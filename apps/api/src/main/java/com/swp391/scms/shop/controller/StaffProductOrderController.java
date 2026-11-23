@@ -11,6 +11,7 @@ import com.swp391.scms.shop.dto.StaffOrderDtos.StaffCancelRequest;
 import com.swp391.scms.shop.service.ProductOrderStaffService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Disabled by default: Shop module removed from the active scope. */
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/staff/product-orders")
 @PreAuthorize("hasAnyRole('RECEPTIONIST','STAFF','CENTER_MANAGER')")

@@ -19,9 +19,6 @@ const mocks = vi.hoisted(() => ({
   createCoachBooking: vi.fn(),
   cancelCoachBooking: vi.fn(),
   getMemberQuotaStatus: vi.fn(),
-  createCoachReview: vi.fn(),
-  getMyCoachReviews: vi.fn(),
-  getCoachLeaderboard: vi.fn(),
 }));
 
 vi.mock('../coachBookingApi', () => ({
@@ -31,12 +28,6 @@ vi.mock('../coachBookingApi', () => ({
   createCoachBooking: mocks.createCoachBooking,
   cancelCoachBooking: mocks.cancelCoachBooking,
   getMemberQuotaStatus: mocks.getMemberQuotaStatus,
-}));
-
-vi.mock('../../coaching/coachReviewApi', () => ({
-  createCoachReview: mocks.createCoachReview,
-  getMyCoachReviews: mocks.getMyCoachReviews,
-  getCoachLeaderboard: mocks.getCoachLeaderboard,
 }));
 
 describe('formatCoachName & isSessionCompleted helpers', () => {
@@ -79,8 +70,6 @@ describe('MemberCoachBookingView Review Logic', () => {
       usedThisMonth: 1,
       remainingQuota: 3,
     });
-    mocks.getMyCoachReviews.mockResolvedValue([]);
-    mocks.getCoachLeaderboard.mockResolvedValue([]);
   });
 
   afterEach(() => {
@@ -126,7 +115,6 @@ describe('MemberCoachBookingView Review Logic', () => {
     // Upcoming indicators
     expect(host.textContent).toContain('Sắp diễn ra');
     expect(host.textContent).not.toContain('Đánh giá sau khi kết thúc buổi');
-    expect(mocks.getMyCoachReviews).not.toHaveBeenCalled();
     expect(host.textContent).toContain('Hủy lịch hẹn');
     // Review button should not be present
     expect(host.textContent).not.toContain('Đánh giá HLV');
@@ -155,8 +143,6 @@ describe('MemberCoachBookingView Review Logic', () => {
     // Session in the past cannot be cancelled
     expect(host.textContent).not.toContain('Hủy lịch hẹn');
 
-    expect(mocks.getMyCoachReviews).not.toHaveBeenCalled();
-    expect(mocks.createCoachReview).not.toHaveBeenCalled();
   });
 
   it('does not offer a review for a finished session the member was not marked present at', async () => {
@@ -186,8 +172,6 @@ describe('MemberCoachBookingView membership notice', () => {
     mocks.getCoaches.mockResolvedValue([]);
     mocks.getAvailableSlots.mockResolvedValue([]);
     mocks.getMyCoachBookings.mockResolvedValue([]);
-    mocks.getMyCoachReviews.mockResolvedValue([]);
-    mocks.getCoachLeaderboard.mockResolvedValue([]);
   });
 
   afterEach(async () => {
@@ -312,8 +296,6 @@ describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
       mocks.getAvailableSlots.mockResolvedValue([]);
       mocks.getMyCoachBookings.mockResolvedValue([]);
       mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'Gold', monthlyQuota: 3, usedThisMonth: 0, remainingQuota: 3 });
-      mocks.getMyCoachReviews.mockResolvedValue([]);
-      mocks.getCoachLeaderboard.mockResolvedValue([]);
     });
 
     afterEach(async () => {
@@ -390,7 +372,6 @@ describe('weekly PT booking after Monday has passed', () => {
     const root = createRoot(host);
     mocks.getCoaches.mockResolvedValue([{ id: 1, fullName: 'HLV A', specialization: 'Gym' }]);
     mocks.getMyCoachBookings.mockResolvedValue([]);
-    mocks.getMyCoachReviews.mockResolvedValue([]);
     mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'GOLD', remainingQuota: 3 });
     mocks.getAvailableSlots.mockImplementation(async (_id, date) => date === '2026-11-06'
       ? [{ startTime: '14:00:00', endTime: '15:00:00', available: true, reason: null }] : []);
@@ -429,7 +410,6 @@ describe('weekly PT booking after Monday has passed', () => {
     const root = createRoot(host);
     mocks.getCoaches.mockResolvedValue([{ id: 1, fullName: 'HLV A', specialization: 'Gym' }]);
     mocks.getMyCoachBookings.mockResolvedValue([]);
-    mocks.getMyCoachReviews.mockResolvedValue([]);
     mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'GOLD', remainingQuota: 3 });
     mocks.getAvailableSlots.mockResolvedValue([]);
     try {
@@ -451,7 +431,6 @@ describe('weekly PT booking after Monday has passed', () => {
     let currentPaymentStatus: 'pending' | 'paid' = 'pending';
     mocks.getCoaches.mockResolvedValue([{ id: 1, fullName: 'HLV Huỳnh Đắc Tài', specialization: 'Gym', defaultHourlyRate: 200000 }]);
     mocks.getAvailableSlots.mockResolvedValue([]);
-    mocks.getMyCoachReviews.mockResolvedValue([]);
     mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'SILVER', monthlyQuota: 0, usedThisMonth: 0, remainingQuota: 0 });
     mocks.getMyCoachBookings.mockImplementation(async () => [
       {

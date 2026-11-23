@@ -12,6 +12,7 @@ import com.swp391.scms.shop.service.ProductCatalogService;
 import com.swp391.scms.shop.service.QuoteService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.http.CacheControl;
 import org.springframework.http.MediaType;
@@ -23,7 +24,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /** Disabled by default: Shop module removed from the active scope. */
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/public")
 public class PublicProductController {

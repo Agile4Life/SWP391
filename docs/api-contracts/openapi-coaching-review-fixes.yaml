@@ -64,42 +64,10 @@ paths:
         '400': {description: Already cancelled}
         '403': {description: Not authorized for this booking}
         '404': {description: Booking not found}
-  /coaching/reviews:
-    post:
-      summary: Member reviews their completed session
-      description: Supply exactly one of bookingId or classSessionId. The session must belong to the member, use the requested coach, have ended and not be cancelled. For a class session the member must have been marked present or late (403 REVIEW_NOT_ATTENDED). Each member may review a session once. The owner's response retains source IDs even when anonymous.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [coachId, rating]
-              properties:
-                coachId: {type: integer, format: int64}
-                bookingId: {type: integer, format: int64, nullable: true}
-                classSessionId: {type: integer, format: int64, nullable: true}
-                rating: {type: integer, minimum: 1, maximum: 5}
-                comment: {type: string, maxLength: 2000, nullable: true}
-                isAnonymous: {type: boolean, default: false}
-      responses:
-        '201': {description: ApiResponse containing CoachReviewDto for the owner}
-        '400': {description: INVALID_REVIEW_SOURCE or REVIEW_SESSION_NOT_FINISHED}
-        '403': {description: Member does not own the booking/enrollment or coach does not match}
-        '404': {description: Session not found}
-        '409': {description: DUPLICATE_REVIEW; unique constraints also guard concurrent submissions}
-  /coaching/reviews/coach/{coachId}:
-    get:
-      summary: Read approved reviews for a coach
-      description: Anonymous reviews redact memberId, bookingId and classSessionId. These properties are nullable. The owner's /coaching/reviews/my response retains source IDs to identify sessions already reviewed.
-      parameters:
-        - {in: path, name: coachId, required: true, schema: {type: integer, format: int64}}
-      responses:
-        '200': {description: ApiResponse containing an array of CoachReviewDto}
   /coaching/leaderboard:
     get:
-      summary: Read published monthly coach rankings
-      description: Read-only. Returns an empty list if no published ranking exists. Never generates, overwrites or publishes monthly reviews; generation remains an explicit manager POST to /coaching/monthly-reviews/generate.
+      summary: Read the monthly coach ranking by sessions taught
+      description: Read-only, computed on request. Ranks public coaches by non-cancelled PT 1:1 bookings plus class sessions dated in the month (ties by name, then coach id); the top three with at least one session get a badge. Reviews are out of scope, so averageRating is null and totalReviews is 0.
       parameters:
         - {in: query, name: year, schema: {type: integer}}
         - {in: query, name: month, schema: {type: integer}}

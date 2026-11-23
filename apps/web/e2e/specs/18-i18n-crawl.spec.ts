@@ -8,12 +8,12 @@ import { authFile, type RoleKey } from '../helpers/accounts';
  * Data (package/class/room/person names) is expected to stay Vietnamese; everything else in the report is a gap.
  */
 const ROUTES: Record<string, string[]> = {
-  an: ['/member/dashboard', '/member/packages', '/member/hold', '/member/card', '/member/check-in', '/member/invoices', '/member/progress', '/member/support', '/member/classes', '/member/classes?tab=pt', '/member/courts', '/member/profile', '/member/notifications', '/messages', '/member/explore'],
+  an: ['/member/dashboard', '/member/packages', '/member/hold', '/member/card', '/member/check-in', '/member/invoices', '/member/progress', '/member/support', '/member/classes', '/member/classes?tab=pt', '/member/profile', '/member/notifications', '/messages', '/member/explore'],
   em: ['/member/dashboard', '/member/packages', '/member/hold'],
   lan: ['/member/dashboard', '/member/packages'],
-  staff: ['/staff/reception', '/staff/check-in', '/staff/support', '/staff/courts', '/staff/attendance', '/staff/coach-classes', '/staff/requests', '/staff/pt-attendance', '/staff/kyc', '/staff/holds', '/staff/classes', '/staff/orders', '/messages', '/profile'],
-  coach: ['/coach/classes', '/coach/pt-attendance', '/coach/training-plans', '/coach/health-metrics', '/coach/saved-plans', '/staff/requests', '/messages', '/profile'],
-  manager: ['/manager/reports', '/manager/catalogs', '/manager/products', '/manager/products/new', '/manager/equipment', '/manager/coach-assignments', '/manager/staff-accounts', '/manager/users', '/manager/cancellations', '/manager/coach-reviews', '/manager/support', '/manager/requests', '/staff/classes', '/profile'],
+  staff: ['/staff/reception', '/staff/check-in', '/staff/support', '/staff/coach-classes', '/staff/requests', '/staff/kyc', '/staff/holds', '/messages', '/profile'],
+  coach: ['/coach/classes', '/coach/pt-attendance', '/coach/training-plans', '/coach/saved-plans', '/staff/requests', '/messages', '/profile'],
+  manager: ['/manager/reports', '/manager/catalogs', '/manager/coach-assignments', '/manager/staff-accounts', '/manager/users', '/manager/cancellations', '/manager/support', '/manager/requests', '/profile'],
   admin: ['/admin/users', '/admin/audit-logs', '/profile'],
 };
 const VI = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹàáèéìíòóùúýÀ-Ỹ]/;

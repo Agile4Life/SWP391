@@ -9,6 +9,7 @@ import com.swp391.scms.security.AuthenticatedPrincipal;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -16,7 +17,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
 @RequestMapping("/api/v1")
 public class CourtBookingController {
     private final CourtBookingService service;

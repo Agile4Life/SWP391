@@ -2,14 +2,12 @@
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DetailPanel } from '../components/DetailPanel';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ExploreBreadcrumb } from '../components/ExploreBreadcrumb';
 import { ExploreSearchModal } from '../components/ExploreSearchModal';
 import { ExploreToolbar } from '../components/ExploreToolbar';
 import { LevelSwitcher } from '../components/LevelSwitcher';
 import {
-  EMPTY_LIVE_SNAPSHOT,
   resolveBindings,
   type LiveCenterSnapshot,
 } from '../data/bindings';
@@ -179,54 +177,6 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     expect(container.querySelector('[data-testid="floorplan-tab-OUT"]')).toBeNull();
   });
 
-  it('renders mandatory simulation badge, seed room/equipment data, offline state without fake numbers, and dispatches scms:open-chat', () => {
-    const liveBindings = resolveBindings(SOL_CENTER_SCENE, SEED_SNAPSHOT);
-    act(() => {
-      useExploreStore.getState().selectNode('zone-l1-gym');
-    });
-
-    renderUi(<DetailPanel bindings={liveBindings} snapshot={SEED_SNAPSHOT} />);
-
-    // Mandatory transparency badge
-    expect(getByTestId('detail-sim-badge').textContent).toMatch(
-      /Mô phỏng minh hoạ|Illustrative simulation/,
-    );
-
-    // Seed room capacity (50) and equipment code EQ-RUN-01
-    expect(getByTestId('detail-zone-capacity').textContent).toBe('50');
-    expect(getByTestId('detail-eq-row-EQ-RUN-01')).toBeTruthy();
-
-    // When live data is unavailable, shows "Không có dữ liệu trực tiếp" and does not render fake capacity
-    const emptyBindings = resolveBindings(SOL_CENTER_SCENE, EMPTY_LIVE_SNAPSHOT);
-    const onRefresh = vi.fn();
-    renderUi(
-      <DetailPanel
-        bindings={emptyBindings}
-        snapshot={EMPTY_LIVE_SNAPSHOT}
-        onRefresh={onRefresh}
-      />,
-    );
-
-    expect(getByTestId('explore3d-no-live-data').textContent).toMatch(
-      /Không có dữ liệu trực tiếp|No live data available/,
-    );
-    expect(container.querySelector('[data-testid="detail-zone-capacity"]')).toBeNull();
-
-    clickTestId('explore3d-retry-btn');
-    expect(onRefresh).toHaveBeenCalledTimes(1);
-
-    // Select Lobby zone and click open-chat CTA
-    act(() => {
-      useExploreStore.getState().selectNode('zone-l1-lobby');
-    });
-    renderUi(<DetailPanel bindings={liveBindings} snapshot={SEED_SNAPSHOT} />);
-
-    const chatListener = vi.fn();
-    window.addEventListener('scms:open-chat', chatListener);
-    clickTestId('hotspot-cta-hs-l1-chat');
-    expect(chatListener).toHaveBeenCalledTimes(1);
-    window.removeEventListener('scms:open-chat', chatListener);
-  });
 
   it('switches levels, levelMode, wallMode, and viewMode via LevelSwitcher and ExploreToolbar', () => {
     renderUi(

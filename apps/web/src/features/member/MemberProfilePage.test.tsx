@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberProfilePage } from './MemberProfilePage';
-import type { Profile, HealthMetric } from './profileApi';
+import type { Profile } from './profileApi';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { setLanguage } from '../../shared/i18n';
 
@@ -14,10 +14,6 @@ const mockApi = vi.hoisted(() => ({
   updateReceptionistProfile: vi.fn(),
   uploadAvatar: vi.fn(),
   changePassword: vi.fn(),
-  listHealthMetrics: vi.fn(),
-  addHealthMetric: vi.fn(),
-  updateHealthMetric: vi.fn(),
-  deleteHealthMetric: vi.fn(),
 }));
 
 vi.mock('./profileApi', () => ({
@@ -27,10 +23,6 @@ vi.mock('./profileApi', () => ({
   updateReceptionistProfile: mockApi.updateReceptionistProfile,
   uploadAvatar: mockApi.uploadAvatar,
   changePassword: mockApi.changePassword,
-  listHealthMetrics: mockApi.listHealthMetrics,
-  addHealthMetric: mockApi.addHealthMetric,
-  updateHealthMetric: mockApi.updateHealthMetric,
-  deleteHealthMetric: mockApi.deleteHealthMetric,
 }));
 
 const sampleProfile: Profile = {
@@ -50,16 +42,6 @@ const sampleProfile: Profile = {
   fitnessLevel: 'beginner',
 };
 
-const sampleMetrics: HealthMetric[] = [
-  {
-    id: 1,
-    metricName: 'weight',
-    metricValue: 70,
-    unit: 'kg',
-    recordedAt: '2026-10-01T08:00:00Z',
-  },
-];
-
 describe('MemberProfilePage role-based profile & avatar upload', () => {
   let host: HTMLDivElement;
   let root: Root;
@@ -75,13 +57,8 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     mockApi.updateCoachProfile.mockReset();
     mockApi.updateReceptionistProfile.mockReset();
     mockApi.uploadAvatar.mockReset();
-    mockApi.listHealthMetrics.mockReset();
-    mockApi.addHealthMetric.mockReset();
-    mockApi.updateHealthMetric.mockReset();
-    mockApi.deleteHealthMetric.mockReset();
 
     mockApi.getProfile.mockResolvedValue(sampleProfile);
-    mockApi.listHealthMetrics.mockResolvedValue(sampleMetrics);
     mockApi.updateCoachProfile.mockResolvedValue(undefined);
     mockApi.updateReceptionistProfile.mockResolvedValue(undefined);
   });
@@ -113,7 +90,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.querySelector('h1')?.textContent).toBe('Hồ sơ cá nhân');
@@ -134,9 +110,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
     await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
     expect(mockApi.updateProfile).toHaveBeenCalledWith(sampleProfile);
-    expect(mockApi.addHealthMetric).not.toHaveBeenCalled();
-    expect(mockApi.updateHealthMetric).not.toHaveBeenCalled();
-    expect(mockApi.deleteHealthMetric).not.toHaveBeenCalled();
   });
 
   it('retains profile form and reports save failure', async () => {
@@ -212,7 +185,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
@@ -251,7 +223,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
@@ -276,7 +247,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');

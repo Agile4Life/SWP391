@@ -1,7 +1,6 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { sourceMessage } from '../../shared/i18n';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
-import { CoachHealthMetrics } from '../coaching/CoachHealthMetrics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { generateRequestId } from '../../shared/lib/requestId';
@@ -1323,8 +1322,6 @@ export function StaffReceptionPage() {
           </form>
         </div>
       </div>
-
-      {selectedMember && currentUser?.role === 'STAFF' && <CoachHealthMetrics memberId={selectedMember.userId} memberName={selectedMember.fullName} intakeOnly />}
 
       {isTopupModalOpen && selectedMember && (
         <Modal

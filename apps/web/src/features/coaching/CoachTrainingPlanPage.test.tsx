@@ -6,9 +6,7 @@ import { CoachTrainingPlanPage } from './CoachTrainingPlanPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { setLanguage } from '../../shared/i18n/language';
 import { aiApi, type MemberOption } from './aiApi';
-import * as profileApi from '../member/profileApi';
 
-vi.mock('../member/profileApi', () => ({ listHealthMetrics: vi.fn().mockResolvedValue([]), addHealthMetrics: vi.fn() }));
 
 const MEMBERS: MemberOption[] = [
   { id: 1, memberCode: 'MB-2026-001', fullName: 'Lê Hoàng Long', fitnessGoal: 'Tăng cơ nạc', healthNotes: 'Tránh Deadlift tạ nặng', fitnessLevel: 'intermediate' },
@@ -413,25 +411,6 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(card.textContent).toContain('Hiệp: 5');expect(card.textContent).toContain('8 reps');expect(card.textContent).toContain('90s');
   });
 
-  it('loads the stored height, weight and BMI into the AI assistant modal', async () => {
-    vi.mocked(profileApi.listHealthMetrics).mockResolvedValue([
-      { id: 1, metricName: 'height', metricValue: 172, unit: 'cm', recordedAt: '2026-11-08T08:00:00' },
-      { id: 2, metricName: 'weight', metricValue: 68, unit: 'kg', recordedAt: '2026-11-08T08:00:00' },
-    ]);
-
-    await renderComponent();
-    expect(host.querySelector('#coach-metric-weight')).toBeNull();
-
-    const aiBtn = Array.from(host.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Gợi ý giáo án bằng AI')
-    );
-    await act(async () => {
-      aiBtn?.click();
-    });
-
-    expect(host.textContent).toContain('172 cm / 68 kg');
-    expect(host.textContent).toContain('23');
-  });
 
   it('allows editing the training plan goal in Step 1 (including after AI apply), sends edited goal to server, and never writes dead localStorage', async () => {
     await renderComponent();

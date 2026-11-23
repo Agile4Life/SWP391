@@ -3,72 +3,13 @@ import { authFile } from '../helpers/accounts';
 
 test.use({ storageState: authFile('coach') });
 
-/** Chọn buổi Strength Foundation đầu tiên của tuần (trang có thể đã tự chọn sẵn, bấm lại sẽ bỏ chọn). */
-async function openStrengthSession(page: import('@playwright/test').Page) {
-  const detail = page.getByText(/Danh sách \d+ học viên đã ghi danh/);
-  if (await detail.isVisible().catch(() => false)) return;
-  await page.getByRole('button', { name: /Strength Foundation/ }).first().click();
-  await page.waitForTimeout(800);
-  test.skip(!(await detail.isVisible().catch(() => false)), 'Không chọn được buổi Strength Foundation trong tuần hiện tại (dữ liệu seed theo ngày)');
-}
-const rosterEmpty = (page: import('@playwright/test').Page) => page.getByText('Danh sách 0 học viên').isVisible().catch(() => false);
-
 test.describe('HLV: lịch dạy', () => {
-  test('thời khóa biểu tuần, học viên phụ trách, tab đánh giá', async ({ page }) => {
+  test('lịch PT 1:1 theo tuần và học viên phụ trách', async ({ page }) => {
     await page.goto('/coach/classes');
     await settled(page);
-    await expect(page.getByRole('heading', { level: 1 })).toContainText('Lịch dạy');
-    await expect(page.locator('main')).toContainText('Strength Foundation');
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     await page.getByRole('tab', { name: 'Học viên phụ trách' }).or(page.getByRole('button', { name: 'Học viên phụ trách' })).first().click();
     await expect(page.locator('main')).toContainText(/Nguyễn Minh An|Ngô Trung Hiếu/);
-    await page.getByRole('tab', { name: /Đánh giá & bảng xếp hạng/ }).or(page.getByRole('button', { name: /Đánh giá & bảng xếp hạng/ })).first().click();
-    await expect(page.locator('main')).toBeVisible();
-  });
-});
-
-test.describe('HLV: điểm danh buổi học', () => {
-  test.describe.configure({ mode: 'serial' });
-
-  test('điểm danh: có mặt/vắng mặt, lưu, tải lại vẫn giữ trạng thái', async ({ page }) => {
-    await page.goto('/staff/attendance');
-    await settled(page);
-    await openStrengthSession(page);
-    test.skip(await rosterEmpty(page), 'Buổi đã chọn không có học viên (dữ liệu seed theo ngày / hội viên đã bảo lưu)');
-    const an = page.locator('input[name="attendance-status-8"]');
-    const hieu = page.locator('input[name="attendance-status-15"]');
-    const row = (name: string) => page.locator('li, tr, article, div').filter({ has: page.getByText(name, { exact: false }) }).filter({ has: page.getByText('Vắng mặt') }).last();
-    await row('Nguyễn Minh An').getByText('Có mặt', { exact: true }).click();
-    await row('Ngô Trung Hiếu').getByText('Vắng mặt', { exact: true }).click();
-    await page.getByRole('button', { name: 'Lưu điểm danh' }).click();
-    await expect(page.getByText(/Đã lưu|thành công|Đã điểm danh/i).first()).toBeVisible();
-    await page.reload();
-    await settled(page);
-    await openStrengthSession(page);
-    await expect(an.first()).toBeChecked();
-    await expect(hieu.nth(1)).toBeChecked();
-  });
-
-  test('điểm danh nhanh tất cả Có mặt rồi sửa lại một học viên', async ({ page }) => {
-    await page.goto('/staff/attendance');
-    await settled(page);
-    await openStrengthSession(page);
-    test.skip(await rosterEmpty(page), 'Buổi đã chọn không có học viên');
-    await page.getByRole('button', { name: /Điểm danh nhanh tất cả/ }).click();
-    await expect(page.locator('input[name="attendance-status-8"]').first()).toBeChecked();
-    await expect(page.locator('input[name="attendance-status-15"]').first()).toBeChecked();
-    await page.locator('li, tr, article, div').filter({ has: page.getByText('Ngô Trung Hiếu') }).filter({ has: page.getByText('Vắng mặt') }).last().getByText('Vắng mặt', { exact: true }).click();
-    await page.getByRole('button', { name: 'Lưu điểm danh' }).click();
-    await expect(page.getByText(/Đã lưu|thành công|Đã điểm danh/i).first()).toBeVisible();
-  });
-
-  test('lịch sử điểm danh ghi nhận buổi vừa lưu; tab đánh giá học viên mở được', async ({ page }) => {
-    await page.goto('/staff/attendance');
-    await settled(page);
-    await page.getByRole('tab', { name: /Lịch sử điểm danh/ }).click();
-    // CẦN XÁC MINH: sau khi lưu điểm danh, bộ đếm "Lịch sử điểm danh (n)" vẫn là 0 -> có thể là lỗi hiển thị lịch sử.
-    await expect(page.locator('main')).toContainText('Lịch sử các buổi đã điểm danh');
-    await page.getByRole('tab', { name: 'Đánh giá học viên' }).click();
-    await expect(page.locator('main')).toBeVisible();
   });
 });
 
@@ -128,19 +69,6 @@ test.describe('HLV: soạn giáo án', () => {
     const plans = await (await import('../helpers/api')).apiWith(res.token, 'GET', '/coaching/training-plans/my');
     expect(plans.status).toBe(200);
     void name;
-  });
-
-  test('thêm số đo sức khỏe: giá trị hợp lệ hiện trong bảng, giá trị âm bị chặn', async ({ page }) => {
-    await page.goto('/coach/health-metrics');
-    await settled(page);
-    const weight = page.locator('#coach-metric-weight');
-    await weight.fill('-5');
-    await page.getByRole('button', { name: 'Lưu đánh giá' }).click();
-    await expect(page.locator('main')).not.toContainText('-5 kg');
-    await weight.fill('75.5');
-    await page.locator('#coach-metric-height').fill('175');
-    await page.getByRole('button', { name: 'Lưu đánh giá' }).click();
-    await expect(page.locator('main')).toContainText('75.5');
   });
 
   test('gợi ý AI: nếu nhà cung cấp AI chưa cấu hình thì báo lỗi thân thiện, trang vẫn dùng được', async ({ page }) => {

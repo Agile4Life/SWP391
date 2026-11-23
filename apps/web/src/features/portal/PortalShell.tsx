@@ -159,9 +159,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
     : t('Hồ sơ cá nhân', 'My Profile');
   const navItems = PORTAL_NAV.filter((item) => item.roles.includes(user.role)).map((item) => {
     if (item.to === '/member/profile') return { ...item, label: profileLabel };
-    if (item.to === '/staff/classes' && user.role === 'STAFF') {
-      return { ...item, label: t('Xem lịch học trung tâm', 'Center Class Schedule') };
-    }
     return { ...item, label: getNavLabel(item.to, item.label, lang) };
   });
   const activeNavItem = navItems.find((item) => isPortalNavActive(item, location.pathname));

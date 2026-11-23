@@ -6,9 +6,7 @@ import { catalogApi, type Discipline, type MembershipPackage, type Room } from '
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { isCourtDiscipline } from '../courts/courtsApi';
 
-import { TimePicker } from '../../shared/ui/TimePicker';
 type Tab = 'disciplines' | 'rooms' | 'packages';
 type Form = Record<string, string>;
 
@@ -210,23 +208,7 @@ export function ManagerCatalogsPage() {
     return isNew ? 'Tạo gói tập mới' : 'Chỉnh sửa gói tập & giá bán';
   };
 
-  // SCRUM / Scope Reduction: Chỉ hiển thị bộ môn Gym và Phòng Gym Tiêu chuẩn
-  const visibleDisciplines = disciplines.filter(
-    (d) => (d.name || '').toLowerCase().includes('gym') || (d.name || '').toLowerCase().includes('thể hình')
-  );
-  const visibleRooms = rooms.filter((r) => {
-    const name = (r.name || '').toLowerCase();
-    const disc = (r.disciplineName || '').toLowerCase();
-    return (
-      name.includes('gym tiêu chuẩn') ||
-      name.includes('standard gym') ||
-      name.includes('tiêu chuẩn') ||
-      (name.includes('gym') && r.tier !== 'PLATINUM') ||
-      disc.includes('gym')
-    );
-  });
-
-  const rowCount = tab === 'disciplines' ? visibleDisciplines.length : tab === 'rooms' ? visibleRooms.length : packages.length;
+  const rowCount = tab === 'disciplines' ? disciplines.length : tab === 'rooms' ? rooms.length : packages.length;
 
   return (
     <div data-i18n-managed className="portal-container">
@@ -248,8 +230,8 @@ export function ManagerCatalogsPage() {
       <div className="portal-tabs">
         {(
           [
-            ['disciplines', t(`Bộ môn (${visibleDisciplines.length})`, `Disciplines (${visibleDisciplines.length})`)],
-            ['rooms', t(`Phòng tập (${visibleRooms.length})`, `Rooms (${visibleRooms.length})`)],
+            ['disciplines', t(`Bộ môn (${disciplines.length})`, `Disciplines (${disciplines.length})`)],
+            ['rooms', t(`Phòng tập (${rooms.length})`, `Rooms (${rooms.length})`)],
             ['packages', t(`Gói tập (${packages.length})`, `Memberships (${packages.length})`)],
           ] as const
         ).map(([key, label]) => (
@@ -367,21 +349,6 @@ export function ManagerCatalogsPage() {
             {tab === 'rooms' && (
               <>
                 <div data-i18n-managed className="portal-form-group">
-                  <label className="portal-label" htmlFor="cat-discipline">{t("Đặt sân / làn theo bộ môn")}</label>
-                  <Select id="cat-discipline" className="portal-select" value={editing.form.disciplineId ?? ''} onChange={event => {
-                    const value = event.target.value;
-                    setFormError('');
-                    setEditing({ ...editing, form: { ...editing.form, disciplineId: value, openTime: editing.form.openTime || '06:00', closeTime: editing.form.closeTime || '22:00' } });
-                  }}>
-                    <option value="">{t("Không mở đặt sân")}</option>
-                    {disciplines.filter(discipline => isCourtDiscipline(discipline.name)).map(discipline => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
-                  </Select>
-                </div>
-                {editing.form.disciplineId && <div className="grid-2">
-                  <label className="portal-form-group" htmlFor="cat-open"><span className="portal-label">{t("Giờ mở cửa")}</span><TimePicker id="cat-open" wholeHour required value={editing.form.openTime ?? ''} onChange={event => set('openTime', event.target.value)} /></label>
-                  <label className="portal-form-group" htmlFor="cat-close"><span className="portal-label">{t("Giờ đóng cửa")}</span><TimePicker id="cat-close" wholeHour required value={editing.form.closeTime ?? ''} onChange={event => set('closeTime', event.target.value)} /></label>
-                </div>}
-                <div data-i18n-managed className="portal-form-group">
                   <label className="portal-label" htmlFor="cat-tier">{t("Phân hạng phòng")}</label>
                   <Select id="cat-tier" className="portal-select" value={editing.form.tier || 'STANDARD'} onChange={(e) => set('tier', e.target.value)}>
                     <option value="STANDARD">{t("Tiêu chuẩn (Mọi hội viên)")}</option>
@@ -424,9 +391,9 @@ export function ManagerCatalogsPage() {
                   value={editing.form.tier || resolvePackageTier({ name: editing.form.name })}
                   onChange={(e) => set('tier', e.target.value)}
                 >
-                  <option value="SILVER">{t("Silver · Cơ bản (1 lượt sân miễn phí/tháng)", "Silver · Basic (1 free court booking/month)")}</option>
-                  <option value="GOLD">{t("Gold · Trung cấp (2 lượt sân miễn phí/tháng)", "Gold · Standard (2 free court bookings/month)")}</option>
-                  <option value="PLATINUM">{t("Platinum · VIP Cao cấp (Phòng VIP + 3 lượt sân miễn phí/tháng)", "Platinum · VIP (VIP room + 3 free court bookings/month)")}</option>
+                  <option value="SILVER">{t("Silver · Cơ bản", "Silver · Basic")}</option>
+                  <option value="GOLD">{t("Gold · Trung cấp", "Gold · Standard")}</option>
+                  <option value="PLATINUM">{t("Platinum · VIP Cao cấp", "Platinum · VIP")}</option>
                 </Select>
               </div>
             )}
@@ -625,7 +592,7 @@ export function ManagerCatalogsPage() {
                     </tr>
                   </thead>
                   <tbody data-i18n-managed>
-                    {visibleDisciplines.map((d) => (
+                    {disciplines.map((d) => (
                       <tr data-i18n-managed key={d.id}>
                         <td><strong>{d.name}</strong></td>
                         <td style={{ color: 'var(--portal-muted)' }}>{d.description || <span className="muted">{t("Không có mô tả")}</span>}</td>
@@ -663,7 +630,7 @@ export function ManagerCatalogsPage() {
                     </tr>
                   </thead>
                   <tbody data-i18n-managed>
-                    {visibleRooms.map((r) => (
+                    {rooms.map((r) => (
                       <tr data-i18n-managed key={r.id}>
                         <td><strong>{r.name}</strong>{r.disciplineName && <div className="muted">{r.disciplineName}{r.openTime && r.closeTime ? ` · ${r.openTime.slice(0, 5)}–${r.closeTime.slice(0, 5)}` : ''}</div>}</td>
                         <td>

@@ -4,7 +4,7 @@ import { sessionFor } from '../helpers/api';
 
 type R = 'member' | 'staff' | 'coach' | 'manager' | 'admin';
 const KEY: Record<R, RoleKey> = { member: 'an', staff: 'staff', coach: 'coach', manager: 'manager', admin: 'admin' };
-const HOME: Record<R, RegExp> = { member: /member\/dashboard/, staff: /staff\/reception/, coach: /staff\/attendance/, manager: /manager\/reports/, admin: /admin\/users/ };
+const HOME: Record<R, RegExp> = { member: /member\/dashboard/, staff: /staff\/reception/, coach: /coach\/pt-attendance/, manager: /manager\/reports/, admin: /admin\/users/ };
 
 // [route, vai trò được phép] — khớp router.tsx
 const ROUTES: [string, R[]][] = [
@@ -14,9 +14,8 @@ const ROUTES: [string, R[]][] = [
   ['/staff/reception', ['staff']],
   ['/staff/kyc', ['staff']],
   ['/staff/holds', ['staff']],
-  ['/staff/classes', ['staff', 'manager']],
   ['/coach/training-plans', ['coach']],
-  ['/staff/attendance', ['coach']],
+  ['/coach/pt-attendance', ['coach']],
   ['/manager/reports', ['manager']],
   ['/manager/catalogs', ['manager']],
   ['/manager/staff-accounts', ['manager']],
@@ -52,15 +51,10 @@ const API_MATRIX: [string, string, R[]][] = [
   ['GET', '/operations/requests/x', ['manager']],
   ['GET', '/operations/requests/my', ['staff', 'coach']],
   ['GET', '/check-in/history', ['staff', 'manager', 'member']],
-  ['GET', '/coaching/monthly-reviews/x', ['manager']],
   ['GET', '/support/requests', ['manager', 'staff']],
   ['GET', '/support/requests/my', ['member']],
   ['GET', '/memberships/subscriptions/my', ['member']],
-  ['GET', '/court-bookings', ['staff', 'manager']],
-  ['GET', '/court-bookings/my', ['member']],
-  ['GET', '/classes/enrollments/my', ['member']],
   ['POST', '/check-in/scan', ['staff', 'manager']],
-  ['POST', '/classes', ['manager']],
 ];
 
 test.describe('Phân quyền API: backend luôn kiểm tra vai trò (ẩn menu không phải là bảo mật)', () => {

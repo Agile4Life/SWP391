@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 /** Per-session class booking: one session, any hand-picked set, a whole week or month, and their cancellation. */
 @Tag(name = "Session Bookings", description = "Book and cancel individual class sessions, singly or in bulk")
 @RestController
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 @RequestMapping("/api/v1/classes")
 public class SessionBookingController {
 
