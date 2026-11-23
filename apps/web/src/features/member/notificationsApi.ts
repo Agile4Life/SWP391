@@ -78,10 +78,9 @@ export function notificationDestination(notification: Pick<MemberNotification, '
     return '/staff/reception';
   }
   if (role === 'COACH') return notification.relatedEntityType === 'training_plan' ? '/coach/training-plans' : '/coach/classes';
-  if (['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER'].includes(role)) {
-    const manager = ['MANAGER', 'CENTER_MANAGER'].includes(role);
+  if (['MANAGER', 'CENTER_MANAGER'].includes(role)) {
     if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
-    return manager ? '/manager/reports' : '/staff/reception';
+    return '/manager/reports';
   }
   if (role === 'ADMIN') return '/admin/users';
   switch (notification.relatedEntityType) {
