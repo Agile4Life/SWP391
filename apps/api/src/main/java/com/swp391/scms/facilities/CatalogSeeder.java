@@ -127,7 +127,7 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final Integer GOLD_6M_CREDIT_LIMIT = 12;
 
     public static final String PLATINUM_3M_NAME = "PLATINUM 3 THÁNG";
-    public static final String PLATINUM_3M_DESC = "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (3 tháng)\n"
+    public static final String PLATINUM_3M_DESC = "VIP – Gym + PT 1:1 chuyên sâu (3 tháng)\n"
             + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
             + "- Tặng 18 buổi tập Personal Trainer 1:1 (06 buổi / mỗi chu kỳ 30 ngày).\n"
             + "- Thiết kế Giáo án tập luyện chuyên sâu theo mục tiêu từng giai đoạn.\n"
@@ -140,7 +140,7 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final Integer PLATINUM_3M_CREDIT_LIMIT = 12;
 
     public static final String PLATINUM_6M_NAME = "PLATINUM 6 THÁNG";
-    public static final String PLATINUM_6M_DESC = "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (6 tháng · Tiết kiệm ~10%)\n"
+    public static final String PLATINUM_6M_DESC = "VIP – Gym + PT 1:1 chuyên sâu (6 tháng · Tiết kiệm ~10%)\n"
             + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
             + "- Tặng 36 buổi tập Personal Trainer 1:1 (06 buổi / mỗi chu kỳ 30 ngày).\n"
             + "- Thiết kế Giáo án tập luyện chuyên sâu theo mục tiêu từng giai đoạn.\n"
