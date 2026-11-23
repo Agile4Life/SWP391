@@ -39,7 +39,7 @@ public class DisciplineController {
     @Operation(summary = "List disciplines")
     @GetMapping
     public ApiResponse<List<DisciplineDto>> list() {
-        return ApiResponse.ok(msg("catalog.list"), service.listGym());
+        return ApiResponse.ok(msg("catalog.list"), service.list());
     }
 
     @Operation(summary = "Create discipline")

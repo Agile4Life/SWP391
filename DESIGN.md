@@ -1,10 +1,10 @@
 # Quy chuẩn thiết kế chính — SÖL
 
 Thu gọn phạm vi chỉ còn Gym (22–23/11/2026, PR #144–#156 — **ghi đè** mọi mục cũ bên dưới nói về lớp nhóm, đặt sân, Shop, thiết bị, streak, số đo, tiến độ hay đánh giá HLV):
-- **Còn giữ**: Gym tiêu chuẩn, gói tập (mua/gia hạn/nâng cấp/bảo lưu), PT 1:1 (đặt/hủy/thanh toán/điểm danh), giáo án, check-in/checkout và QR, ví và hóa đơn, tin nhắn/hỗ trợ, bảng xếp hạng HLV theo số buổi dạy. Giữ Dashboard bốn cột, bố cục, theme và cuộn native hiện hành.
-- **Đã bỏ ở mọi vai trò**: lớp nhóm và xếp lịch lớp, đặt sân, Shop (Public, Member, lễ tân, quản lý), quản lý thiết bị, đánh giá HLV và đánh giá tháng, đánh giá buổi tập, streak, chỉ số cơ thể (kể cả nhập tại quầy lễ tân và lấy số đo trong trợ lý AI soạn giáo án), tiến độ/lịch sử tập luyện; Explore 3D bỏ khu bộ môn khác, Gym VIP, InBody và Shop. Không dựng lại các màn này.
+- **Còn giữ**: Gym tiêu chuẩn, gói tập (mua/gia hạn/nâng cấp/bảo lưu), PT 1:1 (đặt/hủy/thanh toán/điểm danh), giáo án, check-in/checkout và QR, ví và hóa đơn, tin nhắn/hỗ trợ. Giữ Dashboard bốn cột, bố cục, theme và cuộn native hiện hành.
+- **Đã bỏ ở mọi vai trò**: lớp nhóm và xếp lịch lớp, đặt sân, Shop (Public, Member, lễ tân, quản lý), quản lý thiết bị, đánh giá HLV, đánh giá tháng và bảng xếp hạng HLV, đánh giá buổi tập, streak, chỉ số cơ thể (kể cả nhập tại quầy lễ tân và lấy số đo trong trợ lý AI soạn giáo án), tiến độ/lịch sử tập luyện; Explore 3D bỏ khu bộ môn khác, Gym VIP, InBody và Shop. Không dựng lại các màn này.
 - **URL cũ** đi qua `<Navigate replace>` về màn còn giữ: `/member/classes` là lịch PT (`?tab=pt` để đặt); `/staff/classes|orders|courts|pt-attendance` → `/staff/reception`; `/manager/products*` → `/manager/reports`; `/manager/equipment` → `/manager/catalogs`; `/manager/coach-reviews` → `/manager/coach-assignments`; `/staff/attendance*` → `/coach/pt-attendance` (cũng là trang chủ HLV); `/coach/health-metrics` → `/coach/training-plans`. Thông báo hoặc kết quả thanh toán VNPay trỏ màn đã bỏ về `/member/invoices` hoặc trang chủ của vai trò.
-- **Nguồn sự thật ở backend**: controller của tính năng đã bỏ tắt bằng `@ConditionalOnProperty` (mặc định off); chỉ trả bộ môn Gym và Phòng Gym Tiêu chuẩn ở `DisciplineController`/`RoomService`. Frontend không lọc thêm theo tên.
+- **Nguồn sự thật ở backend**: controller của tính năng đã bỏ tắt bằng `@ConditionalOnProperty` (mặc định off); `DisciplineController`/`RoomService` trả toàn bộ dữ liệu, không lọc cứng theo tên, và frontend cũng không lọc; dữ liệu cũ ngoài Gym được dọn bằng `docs/DATA_CLEANUP.md`.
 - **Gói tập** giữ dữ liệu, giá, ID và flow thật; không hiển thị quyền lợi lớp nhóm, lượt sân, phòng VIP hay giảm giá sản phẩm. Không suy luận gói "Gym" từ SILVER/GOLD/PLATINUM.
 
 

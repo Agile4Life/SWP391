@@ -519,13 +519,13 @@ paths:
         '400': { description: INVALID_TOPUP_AMOUNT }
         '409': { description: "RESOURCE_BUSY: the wallet is locked by another operation; retry with the same clientRequestId" }
   /disciplines:
-    get: { summary: List Gym discipline (any authenticated user), responses: { '200': { description: "data = Discipline[]" } } }
+    get: { summary: List disciplines (any authenticated user), responses: { '200': { description: "data = Discipline[]" } } }
     post: { summary: Create discipline (CENTER_MANAGER), responses: { '201': { description: Created }, '409': { description: Name exists } } }
   /disciplines/{id}:
     put: { summary: Update discipline (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
     delete: { summary: "Delete a discipline no class/room/1:1 booking uses; member favourites are cleared (CENTER_MANAGER)", parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: Deleted }, '404': { description: Not found }, '409': { description: DISCIPLINE_IN_USE } } }
   /rooms:
-    get: { summary: List standard Gym room, responses: { '200': { description: "data = Room[]" } } }
+    get: { summary: List rooms, responses: { '200': { description: "data = Room[]" } } }
     post: { summary: Create room (CENTER_MANAGER), responses: { '201': { description: Created } } }
   /rooms/{id}:
     put: { summary: Update room incl. status (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }

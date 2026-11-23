@@ -25,11 +25,6 @@ public class DisciplineService {
         return disciplines.findAllByOrderByNameAsc().stream().map(DisciplineDto::of).toList();
     }
 
-    @Transactional(readOnly = true)
-    public List<DisciplineDto> listGym() {
-        return disciplines.findAllByNameIgnoreCaseOrderByNameAsc("Gym").stream().map(DisciplineDto::of).toList();
-    }
-
     @Transactional
     public DisciplineDto create(DisciplineRequest request) {
         String name = request.name().trim();

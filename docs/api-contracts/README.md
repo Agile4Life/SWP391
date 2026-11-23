@@ -1,10 +1,10 @@
 # API contract workflow
 
 The Gym-only scope retires the class, session attendance, equipment-management, court-booking,
-and member favorite-discipline endpoints, plus coach reviews, session evaluations, monthly coach reviews,
+and member favorite-discipline endpoints, plus coach reviews, session evaluations, monthly coach reviews, the coach leaderboard,
 health metrics, training completion/progress, the check-in streak and the Supplement Shop. Their historical
 schemas below remain for reference; the removed operations are no longer part of the active API.
-PT 1:1, training plans, the session-based coach leaderboard and center check-in remain available.
+PT 1:1, training plans and center check-in remain available.
 
 The API team publishes an OpenAPI YAML/JSON export here when an endpoint is ready for frontend integration. Every change must specify request, successful response and common error response.
 
