@@ -100,7 +100,7 @@ export function MemberCoachBookingView({
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<CoachAvailableSlotDto | null>(null);
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
-  const [bookingSortOrder, setBookingSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [bookingDateFilter, setBookingDateFilter] = useState<string>('');
   const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined | SourceMessage>();
   // Lỗi gửi của hộp thoại hiện ngay trong hộp thoại (không dùng banner đầu trang nằm sau lớp nền mờ).
@@ -973,33 +973,71 @@ export function MemberCoachBookingView({
               : ''}
             )
           </h3>
-          {myBookings.length > 1 && (
-            <button
-              type="button"
-              className="btn-secondary"
-              style={{ fontSize: 13, padding: '6px 12px' }}
-              onClick={() => setBookingSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
-            >
-              {bookingSortOrder === 'asc'
-                ? memberText('Sắp xếp theo ngày: Sớm nhất ↑', 'Sort by day: Earliest ↑')
-                : memberText('Sắp xếp theo ngày: Muộn nhất ↓', 'Sort by day: Latest ↓')}
-            </button>
+          {myBookings.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                type="date"
+                aria-label={memberText('Tìm lịch theo ngày', 'Filter bookings by date')}
+                value={bookingDateFilter}
+                onChange={(e) => setBookingDateFilter(e.target.value)}
+                style={{
+                  fontSize: 13,
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  border: '1px solid var(--portal-border)',
+                  background: 'var(--portal-surface)',
+                  color: 'var(--portal-paper)',
+                }}
+              />
+              {bookingDateFilter && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: 13, padding: '6px 12px' }}
+                  onClick={() => setBookingDateFilter('')}
+                >
+                  {memberText('Tất cả ngày', 'All days')}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
-        {myBookings.length === 0 ? (
-          <div className="portal-card" style={{ padding: 24, textAlign: 'center' }}>
-            <p className="row-card__meta" style={{ margin: 0 }}>
-              {memberText("Chưa có lịch hẹn 1:1.")}</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {[...myBookings]
-              .sort((a, b) => {
-                const cmp = `${a.bookingDate}T${a.startTime}`.localeCompare(`${b.bookingDate}T${b.startTime}`);
-                return bookingSortOrder === 'asc' ? cmp : -cmp;
-              })
-              .map((b) => {
+        {(() => {
+          const visibleBookings = [...myBookings]
+            .filter((b) => !bookingDateFilter || b.bookingDate === bookingDateFilter)
+            .sort((a, b) => `${a.bookingDate}T${a.startTime}`.localeCompare(`${b.bookingDate}T${b.startTime}`));
+
+          if (myBookings.length === 0) {
+            return (
+              <div className="portal-card" style={{ padding: 24, textAlign: 'center' }}>
+                <p className="row-card__meta" style={{ margin: 0 }}>
+                  {memberText("Chưa có lịch hẹn 1:1.")}</p>
+              </div>
+            );
+          }
+
+          if (visibleBookings.length === 0) {
+            return (
+              <div className="portal-card" style={{ padding: 24, textAlign: 'center', display: 'grid', gap: 10, justifyItems: 'center' }}>
+                <p className="row-card__meta" style={{ margin: 0 }}>
+                  {memberText(`Không có lịch hẹn 1:1 vào ngày ${formatCenterDate(bookingDateFilter)}.`, `No 1:1 bookings on ${formatCenterDate(bookingDateFilter)}.`)}
+                </p>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: 13, padding: '6px 12px' }}
+                  onClick={() => setBookingDateFilter('')}
+                >
+                  {memberText('Xem tất cả ngày', 'Show all days')}
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {visibleBookings.map((b) => {
               const isCancelled = b.status === 'cancelled';
               const hasEnded = isSessionCompleted(b);
               const isConfirmed = !isCancelled;
@@ -1129,8 +1167,9 @@ export function MemberCoachBookingView({
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </section>
 
       {/* Modal Xác nhận Đặt lịch */}

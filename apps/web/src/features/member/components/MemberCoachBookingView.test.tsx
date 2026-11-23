@@ -320,7 +320,7 @@ describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
       expect(host.textContent).toContain('Trần Thị Mỹ Trâm');
     });
 
-    it('sorts member PT bookings by day ascending by default and toggles descending', async () => {
+    it('sorts member PT bookings chronologically and filters by selected day', async () => {
       mocks.getMyCoachBookings.mockResolvedValue([
         {
           id: 201,
@@ -368,17 +368,30 @@ describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
       const textAsc = host.textContent ?? '';
       expect(textAsc.indexOf('25/11/2026')).toBeLessThan(textAsc.indexOf('26/11/2026'));
 
-      const sortBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
-        b.textContent?.includes('Sắp xếp theo ngày:')
-      );
-      expect(sortBtn).toBeDefined();
+      const dateInput = host.querySelector<HTMLInputElement>('input[type="date"]');
+      expect(dateInput).not.toBeNull();
 
       await act(async () => {
-        sortBtn?.click();
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        setter?.call(dateInput, '2026-11-26');
+        dateInput?.dispatchEvent(new Event('input', { bubbles: true }));
+        dateInput?.dispatchEvent(new Event('change', { bubbles: true }));
       });
 
-      const textDesc = host.textContent ?? '';
-      expect(textDesc.indexOf('26/11/2026')).toBeLessThan(textDesc.indexOf('25/11/2026'));
+      expect(host.textContent).toContain('26/11/2026');
+      expect(host.textContent).not.toContain('25/11/2026');
+
+      const allDaysBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+        b.textContent?.includes('Tất cả ngày')
+      );
+      expect(allDaysBtn).toBeDefined();
+
+      await act(async () => {
+        allDaysBtn?.click();
+      });
+
+      expect(host.textContent).toContain('25/11/2026');
+      expect(host.textContent).toContain('26/11/2026');
     });
   });
 });
