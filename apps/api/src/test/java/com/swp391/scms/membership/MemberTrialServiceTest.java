@@ -416,4 +416,43 @@ class MemberTrialServiceTest {
                 "https://attacker.example/x.png", null);
         assertThrows(com.swp391.scms.common.exception.BadRequestException.class, () -> service.requestTrial(principal, request));
     }
+
+    @Test
+    void requestTrialReusesVerifiedMemberKycWhenRequestOmitsDocumentDetails() {
+        com.swp391.scms.users.KycCrypto kycCrypto = new com.swp391.scms.users.KycCrypto("test-kyc-secret-key-for-unit-test");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "kycCrypto", kycCrypto);
+
+        testMember.getUser().setFullName("Nguyen Van Test");
+        testMember.setIdentityVerified(true);
+        testMember.setKycStatus("APPROVED");
+        testMember.setDocumentType("CCCD");
+        testMember.setNationality("VN");
+        testMember.setCitizenIdEncrypted(kycCrypto.encrypt("001200009999"));
+        String validPngDataUrl = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+        testMember.setFrontImageUrl(validPngDataUrl);
+        testMember.setBackImageUrl(validPngDataUrl);
+
+        when(members.findById(10L)).thenReturn(java.util.Optional.of(testMember));
+        when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
+        when(trialRedemptions.existsByCccdHashAndMemberUserIdNot(hasher.hash("001200009999"), 10L)).thenReturn(false);
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> {
+            MemberTrialRedemption r = inv.getArgument(0);
+            r.setId(99L);
+            return r;
+        });
+
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
+        TrialClaimRequest request = new TrialClaimRequest(null, null, null, null, null, null, null);
+
+        var result = service.requestTrial(principal, request);
+
+        assertEquals(MemberTrialRedemption.STATUS_PENDING, result.status());
+        org.mockito.ArgumentCaptor<MemberTrialRedemption> captor = org.mockito.ArgumentCaptor.forClass(MemberTrialRedemption.class);
+        verify(trialRedemptions).saveAndFlush(captor.capture());
+        assertEquals(hasher.hash("001200009999"), captor.getValue().getCccdHash());
+        assertEquals("Nguyen Van Test", captor.getValue().getFullName());
+        assertEquals(validPngDataUrl, captor.getValue().getFrontImageUrl());
+        assertEquals(validPngDataUrl, captor.getValue().getBackImageUrl());
+    }
 }
