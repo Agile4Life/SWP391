@@ -49,8 +49,6 @@ export interface CoachBookingDto {
   membershipCode?: string | null;
   memberPhone?: string | null;
   memberEmail?: string | null;
-  phone?: string | null;
-  email?: string | null;
 }
 
 export interface CoachBookingCreatePayload {

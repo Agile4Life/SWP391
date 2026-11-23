@@ -19,6 +19,7 @@ import { parseISODate } from '../schedule/timetable';
 import { ptBookingEvents } from './coachTimetable';
 import './coach-classes.css';
 import { formatCenterDate } from '../../shared/lib/centerTime';
+import { matchPtSearch } from './ptSearch';
 
 function getWeekMonday(date: Date): Date {
   const d = new Date(date);
@@ -36,32 +37,6 @@ function formatYmd(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function matchPtSearch(b: CoachBookingDto, query: string): boolean {
-  if (!query) return true;
-  const q = query.trim().toLowerCase();
-  const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-
-  // 1. Tên học viên
-  const name = (b.memberName ?? '').toLowerCase();
-  const nameNorm = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-  if (name.includes(q) || nameNorm.includes(qNorm)) return true;
-
-  // 2. Mã thẻ / mã học viên
-  const code = (b.membershipCode ?? '').toLowerCase();
-  const idStr = String(b.memberId ?? '');
-  if (code.includes(q) || idStr === q || `mem-${idStr}`.includes(q) || `#${idStr}`.includes(q)) return true;
-
-  // 3. Số điện thoại
-  const phone = (b.memberPhone ?? b.phone ?? '').toLowerCase().replace(/\s+/g, '');
-  const qPhone = q.replace(/\s+/g, '');
-  if (phone && phone.includes(qPhone)) return true;
-
-  // 4. Email
-  const email = (b.memberEmail ?? b.email ?? '').toLowerCase();
-  if (email && email.includes(q)) return true;
-
-  return false;
-}
 
 export function CoachClassesPage() {
   const { t } = useStaffI18n();

@@ -10,6 +10,7 @@ import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import type { CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { getPtAttendance, markPtAttended, unmarkPtAttended, type PtOutcome } from './ptAttendanceApi';
+import { matchPtSearch } from './ptSearch';
 
 const FILTERS: PtOutcome[] = ['ALL', 'ATTENDED', 'MISSED', 'UPCOMING'];
 
@@ -31,32 +32,6 @@ function outcomeOf(booking: CoachBookingDto, now: Date): Exclude<PtOutcome, 'ALL
   return hasStarted(booking, now) ? 'IN_PROGRESS' : 'UPCOMING';
 }
 
-function matchesSearch(row: CoachBookingDto, query: string): boolean {
-  if (!query) return true;
-  const q = query.trim().toLowerCase();
-  const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-
-  // 1. Tên học viên
-  const name = (row.memberName ?? '').toLowerCase();
-  const nameNorm = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-  if (name.includes(q) || nameNorm.includes(qNorm)) return true;
-
-  // 2. Mã thẻ / mã học viên
-  const code = (row.membershipCode ?? '').toLowerCase();
-  const idStr = String(row.memberId ?? '');
-  if (code.includes(q) || idStr === q || `mem-${idStr}`.includes(q) || `#${idStr}`.includes(q)) return true;
-
-  // 3. Số điện thoại
-  const phone = (row.memberPhone ?? row.phone ?? '').toLowerCase().replace(/\s+/g, '');
-  const qPhone = q.replace(/\s+/g, '');
-  if (phone && phone.includes(qPhone)) return true;
-
-  // 4. Email
-  const email = (row.memberEmail ?? row.email ?? '').toLowerCase();
-  if (email && email.includes(q)) return true;
-
-  return false;
-}
 
 /** Attendance of 1:1 sessions for coaches (their own) and for the front desk and managers (everyone's). */
 export function PtAttendancePage() {
@@ -124,7 +99,7 @@ export function PtAttendancePage() {
   for (const row of rows) counts[outcomeOf(row, now)] += 1;
   const visible = rows.filter((row) => {
     const matchFilter = filter === 'ALL' || outcomeOf(row, now) === filter;
-    const matchSearch = matchesSearch(row, search);
+    const matchSearch = matchPtSearch(row, search);
     return matchFilter && matchSearch;
   });
 
@@ -226,11 +201,11 @@ export function PtAttendancePage() {
                     {row.membershipCode ? <span className="muted" style={{ marginLeft: 6 }}>({row.membershipCode})</span> : row.memberId ? <span className="muted" style={{ marginLeft: 6 }}>(#{row.memberId})</span> : null}
                     {!isCoach && <> · {t('HLV', 'Coach')}: {row.coachName}</>}
                   </div>
-                  {(row.memberPhone || row.phone || row.memberEmail || row.email) && (
+                  {(row.memberPhone || row.memberEmail) && (
                     <div className="muted" style={{ fontSize: '0.82rem', marginTop: 2 }}>
-                      {row.memberPhone || row.phone}
-                      {((row.memberPhone || row.phone) && (row.memberEmail || row.email)) ? ' · ' : ''}
-                      {row.memberEmail || row.email}
+                      {row.memberPhone}
+                      {((row.memberPhone) && (row.memberEmail)) ? ' · ' : ''}
+                      {row.memberEmail}
                     </div>
                   )}
                   {row.gateCheckinAt && (
