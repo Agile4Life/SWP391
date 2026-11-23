@@ -757,6 +757,56 @@ class CoachBookingServiceTest {
     }
 
     @Test
+    @DisplayName("Nâng cấp từ Gold lên Platinum ngay trong ngày vẫn giữ đủ 3 lượt PT đã dùng của Gold")
+    void upgradingGoldToPlatinumSameDayCarriesOverGoldPtUsage() {
+        MembershipPackage goldPkg = new MembershipPackage();
+        goldPkg.setId(2L);
+        goldPkg.setName("GOLD 3 THÁNG");
+        goldPkg.setTier("GOLD");
+        goldPkg.setDurationDays(90);
+
+        MembershipPackage platPkg = new MembershipPackage();
+        platPkg.setId(3L);
+        platPkg.setName("PLATINUM 3 THÁNG");
+        platPkg.setTier("PLATINUM");
+        platPkg.setDurationDays(90);
+
+        LocalDate today = LocalDate.now(fixedClock);
+        // When Gold is upgraded on the same day, its endDate is clamped to today (0 days span),
+        // so it must NOT be misclassified as a 3-day Trial subscription.
+        MembershipSubscription goldSub = new MembershipSubscription();
+        goldSub.setId(68L);
+        goldSub.setMember(member);
+        goldSub.setMembershipPackage(goldPkg);
+        goldSub.setStatus("expired");
+        goldSub.setStartDate(today);
+        goldSub.setEndDate(today);
+        goldSub.setCreatedAt(LocalDateTime.now(fixedClock).minusHours(1));
+
+        MembershipSubscription platSub = new MembershipSubscription();
+        platSub.setId(69L);
+        platSub.setMember(member);
+        platSub.setMembershipPackage(platPkg);
+        platSub.setPreviousSubscription(goldSub);
+        platSub.setUpgradeCharge(new BigDecimal("800000.00"));
+        platSub.setStatus("active");
+        platSub.setStartDate(today);
+        platSub.setEndDate(today.plusDays(89));
+        platSub.setCreatedAt(LocalDateTime.now(fixedClock));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(platSub));
+        when(coachBookingRepository.countSubscriptionQuotaUsage(
+                eq(10L), any(), any(), eq("package_quota"), eq(List.of(69L, 68L)), eq(goldSub.getCreatedAt())))
+                .thenReturn(3L);
+
+        var quota = service.getMemberQuotaStatus(10L);
+
+        assertThat(quota.monthlyQuota()).isEqualTo(6);
+        assertThat(quota.usedThisMonth()).isEqualTo(3);
+        assertThat(quota.remainingQuota()).isEqualTo(3);
+    }
+
+    @Test
     void coachOnApprovedLeaveCannotBeBookedAndShowsNoFreeSlots() {
         var leaves = org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "staffRequestRepository", leaves);

@@ -241,16 +241,11 @@ public class CoachBookingService {
 
     private boolean isTrialSubscription(MembershipSubscription sub) {
         if (sub == null) return false;
-        if (sub.getMembershipPackage() != null) {
-            String name = sub.getMembershipPackage().getName();
-            if (name != null && (name.contains("Trải Nghiệm") || name.toUpperCase().contains("TRIAL"))) {
-                return true;
-            }
-            if (sub.getMembershipPackage().getDurationDays() > 0 && sub.getMembershipPackage().getDurationDays() <= 3) {
-                return true;
-            }
+        if (PackageBenefits.isTrial(sub.getMembershipPackage())) {
+            return true;
         }
-        if (sub.getStartDate() != null && sub.getEndDate() != null) {
+        if (sub.getUpgradeCharge() == null && !"expired".equalsIgnoreCase(sub.getStatus())
+                && sub.getStartDate() != null && sub.getEndDate() != null) {
             long days = java.time.temporal.ChronoUnit.DAYS.between(sub.getStartDate(), sub.getEndDate());
             return days >= 0 && days <= 3;
         }
