@@ -560,7 +560,7 @@ export function MemberProfilePage() {
                       type="text"
                       className="portal-input"
                       maxLength={150}
-                      placeholder={memberText("Vd: Yoga, Strength & Conditioning, Pilates...", "E.g. Yoga, Strength & Conditioning, Pilates...")}
+                      placeholder={memberText("Vd: Gym - Sức mạnh, Tăng cơ, Giảm mỡ...", "E.g. Gym - Strength, Muscle gain, Fat loss...")}
                       value={profile.specialization ?? ''}
                       onChange={(e) => patch({ specialization: e.target.value })}
                     />

@@ -26,8 +26,6 @@ import { ApiError } from '../../../shared/api/client';
 import {
   formatCoachName,
   isSessionCompleted,
-  matchesCoachDiscipline,
-  type CoachDisciplineFilter,
 } from '../coachBookingUtils';
 
 function coachBookingErrorMessage(err: unknown): string | SourceMessage {
@@ -94,7 +92,6 @@ export function MemberCoachBookingView({
   useLanguage();
   const navigate = useNavigate();
   const [coaches, setCoaches] = useState<CoachPublicDto[]>([]);
-  const [coachDiscipline, setCoachDiscipline] = useState<CoachDisciplineFilter>('ALL');
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(localToday());
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
@@ -289,20 +286,7 @@ export function MemberCoachBookingView({
   }, [selectedCoachId, slotDate]);
 
   const selectedCoach = coaches.find((c) => c.id === selectedCoachId);
-  const filteredCoaches = coaches.filter((c) => matchesCoachDiscipline(c, coachDiscipline));
 
-  function handleFilterCoachDiscipline(discipline: CoachDisciplineFilter) {
-    setCoachDiscipline(discipline);
-    const nextFiltered = coaches.filter((c) => matchesCoachDiscipline(c, discipline));
-    if (nextFiltered.length > 0) {
-      if (!nextFiltered.some((c) => c.id === selectedCoachId)) {
-        setSelectedCoachId(nextFiltered[0].id);
-        setError('');
-      }
-    } else {
-      setSelectedCoachId(null);
-    }
-  }
 
   const hasRemainingQuota = (quotaStatus?.remainingQuota ?? 0) > 0;
 
@@ -545,7 +529,7 @@ export function MemberCoachBookingView({
           </span>
         </div>
 
-        {filteredCoaches.length === 0 ? (
+        {coaches.length === 0 ? (
           <div
             className="portal-card"
             style={{
@@ -558,14 +542,8 @@ export function MemberCoachBookingView({
             }}
           >
             <p style={{ margin: '0 0 10px', fontSize: 14 }}>
-              {memberText("Chưa có huấn luyện viên nào cho bộ môn ")}<strong>{coachDiscipline}</strong>.
+              {memberText("Chưa có huấn luyện viên nào.")}
             </p>
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              onClick={() => handleFilterCoachDiscipline('ALL')}
-            >
-              {memberText("Xem tất cả huấn luyện viên")}</button>
           </div>
         ) : (
           <div
@@ -575,7 +553,7 @@ export function MemberCoachBookingView({
               gap: 14,
             }}
           >
-            {filteredCoaches.map((c) => {
+            {coaches.map((c) => {
               const isSelected = c.id === selectedCoachId;
               return (
                 <button

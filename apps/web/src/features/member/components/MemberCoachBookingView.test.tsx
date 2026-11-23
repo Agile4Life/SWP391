@@ -8,8 +8,6 @@ import {
 import {
   formatCoachName,
   isSessionCompleted,
-  COACH_FILTER_DISCIPLINES,
-  matchesCoachDiscipline,
 } from '../coachBookingUtils';
 
 const mocks = vi.hoisted(() => ({
@@ -206,79 +204,8 @@ describe('MemberCoachBookingView membership notice', () => {
   });
 });
 
-describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
-  it('has ALL, Gym, Boxing, Yoga as filter disciplines', () => {
-    expect(COACH_FILTER_DISCIPLINES).toEqual(['ALL', 'Gym', 'Boxing', 'Yoga']);
-  });
-
-  it('matches coaches by discipline patterns accurately', () => {
-    const gymCoach = {
-      id: 1,
-      fullName: 'Huỳnh Đắc Tài',
-      email: 'tai@example.com',
-      phone: '0901234567',
-      specialization: 'Fitness & Cardio',
-      bio: 'Chuyên gia huấn luyện thể hình và phục hồi thể lực.',
-      certification: 'NASM',
-      avatarUrl: null,
-      defaultHourlyRate: 200000,
-    };
-    const multiCoach = {
-      id: 2,
-      fullName: 'Nguyễn Minh Quân',
-      email: 'quan@example.com',
-      phone: '0901234568',
-      specialization: 'Yoga & Strength',
-      bio: 'HLV 5 nam kinh nghiem',
-      certification: 'Yoga Alliance',
-      avatarUrl: null,
-      defaultHourlyRate: 200000,
-    };
-    const yogaCoach = {
-      id: 3,
-      fullName: 'Trần Thị Mỹ Trâm',
-      email: 'tram@example.com',
-      phone: '0901234569',
-      specialization: 'Pilates & Yoga',
-      bio: '',
-      certification: '',
-      avatarUrl: null,
-      defaultHourlyRate: 200000,
-    };
-    const boxingCoach = {
-      id: 4,
-      fullName: 'Võ Văn Quyền',
-      email: 'quyen@example.com',
-      phone: '0901234570',
-      specialization: 'Boxing & Kickfit',
-      bio: 'Võ sĩ boxing chuyên nghiệp',
-      certification: '',
-      avatarUrl: null,
-      defaultHourlyRate: 200000,
-    };
-
-    // ALL matches everything
-    expect(matchesCoachDiscipline(gymCoach, 'ALL')).toBe(true);
-    expect(matchesCoachDiscipline(yogaCoach, 'ALL')).toBe(true);
-    expect(matchesCoachDiscipline(boxingCoach, 'ALL')).toBe(true);
-
-    // Gym matching
-    expect(matchesCoachDiscipline(gymCoach, 'Gym')).toBe(true);
-    expect(matchesCoachDiscipline(multiCoach, 'Gym')).toBe(true);
-    expect(matchesCoachDiscipline(yogaCoach, 'Gym')).toBe(false);
-
-    // Yoga matching
-    expect(matchesCoachDiscipline(yogaCoach, 'Yoga')).toBe(true);
-    expect(matchesCoachDiscipline(multiCoach, 'Yoga')).toBe(true);
-    expect(matchesCoachDiscipline(gymCoach, 'Yoga')).toBe(false);
-
-    // Boxing matching
-    expect(matchesCoachDiscipline(boxingCoach, 'Boxing')).toBe(true);
-    expect(matchesCoachDiscipline(gymCoach, 'Boxing')).toBe(false);
-    expect(matchesCoachDiscipline(yogaCoach, 'Boxing')).toBe(false);
-  });
-
-  describe('UI Interaction for discipline chips', () => {
+describe('MemberCoachBookingView coach list & booking order', () => {
+  describe('UI interaction', () => {
     let host: HTMLDivElement;
     let root: Root;
 
