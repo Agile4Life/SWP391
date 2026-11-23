@@ -49,6 +49,23 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
+  it('returns an empty list only when the lookup API succeeds without matches', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200,
+      json: async () => ({ success: true, data: [] }) });
+    vi.stubGlobal('fetch', mockFetch);
+    expect(await receptionApi.lookupMembers('missing')).toEqual([]);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([403, 500])('propagates lookup HTTP %s without requesting /users or inventing member codes', async (status) => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: false, status,
+      json: async () => ({ success: false, message: 'Lookup failed' }) });
+    vi.stubGlobal('fetch', mockFetch);
+    await expect(receptionApi.lookupMembers('1234')).rejects.toThrow();
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith('/api/v1/members/lookup?q=1234', expect.anything());
+  });
+
   it('BR-02: getActivePackages only returns packages with status === active', async () => {
     const mockPackages = [
       { id: 1, name: 'The Essential', price: 2800000, durationDays: 30, status: 'active' },

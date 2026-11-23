@@ -50,6 +50,7 @@ export function StaffReceptionPage() {
   // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký / gia hạn / nâng cấp)
   const [pendingList, setPendingList] = useState<PendingSubscriptionItem[]>([]);
   const [loadingPending, setLoadingPending] = useState(true);
+  const [pendingError, setPendingError] = useState<StaffMessage>('');
   const [selectedPending, setSelectedPending] = useState<PendingSubscriptionItem | null>(null);
   const [cancellingPendingId, setCancellingPendingId] = useState<number | null>(null);
   const [packages, setPackages] = useState<MembershipPackage[]>([]);
@@ -62,6 +63,7 @@ export function StaffReceptionPage() {
   // Danh sách yêu cầu bảo lưu gói tập đang chờ xử lý
   const [holdList, setHoldList] = useState<HoldRequestItem[]>([]);
   const [loadingHolds, setLoadingHolds] = useState(true);
+  const [holdsError, setHoldsError] = useState<StaffMessage>('');
 
   // Buổi PT 1:1 trả phí chờ thu tiền
   const [unpaidPt, setUnpaidPt] = useState<UnpaidCoachBooking[]>([]);
@@ -94,6 +96,8 @@ export function StaffReceptionPage() {
 
   // Ví SÖL của hội viên đang chọn & Modal nạp tiền tại quầy
   const [memberWalletBalance, setMemberWalletBalance] = useState<number | null>(null);
+  const [walletError, setWalletError] = useState(false);
+  const [walletRetry, setWalletRetry] = useState(0);
   const [isTopupModalOpen, setIsTopupModalOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState('200000');
   const [topupMethod, setTopupMethod] = useState<'cash' | 'bank_transfer' | 'pos'>('cash');
@@ -105,6 +109,7 @@ export function StaffReceptionPage() {
   // Danh sách đơn đăng ký Gói Trải Nghiệm 3 Ngày chờ Lễ tân duyệt
   const [trialList, setTrialList] = useState<ReceptionTrialItem[]>([]);
   const [loadingTrials, setLoadingTrials] = useState(true);
+  const [trialsError, setTrialsError] = useState<StaffMessage>('');
   const [processingTrialId, setProcessingTrialId] = useState<number | null>(null);
   const [inspectingTrial, setInspectingTrial] = useState<ReceptionTrialItem | null>(null);
   const [rejectingTrial, setRejectingTrial] = useState<ReceptionTrialItem | null>(null);
@@ -124,14 +129,19 @@ export function StaffReceptionPage() {
   }, [hasAccess, selectedMemberId, selectedPendingId]);
 
   useEffect(() => {
+    // null là chưa có số dư xác thực; lỗi tải không được biến thành số dư 0 của hội viên.
     setMemberWalletBalance(null);
+    setWalletError(false);
     if (!hasAccess || selectedMemberId == null) return;
     let active = true;
     receptionApi.getMemberWallet(selectedMemberId)
-      .then((wallet) => { if (active) setMemberWalletBalance(Number(wallet?.balance ?? 0)); })
-      .catch(() => { if (active) setMemberWalletBalance(0); });
+      .then((wallet) => {
+        if (wallet?.balance == null || !Number.isFinite(Number(wallet.balance))) throw new Error('Invalid wallet balance');
+        if (active) setMemberWalletBalance(Number(wallet.balance));
+      })
+      .catch(() => { if (active) setWalletError(true); });
     return () => { active = false; };
-  }, [hasAccess, selectedMemberId]);
+  }, [hasAccess, selectedMemberId, walletRetry]);
 
   const handleOpenTopupModal = () => {
     if (!selectedMember) return;
@@ -168,6 +178,7 @@ export function StaffReceptionPage() {
       topupAttemptRef.current = null;
       const newBalance = Number(updated?.balance ?? 0);
       setMemberWalletBalance(newBalance);
+      setWalletError(false);
       setIsTopupModalOpen(false);
       notify(
         staffMessage(
@@ -190,9 +201,11 @@ export function StaffReceptionPage() {
     try {
       const items = await receptionApi.getPendingSubscriptions();
       setPendingList(items);
+      setPendingError('');
       setSelectedPending((prev) => items.find((item) => item.id === prev?.id) ?? null);
     } catch {
-      if (!silent) setPendingList([]);
+      // Giữ dữ liệu lần tải thành công trước; API lỗi không có nghĩa là hàng chờ đã hết việc.
+      setPendingError(staffMessage('Không thể tải gói tập chờ thanh toán. Vui lòng thử lại.', 'Unable to load pending memberships. Please try again.'));
     } finally {
       if (!silent) setLoadingPending(false);
     }
@@ -204,8 +217,9 @@ export function StaffReceptionPage() {
     try {
       const items = await receptionApi.getPendingHoldRequests();
       setHoldList(items);
+      setHoldsError('');
     } catch {
-      if (!silent) setHoldList([]);
+      setHoldsError(staffMessage('Không thể tải yêu cầu bảo lưu. Vui lòng thử lại.', 'Unable to load hold requests. Please try again.'));
     } finally {
       if (!silent) setLoadingHolds(false);
     }
@@ -235,8 +249,9 @@ export function StaffReceptionPage() {
     try {
       const items = await receptionApi.getPendingTrials();
       setTrialList(items);
+      setTrialsError('');
     } catch {
-      if (!silent) setTrialList([]);
+      setTrialsError(staffMessage('Không thể tải yêu cầu dùng thử. Vui lòng thử lại.', 'Unable to load trial requests. Please try again.'));
     } finally {
       if (!silent) setLoadingTrials(false);
     }
@@ -244,6 +259,8 @@ export function StaffReceptionPage() {
 
   const todoCount = pendingList.length + unpaidPt.length + trialList.length + holdList.length;
   const loadingTodo = loadingPending || loadingHolds || loadingPt || loadingTrials;
+  const todoErrors = { plan: pendingError, pt: ptError, trial: trialsError, hold: holdsError };
+  const hasTodoError = Object.values(todoErrors).some(Boolean);
   const reloadTodo = useCallback(() => Promise.all([
     loadPendingSubscriptions(), loadPendingHolds(), loadUnpaidPt(), loadPendingTrials(),
   ]), [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
@@ -500,9 +517,11 @@ export function StaffReceptionPage() {
     if (invalid) return;
 
     setIsSearching(true);
-    setHasSearched(true);
+    // Chỉ đánh dấu đã tìm khi API thành công, tránh hiển thị "không tìm thấy" trong lúc lỗi hoặc đang tải.
+    setHasSearched(false);
     try {
       const results = await receptionApi.lookupMembers(q);
+      setHasSearched(true);
       setSearchResults(results);
       if (results.length > 0) {
         const member = results[0];
@@ -578,6 +597,14 @@ export function StaffReceptionPage() {
     }
   };
 
+  // Dùng chung trạng thái số dư ở thông tin hội viên và modal; thử lại chỉ đọc API, không nạp tiền.
+  const walletBalanceContent = walletError ? (
+    <span role="alert" className="form-error">
+      {t('Không thể tải số dư ví. Vui lòng thử lại.', 'Unable to load wallet balance. Please try again.')}{' '}
+      <RefreshButton label={t('Tải lại số dư ví', 'Reload wallet balance')} onClick={() => setWalletRetry((value) => value + 1)} />
+    </span>
+  ) : memberWalletBalance != null ? formatPrice(memberWalletBalance) : t('Đang tải…', 'Loading…');
+
   return (
     <div data-i18n-managed className="portal-container">
       <PageHeader
@@ -649,7 +676,7 @@ export function StaffReceptionPage() {
               <RefreshButton label={t("Làm mới danh sách")} onClick={() => void reloadTodo()} disabled={loadingTodo} />
             </div>
 
-            {todoCount > 0 && (
+            {(todoCount > 0 || hasTodoError) && (
               <div className="filter-chips" style={{ marginBottom: 12 }} role="group" aria-label={t('Lọc danh sách cần xử lý', 'Filter pending queue')}>
                 {[
                   { key: 'all' as const, label: t('Tất cả', 'All'), count: todoCount },
@@ -658,7 +685,7 @@ export function StaffReceptionPage() {
                   { key: 'trial' as const, label: t('Trải nghiệm', 'Trials'), count: trialList.length },
                   { key: 'hold' as const, label: t('Bảo lưu', 'Holds'), count: holdList.length },
                 ]
-                  .filter((tab) => tab.key === 'all' || tab.count > 0)
+                  .filter((tab) => tab.key === 'all' || tab.count > 0 || !!todoErrors[tab.key])
                   .map((tab) => (
                     <button
                       key={tab.key}
@@ -674,6 +701,18 @@ export function StaffReceptionPage() {
             )}
 
             <div className="reception-todo">
+              {/* Mỗi hàng chờ có lỗi và nút thử lại riêng; không che dữ liệu của các nhóm đã tải thành công. */}
+              {[
+                { key: 'plan', error: pendingError, loading: loadingPending, retry: loadPendingSubscriptions, label: t('Tải lại gói tập chờ thanh toán', 'Reload pending memberships') },
+                { key: 'trial', error: trialsError, loading: loadingTrials, retry: loadPendingTrials, label: t('Tải lại yêu cầu dùng thử', 'Reload trial requests') },
+                { key: 'hold', error: holdsError, loading: loadingHolds, retry: loadPendingHolds, label: t('Tải lại yêu cầu bảo lưu', 'Reload hold requests') },
+              ].map((queue) => queue.error && (todoFilter === 'all' || todoFilter === queue.key) && (
+                <div key={queue.key} role="alert" className="form-error">
+                  {t(queue.error)}{' '}
+                  <button type="button" className="btn-secondary btn-sm" aria-label={queue.label}
+                    disabled={queue.loading} onClick={() => void queue.retry()}>{t('Thử lại', 'Retry')}</button>
+                </div>
+              ))}
               {(todoFilter === 'all' || todoFilter === 'plan') && (loadingPending ? (
                   <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
                     <span className="sr-only">{t("Đang tải danh sách yêu cầu chờ thanh toán...")}</span>
@@ -1057,14 +1096,14 @@ export function StaffReceptionPage() {
                   </>
                 ))}
 
-              {!loadingTodo && !ptError && todoCount === 0 && (
+              {!loadingTodo && !hasTodoError && todoCount === 0 && (
                 <div data-i18n-managed className="reception-todo__empty">{t("Không có việc nào cần xử lý.")}</div>
               )}
               {!loadingTodo && todoCount > 0 && todoFilter !== 'all' && (
-                (todoFilter === 'plan' && pendingList.length === 0)
+                (todoFilter === 'plan' && pendingList.length === 0 && !pendingError)
                 || (todoFilter === 'pt' && unpaidPt.length === 0 && !ptError)
-                || (todoFilter === 'trial' && trialList.length === 0)
-                || (todoFilter === 'hold' && holdList.length === 0)
+                || (todoFilter === 'trial' && trialList.length === 0 && !trialsError)
+                || (todoFilter === 'hold' && holdList.length === 0 && !holdsError)
               ) && (
                 <div data-i18n-managed className="reception-todo__empty">
                   {t('Không có mục nào trong nhóm đã chọn.', 'No items in the selected category.')}{' '}
@@ -1149,7 +1188,7 @@ export function StaffReceptionPage() {
                   <span>{t('Số dư Ví SÖL', 'SÖL Wallet balance')}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <strong data-testid="member-wallet-balance" style={{ color: 'var(--portal-salmon, #fb923c)', fontSize: '0.96rem' }}>
-                      {memberWalletBalance != null ? formatPrice(memberWalletBalance) : t('Đang tải…', 'Loading…')}
+                      {walletBalanceContent}
                     </strong>
                     <button
                       type="button"
@@ -1336,7 +1375,7 @@ export function StaffReceptionPage() {
               <br />
               {t('Số dư hiện tại: ', 'Current balance: ')}
               <strong style={{ color: 'var(--portal-salmon, #fb923c)' }}>
-                {formatPrice(memberWalletBalance ?? 0)}
+                {walletBalanceContent}
               </strong>
             </div>
 

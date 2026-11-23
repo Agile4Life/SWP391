@@ -90,6 +90,78 @@ async function chooseAndPay(value: string) {
   await act(async () => select.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 }
 
+it('shows a lookup failure separately from a successful empty search', async () => {
+  api.lookupMembers.mockRejectedValueOnce(new Error('Lookup unavailable'));
+  await selectMember();
+  expect(host.querySelector('#reception-search-error')?.textContent).toContain('Lookup unavailable');
+  expect(host.textContent).not.toContain('Không tìm thấy hội viên');
+  api.lookupMembers.mockResolvedValueOnce([]);
+  const input = host.querySelector('input[placeholder^="Nhập Số điện thoại"]')!;
+  await act(async () => input.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(host.querySelector('#reception-search-error')).toBeNull();
+  expect(host.textContent).toContain('Không tìm thấy hội viên');
+});
+
+it('does not invent a zero wallet balance on failure and retries the read without making a transaction', async () => {
+  api.getMemberWallet.mockRejectedValueOnce(new Error('Wallet unavailable'));
+  await selectMember();
+  expect(host.textContent).toContain('Không thể tải số dư ví. Vui lòng thử lại.');
+  expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).not.toMatch(/0\s*[đ₫]/);
+  await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="open-counter-topup-modal-btn"]')!.click());
+  expect(document.body.querySelectorAll('dialog strong')[1]?.textContent).not.toMatch(/0\s*[đ₫]/);
+  api.getMemberWallet.mockResolvedValueOnce({ balance: 250000 });
+  const retry = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(b => b.getAttribute('aria-label') === 'Tải lại số dư ví')!;
+  await act(async () => retry.click());
+  expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).toContain('250.000');
+  expect(host.textContent).not.toContain('Không thể tải số dư ví. Vui lòng thử lại.');
+  expect(api.topupMemberWallet).not.toHaveBeenCalled();
+  expect(api.processPayment).not.toHaveBeenCalled();
+});
+
+it('displays a genuine zero balance returned by the wallet API', async () => {
+  api.getMemberWallet.mockResolvedValueOnce({ balance: 0 });
+  await selectMember();
+  expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).toMatch(/0\s*[đ₫]/);
+  expect(host.textContent).not.toContain('Không thể tải số dư ví. Vui lòng thử lại.');
+});
+
+it.each([
+  ['getPendingSubscriptions', 'gói tập chờ thanh toán', 'Tải lại gói tập chờ thanh toán', 'plan'],
+  ['getPendingHoldRequests', 'yêu cầu bảo lưu', 'Tải lại yêu cầu bảo lưu', 'hold'],
+  ['getPendingTrials', 'yêu cầu dùng thử', 'Tải lại yêu cầu dùng thử', 'trial'],
+] as const)('shows %s errors instead of empty queues and clears the error after retry', async (method, label, retryLabel, filter) => {
+  api[method].mockRejectedValue(new Error('Offline'));
+  await act(async () => root.render(<StaffReceptionPage />));
+  const card = host.querySelector('.reception-top__queue')!;
+  expect(card.textContent).toContain(`Không thể tải ${label}. Vui lòng thử lại.`);
+  expect(card.textContent).not.toContain('Không có việc nào cần xử lý');
+  const tabs = { plan: 'Gói tập', hold: 'Bảo lưu', trial: 'Trải nghiệm' };
+  const tab = [...card.querySelectorAll<HTMLButtonElement>('.filter-chip')].find(b => b.textContent?.startsWith(tabs[filter]))!;
+  await act(async () => tab.click());
+  expect(card.textContent).not.toContain('Không có mục nào trong nhóm đã chọn');
+  api[method].mockResolvedValue([]);
+  const retry = card.querySelector<HTMLButtonElement>(`button[aria-label="${retryLabel}"]`)!;
+  await act(async () => retry.click());
+  expect(card.textContent).not.toContain(`Không thể tải ${label}`);
+  expect(card.textContent).toContain('Không có việc nào cần xử lý');
+});
+
+it('keeps successful queue data when another queue fails and when its own refresh fails', async () => {
+  const pending = { id: 77, memberId: 10, membershipCode: 'MB-10', memberName: 'An', memberEmail: 'an@example.test',
+    memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30, packagePrice: 200000,
+    startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01' };
+  api.getPendingSubscriptions.mockResolvedValueOnce([pending]).mockRejectedValue(new Error('Offline'));
+  api.getPendingTrials.mockRejectedValue(new Error('Offline'));
+  await act(async () => root.render(<StaffReceptionPage />));
+  const card = host.querySelector('.reception-top__queue')!;
+  expect(card.textContent).toContain('Yêu cầu #77');
+  // Refresh nền thất bại phải giữ bản ghi cũ và báo lỗi, không đổi thành danh sách rỗng.
+  await act(async () => window.dispatchEvent(new Event('online')));
+  expect(card.textContent).toContain('Yêu cầu #77');
+  expect(card.textContent).toContain('Không thể tải gói tập chờ thanh toán');
+  expect(card.textContent).toContain('Không thể tải yêu cầu dùng thử');
+});
+
 it('sells an active package at the counter for a member without a pending order', async () => {
   await selectMember();
   await chooseAndPay('buy:2');
