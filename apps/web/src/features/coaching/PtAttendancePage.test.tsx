@@ -215,4 +215,44 @@ describe('PtAttendancePage', () => {
       expect(tab('Không có mặt').textContent).toContain('(1)');
     } finally { vi.useRealTimers(); }
   });
+
+  it('filters sessions by student name, card code, phone or email search query', async () => {
+    const studentA = { ...attended, id: 10, memberId: 100, memberName: 'Nguyễn Văn A', membershipCode: 'MEM-100', memberPhone: '0912345678', memberEmail: 'a@gmail.com' };
+    const studentB = { ...attended, id: 11, memberId: 101, memberName: 'Trần Thị B', membershipCode: 'MEM-101', memberPhone: '0987654321', memberEmail: 'b@gmail.com' };
+    mocks.load.mockResolvedValue([studentA, studentB]);
+    await render();
+
+    expect(host.querySelector('[data-testid="pt-row-10"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-11"]')).not.toBeNull();
+
+    const searchInput = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+    expect(searchInput).not.toBeNull();
+
+    const doSearch = async (val: string) => {
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(searchInput, val);
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    };
+
+    await doSearch('Nguyễn Văn A');
+    expect(host.querySelector('[data-testid="pt-row-10"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-11"]')).toBeNull();
+
+    await doSearch('MEM-101');
+    expect(host.querySelector('[data-testid="pt-row-10"]')).toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-11"]')).not.toBeNull();
+
+    await doSearch('0912345678');
+    expect(host.querySelector('[data-testid="pt-row-10"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-11"]')).toBeNull();
+
+    await doSearch('b@gmail.com');
+    expect(host.querySelector('[data-testid="pt-row-10"]')).toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-11"]')).not.toBeNull();
+
+    await doSearch('Không tồn tại');
+    expect(host.textContent).toContain('Không tìm thấy học viên phù hợp');
+  });
 });

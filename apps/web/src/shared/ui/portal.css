@@ -1931,6 +1931,33 @@ textarea.portal-textarea:focus-visible,
 /* Bảng "Giáo án đã lưu": các nút cùng một hàng, nút Xóa cùng dáng viền với nút phụ; tên học viên không bị bóp hẹp. */
 .saved-plan-member { min-width: 160px; }
 .saved-plan-member .muted { margin-top: 2px; white-space: nowrap; }
-.saved-plan-actions { display: flex; flex-wrap: nowrap; justify-content: flex-end; align-items: center; gap: 6px; }
+.portal-table th.actions,
+.portal-table td.actions {
+  white-space: nowrap;
+  text-align: right;
+  width: 1%;
+}
+.saved-plan-actions {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.saved-plan-actions button,
+.saved-plan-actions .btn,
+.saved-plan-actions .btn-sm,
+.saved-plan-actions .btn-primary,
+.saved-plan-actions .btn-secondary,
+.saved-plan-actions .btn-danger {
+  white-space: nowrap !important;
+  flex-shrink: 0 !important;
+  min-width: max-content !important;
+  word-break: keep-all !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 .portal-table td.actions .saved-plan-actions > .btn-secondary + .btn-secondary { margin-left: 0; }
 .saved-plan-actions .btn-danger { border-width: 1px; border-style: solid; letter-spacing: normal; text-transform: none; }

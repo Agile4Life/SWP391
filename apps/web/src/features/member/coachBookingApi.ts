@@ -46,6 +46,11 @@ export interface CoachBookingDto {
   attendanceLocked?: boolean;
   /** Gate check-in that covered the session (attendance list only); a hint, never the attendance itself. */
   gateCheckinAt?: string | null;
+  membershipCode?: string | null;
+  memberPhone?: string | null;
+  memberEmail?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }
 
 export interface CoachBookingCreatePayload {

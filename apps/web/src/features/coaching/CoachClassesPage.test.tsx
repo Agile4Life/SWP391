@@ -222,4 +222,52 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     expect(dialog.textContent).toContain('Đau vai trái');
     expect(dialog.textContent).toContain('Quyền lợi gói tập');
   });
+
+  it('filters PT sessions on the weekly timetable by student search query', async () => {
+    vi.mocked(getCoachSchedule).mockResolvedValueOnce([
+      {
+        id: 9,
+        memberId: 1,
+        memberName: 'Phạm Quốc Bảo',
+        membershipCode: 'MB-001',
+        bookingDate: currentMondayStr,
+        startTime: '08:00:00',
+        endTime: '09:00:00',
+        status: 'confirmed',
+      },
+      {
+        id: 10,
+        memberId: 2,
+        memberName: 'Lê Hoàng Long',
+        membershipCode: 'MB-002',
+        bookingDate: currentMondayStr,
+        startTime: '10:00:00',
+        endTime: '11:00:00',
+        status: 'confirmed',
+      },
+    ] as never);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>
+      );
+    });
+
+    const searchInput = host.querySelector<HTMLInputElement>('input[placeholder*="Tìm theo tên học viên"]')!;
+    expect(searchInput).not.toBeNull();
+
+    expect(host.querySelectorAll('.mcal__event--mine')).toHaveLength(2);
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(searchInput, 'Quốc Bảo');
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    const filteredEvents = host.querySelectorAll('.mcal__event--mine');
+    expect(filteredEvents).toHaveLength(1);
+    expect(filteredEvents[0].textContent).toContain('Phạm Quốc Bảo');
+  });
 });

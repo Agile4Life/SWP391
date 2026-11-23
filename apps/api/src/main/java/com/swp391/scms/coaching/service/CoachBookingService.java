@@ -823,7 +823,10 @@ public class CoachBookingService {
                 b.getCancelReason(),
                 b.getAttendedAt(),
                 b.isAttendanceLocked(),
-                gateCheckinAt
+                gateCheckinAt,
+                b.getMember() != null ? b.getMember().getMembershipCode() : null,
+                b.getMember() != null && b.getMember().getUser() != null ? b.getMember().getUser().getPhone() : null,
+                b.getMember() != null && b.getMember().getUser() != null ? b.getMember().getUser().getEmail() : null
         );
     }
     private String msg(String key, Object... args) {

@@ -149,74 +149,74 @@ export function StaffAccountsPage() {
       <form onSubmit={event => void submit(event)}>
         <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div className="portal-form-grid">
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="staff-name">{t("Họ và tên *")}</label>
-            <input id="staff-name" className="portal-input" required maxLength={150} autoComplete="name" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} />
-          </div>
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="staff-email">Email *</label>
-            <input
-              id="staff-email"
-              className="portal-input"
-              type="email"
-              required
-              maxLength={150}
-              autoComplete="email"
-              placeholder="mai.nguyen@sol.vn"
-              aria-invalid={!!fieldErrors.email}
-              aria-describedby={fieldErrors.email ? 'staff-email-error' : undefined}
-              value={form.email}
-              onChange={e => {
-                const value = e.target.value;
-                setForm({ ...form, email: value });
-                if (value.trim() || fieldErrors.email) {
-                  setFieldErrors(prev => ({ ...prev, email: validateStaffEmail(value, accounts) }));
-                }
-              }}
-              onBlur={() => {
-                if (form.email.trim() || fieldErrors.email) {
-                  setFieldErrors(prev => ({ ...prev, email: validateStaffEmail(form.email, accounts) }));
-                }
-              }}
-            />
-            {fieldErrors.email && <p id="staff-email-error" role="alert" className="form-error">{t(fieldErrors.email)}</p>}
-          </div>
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="staff-phone">{t("Số điện thoại")}</label>
-            <input
-              id="staff-phone"
-              className="portal-input"
-              type="tel"
-              maxLength={20}
-              autoComplete="tel"
-              aria-invalid={!!fieldErrors.phone}
-              aria-describedby={fieldErrors.phone ? 'staff-phone-error' : undefined}
-              value={form.phone}
-              onChange={e => {
-                const value = e.target.value;
-                setForm({ ...form, phone: value });
-                setFieldErrors(prev => ({ ...prev, phone: validateStaffPhone(value, accounts) }));
-              }}
-              onBlur={() => setFieldErrors(prev => ({ ...prev, phone: validateStaffPhone(form.phone, accounts) }))}
-            />
-            {fieldErrors.phone && <p id="staff-phone-error" role="alert" className="form-error">{t(fieldErrors.phone)}</p>}
-          </div>
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="staff-password">{t("Mật khẩu *")}</label>
-            <input id="staff-password" className="portal-input" type="password" required minLength={6} maxLength={50} autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-          </div>
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="staff-gender">{t("Giới tính *")}</label>
-            <Select id="staff-gender" className="portal-select" value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value as StaffAccountInput['gender'] })}>
-              <option value="male">{t("Nam")}</option><option value="female">{t("Nữ")}</option><option value="other">{t("Khác")}</option>
-            </Select>
-          </div>
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="staff-role">{t("Vai trò *")}</label>
-            <Select id="staff-role" className="portal-select" value={form.roleCode} onChange={e => setForm({ ...form, roleCode: e.target.value as StaffAccountInput['roleCode'] })}>
-              <option value="COACH">{t("Huấn luyện viên")}</option><option value="RECEPTIONIST">{t("Lễ tân")}</option>
-            </Select>
-          </div>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="staff-name">{t("Họ và tên *")}</label>
+              <input id="staff-name" className="portal-input" required maxLength={150} autoComplete="name" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} />
+            </div>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="staff-email">Email *</label>
+              <input
+                id="staff-email"
+                className="portal-input"
+                type="email"
+                required
+                maxLength={150}
+                autoComplete="email"
+                placeholder="mai.nguyen@sol.vn"
+                aria-invalid={!!fieldErrors.email}
+                aria-describedby={fieldErrors.email ? 'staff-email-error' : undefined}
+                value={form.email}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({ ...form, email: value });
+                  if (value.trim() || fieldErrors.email) {
+                    setFieldErrors(prev => ({ ...prev, email: validateStaffEmail(value, accounts) }));
+                  }
+                }}
+                onBlur={() => {
+                  if (form.email.trim() || fieldErrors.email) {
+                    setFieldErrors(prev => ({ ...prev, email: validateStaffEmail(form.email, accounts) }));
+                  }
+                }}
+              />
+              {fieldErrors.email && <p id="staff-email-error" role="alert" className="form-error">{t(fieldErrors.email)}</p>}
+            </div>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="staff-phone">{t("Số điện thoại")}</label>
+              <input
+                id="staff-phone"
+                className="portal-input"
+                type="tel"
+                maxLength={20}
+                autoComplete="tel"
+                aria-invalid={!!fieldErrors.phone}
+                aria-describedby={fieldErrors.phone ? 'staff-phone-error' : undefined}
+                value={form.phone}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({ ...form, phone: value });
+                  setFieldErrors(prev => ({ ...prev, phone: validateStaffPhone(value, accounts) }));
+                }}
+                onBlur={() => setFieldErrors(prev => ({ ...prev, phone: validateStaffPhone(form.phone, accounts) }))}
+              />
+              {fieldErrors.phone && <p id="staff-phone-error" role="alert" className="form-error">{t(fieldErrors.phone)}</p>}
+            </div>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="staff-password">{t("Mật khẩu *")}</label>
+              <input id="staff-password" className="portal-input" type="password" required minLength={6} maxLength={50} autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+            </div>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="staff-gender">{t("Giới tính *")}</label>
+              <Select id="staff-gender" className="portal-select" value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value as StaffAccountInput['gender'] })}>
+                <option value="male">{t("Nam")}</option><option value="female">{t("Nữ")}</option><option value="other">{t("Khác")}</option>
+              </Select>
+            </div>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="staff-role">{t("Vai trò *")}</label>
+              <Select id="staff-role" className="portal-select" value={form.roleCode} onChange={e => setForm({ ...form, roleCode: e.target.value as StaffAccountInput['roleCode'] })}>
+                <option value="COACH">{t("Huấn luyện viên")}</option><option value="RECEPTIONIST">{t("Lễ tân")}</option>
+              </Select>
+            </div>
           </div>
           <button className="btn-primary" type="submit" disabled={loading || Boolean(loadError)} aria-busy={saving}>{saving ? t('Đang tạo…') : t('Tạo tài khoản nhân sự')}</button>
         </fieldset>
