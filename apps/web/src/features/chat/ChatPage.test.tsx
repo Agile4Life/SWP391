@@ -188,7 +188,7 @@ it('tells a member without any coach class that only the front desk can be messa
   await act(async () => button('Cuộc trò chuyện mới').click());
   const notice = host.querySelector('[data-testid="chat-no-coach"]');
   expect(notice?.textContent).toContain('Chưa có huấn luyện viên để nhắn tin');
-  expect(notice?.querySelector('a')?.getAttribute('href')).toBe('/member/classes');
+  expect(notice?.querySelector('a')?.getAttribute('href')).toBe('/member/classes?tab=pt');
   expect(host.querySelector('[data-contact-id="3"]')).not.toBeNull();
 });
 

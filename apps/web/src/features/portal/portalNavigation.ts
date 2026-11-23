@@ -37,8 +37,7 @@ export const PORTAL_NAV: PortalNavItem[] = [
     { to: '/member/packages', label: 'Gói tập', en: 'Memberships' },
     { to: '/member/hold', label: 'Bảo lưu', en: 'Hold' },
   ] },
-  { to: '/member/classes', label: 'Lịch học & Đặt chỗ', icon: 'calendar', roles: ['MEMBER'] },
-  { to: '/member/courts', label: 'Đặt sân', icon: 'court', roles: ['MEMBER'] },
+  { to: '/member/classes', label: 'Lịch PT 1:1', icon: 'calendar', roles: ['MEMBER'] },
   { to: '/member/card', label: 'Thẻ & Check-in', icon: 'card', roles: ['MEMBER'], tabs: [
     { to: '/member/card', label: 'Thẻ hội viên', en: 'Member card' },
     { to: '/member/check-in', label: 'Quét QR cổng', en: 'Gate QR' },
@@ -103,8 +102,7 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/member/dashboard': 'Dashboard',
   '/member/explore': 'Explore 3D',
   '/member/packages': 'Memberships & Hold',
-  '/member/classes': 'Schedule & Booking',
-  '/member/courts': 'Court Booking',
+  '/member/classes': '1:1 PT schedule',
   '/member/card': 'Card & Check-in',
   '/member/invoices': 'Transactions & Invoices',
   '/member/orders': 'Shop & Orders',
@@ -149,7 +147,7 @@ export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label
   ],
   MEMBER: [
     { to: '/member/dashboard', label: 'Tổng quan' },
-    { to: '/member/classes', label: 'Lịch học' },
+    { to: '/member/classes', label: 'Lịch PT' },
     { to: '/member/check-in', label: 'Quét QR' },
   ],
   STAFF: [
@@ -173,7 +171,7 @@ export const MOBILE_PRIMARY_NAV_EN_LABELS: Record<string, string> = {
   '/admin/users': 'Accounts',
   '/member/profile': 'Profile',
   '/member/dashboard': 'Overview',
-  '/member/classes': 'Classes',
+  '/member/classes': 'PT schedule',
   '/member/check-in': 'QR Scan',
   '/staff/reception': 'Desk',
   '/staff/classes': 'Classes',

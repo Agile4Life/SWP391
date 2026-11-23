@@ -50,9 +50,9 @@ it('renders TrainerStoryPage with portrait/illustration badge rules, coach switc
   expect(host.querySelector('h1')?.textContent).toContain('HLV Huỳnh Đắc Tài');
   expect(host.querySelector('.fit-image-caption')).toBeNull();
   expect(host.querySelectorAll('.fit-trainer-switch-pill span')).toHaveLength(2);
-  expect(host.textContent).toContain('Gym căn bản');
-  const bookLink = [...host.querySelectorAll('a.fit-text-link')].find(a => a.textContent?.includes('Đặt lớp'));
-  expect(bookLink?.getAttribute('href')).toBe('/member/classes?discipline=Gym');
+  expect(host.textContent).not.toContain('Gym căn bản');
+  const bookLink = [...host.querySelectorAll('a.fit-pill')].find(a => a.textContent?.includes('Đặt lịch HLV 1:1'));
+  expect(bookLink?.getAttribute('href')).toBe('/member/classes?tab=pt');
 
   const switchToHai = host.querySelector<HTMLAnchorElement>('a.fit-trainer-switch-pill[href="/trainers/11"]')!;
   await act(async () => switchToHai.click());

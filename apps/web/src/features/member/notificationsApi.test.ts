@@ -24,10 +24,10 @@ describe('SCRUM-127 notification API', () => {
   });
 
   it('maps only existing member destinations', () => {
-    expect(notificationDestination({ relatedEntityType: 'class_session', type: 'schedule_change' })).toBe('/member/classes');
+    expect(notificationDestination({ relatedEntityType: 'class_session', type: 'schedule_change' })).toBe('/member/dashboard');
     expect(notificationDestination({ relatedEntityType: 'membership_subscription', type: 'package_expiry' })).toBe('/member/packages');
     expect(notificationDestination({ relatedEntityType: 'payment', type: 'payment' })).toBe('/member/invoices');
-    expect(notificationDestination({ relatedEntityType: null, type: 'class_reminder' })).toBe('/member/classes');
+    expect(notificationDestination({ relatedEntityType: null, type: 'class_reminder' })).toBe('/member/dashboard');
     expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' })).toBe('/messages?tab=support');
   });
 });
@@ -58,4 +58,10 @@ it('product_order notifications open the right page per role', () => {
   expect(safeNotificationPath('/staff/orders', 'STAFF')).toBe('/staff/orders');
   expect(safeNotificationPath('/staff/orders', 'MANAGER')).toBe('/staff/orders');
   expect(safeNotificationPath('/manager/products', 'MANAGER')).toBe('/manager/products');
+});
+
+it('redirects retired court notifications while preserving PT and staff destinations', () => {
+  expect(safeNotificationPath('/member/courts?sport=Tennis', 'MEMBER')).toBe('/member/invoices');
+  expect(safeNotificationPath('/member/classes?tab=pt', 'MEMBER')).toBe('/member/classes?tab=pt');
+  expect(safeNotificationPath('/staff/courts', 'STAFF')).toBe('/staff/courts');
 });

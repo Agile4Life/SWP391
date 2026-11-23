@@ -20,5 +20,9 @@ it('keeps standard gym and support flows without removed sport or VIP nodes', ()
   expect(actions).toContain('/member/products');
   expect(actions).toContain('/member/streak');
   expect(actions).toContain('/member/classes');
-  expect(actions.join(' ')).not.toMatch(/discipline=(Boxing|Yoga|Tennis)|sport=/);
+  expect(actions.join(' ')).not.toMatch(/discipline=|sport=|\/member\/courts/);
+  const gym = allHotspots(SOL_CENTER_SCENE).find(h => h.id === 'hs-l1-gym');
+  expect(gym?.action).toMatchObject({ type: 'navigate', to: '/member/packages' });
+  const pt = allHotspots(SOL_CENTER_SCENE).find(h => h.id === 'hs-l2-pt-studio');
+  expect(pt?.action).toMatchObject({ type: 'navigate', to: '/member/classes', query: { tab: 'pt' } });
 });

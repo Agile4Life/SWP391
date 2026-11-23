@@ -2,13 +2,12 @@ import { useSourceLanguage, sourceText, sourceFormat } from "../../shop/shopI18n
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';
-import { localizeSeededCatalogText, sessionDate } from '../publicCatalog';
+import { localizeSeededCatalogText } from '../publicCatalog';
 import { formatPrice, getPackageDetails, isTrialPackage, localizeSeededPackageName, LONG_TERM_DAYS, MIN_TERM_DAYS } from '../../../shared/lib/membershipPresentation';
 import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
-import { DISCIPLINES, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
 
 export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
   loading: boolean; retry: () => void; kind?: 'packages' | 'trainers' | 'schedule';
@@ -60,44 +59,6 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
             <span>{sourceText("Chọn gói tập")}</span>
             <RoundArrow diagonal />
           </Link>
-        </article>;
-      })}
-    </div>
-  </>;
-}
-
-export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
-  catalog: PublicCatalog; joinPath: string; coachId?: number; sport?: DisciplineId;
-}) {
-  useSourceLanguage();
-  const [discipline, setDiscipline] = useState('all');
-  const sportName = DISCIPLINES.find((item) => item.id === sport)?.name;
-  // Chỉ giới thiệu lịch Gym; không thay đổi API Classes hay quyền đặt chỗ.
-  const matchesSport = (value: string | null | undefined) => (!sportName || sportName === 'Gym') && matchesDiscipline(value, 'Gym');
-  const sessions = catalog.sessions.filter(session => (!session.status || session.status === 'scheduled')
-    && matchesSport(session.disciplineName)
-    && (!coachId || session.coachId === coachId));
-  const disciplines = [...new Set(sessions.map(session => session.disciplineName))];
-  const activeDiscipline = disciplines.includes(discipline) ? discipline : 'all';
-  const visible = sessions.filter(session => activeDiscipline === 'all' || session.disciplineName === activeDiscipline);
-  return <>
-    <p className="fit-catalog-caption">{sourceText("Lịch trong 7 ngày tới · đặt chỗ qua portal khi gói tập còn hiệu lực.")}</p>
-    {disciplines.length > 1 && <div className="fit-pricing-switch fit-schedule-switch" aria-label={sourceText("Lọc bộ môn trong lịch lớp")}>
-      {['all', ...disciplines].map(value => <button type="button" key={value} aria-pressed={activeDiscipline === value} onClick={() => setDiscipline(value)}>{value === 'all' ? sourceText('Tất cả bộ môn') : localizeSeededCatalogText(value)}</button>)}
-    </div>}
-    {visible.length === 0 && <p className="fit-catalog-state" role="status">{sourceText("Chưa có lịch lớp phù hợp trong 7 ngày tới.")}</p>}
-    <div className="fit-schedule-grid" key={activeDiscipline}>
-      {visible.map(session => {
-        const canonicalDiscipline = DISCIPLINES.find(d => matchesDiscipline(session.disciplineName, d.name))?.name;
-        const sessionJoinPath = joinPath === '/member/classes' && canonicalDiscipline
-          ? `/member/classes?discipline=${encodeURIComponent(canonicalDiscipline)}`
-          : joinPath;
-        return <article key={session.id} className="fit-schedule-card" data-reveal="lift">
-          <div className="fit-schedule-top"><span className="fit-schedule-time">{sessionDate(session.sessionDate)} · {(session.startTime || '').slice(0, 5)} — {(session.endTime || '').slice(0, 5)}</span>
-            <span className="fit-schedule-spots">{Math.max(0, session.capacity - session.bookedCount)}{sourceText(" chỗ trống")}</span></div>
-          <h3>{localizeSeededCatalogText(session.className)}</h3><p className="fit-schedule-meta">{localizeSeededCatalogText(session.disciplineName)} · {localizeSeededCatalogText(session.roomName)}</p>
-          <Link to={`/trainers/${session.coachId}`} className="fit-text-link">{sourceText("HLV: ")}{session.coachName}</Link>
-          <Link to={sessionJoinPath} className="fit-text-link">{session.bookedCount >= session.capacity ? sourceText('Đã đầy chỗ') : sourceText('Đặt lớp')}<RoundArrow diagonal /></Link>
         </article>;
       })}
     </div>

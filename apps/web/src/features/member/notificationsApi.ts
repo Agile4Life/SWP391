@@ -42,6 +42,8 @@ export const markAllNotificationsRead = () =>
 /** Accept only internal portal routes; never follow arbitrary URLs from notification content. */
 export function safeNotificationPath(path: string | null | undefined, role = 'MEMBER'): string | null {
   if (!path || !/^\/[a-z0-9/-]+(?:\?[a-zA-Z0-9_=&%-]+)?(?:#[a-z0-9-]+)?$/.test(path)) return null;
+  // Thông báo sân cũ không mở route đã bỏ; lịch sử thanh toán vẫn ở hóa đơn.
+  if (role === 'MEMBER' && /^\/member\/courts(?:[?/#]|$)/.test(path)) return '/member/invoices';
   const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
   return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && ['/staff/attendance', '/staff/requests', '/staff/coach-classes', '/staff/classes'].some(p => path === p || path.startsWith(`${p}?`))) || (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts', '/staff/orders'].some(p => path === p || path.startsWith(`${p}?`))) || path === '/messages' || path === '/messages?tab=support' ? path : null;
 }
@@ -60,14 +62,14 @@ export function notificationDestination(notification: Pick<MemberNotification, '
   if (role === 'ADMIN') return '/admin/users';
   switch (notification.relatedEntityType) {
     case 'class_session':
-    case 'class_enrollment': return '/member/classes';
+    case 'class_enrollment': return '/member/dashboard';
     case 'membership_subscription': return '/member/packages';
     case 'payment': return '/member/invoices';
     case 'product_order': return '/member/orders';
     case 'support_request': return '/messages?tab=support';
     case 'training_plan': return '/member/progress';
     default:
-      if (notification.type === 'class_reminder' || notification.type === 'schedule_change') return '/member/classes';
+      if (notification.type === 'class_reminder' || notification.type === 'schedule_change') return '/member/dashboard';
       if (notification.type === 'package_expiry') return '/member/packages';
       if (notification.type === 'payment') return '/member/invoices';
       if (notification.type === 'order') return '/member/orders';

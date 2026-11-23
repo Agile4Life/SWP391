@@ -13,7 +13,7 @@ const content = {
   programs: ['Kỹ thuật tập tạ', 'Sức mạnh toàn thân', 'Thể lực và sức bền'],
 };
 // The existing import remains stable; this section now uses a scrolling story rather than a deck.
-export function SportStack({ classPath, heading }: { classPath: string; heading?: ReactNode }) {
+export function SportStack({ ptPath, heading }: { ptPath: string; heading?: ReactNode }) {
   useSourceLanguage();
   const sports = [{ ...MAIN_DISCIPLINE, ...content }];
   const story = useRef<HTMLDivElement>(null);
@@ -110,7 +110,7 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
           <p className="fit-sport-story-summary">{sport.summary}</p>
           <ul className="fit-sport-story-programs">{sport.programs.map(program => <li key={sourceText(program)}>{sourceText(program)}</li>)}</ul>
           <div className="fit-sport-story-footer">
-            <Link className="fit-pill" to={classPath}>{sourceText("Xem lịch học")}<RoundArrow diagonal /></Link>
+            <Link className="fit-pill" to={ptPath}>{sourceText({ vi: 'Đặt lịch HLV 1:1', en: 'Book a 1:1 coach' })}<RoundArrow diagonal /></Link>
           </div>
           <figure className="fit-sport-story-inline" data-reveal="image">{illustration(sport)}</figure>
         </article>)}

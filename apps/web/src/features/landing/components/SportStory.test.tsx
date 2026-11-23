@@ -27,7 +27,7 @@ afterEach(async () => {
   await act(async () => root.unmount());
   host.remove(); vi.unstubAllGlobals(); vi.useRealTimers(); vi.clearAllMocks();
 });
-const render = () => act(async () => root.render(<MemoryRouter><SportStack classPath="/login" /></MemoryRouter>));
+const render = () => act(async () => root.render(<MemoryRouter><SportStack ptPath="/member/classes?tab=pt" /></MemoryRouter>));
 const activate = async (index: number) => act(async () => {
   const target = host.querySelectorAll('.fit-sport-story-step')[index];
   intersect([{ target, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
@@ -35,12 +35,12 @@ const activate = async (index: number) => act(async () => {
 const advance = () => act(async () => vi.advanceTimersByTime(500));
 const shown = () => host.querySelector<HTMLElement>('.fit-sport-story-visual.is-active')?.dataset.sport;
 
-it('shows only Gym with its schedule CTA and mobile illustration', async () => {
+it('shows only Gym with its PT booking CTA and mobile illustration', async () => {
   await render();
   expect(host.querySelectorAll('.fit-sport-story-step')).toHaveLength(1);
   expect(host.querySelector('.fit-sport-story-step h3')?.textContent).toBe('Gym');
   expect(host.querySelectorAll('.fit-sport-story-inline img')).toHaveLength(1);
-  expect([...host.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/login']);
+  expect([...host.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/member/classes?tab=pt']);
   expect(host.textContent).not.toMatch(/Bơi lội|Boxing|Tennis|Cầu lông|Yoga/);
 });
 

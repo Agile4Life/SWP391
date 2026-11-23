@@ -932,8 +932,8 @@ export function MemberPackagesPage() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <Link to="/member/card" className="btn-primary btn-sm">
                 {t(" Xem thẻ QR Check-in ", "View check-in QR card")}</Link>
-              <Link to="/member/classes" className="btn-secondary btn-sm">
-                {t(" Đặt lịch lớp học ", "Book a class")}</Link>
+              <Link to="/member/classes?tab=pt" className="btn-secondary btn-sm">
+                {t(" Đặt lịch HLV 1:1 ", "Book a 1:1 coach")}</Link>
               {!isTrial && (
                 <details className="package-manage">
                   <summary className="btn-secondary btn-sm">{t("Quản lý gói", "Manage membership")}</summary>

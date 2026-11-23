@@ -10,7 +10,8 @@ it('removes public sport pages while retaining the other planned commit routes',
     expect(publicPaths).not.toContain(path);
   }
   const portalPaths = router.routes.flatMap(route => route.children ?? []).flatMap(group => group.children ?? []).map(route => route.path);
-  for (const path of ['/member/packages', '/member/packages/checkout', '/member/classes', '/member/courts', '/member/streak', '/member/progress', '/member/products', '/staff/classes', '/staff/courts', '/manager/products']) {
+  expect(portalPaths).not.toContain('/member/courts');
+  for (const path of ['/member/packages', '/member/packages/checkout', '/member/classes', '/member/streak', '/member/progress', '/member/products', '/staff/classes', '/staff/courts', '/manager/products']) {
     expect(portalPaths).toContain(path);
   }
 });

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { setLanguage } from '../../shared/i18n';
-import { CatalogPackages, CatalogSchedule, CatalogTrainers } from './components/CatalogSections';
+import { CatalogPackages, CatalogTrainers } from './components/CatalogSections';
 import { calculateBmi, FitnessLanding, parseBmiMetric } from './components/FitnessLanding';
 import { usePublicCatalog } from './publicCatalog';
 import type { PublicCatalog } from './publicCatalog';
@@ -27,22 +27,20 @@ beforeEach(() => {
 });
 afterEach(async () => { if (root) await act(async () => root.unmount()); host.replaceChildren(); host.remove(); localStorage.clear(); setLanguage('vi'); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-it('renders API price, duration, benefits, coaches and actual session seats without sample identities', async () => {
+it('renders API price, duration, benefits, coaches without group booking controls without sample identities', async () => {
   root = createRoot(host);
   await act(async () => root.render(<MemoryRouter>
     <CatalogPackages catalog={catalog} joinPath="/member/packages" />
     <CatalogTrainers catalog={catalog} />
-    <CatalogSchedule catalog={catalog} joinPath="/member/classes" />
   </MemoryRouter>));
   expect(host.textContent).toContain('789.000');
   expect(host.textContent).toContain('90 ngày');
   expect(host.textContent).toContain('Quyền lợi mới');
   expect(host.textContent).toContain('HLV An');
   expect(host.textContent).toContain('Ảnh minh họa');
-  expect(host.textContent).toContain('Gym sáng');
-  expect(host.textContent).toContain('7 chỗ trống');
   expect(host.querySelector('a[href="/trainers/2"]')).not.toBeNull();
   expect(host.textContent).not.toMatch(/Derek|1\.200\.000/);
+  expect(host.querySelector('.fit-schedule-grid')).toBeNull();
 });
 
 it('shows empty states when no public packages, coaches or sessions exist', async () => {
@@ -51,20 +49,9 @@ it('shows empty states when no public packages, coaches or sessions exist', asyn
   await act(async () => root.render(<MemoryRouter>
     <CatalogPackages catalog={empty} joinPath="/register" />
     <CatalogTrainers catalog={empty} />
-    <CatalogSchedule catalog={empty} joinPath="/login" />
   </MemoryRouter>));
   expect(host.textContent).toContain('Chưa có gói tập');
   expect(host.textContent).toContain('Chưa có huấn luyện viên');
-  expect(host.textContent).toContain('Chưa có lịch lớp');
-});
-
-it('shows Gym sessions and hides other disciplines without changing their source data', async () => {
-  root = createRoot(host);
-  const tennis = { ...catalog.sessions[0], id: 4, disciplineName: 'Tennis', className: 'Tennis mới' };
-  await act(async () => root.render(<MemoryRouter><CatalogSchedule catalog={{ ...catalog, sessions: [...catalog.sessions, tennis] }} joinPath="/login" /></MemoryRouter>));
-  expect(host.textContent).toContain('Gym sáng');
-  expect(host.textContent).not.toContain('Tennis mới');
-  expect(tennis.disciplineName).toBe('Tennis');
 });
 
 it('ignores older responses and hides stale prices on a failed refresh, then retries', async () => {
@@ -114,7 +101,7 @@ it('excludes trial packages from the public catalog pricing grid', async () => {
   expect(host.textContent).not.toContain('0 đ');
 });
 
-it('filters out non-scheduled sessions and treats whitespace-only coach avatarUrl as missing', async () => {
+it('treats whitespace-only coach avatarUrl as missing', async () => {
   root = createRoot(host);
   const edgeCatalog: PublicCatalog = {
     packages: [],
@@ -129,14 +116,10 @@ it('filters out non-scheduled sessions and treats whitespace-only coach avatarUr
   };
   await act(async () => root.render(<MemoryRouter>
     <CatalogTrainers catalog={edgeCatalog} />
-    <CatalogSchedule catalog={edgeCatalog} joinPath="/member/classes" />
   </MemoryRouter>));
-  expect(host.textContent).toContain('Gym sáng');
   expect(host.textContent).not.toContain('Lớp đã hủy');
   const badges = host.querySelectorAll('.fit-image-caption');
   expect(badges).toHaveLength(1);
-  const bookLink = [...host.querySelectorAll('a.fit-text-link')].find(a => a.textContent?.includes('Đặt lớp'));
-  expect(bookLink?.getAttribute('href')).toBe('/member/classes?discipline=Gym');
 });
 
 it('validates BMI inputs including empty, zero, negative, extreme values, decimal comma/dot and rejects malformed strings', () => {

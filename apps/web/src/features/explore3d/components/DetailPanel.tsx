@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { useI18n } from '../../../shared/i18n';
-import { formatCenterDate } from '../../../shared/lib/centerTime';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import type {
   LiveCenterSnapshot,
@@ -468,109 +467,6 @@ export function DetailPanel({
           </div>
         )}
 
-        {/* Courts summary */}
-        {zBinding && zBinding.courtsSummary.courts.length > 0 && (
-          <div className="explore3d-subsection" data-testid="detail-courts-summary">
-            <div className="explore3d-subsection-header">
-              <h3 className="explore3d-subsection-title">
-                {t('Sân & Làn trực tiếp', 'Live courts & lanes')}
-              </h3>
-              <span className="explore3d-chip">
-                {zBinding.courtsSummary.availableCourts}/{zBinding.courtsSummary.totalCourts}{' '}
-                {t('sẵn sàng', 'available')}
-              </span>
-            </div>
-            <div className="explore3d-court-list">
-              {zBinding.courtsSummary.courts.map(court => {
-                const matchingItem = zoneItems.find(
-                  it =>
-                    it.liveCourtBinding?.courtName.toLowerCase() === court.name.toLowerCase(),
-                );
-                return (
-                  <div
-                    key={court.id}
-                    className="explore3d-court-card"
-                    data-testid={`detail-court-${court.id}`}
-                  >
-                    <div className="explore3d-court-card__info">
-                      <strong>{court.name}</strong>
-                      <div className="explore3d-court-card__meta">
-                        {court.openTime && court.closeTime && (
-                          <span>
-                            {court.openTime.slice(0, 5)} – {court.closeTime.slice(0, 5)}
-                          </span>
-                        )}
-                        {court.availableSlotsToday != null && (
-                          <span>
-                            · {court.availableSlotsToday} {t('khung trống hôm nay', 'free slots today')}
-                          </span>
-                        )}
-                        {court.nextFreeSlot && (
-                          <span>
-                            · {t('Trống kế tiếp', 'Next free')}: {court.nextFreeSlot}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div className="explore3d-court-card__actions">
-                      {matchingItem && (
-                        <button
-                          type="button"
-                          className="explore3d-btn explore3d-btn--secondary"
-                          onClick={() => selectNode(matchingItem.id)}
-                        >
-                          {t('Chọn sân', 'Focus')}
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="explore3d-btn explore3d-btn--primary"
-                        onClick={() =>
-                          handleNavigate(
-                            zone.liveBinding?.courtDiscipline
-                              ? `/member/courts?sport=${encodeURIComponent(zone.liveBinding.courtDiscipline)}`
-                              : '/member/courts',
-                          )
-                        }
-                      >
-                        {t('Đặt sân', 'Book')}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Upcoming class sessions */}
-        {zBinding && zBinding.upcomingSessions.length > 0 && (
-          <div className="explore3d-subsection" data-testid="detail-upcoming-sessions">
-            <h3 className="explore3d-subsection-title">
-              {t('Buổi học sắp tới tại khu vực này', 'Upcoming sessions in this zone')}
-            </h3>
-            <ul className="explore3d-session-list">
-              {zBinding.upcomingSessions.map(session => (
-                <li key={session.id} className="explore3d-session-item">
-                  <div className="explore3d-session-item__title">{session.className}</div>
-                  <div className="explore3d-session-item__meta">
-                    <span>
-                      {formatCenterDate(session.sessionDate)} · {session.startTime.slice(0, 5)} –{' '}
-                      {session.endTime.slice(0, 5)}
-                    </span>
-                    {session.coachName && <span>· {session.coachName}</span>}
-                    {session.bookedCount != null && session.capacity != null && (
-                      <span>
-                        · {session.bookedCount}/{session.capacity}
-                      </span>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {/* Zone Hotspots & Direct Portal CTAs */}
         {zoneHotspots.length > 0 && (
           <div className="explore3d-subsection" data-testid="detail-zone-hotspots">
@@ -690,22 +586,6 @@ export function DetailPanel({
             {t('Khung cận cảnh', 'Fit to view')}
           </button>
 
-          {item.liveCourtBinding && (
-            <button
-              type="button"
-              className="explore3d-btn explore3d-btn--primary"
-              data-testid="detail-item-book-court-btn"
-              onClick={() =>
-                handleNavigate(
-                  parentZone?.liveBinding?.courtDiscipline
-                    ? `/member/courts?sport=${encodeURIComponent(parentZone.liveBinding.courtDiscipline)}`
-                    : '/member/courts',
-                )
-              }
-            >
-              {t('Đặt lịch sân / làn này', 'Book this court / lane')}
-            </button>
-          )}
         </div>
 
         {zoneHotspots.length > 0 && (

@@ -12,7 +12,8 @@ import { toast } from '../../shared/ui/toast';
 import { getVnpayStatus, verifyVnpayReturn, type VnpayStatus } from './vnpayApi';
 import { clearActiveVnpay } from './vnpaySession';
 
-const destinations = new Set(['/member/packages', '/member/courts', '/member/classes', '/member/classes?tab=pt', '/member/invoices']);
+// Thanh toán sân cũ trở về hóa đơn; giữ đích gói tập, PT và Shop.
+const destinations = new Set(['/member/packages', '/member/classes', '/member/classes?tab=pt', '/member/invoices']);
 function isAllowedDestination(destination: string | null | undefined): destination is string {
   return Boolean(destination && (destinations.has(destination) || /^\/member\/orders\/\d+$/.test(destination)));
 }

@@ -38,3 +38,12 @@ describe('portal sidebar grouping', () => {
     for (const item of MOBILE_PRIMARY_NAV[role]) expect(allowed).toContain(item.to);
   });
 });
+
+it('removes court navigation for every role and keeps PT and Shop', () => {
+  const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER'));
+  expect(member.flatMap(portalNavRoutes)).not.toContain('/member/courts');
+  expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch PT 1:1');
+  expect(member.flatMap(portalNavRoutes)).toContain('/member/products');
+  // Staff court screen was cut too (manager/receptionist scope reduction).
+  expect(PORTAL_NAV.flatMap(portalNavRoutes)).not.toContain('/staff/courts');
+});

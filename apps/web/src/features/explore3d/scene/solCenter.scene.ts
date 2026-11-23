@@ -1998,24 +1998,23 @@ addHotspot(zoneL1Shop, {
   },
 });
 
-// 11. /member/classes?discipline=Gym — Standard Gym Arena
+// 11. /member/packages — Standard Gym Arena
 addHotspot(zoneL1Gym, {
   id: 'hs-l1-gym',
   localPosition: [-8.0, 2.5, -6.0],
-  title: { vi: 'Phòng Gym Tiêu chuẩn · Lịch lớp & Thiết bị', en: 'Standard Gym · Schedule & Equipment' },
+  title: { vi: 'Phòng Gym Tiêu chuẩn · Gói tập & Thiết bị', en: 'Standard Gym · Membership & Equipment' },
   subtitle: {
-    vi: 'Xem trạng thái trực tiếp 29 máy tập Cardio/Strength và đặt lịch lớp Gym.',
-    en: 'Inspect live status of 29 Cardio/Strength machines and book Gym classes.',
+    vi: 'Xem trạng thái trực tiếp 29 máy tập Cardio/Strength và xem gói tập Gym.',
+    en: 'Inspect live status of 29 Cardio/Strength machines and view Gym membership packages.',
   },
   badge: 'L1 · GYM',
   icon: 'dumbbell',
   priority: 'primary',
-  liveSummaryKey: 'classes',
+  liveSummaryKey: 'membership',
   action: {
     type: 'navigate',
-    to: '/member/classes',
-    query: { discipline: 'Gym' },
-    ctaLabel: { vi: 'Xem Lịch lớp Gym', en: 'View Gym Schedule' },
+    to: '/member/packages',
+    ctaLabel: { vi: 'Xem gói tập', en: 'View memberships' },
     secondaryTo: '/member/progress',
     secondaryLabel: { vi: 'Mở Giáo án của tôi', en: 'My Training Plan' },
   },
