@@ -40,9 +40,9 @@ public class CoachBookingService {
     private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
     private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 hours
-    private static final int UNPAID_HOLD_MINUTES = 30;
+    private static final int UNPAID_HOLD_MINUTES = 5;
     private static final int UNPAID_RELEASE_LEAD_MINUTES = 60;
-    private static final int UNPAID_MIN_HOLD_MINUTES = 15;
+    private static final int UNPAID_MIN_HOLD_MINUTES = 5;
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
             java.util.Set.of("package_quota", "cash", "bank_transfer");
     private static final int MAX_UNPAID_UPCOMING = 2;
