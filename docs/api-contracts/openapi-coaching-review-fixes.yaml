@@ -64,15 +64,6 @@ paths:
         '400': {description: Already cancelled}
         '403': {description: Not authorized for this booking}
         '404': {description: Booking not found}
-  /coaching/leaderboard:
-    get:
-      summary: Read the monthly coach ranking by sessions taught
-      description: Read-only, computed on request. Ranks public coaches by non-cancelled PT 1:1 bookings plus class sessions dated in the month (ties by name, then coach id); the top three with at least one session get a badge. Reviews are out of scope, so averageRating is null and totalReviews is 0.
-      parameters:
-        - {in: query, name: year, schema: {type: integer}}
-        - {in: query, name: month, schema: {type: integer}}
-      responses:
-        '200': {description: ApiResponse containing an array of CoachLeaderboardItemDto}
 components:
   securitySchemes:
     bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}

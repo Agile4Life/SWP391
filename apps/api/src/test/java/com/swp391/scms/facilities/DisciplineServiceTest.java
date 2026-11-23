@@ -27,11 +27,12 @@ class DisciplineServiceTest {
     @InjectMocks DisciplineService service;
 
     @Test
-    void publicCatalogContainsOnlyGymEvenWhenOtherDisciplinesExist() {
+    void listsEveryDisciplineWithoutFilteringByName() {
         Discipline gym = new Discipline(); gym.setName("Gym");
-        when(disciplines.findAllByNameIgnoreCaseOrderByNameAsc("Gym")).thenReturn(java.util.List.of(gym));
+        Discipline strength = new Discipline(); strength.setName("Gym nâng cao");
+        when(disciplines.findAllByOrderByNameAsc()).thenReturn(java.util.List.of(gym, strength));
 
-        assertEquals(java.util.List.of("Gym"), new DisciplineController(service).list().getData().stream()
+        assertEquals(java.util.List.of("Gym", "Gym nâng cao"), new DisciplineController(service).list().getData().stream()
                 .map(d -> d.name()).toList());
     }
 

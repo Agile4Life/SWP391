@@ -29,11 +29,12 @@ class RoomServiceTest {
     @InjectMocks RoomService service;
 
     @Test
-    void listsOnlyStandardGymRoom() {
+    void listsEveryRoomWithoutFilteringByName() {
         Room standard = new Room(); standard.setName("Phòng Gym Tiêu chuẩn");
-        when(rooms.findAllByNameIgnoreCaseOrderByNameAsc("Phòng Gym Tiêu chuẩn")).thenReturn(java.util.List.of(standard));
+        Room renamed = new Room(); renamed.setName("Phòng Gym Tầng 2");
+        when(rooms.findAllByOrderByNameAsc()).thenReturn(java.util.List.of(standard, renamed));
 
-        assertEquals(java.util.List.of("Phòng Gym Tiêu chuẩn"),
+        assertEquals(java.util.List.of("Phòng Gym Tiêu chuẩn", "Phòng Gym Tầng 2"),
                 service.list().stream().map(room -> room.name()).toList());
     }
 

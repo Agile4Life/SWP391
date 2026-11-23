@@ -8,5 +8,4 @@ public interface DisciplineRepository extends JpaRepository<Discipline, Long> {
     boolean existsByNameIgnoreCase(String name);
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
     List<Discipline> findAllByOrderByNameAsc();
-    List<Discipline> findAllByNameIgnoreCaseOrderByNameAsc(String name);
 }

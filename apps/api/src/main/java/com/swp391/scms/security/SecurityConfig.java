@@ -102,9 +102,6 @@ public class SecurityConfig {
                             "/api/v1/ai/recommendations/**").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
 
-                    // Coach Leaderboard (ranked by sessions taught, without review/monthly-review endpoints)
-                    .requestMatchers(HttpMethod.GET, "/api/v1/coaching/leaderboard").authenticated()
-
                     // Desk review of identity documents: the front desk owns it, the manager portal no longer does
                     .requestMatchers("/api/v1/members/kyc/**").hasRole("RECEPTIONIST")
 

@@ -281,6 +281,7 @@ Hai lệnh này giống các job `test-web` và `test-api` trong Pipeline.
 | [🧾 Business rules](docs/specs/2026-11-10-membership-and-attendance-business-rules.md) | Gói tập, khóa học, điểm danh, bảo lưu và QR cổng |
 | [🎁 Quyền lợi gói](docs/specs/2026-11-09-membership-benefits-design.md) | Thiết kế và trạng thái triển khai quyền lợi theo hạng |
 | [🎨 DESIGN.md](DESIGN.md) | Quy chuẩn thiết kế giao diện đang có hiệu lực |
+| [🧹 DATA_CLEANUP.md](docs/DATA_CLEANUP.md) | Dọn dữ liệu cũ của lớp nhóm, sân, cửa hàng, thiết bị, đánh giá HLV sau khi thu gọn phạm vi |
 | [🏛️ backend-architecture.md](docs/rules/backend-architecture.md) | Kiến trúc 3 lớp, SOLID, IoC, JPA |
 | [☁️ SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) | JDBC TLS, RLS và schema test biệt lập |
 | [🔄 CICD_SETUP.md](docs/CICD_SETUP.md) | Thiết lập Pipeline: Render, Vercel |

@@ -2,6 +2,7 @@
 
 > Cập nhật: 23/11/2026, theo code nhánh `main` sau đợt thu gọn phạm vi chỉ còn Gym (PR #144–#156).
 > **Phạm vi hiện tại:** Gym tiêu chuẩn, gói tập, PT 1:1, giáo án, check-in, ví/hóa đơn, chat, hỗ trợ. Lớp nhóm, đặt sân, cửa hàng, thiết bị, đánh giá HLV, chỉ số cơ thể, tiến độ/lịch sử tập và streak **đã ngừng** (mục 3, 9, 10 chỉ còn ghi chú).
+> Dọn dữ liệu cũ của các tính năng đã ngừng: [`DATA_CLEANUP.md`](DATA_CLEANUP.md).
 > `docs/PROJECT_MASTER_GUIDE.md` là thiết kế gốc. Tài liệu này mô tả **những gì hệ thống đang làm thật**: màn hình, API, quy tắc và state machine. Phần nào khác thiết kế gốc được ghi ở mục 12.
 > Múi giờ nghiệp vụ là `Asia/Ho_Chi_Minh` cho mọi mốc "hôm nay", "trước giờ học" và job định kỳ.
 
@@ -11,7 +12,7 @@
 3. [Flow 2 — Lớp học nhóm (đã ngừng)](#3-flow-2--lớp-học-nhóm-đã-ngừng)
 4. [Flow 3 — Thanh toán, Ví, hóa đơn, hoàn tiền, báo cáo](#4-flow-3--thanh-toán-ví-hóa-đơn-hoàn-tiền-báo-cáo)
 5. [Flow 4 — Quản trị và cấu hình](#5-flow-4--quản-trị-và-cấu-hình)
-6. [Flow 5 — HLV: PT 1:1, giáo án, AI, bảng xếp hạng](#6-flow-5--hlv-pt-11-giáo-án-ai-bảng-xếp-hạng)
+6. [Flow 5 — HLV: PT 1:1, giáo án, AI](#6-flow-5--hlv-pt-11-giáo-án-ai)
 7. [Flow 6 — Trợ lý AI, thông báo, chat, hỗ trợ](#7-flow-6--trợ-lý-ai-thông-báo-chat-hỗ-trợ)
 8. [Luồng mở rộng — Check-in trung tâm](#8-luồng-mở-rộng--check-in-trung-tâm)
 9. [Đặt sân (đã ngừng)](#9-đặt-sân-đã-ngừng)
@@ -152,7 +153,7 @@ Từ 22/11/2026 (PR #152) trung tâm **không còn lớp học nhóm**: không t
 |---|---|---|
 | Người dùng: khóa/mở, đổi vai trò, xóa mềm | `/manager/users`, `/admin/users` | Quản lý, Admin |
 | Tài khoản nhân viên (HLV, lễ tân) | `/manager/staff-accounts` | Quản lý |
-| Danh mục: bộ môn, phòng, gói tập | `/manager/catalogs` | Quản lý. API chỉ trả bộ môn Gym và "Phòng Gym Tiêu chuẩn" (`DisciplineService.listGym`, `RoomService.list` lọc theo tên); frontend không lọc thêm |
+| Danh mục: bộ môn, phòng, gói tập | `/manager/catalogs` | Quản lý. API trả toàn bộ bộ môn và phòng trong DB, không lọc cứng theo tên; frontend cũng không lọc. Dữ liệu ngoài Gym còn sót được dọn theo [`DATA_CLEANUP.md`](DATA_CLEANUP.md) |
 | Xem và điều chuyển HLV phụ trách (không phân công mới), sắp xếp theo tên/số học viên/trạng thái (`sortBy`, `sortDir`) | `/manager/coach-assignments` | Quản lý |
 | Yêu cầu nội bộ: nghỉ phép, đổi ca, đổi lịch, khác | `/staff/requests` (gửi), `/manager/requests` (duyệt) | Nhân viên, Quản lý |
 | Nhật ký kiểm toán | `/admin/audit-logs` | Admin |
@@ -165,7 +166,7 @@ Từ 22/11/2026 (PR #152) trung tâm **không còn lớp học nhóm**: không t
 
 ---
 
-## 6. Flow 5 — HLV: PT 1:1, giáo án, AI, bảng xếp hạng
+## 6. Flow 5 — HLV: PT 1:1, giáo án, AI
 
 ### 6.1 Đặt PT 1:1
 **Màn hình:** `/member/classes` (lịch của tôi, `?tab=pt` để đặt/hủy/thanh toán), `/member/dashboard`; HLV ở `/coach/classes` (lịch tuần) và `/coach/pt-attendance`; lễ tân thu tiền buổi chưa trả ở `/staff/reception`. **API:** `/api/v1/coach-bookings`.
@@ -189,12 +190,9 @@ Từ 22/11/2026 (PR #152) trung tâm **không còn lớp học nhóm**: không t
 
 **State `training_plans.status`:** `draft` → `active` → `superseded` / `cancelled`, hoặc `completed` (tự động khi qua `end_date`).
 
-### 6.3 Bảng xếp hạng HLV
-**API:** `GET /api/v1/coaching/leaderboard?year=&month=` (đã đăng nhập). Tính ngay khi gọi (`CoachLeaderboardService`), không lưu.
-
-- Xếp HLV công khai theo **số buổi dạy trong tháng** = buổi PT 1:1 + buổi lớp có ngày trong tháng và không `cancelled` (kể cả buổi đã đặt nhưng chưa diễn ra; có nên chỉ tính buổi `completed` đang chờ quyết định); hòa thì theo tên, rồi mã HLV.
-- Top 1/2/3 có ít nhất 1 buổi được huy hiệu; không còn thưởng tiền. `averageRating` luôn `null`, `totalReviews` luôn 0.
-- **Đã ngừng:** đánh giá HLV của hội viên, đánh giá buổi tập và tổng kết/thưởng tháng. `CoachReviewController`, `SessionEvaluationController` chỉ nạp khi bật `app.coaching.reviews.enabled` / `app.coaching.evaluations.enabled` (mặc định tắt); endpoint `monthly-reviews` đã xóa hẳn. Bảng `coach_reviews`, `coach_monthly_reviews` còn giữ dữ liệu cũ.
+### 6.3 Đánh giá và xếp hạng HLV (đã ngừng)
+- Bảng xếp hạng HLV (`/api/v1/coaching/leaderboard`) đã xóa hẳn (23/11/2026).
+- Đánh giá HLV của hội viên, đánh giá buổi tập và tổng kết/thưởng tháng cũng đã ngừng. `CoachReviewController`, `SessionEvaluationController` chỉ nạp khi bật `app.coaching.reviews.enabled` / `app.coaching.evaluations.enabled` (mặc định tắt); endpoint `monthly-reviews` đã xóa hẳn. Bảng `coach_reviews`, `coach_monthly_reviews` còn giữ dữ liệu cũ.
 
 ---
 
@@ -299,7 +297,7 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | Giáo án: `draft/active/completed/cancelled` | Có thêm `superseded` (giáo án cũ khi áp dụng giáo án mới) |
 | Hủy lớp "trước giờ học quy định" | Hủy được tới giờ bắt đầu |
 | Lớp học nhóm, đặt chỗ, điểm danh lớp | Đã ngừng từ 22/11/2026 (phạm vi chỉ còn Gym) |
-| Đánh giá HLV, theo dõi tiến độ/chỉ số cơ thể, thiết bị | Đã ngừng từ 22/11/2026; bảng xếp hạng HLV tính theo số buổi dạy |
+| Đánh giá và xếp hạng HLV, theo dõi tiến độ/chỉ số cơ thể, thiết bị | Đã ngừng từ 22–23/11/2026 |
 | Hỗ trợ: nhân viên không mở lại phiếu đã giải quyết | Nhân viên được `resolved → in_progress` khi hội viên còn vấn đề |
 | Xuất Excel/PDF báo cáo | Chỉ có hóa đơn PDF của hội viên; báo cáo xem trên web và lưu snapshot JSON |
 | Push/SMS | Thông báo trong ứng dụng và email; chưa có SMS |

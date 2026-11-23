@@ -47,7 +47,7 @@ class FacilitiesControllerTest {
 
     @Test
     void listDisciplinesReturnsWrappedData() throws Exception {
-        when(disciplines.listGym()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
 
         mockMvc.perform(get("/api/v1/disciplines"))
                 .andExpect(status().isOk())
