@@ -50,7 +50,7 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
   if (role === 'MEMBER' && /^\/member\/streak(?:[?/#]|$)/.test(path)) return '/member/dashboard';
   if (role === 'MEMBER' && /^\/member\/progress(?:[?/#]|$)/.test(path)) return '/member/progress';
   const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
-  return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && ['/staff/attendance', '/staff/requests', '/staff/coach-classes', '/staff/classes'].some(p => path === p || path.startsWith(`${p}?`))) || (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts', '/staff/orders'].some(p => path === p || path.startsWith(`${p}?`))) || path === '/messages' || path === '/messages?tab=support' ? path : null;
+  return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && (path === '/staff/requests' || path.startsWith('/staff/requests?'))) || path === '/messages' || path === '/messages?tab=support' ? path : null;
 }
 
 export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath'>, role = 'MEMBER'): string {
@@ -59,9 +59,7 @@ export function notificationDestination(notification: Pick<MemberNotification, '
   if (role === 'COACH') return notification.relatedEntityType === 'training_plan' ? '/coach/training-plans' : '/coach/classes';
   if (['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER'].includes(role)) {
     const manager = ['MANAGER', 'CENTER_MANAGER'].includes(role);
-    if (notification.relatedEntityType === 'product_order' || notification.type === 'order') return manager ? '/manager/products?tab=orders' : '/staff/orders';
     if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
-    if (['class_session', 'class_enrollment'].includes(notification.relatedEntityType ?? '') || ['schedule_change', 'class_reminder'].includes(notification.type)) return '/staff/classes';
     return manager ? '/manager/reports' : '/staff/reception';
   }
   if (role === 'ADMIN') return '/admin/users';

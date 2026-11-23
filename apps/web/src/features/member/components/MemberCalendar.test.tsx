@@ -4,10 +4,9 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemberCalendar } from './MemberCalendar';
 import { setLanguage } from '../../../shared/i18n/language';
-const mocks = vi.hoisted(() => ({ pt: vi.fn(), classes: vi.fn(), courts: vi.fn() }));
+const mocks = vi.hoisted(() => ({ pt: vi.fn(), classes: vi.fn() }));
 vi.mock('../coachBookingApi', () => ({ getMyCoachBookings: mocks.pt }));
 vi.mock('../../../shared/api/client', async original => ({ ...await original<typeof import('../../../shared/api/client')>(), apiFetch: mocks.classes }));
-vi.mock('../../courts/courtsApi', () => ({ courtsApi: { my: mocks.courts } }));
 vi.mock('../../../shared/lib/centerTime', async original => ({
   ...await original<typeof import('../../../shared/lib/centerTime')>(),
   centerNowParts: () => ({ date: '2099-01-07', time: '06:00' }),
@@ -29,7 +28,7 @@ it('shows PT only and never calls group class or court APIs', async () => {
   expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
   expect(host.textContent).toContain('Hùng');
   expect(host.querySelectorAll('.mcal__event--class, .mcal__event--court')).toHaveLength(0);
-  expect(mocks.classes).not.toHaveBeenCalled(); expect(mocks.courts).not.toHaveBeenCalled();
+  expect(mocks.classes).not.toHaveBeenCalled();
   await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--pt')!.click());
   expect(document.querySelector('a[href="/member/classes?tab=pt"]')).not.toBeNull();
 });
@@ -52,5 +51,5 @@ it('keeps week/month navigation and returns to the current week', async () => {
 it('shows an empty PT calendar without requesting other services', async () => {
   mocks.pt.mockResolvedValue([]); await render();
   expect(host.textContent).toContain('Tuần này bạn chưa có lịch nào.');
-  expect(mocks.classes).not.toHaveBeenCalled(); expect(mocks.courts).not.toHaveBeenCalled();
+  expect(mocks.classes).not.toHaveBeenCalled();
 });

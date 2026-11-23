@@ -1,17 +1,13 @@
 package com.swp391.scms.demo;
 
 import com.swp391.scms.attendance.entity.CenterCheckin;
-import com.swp391.scms.attendance.entity.SessionAttendance;
 import com.swp391.scms.attendance.repository.CenterCheckinRepository;
-import com.swp391.scms.attendance.repository.SessionAttendanceRepository;
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.MembershipPackage;
-import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
-import com.swp391.scms.facilities.repository.RoomRepository;
 import com.swp391.scms.finance.entity.Invoice;
 import com.swp391.scms.finance.entity.InvoiceItem;
 import com.swp391.scms.finance.entity.Payment;
@@ -20,12 +16,6 @@ import com.swp391.scms.health.MemberProgressLogRepository;
 import com.swp391.scms.health.entity.MemberProgressLog;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
-import com.swp391.scms.scheduling.entity.ClassSession;
-import com.swp391.scms.scheduling.entity.GymClass;
-import com.swp391.scms.scheduling.entity.ClassEnrollment;
-import com.swp391.scms.scheduling.repository.ClassSessionRepository;
-import com.swp391.scms.scheduling.repository.GymClassRepository;
-import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.ReceptionistRepository;
@@ -36,16 +26,13 @@ import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.Receptionist;
 import com.swp391.scms.users.entity.User;
 import java.math.BigDecimal;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -115,28 +102,6 @@ public class DemoDataSeeder implements ApplicationRunner {
             new CoachSpec("thao", "Vũ Phương Thảo", "female", "Gym - Sức bền", "CPT",
                     "Huấn luyện viên Gym tập trung kỹ thuật và sức bền.", "Gym"));
 
-    /** {@code fromDay}/{@code toDay}: window of sessions relative to the seed day; the class dates follow its sessions. */
-    private record ClassSpec(String name, String coachKey, String room, String discipline, String level, int capacity,
-                             Set<DayOfWeek> days, LocalTime start, LocalTime end, int price, int fromDay, int toDay) {
-        ClassSpec(String name, String coachKey, String room, String discipline, String level, int capacity,
-                  Set<DayOfWeek> days, LocalTime start, LocalTime end, int price) {
-            this(name, coachKey, room, discipline, level, capacity, days, start, end, price, -28, 14);
-        }
-    }
-
-    private static final List<ClassSpec> CLASSES = List.of(
-            new ClassSpec("Strength Foundation", "hung", "Phòng Gym Tiêu chuẩn", "Gym", "all", 12,
-                    Set.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY), LocalTime.of(18, 0), LocalTime.of(19, 15), 0),
-            new ClassSpec("Morning Flow Yoga", "mai", "Zen Garden Studio", "Yoga", "beginner", 10,
-                    Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), LocalTime.of(18, 0), LocalTime.of(19, 0), 0),
-            new ClassSpec("Boxing Cardio Rounds", "long", "Phòng Gym VIP", "Boxing", "intermediate", 8,
-                    Set.of(DayOfWeek.SATURDAY), LocalTime.of(9, 0), LocalTime.of(10, 15), 0),
-            new ClassSpec("Aqua Technique", "thao", "Oasis Lap Pool", "Bơi lội", "all", 8,
-                    Set.of(DayOfWeek.FRIDAY), LocalTime.of(17, 0), LocalTime.of(18, 0), 0),
-            // Not started yet, so members can try enrolling in a whole course.
-            new ClassSpec("Yoga Cơ Bản (khóa mới)", "mai", "Zen Garden Studio", "Yoga", "beginner", 12,
-                    Set.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY), LocalTime.of(7, 0), LocalTime.of(8, 0), 0, 7, 34));
-
     private final UserRepository users;
     private final RoleRepository roles;
     private final MemberRepository members;
@@ -146,11 +111,6 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final MembershipSubscriptionRepository subscriptions;
     private final PaymentRepository payments;
     private final DisciplineRepository disciplines;
-    private final RoomRepository rooms;
-    private final GymClassRepository classes;
-    private final ClassSessionRepository sessions;
-    private final ClassEnrollmentRepository enrollments;
-    private final SessionAttendanceRepository attendance;
     private final CenterCheckinRepository checkins;
     private final CoachBookingRepository coachBookings;
     private final MemberProgressLogRepository progressLogs;
@@ -160,9 +120,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     public DemoDataSeeder(UserRepository users, RoleRepository roles, MemberRepository members,
                           CoachRepository coaches, ReceptionistRepository receptionists,
                           MembershipPackageRepository packages, MembershipSubscriptionRepository subscriptions,
-                          PaymentRepository payments, DisciplineRepository disciplines, RoomRepository rooms,
-                          GymClassRepository classes, ClassSessionRepository sessions,
-                          ClassEnrollmentRepository enrollments, SessionAttendanceRepository attendance,
+                          PaymentRepository payments, DisciplineRepository disciplines,
                           CenterCheckinRepository checkins, CoachBookingRepository coachBookings,
                           MemberProgressLogRepository progressLogs, PasswordEncoder passwordEncoder,
                           @Value("${app.demo.password:Demo@12345}") String demoPassword) {
@@ -175,11 +133,6 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.subscriptions = subscriptions;
         this.payments = payments;
         this.disciplines = disciplines;
-        this.rooms = rooms;
-        this.classes = classes;
-        this.sessions = sessions;
-        this.enrollments = enrollments;
-        this.attendance = attendance;
         this.checkins = checkins;
         this.coachBookings = coachBookings;
         this.progressLogs = progressLogs;
@@ -197,7 +150,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         LocalDate today = LocalDate.now(ZONE);
         String hash = passwordEncoder.encode(demoPassword);
 
-        User manager = createStaff("CENTER_MANAGER", "manager", "Nguyễn Hoàng Quản Lý", "male", hash, today);
+        createStaff("CENTER_MANAGER", "manager", "Nguyễn Hoàng Quản Lý", "male", hash, today);
         User reception = createStaff("RECEPTIONIST", "letan", "Trần Bảo Ngọc", "female", hash, today);
 
         Map<String, Coach> coachByKey = new HashMap<>();
@@ -206,14 +159,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
 
         Map<String, Member> memberByKey = new HashMap<>();
-        Map<String, MembershipSubscription> currentSub = new HashMap<>();
         for (MemberSpec spec : MEMBERS) {
             Member member = createMember(spec, hash, today);
             memberByKey.put(spec.key(), member);
-            MembershipSubscription sub = createSubscriptions(spec, member, reception, today);
-            if (sub != null) {
-                currentSub.put(spec.key(), sub);
-            }
+            createSubscriptions(spec, member, reception, today);
         }
 
         createCheckins(memberByKey, reception, today);
@@ -405,129 +354,6 @@ public class DemoDataSeeder implements ApplicationRunner {
         return packages.findAllByOrderByPriceAsc().stream()
                 .filter(p -> name.equalsIgnoreCase(p.getName())).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Demo seed needs package '" + name + "' (CatalogSeeder)"));
-    }
-
-    // ---- classes, sessions, course enrollments, attendance ------------------------------------------------------------
-
-    private Map<String, List<ClassSession>> createClasses(User manager, Map<String, Coach> coachByKey,
-                                                          LocalDate today) {
-        Map<String, List<ClassSession>> result = new HashMap<>();
-        Map<String, Room> roomByName = new HashMap<>();
-        rooms.findAllByOrderByNameAsc().forEach(r -> roomByName.put(r.getName(), r));
-        Map<String, Discipline> disciplineByName = new HashMap<>();
-        disciplines.findAll().forEach(d -> disciplineByName.put(d.getName(), d));
-
-        for (ClassSpec spec : CLASSES) {
-            Room room = roomByName.get(spec.room());
-            Discipline discipline = disciplineByName.get(spec.discipline());
-            if (room == null || discipline == null) {
-                log.warn("Demo seed: skip class '{}' (missing room or discipline)", spec.name());
-                continue;
-            }
-            GymClass gymClass = new GymClass();
-            gymClass.setName(spec.name());
-            gymClass.setDiscipline(discipline);
-            gymClass.setCoach(coachByKey.get(spec.coachKey()));
-            gymClass.setRoom(room);
-            gymClass.setCapacity(spec.capacity());
-            gymClass.setLevel(spec.level());
-            gymClass.setDescription("Lớp " + spec.name() + " do huấn luyện viên " + spec.coachKey() + " phụ trách.");
-            gymClass.setStatus("active");
-            gymClass.setPrice(BigDecimal.valueOf(spec.price()));
-            List<LocalDate> dates = new ArrayList<>();
-            for (LocalDate d = today.plusDays(spec.fromDay()); !d.isAfter(today.plusDays(spec.toDay())); d = d.plusDays(1)) {
-                if (spec.days().contains(d.getDayOfWeek())) {
-                    dates.add(d);
-                }
-            }
-            if (dates.isEmpty()) {
-                continue;
-            }
-            // The course runs exactly from its first to its last session: enrolment checks membership against these.
-            gymClass.setStartDate(dates.get(0));
-            gymClass.setEndDate(dates.get(dates.size() - 1));
-            gymClass.setRecurringDays(String.join(",", spec.days().stream().map(DayOfWeek::name).toList()));
-            gymClass.setStartTime(spec.start());
-            gymClass.setEndTime(spec.end());
-            gymClass.setCreatedBy(manager);
-            gymClass = classes.save(gymClass);
-
-            List<ClassSession> created = new ArrayList<>();
-            for (LocalDate d : dates) {
-                ClassSession session = new ClassSession();
-                session.setGymClass(gymClass);
-                session.setSessionDate(d);
-                session.setStartTime(spec.start());
-                session.setEndTime(spec.end());
-                session.setStatus(d.isBefore(today) ? "completed" : "scheduled");
-                created.add(sessions.save(session));
-            }
-            result.put(spec.name(), created);
-        }
-        return result;
-    }
-
-    private void enroll(Map<String, List<ClassSession>> sessionsByClass, Map<String, Member> memberByKey,
-                        List<String> activeKeys, Map<String, Coach> coachByKey, LocalDate today) {
-        // member key -> classes they follow
-        Map<String, List<String>> plan = Map.of(
-                "an", List.of("Strength Foundation", "Boxing Cardio Rounds"),
-                "binh", List.of("Morning Flow Yoga", "Aqua Technique"),
-                "chi", List.of("Morning Flow Yoga"),
-                "hieu", List.of("Strength Foundation"),
-                "giang", List.of("Boxing Cardio Rounds", "Morning Flow Yoga"));
-        Map<String, String> coachOfClass = new HashMap<>();
-        CLASSES.forEach(c -> coachOfClass.put(c.name(), c.coachKey()));
-
-        for (String key : activeKeys) {
-            Member member = memberByKey.get(key);
-            for (String className : plan.getOrDefault(key, List.of())) {
-                List<ClassSession> courseSessions = sessionsByClass.getOrDefault(className, List.of());
-                if (courseSessions.isEmpty()) {
-                    continue;
-                }
-                // Classes are recurring courses: a member enrols in the whole course, never in a single session.
-                GymClass course = courseSessions.get(0).getGymClass();
-                boolean hasUpcoming = courseSessions.stream().anyMatch(s -> !s.getSessionDate().isBefore(today));
-                LocalDate firstDay = courseSessions.get(0).getSessionDate();
-                LocalDate enrolledOn = firstDay.minusDays(3).isBefore(member.getJoinDate())
-                        ? member.getJoinDate() : firstDay.minusDays(3);
-                ClassEnrollment enrollment = new ClassEnrollment();
-                enrollment.setGymClass(course);
-                enrollment.setMember(member);
-                enrollment.setStatus(hasUpcoming ? "booked" : "completed");
-                enrollment.setEnrolledAt(enrolledOn.atTime(10, 0));
-                enrollments.save(enrollment);
-
-                int index = 0;
-                for (ClassSession session : courseSessions) {
-                    // A newer member (joined recently) has no earlier history.
-                    if (session.getSessionDate().isBefore(member.getJoinDate())) {
-                        continue;
-                    }
-                    if (session.getSessionDate().isBefore(today)) {
-                        markAttendance(session, member, coachByKey.get(coachOfClass.get(className)), index++);
-                    }
-                }
-            }
-        }
-    }
-
-    /** Mostly present, with the occasional late or absent so the attendance report has variety. */
-    private void markAttendance(ClassSession session, Member member, Coach coach, int index) {
-        String status = index % 7 == 5 ? "absent" : index % 5 == 3 ? "late" : "present";
-        SessionAttendance record = new SessionAttendance();
-        record.setSession(session);
-        record.setMember(member);
-        record.setStatus(status);
-        record.setRecordedBy(coach);
-        if (!"absent".equals(status)) {
-            LocalDateTime start = session.getSessionDate().atTime(session.getStartTime());
-            record.setCheckedInAt("late".equals(status) ? start.plusMinutes(12) : start.minusMinutes(5));
-        } else {
-            record.setNotes("Vắng không báo trước");
-        }
-        attendance.save(record);
     }
 
     // ---- center check-ins -----------------------------------------------------------------------------------

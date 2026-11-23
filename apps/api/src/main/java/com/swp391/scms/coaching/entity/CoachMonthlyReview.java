@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 
 /**
  * Entity mapping monthly performance review, badges and ranking of coaches (SCRUM-134).
+ * The feature was removed (#144); the entity stays only so the code-first schema still describes the existing table.
  */
 @Entity
 @Table(name = "coach_monthly_reviews", indexes = {

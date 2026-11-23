@@ -50,15 +50,16 @@ it('opens staff and manager support notifications in their own queues', () => {
   expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'MANAGER')).toBe('/messages?tab=support');
 });
 
-it('product_order notifications open the right page per role', () => {
+it('retired shop and class notifications open the home queue of each role', () => {
   expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MEMBER')).toBe('/member/invoices');
-  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'STAFF')).toBe('/staff/orders');
-  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'RECEPTIONIST')).toBe('/staff/orders');
-  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MANAGER')).toBe('/manager/products?tab=orders');
-  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'CENTER_MANAGER')).toBe('/manager/products?tab=orders');
-  expect(safeNotificationPath('/staff/orders', 'STAFF')).toBe('/staff/orders');
-  expect(safeNotificationPath('/staff/orders', 'MANAGER')).toBe('/staff/orders');
-  expect(safeNotificationPath('/manager/products', 'MANAGER')).toBe('/manager/products');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'STAFF')).toBe('/staff/reception');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'RECEPTIONIST')).toBe('/staff/reception');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MANAGER')).toBe('/manager/reports');
+  expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'CENTER_MANAGER')).toBe('/manager/reports');
+  expect(notificationDestination({ relatedEntityType: 'class_session', type: 'class_reminder' }, 'STAFF')).toBe('/staff/reception');
+  expect(safeNotificationPath('/staff/orders', 'MANAGER')).toBeNull();
+  expect(safeNotificationPath('/staff/classes', 'COACH')).toBeNull();
+  expect(safeNotificationPath('/staff/requests', 'COACH')).toBe('/staff/requests');
 });
 
 it('redirects retired court notifications while preserving PT and staff destinations', () => {

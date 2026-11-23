@@ -2,7 +2,7 @@ import { test, expect } from '../fixtures';
 import { ACCOUNTS, API, type RoleKey } from '../helpers/accounts';
 import { createActiveMember, unique } from '../helpers/api';
 
-const HOME: Record<string, string> = { ADMIN: '/admin/users', MANAGER: '/manager/reports', STAFF: '/staff/reception', COACH: '/staff/attendance', MEMBER: '/member/dashboard' };
+const HOME: Record<string, string> = { ADMIN: '/admin/users', MANAGER: '/manager/reports', STAFF: '/staff/reception', COACH: '/coach/pt-attendance', MEMBER: '/member/dashboard' };
 
 async function login(page: import('@playwright/test').Page, username: string, password: string) {
   await page.goto('/login');

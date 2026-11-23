@@ -11,11 +11,12 @@ import com.swp391.scms.facilities.repository.EquipmentRepository;
 import com.swp391.scms.facilities.repository.RoomRepository;
 import java.util.List;
 import java.util.Set;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.equipment-enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.legacy.equipment-enabled", havingValue = "true")
 public class EquipmentService {
 
     private static final Set<String> VALID_STATUSES = Set.of("active", "maintenance", "broken", "retired");

@@ -8,6 +8,7 @@ import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +20,7 @@ import java.util.List;
  * SCRUM-133: REST Controller for member's favorite disciplines.
  */
 @RestController
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.favorite-disciplines-enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.legacy.favorite-disciplines-enabled", havingValue = "true")
 @RequestMapping("/api/v1/members/me/favorite-disciplines")
 public class MemberFavoriteDisciplineController {
 

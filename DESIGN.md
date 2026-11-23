@@ -1,21 +1,11 @@
 # Quy chuẩn thiết kế chính — SÖL
 
-Giảm scope Thịnh — Task 4 (23/11/2026):
-- Member bỏ Streak, số đo, tiến độ/lịch sử tập luyện và đánh giá HLV. `/member/progress` chỉ xem Giáo án theo ngày; không thêm tracking/completion.
-- Giữ Dashboard bốn cột, tiến trình thời hạn membership, hồ sơ/KYC, PT, check-in/checkout, QR, gói tập và thanh toán. Explore bỏ Streak/InBody, giữ Gym/PT và Giáo án.
-
-Giảm scope Thịnh — Task 3 (22/11/2026):
-- Bỏ Shop thương mại điện tử Member/Public: catalog sản phẩm, giỏ hàng, checkout đơn hàng, lịch sử đơn hàng và Shop trong Explore 3D.
-- Giữ thanh toán gói tập/PT, lịch sử giao dịch cũ và Shop của Staff/Manager. Giữ Streak, Progress, Health cho Task 4. Không đổi theme hay bố cục tổng thể.
-
-Giảm scope Thịnh — Task 2 (22/11/2026):
-- Member/Public bỏ đăng ký lớp nhóm và đặt sân. Giữ URL `/member/classes` cho lịch PT và `?tab=pt` cho đặt/hủy/thanh toán PT; giữ bố cục Dashboard bốn cột.
-- Giữ Classes/Courts của Staff/Coach/Manager, Shop, Streak và quyền lợi gói do backend cung cấp. Catalog/quyền lợi backend vẫn chờ An/Khoa đồng bộ.
-
-Giảm scope Thịnh — Task 1 (22/11/2026):
-- Public/Landing chỉ quảng bá Gym; bỏ trang giới thiệu Swimming, Tennis, Boxing, Badminton, Yoga. Giữ bố cục, theme và cuộn native hiện hành.
-- Explore 3D chỉ có Gym tiêu chuẩn và khu hỗ trợ; bỏ khu bộ môn khác, Gym VIP và tiện ích đặc quyền. Shop, Classes/Courts ở portal, Streak và InBody chờ các commit sau, không xóa trong Task 1.
-- Gói tập giữ dữ liệu, giá, ID, quyền lợi và flow mua/gia hạn/nâng cấp thật. DTO chưa có bộ môn/phòng: chưa lọc được gói Gym; cần An/Khoa xác nhận catalog, không suy luận bằng SILVER/GOLD/PLATINUM.
+Thu gọn phạm vi chỉ còn Gym (22–23/11/2026, PR #144–#156 — **ghi đè** mọi mục cũ bên dưới nói về lớp nhóm, đặt sân, Shop, thiết bị, streak, số đo, tiến độ hay đánh giá HLV):
+- **Còn giữ**: Gym tiêu chuẩn, gói tập (mua/gia hạn/nâng cấp/bảo lưu), PT 1:1 (đặt/hủy/thanh toán/điểm danh), giáo án, check-in/checkout và QR, ví và hóa đơn, tin nhắn/hỗ trợ, bảng xếp hạng HLV theo số buổi dạy. Giữ Dashboard bốn cột, bố cục, theme và cuộn native hiện hành.
+- **Đã bỏ ở mọi vai trò**: lớp nhóm và xếp lịch lớp, đặt sân, Shop (Public, Member, lễ tân, quản lý), quản lý thiết bị, đánh giá HLV và đánh giá tháng, đánh giá buổi tập, streak, chỉ số cơ thể (kể cả nhập tại quầy lễ tân và lấy số đo trong trợ lý AI soạn giáo án), tiến độ/lịch sử tập luyện; Explore 3D bỏ khu bộ môn khác, Gym VIP, InBody và Shop. Không dựng lại các màn này.
+- **URL cũ** đi qua `<Navigate replace>` về màn còn giữ: `/member/classes` là lịch PT (`?tab=pt` để đặt); `/staff/classes|orders|courts|pt-attendance` → `/staff/reception`; `/manager/products*` → `/manager/reports`; `/manager/equipment` → `/manager/catalogs`; `/manager/coach-reviews` → `/manager/coach-assignments`; `/staff/attendance*` → `/coach/pt-attendance` (cũng là trang chủ HLV); `/coach/health-metrics` → `/coach/training-plans`. Thông báo hoặc kết quả thanh toán VNPay trỏ màn đã bỏ về `/member/invoices` hoặc trang chủ của vai trò.
+- **Nguồn sự thật ở backend**: controller của tính năng đã bỏ tắt bằng `@ConditionalOnProperty` (mặc định off); chỉ trả bộ môn Gym và Phòng Gym Tiêu chuẩn ở `DisciplineController`/`RoomService`. Frontend không lọc thêm theo tên.
+- **Gói tập** giữ dữ liệu, giá, ID và flow thật; không hiển thị quyền lợi lớp nhóm, lượt sân, phòng VIP hay giảm giá sản phẩm. Không suy luận gói "Gym" từ SILVER/GOLD/PLATINUM.
 
 
 Audit toàn diện cỡ chữ, chống AI-slop & giảm rối toàn web (14/11/2026, đồng bộ cả 5 phân khu `Public/Auth`, `Shell/Chat`, `Member`, `Staff/Coach`, `Manager/Admin`):

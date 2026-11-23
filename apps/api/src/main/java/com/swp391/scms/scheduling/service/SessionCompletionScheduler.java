@@ -5,6 +5,7 @@ import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.scheduling.repository.SessionBookingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +22,7 @@ import java.time.ZoneId;
  * attendance corrections still see them as booked.
  */
 @Service
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 public class SessionCompletionScheduler {
     public static final int GRACE_DAYS = 7;
     private static final Logger log = LoggerFactory.getLogger(SessionCompletionScheduler.class);

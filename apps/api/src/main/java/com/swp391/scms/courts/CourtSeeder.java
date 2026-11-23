@@ -8,6 +8,7 @@ import java.time.LocalTime;
 import java.util.List;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
  * A court is a room that has a court discipline and whole-hour opening hours; existing rooms are never touched.
  */
 @Component
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
 @Order(100)
 public class CourtSeeder implements ApplicationRunner {
 

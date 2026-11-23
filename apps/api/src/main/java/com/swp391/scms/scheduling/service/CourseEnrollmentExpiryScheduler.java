@@ -2,12 +2,13 @@ package com.swp391.scms.scheduling.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /** Periodically frees course seats held by fees that were never paid. */
 @Component
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 public class CourseEnrollmentExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(CourseEnrollmentExpiryScheduler.class);
     private final EnrollmentService service;

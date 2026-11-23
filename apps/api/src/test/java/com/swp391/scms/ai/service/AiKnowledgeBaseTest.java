@@ -1,6 +1,5 @@
 package com.swp391.scms.ai.service;
 
-import com.swp391.scms.shop.ShopProperties;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -22,11 +21,8 @@ class AiKnowledgeBaseTest {
     }
 
     @Test
-    void numbersComeFromTheCodeAndConfigurationThatEnforceThem() {
-        ShopProperties shop = new ShopProperties();
-        shop.setPaymentWindowMinutes(45);
-        shop.setCounterHoldHours(12);
-        String all = new AiKnowledgeBase(shop, 20, 90).sectionsFor("");
+    void numbersComeFromTheCodeThatEnforcesThem() {
+        String all = base.sectionsFor("");
 
         assertTrue(all.contains("ít nhất 24 giờ; mỗi lần tối thiểu 3 ngày"));
     }

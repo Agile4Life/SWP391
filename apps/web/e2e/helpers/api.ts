@@ -96,22 +96,3 @@ export async function approveKyc(memberId: number) {
   return api('staff', 'POST', `/members/kyc/${memberId}/approve`);
 }
 
-/** Tạo khóa học định kỳ tương lai (1 buổi/tuần, 1 tuần) bằng tài khoản quản lý. Thử lại khi trùng lịch HLV/phòng. */
-export async function createCourse(opts: { startInDays: number; capacity?: number; price?: number; name?: string }) {
-  const classes = await api<any[]>('manager', 'GET', '/classes');
-  const base = (classes.data as any[]).find((c) => c.disciplineName === 'Gym') ?? (classes.data as any[])[0];
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const start = new Date(Date.now() + (opts.startInDays + attempt) * 86_400_000);
-    const iso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(start);
-    const day = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][new Date(`${iso}T00:00:00+07:00`).getDay()];
-    const hour = 6 + Math.floor(Math.random() * 14);
-    const res = await api('manager', 'POST', '/classes/recurring', {
-      name: opts.name ?? `E2E ${unique('c')}`, disciplineId: base.disciplineId, coachId: base.coachId, roomId: base.roomId,
-      capacity: opts.capacity ?? 10, level: 'all', description: 'Khóa học tạo bởi e2e', price: opts.price ?? 500000,
-      startDate: iso, endDate: iso, recurringDays: [day], startTime: `${String(hour).padStart(2, '0')}:00:00`, endTime: `${String(hour + 1).padStart(2, '0')}:00:00`,
-    });
-    if (res.status < 300) return { id: Number((res.data as any).id ?? (res.data as any).classId), startDate: iso, raw: res.data as any };
-    if (res.status !== 409) throw new Error(`create course ${res.status} ${JSON.stringify(res.body)}`);
-  }
-  throw new Error('không tạo được khóa học (trùng lịch liên tục)');
-}

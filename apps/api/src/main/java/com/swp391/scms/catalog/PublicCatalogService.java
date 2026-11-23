@@ -1,22 +1,10 @@
 package com.swp391.scms.catalog;
 
-import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.facilities.dto.CatalogResponses.PackageDto;
-import com.swp391.scms.scheduling.repository.SessionBookingRepository;
-import com.swp391.scms.scheduling.dto.SessionBookingCount;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
-import com.swp391.scms.scheduling.dto.ClassBookingCount;
-import com.swp391.scms.scheduling.mapper.SchedulingMapper;
-import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
-import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.users.CoachRepository;
-import java.time.Clock;
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,35 +13,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class PublicCatalogService {
     public record CoachDto(Long id, String name, String specialization, String bio,
                            String certification, String avatarUrl) {}
+    /** {@code sessions} stays in the contract for existing clients but is always empty: group classes are out of scope. */
     public record CatalogDto(List<PackageDto> packages, List<CoachDto> coaches,
                              List<ClassSessionDto> sessions) {}
 
     private final MembershipPackageRepository packages;
     private final CoachRepository coaches;
-    private final ClassSessionRepository sessions;
-    private final ClassEnrollmentRepository enrollments;
 
-    private final SessionBookingRepository sessionBookings;
-    private final SchedulingMapper mapper;
-    private final Clock clock;
-
-    public PublicCatalogService(MembershipPackageRepository packages, CoachRepository coaches,
-            ClassSessionRepository sessions, ClassEnrollmentRepository enrollments,
-            SchedulingMapper mapper, Clock clock) {
-        this(packages, coaches, sessions, enrollments, mapper, clock, null);
-    }
-
-    @Autowired
-    public PublicCatalogService(MembershipPackageRepository packages, CoachRepository coaches,
-            ClassSessionRepository sessions, ClassEnrollmentRepository enrollments,
-            SchedulingMapper mapper, Clock clock, SessionBookingRepository sessionBookings) {
-        this.sessionBookings = sessionBookings;
+    public PublicCatalogService(MembershipPackageRepository packages, CoachRepository coaches) {
         this.packages = packages;
         this.coaches = coaches;
-        this.sessions = sessions;
-        this.enrollments = enrollments;
-        this.mapper = mapper;
-        this.clock = clock;
     }
 
     @Transactional(readOnly = true)

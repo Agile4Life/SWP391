@@ -1,23 +1,17 @@
 package com.swp391.scms.ai.service;
 
 import com.swp391.scms.attendance.service.CenterCheckinService;
-import com.swp391.scms.attendance.service.CourseAttendanceService;
-import com.swp391.scms.courts.service.CourtPricing;
 import com.swp391.scms.facilities.PackageBenefits;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.membership.service.DynamicQrService;
+import com.swp391.scms.membership.service.EntitlementRevocationService;
 import com.swp391.scms.membership.service.MemberTrialService;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
-import com.swp391.scms.scheduling.service.EnrollmentService;
-import com.swp391.scms.shop.ShopProperties;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,17 +37,8 @@ public class AiKnowledgeBase {
 
     private final List<Section> sections;
 
-    /** Defaults for unit tests and for running without the Spring context. */
     public AiKnowledgeBase() {
-        this(new ShopProperties(), 15, 120);
-    }
-
-    @Autowired
-    public AiKnowledgeBase(@Autowired(required = false) ShopProperties shop,
-                           @Value("${app.vnpay.timeout-minutes:15}") int vnpayTimeoutMinutes,
-                           @Value("${app.courts.cash-release-lead-minutes:120}") int courtCashReleaseLeadMinutes) {
-        Map<String, String> values = values(shop != null ? shop : new ShopProperties(),
-                vnpayTimeoutMinutes, courtCashReleaseLeadMinutes);
+        Map<String, String> values = values();
         // Editor notes are dropped first: they explain the {{placeholder}} syntax and must not be filled.
         String text = read().replaceAll("(?s)<!--.*?-->", "");
         List<Section> parsed = new ArrayList<>(parse(fill(text, values)));
@@ -81,35 +66,17 @@ public class AiKnowledgeBase {
         return sections;
     }
 
-    private static Map<String, String> values(ShopProperties shop, int vnpayTimeoutMinutes, int courtCashReleaseLeadMinutes) {
+    private static Map<String, String> values() {
         Map<String, String> v = new HashMap<>();
         v.put("trial.days", String.valueOf(MemberTrialService.TRIAL_DAYS));
         v.put("checkin.qrTtlSeconds", String.valueOf(DynamicQrService.DEFAULT_TTL_SECONDS));
         v.put("checkin.autoCheckoutHours", String.valueOf(CenterCheckinService.ANTI_PASSBACK_TIMEOUT_HOURS));
-        v.put("course.onlineHoldMinutes", String.valueOf(EnrollmentService.ONLINE_HOLD_MINUTES));
-        v.put("course.blockDays", String.valueOf(CourseAttendanceService.BLOCK_DAYS));
-        v.put("court.standardPrice", money(CourtPricing.STANDARD_PRICE));
-        v.put("court.eveningPrice", money(CourtPricing.EVENING_PRICE));
-        v.put("court.eveningFrom", CourtPricing.EVENING_FROM.toString());
-        v.put("court.vnpayTimeoutMinutes", String.valueOf(vnpayTimeoutMinutes));
-        v.put("court.cashReleaseLeadMinutes", String.valueOf(courtCashReleaseLeadMinutes));
         v.put("hold.noticeHours", String.valueOf(MembershipSubscriptionService.HOLD_NOTICE_HOURS));
         v.put("hold.minDays", String.valueOf(MembershipSubscriptionService.MIN_HOLD_DAYS));
-        v.put("hold.courseRefundDays", String.valueOf(EnrollmentService.HOLD_REFUND_NOTICE_DAYS));
-        v.put("hold.ptRefundDays", String.valueOf(com.swp391.scms.membership.service.EntitlementRevocationService.PT_HOLD_REFUND_DAYS));
-        v.put("hold.courtRefundHours", String.valueOf(com.swp391.scms.membership.service.EntitlementRevocationService.COURT_HOLD_REFUND_HOURS));
+        v.put("hold.ptRefundDays", String.valueOf(EntitlementRevocationService.PT_HOLD_REFUND_DAYS));
         v.put("hold.maxDocuments", String.valueOf(MembershipSubscriptionService.MAX_HOLD_DOCUMENTS));
         v.put("hold.maxDocumentMb", String.valueOf(MembershipSubscriptionService.MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)));
-        v.put("shop.paymentWindowMinutes", String.valueOf(shop.paymentWindowMinutes()));
-        v.put("shop.counterHoldHours", String.valueOf(shop.counterHoldHours()));
-        v.put("shop.shippingFee", money(shop.shippingFee()));
-        v.put("shop.freeShippingThreshold", money(shop.freeShippingThreshold()));
-        v.put("shop.pickupAddress", shop.getPickupAddress());
         return v;
-    }
-
-    private static String money(BigDecimal amount) {
-        return amount == null ? "?" : String.format(java.util.Locale.ROOT, "%,d", amount.longValue()).replace(',', '.');
     }
 
     private static String read() {

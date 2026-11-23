@@ -2,12 +2,13 @@ package com.swp391.scms.courts.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /** Periodically frees court slots held by bookings that were never paid. */
 @Component
-@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
+@ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
 public class CourtBookingExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(CourtBookingExpiryScheduler.class);
     private final CourtBookingService service;

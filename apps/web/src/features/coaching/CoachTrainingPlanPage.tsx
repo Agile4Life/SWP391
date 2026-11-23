@@ -1,9 +1,8 @@
 import { useStaffI18n, type StaffMessage, staffError, staffMessage, staffNotify as notify } from '../operations/staffI18n';
-import { calculateAutoBmi, summarizeHealthMetrics, type HealthMetricsSummary } from './coachHealthUtils';
-import { listHealthMetrics } from '../member/profileApi';
+import { calculateAutoBmi } from './coachHealthUtils';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise, type ExerciseValues } from './trainingExercise';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -181,36 +180,6 @@ export function CoachTrainingPlanPage() {
       active = false;
     };
   }, [hasAccess, isManager, membersAttempt]);
-
-  const handleHealthMetricsChange = useCallback((summary: HealthMetricsSummary) => {
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== summary.memberId) return m;
-        const heightCm = summary.heightCm ?? m.heightCm;
-        const weightKg = summary.weightKg ?? m.weightKg;
-        const bmi = calculateAutoBmi(heightCm, weightKg) ?? summary.bmi ?? m.bmi;
-        if (m.heightCm === heightCm && m.weightKg === weightKg && m.bmi === bmi) return m;
-        return { ...m, heightCm, weightKg, bmi };
-      })
-    );
-  }, []);
-
-  useEffect(() => {
-    if (!isAiModalOpen || aiSelectedMemberId == null) return;
-    let active = true;
-    void listHealthMetrics(aiSelectedMemberId)
-      .then((rows) => {
-        if (active && Array.isArray(rows) && rows.length > 0) {
-          handleHealthMetricsChange(summarizeHealthMetrics(aiSelectedMemberId, rows));
-        }
-      })
-      .catch(() => {
-        // Giữ nguyên dữ liệu hiện có của học viên nếu không tải thêm được lịch sử số đo
-      });
-    return () => {
-      active = false;
-    };
-  }, [isAiModalOpen, aiSelectedMemberId, handleHealthMetricsChange]);
 
   // Học viên đang chọn trong form
   const selectedMember: MemberOption | undefined = useMemo(() => {

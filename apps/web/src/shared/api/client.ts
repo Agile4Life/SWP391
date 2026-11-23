@@ -280,7 +280,7 @@ export const homePath = (role: UserSession['role']): string => {
     case 'STAFF':
       return '/staff/reception';
     case 'COACH':
-      return '/staff/attendance';
+      return '/coach/pt-attendance';
     case 'MEMBER':
     default:
       return '/member/dashboard';

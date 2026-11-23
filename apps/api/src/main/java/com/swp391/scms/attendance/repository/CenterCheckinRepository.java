@@ -15,10 +15,6 @@ import java.util.Optional;
 @Repository
 public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Long> {
 
-    @Query("select c.checkInTime from CenterCheckin c where c.member.userId = :memberId "
-            + "and c.status = 'GRANTED' and c.checkInTime <= :until order by c.checkInTime")
-    List<LocalDateTime> findGrantedVisitTimes(@Param("memberId") Long memberId,
-                                            @Param("until") LocalDateTime until);
 
     /**
      * A granted visit that was inside the center while a session ran: it began no earlier than {@code earliest} (a
