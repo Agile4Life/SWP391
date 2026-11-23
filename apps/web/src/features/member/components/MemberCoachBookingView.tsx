@@ -968,10 +968,7 @@ export function MemberCoachBookingView({
       <section data-i18n-managed style={{ marginTop: 12 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-            {memberText("Lịch tập HLV 1:1 của tôi (")}{myBookings.filter((b) => b.status === 'confirmed' && !isSessionCompleted(b)).length} {memberText(" buổi sắp tới")}{myBookings.some((b) => b.status === 'confirmed' && isSessionCompleted(b))
-              ? memberText(` • ${myBookings.filter((b) => b.status === 'confirmed' && isSessionCompleted(b)).length} buổi đã kết thúc`, ` • ${myBookings.filter((b) => b.status === 'confirmed' && isSessionCompleted(b)).length} completed sessions`)
-              : ''}
-            )
+            {memberText("Lịch tập HLV 1:1 của tôi", "My 1:1 coaching schedule")}
           </h3>
           {myBookings.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
