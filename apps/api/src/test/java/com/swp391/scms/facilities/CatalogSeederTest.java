@@ -87,9 +87,9 @@ class CatalogSeederTest {
         verify(disciplines, times(1)).create(any());
         verify(rooms, times(1)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
-        verify(packages, times(4)).create(requests.capture());
+        verify(packages, times(7)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(0, 549000, 799000, 1599000);
+                .containsExactly(0, 549000, 990000, 799000, 1449000, 1599000, 2899000);
         var legacy = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
         verify(packages, times(3)).seedLegacyPackage(legacy.capture());
         org.assertj.core.api.Assertions.assertThat(legacy.getAllValues().stream().map(r -> r.price().intValue()).toList())
@@ -123,8 +123,11 @@ class CatalogSeederTest {
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_NAME, 30),
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_NAME, 30),
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.SILVER_3M_NAME, 90),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.SILVER_6M_NAME, 180),
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_3M_NAME, 90),
-                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_3M_NAME, 90));
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_6M_NAME, 180),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_3M_NAME, 90),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_6M_NAME, 180));
     }
 
     @Test
@@ -138,7 +141,7 @@ class CatalogSeederTest {
         verify(disciplines, times(1)).create(any());
         verify(disciplines, never()).update(any(), any());
         verify(rooms, never()).create(any());
-        verify(packages, times(4)).create(any());
+        verify(packages, times(7)).create(any());
         verify(packages, times(3)).seedLegacyPackage(any());
     }
     @Test

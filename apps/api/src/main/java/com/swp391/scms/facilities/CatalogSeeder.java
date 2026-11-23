@@ -75,39 +75,82 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final int PLATINUM_DURATION = 30;
     public static final Integer PLATINUM_CREDIT_LIMIT = 4;
 
-    // --- 3 THÁNG (90 NGÀY) - ĐỒNG HÀNH DÀI HẠN (giá thấp hơn mua 3 lần gói 1 tháng) ---
+    // --- 3 THÁNG (90 NGÀY) & 6 THÁNG (180 NGÀY) ---
     public static final String SILVER_3M_NAME = "SILVER 3 THÁNG";
-    public static final String SILVER_3M_DESC = "BASIC – Đồng hành 3 tháng (Tiết kiệm 8%)\n"
+    public static final String SILVER_3M_DESC = "BASIC – Đồng hành 3 tháng\n"
             + "Quyền lợi:\n"
-            + "- Tập luyện không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
-            + "- Sử dụng khu vực tập luyện tiêu chuẩn, phòng thay đồ và tủ khóa chung.\n"
-            + "- Miễn phí nước uống.";
+            + "- Tập luyện Gym không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
+            + "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.\n"
+            + "- Sử dụng đầy đủ khu vực tạ tự do, máy cardio và máy tập tiêu chuẩn.\n"
+            + "- Sử dụng phòng thay đồ, tủ khóa chung và miễn phí nước uống.\n"
+            + "- Hỗ trợ bảo lưu tối đa 07 ngày (khi có lý do hợp lệ).\n"
+            + "- Có thể đặt thêm buổi tập PT 1:1 tính phí theo giờ khi có nhu cầu.";
     public static final BigDecimal SILVER_3M_PRICE = new BigDecimal("549000");
     public static final int SILVER_3M_DURATION = 90;
     public static final Integer SILVER_3M_CREDIT_LIMIT = 3;
 
+    public static final String SILVER_6M_NAME = "SILVER 6 THÁNG";
+    public static final String SILVER_6M_DESC = "BASIC – Đồng hành 6 tháng (Tiết kiệm ~10%)\n"
+            + "Quyền lợi:\n"
+            + "- Tập luyện Gym không giới hạn trong giờ hoạt động suốt 180 ngày.\n"
+            + "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.\n"
+            + "- Sử dụng đầy đủ khu vực tạ tự do, máy cardio và máy tập tiêu chuẩn.\n"
+            + "- Sử dụng phòng thay đồ, tủ khóa chung và miễn phí nước uống.\n"
+            + "- Hỗ trợ bảo lưu tối đa 07 ngày (khi có lý do hợp lệ).\n"
+            + "- Có thể đặt thêm buổi tập PT 1:1 tính phí theo giờ khi có nhu cầu.";
+    public static final BigDecimal SILVER_6M_PRICE = new BigDecimal("990000");
+    public static final int SILVER_6M_DURATION = 180;
+    public static final Integer SILVER_6M_CREDIT_LIMIT = 6;
+
     public static final String GOLD_3M_NAME = "GOLD 3 THÁNG";
-    public static final String GOLD_3M_DESC = "STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
+    public static final String GOLD_3M_DESC = "STANDARD – Gym + PT 1:1 & Giáo án (3 tháng)\n"
             + "Toàn bộ quyền lợi Silver, cộng thêm:\n"
-            + "- 09 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
-            + "- Sử dụng khu vực máy tập nâng cao và khăn tập riêng mỗi buổi.\n"
-            + "- Tủ khóa cá nhân cố định.\n"
-            + "- Giảm 10% dịch vụ PT bổ sung.";
+            + "- Tặng 09 buổi tập Personal Trainer 1:1 (03 buổi / mỗi chu kỳ 30 ngày).\n"
+            + "- Được Huấn luyện viên xây dựng Giáo án tập luyện cá nhân hóa.\n"
+            + "- Sử dụng tủ khóa cố định và khăn tập mỗi buổi.\n"
+            + "- Hỗ trợ bảo lưu tối đa 15 ngày.\n"
+            + "- Giảm 10% phí khi đặt thêm các buổi tập PT 1:1 ngoài định mức.";
     public static final BigDecimal GOLD_3M_PRICE = new BigDecimal("799000");
     public static final int GOLD_3M_DURATION = 90;
     public static final Integer GOLD_3M_CREDIT_LIMIT = 6;
 
+    public static final String GOLD_6M_NAME = "GOLD 6 THÁNG";
+    public static final String GOLD_6M_DESC = "STANDARD – Gym + PT 1:1 & Giáo án (6 tháng · Tiết kiệm ~10%)\n"
+            + "Toàn bộ quyền lợi Silver, cộng thêm:\n"
+            + "- Tặng 18 buổi tập Personal Trainer 1:1 (03 buổi / mỗi chu kỳ 30 ngày).\n"
+            + "- Được Huấn luyện viên xây dựng và điều chỉnh Giáo án tập luyện cá nhân hóa.\n"
+            + "- Sử dụng tủ khóa cố định và khăn tập mỗi buổi.\n"
+            + "- Hỗ trợ bảo lưu tối đa 15 ngày.\n"
+            + "- Giảm 10% phí khi đặt thêm các buổi tập PT 1:1 ngoài định mức.";
+    public static final BigDecimal GOLD_6M_PRICE = new BigDecimal("1449000");
+    public static final int GOLD_6M_DURATION = 180;
+    public static final Integer GOLD_6M_CREDIT_LIMIT = 12;
+
     public static final String PLATINUM_3M_NAME = "PLATINUM 3 THÁNG";
-    public static final String PLATINUM_3M_DESC = "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
+    public static final String PLATINUM_3M_DESC = "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (3 tháng)\n"
             + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
-            + "- 18 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
-            + "- Sử dụng phòng xông hơi.\n"
-            + "- Khăn tập, khăn tắm và tủ đồ cá nhân cao cấp.\n"
-            + "- Giáo án tập luyện riêng và tư vấn dinh dưỡng cơ bản.\n"
-            + "- Giảm 20% dịch vụ PT bổ sung.";
+            + "- Tặng 18 buổi tập Personal Trainer 1:1 (06 buổi / mỗi chu kỳ 30 ngày).\n"
+            + "- Thiết kế Giáo án tập luyện chuyên sâu theo mục tiêu từng giai đoạn.\n"
+            + "- Tủ đồ cá nhân cao cấp có khóa riêng, khăn tập & khăn tắm VIP.\n"
+            + "- Miễn phí nước khoáng và đồ uống thể thao.\n"
+            + "- Hỗ trợ bảo lưu tối đa 30 ngày.\n"
+            + "- Giảm 20% phí khi đặt thêm các buổi tập PT 1:1 ngoài định mức.";
     public static final BigDecimal PLATINUM_3M_PRICE = new BigDecimal("1599000");
     public static final int PLATINUM_3M_DURATION = 90;
     public static final Integer PLATINUM_3M_CREDIT_LIMIT = 12;
+
+    public static final String PLATINUM_6M_NAME = "PLATINUM 6 THÁNG";
+    public static final String PLATINUM_6M_DESC = "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (6 tháng · Tiết kiệm ~10%)\n"
+            + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
+            + "- Tặng 36 buổi tập Personal Trainer 1:1 (06 buổi / mỗi chu kỳ 30 ngày).\n"
+            + "- Thiết kế Giáo án tập luyện chuyên sâu theo mục tiêu từng giai đoạn.\n"
+            + "- Tủ đồ cá nhân cao cấp có khóa riêng, khăn tập & khăn tắm VIP.\n"
+            + "- Miễn phí nước khoáng và đồ uống thể thao.\n"
+            + "- Hỗ trợ bảo lưu tối đa 30 ngày.\n"
+            + "- Giảm 20% phí khi đặt thêm các buổi tập PT 1:1 ngoài định mức.";
+    public static final BigDecimal PLATINUM_6M_PRICE = new BigDecimal("2899000");
+    public static final int PLATINUM_6M_DURATION = 180;
+    public static final Integer PLATINUM_6M_CREDIT_LIMIT = 24;
 
 
     private final DisciplineService disciplines;
@@ -143,10 +186,13 @@ public class CatalogSeeder implements ApplicationRunner {
         upsertLegacyPackage(GOLD_NAME, GOLD_DESC, GOLD_PRICE, GOLD_DURATION, GOLD_CREDIT_LIMIT, "The Sanctuary VIP");
         upsertLegacyPackage(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_PRICE, PLATINUM_DURATION, PLATINUM_CREDIT_LIMIT, "The Sovereign Annual");
 
-        // Upsert 3-month long-term packages
-        upsertPackage(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT);
-        upsertPackage(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_DURATION, GOLD_3M_CREDIT_LIMIT);
-        upsertPackage(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_DURATION, PLATINUM_3M_CREDIT_LIMIT);
+        // Upsert 3-month & 6-month long-term packages
+        upsertPackageWithTier(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT, "SILVER");
+        upsertPackageWithTier(SILVER_6M_NAME, SILVER_6M_DESC, SILVER_6M_PRICE, SILVER_6M_DURATION, SILVER_6M_CREDIT_LIMIT, "SILVER");
+        upsertPackageWithTier(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_DURATION, GOLD_3M_CREDIT_LIMIT, "GOLD");
+        upsertPackageWithTier(GOLD_6M_NAME, GOLD_6M_DESC, GOLD_6M_PRICE, GOLD_6M_DURATION, GOLD_6M_CREDIT_LIMIT, "GOLD");
+        upsertPackageWithTier(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_DURATION, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM");
+        upsertPackageWithTier(PLATINUM_6M_NAME, PLATINUM_6M_DESC, PLATINUM_6M_PRICE, PLATINUM_6M_DURATION, PLATINUM_6M_CREDIT_LIMIT, "PLATINUM");
 
         // Đồng bộ quyền lợi mới (spec 2026-11-09) vào các gói đã seed từ trước.
         alignBenefits(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, 3);
