@@ -658,6 +658,60 @@ class CoachBookingServiceTest {
     }
 
     @Test
+    @DisplayName("Tự động hủy lịch PT 1:1 treo quá hạn chưa thanh toán và đóng giao dịch pending")
+    void expireUnpaidBookingsCancelsStaleAndSkipsActiveVnpay() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var guard = org.mockito.Mockito.mock(com.swp391.scms.finance.service.VnpayPaymentGuard.class);
+        CoachBookingService target = new CoachBookingService(
+                coachBookingRepository, coachRepository, memberRepository, classSessionRepository,
+                classEnrollmentRepository, subscriptionRepository, disciplineRepository,
+                null, fixedClock, null, guard);
+        org.springframework.test.util.ReflectionTestUtils.setField(target, "paymentRepository", payments);
+
+        CoachBooking stale = new CoachBooking();
+        stale.setId(170L);
+        stale.setMember(member);
+        stale.setCoach(coach);
+        stale.setStatus("confirmed");
+        stale.setPaymentMethod("cash");
+        stale.setPaymentStatus("pending");
+        stale.setBookingDate(LocalDate.now(fixedClock).plusDays(1));
+        stale.setStartTime(LocalTime.of(10, 0));
+        stale.setEndTime(LocalTime.of(11, 0));
+
+        CoachBooking activeVnpay = new CoachBooking();
+        activeVnpay.setId(171L);
+        activeVnpay.setMember(member);
+        activeVnpay.setCoach(coach);
+        activeVnpay.setStatus("confirmed");
+        activeVnpay.setPaymentMethod("bank_transfer");
+        activeVnpay.setPaymentStatus("pending");
+        activeVnpay.setBookingDate(LocalDate.now(fixedClock).plusDays(1));
+        activeVnpay.setStartTime(LocalTime.of(14, 0));
+        activeVnpay.setEndTime(LocalTime.of(15, 0));
+
+        com.swp391.scms.finance.entity.Payment pendingPayment = new com.swp391.scms.finance.entity.Payment();
+        pendingPayment.setStatus("pending");
+
+        when(coachBookingRepository.findUnpaidStale(any(), any(), any(), any())).thenReturn(List.of(stale, activeVnpay));
+        when(payments.findAllByCoachBookingId(170L)).thenReturn(List.of(pendingPayment));
+        org.mockito.Mockito.doNothing().when(guard).coach(170L);
+        org.mockito.Mockito.doThrow(new ConflictException("VNPAY_PENDING", "error", null, "pending")).when(guard).coach(171L);
+
+        int cancelled = target.expireUnpaidBookings();
+
+        verify(coachBookingRepository).findUnpaidStale(any(), any(), any(), any());
+        verify(guard).coach(170L);
+        verify(payments).findAllByCoachBookingId(170L);
+        assertThat(cancelled).isEqualTo(1);
+        assertThat(stale.getStatus()).isEqualTo("cancelled");
+        assertThat(stale.getCancelledAt()).isNotNull();
+        assertThat(pendingPayment.getStatus()).isEqualTo("failed");
+        assertThat(activeVnpay.getStatus()).isEqualTo("confirmed");
+        verify(coachBookingRepository).save(stale);
+    }
+
+    @Test
     void coachOnApprovedLeaveCannotBeBookedAndShowsNoFreeSlots() {
         var leaves = org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "staffRequestRepository", leaves);
