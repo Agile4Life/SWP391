@@ -8,11 +8,15 @@ spring:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
       minimum-idle: ${DB_POOL_MIN_IDLE:1}
       connection-timeout: 30000
+      idle-timeout: 300000
+      max-lifetime: 600000
+      keepalive-time: 120000
       data-source-properties:
         sslmode: ${DB_SSL_MODE:require}
         sslrootcert: ${DB_SSL_ROOT_CERT:}
         # Safe if a transaction pooler is selected; session pooler is preferred.
         prepareThreshold: 0
+        tcpKeepAlive: true
   jpa:
     properties:
       hibernate:
