@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { StaffReceptionPage } from './StaffReceptionPage';
 import { getCurrentUser } from '../../shared/api/client';
 import { checkinApi } from './checkinApi';
+import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 
 const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), cancelPendingSubscription: vi.fn(), getPendingHoldRequests: vi.fn(),
@@ -26,7 +27,7 @@ const member = { userId: 10, membershipCode: 'MB-10', fullName: 'An', email: 'an
 const pkg = { id: 2, name: 'Gold', price: 200, durationDays: 30, status: 'active' };
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  vi.resetAllMocks();
+  vi.resetAllMocks(); clearNotices();
   api.getRequestHistory.mockResolvedValue([]);
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role: 'STAFF' });
   vi.mocked(checkinApi.gateQr).mockResolvedValue({ qrCode: 'SOL:GATE:1:A1:signed', gateId: 'A1', gate: 'Turnstile A1 - Sảnh Chính',
@@ -95,6 +96,7 @@ it('sells an active package at the counter for a member without a pending order'
   await chooseAndPay('buy:2');
   expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ memberId: 10, packageId: 2, amount: 200 }));
   expect(api.createRenewal).not.toHaveBeenCalled();
+  expect(getNotices()[0].destination).toBe('/staff/reception-history');
   expect(host.textContent).toContain('Hóa đơn thực');
 });
 
@@ -260,6 +262,7 @@ it('lets the receptionist top up a selected member wallet at the counter', async
   const submitBtn = document.body.querySelector<HTMLButtonElement>('[data-testid="submit-counter-topup-btn"]')!;
   await act(async () => submitBtn.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 
+  expect(getNotices()[0].destination).toBe('/staff/reception-history');
   expect(api.topupMemberWallet).toHaveBeenCalledWith(10, {
     amount: 500000,
     paymentMethod: 'cash',

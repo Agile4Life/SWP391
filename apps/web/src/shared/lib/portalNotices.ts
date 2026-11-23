@@ -32,13 +32,14 @@ function commit(next: PortalNotice[]) {
 }
 
 /** `key` thay thế thông báo cùng khóa (ví dụ trạng thái đồng bộ) để không lặp lại. */
-export function notify(message: string, type: PortalNoticeType = 'info', options: { translation?: SourceMessage; key?: string; action?: PortalNotice['action']; silent?: boolean; record?: boolean } = {}) {
+export function notify(message: string, type: PortalNoticeType = 'info', options: { translation?: SourceMessage; key?: string; destination?: string; action?: PortalNotice['action']; silent?: boolean; record?: boolean } = {}) {
   if (type !== 'info' && !options.silent) {
     if (options.translation) toast(message, type, options.translation);
     else toast(message, type);
   }
   if (!options.record) return;
-  const notice: PortalNotice = { id: ++sequence, type, message, translation: options.translation, createdAt: Date.now(), read: false, destination: typeof window !== 'undefined' ? window.location.pathname : undefined, key: options.key, action: options.action };
+  // Nơi phát thông báo có thể chỉ định trang xem kết quả; mặc định giữ hành vi cũ cho các role khác.
+  const notice: PortalNotice = { id: ++sequence, type, message, translation: options.translation, createdAt: Date.now(), read: false, destination: options.destination ?? (typeof window !== 'undefined' ? window.location.pathname : undefined), key: options.key, action: options.action };
   commit([notice, ...notices.filter((item) => !options.key || item.key !== options.key)].slice(0, MAX_NOTICES));
 }
 

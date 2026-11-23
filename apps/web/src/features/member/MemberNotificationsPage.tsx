@@ -2,7 +2,7 @@ import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { useI18n } from '../../shared/i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, safeNotificationPath, type MemberNotification, type NotificationPage } from './notificationsApi';
 import './notifications.css';
@@ -39,12 +39,15 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
   useLanguage();
   const { lang, t } = useI18n();
   const navigate = useNavigate();
+  const location = useLocation();
   const [page, setPage] = useState(0);
   const [data, setData] = useState<NotificationPage | null>(null);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | Error | null | SourceMessage>(null);
   const [busy, setBusy] = useState(false);
+  const mutationBusy = useRef(false);
+  const navigationStarted = useRef(false);
   const request = useRef({ version: 0 });
   const notices = usePortalNotices();
 
@@ -53,6 +56,14 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
 
   const role = getCurrentUser()?.role;
   const serverEnabled = true;
+  useEffect(() => { navigationStarted.current = false; }, [location.key]);
+
+  function openDestination(destination: string) {
+    // Cả thông báo API và thông báo thao tác dùng chung khóa điều hướng, kể cả click trong cùng nhịp.
+    if (navigationStarted.current) return;
+    navigationStarted.current = true;
+    onNavigate?.(); navigate(destination);
+  }
 
   const load = useCallback(async () => {
     const version = ++request.current.version;
@@ -72,8 +83,11 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
   }, [load]);
 
   async function open(item: MemberNotification) {
-    if (busy) return;
+    // Dùng ref để chặn click trùng trước khi React cập nhật state; chỉ mở trang, không chạy nghiệp vụ.
+    if (mutationBusy.current || navigationStarted.current) return;
+    mutationBusy.current = true;
     const version = request.current.version;
+    const destination = notificationDestination(item, role);
     setBusy(true); setError(null);
     try {
       if (!item.isRead) {
@@ -83,14 +97,16 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
         setData((current) => current && ({ ...current, content: (Array.isArray(current.content) ? current.content : []).map((n) => n.id === item.id ? { ...n, isRead: true } : n) }));
         setCount((current) => Math.max(0, current - 1));
       }
-      const destination = notificationDestination(item, role);
-      if (destination) { onNavigate?.(); navigate(destination); }
+      // Chỉ cập nhật đã đọc và điều hướng khi API thành công; lỗi vẫn giữ nguyên thông báo để thử lại.
+      if (version !== request.current.version) return;
+      if (destination) openDestination(destination);
     } catch (reason) { setError(errorMessage(reason)); }
-    finally { setBusy(false); }
+    finally { mutationBusy.current = false; setBusy(false); }
   }
 
   async function readAll() {
-    if (busy) return;
+    if (mutationBusy.current || navigationStarted.current) return;
+    mutationBusy.current = true;
     setBusy(true); setError(null);
     try {
       await markAllNotificationsRead();
@@ -98,7 +114,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
       setCount(0);
       window.dispatchEvent(new Event('member-notifications-changed'));
     } catch (reason) { setError(errorMessage(reason)); }
-    finally { setBusy(false); }
+    finally { mutationBusy.current = false; setBusy(false); }
   }
 
   const notificationItems = Array.isArray(data?.content) ? data.content : [];
@@ -109,9 +125,9 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
     <div className="notification-panel__scroll" aria-busy={loading || busy}>
     {notices.length > 0 && <ul className="notification-activity" aria-label={t("Thông báo vừa phát sinh", "Recent activity")}>
       {notices.map((notice) => <li key={notice.id} className={`notification-activity__item notification-activity__item--${notice.type}`}>
-        <button type="button" className="notification-action notification-copy" onClick={() => {
-          onNavigate?.();
-          navigate(safeNotificationPath(notice.destination, role) ?? notificationDestination({ relatedEntityType: null, type: 'system' }, role));
+        <button type="button" className="notification-action notification-copy" disabled={busy} onClick={() => {
+          if (mutationBusy.current) return;
+          openDestination(safeNotificationPath(notice.destination, role) ?? notificationDestination({ relatedEntityType: null, type: 'system' }, role));
         }}><span>{notice.translation ? t(notice.translation) : notice.message}</span><small>{formatCenterDateTime(new Date(notice.createdAt).toISOString())}</small></button>
         {notice.action && <button type="button" className="notification-action" onClick={notice.action.run}>{notice.action.translation ? t(notice.action.translation) : notice.action.label}</button>}
       </li>)}

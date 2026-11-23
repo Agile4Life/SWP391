@@ -42,6 +42,15 @@ export const markAllNotificationsRead = () =>
 /** Accept only internal portal routes; never follow arbitrary URLs from notification content. */
 export function safeNotificationPath(path: string | null | undefined, role = 'MEMBER'): string | null {
   if (!path || !/^\/[a-z0-9/-]+(?:\?[a-zA-Z0-9_=&%-]+)?(?:#[a-z0-9-]+)?$/.test(path)) return null;
+  // Lễ tân chỉ mở màn hiện có; bỏ query/anchor không được màn danh sách hỗ trợ, không đoán ID.
+  if (role === 'STAFF' || role === 'RECEPTIONIST') {
+    if (path === '/messages' || path === '/messages?tab=support') return path;
+    const pathname = path.split(/[?#]/)[0];
+    if (pathname === '/staff/support') return '/messages?tab=support';
+    if (/^\/staff\/(?:orders|classes|courts|pt-attendance|attendance)(?:\/|$)/.test(pathname)) return '/staff/reception';
+    return ['/staff/reception', '/staff/check-in', '/staff/check-out', '/staff/reception-history',
+      '/staff/kyc', '/staff/holds', '/staff/requests'].includes(pathname) ? pathname : null;
+  }
   // Thông báo sân cũ không mở route đã bỏ; lịch sử thanh toán vẫn ở hóa đơn.
   if (role === 'MEMBER' && /^\/member\/courts(?:[?/#]|$)/.test(path)) return '/member/invoices';
   // Thông báo đơn hàng cũ dẫn về lịch sử giao dịch, không mở màn Shop đã bỏ.
@@ -53,9 +62,21 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
   return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && (path === '/staff/requests' || path.startsWith('/staff/requests?'))) || path === '/messages' || path === '/messages?tab=support' ? path : null;
 }
 
-export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath'>, role = 'MEMBER'): string {
+export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath'> & { title?: string }, role = 'MEMBER'): string {
   const explicit = safeNotificationPath(notification.actionPath, role);
   if (explicit) return explicit;
+  if (role === 'STAFF' || role === 'RECEPTIONIST') {
+    // Ưu tiên metadata thật; lịch sử hiện có chỉ chứa yêu cầu gói đã xử lý và nạp ví.
+    if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
+    if (notification.relatedEntityType === 'payment' || notification.type === 'payment') return '/staff/reception-history';
+    // Đơn nội bộ hiện gửi system/null, không có actionPath: chỉ nhận đúng tiêu đề VI/EN của backend.
+    if (notification.type === 'system' && !notification.relatedEntityType && [
+      'Your request was approved', 'Your request was rejected',
+      'Đơn từ của bạn đã được duyệt', 'Đơn từ của bạn bị từ chối',
+    ].includes(notification.title ?? '')) return '/staff/requests';
+    // Thiếu thông tin thì về quầy; không suy luận bản ghi hoặc chức năng từ nội dung tự do.
+    return '/staff/reception';
+  }
   if (role === 'COACH') return notification.relatedEntityType === 'training_plan' ? '/coach/training-plans' : '/coach/classes';
   if (['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER'].includes(role)) {
     const manager = ['MANAGER', 'CENTER_MANAGER'].includes(role);
