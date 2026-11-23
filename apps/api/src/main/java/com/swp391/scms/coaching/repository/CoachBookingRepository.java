@@ -77,13 +77,13 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
     );
 
     @Query("""
-            select count(cb) from CoachBooking cb
+            select count(cb) from CoachBooking cb left join cb.subscription s
             where cb.member.userId = :memberId
               and cb.bookingDate between :startDate and :endDate
               and cb.paymentMethod = :paymentMethod
               and (cb.status <> 'cancelled' or coalesce(cb.quotaForfeited, false) = true)
-              and (cb.subscription.id in :subscriptionIds
-                   or (cb.subscription is null and cb.createdAt >= :subCreatedAt))
+              and (s.id in :subscriptionIds
+                   or (s.id is null and cb.createdAt >= :subCreatedAt))
             """)
     long countSubscriptionQuotaUsage(
             @Param("memberId") Long memberId,
