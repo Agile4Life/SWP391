@@ -26,7 +26,6 @@ import { ApiError } from '../../../shared/api/client';
 import {
   formatCoachName,
   isSessionCompleted,
-  COACH_FILTER_DISCIPLINES,
   matchesCoachDiscipline,
   type CoachDisciplineFilter,
 } from '../coachBookingUtils';
@@ -543,26 +542,6 @@ export function MemberCoachBookingView({
           <span className="row-card__meta" style={{ fontSize: 13 }}>
             {memberText("Phí tập tiêu chuẩn: ")}<strong>{formatPrice(200000)}{memberText(" / giờ")}</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Gold giảm 10% / Platinum giảm 20%", "Gold 10% off / Platinum 20% off")})
           </span>
-        </div>
-
-        {/* Lọc HLV theo bộ môn: Tất cả bộ môn, Gym, Boxing, Yoga */}
-        <div
-          className="filter-chips tt-chips"
-          role="group"
-          aria-label={memberText("Lọc huấn luyện viên theo bộ môn")}
-          style={{ marginBottom: 14 }}
-        >
-          {COACH_FILTER_DISCIPLINES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={`filter-chip ${coachDiscipline === value ? 'is-active' : ''}`}
-              aria-pressed={coachDiscipline === value}
-              onClick={() => handleFilterCoachDiscipline(value)}
-            >
-              {value === 'ALL' ? memberText("Tất cả bộ môn") : value}
-            </button>
-          ))}
         </div>
 
         {filteredCoaches.length === 0 ? (

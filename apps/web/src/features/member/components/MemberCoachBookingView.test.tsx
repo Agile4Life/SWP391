@@ -305,7 +305,7 @@ describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
       vi.unstubAllGlobals();
     });
 
-    it('renders discipline chips and filters coach list when clicked', async () => {
+    it('does not render discipline filter chips and lists all coaches directly', async () => {
       await act(async () => {
         root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>);
       });
@@ -313,47 +313,8 @@ describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
         await new Promise((r) => setTimeout(r, 60));
       });
 
-      // Default: ALL - all 3 coaches visible
-      expect(host.textContent).toContain('Tất cả bộ môn');
-      expect(host.textContent).toContain('Gym');
-      expect(host.textContent).toContain('Boxing');
-      expect(host.textContent).toContain('Yoga');
-      expect(host.textContent).toContain('Huỳnh Đắc Tài');
-      expect(host.textContent).toContain('Nguyễn Minh Quân');
-      expect(host.textContent).toContain('Trần Thị Mỹ Trâm');
-
-      // Click "Yoga" chip
-      const chips = [...host.querySelectorAll<HTMLButtonElement>('.filter-chip')];
-      const yogaChip = chips.find((c) => c.textContent?.trim() === 'Yoga');
-      expect(yogaChip).toBeDefined();
-
-      await act(async () => {
-        yogaChip?.click();
-      });
-
-      // Huỳnh Đắc Tài should be filtered out
-      expect(host.textContent).not.toContain('Huỳnh Đắc Tài');
-      expect(host.textContent).toContain('Nguyễn Minh Quân');
-      expect(host.textContent).toContain('Trần Thị Mỹ Trâm');
-
-      // Click "Boxing" chip (no coaches match)
-      const boxingChip = chips.find((c) => c.textContent?.trim() === 'Boxing');
-      await act(async () => {
-        boxingChip?.click();
-      });
-
-      expect(host.textContent).toContain('Chưa có huấn luyện viên nào cho bộ môn Boxing.');
-      expect(host.textContent).toContain('Xem tất cả huấn luyện viên');
-
-      // Click "Xem tất cả huấn luyện viên" button in empty state
-      const resetBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
-        (b) => b.textContent?.includes('Xem tất cả huấn luyện viên')
-      );
-      await act(async () => {
-        resetBtn?.click();
-      });
-
-      // All 3 back
+      expect(host.textContent).not.toContain('Tất cả bộ môn');
+      expect(host.querySelectorAll('.filter-chip')).toHaveLength(0);
       expect(host.textContent).toContain('Huỳnh Đắc Tài');
       expect(host.textContent).toContain('Nguyễn Minh Quân');
       expect(host.textContent).toContain('Trần Thị Mỹ Trâm');
