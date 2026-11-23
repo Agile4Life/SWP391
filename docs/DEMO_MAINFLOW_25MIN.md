@@ -1,25 +1,25 @@
 # Kịch bản demo mainflow 25 phút — Mua gói · Check-in cổng · Đặt lịch · Bảo lưu
 
-Một câu chuyện xuyên suốt: **Hồ Mỹ Lan (`lan@demo.sol.vn`) — hội viên mới** đi từ KYC → mua gói Platinum 3 tháng → vào cổng → đăng ký khóa + đặt PT → xin bảo lưu. Lễ tân **Trần Bảo Ngọc (`letan@demo.sol.vn`)** xử lý phía quầy. Mật khẩu chung `Demo@12345` ([DEMO_ACCOUNTS.md](DEMO_ACCOUNTS.md)).
+Một câu chuyện xuyên suốt: **Hồ Mỹ Lan (`lan@demo.sol.vn`) — hội viên mới** đi từ KYC → mua gói Platinum 3 tháng → vào cổng → đặt PT 1:1 → xin bảo lưu. Phạm vi hiện tại chỉ còn Gym (22/11/2026): không có lớp nhóm, đặt sân hay cửa hàng. Lễ tân **Trần Bảo Ngọc (`letan@demo.sol.vn`)** xử lý phía quầy. Mật khẩu chung `Demo@12345` ([DEMO_ACCOUNTS.md](DEMO_ACCOUNTS.md)).
 
 Căn cứ nghiệp vụ: [specs/2026-11-10-membership-and-attendance-business-rules.md](specs/2026-11-10-membership-and-attendance-business-rules.md). Tài liệu `SPRINT2_DEMO_REPORT_GUIDE.md` đã cũ (route `/staff/checkin`, 3 gói "The Essential…"), **không dùng** cho buổi này.
 
 ## Vì sao chọn Lan + Platinum 3 tháng
 
 - Lan chưa có gói, KYC đang chờ duyệt → có sẵn bước KYC (bắt buộc cho gói đầu tiên: `MEMBERSHIP_KYC_REQUIRED`).
-- **Chỉ gói dài hạn (≥ 60 ngày) hoặc Platinum 1 tháng mới được bảo lưu** (Silver/Gold 1 tháng không được). Platinum 3 tháng bảo lưu tối đa 30 ngày, và có 6 buổi PT miễn phí / chu kỳ, 4 khóa nhóm miễn phí → đặt lịch không vướng thanh toán.
+- **Chỉ gói dài hạn (≥ 60 ngày) hoặc Platinum 1 tháng mới được bảo lưu** (Silver/Gold 1 tháng không được). Platinum 3 tháng bảo lưu tối đa 30 ngày, và có 6 buổi PT miễn phí / chu kỳ → đặt PT không vướng thanh toán.
 - Gói mới bắt đầu **hôm nay** → check-in `GRANTED` ngay trong buổi demo.
 
 ## Chuẩn bị (làm trước 1 ngày + 15 phút trước giờ)
 
 | Việc | Chi tiết |
 |---|---|
-| Seed lại dữ liệu | Seed hiện tại dựng theo ngày 12/11/2026. `hieu@` hết hạn 15/11, buổi lớp/PT "sắp tới" chỉ còn đúng nếu seed **1–2 ngày trước demo** ([DEMO_DATA.md](DEMO_DATA.md)). Chỉ bật trên DB demo. |
+| Seed lại dữ liệu | Seed hiện tại dựng theo ngày 12/11/2026. `hieu@` hết hạn 15/11, buổi PT "sắp tới" chỉ còn đúng nếu seed **1–2 ngày trước demo** ([DEMO_DATA.md](DEMO_DATA.md)). Chỉ bật trên DB demo. |
 | 3 cửa sổ trình duyệt | (1) Hội viên `lan@` — cửa sổ ẩn danh. (2) Lễ tân `letan@` — profile thường. (3) Quản lý `manager@` — mở sẵn `/manager/reports`. Đăng nhập sẵn cả ba. |
 | Điện thoại | Đăng nhập `lan@`, mở sẵn `/member/check-in` (camera). Máy chiếu bên lễ tân mở `/staff/check-in` để hiện **QR cổng**. |
 | Thanh toán | VNPay Sandbox chỉ chạy khi backend có `VNPAY_ENABLED` + merchant ([VNPAY_SANDBOX.md](VNPAY_SANDBOX.md)). Chưa có → **demo tiền mặt tại quầy** (kịch bản dưới mặc định như vậy). Không đoán VNPay chạy được. |
-| Kiểm tra nhanh | Đăng nhập `lan@`: chưa có gói. `/staff/kyc` có hồ sơ của Lan. `/member/classes` có khóa còn chỗ, các buổi rơi vào 3–10 ngày tới. Tab PT 1:1 có khung giờ trống cùng khoảng ngày đó. |
-| Chọn ngày bảo lưu | Chốt trước: ngày bảo lưu = **hôm nay + 3 → hôm nay + 9** (7 ngày). Khóa nhóm có buổi và buổi PT đều rơi vào khoảng này (ví dụ hôm nay + 5). |
+| Kiểm tra nhanh | Đăng nhập `lan@`: chưa có gói. `/staff/kyc` có hồ sơ của Lan. `/member/classes?tab=pt` có HLV còn khung giờ trống trong 3–10 ngày tới. |
+| Chọn ngày bảo lưu | Chốt trước: ngày bảo lưu = **hôm nay + 3 → hôm nay + 9** (7 ngày). Buổi PT sẽ đặt rơi vào khoảng này (ví dụ hôm nay + 5). |
 
 ## Dòng thời gian
 
@@ -29,11 +29,11 @@ Căn cứ nghiệp vụ: [specs/2026-11-10-membership-and-attendance-business-ru
 | 1:30–4:00 | **A.** KYC | Lễ tân |
 | 4:00–9:00 | **B.** Mua gói → thu tiền → hóa đơn → thẻ QR | Hội viên + Lễ tân |
 | 9:00–13:30 | **C.** Check-in cổng (GRANTED, check-out, DENIED) | Hội viên + Lễ tân |
-| 13:30–18:30 | **D.** Đăng ký khóa nhóm + PT 1:1 | Hội viên |
+| 13:30–18:30 | **D.** Đặt PT 1:1 và xem giáo án | Hội viên + HLV |
 | 18:30–23:00 | **E.** Bảo lưu và hệ quả | Hội viên + Lễ tân |
 | 23:00–25:00 | **F.** Tổng kết, báo cáo quản lý | Quản lý |
 
-Đệm: nếu trễ, cắt D (bỏ PT, chỉ giữ khóa) hoặc F; **không cắt E** vì đó là điểm ăn tiền của nghiệp vụ.
+Đệm: nếu trễ, rút gọn D (bỏ phần giáo án) hoặc F; **không cắt E** vì đó là điểm ăn tiền của nghiệp vụ.
 
 ---
 
@@ -76,17 +76,15 @@ Có hai đường vào, demo cả hai:
 
 Chuẩn bị riêng: lấy sẵn mã QR của `dung@` và `em@` (đăng nhập, mở thẻ, sao chép) vì mã sống theo từng gói; nếu thẻ không hiện mã, quét QR cổng bằng tài khoản đó trên `/member/check-in` để lấy kết quả DENIED. **Hãy chạy thử trước một lần** — mình chưa kiểm chứng thẻ của gói hết hạn/đóng băng có cho sao chép mã hay không.
 
-Nói thêm khi quét cổng: quét cổng **không tự điểm danh** cả khóa học lẫn PT 1:1. HLV (và lễ tân với PT) điểm danh; màn điểm danh hiện tag "Đã check-in" cho người đã vào cổng trong khung giờ buổi và hỏi xác nhận nếu vẫn đánh vắng / gỡ có mặt.
+Nói thêm khi quét cổng: quét cổng **không tự điểm danh** PT 1:1. HLV điểm danh ở `/coach/pt-attendance`; màn này hiện tag "Đã check-in" cho người đã vào cổng trong khung giờ buổi và hỏi xác nhận nếu gỡ có mặt.
 
-## D. Đặt lịch (13:30–18:30)
+## D. Đặt PT 1:1 (13:30–18:30)
 
-Chính sách: **không có lớp lẻ / đặt từng buổi** (`SingleSessionPolicy`, spec 2026-11-09). Mọi lớp là một khóa định kỳ; hội viên đăng ký **trọn khóa**, nên không có hàng chờ (waitlist) và không có "đặt một buổi".
-
-1. **Khóa nhóm** — Lan → `/member/classes` → chọn một khóa **khai giảng trong hoặc kéo dài qua khoảng bảo lưu** → **Đăng ký trọn gói** (khóa có phí: **Đăng ký & Thanh toán**). Badge đổi sang đã đăng ký, nút thành **Hủy khóa học**. Platinum có 4 khóa miễn phí mỗi chu kỳ.
-2. Thử đăng ký một khóa **trùng giờ** với khóa vừa đăng ký → bị chặn (kiểm tra chồng lịch ở giao diện và trigger DB).
-3. Nói: chỉ hội viên có gói `active` đăng ký được; khóa phải nằm gọn trong hạn gói; sĩ số khóa dòng + trigger capacity. Nút "Đặt chỗ ngay" ở danh sách buổi cũng chỉ đăng ký cả khóa. Quản lý chỉ tạo được khóa định kỳ (`POST /classes/recurring`).
-4. **PT 1:1** — cùng trang, tab **Đặt lịch HLV 1:1 (PT)** (`?tab=pt`) → chọn HLV → khung giờ trống cùng ngày (hôm nay + 5) → xác nhận. Platinum có 6 buổi PT miễn phí/chu kỳ nên **không phát sinh thanh toán**; hết hạn mức thì PT trả theo giờ (tiền mặt hoặc VNPay).
-5. Hiện lịch của tôi: khóa đã đăng ký + buổi PT. Buổi PT và khóa này sẽ bị hủy ở phần E (khóa bắt đầu từ hôm nay + 3 trở đi nên được trả lượt).
+1. **PT 1:1** — Lan → `/member/classes?tab=pt` (tab **Đặt lịch HLV 1:1**) → chọn HLV → khung giờ trống ngày **hôm nay + 5** → xác nhận. Platinum có 6 buổi PT miễn phí/chu kỳ nên **không phát sinh thanh toán**; hết hạn mức thì PT trả theo giờ (tiền mặt hoặc VNPay).
+2. Thử đặt một buổi **trùng giờ** với buổi vừa đặt, hoặc đặt trước chưa đủ 2 giờ → bị chặn (kiểm tra ở backend và trigger DB `trg_pt_schedule_*`).
+3. Tab **Lịch của tôi** và Dashboard hiện buổi PT vừa đặt. Buổi này sẽ bị hủy ở phần E (đặt trước ≥ 3 ngày nên được trả lượt).
+4. (Tùy thời gian) **HLV** `hung@` → `/coach/classes` thấy buổi PT trong lịch tuần; `/coach/training-plans` soạn giáo án (có thể bấm "Yêu cầu AI hỗ trợ") cho hội viên Gold/Platinum đã có buổi PT với mình. Hội viên xem giáo án ở `/member/progress`.
+5. Nói: chỉ hội viên có gói `active` đặt được; ngày tập phải nằm trong hạn gói và không rơi vào ngày bảo lưu đã duyệt; HLV không quá 3 giờ PT liên tiếp.
 
 ## E. Bảo lưu (18:30–23:00)
 
@@ -94,10 +92,10 @@ Chính sách: **không có lớp lẻ / đặt từng buổi** (`SingleSessionPo
 2. Điền: bắt đầu **hôm nay + 3**, kết thúc **hôm nay + 9**, lý do (ví dụ "Công tác xa"), đính kèm 1 ảnh/PDF (giấy tờ không bắt buộc ở giao diện hiện tại — tài liệu spec nói "bắt buộc" đã lạc hậu, giao diện và code chỉ giới hạn tối đa 5 tệp, mỗi tệp 5 MB; xin đừng nói bắt buộc). **Gửi đơn** → trạng thái **Đang chờ duyệt**.
 3. Thử nộp sai để thấy guard (chọn một lần): bắt đầu ngày mai (vi phạm nộp trước 24 giờ), hoặc khoảng 2 ngày (dưới tối thiểu 3 ngày).
 4. **Lễ tân** → `/staff/holds` → bấm mở giấy tờ đính kèm → **Duyệt bảo lưu**.
-5. **Quay lại Lan**: `/member/classes` — buổi PT trong khoảng bảo lưu **đã bị hủy tự động**, chỗ được giải phóng, lượt PT được trả lại; khóa đã đăng ký **bị hủy** và thông báo báo "lượt đăng ký khóa học được hoàn lại" (khóa có phí: học phí hoàn vào Ví); `/member/hold` hiện **Đã duyệt**; có thông báo. Hạn gói sẽ được cộng đúng số ngày bảo lưu khi kỳ bảo lưu kết thúc.
+5. **Quay lại Lan**: `/member/classes` — buổi PT trong khoảng bảo lưu **đã bị hủy tự động**, lượt PT được trả lại và có thông báo; `/member/hold` hiện **Đã duyệt**. Hạn gói sẽ được cộng đúng số ngày bảo lưu khi kỳ bảo lưu kết thúc.
 6. Giải thích vòng đời (không cần chờ thật): job 00:15 hằng ngày đóng băng gói sang `frozen` vào ngày đầu kỳ bảo lưu và tự khôi phục sau ngày cuối; hội viên cũng có thể `resume` sớm. Trong lúc `frozen`: không check-in, không đặt lịch.
 7. **Chứng minh bằng dữ liệu có sẵn**: mở `em@` (Silver, **đang bảo lưu**) → `/member/hold` hiện đơn đã duyệt; dán QR của `em@` vào `/staff/check-in` → từ chối. Kết nối lại với phần C.
-8. Nhấn mạnh: có thể **hủy bảo lưu chưa bắt đầu** (lịch đã hủy không tự khôi phục, gói được trả lại lượt bảo lưu), và quy tắc 3 ngày: duyệt khi khóa còn ≥ 3 ngày mới bắt đầu thì trả lượt/hoàn phí, muộn hơn hoặc khóa đã chạy thì mất. Khung Quy định ở `/member/hold` và dòng nhắc ở `/staff/holds` nói rõ điều này.
+8. Nhấn mạnh: có thể **hủy bảo lưu chưa bắt đầu** (lịch đã hủy không tự khôi phục, gói được trả lại lượt bảo lưu), và quy tắc 3 ngày: duyệt khi buổi PT còn ≥ 3 ngày mới tới thì trả lượt/hoàn tiền, muộn hơn thì mất. Khung Quy định ở `/member/hold` và dòng nhắc ở `/staff/holds` nói rõ điều này.
 
 Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gold 1 tháng có bảo lưu không?"* Không — chỉ gói dài hạn và Platinum 1 tháng. *"Bảo lưu hai lần?"* Không — `hold_used` đặt khi duyệt và không xóa.
 
@@ -106,7 +104,7 @@ Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gold 1 tháng có bảo
 1. **Quản lý** → `/manager/reports`: doanh thu có khoản vừa thu của Lan. (Có thể thêm `/admin/payments` — đối soát thanh toán, nếu có đăng nhập admin.)
 2. Chốt 4 ý:
    - Một vòng đời, ba vai trò, mọi bước có audit: hóa đơn, bản ghi check-in (kể cả DENIED), đơn bảo lưu.
-   - Backend luôn kiểm tra role và quy tắc; trigger DB chặn trùng lịch, vượt sĩ số, gói hết hạn.
+   - Backend luôn kiểm tra role và quy tắc; trigger DB chặn trùng lịch PT, gói hết hạn.
    - Giá chốt, tiền hoàn tính từ tiền thực trả.
    - Song ngữ vi/en qua `Accept-Language`.
 3. Mở Q&A.
@@ -121,7 +119,7 @@ Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gold 1 tháng có bảo
 | QR cổng hết hạn khi vừa quét | Mã sống 60 giây; bấm "Tạo lại mã QR cổng". |
 | Lan bị `MEMBERSHIP_KYC_REQUIRED` | Chưa duyệt KYC ở bước A; quay lại `/staff/kyc`. |
 | Nút "Gửi đơn bảo lưu" không hiện | Gói chưa `active`, hoặc đã dùng lượt bảo lưu, hoặc gói không đủ điều kiện (Silver/Gold 1 tháng). Dùng `an@` (Platinum 3 tháng, hạn 31/12) làm phương án thay thế. |
-| Không có khung giờ PT/lớp trong khoảng 3–9 ngày tới | Đổi ngày bảo lưu cho khớp, hoặc bỏ phần PT. Seed lại 1–2 ngày trước demo giải quyết phần lớn. |
+| Không có khung giờ PT trong khoảng 3–9 ngày tới | Đổi ngày bảo lưu cho khớp, hoặc bỏ phần PT. Seed lại 1–2 ngày trước demo giải quyết phần lớn. |
 | VNPay lỗi cấu hình (503) | Chuyển sang tiền mặt tại quầy, không giải thích dài. |
 | Mạng chậm | Các trang đều có skeleton/lỗi/thử lại; chờ, đừng tải lại liên tục (QR cổng tải lại sẽ đổi mã). |
 
@@ -130,7 +128,7 @@ Câu hỏi hội đồng hay hỏi, trả lời sẵn: *"Gold 1 tháng có bảo
 | Người | Phần |
 |---|---|
 | Người dẫn | Mở đầu, nói lời chuyển, tổng kết, F |
-| Thao tác hội viên (Lan) | B1–B3, C, D, E1–E3 |
+| Thao tác hội viên (Lan) | B1–B3, C, D1–D3, E1–E3 |
 | Thao tác lễ tân | A, B4–B5, C kết hợp, E4 |
 | Giải thích kỹ thuật | Chỉ vào log/Swagger/trigger khi hội đồng hỏi: `PaymentService`, `CheckInService`, `MembershipSubscriptionService` (bảo lưu), `PostgreSqlTriggerProvider` |
 

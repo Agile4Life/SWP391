@@ -1,5 +1,7 @@
 # Nghiệp vụ gói tập và điểm danh
 
+> **Cập nhật 23/11/2026:** phạm vi chỉ còn Gym (PR #144–#156). Các quy tắc về khóa học nhóm, điểm danh lớp, quy tắc vắng 50%, đặt sân, chỉ số cơ thể và streak trong tài liệu này **không còn áp dụng**; quy tắc gói tập, bảo lưu (chỉ còn hủy buổi PT), PT 1:1 và check-in vẫn đúng. Nghiệp vụ đang chạy: [`../BUSINESS_FLOWS.md`](../BUSINESS_FLOWS.md).
+
 Tài liệu tổng hợp quy tắc nghiệp vụ **đang được cài đặt trong code** (`apps/api`) cho hai mảng: gói tập (membership) và điểm danh (check-in cổng + điểm danh buổi học + buổi 1:1). Khi code đổi, cập nhật tài liệu này cùng PR.
 
 Nguồn đối chiếu: `membership/service/*`, `facilities/PackageBenefits.java`, `attendance/service/*`, `coaching/service/PtAttendanceService.java`. Tài liệu gốc `docs/PROJECT_MASTER_GUIDE.md` mô tả bản đầu; nếu khác với file này thì code và file này là chuẩn.

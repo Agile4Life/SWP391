@@ -2,6 +2,8 @@
 
 > **Nghiệp vụ đang triển khai thực tế** (màn hình, API, quy tắc, state machine, khác biệt so với thiết kế dưới đây): xem [`BUSINESS_FLOWS.md`](BUSINESS_FLOWS.md).
 
+> **Thu gọn phạm vi (22–23/11/2026, PR #144–#156):** hệ thống đang chạy **chỉ còn Gym** — gói tập, PT 1:1, giáo án, check-in QR, ví/hóa đơn, chat và hỗ trợ. Các phần của thiết kế dưới đây về lớp học nhóm và thời khóa biểu lớp, đặt chỗ/điểm danh lớp, các bộ môn khác (Yoga, Pilates, Bơi lội, Võ thuật…), đặt sân, cửa hàng, quản lý thiết bị, đánh giá HLV, theo dõi chỉ số cơ thể/tiến độ và streak **không còn được triển khai**; chỉ giữ lại để tham khảo lịch sử. Khi khác nhau, `BUSINESS_FLOWS.md` và code là chuẩn.
+
 > **Tài liệu hướng dẫn kỹ thuật toàn diện (Comprehensive Master Guide) dành cho AI Agent, Kỹ sư phần mềm & Nhóm phát triển.**  
 > **Môn học:** SWP391 - Đồ án Phát triển Phần mềm (Software Development Project) — FPT University  
 > **Repository:** `SWP391` (`PhongTCT/SWP391_GROUP1`)  
