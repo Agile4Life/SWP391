@@ -322,3 +322,62 @@ it('asks confirmation before cancelling a pending membership request at the desk
   await act(async () => dialogConfirmBtn.click());
   expect(api.cancelPendingSubscription).toHaveBeenCalledWith(77);
 });
+
+const runningGold = { id: 50, memberId: 10, packageId: 2, packageName: 'GOLD 9 THÁNG', previousSubscriptionId: null,
+  startDate: '2026-11-21', endDate: '2027-08-16', status: 'active', createdAt: '2026-11-21' };
+const oldSilver = { ...runningGold, id: 40, packageId: 3, packageName: 'SILVER 9 THÁNG',
+  startDate: '2026-02-24', endDate: '2026-11-20', status: 'expired' };
+function useConflictHistory() {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-23T05:00:00Z'));
+  api.getActivePackages.mockResolvedValue([{ ...pkg, name: runningGold.packageName, durationDays: 270 },
+    { ...pkg, id: 3, name: oldSilver.packageName, durationDays: 270 }]);
+  api.getRenewalCandidates.mockResolvedValue([runningGold, oldSilver]);
+}
+afterEach(() => vi.useRealTimers());
+it('disables conflicting history but keeps Gold renewable and blocks a forced Silver submission', async () => {
+  useConflictHistory(); await selectMember();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
+  expect(select.querySelector<HTMLOptionElement>('[value="renew:40"]')!.disabled).toBe(true);
+  expect(select.querySelector<HTMLOptionElement>('[value="renew:50"]')!.disabled).toBe(false);
+  await chooseAndPay('renew:40');
+  expect(host.textContent).toContain('Không thể gia hạn gói SILVER 9 THÁNG vì trùng thời hạn với gói GOLD 9 THÁNG hiện tại. Vui lòng chọn gói hợp lệ.');
+  expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
+  expect((select.closest('form')!.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
+});
+it('still renews Gold when an unrelated old Silver renewal is blocked', async () => {
+  useConflictHistory(); api.createRenewal.mockResolvedValue({ ...runningGold, id: 51, status: 'pending_payment' });
+  await selectMember(); await chooseAndPay('renew:50');
+  expect(api.createRenewal).toHaveBeenCalledWith(10, 50);
+  expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ subscriptionId: 51, packageId: 2 }));
+  expect(host.textContent).toContain('Hóa đơn thực');
+});
+it('explains candidate loading failures and prevents a forced payment', async () => {
+  api.getRenewalCandidates.mockRejectedValue(new Error('offline')); await selectMember();
+  expect(host.textContent).toContain('Không tải được gói tập hoặc lịch sử gia hạn. Vui lòng thử lại.');
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
+  await act(async () => select.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
+});
+it('keeps backend renewal rejection clear and never falls back to collecting a new purchase', async () => {
+  api.getRenewalCandidates.mockResolvedValue([{ ...runningGold, endDate: '2099-08-16' }]);
+  api.createRenewal.mockRejectedValue(Object.assign(new Error('Subscription chain needs review before renewal'), { code: 'MEMBERSHIP_RENEWAL_CONFLICT' }));
+  await selectMember(); await chooseAndPay('renew:50');
+  expect(host.textContent).toContain('Không thể gia hạn kỳ đã chọn. Vui lòng tải lại danh sách hoặc nhờ quản lý kiểm tra.');
+  expect(host.textContent).not.toContain('Subscription chain'); expect(api.processPayment).not.toHaveBeenCalled();
+});
+it('preserves a backend rejection for a different business reason', async () => {
+  api.getRenewalCandidates.mockResolvedValue([{ ...runningGold, endDate: '2099-08-16' }]);
+  api.createRenewal.mockRejectedValue(new Error('Gói đang chờ duyệt bảo lưu.'));
+  await selectMember(); await chooseAndPay('renew:50');
+  expect(host.textContent).toContain('Gói đang chờ duyệt bảo lưu.'); expect(api.processPayment).not.toHaveBeenCalled();
+});
+
+it('does not turn a missing renewal id into a new purchase when its number matches a package id', async () => {
+  await selectMember();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
+  const staleOption = document.createElement('option');
+  staleOption.value = 'renew:2'; staleOption.textContent = 'Stale renewal'; select.add(staleOption);
+  await chooseAndPay('renew:2');
+  expect(host.textContent).toContain('Kỳ gia hạn không còn trong danh sách. Vui lòng chọn lại.');
+  expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
+});
