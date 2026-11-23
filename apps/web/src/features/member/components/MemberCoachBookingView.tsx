@@ -770,7 +770,7 @@ export function MemberCoachBookingView({
                 {memberText("Chọn ngày và khung giờ")}</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <span className="row-card__meta" style={{ fontSize: 13, color: 'var(--portal-star)' }}>
-                  {memberText("Quy tắc: Đặt trước ")}<strong>{memberText("2 tiếng")}</strong>
+                  {memberText("Quy tắc: Đặt và hủy trước ", "Rule: Book and cancel at least ")}<strong>{memberText("2 tiếng")}</strong>
                 </span>
                 {selectedCoach && (
                   <span className="row-card__meta" style={{ fontSize: 13 }}>
