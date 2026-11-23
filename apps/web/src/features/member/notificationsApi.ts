@@ -46,6 +46,9 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
   if (role === 'MEMBER' && /^\/member\/courts(?:[?/#]|$)/.test(path)) return '/member/invoices';
   // Thông báo đơn hàng cũ dẫn về lịch sử giao dịch, không mở màn Shop đã bỏ.
   if (role === 'MEMBER' && /^\/member\/(?:orders|products|checkout)(?:[?/#]|$)/.test(path)) return '/member/invoices';
+  // Thông báo Streak cũ về Dashboard; bỏ anchor cũ để mở trang Giáo án hiện tại.
+  if (role === 'MEMBER' && /^\/member\/streak(?:[?/#]|$)/.test(path)) return '/member/dashboard';
+  if (role === 'MEMBER' && /^\/member\/progress(?:[?/#]|$)/.test(path)) return '/member/progress';
   const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
   return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && ['/staff/attendance', '/staff/requests', '/staff/coach-classes', '/staff/classes'].some(p => path === p || path.startsWith(`${p}?`))) || (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts', '/staff/orders'].some(p => path === p || path.startsWith(`${p}?`))) || path === '/messages' || path === '/messages?tab=support' ? path : null;
 }

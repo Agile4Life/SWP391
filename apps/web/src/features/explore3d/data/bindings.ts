@@ -388,7 +388,6 @@ export function resolveBindings(
       activeMemberTier,
       coaches,
       membership,
-      streak,
     );
   }
 
@@ -567,7 +566,6 @@ function resolveZoneBinding(
   activeMemberTier: 'SILVER' | 'GOLD' | 'PLATINUM' | null,
   coaches: LiveCoachRecord[],
   membership: LiveMembershipSummary,
-  streak: LiveStreakSummary,
 ): ResolvedZoneBinding {
   const zoneItems = itemsOfZone(doc, zone.id);
 
@@ -722,7 +720,7 @@ function resolveZoneBinding(
   const hasZoneSpecificContext =
     (zone.id === 'zone-l2-pt-studio' && coaches.length > 0) ||
     ((zone.id === 'zone-l1-lobby' || zone.id === 'zone-l1-gate') &&
-      (membership !== null || streak !== null));
+      membership !== null);
 
   const hasLiveData =
     matchedRoom !== null ||

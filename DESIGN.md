@@ -1,5 +1,9 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Giảm scope Thịnh — Task 4 (23/11/2026):
+- Member bỏ Streak, số đo, tiến độ/lịch sử tập luyện và đánh giá HLV. `/member/progress` chỉ xem Giáo án theo ngày; không thêm tracking/completion.
+- Giữ Dashboard bốn cột, tiến trình thời hạn membership, hồ sơ/KYC, PT, check-in/checkout, QR, gói tập và thanh toán. Explore bỏ Streak/InBody, giữ Gym/PT và Giáo án.
+
 Giảm scope Thịnh — Task 3 (22/11/2026):
 - Bỏ Shop thương mại điện tử Member/Public: catalog sản phẩm, giỏ hàng, checkout đơn hàng, lịch sử đơn hàng và Shop trong Explore 3D.
 - Giữ thanh toán gói tập/PT, lịch sử giao dịch cũ và Shop của Staff/Manager. Giữ Streak, Progress, Health cho Task 4. Không đổi theme hay bố cục tổng thể.

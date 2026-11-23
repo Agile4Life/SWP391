@@ -125,13 +125,14 @@ describe('MemberCoachBookingView Review Logic', () => {
 
     // Upcoming indicators
     expect(host.textContent).toContain('Sắp diễn ra');
-    expect(host.textContent).toContain('Đánh giá sau khi kết thúc buổi');
+    expect(host.textContent).not.toContain('Đánh giá sau khi kết thúc buổi');
+    expect(mocks.getMyCoachReviews).not.toHaveBeenCalled();
     expect(host.textContent).toContain('Hủy lịch hẹn');
     // Review button should not be present
     expect(host.textContent).not.toContain('Đánh giá HLV');
   });
 
-  it('renders completed session with "Đã kết thúc buổi" and allows reviewing coach', async () => {
+  it('renders completed session with "Đã kết thúc buổi" without offering coach reviews', async () => {
     mocks.getMyCoachBookings.mockResolvedValue([
       {
         id: 88,
@@ -150,21 +151,12 @@ describe('MemberCoachBookingView Review Logic', () => {
     await renderComponent();
 
     expect(host.textContent).toContain('Đã kết thúc buổi');
-    expect(host.textContent).toContain('Đánh giá HLV');
+    expect(host.textContent).not.toContain('Đánh giá HLV');
     // Session in the past cannot be cancelled
     expect(host.textContent).not.toContain('Hủy lịch hẹn');
 
-    // Click review button to open modal
-    const reviewBtn = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Đánh giá HLV'));
-    expect(reviewBtn).toBeDefined();
-
-    await act(async () => {
-      reviewBtn?.click();
-    });
-
-    expect(host.textContent).toContain('Đánh giá Huấn luyện viên: Huỳnh Đắc Tài');
-    expect(host.textContent).toContain('Mức độ hài lòng của bạn:');
-    expect(host.textContent).toContain('Gửi đánh giá');
+    expect(mocks.getMyCoachReviews).not.toHaveBeenCalled();
+    expect(mocks.createCoachReview).not.toHaveBeenCalled();
   });
 
   it('does not offer a review for a finished session the member was not marked present at', async () => {
@@ -175,7 +167,8 @@ describe('MemberCoachBookingView Review Logic', () => {
 
     await renderComponent();
 
-    expect(host.textContent).toContain('Không có mặt · không thể đánh giá');
+    expect(host.textContent).toContain('Không có mặt');
+    expect(host.textContent).not.toContain('không thể đánh giá');
     expect([...host.querySelectorAll('button')].some((b) => b.textContent?.includes('Đánh giá HLV'))).toBe(false);
   });
 });

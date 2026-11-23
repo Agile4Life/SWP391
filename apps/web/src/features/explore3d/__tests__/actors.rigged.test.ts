@@ -67,7 +67,7 @@ describe('rigged actors', () => {
     // Every actor that is not a prop or an effect.
     const objects = new Set(['heavy-bag-sway', 'badminton-shuttlecock', 'tennis-ball', 'fountain-plume']);
     expect(rigged.length).toBe(defs.filter(d => !objects.has(d.activity)).length);
-    expect(rigged.length).toBe(22);
+    expect(rigged.length).toBe(20);
   });
 
   it('gives each activity exactly one way to move', () => {

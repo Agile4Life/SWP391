@@ -31,8 +31,8 @@ test.describe('Bảng điều khiển hội viên theo từng trạng thái gói
       await page.getByRole('button', { name: /Xem hóa đơn/ }).first().click();
       await expect(page.getByRole('dialog', { name: /Hóa đơn/ })).toBeVisible();
     });
-    test('tiến độ & giáo án, streak, check-in lịch sử đều tải được không lỗi', async ({ page }) => {
-      for (const path of ['/member/progress', '/member/streak', '/member/check-in']) {
+    test('giáo án và lịch sử check-in tải được không lỗi', async ({ page }) => {
+      for (const path of ['/member/progress', '/member/check-in']) {
         await page.goto(path);
         await settled(page);
         await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { matchesDiscipline } from '../../../shared/lib/disciplines';
 import { apiFetch } from '../../../shared/api/client';
 import { centerNowParts } from '../../../shared/lib/centerTime';
-import { memberCheckinApi } from '../../member/memberCheckinApi';
 import { getCurrentMembership } from '../../member/membershipApi';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import {
@@ -15,7 +14,6 @@ import {
   type LiveEquipmentRecord,
   type LiveMembershipSummary,
   type LiveRoomRecord,
-  type LiveStreakSummary,
   type ResolvedSceneBindings,
 } from './bindings';
 
@@ -85,13 +83,6 @@ interface RawSubscription {
   remainingDays?: number | null;
 }
 
-interface RawStreak {
-  currentStreak?: number;
-  longestStreak?: number;
-  activeToday?: boolean;
-  activeDates?: string[];
-}
-
 function computeRemainingDays(endDate: string | null | undefined, todayStr: string): number | null {
   if (!endDate) return null;
   const endMs = Date.parse(`${endDate.slice(0, 10)}T00:00:00Z`);
@@ -159,13 +150,11 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
       equipmentRes,
       catalogRes,
       membershipRes,
-      streakRes,
     ] = await Promise.allSettled([
       apiFetch<RawRoom[]>('/rooms'),
       apiFetch<RawEquipment[]>('/equipment'),
       apiFetch<RawPublicCatalog>('/public/catalog', { headers: { Authorization: '' } }),
       fetchMembershipWithFallback(),
-      memberCheckinApi.streak(),
     ]);
 
     const rooms: LiveRoomRecord[] =
@@ -233,22 +222,6 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
       };
     }
 
-    let streak: LiveStreakSummary = null;
-    if (streakRes.status === 'fulfilled' && streakRes.value) {
-      const st: RawStreak = streakRes.value;
-      const activeToday =
-        typeof st.activeToday === 'boolean'
-          ? st.activeToday
-          : Array.isArray(st.activeDates)
-            ? st.activeDates.includes(todayStr)
-            : false;
-      streak = {
-        currentStreak: Number(st.currentStreak ?? 0),
-        longestStreak: Number(st.longestStreak ?? 0),
-        activeToday,
-      };
-    }
-
     const allCoreFailed =
       roomsRes.status === 'rejected' &&
       equipmentRes.status === 'rejected';
@@ -267,7 +240,8 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
       classSessions: [],
       sessions: [],
       membership,
-      streak,
+      // Streak đã bỏ khỏi Member; không phát sinh request check-in phụ.
+      streak: null,
       coaches,
       // Không tải catalog sản phẩm khi Shop không còn trong scene.
       products: [],

@@ -1,20 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { getMyProgressMetrics, getMyTrainingPlans, getMyCompletedItemIds, setTrainingItemCompleted } from './memberProgressApi';
-
+import { getMyTrainingPlans } from './memberProgressApi';
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
-
-it('reads only authenticated member endpoints and unwraps real API data', async () => {
-  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [] }) });
-  vi.stubGlobal('fetch', fetchMock);
-  localStorage.setItem('fitcenter_token', 'test-token');
-  expect(await getMyProgressMetrics()).toEqual([]);
-  expect(await getMyTrainingPlans()).toEqual([]);
-  expect(fetchMock).toHaveBeenCalledWith('/api/v1/health/metrics/my', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer test-token' }) }));
-  expect(fetchMock).toHaveBeenCalledWith('/api/v1/coaching/training-plans/my', expect.anything());
-  await getMyCompletedItemIds('2026-10-26');
-  expect(fetchMock).toHaveBeenCalledWith('/api/v1/coaching/training-completions/my?exerciseDate=2026-10-26', expect.anything());
-  await setTrainingItemCompleted(5, '2026-10-26', true);
-  expect(fetchMock).toHaveBeenCalledWith('/api/v1/coaching/training-completions/my/5?exerciseDate=2026-10-26', expect.objectContaining({ method: 'PUT' }));
-  await setTrainingItemCompleted(5, '2026-10-26', false);
-  expect(fetchMock).toHaveBeenCalledWith('/api/v1/coaching/training-completions/my/5?exerciseDate=2026-10-26', expect.objectContaining({ method: 'DELETE' }));
+it('keeps the authenticated training plan endpoint and returns its real DTO data', async () => {
+  const plan = { id: 1, status: 'active', startDate: '2026-01-01', endDate: '2099-12-31', goal: 'Gym', coachName: 'An', items: [] };
+  const request = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: [plan] }) });
+  vi.stubGlobal('fetch', request); localStorage.setItem('fitcenter_token', 'member-token');
+  await expect(getMyTrainingPlans()).resolves.toEqual([plan]);
+  expect(request).toHaveBeenCalledTimes(1);
+  expect(request).toHaveBeenCalledWith('/api/v1/coaching/training-plans/my', expect.objectContaining({ headers: expect.objectContaining({ Authorization: 'Bearer member-token' }) }));
 });

@@ -277,7 +277,7 @@ describe('resolveBindings against CatalogSeeder & CourtSeeder constants', () => 
 
     expect(resolved.zones['zone-l2-vip-gym']).toBeUndefined();
     expect(resolved.zones['zone-l1-boxing']).toBeUndefined();
-    expect(resolved.zones['zone-l2-inbody'].equipmentSummary.totalUnits).toBe(1);
+    expect(resolved.zones['zone-l2-inbody']).toBeUndefined();
   });
 
   it('clamps visible equipment instances when live quantity is smaller than scene slots', () => {

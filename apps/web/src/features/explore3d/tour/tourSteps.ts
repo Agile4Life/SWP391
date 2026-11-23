@@ -42,8 +42,8 @@ export const TOUR_STEPS: readonly TourStep[] = [
       en: 'L1 · Main Lobby, Reception & QR Gate',
     },
     caption: {
-      vi: 'Đón tiếp hội viên, kích hoạt Thẻ hội viên điện tử, quét QR qua cổng tự động để ghi nhận chuỗi ngày tập (Streak) và tra cứu hóa đơn.',
-      en: 'Member welcome desk, digital Member Card issuance, automated QR check-in gates recording daily workout streaks and billing kiosks.',
+      vi: 'Đón tiếp hội viên, kích hoạt Thẻ hội viên điện tử, quét QR qua cổng tự động để ghi nhận check-in và tra cứu hóa đơn.',
+      en: 'Member welcome desk, digital Member Card issuance, automated QR check-in gates recording check-in and billing kiosks.',
     },
     ctaTo: '/member/check-in',
     ctaLabel: {

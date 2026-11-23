@@ -117,7 +117,7 @@ describe('EXP-05 Procedural Item Geometries, Instancing, Courts & Pool', () => {
     for (const entries of groups.values()) {
       totalItems += entries.length;
     }
-    expect(totalItems).toBe(60);
+    expect(totalItems).toBe(56);
 
     // Verify status color tinting
     expect(resolveItemInstanceColor('active', false, false)).toBe(ITEM_STATUS_COLORS.default);

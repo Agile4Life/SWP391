@@ -34,7 +34,7 @@ describe('SOL_CENTER_SCENE schema & integrity', () => {
 
   it('ensures every ZoneNode has at least one hero viewpoint and non-empty children', () => {
     const zones = allZones(SOL_CENTER_SCENE);
-    expect(zones.length).toBe(9);
+    expect(zones.length).toBe(8);
     for (const zone of zones) {
       expect(zone.viewpoints.some(v => v.kind === 'hero')).toBe(true);
       expect(zone.children.length).toBeGreaterThan(0);
@@ -64,7 +64,7 @@ describe('SOL_CENTER_SCENE schema & integrity', () => {
     expect(byCode.get('EQ-SQUAT-01')).toBe(2);
     expect(byCode.get('EQ-BENCH-01')).toBe(6);
     expect(byCode.get('EQ-VIP-RUN-01')).toBeUndefined();
-    expect(byCode.get('EQ-VIP-INBODY-01')).toBe(1);
+    expect(byCode.get('EQ-VIP-INBODY-01')).toBeUndefined();
   });
 
   it('computes worldBox, breadcrumb, search and deep-link resolution accurately', () => {
@@ -79,23 +79,16 @@ describe('SOL_CENTER_SCENE schema & integrity', () => {
     const boxExploded = worldBox(SOL_CENTER_SCENE, 'zone-l2-pt-studio', 'exploded')!;
     expect(boxExploded.center[1]).toBeGreaterThan(boxStacked.center[1]);
 
-    const trail = breadcrumb(SOL_CENTER_SCENE, 'item-l2-vip-inbody-1');
-    expect(trail.map(n => n.id)).toEqual([
-      'site-sol',
-      'lvl-l2',
-      'zone-l2-inbody',
-      'item-l2-vip-inbody-1',
-    ]);
-
-    const searchInbody = search(SOL_CENTER_SCENE, 'inbody');
-    expect(searchInbody.some(h => h.id === 'item-l2-vip-inbody-1')).toBe(true);
+    const trail = breadcrumb(SOL_CENTER_SCENE, 'zone-l2-pt-studio');
+    expect(trail.map(n => n.id)).toEqual(['site-sol', 'lvl-l2', 'zone-l2-pt-studio']);
+    expect(search(SOL_CENTER_SCENE, 'inbody')).toEqual([]);
 
     expect(search(SOL_CENTER_SCENE, 'cau long')).toEqual([]);
     expect(search(SOL_CENTER_SCENE, 'supplement')).toEqual([]);
     expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'zone-l1-shop')).toBeNull();
     expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'Phòng Gym VIP')).toBeNull();
     expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'Sân Cầu lông 01')).toBeNull();
-    expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'EQ-VIP-INBODY-01')?.id).toBe('item-l2-vip-inbody-1');
+    expect(resolveDeepLinkNode(SOL_CENTER_SCENE, 'EQ-VIP-INBODY-01')).toBeNull();
     expect(allHotspots(SOL_CENTER_SCENE).length).toBeGreaterThanOrEqual(15);
   });
 });

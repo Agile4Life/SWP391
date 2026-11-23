@@ -324,8 +324,8 @@ export function MemberDashboardPage() {
         </section>
 
         <section data-i18n-managed className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
-          <div className="member-column-heading"><h2 id="board-wellness">{memberText("Sức khỏe")}</h2><Link to="/member/profile" aria-label={memberText("Xem hồ sơ và sức khỏe")}><PortalIcon name="arrow" size={16} /></Link></div>
-          <Link className="member-profile-card" to="/member/profile"><h3>{memberText("Hồ sơ sức khỏe")}</h3><span className="member-text-link">{memberText("Cập nhật chỉ số cơ thể")}<PortalIcon name="arrow" size={14} /></span></Link>
+          <div className="member-column-heading"><h2 id="board-wellness">{memberText("Hồ sơ hội viên", "Member profile")}</h2><Link to="/member/profile" aria-label={memberText("Xem hồ sơ hội viên", "View member profile")}><PortalIcon name="arrow" size={16} /></Link></div>
+          <Link className="member-profile-card" to="/member/profile"><h3>{memberText("Hồ sơ tài khoản", "Account profile")}</h3><span className="member-text-link">{memberText("Cập nhật thông tin cá nhân", "Update personal details")}<PortalIcon name="arrow" size={14} /></span></Link>
         </section>
       </div>
     </div>
