@@ -69,6 +69,9 @@ public class CoachBookingService {
     @Autowired(required = false)
     private com.swp391.scms.operations.repository.StaffInternalRequestRepository staffRequestRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
+    private boolean legacyClassesEnabled = true;
+
     private boolean onLeave(Long coachId, LocalDate date) {
         return staffRequestRepository != null && staffRequestRepository.existsApprovedLeaveOn(coachId, date);
     }
@@ -161,10 +164,11 @@ public class CoachBookingService {
         Coach coach = coachRepository.findById(coachId)
                 .orElseThrow(() -> new ResourceNotFoundException("Coach", coachId));
 
-        List<ClassSession> coachClasses = classSessionRepository.findActiveByCoachAndDate(coachId, date);
+        List<ClassSession> coachClasses = legacyClassesEnabled ? classSessionRepository.findActiveByCoachAndDate(coachId, date) : List.of();
         List<CoachBooking> coachBookings = coachBookingRepository.findActiveByCoachAndDate(coachId, date);
 
-        List<ClassSession> memberClasses = currentMemberId != null ? classSessionRepository.findActiveByMemberAndDate(currentMemberId, date) : List.of();
+        List<ClassSession> memberClasses = legacyClassesEnabled && currentMemberId != null
+                ? classSessionRepository.findActiveByMemberAndDate(currentMemberId, date) : List.of();
         List<CoachBooking> memberBookings = currentMemberId != null ? coachBookingRepository.findActiveByMemberAndDate(currentMemberId, date) : List.of();
 
         LocalDateTime now = LocalDateTime.now(clock);
@@ -328,7 +332,8 @@ public class CoachBookingService {
         }
 
         // Rule 2: Coach conflict check
-        List<ClassSession> coachSessions = classSessionRepository.findActiveByCoachAndDate(coach.getUserId(), request.bookingDate());
+        List<ClassSession> coachSessions = legacyClassesEnabled
+                ? classSessionRepository.findActiveByCoachAndDate(coach.getUserId(), request.bookingDate()) : List.of();
         for (ClassSession cs : coachSessions) {
             if (request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime())) {
                 throw new ConflictException(
@@ -369,7 +374,7 @@ public class CoachBookingService {
             }
         }
 
-        if (classSessionRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate()).stream()
+        if (legacyClassesEnabled && classSessionRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate()).stream()
                 .anyMatch(cs -> request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime()))) {
             throw new ConflictException("MEMBER_SCHEDULE_CONFLICT", "error.coach_booking.member_busy", null,
                     "Bạn đã có lịch học lớp trong khung giờ này.");
