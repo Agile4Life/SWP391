@@ -7,7 +7,6 @@ public record TrialClaimRequest(
         String documentType,
         String documentNumber,
         String cccd,
-        @NotBlank(message = "{validation.trial.full_name.required}")
         @Size(max = 150, message = "{validation.trial.full_name.size}")
         String fullName,
         String nationality,

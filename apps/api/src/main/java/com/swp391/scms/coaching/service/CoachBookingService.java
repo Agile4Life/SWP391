@@ -40,6 +40,9 @@ public class CoachBookingService {
     private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
     private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 hours
+    private static final int UNPAID_HOLD_MINUTES = 5;
+    private static final int UNPAID_RELEASE_LEAD_MINUTES = 60;
+    private static final int UNPAID_MIN_HOLD_MINUTES = 5;
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
             java.util.Set.of("package_quota", "cash", "bank_transfer");
     private static final int MAX_UNPAID_UPCOMING = 2;
@@ -653,12 +656,23 @@ public class CoachBookingService {
         if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
             throw new BadRequestException("ALREADY_CANCELLED", "error.coach_booking.already_cancelled", null, "Lịch này đã được hủy trước đó.");
         }
+        LocalDateTime now = LocalDateTime.now(clock);
         // A session that was held (or has started) is part of attendance, quota and revenue history.
         if ("completed".equalsIgnoreCase(booking.getStatus()) || booking.getBookingDate() == null
                 || booking.getStartTime() == null
-                || !LocalDateTime.of(booking.getBookingDate(), booking.getStartTime()).isAfter(LocalDateTime.now(clock))) {
+                || !LocalDateTime.of(booking.getBookingDate(), booking.getStartTime()).isAfter(now)) {
             throw new BadRequestException("COACH_BOOKING_CANCEL_TOO_LATE", "error.coach_booking.cancel_too_late", null,
                     "A 1:1 session that has started can no longer be cancelled.");
+        }
+
+        LocalDateTime sessionStart = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+        boolean cancelledByStaff = "CENTER_MANAGER".equalsIgnoreCase(principal.role())
+                || ("COACH".equalsIgnoreCase(principal.role()) && booking.getCoach().getUserId().equals(principal.id()));
+        boolean inTimeForQuotaRefund = !sessionStart.isBefore(now.plusMinutes(ADVANCE_MINUTES_REQUIRED));
+        if (!cancelledByStaff
+                && "package_quota".equalsIgnoreCase(booking.getPaymentMethod())
+                && !inTimeForQuotaRefund) {
+            booking.setQuotaForfeited(true);
         }
 
         BigDecimal refundedTotal = BigDecimal.ZERO;
@@ -699,6 +713,51 @@ public class CoachBookingService {
         }
 
         return mapToDto(booking);
+    }
+
+    /**
+     * Releases 1:1 PT slots held by unpaid bookings older than {@link #UNPAID_HOLD_MINUTES}, or still unpaid
+     * within {@link #UNPAID_RELEASE_LEAD_MINUTES} of session start (after at least {@link #UNPAID_MIN_HOLD_MINUTES}).
+     * Bookings with an active VNPay checkout are skipped until the gateway attempt settles or expires.
+     */
+    @Transactional
+    public int expireUnpaidBookings() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime createdCutoff = now.minusMinutes(UNPAID_HOLD_MINUTES);
+        LocalDateTime minHoldCutoff = now.minusMinutes(UNPAID_MIN_HOLD_MINUTES);
+        LocalDateTime releaseDueAt = now.plusMinutes(UNPAID_RELEASE_LEAD_MINUTES);
+        List<CoachBooking> stale = coachBookingRepository.findUnpaidStale(
+                createdCutoff, minHoldCutoff, releaseDueAt.toLocalDate(), releaseDueAt.toLocalTime());
+        int cancelled = 0;
+        for (CoachBooking booking : stale) {
+            try {
+                if (vnpayGuard != null) vnpayGuard.coach(booking.getId());
+            } catch (RuntimeException awaitingGateway) {
+                continue;
+            }
+            if (paymentRepository != null) {
+                for (var payment : paymentRepository.findAllByCoachBookingId(booking.getId())) {
+                    if ("pending".equalsIgnoreCase(payment.getStatus())) {
+                        payment.setStatus("failed");
+                    }
+                }
+            }
+            booking.setStatus("cancelled");
+            booking.setCancelledAt(now);
+            booking.setCancelReason(msg("coaching.auto_cancel.unpaid"));
+            coachBookingRepository.save(booking);
+            cancelled++;
+            if (notificationService != null && booking.getMember() != null && booking.getMember().getUserId() != null
+                    && booking.getStartTime() != null && booking.getEndTime() != null) {
+                String title = msg("notifications.coaching.booking.auto_cancelled.title");
+                String body = msg("notifications.coaching.booking.auto_cancelled.body",
+                        booking.getBookingDate(),
+                        booking.getStartTime().toString().substring(0, 5),
+                        booking.getEndTime().toString().substring(0, 5));
+                notificationService.send(booking.getMember().getUserId(), title, body, "system", null, booking.getId(), "/member/classes?tab=pt");
+            }
+        }
+        return cancelled;
     }
 
     /** Hourly 1:1 sessions waiting for the desk to collect payment, oldest first. */

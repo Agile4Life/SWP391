@@ -101,6 +101,7 @@ export function MemberPackagesPage() {
 
   const [submittingPackageId, setSubmittingPackageId] =
     useState<number | null>(null);
+  const [expandedBenefitIds, setExpandedBenefitIds] = useState<Record<number, boolean>>({});
   const requestBusy = useRef(false);
   const createdSubscriptions = useRef<MemberSubscription[]>([]);
   const syncVersion = useRef(0);
@@ -172,8 +173,31 @@ export function MemberPackagesPage() {
     });
   };
 
+  const hasReusableKyc = Boolean(
+    kycProfile &&
+    (kycProfile.identityVerified || kycProfile.kycStatus === 'APPROVED' || kycProfile.kycStatus === 'PENDING') &&
+    kycProfile.citizenId
+  );
+
   const handleClaimTrial = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (hasReusableKyc) {
+      setIsClaimingTrial(true);
+      setTrialError('');
+      try {
+        await trialApi.claim({
+          fullName: (kycProfile?.fullName || '').trim(),
+        });
+        notify(t("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), record: true });
+        setIsTrialModalOpen(false);
+        await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
+      } catch (err) {
+        setTrialError(localizableError(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.'));
+      } finally {
+        setIsClaimingTrial(false);
+      }
+      return;
+    }
     const docClean = trialDocumentNumber.trim();
     if (trialDocType === 'CCCD') {
       if (!/^(\d{9}|\d{12})$/.test(docClean)) {
@@ -1266,25 +1290,40 @@ export function MemberPackagesPage() {
                     {details.summary}
                   </p>
 
-                  <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
-                    {highlights.slice(0, visibleCount).map((benefit, index) => (
-                      <li key={index} className="package-benefit-item">
-                        <span>{benefit}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {highlights.length > visibleCount && (
-                    <details className="package-benefit-more">
-                      <summary>{t("Xem thêm ", "View more")}{highlights.length - visibleCount} {t("quyền lợi", "benefits")}</summary>
-                      <ul className="package-benefit-list">
-                        {highlights.slice(visibleCount).map((benefit, index) => (
-                          <li key={index} className="package-benefit-item">
-                            <span>{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
+                  {(() => {
+                    const isExpanded = Boolean(expandedBenefitIds[membershipPackage.id]);
+                    const shownHighlights = isExpanded ? highlights : highlights.slice(0, visibleCount);
+                    return (
+                      <>
+                        <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
+                          {shownHighlights.map((benefit, index) => (
+                            <li key={index} className="package-benefit-item">
+                              <span>{benefit}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {highlights.length > visibleCount && (
+                          <div className="package-benefit-more">
+                            <button
+                              type="button"
+                              className="package-benefit-more__toggle"
+                              aria-expanded={isExpanded}
+                              onClick={() =>
+                                setExpandedBenefitIds((prev) => ({
+                                  ...prev,
+                                  [membershipPackage.id]: !isExpanded,
+                                }))
+                              }
+                            >
+                              {isExpanded
+                                ? t("Thu gọn", "Show less")
+                                : `${t("Xem thêm ", "View more ")}${highlights.length - visibleCount} ${t("quyền lợi", "benefits")}`}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
 
                 </div>
 
@@ -1413,6 +1452,18 @@ export function MemberPackagesPage() {
             {t("Mỗi hội viên nhận Gói Trải Nghiệm 1 lần. Gồm 1 buổi PT 1:1, không bảo lưu.", "One trial per member. Includes one 1:1 PT session; cannot be paused.")}</p>
 
           <form onSubmit={(e) => void handleClaimTrial(e)} style={{ marginTop: 16 }}>
+            {hasReusableKyc ? (
+              <div className="portal-card" style={{ padding: 14, background: 'var(--portal-surface-2, rgba(255,255,255,0.04))', marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>
+                  {t("Sử dụng thông tin định danh đã nộp", "Using your submitted identity details")}
+                </div>
+                <p className="row-card__meta" style={{ margin: '6px 0 0', lineHeight: 1.5 }}>
+                  {t("Họ và tên:", "Full name:")} <strong>{kycProfile?.fullName}</strong><br />
+                  {kycProfile?.documentType === 'PASSPORT' ? t("Hộ chiếu:", "Passport:") : t("CCCD:", "Identity card:")} <strong>{kycProfile?.citizenId}</strong>
+                </p>
+              </div>
+            ) : (
+              <>
             {/* Chọn loại giấy tờ */}
             <div className="portal-form-group">
               <label className="portal-label">{t("Loại giấy tờ tùy thân *", "Identity document type *")}</label>
@@ -1593,6 +1644,8 @@ export function MemberPackagesPage() {
                 )}
               </div>
             </div>
+              </>
+            )}
 
             {trialError && (
               <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', marginTop: 12, fontSize: '0.88rem' }}>
@@ -1611,7 +1664,7 @@ export function MemberPackagesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isClaimingTrial || !trialDocumentNumber.trim() || !trialFullName.trim()}
+                disabled={isClaimingTrial || (!hasReusableKyc && (!trialDocumentNumber.trim() || !trialFullName.trim()))}
               >
                 {isClaimingTrial ? t("Đang gửi đơn…", "Submitting application…") : t("Xác minh & Kích hoạt", "Verify & Activate")}
               </button>

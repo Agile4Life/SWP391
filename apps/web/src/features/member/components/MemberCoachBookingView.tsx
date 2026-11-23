@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { subscribeMembershipChanges } from '../membershipRealtime';
 import { Modal } from '../../../shared/ui/Modal';
-import { centerNowParts, formatCenterDate } from '../../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, parseCenterTime } from '../../../shared/lib/centerTime';
 import { addDays, parseISODate } from '../../schedule/timetable';
 import {
   getCoaches,
@@ -152,6 +152,8 @@ export function MemberCoachBookingView({
 
   // Cancel Modal State
   const [cancelTarget, setCancelTarget] = useState<CoachBookingDto | null>(null);
+  // Thời điểm mở hộp thoại hủy, dùng để báo trước có được hoàn lượt (quy tắc 2 giờ) hay không.
+  const [cancelOpenedAt, setCancelOpenedAt] = useState(0);
   const [cancelling, setCancelling] = useState(false);
 
   const daysList = nextDays(10);
@@ -770,7 +772,7 @@ export function MemberCoachBookingView({
                 {memberText("Chọn ngày và khung giờ")}</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <span className="row-card__meta" style={{ fontSize: 13, color: 'var(--portal-star)' }}>
-                  {memberText("Quy tắc: Đặt trước ")}<strong>{memberText("2 tiếng")}</strong>
+                  {memberText("Quy tắc: Đặt và hủy trước ", "Rule: Book and cancel at least ")}<strong>{memberText("2 tiếng")}</strong>
                 </span>
                 {selectedCoach && (
                   <span className="row-card__meta" style={{ fontSize: 13 }}>
@@ -1121,7 +1123,7 @@ export function MemberCoachBookingView({
                           type="button"
                           className="btn-secondary btn-sm"
                           style={{ color: 'var(--portal-danger)', borderColor: 'var(--portal-danger)' }}
-                          onClick={() => setCancelTarget(b)}
+                          onClick={() => { setCancelTarget(b); setCancelOpenedAt(Date.now()); }}
                         >
                           {memberText("Hủy lịch hẹn")}</button>
                       )}
@@ -1653,6 +1655,23 @@ export function MemberCoachBookingView({
               {memberText("Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV ")}<strong>{formatCoachName(cancelTarget.coachName)}</strong>{memberText(" vào")}{' '}
               <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)}{memberText(" ngày ")}{formatCenterDate(cancelTarget.bookingDate)}</strong>?
             </p>
+            {cancelTarget.paymentMethod === 'package_quota' && (() => {
+              const sessionStart = parseCenterTime(`${cancelTarget.bookingDate}T${cancelTarget.startTime.slice(0, 5)}:00`);
+              const isWithinTwoHours = sessionStart !== null && sessionStart.getTime() - cancelOpenedAt < 2 * 60 * 60 * 1000;
+              return (
+                <p style={{ margin: 0, fontSize: '0.88rem', color: isWithinTwoHours ? 'var(--portal-danger)' : 'var(--portal-text-muted)' }}>
+                  {isWithinTwoHours
+                    ? memberText(
+                        "Lưu ý: Hủy trong vòng 2 giờ trước khi buổi tập bắt đầu sẽ không được hoàn lại lượt đăng ký HLV 1:1.",
+                        "Note: Cancelling within 2 hours before the session starts will not refund your 1:1 PT booking slot.",
+                      )
+                    : memberText(
+                        "Hủy trước ít nhất 2 giờ nên lượt đăng ký HLV 1:1 sẽ được hoàn lại vào gói.",
+                        "Cancelling at least 2 hours ahead will refund your 1:1 PT booking slot.",
+                      )}
+                </p>
+              );
+            })()}
             {cancelError && <p className="form-error" role="alert">{memberRenderMessage(cancelError)}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button

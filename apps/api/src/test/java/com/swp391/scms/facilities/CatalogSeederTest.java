@@ -87,9 +87,9 @@ class CatalogSeederTest {
         verify(disciplines, times(1)).create(any());
         verify(rooms, times(1)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
-        verify(packages, times(4)).create(requests.capture());
+        verify(packages, times(7)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
-                .containsExactly(0, 549000, 799000, 1599000);
+                .containsExactly(0, 549000, 990000, 799000, 1449000, 1599000, 2899000);
         var legacy = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
         verify(packages, times(3)).seedLegacyPackage(legacy.capture());
         org.assertj.core.api.Assertions.assertThat(legacy.getAllValues().stream().map(r -> r.price().intValue()).toList())
@@ -123,8 +123,11 @@ class CatalogSeederTest {
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_NAME, 30),
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_NAME, 30),
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.SILVER_3M_NAME, 90),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.SILVER_6M_NAME, 180),
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_3M_NAME, 90),
-                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_3M_NAME, 90));
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_6M_NAME, 180),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_3M_NAME, 90),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_6M_NAME, 180));
     }
 
     @Test
@@ -138,7 +141,7 @@ class CatalogSeederTest {
         verify(disciplines, times(1)).create(any());
         verify(disciplines, never()).update(any(), any());
         verify(rooms, never()).create(any());
-        verify(packages, times(4)).create(any());
+        verify(packages, times(7)).create(any());
         verify(packages, times(3)).seedLegacyPackage(any());
     }
     @Test
@@ -224,6 +227,54 @@ class CatalogSeederTest {
 
         verify(disciplines, never()).update(any(), any());
         verify(disciplines, never()).create(any());
+        verify(packages, never()).update(any(), any());
+    }
+
+    @Test
+    void syncsLegacySeededThreeAndSixMonthPackagesToNewDescriptionsAndReactivatesSixMonth() {
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "Phòng Gym Tiêu chuẩn", null, 50, "available")));
+        when(packages.list()).thenReturn(List.of(
+                new PackageDto(1L, CatalogSeeder.SILVER_3M_NAME, "BASIC – Đồng hành 3 tháng (Tiết kiệm 8%)\n- 3 lượt đăng ký khóa Group Fitness", new BigDecimal("549000"), 90, 3, "active"),
+                new PackageDto(2L, CatalogSeeder.SILVER_6M_NAME, "BASIC – Đồng hành 6 tháng (Tiết kiệm 16%)\n- Old description", new BigDecimal("950000"), 180, 6, "inactive"),
+                new PackageDto(3L, CatalogSeeder.GOLD_3M_NAME, "STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)\n- Sử dụng khu vực máy tập nâng cao", new BigDecimal("799000"), 90, 6, "active"),
+                new PackageDto(4L, CatalogSeeder.GOLD_6M_NAME, "STANDARD – Đồng hành 6 tháng (Tiết kiệm 17%)\n- Old description", new BigDecimal("1400000"), 180, 12, "inactive"),
+                new PackageDto(5L, CatalogSeeder.PLATINUM_3M_NAME, "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)\n- Đặc quyền sử dụng phòng tập VIP riêng biệt", new BigDecimal("1599000"), 90, 12, "active"),
+                new PackageDto(6L, CatalogSeeder.PLATINUM_6M_NAME, "VIP – Đồng hành 6 tháng (Đặc quyền VIP - Tiết kiệm 17%)\n- Old description", new BigDecimal("2800000"), 180, 24, "inactive")
+        ));
+
+        seeder.run(null);
+
+        var updated = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
+        verify(packages, times(6)).update(any(), updated.capture());
+        org.assertj.core.api.Assertions.assertThat(updated.getAllValues())
+                .extracting(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest::name,
+                        com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest::status)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.SILVER_3M_NAME, "active"),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.SILVER_6M_NAME, "active"),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_3M_NAME, "active"),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.GOLD_6M_NAME, "active"),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_3M_NAME, "active"),
+                        org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_6M_NAME, "active")
+                );
+    }
+
+    @Test
+    void keepsManagerStatusAndPriceOnMigratedPackagesAcrossRestarts() {
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "Phòng Gym Tiêu chuẩn", null, 50, "available")));
+        when(packages.list()).thenReturn(List.of(
+                new PackageDto(1L, CatalogSeeder.SILVER_3M_NAME, CatalogSeeder.SILVER_3M_DESC, new BigDecimal("499000"), 90, 3, "active"),
+                new PackageDto(2L, CatalogSeeder.SILVER_6M_NAME, CatalogSeeder.SILVER_6M_DESC, CatalogSeeder.SILVER_6M_PRICE, 180, 6, "inactive"),
+                new PackageDto(3L, CatalogSeeder.GOLD_3M_NAME, "STANDARD – Manager tự viết lại\n- Quyền lợi riêng", CatalogSeeder.GOLD_3M_PRICE, 90, 6, "active"),
+                new PackageDto(4L, CatalogSeeder.GOLD_6M_NAME, CatalogSeeder.GOLD_6M_DESC, CatalogSeeder.GOLD_6M_PRICE, 180, 12, "inactive"),
+                new PackageDto(5L, CatalogSeeder.PLATINUM_3M_NAME, CatalogSeeder.PLATINUM_3M_DESC, CatalogSeeder.PLATINUM_3M_PRICE, 90, 12, "active"),
+                new PackageDto(6L, CatalogSeeder.PLATINUM_6M_NAME, CatalogSeeder.PLATINUM_6M_DESC, CatalogSeeder.PLATINUM_6M_PRICE, 180, 24, "inactive")
+        ));
+
+        seeder.run(null);
+
         verify(packages, never()).update(any(), any());
     }
 }

@@ -7,6 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 
@@ -165,4 +166,22 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
     @org.springframework.data.jpa.repository.Modifying
     @Query("update CoachBooking cb set cb.status = 'completed' where cb.status = 'confirmed' and cb.bookingDate < :cutoff")
     int completeHeldBefore(@Param("cutoff") LocalDate cutoff);
+
+    /** Confirmed hourly 1:1 sessions still unpaid past the hold window or too close to start time. */
+    @Query("""
+            select cb from CoachBooking cb
+            where cb.status = 'confirmed'
+              and cb.paymentStatus = 'pending'
+              and cb.paymentMethod <> 'package_quota'
+              and (
+                    cb.createdAt < :createdCutoff
+                 or (cb.createdAt < :minHoldCutoff
+                     and (cb.bookingDate < :dueDate or (cb.bookingDate = :dueDate and cb.startTime <= :dueTime)))
+              )
+            """)
+    List<CoachBooking> findUnpaidStale(
+            @Param("createdCutoff") LocalDateTime createdCutoff,
+            @Param("minHoldCutoff") LocalDateTime minHoldCutoff,
+            @Param("dueDate") LocalDate dueDate,
+            @Param("dueTime") LocalTime dueTime);
 }

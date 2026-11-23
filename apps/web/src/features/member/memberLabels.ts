@@ -113,6 +113,7 @@ export const memberLabels: Readonly<Record<string, string>> = {
   "Bạn đã có lịch trùng": "You have a scheduling conflict",
   "Chọn ngày và khung giờ": "Choose date and time",
   "Quy tắc: Đặt trước": "Rule: Book at least",
+  "Quy tắc: Đặt và hủy trước": "Rule: Book and cancel at least",
   "2 tiếng": "2 hours in advance",
   "Đang kiểm tra lịch trống của huấn luyện viên...": "Checking coach availability...",
   "HLV không có khung giờ trong ngày này.": "The coach has no slots on this day.",

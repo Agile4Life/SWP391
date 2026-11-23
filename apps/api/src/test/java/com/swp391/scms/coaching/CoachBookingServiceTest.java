@@ -599,6 +599,119 @@ class CoachBookingServiceTest {
     }
 
     @Test
+    @DisplayName("Học viên hủy buổi tập 1:1 dùng lượt gói trước 2 tiếng được hoàn lại lượt; hủy trong vòng 2 tiếng bị mất lượt")
+    void memberCancelPackageQuotaRespectsTwoHourRefundWindow() {
+        CoachBooking earlyBooking = new CoachBooking();
+        earlyBooking.setId(161L);
+        earlyBooking.setMember(member);
+        earlyBooking.setCoach(coach);
+        earlyBooking.setStatus("confirmed");
+        earlyBooking.setPaymentMethod("package_quota");
+        earlyBooking.setBookingDate(LocalDate.now(fixedClock));
+        earlyBooking.setStartTime(LocalTime.now(fixedClock).plusHours(2));
+        earlyBooking.setEndTime(LocalTime.now(fixedClock).plusHours(3));
+
+        CoachBooking lateBooking = new CoachBooking();
+        lateBooking.setId(162L);
+        lateBooking.setMember(member);
+        lateBooking.setCoach(coach);
+        lateBooking.setStatus("confirmed");
+        lateBooking.setPaymentMethod("package_quota");
+        lateBooking.setBookingDate(LocalDate.now(fixedClock));
+        lateBooking.setStartTime(LocalTime.now(fixedClock).plusMinutes(90));
+        lateBooking.setEndTime(LocalTime.now(fixedClock).plusMinutes(150));
+
+        when(coachBookingRepository.findByIdForUpdate(161L)).thenReturn(Optional.of(earlyBooking));
+        when(coachBookingRepository.findByIdForUpdate(162L)).thenReturn(Optional.of(lateBooking));
+
+        AuthenticatedPrincipal memberPrincipal = new AuthenticatedPrincipal(member.getUserId(), "member", "MEMBER");
+
+        service.cancelBooking(memberPrincipal, 161L, "Đổi lịch sớm");
+        service.cancelBooking(memberPrincipal, 162L, "Hủy sát giờ");
+
+        assertThat(earlyBooking.getStatus()).isEqualTo("cancelled");
+        assertThat(earlyBooking.isQuotaForfeited()).isFalse();
+        assertThat(lateBooking.getStatus()).isEqualTo("cancelled");
+        assertThat(lateBooking.isQuotaForfeited()).isTrue();
+    }
+
+    @Test
+    @DisplayName("HLV hoặc quản lý hủy buổi tập trong vòng 2 tiếng không làm mất lượt gói của học viên")
+    void staffCancelWithinTwoHoursDoesNotForfeitMemberQuota() {
+        CoachBooking booking = new CoachBooking();
+        booking.setId(163L);
+        booking.setMember(member);
+        booking.setCoach(coach);
+        booking.setStatus("confirmed");
+        booking.setPaymentMethod("package_quota");
+        booking.setBookingDate(LocalDate.now(fixedClock));
+        booking.setStartTime(LocalTime.now(fixedClock).plusMinutes(60));
+        booking.setEndTime(LocalTime.now(fixedClock).plusMinutes(120));
+
+        when(coachBookingRepository.findByIdForUpdate(163L)).thenReturn(Optional.of(booking));
+        AuthenticatedPrincipal coachPrincipal = new AuthenticatedPrincipal(coach.getUserId(), "coach", "COACH");
+
+        service.cancelBooking(coachPrincipal, 163L, "HLV bận đột xuất");
+
+        assertThat(booking.getStatus()).isEqualTo("cancelled");
+        assertThat(booking.isQuotaForfeited()).isFalse();
+    }
+
+    @Test
+    @DisplayName("Tự động hủy lịch PT 1:1 treo quá hạn chưa thanh toán và đóng giao dịch pending")
+    void expireUnpaidBookingsCancelsStaleAndSkipsActiveVnpay() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var guard = org.mockito.Mockito.mock(com.swp391.scms.finance.service.VnpayPaymentGuard.class);
+        CoachBookingService target = new CoachBookingService(
+                coachBookingRepository, coachRepository, memberRepository, classSessionRepository,
+                classEnrollmentRepository, subscriptionRepository, disciplineRepository,
+                null, fixedClock, null, guard);
+        org.springframework.test.util.ReflectionTestUtils.setField(target, "paymentRepository", payments);
+
+        CoachBooking stale = new CoachBooking();
+        stale.setId(170L);
+        stale.setMember(member);
+        stale.setCoach(coach);
+        stale.setStatus("confirmed");
+        stale.setPaymentMethod("cash");
+        stale.setPaymentStatus("pending");
+        stale.setBookingDate(LocalDate.now(fixedClock).plusDays(1));
+        stale.setStartTime(LocalTime.of(10, 0));
+        stale.setEndTime(LocalTime.of(11, 0));
+
+        CoachBooking activeVnpay = new CoachBooking();
+        activeVnpay.setId(171L);
+        activeVnpay.setMember(member);
+        activeVnpay.setCoach(coach);
+        activeVnpay.setStatus("confirmed");
+        activeVnpay.setPaymentMethod("bank_transfer");
+        activeVnpay.setPaymentStatus("pending");
+        activeVnpay.setBookingDate(LocalDate.now(fixedClock).plusDays(1));
+        activeVnpay.setStartTime(LocalTime.of(14, 0));
+        activeVnpay.setEndTime(LocalTime.of(15, 0));
+
+        com.swp391.scms.finance.entity.Payment pendingPayment = new com.swp391.scms.finance.entity.Payment();
+        pendingPayment.setStatus("pending");
+
+        when(coachBookingRepository.findUnpaidStale(any(), any(), any(), any())).thenReturn(List.of(stale, activeVnpay));
+        when(payments.findAllByCoachBookingId(170L)).thenReturn(List.of(pendingPayment));
+        org.mockito.Mockito.doNothing().when(guard).coach(170L);
+        org.mockito.Mockito.doThrow(new ConflictException("VNPAY_PENDING", "error", null, "pending")).when(guard).coach(171L);
+
+        int cancelled = target.expireUnpaidBookings();
+
+        verify(coachBookingRepository).findUnpaidStale(any(), any(), any(), any());
+        verify(guard).coach(170L);
+        verify(payments).findAllByCoachBookingId(170L);
+        assertThat(cancelled).isEqualTo(1);
+        assertThat(stale.getStatus()).isEqualTo("cancelled");
+        assertThat(stale.getCancelledAt()).isNotNull();
+        assertThat(pendingPayment.getStatus()).isEqualTo("failed");
+        assertThat(activeVnpay.getStatus()).isEqualTo("confirmed");
+        verify(coachBookingRepository).save(stale);
+    }
+
+    @Test
     void coachOnApprovedLeaveCannotBeBookedAndShowsNoFreeSlots() {
         var leaves = org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "staffRequestRepository", leaves);

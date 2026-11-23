@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
+@org.hibernate.annotations.DynamicUpdate
 @org.hibernate.annotations.Check(name = "ck_users_gender", constraints = "gender IN ('male','female','other')")
 @org.hibernate.annotations.Check(name = "ck_users_status", constraints = "status IN ('active','inactive','locked')")
 @Table(name = "users")

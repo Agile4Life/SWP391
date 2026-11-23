@@ -17,8 +17,8 @@ export interface TrialStatus {
 }
 
 export interface TrialClaimInput {
-  documentNumber: string;
-  fullName: string;
+  documentNumber?: string;
+  fullName?: string;
   documentType?: 'CCCD' | 'PASSPORT';
   nationality?: string;
   frontImageUrl?: string;
