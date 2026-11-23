@@ -51,8 +51,13 @@ export interface ReceptionistProfileUpdate {
 
 export const getProfile = () => apiFetch<Profile>('/profile');
 
+/** Avatar and identity images have their own endpoints; leaving their data URLs out keeps the PUT body small. */
+const PROFILE_PUT_SKIPPED = new Set(['avatarUrl', 'frontImageUrl', 'backImageUrl']);
 export const updateProfile = (profile: Profile) =>
-  apiFetch<Profile>('/profile', { method: 'PUT', body: JSON.stringify(profile) });
+  apiFetch<Profile>('/profile', {
+    method: 'PUT',
+    body: JSON.stringify(profile, (key, value) => (PROFILE_PUT_SKIPPED.has(key) ? undefined : value)),
+  });
 
 export const submitMemberKyc = (data: MemberKycRequest) =>
   apiFetch<Profile>('/profile/kyc', { method: 'POST', body: JSON.stringify(data) });

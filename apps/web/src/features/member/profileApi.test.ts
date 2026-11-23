@@ -73,9 +73,25 @@ describe('profileApi.ts (Profile)', () => {
       '/api/v1/profile',
       expect.objectContaining({
         method: 'PUT',
-        body: JSON.stringify(updatedData),
+        body: JSON.stringify({ ...updatedData, avatarUrl: undefined }),
       }),
     );
+  });
+
+  it('updateProfile leaves avatar and identity image data URLs out of the PUT body', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: {} }) });
+    vi.stubGlobal('fetch', mockFetch);
+    await updateProfile({
+      userId: 1, fullName: 'A', email: null, phone: null, dob: null, gender: null,
+      avatarUrl: 'data:image/png;base64,AAAA', address: null, membershipCode: null, healthNotes: null,
+      fitnessGoal: null, fitnessLevel: null, emergencyContactName: null, emergencyContactPhone: null,
+      frontImageUrl: 'data:image/jpeg;base64,BBBB', backImageUrl: 'data:image/jpeg;base64,CCCC',
+    });
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body).not.toHaveProperty('avatarUrl');
+    expect(body).not.toHaveProperty('frontImageUrl');
+    expect(body).not.toHaveProperty('backImageUrl');
+    expect(body.fullName).toBe('A');
   });
 
 });
