@@ -145,89 +145,95 @@ function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry 
   return merged;
 }
 
-function buildB1Details(parts: ColoredPart[]): void {
+function buildB1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
   const darkSteel = '#1f2531';
   const chrome = '#cbd5e1';
 
-  // Pool is at centerX=-6.0, centerZ=-5.5, width=25 (x=-18.5..+6.5), depth=12 (z=-11.5..+0.5)
-  // 1. 6 Luxury Poolside Sun Loungers along the South Pool Deck (z = 2.35, x = -17.0..+2.0)
-  const loungerXs = [-17.0, -13.2, -9.4, -5.6, -1.8, 2.0];
-  for (let i = 0; i < loungerXs.length; i += 1) {
-    const lx = loungerXs[i]!;
-    pushBox(parts, 0.78, 0.16, 1.85, lx, 0.22, 2.3, warmWood);
-    pushBox(parts, 0.72, 0.09, 1.28, lx, 0.34, 2.0, '#f8fafc');
-    pushBox(parts, 0.72, 0.09, 0.58, lx, 0.52, 2.88, '#f8fafc', 0.48, 0, 0);
-    pushBox(parts, 0.52, 0.08, 0.22, lx, 0.64, 3.05, salmon, 0.48, 0, 0);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-b1-pool')) {
+    // Pool is at centerX=-6.0, centerZ=-5.5, width=25 (x=-18.5..+6.5), depth=12 (z=-11.5..+0.5)
+    // 1. 6 Luxury Poolside Sun Loungers along the South Pool Deck (z = 2.35, x = -17.0..+2.0)
+    const loungerXs = [-17.0, -13.2, -9.4, -5.6, -1.8, 2.0];
+    for (let i = 0; i < loungerXs.length; i += 1) {
+      const lx = loungerXs[i]!;
+      pushBox(parts, 0.78, 0.16, 1.85, lx, 0.22, 2.3, warmWood);
+      pushBox(parts, 0.72, 0.09, 1.28, lx, 0.34, 2.0, '#f8fafc');
+      pushBox(parts, 0.72, 0.09, 0.58, lx, 0.52, 2.88, '#f8fafc', 0.48, 0, 0);
+      pushBox(parts, 0.52, 0.08, 0.22, lx, 0.64, 3.05, salmon, 0.48, 0, 0);
 
-    if (i % 2 === 0 && i + 1 < loungerXs.length) {
-      const mx = (lx + loungerXs[i + 1]!) * 0.5;
-      pushCylinder(parts, 0.28, 0.28, 0.42, mx, 0.21, 2.5, warmWood, 8);
-      pushCylinder(parts, 0.04, 0.05, 2.35, mx, 1.18, 2.5, chrome, 8);
-      pushCylinder(parts, 0.12, 1.35, 0.38, mx, 2.38, 2.5, i === 2 ? salmon : '#fff8f3', 8);
+      if (i % 2 === 0 && i + 1 < loungerXs.length) {
+        const mx = (lx + loungerXs[i + 1]!) * 0.5;
+        pushCylinder(parts, 0.28, 0.28, 0.42, mx, 0.21, 2.5, warmWood, 8);
+        pushCylinder(parts, 0.04, 0.05, 2.35, mx, 1.18, 2.5, chrome, 8);
+        pushCylinder(parts, 0.12, 1.35, 0.38, mx, 2.38, 2.5, i === 2 ? salmon : '#fff8f3', 8);
+      }
+    }
+
+    // 2. Elevated Open-Frame Lifeguard Chair at West Pool Deck (x = -19.6, z = -5.5)
+    for (const [lx, lz] of [
+      [-19.92, -5.82],
+      [-19.28, -5.82],
+      [-19.92, -5.18],
+      [-19.28, -5.18],
+    ] as const) {
+      pushCylinder(parts, 0.032, 0.038, 1.48, lx, 0.74, lz, chrome, 8);
+    }
+    for (const ry of [0.38, 0.76, 1.14]) {
+      pushBox(parts, 0.04, 0.035, 0.66, -19.28, ry, -5.5, chrome);
+      pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.82, chrome);
+      pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.18, chrome);
+    }
+    pushBox(parts, 0.68, 0.08, 0.66, -19.6, 1.48, -5.5, '#f8fafc');
+    pushBox(parts, 0.58, 0.05, 0.56, -19.58, 1.53, -5.5, salmon);
+    pushBox(parts, 0.08, 0.52, 0.64, -19.92, 1.78, -5.5, '#f8fafc');
+    pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.82, chrome);
+    pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.18, chrome);
+    pushCylinder(parts, 0.075, 0.075, 0.66, -19.6, 1.24, -5.06, '#ef4444', 8, 0.25, 0, 0);
+
+    // 3. 4 Stainless Steel Pool Ladders along North (z = -11.45) & South (z = 0.45) pool walls
+    for (const [lx, lz] of [
+      [-15.0, -11.45],
+      [1.5, -11.45],
+      [-15.0, 0.45],
+      [1.5, 0.45],
+    ] as const) {
+      pushCylinder(parts, 0.03, 0.03, 0.95, lx - 0.24, 0.45, lz, chrome, 6);
+      pushCylinder(parts, 0.03, 0.03, 0.95, lx + 0.24, 0.45, lz, chrome, 6);
+      pushBox(parts, 0.52, 0.04, 0.18, lx, 0.88, lz, chrome);
+    }
+
+    // 4. North Pool Wall Towel Cabana Counter, Rinse Showers & Digital Water Temp Clock (z = -14.8)
+    pushBox(parts, 2.8, 1.02, 0.68, -14.0, 0.51, -14.6, warmWood);
+    pushBox(parts, 2.86, 0.06, 0.74, -14.0, 1.05, -14.6, darkSteel);
+    for (let t = 0; t < 4; t += 1) {
+      const tx = -14.95 + t * 0.63;
+      pushCylinder(parts, 0.11, 0.11, 0.46, tx, 1.18, -14.6, t % 2 === 0 ? '#f8fafc' : salmon, 8, Math.PI / 2, 0, 0);
+    }
+    pushBox(parts, 3.4, 0.98, 0.12, -6.0, 2.25, -15.65, darkSteel);
+    pushBox(parts, 3.48, 0.06, 0.15, -6.0, 2.76, -15.64, salmon);
+    pushBox(parts, 3.16, 0.78, 0.13, -6.0, 2.25, -15.62, '#0f172a');
+    pushBox(parts, 1.15, 0.12, 0.14, -6.85, 2.42, -15.6, salmon);
+    pushBox(parts, 1.35, 0.12, 0.14, -5.25, 2.42, -15.6, '#38bdf8');
+    pushBox(parts, 2.75, 0.08, 0.14, -6.0, 2.08, -15.6, '#cbd5e1');
+    for (const sx of [-1.2, 1.2]) {
+      pushCylinder(parts, 0.04, 0.05, 2.2, sx, 1.1, -14.8, chrome, 8);
+      pushCylinder(parts, 0.16, 0.16, 0.05, sx, 2.18, -14.55, chrome, 8);
+      pushBox(parts, 0.85, 0.05, 0.85, sx, 0.03, -14.5, warmWood);
     }
   }
 
-  // 2. Elevated Open-Frame Lifeguard Chair at West Pool Deck (x = -19.6, z = -5.5)
-  for (const [lx, lz] of [
-    [-19.92, -5.82],
-    [-19.28, -5.82],
-    [-19.92, -5.18],
-    [-19.28, -5.18],
-  ] as const) {
-    pushCylinder(parts, 0.032, 0.038, 1.48, lx, 0.74, lz, chrome, 8);
-  }
-  for (const ry of [0.38, 0.76, 1.14]) {
-    pushBox(parts, 0.04, 0.035, 0.66, -19.28, ry, -5.5, chrome);
-    pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.82, chrome);
-    pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.18, chrome);
-  }
-  pushBox(parts, 0.68, 0.08, 0.66, -19.6, 1.48, -5.5, '#f8fafc');
-  pushBox(parts, 0.58, 0.05, 0.56, -19.58, 1.53, -5.5, salmon);
-  pushBox(parts, 0.08, 0.52, 0.64, -19.92, 1.78, -5.5, '#f8fafc');
-  pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.82, chrome);
-  pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.18, chrome);
-  pushCylinder(parts, 0.075, 0.075, 0.66, -19.6, 1.24, -5.06, '#ef4444', 8, 0.25, 0, 0);
-
-  // 3. 4 Stainless Steel Pool Ladders along North (z = -11.45) & South (z = 0.45) pool walls
-  for (const [lx, lz] of [
-    [-15.0, -11.45],
-    [1.5, -11.45],
-    [-15.0, 0.45],
-    [1.5, 0.45],
-  ] as const) {
-    pushCylinder(parts, 0.03, 0.03, 0.95, lx - 0.24, 0.45, lz, chrome, 6);
-    pushCylinder(parts, 0.03, 0.03, 0.95, lx + 0.24, 0.45, lz, chrome, 6);
-    pushBox(parts, 0.52, 0.04, 0.18, lx, 0.88, lz, chrome);
-  }
-
-  // 4. North Pool Wall Towel Cabana Counter, Rinse Showers & Digital Water Temp Clock (z = -14.8)
-  pushBox(parts, 2.8, 1.02, 0.68, -14.0, 0.51, -14.6, warmWood);
-  pushBox(parts, 2.86, 0.06, 0.74, -14.0, 1.05, -14.6, darkSteel);
-  for (let t = 0; t < 4; t += 1) {
-    const tx = -14.95 + t * 0.63;
-    pushCylinder(parts, 0.11, 0.11, 0.46, tx, 1.18, -14.6, t % 2 === 0 ? '#f8fafc' : salmon, 8, Math.PI / 2, 0, 0);
-  }
-  pushBox(parts, 3.4, 0.98, 0.12, -6.0, 2.25, -15.65, darkSteel);
-  pushBox(parts, 3.48, 0.06, 0.15, -6.0, 2.76, -15.64, salmon);
-  pushBox(parts, 3.16, 0.78, 0.13, -6.0, 2.25, -15.62, '#0f172a');
-  pushBox(parts, 1.15, 0.12, 0.14, -6.85, 2.42, -15.6, salmon);
-  pushBox(parts, 1.35, 0.12, 0.14, -5.25, 2.42, -15.6, '#38bdf8');
-  pushBox(parts, 2.75, 0.08, 0.14, -6.0, 2.08, -15.6, '#cbd5e1');
-  for (const sx of [-1.2, 1.2]) {
-    pushCylinder(parts, 0.04, 0.05, 2.2, sx, 1.1, -14.8, chrome, 8);
-    pushCylinder(parts, 0.16, 0.16, 0.05, sx, 2.18, -14.55, chrome, 8);
-    pushBox(parts, 0.85, 0.05, 0.85, sx, 0.03, -14.5, warmWood);
-  }
-
-  // 5. Thermal Zone (x = 8..20, z = -14..4): Cold Plunge Ice Bath & 3 Heated Stone Loungers
-  pushCylinder(parts, 1.15, 1.08, 0.82, 18.2, 0.41, -8.5, warmWood, 12);
-  pushCylinder(parts, 0.98, 0.98, 0.85, 18.2, 0.43, -8.5, '#38bdf8', 12);
-  for (const tz of [-8.5, -4.5, 2.2]) {
-    pushBox(parts, 1.65, 0.42, 0.76, 10.2, 0.21, tz, '#475569');
-    pushBox(parts, 1.55, 0.08, 0.7, 10.2, 0.45, tz, '#d6cfc4');
-    pushBox(parts, 0.24, 0.08, 0.52, 9.6, 0.53, tz, salmon);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-b1-thermal')) {
+    // 5. Thermal Zone (x = 8..20, z = -14..4): Cold Plunge Ice Bath & 3 Heated Stone Loungers
+    pushCylinder(parts, 1.15, 1.08, 0.82, 18.2, 0.41, -8.5, warmWood, 12);
+    pushCylinder(parts, 0.98, 0.98, 0.85, 18.2, 0.43, -8.5, '#38bdf8', 12);
+    for (const tz of [-8.5, -4.5, 2.2]) {
+      pushBox(parts, 1.65, 0.42, 0.76, 10.2, 0.21, tz, '#475569');
+      pushBox(parts, 1.55, 0.08, 0.7, 10.2, 0.45, tz, '#d6cfc4');
+      pushBox(parts, 0.24, 0.08, 0.52, 9.6, 0.53, tz, salmon);
+    }
   }
 
   // 6. Locker Room (x = -20..8, z = 4..14): 4 Bench Seats, Vanity Mirror Sinks & 4 Rain Shower Stalls
@@ -250,7 +256,7 @@ function buildB1Details(parts: ColoredPart[]): void {
   }
 }
 
-function buildL1Details(parts: ColoredPart[]): void {
+function buildL1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
   const darkSteel = '#1b202b';
@@ -377,66 +383,73 @@ function buildL1Details(parts: ColoredPart[]): void {
   pushCylinder(parts, 0.035, 0.035, 0.92, -16.3, 0.52, 1.15, salmon, 6);
   pushCylinder(parts, 0.2, 0.2, 0.16, -16.8, 0.22, 0.85, chrome, 8);
 
-  // 5. Boxing Zone (x = 4..20, z = -14..-4): Digital Round Scoreboard, Glove Rack & Plyo Boxes
-  pushBox(parts, 2.8, 1.05, 0.14, 10.5, 2.45, -15.65, darkSteel);
-  pushBox(parts, 2.6, 0.85, 0.16, 10.5, 2.45, -15.62, '#ef4444');
-  pushBox(parts, 2.4, 1.65, 0.42, 16.5, 0.85, -15.4, midSteel);
-  for (let g = 0; g < 4; g += 1) {
-    pushBox(
-      parts,
-      0.28,
-      0.28,
-      0.28,
-      15.7 + g * 0.52,
-      1.25,
-      -15.3,
-      g % 2 === 0 ? '#ef4444' : '#f59e0b',
-    );
-    pushBox(parts, 0.28, 0.28, 0.28, 15.7 + g * 0.52, 0.75, -15.3, '#38bdf8');
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-l1-boxing')) {
+    // 5. Boxing Zone (x = 4..20, z = -14..-4): Digital Round Scoreboard, Glove Rack & Plyo Boxes
+    pushBox(parts, 2.8, 1.05, 0.14, 10.5, 2.45, -15.65, darkSteel);
+    pushBox(parts, 2.6, 0.85, 0.16, 10.5, 2.45, -15.62, '#ef4444');
+    pushBox(parts, 2.4, 1.65, 0.42, 16.5, 0.85, -15.4, midSteel);
+    for (let g = 0; g < 4; g += 1) {
+      pushBox(
+        parts,
+        0.28,
+        0.28,
+        0.28,
+        15.7 + g * 0.52,
+        1.25,
+        -15.3,
+        g % 2 === 0 ? '#ef4444' : '#f59e0b',
+      );
+      pushBox(parts, 0.28, 0.28, 0.28, 15.7 + g * 0.52, 0.75, -15.3, '#38bdf8');
+    }
+    // 3 Plyometric Jump Boxes at (x = 5.8..7.8, z = -4.8)
+    pushBox(parts, 0.62, 0.48, 0.62, 5.8, 0.24, -4.8, warmWood);
+    pushBox(parts, 0.62, 0.62, 0.62, 6.7, 0.31, -4.8, salmon);
+    pushBox(parts, 0.62, 0.76, 0.62, 7.6, 0.38, -4.8, darkSteel);
   }
-  // 3 Plyometric Jump Boxes at (x = 5.8..7.8, z = -4.8)
-  pushBox(parts, 0.62, 0.48, 0.62, 5.8, 0.24, -4.8, warmWood);
-  pushBox(parts, 0.62, 0.62, 0.62, 6.7, 0.31, -4.8, salmon);
-  pushBox(parts, 0.62, 0.76, 0.62, 7.6, 0.38, -4.8, darkSteel);
 
-  // 6. Badminton Hall (x = -20..-6, z = 2..15): 4 Courts at (-16.5, 5.5), (-9.8, 5.5), (-16.5, 11.6), (-9.8, 11.6)
-  // 3D Nets, Top White Tapes & Net Posts for all 4 Badminton Courts
-  for (const cx of [-16.5, -9.8]) {
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-l1-badminton')) {
+    // 6. Badminton Hall (x = -20..-6, z = 2..15): 4 Courts at (-16.5, 5.5), (-9.8, 5.5), (-16.5, 11.6), (-9.8, 11.6)
+    // 3D Nets, Top White Tapes & Net Posts for all 4 Badminton Courts
+    for (const cx of [-16.5, -9.8]) {
+      for (const cz of [5.5, 11.6]) {
+        pushCylinder(parts, 0.03, 0.03, 1.55, cx - 2.65, 0.78, cz, darkSteel, 8);
+        pushCylinder(parts, 0.03, 0.03, 1.55, cx + 2.65, 0.78, cz, darkSteel, 8);
+        pushBox(parts, 5.3, 0.72, 0.025, cx, 1.14, cz, '#334155');
+        pushBox(parts, 5.34, 0.05, 0.035, cx, 1.52, cz, '#f8fafc');
+      }
+    }
+    // Open-Frame Tubular Steel Umpire Chairs & Slatted Player Benches along center spine (x = -13.15)
     for (const cz of [5.5, 11.6]) {
-      pushCylinder(parts, 0.03, 0.03, 1.55, cx - 2.65, 0.78, cz, darkSteel, 8);
-      pushCylinder(parts, 0.03, 0.03, 1.55, cx + 2.65, 0.78, cz, darkSteel, 8);
-      pushBox(parts, 5.3, 0.72, 0.025, cx, 1.14, cz, '#334155');
-      pushBox(parts, 5.34, 0.05, 0.035, cx, 1.52, cz, '#f8fafc');
+      const uz = cz - 0.8;
+      for (const [dx, dz] of [
+        [-0.22, -0.22],
+        [0.22, -0.22],
+        [-0.22, 0.22],
+        [0.22, 0.22],
+      ] as const) {
+        pushCylinder(parts, 0.024, 0.028, 1.52, -13.15 + dx, 0.76, uz + dz, darkSteel, 6);
+      }
+      for (const ry of [0.42, 0.82, 1.2]) {
+        pushBox(parts, 0.46, 0.03, 0.035, -13.15, ry, uz + 0.22, chrome);
+        pushBox(parts, 0.035, 0.03, 0.46, -13.15 - 0.22, ry, uz, darkSteel);
+        pushBox(parts, 0.035, 0.03, 0.46, -13.15 + 0.22, ry, uz, darkSteel);
+      }
+      pushBox(parts, 0.5, 0.06, 0.48, -13.15, 1.54, uz, darkSteel);
+      pushBox(parts, 0.44, 0.04, 0.42, -13.15, 1.58, uz, salmon);
+      pushBox(parts, 0.48, 0.36, 0.05, -13.15, 1.76, uz - 0.22, darkSteel);
+      // Open-leg warm oak bench
+      const bz = cz + 1.05;
+      pushBox(parts, 0.46, 0.06, 1.65, -13.15, 0.42, bz, warmWood);
+      pushBox(parts, 0.38, 0.04, 0.06, -13.15, 0.21, bz - 0.68, darkSteel);
+      pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz - 0.68, darkSteel);
+      pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz - 0.68, darkSteel);
+      pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz + 0.68, darkSteel);
+      pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz + 0.68, darkSteel);
     }
   }
-  // Open-Frame Tubular Steel Umpire Chairs & Slatted Player Benches along center spine (x = -13.15)
-  for (const cz of [5.5, 11.6]) {
-    const uz = cz - 0.8;
-    for (const [dx, dz] of [
-      [-0.22, -0.22],
-      [0.22, -0.22],
-      [-0.22, 0.22],
-      [0.22, 0.22],
-    ] as const) {
-      pushCylinder(parts, 0.024, 0.028, 1.52, -13.15 + dx, 0.76, uz + dz, darkSteel, 6);
-    }
-    for (const ry of [0.42, 0.82, 1.2]) {
-      pushBox(parts, 0.46, 0.03, 0.035, -13.15, ry, uz + 0.22, chrome);
-      pushBox(parts, 0.035, 0.03, 0.46, -13.15 - 0.22, ry, uz, darkSteel);
-      pushBox(parts, 0.035, 0.03, 0.46, -13.15 + 0.22, ry, uz, darkSteel);
-    }
-    pushBox(parts, 0.5, 0.06, 0.48, -13.15, 1.54, uz, darkSteel);
-    pushBox(parts, 0.44, 0.04, 0.42, -13.15, 1.58, uz, salmon);
-    pushBox(parts, 0.48, 0.36, 0.05, -13.15, 1.76, uz - 0.22, darkSteel);
-    // Open-leg warm oak bench
-    const bz = cz + 1.05;
-    pushBox(parts, 0.46, 0.06, 1.65, -13.15, 0.42, bz, warmWood);
-    pushBox(parts, 0.38, 0.04, 0.06, -13.15, 0.21, bz - 0.68, darkSteel);
-    pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz - 0.68, darkSteel);
-    pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz - 0.68, darkSteel);
-    pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz + 0.68, darkSteel);
-    pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz + 0.68, darkSteel);
-  }
+
   // 7. Exterior Facade Structural Columns on L1 (0..5.76m local height, up to the L2 slab)
   for (const cx of [-21.8, -11.0, 0.0, 11.0, 21.8]) {
     pushBox(parts, 0.45, 5.76, 0.45, cx, 2.88, -16.15, darkSteel);
@@ -480,46 +493,49 @@ function appendCeilingCoffers(
   }
 }
 
-function buildL2Details(parts: ColoredPart[]): void {
+function buildL2Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
   const darkSteel = '#1b202b';
   const gold = '#f59e0b';
   const chrome = '#cbd5e1';
 
-  // 1. VIP Gym (x = -20..6, z = -14..6): Smoked-Gold Timber-Slat Feature Panels on solid South piers (keeping West panoramic windows clear)
-  for (const mx of [-15.5, -2.5]) {
-    pushBox(parts, 3.8, 2.35, 0.06, mx, 1.42, 5.88, darkSteel);
-    for (let sx = mx - 1.65; sx <= mx + 1.66; sx += 0.33) {
-      pushBox(parts, 0.14, 2.2, 0.09, sx, 1.41, 5.85, warmWood);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-l2-vip-gym')) {
+    // 1. VIP Gym (x = -20..6, z = -14..6): Smoked-Gold Timber-Slat Feature Panels on solid South piers (keeping West panoramic windows clear)
+    for (const mx of [-15.5, -2.5]) {
+      pushBox(parts, 3.8, 2.35, 0.06, mx, 1.42, 5.88, darkSteel);
+      for (let sx = mx - 1.65; sx <= mx + 1.66; sx += 0.33) {
+        pushBox(parts, 0.14, 2.2, 0.09, sx, 1.41, 5.85, warmWood);
+      }
+      pushBox(parts, 3.9, 0.08, 0.1, mx, 2.62, 5.85, gold);
     }
-    pushBox(parts, 3.9, 0.08, 0.1, mx, 2.62, 5.85, gold);
-  }
-  for (const px of [-16.0, -10.0]) {
-    pushBox(parts, 2.8, 0.06, 2.2, px, 0.03, 1.5, darkSteel);
-    pushBox(parts, 1.15, 0.065, 2.2, px, 0.033, 1.5, warmWood);
-    pushCylinder(parts, 0.025, 0.025, 2.2, px, 0.26, 1.5, chrome, 8, 0, 0, Math.PI / 2);
-    for (const side of [-0.82, -0.74, 0.74, 0.82]) {
-      pushCylinder(
-        parts,
-        0.22,
-        0.22,
-        0.06,
-        px + side,
-        0.26,
-        1.5,
-        Math.abs(side) > 0.78 ? gold : darkSteel,
-        10,
-        0,
-        0,
-        Math.PI / 2,
-      );
+    for (const px of [-16.0, -10.0]) {
+      pushBox(parts, 2.8, 0.06, 2.2, px, 0.03, 1.5, darkSteel);
+      pushBox(parts, 1.15, 0.065, 2.2, px, 0.033, 1.5, warmWood);
+      pushCylinder(parts, 0.025, 0.025, 2.2, px, 0.26, 1.5, chrome, 8, 0, 0, Math.PI / 2);
+      for (const side of [-0.82, -0.74, 0.74, 0.82]) {
+        pushCylinder(
+          parts,
+          0.22,
+          0.22,
+          0.06,
+          px + side,
+          0.26,
+          1.5,
+          Math.abs(side) > 0.78 ? gold : darkSteel,
+          10,
+          0,
+          0,
+          Math.PI / 2,
+        );
+      }
     }
-  }
-  // VIP Stretching & Mobility Mat Sanctuary with Foam Rollers at (x = -4.5..+0.5, z = 1.5)
-  for (const mx of [-4.5, -2.5, -0.5]) {
-    pushBox(parts, 1.1, 0.04, 2.1, mx, 0.02, 1.5, '#334155');
-    pushCylinder(parts, 0.09, 0.09, 0.75, mx, 0.12, 0.7, salmon, 8, 0, 0, Math.PI / 2);
+    // VIP Stretching & Mobility Mat Sanctuary with Foam Rollers at (x = -4.5..+0.5, z = 1.5)
+    for (const mx of [-4.5, -2.5, -0.5]) {
+      pushBox(parts, 1.1, 0.04, 2.1, mx, 0.02, 1.5, '#334155');
+      pushCylinder(parts, 0.09, 0.09, 0.75, mx, 0.12, 0.7, salmon, 8, 0, 0, Math.PI / 2);
+    }
   }
 
   // 2. InBody 770 Suite (x = 6..20, z = -14..-2): 65" Diagnostic Screen & Framed Posture Calibration Grid
@@ -551,28 +567,31 @@ function buildL2Details(parts: ColoredPart[]): void {
     pushCylinder(parts, 0.016, 0.016, 0.92, 21.48, 1.92, sz, '#eab308', 6);
   }
 
-  // 4. Platinum Lounge (x = -20..6, z = 6..14): Sofas are at x = -15.5, -9.0, -2.5, z = 10.2; Juice Bar at [2.0, 10.2]
-  for (const lx of [-15.5, -9.0, -2.5]) {
-    pushBox(parts, 3.2, 0.02, 2.8, lx, 0.015, 10.8, '#272224');
-    pushBox(parts, 1.35, 0.36, 0.78, lx, 0.18, 12.0, '#f8fafc');
-    pushBox(parts, 1.25, 0.04, 0.68, lx, 0.37, 12.0, gold);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-l2-lounge')) {
+    // 4. Platinum Lounge (x = -20..6, z = 6..14): Sofas are at x = -15.5, -9.0, -2.5, z = 10.2; Juice Bar at [2.0, 10.2]
+    for (const lx of [-15.5, -9.0, -2.5]) {
+      pushBox(parts, 3.2, 0.02, 2.8, lx, 0.015, 10.8, '#272224');
+      pushBox(parts, 1.35, 0.36, 0.78, lx, 0.18, 12.0, '#f8fafc');
+      pushBox(parts, 1.25, 0.04, 0.68, lx, 0.37, 12.0, gold);
+    }
+    // 4 High Bar Stools in front of the Platinum Juice Bar (x = 0.5..3.5, z = 8.9)
+    for (let s = 0; s < 4; s += 1) {
+      const sx = 0.5 + s * 1.0;
+      pushCylinder(parts, 0.22, 0.26, 0.06, sx, 0.03, 8.9, gold, 8);
+      pushCylinder(parts, 0.04, 0.04, 0.72, sx, 0.38, 8.9, gold, 8);
+      pushCylinder(parts, 0.22, 0.22, 0.1, sx, 0.76, 8.9, salmon, 10);
+    }
+    // Back-Bar Illuminated Bottle/Protein Display & Sculpted Dual-Group Italian Espresso Machine at (x = 2.0, z = 10.2)
+    pushBox(parts, 4.2, 2.35, 0.52, 2.0, 1.18, 12.3, darkSteel);
+    pushBox(parts, 3.9, 0.1, 0.56, 2.0, 1.65, 12.3, gold);
+    pushBox(parts, 3.9, 0.1, 0.56, 2.0, 2.15, 12.3, salmon);
+    pushBox(parts, 0.78, 0.34, 0.42, 2.0, 1.28, 10.2, darkSteel);
+    pushBox(parts, 0.8, 0.04, 0.44, 2.0, 1.46, 10.2, chrome);
+    pushBox(parts, 0.74, 0.03, 0.06, 2.0, 1.49, 10.02, salmon);
+    pushCylinder(parts, 0.055, 0.055, 0.1, 1.82, 1.24, 9.96, chrome, 8);
+    pushCylinder(parts, 0.055, 0.055, 0.1, 2.18, 1.24, 9.96, chrome, 8);
   }
-  // 4 High Bar Stools in front of the Platinum Juice Bar (x = 0.5..3.5, z = 8.9)
-  for (let s = 0; s < 4; s += 1) {
-    const sx = 0.5 + s * 1.0;
-    pushCylinder(parts, 0.22, 0.26, 0.06, sx, 0.03, 8.9, gold, 8);
-    pushCylinder(parts, 0.04, 0.04, 0.72, sx, 0.38, 8.9, gold, 8);
-    pushCylinder(parts, 0.22, 0.22, 0.1, sx, 0.76, 8.9, salmon, 10);
-  }
-  // Back-Bar Illuminated Bottle/Protein Display & Sculpted Dual-Group Italian Espresso Machine at (x = 2.0, z = 10.2)
-  pushBox(parts, 4.2, 2.35, 0.52, 2.0, 1.18, 12.3, darkSteel);
-  pushBox(parts, 3.9, 0.1, 0.56, 2.0, 1.65, 12.3, gold);
-  pushBox(parts, 3.9, 0.1, 0.56, 2.0, 2.15, 12.3, salmon);
-  pushBox(parts, 0.78, 0.34, 0.42, 2.0, 1.28, 10.2, darkSteel);
-  pushBox(parts, 0.8, 0.04, 0.44, 2.0, 1.46, 10.2, chrome);
-  pushBox(parts, 0.74, 0.03, 0.06, 2.0, 1.49, 10.02, salmon);
-  pushCylinder(parts, 0.055, 0.055, 0.1, 1.82, 1.24, 9.96, chrome, 8);
-  pushCylinder(parts, 0.055, 0.055, 0.1, 2.18, 1.24, 9.96, chrome, 8);
 
   // 5. Exterior Facade Structural Columns & Brise-Soleil Sun Fins on L2 (0..5.48m local height, flush under RF slab)
   for (const cx of [-21.8, -11.0, 0.0, 11.0, 21.8]) {
@@ -611,40 +630,43 @@ function buildL2Details(parts: ColoredPart[]): void {
   });
 }
 
-function buildRFDetails(parts: ColoredPart[]): void {
+function buildRFDetails(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
   const darkSteel = '#1f2531';
   const gold = '#f59e0b';
 
-  // 1. Zen Yoga Studio (x = -16..10, z = -12..8): Instructor Stage & Sacred Brass Gong at (x = -3.5, z = -10.5)
-  pushBox(parts, 5.6, 0.22, 2.0, -3.5, 0.11, -10.5, warmWood);
-  pushBox(parts, 5.7, 0.05, 2.1, -3.5, 0.23, -10.5, salmon);
-  pushCylinder(parts, 0.05, 0.05, 1.65, -5.3, 1.05, -10.8, warmWood, 8);
-  pushCylinder(parts, 0.05, 0.05, 1.65, -3.9, 1.05, -10.8, warmWood, 8);
-  pushBox(parts, 1.65, 0.08, 0.08, -4.6, 1.85, -10.8, warmWood);
-  pushCylinder(parts, 0.52, 0.52, 0.06, -4.6, 1.15, -10.8, gold, 14, Math.PI / 2, 0, 0);
-  pushBox(parts, 1.8, 0.03, 0.72, -2.5, 0.25, -10.3, salmon);
-  pushCylinder(parts, 0.14, 0.1, 0.12, -1.3, 0.28, -10.5, gold, 8);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-rf-zen')) {
+    // 1. Zen Yoga Studio (x = -16..10, z = -12..8): Instructor Stage & Sacred Brass Gong at (x = -3.5, z = -10.5)
+    pushBox(parts, 5.6, 0.22, 2.0, -3.5, 0.11, -10.5, warmWood);
+    pushBox(parts, 5.7, 0.05, 2.1, -3.5, 0.23, -10.5, salmon);
+    pushCylinder(parts, 0.05, 0.05, 1.65, -5.3, 1.05, -10.8, warmWood, 8);
+    pushCylinder(parts, 0.05, 0.05, 1.65, -3.9, 1.05, -10.8, warmWood, 8);
+    pushBox(parts, 1.65, 0.08, 0.08, -4.6, 1.85, -10.8, warmWood);
+    pushCylinder(parts, 0.52, 0.52, 0.06, -4.6, 1.15, -10.8, gold, 14, Math.PI / 2, 0, 0);
+    pushBox(parts, 1.8, 0.03, 0.72, -2.5, 0.25, -10.3, salmon);
+    pushCylinder(parts, 0.14, 0.1, 0.12, -1.3, 0.28, -10.5, gold, 8);
 
-  // 2. Bamboo & White River-Stone Indoor Zen Garden along West Yoga Wall (x = -15.1, z = -9..+6)
-  pushBox(parts, 0.95, 0.24, 15.2, -15.1, 0.12, -1.5, '#475569');
-  pushBox(parts, 0.78, 0.26, 14.8, -15.1, 0.14, -1.5, '#e2e8f0');
-  for (let bz = -8.2; bz <= 5.2; bz += 1.6) {
-    pushCylinder(parts, 0.05, 0.06, 2.45, -15.1, 1.35, bz, '#4d7c0f', 7);
-    pushCylinder(parts, 0.28, 0.35, 0.65, -15.1, 2.25, bz, '#65a30d', 7);
-  }
+    // 2. Bamboo & White River-Stone Indoor Zen Garden along West Yoga Wall (x = -15.1, z = -9..+6)
+    pushBox(parts, 0.95, 0.24, 15.2, -15.1, 0.12, -1.5, '#475569');
+    pushBox(parts, 0.78, 0.26, 14.8, -15.1, 0.14, -1.5, '#e2e8f0');
+    for (let bz = -8.2; bz <= 5.2; bz += 1.6) {
+      pushCylinder(parts, 0.05, 0.06, 2.45, -15.1, 1.35, bz, '#4d7c0f', 7);
+      pushCylinder(parts, 0.28, 0.35, 0.65, -15.1, 2.25, bz, '#65a30d', 7);
+    }
 
-  // 3. Matcha & Herbal Tea Ceremony Low Table at South-East Yoga Corner (x = 7.2, z = 5.4)
-  pushBox(parts, 2.6, 0.03, 1.8, 7.2, 0.02, 5.4, '#d6cfc4');
-  pushBox(parts, 1.55, 0.32, 0.82, 7.2, 0.16, 5.4, warmWood);
-  for (const [cx, cz] of [
-    [6.1, 5.4],
-    [8.3, 5.4],
-    [7.2, 4.6],
-    [7.2, 6.2],
-  ] as const) {
-    pushCylinder(parts, 0.26, 0.26, 0.1, cx, 0.05, cz, salmon, 10);
+    // 3. Matcha & Herbal Tea Ceremony Low Table at South-East Yoga Corner (x = 7.2, z = 5.4)
+    pushBox(parts, 2.6, 0.03, 1.8, 7.2, 0.02, 5.4, '#d6cfc4');
+    pushBox(parts, 1.55, 0.32, 0.82, 7.2, 0.16, 5.4, warmWood);
+    for (const [cx, cz] of [
+      [6.1, 5.4],
+      [8.3, 5.4],
+      [7.2, 4.6],
+      [7.2, 6.2],
+    ] as const) {
+      pushCylinder(parts, 0.26, 0.26, 0.1, cx, 0.05, cz, salmon, 10);
+    }
   }
 
   // 4. Rooftop Terrace (x = 10..20, z = -14..14): Open-Air Cedar Pergola Canopy (x = 11.2..19.2, z = -6.0..+6.0)
@@ -818,7 +840,7 @@ function buildOUTDetails(parts: ColoredPart[]): void {
  * poolside loungers, pergolas, and floodlight towers for a given level as a single
  * vertex-colored BufferGeometry (1 draw call per level).
  */
-export function buildLevelInteriorDetailsGeometry(levelCode: LevelCode): THREE.BufferGeometry {
+export function buildLevelInteriorDetailsGeometry(levelCode: LevelCode, zoneIds?: ReadonlySet<string>): THREE.BufferGeometry {
   const parts: ColoredPart[] = [];
   const trimColor = '#ce9180';
   if (levelCode === 'OUT') {
@@ -834,16 +856,16 @@ export function buildLevelInteriorDetailsGeometry(levelCode: LevelCode): THREE.B
   }
   switch (levelCode) {
     case 'B1':
-      buildB1Details(parts);
+      buildB1Details(parts, zoneIds);
       break;
     case 'L1':
-      buildL1Details(parts);
+      buildL1Details(parts, zoneIds);
       break;
     case 'L2':
-      buildL2Details(parts);
+      buildL2Details(parts, zoneIds);
       break;
     case 'RF':
-      buildRFDetails(parts);
+      buildRFDetails(parts, zoneIds);
       break;
     case 'OUT':
       buildOUTDetails(parts);

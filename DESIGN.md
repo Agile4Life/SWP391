@@ -1,5 +1,11 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Giảm scope Thịnh — Task 1 (22/11/2026):
+- Public/Landing chỉ quảng bá Gym; bỏ trang giới thiệu Swimming, Tennis, Boxing, Badminton, Yoga. Giữ bố cục, theme và cuộn native hiện hành.
+- Explore 3D chỉ có Gym tiêu chuẩn và khu hỗ trợ; bỏ khu bộ môn khác, Gym VIP và tiện ích đặc quyền. Shop, Classes/Courts ở portal, Streak và InBody chờ các commit sau, không xóa trong Task 1.
+- Gói tập giữ dữ liệu, giá, ID, quyền lợi và flow mua/gia hạn/nâng cấp thật. DTO chưa có bộ môn/phòng: chưa lọc được gói Gym; cần An/Khoa xác nhận catalog, không suy luận bằng SILVER/GOLD/PLATINUM.
+
+
 Audit toàn diện cỡ chữ, chống AI-slop & giảm rối toàn web (14/11/2026, đồng bộ cả 5 phân khu `Public/Auth`, `Shell/Chat`, `Member`, `Staff/Coach`, `Manager/Admin`):
 - **Thang chữ 7 bậc & ngưỡng tối thiểu**: toàn web dùng thang chữ chuẩn (`12 / 13 / 14 / 16 / 20 / 24–28 / display`), cấm mọi cỡ chữ `< 12px` (`0.75rem`) cho nhãn, badge, chú thích hay HUD SVG; số liệu tiền tệ, thời gian, bộ đếm và ô bảng dùng `font-variant-numeric: tabular-nums`.
 - **Ô nhập thiết bị cảm ứng & thanh cuộn bảng**: ở `@media (max-width: 1024px)`, mọi `input`, `select`, `textarea` giữ `font-size: 16px` để ngăn iOS tự phóng to khi focus; `.portal-table-wrapper` hiển thị thanh cuộn ngang mảnh (`scrollbar-width: thin`, cao `6px`) báo hiệu bảng rộng có thể cuộn.

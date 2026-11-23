@@ -8,7 +8,7 @@ import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
-import { DISCIPLINES, isStandardDiscipline, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
+import { DISCIPLINES, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
 
 export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
   loading: boolean; retry: () => void; kind?: 'packages' | 'trainers' | 'schedule';
@@ -72,7 +72,8 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
   useSourceLanguage();
   const [discipline, setDiscipline] = useState('all');
   const sportName = DISCIPLINES.find((item) => item.id === sport)?.name;
-  const matchesSport = (value: string | null | undefined) => sportName ? matchesDiscipline(value, sportName) : isStandardDiscipline(value);
+  // Chỉ giới thiệu lịch Gym; không thay đổi API Classes hay quyền đặt chỗ.
+  const matchesSport = (value: string | null | undefined) => (!sportName || sportName === 'Gym') && matchesDiscipline(value, 'Gym');
   const sessions = catalog.sessions.filter(session => (!session.status || session.status === 'scheduled')
     && matchesSport(session.disciplineName)
     && (!coachId || session.coachId === coachId));

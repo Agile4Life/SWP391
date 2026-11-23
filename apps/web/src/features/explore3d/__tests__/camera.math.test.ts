@@ -88,12 +88,12 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     // Exploded mode shifts Y upward for L2 and downward for B1
     const vpL2Stacked = computeBestViewpoint(
       SOL_CENTER_SCENE,
-      'zone-l2-vip-gym',
+      'zone-l2-pt-studio',
       'stacked',
     );
     const vpL2Exploded = computeBestViewpoint(
       SOL_CENTER_SCENE,
-      'zone-l2-vip-gym',
+      'zone-l2-pt-studio',
       'exploded',
     );
     expect(vpL2Exploded.position[1]).toBeGreaterThan(vpL2Stacked.position[1]);
@@ -222,9 +222,9 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     expect(typeof prefersReducedMotion()).toBe('boolean');
   });
 
-  it('defines 8 valid Guided Tour steps totaling 90 seconds and referencing existing scene nodes', () => {
-    expect(TOUR_STEPS).toHaveLength(8);
-    expect(TOTAL_TOUR_DURATION_MS).toBe(90000);
+  it('defines 4 valid Gym/support Guided Tour steps and referencing existing scene nodes', () => {
+    expect(TOUR_STEPS).toHaveLength(4);
+    expect(TOTAL_TOUR_DURATION_MS).toBe(45000);
 
     for (const step of TOUR_STEPS) {
       const node = getNode(SOL_CENTER_SCENE, step.nodeId);
@@ -320,12 +320,12 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       WALK_COLLIDER_RADIUS_M,
       b1Obstacles,
     );
-    expect(stoppedAtPoolEdge[0]).toBeGreaterThan(5.1);
+    expect(stoppedAtPoolEdge[0]).toBeLessThan(5.1);
   });
 
-  it('audits 100% of zones (18), items (90+), and hotspots (28) in Walk Mode so camera always faces the selected target without wall occlusion', () => {
+  it('audits every retained zone, item and hotspot in Walk Mode so camera always faces the selected target without wall occlusion', () => {
     const zones = allZones(SOL_CENTER_SCENE);
-    expect(zones).toHaveLength(18);
+    expect(zones).toHaveLength(10);
 
     // Every single zone must define both a hero and an eye viewpoint
     for (const zone of zones) {
@@ -374,10 +374,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       ).toBeGreaterThan(0.95);
     }
 
-    // Specifically verify Sofa Thư giãn Platinum 01 (item-l2-sofa-1) looks toward the sofa (z = 10.2), not the North wall
-    const sofaPose = computeInitialWalkPose(SOL_CENTER_SCENE, 'item-l2-sofa-1', 'L2');
-    const sofaVp = poseToViewpoint(sofaPose);
-    expect(sofaVp.target[2]).toBeGreaterThan(sofaVp.position[2]);
+    expect(SOL_CENTER_SCENE.nodes['item-l2-sofa-1']).toBeUndefined();
   });
 
   it('supports physical staircase climbing and floor transitions across B1 <-> L1 <-> L2 <-> RF', () => {

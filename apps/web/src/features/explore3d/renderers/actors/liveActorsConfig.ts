@@ -894,7 +894,8 @@ export function buildLiveActorDefinitions(
 
   // Assign contiguous instanceStartIndex and partCount
   let cursor = 0;
-  return rawDefs.map(def => {
+  // Không tạo actor tự do ở khu đã loại khỏi scene.
+  return rawDefs.filter(def => Boolean(scene.nodes[def.zoneId])).map(def => {
     const partCount = getPartCountForActivity(def.activity);
     const fullDef: LiveActorDefinition = {
       ...def,

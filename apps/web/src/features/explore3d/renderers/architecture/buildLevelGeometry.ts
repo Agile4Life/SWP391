@@ -773,7 +773,7 @@ export function buildLevelGeometry(
 
   const interiorOpaqueGeometry = mergeBufferGeometries(interiorOpaqueParts);
   const glassWallGeometry = mergeBufferGeometries(glassParts);
-  const interiorDetailsGeometry = buildLevelInteriorDetailsGeometry(level.code);
+  const interiorDetailsGeometry = buildLevelInteriorDetailsGeometry(level.code, new Set(zones.map(zone => zone.id)));
 
   interiorOpaqueParts.forEach(g => g.dispose());
   glassParts.forEach(g => g.dispose());

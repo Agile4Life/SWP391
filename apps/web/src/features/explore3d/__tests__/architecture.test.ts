@@ -75,7 +75,7 @@ function assertValidBufferGeometry(geom: THREE.BufferGeometry, allowEmpty = fals
 }
 
 describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
-  const LEVEL_IDS = ['lvl-b1', 'lvl-l1', 'lvl-l2', 'lvl-rf', 'lvl-out'] as const;
+  const LEVEL_IDS = ['lvl-b1', 'lvl-l1', 'lvl-l2', 'lvl-rf'] as const;
 
   describe('buildLevelGeometry across all 5 levels', () => {
     it.each(LEVEL_IDS)('builds non-empty, NaN-free geometry buckets for %s', levelId => {
@@ -112,8 +112,8 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       }
 
       // Interior opaque & glass wall buckets must be valid (OUT has only exterior fence walls)
-      assertValidBufferGeometry(built.interiorOpaqueGeometry, levelId === 'lvl-out');
-      assertValidBufferGeometry(built.glassWallGeometry, levelId === 'lvl-out');
+      assertValidBufferGeometry(built.interiorOpaqueGeometry);
+      assertValidBufferGeometry(built.glassWallGeometry);
 
       // Interior details geometry must be non-empty and vertex-colored on all 5 levels
       expect(built.interiorDetailsGeometry.getAttribute('position').count).toBeGreaterThan(100);
@@ -276,7 +276,6 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       const l1 = levels.find(l => l.code === 'L1')!;
       const l2 = levels.find(l => l.code === 'L2')!;
       const rf = levels.find(l => l.code === 'RF')!;
-      const out = levels.find(l => l.code === 'OUT')!;
 
       expect(computeLevelTargetY(l2, 'stacked')).toBeCloseTo(5.76, 4);
       expect(computeLevelTargetY(l2, 'exploded')).toBeCloseTo(11.76, 4);
@@ -286,7 +285,6 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(isLevelVisibleInMode(l1, 'solo', 'L1')).toBe(true);
       expect(isLevelVisibleInMode(l2, 'solo', 'L1')).toBe(false);
       expect(isLevelVisibleInMode(rf, 'solo', 'L1')).toBe(false);
-      expect(isLevelVisibleInMode(out, 'solo', 'L1')).toBe(true);
 
       expect(isLevelDimmedInMode(b1, 'solo', 'L1')).toBe(true);
       expect(isLevelDimmedInMode(l1, 'solo', 'L1')).toBe(false);
@@ -527,16 +525,11 @@ describe('Soft ray-traced gym glass, rooftop sky & street sightlines', () => {
     expect(crown.glassGeometry.boundingBox!.max.x).toBeLessThanOrEqual(9.5);
   });
 
-  it('keeps streets & outdoor tennis visible from L2 and RF in solo mode and frames the sky on all RF viewpoints', () => {
+  it('keeps streets visible from L2 and RF in solo mode and frames the sky on all RF viewpoints', () => {
     expect(isExteriorWorldVisible('solo', 'L2')).toBe(true);
     expect(isExteriorWorldVisible('solo', 'RF')).toBe(true);
     expect(isExteriorWorldVisible('solo', 'L1')).toBe(true);
     expect(isExteriorWorldVisible('solo', 'B1')).toBe(false);
-
-    const levels = getLevels(SOL_CENTER_SCENE);
-    const out = levels.find(l => l.code === 'OUT')!;
-    expect(isLevelVisibleInMode(out, 'solo', 'RF')).toBe(true);
-    expect(isLevelVisibleInMode(out, 'solo', 'L2')).toBe(true);
 
     const rfNodes = [
       SOL_CENTER_SCENE.nodes['lvl-rf'],

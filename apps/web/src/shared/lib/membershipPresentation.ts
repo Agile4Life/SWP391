@@ -27,6 +27,10 @@ const SEEDED_PACKAGE_LINE_EN: Readonly<Record<string, string>> = {
   'STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)': 'STANDARD – 3-month commitment (Save 11%)',
   'VIP – Đồng hành 3 tháng (Tiết kiệm 11%)': 'VIP – 3-month commitment (Save 11%)',
   'Nhận các dịch vụ của gói Gold (không gồm phòng VIP).': 'Access Gold tier services (excluding VIP studio).',
+  'Nhận các dịch vụ của gói Gold.': 'Access Gold tier services.',
+  'Không áp dụng chính sách bảo lưu.': 'Membership hold policies do not apply.',
+  'Giảm 10% dịch vụ PT bổ sung.': '10% off extra PT sessions.',
+  'Giảm 20% dịch vụ PT bổ sung.': '20% off extra PT sessions.',
   'Toàn quyền sử dụng khu vực gym tiêu chuẩn và trang thiết bị hiện đại.': 'Full access to the standard gym floor and modern training equipment.',
   '01 buổi tập Personal Trainer 1:1 cùng Huấn luyện viên chuyên nghiệp.': '1 Personal Trainer 1:1 session with a certified coach.',
   'Sử dụng tủ khóa và tiện ích phòng thay đồ.': 'Locker room and changing amenities included.',
@@ -91,6 +95,7 @@ export function isTrialPackage(pkg: { price?: number; durationDays?: number; nam
 export const MIN_TERM_DAYS = 90;
 export const LONG_TERM_DAYS = 180;
 
+// Hiển thị quyền lợi thật từ catalog; không tự sửa quyền lợi để khớp scope Gym ở frontend.
 export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = getLanguage()) {
   const t = (vi: string, en: string) => lang === 'en' ? en : vi;
   const desc = pkg.description?.trim() || '';
@@ -116,8 +121,7 @@ export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = ge
 
   const defaultBenefits = [
     t(`Hiệu lực ${pkg.durationDays} ngày kể từ khi kích hoạt`, `Valid for ${pkg.durationDays} days from activation`),
-    pkg.classCreditLimit != null ? t(`Tối đa ${pkg.classCreditLimit} lượt đặt lớp mỗi kỳ`, `Up to ${pkg.classCreditLimit} class bookings per period`) : t('Không giới hạn lượt đặt lớp', 'Unlimited class bookings'),
-    t('Đặt lớp và check-in khi gói còn hiệu lực', 'Book classes and check in while your membership is valid'),
+    t('Check-in và đặt lịch PT 1:1 khi gói còn hiệu lực', 'Check in and book 1:1 PT sessions while your membership is valid'),
     t('Thanh toán và kích hoạt tại quầy lễ tân', 'Payment and activation at reception'),
   ];
 

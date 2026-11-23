@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { LevelCode, Viewpoint } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
-import { getNode, levelOf } from '../scene/selectors';
+import { getLevelByCode, getNode, levelOf } from '../scene/selectors';
 
 export type LevelMode = 'stacked' | 'exploded' | 'solo';
 export type WallMode = 'up' | 'cutaway' | 'down';
@@ -178,6 +178,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
   },
 
   syncWalkLevel: level => {
+    if (!getLevelByCode(SOL_CENTER_SCENE, level)) return;
     const current = get();
     const selectedLevel = current.selectedId
       ? levelOf(SOL_CENTER_SCENE, current.selectedId)?.code
@@ -196,6 +197,8 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
   },
 
   setFocusLevel: level => {
+    // Bỏ qua tầng đã loại, kể cả lời gọi từ phím tắt hoặc session cũ.
+    if (level !== 'ALL' && !getLevelByCode(SOL_CENTER_SCENE, level)) return;
     const current = get();
     if (level === 'ALL') {
       set({

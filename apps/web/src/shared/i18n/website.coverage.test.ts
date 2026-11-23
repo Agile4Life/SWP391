@@ -47,7 +47,8 @@ function catalog(file: string) {
 }
 afterEach(() => { localStorage.clear(); setLanguage('vi'); clearMissingTranslations(); });
 describe('active route source translation coverage', () => {
-  it('discovers every lazy route instead of maintaining a hand-picked screen list', () => { expect(routes.length).toBeGreaterThanOrEqual(50); });
+  // Floor only proves route discovery works; scope reduction (Gym, PT 1:1) cut the route count to ~40.
+  it('discovers every lazy route instead of maintaining a hand-picked screen list', () => { expect(routes.length).toBeGreaterThanOrEqual(35); });
   for (const { route, entry } of routes) it(route + ' has paired source labels and no raw Vietnamese JSX', () => {
     const errors: string[] = []; let labels = 0;
     for (const file of reachable(entry)) {

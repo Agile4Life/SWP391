@@ -1391,13 +1391,13 @@ export function createCampusSignageTexture(): THREE.CanvasTexture | null {
     {
       badge: 'SÖL',
       title: 'SÖL FITNESS & WELLNESS',
-      subtitle: 'FLAGSHIP SPORTS · AQUATICS · RECOVERY · ROOFTOP ZEN',
+      subtitle: 'STANDARD GYM · PERSONAL TRAINING · MEMBER SERVICES',
       accent: '#f07654',
     },
     {
       badge: 'SÖL',
       title: 'SÖL CENTER · FLAGSHIP CLUB',
-      subtitle: '5 LEVELS · OLYMPIC POOL · TENNIS ARENA · VIP LOUNGE',
+      subtitle: 'STANDARD GYM · PERSONAL TRAINING · QR CHECK-IN',
       accent: '#f07654',
     },
     {
@@ -1415,7 +1415,7 @@ export function createCampusSignageTexture(): THREE.CanvasTexture | null {
     {
       badge: 'SÖL MAP',
       title: 'SÖL DIRECTORY',
-      subtitle: 'RF ZEN · L2 VIP · L1 GYM · B1 AQUA · OUT TENNIS',
+      subtitle: 'RF TERRACE · L2 PT · L1 GYM · B1 LOCKERS',
       accent: '#38bdf8',
     },
     {
@@ -1432,8 +1432,8 @@ export function createCampusSignageTexture(): THREE.CanvasTexture | null {
     },
     {
       badge: 'SÖL OPEN',
-      title: 'SÖL TENNIS ARENA · 6–4 · 7–5',
-      subtitle: 'COURTS 01–02 · ITF PRO HARD COURT · LED FLOODLIGHTS',
+      title: 'SÖL FITNESS · GYM & PERSONAL TRAINING',
+      subtitle: 'STANDARD GYM · PERSONAL TRAINING · QR CHECK-IN',
       accent: '#10b981',
     },
   ];

@@ -32,7 +32,7 @@ const SEED_SNAPSHOT: LiveCenterSnapshot = {
     },
     {
       id: 'room-2',
-      name: 'Phòng Gym VIP',
+      name: 'Studio HLV 1:1',
       location: 'Tầng 2 - Khu VIP Platinum',
       capacity: 25,
       status: 'available',
@@ -62,7 +62,7 @@ const SEED_SNAPSHOT: LiveCenterSnapshot = {
       name: 'Máy đo chỉ số cơ thể chuyên sâu InBody 770',
       code: 'EQ-VIP-INBODY-01',
       category: 'Diagnostic',
-      roomName: 'Phòng Gym VIP',
+      roomName: 'Studio HLV 1:1',
       quantity: 1,
       status: 'active',
     },
@@ -161,26 +161,22 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     // Switch to B1
     clickTestId('floorplan-tab-B1');
     expect(getByTestId('floorplan-svg-B1')).toBeTruthy();
-    clickTestId('floorplan-zone-zone-b1-pool');
-    expect(useExploreStore.getState().selectedId).toBe('zone-b1-pool');
+    clickTestId('floorplan-zone-zone-b1-locker');
+    expect(useExploreStore.getState().selectedId).toBe('zone-b1-locker');
 
     // Switch to L2
     clickTestId('floorplan-tab-L2');
     expect(getByTestId('floorplan-svg-L2')).toBeTruthy();
-    clickTestId('floorplan-zone-zone-l2-vip-gym');
-    expect(useExploreStore.getState().selectedId).toBe('zone-l2-vip-gym');
+    clickTestId('floorplan-zone-zone-l2-pt-studio');
+    expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
     // Switch to RF
     clickTestId('floorplan-tab-RF');
     expect(getByTestId('floorplan-svg-RF')).toBeTruthy();
-    clickTestId('floorplan-zone-zone-rf-zen');
-    expect(useExploreStore.getState().selectedId).toBe('zone-rf-zen');
+    clickTestId('floorplan-zone-zone-rf-terrace');
+    expect(useExploreStore.getState().selectedId).toBe('zone-rf-terrace');
 
-    // Switch to OUT
-    clickTestId('floorplan-tab-OUT');
-    expect(getByTestId('floorplan-svg-OUT')).toBeTruthy();
-    clickTestId('floorplan-zone-zone-out-tennis');
-    expect(useExploreStore.getState().selectedId).toBe('zone-out-tennis');
+    expect(container.querySelector('[data-testid="floorplan-tab-OUT"]')).toBeNull();
   });
 
   it('renders mandatory simulation badge, seed room/equipment data, offline state without fake numbers, and dispatches scms:open-chat', () => {
@@ -301,9 +297,9 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
 
     // Select a zone on L2
     act(() => {
-      useExploreStore.getState().selectNode('zone-l2-vip-gym');
+      useExploreStore.getState().selectNode('zone-l2-pt-studio');
     });
-    expect(useExploreStore.getState().selectedId).toBe('zone-l2-vip-gym');
+    expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
     // Press '/' -> opens search modal
     act(() => {
@@ -318,7 +314,7 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     });
     expect(useExploreStore.getState().searchOpen).toBe(false);
-    expect(useExploreStore.getState().selectedId).toBe('zone-l2-vip-gym');
+    expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
     // Pressing Escape again with modal closed clears selectedId
     act(() => {
@@ -341,9 +337,9 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     expect(hotspotLink.level).toBe('L1');
 
     const bilingualNameLink = parseExploreSearchParams(
-      new URLSearchParams('focus=Phòng Gym VIP'),
+      new URLSearchParams('focus=Studio Huấn luyện viên Cá nhân 1:1 (PT)'),
     );
-    expect(bilingualNameLink.selectedId).toBe('zone-l2-vip-gym');
+    expect(bilingualNameLink.selectedId).toBe('zone-l2-pt-studio');
     expect(bilingualNameLink.level).toBe('L2');
   });
 
