@@ -541,7 +541,7 @@ export function MemberCoachBookingView({
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
             {memberText("Chọn Huấn luyện viên cá nhân (PT 1:1)")}</h3>
           <span className="row-card__meta" style={{ fontSize: 13 }}>
-            {memberText("Phí tập tiêu chuẩn: ")}<strong>{formatPrice(200000)}{memberText(" / giờ")}</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Miễn phí với gói Gold/Platinum")})
+            {memberText("Phí tập tiêu chuẩn: ")}<strong>{formatPrice(200000)}{memberText(" / giờ")}</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Tặng 3 buổi (Gold) / 6 buổi (Platinum) mỗi 30 ngày; đặt thêm giảm 10% / 20%", "3 sessions (Gold) / 6 sessions (Platinum) per 30 days; 10% / 20% off extra")})
           </span>
         </div>
 

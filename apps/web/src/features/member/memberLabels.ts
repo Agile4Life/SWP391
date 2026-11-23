@@ -98,7 +98,7 @@ export const memberLabels: Readonly<Record<string, string>> = {
   "Phí tập tiêu chuẩn:": "Standard rate:",
   "/ giờ": "/ hour",
   "Miễn phí 01 buổi với Gói Trải Nghiệm": "01 free session with Trial Membership",
-  "Miễn phí với gói Gold/Platinum": "Free with Gold/Platinum",
+  "Tặng 3 buổi (Gold) / 6 buổi (Platinum) mỗi 30 ngày; đặt thêm giảm 10% / 20%": "3 sessions (Gold) / 6 sessions (Platinum) per 30 days; 10% / 20% off extra",
   "Lọc huấn luyện viên theo bộ môn": "Filter coaches by discipline",
   "Tất cả bộ môn": "All disciplines",
   "Chưa có huấn luyện viên nào cho bộ môn": "No coaches for this discipline",
