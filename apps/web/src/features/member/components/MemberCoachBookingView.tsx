@@ -100,6 +100,7 @@ export function MemberCoachBookingView({
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<CoachAvailableSlotDto | null>(null);
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
+  const [bookingSortOrder, setBookingSortOrder] = useState<'asc' | 'desc'>('asc');
   const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined | SourceMessage>();
   // Lỗi gửi của hộp thoại hiện ngay trong hộp thoại (không dùng banner đầu trang nằm sau lớp nền mờ).
@@ -965,13 +966,25 @@ export function MemberCoachBookingView({
 
       {/* Danh sách Lịch 1:1 đã đặt của Hội viên */}
       <section data-i18n-managed style={{ marginTop: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
             {memberText("Lịch tập HLV 1:1 của tôi (")}{myBookings.filter((b) => b.status === 'confirmed' && !isSessionCompleted(b)).length} {memberText(" buổi sắp tới")}{myBookings.some((b) => b.status === 'confirmed' && isSessionCompleted(b))
               ? memberText(` • ${myBookings.filter((b) => b.status === 'confirmed' && isSessionCompleted(b)).length} buổi đã kết thúc`, ` • ${myBookings.filter((b) => b.status === 'confirmed' && isSessionCompleted(b)).length} completed sessions`)
               : ''}
             )
           </h3>
+          {myBookings.length > 1 && (
+            <button
+              type="button"
+              className="btn-secondary"
+              style={{ fontSize: 13, padding: '6px 12px' }}
+              onClick={() => setBookingSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+            >
+              {bookingSortOrder === 'asc'
+                ? memberText('Sắp xếp theo ngày: Sớm nhất ↑', 'Sort by day: Earliest ↑')
+                : memberText('Sắp xếp theo ngày: Muộn nhất ↓', 'Sort by day: Latest ↓')}
+            </button>
+          )}
         </div>
 
         {myBookings.length === 0 ? (
@@ -981,7 +994,12 @@ export function MemberCoachBookingView({
           </div>
         ) : (
           <div style={{ display: 'grid', gap: 10 }}>
-            {myBookings.map((b) => {
+            {[...myBookings]
+              .sort((a, b) => {
+                const cmp = `${a.bookingDate}T${a.startTime}`.localeCompare(`${b.bookingDate}T${b.startTime}`);
+                return bookingSortOrder === 'asc' ? cmp : -cmp;
+              })
+              .map((b) => {
               const isCancelled = b.status === 'cancelled';
               const hasEnded = isSessionCompleted(b);
               const isConfirmed = !isCancelled;

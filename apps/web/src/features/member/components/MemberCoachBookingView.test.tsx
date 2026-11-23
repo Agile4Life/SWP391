@@ -319,6 +319,67 @@ describe('MemberCoachBookingView Coach Discipline Sorting & Filtering', () => {
       expect(host.textContent).toContain('Nguyễn Minh Quân');
       expect(host.textContent).toContain('Trần Thị Mỹ Trâm');
     });
+
+    it('sorts member PT bookings by day ascending by default and toggles descending', async () => {
+      mocks.getMyCoachBookings.mockResolvedValue([
+        {
+          id: 201,
+          memberId: 10,
+          memberName: 'Khoa',
+          coachId: 1,
+          coachName: 'Lê Trọng Nam',
+          bookingDate: '2026-11-26',
+          startTime: '20:00:00',
+          endTime: '21:00:00',
+          hourlyRate: 200000,
+          paymentMethod: 'cash',
+          paymentStatus: 'paid',
+          status: 'confirmed',
+          attendedAt: null,
+          attendanceLocked: false,
+          gateCheckinAt: null,
+        },
+        {
+          id: 202,
+          memberId: 10,
+          memberName: 'Khoa',
+          coachId: 1,
+          coachName: 'Lê Trọng Nam',
+          bookingDate: '2026-11-25',
+          startTime: '14:00:00',
+          endTime: '15:00:00',
+          hourlyRate: 200000,
+          paymentMethod: 'cash',
+          paymentStatus: 'paid',
+          status: 'confirmed',
+          attendedAt: null,
+          attendanceLocked: false,
+          gateCheckinAt: null,
+        },
+      ]);
+
+      await act(async () => {
+        root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>);
+      });
+      await act(async () => {
+        await new Promise((r) => setTimeout(r, 60));
+      });
+
+      const textAsc = host.textContent ?? '';
+      expect(textAsc.indexOf('25/11/2026')).toBeLessThan(textAsc.indexOf('26/11/2026'));
+
+      const sortBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+        b.textContent?.includes('Sắp xếp theo ngày:')
+      );
+      expect(sortBtn).toBeDefined();
+
+      await act(async () => {
+        sortBtn?.click();
+      });
+
+      const textDesc = host.textContent ?? '';
+      expect(textDesc.indexOf('26/11/2026')).toBeLessThan(textDesc.indexOf('25/11/2026'));
+    });
   });
 });
 
