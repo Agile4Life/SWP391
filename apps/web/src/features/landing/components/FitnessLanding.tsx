@@ -199,7 +199,7 @@ const spaces = [
 
 const journeySteps = [
   { step: '01', get title() { return sourceText('Tạo tài khoản & chọn gói tập'); }, get description() { return sourceText('Đăng ký trực tuyến nhanh gọn.'); } },
-  { step: '02', get title() { return sourceText('Cập nhật chỉ số & mục tiêu'); }, get description() { return sourceText('Nhận gợi ý lộ trình theo BMI.'); } },
+  { step: '02', get title() { return sourceText({ vi: 'Hoàn thiện hồ sơ hội viên', en: 'Complete your member profile' }); }, get description() { return sourceText({ vi: 'Cập nhật thông tin và mục tiêu tập luyện.', en: 'Update your details and fitness goals.' }); } },
   { step: '03', get title() { return sourceText('Đặt lịch & quét QR check-in'); }, get description() { return sourceText('Giữ chỗ & vào cửa bằng thẻ QR.'); } },
 ];
 const memberBenefits = [
@@ -226,18 +226,18 @@ const memberBenefits = [
   {
     get tag() { return sourceText({ vi: 'HLV', en: 'Coach' }); },
     idx: '03',
-    get title() { return sourceText('HLV theo dõi từng buổi tập'); },
-    get description() { return sourceText('HLV ghi lại mức tạ, số lần tập và tiến độ sau mỗi buổi.'); },
+    get title() { return sourceText({ vi: 'Xem giáo án của huấn luyện viên', en: 'View your coach’s training plan' }); },
+    get description() { return sourceText({ vi: 'Xem bài tập, số hiệp và thời gian nghỉ trong giáo án đang áp dụng.', en: 'View exercises, sets and rest times in your active training plan.' }); },
     perks: [
       'HLV có chứng chỉ đúng từng bộ môn',
-      { vi: 'Xem kết quả từng buổi trên Portal', en: 'See each session’s results in the portal' },
+      { vi: 'Bài tập được nhóm theo ngày', en: 'Exercises grouped by day' },
     ],
   },
   {
     get tag() { return sourceText('Kế hoạch'); },
     idx: '04',
     get title() { return sourceText('Kế hoạch tuần cho riêng bạn'); },
-    get description() { return sourceText('Gợi ý lịch tuần theo BMI và mục tiêu, có trợ lý hỏi đáp.'); },
+    get description() { return sourceText({ vi: 'Xem lịch giáo án HLV soạn theo mục tiêu tập luyện.', en: 'View the plan your coach prepares for your fitness goals.' }); },
     perks: [
       { vi: 'Mục tiêu: giảm mỡ, tăng cơ, sức bền', en: 'Goals: fat loss, muscle gain, endurance' },
       { vi: 'Tạm dừng gói ngay trên Portal', en: 'Freeze your plan from the portal' },

@@ -1,13 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
 
-export interface ProgressMetric {
-  id: number;
-  metricName: string;
-  metricValue: number;
-  unit: string | null;
-  recordedAt: string;
-}
-
 export interface TrainingItem {
   id: number;
   dayOfWeek: number | null;
@@ -30,15 +22,5 @@ export interface TrainingPlan {
   items: TrainingItem[];
 }
 
-export const getMyProgressMetrics = () => apiFetch<ProgressMetric[]>('/health/metrics/my');
+// Giữ API Giáo án thật cho Member; các API số đo/completion không còn consumer.
 export const getMyTrainingPlans = () => apiFetch<TrainingPlan[]>('/coaching/training-plans/my');
-
-export interface TrainingCompletion { itemId: number; exerciseDate: string; completed: boolean }
-
-export const getMyCompletedItemIds = (exerciseDate: string) =>
-  apiFetch<number[]>(`/coaching/training-completions/my?exerciseDate=${exerciseDate}`);
-
-export const setTrainingItemCompleted = (itemId: number, exerciseDate: string, completed: boolean) =>
-  apiFetch<TrainingCompletion>(`/coaching/training-completions/my/${itemId}?exerciseDate=${exerciseDate}`, {
-    method: completed ? 'PUT' : 'DELETE',
-  });

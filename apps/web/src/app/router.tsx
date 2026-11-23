@@ -72,6 +72,7 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/member/MemberInvoicesPage')).MemberInvoicesPage }),
           },
           {
+            // Giữ URL cũ cho Giáo án; quyền Member vẫn được kiểm tra bởi RoleGuard.
             path: '/member/progress',
             lazy: async () => ({ Component: (await import('../features/member/MemberProgressPage')).MemberProgressPage }),
           },
@@ -94,10 +95,6 @@ export const router = createBrowserRouter([
           {
             path: '/member/classes',
             lazy: async () => ({ Component: (await import('../features/member/MemberClassesPage')).MemberClassesPage }),
-          },
-          {
-            path: '/member/streak',
-            lazy: async () => ({ Component: (await import('../features/member/MemberStreakPage')).MemberStreakPage }),
           },
         ],
       },

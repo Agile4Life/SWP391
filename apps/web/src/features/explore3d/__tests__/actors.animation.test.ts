@@ -26,7 +26,6 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
       'barbell-squat',
       'bench-press',
       'dumbbell-curl',
-      'inbody-scan',
       'pt-coach-tablet',
       'receptionist-greet',
       'walking-patrol',

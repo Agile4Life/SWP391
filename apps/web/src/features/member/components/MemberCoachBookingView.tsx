@@ -20,14 +20,8 @@ import {
   type CoachBookingDto,
   type CoachQuotaStatusDto,
 } from '../coachBookingApi';
-import {
-  createCoachReview,
-  getMyCoachReviews,
-  type CoachReviewDto,
-} from '../../coaching/coachReviewApi';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
-import { notify } from '../../../shared/lib/portalNotices';
 import { ApiError } from '../../../shared/api/client';
 import {
   formatCoachName,
@@ -125,7 +119,6 @@ export function MemberCoachBookingView({
   const displayedPackageName = isTrial
     ? 'Gói Trải Nghiệm 3 Ngày'
     : (quotaStatus?.packageName || 'Gold / Platinum');
-  const [myReviews, setMyReviews] = useState<CoachReviewDto[]>([]);
 
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -157,37 +150,28 @@ export function MemberCoachBookingView({
     }
   }, []);
 
-  // Review Modal State
-  const [reviewTargetBooking, setReviewTargetBooking] = useState<CoachBookingDto | null>(null);
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewComment, setReviewComment] = useState<string>('');
-  const [reviewAnonymous, setReviewAnonymous] = useState<boolean>(false);
-  const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
-
   // Cancel Modal State
   const [cancelTarget, setCancelTarget] = useState<CoachBookingDto | null>(null);
   const [cancelling, setCancelling] = useState(false);
 
   const daysList = nextDays(10);
 
-  // Load coaches, member bookings and reviews
+  // Tải HLV, lịch PT và quota thật; không gọi API đánh giá đã bỏ khỏi Member.
   useEffect(() => {
     let active = true;
     async function init() {
       setLoadingCoaches(true);
       setError('');
       try {
-        const [coachList, bookingsList, quota, reviews] = await Promise.all([
+        const [coachList, bookingsList, quota] = await Promise.all([
           getCoaches(),
           getMyCoachBookings(),
           getMemberQuotaStatus().catch(() => null),
-          getMyCoachReviews().catch(() => []),
         ]);
         if (!active) return;
         setCoaches(coachList);
         setMyBookings(bookingsList);
         if (quota) setQuotaStatus(quota);
-        setMyReviews(reviews);
         setSelectedCoachId((current) => current ?? coachList[0]?.id ?? null);
       } catch (err: unknown) {
         if (active) setError((memberError(err, 'Không thể tải danh sách huấn luyện viên.')));
@@ -387,33 +371,6 @@ export function MemberCoachBookingView({
       setBookingError(coachBookingErrorMessage(err));
     } finally {
       setSubmitting(false);
-    }
-  }
-
-  async function handleConfirmReview() {
-    if (!reviewTargetBooking) return;
-    setReviewSubmitting(true);
-    setError('');
-    try {
-      await createCoachReview({
-        coachId: reviewTargetBooking.coachId,
-        bookingId: reviewTargetBooking.id,
-        rating: reviewRating,
-        comment: reviewComment.trim() || undefined,
-        isAnonymous: reviewAnonymous,
-      });
-
-      const updatedReviews = await getMyCoachReviews().catch(() => []);
-      setMyReviews(updatedReviews);
-
-      memberNotify(memberMessage(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${formatCoachName(reviewTargetBooking.coachName)} thành công.`, `Thank you! Your ${reviewRating}-star review for coach ${formatCoachName(reviewTargetBooking.coachName)} was submitted.`), 'success');
-      setReviewTargetBooking(null);
-      setReviewComment('');
-    } catch (err: unknown) {
-      const errMsg = memberError(err, 'Không thể gửi đánh giá.');
-      notify(memberRenderMessage(errMsg), 'error', typeof errMsg === 'string' ? {} : { translation: errMsg });
-    } finally {
-      setReviewSubmitting(false);
     }
   }
 
@@ -1047,7 +1004,6 @@ export function MemberCoachBookingView({
               const isCancelled = b.status === 'cancelled';
               const hasEnded = isSessionCompleted(b);
               const isConfirmed = !isCancelled;
-              const existingReview = myReviews.find((r) => r.bookingId === b.id);
               const coachDisplayName = formatCoachName(b.coachName);
 
               return (
@@ -1125,10 +1081,6 @@ export function MemberCoachBookingView({
                           <span className="badge badge-success" style={{ fontSize: 12 }}>
                             {memberText("Đã thanh toán", "Paid")}</span>
                         )}
-                        {existingReview && (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--portal-star)' }}>
-                            {memberText("Đã đánh giá (")}{existingReview.rating} {memberText(" sao)", " stars)")}</span>
-                        )}
                       </div>
                       <p className="row-card__meta" style={{ margin: '3px 0 0' }}>
                         {memberText("Ngày ")}<strong>{formatCenterDate(b.bookingDate)}</strong> • <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? memberText("Quyền lợi gói tập") : memberText(`Trả phí: ${formatPrice(b.hourlyRate)}`, `Paid session: ${formatPrice(b.hourlyRate)}`)}
@@ -1143,43 +1095,7 @@ export function MemberCoachBookingView({
 
                   {isConfirmed && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      {/* Đánh giá HLV sau khi kết thúc buổi */}
-                      {hasEnded ? (
-                        !existingReview && !b.attendedAt ? (
-                          <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
-                            {memberText("Không có mặt · không thể đánh giá", "Not marked present · cannot review")}</span>
-                        ) : !existingReview ? (
-                          <button
-                            type="button"
-                            className="btn-primary btn-sm"
-                            onClick={() => {
-                              setReviewTargetBooking(b);
-                              setReviewRating(5);
-                              setReviewComment('');
-                              setReviewAnonymous(false);
-                            }}
-                          >
-                            {memberText("Đánh giá HLV")}</button>
-                        ) : (
-                          <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
-                            {memberText("Đã gửi review")}</span>
-                        )
-                      ) : (
-                        <span
-                          className="badge badge-neutral"
-                          style={{
-                            fontSize: 12,
-                            color: 'var(--portal-muted)',
-                            padding: '4px 8px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                          }}
-                          title={memberText("Hệ thống sẽ mở đánh giá HLV sau khi buổi học kết thúc")}
-                        >
-                          {memberText("Đánh giá sau khi kết thúc buổi")}</span>
-                      )}
-
+                      {/* Giữ thanh toán và hủy lịch PT độc lập với chức năng đánh giá đã bỏ. */}
                       {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && (
                         <VnpayPayButton
                           target={{ coachBookingId: b.id }}
@@ -1217,108 +1133,6 @@ export function MemberCoachBookingView({
           </div>
         )}
       </section>
-
-      {/* Modal Đánh giá Huấn luyện viên */}
-      {reviewTargetBooking && (
-        <Modal
-          title={memberText(`Đánh giá Huấn luyện viên: ${formatCoachName(reviewTargetBooking.coachName)}`, `Review coach: ${formatCoachName(reviewTargetBooking.coachName)}`)}
-          onClose={() => setReviewTargetBooking(null)}
-          busy={reviewSubmitting}
-        >
-          <div style={{ display: 'grid', gap: 16 }}>
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 10,
-                background: 'var(--portal-raised)',
-                color: 'var(--portal-paper)',
-                fontSize: 13,
-                border: '1px solid var(--portal-border)',
-              }}
-            >
-              {memberText("Buổi tập 1:1 đã kết thúc ngày ")}<strong>{formatCenterDate(reviewTargetBooking.bookingDate)}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--portal-paper)' }}>
-                {memberText("Mức độ hài lòng của bạn:")}</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setReviewRating(star)}
-                    style={{
-                      border: '1px solid',
-                      borderColor: star <= reviewRating ? 'var(--portal-star)' : 'var(--portal-border)',
-                      background: star <= reviewRating ? 'color-mix(in srgb, var(--portal-star) 15%, transparent)' : 'transparent',
-                      borderRadius: 8,
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      fontSize: 18,
-                    }}
-                  >
-                    {star <= reviewRating ? '⭐' : '☆'}
-                  </button>
-                ))}
-                <span style={{ alignSelf: 'center', fontWeight: 700, fontSize: 14, color: 'var(--portal-star)', marginLeft: 8 }}>
-                  {reviewRating === 5
-                    ? memberText("Xuất sắc (5 sao)")
-                    : reviewRating === 4
-                      ? memberText("Rất tốt (4 sao)")
-                      : reviewRating === 3
-                        ? memberText("Bình thường (3 sao)")
-                        : reviewRating === 2
-                          ? memberText("Chưa hài lòng (2 sao)")
-                          : memberText("Rất thất vọng (1 sao)")}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--portal-paper)' }}>
-                {memberText("Nhận xét chi tiết (Gửi tới Quản lý và Huấn luyện viên):")}</label>
-              <textarea
-                rows={4}
-                className="portal-input"
-                style={{ width: '100%', resize: 'vertical', color: 'var(--portal-paper)' }}
-                placeholder={memberText("Nhận xét về HLV...")}
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-              />
-            </div>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--portal-paper)' }}>
-              <input
-                type="checkbox"
-                checked={reviewAnonymous}
-                onChange={(e) => setReviewAnonymous(e.target.checked)}
-              />
-              <span>{memberText("Đánh giá ẩn danh")}</span>
-            </label>
-
-            {/* Review modal is for already completed sessions; no active package alert needed here */}
-            <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={reviewSubmitting}
-                onClick={() => setReviewTargetBooking(null)}
-              >
-                {memberText("Hủy", "Cancel")}
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={reviewSubmitting}
-                onClick={() => void handleConfirmReview()}
-              >
-                {reviewSubmitting ? memberText("Đang gửi…", "Sending…") : memberText("Gửi đánh giá", "Submit review")}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
 
       {/* Modal Xác nhận Đặt lịch */}
       {modalSlot && selectedCoach && (

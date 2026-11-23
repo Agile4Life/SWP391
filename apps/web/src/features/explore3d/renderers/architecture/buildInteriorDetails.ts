@@ -506,21 +506,6 @@ function buildL2Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): vo
     }
   }
 
-  // 2. InBody 770 Suite (x = 6..20, z = -14..-2): 65" Diagnostic Screen & Framed Posture Calibration Grid
-  pushBox(parts, 2.8, 1.45, 0.1, 13.5, 1.85, -15.65, darkSteel);
-  pushBox(parts, 2.62, 1.27, 0.12, 13.5, 1.85, -15.62, '#0f172a');
-  pushBox(parts, 0.95, 0.12, 0.14, 12.85, 2.18, -15.6, salmon);
-  pushBox(parts, 1.15, 0.55, 0.14, 14.05, 1.78, -15.6, '#1e293b');
-  pushBox(parts, 0.95, 0.08, 0.15, 14.05, 1.92, -15.59, '#38bdf8');
-  pushBox(parts, 0.75, 0.08, 0.15, 13.95, 1.74, -15.59, salmon);
-  // Framed architectural posture calibration grid
-  pushBox(parts, 1.72, 2.28, 0.06, 9.5, 1.26, -15.66, darkSteel);
-  pushBox(parts, 1.56, 2.12, 0.07, 9.5, 1.26, -15.64, '#1e2532');
-  pushBox(parts, 0.025, 2.04, 0.08, 9.5, 1.26, -15.62, salmon);
-  for (const gy of [0.65, 1.05, 1.45, 1.85]) {
-    pushBox(parts, 1.46, 0.02, 0.08, 9.5, gy, -15.62, '#64748b');
-  }
-
   // 3. 1:1 PT Studio (x = 6..20, z = -2..14): 12.5m Emerald Sprint Turf Track, Prowler Sled & Open-Frame TRX Rig
   pushBox(parts, 2.1, 0.025, 12.5, 18.4, 0.015, 6.0, '#059669');
   for (let tz = 0.5; tz <= 11.5; tz += 2.2) {

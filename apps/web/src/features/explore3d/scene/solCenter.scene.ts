@@ -347,8 +347,8 @@ const zoneL1Gate: ZoneNode = register({
   code: 'L1-GATE',
   name: { vi: 'Cổng Quét QR Check-in Tự động', en: 'Automated QR Check-in Gate' },
   description: {
-    vi: 'Cổng kiểm soát ra vào tự động bằng mã QR trên Thẻ hội viên; tự động ghi nhận Streak tập luyện mỗi ngày.',
-    en: 'Turnstile gate scanning your Member QR code and recording your daily workout streak.',
+    vi: 'Cổng kiểm soát ra vào tự động bằng mã QR trên Thẻ hội viên; ghi nhận lượt check-in của hội viên.',
+    en: 'Turnstile gate scanning your Member QR code for check-in.',
   },
   category: 'circulation',
   polygon: rectPolygon(-6, 2, 6, 6),
@@ -824,8 +824,8 @@ const zoneRfTerrace: ZoneNode = register({
   code: 'RF-TERRACE',
   name: { vi: 'Vườn Thiền & Sân Thượng Ngắm Cảnh', en: 'Rooftop Mindful Terrace & Sky Deck' },
   description: {
-    vi: 'Không gian cây xanh thoáng đãng bao quanh Penthouse để hít thở, giãn cơ và theo dõi chuỗi ngày tập (Streak).',
-    en: 'Landscaped sky deck surrounding the Penthouse for breathwork, stretching and celebrating your workout streak.',
+    vi: 'Không gian cây xanh thoáng đãng bao quanh Penthouse để hít thở, giãn cơ và nghỉ ngơi sau buổi tập.',
+    en: 'Landscaped sky deck surrounding the Penthouse for breathwork, stretching and resting after training.',
   },
   category: 'lounge',
   polygon: rectPolygon(8, -14, 20, 14),
@@ -1928,26 +1928,6 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 8. /member/streak — Workout Streak Totem
-addHotspot(zoneL1Lobby, {
-  id: 'hs-l1-streak',
-  localPosition: [-3.8, 2.4, 8.2],
-  title: { vi: 'Cột Mốc Streak Tập luyện', en: 'Workout Streak Totem' },
-  subtitle: {
-    vi: 'Theo dõi chuỗi ngày tập liên tiếp 13 tuần trên biểu đồ lưới rắn SÖL.',
-    en: 'Track your 13-week consecutive workout streak on the SÖL snake grid.',
-  },
-  badge: 'L1 · STREAK',
-  icon: 'star',
-  priority: 'secondary',
-  liveSummaryKey: 'streak',
-  action: {
-    type: 'navigate',
-    to: '/member/streak',
-    ctaLabel: { vi: 'Xem Streak tập luyện', en: 'View Workout Streak' },
-  },
-});
-
 // 9. /member/check-in — QR Turnstile Gate
 addHotspot(zoneL1Gate, {
   id: 'hs-l1-checkin',
@@ -2181,45 +2161,23 @@ addHotspot(zoneL2VipGym, {
   },
 });
 
-// 20. /member/progress — L2 InBody 770 Lab
-addHotspot(zoneL2Inbody, {
-  id: 'hs-l2-inbody',
-  localPosition: [11.5, 2.2, -9.5],
-  title: { vi: 'Phân tích InBody 770 · Tiến độ & Giáo án', en: 'InBody 770 · Progress & Training Plans' },
-  subtitle: {
-    vi: 'Theo dõi lịch sử BMI, % mỡ cơ thể, khối lượng cơ và giáo án HLV thiết kế riêng.',
-    en: 'Track your BMI, body fat %, muscle mass history and personalized training plans.',
-  },
-  badge: 'L2 · INBODY 770',
-  icon: 'chart',
-  priority: 'primary',
-  liveSummaryKey: 'progress',
-  action: {
-    type: 'navigate',
-    to: '/member/progress',
-    ctaLabel: { vi: 'Mở Tiến độ & Giáo án', en: 'Open Progress & Plans' },
-    secondaryTo: '/member/profile',
-    secondaryLabel: { vi: 'Cập nhật Hồ sơ Sức khỏe', en: 'Update Health Profile' },
-  },
-});
-
-// 21. /member/profile — Health & Profile Consultation Pod
-addHotspot(zoneL2Inbody, {
+// Hồ sơ hội viên đặt tại sảnh để không phụ thuộc khu số đo đã bỏ.
+addHotspot(zoneL1Lobby, {
   id: 'hs-l2-profile',
-  localPosition: [16.2, 2.0, -7.2],
-  title: { vi: 'Hồ sơ Cá nhân & Chỉ số Sức khỏe', en: 'Member Profile & Health Records' },
+  localPosition: [2, 2, 10],
+  title: { vi: 'Hồ sơ hội viên', en: 'Member profile' },
   subtitle: {
-    vi: 'Cập nhật thông tin cá nhân, mục tiêu tập luyện và hồ sơ thể trạng của bạn.',
-    en: 'Manage your personal profile, fitness goals and baseline health metrics.',
+    vi: 'Cập nhật thông tin cá nhân, mục tiêu tập luyện và thông tin liên hệ của bạn.',
+    en: 'Manage your personal profile, fitness goals and contact details.',
   },
-  badge: 'L2 · PROFILE',
+  badge: 'L1 · PROFILE',
   icon: 'profile',
   priority: 'primary',
   liveSummaryKey: 'profile',
   action: {
     type: 'navigate',
     to: '/member/profile',
-    ctaLabel: { vi: 'Mở Hồ sơ & Sức khỏe', en: 'Open Profile & Health' },
+    ctaLabel: { vi: 'Mở hồ sơ hội viên', en: 'Open member profile' },
   },
 });
 
@@ -2284,26 +2242,6 @@ addHotspot(zoneRfZen, {
     to: '/member/classes',
     query: { discipline: 'Yoga' },
     ctaLabel: { vi: 'Đặt lớp Yoga', en: 'Book Yoga Class' },
-  },
-});
-
-// 25. RF Terrace -> /member/streak
-addHotspot(zoneRfTerrace, {
-  id: 'hs-rf-terrace',
-  localPosition: [15.0, 2.1, 0],
-  title: { vi: 'Vườn Thiền Sân Thượng · Chuỗi Ngày tập', en: 'Mindful Sky Deck · Workout Streak' },
-  subtitle: {
-    vi: 'Duy trì thói quen rèn luyện mỗi ngày và kiểm tra kỷ lục Streak của bạn.',
-    en: 'Celebrate daily consistency and view your all-time workout streak.',
-  },
-  badge: 'RF · SKY DECK',
-  icon: 'star',
-  priority: 'secondary',
-  liveSummaryKey: 'streak',
-  action: {
-    type: 'navigate',
-    to: '/member/streak',
-    ctaLabel: { vi: 'Xem Streak tập luyện', en: 'View Workout Streak' },
   },
 });
 
@@ -2398,9 +2336,9 @@ levelRF.children.unshift(zoneRfZen.id, zoneRfTerrace.id);
 levelOUT.children.unshift(zoneOutTennis.id);
 
 // Bỏ cả cây con để search, deep link, hotspot và viewpoint không tham chiếu khu đã loại.
-// Bỏ Shop cùng cây con; giữ Streak, Health, Progress và PT cho đúng phạm vi Task 3.
+// Bỏ cây số đo và các khu đã giảm scope; giữ Gym, PT, check-in và liên kết Giáo án.
 const removedNodeIds = [
-  'zone-l1-shop', 'zone-b1-pool', 'zone-b1-thermal', 'zone-l1-boxing', 'zone-l1-badminton',
+  'item-l1-trophy-totem', 'zone-l2-inbody', 'zone-l1-shop', 'zone-b1-pool', 'zone-b1-thermal', 'zone-l1-boxing', 'zone-l1-badminton',
   'zone-l2-vip-gym', 'zone-l2-lounge', 'zone-rf-zen', 'lvl-out',
 ];
 function removeSceneSubtree(id: string): void {

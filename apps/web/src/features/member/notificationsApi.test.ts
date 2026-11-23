@@ -38,7 +38,8 @@ it('routes training plans and coach notifications to the correct workspace', () 
 });
 
 it('uses safe action links and rejects external or other-role destinations', () => {
-  expect(notificationDestination({ relatedEntityType: null, type: 'system', actionPath: '/member/progress#coach-evaluations' })).toBe('/member/progress#coach-evaluations');
+  expect(notificationDestination({ relatedEntityType: null, type: 'system', actionPath: '/member/streak' })).toBe('/member/dashboard');
+  expect(notificationDestination({ relatedEntityType: null, type: 'system', actionPath: '/member/progress#coach-evaluations' })).toBe('/member/progress');
   for (const actionPath of ['https://example.com', '//example.com', '/admin/users', '/member/../admin/users']) {
     expect(notificationDestination({ relatedEntityType: null, type: 'system', actionPath })).toBe('/member/dashboard');
   }

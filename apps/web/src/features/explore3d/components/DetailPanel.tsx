@@ -646,18 +646,6 @@ export function DetailPanel({
           </div>
         )}
 
-        {hs.liveSummaryKey === 'streak' && bindings.streak && (
-          <div className="explore3d-live-card" data-testid="detail-live-streak">
-            <div className="explore3d-live-card__title">
-              {t('Chuỗi hiện tại', 'Current streak')}: {bindings.streak.currentStreak}{' '}
-              {t('ngày', 'days')}
-            </div>
-            <div className="explore3d-live-card__meta">
-              {t('Kỷ lục', 'Longest')}: {bindings.streak.longestStreak} {t('ngày', 'days')}
-            </div>
-          </div>
-        )}
-
         {hs.liveSummaryKey === 'coaches' && bindings.coaches.length > 0 && (
           <div className="explore3d-subsection" data-testid="detail-live-coaches">
             <h3 className="explore3d-subsection-title">

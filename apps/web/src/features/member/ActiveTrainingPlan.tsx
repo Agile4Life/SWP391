@@ -33,6 +33,7 @@ function Dose({ item }: { item: TrainingItem }) {
 /** Lịch giáo án HLV đã soạn và đang áp dụng cho hội viên, theo từng thứ trong tuần. */
 export function ActiveTrainingPlan({ state, today, onRetry }: { state: PlanLoadState; today: string; onRetry: () => void }) {
   useLanguage();
+  // Lọc Giáo án active theo ngày; planDays() giữ thứ tự bài tập theo từng ngày trong tuần.
   const plans = state.kind === 'ready' ? activePlans(state.data, today) : [];
   return <section data-i18n-managed id="coach-training-plan" className="portal-card" aria-labelledby="coach-training-plan-title">
     <div className="portal-card-header"><h2 id="coach-training-plan-title" className="portal-card-title">{memberText('Lịch giáo án của huấn luyện viên')}</h2></div>

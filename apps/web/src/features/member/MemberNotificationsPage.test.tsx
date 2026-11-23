@@ -93,12 +93,12 @@ describe('SCRUM-127 member notifications', () => {
     expect(api.read).toHaveBeenCalledWith(3);
   });
 
-  it('opens a new evaluation at the feedback section and marks it read', async () => {
+  it('opens a legacy feedback notification at training plans and marks it read', async () => {
     api.list.mockResolvedValue({ content: [{ id: 7, title: 'Đánh giá mới', message: 'Xem nhận xét', type: 'system', relatedEntityType: null, relatedEntityId: null, actionPath: '/member/progress#coach-evaluations', isRead: false, createdAt: '2026-11-03T10:00:00' }], number: 0, totalPages: 1 });
     await render();
     await act(async () => button('Đánh giá mới')?.click());
     expect(api.read).toHaveBeenCalledWith(7);
-    expect(host.querySelector('output')?.textContent).toBe('/member/progress#coach-evaluations');
+    expect(host.querySelector('output')?.textContent).toBe('/member/progress');
   });
 
   it('marks all visible notifications read through the backend', async () => {

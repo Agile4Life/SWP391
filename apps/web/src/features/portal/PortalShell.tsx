@@ -155,7 +155,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const hasServerNotifications = true;
   const canReceiveNotifications = true;
   const profileLabel = isMember
-    ? t('Hồ sơ & Sức khỏe', 'Profile & Health')
+    ? t('Hồ sơ hội viên', 'Member profile')
     : t('Hồ sơ cá nhân', 'My Profile');
   const navItems = PORTAL_NAV.filter((item) => item.roles.includes(user.role)).map((item) => {
     if (item.to === '/member/profile') return { ...item, label: profileLabel };
@@ -471,11 +471,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
                       </div>
                     </div>
                   </div>
-
-                  {isMember && <Link to="/member/streak" role="menuitem" data-testid="avatar-menu-streak"
-                    className="portal-avatar-dropdown__link" onClick={() => setAvatarMenuOpen(false)}>
-                    {t('Streak tập luyện', 'Workout streak')}
-                  </Link>}
 
                   {isMember && <button
                     type="button"
