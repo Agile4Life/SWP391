@@ -194,14 +194,19 @@ public class CatalogSeeder implements ApplicationRunner {
         upsertPackageWithTier(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_DURATION, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM");
         upsertPackageWithTier(PLATINUM_6M_NAME, PLATINUM_6M_DESC, PLATINUM_6M_PRICE, PLATINUM_6M_DURATION, PLATINUM_6M_CREDIT_LIMIT, "PLATINUM");
 
-        // Đồng bộ quyền lợi mới (spec 2026-11-09) vào các gói đã seed từ trước.
+        // Đồng bộ lại mô tả, giá và trạng thái active cho 6 gói (3 tháng & 6 tháng) nếu trong DB vẫn là bản seed cũ.
+        syncSeededPackage(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_CREDIT_LIMIT, "SILVER");
+        syncSeededPackage(SILVER_6M_NAME, SILVER_6M_DESC, SILVER_6M_PRICE, SILVER_6M_CREDIT_LIMIT, "SILVER");
+        syncSeededPackage(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_CREDIT_LIMIT, "GOLD");
+        syncSeededPackage(GOLD_6M_NAME, GOLD_6M_DESC, GOLD_6M_PRICE, GOLD_6M_CREDIT_LIMIT, "GOLD");
+        syncSeededPackage(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM");
+        syncSeededPackage(PLATINUM_6M_NAME, PLATINUM_6M_DESC, PLATINUM_6M_PRICE, PLATINUM_6M_CREDIT_LIMIT, "PLATINUM");
+
+        // Đồng bộ quyền lợi cho Trial & legacy 1-month nếu còn nguyên mô tả seed cũ.
         alignBenefits(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, 3);
         alignBenefits(SILVER_NAME, SILVER_DESC, SILVER_CREDIT_LIMIT, "SILVER", 2);
         alignBenefits(GOLD_NAME, GOLD_DESC, GOLD_CREDIT_LIMIT, "GOLD", 5);
         alignBenefits(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_CREDIT_LIMIT, "PLATINUM", null);
-        alignBenefits(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_CREDIT_LIMIT, "SILVER", 6);
-        alignBenefits(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_CREDIT_LIMIT, "GOLD", 15);
-        alignBenefits(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM", null);
 
         // Không tự đổi trạng thái gói ở đây: việc ngừng bán gói 6/12 tháng cũ đã chạy trên mọi CSDL,
         // từ nay Manager toàn quyền bật/tắt gói (chạy lại mỗi lần khởi động sẽ tắt gói Manager vừa bật).
@@ -272,6 +277,34 @@ public class CatalogSeeder implements ApplicationRunner {
      * Chuyển gói seed cũ sang quyền lợi mới (spec 2026-11-09). Chỉ đụng vào gói còn nguyên mô tả và hạn mức seed cũ;
      * gói mà Manager đã chỉnh sửa thì giữ nguyên, kể cả giá.
      */
+    private void syncSeededPackage(String name, String desc, BigDecimal price, Integer creditLimit, String tier) {
+        for (var pkg : packages.list()) {
+            if (!name.equalsIgnoreCase(pkg.name())) continue;
+            String currentDesc = pkg.description();
+            if (!isLegacySeededDescription(currentDesc)) {
+                return;
+            }
+            boolean descMatches = java.util.Objects.equals(desc, currentDesc);
+            boolean priceMatches = pkg.price() != null && pkg.price().compareTo(price) == 0;
+            boolean tierMatches = tier.equalsIgnoreCase(pkg.tier());
+            boolean isActive = "active".equalsIgnoreCase(pkg.status());
+            if (!descMatches || !priceMatches || !tierMatches || !isActive) {
+                packages.update(pkg.id(), new PackageRequest(
+                        pkg.name(), desc, price, pkg.durationDays(), creditLimit, "active", tier));
+            }
+            return;
+        }
+    }
+
+    private static boolean isLegacySeededDescription(String description) {
+        if (description == null) return false;
+        String trimmed = description.trim();
+        return trimmed.startsWith("BASIC –")
+                || trimmed.startsWith("STANDARD –")
+                || trimmed.startsWith("VIP –")
+                || trimmed.startsWith("CAO CẤP –");
+    }
+
     private void alignBenefits(String name, String desc, Integer creditLimit, String tier, Integer legacyCreditLimit) {
         String marker = desc.substring(0, desc.indexOf('\n'));
         for (var pkg : packages.list()) {
