@@ -727,6 +727,36 @@ class CoachBookingServiceTest {
     }
 
     @Test
+    @DisplayName("Lượt PT miễn phí đã dùng ở gói Trial không trừ vào 3 lượt của gói Gold mới mua")
+    void trialQuotaUsageDoesNotReduceSubsequentGoldPackageQuota() {
+        MembershipPackage goldPkg = new MembershipPackage();
+        goldPkg.setId(2L);
+        goldPkg.setName("GOLD 3 THÁNG");
+        goldPkg.setTier("GOLD");
+        goldPkg.setDurationDays(90);
+
+        MembershipSubscription goldSub = new MembershipSubscription();
+        goldSub.setId(500L);
+        goldSub.setMember(member);
+        goldSub.setMembershipPackage(goldPkg);
+        goldSub.setStatus("active");
+        goldSub.setStartDate(LocalDate.now(fixedClock));
+        goldSub.setEndDate(LocalDate.now(fixedClock).plusDays(90));
+        goldSub.setCreatedAt(LocalDateTime.now(fixedClock));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(goldSub));
+        when(coachBookingRepository.countSubscriptionQuotaUsage(
+                eq(10L), any(), any(), eq("package_quota"), eq(List.of(500L)), eq(goldSub.getCreatedAt())))
+                .thenReturn(0L);
+
+        var quota = service.getMemberQuotaStatus(10L);
+
+        assertThat(quota.monthlyQuota()).isEqualTo(3);
+        assertThat(quota.usedThisMonth()).isEqualTo(0);
+        assertThat(quota.remainingQuota()).isEqualTo(3);
+    }
+
+    @Test
     void coachOnApprovedLeaveCannotBeBookedAndShowsNoFreeSlots() {
         var leaves = org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "staffRequestRepository", leaves);

@@ -277,10 +277,46 @@ public class CoachBookingService {
         LocalDate now = LocalDate.now(clock);
         LocalDate startMonth = PackageBenefits.cycleStart(sub, now);
         LocalDate endMonth = PackageBenefits.cycleEnd(sub, now);
-        long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(memberUserId, startMonth, endMonth, "package_quota");
+        long usedQuota = countQuotaUsageForSubscription(memberUserId, sub, startMonth, endMonth);
 
         int remaining = Math.max(0, monthlyQuota - (int) usedQuota);
         return new CoachQuotaStatusDto(pkgName, monthlyQuota, (int) usedQuota, remaining);
+    }
+
+    /**
+     * Counts PT quota sessions consumed by {@code sub} (and any non-trial predecessor in a mid-cycle upgrade chain)
+     * so a free Trial PT session never reduces the allowance of a newly purchased Gold/Platinum package.
+     */
+    private long countQuotaUsageForSubscription(Long memberUserId, MembershipSubscription sub,
+                                                LocalDate startMonth, LocalDate endMonth) {
+        List<Long> subIds = new ArrayList<>();
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        MembershipSubscription current = sub;
+        MembershipSubscription earliest = sub;
+        while (current != null && !isTrialSubscription(current)) {
+            if (current.getId() != null) {
+                if (!seen.add(current.getId())) break;
+                subIds.add(current.getId());
+            }
+            earliest = current;
+            if (current.getUpgradeCharge() != null && current.getPreviousSubscription() != null
+                    && !isTrialSubscription(current.getPreviousSubscription())) {
+                current = current.getPreviousSubscription();
+            } else {
+                break;
+            }
+        }
+        if (isTrialSubscription(sub) && sub.getId() != null) {
+            subIds.add(sub.getId());
+        }
+        if (subIds.isEmpty()) {
+            return coachBookingRepository.countMonthlyQuotaUsage(memberUserId, startMonth, endMonth, "package_quota");
+        }
+        LocalDateTime subCreatedAt = earliest.getCreatedAt() != null
+                ? earliest.getCreatedAt()
+                : (earliest.getStartDate() != null ? earliest.getStartDate().atStartOfDay() : LocalDateTime.of(2000, 1, 1, 0, 0));
+        return coachBookingRepository.countSubscriptionQuotaUsage(
+                memberUserId, startMonth, endMonth, "package_quota", subIds, subCreatedAt);
     }
 
     @Transactional
@@ -403,6 +439,7 @@ public class CoachBookingService {
 
         // Rule 4: Payment / PT Quota verification
         String paymentStatus = "used_quota";
+        MembershipSubscription usedSubscription = null;
 
         if ("package_quota".equalsIgnoreCase(paymentMethod)) {
             List<MembershipSubscription> activeSubs = validSubscriptions;
@@ -411,6 +448,7 @@ public class CoachBookingService {
             }
 
             MembershipSubscription sub = activeSubs.get(0);
+            usedSubscription = sub;
             boolean isTrial = isTrialSubscription(sub);
             int monthlyQuota = ptQuotaOf(sub, isTrial);
 
@@ -425,7 +463,7 @@ public class CoachBookingService {
 
             LocalDate startMonth = PackageBenefits.cycleStart(sub, request.bookingDate());
             LocalDate endMonth = PackageBenefits.cycleEnd(sub, request.bookingDate());
-            long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(member.getUserId(), startMonth, endMonth, "package_quota");
+            long usedQuota = countQuotaUsageForSubscription(member.getUserId(), sub, startMonth, endMonth);
 
             if (usedQuota >= monthlyQuota) {
                 if (isTrial) {
@@ -461,6 +499,7 @@ public class CoachBookingService {
         booking.setMember(member);
         booking.setCoach(coach);
         booking.setDiscipline(discipline);
+        booking.setSubscription(usedSubscription);
         booking.setBookingDate(request.bookingDate());
         booking.setStartTime(request.startTime());
         booking.setEndTime(request.endTime());

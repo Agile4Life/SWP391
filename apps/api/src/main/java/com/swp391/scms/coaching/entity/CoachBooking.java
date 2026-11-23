@@ -1,6 +1,7 @@
 package com.swp391.scms.coaching.entity;
 
 import com.swp391.scms.facilities.entity.Discipline;
+import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
 import jakarta.persistence.*;
@@ -38,6 +39,10 @@ public class CoachBooking {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "discipline_id")
     private Discipline discipline;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "subscription_id")
+    private MembershipSubscription subscription;
 
     @Column(name = "booking_date", nullable = false)
     private LocalDate bookingDate;
@@ -97,6 +102,9 @@ public class CoachBooking {
 
     public Discipline getDiscipline() { return discipline; }
     public void setDiscipline(Discipline discipline) { this.discipline = discipline; }
+
+    public MembershipSubscription getSubscription() { return subscription; }
+    public void setSubscription(MembershipSubscription subscription) { this.subscription = subscription; }
 
     public LocalDate getBookingDate() { return bookingDate; }
     public void setBookingDate(LocalDate bookingDate) { this.bookingDate = bookingDate; }

@@ -75,6 +75,24 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             @Param("endDate") LocalDate endDate,
             @Param("paymentMethod") String paymentMethod
     );
+
+    @Query("""
+            select count(cb) from CoachBooking cb
+            where cb.member.userId = :memberId
+              and cb.bookingDate between :startDate and :endDate
+              and cb.paymentMethod = :paymentMethod
+              and (cb.status <> 'cancelled' or coalesce(cb.quotaForfeited, false) = true)
+              and (cb.subscription.id in :subscriptionIds
+                   or (cb.subscription is null and cb.createdAt >= :subCreatedAt))
+            """)
+    long countSubscriptionQuotaUsage(
+            @Param("memberId") Long memberId,
+            @Param("startDate") LocalDate startDate,
+            @Param("endDate") LocalDate endDate,
+            @Param("paymentMethod") String paymentMethod,
+            @Param("subscriptionIds") java.util.Collection<Long> subscriptionIds,
+            @Param("subCreatedAt") LocalDateTime subCreatedAt
+    );
     /** Non-cancelled 1:1 sessions of every coach between two dates, newest first (desk view). */
     @Query("""
             select cb from CoachBooking cb
