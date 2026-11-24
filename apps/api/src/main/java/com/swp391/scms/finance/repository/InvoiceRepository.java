@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/** Truy cập bảng invoices (hóa đơn điện tử). */
 @Repository
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 

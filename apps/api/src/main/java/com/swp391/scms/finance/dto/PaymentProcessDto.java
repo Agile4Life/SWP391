@@ -9,6 +9,9 @@ import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 
 /**
+ * Dữ liệu thu tiền một bước tại quầy: hội viên, kỳ gói hoặc gói (để tạo kỳ mới), khóa học, số tiền, phương
+ * thức, người nhận và ghi chú.
+ *
  * Data Transfer Object for processing a checkout payment and activating subscriptions/enrollments.
  */
 @Schema(description = "Yêu cầu xử lý thanh toán mua gói tập hoặc ghi danh lớp học")
@@ -43,8 +46,10 @@ public class PaymentProcessDto {
     @Schema(description = "Ghi chú giao dịch", example = "Thanh toán kích hoạt gói tập tại quầy")
     private String note;
 
+    /** Constructor rỗng cho Jackson. */
     public PaymentProcessDto() {}
 
+    /** Tạo yêu cầu thu tiền với đầy đủ trường. */
     public PaymentProcessDto(Long memberId, Long subscriptionId, Long classEnrollmentId,
                              BigDecimal amount, String method, Long receivedById, String note) {
         this.memberId = memberId;

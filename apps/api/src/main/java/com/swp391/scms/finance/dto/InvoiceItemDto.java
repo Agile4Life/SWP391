@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 
 /**
+ * Một dòng hàng trả cho client: mô tả, số lượng, đơn giá và thành tiền.
+ *
  * Data Transfer Object for Invoice line item response.
  */
 @Schema(description = "Chi tiết một dòng sản phẩm/dịch vụ trên hóa đơn")
@@ -16,6 +18,7 @@ public class InvoiceItemDto {
     private BigDecimal unitPrice;
     private BigDecimal amount;
 
+    /** Constructor rỗng cho Jackson. */
     public InvoiceItemDto() {}
 
     /** Lấy giá trị trường id. */

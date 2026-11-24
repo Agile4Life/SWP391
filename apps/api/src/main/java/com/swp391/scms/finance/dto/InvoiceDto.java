@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Hóa đơn trả cho client: số hóa đơn, ngày xuất, tiền trước thuế, thuế, tổng, link PDF và các dòng hàng.
+ *
  * Data Transfer Object for Invoice response.
  */
 @Schema(description = "Thông tin hóa đơn điện tử")
@@ -23,6 +25,7 @@ public class InvoiceDto {
     private LocalDateTime createdAt;
     private List<InvoiceItemDto> items = new ArrayList<>();
 
+    /** Constructor rỗng cho Jackson. */
     public InvoiceDto() {}
 
     /** Lấy giá trị trường id. */

@@ -8,6 +8,8 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 /**
+ * Một dòng hàng khi tạo hóa đơn: mô tả, số lượng và đơn giá.
+ *
  * Data Transfer Object for creating an Invoice line item.
  */
 @Schema(description = "Yêu cầu tạo chi tiết dòng hóa đơn")
@@ -27,8 +29,10 @@ public class InvoiceItemCreateDto {
     @Schema(description = "Đơn giá (VNĐ)", example = "3000000.00")
     private BigDecimal unitPrice;
 
+    /** Constructor rỗng cho Jackson. */
     public InvoiceItemCreateDto() {}
 
+    /** Tạo dòng hàng với mô tả, số lượng và đơn giá. */
     public InvoiceItemCreateDto(String description, Integer quantity, BigDecimal unitPrice) {
         this.description = description;
         this.quantity = quantity;

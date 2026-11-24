@@ -10,6 +10,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
+ * Dữ liệu tạo khoản thanh toán: hội viên, kỳ gói hoặc khóa học, số tiền, phương thức, trạng thái, thời điểm
+ * trả, người nhận tiền, ghi chú và ảnh biên lai.
+ *
  * Data Transfer Object for creating a new Payment transaction.
  */
 @Schema(description = "Yêu cầu tạo mới giao dịch thanh toán")
@@ -52,6 +55,7 @@ public class PaymentCreateDto {
     @Schema(description = "Ảnh hóa đơn thanh toán tiền mặt dạng data URL (jpeg/png/webp)")
     private String receiptImage;
 
+    /** Constructor rỗng cho Jackson. */
     public PaymentCreateDto() {}
 
     /** Lấy giá trị trường receiptImage. */

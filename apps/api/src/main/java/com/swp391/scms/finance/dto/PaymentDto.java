@@ -5,6 +5,10 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
+ * Khoản thanh toán trả cho client: hội viên, đối tượng thanh toán (gói, khóa học, PT, sân, đơn hàng), số tiền,
+ * đã hoàn, phương thức, trạng thái, người nhận, ghi chú, số hóa đơn, biên lai, loại và tên dịch vụ, và cờ đang
+ * chờ VNPay.
+ *
  * Data Transfer Object for Payment response.
  */
 @Schema(description = "Thông tin giao dịch thanh toán")
@@ -27,6 +31,7 @@ public class PaymentDto {
     private boolean hasReceipt;
     private String receiptImage; // chỉ trả ở API chi tiết dành cho nhân viên
 
+    /** Constructor rỗng cho Jackson. */
     public PaymentDto() {}
 
     /** Cho biết has receipt (trường boolean). */

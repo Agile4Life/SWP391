@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập bảng payments (khoản thanh toán). */
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
@@ -75,6 +76,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
                   and s.status = 'scheduled'
                   and (s.sessionDate > :today or (s.sessionDate = :today and s.endTime >= :nowTime))))
             """)
+    /**
+     * Hội viên còn khoản thu khóa học (đang chờ hoặc đã trả) cho đăng ký đang giữ chỗ mà khóa chưa diễn ra hết
+     * không; dùng khi xét hủy gói.
+     */
     boolean hasUnsettledUpcomingEnrollmentPayment(@Param("memberId") Long memberId,
             @Param("today") java.time.LocalDate today, @Param("nowTime") java.time.LocalTime nowTime);
 
@@ -82,7 +87,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @EntityGraph(attributePaths = {"invoice"})
     Optional<Payment> findByClassEnrollmentId(Long classEnrollmentId);
 
-    /** Unpaid course fees (pending, tied to a class enrollment) created before the cutoff. */
+    /**
+     * Các khoản học phí khóa học đang chờ được tạo trước mốc thời gian (để tự hủy khi quá hạn).
+     *
+     * Unpaid course fees (pending, tied to a class enrollment) created before the cutoff.
+     */
     @org.springframework.data.jpa.repository.Query("select p from Payment p where p.status = 'pending' and p.classEnrollmentId is not null and p.createdAt < :before")
     java.util.List<Payment> findPendingCourseFeesCreatedBefore(@org.springframework.data.repository.query.Param("before") java.time.LocalDateTime before);
 
@@ -120,5 +129,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
               and not exists (select w from WalletTransaction w
                               where w.referenceId = concat('WALLET_PAY_', cast(p.id as String)))
             """)
+    /**
+     * Đếm khoản thanh toán online được đánh dấu đã trả mà không có lượt VNPay thành công lẫn bút toán trừ ví:
+     * lẽ ra không bao giờ xảy ra (dùng cho đối soát).
+     */
     long countOnlinePaymentsWithoutSource();
 }

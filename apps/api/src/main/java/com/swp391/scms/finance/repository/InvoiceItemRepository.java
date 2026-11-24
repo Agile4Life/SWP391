@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/** Truy cập bảng invoice_items (dòng hàng của hóa đơn). */
 @Repository
 public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, Long> {
 

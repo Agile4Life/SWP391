@@ -33,6 +33,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
+ * Dữ liệu đối soát thanh toán cho Admin (chỉ đọc): tổng quan, lượt VNPay, hoàn tiền muộn, nhật ký callback và
+ * dòng thời gian từng khoản thu, để phát hiện tiền bị treo hoặc bất thường.
+ *
  * Read-only view of VNPay attempts, callbacks and the automatic late refunds for administrators. Nothing here changes
  * money or payment state; every change still goes through the existing payment flows.
  */
@@ -53,6 +56,7 @@ public class PaymentReconciliationService {
     private final WalletTransactionRepository walletTransactions;
     private final Clock clock;
 
+    /** Nhận các repository VNPay, callback, thanh toán, giao dịch ví và Clock. */
     public PaymentReconciliationService(VnpayTransactionRepository attempts, VnpayIpnEventRepository callbacks,
                                         PaymentRepository payments, WalletTransactionRepository walletTransactions,
                                         Clock clock) {
@@ -63,12 +67,19 @@ public class PaymentReconciliationService {
         this.clock = clock;
     }
 
-    /** Inclusive date range resolved against the default and maximum window. */
+    /**
+     * Khoảng ngày đã kiểm tra (tính cả hai đầu).
+     *
+     * Inclusive date range resolved against the default and maximum window.
+     */
     public record DateRange(LocalDate from, LocalDate to) {
+        /** Thời điểm bắt đầu khoảng (đầu ngày from). */
         public LocalDateTime start() { return from.atStartOfDay(); }
+        /** Thời điểm kết thúc khoảng (đầu ngày sau to, không tính). */
         public LocalDateTime endExclusive() { return to.plusDays(1).atStartOfDay(); }
     }
 
+    /** Khoảng ngày mặc định và kiểm tra: ngày bắt đầu không sau ngày kết thúc, không quá số ngày tối đa. */
     public DateRange range(LocalDate from, LocalDate to) {
         LocalDate end = to != null ? to : (from != null ? from.plusDays(DEFAULT_RANGE_DAYS - 1L) : today());
         LocalDate start = from != null ? from : end.minusDays(DEFAULT_RANGE_DAYS - 1L);
@@ -83,6 +94,7 @@ public class PaymentReconciliationService {
         return new DateRange(start, end);
     }
 
+    /** Phân trang hợp lệ (trang không âm, cỡ trang trong giới hạn). */
     public Pageable page(int page, int size, Sort sort) {
         if (page < 0 || size < 1 || size > MAX_PAGE_SIZE) {
             throw new BadRequestException("RECONCILIATION_PAGE_INVALID", "error.reconciliation.page_invalid",
@@ -91,6 +103,10 @@ public class PaymentReconciliationService {
         return PageRequest.of(page, size, sort);
     }
 
+    /**
+     * Tổng quan đối soát trong khoảng ngày: lượt treo/đang chờ, hoàn muộn, callback cần thử lại/bị từ chối,
+     * khoản nhiều lượt và các bất thường.
+     */
     public ReconciliationSummaryDto summary(LocalDate from, LocalDate to) {
         DateRange r = range(from, to);
         LocalDateTime cutoff = staleCutoff();
@@ -109,6 +125,10 @@ public class PaymentReconciliationService {
                 new AnomalyCounts(successUnpaid, withoutSource, successUnpaid + withoutSource));
     }
 
+    /**
+     * Danh sách lượt VNPay lọc theo trạng thái, chỉ lượt treo (tính theo hiện tại, không giới hạn ngày), từ
+     * khóa và khoảng ngày; kèm số lượt của từng khoản thu.
+     */
     public Page<VnpayAttemptRowDto> attempts(String status, Boolean stale, String q, LocalDate from, LocalDate to,
                                              int page, int size) {
         Pageable pageable = page(page, size, Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by("reference")));
@@ -127,6 +147,7 @@ public class PaymentReconciliationService {
         return result.map(t -> attemptRow(t, counts.getOrDefault(paymentId(t), 1L), cutoff));
     }
 
+    /** Các lần hoàn tiền VNPay muộn trong khoảng ngày kèm hội viên và mã tham chiếu cổng. */
     public Page<LateRefundRowDto> lateRefunds(LocalDate from, LocalDate to, int page, int size) {
         Pageable pageable = page(page, size, Sort.unsorted());
         DateRange r = range(from, to);
@@ -148,6 +169,7 @@ public class PaymentReconciliationService {
         });
     }
 
+    /** Nhật ký callback lọc theo mã trả lời (2 chữ số), nguồn (IPN/return), mã tham chiếu và khoảng ngày. */
     public Page<IpnEventRowDto> ipnEvents(String rspCode, String source, String reference, LocalDate from, LocalDate to,
                                           int page, int size) {
         Pageable pageable = page(page, size, Sort.by(Sort.Direction.DESC, "receivedAt").and(Sort.by(Sort.Direction.DESC, "id")));
@@ -173,6 +195,10 @@ public class PaymentReconciliationService {
         return callbacks.findAll(spec, pageable).map(PaymentReconciliationService::eventRow);
     }
 
+    /**
+     * Dòng thời gian của một khoản thu: thông tin, các lượt VNPay, callback, bút toán ví liên quan và các mốc
+     * (tạo, trả, hóa đơn...).
+     */
     public PaymentTimelineDto timeline(Long paymentId) {
         Payment p = paymentId == null ? null : payments.findById(paymentId).orElse(null);
         if (p == null) {
@@ -235,6 +261,7 @@ public class PaymentReconciliationService {
 
     // --- helpers ---
 
+    /** Điều kiện truy vấn động cho lượt VNPay. */
     private Specification<VnpayTransaction> attemptSpec(String status, boolean onlyStale, String q, DateRange r,
                                                         LocalDateTime cutoff) {
         return (root, query, cb) -> {
@@ -262,6 +289,7 @@ public class PaymentReconciliationService {
         };
     }
 
+    /** Số lượt VNPay của từng khoản thu trong trang kết quả. */
     private Map<Long, Long> attemptCounts(List<VnpayTransaction> rows) {
         Set<Long> ids = rows.stream().map(PaymentReconciliationService::paymentId).filter(Objects::nonNull).collect(Collectors.toSet());
         if (ids.isEmpty()) return Map.of();
@@ -273,6 +301,7 @@ public class PaymentReconciliationService {
         return counts;
     }
 
+    /** Tạo một dòng lượt VNPay (đánh dấu treo nếu đang chờ quá mốc). */
     private VnpayAttemptRowDto attemptRow(VnpayTransaction t, long attemptCount, LocalDateTime cutoff) {
         Payment p = t.getPayment();
         String[] target = target(p);
@@ -284,12 +313,17 @@ public class PaymentReconciliationService {
                 t.getCreatedAt(), t.getExpiresAt(), t.getGatewayTransactionNo(), attemptCount);
     }
 
+    /** Tạo một dòng callback. */
     private static IpnEventRowDto eventRow(VnpayIpnEvent e) {
         return new IpnEventRowDto(e.getId(), e.getReference(), e.getSource(), e.getGatewayResponseCode(),
                 e.getGatewayTransactionStatus(), e.getGatewayTransactionNo(), e.getAmount(), e.getRspCode(), e.getReceivedAt());
     }
 
-    /** What the payment is for, with the same fallback as the gateway checkout: no linked record means a top-up. */
+    /**
+     * Đối tượng của khoản thu (loại và id); không gắn gì thì là nạp ví.
+     *
+     * What the payment is for, with the same fallback as the gateway checkout: no linked record means a top-up.
+     */
     static String[] target(Payment p) {
         if (p == null) return new String[]{null, null};
         if (p.getSubscriptionId() != null) return new String[]{"MEMBERSHIP", p.getSubscriptionId().toString()};
@@ -300,7 +334,11 @@ public class PaymentReconciliationService {
         return new String[]{"WALLET_TOPUP", null};
     }
 
-    /** Gateway reference from {@code <ref>:LATE_REFUND} or {@code ORDER_LATE_REFUND_<ref>}. */
+    /**
+     * Mã tham chiếu cổng lấy từ mã bút toán hoàn muộn ("<mã>:LATE_REFUND" hoặc "ORDER_LATE_REFUND_<mã>").
+     *
+     * Gateway reference from {@code <ref>:LATE_REFUND} or {@code ORDER_LATE_REFUND_<ref>}.
+     */
     static String gatewayReference(String walletReferenceId) {
         if (walletReferenceId == null) return null;
         if (walletReferenceId.endsWith(LATE_REFUND_SUFFIX)) {
@@ -312,26 +350,32 @@ public class PaymentReconciliationService {
         return null;
     }
 
+    /** Thông tin ngắn của hội viên. */
     private static MemberRef member(User u) {
         return u == null ? null : new MemberRef(u.getId(), u.getFullName(), u.getEmail(), u.getPhone());
     }
 
+    /** Id khoản thu của lượt VNPay. */
     private static Long paymentId(VnpayTransaction t) {
         return t.getPayment() != null ? t.getPayment().getId() : null;
     }
 
+    /** Mốc coi là treo: hiện tại trừ thời gian chờ IPN. */
     private LocalDateTime staleCutoff() {
         return LocalDateTime.now(clock).minus(VnpayPaymentGuard.SETTLEMENT_GRACE);
     }
 
+    /** Ngày hôm nay. */
     private LocalDate today() {
         return LocalDate.now(clock);
     }
 
+    /** Chuỗi trống thì null, không thì bỏ khoảng trắng hai đầu. */
     private static String blankToNull(String value) {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    /** Lỗi 400 "bộ lọc không hợp lệ" kèm tên trường. */
     private static BadRequestException invalidFilter(String field) {
         return new BadRequestException("RECONCILIATION_FILTER_INVALID", "error.reconciliation.filter_invalid",
                 new Object[]{field}, "Bộ lọc không hợp lệ: " + field + ".");

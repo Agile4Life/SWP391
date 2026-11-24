@@ -39,8 +39,10 @@ public class InvoiceItem {
     @Column(name = "amount", insertable = false, updatable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
+    /** Constructor rỗng cho JPA. */
     public InvoiceItem() {}
 
+    /** Tạo dòng hàng với mô tả, số lượng và đơn giá. */
     public InvoiceItem(String description, Integer quantity, BigDecimal unitPrice) {
         this.description = description;
         this.quantity = quantity;
@@ -48,6 +50,8 @@ public class InvoiceItem {
     }
 
     /**
+     * Tính tạm thành tiền (đơn giá × số lượng) trong bộ nhớ, dùng trước khi lưu.
+     *
      * Helper calculation method for in-memory / preview before persistence.
      */
     public BigDecimal calculateComputedAmount() {
@@ -107,6 +111,7 @@ public class InvoiceItem {
         this.unitPrice = unitPrice;
     }
 
+    /** Thành tiền: giá trị do database tính nếu có, không thì tính tạm. */
     public BigDecimal getAmount() {
         return amount != null ? amount : calculateComputedAmount();
     }

@@ -4,6 +4,10 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/**
+ * Bảng vnpay_transactions: một lượt thanh toán qua VNPay (mã tham chiếu, khoản thu, số tiền, thời điểm tạo/hết
+ * hạn, IP, trạng thái, mã giao dịch cổng).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_vnpay_transactions_status", constraints = "status IN ('pending','success','failed')")
 @Table(name = "vnpay_transactions", indexes = @Index(name = "ix_vnpay_payment_status", columnList = "payment_id,status"))
@@ -24,7 +28,9 @@ public class VnpayTransaction {
     private String status;
     @Column(name = "gateway_transaction_no", unique = true, length = 20)
     private String gatewayTransactionNo;
+    /** Constructor rỗng cho JPA. */
     protected VnpayTransaction() {}
+    /** Tạo lượt thanh toán mới ở trạng thái pending. */
     public VnpayTransaction(String reference, Payment payment, BigDecimal amount, LocalDateTime createdAt, LocalDateTime expiresAt, String ipAddress) {
         this.reference = reference; this.payment = payment; this.amount = amount;
         this.createdAt = createdAt; this.expiresAt = expiresAt; this.ipAddress = ipAddress; this.status = "pending";

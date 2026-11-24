@@ -18,6 +18,11 @@ import java.time.LocalDateTime;
         @Index(name = "ix_payments_member_status", columnList = "member_id, status"),
         @Index(name = "ix_payments_paid_at", columnList = "paid_at")
 })
+/**
+ * Bảng payments: một khoản thanh toán của hội viên cho đúng một đối tượng (kỳ gói, khóa học, buổi PT, sân, đơn
+ * hàng) hoặc nạp ví; gồm số tiền, đã hoàn, phương thức, trạng thái, thời điểm trả, người nhận, ghi chú, ảnh
+ * biên lai và hóa đơn.
+ */
 public class Payment {
 
     @Id
@@ -54,12 +59,15 @@ public class Payment {
 
     /** Lấy giá trị trường coachBookingId. */
     public Long getCoachBookingId() { return coachBookingId; }
+    /** Gán buổi PT được thanh toán. */
     public void setCoachBookingId(Long id) { coachBookingId = id; }
     /** Lấy giá trị trường courtBookingId. */
     public Long getCourtBookingId() { return courtBookingId; }
+    /** Gán lượt đặt sân được thanh toán. */
     public void setCourtBookingId(Long id) { courtBookingId = id; }
     /** Lấy giá trị trường productOrderId. */
     public Long getProductOrderId() { return productOrderId; }
+    /** Gán đơn hàng được thanh toán. */
     public void setProductOrderId(Long id) { productOrderId = id; }
     /** Lấy giá trị trường productOrder. */
     public com.swp391.scms.shop.entity.ProductOrder getProductOrder() { return productOrder; }
@@ -119,6 +127,7 @@ public class Payment {
     @OneToOne(mappedBy = "payment", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Invoice invoice;
 
+    /** Constructor rỗng cho JPA. */
     public Payment() {}
 
     /** Lấy giá trị trường id. */
@@ -261,7 +270,11 @@ public class Payment {
         this.refundedAmount = refundedAmount;
     }
 
-    /** Amount the centre keeps: what was paid minus what was refunded. */
+    /**
+     * Số tiền trung tâm giữ lại: đã trả trừ đã hoàn.
+     *
+     * Amount the centre keeps: what was paid minus what was refunded.
+     */
     public BigDecimal netAmount() {
         if (amount == null) return BigDecimal.ZERO;
         return refundedAmount == null ? amount : amount.subtract(refundedAmount);

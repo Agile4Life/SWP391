@@ -54,19 +54,24 @@ public class Invoice {
     @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InvoiceItem> items = new ArrayList<>();
 
+    /** Constructor rỗng cho JPA. */
     public Invoice() {}
 
+    /** Thêm dòng hàng vào hóa đơn và gắn hai chiều. */
     public void addItem(InvoiceItem item) {
         items.add(item);
         item.setInvoice(this);
     }
 
+    /** Bỏ dòng hàng khỏi hóa đơn. */
     public void removeItem(InvoiceItem item) {
         items.remove(item);
         item.setInvoice(null);
     }
 
     /**
+     * Tính tạm tổng tiền (trước thuế + thuế) trong bộ nhớ, dùng trước khi lưu.
+     *
      * Helper calculation method for in-memory / preview before persistence.
      */
     public BigDecimal calculateComputedTotal() {
@@ -135,6 +140,7 @@ public class Invoice {
         this.taxAmount = taxAmount;
     }
 
+    /** Tổng tiền: giá trị do database tính (cột sinh tự động) nếu có, không thì tính tạm. */
     public BigDecimal getTotalAmount() {
         return totalAmount != null ? totalAmount : calculateComputedTotal();
     }

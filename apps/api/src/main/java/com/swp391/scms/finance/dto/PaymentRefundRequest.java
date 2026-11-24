@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
 
 /**
+ * Yêu cầu hoàn tiền: lý do và số tiền (trống là hoàn toàn bộ phần còn lại).
+ *
  * Data Transfer Object for refunding a payment transaction.
  */
 @Schema(description = "Yêu cầu hoàn tiền và hủy giao dịch")
@@ -19,12 +21,15 @@ public class PaymentRefundRequest {
     @Schema(description = "Số tiền hoàn lại (mặc định hoàn toàn bộ)", example = "1500000.00")
     private BigDecimal refundAmount;
 
+    /** Constructor rỗng cho Jackson. */
     public PaymentRefundRequest() {}
 
+    /** Hoàn toàn bộ với lý do. */
     public PaymentRefundRequest(String reason) {
         this(reason, null);
     }
 
+    /** Hoàn một số tiền cụ thể với lý do. */
     public PaymentRefundRequest(String reason, BigDecimal refundAmount) {
         this.reason = reason;
         this.refundAmount = refundAmount;

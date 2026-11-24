@@ -14,6 +14,10 @@ import java.time.LocalDateTime;
         @Index(name = "ix_vnpay_ipn_events_reference", columnList = "reference,received_at"),
         @Index(name = "ix_vnpay_ipn_events_rsp_code", columnList = "rsp_code,received_at")
 })
+/**
+ * Bảng vnpay_ipn_events: một callback từ VNPay (IPN hoặc trang quay về) với các trường không nhạy cảm và mã đã
+ * trả lời, để đối soát.
+ */
 public class VnpayIpnEvent {
     public static final String SOURCE_IPN = "IPN";
     public static final String SOURCE_RETURN = "RETURN";
@@ -38,8 +42,10 @@ public class VnpayIpnEvent {
     @Column(name = "received_at", nullable = false)
     private LocalDateTime receivedAt;
 
+    /** Constructor rỗng cho JPA. */
     protected VnpayIpnEvent() {}
 
+    /** Tạo bản ghi callback. */
     public VnpayIpnEvent(String reference, String source, String gatewayResponseCode, String gatewayTransactionStatus,
                          String gatewayTransactionNo, BigDecimal amount, String rspCode, LocalDateTime receivedAt) {
         this.reference = reference; this.source = source; this.gatewayResponseCode = gatewayResponseCode;

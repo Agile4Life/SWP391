@@ -10,6 +10,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
+ * Dữ liệu tạo hóa đơn: khoản thanh toán, số hóa đơn (tự sinh nếu trống), ngày xuất, tiền trước thuế, thuế, link
+ * PDF và các dòng hàng.
+ *
  * Data Transfer Object for creating an Invoice.
  */
 @Schema(description = "Yêu cầu phát hành hóa đơn mới")
@@ -41,6 +44,7 @@ public class InvoiceCreateDto {
     @Schema(description = "Danh sách chi tiết dòng sản phẩm/dịch vụ trên hóa đơn")
     private List<InvoiceItemCreateDto> items = new ArrayList<>();
 
+    /** Constructor rỗng cho Jackson. */
     public InvoiceCreateDto() {}
 
     /** Lấy giá trị trường paymentId. */

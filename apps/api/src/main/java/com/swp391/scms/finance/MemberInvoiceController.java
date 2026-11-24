@@ -20,6 +20,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 
+/** API hóa đơn của chính hội viên (/api/v1/invoices/my): xem và tải PDF. */
 @RestController
 @RequestMapping("/api/v1/invoices/my")
 @PreAuthorize("hasRole('MEMBER')")
@@ -29,10 +30,12 @@ public class MemberInvoiceController {
     private final MessageService messageService;
     private final MemberInvoicePdfService pdfService;
 
+    /** Constructor cho test, không có MessageService. */
     public MemberInvoiceController(InvoiceService invoiceService, MemberInvoicePdfService pdfService) {
         this(invoiceService, null, pdfService);
     }
 
+    /** Constructor Spring dùng. */
     @org.springframework.beans.factory.annotation.Autowired
     public MemberInvoiceController(InvoiceService invoiceService, MessageService messageService,
             MemberInvoicePdfService pdfService) {
@@ -41,10 +44,12 @@ public class MemberInvoiceController {
         this.pdfService = pdfService;
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** GET /by-payment/{paymentId}: hóa đơn của khoản thanh toán thành công thuộc chính hội viên. */
     @GetMapping("/by-payment/{paymentId}")
     @Operation(summary = "Xem hóa đơn của giao dịch thuộc hội viên đang đăng nhập")
     public ApiResponse<InvoiceDto> getMine(@PathVariable Long paymentId,
@@ -53,6 +58,7 @@ public class MemberInvoiceController {
                 invoiceService.getMemberInvoiceByPaymentId(paymentId, principal.id()));
     }
 
+    /** GET /by-payment/{paymentId}/download: tải hóa đơn dạng PDF (không cho cache). */
     @GetMapping(value = "/by-payment/{paymentId}/download", produces = "application/pdf")
     @Operation(summary = "Tải bản PDF thông tin hóa đơn của hội viên")
     public ResponseEntity<byte[]> download(@PathVariable Long paymentId,
