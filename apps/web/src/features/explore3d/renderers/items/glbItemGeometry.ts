@@ -6,6 +6,7 @@ import { mergeAndFit } from './itemGeometries';
 /** Instanced dozens of times per kind, so keep loaded models light. */
 export const GLB_ITEM_TRIANGLE_BUDGET = 8000;
 
+/** Lỗi khi mô hình GLB vượt ngân sách tam giác hoặc không có mesh phù hợp. */
 export class GlbItemBudgetError extends Error {
   constructor(message: string) {
     super(message);
@@ -13,6 +14,7 @@ export class GlbItemBudgetError extends Error {
   }
 }
 
+/** Tùy chọn khớp mô hình GLB: góc xoay, số tam giác tối đa và bảng đổi màu theo tên vật liệu. */
 export interface GlbItemFitOptions {
   /** Radians. Rotate the model so its front matches the procedural item (front faces +Z). */
   rotationY?: number;
@@ -21,6 +23,7 @@ export interface GlbItemFitOptions {
   materialColors?: Readonly<Record<string, string>>;
 }
 
+/** Đếm số tam giác của một hình học (theo chỉ mục hoặc theo số đỉnh). */
 function triangleCount(geometry: THREE.BufferGeometry): number {
   const index = geometry.getIndex();
   if (index) return Math.floor(index.count / 3);
@@ -28,6 +31,9 @@ function triangleCount(geometry: THREE.BufferGeometry): number {
 }
 
 /**
+ * Gộp mọi mesh dưới một nút thành một hình học tô màu theo đỉnh, co vừa kích thước đồ vật (giữ tỉ lệ, đáy ở y =
+ * 0, căn giữa X/Z) để dùng chung vật liệu instanced.
+ *
  * Flatten every mesh under `root` into a single vertex-colored geometry that fits
  * inside `dimensions` (uniform "contain" scale, base on y = 0, centered on X/Z).
  *
@@ -116,6 +122,9 @@ export function buildItemGeometryFromObject(
 export const GLB_TEXTURED_TRIANGLE_BUDGET = 16000;
 
 /**
+ * Như buildItemGeometryFromObject nhưng giữ UV và vật liệu PBR riêng của mô hình (mỗi mesh một nhóm; mảng vật
+ * liệu lưu ở userData.itemMaterials).
+ *
  * Like `buildItemGeometryFromObject`, but keeps UVs and the model's own PBR
  * materials (photo-scanned CC0 props). The result is one geometry with a group
  * per source mesh; the matching material array is stored on
@@ -164,6 +173,7 @@ export function buildTexturedItemGeometryFromObject(
     materials.push(material);
   });
 
+  // Giải phóng các phần hình học và vật liệu đã tạo khi bị loại.
   const dispose = () => {
     for (const part of parts) part.dispose();
     for (const material of materials) material.dispose();

@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 
+/** Loại vật cầm tay: vợt, máy tính bảng, tạ tay hoặc găng boxing. */
 export type RiggedHandPropKind = 'racket' | 'tablet' | 'dumbbell' | 'boxing-glove';
 
+/** Mô tả vật cầm tay: loại, xương gắn vào, vị trí và xoay trong hệ xương, kích thước và màu nhấn. */
 export interface RiggedHandPropSpec {
   kind: RiggedHandPropKind;
   /** Bone the prop is parented to (it follows the clip, swing included). */
@@ -20,6 +22,7 @@ const GRIP = '#19191c';
 const CHROME = '#cfd4dc';
 const SCREEN = '#68b5c9';
 
+/** Các phần hình học dùng chung của vật cầm tay (vợt, máy tính bảng, tạ tay, găng). */
 interface SharedParts {
   handle: THREE.BufferGeometry;
   buttCap: THREE.BufferGeometry;
@@ -45,6 +48,7 @@ interface SharedParts {
 
 let shared: SharedParts | null = null;
 
+/** Tạo (một lần, có cache) các phần hình học và vật liệu dùng chung của vật cầm tay. */
 function getSharedParts(): SharedParts {
   if (shared) return shared;
   shared = {
@@ -87,6 +91,7 @@ function getSharedParts(): SharedParts {
   return shared;
 }
 
+/** Lấy vật liệu găng theo màu (điều chỉnh độ bão hòa/sáng), có cache theo màu. */
 function getGloveMaterial(parts: SharedParts, hex: string): THREE.MeshStandardMaterial {
   let mat = parts.gloveMaterials.get(hex);
   if (!mat) {
@@ -100,6 +105,7 @@ function getGloveMaterial(parts: SharedParts, hex: string): THREE.MeshStandardMa
   return mat;
 }
 
+/** Tạo một mesh với vị trí, xoay và tỉ lệ cho trước. */
 function mesh(
   geometry: THREE.BufferGeometry,
   material: THREE.Material,
@@ -117,6 +123,9 @@ function mesh(
 }
 
 /**
+ * Dựng vật cầm tay theo đơn vị thế giới và co theo modelScale để đúng cỡ khi gắn vào xương của nhân vật bị co;
+ * hình học và vật liệu dùng chung cho mọi vật.
+ *
  * Builds a hand-held prop sized in world units and shrunk by `modelScale`, so it
  * stays correct when parented under a bone of a scaled character. Geometry and
  * materials are shared between all props and live for the page's lifetime.

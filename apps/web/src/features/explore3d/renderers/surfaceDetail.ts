@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import { getSurfaceTextureSet, type SurfaceTextureName } from './surfaceTextures';
 
 /**
+ * Biến thiên bề mặt trong không gian thế giới cho vật liệu MeshStandard phẳng (biến thiên màu vĩ mô, bụi bẩn,
+ * độ nhám, bump, bề mặt ướt), để mặt phẳng lớn không bị một màu và vệt sáng của nắng thấp tự nhiên hơn.
+ *
  * World-space surface variation for flat-coloured MeshStandardMaterials,
  * ported from the Saltline material patch ("macro variation" + grime +
  * roughness breakup). Large repeated surfaces stop reading as one flat colour,
@@ -40,12 +43,14 @@ export interface SurfaceDetail {
   maxDist?: number;
 }
 
+/** Giá trị nền chung cho sàn, tường và gỗ (biến thiên màu/độ nhám, tỉ lệ nhiễu, bụi, bump). */
 const BASE = {
   floor: { albedo: 0.1, roughness: 0.1, scale: 0.55, grime: 0.35, bump: 0.5, bumpScale: 38 },
   wall: { albedo: 0.09, roughness: 0.1, scale: 0.4, grime: 0.4, bump: 0.6, bumpScale: 30 },
   wood: { albedo: 0.16, roughness: 0.12, scale: 0.9, grime: 0.25, bump: 0.5, bumpScale: 26 },
 } satisfies Record<string, SurfaceDetail>;
 
+/** Các mẫu chi tiết bề mặt dựng sẵn (sàn, cao su, sân, tatami, đánh bóng, địa hình, xe, kim loại...). */
 export const SURFACE_DETAIL_PRESETS = {
   floor: BASE.floor,
   rubber: { ...BASE.floor, texture: 'rubber_tiles', textureSize: 2 },
@@ -298,11 +303,16 @@ if (uSlMicro.x > 0.0) {
 }
 `;
 
+/**
+ * Áp chi tiết bề mặt lên vật liệu bằng cách vá shader (onBeforeCompile) và truyền các uniform; trả lại chính
+ * vật liệu đó.
+ */
 export function applySurfaceDetail<T extends THREE.MeshStandardMaterial>(
   material: T,
   detail: SurfaceDetail,
 ): T {
   const macro = { value: [detail.albedo, detail.roughness, detail.scale, detail.grime] };
+  // Uniform bump vi mô: độ nổi, tần số, độ ướt và cờ chỉ làm tối khi ướt.
   const micro = {
     value: [detail.bump ?? 0, detail.bumpScale ?? 30, detail.wet ?? 0, detail.wetDarkOnly ? 1 : 0],
   };
@@ -318,6 +328,7 @@ export function applySurfaceDetail<T extends THREE.MeshStandardMaterial>(
   if (detail.stochasticPlaza) {
     material.defines = { ...(material.defines ?? {}), SL_STOCHASTIC_PLAZA: '' };
   }
+  // Uniform texture PBR: nghịch đảo kích thước, độ ảnh hưởng màu và pháp tuyến.
   const tex = {
     value: [1 / (detail.textureSize ?? 2), detail.textureChroma ?? 0.25, detail.textureNormal ?? 1, 0],
   };
@@ -350,6 +361,9 @@ export function applySurfaceDetail<T extends THREE.MeshStandardMaterial>(
 }
 
 /**
+ * Vật liệu mặt nước kiến trúc với sóng mao dẫn tính bằng công thức ở không gian thế giới, không đọc texture nên
+ * chạy 60 FPS ổn định trên WebGL2/Metal.
+ *
  * Architectural water surface material with analytical capillary ripples in world space.
  * Zero texture fetches and no extra height derivatives — safe across WebGL2/Metal at 60 FPS.
  */
@@ -358,6 +372,7 @@ export function createWaterSurfaceMaterial(
   isLight: boolean,
 ): { material: THREE.MeshStandardMaterial; setTime: (t: number) => void } {
   const timeUniform = { value: 0 };
+  // Cập nhật thời gian cho shader.
   const setTime = (t: number): void => {
     timeUniform.value = t;
   };
@@ -415,6 +430,9 @@ export function createWaterSurfaceMaterial(
 }
 
 /**
+ * Sinh texture cụm lá kép có alpha cho tán cây: hình lá răng cưa, chuyển màu xanh tự nhiên, mặt nạ alpha dùng
+ * với alphaTest = 0,42.
+ *
  * Procedural compound leaf-cluster texture generator for alpha-tested canopies.
  * Produces crisp serrated leaf silhouettes with natural green gradients and
  * a clean alpha mask suitable for alphaTest = 0.42.
@@ -493,14 +511,19 @@ export function createProceduralFoliageTexture(): THREE.DataTexture {
   return texture;
 }
 
+/** Bộ vật liệu tán lá: vật liệu chính, vật liệu độ sâu (đổ bóng lá), hàm cập nhật thời gian và texture. */
 export interface FoliageMaterialBundle {
   material: THREE.MeshStandardMaterial;
   depthMaterial: THREE.MeshDepthMaterial;
+  // Cập nhật thời gian cho gió.
   setTime: (t: number) => void;
   texture: THREE.DataTexture;
 }
 
 /**
+ * Tạo bộ vật liệu tán lá chân thực: dịch đỉnh theo gió, ánh xuyên sáng và vật liệu độ sâu alpha-test để đổ bóng
+ * lá lốm đốm lên mặt đất và kiến trúc.
+ *
  * High-realism foliage material bundle with wind-swaying vertex displacement,
  * subsurface translucency sheen, and an alpha-tested customDepthMaterial that
  * casts authentic dappled leaf shadows onto ground and architecture.
@@ -510,6 +533,7 @@ export function createFoliageMaterialBundle(
   isLight: boolean,
 ): FoliageMaterialBundle {
   const timeUniform = { value: 0 };
+  // Cập nhật thời gian cho shader.
   const setTime = (t: number): void => {
     timeUniform.value = t;
   };
@@ -587,6 +611,9 @@ transformed += fWindDir * (fSway * fWeight);
 }
 
 /**
+ * Shader kính cho tòa nhà thành phố: giả lập nhiều tầng văn phòng sáng đèn (sàn, đèn trần, tường, mức lấp đầy
+ * ngẫu nhiên) bằng ray-cast parallax trong một lượt, cộng phản xạ Fresnel bên ngoài.
+ *
  * GPU Single-Pass Ray-Cast Parallax Interior Mapping for city skyline glazing.
  * Simulates multi-floor illuminated office spaces with slabs, ceiling troffers,
  * back/side walls, randomized occupancy, and exterior glass Fresnel reflection.
@@ -681,6 +708,9 @@ float slCityHash3(vec3 p) {
 }
 
 /**
+ * Shader kính kiến trúc một lượt: độ mờ/phản xạ theo Fresnel Schlick, hiệu ứng hai lớp kính, phản xạ bầu
+ * trời/chân trời/nắng và dải đèn LED trần, không cần MeshPhysicalMaterial.
+ *
  * Single-pass soft ray-traced architectural glass shader for MeshStandardMaterial.
  * Combines true Schlick Fresnel angle-dependent opacity/reflectivity, dual-pane IGU
  * ghost offset, analytical sky/horizon/sun bounce, and ray-cast ceiling LED strip

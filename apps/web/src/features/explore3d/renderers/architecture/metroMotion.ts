@@ -4,7 +4,12 @@ export const STATION_X = 4;
 export const DWELL_S = 7;
 export const BRAKE_M = 16;
 
-/** Position along the travel axis (-380..380). */
+/**
+ * Vị trí của tàu dọc trục di chuyển theo thời gian: chạy với vận tốc v, phanh vào ga, dừng chờ rồi tăng tốc đi
+ * tiếp trong một vòng lặp.
+ *
+ * Position along the travel axis (-380..380).
+ */
 export function metroPosition(time: number, v: number, stationS: number): number {
   const s0 = -LOOP / 2;
   const tA = (stationS - BRAKE_M - s0) / v;

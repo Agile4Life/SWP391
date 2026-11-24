@@ -1,5 +1,9 @@
 import type { ItemKind } from '../../scene/schema';
 
+/**
+ * Một mô hình GLB cho đồ vật: đường dẫn, tác giả, nguồn, giấy phép, góc xoay quanh Y và bảng đổi màu theo tên
+ * vật liệu.
+ */
 export interface ItemGlbEntry {
   /** Served from apps/web/public, for example `/models/explore3d/treadmill.glb`. */
   url: string;

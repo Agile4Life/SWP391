@@ -13,11 +13,17 @@ const SUPINE = new THREE.Quaternion().setFromEuler(new THREE.Euler(-HALF_PI, Mat
 /** Feet flat on the floor with the toes pointing away from the head. */
 const FEET_AWAY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 
+/** Nội suy tuyến tính giữa a và b theo t. */
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+/** Vector hướng chuẩn hóa từ ba thành phần. */
 const dir = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).normalize();
+/** Quaternion xoay quanh trục X một góc x. */
 const tilt = (x: number) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), x);
 
 /**
+ * Tư thế đẩy tạ trên ghế nghiêng của SÖL: xương chậu sát ghế, cột sống tựa lưng ghế, đầu gối co với giày đặt
+ * sàn và cẳng tay đẩy thanh tạ theo phương thẳng đứng trên ngực.
+ *
  * Bench press on SÖL's adjustable incline bench (26.4° backrest, seat top at y = 0.50 m):
  * pelvis sits flush in the seat crease, spine reclines up the padded backrest, knees bend
  * with sneakers planted flat on the floor, and forearms drive the bar vertically over the upper chest.
@@ -27,7 +33,9 @@ export function benchPress(phase: number): PoseOverride {
   const flare = lerp(1.68, 0.44, rise);
   const forearm = 0.44 * rise;
   // After the supine turn the character's left (+X at rest) lies toward -X.
+  // Hướng cánh tay theo bên trái/phải và độ dạng tay.
   const arm = (side: -1 | 1) => dir(side * Math.sin(flare), Math.cos(flare), -0.18);
+  // Hướng cẳng tay theo bên trái/phải và độ duỗi.
   const fore = (side: -1 | 1) => dir(side * Math.sin(forearm), Math.cos(forearm), -0.1);
   return {
     hipsPosition: [0, 0.07, -0.22],
