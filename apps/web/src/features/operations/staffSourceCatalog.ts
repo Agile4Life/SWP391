@@ -1135,6 +1135,7 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Duyệt yêu cầu hủy gói tập &amp; Hoàn tiền về Ví (": "Approve membership cancellations &amp; Wallet refunds (",
   "Làm mới yêu cầu hủy": "Refresh cancellation requests",
   "Đang tải danh sách yêu cầu hủy gói…": "Loading cancellation requests…",
+  "Không thể tải danh sách yêu cầu hủy gói. Vui lòng làm mới để thử lại.": "Unable to load cancellation requests. Please refresh to try again.",
   "Hiện không có yêu cầu hủy gói tập &amp; hoàn tiền nào cần duyệt.": "No membership cancellations &amp; refunds awaiting approval.",
   "Hội viên #": "Member #",
   "CHỜ DUYỆT": "PENDING APPROVAL",

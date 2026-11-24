@@ -2,7 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { ManagerReportsPage } from './ManagerReportsPage';
-const api = vi.hoisted(() => ({ getSummary: vi.fn(), createSnapshot: vi.fn(), toast: vi.fn() }));
+const api = vi.hoisted(() => ({ getSummary: vi.fn(), getCancellationRequests: vi.fn(), createSnapshot: vi.fn(), toast: vi.fn() }));
 vi.mock('./reportsApi', () => ({ reportsApi: api }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: () => ({ role: 'MANAGER' }) }));
 vi.mock('../../shared/ui/toast', () => ({ toast: api.toast }));
@@ -17,6 +17,7 @@ beforeEach(() => {
     recentTransactions: [{ id: 1, invoiceNumber: '=invoice', memberName: ' +cmd', packageName: '@package', amount: 100, method: '=method', paidAt: '2026-10-21T08:00:00' }],
   });
   api.createSnapshot.mockResolvedValue({ id: 1 });
+  api.getCancellationRequests.mockResolvedValue([]);
   vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
   vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
   vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
@@ -35,6 +36,16 @@ it('shows cancellation requests below daily revenue and before recent transactio
   expect(text.indexOf('Doanh thu theo ngày')).toBeGreaterThan(-1);
   expect(text.indexOf('Doanh thu theo ngày')).toBeLessThan(text.indexOf('Duyệt yêu cầu hủy'));
   expect(text.indexOf('Duyệt yêu cầu hủy')).toBeLessThan(text.indexOf('Giao dịch gần đây'));
+});
+it('shows a load error instead of an empty count and allows retry', async () => {
+  api.getCancellationRequests.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce([]);
+  await act(async () => root.render(<ManagerReportsPage />));
+  expect(host.textContent).toContain('Không thể tải danh sách yêu cầu hủy gói');
+  expect(host.textContent).not.toContain('Hiện không có yêu cầu hủy gói tập');
+  expect(host.textContent).not.toContain('Hoàn tiền về Ví (0)');
+  const refresh = [...host.querySelectorAll('button')].find(b => b.getAttribute('aria-label')?.includes('Làm mới yêu cầu hủy'))!;
+  await act(async () => refresh.click());
+  expect(host.textContent).toContain('Hiện không có yêu cầu hủy gói tập');
 });
 it('protects every untrusted CSV text cell from spreadsheet formulas', async () => {
   await exportReport();

@@ -77,6 +77,7 @@ export function ManagerReportsPage() {
 
   const [cancellationRequests, setCancellationRequests] = useState<CancellationRequestDto[]>([]);
   const [loadingCancellations, setLoadingCancellations] = useState(false);
+  const [cancellationError, setCancellationError] = useState(false);
   const [decidingCancelId, setDecidingCancelId] = useState<number | null>(null);
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
@@ -123,11 +124,13 @@ export function ManagerReportsPage() {
   const loadCancellations = useCallback(async () => {
     if (!hasAccess || typeof reportsApi.getCancellationRequests !== 'function') return;
     setLoadingCancellations(true);
+    setCancellationError(false);
     try {
       const items = await reportsApi.getCancellationRequests();
       setCancellationRequests(items ?? []);
     } catch {
       setCancellationRequests([]);
+      setCancellationError(true);
     } finally {
       setLoadingCancellations(false);
     }
@@ -640,7 +643,7 @@ export function ManagerReportsPage() {
         <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
           <div>
             <h2 className="portal-card-title">
-              {t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{cancellationRequests.filter((r) => r.status === 'PENDING').length})
+              {t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{loadingCancellations || cancellationError ? '—' : cancellationRequests.filter((r) => r.status === 'PENDING').length})
             </h2>
           </div>
           <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
@@ -648,6 +651,8 @@ export function ManagerReportsPage() {
 
         {loadingCancellations ? (
           <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
+        ) : cancellationError ? (
+          <p data-i18n-managed role="alert" className="row-card__meta" style={{ marginTop: 12 }}>{t("Không thể tải danh sách yêu cầu hủy gói. Vui lòng làm mới để thử lại.")}</p>
         ) : cancellationRequests.length === 0 ? (
           <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
             {t("Hiện không có yêu cầu hủy gói tập & hoàn tiền nào cần duyệt.")}</div>
