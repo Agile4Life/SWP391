@@ -4,9 +4,11 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { MemberCoachBookingView } from './components/MemberCoachBookingView';
 import { MemberCalendar } from './components/MemberCalendar';
 
+/** Trang lịch của hội viên: đặt và xem buổi PT 1:1 (liên kết cũ của lớp nhóm quay về tab PT). */
 export function MemberClassesPage() {
   const { lang } = useLanguage();
   const [params, setParams] = useSearchParams();
+  /** Chọn chuỗi theo ngôn ngữ hiện tại. */
   const text = (vi: string, en: string) => lang === 'en' ? en : vi;
   // Giữ URL cũ cho liên kết thanh toán PT; tab lớp nhóm cũ trở về lịch PT.
   const booking = params.get('tab') === 'pt';

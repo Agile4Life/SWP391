@@ -3,6 +3,7 @@ import { useI18n } from '../../shared/i18n';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { MemberNotificationsPanel } from './MemberNotificationsPage';
 
+/** Hộp thông báo nổi: đặt vị trí theo nút mở, đóng bằng Esc hoặc bấm ra ngoài. */
 export function NotificationsPopover({ onClose, triggerRef }: { onClose: () => void; triggerRef: RefObject<HTMLElement | null> }) {
   useLanguage();
   const { t } = useI18n();
@@ -34,9 +35,11 @@ export function NotificationsPopover({ onClose, triggerRef }: { onClose: () => v
 
   useEffect(() => {
     closeButton.current?.focus();
+    // Nhấn Esc thì đóng.
     const escape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); onClose(); }
     };
+    // Bấm ra ngoài hộp và nút mở thì đóng.
     const outside = (event: PointerEvent) => {
       if (event.target instanceof Node && !panel.current?.contains(event.target) && !triggerRef.current?.contains(event.target)) onClose();
     };

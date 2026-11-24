@@ -7,6 +7,7 @@ import { ActiveTrainingPlan, type PlanLoadState } from './ActiveTrainingPlan';
 import { getMyTrainingPlans } from './memberProgressApi';
 import './member-progress.css';
 
+/** Trang giáo án của hội viên: giáo án đang áp dụng theo ngày hôm nay, có tải lại khi lỗi. */
 export function MemberProgressPage() {
   useLanguage();
   // Trạng thái Giáo án độc lập; retry đưa UI về loading trước khi gọi lại API.
@@ -16,6 +17,7 @@ export function MemberProgressPage() {
 
   // Dùng ngày của trung tâm để Giáo án còn hiệu lực được chọn đúng khi sang ngày mới.
   useEffect(() => {
+    // Cập nhật "hôm nay" mỗi 30 giây và khi lấy lại focus.
     const update = () => setToday(centerNowParts().date);
     const timer = window.setInterval(update, 30000);
     window.addEventListener('focus', update);

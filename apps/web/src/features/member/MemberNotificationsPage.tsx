@@ -24,10 +24,12 @@ const category: Record<string, { label: string; en: string }> = {
   system: { label: 'Hệ thống', en: 'System' },
 };
 
+/** Lỗi hiển thị khi không tải được thông báo. */
 function errorMessage(error: unknown): string | Error {
   return safeMessage(error, 'Không thể tải thông báo. Vui lòng thử lại.');
 }
 
+/** Trang Thông báo: chuyển hướng tới màn chính của vai trò (kèm yêu cầu mở khung thông báo). */
 export function MemberNotificationsPage() {
   useLanguage();
   const role = getCurrentUser()?.role;
@@ -35,6 +37,7 @@ export function MemberNotificationsPage() {
   return <Navigate to={redirectPath} replace state={{ openNotifications: true }} />;
 }
 
+/** Khung danh sách thông báo: phân trang, đánh dấu đã đọc, đọc tất cả và mở trang đích của từng thông báo. */
 export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => void }) {
   useLanguage();
   const { lang, t } = useI18n();
@@ -58,6 +61,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
   const serverEnabled = true;
   useEffect(() => { navigationStarted.current = false; }, [location.key]);
 
+  // Điều hướng tới trang đích; khóa để không điều hướng hai lần.
   function openDestination(destination: string) {
     // Cả thông báo API và thông báo thao tác dùng chung khóa điều hướng, kể cả click trong cùng nhịp.
     if (navigationStarted.current) return;
@@ -65,6 +69,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
     onNavigate?.(); navigate(destination);
   }
 
+  // Tải thông báo và số chưa đọc; chỉ lần gọi mới nhất được dùng.
   const load = useCallback(async () => {
     const version = ++request.current.version;
     if (!serverEnabled) { setData(null); setCount(0); setLoading(false); return; }
@@ -82,6 +87,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
     return () => { sequence.version++; };
   }, [load]);
 
+  // Mở một thông báo: đánh dấu đã đọc rồi điều hướng tới trang đích.
   async function open(item: MemberNotification) {
     // Dùng ref để chặn click trùng trước khi React cập nhật state; chỉ mở trang, không chạy nghiệp vụ.
     if (mutationBusy.current || navigationStarted.current) return;
@@ -104,6 +110,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
     finally { mutationBusy.current = false; setBusy(false); }
   }
 
+  // Đánh dấu mọi thông báo là đã đọc.
   async function readAll() {
     if (mutationBusy.current || navigationStarted.current) return;
     mutationBusy.current = true;

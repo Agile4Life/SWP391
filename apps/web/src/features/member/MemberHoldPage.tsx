@@ -22,22 +22,29 @@ import {
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
+/** Định dạng Date thành chuỗi YYYY-MM-DD. */
 function isoDate(date: Date): string {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
+/** Cộng/trừ số ngày vào ngày YYYY-MM-DD. */
 function addDays(iso: string, days: number): string {
   const date = new Date(`${iso}T00:00:00`);
   date.setDate(date.getDate() + days);
   return isoDate(date);
 }
 
+/** Số ngày tính cả hai đầu của khoảng [start, end]. */
 function inclusiveDays(start: string, end: string): number {
   return Math.round((new Date(`${end}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000) + 1;
 }
 
-/** The subscription a hold applies to: the one running today, else one that is already frozen. */
+/**
+ * Chọn gói áp dụng bảo lưu: gói đang hoạt động hôm nay, nếu không thì gói đang bảo lưu.
+ *
+ * The subscription a hold applies to: the one running today, else one that is already frozen.
+ */
 function pickSubscription(history: MemberSubscription[]): MemberSubscription | null {
   const today = isoDate(new Date());
   return history.find((item) => item.status === 'active' && item.startDate <= today && item.endDate >= today)
@@ -45,6 +52,10 @@ function pickSubscription(history: MemberSubscription[]): MemberSubscription | n
     ?? null;
 }
 
+/**
+ * Trang bảo lưu của hội viên: xem chính sách, gửi yêu cầu bảo lưu kèm tài liệu y tế, xem tình trạng, rút yêu
+ * cầu và mở tài liệu đã nộp.
+ */
 export function MemberHoldPage() {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
@@ -59,6 +70,7 @@ export function MemberHoldPage() {
   const [formError, setFormError] = useState<string | Error | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Tải gói hiện tại, chính sách và yêu cầu bảo lưu hiện có.
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -86,6 +98,7 @@ export function MemberHoldPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  // Ngày bắt đầu sớm nhất được chọn (hôm nay + 2 ngày).
   const earliestStart = useMemo(() => addDays(isoDate(new Date()), 2), []);
   const status = detail?.holdStatus ?? null;
   // A pending request, or an approved hold that has not started yet, can still be withdrawn.
@@ -94,6 +107,7 @@ export function MemberHoldPage() {
   const canRequest = !!subscription && !!policy?.allowed && !policy.alreadyUsed
     && subscription.status === 'active' && status !== 'PENDING' && status !== 'APPROVED';
 
+  // Chọn tệp đính kèm, kiểm tra số lượng và dung lượng theo chính sách.
   function onPickFiles(list: FileList | null) {
     setFormError(null);
     if (!list) return;
@@ -113,6 +127,7 @@ export function MemberHoldPage() {
     setFiles(picked);
   }
 
+  // Gửi yêu cầu bảo lưu sau khi kiểm tra lý do, khoảng ngày, thời hạn báo trước và độ dài bảo lưu.
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!subscription || !policy || busy) return;
@@ -142,6 +157,7 @@ export function MemberHoldPage() {
     }
   }
 
+  // Rút yêu cầu bảo lưu đang chờ hoặc đã duyệt nhưng chưa bắt đầu.
   async function onWithdraw() {
     if (!subscription || busy) return;
     setBusy(true);
@@ -156,6 +172,7 @@ export function MemberHoldPage() {
     }
   }
 
+  // Mở tài liệu đã nộp trong tab mới qua object URL (thu hồi sau 60 giây).
   async function openDocument(documentId: number) {
     if (!subscription) return;
     try {

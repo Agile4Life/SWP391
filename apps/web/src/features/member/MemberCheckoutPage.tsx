@@ -20,6 +20,10 @@ import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './member-checkout.css';
 import { localizableError } from '../../shared/lib/errorMessage';
 
+/**
+ * Trang thanh toán gói tập: chọn gói, xác minh danh tính (KYC) nếu cần rồi thanh toán bằng VNPay hoặc Ví SÖL
+ * (VnpayPayButton); thanh toán tiền mặt thì làm tại quầy lễ tân.
+ */
 export function MemberCheckoutPage() {
   useLanguage();
   const { t } = useI18n();
@@ -52,6 +56,7 @@ export function MemberCheckoutPage() {
   const [kycSuccess, setKycSuccess] = useState('');
   const [refreshingKyc, setRefreshingKyc] = useState(false);
 
+  // Tải lại hồ sơ để cập nhật trạng thái xác minh danh tính.
   async function refreshKycStatus() {
     setRefreshingKyc(true);
     try {
@@ -69,6 +74,7 @@ export function MemberCheckoutPage() {
     let active = true;
     let request = 0;
     preparedSubscriptionId.current = existingSubscriptionId;
+    // Tải gói, lịch sử và hồ sơ để chuẩn bị thanh toán; chỉ lần gọi mới nhất được dùng.
     async function initCheckout() {
       const version = ++request;
       setLoading(true);
@@ -120,6 +126,7 @@ export function MemberCheckoutPage() {
     }
 
     void initCheckout();
+    // Quay lại trang từ bộ nhớ đệm thì khởi tạo lại.
     const restore = (event: PageTransitionEvent) => { if (event.persisted) void initCheckout(); };
     window.addEventListener('pageshow', restore);
     return () => {
@@ -131,6 +138,7 @@ export function MemberCheckoutPage() {
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
   const isKycVerified = Boolean(profile?.identityVerified || hasPriorSubscriptions);
 
+  // Chọn ảnh giấy tờ mặt trước hoặc sau (tối đa 2MB).
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>, target: 'front' | 'back') {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -148,6 +156,7 @@ export function MemberCheckoutPage() {
     });
   }
 
+  // Gửi hồ sơ xác minh danh tính sau khi kiểm tra số giấy tờ và ảnh.
   async function handleKycSubmit(e: React.FormEvent) {
     e.preventDefault();
     setKycError('');
@@ -207,6 +216,7 @@ export function MemberCheckoutPage() {
     }
   }
 
+  // Chuẩn bị khoản cần thanh toán: dùng lại đăng ký chờ thanh toán đã tạo cho đúng gói, nếu không thì tạo mới.
   async function preparePaymentTarget() {
     if (!selectedPackage) throw Object.assign(new Error('Không tìm thấy gói tập.'), { translation: memberMessage("Không tìm thấy gói tập.") });
     const history = await getMembershipHistory();

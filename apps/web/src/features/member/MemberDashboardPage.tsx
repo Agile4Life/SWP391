@@ -18,6 +18,7 @@ import { formatCenterDate } from '../../shared/lib/centerTime';
 
 const DAY_MS = 86_400_000;
 
+/** Kiểm tra chuỗi ngày YYYY-MM-DD hợp lệ (ngày có thật trên lịch). */
 function validDate(value: string | null | undefined): boolean {
   if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return false;
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
@@ -29,17 +30,20 @@ function validDate(value: string | null | undefined): boolean {
   );
 }
 
+/** Đổi chuỗi ngày thành Date theo giờ địa phương. */
 function localDate(value: string): Date {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);
 }
 
+/** Số thứ tự ngày của một Date (bỏ phần giờ). */
 function dayNumber(date: Date): number {
   return Math.floor(
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS,
   );
 }
 
+/** Tiến độ gói đã trôi qua (phần trăm) từ ngày bắt đầu đến ngày kết thúc/đã trả tiền tới. */
 function membershipProgress(
   subscription: MemberSubscription,
   today: Date,
@@ -54,20 +58,27 @@ function membershipProgress(
   return Math.min(100, Math.max(0, (used / duration) * 100));
 }
 
+/** Định dạng ngày thành dd/MM/yyyy. */
 function formatDate(value: string): string {
   return formatCenterDate(value.slice(0, 10));
 }
 
+/** Trạng thái tải gói: đang tải, lỗi hoặc thành công kèm gói (có thể chưa có). */
 type MembershipState =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'success'; membership: MemberSubscription | null };
 
+/** Trạng thái tải lịch PT: đang tải, lỗi hoặc thành công kèm danh sách buổi. */
 type PtState =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'success'; bookings: CoachBookingDto[] };
 
+/**
+ * Bảng điều khiển của hội viên: gói tập hiện tại và tiến độ, các buổi PT sắp tới; tự làm mới khi quay lại tab
+ * hoặc có mạng.
+ */
 export function MemberDashboardPage() {
   useLanguage();
   const userName = useCurrentUser()?.name || memberText('Hội viên');
@@ -78,6 +89,7 @@ export function MemberDashboardPage() {
   const [ptState, setPtState] =
     useState<PtState>({ status: 'loading' });
 
+  // Tải gói hiện tại (silent thì không hiện trạng thái đang tải).
   const loadMembership = useCallback(async (silent = false) => {
     if (!silent) setMembershipState({ status: 'loading' });
 
@@ -89,6 +101,7 @@ export function MemberDashboardPage() {
     }
   }, []);
 
+  // Tải lịch PT 1:1 của hội viên.
   const loadPtBookings = useCallback(async (silent = false) => {
     if (!silent) setPtState({ status: 'loading' });
 
@@ -104,6 +117,7 @@ export function MemberDashboardPage() {
   useEffect(() => {
     void loadMembership();
     void loadPtBookings();
+    // Làm mới ngầm khi tab đang hiển thị.
     const syncDashboard = () => {
       if (document.visibilityState === 'hidden') return;
       void loadMembership(true);

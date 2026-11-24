@@ -12,14 +12,20 @@ import { memberCheckinApi } from './memberCheckinApi';
 import type { CheckinDto } from '../reception/checkinApi';
 import { centerNowParts, formatCenterDateTime, formatCenterTime } from '../../shared/lib/centerTime';
 
+/** Chế độ quét: vào hoặc ra. */
 type Mode = 'in' | 'out';
 const RANGES = [{ days: 1, label: 'Hôm nay' }, { days: 7, label: '7 ngày' }, { days: 30, label: '30 ngày' }];
+/** Lùi số ngày từ một ngày YYYY-MM-DD. */
 function subtractCenterDays(dateKey: string, offsetDays: number): string {
   const date = new Date(`${dateKey}T12:00:00Z`);
   date.setUTCDate(date.getUTCDate() - offsetDays);
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * Trang tự check-in/out của hội viên bằng cách quét QR cổng ở lễ tân: kiểm tra có gói đang hoạt động, hiện kết
+ * quả và lịch sử ra vào theo khoảng ngày.
+ */
 export function MemberCheckInPage() {
   useLanguage();
   const plan = useActivePlan();
@@ -34,6 +40,7 @@ export function MemberCheckInPage() {
   const [online, setOnline] = useState(navigator.onLine);
   const busy = useRef(false);
   const mounted = useRef(true);
+  // Tải lịch sử ra vào (hôm nay hoặc 7/30 ngày).
   const loadHistory = useCallback(async () => {
     setLoading(true); setHistoryError('');
     try { const toDate = centerNowParts().date; const fromDate = subtractCenterDays(toDate, days - 1);
@@ -44,11 +51,13 @@ export function MemberCheckInPage() {
   useEffect(() => {
     mounted.current = true;
     void loadHistory();
+    // Cập nhật trạng thái có mạng hay không.
     const update = () => setOnline(navigator.onLine);
     window.addEventListener('online', update); window.addEventListener('offline', update);
     return () => { mounted.current = false; window.removeEventListener('online', update); window.removeEventListener('offline', update); };
   }, [loadHistory]);
 
+  // Quét mã QR cổng: cần có mạng, đúng định dạng SOL:GATE:, rồi gửi check-in hoặc check-out.
   async function scan(code: string) {
     if (busy.current) return;
     setResult(null); setError('');

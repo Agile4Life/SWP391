@@ -5,8 +5,10 @@ import { memberText } from './memberI18n';
 import { activePlans, planDays } from './progressPresentation';
 import type { TrainingItem, TrainingPlan } from './memberProgressApi';
 
+/** Trạng thái tải giáo án: đang tải, lỗi hoặc sẵn sàng kèm danh sách. */
 export type PlanLoadState = { kind: 'loading' } | { kind: 'error' } | { kind: 'ready'; data: TrainingPlan[] };
 
+/** Nhãn thứ trong tuần theo ngôn ngữ (không có thứ thì "linh hoạt"). */
 function dayLabel(day: number | null): string {
   switch (day) {
     case 1: return memberText('Thứ 2', 'Monday');
@@ -20,8 +22,10 @@ function dayLabel(day: number | null): string {
   }
 }
 
+/** Định dạng ngày thành dd/MM/yyyy. */
 const formatDate = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
+/** Hiển thị liều tập của một bài: số hiệp × reps, thời lượng và thời gian nghỉ. */
 function Dose({ item }: { item: TrainingItem }) {
   return <div className="member-progress-dose">
     {item.sets != null && item.reps != null && <span className="member-progress-dose__chip is-volume">{item.sets}{memberText(' hiệp × ')}{item.reps}{memberText(' lần')}</span>}
