@@ -39,6 +39,9 @@ const OVERVIEW_DIRECTION: Vec3 = [42, 34, 48];
 const OVERVIEW_VISIBLE_WIDTH_M = 135;
 
 /**
+ * Góc nhìn toàn cảnh cố định: cùng hướng và độ nghiêng với OVERVIEW_VIEWPOINT, lùi xa theo tỉ lệ khung (aspect)
+ * để toàn bộ khuôn viên luôn lọt khung.
+ *
  * The locked hero shot: same bearing and tilt as `OVERVIEW_VIEWPOINT`, pulled back so the whole
  * campus and the skyline behind it stay in frame at this canvas aspect (width / height). The
  * camera can't be zoomed by hand, so the distance has to follow the window, not the other way round.
@@ -62,6 +65,10 @@ export function getOverviewViewpoint(aspect: number): Viewpoint {
   };
 }
 
+/**
+ * Giới hạn camera: khoảng cách gần/xa, góc nghiêng cố định (khóa một độ nghiêng điện ảnh) và hộp biên cho điểm
+ * nhìn.
+ */
 export const CAMERA_LIMITS = {
   minDistance: 0.65,
   maxDistance: 165,
@@ -83,12 +90,14 @@ const CANDIDATE_YAW_SIGNS: readonly Vec2[] = [
   [-1, -1],
 ];
 
+/** Đoạn tường đặc 2D (sau khi trừ các lối đi): hai đầu và độ dày. */
 export interface SolidWallSegment2D {
   a: Vec2;
   b: Vec2;
   thickness: number;
 }
 
+/** Hộp vật cản 2D theo trục (minX, maxX, minZ, maxZ). */
 export interface ObstacleBox2D {
   minX: number;
   maxX: number;
@@ -109,6 +118,9 @@ const WALKABLE_SURFACE_ITEM_KINDS = new Set<string>([
 ]);
 
 /**
+ * Gom các hộp vật cản 2D của thiết bị đứng sàn (và bể sâu của hồ bơi tầng B1) để người đi bộ góc nhìn thứ nhất
+ * không xuyên qua máy, quầy, tủ hoặc nước sâu.
+ *
  * Collects 2D axis-aligned obstacle boxes for solid floor-standing equipment and the B1 deep pool basin
  * so first-person walkers cannot pass through machines, counters, lockers, or deep water.
  */
@@ -151,6 +163,7 @@ export function getWalkObstaclesForLevel(
   return obstacles;
 }
 
+/** Giới hạn điểm nhìn của camera trong hộp biên CAMERA_LIMITS. */
 export function clampTargetToBounds(target: Vec3): Vec3 {
   const [minX, minY, minZ] = CAMERA_LIMITS.boundaryMin;
   const [maxX, maxY, maxZ] = CAMERA_LIMITS.boundaryMax;
@@ -161,6 +174,10 @@ export function clampTargetToBounds(target: Vec3): Vec3 {
   ];
 }
 
+/**
+ * Làm sạch tư thế camera: thay giá trị không hợp lệ bằng giá trị an toàn và không cho camera thấp hơn
+ * minCameraY.
+ */
 export function sanitizeCameraPose(
   position: Vec3,
   target: Vec3,
@@ -259,6 +276,7 @@ export function sanitizeCameraPose(
   };
 }
 
+/** Tính bước thu phóng tỉ lệ theo khoảng cách hiện tại (vào hoặc ra), nằm trong giới hạn khoảng cách. */
 export function computeProportionalZoomStep(
   currentDistance: number,
   direction: 'in' | 'out',
@@ -277,6 +295,7 @@ export function computeProportionalZoomStep(
   );
 }
 
+/** Người dùng có bật chế độ giảm chuyển động không. */
 export function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false;
@@ -288,6 +307,10 @@ export function prefersReducedMotion(): boolean {
   }
 }
 
+/**
+ * Chuyến bay giữa hai tầng có cần dừng ở điểm trung gian (hai chặng) không; không áp dụng khi thiếu tầng, chọn
+ * tất cả hoặc cùng tầng.
+ */
 export function needsTwoHopFlight(
   fromLevel: LevelCode | 'ALL' | null | undefined,
   toLevel: LevelCode | 'ALL' | null | undefined,
@@ -302,6 +325,8 @@ export function needsTwoHopFlight(
 }
 
 /**
+ * Tách một bức tường thành các đoạn đặc 2D bằng cách cắt các lỗ đi qua được (cửa, vòm có sillHeight = 0).
+ *
  * Splits a WallNode into 2D solid segments by carving out walkable openings (doors/arches where sillHeight === 0).
  */
 export function getSolidWallSegments2D(wall: WallNode): SolidWallSegment2D[] {
@@ -351,10 +376,12 @@ export function getSolidWallSegments2D(wall: WallNode): SolidWallSegment2D[] {
   return segments;
 }
 
+/** Tích có hướng 2D của ba điểm (dấu cho biết chiều quay). */
 function ccw2D(a: Vec2, b: Vec2, c: Vec2): number {
   return (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
 }
 
+/** Hai đoạn thẳng có cắt nhau không. */
 export function segmentsIntersect2D(p1: Vec2, p2: Vec2, q1: Vec2, q2: Vec2): boolean {
   const d1 = ccw2D(p1, p2, q1);
   const d2 = ccw2D(p1, p2, q2);
@@ -368,6 +395,7 @@ export function segmentsIntersect2D(p1: Vec2, p2: Vec2, q1: Vec2, q2: Vec2): boo
   return false;
 }
 
+/** Điểm gần nhất trên đoạn thẳng a–b so với điểm p. */
 export function closestPointOnSegment2D(p: Vec2, a: Vec2, b: Vec2): Vec2 {
   const abx = b[0] - a[0];
   const abz = b[1] - a[1];
@@ -377,6 +405,7 @@ export function closestPointOnSegment2D(p: Vec2, a: Vec2, b: Vec2): Vec2 {
   return [a[0] + abx * t, a[1] + abz * t];
 }
 
+/** Đẩy một vòng tròn bán kính radius ra khỏi hộp vật cản (mở rộng hộp theo bán kính). */
 function pushCircleOutOfBox2D(
   p: Vec2,
   box: ObstacleBox2D,
@@ -422,6 +451,9 @@ function pushCircleOutOfBox2D(
 }
 
 /**
+ * Giải quyết chuyển động 2D từ from tới to cho vòng va chạm tròn với tường đặc và vật cản: chia bước nhỏ, khử
+ * xuyên qua góc nhiều lần và chặn bằng kiểm tra tô-pô để người đi trượt dọc tường và đi qua cửa.
+ *
  * Resolves 2D movement from `from` to `to` with a circle collider against solid wall segments
  * and optional equipment/pool obstacles.
  * Uses micro-substepping (0.16m), 4-iteration corner depenetration, and a hard topological guard
@@ -575,6 +607,7 @@ export function resolveWalkCollision2D(
   return curr;
 }
 
+/** Đếm số tường trong (không phải tường ngoài) mà đoạn from–to cắt qua (tường kính tính nửa). */
 function countInteriorWallCrossings(from: Vec2, to: Vec2, walls: WallNode[]): number {
   let hits = 0;
   for (const wall of walls) {
@@ -589,6 +622,7 @@ function countInteriorWallCrossings(from: Vec2, to: Vec2, walls: WallNode[]): nu
   return hits;
 }
 
+/** Chọn góc nhìn tốt nhất tới một nút (thử các hướng ứng viên, ưu tiên ít tường che) theo chế độ tầng. */
 export function computeBestViewpoint(
   doc: SceneDoc,
   nodeId: string,
@@ -716,6 +750,7 @@ export function computeBestViewpoint(
   };
 }
 
+/** Tính góc nhìn vừa khung cho hộp bao của một nút theo góc mở fovDeg và chế độ tầng. */
 export function computeFitViewpoint(
   doc: SceneDoc,
   nodeId: string,
@@ -792,6 +827,7 @@ export const WALK_FOV_DEG = 60;
 export const WALK_COLLIDER_RADIUS_M = 0.42;
 export const WALK_MAX_PITCH_RAD = (62 * Math.PI) / 180;
 
+/** Tư thế đi bộ: tầng, vị trí, góc xoay yaw (0 nhìn về -Z) và góc ngẩng pitch. */
 export interface WalkPose {
   levelCode: LevelCode;
   position: [number, number, number];
@@ -799,6 +835,7 @@ export interface WalkPose {
   pitch?: number; // radians vertical look: positive looks up, negative looks down
 }
 
+/** Đầu vào một bước đi bộ: tiến/lùi, đi ngang, xoay và thay đổi góc ngẩng (từ -1 đến 1). */
 export interface WalkStepInput {
   forward: number; // -1..1
   strafe: number;  // -1..1
@@ -806,11 +843,13 @@ export interface WalkStepInput {
   pitchDelta?: number; // -1..1
 }
 
+/** Giới hạn góc ngẩng trong khoảng cho phép (giá trị sai thì 0). */
 export function clampWalkPitch(pitchRad: number): number {
   if (!Number.isFinite(pitchRad)) return 0;
   return Math.min(WALK_MAX_PITCH_RAD, Math.max(-WALK_MAX_PITCH_RAD, pitchRad));
 }
 
+/** Xoay tư thế đi bộ theo góc yaw và pitch (pitch được giới hạn). */
 export function rotateWalkPose(
   pose: WalkPose,
   deltaYawRad: number,
@@ -827,6 +866,7 @@ export function rotateWalkPose(
   };
 }
 
+/** Đổi tư thế đi bộ thành góc nhìn camera (điểm nhìn ở phía trước một đoạn cố định). */
 export function poseToViewpoint(pose: WalkPose): Viewpoint {
   const [x, y, z] = pose.position;
   const pitch = clampWalkPitch(pose.pitch ?? 0);
@@ -851,6 +891,7 @@ export function poseToViewpoint(pose: WalkPose): Viewpoint {
   };
 }
 
+/** Trạng thái leo cầu thang: có đang ở cầu thang không, tiến độ 0–1, độ cao đã leo (0–2,15 m) và id cầu thang. */
 export interface StairElevationState {
   onStairs: boolean;
   progress: number; // 0 at lower south entry, 1 at upper north landing
@@ -858,7 +899,11 @@ export interface StairElevationState {
   stairItemId: string | null;
 }
 
-/** Maps normalized South->North stair travel [0..1] onto the 2-flight + mid-landing elevation curve. */
+/**
+ * Ánh xạ tiến độ đi cầu thang [0..1] sang tỉ lệ độ cao: hai vế thang và chiếu nghỉ ở giữa.
+ *
+ * Maps normalized South->North stair travel [0..1] onto the 2-flight + mid-landing elevation curve.
+ */
 function stairProgressToElevationFraction(progress: number): number {
   const p = Math.max(0, Math.min(1, progress));
   if (p <= 0.43) return (p / 0.43) * 0.5;
@@ -866,6 +911,7 @@ function stairProgressToElevationFraction(progress: number): number {
   return 0.5 + ((p - 0.57) / 0.43) * 0.5;
 }
 
+/** Tính độ cao leo cầu thang tại vị trí (x, z) của một tầng. */
 export function computeStairElevationOffset(
   doc: SceneDoc,
   levelCode: LevelCode,
@@ -921,6 +967,9 @@ export function computeStairElevationOffset(
 const VERTICAL_STAIR_FLOORS: readonly LevelCode[] = ['B1', 'L1', 'L2', 'RF'] as const;
 
 /**
+ * Đánh giá một bước đi qua chiếu nghỉ cầu thang có kích hoạt chuyển tầng lên hoặc xuống (B1, L1, L2, RF) không;
+ * trả mã tầng mới hoặc null.
+ *
  * Evaluates whether a walk step across a `stair-core` landing triggers a floor transition
  * up or down between B1 <-> L1 <-> L2 <-> RF.
  */
@@ -975,6 +1024,7 @@ export function evaluateStairOrElevatorPortal(
   return null;
 }
 
+/** Tính tư thế đi bộ ban đầu cho một tầng theo đối tượng đang chọn và tầng đang xem. */
 export function computeInitialWalkPose(
   doc: SceneDoc,
   selectedId: string | null,
@@ -1179,6 +1229,10 @@ export function computeInitialWalkPose(
   };
 }
 
+/**
+ * Tính tư thế đi bộ sau một bước: áp dụng xoay, tiến/ngang theo thời gian dtSec, va chạm với tường và vật cản,
+ * và giới hạn trong sàn.
+ */
 export function stepWalkPose(
   pose: WalkPose,
   input: WalkStepInput,
@@ -1269,6 +1323,10 @@ export function stepWalkPose(
   };
 }
 
+/**
+ * Trạng thái đang đi trên một vế cầu thang liên tục: vế (từ tầng nào tới tầng nào), tiến độ, độ cao chân và
+ * tầng va chạm.
+ */
 export interface ContinuousStairFlightState {
   onStairs: boolean;
   flightFrom: LevelCode | null;
@@ -1281,6 +1339,9 @@ export interface ContinuousStairFlightState {
 }
 
 /**
+ * Xác định vế cầu thang 3D (B1→L1, L1→L2, L2→RF) người đi đang ở, dựa trên cả vị trí (x, z) lẫn độ cao chân vì
+ * các tầng dùng chung giếng thang.
+ *
  * Resolves which physical 3D stair flight (`B1->L1`, `L1->L2`, or `L2->RF`) the walker is on
  * using BOTH `(x, z)` stairwell footprint and actual 3D elevation proximity (`currentFootY`).
  *
@@ -1360,6 +1421,8 @@ export function resolveContinuousStairFlight(
 }
 
 /**
+ * Tìm tầng trong nhà có độ cao sàn gần độ cao chân hiện tại nhất.
+ *
  * Finds the structural indoor floor level (`B1`, `L1`, `L2`, or `RF`) whose slab elevation
  * matches the walker's current vertical foot position.
  */
@@ -1382,6 +1445,10 @@ export function resolveHorizontalLevelAtElevation(
 }
 
 /**
+ * Bộ giải chuyển động 3D liên tục cho chế độ đi bộ: va chạm tường/vật cản trượt mượt, chuyển liền mạch sân
+ * trong và sân tennis, khóa độ cao theo vế cầu thang và chặn lan can; trả tư thế mới, độ cao mắt mục tiêu và
+ * trạng thái cầu thang.
+ *
  * Continuous 3D movement solver for live WalkView:
  * - Zero-stick tangent-sliding wall + equipment collision
  * - Seamless indoor/outdoor L1 courtyard + tennis arena transition
