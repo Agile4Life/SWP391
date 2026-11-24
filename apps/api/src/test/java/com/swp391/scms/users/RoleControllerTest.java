@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller RoleController (role controller). */
 @ExtendWith(MockitoExtension.class)
 class RoleControllerTest {
 
@@ -38,6 +39,7 @@ class RoleControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (make role). */
     private RoleDto makeRole(Long id, String code, String name) {
         RoleDto r = new RoleDto();
         r.setId(id);
@@ -46,6 +48,7 @@ class RoleControllerTest {
         return r;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (make perm). */
     private PermissionDto makePerm(Long id, String code, String name, String module) {
         PermissionDto p = new PermissionDto();
         p.setId(id);

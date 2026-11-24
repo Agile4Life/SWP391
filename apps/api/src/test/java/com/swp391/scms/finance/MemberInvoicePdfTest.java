@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho MemberInvoicePdf (member invoice pdf). */
 class MemberInvoicePdfTest {
     @Test
     void generatesDownloadFromOwnedPersistedInvoice() throws Exception {

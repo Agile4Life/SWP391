@@ -30,7 +30,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** Spec 2026-11-09 sections 1.3 and 1.5: a course must fit the membership; an upgrade keeps the credits already spent. */
+/**
+ * Bộ kiểm thử cho CourseMembershipRules (course membership rules).
+ *
+ * Spec 2026-11-09 sections 1.3 and 1.5: a course must fit the membership; an upgrade keeps the credits already spent.
+ */
 class CourseMembershipRulesTest {
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
     private final GymClassRepository gymClasses = mock(GymClassRepository.class);
@@ -55,6 +59,7 @@ class CourseMembershipRulesTest {
                 .thenReturn(true);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sub). */
     private MembershipSubscription sub(long id, String tier, int credits, LocalDate start, LocalDate end) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setId(id);

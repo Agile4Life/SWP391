@@ -17,6 +17,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/** Bộ kiểm thử cho service RoleService (role service). */
 @ExtendWith(MockitoExtension.class)
 class RoleServiceTest {
 

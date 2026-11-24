@@ -36,7 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Runs the actual Hibernate schema and PostgreSQL invariants for Supplement Shop on a dedicated test schema. */
+/**
+ * Bộ kiểm thử cho ProductOrderPostgreSql (product order postgre sql).
+ *
+ * Runs the actual Hibernate schema and PostgreSQL invariants for Supplement Shop on a dedicated test schema.
+ */
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ProductOrderPostgreSqlTest {
@@ -223,6 +227,7 @@ class ProductOrderPostgreSqlTest {
         buildSessionFactory(source, schema, action).close();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (build session factory). */
     private static EntityManagerFactory buildSessionFactory(SingleConnectionDataSource source, String schema, String action) throws Exception {
         var registry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.connection.datasource", source)

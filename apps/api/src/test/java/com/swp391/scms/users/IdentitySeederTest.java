@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.any;
 
+/** Bộ kiểm thử cho bộ khởi tạo dữ liệu IdentitySeeder (identity seeder). */
 class IdentitySeederTest {
     @Test
     void seedsFiveRolesAndOnlyBootstrapAdminWithoutPromotingExistingManagers() {

@@ -39,6 +39,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
+ * Bộ kiểm thử cho controller EnrollmentController (enrollment controller).
+ *
  * SCRUM-73: enrollment endpoint contract tests.
  */
 @ExtendWith(MockitoExtension.class)
@@ -52,11 +54,13 @@ class EnrollmentControllerTest {
     private EnrollmentController controller;
 
     private final HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+        /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
         @Override
         public boolean supportsParameter(MethodParameter parameter) {
             return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
         }
 
+        /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                 NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
@@ -83,6 +87,7 @@ class EnrollmentControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample dto). */
     private EnrollmentDto sampleDto() {
         return new EnrollmentDto(1L, 5L, "Yoga Flow", 12L, 9L,
                 LocalDate.now().plusDays(1), LocalTime.of(18, 0), LocalTime.of(19, 0),

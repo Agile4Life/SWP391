@@ -7,6 +7,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 
+/** Bộ kiểm thử cho ClassFeatureDisabled (class feature disabled). */
 class ClassFeatureDisabledTest {
     @Test
     void classEndpointsAndDemoSeederAreNotRegistered() {

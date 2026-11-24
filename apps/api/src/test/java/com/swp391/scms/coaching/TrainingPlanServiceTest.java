@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service TrainingPlanService (training plan service). */
 @ExtendWith(MockitoExtension.class)
 class TrainingPlanServiceTest {
 

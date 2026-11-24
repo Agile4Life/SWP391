@@ -6,6 +6,7 @@ import com.swp391.scms.config.WebConfig;
 import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho CenterTime (center time). */
 class CenterTimeTest {
     @Test
     void applicationClockRunsInTheCenterTimezone() {

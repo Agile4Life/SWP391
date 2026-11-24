@@ -10,6 +10,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service MembershipRealtimeService (membership realtime service). */
 class MembershipRealtimeServiceTest {
     @Test
     void returnsOnlyOwnersOpaqueChannelAndRejectsOtherRoles() {

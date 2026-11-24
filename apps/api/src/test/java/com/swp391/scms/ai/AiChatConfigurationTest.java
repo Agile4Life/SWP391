@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Bộ kiểm thử cho AiChatConfiguration (ai chat configuration). */
 class AiChatConfigurationTest {
     private MockEnvironment environment(Map<String, Object> variables) throws IOException {
         var environment = new MockEnvironment();

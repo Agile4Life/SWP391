@@ -40,6 +40,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service CenterCheckinService (center checkin service). */
 @ExtendWith(MockitoExtension.class)
 class CenterCheckinServiceTest {
 
@@ -77,6 +78,7 @@ class CenterCheckinServiceTest {
         service = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (mock member). */
     private Member mockMember(Long userId, String name) {
         User user = new User();
         user.setId(userId);
@@ -104,6 +106,7 @@ class CenterCheckinServiceTest {
         return codes.get(label);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (mock subscription). */
     private MembershipSubscription mockSubscription(Member member, String status, LocalDate start, LocalDate end) {
         MembershipSubscription sub = new MembershipSubscription();
         sub.setMember(member);
@@ -207,6 +210,7 @@ class CenterCheckinServiceTest {
                 new CheckinRequests.SelfScan(gateQr.generate("A1", clock.millis()).qrCode())).status());
     }
 
+    /** Kiểm thử: BR-01: Member tự gọi API scan phải bị chặn 403 Forbidden */
     @Test
     @DisplayName("BR-01: Member tự gọi API scan phải bị chặn 403 Forbidden")
     void br01_memberCallingScan_throwsForbidden() {
@@ -216,6 +220,7 @@ class CenterCheckinServiceTest {
         verify(checkins, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: BR-02 & BR-03: Mã QR không tồn tại -> Lưu bản ghi DENIED vào center_checkins */
     @Test
     @DisplayName("BR-02 & BR-03: Mã QR không tồn tại -> Lưu bản ghi DENIED vào center_checkins")
     void br02_qrNotFound_logsDeniedRecord() {
@@ -237,6 +242,7 @@ class CenterCheckinServiceTest {
         assertEquals("Gate A", captor.getValue().getGate());
     }
 
+    /** Kiểm thử: BR-02 & BR-03: Gói tập chưa active (pending_payment) -> Lưu bản ghi DENIED */
     @Test
     @DisplayName("BR-02 & BR-03: Gói tập chưa active (pending_payment) -> Lưu bản ghi DENIED")
     void br02_inactiveSubscription_logsDeniedRecord() {
@@ -260,6 +266,7 @@ class CenterCheckinServiceTest {
         assertEquals(member, captor.getValue().getMember());
     }
 
+    /** Kiểm thử: BR-02 & BR-03: Gói tập đã hết hạn -> Lưu bản ghi DENIED */
     @Test
     @DisplayName("BR-02 & BR-03: Gói tập đã hết hạn -> Lưu bản ghi DENIED")
     void br02_expiredSubscription_logsDeniedRecord() {
@@ -278,6 +285,10 @@ class CenterCheckinServiceTest {
         assertEquals("DENIED", captor.getValue().getStatus());
     }
 
+    /**
+     * Kiểm thử: BR-04 Anti-passback: Hội viên đang ở trong phòng tập (GRANTED chưa checkout) -> Chặn GRANTED
+     * thứ hai, log DENIED
+     */
     @Test
     @DisplayName("BR-04 Anti-passback: Hội viên đang ở trong phòng tập (GRANTED chưa checkout) -> Chặn GRANTED thứ hai, log DENIED")
     void br04_antiPassback_alreadyInside_logsDeniedRecord() {
@@ -352,6 +363,7 @@ class CenterCheckinServiceTest {
         }
     }
 
+    /** Kiểm thử: BR-02: Gói tập active, đúng hạn, chưa check-in -> result = GRANTED */
     @Test
     @DisplayName("BR-02: Gói tập active, đúng hạn, chưa check-in -> result = GRANTED")
     void br02_validSubscription_granted() {
@@ -387,6 +399,7 @@ class CenterCheckinServiceTest {
         locksBeforeInsert.verify(checkins).saveAndFlush(any());
     }
 
+    /** Kiểm thử: BR-05: Checkout bản ghi DENIED -> Bị từ chối BadRequestException */
     @Test
     @DisplayName("BR-05: Checkout bản ghi DENIED -> Bị từ chối BadRequestException")
     void br05_checkoutDeniedRecord_throwsBadRequest() {
@@ -397,6 +410,7 @@ class CenterCheckinServiceTest {
         assertThrows(BadRequestException.class, () -> service.checkout(receptionist, 1L));
     }
 
+    /** Kiểm thử: BR-05: Checkout bản ghi đã checkout -> Bị từ chối BadRequestException */
     @Test
     @DisplayName("BR-05: Checkout bản ghi đã checkout -> Bị từ chối BadRequestException")
     void br05_checkoutAlreadyCheckedOut_throwsBadRequest() {
@@ -408,6 +422,7 @@ class CenterCheckinServiceTest {
         assertThrows(BadRequestException.class, () -> service.checkout(receptionist, 2L));
     }
 
+    /** Kiểm thử: BR-05: Checkout thành công cho lượt GRANTED đang mở */
     @Test
     @DisplayName("BR-05: Checkout thành công cho lượt GRANTED đang mở")
     void br05_checkoutSuccess() {
@@ -424,6 +439,7 @@ class CenterCheckinServiceTest {
         assertNotNull(result.checkOutTime());
     }
 
+    /** Kiểm thử: BR-06: Member xem lịch sử -> chỉ lấy đúng danh sách của chính mình (principal.id) */
     @Test
     @DisplayName("BR-06: Member xem lịch sử -> chỉ lấy đúng danh sách của chính mình (principal.id)")
     void br06_memberViewsHistory_onlyGetsOwnRecords() {
@@ -439,6 +455,7 @@ class CenterCheckinServiceTest {
         verify(checkins, never()).findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(any(), any());
     }
 
+    /** Kiểm thử: BR-06: Receptionist xem lịch sử -> lấy toàn bộ trong ngày */
     @Test
     @DisplayName("BR-06: Receptionist xem lịch sử -> lấy toàn bộ trong ngày")
     void br06_receptionistViewsHistory_getsAllRecords() {
@@ -511,6 +528,7 @@ class CenterCheckinServiceTest {
         assertEquals("Legacy QR denial text", service.history(receptionist).getFirst().denialReason());
     }
 
+    /** Kiểm thử: Lượt check-in chỉ bị coi là treo sau 8 tiếng */
     @Test
     @DisplayName("Lượt check-in chỉ bị coi là treo sau 8 tiếng")
     void staleVisitCutoffIsEightHoursBeforeTheScan() {
@@ -528,6 +546,10 @@ class CenterCheckinServiceTest {
                 eq(10L), eq("GRANTED"), eq(now.minusHours(8)));
     }
 
+    /**
+     * Kiểm thử: Anti-passback: Lượt check-in cũ quá 8 tiếng được tự động check-out (SYSTEM_AUTO_CHECKOUT) và
+     * lượt quét hôm sau được GRANTED
+     */
     @Test
     @DisplayName("Anti-passback: Lượt check-in cũ quá 8 tiếng được tự động check-out (SYSTEM_AUTO_CHECKOUT) và lượt quét hôm sau được GRANTED")
     void antiPassback_staleCheckinOlderThan8Hours_isAutoCheckedOutAndSubsequentScanGranted() {
@@ -557,6 +579,7 @@ class CenterCheckinServiceTest {
         verify(checkins).save(staleCheckin);
     }
 
+    /** Kiểm thử: Cron Job 03:00 AM: Tự động đóng tất cả lượt check-in GRANTED treo quá 8 tiếng */
     @Test
     @DisplayName("Cron Job 03:00 AM: Tự động đóng tất cả lượt check-in GRANTED treo quá 8 tiếng")
     void autoCheckoutStaleVisitsCronJob_closesAllVisitsOlderThan8Hours() {
@@ -587,6 +610,7 @@ class CenterCheckinServiceTest {
         verify(checkins, times(2)).save(any(CenterCheckin.class));
     }
 
+    /** Kiểm thử: Dynamic QR HMAC-SHA256 hợp lệ -> GRANTED */
     @Test
     @DisplayName("Dynamic QR HMAC-SHA256 hợp lệ -> GRANTED")
     void validDynamicQr_granted() {
@@ -608,6 +632,7 @@ class CenterCheckinServiceTest {
         assertNull(result.denialReason());
     }
 
+    /** Kiểm thử: Dynamic QR đã hết hạn (>60s) -> Bị từ chối với lỗi error.attendance.qr_expired */
     @Test
     @DisplayName("Dynamic QR đã hết hạn (>60s) -> Bị từ chối với lỗi error.attendance.qr_expired")
     void expiredDynamicQr_deniedWithQrExpired() {

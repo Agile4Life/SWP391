@@ -3,6 +3,7 @@ package com.swp391.scms.notifications;
 import com.swp391.scms.common.i18n.MessageService;
 import org.springframework.context.support.ResourceBundleMessageSource;
 
+/** Bộ kiểm thử cho NotificationTestMessages (notification test messages). */
 final class NotificationTestMessages {
     private NotificationTestMessages() {}
 

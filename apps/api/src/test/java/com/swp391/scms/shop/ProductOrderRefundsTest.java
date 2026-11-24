@@ -21,6 +21,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho ProductOrderRefunds (product order refunds). */
 class ProductOrderRefundsTest {
     final PaymentRepository payments = mock(PaymentRepository.class);
     final WalletService wallet = mock(WalletService.class);

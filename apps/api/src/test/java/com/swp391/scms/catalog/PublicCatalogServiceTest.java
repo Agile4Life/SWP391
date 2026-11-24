@@ -11,6 +11,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service PublicCatalogService (public catalog service). */
 class PublicCatalogServiceTest {
     private final MembershipPackageRepository packages = mock(MembershipPackageRepository.class);
     private final CoachRepository coaches = mock(CoachRepository.class);

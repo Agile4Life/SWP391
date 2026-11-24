@@ -19,7 +19,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** Identity documents: encrypted at rest, reviewed by the desk before they count (spec 2026-11-09 review). */
+/**
+ * Bộ kiểm thử cho KycFlow (kyc flow).
+ *
+ * Identity documents: encrypted at rest, reviewed by the desk before they count (spec 2026-11-09 review).
+ */
 class KycFlowTest {
     private final UserRepository users = mock(UserRepository.class);
     private final MemberRepository members = mock(MemberRepository.class);

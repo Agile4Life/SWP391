@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(controllers = EnrollmentController.class, properties = "app.legacy.classes-enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
+/** Bộ kiểm thử cho CourseEnrollmentSecurity (course enrollment security). */
 class CourseEnrollmentSecurityTest {
     @Autowired MockMvc mvc;
     @MockitoBean EnrollmentService service;
@@ -37,6 +38,7 @@ class CourseEnrollmentSecurityTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(10L, "review-user", role),
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));

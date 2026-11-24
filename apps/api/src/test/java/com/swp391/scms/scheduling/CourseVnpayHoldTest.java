@@ -32,7 +32,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** A course fee VNPay may still settle keeps its seat: neither a cancellation nor the unpaid-fee sweep releases it. */
+/**
+ * Bộ kiểm thử cho CourseVnpayHold (course vnpay hold).
+ *
+ * A course fee VNPay may still settle keeps its seat: neither a cancellation nor the unpaid-fee sweep releases it.
+ */
 class CourseVnpayHoldTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     // 15:00 in the center's time zone.

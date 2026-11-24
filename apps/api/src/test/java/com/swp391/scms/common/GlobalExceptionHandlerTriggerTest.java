@@ -28,7 +28,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** SCRUM-80: PostgreSQL trigger failures must retain localized HTTP responses. */
+/**
+ * Bộ kiểm thử cho GlobalExceptionHandlerTrigger (global exception handler trigger).
+ *
+ * SCRUM-80: PostgreSQL trigger failures must retain localized HTTP responses.
+ */
 class GlobalExceptionHandlerTriggerTest {
 
     private static final String DB_CAPACITY_VI = "Lớp học đã đầy chỗ (vượt quá capacity cho phép).";
@@ -128,6 +132,7 @@ class GlobalExceptionHandlerTriggerTest {
         return translated;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (mock mvc for). */
     private MockMvc mockMvcFor(RuntimeException failure) {
         ResourceBundleMessageSource source = new ResourceBundleMessageSource();
         source.setBasename("i18n/messages");
@@ -199,6 +204,7 @@ class GlobalExceptionHandlerTriggerTest {
     private record TriggerFailure(String message, String constraint, String sqlState,
                                   int status, String code, String vietnamese, String english) { }
 
+    /** Bộ kiểm thử cho controller FailingController (failing controller). */
     @RestController
     static class FailingController {
         private final RuntimeException failure;

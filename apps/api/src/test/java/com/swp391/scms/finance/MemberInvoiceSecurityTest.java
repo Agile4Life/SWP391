@@ -20,7 +20,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho MemberInvoiceSecurity (member invoice security). */
 class MemberInvoiceSecurityTest {
+    /** Bộ kiểm thử cho MethodSecurityOnly (method security only). */
     @Configuration
     @EnableMethodSecurity
     static class MethodSecurityOnly {}

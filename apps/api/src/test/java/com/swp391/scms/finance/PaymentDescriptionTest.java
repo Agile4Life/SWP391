@@ -14,7 +14,11 @@ import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** A member's payment list says what each payment is for (reported: pending payments only showed an id and amount). */
+/**
+ * Bộ kiểm thử cho PaymentDescription (payment description).
+ *
+ * A member's payment list says what each payment is for (reported: pending payments only showed an id and amount).
+ */
 class PaymentDescriptionTest {
 
     private static PaymentDto describe(Payment payment) throws Exception {

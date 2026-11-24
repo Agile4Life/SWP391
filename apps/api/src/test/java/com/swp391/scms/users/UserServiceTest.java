@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/** Bộ kiểm thử cho service UserService (user service). */
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 

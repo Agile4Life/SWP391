@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ClassController (class controller). */
 @ExtendWith(MockitoExtension.class)
 class ClassControllerTest {
 
@@ -125,12 +126,14 @@ class ClassControllerTest {
                 new com.swp391.scms.security.AuthenticatedPrincipal(7L, "coach@test.com", "COACH");
         MockMvc coachMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
                         return parameter.hasParameterAnnotation(
                                 org.springframework.security.core.annotation.AuthenticationPrincipal.class);
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(org.springframework.core.MethodParameter parameter,
                                                   org.springframework.web.method.support.ModelAndViewContainer mavContainer,

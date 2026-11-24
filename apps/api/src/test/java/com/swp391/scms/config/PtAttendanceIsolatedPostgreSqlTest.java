@@ -38,7 +38,11 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Opt-in, real PostgreSQL. Never reads environment credentials or starts the application. */
+/**
+ * Bộ kiểm thử cho PtAttendanceIsolatedPostgreSql (pt attendance isolated postgre sql).
+ *
+ * Opt-in, real PostgreSQL. Never reads environment credentials or starts the application.
+ */
 @EnabledIfSystemProperty(named = "scms.pt.isolated.port", matches = "[0-9]{1,5}")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PtAttendanceIsolatedPostgreSqlTest {
@@ -93,7 +97,9 @@ class PtAttendanceIsolatedPostgreSqlTest {
         service = proxy.getProxy();
         mvc = MockMvcBuilders.standaloneSetup(new CoachBookingController(service, null))
                 .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     public boolean supportsParameter(org.springframework.core.MethodParameter p) { return p.getParameterType() == AuthenticatedPrincipal.class; }
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     public Object resolveArgument(org.springframework.core.MethodParameter p,
                             org.springframework.web.method.support.ModelAndViewContainer c,
                             org.springframework.web.context.request.NativeWebRequest r,
@@ -106,6 +112,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
         jdbc.update("insert into membership_packages(name,price,duration_days,status,tier,created_at,updated_at) values ('PT test',100,90,'active','GOLD',now(),now())");
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private long user(String role) {
         long roleId = jdbc.queryForObject("insert into roles(code,name,created_at) values (?,?,now()) returning id", Long.class, role, role);
         return jdbc.queryForObject("insert into users(role_id,full_name,email,password_hash,status,created_at,updated_at) values (?,?,?,'unused','active',now(),now()) returning id",
@@ -137,6 +144,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
     private List<String> history() {
         return jdbc.queryForList("select row_to_json(a)::text from audit_logs a where action='HISTORY' order by id", String.class);
     }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private Map<String, Object> booking() {
         return jdbc.queryForMap("select attended_at, attendance_locked, status from coach_bookings where id=?", bookingId);
     }

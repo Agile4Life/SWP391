@@ -8,6 +8,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho cấu hình WebConfig (web config). */
 class WebConfigTest {
     private static class Registry extends CorsRegistry {
         Map<String, CorsConfiguration> configurations() { return getCorsConfigurations(); }

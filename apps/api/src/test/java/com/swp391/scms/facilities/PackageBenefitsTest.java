@@ -6,6 +6,7 @@ import com.swp391.scms.facilities.entity.MembershipPackage;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho PackageBenefits (package benefits). */
 class PackageBenefitsTest {
     private static MembershipPackage pkg(String name, String tier, int days) {
         MembershipPackage p = new MembershipPackage();

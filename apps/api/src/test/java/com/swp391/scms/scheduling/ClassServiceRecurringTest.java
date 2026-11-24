@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho ClassServiceRecurring (class service recurring). */
 class ClassServiceRecurringTest {
 
     private GymClassRepository gymClasses = mock(GymClassRepository.class);

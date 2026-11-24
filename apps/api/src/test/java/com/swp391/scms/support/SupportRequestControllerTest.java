@@ -43,6 +43,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller SupportRequestController (support request controller). */
 @ExtendWith(MockitoExtension.class)
 class SupportRequestControllerTest {
 
@@ -55,12 +56,14 @@ class SupportRequestControllerTest {
     private ObjectMapper objectMapper;
 
     private final HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+        /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
         @Override
         public boolean supportsParameter(MethodParameter parameter) {
             return parameter.hasParameterAnnotation(AuthenticationPrincipal.class)
                     && parameter.getParameterType().equals(AuthenticatedPrincipal.class);
         }
 
+        /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                       NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
@@ -86,6 +89,7 @@ class SupportRequestControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample dto). */
     private SupportRequestDto sampleDto(Long id, String status) {
         return new SupportRequestDto(
                 id, 10L, "Nguyễn Văn A", null, null,
@@ -94,6 +98,7 @@ class SupportRequestControllerTest {
         );
     }
 
+    /** Kiểm thử: POST /api/v1/support/requests tạo yêu cầu thành công */
     @Test
     @DisplayName("POST /api/v1/support/requests tạo yêu cầu thành công")
     void createRequest_Success() throws Exception {
@@ -110,6 +115,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.data.subject").value("Lỗi phòng tập"));
     }
 
+    /** Kiểm thử: POST /api/v1/support/requests lỗi 400 khi subject để trống */
     @Test
     @DisplayName("POST /api/v1/support/requests lỗi 400 khi subject để trống")
     void createRequest_ValidationFailure() throws Exception {
@@ -122,6 +128,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: GET /api/v1/support/requests/my lấy danh sách yêu cầu của Member */
     @Test
     @DisplayName("GET /api/v1/support/requests/my lấy danh sách yêu cầu của Member")
     void getMyRequests_Success() throws Exception {
@@ -135,6 +142,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.data.content[0].id").value(1));
     }
 
+    /** Kiểm thử: GET /api/v1/support/requests lấy tất cả yêu cầu cho Receptionist/Manager */
     @Test
     @DisplayName("GET /api/v1/support/requests lấy tất cả yêu cầu cho Receptionist/Manager")
     void getAllRequests_Success() throws Exception {
@@ -147,6 +155,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.data.content.length()").value(2));
     }
 
+    /** Kiểm thử: PATCH /api/v1/support/requests/{id}/status cập nhật trạng thái ticket */
     @Test
     @DisplayName("PATCH /api/v1/support/requests/{id}/status cập nhật trạng thái ticket")
     void updateStatus_Success() throws Exception {
@@ -162,6 +171,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.data.status").value("in_progress"));
     }
 
+    /** Kiểm thử: PATCH /api/v1/support/requests/{id}/status lỗi 400 khi status không thuộc regex */
     @Test
     @DisplayName("PATCH /api/v1/support/requests/{id}/status lỗi 400 khi status không thuộc regex")
     void updateStatus_InvalidStatusRegex() throws Exception {
@@ -174,6 +184,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: PATCH /api/v1/support/requests/{id}/status trả về 403 FORBIDDEN khi phân quyền bị chặn */
     @Test
     @DisplayName("PATCH /api/v1/support/requests/{id}/status trả về 403 FORBIDDEN khi phân quyền bị chặn")
     void updateStatus_AccessDeniedReturns403() throws Exception {
@@ -188,6 +199,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
+    /** Kiểm thử: POST /api/v1/support/requests/{id}/messages gửi tin nhắn thành công */
     @Test
     @DisplayName("POST /api/v1/support/requests/{id}/messages gửi tin nhắn thành công")
     void sendMessage_Success() throws Exception {
@@ -207,6 +219,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.data.message").value("Tôi muốn kiểm tra lại"));
     }
 
+    /** Kiểm thử: POST /api/v1/support/requests/{id}/messages lỗi 400 khi tin nhắn trống */
     @Test
     @DisplayName("POST /api/v1/support/requests/{id}/messages lỗi 400 khi tin nhắn trống")
     void sendMessage_BlankMessage_Returns400() throws Exception {
@@ -219,6 +232,7 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: GET /api/v1/support/requests/{id}/messages lấy lịch sử trao đổi thành công */
     @Test
     @DisplayName("GET /api/v1/support/requests/{id}/messages lấy lịch sử trao đổi thành công")
     void getMessages_Success() throws Exception {

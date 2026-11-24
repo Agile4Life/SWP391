@@ -8,7 +8,11 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
-/** The desk's request history labels each processed request as a registration, renewal or upgrade. */
+/**
+ * Bộ kiểm thử cho MembershipRequestHistoryType (membership request history type).
+ *
+ * The desk's request history labels each processed request as a registration, renewal or upgrade.
+ */
 class MembershipRequestHistoryTypeTest {
 
     private static String typeOf(MembershipSubscription sub) throws Exception {
@@ -18,6 +22,7 @@ class MembershipRequestHistoryTypeTest {
         return (String) method.invoke(null, sub);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sub). */
     private static MembershipSubscription sub(long packageId) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setId(packageId);

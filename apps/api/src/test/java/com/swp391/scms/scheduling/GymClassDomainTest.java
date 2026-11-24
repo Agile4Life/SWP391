@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Bộ kiểm thử cho GymClassDomain (gym class domain). */
 class GymClassDomainTest {
 
     @Test

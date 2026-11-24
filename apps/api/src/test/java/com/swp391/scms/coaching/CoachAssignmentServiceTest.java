@@ -44,6 +44,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service CoachAssignmentService (coach assignment service). */
 @ExtendWith(MockitoExtension.class)
 class CoachAssignmentServiceTest {
     @Mock CoachRepository coaches;
@@ -75,12 +76,15 @@ class CoachAssignmentServiceTest {
     }
 
     @AfterEach void clearSecurity() { SecurityContextHolder.clearContext(); }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private User user(Long id, String name) { User u = new User(); u.setId(id); u.setFullName(name); u.setStatus("active"); return u; }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (coach). */
     private Coach coach(Long id, String name) { Coach c = new Coach(); c.setUserId(id); c.setUser(user(id, name)); c.setEmploymentStatus("active"); return c; }
     private TrainingPlan plan(Long id, String status) {
         TrainingPlan p = new TrainingPlan(); p.setId(id); p.setMember(member); p.setCoach(from); p.setStatus(status);
         p.setStartDate(today.minusDays(3)); p.setEndDate(today.plusDays(30)); p.setGoal("Gain strength"); return p;
     }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private CoachBooking booking(Long id) {
         CoachBooking b = new CoachBooking(); b.setId(id); b.setMember(member); b.setCoach(from); b.setStatus("confirmed");
         b.setBookingDate(today.plusDays(1)); b.setStartTime(LocalTime.of(10, 0)); b.setEndTime(LocalTime.of(11, 0)); return b;

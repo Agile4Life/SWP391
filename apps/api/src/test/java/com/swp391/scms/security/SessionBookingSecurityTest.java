@@ -32,6 +32,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @WebMvcTest(controllers = SessionBookingController.class, properties = "app.legacy.classes-enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
+/** Bộ kiểm thử cho SessionBookingSecurity (session booking security). */
 class SessionBookingSecurityTest {
     @Autowired MockMvc mvc;
     @MockitoBean SessionBookingService service;
@@ -39,6 +40,7 @@ class SessionBookingSecurityTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(10L, "review-user", role),
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));

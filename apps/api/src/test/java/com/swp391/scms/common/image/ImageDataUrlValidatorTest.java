@@ -8,6 +8,7 @@ import java.util.Base64;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Bộ kiểm thử cho ImageDataUrlValidator (image data url validator). */
 class ImageDataUrlValidatorTest {
     static String dataUrl(String type, byte[] bytes) {
         return "data:" + type + ";base64," + Base64.getEncoder().encodeToString(bytes);

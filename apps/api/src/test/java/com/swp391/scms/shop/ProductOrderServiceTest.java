@@ -56,6 +56,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service ProductOrderService (product order service). */
 class ProductOrderServiceTest {
     final ProductOrderRepository orders = mock(ProductOrderRepository.class);
     final ProductVariantRepository variants = mock(ProductVariantRepository.class);
@@ -138,6 +139,7 @@ class ProductOrderServiceTest {
         return v;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (variant). */
     ProductVariant variant(Long id) {
         return variantStore.get(id);
     }

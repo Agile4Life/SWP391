@@ -10,6 +10,7 @@ import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Bộ kiểm thử cho service LoginAttemptService (login attempt service). */
 class LoginAttemptServiceTest {
 
     private MutableClock clock;

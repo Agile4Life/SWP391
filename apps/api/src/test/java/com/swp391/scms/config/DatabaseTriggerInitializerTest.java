@@ -14,6 +14,7 @@ import java.util.List;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/** Bộ kiểm thử cho DatabaseTriggerInitializer (database trigger initializer). */
 class DatabaseTriggerInitializerTest {
     @Test
     void refusesUnsupportedDatabasesRatherThanStartingWithoutMandatoryTriggers() throws Exception {

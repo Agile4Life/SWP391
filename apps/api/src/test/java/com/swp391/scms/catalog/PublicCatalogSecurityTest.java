@@ -14,6 +14,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho PublicCatalogSecurity (public catalog security). */
 @WebMvcTest(PublicCatalogController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class, JsonAccessDeniedHandler.class})
 class PublicCatalogSecurityTest {

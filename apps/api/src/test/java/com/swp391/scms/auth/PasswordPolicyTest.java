@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho chính sách PasswordPolicy (password policy). */
 class PasswordPolicyTest {
     private static final Pattern POLICY = Pattern.compile(PasswordPolicy.REGEX);
 

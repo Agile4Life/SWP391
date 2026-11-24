@@ -38,6 +38,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
+ * Bộ kiểm thử cho ConcurrencyBooking (concurrency booking).
+ *
  * SCRUM-114: Concurrency & Stress Integration Test for Class Booking.
  *
  * Simulates 50 concurrent threads attempting to book the 1 remaining slot

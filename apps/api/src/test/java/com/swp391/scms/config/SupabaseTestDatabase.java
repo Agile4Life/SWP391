@@ -5,7 +5,11 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-/** Dedicated Supabase test credentials; callers isolate changes in generated schemas. */
+/**
+ * Bộ kiểm thử cho SupabaseTestDatabase (supabase test database).
+ *
+ * Dedicated Supabase test credentials; callers isolate changes in generated schemas.
+ */
 final class SupabaseTestDatabase {
     private SupabaseTestDatabase() { }
 

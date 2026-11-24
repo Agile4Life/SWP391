@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+/** Bộ kiểm thử cho bộ khởi tạo dữ liệu DemoClassSeeder (demo class seeder). */
 @ExtendWith(MockitoExtension.class)
 class DemoClassSeederTest {
 
@@ -152,6 +153,7 @@ class DemoClassSeederTest {
         verify(classes, never()).save(any());
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (coach). */
     private static Coach coach(Long id, String specialization) {
         Coach coach = new Coach();
         coach.setUserId(id);
@@ -159,6 +161,7 @@ class DemoClassSeederTest {
         return coach;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (room). */
     private static Room room(Long id, String name, int capacity) {
         Room room = new Room();
         room.setId(id);
@@ -168,6 +171,7 @@ class DemoClassSeederTest {
         return room;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (discipline). */
     private static Discipline discipline(Long id, String name) {
         Discipline discipline = new Discipline();
         ReflectionTestUtils.setField(discipline, "id", id);

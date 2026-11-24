@@ -25,7 +25,11 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Real production security chain with mock services. No Boot startup, dotenv, database or real account. */
+/**
+ * Bộ kiểm thử cho PtAttendanceSecurity (pt attendance security).
+ *
+ * Real production security chain with mock services. No Boot startup, dotenv, database or real account.
+ */
 class PtAttendanceSecurityTest {
     AnnotationConfigWebApplicationContext context;
     MockMvc mvc;
@@ -40,6 +44,7 @@ class PtAttendanceSecurityTest {
         mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     }
     @AfterEach void close() { context.close(); }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(2L, "mock-actor", role),
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
@@ -69,6 +74,7 @@ class PtAttendanceSecurityTest {
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
+    /** Bộ kiểm thử cho TestConfiguration (test configuration). */
     @Configuration(proxyBeanMethods = false)
     @EnableWebMvc
     @Import(SecurityConfig.class)

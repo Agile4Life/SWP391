@@ -37,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service SupportRequestService (support request service). */
 @ExtendWith(MockitoExtension.class)
 class SupportRequestServiceTest {
 
@@ -85,6 +86,7 @@ class SupportRequestServiceTest {
         sampleRequest.setStatus("open");
     }
 
+    /** Kiểm thử: Tạo yêu cầu hỗ trợ thành công khi member tồn tại */
     @Test
     @DisplayName("Tạo yêu cầu hỗ trợ thành công khi member tồn tại")
     void createRequest_Success() {
@@ -104,6 +106,7 @@ class SupportRequestServiceTest {
         verify(supportRequestRepository).save(any(SupportRequest.class));
     }
 
+    /** Kiểm thử: Tạo yêu cầu hỗ trợ chỉ thông báo Lễ tân, Quản lý chỉ nhận khi đã escalate */
     @Test
     @DisplayName("Tạo yêu cầu hỗ trợ chỉ thông báo Lễ tân, Quản lý chỉ nhận khi đã escalate")
     void createRequest_notifiesReceptionistOnly() {
@@ -133,6 +136,7 @@ class SupportRequestServiceTest {
         verify(notificationService, never()).send(eq(50L), any(), any(), any(), any(), any());
     }
 
+    /** Kiểm thử: Ném ResourceNotFoundException khi tạo yêu cầu với member không tồn tại */
     @Test
     @DisplayName("Ném ResourceNotFoundException khi tạo yêu cầu với member không tồn tại")
     void createRequest_MemberNotFound() {
@@ -143,6 +147,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
+    /** Kiểm thử: Ném ResourceNotFoundException khi user của member đã bị xóa mềm */
     @Test
     @DisplayName("Ném ResourceNotFoundException khi user của member đã bị xóa mềm")
     void createRequest_SoftDeletedMemberUser() {
@@ -154,6 +159,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
+    /** Kiểm thử: Lấy danh sách yêu cầu của Member có phân trang */
     @Test
     @DisplayName("Lấy danh sách yêu cầu của Member có phân trang")
     void getMyRequests_Success() {
@@ -172,6 +178,7 @@ class SupportRequestServiceTest {
         assertThat(result.getContent().get(0).subject()).isEqualTo("Lỗi tủ đồ");
     }
 
+    /** Kiểm thử: Lấy toàn bộ yêu cầu lọc theo status */
     @Test
     @DisplayName("Lấy toàn bộ yêu cầu lọc theo status")
     void getAllRequests_Success() {
@@ -189,6 +196,7 @@ class SupportRequestServiceTest {
         assertThat(result.getContent()).hasSize(1);
     }
 
+    /** Kiểm thử: Chuyển trạng thái hợp lệ: open -> in_progress và gửi thông báo cho member */
     @Test
     @DisplayName("Chuyển trạng thái hợp lệ: open -> in_progress và gửi thông báo cho member")
     void updateStatus_OpenToInProgress_Success() {
@@ -207,6 +215,7 @@ class SupportRequestServiceTest {
         verify(notificationService).send(eq(10L), any(), any(), eq("support_reply"), eq("support_request"), any());
     }
 
+    /** Kiểm thử: Chuyển trạng thái hợp lệ: in_progress -> resolved và ghi nhận resolvedAt */
     @Test
     @DisplayName("Chuyển trạng thái hợp lệ: in_progress -> resolved và ghi nhận resolvedAt")
     void updateStatus_InProgressToResolved_Success() {
@@ -224,6 +233,7 @@ class SupportRequestServiceTest {
         assertThat(sampleRequest.getResolvedAt()).isNotNull();
     }
 
+    /** Kiểm thử: Chuyển trạng thái hợp lệ: resolved -> closed */
     @Test
     @DisplayName("Chuyển trạng thái hợp lệ: resolved -> closed")
     void updateStatus_ResolvedToClosed_Success() {
@@ -241,6 +251,7 @@ class SupportRequestServiceTest {
         assertThat(sampleRequest.getStatus()).isEqualTo("closed");
     }
 
+    /** Kiểm thử: Chuyển trạng thái hợp lệ: in_progress -> open (yêu cầu thêm thông tin) */
     @Test
     @DisplayName("Chuyển trạng thái hợp lệ: in_progress -> open (yêu cầu thêm thông tin)")
     void updateStatus_InProgressToOpen_Success() {
@@ -258,6 +269,7 @@ class SupportRequestServiceTest {
         assertThat(sampleRequest.getResolvedAt()).isNull();
     }
 
+    /** Kiểm thử: Không được phép mở lại hoặc thay đổi ticket đã đóng (closed) */
     @Test
     @DisplayName("Không được phép mở lại hoặc thay đổi ticket đã đóng (closed)")
     void updateStatus_ClosedTicketCannotBeChanged() {
@@ -271,6 +283,7 @@ class SupportRequestServiceTest {
                 .hasMessageContaining("Closed support request cannot be modified");
     }
 
+    /** Kiểm thử: Ném AppException khi chuyển trạng thái sai state machine: open -> closed */
     @Test
     @DisplayName("Ném AppException khi chuyển trạng thái sai state machine: open -> closed")
     void updateStatus_InvalidTransition_OpenToClosed() {
@@ -284,6 +297,7 @@ class SupportRequestServiceTest {
                 .hasMessageContaining("Invalid state transition from open to closed");
     }
 
+    /** Kiểm thử: Cập nhật người phụ trách (assignedTo) thành công */
     @Test
     @DisplayName("Cập nhật người phụ trách (assignedTo) thành công")
     void updateStatus_AssignToUser_Success() {
@@ -311,6 +325,7 @@ class SupportRequestServiceTest {
         assertThat(result.assignedToName()).isEqualTo("Lễ tân Lan");
     }
 
+    /** Kiểm thử: Gửi tin nhắn phản hồi thành công bởi Member và gửi thông báo cho Assigned Staff */
     @Test
     @DisplayName("Gửi tin nhắn phản hồi thành công bởi Member và gửi thông báo cho Assigned Staff")
     void sendMessage_asMember_Success() {
@@ -339,6 +354,7 @@ class SupportRequestServiceTest {
         verify(notificationService).send(eq(20L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
     }
 
+    /** Kiểm thử: Gửi tin nhắn phản hồi thành công bởi Staff và gửi thông báo cho Member */
     @Test
     @DisplayName("Gửi tin nhắn phản hồi thành công bởi Staff và gửi thông báo cho Member")
     void sendMessage_asStaff_Success() {
@@ -366,6 +382,7 @@ class SupportRequestServiceTest {
         verify(notificationService).send(eq(10L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
     }
 
+    /** Kiểm thử: Lễ tân vẫn trả lời được phiếu của hội viên đã bị xóa mềm, không gửi thông báo */
     @Test
     @DisplayName("Lễ tân vẫn trả lời được phiếu của hội viên đã bị xóa mềm, không gửi thông báo")
     void sendMessage_StaffReplyToDeletedMemberSkipsNotification() {
@@ -387,6 +404,7 @@ class SupportRequestServiceTest {
         verify(notificationService, never()).send(any(), any(), any(), any(), any(), any());
     }
 
+    /** Kiểm thử: Gửi tin nhắn thất bại khi phiếu hỗ trợ đã đóng (closed) */
     @Test
     @DisplayName("Gửi tin nhắn thất bại khi phiếu hỗ trợ đã đóng (closed)")
     void sendMessage_whenTicketClosed_throwsBadRequestException() {
@@ -400,6 +418,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: Gửi tin nhắn thất bại khi Member không phải chủ phiếu hỗ trợ */
     @Test
     @DisplayName("Gửi tin nhắn thất bại khi Member không phải chủ phiếu hỗ trợ")
     void sendMessage_whenMemberNotOwner_throwsForbiddenException() {
@@ -411,6 +430,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: Không tiết lộ trạng thái phiếu đóng cho Member không sở hữu */
     @Test
     @DisplayName("Không tiết lộ trạng thái phiếu đóng cho Member không sở hữu")
     void sendMessage_whenClosedAndMemberNotOwner_checksOwnershipFirst() {
@@ -423,6 +443,7 @@ class SupportRequestServiceTest {
         verify(supportRequestMessageRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Lấy danh sách tin nhắn thành công theo thứ tự thời gian cho Member chủ phiếu */
     @Test
     @DisplayName("Lấy danh sách tin nhắn thành công theo thứ tự thời gian cho Member chủ phiếu")
     void getMessages_asMember_Success() {
@@ -448,6 +469,7 @@ class SupportRequestServiceTest {
         assertThat(result.get(1).message()).isEqualTo("Tin nhắn 2");
     }
 
+    /** Kiểm thử: Lấy danh sách tin nhắn thất bại khi Member không phải chủ phiếu */
     @Test
     @DisplayName("Lấy danh sách tin nhắn thất bại khi Member không phải chủ phiếu")
     void getMessages_asMember_whenNotOwner_throwsForbiddenException() {
@@ -457,6 +479,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: Lễ tân xem được tin nhắn dù không phải Member chủ phiếu */
     @Test
     @DisplayName("Lễ tân xem được tin nhắn dù không phải Member chủ phiếu")
     void getMessages_asStaff_Success() {
@@ -472,6 +495,7 @@ class SupportRequestServiceTest {
         assertThat(result).isEmpty();
     }
 
+    /** Kiểm thử: Quản lý chỉ xem tin nhắn của khiếu nại đã được lễ tân chuyển lên */
     @Test
     @DisplayName("Quản lý chỉ xem tin nhắn của khiếu nại đã được lễ tân chuyển lên")
     void getMessages_managerNeedsAnEscalatedRequest() {
@@ -487,6 +511,7 @@ class SupportRequestServiceTest {
         assertThat(supportRequestService.getMessages(1L, 50L, "CENTER_MANAGER")).isEmpty();
     }
 
+    /** Kiểm thử: Tin nhắn của Member vào ticket chưa phân công chỉ báo cho lễ tân, không báo quản lý */
     @Test
     @DisplayName("Tin nhắn của Member vào ticket chưa phân công chỉ báo cho lễ tân, không báo quản lý")
     void sendMessage_asMember_whenTicketUnassigned_notifiesReceptionistsFirst() {
@@ -517,6 +542,7 @@ class SupportRequestServiceTest {
         verify(notificationService, never()).send(eq(50L), any(), any(), any(), any(), any());
     }
 
+    /** Kiểm thử: Sau khi chuyển cấp, tin nhắn của Member chỉ báo cho quản lý */
     @Test
     @DisplayName("Sau khi chuyển cấp, tin nhắn của Member chỉ báo cho quản lý")
     void sendMessage_asMember_afterEscalation_notifiesManagers() {
@@ -553,6 +579,7 @@ class SupportRequestServiceTest {
                 request.getEscalatedAt(), "Lễ tân", request.getEscalationReason());
     }
 
+    /** Kiểm thử: Lễ tân chuyển khiếu nại lên quản lý: đánh dấu, bỏ người phụ trách và chỉ báo cho quản lý */
     @Test
     @DisplayName("Lễ tân chuyển khiếu nại lên quản lý: đánh dấu, bỏ người phụ trách và chỉ báo cho quản lý")
     void escalate_marksRequestAndNotifiesManagersOnly() {
@@ -579,6 +606,7 @@ class SupportRequestServiceTest {
         verify(notificationService).send(eq(10L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
     }
 
+    /** Kiểm thử: Chỉ lễ tân được chuyển cấp; quản lý và huấn luyện viên bị từ chối */
     @Test
     @DisplayName("Chỉ lễ tân được chuyển cấp; quản lý và huấn luyện viên bị từ chối")
     void escalate_requiresReceptionist() {
@@ -590,6 +618,7 @@ class SupportRequestServiceTest {
         verify(supportRequestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Không chuyển cấp lần hai và không chuyển khiếu nại đã giải quyết */
     @Test
     @DisplayName("Không chuyển cấp lần hai và không chuyển khiếu nại đã giải quyết")
     void escalate_rejectsRepeatAndFinishedRequests() {
@@ -609,6 +638,7 @@ class SupportRequestServiceTest {
         verify(supportRequestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Quản lý chỉ thấy khiếu nại đã chuyển lên; lễ tân thấy tất cả */
     @Test
     @DisplayName("Quản lý chỉ thấy khiếu nại đã chuyển lên; lễ tân thấy tất cả")
     void getAllRequests_scopesManagersToEscalatedRequests() {
@@ -624,6 +654,7 @@ class SupportRequestServiceTest {
         verify(supportRequestRepository).findAllByStatus(null, pageable);
     }
 
+    /** Kiểm thử: Huấn luyện viên không xem được hộp thư khiếu nại */
     @Test
     @DisplayName("Huấn luyện viên không xem được hộp thư khiếu nại")
     void getAllRequests_rejectsCoaches() {
@@ -632,6 +663,7 @@ class SupportRequestServiceTest {
         verifyNoInteractions(supportRequestRepository);
     }
 
+    /** Kiểm thử: Sau khi chuyển cấp lễ tân bị khóa, trước khi chuyển cấp quản lý bị khóa */
     @Test
     @DisplayName("Sau khi chuyển cấp lễ tân bị khóa, trước khi chuyển cấp quản lý bị khóa")
     void updateStatus_followsTheEscalationHandoff() {
@@ -648,6 +680,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: Quản lý trả lời được khiếu nại đã chuyển lên, lễ tân và HLV thì không */
     @Test
     @DisplayName("Quản lý trả lời được khiếu nại đã chuyển lên, lễ tân và HLV thì không")
     void sendMessage_isRestrictedToTheCurrentHandler() {
@@ -667,6 +700,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: Hội viên thấy khiếu nại đã chuyển cấp nhưng không thấy lý do nội bộ */
     @Test
     @DisplayName("Hội viên thấy khiếu nại đã chuyển cấp nhưng không thấy lý do nội bộ")
     void memberViewsHideTheEscalationReason() {
@@ -683,6 +717,7 @@ class SupportRequestServiceTest {
         assertThat(seen.escalatedByName()).isNull();
     }
 
+    /** Kiểm thử: Hội viên rút phiếu open hoặc xác nhận phiếu resolved; phiếu khác hoặc của người khác bị từ chối */
     @Test
     @DisplayName("Hội viên rút phiếu open hoặc xác nhận phiếu resolved; phiếu khác hoặc của người khác bị từ chối")
     void closeByMember_onlyOwnerAndOnlyOpenOrResolved() {
@@ -701,6 +736,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(com.swp391.scms.common.exception.ForbiddenException.class);
     }
 
+    /** Kiểm thử: Nhân viên không được nhảy open -> resolved hoặc in_progress -> closed */
     @Test
     @DisplayName("Nhân viên không được nhảy open -> resolved hoặc in_progress -> closed")
     void updateStatus_rejectsSkippingSteps() {
@@ -712,6 +748,7 @@ class SupportRequestServiceTest {
                 .isInstanceOf(com.swp391.scms.common.exception.AppException.class);
     }
 
+    /** Kiểm thử: Phiếu resolved quá 72 giờ tự đóng */
     @Test
     @DisplayName("Phiếu resolved quá 72 giờ tự đóng")
     void closeStaleResolved_closesOldResolvedTickets() {

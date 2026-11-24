@@ -28,6 +28,7 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service ProductCatalogService (product catalog service). */
 class ProductCatalogServiceTest {
     ProductRepository products;
     ProductCategoryRepository categories;
@@ -63,6 +64,7 @@ class ProductCatalogServiceTest {
         return p;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (variant). */
     static ProductVariant variant(Product p, Long id, String price, Integer servings, int stock, boolean active) {
         ProductVariant v = new ProductVariant();
         v.setId(id);

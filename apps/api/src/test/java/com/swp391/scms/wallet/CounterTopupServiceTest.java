@@ -21,6 +21,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+/** Bộ kiểm thử cho service CounterTopupService (counter topup service). */
 class CounterTopupServiceTest {
     private final PaymentRepository payments = mock(PaymentRepository.class);
     private final MemberRepository members = mock(MemberRepository.class);

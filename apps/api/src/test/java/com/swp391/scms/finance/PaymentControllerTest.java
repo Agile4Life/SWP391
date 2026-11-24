@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho controller PaymentController (payment controller). */
 @ExtendWith(MockitoExtension.class)
 class PaymentControllerTest {
 

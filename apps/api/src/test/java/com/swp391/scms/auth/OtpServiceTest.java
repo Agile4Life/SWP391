@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/** Bộ kiểm thử cho service OtpService (otp service). */
 @ExtendWith(MockitoExtension.class)
 class OtpServiceTest {
 

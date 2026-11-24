@@ -28,6 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
+/** Bộ kiểm thử cho service CourtBookingService (court booking service). */
 class CourtBookingServiceTest {
     final CourtBookingRepository bookings = mock(CourtBookingRepository.class);
     final RoomRepository rooms = mock(RoomRepository.class);
@@ -72,7 +73,9 @@ class CourtBookingServiceTest {
             return saved;
         }).when(bookings).saveAndFlush(any());
     }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (paid). */
     BookRequest paid(LocalTime time, String method) { return new BookRequest(10L, date, time, method); }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (paid). */
     BookRequest paid(LocalDate day, LocalTime time, String method) { return new BookRequest(10L, day, time, method); }
 
     BookRequest request(LocalDate day, LocalTime time) { return new BookRequest(10L, day, time); }

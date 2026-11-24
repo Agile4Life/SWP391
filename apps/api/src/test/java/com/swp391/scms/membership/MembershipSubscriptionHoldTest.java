@@ -7,6 +7,7 @@ import com.swp391.scms.membership.entity.MembershipSubscription;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho MembershipSubscriptionHold (membership subscription hold). */
 class MembershipSubscriptionHoldTest {
     private static MembershipSubscription held(String status) {
         MembershipSubscription s = new MembershipSubscription();

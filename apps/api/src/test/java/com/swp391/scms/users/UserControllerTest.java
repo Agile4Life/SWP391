@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller UserController (user controller). */
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 
@@ -46,6 +47,7 @@ class UserControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample user). */
     private UserDto sampleUser(Long id, String roleCode, String status) {
         UserDto u = new UserDto();
         u.setId(id);

@@ -17,6 +17,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service VnpayPaymentService (vnpay payment service). */
 class VnpayPaymentServiceTest {
     final VnpayTransactionRepository transactions = mock(VnpayTransactionRepository.class);
     final PaymentRepository payments = mock(PaymentRepository.class);

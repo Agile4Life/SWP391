@@ -29,7 +29,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
-/** A membership hold gives a course credit or fee back only when approved 3+ days before the course starts. */
+/**
+ * Bộ kiểm thử cho CourseHoldRefund (course hold refund).
+ *
+ * A membership hold gives a course credit or fee back only when approved 3+ days before the course starts.
+ */
 class CourseHoldRefundTest {
 
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
@@ -72,6 +76,7 @@ class CourseHoldRefundTest {
         return enrollment;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (paid). */
     private Payment paid(long enrollmentId, String amount) {
         Payment payment = new Payment();
         payment.setId(enrollmentId + 1);

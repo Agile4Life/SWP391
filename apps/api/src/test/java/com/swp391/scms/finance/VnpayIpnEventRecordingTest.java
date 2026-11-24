@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho VnpayIpnEventRecording (vnpay ipn event recording). */
 class VnpayIpnEventRecordingTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 

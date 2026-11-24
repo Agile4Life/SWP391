@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho CoursePayment (course payment). */
 class CoursePaymentTest {
 
     private ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);

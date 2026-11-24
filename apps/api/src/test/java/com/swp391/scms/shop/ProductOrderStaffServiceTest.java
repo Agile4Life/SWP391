@@ -54,6 +54,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service ProductOrderStaffService (product order staff service). */
 class ProductOrderStaffServiceTest {
     final ProductOrderRepository orders = mock(ProductOrderRepository.class);
     final ProductVariantRepository variants = mock(ProductVariantRepository.class);

@@ -40,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service CoachBookingService (coach booking service). */
 @ExtendWith(MockitoExtension.class)
 class CoachBookingServiceTest {
 
@@ -98,6 +99,7 @@ class CoachBookingServiceTest {
         principal = new AuthenticatedPrincipal(10L, "khoa", "MEMBER");
     }
 
+    /** Kiểm thử: Đặt lịch 1:1 thành công với hình thức trả phí theo giờ */
     @Test
     @DisplayName("Đặt lịch 1:1 thành công với hình thức trả phí theo giờ")
     void createBooking_success_hourlyPay() {
@@ -138,6 +140,7 @@ class CoachBookingServiceTest {
         assertThat(result.status()).isEqualTo("confirmed");
     }
 
+    /** Kiểm thử: Chặn đặt lịch nếu thời gian bắt đầu cách dưới 2 tiếng */
     @Test
     @DisplayName("Chặn đặt lịch nếu thời gian bắt đầu cách dưới 2 tiếng")
     void createBooking_throws_whenTooSoon() {
@@ -160,6 +163,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("COACH_BOOKING_TOO_SOON"));
     }
 
+    /** Kiểm thử: Chặn đặt lịch nếu Huấn luyện viên đã có lịch dạy lớp trùng giờ */
     @Test
     @DisplayName("Chặn đặt lịch nếu Huấn luyện viên đã có lịch dạy lớp trùng giờ")
     void createBooking_throws_whenCoachBusy() {
@@ -191,6 +195,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((ConflictException) e).getErrorCode()).isEqualTo("COACH_SCHEDULE_CONFLICT"));
     }
 
+    /** Kiểm thử: Thành công trừ lượt PT của gói GOLD khi còn hạn mức */
     @Test
     @DisplayName("Thành công trừ lượt PT của gói GOLD khi còn hạn mức")
     void createBooking_success_withPackageQuota() {
@@ -234,6 +239,7 @@ class CoachBookingServiceTest {
         assertThat(result.status()).isEqualTo("confirmed");
     }
 
+    /** Kiểm thử: Thành công trừ lượt PT của Gói Trải Nghiệm 3 Ngày (tối đa 1 lượt) */
     @Test
     @DisplayName("Thành công trừ lượt PT của Gói Trải Nghiệm 3 Ngày (tối đa 1 lượt)")
     void createBooking_success_withTrialQuota() {
@@ -278,6 +284,7 @@ class CoachBookingServiceTest {
         assertThat(result.status()).isEqualTo("confirmed");
     }
 
+    /** Kiểm thử: Báo lỗi khi Gói Trải Nghiệm 3 Ngày đã dùng hết 1 buổi PT 1:1 */
     @Test
     @DisplayName("Báo lỗi khi Gói Trải Nghiệm 3 Ngày đã dùng hết 1 buổi PT 1:1")
     void createBooking_throws_whenTrialQuotaExceeded() {
@@ -316,6 +323,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("COACH_BOOKING_TRIAL_QUOTA_EXCEEDED"));
     }
 
+    /** Kiểm thử: Báo lỗi khi gói tập không có quyền lợi PT (như SILVER) mà chọn trừ lượt gói */
     @Test
     @DisplayName("Báo lỗi khi gói tập không có quyền lợi PT (như SILVER) mà chọn trừ lượt gói")
     void createBooking_throws_whenSilverHasNoPtQuota() {
@@ -351,6 +359,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("COACH_BOOKING_PACKAGE_NO_QUOTA"));
     }
 
+    /** Kiểm thử: Kiểm tra khung giờ khả dụng: đánh dấu slot dưới 2 tiếng là too_soon */
     @Test
     @DisplayName("Kiểm tra khung giờ khả dụng: đánh dấu slot dưới 2 tiếng là too_soon")
     void getAvailableSlots_marks_tooSoon() {
@@ -511,6 +520,7 @@ class CoachBookingServiceTest {
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
     }
 
+    /** Kiểm thử: Đặt lịch 1:1 trả phí tạo khoản chờ thanh toán và gửi thông báo thanh toán */
     @Test
     @DisplayName("Đặt lịch 1:1 trả phí tạo khoản chờ thanh toán và gửi thông báo thanh toán")
     void createHourlyBookingCreatesPendingPaymentAndSendsPaymentNotification() {
@@ -561,6 +571,7 @@ class CoachBookingServiceTest {
         );
     }
 
+    /** Kiểm thử: Hủy buổi tập 1:1 đã thanh toán trước giờ bắt đầu hoàn tiền về Ví hội viên */
     @Test
     @DisplayName("Hủy buổi tập 1:1 đã thanh toán trước giờ bắt đầu hoàn tiền về Ví hội viên")
     void cancelPaidBookingBeforeStartRefundsToWallet() {
@@ -598,6 +609,10 @@ class CoachBookingServiceTest {
         verify(wallets).creditCoachBookingRefund(10L, new BigDecimal("200000.00"), "COACH_REFUND_160", "Bận việc đột xuất");
     }
 
+    /**
+     * Kiểm thử: Học viên hủy buổi tập 1:1 dùng lượt gói trước 2 tiếng được hoàn lại lượt; hủy trong vòng 2
+     * tiếng bị mất lượt
+     */
     @Test
     @DisplayName("Học viên hủy buổi tập 1:1 dùng lượt gói trước 2 tiếng được hoàn lại lượt; hủy trong vòng 2 tiếng bị mất lượt")
     void memberCancelPackageQuotaRespectsTwoHourRefundWindow() {
@@ -635,6 +650,7 @@ class CoachBookingServiceTest {
         assertThat(lateBooking.isQuotaForfeited()).isTrue();
     }
 
+    /** Kiểm thử: HLV hoặc quản lý hủy buổi tập trong vòng 2 tiếng không làm mất lượt gói của học viên */
     @Test
     @DisplayName("HLV hoặc quản lý hủy buổi tập trong vòng 2 tiếng không làm mất lượt gói của học viên")
     void staffCancelWithinTwoHoursDoesNotForfeitMemberQuota() {
@@ -657,6 +673,7 @@ class CoachBookingServiceTest {
         assertThat(booking.isQuotaForfeited()).isFalse();
     }
 
+    /** Kiểm thử: Tự động hủy lịch PT 1:1 treo quá hạn chưa thanh toán và đóng giao dịch pending */
     @Test
     @DisplayName("Tự động hủy lịch PT 1:1 treo quá hạn chưa thanh toán và đóng giao dịch pending")
     void expireUnpaidBookingsCancelsStaleAndSkipsActiveVnpay() {
@@ -711,6 +728,10 @@ class CoachBookingServiceTest {
         verify(coachBookingRepository).save(stale);
     }
 
+    /**
+     * Kiểm thử: Khi tắt lớp học nhóm (legacyClassesEnabled=false), các ClassSession cũ không chặn slot PT 1:1
+     * của HLV
+     */
     @Test
     @DisplayName("Khi tắt lớp học nhóm (legacyClassesEnabled=false), các ClassSession cũ không chặn slot PT 1:1 của HLV")
     void legacyClassSessionsAreIgnoredWhenClassesDisabled() {
@@ -726,6 +747,7 @@ class CoachBookingServiceTest {
         verify(classSessionRepository, never()).findActiveByMemberAndDate(any(), any());
     }
 
+    /** Kiểm thử: Lượt PT miễn phí đã dùng ở gói Trial không trừ vào 3 lượt của gói Gold mới mua */
     @Test
     @DisplayName("Lượt PT miễn phí đã dùng ở gói Trial không trừ vào 3 lượt của gói Gold mới mua")
     void trialQuotaUsageDoesNotReduceSubsequentGoldPackageQuota() {
@@ -756,6 +778,7 @@ class CoachBookingServiceTest {
         assertThat(quota.remainingQuota()).isEqualTo(3);
     }
 
+    /** Kiểm thử: Nâng cấp từ Gold lên Platinum ngay trong ngày vẫn giữ đủ 3 lượt PT đã dùng của Gold */
     @Test
     @DisplayName("Nâng cấp từ Gold lên Platinum ngay trong ngày vẫn giữ đủ 3 lượt PT đã dùng của Gold")
     void upgradingGoldToPlatinumSameDayCarriesOverGoldPtUsage() {
@@ -828,6 +851,7 @@ class CoachBookingServiceTest {
         verify(coachBookingRepository, never()).save(any());
     }
 
+    /** Kiểm thử: getMemberQuotaStatus: Trả về đúng 1 lượt cho Gói Trải Nghiệm 3 Ngày (dù tên cũ là GOLD) */
     @Test
     @DisplayName("getMemberQuotaStatus: Trả về đúng 1 lượt cho Gói Trải Nghiệm 3 Ngày (dù tên cũ là GOLD)")
     void getMemberQuotaStatus_returnsTrialQuotaCorrectly() {
@@ -850,6 +874,7 @@ class CoachBookingServiceTest {
         assertThat(quota.remainingQuota()).isEqualTo(1);
     }
 
+    /** Kiểm thử: getMemberQuotaStatus: Trả về đúng 3 lượt cho Gói GOLD 30 ngày chuẩn */
     @Test
     @DisplayName("getMemberQuotaStatus: Trả về đúng 3 lượt cho Gói GOLD 30 ngày chuẩn")
     void getMemberQuotaStatus_returnsGoldQuotaCorrectly() {

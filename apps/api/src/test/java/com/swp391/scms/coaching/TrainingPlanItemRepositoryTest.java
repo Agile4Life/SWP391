@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho repository TrainingPlanItemRepository (training plan item repository). */
 class TrainingPlanItemRepositoryTest {
     // Contract check only; PostgreSQL SQL execution/locking requires an isolated database.
     @Test void completionLookupFetchesOwnershipGraphAndKeepsWriteLock() throws Exception {

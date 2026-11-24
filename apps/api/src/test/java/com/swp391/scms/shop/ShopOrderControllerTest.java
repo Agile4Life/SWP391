@@ -33,6 +33,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ShopOrderController (shop order controller). */
 class ShopOrderControllerTest {
     final ProductOrderService orders = mock(ProductOrderService.class);
     final AuthenticatedPrincipal member = new AuthenticatedPrincipal(1L, "member", "MEMBER");
@@ -43,11 +44,13 @@ class ShopOrderControllerTest {
     void setUp() {
         mvc = MockMvcBuilders.standaloneSetup(new ShopOrderController(orders))
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(MethodParameter parameter) {
                         return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(MethodParameter parameter,
                                                   ModelAndViewContainer mavContainer,
@@ -60,6 +63,7 @@ class ShopOrderControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample order). */
     OrderDto sampleOrder() {
         return new OrderDto(
                 9L, "SOL-261105-ABCD", "pending_payment", "pickup", "online",

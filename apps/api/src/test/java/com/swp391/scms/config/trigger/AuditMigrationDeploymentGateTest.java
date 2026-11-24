@@ -10,7 +10,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
-/** Spring property binding, without Boot startup, datasource, environment credentials or schema writes. */
+/**
+ * Bộ kiểm thử cho AuditMigrationDeploymentGate (audit migration deployment gate).
+ *
+ * Spring property binding, without Boot startup, datasource, environment credentials or schema writes.
+ */
 class AuditMigrationDeploymentGateTest {
     private ApplicationContextRunner context() {
         return new ApplicationContextRunner()

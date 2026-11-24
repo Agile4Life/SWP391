@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Bộ kiểm thử cho ShopPricing (shop pricing). */
 class ShopPricingTest {
     static ShopProperties props(long fee, long threshold) {
         ShopProperties p = new ShopProperties();

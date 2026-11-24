@@ -42,6 +42,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller NotificationController (notification controller). */
 @ExtendWith(MockitoExtension.class)
 public class NotificationControllerTest {
 
@@ -57,12 +58,14 @@ public class NotificationControllerTest {
     private ObjectMapper objectMapper;
 
     private final HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+        /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
         @Override
         public boolean supportsParameter(MethodParameter parameter) {
             return parameter.hasParameterAnnotation(AuthenticationPrincipal.class)
                     && parameter.getParameterType().equals(AuthenticatedPrincipal.class);
         }
 
+        /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                       NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {

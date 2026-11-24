@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 
+/** Bộ kiểm thử cho CourtFeatureDisabled (court feature disabled). */
 class CourtFeatureDisabledTest {
     @Test
     void courtEndpointsAndSeederAreNotRegistered() {

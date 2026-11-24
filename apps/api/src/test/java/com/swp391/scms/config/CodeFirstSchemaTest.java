@@ -23,6 +23,8 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 
 /**
+ * Bộ kiểm thử cho CodeFirstSchema (code first schema).
+ *
  * Code-first guard: the JPA entities alone must be able to generate every table of
  * databaseschema.sql on PostgreSQL, without a live connection or hand-written runtime DDL.
  */

@@ -47,7 +47,11 @@ import java.util.function.Supplier;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** SCRUM-75 concurrency and membership boundaries against a dedicated Supabase test schema. */
+/**
+ * Bộ kiểm thử cho OperationsConcurrencyPostgreSql (operations concurrency postgre sql).
+ *
+ * SCRUM-75 concurrency and membership boundaries against a dedicated Supabase test schema.
+ */
 @SpringBootTest
 @ActiveProfiles("supabase")
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
@@ -405,6 +409,7 @@ class OperationsConcurrencyPostgreSqlTest {
         return jdbc.queryForObject("select " + column + " from center_checkins where id = ?", LocalDateTime.class, visit);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private long user(String role) {
         return jdbc.queryForObject("""
                 insert into users (role_id, full_name, email, password_hash, status, created_at, updated_at)
@@ -412,6 +417,7 @@ class OperationsConcurrencyPostgreSqlTest {
                 """, Long.class, role, UUID.randomUUID() + "@example.invalid");
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (member). */
     private long member() {
         long member = user("MEMBER");
         jdbc.update("insert into members (user_id, membership_code, join_date, fitness_level) values (?, ?, current_date, 'beginner')",
@@ -419,6 +425,7 @@ class OperationsConcurrencyPostgreSqlTest {
         return member;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (subscription). */
     private String subscription(long member, String status, int startOffset, int endOffset) {
         String qr = UUID.randomUUID().toString();
         LocalDate today = LocalDate.now(clock);

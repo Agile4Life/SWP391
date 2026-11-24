@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 
+/** Bộ kiểm thử cho EquipmentFeatureDisabled (equipment feature disabled). */
 class EquipmentFeatureDisabledTest {
     @Test
     void equipmentManagementControllerIsNotRegistered() {

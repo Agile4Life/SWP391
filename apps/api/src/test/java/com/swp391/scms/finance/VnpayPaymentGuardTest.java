@@ -11,6 +11,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho VnpayPaymentGuard (vnpay payment guard). */
 class VnpayPaymentGuardTest {
     @Test void unsettledAttemptBlocksCashierAndRefundEvenAfterLocalTimeout() {
         var transactions=mock(VnpayTransactionRepository.class);

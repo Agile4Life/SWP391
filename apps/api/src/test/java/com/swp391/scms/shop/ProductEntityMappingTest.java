@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho ProductEntityMapping (product entity mapping). */
 class ProductEntityMappingTest {
 
     @Test

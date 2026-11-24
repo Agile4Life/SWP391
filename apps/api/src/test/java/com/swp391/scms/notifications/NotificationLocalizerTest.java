@@ -9,6 +9,7 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho NotificationLocalizer (notification localizer). */
 class NotificationLocalizerTest {
 
     private final NotificationLocalizer localizer = NotificationTestMessages.localizer();

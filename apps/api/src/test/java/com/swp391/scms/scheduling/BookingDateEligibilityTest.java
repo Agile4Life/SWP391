@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho BookingDateEligibility (booking date eligibility). */
 class BookingDateEligibilityTest {
     private static final ZoneId CENTER = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final LocalDate TODAY = LocalDate.of(2026, 11, 1);

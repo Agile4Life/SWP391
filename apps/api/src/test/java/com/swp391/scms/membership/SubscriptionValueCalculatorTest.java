@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho SubscriptionValueCalculator (subscription value calculator). */
 class SubscriptionValueCalculatorTest {
 
     private static final LocalDate START = LocalDate.of(2026, 11, 1);
@@ -22,6 +23,7 @@ class SubscriptionValueCalculatorTest {
     private final PaymentRepository payments = mock(PaymentRepository.class);
     private final SubscriptionValueCalculator calculator = new SubscriptionValueCalculator(payments);
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (period). */
     private MembershipSubscription period(String listPrice) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setId(1L);
@@ -35,6 +37,7 @@ class SubscriptionValueCalculatorTest {
         return subscription;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (payment). */
     private static Payment payment(String amount, String status, String refunded) {
         Payment payment = new Payment();
         payment.setSubscriptionId(7L);

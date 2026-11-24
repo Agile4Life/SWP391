@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho WalletServiceNotification (wallet service notification). */
 @ExtendWith(MockitoExtension.class)
 class WalletServiceNotificationTest {
 

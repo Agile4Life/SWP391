@@ -33,8 +33,10 @@ import static org.mockito.Mockito.mock;
 @ContextConfiguration(classes = {
         MethodSecurityPolicyTest.MethodSecurityConfig.class
 })
+/** Bộ kiểm thử cho chính sách MethodSecurityPolicy (method security policy). */
 class MethodSecurityPolicyTest {
 
+    /** Bộ kiểm thử cho cấu hình MethodSecurityConfig (method security config). */
     @Configuration
     @EnableMethodSecurity
     static class MethodSecurityConfig {
@@ -111,6 +113,7 @@ class MethodSecurityPolicyTest {
     @Autowired
     private com.swp391.scms.scheduling.ClassController classController;
 
+    /** Kiểm thử: AC SCRUM-69: Receptionist không thể xóa người dùng -> Spring Security ném AccessDeniedException */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist không thể xóa người dùng -> Spring Security ném AccessDeniedException")
@@ -118,6 +121,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> userController.deleteUser(4L));
     }
 
+    /** Kiểm thử: Manager chỉ tạo nhân sự, không xóa người dùng */
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
     @DisplayName("Manager chỉ tạo nhân sự, không xóa người dùng")
@@ -131,6 +135,10 @@ class MethodSecurityPolicyTest {
         assertDoesNotThrow(() -> userController.deleteUser(4L));
     }
 
+    /**
+     * Kiểm thử: AC SCRUM-69: Receptionist không thể sửa bảng giá gói tập -> Spring Security ném
+     * AccessDeniedException
+     */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist không thể sửa bảng giá gói tập -> Spring Security ném AccessDeniedException")
@@ -139,6 +147,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> packageController.update(1L, request));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Center Manager có quyền sửa gói tập -> Không bị chặn */
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
     @DisplayName("AC SCRUM-69: Center Manager có quyền sửa gói tập -> Không bị chặn")
@@ -147,6 +156,10 @@ class MethodSecurityPolicyTest {
         assertDoesNotThrow(() -> packageController.update(1L, request));
     }
 
+    /**
+     * Kiểm thử: AC SCRUM-69: Member không thể xem toàn bộ yêu cầu hỗ trợ -> Spring Security ném
+     * AccessDeniedException
+     */
     @Test
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể xem toàn bộ yêu cầu hỗ trợ -> Spring Security ném AccessDeniedException")
@@ -154,6 +167,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> supportRequestController.getAllRequests(supportActor(), null, null));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Receptionist có quyền xem và xử lý yêu cầu hỗ trợ -> Không bị chặn */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist có quyền xem và xử lý yêu cầu hỗ trợ -> Không bị chặn")
@@ -161,6 +175,10 @@ class MethodSecurityPolicyTest {
         assertDoesNotThrow(() -> supportRequestController.getAllRequests(supportActor(), null, null));
     }
 
+    /**
+     * Kiểm thử: AC SCRUM-69: Member không thể cập nhật trạng thái yêu cầu hỗ trợ -> Spring Security ném
+     * AccessDeniedException
+     */
     @Test
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể cập nhật trạng thái yêu cầu hỗ trợ -> Spring Security ném AccessDeniedException")
@@ -169,6 +187,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> supportRequestController.updateStatus(supportActor(), 1L, updateDto));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Center Manager có quyền cập nhật trạng thái yêu cầu hỗ trợ -> Không bị chặn */
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
     @DisplayName("AC SCRUM-69: Center Manager có quyền cập nhật trạng thái yêu cầu hỗ trợ -> Không bị chặn")
@@ -177,6 +196,7 @@ class MethodSecurityPolicyTest {
         assertDoesNotThrow(() -> supportRequestController.updateStatus(supportActor(), 1L, updateDto));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Member không thể truy cập endpoint quản lý lớp của Manager */
     @Test
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể truy cập endpoint quản lý lớp của Manager")
@@ -186,6 +206,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> classController.createClass(req));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Member không thể truy cập endpoint xử lý thanh toán của Receptionist */
     @Test
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể truy cập endpoint xử lý thanh toán của Receptionist")
@@ -194,6 +215,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> paymentController.processPayment(req));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Receptionist không thể hoàn tiền (chỉ Center Manager) */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist không thể hoàn tiền (chỉ Center Manager)")
@@ -206,6 +228,7 @@ class MethodSecurityPolicyTest {
         return new com.swp391.scms.security.AuthenticatedPrincipal(1L, "actor", "RECEPTIONIST");
     }
 
+    /** Kiểm thử: Huấn luyện viên không còn xem hay xử lý khiếu nại -> AccessDeniedException */
     @Test
     @WithMockUser(roles = "COACH")
     @DisplayName("Huấn luyện viên không còn xem hay xử lý khiếu nại -> AccessDeniedException")
@@ -218,6 +241,7 @@ class MethodSecurityPolicyTest {
                 new com.swp391.scms.support.dto.CreateSupportMessageDto("Xin chào", null)));
     }
 
+    /** Kiểm thử: Chỉ lễ tân được chuyển khiếu nại lên quản lý; quản lý không tự chuyển -> AccessDeniedException */
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
     @DisplayName("Chỉ lễ tân được chuyển khiếu nại lên quản lý; quản lý không tự chuyển -> AccessDeniedException")
@@ -226,6 +250,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> supportRequestController.escalate(supportActor(), 1L, dto));
     }
 
+    /** Kiểm thử: Lễ tân được chuyển khiếu nại lên quản lý -> Không bị chặn */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("Lễ tân được chuyển khiếu nại lên quản lý -> Không bị chặn")

@@ -20,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+/** Bộ kiểm thử cho AuditAspect (audit aspect). */
 @ExtendWith(MockitoExtension.class)
 class AuditAspectTest {
 

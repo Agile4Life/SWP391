@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service StaffInternalRequestService (staff internal request service). */
 @ExtendWith(MockitoExtension.class)
 class StaffInternalRequestServiceTest {
 
@@ -79,6 +80,7 @@ class StaffInternalRequestServiceTest {
         org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
     }
 
+    /** Kiểm thử: Tạo đơn xin nghỉ phép thành công và gửi thông báo cho Manager */
     @Test
     @DisplayName("Tạo đơn xin nghỉ phép thành công và gửi thông báo cho Manager")
     void createRequest_Success() {
@@ -120,6 +122,7 @@ class StaffInternalRequestServiceTest {
         );
     }
 
+    /** Kiểm thử: Tạo đơn với loại không hợp lệ ném BadRequestException */
     @Test
     @DisplayName("Tạo đơn với loại không hợp lệ ném BadRequestException")
     void createRequest_InvalidType_ThrowsBadRequest() {
@@ -136,6 +139,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Hủy đơn thành công khi đơn còn đang PENDING */
     @Test
     @DisplayName("Hủy đơn thành công khi đơn còn đang PENDING")
     void cancelRequest_Success() {
@@ -154,6 +158,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository).save(req);
     }
 
+    /** Kiểm thử: Người dùng khác hủy đơn của đồng nghiệp bị ForbiddenException */
     @Test
     @DisplayName("Người dùng khác hủy đơn của đồng nghiệp bị ForbiddenException")
     void cancelRequest_Forbidden_WhenNotOwner() {
@@ -168,6 +173,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Hủy đơn đã được duyệt hoặc từ chối ném BadRequestException */
     @Test
     @DisplayName("Hủy đơn đã được duyệt hoặc từ chối ném BadRequestException")
     void cancelRequest_BadRequest_WhenNotPending() {
@@ -181,6 +187,7 @@ class StaffInternalRequestServiceTest {
         assertThrows(BadRequestException.class, () -> service.cancelRequest(10L, 50L));
     }
 
+    /** Kiểm thử: Quản lý duyệt đơn (APPROVED) thành công và gửi thông báo cho nhân viên */
     @Test
     @DisplayName("Quản lý duyệt đơn (APPROVED) thành công và gửi thông báo cho nhân viên")
     void reviewRequest_Approve_Success() {
@@ -213,6 +220,7 @@ class StaffInternalRequestServiceTest {
         );
     }
 
+    /** Kiểm thử: Quản lý từ chối đơn (REJECTED) bắt buộc phải có lý do */
     @Test
     @DisplayName("Quản lý từ chối đơn (REJECTED) bắt buộc phải có lý do")
     void reviewRequest_Reject_MissingReason_ThrowsBadRequest() {
@@ -229,6 +237,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Duyệt đơn đã xử lý trước đó ném BadRequestException */
     @Test
     @DisplayName("Duyệt đơn đã xử lý trước đó ném BadRequestException")
     void reviewRequest_AlreadyReviewed_ThrowsBadRequest() {

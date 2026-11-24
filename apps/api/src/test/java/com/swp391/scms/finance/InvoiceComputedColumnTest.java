@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+/** Bộ kiểm thử cho InvoiceComputedColumn (invoice computed column). */
 class InvoiceComputedColumnTest {
 
     @Test

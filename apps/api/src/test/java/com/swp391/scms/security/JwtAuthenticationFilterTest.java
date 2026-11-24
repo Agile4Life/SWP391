@@ -15,6 +15,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho bộ lọc JwtAuthenticationFilter (jwt authentication filter). */
 class JwtAuthenticationFilterTest {
     private final UserRepository users = mock(UserRepository.class);
     private final JwtService jwt = new JwtService("test-only-signing-secret-with-at-least-32-bytes", 60000L);

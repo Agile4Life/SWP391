@@ -22,6 +22,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service TrainingCompletionService (training completion service). */
 class TrainingCompletionServiceTest {
     @Mock TrainingPlanItemRepository itemRepository;
     @Mock TrainingItemCompletionRepository completionRepository;

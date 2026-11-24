@@ -34,6 +34,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho controller TrainingPlanController (training plan controller). */
 @ExtendWith(MockitoExtension.class)
 class TrainingPlanControllerTest {
 
@@ -53,11 +54,13 @@ class TrainingPlanControllerTest {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+            /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
             @Override
             public boolean supportsParameter(MethodParameter parameter) {
                 return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
             }
 
+            /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
             @Override
             public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                           NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {

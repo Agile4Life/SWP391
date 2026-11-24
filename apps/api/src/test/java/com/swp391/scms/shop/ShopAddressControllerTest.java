@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ShopAddressController (shop address controller). */
 class ShopAddressControllerTest {
     AddressService service;
     MockMvc mvc;
@@ -36,11 +37,13 @@ class ShopAddressControllerTest {
         mvc = MockMvcBuilders.standaloneSetup(new ShopAddressController(service))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(MethodParameter parameter) {
                         return parameter.getParameterType() == AuthenticatedPrincipal.class;
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(MethodParameter p, ModelAndViewContainer c, NativeWebRequest r, WebDataBinderFactory f) {
                         return new AuthenticatedPrincipal(1L, "member", "MEMBER");

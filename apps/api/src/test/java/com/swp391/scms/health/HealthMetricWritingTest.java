@@ -12,6 +12,7 @@ import java.time.*;
 import java.util.*;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
+/** Bộ kiểm thử cho HealthMetricWriting (health metric writing). */
 class HealthMetricWritingTest {
  MemberProgressLogRepository logs=mock(MemberProgressLogRepository.class);
  MemberRepository members=mock(MemberRepository.class); UserRepository users=mock(UserRepository.class);

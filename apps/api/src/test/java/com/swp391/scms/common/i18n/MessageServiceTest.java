@@ -9,6 +9,7 @@ import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Bộ kiểm thử cho service MessageService (message service). */
 @DisplayName("MessageService i18n Unit Tests")
 class MessageServiceTest {
 

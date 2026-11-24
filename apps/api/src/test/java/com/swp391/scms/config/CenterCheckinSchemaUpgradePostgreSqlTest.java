@@ -18,7 +18,11 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Exercises an existing database upgrade in a generated schema; never changes public. */
+/**
+ * Bộ kiểm thử cho CenterCheckinSchemaUpgradePostgreSql (center checkin schema upgrade postgre sql).
+ *
+ * Exercises an existing database upgrade in a generated schema; never changes public.
+ */
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 class CenterCheckinSchemaUpgradePostgreSqlTest {
 

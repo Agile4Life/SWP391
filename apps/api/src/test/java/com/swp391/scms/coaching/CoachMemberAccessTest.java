@@ -20,6 +20,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho CoachMemberAccess (coach member access). */
 @ExtendWith(MockitoExtension.class)
 class CoachMemberAccessTest {
 

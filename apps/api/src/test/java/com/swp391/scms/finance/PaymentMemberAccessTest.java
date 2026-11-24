@@ -42,6 +42,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(PaymentController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class, PaymentService.class})
+/** Bộ kiểm thử cho PaymentMemberAccess (payment member access). */
 class PaymentMemberAccessTest {
     @Autowired MockMvc mvc;
     @MockBean com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
@@ -55,6 +56,7 @@ class PaymentMemberAccessTest {
     @MockBean MessageService messages;
     @MockBean Clock clock;
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(2L, "review-member", role),
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));

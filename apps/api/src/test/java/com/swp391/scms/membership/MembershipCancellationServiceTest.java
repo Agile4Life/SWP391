@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service MembershipCancellationService (membership cancellation service). */
 @ExtendWith(MockitoExtension.class)
 class MembershipCancellationServiceTest {
     @Mock MembershipCancellationRequestRepository requests;

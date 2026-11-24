@@ -23,6 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service AddressService (address service). */
 class AddressServiceTest {
     MemberAddressRepository repo;
     MemberRepository members;

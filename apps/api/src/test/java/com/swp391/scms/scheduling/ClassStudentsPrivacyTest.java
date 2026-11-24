@@ -26,7 +26,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** Health notes are medical data: only the class's own coach and managers read them. */
+/**
+ * Bộ kiểm thử cho ClassStudentsPrivacy (class students privacy).
+ *
+ * Health notes are medical data: only the class's own coach and managers read them.
+ */
 class ClassStudentsPrivacyTest {
     private final GymClassRepository gymClasses = mock(GymClassRepository.class);
     private final ClassSessionRepository sessions = mock(ClassSessionRepository.class);

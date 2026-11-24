@@ -24,6 +24,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/** Bộ kiểm thử cho bộ khởi tạo dữ liệu CatalogSeeder (catalog seeder). */
 @ExtendWith(MockitoExtension.class)
 class CatalogSeederTest {
 

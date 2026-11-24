@@ -8,7 +8,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Runs in CI: legacy reference SQL must never become an application dependency. */
+/**
+ * Bộ kiểm thử cho chính sách DatabasePolicy (database policy).
+ *
+ * Runs in CI: legacy reference SQL must never become an application dependency.
+ */
 class DatabasePolicyTest {
     private static final Path ROOT = Path.of("..", "..");
     private static final Pattern LEGACY_DATABASE = Pattern.compile(

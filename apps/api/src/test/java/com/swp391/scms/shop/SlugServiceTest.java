@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho service SlugService (slug service). */
 class SlugServiceTest {
     @Test
     void slugifyHandlesVietnamese() {

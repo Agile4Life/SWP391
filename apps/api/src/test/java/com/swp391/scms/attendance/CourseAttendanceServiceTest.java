@@ -29,6 +29,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+/** Bộ kiểm thử cho service CourseAttendanceService (course attendance service). */
 class CourseAttendanceServiceTest {
     private final SessionAttendanceRepository attendance = mock(SessionAttendanceRepository.class);
     private final ClassSessionRepository sessions = mock(ClassSessionRepository.class);
@@ -51,6 +52,7 @@ class CourseAttendanceServiceTest {
         member.setUserId(100L);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (session). */
     private ClassSession session(long id, LocalDate date, LocalTime start, LocalTime end) {
         ClassSession s = new ClassSession();
         s.setId(id);
@@ -61,6 +63,7 @@ class CourseAttendanceServiceTest {
         return s;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (enrollment). */
     private ClassEnrollment enrollment(LocalDateTime enrolledAt) {
         ClassEnrollment e = new ClassEnrollment();
         e.setGymClass(course);

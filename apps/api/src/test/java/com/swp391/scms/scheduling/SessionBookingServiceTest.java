@@ -26,6 +26,7 @@ import java.util.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho service SessionBookingService (session booking service). */
 class SessionBookingServiceTest {
 
     final SessionBookingRepository bookings = mock(SessionBookingRepository.class);
@@ -70,6 +71,7 @@ class SessionBookingServiceTest {
         });
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (session). */
     ClassSession session(long id, LocalDate date, int startHour) {
         ClassSession s = new ClassSession();
         s.setId(id);

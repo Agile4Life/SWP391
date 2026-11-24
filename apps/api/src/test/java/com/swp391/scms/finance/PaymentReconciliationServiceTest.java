@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service PaymentReconciliationService (payment reconciliation service). */
 class PaymentReconciliationServiceTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final LocalDateTime NOW = LocalDateTime.of(2026, 11, 13, 10, 0);
@@ -51,6 +52,7 @@ class PaymentReconciliationServiceTest {
         service = new PaymentReconciliationService(attempts, callbacks, payments, wallet, clock);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (payment). */
     private static Payment payment(long id, String status) {
         User u = new User();
         u.setId(7L); u.setFullName("Nguyễn An"); u.setEmail("an@example.com"); u.setPhone("0900000000");

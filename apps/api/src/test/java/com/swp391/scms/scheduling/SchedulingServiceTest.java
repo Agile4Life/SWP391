@@ -60,6 +60,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho service SchedulingService (scheduling service). */
 @ExtendWith(MockitoExtension.class)
 class SchedulingServiceTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 17);
@@ -182,11 +183,13 @@ class SchedulingServiceTest {
         ReflectionTestUtils.setField(ownBooking, "id", 21L);
         lenient().when(enrollments.findByMemberUserId(MEMBER.id())).thenReturn(List.of(ownBooking));
         var principalResolver = new HandlerMethodArgumentResolver() {
+            /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
             @Override
             public boolean supportsParameter(MethodParameter parameter) {
                 return parameter.getParameterType() == AuthenticatedPrincipal.class;
             }
 
+            /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
             @Override
             public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer container,
                                           NativeWebRequest request, WebDataBinderFactory factory) {

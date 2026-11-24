@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service MemberTrialService (member trial service). */
 @ExtendWith(MockitoExtension.class)
 class MemberTrialServiceTest {
 
@@ -211,6 +212,7 @@ class MemberTrialServiceTest {
         verify(subscriptions, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: CccdHasher: không lưu số gốc, ổn định và phụ thuộc pepper */
     @Test
     @DisplayName("CccdHasher: không lưu số gốc, ổn định và phụ thuộc pepper")
     void testCccdHasher() {

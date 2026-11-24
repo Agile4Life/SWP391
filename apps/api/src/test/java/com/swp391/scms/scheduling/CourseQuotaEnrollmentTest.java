@@ -25,6 +25,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho CourseQuotaEnrollment (course quota enrollment). */
 class CourseQuotaEnrollmentTest {
 
     private ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);

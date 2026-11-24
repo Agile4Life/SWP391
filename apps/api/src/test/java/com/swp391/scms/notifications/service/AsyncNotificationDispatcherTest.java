@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho AsyncNotificationDispatcher (async notification dispatcher). */
 @ExtendWith(MockitoExtension.class)
 class AsyncNotificationDispatcherTest {
 

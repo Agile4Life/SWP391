@@ -20,6 +20,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho AiChatRateLimiter (ai chat rate limiter). */
 class AiChatRateLimiterTest {
     static final Instant NOW = Instant.parse("2026-11-12T03:00:00Z");
     final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);

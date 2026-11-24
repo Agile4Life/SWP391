@@ -36,6 +36,7 @@ import com.swp391.scms.users.MemberRepository;
 import org.springframework.data.domain.Pageable;
 import com.swp391.scms.users.MemberRepository;
 
+/** Bộ kiểm thử cho service MemberLookupService (member lookup service). */
 @ExtendWith(MockitoExtension.class)
 class MemberLookupServiceTest {
 

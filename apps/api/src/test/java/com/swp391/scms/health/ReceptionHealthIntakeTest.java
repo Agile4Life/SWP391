@@ -9,6 +9,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;import java.time.*;import java.util.*;
 import static org.mockito.Mockito.*;import static org.assertj.core.api.Assertions.*;
+/** Bộ kiểm thử cho ReceptionHealthIntake (reception health intake). */
 class ReceptionHealthIntakeTest {
  MemberProgressLogRepository logs=mock(MemberProgressLogRepository.class);MemberRepository members=mock(MemberRepository.class);UserRepository users=mock(UserRepository.class);CenterCheckinRepository checkins=mock(CenterCheckinRepository.class);
  HealthMetricService service=new HealthMetricService(logs,members,users);CenterCheckin checkin;Member member;User staff;LocalDateTime now=LocalDateTime.of(2026,11,4,0,5);

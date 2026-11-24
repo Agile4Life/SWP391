@@ -32,6 +32,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+/** Bộ kiểm thử cho AiClient (ai client). */
 @ExtendWith(MockitoExtension.class)
 class AiClientTest {
 

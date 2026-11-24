@@ -21,6 +21,8 @@ import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 
 /**
+ * Bộ kiểm thử cho RepositoryQueryValidation (repository query validation).
+ *
  * Builds every Spring Data repository against the real entity model without a database: derived query method names
  * and every {@code @Query} (JPQL) are parsed and resolved exactly as at application start, so a typo fails here
  * instead of stopping the API from booting.

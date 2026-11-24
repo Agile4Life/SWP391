@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Bộ kiểm thử cho DatabaseProfiles (database profiles). */
 class DatabaseProfilesTest {
     private ApplicationContextRunner database() {
         return new ApplicationContextRunner()

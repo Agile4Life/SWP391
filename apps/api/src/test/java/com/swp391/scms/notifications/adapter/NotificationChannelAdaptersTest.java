@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho NotificationChannelAdapters (notification channel adapters). */
 @ExtendWith(MockitoExtension.class)
 class NotificationChannelAdaptersTest {
 

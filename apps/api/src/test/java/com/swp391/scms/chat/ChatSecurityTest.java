@@ -19,6 +19,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho ChatSecurity (chat security). */
 @SpringJUnitConfig(ChatSecurityTest.Config.class)
 class ChatSecurityTest {
     @Configuration @EnableMethodSecurity static class Config {

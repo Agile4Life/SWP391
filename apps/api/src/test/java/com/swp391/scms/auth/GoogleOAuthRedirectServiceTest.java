@@ -8,6 +8,7 @@ import java.time.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service GoogleOAuthRedirectService (google oauth redirect service). */
 class GoogleOAuthRedirectServiceTest {
     private static final String VERIFIER = "v".repeat(43);
     private static final String CHALLENGE = "7w_YNF9DSfIdPf_pRjSq646_kPr-2-o9NAl16JGghdM";

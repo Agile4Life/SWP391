@@ -21,6 +21,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho MessageBundlesConsistency (message bundles consistency). */
 class MessageBundlesConsistencyTest {
 
     private static Properties loadBundle(String file) throws Exception {

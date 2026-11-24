@@ -27,6 +27,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho UserServiceTransaction (user service transaction). */
 class UserServiceTransactionTest {
     private final UserRepository users = mock(UserRepository.class);
     private final ReceptionistRepository receptionists = mock(ReceptionistRepository.class);

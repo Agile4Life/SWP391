@@ -30,7 +30,11 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Entity contract and rollback safety. Real PostgreSQL coverage lives in PtAttendanceIsolatedPostgreSqlTest. */
+/**
+ * Bộ kiểm thử cho PtAttendanceTransactionDiagnostic (pt attendance transaction diagnostic).
+ *
+ * Entity contract and rollback safety. Real PostgreSQL coverage lives in PtAttendanceIsolatedPostgreSqlTest.
+ */
 class PtAttendanceTransactionDiagnosticTest {
     @Test
     void entitySupportsPtAuditAndGenuineAuditFailureStillRollsBack() throws Exception {
@@ -68,9 +72,11 @@ class PtAttendanceTransactionDiagnosticTest {
         CoachBookingService service = proxy.getProxy();
         var mvc = MockMvcBuilders.standaloneSetup(new CoachBookingController(service, null))
                 .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
                         return parameter.getParameterType() == AuthenticatedPrincipal.class;
                     }
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     public Object resolveArgument(org.springframework.core.MethodParameter parameter,
                             org.springframework.web.method.support.ModelAndViewContainer container,
                             org.springframework.web.context.request.NativeWebRequest request,

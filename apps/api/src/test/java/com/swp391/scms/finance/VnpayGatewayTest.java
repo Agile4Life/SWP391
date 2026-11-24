@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Bộ kiểm thử cho VnpayGateway (vnpay gateway). */
 class VnpayGatewayTest {
     private final VnpayProperties config = new VnpayProperties(true, "TEST1234", "test-secret",
             "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", "https://example.test/member/payments/vnpay/return", 15);

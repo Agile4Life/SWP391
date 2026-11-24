@@ -18,8 +18,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho AiChatSecurity (ai chat security). */
 @SpringJUnitConfig(AiChatSecurityTest.Config.class)
 class AiChatSecurityTest {
+    /** Bộ kiểm thử cho cấu hình Config (config). */
     @Configuration
     @EnableMethodSecurity
     static class Config {

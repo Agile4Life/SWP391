@@ -27,7 +27,11 @@ import static com.swp391.scms.config.SupabaseTestDatabase.credential;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Real Supabase PostgreSQL. Uses a fresh, uniquely named schema and never resets public. */
+/**
+ * Bộ kiểm thử cho PostgreSqlDatabase (postgre sql database).
+ *
+ * Real Supabase PostgreSQL. Uses a fresh, uniquely named schema and never resets public.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("supabase")
@@ -136,6 +140,7 @@ class PostgreSqlDatabaseIntegrationTest {
         } finally { socket.sendClose(1000, "done").join(); }
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private long user(String role) {
         return jdbc.queryForObject("""
                 insert into users (role_id, full_name, email, password_hash, status, created_at, updated_at)
@@ -143,6 +148,7 @@ class PostgreSqlDatabaseIntegrationTest {
                 """, Long.class, role, UUID.randomUUID() + "@example.invalid");
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (member). */
     private long member() {
         long id = user("MEMBER");
         jdbc.update("insert into members (user_id, membership_code, join_date, fitness_level) values (?, ?, current_date, 'beginner')",
@@ -164,12 +170,14 @@ class PostgreSqlDatabaseIntegrationTest {
         return id;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (coach). */
     private long coach() {
         long id = user("COACH");
         jdbc.update("insert into coaches (user_id, employment_status) values (?, 'active')", id);
         return id;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (room). */
     private long room() {
         return jdbc.queryForObject("insert into rooms (name, capacity, status) values (?, 10, 'available') returning id",
                 Long.class, "Room " + UUID.randomUUID());

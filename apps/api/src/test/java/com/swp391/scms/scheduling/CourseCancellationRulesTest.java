@@ -24,7 +24,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** A member cannot cancel a course that has started; before the start the unpaid fee is voided. */
+/**
+ * Bộ kiểm thử cho CourseCancellationRules (course cancellation rules).
+ *
+ * A member cannot cancel a course that has started; before the start the unpaid fee is voided.
+ */
 class CourseCancellationRulesTest {
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
     private final GymClassRepository gymClasses = mock(GymClassRepository.class);

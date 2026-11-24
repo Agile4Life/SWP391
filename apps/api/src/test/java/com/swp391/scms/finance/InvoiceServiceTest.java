@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service InvoiceService (invoice service). */
 @ExtendWith(MockitoExtension.class)
 class InvoiceServiceTest {
 

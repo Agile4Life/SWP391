@@ -42,6 +42,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service MembershipSubscriptionService (membership subscription service). */
 @ExtendWith(MockitoExtension.class)
 class MembershipSubscriptionServiceTest {
 
@@ -1029,6 +1030,7 @@ class MembershipSubscriptionServiceTest {
         assertThatThrownBy(() -> service.renew(principal, 100L)).isInstanceOf(ConflictException.class);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (period). */
     private MembershipSubscription period(long id, Member member, MembershipPackage pack,
             MembershipSubscription previous, LocalDate start, LocalDate end) {
         MembershipSubscription sub = new MembershipSubscription();

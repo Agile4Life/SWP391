@@ -14,11 +14,16 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 
-/** The gate check-in that covered a 1:1 session is only reported; it never records the arrival. */
+/**
+ * Bộ kiểm thử cho service PtAttendanceService (pt attendance service).
+ *
+ * The gate check-in that covered a 1:1 session is only reported; it never records the arrival.
+ */
 class PtAttendanceServiceTest {
     private final CenterCheckinRepository checkins = mock(CenterCheckinRepository.class);
     private final PtAttendanceService service = new PtAttendanceService(checkins);
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private CoachBooking booking() {
         Member member = new Member();
         member.setUserId(100L);

@@ -29,6 +29,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho ProductOrderPayments (product order payments). */
 class ProductOrderPaymentsTest {
     final ProductOrderRepository orders = mock(ProductOrderRepository.class);
     final ProductOrderRefunds refunds = mock(ProductOrderRefunds.class);

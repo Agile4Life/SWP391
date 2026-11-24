@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho OrderStatus (order status). */
 class OrderStatusTest {
     @Test
     void onlyCompletedAndCancelledAreTerminal() {

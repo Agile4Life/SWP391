@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest({AuditController.class, ReportController.class})
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
+/** Bộ kiểm thử cho AuditOccupancySecurity (audit occupancy security). */
 class AuditOccupancySecurityTest {
     @Autowired MockMvc mvc;
     @Autowired AuditController auditController;

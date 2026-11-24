@@ -25,6 +25,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/** Bộ kiểm thử cho service EquipmentService (equipment service). */
 @ExtendWith(MockitoExtension.class)
 class EquipmentServiceTest {
 
@@ -50,6 +51,7 @@ class EquipmentServiceTest {
         sampleEquipment.setId(1L);
     }
 
+    /** Kiểm thử: Lấy danh sách thiết bị tất cả hoặc theo phòng */
     @Test
     @DisplayName("Lấy danh sách thiết bị tất cả hoặc theo phòng")
     void list_returnsEquipmentList() {
@@ -65,6 +67,7 @@ class EquipmentServiceTest {
         assertThat(byRoom.getFirst().roomId()).isEqualTo(10L);
     }
 
+    /** Kiểm thử: Tạo mới thiết bị thành công */
     @Test
     @DisplayName("Tạo mới thiết bị thành công")
     void create_success() {
@@ -83,6 +86,7 @@ class EquipmentServiceTest {
         assertThat(created.code()).isEqualTo("EQ-02");
     }
 
+    /** Kiểm thử: Ném ConflictException khi mã thiết bị đã tồn tại */
     @Test
     @DisplayName("Ném ConflictException khi mã thiết bị đã tồn tại")
     void create_duplicateCode_throwsConflict() {
@@ -93,6 +97,7 @@ class EquipmentServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: Cập nhật trạng thái thiết bị thành công */
     @Test
     @DisplayName("Cập nhật trạng thái thiết bị thành công")
     void updateStatus_success() {
@@ -103,6 +108,7 @@ class EquipmentServiceTest {
         assertThat(updated.status()).isEqualTo("maintenance");
     }
 
+    /** Kiểm thử: Ném BadRequestException khi trạng thái thiết bị không hợp lệ */
     @Test
     @DisplayName("Ném BadRequestException khi trạng thái thiết bị không hợp lệ")
     void updateStatus_invalid_throwsBadRequest() {
@@ -110,6 +116,7 @@ class EquipmentServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: Xóa thiết bị thành công */
     @Test
     @DisplayName("Xóa thiết bị thành công")
     void delete_success() {
@@ -119,6 +126,7 @@ class EquipmentServiceTest {
         verify(equipmentRepository).delete(sampleEquipment);
     }
 
+    /** Kiểm thử: Ném ResourceNotFoundException khi xóa thiết bị không tồn tại */
     @Test
     @DisplayName("Ném ResourceNotFoundException khi xóa thiết bị không tồn tại")
     void delete_missing_throwsNotFound() {

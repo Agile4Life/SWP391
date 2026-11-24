@@ -22,7 +22,11 @@ import java.util.UUID;
 import static com.swp391.scms.config.SupabaseTestDatabase.credential;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Runs the reconciliation JPQL on real PostgreSQL in a disposable schema created by Hibernate. */
+/**
+ * Bộ kiểm thử cho PaymentReconciliationPostgreSql (payment reconciliation postgre sql).
+ *
+ * Runs the reconciliation JPQL on real PostgreSQL in a disposable schema created by Hibernate.
+ */
 @SpringBootTest
 @ActiveProfiles("supabase")
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
@@ -107,6 +111,7 @@ class PaymentReconciliationPostgreSqlTest {
         assertThat(service.summary(LocalDate.now(ZONE).minusDays(91), LocalDate.now(ZONE)).staleAttempts()).isEqualTo(1);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (payment). */
     private long payment(long user, String status, LocalDateTime now) {
         return jdbc.queryForObject("insert into payments(member_id,amount,method,status,paid_at,created_at) "
                 + "values (?,150000,'online_wallet',?,?,?) returning id", Long.class,

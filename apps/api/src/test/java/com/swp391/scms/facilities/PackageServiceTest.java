@@ -18,6 +18,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/** Bộ kiểm thử cho service PackageService (package service). */
 @ExtendWith(MockitoExtension.class)
 class PackageServiceTest {
 

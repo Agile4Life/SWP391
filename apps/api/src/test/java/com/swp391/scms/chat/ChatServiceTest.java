@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service ChatService (chat service). */
 class ChatServiceTest {
     final ChatConversationRepository conversations = mock(ChatConversationRepository.class);
     final ChatMessageRepository messages = mock(ChatMessageRepository.class);
@@ -43,6 +44,7 @@ class ChatServiceTest {
         when(messages.save(any())).thenAnswer(inv -> { ChatMessage m = inv.getArgument(0); m.setId(100L); return m; });
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     static User user(long id, String code) {
         var role = new Role(); role.setCode(code);
         var u = new User(); u.setId(id); u.setFullName("User " + id); u.setRole(role); u.setStatus("active"); return u;

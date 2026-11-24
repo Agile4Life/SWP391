@@ -16,6 +16,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
+ * Bộ kiểm thử cho TriggerPolymorphism (trigger polymorphism).
+ *
  * PostgreSQL provider checks for mandatory P2, P3, and P4 triggers.
  */
 class TriggerPolymorphismIntegrationTest {

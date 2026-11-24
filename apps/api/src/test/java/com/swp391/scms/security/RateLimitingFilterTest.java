@@ -13,6 +13,7 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho bộ lọc RateLimitingFilter (rate limiting filter). */
 class RateLimitingFilterTest {
 
     @Test
@@ -55,6 +56,7 @@ class RateLimitingFilterTest {
         filterChain = mock(FilterChain.class);
     }
 
+    /** Kiểm thử: Các request bình thường dưới ngưỡng limit được cho qua */
     @Test
     @DisplayName("Các request bình thường dưới ngưỡng limit được cho qua")
     void requestsUnderLimit_passThrough() throws ServletException, IOException {
@@ -68,6 +70,10 @@ class RateLimitingFilterTest {
         verify(filterChain).doFilter(request, response);
     }
 
+    /**
+     * Kiểm thử: Vượt quá rate limit (quét cạn > 60 req/phút) -> Trả về HTTP 429 Too Many Requests kèm
+     * Retry-After
+     */
     @Test
     @DisplayName("Vượt quá rate limit (quét cạn > 60 req/phút) -> Trả về HTTP 429 Too Many Requests kèm Retry-After")
     void requestsExceedingLimit_return429TooManyRequests() throws ServletException, IOException {

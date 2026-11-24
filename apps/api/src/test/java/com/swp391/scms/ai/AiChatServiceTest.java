@@ -42,6 +42,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service AiChatService (ai chat service). */
 @ExtendWith(MockitoExtension.class)
 class AiChatServiceTest {
 

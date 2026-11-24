@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho service GeoService (geo service). */
 class GeoServiceTest {
     final GeoService geo = new GeoService(new com.fasterxml.jackson.databind.ObjectMapper());
 

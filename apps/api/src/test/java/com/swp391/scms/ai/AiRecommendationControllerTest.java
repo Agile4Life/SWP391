@@ -49,6 +49,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho controller AiRecommendationController (ai recommendation controller). */
 @ExtendWith(MockitoExtension.class)
 class AiRecommendationControllerTest {
 
@@ -90,11 +91,13 @@ class AiRecommendationControllerTest {
         controller = new AiRecommendationController(recommendationService);
 
         HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+            /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
             @Override
             public boolean supportsParameter(MethodParameter parameter) {
                 return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
             }
 
+            /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
             @Override
             public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                           NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {

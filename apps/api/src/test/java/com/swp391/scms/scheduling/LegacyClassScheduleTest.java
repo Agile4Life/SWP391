@@ -12,11 +12,14 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
+ * Bộ kiểm thử cho LegacyClassSchedule (legacy class schedule).
+ *
  * Reported: a class without recurring days showed "Mon, Wed, Fri" (a UI default) while its sessions ran on Tue/Thu.
  * The class list now derives the schedule from the real sessions.
  */
 class LegacyClassScheduleTest {
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (session). */
     private static ClassSession session(LocalDate date, String status) {
         ClassSession s = new ClassSession();
         s.setSessionDate(date);

@@ -39,6 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ProfileController (profile controller). */
 @ExtendWith(MockitoExtension.class)
 class ProfileControllerTest {
 
@@ -62,11 +63,13 @@ class ProfileControllerTest {
     private MessageService messageService;
 
     private final HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+        /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
         @Override
         public boolean supportsParameter(MethodParameter parameter) {
             return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
         }
 
+        /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                       NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
@@ -104,6 +107,7 @@ class ProfileControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample profile). */
     private ProfileDto sampleProfile() {
         return new ProfileDto(
                 101L,
@@ -123,6 +127,7 @@ class ProfileControllerTest {
         );
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample user). */
     private User sampleUser() {
         User user = new User();
         user.setId(101L);

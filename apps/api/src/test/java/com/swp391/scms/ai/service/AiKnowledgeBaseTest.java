@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Bộ kiểm thử cho AiKnowledgeBase (ai knowledge base). */
 class AiKnowledgeBaseTest {
 
     private final AiKnowledgeBase base = new AiKnowledgeBase();

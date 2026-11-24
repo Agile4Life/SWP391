@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service PaymentService (payment service). */
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
 

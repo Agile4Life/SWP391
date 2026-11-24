@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service QuoteService (quote service). */
 class QuoteServiceTest {
     ProductVariantRepository variants;
     QuoteService service;
@@ -32,6 +33,7 @@ class QuoteServiceTest {
         service = new QuoteService(variants, new ShopPricing(new ShopProperties()));
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (variant). */
     static ProductVariant variant(Long id, String price, int stock, boolean active) {
         ProductCategory cat = new ProductCategory();
         cat.setId(1L);

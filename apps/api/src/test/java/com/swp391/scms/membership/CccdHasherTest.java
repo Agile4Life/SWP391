@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import com.swp391.scms.membership.service.CccdHasher;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho CccdHasher (cccd hasher). */
 class CccdHasherTest {
     @Test
     void encryptedDocumentNumberRoundTripsAndNeverContainsThePlainNumber() {

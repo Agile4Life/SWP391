@@ -29,6 +29,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+/** Bộ kiểm thử cho controller FacilitiesController (facilities controller). */
 @ExtendWith(MockitoExtension.class)
 class FacilitiesControllerTest {
 

@@ -16,11 +16,13 @@ import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho service MemberDiscountService (member discount service). */
 class MemberDiscountServiceTest {
     private final MembershipSubscriptionRepository subscriptions = mock(MembershipSubscriptionRepository.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T08:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final MemberDiscountService service = new MemberDiscountService(subscriptions, clock);
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sub). */
     private MembershipSubscription sub(String name, String tier, int days, LocalDate start, LocalDate end) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setName(name);

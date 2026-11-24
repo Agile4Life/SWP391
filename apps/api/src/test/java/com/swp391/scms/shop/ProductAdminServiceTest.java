@@ -25,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service ProductAdminService (product admin service). */
 class ProductAdminServiceTest {
     ProductRepository products;
     ProductCategoryRepository categories;

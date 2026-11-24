@@ -20,6 +20,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+/** Bộ kiểm thử cho service DisciplineService (discipline service). */
 @ExtendWith(MockitoExtension.class)
 class DisciplineServiceTest {
 

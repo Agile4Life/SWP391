@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(AuthController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
+/** Bộ kiểm thử cho AuthSessionEndpoint (auth session endpoint). */
 class AuthSessionEndpointTest {
     @Autowired MockMvc mvc;
     @MockitoBean AuthService authService;

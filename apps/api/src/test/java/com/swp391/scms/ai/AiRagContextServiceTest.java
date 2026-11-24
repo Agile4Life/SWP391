@@ -29,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service AiRagContextService (ai rag context service). */
 @ExtendWith(MockitoExtension.class)
 class AiRagContextServiceTest {
 

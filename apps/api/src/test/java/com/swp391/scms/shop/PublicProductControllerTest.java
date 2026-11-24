@@ -18,6 +18,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller PublicProductController (public product controller). */
 class PublicProductControllerTest {
     ProductCatalogService catalog;
     QuoteService quotes;

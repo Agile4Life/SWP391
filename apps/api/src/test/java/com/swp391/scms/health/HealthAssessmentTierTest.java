@@ -35,7 +35,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** Spec 2026-11-09: first assessment by any coach; Body Fat and Muscle Mass for Platinum; follow-ups from Gold. */
+/**
+ * Bộ kiểm thử cho HealthAssessmentTier (health assessment tier).
+ *
+ * Spec 2026-11-09: first assessment by any coach; Body Fat and Muscle Mass for Platinum; follow-ups from Gold.
+ */
 class HealthAssessmentTierTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private final MemberProgressLogRepository logs = mock(MemberProgressLogRepository.class);
@@ -71,6 +75,7 @@ class HealthAssessmentTierTest {
         when(logs.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (row). */
     private MemberProgressLog row(Long recorderId, LocalDateTime at) {
         MemberProgressLog log = new MemberProgressLog();
         log.setMember(member);
@@ -83,6 +88,7 @@ class HealthAssessmentTierTest {
         return log;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (active). */
     private MembershipSubscription active(String tier, int days) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setName(tier);

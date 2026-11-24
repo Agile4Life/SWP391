@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.BadSqlGrammarException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+/** Bộ kiểm thử cho TriggerProviders (trigger providers). */
 class TriggerProvidersTest {
 
     @Test

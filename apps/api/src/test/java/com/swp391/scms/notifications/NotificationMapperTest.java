@@ -13,6 +13,7 @@ import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho mapper NotificationMapper (notification mapper). */
 class NotificationMapperTest {
 
     private final NotificationMapper mapper = new NotificationMapper(NotificationTestMessages.localizer());

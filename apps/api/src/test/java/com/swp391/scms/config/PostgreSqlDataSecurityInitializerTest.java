@@ -15,6 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho PostgreSqlDataSecurityInitializer (postgre sql data security initializer). */
 class PostgreSqlDataSecurityInitializerTest {
     @SuppressWarnings("unchecked")
     private EntityManagerFactory entities() {

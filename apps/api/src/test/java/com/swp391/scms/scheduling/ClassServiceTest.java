@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service ClassService (class service). */
 @ExtendWith(MockitoExtension.class)
 class ClassServiceTest {
 

@@ -22,7 +22,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Runs the actual Hibernate schema and PostgreSQL triggers, with independent database transactions. */
+/**
+ * Bộ kiểm thử cho CourtBookingPostgreSql (court booking postgre sql).
+ *
+ * Runs the actual Hibernate schema and PostgreSQL triggers, with independent database transactions.
+ */
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CourtBookingPostgreSqlTest {
@@ -248,6 +252,7 @@ class CourtBookingPostgreSqlTest {
         return worker;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (member). */
     private long member(boolean active) {
         long id = user("MEMBER");
         jdbc.update("insert into members (user_id,membership_code,join_date,fitness_level) values (?, ?, current_date, 'beginner')", id, "COURT-" + id);
@@ -258,6 +263,7 @@ class CourtBookingPostgreSqlTest {
         return id;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private long user(String role) {
         return jdbc.queryForObject("""
                 insert into users (role_id,full_name,email,password_hash,status,created_at,updated_at)
@@ -265,6 +271,7 @@ class CourtBookingPostgreSqlTest {
                 """, Long.class, role, UUID.randomUUID() + "@example.invalid");
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (room). */
     private long room() {
         return jdbc.queryForObject("""
                 insert into rooms (name,capacity,status,discipline_id,open_time,close_time)
@@ -281,6 +288,7 @@ class CourtBookingPostgreSqlTest {
                 """, Long.class, discipline, coach, room);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private long booking(JdbcTemplate db, long room, long member, int hour) {
         return insertBooking(db, room, member, tomorrow, "%02d:00".formatted(hour), "%02d:00".formatted(hour + 1));
     }
@@ -292,6 +300,7 @@ class CourtBookingPostgreSqlTest {
                 """, Long.class, room, member, date, start, end);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (session). */
     private long session(JdbcTemplate db, long gymClass, int hour) {
         return db.queryForObject("""
                 insert into class_sessions (class_id,session_date,start_time,end_time,status,created_at,updated_at)
