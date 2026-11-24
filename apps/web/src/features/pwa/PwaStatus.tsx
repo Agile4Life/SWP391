@@ -1,4 +1,4 @@
-import { useSourceLanguage, sourceText } from "../shop/shopI18n";
+import { useSourceLanguage, sourceText } from "../../shared/i18n/sourceText";
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Modal } from '../../shared/ui/Modal';
 import { applyPwaUpdate, capturePwaInstall, clearInstallPrompt, getInstallPrompt, getWaitingRegistration, subscribePwaInstall, subscribePwaUpdate } from './registerPwa';

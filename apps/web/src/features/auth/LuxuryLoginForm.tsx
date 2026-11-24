@@ -1,4 +1,4 @@
-import { sourceText, useSourceLanguage, sourceFormat, sourceError, sourceToast as toast, sourceFormatPair } from '../shop/shopI18n';
+import { sourceText, useSourceLanguage, sourceFormat, sourceError, sourceToast as toast, sourceFormatPair } from '../../shared/i18n/sourceText';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, ApiError, type UserSession } from '../../shared/api/client';

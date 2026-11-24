@@ -1,4 +1,4 @@
-import { sourceText, useSourceLanguage, sourceFormat } from "../../shop/shopI18n";
+import { sourceText, useSourceLanguage, sourceFormat } from "../../../shared/i18n/sourceText";
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { RoundArrow } from './PublicLayout';

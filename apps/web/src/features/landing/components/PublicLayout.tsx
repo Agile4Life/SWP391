@@ -1,4 +1,4 @@
-import { sourceText, useSourceLanguage } from "../../shop/shopI18n";
+import { sourceText, useSourceLanguage } from "../../../shared/i18n/sourceText";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { purchaseAuthPath } from '../../../shared/lib/purchaseIntent';
 import { useEffect, useRef, useState, type ReactNode } from 'react';

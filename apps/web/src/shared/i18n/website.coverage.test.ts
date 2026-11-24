@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { englishLabels } from './translations';
 import { memberLabels } from '../../features/member/memberLabels';
 import { staffSourceCatalog } from '../../features/operations/staffSourceCatalog';
-import { englishShopPublicLabels } from '../../features/shop/shopTranslations';
+import { englishPublicLabels } from './publicLabels';
 import { clearMissingTranslations, getMissingTranslations, setLanguage, translateSource } from './language';
 import routerSource from '../../app/router.tsx?raw';
 
@@ -42,7 +42,7 @@ const translationCalls = new Set(['t', 'memberText', 'memberMessage', 'sourceTex
 function catalog(file: string) {
   const domain = /\/(member|courts|checkin|schedule|wallet|payments)\//.test(file) ? memberLabels
     : /\/(coaching|classes|reception|manager|admin|operations|support)\//.test(file) ? staffSourceCatalog
-    : /\/(landing|auth|shop|pwa)\//.test(file) ? englishShopPublicLabels : {};
+    : /\/(landing|auth|pwa)\//.test(file) ? englishPublicLabels : {};
   return { ...englishLabels, ...domain };
 }
 afterEach(() => { localStorage.clear(); setLanguage('vi'); clearMissingTranslations(); });

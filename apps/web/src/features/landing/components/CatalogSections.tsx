@@ -1,4 +1,4 @@
-import { useSourceLanguage, sourceText, sourceFormat } from "../../shop/shopI18n";
+import { useSourceLanguage, sourceText, sourceFormat } from "../../../shared/i18n/sourceText";
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';

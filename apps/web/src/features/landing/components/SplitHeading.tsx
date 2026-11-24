@@ -1,4 +1,4 @@
-import { useSourceLanguage, sourceText } from "../../shop/shopI18n";
+import { useSourceLanguage, sourceText } from "../../../shared/i18n/sourceText";
 import type { CSSProperties } from 'react';
 
 export function SplitHeading({ id, lines }: { id: string; lines: string[] }) {

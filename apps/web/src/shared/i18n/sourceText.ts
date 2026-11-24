@@ -1,7 +1,7 @@
-import { notify } from '../../shared/lib/portalNotices';
-import { toast } from '../../shared/ui/toast';
-import { getLanguage, translateSource, useI18n, type SourceMessage } from '../../shared/i18n';
-import { englishShopPublicLabels, vietnamesePublicLabels } from './shopTranslations';
+import { notify } from '../lib/portalNotices';
+import { toast } from '../ui/toast';
+import { getLanguage, translateSource, useI18n, type SourceMessage } from './language';
+import { englishPublicLabels, vietnamesePublicLabels } from './publicLabels';
 
 
 function translatedSource(value: string, lang: 'vi' | 'en'): string {
@@ -10,7 +10,7 @@ function translatedSource(value: string, lang: 'vi' | 'en'): string {
   const key = trimmed.replace(/\s+/g, ' ');
   const translated = Object.hasOwn(vietnamesePublicLabels, key)
     ? translateSource(vietnamesePublicLabels[key], key, lang)
-    : translateSource(key, englishShopPublicLabels[key] ?? englishShopPublicLabels[value], lang);
+    : translateSource(key, englishPublicLabels[key] ?? englishPublicLabels[value], lang);
   // Keep intentional separators in fragments such as " and {0} other items".
   return value.slice(0, value.indexOf(trimmed)) + translated.trim() + value.slice(value.indexOf(trimmed) + trimmed.length);
 }
@@ -53,7 +53,7 @@ export function sourceFormatPair(source: string, ...values: unknown[]): SourceMe
 function noticePair(value: string | Error | SourceMessage): SourceMessage | undefined {
   if (value instanceof Error) return (value as Error & { translation?: SourceMessage }).translation;
   if (typeof value !== 'string') return value;
-  return Object.hasOwn(englishShopPublicLabels, value) ? sourcePair(value) : undefined;
+  return Object.hasOwn(englishPublicLabels, value) ? sourcePair(value) : undefined;
 }
 
 export function sourceNotify(value: string | Error | SourceMessage, type?: Parameters<typeof notify>[1], options?: Parameters<typeof notify>[2]): void {

@@ -1,4 +1,4 @@
-import { useSourceLanguage } from "../shop/shopI18n";
+import { useSourceLanguage } from "../../shared/i18n/sourceText";
 import { LuxuryLoginForm } from './LuxuryLoginForm';
 import { AuthLayout } from '../landing/components/PublicLayout';
 

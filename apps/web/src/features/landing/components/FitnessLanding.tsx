@@ -1,4 +1,4 @@
-import { sourceText, useSourceLanguage, sourceFormat } from "../../shop/shopI18n";
+import { sourceText, useSourceLanguage, sourceFormat } from "../../../shared/i18n/sourceText";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';

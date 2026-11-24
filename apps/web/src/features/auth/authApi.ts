@@ -1,4 +1,4 @@
-import { sourceError } from '../shop/shopI18n';
+import { sourceError } from '../../shared/i18n/sourceText';
 import { apiFetch } from '../../shared/api/client';
 
 export interface RegisterInput {

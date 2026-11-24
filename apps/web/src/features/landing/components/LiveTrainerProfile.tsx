@@ -1,4 +1,4 @@
-import { useSourceLanguage, sourceText } from "../../shop/shopI18n";
+import { useSourceLanguage, sourceText } from "../../../shared/i18n/sourceText";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { Link, useParams } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
