@@ -4,10 +4,16 @@ import * as THREE from 'three';
 import type { CityMetropolisGeometries } from '../renderers/architecture/buildCityMetropolis';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Raycast rỗng để các chi tiết đời sống không bắt sự kiện chuột. */
 const NOOP = () => null;
 const CYCLE = 24; // seconds: 10 green, 2 yellow per axis
 
+/** Màu đèn giao thông: đỏ, vàng hoặc xanh. */
 type Light = 'red' | 'yellow' | 'green';
+/**
+ * Pha đèn của một trục đường tại thời điểm t: chu kỳ 24 giây, mỗi trục 10 giây xanh rồi 2 giây vàng, hai trục
+ * lệch nửa chu kỳ.
+ */
 function phaseFor(axis: 'EW' | 'NS', t: number): Light {
   const k = (t + (axis === 'NS' ? CYCLE / 2 : 0)) % CYCLE;
   if (k < 10) return 'green';
@@ -21,9 +27,14 @@ const LAMP_RGB: Record<Light, [number, number, number]> = {
 };
 const DIM = 0.06;
 
-/** Signal lamps that cycle red/yellow/green; instanced, recoloured only on phase change. */
+/**
+ * Đèn tín hiệu đổi đỏ/vàng/xanh theo pha; dùng instanced và chỉ đổi màu khi pha thay đổi.
+ *
+ * Signal lamps that cycle red/yellow/green; instanced, recoloured only on phase change.
+ */
 function TrafficSignals({ city }: { city: CityMetropolisGeometries }) {
   const ref = useRef<THREE.InstancedMesh>(null);
+  // Danh sách bóng đèn: trục, vị trí đèn (đỏ, vàng, xanh) tại từng cột tín hiệu.
   const lamps = useMemo(() => {
     const out: { axis: 'EW' | 'NS'; slot: 0 | 1 | 2; pos: THREE.Vector3 }[] = [];
     for (const a of city.trafficSignalAnchors) {
@@ -48,7 +59,9 @@ function TrafficSignals({ city }: { city: CityMetropolisGeometries }) {
     }
     return out;
   }, [city]);
+  // Hình cầu nhỏ cho bóng đèn.
   const geometry = useMemo(() => new THREE.SphereGeometry(0.1, 8, 6), []);
+  // Vật liệu bóng đèn phát sáng, không tone map.
   const material = useMemo(() => new THREE.MeshBasicMaterial({ toneMapped: false }), []);
   const last = useRef('');
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -61,6 +74,7 @@ function TrafficSignals({ city }: { city: CityMetropolisGeometries }) {
     mesh.instanceMatrix.needsUpdate = true;
     last.current = '';
   }, [lamps]);
+  // Màu tạm dùng lại để tránh cấp phát mỗi khung hình.
   const c = useMemo(() => new THREE.Color(), []);
   useFrame(({ clock }) => {
     const mesh = ref.current;
@@ -82,9 +96,12 @@ function TrafficSignals({ city }: { city: CityMetropolisGeometries }) {
   return <instancedMesh key={lamps.length} ref={ref} args={[geometry, material, lamps.length]} frustumCulled={false} raycast={NOOP} />;
 }
 
+/** Các biển/biểu ngữ treo dọc đại lộ (instanced). */
 function Banners({ city }: { city: CityMetropolisGeometries }) {
   const ref = useRef<THREE.InstancedMesh>(null);
+  // Hình hộp mỏng của biểu ngữ.
   const geometry = useMemo(() => new THREE.BoxGeometry(0.05, 2.3, 0.95), []);
+  // Vật liệu biểu ngữ (đỏ đất nhạt, hơi phát sáng).
   const material = useMemo(
     () => new THREE.MeshStandardMaterial({ color: '#c47c6a', roughness: 0.78, emissive: '#4a1f16', emissiveIntensity: 0.12 }),
     [],
@@ -103,9 +120,15 @@ function Banners({ city }: { city: CityMetropolisGeometries }) {
   return <instancedMesh key={anchors.length} ref={ref} args={[geometry, material, anchors.length]} castShadow raycast={NOOP} />;
 }
 
-/** Aviation beacons on supertalls pulse. */
+/**
+ * Đèn báo hàng không trên các tòa siêu cao tầng, nhấp nháy theo nhịp.
+ *
+ * Aviation beacons on supertalls pulse.
+ */
 function Beacons({ city }: { city: CityMetropolisGeometries }) {
+  // Hình cầu của đèn báo.
   const geometry = useMemo(() => new THREE.SphereGeometry(0.7, 8, 6), []);
+  // Vật liệu đỏ phát sáng, không tone map.
   const material = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ff2a20', toneMapped: false }), []);
   const ref = useRef<THREE.InstancedMesh>(null);
   const anchors = city.beaconAnchors;
@@ -126,6 +149,7 @@ function Beacons({ city }: { city: CityMetropolisGeometries }) {
   return <instancedMesh key={anchors.length} ref={ref} args={[geometry, material, anchors.length]} frustumCulled={false} raycast={NOOP} />;
 }
 
+/** Một người đi bộ: trục, toạ độ cố định, hướng, tốc độ và độ lệch ban đầu. */
 interface Walker {
   axis: 'x' | 'z';
   fixed: number;
@@ -143,6 +167,7 @@ const WALK_LINES: readonly { axis: 'x' | 'z'; fixed: number }[] = [
 ];
 const CLOTHES = ['#b86f5c', '#2d3748', '#dcd6ca', '#4f6855', '#222730', '#8c443a', '#68768a', '#b08f4a'];
 
+/** Gộp các phần cơ thể người (màu cố định hoặc tính theo đỉnh) thành một hình học duy nhất. */
 function mergeHumanParts(parts: readonly { geom: THREE.BufferGeometry; col?: string; colorAt?: (x: number, y: number, z: number, out: THREE.Color) => void }[]): THREE.BufferGeometry {
   const nonIdx = parts.map(p => {
     const g = p.geom.index ? p.geom.toNonIndexed() : p.geom;
@@ -180,7 +205,11 @@ function mergeHumanParts(parts: readonly { geom: THREE.BufferGeometry; col?: str
   return out;
 }
 
-/** Local forward = +X; natural neck + oval head with dark hair cap. */
+/**
+ * Dựng đầu và cổ có tóc: cổ, đầu bầu dục và mũ tóc tối (hướng trước là +X).
+ *
+ * Local forward = +X; natural neck + oval head with dark hair cap.
+ */
 function buildHeadWithHairGeometry(): THREE.BufferGeometry {
   const skin = new THREE.Color('#c69474');
   const hair = new THREE.Color('#221d1a');
@@ -192,6 +221,7 @@ function buildHeadWithHairGeometry(): THREE.BufferGeometry {
     { geom: neck, col: '#c69474' },
     {
       geom: cranium,
+      // Màu theo đỉnh: phần trên và phía sau là tóc, còn lại là da.
       colorAt: (x, y, _z, out) => {
         out.copy(y > 0.055 || x < -0.025 ? hair : skin);
       },
@@ -199,7 +229,11 @@ function buildHeadWithHairGeometry(): THREE.BufferGeometry {
   ]);
 }
 
-/** Local forward = +X, lateral = +-Z; subtle vertex AO so instanceColor clothes look natural. */
+/**
+ * Dựng thân và hai tay (hướng trước +X, hai bên ±Z) với bóng đổ nhẹ theo đỉnh để quần áo tự nhiên.
+ *
+ * Local forward = +X, lateral = +-Z; subtle vertex AO so instanceColor clothes look natural.
+ */
 function buildTorsoWithArmsGeometry(): THREE.BufferGeometry {
   const chest = new THREE.CylinderGeometry(0.14, 0.115, 0.56, 10).scale(0.84, 1, 1.28);
   const shoulders = new THREE.SphereGeometry(0.14, 10, 6).scale(0.75, 0.55, 1.35);
@@ -210,8 +244,10 @@ function buildTorsoWithArmsGeometry(): THREE.BufferGeometry {
   const armR = new THREE.CapsuleGeometry(0.048, 0.40, 2, 6);
   armR.rotateZ(-0.08);
   armR.translate(0.02, -0.02, -0.205);
+  // Tô bóng nhẹ: phần dưới thân tối hơn phần trên.
   const shades = (geom: THREE.BufferGeometry) => ({
     geom,
+    // Màu theo đỉnh cho độ tối nhẹ theo chiều cao.
     colorAt: (_x: number, y: number, _z: number, out: THREE.Color) => {
       const ao = y < -0.15 ? 0.86 : 0.98;
       out.setRGB(ao, ao, ao);
@@ -220,6 +256,7 @@ function buildTorsoWithArmsGeometry(): THREE.BufferGeometry {
   return mergeHumanParts([shades(chest), shades(shoulders), shades(armL), shades(armR)]);
 }
 
+/** Dựng hai chân đứng (cẳng, đùi, giày) cho người đứng chờ. */
 function buildStandingLegsGeometry(): THREE.BufferGeometry {
   const parts: { geom: THREE.BufferGeometry; col: string }[] = [];
   for (const sz of [-0.095, 0.095]) {
@@ -234,6 +271,10 @@ function buildStandingLegsGeometry(): THREE.BufferGeometry {
   return mergeHumanParts(parts);
 }
 
+/**
+ * Một phần cơ thể của người đi bộ: hình học, chi nào (thân/đầu, chân trái/phải, tay trái/phải), có phải quần áo
+ * không, màu.
+ */
 interface PedestrianPart {
   geom: THREE.BufferGeometry;
   limb: number; // 0: torso/head, 1: left leg, -1: right leg, 2: left arm, -2: right arm
@@ -242,6 +283,7 @@ interface PedestrianPart {
   colorAt?: (x: number, y: number, z: number, out: THREE.Color) => void;
 }
 
+/** Gộp các phần của người đi bộ thành một hình học, ghi thuộc tính chi và cờ quần áo cho shader. */
 function mergePedestrianParts(parts: readonly PedestrianPart[]): THREE.BufferGeometry {
   const nonIdx = parts.map(p => {
     const g = p.geom.index ? p.geom.toNonIndexed() : p.geom;
@@ -285,6 +327,7 @@ function mergePedestrianParts(parts: readonly PedestrianPart[]): THREE.BufferGeo
   return out;
 }
 
+/** Dựng hình học người đi bộ có tay chân (đầu, cổ, thân, tay, chân) để shader làm hoạt ảnh sải bước. */
 function buildAnimatedPedestrianGeometry(): THREE.BufferGeometry {
   const skin = new THREE.Color('#c69474');
   const hair = new THREE.Color('#252528');
@@ -338,6 +381,7 @@ function buildAnimatedPedestrianGeometry(): THREE.BufferGeometry {
       geom: cranium,
       limb: 0,
       isClothes: 0,
+      // Màu theo đỉnh: phần đỉnh đầu và phía sau là tóc, còn lại là da.
       colorAt: (x, y, _z, out) => {
         out.copy(y > 1.60 || x < -0.025 ? hair : skin);
       },
@@ -357,6 +401,10 @@ function buildAnimatedPedestrianGeometry(): THREE.BufferGeometry {
   ]);
 }
 
+/**
+ * Tạo vật liệu người đi bộ: vertex shader xoay tay chân theo thời gian để mô phỏng bước đi, kèm vật liệu độ sâu
+ * cho bóng.
+ */
 function createAnimatedPedestrianMaterial() {
   const uTime = { value: 0 };
   const mat = new THREE.MeshStandardMaterial({
@@ -461,9 +509,11 @@ function createAnimatedPedestrianMaterial() {
   return {
     material: mat,
     depthMaterial: depthMat,
+    // Cập nhật thời gian cho shader.
     setTime: (t: number) => {
       uTime.value = t;
     },
+    // Giải phóng vật liệu chính và vật liệu độ sâu.
     dispose: () => {
       mat.dispose();
       depthMat.dispose();
@@ -471,7 +521,11 @@ function createAnimatedPedestrianMaterial() {
   };
 }
 
-/** Pedestrians strolling the sidewalks with vertex-shader walking stride and zero per-frame JS allocations. */
+/**
+ * Người đi bộ trên vỉa hè, dùng vertex shader cho sải bước và không cấp phát trong từng khung hình.
+ *
+ * Pedestrians strolling the sidewalks with vertex-shader walking stride and zero per-frame JS allocations.
+ */
 function Pedestrians() {
   const tier = useExploreStore(s => s.tier);
   const meshRef = useRef<THREE.InstancedMesh>(null);
@@ -491,6 +545,7 @@ function Pedestrians() {
     return out;
   }, [count]);
 
+  // Hình học người đi bộ cùng thuộc tính bước đi theo từng người.
   const geo = useMemo(() => {
     const base = buildAnimatedPedestrianGeometry();
     const walkParams = new Float32Array(count * 2);
@@ -503,6 +558,7 @@ function Pedestrians() {
     return base;
   }, [count, walkers]);
 
+  // Vật liệu hoạt ảnh của người đi bộ.
   const bundle = useMemo(() => createAnimatedPedestrianMaterial(), []);
 
   useEffect(() => () => {
@@ -518,10 +574,15 @@ function Pedestrians() {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [walkers]);
 
+  // Ma trận dùng lại mỗi khung hình.
   const m = useMemo(() => new THREE.Matrix4(), []);
+  // Quaternion xoay quanh trục y dùng lại mỗi khung hình.
   const qYaw = useMemo(() => new THREE.Quaternion(), []);
+  // Vector vị trí dùng lại mỗi khung hình.
   const v = useMemo(() => new THREE.Vector3(), []);
+  // Vector tỉ lệ đơn vị dùng lại mỗi khung hình.
   const one = useMemo(() => new THREE.Vector3(1, 1, 1), []);
+  // Vector trục y dùng lại mỗi khung hình.
   const axisY = useMemo(() => new THREE.Vector3(0, 1, 0), []);
 
   useFrame(({ clock }) => {
@@ -560,18 +621,29 @@ function Pedestrians() {
 const COMMUTERS = 14;
 const PLATFORM_Y = 9.2 + 0.48 + 0.23;
 
-/** Passengers waiting on the elevated metro platform; they sway slightly and face the tracks. */
+/**
+ * Hành khách chờ trên sân ga metro trên cao: đứng đung đưa nhẹ và quay mặt về phía đường ray.
+ *
+ * Passengers waiting on the elevated metro platform; they sway slightly and face the tracks.
+ */
 function Commuters() {
   const bodyRef = useRef<THREE.InstancedMesh>(null);
   const headRef = useRef<THREE.InstancedMesh>(null);
   const legRef = useRef<THREE.InstancedMesh>(null);
+  // Hình học thân và hai tay.
   const bodyGeo = useMemo(() => buildTorsoWithArmsGeometry(), []);
+  // Hình học đầu có tóc.
   const headGeo = useMemo(() => buildHeadWithHairGeometry(), []);
+  // Hình học hai chân.
   const legGeo = useMemo(() => buildStandingLegsGeometry(), []);
+  // Vật liệu thân.
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.84 }), []);
+  // Vật liệu đầu.
   const headMat = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.78 }), []);
+  // Vật liệu chân.
   const legMat = useMemo(() => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.86 }), []);
   useEffect(() => () => { bodyGeo.dispose(); headGeo.dispose(); legGeo.dispose(); bodyMat.dispose(); headMat.dispose(); legMat.dispose(); }, [bodyGeo, headGeo, legGeo, bodyMat, headMat, legMat]);
+  // Vị trí đứng chờ của từng hành khách trên sân ga.
   const spots = useMemo(
     () => Array.from({ length: COMMUTERS }, (_, i) => ({
       x: -17 + ((i * 2.9) % 42) + (i % 3) * 0.4,
@@ -586,10 +658,15 @@ function Commuters() {
     spots.forEach((_, i) => mesh.setColorAt(i, c.set(CLOTHES[i % CLOTHES.length]!)));
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [spots]);
+  // Ma trận dùng lại mỗi khung hình.
   const m = useMemo(() => new THREE.Matrix4(), []);
+  // Quaternion xoay quanh trục y dùng lại mỗi khung hình.
   const qYaw = useMemo(() => new THREE.Quaternion(), []);
+  // Vector vị trí dùng lại mỗi khung hình.
   const v = useMemo(() => new THREE.Vector3(), []);
+  // Vector tỉ lệ đơn vị dùng lại mỗi khung hình.
   const one = useMemo(() => new THREE.Vector3(1, 1, 1), []);
+  // Vector trục y dùng lại mỗi khung hình.
   const axisY = useMemo(() => new THREE.Vector3(0, 1, 0), []);
   useFrame(({ clock }) => {
     const b = bodyRef.current;
@@ -620,6 +697,7 @@ function Commuters() {
   );
 }
 
+/** Đời sống của thành phố nền: đèn giao thông, biểu ngữ, đèn báo hàng không, người đi bộ và hành khách ga metro. */
 export function CityLife({ city }: { city: CityMetropolisGeometries }) {
   return (
     <>
