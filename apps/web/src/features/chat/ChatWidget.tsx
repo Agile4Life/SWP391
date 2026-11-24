@@ -19,6 +19,10 @@ const connectionLabel: Record<ChatConnection, [string, string]> = {
   reconnecting: ['Mất kết nối · đang thử lại', 'Connection lost · reconnecting'], disabled: ['Bấm làm mới để xem tin mới', 'Refresh to see new messages'],
 };
 
+/**
+ * Nút chat nổi: khách xem được khung rỗng, quản lý dùng bản riêng, các vai trò khác dùng bản có kết nối
+ * realtime; vai trò không hợp lệ thì không hiển thị.
+ */
 export function ChatWidget() {
   const user = getCurrentUser();
   const allowed = !user || ['MEMBER', 'STAFF', 'COACH', 'MANAGER'].includes(user.role);
@@ -29,6 +33,7 @@ export function ChatWidget() {
 
 /** Quản lý không có chat riêng: không mở kết nối/badge chat, hộp thư khiếu nại tự giữ realtime của nó. */
 const MANAGER_FEED: ChatRealtimeFeed = { connection: 'disabled', tick: 0, reconnect: () => {} };
+/** Nút chat nổi cho quản lý (không có số chưa đọc và không hiện trạng thái kết nối). */
 function ManagerChatWidget() {
   return <ChatShell unread={0} feed={MANAGER_FEED} showStatus={false} onOpen={() => {}} />;
 }
@@ -39,12 +44,14 @@ function SignedInChatWidget() {
   const [connection, setConnection] = useState<ChatConnection>('connecting');
   const [tick, setTick] = useState(0);
   const [attempt, setAttempt] = useState(0);
+  // Tải lại số tin chưa đọc.
   const refreshUnread = useCallback(() => {
     void getChatUnreadCount().then(data => setUnread(data.count)).catch(() => {});
   }, []);
   useEffect(() => subscribeChat(() => { setTick(n => n + 1); refreshUnread(); }, setConnection), [refreshUnread, attempt]);
   useEffect(() => {
     refreshUnread();
+    // Nhận số chưa đọc phát từ nơi khác trong ứng dụng.
     const onCount = (event: Event) => setUnread((event as CustomEvent<number>).detail);
     window.addEventListener(CHAT_UNREAD_EVENT, onCount);
     return () => window.removeEventListener(CHAT_UNREAD_EVENT, onCount);
@@ -53,6 +60,7 @@ function SignedInChatWidget() {
   return <ChatShell unread={unread} feed={feed} onOpen={refreshUnread} onRefresh={() => { setTick(n => n + 1); refreshUnread(); }} />;
 }
 
+/** Vỏ của nút chat nổi: nút kèm số chưa đọc, panel chat có thể kéo, mở rộng, đóng bằng Esc hoặc bấm ra ngoài. */
 function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unread: number; feed: ChatRealtimeFeed | null; onOpen: () => void; onRefresh?: () => void; showStatus?: boolean }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
@@ -68,6 +76,7 @@ function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unr
   useCloseWhenOtherPanelOpens('chat', () => setOpen(false));
 
   useEffect(() => {
+    // Mở chat: đóng các panel nổi khác, làm mới số chưa đọc.
     const onOpenChat = () => {
       setVisited(true);
       announceFloatingPanel('chat');
@@ -81,11 +90,14 @@ function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unr
   useEffect(() => {
     if (!open) return;
     closeButton.current?.focus();
+    // Đóng panel và trả focus về nút mở.
     const close = () => { setOpen(false); trigger.current?.focus(); };
+    // Nhấn Esc thì đóng panel.
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       if (event.key === 'Escape') { event.preventDefault(); close(); }
     };
+    // Bấm ra ngoài panel và nút mở thì đóng panel.
     const onPointer = (event: PointerEvent) => {
       if (event.target instanceof Node && !panel.current?.contains(event.target) && !trigger.current?.contains(event.target)) setOpen(false);
     };

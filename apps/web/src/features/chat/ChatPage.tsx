@@ -23,6 +23,7 @@ const connectionLabel: Record<ChatConnection, [string, string]> = {
   reconnecting: ['Mất kết nối trực tiếp · đang thử lại', 'Live connection lost · reconnecting'], disabled: ['Tự động đồng bộ tin nhắn', 'Auto-syncing messages'],
 };
 
+/** Thời gian tương đối của tin nhắn ("Vừa xong", "x phút trước"...); chuỗi sai thì hiện ngày. */
 function formatRelativeChatTime(iso: string, t: (vi: string, en: string) => string): string {
   const time = Date.parse(iso);
   if (Number.isNaN(time)) return formatCenterDate(iso);
@@ -42,6 +43,10 @@ function formatRelativeChatTime(iso: string, t: (vi: string, en: string) => stri
 /** Khi nhúng trong widget, widget giữ kết nối realtime và truyền xuống để không mở hai kết nối. */
 export interface ChatRealtimeFeed { connection: ChatConnection; tick: number; reconnect: () => void }
 
+/**
+ * Trang Tin nhắn: chỉ hội viên, lễ tân, HLV và quản lý được dùng; hiển thị khung chat trực tiếp, hỗ trợ/khiếu
+ * nại và trợ lý AI theo vai trò.
+ */
 export function ChatPage({ embedded = false, visible = true, realtime, onPeersChange }: { embedded?: boolean; visible?: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
   const { t } = useI18n();
   const user = getCurrentUser();
@@ -56,6 +61,10 @@ export function ChatPage({ embedded = false, visible = true, realtime, onPeersCh
   return <ChatWorkspace member={user.role === 'MEMBER'} direct={!manager} support={support} ai={ai} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
 }
 
+/**
+ * Không gian làm việc của Tin nhắn: danh sách hội thoại, khung nội dung, chọn người mới và chuyển giữa chat
+ * trực tiếp, hỗ trợ và AI (trên di động chuyển giữa danh sách và nội dung).
+ */
 function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtime, onPeersChange }: { member: boolean; direct: boolean; support: SupportAudience | null; ai: 'member' | 'staff' | null; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
   const { t } = useI18n();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -80,6 +89,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
   const listTitle = useRef<HTMLHeadingElement>(null);
   useEffect(() => { onPeersRef.current = onPeersChange; }, [onPeersChange]);
 
+  // Tải danh sách hội thoại theo trang; chỉ kết quả mới nhất được dùng, background thì không hiện trạng thái tải.
   const loadInbox = useCallback(async (nextPage: number, background = false) => {
     const request = ++listSequence.current;
     if (!background) setLoading(true);
@@ -93,6 +103,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
     } catch (e) { if (mounted.current && request === listSequence.current) setListError(chatError(e, 'Không thể tải hội thoại.', 'Unable to load conversations.')); }
     finally { if (mounted.current && request === listSequence.current) setLoading(false); }
   }, []);
+  // Sau khi gửi tin thì tải lại ngầm danh sách hội thoại.
   const onSent = useCallback(() => { void loadInbox(0, true); }, [loadInbox]);
   const chat = useChatConversation(onSent);
   const { refresh } = chat;
@@ -110,20 +121,26 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
     if (tick === 0 || !direct) return;
     void loadInbox(pageRef.current, true); void refresh();
   }, [tick, loadInbox, refresh, direct]);
+  // Đã đọc một hội thoại thì đưa số chưa đọc về 0.
   const onRead = useCallback((conversationId: number) => {
     setConversations(list => list.map(c => c.id === conversationId ? { ...c, unreadCount: 0 } : c));
   }, []);
 
+  // Chọn một hội thoại trực tiếp (đóng khung AI/hỗ trợ).
   function select(conversation: ChatConversation) {
     setAiOpen(false); setSupportOpen(false); setSelected(conversation); chat.select(conversation.id); setMobileThread(true);
   }
+  // Mở khung trợ lý AI.
   function selectAi() {
     setSupportOpen(false); setAiOpen(true); setMobileThread(true);
   }
+  // Mở khung hỗ trợ và khiếu nại.
   function selectSupport() {
     setAiOpen(false); setSupportOpen(true); setMobileThread(true);
   }
+  // Quay về danh sách (di động) và đưa focus vào tiêu đề danh sách.
   const backToList = () => { setMobileThread(false); requestAnimationFrame(() => listTitle.current?.focus({ preventScroll: true })); };
+  // Mở (hoặc tạo) hội thoại với một liên hệ rồi chọn nó.
   async function choose(contact: ChatContact) {
     if (opening.current) return;
     opening.current = true; setPending(contact.id); setOpenError(null);

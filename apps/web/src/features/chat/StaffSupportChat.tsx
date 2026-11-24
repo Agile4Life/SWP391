@@ -13,6 +13,7 @@ import { SUPPORT_MESSAGE_MAX, SUPPORT_STATUS_LABEL, isAccessDenied, supportBubbl
 import '../member/member-support.css';
 import './support-chat.css';
 
+/** Trạng thái của phiếu hỗ trợ. */
 type Status = SupportTicket['status'];
 const STATUSES = Object.keys(SUPPORT_STATUS_LABEL) as Status[];
 const TRANSITIONS: Record<Status, Status[]> = { open: ['open', 'in_progress'], in_progress: ['open', 'in_progress', 'resolved'], resolved: ['in_progress', 'resolved', 'closed'], closed: ['closed'] };
@@ -53,9 +54,11 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; selection.current = null; }; }, []);
 
+  // Tải danh sách phiếu theo trang và trạng thái hiện tại; trang vượt quá thì lùi về trang cuối, chỉ lần gọi mới nhất được dùng.
   const loadList = useCallback(async (background = false) => {
     const { page: target, filter: status } = listQuery.current;
     const generation = ++listGeneration.current;
+    // Lần gọi này còn hiệu lực không (component còn sống và chưa có lần gọi mới hơn).
     const current = () => alive.current && generation === listGeneration.current;
     if (!background) setLoading(true);
     try {
@@ -74,8 +77,10 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   }, []);
   useEffect(() => { void loadList(); }, [loadList]);
 
+  // Tải chi tiết phiếu và các tin nhắn (silent thì không hiện trạng thái tải).
   const loadDetail = useCallback(async (id: number, silent = false) => {
     const generation = ++detailGeneration.current;
+    // Lần gọi này còn hiệu lực không (đúng phiếu đang chọn và chưa có lần gọi mới hơn).
     const current = () => alive.current && selection.current === id && generation === detailGeneration.current;
     if (!silent) { setDetailLoading(true); setDetailError(null); setAccessDenied(false); }
     try {
@@ -90,6 +95,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false, running = false, dirty = false;
+    // Khi có thông báo realtime: tải lại danh sách (gộp các thông báo liên tiếp, không chạy chồng).
     const invalidate = () => {
       if (disposed || !alive.current || document.visibilityState === 'hidden') return;
       if (running) { dirty = true; return; }
@@ -103,6 +109,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     const id = selected;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false, running = false, dirty = false;
+    // Khi có thông báo realtime: tải lại chi tiết phiếu đang mở (gộp các thông báo liên tiếp).
     const invalidate = () => {
       if (disposed || !alive.current || selection.current !== id || document.visibilityState === 'hidden') return;
       if (running) { dirty = true; return; }
@@ -113,17 +120,20 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     return () => { disposed = true; stop(); clearTimeout(timer); };
   }, [selected, loadDetail]);
 
+  // Mở một phiếu để xem chi tiết.
   function open(item: SupportTicket) {
     detailGeneration.current++;
     selection.current = item.id;
     setTicket(item); setMessages([]); setDetailError(null); setAccessDenied(false); setActionError(null); setPending(null);
     setDetailLoading(true); setEscalating(false); setReason(''); setSelected(item.id);
   }
+  // Đóng phiếu đang xem, quay về danh sách và tải lại.
   function close() {
     selection.current = null; detailGeneration.current++;
     setSelected(null); setTicket(null); setMessages([]); setActionError(null); setPending(null); setEscalating(false); setReason('');
     void loadList(true);
   }
+  // Đổi trang hoặc bộ lọc trạng thái rồi tải lại danh sách.
   function changeQuery(nextPage: number, nextFilter: '' | Status) {
     listQuery.current = { page: nextPage, filter: nextFilter };
     setPage(nextPage); setFilter(nextFilter);
@@ -135,6 +145,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const canEscalate = canAct && !manager && (ticket!.status === 'open' || ticket!.status === 'in_progress');
   const draft = selected != null ? drafts[selected] ?? '' : '';
 
+  // Thực hiện một thao tác lên phiếu (gửi, đổi trạng thái, chuyển cấp...) với khóa chống bấm đúp.
   async function act(operation: () => Promise<unknown>, onDone?: () => void) {
     if (!ticket || busyRef.current || detailLoading || accessDenied) return;
     const id = ticket.id;
@@ -148,6 +159,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     } catch (cause) { if (alive.current) setActionError(supportError(cause)); }
     finally { busyRef.current = false; if (alive.current) { setBusy(false); setPending(null); } }
   }
+  // Gửi tin nhắn trả lời; mỗi nội dung dùng một khóa riêng để gửi lại không bị trùng.
   function send() {
     if (!ticket || !canAct || ticket.status === 'closed') return;
     const id = ticket.id, text = draft.trim();
@@ -161,10 +173,12 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
       setDrafts(values => values[id] === draft ? { ...values, [id]: '' } : values);
     });
   }
+  // Đổi trạng thái phiếu theo các chuyển đổi cho phép.
   function changeStatus(status: Status) {
     if (!ticket || status === ticket.status) return;
     void act(() => updateSupportStatus(ticket.id, status));
   }
+  // Gửi chuyển cấp khiếu nại lên quản lý kèm lý do tối đa 500 ký tự.
   function submitEscalation(event: FormEvent) {
     event.preventDefault();
     const text = reason.trim();
@@ -172,7 +186,9 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     void act(() => escalateSupportTicket(ticket.id, text), () => { setEscalating(false); setReason(''); });
   }
 
+  // Các bong bóng chat dựng từ phiếu và tin nhắn (nhân sự là "tôi").
   const bubbles = useMemo(() => supportBubbles(ticket, messages, false), [ticket, messages]);
+  // Tên hội viên của phiếu (không có tên thì hiện "Hội viên #id").
   const memberName = (item: SupportTicket) => item.memberName || t(`Hội viên #${item.memberId}`, `Member #${item.memberId}`);
   const connectionText = connection === 'reconnecting' ? t('Mất kết nối trực tiếp · đang thử lại', 'Live connection lost · reconnecting') : connection === 'connected' ? t('Cập nhật trực tiếp', 'Live updates') : t('Tự động đồng bộ phiếu', 'Auto-syncing tickets');
 

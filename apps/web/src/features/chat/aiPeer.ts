@@ -6,6 +6,7 @@ import type { ChatContact } from './chatApi';
  */
 export const AI_PEER: ChatContact = { id: -1, name: 'SÖL AI', role: 'AI', available: true, avatarUrl: null };
 
+/** True nếu liên hệ là trợ lý AI. */
 export const isAiPeer = (contact: Pick<ChatContact, 'role'>) => contact.role === 'AI';
 
 /** Câu trả lời của AI có thể chứa Markdown; khung chat chỉ hiển thị chữ thuần. */

@@ -3,11 +3,17 @@ import { getHistory, sendMessage, type ChatMessage } from './chatApi';
 import { useI18n } from '../../shared/i18n';
 import { chatError, type ChatError } from './chatMessages';
 
+/** Trạng thái của một hội thoại đang mở: tin nhắn, con trỏ tin cũ, đang đồng bộ và cờ cần đồng bộ lại. */
 interface Thread {
   id: number; messages: ChatMessage[]; cursor: number | null; syncing: boolean; again: boolean;
 }
+/** Tạo lỗi hiển thị khi không tải được tin nhắn. */
 const errorText = (error: unknown) => chatError(error, 'Không thể tải tin nhắn. Vui lòng thử lại.', 'Unable to load messages. Please try again.');
 
+/**
+ * Hook quản lý một hội thoại trực tiếp: chọn hội thoại, đồng bộ tin mới, tải tin cũ, nháp theo từng hội thoại
+ * và gửi tin (tối đa 2000 ký tự, chống gửi trùng); onSent gọi sau khi gửi.
+ */
 export function useChatConversation(onSent: () => void) {
   const { t } = useI18n();
   const thread = useRef<Thread | null>(null);
@@ -33,6 +39,7 @@ export function useChatConversation(onSent: () => void) {
     return () => { mounted.current = false; thread.current = null; };
   }, []);
 
+  // Gộp tin mới vào hội thoại theo id và sắp xếp lại.
   const merge = useCallback((target: Thread, items: ChatMessage[]) => {
     if (!mounted.current || thread.current !== target) return;
     const byId = new Map(target.messages.map(m => [m.id, m]));
@@ -41,6 +48,7 @@ export function useChatConversation(onSent: () => void) {
     setMessages(target.messages);
   }, []);
 
+  // Đồng bộ tin mới; nếu đang đồng bộ thì đánh dấu để chạy lại một lần.
   const refresh = useCallback(async () => {
     const target = thread.current;
     if (!target) return;
@@ -65,6 +73,7 @@ export function useChatConversation(onSent: () => void) {
     }
   }, [merge]);
 
+  // Chọn hội thoại theo id và nạp lại nháp, lỗi gửi của hội thoại đó.
   const select = useCallback((id: number) => {
     if (thread.current?.id === id) return;
     thread.current = { id, messages: [], cursor: null, syncing: false, again: false };
@@ -74,6 +83,7 @@ export function useChatConversation(onSent: () => void) {
     void refresh();
   }, [refresh]);
 
+  // Cập nhật nháp của hội thoại hiện tại.
   const setDraft = useCallback((text: string) => {
     const id = thread.current?.id;
     if (id === undefined) return;
@@ -81,6 +91,7 @@ export function useChatConversation(onSent: () => void) {
     sendErrors.current.delete(id); setSendError(null);
   }, []);
 
+  // Tải thêm tin cũ hơn tin đầu tiên.
   const loadOlder = useCallback(async () => {
     const target = thread.current;
     if (!target || !target.messages.length || olderRequest.current === target) return;
@@ -96,6 +107,7 @@ export function useChatConversation(onSent: () => void) {
     }
   }, [merge]);
 
+  // Gửi nháp hiện tại với mã client riêng.
   const send = useCallback(async () => {
     const target = thread.current;
     if (!target || sendingIds.current.has(target.id)) return;

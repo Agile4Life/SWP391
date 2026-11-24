@@ -6,7 +6,12 @@ import { ChatAvatar } from './ChatAvatar';
 import { chatError, type ChatError } from './chatMessages';
 import { useI18n } from '../../shared/i18n';
 
-/** `forMember`: a member looks for a receptionist/coach; otherwise staff look for a member to write to. */
+/**
+ * Danh sách tìm người để bắt đầu trò chuyện (hội viên tìm lễ tân/HLV của mình, nhân sự tìm hội viên) với tìm
+ * kiếm và phân trang.
+ *
+ * `forMember`: a member looks for a receptionist/coach; otherwise staff look for a member to write to.
+ */
 export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose: (contact: ChatContact) => void; pending: number | null; forMember?: boolean }) {
   const { t } = useI18n();
   const [query, setQuery] = useState('');
@@ -19,6 +24,7 @@ export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose
   const [noCoach, setNoCoach] = useState(false);
   const inRouter = useInRouterContext();
   const sequence = useRef({ value: 0 });
+  // Tìm liên hệ theo từ khóa và trang; chỉ kết quả của lần gọi mới nhất được dùng.
   const search = useCallback(async (term: string, nextPage: number) => {
     const request = ++sequence.current.value;
     setLoading(true); setError(null); setSubmitted(term);
@@ -33,6 +39,7 @@ export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose
     finally { if (request === sequence.current.value) setLoading(false); }
   }, []);
   useEffect(() => { const requests = sequence.current; void search('', 0); return () => { requests.value++; }; }, [search]);
+  // Gửi biểu mẫu tìm kiếm và về trang đầu.
   function submit(event: FormEvent) { event.preventDefault(); void search(query.trim(), 0); }
   return <section data-i18n-managed className="direct-chat__contacts" aria-label={forMember ? t("Chọn người để trò chuyện", "Choose a chat recipient") : t("Chọn hội viên để nhắn tin", "Choose a member to message")}>
     <form onSubmit={submit} className="direct-chat__search">

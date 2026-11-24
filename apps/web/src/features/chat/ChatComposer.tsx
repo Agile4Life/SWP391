@@ -22,6 +22,7 @@ export function ChatComposer({ id, label, value, onChange, onSubmit, disabled = 
 
   useEffect(() => {
     if (!emojiOpen || disabled) return;
+    // Nhấn Esc thì đóng bảng emoji và trả focus về ô nhập.
     const onKey = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         event.preventDefault();
@@ -42,10 +43,12 @@ export function ChatComposer({ id, label, value, onChange, onSubmit, disabled = 
     node.style.height = `${Math.min(node.scrollHeight, MAX_HEIGHT_PX)}px`;
   }, [value]);
 
+  // Gửi tin nhắn và đóng bảng emoji nếu được phép gửi.
   function submit() {
     setEmojiOpen(false);
     if (canSend) onSubmit();
   }
+  // Chèn emoji vào cuối nội dung rồi đóng bảng emoji.
   function insert(emoji: string) {
     onChange(`${value}${emoji}`);
     setEmojiOpen(false);
