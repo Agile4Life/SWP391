@@ -62,12 +62,14 @@ class PaymentMemberAccessTest {
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc và dữ liệu cho test quyền truy cập thanh toán của hội viên. */
     @BeforeEach
     void setup() {
         when(clock.instant()).thenReturn(Instant.parse("2026-10-15T10:00:00Z"));
         when(clock.getZone()).thenReturn(ZoneOffset.UTC);
     }
 
+    /** Kiểm thử: hội viên chỉ đọc được lịch sử của chính mình. */
     @Test
     void memberReadsOnlyOwnHistory() throws Exception {
         when(members.existsById(2L)).thenReturn(true);
@@ -79,6 +81,7 @@ class PaymentMemberAccessTest {
         verifyNoMoreInteractions(payments);
     }
 
+    /** Kiểm thử: hội viên tạo thanh toán pending của mình mà không kích hoạt subscription. */
     @Test
     void memberCreatesOwnPendingPaymentWithoutActivatingSubscription() throws Exception {
         Member member = new Member();
@@ -109,6 +112,7 @@ class PaymentMemberAccessTest {
         verify(subscriptions, never()).save(any());
     }
 
+    /** Hàm trợ giúp của test: tạo subscription đang chờ. */
     private MembershipSubscription pendingSubscription() {
         Member member = new Member();
         member.setUserId(2L);
@@ -125,6 +129,7 @@ class PaymentMemberAccessTest {
         return subscription;
     }
 
+    /** Kiểm thử: thanh toán tiền mặt của hội viên bắt buộc có ảnh biên nhận. */
     @Test
     void memberCashPaymentRequiresReceiptPhoto() throws Exception {
         pendingSubscription();
@@ -137,6 +142,7 @@ class PaymentMemberAccessTest {
         verify(payments, never()).save(any());
     }
 
+    /** Kiểm thử: thanh toán tiền mặt từ chối biên nhận không phải ảnh. */
     @Test
     void memberCashPaymentRejectsNonImageReceipt() throws Exception {
         pendingSubscription();
@@ -150,6 +156,7 @@ class PaymentMemberAccessTest {
         verify(payments, never()).save(any());
     }
 
+    /** Kiểm thử: thanh toán tiền mặt có biên nhận ở trạng thái pending. */
     @Test
     void memberCashPaymentWithReceiptStaysPending() throws Exception {
         pendingSubscription();
@@ -167,6 +174,7 @@ class PaymentMemberAccessTest {
         org.junit.jupiter.api.Assertions.assertEquals("pending", saved.getStatus());
     }
 
+    /** Kiểm thử: hội viên không tạo được thanh toán cho người khác. */
     @Test
     void memberCannotCreatePaymentForAnotherMember() throws Exception {
         mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
@@ -178,6 +186,7 @@ class PaymentMemberAccessTest {
         verifyNoInteractions(payments);
     }
 
+    /** Kiểm thử: hội viên không giả mạo được thanh toán thành công hay thu ngân. */
     @Test
     void memberCannotForgeSuccessfulPaymentOrCashier() throws Exception {
         for (String extra : List.of(
@@ -190,6 +199,7 @@ class PaymentMemberAccessTest {
         verifyNoInteractions(payments);
     }
 
+    /** Kiểm thử: hội viên không gắn được subscription của người khác. */
     @Test
     void memberCannotAttachAnotherMembersSubscription() throws Exception {
         Member owner = new Member();
@@ -206,6 +216,7 @@ class PaymentMemberAccessTest {
         verifyNoInteractions(payments);
     }
 
+    /** Kiểm thử: hội viên không xác nhận, hoàn tiền, đổi trạng thái hay đọc thanh toán tùy ý. */
     @Test
     void memberCannotConfirmRefundChangeStatusOrReadArbitraryPayment() throws Exception {
         mvc.perform(post("/api/v1/payments/process").with(authentication(actor("MEMBER")))

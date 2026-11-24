@@ -26,6 +26,7 @@ class RoleServiceTest {
     @Mock RoleMapper roleMapper;
     @InjectMocks RoleService service;
 
+    /** Kiểm thử: cấp quyền được kể cả khi vai trò chưa có quyền nào. */
     @Test
     void grantAddsPermissionEvenWhenRoleHasNone() {
         Role role = new Role();
@@ -38,6 +39,7 @@ class RoleServiceTest {
         assertTrue(role.getPermissions().contains(permission));
     }
 
+    /** Kiểm thử: thu hồi quyền gỡ quyền khỏi vai trò. */
     @Test
     void revokeRemovesPermission() {
         Role role = new Role();
@@ -51,6 +53,7 @@ class RoleServiceTest {
         assertFalse(role.getPermissions().contains(permission));
     }
 
+    /** Kiểm thử: cấp quyền cho vai trò không tồn tại ném not found. */
     @Test
     void grantUnknownRoleThrowsNotFound() {
         when(roleRepository.findById(9L)).thenReturn(Optional.empty());
@@ -58,6 +61,7 @@ class RoleServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> service.grantPermission(9L, 2L));
     }
 
+    /** Kiểm thử: cấp quyền không tồn tại ném not found. */
     @Test
     void grantUnknownPermissionThrowsNotFound() {
         when(roleRepository.findById(1L)).thenReturn(Optional.of(new Role()));

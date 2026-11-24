@@ -34,6 +34,7 @@ class KycFlowTest {
     private Member member;
     private final AuthenticatedPrincipal desk = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
 
+    /** Chuẩn bị trước mỗi test: tạo luồng KYC với repository giả lập. */
     @BeforeEach
     void setUp() {
         profiles = new ProfileService(users, members, mock(CoachRepository.class), mock(ReceptionistRepository.class));
@@ -52,10 +53,12 @@ class KycFlowTest {
         when(users.findById(2L)).thenReturn(Optional.of(new User()));
     }
 
+    /** Hàm trợ giúp của test: gửi hồ sơ KYC mẫu. */
     private void submit() {
         profiles.submitMemberKyc(10L, new MemberKycRequest("CCCD", "012345678901", "NGUYEN VAN A", "Việt Nam", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="));
     }
 
+    /** Kiểm thử: số giấy tờ lưu dạng mã hóa và chỉ đọc được dạng che bớt. */
     @Test
     void theNumberIsStoredEncryptedAndOnlyTheMaskedFormIsReadable() {
         submit();
@@ -69,6 +72,7 @@ class KycFlowTest {
         assertNull(crypto.decrypt("plain-text"));
     }
 
+    /** Kiểm thử: hồ sơ gửi lên ở trạng thái chờ cho tới khi quầy duyệt. */
     @Test
     void aSubmissionIsPendingUntilTheDeskApprovesIt() {
         submit();
@@ -86,6 +90,7 @@ class KycFlowTest {
         assertThrows(ConflictException.class, () -> review.approve(desk, 10L));
     }
 
+    /** Kiểm thử: từ chối cần có lý do và giữ hội viên ở trạng thái chưa xác minh. */
     @Test
     void aRejectionNeedsAReasonAndKeepsTheMemberUnverified() {
         submit();
@@ -102,6 +107,7 @@ class KycFlowTest {
         assertNull(member.getKycRejectReason());
     }
 
+    /** Kiểm thử: người duyệt thấy số giấy tờ đọc được và chỉ liệt kê hồ sơ đang chờ. */
     @Test
     void theReviewerSeesTheReadableNumberAndOnlyPendingSubmissionsAreListed() {
         submit();
@@ -114,6 +120,7 @@ class KycFlowTest {
         assertEquals("MB-010", pending.get(0).membershipCode());
     }
 
+    /** Kiểm thử: số giấy tờ cũ lưu plaintext được mã hóa một lần bằng backfill. */
     @Test
     void legacyPlaintextNumbersAreEncryptedOnceByTheBackfill() throws Exception {
         member.setCitizenId("012345678901");

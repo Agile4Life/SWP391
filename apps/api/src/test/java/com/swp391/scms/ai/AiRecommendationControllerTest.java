@@ -450,13 +450,16 @@ class AiRecommendationControllerTest {
 
         var prompts = new java.util.ArrayList<String>();
         AiClient capturingClient = new AiClient() {
+            /** AiClient giả: sinh nội dung và ghi nhận lời gọi. */
             @Override
             public String generate(String systemPrompt, String userMessage) {
                 prompts.add(userMessage);
                 return "{\"goal\":\"Tăng cơ giai đoạn 2\",\"analysis\":\"Tốt\",\"items\":[]}";
             }
+            /** AiClient giả: trả tên model. */
             @Override
             public String getModelName() { return "test-model"; }
+            /** AiClient giả: trả tên provider. */
             @Override
             public String getProviderName() { return "test-provider"; }
         };
@@ -476,6 +479,7 @@ class AiRecommendationControllerTest {
         assertFalse(userPrompt.contains("Yoga phục hồi buổi sáng"), "Prompt must not inherit another coach's plan");
     }
 
+    /** Kiểm thử: quản lý được áp dụng gợi ý AI còn HLV khác bị chặn. */
     @Test
     @DisplayName("Manager apply uses log coach or explicit coach_id instead of manager userId, and blocks cross-coach apply")
     void shouldAllowManagerApplyAndBlockOtherCoachApply() throws Exception {
@@ -512,6 +516,7 @@ class AiRecommendationControllerTest {
                 () -> recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 21L, "COACH"));
     }
 
+    /** Kiểm thử: validate số tuần của kế hoạch và giới hạn tần suất sinh gợi ý. */
     @Test
     @DisplayName("Validates durationWeeks range (1..52) and enforces per-user rate limit on workout generation")
     void shouldValidateDurationWeeksAndRateLimitGeneration() throws Exception {

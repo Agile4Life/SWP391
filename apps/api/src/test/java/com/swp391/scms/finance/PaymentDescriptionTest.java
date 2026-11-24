@@ -21,6 +21,7 @@ import org.springframework.test.util.ReflectionTestUtils;
  */
 class PaymentDescriptionTest {
 
+    /** Hàm trợ giúp của test: tạo mô tả cho khoản thanh toán. */
     private static PaymentDto describe(Payment payment) throws Exception {
         Method method = com.swp391.scms.finance.service.PaymentService.class
                 .getDeclaredMethod("describe", Payment.class, PaymentDto.class);
@@ -28,6 +29,7 @@ class PaymentDescriptionTest {
         return (PaymentDto) method.invoke(null, payment, new PaymentDto());
     }
 
+    /** Kiểm thử: thanh toán đặt sân nêu tên sân và khung giờ. */
     @Test
     void courtPaymentNamesTheCourtAndSlot() throws Exception {
         Room room = new Room();
@@ -46,6 +48,7 @@ class PaymentDescriptionTest {
         assertThat(dto.getServiceName()).isEqualTo("Sân Tennis 01 · 20/11/2026 · 14:00");
     }
 
+    /** Kiểm thử: thanh toán membership nêu tên gói. */
     @Test
     void membershipPaymentNamesThePackage() throws Exception {
         MembershipPackage pkg = new MembershipPackage();
@@ -62,6 +65,7 @@ class PaymentDescriptionTest {
         assertThat(dto.getServiceName()).isEqualTo("GOLD");
     }
 
+    /** Kiểm thử: nạp ví được gắn nhãn là nạp ví. */
     @Test
     void walletTopupPaymentIsLabelledAsAWalletTopup() throws Exception {
         Payment payment = new Payment();
@@ -72,6 +76,7 @@ class PaymentDescriptionTest {
         assertThat(dto.getServiceType()).isEqualTo("WALLET_TOPUP");
     }
 
+    /** Kiểm thử: thanh toán không gắn với gì là loại khác. */
     @Test
     void unlinkedPaymentIsOther() throws Exception {
         PaymentDto dto = describe(new Payment());

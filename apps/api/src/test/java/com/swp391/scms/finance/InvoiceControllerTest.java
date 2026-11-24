@@ -39,6 +39,7 @@ class InvoiceControllerTest {
     @InjectMocks
     private InvoiceController invoiceController;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller hóa đơn. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -48,6 +49,7 @@ class InvoiceControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: tạo hóa đơn thành công. */
     @Test
     @DisplayName("POST /api/v1/invoices should return 201 Created when request is valid")
     void shouldCreateInvoiceSuccessfully() throws Exception {
@@ -71,6 +73,7 @@ class InvoiceControllerTest {
                 .andExpect(jsonPath("$.data.invoiceNumber").value("INV-20261001-ABCDEF"));
     }
 
+    /** Kiểm thử: từ chối request hóa đơn không hợp lệ. */
     @Test
     @DisplayName("POST /api/v1/invoices should return 400 Bad Request when missing paymentId or subtotal")
     void shouldRejectInvalidInvoiceRequest() throws Exception {
@@ -84,6 +87,7 @@ class InvoiceControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: lấy hóa đơn theo id. */
     @Test
     @DisplayName("GET /api/v1/invoices/{id} should return 200 OK")
     void shouldGetInvoiceById() throws Exception {
@@ -97,6 +101,7 @@ class InvoiceControllerTest {
                 .andExpect(jsonPath("$.data.id").value(1));
     }
 
+    /** Kiểm thử: lấy hóa đơn theo số hóa đơn. */
     @Test
     @DisplayName("GET /api/v1/invoices/by-number/{invoiceNumber} should return 200 OK")
     void shouldGetInvoiceByNumber() throws Exception {
@@ -110,6 +115,7 @@ class InvoiceControllerTest {
                 .andExpect(jsonPath("$.data.invoiceNumber").value("INV-20261001-001"));
     }
 
+    /** Kiểm thử: lấy hóa đơn theo mã thanh toán. */
     @Test
     @DisplayName("GET /api/v1/invoices/by-payment/{paymentId} should return 200 OK")
     void shouldGetInvoiceByPaymentId() throws Exception {
@@ -123,6 +129,7 @@ class InvoiceControllerTest {
                 .andExpect(jsonPath("$.data.id").value(1));
     }
 
+    /** Kiểm thử: tự động phát hành hóa đơn thành công. */
     @Test
     @DisplayName("POST /api/v1/invoices/auto-issue/{paymentId} should return 201 Created")
     void shouldAutoIssueInvoiceSuccessfully() throws Exception {

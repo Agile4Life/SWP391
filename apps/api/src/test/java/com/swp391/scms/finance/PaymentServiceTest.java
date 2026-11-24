@@ -64,6 +64,7 @@ class PaymentServiceTest {
     private Clock clock;
     private PaymentService paymentService;
 
+    /** Chuẩn bị trước mỗi test: tạo PaymentService với repository giả lập. */
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(Instant.parse("2026-10-01T10:00:00Z"), ZoneOffset.UTC);
@@ -71,6 +72,7 @@ class PaymentServiceTest {
                 membershipSubscriptionRepository, classEnrollmentRepository, paymentMapper, clock);
     }
 
+    /** Kiểm thử: tạo thanh toán thành công. */
     @Test
     @DisplayName("Should create payment successfully when member and cashier are valid")
     void shouldCreatePaymentSuccessfully() {
@@ -103,6 +105,7 @@ class PaymentServiceTest {
         verify(paymentRepository).save(payment);
     }
 
+    /** Kiểm thử: ném lỗi khi tạo thanh toán cho hội viên không tồn tại. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when member does not exist")
     void shouldThrowWhenCreatingPaymentWithNonExistentMember() {
@@ -115,6 +118,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: ném lỗi khi thu ngân đã bị xóa mềm. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when cashier receiver is soft-deleted")
     void shouldThrowWhenCreatingPaymentWithSoftDeletedCashier() {
@@ -129,6 +133,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: lấy thanh toán theo id. */
     @Test
     @DisplayName("Should return PaymentDto by ID when payment exists")
     void shouldGetPaymentById() {
@@ -144,6 +149,7 @@ class PaymentServiceTest {
         assertEquals(5L, result.getId());
     }
 
+    /** Kiểm thử: ném lỗi khi không tìm thấy thanh toán. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when payment ID not found")
     void shouldThrowWhenPaymentNotFound() {
@@ -151,6 +157,7 @@ class PaymentServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> paymentService.getPaymentById(999L));
     }
 
+    /** Kiểm thử: lấy thanh toán theo hội viên. */
     @Test
     @DisplayName("Should return list of payments for existing member")
     void shouldGetPaymentsByMemberId() {
@@ -163,6 +170,7 @@ class PaymentServiceTest {
         assertEquals(1, results.size());
     }
 
+    /** Kiểm thử: ném lỗi khi không tìm thấy hội viên cho lịch sử thanh toán. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when querying payments for non-existent member")
     void shouldThrowWhenMemberNotFoundForPaymentsHistory() {
@@ -170,6 +178,7 @@ class PaymentServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> paymentService.getPaymentsByMemberId(999L));
     }
 
+    /** Kiểm thử: cập nhật trạng thái từ pending sang success. */
     @Test
     @DisplayName("Should update payment status from pending to success and set paidAt")
     void shouldUpdatePaymentStatusFromPendingToSuccess() {
@@ -186,6 +195,7 @@ class PaymentServiceTest {
         assertEquals(LocalDateTime.now(clock), payment.getPaidAt());
     }
 
+    /** Kiểm thử: từ chối chuyển từ success sang refunded qua cập nhật trạng thái. */
     @Test
     @DisplayName("Should reject success to refunded on the status endpoint; refunds go through refundPayment")
     void shouldRejectStatusUpdateFromSuccessToRefunded() {
@@ -200,6 +210,7 @@ class PaymentServiceTest {
         assertEquals("success", payment.getStatus());
     }
 
+    /** Kiểm thử: từ chối các chuyển trạng thái không được phép. */
     @Test
     @DisplayName("Should throw BadRequestException for invalid status transitions (e.g., refunded -> success)")
     void shouldRejectDisallowedStatusTransitions() {
@@ -212,6 +223,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatus(1L, "success"));
     }
 
+    /** Kiểm thử: từ chối chuỗi trạng thái không hợp lệ. */
     @Test
     @DisplayName("Should throw BadRequestException when status string is unknown")
     void shouldRejectInvalidStatusString() {
@@ -223,6 +235,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatus(1L, "invalid_status"));
     }
 
+    /** Kiểm thử: xử lý thanh toán và kích hoạt subscription. */
     @Test
     @DisplayName("Should process payment and activate subscription with QR code generation")
     void shouldProcessPaymentAndActivateSubscription() {
@@ -254,6 +267,7 @@ class PaymentServiceTest {
         verify(paymentRepository).save(any(Payment.class));
     }
 
+    /** Kiểm thử: POS không kích hoạt được subscription đã hủy. */
     @Test
     void posCannotActivateCancelledSubscription() {
         Member member = new Member(); member.setUserId(2L);
@@ -268,6 +282,7 @@ class PaymentServiceTest {
         assertEquals("cancelled", cancelled.getStatus());
     }
 
+    /** Kiểm thử: POS tất toán thanh toán pending có sẵn mà không tạo bản trùng. */
     @Test
     void posSettlesExistingPendingPaymentWithoutCreatingDuplicate() {
         Member member = new Member(); member.setUserId(2L);
@@ -292,6 +307,7 @@ class PaymentServiceTest {
         verify(paymentRepository, times(1)).save(any());
     }
 
+    /** Kiểm thử: thanh toán subscription có sẵn không tất toán được ghi danh khác. */
     @Test
     void existingSubscriptionPaymentCannotSettleAnotherEnrollment() {
         Member member = new Member(); member.setUserId(2L);
@@ -314,6 +330,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: xác nhận thanh toán không kích hoạt lại yêu cầu đã hủy. */
     @Test
     void paymentConfirmationCannotReactivateCancelledRequest() {
         Member member = new Member(); member.setUserId(2L);
@@ -328,6 +345,7 @@ class PaymentServiceTest {
         assertEquals("cancelled", cancelled.getStatus());
     }
 
+    /** Kiểm thử: từ chối thanh toán khi số tiền không khớp. */
     @Test
     @DisplayName("Should reject payment processing when amount does not match package price")
     void shouldRejectPaymentWhenAmountMismatches() {
@@ -349,6 +367,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
     }
 
+    /** Kiểm thử: từ chối thanh toán khi thiếu đối tượng thanh toán. */
     @Test
     @DisplayName("Should reject payment processing when target subscription and enrollment are both null")
     void shouldRejectPaymentWhenTargetIsMissing() {

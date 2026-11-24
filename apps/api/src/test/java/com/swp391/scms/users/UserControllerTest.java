@@ -39,6 +39,7 @@ class UserControllerTest {
     @InjectMocks
     private UserController userController;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller người dùng. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -60,6 +61,7 @@ class UserControllerTest {
         return u;
     }
 
+    /** Kiểm thử: lấy danh sách người dùng thành công. */
     @Test
     @DisplayName("GET /api/v1/users returns all active users")
     void getAllUsersSuccess() throws Exception {
@@ -75,6 +77,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data[0].roleCode").value("CENTER_MANAGER"));
     }
 
+    /** Kiểm thử: lấy người dùng theo id thành công. */
     @Test
     @DisplayName("GET /api/v1/users/{id} returns user detail")
     void getUserByIdSuccess() throws Exception {
@@ -86,6 +89,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data.fullName").value("User 1"));
     }
 
+    /** Kiểm thử: tạo người dùng thành công. */
     @Test
     @DisplayName("POST /api/v1/users creates new user and returns 201")
     void createUserSuccess() throws Exception {
@@ -107,6 +111,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data.id").value(3));
     }
 
+    /** Kiểm thử: khóa người dùng thành công. */
     @Test
     @DisplayName("PATCH /api/v1/users/{id}/lock calls setStatus locked")
     void lockUserSuccess() throws Exception {
@@ -117,6 +122,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data.status").value("locked"));
     }
 
+    /** Kiểm thử: mở khóa người dùng thành công. */
     @Test
     @DisplayName("PATCH /api/v1/users/{id}/unlock calls setStatus active")
     void unlockUserSuccess() throws Exception {
@@ -127,6 +133,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data.status").value("active"));
     }
 
+    /** Kiểm thử: xóa người dùng thành công. */
     @Test
     @DisplayName("DELETE /api/v1/users/{id} calls deleteUser")
     void deleteUserSuccess() throws Exception {
@@ -137,6 +144,7 @@ class UserControllerTest {
         verify(userService).deleteUser(4L);
     }
 
+    /** Kiểm thử: lấy danh sách người dùng đã xóa thành công. */
     @Test
     @DisplayName("GET /api/v1/users/deleted calls getDeletedUsers")
     void getDeletedUsersSuccess() throws Exception {
@@ -147,6 +155,7 @@ class UserControllerTest {
         verify(userService).getDeletedUsers();
     }
 
+    /** Kiểm thử: khôi phục người dùng thành công. */
     @Test
     @DisplayName("PATCH /api/v1/users/{id}/restore calls restoreUser")
     void restoreUserSuccess() throws Exception {
@@ -158,6 +167,7 @@ class UserControllerTest {
         verify(userService).restoreUser(4L);
     }
 
+    /** Kiểm thử: cập nhật hồ sơ lễ tân thành công. */
     @Test
     @DisplayName("PUT /api/v1/users/{id}/receptionist updates receptionist shift")
     void updateReceptionistProfileSuccess() throws Exception {
@@ -172,6 +182,7 @@ class UserControllerTest {
     }
 
 
+    /** Kiểm thử: lễ tân không được xóa người dùng. */
     @Test
     @DisplayName("DELETE /api/v1/users/{id} returns 403 when not allowed")
     void receptionistCannotDeleteUser() throws Exception {
@@ -181,6 +192,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
+    /** Kiểm thử: dọn dẹp người dùng không hoạt động thành công. */
     @Test
     @DisplayName("POST /api/v1/users/cleanup-inactive calls cleanupInactiveUsers and returns deletedCount")
     void cleanupInactiveUsersSuccess() throws Exception {

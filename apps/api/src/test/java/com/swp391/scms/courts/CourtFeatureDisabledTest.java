@@ -9,6 +9,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 
 /** Bộ kiểm thử cho CourtFeatureDisabled (court feature disabled). */
 class CourtFeatureDisabledTest {
+    /** Kiểm thử: các endpoint sân và seeder không được đăng ký khi tính năng đã tắt. */
     @Test
     void courtEndpointsAndSeederAreNotRegistered() {
         var scanner = new ClassPathScanningCandidateComponentProvider(true);

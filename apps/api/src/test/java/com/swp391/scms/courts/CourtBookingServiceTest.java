@@ -57,13 +57,18 @@ class CourtBookingServiceTest {
         org.springframework.test.util.ReflectionTestUtils.setField(service, "payments", payments);
     }
 
+    /** Hàm trợ giúp của test: tạo gói/quota đặt sân mẫu. */
     void plan(String name) {
         MembershipPackage pkg = new MembershipPackage(); pkg.setName(name);
         MembershipSubscription sub = new MembershipSubscription();
         sub.setMembershipPackage(pkg); sub.setStatus("active"); sub.setStartDate(date.minusDays(10)); sub.setEndDate(date.plusDays(60));
         lenient().when(subscriptions.findByMemberUserIdAndStatus(1L, "active")).thenReturn(List.of(sub));
     }
-    /** Pretends {@code n} bookings of the month were already covered by the plan, then counts the ones made since. */
+    /**
+     * Hàm trợ giúp của test: tạo số lượt đã dùng mẫu.
+     *
+     * Pretends {@code n} bookings of the month were already covered by the plan, then counts the ones made since.
+     */
     void used(long n) {
         long[] extra = {0};
         lenient().when(bookings.countQuotaUsage(eq(1L), any(), any(), eq("package_quota"))).thenAnswer(i -> n + extra[0]);
@@ -78,7 +83,9 @@ class CourtBookingServiceTest {
     /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (paid). */
     BookRequest paid(LocalDate day, LocalTime time, String method) { return new BookRequest(10L, day, time, method); }
 
+    /** Hàm trợ giúp của test: tạo request đặt sân. */
     BookRequest request(LocalDate day, LocalTime time) { return new BookRequest(10L, day, time); }
+    /** Hàm trợ giúp của test: tạo ngoại lệ lỗi với mã lỗi cho trước. */
     void error(String code, Runnable action) { assertEquals(code, assertThrows(AppException.class, action::run).getErrorCode()); }
 
     @Test void booksOneHourWithinOpeningHours() {
@@ -207,6 +214,7 @@ class CourtBookingServiceTest {
         var quota = service.quota(member, date);
         assertEquals(2, quota.monthlyQuota()); assertEquals(1, quota.used()); assertEquals(1, quota.remaining());
     }
+    /** Hàm trợ giúp của test: tạo lượt đặt sân đã tồn tại. */
     CourtBooking existing(LocalTime start) {
         CourtBooking booking = new CourtBooking(); booking.setId(8L); booking.setRoom(room); booking.setMember(user);
         booking.setBookingDate(date); booking.setStartTime(start); booking.setEndTime(start.plusHours(1));

@@ -40,6 +40,7 @@ class PaymentControllerTest {
     @InjectMocks
     private PaymentController paymentController;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller thanh toán. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -49,6 +50,7 @@ class PaymentControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: tạo thanh toán thành công. */
     @Test
     @DisplayName("POST /api/v1/payments should return 201 Created when request is valid")
     void shouldCreatePaymentSuccessfully() throws Exception {
@@ -73,6 +75,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.data.id").value(10));
     }
 
+    /** Kiểm thử: từ chối request thanh toán không hợp lệ. */
     @Test
     @DisplayName("POST /api/v1/payments should return 400 Bad Request when missing memberId or invalid method")
     void shouldRejectInvalidPaymentRequest() throws Exception {
@@ -87,6 +90,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: lấy thanh toán theo id. */
     @Test
     @DisplayName("GET /api/v1/payments/{id} should return 200 OK")
     void shouldGetPaymentById() throws Exception {
@@ -100,6 +104,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.data.id").value(1));
     }
 
+    /** Kiểm thử: lấy thanh toán theo hội viên. */
     @Test
     @DisplayName("GET /api/v1/payments/member/{memberId} should return 200 OK")
     void shouldGetPaymentsByMemberId() throws Exception {
@@ -113,6 +118,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.data").isArray());
     }
 
+    /** Kiểm thử: cập nhật trạng thái thanh toán thành công. */
     @Test
     @DisplayName("PATCH /api/v1/payments/{id}/status should return 200 OK on valid status")
     void shouldUpdatePaymentStatusSuccessfully() throws Exception {
@@ -130,6 +136,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.data.status").value("refunded"));
     }
 
+    /** Kiểm thử: từ chối cập nhật trạng thái không hợp lệ. */
     @Test
     @DisplayName("PATCH /api/v1/payments/{id}/status should return 400 Bad Request on invalid status")
     void shouldRejectInvalidPaymentStatusUpdate() throws Exception {
@@ -142,6 +149,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: xử lý thanh toán thành công. */
     @Test
     @DisplayName("POST /api/v1/payments/process should return 201 Created when process request is valid")
     void shouldProcessPaymentSuccessfully() throws Exception {
@@ -164,6 +172,7 @@ class PaymentControllerTest {
                 .andExpect(jsonPath("$.data.status").value("success"));
     }
 
+    /** Kiểm thử: hoàn tiền thanh toán thành công. */
     @Test
     @DisplayName("POST /api/v1/payments/{id}/refund should return 200 OK when refund is valid")
     void shouldRefundPaymentSuccessfully() throws Exception {

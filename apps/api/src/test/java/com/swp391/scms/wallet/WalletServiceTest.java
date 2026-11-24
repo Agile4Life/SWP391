@@ -43,6 +43,7 @@ class WalletServiceTest {
     private WalletService walletService;
     private Wallet wallet;
 
+    /** Chuẩn bị trước mỗi test: tạo WalletService với repository giả lập. */
     @BeforeEach
     void setUp() {
         walletService = new WalletService(
@@ -62,6 +63,7 @@ class WalletServiceTest {
         lenient().when(walletTransactionRepository.findTop50ByWallet_IdOrderByCreatedAtDescIdDesc(100L)).thenReturn(List.of());
     }
 
+    /** Kiểm thử: nạp ví idempotent theo mã tham chiếu. */
     @Test
     void creditTopup_isIdempotentOnReference() {
         when(walletTransactionRepository.existsByWallet_IdAndReferenceId(100L, "REF123:TOPUP"))
@@ -76,6 +78,7 @@ class WalletServiceTest {
         verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/invoices"));
     }
 
+    /** Kiểm thử: ghi nạp VNPay và trừ tiền ghi cả hai giao dịch idempotent và giữ nguyên số dư. */
     @Test
     void recordVnpayTopupAndDebit_recordsBothTransactionsIdempotentlyAndPreservesBalance() {
         when(walletTransactionRepository.existsByWallet_IdAndReferenceId(100L, "REF999:TOPUP"))
@@ -90,6 +93,7 @@ class WalletServiceTest {
         verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/invoices"));
     }
 
+    /** Kiểm thử: trừ tiền thanh toán chỉ trừ một lần và idempotent khi trùng mã tham chiếu. */
     @Test
     void debitForPayment_deductsOnceAndRemainsIdempotentOnDuplicateReferenceId() {
         when(walletTransactionRepository.existsByWallet_IdAndReferenceId(100L, "WALLET_PAY_55"))
@@ -105,6 +109,7 @@ class WalletServiceTest {
         verify(walletRepository, times(1)).saveAndFlush(wallet);
     }
 
+    /** Kiểm thử: từ chối trừ tiền khi số dư không đủ. */
     @Test
     void debitForPayment_rejectsInsufficientBalance() {
         assertThatThrownBy(() -> walletService.debitForPayment(7L, new BigDecimal("600000"), "WALLET_PAY_56", "Thanh toán", "/member/packages"))
@@ -114,6 +119,7 @@ class WalletServiceTest {
         verify(walletTransactionRepository, never()).save(any());
     }
 
+    /** Kiểm thử: hoàn tiền cộng số dương idempotent và bỏ qua số tiền 0. */
     @Test
     void creditRefund_creditsPositiveRefundIdempotentlyAndSkipsZeroAmount() {
         walletService.creditRefund(7L, BigDecimal.ZERO, "CANCEL_REQ_0", "Moving");
@@ -131,6 +137,7 @@ class WalletServiceTest {
         verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/packages"));
     }
 
+    /** Kiểm thử: lễ tân nạp ví cho hội viên và ghi giao dịch quầy. */
     @Test
     void creditByReceptionist_creditsMemberWalletAndRecordsCounterTransaction() {
         WalletDto dto = walletService.creditByReceptionist(
@@ -153,6 +160,7 @@ class WalletServiceTest {
         verify(notificationService, times(1)).send(eq(7L), any(), any(), eq("payment"), eq("wallet"), eq(100L), eq("/member/invoices"));
     }
 
+    /** Kiểm thử: gửi lại cùng request id của lễ tân chỉ nạp một lần. */
     @Test
     void creditByReceptionist_resendWithSameRequestIdCreditsOnce() {
         when(walletTransactionRepository.existsByWallet_IdAndReferenceId(100L, "POS-REQ-desk-req-0001"))
@@ -168,6 +176,7 @@ class WalletServiceTest {
                 "TOPUP_COUNTER".equals(tx.getType()) && "POS-REQ-desk-req-0001".equals(tx.getReferenceId())));
     }
 
+    /** Kiểm thử: thanh toán cổng đến muộn chỉ cộng ví một lần theo mã tham chiếu. */
     @Test
     void creditLateGatewayPayment_creditsWalletOncePerReference() {
         when(walletTransactionRepository.existsByWallet_IdAndReferenceId(100L, "REF9:LATE_REFUND"))

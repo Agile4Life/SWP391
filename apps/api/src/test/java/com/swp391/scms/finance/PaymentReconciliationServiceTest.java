@@ -42,6 +42,7 @@ class PaymentReconciliationServiceTest {
     private WalletTransactionRepository wallet;
     private PaymentReconciliationService service;
 
+    /** Chuẩn bị trước mỗi test: tạo PaymentReconciliationService với repository giả lập. */
     @BeforeEach
     void setUp() {
         attempts = mock(VnpayTransactionRepository.class);
@@ -64,6 +65,7 @@ class PaymentReconciliationServiceTest {
         return p;
     }
 
+    /** Kiểm thử: tổng quan đếm theo trạng thái hiện tại và khoảng thời gian. */
     @Test
     void summaryCountsCurrentStateAndRange() {
         LocalDateTime start = LocalDate.of(2026, 11, 7).atStartOfDay();
@@ -95,6 +97,7 @@ class PaymentReconciliationServiceTest {
         assertEquals(3, s.anomalies().total());
     }
 
+    /** Kiểm thử: tổng quan không có dữ liệu thì bằng 0. */
     @Test
     void summaryWithNoDataIsZero() {
         when(wallet.sumLateRefunds(any(), any())).thenReturn(null);
@@ -103,6 +106,7 @@ class PaymentReconciliationServiceTest {
         assertEquals(BigDecimal.ZERO, s.lateRefundAmount());
     }
 
+    /** Kiểm thử: giới hạn khoảng thời gian và kích thước trang được áp dụng. */
     @Test
     void rangeAndPageLimitsAreEnforced() {
         var tooLong = assertThrows(BadRequestException.class,
@@ -123,6 +127,7 @@ class PaymentReconciliationServiceTest {
         verifyNoInteractions(attempts, callbacks);
     }
 
+    /** Kiểm thử: đánh dấu dòng cũ và đếm số lần thử theo từng thanh toán. */
     @Test
     @SuppressWarnings("unchecked")
     void attemptsFlagStaleRowsAndCountAttemptsPerPayment() {
@@ -146,6 +151,7 @@ class PaymentReconciliationServiceTest {
         assertEquals("an@example.com", first.member().email());
     }
 
+    /** Kiểm thử: hoàn tiền muộn phân giải đúng tham chiếu và thanh toán. */
     @Test
     void lateRefundsResolveReferenceAndPayment() {
         Payment p = payment(11L, "success");
@@ -173,6 +179,7 @@ class PaymentReconciliationServiceTest {
         assertNull(rows.get(1).paymentId());
     }
 
+    /** Kiểm thử: dòng thời gian gộp mọi sự kiện theo thứ tự thời gian. */
     @Test
     void timelineMergesEverythingInTimeOrder() {
         Payment p = payment(11L, "success");
@@ -207,6 +214,7 @@ class PaymentReconciliationServiceTest {
         assertEquals(1, t.walletTransactions().size());
     }
 
+    /** Kiểm thử: dòng thời gian của thanh toán không tồn tại trả not found. */
     @Test
     void timelineOfUnknownPaymentIsNotFound() {
         when(payments.findById(404L)).thenReturn(Optional.empty());
