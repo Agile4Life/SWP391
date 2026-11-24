@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import type { ExploreTheme } from '../materials';
 
+/** Giới hạn khuôn viên theo mặt phẳng XZ (min/max X, Z). */
 export interface CampusBounds {
   readonly minX: number;
   readonly maxX: number;
@@ -16,6 +17,7 @@ export const CAMPUS_BOUNDS: CampusBounds = {
   maxZ: 30,
 };
 
+/** Một phần hình học kèm màu, độ nhám và độ kim loại để gộp. */
 interface ColoredPart {
   readonly geometry: THREE.BufferGeometry;
   readonly color: string;
@@ -23,6 +25,7 @@ interface ColoredPart {
   readonly metalness?: number;
 }
 
+/** Một tấm lá cây (card): toạ độ đỉnh, màu và các thuộc tính để gộp thành tán cây. */
 export interface FoliageCard {
   readonly positions: readonly [
     number, number, number,
@@ -51,6 +54,7 @@ export interface FoliageCard {
   readonly windWeights: readonly [number, number, number, number];
 }
 
+/** Gộp các tấm lá thành một BufferGeometry (không có tấm nào thì trả hình dự phòng). */
 export function mergeFoliageCards(cards: readonly FoliageCard[]): THREE.BufferGeometry {
   if (cards.length === 0) {
     const fallback = new THREE.BufferGeometry();
@@ -105,6 +109,7 @@ export function mergeFoliageCards(cards: readonly FoliageCard[]): THREE.BufferGe
   return geom;
 }
 
+/** Các hình học của cảnh khuôn viên đã gộp theo loại vật liệu: đặc, kính, nước, xe, tán lá... */
 export interface CampusSceneGeometries {
   readonly opaque: THREE.BufferGeometry;
   readonly glass: THREE.BufferGeometry;
@@ -113,6 +118,7 @@ export interface CampusSceneGeometries {
   readonly foliage: THREE.BufferGeometry;
 }
 
+/** Thêm một khối hộp (kích thước, vị trí, xoay, màu...) vào danh sách phần. */
 function pushBox(
   parts: ColoredPart[],
   w: number,
@@ -144,6 +150,7 @@ function pushBox(
   parts.push({ geometry: geom, color, roughness, metalness });
 }
 
+/** Thêm một khối trụ (bán kính trên/dưới, chiều cao, vị trí, màu...) vào danh sách phần. */
 function pushCylinder(
   parts: ColoredPart[],
   rTop: number,
@@ -176,6 +183,7 @@ function pushCylinder(
   parts.push({ geometry: geom, color, roughness, metalness });
 }
 
+/** Gộp các phần tô màu thành một BufferGeometry duy nhất (rỗng thì trả hộp nhỏ dự phòng). */
 function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   if (parts.length === 0) {
     const fallback = new THREE.BoxGeometry(0.01, 0.01, 0.01);
@@ -292,6 +300,7 @@ const CAR_PAINT: Readonly<Record<string, string>> = {
  */
 const METALLIC_CAR_PAINTS = new Set(['#c4c7ca', '#8b8e92', '#6b7178']);
 
+/** Dựng một chiếc ô tô 3D (thân, kính, bánh, đèn) đặt tại (cx, cz) và hướng ry. */
 function addCar3D(
   parts: ColoredPart[],
   cx: number,
@@ -315,12 +324,14 @@ function addCar3D(
   const rTop = variant === 'suv' ? -h + 0.55 : variant === 'coupe' ? -0.75 : -0.95;
   const rBase = variant === 'suv' ? -h + 0.22 : variant === 'coupe' ? -h + 0.55 : -h + 0.75;
 
+  // Đặt một phần của xe: xoay theo hướng xe, dời tới vị trí và thêm vào danh sách.
   const place = (geometry: THREE.BufferGeometry, color: string, roughness = 0.78, metalness = 0) => {
     geometry.rotateY(ry);
     geometry.translate(cx, 0, cz);
     parts.push({ geometry, color, roughness, metalness });
   };
   /** Extrude a side profile (points in car z / y) across the car width. */
+  // Ép biên dạng cạnh bên của xe (toạ độ z/y) theo bề rộng xe để ra thân xe.
   const extrude = (pts: ReadonlyArray<readonly [number, number]>, width: number, bevel: number) => {
     const shape = new THREE.Shape();
     pts.forEach(([z, y], i) => (i === 0 ? shape.moveTo(z, y) : shape.lineTo(z, y)));
@@ -435,6 +446,7 @@ function addCar3D(
   }
 }
 
+/** Dựng một chiếc xe máy 3D (bánh, khung, yên, tay lái) đặt tại (mx, mz) và hướng ry. */
 function addMotorbike3D(
   parts: ColoredPart[],
   mx: number,
@@ -444,9 +456,12 @@ function addMotorbike3D(
 ): void {
   const cos = Math.cos(ry);
   const sin = Math.sin(ry);
+  // Đổi toạ độ cục bộ x của xe máy sang toạ độ thế giới.
   const tx = (lx: number, lz: number) => mx + lx * cos + lz * sin;
+  // Đổi toạ độ cục bộ z của xe máy sang toạ độ thế giới.
   const tz = (lx: number, lz: number) => mz - lx * sin + lz * cos;
 
+  // Dựng một bánh xe máy (lốp và vành) tại vị trí lz.
   const wheel = (lz: number) => {
     const tyre = new THREE.CylinderGeometry(0.21, 0.21, 0.11, 12);
     tyre.rotateZ(Math.PI / 2);
@@ -479,6 +494,7 @@ function addMotorbike3D(
   pushBox(parts, 0.14, 0.07, 0.06, tx(0, -0.78), 0.57, tz(0, -0.78), '#7a1919', 0, ry, 0, 0.18, 0);
 }
 
+/** Bộ sinh số giả ngẫu nhiên có hạt giống (cùng seed cho cùng dãy số). */
 function seededRandom(seed: number): () => number {
   let t = (seed | 0) + 0x6d2b79f5;
   return () => {
@@ -488,6 +504,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
+/** Thêm một tấm lá cây vào danh sách tại vị trí và hướng cho trước. */
 function addFoliageCard(
   target: FoliageCard[],
   cx: number,
@@ -572,6 +589,9 @@ function addFoliageCard(
 }
 
 /**
+ * Dựng cây lá rộng phân nhánh: chậu đá granite vát cạnh với đất phủ, thân và cành thon nghiêng nhiều nhánh, tán
+ * lá thưa gồm các tấm lá chéo nhau đổ bóng lá lung linh theo gió.
+ *
  * Organic branched broadleaf tree: bevelled granite planter + dark mulched soil,
  * multi-fork tapered leaning bark trunk & limbs, and an airy canopy of crossed & layered
  * alpha-tested fronds that cast dappled wind-swaying leaf shadows.
@@ -746,6 +766,7 @@ export const STREET_LAMPS: ReadonlyArray<readonly [number, number, number, numbe
 export const STREET_LAMP_HEIGHT = 5.2;
 export const STREET_LAMP_ARM = 1.15 * 0.88;
 
+/** Dựng một cột đèn đường (thân, tay đèn, đầu đèn) tại vị trí và hướng tay đèn cho trước. */
 function addStreetLamp(
   parts: ColoredPart[],
   x: number,
@@ -767,12 +788,14 @@ function addStreetLamp(
   pushBox(parts, 0.36, 0.08, 0.36, lx, height - 0.12, lz, '#f5e4b8', 0, 0, 0, 0.2, 0);
 }
 
+/** Dựng một trụ đèn bollard thấp (thân trụ và đầu đèn phát sáng). */
 function addBollardLight(parts: ColoredPart[], x: number, z: number): void {
   pushCylinder(parts, 0.09, 0.1, 0.72, x, 0.36, z, '#2b313d', 8, 0, 0, 0, 0.36, 0.88);
   pushCylinder(parts, 0.095, 0.095, 0.16, x, 0.8, z, '#f2c4ad', 8, 0, 0, 0, 0.18, 0);
   pushCylinder(parts, 0.1, 0.1, 0.06, x, 0.91, z, '#1f242d', 8, 0, 0, 0, 0.34, 0.88);
 }
 
+/** Vị trí neo của một cột cờ trong khuôn viên: id, toạ độ và kích thước lá cờ. */
 export interface FlagpoleAnchor {
   readonly id: string;
   readonly x: number;
@@ -791,6 +814,9 @@ export const CAMPUS_FLAGPOLE_ANCHORS: readonly FlagpoleAnchor[] = [
 ];
 
 /**
+ * Dựng toàn bộ thế giới khuôn viên SÖL bên ngoài (cổng, chốt bảo vệ, thanh chắn, vạch qua đường, cây, đèn,
+ * xe...) thành các danh sách phần theo loại vật liệu, sao cho nhìn rõ từ góc toàn cảnh mặc định.
+ *
  * Builds the entire exterior SÖL Campus 3D world as a single merged vertex-colored BufferGeometry.
  * Positioned so that from the default overview camera ([46, 36, 48] -> [4, 2, 0]),
  * the Main Entrance Gate, Guard Booth, Boom Barriers, Zebra Crosswalk, Monument Sign,
@@ -1220,10 +1246,12 @@ function buildCampusParts(theme: ExploreTheme): {
   return { parts, glassParts, waterParts, vehicles, foliageParts };
 }
 
+/** Giải phóng hình học của các phần không còn dùng. */
 function disposeParts(parts: readonly ColoredPart[]): void {
   for (const part of parts) part.geometry.dispose();
 }
 
+/** Dựng và gộp toàn bộ cảnh khuôn viên thành các hình học theo vật liệu (đặc, kính, nước, xe, tán lá). */
 export function buildCampusSceneGeometries(theme: ExploreTheme): CampusSceneGeometries {
   const { parts, glassParts, waterParts, vehicles, foliageParts } = buildCampusParts(theme);
   return {
@@ -1235,6 +1263,7 @@ export function buildCampusSceneGeometries(theme: ExploreTheme): CampusSceneGeom
   };
 }
 
+/** Dựng hình học đặc của khuôn viên (giải phóng các phần kính, nước, xe không dùng). */
 export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
   const { parts, glassParts, waterParts, vehicles } = buildCampusParts(theme);
   disposeParts(glassParts);
@@ -1243,7 +1272,11 @@ export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
   return mergeColoredParts(parts);
 }
 
-/** Parked cars as their own geometry so they can use a clear-coated car-paint material. */
+/**
+ * Dựng riêng hình học xe đậu để dùng vật liệu sơn xe có lớp bóng.
+ *
+ * Parked cars as their own geometry so they can use a clear-coated car-paint material.
+ */
 export function buildCampusVehiclesGeometry(theme: ExploreTheme): THREE.BufferGeometry {
   const { parts, glassParts, waterParts, vehicles } = buildCampusParts(theme);
   disposeParts(parts);
@@ -1252,6 +1285,7 @@ export function buildCampusVehiclesGeometry(theme: ExploreTheme): THREE.BufferGe
   return mergeColoredParts(vehicles);
 }
 
+/** Mô tả một mặt biển hiệu: tâm, kích thước, góc xoay và dải texture. */
 interface SignQuadSpec {
   readonly center: readonly [number, number, number];
   readonly width: number;
@@ -1291,6 +1325,9 @@ const SIGN_SPECS: readonly SignQuadSpec[] = [
 ];
 
 /**
+ * Dựng hình học biển hiệu 3D có UV cho mọi mặt biển hiệu của khuôn viên, ánh xạ tới 8 dải ngang của texture; có
+ * thể bỏ biển trên mái.
+ *
  * Builds a single UV-mapped BufferGeometry containing all 3D signage faces across the campus,
  * mapped to the 8 horizontal bands of `createCampusSignageTexture`.
  */
@@ -1371,6 +1408,9 @@ export function buildCampusSignageGeometry(
 }
 
 /**
+ * Tạo atlas CanvasTexture 1024×2048 với 8 dải biển hiệu kiến trúc phát sáng; trả null khi không có DOM (test,
+ * headless).
+ *
  * Generates a single 1024x2048 CanvasTexture atlas with 8 crisp illuminated architectural signage bands.
  * Safe in headless/unit-test environments where 2D canvas context may return null.
  */

@@ -3,8 +3,10 @@ import type { QualityTier } from '../../state/exploreStore';
 import type { ExploreTheme } from '../materials';
 import { mergeFoliageCards, type FoliageCard } from './buildCampusGeometry';
 
+/** Trục đường của đèn giao thông: đông–tây hoặc bắc–nam. */
 export type TrafficAxis = 'EW' | 'NS';
 
+/** Vị trí neo của một đèn tín hiệu: id, giao lộ, trục và toạ độ. */
 export interface TrafficSignalAnchor {
   readonly id: string;
   readonly intersectionId: string;
@@ -13,6 +15,7 @@ export interface TrafficSignalAnchor {
   readonly rotationY: number;
 }
 
+/** Vị trí neo của một biển/biểu ngữ dọc đại lộ. */
 export interface BoulevardBannerAnchor {
   readonly id: string;
   readonly x: number;
@@ -21,6 +24,10 @@ export interface BoulevardBannerAnchor {
   readonly side: 1 | -1;
 }
 
+/**
+ * Các hình học của thành phố nền đã gộp theo vật liệu (đặc, kim loại, kính, phát sáng, tán lá) kèm các điểm
+ * neo.
+ */
 export interface CityMetropolisGeometries {
   readonly opaqueGeometry: THREE.BufferGeometry;
   readonly metalGeometry: THREE.BufferGeometry;
@@ -32,6 +39,7 @@ export interface CityMetropolisGeometries {
   readonly boulevardBannerAnchors: ReadonlyArray<BoulevardBannerAnchor>;
 }
 
+/** Một phần hình học kèm màu và hệ số sáng HDR để gộp. */
 interface ColoredPart {
   readonly geometry: THREE.BufferGeometry;
   readonly color: string;
@@ -40,6 +48,7 @@ interface ColoredPart {
   readonly metalness?: number;
 }
 
+/** Các nhóm phần theo vật liệu (đặc, kim loại, kính, phát sáng...). */
 interface CityBuckets {
   opaque: ColoredPart[];
   metal: ColoredPart[];
@@ -48,6 +57,7 @@ interface CityBuckets {
   foliage: FoliageCard[];
 }
 
+/** Bộ sinh số giả ngẫu nhiên có hạt giống (cùng seed cho cùng dãy số). */
 function seededRandom(seed: number): () => number {
   let t = (seed | 0) + 0x6d2b79f5;
   return () => {
@@ -57,6 +67,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
+/** Biến đổi hình học (dịch, xoay, co giãn) trước khi thêm vào nhóm. */
 function transformGeom(
   geom: THREE.BufferGeometry,
   x: number,
@@ -81,6 +92,7 @@ function transformGeom(
   return geom;
 }
 
+/** Thêm một khối hộp có kích thước, vị trí, xoay và màu vào nhóm. */
 function pushBox(
   target: ColoredPart[],
   w: number,
@@ -102,6 +114,7 @@ function pushBox(
   target.push({ geometry: geom, color, hdrScale, roughness, metalness });
 }
 
+/** Thêm một khối trụ (bán kính trên/dưới, chiều cao, vị trí, màu) vào nhóm. */
 function pushCylinder(
   target: ColoredPart[],
   rTop: number,
@@ -132,6 +145,7 @@ function pushCylinder(
   target.push({ geometry: geom, color, hdrScale, roughness, metalness });
 }
 
+/** Gộp các phần của thành phố thành một BufferGeometry duy nhất (rỗng thì trả hộp nhỏ dự phòng). */
 function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   if (parts.length === 0) {
     const fallback = new THREE.BoxGeometry(0.01, 0.01, 0.01);
@@ -245,6 +259,7 @@ function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   return merged;
 }
 
+/** Thêm một tấm lá cho tán cây thành phố. */
 function addCityFoliageCard(
   target: FoliageCard[],
   cx: number,
@@ -328,6 +343,7 @@ function addCityFoliageCard(
   });
 }
 
+/** Thêm một cây của thành phố (thân và tán lá) tại vị trí cho trước. */
 function addCityTree(
   buckets: CityBuckets,
   x: number,
@@ -448,6 +464,7 @@ function addCityTree(
   }
 }
 
+/** Thêm một cột đèn đường dọc đại lộ. */
 function addBoulevardStreetLamp(
   buckets: CityBuckets,
   x: number,
@@ -476,6 +493,7 @@ function addBoulevardStreetLamp(
   }
 }
 
+/** Thêm một giàn treo đèn tín hiệu và ghi các điểm neo đèn. */
 function addSignalGantry(
   buckets: CityBuckets,
   anchors: TrafficSignalAnchor[],
@@ -522,6 +540,7 @@ function addSignalGantry(
   }
 }
 
+/** Mô tả một tòa tháp: vị trí, kích thước, kiểu dáng và vòng (gần hay chân trời). */
 interface TowerSpec {
   readonly x: number;
   readonly z: number;
@@ -542,6 +561,7 @@ const GLASS_DUSK = ['#192534', '#1d2b3b', '#14202e', '#212d3c', '#182433'] as co
 const WINDOW_DAY_TINTS = ['#364859', '#405366', '#4c5f70', '#334252'] as const;
 const WINDOW_DUSK_WARM = ['#ffcf8c', '#ffe2ad', '#ffb86e', '#d6e8ff', '#fff0d1'] as const;
 
+/** Dựng một tòa nhà chọc trời theo mô tả (thân, vật liệu kính/đá, đỉnh) và ghi điểm neo đèn báo. */
 function addSkyscraper(
   buckets: CityBuckets,
   beaconAnchors: Array<readonly [number, number, number]>,
@@ -791,6 +811,7 @@ function addSkyscraper(
   }
 }
 
+/** Dựng cầu cạn metro trên cao và nhà ga theo theme và mức chất lượng. */
 function addElevatedMetroViaductAndStation(
   buckets: CityBuckets,
   isLight: boolean,
@@ -852,6 +873,7 @@ function addElevatedMetroViaductAndStation(
   pushBox(buckets.glass, 3.8, 8.4, 4.0, 23.0, 4.5, -49.6, canopyGlass);
 }
 
+/** Dựng mạng đường (lề, vạch kẻ, đèn tín hiệu, biển ngữ) và công viên phía nam có kênh nước. */
 function addRoadNetworkAndSouthPark(
   buckets: CityBuckets,
   signalAnchors: TrafficSignalAnchor[],
@@ -1100,11 +1122,14 @@ function addRoadNetworkAndSouthPark(
   }
 }
 
+/** Sinh các tòa tháp của các quận xung quanh một cách xác định (seed cố định) theo mức chất lượng và theme. */
 function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[] {
   const rand = seededRandom(20261114);
   const stones = isLight ? STONE_DAY : STONE_DUSK;
   const glasses = isLight ? GLASS_DAY : GLASS_DUSK;
+  // Chọn ngẫu nhiên một vật liệu đá.
   const pickStone = () => stones[Math.floor(rand() * stones.length)]!;
+  // Chọn ngẫu nhiên một vật liệu kính.
   const pickGlass = () => glasses[Math.floor(rand() * glasses.length)]!;
   const styles: ReadonlyArray<TowerSpec['style']> = [
     'curtain-stepped',
@@ -1112,6 +1137,7 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
     'diagrid-crown',
     'residential-terrace',
   ];
+  // Chọn ngẫu nhiên một kiểu dáng tòa nhà.
   const pickStyle = () => styles[Math.floor(rand() * styles.length)]!;
 
   const specs: TowerSpec[] = [];
@@ -1241,6 +1267,7 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
   return specs;
 }
 
+/** Hộp va chạm (tâm, nửa rộng/sâu, chiều cao) của một tòa tháp để đẩy camera ra khỏi tòa nhà. */
 export interface CityCollider {
   readonly x: number;
   readonly z: number;
@@ -1251,7 +1278,12 @@ export interface CityCollider {
 
 let colliderCache: readonly CityCollider[] | null = null;
 
-/** Footprints of the non-horizon towers; the camera is pushed out of them so it never sits inside a building. */
+/**
+ * Dấu chân của các tòa tháp không thuộc đường chân trời; camera bị đẩy ra ngoài để không bao giờ nằm trong một
+ * tòa nhà.
+ *
+ * Footprints of the non-horizon towers; the camera is pushed out of them so it never sits inside a building.
+ */
 export function getCityColliders(): readonly CityCollider[] {
   colliderCache ??= generateDistrictTowers('high', true)
     .filter(t => t.ring !== 'horizon')
@@ -1262,7 +1294,11 @@ export function getCityColliders(): readonly CityCollider[] {
 const metropolisCache = new Map<string, CityMetropolisGeometries>();
 
 
-/** SÖL Beacon: a slender landmark mast beside the campus that gives the gym a taller silhouette. */
+/**
+ * SÖL Beacon: cột mốc mảnh bên cạnh khuôn viên giúp phòng gym có hình bóng cao hơn.
+ *
+ * SÖL Beacon: a slender landmark mast beside the campus that gives the gym a taller silhouette.
+ */
 function addSolBeacon(
   buckets: CityBuckets,
   beaconAnchors: Array<readonly [number, number, number]>,
@@ -1303,6 +1339,7 @@ function addSolBeacon(
 }
 
 
+/** Các hình học của mũ mái phòng gym gộp theo vật liệu (đặc, kim loại, kính, phát sáng). */
 export interface GymCrownGeometries {
   readonly opaqueGeometry: THREE.BufferGeometry;
   readonly metalGeometry: THREE.BufferGeometry;
@@ -1316,6 +1353,10 @@ const gymCrownCache = new Map<ExploreTheme, GymCrownGeometries>();
 const GYM_ROOF_Y = 15.16;
 
 /**
+ * Mái che thời tiết của phòng gym: mái kính khung thép nổi trên các cột mảnh ngay trên tường penthouse để tòa
+ * nhà thành một khối cao có mái (cao hơn khoảng 1,3 lần) mà tấm mờ vẫn cho ánh sáng đi qua; có cache theo
+ * theme.
+ *
  * The gym's weather roof: a glazed steel canopy that floats just above the penthouse walls on
  * slender columns, so the building reads as one tall covered volume (~1.3x the old height)
  * while the translucent panels still let the cutaway interior show from above.
@@ -1382,6 +1423,9 @@ export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
 }
 
 /**
+ * Sinh toàn bộ thành phố bao quanh khuôn viên SÖL 360° thành bốn nhóm hình học (đặc, kim loại, kính, phát
+ * sáng), có cache theo (theme, tier) để đổi theme không giật.
+ *
  * Generates the entire 360° AAA surrounding metropolis around SÖL Campus as 4
  * batched BufferGeometry buckets (`opaque`, `metal`, `glass`, `emissive`), cached
  * per `(theme, tier)` for instant zero-hitch theme toggling.
