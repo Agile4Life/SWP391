@@ -100,6 +100,7 @@ export function ManagerReportsPage() {
   }, [recentTransactions, txSearchTerm]);
 
   const isInvalidRange = Boolean(startDate && endDate && startDate > endDate);
+  const includesToday = appliedRange.startDate <= todayStr && todayStr <= appliedRange.endDate;
 
   // Đổi ngày bắt đầu; nếu vượt ngày kết thúc thì kéo ngày kết thúc theo.
   const handleStartDateChange = (e: { target: { value: string } }) => {
@@ -224,8 +225,8 @@ export function ManagerReportsPage() {
   };
 
   // Chọn nhanh khoảng ngày tính lùi từ hôm nay.
-  const handleQuickRange = (days: number) => {
-    const end = todayStr;
+  const handleQuickRange = (days: number, excludeToday = false) => {
+    const end = excludeToday ? addCenterDays(todayStr, -1) : todayStr;
     const start = addCenterDays(todayStr, -days);
     setStartDate(start);
     setEndDate(end);
@@ -246,7 +247,7 @@ export function ManagerReportsPage() {
         periodEnd: appliedRange.endDate,
         data: JSON.stringify({
           periodRevenue: summary.periodRevenue,
-          todayRevenue: summary.todayRevenue,
+          todayRevenue: includesToday ? summary.todayRevenue : null,
           packagesSoldCount: summary.packagesSoldCount,
           renewalRate: summary.renewalRate,
           dailyRevenueCount: summary.dailyRevenue.length,
@@ -266,7 +267,7 @@ export function ManagerReportsPage() {
       csv += t('1. TỔNG QUAN CHỈ SỐ KPI\n', "1. KPI OVERVIEW\n");
       csv += t(`Doanh Thu Kỳ Lọc,${summary.periodRevenue} VNĐ\n`, `Period Revenue,${summary.periodRevenue} VND
 `);
-      csv += t(`Doanh Thu Hôm Nay,${summary.todayRevenue} VNĐ\n`, `Today's Revenue,${summary.todayRevenue} VND
+      csv += t(`Doanh Thu Hôm Nay,${includesToday ? `${summary.todayRevenue} VNĐ` : '—'}\n`, `Today's Revenue,${includesToday ? `${summary.todayRevenue} VND` : '—'}
 `);
       csv += t(`Số Gói Đã Bán,${summary.packagesSoldCount} gói\n`, `Memberships Sold,${summary.packagesSoldCount} memberships
 `);
@@ -430,7 +431,7 @@ export function ManagerReportsPage() {
               type="button"
               className="btn-secondary"
               style={{ padding: '6px 12px', fontSize: '0.82rem' }}
-              onClick={() => handleQuickRange(7)}
+              onClick={() => handleQuickRange(7, true)}
             >
               {t("7 ngày qua")}</button>
             <button
@@ -488,7 +489,8 @@ export function ManagerReportsPage() {
         <div data-i18n-managed className="metrics-grid" style={{ marginBottom: '24px' }}>
           <div className="metric-card">
             <div className="metric-label">{t("Doanh thu hôm nay")}</div>
-            <div className="metric-value">{vnd(summary.todayRevenue)}</div>
+            <div className="metric-value">{includesToday ? vnd(summary.todayRevenue) : '—'}</div>
+            {!includesToday && <div className="row-card__meta">{t('Không nằm trong kỳ lọc', 'Outside the selected period')}</div>}
           </div>
 
           <div className="metric-card">

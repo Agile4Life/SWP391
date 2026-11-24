@@ -6,6 +6,10 @@ const api = vi.hoisted(() => ({ getSummary: vi.fn(), getCancellationRequests: vi
 vi.mock('./reportsApi', () => ({ reportsApi: api }));
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: () => ({ role: 'MANAGER' }) }));
 vi.mock('../../shared/ui/toast', () => ({ toast: api.toast }));
+vi.mock('../../shared/lib/centerTime', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../shared/lib/centerTime')>(),
+  centerNowParts: () => ({ date: '2026-11-24' }),
+}));
 let root: Root;
 let host: HTMLDivElement;
 beforeEach(() => {
@@ -46,6 +50,19 @@ it('shows a load error instead of an empty count and allows retry', async () => 
   const refresh = [...host.querySelectorAll('button')].find(b => b.getAttribute('aria-label')?.includes('Làm mới yêu cầu hủy'))!;
   await act(async () => refresh.click());
   expect(host.textContent).toContain('Hiện không có yêu cầu hủy gói tập');
+});
+it('filters the previous seven days without today and does not misreport today revenue', async () => {
+  await act(async () => root.render(<ManagerReportsPage />));
+  const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('7 ngày qua'))!;
+  await act(async () => button.click());
+  expect(api.getSummary).toHaveBeenLastCalledWith('2026-11-17', '2026-11-23');
+  const todayMetric = [...host.querySelectorAll('.metric-label')].find(el => el.textContent?.includes('Doanh thu hôm nay'))!.parentElement!;
+  expect(todayMetric.querySelector('.metric-value')?.textContent).toBe('—');
+  const exportButton = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xuất báo cáo'))!;
+  await act(async () => exportButton.click());
+  const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
+  expect(await blob.text()).toContain('Doanh Thu Hôm Nay,—');
+  expect(JSON.parse(api.createSnapshot.mock.calls[0][0].data).todayRevenue).toBeNull();
 });
 it('protects every untrusted CSV text cell from spreadsheet formulas', async () => {
   await exportReport();
