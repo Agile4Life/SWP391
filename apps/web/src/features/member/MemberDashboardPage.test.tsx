@@ -17,11 +17,13 @@ vi.mock('./memberDashboardApi', () => ({
 
 vi.mock('./coachBookingApi', () => ({ getMyCoachBookings: api.bookings }));
 
+// Component phụ chỉ phục vụ kiểm thử.
 function LocationProbe() {
   const location = useLocation();
   return <span data-testid="location">{location.pathname}</span>;
 }
 
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const membership = {
   id: 1, memberId: 1, packageId: 2, packageName: 'Essential',
   previousSubscriptionId: null, startDate: '2026-01-01',
@@ -50,6 +52,7 @@ describe('SCRUM-85 dashboard', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderDashboard() {
     await act(async () => {
       root.render(<MemoryRouter><MemberDashboardPage /><LocationProbe /></MemoryRouter>);
@@ -79,6 +82,7 @@ describe('SCRUM-85 dashboard', () => {
     const start = new Date(today); start.setUTCDate(start.getUTCDate() - 1);
     const end = new Date(today); end.setUTCDate(end.getUTCDate() + 28);
     const paid = new Date(today); paid.setUTCDate(paid.getUTCDate() + 119);
+    // Khóa ngày YYYY-MM-DD của một Date.
     const key = (date: Date) => date.toISOString().slice(0, 10);
     api.membership.mockResolvedValue({ ...membership, startDate: key(start), endDate: key(end), paidThroughDate: key(paid) });
     await renderDashboard();

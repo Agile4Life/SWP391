@@ -75,6 +75,7 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() {
     await act(async () => {
       root.render(<ManagerInternalRequestsPage />);

@@ -8,6 +8,7 @@ import type { MemberSubscription } from './membershipApi';
 import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 
+// Gộp nội dung các thông báo thành một chuỗi.
 const noticeText = () => getNotices().map((notice) => notice.message).join(' ');
 
 const trialApiMock = vi.hoisted(() => ({
@@ -48,23 +49,28 @@ vi.mock('./membershipApi', () => ({
   createPaymentRequest: api.createPayment,
 }));
 
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const membershipPackage = {
   id: 5, name: 'Essential', description: null, price: 500000,
   durationDays: 90, classCreditLimit: null, status: 'active',
 };
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const higherPackage = {
   id: 6, name: 'VIP Sanctuary', description: null, price: 1500000,
   durationDays: 90, classCreditLimit: null, status: 'active',
 };
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const lowerPackage = {
   id: 4, name: 'Starter', description: null, price: 250000,
   durationDays: 90, classCreditLimit: 4, status: 'active',
 };
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const pending = {
   id: 12, memberId: 34, packageId: 5, packageName: 'Essential',
   previousSubscriptionId: null, startDate: '2026-10-16', endDate: '2026-11-16',
   status: 'pending_payment', qrCode: null, createdAt: '2026-10-16T10:00:00',
 };
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const payment = {
   id: 90, memberId: 34, memberName: null, subscriptionId: 12,
   classEnrollmentId: null, amount: 500000, method: 'bank_transfer',
@@ -115,16 +121,20 @@ describe('SCRUM-86 packages', () => {
     vi.restoreAllMocks();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() {
     await act(async () => root.render(<MemoryRouter><MemberPackagesPage /></MemoryRouter>));
   }
 
+  // Tìm nút theo nhãn.
   function button(label: string) {
     return [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
   }
 
   // Purchase buttons now ask for confirmation before the request is created.
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const confirmRequest = () => [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === 'Gửi yêu cầu')?.click();
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const closeDialog = () => (host.querySelector('dialog button[aria-label="Đóng hộp thoại"]') as HTMLButtonElement | null)?.click();
 
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
@@ -342,6 +352,7 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).toHaveBeenCalledExactlyOnceWith(1);
   });
   it('allows an active subscription to upgrade to a higher package and blocks lower packages', async () => {
+    // Dữ liệu mẫu: yêu cầu nâng cấp đang chờ thanh toán.
     const upgradePending = {
       ...pending,
       id: 18,
@@ -846,6 +857,7 @@ describe('SCRUM-86 packages', () => {
 
 
   it('excludes trial packages from the purchasable catalog grid', async () => {
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const trialPkg = {
       id: 999,
       name: 'Gói Trải Nghiệm 3 Ngày',
@@ -985,6 +997,7 @@ describe('SCRUM-86 packages', () => {
   it('includes prorated deduction breakdown in upgrade confirmation dialog', async () => {
     const futureEnd = new Date(Date.now() + 45 * 86400000).toLocaleDateString('en-CA');
     const pastStart = new Date(Date.now() - 45 * 86400000).toLocaleDateString('en-CA');
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const currentSub = {
       ...pending,
       id: 21,

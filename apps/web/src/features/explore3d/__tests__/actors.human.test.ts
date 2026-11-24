@@ -36,12 +36,14 @@ import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 
 const defs = buildLiveActorDefinitions(SOL_CENTER_SCENE);
 
+// Đọc phần JSON của một file GLB.
 function readGlbJson(url: string): { animations?: { name: string }[]; nodes?: { name?: string }[] } {
   const data = readFileSync(resolve(process.cwd(), 'public', url.replace(/^\//, '')));
   const jsonLength = data.readUInt32LE(12);
   return JSON.parse(data.subarray(20, 20 + jsonLength).toString('utf8'));
 }
 
+// Tải một mô hình GLB.
 async function load(url: string): Promise<THREE.Object3D> {
   const data = readFileSync(resolve(process.cwd(), 'public', url.replace(/^\//, '')));
   const buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
@@ -77,10 +79,12 @@ beforeAll(async () => {
   };
 });
 
+// Tìm nhân vật có hoạt động cho trước.
 function actorFor(activity: ActorActivityKind): LiveActorDefinition {
   return defs.find(d => d.activity === activity) ?? { ...defs[0]!, id: `fixture-${activity}`, activity };
 }
 
+// Đặt tư thế cho mô hình tại một thời điểm.
 function poseModel(def: LiveActorDefinition, timeSec: number) {
   const model = cloneSkinned(male) as THREE.Object3D;
   model.scale.setScalar(scale);
@@ -91,6 +95,7 @@ function poseModel(def: LiveActorDefinition, timeSec: number) {
   const roll = typeof spec.forearmRoll === 'function' ? spec.forearmRoll(phase) : spec.forearmRoll;
   applyRetargetPose(rig, pose, spec, roll, timeSec, spec.override?.(phase));
   model.updateMatrixWorld(true);
+  // Vị trí thế giới của một xương.
   const at = (name: DrivenBone) => model.getObjectByName(HUMAN_BONES[name])!.getWorldPosition(new THREE.Vector3());
   return { model, rig, pose, at };
 }
@@ -171,7 +176,9 @@ describe('pose-driven skeleton', () => {
 
   it('bench press: lies on the bench, head toward +Z, bar rises, hands stay wide', () => {
     const def = actorFor('bench-press');
+    // Pha tương ứng một mức nâng (nghịch đảo của 0,5 − 0,5 cos).
     const phaseAt = (rise: number) => Math.acos(1 - 2 * rise); // inverse of 0.5 - 0.5 cos
+    // Lấy mẫu tư thế tại một mức nâng.
     const sample = (rise: number) => {
       const model = cloneSkinned(male) as THREE.Object3D;
       model.scale.setScalar(scale);
@@ -351,6 +358,7 @@ describe('human appearance', () => {
   });
 
   it('shares geometry between actors with the same outfit', () => {
+    // Tạo mô hình mới để thử.
     const make = () => {
       const model = cloneSkinned(male) as THREE.Object3D;
       dressHuman(model, assets, { gender: 'male', palette, hairStyle: 'hair-buzzed', outfit: OUTFIT, swimCap: false });
@@ -364,6 +372,7 @@ describe('human appearance', () => {
     const fist = cloneSkinned(male) as THREE.Object3D;
     relaxHands(relaxed, 1);
     relaxHands(fist, 2);
+    // Góc xoay của một mô hình.
     const angle = (model: THREE.Object3D) =>
       model.getObjectByName('index_02_l')!.quaternion.angleTo(male.getObjectByName('index_02_l')!.quaternion);
     expect(angle(relaxed)).toBeGreaterThan(0.2);
@@ -560,6 +569,7 @@ describe('biomechanical poses & machine alignment', () => {
 
   it('keeps white sportswear crisp instead of muddy grey and drapes untucked shirts cleanly over shorts', () => {
     const model = cloneSkinned(male) as THREE.Object3D;
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const whiteKit = {
       skin: '#e0b18a',
       hair: '#1f1a17',

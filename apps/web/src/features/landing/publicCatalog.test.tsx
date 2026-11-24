@@ -54,10 +54,12 @@ it('ignores older responses and hides stale prices on a failed refresh, then ret
   const responses: ((response: Response) => void)[] = [];
   vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => responses.push(resolve))));
   vi.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible');
+  // Component phụ chỉ phục vụ kiểm thử.
   function Probe() {
     const { catalog: data, error, retry } = usePublicCatalog();
     return <><p>{error ? 'error' : data?.packages[0]?.price ?? 'loading'}</p><button onClick={retry}>retry</button></>;
   }
+  // Tạo phản hồi giả của catalog với giá cho trước.
   const reply = (price: number) => new Response(JSON.stringify({ data: { ...catalog, packages: [{ ...catalog.packages[0], price }] } }), { status: 200 });
   root = createRoot(host);
   await act(async () => root.render(<Probe />));

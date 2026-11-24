@@ -11,7 +11,9 @@ vi.mock('../member/supportRealtime', () => ({ subscribeSupport: vi.fn(() => () =
 vi.mock('../member/memberSupportApi', () => ({ getSupportInbox: vi.fn(), getSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn(), updateSupportStatus: vi.fn(), escalateSupportTicket: vi.fn() }));
 
 const ticket = { id: 7, memberId: 10, memberName: 'Nguyễn An', subject: '[Thiết bị] Máy chạy', description: 'Máy không bật', status: 'open', createdAt: '2026-10-25T08:00:00', assignedToName: null } as supportApi.SupportTicket;
+// Tạo tin nhắn giả của hội viên.
 const memberMessage = (id: number, text: string): supportApi.SupportMessage => ({ id, senderId: 10, senderName: 'Nguyễn An', senderRole: 'MEMBER', message: text, createdAt: '2026-10-25T08:05:00' });
+// Tạo tin nhắn giả của nhân viên.
 const staffMessage = (id: number, text: string): supportApi.SupportMessage => ({ id, senderId: 2, senderName: 'Lễ tân Hà', senderRole: 'RECEPTIONIST', message: text, createdAt: '2026-10-25T08:06:00' });
 let host: HTMLDivElement, root: Root;
 
@@ -29,15 +31,20 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.resetAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<StaffSupportChat onBack={() => {}} />));
+// Các bong bóng chat đang hiển thị.
 const bubbles = () => [...host.querySelectorAll('.direct-chat__bubble')];
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const byText = (text: string) => [...host.querySelectorAll('button')].find(b => b.textContent === text) as HTMLButtonElement;
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function openTicket() {
   await render();
   await vi.waitFor(() => expect(host.querySelector('[data-support-ticket="7"]')).not.toBeNull());
   await act(async () => (host.querySelector('[data-support-ticket="7"]') as HTMLButtonElement).click());
   await vi.waitFor(() => expect(bubbles().length).toBeGreaterThan(0));
 }
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function type(value: string) {
   const field = host.querySelector<HTMLTextAreaElement>('textarea#staff-support-message')!;
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(field, value); field.dispatchEvent(new Event('input', { bubbles: true })); });

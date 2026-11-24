@@ -251,6 +251,7 @@ const SEED_COURTS: LiveCourtSummary[] = [
   },
 ];
 
+// Tạo ảnh chụp dữ liệu trung tâm mẫu (ghi đè được từng trường).
 function createSeedSnapshot(overrides: Partial<LiveCenterSnapshot> = {}): LiveCenterSnapshot {
   return {
     rooms: structuredClone(SEED_ROOMS),

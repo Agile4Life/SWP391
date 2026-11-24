@@ -31,6 +31,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: rawUsers }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -60,6 +61,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
       { id: 1, code: 'CENTER_MANAGER' },
       { id: 2, code: 'COACH' },
     ];
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const createdUser = {
       id: 3,
       roleCode: 'COACH',
@@ -75,12 +77,14 @@ describe('userApi.ts (User Management & RBAC)', () => {
         return Promise.resolve({
           ok: true,
           status: 200,
+          // Giả lập phần thân JSON của phản hồi API.
           json: async () => ({ success: true, data: rolesList }),
         });
       }
       return Promise.resolve({
         ok: true,
         status: 201,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: createdUser }),
       });
     });
@@ -116,6 +120,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
       { id: 1, code: 'CENTER_MANAGER' },
       { id: 2, code: 'COACH' },
     ];
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const updatedUser = {
       id: 1,
       roleCode: 'CENTER_MANAGER',
@@ -131,12 +136,14 @@ describe('userApi.ts (User Management & RBAC)', () => {
         return Promise.resolve({
           ok: true,
           status: 200,
+          // Giả lập phần thân JSON của phản hồi API.
           json: async () => ({ success: true, data: rolesList }),
         });
       }
       return Promise.resolve({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: updatedUser }),
       });
     });
@@ -171,6 +178,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({
           success: true,
           data: { id: 5, roleCode: 'MEMBER', fullName: 'John', email: 'j@t.com', phone: null, status: 'active', createdAt: '2026-09-20' },
@@ -180,6 +188,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({
           success: true,
           data: { id: 5, roleCode: 'MEMBER', fullName: 'John', email: 'j@t.com', phone: null, status: 'locked', createdAt: '2026-09-20' },
@@ -208,18 +217,21 @@ describe('userApi.ts (User Management & RBAC)', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: rolesList }),
       })
       // Call 2: GET /roles/1/permissions
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: permissionsForRole }),
       })
       // Call 3: DELETE /roles/1/permissions/101 (since already granted)
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: null }),
       });
     vi.stubGlobal('fetch', mockFetch);
@@ -237,6 +249,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: null }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -253,6 +266,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 403,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: false, message: 'Access denied', code: 'FORBIDDEN' }),
     }));
 
@@ -269,6 +283,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         data: { deletedCount: 5, cutoffDate: '2026-04-20T10:00:00' },
@@ -302,6 +317,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: deletedList }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -318,6 +334,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
   });
 
   it('restoreUser calls PATCH /api/v1/users/:id/restore', async () => {
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const restoredUser = {
       id: 99,
       roleCode: 'MEMBER',
@@ -331,6 +348,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: restoredUser }),
     });
     vi.stubGlobal('fetch', mockFetch);

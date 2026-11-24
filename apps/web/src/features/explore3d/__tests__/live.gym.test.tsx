@@ -18,6 +18,7 @@ it.each([false, true])('skips removed court requests and preserves core loading 
     if (path === '/public/catalog') return { packages: [], coaches: [], sessions: [] };
     return [];
   });
+  // Component phụ chỉ phục vụ kiểm thử.
   function Probe() {
     const { loading, error } = useLiveCenterData();
     return <span>{loading ? 'loading' : error ? 'error' : 'ready'}</span>;

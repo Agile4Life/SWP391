@@ -21,16 +21,19 @@ let host: HTMLDivElement;
 let root: Root;
 let clipboardDescriptor: PropertyDescriptor | undefined;
 
+// Dựng component vào DOM giả để kiểm thử.
 async function renderPage() {
   await act(async () => { root.render(<MemoryRouter><MemberCardPage /></MemoryRouter>); });
 }
 
+// Chờ cho mã QR tải xong.
 async function finishQrLoading() {
   const image = host.querySelector('img[alt="Mã QR check-in của hội viên"]');
   expect(image).not.toBeNull();
   await act(async () => { image?.dispatchEvent(new Event('load')); });
 }
 
+// Ngày theo giờ trung tâm lệch offsetDays so với hôm nay.
 function offsetCenterDate(offsetDays: number): string {
   const base = parseCenterTime(centerNowParts().date)!;
   base.setDate(base.getDate() + offsetDays);

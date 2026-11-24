@@ -73,6 +73,7 @@ it('keeps the gate QR hidden from members on reception', async () => {
   expect(checkinApi.gateQr).not.toHaveBeenCalled();
 });
 
+// Chọn một hội viên trong kết quả tra cứu.
 async function selectMember() {
   await act(async () => root.render(<StaffReceptionPage />));
   const input = host.querySelector('input[placeholder^="Nhập Số điện thoại"]') as HTMLInputElement;
@@ -84,6 +85,7 @@ async function selectMember() {
   expect(api.lookupMembers).toHaveBeenCalledWith('1234');
 }
 
+// Chọn phương thức rồi thu tiền.
 async function chooseAndPay(value: string) {
   const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
   expect(Array.from(select.options).map((option) => option.value)).toContain(value);
@@ -251,6 +253,7 @@ it('lets the desk record payment for an unpaid hourly 1:1 session', async () => 
 });
 
 it('renders pending trial applications and lets the desk approve a trial with name sync', async () => {
+  // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const trialItem = {
     id: 55,
     memberId: 10,
@@ -283,6 +286,7 @@ it('renders pending trial applications and lets the desk approve a trial with na
 });
 
 it('renders passport document type and nationality for foreign trial applicants', async () => {
+  // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const passportItem = {
     id: 56,
     memberId: 12,
@@ -353,6 +357,7 @@ it('resends the same request id when the receptionist retries a top-up after a n
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(amountInput, '500000');
     amountInput.dispatchEvent(new Event('input', { bubbles: true }));
   });
+  // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
   const submit = async () => act(async () => document.body.querySelector<HTMLButtonElement>('[data-testid="submit-counter-topup-btn"]')!
     .closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 
@@ -377,6 +382,7 @@ it('offers only renewal, not a second new package, while the member still has a 
 });
 
 it('asks confirmation before cancelling a pending membership request at the desk', async () => {
+  // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const pendingItem = {
     id: 77, memberId: 10, membershipCode: 'MB-10', memberName: 'An',
     memberEmail: 'an@example.test', memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30,
@@ -402,6 +408,7 @@ const runningGold = { id: 50, memberId: 10, packageId: 2, packageName: 'GOLD 9 T
   startDate: '2026-11-21', endDate: '2027-08-16', status: 'active', createdAt: '2026-11-21' };
 const oldSilver = { ...runningGold, id: 40, packageId: 3, packageName: 'SILVER 9 THÁNG',
   startDate: '2026-02-24', endDate: '2026-11-20', status: 'expired' };
+// Component phụ chỉ phục vụ kiểm thử.
 function useConflictHistory() {
   vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-23T05:00:00Z'));
   api.getActivePackages.mockResolvedValue([{ ...pkg, name: runningGold.packageName, durationDays: 270 },

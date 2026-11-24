@@ -27,6 +27,7 @@ it('becomes usable again when the browser restores the page after leaving VNPay 
  await act(async()=>root.render(<VnpayPayButton target={{coachBookingId:81}} />));
  const button=host.querySelector('button')!;await act(async()=>button.click());
  expect(button.disabled).toBe(true);expect(button.textContent).toContain('Đang chuyển');
+ // Tạo sự kiện pageshow giả (persisted hay không).
  const pageshow=(persisted:boolean)=>Object.assign(new Event('pageshow'),{persisted});
  await act(async()=>{window.dispatchEvent(pageshow(false));});expect(button.disabled).toBe(true);
  await act(async()=>{window.dispatchEvent(pageshow(true));});

@@ -571,6 +571,7 @@ describe('Locked overview framing', () => {
   });
 
   it('pulls back further on narrower canvases', () => {
+    // Đổi độ sang radian cho các phép thử.
     const d = (a: number) => {
       const v = getOverviewViewpoint(a);
       return Math.hypot(v.position[0] - v.target[0], v.position[1] - v.target[1], v.position[2] - v.target[2]);

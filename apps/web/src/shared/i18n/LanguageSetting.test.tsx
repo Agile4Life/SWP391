@@ -5,10 +5,12 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { LanguageSetting } from './LanguageSetting';
 import { getLanguage, setLanguage, useDomLanguageSync, useI18n } from './language';
 
+// Component phụ chỉ phục vụ kiểm thử.
 function Shell() {
   useDomLanguageSync();
   return <><LanguageSetting variant="menu" /><Outlet /><LanguageSetting variant="footer" /></>;
 }
+// Component phụ chỉ phục vụ kiểm thử.
 function Page() {
   const { t } = useI18n();
   return <main data-page-label data-i18n-managed>{t('Trang chủ', 'Home')}</main>;
@@ -22,12 +24,15 @@ it('preserves language endonyms and button nodes through legacy translation, Mem
   const host = document.createElement('div');
   document.body.append(host);
   let root = createRoot(host);
+  // Tạo router giả để kiểm tra ô chọn ngôn ngữ.
   const makeRouter = () => createMemoryRouter([{ element: <Shell />, children: [
     { path: '/member/dashboard', element: <Page /> },
     { path: '/member/support', element: <Page /> },
   ] }], { initialEntries: ['/member/dashboard'] });
   let router = makeRouter();
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (variant: string, locale: string) => host.querySelector<HTMLButtonElement>(`[data-testid="${variant}-lang-${locale}"]`)!;
+  // Kiểm tra các lựa chọn ngôn ngữ hiển thị đúng theo locale.
   function assertChoices(locale: 'vi' | 'en') {
     for (const variant of ['menu', 'footer']) {
       const prefix = variant === 'menu' ? 'avatar' : variant;

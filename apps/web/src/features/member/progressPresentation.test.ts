@@ -2,7 +2,9 @@ import { expect, it } from 'vitest';
 import { activePlans, planDays } from './progressPresentation';
 import type { TrainingPlan } from './memberProgressApi';
 
+// Tạo một bài tập mẫu.
 const item = (id: number, dayOfWeek: number | null, orderIndex: number) => ({ id, dayOfWeek, exerciseName: `E${id}`, description: null, sets: null, reps: null, durationMinutes: 10, orderIndex });
+// Tạo một giáo án mẫu (ghi đè được từng trường).
 const plan = (over: Partial<TrainingPlan> = {}): TrainingPlan => ({ id: 1, status: 'active', startDate: '2026-10-01', endDate: '2026-10-31', goal: null, coachName: 'Coach', items: [], ...over });
 
 it('prefers active plans covering today and falls back to any active plan', () => {

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { afterEach, expect, it, vi } from 'vitest';
 import { getLanguage, setLanguage, useDomLanguageSync, useI18n } from './language';
 import { Modal } from '../ui/Modal';
+// Component phụ chỉ phục vụ kiểm thử.
 function Probe() { const { t } = useI18n(); useDomLanguageSync(); return <><span data-content>Active</span><span data-protected data-i18n-managed>Đóng</span><span data-fallback>{t('toString')}</span><Modal title={t('Gói tập')} onClose={() => {}}><span data-label>{t('Đang chờ thanh toán')}</span><input placeholder={t('Tóm tắt vấn đề')} /></Modal></>; }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); setLanguage('vi'); });
 it('switches labels, attributes and modal chrome both ways without modifying content', async () => {

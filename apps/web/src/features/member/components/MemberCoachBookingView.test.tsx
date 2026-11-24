@@ -76,6 +76,7 @@ describe('MemberCoachBookingView Review Logic', () => {
     vi.clearAllMocks();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderComponent() {
     await act(async () => {
       root.render(
@@ -179,6 +180,7 @@ describe('MemberCoachBookingView membership notice', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   const render = () => act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
 
   it('tells a member without a package to register one', async () => {

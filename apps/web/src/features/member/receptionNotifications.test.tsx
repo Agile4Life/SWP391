@@ -14,6 +14,7 @@ const item: MemberNotification = { id: 7, title: 'Thông báo', message: 'Nội 
   relatedEntityId: null, isRead: false, createdAt: '2026-11-23T10:00:00' };
 const routes = ['/staff/reception', '/staff/check-in', '/staff/check-out', '/staff/reception-history', '/staff/kyc', '/staff/holds', '/staff/requests', '/messages?tab=support'];
 let host: HTMLDivElement; let root: Root; let closed: ReturnType<typeof vi.fn<() => void>>;
+// Component phụ chỉ phục vụ kiểm thử.
 function Path() { const location = useLocation(); return <output>{location.pathname}{location.search}</output>; }
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); localStorage.clear(); clearNotices(); vi.clearAllMocks();
@@ -23,6 +24,7 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); clearNotices(); localStorage.clear(); vi.unstubAllGlobals(); });
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<MemoryRouter initialEntries={['/staff/reception']}><MemberNotificationsPanel onNavigate={closed} /><Path /></MemoryRouter>));
 
 it.each(routes)('opens only the existing Receptionist destination: %s', async actionPath => {

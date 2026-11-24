@@ -57,6 +57,7 @@ it('destroys a pending camera on unmount and never publishes a late result', asy
 });
 it('releases an active camera when disabled and ignores further results', async () => {
   const codes: string[] = [];
+  // Biến/hàm phụ để ghi lại kết quả trong kiểm thử.
   const onScan = (code: string) => { codes.push(code); };
   await act(async () => root.render(<QrCameraScanner onScan={onScan} />));
   await act(async () => host.querySelector('button')!.click());
@@ -67,6 +68,7 @@ it('releases an active camera when disabled and ignores further results', async 
 });
 it('keeps a compact completed state through submission and can scan again', async () => {
   const codes: string[] = [];
+  // Biến/hàm phụ để ghi lại kết quả trong kiểm thử.
   const onScan = (code: string) => { codes.push(code); };
   await act(async () => root.render(<QrCameraScanner onScan={onScan} />));
   await act(async () => host.querySelector('button')!.click());

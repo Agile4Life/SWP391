@@ -9,6 +9,7 @@ const plan = { id: 1, status: 'active', startDate: '2026-01-01', endDate: '2099-
 ] };
 let host: HTMLDivElement; let root: Root;
 let request: ReturnType<typeof vi.fn>;
+// Tạo phản hồi API giả với dữ liệu cho trước.
 const reply = (data: unknown) => new Response(JSON.stringify({ data }), { status: 200 });
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -17,6 +18,7 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); localStorage.clear(); vi.unstubAllGlobals(); });
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<MemoryRouter><MemberProgressPage /></MemoryRouter>));
 it('loads the real authenticated plan endpoint and groups exercises by day without metrics/history', async () => {
   localStorage.setItem('fitcenter_token', 'member-token'); await render();

@@ -12,6 +12,7 @@ const files = import.meta.glob<string>(['../../features/**/*.{ts,tsx}', '../../s
 const ast = new Map(Object.entries(files).map(([name, content]) => [name, ts.createSourceFile(name, content, ts.ScriptTarget.Latest, true, name.endsWith('tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)]));
 const router = ts.createSourceFile('router.tsx', routerSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const routes: { route: string; entry: string }[] = [];
+// Duyệt đệ quy cây cú pháp TypeScript.
 function walk(node: ts.Node, visit: (node: ts.Node) => void) { visit(node); node.forEachChild(child => walk(child, visit)); }
 walk(router, node => {
   if (!ts.isObjectLiteralExpression(node)) return;
@@ -21,6 +22,7 @@ walk(router, node => {
   const routePath = path.initializer.text;
   walk(lazy, child => { if (ts.isCallExpression(child) && child.expression.kind === ts.SyntaxKind.ImportKeyword && ts.isStringLiteral(child.arguments[0])) routes.push({ route: routePath, entry: child.arguments[0].text.replace('../features/', '../../features/') + '.tsx' }); });
 });
+// Phân giải đường dẫn file của một import.
 function resolve(file: string, dependency: string) {
   const parts = (file.substring(0, file.lastIndexOf('/') + 1) + dependency).split('/');
   const normalized: string[] = [];
@@ -28,6 +30,7 @@ function resolve(file: string, dependency: string) {
   const base = normalized.join('/');
   return [base, base + '.tsx', base + '.ts', base + '/index.ts'].find(candidate => ast.has(candidate));
 }
+// Tập các file có thể tới được từ file khởi đầu.
 function reachable(entry: string, seen = new Set<string>()): Set<string> {
   if (seen.has(entry)) return seen;
   seen.add(entry); const source = ast.get(entry); if (!source) return seen;
@@ -39,6 +42,7 @@ function reachable(entry: string, seen = new Set<string>()): Set<string> {
   return seen;
 }
 const translationCalls = new Set(['t', 'memberText', 'memberMessage', 'sourceText', 'sourcePair', 'sourceFormat', 'sourceMessage', 'staffMessage']);
+// Đọc bảng nhãn dịch của một file.
 function catalog(file: string) {
   const domain = /\/(member|courts|checkin|schedule|wallet|payments)\//.test(file) ? memberLabels
     : /\/(coaching|classes|reception|manager|admin|operations|support)\//.test(file) ? staffSourceCatalog

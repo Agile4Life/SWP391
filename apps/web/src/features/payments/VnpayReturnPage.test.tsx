@@ -10,6 +10,7 @@ vi.mock('./vnpayApi', () => ({ getVnpayStatus: vi.fn(), verifyVnpayReturn: vi.fn
 let host: HTMLDivElement; let root: Root;
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); host=document.createElement('div');document.body.append(host);root=createRoot(host); });
 afterEach(async()=>{await act(async()=>root.unmount());host.remove();vi.clearAllMocks();vi.unstubAllGlobals();});
+// Dựng component vào DOM giả để kiểm thử.
 async function render(query: string) { await act(async()=>root.render(<MemoryRouter key={query} initialEntries={['/member/payments/vnpay/return'+query]}><VnpayReturnPage /></MemoryRouter>)); }
 it('never trusts a successful browser return code over server status',async()=>{
  vi.mocked(api.getVnpayStatus).mockResolvedValue({reference:'ABC123',paymentId:1,subscriptionId:2,amount:500000,status:'failed',expiresAt:'2026-11-03T12:15:00',destination:'/member/packages'});

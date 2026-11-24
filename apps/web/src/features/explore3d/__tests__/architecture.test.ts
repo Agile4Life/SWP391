@@ -48,6 +48,7 @@ import {
   MaterialRegistry,
 } from '../renderers/materials';
 
+// Kiểm tra một BufferGeometry hợp lệ (có thuộc tính, không NaN; cho phép rỗng nếu allowEmpty).
 function assertValidBufferGeometry(geom: THREE.BufferGeometry, allowEmpty = false): void {
   const pos = geom.getAttribute('position');
   const norm = geom.getAttribute('normal');

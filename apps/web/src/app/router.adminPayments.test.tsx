@@ -12,6 +12,7 @@ afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 const PATH = '/admin/payments';
 const groups = router.routes.flatMap(route => route.children ?? []);
+// Nhóm route quản trị chứa đường dẫn cần kiểm tra.
 const adminGroup = () => groups.find(group => group.children?.some(route => route.path === PATH));
 
 describe('Admin payment reconciliation route', () => {

@@ -14,6 +14,7 @@ import {
   unregisterItemGeometryOverride,
 } from '../renderers/items/itemGeometries';
 
+// Tạo mô hình GLB giả.
 function makeModel(): THREE.Group {
   const root = new THREE.Group();
   const red = new THREE.Mesh(
@@ -31,6 +32,7 @@ function makeModel(): THREE.Group {
   return root;
 }
 
+// Tính hộp bao của một hình học.
 function bounds(geometry: THREE.BufferGeometry): THREE.Box3 {
   geometry.computeBoundingBox();
   return geometry.boundingBox!.clone();

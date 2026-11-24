@@ -9,6 +9,7 @@ vi.mock('../member/holdApi', async (original) => ({
   listHolds: mocks.list, approveHold: mocks.approve, rejectHold: mocks.reject, fetchHoldDocument: mocks.document, withdrawHoldForMember: mocks.withdraw,
 }));
 
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const pending = {
   id: 7, memberName: 'Nguyen Van A', membershipCode: 'MB-007', packageName: 'GOLD 3 THÁNG', startDate: '2026-11-01', endDate: '2027-01-29',
   holdStatus: 'PENDING', holdReason: 'Phẫu thuật', holdRequestedAt: '2026-11-09T09:00:00', holdStartDate: '2026-11-12', holdEndDate: '2026-11-20',
@@ -25,6 +26,7 @@ describe('HoldManagementPage', () => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() { await act(async () => root.render(<HoldManagementPage />)); }
 
   it('lists pending requests with dates, reason and documents and approves one', async () => {
@@ -80,6 +82,7 @@ describe('HoldManagementPage', () => {
     mocks.list.mockResolvedValue([future, running]);
     mocks.withdraw.mockResolvedValue({});
     await render();
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const cancelFor = (id: number) => [...host.querySelectorAll<HTMLButtonElement>(`[data-testid="hold-${id}"] button`)].filter((button) => button.textContent === 'Hủy bảo lưu (chưa bắt đầu)');
     expect(cancelFor(9)).toHaveLength(0);
     expect(cancelFor(8)).toHaveLength(1);

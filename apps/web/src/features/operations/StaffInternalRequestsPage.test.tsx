@@ -6,6 +6,7 @@ import * as staffRequestApi from './staffRequestApi';
 
 // Plain inputs stand in for the date picker so a test can type the leave dates.
 vi.mock('../../shared/ui/DatePicker', () => ({
+  // Thay DatePicker bằng ô nhập đơn giản.
   DatePicker: (props: { id: string; value: string; onChange: (e: { target: { value: string } }) => void }) => (
     <input id={props.id} value={props.value} onChange={(e) => props.onChange({ target: { value: e.target.value } })} />
   ),
@@ -83,6 +84,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() {
     await act(async () => {
       root.render(<StaffInternalRequestsPage />);
@@ -178,6 +180,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
       .mockResolvedValueOnce({ ...mockRequests[0], id: 9 });
     await render();
     await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Tạo đơn từ mới'))?.click(); });
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const fill = (selector: string, value: string, proto: typeof HTMLInputElement | typeof HTMLTextAreaElement = HTMLInputElement) => {
       const el = host.querySelector(selector) as HTMLInputElement;
       Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set?.call(el, value);

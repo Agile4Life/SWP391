@@ -108,12 +108,14 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
   let container: HTMLDivElement;
   let root: Root;
 
+  // Dựng component vào DOM giả để kiểm thử.
   const renderUi = (node: ReactNode) => {
     act(() => {
       root.render(<MemoryRouter>{node}</MemoryRouter>);
     });
   };
 
+  // Lấy phần tử theo data-testid.
   const getByTestId = (testId: string): HTMLElement => {
     const el = container.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
     if (!el) {
@@ -122,6 +124,7 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     return el;
   };
 
+  // Bấm phần tử theo data-testid.
   const clickTestId = (testId: string) => {
     const el = getByTestId(testId);
     act(() => {

@@ -25,7 +25,9 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.resetAllMocks(); vi.unstubAllGlobals(); });
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const button = (text: string) => [...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))!;
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<ChatPage />));
 
 it('keeps a skeleton in each pending chat region and renders responses immediately', async () => {
@@ -248,6 +250,7 @@ it('offers SÖL AI to members and receptionists but not to coaches, who use AI o
 
 it('opens Support & Tickets when a notification links to ?tab=support while Messages is already open', async () => {
   let go!: (to: string) => void;
+  // Component phụ chỉ phục vụ kiểm thử.
   function Nav() { go = useNavigate(); return null; }
   await act(async () => root.render(<MemoryRouter initialEntries={['/messages']}><Nav /><ChatPage /></MemoryRouter>));
   await vi.waitFor(() => expect(host.querySelector('.direct-chat__person--support')).not.toBeNull());

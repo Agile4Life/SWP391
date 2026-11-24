@@ -31,6 +31,7 @@ describe('portal navigation', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderPortal(role: UserSession['role'] = 'MEMBER') {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
       id: '1', name: 'Nguyễn An', identifier: 'an', role,

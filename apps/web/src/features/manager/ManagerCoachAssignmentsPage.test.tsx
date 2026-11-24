@@ -159,6 +159,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     vi.useRealTimers();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderComponent() {
     await act(async () => {
       root.render(<ManagerCoachAssignmentsPage />);

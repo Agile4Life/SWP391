@@ -44,6 +44,7 @@ it('records vnp_TxnRef on navigateToVnpay and releases it when returning outside
   expect(assignSpy).toHaveBeenCalledTimes(1);
 
   const events: string[] = [];
+  // Biến/hàm phụ để ghi lại kết quả trong kiểm thử.
   const onReleased = (e: Event) => events.push((e as CustomEvent<{ reference: string }>).detail.reference);
   window.addEventListener('vnpay-attempt-released', onReleased);
 

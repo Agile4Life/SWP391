@@ -71,6 +71,7 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderPage() {
     await act(async () => {
       root.render(
@@ -127,6 +128,7 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     mockApi.uploadAvatar.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
     await renderPage();
     const name = host.querySelector<HTMLInputElement>('#fullName')!;
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const editName = async (value: string) => act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, value);
       name.dispatchEvent(new Event('input', { bubbles: true }));
@@ -258,9 +260,12 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     mockApi.getProfile.mockResolvedValue({ ...sampleProfile, avatarUrl: 'https://broken.example.test/avatar.png' });
 
     const OrigFileReader = globalThis.FileReader;
+    // Lớp giả lập dùng trong kiểm thử.
     class MockFileReader {
       result: string | null = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+      // Callback khi đọc file thành công.
       onload: (() => void) | null = null;
+      // Callback khi đọc file lỗi.
       onerror: (() => void) | null = null;
       readAsDataURL() {
         if (this.onload) this.onload();
@@ -268,12 +273,15 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     }
     vi.stubGlobal('FileReader', MockFileReader as unknown as typeof FileReader);
 
+    // Lớp giả lập dùng trong kiểm thử.
     class MockTinyImage {
       naturalWidth = 50;
       naturalHeight = 50;
       width = 50;
       height = 50;
+      // Callback khi tải ảnh thành công.
       onload: (() => void) | null = null;
+      // Callback khi tải ảnh lỗi.
       onerror: (() => void) | null = null;
       set src(_val: string) {
         if (this.onload) this.onload();
@@ -347,6 +355,7 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' }));
     await renderPage();
     await act(async () => host.querySelector<HTMLButtonElement>('#toggle-password-change-btn')!.click());
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const type = (id: string, value: string) => {
       const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);

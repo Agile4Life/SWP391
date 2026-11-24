@@ -31,10 +31,14 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<SavedTrainingPlans />));
+// Các dòng giáo án trong bảng.
 const rows = () => [...host.querySelectorAll('tbody tr')];
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const buttonIn = (row: Element, label: string) =>
   [...row.querySelectorAll('button')].find((b) => b.textContent === label);
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const click = (el: Element | null | undefined) => act(async () => (el as HTMLElement).click());
 
 it('shows loaded plans with Sửa for draft/active, Xóa for draft/active, and nothing for finished plans', async () => {
@@ -84,6 +88,7 @@ it('deletes a draft only after confirmation and keeps it when the server refuses
   const del = vi.spyOn(aiApi, 'deleteTrainingPlan').mockRejectedValueOnce(new Error('Chỉ xóa được bản nháp')).mockResolvedValueOnce(undefined);
   await render();
   await click(buttonIn(rows()[0], 'Xóa'));
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const confirmButton = () => [...host.ownerDocument.querySelectorAll('button')].find((b) => b.textContent === 'Xóa' && b.closest('dialog,[role="dialog"],[role="alertdialog"]'));
   await click(confirmButton());
   expect(del).toHaveBeenCalledWith(1);

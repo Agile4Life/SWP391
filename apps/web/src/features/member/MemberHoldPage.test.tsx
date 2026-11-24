@@ -11,6 +11,7 @@ vi.mock('./holdApi', async (original) => ({
   getHoldPolicy: mocks.policy, getHoldDetail: mocks.detail, submitHoldRequest: mocks.submit, withdrawHoldRequest: mocks.withdraw,
 }));
 
+// Ngày YYYY-MM-DD lệch days ngày so với hôm nay.
 function isoOffset(days: number) {
   const date = new Date(); date.setDate(date.getDate() + days);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
@@ -28,13 +29,16 @@ describe('MemberHoldPage', () => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() { await act(async () => root.render(<MemoryRouter><MemberHoldPage /></MemoryRouter>)); }
+  // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
   function setValue(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
     const proto = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
     Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(element, value);
     element.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
+  // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
   async function pickDate(id: string, iso: string) {
     await act(async () => host.querySelector<HTMLButtonElement>(`button#${id}`)!.click());
     for (let i = 0; i < 3 && !document.querySelector(`button[aria-label="${iso}"]`); i++) {

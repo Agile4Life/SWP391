@@ -12,6 +12,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 201,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         message: 'Tài khoản đã tạo thành công',
@@ -20,6 +21,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
 
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const input = {
       fullName: 'New Member',
       username: 'newmember',
@@ -43,6 +45,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 201,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         message: 'Tài khoản đã tạo thành công',
@@ -51,6 +54,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     });
     vi.stubGlobal('fetch', mockFetch);
 
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const input = {
       fullName: 'Phone Member',
       username: 'phonemember',
@@ -75,6 +79,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         data: { destination: 'member@test.com', expiresInMinutes: 5, debugOtp: '123456' },
@@ -98,6 +103,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         data: { target: 'member@test.com', isVerified: true },
@@ -122,6 +128,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({
           success: true,
           data: { email: 'user@gmail.com', message: 'Sent', expiresInMinutes: 5, debugOtp: '654321' },
@@ -130,6 +137,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({
           success: true,
           data: { token: 'jwt-google', username: 'user', role: 'MEMBER' },
@@ -162,6 +170,7 @@ describe('authApi.ts (Register and OTP flow)', () => {
     const mockFetch = vi.fn().mockResolvedValueOnce({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         data: {

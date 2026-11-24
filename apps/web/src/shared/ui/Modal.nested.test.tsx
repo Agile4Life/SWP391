@@ -24,6 +24,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
+// Component phụ chỉ phục vụ kiểm thử.
 function NestedDialogs() {
   const [outer, setOuter] = useState(true);
   const [inner, setInner] = useState(true);

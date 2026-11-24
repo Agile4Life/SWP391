@@ -14,6 +14,7 @@ it('renders a member without a subscription using the real API client and an omi
   vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
     ok: true,
     status: 200,
+    // Giả lập phần thân JSON của phản hồi API.
     json: async () => ({
       success: true, status: 200, message: 'OK', timestamp: '2026-10-18T22:45:00',
       ...(url.includes('/coach-bookings/') ? { data: [] } : {}),

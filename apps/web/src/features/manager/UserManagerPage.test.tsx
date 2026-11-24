@@ -100,6 +100,7 @@ describe('UserManagerPage', () => {
     vi.clearAllMocks();
   });
 
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (container: HTMLElement, label: string) =>
     [...container.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
 
@@ -185,6 +186,7 @@ describe('UserManagerPage', () => {
       addBtn?.click();
     });
 
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const setInput = async (id: string, value: string) => {
       const input = document.querySelector<HTMLInputElement>(`#${id}`)!;
       await act(async () => {

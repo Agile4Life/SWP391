@@ -22,6 +22,7 @@ let catalogState: { catalog: PublicCatalog | null; error: boolean; retry: Return
 
 vi.mock('./publicCatalog', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./publicCatalog')>()),
+  // Giả lập hook tải catalog bằng trạng thái do test điều khiển.
   usePublicCatalog: () => catalogState,
 }));
 
@@ -39,6 +40,7 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
 
+// Dựng component vào DOM giả để kiểm thử.
 const render = (path: string) => act(async () => root.render(
   <MemoryRouter initialEntries={[path]}><Routes>
     <Route path="/trainers/:trainerId" element={<TrainerStoryPage />} />

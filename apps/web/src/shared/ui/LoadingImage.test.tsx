@@ -10,6 +10,7 @@ afterEach(async () => { await act(async () => root.unmount()); host.replaceChild
 it('shows an image placeholder only while loading, resets on source change and settles errors immediately', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   root = createRoot(host);
+  // Dựng component vào DOM giả để kiểm thử.
   const render = (src: string) => act(async () => root.render(<LoadingImage src={src} alt="Phòng tập" className="existing-photo" />));
   await render('/first.jpg');
   let image = host.querySelector('img')!;

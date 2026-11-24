@@ -23,6 +23,7 @@ describe('MemberInvoicesPage', () => {
     mocks.payments.mockReset(); mocks.invoice.mockReset(); mocks.pdf.mockReset();
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.useRealTimers(); vi.unstubAllGlobals(); });
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() { await act(async () => root.render(<MemoryRouter><MemberInvoicesPage /></MemoryRouter>)); }
 
   it('names a wallet top-up payment as a SÖL wallet top-up instead of "Khác"', async () => {

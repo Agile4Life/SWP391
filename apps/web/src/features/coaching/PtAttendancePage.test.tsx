@@ -8,14 +8,17 @@ import { centerNowParts } from '../../shared/lib/centerTime';
 const mocks = vi.hoisted(() => ({ load: vi.fn(), mark: vi.fn(), unmark: vi.fn() }));
 vi.mock('./ptAttendanceApi', () => ({ getPtAttendance: mocks.load, markPtAttended: mocks.mark, unmarkPtAttended: mocks.unmark }));
 
+// Ngày YYYY-MM-DD lệch days ngày so với hôm nay.
 function isoOffset(days: number): string {
   const [year, month, day] = centerNowParts().date.split('-').map(Number);
   const date = new Date(Date.UTC(year, month - 1, day + days));
   return date.toISOString().slice(0, 10);
 }
 
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function pickDate(host: HTMLElement, id: string, iso: string) {
   await act(async () => host.querySelector<HTMLButtonElement>(`button#${id}`)!.click());
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const dayButton = () => document.querySelector<HTMLButtonElement>(`button[aria-label="${iso}"]`);
   for (let i = 0; i < 2 && !dayButton(); i++) {
     await act(async () => document.querySelector<HTMLButtonElement>('button[aria-label="Tháng sau"]')?.click());
@@ -26,6 +29,7 @@ async function pickDate(host: HTMLElement, id: string, iso: string) {
   await act(async () => dayButton()!.click());
 }
 
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const base = {
   memberId: 10, memberName: 'Khoa Hội Viên', coachId: 20, coachName: 'HLV Hùng', coachSpecialization: 'Gym',
   coachAvatarUrl: null, disciplineId: null, disciplineName: null, hourlyRate: 0, paymentMethod: 'package_quota',
@@ -48,7 +52,9 @@ describe('PtAttendancePage', () => {
     vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({ id: '2', name: 'Lễ tân', identifier: 'desk', role: 'STAFF' });
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() { await act(async () => root.render(<PtAttendancePage />)); }
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const tab = (label: string) => [...host.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].find((button) => button.textContent?.startsWith(label))!;
 
   it('splits sessions into attended, missed and upcoming with counts, and shows the coach to the desk', async () => {
@@ -82,6 +88,7 @@ describe('PtAttendancePage', () => {
     mocks.load.mockResolvedValue([upcoming, missed, attended]);
     mocks.mark.mockResolvedValue({});
     await render();
+    // Các nút ghi nhận có mặt của một buổi.
     const markButtons = (id: number) => [...(host.querySelector(`[data-testid="pt-row-${id}"]`)?.querySelectorAll('button') ?? [])]
       .filter((button) => button.textContent === 'Đánh dấu có mặt');
     // Only the finished, unrecorded session offers the action: not the attended one, not the future one.
@@ -108,6 +115,7 @@ describe('PtAttendancePage', () => {
     mocks.unmark.mockResolvedValue({});
     await render();
     expect(host.querySelector('[data-testid="pt-row-1"] .pt-gate-tag')?.textContent).toContain('Đã check-in');
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const button = (label: string) => [...document.body.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === label)!;
 
     await act(async () => button('Bỏ đánh dấu có mặt').click());
@@ -228,6 +236,7 @@ describe('PtAttendancePage', () => {
     const searchInput = host.querySelector<HTMLInputElement>('input[type="search"]')!;
     expect(searchInput).not.toBeNull();
 
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const doSearch = async (val: string) => {
       await act(async () => {
         Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(searchInput, val);

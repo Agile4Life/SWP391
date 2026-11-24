@@ -23,6 +23,7 @@ afterEach(async () => {
   host.remove();
   vi.unstubAllGlobals();
 });
+// Component phụ chỉ phục vụ kiểm thử.
 function Landing() {
   const ref = useRef<HTMLDivElement>(null);
   useComponentReveal(ref, '/');

@@ -18,6 +18,7 @@ const fake = vi.hoisted(() => {
 vi.mock('../../shared/api/client', () => ({ apiFetch: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: fake.createClient }));
 
+// Biến/hàm phụ để ghi lại kết quả trong kiểm thử.
 let dispose = () => {};
 
 beforeEach(() => {

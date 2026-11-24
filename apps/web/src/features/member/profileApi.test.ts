@@ -31,6 +31,7 @@ describe('profileApi.ts (Profile)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: mockProfile }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -62,6 +63,7 @@ describe('profileApi.ts (Profile)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: updatedData }),
     });
     vi.stubGlobal('fetch', mockFetch);

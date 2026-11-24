@@ -92,6 +92,7 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
     }
 
     // Verify dynamic movement across key activities (shuttlecock, tennis ball, swimmer, barbell squat, runner)
+    // Kiểm tra nhân vật có di chuyển giữa hai thời điểm.
     const checkActorMoved = (actorId: string) => {
       const a0 = partsT0.filter(p => p.actorId === actorId);
       const a1 = partsT1.filter(p => p.actorId === actorId);

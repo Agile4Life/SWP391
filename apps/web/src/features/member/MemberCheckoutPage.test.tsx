@@ -128,6 +128,7 @@ describe('MemberCheckoutPage Component', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderCheckout(initialEntry = '/member/packages/checkout?packageId=1') {
     await act(async () => {
       root.render(

@@ -6,12 +6,15 @@ import * as api from './chatApi';
 vi.mock('./chatApi', () => ({ getHistory: vi.fn(), sendMessage: vi.fn() }));
 let root: Root, host: HTMLDivElement;
 let chat: ReturnType<typeof useChatConversation>;
+// Tạo tin nhắn chat giả.
 const msg = (id: number, conversationId = 1): api.ChatMessage => ({ id, conversationId, clientMessageId: `uuid-${id}`, senderId: 10, mine: false, message: `Message ${id}`, createdAt: '2026-10-29T01:00:00Z' });
+// Component phụ chỉ phục vụ kiểm thử.
 function Harness() {
   const state = useChatConversation(vi.fn());
   useLayoutEffect(() => { chat = state; }, [state]);
   return <div>{state.messages.map(m => m.message).join('|')}</div>;
 }
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function select(id: number) { await act(async () => chat.select(id)); }
 beforeEach(async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);

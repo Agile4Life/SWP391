@@ -20,8 +20,10 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); setLanguage('vi'); });
 
+// Component phụ chỉ phục vụ kiểm thử.
 function MemoProbe() {
   const { t } = useI18n();
+  // Nhãn dịch được ghi nhớ theo ngôn ngữ.
   const label = useMemo(() => t('Trang chủ', 'Home'), [t]);
   return <p>{label}</p>;
 }
@@ -61,6 +63,7 @@ it('switches shared calendar, loading and send controls while open', async () =>
   await act(async () => setLanguage('vi'));
   expect(host.querySelector('.direct-chat__send-btn')?.textContent).toBe('Gửi');
 });
+// Component phụ chỉ phục vụ kiểm thử.
 function ConfirmProbe() {
   const [confirm, dialog] = useConfirm();
   return <><button onClick={() => void confirm({ title: sourceMessage('Xác nhận thao tác', 'Confirm action'), message: sourceMessage('Tiếp tục?', 'Continue?'), confirmLabel: sourceMessage('Tiếp tục', 'Continue') })}>open</button>{dialog}</>;

@@ -27,12 +27,16 @@ afterEach(async () => {
   await act(async () => root.unmount());
   host.remove(); vi.unstubAllGlobals(); vi.useRealTimers(); vi.clearAllMocks();
 });
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<MemoryRouter><SportStack ptPath="/member/classes?tab=pt" /></MemoryRouter>));
+// Kích hoạt một bước của phần giới thiệu.
 const activate = async (index: number) => act(async () => {
   const target = host.querySelectorAll('.fit-sport-story-step')[index];
   intersect([{ target, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
 });
+// Tiến đồng hồ giả thêm 500 ms.
 const advance = () => act(async () => vi.advanceTimersByTime(500));
+// Môn đang được hiển thị (active).
 const shown = () => host.querySelector<HTMLElement>('.fit-sport-story-visual.is-active')?.dataset.sport;
 
 it('shows only Gym with its PT booking CTA and mobile illustration', async () => {

@@ -6,6 +6,7 @@ import { KycReviewPage } from './KycReviewPage';
 const mocks = vi.hoisted(() => ({ list: vi.fn(), approve: vi.fn(), reject: vi.fn() }));
 vi.mock('./kycReviewApi', () => ({ listPendingKyc: mocks.list, approveKyc: mocks.approve, rejectKyc: mocks.reject }));
 
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const submission = {
   memberId: 10, membershipCode: 'MB-010', fullName: 'Nguyen Van A', documentType: 'CCCD', citizenId: '012345678901',
   nationality: 'Việt Nam', frontImageUrl: 'data:image/png;base64,AA', backImageUrl: 'data:image/png;base64,BB', submittedAt: '2026-11-09T09:00:00',
@@ -21,7 +22,9 @@ describe('KycReviewPage', () => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() { await act(async () => root.render(<KycReviewPage />)); }
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (label: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find((item) => item.textContent === label)!;
 
   it('shows the readable number and both photos and confirms before approving a submission', async () => {

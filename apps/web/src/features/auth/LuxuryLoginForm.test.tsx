@@ -46,11 +46,13 @@ afterEach(async () => {
   vi.useRealTimers();
 });
 
+// Component phụ chỉ phục vụ kiểm thử.
 function CurrentLocation() {
   const { pathname, search } = useLocation();
   return <output data-testid="auth-location">{pathname}{search}</output>;
 }
 
+// Dựng component vào DOM giả để kiểm thử.
 async function renderForm() {
   await act(async () => root.render(<MemoryRouter initialEntries={['/login']}><LuxuryLoginForm /><CurrentLocation /></MemoryRouter>));
 }
@@ -89,6 +91,7 @@ it('transitions to email OTP verification screen when the single Google button r
   const mockFetch = vi.fn().mockResolvedValueOnce({
     ok: true,
     status: 200,
+    // Giả lập phần thân JSON của phản hồi API.
     json: async () => ({
       success: true,
       data: {
@@ -175,6 +178,7 @@ it('signs in an existing active Google member immediately without showing OTP', 
   vi.useFakeTimers();
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
     ok: true, status: 200,
+    // Giả lập phần thân JSON của phản hồi API.
     json: async () => ({ success: true, data: {
       requiresOtp: false, email: 'returning@gmail.com',
       authentication: { token: 'returning-jwt', username: 'returning-member', role: 'MEMBER' },
@@ -197,6 +201,7 @@ it('redeems a browser-bound redirect and signs in without showing OTP', async ()
   sessionStorage.setItem('scms_google_redirect_verifier', 'v'.repeat(43));
   window.history.replaceState({}, '', '/login?google_oauth=authenticated#google_login_code=ticket-code');
   const mockFetch = vi.fn().mockResolvedValueOnce({ ok: true, status: 200,
+    // Giả lập phần thân JSON của phản hồi API.
     json: async () => ({ success: true, data: { token: 'redirect-jwt', username: 'redirect-member', role: 'MEMBER' } }),
   });
   vi.stubGlobal('fetch', mockFetch);
@@ -242,6 +247,7 @@ it('sends password reset OTP via email and resets password with 6-digit OTP', as
     .mockResolvedValueOnce({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         data: { email: 'member@example.com', expiresInMinutes: 5 },
@@ -250,6 +256,7 @@ it('sends password reset OTP via email and resets password with 6-digit OTP', as
     .mockResolvedValueOnce({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         data: { email: 'member@example.com' },
@@ -311,6 +318,7 @@ it('locks login submission and shows countdown when receiving 429 lockout respon
   const mockFetch = vi.fn().mockResolvedValueOnce({
     ok: false,
     status: 429,
+    // Giả lập phần thân JSON của phản hồi API.
     json: async () => ({
       code: 'LOGIN_LOCKED',
       message: 'Tài khoản tạm thời bị khóa do nhập sai quá 5 lần. Vui lòng thử lại sau 60 giây.',

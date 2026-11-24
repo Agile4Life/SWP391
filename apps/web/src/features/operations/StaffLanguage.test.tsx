@@ -25,6 +25,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.restoreAllMocks(); vi.resetAllMocks(); vi.unstubAllGlobals();
 });
+// Đổi ngôn ngữ giao diện (vi hoặc en).
 const language = async (next: 'vi' | 'en') => act(async () => setLanguage(next));
 
 it('switches coach form metadata VI → EN → VI without translating entered exercise content', async () => {

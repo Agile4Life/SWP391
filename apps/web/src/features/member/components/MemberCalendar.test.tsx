@@ -9,6 +9,7 @@ vi.mock('../coachBookingApi', () => ({ getMyCoachBookings: mocks.pt }));
 vi.mock('../../../shared/api/client', async original => ({ ...await original<typeof import('../../../shared/api/client')>(), apiFetch: mocks.classes }));
 vi.mock('../../../shared/lib/centerTime', async original => ({
   ...await original<typeof import('../../../shared/lib/centerTime')>(),
+  // Cố định thời điểm hiện tại theo giờ trung tâm.
   centerNowParts: () => ({ date: '2099-01-07', time: '06:00' }),
 }));
 const booking = { id: 31, coachName: 'Hùng', bookingDate: '2099-01-08', startTime: '07:00:00', endTime: '08:00:00', status: 'confirmed' };
@@ -21,7 +22,9 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.unstubAllGlobals(); });
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<MemoryRouter><MemberCalendar /></MemoryRouter>));
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === text)!;
 it('shows PT only and never calls group class or court APIs', async () => {
   await render();

@@ -28,6 +28,7 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: mockMembers }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -51,6 +52,7 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
 
   it('returns an empty list only when the lookup API succeeds without matches', async () => {
     const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: [] }) });
     vi.stubGlobal('fetch', mockFetch);
     expect(await receptionApi.lookupMembers('missing')).toEqual([]);
@@ -59,6 +61,7 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
 
   it.each([403, 500])('propagates lookup HTTP %s without requesting /users or inventing member codes', async (status) => {
     const mockFetch = vi.fn().mockResolvedValue({ ok: false, status,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: false, message: 'Lookup failed' }) });
     vi.stubGlobal('fetch', mockFetch);
     await expect(receptionApi.lookupMembers('1234')).rejects.toThrow();
@@ -75,6 +78,7 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: mockPackages }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -86,6 +90,7 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
   });
 
   it('processPayment calls payment endpoint and returns invoiceNumber', async () => {
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const mockPayment = {
       id: 101,
       memberId: 1,
@@ -99,6 +104,7 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 201,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: mockPayment }),
     });
     vi.stubGlobal('fetch', mockFetch);

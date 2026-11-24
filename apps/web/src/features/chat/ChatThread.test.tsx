@@ -8,12 +8,14 @@ import type { useChatConversation } from './useChatConversation';
 
 let host: HTMLDivElement, root: Root;
 const conversation: ChatConversation = { id: 7, peer: { id: 20, name: 'Tin nhắn', role: 'COACH', available: true }, createdAt: '', lastActivityAt: '' };
+// Tạo trạng thái hội thoại giả (ghi đè được từng phần).
 const chat = (extra: Partial<ReturnType<typeof useChatConversation>> = {}): ReturnType<typeof useChatConversation> => ({
   selectedId: 7, messages: [], draft: 'Gửi', setDraft: vi.fn(), select: vi.fn(), refresh: vi.fn(), loadOlder: vi.fn(), send: vi.fn(),
   loading: false, error: null, hasOlder: false, olderLoading: false, sending: false, sendError: null, ...extra,
 });
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); setLanguage('vi'); host = document.createElement('div'); document.body.append(host); root = createRoot(host); });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.unstubAllGlobals(); });
+// Dựng component vào DOM giả để kiểm thử.
 const render = (state: ReturnType<typeof useChatConversation>) => act(async () => root.render(<ChatThread conversation={conversation} chat={state} canMarkRead={false} onBack={() => {}} />));
 
 it('toggles retry, older-history, transcript and loading labels without translating names, errors or drafts', async () => {

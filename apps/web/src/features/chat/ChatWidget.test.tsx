@@ -24,7 +24,9 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const button = (label: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<MemoryRouter><ChatWidget /></MemoryRouter>));
 /** Khung chat tải lazy khi mở widget lần đầu: chờ module xong rồi mới kiểm tra. */
 const settle = () => act(async () => { await vi.dynamicImportSettled(); });

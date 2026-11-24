@@ -12,6 +12,7 @@ vi.mock('./notificationsApi', async (importOriginal) => ({
   markNotificationRead: api.read, markAllNotificationsRead: api.all,
 }));
 
+// Component phụ chỉ phục vụ kiểm thử.
 function CurrentPath() { const location = useLocation(); return <output>{location.pathname}{location.hash}</output>; }
 
 describe('SCRUM-127 member notifications', () => {
@@ -25,7 +26,9 @@ describe('SCRUM-127 member notifications', () => {
     api.count.mockResolvedValue(0); api.read.mockResolvedValue(undefined); api.all.mockResolvedValue(undefined);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+  // Dựng component vào DOM giả để kiểm thử.
   const render = async () => act(async () => root.render(<MemoryRouter><MemberNotificationsPage /><CurrentPath /></MemoryRouter>));
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (text: string) => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes(text));
 
   it('shows empty state from the API', async () => {
