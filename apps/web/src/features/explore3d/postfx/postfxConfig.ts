@@ -2,6 +2,9 @@ import type { ExploreTheme } from '../renderers/materials';
 import type { QualityTier } from '../state/exploreStore';
 
 /**
+ * Cấu hình hậu kỳ điện ảnh: MSAA, ngân sách điểm ảnh, SSAO, bloom, chỉnh màu, khử răng cưa, làm nét và nhiễu
+ * hạt.
+ *
  * Cinematic post-processing presets, adapted from the Saltline render study
  * (HDR buffer → half-res SSAO → dual-filter bloom → filmic grade → FXAA/sharpen/grain).
  * Pure data so it can be unit tested without WebGL.
@@ -52,6 +55,7 @@ export interface PostFxConfig {
   };
 }
 
+/** Lấy cấu hình hậu kỳ theo mức chất lượng và theme sáng/tối. */
 export function getPostFxConfig(tier: QualityTier, theme: ExploreTheme): PostFxConfig {
   const isDark = theme === 'dark';
   const high = tier === 'high';
@@ -99,7 +103,11 @@ export function getPostFxConfig(tier: QualityTier, theme: ExploreTheme): PostFxC
   };
 }
 
-/** Internal render scale (≤ 1) that keeps width × height inside the pixel budget. */
+/**
+ * Hệ số thu nhỏ nội bộ (≤ 1) để số điểm ảnh không vượt ngân sách.
+ *
+ * Internal render scale (≤ 1) that keeps width × height inside the pixel budget.
+ */
 export function getInternalScale(width: number, height: number, budget: number): number {
   const pixels = Math.max(1, width * height);
   if (pixels <= budget) return 1;

@@ -43,6 +43,7 @@ const WALK_FLOOR_OPTIONS: readonly {
   { code: 'OUT', shortLabel: 'OUT', titleVi: 'Ngoài trời · Sân Tennis', titleEn: 'Outdoor · Tennis Courts' },
 ] as const;
 
+/** Tầng kế tiếp khi đi lên hoặc xuống bằng cầu thang (tầng ngoài trời đi xuống vào B1, đi lên vào L2). */
 export function getNextVerticalWalkLevel(
   current: LevelCode,
   direction: 'up' | 'down',
@@ -60,6 +61,7 @@ export function getNextVerticalWalkLevel(
   ]!;
 }
 
+/** Phần tử có đang nhận chữ gõ không (input, textarea, select hoặc contenteditable). */
 function isTypingElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
@@ -67,6 +69,10 @@ function isTypingElement(target: EventTarget | null): boolean {
   return target.isContentEditable;
 }
 
+/**
+ * Vòng lặp từng khung hình của chế độ đi bộ: làm mượt góc nhìn, áp dụng phím/vận tốc, di chuyển tư thế, cập
+ * nhật camera và đèn đầu.
+ */
 function WalkFrameLoop({
   poseRef,
   headlampRef,
@@ -245,6 +251,7 @@ function WalkFrameLoop({
   return null;
 }
 
+/** Lớp phủ trong cảnh khi đi bộ: đặt camera/đèn đầu theo tư thế và chạy vòng lặp khung hình. */
 function WalkSceneOverlay({
   children,
   headlampRef,
@@ -307,6 +314,7 @@ function WalkSceneOverlay({
   );
 }
 
+/** Kiểu dùng chung cho các nút nhỏ trên HUD đi bộ. */
 const HUD_BTN_STYLE = {
   minHeight: '26px',
   minWidth: '26px',
@@ -321,6 +329,10 @@ const HUD_BTN_STYLE = {
   lineHeight: 1,
 } as const;
 
+/**
+ * Bộ điều khiển chế độ đi bộ góc nhìn thứ nhất: phím WASD/mũi tên, chuột/pointer lock, kéo, cuộn, chuyển tầng
+ * bằng cầu thang và HUD.
+ */
 export function WalkController() {
   const { t } = useI18n();
   const r3fStore = useContext(r3fContext);
@@ -335,6 +347,7 @@ export function WalkController() {
   const canGoDownFloor = activeWalkLevel !== 'B1';
   const canGoUpFloor = activeWalkLevel !== 'RF';
 
+  // Chuyển sang một tầng khác.
   const switchWalkFloor = useCallback(
     (targetLevel: LevelCode) => {
       setFocusLevel(targetLevel);
@@ -342,6 +355,7 @@ export function WalkController() {
     [setFocusLevel],
   );
 
+  // Đi lên hoặc xuống một tầng (nếu còn tầng kế tiếp).
   const stepWalkFloor = useCallback(
     (direction: 'up' | 'down') => {
       const storeLevel = useExploreStore.getState().focusLevel;
@@ -374,6 +388,7 @@ export function WalkController() {
   const prevFocusLevelRef = useRef<LevelCode | 'ALL'>(focusLevel);
   const prevSelectedIdRef = useRef<string | null>(selectedId);
 
+  // Áp dụng một tư thế mới: đặt lại vận tốc và đồng bộ camera.
   const commitWalkPose = useCallback(
     (nextPose: WalkPose) => {
       poseRef.current = nextPose;
@@ -415,6 +430,7 @@ export function WalkController() {
     [r3fStore],
   );
 
+  // Dịch/xoay tư thế theo đầu vào từ nút HUD (tiến, ngang, xoay độ, ngẩng độ).
   const nudgePoseByInput = useCallback(
     (forward: number, strafe: number, turnDeg: number, pitchDeg: number) => {
       const currentPose = poseRef.current;
@@ -520,6 +536,7 @@ export function WalkController() {
   useEffect(() => {
     if (!walkMode) return;
 
+    // Nhấn phím: bỏ qua khi hộp tìm kiếm mở hoặc đang gõ chữ; ghi nhận phím di chuyển và phím tắt.
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       if (useExploreStore.getState().searchOpen) {
@@ -586,12 +603,14 @@ export function WalkController() {
       }
     };
 
+    // Nhả phím thì bỏ khỏi tập phím đang giữ.
     const handleKeyUp = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
       pressedKeysRef.current.delete(key);
       r3fStore?.getState()?.invalidate();
     };
 
+    // Bắt đầu kéo trên canvas để xoay hướng nhìn (bỏ qua thao tác trên HUD).
     const handlePointerDown = (event: PointerEvent) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
@@ -609,6 +628,7 @@ export function WalkController() {
       }
     };
 
+    // Kéo: xoay hướng nhìn, coi là kéo khi di chuyển quá 4 px.
     const handlePointerMove = (event: PointerEvent) => {
       const drag = pointerDragRef.current;
       if (!drag) return;
@@ -633,6 +653,7 @@ export function WalkController() {
       r3fStore?.getState()?.invalidate();
     };
 
+    // Thả chuột: nếu không kéo thì xử lý như một cú bấm.
     const handlePointerUp = (event: PointerEvent) => {
       const drag = pointerDragRef.current;
       pointerDragRef.current = null;
@@ -655,6 +676,7 @@ export function WalkController() {
       }
     };
 
+    // Di chuột khi khóa con trỏ thì xoay hướng nhìn (giới hạn góc ngẩng).
     const handleMouseMove = (event: MouseEvent) => {
       if (document.pointerLockElement) {
         const sens = 0.0022;
@@ -667,10 +689,12 @@ export function WalkController() {
       }
     };
 
+    // Trạng thái khóa con trỏ thay đổi.
     const handlePointerLockChange = () => {
       pointerLockedRef.current = document.pointerLockElement !== null;
     };
 
+    // Cuộn chuột trên canvas để đi tiến/lùi từng bước.
     const handleWheel = (event: WheelEvent) => {
       const target = event.target;
       if (!(target instanceof Element) || target.tagName !== 'CANVAS') return;
@@ -697,6 +721,7 @@ export function WalkController() {
       commitWalkPose(stepped.pose);
     };
 
+    // Dịch chuyển tới toạ độ (x, z) khi có sự kiện bấm lên sàn, có kiểm tra tường và vật cản.
     const handleFloorTeleportEvent = (event: Event) => {
       const custom = event as CustomEvent<{ x?: number; z?: number }>;
       const currentPose = poseRef.current;

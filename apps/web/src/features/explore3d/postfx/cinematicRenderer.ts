@@ -12,8 +12,10 @@ import {
   STREAK_FRAG,
 } from './shaders';
 
+/** Kiểu bảng uniform của shader. */
 type Uniforms = Record<string, THREE.IUniform>;
 
+/** Tạo vật liệu shader toàn màn hình (không test/ghi độ sâu, không tone map). */
 function makeMaterial(fragmentShader: string, uniforms: Uniforms, defines?: Record<string, string | number>) {
   return new THREE.ShaderMaterial({
     vertexShader: FULLSCREEN_VERT,
@@ -26,6 +28,7 @@ function makeMaterial(fragmentShader: string, uniforms: Uniforms, defines?: Reco
   });
 }
 
+/** Tạo render target với kiểu dữ liệu và tùy chọn cho trước. */
 function makeTarget(type: THREE.TextureDataType, options: THREE.RenderTargetOptions = {}) {
   return new THREE.WebGLRenderTarget(1, 1, {
     type,
@@ -38,6 +41,7 @@ function makeTarget(type: THREE.TextureDataType, options: THREE.RenderTargetOpti
   });
 }
 
+/** Tập các render target và vật liệu của chuỗi hậu kỳ (cảnh, composite, SSAO, bloom xuống/lên, LDR, streak...). */
 interface Pipeline {
   scene: THREE.WebGLRenderTarget;
   composite: THREE.WebGLRenderTarget;
@@ -65,6 +69,7 @@ interface Pipeline {
   height: number;
 }
 
+/** Tạo chuỗi hậu kỳ theo cấu hình và kiểu dữ liệu HDR. */
 export function createPipeline(cfg: PostFxConfig, hdrType: THREE.TextureDataType): Pipeline {
   const depthTexture = new THREE.DepthTexture(1, 1);
   depthTexture.type = THREE.UnsignedIntType;
@@ -78,6 +83,7 @@ export function createPipeline(cfg: PostFxConfig, hdrType: THREE.TextureDataType
   const down = Array.from({ length: cfg.bloom.levels }, () => makeTarget(hdrType));
   const up = Array.from({ length: cfg.bloom.levels - 1 }, () => makeTarget(hdrType));
 
+  // Các vật liệu shader của từng bước (SSAO, bloom, composite...).
   const mats = {
     ssao: makeMaterial(
       SSAO_FRAG,
@@ -184,6 +190,7 @@ export function createPipeline(cfg: PostFxConfig, hdrType: THREE.TextureDataType
   };
 }
 
+/** Giải phóng mọi render target, vật liệu và hình học của chuỗi. */
 export function disposePipeline(p: Pipeline) {
   p.scene.depthTexture?.dispose();
   [p.scene, p.composite, p.ao, p.aoBlur, p.ldr, p.streakA, p.streakB, ...p.down, ...p.up].forEach(t => t.dispose());
@@ -191,6 +198,7 @@ export function disposePipeline(p: Pipeline) {
   p.quad.geometry.dispose();
 }
 
+/** Đổi kích thước các render target theo độ phân giải mới (bỏ qua nếu không đổi). */
 function resizePipeline(p: Pipeline, w: number, h: number) {
   if (p.width === w && p.height === h) return;
   p.width = w;
@@ -216,12 +224,16 @@ function resizePipeline(p: Pipeline, w: number, h: number) {
   });
 }
 
+/** GPU có hỗ trợ render target half-float/float không. */
 export function hasHalfFloatTargets(gl: THREE.WebGLRenderer): boolean {
   const ext = gl.extensions;
   return Boolean(ext?.has?.('EXT_color_buffer_float') || ext?.has?.('EXT_color_buffer_half_float'));
 }
 
 /**
+ * Bộ kết xuất hậu kỳ HDR theo kiểu mệnh lệnh: giữ mọi render target và vật liệu, React chỉ tạo/hủy và chuyển
+ * khung hình.
+ *
  * Imperative HDR post chain (Saltline-style). Owns all render targets and
  * materials; React only creates/disposes it and forwards frames.
  */
@@ -309,6 +321,7 @@ export class CinematicRenderer {
     const h = Math.max(1, Math.round(drawing.y * scale));
     resizePipeline(p, w, h);
 
+    // Chạy một bước vẽ toàn màn hình vào render target (hoặc màn hình).
     const pass = (material: THREE.ShaderMaterial, target: THREE.WebGLRenderTarget | null) => {
       p.quad.material = material;
       gl.setRenderTarget(target);

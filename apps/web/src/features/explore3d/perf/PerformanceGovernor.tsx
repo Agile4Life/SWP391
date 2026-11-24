@@ -13,6 +13,7 @@ const UPGRADE_CONSECUTIVE_WINDOWS = 2;
 /** After a downgrade, stay put: flipping tiers back and forth recompiles shaders and reallocates shadow maps. */
 export const UPGRADE_COOLDOWN_MS = 20_000;
 
+/** Cấu hình theo mức chất lượng: DPR và bật/tắt bóng đổ. */
 export function getPerformanceConfig(tier: QualityTier): {
   tier: QualityTier;
   dpr: number;
@@ -27,6 +28,7 @@ export function getPerformanceConfig(tier: QualityTier): {
   return { tier: 'low', dpr: 1.15, shadows: false };
 }
 
+/** Mức chất lượng thấp hơn kế tiếp (null nếu đã thấp nhất). */
 export function getNextLowerTier(currentTier: QualityTier): {
   tier: QualityTier;
   dpr: number;
@@ -40,6 +42,7 @@ export function getNextLowerTier(currentTier: QualityTier): {
   return null;
 }
 
+/** Mức chất lượng cao hơn kế tiếp (null nếu đã cao nhất). */
 export function getNextHigherTier(currentTier: QualityTier): {
   tier: QualityTier;
   dpr: number;
@@ -53,6 +56,10 @@ export function getNextHigherTier(currentTier: QualityTier): {
   return null;
 }
 
+/**
+ * Bộ điều tiết chất lượng: đo FPS (bỏ qua khoảng nghỉ dài), công bố số đo và tự hạ hoặc nâng mức chất lượng/DPR
+ * theo hiệu năng.
+ */
 export function PerformanceGovernor() {
   const tier = useExploreStore(s => s.tier);
   const setDpr = useThree(s => s.setDpr);

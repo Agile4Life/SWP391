@@ -21,6 +21,10 @@ const SOFT_BLOCK = `shadow = 0.0;
 
 let patched = false;
 
+/**
+ * Vá đoạn shader PCF của three.js thành bộ lọc bóng mềm 4 mẫu và làm mờ bóng gần mép shadow map; chỉ vá một
+ * lần, trả true nếu đã vá.
+ */
 export function patchSoftShadowChunk(chunks: Record<string, string> = THREE.ShaderChunk): boolean {
   if (patched && chunks === THREE.ShaderChunk) return true;
   const source = chunks.shadowmap_pars_fragment;

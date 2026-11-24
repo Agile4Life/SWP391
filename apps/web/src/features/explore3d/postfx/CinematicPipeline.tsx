@@ -8,6 +8,9 @@ import { getAtmosphere, getSunDirection } from '../canvas/atmosphere';
 import * as THREE from 'three';
 
 /**
+ * Thành phần R3F dùng chuỗi hậu kỳ HDR điện ảnh thay cho kết xuất thường (dựng lại theo mức chất lượng, đổi
+ * theme chỉ chỉnh uniform).
+ *
  * Takes over R3F rendering (useFrame priority 1) and runs the cinematic HDR
  * post chain. Render targets are rebuilt per quality tier; theme changes only
  * retune uniforms.
