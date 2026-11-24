@@ -32,7 +32,7 @@ export function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(() => Math.max(0, Math.ceil(((pendingAccount?.resendAt ?? 0) - Date.now()) / 1000)));
 
-  // Timer countdown for resending OTP
+  // Bộ đếm ngược thời gian gửi lại mã OTP
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = window.setInterval(() => {

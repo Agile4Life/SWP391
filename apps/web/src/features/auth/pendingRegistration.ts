@@ -14,7 +14,7 @@ export function readPendingRegistration(): PendingRegistration | null {
     const parsed = pendingSchema.safeParse(JSON.parse(sessionStorage.getItem(KEY) || 'null'));
     if (parsed.success && parsed.data.createdAt <= Date.now() && Date.now() - parsed.data.createdAt < 86_400_000) return parsed.data;
     sessionStorage.removeItem(KEY);
-  } catch { /* Verification still works when browser storage is unavailable. */ }
+  } catch { /* Quá trình xác thực vẫn hoạt động khi bộ nhớ trình duyệt không khả dụng. */ }
   return null;
 }
 
@@ -23,5 +23,5 @@ export function savePendingRegistration(value: PendingRegistration | null) {
   try {
     if (value) sessionStorage.setItem(KEY, JSON.stringify(value));
     else sessionStorage.removeItem(KEY);
-  } catch { /* The current screen keeps its in-memory state. */ }
+  } catch { /* Màn hình hiện tại vẫn giữ trạng thái trong bộ nhớ tạm (in-memory). */ }
 }

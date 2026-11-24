@@ -54,8 +54,7 @@ export function CoachTrainingPlanPage() {
   const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
-  // Role authorization
-  // Chỉ HLV và quản lý được dùng màn này.
+  // Phân quyền theo vai trò: chỉ HLV và quản lý được dùng màn này.
   const hasAccess = useMemo(() => {
     if (!currentUser) return false;
     return currentUser.role === 'COACH' || currentUser.role === 'MANAGER';
@@ -628,7 +627,7 @@ export function CoachTrainingPlanPage() {
           </div>
         </div>
 
-        {/* Member Physical Summary Preview */}
+        {/* Xem trước tóm tắt thể chất của hội viên */}
         <div
           style={{
             marginTop: '16px',

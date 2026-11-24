@@ -178,7 +178,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     expect(host.textContent).toContain('Mục tiêu thể lực');
     expect(host.textContent).toContain('Lưu ý sức khỏe & chấn thương');
 
-    // Ensure emojis are not present in the students tab
+    // Đảm bảo không có emoji xuất hiện trong tab học viên
     expect(host.textContent).not.toContain('📧');
     expect(host.textContent).not.toContain('📞');
     expect(host.textContent).not.toContain('⚠️');

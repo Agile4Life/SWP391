@@ -41,7 +41,7 @@ export interface StaffInternalRequestCreatePayload {
   endDate?: string | null;
   targetShift?: string | null;
   replacementUserId?: number | null;
-  /** Send a leave even though it overlaps a pending/approved one (after the user confirmed the warning). */
+  /** Gửi đơn nghỉ phép ngay cả khi trùng ngày với đơn đang chờ/đã duyệt (sau khi người dùng xác nhận cảnh báo). */
   confirmOverlap?: boolean;
 }
 

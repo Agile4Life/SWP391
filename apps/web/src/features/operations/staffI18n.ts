@@ -8,8 +8,7 @@ export type StaffMessage = string | Error | SourceMessage;
 
 /**
  * Dịch chuỗi nguồn của màn nhân sự sang tiếng Anh bằng bảng nhãn riêng; không có bản dịch thì giữ nguyên.
- *
- * Only call with source-owned copy or an explicitly preserved error.
+ * Chỉ gọi với văn bản giao diện do mã nguồn sở hữu hoặc lỗi đã được bảo toàn tường minh.
  */
 export function staffTranslation(source: string): string {
   const trimmed = source.trim().replace(/\s+/g, ' ');
@@ -20,8 +19,7 @@ export function staffTranslation(source: string): string {
 /** Hook dịch cho màn nhân sự: trả về ngôn ngữ, locale và hàm t() nhận chuỗi, Error hoặc cặp vi/en. */
 export function useStaffI18n() {
   const { lang, t: translate } = useI18n();
-  // Render translations follow locale changes; data effects keep source messages and do not depend on t.
-  // Dịch một thông điệp nhân sự theo ngôn ngữ hiện tại.
+  // Bản dịch lúc render theo dõi thay đổi ngôn ngữ; các effect tải dữ liệu giữ thông điệp nguồn và không phụ thuộc vào t.
   const t = useCallback((source: StaffMessage | null | undefined, english?: string): string => {
     if (source == null) return '';
     if (typeof source !== 'string') {
@@ -37,9 +35,7 @@ export function useStaffI18n() {
 }
 
 /**
- * Giữ nguyên lỗi từ backend; lỗi khác dùng chuỗi dự phòng.
- *
- * Keep backend/business Error content verbatim; translate only the source fallback.
+ * Giữ nguyên nội dung Error từ backend/nghiệp vụ; chỉ dịch chuỗi dự phòng do mã nguồn định nghĩa.
  */
 export function staffError(error: unknown, fallback: string): StaffMessage {
   return error instanceof Error && error.name === 'Error' && error.message ? error : fallback;
@@ -51,9 +47,8 @@ export function staffMessage(vi: string, en: string): SourceMessage {
 }
 
 /**
- * Hiện thông báo portal cho màn nhân sự, kèm bản dịch để đổi ngôn ngữ về sau vẫn đúng.
- *
- * Source provenance survives toast/inbox storage and later preference changes.
+ * Hiện thông báo portal cho màn nhân sự, kèm bản dịch để nguồn thông điệp được giữ nguyên trong toast/hộp thư
+ * ngay cả khi người dùng đổi tùy chọn ngôn ngữ về sau.
  */
 export const staffNotify = (message: StaffMessage, type: Parameters<typeof portalNotify>[1] = 'info', options?: Parameters<typeof portalNotify>[2]) => {
   const translation = typeof message === 'string'

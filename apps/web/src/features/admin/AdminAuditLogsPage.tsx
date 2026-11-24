@@ -23,7 +23,7 @@ export function AdminAuditLogsPage() {
   const { t } = useStaffI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>('audit');
 
-  // Audit Logs state
+  // Trạng thái danh sách nhật ký thao tác
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loadingLogs, setLoadingLogs] = useState<boolean>(true);
   const [logsError, setLogsError] = useState<StaffMessage>('');
@@ -32,21 +32,21 @@ export function AdminAuditLogsPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(0);
 
-  // Audit Filter state
+  // Trạng thái bộ lọc nhật ký
   const [selectedAction, setSelectedAction] = useState<string>('ALL');
   const [selectedEntityType, setSelectedEntityType] = useState<string>('ALL');
   const [actorSearch, setActorSearch] = useState<string>('');
 
-  // Diff Modal state
+  // Trạng thái hộp thoại xem khác biệt (diff)
   const [diffLog, setDiffLog] = useState<AuditLogItem | null>(null);
 
-  // Occupancy Report state
+  // Trạng thái báo cáo mức lấp đầy lớp học
   const [occupancyList, setOccupancyList] = useState<ClassOccupancyItem[]>([]);
   const [loadingOccupancy, setLoadingOccupancy] = useState<boolean>(true);
   const [occupancyError, setOccupancyError] = useState<StaffMessage>('');
   const [occupancyReload, setOccupancyReload] = useState<number>(0);
 
-  // Fetch Audit Logs
+  // Tải danh sách nhật ký thao tác
   useEffect(() => {
     let mounted = true;
     // Tải nhật ký thao tác theo bộ lọc và trang hiện tại.
@@ -82,7 +82,7 @@ export function AdminAuditLogsPage() {
     };
   }, [selectedAction, selectedEntityType, currentPage, logsReload]);
 
-  // Fetch Occupancy
+  // Tải báo cáo mức lấp đầy lớp học
   useEffect(() => {
     let mounted = true;
     // Tải thống kê mức lấp đầy của các lớp.
@@ -112,8 +112,7 @@ export function AdminAuditLogsPage() {
     };
   }, [activeTab, occupancyReload]);
 
-  // Filter logs by actor search locally
-  // Nhật ký sau khi lọc theo tên/email người thực hiện.
+  // Lọc nhật ký tại client theo tên/email người thực hiện.
   const filteredLogs = useMemo(() => {
     if (!actorSearch.trim()) return logs;
     const q = actorSearch.toLowerCase().trim();
@@ -124,8 +123,7 @@ export function AdminAuditLogsPage() {
     );
   }, [logs, actorSearch]);
 
-  // Overall Occupancy Metrics
-  // Chỉ số tổng hợp: tỷ lệ lấp đầy trung bình, lớp cao nhất, tổng sức chứa và tổng ghi danh.
+  // Chỉ số tổng hợp mức lấp đầy: tỷ lệ lấp đầy trung bình, lớp cao nhất, tổng sức chứa và tổng ghi danh.
   const occupancyMetrics = useMemo(() => {
     if (occupancyList.length === 0) {
       return { avgUtilization: 0, highestClass: '—', totalCapacity: 0, totalEnrolled: 0 };
@@ -440,7 +438,7 @@ export function AdminAuditLogsPage() {
         title={t("Nhật ký & lấp đầy lớp")}
       />
 
-      {/* Navigation Tabs */}
+      {/* Các tab điều hướng */}
       <div className="portal-tabs audit-view-tabs" role="tablist">
         <button
           type="button"
@@ -462,7 +460,7 @@ export function AdminAuditLogsPage() {
 
       {activeTab === 'audit' ? (
         <section data-i18n-managed aria-label={t("Bảng tra cứu nhật ký kiểm toán", "Audit log lookup")}>
-          {/* Filters Bar */}
+          {/* Thanh bộ lọc */}
           <div className="portal-card audit-filter-bar">
             <div className="audit-filter-group" style={{ flex: 1.2, minWidth: '220px' }}>
               <span className="portal-label filter-label">{t("Tìm kiếm Người thực hiện")}</span>
@@ -544,7 +542,7 @@ export function AdminAuditLogsPage() {
             </div>
           </div>
 
-          {/* Audit Table */}
+          {/* Bảng nhật ký thao tác */}
           <div className="portal-card portal-card--flush audit-table-card">
             {loadingLogs ? (
               <LoadingSkeleton label={t("Đang tải nhật ký kiểm toán…")} variant="table" count={8} />
@@ -614,7 +612,7 @@ export function AdminAuditLogsPage() {
               </table>
             )}
 
-            {/* Pagination Controls */}
+            {/* Điều khiển phân trang */}
             <div className="audit-pagination-bar">
               <span>
                 {t("Hiển thị trang ")}<strong>{currentPage + 1}</strong> / <strong>{totalPages}</strong> ({totalElements}{t(" bản ghi)")}</span>
@@ -640,7 +638,7 @@ export function AdminAuditLogsPage() {
           </div>
         </section>
       ) : (
-        /* Tab 2: Occupancy Chart Section */
+        /* Tab 2: Khu vực biểu đồ mức lấp đầy lớp học */
         <section data-i18n-managed aria-label={t("Biểu đồ tỷ lệ lấp đầy phòng học theo bộ môn")}>
           {occupancyError && !loadingOccupancy && (
             <div data-i18n-managed className="portal-alert" role="alert">

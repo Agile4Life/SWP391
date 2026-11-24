@@ -645,7 +645,7 @@
   .chat-widget__trigger { background: #212328; backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
 
-/* Pure CSS glass layers inside widget panels (backdrop-filter). */
+/* Các lớp kính thuần CSS bên trong khung cửa sổ chat nổi (backdrop-filter). */
 .chat-widget__panel > .chat-widget__glass.glass-container,
 .chat-widget__trigger > .chat-widget__trigger-glass.glass-container {
   position: absolute;
@@ -722,7 +722,7 @@
 :root[data-theme='light'] .chat-widget__mini-avatar { border-color: rgba(255, 255, 255, 0.92); }
 :root[data-theme='light'] .chat-widget__badge { border-color: #ffffff; }
 
-/* Panel */
+/* Khung chat */
 :root[data-theme='light'] .chat-widget__panel {
   background: linear-gradient(155deg, rgba(255, 255, 255, 0.66) 0%, rgba(248, 245, 242, 0.56) 100%);
   border-color: rgba(255, 255, 255, 0.88);
@@ -821,7 +821,7 @@
   :root[data-theme='light'] .chat-widget__trigger { background: #faf8f6; }
 }
 
-/* Keep the message controls consistent with SÖL while preserving the glass panel. */
+/* Giữ các nút điều khiển tin nhắn nhất quán với SÖL trong khi vẫn bảo toàn lớp kính của khung chat. */
 .chat-widget .direct-chat .direct-chat__send-btn,
 :root[data-theme='light'] .chat-widget .direct-chat .direct-chat__send-btn { background: var(--sol-accent); color: #212328; }
 .chat-widget .direct-chat .direct-chat__send-btn:hover:not(:disabled),

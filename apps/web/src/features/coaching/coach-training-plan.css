@@ -1,14 +1,14 @@
 /* Mục đích: Kiểu cho màn hình lập và quản lý kế hoạch tập của HLV. */
 /* ==========================================================================
-   COACH TRAINING PLAN & AI GENERATOR — SÖL FITNESS CHARCOAL–SALMON DESIGN
-   Conforming to DESIGN.md & SCRUM-122
+   GIÁO ÁN HLV & TRÌNH SINH GIÁO ÁN AI — THIẾT KẾ SÖL FITNESS THAN–SALMON
+   Tuân thủ DESIGN.md & SCRUM-122
    ========================================================================== */
 
 .plan-editor-page {
   padding-bottom: 80px;
 }
 
-/* Plan Info Header Card */
+/* Thẻ tiêu đề thông tin kế hoạch */
 .plan-meta-card {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
@@ -30,7 +30,7 @@
   scrollbar-width: none;
 }
 
-/* Exercise Quick Form */
+/* Biểu mẫu thêm nhanh bài tập */
 .exercise-form-card {
   background: var(--portal-surface);
   border: 1px solid var(--portal-border);
@@ -46,7 +46,7 @@
   align-items: flex-end;
 }
 
-/* Exercise Items List */
+/* Danh sách mục bài tập */
 .exercise-items-list {
   display: grid;
   gap: 12px;
@@ -124,7 +124,7 @@
   background: rgba(239, 68, 68, 0.15);
 }
 
-/* AI Modal Styling */
+/* Kiểu hộp thoại trợ lý AI */
 .ai-modal-container {
   max-width: 760px;
   width: 100%;
@@ -182,7 +182,7 @@
   border-color: var(--portal-salmon);
 }
 
-/* AI Generating Loading State */
+/* Trạng thái đang sinh gợi ý AI */
 .ai-loading-box {
   text-align: center;
   padding: 36px 20px;
@@ -203,7 +203,7 @@
   100% { transform: scale(0.9); opacity: 0.7; box-shadow: 0 0 0 0 rgb(var(--sol-accent-rgb) / 0); }
 }
 
-/* AI Results Box */
+/* Hộp kết quả gợi ý AI */
 .ai-result-box {
   background: var(--portal-surface);
   border: 1px solid var(--portal-salmon);
@@ -243,7 +243,7 @@
   font-size: 0.85rem;
 }
 
-/* Responsive queries */
+/* Truy vấn đáp ứng màn hình nhỏ */
 @media (max-width: 1100px) {
   .plan-meta-grid {
     grid-template-columns: 1fr 1fr;
@@ -293,7 +293,7 @@
   }
 }
 
-/* Flat exercise forms shared by the local draft and saved-plan editor. */
+/* Biểu mẫu bài tập dạng phẳng dùng chung cho bản nháp cục bộ và trình sửa giáo án đã lưu. */
 .plan-exercise-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .plan-exercise-fields__wide { grid-column: 1 / -1; }
 .plan-exercise-fields > * { min-width: 0; }

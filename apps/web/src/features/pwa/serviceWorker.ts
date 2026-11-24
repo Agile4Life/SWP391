@@ -1,8 +1,6 @@
 /**
- * Sinh mã nguồn service worker lúc build: chỉ cache bộ file công khai của ứng dụng (precache khi cài, cache
- * thêm các file đã truy cập, dọn cache phiên bản cũ).
- *
- * Build-time worker template. Only the public application bundle enters its cache.
+ * Mẫu sinh mã nguồn service worker lúc build: chỉ bộ file ứng dụng công khai mới được đưa vào cache
+ * (precache khi cài, cache thêm các file đã truy cập, dọn cache phiên bản cũ).
  */
 export function createWorkerSource(version: string, assets: string[], precache: string[] = assets) {
   return `

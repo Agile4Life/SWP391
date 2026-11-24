@@ -36,14 +36,12 @@ function shiftIsoDate(iso: string, days: number): string {
 }
 
 /**
- * Hook tải một trang danh sách khi được bật; key đổi (tham số đổi) thì tải lại, bỏ qua kết quả khi đã gỡ
- * component, có hàm retry.
- *
- * Loads one page of a list while `enabled`; `key` changes whenever the request parameters change.
+ * Hook tải một trang danh sách khi `enabled` được bật; mỗi khi `key` đổi (tham số yêu cầu đổi) thì tải lại, bỏ qua
+ * kết quả khi component đã gỡ, và cung cấp hàm retry.
  */
 function usePaged<T>(load: () => Promise<PageResult<T>>, key: string, enabled: boolean, fallback: string) {
   const loader = useRef(load);
-  // Declared before the loading effect, so the request below always uses the latest filters.
+  // Khai báo trước effect tải dữ liệu để yêu cầu bên dưới luôn dùng bộ lọc mới nhất.
   useEffect(() => { loader.current = load; });
   const [data, setData] = useState<PageResult<T> | null>(null);
   const [loading, setLoading] = useState(enabled);
@@ -84,7 +82,7 @@ export function AdminPaymentReconciliationPage() {
   // Định dạng số tiền (rỗng là "—").
   const formatOptionalPrice = (n: number | null | undefined) => (n == null ? '—' : formatPrice(Math.round(Number(n))));
 
-  // Summary
+  // Tóm tắt đối soát
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<StaffMessage>('');
@@ -106,7 +104,7 @@ export function AdminPaymentReconciliationPage() {
     return () => { mounted = false; };
   }, [from, to, summaryReload]);
 
-  // Attempts tab
+  // Tab lượt thanh toán
   const [attemptStatus, setAttemptStatus] = useState('ALL');
   const [staleOnly, setStaleOnly] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
@@ -119,7 +117,7 @@ export function AdminPaymentReconciliationPage() {
     'Không thể tải danh sách lượt VNPay.',
   );
 
-  // Late refunds tab
+  // Tab hoàn tiền trễ
   const [refundPage, setRefundPage] = useState(0);
   const refunds = usePaged<LateRefundRow>(
     () => reconciliationApi.getLateRefunds({ from, to, page: refundPage, size: PAGE_SIZE }),
@@ -128,7 +126,7 @@ export function AdminPaymentReconciliationPage() {
     'Không thể tải danh sách hoàn tiền tự động.',
   );
 
-  // IPN events tab
+  // Tab sự kiện IPN
   const [rspCode, setRspCode] = useState('ALL');
   const [source, setSource] = useState('ALL');
   const [referenceDraft, setReferenceDraft] = useState('');
@@ -141,7 +139,7 @@ export function AdminPaymentReconciliationPage() {
     'Không thể tải sự kiện IPN.',
   );
 
-  // Timeline modal
+  // Hộp thoại dòng thời gian
   const [timelineId, setTimelineId] = useState<number | null>(null);
   const [timeline, setTimeline] = useState<PaymentTimeline | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);

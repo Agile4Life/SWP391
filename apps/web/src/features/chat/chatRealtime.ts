@@ -6,10 +6,9 @@ import type { ChatRealtimeSession } from './chatApi';
 export type ChatConnection = 'connecting' | 'connected' | 'reconnecting' | 'disabled';
 
 /**
- * Đăng ký nhận thông báo realtime qua Supabase (chỉ để làm mất hiệu lực dữ liệu): tự gia hạn token trước khi
- * hết hạn, kết nối lại theo cấp số nhân, chuyển sang hỏi định kỳ mỗi 4 giây khi realtime tắt; trả về hàm hủy.
- *
- * Broadcast only invalidates data. Never render or trust its payload.
+ * Đăng ký nhận thông báo realtime qua Supabase: tự gia hạn token trước khi hết hạn, kết nối lại theo cấp số nhân,
+ * chuyển sang hỏi định kỳ mỗi 4 giây khi realtime tắt; trả về hàm hủy.
+ * Thông báo broadcast chỉ dùng để làm mất hiệu lực dữ liệu; không bao giờ hiển thị hay tin tưởng payload của nó.
  */
 export function subscribeChat(changed: () => void, status: (state: ChatConnection) => void,
   sessionPath = '/chat/realtime-session'): () => void {
@@ -67,9 +66,8 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
       chatToken = session.token;
       if (!client) client = createClient(session.url, session.publishableKey, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-        // supabase-js installs a callback even without a Supabase Auth session.
-        // Keep our scoped JWT as its source of truth on connect and heartbeat.
-        // Token giới hạn quyền của chat là nguồn sự thật cho client Supabase.
+        // supabase-js vẫn gắn callback ngay cả khi không có phiên Supabase Auth.
+        // Giữ JWT giới hạn quyền của chat làm nguồn sự thật khi kết nối và gửi heartbeat.
         accessToken: async () => chatToken,
       });
       const current = client;

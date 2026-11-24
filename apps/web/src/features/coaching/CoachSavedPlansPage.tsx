@@ -5,8 +5,6 @@ import './coach-training-plan.css';
 
 /**
  * Tab giáo án đã lưu: các giáo án HLV đã kích hoạt, tách khỏi trình soạn giáo án từng bước.
- *
- * Saved plans tab: plans the coach already activated, separate from the step-by-step builder.
  */
 export function CoachSavedPlansPage() {
   const { t } = useStaffI18n();

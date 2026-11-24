@@ -128,8 +128,8 @@ export function useChatConversation(onSent: () => void) {
       }
       const current = thread.current;
       if (current?.id === target.id) {
-        // Optimistic display must not advance the synchronized cursor: a peer's
-        // message may have committed between the last fetch and our send.
+        // Hiển thị lạc quan (optimistic) không được đẩy con trỏ đồng bộ lên trước:
+        // tin nhắn của đối phương có thể đã ghi nhận giữa lần tải gần nhất và lúc gửi này.
         merge(current, [saved]); await refresh();
       }
       onSentRef.current();

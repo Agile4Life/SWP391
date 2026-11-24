@@ -7,10 +7,8 @@ import { chatError, type ChatError } from './chatMessages';
 import { useI18n } from '../../shared/i18n';
 
 /**
- * Danh sách tìm người để bắt đầu trò chuyện (hội viên tìm lễ tân/HLV của mình, nhân sự tìm hội viên) với tìm
- * kiếm và phân trang.
- *
- * `forMember`: a member looks for a receptionist/coach; otherwise staff look for a member to write to.
+ * Danh sách tìm người để bắt đầu trò chuyện với tìm kiếm và phân trang:
+ * khi `forMember` là true, hội viên tìm lễ tân/HLV của mình; ngược lại nhân sự tìm hội viên để nhắn tin.
  */
 export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose: (contact: ChatContact) => void; pending: number | null; forMember?: boolean }) {
   const { t } = useI18n();
@@ -33,7 +31,7 @@ export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose
       if (request !== sequence.current.value) return;
       const items = Array.isArray(data?.content) ? data.content : [];
       setContacts(items); setPage(nextPage); setTotal(typeof data?.totalPages === 'number' ? data.totalPages : 0);
-      // Coaches are listed first, so none on the first unfiltered page means the member has no coach to write to yet.
+      // HLV được liệt kê trước, nên trang đầu chưa lọc mà không có HLV nào nghĩa là hội viên chưa có HLV để nhắn tin.
       if (term === '' && nextPage === 0) setNoCoach(!items.some(contact => contact.role === 'COACH'));
     } catch (e) { if (request === sequence.current.value) setError(chatError(e, 'Không thể tải danh bạ.', 'Unable to load contacts.')); }
     finally { if (request === sequence.current.value) setLoading(false); }

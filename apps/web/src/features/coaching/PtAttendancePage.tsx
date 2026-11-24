@@ -21,11 +21,7 @@ function addDays(iso: string, days: number): string {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
-/**
- * Buổi kèm đã bắt đầu chưa (theo giờ trung tâm).
- *
- * Outcome of one session: arrived, finished without an arrival, or still ahead.
- */
+/** Buổi kèm đã bắt đầu chưa (theo giờ trung tâm). */
 function hasStarted(booking: CoachBookingDto, now: Date): boolean {
   return (parseCenterTime(`${booking.bookingDate}T${booking.startTime}`)?.getTime() ?? Infinity) <= now.getTime();
 }
@@ -42,8 +38,6 @@ function outcomeOf(booking: CoachBookingDto, now: Date): Exclude<PtOutcome, 'ALL
 /**
  * Trang điểm danh buổi kèm 1:1: HLV thấy của mình, lễ tân và quản lý thấy của mọi HLV; lọc theo khoảng ngày,
  * kết quả và tìm kiếm, ghi nhận hoặc bỏ ghi nhận có mặt.
- *
- * Attendance of 1:1 sessions for coaches (their own) and for the front desk and managers (everyone's).
  */
 export function PtAttendancePage() {
   const { t } = useI18n();
@@ -130,7 +124,7 @@ export function PtAttendancePage() {
   // Ghi nhận hoặc bỏ ghi nhận có mặt; bỏ ghi nhận khi hội viên đã quét cổng thì hỏi xác nhận trước.
   async function markAttended(row: CoachBookingDto, attended: boolean) {
     if (busy.current || loading) return;
-    // The member scanned in at the gate around this session: removing the mark needs a second look.
+    // Hội viên đã quét mã vào cổng quanh thời điểm buổi tập này: cần xác nhận lại trước khi bỏ ghi nhận.
     if (!attended && row.gateCheckinAt && !(await confirm({
       title: { vi: 'Bỏ ghi nhận có mặt?', en: 'Remove the attended mark?' },
       message: {

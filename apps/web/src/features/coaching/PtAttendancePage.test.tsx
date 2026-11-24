@@ -91,7 +91,7 @@ describe('PtAttendancePage', () => {
     // Các nút ghi nhận có mặt của một buổi.
     const markButtons = (id: number) => [...(host.querySelector(`[data-testid="pt-row-${id}"]`)?.querySelectorAll('button') ?? [])]
       .filter((button) => button.textContent === 'Đánh dấu có mặt');
-    // Only the finished, unrecorded session offers the action: not the attended one, not the future one.
+    // Chỉ buổi đã kết thúc và chưa ghi nhận mới hiện nút thao tác: không hiện với buổi đã có mặt hoặc buổi tương lai.
     expect(markButtons(1)).toHaveLength(0);
     expect(markButtons(3)).toHaveLength(0);
     expect(markButtons(2)).toHaveLength(1);
@@ -207,7 +207,7 @@ describe('PtAttendancePage', () => {
 
   it('keeps ongoing sessions out of upcoming and recomputes counts at the Vietnam end boundary', async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date('2026-11-12T17:30:00Z')); // 00:30 on Nov 13 in Vietnam
+    vi.setSystemTime(new Date('2026-11-12T17:30:00Z')); // 00:30 ngày 13/11 theo giờ Việt Nam
     mocks.load.mockResolvedValue([
       { ...missed, id: 4, bookingDate: '2026-11-13', startTime: '00:00:00', endTime: '00:31:00' },
       { ...upcoming, bookingDate: '2026-11-13', startTime: '01:00:00', endTime: '02:00:00' },

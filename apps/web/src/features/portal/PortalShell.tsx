@@ -25,7 +25,7 @@ import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { navigateToVnpay } from '../payments/vnpayApi';
 import { releaseAbandonedVnpay, rememberActiveVnpay } from '../payments/vnpaySession';
 
-// Only members see the AI assistant; its WebGL shaders stay out of every other role's first load.
+// Chỉ hội viên mới thấy trợ lý AI; các WebGL shader của nó không được tải ở lần tải đầu của mọi vai trò khác.
 
 /** Một giao dịch trong dữ liệu ví trả về từ API (mọi trường đều tùy chọn). */
 interface WalletTransactionItem {
@@ -195,7 +195,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         }
       })
       .catch(() => {
-        // Ignore in offline/test contexts where /profile is not mocked
+        // Bỏ qua trong ngữ cảnh ngoại tuyến/kiểm thử khi /profile chưa được giả lập
       });
   }, []);
 
@@ -211,7 +211,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         }
       })
       .catch(() => {
-        // Graceful fallback to 0 đ
+        // Giữ giá trị dự phòng an toàn là 0 đ
       })
       .finally(() => {
         setWalletLoading(false);

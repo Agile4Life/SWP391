@@ -4,9 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StaffInternalRequestsPage } from './StaffInternalRequestsPage';
 import * as staffRequestApi from './staffRequestApi';
 
-// Plain inputs stand in for the date picker so a test can type the leave dates.
+// Thay DatePicker bằng ô nhập thường để ca kiểm thử có thể nhập trực tiếp ngày nghỉ phép.
 vi.mock('../../shared/ui/DatePicker', () => ({
-  // Thay DatePicker bằng ô nhập đơn giản.
   DatePicker: (props: { id: string; value: string; onChange: (e: { target: { value: string } }) => void }) => (
     <input id={props.id} value={props.value} onChange={(e) => props.onChange({ target: { value: e.target.value } })} />
   ),
@@ -131,7 +130,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
       b.textContent?.includes('Gửi đơn tới Quản Lý')
     );
 
-    // Click without filling fields -> triggers validation error
+    // Bấm gửi khi chưa điền trường bắt buộc -> kích hoạt lỗi kiểm tra hợp lệ
     await act(async () => {
       submitBtn?.click();
     });

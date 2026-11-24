@@ -11,7 +11,7 @@ export function rememberActiveVnpay(reference: string) {
   try {
     window.localStorage.setItem(ACTIVE_VNPAY_KEY, trimmed);
   } catch {
-    // Ignore storage privacy/quota errors
+    // Bỏ qua lỗi quyền riêng tư hoặc đầy dung lượng lưu trữ
   }
 }
 
@@ -27,7 +27,7 @@ export function clearActiveVnpay(reference?: string) {
       window.localStorage.removeItem(ACTIVE_VNPAY_KEY);
     }
   } catch {
-    // Ignore storage errors
+    // Bỏ qua lỗi lưu trữ trình duyệt
   }
 }
 
@@ -56,7 +56,7 @@ export function releaseAbandonedVnpay(): Promise<boolean> {
     hasToken = Boolean(window.localStorage.getItem(TOKEN_STORAGE_KEY));
     if (stored) window.localStorage.removeItem(ACTIVE_VNPAY_KEY);
   } catch {
-    // Storage unavailable: with no stored reference or token the check below returns false.
+    // Bộ nhớ trình duyệt không khả dụng: khi không có mã tham chiếu hoặc token đã lưu, điều kiện bên dưới sẽ trả về false.
   }
   if (!stored || !hasToken) return Promise.resolve(false);
   const reference = stored;

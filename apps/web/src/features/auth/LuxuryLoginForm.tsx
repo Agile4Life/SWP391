@@ -50,16 +50,16 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => getCurrentUser());
   const [mode, setMode] = useState<AuthMode>('standard');
 
-  // Standard Login Form
+  // Biểu mẫu đăng nhập thường
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Forgot Password Form
+  // Biểu mẫu quên mật khẩu
   const [resetEmail, setResetEmail] = useState('');
   const [resetNewPassword, setResetNewPassword] = useState('');
 
-  // Google Login Form
+  // Biểu mẫu đăng nhập Google
   const [googleEmail, setGoogleEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpMessage, setOtpMessage] = useState<string | Error | import('../../shared/i18n').SourceMessage>('');
@@ -87,7 +87,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     return new URLSearchParams(window.location.search).get('expired') === '1';
   });
 
-  // Countdown timer for resending OTP
+  // Bộ đếm ngược thời gian gửi lại mã OTP
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = window.setInterval(() => {
@@ -96,7 +96,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Countdown timer for login lockout
+  // Bộ đếm ngược thời gian khóa đăng nhập
   useEffect(() => {
     if (lockCountdown <= 0) return;
     const timer = window.setInterval(() => {
@@ -255,8 +255,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }
   }, [fail, redeemGoogleRedirect]);
 
-  // One Google entry point: popup when ready, otherwise the state-protected backend redirect.
-  // Bắt đầu đăng nhập Google: dùng token client của Google nếu có, không thì chuyển hướng toàn trang.
+  // Một điểm vào Google duy nhất: mở popup qua token client khi sẵn sàng, không thì chuyển hướng toàn trang có bảo vệ state qua backend.
   const handleGoogleOAuthLogin = async () => {
     setFormError('');
     if (googleClientId && !window.google?.accounts?.oauth2?.initTokenClient) {
@@ -564,7 +563,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
         </div>
       )}
 
-      {/* MODE 1: Standard Username/Password Login */}
+      {/* CHẾ ĐỘ 1: Đăng nhập thường bằng tên đăng nhập/mật khẩu */}
       {mode === 'standard' && (
         <>
           <form onSubmit={handleStandardSubmit}>
@@ -816,7 +815,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
         </form>
       )}
 
-      {/* MODE 3: Google OTP Verification (Hiển thị sau khi Google OAuth callback hoặc gửi OTP qua mail) */}
+      {/* CHẾ ĐỘ 3: Xác thực OTP Google (Hiển thị sau khi Google OAuth callback hoặc gửi OTP qua mail) */}
       {mode === 'google_otp' && (
         <form onSubmit={handleGoogleVerifyOtp}>
           {/* Hộp thông báo màu xanh theo đúng yêu cầu đề bài */}

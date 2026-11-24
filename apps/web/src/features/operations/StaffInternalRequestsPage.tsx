@@ -42,10 +42,10 @@ export function StaffInternalRequestsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<StaffMessage>('');
 
-  // Filter
+  // Bộ lọc
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  // Create Modal
+  // Hộp thoại tạo đơn mới
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [createType, setCreateType] = useState<RequestType>('LEAVE');
   const [createTitle, setCreateTitle] = useState<string>('');
@@ -56,7 +56,7 @@ export function StaffInternalRequestsPage() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<StaffMessage>('');
 
-  // Cancel target
+  // Đơn đang thao tác hủy
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   // Tải đơn từ của chính người dùng.
@@ -238,7 +238,7 @@ export function StaffInternalRequestsPage() {
                   gap: 14,
                 }}
               >
-                {/* Header row of card */}
+                {/* Hàng tiêu đề của thẻ */}
                 <div
                   style={{
                     display: 'flex',
@@ -281,7 +281,7 @@ export function StaffInternalRequestsPage() {
                   </span>
                 </div>
 
-                {/* Title & Reason */}
+                {/* Tiêu đề & lý do */}
                 <div>
                   <h3 style={{ margin: '0 0 6px 0', fontSize: 17, fontWeight: 800, color: 'var(--portal-paper)' }}>
                     {req.title}
@@ -291,7 +291,7 @@ export function StaffInternalRequestsPage() {
                   </p>
                 </div>
 
-                {/* Scope details (dates, target shift) */}
+                {/* Chi tiết phạm vi (ngày, ca mong muốn) */}
                 {(req.startDate || req.targetShift) && (
                   <div
                     style={{
@@ -324,7 +324,7 @@ export function StaffInternalRequestsPage() {
                   </div>
                 )}
 
-                {/* Manager review result */}
+                {/* Kết quả duyệt của quản lý */}
                 {req.reviewedAt && (
                   <div data-i18n-managed
                     style={{
@@ -351,7 +351,7 @@ export function StaffInternalRequestsPage() {
                   </div>
                 )}
 
-                {/* Footer Action (Cancel button if pending) */}
+                {/* Thao tác chân thẻ (nút Hủy khi đơn đang chờ duyệt) */}
                 {isPending && (
                   <div data-i18n-managed style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>
                     <button

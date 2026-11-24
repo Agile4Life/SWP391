@@ -41,11 +41,11 @@ export function ManagerInternalRequestsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<StaffMessage>('');
 
-  // Filters
+  // Bộ lọc
   const [statusFilter, setStatusFilter] = useState<string>('PENDING');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
 
-  // Review Modal
+  // Hộp thoại duyệt đơn
   const [reviewTarget, setReviewTarget] = useState<StaffInternalRequestDto | null>(null);
   const [reviewAction, setReviewAction] = useState<'APPROVED' | 'REJECTED'>('APPROVED');
   const [managerNotes, setManagerNotes] = useState<string>('');
@@ -138,7 +138,7 @@ export function ManagerInternalRequestsPage() {
         title={t("Duyệt đơn từ nội bộ")}
       />
 
-      {/* Filter and controls bar */}
+      {/* Thanh bộ lọc và điều khiển */}
       <div
         style={{
           display: 'flex',
@@ -153,7 +153,7 @@ export function ManagerInternalRequestsPage() {
           marginBottom: 24,
         }}
       >
-        {/* Status tabs */}
+        {/* Các tab trạng thái */}
         <div className="portal-tabs" role="tablist" aria-label={t("Lọc trạng thái đơn nội bộ", "Filter internal request status")} style={{ marginBottom: 0 }}>
           {[
             { key: 'PENDING', label: t('Chờ duyệt', 'Pending'), count: pendingCount },
@@ -182,7 +182,7 @@ export function ManagerInternalRequestsPage() {
           })}
         </div>
 
-        {/* Type filter */}
+        {/* Bộ lọc loại đơn */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>{t("Loại đơn:")}</span>
           <Select
@@ -265,7 +265,7 @@ export function ManagerInternalRequestsPage() {
                   gap: 14,
                 }}
               >
-                {/* Header row: Requester Info & Status */}
+                {/* Hàng tiêu đề: Thông tin người gửi & trạng thái */}
                 <div
                   style={{
                     display: 'flex',
@@ -345,7 +345,7 @@ export function ManagerInternalRequestsPage() {
                   </div>
                 </div>
 
-                {/* Title & Reason */}
+                {/* Tiêu đề & lý do */}
                 <div>
                   <h3 style={{ margin: '0 0 6px 0', fontSize: 17, fontWeight: 800, color: 'var(--portal-paper)' }}>
                     {req.title}
@@ -355,7 +355,7 @@ export function ManagerInternalRequestsPage() {
                   </p>
                 </div>
 
-                {/* Scope details (dates, target shift) */}
+                {/* Chi tiết phạm vi (ngày, ca mong muốn) */}
                 <div
                   style={{
                     display: 'flex',
@@ -386,7 +386,7 @@ export function ManagerInternalRequestsPage() {
                   )}
                 </div>
 
-                {/* Review result if already reviewed */}
+                {/* Kết quả duyệt nếu đã được xử lý */}
                 {req.reviewedAt && (
                   <div data-i18n-managed
                     style={{
@@ -413,7 +413,7 @@ export function ManagerInternalRequestsPage() {
                   </div>
                 )}
 
-                {/* Manager Actions (Approve / Reject buttons for pending) */}
+                {/* Thao tác của quản lý (nút Duyệt / Từ chối cho đơn chờ duyệt) */}
                 {isPending && (
                   <div data-i18n-managed
                     style={{

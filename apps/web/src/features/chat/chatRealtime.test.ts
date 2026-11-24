@@ -89,7 +89,7 @@ it('keeps the scoped token when the installed SDK refreshes auth on connect or h
   let realClient: ReturnType<typeof sdk.createClient> | undefined;
   fake.createClient.mockImplementationOnce((url, key, options) => {
     realClient = sdk.createClient(url, key, options);
-    // Keep the real SDK's auth machinery; replace only the external socket boundary.
+    // Giữ nguyên cơ chế xác thực thật của SDK; chỉ thay thế ranh giới socket bên ngoài.
     vi.spyOn(realClient, 'channel').mockReturnValue({ on: fake.on } as unknown as ReturnType<typeof realClient.channel>);
     return realClient;
   });

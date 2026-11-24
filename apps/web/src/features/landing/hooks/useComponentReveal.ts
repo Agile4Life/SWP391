@@ -5,9 +5,7 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 
 /**
  * Hook phát lại hiệu ứng xuất hiện khi component vào lại viewport và cập nhật các hiệu ứng theo tiến độ cuộn
- * (thanh tiến độ, hero, manifesto, CTA); không chặn cuộn tài liệu và tôn trọng giảm chuyển động.
- *
- * Replay entrances on viewport re-entry and drive scroll-linked UI progress; document scrolling stays native.
+ * (thanh tiến độ, hero, manifesto, CTA); giữ nguyên cuộn tài liệu tự nhiên và tôn trọng tùy chọn giảm chuyển động.
  */
 export function useComponentReveal(container: RefObject<HTMLDivElement | null>, route: string) {
   useLayoutEffect(() => {
@@ -36,7 +34,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     };
     // Tính các hiệu ứng theo cuộn: đọc hình học trước rồi mới ghi style để tránh layout lặp.
     const syncScrollEffects = () => {
-      // Read geometry first. Writing inherited styles between reads forces repeated layouts.
+      // Đọc toàn bộ thông số hình học trước. Ghi style kế thừa xen giữa các lần đọc sẽ ép trình duyệt tính layout lặp lại.
       const currentScrollY = window.scrollY;
       const viewportHeight = window.innerHeight;
       const maxScroll = Math.max(1, document.documentElement.scrollHeight - viewportHeight);
@@ -47,7 +45,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       const manifestoRects = preference.matches ? [] : manifestos.map(({ element }) => element.getBoundingClientRect());
       const ctaRect = !preference.matches ? finalCta?.getBoundingClientRect() : undefined;
 
-      // The progress bar consumes this value directly; changing a variable on root invalidates the whole page.
+      // Thanh tiến độ dùng trực tiếp giá trị này; đổi biến CSS trên root sẽ làm trình duyệt tính lại toàn bộ trang.
       setProperty(progressBar, 'transform', `scaleX(${progress.toFixed(4)})`);
       header?.classList.toggle('is-scrolled', currentScrollY > 36);
       if (benefits && benefitRect) {

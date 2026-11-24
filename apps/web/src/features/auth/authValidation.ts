@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
-/** Same rule as the backend PasswordPolicy: 8–50 characters, at least one letter and one digit, no whitespace. */
+/** Cùng quy tắc với PasswordPolicy ở backend: 8–50 ký tự, ít nhất một chữ cái và một chữ số, không có khoảng trắng. */
 export const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$/;
 export const PASSWORD_RULE_ERROR = 'Mật khẩu phải dài 8–50 ký tự, có ít nhất 1 chữ cái và 1 chữ số, không chứa khoảng trắng.';
 export const PASSWORD_RULE_HINT = '8–50 ký tự, có chữ cái và chữ số, không khoảng trắng';

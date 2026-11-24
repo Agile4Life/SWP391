@@ -67,8 +67,8 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
       const { default: Decoder } = await import('qr-scanner');
       if (run.current !== current) return;
       if (!videoHost.current || document.hidden) { setPhase('ready'); return; }
-      // The decoder owns this child. A fresh node isolates its delayed stop callback
-      // from the next run, even when the user retries immediately after a scan.
+      // Bộ giải mã sở hữu phần tử con này. Tạo node mới giúp cô lập callback dừng bị trễ
+      // khỏi lượt quét kế tiếp, kể cả khi người dùng thử lại ngay sau một lần quét.
       const element = document.createElement('video');
       element.muted = true;
       element.playsInline = true;

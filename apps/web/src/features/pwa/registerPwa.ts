@@ -63,13 +63,13 @@ export function applyPwaUpdate() {
  * đang chờ và kiểm tra cập nhật khi online; không bao giờ tự kích hoạt bản mới.
  */
 export async function registerPwa() {
-  // Capture even on public pages, before the authenticated portal is mounted.
+  // Bắt sự kiện cài đặt ngay cả trên trang công khai, trước khi portal sau đăng nhập được mount.
   capturePwaInstall();
   if (!import.meta.env.PROD || !('serviceWorker' in navigator) || registrationStarted) return;
   registrationStarted = true;
   try {
     const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/', updateViaCache: 'none' });
-    // Initial route chunks may finish before the first worker controls this page.
+    // Các chunk của route ban đầu có thể tải xong trước khi worker đầu tiên kiểm soát trang này.
     // Gửi danh sách file /assets cùng nguồn đã tải cho service worker để lưu cache.
     const syncAssets = (entries: PerformanceEntry[]) => {
       const paths = entries.flatMap(entry => {
@@ -98,13 +98,13 @@ export async function registerPwa() {
         if (installing.state === 'installed') announceUpdate();
       });
     });
-    // Check when returning to the app; never activate a replacement automatically.
+    // Kiểm tra cập nhật khi quay lại ứng dụng; không bao giờ tự kích hoạt bản thay thế.
     window.addEventListener('online', () => { void registration.update().catch(() => {}); });
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') void registration.update().catch(() => {});
     });
   } catch {
-    // Installation is optional; a blocked worker must not prevent portal access.
+    // Cài đặt PWA là tùy chọn; service worker bị chặn không được ngăn người dùng truy cập portal.
     registrationStarted = false;
   }
 }

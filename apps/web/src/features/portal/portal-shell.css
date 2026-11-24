@@ -1,6 +1,4 @@
-/* Mục đích: Khung portal (sidebar icon, topbar, lưới dashboard bốn cột) và màu theo bảng màu landing; giữ nguyên tổ chức component ban đầu. */
-/* Landing palette; original component organization preserved. */
-/* Palette adapters only: keep component sizes, placement and behavior. */
+/* Mục đích: Khung portal (sidebar icon, topbar, lưới dashboard bốn cột) và bộ thích ứng bảng màu theo landing; giữ nguyên tổ chức, kích thước, vị trí và hành vi component ban đầu. */
 html:has(.portal-backdrop),
 body:has(.portal-backdrop) {
   background: #202020;
@@ -853,7 +851,7 @@ html:root .portal-logo.portal-logo--mark {
   color: var(--portal-muted);
 }
 
-/* Adapt the existing feature screens to the same visual language. */
+/* Đồng bộ các màn hình tính năng hiện có sang cùng ngôn ngữ thị giác. */
 .portal-v2 .portal-card,
 .portal-v2 .metric-card {
   min-width: 0;
@@ -2153,7 +2151,7 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 
-/* Health Metrics Compact Table & Action Buttons (No horizontal scrollbar) */
+/* Bảng chỉ số sức khỏe gọn gàng & nút thao tác (không có thanh cuộn ngang) */
 .portal-v2 .profile-metric-table-container {
   width: 100%;
   max-width: 100%;
@@ -2325,7 +2323,7 @@ html:root .portal-logo.portal-logo--mark {
   }
 }
 
-/* Dark accents mark the current location and primary actions; ordinary cards stay quiet. */
+/* Điểm nhấn chế độ tối đánh dấu vị trí hiện tại và thao tác chính; các thẻ thông thường giữ dịu mắt. */
 :root:not([data-theme='light']) .portal-backdrop {
   --portal-led-edge: var(--sol-led-edge);
   --portal-led-glow: var(--sol-led-glow);
@@ -2378,7 +2376,7 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 
-/* Multi-language setting in avatar dropdown and workspace footer */
+/* Cài đặt đa ngôn ngữ trong menu ảnh đại diện và chân trang không gian làm việc */
 .portal-avatar-settings-block {
   padding: 10px 12px;
   margin-bottom: 6px;

@@ -128,7 +128,7 @@ it('tags the current plan and offers re-applying a history plan after confirmati
 
   await click(buttonIn(old, 'Áp dụng lại'));
   expect(reapply).not.toHaveBeenCalled();
-  // Only this coach's active plan is named as moving to history, not the other coach's.
+  // Chỉ giáo án đang áp dụng của HLV này được nêu tên là chuyển sang lịch sử, không phải của HLV khác.
   expect(host.ownerDocument.body.textContent).toContain('Tăng cơ');
   expect(host.ownerDocument.body.textContent).not.toContain('"Yoga phục hồi" hiện tại');
   const confirmButton = [...host.ownerDocument.querySelectorAll('button')].find((b) => b.textContent === 'Áp dụng lại' && b.closest('dialog,[role="dialog"],[role="alertdialog"]'));

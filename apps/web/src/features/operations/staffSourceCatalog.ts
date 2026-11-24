@@ -1,4 +1,4 @@
-// Explicit source-owned UI copy. Never use this catalogue to translate API or user content.
+// Văn bản giao diện tường minh do mã nguồn sở hữu. Không bao giờ dùng bảng nhãn này để dịch dữ liệu API hoặc nội dung người dùng.
 export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Khôi phục tài khoản?": "Restore account?",
   "Khôi phục tài khoản": "Restore account",

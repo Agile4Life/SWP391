@@ -12,7 +12,7 @@ const content = {
   get summary() { return sourceText('Xây dựng sức mạnh và thể lực với các bài tập tạ.'); },
   programs: ['Kỹ thuật tập tạ', 'Sức mạnh toàn thân', 'Thể lực và sức bền'],
 };
-// The existing import remains stable; this section now uses a scrolling story rather than a deck.
+// Giữ tên import cũ ổn định; khu vực này nay dùng kiểu kể chuyện theo cuộn thay vì chồng thẻ.
 /**
  * Khu giới thiệu không gian Gym theo kiểu kể chuyện khi cuộn: bước nào ở giữa màn hình thì hiện ảnh tương ứng,
  * hỗ trợ focus bàn phím và giảm chuyển động.
@@ -53,7 +53,7 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
         show(index);
         return;
       }
-      // Match the reference's exit-before-enter transition; rapid scroll always selects the latest step.
+      // Khớp hiệu ứng rời trước khi vào của thiết kế tham chiếu; cuộn nhanh luôn chọn bước mới nhất.
       visuals[displayed].classList.add('is-leaving');
       if (!timer) timer = window.setTimeout(() => show(active), 500);
     };
@@ -69,7 +69,7 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
       section.style.setProperty('--sport-story-top', `${top}px`);
       observer?.disconnect();
       if (typeof IntersectionObserver !== 'undefined') {
-        // Vertical percentage root margins resolve against width; use pixels for a true middle 10% band.
+        // rootMargin theo phần trăm chiều dọc được tính theo chiều rộng; dùng pixel để có đúng dải 10% ở giữa màn hình.
         const inset = Math.round(window.innerHeight * .45);
         observer = new IntersectionObserver(entries => {
           entries.forEach(entry => {

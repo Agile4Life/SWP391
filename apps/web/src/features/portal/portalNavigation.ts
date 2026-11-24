@@ -129,7 +129,7 @@ export function getNavLabel(to: string, fallbackVi: string, lang: Language = 'vi
   return fallbackVi;
 }
 
-/** Short labels for the three frequent tasks; permissions still come from PORTAL_NAV. */
+/** Nhãn ngắn cho ba tác vụ thường dùng; quyền truy cập vẫn lấy từ PORTAL_NAV. */
 export const MOBILE_PRIMARY_NAV: Record<UserSession['role'], { to: string; label: string }[]> = {
   ADMIN: [
     { to: '/admin/users', label: 'Tài khoản' },

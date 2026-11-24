@@ -44,7 +44,7 @@
 .fit-sport-story-dots i.is-active { background: var(--fit-ink); }
 .fit-sport-story-inline { margin: 24px 0 0; }
 .fit-sport-story-inline figcaption { margin-top: 10px; font-size: 12px; color: var(--fit-muted); }
-/* Progressive enhancement: without an observer, all illustrations stay in the document. */
+/* Cải tiến tăng dần: khi không có observer, mọi hình minh họa vẫn giữ nguyên trong tài liệu. */
 .fit-sport-story:not(.is-enhanced) .fit-sport-story-layout { grid-template-columns: 1fr; gap: 0; }
 .fit-sport-story:not(.is-enhanced) .fit-sport-story-rail { display: none; }
 .fit-sport-story:not(.is-enhanced) .fit-sport-story-steps { padding-left: 0; }
@@ -81,7 +81,7 @@
   .fit-sport-story-step, .fit-sport-story-step:first-of-type { min-height: 0; padding: 36px 0; border-bottom: 1px solid var(--color-border-medium); }
 }
 
-/* Match the reference's type scale locally, above the landing's general heading rules. */
+/* Khớp thang cỡ chữ của thiết kế tham chiếu ở phạm vi cục bộ, ưu tiên hơn quy tắc tiêu đề chung của landing. */
 .fit-site--landing .fit-sport-story > .fit-section-heading h2 { font-size: clamp(38px, 5.4vw, 74px); font-weight: 800; line-height: 1; letter-spacing: -.005em; margin: 10px 0 22px; }
 .fit-site--landing .fit-sport-story > .fit-section-heading .fit-kicker { font-size: 15px; font-weight: 600; line-height: 1.5; letter-spacing: .12em; }
 .fit-site--landing .fit-sport-story-step h3 { font-size: clamp(28px, 3vw, 40px); font-weight: 700; line-height: 1.08; letter-spacing: normal; margin: 0 0 14px; }

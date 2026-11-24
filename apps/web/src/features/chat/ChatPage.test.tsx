@@ -81,7 +81,7 @@ it('coach and receptionist can start a chat with a member from the directory', a
     await render();
     expect(button('Cuộc trò chuyện mới')).toBeDefined();
     await act(async () => button('Cuộc trò chuyện mới').click());
-    // Staff look for a member, not for another receptionist/coach.
+    // Nhân sự tìm hội viên, không tìm lễ tân hoặc HLV khác.
     expect(host.textContent).toContain('Tìm hội viên');
     expect(host.textContent).not.toContain('Tìm lễ tân hoặc huấn luyện viên');
     await act(async () => host.querySelector<HTMLButtonElement>('button[data-contact-id="10"]')!.click());

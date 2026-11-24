@@ -1,5 +1,4 @@
 /* Mục đích: Kiểu cho các trang công khai (landing, đăng nhập, đăng ký, OTP) theo thiết kế SÖL Fitness; chỉ áp dụng trong layout công khai. */
-/* Public page styles, scoped to the active public layout. */
 html:has(.fit-site) {
   background: #202020;
   color-scheme: dark;
@@ -505,7 +504,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-footer-bottom { display: flex; justify-content: space-between; gap: 15px; border-top: 1px solid #ffffff1a; margin-top: 40px; padding-top: 20px; font-size: 12px; color: #a6a19c; }
 .fit-footer-watermark { font-size: clamp(44px, 13.5vw, 200px); font-weight: 800; letter-spacing: -.04em; line-height: .86; color: #ffffff09; text-align: center; white-space: nowrap; user-select: none; pointer-events: none; margin: 28px 0 -.12em; }
 
-/* Authentication shares the public palette; account, OAuth and OTP logic are unchanged. */
+/* Khu vực xác thực dùng chung bảng màu trang công khai; logic tài khoản, OAuth và OTP giữ nguyên. */
 .fit-auth { padding: 60px 8.5% 90px; display: grid; grid-template-columns: 1fr 1fr; gap: 9%; align-items: start; }
 .fit-auth-story h1 { font-size: clamp(36px, 4.2vw, 58px); font-weight: 800; letter-spacing: -.04em; line-height: 1.12; margin-top: 22px; }
 .fit-auth-story h1 em { color: var(--fit-salmon); font-style: normal; }
@@ -561,7 +560,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-auth .fit-auth-link { min-height: 32px; text-align: start; }
 .fit-auth button:disabled { opacity: .55; cursor: not-allowed; }
 
-/* Dedicated Trainer Story Page (/trainers/:trainerId) */
+/* Trang câu chuyện riêng của HLV (/trainers/:trainerId) */
 .fit-trainer-story-page { padding-bottom: 40px; }
 .fit-trainer-story-hero { padding-top: 36px; }
 .fit-trainer-story-topbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 28px; }
@@ -790,7 +789,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
   .fit-auth-photo, .fit-auth-facts, .fit-auth-note { display: none; }
   .fit-auth .luxury-login-container, .fit-auth-card { padding: 28px 22px !important; border-radius: 24px !important; }
 }
-/* Component entrances only: no pinned tracks or intercepted document scrolling. */
+/* Chỉ dùng hiệu ứng xuất hiện của từng component: không ghim track hay chặn cuộn tài liệu. */
 @keyframes fit-component-lift {
   from { opacity: 0; translate: 0 26px; }
   to { opacity: 1; translate: 0 0; }
@@ -908,7 +907,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
   .fit-site .fit-word > span { translate: none; }
 }
 
-/* Landing typography follows the membership-benefits reference. */
+/* Kiểu chữ trang landing theo thiết kế tham chiếu phần quyền lợi hội viên. */
 .fit-site--landing {
   --font-sans: var(--fit-font);
   --font-serif: var(--fit-font);
@@ -928,7 +927,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 .fit-site--landing :is(.fit-nav a, .fit-pill, .fit-text-link) { font-weight: 700; letter-spacing: -.015em; }
 .fit-site--landing :is(.fit-kicker, .fit-benefits-eyebrow) { font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
 
-/* Reserve the same grids while the public catalog is loading. */
+/* Giữ nguyên cấu trúc lưới trong lúc danh mục công khai đang tải. */
 .fit-catalog-skeleton { margin-top: 24px; }
 .fit-catalog-skeleton--packages .loading-skeleton__item { min-height: 405px; border-radius: 34px; padding: 25px; }
 .fit-catalog-skeleton--packages .loading-skeleton__media { width: 55%; height: 36px; }
@@ -940,7 +939,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
   .fit-catalog-skeleton--trainers .loading-skeleton__content { grid-template-columns: 1fr; }
 }
 
-/* A few salmon light sources, rather than a glow around every surface. */
+/* Chỉ đặt vài điểm sáng màu salmon có chủ đích thay vì phát sáng quanh mọi bề mặt. */
 :root:not([data-theme='light']) .fit-site {
   --fit-led-edge: var(--sol-led-edge);
   --fit-led-glow: var(--sol-led-glow);
@@ -965,7 +964,7 @@ html:has(.fit-site)::-webkit-scrollbar-thumb:hover, .fit-site ::-webkit-scrollba
 }
 
 
-/* Multi-language setting in public footer & minimal auth header */
+/* Cài đặt đa ngôn ngữ ở chân trang công khai và phần đầu trang xác thực tối giản */
 :is(.fit-footer-bottom, .fit-header-actions) .scms-footer-lang-setting {
   display: inline-flex;
   align-items: center;

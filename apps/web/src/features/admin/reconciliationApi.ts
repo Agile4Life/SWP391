@@ -147,8 +147,7 @@ function requirePage<T>(res: PageResult<T> | null | undefined): PageResult<T> {
 
 /** Gom các hàm API đối soát thanh toán (chỉ ADMIN). */
 export const reconciliationApi = {
-  /** GET /admin/payments/reconciliation/summary (ADMIN) */
-  // Lấy tóm tắt đối soát và kiểm tra dữ liệu hợp lệ.
+  /** Lấy tóm tắt đối soát và kiểm tra dữ liệu hợp lệ (GET /admin/payments/reconciliation/summary, quyền ADMIN). */
   getSummary: async (filter: RangeFilter = {}): Promise<ReconciliationSummary> => {
     const res = await apiFetch<ReconciliationSummary>(`${BASE}/summary${query({ from: filter.from, to: filter.to })}`);
     if (!res || typeof res.staleAttempts !== 'number' || !res.anomalies) {
@@ -157,8 +156,7 @@ export const reconciliationApi = {
     return res;
   },
 
-  /** GET /admin/payments/reconciliation/attempts (ADMIN) */
-  // Lấy một trang lượt thanh toán VNPay theo bộ lọc.
+  /** Lấy một trang lượt thanh toán VNPay theo bộ lọc (GET /admin/payments/reconciliation/attempts, quyền ADMIN). */
   getAttempts: async (filter: AttemptFilter = {}): Promise<PageResult<VnpayAttemptRow>> =>
     requirePage(await apiFetch<PageResult<VnpayAttemptRow>>(`${BASE}/attempts${query({
       status: filter.status,
@@ -170,15 +168,13 @@ export const reconciliationApi = {
       size: filter.size ?? 20,
     })}`)),
 
-  /** GET /admin/payments/reconciliation/late-refunds (ADMIN) */
-  // Lấy một trang các khoản hoàn tiền trễ.
+  /** Lấy một trang các khoản hoàn tiền trễ (GET /admin/payments/reconciliation/late-refunds, quyền ADMIN). */
   getLateRefunds: async (filter: RangeFilter & PageFilter = {}): Promise<PageResult<LateRefundRow>> =>
     requirePage(await apiFetch<PageResult<LateRefundRow>>(`${BASE}/late-refunds${query({
       from: filter.from, to: filter.to, page: filter.page ?? 0, size: filter.size ?? 20,
     })}`)),
 
-  /** GET /admin/payments/reconciliation/ipn-events (ADMIN) */
-  // Lấy một trang sự kiện IPN theo bộ lọc.
+  /** Lấy một trang sự kiện IPN theo bộ lọc (GET /admin/payments/reconciliation/ipn-events, quyền ADMIN). */
   getIpnEvents: async (filter: IpnFilter = {}): Promise<PageResult<IpnEventRow>> =>
     requirePage(await apiFetch<PageResult<IpnEventRow>>(`${BASE}/ipn-events${query({
       rspCode: filter.rspCode,
@@ -190,8 +186,7 @@ export const reconciliationApi = {
       size: filter.size ?? 20,
     })}`)),
 
-  /** GET /admin/payments/reconciliation/payments/{id}/timeline (ADMIN) */
-  // Lấy dòng thời gian của một khoản thanh toán.
+  /** Lấy dòng thời gian của một khoản thanh toán (GET /admin/payments/reconciliation/payments/{id}/timeline, quyền ADMIN). */
   getTimeline: async (paymentId: number): Promise<PaymentTimeline> => {
     const res = await apiFetch<PaymentTimeline>(`${BASE}/payments/${paymentId}/timeline`);
     if (!res || !Array.isArray(res.entries)) {

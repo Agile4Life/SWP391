@@ -40,7 +40,7 @@ it('removes court navigation for every role and keeps PT', () => {
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/courts');
   expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch PT 1:1');
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/products');
-  // Staff court screen was cut too (manager/receptionist scope reduction).
+  // Màn hình quản lý sân của nhân sự cũng đã bị cắt bỏ (thu gọn phạm vi quản lý/lễ tân).
   expect(PORTAL_NAV.flatMap(portalNavRoutes)).not.toContain('/staff/courts');
 });
 
@@ -49,7 +49,7 @@ it('removes Shop navigation for members, staff and managers', () => {
   expect(member).not.toContain('/member/orders');
   expect(member).toContain('/member/packages');
   expect(member).toContain('/member/invoices');
-  // Staff orders and manager products were cut in the staff/manager scope reduction.
+  // Màn đơn hàng của nhân sự và sản phẩm của quản lý đã bị cắt bỏ khi thu gọn phạm vi nhân sự/quản lý.
   expect(PORTAL_NAV.filter(item => item.roles.includes('STAFF')).flatMap(portalNavRoutes)).not.toContain('/staff/orders');
   expect(PORTAL_NAV.filter(item => item.roles.includes('MANAGER')).flatMap(portalNavRoutes)).not.toContain('/manager/products');
 });
