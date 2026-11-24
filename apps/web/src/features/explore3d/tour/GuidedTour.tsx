@@ -27,7 +27,7 @@ export function GuidedTour() {
   const currentStep = TOUR_STEPS[safeIndex];
   const reducedMotion = prefersReducedMotion();
 
-  // Select node & sync level when tour step changes
+  // Chọn nút và đồng bộ tầng khi bước tour thay đổi
   useEffect(() => {
     if (!tourActive || !currentStep) return;
     selectNode(currentStep.nodeId, { syncLevel: true });
@@ -36,7 +36,7 @@ export function GuidedTour() {
     }
   }, [tourActive, safeIndex, currentStep, selectNode]);
 
-  // Auto-advance timer (disabled when paused or under prefers-reduced-motion)
+  // Bộ hẹn giờ tự chuyển bước (tắt khi tạm dừng hoặc khi bật prefers-reduced-motion)
   useEffect(() => {
     if (!tourActive || tourPaused || reducedMotion || !currentStep) return;
 
@@ -51,7 +51,7 @@ export function GuidedTour() {
     return () => window.clearTimeout(timer);
   }, [tourActive, tourPaused, reducedMotion, safeIndex, totalSteps, currentStep, setTourStep, stopTour]);
 
-  // Pause automatically if the user manually interacts with the canvas
+  // Tự động tạm dừng nếu người dùng thao tác thủ công lên canvas
   useEffect(() => {
     if (!tourActive || tourPaused) return;
 
@@ -196,7 +196,7 @@ export function GuidedTour() {
           )}
         </div>
 
-        {/* Step dots */}
+        {/* Các chấm chỉ báo bước */}
         <div
           role="tablist"
           aria-label={t('Các điểm dừng tham quan', 'Tour stops')}

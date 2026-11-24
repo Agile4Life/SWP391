@@ -81,14 +81,14 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
     focusLevel !== 'ALL' ? focusLevel : 'L1',
   );
 
-  // Sync activeLevel when focusLevel changes to a specific level
+  // Đồng bộ activeLevel khi focusLevel chuyển sang một tầng cụ thể
   useEffect(() => {
     if (focusLevel !== 'ALL') {
       setActiveLevel(focusLevel);
     }
   }, [focusLevel]);
 
-  // Also sync activeLevel if selectedId belongs to a level
+  // Đồng thời đồng bộ activeLevel nếu selectedId thuộc một tầng cụ thể
   useEffect(() => {
     if (!selectedId) return;
     const lvl = levelOf(SOL_CENTER_SCENE, selectedId);
@@ -97,7 +97,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
     }
   }, [selectedId]);
 
-  // Global keyboard shortcuts when 2D floor plan is active (0..5, F, R, Esc, /)
+  // Phím tắt toàn cục khi sơ đồ mặt bằng 2D đang hoạt động (0..5, F, R, Esc, /)
   useEffect(() => {
     // Phần tử có đang nhận chữ gõ không.
     const isTypingElement = (target: EventTarget | null): boolean => {
@@ -196,7 +196,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
       className="explore3d-floorplan-2d"
       data-testid="explore3d-floorplan-2d"
     >
-      {/* 2D Level Tabs */}
+      {/* Các tab chọn tầng 2D */}
       <div
         className="explore3d-floorplan-tabs"
         role="tablist"
@@ -226,7 +226,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
         })}
       </div>
 
-      {/* Interactive Architectural SVG */}
+      {/* Bản vẽ kiến trúc SVG tương tác */}
       <div className="explore3d-floorplan-canvas-wrap">
         <svg
           className="explore3d-floorplan-svg"
@@ -239,7 +239,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
               : `Sơ đồ mặt bằng kiến trúc 2D — ${levelNode.name.vi}`
           }
         >
-          {/* Level Slab Footprint */}
+          {/* Khung mặt sàn của tầng */}
           <polygon
             points={polygonToSvgPoints(levelNode.slabPolygon)}
             className="explore3d-svg-slab"
@@ -248,10 +248,10 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
             strokeWidth={0.22}
           />
 
-          {/* L1 Exterior Campus Forecourt: Car/EV Parking, Main Gate, Fountain & Motorbike Shelter */}
+          {/* Khuôn viên sân trước tầng L1: Bãi đỗ ô tô/EV, Cổng chính, Đài phun nước & Nhà xe máy */}
           {levelNode.code === 'L1' && (
             <g className="explore3d-svg-campus" data-testid="floorplan-campus-forecourt">
-              {/* Car & EV Solar Parking Court */}
+              {/* Khu đỗ ô tô & sạc EV mái năng lượng mặt trời */}
               <rect
                 x={-22}
                 y={16.8}
@@ -284,7 +284,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                 {t('P · BÃI ĐỖ Ô TÔ & SẠC EV', 'P · CAR & EV PARKING')}
               </text>
 
-              {/* Main Entrance Gate, Guard Booth & Porte-Cochère Drop-Off */}
+              {/* Cổng chính, bốt bảo vệ & sảnh đón trả khách Porte-Cochère */}
               <rect
                 x={0.5}
                 y={16.4}
@@ -316,7 +316,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                 {t('CỔNG CHÍNH SÖL · AN NINH 24/7', 'SÖL MAIN GATE · 24/7 SECURITY')}
               </text>
 
-              {/* Reflection Fountain & Solar Car/EV + Motorbike Parking */}
+              {/* Đài phun nước phản chiếu & bãi đỗ ô tô EV + xe máy */}
               <circle
                 cx={-1.8}
                 cy={19.6}
@@ -348,7 +348,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
             </g>
           )}
 
-          {/* Clickable Zones */}
+          {/* Các khu vực có thể bấm chọn */}
           {zones.map(zone => {
             const isZoneSelected = selectedId === zone.id;
             const zoneName = lang === 'en' ? zone.name.en : zone.name.vi;
@@ -380,7 +380,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
             );
           })}
 
-          {/* Architectural Walls */}
+          {/* Tường kiến trúc */}
           <g className="explore3d-svg-walls" pointerEvents="none">
             {walls.map(wall => (
               <line
@@ -402,7 +402,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
             ))}
           </g>
 
-          {/* Zone Items (Equipment & Courts) */}
+          {/* Đồ vật trong khu vực (Thiết bị & Sân) */}
           {zones.map(zone => {
             const items = itemsOfZone(SOL_CENTER_SCENE, zone.id);
             return items.map(item => {
@@ -471,7 +471,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
             });
           })}
 
-          {/* Hotspot Pins */}
+          {/* Ghim điểm nóng */}
           {zones.map(zone => {
             const hotspots = hotspotsOfZone(SOL_CENTER_SCENE, zone.id);
             return hotspots.map(hs => {
@@ -509,7 +509,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
             });
           })}
 
-          {/* Zone Labels (top layer with dark halo and smart hotspot avoidance) */}
+          {/* Nhãn khu vực (lớp trên cùng có viền tối và tự động tránh đè điểm nóng) */}
           <g className="explore3d-svg-zone-labels" pointerEvents="none">
             {zones.map(zone => {
               const isZoneSelected = selectedId === zone.id;
@@ -599,7 +599,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
         </svg>
       </div>
 
-      {/* Screen-reader and keyboard-accessible region listing zones & hotspots */}
+      {/* Vùng hỗ trợ trình đọc màn hình và bàn phím liệt kê khu vực và điểm nóng */}
       <div
         className="explore3d-floorplan-a11y-list"
         role="region"

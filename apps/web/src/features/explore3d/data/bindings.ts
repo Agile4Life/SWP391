@@ -183,7 +183,7 @@ export interface ResolvedItemBinding {
   visible: boolean;
   status: NormalizedItemStatus;
   liveName: string | null;
-  // Equipment binding properties
+  // Thuộc tính liên kết thiết bị
   equipmentCode: string | null;
   instanceSlot: number | null;
   quantity: number | null;
@@ -191,7 +191,7 @@ export interface ResolvedItemBinding {
   sceneSlots: number;
   overflowCount: number;
   overflowBadge: string | null;
-  // Court binding properties
+  // Thuộc tính liên kết sân
   courtName: string | null;
   courtStatus: NormalizedRoomStatus;
   availableSlotsToday: number | null;
@@ -335,12 +335,9 @@ function enrichCourtWithSlots(
 }
 
 /**
- * Gắn dữ liệu thật vào cảnh tĩnh (hàm thuần): đánh chỉ mục phòng/thiết bị/sân theo tên hoặc mã, rồi tính dữ
- * liệu cho từng khu vực và đồ vật; không bịa số liệu, snapshot rỗng hoặc lỗi thì hasLiveData là false.
- *
- * Pure function that resolves live center API records against the static 3D SceneDoc.
- * Never fabricates occupancy percentages or headcounts; marks `hasLiveData: false` when
- * the snapshot is empty or errored.
+ * Hàm thuần gắn các bản ghi API trực tiếp của trung tâm vào SceneDoc 3D tĩnh: đánh chỉ mục phòng/thiết bị/sân
+ * theo tên hoặc mã, rồi tính dữ liệu cho từng khu vực và đồ vật. Không bao giờ bịa tỷ lệ lấp đầy hay số lượng
+ * người; đánh dấu `hasLiveData: false` khi ảnh chụp rỗng hoặc bị lỗi.
  */
 export function resolveBindings(
   doc: SceneDoc,
@@ -358,21 +355,21 @@ export function resolveBindings(
   const coaches = hasError ? [] : (snapshot.coaches ?? []);
   const products = hasError ? [] : (snapshot.products ?? []);
 
-  // Index rooms by normalized name
+  // Đánh chỉ mục phòng theo tên đã chuẩn hóa
   const roomsByName = new Map<string, LiveRoomRecord>();
   for (const r of rawRooms) {
     const key = normalizeKey(r.name);
     if (key) roomsByName.set(key, r);
   }
 
-  // Index equipment by normalized code
+  // Đánh chỉ mục thiết bị theo mã đã chuẩn hóa
   const equipmentByCode = new Map<string, LiveEquipmentRecord>();
   for (const eq of rawEquipment) {
     const key = normalizeKey(eq.code);
     if (key) equipmentByCode.set(key, eq);
   }
 
-  // Enrich and index courts by normalized name
+  // Bổ sung khung giờ và đánh chỉ mục sân theo tên đã chuẩn hóa
   const enrichedCourts: LiveCourtSummary[] = rawCourts.map(c =>
     enrichCourtWithSlots(c, snapshot.courtSlotsByCourtId),
   );
@@ -382,7 +379,7 @@ export function resolveBindings(
     if (key) courtsByName.set(key, c);
   }
 
-  // Count how many scene item slots exist per equipmentCode across the entire SceneDoc
+  // Đếm số lượng ô đồ vật trong cảnh ứng với mỗi equipmentCode trên toàn bộ SceneDoc
   const sceneItems = allItems(doc);
   const totalSceneSlotsByCode = new Map<string, number>();
   for (const item of sceneItems) {
@@ -392,12 +389,12 @@ export function resolveBindings(
     }
   }
 
-  // Determine member tier for tier-lock computation
+  // Xác định hạng hội viên để tính trạng thái khóa theo hạng
   const activeMemberTier = isMembershipActive(membership)
     ? inferMembershipTier(membership?.tier || membership?.packageName)
     : null;
 
-  // Sort active upcoming sessions chronologically
+  // Sắp xếp các buổi học sắp diễn ra theo thứ tự thời gian
   const validSessions = rawSessions
     .filter(s => normalizeKey(s.status) !== 'cancelled')
     .slice()
@@ -407,7 +404,7 @@ export function resolveBindings(
       return a.startTime.localeCompare(b.startTime);
     });
 
-  // Resolve items
+  // Gắn dữ liệu cho từng đồ vật
   const resolvedItems: Record<string, ResolvedItemBinding> = {};
   for (const item of sceneItems) {
     resolvedItems[item.id] = resolveItemBinding(
@@ -419,7 +416,7 @@ export function resolveBindings(
     );
   }
 
-  // Resolve zones
+  // Gắn dữ liệu cho từng khu vực
   const resolvedZones: Record<string, ResolvedZoneBinding> = {};
   for (const zone of allZones(doc)) {
     resolvedZones[zone.id] = resolveZoneBinding(
@@ -622,11 +619,11 @@ function resolveZoneBinding(
 ): ResolvedZoneBinding {
   const zoneItems = itemsOfZone(doc, zone.id);
 
-  // 1. Room resolution
+  // 1. Khớp phòng tương ứng
   const boundRoomKey = normalizeKey(zone.liveBinding?.roomName);
   const matchedRoom = boundRoomKey ? (roomsByName.get(boundRoomKey) ?? null) : null;
 
-  // 2. Tier resolution & locking
+  // 2. Xác định hạng gói yêu cầu và khóa theo hạng
   const roomTier = inferMembershipTier(matchedRoom?.tier);
   const tierRequired: 'SILVER' | 'GOLD' | 'PLATINUM' | null =
     zone.liveBinding?.tierRequired ??
@@ -637,7 +634,7 @@ function resolveZoneBinding(
     tierLocked = TIER_RANK[activeMemberTier] < TIER_RANK[tierRequired];
   }
 
-  // 3. Equipment summary for all equipment bound to items in this zone
+  // 3. Tóm tắt thiết bị cho toàn bộ thiết bị được gắn vào đồ vật trong khu vực này
   const slotCountByCodeInZone = new Map<string, { rawCode: string; slots: number }>();
   for (const item of zoneItems) {
     if (item.liveEquipmentBinding) {
@@ -694,7 +691,7 @@ function resolveZoneBinding(
     groups,
   };
 
-  // 4. Courts summary for court zones
+  // 4. Tóm tắt danh sách sân cho các khu vực sân thể thao
   const matchedCourts: LiveCourtSummary[] = [];
   const seenCourtKeys = new Set<string>();
 
@@ -745,7 +742,7 @@ function resolveZoneBinding(
     courts: matchedCourts,
   };
 
-  // 5. Upcoming class sessions (up to 3 matching roomName or discipline)
+  // 5. Các buổi học sắp tới (tối đa 3 buổi khớp theo roomName hoặc bộ môn)
   const disciplineKey = normalizeKey(zone.liveBinding?.discipline);
   const upcomingSessions = validSessions
     .filter(s => {
@@ -755,7 +752,7 @@ function resolveZoneBinding(
     })
     .slice(0, 3);
 
-  // 6. Room status, capacity, location & open hours
+  // 6. Trạng thái phòng, sức chứa, vị trí & giờ mở cửa
   let roomStatus: NormalizedRoomStatus = 'unknown';
   if (matchedRoom) {
     roomStatus = normalizeRoomStatus(matchedRoom.status);

@@ -96,7 +96,7 @@ function WalkFrameLoop({
     const keys = keysRef.current;
     const isSearching = useExploreStore.getState().searchOpen;
 
-    // 1. Process continuous keyboard turn / pitch
+    // 1. Xử lý quay ngang / ngẩng cúi liên tục bằng bàn phím
     let turnInput = 0;
     let pitchInput = 0;
     if (!isSearching) {
@@ -119,7 +119,7 @@ function WalkFrameLoop({
       );
     }
 
-    // Exponential yaw & pitch damping
+    // Giảm chấn hàm mũ cho góc quay yaw và góc ngẩng pitch
     const lookDamp = 1 - Math.exp(-dt * 24);
     const smoothedYaw =
       currentPose.yaw +
@@ -129,7 +129,7 @@ function WalkFrameLoop({
       currentPitch +
       (targetLookRef.current.targetPitch - currentPitch) * lookDamp;
 
-    // 2. Process continuous translation inputs & exponential velocity damping
+    // 2. Xử lý đầu vào di chuyển liên tục và giảm chấn vận tốc hàm mũ
     let forwardInput = 0;
     let strafeInput = 0;
     if (!isSearching) {
@@ -171,7 +171,7 @@ function WalkFrameLoop({
     const dispX = velocityRef.current.vx * dt;
     const dispZ = velocityRef.current.vz * dt;
 
-    // 3. Unified continuous 3D walk + zero-stick wall slide + elevation-locked stair solver
+    // 3. Bộ giải đi bộ 3D liên tục hợp nhất + trượt tường không kẹt + cầu thang khóa theo cao độ
     const stepped = stepContinuousWalkPose3D(
       SOL_CENTER_SCENE,
       currentPose,
@@ -185,12 +185,12 @@ function WalkFrameLoop({
     const posZ = stepped.pose.position[2];
     const targetY = stepped.targetEyeY;
 
-    // Vertical spring damping (~40ms response) for silky-smooth tread climbing without jitter
+    // Giảm chấn lò xo theo trục dọc (phản hồi ~40ms) giúp leo bậc thang mượt mà không bị giật
     const vDamp = 1 - Math.exp(-dt * 24);
     const posY = currentPose.position[1] + (targetY - currentPose.position[1]) * vDamp;
 
     if (stepped.pose.levelCode !== currentPose.levelCode) {
-      // Synchronize floor pill in store without resetting camera pose or losing momentum
+      // Đồng bộ nhãn tầng trong store mà không đặt lại tư thế camera hay làm mất quán tính
       useExploreStore.getState().syncWalkLevel(stepped.pose.levelCode);
     }
 
@@ -201,10 +201,10 @@ function WalkFrameLoop({
       pitch: smoothedPitch,
     };
 
-    // 5. Commit updated pose to ref
+    // 5. Ghi nhận tư thế đã cập nhật vào ref
     poseRef.current = candidatePose;
 
-    // 6. Update Three.js camera & headlamp directly at 60+ FPS
+    // 6. Cập nhật trực tiếp camera Three.js và đèn đầu ở tốc độ 60+ FPS
     const cam = state.camera;
     cam.position.set(posX, posY, posZ);
 
@@ -232,7 +232,7 @@ function WalkFrameLoop({
       headlampRef.current.position.set(posX, posY + 0.35, posZ);
     }
 
-    // Keep invalidating while moving or damping
+    // Tiếp tục gọi invalidate trong khi đang di chuyển hoặc đang giảm chấn
     const isMoving =
       Math.hypot(velocityRef.current.vx, velocityRef.current.vz) > 0.001 ||
       forwardInput !== 0 ||
@@ -478,7 +478,7 @@ export function WalkController() {
     [commitWalkPose],
   );
 
-  // Initialize walk pose when entering walkMode or switching level externally
+  // Khởi tạo tư thế đi bộ khi vào chế độ walkMode hoặc khi chuyển tầng từ bên ngoài
   useEffect(() => {
     if (!walkMode) {
       poseRef.current = null;
@@ -489,7 +489,7 @@ export function WalkController() {
         try {
           document.exitPointerLock?.();
         } catch {
-          // ignore
+          // bỏ qua
         }
       }
       return;
@@ -497,8 +497,8 @@ export function WalkController() {
 
     const activeLevel: LevelCode = focusLevel === 'ALL' ? 'L1' : focusLevel;
 
-    // If this effect was triggered by an internal portal transition:
-    // If poseRef is already on activeLevel and selectedId has not changed, do NOT reinitialize!
+    // Nếu effect này được kích hoạt bởi chuyển tầng nội bộ qua cầu thang/lối thông:
+    // Nếu poseRef đã ở đúng activeLevel và selectedId không đổi thì KHÔNG khởi tạo lại!
     if (
       poseRef.current &&
       poseRef.current.levelCode === activeLevel &&
@@ -532,7 +532,7 @@ export function WalkController() {
     commitWalkPose(initialPose);
   }, [walkMode, focusLevel, selectedId, commitWalkPose]);
 
-  // Keyboard controls, pointer lock / drag 360° look, wheel step, and floor teleport click
+  // Điều khiển bàn phím, khóa con trỏ / kéo xoay góc nhìn 360°, cuộn chuột bước đi và bấm lên sàn để dịch chuyển
   useEffect(() => {
     if (!walkMode) return;
 
@@ -552,7 +552,7 @@ export function WalkController() {
           try {
             document.exitPointerLock?.();
           } catch {
-            // ignore
+            // bỏ qua
           }
           return;
         }
@@ -670,7 +670,7 @@ export function WalkController() {
           try {
             void canvas.requestPointerLock();
           } catch {
-            // ignore
+            // bỏ qua
           }
         }
       }

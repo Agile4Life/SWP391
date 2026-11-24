@@ -231,11 +231,8 @@ export function hasHalfFloatTargets(gl: THREE.WebGLRenderer): boolean {
 }
 
 /**
- * Bộ kết xuất hậu kỳ HDR theo kiểu mệnh lệnh: giữ mọi render target và vật liệu, React chỉ tạo/hủy và chuyển
- * khung hình.
- *
- * Imperative HDR post chain (Saltline-style). Owns all render targets and
- * materials; React only creates/disposes it and forwards frames.
+ * Chuỗi hậu kỳ HDR theo kiểu mệnh lệnh (phong cách Saltline): sở hữu toàn bộ render target và vật liệu;
+ * React chỉ tạo/giải phóng nó và chuyển tiếp từng khung hình.
  */
 export class CinematicRenderer {
   private readonly p: Pipeline;
@@ -249,7 +246,7 @@ export class CinematicRenderer {
     this.p = createPipeline(cfg, hdrType);
   }
 
-  /** Falls back to forward rendering for good if any program fails to compile. */
+  /** Quay về kết xuất forward vĩnh viễn nếu có bất kỳ chương trình shader nào biên dịch lỗi. */
   attach(gl: THREE.WebGLRenderer, onFail: () => void) {
     const prev = gl.debug.onShaderError;
     gl.debug.onShaderError = (ctx, program, vs, fs) => {
@@ -265,7 +262,7 @@ export class CinematicRenderer {
     };
   }
 
-  /** Time-of-day inputs for the haze (linear colours, world-space sun direction). */
+  /** Tham số thời điểm trong ngày cho lớp sương mù (màu tuyến tính, hướng mặt trời trong không gian thế giới). */
   setAtmosphere(a: {
     sunDir: THREE.Vector3;
     fogColor: readonly [number, number, number];
@@ -333,7 +330,7 @@ export class CinematicRenderer {
     info.autoReset = false;
     info.reset();
 
-    // 1. Scene → HDR (MSAA) with depth texture.
+    // 1. Cảnh → HDR (MSAA) kèm texture độ sâu.
     gl.setRenderTarget(p.scene);
     gl.clear();
     gl.render(scene, camera);
@@ -346,7 +343,7 @@ export class CinematicRenderer {
       ? (camera as THREE.PerspectiveCamera)
       : null;
 
-    // 2. Half-res SSAO → depth-aware blur H/V → composite with bilateral upsample.
+    // 2. SSAO nửa độ phân giải → làm mờ ngang/dọc theo độ sâu → ghép cảnh bằng bilateral upsample.
     if (cfg.ao.enabled && persp && depth) {
       const tanHalf = Math.tan(THREE.MathUtils.degToRad(persp.fov) / 2) / (persp.zoom || 1);
       const su = m.ssao.uniforms;
@@ -377,7 +374,7 @@ export class CinematicRenderer {
       hdr = p.composite.texture;
     }
 
-    // 3. Dual-filter bloom: 6 downsamples (Karis on the first), 5 tent upsamples.
+    // 3. Bloom lọc kép: 6 bước hạ mẫu (dùng Karis ở bước đầu), 5 bước nâng mẫu tent.
     let bloomTex: THREE.Texture | null = null;
     if (cfg.bloom.enabled) {
       const du = m.down.uniforms;
@@ -404,7 +401,7 @@ export class CinematicRenderer {
       }
       bloomTex = p.up[0].texture;
 
-      // Anamorphic streak from the third bloom level: thresholded, then widened.
+      // Vệt sáng anamorphic từ tầng bloom thứ ba: lọc ngưỡng rồi mở rộng.
       if (cfg.bloom.streak > 0) {
         const st = m.streak.uniforms;
         const src2 = p.down[2];
@@ -419,7 +416,7 @@ export class CinematicRenderer {
       }
     }
 
-    // 4. Grade → LDR.
+    // 4. Chỉnh màu điện ảnh → LDR.
     const gu = m.grade.uniforms;
     gu.tScene.value = hdr;
     gu.tDepth.value = depth;
@@ -430,7 +427,7 @@ export class CinematicRenderer {
     gu.uCamPos.value.setFromMatrixPosition(camera.matrixWorld);
     pass(m.grade, p.ldr);
 
-    // 5. FXAA + sharpen + grain + dither, upscaled to the drawing buffer.
+    // 5. FXAA + làm nét + nhiễu hạt + dither, phóng to lên drawing buffer.
     const fu = m.final.uniforms;
     fu.tInput.value = p.ldr.texture;
     fu.uTexel.value.set(1 / w, 1 / h);
@@ -438,7 +435,7 @@ export class CinematicRenderer {
     fu.uTime.value = (fu.uTime.value + Math.min(delta, 0.1)) % 1000;
     pass(m.final, null);
 
-    // Keep perf telemetry/bench budgets about the scene, not the fullscreen passes.
+    // Giữ số liệu hiệu năng/ngân sách benchmark phản ánh riêng cảnh 3D, không tính các pass toàn màn hình.
     info.render.calls = sceneCalls;
     info.render.triangles = sceneTriangles;
     info.autoReset = prevAutoReset;

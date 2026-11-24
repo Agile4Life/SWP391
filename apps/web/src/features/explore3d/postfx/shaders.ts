@@ -1,8 +1,8 @@
 /**
- * GLSL for the Explore 3D cinematic pipeline. Techniques follow the Saltline
- * render study: IGN-rotated sampling, depth-aware blurs, bilateral upsample,
- * Karis-averaged 13-tap bloom, ACES/AgX blend, teal–orange split tone,
- * FXAA + edge-aware sharpen + luminance-weighted grain + dither.
+ * Các đoạn mã GLSL cho chuỗi hậu kỳ điện ảnh của Explore 3D. Các kỹ thuật bám theo nghiên cứu kết xuất
+ * Saltline: lấy mẫu xoay theo IGN, làm mờ theo độ sâu, bilateral upsample,
+ * bloom 13 mẫu có trung bình Karis, pha trộn ACES/AgX, tách tông xanh lam–cam,
+ * FXAA + làm nét theo cạnh + nhiễu hạt theo độ sáng + dither.
  */
 
 export const FULLSCREEN_VERT = /* glsl */ `
@@ -35,7 +35,7 @@ float slLinearDepth(float d) {
 }
 `;
 
-/** Half-res SSAO. Output: r = AO, g = linear depth (for depth-aware blur/upsample). */
+/** SSAO nửa độ phân giải. Đầu ra: r = AO, g = độ sâu tuyến tính (dùng cho bước làm mờ/nâng mẫu theo độ sâu). */
 export const SSAO_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -115,7 +115,7 @@ void main() {
 }
 `;
 
-/** 7-tap separable blur that never crosses depth discontinuities. */
+/** Bộ làm mờ tách chiều 7 mẫu, không bao giờ băng qua ranh giới gián đoạn độ sâu. */
 export const DEPTH_BLUR_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -137,7 +137,7 @@ void main() {
 }
 `;
 
-/** Applies AO (bilateral upsample) to the HDR scene. AO only occludes ambient-ish light. */
+/** Áp dụng AO (nâng mẫu bilateral) vào cảnh HDR. AO chủ yếu chỉ che khuất ánh sáng môi trường. */
 export const COMPOSITE_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -182,7 +182,7 @@ void main() {
 }
 `;
 
-/** 13-tap downsample (Jimenez 2014). First level uses partial Karis average against fireflies. */
+/** Hạ mẫu 13 điểm (Jimenez 2014). Tầng đầu dùng trung bình Karis từng phần để chống đốm sáng (fireflies). */
 export const BLOOM_DOWN_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -215,7 +215,7 @@ void main() {
 }
 `;
 
-/** 3×3 tent upsample of the lower level, blended with the current level. */
+/** Nâng mẫu tent 3×3 từ tầng thấp hơn rồi hòa trộn với tầng hiện tại. */
 export const BLOOM_UP_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -239,7 +239,7 @@ void main() {
 }
 `;
 
-/** Filmic grade → LDR (sRGB in rgb, luma in alpha for FXAA). */
+/** Chỉnh màu điện ảnh → LDR (sRGB ở kênh rgb, độ sáng luma ở kênh alpha cho FXAA). */
 export const GRADE_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -375,7 +375,7 @@ void main() {
 }
 `;
 
-/** FXAA → edge-aware unsharp mask → luminance-weighted film grain → dither. Upscales to screen. */
+/** FXAA → làm nét unsharp mask theo cạnh → nhiễu hạt phim theo độ sáng → dither. Phóng to ra màn hình. */
 export const FINAL_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;
@@ -432,7 +432,7 @@ void main() {
 }
 `;
 
-/** Horizontal 15-tap Gaussian for the anamorphic streak; the first pass thresholds. */
+/** Bộ lọc Gaussian 15 mẫu theo chiều ngang cho vệt sáng anamorphic; lượt đầu tiên thực hiện lọc ngưỡng. */
 export const STREAK_FRAG = /* glsl */ `
 precision highp float;
 varying vec2 vUv;

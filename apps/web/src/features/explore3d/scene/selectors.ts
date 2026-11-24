@@ -338,7 +338,7 @@ export function search(doc: SceneDoc, rawQuery: string): SearchHit[] {
   }
 
   if (!q) {
-    // Return top zones & primary hotspots when query is empty
+    // Trả về các khu vực hàng đầu và điểm nóng chính khi từ khóa trống
     return hits.filter(h => h.nodeType === 'zone' || h.nodeType === 'hotspot').slice(0, 16);
   }
 
@@ -351,10 +351,8 @@ export function search(doc: SceneDoc, rawQuery: string): SearchHit[] {
 }
 
 /**
- * Tìm nút theo khóa trên URL: id, mã khu vực, tên song ngữ hoặc tên phòng.
- *
- * Resolves a deep-link parameter (`focus` or `item`) by node id, zone code, room name,
- * court name, or equipment code so cross-feature links from `/member/courts` and `/member/classes` work seamlessly.
+ * Giải mã tham số deep-link (`focus` hoặc `item`) theo id nút, mã khu vực, tên phòng,
+ * tên sân hoặc mã thiết bị để các liên kết chéo từ `/member/courts` và `/member/classes` hoạt động mượt mà.
  */
 export function resolveDeepLinkNode(doc: SceneDoc, key: string | null | undefined): SceneNode | null {
   if (!key) return null;
@@ -367,7 +365,7 @@ export function resolveDeepLinkNode(doc: SceneDoc, key: string | null | undefine
 
   const normalized = normalizeSearchText(trimmed);
 
-  // Match zone code, id, bilingual name, or roomName
+  // Khớp theo mã khu vực, id, tên song ngữ hoặc roomName
   for (const z of allZones(doc)) {
     if (
       normalizeSearchText(z.code) === normalized ||
@@ -380,7 +378,7 @@ export function resolveDeepLinkNode(doc: SceneDoc, key: string | null | undefine
     }
   }
 
-  // Match item id, bilingual name, courtName, or equipmentCode (slot 0)
+  // Khớp theo id đồ vật, tên song ngữ, courtName hoặc equipmentCode (slot 0)
   for (const item of allItems(doc)) {
     if (
       normalizeSearchText(item.id) === normalized ||
@@ -395,7 +393,7 @@ export function resolveDeepLinkNode(doc: SceneDoc, key: string | null | undefine
     }
   }
 
-  // Match hotspot id or bilingual title
+  // Khớp theo id điểm nóng hoặc tiêu đề song ngữ
   for (const hs of allHotspots(doc)) {
     if (
       normalizeSearchText(hs.id) === normalized ||
@@ -406,7 +404,7 @@ export function resolveDeepLinkNode(doc: SceneDoc, key: string | null | undefine
     }
   }
 
-  // Match level id or code
+  // Khớp theo id hoặc mã tầng
   for (const lvl of getLevels(doc)) {
     if (
       normalizeSearchText(lvl.id) === normalized ||

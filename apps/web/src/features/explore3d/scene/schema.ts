@@ -37,9 +37,9 @@ export interface Viewpoint {
   id: string;
   label?: BilingualText;
   kind: ViewpointKind;
-  position: Vec3; // world space
-  target: Vec3;   // world space
-  fov?: number;   // default 38
+  position: Vec3; // không gian thế giới
+  target: Vec3;   // không gian thế giới
+  fov?: number;   // mặc định 38
 }
 
 /** Nút gốc của khu đất: tên, kích thước, nút con và các góc nhìn. */
@@ -48,7 +48,7 @@ export interface SiteNode {
   type: 'site';
   parentId: null;
   name: BilingualText;
-  bounds: [number, number]; // [64, 48] meters
+  bounds: [number, number]; // [64, 48] mét
   children: string[];
   viewpoints: Viewpoint[];
 }
@@ -76,12 +76,12 @@ export interface LevelNode {
   order: number;
   name: BilingualText;
   subtitle: BilingualText;
-  elevation: number;      // base Y in stacked mode (m)
-  explodedOffset: number; // extra Y in exploded mode (m)
-  height: number;         // wall height (m)
+  elevation: number;      // cao độ Y gốc ở chế độ xếp chồng (m)
+  explodedOffset: number; // cao độ Y cộng thêm ở chế độ tách tầng (m)
+  height: number;         // chiều cao tường (m)
   slabThickness: number;  // 0.28 m
-  slabPolygon: Vec2[];    // local XZ polygon
-  children: string[];     // zone/wall/hotspot ids
+  slabPolygon: Vec2[];    // đa giác XZ cục bộ
+  children: string[];     // id các khu vực/tường/điểm nóng
   viewpoints: Viewpoint[];
 }
 
@@ -97,12 +97,12 @@ export interface ZoneLiveBinding {
 export interface ZoneNode {
   id: string;
   type: 'zone';
-  parentId: string; // level id
+  parentId: string; // id tầng
   code: string;
   name: BilingualText;
   description: BilingualText;
   category: ZoneCategory;
-  polygon: Vec2[]; // local XZ vertices (CCW)
+  polygon: Vec2[]; // các đỉnh XZ cục bộ (ngược chiều kim đồng hồ - CCW)
   floorMaterial:
     | 'rubber-dark'
     | 'hardwood'
@@ -114,28 +114,28 @@ export interface ZoneNode {
     | 'tatami';
   accentColor?: string;
   liveBinding?: ZoneLiveBinding;
-  viewpoints: Viewpoint[]; // must include at least 1 'hero'
-  children: string[];      // item ids + hotspot ids
+  viewpoints: Viewpoint[]; // phải có ít nhất 1 góc nhìn 'hero'
+  children: string[];      // id đồ vật + id điểm nóng
 }
 
 /** Một lỗ mở trên tường: cửa, cửa đôi, cửa kính, cửa sổ hoặc vòm, kèm vị trí và kích thước. */
 export interface WallOpening {
   id: string;
   kind: 'door' | 'double-door' | 'glass-door' | 'window' | 'arch';
-  offset: number;     // distance from `start` along wall (m)
+  offset: number;     // khoảng cách từ `start` dọc theo tường (m)
   width: number;      // m
   height: number;     // m
-  sillHeight: number; // 0 for doors, >0 for windows
+  sillHeight: number; // 0 cho cửa đi, >0 cho cửa sổ
 }
 
 /** Nút tường: hai đầu, độ dày, chiều cao, vật liệu, tường ngoài hay trong và các lỗ mở. */
 export interface WallNode {
   id: string;
   type: 'wall';
-  parentId: string; // level id
+  parentId: string; // id tầng
   start: Vec2;
   end: Vec2;
-  thickness: number; // 0.18 exterior, 0.12 interior
+  thickness: number; // 0.18 tường ngoài, 0.12 tường trong
   height: number;
   material: 'concrete' | 'glass' | 'accent-salmon' | 'wood-slat';
   exterior: boolean;
@@ -183,26 +183,26 @@ export type ItemKind =
 
 /** Liên kết đồ vật với trạng thái thiết bị thật. */
 export interface ItemLiveEquipmentBinding {
-  equipmentCode: string; // e.g., 'EQ-RUN-01', 'EQ-VIP-INBODY-01'
-  instanceSlot: number;  // 0..quantity-1
+  equipmentCode: string; // ví dụ: 'EQ-RUN-01', 'EQ-VIP-INBODY-01'
+  instanceSlot: number;  // chỉ số từ 0..quantity-1
 }
 
 /** Liên kết đồ vật (sân) với trạng thái sân thật. */
 export interface ItemLiveCourtBinding {
-  courtName: string; // e.g., 'Sân Cầu lông 01', 'Sân Tennis 01', 'Làn bơi 01'
+  courtName: string; // ví dụ: 'Sân Cầu lông 01', 'Sân Tennis 01', 'Làn bơi 01'
 }
 
 /** Nút đồ vật: loại, vị trí, xoay, kích thước và liên kết dữ liệu thật. */
 export interface ItemNode {
   id: string;
   type: 'item';
-  parentId: string; // zone id
+  parentId: string; // id khu vực
   kind: ItemKind;
   name: BilingualText;
-  position: Vec3; // local to level (x, y, z)
-  rotationY: number; // radians
+  position: Vec3; // cục bộ theo tầng (x, y, z)
+  rotationY: number; // radian
   scale?: Vec3;
-  dimensions: Vec3; // [width, height, depth] in meters for selection & fitToBox
+  dimensions: Vec3; // [rộng, cao, sâu] tính bằng mét để chọn & fitToBox
   variant?: 'standard' | 'vip';
   liveEquipmentBinding?: ItemLiveEquipmentBinding;
   liveCourtBinding?: ItemLiveCourtBinding;
@@ -236,8 +236,8 @@ export type HotspotAction =
 export interface HotspotNode {
   id: string;
   type: 'hotspot';
-  parentId: string; // zone id or level id
-  position: Vec3;   // world space or level-local with level y added; stored in world space for direct placement
+  parentId: string; // id khu vực hoặc id tầng
+  position: Vec3;   // không gian thế giới hoặc cục bộ theo tầng đã cộng cao độ Y; lưu theo không gian thế giới để đặt trực tiếp
   title: BilingualText;
   subtitle: BilingualText;
   badge?: string;
@@ -294,7 +294,7 @@ export interface SceneDoc {
   nodes: Record<string, SceneNode>;
 }
 
-// --- Zod Schemas ---
+// --- Schema Zod ---
 
 const Vec2Schema = z.tuple([z.number(), z.number()]);
 const Vec3Schema = z.tuple([z.number(), z.number(), z.number()]);

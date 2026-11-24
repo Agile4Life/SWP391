@@ -92,7 +92,7 @@ export function saveExploreSessionView(view: PersistedExploreView): void {
   try {
     sessionStorage.setItem(EXPLORE3D_SESSION_KEY, JSON.stringify(view));
   } catch {
-    // Ignore storage quota / privacy mode errors
+    // Bỏ qua lỗi vượt hạn mức lưu trữ hoặc chế độ riêng tư
   }
 }
 

@@ -26,7 +26,7 @@ export function ExploreSearchModal() {
   // Kết quả tìm kiếm theo từ khóa hiện tại.
   const hits = useMemo(() => search(SOL_CENTER_SCENE, query), [query]);
 
-  // Global `/` shortcut to open search modal
+  // Phím tắt toàn cục `/` để mở hộp tìm kiếm
   useEffect(() => {
     // Phím / mở hộp tìm (khi không đang gõ ở nơi khác) và Esc đóng hộp.
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {

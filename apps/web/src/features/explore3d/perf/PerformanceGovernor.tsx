@@ -10,7 +10,7 @@ const SLOW_WINDOW_THRESHOLD_MS = 30;
 const FAST_WINDOW_THRESHOLD_MS = 20;
 const DOWNGRADE_CONSECUTIVE_WINDOWS = 4;
 const UPGRADE_CONSECUTIVE_WINDOWS = 2;
-/** After a downgrade, stay put: flipping tiers back and forth recompiles shaders and reallocates shadow maps. */
+/** Sau khi hạ mức chất lượng thì giữ nguyên tạm thời: đảo mức qua lại liên tục sẽ biên dịch lại shader và cấp phát lại shadow map. */
 export const UPGRADE_COOLDOWN_MS = 20_000;
 
 /** Cấu hình theo mức chất lượng: DPR và bật/tắt bóng đổ. */
@@ -80,7 +80,7 @@ export function PerformanceGovernor() {
   }, [setDpr, tier, config.dpr]);
 
   useFrame((state, delta) => {
-    // Ignore demand-loop sleep/idle intervals (> 120ms) for quality tier governance
+    // Bỏ qua các khoảng nghỉ/nhàn rỗi của vòng lặp demand (> 120ms) khi điều tiết mức chất lượng
     if (delta > 0 && delta <= MAX_ACTIVE_DELTA_SEC) {
       windowFramesRef.current += 1;
       windowDeltaMsRef.current += delta * 1000;
@@ -123,7 +123,7 @@ export function PerformanceGovernor() {
       }
     }
 
-    // Clamp delta to ignore demand-loop idle intervals (> 120ms) for HUD telemetry
+    // Giới hạn delta để bỏ qua các khoảng nhàn rỗi của vòng lặp demand (> 120ms) khi đo thông số HUD
     const activeDeltaSec = delta > 0 && delta <= MAX_ACTIVE_DELTA_SEC ? delta : 1 / 60;
     frameCountRef.current += 1;
     accumulatedDeltaSecRef.current += activeDeltaSec;
@@ -150,7 +150,7 @@ export function PerformanceGovernor() {
     frameCountRef.current = 0;
     accumulatedDeltaSecRef.current = 0;
 
-    // Update store metrics without calling invalidate()
+    // Cập nhật chỉ số hiệu năng vào store mà không gọi invalidate()
     useExploreStore.getState().setPerfMetrics({
       fps,
       frameTimeMs,

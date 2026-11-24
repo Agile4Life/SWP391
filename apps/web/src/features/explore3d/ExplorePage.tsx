@@ -30,7 +30,7 @@ export function ExplorePage() {
   const perfEnabled = Boolean(parsedParams.perf || parsedParams.bench);
   const benchEnabled = Boolean(parsedParams.bench);
 
-  // Sync URL deep-link params or restore previous session view on mount / param change
+  // Đồng bộ tham số deep-link từ URL hoặc khôi phục góc nhìn của phiên trước khi mount / tham số thay đổi
   useEffect(() => {
     const parsed = parseExploreSearchParams(searchParams);
     const hasUrlOverrides = Boolean(
