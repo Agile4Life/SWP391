@@ -5,7 +5,12 @@ import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-/** Entity mapping table center_checkins (schema is generated code-first by Hibernate). */
+/**
+ * Bảng center_checkins: một lượt ra vào cổng (hội viên, giờ vào/ra, cách thức, người ghi nhận, cổng, kết quả
+ * GRANTED/DENIED, lý do từ chối, ghi chú).
+ *
+ * Entity mapping table center_checkins (schema is generated code-first by Hibernate).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_checkins_method", constraints = "method IN ('qr','manual')")
 @org.hibernate.annotations.Check(name = "ck_checkins_status", constraints = "status IN ('GRANTED','DENIED')")

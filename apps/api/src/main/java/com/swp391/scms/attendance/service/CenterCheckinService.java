@@ -31,6 +31,9 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
+ * Nghiệp vụ ra vào cổng: chỉ cho vào khi gói đang hiệu lực; ghi lại mọi lượt quét (được vào hay bị từ chối) với
+ * giờ server; chống quẹt hộ (anti-passback) khi hội viên đã ở trong mà chưa ra; tự đóng lượt bị treo quá 8 giờ.
+ *
  * Service managing center access QR check-in, checkout, audit trail and daily history (SCRUM-75).
  */
 @Service
@@ -58,6 +61,7 @@ public class CenterCheckinService {
     private final DynamicQrService dynamicQrService;
     private final GateQrService gateQrService;
 
+    /** Constructor cho test với các phụ thuộc tối thiểu. */
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
@@ -66,6 +70,7 @@ public class CenterCheckinService {
         this(checkins, subscriptions, users, members, clock, null, new DynamicQrService());
     }
 
+    /** Constructor cho test có MessageService. */
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
@@ -75,6 +80,7 @@ public class CenterCheckinService {
         this(checkins, subscriptions, users, members, clock, messageService, new DynamicQrService());
     }
 
+    /** Constructor cho test có DynamicQrService. */
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
                                 UserRepository users,
@@ -86,6 +92,7 @@ public class CenterCheckinService {
                 new GateQrService(java.util.UUID.randomUUID().toString()));
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public CenterCheckinService(CenterCheckinRepository checkins,
                                 MembershipSubscriptionRepository subscriptions,
@@ -102,12 +109,17 @@ public class CenterCheckinService {
         this.gateQrService = gateQrService;
     }
 
+    /** Quầy lấy mã QR cổng có chữ ký (chỉ nhân viên). */
     @Transactional(readOnly = true)
     public com.swp391.scms.attendance.dto.CheckinResponses.GateQrDto gateQr(AuthenticatedPrincipal principal, String gateId) {
         ensureStaff(principal);
         return gateQrService.generate(gateId, clock.millis());
     }
 
+    /**
+     * Hội viên tự quét QR cổng: QR cổng sai/hết hạn thì ghi lượt bị từ chối; không có gói hiệu lực hôm nay thì
+     * từ chối; hợp lệ thì xét cho vào.
+     */
     @Transactional
     public CheckinDto selfScan(AuthenticatedPrincipal principal, CheckinRequests.SelfScan request) {
         if (principal == null || !"MEMBER".equalsIgnoreCase(principal.role())) {
@@ -137,7 +149,12 @@ public class CenterCheckinService {
         return recordEntry(subscription.get(), now, gate, recorder);
     }
 
-    /** Member leaves the center by scanning a valid gate QR; closes their own open GRANTED visit. */
+    /**
+     * Hội viên tự quét QR cổng để ra: đóng lượt GRANTED đang mở của chính mình; không có lượt đang mở thì báo
+     * lỗi.
+     *
+     * Member leaves the center by scanning a valid gate QR; closes their own open GRANTED visit.
+     */
     @Transactional
     public CheckinDto selfCheckout(AuthenticatedPrincipal principal, CheckinRequests.SelfScan request) {
         if (principal == null || !"MEMBER".equalsIgnoreCase(principal.role())) {
@@ -154,6 +171,7 @@ public class CenterCheckinService {
         return toDto(checkins.saveAndFlush(open));
     }
 
+    /** Dịch mã lý do; không dịch được thì giữ nguyên mã. */
     private String resolveMessage(String key) {
         return messageService != null ? messageService.getMessageOrDefault(key, key) : key;
     }
@@ -205,6 +223,11 @@ public class CenterCheckinService {
         return recordEntry(subOpt.get(), now, request.gate(), recorder);
     }
 
+    /**
+     * Xét cho vào: khóa dòng hội viên để các lượt quét song song xếp hàng; từ chối nếu không thấy hội viên, tài
+     * khoản không active, gói chưa active/chưa tới ngày/đã hết hạn, hoặc hội viên đang ở trong trung tâm. Hợp
+     * lệ thì ghi lượt GRANTED và trả kèm tên gói và số ngày còn lại.
+     */
     private CheckinDto recordEntry(MembershipSubscription sub, LocalDateTime now, String gate, User recorder) {
         LocalDate today = now.toLocalDate();
         Member member = sub.getMember();
@@ -289,6 +312,7 @@ public class CenterCheckinService {
         return closeStaleVisits(staleVisits, now);
     }
 
+    /** Đóng các lượt bị treo: giờ ra mặc định là 4 giờ sau giờ vào (không quá hiện tại), ghi chú tự động. */
     private int closeStaleVisits(List<CenterCheckin> staleVisits, LocalDateTime now) {
         for (CenterCheckin stale : staleVisits) {
             LocalDateTime defaultEnd = stale.getCheckInTime().plusHours(4);
@@ -299,6 +323,7 @@ public class CenterCheckinService {
         return staleVisits.size();
     }
 
+    /** Ghi một lượt bị từ chối (DENIED) kèm mã lý do, dùng để kiểm tra sau này. */
     private CheckinDto saveDeniedRecord(Member member, LocalDateTime now, String gate, User recorder, String reasonKey) {
         CenterCheckin checkin = new CenterCheckin();
         checkin.setMember(member);
@@ -355,7 +380,12 @@ public class CenterCheckinService {
         return history(principal, null, null);
     }
 
-    /** History for an inclusive date range (default today, at most {@link #MAX_HISTORY_DAYS} days). */
+    /**
+     * Lịch sử ra vào trong khoảng ngày (mặc định hôm nay, tối đa số ngày cho phép): nhân viên xem tất cả, hội
+     * viên chỉ xem của mình.
+     *
+     * History for an inclusive date range (default today, at most {@link #MAX_HISTORY_DAYS} days).
+     */
     @Transactional(readOnly = true)
     public List<CheckinDto> history(AuthenticatedPrincipal principal, LocalDate from, LocalDate to) {
         if (principal == null) {
@@ -392,6 +422,7 @@ public class CenterCheckinService {
     }
 
 
+    /** Bắt buộc người gọi là nhân viên được phép quét; không thì 403. */
     private void ensureStaff(AuthenticatedPrincipal principal) {
         if (!isStaff(principal)) {
             throw new ForbiddenException(
@@ -402,12 +433,14 @@ public class CenterCheckinService {
         }
     }
 
+    /** Người gọi có thuộc nhóm vai trò được quét/xem lịch sử toàn bộ không. */
     private boolean isStaff(AuthenticatedPrincipal principal) {
         return principal != null
                 && principal.role() != null
                 && STAFF_SCAN_ROLES.contains(principal.role().toUpperCase());
     }
 
+    /** Chuyển lượt ra vào sang DTO (lý do từ chối được dịch). */
     private CheckinDto toDto(CenterCheckin c) {
         Member member = c.getMember();
         String memberName = null;

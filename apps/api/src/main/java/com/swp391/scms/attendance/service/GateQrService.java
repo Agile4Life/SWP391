@@ -13,7 +13,12 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.Map;
 
-/** Gate challenges have a separate signing domain from membership QR codes. */
+/**
+ * Mã QR cổng có chữ ký HMAC riêng (tách biệt với QR thẻ hội viên), sống 60 giây: quầy hiển thị, hội viên quét
+ * để vào/ra.
+ *
+ * Gate challenges have a separate signing domain from membership QR codes.
+ */
 @Service
 public class GateQrService {
     public static final long TTL_SECONDS = 60;
@@ -23,11 +28,13 @@ public class GateQrService {
             "B1", "Turnstile B1 - Tầng Mezzanine");
     private final byte[] secret;
 
+    /** Nhận khóa ký (app.qr.secret, mặc định JWT secret); trống thì dừng khởi động. */
     public GateQrService(@Value("${app.qr.secret:${app.jwt.secret}}") String secret) {
         if (secret == null || secret.isBlank()) throw new IllegalArgumentException("Gate QR signing secret is required");
         this.secret = secret.getBytes(StandardCharsets.UTF_8);
     }
 
+    /** Tạo mã QR cho cổng: "SOL:GATE:1:<mã cổng>:<thời điểm>:<chữ ký>" kèm tên cổng và thời gian hiệu lực. */
     public GateQrDto generate(String gateId, long nowMillis) {
         String gate = gateName(gateId);
         String payload = PREFIX + gateId + ":" + nowMillis;
@@ -35,6 +42,10 @@ public class GateQrService {
                 Instant.ofEpochMilli(nowMillis), Instant.ofEpochMilli(nowMillis + TTL_SECONDS * 1000), TTL_SECONDS);
     }
 
+    /**
+     * Kiểm tra mã QR cổng: đúng định dạng, cổng tồn tại, chữ ký khớp (so sánh thời gian hằng) và chưa quá 60
+     * giây; trả mã cổng.
+     */
     public String verify(String qr, long nowMillis) {
         if (qr == null || qr.length() > 256 || !qr.startsWith(PREFIX)) throw invalid();
         String[] parts = qr.split(":", -1);
@@ -49,15 +60,18 @@ public class GateQrService {
         return parts[3];
     }
 
+    /** Tên hiển thị của cổng; mã cổng lạ thì báo lỗi. */
     public String gateName(String gateId) {
         if (gateId == null || !GATES.containsKey(gateId)) throw invalid();
         return GATES.get(gateId);
     }
 
+    /** Lỗi 400 "mã QR cổng không hợp lệ". */
     private BadRequestException invalid() {
         return new BadRequestException("GATE_QR_INVALID", "error.attendance.gate_qr_invalid", null, "error.attendance.gate_qr_invalid");
     }
 
+    /** Ký chuỗi bằng HMAC-SHA256 và trả dạng hex. */
     private String sign(String payload) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");

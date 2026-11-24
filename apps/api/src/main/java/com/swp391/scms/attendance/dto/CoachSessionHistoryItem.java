@@ -5,7 +5,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
-/** A past class session that has attendance or evaluations recorded, for the coach's history tabs. */
+/**
+ * Một buổi lớp đã qua trong lịch sử điểm danh: lớp, phòng, ngày giờ, số có mặt/muộn/vắng/có phép, số đã đánh
+ * giá, điểm trung bình, lần đánh giá cuối và còn sửa điểm danh được không.
+ *
+ * A past class session that has attendance or evaluations recorded, for the coach's history tabs.
+ */
 public record CoachSessionHistoryItem(
         Long sessionId,
         Long classId,

@@ -40,6 +40,9 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
+ * Nghiệp vụ điểm danh lớp nhóm (tính năng cũ): xem danh sách học viên của buổi, lịch sử điểm danh, điểm danh
+ * hàng loạt kèm đánh giá.
+ *
  * SCRUM-111: Session attendance service for retrieving rosters and batch recording attendance.
  */
 @Service
@@ -66,6 +69,7 @@ public class SessionAttendanceService {
 
     private final com.swp391.scms.notifications.NotificationService notificationService;
 
+    /** Constructor cho test với các repository bắt buộc. */
     public SessionAttendanceService(SessionAttendanceRepository attendanceRepository,
                                   ClassSessionRepository sessionRepository,
                                   ClassEnrollmentRepository enrollmentRepository,
@@ -76,6 +80,7 @@ public class SessionAttendanceService {
         this(attendanceRepository, sessionRepository, enrollmentRepository, coachRepository, memberRepository, messageService, clock, null);
     }
 
+    /** Constructor cho test có thêm các phụ thuộc phụ. */
     @Autowired
     public SessionAttendanceService(SessionAttendanceRepository attendanceRepository, ClassSessionRepository sessionRepository,
             ClassEnrollmentRepository enrollmentRepository, CoachRepository coachRepository, MemberRepository memberRepository,
@@ -90,6 +95,7 @@ public class SessionAttendanceService {
         this.clock = clock;
     }
 
+    /** Constructor Spring dùng. */
     public SessionAttendanceService(SessionAttendanceRepository attendanceRepository,
                                   ClassSessionRepository sessionRepository,
                                   ClassEnrollmentRepository enrollmentRepository,
@@ -98,13 +104,19 @@ public class SessionAttendanceService {
         this(attendanceRepository, sessionRepository, enrollmentRepository, coachRepository, memberRepository, null, Clock.systemUTC());
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** Một học viên có chỗ trong buổi và trạng thái đăng ký. */
     private record RosterEntry(Member member, String status) {}
 
-    /** Everyone with a seat in this session: class-wide enrollments plus members who booked this session. */
+    /**
+     * Danh sách học viên có chỗ trong buổi: đăng ký cả khóa cộng với người đặt riêng buổi đó (không trùng).
+     *
+     * Everyone with a seat in this session: class-wide enrollments plus members who booked this session.
+     */
     private List<RosterEntry> rosterFor(ClassSession session) {
         Map<Long, RosterEntry> roster = new java.util.LinkedHashMap<>();
         for (ClassEnrollment e : enrollmentRepository.findByGymClassId(session.getGymClass().getId())) {
@@ -123,6 +135,9 @@ public class SessionAttendanceService {
     }
 
     /**
+     * Bảng điểm danh của buổi: HLV chỉ xem buổi của lớp mình; ghép danh sách học viên với bản ghi điểm danh,
+     * kèm giờ quét cổng để gợi ý.
+     *
      * SCRUM-111 AC: GET /api/v1/attendance/sessions/{id}
      * Returns list of enrolled students for the session with their attendance records if recorded.
      */
@@ -225,6 +240,9 @@ public class SessionAttendanceService {
     public static final int MAX_HISTORY_DAYS = 31;
 
     /**
+     * Lịch sử các buổi đã có điểm danh hoặc đánh giá trong khoảng ngày (mặc định gần nhất, giới hạn số ngày):
+     * HLV chỉ thấy lớp mình, nhân viên thấy tất cả; kèm số liệu và cờ còn sửa được không.
+     *
      * Past class sessions with attendance or evaluations recorded, newest first: a coach sees their own classes,
      * staff see every class. Defaults to the last {@value #MAX_HISTORY_DAYS} days.
      */
@@ -287,6 +305,9 @@ public class SessionAttendanceService {
     }
 
     /**
+     * Điểm danh hàng loạt cho buổi: không cho buổi đã hủy hoặc chưa bắt đầu; chỉ học viên đang có chỗ; lưu hoặc
+     * cập nhật bản ghi, có thể kèm đánh giá tiến bộ; ghi audit.
+     *
      * SCRUM-111 AC: POST /api/v1/attendance/sessions/{id}/batch
      * Transactional batch attendance recording (and optional progress evaluation) by authenticated coach / staff.
      */
@@ -455,7 +476,11 @@ public class SessionAttendanceService {
         return result;
     }
 
-    /** A coach may only read or record the sessions of classes assigned to them; staff roles are not limited. */
+    /**
+     * HLV chỉ được xem/điểm danh buổi của lớp mình phụ trách; nhân viên khác không bị giới hạn.
+     *
+     * A coach may only read or record the sessions of classes assigned to them; staff roles are not limited.
+     */
     private static void requireAssignedCoach(AuthenticatedPrincipal principal, Coach sessionCoach) {
         if (principal != null && "COACH".equalsIgnoreCase(principal.role())
                 && sessionCoach != null
@@ -470,6 +495,10 @@ public class SessionAttendanceService {
         }
     }
 
+    /**
+     * Xác định HLV ghi nhận điểm danh: HLV của buổi hoặc người gọi (nếu là HLV); không xác định được thì từ
+     * chối.
+     */
     private Coach resolveRecordingCoach(AuthenticatedPrincipal principal, ClassSession session) {
         Coach sessionCoach = session.getGymClass() != null ? session.getGymClass().getCoach() : null;
         if (principal == null) {

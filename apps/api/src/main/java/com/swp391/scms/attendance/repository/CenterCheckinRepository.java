@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập bảng center_checkins (lượt ra vào cổng). */
 @Repository
 public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Long> {
 
@@ -24,9 +25,15 @@ public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Lo
     @Query("select min(c.checkInTime) from CenterCheckin c where c.member.userId = :memberId and c.status = 'GRANTED' "
             + "and c.checkInTime >= :earliest and c.checkInTime <= :end "
             + "and (c.checkOutTime is null or c.checkOutTime >= :start)")
+    /**
+     * Giờ vào sớm nhất của lượt check-in được cho vào mà hội viên còn ở trong trung tâm lúc buổi tập diễn ra
+     * (bắt đầu không sớm hơn mốc earliest, không muộn hơn giờ kết thúc buổi, và chưa ra hoặc ra sau giờ bắt
+     * đầu).
+     */
     LocalDateTime findCoveringVisitStart(@Param("memberId") Long memberId, @Param("earliest") LocalDateTime earliest,
                                          @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
 
+    /** Lấy lượt ra vào và khóa dòng để ghi. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from CenterCheckin c where c.id = :id")
     Optional<CenterCheckin> findByIdForUpdate(@Param("id") Long id);
@@ -37,13 +44,16 @@ public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Lo
      */
     boolean existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(Long memberId, String status);
 
+    /** Hội viên có đang ở trong trung tâm không (có lượt GRANTED chưa check-out). */
     default boolean existsByMemberUserIdAndCheckOutTimeIsNull(Long memberId) {
         return existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(memberId, "GRANTED");
     }
 
+    /** Lượt check-in theo trạng thái chưa check-out gần nhất của hội viên. */
     Optional<CenterCheckin> findFirstByMemberUserIdAndStatusAndCheckOutTimeIsNullOrderByCheckInTimeDesc(
             Long memberId, String status);
 
+    /** Lượt check-in được cho vào (GRANTED) chưa check-out gần nhất của hội viên. */
     default Optional<CenterCheckin> findFirstByMemberUserIdAndCheckOutTimeIsNullOrderByCheckInTimeDesc(Long memberId) {
         return findFirstByMemberUserIdAndStatusAndCheckOutTimeIsNullOrderByCheckInTimeDesc(memberId, "GRANTED");
     }
