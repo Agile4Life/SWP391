@@ -23,9 +23,28 @@ paths:
                         kycStatus: {type: string, nullable: true, enum: [PENDING, APPROVED, REJECTED]}
                         documentType: {type: string, nullable: true, enum: [CCCD, PASSPORT]}
                         citizenId: {type: string, nullable: true, description: 'Masked number showing at most the last four characters'}
+  /memberships/subscriptions/pending:
+    get:
+      description: Existing pending queue with previousSubscriptionId to distinguish a new purchase from a linked renewal or upgrade before POS validation.
+      responses:
+        '200':
+          description: Existing pending response plus nullable relation ID.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        previousSubscriptionId: {type: integer, format: int64, nullable: true}
   /payments/process:
     post:
       description: New purchases require verified identity or an approved trial before subscription, payment, invoice or QR writes. Cancelled or pending history is not identity evidence. Same rule applies to new subscription requests and creating/confirming linked new-purchase payments. Renewals and upgrades retain existing policy.
       responses:
         '200': {description: Existing payment response}
         '400': {description: MEMBERSHIP_KYC_REQUIRED or MEMBERSHIP_KYC_PENDING}
+
+# GET /memberships/subscriptions/pending additionally returns previousSubscriptionId (nullable): null = new purchase, linked = renewal/upgrade. The POS uses this field before payment; backend remains authoritative.

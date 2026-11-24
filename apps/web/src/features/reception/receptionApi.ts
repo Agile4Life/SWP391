@@ -83,6 +83,7 @@ export interface CounterTopupHistoryItem {
 
 /** Một yêu cầu gói tập chờ thanh toán: hội viên, gói, thời hạn, giá, thời gian và trạng thái. */
 export interface PendingSubscriptionItem {
+  previousSubscriptionId?: number | null;
   id: number;
   memberId: number;
   membershipCode: string | null;

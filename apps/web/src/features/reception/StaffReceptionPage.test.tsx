@@ -478,3 +478,11 @@ it('refreshes approval and shows masked passport', async () => {
   expect(host.textContent).toContain('Số hộ chiếu');
   expect(host.textContent).toContain('********1234');
 });
+
+it.each([null, 5])('validates KYC only for new pending requests, previous=%s', async previousSubscriptionId => {
+  api.lookupMembers.mockResolvedValue([{ ...member, identityVerified: false, kycStatus: 'PENDING' }]);
+  api.getPendingSubscriptions.mockResolvedValue([{ id: 9, memberId: 10, membershipCode: 'MB-10', memberName: 'An', memberEmail: 'an@example.test', memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30, packagePrice: 200, startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01', previousSubscriptionId }]);
+  await selectMember();
+  await act(async () => host.querySelector('#pos-package')!.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.processPayment).toHaveBeenCalledTimes(previousSubscriptionId ? 1 : 0);
+});

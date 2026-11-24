@@ -26,3 +26,5 @@ Review: reviewer độc lập chỉ đọc diff; không còn Important/Critical 
 ## Lệnh kiểm tra
 
 `node node_modules/typescript/bin/tsc -b`, `npm run lint`, `npm test`, `npm run build`, `git diff --check`. Java dùng Maven 3.9.16 đã có trong wrapper cache với `-Dmaven.repo.local=<user>/.m2/repository` do wrapper Windows không khởi động được trong harness. Unit tests không kết nối DB; chưa kiểm thử Supabase integration.
+
+Bổ sung cuối: PendingSubscriptionDto.previousSubscriptionId phân biệt mua mới với gia hạn/nâng cấp; POS kiểm tra KYC cả đơn mua mới đang chờ. Test hồi quy RED 1 FAIL trước sửa → GREEN 120/120 test trực tiếp. Không dùng lịch sử đơn để suy đoán quan hệ.

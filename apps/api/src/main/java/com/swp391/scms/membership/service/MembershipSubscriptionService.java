@@ -1454,7 +1454,8 @@ public class MembershipSubscriptionService {
                 s.getStartDate(),
                 s.getEndDate(),
                 s.getStatus(),
-                s.getCreatedAt());
+                s.getCreatedAt(),
+                s.getPreviousSubscription() != null ? s.getPreviousSubscription().getId() : null);
     }
 
     /** Danh sách thông tin giấy tờ bảo lưu (không kèm nội dung file) của một kỳ gói. */

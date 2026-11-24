@@ -619,7 +619,7 @@ export function StaffReceptionPage() {
       const fresh = await refreshSelectedMember();
       if (!fresh) return;
       // Mua mới cần KYC; gia hạn/nâng cấp vẫn kiểm tra theo kỳ liên kết ở backend.
-      if (!selectedPending && !selectedCandidate && (!fresh.identityVerified || fresh.kycStatus === 'PENDING' || fresh.kycStatus === 'REJECTED')) {
+      if (!selectedCandidate && !selectedPending?.previousSubscriptionId && (!fresh.identityVerified || fresh.kycStatus === 'PENDING' || fresh.kycStatus === 'REJECTED')) {
         setPaymentError(staffMessage('Hội viên chưa xác thực KYC. Vui lòng yêu cầu hội viên hoàn tất xác thực trước khi đăng ký gói tập.',
           'The member has not completed identity verification. Ask them to complete verification before registering a membership.'));
         return;
@@ -630,6 +630,7 @@ export function StaffReceptionPage() {
         const created = await receptionApi.createRenewal(selectedMember.userId, selectedCandidate.id);
         creatingRenewal = false;
         pending = {
+          previousSubscriptionId: created.previousSubscriptionId,
           id: created.id, memberId: created.memberId, membershipCode: selectedMember.membershipCode,
           memberName: selectedMember.fullName, memberEmail: selectedMember.email, memberPhone: selectedMember.phone,
           packageId: created.packageId, packageName: created.packageName, durationDays: selectedPackage.durationDays,
