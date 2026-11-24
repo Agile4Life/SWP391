@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
+ * API bộ môn yêu thích của hội viên (tính năng đã ngừng, chỉ bật khi
+ * app.legacy.favorite-disciplines-enabled=true).
+ *
  * SCRUM-133: REST Controller for member's favorite disciplines.
  */
 @RestController
@@ -28,6 +31,7 @@ public class MemberFavoriteDisciplineController {
     private final DisciplineRepository disciplineRepository;
     private final MessageService messageService;
 
+    /** Nhận repository hội viên, bộ môn và MessageService. */
     public MemberFavoriteDisciplineController(
             MemberRepository memberRepository,
             DisciplineRepository disciplineRepository,
@@ -37,6 +41,7 @@ public class MemberFavoriteDisciplineController {
         this.messageService = messageService;
     }
 
+    /** GET: danh sách id bộ môn yêu thích của hội viên. */
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<Long>>> getFavoriteDisciplines(
@@ -54,6 +59,7 @@ public class MemberFavoriteDisciplineController {
         return ResponseEntity.ok(ApiResponse.ok(msg, favoriteIds));
     }
 
+    /** POST /{disciplineId}/toggle: thêm hoặc bỏ một bộ môn khỏi danh sách yêu thích. */
     @PostMapping("/{disciplineId}/toggle")
     @Transactional
     public ResponseEntity<ApiResponse<List<Long>>> toggleFavoriteDiscipline(

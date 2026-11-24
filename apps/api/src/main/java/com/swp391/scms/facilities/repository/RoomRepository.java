@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+/** Truy cập bảng rooms (phòng tập/sân). */
 public interface RoomRepository extends JpaRepository<Room, Long> {
     /** Kiểm tra có tồn tại bản ghi có disciplineId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByDisciplineId(Long disciplineId);
@@ -20,5 +21,9 @@ public interface RoomRepository extends JpaRepository<Room, Long> {
               and (:discipline = '' or lower(d.name) = lower(:discipline))
             order by d.name, r.name, r.id
             """)
+    /**
+     * Các sân đang sẵn sàng có giờ mở cửa (tính năng đặt sân cũ: Tennis, Cầu lông, Bơi lội), lọc theo bộ môn
+     * (rỗng là tất cả).
+     */
     List<Room> findAvailableCourts(@Param("discipline") String discipline);
 }

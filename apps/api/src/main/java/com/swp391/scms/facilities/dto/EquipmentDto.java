@@ -4,6 +4,10 @@ import com.swp391.scms.facilities.entity.Equipment;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Thiết bị trả cho client: tên, mã, loại, phòng, số lượng, trạng thái, ngày mua, ngày bảo trì, ghi chú và thời
+ * điểm tạo/cập nhật.
+ */
 public record EquipmentDto(
         Long id,
         String name,
@@ -19,6 +23,7 @@ public record EquipmentDto(
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
+    /** Chuyển entity thiết bị sang DTO. */
     public static EquipmentDto of(Equipment e) {
         return new EquipmentDto(
                 e.getId(),

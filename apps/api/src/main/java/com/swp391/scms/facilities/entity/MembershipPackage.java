@@ -6,7 +6,12 @@ import org.hibernate.Length;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/** Entity mapping table membership_packages (Module B: Master Facilities). */
+/**
+ * Bảng membership_packages: gói tập (tên, mô tả, giá, số ngày, hạn mức buổi lớp, trạng thái mở bán, hạng, người
+ * tạo).
+ *
+ * Entity mapping table membership_packages (Module B: Master Facilities).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_packages_status", constraints = "status IN ('active','inactive')")
 @Table(name = "membership_packages")
@@ -47,11 +52,13 @@ public class MembershipPackage {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    /** Hibernate gọi trước khi thêm bản ghi: gán thời điểm tạo và cập nhật. */
     @PrePersist
     void onCreate() {
         createdAt = updatedAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
     }
 
+    /** Hibernate gọi trước khi cập nhật: cập nhật thời điểm sửa. */
     @PreUpdate
     void onUpdate() {
         updatedAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);

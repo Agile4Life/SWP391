@@ -13,28 +13,36 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Business logic for the room catalog (SCRUM-59). */
+/**
+ * Nghiệp vụ danh mục phòng tập.
+ *
+ * Business logic for the room catalog (SCRUM-59).
+ */
 @Service
 public class RoomService {
 
     private final RoomRepository rooms;
     private final DisciplineRepository disciplines;
 
+    /** Constructor cho test, không có repository bộ môn. */
     public RoomService(RoomRepository rooms) {
         this(rooms, null);
     }
 
+    /** Constructor Spring dùng. */
     @org.springframework.beans.factory.annotation.Autowired
     public RoomService(RoomRepository rooms, DisciplineRepository disciplines) {
         this.rooms = rooms;
         this.disciplines = disciplines;
     }
 
+    /** Danh sách phòng theo tên. */
     @Transactional(readOnly = true)
     public List<RoomDto> list() {
         return rooms.findAllByOrderByNameAsc().stream().map(RoomDto::of).toList();
     }
 
+    /** Tạo phòng. */
     @Transactional
     public RoomDto create(RoomRequest request) {
         Room room = new Room();
@@ -42,6 +50,7 @@ public class RoomService {
         return RoomDto.of(rooms.save(room));
     }
 
+    /** Sửa phòng. */
     @Transactional
     public RoomDto update(Long id, RoomRequest request) {
         Room room = rooms.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.room", id));
@@ -49,6 +58,7 @@ public class RoomService {
         return RoomDto.of(room);
     }
 
+    /** Gán dữ liệu phòng: nếu gắn bộ môn thì phải là bộ môn sân và giờ mở/đóng hợp lệ; hạng mặc định STANDARD. */
     private void apply(Room room, RoomRequest request) {
         Discipline discipline = request.disciplineId() == null ? null : disciplines.findById(request.disciplineId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
@@ -83,7 +93,11 @@ public class RoomService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.facilities.repository.EquipmentRepository equipment;
 
-    /** A room that was ever used by a class, court booking, or equipment is kept (set status to closed instead). */
+    /**
+     * Xóa phòng chưa từng được dùng cho lớp, đặt sân hay thiết bị (đã dùng thì đổi trạng thái đóng cửa).
+     *
+     * A room that was ever used by a class, court booking, or equipment is kept (set status to closed instead).
+     */
     @Transactional
     public void delete(Long id) {
         Room room = rooms.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.room", id));

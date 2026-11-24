@@ -12,7 +12,13 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/** Seeds sample disciplines, rooms and packages into empty catalogs (idempotent). */
+/**
+ * Chạy khi khởi động: tạo dữ liệu danh mục mẫu cho Gym (bộ môn Gym, phòng Gym tiêu chuẩn, gói trải nghiệm, các
+ * gói 1/3/6 tháng Silver/Gold/Platinum, thiết bị ban đầu). Chạy lại nhiều lần không tạo trùng, và không ghi đè
+ * gói mà quản lý đã chỉnh sửa.
+ *
+ * Seeds sample disciplines, rooms and packages into empty catalogs (idempotent).
+ */
 @Component
 @Order(50)
 public class CatalogSeeder implements ApplicationRunner {
@@ -163,12 +169,18 @@ public class CatalogSeeder implements ApplicationRunner {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.facilities.repository.RoomRepository roomRepository;
 
+    /** Nhận dịch vụ bộ môn, phòng và gói tập. */
     public CatalogSeeder(DisciplineService disciplines, RoomService rooms, PackageService packages) {
         this.disciplines = disciplines;
         this.rooms = rooms;
         this.packages = packages;
     }
 
+    /**
+     * Tạo/cập nhật dữ liệu mẫu: bộ môn và phòng Gym, gói trải nghiệm, gói 3 và 6 tháng; đồng bộ một lần các gói
+     * còn mô tả seed cũ sang quyền lợi mới; tạo thiết bị ban đầu nếu chưa có thiết bị nào. Không tự bật/tắt gói
+     * (quản lý toàn quyền).
+     */
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
@@ -216,6 +228,7 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
 
+    /** Tạo bộ thiết bị ban đầu cho phòng Gym tiêu chuẩn. */
     private void seedInitialEquipment() {
         upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
         var allRooms = roomRepository.findAll();
@@ -234,12 +247,14 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
 
+    /** Tạo thiết bị nếu chưa có thiết bị nào cùng mã. */
     private void seedEquipmentIfMissing(String name, String code, String category, com.swp391.scms.facilities.entity.Room room, int quantity, String status) {
         if (equipmentRepository != null && !equipmentRepository.existsByCode(code)) {
             equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment(name, code, category, room, quantity, status));
         }
     }
 
+    /** Tạo phòng nếu chưa có; phòng đã có thì chỉ cập nhật hạng phòng nếu khác. */
     private void upsertRoom(String name, String location, int capacity, String status, String tier) {
         for (var r : rooms.list()) {
             if (name.equalsIgnoreCase(r.name())) {
@@ -304,12 +319,17 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
 
+    /** Mô tả có phải bản seed cũ không (dòng đầu khớp một trong các dòng seed cũ đã biết). */
     private static boolean isOldSeededDescription(String description) {
         if (description == null) return false;
         String firstLine = description.strip().lines().findFirst().orElse("").strip();
         return OLD_SEEDED_FIRST_LINES.contains(firstLine);
     }
 
+    /**
+     * Cập nhật quyền lợi (mô tả, hạn mức, hạng) cho gói còn nguyên bản seed cũ; gói quản lý đã chỉnh thì giữ
+     * nguyên.
+     */
     private void alignBenefits(String name, String desc, Integer creditLimit, String tier, Integer legacyCreditLimit) {
         String marker = desc.substring(0, desc.indexOf('\n'));
         for (var pkg : packages.list()) {
@@ -327,18 +347,25 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
 
+    /** Tạo gói (không có hạng) nếu chưa có, hoặc đổi tên gói cũ theo bí danh. */
     private void upsertPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
         upsertPackageWithTier(name, desc, price, duration, creditLimit, null, false, legacyAliases);
     }
 
+    /** Tạo gói 1 tháng kiểu cũ (ngoài quy tắc 3-12 tháng) nếu chưa có. */
     private void upsertLegacyPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
         upsertPackageWithTier(name, desc, price, duration, creditLimit, null, true, legacyAliases);
     }
 
+    /** Tạo gói có hạng nếu chưa có. */
     private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier, String... legacyAliases) {
         upsertPackageWithTier(name, desc, price, duration, creditLimit, tier, false, legacyAliases);
     }
 
+    /**
+     * Tạo gói nếu chưa có tên này; nếu có gói mang tên cũ (bí danh) thì đổi tên gói đó (giữ giá quản lý đã
+     * chỉnh), trừ khi gói đã bán thì bỏ qua để giữ lịch sử và tạo gói chuẩn mới.
+     */
     private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier,
                                        boolean legacyTerm, String... legacyAliases) {
         var existingList = packages.list();
@@ -371,6 +398,9 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
     /**
+     * Chỉ đổi giá seed gốc chưa chỉnh của các gói cũ ("The Essential"...) sang giá mới khi đổi tên lần đầu; giá
+     * quản lý đã chỉnh thì giữ nguyên.
+     *
      * Preserves any price customized by a Manager in the database; only converts the original
      * unedited seed prices when renaming legacy package aliases ("The Essential", etc.) for the first time.
      */

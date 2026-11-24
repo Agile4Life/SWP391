@@ -10,21 +10,28 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Business logic for the discipline catalog (SCRUM-58). */
+/**
+ * Nghiệp vụ danh mục bộ môn.
+ *
+ * Business logic for the discipline catalog (SCRUM-58).
+ */
 @Service
 public class DisciplineService {
 
     private final DisciplineRepository disciplines;
 
+    /** Nhận repository bộ môn. */
     public DisciplineService(DisciplineRepository disciplines) {
         this.disciplines = disciplines;
     }
 
+    /** Danh sách bộ môn theo tên. */
     @Transactional(readOnly = true)
     public List<DisciplineDto> list() {
         return disciplines.findAllByOrderByNameAsc().stream().map(DisciplineDto::of).toList();
     }
 
+    /** Tạo bộ môn; tên (không phân biệt hoa thường) không được trùng. */
     @Transactional
     public DisciplineDto create(DisciplineRequest request) {
         String name = request.name().trim();
@@ -36,6 +43,7 @@ public class DisciplineService {
         return DisciplineDto.of(disciplines.save(discipline));
     }
 
+    /** Sửa bộ môn; tên mới không được trùng bộ môn khác. */
     @Transactional
     public DisciplineDto update(Long id, DisciplineRequest request) {
         Discipline discipline = disciplines.findById(id)
@@ -48,11 +56,13 @@ public class DisciplineService {
         return DisciplineDto.of(discipline);
     }
 
+    /** Gán tên (bỏ khoảng trắng hai đầu) và mô tả. */
     private void apply(Discipline discipline, DisciplineRequest request) {
         discipline.setName(request.name().trim());
         discipline.setDescription(request.description());
     }
 
+    /** Lỗi 409 "tên bộ môn đã tồn tại". */
     private ConflictException duplicate(String name) {
         return new ConflictException("DISCIPLINE_EXISTS", "catalog.discipline.name_exists", new Object[]{name}, null);
     }
@@ -69,7 +79,12 @@ public class DisciplineService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.users.MemberRepository members;
 
-    /** A discipline still used by a class, room or 1:1 booking cannot be removed; member favourites are cleared. */
+    /**
+     * Xóa bộ môn: không xóa được nếu còn lớp, phòng hoặc buổi PT dùng; danh sách yêu thích của hội viên được
+     * dọn trước.
+     *
+     * A discipline still used by a class, room or 1:1 booking cannot be removed; member favourites are cleared.
+     */
     @Transactional
     public void delete(Long id) {
         Discipline discipline = disciplines.findById(id)

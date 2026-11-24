@@ -3,7 +3,12 @@ package com.swp391.scms.facilities.entity;
 import jakarta.persistence.*;
 import java.time.LocalTime;
 
-/** Entity mapping table rooms (Module B: Master Facilities). */
+/**
+ * Bảng rooms: phòng tập (tên, vị trí, sức chứa, trạng thái, hạng STANDARD/VIP); phòng gắn bộ môn và giờ mở/đóng
+ * là sân (tính năng cũ).
+ *
+ * Entity mapping table rooms (Module B: Master Facilities).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_rooms_status", constraints = "status IN ('available','maintenance','closed')")
 @Table(name = "rooms")

@@ -4,6 +4,7 @@ import com.swp391.scms.facilities.entity.Discipline;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+/** Truy cập bảng disciplines (bộ môn). */
 public interface DisciplineRepository extends JpaRepository<Discipline, Long> {
     /**
      * Kiểm tra có tồn tại bản ghi có name bằng tham số (không phân biệt hoa thường) (Spring Data tự sinh truy

@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
         @Index(name = "ix_equipment_room", columnList = "room_id"),
         @Index(name = "ix_equipment_status", columnList = "status")
 })
+/** Bảng equipment: thiết bị (tên, mã, loại, phòng, số lượng, trạng thái, ngày mua/bảo trì, ghi chú). */
 public class Equipment {
 
     @Id
@@ -53,13 +54,16 @@ public class Equipment {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
 
+    /** Hibernate gọi trước khi cập nhật: cập nhật thời điểm sửa. */
     @PreUpdate
     void onUpdate() {
         this.updatedAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
     }
 
+    /** Constructor rỗng cho JPA. */
     public Equipment() {}
 
+    /** Tạo thiết bị với thông tin cơ bản. */
     public Equipment(String name, String code, String category, Room room, int quantity, String status) {
         this.name = name;
         this.code = code;
