@@ -129,12 +129,13 @@ export function ManagerCoachAssignmentsPage() {
           const count = (type?: CoachAssignmentStudent['assignmentType']) => new Set(students.filter((student) => !type || student.assignmentType === type).map((student) => student.memberId)).size;
           return { ...coach, students, totalStudentsCount: count(), ptStudentsCount: count('PT_1_1'), planStudentsCount: count('TRAINING_PLAN') };
         });
-        if (sortOption === 'students_desc' || sortOption === 'students_asc' || sortOption === 'pt_desc') {
-          coaches.sort((a, b) => {
-            const diff = sortOption === 'pt_desc' ? b.ptStudentsCount - a.ptStudentsCount : a.totalStudentsCount - b.totalStudentsCount;
-            return (sortOption === 'students_desc' ? -diff : diff) || a.coachName.localeCompare(b.coachName, 'vi');
-          });
-        }
+        coaches.sort((a, b) => {
+          const nameOrder = a.coachName.localeCompare(b.coachName, 'vi');
+          const countOrder = sortOption === 'pt_desc' ? b.ptStudentsCount - a.ptStudentsCount
+            : sortOption === 'students_desc' ? b.totalStudentsCount - a.totalStudentsCount
+            : sortOption === 'students_asc' ? a.totalStudentsCount - b.totalStudentsCount : 0;
+          return countOrder || (sortOption === 'name_desc' ? -nameOrder : nameOrder) || a.coachId - b.coachId;
+        });
         const students = coaches.flatMap((coach) => coach.students);
         const count = (type: CoachAssignmentStudent['assignmentType']) => new Set(students.filter((student) => student.assignmentType === type).map((student) => student.memberId)).size;
         setData({ ...res, coaches, stats: { ...res.stats, totalPtStudents: count('PT_1_1'), totalPlanStudents: count('TRAINING_PLAN') } });
@@ -300,9 +301,9 @@ export function ManagerCoachAssignmentsPage() {
           >
             <option value="name_asc">{t("Tên HLV (A–Z)", "Coach name (A–Z)")}</option>
             <option value="name_desc">{t("Tên HLV (Z–A)", "Coach name (Z–A)")}</option>
-            <option value="students_desc">{t("Số học viên (Nhiều nhất)", "Total students (Highest)")}</option>
-            <option value="students_asc">{t("Số học viên (Ít nhất)", "Total students (Lowest)")}</option>
-            <option value="pt_desc">{t("Học viên PT (Nhiều nhất)", "PT students (Highest)")}</option>
+            <option value="students_desc">{t("Số học viên khác nhau (Nhiều nhất)", "Distinct members (Highest)")}</option>
+            <option value="students_asc">{t("Số học viên khác nhau (Ít nhất)", "Distinct members (Lowest)")}</option>
+            <option value="pt_desc">{t("Số học viên PT khác nhau (Nhiều nhất)", "Distinct PT members (Highest)")}</option>
           </Select>
         </div>
 

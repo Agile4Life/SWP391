@@ -337,5 +337,48 @@ describe('ManagerCoachAssignmentsPage', () => {
       expect.objectContaining({ sortBy: 'ptStudentsCount', sortDir: 'desc' })
     );
   });
+
+  it('sorts coaches by Vietnamese names and distinct visible members in both views', async () => {
+    const [base, legacy] = mockData.coaches;
+    const [pt, plan] = base.students;
+    const a = { ...base, coachId: 20, coachName: 'HLV Ánh', students: [pt, { ...pt, referenceId: 502 }, { ...plan, memberId: pt.memberId }] };
+    const b = { ...base, coachId: 30, coachName: 'HLV Bình', students: [pt, plan] };
+    const c = { ...legacy, coachId: 40, coachName: 'HLV An', students: [legacy.students[0]] };
+    vi.mocked(coachAssignmentsApi.getOverview).mockImplementation(async params => ({
+      ...mockData,
+      coaches: [b, a, c].map(coach => ({
+        ...coach,
+        students: coach.students.filter(student => !params?.type || student.assignmentType === params.type),
+      })),
+    }));
+    await renderComponent();
+    const names = () => [...host.querySelectorAll('.coach-card-header h3')].map(el => el.textContent);
+    const counts = () => [...host.querySelectorAll('.coach-card-header')].map(el => [...el.querySelectorAll('.student-count-pill strong')].map(x => x.textContent));
+    expect(names()).toEqual(['HLV An', 'HLV Ánh', 'HLV Bình']);
+    expect(counts()).toEqual([['0', '0', '0'], ['1', '1', '1'], ['2', '1', '1']]);
+    const select = host.querySelector('select[aria-label="Sắp xếp danh sách HLV"]') as HTMLSelectElement;
+    const choose = async (value: string) => {
+      await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); });
+      await act(async () => { await new Promise(r => setTimeout(r, 260)); });
+    };
+    await choose('name_desc');
+    expect(names()).toEqual(['HLV Bình', 'HLV Ánh', 'HLV An']);
+    await choose('students_desc');
+    expect(names()).toEqual(['HLV Bình', 'HLV Ánh', 'HLV An']);
+    await choose('students_asc');
+    expect(names()).toEqual(['HLV An', 'HLV Ánh', 'HLV Bình']);
+    await choose('pt_desc');
+    expect(names()).toEqual(['HLV Ánh', 'HLV Bình', 'HLV An']);
+    await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent?.includes('Bảng danh sách'))!.click(); });
+    expect([...host.querySelectorAll('.coach-table tbody tr')].map(row => row.querySelectorAll('td')[1].textContent)).toEqual([
+      'HLV Ánh', 'HLV Ánh', 'HLV Ánh', 'HLV Bình', 'HLV Bình',
+    ]);
+    await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent === 'Theo HLV')!.click(); });
+    const typeFilter = host.querySelector('select[aria-label="Lọc theo hình thức"]') as HTMLSelectElement;
+    await act(async () => { typeFilter.value = 'PT_1_1'; typeFilter.dispatchEvent(new Event('change', { bubbles: true })); });
+    await act(async () => { await new Promise(r => setTimeout(r, 260)); });
+    expect(names()).toEqual(['HLV Ánh', 'HLV Bình', 'HLV An']);
+    expect(counts()).toEqual([['1', '1', '0'], ['1', '1', '0'], ['0', '0', '0']]);
+  });
 });
 
