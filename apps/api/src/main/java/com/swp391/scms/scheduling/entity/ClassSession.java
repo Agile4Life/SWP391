@@ -7,7 +7,12 @@ import java.time.LocalTime;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-/** Entity mapping table class_sessions (schema is generated code-first by Hibernate). */
+/**
+ * Entity một buổi học của lớp (bảng class_sessions): ngày, giờ bắt đầu/kết thúc, trạng thái, lý do hủy và mốc
+ * thời gian.
+ *
+ * Entity mapping table class_sessions (schema is generated code-first by Hibernate).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_sessions_status", constraints = "status IN ('scheduled','completed','cancelled')")
 @Table(name = "class_sessions", indexes = {@Index(name = "ix_sessions_class_date", columnList = "class_id, session_date")})
@@ -43,6 +48,7 @@ public class ClassSession {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    /** Tự cập nhật updatedAt trước mỗi lần cập nhật. */
     @PreUpdate
     void touch() {
         updatedAt = LocalDateTime.now();

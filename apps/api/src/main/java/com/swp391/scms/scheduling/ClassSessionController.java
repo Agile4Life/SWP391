@@ -16,6 +16,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
+ * API hủy buổi học (đã ngừng; chỉ bật khi app.legacy.classes-enabled=true).
+ *
  * SCRUM-113: Class Session Controller.
  * Provides endpoints to manage class sessions lifecycle such as cancellation and notification workflows.
  */
@@ -28,20 +30,24 @@ public class ClassSessionController {
     private final ClassSessionService sessionService;
     private final MessageService messageService;
 
+    /** Constructor cho test: không có MessageService. */
     public ClassSessionController(ClassSessionService sessionService) {
         this(sessionService, null);
     }
 
+    /** Constructor chính: nhận ClassSessionService và MessageService. */
     @Autowired
     public ClassSessionController(ClassSessionService sessionService, MessageService messageService) {
         this.sessionService = sessionService;
         this.messageService = messageService;
     }
 
+    /** Dịch message key kèm tham số; không có MessageService thì trả lại key. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** POST /{id}/cancel: hủy buổi học kèm lý do và thông báo cho học viên đã đặt. */
     @Operation(summary = "Cancel a class session with reason and notify enrolled members")
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")

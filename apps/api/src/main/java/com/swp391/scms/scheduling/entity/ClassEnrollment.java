@@ -5,7 +5,12 @@ import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-/** Entity mapping table class_enrollments (schema is generated code-first by Hibernate). */
+/**
+ * Entity lượt ghi danh khóa học (bảng class_enrollments): lớp, hội viên, trạng thái, thời điểm ghi danh/hủy,
+ * người hủy, lý do và có bị mất credit không.
+ *
+ * Entity mapping table class_enrollments (schema is generated code-first by Hibernate).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_enrollments_status", constraints = "status IN ('booked','cancelled','completed')")
 @Table(name = "class_enrollments", indexes = {@Index(name = "ix_enrollments_member_status", columnList = "member_id, status"), @Index(name = "ix_enrollments_class_status", columnList = "class_id, status")})
@@ -78,6 +83,7 @@ public class ClassEnrollment {
     public String getCancelReason() { return cancelReason; }
     /** Gán giá trị mới cho trường cancelReason. */
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
+    /** Cho biết credit forfeited (trường boolean). */
     public boolean isCreditForfeited() { return Boolean.TRUE.equals(creditForfeited); }
     /** Gán giá trị mới cho trường creditForfeited. */
     public void setCreditForfeited(boolean creditForfeited) { this.creditForfeited = creditForfeited; }

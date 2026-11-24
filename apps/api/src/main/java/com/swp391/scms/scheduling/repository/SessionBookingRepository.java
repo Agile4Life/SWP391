@@ -14,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+/** Truy cập dữ liệu đặt chỗ buổi học (bảng session_bookings). */
 @Repository
 public interface SessionBookingRepository extends JpaRepository<SessionBooking, Long> {
     @EntityGraph(attributePaths = {"member", "member.user", "session", "session.gymClass"})
@@ -25,13 +26,16 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
               and (b.session.sessionDate > :today or (b.session.sessionDate = :today and b.session.startTime > :now))
             order by b.session.sessionDate, b.session.startTime, b.id
             """)
+    /** Lượt đặt chỗ còn hiệu lực ở buổi sắp tới của các lớp active do HLV dạy, kèm hội viên còn hoạt động. */
     List<SessionBooking> findCurrentCoachAssignments(@Param("coachId") Long coachId,
             @Param("today") LocalDate today, @Param("now") java.time.LocalTime now);
 
+    /** Lấy lượt đặt chỗ theo id và khóa dòng (PESSIMISTIC_WRITE) để hủy an toàn. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select b from SessionBooking b where b.id = :id")
     Optional<SessionBooking> findByIdForUpdate(@Param("id") Long id);
 
+    /** Lấy id lớp của một lượt đặt chỗ. */
     @Query("select b.session.gymClass.id from SessionBooking b where b.id = :id")
     Optional<Long> findClassIdById(@Param("id") Long id);
 
@@ -40,6 +44,7 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
 
     @Query("select new com.swp391.scms.scheduling.dto.SessionBookingCount(b.session.id, count(b)) "
             + "from SessionBooking b where b.session.gymClass.id = :classId and b.status = 'booked' group by b.session.id")
+    /** Đếm lượt đặt chỗ booked của từng buổi trong một lớp. */
     List<SessionBookingCount> countBookedGroupedBySession(@Param("classId") Long classId);
 
     /**
@@ -56,13 +61,18 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
 
     @Query("select new com.swp391.scms.scheduling.dto.SessionBookingCount(b.session.id, count(b)) "
             + "from SessionBooking b where b.session.id in :sessionIds and b.status = 'booked' group by b.session.id")
+    /** Đếm lượt đặt chỗ booked cho nhiều buổi cùng lúc, nhóm theo buổi. */
     List<SessionBookingCount> countBookedBySessionIds(@Param("sessionIds") Collection<Long> sessionIds);
 
     /** Tìm các bản ghi có sessionId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"member", "member.user"})
     List<SessionBooking> findBySessionIdAndStatus(Long sessionId, String status);
 
-    /** Members holding a booked seat in any session of the class (class-level rosters). */
+    /**
+     * Mọi lượt đặt chỗ booked của một lớp kèm hội viên và buổi.
+     *
+     * Members holding a booked seat in any session of the class (class-level rosters).
+     */
     @EntityGraph(attributePaths = {"member", "member.user", "session"})
     @Query("select b from SessionBooking b where b.session.gymClass.id = :classId and b.status = 'booked'")
     List<SessionBooking> findBookedByClassId(@Param("classId") Long classId);
@@ -77,10 +87,13 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
               and b.session.sessionDate <= :toDate
             order by b.session.sessionDate, b.session.startTime, b.id
             """)
+    /** Lượt đặt chỗ của hội viên trong khoảng ngày, lọc trạng thái nếu có, kèm buổi/lớp/phòng/HLV. */
     List<SessionBooking> findForMemberBetween(@Param("memberId") Long memberId, @Param("status") String status,
                                               @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /**
+     * Như findForMemberBetween nhưng cho phép bỏ trống ngày đầu/cuối (thay bằng mốc rất xa).
+     *
      * A null bound means "unbounded". PostgreSQL cannot infer the type of a bare {@code ? is null} date parameter
      * ("could not determine data type of parameter"), so open bounds are replaced by sentinel dates instead.
      */
@@ -97,6 +110,7 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
               and b.session.sessionDate >= :today
             order by b.session.sessionDate, b.session.startTime
             """)
+    /** Lượt đặt chỗ booked ở buổi đã xếp từ hôm nay trở đi của hội viên, sắp theo ngày giờ. */
     List<SessionBooking> findUpcomingBookedForMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 
     @Query("""
@@ -104,6 +118,7 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
             where b.member.userId = :memberId and b.status = 'booked' and b.session.status = 'scheduled'
               and b.session.sessionDate >= :today
             """)
+    /** Kiểm tra hội viên còn lượt đặt chỗ ở buổi sắp tới không. */
     boolean existsUpcomingBookedForMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 
     @Query("""
@@ -111,11 +126,14 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
             where b.member.userId = :memberId and b.session.gymClass.coach.userId = :coachId
               and b.status in ('booked', 'completed')
             """)
+    /** Kiểm tra hội viên có từng đặt (booked/completed) buổi của lớp do HLV này dạy không. */
     boolean existsForCoachAndMember(@Param("coachId") Long coachId, @Param("memberId") Long memberId);
 
+    /** Id các lớp mà hội viên đang có lượt đặt chỗ booked. */
     @Query("select distinct b.session.gymClass.id from SessionBooking b where b.member.userId = :memberId and b.status = 'booked'")
     List<Long> findBookedClassIdsByMemberId(@Param("memberId") Long memberId);
 
+    /** Id các hội viên đang có ít nhất một lượt đặt chỗ booked. */
     @Query("select distinct b.member.userId from SessionBooking b where b.status = 'booked'")
     List<Long> findMemberIdsWithBooked();
 
@@ -132,5 +150,6 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
             where b.status = 'booked'
               and b.session in (select s from ClassSession s where s.status <> 'cancelled' and s.sessionDate < :cutoff)
             """)
+    /** Chuyển lượt đặt chỗ booked ở buổi chưa hủy diễn ra trước cutoff sang completed; trả về số dòng cập nhật. */
     int completeHeldBefore(@Param("cutoff") LocalDate cutoff);
 }

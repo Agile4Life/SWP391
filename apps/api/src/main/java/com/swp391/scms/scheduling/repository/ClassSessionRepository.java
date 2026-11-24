@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 
+/** Truy cập dữ liệu buổi học (bảng class_sessions). */
 @Repository
 public interface ClassSessionRepository extends JpaRepository<ClassSession, Long> {
 
@@ -22,6 +23,10 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
               and (s.sessionDate > :fromDate or s.startTime > :now)
             order by s.sessionDate, s.startTime, s.id
             """)
+    /**
+     * Buổi học công khai sắp diễn ra trong khoảng ngày: lớp active, phòng sẵn sàng, HLV còn làm việc; bỏ buổi
+     * đã qua giờ trong ngày đầu.
+     */
     List<ClassSession> findPublicSessions(@Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate, @Param("now") java.time.LocalTime now);
 
@@ -42,9 +47,12 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             join fetch c.room r
             order by s.sessionDate asc, s.startTime asc
             """)
+    /** Mọi buổi học kèm lớp, bộ môn, HLV và phòng, sắp theo ngày giờ. */
     List<ClassSession> findAllWithDetails();
 
     /**
+     * Lọc buổi học trong bộ nhớ theo khoảng ngày, bộ môn và HLV (tham số null thì bỏ qua điều kiện đó).
+     *
      * SCRUM-72 BR-06: schedule lookup with optional filters by date range, discipline and coach.
      * Avoids PostgreSQL PSQLException ("could not determine data type of parameter $1") on (? is null).
      */
@@ -74,6 +82,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             select s from ClassSession s join fetch s.gymClass
             where s.status <> 'cancelled' and s.sessionDate between :fromDate and :toDate
             """)
+    /** Buổi chưa hủy trong khoảng ngày kèm lớp; trigger lịch dùng để đối chiếu trùng giờ. */
     List<ClassSession> findNotCancelledBetween(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     @Query("""
@@ -83,6 +92,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
               and s.sessionDate >= :startDate
               and s.sessionDate <= :endDate
             """)
+    /** Buổi đã xếp (scheduled) trong khoảng ngày kèm lớp. */
     List<ClassSession> findScheduledSessionsBetweenDates(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);
@@ -93,12 +103,14 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
               and s.sessionDate = :date
               and s.status = 'scheduled'
             """)
+    /** Buổi đã xếp của HLV trong một ngày, dùng để kiểm tra HLV bận. */
     List<ClassSession> findActiveByCoachAndDate(@Param("coachId") Long coachId, @Param("date") LocalDate date);
 
     @Query("""
             select s from ClassSession s
             where s.gymClass.coach.userId = :coachId
             """)
+    /** Mọi buổi học của các lớp do HLV dạy. */
     List<ClassSession> findByCoachId(@Param("coachId") Long coachId);
 
     /** Xóa các bản ghi có gymClassId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
@@ -108,6 +120,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             "and e.member.userId = :memberId and e.status = 'booked') " +
             "or exists (select b.id from SessionBooking b where b.session = s " +
             "and b.member.userId = :memberId and b.status = 'booked'))")
+    /** Buổi đã xếp trong ngày mà hội viên đã ghi danh lớp hoặc đặt chỗ, dùng để chặn trùng lịch. */
     List<ClassSession> findActiveByMemberAndDate(@Param("memberId") Long memberId, @Param("date") LocalDate date);
 
     /**
@@ -132,6 +145,10 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
                                  and b2.session = s and b2.status = 'booked')))
             order by s.startTime
             """)
+    /**
+     * Buổi khác trong ngày trùng giờ với buổi đang xếp mà có chung học viên với lớp/buổi này; dùng để báo xung
+     * đột lịch học viên khi xếp/dời buổi.
+     */
     List<ClassSession> findMemberOverlaps(@Param("classId") Long classId, @Param("sessionId") Long sessionId,
                                           @Param("date") LocalDate date,
                                           @Param("startTime") java.time.LocalTime startTime,
@@ -141,6 +158,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             select (count(s) > 0) from ClassSession s
             where s.gymClass.coach.userId = :coachId and s.status = 'scheduled' and s.sessionDate >= :today
             """)
+    /** Kiểm tra HLV còn buổi đã xếp từ hôm nay trở đi không. */
     boolean existsScheduledForCoachFrom(@Param("coachId") Long coachId, @Param("today") java.time.LocalDate today);
 
     @Query("""
@@ -148,6 +166,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             where s.gymClass.coach.userId = :coachId and s.status = 'scheduled'
               and s.sessionDate between :startDate and :endDate
             """)
+    /** Đếm buổi đã xếp của HLV trong khoảng ngày. */
     long countScheduledForCoachBetween(@Param("coachId") Long coachId,
                                        @Param("startDate") java.time.LocalDate startDate,
                                        @Param("endDate") java.time.LocalDate endDate);
@@ -158,5 +177,9 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             update ClassSession s set s.status = 'completed', s.updatedAt = :now
             where s.status = 'scheduled' and s.sessionDate < :cutoff
             """)
+    /**
+     * Chuyển buổi scheduled diễn ra trước ngày cutoff sang completed và cập nhật updatedAt; trả về số dòng cập
+     * nhật.
+     */
     int completeHeldBefore(@Param("cutoff") LocalDate cutoff, @Param("now") java.time.LocalDateTime now);
 }

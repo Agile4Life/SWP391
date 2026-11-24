@@ -55,6 +55,9 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
+ * Nghiệp vụ quản lý lớp/khóa học và buổi học: tạo, sửa, đóng/xóa lớp, xếp và dời buổi, tra cứu lịch và học
+ * viên; kiểm tra xung đột phòng/HLV ở service và trigger DB.
+ *
  * SCRUM-72, SCRUM-131 & SCRUM-132: class and class-session management.
  *
  * <p>Schedule-conflict (Trigger P3) is enforced both in the service layer (with detailed
@@ -106,6 +109,7 @@ public class ClassService {
     private final Clock clock;
     private final CourtBookingRepository courtBookings;
 
+    /** Constructor rút gọn không có CourtBookingRepository (dùng trong test). */
     public ClassService(GymClassRepository gymClasses,
                         ClassSessionRepository sessions,
                         ClassEnrollmentRepository enrollments,
@@ -117,6 +121,10 @@ public class ClassService {
         this(gymClasses, sessions, enrollments, disciplines, coaches, rooms, mapper, clock, null);
     }
 
+    /**
+     * Constructor chính: nhận các repository lớp, buổi, ghi danh, bộ môn, HLV, phòng, mapper, Clock và
+     * repository đặt sân.
+     */
     @Autowired
     public ClassService(GymClassRepository gymClasses,
                         ClassSessionRepository sessions,
@@ -139,6 +147,9 @@ public class ClassService {
     }
 
     /**
+     * Tạo lớp (một buổi, đã ngừng ở API): bộ môn/HLV/phòng phải tồn tại, HLV active, phòng sẵn sàng, sức chứa >
+     * 0; nếu có ngày giờ thì kiểm tra xung đột rồi xếp buổi đầu tiên.
+     *
      * SCRUM-72 BR-01..BR-02, BR-05 & SCRUM-132: create a class. Disciplines/coach/room must exist,
      * capacity &gt; 0, the room must be available and the coach must be active.
      * If sessionDate, startTime, and endTime are provided, validates room/coach conflicts first
@@ -217,6 +228,9 @@ public class ClassService {
     }
 
     /**
+     * Tạo khóa định kỳ: kiểm tra bộ môn/HLV/phòng, sinh mọi buổi trong [startDate, endDate] theo các thứ đã
+     * chọn và kiểm tra xung đột phòng/HLV cho từng buổi.
+     *
      * Create a recurring course: generates all sessions within [startDate, endDate]
      * for the selected days of the week, validating room/coach conflicts across every session.
      */
@@ -324,6 +338,9 @@ public class ClassService {
     }
 
     /**
+     * Quản lý cập nhật lớp: kiểm tra bộ môn/HLV/phòng và sức chứa; chuyển lớp sang ngừng hoạt động thì đóng lớp
+     * như khi xóa để không còn lượt đặt sống.
+     *
      * SCRUM-131 & SCRUM-132: Manager updates an existing class.
      */
     @Transactional
@@ -422,6 +439,9 @@ public class ClassService {
     }
 
     /**
+     * Đóng lớp: hủy các buổi chưa bắt đầu, nhả lượt đặt chỗ và ghi danh khóa, hoàn phí đã trả vào ví và thông
+     * báo cho hội viên.
+     *
      * Closing a class: cancels its sessions that have not started, releases their bookings and the course enrollments,
      * refunds settled course fees to the wallet and notifies the members.
      */
@@ -553,6 +573,10 @@ public class ClassService {
         gymClasses.flush();
     }
 
+    /**
+     * True nếu lớp đã có dữ liệu phụ thuộc (ghi danh, thanh toán, đặt chỗ, điểm danh, đánh giá, buổi không còn
+     * scheduled) — khi đó chỉ đóng lớp chứ không xóa cứng.
+     */
     private boolean hasDependentRecords(Long classId,
                                         List<ClassEnrollment> classEnrollments,
                                         List<ClassSession> classSessions) {
@@ -606,6 +630,7 @@ public class ClassService {
         return false;
     }
 
+    /** Chạy một câu JPQL đếm với tham số cid; lỗi (vd. entity không tồn tại) thì trả 0. */
     private long countQuery(String jpql, Long classId) {
         try {
             Long count = entityManager.createQuery(jpql, Long.class)
@@ -617,11 +642,15 @@ public class ClassService {
         }
     }
 
+    /** Dịch message key kèm tham số; không có MessageService thì trả lại key. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
     /**
+     * Xếp một buổi cho lớp: lớp active, giờ kết thúc sau giờ bắt đầu, buổi ở tương lai; kiểm tra trước xung đột
+     * phòng/HLV và học viên rồi lưu.
+     *
      * SCRUM-72 BR-03 & SCRUM-132: schedule a session. End time must be after start time and the
      * session may not be placed in the past. Pre-checks room and coach conflicts before saving.
      */
@@ -690,6 +719,9 @@ public class ClassService {
     }
 
     /**
+     * Quản lý dời lịch một buổi: buổi phải thuộc lớp, chưa hủy, lớp active; kiểm tra giờ, tương lai và xung đột
+     * phòng/HLV/học viên (trigger DB kiểm tra lại).
+     *
      * SCRUM-131 & SCRUM-132: Manager reschedules an existing class session.
      * Pre-checks room and coach conflicts and enforces Trigger P3 at the database.
      */
@@ -754,6 +786,9 @@ public class ClassService {
     }
 
     /**
+     * Kiểm tra trước xung đột: HLV không nghỉ phép đã duyệt, phòng không bị đặt sân, và không có buổi scheduled
+     * khác cùng ngày trùng giờ ở cùng phòng hoặc cùng HLV.
+     *
      * SCRUM-132: Pre-check that no scheduled session on the same date overlaps in time
      * for the same room or the same coach, and the coach is not on approved leave.
      */
@@ -846,6 +881,9 @@ public class ClassService {
     }
 
     /**
+     * Học viên chỉ học một lớp tại một thời điểm: buổi mới/dời không được trùng giờ với lớp khác mà học viên
+     * của lớp/buổi này đang học (trigger trg_member_schedule_conflict kiểm tra lại).
+     *
      * A member attends one class at a time: a new or moved session must not overlap another class that one of its
      * members (class-wide enrollment or seat in this session) already attends. The database trigger
      * {@code trg_member_schedule_conflict} repeats this check.
@@ -870,6 +908,7 @@ public class ClassService {
                 "A booked member already attends class " + otherName + " at this time");
     }
 
+    /** Định dạng giờ thành chuỗi HH:mm (null thành chuỗi rỗng). */
     private static String formatTime(LocalTime time) {
         if (time == null) return "";
         String raw = time.toString();
@@ -880,6 +919,8 @@ public class ClassService {
             java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     /**
+     * Tra cứu lịch buổi học cho mọi role đã đăng nhập, lọc theo ngày, bộ môn, HLV; kèm số chỗ đã đặt.
+     *
      * SCRUM-72 BR-06: schedule lookup for any authenticated role with optional filters.
      */
     @Transactional(readOnly = true)
@@ -892,6 +933,7 @@ public class ClassService {
                 .toList();
     }
 
+    /** Danh sách lớp mới nhất trước; chỉ lớp cũ thiếu dữ liệu lịch mới phải đọc buổi học để suy ra lịch. */
     @Transactional(readOnly = true)
     public List<GymClassDto> listClasses() {
         return gymClasses.findAllByOrderByIdDesc().stream()
@@ -902,6 +944,7 @@ public class ClassService {
                 .toList();
     }
 
+    /** Danh sách HLV đang hoạt động dùng làm lựa chọn khi xếp lớp. */
     @Transactional(readOnly = true)
     public List<CoachOptionDto> listActiveCoaches() {
         return coaches.findActiveWithUser().stream()
@@ -915,6 +958,7 @@ public class ClassService {
                 .toList();
     }
 
+    /** Học viên của lớp: ghi danh chưa hủy cộng hội viên đặt chỗ từng buổi (không trùng lặp). */
     @Transactional(readOnly = true)
     public List<EnrolledStudentDto> getClassStudents(Long classId) {
         if (!gymClasses.existsById(classId)) {
@@ -937,6 +981,8 @@ public class ClassService {
     }
 
     /**
+     * Học viên của lớp theo người xem: HLV chỉ xem lớp mình, lễ tân không thấy ghi chú sức khỏe.
+     *
      * Students of a class for the caller: a coach only for their own class, the desk without the health notes
      * (medical data is for the coach who trains the member and for managers).
      */
@@ -947,6 +993,7 @@ public class ClassService {
         return scopeStudents(getClassStudents(classId), gymClass, principal);
     }
 
+    /** Học viên của buổi học theo người xem (cùng quy tắc phạm vi như getClassStudents). */
     @Transactional(readOnly = true)
     public List<EnrolledStudentDto> getSessionStudents(Long sessionId, com.swp391.scms.security.AuthenticatedPrincipal principal) {
         ClassSession session = sessions.findById(sessionId)
@@ -954,6 +1001,10 @@ public class ClassService {
         return scopeStudents(getSessionStudents(sessionId), session.getGymClass(), principal);
     }
 
+    /**
+     * Giới hạn dữ liệu học viên theo role: HLV chỉ lớp mình dạy, quản lý thấy đủ, lễ tân chỉ bị ẩn ghi chú sức
+     * khỏe.
+     */
     private static List<EnrolledStudentDto> scopeStudents(List<EnrolledStudentDto> students, GymClass gymClass,
                                                           com.swp391.scms.security.AuthenticatedPrincipal principal) {
         String role = principal == null || principal.role() == null ? "" : principal.role().toUpperCase(java.util.Locale.ROOT);
@@ -973,6 +1024,7 @@ public class ClassService {
                 s.emergencyContactPhone(), s.enrolledAt(), s.status())).toList();
     }
 
+    /** Học viên của một buổi: ghi danh chưa hủy của lớp cộng các lượt đặt chỗ booked của buổi (không trùng lặp). */
     @Transactional(readOnly = true)
     public List<EnrolledStudentDto> getSessionStudents(Long sessionId) {
         ClassSession session = sessions.findById(sessionId)
@@ -993,6 +1045,7 @@ public class ClassService {
         return students;
     }
 
+    /** Chuyển lượt ghi danh sang EnrolledStudentDto (giá trị trống được thay bằng mặc định). */
     private EnrolledStudentDto toStudentDto(ClassEnrollment enrollment) {
         Member member = enrollment.getMember();
         User user = member != null ? member.getUser() : null;
@@ -1014,20 +1067,29 @@ public class ClassService {
         );
     }
 
-    /** Seats taken in one session: class-wide enrollments plus the members who booked this session. */
+    /**
+     * Số chỗ đã chiếm trong một buổi: ghi danh cả lớp cộng lượt đặt riêng buổi đó.
+     *
+     * Seats taken in one session: class-wide enrollments plus the members who booked this session.
+     */
     private long countBooked(ClassSession session) {
         long classWide = enrollments.countByGymClassIdAndStatus(session.getGymClass().getId(), ENROLLMENT_BOOKED);
         return classWide + (sessionBookings != null && session.getId() != null
                 ? sessionBookings.countBySessionIdAndStatus(session.getId(), ENROLLMENT_BOOKED) : 0);
     }
 
-    /** Highest number of per-session bookings in any session of the class. */
+    /**
+     * Số lượt đặt chỗ lớn nhất trong một buổi bất kỳ của lớp.
+     *
+     * Highest number of per-session bookings in any session of the class.
+     */
     private long busiestSession(Long classId) {
         if (sessionBookings == null) return 0;
         return sessionBookings.countBookedGroupedBySession(classId).stream()
                 .mapToLong(com.swp391.scms.scheduling.dto.SessionBookingCount::bookedCount).max().orElse(0);
     }
 
+    /** Chuyển lượt đặt chỗ buổi sang EnrolledStudentDto (giá trị trống được thay bằng mặc định). */
     private EnrolledStudentDto toStudentDto(SessionBooking booking) {
         Member member = booking.getMember();
         User user = member != null ? member.getUser() : null;

@@ -7,14 +7,19 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
+ * Nhóm các DTO yêu cầu cho nghiệp vụ lớp học và buổi học.
+ *
  * SCRUM-72 & SCRUM-131: request payloads for class and session management.
  */
 public final class SchedulingRequests {
 
+    /** Constructor private: chỉ dùng làm nơi chứa các record. */
     private SchedulingRequests() {
     }
 
     /**
+     * Yêu cầu tạo lớp một buổi (đã ngừng): tên, bộ môn, HLV, phòng, sức chứa, trình độ, mô tả, ngày và giờ học.
+     *
      * SCRUM-72 AC: Manager creates a class (discipline, coach, room, capacity, level),
      * optionally scheduling the first session in the same request.
      */
@@ -45,6 +50,7 @@ public final class SchedulingRequests {
             java.time.LocalTime startTime,
             java.time.LocalTime endTime
     ) {
+        /** Constructor rút gọn không có ngày giờ buổi học. */
         public CreateClassRequest(String name,
                                   Long disciplineId,
                                   Long coachId,
@@ -57,6 +63,8 @@ public final class SchedulingRequests {
     }
 
     /**
+     * Yêu cầu tạo khóa học định kỳ: thông tin lớp, giá, ngày bắt đầu/kết thúc, các thứ trong tuần và giờ học.
+     *
      * Manager creates a recurring course with an advance date window,
      * weekly recurring days, and course fee price.
      */
@@ -103,6 +111,8 @@ public final class SchedulingRequests {
     }
 
     /**
+     * Yêu cầu cập nhật lớp: tên, bộ môn, HLV, phòng, sức chứa, trình độ, mô tả và trạng thái.
+     *
      * SCRUM-131 AC: Manager updates an existing class (name, discipline, coach, room, capacity, level, description, status).
      */
     public record UpdateClassRequest(
@@ -134,6 +144,8 @@ public final class SchedulingRequests {
     }
 
     /**
+     * Yêu cầu xếp một buổi học cụ thể: ngày, giờ bắt đầu và kết thúc.
+     *
      * SCRUM-72 AC: schedule a concrete session for a class.
      */
     public record CreateSessionRequest(
@@ -149,6 +161,8 @@ public final class SchedulingRequests {
     }
 
     /**
+     * Yêu cầu dời lịch buổi học: ngày, giờ bắt đầu và kết thúc mới.
+     *
      * SCRUM-131 AC: reschedule an existing class session.
      */
     public record RescheduleSessionRequest(
@@ -163,6 +177,7 @@ public final class SchedulingRequests {
     ) {
     }
 
+    /** Yêu cầu thanh toán khóa học: phương thức thanh toán. */
     public record CourseCheckoutRequest(
             String method
     ) {

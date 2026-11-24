@@ -6,17 +6,26 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** Periodically frees course seats held by fees that were never paid. */
+/**
+ * Job nền định kỳ nhả chỗ khóa học đang giữ cho các khoản phí chưa thanh toán quá hạn.
+ *
+ * Periodically frees course seats held by fees that were never paid.
+ */
 @Component
 @ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 public class CourseEnrollmentExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(CourseEnrollmentExpiryScheduler.class);
     private final EnrollmentService service;
 
+    /** Khởi tạo job với EnrollmentService. */
     public CourseEnrollmentExpiryScheduler(EnrollmentService service) {
         this.service = service;
     }
 
+    /**
+     * Chạy theo chu kỳ app.courses.expiry-interval-ms (mặc định 60 giây): gọi expireUnpaidCourseEnrollments và
+     * ghi log; lỗi chỉ ghi cảnh báo.
+     */
     @Scheduled(fixedDelayString = "${app.courses.expiry-interval-ms:60000}", initialDelayString = "${app.courses.expiry-interval-ms:60000}")
     public void releaseUnpaid() {
         try {

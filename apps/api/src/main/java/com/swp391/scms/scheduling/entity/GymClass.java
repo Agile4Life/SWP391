@@ -11,7 +11,12 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import org.hibernate.Length;
 
-/** Entity mapping table classes (schema is generated code-first by Hibernate). */
+/**
+ * Entity lớp/khóa học nhóm (bảng classes): tên, bộ môn, HLV, phòng, sức chứa, trình độ, giá, thời gian và lịch
+ * lặp hằng tuần, người tạo.
+ *
+ * Entity mapping table classes (schema is generated code-first by Hibernate).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_classes_level", constraints = "level IN ('beginner','intermediate','advanced','all')")
 @org.hibernate.annotations.Check(name = "ck_classes_status", constraints = "status IN ('active','inactive','archived')")
@@ -77,6 +82,7 @@ public class GymClass {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    /** Tự cập nhật updatedAt trước mỗi lần cập nhật. */
     @PreUpdate
     void touch() {
         updatedAt = LocalDateTime.now();

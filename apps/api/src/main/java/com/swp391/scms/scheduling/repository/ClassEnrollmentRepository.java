@@ -12,6 +12,7 @@ import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập dữ liệu ghi danh khóa học (bảng class_enrollments). */
 @Repository
 public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment, Long> {
     @Query("""
@@ -22,16 +23,23 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
                 and (s.sessionDate > :today or (s.sessionDate = :today and s.startTime > :now)))
             order by c.id, e.id
             """)
+    /**
+     * Lượt ghi danh còn hiệu lực ở các lớp active của một HLV mà lớp còn buổi sắp tới, kèm hội viên còn hoạt
+     * động.
+     */
     List<ClassEnrollment> findCurrentCoachAssignments(@Param("coachId") Long coachId,
             @Param("today") java.time.LocalDate today, @Param("now") java.time.LocalTime now);
 
+    /** Lấy id lớp của một lượt ghi danh (không tải cả entity). */
     @Query("select e.gymClass.id from ClassEnrollment e where e.id = :id")
     Optional<Long> findClassIdById(@Param("id") Long id);
 
+    /** Lấy lượt ghi danh theo id và khóa dòng (PESSIMISTIC_WRITE) để hủy/sửa an toàn. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select e from ClassEnrollment e where e.id = :id")
     Optional<ClassEnrollment> findByIdForUpdate(@Param("id") Long id);
 
+    /** Id các lớp mà hội viên đang ghi danh (trạng thái booked), không trùng lặp. */
     @Query("select distinct e.gymClass.id from ClassEnrollment e where e.member.userId = :memberId and e.status = 'booked'")
     List<Long> findBookedClassIdsByMemberId(@Param("memberId") Long memberId);
 
@@ -52,6 +60,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
 
     @Query("select new com.swp391.scms.scheduling.dto.ClassBookingCount(e.gymClass.id, count(e)) "
             + "from ClassEnrollment e where e.gymClass.id in :classIds and e.status = :status group by e.gymClass.id")
+    /** Đếm số lượt ghi danh theo trạng thái cho nhiều lớp cùng lúc, nhóm theo lớp. */
     List<ClassBookingCount> countByClassIdsAndStatus(@Param("classIds") List<Long> classIds, @Param("status") String status);
 
     /**
@@ -74,9 +83,11 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             where e.member.userId = :memberId and e.gymClass.coach.userId = :coachId
               and e.status in ('booked', 'completed')
             """)
+    /** Kiểm tra hội viên có từng học (booked/completed) lớp do HLV này dạy không. */
     boolean existsForCoachAndMember(@org.springframework.data.repository.query.Param("coachId") Long coachId,
                                     @org.springframework.data.repository.query.Param("memberId") Long memberId);
 
+    /** Id các hội viên đang có ít nhất một lượt ghi danh booked. */
     @org.springframework.data.jpa.repository.Query("select distinct e.member.userId from ClassEnrollment e where e.status = 'booked'")
     List<Long> findMemberIdsWithBookedEnrollments();
 
@@ -86,6 +97,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
               and exists (select s.id from ClassSession s
                           where s.gymClass = e.gymClass and s.status = 'scheduled' and s.sessionDate >= :today)
             """)
+    /** Kiểm tra hội viên còn ghi danh lớp có buổi đã xếp từ hôm nay trở đi không. */
     boolean existsUpcomingBookedForMember(@org.springframework.data.repository.query.Param("memberId") Long memberId,
                                           @org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
 
@@ -98,6 +110,10 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
                 where p.classEnrollmentId = e.id and p.status in ('pending', 'success')
               )
             """)
+    /**
+     * Đếm số credit miễn phí đã dùng: lượt ghi danh theo trạng thái có ngày bắt đầu khóa trong khoảng, không
+     * tính lượt đã trả tiền hoặc đang chờ thanh toán.
+     */
     long countByMemberUserIdAndStatusAndGymClassStartDateBetween(
             @org.springframework.data.repository.query.Param("memberId") Long memberId,
             @org.springframework.data.repository.query.Param("status") String status,
@@ -114,6 +130,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
                 where p.classEnrollmentId = e.id and p.status in ('pending', 'success')
               )
             """)
+    /** Đếm số credit bị mất do hủy muộn trong khoảng ngày (không tính lượt trả tiền). */
     long countForfeitedCreditsBetween(
             @org.springframework.data.repository.query.Param("memberId") Long memberId,
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
@@ -128,5 +145,9 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
               and not exists (select s.id from ClassSession s where s.gymClass = e.gymClass
                               and s.status <> 'cancelled' and s.sessionDate >= :cutoff)
             """)
+    /**
+     * Chuyển lượt ghi danh booked sang completed khi lớp không còn buổi chưa hủy nào từ ngày cutoff trở đi; trả
+     * về số dòng cập nhật.
+     */
     int completeFinishedBefore(@Param("cutoff") java.time.LocalDate cutoff);
 }

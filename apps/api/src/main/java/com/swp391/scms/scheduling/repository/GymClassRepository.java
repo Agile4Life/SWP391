@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập dữ liệu lớp/khóa học (bảng classes). */
 @Repository
 public interface GymClassRepository extends JpaRepository<GymClass, Long> {
     /** Kiểm tra có tồn tại bản ghi có roomId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
@@ -28,6 +29,7 @@ public interface GymClassRepository extends JpaRepository<GymClass, Long> {
     /** Tìm các bản ghi có coachUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<GymClass> findByCoachUserId(Long coachId);
 
+    /** Lấy lớp theo id và khóa dòng (PESSIMISTIC_WRITE) để kiểm tra sức chứa khi ghi danh đồng thời. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from GymClass c where c.id = :id")
     Optional<GymClass> findByIdForUpdate(@Param("id") Long id);

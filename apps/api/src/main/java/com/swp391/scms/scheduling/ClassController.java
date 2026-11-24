@@ -26,6 +26,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
+ * API quản lý lớp học nhóm và buổi học (đã ngừng; chỉ bật khi app.legacy.classes-enabled=true).
+ *
  * SCRUM-72 & SCRUM-131: class and schedule endpoints.
  * Writes are restricted to CENTER_MANAGER; schedule reads are open to every authenticated role.
  */
@@ -38,20 +40,24 @@ public class ClassController {
     private final ClassService service;
     private final MessageService messageService;
 
+    /** Constructor cho test: không có MessageService. */
     public ClassController(ClassService service) {
         this(service, null);
     }
 
+    /** Constructor chính: nhận ClassService và MessageService. */
     @org.springframework.beans.factory.annotation.Autowired
     public ClassController(ClassService service, MessageService messageService) {
         this.service = service;
         this.messageService = messageService;
     }
 
+    /** Dịch message key; không có MessageService thì trả lại key. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** POST: tạo lớp một buổi — đã ngừng, luôn ném lỗi SingleSessionPolicy (dùng POST /recurring). */
     @Operation(summary = "Retired: one-off classes are no longer created; use /recurring", deprecated = true)
     @PostMapping
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
@@ -60,6 +66,7 @@ public class ClassController {
         throw SingleSessionPolicy.rejection();
     }
 
+    /** POST /recurring: quản lý tạo khóa học định kỳ (sinh sẵn các buổi theo lịch tuần). */
     @Operation(summary = "Create a recurring course (CENTER_MANAGER only)")
     @PostMapping("/recurring")
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
@@ -68,6 +75,7 @@ public class ClassController {
                 .body(ApiResponse.created(msg("scheduling.class.created"), service.createRecurringClass(request)));
     }
 
+    /** PUT /{id}: quản lý cập nhật thông tin lớp/khóa học. */
     @Operation(summary = "Update a class (CENTER_MANAGER only)")
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
@@ -76,6 +84,7 @@ public class ClassController {
         return ApiResponse.ok(msg("scheduling.class.updated"), service.updateClass(id, request));
     }
 
+    /** DELETE /{id}: quản lý xóa hoặc đóng lớp (service quyết định tùy dữ liệu phụ thuộc). */
     @Operation(summary = "Delete a class (CENTER_MANAGER only)")
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
@@ -84,18 +93,21 @@ public class ClassController {
         return ApiResponse.ok(msg("scheduling.class.deleted"), null);
     }
 
+    /** GET: danh sách lớp học. */
     @Operation(summary = "List classes")
     @GetMapping
     public ApiResponse<List<GymClassDto>> listClasses() {
         return ApiResponse.ok(msg("scheduling.class.list"), service.listClasses());
     }
 
+    /** GET /coaches: danh sách HLV đang hoạt động để chọn khi xếp lớp và lọc. */
     @Operation(summary = "List active coaches for class scheduling and filtering")
     @GetMapping("/coaches")
     public ApiResponse<List<CoachOptionDto>> listActiveCoaches() {
         return ApiResponse.ok(msg("scheduling.class.list"), service.listActiveCoaches());
     }
 
+    /** POST /{id}/sessions: quản lý xếp thêm một buổi cho lớp. */
     @Operation(summary = "Schedule a session for a class (CENTER_MANAGER only)")
     @PostMapping("/{id}/sessions")
     @PreAuthorize("hasRole('CENTER_MANAGER')")
@@ -105,6 +117,7 @@ public class ClassController {
                 .body(ApiResponse.created(msg("scheduling.session.created"), service.createSession(id, request)));
     }
 
+    /** PUT /{id}/sessions/{sessionId}: quản lý dời lịch một buổi học. */
     @Operation(summary = "Reschedule an existing class session (CENTER_MANAGER only)")
     @PutMapping("/{id}/sessions/{sessionId}")
     @PreAuthorize("hasRole('CENTER_MANAGER')")
@@ -114,6 +127,10 @@ public class ClassController {
         return ApiResponse.ok(msg("scheduling.session.rescheduled"), service.rescheduleSession(id, sessionId, request));
     }
 
+    /**
+     * GET /sessions: danh sách buổi học lọc theo ngày, bộ môn, HLV, lớp; HLV đăng nhập chỉ thấy buổi của chính
+     * mình.
+     */
     @Operation(summary = "List class sessions with optional filters (date range, discipline, coach, classId); a COACH only ever sees their own sessions")
     @GetMapping("/sessions")
     public ApiResponse<List<ClassSessionDto>> listSessions(
@@ -131,6 +148,7 @@ public class ClassController {
         return ApiResponse.ok(msg("scheduling.session.list"), result);
     }
 
+    /** GET /{id}/students: học viên đã ghi danh của lớp kèm ghi chú sức khỏe (HLV chỉ xem lớp mình dạy). */
     @Operation(summary = "Get enrolled students and health notes for a class")
     @GetMapping("/{id}/students")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")
@@ -139,6 +157,7 @@ public class ClassController {
         return ApiResponse.ok(msg("scheduling.class.list"), service.getClassStudents(id, principal));
     }
 
+    /** GET /sessions/{sessionId}/students: học viên của một buổi học kèm ghi chú sức khỏe. */
     @Operation(summary = "Get enrolled students and health notes for a class session")
     @GetMapping("/sessions/{sessionId}/students")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")

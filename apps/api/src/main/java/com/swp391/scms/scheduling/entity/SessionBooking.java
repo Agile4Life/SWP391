@@ -8,6 +8,9 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 /**
+ * Entity lượt đặt chỗ một buổi học (bảng session_bookings): buổi, hội viên, trạng thái, thời điểm đặt, mã lô
+ * đặt nhiều buổi và thông tin hủy.
+ *
  * A member's seat in ONE class session. Unlike {@link ClassEnrollment}, which holds a seat for every session of a
  * class, a booking is made, cancelled and counted per session, so members can pick individual days, a whole week or a
  * whole month. Capacity and the one-booking-per-session rule are enforced by database triggers/indexes.

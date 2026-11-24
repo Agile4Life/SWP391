@@ -16,6 +16,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
+ * Job nền hằng ngày chuyển buổi học, lượt đặt chỗ và ghi danh khóa đã kết thúc sang completed (giữ lại
+ * GRACE_DAYS ngày để điểm danh trễ).
+ *
  * Settles held class sessions, their per-session bookings and finished course enrollments as {@code completed}.
  *
  * <p>Rows stay open for {@link #GRACE_DAYS} days after the session so the auto-absent sweep (7-day lookback) and late
@@ -33,6 +36,7 @@ public class SessionCompletionScheduler {
     private final ClassEnrollmentRepository enrollments;
     private final Clock clock;
 
+    /** Khởi tạo với các repository buổi học, đặt chỗ, ghi danh và Clock. */
     public SessionCompletionScheduler(ClassSessionRepository sessions, SessionBookingRepository bookings,
                                       ClassEnrollmentRepository enrollments, Clock clock) {
         this.sessions = sessions;
@@ -41,6 +45,10 @@ public class SessionCompletionScheduler {
         this.clock = clock;
     }
 
+    /**
+     * Chạy theo cron app.scheduling.completion.cron (mặc định 00:30): gọi completeHeld và ghi log; lỗi chỉ ghi
+     * cảnh báo.
+     */
     @Scheduled(cron = "${app.scheduling.completion.cron:0 30 0 * * ?}")
     public void sweep() {
         try {
@@ -51,7 +59,12 @@ public class SessionCompletionScheduler {
         }
     }
 
-    /** Returns {sessions, bookings, enrollments} moved to completed. */
+    /**
+     * Tính mốc cutoff = hôm nay − GRACE_DAYS; hoàn tất đặt chỗ và ghi danh trước rồi mới tới buổi học; trả về
+     * {số buổi, số đặt chỗ, số ghi danh}.
+     *
+     * Returns {sessions, bookings, enrollments} moved to completed.
+     */
     @Transactional
     public int[] completeHeld() {
         LocalDateTime now = clock.instant().atZone(CENTER_ZONE).toLocalDateTime();
