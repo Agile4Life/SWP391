@@ -123,8 +123,8 @@ export function AiChatThread({ onBack, active = true, audience = 'member' }: { o
       {loading ? <LoadingSkeleton label={t("Đang tải hội thoại với SÖL AI…", "Loading SÖL AI conversation…")} count={3} />
         : messages.length === 0 && !pending && !error
           ? <div className="direct-chat__empty direct-chat__ai-intro"><ChatAvatar contact={AI_PEER} /><p><strong>SÖL AI</strong>{audience === 'staff'
-            ? t(' giúp lễ tân tra nhanh bảng giá, quyền lợi gói, lịch lớp, đặt sân và quy định trung tâm để trả lời khách.', ' helps the front desk look up prices, membership benefits, classes, court booking and centre rules to answer customers.')
-            : t(' trả lời về gói tập, lịch lớp, huấn luyện viên và tập luyện dựa trên dữ liệu của trung tâm.', ' answers questions about memberships, classes, coaches and training using center data.')}</p></div>
+            ? t(' giúp lễ tân tra nhanh bảng giá, quyền lợi gói và quy định trung tâm để trả lời khách.', ' helps the front desk look up prices, membership benefits and centre rules to answer customers.')
+            : t(' trả lời về gói tập, huấn luyện viên và tập luyện dựa trên dữ liệu của trung tâm.', ' answers questions about memberships, coaches and training using center data.')}</p></div>
           : null}
       {!loading && <ol className="direct-chat__messages">
         {messages.map(message => {

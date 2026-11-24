@@ -35,7 +35,7 @@ it('becomes usable again when the browser restores the page after leaving VNPay 
 });
 it('allows retry after an API error and shows the error inline',async()=>{
  vi.mocked(api.createVnpayCheckout).mockRejectedValue(new Error('private error'));
- await act(async()=>root.render(<VnpayPayButton target={{courtBookingId:82}} />));
+ await act(async()=>root.render(<VnpayPayButton target={{coachBookingId:82}} />));
  await act(async()=>host.querySelector('button')!.click());
  expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(host.querySelector('button')!.disabled).toBe(false);
  await act(async()=>host.querySelector('button')!.click());expect(api.createVnpayCheckout).toHaveBeenCalledTimes(2);

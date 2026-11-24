@@ -176,7 +176,7 @@ export function HoldManagementPage() {
                 </div>
               )}
               {item.holdStatus === 'PENDING' && (
-                <small className="meta-label">{t('Duyệt sẽ hủy PT, sân và khóa học trong giai đoạn bảo lưu. Khóa bắt đầu trong dưới 3 ngày hoặc đã bắt đầu sẽ mất lượt/học phí.', 'Approving cancels PT sessions, courts and courses within the hold. Courses starting in under 3 days, or already running, lose their credit or fee.')}</small>
+                <small className="meta-label">{t('Duyệt sẽ hủy các buổi PT trong giai đoạn bảo lưu.', 'Approving cancels PT sessions within the hold.')}</small>
               )}
             </li>
           ))}
