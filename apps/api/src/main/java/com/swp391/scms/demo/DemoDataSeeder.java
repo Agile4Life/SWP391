@@ -154,6 +154,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (users.findByEmailIgnoreCase(MANAGER_EMAIL).isPresent()) {
+            syncLegacyCoachSpecializations();
             log.info("Demo data already present; skipping seed.");
             return;
         }
@@ -232,6 +233,47 @@ public class DemoDataSeeder implements ApplicationRunner {
         coach.setHireDate(today.minusYears(2));
         coach.setEmploymentStatus("active");
         return coaches.save(coach);
+    }
+
+    /**
+     * Đồng bộ chuyên môn và giới thiệu của các HLV demo nếu DB cũ vẫn còn nhãn ngoài phạm vi Gym
+     * (Yoga, Boxing, Bơi lội, Pilates...). Không ghi đè nếu Manager đã chỉnh sang chuyên môn Gym khác.
+     */
+    private void syncLegacyCoachSpecializations() {
+        for (CoachSpec spec : COACHES) {
+            syncCoachIfLegacy(spec.key() + DOMAIN, spec.specialization(), spec.bio());
+        }
+        syncCoachIfLegacy("coach@scms.local", "Gym & Strength", null);
+    }
+
+    private void syncCoachIfLegacy(String email, String targetSpec, String targetBio) {
+        users.findByEmailIgnoreCase(email)
+                .flatMap(user -> coaches.findById(user.getId()))
+                .ifPresent(coach -> {
+                    boolean changed = false;
+                    if (hasLegacyDisciplineText(coach.getSpecialization())) {
+                        coach.setSpecialization(targetSpec);
+                        changed = true;
+                    }
+                    if (targetBio != null && hasLegacyDisciplineText(coach.getBio())) {
+                        coach.setBio(targetBio);
+                        changed = true;
+                    }
+                    if (changed) {
+                        coaches.save(coach);
+                    }
+                });
+    }
+
+    private static boolean hasLegacyDisciplineText(String text) {
+        if (text == null || text.isBlank()) return false;
+        String lower = text.toLowerCase(java.util.Locale.ROOT);
+        return lower.contains("yoga")
+                || lower.contains("boxing")
+                || lower.contains("bơi")
+                || lower.contains("pilates")
+                || lower.contains("tennis")
+                || lower.contains("cầu lông");
     }
 
     /**
