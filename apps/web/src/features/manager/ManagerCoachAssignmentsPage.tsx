@@ -254,6 +254,7 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       </section>}
       {!loading && !error && data && <p className="row-card__meta">{t('Số học viên theo bộ lọc gồm giáo án đang áp dụng hoặc buổi PT chưa bắt đầu; mỗi học viên được tính một lần trong mỗi số liệu.', 'Filtered member counts include current training plans or PT sessions that have not started; each member is counted once per metric.')}</p>}
+      {!loading && !error && data && <p className="row-card__meta">{t('Giáo án có hiệu lực đến hết ngày kết thúc; sau đó không còn trong danh sách đang áp dụng.', 'Training plans remain valid through their end date and then leave the current assignments list.')}</p>}
 
       {/* Thanh công cụ: Bộ lọc, Tìm kiếm, Chuyển đổi chế độ xem */}
       <section className="portal-card coach-assignments-toolbar" aria-label={t("Bộ lọc và tìm kiếm")}>
