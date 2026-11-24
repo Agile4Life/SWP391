@@ -5,6 +5,7 @@ const profilePortraits = new Map([
   ['tran thi my tram', '/images/fitness/coach-my-tram.jpg'],
 ]);
 
+/** Ảnh chân dung riêng của HLV theo tên (bỏ dấu, bỏ tiền tố HLV/Coach); không có thì undefined. */
 export function coachPortrait(coachName?: string | null) {
   const name = (coachName || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[đĐ]/g, 'd').toLowerCase().trim().replace(/\s+/g, ' ')
@@ -12,6 +13,10 @@ export function coachPortrait(coachName?: string | null) {
   return profilePortraits.get(name);
 }
 
+/**
+ * Ảnh minh họa HLV: ưu tiên chân dung riêng, nếu không thì chọn ảnh theo chuyên môn (tennis, bơi, vận động, sức
+ * mạnh) hoặc ảnh chung.
+ */
 export function coachIllustration(specialization: string | null, coachName?: string | null) {
   const portrait = coachPortrait(coachName);
   if (portrait) return portrait;

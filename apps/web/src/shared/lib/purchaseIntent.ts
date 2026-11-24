@@ -1,6 +1,7 @@
 import { homePath, type UserSession } from '../api/client';
 
 const KEY = 'scms_purchase_return';
+/** Đọc packageId hợp lệ (số nguyên dương) từ query string; không có thì null. */
 export function selectedPackageId(search: string): number | null {
   const raw = new URLSearchParams(search).get('packageId')?.trim();
   if (!raw) return null;
@@ -26,11 +27,16 @@ function purchaseReturnPath(search: string): string | null {
   return null;
 }
 
+/** Đường dẫn đăng nhập/đăng ký kèm returnTo để quay lại trang chọn gói sau khi xác thực. */
 export function purchaseAuthPath(path: '/login' | '/register', search: string): string {
   const target = purchaseReturnPath(search);
   return path + (target ? `?returnTo=${encodeURIComponent(target)}` : '');
 }
 
+/**
+ * Trang đích sau đăng nhập: role khác MEMBER về trang chủ của role; hội viên ưu tiên quay lại trang chọn gói đã
+ * lưu.
+ */
 export function authDestination(role: UserSession['role'], search: string): string {
   if (role !== 'MEMBER') return homePath(role);
   let saved: string | null = null;
@@ -38,11 +44,13 @@ export function authDestination(role: UserSession['role'], search: string): stri
   return purchaseReturnPath(search) ?? purchaseReturnPath(`?returnTo=${encodeURIComponent(saved ?? '')}`) ?? homePath(role);
 }
 
+/** Lưu ý định mua gói vào sessionStorage để giữ qua các bước chuyển hướng đăng nhập. */
 export function rememberPurchaseIntent(search: string) {
   const target = purchaseReturnPath(search);
   try { if (target) sessionStorage.setItem(KEY, target); } catch { /* Optional OAuth redirect continuity. */ }
 }
 
+/** Xóa ý định mua gói đã lưu. */
 export function clearPurchaseIntent() {
   try { sessionStorage.removeItem(KEY); } catch { /* Optional browser storage. */ }
 }

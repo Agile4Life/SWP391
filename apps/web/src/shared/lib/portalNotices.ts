@@ -9,6 +9,10 @@ import { toast } from '../ui/toast';
  */
 export type PortalNoticeType = 'success' | 'error' | 'info';
 
+/**
+ * Một thông báo trong portal: loại, nội dung (kèm bản dịch), thời điểm, đã đọc chưa, đường dẫn đích và khóa
+ * chống trùng.
+ */
 export interface PortalNotice {
   id: number;
   type: PortalNoticeType;
@@ -26,6 +30,7 @@ let notices: PortalNotice[] = [];
 let sequence = 0;
 const listeners = new Set<() => void>();
 
+/** Thay danh sách thông báo và báo cho các listener. */
 function commit(next: PortalNotice[]) {
   notices = next;
   listeners.forEach((listener) => listener());
@@ -48,20 +53,25 @@ export function resolveNotice(key: string) {
   if (notices.some((item) => item.key === key)) commit(notices.filter((item) => item.key !== key));
 }
 
+/** Đánh dấu mọi thông báo là đã đọc. */
 export function markNoticesRead() {
   if (notices.some((item) => !item.read)) commit(notices.map((item) => ({ ...item, read: true })));
 }
 
+/** Xóa toàn bộ thông báo. */
 export function clearNotices() {
   if (notices.length) commit([]);
 }
 
+/** Lấy danh sách thông báo hiện tại. */
 export const getNotices = () => notices;
+/** Đăng ký listener nhận thay đổi danh sách thông báo; trả về hàm hủy đăng ký. */
 export function subscribeNotices(listener: () => void) {
   listeners.add(listener);
   return () => { listeners.delete(listener); };
 }
 
+/** Hook React đọc danh sách thông báo và tự render lại khi thay đổi. */
 export function usePortalNotices(): PortalNotice[] {
   return useSyncExternalStore(subscribeNotices, getNotices, getNotices);
 }

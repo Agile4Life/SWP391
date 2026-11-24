@@ -1,4 +1,6 @@
 /**
+ * Sinh id cho một thao tác ghi dữ liệu; gửi lại cùng id khi thử lại sau lỗi mạng để server không xử lý hai lần.
+ *
  * Id for one user action that writes data. Resend the same id when retrying that action after a network error so
  * the server can recognise the retry and not apply the action twice.
  */

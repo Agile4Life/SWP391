@@ -13,7 +13,11 @@ export const JPEG_QUALITY = 0.85;
 export const KEEP_AS_IS_BYTES = 300 * 1024;
 const KEEP_AS_IS_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-/** Size after scaling so that the longer side is at most `maxSide`; never enlarges. */
+/**
+ * Kích thước sau khi thu nhỏ để cạnh dài nhất không quá maxSide; không bao giờ phóng to.
+ *
+ * Size after scaling so that the longer side is at most `maxSide`; never enlarges.
+ */
 export function fitWithin(width: number, height: number, maxSide = MAX_UPLOAD_SIDE): { width: number; height: number } {
   const longest = Math.max(width, height);
   if (longest <= maxSide) return { width, height };
@@ -21,6 +25,7 @@ export function fitWithin(width: number, height: number, maxSide = MAX_UPLOAD_SI
   return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
 }
 
+/** Đọc file thành data URL bằng FileReader. */
 function readAsDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -30,6 +35,10 @@ function readAsDataUrl(file: Blob): Promise<string> {
   });
 }
 
+/**
+ * Giải mã ảnh thành nguồn vẽ được lên canvas (ưu tiên createImageBitmap, nếu không thì dùng thẻ img) kèm hàm
+ * giải phóng.
+ */
 async function decode(file: Blob): Promise<{ source: CanvasImageSource; width: number; height: number; close: () => void }> {
   if (typeof createImageBitmap === 'function') {
     const bitmap = await createImageBitmap(file);
@@ -47,6 +56,9 @@ async function decode(file: Blob): Promise<{ source: CanvasImageSource; width: n
 }
 
 /**
+ * Data URL để tải lên: giữ nguyên ảnh nếu đã nhỏ, ngược lại nén thành JPEG có cạnh dài tối đa 1600px; báo lỗi
+ * nếu trình duyệt không giải mã được (vd. HEIC).
+ *
  * Data URL for `file`: the original when it is already small, otherwise a JPEG no larger than 1600 px on its long side.
  * Rejects when the browser cannot decode the file (for example a HEIC picture in a browser without HEIC support).
  */

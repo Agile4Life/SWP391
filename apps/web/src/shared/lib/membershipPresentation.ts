@@ -1,6 +1,7 @@
 import { getIntlLocale, getLanguage } from '../i18n/language';
 import type { MembershipPackage } from '../../features/member/membershipApi';
 
+/** Định dạng số tiền theo VND và ngôn ngữ hiện tại. */
 export const formatPrice = (price: number) => new Intl.NumberFormat(getIntlLocale(), {
   style: 'currency', currency: 'VND',
 }).format(price);
@@ -75,16 +76,19 @@ const SEEDED_PACKAGE_LINE_EN: Readonly<Record<string, string>> = {
   '12 lượt đăng ký khóa Group Fitness.': '12 Group Fitness course enrollments.',
 };
 
+/** Dịch tên gói mẫu sang tiếng Anh khi đang ở bản tiếng Anh (gói không có bản dịch thì giữ nguyên). */
 export function localizeSeededPackageName(name: string, lang: 'vi' | 'en' = getLanguage()): string {
   if (!name || lang !== 'en') return name;
   return SEEDED_PACKAGE_NAME_EN[name.trim()] ?? name;
 }
 
+/** Dịch một dòng mô tả gói mẫu sang tiếng Anh khi đang ở bản tiếng Anh. */
 function localizeSeededPackageLine(line: string, lang: 'vi' | 'en'): string {
   if (!line || lang !== 'en') return line;
   return SEEDED_PACKAGE_LINE_EN[line.trim()] ?? line;
 }
 
+/** True nếu là gói trải nghiệm (miễn phí 3 ngày hoặc tên có "trải nghiệm"/"trial"). */
 export function isTrialPackage(pkg: { price?: number; durationDays?: number; name?: string }): boolean {
   if (pkg.price === 0 && pkg.durationDays === 3) return true;
   const name = (pkg.name || '').toLowerCase();
@@ -97,6 +101,7 @@ export const LONG_TERM_DAYS = 180;
 
 // Hiển thị quyền lợi thật từ catalog; không tự sửa quyền lợi để khớp scope Gym ở frontend.
 export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = getLanguage()) {
+  // Chọn chuỗi theo ngôn ngữ hiển thị.
   const t = (vi: string, en: string) => lang === 'en' ? en : vi;
   const desc = pkg.description?.trim() || '';
   const lines = desc.split('\n').map((l) => l.trim()).filter(Boolean);
