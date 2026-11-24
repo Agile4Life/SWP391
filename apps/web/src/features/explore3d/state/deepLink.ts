@@ -6,6 +6,10 @@ import type { LevelMode, WallMode } from './exploreStore';
 
 export const EXPLORE3D_SESSION_KEY = 'scms_explore3d_view';
 
+/**
+ * Góc nhìn được lưu trong phiên: vị trí và điểm nhìn camera, tầng đang xem, đối tượng đang chọn, chế độ tầng và
+ * tường.
+ */
 export interface PersistedExploreView {
   position: Vec3;
   target: Vec3;
@@ -15,6 +19,7 @@ export interface PersistedExploreView {
   wallMode: WallMode;
 }
 
+/** Kết quả đọc đường dẫn khám phá: tầng, đối tượng được chọn, chế độ 2D/3D và cờ hiệu năng/benchmark. */
 export interface ParsedExploreDeepLink {
   level?: LevelCode;
   selectedId?: string;
@@ -23,6 +28,10 @@ export interface ParsedExploreDeepLink {
   bench?: boolean;
 }
 
+/**
+ * Đọc tham số URL (level, item/focus, mode, perf, bench); chỉ nhận giá trị hợp lệ và suy ra tầng từ đối tượng
+ * được chọn.
+ */
 export function parseExploreSearchParams(searchParams: URLSearchParams): ParsedExploreDeepLink {
   const result: ParsedExploreDeepLink = {};
 
@@ -59,6 +68,7 @@ export function parseExploreSearchParams(searchParams: URLSearchParams): ParsedE
   return result;
 }
 
+/** Dựng đường dẫn /member/explore kèm level và item (hoặc focus). */
 export function buildExploreDeepLink(params: {
   level?: LevelCode | 'ALL';
   focus?: string | null;
@@ -77,6 +87,7 @@ export function buildExploreDeepLink(params: {
   return qs ? `/member/explore?${qs}` : '/member/explore';
 }
 
+/** Lưu góc nhìn hiện tại vào sessionStorage (bỏ qua lỗi storage). */
 export function saveExploreSessionView(view: PersistedExploreView): void {
   try {
     sessionStorage.setItem(EXPLORE3D_SESSION_KEY, JSON.stringify(view));
@@ -85,6 +96,7 @@ export function saveExploreSessionView(view: PersistedExploreView): void {
   }
 }
 
+/** Đọc lại góc nhìn đã lưu trong sessionStorage; dữ liệu sai thì trả null. */
 export function loadExploreSessionView(): PersistedExploreView | null {
   try {
     const raw = sessionStorage.getItem(EXPLORE3D_SESSION_KEY);

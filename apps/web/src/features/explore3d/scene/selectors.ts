@@ -11,6 +11,7 @@ import type {
 } from './schema';
 import { polygonBounds2D } from './schema';
 
+/** Hộp bao trong không gian thế giới: min, max, tâm và kích thước. */
 export interface WorldBox {
   min: Vec3;
   max: Vec3;
@@ -18,17 +19,20 @@ export interface WorldBox {
   size: Vec3;
 }
 
+/** Lấy nút theo id (không có thì null). */
 export function getNode(doc: SceneDoc, id: string | null | undefined): SceneNode | null {
   if (!id) return null;
   return doc.nodes[id] ?? null;
 }
 
+/** Danh sách các tầng theo thứ tự. */
 export function getLevels(doc: SceneDoc): LevelNode[] {
   return Object.values(doc.nodes)
     .filter((n): n is LevelNode => n.type === 'level')
     .sort((a, b) => a.order - b.order);
 }
 
+/** Tìm tầng theo mã. */
 export function getLevelByCode(doc: SceneDoc, code: LevelCode): LevelNode | null {
   for (const node of Object.values(doc.nodes)) {
     if (node.type === 'level' && node.code === code) return node;
@@ -36,6 +40,7 @@ export function getLevelByCode(doc: SceneDoc, code: LevelCode): LevelNode | null
   return null;
 }
 
+/** Các nút con trực tiếp của một nút. */
 export function childrenOf(doc: SceneDoc, parentId: string): SceneNode[] {
   const parent = doc.nodes[parentId];
   if (!parent || !('children' in parent)) return [];
@@ -47,6 +52,7 @@ export function childrenOf(doc: SceneDoc, parentId: string): SceneNode[] {
   return out;
 }
 
+/** Tầng chứa một nút (đi ngược lên cha). */
 export function levelOf(doc: SceneDoc, nodeId: string | null | undefined): LevelNode | null {
   let curr = getNode(doc, nodeId);
   while (curr) {
@@ -56,6 +62,7 @@ export function levelOf(doc: SceneDoc, nodeId: string | null | undefined): Level
   return null;
 }
 
+/** Khu vực chứa một nút. */
 export function zoneOf(doc: SceneDoc, nodeId: string | null | undefined): ZoneNode | null {
   let curr = getNode(doc, nodeId);
   while (curr) {
@@ -65,6 +72,7 @@ export function zoneOf(doc: SceneDoc, nodeId: string | null | undefined): ZoneNo
   return null;
 }
 
+/** Các khu vực của một tầng (theo id hoặc mã). */
 export function zonesOfLevel(doc: SceneDoc, levelIdOrCode: string): ZoneNode[] {
   const level =
     doc.nodes[levelIdOrCode]?.type === 'level'
@@ -76,6 +84,7 @@ export function zonesOfLevel(doc: SceneDoc, levelIdOrCode: string): ZoneNode[] {
     .filter((n): n is ZoneNode => Boolean(n && n.type === 'zone'));
 }
 
+/** Các tường của một tầng. */
 export function wallsOfLevel(doc: SceneDoc, levelIdOrCode: string): WallNode[] {
   const level =
     doc.nodes[levelIdOrCode]?.type === 'level'
@@ -87,6 +96,7 @@ export function wallsOfLevel(doc: SceneDoc, levelIdOrCode: string): WallNode[] {
     .filter((n): n is WallNode => Boolean(n && n.type === 'wall'));
 }
 
+/** Các đồ vật của một khu vực. */
 export function itemsOfZone(doc: SceneDoc, zoneId: string): ItemNode[] {
   const zone = doc.nodes[zoneId];
   if (!zone || zone.type !== 'zone') return [];
@@ -95,6 +105,7 @@ export function itemsOfZone(doc: SceneDoc, zoneId: string): ItemNode[] {
     .filter((n): n is ItemNode => Boolean(n && n.type === 'item'));
 }
 
+/** Các đồ vật của một tầng. */
 export function itemsOfLevel(doc: SceneDoc, levelIdOrCode: string): ItemNode[] {
   const zones = zonesOfLevel(doc, levelIdOrCode);
   const items: ItemNode[] = [];
@@ -104,6 +115,7 @@ export function itemsOfLevel(doc: SceneDoc, levelIdOrCode: string): ItemNode[] {
   return items;
 }
 
+/** Các điểm nóng của một khu vực. */
 export function hotspotsOfZone(doc: SceneDoc, zoneId: string): HotspotNode[] {
   const zone = doc.nodes[zoneId];
   if (!zone || zone.type !== 'zone') return [];
@@ -112,6 +124,7 @@ export function hotspotsOfZone(doc: SceneDoc, zoneId: string): HotspotNode[] {
     .filter((n): n is HotspotNode => Boolean(n && n.type === 'hotspot'));
 }
 
+/** Các điểm nóng của một tầng. */
 export function hotspotsOfLevel(doc: SceneDoc, levelIdOrCode: string): HotspotNode[] {
   const zones = zonesOfLevel(doc, levelIdOrCode);
   const out: HotspotNode[] = [];
@@ -121,18 +134,22 @@ export function hotspotsOfLevel(doc: SceneDoc, levelIdOrCode: string): HotspotNo
   return out;
 }
 
+/** Mọi khu vực trong cảnh. */
 export function allZones(doc: SceneDoc): ZoneNode[] {
   return Object.values(doc.nodes).filter((n): n is ZoneNode => n.type === 'zone');
 }
 
+/** Mọi đồ vật trong cảnh. */
 export function allItems(doc: SceneDoc): ItemNode[] {
   return Object.values(doc.nodes).filter((n): n is ItemNode => n.type === 'item');
 }
 
+/** Mọi điểm nóng trong cảnh. */
 export function allHotspots(doc: SceneDoc): HotspotNode[] {
   return Object.values(doc.nodes).filter((n): n is HotspotNode => n.type === 'hotspot');
 }
 
+/** Độ cao thế giới của một tầng (cộng độ nhấc khi ở chế độ tách tầng). */
 export function getLevelWorldY(
   level: LevelNode,
   levelMode: 'stacked' | 'exploded' | 'solo' = 'stacked',
@@ -140,6 +157,7 @@ export function getLevelWorldY(
   return levelMode === 'exploded' ? level.elevation + level.explodedOffset : level.elevation;
 }
 
+/** Hộp bao trong không gian thế giới của một nút theo chế độ tầng. */
 export function worldBox(
   doc: SceneDoc,
   nodeId: string,
@@ -211,6 +229,7 @@ export function worldBox(
   return null;
 }
 
+/** Dựng hộp bao từ điểm min và max. */
 function makeBox(min: Vec3, max: Vec3): WorldBox {
   const center: Vec3 = [
     (min[0] + max[0]) * 0.5,
@@ -221,6 +240,7 @@ function makeBox(min: Vec3, max: Vec3): WorldBox {
   return { min, max, center, size };
 }
 
+/** Chuỗi nút từ gốc đến một nút (dùng cho breadcrumb). */
 export function breadcrumb(doc: SceneDoc, nodeId: string | null | undefined): SceneNode[] {
   const path: SceneNode[] = [];
   let curr = getNode(doc, nodeId);
@@ -236,6 +256,7 @@ export function breadcrumb(doc: SceneDoc, nodeId: string | null | undefined): Sc
   return path;
 }
 
+/** Một kết quả tìm kiếm: id, loại, tiêu đề/phụ đề song ngữ, tầng và đường dẫn. */
 export interface SearchHit {
   id: string;
   nodeType: 'level' | 'zone' | 'item' | 'hotspot';
@@ -247,6 +268,7 @@ export interface SearchHit {
   routeTo?: string;
 }
 
+/** Chuẩn hóa chuỗi tìm kiếm: bỏ dấu, đ thành d, chữ thường. */
 function normalizeSearchText(str: string): string {
   return str
     .normalize('NFD')
@@ -257,6 +279,7 @@ function normalizeSearchText(str: string): string {
     .trim();
 }
 
+/** Tìm các tầng, khu vực, đồ vật, điểm nóng khớp từ khóa (không phân biệt dấu). */
 export function search(doc: SceneDoc, rawQuery: string): SearchHit[] {
   const q = normalizeSearchText(rawQuery);
   const hits: SearchHit[] = [];
@@ -328,6 +351,8 @@ export function search(doc: SceneDoc, rawQuery: string): SearchHit[] {
 }
 
 /**
+ * Tìm nút theo khóa trên URL: id, mã khu vực, tên song ngữ hoặc tên phòng.
+ *
  * Resolves a deep-link parameter (`focus` or `item`) by node id, zone code, room name,
  * court name, or equipment code so cross-feature links from `/member/courts` and `/member/classes` work seamlessly.
  */

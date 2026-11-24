@@ -12,6 +12,7 @@ import type {
   ZoneNode,
 } from './schema';
 
+/** Đa giác chữ nhật từ hai góc (ngược chiều kim đồng hồ trong mặt phẳng XZ). */
 function rectPolygon(minX: number, minZ: number, maxX: number, maxZ: number): Vec2[] {
   // Counter-clockwise in XZ plane
   return [
@@ -24,6 +25,7 @@ function rectPolygon(minX: number, minZ: number, maxX: number, maxZ: number): Ve
 
 const nodes: Record<string, SceneNode> = {};
 
+/** Đăng ký một nút vào bảng nút của cảnh và trả lại chính nó. */
 function register<T extends SceneNode>(node: T): T {
   nodes[node.id] = node;
   return node;
@@ -929,6 +931,7 @@ const zoneOutTennis: ZoneNode = register({
 // WALLS (Exterior & Interior Partitions per Level)
 // ============================================================================
 
+/** Thêm một tường vào tầng với tùy chọn ngoài/trong, vật liệu, chiều cao và lỗ mở. */
 function addWall(
   level: LevelNode,
   idSuffix: string,
@@ -1155,6 +1158,7 @@ addWall(levelOUT, 'fence-e', [46, -16], [46, 16], { exterior: true, material: 'g
 // ITEMS HELPER
 // ============================================================================
 
+/** Thêm một đồ vật vào khu vực và đăng ký vào cảnh. */
 function addItem(
   zone: ZoneNode,
   spec: Omit<ItemNode, 'type' | 'parentId'>,
@@ -1764,6 +1768,7 @@ addItem(zoneOutTennis, {
 // HOTSPOTS (Covers 100% of MEMBER routes in PORTAL_NAV + open-chat + level jumps)
 // ============================================================================
 
+/** Thêm một điểm nóng vào khu vực (đổi toạ độ cục bộ sang toạ độ thế giới theo độ cao tầng). */
 function addHotspot(
   zone: ZoneNode,
   spec: Omit<HotspotNode, 'type' | 'parentId' | 'position'> & { localPosition: Vec3 },
@@ -2341,6 +2346,7 @@ const removedNodeIds = [
   'item-l1-trophy-totem', 'zone-l2-inbody', 'zone-l1-shop', 'zone-b1-pool', 'zone-b1-thermal', 'zone-l1-boxing', 'zone-l1-badminton',
   'zone-l2-vip-gym', 'zone-l2-lounge', 'zone-rf-zen', 'lvl-out',
 ];
+/** Xóa một nút cùng toàn bộ nút con khỏi cảnh. */
 function removeSceneSubtree(id: string): void {
   const node = nodes[id];
   if (!node) return;
