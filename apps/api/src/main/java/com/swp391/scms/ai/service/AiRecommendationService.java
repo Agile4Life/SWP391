@@ -14,8 +14,6 @@ import com.swp391.scms.coaching.entity.TrainingPlan;
 import com.swp391.scms.coaching.entity.TrainingPlanItem;
 import com.swp391.scms.coaching.repository.TrainingPlanItemRepository;
 import com.swp391.scms.coaching.repository.TrainingPlanRepository;
-import com.swp391.scms.facilities.entity.Equipment;
-import com.swp391.scms.facilities.repository.EquipmentRepository;
 import com.swp391.scms.coaching.dto.TrainingPlanDto;
 import com.swp391.scms.coaching.dto.TrainingPlanItemCreateDto;
 import com.swp391.scms.coaching.service.TrainingPlanService;
@@ -65,7 +63,6 @@ public class AiRecommendationService {
 
     private static final int MAX_PLAN_ITEMS = 40;
     private static final int MAX_CONTEXT_PLAN_ITEMS = 20;
-    private static final int MAX_CONTEXT_EQUIPMENT = 40;
 
     private final AiClient aiClient;
     private final AiRecommendationLogRepository recommendationLogRepository;
@@ -559,8 +556,7 @@ public class AiRecommendationService {
 
     /**
      * Retrieval for plan generation: what the model cannot know from the profile alone —
-     * the requested length, how the member's weight has moved, the plan they are on now,
-     * and the equipment the centre actually has in service.
+     * the requested length, how the member's weight has moved and the plan they are on now.
      */
     private String buildRetrievedPlanContext(Long memberId, Coach coach, Integer durationWeeks) {
         StringBuilder sb = new StringBuilder();
@@ -575,7 +571,6 @@ public class AiRecommendationService {
             appendWeightTrend(sb, memberId);
             appendCurrentPlan(sb, memberId, coach != null ? coach.getUserId() : null);
         }
-        appendEquipment(sb);
         return sb.toString();
     }
 
@@ -638,37 +633,6 @@ public class AiRecommendationService {
                 sb.append(" ").append(item.getSets()).append("x").append(item.getReps());
             }
         });
-    }
-
-    private void appendEquipment(StringBuilder sb) {
-        if (equipmentRepository == null) {
-            return;
-        }
-        List<Equipment> all = equipmentRepository.findAllWithRoom();
-        if (all == null) {
-            return;
-        }
-        Map<String, Set<String>> byCategory = new LinkedHashMap<>();
-        int count = 0;
-        for (Equipment equipment : all) {
-            if (count >= MAX_CONTEXT_EQUIPMENT) {
-                break;
-            }
-            if (!"active".equalsIgnoreCase(equipment.getStatus()) || equipment.getName() == null) {
-                continue;
-            }
-            String category = equipment.getCategory() != null && !equipment.getCategory().isBlank()
-                    ? equipment.getCategory() : "Khác";
-            if (byCategory.computeIfAbsent(category, key -> new LinkedHashSet<>()).add(equipment.getName().trim())) {
-                count++;
-            }
-        }
-        if (byCategory.isEmpty()) {
-            return;
-        }
-        sb.append("\nThiết bị sẵn có tại trung tâm:");
-        byCategory.forEach((category, names) ->
-                sb.append("\n- ").append(category).append(": ").append(String.join(", ", names)));
     }
 
     private Map<String, Object> parseMapSafe(String json) {
@@ -738,7 +702,4 @@ public class AiRecommendationService {
 
     @Autowired(required = false)
     private TrainingPlanItemRepository trainingPlanItemRepository;
-
-    @Autowired(required = false)
-    private EquipmentRepository equipmentRepository;
 }

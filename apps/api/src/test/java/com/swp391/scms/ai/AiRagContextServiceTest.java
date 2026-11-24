@@ -12,8 +12,6 @@ import com.swp391.scms.facilities.dto.CatalogResponses.PackageDto;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
-import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
-import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.users.entity.Member;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +22,6 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,9 +39,6 @@ class AiRagContextServiceTest {
     private MembershipSubscriptionRepository subscriptionRepository;
 
     @Mock
-    private ClassEnrollmentRepository enrollmentRepository;
-
-    @Mock
     private TrainingPlanRepository trainingPlanRepository;
 
     @Mock
@@ -57,7 +51,6 @@ class AiRagContextServiceTest {
         ragContextService = new AiRagContextService(
                 catalogService,
                 subscriptionRepository,
-                enrollmentRepository,
                 trainingPlanRepository,
                 trainingPlanItemRepository
         );
@@ -67,12 +60,7 @@ class AiRagContextServiceTest {
     void buildRagContext_IncludesCatalogAndAuthenticatedMemberData() {
         PackageDto pkg = new PackageDto(1L, "SÖL Signature", "Full gym & yoga", BigDecimal.valueOf(499000), 30, 12, "active");
         CoachDto coach = new CoachDto(10L, "Trần Minh", "Strength & Conditioning", "10 năm kinh nghiệm", "NASM-CPT", null);
-        ClassSessionDto session = new ClassSessionDto(
-                20L, 5L, "Morning Vinyasa Flow", 2L, "Yoga", 10L, "Trần Minh",
-                3L, "Studio A", LocalDate.of(2026, 11, 3), LocalTime.of(7, 0), LocalTime.of(8, 0),
-                "scheduled", null, 20, 12L
-        );
-        when(catalogService.getCatalog()).thenReturn(new CatalogDto(List.of(pkg), List.of(coach), List.of(session)));
+        when(catalogService.getCatalog()).thenReturn(new CatalogDto(List.of(pkg), List.of(coach), List.of()));
 
         Member member = new Member();
         member.setUserId(100L);
@@ -90,8 +78,6 @@ class AiRagContextServiceTest {
         sub.setEndDate(LocalDate.of(2026, 11, 14));
         when(subscriptionRepository.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(100L, "active"))
                 .thenReturn(Optional.of(sub));
-
-        when(enrollmentRepository.findBookedClassIdsByMemberId(100L)).thenReturn(List.of(5L));
 
         TrainingPlan plan = new TrainingPlan();
         ReflectionTestUtils.setField(plan, "id", 77L);
@@ -111,7 +97,7 @@ class AiRagContextServiceTest {
 
         assertTrue(context.contains("SÖL Signature"));
         assertTrue(context.contains("499000"));
-        assertTrue(context.contains("Morning Vinyasa Flow"));
+        assertFalse(context.contains("buổi lớp"));
         assertTrue(context.contains("Trần Minh"));
         assertTrue(context.contains("MEM-100"));
         assertTrue(context.contains("Đau nhẹ khớp gối trái"));
@@ -124,43 +110,15 @@ class AiRagContextServiceTest {
         org.mockito.Mockito.verify(catalogService, org.mockito.Mockito.times(1)).getCatalog();
     }
 
-    private static ClassSessionDto sessionOn(long id, String className, String discipline, String coach, LocalDate date) {
-        return new ClassSessionDto(id, id, className, 1L, discipline, 10L, coach, 3L, "Studio A",
-                date, LocalTime.of(7, 0), LocalTime.of(8, 0), "scheduled", null, 20, 5L);
-    }
-
-    /** Friday 13 Nov 2026: 20 Gym sessions fill the first days, the only Yoga session is last in the week. */
-    private void givenACrowdedWeek() {
+    @Test
+    void buildRagContext_StatesToday() {
         ReflectionTestUtils.setField(ragContextService, "clock", java.time.Clock.fixed(
                 java.time.Instant.parse("2026-11-13T03:00:00Z"), java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
-        var sessions = new java.util.ArrayList<ClassSessionDto>();
-        for (int i = 0; i < 20; i++) {
-            sessions.add(sessionOn(i + 1, "Gym Sức Mạnh " + (i + 1), "Gym", "Lê Quân", LocalDate.of(2026, 11, 13).plusDays(i / 5)));
-        }
-        sessions.add(sessionOn(99, "Vinyasa Tối", "Yoga", "Đỗ Hạnh", LocalDate.of(2026, 11, 19)));
-        when(catalogService.getCatalog()).thenReturn(new CatalogDto(List.of(), List.of(), sessions));
-    }
+        when(catalogService.getCatalog()).thenReturn(new CatalogDto(List.of(), List.of(), List.of()));
 
-    @Test
-    void buildRagContext_KeepsTheSessionsTheQuestionIsAboutWhenTheWeekDoesNotFit() {
-        givenACrowdedWeek();
-
-        String unrelated = ragContextService.buildRagContext(null, "Ăn gì để tăng cơ?");
-        assertFalse(unrelated.contains("Vinyasa Tối"));
-        assertTrue(unrelated.contains("còn 6 buổi khác"));
-
-        String aboutYoga = ragContextService.buildRagContext(null, "lich yoga tuan nay the nao?");
-        assertTrue(aboutYoga.contains("Vinyasa Tối"));
-    }
-
-    @Test
-    void buildRagContext_StatesTodayAndKeepsTheDayAskedAbout() {
-        givenACrowdedWeek();
-
-        String context = ragContextService.buildRagContext(null, "Thứ 5 có lớp nào không?");
+        String context = ragContextService.buildRagContext(null, "Thứ 5 có gì không?");
 
         assertTrue(context.contains("Thứ Sáu 2026-11-13 10:00"));
-        assertTrue(context.contains("[Thứ Năm 2026-11-19 07:00-08:00] Vinyasa Tối"));
     }
 
     @Test

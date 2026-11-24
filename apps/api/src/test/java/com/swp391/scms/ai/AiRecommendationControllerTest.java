@@ -271,7 +271,7 @@ class AiRecommendationControllerTest {
     }
 
     @Test
-    @DisplayName("Plan generation sends the member's current plan and the centre's equipment, and keeps a plan whose items need tidying")
+    @DisplayName("Plan generation sends the member's current plan, leaves out the retired equipment list, and keeps a plan whose items need tidying")
     void shouldGroundThePromptAndKeepItemsThatNeedTidying() {
         Member member = new Member();
         member.setUserId(10L);
@@ -281,7 +281,6 @@ class AiRecommendationControllerTest {
 
         var plans = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.TrainingPlanRepository.class);
         var planItems = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.TrainingPlanItemRepository.class);
-        var equipment = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.EquipmentRepository.class);
         var currentPlan = new com.swp391.scms.coaching.entity.TrainingPlan();
         ReflectionTestUtils.setField(currentPlan, "id", 5L);
         currentPlan.setGoal("Giảm mỡ 4 tuần");
@@ -292,14 +291,6 @@ class AiRecommendationControllerTest {
         currentItem.setSets(3);
         currentItem.setReps(12);
         when(planItems.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(5L)).thenReturn(List.of(currentItem));
-        var treadmill = new com.swp391.scms.facilities.entity.Equipment();
-        treadmill.setName("Máy chạy bộ");
-        treadmill.setCategory("Cardio");
-        var broken = new com.swp391.scms.facilities.entity.Equipment();
-        broken.setName("Máy kéo cáp");
-        broken.setCategory("Strength");
-        broken.setStatus("broken");
-        when(equipment.findAllWithRoom()).thenReturn(List.of(treadmill, broken));
 
         var prompts = new java.util.ArrayList<String>();
         AiClient client = new AiClient() {
@@ -322,7 +313,6 @@ class AiRecommendationControllerTest {
                 memberRepository, coachRepository, progressLogRepository, trainingPlanService, objectMapper);
         ReflectionTestUtils.setField(service, "trainingPlanRepository", plans);
         ReflectionTestUtils.setField(service, "trainingPlanItemRepository", planItems);
-        ReflectionTestUtils.setField(service, "equipmentRepository", equipment);
 
         var response = service.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 6), null);
 
@@ -331,8 +321,7 @@ class AiRecommendationControllerTest {
         assertTrue(userPrompt.contains("Thời lượng giáo án: 6 tuần"));
         assertTrue(userPrompt.contains("Giáo án đang áp dụng: Giảm mỡ 4 tuần"));
         assertTrue(userPrompt.contains("Goblet Squat 3x12"));
-        assertTrue(userPrompt.contains("Cardio: Máy chạy bộ"));
-        assertFalse(userPrompt.contains("Máy kéo cáp"));
+        assertFalse(userPrompt.contains("Thiết bị sẵn có"));
 
         assertEquals(2, response.getItems().size());
         var run = response.getItems().get(0);
