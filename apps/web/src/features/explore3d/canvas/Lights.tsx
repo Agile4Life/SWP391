@@ -48,7 +48,7 @@ export interface LightingBudgetConfig {
     };
     shadowBias: number;
     shadowNormalBias: number;
-    /** Vogel-disk filter radius in shadow texels (penumbra width). */
+    /** Bán kính bộ lọc đĩa Vogel theo đơn vị shadow texel (độ rộng vùng bán ảnh). */
     shadowRadius: number;
   };
   fillLight: {
@@ -71,12 +71,12 @@ export function getLightingBudgetConfig(
   tier: QualityTier,
 ): LightingBudgetConfig {
   const palette = getExploreThemePalette(theme);
-  // Saltline-style: 4096 map on high, 2048 on medium.
+  // Kiểu Saltline: shadow map độ phân giải cao (4096) ở mức high, 2048 ở mức medium.
   const mapResolution = tier === 'high' ? 3072 : 2048;
   const isDark = theme === 'dark';
-  // Saltline lighting model: one strong HDR sun + sky image-based light, with
-  // only a small flat ambient. The low tier has no sky probe, so it keeps a
-  // stronger hemisphere/ambient fill instead.
+  // Mô hình chiếu sáng kiểu Saltline: một nguồn nắng HDR mạnh + ánh sáng bầu trời dựa trên ảnh,
+  // kèm một lượng nhỏ ánh sáng ambient phẳng. Mức low không có sky probe nên giữ
+  // nguồn hemisphere/ambient bổ trợ mạnh hơn.
   const hasSkyProbe = tier !== 'low';
   const atmosphere = getAtmosphere(theme);
   return {
@@ -89,9 +89,9 @@ export function getLightingBudgetConfig(
       groundColor: hasSkyProbe ? (isDark ? '#241c18' : '#6b5a4c') : palette.groundColor,
       intensity: hasSkyProbe ? (isDark ? 0.3 : 0.28) : isDark ? 0.98 : 1.05,
     },
-    // Time-of-day sun (see atmosphere.ts): golden hour in the light theme, a very
-    // low dusk sun in the dark theme. It rakes in from the left of the default
-    // camera so long shadows fall into view. HDR intensity; the grade rolls it off.
+    // Mặt trời theo thời điểm trong ngày (xem atmosphere.ts): giờ vàng ở theme sáng, mặt trời chạng vạng
+    // rất thấp ở theme tối. Ánh nắng chiếu xiên từ bên trái camera mặc định để bóng đổ dài vào khung hình.
+    // Cường độ ở dải HDR; bước chỉnh màu hậu kỳ sẽ nén mượt phần sáng chói.
     keyLight: {
       position: atmosphere.sunPosition,
       color: atmosphere.sunColor,
@@ -113,7 +113,7 @@ export function getLightingBudgetConfig(
     fillLight: {
       position: [34, 18, -10],
       color: isDark ? '#7f9fd6' : '#cfe0f6',
-      // Cool sky-bounce fill from the side opposite the sun (teal & orange).
+      // Ánh sáng bổ trợ hắt bầu trời tông lạnh từ phía đối diện mặt trời (tương phản xanh lam & cam).
       intensity: hasSkyProbe ? (isDark ? 0.3 : 0.34) : isDark ? 0.8 : 0.7,
       castShadow: false,
     },
@@ -142,11 +142,11 @@ export function Lights() {
   const cfg = getLightingBudgetConfig(theme, tier);
   const activeLevelCode: LevelCode = focusLevel === 'ALL' ? 'L1' : focusLevel;
   const ceilingY = LEVEL_ELEVATION_BY_CODE[activeLevelCode] + 3.45;
-  // Physically-decaying warm interior lights; at dusk they are the main light indoors.
+  // Đèn nội thất tông ấm suy giảm theo quy luật vật lý; lúc chạng vạng đây là nguồn sáng chính trong nhà.
   const interiorBoost = (walkMode ? 1.35 : 1.0) * (theme === 'dark' ? 26 : 12);
 
-  // The shadow camera sits at the light: push it far enough out along the sun
-  // direction that the whole campus is in front of it, even with a very low sun.
+  // Camera tạo bóng đặt tại nguồn sáng: đẩy đủ xa dọc theo hướng mặt trời
+  // để toàn bộ khuôn viên nằm phía trước nó, kể cả khi mặt trời rất thấp.
   const [sx, sy, sz] = cfg.keyLight.position;
   const sunScale = SUN_DISTANCE / Math.hypot(sx, sy, sz);
   const sunPosition: [number, number, number] = [sx * sunScale, sy * sunScale, sz * sunScale];
@@ -162,8 +162,8 @@ export function Lights() {
     invalidate();
   }, [theme, tier, focusLevel, walkMode, invalidate]);
 
-  // The sun is fixed, so the shadow map only has to follow moving casters (people, cars):
-  // refreshing it every third frame (20 Hz at 60 fps) preserves crisp shadows while cutting shadow-pass cost.
+  // Mặt trời cố định nên shadow map chỉ cần theo các vật đổ bóng di động (người, xe):
+  // làm mới mỗi 3 khung hình (20 Hz ở 60 fps) giữ bóng sắc nét mà giảm chi phí shadow-pass.
   const shadowFrame = useRef(0);
   useFrame(({ camera, gl }) => {
     gl.shadowMap.autoUpdate = false;
@@ -270,10 +270,10 @@ export function Lights() {
         intensity={cfg.rimLight.intensity}
         castShadow={false}
       />
-      {/* Warm architectural interior ceiling lights on the active floor */}
-      {/* Every point light is evaluated for every lit pixel in the scene (~3 fps each on an M4) and
-          is barely visible in the whole-campus overview, so they only exist when a floor is in focus;
-          two placed at the old trio's centres of mass keep the same warmth. */}
+      {/* Đèn trần nội thất kiến trúc tông ấm ở tầng đang hoạt động */}
+      {/* Mỗi point light được tính cho mọi pixel có ánh sáng trong cảnh (~3 fps mỗi đèn trên chip M4) và
+          hầu như không thấy rõ ở góc nhìn toàn khuôn viên, nên chỉ bật khi đang tập trung vào một tầng;
+          đặt tại tâm khối thay cho bộ ba đèn cũ để giữ nguyên độ ấm tương đương. */}
       {(walkMode || focusLevel !== 'ALL') && (
         <pointLight
           position={[2.5, ceilingY, 0]}

@@ -19,9 +19,8 @@ export type CutawayWallDescriptor = Pick<
 >;
 
 /**
- * Tích vô hướng giữa pháp tuyến tường và hướng từ tường tới camera trên mặt phẳng XZ.
- *
- * Computes `dot(wallNormalXZ, normalize(cameraPosXZ - wallCenterXZ))`.
+ * Tính tích vô hướng giữa pháp tuyến tường và hướng từ tâm tường tới camera trên mặt phẳng XZ:
+ * `dot(wallNormalXZ, normalize(cameraPosXZ - wallCenterXZ))`.
  */
 export function computeWallCameraDot(
   wallNormalXZ: readonly [number, number],
@@ -40,9 +39,7 @@ export function computeWallCameraDot(
 }
 
 /**
- * Tường ngoài có quay mặt về phía camera không (tích vô hướng vượt ngưỡng 0,22).
- *
- * Returns true when an exterior wall faces the camera (`dot > 0.22`).
+ * Trả về true khi tường ngoài quay mặt về phía camera (`dot > 0.22`).
  */
 export function isWallFacingCamera(
   wallNormalXZ: readonly [number, number],
@@ -54,10 +51,7 @@ export function isWallFacingCamera(
 }
 
 /**
- * Tập id các tường ngoài cần hạ thấp (cắt tường) theo chế độ tường và vị trí camera.
- *
- * Computes the set of exterior wall IDs that should be rendered in cutaway (low height)
- * given the current `wallMode` and camera XZ position.
+ * Tính tập id các tường ngoài cần hiển thị dạng cắt thấp (cutaway) theo `wallMode` và vị trí camera trên mặt phẳng XZ.
  */
 export function computeCutawayWallIds(
   walls: ReadonlyArray<CutawayWallDescriptor>,
@@ -147,12 +141,8 @@ export interface CutawayProps {
 }
 
 /**
- * Thành phần R3F tính các tường ngoài quay mặt về camera để hạ thấp khi chế độ tường hoặc hướng camera đổi, chỉ
- * yêu cầu vẽ lại khi tập tường thay đổi.
- *
- * R3F controller component that evaluates which exterior walls face the camera
- * and updates cutaway state when `wallMode` or camera direction changes,
- * calling `invalidate()` only when the cutaway wall set changes.
+ * Thành phần điều khiển R3F đánh giá các tường ngoài quay mặt về camera và cập nhật trạng thái cutaway
+ * khi `wallMode` hoặc hướng camera thay đổi, chỉ gọi `invalidate()` khi tập tường cắt thay đổi.
  */
 export function Cutaway({ walls }: CutawayProps) {
   const wallMode = useExploreStore(s => s.wallMode);
@@ -175,7 +165,7 @@ export function Cutaway({ walls }: CutawayProps) {
     [walls],
   );
 
-  // Sync immediately when wallMode, walkMode, or levelMode changes
+  // Đồng bộ ngay khi wallMode, walkMode hoặc levelMode thay đổi
   useEffect(() => {
     const effectiveWallMode: WallMode =
       walkMode && wallMode === 'cutaway' ? 'up' : wallMode;

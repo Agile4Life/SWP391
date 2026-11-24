@@ -64,7 +64,7 @@ export function CameraRig() {
   const invalidate = useThree(state => state.invalidate);
   const canvasWidth = useThree(state => state.size.width);
   const canvasHeight = useThree(state => state.size.height);
-  // Quantised so a drag-resize does not re-fly the camera on every pixel.
+  // Làm tròn tỉ lệ khung hình để kéo thay đổi kích thước cửa sổ không làm camera bay lại trên từng pixel.
   const aspect = Math.round((canvasWidth / Math.max(1, canvasHeight)) * 10) / 10;
   const aspectRef = useRef(aspect);
   useEffect(() => {
@@ -187,7 +187,7 @@ export function CameraRig() {
     [invalidate],
   );
 
-  // Restore isometric viewpoint when exiting walkMode
+  // Khôi phục góc nhìn isometric khi thoát walkMode
   useEffect(() => {
     const wasWalking = prevWalkModeRef.current;
     prevWalkModeRef.current = walkMode;
@@ -203,7 +203,7 @@ export function CameraRig() {
 
     if (!wasWalking) return;
 
-    // Cleanly sync controls to current camera position before transitioning back to isometric
+    // Đồng bộ controls về vị trí camera hiện tại trước khi chuyển lại góc nhìn isometric
     const ctrlCam = (controls as unknown as { camera?: THREE.Camera }).camera;
     if (ctrlCam) {
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(ctrlCam.quaternion);
@@ -228,7 +228,7 @@ export function CameraRig() {
     void applyViewpoint(controls, vp, lastLevelRef.current, lastLevelRef.current);
   }, [applyViewpoint, walkMode]);
 
-  // The overview distance follows the canvas aspect, so re-frame it when the window is resized.
+  // Khoảng cách toàn cảnh phụ thuộc tỉ lệ canvas, nên căn khung lại khi cửa sổ đổi kích thước.
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || !initializedRef.current || useExploreStore.getState().walkMode) return;
@@ -237,7 +237,7 @@ export function CameraRig() {
     void applyViewpoint(controls, getOverviewViewpoint(aspect), 'ALL', 'ALL', true);
   }, [applyViewpoint, aspect]);
 
-  // Configure boundary and initial camera pose on mount
+  // Cấu hình vùng biên và tư thế camera ban đầu khi mount
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || initializedRef.current) return;
@@ -272,7 +272,7 @@ export function CameraRig() {
     invalidate();
   }, [invalidate]);
 
-  // Execute store camera commands
+  // Thực thi các lệnh camera từ store
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || !cameraCommand) return;
@@ -342,7 +342,7 @@ export function CameraRig() {
     }
   }, [applyViewpoint, cameraCommand, invalidate, levelMode, walkMode, zoomByDirection]);
 
-  // Re-frame camera when levelMode toggles between stacked and exploded
+  // Căn khung lại camera khi levelMode chuyển đổi giữa stacked và exploded
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || walkMode) return;
@@ -369,7 +369,7 @@ export function CameraRig() {
     }
   }, [applyViewpoint, levelMode, walkMode]);
 
-  // Keyboard shortcuts and custom zoom events
+  // Phím tắt bàn phím và các sự kiện thu phóng tùy chỉnh
   useEffect(() => {
     // Phím tắt điều khiển camera (khi không đang gõ chữ).
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -398,7 +398,7 @@ export function CameraRig() {
         return;
       }
 
-      // In walk mode, WalkController owns WASD / Arrow movement
+      // Ở chế độ đi bộ, WalkController phụ trách di chuyển bằng phím WASD / mũi tên
       if (state.walkMode) return;
 
       if (event.key === '0') {
@@ -584,8 +584,8 @@ export function CameraRig() {
     <CameraControls
       ref={controlsRef}
       makeDefault
-      // The camera is locked: it only moves when a level, node or viewpoint is chosen (programmatic
-      // flights still run while disabled). In walkMode, WalkController directly owns the camera.
+      // Camera bị khóa: chỉ di chuyển khi chọn tầng, nút hoặc góc nhìn (các chuyến bay lập trình
+      // vẫn chạy ngay cả khi disabled). Trong walkMode, WalkController trực tiếp điều khiển camera.
       enabled={!walkMode && false}
       dollySpeed={1.15}
       truckSpeed={1.8}

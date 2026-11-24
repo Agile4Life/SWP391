@@ -181,8 +181,6 @@ const TRACKS = [
 ] as const;
 /**
  * Hai đoàn tàu metro chạy qua lại trên cầu cạn.
- *
- * Two metro trainsets shuttling along the elevated viaduct.
  */
 function Metro({ isLight }: { isLight: boolean }) {
   // Hình thân tàu.
@@ -224,27 +222,25 @@ const BIRDS = 28;
 
 /**
  * Đàn chim bay lượn trên cao khuôn viên vào ban ngày.
- *
- * A loose flock circling high over the campus in daylight.
  */
 function Birds() {
   const ref = useRef<THREE.InstancedMesh>(null);
   // Hình học một con chim: thân mảnh và hai cánh gập hai đoạn.
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
-    // Slender body spine + swept two-segment gull/swallow wings (continuous centerline chord, no bowtie pinch)
+    // Sống thân mảnh + cánh chim hải âu/én hai đoạn vuốt ngược (dây cung trục giữa liên tục, không bị thắt hình nơ)
     g.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(
         [
-          // Body spine left & right
+          // Sống thân trái và phải
           0, 0, 0.44, -0.11, 0, -0.04, 0, 0, -0.42,
           0, 0, 0.44, 0, 0, -0.42, 0.11, 0, -0.04,
-          // Left inner wing + outer swept tip
+          // Cánh trái đoạn trong + đầu cánh ngoài vuốt ngược
           0, 0, 0.24, -0.62, 0.11, 0.05, -0.46, 0.07, -0.18,
           0, 0, 0.24, -0.46, 0.07, -0.18, 0, 0, -0.14,
           -0.62, 0.11, 0.05, -1.28, 0.02, -0.3, -0.46, 0.07, -0.18,
-          // Right inner wing + outer swept tip
+          // Cánh phải đoạn trong + đầu cánh ngoài vuốt ngược
           0, 0, 0.24, -0.0, 0, -0.14, 0.46, 0.07, -0.18,
           0, 0, 0.24, 0.46, 0.07, -0.18, 0.62, 0.11, 0.05,
           0.62, 0.11, 0.05, 0.46, 0.07, -0.18, 1.28, 0.02, -0.3,
@@ -294,8 +290,6 @@ const DUCKS = 7;
 
 /**
  * Mặt nước kênh chuyển động cùng đàn vịt trời trôi trong bể công viên phía nam.
- *
- * Animated canal water surface with drifting mallards inside the south-park basin.
  */
 function CanalLife({ isLight }: { isLight: boolean }) {
   const bodyRef = useRef<THREE.InstancedMesh>(null);

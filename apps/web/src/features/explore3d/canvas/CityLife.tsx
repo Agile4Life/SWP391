@@ -6,7 +6,7 @@ import { useExploreStore } from '../state/exploreStore';
 
 /** Raycast rỗng để các chi tiết đời sống không bắt sự kiện chuột. */
 const NOOP = () => null;
-const CYCLE = 24; // seconds: 10 green, 2 yellow per axis
+const CYCLE = 24; // giây: 10 giây xanh, 2 giây vàng cho mỗi trục
 
 /** Màu đèn giao thông: đỏ, vàng hoặc xanh. */
 type Light = 'red' | 'yellow' | 'green';
@@ -29,8 +29,6 @@ const DIM = 0.06;
 
 /**
  * Đèn tín hiệu đổi đỏ/vàng/xanh theo pha; dùng instanced và chỉ đổi màu khi pha thay đổi.
- *
- * Signal lamps that cycle red/yellow/green; instanced, recoloured only on phase change.
  */
 function TrafficSignals({ city }: { city: CityMetropolisGeometries }) {
   const ref = useRef<THREE.InstancedMesh>(null);
@@ -122,8 +120,6 @@ function Banners({ city }: { city: CityMetropolisGeometries }) {
 
 /**
  * Đèn báo hàng không trên các tòa siêu cao tầng, nhấp nháy theo nhịp.
- *
- * Aviation beacons on supertalls pulse.
  */
 function Beacons({ city }: { city: CityMetropolisGeometries }) {
   // Hình cầu của đèn báo.
@@ -207,8 +203,6 @@ function mergeHumanParts(parts: readonly { geom: THREE.BufferGeometry; col?: str
 
 /**
  * Dựng đầu và cổ có tóc: cổ, đầu bầu dục và mũ tóc tối (hướng trước là +X).
- *
- * Local forward = +X; natural neck + oval head with dark hair cap.
  */
 function buildHeadWithHairGeometry(): THREE.BufferGeometry {
   const skin = new THREE.Color('#c69474');
@@ -230,9 +224,7 @@ function buildHeadWithHairGeometry(): THREE.BufferGeometry {
 }
 
 /**
- * Dựng thân và hai tay (hướng trước +X, hai bên ±Z) với bóng đổ nhẹ theo đỉnh để quần áo tự nhiên.
- *
- * Local forward = +X, lateral = +-Z; subtle vertex AO so instanceColor clothes look natural.
+ * Dựng thân và hai tay (hướng trước +X, hai bên ±Z) với bóng đổ nhẹ theo đỉnh (vertex AO) để màu quần áo instanceColor trông tự nhiên.
  */
 function buildTorsoWithArmsGeometry(): THREE.BufferGeometry {
   const chest = new THREE.CylinderGeometry(0.14, 0.115, 0.56, 10).scale(0.84, 1, 1.28);
@@ -277,8 +269,8 @@ function buildStandingLegsGeometry(): THREE.BufferGeometry {
  */
 interface PedestrianPart {
   geom: THREE.BufferGeometry;
-  limb: number; // 0: torso/head, 1: left leg, -1: right leg, 2: left arm, -2: right arm
-  isClothes: number; // 1: clothes, 0: skin/hair/trousers/shoes
+  limb: number; // 0: thân/đầu, 1: chân trái, -1: chân phải, 2: tay trái, -2: tay phải
+  isClothes: number; // 1: quần áo, 0: da/tóc/quần/giày
   col?: string;
   colorAt?: (x: number, y: number, z: number, out: THREE.Color) => void;
 }
@@ -332,19 +324,19 @@ function buildAnimatedPedestrianGeometry(): THREE.BufferGeometry {
   const skin = new THREE.Color('#c69474');
   const hair = new THREE.Color('#252528');
 
-  // Head and neck
+  // Đầu và cổ
   const neck = new THREE.CylinderGeometry(0.055, 0.065, 0.14, 8);
   neck.translate(0, 1.45, 0);
   const cranium = new THREE.SphereGeometry(0.125, 10, 8).scale(0.85, 1.15, 0.95);
   cranium.translate(0, 1.58, 0);
 
-  // Torso
+  // Thân trên
   const chest = new THREE.CylinderGeometry(0.14, 0.115, 0.56, 10).scale(0.84, 1, 1.28);
   chest.translate(0, 1.10, 0);
   const shoulders = new THREE.SphereGeometry(0.14, 10, 6).scale(0.75, 0.55, 1.35);
   shoulders.translate(0, 1.34, 0);
 
-  // Arms: short-sleeved upper arm (tinted by instance outfit) + bare skin forearm
+  // Hai tay: bắp tay áo cộc (nhuộm màu theo trang phục từng instance) + cẳng tay trần
   const sleeveL = new THREE.CapsuleGeometry(0.05, 0.16, 2, 6);
   sleeveL.rotateZ(-0.06);
   sleeveL.translate(0.01, 1.25, 0.205);
@@ -359,7 +351,7 @@ function buildAnimatedPedestrianGeometry(): THREE.BufferGeometry {
   forearmR.rotateZ(0.08);
   forearmR.translate(0.03, 1.04, -0.205);
 
-  // Left Leg & Shoe (hip pivot at y = 0.82, z = 0.095)
+  // Chân trái và giày (trục xoay hông tại y = 0.82, z = 0.095)
   const legL = new THREE.CylinderGeometry(0.072, 0.05, 0.72, 8);
   legL.translate(0, 0.46, 0.095);
   const upperShoeL = new THREE.BoxGeometry(0.22, 0.065, 0.105);
@@ -367,7 +359,7 @@ function buildAnimatedPedestrianGeometry(): THREE.BufferGeometry {
   const soleL = new THREE.BoxGeometry(0.23, 0.03, 0.11);
   soleL.translate(0.035, 0.015, 0.095);
 
-  // Right Leg & Shoe (hip pivot at y = 0.82, z = -0.095)
+  // Chân phải và giày (trục xoay hông tại y = 0.82, z = -0.095)
   const legR = new THREE.CylinderGeometry(0.072, 0.05, 0.72, 8);
   legR.translate(0, 0.46, -0.095);
   const upperShoeR = new THREE.BoxGeometry(0.22, 0.065, 0.105);
@@ -522,9 +514,7 @@ function createAnimatedPedestrianMaterial() {
 }
 
 /**
- * Người đi bộ trên vỉa hè, dùng vertex shader cho sải bước và không cấp phát trong từng khung hình.
- *
- * Pedestrians strolling the sidewalks with vertex-shader walking stride and zero per-frame JS allocations.
+ * Người đi bộ trên vỉa hè, dùng vertex shader cho sải bước và không cấp phát JS trong từng khung hình.
  */
 function Pedestrians() {
   const tier = useExploreStore(s => s.tier);
@@ -623,8 +613,6 @@ const PLATFORM_Y = 9.2 + 0.48 + 0.23;
 
 /**
  * Hành khách chờ trên sân ga metro trên cao: đứng đung đưa nhẹ và quay mặt về phía đường ray.
- *
- * Passengers waiting on the elevated metro platform; they sway slightly and face the tracks.
  */
 function Commuters() {
   const bodyRef = useRef<THREE.InstancedMesh>(null);

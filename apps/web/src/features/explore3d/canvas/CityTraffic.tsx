@@ -6,10 +6,10 @@ import { useExploreStore } from '../state/exploreStore';
 
 /** Một làn xe: toạ độ cố định, trục (đông–tây hoặc bắc–nam), hướng đi và số xe. */
 interface Lane {
-  /** Fixed coordinate across the lane (z for EW lanes, x for NS lanes). */
+  /** Tọa độ cố định theo phương ngang làn đường (z cho làn Đông–Tây EW, x cho làn Bắc–Nam NS). */
   readonly fixed: number;
   readonly axis: 'EW' | 'NS';
-  /** +1 / -1 travel direction along the lane axis. */
+  /** Hướng di chuyển +1 / -1 dọc theo trục làn đường. */
   readonly dir: 1 | -1;
   readonly speed: number;
   readonly cars: number;
@@ -48,7 +48,7 @@ function buildCarGeometry(): THREE.BufferGeometry {
     parts.push({ geom: nonIdx, r, g, b, roughness, metalness });
   };
 
-  // Lower body shell facing +X (bevelled sedan silhouette)
+  // Vỏ thân dưới hướng về +X (dáng sedan vát cạnh)
   const bodyShape = new THREE.Shape();
   bodyShape.moveTo(-2.02, 0.25);
   bodyShape.lineTo(2.02, 0.25);
@@ -70,7 +70,7 @@ function buildCarGeometry(): THREE.BufferGeometry {
   bodyGeom.translate(0, 0, -0.82);
   push(bodyGeom, 1, 1, 1, 0.26, 0.42);
 
-  // Raked tinted greenhouse cabin
+  // Khoang kính cabin nghiêng màu tối
   const cabinShape = new THREE.Shape();
   cabinShape.moveTo(-1.28, 0.78);
   cabinShape.lineTo(0.86, 0.78);
@@ -88,12 +88,12 @@ function buildCarGeometry(): THREE.BufferGeometry {
   cabinGeom.translate(0, 0, -0.68);
   push(cabinGeom, 0.11, 0.13, 0.16, 0.10, 0.65);
 
-  // Body-colored roof cap
+  // Nóc xe cùng màu thân
   const roofGeom = new THREE.BoxGeometry(1.12, 0.04, 1.34);
   roofGeom.translate(-0.26, 1.355, 0);
   push(roofGeom, 0.98, 0.98, 0.98, 0.26, 0.42);
 
-  // Matte lower trim, front grille & rear diffuser
+  // Ốp gầm nhám, lưới tản nhiệt trước và bộ khuếch tán sau
   const grilleGeom = new THREE.BoxGeometry(0.14, 0.22, 1.44);
   grilleGeom.translate(2.05, 0.40, 0);
   push(grilleGeom, 0.08, 0.08, 0.09, 0.78, 0.12);
@@ -106,7 +106,7 @@ function buildCarGeometry(): THREE.BufferGeometry {
   rockerGeom.translate(0, 0.24, 0);
   push(rockerGeom, 0.08, 0.08, 0.09, 0.80, 0.10);
 
-  // 4 cylindrical rubber tyres & alloy hubs
+  // 4 lốp cao su hình trụ và mâm hợp kim
   for (const wx of [-1.32, 1.32]) {
     for (const wz of [-0.82, 0.82]) {
       const tyre = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 14).rotateX(Math.PI / 2);
@@ -180,8 +180,6 @@ function buildLightsGeometry(): THREE.BufferGeometry {
 
 /**
  * Các xe instanced chạy vòng trên đại lộ và hai đường nhánh.
- *
- * Instanced cars looping along the boulevard and the two avenues.
  */
 export function CityTraffic() {
   const tier = useExploreStore(s => s.tier);

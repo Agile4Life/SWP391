@@ -7,7 +7,7 @@ import {
 } from '../renderers/architecture/buildCampusGeometry';
 import type { QualityTier } from '../state/exploreStore';
 
-/** Tennis floodlight towers [x, z] (see buildInteriorDetails). */
+/** Các cột đèn pha sân tennis [x, z] (xem buildInteriorDetails). */
 const FLOOD_TOWERS: ReadonlyArray<readonly [number, number]> = [
   [24.2, -14.8],
   [44.8, -14.8],
@@ -29,20 +29,16 @@ const NOOP_RAYCAST = () => null;
 /** Props của đèn thực tế: mức chất lượng, độ nhấc theo chiều dọc, hiển thị hay không và chế độ đi bộ. */
 export interface PracticalLightsProps {
   tier: QualityTier;
-  /** Vertical offset of the ground campus (exploded / basement views). */
+  /** Độ lệch theo trục dọc của khuôn viên mặt đất (ở góc nhìn tách tầng / tầng hầm). */
   offsetY: number;
   visible: boolean;
-  /** Skips outdoor per-pixel pointLights while indoor WalkView is active. */
+  /** Bỏ qua các pointLight ngoài trời tính theo từng pixel khi WalkView trong nhà đang hoạt động. */
   walkMode?: boolean;
 }
 
 /**
- * Đèn thực tế lúc chạng vạng: đầu đèn phát sáng HDR (một lần vẽ instanced) kèm một số đèn điểm thật chiếu ấm
- * dưới đèn đường và trắng lạnh trên sân tennis.
- *
- * Dusk practicals: HDR-emissive lamp heads (they bloom) plus a budgeted set of
- * real point lights that pool warm light under street lamps and cool white
- * light over the tennis courts. Emissive bulbs are one instanced draw call.
+ * Đèn thực tế lúc chạng vạng: đầu đèn phát sáng HDR (tạo bloom, gộp trong 1 draw call instanced)
+ * kèm bộ đèn điểm thật giới hạn ngân sách chiếu sáng ấm dưới đèn đường và ánh sáng trắng lạnh trên sân tennis.
  */
 export function PracticalLights({ tier, offsetY, visible, walkMode = false }: PracticalLightsProps) {
   const bulbsRef = useRef<THREE.InstancedMesh>(null);
@@ -61,7 +57,7 @@ export function PracticalLights({ tier, offsetY, visible, walkMode = false }: Pr
     const warm = new THREE.Color(9, 5.2, 2.2);
     const cool = new THREE.Color(7, 8, 10);
     LAMP_BULBS.forEach((b, i) => {
-      // Slightly larger than the modelled lamp head so it glows from every angle.
+      // Lớn hơn một chút so với chao đèn mô hình để phát sáng rõ từ mọi góc nhìn.
       m.makeScale(0.42, 0.13, 0.42).setPosition(b.x, b.y, b.z);
       mesh.setMatrixAt(i, m);
       mesh.setColorAt(i, warm);
@@ -75,8 +71,8 @@ export function PracticalLights({ tier, offsetY, visible, walkMode = false }: Pr
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, []);
 
-  // Real lights are evaluated per fragment across the scene: budget 2 lights on Dark HIGH (1 entrance + 1 flood)
-  // while all 15 HDR-emissive bulb quads continue to bloom at 1 instanced draw call.
+  // Đèn thật được tính cho từng fragment trên toàn cảnh: giới hạn 2 đèn ở chế độ tối mức HIGH (1 cổng vào + 1 đèn pha)
+  // trong khi toàn bộ 15 bóng đèn phát sáng HDR vẫn tạo hiệu ứng bloom chỉ với 1 draw call instanced.
   const litLamps = tier === 'low' ? [] : [LAMP_BULBS[3]!];
   const litFloods: ReadonlyArray<readonly [number, number]> =
     tier === 'low' ? [] : [[34.5, 0]];

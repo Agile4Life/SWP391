@@ -96,7 +96,7 @@ export function LiveActivityActors({
   const walkMode = useExploreStore(s => s.walkMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const invalidate = useThree(s => s.invalidate);
-  // Actors drawn as skinned characters are hidden here once their model has loaded.
+  // Các nhân vật được vẽ dạng skinned character sẽ được ẩn ở đây sau khi mô hình của chúng tải xong.
   const riggedActorIds = useRiggedActorIds();
   const { reducedMotion, shouldAnimate } = useActorMotion(benchEnabled);
 
@@ -150,13 +150,13 @@ export function LiveActivityActors({
     [actorDefs, totalInstances, scene, effectiveLevelMode, focusLevel, riggedActorIds],
   );
 
-  // Apply initial / static pose immediately whenever definitions or level visibility changes
+  // Áp dụng tư thế ban đầu / tĩnh ngay lập tức khi định nghĩa nhân vật hoặc trạng thái hiển thị tầng thay đổi
   useLayoutEffect(() => {
     applyTransforms(STATIC_POSE_TIME_SEC);
     invalidate();
   }, [applyTransforms, reducedMotion, shouldAnimate, invalidate]);
 
-  // Smooth 60 FPS animation synchronized natively with R3F's render loop
+  // Hoạt ảnh mượt 60 FPS đồng bộ trực tiếp với vòng lặp render của R3F
   useFrame(({ clock }) => {
     if (!shouldAnimate || totalInstances === 0) return;
     applyTransforms(STATIC_POSE_TIME_SEC + clock.getElapsedTime());

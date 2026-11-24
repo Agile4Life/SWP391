@@ -26,7 +26,7 @@ import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { RiggedActors } from './RiggedActors';
 import { SelectionHighlight } from './SelectionHighlight';
 
-// Wider, edge-faded Vogel PCF; must run before the first material compiles.
+// Bộ lọc Vogel PCF rộng hơn và mờ dần ở mép; phải chạy trước khi vật liệu đầu tiên được biên dịch.
 patchSoftShadowChunk();
 
 /** Props của canvas 3D: dữ liệu thật đã gắn vào cảnh và cờ chạy benchmark. */
@@ -35,8 +35,7 @@ export interface ExploreCanvasProps {
   benchEnabled?: boolean;
 }
 
-// AA comes from MSAA on the HDR render target + FXAA in the final pass.
-// Cấu hình WebGL: tắt MSAA gốc vì khử răng cưa do MSAA trên HDR target và FXAA ở bước cuối.
+// Cấu hình WebGL: tắt antialias gốc vì khử răng cưa do MSAA trên HDR render target kết hợp FXAA ở bước cuối đảm nhiệm.
 const GL_CONFIG = {
   antialias: false,
   alpha: false,
@@ -80,18 +79,18 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
 
     if (state.gl.shadowMap) {
       state.gl.shadowMap.enabled = true;
-      // PCFSoftShadowMap was removed in r186; softness comes from the patched Vogel filter.
+      // PCFSoftShadowMap đã bị gỡ bỏ ở r186; độ mềm của bóng đến từ bộ lọc Vogel đã vá.
       state.gl.shadowMap.type = THREE.PCFShadowMap;
     }
 
-    // Only used by the forward fallback: the cinematic pipeline tone maps itself
-    // (three skips renderer tone mapping when drawing into render targets).
+    // Chỉ dùng cho chế độ dự phòng forward: pipeline điện ảnh tự thực hiện tone mapping
+    // (Three.js bỏ qua tone mapping của renderer khi vẽ vào render target).
     if ('toneMapping' in state.gl) {
       state.gl.toneMapping = THREE.ACESFilmicToneMapping;
       state.gl.toneMappingExposure = 1.06;
     }
 
-    // Scanned PBR surface sets stream in; materials use procedural detail until then.
+    // Bộ bề mặt PBR quét sẽ tải dần vào; các vật liệu dùng chi tiết thủ tục cho đến khi tải xong.
     if (useExploreStore.getState().tier !== 'low') {
       loadSurfaceTextures(() => state.invalidate(), Math.min(4, state.gl.capabilities?.getMaxAnisotropy?.() ?? 4));
     }
@@ -117,7 +116,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       try {
         state.gl.forceContextLoss();
       } catch {
-        // Ignore teardown errors during page navigation
+        // Bỏ qua lỗi dọn dẹp khi điều hướng rời trang
       }
     };
 

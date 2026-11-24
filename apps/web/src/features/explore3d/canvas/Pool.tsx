@@ -38,11 +38,11 @@ export function createPoolBasinTexture(): THREE.Texture {
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
-    // Deep aquatic mosaic base
+    // Nền gạch mosaic xanh nước đậm
     ctx.fillStyle = '#153b56';
     ctx.fillRect(0, 0, 2048, 1024);
 
-    // Fine ceramic sub-mosaic tile grid lines (32px intervals)
+    // Đường lưới gạch mosaic gốm mảnh (bước 32px)
     ctx.strokeStyle = 'rgba(135, 205, 240, 0.12)';
     ctx.lineWidth = 1;
     for (let x = 0; x <= 2048; x += 32) {
@@ -58,7 +58,7 @@ export function createPoolBasinTexture(): THREE.Texture {
       ctx.stroke();
     }
 
-    // Major architectural tile grout lines (64px intervals) for high-definition crispness
+    // Đường ron gạch kiến trúc chính (bước 64px) cho độ sắc nét cao
     ctx.strokeStyle = 'rgba(165, 222, 248, 0.24)';
     ctx.lineWidth = 2;
     for (let x = 0; x <= 2048; x += 64) {
@@ -74,12 +74,12 @@ export function createPoolBasinTexture(): THREE.Texture {
       ctx.stroke();
     }
 
-    // Crisp perimeter tile border frame
+    // Khung viền gạch chu vi sắc nét
     ctx.strokeStyle = 'rgba(206, 145, 128, 0.55)';
     ctx.lineWidth = 6;
     ctx.strokeRect(24, 24, 2000, 976);
 
-    // Center divider line between Lane 01 and Lane 02 (scaled 2x)
+    // Đường phân cách giữa Làn 01 và Làn 02 (tỉ lệ 2x)
     ctx.save();
     ctx.setLineDash([36, 24]);
     ctx.strokeStyle = 'rgba(250, 249, 246, 0.62)';
@@ -90,23 +90,23 @@ export function createPoolBasinTexture(): THREE.Texture {
     ctx.stroke();
     ctx.restore();
 
-    // FINA floor lane T-marks for Lane 01 (y=256) and Lane 02 (y=768) (scaled 2x)
+    // Vạch chữ T dẫn làn đáy hồ chuẩn FINA cho Làn 01 (y=256) và Làn 02 (y=768) (tỉ lệ 2x)
     const laneYs = [256, 768];
     for (const ly of laneYs) {
-      // Crisp bright ceramic contrast border around lane stripe & T-bars
+      // Viền gốm sáng tương phản quanh vạch làn và thanh ngang chữ T
       ctx.fillStyle = 'rgba(225, 244, 255, 0.35)';
       ctx.fillRect(164, ly - 24, 1720, 48);
       ctx.fillRect(148, ly - 92, 44, 184);
       ctx.fillRect(1856, ly - 92, 44, 184);
 
-      // Main dark floor guide stripe
+      // Vạch dẫn hướng đáy hồ chính màu tối
       ctx.fillStyle = '#091b29';
       ctx.fillRect(168, ly - 20, 1712, 40);
-      // End T-bars
+      // Thanh ngang chữ T hai đầu
       ctx.fillRect(152, ly - 88, 36, 176);
       ctx.fillRect(1860, ly - 88, 36, 176);
 
-      // Salmon turn-target accent crossbars
+      // Thanh nhấn đích quay vòng màu salmon
       ctx.fillStyle = '#ce9180';
       ctx.fillRect(160, ly - 72, 20, 144);
       ctx.fillRect(1868, ly - 72, 20, 144);
@@ -143,7 +143,7 @@ export function createWaterCausticsTexture(): THREE.Texture {
     ctx.fillStyle = '#297496';
     ctx.fillRect(0, 0, 512, 512);
 
-    // Primary crisp procedural caustic wave bands (scaled 2x)
+    // Các dải sóng vân sáng caustics thủ tục chính sắc nét (tỉ lệ 2x)
     ctx.strokeStyle = 'rgba(230, 249, 255, 0.34)';
     ctx.lineWidth = 5;
     for (let row = 0; row < 8; row++) {
@@ -160,7 +160,7 @@ export function createWaterCausticsTexture(): THREE.Texture {
       ctx.stroke();
     }
 
-    // Secondary cross-harmonic caustic filaments for sharper water refraction shimmer
+    // Các sợi vân sáng caustics giao thoa phụ giúp ánh khúc xạ mặt nước lung linh sắc nét hơn
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.lineWidth = 2.5;
     for (let col = 0; col < 8; col++) {
@@ -390,7 +390,7 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
   const canAnimate =
     isB1Visible && !prefersReducedMotion && (focusLevel === 'B1' || focusLevel === 'ALL');
 
-  // Steps subtle UV ripple only when frames are actively rendered (does NOT force 60fps when idle)
+  // Dịch chuyển gợn sóng UV nhẹ chỉ khi khung hình đang được vẽ chủ động (KHÔNG ép chạy 60fps khi nhàn rỗi)
   useFrame((_, delta) => {
     const tex = waterTexRef.current;
     if (!canAnimate || !tex) return;
@@ -432,7 +432,7 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
 
   return (
     <group name="sol-oasis-pool" position={[centerX, b1WorldY, centerZ]}>
-      {/* Tiled floor basin with FINA lane T-markings */}
+      {/* Đáy bể lát gạch với vạch chữ T chuẩn FINA */}
       <mesh
         position={[0, 0.018, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -443,7 +443,7 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
         raycast={NOOP_RAYCAST}
       />
 
-      {/* Semi-transparent caustic water surface */}
+      {/* Mặt nước bán trong suốt có vân sáng caustics */}
       <mesh
         position={[0, 0.14, 0]}
         rotation={[-Math.PI / 2, 0, 0]}
@@ -456,10 +456,10 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
         onPointerOut={handlePointerOut}
       />
 
-      {/* Merged perimeter stone coping deck curb */}
+      {/* Gờ đá ốp viền thành bể đã gộp */}
       <mesh geometry={resources.copingGeom} material={resources.copingMat} raycast={NOOP_RAYCAST} />
 
-      {/* Merged SÖL salmon overflow gutter accent strips */}
+      {/* Dải nhấn rãnh tràn màu salmon SÖL đã gộp */}
       <mesh geometry={resources.trimGeom} material={resources.accentTrimMat} raycast={NOOP_RAYCAST} />
     </group>
   );

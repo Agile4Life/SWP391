@@ -23,7 +23,7 @@ const LERP_DAMPING = 10;
 /** Raycast rỗng để phần trang trí không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
-// Shared unit box (1x1x1 centered at origin) to minimize WebGL BufferGeometry allocations
+// Hộp đơn vị dùng chung (1x1x1 đặt tâm tại gốc tọa độ) để giảm thiểu cấp phát BufferGeometry WebGL
 const SHARED_UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 
 /** Tính tâm và kích thước hộp bao của một hình học để đặt hộp đơn vị dùng chung vừa khít. */
@@ -77,7 +77,7 @@ export function isLevelVisibleInMode(
   if (level.code === focusLevel) {
     return true;
   }
-  // Keep ground-level outdoor tennis courts visible when looking out from L2 or RF
+  // Giữ sân tennis ngoài trời ở mặt đất hiển thị khi nhìn ra từ L2 hoặc RF
   if ((focusLevel === 'L2' || focusLevel === 'RF') && level.code === 'OUT') {
     return true;
   }
@@ -88,7 +88,7 @@ export function isLevelVisibleInMode(
   if (!focusedNode) {
     return true;
   }
-  // When focused on ground floor L1 in solo mode, keep ground-level OUT & sub-slab B1 visible while hiding upper floors
+  // Khi tập trung vào tầng trệt L1 ở chế độ solo, giữ tầng ngoài trời OUT và tầng hầm B1 hiển thị đồng thời ẩn các tầng trên
   if (level.order > focusedNode.order && level.code !== 'OUT') {
     return false;
   }
@@ -212,7 +212,7 @@ function LevelGroup({
       position={[0, level.elevation, 0]}
       visible={visible}
     >
-      {/* 1. Structural Slab Base (renders built.slabGeometry preserving stairwell cutouts) */}
+      {/* 1. Đế sàn kết cấu (vẽ built.slabGeometry giữ nguyên các lỗ thông tầng cầu thang) */}
       <mesh
         geometry={built.slabGeometry}
         material={materials.slabBase}
@@ -220,7 +220,7 @@ function LevelGroup({
         raycast={NOOP_RAYCAST}
       />
 
-      {/* 2. Dimmed Perimeter Trim Override (normal salmon perimeter trim is merged into interiorDetailsGeometry) */}
+      {/* 2. Viền chu vi thay thế khi làm mờ (viền chu vi màu salmon bình thường được gộp trong interiorDetailsGeometry) */}
       {dimmed && (
         <mesh
           geometry={built.slabEdgeGeometry}
@@ -229,7 +229,7 @@ function LevelGroup({
         />
       )}
 
-      {/* 3. Zone Floors & Borders */}
+      {/* 3. Sàn và đường viền của các khu vực */}
       {built.zoneFloorGeometries.map(zf => {
         const isHighlighted = selectedId === zf.zoneId || hoveredId === zf.zoneId;
         return (
@@ -253,7 +253,7 @@ function LevelGroup({
         );
       })}
 
-      {/* 4. Exterior Walls (scaled down to cutaway height when facing camera) */}
+      {/* 4. Tường ngoài (thu thấp xuống chiều cao cắt tường khi quay mặt về camera) */}
       {built.exteriorWallsByNormal.map(extWall => {
         const isCut =
           !walkMode &&
@@ -317,7 +317,7 @@ function LevelGroup({
         );
       })}
 
-      {/* 5. Merged Interior Opaque Walls */}
+      {/* 5. Tường nội thất đặc đã gộp */}
       {hasInteriorOpaque && (
         <mesh
           geometry={built.interiorOpaqueGeometry}
@@ -328,7 +328,7 @@ function LevelGroup({
         />
       )}
 
-      {/* 6. Merged Glass Walls & Opening Panes */}
+      {/* 6. Tường kính và ô kính cửa đã gộp */}
       {hasGlassWalls && (
         <mesh
           geometry={built.glassWallGeometry}
@@ -338,7 +338,7 @@ function LevelGroup({
         />
       )}
 
-      {/* 7. Merged Architectural & Zone Interior Furnishings, Mirrors, Racks & Floodlights */}
+      {/* 7. Nội thất kiến trúc và khu vực, gương, giá đỡ và đèn pha đã gộp */}
       {hasInteriorDetails && (
         <mesh
           geometry={built.interiorDetailsGeometry}

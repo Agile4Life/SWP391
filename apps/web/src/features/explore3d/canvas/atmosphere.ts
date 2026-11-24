@@ -7,20 +7,17 @@ type RGB = [number, number, number];
 /**
  * Bối cảnh theo thời điểm trong ngày: theme sáng là hoàng hôn vàng, theme tối là chạng vạng xanh có đèn thực tế
  * bật; mọi màu ở không gian tuyến tính HDR.
- *
- * Time-of-day art direction. Light theme = golden hour, dark theme = dusk /
- * blue hour with practical lights on. All colours are linear HDR.
  */
 export interface Atmosphere {
-  /** Sun (key light) position; direction = normalize(position). */
+  /** Vị trí mặt trời (đèn chính key light); hướng = normalize(position). */
   sunPosition: [number, number, number];
   sunColor: string;
   sunIntensity: number;
-  /** Practical (street / flood) lights are lit. */
+  /** Cờ bật đèn thực tế (đèn đường / đèn pha). */
   practicals: boolean;
-  /** Strength of the baked sky as ambient light (scene.environmentIntensity). */
+  /** Cường độ bầu trời đã bake dùng làm ánh sáng môi trường (scene.environmentIntensity). */
   skyLight: number;
-  /** Colour of the terrain that runs from the campus to the horizon. */
+  /** Màu sắc địa hình trải dài từ khuôn viên đến đường chân trời. */
   terrain: string;
   sky: {
     zenith: RGB;

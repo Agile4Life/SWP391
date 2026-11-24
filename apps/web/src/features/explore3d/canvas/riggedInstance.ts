@@ -46,9 +46,8 @@ const WALK_FLOOR_INDEX: Record<LevelCode, number> = {
 };
 
 /**
- * Tầng có kề tầng đang đi bộ không (loại bỏ tầng xa khi đi bộ, giữ lại cầu thang và khuôn viên).
- *
- * Culls far non-adjacent floor props/actors during WalkView while keeping stairs & campus visible.
+ * Kiểm tra tầng đích có kề tầng đang đi bộ không; loại bỏ đồ vật/nhân vật ở tầng xa không liền kề
+ * trong WalkView đồng thời giữ cầu thang và khuôn viên hiển thị.
  */
 export function isWalkFloorAdjacent(
   targetCode: LevelCode,
@@ -80,13 +79,13 @@ export interface RiggedInstance {
   def: LiveActorDefinition;
   motion: RiggedMotion;
   holder: THREE.Group;
-  /** Meshes cached once at creation so per-frame sun shadow toggling avoids tree traversal. */
+  /** Các mesh được lưu cache một lần khi tạo để bật/tắt bóng nắng mỗi khung hình không cần duyệt lại cây đối tượng. */
   shadowMeshes: THREE.Mesh[];
-  /** Clip playback (motion capture or generated clips). */
+  /** Phát clip hoạt ảnh (motion capture hoặc clip tự sinh). */
   mixer?: THREE.AnimationMixer;
   action?: THREE.AnimationAction;
   combo?: ComboState;
-  /** Pose-driven skeleton. */
+  /** Bộ xương điều khiển theo góc tư thế (pose-driven). */
   rig?: RetargetRig;
   barbell?: HeldBarbell;
 }
@@ -99,8 +98,6 @@ export interface RiggedAssets {
 
 /**
  * Đưa texture da JPEG về quy ước glTF để dùng trong vật liệu thân.
- *
- * Makes a loaded JPEG follow the glTF texture convention, so it drops into the body material.
  */
 export function configureSkinTexture(texture: THREE.Texture): THREE.Texture {
   texture.flipY = false;
@@ -112,12 +109,9 @@ export function configureSkinTexture(texture: THREE.Texture): THREE.Texture {
 const retargetedClips = new Map<string, THREE.AnimationClip>();
 
 /**
- * Bỏ các track dịch/tỉ lệ chân tay của clip mannequin để nam và nữ giữ đúng tỉ lệ xương, đồng thời co tịnh tiến
- * gốc/xương chậu theo chiều dài chân thật.
- *
- * Strips neutral-mannequin limb translation/scale tracks from UAL clips so female and male
- * skeletons preserve 100% of their anatomical bone proportions, while scaling root/pelvis
- * translation to match the character's true leg length.
+ * Loại bỏ các track tịnh tiến/tỉ lệ chân tay của mannequin trung tính khỏi các clip UAL
+ * để bộ xương nam và nữ giữ nguyên 100% tỉ lệ giải phẫu, đồng thời co giãn tịnh tiến
+ * gốc/xương chậu theo đúng chiều dài chân thật của nhân vật.
  */
 export function prepareCharacterClip(
   clip: THREE.AnimationClip,
@@ -165,8 +159,6 @@ function wearForActor(def: LiveActorDefinition): WearMode {
 
 /**
  * Kiểu cắt và chi tiết trang phục thể thao của một nhân vật, ổn định theo từng nhân vật và phù hợp môn tập.
- *
- * The cut and details of an actor's sportswear, stable per actor and tailored to the sport.
  */
 function outfitFor(def: LiveActorDefinition, gender: Gender, wear: WearMode): OutfitVariant {
   const bits = hashString(`${def.id}:outfit`);
@@ -204,9 +196,7 @@ function outfitFor(def: LiveActorDefinition, gender: Gender, wear: WearMode): Ou
 
 const heights = new WeakMap<THREE.Object3D, number>();
 /**
- * Tỉ lệ để nhân vật cao đúng HUMAN_HEIGHT (có cache theo mô hình).
- *
- * Scale that makes the character stand `HUMAN_HEIGHT` tall.
+ * Tỉ lệ để nhân vật cao đúng `HUMAN_HEIGHT` (có cache theo mô hình).
  */
 function baseScale(character: THREE.Object3D): number {
   let height = heights.get(character);
@@ -224,8 +214,6 @@ const X_AXIS = new THREE.Vector3(1, 0, 0);
 
 /**
  * Dựng thanh tạ Olympic có đĩa cao su dọc theo trục +X, đặt tâm ở gốc.
- *
- * Olympic bar with bumper plates, built along +X and centred on the origin.
  */
 function buildHeldBarbell(): THREE.Group {
   const group = new THREE.Group();
@@ -252,8 +240,6 @@ function buildHeldBarbell(): THREE.Group {
 
 /**
  * Giữ thanh tạ ở giữa hai bàn tay, dọc theo đường nối hai tay.
- *
- * Keeps a held bar centred between the two hands, along the line joining them.
  */
 function updateHeldBarbell(holder: THREE.Object3D, held: HeldBarbell): void {
   holder.updateMatrixWorld(true);
@@ -267,9 +253,7 @@ function updateHeldBarbell(holder: THREE.Object3D, held: HeldBarbell): void {
 }
 
 /**
- * Tạo nhân vật có xương cho một hoạt động; không có người hoặc thiếu clip thì trả null.
- *
- * A person for `def`, or null when the activity has no person or its clip is missing.
+ * Tạo nhân vật có xương cho `def`, hoặc trả null khi hoạt động không có người hay thiếu clip.
  */
 export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAssets): RiggedInstance | null {
   const motion = getRiggedMotion(def.activity);
@@ -299,7 +283,7 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
   const wear = wearForActor(def);
   const scale = baseScale(assets.humans.characters[gender]) * (0.95 + (hash % 11) * 0.01);
 
-  // All of this happens while the clone is still in its rest pose and unscaled.
+  // Toàn bộ thao tác này diễn ra khi bản sao vẫn đang ở tư thế nghỉ (rest pose) và chưa phóng to/thu nhỏ.
   relaxHands(model, closedGrip ? 2 : 1);
   const rig = motion.kind === 'pose' ? createRetargetRig(model, scale) : null;
   if (motion.kind === 'pose' && !rig) return null;
@@ -408,7 +392,7 @@ export function createRiggedInstance(def: LiveActorDefinition, assets: RiggedAss
     if (handProp) model.getObjectByName(handProp.bone)?.add(buildHandProp(handProp, scale));
     if (dumbbellsInHands) {
       for (const handName of HUMAN_HAND_BONES) {
-        // Palm normal is +X on `hand_l` and -X on `hand_r`; grip bar runs along local Z across fingers.
+        // Pháp tuyến lòng bàn tay là +X trên `hand_l` và -X trên `hand_r`; tay cầm chạy dọc theo trục Z cục bộ ngang qua các ngón tay.
         const palmX = handName === 'hand_l' ? 0.032 : -0.032;
         const dumbbell = buildHandProp(
           { kind: 'dumbbell', bone: handName, position: [palmX, 0.075, 0.004], rotation: [0, 0, 0], size: 1 },
@@ -464,8 +448,6 @@ export function placeInstance(
 
 /**
  * Cập nhật hoạt ảnh theo thời gian (clip) hoặc đặt tư thế xương theo góc của hoạt động.
- *
- * Advances the clip, or poses the skeleton from the activity's angles.
  */
 export function stepInstance(
   instance: RiggedInstance,
@@ -479,7 +461,7 @@ export function stepInstance(
     if (def.activity === 'walking-patrol' && action) {
       const walkCycle = (timeSec * def.speed * 0.14 + def.phaseOffset * 0.2) % 2;
       const rawU = walkCycle < 1 ? walkCycle : 2 - walkCycle;
-      // Match stride cadence to instantaneous cosine-eased patrol speed so feet never moonwalk at endpoints.
+      // Khớp nhịp bước với tốc độ tuần tra tức thời làm mượt theo hàm cosin để bàn chân không bị trượt ngược ở hai điểm đầu cuối.
       const speedFactor = Math.max(0.32, Math.sin(rawU * Math.PI) * 1.15);
       action.timeScale = Math.max(0.25, def.speed * motion.spec.timeScale * speedFactor);
     }
@@ -510,7 +492,7 @@ export function stepInstance(
 
 /** Giải phóng mixer và tạ của nhân vật (thân, quần áo, tóc dùng chung nên giữ cache). */
 export function disposeInstance(instance: RiggedInstance): void {
-  // Body, clothes and hair geometry and materials are shared between actors and stay cached.
+  // Hình học và vật liệu của thân, quần áo và tóc được dùng chung giữa các nhân vật nên giữ lại trong cache.
   const { mixer, holder, barbell } = instance;
   mixer?.stopAllAction();
   const root = holder.children[0];

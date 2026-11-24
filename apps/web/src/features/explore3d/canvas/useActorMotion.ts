@@ -16,9 +16,7 @@ export function isBenchmarkActive(benchEnabledProp?: boolean): boolean {
 
 /**
  * Hook quyết định nhân vật có chuyển động không (không khi giảm chuyển động, benchmark, chế độ 2D hoặc chất
- * lượng thấp); dùng chung cho nhân vật thủ tục và có xương.
- *
- * Shared by the procedural and rigged actors so both freeze together.
+ * lượng thấp); dùng chung cho nhân vật thủ tục và có xương để cả hai dừng cùng lúc.
  */
 export function useActorMotion(benchEnabled = false): {
   reducedMotion: boolean;

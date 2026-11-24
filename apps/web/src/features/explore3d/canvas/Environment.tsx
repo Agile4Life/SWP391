@@ -142,8 +142,7 @@ export function Environment() {
     () => createFoliageMaterialBundle('sol-campus-foliage', theme === 'light'),
     [theme],
   );
-  // Uses per-vertex `surf` so metallic body paint & rims gleam while rubber tyres stay matte.
-  // Vật liệu xe (kim loại sơn, lốp cao su mờ nhờ thuộc tính surf).
+  // Vật liệu xe sử dụng thuộc tính `surf` trên từng đỉnh để lớp sơn kim loại và mâm xe bóng sáng trong khi lốp cao su giữ độ mờ.
   const vehicleMaterial = useMemo(
     () =>
       applySurfaceDetail(
@@ -198,8 +197,7 @@ export function Environment() {
     () => buildCampusSignageGeometry(rooftopOffsetY, showRooftopSigns),
     [rooftopOffsetY, showRooftopSigns],
   );
-  // Illuminated signage emits above 1.0 at dusk so it blooms like a lit sign.
-  // Biển hiệu phát sáng trên 1,0 lúc chạng vạng để lóe sáng như bảng đèn.
+  // Biển hiệu có đèn phát sáng trên ngưỡng 1.0 lúc chạng vạng để tạo hiệu ứng bloom như bảng đèn thật.
   const signageMaterialBundle = useMemo(() => {
     const tex = createCampusSignageTexture();
     const mat = new THREE.MeshBasicMaterial({
@@ -238,8 +236,8 @@ export function Environment() {
   // Lưới quảng trường.
   const gridGeometry = useMemo(() => buildPlazaGridGeometry(), []);
 
-  // Terrain out to the horizon so the campus sits in a world instead of a void;
-  // the post haze dissolves it into the sky.
+  // Địa hình trải dài tới đường chân trời để khuôn viên nằm trong một không gian thật thay vì khoảng trống;
+  // lớp sương mù hậu kỳ sẽ hòa tan phần rìa địa hình vào bầu trời.
   const terrainColor = getAtmosphere(theme).terrain;
   // Vật liệu địa hình.
   const terrainMaterial = useMemo(
@@ -264,7 +262,7 @@ export function Environment() {
   return (
     <>
       <color attach="background" args={[palette.canvasBg]} />
-      {/* Sky + height haze replace the flat fog: the haze is applied in the post grade. */}
+      {/* Bầu trời + sương mù theo độ cao thay thế cho sương mù phẳng: lớp sương mù được áp dụng ở bước chỉnh màu hậu kỳ. */}
       <SkyDome theme={theme} />
 
       <PracticalLights
@@ -275,7 +273,7 @@ export function Environment() {
       />
 
       <group name="sol-plaza-environment">
-        {/* Ground Plaza Plane [-45..58] X, [-30..30] Z */}
+        {/* Mặt phẳng quảng trường nền [-45..58] X, [-30..30] Z */}
         <mesh
           position={[plazaCenterX, plazaY, plazaCenterZ]}
           rotation={[-Math.PI / 2, 0, 0]}
@@ -296,14 +294,14 @@ export function Environment() {
           raycast={NOOP_RAYCAST}
         />
 
-        {/* Subtle Architectural Grid Lines */}
+        {/* Các đường lưới kiến trúc mờ nhẹ */}
         <lineSegments
           position={[0, plazaY + 0.008, 0]}
           geometry={gridGeometry}
           material={materials.plazaGrid}
         />
 
-        {/* Full 3D Exterior Campus: Main Gate, Guard Booth, Car & Motorbike Parking, EV Chargers, Fountain, Canopy, Trees & Streetlamps */}
+        {/* Toàn bộ khuôn viên ngoại thất 3D: Cổng chính, Chốt bảo vệ, Bãi đỗ ô tô & xe máy, Trạm sạc xe điện, Đài phun nước, Mái đón, Cây xanh & Đèn đường */}
         <mesh
           name="sol-campus-architecture"
           visible={showGroundCampus}
@@ -348,7 +346,7 @@ export function Environment() {
           raycast={NOOP_RAYCAST}
         />
 
-        {/* Illuminated 3D Rooftop Sky-Signs, Gate Sign, Lobby Canopy Sign, Parking & Tennis Signs */}
+        {/* Biển hiệu 3D phát sáng trên mái nhà, biển cổng chính, biển mái đón sảnh, biển bãi đỗ xe và sân tennis */}
         <mesh
           name="sol-campus-signage"
           visible={showGroundCampus}

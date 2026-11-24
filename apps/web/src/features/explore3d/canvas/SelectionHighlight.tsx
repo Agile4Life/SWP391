@@ -42,12 +42,9 @@ export function computeHighlightFrame(
 }
 
 /**
- * Dựng hình khung đơn vị dùng lại cho mọi lần chọn/rê: vòng đáy đôi và các góc ở đỉnh, chỉ tốn 1–2 draw call và
- * không cấp phát hình học lúc chạy.
- *
- * Builds a reusable unit architectural bounding frame (x: -0.5..0.5, y: 0..1, z: -0.5..0.5)
- * with double base ring at y = 0 and corner brackets at y = 1 so selection + hover cost
- * only 1-2 draw calls and zero runtime geometry allocations.
+ * Dựng hình khung bao kiến trúc đơn vị dùng lại (x: -0.5..0.5, y: 0..1, z: -0.5..0.5)
+ * với vòng đáy đôi tại y = 0 và khung đỉnh tại y = 1, giúp việc chọn và rê chuột chỉ tốn
+ * 1–2 draw call và không cấp phát hình học lúc chạy.
  */
 export function buildUnitHighlightFrameGeometry(): THREE.BufferGeometry {
   const pts: number[] = [];
@@ -62,14 +59,14 @@ export function buildUnitHighlightFrameGeometry(): THREE.BufferGeometry {
     );
   };
 
-  // Outer & inner base perimeter rings at y = 0
+  // Vòng chu vi đáy ngoài và trong tại y = 0
   pushRectXZ(0.5, 0, 0.5);
   pushRectXZ(0.47, 0.005, 0.47);
 
-  // Top perimeter frame at y = 1
+  // Khung chu vi đỉnh tại y = 1
   pushRectXZ(0.5, 1, 0.5);
 
-  // 4 vertical corner posts
+  // 4 cột góc thẳng đứng
   const corners: Array<[number, number]> = [
     [-0.5, -0.5],
     [0.5, -0.5],

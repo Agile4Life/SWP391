@@ -12,7 +12,7 @@ import { useExploreStore, type QualityTier } from '../state/exploreStore';
 export interface ImageBasedLightingConfig {
   enabled: boolean;
   resolution: number;
-  /** Scene-wide multiplier for the baked reflection probe (scene.environmentIntensity). */
+  /** Hệ số nhân toàn cảnh cho reflection probe đã bake (scene.environmentIntensity). */
   intensity: number;
   panels: {
     id: string;
@@ -26,13 +26,10 @@ export interface ImageBasedLightingConfig {
 }
 
 /**
- * Tính cấu hình probe phản chiếu theo theme và mức chất lượng (tắt khi chất lượng thấp).
- *
- * Procedural studio-style reflection probe. The scene materials already declare
- * `envMapIntensity` and metalness, but without an environment map metal and
- * glossy surfaces had nothing to reflect and read as flat plastic. The probe is
- * built from a few light panels (no HDR download), baked once, and skipped on the
- * low quality tier.
+ * Tính cấu hình reflection probe thủ tục kiểu studio theo theme và mức chất lượng (bỏ qua ở mức chất lượng thấp).
+ * Các vật liệu trong cảnh đã khai báo `envMapIntensity` và metalness, nhưng nếu không có environment map thì kim loại
+ * và bề mặt bóng sẽ không có gì để phản chiếu và trông như nhựa phẳng. Probe được dựng từ vài tấm đèn (không cần tải
+ * file HDR) và chỉ bake một lần.
  */
 export function getImageBasedLightingConfig(
   theme: ExploreTheme,
@@ -42,8 +39,8 @@ export function getImageBasedLightingConfig(
   return {
     enabled: tier !== 'low',
     resolution: tier === 'high' ? 256 : 128,
-    // The sky dome (SkyProbe) now provides most of the ambient light, Saltline-style:
-    // image-based sky light instead of a flat ambient term.
+    // Vòm trời (SkyProbe) hiện cung cấp phần lớn ánh sáng môi trường theo phong cách Saltline:
+    // ánh sáng bầu trời dựa trên ảnh thay vì nguồn ambient phẳng.
     intensity: getAtmosphere(theme).skyLight,
     panels: [
       {

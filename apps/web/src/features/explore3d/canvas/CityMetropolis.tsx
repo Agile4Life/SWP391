@@ -22,8 +22,6 @@ const NOOP_RAYCAST = () => null;
 
 /**
  * Thành phố nền: đường chân trời, lưới đường, cầu cạn metro, kính, cây và cờ khuôn viên động theo gió.
- *
- * Surrounding skyline, road grid, metro viaduct, plus wind-animated campus flags.
  */
 export function CityMetropolis() {
   const theme = useDocumentTheme();
@@ -34,8 +32,7 @@ export function CityMetropolis() {
   const city = useMemo(() => buildCityMetropolis(theme, tier), [theme, tier]);
   const visible = isExteriorWorldVisible(levelMode, focusLevel);
 
-  // Scanned-concrete / asphalt grain & surface roughness from per-vertex `surf`.
-  // Vật liệu đặc (bê tông/nhựa đường) lấy độ nhám và hạt từ thuộc tính surf.
+  // Vật liệu đặc (bê tông quét/nhựa đường) lấy hạt bề mặt và độ nhám từ thuộc tính `surf` trên từng đỉnh.
   const opaqueMat = useMemo(
     () =>
       applySurfaceDetail(
@@ -49,15 +46,14 @@ export function CityMetropolis() {
     () =>
       applySurfaceDetail(
         new THREE.MeshStandardMaterial({ name: 'sol-city-metal', vertexColors: true, roughness: 0.38, metalness: 0.65, envMapIntensity: 1.5 }),
-        // Relief at 80 cycles/m is sub-pixel from the locked camera distance, so skip it.
+        // Độ nổi 80 chu kỳ/m nhỏ hơn kích thước pixel ở khoảng cách camera khóa, nên bỏ qua.
         { ...SURFACE_DETAIL_PRESETS.metal, bump: 0, albedo: 0, roughness: 0 },
       ),
     [],
   );
   useEffect(() => () => opaqueMat.dispose(), [opaqueMat]);
   useEffect(() => () => metalMat.dispose(), [metalMat]);
-  // Translucent so the penthouse stays visible from above through its roof.
-  // Vật liệu kính mái, trong suốt để thấy phần trên cùng từ trên cao.
+  // Vật liệu kính mái bán trong suốt để vẫn nhìn thấy tầng penthouse bên dưới khi quan sát từ trên cao.
   const roofGlassMat = useMemo(
     () =>
       applyArchitecturalGlassShader(
@@ -210,8 +206,6 @@ interface GymCrownProps {
 
 /**
  * Mũ mái phòng gym trên tấm mái xếp chồng; ẩn khi các tầng bị tách hoặc cô lập.
- *
- * Roof crown sits on the stacked roof slab, so it hides when levels are exploded or isolated.
  */
 function GymCrown({ theme, glassMat, emissiveMat, opaqueMat, metalMat }: GymCrownProps) {
   const levelMode = useExploreStore(s => s.levelMode);

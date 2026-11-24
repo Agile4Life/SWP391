@@ -40,7 +40,7 @@ export interface RiggedActorsProps {
   benchEnabled?: boolean;
 }
 
-/** Longest step fed to the mixers, so a long idle gap in the demand loop does not skip the pose. */
+/** Bước thời gian tối đa truyền cho các mixer để khoảng nghỉ dài trong vòng lặp theo yêu cầu (demand loop) không làm nhảy cóc tư thế. */
 const MAX_STEP_SEC = 0.1;
 
 /** Error boundary: nếu tải mô hình nhân vật lỗi thì không hiển thị gì thay vì làm hỏng cảnh. */
@@ -108,7 +108,7 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
       if (!isRiggedActivity(def.activity)) continue;
       const instance = createRiggedInstance(def, assets);
       if (!instance) continue;
-      // Poses the character once so reduced-motion / low-power states show a sensible frame.
+      // Tạo tư thế cho nhân vật một lần để trạng thái giảm chuyển động / tiết kiệm năng lượng hiển thị khung hình hợp lý.
       const pose = placeInstance(
         instance,
         scene,
@@ -130,7 +130,7 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
     };
   }, [scene, assets, invalidate]);
 
-  // Keep each character on its level, even as the stack explodes or collapses.
+  // Giữ mỗi nhân vật đúng tầng của mình, kể cả khi chồng tầng tách ra hay thu gọn lại.
   useLayoutEffect(() => {
     for (const instance of instances) {
       placeInstance(
@@ -178,8 +178,6 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
 
 /**
  * Nhân vật có xương cho mọi hoạt động có người; bọc trong error boundary và Suspense.
- *
- * Skinned human characters for every activity that has a person in it.
  */
 export function RiggedActors(props: RiggedActorsProps) {
   return (

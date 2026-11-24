@@ -26,20 +26,20 @@ function createBadmintonCourtTexture(): THREE.Texture {
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
-    // Charcoal outer surround
+    // Viền ngoài màu than chì
     ctx.fillStyle = '#1f2226';
     ctx.fillRect(0, 0, 1024, 1024);
 
-    // Subtle salmon perimeter accent frame
+    // Khung nhấn chu vi màu salmon nhẹ
     ctx.strokeStyle = '#ce9180';
     ctx.lineWidth = 8;
     ctx.strokeRect(48, 48, 928, 928);
 
-    // Tournament green playing mat
+    // Thảm thi đấu màu xanh lục tiêu chuẩn giải đấu
     ctx.fillStyle = '#255845';
     ctx.fillRect(68, 68, 888, 888);
 
-    // Subtle matte PVC court micro-seam grid for close-up surface sharpness
+    // Lưới đường nối siêu mảnh của thảm PVC mờ để bề mặt sắc nét khi nhìn cận cảnh
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.035)';
     ctx.lineWidth = 2;
     for (let y = 132; y < 928; y += 64) {
@@ -49,47 +49,47 @@ function createBadmintonCourtTexture(): THREE.Texture {
       ctx.stroke();
     }
 
-    // Crisp outer contrast border around BWF court lines
+    // Viền tương phản đậm bao quanh các vạch sân chuẩn BWF
     ctx.strokeStyle = 'rgba(15, 34, 27, 0.55)';
     ctx.lineWidth = 18;
     ctx.strokeRect(108, 96, 808, 832);
 
-    // High-contrast white BWF court lines (scaled 2x)
+    // Các vạch sân chuẩn BWF màu trắng độ tương phản cao (tỉ lệ 2x)
     ctx.strokeStyle = '#faf9f6';
     ctx.lineWidth = 12;
     ctx.lineCap = 'square';
     ctx.lineJoin = 'miter';
 
-    // Doubles boundary
+    // Đường biên đánh đôi
     ctx.strokeRect(108, 96, 808, 832);
 
-    // Singles sidelines
+    // Đường biên dọc đánh đơn
     ctx.beginPath();
     ctx.moveTo(176, 96);
     ctx.lineTo(176, 928);
     ctx.moveTo(848, 96);
     ctx.lineTo(848, 928);
 
-    // Doubles long service lines
+    // Đường giao cầu dài đánh đôi
     ctx.moveTo(108, 156);
     ctx.lineTo(916, 156);
     ctx.moveTo(108, 868);
     ctx.lineTo(916, 868);
 
-    // Short service lines
+    // Đường giao cầu ngắn
     ctx.moveTo(108, 376);
     ctx.lineTo(916, 376);
     ctx.moveTo(108, 648);
     ctx.lineTo(916, 648);
 
-    // Center service lines
+    // Đường chia ô giao cầu giữa sân
     ctx.moveTo(512, 96);
     ctx.lineTo(512, 376);
     ctx.moveTo(512, 648);
     ctx.lineTo(512, 928);
     ctx.stroke();
 
-    // Service box corner tick marks for architectural precision
+    // Dấu góc ô giao cầu tạo độ chính xác kiến trúc
     ctx.strokeStyle = 'rgba(206, 145, 128, 0.85)';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -99,7 +99,7 @@ function createBadmintonCourtTexture(): THREE.Texture {
     ctx.lineTo(512 + 16, 648);
     ctx.stroke();
 
-    // Crisp double-line net tape & salmon center net line
+    // Băng lưới đôi sắc nét và vạch lưới trung tâm màu salmon
     ctx.strokeStyle = 'rgba(250, 249, 246, 0.92)';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -119,7 +119,7 @@ function createBadmintonCourtTexture(): THREE.Texture {
     ctx.stroke();
     ctx.restore();
 
-    // Vertical center net strap mark & post anchor pads
+    // Dấu dây căng giữa lưới và đệm chân cột lưới
     ctx.fillStyle = '#faf9f6';
     ctx.fillRect(507, 496, 10, 32);
     ctx.fillStyle = '#ce9180';
@@ -152,64 +152,64 @@ function createTennisCourtTexture(): THREE.Texture {
   const ctx = canvas.getContext('2d');
 
   if (ctx) {
-    // Terracotta / salmon outer apron
+    // Vùng ngoài màu đất nung / salmon
     ctx.fillStyle = '#86483a';
     ctx.fillRect(0, 0, 1024, 2048);
 
-    // Crisp outer architectural apron frame
+    // Khung kiến trúc sắc nét cho vùng biên ngoài
     ctx.strokeStyle = '#ce9180';
     ctx.lineWidth = 8;
     ctx.strokeRect(44, 60, 936, 1928);
 
-    // Championship green inner acrylic court (scaled 2x)
+    // Mặt sân acrylic bên trong màu xanh lục giải vô địch (tỉ lệ 2x)
     ctx.fillStyle = '#2c6852';
     ctx.fillRect(104, 148, 816, 1752);
 
-    // Subtle acrylic squeegee pass bands for high-definition court realism
+    // Dải vân gạt sơn acrylic tinh tế tăng độ chân thực cho mặt sân
     ctx.fillStyle = 'rgba(255, 255, 255, 0.025)';
     for (let y = 148; y < 1900; y += 175) {
       ctx.fillRect(104, y, 816, 88);
     }
 
-    // Subtle dark edge shadow around outer doubles boundary for maximum line crispness
+    // Viền bóng tối nhẹ quanh đường biên đánh đôi để vạch sân sắc nét tối đa
     ctx.strokeStyle = 'rgba(14, 34, 26, 0.55)';
     ctx.lineWidth = 20;
     ctx.strokeRect(136, 184, 752, 1680);
 
-    // Crisp white ITF markings (scaled 2x)
+    // Các vạch sân chuẩn ITF màu trắng sắc nét (tỉ lệ 2x)
     ctx.strokeStyle = '#faf9f6';
     ctx.lineWidth = 14;
     ctx.lineCap = 'square';
     ctx.lineJoin = 'miter';
 
-    // Doubles boundary
+    // Đường biên đánh đôi
     ctx.strokeRect(136, 184, 752, 1680);
 
-    // Singles sidelines
+    // Đường biên dọc đánh đơn
     ctx.beginPath();
     ctx.moveTo(228, 184);
     ctx.lineTo(228, 1864);
     ctx.moveTo(796, 184);
     ctx.lineTo(796, 1864);
 
-    // Service lines
+    // Đường giao bóng
     ctx.moveTo(228, 592);
     ctx.lineTo(796, 592);
     ctx.moveTo(228, 1456);
     ctx.lineTo(796, 1456);
 
-    // Center service line
+    // Đường giao bóng giữa sân
     ctx.moveTo(512, 592);
     ctx.lineTo(512, 1456);
 
-    // Baseline center marks
+    // Vạch dấu tâm đường cuối sân
     ctx.moveTo(512, 184);
     ctx.lineTo(512, 228);
     ctx.moveTo(512, 1820);
     ctx.lineTo(512, 1864);
     ctx.stroke();
 
-    // Double-line white net tape + salmon center net chord + vertical center strap mark
+    // Băng lưới đôi màu trắng + dây lưới trung tâm màu salmon + dấu dây căng giữa lưới
     ctx.strokeStyle = '#faf9f6';
     ctx.lineWidth = 5;
     ctx.beginPath();
@@ -226,7 +226,7 @@ function createTennisCourtTexture(): THREE.Texture {
     ctx.lineTo(920, 1024);
     ctx.stroke();
 
-    // Center net strap & net post bases
+    // Dây căng giữa lưới và chân đế cột lưới
     ctx.fillStyle = '#faf9f6';
     ctx.fillRect(505, 1004, 14, 40);
     ctx.fillStyle = '#ce9180';
