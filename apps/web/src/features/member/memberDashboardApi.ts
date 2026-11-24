@@ -1,5 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 
+/** Gói đăng ký hiển thị trên bảng điều khiển. */
 export interface MemberSubscription {
   id: number;
   memberId: number;
@@ -14,5 +15,6 @@ export interface MemberSubscription {
   createdAt: string;
 }
 
+/** Lấy gói hiện tại của hội viên (null nếu chưa có). */
 export const getCurrentMembership = () =>
   apiFetch<MemberSubscription | null>('/memberships/subscriptions/my');

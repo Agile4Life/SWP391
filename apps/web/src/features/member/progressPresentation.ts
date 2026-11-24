@@ -7,6 +7,7 @@ export function activePlans(plans: readonly TrainingPlan[], dateKey: string): Tr
   return current.length > 0 ? current : active;
 }
 
+/** Một ngày trong giáo án: thứ (null nếu không gắn thứ) và các bài tập. */
 export interface PlanDay { day: number | null; items: TrainingItem[] }
 
 /** Nhóm bài tập theo thứ (ISO 1–7), thứ 2 đến Chủ nhật; bài không gắn thứ xếp cuối. */

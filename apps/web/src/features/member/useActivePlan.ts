@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { getCurrentMembership } from './membershipApi';
 import { centerNowParts } from '../../shared/lib/centerTime';
 
+/** Trạng thái kiểm tra gói đang hoạt động: đang tải, có hoặc không. */
 export type ActivePlanState = 'loading' | 'yes' | 'no';
 
 /**

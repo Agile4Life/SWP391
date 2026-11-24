@@ -1,5 +1,6 @@
 import { centerNowParts } from '../../shared/lib/centerTime';
 
+/** Tên HLV hiển thị: bỏ tiền tố "HLV" (không có tên thì "Huấn luyện viên"). */
 export function formatCoachName(name?: string | null): string {
   if (!name) return 'Huấn luyện viên';
   return name.replace(/^HLV\s+/i, '').trim();

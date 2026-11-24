@@ -1,5 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 
+/** Gói tập: giá, thời hạn, giới hạn credit lớp và trạng thái. */
 export interface MembershipPackage {
   id: number;
   name: string;
@@ -10,6 +11,7 @@ export interface MembershipPackage {
   status: 'active' | 'inactive';
 }
 
+/** Gói đăng ký của hội viên: gói, thời gian, giá/credit khi nâng cấp, trạng thái, mã QR và thông tin bảo lưu. */
 export interface MemberSubscription {
   id: number;
   memberId: number;
@@ -36,6 +38,7 @@ export interface MemberSubscription {
   holdResolvedAt?: string | null;
 }
 
+/** Một khoản thanh toán: hội viên, gói/lớp, số tiền, phương thức, trạng thái, người nhận, ghi chú và số hóa đơn. */
 export interface Payment {
   id: number;
   memberId: number;
@@ -61,6 +64,7 @@ export interface Payment {
   vnpayPending?: boolean;
 }
 
+/** Yêu cầu hủy gói của hội viên: gói, lý do, trạng thái duyệt và người xử lý. */
 export interface MembershipCancellationRequest {
   id: number;
   memberId: number;
@@ -75,16 +79,19 @@ export interface MembershipCancellationRequest {
   resolutionNote: string | null;
 }
 
+/** Lấy các yêu cầu hủy gói của hội viên (luôn trả mảng). */
 export const getMyMembershipCancellations = async () => {
   const res = await apiFetch<MembershipCancellationRequest[]>('/memberships/cancellations/my');
   return Array.isArray(res) ? res : [];
 };
 
+/** Lấy danh sách gói tập đang bán (luôn trả mảng). */
 export const getMembershipPackages = async () => {
   const res = await apiFetch<MembershipPackage[]>('/packages');
   return Array.isArray(res) ? res : [];
 };
 
+/** Lấy gói hiện tại của hội viên; null khi chưa có, dữ liệu lạ thì trả undefined. */
 export const getCurrentMembership = async (): Promise<MemberSubscription | null> => {
   const res = await apiFetch<MemberSubscription | null>('/memberships/subscriptions/my');
   if (res === null) return null;
@@ -92,16 +99,19 @@ export const getCurrentMembership = async (): Promise<MemberSubscription | null>
   return undefined as unknown as MemberSubscription | null;
 };
 
+/** Lấy lịch sử các kỳ gói của hội viên. */
 export const getMembershipHistory = async () => {
   const res = await apiFetch<MemberSubscription[]>('/memberships/subscriptions/history');
   return Array.isArray(res) ? res : [];
 };
 
+/** Lấy lịch sử thanh toán của hội viên. */
 export const getMyPayments = async () => {
   const res = await apiFetch<Payment[]>('/payments/my');
   return Array.isArray(res) ? res : [];
 };
 
+/** Tạo khoản thanh toán bằng ví điện tử cho một gói. */
 export const createPaymentRequest = (subscription: MemberSubscription, amount: number) =>
   apiFetch<Payment>('/payments', {
     method: 'POST',
@@ -126,12 +136,14 @@ export const createCashReceiptPayment = (subscription: MemberSubscription, amoun
     }),
   });
 
+/** Đăng ký một gói tập mới. */
 export const createMembershipSubscription = (packageId: number) =>
   apiFetch<MemberSubscription>('/memberships/subscriptions', {
     method: 'POST',
     body: JSON.stringify({ packageId }),
   });
 
+/** Gia hạn một kỳ gói. */
 export const renewMembershipSubscription = (subscriptionId: number) =>
   apiFetch<MemberSubscription>(
     `/memberships/subscriptions/${subscriptionId}/renew`,
@@ -152,6 +164,7 @@ export const upgradeMembershipSubscription = (
     },
   );
 
+/** Mở lại gói đang bảo lưu. */
 export const resumeMembershipSubscription = (subscriptionId: number) =>
   apiFetch<MemberSubscription>(`/memberships/subscriptions/${subscriptionId}/resume`, { method: 'POST' });
 

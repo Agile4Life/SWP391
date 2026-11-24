@@ -1,5 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 
+/** Một bài tập trong giáo án: thứ, tên, mô tả, số hiệp/lần, thời lượng, nghỉ và thứ tự. */
 export interface TrainingItem {
   id: number;
   dayOfWeek: number | null;
@@ -12,6 +13,7 @@ export interface TrainingItem {
   orderIndex: number;
 }
 
+/** Giáo án của hội viên: trạng thái, khoảng ngày, mục tiêu, HLV và danh sách bài tập. */
 export interface TrainingPlan {
   id: number;
   status: string;

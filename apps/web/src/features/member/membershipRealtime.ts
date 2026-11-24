@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { apiFetch } from '../../shared/api/client';
 
+/** Phiên realtime do backend cấp: bật hay tắt, URL, khóa công khai và kênh. */
 interface RealtimeSession {
   enabled: boolean;
   url: string;
@@ -8,13 +9,19 @@ interface RealtimeSession {
   topic: string;
 }
 
-/** Broadcast is an invalidation hint only. Never trust it as confirmation of payment. */
+/**
+ * Đăng ký nhận thông báo realtime về thay đổi gói (chỉ là gợi ý để tải lại, không dùng làm bằng chứng thanh
+ * toán); khi realtime tắt thì hỏi định kỳ; trả về hàm hủy.
+ *
+ * Broadcast is an invalidation hint only. Never trust it as confirmation of payment.
+ */
 export function subscribeMembershipChanges(changed: () => void, unavailable?: () => void): () => void {
   let disposed = false;
   let disabled = false;
   let connecting = false;
   let client: SupabaseClient | null = null;
   let pollTimer: ReturnType<typeof setInterval> | undefined;
+  // Đóng client và các kênh hiện có.
   function closeClient() {
     if (!client) return;
     const active = client;
@@ -22,12 +29,14 @@ export function subscribeMembershipChanges(changed: () => void, unavailable?: ()
     void active.removeAllChannels();
     active.realtime.disconnect();
   }
+  // Hỏi định kỳ thay cho realtime.
   function startFallbackPolling() {
     if (disposed || pollTimer) return;
     pollTimer = setInterval(() => {
       if (!disposed && document.visibilityState !== 'hidden') changed();
     }, 4000);
   }
+  // Lấy phiên realtime, kiểm tra hợp lệ và đăng ký kênh.
   async function connect() {
     if (disposed || disabled || connecting || client) return;
     connecting = true;
@@ -59,6 +68,7 @@ export function subscribeMembershipChanges(changed: () => void, unavailable?: ()
       }
     } finally { connecting = false; }
   }
+  // Khi tab/mạng/focus quay lại: realtime tắt thì làm mới dữ liệu, ngược lại thử kết nối lại.
   const retry = () => {
     if (disposed || document.visibilityState === 'hidden') return;
     if (disabled) {

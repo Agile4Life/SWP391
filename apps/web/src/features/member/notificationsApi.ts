@@ -1,5 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 
+/** Một thông báo: tiêu đề, nội dung, loại, đối tượng liên quan, đã đọc chưa và đường dẫn hành động. */
 export interface MemberNotification {
   id: number;
   title: string;
@@ -12,12 +13,14 @@ export interface MemberNotification {
   actionPath?: string | null;
 }
 
+/** Một trang thông báo: nội dung, số trang và tổng số trang. */
 export interface NotificationPage {
   content: MemberNotification[];
   number: number;
   totalPages: number;
 }
 
+/** Lấy một trang thông báo (20 mỗi trang); chấp nhận cả mảng thuần. */
 export const getNotifications = async (page = 0): Promise<NotificationPage> => {
   const res = await apiFetch<NotificationPage | MemberNotification[]>(`/notifications?page=${page}&size=20`);
   if (Array.isArray(res)) {
@@ -30,16 +33,24 @@ export const getNotifications = async (page = 0): Promise<NotificationPage> => {
     totalPages: typeof res?.totalPages === 'number' ? res.totalPages : (content.length > 0 ? 1 : 0),
   };
 };
+/** Lấy số thông báo chưa đọc (lỗi dữ liệu thì 0). */
 export const getUnreadCount = async () => {
   const res = await apiFetch<{ count?: number } | null>('/notifications/unread-count');
   return typeof res?.count === 'number' ? res.count : 0;
 };
+/** Đánh dấu một thông báo đã đọc. */
 export const markNotificationRead = (id: number) =>
   apiFetch<void>(`/notifications/${id}/read`, { method: 'PATCH' });
+/** Đánh dấu mọi thông báo đã đọc. */
 export const markAllNotificationsRead = () =>
   apiFetch<void>('/notifications/read-all', { method: 'PATCH' });
 
-/** Accept only internal portal routes; never follow arbitrary URLs from notification content. */
+/**
+ * Chỉ chấp nhận đường dẫn nội bộ của portal và đổi đường dẫn cũ/đã bỏ về màn phù hợp theo vai trò; đường dẫn lạ
+ * trả null.
+ *
+ * Accept only internal portal routes; never follow arbitrary URLs from notification content.
+ */
 export function safeNotificationPath(path: string | null | undefined, role = 'MEMBER'): string | null {
   if (!path || !/^\/[a-z0-9/-]+(?:\?[a-zA-Z0-9_=&%-]+)?(?:#[a-z0-9-]+)?$/.test(path)) return null;
   // Lễ tân chỉ mở màn hiện có; bỏ query/anchor không được màn danh sách hỗ trợ, không đoán ID.
@@ -62,6 +73,10 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
   return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && (path === '/staff/requests' || path.startsWith('/staff/requests?'))) || path === '/messages' || path === '/messages?tab=support' ? path : null;
 }
 
+/**
+ * Chọn trang đích khi bấm thông báo: ưu tiên đường dẫn hợp lệ trong thông báo, rồi theo vai trò và loại đối
+ * tượng liên quan.
+ */
 export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath'> & { title?: string }, role = 'MEMBER'): string {
   const explicit = safeNotificationPath(notification.actionPath, role);
   if (explicit) return explicit;
