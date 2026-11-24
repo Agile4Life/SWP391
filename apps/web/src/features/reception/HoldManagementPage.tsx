@@ -21,9 +21,7 @@ const FILTERS: Filter[] = ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'ALL'
 
 /**
  * Màn lễ tân/quản lý xử lý yêu cầu bảo lưu: xem hồ sơ y tế đính kèm, duyệt hoặc từ chối (kèm lý do), rút yêu
- * cầu hộ hội viên và xem lịch sử.
- *
- * Receptionist and manager screen: review hold requests with their medical paperwork and keep the history.
+ * cầu hộ hội viên và lưu giữ lịch sử.
  */
 export function HoldManagementPage() {
   const { t } = useI18n();

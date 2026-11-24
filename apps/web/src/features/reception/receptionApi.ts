@@ -28,7 +28,7 @@ export interface ReceptionTrialItem {
   memberPhone: string | null;
   documentType: 'CCCD' | 'PASSPORT';
   documentNumberMasked: string;
-  /** Full number, only while the request is pending. */
+  /** Số giấy tờ đầy đủ, chỉ hiển thị khi yêu cầu đang chờ duyệt. */
   documentNumber?: string | null;
   documentFullName: string;
   nationality?: string | null;
@@ -46,10 +46,8 @@ export interface ReceptionTrialItem {
 }
 
 /**
- * Một dòng lịch sử yêu cầu gói tập đã xử lý: loại (đăng ký, gia hạn, nâng cấp), kết quả, hội viên, gói, số tiền
- * và phương thức.
- *
- * A membership request the desk already processed (GET /memberships/subscriptions/requests/history).
+ * Một dòng lịch sử yêu cầu gói tập quầy lễ tân đã xử lý (GET /memberships/subscriptions/requests/history): loại
+ * (đăng ký, gia hạn, nâng cấp), kết quả, hội viên, gói, số tiền và phương thức.
  */
 export interface RequestHistoryItem {
   subscriptionId: number;
@@ -67,9 +65,7 @@ export interface RequestHistoryItem {
 }
 
 /**
- * Một lần nạp ví tại quầy: hội viên, số tiền, phương thức, thời điểm và người nhận.
- *
- * A wallet top-up the desk took (GET /wallet/counter-topups).
+ * Một lần nạp ví tại quầy lễ tân (GET /wallet/counter-topups): hội viên, số tiền, phương thức, thời điểm và người nhận.
  */
 export interface CounterTopupHistoryItem {
   paymentId: number;

@@ -84,7 +84,7 @@
   .member-digital-card { min-height: 200px; }
 }
 
-/* Navigation cards keep their existing actions as separate links. */
+/* Các thẻ điều hướng giữ nguyên các hành động hiện có dưới dạng liên kết riêng biệt. */
 .member-card-cover-link, .member-card-details-link { display: block; }
 .member-card-cover-link { border-radius: 12px; overflow: hidden; }
 .member-card-details-link { color: inherit; }
@@ -97,7 +97,7 @@
 .member-membership-card a, .member-classes-card a, .member-board-info, .member-discover-card, .member-digital-card { cursor: pointer; }
 .member-membership-card a:focus-visible, .member-classes-card a:focus-visible, .member-board-info:focus-visible, .member-discover-card:focus-visible, .member-digital-card:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 3px; }
 
-/* The membership pass is the board's single illuminated card. */
+/* Thẻ hội viên là thẻ duy nhất phát sáng trên bảng điều khiển. */
 :root:not([data-theme='light']) .portal-v2 .member-digital-card {
   border-color: var(--portal-led-edge);
   color: var(--portal-accent-text);

@@ -51,7 +51,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     Boolean(subscription.qrCode?.trim());
   const border = status === 'warning' ? '#D6A638' : status === 'active' ? '#ce9180' : '#A45A53';
 
-  // Fetch dynamic QR on interval
+  // Lấy mã QR động theo chu kỳ
   useEffect(() => {
     if (!canShowQr || typeof getDynamicQr !== 'function') return;
 
@@ -65,7 +65,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
           setDynamicQr(res.qrCode);
         }
       } catch {
-        // Keep the last rotating code; a static code is no longer accepted at the gate.
+        // Giữ lại mã luân phiên gần nhất; mã tĩnh không còn được chấp nhận tại cổng.
       }
     }
 
@@ -80,7 +80,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     };
   }, [canShowQr]);
 
-  // Only the rotating signed code works at the gate; the static identifier is never shown as a scannable QR.
+  // Chỉ mã ký số luân phiên mới hợp lệ tại cổng; mã định danh tĩnh không bao giờ hiển thị dạng QR để quét.
   const activeQrCode = dynamicQr;
 
   useEffect(() => {

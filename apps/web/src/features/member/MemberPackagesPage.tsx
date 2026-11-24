@@ -52,11 +52,11 @@ interface RequestResult {
 }
 
 // Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
-/** Sellable plans run 3-12 months: 3 months is "short", 6 months and up is "long". */
+/** Các gói mở bán có kỳ hạn 3–12 tháng: 3 tháng thuộc nhóm "short", từ 6 tháng trở lên thuộc nhóm "long". */
 const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.';
 
-// The backend VNPay guard decides whether a pending online attempt can still settle.
-// Cash receipts under review, settled payments and unknown states must remain blocked here.
+// Bộ kiểm tra VNPay phía backend quyết định liệu một lượt thanh toán trực tuyến đang chờ còn có thể hoàn tất hay không.
+// Biên lai tiền mặt đang chờ duyệt, thanh toán đã hoàn tất và các trạng thái không xác định phải tiếp tục bị chặn ở đây.
 /** Khoản thanh toán có chặn việc hủy gói không (khoản thất bại hoặc ví đang chờ thì không chặn). */
 function blocksMemberCancellation(payment: Payment): boolean {
   return payment.status !== 'failed' && !(payment.status === 'pending' && payment.method === 'online_wallet');
@@ -133,7 +133,7 @@ export function MemberPackagesPage() {
   const [requestResult, setRequestResult] =
     useState<RequestResult | null>(null);
 
-  // Bảo lưu gói tập modal state
+  // Trạng thái hộp thoại gói trải nghiệm / KYC
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [kycProfile, setKycProfile] = useState<Profile | null>(null);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
@@ -152,7 +152,7 @@ export function MemberPackagesPage() {
       const res = await trialApi.getStatus();
       setTrialStatus(res);
     } catch {
-      // Ignore background check failure
+      // Bỏ qua lỗi kiểm tra chạy nền
     }
   }, []);
 
@@ -162,7 +162,7 @@ export function MemberPackagesPage() {
       const res = await getProfile();
       if (res && typeof res === 'object') setKycProfile(res);
     } catch {
-      // Ignore background profile check failure
+      // Bỏ qua lỗi kiểm tra hồ sơ chạy nền
     }
   }, []);
 
@@ -177,7 +177,7 @@ export function MemberPackagesPage() {
       setTrialError(memberMessage("Dung lượng ảnh tối đa là 5MB."));
       return;
     }
-    // Scaled down in the browser: two full-size phone photos as base64 pass the proxy's body limit (HTTP 413).
+    // Thu nhỏ ngay trên trình duyệt: hai ảnh điện thoại kích thước gốc dạng base64 sẽ vượt giới hạn body của proxy (HTTP 413).
     void fileToUploadDataUrl(file).then((dataUrl) => {
       if (target === 'front') setTrialFrontImage(dataUrl);
       else setTrialBackImage(dataUrl);
@@ -384,9 +384,8 @@ export function MemberPackagesPage() {
     ? paymentsState.data.filter((payment) => payment.subscriptionId === pending.id) : [];
   const pendingPackage = pending ? packages.find((item) => item.id === pending.packageId) : null;
 
-  // Số lần gia hạn đang chiếm chỗ của một kỳ (chỉ pending_payment hoặc active chặn gia hạn, khớp backend).
+  // Số lần gia hạn đang chiếm chỗ của một kỳ (chỉ pending_payment hoặc active chặn gia hạn, khớp MembershipSubscriptionService.renew()).
   function renewalCount(subscriptionId: number): number {
-    // Match MembershipSubscriptionService.renew(): only pending_payment/active block renewal.
     return historyState.status === 'success'
       ? historyState.data.filter((item) => item.previousSubscriptionId === subscriptionId
         && (item.status === 'active' || item.status === 'pending_payment')).length
@@ -457,8 +456,8 @@ export function MemberPackagesPage() {
     }
   }, [historyState]);
 
-  // Supabase Broadcast invalidates data; the authenticated API remains authoritative.
-  // A foreground read or mutation invalidates an older background snapshot.
+  // Supabase Broadcast chỉ dùng để đánh dấu dữ liệu cần tải lại; API đã xác thực vẫn là nguồn chuẩn duy nhất.
+  // Lượt đọc hoặc thao tác ghi ở tiền cảnh sẽ vô hiệu hóa bản chụp chạy nền cũ hơn.
   useEffect(() => {
     let disposed = false;
     let inFlight = false;
@@ -608,7 +607,7 @@ export function MemberPackagesPage() {
       return;
     }
 
-    // One click used to create the request straight away; let the member check plan and amount first.
+    // Trước đây bấm một lần là tạo yêu cầu ngay; giờ cho hội viên kiểm tra gói và số tiền trước.
     const quote = upgradeFrom ? upgradeQuote(upgradeFrom, membershipPackage.price, todayKey()) : null;
     const amount = quote?.amount ?? membershipPackage.price;
     const actionLabel = upgradeFrom
@@ -778,7 +777,7 @@ export function MemberPackagesPage() {
       />
       {returnSyncing && <p role="status">{t("Đang đồng bộ thông tin gói tập…", 'Synchronizing membership information…')}</p>}
 
-      {/* Unified Skeleton for Status Area (replaces piecemeal text lines) */}
+      {/* Khung xương đồng nhất cho khu vực trạng thái (thay thế các dòng chữ rời rạc) */}
       {isStatusSyncing && !current && !pending && (
         <div className="package-status-skeleton" role="status" aria-busy="true">
           <span className="sr-only">{t("Đang đồng bộ thông tin gói tập…", "Synchronizing membership details…")}</span>

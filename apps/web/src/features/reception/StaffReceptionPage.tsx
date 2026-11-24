@@ -168,7 +168,7 @@ export function StaffReceptionPage() {
       setTopupModalError(staffMessage('Số tiền nạp Ví phải từ 10.000 đ đến 100.000.000 đ.', 'Top-up amount must be between 10,000 VND and 100,000,000 VND.'));
       return;
     }
-    // Keep one request id per member/amount/method so a retry after a lost response is not credited twice.
+    // Giữ một mã yêu cầu duy nhất cho mỗi bộ hội viên/số tiền/phương thức để lần thử lại sau khi mất phản hồi không bị cộng tiền hai lần.
     const attemptKey = `${selectedMember.userId}|${parsed}|${topupMethod}`;
     if (!topupAttemptRef.current || topupAttemptRef.current.key !== attemptKey) {
       topupAttemptRef.current = { key: attemptKey, id: generateRequestId() };
@@ -330,9 +330,8 @@ export function StaffReceptionPage() {
     [renewalCandidates]
   );
 
-  // Mirrors the counter checkout rule (MEMBERSHIP_ALREADY_ACTIVE): a member with a paid period still running can only
-  // renew, so "buy new" is not offered instead of failing after the cashier presses collect.
-  // Hội viên còn kỳ đã trả tiền đang chạy thì chỉ được gia hạn, không cho mua mới (giống quy tắc backend).
+  // Khớp quy tắc thu tiền tại quầy (MEMBERSHIP_ALREADY_ACTIVE): hội viên còn kỳ đã trả tiền đang chạy thì chỉ được
+  // gia hạn, nên không hiện lựa chọn "mua mới" thay vì để thất bại sau khi thu ngân bấm thu tiền.
   const hasRunningPaidPeriod = useMemo(() => {
     const today = centerNowParts().date;
     return renewalCandidates.some((c) => {

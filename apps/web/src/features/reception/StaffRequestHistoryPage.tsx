@@ -7,9 +7,7 @@ import { MembershipRequestHistory } from './MembershipRequestHistory';
 import { WalletTopupHistory } from './WalletTopupHistory';
 
 /**
- * Tab lịch sử của lễ tân: yêu cầu gói tập đã xử lý và các lần nạp ví đã thu; chỉ quản lý và nhân viên được xem.
- *
- * History tab of the front desk: membership requests it processed and wallet top-ups it took.
+ * Tab lịch sử của quầy lễ tân: yêu cầu gói tập đã xử lý và các lần nạp ví đã thu; chỉ quản lý và nhân viên được xem.
  */
 export function StaffRequestHistoryPage() {
   const { t } = useStaffI18n();

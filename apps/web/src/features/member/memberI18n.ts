@@ -3,9 +3,7 @@ import { englishLabels } from '../../shared/i18n/translations';
 import { memberLabels } from './memberLabels';
 
 /**
- * Dịch chuỗi nguồn của màn hội viên (không dùng cho dữ liệu API hay nội dung người dùng).
- *
- * Only call with source-owned copy, never API or user text.
+ * Dịch chuỗi nguồn của màn hội viên (chỉ gọi với nội dung nguồn do mã sở hữu, không dùng cho dữ liệu API hay nội dung người dùng).
  */
 export function memberText(source: string, english?: string): string {
   if (getLanguage() !== 'en') return source;
@@ -33,9 +31,7 @@ export function memberError(reason: unknown, fallback: string): string | SourceM
 import { notify, type PortalNoticeType } from '../../shared/lib/portalNotices';
 
 /**
- * Hiện thông báo portal kèm bản dịch để đổi ngôn ngữ thì thông báo đang mở cũng đổi theo.
- *
- * Explicit bilingual provenance keeps an open notice synchronized with the selected language.
+ * Hiện thông báo portal kèm nguồn gốc song ngữ tường minh để khi đổi ngôn ngữ thì thông báo đang mở cũng đồng bộ theo.
  */
 export function memberNotify(message: SourceMessage | string, type: PortalNoticeType, options: Parameters<typeof notify>[2] = {}) {
   const translation = typeof message === 'string' ? memberMessage(message) : message;

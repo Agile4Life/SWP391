@@ -10,10 +10,8 @@ interface RealtimeSession {
 }
 
 /**
- * Đăng ký nhận thông báo realtime về thay đổi gói (chỉ là gợi ý để tải lại, không dùng làm bằng chứng thanh
- * toán); khi realtime tắt thì hỏi định kỳ; trả về hàm hủy.
- *
- * Broadcast is an invalidation hint only. Never trust it as confirmation of payment.
+ * Đăng ký nhận thông báo realtime về thay đổi gói (chỉ là gợi ý tải lại dữ liệu, tuyệt đối không tin dùng như
+ * xác nhận thanh toán); khi realtime tắt thì hỏi định kỳ; trả về hàm hủy.
  */
 export function subscribeMembershipChanges(changed: () => void, unavailable?: () => void): () => void {
   let disposed = false;
@@ -55,7 +53,7 @@ export function subscribeMembershipChanges(changed: () => void, unavailable?: ()
         .on('broadcast', { event: 'changed' }, () => { if (!disposed) changed(); })
         .subscribe(status => {
           if (disposed) return;
-          if (status === 'SUBSCRIBED') changed(); // Catch up after joining or reconnecting.
+          if (status === 'SUBSCRIBED') changed(); // Đồng bộ lại sau khi tham gia hoặc kết nối lại.
           if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
             closeClient();
             unavailable?.();

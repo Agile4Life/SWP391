@@ -255,7 +255,7 @@ export function UserManagerPage() {
       const res = await userApi.cleanupInactiveUsers();
       setCleanupResult(res);
       notify(res.message ? new Error(res.message) : staffMessage(`Đã dọn dẹp ${res.deletedCount} tài khoản không hoạt động.`, `Cleaned up ${res.deletedCount} inactive accounts.`), 'success');
-      // Refresh user list
+      // Làm mới danh sách người dùng
       const u = await userApi.getUsers();
       setUsers(u);
     } catch (err) {
@@ -399,7 +399,7 @@ export function UserManagerPage() {
   async function handleTogglePermission(role: SystemRole, permId: string) {
     if (role === 'ADMIN') return;
 
-    // Optimistic update
+    // Cập nhật lạc quan
     const previous = rolePerms[role] ?? [];
     const hasPerm = previous.includes(permId);
     const updatedList = hasPerm
@@ -412,7 +412,7 @@ export function UserManagerPage() {
       await userApi.toggleRolePermission(role, permId);
       notify('Đã cập nhật quyền.', 'success');
     } catch (err) {
-      // Revert on error
+      // Hoàn tác khi có lỗi
       setRolePerms((prev) => ({ ...prev, [role]: previous }));
       const msg = errorMessage(err, 'Không thể cập nhật quyền.');
       notify(msg, 'error');
@@ -441,7 +441,7 @@ export function UserManagerPage() {
         title={t("Tài khoản & phân quyền")}
       />
 
-      {/* Tabs */}
+      {/* Các tab */}
       <div className="portal-tabs">
         <button
           type="button"
@@ -484,7 +484,7 @@ export function UserManagerPage() {
         </div>
       ) : activeTab === 'USERS' ? (
         <div data-i18n-managed>
-          {/* Controls / Filter Bar */}
+          {/* Thanh điều khiển / bộ lọc */}
           <div className="portal-toolbar">
             <input
               type="text"
@@ -529,7 +529,7 @@ export function UserManagerPage() {
             </ActionMenu>
           </div>
 
-          {/* User Table */}
+          {/* Bảng danh sách người dùng */}
           <div className="portal-card portal-card--flush">
             {filteredUsers.length === 0 ? (
               <div data-i18n-managed className="portal-state" style={{ minHeight: '180px' }}>
@@ -666,7 +666,7 @@ export function UserManagerPage() {
         </div>
       ) : activeTab === 'DELETED' ? (
         <div data-i18n-managed>
-          {/* Controls / Filter Bar for Deleted Users */}
+          {/* Thanh điều khiển / bộ lọc cho tài khoản đã xóa */}
           <div className="portal-toolbar">
             <input
               type="text"
@@ -689,7 +689,7 @@ export function UserManagerPage() {
             </Select>
           </div>
 
-          {/* Deleted Users Table */}
+          {/* Bảng danh sách tài khoản đã xóa */}
           <div className="portal-card portal-card--flush">
             {filteredDeletedUsers.length === 0 ? (
               <div data-i18n-managed className="portal-state" style={{ minHeight: '180px' }}>

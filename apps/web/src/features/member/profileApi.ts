@@ -29,7 +29,7 @@ export interface Profile {
   frontImageUrl?: string | null;
   backImageUrl?: string | null;
   identityVerified?: boolean | null;
-  /** PENDING (waiting for the desk), APPROVED or REJECTED; null for members verified before reviews existed. */
+  /** PENDING (chờ quầy lễ tân duyệt), APPROVED hoặc REJECTED; null với hội viên đã xác minh trước khi có quy trình duyệt. */
   kycStatus?: string | null;
   kycRejectReason?: string | null;
 }
@@ -59,7 +59,7 @@ export interface ReceptionistProfileUpdate {
 /** Lấy hồ sơ của người dùng đang đăng nhập. */
 export const getProfile = () => apiFetch<Profile>('/profile');
 
-/** Avatar and identity images have their own endpoints; leaving their data URLs out keeps the PUT body small. */
+/** Ảnh đại diện và ảnh giấy tờ có endpoint riêng; loại bỏ data URL của chúng giúp body của yêu cầu PUT luôn gọn. */
 const PROFILE_PUT_SKIPPED = new Set(['avatarUrl', 'frontImageUrl', 'backImageUrl']);
 /** Cập nhật hồ sơ (bỏ ảnh đại diện và ảnh giấy tờ khỏi body vì có endpoint riêng). */
 export const updateProfile = (profile: Profile) =>
@@ -77,9 +77,7 @@ export const uploadAvatar = (avatarUrl: string | null) =>
   apiFetch<Profile>('/profile/avatar', { method: 'POST', body: JSON.stringify({ avatarUrl }) });
 
 /**
- * Đổi mật khẩu; backend trả token mới cho phiên này nên được lưu lại.
- *
- * Changing the password signs out every other session; the API returns a fresh token for this one.
+ * Đổi mật khẩu; thao tác này đăng xuất tất cả các phiên khác và backend trả về token mới cho phiên hiện tại để lưu lại.
  */
 export const changePassword = async (currentPassword: string, newPassword: string) => {
   const renewed = await apiFetch<{ token: string; username: string; role: string; fullName?: string | null } | null>('/profile/password', {

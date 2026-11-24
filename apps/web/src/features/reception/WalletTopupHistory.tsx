@@ -17,9 +17,7 @@ const METHOD_LABELS: Record<string, StaffMessage> = {
 const vnd = (amount: number) => formatPrice(Number(amount));
 
 /**
- * Lịch sử các lần lễ tân nạp ví để tra cứu và đối soát số tiền đã thu.
- *
- * Wallet top-ups the desk took, so the cash it collected can be looked up and reconciled.
+ * Lịch sử các lần nạp ví tại quầy lễ tân, phục vụ tra cứu và đối soát số tiền mặt đã thu.
  */
 export function WalletTopupHistory({ refreshKey = 0 }: { refreshKey?: number }) {
   const { t } = useStaffI18n();

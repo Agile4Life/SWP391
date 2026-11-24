@@ -17,8 +17,7 @@ import './manager-coach-assignments.css';
 import { Select } from '../../shared/ui/Select';
 /**
  * Huy hiệu cảnh báo vấn đề gói tập của hội viên (đang bảo lưu, hết hiệu lực...) kèm gợi ý.
- *
- * Short tag shown only when the member's plan blocks coaching; nothing is shown when the plan is fine.
+ * Chỉ hiển thị thẻ ngắn khi gói tập của hội viên đang chặn việc huấn luyện; không hiển thị gì khi gói tập bình thường.
  */
 function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['membershipIssue'] }) {
   if (!issue) return null;
@@ -47,9 +46,7 @@ interface MemberAssignmentGroup {
 }
 
 /**
- * Gom các phân công theo hội viên.
- *
- * One member may hold several assignments with the same coach; show them under a single profile.
+ * Gom các phân công theo hội viên: một hội viên có thể có nhiều phân công với cùng một HLV nên hiển thị chung dưới một hồ sơ.
  */
 function groupStudentsByMember(students: CoachAssignmentStudent[]): MemberAssignmentGroup[] {
   const groups = new Map<number, MemberAssignmentGroup>();
@@ -99,7 +96,7 @@ export function ManagerCoachAssignmentsPage() {
     }
   }, [sortOption]);
 
-  // Modals state
+  // Trạng thái các hộp thoại
   const [reassignStudent, setReassignStudent] = useState<{
     student: CoachAssignmentStudent;
     currentCoachId: number;
@@ -107,7 +104,7 @@ export function ManagerCoachAssignmentsPage() {
   } | null>(null);
   const [selectedStudentDetail, setSelectedStudentDetail] = useState<CoachAssignmentStudent | null>(null);
 
-  // Form state for Reassign
+  // Trạng thái biểu mẫu điều chuyển HLV
   const [targetCoachId, setTargetCoachId] = useState<number | ''>('');
   const [reassignReason, setReassignReason] = useState('');
 
@@ -136,7 +133,7 @@ export function ManagerCoachAssignmentsPage() {
     const timer = setTimeout(() => {
       void load();
     }, 200);
-    // loadGeneration is a request counter, not a DOM ref: bump it on cleanup to drop stale responses.
+    // loadGeneration là bộ đếm yêu cầu, không phải DOM ref: tăng khi dọn dẹp để bỏ qua các phản hồi cũ.
     const generation = loadGeneration;
     return () => { clearTimeout(timer); generation.current += 1; };
   }, [load]);
@@ -197,8 +194,7 @@ export function ManagerCoachAssignmentsPage() {
     }
   };
 
-  // Flat list for table view
-  // Làm phẳng học viên của mọi HLV thành một danh sách kèm thông tin HLV.
+  // Danh sách phẳng cho chế độ xem bảng: làm phẳng học viên của mọi HLV thành một danh sách kèm thông tin HLV.
   const flattenedStudents = useMemo(() => {
     if (!data?.coaches) return [];
     return data.coaches.flatMap((coach) =>
@@ -225,7 +221,7 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       )}
 
-      {/* Summary KPI Cards */}
+      {/* Các thẻ KPI tổng quan */}
       <section className="metrics-grid coach-assignments-stats" aria-label={t("Thống kê tổng quan")}>
         <div className="metric-card coach-stat-card">
           <span className="metric-label">{t("Tổng số Huấn luyện viên")}</span>
@@ -245,7 +241,7 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       </section>
 
-      {/* Toolbar: Filters, Search, View switch */}
+      {/* Thanh công cụ: Bộ lọc, Tìm kiếm, Chuyển đổi chế độ xem */}
       <section className="portal-card coach-assignments-toolbar" aria-label={t("Bộ lọc và tìm kiếm")}>
         <div className="coach-assignments-filters">
           <input
@@ -315,7 +311,7 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       </section>
 
-      {/* Main View Area */}
+      {/* Khu vực hiển thị chính */}
       {loading ? (
         <LoadingSkeleton label={t("Đang tải dữ liệu HLV và học viên...")} count={4} />
       ) : !data || data.coaches.length === 0 ? (
@@ -324,7 +320,7 @@ export function ManagerCoachAssignmentsPage() {
           <p>{t("Không có kết quả phù hợp.")}</p>
         </div>
       ) : viewMode === 'cards' ? (
-        /* Card View by Coach */
+        /* Chế độ xem thẻ theo từng HLV */
         <div data-i18n-managed className="coach-cards-grid">
           {data.coaches.map((coach: CoachAssignmentOverview) => (
             <article data-i18n-managed key={coach.coachId} className="portal-card portal-card--flush coach-card-panel">
@@ -437,7 +433,7 @@ export function ManagerCoachAssignmentsPage() {
           ))}
         </div>
       ) : (
-        /* Table View */
+        /* Chế độ xem bảng */
         <div data-i18n-managed className="portal-card portal-card--flush portal-table-wrapper coach-table-container">
           <table className="portal-table coach-table">
             <thead>
@@ -510,7 +506,7 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       )}
 
-      {/* Modal 2: Reassign Student */}
+      {/* Hộp thoại 2: Điều chuyển HLV cho học viên */}
       {reassignStudent && (
         <Modal
           title={t(`Điều chuyển HLV cho học viên: ${reassignStudent.student.fullName}`, `Transfer coach for member: ${reassignStudent.student.fullName}`)}
@@ -597,7 +593,7 @@ export function ManagerCoachAssignmentsPage() {
         </Modal>
       )}
 
-      {/* Modal 3: Student Details */}
+      {/* Hộp thoại 3: Chi tiết học viên */}
       {selectedStudentDetail && (
         <Modal
           title={t(`Hồ sơ học viên: ${selectedStudentDetail.fullName}`, `Member profile: ${selectedStudentDetail.fullName}`)}

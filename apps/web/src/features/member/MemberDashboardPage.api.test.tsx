@@ -10,7 +10,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 it('renders a member without a subscription using the real API client and an omitted data field', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  // ApiResponse uses NON_NULL: no current subscription omits data entirely.
+  // ApiResponse dùng NON_NULL: khi chưa có gói hiện tại thì bỏ qua hoàn toàn trường data.
   vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
     ok: true,
     status: 200,
@@ -31,7 +31,7 @@ it('renders a member without a subscription using the real API client and an omi
     const paths = vi.mocked(fetch).mock.calls.map(([path]) => String(path));
     expect(paths.some(path => path.includes('/classes/') || path.includes('/court-bookings'))).toBe(false);
     expect(paths.some(path => path.includes('/coach-bookings/my'))).toBe(true);
-    // The same transport fix must cover packages and member cards as well.
+    // Bản sửa lỗi truyền tải tương tự cũng phải áp dụng cho gói tập và thẻ hội viên.
     await expect(getCurrentMembership()).resolves.toBeNull();
     await expect(getMySubscription()).resolves.toBeNull();
   } finally {

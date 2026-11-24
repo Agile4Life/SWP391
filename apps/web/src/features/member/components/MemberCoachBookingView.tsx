@@ -110,7 +110,7 @@ export function MemberCoachBookingView({
   // Lỗi gửi của hộp thoại hiện ngay trong hộp thoại (không dùng banner đầu trang nằm sau lớp nền mờ).
   const [bookingError, setBookingError] = useState<string | SourceMessage>('');
   const [cancelError, setCancelError] = useState<string | SourceMessage>('');
-  // quotaStatus stays null while loading or when the request fails; only a loaded answer without a package means none.
+  // quotaStatus giữ null khi đang tải hoặc khi yêu cầu lỗi; chỉ kết quả đã tải xong mà không có gói mới nghĩa là chưa có gói.
   const hasNoPackage = quotaStatus !== null && !quotaStatus.packageName;
   const isTrial = Boolean(
     quotaStatus &&
@@ -130,13 +130,13 @@ export function MemberCoachBookingView({
 
   const [error, setError] = useState<string | SourceMessage>('');
 
-  // Booking Modal State
+  // Trạng thái hộp thoại đặt lịch
   const [modalSlot, setModalSlot] = useState<CoachAvailableSlotDto | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'package_quota' | 'hourly_pay'>('package_quota');
   const [notes, setNotes] = useState('');
   const slotDate = selectedDate;
 
-  // Payment Checkout Modal State
+  // Trạng thái hộp thoại thanh toán
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
   const watchedPendingBookingsRef = useRef<Set<number>>(new Set());
   const announcedPaidBookingsRef = useRef<Set<number>>(new Set());
@@ -151,11 +151,11 @@ export function MemberCoachBookingView({
       setMyBookings(bookingsList);
       if (quota) setQuotaStatus(quota);
     } catch {
-      // Silent background refresh
+      // Làm mới ngầm khi có lỗi
     }
   }, []);
 
-  // Cancel Modal State
+  // Trạng thái hộp thoại hủy lịch
   const [cancelTarget, setCancelTarget] = useState<CoachBookingDto | null>(null);
   // Thời điểm mở hộp thoại hủy, dùng để báo trước có được hoàn lượt (quy tắc 2 giờ) hay không.
   const [cancelOpenedAt, setCancelOpenedAt] = useState(0);
@@ -191,7 +191,7 @@ export function MemberCoachBookingView({
     return () => { active = false; };
   }, []);
 
-  // Track pending paid 1:1 bookings and announce real-time payment confirmation
+  // Theo dõi các buổi 1:1 trả phí đang chờ thanh toán và thông báo theo thời gian thực khi thanh toán được xác nhận
   useEffect(() => {
     for (const b of myBookings) {
       if (b.status !== 'cancelled' && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending') {
@@ -226,7 +226,7 @@ export function MemberCoachBookingView({
     (b) => b.status !== 'cancelled' && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending',
   );
 
-  // Real-time invalidation & visibility/focus synchronization for 1:1 booking payments
+  // Làm mới theo thời gian thực và đồng bộ khi hiển thị/focus cho thanh toán lịch 1:1
   useEffect(() => {
     let fallbackTimer: number | null = null;
     // Dừng vòng hỏi định kỳ.
@@ -277,7 +277,7 @@ export function MemberCoachBookingView({
     };
   }, [hasPendingPaymentBooking, refreshBookingsAndQuota]);
 
-  // Load slots when coach or date changes
+  // Tải danh sách khung giờ khi đổi HLV hoặc đổi ngày
   useEffect(() => {
     if (!selectedCoachId || !slotDate) return;
     let active = true;
@@ -456,7 +456,7 @@ export function MemberCoachBookingView({
         </div>
       )}
 
-      {/* Quota Info Banner */}
+      {/* Banner thông tin hạn mức */}
       <div
         className="portal-card"
         style={{
@@ -758,7 +758,7 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            {/* Calendar Day Cards Row */}
+            {/* Hàng thẻ chọn ngày trên lịch */}
             <div>
               <div
                 style={{
@@ -860,7 +860,7 @@ export function MemberCoachBookingView({
             <p className="row-card__meta" style={{ margin: 0 }}>
               {memberText("Khung giờ cho ngày ")}{slotDate.split('-').reverse().join('/')} {memberText(" · HLV nghỉ 1 slot sau 3 slot 1:1 liên tiếp.")}</p>
 
-            {/* Time Slots Grouped by Time of Day */}
+            {/* Các khung giờ được nhóm theo buổi trong ngày */}
             {loadingSlots ? (
               <div style={{ padding: '24px 0', textAlign: 'center' }}>
                 <p className="row-card__meta" style={{ margin: 0 }}>
@@ -903,7 +903,7 @@ export function MemberCoachBookingView({
                   </div>
                 )}
 
-                {/* Selected Slot Summary Action */}
+                {/* Tóm tắt và nút hành động cho khung giờ đã chọn */}
                 {selectedSlot && (
                   <div
                     style={{
@@ -1203,7 +1203,7 @@ export function MemberCoachBookingView({
           busy={submitting}
         >
           <div style={{ display: 'grid', gap: 18 }}>
-            {/* Coach & Session Info Card */}
+            {/* Thẻ thông tin HLV và buổi tập */}
             <div
               style={{
                 padding: '16px 20px',
@@ -1217,7 +1217,7 @@ export function MemberCoachBookingView({
                 flexWrap: 'wrap',
               }}
             >
-              {/* Coach */}
+              {/* Huấn luyện viên */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 200, flex: '1 1 auto' }}>
                 <div style={{ position: 'relative', width: 62, height: 62, flexShrink: 0 }}>
                   <img
@@ -1265,7 +1265,7 @@ export function MemberCoachBookingView({
                 </div>
               </div>
 
-              {/* Time */}
+              {/* Thời gian */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 140, flex: '1 1 auto' }}>
                 <span style={{ color: 'var(--portal-muted)', marginTop: 2, flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1287,7 +1287,7 @@ export function MemberCoachBookingView({
                 </div>
               </div>
 
-              {/* Cost */}
+              {/* Chi phí */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 140, flex: '1 1 auto' }}>
                 <span style={{ color: 'var(--portal-muted)', marginTop: 2, flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1306,7 +1306,7 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            {/* Payment Method Section */}
+            {/* Khu vực chọn phương thức thanh toán */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1318,7 +1318,7 @@ export function MemberCoachBookingView({
               </div>
 
               <div role="radiogroup" aria-label={memberText("Phương thức thanh toán", "Payment method")} style={{ display: 'grid', gap: 10 }}>
-                {/* Option 1: Gói tập */}
+                {/* Lựa chọn 1: Gói tập */}
                 <div
                   role="radio"
                   aria-checked={paymentMethod === 'package_quota'}
@@ -1418,7 +1418,7 @@ export function MemberCoachBookingView({
                   </div>
                 </div>
 
-                {/* Option 2: Trả phí theo giờ */}
+                {/* Lựa chọn 2: Trả phí theo giờ */}
                 <div
                   role="radio"
                   aria-checked={paymentMethod === 'hourly_pay'}
@@ -1499,7 +1499,7 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            {/* Notes Section */}
+            {/* Khu vực ghi chú */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1566,7 +1566,7 @@ export function MemberCoachBookingView({
               </div>
             )}
 
-            {/* Footer Action Buttons */}
+            {/* Các nút hành động cuối hộp thoại */}
             <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 10 }}>
               <button
                 type="button"

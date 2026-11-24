@@ -174,7 +174,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
   it('toggleLockUser checks current status and invokes lock/unlock accordingly', async () => {
     const mockFetch = vi
       .fn()
-      // First call: GET /users/5
+      // Lần gọi 1: GET /users/5
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -184,7 +184,7 @@ describe('userApi.ts (User Management & RBAC)', () => {
           data: { id: 5, roleCode: 'MEMBER', fullName: 'John', email: 'j@t.com', phone: null, status: 'active', createdAt: '2026-09-20' },
         }),
       })
-      // Second call: PATCH /users/5/lock
+      // Lần gọi 2: PATCH /users/5/lock
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
@@ -213,21 +213,21 @@ describe('userApi.ts (User Management & RBAC)', () => {
 
     const mockFetch = vi
       .fn()
-      // Call 1: GET /roles (from roleIds)
+      // Lần gọi 1: GET /roles (từ roleIds)
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
         // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: rolesList }),
       })
-      // Call 2: GET /roles/1/permissions
+      // Lần gọi 2: GET /roles/1/permissions
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
         // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: permissionsForRole }),
       })
-      // Call 3: DELETE /roles/1/permissions/101 (since already granted)
+      // Lần gọi 3: DELETE /roles/1/permissions/101 (do quyền đã được cấp sẵn)
       .mockResolvedValueOnce({
         ok: true,
         status: 200,

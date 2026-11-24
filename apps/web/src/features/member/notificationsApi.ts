@@ -46,10 +46,8 @@ export const markAllNotificationsRead = () =>
   apiFetch<void>('/notifications/read-all', { method: 'PATCH' });
 
 /**
- * Chỉ chấp nhận đường dẫn nội bộ của portal và đổi đường dẫn cũ/đã bỏ về màn phù hợp theo vai trò; đường dẫn lạ
- * trả null.
- *
- * Accept only internal portal routes; never follow arbitrary URLs from notification content.
+ * Chỉ chấp nhận đường dẫn nội bộ của portal (không bao giờ mở URL tùy ý từ nội dung thông báo) và đổi đường dẫn
+ * cũ/đã bỏ về màn phù hợp theo vai trò; đường dẫn lạ trả null.
  */
 export function safeNotificationPath(path: string | null | undefined, role = 'MEMBER'): string | null {
   if (!path || !/^\/[a-z0-9/-]+(?:\?[a-zA-Z0-9_=&%-]+)?(?:#[a-z0-9-]+)?$/.test(path)) return null;

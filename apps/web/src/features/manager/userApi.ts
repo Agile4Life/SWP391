@@ -31,7 +31,7 @@ export interface Permission {
   module: string;
 }
 
-// Backend role codes; the portal displays CENTER_MANAGER as Manager.
+// Mã vai trò phía backend; cổng quản trị hiển thị CENTER_MANAGER là Quản lý trung tâm.
 export const CORE_ROLES: { id: SystemRole; name: string; description: string }[] = [
   { id: 'ADMIN', name: 'Quản trị hệ thống', description: 'Quản trị tài khoản và phân quyền' },
   { id: 'CENTER_MANAGER', name: 'Quản lý trung tâm', description: 'Quản lý vận hành và tạo tài khoản nhân sự' },

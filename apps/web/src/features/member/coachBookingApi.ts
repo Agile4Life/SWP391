@@ -46,11 +46,11 @@ export interface CoachBookingDto {
   createdAt: string;
   cancelledAt: string | null;
   cancelReason: string | null;
-  /** When the member was recorded as present (gate scan during the session); null when not recorded. */
+  /** Thời điểm hội viên được ghi nhận có mặt (quét cổng trong buổi tập); null nếu chưa được ghi nhận. */
   attendedAt?: string | null;
-  /** Staff removed the mark; scans and the sweep must not restore it automatically. */
+  /** Nhân viên đã gỡ dấu điểm danh; lượt quét và tác vụ quét tự động không được khôi phục lại. */
   attendanceLocked?: boolean;
-  /** Gate check-in that covered the session (attendance list only); a hint, never the attendance itself. */
+  /** Lượt check-in tại cổng trùng khung giờ buổi tập (chỉ có trong danh sách điểm danh); chỉ là gợi ý, không phải xác nhận điểm danh. */
   gateCheckinAt?: string | null;
   membershipCode?: string | null;
   memberPhone?: string | null;

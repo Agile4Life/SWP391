@@ -21,13 +21,13 @@ export interface MemberSubscription {
   startDate: string;
   endDate: string;
   paidThroughDate?: string | null;
-  /** Quoted amount of a pending upgrade: new package price minus `creditApplied`; null for other subscriptions. */
+  /** Số tiền báo giá của yêu cầu nâng cấp đang chờ: giá gói mới trừ `creditApplied`; null với các gói khác. */
   upgradeCharge?: number | null;
-  /** Pending registration or renewal: catalog price fixed when the request was made; null for older requests. */
+  /** Đăng ký mới hoặc gia hạn đang chờ: giá niêm yết được chốt tại thời điểm tạo yêu cầu; null với các yêu cầu cũ hơn. */
   quotedPrice?: number | null;
-  /** Pending upgrade: unused value of the replaced period already deducted from the price. */
+  /** Nâng cấp đang chờ: giá trị chưa sử dụng của kỳ bị thay thế đã được trừ khỏi giá bán. */
   creditApplied?: number | null;
-  /** Period active today: unused share of what was actually paid, deducted by an upgrade. */
+  /** Kỳ đang hoạt động hôm nay: phần giá trị chưa dùng của số tiền thực tế đã trả, sẽ được khấu trừ khi nâng cấp. */
   remainingValue?: number | null;
   status: string;
   qrCode: string | null;
@@ -54,9 +54,9 @@ export interface Payment {
   note: string | null;
   createdAt: string;
   invoiceNumber: string | null;
-  /** What the payment is for (server-derived); absent on endpoints that do not describe payments. */
+  /** Mục đích khoản thanh toán (do máy chủ suy ra); không có trên các endpoint không mô tả thanh toán. */
   serviceType?: 'MEMBERSHIP' | 'CLASS' | 'PT' | 'COURT' | 'SHOP' | 'WALLET_TOPUP' | 'OTHER' | null;
-  /** The paid item as stored data: package, class, coach + slot, court + slot or order code. */
+  /** Khoản đã thanh toán theo dữ liệu lưu trữ: gói tập, lớp học, HLV + khung giờ, sân + khung giờ hoặc mã đơn hàng. */
   serviceName?: string | null;
   coachBookingId?: number | null;
   courtBookingId?: number | null;

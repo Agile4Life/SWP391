@@ -131,7 +131,7 @@ describe('SCRUM-86 packages', () => {
     return [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
   }
 
-  // Purchase buttons now ask for confirmation before the request is created.
+  // Các nút mua gói nay yêu cầu xác nhận trước khi tạo yêu cầu.
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const confirmRequest = () => [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === 'Gửi yêu cầu')?.click();
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
@@ -369,7 +369,7 @@ describe('SCRUM-86 packages', () => {
 
     await render();
 
-    // The card previews the charge: the new price minus the unused value the backend computed from what was paid.
+    // Thẻ xem trước số tiền phải trả: giá gói mới trừ giá trị chưa dùng do backend tính từ số tiền đã thanh toán.
     const quote = host.querySelector('[data-testid="upgrade-quote"]');
     expect(quote?.textContent).toContain(`Nâng cấp: thanh toán ${formatPrice(higherPackage.price - 266000)}`);
     expect(quote?.textContent).toContain(`đã trừ ${formatPrice(266000)} giá trị còn lại`);
@@ -388,7 +388,7 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).not.toHaveBeenCalled();
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Nâng cấp gói tập');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('VIP Sanctuary');
-    // The amount the backend quoted is shown, not the catalog price.
+    // Hiển thị đúng số tiền backend báo giá, không phải giá niêm yết.
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Số tiền cần thanh toán để nâng cấp');
     expect(host.querySelector('[role="dialog"]')?.textContent).toMatch(/1\.234\.000/);
   });
@@ -872,7 +872,7 @@ describe('SCRUM-86 packages', () => {
 
     const grid = host.querySelector('.grid-3');
     expect(grid).not.toBeNull();
-    // Grid must contain regular packages but must NOT render trial package as a purchasable card
+    // Lưới phải chứa các gói thông thường nhưng KHÔNG được hiển thị gói trải nghiệm như một thẻ mua được
     expect(grid?.textContent).toContain('Essential');
     expect(grid?.textContent).toContain('VIP Sanctuary');
     expect(grid?.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày');
@@ -885,7 +885,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([{ ...pending, id: 88, status: 'expired' }]);
     await render();
 
-    // Banner should NOT be visible because user has membership history
+    // Banner KHÔNG được hiển thị vì người dùng đã có lịch sử gói tập
     expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày miễn phí');
     expect(button('Nhận 3 ngày tập miễn phí')).toBeUndefined();
   });

@@ -75,10 +75,10 @@ describe('SCRUM-85 dashboard', () => {
   });
 
   it('shows paid renewal expiry and remaining days across 120 days', async () => {
-    // The dashboard counts days on the center calendar (UTC+7), so build the dates from it, not the machine's timezone.
+    // Bảng điều khiển tính ngày theo lịch trung tâm (UTC+7), nên tạo ngày từ lịch đó thay vì múi giờ máy.
     const [year, month, day] = centerNowParts().date.split('-').map(Number);
     const today = new Date(Date.UTC(year, month - 1, day));
-    // Start the day before so the card counts as started whichever calendar day the machine's timezone is on.
+    // Bắt đầu từ hôm trước để thẻ luôn tính là đã bắt đầu bất kể múi giờ máy đang ở ngày nào.
     const start = new Date(today); start.setUTCDate(start.getUTCDate() - 1);
     const end = new Date(today); end.setUTCDate(end.getUTCDate() + 28);
     const paid = new Date(today); paid.setUTCDate(paid.getUTCDate() + 119);

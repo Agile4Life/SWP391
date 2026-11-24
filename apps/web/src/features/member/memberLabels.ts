@@ -1,4 +1,4 @@
-// Source-owned member UI copy only. Never apply to API or user content.
+// Chỉ chứa nội dung giao diện nguồn của màn hội viên. Tuyệt đối không áp dụng cho dữ liệu API hoặc nội dung người dùng.
 export const memberLabels: Readonly<Record<string, string>> = {
   "Bảo mật tài khoản": "Account security",
   "Cập nhật mật khẩu định kỳ và nhận thông báo bảo mật qua email": "Update your password regularly and receive security alerts via email",

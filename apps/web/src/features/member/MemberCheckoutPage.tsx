@@ -42,7 +42,7 @@ export function MemberCheckoutPage() {
   // Số tiền thật phải thanh toán: yêu cầu nâng cấp hoặc gia hạn đã được backend báo giá
   const [quotedAmount, setQuotedAmount] = useState<number | null>(null);
 
-  // Identity / KYC state for first-time package purchase
+  // Trạng thái định danh / KYC cho lần mua gói tập đầu tiên
   const [profile, setProfile] = useState<Profile | null>(null);
   const [hasPriorSubscriptions, setHasPriorSubscriptions] = useState(false);
   const [kycDocType, setKycDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
@@ -66,7 +66,7 @@ export function MemberCheckoutPage() {
         setKycSuccess(t('Đã xác minh thành công! Bạn có thể tiến hành thanh toán.', 'Verification approved! You can now proceed to payment.') as string);
         window.dispatchEvent(new Event('profile-updated'));
       }
-    } catch { /* ignore */ }
+    } catch { /* bỏ qua */ }
     finally { setRefreshingKyc(false); }
   }
 
@@ -146,7 +146,7 @@ export function MemberCheckoutPage() {
       setKycError(memberMessage("Dung lượng ảnh tối đa 2MB."));
       return;
     }
-    // Re-encoded as a JPEG of at most 1600 px: keeps the request small and avoids formats the server rejects.
+    // Mã hóa lại thành JPEG tối đa 1600 px: giữ kích thước yêu cầu nhỏ và tránh các định dạng máy chủ từ chối.
     void fileToUploadDataUrl(file).then((dataUrl) => {
       if (target === 'front') setKycFrontImage(dataUrl);
       else setKycBackImage(dataUrl);

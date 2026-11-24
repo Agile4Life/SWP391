@@ -1,6 +1,6 @@
 /* Mục đích: Kiểu cho màn hình thanh toán của hội viên. */
 /* ==========================================================================
-   MEMBER CHECKOUT - SÖL Fitness Theme (Light & Dark Mode Adaptive)
+   THANH TOÁN HỘI VIÊN - Giao diện SÖL Fitness (Thích ứng chế độ Sáng & Tối)
    ========================================================================== */
 
 .checkout-container {
@@ -42,7 +42,7 @@
 }
 
 /* --------------------------------------------------------------------------
-   Order Summary Card
+   Thẻ tóm tắt đơn hàng
    -------------------------------------------------------------------------- */
 .order-summary-card {
   background: var(--portal-surface);

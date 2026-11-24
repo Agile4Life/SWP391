@@ -42,8 +42,6 @@ function inclusiveDays(start: string, end: string): number {
 
 /**
  * Chọn gói áp dụng bảo lưu: gói đang hoạt động hôm nay, nếu không thì gói đang bảo lưu.
- *
- * The subscription a hold applies to: the one running today, else one that is already frozen.
  */
 function pickSubscription(history: MemberSubscription[]): MemberSubscription | null {
   const today = isoDate(new Date());
@@ -101,7 +99,7 @@ export function MemberHoldPage() {
   // Ngày bắt đầu sớm nhất được chọn (hôm nay + 2 ngày).
   const earliestStart = useMemo(() => addDays(isoDate(new Date()), 2), []);
   const status = detail?.holdStatus ?? null;
-  // A pending request, or an approved hold that has not started yet, can still be withdrawn.
+  // Yêu cầu đang chờ duyệt, hoặc bảo lưu đã duyệt nhưng chưa bắt đầu, vẫn có thể rút lại.
   const canWithdraw = status === 'PENDING'
     || (status === 'APPROVED' && subscription?.status === 'active' && !!detail?.holdStartDate && detail.holdStartDate > isoDate(new Date()));
   const canRequest = !!subscription && !!policy?.allowed && !policy.alreadyUsed

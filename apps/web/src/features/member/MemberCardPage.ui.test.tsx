@@ -50,7 +50,7 @@ beforeEach(() => {
   vi.mocked(getProfile).mockResolvedValue(profile as never);
   vi.mocked(getMySubscription).mockResolvedValue(subscription as never);
   vi.mocked(getMembershipHistory).mockResolvedValue([]);
-  // Only the rotating signed code is a scannable QR; the static identifier is never rendered.
+  // Chỉ mã ký số luân phiên mới là mã QR quét được; mã định danh tĩnh không bao giờ được hiển thị.
   vi.mocked(getDynamicQr).mockResolvedValue({ qrCode: 'DYN:9:1:123:signed', expiresInSeconds: 60, generatedAt: '2026-10-21T12:00:00' });
   vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,AA' as never);
 });

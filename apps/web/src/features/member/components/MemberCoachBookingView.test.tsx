@@ -37,13 +37,13 @@ describe('formatCoachName & isSessionCompleted helpers', () => {
   });
 
   it('determines whether a session has completed based on status and time', () => {
-    // Completed status
+    // Trạng thái đã hoàn thành
     expect(isSessionCompleted({ bookingDate: '2099-01-01', endTime: '20:00', status: 'completed' })).toBe(true);
-    // Cancelled status
+    // Trạng thái đã hủy
     expect(isSessionCompleted({ bookingDate: '2000-01-01', endTime: '10:00', status: 'cancelled' })).toBe(false);
-    // Past booking date & time
+    // Ngày giờ đặt lịch trong quá khứ
     expect(isSessionCompleted({ bookingDate: '2020-01-01', endTime: '10:00', status: 'confirmed' })).toBe(true);
-    // Far future booking
+    // Lịch đặt ở tương lai xa
     expect(isSessionCompleted({ bookingDate: '2099-12-31', endTime: '23:59', status: 'confirmed' })).toBe(false);
   });
 });
@@ -107,15 +107,15 @@ describe('MemberCoachBookingView Review Logic', () => {
 
     await renderComponent();
 
-    // Does not double HLV prefix
+    // Không lặp tiền tố HLV
     expect(host.textContent).toContain('Tập 1:1 cùng HLV Huỳnh Đắc Tài');
     expect(host.textContent).not.toContain('HLV HLV');
 
-    // Upcoming indicators
+    // Các chỉ báo buổi sắp diễn ra
     expect(host.textContent).toContain('Sắp diễn ra');
     expect(host.textContent).not.toContain('Đánh giá sau khi kết thúc buổi');
     expect(host.textContent).toContain('Hủy lịch hẹn');
-    // Review button should not be present
+    // Không được hiển thị nút đánh giá
     expect(host.textContent).not.toContain('Đánh giá HLV');
   });
 
@@ -139,7 +139,7 @@ describe('MemberCoachBookingView Review Logic', () => {
 
     expect(host.textContent).toContain('Đã kết thúc buổi');
     expect(host.textContent).not.toContain('Đánh giá HLV');
-    // Session in the past cannot be cancelled
+    // Không thể hủy buổi tập đã qua
     expect(host.textContent).not.toContain('Hủy lịch hẹn');
 
   });
@@ -367,7 +367,7 @@ describe('weekly PT booking after Monday has passed', () => {
   it('uses Asia/Ho_Chi_Minh date for startDate even when UTC is still on the previous calendar day', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers({ toFake: ['Date'] });
-    // 2026-11-05T20:00:00Z is 2026-11-06 03:00:00 in Asia/Ho_Chi_Minh
+    // 2026-11-05T20:00:00Z tương ứng 2026-11-06 03:00:00 theo múi giờ Asia/Ho_Chi_Minh
     vi.setSystemTime(new Date('2026-11-05T20:00:00Z'));
     const host = document.createElement('div');
     document.body.append(host);
@@ -422,7 +422,7 @@ describe('weekly PT booking after Monday has passed', () => {
 
       expect(host.textContent).toContain('Chờ thanh toán');
 
-      // Simulate payment confirmation from Reception or VNPay/Wallet
+      // Mô phỏng xác nhận thanh toán từ Lễ tân hoặc VNPay/Ví
       currentPaymentStatus = 'paid';
       await act(async () => {
         window.dispatchEvent(new CustomEvent('wallet-updated'));

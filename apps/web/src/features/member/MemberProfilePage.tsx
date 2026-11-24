@@ -67,7 +67,7 @@ function validateAndProcessImage(dataUrl: string, mimeType: string): Promise<str
           }
         }
       } catch {
-        // Fallback to original dataUrl if canvas is unsupported in test environment
+        // Dùng lại dataUrl gốc nếu canvas không được hỗ trợ trong môi trường kiểm thử
       }
       resolve(dataUrl);
     };

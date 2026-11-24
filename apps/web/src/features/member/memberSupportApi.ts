@@ -12,9 +12,9 @@ export interface SupportTicket {
   status: 'open' | 'in_progress' | 'resolved' | 'closed';
   createdAt: string;
   assignedToName: string | null;
-  /** Set once a receptionist hands the complaint up to a manager. */
+  /** Được gán khi lễ tân chuyển khiếu nại lên quản lý. */
   escalatedAt?: string | null;
-  /** Staff only: who escalated and why (hidden from members by the API). */
+  /** Chỉ dành cho nhân sự: ai đã chuyển cấp và lý do (API ẩn khỏi hội viên). */
   escalatedByName?: string | null;
   escalationReason?: string | null;
 }
@@ -65,8 +65,6 @@ export const updateSupportStatus = (id: number, status: SupportTicket['status'],
 
 /**
  * Hội viên rút phiếu đang mở hoặc xác nhận phiếu đã giải quyết.
- *
- * Member withdraws an open ticket or confirms a resolved one.
  */
 export const closeSupportTicket = (id: number) =>
   apiFetch<SupportTicket>(`/support/requests/${id}/close`, { method: 'POST' });

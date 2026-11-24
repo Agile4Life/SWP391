@@ -27,10 +27,8 @@ export interface HoldPolicy {
 }
 
 /**
- * Một yêu cầu bảo lưu hoặc dòng lịch sử: hội viên, gói, thời gian, trạng thái, lý do, thời điểm xử lý, số lớp
- * bị hủy và tài liệu.
- *
- * One hold request or hold-history row, as shown to the member and to desk staff.
+ * Một yêu cầu bảo lưu hoặc dòng lịch sử hiển thị cho hội viên và nhân viên quầy lễ tân: hội viên, gói, thời
+ * gian, trạng thái, lý do, thời điểm xử lý, số lớp bị hủy và tài liệu.
  */
 export interface HoldDetail {
   id: number;
@@ -100,17 +98,13 @@ export const rejectHold = (subscriptionId: number, reason: string) =>
   apiFetch<HoldDetail>(`${base}/${subscriptionId}/hold/reject`, { method: 'POST', body: JSON.stringify({ reason }) });
 
 /**
- * Tải tài liệu y tế riêng tư của yêu cầu bảo lưu.
- *
- * Medical documents are private: fetch with the session token and open the blob, never link them directly.
+ * Tải tài liệu y tế riêng tư của yêu cầu bảo lưu: luôn tải kèm session token rồi mở blob, không liên kết trực tiếp.
  */
 export const fetchHoldDocument = (subscriptionId: number, documentId: number) =>
   apiFetchBlob(`${base}/${subscriptionId}/hold/documents/${documentId}`);
 
 /**
- * Lễ tân rút yêu cầu bảo lưu thay hội viên.
- *
- * The desk withdraws a hold for a member who asked at the counter (pending, or approved and not started).
+ * Lễ tân rút yêu cầu bảo lưu thay cho hội viên yêu cầu tại quầy (đang chờ duyệt hoặc đã duyệt nhưng chưa bắt đầu).
  */
 export const withdrawHoldForMember = (subscriptionId: number) =>
   apiFetch<unknown>(`${base}/${subscriptionId}/hold/withdraw`, { method: 'POST' });

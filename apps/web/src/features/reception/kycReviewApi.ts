@@ -1,10 +1,8 @@
 import { apiFetch } from '../../shared/api/client';
 
 /**
- * Một hồ sơ KYC đang chờ duyệt: hội viên, loại giấy tờ, số giấy tờ (chỉ người duyệt thấy), quốc tịch, ảnh hai
- * mặt và thời điểm nộp.
- *
- * One identity submission waiting for review; the number is readable only here, for the reviewer.
+ * Một hồ sơ định danh đang chờ duyệt: hội viên, loại giấy tờ, số giấy tờ (chỉ hiển thị tại đây cho người duyệt),
+ * quốc tịch, ảnh hai mặt và thời điểm nộp.
  */
 export interface KycSubmission {
   memberId: number;

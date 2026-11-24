@@ -69,7 +69,7 @@ describe('MemberInvoicesPage', () => {
     expect(mocks.invoice).toHaveBeenCalledWith(12);
     expect(host.textContent).toContain('INV-12');
     expect(host.textContent).toContain('219.000');
-    // Both the list and the invoice show the time of day, not only the date.
+    // Cả danh sách lẫn hóa đơn đều hiển thị giờ trong ngày, không chỉ ngày.
     expect(host.textContent).toContain('10:00 25/10/2026');
     expect(host.textContent).toContain('Phát hành lúc 10:00 25/10/2026');
     expect(host.textContent).toContain('Thanh toán lúc10:00 25/10/2026');
@@ -117,7 +117,7 @@ describe('MemberInvoicesPage', () => {
     mocks.invoice.mockRejectedValue(new ApiError('missing', 404));
     await render();
     expect(host.textContent).toContain('Chưa có giao dịch');
-    // Remount to exercise the request failure independently.
+    // Dựng lại component để kiểm tra lỗi yêu cầu một cách độc lập.
     await act(async () => root.unmount());
     root = createRoot(host);
     await render();

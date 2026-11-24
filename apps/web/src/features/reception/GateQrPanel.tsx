@@ -8,8 +8,7 @@ import '../checkin/qr-checkin.css';
 /**
  * Bảng mã QR của cổng cho hội viên tự quét (vào hoặc ra): tạo ảnh QR từ backend, tự làm mới mỗi 45 giây và khi
  * tab hiện lại, đếm ngược thời hạn theo cả đồng hồ thường lẫn đồng hồ đơn điệu.
- *
- * `purpose` only changes the copy: members scan the same gate QR to enter and to leave.
+ * `purpose` chỉ thay đổi phần hướng dẫn hiển thị: hội viên quét cùng một mã QR cổng để vào và để ra.
  */
 export function GateQrPanel({ gateId, purpose = 'in' }: { gateId: string; purpose?: 'in' | 'out' }) {
   const { t } = useStaffI18n();

@@ -72,12 +72,12 @@ describe('KycReviewPage', () => {
       await render();
       expect(host.textContent).toContain('Không có hồ sơ nào chờ duyệt');
 
-      // A member uploads while the receptionist keeps the page open; the 30s background refresh shows it.
+      // Hội viên tải hồ sơ lên trong khi lễ tân vẫn đang mở trang; lượt làm mới chạy nền mỗi 30 giây sẽ hiển thị nó.
       mocks.list.mockResolvedValue([submission]);
       await act(async () => { vi.advanceTimersByTime(30_000); });
       expect(host.querySelector('[data-testid="kyc-10"]')).not.toBeNull();
 
-      // The manual button and returning to the tab also re-query; a failing refresh keeps the list on screen.
+      // Nút làm mới thủ công và việc quay lại tab cũng truy vấn lại; lượt làm mới lỗi vẫn giữ nguyên danh sách trên màn hình.
       mocks.list.mockRejectedValue(new Error('offline'));
       await act(async () => { window.dispatchEvent(new Event('focus')); });
       expect(host.querySelector('[data-testid="kyc-10"]')).not.toBeNull();

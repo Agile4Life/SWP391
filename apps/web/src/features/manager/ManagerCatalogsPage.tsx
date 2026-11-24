@@ -121,7 +121,7 @@ export function ManagerCatalogsPage() {
         return;
       }
       const outOfRange = parsedDuration !== 3 && (parsedDuration < 90 || parsedDuration > 365);
-      // Existing packages keep their saved term unless it changes; the server enforces the rule for edits.
+      // Các gói hiện có giữ nguyên thời hạn đã lưu trừ khi được thay đổi; máy chủ sẽ kiểm tra quy tắc khi chỉnh sửa.
       if (!Number.isFinite(parsedDuration) || (isNew && outOfRange)) {
         setFormError('Thời hạn gói tập phải từ 3 đến 12 tháng (90–365 ngày); chỉ gói trải nghiệm 3 ngày được ngắn hơn.');
         return;
@@ -271,7 +271,7 @@ export function ManagerCatalogsPage() {
         </div>
       )}
 
-      {/* Quick Price Edit Modal */}
+      {/* Hộp thoại sửa giá nhanh */}
       {quickPricePkg && (
         <Modal
           title={t(`Sửa giá nhanh: ${quickPricePkg.pkg.name}`, `Quick price edit: ${quickPricePkg.pkg.name}`)}
@@ -340,7 +340,7 @@ export function ManagerCatalogsPage() {
         </Modal>
       )}
 
-      {/* Accessible Dialog Modal for Adding/Editing */}
+      {/* Hộp thoại thêm/chỉnh sửa hỗ trợ truy cập */}
       {editing && (
         <Modal title={t(modalTitle())} busy={isSubmitting} onClose={() => !isSubmitting && setEditing(null)}>
           <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>

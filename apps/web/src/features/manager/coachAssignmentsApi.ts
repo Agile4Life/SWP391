@@ -19,7 +19,7 @@ export interface CoachAssignmentStudent {
   detail: string;
   startDate: string | null;
   endDate: string | null;
-  /** Set only when the plan blocks coaching: on hold, no valid plan, or ending before the PT day. */
+  /** Chỉ được gán khi gói tập chặn việc huấn luyện: đang bảo lưu, không còn gói hợp lệ, hoặc hết hạn trước ngày buổi PT. */
   membershipIssue?: 'FROZEN' | 'NO_ACTIVE' | 'NOT_COVERED' | null;
   nextSession: string | null;
   status: string;

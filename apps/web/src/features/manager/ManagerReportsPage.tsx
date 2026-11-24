@@ -30,7 +30,7 @@ const formatTransactionTime = (paidAt: string) => {
   return { date, time };
 };
 
-// CSV quoting alone does not stop spreadsheet formula evaluation.
+// Riêng việc bọc ngoặc kép CSV không ngăn bảng tính thực thi công thức.
 /**
  * Chuẩn hóa một ô CSV: thêm dấu nháy nếu bắt đầu bằng ký tự công thức (=, +, @, -) để chống chèn công thức, rồi
  * bọc trong ngoặc kép.
@@ -320,7 +320,7 @@ export function ManagerReportsPage() {
     }
   };
 
-  // 403 Forbidden Guard
+  // Chặn truy cập 403 Forbidden
   if (!hasAccess) {
     return (
       <div data-i18n-managed className="portal-container" data-testid="reports-forbidden-guard">
@@ -542,7 +542,7 @@ export function ManagerReportsPage() {
         )}
       </div>
 
-      {/* Error state */}
+      {/* Trạng thái lỗi */}
       {error && !loading && (
         <div data-i18n-managed className="portal-card" style={{ marginBottom: '24px' }}>
           <div className="portal-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
@@ -555,7 +555,7 @@ export function ManagerReportsPage() {
         </div>
       )}
 
-      {/* Loading Skeleton */}
+      {/* Khung xương đang tải */}
       {loading && (
         <div data-i18n-managed role="status" aria-busy="true">
           <span className="sr-only">{t("Đang tải số liệu...")}</span>

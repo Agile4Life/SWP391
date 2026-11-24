@@ -9,14 +9,12 @@ import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { notify } from '../../shared/lib/portalNotices';
 import { approveKyc, listPendingKyc, rejectKyc, type KycSubmission } from './kycReviewApi';
 
-/** How often the open page looks for new submissions, so the desk sees a member's upload without reloading. */
+/** Chu kỳ kiểm tra hồ sơ mới khi trang đang mở để quầy lễ tân thấy ảnh hội viên tải lên mà không cần tải lại trang. */
 const AUTO_REFRESH_MS = 30_000;
 
 /**
- * Màn duyệt hồ sơ xác minh danh tính (KYC) của hội viên: xem giấy tờ, duyệt (có xác nhận) hoặc từ chối kèm lý
- * do bắt buộc.
- *
- * Receptionists and managers compare the declared number with the document photos, then approve or reject.
+ * Màn duyệt hồ sơ xác minh danh tính (KYC) của hội viên: lễ tân và quản lý đối chiếu số giấy tờ đã khai với ảnh
+ * chụp giấy tờ, sau đó duyệt (có xác nhận) hoặc từ chối kèm lý do bắt buộc.
  */
 export function KycReviewPage() {
   const { t } = useI18n();
@@ -28,8 +26,7 @@ export function KycReviewPage() {
   const [rejecting, setRejecting] = useState<number | null>(null);
   const [reason, setReason] = useState('');
 
-  // `silent` refreshes keep what is on screen: no skeleton, and a failed background refresh does not wipe the list.
-  // Tải danh sách hồ sơ chờ duyệt; chế độ silent không hiện trạng thái đang tải.
+  // Tải danh sách hồ sơ chờ duyệt; chế độ `silent` giữ nguyên dữ liệu trên màn hình (không hiện khung xương, và lượt làm mới nền bị lỗi không xóa danh sách).
   const load = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(null); }
     try {
@@ -48,7 +45,7 @@ export function KycReviewPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // The page used to load once on open, so a document sent while the receptionist already had it open never showed up.
+  // Trước đây trang chỉ tải một lần khi mở, nên giấy tờ gửi lên khi lễ tân đã mở sẵn trang không tự hiển thị.
   useEffect(() => {
     // Tự tải lại ngầm khi tab đang hiển thị.
     const refresh = () => { if (document.visibilityState !== 'hidden') void load(true); };
