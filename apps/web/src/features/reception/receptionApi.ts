@@ -13,6 +13,9 @@ export interface MemberLookupResult {
   email: string;
   phone: string | null;
   citizenId?: string | null;
+  identityVerified?: boolean;
+  kycStatus?: string | null;
+  documentType?: string | null;
   status: string;
   currentPackage?: string;
   endDate?: string;

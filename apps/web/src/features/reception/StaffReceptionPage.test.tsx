@@ -23,7 +23,7 @@ vi.mock('./PaymentInvoice', () => ({ PaymentInvoice: () => <div>Hóa đơn thự
 
 let root: Root;
 let host: HTMLDivElement;
-const member = { userId: 10, membershipCode: 'MB-10', fullName: 'An', email: 'an@example.test', phone: '1234', status: 'ACTIVE' };
+const member = { userId: 10, membershipCode: 'MB-10', fullName: 'An', email: 'an@example.test', phone: '1234', status: 'ACTIVE', identityVerified: true, kycStatus: 'APPROVED' };
 const pkg = { id: 2, name: 'Gold', price: 200, durationDays: 30, status: 'active' };
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -193,6 +193,7 @@ it('blocks payment for the previous member while another member lookup is pendin
   expect(api.createRenewal).not.toHaveBeenCalled();
   expect(paymentForm.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
 
+  api.lookupMembers.mockResolvedValue([{ ...member, userId: 20, fullName: 'Bình', phone: '5678' }]);
   await act(async () => finishSearch([{ ...member, userId: 20, fullName: 'Bình', phone: '5678' }]));
   await chooseAndPay('buy:2');
   expect(api.processPayment).toHaveBeenCalledTimes(1);
@@ -462,4 +463,18 @@ it('does not turn a missing renewal id into a new purchase when its number match
   await chooseAndPay('renew:2');
   expect(host.textContent).toContain('Kỳ gia hạn không còn trong danh sách. Vui lòng chọn lại.');
   expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
+});
+
+it.each([null, 'PENDING', 'REJECTED'])('blocks new purchase when KYC is %s after refreshing member', async (kycStatus) => {
+  api.lookupMembers.mockResolvedValue([{ ...member, identityVerified: false, kycStatus }]);
+  await selectMember(); await chooseAndPay('buy:2');
+  expect(api.processPayment).not.toHaveBeenCalled();
+  expect(host.textContent).toContain('Hội viên chưa xác thực KYC');
+});
+it('refreshes approval and shows masked passport', async () => {
+  await selectMember();
+  api.lookupMembers.mockResolvedValue([{ ...member, documentType: 'PASSPORT', citizenId: '********1234' }]);
+  await act(async () => window.dispatchEvent(new Event('focus')));
+  expect(host.textContent).toContain('Số hộ chiếu');
+  expect(host.textContent).toContain('********1234');
 });

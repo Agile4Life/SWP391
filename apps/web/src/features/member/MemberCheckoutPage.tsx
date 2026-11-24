@@ -41,10 +41,11 @@ export function MemberCheckoutPage() {
   const [selectedPackage, setSelectedPackage] = useState<MembershipPackage | null>(null);
   // Số tiền thật phải thanh toán: yêu cầu nâng cấp hoặc gia hạn đã được backend báo giá
   const [quotedAmount, setQuotedAmount] = useState<number | null>(null);
+  const [isLinkedRequest, setIsLinkedRequest] = useState(false);
 
   // Trạng thái định danh / KYC cho lần mua gói tập đầu tiên
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [hasPriorSubscriptions, setHasPriorSubscriptions] = useState(false);
+
   const [kycDocType, setKycDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
   const [kycNumber, setKycNumber] = useState('');
   const [kycFullName, setKycFullName] = useState('');
@@ -88,9 +89,10 @@ export function MemberCheckoutPage() {
         if (!active || version !== request) return;
 
         setProfile(userProfile);
-        setHasPriorSubscriptions(
-          history.some((item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen'),
-        );
+        // Chỉ kỳ gia hạn/nâng cấp liên kết thật mới giữ chính sách thanh toán cũ.
+        const target = history.find(item => item.id === preparedSubscriptionId.current) ?? history.find(item => item.packageId === parsedPackageId && item.status === 'pending_payment');
+        setIsLinkedRequest(Boolean(target?.previousSubscriptionId));
+
         if (userProfile?.fullName) {
           setKycFullName(userProfile.fullName);
         }
@@ -136,7 +138,7 @@ export function MemberCheckoutPage() {
   }, [parsedPackageId, existingSubscriptionId]);
 
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
-  const isKycVerified = Boolean(profile?.identityVerified || hasPriorSubscriptions);
+  const isKycVerified = Boolean(isLinkedRequest || (profile?.identityVerified && profile.kycStatus !== 'PENDING' && profile.kycStatus !== 'REJECTED'));
 
   // Chọn ảnh giấy tờ mặt trước hoặc sau (tối đa 2MB).
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>, target: 'front' | 'back') {

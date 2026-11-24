@@ -389,4 +389,9 @@ describe('MemberCheckoutPage Component', () => {
     expect(walletBtn).not.toBeNull();
     expect(walletBtn?.disabled).toBe(false);
   });
+  it('keeps payment available for a linked upgrade without imposing new-purchase KYC', async () => {
+    vi.mocked(profileApi.getProfile).mockResolvedValue({ userId: 10, fullName: 'Member', email: 'm@example.test', identityVerified: false, kycStatus: 'PENDING' } as profileApi.Profile);
+    await act(async () => root.render(<MemoryRouter initialEntries={['/member/packages/checkout?packageId=2&subscriptionId=55']}><MemberCheckoutPage /></MemoryRouter>));
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')?.disabled).toBe(false);
+  });
 });
