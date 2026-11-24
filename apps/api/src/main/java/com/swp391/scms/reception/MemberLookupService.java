@@ -39,7 +39,9 @@ public class MemberLookupService {
         }
         return repository.search("%" + keyword + "%", PageRequest.of(0, MAX_RESULTS)).stream()
                 .map(m -> new MemberLookupDto(m.getUserId(), m.getMembershipCode(), m.getUser().getFullName(),
-                        m.getUser().getEmail(), m.getUser().getPhone(), m.getUser().getStatus()))
+                        m.getUser().getEmail(), m.getUser().getPhone(), m.getUser().getStatus(),
+                        m.getIdentityVerified(), m.getKycStatus(), m.getDocumentType(),
+                        com.swp391.scms.users.KycCrypto.mask(m.getCitizenId())))
                 .toList();
     }
 }

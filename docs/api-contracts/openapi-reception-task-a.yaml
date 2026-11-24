@@ -1,0 +1,31 @@
+openapi: 3.0.3
+info: {title: Receptionist KYC, version: 1.0.0}
+servers: [{url: /api/v1}]
+paths:
+  /members/lookup:
+    get:
+      description: Receptionist or center manager only. Existing lookup fields plus safe identity summary. Never returns full identity number, ciphertext or document images.
+      parameters: [{name: q, in: query, required: true, schema: {type: string, minLength: 2}}]
+      responses:
+        '200':
+          description: ApiResponse data array; additional fields below.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        identityVerified: {type: boolean}
+                        kycStatus: {type: string, nullable: true, enum: [PENDING, APPROVED, REJECTED]}
+                        documentType: {type: string, nullable: true, enum: [CCCD, PASSPORT]}
+                        citizenId: {type: string, nullable: true, description: 'Masked number showing at most the last four characters'}
+  /payments/process:
+    post:
+      description: New purchases require verified identity or an approved trial before subscription, payment, invoice or QR writes. Cancelled or pending history is not identity evidence. Same rule applies to new subscription requests and creating/confirming linked new-purchase payments. Renewals and upgrades retain existing policy.
+      responses:
+        '200': {description: Existing payment response}
+        '400': {description: MEMBERSHIP_KYC_REQUIRED or MEMBERSHIP_KYC_PENDING}

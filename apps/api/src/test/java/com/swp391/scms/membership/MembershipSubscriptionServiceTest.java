@@ -186,6 +186,7 @@ class MembershipSubscriptionServiceTest {
     void create_success() {
         Member member = new Member();
         member.setUserId(10L);
+        member.setIdentityVerified(true);
 
         MembershipPackage pack = new MembershipPackage();
         pack.setId(1L);
@@ -235,6 +236,7 @@ class MembershipSubscriptionServiceTest {
     void create_succeedsWhenMemberHasExpiredSubscriptionEvenWithActiveStatus() {
         Member member = new Member();
         member.setUserId(10L);
+        member.setIdentityVerified(true);
 
         MembershipPackage pack = new MembershipPackage();
         pack.setId(1L);
@@ -290,7 +292,6 @@ class MembershipSubscriptionServiceTest {
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
-        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
         when(trialRepo.findByMemberUserId(10L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(1L)))
@@ -314,7 +315,6 @@ class MembershipSubscriptionServiceTest {
         service.setTrialRedemptionRepository(trialRepo);
         when(members.findById(10L)).thenReturn(Optional.of(member));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
-        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
         when(trialRepo.findByMemberUserId(10L)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(1L)))
@@ -340,7 +340,6 @@ class MembershipSubscriptionServiceTest {
 
         when(members.findById(10L)).thenReturn(Optional.of(member));
         when(packages.findById(1L)).thenReturn(Optional.of(pack));
-        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
         SubscriptionDto result = service.create(principal, new SubscriptionRequests.Create(1L));

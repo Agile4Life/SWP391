@@ -61,6 +61,7 @@ class MemberLookupServiceTest {
         Member member = new Member();
         member.setUser(user);
         member.setMembershipCode("MEM-1");
+        member.setCitizenId("012345678901"); member.setIdentityVerified(true); member.setKycStatus("APPROVED");
         when(repository.search(eq("%nguyen%"), any(Pageable.class))).thenReturn(List.of(member));
 
         List<MemberLookupDto> result = service.search("  Nguyen ");
@@ -68,5 +69,7 @@ class MemberLookupServiceTest {
         assertEquals(1, result.size());
         assertEquals("MEM-1", result.get(0).membershipCode());
         assertEquals("Nguyen An", result.get(0).fullName());
+        assertEquals("********8901", result.get(0).citizenId());
+        assertEquals(true, result.get(0).identityVerified());
     }
 }
