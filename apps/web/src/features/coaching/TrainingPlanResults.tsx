@@ -62,27 +62,42 @@ export function TrainingPlanResults({ plan }: TrainingPlanResultsProps) {
           background: 'var(--portal-raised)',
           border: '1px solid var(--portal-border)',
           borderRadius: 10,
-          padding: '12px 16px',
+          padding: '14px 16px',
           marginBottom: 16,
           display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          flexDirection: 'column',
           gap: 12
         }}>
           <div>
-            <div style={{ fontSize: '0.8rem', color: 'var(--portal-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            <div style={{ fontSize: '0.78rem', color: 'var(--portal-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
               {t("Mục tiêu huấn luyện", "Training Goal")}
             </div>
-            <strong style={{ fontSize: '0.98rem', color: 'var(--portal-paper)' }}>
+            <strong style={{ fontSize: '0.98rem', color: 'var(--portal-paper)', lineHeight: 1.45, display: 'block' }}>
               {plan.goal || t("Chưa đặt mục tiêu", "No goal specified")}
             </strong>
           </div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--portal-muted)', textAlign: 'right' }}>
-            <div>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</div>
-            <div style={{ fontWeight: 600, color: 'var(--portal-salmon)' }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: 10,
+            paddingTop: 10,
+            borderTop: '1px solid var(--portal-border)',
+            fontSize: '0.85rem'
+          }}>
+            <span style={{ color: 'var(--portal-muted)' }}>
+              {formatDate(plan.startDate)} – {formatDate(plan.endDate)}
+            </span>
+            <span style={{
+              fontWeight: 600,
+              color: 'var(--portal-salmon)',
+              background: 'var(--portal-tint)',
+              padding: '3px 10px',
+              borderRadius: 6
+            }}>
               {itemsCount} {t("bài tập", itemsCount === 1 ? "exercise" : "exercises")}
-            </div>
+            </span>
           </div>
         </div>
       )}
