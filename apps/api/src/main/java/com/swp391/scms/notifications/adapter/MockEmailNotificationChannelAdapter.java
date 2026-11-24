@@ -91,7 +91,6 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
                 .build();
     }
 
-    /** Lấy giá trị trường channel. */
     @Override
     public NotificationChannel getChannel() {
         return NotificationChannel.EMAIL;

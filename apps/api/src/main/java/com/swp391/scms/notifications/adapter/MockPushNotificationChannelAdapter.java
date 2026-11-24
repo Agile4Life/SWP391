@@ -15,7 +15,6 @@ public class MockPushNotificationChannelAdapter implements NotificationChannelAd
 
     private static final Logger log = LoggerFactory.getLogger(MockPushNotificationChannelAdapter.class);
 
-    /** Lấy giá trị trường channel. */
     @Override
     public NotificationChannel getChannel() {
         return NotificationChannel.PUSH;

@@ -200,7 +200,6 @@ public class MembershipSubscription {
     public LocalDate getHoldEndDate() { return holdEndDate; }
     /** Gán giá trị mới cho trường holdEndDate. */
     public void setHoldEndDate(LocalDate holdEndDate) { this.holdEndDate = holdEndDate; }
-    /** Cho biết hold days credited (trường boolean). */
     public boolean isHoldDaysCredited() { return Boolean.TRUE.equals(holdDaysCredited); }
     /** Gán giá trị mới cho trường holdDaysCredited. */
     public void setHoldDaysCredited(Boolean holdDaysCredited) { this.holdDaysCredited = holdDaysCredited; }
@@ -209,7 +208,6 @@ public class MembershipSubscription {
         return "APPROVED".equalsIgnoreCase(holdStatus) && holdStartDate != null && holdEndDate != null
                 && !date.isBefore(holdStartDate) && !date.isAfter(holdEndDate);
     }
-    /** Cho biết hold used (trường boolean). */
     public boolean isHoldUsed() { return Boolean.TRUE.equals(holdUsed); }
     /** Gán giá trị mới cho trường holdUsed. */
     public void setHoldUsed(boolean holdUsed) { this.holdUsed = holdUsed; }

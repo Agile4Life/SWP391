@@ -47,14 +47,12 @@ public class RoleController {
         return ApiResponse.ok(msg("rbac.permission.revoked"), roleService.revokePermission(id, permissionId));
     }
 
-    /** Lấy giá trị trường allRoles. */
     @Operation(summary = "Lấy danh sách vai trò", description = "Danh sách tất cả vai trò (Role) trong hệ thống")
     @GetMapping
     public ApiResponse<List<RoleDto>> getAllRoles() {
         return ApiResponse.ok(msg("users.role.list.success"), roleService.getAllRoles());
     }
 
-    /** Lấy giá trị trường allPermissions. */
     @Operation(summary = "Lấy danh sách quyền hạn", description = "Danh sách tất cả quyền (Permission) trong hệ thống")
     @GetMapping("/permissions")
     public ApiResponse<List<PermissionDto>> getAllPermissions() {

@@ -135,7 +135,6 @@ public class Invoice {
         this.taxAmount = taxAmount;
     }
 
-    /** Lấy giá trị trường totalAmount. */
     public BigDecimal getTotalAmount() {
         return totalAmount != null ? totalAmount : calculateComputedTotal();
     }

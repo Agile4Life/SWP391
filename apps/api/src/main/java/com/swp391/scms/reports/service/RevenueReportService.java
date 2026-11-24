@@ -301,7 +301,6 @@ public class RevenueReportService {
         return toDto(saved);
     }
 
-    /** Lấy giá trị trường snapshots. */
     @Transactional(readOnly = true)
     public List<ReportSnapshotDto> getSnapshots() {
         return snapshotRepository.findAllByOrderByGeneratedAtDesc().stream()

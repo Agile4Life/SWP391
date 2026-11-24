@@ -15,7 +15,10 @@ public record GoogleOAuthCallbackRequest(
         String code,
         String redirectUri
 ) {
-    /** Cho biết popup credential (trường boolean). */
+    /**
+     * Ràng buộc validate cho luồng popup: request chỉ được chứa ID Token hoặc Access Token, không được gửi
+     * code/redirectUri (hai trường này chỉ dùng nội bộ trong luồng chuyển hướng đã kiểm tra state).
+     */
     @JsonIgnore
     @AssertTrue(message = "{auth.google.invalid_token}")
     public boolean isPopupCredential() {

@@ -15,7 +15,6 @@ public class MockAiClient implements AiClient {
         this.model = (model != null && !model.isBlank()) ? model : "mock-ai-engine-v1";
     }
 
-    /** Lấy giá trị trường providerName. */
     @Override
     public String getProviderName() {
         return "mock";

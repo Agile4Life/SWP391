@@ -107,7 +107,6 @@ public class InvoiceItem {
         this.unitPrice = unitPrice;
     }
 
-    /** Lấy giá trị trường amount. */
     public BigDecimal getAmount() {
         return amount != null ? amount : calculateComputedAmount();
     }

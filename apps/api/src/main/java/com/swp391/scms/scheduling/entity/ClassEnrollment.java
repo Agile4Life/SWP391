@@ -78,7 +78,6 @@ public class ClassEnrollment {
     public String getCancelReason() { return cancelReason; }
     /** Gán giá trị mới cho trường cancelReason. */
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
-    /** Cho biết credit forfeited (trường boolean). */
     public boolean isCreditForfeited() { return Boolean.TRUE.equals(creditForfeited); }
     /** Gán giá trị mới cho trường creditForfeited. */
     public void setCreditForfeited(boolean creditForfeited) { this.creditForfeited = creditForfeited; }

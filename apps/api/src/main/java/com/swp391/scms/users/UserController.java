@@ -38,7 +38,6 @@ public class UserController {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
-    /** Lấy giá trị trường allUsers. */
     @Operation(summary = "Lấy danh sách người dùng", description = "Trả về danh sách tất cả người dùng chưa bị xóa mềm")
     @GetMapping
     public ApiResponse<List<UserDto>> getAllUsers() {
@@ -71,7 +70,6 @@ public class UserController {
         return ApiResponse.ok(msg("users.deleted.success"), null);
     }
 
-    /** Lấy giá trị trường deletedUsers. */
     @Operation(summary = "Lấy danh sách người dùng đã bị xóa mềm", description = "Trả về danh sách tài khoản có deleted_at khác null")
     @GetMapping("/deleted")
     public ApiResponse<List<UserDto>> getDeletedUsers() {

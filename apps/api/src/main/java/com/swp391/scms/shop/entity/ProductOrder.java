@@ -294,7 +294,6 @@ public class ProductOrder {
 
     /** Lấy giá trị trường cancelledBy. */
     public User getCancelledBy() { return cancelledBy; }
-    /** Gán giá trị mới cho trường cancelledBy. */
     public void setCancelledBy(User cancelledBy) {
         this.cancelledBy = cancelledBy;
         this.cancelledById = cancelledBy == null ? null : cancelledBy.getId();

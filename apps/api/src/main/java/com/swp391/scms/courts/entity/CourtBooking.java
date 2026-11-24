@@ -60,7 +60,6 @@ public class CourtBooking {
     /** Lấy giá trị trường cancelledAt. */
     public LocalDateTime getCancelledAt() { return cancelledAt; }
     public void setCancelledAt(LocalDateTime value) { cancelledAt = value; }
-    /** Cho biết quota forfeited (trường boolean). */
     public boolean isQuotaForfeited() { return Boolean.TRUE.equals(quotaForfeited); }
     public void setQuotaForfeited(boolean value) { quotaForfeited = value; }
     /** Lấy giá trị trường cancelReason. */

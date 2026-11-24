@@ -77,7 +77,6 @@ public class StockMovement {
 
     /** Lấy giá trị trường actor. */
     public User getActor() { return actor; }
-    /** Gán giá trị mới cho trường actor. */
     public void setActor(User actor) {
         this.actor = actor;
         this.actorId = actor == null ? null : actor.getId();

@@ -100,7 +100,6 @@ public class SupportRequest {
     public String getEscalationReason() { return escalationReason; }
     /** Gán giá trị mới cho trường escalationReason. */
     public void setEscalationReason(String escalationReason) { this.escalationReason = escalationReason; }
-    /** Cho biết escalated (trường boolean). */
     public boolean isEscalated() { return escalatedAt != null; }
     /** Lấy giá trị trường resolvedAt. */
     public LocalDateTime getResolvedAt() { return resolvedAt; }

@@ -146,7 +146,6 @@ public class CoachBooking {
     /** Gán giá trị mới cho trường paymentStatus. */
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 
-    /** Cho biết quota forfeited (trường boolean). */
     public boolean isQuotaForfeited() { return Boolean.TRUE.equals(quotaForfeited); }
     /** Gán giá trị mới cho trường quotaForfeited. */
     public void setQuotaForfeited(boolean quotaForfeited) { this.quotaForfeited = quotaForfeited; }
@@ -165,7 +164,6 @@ public class CoachBooking {
     /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
-    /** Cho biết attendance locked (trường boolean). */
     public boolean isAttendanceLocked() { return Boolean.TRUE.equals(attendanceLocked); }
     /** Gán giá trị mới cho trường attendanceLocked. */
     public void setAttendanceLocked(boolean attendanceLocked) { this.attendanceLocked = attendanceLocked; }

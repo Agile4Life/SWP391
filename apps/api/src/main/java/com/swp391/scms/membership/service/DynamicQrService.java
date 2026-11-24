@@ -39,7 +39,6 @@ public class DynamicQrService {
         this.ttlMillis = ttlSeconds * 1000L;
     }
 
-    /** Lấy giá trị trường ttlSeconds. */
     public long getTtlSeconds() {
         return ttlMillis / 1000L;
     }

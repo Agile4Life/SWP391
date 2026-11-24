@@ -15,7 +15,6 @@ public class MockWebhookNotificationChannelAdapter implements NotificationChanne
 
     private static final Logger log = LoggerFactory.getLogger(MockWebhookNotificationChannelAdapter.class);
 
-    /** Lấy giá trị trường channel. */
     @Override
     public NotificationChannel getChannel() {
         return NotificationChannel.WEBHOOK;

@@ -39,7 +39,6 @@ public class GeminiRestClient implements AiClient {
                 .build();
     }
 
-    /** Lấy giá trị trường providerName. */
     @Override
     public String getProviderName() {
         return "gemini";
