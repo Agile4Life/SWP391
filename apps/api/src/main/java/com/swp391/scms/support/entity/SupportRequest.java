@@ -6,7 +6,12 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import org.hibernate.Length;
 
-/** Entity mapping table support_requests (schema is generated code-first by Hibernate). */
+/**
+ * Bảng support_requests: phiếu khiếu nại của hội viên (người phụ trách, tiêu đề, mô tả, trạng thái, thời điểm
+ * tạo/giải quyết, thông tin chuyển lên quản lý).
+ *
+ * Entity mapping table support_requests (schema is generated code-first by Hibernate).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_support_status", constraints = "status IN ('open','in_progress','resolved','closed')")
 @Table(name = "support_requests")
@@ -50,8 +55,10 @@ public class SupportRequest {
     @Column(name = "escalation_reason", length = 500)
     private String escalationReason;
 
+    /** Constructor rỗng cho JPA. */
     public SupportRequest() {}
 
+    /** Tạo phiếu mới ở trạng thái open. */
     public SupportRequest(Member member, String subject, String description) {
         this.member = member;
         this.subject = subject;
@@ -100,6 +107,7 @@ public class SupportRequest {
     public String getEscalationReason() { return escalationReason; }
     /** Gán giá trị mới cho trường escalationReason. */
     public void setEscalationReason(String escalationReason) { this.escalationReason = escalationReason; }
+    /** Phiếu đã được chuyển lên quản lý chưa. */
     public boolean isEscalated() { return escalatedAt != null; }
     /** Lấy giá trị trường resolvedAt. */
     public LocalDateTime getResolvedAt() { return resolvedAt; }

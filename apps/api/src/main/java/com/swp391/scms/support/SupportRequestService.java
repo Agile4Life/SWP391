@@ -32,6 +32,11 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
 
+/**
+ * Nghiệp vụ khiếu nại/hỗ trợ: hội viên gửi phiếu và nhắn tin; lễ tân phụ trách cho tới khi chuyển lên quản lý;
+ * luồng trạng thái open → in_progress → resolved → closed; tự đóng phiếu đã giải quyết sau 72 giờ; gửi thông
+ * báo cho đúng người ở mỗi bước.
+ */
 @Service
 public class SupportRequestService {
 
@@ -50,6 +55,7 @@ public class SupportRequestService {
     private final MessageService messageService;
     private final Clock clock;
 
+    /** Constructor cho test với repository bắt buộc. */
     public SupportRequestService(SupportRequestRepository supportRequestRepository,
                                  SupportRequestMapper supportRequestMapper,
                                  MemberRepository memberRepository,
@@ -57,6 +63,7 @@ public class SupportRequestService {
         this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, null, null, null);
     }
 
+    /** Constructor cho test có repository tin nhắn. */
     public SupportRequestService(SupportRequestRepository supportRequestRepository,
                                  SupportRequestMapper supportRequestMapper,
                                  MemberRepository memberRepository,
@@ -65,6 +72,7 @@ public class SupportRequestService {
         this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, supportRequestMessageRepository, null, null, null);
     }
 
+    /** Constructor cho test có NotificationService. */
     public SupportRequestService(SupportRequestRepository supportRequestRepository,
                                  SupportRequestMapper supportRequestMapper,
                                  MemberRepository memberRepository,
@@ -74,6 +82,7 @@ public class SupportRequestService {
         this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, null, notificationService, messageService, null);
     }
 
+    /** Constructor cho test có MessageService. */
     public SupportRequestService(SupportRequestRepository supportRequestRepository,
                                  SupportRequestMapper supportRequestMapper,
                                  MemberRepository memberRepository,
@@ -84,6 +93,7 @@ public class SupportRequestService {
         this(supportRequestRepository, supportRequestMapper, memberRepository, userRepository, supportRequestMessageRepository, notificationService, messageService, null);
     }
 
+    /** Constructor Spring dùng; các phụ thuộc phụ là tùy chọn. */
     @Autowired
     public SupportRequestService(SupportRequestRepository supportRequestRepository,
                                  SupportRequestMapper supportRequestMapper,
@@ -103,6 +113,7 @@ public class SupportRequestService {
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
+    /** Hội viên (chưa bị xóa) gửi phiếu mới; báo cho lễ tân (quản lý chỉ được báo khi phiếu được chuyển lên). */
     @Transactional
     public SupportRequestDto createRequest(Long memberId, CreateSupportRequestDto dto) {
         Member member = memberRepository.findById(memberId)
@@ -118,7 +129,12 @@ public class SupportRequestService {
         return supportRequestMapper.toDto(saved).forMember();
     }
 
-    /** Member withdraws an open ticket or confirms a resolved one; both end in {@code closed}. */
+    /**
+     * Hội viên đóng phiếu của mình: chỉ khi phiếu đang mở (rút lại) hoặc đã giải quyết (xác nhận); cả hai đều
+     * thành closed.
+     *
+     * Member withdraws an open ticket or confirms a resolved one; both end in {@code closed}.
+     */
     @Transactional
     @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
     public SupportRequestDto closeByMember(Long id, Long memberId) {
@@ -138,7 +154,11 @@ public class SupportRequestService {
         return supportRequestMapper.toDto(saved != null ? saved : request).forMember();
     }
 
-    /** Resolved tickets the member did not answer for 72 hours are closed automatically. */
+    /**
+     * Đóng các phiếu đã giải quyết mà hội viên không phản hồi quá 72 giờ; trả số phiếu đã đóng.
+     *
+     * Resolved tickets the member did not answer for 72 hours are closed automatically.
+     */
     @Transactional
     public int closeStaleResolved() {
         LocalDateTime cutoff = LocalDateTime.now(clock).minusHours(AUTO_CLOSE_HOURS);
@@ -151,6 +171,7 @@ public class SupportRequestService {
         return closed;
     }
 
+    /** Job chạy mỗi giờ để tự đóng phiếu quá hạn; lỗi thì để lần chạy sau thử lại. */
     @org.springframework.scheduling.annotation.Scheduled(cron = "${app.support.auto-close.cron:0 0 * * * ?}")
     public void autoCloseResolved() {
         try {
@@ -160,12 +181,17 @@ public class SupportRequestService {
         }
     }
 
+    /** Các phiếu của hội viên (ẩn lý do chuyển lên nội bộ), mới nhất trước. */
     @Transactional(readOnly = true)
     public Page<SupportRequestDto> getMyRequests(Long memberId, Pageable pageable) {
         return supportRequestRepository.findByMemberUserIdOrderByCreatedAtDesc(memberId, pageable)
                 .map(request -> supportRequestMapper.toDto(request).forMember());
     }
 
+    /**
+     * Hộp thư phiếu cho nhân viên: trạng thái lọc phải hợp lệ; quản lý chỉ thấy phiếu đã chuyển lên, lễ tân
+     * thấy tất cả.
+     */
     @Transactional(readOnly = true)
     public Page<SupportRequestDto> getAllRequests(String status, Pageable pageable, String role) {
         String normalizedStatus = (status == null || status.isBlank()) ? null : status.trim().toLowerCase(Locale.ROOT);
@@ -180,6 +206,11 @@ public class SupportRequestService {
         return page.map(supportRequestMapper::toDto);
     }
 
+    /**
+     * Đổi trạng thái và/hoặc người phụ trách: người thao tác phải là người đang phụ trách theo cấp (lễ tân
+     * trước khi chuyển lên, quản lý sau đó); phiếu đã đóng không sửa được; chuyển trạng thái phải theo đúng
+     * luồng; người phụ trách mới phải là nhân viên active đúng vai trò. Đổi trạng thái thì báo cho hội viên.
+     */
     @Transactional
     @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
     public SupportRequestDto updateStatus(Long id, UpdateSupportRequestStatusDto dto, String actorRole) {
@@ -253,6 +284,11 @@ public class SupportRequestService {
         return supportRequestMapper.toDto(saved != null ? saved : request);
     }
 
+    /**
+     * Gửi tin nhắn trong phiếu: hội viên chỉ nhắn phiếu của mình, nhân viên phải là người đang phụ trách; cùng
+     * clientMessageId thì trả lại tin đã gửi (gửi lại không bị trùng); phiếu đã đóng không nhắn được. Nhân viên
+     * trả lời phiếu đang mở thì tự chuyển sang in_progress và nhận phụ trách. Báo cho phía bên kia.
+     */
     @Transactional
     public SupportRequestMessageDto sendMessage(Long requestId, Long senderUserId, String senderRole, CreateSupportMessageDto dto) {
         SupportRequest request = supportRequestRepository.findByIdForUpdate(requestId)
@@ -349,6 +385,7 @@ public class SupportRequestService {
         return supportRequestMapper.toMessageDto(saved);
     }
 
+    /** Tin nhắn của phiếu theo thứ tự thời gian, sau khi kiểm tra quyền xem. */
     @Transactional(readOnly = true)
     public List<SupportRequestMessageDto> getMessages(Long requestId, Long currentUserId, String currentRole) {
         SupportRequest request = supportRequestRepository.findById(requestId)
@@ -377,12 +414,14 @@ public class SupportRequestService {
         return messages.stream().map(supportRequestMapper::toMessageDto).toList();
     }
 
+    /** Chi tiết phiếu sau khi kiểm tra quyền; hội viên không thấy lý do chuyển lên nội bộ. */
     @Transactional(readOnly = true)
     public SupportRequestDto getRequest(Long requestId, Long actorId, String role) {
         SupportRequestDto dto = supportRequestMapper.toDto(requireTicket(requestId, actorId, role));
         return isStaffRole(role) ? dto : dto.forMember();
     }
 
+    /** Lấy phiếu và kiểm tra quyền: hội viên chỉ phiếu của mình; quản lý chỉ phiếu đã chuyển lên. */
     @Transactional(readOnly = true)
     public SupportRequest requireTicket(Long requestId, Long actorId, String role) {
         requireActor(actorId, role);
@@ -394,6 +433,10 @@ public class SupportRequestService {
         return request;
     }
 
+    /**
+     * Người thao tác phải là tài khoản active, chưa bị xóa, vai trò trong database khớp vai trò trong token và
+     * là hội viên hoặc nhân viên hỗ trợ.
+     */
     public User requireActor(Long actorId, String role) {
         User actor = userRepository.findByIdAndDeletedAtIsNull(actorId)
                 .orElseThrow(() -> new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null));
@@ -404,41 +447,57 @@ public class SupportRequestService {
         return actor;
     }
 
+    /** Chuẩn hóa mã vai trò: bỏ tiền tố ROLE_ và chuyển chữ hoa. */
     private static String normalizeRole(String role) {
         if (role == null) return "";
         String normalized = role.startsWith("ROLE_") ? role.substring(5) : role;
         return normalized.toUpperCase(Locale.ROOT);
     }
 
+    /** Vai trò quản lý (CENTER_MANAGER hoặc MANAGER). */
     private static boolean isManager(String role) {
         String normalized = normalizeRole(role);
         return MANAGER.equals(normalized) || "MANAGER".equals(normalized);
     }
 
+    /** Vai trò lễ tân (RECEPTIONIST hoặc STAFF). */
     private static boolean isReceptionist(String role) {
         String normalized = normalizeRole(role);
         return RECEPTIONIST.equals(normalized) || "STAFF".equals(normalized);
     }
 
-    /** Coaches no longer take part in complaints: only receptionists and managers are staff here. */
+    /**
+     * Nhân viên xử lý khiếu nại chỉ gồm lễ tân và quản lý (HLV không tham gia).
+     *
+     * Coaches no longer take part in complaints: only receptionists and managers are staff here.
+     */
     private boolean isStaffRole(String role) {
         return isManager(role) || isReceptionist(role);
     }
 
+    /** Chỉ nhân viên xử lý khiếu nại mới xem được hộp thư. */
     private void requireInboxRole(String role) {
         if (!isStaffRole(role)) {
             throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
         }
     }
 
-    /** Receptionists see every complaint; managers only the ones escalated to them. */
+    /**
+     * Lễ tân xem mọi phiếu; quản lý chỉ xem phiếu đã chuyển lên.
+     *
+     * Receptionists see every complaint; managers only the ones escalated to them.
+     */
     private void requireReadable(SupportRequest request, String role) {
         if (isManager(role) && !request.isEscalated()) {
             throw new ForbiddenException("SUPPORT_NOT_ESCALATED", "support.manager.not_escalated", null, null);
         }
     }
 
-    /** The receptionist handles a complaint until it is escalated; from then on only a manager may act on it. */
+    /**
+     * Lễ tân xử lý phiếu cho tới khi chuyển lên; sau đó chỉ quản lý được thao tác.
+     *
+     * The receptionist handles a complaint until it is escalated; from then on only a manager may act on it.
+     */
     private void requireHandler(SupportRequest request, String role) {
         if (isManager(role)) {
             if (!request.isEscalated()) {
@@ -453,7 +512,12 @@ public class SupportRequestService {
         }
     }
 
-    /** Hand a complaint the receptionist cannot resolve up to the managers. */
+    /**
+     * Lễ tân chuyển phiếu đang mở/đang xử lý lên quản lý: lưu thời điểm, người chuyển, lý do, bỏ người phụ
+     * trách cũ; báo cho quản lý và hội viên.
+     *
+     * Hand a complaint the receptionist cannot resolve up to the managers.
+     */
     @Transactional
     @Audited(action = "SUPPORT_ESCALATE", entity = "support_requests")
     public SupportRequestDto escalate(Long id, Long actorId, String role, EscalateSupportRequestDto dto) {
@@ -491,6 +555,9 @@ public class SupportRequestService {
     }
 
     /**
+     * Hội viên còn nhận được thông báo không (tài khoản chưa bị xóa); phiếu của tài khoản đã xóa vẫn xử lý được
+     * nhưng bỏ qua thông báo.
+     *
      * Notifications resolve the recipient among non-deleted users. Replying to or updating a complaint
      * of a deleted member must still work, so skip the in-app notice instead of failing the whole write.
      */
@@ -499,10 +566,12 @@ public class SupportRequestService {
         return member != null && (member.getUser() == null || member.getUser().getDeletedAt() == null);
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String text(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** Gửi thông báo cho mọi nhân viên đang hoạt động thuộc vai trò cho trước (quản lý hoặc lễ tân). */
     private void notifyStaff(String roleCode, String titleKey, String bodyKey, Long requestId, Object... bodyArgs) {
         if (notificationService == null || userRepository == null) return;
         List<User> staff = userRepository.findActiveStaffUsers();
@@ -518,6 +587,10 @@ public class SupportRequestService {
         }
     }
 
+    /**
+     * Kiểm tra chuyển trạng thái hợp lệ: open → in_progress; in_progress → open/resolved; resolved →
+     * in_progress/closed; giữ nguyên trạng thái luôn hợp lệ.
+     */
     private void validateStatusTransition(String currentStatus, String targetStatus) {
         if (currentStatus != null && currentStatus.equalsIgnoreCase(targetStatus)) {
             return;

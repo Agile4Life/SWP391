@@ -3,6 +3,7 @@ package com.swp391.scms.support.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/** Dữ liệu tạo phiếu: tiêu đề và mô tả. */
 public record CreateSupportRequestDto(
     @NotBlank(message = "{validation.support.subject.not_blank}")
     @Size(max = 150, message = "{validation.support.subject.size}")

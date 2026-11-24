@@ -7,7 +7,11 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.Length;
 
-/** Entity mapping table support_request_messages (schema is generated code-first by Hibernate). */
+/**
+ * Bảng support_request_messages: một tin nhắn trong phiếu (người gửi, nội dung, thời điểm, mã tin phía client).
+ *
+ * Entity mapping table support_request_messages (schema is generated code-first by Hibernate).
+ */
 @Entity
 @Table(name = "support_request_messages", uniqueConstraints = @UniqueConstraint(name = "uq_support_message_client", columnNames = {"support_request_id", "sender_user_id", "client_message_id"}))
 public class SupportRequestMessage {
@@ -38,8 +42,10 @@ public class SupportRequestMessage {
     /** Gán giá trị mới cho trường clientMessageId. */
     public void setClientMessageId(java.util.UUID clientMessageId) { this.clientMessageId = clientMessageId; }
 
+    /** Constructor rỗng cho JPA. */
     public SupportRequestMessage() {}
 
+    /** Tạo tin nhắn mới của người gửi trong phiếu. */
     public SupportRequestMessage(SupportRequest supportRequest, User sender, String message) {
         this.supportRequest = supportRequest;
         this.sender = sender;

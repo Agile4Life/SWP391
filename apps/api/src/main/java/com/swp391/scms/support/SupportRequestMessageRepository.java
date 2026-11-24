@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/** Truy cập bảng support_request_messages (tin nhắn trong phiếu hỗ trợ). */
 @Repository
 public interface SupportRequestMessageRepository extends JpaRepository<SupportRequestMessage, Long> {
 
