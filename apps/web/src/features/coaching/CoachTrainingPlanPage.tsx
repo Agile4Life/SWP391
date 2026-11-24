@@ -42,14 +42,20 @@ const PLAN_STEPS = [
   { id: 2, vi: 'Bài tập theo ngày', en: 'Daily exercises' },
   { id: 3, vi: 'Xem lại & kích hoạt', en: 'Review & activate' },
 ] as const;
+/** Mã bước của trình soạn giáo án (lấy từ PLAN_STEPS). */
 type PlanStep = (typeof PLAN_STEPS)[number]['id'];
 
+/**
+ * Trình soạn giáo án nhiều bước cho HLV/quản lý: chọn học viên và thông tin chung, soạn bài tập (thủ công hoặc
+ * gợi ý AI), xem lại rồi lưu và kích hoạt; quản lý phải chọn HLV phụ trách.
+ */
 export function CoachTrainingPlanPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
   // Role authorization
+  // Chỉ HLV và quản lý được dùng màn này.
   const hasAccess = useMemo(() => {
     if (!currentUser) return false;
     return currentUser.role === 'COACH' || currentUser.role === 'MANAGER';
@@ -67,10 +73,12 @@ export function CoachTrainingPlanPage() {
   const [coaches, setCoaches] = useState<CoachOption[]>([]);
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [planGoal, setPlanGoal] = useState('Tăng cường sức mạnh và cải thiện tư thế');
+  // Cộng/trừ số ngày vào ngày YYYY-MM-DD (tính theo UTC để không lệch múi giờ).
   const addCenterDays = (isoDate: string, days: number): string => {
     const [y, m, d] = isoDate.split('-').map(Number);
     return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
   };
+  // Số tuần giữa hai ngày, làm tròn, giới hạn 1–52 (mặc định 4 nếu khoảng ngày không hợp lệ).
   const weeksBetween = (startIso: string, endIso: string): number => {
     const [sy, sm, sd] = startIso.split('-').map(Number);
     const [ey, em, ed] = endIso.split('-').map(Number);
@@ -79,11 +87,13 @@ export function CoachTrainingPlanPage() {
     return Math.min(52, Math.max(1, Math.round(diffDays / 7) || 1));
   };
 
+  // Ngày hôm nay theo giờ trung tâm.
   const todayStr = useMemo(() => centerNowParts().date, []);
 
   const [startDate, setStartDate] = useState(() => centerNowParts().date);
   const [endDate, setEndDate] = useState(() => addCenterDays(centerNowParts().date, 28));
 
+  // Đổi ngày bắt đầu; nếu vượt ngày kết thúc thì đẩy ngày kết thúc lên 28 ngày sau.
   const handleStartDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     setStartDate(val);
@@ -92,6 +102,7 @@ export function CoachTrainingPlanPage() {
     }
   };
 
+  // Đổi ngày kết thúc; không cho nhỏ hơn ngày bắt đầu.
   const handleEndDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     if (val && startDate && val < startDate) {
@@ -376,6 +387,7 @@ export function CoachTrainingPlanPage() {
       : startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
         : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
           : null;
+  // Chuyển bước; sang bước sau phải qua kiểm tra thông tin chung, lỗi thì quay về bước 1.
   const goToStep = (next: PlanStep) => {
     if (next > 1) {
       const invalid = planInfoError();
@@ -388,6 +400,7 @@ export function CoachTrainingPlanPage() {
 
   // Lưu & Kích hoạt giáo án
   const [isSaving, setIsSaving] = useState(false);
+  // Lưu và kích hoạt giáo án sau khi kiểm tra có bài tập, mục tiêu, khoảng ngày hợp lệ, đã chọn học viên (và HLV với quản lý).
   const handleSavePlan = async () => {
     const trimmedGoal = planGoal.trim();
     const invalid =
@@ -466,6 +479,7 @@ export function CoachTrainingPlanPage() {
     </div>;
   }
 
+  // Mô tả liều tập của bài AI gợi ý: ưu tiên hiệp × lần, rồi hiệp · phút, phút, hiệp, lần; thiếu hết thì "—".
   const formatAiExerciseDose = (item: WorkoutExerciseItem): string => {
     if (item.sets != null && item.reps != null) return `${item.sets} ${t('hiệp', 'sets')} × ${item.reps} ${t('lần', 'reps')}`;
     if (item.sets != null && item.durationMinutes != null) return `${item.sets} ${t('hiệp', 'sets')} · ${item.durationMinutes} ${t('phút', 'min')}`;

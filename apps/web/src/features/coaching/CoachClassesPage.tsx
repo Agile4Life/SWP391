@@ -21,6 +21,7 @@ import './coach-classes.css';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 import { matchPtSearch } from './ptSearch';
 
+/** Thứ Hai (00:00) của tuần chứa ngày cho trước; Chủ nhật được tính vào tuần trước. */
 function getWeekMonday(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -30,6 +31,7 @@ function getWeekMonday(date: Date): Date {
   return d;
 }
 
+/** Định dạng Date thành chuỗi YYYY-MM-DD theo giờ địa phương. */
 function formatYmd(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -38,6 +40,10 @@ function formatYmd(d: Date): string {
 }
 
 
+/**
+ * Trang lịch dạy của HLV: thời khóa biểu tuần các buổi kèm 1:1 (có tìm kiếm, xem chi tiết, hủy buổi kèm lý do)
+ * và danh sách học viên mình phụ trách.
+ */
 export function CoachClassesPage() {
   const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
@@ -68,6 +74,7 @@ export function CoachClassesPage() {
   // Tải danh sách toàn bộ học viên phụ trách
   useEffect(() => {
     let mounted = true;
+    // Tải toàn bộ học viên HLV đang phụ trách (bỏ qua kết quả nếu component đã bị gỡ).
     const fetchAllStudents = async () => {
       setAllStudentsLoading(true);
       setAllStudentsError(null);
@@ -86,6 +93,7 @@ export function CoachClassesPage() {
     };
   }, [currentUser?.id]);
 
+  // Học viên sau khi lọc theo từ khóa tìm kiếm.
   const filteredAllStudents = useMemo(() => {
     return allStudents.filter((st) => {
       const q = allStudentsSearch.trim().toLowerCase();
@@ -101,10 +109,12 @@ export function CoachClassesPage() {
     });
   }, [allStudents, allStudentsSearch, allStudentsLevelFilter]);
 
+  // Các buổi kèm 1:1 khớp từ khóa tìm kiếm.
   const filteredPtBookings = useMemo(() => {
     return coach1on1Bookings.filter((b) => matchPtSearch(b, scheduleSearch));
   }, [coach1on1Bookings, scheduleSearch]);
 
+  // Tải lịch kèm 1:1 của HLV; lỗi thì báo để thử lại.
   const loadWeeklySessions = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -122,12 +132,14 @@ export function CoachClassesPage() {
     void loadWeeklySessions();
   }, [loadWeeklySessions]);
 
+  // Bấm một khối pt-<id> trên lịch thì mở chi tiết buổi kèm tương ứng.
   const handleEventClick = (eventId: string) => {
     if (eventId.startsWith('pt-')) {
       setSelectedPt(coach1on1Bookings.find((booking) => `pt-${booking.id}` === eventId) ?? null);
     }
   };
 
+  // Xác nhận hủy buổi kèm 1:1: bắt buộc nhập lý do, gửi yêu cầu xóa rồi tải lại lịch.
   const handleConfirmCancelPt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cancellingPt || cancelBusy) return;

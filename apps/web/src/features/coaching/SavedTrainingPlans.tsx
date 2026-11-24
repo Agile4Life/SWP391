@@ -17,6 +17,7 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: 'Đã hủy',
 };
 
+/** Định dạng ngày YYYY-MM-DD thành dd/MM/yyyy. */
 const formatDate = (iso: string) => iso.split('-').reverse().join('/');
 
 /** Chỉnh sửa giáo án và bài tập trên server; giữ ID bài tập và lịch sử tập của hội viên. */
@@ -32,6 +33,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
   const [editing, setEditing] = useState<{ plan: SavedTrainingPlan; goal: string; startDate: string; endDate: string; items: SavedTrainingPlanItem[] } | null>(null);
   const [formError, setFormError] = useState<StaffMessage>('');
 
+  // Tải lại danh sách giáo án bằng cách tăng số lần thử.
   const load = useCallback(() => setAttempt((value) => value + 1), []);
 
   useEffect(() => {
@@ -45,11 +47,13 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
     return () => { active = false; };
   }, [attempt, refreshKey]);
 
+  // Mở hộp chỉnh sửa giáo án với dữ liệu hiện có.
   const openEditor = (plan: SavedTrainingPlan) => {
     setFormError('');
     setEditing({ plan, goal: plan.goal ?? '', startDate: plan.startDate, endDate: plan.endDate, items: (plan.items ?? []).map(item => ({ ...item })) });
   };
 
+  // Lưu chỉnh sửa: kiểm tra khoảng ngày và từng bài tập rồi gửi lên server.
   const submitEdit = async (event: FormEvent) => {
     event.preventDefault();
     if (!editing || busyId !== null) return;
@@ -78,6 +82,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
     }
   };
 
+  // Xóa giáo án (giáo án trong lịch sử thì gỡ khỏi lịch sử) sau khi xác nhận.
   const remove = async (plan: SavedTrainingPlan) => {
     if (busyId !== null) return;
     const confirmed = await confirm({
@@ -99,6 +104,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
     }
   };
 
+  // Áp dụng lại giáo án trong lịch sử: giáo án đang áp dụng của cùng HLV cho hội viên đó sẽ chuyển vào lịch sử, có xác nhận trước.
   const reapply = async (plan: SavedTrainingPlan) => {
     if (busyId !== null) return;
     // Chỉ giáo án đang áp dụng của cùng HLV cho hội viên này bị chuyển vào lịch sử; giáo án của HLV khác giữ nguyên.

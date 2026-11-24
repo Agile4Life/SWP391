@@ -14,17 +14,23 @@ import { matchPtSearch } from './ptSearch';
 
 const FILTERS: PtOutcome[] = ['ALL', 'ATTENDED', 'MISSED', 'UPCOMING'];
 
+/** Cộng/trừ số ngày vào ngày YYYY-MM-DD (theo giờ địa phương). */
 function addDays(iso: string, days: number): string {
   const date = new Date(`${iso}T00:00:00`);
   date.setDate(date.getDate() + days);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
-/** Outcome of one session: arrived, finished without an arrival, or still ahead. */
+/**
+ * Buổi kèm đã bắt đầu chưa (theo giờ trung tâm).
+ *
+ * Outcome of one session: arrived, finished without an arrival, or still ahead.
+ */
 function hasStarted(booking: CoachBookingDto, now: Date): boolean {
   return (parseCenterTime(`${booking.bookingDate}T${booking.startTime}`)?.getTime() ?? Infinity) <= now.getTime();
 }
 
+/** Kết quả một buổi: đã có mặt, đã kết thúc mà không có mặt (vắng), đang diễn ra hoặc sắp tới. */
 function outcomeOf(booking: CoachBookingDto, now: Date): Exclude<PtOutcome, 'ALL'> | 'IN_PROGRESS' {
   if (booking.attendedAt) return 'ATTENDED';
   const ended = (parseCenterTime(`${booking.bookingDate}T${booking.endTime}`)?.getTime() ?? Infinity) <= now.getTime();
@@ -33,7 +39,12 @@ function outcomeOf(booking: CoachBookingDto, now: Date): Exclude<PtOutcome, 'ALL
 }
 
 
-/** Attendance of 1:1 sessions for coaches (their own) and for the front desk and managers (everyone's). */
+/**
+ * Trang điểm danh buổi kèm 1:1: HLV thấy của mình, lễ tân và quản lý thấy của mọi HLV; lọc theo khoảng ngày,
+ * kết quả và tìm kiếm, ghi nhận hoặc bỏ ghi nhận có mặt.
+ *
+ * Attendance of 1:1 sessions for coaches (their own) and for the front desk and managers (everyone's).
+ */
 export function PtAttendancePage() {
   const { t } = useI18n();
   const isCoach = getCurrentUser()?.role === 'COACH';
@@ -51,6 +62,7 @@ export function PtAttendancePage() {
   const [now, setNow] = useState(() => new Date());
   const [confirm, confirmDialog] = useConfirm();
 
+  // Tải danh sách buổi trong khoảng ngày; bỏ qua kết quả của lần gọi cũ khi đã có lần gọi mới.
   const load = useCallback(async () => {
     const current = ++requestId.current;
     setError(null);
@@ -78,7 +90,9 @@ export function PtAttendancePage() {
 
   useEffect(() => {
     void load();
+    // Làm các lần tải đang bay trở nên vô hiệu.
     const invalidateRequests = () => { requestId.current++; };
+    // Tự tải lại khi tab hiện lại hoặc lấy lại focus, trừ lúc đang thao tác.
     const refresh = () => { if (!busy.current && document.visibilityState !== 'hidden') void load(); };
     window.addEventListener('focus', refresh);
     window.addEventListener('pageshow', refresh);
@@ -113,6 +127,7 @@ export function PtAttendancePage() {
   const badge = { ATTENDED: 'badge-success', MISSED: 'badge-warning', UPCOMING: 'badge-info', IN_PROGRESS: 'badge-info' };
   const invalidRange = from > to;
 
+  // Ghi nhận hoặc bỏ ghi nhận có mặt; bỏ ghi nhận khi hội viên đã quét cổng thì hỏi xác nhận trước.
   async function markAttended(row: CoachBookingDto, attended: boolean) {
     if (busy.current || loading) return;
     // The member scanned in at the gate around this session: removing the mark needs a second look.

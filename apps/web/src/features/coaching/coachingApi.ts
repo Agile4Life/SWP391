@@ -2,6 +2,7 @@ import { staffSourceError } from '../operations/staffI18n';
 import { apiFetch } from '../../shared/api/client';
 import { getProfile } from '../member/profileApi';
 
+/** Buổi dạy của HLV: lớp, bộ môn, phòng, ngày giờ, trạng thái, sức chứa và số chỗ đã đặt. */
 export interface CoachSession {
   id: number;
   classId: number;
@@ -23,6 +24,7 @@ export interface CoachSession {
   description?: string;
 }
 
+/** Học viên đã ghi danh: thông tin hội viên, mục tiêu, sức khỏe, trình độ, liên hệ khẩn cấp và trạng thái. */
 export interface EnrolledStudent {
   id: number; // enrollment ID
   memberId: number;
@@ -40,6 +42,7 @@ export interface EnrolledStudent {
   status: 'booked' | 'attended' | 'cancelled' | string;
 }
 
+/** Gom các hàm API lịch dạy và học viên của HLV. */
 export const coachingApi = {
   getCoachSchedule: async (
     coachId?: number | string,
@@ -68,6 +71,7 @@ export const coachingApi = {
     return coachingApi.getCoachSchedule(profile.userId, mondayStr, sunday.toISOString().slice(0, 10));
   },
 
+  // Lấy học viên của một buổi học.
   getSessionStudents: async (sessionId: number, _classId?: number): Promise<EnrolledStudent[]> => {
     void _classId; // Preserve the existing optional argument for callers.
     const res = await apiFetch<EnrolledStudent[]>(
@@ -79,6 +83,7 @@ export const coachingApi = {
     throw staffSourceError('Dữ liệu học viên không hợp lệ', 'Invalid member data.');
   },
 
+  // Lấy toàn bộ học viên mà HLV đang phụ trách (gộp theo hội viên qua các lớp).
   getAllAssignedStudents: async (coachId?: string | number): Promise<EnrolledStudent[]> => {
     const id = coachId ?? (await getProfile()).userId;
     const sessions = await coachingApi.getCoachSchedule(id);
