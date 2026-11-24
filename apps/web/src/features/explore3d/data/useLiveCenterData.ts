@@ -18,6 +18,7 @@ import {
 
 const CACHE_TTL_MS = 60_000;
 
+/** Một mục cache: ảnh chụp dữ liệu và thời điểm lưu. */
 interface CacheEntry {
   snapshot: LiveCenterSnapshot;
   timestamp: number;
@@ -25,10 +26,12 @@ interface CacheEntry {
 
 let cachedCenterSnapshot: CacheEntry | null = null;
 
+/** Xóa cache ảnh chụp dữ liệu trung tâm. */
 export function clearLiveCenterCache(): void {
   cachedCenterSnapshot = null;
 }
 
+/** Dữ liệu phòng thô từ API. */
 interface RawRoom {
   id: number | string;
   name: string;
@@ -41,6 +44,7 @@ interface RawRoom {
   disciplineName?: string | null;
 }
 
+/** Dữ liệu thiết bị thô từ API. */
 interface RawEquipment {
   id: number | string;
   name: string;
@@ -52,6 +56,7 @@ interface RawEquipment {
   status?: string;
 }
 
+/** Dữ liệu HLV công khai thô từ API. */
 interface RawPublicCoach {
   id: number | string;
   name?: string;
@@ -61,6 +66,7 @@ interface RawPublicCoach {
   avatarUrl?: string | null;
 }
 
+/** Dữ liệu gói công khai thô từ API. */
 interface RawPublicPackage {
   id: number | string;
   name: string;
@@ -68,11 +74,13 @@ interface RawPublicPackage {
   status?: string;
 }
 
+/** Danh mục công khai thô từ API. */
 interface RawPublicCatalog {
   packages?: RawPublicPackage[];
   coaches?: RawPublicCoach[];
 }
 
+/** Dữ liệu gói đăng ký thô từ API. */
 interface RawSubscription {
   id?: number | string;
   packageName?: string;
@@ -82,6 +90,7 @@ interface RawSubscription {
   remainingDays?: number | null;
 }
 
+/** Số ngày còn lại tới ngày hết hạn (không âm); ngày sai thì null. */
 function computeRemainingDays(endDate: string | null | undefined, todayStr: string): number | null {
   if (!endDate) return null;
   const endMs = Date.parse(`${endDate.slice(0, 10)}T00:00:00Z`);
@@ -90,6 +99,7 @@ function computeRemainingDays(endDate: string | null | undefined, todayStr: stri
   return Math.max(0, Math.round((endMs - todayMs) / 86_400_000));
 }
 
+/** Lấy gói hiện tại; lỗi thì thử endpoint dự phòng /memberships/current. */
 async function fetchMembershipWithFallback(): Promise<RawSubscription | null> {
   try {
     return await getCurrentMembership();
@@ -98,14 +108,20 @@ async function fetchMembershipWithFallback(): Promise<RawSubscription | null> {
   }
 }
 
+/** Kết quả của hook: ảnh chụp dữ liệu, dữ liệu đã gắn vào cảnh, đang tải, lỗi và hàm làm mới. */
 export interface UseLiveCenterDataResult {
   snapshot: LiveCenterSnapshot;
   bindings: ResolvedSceneBindings;
   loading: boolean;
   error: string | null;
+  // Tải lại ngay, bỏ qua cache.
   refresh: () => Promise<void>;
 }
 
+/**
+ * Hook tải dữ liệu thật của trung tâm (phòng, thiết bị, danh mục, gói) có cache trong thời gian CACHE_TTL_MS và
+ * gắn vào cảnh 3D.
+ */
 export function useLiveCenterData(): UseLiveCenterDataResult {
   const [snapshot, setSnapshot] = useState<LiveCenterSnapshot>(() =>
     cachedCenterSnapshot && Date.now() - cachedCenterSnapshot.timestamp < CACHE_TTL_MS
@@ -125,6 +141,7 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
     };
   }, []);
 
+  // Tải ảnh chụp dữ liệu (dùng cache còn hạn trừ khi force); chỉ dùng dữ liệu Gym và các luồng còn giữ.
   const loadSnapshot = useCallback(async (force = false) => {
     const now = Date.now();
     if (!force && cachedCenterSnapshot && now - cachedCenterSnapshot.timestamp < CACHE_TTL_MS) {
@@ -264,10 +281,12 @@ export function useLiveCenterData(): UseLiveCenterDataResult {
     void loadSnapshot(false);
   }, [loadSnapshot]);
 
+  // Tải lại ngay, bỏ qua cache.
   const refresh = useCallback(async () => {
     await loadSnapshot(true);
   }, [loadSnapshot]);
 
+  // Gắn dữ liệu thật vào cảnh mỗi khi ảnh chụp đổi.
   const bindings = useMemo(() => resolveBindings(SOL_CENTER_SCENE, snapshot), [snapshot]);
 
   return {
