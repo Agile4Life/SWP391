@@ -124,22 +124,27 @@ public class ProductOrderService {
         }
     }
 
+    /** Gán giá trị mới cho trường guard. */
     public void setGuard(VnpayPaymentGuard guard) {
         this.guard = guard;
     }
 
+    /** Gán giá trị mới cho trường payments. */
     public void setPayments(PaymentRepository payments) {
         this.payments = payments;
     }
 
+    /** Gán giá trị mới cho trường refunds. */
     public void setRefunds(ProductOrderRefunds refunds) {
         this.refunds = refunds;
     }
 
+    /** Gán giá trị mới cho trường notifications. */
     public void setNotifications(NotificationService notifications) {
         this.notifications = notifications;
     }
 
+    /** Gán giá trị mới cho trường messages. */
     public void setMessages(MessageService messages) {
         this.messages = messages;
     }

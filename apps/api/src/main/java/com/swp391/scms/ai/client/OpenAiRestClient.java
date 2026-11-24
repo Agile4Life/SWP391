@@ -50,11 +50,13 @@ public class OpenAiRestClient implements AiClient {
                 .build();
     }
 
+    /** Lấy giá trị trường providerName. */
     @Override
     public String getProviderName() {
         return providerName;
     }
 
+    /** Lấy giá trị trường modelName. */
     @Override
     public String getModelName() {
         return model;

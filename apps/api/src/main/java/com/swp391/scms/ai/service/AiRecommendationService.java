@@ -652,6 +652,7 @@ public class AiRecommendationService {
         }
     }
 
+    /** Lấy giá trị trường aiClient. */
     public AiClient getAiClient() {
         return aiClient;
     }

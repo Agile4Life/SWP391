@@ -9,5 +9,6 @@ import java.util.List;
 @Repository
 public interface InvoiceItemRepository extends JpaRepository<InvoiceItem, Long> {
 
+    /** Tìm các bản ghi có invoiceId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<InvoiceItem> findByInvoiceId(Long invoiceId);
 }

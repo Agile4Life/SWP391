@@ -16,6 +16,7 @@ public enum AttendanceStatus {
         this.value = value;
     }
 
+    /** Lấy giá trị trường value. */
     public String getValue() {
         return value;
     }

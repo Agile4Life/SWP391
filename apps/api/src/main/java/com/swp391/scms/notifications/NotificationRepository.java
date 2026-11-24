@@ -13,10 +13,16 @@ import java.util.Optional;
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
     
+    /**
+     * Tìm các bản ghi có userId = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     Page<Notification> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
     
+    /** Đếm số bản ghi có userId = tham số và isRead là false (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByUserIdAndIsReadFalse(Long userId);
     
+    /** Tìm các bản ghi có id = tham số và userId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Notification> findByIdAndUserId(Long id, Long userId);
     
     @Modifying

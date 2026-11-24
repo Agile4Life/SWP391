@@ -142,6 +142,7 @@ public class CoachBookingService {
         this.messageService = messageService;
     }
 
+    /** Lấy giá trị trường publicCoaches. */
     @Transactional(readOnly = true)
     public List<CoachPublicDto> getPublicCoaches() {
         return coachRepository.findPublicCoaches().stream()

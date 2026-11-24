@@ -80,6 +80,7 @@ public class PaymentService {
     @Autowired(required = false)
     private com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository;
 
+    /** Gán giá trị mới cho trường vnpayTransactionRepository. */
     public void setVnpayTransactionRepository(com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository) {
         this.vnpayTransactionRepository = vnpayTransactionRepository;
     }

@@ -35,22 +35,27 @@ public class AppException extends RuntimeException {
         this.details = null;
     }
 
+    /** Lấy giá trị trường status. */
     public HttpStatus getStatus() {
         return status;
     }
 
+    /** Lấy giá trị trường errorCode. */
     public String getErrorCode() {
         return errorCode;
     }
 
+    /** Lấy giá trị trường messageKey. */
     public String getMessageKey() {
         return messageKey;
     }
 
+    /** Lấy giá trị trường messageArgs. */
     public Object[] getMessageArgs() {
         return messageArgs;
     }
 
+    /** Lấy giá trị trường details. */
     public Object getDetails() {
         return details;
     }

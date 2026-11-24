@@ -64,7 +64,9 @@ public class MembershipSubscription {
     @Column(name = "replaced_end_date")
     private java.time.LocalDate replacedEndDate;
 
+    /** Lấy giá trị trường replacedEndDate. */
     public java.time.LocalDate getReplacedEndDate() { return replacedEndDate; }
+    /** Gán giá trị mới cho trường replacedEndDate. */
     public void setReplacedEndDate(java.time.LocalDate replacedEndDate) { this.replacedEndDate = replacedEndDate; }
 
     @Column(name = "hold_status", length = 20)
@@ -117,27 +119,49 @@ public class MembershipSubscription {
         updatedAt = LocalDateTime.now();
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
+    /** Lấy giá trị trường membershipPackage. */
     public MembershipPackage getMembershipPackage() { return membershipPackage; }
+    /** Gán giá trị mới cho trường membershipPackage. */
     public void setMembershipPackage(MembershipPackage membershipPackage) { this.membershipPackage = membershipPackage; }
+    /** Lấy giá trị trường previousSubscription. */
     public MembershipSubscription getPreviousSubscription() { return previousSubscription; }
+    /** Gán giá trị mới cho trường previousSubscription. */
     public void setPreviousSubscription(MembershipSubscription previousSubscription) { this.previousSubscription = previousSubscription; }
+    /** Lấy giá trị trường startDate. */
     public LocalDate getStartDate() { return startDate; }
+    /** Gán giá trị mới cho trường startDate. */
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    /** Lấy giá trị trường endDate. */
     public LocalDate getEndDate() { return endDate; }
+    /** Gán giá trị mới cho trường endDate. */
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) { this.status = status; }
+    /** Lấy giá trị trường qrCode. */
     public String getQrCode() { return qrCode; }
+    /** Gán giá trị mới cho trường qrCode. */
     public void setQrCode(String qrCode) { this.qrCode = qrCode; }
+    /** Lấy giá trị trường upgradeCharge. */
     public BigDecimal getUpgradeCharge() { return upgradeCharge; }
+    /** Gán giá trị mới cho trường upgradeCharge. */
     public void setUpgradeCharge(BigDecimal upgradeCharge) { this.upgradeCharge = upgradeCharge; }
+    /** Lấy giá trị trường creditApplied. */
     public BigDecimal getCreditApplied() { return creditApplied; }
+    /** Gán giá trị mới cho trường creditApplied. */
     public void setCreditApplied(BigDecimal creditApplied) { this.creditApplied = creditApplied; }
+    /** Lấy giá trị trường quotedPrice. */
     public BigDecimal getQuotedPrice() { return quotedPrice; }
+    /** Gán giá trị mới cho trường quotedPrice. */
     public void setQuotedPrice(BigDecimal quotedPrice) { this.quotedPrice = quotedPrice; }
     /**
      * What the member owes at the counter or on VNPay: the price fixed when the request was made (upgrade charge or
@@ -148,35 +172,61 @@ public class MembershipSubscription {
         if (quotedPrice != null) return quotedPrice;
         return membershipPackage != null ? membershipPackage.getPrice() : null;
     }
+    /** Lấy giá trị trường holdStatus. */
     public String getHoldStatus() { return holdStatus; }
+    /** Gán giá trị mới cho trường holdStatus. */
     public void setHoldStatus(String holdStatus) { this.holdStatus = holdStatus; }
+    /** Lấy giá trị trường holdRejectionReason. */
     public String getHoldRejectionReason() { return holdRejectionReason; }
+    /** Gán giá trị mới cho trường holdRejectionReason. */
     public void setHoldRejectionReason(String holdRejectionReason) { this.holdRejectionReason = holdRejectionReason; }
+    /** Lấy giá trị trường holdReason. */
     public String getHoldReason() { return holdReason; }
+    /** Gán giá trị mới cho trường holdReason. */
     public void setHoldReason(String holdReason) { this.holdReason = holdReason; }
+    /** Lấy giá trị trường holdRequestedAt. */
     public LocalDateTime getHoldRequestedAt() { return holdRequestedAt; }
+    /** Gán giá trị mới cho trường holdRequestedAt. */
     public void setHoldRequestedAt(LocalDateTime holdRequestedAt) { this.holdRequestedAt = holdRequestedAt; }
+    /** Lấy giá trị trường holdResolvedAt. */
     public LocalDateTime getHoldResolvedAt() { return holdResolvedAt; }
+    /** Gán giá trị mới cho trường holdResolvedAt. */
     public void setHoldResolvedAt(LocalDateTime holdResolvedAt) { this.holdResolvedAt = holdResolvedAt; }
+    /** Lấy giá trị trường holdStartDate. */
     public LocalDate getHoldStartDate() { return holdStartDate; }
+    /** Gán giá trị mới cho trường holdStartDate. */
     public void setHoldStartDate(LocalDate holdStartDate) { this.holdStartDate = holdStartDate; }
+    /** Lấy giá trị trường holdEndDate. */
     public LocalDate getHoldEndDate() { return holdEndDate; }
+    /** Gán giá trị mới cho trường holdEndDate. */
     public void setHoldEndDate(LocalDate holdEndDate) { this.holdEndDate = holdEndDate; }
+    /** Cho biết hold days credited (trường boolean). */
     public boolean isHoldDaysCredited() { return Boolean.TRUE.equals(holdDaysCredited); }
+    /** Gán giá trị mới cho trường holdDaysCredited. */
     public void setHoldDaysCredited(Boolean holdDaysCredited) { this.holdDaysCredited = holdDaysCredited; }
     /** True when an approved hold covers {@code date}: nothing may be booked on a held day. */
     public boolean isHeldOn(LocalDate date) {
         return "APPROVED".equalsIgnoreCase(holdStatus) && holdStartDate != null && holdEndDate != null
                 && !date.isBefore(holdStartDate) && !date.isAfter(holdEndDate);
     }
+    /** Cho biết hold used (trường boolean). */
     public boolean isHoldUsed() { return Boolean.TRUE.equals(holdUsed); }
+    /** Gán giá trị mới cho trường holdUsed. */
     public void setHoldUsed(boolean holdUsed) { this.holdUsed = holdUsed; }
+    /** Lấy giá trị trường holdResolvedBy. */
     public User getHoldResolvedBy() { return holdResolvedBy; }
+    /** Gán giá trị mới cho trường holdResolvedBy. */
     public void setHoldResolvedBy(User holdResolvedBy) { this.holdResolvedBy = holdResolvedBy; }
+    /** Lấy giá trị trường createdBy. */
     public User getCreatedBy() { return createdBy; }
+    /** Gán giá trị mới cho trường createdBy. */
     public void setCreatedBy(User createdBy) { this.createdBy = createdBy; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    /** Lấy giá trị trường updatedAt. */
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    /** Gán giá trị mới cho trường updatedAt. */
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

@@ -18,12 +18,19 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long> {
     @Query("SELECT e FROM Equipment e LEFT JOIN FETCH e.room WHERE e.id = :id")
     Optional<Equipment> findByIdWithRoom(@Param("id") Long id);
 
+    /** Kiểm tra có tồn tại bản ghi có code = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByCode(String code);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có code = tham số và id khác tham số (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     boolean existsByCodeAndIdNot(String code, Long id);
 
+    /** Kiểm tra có tồn tại bản ghi có roomId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByRoomId(Long roomId);
 
+    /** Đếm số bản ghi có status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByStatus(String status);
 }
 

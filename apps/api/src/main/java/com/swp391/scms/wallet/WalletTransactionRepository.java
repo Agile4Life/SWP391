@@ -8,8 +8,16 @@ import java.util.List;
 @Repository
 public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, Long> {
 
+    /**
+     * Tìm các bản ghi có wallet_Id = tham số, sắp xếp theo createdAt giảm dần, id giảm dần (chỉ lấy bản ghi đầu
+     * tiên) (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     List<WalletTransaction> findTop50ByWallet_IdOrderByCreatedAtDescIdDesc(Long walletId);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có wallet_Id = tham số và referenceId = tham số (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     boolean existsByWallet_IdAndReferenceId(Long walletId, String referenceId);
 
     /** Automatic refunds of VNPay money confirmed too late: wallet credits keyed by the gateway reference. */
@@ -35,5 +43,9 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
     java.math.BigDecimal sumLateRefunds(@org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
                                         @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to);
 
+    /**
+     * Tìm các bản ghi có referenceId thuộc danh sách tham số, sắp xếp theo createdAt tăng dần, id tăng dần
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     List<WalletTransaction> findAllByReferenceIdInOrderByCreatedAtAscIdAsc(java.util.Collection<String> referenceIds);
 }

@@ -54,58 +54,72 @@ public class ApiResponse<T> {
 
     // --- Getters and Setters ---
 
+    /** Cho biết success (trường boolean). */
     public boolean isSuccess() {
         return success;
     }
 
+    /** Gán giá trị mới cho trường success. */
     public void setSuccess(boolean success) {
         this.success = success;
     }
 
+    /** Lấy giá trị trường status. */
     public int getStatus() {
         return status;
     }
 
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(int status) {
         this.status = status;
     }
 
+    /** Lấy giá trị trường message. */
     public String getMessage() {
         return message;
     }
 
+    /** Gán giá trị mới cho trường message. */
     public void setMessage(String message) {
         this.message = message;
     }
 
+    /** Lấy giá trị trường data. */
     public T getData() {
         return data;
     }
 
+    /** Gán giá trị mới cho trường data. */
     public void setData(T data) {
         this.data = data;
     }
 
+    /** Lấy giá trị trường code. */
     public String getCode() {
         return code;
     }
 
+    /** Gán giá trị mới cho trường code. */
     public void setCode(String code) {
         this.code = code;
     }
 
+    /** Lấy giá trị trường details. */
     public Object getDetails() {
         return details;
     }
 
+    /** Gán giá trị mới cho trường details. */
     public void setDetails(Object details) {
         this.details = details;
     }
 
+    /** Lấy giá trị trường timestamp. */
     public LocalDateTime getTimestamp() {
         return timestamp;
     }
 
+    /** Gán giá trị mới cho trường timestamp. */
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
     }

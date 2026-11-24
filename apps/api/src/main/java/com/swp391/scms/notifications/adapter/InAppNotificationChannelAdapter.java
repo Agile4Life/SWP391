@@ -30,6 +30,7 @@ public class InAppNotificationChannelAdapter implements NotificationChannelAdapt
         this.userRepository = userRepository;
     }
 
+    /** Lấy giá trị trường channel. */
     @Override
     public NotificationChannel getChannel() {
         return NotificationChannel.IN_APP;

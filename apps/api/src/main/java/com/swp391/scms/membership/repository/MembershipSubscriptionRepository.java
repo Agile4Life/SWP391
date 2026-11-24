@@ -14,6 +14,7 @@ import java.util.Optional;
 
 @Repository
 public interface MembershipSubscriptionRepository extends JpaRepository<MembershipSubscription, Long> {
+    /** Kiểm tra có tồn tại bản ghi có membershipPackageId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByMembershipPackageId(Long packageId);
 
 
@@ -21,25 +22,53 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
     @Query("select s from MembershipSubscription s where s.id = :id")
     Optional<MembershipSubscription> findByIdForUpdate(@Param("id") Long id);
 
+    /** Tìm các bản ghi có memberUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<MembershipSubscription> findByMemberUserId(Long memberId);
 
+    /** Tìm các bản ghi có qrCode = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @Lock(LockModeType.PESSIMISTIC_READ)
     Optional<MembershipSubscription> findByQrCode(String qrCode);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     List<MembershipSubscription> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
 
+    /**
+     * Tìm các bản ghi có status = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     List<MembershipSubscription> findByStatusOrderByCreatedAtDesc(String status);
 
+    /**
+     * Tìm các bản ghi có status = tham số và updatedAt ≥ tham số, sắp xếp theo updatedAt giảm dần (Spring Data
+     * tự sinh truy vấn từ tên hàm).
+     */
     List<MembershipSubscription> findByStatusAndUpdatedAtGreaterThanEqualOrderByUpdatedAtDesc(String status, java.time.LocalDateTime since);
 
+    /**
+     * Tìm các bản ghi có holdStatus = tham số, sắp xếp theo holdRequestedAt giảm dần (Spring Data tự sinh truy
+     * vấn từ tên hàm).
+     */
     List<MembershipSubscription> findByHoldStatusOrderByHoldRequestedAtDesc(String holdStatus);
 
+    /** Tìm các bản ghi có memberUserId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<MembershipSubscription> findByMemberUserIdAndStatus(Long memberId, String status);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và status = tham số (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     boolean existsByMemberUserIdAndStatus(Long memberId, String status);
 
+    /** Kiểm tra có tồn tại bản ghi có memberUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByMemberUserId(Long memberId);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có previousSubscriptionId = tham số và status thuộc danh sách tham số (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     boolean existsByPreviousSubscriptionIdAndStatusIn(Long previousId, java.util.Collection<String> statuses);
 
     @Query("""
@@ -59,14 +88,30 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
             """)
     long countRenewedExpiredPaidPeriods(@Param("start") LocalDate start, @Param("end") LocalDate end);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và status = tham số và endDate ≥ tham số (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     boolean existsByMemberUserIdAndStatusAndEndDateGreaterThanEqual(Long memberId, String status, LocalDate date);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và status = tham số và startDate ≤ tham số và
+     * endDate ≥ tham số (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     boolean existsByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
             Long memberId, String status, LocalDate startDate, LocalDate endDate);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số và status = tham số, sắp xếp theo endDate giảm dần (chỉ lấy bản
+     * ghi đầu tiên) (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusOrderByEndDateDesc(Long memberId,
             String status);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số và status = tham số và startDate ≤ tham số và endDate ≥ tham
+     * số, sắp xếp theo endDate giảm dần (chỉ lấy bản ghi đầu tiên) (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     Optional<MembershipSubscription> findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
             Long memberId, String status, LocalDate todayForStart, LocalDate todayForEnd);
 
@@ -117,6 +162,10 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
             """)
     boolean existsEntitlementEndingOnOrAfter(@Param("memberId") Long memberId, @Param("since") LocalDate since);
 
+    /**
+     * Tìm các bản ghi có status = tham số và holdStatus = tham số và holdResolvedAt ≤ tham số (Spring Data tự
+     * sinh truy vấn từ tên hàm).
+     */
     List<MembershipSubscription> findByStatusAndHoldStatusAndHoldResolvedAtLessThanEqual(
             String status, String holdStatus, java.time.LocalDateTime resolvedBefore);
 
@@ -143,6 +192,10 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
             """)
     List<MembershipSubscription> findAllWithHoldHistory();
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và status thuộc danh sách tham số và endDate ≥ tham
+     * số (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     boolean existsByMemberUserIdAndStatusInAndEndDateGreaterThanEqual(
             Long memberId, java.util.Collection<String> statuses, LocalDate date);
 }

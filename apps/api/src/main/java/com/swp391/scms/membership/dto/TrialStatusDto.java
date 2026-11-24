@@ -44,10 +44,12 @@ public record TrialStatusDto(
         );
     }
 
+    /** Lấy giá trị trường documentNumberMasked. */
     public String getDocumentNumberMasked() {
         return cccd;
     }
 
+    /** Lấy giá trị trường requestedAt. */
     public LocalDateTime getRequestedAt() {
         return redeemedAt;
     }

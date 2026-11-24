@@ -16,6 +16,7 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
     @Query("select a.session.id, a.status, count(a) from SessionAttendance a where a.session.id in :ids group by a.session.id, a.status")
     List<Object[]> countByStatusForSessions(@Param("ids") java.util.Collection<Long> ids);
 
+    /** Tìm các bản ghi có sessionId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<SessionAttendance> findBySessionId(Long sessionId);
 
     @Query("""
@@ -26,12 +27,22 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
             """)
     List<SessionAttendance> findBySessionIdWithDetails(@Param("sessionId") Long sessionId);
 
+    /**
+     * Tìm các bản ghi có sessionId = tham số và memberUserId = tham số (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     Optional<SessionAttendance> findBySessionIdAndMemberUserId(Long sessionId, Long memberId);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có sessionId = tham số và memberUserId = tham số (Spring Data tự sinh truy
+     * vấn từ tên hàm).
+     */
     boolean existsBySessionIdAndMemberUserId(Long sessionId, Long memberId);
 
+    /** Tìm các bản ghi có memberUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<SessionAttendance> findByMemberUserId(Long memberId);
 
+    /** Đếm số bản ghi có sessionId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countBySessionIdAndStatus(Long sessionId, String status);
 
     /** Sessions excused automatically by a membership hold, from {@code fromDate} on. */

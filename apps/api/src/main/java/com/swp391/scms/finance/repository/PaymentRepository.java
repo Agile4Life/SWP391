@@ -13,35 +13,57 @@ import java.util.Optional;
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
+    /** Tìm các bản ghi có memberUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"invoice", "member", "member.user", "receivedBy"})
     List<Payment> findByMemberUserId(Long memberId);
 
+    /** Tìm các bản ghi có id = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @Override
     @EntityGraph(attributePaths = {"invoice", "member", "member.user", "receivedBy"})
     Optional<Payment> findById(Long id);
 
+    /** Tìm các bản ghi có status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findByStatus(String status);
 
+    /** Tìm các bản ghi có subscriptionId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"invoice"})
     Optional<Payment> findBySubscriptionId(Long subscriptionId);
 
+    /** Tìm các bản ghi có subscriptionId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findAllBySubscriptionId(Long subscriptionId);
 
-    /** Membership payments settled since a moment, newest first: the desk's history of processed requests. */
+    /**
+     * Tìm các bản ghi có subscriptionId đã có giá trị và status thuộc danh sách tham số và paidAt ≥ tham số,
+     * sắp xếp theo paidAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm).
+     *
+     * Membership payments settled since a moment, newest first: the desk's history of processed requests.
+     */
     List<Payment> findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(
             java.util.Collection<String> statuses, java.time.LocalDateTime since);
 
-    /** Wallet top-ups taken at the front desk since a moment, newest first. */
+    /**
+     * Tìm các bản ghi có note = tham số và status = tham số và paidAt ≥ tham số, sắp xếp theo paidAt giảm dần
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     *
+     * Wallet top-ups taken at the front desk since a moment, newest first.
+     */
     @EntityGraph(attributePaths = {"member", "member.user", "receivedBy"})
     List<Payment> findByNoteAndStatusAndPaidAtGreaterThanEqualOrderByPaidAtDesc(
             String note, String status, java.time.LocalDateTime since);
 
+    /** Tìm các bản ghi có coachBookingId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<Payment> findAllByCoachBookingId(Long coachBookingId);
+    /** Tìm các bản ghi có courtBookingId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<Payment> findAllByCourtBookingId(Long courtBookingId);
+    /** Tìm các bản ghi có productOrderId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<Payment> findAllByProductOrderId(Long productOrderId);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có subscriptionId = tham số và status = tham số (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     boolean existsBySubscriptionIdAndStatus(Long subscriptionId, String status);
 
     @Query("""
@@ -56,6 +78,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     boolean hasUnsettledUpcomingEnrollmentPayment(@Param("memberId") Long memberId,
             @Param("today") java.time.LocalDate today, @Param("nowTime") java.time.LocalTime nowTime);
 
+    /** Tìm các bản ghi có classEnrollmentId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"invoice"})
     Optional<Payment> findByClassEnrollmentId(Long classEnrollmentId);
 
@@ -63,14 +86,27 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @org.springframework.data.jpa.repository.Query("select p from Payment p where p.status = 'pending' and p.classEnrollmentId is not null and p.createdAt < :before")
     java.util.List<Payment> findPendingCourseFeesCreatedBefore(@org.springframework.data.repository.query.Param("before") java.time.LocalDateTime before);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có classEnrollmentGymClassId = tham số (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     boolean existsByClassEnrollmentGymClassId(Long classId);
 
+    /**
+     * Tìm các bản ghi có status = tham số và paidAt nằm trong khoảng hai tham số (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findByStatusAndPaidAtBetween(String status, java.time.LocalDateTime start, java.time.LocalDateTime end);
 
+    /** Tìm các bản ghi có paidAt nằm trong khoảng hai tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"invoice"})
     List<Payment> findByPaidAtBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và paidAt ≥ tham số (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     boolean existsByMemberUserIdAndPaidAtGreaterThanEqual(Long memberId, java.time.LocalDateTime since);
 
     /**

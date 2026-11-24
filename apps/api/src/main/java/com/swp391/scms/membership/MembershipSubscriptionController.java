@@ -212,6 +212,7 @@ public class MembershipSubscriptionController {
         return ApiResponse.ok(msg("membership.subscription.list"), service.mine(principal));
     }
 
+    /** Lấy giá trị trường pending. */
     @Operation(summary = "List all pending payment subscriptions for receptionist confirmation")
     @GetMapping("/pending")
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
@@ -219,6 +220,7 @@ public class MembershipSubscriptionController {
         return ApiResponse.ok(msg("membership.subscription.list"), service.listPending());
     }
 
+    /** Lấy giá trị trường pendingHolds. */
     @Operation(summary = "List all pending hold requests for receptionist processing")
     @GetMapping("/holds/pending")
     @PreAuthorize("hasRole('RECEPTIONIST')")

@@ -57,50 +57,62 @@ public class InvoiceItem {
         return unitPrice.multiply(BigDecimal.valueOf(quantity));
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() {
         return id;
     }
 
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) {
         this.id = id;
     }
 
+    /** Lấy giá trị trường invoice. */
     public Invoice getInvoice() {
         return invoice;
     }
 
+    /** Gán giá trị mới cho trường invoice. */
     public void setInvoice(Invoice invoice) {
         this.invoice = invoice;
     }
 
+    /** Lấy giá trị trường description. */
     public String getDescription() {
         return description;
     }
 
+    /** Gán giá trị mới cho trường description. */
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /** Lấy giá trị trường quantity. */
     public Integer getQuantity() {
         return quantity;
     }
 
+    /** Gán giá trị mới cho trường quantity. */
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
     }
 
+    /** Lấy giá trị trường unitPrice. */
     public BigDecimal getUnitPrice() {
         return unitPrice;
     }
 
+    /** Gán giá trị mới cho trường unitPrice. */
     public void setUnitPrice(BigDecimal unitPrice) {
         this.unitPrice = unitPrice;
     }
 
+    /** Lấy giá trị trường amount. */
     public BigDecimal getAmount() {
         return amount != null ? amount : calculateComputedAmount();
     }
 
+    /** Gán giá trị mới cho trường amount. */
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }

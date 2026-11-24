@@ -38,19 +38,34 @@ public class MembershipHoldDocument {
     @Column(name = "uploaded_at", nullable = false)
     private LocalDateTime uploadedAt = LocalDateTime.now();
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường subscription. */
     public MembershipSubscription getSubscription() { return subscription; }
+    /** Gán giá trị mới cho trường subscription. */
     public void setSubscription(MembershipSubscription subscription) { this.subscription = subscription; }
+    /** Lấy giá trị trường fileName. */
     public String getFileName() { return fileName; }
+    /** Gán giá trị mới cho trường fileName. */
     public void setFileName(String fileName) { this.fileName = fileName; }
+    /** Lấy giá trị trường contentType. */
     public String getContentType() { return contentType; }
+    /** Gán giá trị mới cho trường contentType. */
     public void setContentType(String contentType) { this.contentType = contentType; }
+    /** Lấy giá trị trường sizeBytes. */
     public long getSizeBytes() { return sizeBytes; }
+    /** Gán giá trị mới cho trường sizeBytes. */
     public void setSizeBytes(long sizeBytes) { this.sizeBytes = sizeBytes; }
+    /** Lấy giá trị trường content. */
     public byte[] getContent() { return content; }
+    /** Gán giá trị mới cho trường content. */
     public void setContent(byte[] content) { this.content = content; }
+    /** Lấy giá trị trường uploadedBy. */
     public User getUploadedBy() { return uploadedBy; }
+    /** Gán giá trị mới cho trường uploadedBy. */
     public void setUploadedBy(User uploadedBy) { this.uploadedBy = uploadedBy; }
+    /** Lấy giá trị trường uploadedAt. */
     public LocalDateTime getUploadedAt() { return uploadedAt; }
+    /** Gán giá trị mới cho trường uploadedAt. */
     public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
 }

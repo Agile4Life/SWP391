@@ -60,28 +60,52 @@ public class TrainingPlan {
         updatedAt = LocalDateTime.now();
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
+    /** Lấy giá trị trường coach. */
     public Coach getCoach() { return coach; }
+    /** Gán giá trị mới cho trường coach. */
     public void setCoach(Coach coach) { this.coach = coach; }
+    /** Lấy giá trị trường gymClass. */
     public GymClass getGymClass() { return gymClass; }
+    /** Gán giá trị mới cho trường gymClass. */
     public void setGymClass(GymClass gymClass) { this.gymClass = gymClass; }
+    /** Lấy giá trị trường goal. */
     public String getGoal() { return goal; }
+    /** Gán giá trị mới cho trường goal. */
     public void setGoal(String goal) { this.goal = goal; }
+    /** Lấy giá trị trường startDate. */
     public LocalDate getStartDate() { return startDate; }
+    /** Gán giá trị mới cho trường startDate. */
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    /** Lấy giá trị trường endDate. */
     public LocalDate getEndDate() { return endDate; }
+    /** Gán giá trị mới cho trường endDate. */
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) { this.status = status; }
+    /** Cho biết ai generated (trường boolean). */
     public boolean isAiGenerated() { return aiGenerated; }
+    /** Gán giá trị mới cho trường aiGenerated. */
     public void setAiGenerated(boolean aiGenerated) { this.aiGenerated = aiGenerated; }
+    /** Lấy giá trị trường aiRecommendation. */
     public AiRecommendationLog getAiRecommendation() { return aiRecommendation; }
+    /** Gán giá trị mới cho trường aiRecommendation. */
     public void setAiRecommendation(AiRecommendationLog aiRecommendation) { this.aiRecommendation = aiRecommendation; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    /** Lấy giá trị trường updatedAt. */
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    /** Gán giá trị mới cho trường updatedAt. */
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

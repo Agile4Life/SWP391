@@ -56,18 +56,22 @@ public class VnpayPaymentService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.shop.service.ProductOrderRefunds orderRefunds;
 
+    /** Gán giá trị mới cho trường orderRefunds. */
     public void setOrderRefunds(com.swp391.scms.shop.service.ProductOrderRefunds orderRefunds) {
         this.orderRefunds = orderRefunds;
     }
 
+    /** Gán giá trị mới cho trường orderPayments. */
     public void setOrderPayments(com.swp391.scms.shop.service.ProductOrderPayments orderPayments) {
         this.orderPayments = orderPayments;
     }
 
+    /** Gán giá trị mới cho trường orders. */
     public void setOrders(com.swp391.scms.shop.repository.ProductOrderRepository orders) {
         this.orders = orders;
     }
 
+    /** Gán giá trị mới cho trường walletService. */
     public void setWalletService(com.swp391.scms.wallet.WalletService walletService) {
         this.walletService = walletService;
     }

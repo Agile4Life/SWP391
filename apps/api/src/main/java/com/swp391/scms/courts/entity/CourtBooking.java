@@ -30,32 +30,49 @@ public class CourtBooking {
     /** {@code package_quota} when the plan covered the slot, otherwise the method paid at booking time. */
     @Column(name = "payment_method", length = 20) private String paymentMethod;
     @Column(name = "payment_status", length = 20) private String paymentStatus;
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường room. */
     public Room getRoom() { return room; }
+    /** Gán giá trị mới cho trường room. */
     public void setRoom(Room room) { this.room = room; }
+    /** Lấy giá trị trường member. */
     public User getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(User member) { this.member = member; }
+    /** Lấy giá trị trường bookingDate. */
     public LocalDate getBookingDate() { return bookingDate; }
     public void setBookingDate(LocalDate value) { bookingDate = value; }
+    /** Lấy giá trị trường startTime. */
     public LocalTime getStartTime() { return startTime; }
     public void setStartTime(LocalTime value) { startTime = value; }
+    /** Lấy giá trị trường endTime. */
     public LocalTime getEndTime() { return endTime; }
     public void setEndTime(LocalTime value) { endTime = value; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
     public void setStatus(String value) { status = value; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime value) { createdAt = value; }
+    /** Lấy giá trị trường cancelledAt. */
     public LocalDateTime getCancelledAt() { return cancelledAt; }
     public void setCancelledAt(LocalDateTime value) { cancelledAt = value; }
+    /** Cho biết quota forfeited (trường boolean). */
     public boolean isQuotaForfeited() { return Boolean.TRUE.equals(quotaForfeited); }
     public void setQuotaForfeited(boolean value) { quotaForfeited = value; }
+    /** Lấy giá trị trường cancelReason. */
     public String getCancelReason() { return cancelReason; }
     public void setCancelReason(String value) { cancelReason = value; }
+    /** Lấy giá trị trường price. */
     public BigDecimal getPrice() { return price; }
     public void setPrice(BigDecimal value) { price = value; }
+    /** Lấy giá trị trường paymentMethod. */
     public String getPaymentMethod() { return paymentMethod; }
     public void setPaymentMethod(String value) { paymentMethod = value; }
+    /** Lấy giá trị trường paymentStatus. */
     public String getPaymentStatus() { return paymentStatus; }
     public void setPaymentStatus(String value) { paymentStatus = value; }
 }

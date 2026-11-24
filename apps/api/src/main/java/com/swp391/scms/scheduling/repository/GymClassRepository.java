@@ -13,14 +13,19 @@ import java.util.Optional;
 
 @Repository
 public interface GymClassRepository extends JpaRepository<GymClass, Long> {
+    /** Kiểm tra có tồn tại bản ghi có roomId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByRoomId(Long roomId);
 
+    /** Kiểm tra có tồn tại bản ghi có disciplineId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByDisciplineId(Long disciplineId);
 
+    /** Tìm các bản ghi có  = tham số, sắp xếp theo id giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<GymClass> findAllByOrderByIdDesc();
 
+    /** Tìm các bản ghi có status = tham số, sắp xếp theo id giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<GymClass> findByStatusOrderByIdDesc(String status);
 
+    /** Tìm các bản ghi có coachUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<GymClass> findByCoachUserId(Long coachId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

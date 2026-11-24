@@ -96,6 +96,7 @@ public class MembershipSubscriptionService {
     @Autowired(required = false)
     private com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRedemptionRepository;
 
+    /** Gán giá trị mới cho trường trialRedemptionRepository. */
     public void setTrialRedemptionRepository(com.swp391.scms.membership.repository.MemberTrialRedemptionRepository repo) {
         this.trialRedemptionRepository = repo;
     }

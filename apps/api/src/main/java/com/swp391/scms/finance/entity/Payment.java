@@ -52,18 +52,30 @@ public class Payment {
     @JoinColumn(name = "product_order_id", insertable = false, updatable = false)
     private com.swp391.scms.shop.entity.ProductOrder productOrder;
 
+    /** Lấy giá trị trường coachBookingId. */
     public Long getCoachBookingId() { return coachBookingId; }
     public void setCoachBookingId(Long id) { coachBookingId = id; }
+    /** Lấy giá trị trường courtBookingId. */
     public Long getCourtBookingId() { return courtBookingId; }
     public void setCourtBookingId(Long id) { courtBookingId = id; }
+    /** Lấy giá trị trường productOrderId. */
     public Long getProductOrderId() { return productOrderId; }
     public void setProductOrderId(Long id) { productOrderId = id; }
+    /** Lấy giá trị trường productOrder. */
     public com.swp391.scms.shop.entity.ProductOrder getProductOrder() { return productOrder; }
-    /** Read-only views of the linked records (the *_id fields are the writable side). */
+    /**
+     * Lấy giá trị trường subscription.
+     *
+     * Read-only views of the linked records (the *_id fields are the writable side).
+     */
     public MembershipSubscription getSubscription() { return subscription; }
+    /** Lấy giá trị trường coachBooking. */
     public com.swp391.scms.coaching.entity.CoachBooking getCoachBooking() { return coachBooking; }
+    /** Lấy giá trị trường courtBooking. */
     public com.swp391.scms.courts.entity.CourtBooking getCourtBooking() { return courtBooking; }
+    /** Lấy giá trị trường classEnrollment. */
     public ClassEnrollment getClassEnrollment() { return classEnrollment; }
+    /** Gán giá trị mới cho trường productOrder. */
     public void setProductOrder(com.swp391.scms.shop.entity.ProductOrder productOrder) { this.productOrder = productOrder; }
 
     @Column(name = "class_enrollment_id")
@@ -109,114 +121,142 @@ public class Payment {
 
     public Payment() {}
 
+    /** Lấy giá trị trường id. */
     public Long getId() {
         return id;
     }
 
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) {
         this.id = id;
     }
 
+    /** Lấy giá trị trường member. */
     public Member getMember() {
         return member;
     }
 
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) {
         this.member = member;
     }
 
+    /** Lấy giá trị trường subscriptionId. */
     public Long getSubscriptionId() {
         return subscriptionId;
     }
 
+    /** Gán giá trị mới cho trường subscriptionId. */
     public void setSubscriptionId(Long subscriptionId) {
         this.subscriptionId = subscriptionId;
     }
 
+    /** Lấy giá trị trường classEnrollmentId. */
     public Long getClassEnrollmentId() {
         return classEnrollmentId;
     }
 
+    /** Gán giá trị mới cho trường classEnrollmentId. */
     public void setClassEnrollmentId(Long classEnrollmentId) {
         this.classEnrollmentId = classEnrollmentId;
     }
 
+    /** Lấy giá trị trường amount. */
     public BigDecimal getAmount() {
         return amount;
     }
 
+    /** Gán giá trị mới cho trường amount. */
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
 
+    /** Lấy giá trị trường method. */
     public String getMethod() {
         return method;
     }
 
+    /** Gán giá trị mới cho trường method. */
     public void setMethod(String method) {
         this.method = method;
     }
 
+    /** Lấy giá trị trường status. */
     public String getStatus() {
         return status;
     }
 
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) {
         this.status = status;
     }
 
+    /** Lấy giá trị trường paidAt. */
     public LocalDateTime getPaidAt() {
         return paidAt;
     }
 
+    /** Gán giá trị mới cho trường paidAt. */
     public void setPaidAt(LocalDateTime paidAt) {
         this.paidAt = paidAt;
     }
 
+    /** Lấy giá trị trường receivedBy. */
     public User getReceivedBy() {
         return receivedBy;
     }
 
+    /** Gán giá trị mới cho trường receivedBy. */
     public void setReceivedBy(User receivedBy) {
         this.receivedBy = receivedBy;
     }
 
+    /** Lấy giá trị trường note. */
     public String getNote() {
         return note;
     }
 
+    /** Gán giá trị mới cho trường note. */
     public void setNote(String note) {
         this.note = note;
     }
 
+    /** Lấy giá trị trường receiptImage. */
     public String getReceiptImage() {
         return receiptImage;
     }
 
+    /** Gán giá trị mới cho trường receiptImage. */
     public void setReceiptImage(String receiptImage) {
         this.receiptImage = receiptImage;
     }
 
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 
+    /** Lấy giá trị trường invoice. */
     public Invoice getInvoice() {
         return invoice;
     }
 
+    /** Gán giá trị mới cho trường invoice. */
     public void setInvoice(Invoice invoice) {
         this.invoice = invoice;
     }
 
+    /** Lấy giá trị trường refundedAmount. */
     public BigDecimal getRefundedAmount() {
         return refundedAmount;
     }
 
+    /** Gán giá trị mới cho trường refundedAmount. */
     public void setRefundedAmount(BigDecimal refundedAmount) {
         this.refundedAmount = refundedAmount;
     }

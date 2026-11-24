@@ -13,13 +13,30 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
     @Query("select r from SupportRequest r where r.id = :id")
     java.util.Optional<SupportRequest> findByIdForUpdate(@Param("id") Long id);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     Page<SupportRequest> findByMemberUserIdOrderByCreatedAtDesc(Long memberId, Pageable pageable);
 
+    /** Tìm các bản ghi có  = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     Page<SupportRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
+    /**
+     * Tìm các bản ghi có status = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     Page<SupportRequest> findByStatusOrderByCreatedAtDesc(String status, Pageable pageable);
 
+    /**
+     * Tìm các bản ghi có escalatedAt đã có giá trị, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy
+     * vấn từ tên hàm).
+     */
     Page<SupportRequest> findByEscalatedAtIsNotNullOrderByCreatedAtDesc(Pageable pageable);
+    /**
+     * Tìm các bản ghi có status = tham số và escalatedAt đã có giá trị, sắp xếp theo createdAt giảm dần (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     Page<SupportRequest> findByStatusAndEscalatedAtIsNotNullOrderByCreatedAtDesc(String status, Pageable pageable);
     /** Managers only ever work the requests a receptionist has escalated. */
     default Page<SupportRequest> findEscalatedByStatus(String status, Pageable pageable) {
@@ -35,5 +52,9 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
         return findByStatusOrderByCreatedAtDesc(status, pageable);
     }
 
+    /**
+     * Tìm các bản ghi có status = tham số và resolvedAt trước tham số (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     java.util.List<com.swp391.scms.support.entity.SupportRequest> findByStatusAndResolvedAtBefore(String status, java.time.LocalDateTime cutoff);
 }

@@ -25,6 +25,7 @@ import java.util.Locale;
 
 @Service
 public class UserService {
+    /** Lấy giá trị trường staffAccounts. */
     @Transactional(readOnly = true)
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CENTER_MANAGER', 'ADMIN')")
     public List<UserDto> getStaffAccounts() {
@@ -140,6 +141,7 @@ public class UserService {
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
+    /** Lấy giá trị trường allUsers. */
     @Transactional(readOnly = true)
     public List<UserDto> getAllUsers() {
         return userRepository.findAllByDeletedAtIsNullOrderByIdAsc().stream()
@@ -325,6 +327,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    /** Lấy giá trị trường deletedUsers. */
     @Transactional(readOnly = true)
     public List<UserDto> getDeletedUsers() {
         return userRepository.findAllByDeletedAtIsNotNullOrderByIdDesc().stream()

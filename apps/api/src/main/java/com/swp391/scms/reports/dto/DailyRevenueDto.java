@@ -24,12 +24,18 @@ public class DailyRevenueDto {
         this.transactionCount = transactionCount;
     }
 
+    /** Lấy giá trị trường date. */
     public LocalDate getDate() { return date; }
+    /** Gán giá trị mới cho trường date. */
     public void setDate(LocalDate date) { this.date = date; }
 
+    /** Lấy giá trị trường revenue. */
     public BigDecimal getRevenue() { return revenue; }
+    /** Gán giá trị mới cho trường revenue. */
     public void setRevenue(BigDecimal revenue) { this.revenue = revenue; }
 
+    /** Lấy giá trị trường transactionCount. */
     public int getTransactionCount() { return transactionCount; }
+    /** Gán giá trị mới cho trường transactionCount. */
     public void setTransactionCount(int transactionCount) { this.transactionCount = transactionCount; }
 }

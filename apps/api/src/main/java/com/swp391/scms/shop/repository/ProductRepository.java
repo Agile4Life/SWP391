@@ -14,10 +14,18 @@ import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
+    /** Tìm các bản ghi có slug = tham số và active là true (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Product> findBySlugAndActiveTrue(String slug);
+    /** Tìm các bản ghi có slug = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Product> findBySlug(String slug);
+    /** Kiểm tra có tồn tại bản ghi có slug = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsBySlug(String slug);
+    /**
+     * Kiểm tra có tồn tại bản ghi có slug = tham số và id khác tham số (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     boolean existsBySlugAndIdNot(String slug, Long id);
+    /** Đếm số bản ghi có category_Id = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByCategory_Id(Long categoryId);
 
     @Query("""

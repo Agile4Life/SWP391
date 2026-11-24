@@ -10,8 +10,16 @@ import java.util.List;
 @Repository
 public interface SupportRequestMessageRepository extends JpaRepository<SupportRequestMessage, Long> {
 
+    /**
+     * Tìm các bản ghi có supportRequestId = tham số và senderId = tham số và clientMessageId = tham số (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     java.util.Optional<SupportRequestMessage> findBySupportRequestIdAndSenderIdAndClientMessageId(Long requestId, Long senderId, java.util.UUID clientMessageId);
 
+    /**
+     * Tìm các bản ghi có supportRequestId = tham số, sắp xếp theo createdAt tăng dần (Spring Data tự sinh truy
+     * vấn từ tên hàm).
+     */
     @EntityGraph(attributePaths = {"sender", "sender.role"})
     List<SupportRequestMessage> findBySupportRequestIdOrderByCreatedAtAsc(Long supportRequestId);
 }

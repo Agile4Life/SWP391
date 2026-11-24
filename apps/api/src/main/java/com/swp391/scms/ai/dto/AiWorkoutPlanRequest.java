@@ -32,12 +32,20 @@ public class AiWorkoutPlanRequest {
         this.durationWeeks = durationWeeks;
     }
 
+    /** Lấy giá trị trường memberId. */
     public Long getMemberId() { return memberId; }
+    /** Gán giá trị mới cho trường memberId. */
     public void setMemberId(Long memberId) { this.memberId = memberId; }
+    /** Lấy giá trị trường coachId. */
     public Long getCoachId() { return coachId; }
+    /** Gán giá trị mới cho trường coachId. */
     public void setCoachId(Long coachId) { this.coachId = coachId; }
+    /** Lấy giá trị trường additionalRequirements. */
     public String getAdditionalRequirements() { return additionalRequirements; }
+    /** Gán giá trị mới cho trường additionalRequirements. */
     public void setAdditionalRequirements(String additionalRequirements) { this.additionalRequirements = additionalRequirements; }
+    /** Lấy giá trị trường durationWeeks. */
     public Integer getDurationWeeks() { return durationWeeks; }
+    /** Gán giá trị mới cho trường durationWeeks. */
     public void setDurationWeeks(Integer durationWeeks) { this.durationWeeks = durationWeeks; }
 }

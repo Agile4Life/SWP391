@@ -35,15 +35,26 @@ public class AiChatSession {
     @Column(name = "ended_at")
     private LocalDateTime endedAt;
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
+    /** Lấy giá trị trường staffUser. */
     public User getStaffUser() { return staffUser; }
+    /** Gán giá trị mới cho trường staffUser. */
     public void setStaffUser(User staffUser) { this.staffUser = staffUser; }
+    /** Lấy giá trị trường topic. */
     public String getTopic() { return topic; }
+    /** Gán giá trị mới cho trường topic. */
     public void setTopic(String topic) { this.topic = topic; }
+    /** Lấy giá trị trường startedAt. */
     public LocalDateTime getStartedAt() { return startedAt; }
+    /** Gán giá trị mới cho trường startedAt. */
     public void setStartedAt(LocalDateTime startedAt) { this.startedAt = startedAt; }
+    /** Lấy giá trị trường endedAt. */
     public LocalDateTime getEndedAt() { return endedAt; }
+    /** Gán giá trị mới cho trường endedAt. */
     public void setEndedAt(LocalDateTime endedAt) { this.endedAt = endedAt; }
 }

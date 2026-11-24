@@ -30,13 +30,22 @@ public class AiChatMessage {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường session. */
     public AiChatSession getSession() { return session; }
+    /** Gán giá trị mới cho trường session. */
     public void setSession(AiChatSession session) { this.session = session; }
+    /** Lấy giá trị trường sender. */
     public String getSender() { return sender; }
+    /** Gán giá trị mới cho trường sender. */
     public void setSender(String sender) { this.sender = sender; }
+    /** Lấy giá trị trường message. */
     public String getMessage() { return message; }
+    /** Gán giá trị mới cho trường message. */
     public void setMessage(String message) { this.message = message; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

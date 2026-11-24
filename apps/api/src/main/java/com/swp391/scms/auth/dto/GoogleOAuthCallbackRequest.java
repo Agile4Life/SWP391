@@ -12,6 +12,7 @@ public record GoogleOAuthCallbackRequest(
         String code,
         String redirectUri
 ) {
+    /** Cho biết popup credential (trường boolean). */
     @JsonIgnore
     @AssertTrue(message = "{auth.google.invalid_token}")
     public boolean isPopupCredential() {

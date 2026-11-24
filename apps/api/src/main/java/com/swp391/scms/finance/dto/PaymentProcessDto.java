@@ -56,27 +56,43 @@ public class PaymentProcessDto {
         this.note = note;
     }
 
+    /** Lấy giá trị trường memberId. */
     public Long getMemberId() { return memberId; }
+    /** Gán giá trị mới cho trường memberId. */
     public void setMemberId(Long memberId) { this.memberId = memberId; }
 
+    /** Lấy giá trị trường subscriptionId. */
     public Long getSubscriptionId() { return subscriptionId; }
+    /** Gán giá trị mới cho trường subscriptionId. */
     public void setSubscriptionId(Long subscriptionId) { this.subscriptionId = subscriptionId; }
 
+    /** Lấy giá trị trường packageId. */
     public Long getPackageId() { return packageId; }
+    /** Gán giá trị mới cho trường packageId. */
     public void setPackageId(Long packageId) { this.packageId = packageId; }
 
+    /** Lấy giá trị trường classEnrollmentId. */
     public Long getClassEnrollmentId() { return classEnrollmentId; }
+    /** Gán giá trị mới cho trường classEnrollmentId. */
     public void setClassEnrollmentId(Long classEnrollmentId) { this.classEnrollmentId = classEnrollmentId; }
 
+    /** Lấy giá trị trường amount. */
     public BigDecimal getAmount() { return amount; }
+    /** Gán giá trị mới cho trường amount. */
     public void setAmount(BigDecimal amount) { this.amount = amount; }
 
+    /** Lấy giá trị trường method. */
     public String getMethod() { return method; }
+    /** Gán giá trị mới cho trường method. */
     public void setMethod(String method) { this.method = method; }
 
+    /** Lấy giá trị trường receivedById. */
     public Long getReceivedById() { return receivedById; }
+    /** Gán giá trị mới cho trường receivedById. */
     public void setReceivedById(Long receivedById) { this.receivedById = receivedById; }
 
+    /** Lấy giá trị trường note. */
     public String getNote() { return note; }
+    /** Gán giá trị mới cho trường note. */
     public void setNote(String note) { this.note = note; }
 }

@@ -46,7 +46,11 @@ public class WalletService {
         this.messageService = messageService;
     }
 
-    /** Optional: records a front-desk top-up as a settled payment so it reaches the member's invoices. */
+    /**
+     * Gán giá trị mới cho trường counterTopupService.
+     *
+     * Optional: records a front-desk top-up as a settled payment so it reaches the member's invoices.
+     */
     @Autowired(required = false)
     public void setCounterTopupService(@org.springframework.context.annotation.Lazy CounterTopupService counterTopupService) {
         this.counterTopupService = counterTopupService;

@@ -54,10 +54,12 @@ public class MembershipCancellationService {
     @Autowired(required = false)
     private SubscriptionValueCalculator valueCalculator;
 
+    /** Gán giá trị mới cho trường walletService. */
     public void setWalletService(WalletService walletService) {
         this.walletService = walletService;
     }
 
+    /** Gán giá trị mới cho trường notificationService. */
     public void setNotificationService(NotificationService notificationService) {
         this.notificationService = notificationService;
     }

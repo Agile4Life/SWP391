@@ -14,6 +14,7 @@ import jakarta.persistence.LockModeType;
 
 @Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
+    /** Tìm các bản ghi có membershipCode = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Member> findByMembershipCode(String membershipCode);
 
     /** Registered, active members nobody has measured yet: the people a coach may give a first assessment. */

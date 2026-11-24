@@ -15,6 +15,10 @@ import java.util.List;
 @Repository
 public interface AiChatMessageRepository extends JpaRepository<AiChatMessage, Long> {
 
+    /**
+     * Tìm các bản ghi có sessionId = tham số, sắp xếp theo createdAt tăng dần, id tăng dần (Spring Data tự sinh
+     * truy vấn từ tên hàm).
+     */
     List<AiChatMessage> findBySessionIdOrderByCreatedAtAscIdAsc(Long sessionId);
 
     /**

@@ -16,9 +16,19 @@ import java.util.List;
 import java.util.Optional;
 
 public interface VnpayTransactionRepository extends JpaRepository<VnpayTransaction, String>, JpaSpecificationExecutor<VnpayTransaction> {
+    /**
+     * Tìm các bản ghi có paymentId = tham số và status = tham số, sắp xếp theo createdAt giảm dần (chỉ lấy bản
+     * ghi đầu tiên) (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     Optional<VnpayTransaction> findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(Long paymentId, String status);
+    /** Tìm các bản ghi có paymentId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<VnpayTransaction> findAllByPaymentId(Long paymentId);
+    /**
+     * Kiểm tra có tồn tại bản ghi có paymentId = tham số và status = tham số (Spring Data tự sinh truy vấn từ
+     * tên hàm).
+     */
     boolean existsByPaymentIdAndStatus(Long paymentId, String status);
+    /** Kiểm tra có tồn tại bản ghi có paymentId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByPaymentId(Long paymentId);
 
     /** Payments with a pending attempt whose gateway expiry passed before {@code cutoff}. */
@@ -34,8 +44,10 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
     @EntityGraph(attributePaths = {"payment", "payment.member", "payment.member.user"})
     Page<VnpayTransaction> findAll(Specification<VnpayTransaction> spec, Pageable pageable);
 
+    /** Đếm số bản ghi có status = tham số và expiresAt trước tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByStatusAndExpiresAtBefore(String status, LocalDateTime cutoff);
 
+    /** Đếm số bản ghi có status = tham số và expiresAt ≥ tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByStatusAndExpiresAtGreaterThanEqual(String status, LocalDateTime cutoff);
 
     /** Payments with two or more attempts, at least one of them created in {@code [from, to)}. */
@@ -61,6 +73,7 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
             """)
     List<Object[]> countAttemptsByPaymentIds(@Param("paymentIds") Collection<Long> paymentIds);
 
+    /** Tìm các bản ghi có reference thuộc danh sách tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"payment"})
     List<VnpayTransaction> findAllByReferenceIn(Collection<String> references);
 }

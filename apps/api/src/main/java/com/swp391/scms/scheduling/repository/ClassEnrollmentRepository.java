@@ -35,24 +35,38 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
     @Query("select distinct e.gymClass.id from ClassEnrollment e where e.member.userId = :memberId and e.status = 'booked'")
     List<Long> findBookedClassIdsByMemberId(@Param("memberId") Long memberId);
 
+    /** Tìm các bản ghi có memberUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<ClassEnrollment> findByMemberUserId(Long memberId);
 
+    /** Tìm các bản ghi có gymClassId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<ClassEnrollment> findByGymClassId(Long classId);
 
+    /**
+     * Tìm các bản ghi có gymClassId = tham số và memberUserId = tham số (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     Optional<ClassEnrollment> findByGymClassIdAndMemberUserId(Long classId, Long memberId);
 
+    /** Đếm số bản ghi có gymClassId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByGymClassIdAndStatus(Long classId, String status);
 
     @Query("select new com.swp391.scms.scheduling.dto.ClassBookingCount(e.gymClass.id, count(e)) "
             + "from ClassEnrollment e where e.gymClass.id in :classIds and e.status = :status group by e.gymClass.id")
     List<ClassBookingCount> countByClassIdsAndStatus(@Param("classIds") List<Long> classIds, @Param("status") String status);
 
-    /** SCRUM-73 BR-03: a member may only hold one active booking per class. */
+    /**
+     * Tìm các bản ghi có gymClassId = tham số và memberUserId = tham số và status = tham số (Spring Data tự
+     * sinh truy vấn từ tên hàm).
+     *
+     * SCRUM-73 BR-03: a member may only hold one active booking per class.
+     */
     Optional<ClassEnrollment> findByGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
 
+    /** Tìm các bản ghi có gymClassId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"member", "member.user"})
     List<ClassEnrollment> findByGymClassIdAndStatus(Long classId, String status);
 
+    /** Xóa các bản ghi có gymClassId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     void deleteByGymClassId(Long classId);
 
     @org.springframework.data.jpa.repository.Query("""

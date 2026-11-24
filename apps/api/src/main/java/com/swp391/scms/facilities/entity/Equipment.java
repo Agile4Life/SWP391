@@ -69,27 +69,49 @@ public class Equipment {
         this.status = status != null ? status : "active";
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường name. */
     public String getName() { return name; }
+    /** Gán giá trị mới cho trường name. */
     public void setName(String name) { this.name = name; }
+    /** Lấy giá trị trường code. */
     public String getCode() { return code; }
+    /** Gán giá trị mới cho trường code. */
     public void setCode(String code) { this.code = code; }
+    /** Lấy giá trị trường category. */
     public String getCategory() { return category; }
+    /** Gán giá trị mới cho trường category. */
     public void setCategory(String category) { this.category = category; }
+    /** Lấy giá trị trường room. */
     public Room getRoom() { return room; }
+    /** Gán giá trị mới cho trường room. */
     public void setRoom(Room room) { this.room = room; }
+    /** Lấy giá trị trường quantity. */
     public int getQuantity() { return quantity; }
+    /** Gán giá trị mới cho trường quantity. */
     public void setQuantity(int quantity) { this.quantity = quantity; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) { this.status = status; }
+    /** Lấy giá trị trường purchaseDate. */
     public LocalDate getPurchaseDate() { return purchaseDate; }
+    /** Gán giá trị mới cho trường purchaseDate. */
     public void setPurchaseDate(LocalDate purchaseDate) { this.purchaseDate = purchaseDate; }
+    /** Lấy giá trị trường maintenanceDate. */
     public LocalDate getMaintenanceDate() { return maintenanceDate; }
+    /** Gán giá trị mới cho trường maintenanceDate. */
     public void setMaintenanceDate(LocalDate maintenanceDate) { this.maintenanceDate = maintenanceDate; }
+    /** Lấy giá trị trường note. */
     public String getNote() { return note; }
+    /** Gán giá trị mới cho trường note. */
     public void setNote(String note) { this.note = note; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Lấy giá trị trường updatedAt. */
     public LocalDateTime getUpdatedAt() { return updatedAt; }
 }
 

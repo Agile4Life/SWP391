@@ -14,6 +14,10 @@ import java.util.Optional;
 @Repository
 public interface TrainingPlanItemRepository extends JpaRepository<TrainingPlanItem, Long> {
 
+    /**
+     * Tìm các bản ghi có trainingPlanId = tham số, sắp xếp theo orderIndex tăng dần, id tăng dần (Spring Data
+     * tự sinh truy vấn từ tên hàm).
+     */
     List<TrainingPlanItem> findByTrainingPlanIdOrderByOrderIndexAscIdAsc(Long trainingPlanId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

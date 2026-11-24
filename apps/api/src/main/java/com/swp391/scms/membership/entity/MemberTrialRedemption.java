@@ -88,130 +88,162 @@ public class MemberTrialRedemption {
         this.redeemedAt = LocalDateTime.now();
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() {
         return id;
     }
 
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) {
         this.id = id;
     }
 
+    /** Lấy giá trị trường member. */
     public Member getMember() {
         return member;
     }
 
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) {
         this.member = member;
     }
 
+    /** Lấy giá trị trường cccdHash. */
     public String getCccdHash() {
         return cccdHash;
     }
 
+    /** Gán giá trị mới cho trường cccdHash. */
     public void setCccdHash(String cccdHash) {
         this.cccdHash = cccdHash;
     }
 
+    /** Lấy giá trị trường documentNumberEnc. */
     public String getDocumentNumberEnc() {
         return documentNumberEnc;
     }
 
+    /** Gán giá trị mới cho trường documentNumberEnc. */
     public void setDocumentNumberEnc(String documentNumberEnc) {
         this.documentNumberEnc = documentNumberEnc;
     }
 
+    /** Lấy giá trị trường cccdLast4. */
     public String getCccdLast4() {
         return cccdLast4;
     }
 
+    /** Gán giá trị mới cho trường cccdLast4. */
     public void setCccdLast4(String cccdLast4) {
         this.cccdLast4 = cccdLast4;
     }
 
+    /** Lấy giá trị trường fullName. */
     public String getFullName() {
         return fullName;
     }
 
+    /** Gán giá trị mới cho trường fullName. */
     public void setFullName(String fullName) {
         this.fullName = fullName;
     }
 
+    /** Lấy giá trị trường documentType. */
     public String getDocumentType() {
         return documentType;
     }
 
+    /** Gán giá trị mới cho trường documentType. */
     public void setDocumentType(String documentType) {
         this.documentType = documentType;
     }
 
+    /** Lấy giá trị trường nationality. */
     public String getNationality() {
         return nationality;
     }
 
+    /** Gán giá trị mới cho trường nationality. */
     public void setNationality(String nationality) {
         this.nationality = nationality;
     }
 
+    /** Lấy giá trị trường frontImageUrl. */
     public String getFrontImageUrl() {
         return frontImageUrl;
     }
 
+    /** Gán giá trị mới cho trường frontImageUrl. */
     public void setFrontImageUrl(String frontImageUrl) {
         this.frontImageUrl = frontImageUrl;
     }
 
+    /** Lấy giá trị trường backImageUrl. */
     public String getBackImageUrl() {
         return backImageUrl;
     }
 
+    /** Gán giá trị mới cho trường backImageUrl. */
     public void setBackImageUrl(String backImageUrl) {
         this.backImageUrl = backImageUrl;
     }
 
+    /** Lấy giá trị trường status. */
     public String getStatus() {
         return status;
     }
 
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) {
         this.status = status;
     }
 
+    /** Lấy giá trị trường reviewedBy. */
     public Long getReviewedBy() {
         return reviewedBy;
     }
 
+    /** Gán giá trị mới cho trường reviewedBy. */
     public void setReviewedBy(Long reviewedBy) {
         this.reviewedBy = reviewedBy;
     }
 
+    /** Lấy giá trị trường reviewedAt. */
     public LocalDateTime getReviewedAt() {
         return reviewedAt;
     }
 
+    /** Gán giá trị mới cho trường reviewedAt. */
     public void setReviewedAt(LocalDateTime reviewedAt) {
         this.reviewedAt = reviewedAt;
     }
 
+    /** Lấy giá trị trường rejectionReason. */
     public String getRejectionReason() {
         return rejectionReason;
     }
 
+    /** Gán giá trị mới cho trường rejectionReason. */
     public void setRejectionReason(String rejectionReason) {
         this.rejectionReason = rejectionReason;
     }
 
+    /** Lấy giá trị trường subscription. */
     public MembershipSubscription getSubscription() {
         return subscription;
     }
 
+    /** Gán giá trị mới cho trường subscription. */
     public void setSubscription(MembershipSubscription subscription) {
         this.subscription = subscription;
     }
 
+    /** Lấy giá trị trường redeemedAt. */
     public LocalDateTime getRedeemedAt() {
         return redeemedAt;
     }
 
+    /** Gán giá trị mới cho trường redeemedAt. */
     public void setRedeemedAt(LocalDateTime redeemedAt) {
         this.redeemedAt = redeemedAt;
     }

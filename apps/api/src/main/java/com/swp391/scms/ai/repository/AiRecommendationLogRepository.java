@@ -9,7 +9,9 @@ import java.util.List;
 @Repository
 public interface AiRecommendationLogRepository extends JpaRepository<AiRecommendationLog, Long> {
 
+    /** Tìm các bản ghi có memberUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<AiRecommendationLog> findByMemberUserId(Long memberId);
 
+    /** Tìm các bản ghi có coachUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<AiRecommendationLog> findByCoachUserId(Long coachId);
 }

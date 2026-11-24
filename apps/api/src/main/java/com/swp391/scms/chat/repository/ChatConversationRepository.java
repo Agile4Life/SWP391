@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
 public interface ChatConversationRepository extends JpaRepository<ChatConversation, Long> {
+    /** Tìm các bản ghi có memberId = tham số và staffId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<ChatConversation> findByMemberIdAndStaffId(Long memberId, Long staffId);
 
     @Query(value = "select c from ChatConversation c join fetch c.member m join fetch m.role join fetch c.staff s join fetch s.role where m.id = :userId or s.id = :userId order by c.lastActivityAt desc, c.id desc",

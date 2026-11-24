@@ -7,8 +7,10 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface RoomRepository extends JpaRepository<Room, Long> {
+    /** Kiểm tra có tồn tại bản ghi có disciplineId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByDisciplineId(Long disciplineId);
 
+    /** Tìm các bản ghi có  = tham số, sắp xếp theo name tăng dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<Room> findAllByOrderByNameAsc();
 
     @Query("""

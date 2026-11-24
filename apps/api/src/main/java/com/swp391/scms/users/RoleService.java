@@ -26,11 +26,13 @@ public class RoleService {
         this.roleMapper = roleMapper;
     }
 
+    /** Lấy giá trị trường allRoles. */
     @Transactional(readOnly = true)
     public List<RoleDto> getAllRoles() {
         return roleRepository.findAll().stream().map(roleMapper::toDto).toList();
     }
 
+    /** Lấy giá trị trường allPermissions. */
     @Transactional(readOnly = true)
     public List<PermissionDto> getAllPermissions() {
         return permissionRepository.findAll().stream().map(roleMapper::toDto).toList();

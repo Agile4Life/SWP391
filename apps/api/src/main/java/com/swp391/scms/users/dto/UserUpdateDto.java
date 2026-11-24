@@ -17,12 +17,20 @@ public class UserUpdateDto {
     private String gender;
 
     // Getters and Setters
+    /** Lấy giá trị trường fullName. */
     public String getFullName() { return fullName; }
+    /** Gán giá trị mới cho trường fullName. */
     public void setFullName(String fullName) { this.fullName = fullName; }
+    /** Lấy giá trị trường phone. */
     public String getPhone() { return phone; }
+    /** Gán giá trị mới cho trường phone. */
     public void setPhone(String phone) { this.phone = phone; }
+    /** Lấy giá trị trường roleId. */
     public Long getRoleId() { return roleId; }
+    /** Gán giá trị mới cho trường roleId. */
     public void setRoleId(Long roleId) { this.roleId = roleId; }
+    /** Lấy giá trị trường gender. */
     public String getGender() { return gender; }
+    /** Gán giá trị mới cho trường gender. */
     public void setGender(String gender) { this.gender = gender; }
 }

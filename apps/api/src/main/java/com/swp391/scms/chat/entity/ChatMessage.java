@@ -20,11 +20,18 @@ public class ChatMessage {
     public ChatMessage(ChatConversation conversation, User sender, UUID clientMessageId, String message, Instant now) {
         this.conversation = conversation; this.sender = sender; this.clientMessageId = clientMessageId; this.message = message; this.createdAt = now;
     }
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường conversation. */
     public ChatConversation getConversation() { return conversation; }
+    /** Lấy giá trị trường sender. */
     public User getSender() { return sender; }
+    /** Lấy giá trị trường clientMessageId. */
     public UUID getClientMessageId() { return clientMessageId; }
+    /** Lấy giá trị trường message. */
     public String getMessage() { return message; }
+    /** Lấy giá trị trường createdAt. */
     public Instant getCreatedAt() { return createdAt; }
 }

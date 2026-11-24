@@ -11,8 +11,17 @@ import java.util.List;
 
 @Repository
 public interface CoachReviewRepository extends JpaRepository<CoachReview, Long> {
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và bookingId = tham số (Spring Data tự sinh truy
+     * vấn từ tên hàm).
+     */
     boolean existsByMemberUserIdAndBookingId(Long memberId, Long bookingId);
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và classSessionId = tham số (Spring Data tự sinh
+     * truy vấn từ tên hàm).
+     */
     boolean existsByMemberUserIdAndClassSessionId(Long memberId, Long classSessionId);
+    /** Kiểm tra có tồn tại bản ghi có classSessionId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByClassSessionId(Long classSessionId);
 
 

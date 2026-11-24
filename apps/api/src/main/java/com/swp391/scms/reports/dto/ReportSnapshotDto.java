@@ -33,27 +33,43 @@ public class ReportSnapshotDto {
 
     public ReportSnapshotDto() {}
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
 
+    /** Lấy giá trị trường reportType. */
     public String getReportType() { return reportType; }
+    /** Gán giá trị mới cho trường reportType. */
     public void setReportType(String reportType) { this.reportType = reportType; }
 
+    /** Lấy giá trị trường periodStart. */
     public LocalDate getPeriodStart() { return periodStart; }
+    /** Gán giá trị mới cho trường periodStart. */
     public void setPeriodStart(LocalDate periodStart) { this.periodStart = periodStart; }
 
+    /** Lấy giá trị trường periodEnd. */
     public LocalDate getPeriodEnd() { return periodEnd; }
+    /** Gán giá trị mới cho trường periodEnd. */
     public void setPeriodEnd(LocalDate periodEnd) { this.periodEnd = periodEnd; }
 
+    /** Lấy giá trị trường data. */
     public String getData() { return data; }
+    /** Gán giá trị mới cho trường data. */
     public void setData(String data) { this.data = data; }
 
+    /** Lấy giá trị trường generatedById. */
     public Long getGeneratedById() { return generatedById; }
+    /** Gán giá trị mới cho trường generatedById. */
     public void setGeneratedById(Long generatedById) { this.generatedById = generatedById; }
 
+    /** Lấy giá trị trường generatedByName. */
     public String getGeneratedByName() { return generatedByName; }
+    /** Gán giá trị mới cho trường generatedByName. */
     public void setGeneratedByName(String generatedByName) { this.generatedByName = generatedByName; }
 
+    /** Lấy giá trị trường generatedAt. */
     public LocalDateTime getGeneratedAt() { return generatedAt; }
+    /** Gán giá trị mới cho trường generatedAt. */
     public void setGeneratedAt(LocalDateTime generatedAt) { this.generatedAt = generatedAt; }
 }

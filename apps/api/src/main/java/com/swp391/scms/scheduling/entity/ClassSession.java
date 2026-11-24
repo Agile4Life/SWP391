@@ -48,22 +48,40 @@ public class ClassSession {
         updatedAt = LocalDateTime.now();
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường gymClass. */
     public GymClass getGymClass() { return gymClass; }
+    /** Gán giá trị mới cho trường gymClass. */
     public void setGymClass(GymClass gymClass) { this.gymClass = gymClass; }
+    /** Lấy giá trị trường sessionDate. */
     public LocalDate getSessionDate() { return sessionDate; }
+    /** Gán giá trị mới cho trường sessionDate. */
     public void setSessionDate(LocalDate sessionDate) { this.sessionDate = sessionDate; }
+    /** Lấy giá trị trường startTime. */
     public LocalTime getStartTime() { return startTime; }
+    /** Gán giá trị mới cho trường startTime. */
     public void setStartTime(LocalTime startTime) { this.startTime = startTime; }
+    /** Lấy giá trị trường endTime. */
     public LocalTime getEndTime() { return endTime; }
+    /** Gán giá trị mới cho trường endTime. */
     public void setEndTime(LocalTime endTime) { this.endTime = endTime; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) { this.status = status; }
+    /** Lấy giá trị trường cancelReason. */
     public String getCancelReason() { return cancelReason; }
+    /** Gán giá trị mới cho trường cancelReason. */
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    /** Lấy giá trị trường updatedAt. */
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    /** Gán giá trị mới cho trường updatedAt. */
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

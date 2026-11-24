@@ -31,12 +31,20 @@ public class TrainingItemCompletion {
     @Column(name = "completed_at", nullable = false)
     private LocalDateTime completedAt = LocalDateTime.now();
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
+    /** Lấy giá trị trường trainingPlanItem. */
     public TrainingPlanItem getTrainingPlanItem() { return trainingPlanItem; }
+    /** Gán giá trị mới cho trường trainingPlanItem. */
     public void setTrainingPlanItem(TrainingPlanItem trainingPlanItem) { this.trainingPlanItem = trainingPlanItem; }
+    /** Lấy giá trị trường exerciseDate. */
     public LocalDate getExerciseDate() { return exerciseDate; }
+    /** Gán giá trị mới cho trường exerciseDate. */
     public void setExerciseDate(LocalDate exerciseDate) { this.exerciseDate = exerciseDate; }
+    /** Lấy giá trị trường completedAt. */
     public LocalDateTime getCompletedAt() { return completedAt; }
 }

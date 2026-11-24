@@ -7,6 +7,10 @@ import org.springframework.data.repository.query.Param;
 import java.util.*;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
+    /**
+     * Tìm các bản ghi có conversationId = tham số và senderId = tham số và clientMessageId = tham số (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     Optional<ChatMessage> findByConversationIdAndSenderIdAndClientMessageId(Long conversationId, Long senderId, UUID clientMessageId);
 
     @Query("select m from ChatMessage m where m.conversation.id = :id and (:before is null or m.id < :before) order by m.id desc")

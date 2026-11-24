@@ -25,6 +25,10 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findPublicSessions(@Param("fromDate") LocalDate fromDate,
             @Param("toDate") LocalDate toDate, @Param("now") java.time.LocalTime now);
 
+    /**
+     * Tìm các bản ghi có gymClassId = tham số, sắp xếp theo sessionDate tăng dần, startTime tăng dần (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     List<ClassSession> findByGymClassIdOrderBySessionDateAscStartTimeAsc(Long classId);
 
     /**
@@ -60,8 +64,10 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
                 .toList();
     }
 
+    /** Đếm số bản ghi có gymClassId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByGymClassIdAndStatus(Long classId, String status);
 
+    /** Đếm số bản ghi có gymClassId = tham số và status khác tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByGymClassIdAndStatusNot(Long classId, String status);
 
     @Query("""
@@ -95,6 +101,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             """)
     List<ClassSession> findByCoachId(@Param("coachId") Long coachId);
 
+    /** Xóa các bản ghi có gymClassId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     void deleteByGymClassId(Long classId);
     @Query("select s from ClassSession s where s.status = 'scheduled' and s.sessionDate = :date " +
             "and (exists (select e.id from ClassEnrollment e where e.gymClass = s.gymClass " +

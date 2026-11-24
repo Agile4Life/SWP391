@@ -54,82 +54,102 @@ public class PaymentCreateDto {
 
     public PaymentCreateDto() {}
 
+    /** Lấy giá trị trường receiptImage. */
     public String getReceiptImage() {
         return receiptImage;
     }
 
+    /** Gán giá trị mới cho trường receiptImage. */
     public void setReceiptImage(String receiptImage) {
         this.receiptImage = receiptImage;
     }
 
+    /** Lấy giá trị trường memberId. */
     public Long getMemberId() {
         return memberId;
     }
 
+    /** Gán giá trị mới cho trường memberId. */
     public void setMemberId(Long memberId) {
         this.memberId = memberId;
     }
 
+    /** Lấy giá trị trường subscriptionId. */
     public Long getSubscriptionId() {
         return subscriptionId;
     }
 
+    /** Gán giá trị mới cho trường subscriptionId. */
     public void setSubscriptionId(Long subscriptionId) {
         this.subscriptionId = subscriptionId;
     }
 
+    /** Lấy giá trị trường classEnrollmentId. */
     public Long getClassEnrollmentId() {
         return classEnrollmentId;
     }
 
+    /** Gán giá trị mới cho trường classEnrollmentId. */
     public void setClassEnrollmentId(Long classEnrollmentId) {
         this.classEnrollmentId = classEnrollmentId;
     }
 
+    /** Lấy giá trị trường amount. */
     public BigDecimal getAmount() {
         return amount;
     }
 
+    /** Gán giá trị mới cho trường amount. */
     public void setAmount(BigDecimal amount) {
         this.amount = amount;
     }
 
+    /** Lấy giá trị trường method. */
     public String getMethod() {
         return method;
     }
 
+    /** Gán giá trị mới cho trường method. */
     public void setMethod(String method) {
         this.method = method;
     }
 
+    /** Lấy giá trị trường status. */
     public String getStatus() {
         return status;
     }
 
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) {
         this.status = status;
     }
 
+    /** Lấy giá trị trường paidAt. */
     public LocalDateTime getPaidAt() {
         return paidAt;
     }
 
+    /** Gán giá trị mới cho trường paidAt. */
     public void setPaidAt(LocalDateTime paidAt) {
         this.paidAt = paidAt;
     }
 
+    /** Lấy giá trị trường receivedById. */
     public Long getReceivedById() {
         return receivedById;
     }
 
+    /** Gán giá trị mới cho trường receivedById. */
     public void setReceivedById(Long receivedById) {
         this.receivedById = receivedById;
     }
 
+    /** Lấy giá trị trường note. */
     public String getNote() {
         return note;
     }
 
+    /** Gán giá trị mới cho trường note. */
     public void setNote(String note) {
         this.note = note;
     }

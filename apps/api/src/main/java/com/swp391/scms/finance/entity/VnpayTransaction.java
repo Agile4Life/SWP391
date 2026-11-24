@@ -29,14 +29,24 @@ public class VnpayTransaction {
         this.reference = reference; this.payment = payment; this.amount = amount;
         this.createdAt = createdAt; this.expiresAt = expiresAt; this.ipAddress = ipAddress; this.status = "pending";
     }
+    /** Lấy giá trị trường reference. */
     public String getReference() { return reference; }
+    /** Lấy giá trị trường payment. */
     public Payment getPayment() { return payment; }
+    /** Lấy giá trị trường amount. */
     public BigDecimal getAmount() { return amount; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Lấy giá trị trường expiresAt. */
     public LocalDateTime getExpiresAt() { return expiresAt; }
+    /** Lấy giá trị trường ipAddress. */
     public String getIpAddress() { return ipAddress; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String value) { this.status = value; }
+    /** Lấy giá trị trường gatewayTransactionNo. */
     public String getGatewayTransactionNo() { return gatewayTransactionNo; }
+    /** Gán giá trị mới cho trường gatewayTransactionNo. */
     public void setGatewayTransactionNo(String value) { this.gatewayTransactionNo = value; }
 }

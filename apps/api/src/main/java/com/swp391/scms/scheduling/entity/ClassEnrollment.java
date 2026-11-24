@@ -46,22 +46,40 @@ public class ClassEnrollment {
     @Column(name = "credit_forfeited")
     private Boolean creditForfeited;
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường gymClass. */
     public GymClass getGymClass() { return gymClass; }
+    /** Gán giá trị mới cho trường gymClass. */
     public void setGymClass(GymClass gymClass) { this.gymClass = gymClass; }
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) { this.status = status; }
+    /** Lấy giá trị trường enrolledAt. */
     public LocalDateTime getEnrolledAt() { return enrolledAt; }
+    /** Gán giá trị mới cho trường enrolledAt. */
     public void setEnrolledAt(LocalDateTime enrolledAt) { this.enrolledAt = enrolledAt; }
+    /** Lấy giá trị trường cancelledAt. */
     public LocalDateTime getCancelledAt() { return cancelledAt; }
+    /** Gán giá trị mới cho trường cancelledAt. */
     public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+    /** Lấy giá trị trường cancelledBy. */
     public User getCancelledBy() { return cancelledBy; }
+    /** Gán giá trị mới cho trường cancelledBy. */
     public void setCancelledBy(User cancelledBy) { this.cancelledBy = cancelledBy; }
+    /** Lấy giá trị trường cancelReason. */
     public String getCancelReason() { return cancelReason; }
+    /** Gán giá trị mới cho trường cancelReason. */
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
+    /** Cho biết credit forfeited (trường boolean). */
     public boolean isCreditForfeited() { return Boolean.TRUE.equals(creditForfeited); }
+    /** Gán giá trị mới cho trường creditForfeited. */
     public void setCreditForfeited(boolean creditForfeited) { this.creditForfeited = creditForfeited; }
 }

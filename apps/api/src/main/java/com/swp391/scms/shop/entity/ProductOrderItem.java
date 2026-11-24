@@ -56,30 +56,48 @@ public class ProductOrderItem {
         return item;
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
 
+    /** Lấy giá trị trường order. */
     public ProductOrder getOrder() { return order; }
+    /** Gán giá trị mới cho trường order. */
     public void setOrder(ProductOrder order) { this.order = order; }
 
+    /** Lấy giá trị trường variant. */
     public ProductVariant getVariant() { return variant; }
+    /** Gán giá trị mới cho trường variant. */
     public void setVariant(ProductVariant variant) { this.variant = variant; }
 
+    /** Lấy giá trị trường productName. */
     public String getProductName() { return productName; }
+    /** Gán giá trị mới cho trường productName. */
     public void setProductName(String productName) { this.productName = productName; }
 
+    /** Lấy giá trị trường variantLabel. */
     public String getVariantLabel() { return variantLabel; }
+    /** Gán giá trị mới cho trường variantLabel. */
     public void setVariantLabel(String variantLabel) { this.variantLabel = variantLabel; }
 
+    /** Lấy giá trị trường sku. */
     public String getSku() { return sku; }
+    /** Gán giá trị mới cho trường sku. */
     public void setSku(String sku) { this.sku = sku; }
 
+    /** Lấy giá trị trường unitPrice. */
     public BigDecimal getUnitPrice() { return unitPrice; }
+    /** Gán giá trị mới cho trường unitPrice. */
     public void setUnitPrice(BigDecimal unitPrice) { this.unitPrice = unitPrice; }
 
+    /** Lấy giá trị trường quantity. */
     public int getQuantity() { return quantity; }
+    /** Gán giá trị mới cho trường quantity. */
     public void setQuantity(int quantity) { this.quantity = quantity; }
 
+    /** Lấy giá trị trường lineTotal. */
     public BigDecimal getLineTotal() { return lineTotal; }
+    /** Gán giá trị mới cho trường lineTotal. */
     public void setLineTotal(BigDecimal lineTotal) { this.lineTotal = lineTotal; }
 }

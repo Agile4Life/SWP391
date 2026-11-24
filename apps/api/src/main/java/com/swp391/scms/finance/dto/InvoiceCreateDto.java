@@ -43,58 +43,72 @@ public class InvoiceCreateDto {
 
     public InvoiceCreateDto() {}
 
+    /** Lấy giá trị trường paymentId. */
     public Long getPaymentId() {
         return paymentId;
     }
 
+    /** Gán giá trị mới cho trường paymentId. */
     public void setPaymentId(Long paymentId) {
         this.paymentId = paymentId;
     }
 
+    /** Lấy giá trị trường invoiceNumber. */
     public String getInvoiceNumber() {
         return invoiceNumber;
     }
 
+    /** Gán giá trị mới cho trường invoiceNumber. */
     public void setInvoiceNumber(String invoiceNumber) {
         this.invoiceNumber = invoiceNumber;
     }
 
+    /** Lấy giá trị trường issuedAt. */
     public LocalDateTime getIssuedAt() {
         return issuedAt;
     }
 
+    /** Gán giá trị mới cho trường issuedAt. */
     public void setIssuedAt(LocalDateTime issuedAt) {
         this.issuedAt = issuedAt;
     }
 
+    /** Lấy giá trị trường subtotalAmount. */
     public BigDecimal getSubtotalAmount() {
         return subtotalAmount;
     }
 
+    /** Gán giá trị mới cho trường subtotalAmount. */
     public void setSubtotalAmount(BigDecimal subtotalAmount) {
         this.subtotalAmount = subtotalAmount;
     }
 
+    /** Lấy giá trị trường taxAmount. */
     public BigDecimal getTaxAmount() {
         return taxAmount;
     }
 
+    /** Gán giá trị mới cho trường taxAmount. */
     public void setTaxAmount(BigDecimal taxAmount) {
         this.taxAmount = taxAmount;
     }
 
+    /** Lấy giá trị trường pdfUrl. */
     public String getPdfUrl() {
         return pdfUrl;
     }
 
+    /** Gán giá trị mới cho trường pdfUrl. */
     public void setPdfUrl(String pdfUrl) {
         this.pdfUrl = pdfUrl;
     }
 
+    /** Lấy giá trị trường items. */
     public List<InvoiceItemCreateDto> getItems() {
         return items;
     }
 
+    /** Gán giá trị mới cho trường items. */
     public void setItems(List<InvoiceItemCreateDto> items) {
         this.items = items;
     }

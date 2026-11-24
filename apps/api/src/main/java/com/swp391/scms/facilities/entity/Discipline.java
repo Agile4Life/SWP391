@@ -27,10 +27,16 @@ public class Discipline {
         createdAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường name. */
     public String getName() { return name; }
+    /** Gán giá trị mới cho trường name. */
     public void setName(String name) { this.name = name; }
+    /** Lấy giá trị trường description. */
     public String getDescription() { return description; }
+    /** Gán giá trị mới cho trường description. */
     public void setDescription(String description) { this.description = description; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

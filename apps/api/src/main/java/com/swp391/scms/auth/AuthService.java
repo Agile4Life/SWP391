@@ -107,6 +107,7 @@ public class AuthService {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** Lấy giá trị trường loginAttemptService. */
     public LoginAttemptService getLoginAttemptService() {
         return loginAttemptService;
     }

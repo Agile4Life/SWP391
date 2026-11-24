@@ -56,44 +56,72 @@ public class MemberAddress {
         updatedAt = LocalDateTime.now();
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
 
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
 
+    /** Lấy giá trị trường recipientName. */
     public String getRecipientName() { return recipientName; }
+    /** Gán giá trị mới cho trường recipientName. */
     public void setRecipientName(String recipientName) { this.recipientName = recipientName; }
 
+    /** Lấy giá trị trường phone. */
     public String getPhone() { return phone; }
+    /** Gán giá trị mới cho trường phone. */
     public void setPhone(String phone) { this.phone = phone; }
 
+    /** Lấy giá trị trường provinceCode. */
     public String getProvinceCode() { return provinceCode; }
+    /** Gán giá trị mới cho trường provinceCode. */
     public void setProvinceCode(String provinceCode) { this.provinceCode = provinceCode; }
 
+    /** Lấy giá trị trường provinceName. */
     public String getProvinceName() { return provinceName; }
+    /** Gán giá trị mới cho trường provinceName. */
     public void setProvinceName(String provinceName) { this.provinceName = provinceName; }
 
+    /** Lấy giá trị trường wardCode. */
     public String getWardCode() { return wardCode; }
+    /** Gán giá trị mới cho trường wardCode. */
     public void setWardCode(String wardCode) { this.wardCode = wardCode; }
 
+    /** Lấy giá trị trường wardName. */
     public String getWardName() { return wardName; }
+    /** Gán giá trị mới cho trường wardName. */
     public void setWardName(String wardName) { this.wardName = wardName; }
 
+    /** Lấy giá trị trường streetLine. */
     public String getStreetLine() { return streetLine; }
+    /** Gán giá trị mới cho trường streetLine. */
     public void setStreetLine(String streetLine) { this.streetLine = streetLine; }
 
+    /** Lấy giá trị trường note. */
     public String getNote() { return note; }
+    /** Gán giá trị mới cho trường note. */
     public void setNote(String note) { this.note = note; }
 
+    /** Cho biết default (trường boolean). */
     public boolean isDefault() { return isDefault; }
+    /** Lấy giá trị trường isDefault. */
     public boolean getIsDefault() { return isDefault; }
+    /** Gán giá trị mới cho trường default. */
     public void setDefault(boolean aDefault) { this.isDefault = aDefault; }
+    /** Gán giá trị mới cho trường isDefault. */
     public void setIsDefault(boolean aDefault) { this.isDefault = aDefault; }
 
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    /** Lấy giá trị trường updatedAt. */
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    /** Gán giá trị mới cho trường updatedAt. */
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 }

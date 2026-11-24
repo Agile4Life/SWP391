@@ -41,11 +41,18 @@ public class OtpChallenge {
         this.createdAt = createdAt;
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường target. */
     public String getTarget() { return target; }
+    /** Lấy giá trị trường codeHash. */
     public String getCodeHash() { return codeHash; }
+    /** Lấy giá trị trường expiresAt. */
     public LocalDateTime getExpiresAt() { return expiresAt; }
+    /** Lấy giá trị trường failedAttempts. */
     public int getFailedAttempts() { return failedAttempts; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường failedAttempts. */
     public void setFailedAttempts(int failedAttempts) { this.failedAttempts = failedAttempts; }
 }

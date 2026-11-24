@@ -22,11 +22,17 @@ public class ChatConversation {
     public ChatConversation(User member, User staff, Instant now) {
         this.member = member; this.staff = staff; this.createdAt = now; this.lastActivityAt = now;
     }
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường member. */
     public User getMember() { return member; }
+    /** Lấy giá trị trường staff. */
     public User getStaff() { return staff; }
+    /** Lấy giá trị trường createdAt. */
     public Instant getCreatedAt() { return createdAt; }
+    /** Lấy giá trị trường lastActivityAt. */
     public Instant getLastActivityAt() { return lastActivityAt; }
     public void touch(Instant now) { lastActivityAt = now; }
     public Long lastReadBy(Long userId) { return member.getId().equals(userId) ? memberLastReadMessageId : staffLastReadMessageId; }

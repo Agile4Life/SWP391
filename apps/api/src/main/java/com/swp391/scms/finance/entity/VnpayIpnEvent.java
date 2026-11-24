@@ -47,13 +47,22 @@ public class VnpayIpnEvent {
         this.amount = amount; this.rspCode = rspCode; this.receivedAt = receivedAt;
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường reference. */
     public String getReference() { return reference; }
+    /** Lấy giá trị trường source. */
     public String getSource() { return source; }
+    /** Lấy giá trị trường gatewayResponseCode. */
     public String getGatewayResponseCode() { return gatewayResponseCode; }
+    /** Lấy giá trị trường gatewayTransactionStatus. */
     public String getGatewayTransactionStatus() { return gatewayTransactionStatus; }
+    /** Lấy giá trị trường gatewayTransactionNo. */
     public String getGatewayTransactionNo() { return gatewayTransactionNo; }
+    /** Lấy giá trị trường amount. */
     public BigDecimal getAmount() { return amount; }
+    /** Lấy giá trị trường rspCode. */
     public String getRspCode() { return rspCode; }
+    /** Lấy giá trị trường receivedAt. */
     public LocalDateTime getReceivedAt() { return receivedAt; }
 }

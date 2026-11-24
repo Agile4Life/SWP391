@@ -86,6 +86,7 @@ public class EnrollmentService {
     /** Online (wallet/VNPay) course fees hold the seat this long; cash fees hold it until the course starts. */
     public static final long ONLINE_HOLD_MINUTES = 15;
 
+    /** Gán giá trị mới cho trường memberDiscounts. */
     public void setMemberDiscounts(MemberDiscountService memberDiscounts) {
         this.memberDiscounts = memberDiscounts;
     }
@@ -94,10 +95,12 @@ public class EnrollmentService {
     @org.springframework.context.annotation.Lazy
     private com.swp391.scms.finance.service.VnpayPaymentService vnpayPaymentService;
 
+    /** Gán giá trị mới cho trường paymentRepository. */
     public void setPaymentRepository(PaymentRepository paymentRepository) {
         this.paymentRepository = paymentRepository;
     }
 
+    /** Gán giá trị mới cho trường vnpayPaymentService. */
     public void setVnpayPaymentService(com.swp391.scms.finance.service.VnpayPaymentService vnpayPaymentService) {
         this.vnpayPaymentService = vnpayPaymentService;
     }
@@ -106,6 +109,7 @@ public class EnrollmentService {
     @Autowired(required = false)
     private com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
+    /** Gán giá trị mới cho trường vnpayGuard. */
     public void setVnpayGuard(com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard) {
         this.vnpayGuard = vnpayGuard;
     }

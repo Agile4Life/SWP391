@@ -9,10 +9,22 @@ import java.util.List;
 @Repository
 public interface SessionEvaluationRepository extends JpaRepository<SessionEvaluation, Long> {
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số, sắp xếp theo evaluatedAt giảm dần (Spring Data tự sinh truy
+     * vấn từ tên hàm).
+     */
     List<SessionEvaluation> findByMemberUserIdOrderByEvaluatedAtDesc(Long memberId);
 
+    /**
+     * Tìm các bản ghi có coachUserId = tham số, sắp xếp theo evaluatedAt giảm dần (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     List<SessionEvaluation> findByCoachUserIdOrderByEvaluatedAtDesc(Long coachId);
 
+    /**
+     * Tìm các bản ghi có sessionId = tham số, sắp xếp theo evaluatedAt giảm dần (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     List<SessionEvaluation> findBySessionIdOrderByEvaluatedAtDesc(Long sessionId);
 
     /** Evaluation summary per session: [sessionId, count, average progress score, latest evaluatedAt]. */

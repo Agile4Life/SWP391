@@ -13,6 +13,7 @@ import java.util.List;
 @Repository
 public interface SessionAttendanceReportRepository extends JpaRepository<SessionAttendance, Long> {
 
+    /** Tìm các bản ghi có sessionGymClassId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<SessionAttendance> findBySessionGymClassId(Long classId);
 
     interface ClassUtilizationRow {

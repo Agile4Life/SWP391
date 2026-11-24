@@ -93,6 +93,7 @@ public class ProductOrderStaffService {
         this.guard = guard;
     }
 
+    /** Gán giá trị mới cho trường guard. */
     public void setGuard(VnpayPaymentGuard guard) {
         this.guard = guard;
     }

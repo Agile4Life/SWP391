@@ -30,9 +30,13 @@ public class PaymentRefundRequest {
         this.refundAmount = refundAmount;
     }
 
+    /** Lấy giá trị trường reason. */
     public String getReason() { return reason; }
+    /** Gán giá trị mới cho trường reason. */
     public void setReason(String reason) { this.reason = reason; }
 
+    /** Lấy giá trị trường refundAmount. */
     public BigDecimal getRefundAmount() { return refundAmount; }
+    /** Gán giá trị mới cho trường refundAmount. */
     public void setRefundAmount(BigDecimal refundAmount) { this.refundAmount = refundAmount; }
 }

@@ -42,7 +42,9 @@ public class Notification {
     @Column(name = "action_path", length = 500)
     private String actionPath;
 
+    /** Lấy giá trị trường actionPath. */
     public String getActionPath() { return actionPath; }
+    /** Gán giá trị mới cho trường actionPath. */
     public void setActionPath(String actionPath) { this.actionPath = actionPath; }
 
     public static final java.util.Set<String> ALLOWED_TYPES = java.util.Set.of(
@@ -100,30 +102,46 @@ public class Notification {
         this.createdAt = LocalDateTime.now();
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
     
+    /** Lấy giá trị trường user. */
     public User getUser() { return user; }
+    /** Gán giá trị mới cho trường user. */
     public void setUser(User user) { this.user = user; }
     
+    /** Lấy giá trị trường title. */
     public String getTitle() { return title; }
+    /** Gán giá trị mới cho trường title. */
     public void setTitle(String title) { this.title = title; }
     
+    /** Lấy giá trị trường message. */
     public String getMessage() { return message; }
+    /** Gán giá trị mới cho trường message. */
     public void setMessage(String message) { this.message = message; }
     
+    /** Lấy giá trị trường type. */
     public String getType() { return type; }
     public void setType(String type) { this.type = normalizeType(type); }
     
+    /** Lấy giá trị trường relatedEntityType. */
     public String getRelatedEntityType() { return relatedEntityType; }
     public void setRelatedEntityType(String relatedEntityType) { this.relatedEntityType = normalizeEntityType(relatedEntityType); }
 
+    /** Lấy giá trị trường relatedEntityId. */
     public Long getRelatedEntityId() { return relatedEntityId; }
+    /** Gán giá trị mới cho trường relatedEntityId. */
     public void setRelatedEntityId(Long relatedEntityId) { this.relatedEntityId = relatedEntityId; }
     
+    /** Cho biết read (trường boolean). */
     public boolean isRead() { return isRead; }
+    /** Gán giá trị mới cho trường read. */
     public void setRead(boolean read) { this.isRead = read; }
     
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

@@ -75,86 +75,107 @@ public class Invoice {
         return sub.add(tax);
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() {
         return id;
     }
 
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) {
         this.id = id;
     }
 
+    /** Lấy giá trị trường payment. */
     public Payment getPayment() {
         return payment;
     }
 
+    /** Gán giá trị mới cho trường payment. */
     public void setPayment(Payment payment) {
         this.payment = payment;
     }
 
+    /** Lấy giá trị trường invoiceNumber. */
     public String getInvoiceNumber() {
         return invoiceNumber;
     }
 
+    /** Gán giá trị mới cho trường invoiceNumber. */
     public void setInvoiceNumber(String invoiceNumber) {
         this.invoiceNumber = invoiceNumber;
     }
 
+    /** Lấy giá trị trường issuedAt. */
     public LocalDateTime getIssuedAt() {
         return issuedAt;
     }
 
+    /** Gán giá trị mới cho trường issuedAt. */
     public void setIssuedAt(LocalDateTime issuedAt) {
         this.issuedAt = issuedAt;
     }
 
+    /** Lấy giá trị trường subtotalAmount. */
     public BigDecimal getSubtotalAmount() {
         return subtotalAmount;
     }
 
+    /** Gán giá trị mới cho trường subtotalAmount. */
     public void setSubtotalAmount(BigDecimal subtotalAmount) {
         this.subtotalAmount = subtotalAmount;
     }
 
+    /** Lấy giá trị trường taxAmount. */
     public BigDecimal getTaxAmount() {
         return taxAmount;
     }
 
+    /** Gán giá trị mới cho trường taxAmount. */
     public void setTaxAmount(BigDecimal taxAmount) {
         this.taxAmount = taxAmount;
     }
 
+    /** Lấy giá trị trường totalAmount. */
     public BigDecimal getTotalAmount() {
         return totalAmount != null ? totalAmount : calculateComputedTotal();
     }
 
+    /** Lấy giá trị trường persistedTotalAmount. */
     public BigDecimal getPersistedTotalAmount() {
         return totalAmount;
     }
 
+    /** Gán giá trị mới cho trường totalAmount. */
     public void setTotalAmount(BigDecimal totalAmount) {
         this.totalAmount = totalAmount;
     }
 
+    /** Lấy giá trị trường pdfUrl. */
     public String getPdfUrl() {
         return pdfUrl;
     }
 
+    /** Gán giá trị mới cho trường pdfUrl. */
     public void setPdfUrl(String pdfUrl) {
         this.pdfUrl = pdfUrl;
     }
 
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
 
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
 
+    /** Lấy giá trị trường items. */
     public List<InvoiceItem> getItems() {
         return items;
     }
 
+    /** Gán giá trị mới cho trường items. */
     public void setItems(List<InvoiceItem> items) {
         this.items = items;
     }

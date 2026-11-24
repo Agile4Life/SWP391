@@ -10,6 +10,7 @@ import java.time.*;
 import java.util.*;
 
 public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long> {
+    /** Kiểm tra có tồn tại bản ghi có roomId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByRoomId(Long roomId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -61,6 +62,10 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
             + "and b.paymentStatus = 'pending' and b.bookingDate >= :today")
     long countUnpaidHolds(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 
+    /**
+     * Đếm số bản ghi có memberId = tham số và bookingDate = tham số và status = tham số (Spring Data tự sinh
+     * truy vấn từ tên hàm).
+     */
     long countByMemberIdAndBookingDateAndStatus(Long memberId, LocalDate bookingDate, String status);
 
     @Query("select count(b) from CourtBooking b where b.member.id = :memberId "
@@ -69,6 +74,10 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
     long countQuotaUsage(@Param("memberId") Long memberId, @Param("from") LocalDate from, @Param("to") LocalDate to,
                          @Param("method") String method);
 
+    /**
+     * Tìm các bản ghi có memberId = tham số, sắp xếp theo bookingDate giảm dần, startTime giảm dần, id giảm dần
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     @EntityGraph(attributePaths = {"room", "room.discipline", "member"})
     Page<CourtBooking> findByMemberIdOrderByBookingDateDescStartTimeDescIdDesc(Long memberId, Pageable pageable);
 

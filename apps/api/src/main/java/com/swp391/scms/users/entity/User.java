@@ -84,23 +84,36 @@ public class User {
     }
 
     // Getters and Setters
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
 
+    /** Lấy giá trị trường role. */
     public Role getRole() { return role; }
+    /** Gán giá trị mới cho trường role. */
     public void setRole(Role role) { this.role = role; }
 
+    /** Lấy giá trị trường fullName. */
     public String getFullName() { return fullName; }
+    /** Gán giá trị mới cho trường fullName. */
     public void setFullName(String fullName) { this.fullName = fullName; }
 
+    /** Lấy giá trị trường email. */
     public String getEmail() { return email; }
+    /** Lấy giá trị trường username. */
     public String getUsername() { return username; }
+    /** Gán giá trị mới cho trường username. */
     public void setUsername(String username) { this.username = username; }
+    /** Gán giá trị mới cho trường email. */
     public void setEmail(String email) { this.email = email; }
 
+    /** Lấy giá trị trường phone. */
     public String getPhone() { return phone; }
+    /** Gán giá trị mới cho trường phone. */
     public void setPhone(String phone) { this.phone = phone; }
 
+    /** Lấy giá trị trường passwordHash. */
     public String getPasswordHash() { return passwordHash; }
     public void setPasswordHash(String passwordHash) {
         // Replacing an existing password (reset, change) revokes older tokens; setting the first one does not.
@@ -109,45 +122,73 @@ public class User {
         }
         this.passwordHash = passwordHash;
     }
+    /** Lấy giá trị trường passwordChangedAt. */
     public LocalDateTime getPasswordChangedAt() { return passwordChangedAt; }
+    /** Gán giá trị mới cho trường passwordChangedAt. */
     public void setPasswordChangedAt(LocalDateTime passwordChangedAt) { this.passwordChangedAt = passwordChangedAt; }
 
+    /** Lấy giá trị trường dob. */
     public LocalDate getDob() { return dob; }
+    /** Gán giá trị mới cho trường dob. */
     public void setDob(LocalDate dob) { this.dob = dob; }
 
+    /** Lấy giá trị trường gender. */
     public String getGender() { return gender; }
+    /** Gán giá trị mới cho trường gender. */
     public void setGender(String gender) { this.gender = gender; }
 
+    /** Lấy giá trị trường avatarUrl. */
     public String getAvatarUrl() { return avatarUrl; }
+    /** Gán giá trị mới cho trường avatarUrl. */
     public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
+    /** Lấy giá trị trường address. */
     public String getAddress() { return address; }
+    /** Gán giá trị mới cho trường address. */
     public void setAddress(String address) { this.address = address; }
 
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) { this.status = status; }
 
+    /** Lấy giá trị trường lastLoginAt. */
     public LocalDateTime getLastLoginAt() { return lastLoginAt; }
+    /** Gán giá trị mới cho trường lastLoginAt. */
     public void setLastLoginAt(LocalDateTime lastLoginAt) { this.lastLoginAt = lastLoginAt; }
 
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    /** Lấy giá trị trường updatedAt. */
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+    /** Gán giá trị mới cho trường updatedAt. */
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
+    /** Lấy giá trị trường deletedAt. */
     public LocalDateTime getDeletedAt() { return deletedAt; }
+    /** Gán giá trị mới cho trường deletedAt. */
     public void setDeletedAt(LocalDateTime deletedAt) { this.deletedAt = deletedAt; }
 
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
 
+    /** Lấy giá trị trường coach. */
     public Coach getCoach() { return coach; }
+    /** Gán giá trị mới cho trường coach. */
     public void setCoach(Coach coach) { this.coach = coach; }
 
+    /** Lấy giá trị trường receptionist. */
     public Receptionist getReceptionist() { return receptionist; }
+    /** Gán giá trị mới cho trường receptionist. */
     public void setReceptionist(Receptionist receptionist) { this.receptionist = receptionist; }
 
+    /** Lấy giá trị trường googleSub. */
     public String getGoogleSub() { return googleSub; }
+    /** Gán giá trị mới cho trường googleSub. */
     public void setGoogleSub(String googleSub) { this.googleSub = googleSub; }
 }

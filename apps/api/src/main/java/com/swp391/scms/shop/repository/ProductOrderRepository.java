@@ -21,15 +21,25 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
     @Query("select o from ProductOrder o where o.id = :id")
     Optional<ProductOrder> findByIdForUpdate(@Param("id") Long id);
 
+    /**
+     * Tìm các bản ghi có member_UserId = tham số và clientRequestId = tham số (Spring Data tự sinh truy vấn từ
+     * tên hàm).
+     */
     Optional<ProductOrder> findByMember_UserIdAndClientRequestId(Long memberId, String clientRequestId);
 
+    /** Tìm các bản ghi có id = tham số và member_UserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<ProductOrder> findByIdAndMember_UserId(Long id, Long memberId);
 
+    /** Kiểm tra có tồn tại bản ghi có code = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByCode(String code);
 
     @Query("select o from ProductOrder o where o.status = 'pending_payment' and o.paymentDueAt < :now order by o.paymentDueAt asc, o.id asc")
     List<ProductOrder> findExpiredUnpaid(@Param("now") LocalDateTime now);
 
+    /**
+     * Tìm các bản ghi có member_UserId = tham số, sắp xếp theo createdAt giảm dần, id giảm dần (Spring Data tự
+     * sinh truy vấn từ tên hàm).
+     */
     Page<ProductOrder> findByMember_UserIdOrderByCreatedAtDescIdDesc(Long memberId, Pageable pageable);
 
     Page<ProductOrder> findByMember_UserIdAndStatusInOrderByCreatedAtDescIdDesc(
@@ -55,8 +65,10 @@ public interface ProductOrderRepository extends JpaRepository<ProductOrder, Long
             Pageable pageable
     );
 
+    /** Đếm số bản ghi có status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByStatus(String status);
 
+    /** Đếm số bản ghi có status = tham số và paymentMethod = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByStatusAndPaymentMethod(String status, String paymentMethod);
 
     @Query("select o from ProductOrder o where o.status in ('paid', 'processing') or o.paidAt >= :since")

@@ -60,6 +60,7 @@ public class WalletController {
     private final VnpayPaymentService vnpayPaymentService;
     private CounterTopupService counterTopupService;
 
+    /** Gán giá trị mới cho trường counterTopupService. */
     @Autowired(required = false)
     public void setCounterTopupService(CounterTopupService counterTopupService) {
         this.counterTopupService = counterTopupService;

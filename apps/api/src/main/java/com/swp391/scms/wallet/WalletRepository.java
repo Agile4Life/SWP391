@@ -12,6 +12,7 @@ import java.util.Optional;
 @Repository
 public interface WalletRepository extends JpaRepository<Wallet, Long> {
 
+    /** Tìm các bản ghi có user_Id = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Wallet> findByUser_Id(Long userId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

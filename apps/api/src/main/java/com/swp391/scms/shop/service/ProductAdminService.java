@@ -105,6 +105,7 @@ public class ProductAdminService {
         this.entityManager = entityManager;
     }
 
+    /** Gán giá trị mới cho trường orderUsageChecker. */
     public void setOrderUsageChecker(OrderUsageChecker orderUsageChecker) {
         this.orderUsageChecker = orderUsageChecker;
     }

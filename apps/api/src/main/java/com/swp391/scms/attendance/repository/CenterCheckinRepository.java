@@ -31,6 +31,10 @@ public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Lo
     @Query("select c from CenterCheckin c where c.id = :id")
     Optional<CenterCheckin> findByIdForUpdate(@Param("id") Long id);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và status = tham số và checkOutTime đang trống
+     * (null) (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     boolean existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(Long memberId, String status);
 
     default boolean existsByMemberUserIdAndCheckOutTimeIsNull(Long memberId) {
@@ -44,17 +48,37 @@ public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Lo
         return findFirstByMemberUserIdAndStatusAndCheckOutTimeIsNullOrderByCheckInTimeDesc(memberId, "GRANTED");
     }
 
+    /**
+     * Tìm các bản ghi có checkInTime ≥ tham số và checkInTime < tham số, sắp xếp theo checkInTime giảm dần
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     List<CenterCheckin> findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(
             LocalDateTime start, LocalDateTime end);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số và checkInTime ≥ tham số và checkInTime < tham số, sắp xếp theo
+     * checkInTime giảm dần (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     List<CenterCheckin> findByMemberUserIdAndCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(
             Long memberId, LocalDateTime start, LocalDateTime end);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số và status = tham số và checkOutTime đang trống (null) và
+     * checkInTime < tham số (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     List<CenterCheckin> findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
             Long memberId, String status, LocalDateTime cutoff);
 
+    /**
+     * Tìm các bản ghi có status = tham số và checkOutTime đang trống (null) và checkInTime < tham số (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     List<CenterCheckin> findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
             String status, LocalDateTime cutoff);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có memberUserId = tham số và checkInTime ≥ tham số (Spring Data tự sinh truy
+     * vấn từ tên hàm).
+     */
     boolean existsByMemberUserIdAndCheckInTimeGreaterThanEqual(Long memberId, LocalDateTime since);
 }

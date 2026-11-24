@@ -33,7 +33,9 @@ public class SupportRequestMessage {
 
     @Column(name = "client_message_id")
     private java.util.UUID clientMessageId;
+    /** Lấy giá trị trường clientMessageId. */
     public java.util.UUID getClientMessageId() { return clientMessageId; }
+    /** Gán giá trị mới cho trường clientMessageId. */
     public void setClientMessageId(java.util.UUID clientMessageId) { this.clientMessageId = clientMessageId; }
 
     public SupportRequestMessage() {}
@@ -45,14 +47,24 @@ public class SupportRequestMessage {
         this.createdAt = LocalDateTime.now();
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường supportRequest. */
     public SupportRequest getSupportRequest() { return supportRequest; }
+    /** Gán giá trị mới cho trường supportRequest. */
     public void setSupportRequest(SupportRequest supportRequest) { this.supportRequest = supportRequest; }
+    /** Lấy giá trị trường sender. */
     public User getSender() { return sender; }
+    /** Gán giá trị mới cho trường sender. */
     public void setSender(User sender) { this.sender = sender; }
+    /** Lấy giá trị trường message. */
     public String getMessage() { return message; }
+    /** Gán giá trị mới cho trường message. */
     public void setMessage(String message) { this.message = message; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

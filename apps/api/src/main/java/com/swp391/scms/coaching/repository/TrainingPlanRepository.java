@@ -19,10 +19,15 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
     List<TrainingPlan> findCurrentAssignments(@org.springframework.data.repository.query.Param("coachId") Long coachId,
             @org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
 
+    /** Tìm các bản ghi có idForUpdate = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select p from TrainingPlan p where p.id = :id")
     java.util.Optional<TrainingPlan> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số và status = tham số, sắp xếp theo createdAt giảm dần (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     List<TrainingPlan> findByMemberUserIdAndStatusOrderByCreatedAtDesc(Long memberId, String status);
 
     /** The other active plans one coach gave one member; plans from the member's other coaches are not included. */
@@ -31,12 +36,25 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
             @org.springframework.data.repository.query.Param("coachId") Long coachId,
             @org.springframework.data.repository.query.Param("exceptId") Long exceptId);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số và coachUserId = tham số và status thuộc danh sách tham số
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     List<TrainingPlan> findByMemberUserIdAndCoachUserIdAndStatusIn(Long memberId, Long coachId, java.util.Collection<String> statuses);
 
+    /**
+     * Tìm các bản ghi có memberUserId = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     List<TrainingPlan> findByMemberUserIdOrderByCreatedAtDesc(Long memberId);
 
+    /**
+     * Tìm các bản ghi có coachUserId = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn
+     * từ tên hàm).
+     */
     List<TrainingPlan> findByCoachUserIdOrderByCreatedAtDesc(Long coachId);
 
+    /** Tìm các bản ghi có  = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<TrainingPlan> findAllByOrderByCreatedAtDesc();
 
     @org.springframework.data.jpa.repository.Query("select (count(p) > 0) from TrainingPlan p where p.coach.userId = :coachId and p.member.userId = :memberId")

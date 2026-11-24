@@ -30,18 +30,32 @@ public class AiApplyRecommendationRequest {
 
     public AiApplyRecommendationRequest() {}
 
+    /** Lấy giá trị trường startDate. */
     public LocalDate getStartDate() { return startDate; }
+    /** Gán giá trị mới cho trường startDate. */
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+    /** Lấy giá trị trường endDate. */
     public LocalDate getEndDate() { return endDate; }
+    /** Gán giá trị mới cho trường endDate. */
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    /** Lấy giá trị trường classId. */
     public Long getClassId() { return classId; }
+    /** Gán giá trị mới cho trường classId. */
     public void setClassId(Long classId) { this.classId = classId; }
+    /** Lấy giá trị trường coachId. */
     public Long getCoachId() { return coachId; }
+    /** Gán giá trị mới cho trường coachId. */
     public void setCoachId(Long coachId) { this.coachId = coachId; }
+    /** Lấy giá trị trường goal. */
     public String getGoal() { return goal; }
+    /** Gán giá trị mới cho trường goal. */
     public void setGoal(String goal) { this.goal = goal; }
+    /** Lấy giá trị trường items. */
     public List<TrainingPlanItemCreateDto> getItems() { return items; }
+    /** Gán giá trị mới cho trường items. */
     public void setItems(List<TrainingPlanItemCreateDto> items) { this.items = items; }
+    /** Lấy giá trị trường activate. */
     public Boolean getActivate() { return activate; }
+    /** Gán giá trị mới cho trường activate. */
     public void setActivate(Boolean activate) { this.activate = activate; }
 }

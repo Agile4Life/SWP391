@@ -35,20 +35,30 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
     @Query("select b.session.gymClass.id from SessionBooking b where b.id = :id")
     Optional<Long> findClassIdById(@Param("id") Long id);
 
+    /** Đếm số bản ghi có sessionId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countBySessionIdAndStatus(Long sessionId, String status);
 
     @Query("select new com.swp391.scms.scheduling.dto.SessionBookingCount(b.session.id, count(b)) "
             + "from SessionBooking b where b.session.gymClass.id = :classId and b.status = 'booked' group by b.session.id")
     List<SessionBookingCount> countBookedGroupedBySession(@Param("classId") Long classId);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có sessionId = tham số và memberUserId = tham số và status khác tham số
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     boolean existsBySessionIdAndMemberUserIdAndStatusNot(Long sessionId, Long memberId, String status);
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có sessionId = tham số và memberUserId = tham số và status = tham số (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     boolean existsBySessionIdAndMemberUserIdAndStatus(Long sessionId, Long memberId, String status);
 
     @Query("select new com.swp391.scms.scheduling.dto.SessionBookingCount(b.session.id, count(b)) "
             + "from SessionBooking b where b.session.id in :sessionIds and b.status = 'booked' group by b.session.id")
     List<SessionBookingCount> countBookedBySessionIds(@Param("sessionIds") Collection<Long> sessionIds);
 
+    /** Tìm các bản ghi có sessionId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"member", "member.user"})
     List<SessionBooking> findBySessionIdAndStatus(Long sessionId, String status);
 
@@ -109,6 +119,10 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
     @Query("select distinct b.member.userId from SessionBooking b where b.status = 'booked'")
     List<Long> findMemberIdsWithBooked();
 
+    /**
+     * Kiểm tra có tồn tại bản ghi có sessionGymClassId = tham số và memberUserId = tham số và status = tham số
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     boolean existsBySessionGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
 
     /** Bookings of sessions held before {@code cutoff} are settled as completed (state machine 12). */

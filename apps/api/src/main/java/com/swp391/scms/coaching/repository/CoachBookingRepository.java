@@ -23,6 +23,7 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             """)
     List<CoachBooking> findCurrentAssignments(@Param("coachId") Long coachId, @Param("today") LocalDate today,
             @Param("now") LocalTime now);
+    /** Kiểm tra có tồn tại bản ghi có disciplineId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByDisciplineId(Long disciplineId);
 
 

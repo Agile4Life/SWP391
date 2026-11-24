@@ -9,8 +9,16 @@ import java.util.Collection;
 import java.util.List;
 
 public interface VnpayIpnEventRepository extends JpaRepository<VnpayIpnEvent, Long>, JpaSpecificationExecutor<VnpayIpnEvent> {
+    /**
+     * Đếm số bản ghi có rspCode thuộc danh sách tham số và receivedAt ≥ tham số và receivedAt < tham số (Spring
+     * Data tự sinh truy vấn từ tên hàm).
+     */
     long countByRspCodeInAndReceivedAtGreaterThanEqualAndReceivedAtLessThan(
             Collection<String> rspCodes, LocalDateTime from, LocalDateTime to);
 
+    /**
+     * Tìm các bản ghi có reference thuộc danh sách tham số, sắp xếp theo receivedAt tăng dần, id tăng dần
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     List<VnpayIpnEvent> findAllByReferenceInOrderByReceivedAtAscIdAsc(Collection<String> references);
 }

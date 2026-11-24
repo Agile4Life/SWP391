@@ -15,10 +15,19 @@ public interface StaffInternalRequestRepository extends JpaRepository<StaffInter
     java.util.Optional<StaffInternalRequest> findByIdForUpdate(@Param("id") Long id);
 
 
+    /**
+     * Tìm các bản ghi có userId = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     List<StaffInternalRequest> findByUserIdOrderByCreatedAtDesc(Long userId);
 
+    /**
+     * Tìm các bản ghi có userId = tham số và status = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự
+     * sinh truy vấn từ tên hàm).
+     */
     List<StaffInternalRequest> findByUserIdAndStatusOrderByCreatedAtDesc(Long userId, String status);
 
+    /** Tìm các bản ghi có  = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<StaffInternalRequest> findAllByOrderByCreatedAtDesc();
 
     @Query("SELECT r FROM StaffInternalRequest r " +

@@ -45,25 +45,46 @@ public class CenterCheckin {
     @Column(name = "notes", length = 255)
     private String notes;
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
+    /** Lấy giá trị trường checkInTime. */
     public LocalDateTime getCheckInTime() { return checkInTime; }
+    /** Gán giá trị mới cho trường checkInTime. */
     public void setCheckInTime(LocalDateTime checkInTime) { this.checkInTime = checkInTime; }
+    /** Lấy giá trị trường checkOutTime. */
     public LocalDateTime getCheckOutTime() { return checkOutTime; }
+    /** Gán giá trị mới cho trường checkOutTime. */
     public void setCheckOutTime(LocalDateTime checkOutTime) { this.checkOutTime = checkOutTime; }
+    /** Lấy giá trị trường method. */
     public String getMethod() { return method; }
+    /** Gán giá trị mới cho trường method. */
     public void setMethod(String method) { this.method = method; }
+    /** Lấy giá trị trường recordedBy. */
     public User getRecordedBy() { return recordedBy; }
+    /** Gán giá trị mới cho trường recordedBy. */
     public void setRecordedBy(User recordedBy) { this.recordedBy = recordedBy; }
+    /** Lấy giá trị trường gate. */
     public String getGate() { return gate; }
+    /** Gán giá trị mới cho trường gate. */
     public void setGate(String gate) { this.gate = gate; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) { this.status = status; }
+    /** Lấy giá trị trường result. */
     public String getResult() { return status; }
+    /** Gán giá trị mới cho trường result. */
     public void setResult(String result) { this.status = result; }
+    /** Lấy giá trị trường denialReason. */
     public String getDenialReason() { return denialReason; }
+    /** Gán giá trị mới cho trường denialReason. */
     public void setDenialReason(String denialReason) { this.denialReason = denialReason; }
+    /** Lấy giá trị trường notes. */
     public String getNotes() { return notes; }
+    /** Gán giá trị mới cho trường notes. */
     public void setNotes(String notes) { this.notes = notes; }
 }
