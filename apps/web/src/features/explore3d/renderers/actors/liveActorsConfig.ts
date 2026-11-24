@@ -90,7 +90,7 @@ const OUTFIT_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#e8be9e',
     hair: '#1e2024',
-    top: '#b34738', // Deep SÖL terracotta jersey (high contrast against warm skin)
+    top: '#b34738', // Áo thể thao SÖL màu đất nung đậm (tương phản cao với tông da ấm)
     bottom: '#23252a',
     shoe: '#f4f3ef',
     accent: '#f07654',
@@ -98,7 +98,7 @@ const OUTFIT_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#dfb18b',
     hair: '#2c221e',
-    top: '#26282e', // SÖL charcoal athletic top
+    top: '#26282e', // Áo thể thao SÖL màu than chì
     bottom: '#383b44',
     shoe: '#ce9180',
     accent: '#ce9180',
@@ -106,7 +106,7 @@ const OUTFIT_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#f0c8a8',
     hair: '#3a271c',
-    top: '#f4f3ef', // Crisp ivory performance tee
+    top: '#f4f3ef', // Áo thun thể thao màu trắng ngà sắc nét
     bottom: '#22252b',
     shoe: '#e2e8f0',
     accent: '#38bdf8',
@@ -114,7 +114,7 @@ const OUTFIT_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#d7a17c',
     hair: '#18191c',
-    top: '#2e6f7e', // Oasis teal top
+    top: '#2e6f7e', // Áo màu xanh mòng két Oasis
     bottom: '#1f232a',
     shoe: '#f8fafc',
     accent: '#68b5c9',
@@ -122,7 +122,7 @@ const OUTFIT_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#eac0a0',
     hair: '#4a3222',
-    top: '#9e3a2e', // Rich crimson-terracotta jersey
+    top: '#9e3a2e', // Áo thể thao màu đỏ thẫm pha đất nung
     bottom: '#252830',
     shoe: '#f4f3ef',
     accent: '#f59e0b',
@@ -130,7 +130,7 @@ const OUTFIT_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#c98e68',
     hair: '#17181b',
-    top: '#3b4252', // Slate pro jersey
+    top: '#3b4252', // Áo thể thao chuyên nghiệp màu xám đá
     bottom: '#1e222a',
     shoe: '#ce9180',
     accent: '#10b981',
@@ -149,7 +149,7 @@ const COACH_PALETTE: ActorOutfitPalette = {
 const SWIMMER_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#e7bc9b',
-    hair: '#f07654', // Salmon swim cap
+    hair: '#f07654', // Mũ bơi màu hồng salmon
     top: '#1e242d',
     bottom: '#1e242d',
     shoe: '#e7bc9b',
@@ -157,7 +157,7 @@ const SWIMMER_PALETTES: readonly ActorOutfitPalette[] = [
   },
   {
     skin: '#ddb08c',
-    hair: '#38bdf8', // Aqua swim cap
+    hair: '#38bdf8', // Mũ bơi màu xanh ngọc
     top: '#222730',
     bottom: '#222730',
     shoe: '#ddb08c',
@@ -165,7 +165,7 @@ const SWIMMER_PALETTES: readonly ActorOutfitPalette[] = [
   },
   {
     skin: '#f0c7a8',
-    hair: '#f4f3ef', // White swim cap
+    hair: '#f4f3ef', // Mũ bơi màu trắng
     top: '#ce9180',
     bottom: '#1e242d',
     shoe: '#f0c7a8',
@@ -204,32 +204,32 @@ const TENNIS_PALETTES: readonly ActorOutfitPalette[] = [
   {
     skin: '#e7bc9b',
     hair: '#1f1c1a',
-    top: '#f8fafc', // Crisp Grand Slam ivory court polo
-    bottom: '#1e293b', // Tailored navy court shorts
+    top: '#f8fafc', // Áo polo tennis trắng ngà kiểu Grand Slam
+    bottom: '#1e293b', // Quần short sân đấu màu xanh navy
     shoe: '#f8fafc',
     accent: '#ce9180',
   },
   {
     skin: '#eec4a5',
     hair: '#3b281d',
-    top: '#a83f31', // Deep SÖL clay-court crimson terracotta polo (crisp contrast vs skin & cream shorts)
-    bottom: '#f4f3ef', // Crisp cream court shorts
+    top: '#a83f31', // Áo polo SÖL màu đỏ đất nung sân đất nện (tương phản rõ với da và quần kem)
+    bottom: '#f4f3ef', // Quần short sân đấu màu kem sáng
     shoe: '#f8fafc',
     accent: '#262930',
   },
   {
     skin: '#d9a480',
     hair: '#18191d',
-    top: '#3d6352', // Heritage court sage polo
-    bottom: '#f4f3ef', // Crisp cream court shorts
+    top: '#3d6352', // Áo polo màu xanh lá xô thơm cổ điển
+    bottom: '#f4f3ef', // Quần short sân đấu màu kem sáng
     shoe: '#f8fafc',
     accent: '#ce9180',
   },
   {
     skin: '#f0c8aa',
     hair: '#2a201b',
-    top: '#223046', // Midnight navy tour jersey
-    bottom: '#f8fafc', // Crisp white court shorts
+    top: '#223046', // Áo thi đấu màu xanh navy đêm
+    bottom: '#f8fafc', // Quần short sân đấu màu trắng sáng
     shoe: '#f4f3ef',
     accent: '#68b5c9',
   },
@@ -240,33 +240,32 @@ export function getPartCountForActivity(activity: ActorActivityKind): number {
   switch (activity) {
     case 'barbell-squat':
     case 'bench-press':
-      return 15; // 12 human parts + barbell shaft + 2 weight plates
+      return 15; // 12 phần cơ thể + thanh đòn tạ + 2 đĩa tạ
     case 'dumbbell-curl':
     case 'badminton-player':
     case 'tennis-player':
     case 'swim-freestyle':
-      return 14; // 12 human parts + 2 prop/splash parts
+      return 14; // 12 phần cơ thể + 2 phần đạo cụ / bọt nước
     case 'pt-coach-tablet':
-      return 13; // 12 human parts + 1 tablet
+      return 13; // 12 phần cơ thể + 1 máy tính bảng
     case 'heavy-bag-sway':
-      return 3; // chain + bag body + salmon strike band
+      return 3; // dây xích + thân bao cát + dải đánh màu salmon
     case 'badminton-shuttlecock':
     case 'tennis-ball':
-      return 2; // projectile core + skirt/shadow
+      return 2; // lõi cầu/bóng + tán lông hoặc bóng đổ
     case 'fountain-plume':
-      return 8; // 8 rising & cascading water droplets
+      return 8; // 8 tia giọt nước phun lên và rơi xuống
     default:
-      return 12; // 12 articulated human parts
+      return 12; // 12 phần cơ thể khớp nối
   }
 }
 
-/**
- * Builds a single crisp chamfered unit capsule/box geometry centered at `[0, 0, 0]`
- * with exact bounding box `[-0.5, 0.5]` on X, Y, Z and 32 triangles.
- */
 let cachedActorPartGeometry: THREE.BufferGeometry | null = null;
 
-/** Tạo (có cache) hình học đơn vị dùng chung cho mọi phần cơ thể của nhân vật thủ tục. */
+/**
+ * Tạo (có cache) một hình học viên nang/hộp đơn vị vát cạnh đặt tâm tại `[0, 0, 0]`
+ * với hộp bao chính xác `[-0.5, 0.5]` trên các trục X, Y, Z và 32 tam giác, dùng chung cho mọi phần cơ thể nhân vật thủ tục.
+ */
 export function createActorPartGeometry(): THREE.BufferGeometry {
   if (cachedActorPartGeometry) {
     return cachedActorPartGeometry;
@@ -283,7 +282,7 @@ export function createActorPartGeometry(): THREE.BufferGeometry {
     [-0.5, -0.22],
   ];
 
-  // 18 vertices: 8 at y = -0.36, 8 at y = +0.36, 1 bottom apex (0, -0.5, 0), 1 top apex (0, +0.5, 0)
+  // 18 đỉnh: 8 đỉnh tại y = -0.36, 8 đỉnh tại y = +0.36, 1 đỉnh đáy (0, -0.5, 0), 1 đỉnh trên (0, +0.5, 0)
   const positions = new Float32Array(18 * 3);
   const yLow = -0.36;
   const yHigh = 0.36;
@@ -300,21 +299,21 @@ export function createActorPartGeometry(): THREE.BufferGeometry {
     positions[hi * 3 + 2] = pz;
   }
 
-  // Bottom apex (index 16)
+  // Đỉnh đáy (chỉ số 16)
   positions[16 * 3] = 0;
   positions[16 * 3 + 1] = -0.5;
   positions[16 * 3 + 2] = 0;
 
-  // Top apex (index 17)
+  // Đỉnh trên (chỉ số 17)
   positions[17 * 3] = 0;
   positions[17 * 3 + 1] = 0.5;
   positions[17 * 3 + 2] = 0;
 
-  // 32 triangles (96 indices)
+  // 32 tam giác (96 chỉ số đỉnh)
   const indices = new Uint16Array(32 * 3);
   let ptr = 0;
 
-  // 8 side quads (16 triangles)
+  // 8 mặt tứ giác bên (16 tam giác)
   for (let i = 0; i < 8; i++) {
     const next = (i + 1) % 8;
     const b0 = i;
@@ -331,7 +330,7 @@ export function createActorPartGeometry(): THREE.BufferGeometry {
     indices[ptr++] = t1;
   }
 
-  // 8 bottom cap triangles
+  // 8 tam giác nắp đáy
   for (let i = 0; i < 8; i++) {
     const next = (i + 1) % 8;
     indices[ptr++] = 16;
@@ -339,7 +338,7 @@ export function createActorPartGeometry(): THREE.BufferGeometry {
     indices[ptr++] = next;
   }
 
-  // 8 top cap triangles
+  // 8 tam giác nắp trên
   for (let i = 0; i < 8; i++) {
     const next = (i + 1) % 8;
     indices[ptr++] = 17;
@@ -360,10 +359,8 @@ export function createActorPartGeometry(): THREE.BufferGeometry {
 }
 
 /**
- * Dựng toàn bộ định nghĩa nhân vật và vật thể động từ tài liệu cảnh một cách xác định (cùng đầu vào cho cùng
- * kết quả).
- *
- * Deterministically builds all live human and dynamic object definitions from the scene document.
+ * Dựng toàn bộ định nghĩa nhân vật sống và vật thể động từ tài liệu cảnh một cách xác định
+ * (cùng đầu vào luôn cho cùng kết quả).
  */
 export function buildLiveActorDefinitions(
   scene: SceneDoc = SOL_CENTER_SCENE,
@@ -426,7 +423,7 @@ export function buildLiveActorDefinitions(
   };
 
   // =========================================================================
-  // LEVEL L1 — Standard Gym, Lobby, Boxing Ring & 4 Badminton Courts
+  // TẦNG L1 — Gym Tiêu chuẩn, Sảnh chính, Sàn Boxing & 4 Sân Cầu lông
   // =========================================================================
   const l1Treadmills = ['item-l1-run-1', 'item-l1-run-3', 'item-l1-run-5', 'item-l1-run-7'];
   l1Treadmills.forEach((id, idx) => {
@@ -506,7 +503,7 @@ export function buildLiveActorDefinitions(
     );
   });
 
-  // L1 Receptionist & Lobby Walkers
+  // Lễ tân L1 & Khách đi bộ qua sảnh
   addFromItem(
     'item-l1-reception-desk',
     'actor-l1-receptionist',
@@ -545,7 +542,7 @@ export function buildLiveActorDefinitions(
     },
   );
 
-  // L1 Boxing Ring Sparring Pair + Heavy Bag Boxers + Dynamic Swaying Bags
+  // Cặp đấu tập trên Sàn Boxing L1 + Võ sĩ đấm bao cát + Bao cát đung đưa động
   addFromItem(
     'item-l1-boxing-ring',
     'actor-l1-ring-boxer-1',
@@ -572,7 +569,7 @@ export function buildLiveActorDefinitions(
     addFromItem(bagId, `prop-l1-heavy-bag-sway-${idx + 1}`, 'heavy-bag-sway', [0, 1.28, 0.1], 0, phase, 1.1);
   });
 
-  // L1 Badminton Courts (Courts 01 & 02 active rallies + animated shuttlecocks)
+  // Sân Cầu lông L1 (Sân 01 & 02 đang đánh qua lại + quả cầu lông chuyển động)
   const activeBadmintonCourts = ['item-l1-badminton-01', 'item-l1-badminton-02'];
   activeBadmintonCourts.forEach((courtId, idx) => {
     const rallyPhase = idx * 1.65;
@@ -612,7 +609,7 @@ export function buildLiveActorDefinitions(
   });
 
   // =========================================================================
-  // LEVEL L2 — VIP Platinum Gym, InBody 770 Lab, 1:1 PT Studio & Lounge
+  // TẦNG L2 — Gym VIP Platinum, Phòng đo InBody 770, Studio PT 1:1 & Phòng chờ
   // =========================================================================
   const l2Treadmills = ['item-l2-vip-run-1', 'item-l2-vip-run-3'];
   l2Treadmills.forEach((id, idx) => {
@@ -667,7 +664,7 @@ export function buildLiveActorDefinitions(
     COACH_PALETTE,
   );
 
-  // L2 1:1 PT Studio Coach & Client
+  // HLV & Hội viên tại Studio PT 1:1 tầng L2
   rawDefs.push(
     {
       id: 'actor-l2-pt-coach',
@@ -720,7 +717,7 @@ export function buildLiveActorDefinitions(
   );
 
   // =========================================================================
-  // LEVEL B1 — Oasis 25m Lap Pool Swimmers & Poolside Coach
+  // TẦNG B1 — Người bơi tại Hồ bơi 25m Oasis & HLV bên hồ
   // =========================================================================
   rawDefs.push(
     {
@@ -777,7 +774,7 @@ export function buildLiveActorDefinitions(
   );
 
   // =========================================================================
-  // LEVEL RF — Rooftop Zen Garden Yoga Instructor + 5 Yoga Students
+  // TẦNG RF — GV hướng dẫn Yoga Vườn Thiền Sân thượng + 5 Học viên Yoga
   // =========================================================================
   rawDefs.push({
     id: 'actor-rf-yoga-instructor',
@@ -805,14 +802,14 @@ export function buildLiveActorDefinitions(
       'yoga-flow',
       [0, 0.03, 0],
       Math.PI,
-      idx * 0.12, // Synchronized breath flow with gentle ripple
+      idx * 0.12, // Nhịp thở đồng bộ có độ gợn sóng nhẹ
       0.72,
       YOGA_PALETTES[idx % YOGA_PALETTES.length]!,
     );
   });
 
   // =========================================================================
-  // LEVEL OUT — Outdoor Tennis Courts (4 Players + 2 Balls), Pedestrians & Fountain
+  // KHU OUT — Sân Tennis ngoài trời (4 Người chơi + 2 Bóng), Người đi bộ & Đài phun nước
   // =========================================================================
   const tennisCourts = ['item-out-tennis-01', 'item-out-tennis-02'];
   tennisCourts.forEach((courtId, idx) => {
@@ -858,7 +855,7 @@ export function buildLiveActorDefinitions(
     );
   });
 
-  // Campus Pedestrians walking through Main Entrance Gate, Zebra Crosswalk & Promenade
+  // Người đi bộ trong khuôn viên qua Cổng chính, Vạch qua đường & Lối dạo
   rawDefs.push(
     {
       id: 'actor-out-pedestrian-1',
@@ -896,7 +893,7 @@ export function buildLiveActorDefinitions(
       speed: 0.88,
       palette: nextPalette(),
     },
-    // Animated Courtyard Reflection Fountain Water Plume Jets
+    // Tia nước phun động của Đài phun nước phản chiếu ở sân trước
     {
       id: 'prop-out-fountain-jets',
       level: 'OUT',
@@ -910,7 +907,7 @@ export function buildLiveActorDefinitions(
     },
   );
 
-  // Assign contiguous instanceStartIndex and partCount
+  // Gán instanceStartIndex và partCount liên tiếp
   let cursor = 0;
   // Không tạo actor tự do ở khu đã loại khỏi scene.
   return rawDefs.filter(def => Boolean(scene.nodes[def.zoneId])).map(def => {
@@ -945,7 +942,7 @@ export function isActorLevelVisible(
 }
 
 // =========================================================================
-// BIOMECHANICAL POSE SOLVER & FORWARD KINEMATICS
+// BỘ GIẢI TƯ THẾ SINH CƠ HỌC & ĐỘNG HỌC THUẬN (FORWARD KINEMATICS)
 // =========================================================================
 
 /** Các góc tư thế của người: dịch gốc, xoay thân, góc hông/gối/vai/khuỷu và các thông số bổ sung. */
@@ -1027,11 +1024,7 @@ function rotateLocalToWorld(
   ];
 }
 
-/**
- * Đường bơi vòng của một vận động viên bơi, dùng chung cho thân thủ tục và nhân vật có xương.
- *
- * Lap path of a swimmer: shared by the procedural body and the rigged character.
- */
+/** Đường bơi vòng của một vận động viên bơi, dùng chung cho thân thủ tục và nhân vật có xương. */
 export function solveSwimPath(
   actor: LiveActorDefinition,
   timeSec: number,
@@ -1064,18 +1057,14 @@ export function solveSwimPath(
 /** Kết quả giải tư thế: góc tư thế, vị trí thế giới của neo (di chuyển khi tuần tra) và hướng nhìn. */
 export interface HumanPoseSolution {
   pose: HumanPoseAngles;
-  /** World position of the actor's anchor (moves for walking patrols). */
+  /** Vị trí thế giới của điểm neo nhân vật (di chuyển đối với hoạt động đi bộ tuần tra). */
   worldPos: Vec3;
   yaw: number;
 }
 
 /**
- * Giải góc tư thế của hoạt động cùng vị trí thế giới và hướng của nhân vật tại timeSec; dùng chung cho hình
- * khớp thủ tục và nhân vật có xương để cùng đường đi và độ đung đưa.
- *
- * Solves the activity's pose angles plus the actor's world position and yaw at `timeSec`.
- * Shared by the procedural jointed figure and the rigged characters so both follow the
- * same paths and swaying.
+ * Giải góc tư thế của hoạt động cùng vị trí thế giới và hướng nhìn của nhân vật tại `timeSec`;
+ * dùng chung cho hình khớp thủ tục và nhân vật có xương để cả hai đi cùng đường và cùng độ đung đưa.
  */
 export function solveHumanPose(
   actor: LiveActorDefinition,
@@ -1147,7 +1136,7 @@ export function solveHumanPose(
       pose.rootOffset = [0, Math.abs(s) * 0.03, 0];
       pose.torsoPitch = 0.08;
       pose.torsoRoll = s * 0.035;
-      // Contralateral dual-action stride handles: elevated hands grip the upper rubber bars (`y ~ 1.24 m`).
+      // Tay cầm sải bước đối nghịch hai chiều: hai tay giơ lên nắm thanh bọc cao su phía trên (`y ~ 1.24 m`).
       pose.leftShoulderPitch = 0.86 - s * 0.3;
       pose.leftShoulderSplay = -0.24;
       pose.leftElbowPitch = 1.86 - s * 0.22;
@@ -1172,7 +1161,7 @@ export function solveHumanPose(
       pose.rootOffset = [0, -depth, -squatFactor * 0.06];
       pose.torsoPitch = lean;
       pose.headPitch = -lean * 0.65;
-      // High-bar trap shelf: elbows tucked down & back, forearms angled up onto the upper traps behind the neck.
+      // Tư thế đặt đòn tạ cao trên cơ cầu vai: khuỷu tay khép xuống và ra sau, cẳng tay dựng lên đỡ tạ sau gáy.
       pose.leftShoulderPitch = -0.66 + lean * 0.88;
       pose.leftShoulderSplay = -0.78;
       pose.leftElbowPitch = 3.28 - lean * 0.88;
@@ -1207,7 +1196,7 @@ export function solveHumanPose(
       const rCurl = 0.5 - 0.5 * Math.cos(phase * 1.2 + Math.PI);
       pose.rootOffset = [0, Math.sin(phase * 2.4) * 0.01, 0];
       pose.torsoRoll = (rCurl - lCurl) * 0.03;
-      // Upper arms pinned strictly to the lats while forearms curl and supinate cleanly.
+      // Bắp tay ép chặt sát lườn trong khi cẳng tay cuốn lên và xoay ngửa cổ tay dứt khoát.
       pose.leftShoulderPitch = 0.06 + lCurl * 0.14;
       pose.leftShoulderSplay = -0.14;
       pose.leftElbowPitch = 0.28 + lCurl * 2.02;
@@ -1248,7 +1237,7 @@ export function solveHumanPose(
 
     case 'badminton-player': {
       const cycle = (timeSec * actor.speed * 0.72 + actor.phaseOffset / Math.PI) % 2;
-      // Shuttlecock arrives/departs at `cycle === 0` (`d === 0`): coil before 0, peak impact at 0, follow-through after 0.
+      // Quả cầu tới/rời vợt tại `cycle === 0` (`d === 0`): lấy đà trước 0, điểm chạm đỉnh tại 0, vung theo đà sau 0.
       const d = cycle > 1 ? cycle - 2 : cycle;
       const w = 0.42;
       const swing = Math.abs(d) < w ? Math.sin(((d + w) / (2 * w)) * Math.PI) : 0;
@@ -1274,7 +1263,7 @@ export function solveHumanPose(
     }
 
     case 'tennis-player': {
-      // 4-beat synchronized figure-8 rally (`c = 0`: Forehand drive, `c = 1` & `3`: center split-step, `c = 2`: Backhand drive).
+      // Chuỗi đánh qua lại hình số 8 đồng bộ 4 nhịp (`c = 0`: thuận tay, `c = 1` & `3`: bước tách chân giữa sân, `c = 2`: trái tay).
       const c = (((timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 4) + 4) % 4;
       const spanX = actor.rallySpanX ?? 0.92;
       // Hàm làm mượt (smoothstep) trong [0, 1].
@@ -1283,8 +1272,8 @@ export function solveHumanPose(
         return cl * cl * (3 - 2 * cl);
       };
 
-      const fhPlantX = -spanX - 0.3; // Racket head (+0.30 local X at waist height) meets ball at `-spanX`
-      const bhPlantX = spanX + 0.62; // Backhand racket head (-0.62 local X at waist height) meets ball at `+spanX`
+      const fhPlantX = -spanX - 0.3; // Mặt vợt (+0.30 X cục bộ ở tầm eo) đón bóng tại `-spanX`
+      const bhPlantX = spanX + 0.62; // Mặt vợt trái tay (-0.62 X cục bộ ở tầm eo) đón bóng tại `+spanX`
 
       let localBaselineX: number;
       let moveIntensity = 0;
@@ -1312,10 +1301,10 @@ export function solveHumanPose(
         localBaselineX = fhPlantX;
       }
 
-      // Move baseline footwork directly in court space so torso/stance yaw never swings feet in an arc.
+      // Di chuyển bộ chân cuối sân trực tiếp trong hệ sân để độ xoay thân/tư thế không làm bàn chân quét thành cung.
       actorWorldPos = rotateLocalToWorld(baseAnchor, actor.rotationY, localBaselineX, 0, 0);
 
-      // Split-step hop & wide ready landing right as the opponent strikes at `c = 1` and `c = 3`.
+      // Nhảy tách chân (split-step) và tiếp đất rộng sẵn sàng đúng lúc đối thủ đánh bóng tại `c = 1` và `c = 3`.
       const dSplit = Math.min(Math.abs(c - 1), Math.abs(c - 3));
       const splitHop = dSplit < 0.18 ? Math.sin((1 - dSplit / 0.18) * Math.PI) : 0;
 
@@ -1324,7 +1313,7 @@ export function solveHumanPose(
       const strokeWin = 0.46;
 
       if (Math.abs(dFh) < strokeWin) {
-        // --- FOREHAND TOPSPIN DRIVE (Unit Turn -> Lag & Drive -> Windshield-Wiper Finish) ---
+        // --- CÚ ĐÁNH THUẬN TAY TOPSPIN (Xoay vai lấy đà -> Kéo trễ & Đánh -> Vẩy kết thúc kiểu gạt nước) ---
         const takeback =
           dFh < 0
             ? Math.sin(ease((dFh + strokeWin) / (strokeWin * 0.58)) * Math.PI * 0.5) *
@@ -1346,19 +1335,19 @@ export function solveHumanPose(
         pose.headYaw = takeback * 0.26 - follow * 0.18;
         pose.headPitch = 0.08;
 
-        // Off-hand (`left`) cradles throat on unit-turn, pulls in for rotational torque on follow-through.
+        // Tay không thuận (`left`) đỡ cổ vợt khi xoay vai lấy đà, rồi thu vào tạo mô-men xoắn khi vung theo đà.
         pose.leftShoulderPitch = 0.46 + takeback * 0.36 + contact * 0.22 + follow * 0.18;
         pose.leftShoulderSplay = -0.22 + takeback * 0.42 - contact * 0.18 - follow * 0.22;
         pose.leftElbowPitch = 1.18 + takeback * 0.24 + follow * 0.42;
         pose.leftElbowSplay = -0.08 + takeback * 0.28 - follow * 0.15;
 
-        // Racket arm (`right`) loops back, slots into waist-high contact zone, and wraps high across left shoulder.
+        // Tay cầm vợt (`right`) vòng ra sau, hạ vào vùng chạm bóng ngang eo rồi vắt cao qua vai trái.
         pose.rightShoulderPitch = 0.42 - takeback * 0.72 + contact * 0.18 + follow * 0.98;
         pose.rightShoulderSplay = 0.32 + takeback * 0.36 + contact * 0.26 - follow * 0.68;
         pose.rightElbowPitch = 1.05 - takeback * 0.34 - contact * 0.28 + follow * 0.86;
         pose.rightElbowSplay = 0.16 + takeback * 0.24 + contact * 0.28 - follow * 0.68;
 
-        // Semi-open/neutral forehand leg drive
+        // Lực đạp chân thế mở nửa / trung tính cho cú thuận tay
         pose.leftHipPitch = 0.22 + takeback * 0.16 + contact * 0.26 + follow * 0.18;
         pose.leftHipSplay = -0.18 - takeback * 0.05;
         pose.leftKneePitch = -0.24 - takeback * 0.18 - contact * 0.12;
@@ -1366,7 +1355,7 @@ export function solveHumanPose(
         pose.rightHipSplay = 0.2 + takeback * 0.08;
         pose.rightKneePitch = -0.24 - takeback * 0.22 - contact * 0.08;
       } else if (Math.abs(dBh) < strokeWin) {
-        // --- TWO-HANDED / DRIVE BACKHAND (Deep Left Coil -> Cross-Body Drive -> High Open Finish) ---
+        // --- CÚ TRÁI TAY HAI TAY / ĐÁNH THẲNG (Xoắn sâu sang trái -> Đánh ngang thân -> Kết thúc mở cao) ---
         const takeback =
           dBh < 0
             ? Math.sin(ease((dBh + strokeWin) / (strokeWin * 0.58)) * Math.PI * 0.5) *
@@ -1388,19 +1377,19 @@ export function solveHumanPose(
         pose.headYaw = -takeback * 0.28 + follow * 0.16;
         pose.headPitch = 0.08;
 
-        // Guide hand (`left`) joins grip on takeback & contact, then extends back gracefully on finish.
+        // Tay dẫn hướng (`left`) cùng nắm vợt khi lấy đà & chạm bóng, rồi duỗi nhẹ ra sau khi kết thúc cú đánh.
         pose.leftShoulderPitch = 0.46 - takeback * 0.24 + contact * 0.24 - follow * 0.58;
         pose.leftShoulderSplay = -0.24 - takeback * 0.26 + contact * 0.1 - follow * 0.34;
         pose.leftElbowPitch = 1.18 - takeback * 0.08 - contact * 0.14 - follow * 0.72;
         pose.leftElbowSplay = -0.12 - takeback * 0.16 - contact * 0.06 - follow * 0.22;
 
-        // Dominant arm (`right`) draws across torso to left hip, drives waist-high through `-0.36 X`, finishes high right.
+        // Tay thuận (`right`) kéo ngang thân sang hông trái, đánh ngang eo qua `-0.36 X` và kết thúc cao bên phải.
         pose.rightShoulderPitch = 0.44 - takeback * 0.06 + contact * 0.2 + follow * 0.96;
         pose.rightShoulderSplay = 0.24 - takeback * 0.86 - contact * 0.78 + follow * 0.28;
         pose.rightElbowPitch = 1.08 + takeback * 0.12 - contact * 0.26 + follow * 0.38;
         pose.rightElbowSplay = 0.12 - takeback * 0.7 - contact * 0.72 + follow * 0.26;
 
-        // Front right leg steps across/forward into backhand while left leg anchors
+        // Chân phải phía trước bước chéo tới đón cú trái tay trong khi chân trái làm trụ
         pose.leftHipPitch = -0.06 + takeback * 0.16 - contact * 0.16 - follow * 0.12;
         pose.leftHipSplay = -0.2 - takeback * 0.06;
         pose.leftKneePitch = -0.24 - takeback * 0.22 - contact * 0.08;
@@ -1408,7 +1397,7 @@ export function solveHumanPose(
         pose.rightHipSplay = 0.16;
         pose.rightKneePitch = -0.24 - takeback * 0.18 - contact * 0.12;
       } else {
-        // --- ATHLETIC READY STANCE, SPLIT-STEP & LATERAL RECOVERY FOOTWORK ---
+        // --- TƯ THẾ SẴN SÀNG THỂ THAO, BƯỚC TÁCH CHÂN & DI CHUYỂN HỒI VỊ TRÍ NGANG ---
         const footStep = Math.sin(phase * 2.6) * moveIntensity;
         pose.rootOffset = [0, splitHop * 0.048 + Math.abs(footStep) * 0.028 - 0.03, 0];
         pose.torsoPitch = 0.18 + splitHop * 0.04;
@@ -1416,7 +1405,7 @@ export function solveHumanPose(
         pose.torsoTwist = 0;
         pose.headPitch = -0.06;
 
-        // Both hands poised in front holding racket throat in athletic ready position
+        // Hai tay giữ cổ vợt phía trước ở tư thế sẵn sàng thi đấu
         pose.leftShoulderPitch = 0.54 + Math.abs(footStep) * 0.08;
         pose.leftShoulderSplay = -0.14;
         pose.leftElbowPitch = 1.28;
@@ -1459,7 +1448,7 @@ export function solveHumanPose(
     }
 
     case 'inbody-scan': {
-      // Clinical InBody 770 posture: straight abducted arms gripping side thumb electrodes, bare feet on chrome plates.
+      // Tư thế đo InBody 770 chuẩn lâm sàng: hai tay duỗi dang nhẹ nắm điện cực ngón cái hai bên, chân trần đứng trên bản cực chrome.
       pose.rootOffset = [0, Math.sin(phase * 0.6) * 0.004, 0];
       pose.headPitch = 0.12 + Math.sin(phase * 0.4) * 0.03;
       pose.leftShoulderPitch = 0.48;
@@ -1584,11 +1573,7 @@ export function resolveLevelWorldYMap(
   return map;
 }
 
-/**
- * Vị trí thế giới của điểm neo (chân) của nhân vật theo cách bố trí tầng hiện tại.
- *
- * World position of an actor's anchor (feet) for the current level layout.
- */
+/** Vị trí thế giới của điểm neo (chân) của nhân vật theo cách bố trí tầng hiện tại. */
 export function getActorWorldAnchor(
   actor: LiveActorDefinition,
   scene: SceneDoc,
@@ -1598,11 +1583,7 @@ export function getActorWorldAnchor(
   return [actor.anchorPosition[0], levelY + actor.anchorPosition[1], actor.anchorPosition[2]];
 }
 
-/**
- * Tính ma trận mọi phần cơ thể đã instanced tại timeSec cho một tập nhân vật.
- *
- * Evaluates all instanced part transforms at `timeSec` for a given set of actor definitions.
- */
+/** Tính ma trận biến đổi của mọi phần đã instanced tại `timeSec` cho một tập định nghĩa nhân vật. */
 export function evaluateActorPartsAtTime(
   defs: readonly LiveActorDefinition[],
   timeSec: number,
@@ -1652,7 +1633,7 @@ export function evaluateActorPartsAtTime(
     const phase = timeSec * actor.speed * 3.2 + actor.phaseOffset;
 
     // -----------------------------------------------------------------------
-    // NON-HUMAN DYNAMIC PROPS (Heavy Bag Sway, Shuttlecock, Tennis Ball, Fountain)
+    // ĐẠO CỤ ĐỘNG PHI NHÂN VẬT (Bao cát đung đưa, Quả cầu lông, Bóng tennis, Đài phun nước)
     // -----------------------------------------------------------------------
     if (actor.activity === 'heavy-bag-sway') {
       const punchImpulse = Math.max(0, Math.sin(phase * 1.5));
@@ -1725,7 +1706,7 @@ export function evaluateActorPartsAtTime(
     if (actor.activity === 'tennis-ball') {
       const spanZ = actor.rallySpanZ ?? 8.22;
       const spanX = actor.rallySpanX ?? 0.92;
-      // 4-beat figure-8 tour drill synchronized with P1 & P2 forehand (`0, 3`) and backhand (`1, 2`) strikes.
+      // Bài tập đánh hình số 8 gồm 4 nhịp đồng bộ với cú thuận tay (`0, 3`) và trái tay (`1, 2`) của P1 & P2.
       const u4 = (((timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 4) + 4) % 4;
       const leg = Math.min(3, Math.floor(u4));
       const u = u4 - leg;
@@ -1791,7 +1772,7 @@ export function evaluateActorPartsAtTime(
     }
 
     // -----------------------------------------------------------------------
-    // SWIMMING FREESTYLE (Prone horizontal aquatic kinematics + splash)
+    // BƠI TỰ DO (Động học nằm sấp ngang mặt nước + bọt nước bắn)
     // -----------------------------------------------------------------------
     if (actor.activity === 'swim-freestyle') {
       const { anchor: swimAnchor, yaw: swimYaw } = solveSwimPath(actor, timeSec, baseAnchor);
@@ -1821,39 +1802,39 @@ export function evaluateActorPartsAtTime(
       placeSwimPart('head', 0, 0.09, 0.46, 0.2, Math.sin(phase * 0.5) * 0.35, 0, [0.2, 0.21, 0.22], P.skin);
       placeSwimPart('hair', 0, 0.14, 0.46, 0.15, 0, 0, [0.21, 0.11, 0.23], P.hair);
 
-      // Left arm windmill stroke
+      // Quạt tay trái kiểu cối xay gió
       const lArmZ = 0.32 + Math.cos(strokeL) * 0.28;
       const lArmY = 0.06 + Math.sin(strokeL) * 0.18;
       placeSwimPart('leftUpperArm', -0.22, lArmY, lArmZ, Math.PI / 2 - Math.sin(strokeL) * 0.7, 0, 0, [0.09, 0.28, 0.09], P.skin);
       placeSwimPart('leftForearm', -0.24, lArmY + Math.sin(strokeL) * 0.08, lArmZ + Math.cos(strokeL) * 0.22, Math.PI / 2 - Math.sin(strokeL) * 0.9, 0, 0, [0.08, 0.26, 0.08], P.skin);
 
-      // Right arm windmill stroke
+      // Quạt tay phải kiểu cối xay gió
       const rArmZ = 0.32 + Math.cos(strokeR) * 0.28;
       const rArmY = 0.06 + Math.sin(strokeR) * 0.18;
       placeSwimPart('rightUpperArm', 0.22, rArmY, rArmZ, Math.PI / 2 - Math.sin(strokeR) * 0.7, 0, 0, [0.09, 0.28, 0.09], P.skin);
       placeSwimPart('rightForearm', 0.24, rArmY + Math.sin(strokeR) * 0.08, rArmZ + Math.cos(strokeR) * 0.22, Math.PI / 2 - Math.sin(strokeR) * 0.9, 0, 0, [0.08, 0.26, 0.08], P.skin);
 
-      // Flutter-kicking legs
+      // Hai chân đập nước luân phiên
       placeSwimPart('leftThigh', -0.1, 0.01 + kick * 0.4, -0.48, Math.PI / 2 + kick, 0, 0, [0.11, 0.34, 0.11], P.skin);
       placeSwimPart('leftShin', -0.1, -0.01 + kick * 0.9, -0.82, Math.PI / 2 + kick * 1.4, 0, 0, [0.09, 0.34, 0.09], P.skin);
       placeSwimPart('rightThigh', 0.1, 0.01 - kick * 0.4, -0.48, Math.PI / 2 - kick, 0, 0, [0.11, 0.34, 0.11], P.skin);
       placeSwimPart('rightShin', 0.1, -0.01 - kick * 0.9, -0.82, Math.PI / 2 - kick * 1.4, 0, 0, [0.09, 0.34, 0.09], P.skin);
 
-      // Water splash droplets behind kicking feet
+      // Các giọt nước bắn tung phía sau bàn chân đập nước
       placeSwimPart('splashLeft', -0.12, 0.06 + Math.abs(kick) * 0.4, -1.08, 0, 0, 0, [0.14, 0.08, 0.18], '#e0f2fe');
       placeSwimPart('splashRight', 0.12, 0.05 + (0.11 - Math.abs(kick)) * 0.4, -1.14, 0, 0, 0, [0.12, 0.07, 0.16], '#bae6fd');
       continue;
     }
 
     // -----------------------------------------------------------------------
-    // ARTICULATED HUMAN ACTIVITIES
+    // HOẠT ĐỘNG NGƯỜI KHỚP NỐI
     // -----------------------------------------------------------------------
     const solved = solveHumanPose(actor, timeSec, baseAnchor);
     const pose = solved.pose;
     const actorWorldPos = solved.worldPos;
     const actorYaw = solved.yaw;
 
-    // Special handling for Reclined Bench Presser (15 parts)
+    // Xử lý riêng cho người nằm ghế đẩy tạ (15 phần)
     if (pose.reclinedMode) {
       const P = actor.palette;
       const press = 0.5 - 0.5 * Math.cos(phase * 1.0);
@@ -1888,7 +1869,7 @@ export function evaluateActorPartsAtTime(
       placeBenchPart('rightThigh', 0.2, -0.02, -0.42, 1.25, 0, 0.2, [0.12, 0.38, 0.12], P.bottom);
       placeBenchPart('rightShin', 0.24, -0.26, -0.58, 0.1, 0, 0, [0.1, 0.38, 0.11], P.shoe);
 
-      // Pressed Barbell + Weight Plates
+      // Đòn tạ đẩy và các đĩa tạ
       const barY = 0.68 + liftY;
       placeBenchPart('barbellShaft', 0, barY, 0.14, 0, 0, 0, [1.76, 0.038, 0.038], '#cbd5e1');
       placeBenchPart('barbellPlateLeft', -0.74, barY, 0.14, 0, 0, 0, [0.09, 0.36, 0.36], '#ce9180');
@@ -1896,7 +1877,7 @@ export function evaluateActorPartsAtTime(
       continue;
     }
 
-    // Standard Upright / Articulated Human Rig (12 base parts + optional props)
+    // Bộ khung người đứng chuẩn / khớp nối (12 phần cơ bản + đạo cụ tùy chọn)
     const P = actor.palette;
     const totalYaw = actorYaw + pose.yawOffset;
     const [rx, ry, rz] = pose.rootOffset;
@@ -1969,7 +1950,7 @@ export function evaluateActorPartsAtTime(
       P.hair,
     );
 
-    // Left Arm Forward Kinematics
+    // Động học thuận tay trái
     const lUpperLen = 0.29;
     const lForeLen = 0.27;
     const lShoulder: Vec3 = [-0.22, shoulderY, shoulderZ];
@@ -2014,7 +1995,7 @@ export function evaluateActorPartsAtTime(
       forearmColor,
     );
 
-    // Right Arm Forward Kinematics
+    // Động học thuận tay phải
     const rShoulder: Vec3 = [0.22, shoulderY, shoulderZ];
     const rDir1 = limbDirection(pose.rightShoulderPitch, pose.rightShoulderSplay);
     const rElbow: Vec3 = [
@@ -2052,7 +2033,7 @@ export function evaluateActorPartsAtTime(
       forearmColor,
     );
 
-    // Left Leg Forward Kinematics
+    // Động học thuận chân trái
     const thighLen = 0.42;
     const shinLen = 0.42;
     const lHip: Vec3 = [-0.1, hipY - 0.04, 0];
@@ -2092,7 +2073,7 @@ export function evaluateActorPartsAtTime(
       P.shoe,
     );
 
-    // Right Leg Forward Kinematics
+    // Động học thuận chân phải
     const rHip: Vec3 = [0.1, hipY - 0.04, 0];
     const rLegDir1 = limbDirection(pose.rightHipPitch, pose.rightHipSplay);
     const rKnee: Vec3 = [
@@ -2131,7 +2112,7 @@ export function evaluateActorPartsAtTime(
     );
 
     // -----------------------------------------------------------------------
-    // HELD PROPS ATTACHED TO HANDS / SHOULDERS
+    // ĐẠO CỤ CẦM TAY / GẮN TRÊN VAI
     // -----------------------------------------------------------------------
     if (actor.activity === 'barbell-squat') {
       const barY = shoulderY + 0.03;

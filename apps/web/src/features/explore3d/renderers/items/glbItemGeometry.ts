@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import type { Vec3 } from '../../scene/schema';
 import { mergeAndFit } from './itemGeometries';
 
-/** Instanced dozens of times per kind, so keep loaded models light. */
+/** Được vẽ instancing hàng chục lần mỗi loại, nên cần giữ các mô hình nạp vào thật nhẹ. */
 export const GLB_ITEM_TRIANGLE_BUDGET = 8000;
 
 /** Lỗi khi mô hình GLB vượt ngân sách tam giác hoặc không có mesh phù hợp. */
@@ -16,10 +16,10 @@ export class GlbItemBudgetError extends Error {
 
 /** Tùy chọn khớp mô hình GLB: góc xoay, số tam giác tối đa và bảng đổi màu theo tên vật liệu. */
 export interface GlbItemFitOptions {
-  /** Radians. Rotate the model so its front matches the procedural item (front faces +Z). */
+  /** Radian. Xoay mô hình sao cho mặt trước khớp với đồ vật dựng bằng mã (mặt trước hướng +Z). */
   rotationY?: number;
   maxTriangles?: number;
-  /** Recolor by material name (hex), so third-party models can match the SOL palette. */
+  /** Đổi màu theo tên vật liệu (mã hex) để mô hình bên thứ ba khớp với bảng màu SÖL. */
   materialColors?: Readonly<Record<string, string>>;
 }
 
@@ -31,15 +31,12 @@ function triangleCount(geometry: THREE.BufferGeometry): number {
 }
 
 /**
- * Gộp mọi mesh dưới một nút thành một hình học tô màu theo đỉnh, co vừa kích thước đồ vật (giữ tỉ lệ, đáy ở y =
- * 0, căn giữa X/Z) để dùng chung vật liệu instanced.
+ * Gộp mọi mesh dưới `root` thành một hình học tô màu theo đỉnh vừa khít trong `dimensions`
+ * (tỉ lệ "contain" đồng nhất, đáy nằm ở y = 0, căn giữa theo X/Z).
  *
- * Flatten every mesh under `root` into a single vertex-colored geometry that fits
- * inside `dimensions` (uniform "contain" scale, base on y = 0, centered on X/Z).
- *
- * The result plugs into the shared instanced vertex-color material, so per-instance
- * status tint, picking and selection keep working. Textures are not carried over:
- * each mesh contributes its COLOR_0 attribute, or else its material base color.
+ * Kết quả nối thẳng vào vật liệu tô màu theo đỉnh instanced dùng chung nên phủ màu trạng thái
+ * theo từng instance, picking và trạng thái chọn vẫn hoạt động bình thường. Texture không được
+ * giữ lại: mỗi mesh đóng góp thuộc tính `COLOR_0` hoặc màu cơ bản của vật liệu.
  */
 export function buildItemGeometryFromObject(
   root: THREE.Object3D,
@@ -118,18 +115,14 @@ export function buildItemGeometryFromObject(
   return mergeAndFit(parts, [size.x * scale, size.y * scale, size.z * scale]);
 }
 
-/** Textured models carry real PBR maps, so they get a higher budget than flat-coloured ones. */
+/** Mô hình có texture mang bản đồ PBR thật nên được cấp ngân sách tam giác cao hơn loại tô màu phẳng. */
 export const GLB_TEXTURED_TRIANGLE_BUDGET = 16000;
 
 /**
- * Như buildItemGeometryFromObject nhưng giữ UV và vật liệu PBR riêng của mô hình (mỗi mesh một nhóm; mảng vật
- * liệu lưu ở userData.itemMaterials).
- *
- * Like `buildItemGeometryFromObject`, but keeps UVs and the model's own PBR
- * materials (photo-scanned CC0 props). The result is one geometry with a group
- * per source mesh; the matching material array is stored on
- * `geometry.userData.itemMaterials` and used by the instanced batch, so
- * per-instance status tint, picking and selection keep working.
+ * Tương tự `buildItemGeometryFromObject`, nhưng giữ lại UV và các vật liệu PBR riêng của mô hình
+ * (đạo cụ CC0 quét ảnh). Kết quả là một hình học duy nhất có một nhóm cho mỗi mesh nguồn;
+ * mảng vật liệu tương ứng được lưu ở `geometry.userData.itemMaterials` và dùng cho batch instanced,
+ * giúp phủ màu trạng thái theo từng instance, picking và trạng thái chọn vẫn hoạt động bình thường.
  */
 export function buildTexturedItemGeometryFromObject(
   root: THREE.Object3D,
@@ -162,7 +155,7 @@ export function buildTexturedItemGeometryFromObject(
       new THREE.Matrix4().copy(rotation).multiply(rootInverse).multiply(mesh.matrixWorld),
     );
     if (!normal) geometry.computeVertexNormals();
-    // White vertex colours: the instance colour then acts as a pure status tint.
+    // Màu đỉnh trắng để màu của từng instance đóng vai trò lớp phủ trạng thái thuần túy.
     const count = geometry.getAttribute('position').count;
     geometry.setAttribute('color', new THREE.BufferAttribute(new Float32Array(count * 3).fill(1), 3));
 

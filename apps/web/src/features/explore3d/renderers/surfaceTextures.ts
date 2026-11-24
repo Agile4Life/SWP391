@@ -1,9 +1,7 @@
 import * as THREE from 'three';
 
 /**
- * Tên các bộ texture PBR CC0 từ Poly Haven (đặt ở /textures/explore3d).
- *
- * CC0 PBR sets from Poly Haven, served from /textures/explore3d (see docs/3D_ASSETS.md).
+ * Tên các bộ texture PBR CC0 từ Poly Haven, phục vụ từ /textures/explore3d (xem docs/3D_ASSETS.md).
  */
 export type SurfaceTextureName =
   | 'asphalt_02'
@@ -21,21 +19,19 @@ export type SurfaceTextureName =
 export const SURFACE_TEXTURE_BASE_URL = '/textures/explore3d';
 
 /**
- * Bộ uniform texture dùng chung: vật liệu nào dùng bộ này cũng thấy texture ngay khi tải xong (albedo, normal,
- * ARM, cờ ready và các giá trị trung bình).
- *
- * Shared uniform objects: every material using the set sees the texture the moment it loads.
+ * Bộ uniform texture dùng chung: mọi vật liệu sử dụng bộ này đều thấy texture ngay khi tải xong
+ * (albedo, normal, ARM, cờ ready và các giá trị trung bình).
  */
 export interface SurfaceTextureSet {
   name: SurfaceTextureName;
   albedo: THREE.IUniform<THREE.Texture>;
   normal: THREE.IUniform<THREE.Texture>;
   arm: THREE.IUniform<THREE.Texture>;
-  /** 0 until all three maps are decoded; shaders fall back to the procedural detail. */
+  /** Bằng 0 cho đến khi cả ba bản đồ được giải mã xong; shader sẽ tạm dùng chi tiết thủ tục. */
   ready: THREE.IUniform<number>;
-  /** Mean linear albedo, so the texture adds detail without replacing the palette colour. */
+  /** Albedo tuyến tính trung bình để texture bổ sung chi tiết mà không thay thế màu của bảng màu. */
   mean: THREE.IUniform<THREE.Vector3>;
-  /** Mean roughness (ARM green channel). */
+  /** Độ nhám trung bình (kênh xanh lá của bản đồ ARM). */
   meanRoughness: THREE.IUniform<number>;
   requested: boolean;
 }
@@ -100,11 +96,8 @@ function averagePixel(image: CanvasImageSource): [number, number, number] | null
 }
 
 /**
- * Bắt đầu tải mọi bộ texture mà vật liệu đã yêu cầu; gọi lặp lại an toàn, không làm gì khi không có DOM (test).
- *
- * Starts loading every texture set that a material has asked for. Safe to call
- * repeatedly; does nothing without a DOM (unit tests) so materials keep their
- * procedural detail there.
+ * Bắt đầu tải mọi bộ texture mà vật liệu đã yêu cầu. Gọi lặp lại an toàn; không làm gì khi không
+ * có DOM (unit test) để vật liệu giữ nguyên chi tiết thủ tục ở môi trường kiểm thử.
  */
 export function loadSurfaceTextures(onLoaded: () => void, anisotropy = 4): void {
   if (typeof document === 'undefined') return;

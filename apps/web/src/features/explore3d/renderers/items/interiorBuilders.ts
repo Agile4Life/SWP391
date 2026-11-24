@@ -6,14 +6,10 @@ import type { GymBuilderHelpers } from './gymBuilders';
 type Geo = THREE.BufferGeometry;
 
 /**
- * Tạo các hàm dựng nội thất sảnh, dịch vụ, spa và lối đi thực tế: diện tích và hướng mỗi món khớp bản hộp cũ,
- * cấu trúc theo mộc và phụ kiện thật (chân đế, đá, gỗ).
- *
- * Realistic lobby, service, spa and circulation furniture. Footprints and the
- * side each piece faces match the earlier box-built versions; construction now
- * follows real joinery and fittings: plinths with shadow gaps, slatted timber,
- * polished stone tops, brushed-steel hardware, glass panels and upholstery.
- * Brand salmon is used as thin accents, never as whole blocks.
+ * Tạo các hàm dựng nội thất sảnh, dịch vụ, spa và lối đi thực tế. Diện tích chiếm chỗ và hướng
+ * mặt trước của mỗi món khớp với các phiên bản dựng bằng hộp trước đó; kết cấu tuân theo mộc và
+ * phụ kiện thật: chân đế có khe bóng, gỗ ốp nan dọc, mặt đá đánh bóng, phụ kiện thép xước,
+ * tấm kính và đệm bọc vải. Màu hồng salmon thương hiệu chỉ dùng làm điểm nhấn mảnh, không tô thành mảng khối lớn.
  */
 export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind, () => Geo>> {
   const { P, dims, box, cyl, sphere, roundedBox: rbox, tube, disc, shape, surface, fit } = h;
@@ -36,11 +32,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   const glass = P.glass;
   const PI2 = Math.PI / 2;
 
-  /**
-   * Màn hình phẳng trên chân đế nhỏ, hướng +Z, ngả ra sau một góc tilt.
-   *
-   * Flat display on a small stand, facing +Z, tilted back by `tilt`.
-   */
+  /** Màn hình phẳng trên chân đế nhỏ, hướng +Z, ngả ra sau một góc `tilt`. */
   const monitor = (x: number, y: number, z: number, w = 0.5, hh = 0.3, tilt = -0.12, ry = 0): Geo[] => [
     disc(0.09, 0.012, steel, [x, y + 0.006, z], 'y', 16),
     cyl(0.012, 0.012, hh * 0.6, steel, [x, y + hh * 0.3, z], undefined, 8),
@@ -48,11 +40,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     box(w - 0.03, hh - 0.03, 0.004, P.screen, [x, y + hh * 0.75, z + 0.023], [tilt, ry, 0]),
   ];
 
-  /**
-   * Hàng nan gỗ dọc theo trục X trên nền tối.
-   *
-   * Row of vertical timber battens along X on a dark backing.
-   */
+  /** Hàng nan gỗ đứng dọc theo trục X trên nền tối. */
   const battens = (width: number, height: number, y: number, z: number, color: string, pitch = 0.11): Geo[] => {
     const parts: Geo[] = [box(width, height, 0.02, plinth, [0, y, z - 0.02])];
     const n = Math.floor(width / pitch);
@@ -66,20 +54,20 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   const buildReceptionDesk = (): Geo =>
     fit(
       [
-        // recessed plinth, carcass, slatted timber front
+        // chân đế lõm, thân quầy, mặt trước ốp nan gỗ
         box(5.1, 0.1, 1.3, plinth, [0, 0.05, 0]),
         rbox(5.3, 0.9, 1.44, 0.03, body, [0, 0.56, 0]),
         ...battens(5.2, 0.84, 0.56, 0.745, P.wood),
-        // LED shadow line under the transaction counter
+        // dải LED hắt khe sáng dưới mặt quầy giao dịch
         box(5.3, 0.012, 0.02, P.salmonBright, [0, 1.035, 0.76]),
-        // polished stone transaction counter and lower work surface
+        // mặt quầy giao dịch bằng đá đánh bóng và mặt bàn làm việc thấp hơn
         rbox(5.4, 0.06, 0.62, 0.02, stone, [0, 1.09, 0.48]),
         box(5.2, 0.03, 0.8, woodDark, [0, 1.0, -0.24]),
         ...monitor(-1.2, 1.015, -0.3),
         ...monitor(1.2, 1.015, -0.3),
         rbox(0.4, 0.015, 0.13, 0.005, plinth, [-1.2, 1.022, -0.02]),
         rbox(0.4, 0.015, 0.13, 0.005, plinth, [1.2, 1.022, -0.02]),
-        // card reader, bell, brochure stand on the counter
+        // đầu đọc thẻ, chuông bàn và kệ tờ rơi trên mặt quầy
         rbox(0.09, 0.04, 0.16, 0.012, plinth, [0.3, 1.14, 0.5], [-0.3, 0, 0]),
         disc(0.035, 0.03, brass, [-0.4, 1.135, 0.52], 'y', 16),
         box(0.22, 0.26, 0.012, glass, [2.1, 1.25, 0.5], [-0.2, 0, 0]),
@@ -92,17 +80,17 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     fit(
       [
         ...[-1, 1].flatMap(s => [
-          // stainless pedestal with dark side inlay and top cap
+          // trụ thép không gỉ với mảng ốp tối hai bên và nắp trên
           rbox(0.22, 0.96, 1.5, 0.06, steel, [s * 0.48, 0.48, 0]),
           box(0.224, 0.6, 1.1, plinth, [s * 0.48, 0.5, 0]),
           rbox(0.24, 0.03, 1.54, 0.012, chrome, [s * 0.48, 0.975, 0]),
-          // hinge post and frameless glass wing
+          // trụ bản lề và cánh kính không khung
           cyl(0.022, 0.022, 0.8, chrome, [s * 0.36, 0.52, 0], undefined, 12),
           rbox(0.33, 0.74, 0.014, 0.006, glass, [s * 0.185, 0.54, 0]),
-          // status light bar on the entry face
+          // thanh đèn trạng thái ở mặt lối vào
           box(0.02, 0.5, 0.012, s > 0 ? P.salmonBright : P.screenGlow, [s * 0.48, 0.55, 0.757]),
         ]),
-        // QR / card reader window set into the right-hand cap
+        // cửa sổ đầu đọc QR / thẻ đặt trên nắp trụ bên phải
         rbox(0.16, 0.014, 0.22, 0.006, plinth, [0.48, 0.997, 0.5]),
         box(0.1, 0.004, 0.1, P.screenGlow, [0.48, 1.006, 0.5]),
         rbox(0.16, 0.014, 0.22, 0.006, plinth, [-0.48, 0.997, 0.5]),
@@ -116,11 +104,11 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       [
         rbox(0.6, 0.03, 0.5, 0.012, steel, [0, 0.015, 0]),
         rbox(0.3, 0.98, 0.1, 0.03, body, [0, 0.52, -0.06], [-0.1, 0, 0]),
-        // tilted touchscreen head
+        // đầu màn hình cảm ứng nghiêng
         rbox(0.58, 0.78, 0.055, 0.025, plinth, [0, 1.14, 0.0], [-0.22, 0, 0]),
         box(0.5, 0.62, 0.004, P.screen, [0, 1.165, 0.034], [-0.22, 0, 0]),
         disc(0.012, 0.006, glass, [0, 1.49, -0.045], 'z', 10),
-        // reader shelf with card slot and receipt outlet
+        // khay đầu đọc gồm khe quét thẻ và khe ra hóa đơn
         rbox(0.3, 0.05, 0.14, 0.015, panel, [0, 0.72, 0.1], [-0.35, 0, 0]),
         box(0.12, 0.006, 0.02, plinth, [0, 0.745, 0.115], [-0.35, 0, 0]),
         box(0.5, 0.008, 0.012, P.salmon, [0, 0.79, 0.1], [-0.22, 0, 0]),
@@ -134,13 +122,13 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       [
         box(1.0, 0.08, 0.66, plinth, [0, 0.04, 0]),
         rbox(1.06, 0.74, 0.74, 0.02, body, [0, 0.45, 0]),
-        // two timber doors with a shadow gap and bar handles
+        // hai cánh tủ gỗ có khe bóng và tay nắm dạng thanh
         box(0.5, 0.68, 0.02, P.wood, [-0.262, 0.45, 0.372]),
         box(0.5, 0.68, 0.02, P.wood, [0.262, 0.45, 0.372]),
         cyl(0.008, 0.008, 0.2, chrome, [-0.05, 0.5, 0.395], undefined, 8),
         cyl(0.008, 0.008, 0.2, chrome, [0.05, 0.5, 0.395], undefined, 8),
         rbox(1.1, 0.04, 0.78, 0.012, stone, [0, 0.84, 0]),
-        // card printer with feed hopper, output slot and status light
+        // máy in thẻ có phễu nạp phôi, khe trả thẻ và đèn trạng thái
         rbox(0.36, 0.24, 0.42, 0.04, white, [-0.24, 0.98, 0]),
         rbox(0.2, 0.1, 0.16, 0.02, plinth, [-0.24, 1.13, -0.08]),
         box(0.2, 0.012, 0.02, plinth, [-0.24, 0.94, 0.212]),
@@ -155,7 +143,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   /** Kệ trưng bày thực phẩm bổ sung: chân đế, vách sau, vách bên, tiêu đề và các tầng kệ. */
   const buildSupplementShelf = (): Geo => {
     const parts: Geo[] = [
-      // gondola: plinth, back panel, end panels, header
+      // kệ trưng bày: chân đế, vách hậu, hai vách đầu hồi, bảng tiêu đề
       box(1.9, 0.12, 0.66, plinth, [0, 0.06, 0]),
       box(1.96, 2.0, 0.03, panel, [0, 1.06, -0.33]),
       box(0.03, 2.0, 0.6, body, [-0.965, 1.06, -0.04]),
@@ -188,7 +176,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
           rbox(0.14, 0.03, 0.46, 0.01, steel, [x, 0.015, 0]),
           cyl(0.03, 0.03, 1.86, steel, [x, 0.95, 0], undefined, 12),
         ]),
-        // framed matte menu panel with printed rows
+        // bảng thực đơn bề mặt lì đóng khung có các dòng chữ in
         rbox(2.2, 1.34, 0.05, 0.015, woodDark, [0, 1.18, 0]),
         box(2.08, 1.22, 0.01, plinth, [0, 1.18, 0.026]),
         box(1.2, 0.1, 0.004, white, [-0.38, 1.66, 0.033]),
@@ -206,7 +194,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     const parts: Geo[] = [
       rbox(0.96, 0.16, 0.56, 0.02, stone, [0, 0.08, 0]),
       rbox(0.74, 1.7, 0.3, 0.03, body, [0, 1.02, 0]),
-      // recessed back-lit streak tiles
+      // các ô thành tích âm tường có đèn nền
       box(0.62, 1.2, 0.004, plinth, [0, 0.98, 0.1505]),
       disc(0.21, 0.05, brass, [0, 1.96, 0], 'z', 32),
       disc(0.16, 0.056, body, [0, 1.96, 0], 'z', 32),
@@ -228,10 +216,10 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
         box(1.26, 0.08, 0.84, plinth, [0, 0.04, 0]),
         rbox(1.24, 0.94, 0.68, 0.025, body, [0, 0.55, 0]),
         ...battens(1.14, 0.84, 0.55, 0.352, P.wood, 0.095),
-        // sloped reading top with a raised lip
+        // mặt đọc nghiêng có gờ chặn phía trước
         rbox(1.36, 0.04, 0.82, 0.012, stone, [0, 1.06, 0], [0.16, 0, 0]),
         box(1.36, 0.03, 0.02, steel, [0, 1.015, 0.405]),
-        // two tablets resting on the slope
+        // hai máy tính bảng đặt trên mặt nghiêng
         rbox(0.4, 0.26, 0.014, 0.008, plinth, [-0.28, 1.1, -0.05], [0.16 - PI2, 0, 0]),
         box(0.36, 0.22, 0.003, P.screen, [-0.28, 1.109, -0.048], [0.16 - PI2, 0, 0]),
         rbox(0.4, 0.26, 0.014, 0.008, plinth, [0.28, 1.1, -0.05], [0.16 - PI2, 0, 0]),
@@ -244,7 +232,6 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   const buildConsultationPod = (): Geo => {
     // Ghế bọc: chân thép mảnh, đệm ngồi và lưng ôm (s là bên trái/phải).
     const chair = (s: number): Geo[] => [
-      // slim steel legs, upholstered seat and wrap-around back
       ...[-0.22, 0.22].flatMap(z => [
         cyl(0.012, 0.012, 0.24, steel, [s * 0.5, 0.12, z], undefined, 8),
         cyl(0.012, 0.012, 0.24, steel, [s * 0.86, 0.12, z], undefined, 8),
@@ -274,7 +261,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     const parts: Geo[] = [
       box(3.1, 0.08, 0.5, plinth, [0, 0.04, -0.14]),
       rbox(3.16, 1.9, 0.58, 0.015, body, [0, 1.03, -0.14]),
-      // changing bench: timber slats on a bent steel frame
+      // ghế thay đồ: nan gỗ trên khung thép uốn
       ...[-1.36, 0, 1.36].flatMap(x =>
         tube(
           [
@@ -295,7 +282,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       const x = -1.3 + col * 0.52;
       for (const y of [1.5, 0.58]) {
         parts.push(box(0.5, 0.88, 0.02, P.wood, [x, y, 0.158]));
-        // louvre vents, number plate, RFID lock with status light
+        // khe thoáng khí, bảng số tủ và khóa RFID kèm đèn trạng thái
         for (let v = 0; v < 4; v++) parts.push(box(0.22, 0.008, 0.004, plinth, [x, y + 0.34 - v * 0.03, 0.17]));
         parts.push(box(0.07, 0.035, 0.004, chrome, [x, y + 0.16, 0.17]));
         parts.push(box(0.05, 0.1, 0.018, plinth, [x + 0.19, y, 0.176]));
@@ -313,7 +300,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     const slats = (cx: number, y: number, z0: number, n: number, len: number, color: string) => {
       for (let i = 0; i < n; i++) parts.push(rbox(len, 0.035, 0.11, 0.01, color, [cx, y, z0 + i * 0.125]));
     };
-    // lower and upper slatted benches on timber bearers, slatted backrest
+    // băng ghế nan gỗ tầng dưới và tầng trên đặt trên dầm gỗ, kèm tựa lưng nan gỗ
     slats(-0.42, 0.44, 0.02, 6, 3.28, P.woodLight);
     slats(-0.42, 0.86, -0.82, 6, 3.28, P.woodLight);
     for (const x of [-1.9, -0.42, 1.06]) {
@@ -323,7 +310,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     }
     for (const y of [1.0, 1.14, 1.28]) parts.push(rbox(3.28, 0.09, 0.025, 0.008, P.woodLight, [-0.42, y, -0.845 - (y - 1) * 0.12], [-0.12, 0, 0]));
     parts.push(box(3.28, 0.3, 0.02, P.wood, [-0.42, 0.24, 0.7]));
-    // heater: brushed-steel body filled with stones behind a timber guard
+    // lò sưởi: thân thép xước chất đầy đá sauna phía sau khung chắn bằng gỗ
     parts.push(rbox(0.6, 0.74, 0.5, 0.03, steel, [1.68, 0.37, -0.18]));
     parts.push(box(0.5, 0.3, 0.004, plinth, [1.68, 0.3, 0.072]));
     for (let i = 0; i < 14; i++) {
@@ -349,7 +336,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   /** Bồn jacuzzi: thành bồn ốp, đá viền quanh lòng bồn mở và vòi. */
   const buildJacuzziTub = (): Geo => {
     const parts: Geo[] = [
-      // surround: plinth, clad walls, polished stone coping around an open basin
+      // thành bao ngoài: chân đế, vách ốp, viền đá đánh bóng quanh lòng bồn mở
       box(3.5, 0.08, 3.1, plinth, [0, 0.04, 0]),
       rbox(3.56, 0.8, 0.3, 0.02, body, [0, 0.46, -1.43]),
       rbox(3.56, 0.8, 0.3, 0.02, body, [0, 0.46, 1.43]),
@@ -359,13 +346,13 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       rbox(3.6, 0.05, 0.36, 0.015, stone, [0, 0.885, 1.42]),
       rbox(0.36, 0.05, 2.5, 0.015, stone, [-1.62, 0.885, 0]),
       rbox(0.36, 0.05, 2.5, 0.015, stone, [1.62, 0.885, 0]),
-      // acrylic shell and water sitting below the coping
+      // lòng bồn acrylic và mặt nước nằm thấp hơn viền đá
       box(2.96, 0.4, 0.03, tile, [0, 0.68, -1.265]),
       box(2.96, 0.4, 0.03, tile, [0, 0.68, 1.265]),
       box(0.03, 0.4, 2.5, tile, [-1.465, 0.68, 0]),
       box(0.03, 0.4, 2.5, tile, [1.465, 0.68, 0]),
       box(2.92, 0.02, 2.5, P.water, [0, 0.8, 0]),
-      // head rests, grab rail, entry steps
+      // gối tựa đầu, tay vịn và bậc bước lên xuống
       rbox(0.5, 0.07, 0.2, 0.03, white, [-0.9, 0.93, -1.32]),
       rbox(0.5, 0.07, 0.2, 0.03, white, [0.9, 0.93, -1.32]),
       ...tube(
@@ -383,7 +370,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       rbox(1.4, 0.19, 0.3, 0.015, P.wood, [0.3, 0.095, 1.7]),
       rbox(1.4, 0.19, 0.14, 0.015, P.wood, [0.3, 0.285, 1.63]),
     ];
-    // chrome jets around the shell
+    // các đầu phun nước mạ chrome quanh lòng bồn
     for (let i = 0; i < 6; i++) {
       parts.push(disc(0.04, 0.012, chrome, [-1.1 + i * 0.44, 0.7, -1.245], 'z', 12));
       parts.push(disc(0.04, 0.012, chrome, [-1.1 + i * 0.44, 0.7, 1.245], 'z', 12));
@@ -406,8 +393,8 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       ...battens(3.66, 0.82, 0.55, 0.642, P.wood),
       box(3.76, 0.012, 0.02, P.salmonBright, [0, 0.985, 0.66]),
       rbox(3.84, 0.05, 1.4, 0.015, stone, [0, 1.025, 0.02]),
-      // chilled display well with a chrome sneeze-guard frame (vertex-coloured glass
-      // would be opaque and hide the produce, so the guard is left as an open frame)
+      // khay trưng bày làm mát với khung chắn chrome (kính tô màu đỉnh sẽ đục
+      // và che mất hoa quả bên trong nên khung chắn để hở)
       rbox(1.36, 0.05, 0.5, 0.012, steel, [-1.05, 1.075, 0.17]),
       ...tube(
         [
@@ -439,7 +426,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       ),
       ...blender(0.36, plinth),
       ...blender(0.66, P.salmon),
-      // citrus press and POS terminal
+      // máy ép cam và máy tính tiền POS
       rbox(0.2, 0.3, 0.22, 0.04, steel, [1.0, 1.2, -0.1]),
       cyl(0.07, 0.05, 0.08, chrome, [1.0, 1.39, -0.1], undefined, 14),
       ...monitor(1.44, 1.05, 0.1, 0.4, 0.26, -0.25),
@@ -457,21 +444,21 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     const treadW = 3.04;
     const landingW = 3.2;
 
-    // Exact [3.60, 4.56, 4.28] architectural envelope:
-    // - Base threshold rests at y = 0.00 (z = +2.14)
-    // - Mid-flight rest landing sits at y = 1.90 (z = 0.00)
-    // - Top arrival bridge sits flush at y = 3.80 (z = -2.14)
-    // - Ergonomic handrail peaks at y = 4.56 (+0.76 m above top landing)
+    // Khung bao kiến trúc chính xác [3.60, 4.56, 4.28]:
+    // - Ngưỡng chân thang đặt tại y = 0.00 (z = +2.14)
+    // - Chiếu nghỉ giữa thang đặt tại y = 1.90 (z = 0.00)
+    // - Cầu tới đỉnh thang phẳng mặt sàn trên tại y = 3.80 (z = -2.14)
+    // - Tay vịn công thái học đạt đỉnh tại y = 4.56 (+0.76 m trên chiếu nghỉ trên)
     parts.push(box(landingW, 0.08, 0.52, stone, [0, 0.04, 1.88]));
     parts.push(box(treadW, 0.014, 0.036, P.salmonBright, [0, 0.081, 1.66]));
 
-    // Mid-flight structural rest landing + steel support crossbeam + warm accent reveal
+    // Chiếu nghỉ kết cấu giữa thang + dầm ngang thép chịu lực + khe nhấn ấm
     parts.push(box(landingW, 0.12, 0.64, stone, [0, 1.84, 0]));
     parts.push(box(landingW - 0.16, 0.14, 0.22, steel, [0, 1.71, 0]));
     parts.push(box(treadW, 0.014, 0.032, P.salmon, [0, 1.901, 0.28]));
     parts.push(box(treadW, 0.014, 0.032, P.salmon, [0, 1.901, -0.28]));
 
-    // Top arrival bridge connecting flush to upper floor slab at y = 3.80, z = -2.14
+    // Cầu tới đỉnh thang nối phẳng với sàn tầng trên tại y = 3.80, z = -2.14
     parts.push(box(landingW, 0.14, 0.52, stone, [0, 3.73, -1.88]));
     parts.push(box(treadW, 0.014, 0.038, rubber, [0, 3.795, -1.65]));
 
@@ -488,13 +475,13 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       for (let i = 0; i < stepsPerFlight; i++) {
         const y = fl.y0 + i * rise;
         const z = fl.z0 + i * going;
-        // Solid warm oak floating tread + anti-slip dark nosing + recessed shadow-gap riser
+        // Mặt bậc gỗ sồi ấm nguyên khối + nẹp mũi chống trượt tối + cổ bậc lùi tạo khe bóng
         parts.push(box(treadW, 0.068, 0.25, P.wood, [0, y - 0.034, z]));
         parts.push(box(treadW - 0.04, 0.01, 0.032, rubber, [0, y + 0.003, z + 0.102]));
         parts.push(box(treadW - 0.18, 0.145, 0.024, plinth, [0, y - 0.1, z - 0.09]));
       }
 
-      // Segmented structural side stringers + twin inset steel spine beams strictly underneath oak treads
+      // Dầm cốn thép phân đoạn hai bên + cặp dầm sống thép âm nằm trọn dưới mặt bậc gỗ sồi
       const dy = fl.y1 - fl.y0;
       const dz = fl.z0 - fl.z1;
       const slope = Math.atan2(dy, dz);
@@ -511,19 +498,19 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       }
     }
 
-    // Horizontal stringer knees across mid-landing & landings
+    // Khớp nối ngang của dầm cốn qua chiếu nghỉ giữa và các chiếu nghỉ đầu cuối
     for (const sx of [-1.46, 1.46]) {
       parts.push(box(0.065, 0.22, 0.72, body, [sx, 1.74, 0]));
       parts.push(box(0.08, 0.04, 0.36, steel, [sx, 0.02, 1.88]));
       parts.push(box(0.08, 0.16, 0.44, body, [sx, 3.68, -1.88]));
     }
 
-    // Open architectural steel stanchions, 3-tier chrome tension rods & warm oak handrails (zero opaque fake glass!)
+    // Cột lan can thép hở, 3 tầng thanh giằng chrome và tay vịn gỗ sồi ấm (không dùng kính giả bị đục!)
     for (const side of [-1, 1] as const) {
       const postX = side * 1.66;
       const bracketX = side * 1.76;
 
-      // Outer mounting brackets define exact 3.60 m total width (`±1.80 m`)
+      // Ngàm gắn ngoài xác định đúng tổng chiều rộng 3.60 m (`±1.80 m`)
       parts.push(box(0.08, 0.06, 0.14, steel, [bracketX, 0.12, 1.92]));
       parts.push(box(0.08, 0.06, 0.14, steel, [bracketX, 1.92, 0]));
       parts.push(box(0.08, 0.06, 0.14, steel, [bracketX, 3.82, -1.92]));
@@ -544,7 +531,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
         parts.push(box(0.036, 0.022, 0.056, chrome, [postX, py + 0.73, pz]));
       }
 
-      // Three parallel brushed-chrome tension rods + top ergonomic oak handrail along all 5 segments
+      // Ba thanh giằng chrome xước song song + tay vịn gỗ sồi công thái học dọc theo cả 5 đoạn
       const railProfile: Array<[number, number]> = [
         [0.08, 1.98],
         [0.23, 1.54],
@@ -571,7 +558,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
           8,
         ),
       );
-      // Top handrail chrome terminal cap peaking cleanly at y = 4.560
+      // Nắp chụp đầu tay vịn mạ chrome đạt đỉnh gọn gàng tại y = 4.560
       parts.push(box(0.046, 0.044, 0.12, chrome, [postX, 4.538, -1.96]));
     }
 
@@ -582,11 +569,11 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   const buildElevatorCore = (): Geo =>
     fit(
       [
-        // Grounded granite plinth & cantilevered charcoal penthouse cap with signature SÖL salmon fascia
+        // Bệ granite chạm đất và mũ penthouse than chì nhô ra với dải viền salmon đặc trưng SÖL
         box(2.58, 0.14, 2.58, plinth, [0, 0.07, 0]),
         rbox(2.54, 0.2, 2.54, 0.02, body, [0, 3.64, 0]),
         box(2.58, 0.06, 2.58, P.salmon, [0, 3.77, 0]),
-        // Architectural dark-steel corner pilasters & matte graphite cladding panels (no opaque sky-blue fake glass)
+        // Trụ góc thép tối kiến trúc và tấm ốp màu than chì lì (không dùng kính giả màu xanh dương đục)
         ...[
           [-1.21, -1.21],
           [1.21, -1.21],
@@ -596,13 +583,13 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
         box(2.3, 3.4, 0.04, panel, [0, 1.84, -1.2]),
         box(0.04, 3.4, 2.3, panel, [-1.2, 1.84, 0]),
         box(0.04, 3.4, 2.3, panel, [1.2, 1.84, 0]),
-        // Architectural horizontal steel transom reveals on side & rear elevations
+        // Các đường chỉ ngang thép kiến trúc trên mặt bên và mặt sau
         ...[1.22, 2.44].flatMap(ty => [
           box(2.36, 0.05, 0.07, steel, [0, ty, -1.21]),
           box(0.07, 0.05, 2.36, steel, [-1.21, ty, 0]),
           box(0.07, 0.05, 2.36, steel, [1.21, ty, 0]),
         ]),
-        // Front portal wall, deep-set brushed-steel architrave & centre-opening doors
+        // Vách cổng trước, khung bao thép xước lõm sâu và cửa mở hai cánh từ giữa
         box(2.3, 3.4, 0.05, body, [0, 1.84, 1.19]),
         box(1.84, 2.34, 0.05, steel, [0, 1.28, 1.215]),
         box(1.68, 2.22, 0.03, plinth, [0, 1.23, 1.228]),
@@ -610,7 +597,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
         box(0.79, 2.16, 0.024, steel, [0.408, 1.21, 1.242]),
         box(0.04, 2.16, 0.028, chrome, [-0.04, 1.21, 1.246]),
         box(0.04, 2.16, 0.028, chrome, [0.04, 1.21, 1.246]),
-        // Warm digital floor indicator & brushed stainless call station
+        // Bảng chỉ báo tầng kỹ thuật số ánh ấm và hộp nút gọi tầng bằng inox xước
         rbox(0.56, 0.13, 0.028, 0.008, plinth, [0, 2.58, 1.24]),
         box(0.22, 0.055, 0.008, P.salmonBright, [0, 2.58, 1.256]),
         rbox(0.11, 0.26, 0.02, 0.006, chrome, [1.04, 1.2, 1.232]),
@@ -626,12 +613,12 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       [
         rbox(0.5, 0.03, 0.5, 0.01, chrome, [0, 0.015, 0]),
         rbox(0.2, 0.52, 0.24, 0.03, steel, [0, 0.3, 0.04], [-0.14, 0, 0]),
-        // sloped platform with a non-slip top and adjustable rear kick plate
+        // mặt bục nghiêng có lớp chống trượt và tấm đạp sau điều chỉnh được
         rbox(0.72, 0.07, 0.74, 0.02, white, [0, 0.62, 0], [0.16, 0, 0]),
         box(0.64, 0.008, 0.66, rubber, [0, 0.658, 0], [0.16, 0, 0]),
         rbox(0.56, 0.22, 0.03, 0.01, rubber, [0, 0.76, 0.3], [-0.5, 0, 0]),
         box(0.16, 0.12, 0.006, P.salmon, [0, 0.6, -0.386], [0.16, 0, 0]),
-        // backstroke grab bar
+        // thanh nắm xuất phát bơi ngửa
         ...tube(
           [
             [-0.3, 0.56, -0.26],
@@ -654,7 +641,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       [
         rbox(0.74, 0.012, 1.82, 0.005, fabricWarm, [0, 0.006, 0]),
         box(0.004, 0.002, 1.5, plinth, [0, 0.0125, 0.04]),
-        // cork block and a rolled strap at the head of the mat
+        // gạch tập bằng bần và dây tập cuộn tròn ở đầu thảm
         rbox(0.22, 0.045, 0.14, 0.012, cork, [0.18, 0.035, -0.72]),
         cyl(0.03, 0.03, 0.06, fabric, [-0.2, 0.042, -0.74], [0, 0, PI2], 12),
       ],
@@ -665,7 +652,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   const buildMeditationBolster = (): Geo =>
     fit(
       [
-        // zabuton mat, round zafu cushion with a piped seam, singing bowl
+        // thảm zabuton, gối tròn zafu có đường viền gân, chuông xướng
         rbox(0.62, 0.05, 0.62, 0.025, fabric, [0, 0.025, 0]),
         sphere(0.25, fabricWarm, [0, 0.16, 0], [1, 0.46, 1], 20, 12),
         disc(0.252, 0.012, woodDark, [0, 0.16, 0], 'y', 24),
@@ -679,13 +666,13 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   const buildInbodyAnalyzer = (): Geo =>
     fit(
       [
-        // scale platform with stainless foot electrodes
+        // bục cân kèm các điện cực bàn chân bằng inox
         rbox(0.74, 0.07, 0.86, 0.03, panel, [0, 0.035, 0.12]),
         ...[-0.16, 0.16].flatMap(x => [
           rbox(0.15, 0.008, 0.2, 0.003, chrome, [x, 0.074, 0.26]),
           rbox(0.15, 0.008, 0.11, 0.003, chrome, [x, 0.074, 0.06]),
         ]),
-        // column, hand-electrode holsters and grips, display head
+        // trụ đứng, giá gác cùng tay cầm điện cực và đầu màn hình hiển thị
         rbox(0.17, 1.14, 0.12, 0.035, white, [0, 0.62, -0.28], [-0.1, 0, 0]),
         ...[-1, 1].flatMap(s => [
           ...tube(

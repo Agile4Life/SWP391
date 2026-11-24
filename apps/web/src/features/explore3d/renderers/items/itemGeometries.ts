@@ -86,9 +86,9 @@ const tempScale = new THREE.Vector3();
 const tempColor = new THREE.Color();
 
 /**
- * Per-part PBR response [roughness, metalness], keyed by palette colour and
- * written to the `surf` vertex attribute. One instanced material can then
- * render chrome, powder-coated steel, rubber and vinyl differently.
+ * Phản hồi PBR `[roughness, metalness]` theo từng phần, ánh xạ theo mã màu trong bảng màu
+ * và ghi vào thuộc tính đỉnh `surf`. Nhờ đó một vật liệu instanced duy nhất có thể hiển thị
+ * chrome, thép sơn tĩnh điện, cao su và da vinyl khác nhau.
  */
 const SURFACE_BY_COLOR: Record<string, readonly [number, number]> = {
   [ITEM_PALETTE.charcoal]: [0.42, 0.2],
@@ -112,11 +112,7 @@ const SURFACE_BY_COLOR: Record<string, readonly [number, number]> = {
 };
 const DEFAULT_SURFACE: readonly [number, number] = [0.5, 0];
 
-/**
- * Khai báo một màu sẽ được đổ bóng thế nào (độ nhám, độ kim loại); trả lại chính mã màu.
- *
- * Declare how a colour should shade (roughness, metalness).
- */
+/** Khai báo cách một màu được đổ bóng (độ nhám, độ kim loại); trả lại chính mã màu. */
 export function registerItemSurface(colorHex: string, roughness: number, metalness: number): string {
   SURFACE_BY_COLOR[colorHex] = [roughness, metalness];
   return colorHex;
@@ -169,18 +165,14 @@ function paintGeometry(
   return geom;
 }
 
-/** Edge chamfer used on item boxes. Capped relative to the smallest dimension. */
+/** Độ vát cạnh dùng cho các khối hộp đồ vật. Giới hạn theo chiều kích thước nhỏ nhất. */
 export const ITEM_BEVEL_MAX = 0.03;
 const ITEM_BEVEL_MIN_DIMENSION = 0.08;
 
 /**
- * Khối hộp vát 45° ở mọi cạnh (44 tam giác); dải vát có pháp tuyến chéo riêng nên cạnh bắt sáng mảnh thay vì
- * đường đen/trắng gắt của hộp thường, mà không tốn nhiều tam giác.
- *
- * Box with a single 45 degree chamfer on every edge (44 triangles). The bevel
- * strips carry their own diagonal normals so edges catch a thin highlight
- * instead of the hard black/white seam of a plain box, without the ~100+
- * triangles a RoundedBoxGeometry would add per part.
+ * Khối hộp vát một góc 45° ở mọi cạnh (44 tam giác). Các dải vát mang pháp tuyến chéo riêng nên
+ * cạnh bắt được một đường sáng mảnh thay vì viền đen/trắng gắt của hộp thường, mà không tốn thêm
+ * hơn 100 tam giác mỗi phần như `RoundedBoxGeometry`.
  */
 export function buildChamferBoxGeometry(
   w: number,
@@ -304,7 +296,7 @@ export function buildChamferBoxGeometry(
   return geom;
 }
 
-/** Matches the per-item budget asserted in items.geometries.test.ts. */
+/** Khớp với ngân sách tam giác mỗi đồ vật được kiểm tra trong `items.geometries.test.ts`. */
 export const ITEM_HIGH_DETAIL_TRIANGLE_BUDGET = 9000;
 
 let bevelEnabled = true;
@@ -499,11 +491,7 @@ export function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec
   return merged;
 }
 
-/**
- * Khối hộp bo cạnh mềm dùng cho đồ bọc, vỏ máy và thân thiết bị.
- *
- * Soft-edged box for upholstery, shrouds and housings.
- */
+/** Khối hộp bo cạnh mềm dùng cho đồ bọc, vỏ máy và thân thiết bị. */
 function roundedBox(
   w: number,
   h: number,
@@ -518,12 +506,8 @@ function roundedBox(
 }
 
 /**
- * Ống thép uốn qua các điểm: đoạn thẳng nối bằng khúc cua bo tròn và hai đầu bán cầu — đúng dạng khung, tay lái
- * và ray thật thay vì thanh vuông.
- *
- * Bent steel tube through `points`: straight runs joined by rounded bends,
- * closed with hemispherical ends. This is what frames, handlebars and rails
- * are actually made of, instead of square sticks.
+ * Ống thép uốn qua các điểm `points`: các đoạn thẳng nối bằng khúc cua bo tròn và đóng kín bằng hai đầu bán cầu —
+ * đúng dạng khung, tay lái và ray thật thay vì thanh vuông.
  */
 function tube(
   points: readonly Vec3[],
@@ -564,11 +548,7 @@ function tube(
   return [body, capA, capB];
 }
 
-/**
- * Đĩa/bánh xe/đĩa tạ có trục theo X (mặc định), Y hoặc Z.
- *
- * Disc / wheel / weight plate whose axis runs along X (default), Y or Z.
- */
+/** Đĩa / bánh xe / đĩa tạ có trục chạy dọc theo X (mặc định), Y hoặc Z. */
 function disc(
   radius: number,
   thickness: number,
@@ -587,11 +567,7 @@ function disc(
   );
 }
 
-/**
- * Bọc bất kỳ hình học nào (capsule, lathe...) bằng màu bảng màu và phép biến đổi.
- *
- * Wraps any geometry (capsule, lathe...) with a palette colour and transform.
- */
+/** Bọc bất kỳ hình học nào (capsule, lathe...) bằng màu bảng màu và phép biến đổi. */
 function shape(
   geometry: THREE.BufferGeometry,
   colorHex: string,
@@ -1670,11 +1646,7 @@ function notifyGeometryChange(): void {
   for (const listener of geometryListeners) listener();
 }
 
-/**
- * Đăng ký listener cho useSyncExternalStore để các lô instanced dựng lại khi mô hình bị thay; trả về hàm hủy.
- *
- * useSyncExternalStore subscription so instanced batches rebuild when a model is swapped.
- */
+/** Đăng ký listener cho `useSyncExternalStore` để các lô instanced dựng lại khi mô hình bị thay; trả về hàm hủy. */
 export function subscribeItemGeometries(listener: () => void): () => void {
   geometryListeners.add(listener);
   return () => {
@@ -1688,12 +1660,8 @@ export function getItemGeometryRevision(): number {
 }
 
 /**
- * Thay hình học bản chi tiết cao của một loại đồ vật (ví dụ bằng mô hình .glb); bản thấp và bộ dựng thủ tục vẫn
- * là phương án dự phòng.
- *
- * Replace the high-detail geometry of an item kind (for example with a model
- * loaded from a .glb). Low detail proxies and the procedural builder stay
- * available as the fallback.
+ * Thay hình học bản chi tiết cao của một loại đồ vật (ví dụ bằng mô hình nạp từ `.glb`);
+ * bản proxy chi tiết thấp và bộ dựng thủ tục vẫn luôn sẵn sàng làm phương án dự phòng.
  */
 export function registerItemGeometryOverride(
   kind: ItemKind,

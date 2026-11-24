@@ -77,10 +77,8 @@ function createEmptyGeometry(): THREE.BufferGeometry {
 }
 
 /**
- * Gộp nhiều BufferGeometry thành một hình có chỉ mục bằng mảng định kiểu (position, normal, uv, index).
- *
- * Merges an array of BufferGeometries into a single indexed BufferGeometry
- * using typed arrays directly (`position`, `normal`, `uv`, `index`).
+ * Gộp mảng các BufferGeometry thành một BufferGeometry có chỉ mục duy nhất
+ * bằng mảng định kiểu trực tiếp (`position`, `normal`, `uv`, `index`).
  */
 export function mergeBufferGeometries(
   geometries: THREE.BufferGeometry[],
@@ -208,7 +206,7 @@ function createPolygonShape(
 
   if (holeBounds) {
     const hole = new THREE.Path();
-    // Counter-clockwise hole in (X, -Z) plane opposite to CW outer polygon
+    // Lỗ khoét ngược chiều kim đồng hồ trong mặt phẳng (X, -Z), ngược với đa giác ngoài thuận chiều kim đồng hồ
     hole.moveTo(holeBounds.minX, -holeBounds.minZ);
     hole.lineTo(holeBounds.minX, -holeBounds.maxZ);
     hole.lineTo(holeBounds.maxX, -holeBounds.maxZ);
@@ -311,9 +309,7 @@ function buildZoneFloorGeometry(
 }
 
 /**
- * Pháp tuyến đơn vị hướng ra ngoài (XZ) của một tường ngoài so với đa giác sàn của tầng.
- *
- * Computes the outward XZ unit normal of an exterior wall relative to the level's slab polygon.
+ * Tính vector pháp tuyến đơn vị hướng ra ngoài (XZ) của tường ngoài so với đa giác sàn của tầng.
  */
 export function computeExteriorWallNormal(
   wall: WallNode,
@@ -333,7 +329,7 @@ export function computeExteriorWallNormal(
   const wallCenterX = (wall.start[0] + wall.end[0]) * 0.5;
   const wallCenterZ = (wall.start[1] + wall.end[1]) * 0.5;
 
-  // Candidate perpendicular normals
+  // Vector pháp tuyến vuông góc ứng viên
   const n1x = -dz / len;
   const n1z = dx / len;
 
@@ -348,13 +344,10 @@ export function computeExteriorWallNormal(
 }
 
 /**
- * Chia một tường thành các đoạn hình chữ nhật quanh các lỗ mở (không dùng CSG): đoạn nguyên chiều cao, đoạn bệ
- * dưới cửa sổ và đoạn lanh tô trên cửa.
- *
- * Splits a wall into rectangular sub-segments around its openings without CSG:
- * - Left / intermediate / right full-height segments
- * - Sill segments (`0..sillHeight`) under windows
- * - Header/lintel segments (`sillHeight + height..wall.height`) above doors/windows/arches
+ * Chia một bức tường thành các đoạn hình chữ nhật con quanh các lỗ mở mà không dùng CSG:
+ * - Các đoạn nguyên chiều cao ở bên trái / giữa / bên phải
+ * - Các đoạn bệ tường (`0..sillHeight`) bên dưới cửa sổ
+ * - Các đoạn lanh tô (`sillHeight + height..wall.height`) phía trên cửa đi/cửa sổ/vòm
  */
 export function splitWallIntoSegments(
   wall: WallNode,
@@ -393,7 +386,7 @@ export function splitWallIntoSegments(
     const opStart = Math.max(cursor, Math.min(wallLength, op.offset));
     const opEnd = Math.max(opStart, Math.min(wallLength, op.offset + op.width));
 
-    // Solid segment before opening
+    // Đoạn tường đặc trước lỗ mở
     if (opStart - cursor > 1e-3) {
       segments.push({
         wallId: wall.id,
@@ -406,7 +399,7 @@ export function splitWallIntoSegments(
     }
 
     if (opEnd - opStart > 1e-3) {
-      // Sill segment below window opening
+      // Đoạn bệ tường bên dưới ô cửa sổ
       const sillTop = Math.min(op.sillHeight, effectiveHeight);
       if (sillTop > 1e-3) {
         segments.push({
@@ -420,7 +413,7 @@ export function splitWallIntoSegments(
         });
       }
 
-      // Header/lintel segment above opening
+      // Đoạn lanh tô phía trên lỗ mở
       const openTop = op.sillHeight + op.height;
       if (effectiveHeight - openTop > 1e-3) {
         segments.push({
@@ -438,7 +431,7 @@ export function splitWallIntoSegments(
     cursor = opEnd;
   }
 
-  // Solid segment after last opening
+  // Đoạn tường đặc sau lỗ mở cuối cùng
   if (wallLength - cursor > 1e-3) {
     segments.push({
       wallId: wall.id,
@@ -538,7 +531,7 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
       op.kind === 'arch';
 
     if (isDoor) {
-      // 1. Left and right door jambs
+      // 1. Khung đứng bên trái và bên phải của cửa
       const jambWidth = 0.06;
       const leftJamb = buildBoxForWallRange(
         wall,
@@ -560,7 +553,7 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
       );
       if (rightJamb) opaqueFrames.push(rightJamb);
 
-      // 2. Transom header bar
+      // 2. Thanh khung ngang phía trên cửa
       const transom = buildBoxForWallRange(
         wall,
         op.offset,
@@ -571,7 +564,7 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
       );
       if (transom) opaqueFrames.push(transom);
 
-      // 3. Subtle 85°-open door leaf tucked outside walk path (only for doors, not arch)
+      // 3. Cánh cửa mở nhẹ 85° ép gọn ngoài lối đi (chỉ áp dụng cho cửa, không dùng cho vòm)
       if (op.kind !== 'arch') {
         const leafW = Math.min(
           0.92,
@@ -580,11 +573,11 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
         const leafH = Math.max(0.2, op.height - 0.08);
         const leafThick = 0.04;
 
-        // Pivot on left jamb, swing open ~85° inwards
+        // Bản lề đặt trên khung trái, mở xoay vào trong khoảng 85°
         const hingeU = op.offset + jambWidth;
         const hx = wall.start[0] + unitX * hingeU;
         const hz = wall.start[1] + unitZ * hingeU;
-        const swingAngle = wallAngle + 1.48; // ~85° open
+        const swingAngle = wallAngle + 1.48; // mở ~85°
 
         const leafMidX = hx + Math.cos(-swingAngle) * (leafW * 0.5);
         const leafMidZ = hz - Math.sin(-swingAngle) * (leafW * 0.5);
@@ -597,7 +590,7 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
         if (op.kind === 'glass-door') {
           glassPanes.push(leafBox);
 
-          // Slim architectural top/bottom rails and double-sided pull handle on open glass leaf
+          // Thanh nẹp trên/dưới mảnh và tay nắm kéo hai mặt trên cánh cửa kính mở
           const topRail = new THREE.BoxGeometry(leafW, 0.036, leafThick + 0.012);
           topRail.translate(0, leafH * 0.5 - 0.018, 0);
           topRail.rotateY(swingAngle);
@@ -620,7 +613,7 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
         }
       }
     } else if (op.kind === 'window') {
-      // Architectural curtain-wall window frame + slender mullions + glass pane
+      // Khung cửa sổ mặt dựng kiến trúc + đố đứng mảnh + tấm kính
       const y0 = op.sillHeight;
       const y1 = Math.min(wall.height, op.sillHeight + op.height);
       const frameT = 0.055;
@@ -677,7 +670,7 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
     }
   }
 
-  // Add sleek top/bottom glazing channels & slender vertical mullions along tall glass walls
+  // Thêm thanh nẹp kính trên/dưới mảnh và đố đứng dọc theo các vách kính cao
   if (wall.material === 'glass' && wall.height >= 2.2) {
     const solidRuns = splitWallIntoSegments(wall, wall.height).filter(s => s.kind === 'solid');
     const railDepth = wall.thickness + 0.02;

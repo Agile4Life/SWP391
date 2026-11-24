@@ -2,15 +2,15 @@ import * as THREE from 'three';
 import type { PoseOverride } from './humanRetarget';
 
 /**
- * Poses the pitch/splay angles of `solveHumanPose` cannot express. Frame: +Y up, +Z the
- * way the character faces at yaw 0, +X the character's left in the rest pose.
+ * Các tư thế mà góc nghiêng/dạng của `solveHumanPose` không biểu diễn được. Hệ tọa độ: +Y hướng lên,
+ * +Z là hướng mặt nhân vật khi yaw = 0, +X là phía bên trái của nhân vật ở tư thế nghỉ.
  */
 
 const HALF_PI = Math.PI / 2;
 
-/** Lying on the back, head toward +Z, face up: Ry(180°) after Rx(-90°). */
+/** Nằm ngửa, đầu hướng về +Z, mặt ngửa lên trên: Ry(180°) sau Rx(-90°). */
 const SUPINE = new THREE.Quaternion().setFromEuler(new THREE.Euler(-HALF_PI, Math.PI, 0, 'YXZ'));
-/** Feet flat on the floor with the toes pointing away from the head. */
+/** Bàn chân đặt phẳng trên sàn với mũi chân hướng ra xa đầu. */
 const FEET_AWAY = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
 
 /** Nội suy tuyến tính giữa a và b theo t. */
@@ -21,18 +21,15 @@ const dir = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).norm
 const tilt = (x: number) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), x);
 
 /**
- * Tư thế đẩy tạ trên ghế nghiêng của SÖL: xương chậu sát ghế, cột sống tựa lưng ghế, đầu gối co với giày đặt
- * sàn và cẳng tay đẩy thanh tạ theo phương thẳng đứng trên ngực.
- *
- * Bench press on SÖL's adjustable incline bench (26.4° backrest, seat top at y = 0.50 m):
- * pelvis sits flush in the seat crease, spine reclines up the padded backrest, knees bend
- * with sneakers planted flat on the floor, and forearms drive the bar vertically over the upper chest.
+ * Tư thế đẩy tạ trên ghế nghiêng điều chỉnh của SÖL (tựa lưng 26.4°, mặt ghế ở y = 0.50 m):
+ * xương chậu đặt sát khe ghế, cột sống tựa lên phần đệm lưng, đầu gối co với giày đặt phẳng
+ * trên sàn và cẳng tay đẩy thanh tạ thẳng đứng phía trên ngực trên.
  */
 export function benchPress(phase: number): PoseOverride {
-  const rise = 0.5 - 0.5 * Math.cos(phase); // 0 = bar near upper chest, 1 = controlled lockout
+  const rise = 0.5 - 0.5 * Math.cos(phase); // 0 = thanh tạ gần ngực trên, 1 = duỗi tay khóa khớp có kiểm soát
   const flare = lerp(1.68, 0.44, rise);
   const forearm = 0.44 * rise;
-  // After the supine turn the character's left (+X at rest) lies toward -X.
+  // Sau phép xoay nằm ngửa, phía bên trái của nhân vật (+X ở tư thế nghỉ) hướng về -X.
   // Hướng cánh tay theo bên trái/phải và độ dạng tay.
   const arm = (side: -1 | 1) => dir(side * Math.sin(flare), Math.cos(flare), -0.18);
   // Hướng cẳng tay theo bên trái/phải và độ duỗi.
@@ -50,7 +47,7 @@ export function benchPress(phase: number): PoseOverride {
       LeftForeArm: fore(-1),
       RightArm: arm(1),
       RightForeArm: fore(1),
-      // Thighs splayed out over the seat pad and shins planted cleanly down to the gym floor.
+      // Đùi dạng ra trên đệm ghế và cẳng chân đặt gọn xuống sàn gym.
       LeftUpLeg: dir(-0.32, -0.13, -0.94),
       LeftLeg: dir(-0.1, -0.97, -0.22),
       RightUpLeg: dir(0.32, -0.13, -0.94),

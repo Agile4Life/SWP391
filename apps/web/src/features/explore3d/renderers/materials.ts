@@ -164,8 +164,6 @@ export function getExploreThemePalette(theme: ExploreTheme): ExploreThemePalette
 /**
  * Màu nhấn giao diện (khung chọn, ghim): bạc ở theme tối, hồng salmon ở theme sáng; vật liệu cảnh giữ màu
  * riêng.
- *
- * Interface accent (selection highlight, pins): silver in Dark, salmon in Light. Scene materials keep their own colours.
  */
 export function getExploreUiAccent(theme: ExploreTheme): { accent: string; hover: string } {
   return theme === 'light'
@@ -287,7 +285,7 @@ export class MaterialRegistry {
       }),
     };
 
-    // Never use MeshPhysicalMaterial with transmission — use MeshStandardMaterial for glass
+    // Không bao giờ dùng MeshPhysicalMaterial kèm transmission — dùng MeshStandardMaterial cho kính
     const wallConcrete = new THREE.MeshStandardMaterial({
       name: 'wall-concrete',
       color: p.walls.concrete,
@@ -492,7 +490,7 @@ export class MaterialRegistry {
     this.applySurfaceDetails();
   }
 
-  /** Saltline-style world-space macro variation so flat colours catch the light unevenly. */
+  /** Biến thiên vĩ mô trong không gian thế giới kiểu Saltline giúp mảng màu phẳng bắt sáng không bị đều cứng. */
   private applySurfaceDetails(): void {
     const f = this.floors;
     applySurfaceDetail(f['rubber-dark'], SD.rubber);

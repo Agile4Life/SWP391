@@ -5,10 +5,8 @@ import type { ItemKind, Vec3 } from '../../scene/schema';
 type Geo = THREE.BufferGeometry;
 
 /**
- * Các hàm trợ giúp hình học do itemGeometries.ts cung cấp (truyền vào để tránh import vòng): bảng màu, kích
- * thước, hộp, trụ, ống, đĩa, hình tùy ý, bề mặt và co vừa kích thước.
- *
- * Geometry helpers owned by itemGeometries.ts (passed in to avoid a circular import).
+ * Các hàm trợ giúp hình học do itemGeometries.ts sở hữu (truyền vào để tránh import vòng):
+ * bảng màu, kích thước, hộp, trụ, ống, đĩa, hình tùy ý, bề mặt và căn vừa kích thước.
  */
 export interface GymBuilderHelpers {
   P: Readonly<Record<string, string>>;
@@ -60,19 +58,15 @@ export interface GymBuilderHelpers {
 }
 
 /**
- * Tạo các hàm dựng thiết bị gym thương mại thực tế: vị trí người tập ngồi/đứng/nắm khớp bản dựng hộp cũ để nhân
- * vật vẫn khớp, còn cấu trúc theo máy thật.
- *
- * Realistic commercial gym equipment. Layout (where the user stands, sits or
- * grips) matches the earlier box-built versions so the live actors still line
- * up; the construction now follows real machines: bent round-tube frames,
- * upholstered pads with soft edges, chrome guide rods, rubber bumper plates,
- * selectorised weight stacks, cables and pulleys.
+ * Dựng các thiết bị gym thương mại chân thực. Bố cục (vị trí người tập đứng, ngồi hoặc cầm nắm)
+ * khớp với các bản dựng khối hộp trước đó để nhân vật sống vẫn căn chỉnh đúng; kết cấu giờ đây
+ * bám sát máy thật: khung ống tròn uốn cong, đệm bọc viền mềm, thanh dẫn hướng mạ chrome,
+ * đĩa tạ cao su, cột tạ chọn mức, cáp và ròng rọc.
  */
 export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind, () => Geo>> {
   const { P, dims, box, cyl, roundedBox: rbox, tube, disc, shape, surface, fit } = h;
 
-  // Materials that are not in the base palette.
+  // Các vật liệu không có trong bảng màu cơ sở.
   const rubber = surface('#0f0f11', 0.9, 0);
   const belt = surface('#151517', 0.78, 0);
   const vinyl = surface('#1b1b1e', 0.55, 0);
@@ -86,9 +80,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   const PI2 = Math.PI / 2;
 
   /**
-   * Tấm màn hình mỏng nghiêng đặt phía trước bảng điều khiển (tilt quanh trục X, lift là độ nhô ra).
-   *
-   * Thin tilted panel (screen) sitting `lift` in front of a console rotated about X by `tilt`.
+   * Tấm màn hình mỏng nghiêng đặt nhô ra `lift` phía trước bảng điều khiển đã xoay quanh trục X một góc `tilt`.
    */
   const screenOn = (w: number, hh: number, center: Vec3, tilt: number, lift: number, color = P.screen): Geo =>
     box(w, hh, 0.012, color, [center[0], center[1] - Math.sin(tilt) * lift, center[2] + Math.cos(tilt) * lift], [
@@ -98,9 +90,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     ]);
 
   /**
-   * Thanh tạ Olympic theo trục X với ống tay, đĩa cao su và khóa.
-   *
-   * Olympic bar along X with sleeves, bumper plates and collars.
+   * Thanh tạ Olympic dọc trục X gồm ống tay, đĩa tạ cao su và khóa kẹp.
    */
   const barbell = (y: number, z: number, length: number, plateX: number): Geo[] => [
     cyl(0.014, 0.014, length, chrome, [0, y, z], [0, 0, PI2], 10),
@@ -115,9 +105,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   ];
 
   /**
-   * Cột tạ chọn mức (selectorised) giữa hai thanh dẫn chrome.
-   *
-   * Selectorised weight stack between two chrome guide rods.
+   * Cột tạ chọn mức nằm giữa hai thanh dẫn hướng mạ chrome.
    */
   const weightStack = (x: number, z: number, baseY: number, plates: number, w = 0.34, d = 0.12): Geo[] => {
     const parts: Geo[] = [];
@@ -136,7 +124,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     const consoleCenter: Vec3 = [0, 1.28, -0.86];
     return fit(
       [
-        // deck, belt, side landing rails
+        // sàn chạy, băng tải, thanh đặt chân hai bên
         rbox(0.86, 0.12, 1.9, 0.04, frame, [0, 0.1, 0.02]),
         box(0.54, 0.02, 1.56, belt, [0, 0.168, 0.12]),
         cyl(0.05, 0.05, 0.56, steel, [0, 0.12, 0.93], [0, 0, PI2], 12),
@@ -145,9 +133,9 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
           box(0.012, 0.03, 1.5, P.salmon, [s * 0.425, 0.17, 0.1]),
           disc(0.045, 0.05, rubber, [s * 0.4, 0.045, 0.9], 'x', 12),
         ]),
-        // motor hood
+        // nắp che động cơ
         rbox(0.9, 0.24, 0.5, 0.09, shroud, [0, 0.2, -0.72]),
-        // uprights, side handrails, front grab bar
+        // trụ đứng, tay vịn hai bên, thanh nắm trước
         ...[-1, 1].flatMap(s => [
           ...tube(
             [
@@ -178,7 +166,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
           0.024,
           steel,
         ),
-        // console, touchscreen, accent, safety key
+        // bảng điều khiển, màn hình cảm ứng, viền nhấn, khóa an toàn
         rbox(0.82, 0.32, 0.1, 0.04, shroud, consoleCenter, [tilt, 0, 0]),
         screenOn(0.5, 0.22, [0, 1.3, -0.86], tilt, 0.052),
         screenOn(0.5, 0.02, [0, 1.16, -0.8], tilt, 0.052, P.salmon),
@@ -192,13 +180,13 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   const buildUprightBike = (): Geo =>
     fit(
       [
-        // stabilisers with rubber feet
+        // thanh chân đế có đệm cao su
         ...[-0.5, 0.5].flatMap(z => [
           cyl(0.035, 0.035, 0.6, frame, [0, 0.04, z], [0, 0, PI2], 10),
           disc(0.045, 0.05, rubber, [-0.3, 0.045, z], 'x', 12),
           disc(0.045, 0.05, rubber, [0.3, 0.045, z], 'x', 12),
         ]),
-        // main frame spine
+        // sống khung chính
         ...tube(
           [
             [0, 0.06, 0.5],
@@ -210,7 +198,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
           frame,
           10,
         ),
-        // flywheel shroud, crank, pedals
+        // vỏ bánh đà, giò đĩa, bàn đạp
         disc(0.27, 0.15, shroud, [0, 0.37, -0.14]),
         disc(0.2, 0.156, P.salmon, [0, 0.37, -0.14]),
         disc(0.07, 0.2, steel, [0, 0.34, 0.02], 'x', 14),
@@ -218,7 +206,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
         box(0.02, 0.17, 0.035, steel, [0.11, 0.41, 0.04]),
         rbox(0.1, 0.03, 0.16, 0.012, rubber, [-0.17, 0.2, -0.02]),
         rbox(0.1, 0.03, 0.16, 0.012, rubber, [0.17, 0.48, 0.06]),
-        // seat post and saddle
+        // cọc yên và yên xe
         ...tube(
           [
             [0, 0.36, 0.2],
@@ -229,7 +217,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
         ),
         rbox(0.25, 0.08, 0.2, 0.038, vinyl, [0, 0.975, 0.42]),
         rbox(0.11, 0.065, 0.2, 0.03, vinyl, [0, 0.968, 0.26]),
-        // handlebar mast, bars, display
+        // trụ tay lái, tay lái, màn hình hiển thị
         ...tube(
           [
             [0, 0.42, -0.2],
@@ -262,7 +250,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   const buildElliptical = (): Geo =>
     fit(
       [
-        // base rails and stabilisers
+        // thanh ray đế và thanh chân đế
         ...[-0.3, 0.3].flatMap(x =>
           tube(
             [
@@ -279,11 +267,11 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
           disc(0.05, 0.05, rubber, [-0.42, 0.05, z], 'x', 12),
           disc(0.05, 0.05, rubber, [0.42, 0.05, z], 'x', 12),
         ]),
-        // rear drive housing
+        // hộp truyền động phía sau
         disc(0.36, 0.24, shroud, [0, 0.43, 0.6]),
         disc(0.22, 0.25, P.salmon, [0, 0.43, 0.6]),
         disc(0.06, 0.5, steel, [0, 0.43, 0.6], 'x', 12),
-        // pedal arms and foot plates
+        // cần bàn đạp và tấm đặt chân
         ...tube(
           [
             [-0.26, 0.52, 0.78],
@@ -302,7 +290,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
         ),
         rbox(0.19, 0.05, 0.42, 0.02, rubber, [-0.26, 0.37, 0.14], [0.22, 0, 0]),
         rbox(0.19, 0.05, 0.42, 0.02, rubber, [0.26, 0.29, -0.06], [0.12, 0, 0]),
-        // console tower
+        // trụ bảng điều khiển
         ...tube(
           [
             [0, 0.08, -0.7],
@@ -327,7 +315,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
           8,
           0.05,
         ),
-        // moving stride arms with grips
+        // tay đòn chuyển động kèm tay nắm
         ...tube(
           [
             [-0.36, 0.3, -0.48],
@@ -369,25 +357,25 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   /** Máy Smith: đế, hai trụ dẫn hướng, thanh tạ trượt và móc. */
   const buildSmithMachine = (): Geo => {
     const parts: Geo[] = [
-      // base
+      // chân đế
       box(0.12, 0.08, 1.52, frame, [-0.82, 0.04, 0]),
       box(0.12, 0.08, 1.52, frame, [0.82, 0.04, 0]),
       box(1.76, 0.08, 0.12, frame, [0, 0.04, -0.66]),
-      // columns, braces, header
+      // trụ đứng, thanh giằng, xà ngang trên
       box(0.1, 2.16, 0.1, frame, [-0.82, 1.12, -0.18]),
       box(0.1, 2.16, 0.1, frame, [0.82, 1.12, -0.18]),
       box(0.08, 2.14, 0.08, frame, [-0.82, 1.1, -0.58], [0.18, 0, 0]),
       box(0.08, 2.14, 0.08, frame, [0.82, 1.1, -0.58], [0.18, 0, 0]),
       box(1.84, 0.12, 0.2, frame, [0, 2.16, -0.24]),
       box(0.5, 0.07, 0.012, P.salmon, [0, 2.16, -0.135]),
-      // chrome guide rods with linear bearings
+      // thanh dẫn hướng mạ chrome kèm bạc trượt tuyến tính
       ...[-0.72, 0.72].flatMap(x => [
         cyl(0.02, 0.02, 2.04, chrome, [x, 1.08, -0.02], undefined, 12),
         cyl(0.04, 0.04, 0.16, steel, [x, 1.15, -0.02], undefined, 12),
       ]),
       ...barbell(1.15, -0.02, 2.14, 0.9),
     ];
-    // lock-out pegs up the columns and plate storage horns
+    // chốt khóa dọc theo các trụ và thanh treo đĩa tạ
     for (const s of [-1, 1]) {
       for (let i = 0; i < 9; i++) {
         parts.push(box(0.03, 0.025, 0.07, steel, [s * 0.82, 0.5 + i * 0.16, -0.1]));
@@ -403,25 +391,25 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   const buildLatPulldown = (): Geo =>
     fit(
       [
-        // base
+        // chân đế
         box(0.1, 0.07, 1.4, frame, [0, 0.035, 0]),
         box(0.9, 0.07, 0.1, frame, [0, 0.035, -0.6]),
         box(0.6, 0.07, 0.1, frame, [0, 0.035, 0.6]),
-        // weight stack frame, shroud back, guide rods, plates
+        // khung cột tạ, tấm che lưng, thanh dẫn hướng, các phiến tạ
         box(0.07, 2.06, 0.07, frame, [-0.27, 1.05, -0.52]),
         box(0.07, 2.06, 0.07, frame, [0.27, 1.05, -0.52]),
         box(0.62, 2.0, 0.02, shroud, [0, 1.04, -0.6]),
         cyl(0.011, 0.011, 1.9, chrome, [-0.1, 1.05, -0.5], undefined, 8),
         cyl(0.011, 0.011, 1.9, chrome, [0.1, 1.05, -0.5], undefined, 8),
         ...weightStack(0, -0.5, 0.16, 15),
-        // boom, pulleys, cables
+        // cần ngang trên, ròng rọc, dây cáp
         box(0.09, 0.1, 1.02, frame, [0, 2.12, -0.12]),
         disc(0.07, 0.03, steel, [0, 2.05, 0.3], 'x', 18),
         disc(0.07, 0.03, steel, [0, 2.05, -0.5], 'x', 18),
         cyl(0.006, 0.006, 0.2, cable, [0, 1.94, 0.3], undefined, 6),
         cyl(0.006, 0.006, 0.98, cable, [0, 1.52, -0.5], undefined, 6),
         cyl(0.006, 0.006, 0.8, cable, [0, 2.12, -0.1], [PI2, 0, 0], 6),
-        // lat bar with rubber grips
+        // thanh kéo xô kèm tay nắm cao su
         ...tube(
           [
             [-0.62, 1.74, 0.3],
@@ -450,7 +438,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
           0.021,
           rubber,
         ),
-        // seat and thigh hold-down rollers
+        // ghế ngồi và con lăn giữ đùi
         box(0.08, 0.44, 0.08, frame, [0, 0.25, 0.3]),
         rbox(0.36, 0.075, 0.4, 0.032, vinyl, [0, 0.5, 0.3]),
         box(0.07, 0.62, 0.07, frame, [0, 0.38, 0.02]),
@@ -464,16 +452,16 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   /** Giá squat: bục cao su và gỗ sồi, trụ, móc và thanh an toàn. */
   const buildSquatRack = (): Geo => {
     const parts: Geo[] = [
-      // platform: rubber wings, oak centre
+      // bục tập: hai cánh cao su, phần giữa gỗ sồi
       box(1.66, 0.05, 1.74, rubber, [0, 0.025, 0]),
       box(0.86, 0.054, 1.72, P.wood, [0, 0.027, 0]),
-      // uprights and top frame
+      // trụ đứng và khung đỉnh
       ...[-0.62, 0.62].flatMap(x => [
         box(0.08, 2.2, 0.08, frame, [x, 1.15, -0.56]),
         box(0.08, 2.2, 0.08, frame, [x, 1.15, 0.26]),
         box(0.08, 0.08, 0.9, frame, [x, 2.21, -0.15]),
         box(0.07, 0.06, 0.92, steel, [x, 0.88, -0.15]),
-        // J-hooks
+        // móc đỡ tạ chữ J
         box(0.05, 0.12, 0.05, steel, [x, 1.36, 0.325]),
         box(0.05, 0.03, 0.09, steel, [x, 1.33, 0.36]),
       ]),
@@ -491,11 +479,11 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
       ...barbell(1.4, 0.37, 1.66, 0.7),
     ];
     for (const s of [-1, 1]) {
-      // numbered adjustment holes read as a dotted line up each upright
+      // các lỗ chỉnh độ cao đánh số tạo thành hàng chấm dọc mỗi trụ đứng
       for (let i = 0; i < 12; i++) {
         parts.push(box(0.03, 0.02, 0.006, P.charcoalDeep, [s * 0.62, 0.5 + i * 0.13, 0.303]));
       }
-      // rear plate storage
+      // giá treo đĩa tạ phía sau
       parts.push(cyl(0.024, 0.024, 0.2, chrome, [s * 0.74, 0.5, -0.56], [0, 0, PI2], 10));
       parts.push(disc(0.2, 0.05, rubber, [s * 0.72, 0.5, -0.56]));
       parts.push(disc(0.2, 0.05, rubber, [s * 0.78, 0.5, -0.56]));
@@ -506,7 +494,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   /** Giá tạ tay: ba khung bằng ống uốn và hai khay nghiêng. */
   const buildDumbbellRack = (): Geo => {
     const parts: Geo[] = [];
-    // three side frames from bent tube, two angled trays
+    // ba khung bên bằng ống uốn cong, hai khay đặt nghiêng
     for (const x of [-1.18, 0, 1.18]) {
       parts.push(
         ...tube(
@@ -529,8 +517,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     parts.push(box(2.5, 0.025, 0.34, frame, [0, 0.4, 0.1], [0.2, 0, 0]));
     parts.push(box(2.5, 0.05, 0.02, steel, [0, 0.75, 0.055], [0.2, 0, 0]));
     parts.push(box(2.5, 0.05, 0.02, steel, [0, 0.385, 0.275], [0.2, 0, 0]));
-    // hex rubber dumbbells, heavier toward the right and on the bottom tray
-    // Một quả tạ tay lục giác bọc cao su (nặng hơn về phía phải và khay dưới).
+    // Một quả tạ tay lục giác bọc cao su (nặng dần về phía phải và ở khay dưới).
     const dumbbell = (x: number, y: number, z: number, r: number): Geo[] => [
       cyl(0.014, 0.014, 0.16, chrome, [x, y, z], [PI2 + 0.2, 0, 0], 8),
       cyl(r, r, 0.085, rubber, [x, y + 0.021, z - 0.105], [PI2 + 0.2, 0, 0], 6),
@@ -551,14 +538,14 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   const buildAdjustableBench = (): Geo =>
     fit(
       [
-        // feet with rubber caps and transport wheels
+        // chân ghế có nắp cao su và bánh xe di chuyển
         cyl(0.03, 0.03, 0.64, frame, [0, 0.035, -0.56], [0, 0, PI2], 10),
         cyl(0.03, 0.03, 0.5, frame, [0, 0.035, 0.56], [0, 0, PI2], 10),
         disc(0.04, 0.05, rubber, [-0.3, 0.04, -0.56], 'x', 12),
         disc(0.04, 0.05, rubber, [0.3, 0.04, -0.56], 'x', 12),
         disc(0.045, 0.03, rubber, [-0.24, 0.045, 0.56], 'x', 14),
         disc(0.045, 0.03, rubber, [0.24, 0.045, 0.56], 'x', 14),
-        // spine
+        // sống khung chính
         ...tube(
           [
             [0, 0.04, 0.56],
@@ -570,11 +557,11 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
           frame,
           10,
         ),
-        // upholstered seat and back pad with stitched piping underneath
+        // đệm ngồi và đệm lưng bọc da kèm đường viền chỉ bên dưới
         rbox(0.3, 0.075, 0.36, 0.032, vinyl, [0, 0.46, 0.36], [-0.12, 0, 0]),
         rbox(0.3, 0.085, 0.84, 0.036, vinyl, [0, 0.66, -0.22], [0.46, 0, 0]),
         box(0.31, 0.012, 0.8, P.salmon, [0, 0.625, -0.245], [0.46, 0, 0]),
-        // back support ladder and pop-pin
+        // thanh răng chống lưng và chốt rút điều chỉnh
         ...tube(
           [
             [0, 0.3, -0.1],
@@ -600,11 +587,11 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
       box(0.38, 0.5, 0.012, P.screen, [0, 1.42, -0.405]),
     ];
     for (const s of [-1, 1]) {
-      // weight tower with visible stack behind a slot
+      // tháp tạ có khe hở để lộ cột tạ bên trong
       parts.push(box(0.38, 2.1, 0.3, frame, [s * 0.92, 1.1, -0.52]));
       parts.push(box(0.2, 1.2, 0.012, P.charcoalDeep, [s * 0.92, 0.9, -0.365]));
       parts.push(...weightStack(s * 0.92, -0.37, 0.34, 12, 0.16, 0.03));
-      // three articulated pulley arms per side, each ending in a swivel pulley and handle
+      // ba cánh tay ròng rọc khớp nối mỗi bên, đầu mỗi tay gắn ròng rọc xoay và tay nắm
       const arms: Array<[Vec3, Vec3]> = [
         [
           [s * 0.9, 1.98, -0.4],
@@ -641,7 +628,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   /** Bao cát nặng: chân đế ba chân, trụ đỡ, dây treo và thân bao. */
   const buildHeavyBag = (): Geo => {
     const parts: Geo[] = [
-      // tripod base and stanchion
+      // chân đế ba nhánh và trụ đứng
       ...tube(
         [
           [-0.4, 0.035, -0.36],
@@ -679,13 +666,13 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
         0.022,
         frame,
       ),
-      // swivel, bag, strap band
+      // khớp xoay, thân bao, đai quấn
       disc(0.03, 0.06, chrome, [0, 2.17, 0.1], 'y', 10),
       shape(new THREE.CapsuleGeometry(0.2, 0.86, 5, 20), leather, [0, 1.26, 0.1]),
       cyl(0.203, 0.203, 0.16, P.salmon, [0, 1.42, 0.1], undefined, 20),
       disc(0.11, 0.02, steel, [0, 1.9, 0.1], 'y', 16),
     ];
-    // four chains from the swivel to the bag's top ring
+    // bốn sợi xích từ khớp xoay xuống vòng đỉnh của bao cát
     for (let i = 0; i < 4; i++) {
       const a = (i / 4) * Math.PI * 2 + Math.PI / 4;
       const tx = Math.cos(a) * 0.1;
@@ -707,7 +694,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
 
   /** Bao tốc độ: thân giọt nước xoay quanh trục Y, bản gỗ và khung treo. */
   const buildSpeedBag = (): Geo => {
-    // teardrop profile revolved around Y
+    // biên dạng hình giọt nước xoay quanh trục Y
     const profile = [
       [0.0, -0.17],
       [0.07, -0.15],
@@ -731,10 +718,10 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
           10,
           0.1,
         ),
-        // rebound platform with steel rim
+        // mặt đĩa bật nảy có viền thép
         disc(0.34, 0.045, P.wood, [0, 1.8, 0.08], 'y', 28),
         disc(0.345, 0.02, steel, [0, 1.8, 0.08], 'y', 28),
-        // swivel and bag
+        // khớp xoay và bao tốc độ
         disc(0.03, 0.05, chrome, [0, 1.755, 0.08], 'y', 10),
         shape(new THREE.LatheGeometry(profile, 16), leather, [0, 1.55, 0.08]),
         cyl(0.03, 0.03, 0.03, P.salmon, [0, 1.71, 0.08], undefined, 10),
@@ -746,7 +733,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   /** Sàn đấu boxing: tạp dề, thảm canvas, biểu tượng giữa, cột góc và dây. */
   const buildBoxingRing = (): Geo => {
     const parts: Geo[] = [
-      // apron skirt, canvas, centre emblem
+      // yếm bao sàn, thảm canvas, biểu tượng trung tâm
       box(5.5, 0.44, 5.5, frame, [0, 0.22, 0]),
       box(5.3, 0.05, 5.3, P.stone, [0, 0.465, 0]),
       box(1.8, 0.012, 1.8, P.salmon, [0, 0.492, 0]),
@@ -760,13 +747,13 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     ];
     for (const [x, z, color] of corners) {
       parts.push(cyl(0.06, 0.06, 1.2, steel, [x, 1.0, z], undefined, 14));
-      // padded corner cushion facing the ring centre
+      // đệm góc bọc mút hướng về tâm võ đài
       const inward = 0.1;
       parts.push(
         h.roundedBox(0.3, 0.9, 0.3, 0.07, color, [x - Math.sign(x) * inward, 1.08, z - Math.sign(z) * inward], [0, Math.PI / 4, 0]),
       );
     }
-    // four rope tiers: padded ropes tied into the posts with turnbuckles
+    // bốn tầng dây đài: dây bọc đệm căng vào cột góc bằng tăng đơ
     const tiers: Array<[number, string]> = [
       [0.72, P.white],
       [0.98, P.salmon],
@@ -780,7 +767,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
       parts.push(cyl(0.02, 0.02, e * 2, color, [-e, y, 0], [PI2, 0, 0], 8));
       parts.push(cyl(0.02, 0.02, e * 2, color, [e, y, 0], [PI2, 0, 0], 8));
     }
-    // rope spacers
+    // dây giữ khoảng cách giữa các tầng dây
     for (const s of [-1, 1]) {
       for (const t of [-1.2, 1.2]) {
         parts.push(box(0.03, 0.8, 0.02, P.white, [t, 1.11, s * 2.38]));

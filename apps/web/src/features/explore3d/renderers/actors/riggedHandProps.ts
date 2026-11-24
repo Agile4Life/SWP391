@@ -6,14 +6,14 @@ export type RiggedHandPropKind = 'racket' | 'tablet' | 'dumbbell' | 'boxing-glov
 /** Mô tả vật cầm tay: loại, xương gắn vào, vị trí và xoay trong hệ xương, kích thước và màu nhấn. */
 export interface RiggedHandPropSpec {
   kind: RiggedHandPropKind;
-  /** Bone the prop is parented to (it follows the clip, swing included). */
+  /** Xương mà vật cầm tay được gắn vào (đi theo chuyển động clip, kể cả động tác vung tay). */
   bone: string;
-  /** Hand position and orientation in the bone's local space, in model units (pre-scale). */
+  /** Vị trí và hướng đặt trong không gian cục bộ của xương, theo đơn vị mô hình (trước khi nhân tỉ lệ). */
   position: readonly [number, number, number];
   rotation: readonly [number, number, number];
-  /** Uniform size multiplier on top of the base dimensions below (world units). */
+  /** Hệ số phóng đại đồng nhất áp lên kích thước cơ bản bên dưới (đơn vị thế giới). */
   size: number;
-  /** Optional accent colour (used for padded boxing gloves). */
+  /** Màu nhấn tùy chọn (dùng cho găng đấm bốc có đệm). */
   color?: string;
 }
 
@@ -52,7 +52,7 @@ let shared: SharedParts | null = null;
 function getSharedParts(): SharedParts {
   if (shared) return shared;
   shared = {
-    // Racket points along -Y in its own frame, then rotated into the hand's +Z grip axis.
+    // Vợt hướng dọc theo -Y trong hệ trục riêng, sau đó xoay vào trục nắm +Z của bàn tay.
     handle: new THREE.CylinderGeometry(0.014, 0.0155, 0.18, 8),
     buttCap: new THREE.CylinderGeometry(0.019, 0.016, 0.022, 8),
     throatStrut: new THREE.CylinderGeometry(0.0075, 0.009, 0.105, 6),
@@ -61,10 +61,10 @@ function getSharedParts(): SharedParts {
     strings: new THREE.CircleGeometry(0.098, 18),
     tabletBody: new THREE.BoxGeometry(0.22, 0.014, 0.16),
     tabletScreen: new THREE.PlaneGeometry(0.2, 0.14),
-    // Anatomical grip axis in `hand_l` and `hand_r` runs along local Z (pinky -Z to index/thumb +Z).
+    // Trục nắm giải phẫu trong `hand_l` và `hand_r` chạy dọc theo Z cục bộ (ngón út -Z tới ngón trỏ/cái +Z).
     dumbbellBar: new THREE.CylinderGeometry(0.014, 0.014, 0.15, 8).rotateX(Math.PI / 2),
     dumbbellHead: new THREE.CylinderGeometry(0.048, 0.048, 0.052, 6).rotateX(Math.PI / 2),
-    // Padded 14oz boxing glove: rounded leather fist along +Y (wrist -> knuckles), tucked +Z thumb, wrist wrap.
+    // Găng đấm bốc đệm 14oz: phần nắm da bo tròn dọc theo +Y (cổ tay -> khớp ngón), ngón cái gập ở +Z, đai quấn cổ tay.
     gloveFist: new THREE.SphereGeometry(0.068, 12, 10).scale(0.84, 1.22, 0.96),
     gloveThumb: new THREE.CapsuleGeometry(0.022, 0.042, 3, 6),
     gloveCuff: new THREE.CylinderGeometry(0.044, 0.041, 0.065, 10),
@@ -123,12 +123,8 @@ function mesh(
 }
 
 /**
- * Dựng vật cầm tay theo đơn vị thế giới và co theo modelScale để đúng cỡ khi gắn vào xương của nhân vật bị co;
- * hình học và vật liệu dùng chung cho mọi vật.
- *
- * Builds a hand-held prop sized in world units and shrunk by `modelScale`, so it
- * stays correct when parented under a bone of a scaled character. Geometry and
- * materials are shared between all props and live for the page's lifetime.
+ * Dựng vật cầm tay theo đơn vị thế giới và co theo `modelScale` để giữ đúng tỉ lệ khi gắn vào xương
+ * của nhân vật đã co giãn. Hình học và vật liệu được dùng chung giữa mọi vật cầm tay và tồn tại suốt vòng đời trang.
  */
 export function buildHandProp(spec: RiggedHandPropSpec, modelScale: number): THREE.Group {
   const parts = getSharedParts();
@@ -137,11 +133,11 @@ export function buildHandProp(spec: RiggedHandPropSpec, modelScale: number): THR
 
   if (spec.kind === 'racket') {
     group.add(mesh(parts.handle, parts.gripMaterial, [0, -0.09, 0]));
-    // Oval head (children[1]) flat in the YZ swing plane (normal along prop X -> palm normal after rotation).
+    // Mặt vợt hình bầu dục (children[1]) nằm phẳng trong mặt phẳng vung YZ (pháp tuyến dọc trục X của vợt -> trùng pháp tuyến lòng bàn tay sau khi xoay).
     const headScale: [number, number, number] = [0.88, 1.18, 1];
     group.add(mesh(parts.frame, parts.frameMaterial, [0, -0.375, 0], [0, Math.PI / 2, 0], headScale));
     group.add(mesh(parts.strings, parts.stringMaterial, [0, -0.375, 0], [0, Math.PI / 2, 0], headScale));
-    // Flared butt-cap + twin graphite V-throat bridge struts + throat crossbar.
+    // Nắp chuôi loe + hai thanh chữ V cổ vợt bằng graphite + thanh ngang cổ vợt.
     group.add(mesh(parts.buttCap, parts.frameMaterial, [0, 0.004, 0]));
     group.add(mesh(parts.throatStrut, parts.throatMaterial, [0, -0.222, -0.025], [-0.38, 0, 0]));
     group.add(mesh(parts.throatStrut, parts.throatMaterial, [0, -0.222, 0.025], [0.38, 0, 0]));

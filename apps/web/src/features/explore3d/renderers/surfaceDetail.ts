@@ -2,44 +2,41 @@ import * as THREE from 'three';
 import { getSurfaceTextureSet, type SurfaceTextureName } from './surfaceTextures';
 
 /**
- * Biến thiên bề mặt trong không gian thế giới cho vật liệu MeshStandard phẳng (biến thiên màu vĩ mô, bụi bẩn,
- * độ nhám, bump, bề mặt ướt), để mặt phẳng lớn không bị một màu và vệt sáng của nắng thấp tự nhiên hơn.
- *
- * World-space surface variation for flat-coloured MeshStandardMaterials,
- * ported from the Saltline material patch ("macro variation" + grime +
- * roughness breakup). Large repeated surfaces stop reading as one flat colour,
- * and specular highlights break up naturally under the low sun.
+ * Biến thiên bề mặt trong không gian thế giới cho các MeshStandardMaterial màu phẳng,
+ * chuyển thể từ bản vá vật liệu Saltline ("biến thiên vĩ mô" + bụi bẩn + phá vỡ độ nhám).
+ * Các bề mặt lặp kích thước lớn sẽ không còn trông như một mảng màu phẳng, và điểm sáng
+ * phản xạ (specular highlight) được phân tách tự nhiên dưới ánh nắng thấp.
  */
 export interface SurfaceDetail {
-  /** Albedo variation amount (±). */
+  /** Mức độ biến thiên albedo (±). */
   albedo: number;
-  /** Roughness variation amount (±). */
+  /** Mức độ biến thiên độ nhám (±). */
   roughness: number;
-  /** Noise frequency in cycles per metre. */
+  /** Tần số nhiễu tính theo chu kỳ trên mỗi mét. */
   scale: number;
-  /** Grime: darkens noisy patches by up to 35 %. */
+  /** Bụi bẩn: làm tối các mảng nhiễu tới tối đa 35%. */
   grime: number;
-  /** Micro-relief strength (procedural bump; concrete grain, asphalt, fabric). */
+  /** Cường độ vi nổi (bump thủ tục cho vân bê tông, nhựa đường, vải). */
   bump?: number;
-  /** Micro-relief frequency in cycles per metre. */
+  /** Tần số vi nổi tính theo chu kỳ trên mỗi mét. */
   bumpScale?: number;
-  /** Standing-water amount on low, up-facing surfaces (puddles that mirror the sky). */
+  /** Lượng nước đọng trên các bề mặt thấp hướng lên trên (vũng nước phản chiếu bầu trời). */
   wet?: number;
-  /** Only wet dark (asphalt-like) colours; for merged vertex-coloured geometry. */
+  /** Chỉ làm ướt các màu tối (giống nhựa đường); dùng cho hình học gộp tô màu đỉnh. */
   wetDarkOnly?: boolean;
-  /** Photo-scanned PBR set, projected triplanar in world space (no UVs needed). */
+  /** Bộ texture PBR quét ảnh, chiếu triplanar trong không gian thế giới (không cần UV). */
   texture?: SurfaceTextureName;
-  /** Metres covered by one texture tile. */
+  /** Số mét được phủ bởi một ô lặp texture. */
   textureSize?: number;
-  /** How much of the texture's own hue to keep (0 = luminance detail only, 1 = full colour). */
+  /** Mức giữ lại sắc độ gốc của texture (0 = chỉ giữ chi tiết độ sáng, 1 = giữ toàn bộ màu). */
   textureChroma?: number;
-  /** Normal-map strength. */
+  /** Cường độ bản đồ pháp tuyến (normal-map). */
   textureNormal?: number;
-  /** Read per-vertex [roughness, metalness] from the `surf` attribute (instanced/merged items). */
+  /** Đọc [roughness, metalness] theo từng đỉnh từ thuộc tính `surf` (vật thể instanced/merged). */
   vertexSurface?: boolean;
-  /** Break up repetitive tile repetition on large stone plazas with multi-scale stochastic modulation. */
+  /** Phá vỡ sự lặp lại đơn điệu trên các quảng trường đá rộng bằng điều biến ngẫu nhiên đa tỉ lệ. */
   stochasticPlaza?: boolean;
-  /** Fade out triplanar texture, noise, puddles and procedural bump beyond this distance (m) from camera. */
+  /** Làm mờ dần texture triplanar, nhiễu, vũng nước và bump thủ tục vượt quá khoảng cách này (m) tính từ camera. */
   maxDist?: number;
 }
 
@@ -262,7 +259,7 @@ roughnessFactor = mix(roughnessFactor, 0.035, smoothstep(0.3, 0.9, slWetK));
 roughnessFactor = clamp(roughnessFactor, 0.03, 1.0);
 `;
 
-/** Procedural micro-relief: perturbs the shading normal from a world-space height field. */
+/** Vi nổi thủ tục: làm nhiễu pháp tuyến đổ bóng từ một trường độ cao trong không gian thế giới. */
 const FRAG_NORMAL = /* glsl */ `
 float slProcBump = uSlMicro.x;
 #ifdef SL_TEX
@@ -361,11 +358,8 @@ export function applySurfaceDetail<T extends THREE.MeshStandardMaterial>(
 }
 
 /**
- * Vật liệu mặt nước kiến trúc với sóng mao dẫn tính bằng công thức ở không gian thế giới, không đọc texture nên
- * chạy 60 FPS ổn định trên WebGL2/Metal.
- *
- * Architectural water surface material with analytical capillary ripples in world space.
- * Zero texture fetches and no extra height derivatives — safe across WebGL2/Metal at 60 FPS.
+ * Vật liệu mặt nước kiến trúc với sóng mao dẫn giải tích trong không gian thế giới.
+ * Không cần truy xuất texture và không tính thêm đạo hàm độ cao — chạy ổn định 60 FPS trên WebGL2/Metal.
  */
 export function createWaterSurfaceMaterial(
   name: string,
@@ -430,12 +424,9 @@ export function createWaterSurfaceMaterial(
 }
 
 /**
- * Sinh texture cụm lá kép có alpha cho tán cây: hình lá răng cưa, chuyển màu xanh tự nhiên, mặt nạ alpha dùng
- * với alphaTest = 0,42.
- *
- * Procedural compound leaf-cluster texture generator for alpha-tested canopies.
- * Produces crisp serrated leaf silhouettes with natural green gradients and
- * a clean alpha mask suitable for alphaTest = 0.42.
+ * Trình tạo texture cụm lá kép thủ tục cho tán cây dùng alpha-test.
+ * Tạo đường viền lá răng cưa sắc nét với dải chuyển sắc xanh tự nhiên và mặt nạ alpha gọn
+ * phù hợp cho `alphaTest = 0.42`.
  */
 export function createProceduralFoliageTexture(): THREE.DataTexture {
   const size = 256;
@@ -521,12 +512,9 @@ export interface FoliageMaterialBundle {
 }
 
 /**
- * Tạo bộ vật liệu tán lá chân thực: dịch đỉnh theo gió, ánh xuyên sáng và vật liệu độ sâu alpha-test để đổ bóng
- * lá lốm đốm lên mặt đất và kiến trúc.
- *
- * High-realism foliage material bundle with wind-swaying vertex displacement,
- * subsurface translucency sheen, and an alpha-tested customDepthMaterial that
- * casts authentic dappled leaf shadows onto ground and architecture.
+ * Bộ vật liệu tán lá độ chân thực cao với dịch chuyển đỉnh đung đưa theo gió, ánh xuyên sáng
+ * dưới bề mặt và `customDepthMaterial` có alpha-test để đổ bóng lá lốm đốm tự nhiên lên mặt đất
+ * và kiến trúc.
  */
 export function createFoliageMaterialBundle(
   name: string,
@@ -611,12 +599,9 @@ transformed += fWindDir * (fSway * fWeight);
 }
 
 /**
- * Shader kính cho tòa nhà thành phố: giả lập nhiều tầng văn phòng sáng đèn (sàn, đèn trần, tường, mức lấp đầy
- * ngẫu nhiên) bằng ray-cast parallax trong một lượt, cộng phản xạ Fresnel bên ngoài.
- *
- * GPU Single-Pass Ray-Cast Parallax Interior Mapping for city skyline glazing.
- * Simulates multi-floor illuminated office spaces with slabs, ceiling troffers,
- * back/side walls, randomized occupancy, and exterior glass Fresnel reflection.
+ * Kỹ thuật Parallax Interior Mapping ray-cast một lượt trên GPU cho mặt dựng kính đường chân trời thành phố.
+ * Giả lập các không gian văn phòng nhiều tầng sáng đèn gồm sàn, hộp đèn trần, tường hậu/tường bên,
+ * tỉ lệ lấp đầy ngẫu nhiên và phản xạ Fresnel của lớp kính ngoài.
  */
 export function applyCityGlazingShader<T extends THREE.MeshStandardMaterial>(
   material: T,
@@ -708,13 +693,10 @@ float slCityHash3(vec3 p) {
 }
 
 /**
- * Shader kính kiến trúc một lượt: độ mờ/phản xạ theo Fresnel Schlick, hiệu ứng hai lớp kính, phản xạ bầu
- * trời/chân trời/nắng và dải đèn LED trần, không cần MeshPhysicalMaterial.
- *
- * Single-pass soft ray-traced architectural glass shader for MeshStandardMaterial.
- * Combines true Schlick Fresnel angle-dependent opacity/reflectivity, dual-pane IGU
- * ghost offset, analytical sky/horizon/sun bounce, and ray-cast ceiling LED strip
- * reflections without MeshPhysicalMaterial multi-pass transmission overhead.
+ * Shader kính kiến trúc giả lập ray-tracing mềm một lượt cho MeshStandardMaterial.
+ * Kết hợp độ mờ/phản xạ phụ thuộc góc theo Fresnel Schlick thực, độ lệch ảnh phụ của kính hộp hai lớp IGU,
+ * phản xạ giải tích bầu trời/chân trời/mặt trời và phản chiếu dải đèn LED trần ray-cast mà không tốn
+ * chi phí truyền sáng đa lượt của MeshPhysicalMaterial.
  */
 export function applyArchitecturalGlassShader<T extends THREE.MeshStandardMaterial>(
   material: T,
