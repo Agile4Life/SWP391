@@ -174,15 +174,18 @@ describe('ManagerCoachAssignmentsPage', () => {
     await renderComponent();
 
     expect(host.textContent).toContain('HLV & học viên phụ trách');
-    expect(host.textContent).toContain('Tổng số Huấn luyện viên');
-    expect(host.textContent).toContain('Tổng học viên đang theo kèm');
+    expect(host.textContent).toContain('HLV đang hoạt động');
+    expect(host.textContent).not.toContain('Tổng học viên đang theo kèm');
     expect(host.textContent).toContain('Học viên tập 1:1 (PT)');
     expect(host.textContent).toContain('Theo giáo án riêng');
     expect(host.textContent).toContain('HLV Trần Văn A');
     expect(host.textContent).toContain('HLV Nguyễn Thị B');
     expect(host.textContent).toContain('Nguyễn Văn Member');
     expect(host.textContent).toContain('Lê Thị Hoa');
-    expect(host.textContent).toContain('Phạm Minh Tuấn');
+    expect(host.textContent).not.toContain('Phạm Minh Tuấn');
+    expect(host.textContent).not.toContain('Lớp nhóm');
+    expect(host.textContent).not.toContain('Pilates & Yoga');
+    expect(host.querySelector('option[value="CLASS"]')).toBeNull();
   });
 
   it('tags only the student whose plan is on hold', async () => {
@@ -249,11 +252,10 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(rows[0].querySelectorAll('.coach-assignment-line')).toHaveLength(2);
   });
 
-  it('keeps class assignments read-only', async () => {
+  it('hides legacy class assignments', async () => {
     await renderComponent();
     const row = [...host.querySelectorAll('.coach-student-row')].find(r => r.textContent?.includes('Phạm Minh Tuấn'));
-    expect(row?.textContent).not.toContain('Điều chuyển HLV');
-    expect(row?.textContent).not.toContain('Kết thúc');
+    expect(row).toBeUndefined();
   });
 
   it('formats assignment deadlines and PT times', async () => {
@@ -261,7 +263,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     vi.setSystemTime(new Date('2026-11-04T18:05:00Z'));
     await renderComponent();
     expect(host.textContent).toContain('09:00 10/11/2026');
-    expect(host.textContent).toContain('Hạn: 05/12/2026');
+    expect(host.textContent).toContain('Ngày kết thúc giáo án: 05/12/2026');
   });
 
   it('keeps target coach options after filtering and sends the selected PT relationship only', async () => {
