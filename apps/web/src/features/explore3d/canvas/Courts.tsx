@@ -6,10 +6,12 @@ import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { getLevelByCode, getLevelWorldY, itemsOfZone } from '../scene/selectors';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Props của các sân: cảnh. */
 export interface CourtsProps {
   scene?: SceneDoc;
 }
 
+/** Tạo texture mặt sân cầu lông bằng canvas (không có document thì dùng texture một điểm ảnh). */
 function createBadmintonCourtTexture(): THREE.Texture {
   if (typeof document === 'undefined') {
     const data = new Uint8Array([39, 89, 71, 255]);
@@ -135,6 +137,7 @@ function createBadmintonCourtTexture(): THREE.Texture {
   return texture;
 }
 
+/** Tạo texture mặt sân tennis bằng canvas (không có document thì dùng texture một điểm ảnh). */
 function createTennisCourtTexture(): THREE.Texture {
   if (typeof document === 'undefined') {
     const data = new Uint8Array([47, 107, 85, 255]);
@@ -244,6 +247,7 @@ function createTennisCourtTexture(): THREE.Texture {
 const SHARED_COURT_PLANE = new THREE.PlaneGeometry(1, 1);
 const SHARED_COURT_RING = new THREE.RingGeometry(0.45, 0.48, 32);
 
+/** Props của mặt sân: đồ vật, độ cao tầng, vật liệu, đang chọn/rê, nhận bóng và các hàm chọn/rê. */
 interface CourtSurfaceMeshProps {
   item: ItemNode;
   levelY: number;
@@ -251,10 +255,13 @@ interface CourtSurfaceMeshProps {
   selected: boolean;
   hovered: boolean;
   receiveShadow: boolean;
+  // Gọi khi chọn một sân (fit = vừa khung khi bấm đúp).
   onSelect: (id: string, fit?: boolean) => void;
+  // Gọi khi rê vào hoặc ra khỏi sân.
   onHover: (id: string | null) => void;
 }
 
+/** Một mặt sân hiển thị trong cảnh: bấm chọn, bấm đúp để vừa khung, rê để tô sáng. */
 function CourtSurfaceMesh({
   item,
   levelY,
@@ -269,21 +276,25 @@ function CourtSurfaceMesh({
   const [x, y, z] = item.position;
   const worldY = levelY + Math.max(y, 0.02) + 0.008;
 
+  // Bấm: chọn sân.
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     onSelect(item.id, false);
   };
 
+  // Bấm đúp: chọn sân và bay vừa khung.
   const handleDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     onSelect(item.id, true);
   };
 
+  // Rê vào: đặt sân đang rê.
   const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     onHover(item.id);
   };
 
+  // Rê ra: bỏ sân đang rê.
   const handlePointerOut = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     onHover(null);
@@ -320,6 +331,10 @@ function CourtSurfaceMesh({
   );
 }
 
+/**
+ * Các sân cầu lông (tầng L1) và sân tennis (ngoài trời) với texture, vật liệu, cách hiển thị theo tầng/chế độ
+ * và tương tác chọn/rê.
+ */
 export function Courts({ scene = SOL_CENTER_SCENE }: CourtsProps) {
   const levelMode = useExploreStore(s => s.levelMode);
   const walkMode = useExploreStore(s => s.walkMode);
@@ -332,19 +347,24 @@ export function Courts({ scene = SOL_CENTER_SCENE }: CourtsProps) {
 
   const effectiveLevelMode = walkMode ? 'stacked' : levelMode;
 
+  // Tầng L1.
   const levelL1 = useMemo(() => getLevelByCode(scene, 'L1'), [scene]);
+  // Tầng ngoài trời.
   const levelOut = useMemo(() => getLevelByCode(scene, 'OUT'), [scene]);
 
+  // Các sân cầu lông của khu cầu lông L1.
   const badmintonCourts = useMemo(
     () =>
       itemsOfZone(scene, 'zone-l1-badminton').filter(item => item.kind === 'badminton-court'),
     [scene],
   );
+  // Các sân tennis của khu tennis ngoài trời.
   const tennisCourts = useMemo(
     () => itemsOfZone(scene, 'zone-out-tennis').filter(item => item.kind === 'tennis-court'),
     [scene],
   );
 
+  // Tạo texture và vật liệu cho sân cầu lông và sân tennis.
   const resources = useMemo(() => {
     const badmintonTex = createBadmintonCourtTexture();
     const tennisTex = createTennisCourtTexture();
@@ -390,6 +410,7 @@ export function Courts({ scene = SOL_CENTER_SCENE }: CourtsProps) {
   const outWorldY = levelOut ? getLevelWorldY(levelOut, effectiveLevelMode) : 0;
   const receiveShadow = tier !== 'low';
 
+  // Chọn sân (fit = bay vừa khung).
   const handleSelect = (id: string, fit = false) => {
     selectNode(id, fit ? { fit: true } : undefined);
   };

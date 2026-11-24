@@ -12,12 +12,15 @@ import {
 
 export const CUTAWAY_DOT_THRESHOLD = 0.22;
 
+/** Mô tả một tường ngoài cho cắt tường: id, pháp tuyến và tâm. */
 export type CutawayWallDescriptor = Pick<
   ExteriorWallBuiltRecord,
   'wallId' | 'normal' | 'center'
 >;
 
 /**
+ * Tích vô hướng giữa pháp tuyến tường và hướng từ tường tới camera trên mặt phẳng XZ.
+ *
  * Computes `dot(wallNormalXZ, normalize(cameraPosXZ - wallCenterXZ))`.
  */
 export function computeWallCameraDot(
@@ -37,6 +40,8 @@ export function computeWallCameraDot(
 }
 
 /**
+ * Tường ngoài có quay mặt về phía camera không (tích vô hướng vượt ngưỡng 0,22).
+ *
  * Returns true when an exterior wall faces the camera (`dot > 0.22`).
  */
 export function isWallFacingCamera(
@@ -49,6 +54,8 @@ export function isWallFacingCamera(
 }
 
 /**
+ * Tập id các tường ngoài cần hạ thấp (cắt tường) theo chế độ tường và vị trí camera.
+ *
  * Computes the set of exterior wall IDs that should be rendered in cutaway (low height)
  * given the current `wallMode` and camera XZ position.
  */
@@ -76,20 +83,24 @@ export function computeCutawayWallIds(
   return result;
 }
 
+/** Chuyển tập id tường thành chuỗi ổn định (đã sắp xếp) để so sánh thay đổi. */
 export function serializeWallIdSet(ids: Set<string>): string {
   if (ids.size === 0) return '';
   return Array.from(ids).sort().join('|');
 }
 
+/** Trạng thái cắt tường: chuỗi nhận dạng, tập id tường bị cắt và hàm cập nhật. */
 interface CutawayStoreState {
   signature: string;
   cutawayWallIds: Set<string>;
+  /** Store zustand giữ tập tường đang bị cắt. */
   setCutawayWalls: (nextIds: Set<string>, nextSignature: string) => void;
 }
 
 export const useCutawayStore = create<CutawayStoreState>(set => ({
   signature: '',
   cutawayWallIds: new Set<string>(),
+  /** Cập nhật tập tường bị cắt cùng chuỗi nhận dạng. */
   setCutawayWalls: (nextIds, nextSignature) =>
     set({
       cutawayWallIds: nextIds,
@@ -97,6 +108,7 @@ export const useCutawayStore = create<CutawayStoreState>(set => ({
     }),
 }));
 
+/** Gom mô tả của mọi tường ngoài trong cảnh. */
 export function collectSceneExteriorWallDescriptors(): CutawayWallDescriptor[] {
   const descriptors: CutawayWallDescriptor[] = [];
   const levels = getLevels(SOL_CENTER_SCENE);
@@ -117,6 +129,7 @@ export function collectSceneExteriorWallDescriptors(): CutawayWallDescriptor[] {
   return descriptors;
 }
 
+/** Hook trả về tập id tường đang bị cắt (đồng bộ từ store). */
 export function useCutawayWallIds(): Set<string> {
   const cutawayWallIds = useCutawayStore(s => s.cutawayWallIds);
   const [localIds, setLocalIds] = useState<Set<string>>(cutawayWallIds);
@@ -128,11 +141,15 @@ export function useCutawayWallIds(): Set<string> {
   return localIds;
 }
 
+/** Props của bộ điều khiển cắt tường: danh sách tường (mặc định là mọi tường ngoài). */
 export interface CutawayProps {
   walls?: ReadonlyArray<CutawayWallDescriptor>;
 }
 
 /**
+ * Thành phần R3F tính các tường ngoài quay mặt về camera để hạ thấp khi chế độ tường hoặc hướng camera đổi, chỉ
+ * yêu cầu vẽ lại khi tập tường thay đổi.
+ *
  * R3F controller component that evaluates which exterior walls face the camera
  * and updates cutaway state when `wallMode` or camera direction changes,
  * calling `invalidate()` only when the cutaway wall set changes.
@@ -152,6 +169,7 @@ export function Cutaway({ walls }: CutawayProps) {
     levelMode: '',
   });
 
+  // Mô tả các tường dùng để tính (mặc định là mọi tường ngoài trong cảnh).
   const descriptors = useMemo(
     () => (walls && walls.length > 0 ? walls : collectSceneExteriorWallDescriptors()),
     [walls],

@@ -7,10 +7,12 @@ import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { getLevelByCode, getLevelWorldY } from '../scene/selectors';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Props của hồ bơi: cảnh. */
 export interface PoolProps {
   scene?: SceneDoc;
 }
 
+/** Kích thước và vị trí tâm của hồ bơi Oasis (rộng 25 m, sâu 12 m). */
 const OASIS_POOL_DIMENSIONS = {
   centerX: -6.0,
   centerZ: -5.5,
@@ -18,8 +20,10 @@ const OASIS_POOL_DIMENSIONS = {
   depth: 12.0,
 } as const;
 
+/** Raycast rỗng để mặt nước không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
+/** Tạo texture đáy hồ bằng canvas (không có document thì dùng texture một điểm ảnh). */
 export function createPoolBasinTexture(): THREE.Texture {
   if (typeof document === 'undefined') {
     const data = new Uint8Array([24, 68, 96, 255]);
@@ -119,6 +123,7 @@ export function createPoolBasinTexture(): THREE.Texture {
   return texture;
 }
 
+/** Tạo texture vân sáng dưới nước (caustics) có thể lặp. */
 export function createWaterCausticsTexture(): THREE.Texture {
   if (typeof document === 'undefined') {
     const data = new Uint8Array([58, 124, 165, 255]);
@@ -188,6 +193,7 @@ export function createWaterCausticsTexture(): THREE.Texture {
 
 const createPoolWaterCausticTexture = createWaterCausticsTexture;
 
+/** Hook cho biết người dùng có bật giảm chuyển động không. */
 function usePrefersReducedMotion(): boolean {
   const [reduced, setReduced] = useState<boolean>(() => {
     if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
@@ -201,6 +207,7 @@ function usePrefersReducedMotion(): boolean {
       return;
     }
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    // Cập nhật khi tùy chọn giảm chuyển động đổi.
     const onChange = (e: MediaQueryListEvent) => setReduced(e.matches);
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
@@ -209,6 +216,10 @@ function usePrefersReducedMotion(): boolean {
   return reduced;
 }
 
+/**
+ * Hồ bơi Oasis ở tầng B1: đáy hồ, mặt nước chuyển động (đứng yên khi giảm chuyển động), thành hồ, làn bơi và
+ * tương tác chọn/rê.
+ */
 export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
   const levelMode = useExploreStore(s => s.levelMode);
   const walkMode = useExploreStore(s => s.walkMode);
@@ -219,9 +230,11 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
 
   const effectiveLevelMode = walkMode ? 'stacked' : levelMode;
 
+  // Tầng B1.
   const levelB1 = useMemo(() => getLevelByCode(scene, 'B1'), [scene]);
   const waterTexRef = useRef<THREE.Texture | null>(null);
 
+  // Tạo texture và vật liệu của đáy hồ và mặt nước.
   const resources = useMemo(() => {
     const basinTex = createPoolBasinTexture();
     const waterTex = createPoolWaterCausticTexture();
@@ -393,21 +406,25 @@ export function Pool({ scene = SOL_CENTER_SCENE }: PoolProps) {
   const b1WorldY = levelB1 ? getLevelWorldY(levelB1, effectiveLevelMode) : -4.5;
   const { centerX, centerZ, width, depth } = OASIS_POOL_DIMENSIONS;
 
+  // Bấm: chọn hồ bơi.
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     selectNode('zone-b1-pool');
   };
 
+  // Bấm đúp: chọn hồ bơi và bay vừa khung.
   const handleDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     selectNode('zone-b1-pool', { fit: true });
   };
 
+  // Rê vào: đặt hồ bơi đang rê.
   const handlePointerOver = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     setHoveredId('zone-b1-pool');
   };
 
+  // Rê ra: bỏ hồ bơi đang rê.
   const handlePointerOut = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     setHoveredId(null);

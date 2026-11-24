@@ -25,6 +25,7 @@ import { isExteriorWorldVisible } from './LevelStack';
 import { PracticalLights } from './PracticalLights';
 import { SkyDome } from './SkyProbe';
 
+/** Giới hạn quảng trường quanh tòa nhà (min/max X, Z và độ cao). */
 export const PLAZA_BOUNDS = {
   minX: -45,
   maxX: 58,
@@ -33,6 +34,7 @@ export const PLAZA_BOUNDS = {
   y: -0.04,
 } as const;
 
+/** Giới hạn lối đi vào cửa chính. */
 export const ENTRANCE_WALKWAY_BOUNDS = {
   minX: -4,
   maxX: 8,
@@ -41,6 +43,7 @@ export const ENTRANCE_WALKWAY_BOUNDS = {
   y: -0.025,
 } as const;
 
+/** Dựng lưới quảng trường (đường kẻ theo bước step mét). */
 export function buildPlazaGridGeometry(
   minX: number = PLAZA_BOUNDS.minX,
   maxX: number = PLAZA_BOUNDS.maxX,
@@ -62,8 +65,13 @@ export function buildPlazaGridGeometry(
 
 const SHARED_PLAZA_PLANE = new THREE.PlaneGeometry(1, 1);
 const TERRAIN_DISC = new THREE.CircleGeometry(1000, 64);
+/** Raycast rỗng để môi trường không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
+/**
+ * Môi trường của khuôn viên: quảng trường, địa hình tới chân trời, kiến trúc, cây, nước, xe, biển hiệu và thành
+ * phố nền theo theme và tầng/chế độ đang xem.
+ */
 export function Environment() {
   const theme = useDocumentTheme();
   const palette = getExploreThemePalette(theme);
@@ -82,7 +90,9 @@ export function Environment() {
         ? -4.82
         : PLAZA_BOUNDS.y;
 
+  // Hình học khuôn viên theo theme.
   const campusScene = useMemo(() => buildCampusSceneGeometries(theme), [theme]);
+  // Vật liệu kiến trúc khuôn viên.
   const campusMaterial = useMemo(
     () =>
       applySurfaceDetail(
@@ -97,6 +107,7 @@ export function Environment() {
       ),
     [],
   );
+  // Vật liệu kính kiến trúc.
   const campusGlassMaterial = useMemo(
     () =>
       applyArchitecturalGlassShader(
@@ -121,15 +132,18 @@ export function Environment() {
       theme === 'light',
     );
   }, [campusGlassMaterial, theme]);
+  // Vật liệu nước của khuôn viên.
   const campusWaterBundle = useMemo(
     () => createWaterSurfaceMaterial('sol-campus-water', theme === 'light'),
     [theme],
   );
+  // Vật liệu tán lá cây.
   const foliageBundle = useMemo(
     () => createFoliageMaterialBundle('sol-campus-foliage', theme === 'light'),
     [theme],
   );
   // Uses per-vertex `surf` so metallic body paint & rims gleam while rubber tyres stay matte.
+  // Vật liệu xe (kim loại sơn, lốp cao su mờ nhờ thuộc tính surf).
   const vehicleMaterial = useMemo(
     () =>
       applySurfaceDetail(
@@ -179,11 +193,13 @@ export function Environment() {
     foliageBundle.setTime(t);
   });
 
+  // Hình học biển hiệu.
   const signageGeometry = useMemo(
     () => buildCampusSignageGeometry(rooftopOffsetY, showRooftopSigns),
     [rooftopOffsetY, showRooftopSigns],
   );
   // Illuminated signage emits above 1.0 at dusk so it blooms like a lit sign.
+  // Biển hiệu phát sáng trên 1,0 lúc chạng vạng để lóe sáng như bảng đèn.
   const signageMaterialBundle = useMemo(() => {
     const tex = createCampusSignageTexture();
     const mat = new THREE.MeshBasicMaterial({
@@ -219,11 +235,13 @@ export function Environment() {
   const plazaCenterX = (PLAZA_BOUNDS.minX + PLAZA_BOUNDS.maxX) * 0.5;
   const plazaCenterZ = (PLAZA_BOUNDS.minZ + PLAZA_BOUNDS.maxZ) * 0.5;
 
+  // Lưới quảng trường.
   const gridGeometry = useMemo(() => buildPlazaGridGeometry(), []);
 
   // Terrain out to the horizon so the campus sits in a world instead of a void;
   // the post haze dissolves it into the sky.
   const terrainColor = getAtmosphere(theme).terrain;
+  // Vật liệu địa hình.
   const terrainMaterial = useMemo(
     () =>
       applySurfaceDetail(

@@ -20,11 +20,13 @@ import { useCutawayWallIds } from './Cutaway';
 
 const Y_SETTLE_EPSILON = 0.005;
 const LERP_DAMPING = 10;
+/** Raycast rỗng để phần trang trí không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
 // Shared unit box (1x1x1 centered at origin) to minimize WebGL BufferGeometry allocations
 const SHARED_UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 
+/** Tính tâm và kích thước hộp bao của một hình học để đặt hộp đơn vị dùng chung vừa khít. */
 function getGeometryBoundsTransform(geom: THREE.BufferGeometry): {
   center: [number, number, number];
   size: [number, number, number];
@@ -45,12 +47,14 @@ function getGeometryBoundsTransform(geom: THREE.BufferGeometry): {
   };
 }
 
+/** Độ cao đích của một tầng (cộng độ nhấc khi ở chế độ tách tầng). */
 export function computeLevelTargetY(level: LevelNode, levelMode: LevelMode): number {
   return levelMode === 'exploded'
     ? level.elevation + level.explodedOffset
     : level.elevation;
 }
 
+/** Thế giới bên ngoài có hiển thị không (ẩn khi chỉ xem tầng hầm B1). */
 export function isExteriorWorldVisible(
   levelMode: LevelMode,
   focusLevel: LevelCode | 'ALL',
@@ -58,6 +62,10 @@ export function isExteriorWorldVisible(
   return levelMode !== 'solo' || focusLevel !== 'B1';
 }
 
+/**
+ * Tầng có hiển thị trong chế độ hiện tại không (chế độ một tầng thì chỉ hiện tầng đang xem và các tầng liên
+ * quan).
+ */
 export function isLevelVisibleInMode(
   level: LevelNode,
   levelMode: LevelMode,
@@ -87,6 +95,7 @@ export function isLevelVisibleInMode(
   return true;
 }
 
+/** Tầng có bị làm mờ trong chế độ hiện tại không (khi xem một tầng). */
 export function isLevelDimmedInMode(
   level: LevelNode,
   levelMode: LevelMode,
@@ -98,6 +107,7 @@ export function isLevelDimmedInMode(
   return level.code !== focusLevel;
 }
 
+/** Props của nhóm một tầng: tầng, hình học đã dựng, vật liệu, chế độ tầng/tường, tầng đang xem và các callback. */
 interface LevelGroupProps {
   level: LevelNode;
   built: LevelBuiltGeometry;
@@ -112,6 +122,7 @@ interface LevelGroupProps {
   children?: ReactNode;
 }
 
+/** Dựng một tầng (sàn, tường, khu vực) với hiệu ứng nhấc/mờ theo chế độ và tương tác chọn/rê khu vực. */
 function LevelGroup({
   level,
   built,
@@ -162,12 +173,14 @@ function LevelGroup({
       ? Math.min(1, CUTAWAY_WALL_HEIGHT / Math.max(0.5, level.height))
       : 1;
 
+  // Bấm một khu vực: chọn nó và yêu cầu vẽ lại.
   const handleZoneClick = (zoneId: string) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     useExploreStore.getState().selectNode(zoneId);
     invalidate();
   };
 
+  // Rê vào một khu vực: đặt khu vực đang rê.
   const handleZonePointerOver = (zoneId: string) => (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (useExploreStore.getState().hoveredId !== zoneId) {
@@ -176,6 +189,7 @@ function LevelGroup({
     }
   };
 
+  // Rê ra khỏi khu vực: bỏ khu vực đang rê.
   const handleZonePointerOut = (zoneId: string) => (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (useExploreStore.getState().hoveredId === zoneId) {
@@ -339,10 +353,15 @@ function LevelGroup({
   );
 }
 
+/** Props của chồng tầng: hàm vẽ nội dung con cho từng tầng. */
 export interface LevelStackProps {
   renderLevelChildren?: (level: LevelNode) => ReactNode;
 }
 
+/**
+ * Chồng các tầng của tòa nhà: dựng hình học từng tầng, nhấc/tách/làm mờ theo chế độ tầng và tường, cắt tường và
+ * vẽ nội dung con của tầng.
+ */
 export function LevelStack({ renderLevelChildren }: LevelStackProps) {
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
@@ -354,8 +373,10 @@ export function LevelStack({ renderLevelChildren }: LevelStackProps) {
   const materials = useExploreMaterials();
   const cutawayWallIds = useCutawayWallIds();
 
+  // Danh sách các tầng của cảnh.
   const levels = useMemo(() => getLevels(SOL_CENTER_SCENE), []);
 
+  // Hình học đã dựng của từng tầng, dựng một lần.
   const builtByLevelId = useMemo(() => {
     const map = new Map<string, LevelBuiltGeometry>();
     for (const lvl of levels) {
