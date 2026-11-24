@@ -4,6 +4,9 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDateTime;
 
 /**
+ * Khung phản hồi chung cho mọi API: success, status (mã HTTP), message (đã dịch theo Accept-Language), data (dữ
+ * liệu trả về), code (mã lỗi máy đọc được) và details (chi tiết lỗi, ví dụ lỗi từng trường).
+ *
  * Standard API Response Wrapper for all SCMS endpoints.
  * Provides unified structure for both success and error payloads.
  */
@@ -18,10 +21,12 @@ public class ApiResponse<T> {
     private Object details;
     private LocalDateTime timestamp;
 
+    /** Constructor rỗng cho Jackson khi đọc JSON; timestamp được gán bằng thời điểm tạo. */
     public ApiResponse() {
         this.timestamp = LocalDateTime.now();
     }
 
+    /** Tạo phản hồi đầy đủ các trường; timestamp là thời điểm tạo đối tượng. */
     public ApiResponse(boolean success, int status, String message, T data, String code, Object details) {
         this.success = success;
         this.status = status;
@@ -34,20 +39,24 @@ public class ApiResponse<T> {
 
     // --- Success Factory Methods ---
 
+    /** Phản hồi thành công HTTP 200 kèm thông báo và dữ liệu. */
     public static <T> ApiResponse<T> ok(String message, T data) {
         return new ApiResponse<>(true, 200, message, data, null, null);
     }
 
+    /** Phản hồi tạo mới thành công HTTP 201 kèm thông báo và dữ liệu vừa tạo. */
     public static <T> ApiResponse<T> created(String message, T data) {
         return new ApiResponse<>(true, 201, message, data, null, null);
     }
 
     // --- Error Factory Methods ---
 
+    /** Phản hồi lỗi với mã HTTP, mã lỗi (code) và thông báo; không có details. */
     public static <T> ApiResponse<T> error(int status, String code, String message) {
         return new ApiResponse<>(false, status, message, null, code, null);
     }
 
+    /** Phản hồi lỗi kèm details (ví dụ map tên trường -> lỗi khi validate form). */
     public static <T> ApiResponse<T> error(int status, String code, String message, Object details) {
         return new ApiResponse<>(false, status, message, null, code, details);
     }

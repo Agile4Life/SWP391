@@ -4,15 +4,26 @@ import com.swp391.scms.common.exception.BadRequestException;
 
 import java.util.Base64;
 
+/**
+ * Kiểm tra ảnh gửi lên dạng data URL (data:image/...;base64,...): đúng định dạng, không quá dung lượng và nội
+ * dung thật khớp loại ảnh khai báo (chống giả mạo đuôi file).
+ */
 public final class ImageDataUrlValidator {
+    /** Lớp tiện ích static, không cho tạo đối tượng. */
     private ImageDataUrlValidator() {}
 
+    /** Kết quả ảnh hợp lệ: loại MIME đã xác minh và mảng byte đã giải mã. */
     public record ValidatedImage(String contentType, byte[] bytes) {}
 
+    /** Kiểm tra ảnh với mã lỗi mặc định của ảnh sản phẩm. */
     public static ValidatedImage validate(String dataUrl, long maxBytes) {
         return validate(dataUrl, maxBytes, "PRODUCT_IMAGE_INVALID", "error.shop.product_image_invalid");
     }
 
+    /**
+     * Kiểm tra ảnh và ném BadRequestException với mã lỗi/message key do nơi gọi chọn nếu ảnh không hợp lệ. Trả
+     * về loại ảnh và dữ liệu byte.
+     */
     public static ValidatedImage validate(String dataUrl, long maxBytes, String errorCode, String messageKey) {
         if (dataUrl == null || !dataUrl.startsWith("data:")) {
             throw invalid(errorCode, messageKey);
@@ -42,6 +53,10 @@ public final class ImageDataUrlValidator {
         return new ValidatedImage(detectedType, bytes);
     }
 
+    /**
+     * Nhận diện loại ảnh qua "magic bytes" ở đầu file: JPEG (FF D8 FF), PNG (89 50 4E 47...), WEBP
+     * (RIFF....WEBP). Trả null nếu không phải ba loại này.
+     */
     private static String detectMimeType(byte[] b) {
         if (b.length >= 3
                 && (b[0] & 0xFF) == 0xFF
@@ -74,6 +89,7 @@ public final class ImageDataUrlValidator {
         return null;
     }
 
+    /** Tạo lỗi 400 "ảnh không hợp lệ" với mã lỗi và message key cho trước. */
     private static BadRequestException invalid(String errorCode, String messageKey) {
         return new BadRequestException(errorCode, messageKey, null, "Invalid image");
     }

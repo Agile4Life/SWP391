@@ -11,15 +11,28 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+/**
+ * Điểm khởi động của API SÖL (Spring Boot). @EnableScheduling bật các job chạy định kỳ (nhắc gia hạn gói, hết
+ * hạn thanh toán...).
+ */
 @EnableScheduling
 @SpringBootApplication
 public class ScmsApplication {
+    /**
+     * Hàm main: đặt múi giờ mặc định là giờ Việt Nam, nạp biến môi trường từ file .env (nếu có) rồi khởi động
+     * Spring.
+     */
     public static void main(String[] args) {
         CenterTime.useAsDefault();
         loadDotEnv();
         SpringApplication.run(ScmsApplication.class, args);
     }
 
+    /**
+     * Đọc file .env ở thư mục hiện tại hoặc thư mục cha và đưa từng cặp KEY=VALUE vào System properties. Biến
+     * đã có sẵn trong môi trường thật luôn được ưu tiên (không bị ghi đè). Nếu chưa chọn profile thì mặc định
+     * dùng profile "supabase" theo quy định của dự án.
+     */
     private static void loadDotEnv() {
         for (Path path : List.of(Paths.get(".env"), Paths.get("../../.env"), Paths.get("../.env"))) {
             if (Files.isRegularFile(path)) {

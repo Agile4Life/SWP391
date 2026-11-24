@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import java.util.Locale;
 
 /**
+ * Dịch mã thông báo (message key) sang tiếng Việt hoặc tiếng Anh theo header Accept-Language của request, dùng
+ * các file i18n/messages_vi.properties và messages_en.properties.
+ *
  * Service for resolving localized messages from i18n message bundles.
  * Uses request locale from LocaleContextHolder (driven by Accept-Language header).
  */
@@ -16,11 +19,14 @@ public class MessageService {
 
     private final MessageSource messageSource;
 
+    /** Nhận MessageSource của Spring (đã cấu hình đọc các file messages_*.properties). */
     public MessageService(MessageSource messageSource) {
         this.messageSource = messageSource;
     }
 
     /**
+     * Dịch mã thông báo theo ngôn ngữ của request hiện tại; không tìm thấy mã thì trả lại chính mã đó.
+     *
      * Resolves a message for the current thread's Locale.
      *
      * @param code the message code/key in messages.properties
@@ -33,6 +39,9 @@ public class MessageService {
     }
 
     /**
+     * Dịch mã thông báo theo một ngôn ngữ chỉ định (dùng khi gửi thông báo cho người khác, không phải người
+     * đang gọi API).
+     *
      * Resolves a message for a specific Locale.
      *
      * @param code the message code/key
@@ -49,6 +58,8 @@ public class MessageService {
     }
 
     /**
+     * Dịch mã thông báo; nếu mã không tồn tại thì trả câu mặc định được truyền vào.
+     *
      * Resolves a message with a default fallback text if the code is not present.
      *
      * @param code the message code/key

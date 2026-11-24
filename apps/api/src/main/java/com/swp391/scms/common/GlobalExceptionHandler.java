@@ -22,6 +22,9 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Bộ xử lý lỗi toàn cục: bắt mọi exception ném ra từ controller/service và chuyển thành ApiResponse với mã HTTP
+ * và thông báo đã dịch (vi/en), để client luôn nhận cùng một định dạng lỗi và không lộ chi tiết nội bộ.
+ *
  * Centralized exception handler for all REST controllers.
  * Maps application and database errors into standardized API responses,
  * with i18n multi-language support.
@@ -33,15 +36,24 @@ public class GlobalExceptionHandler {
 
     private final MessageService messageService;
 
+    /** Constructor dùng trong unit test khi không có MessageService: thông báo trả về là chuỗi mặc định. */
     public GlobalExceptionHandler() {
         this.messageService = null;
     }
 
+    /**
+     * Constructor Spring dùng khi chạy thật: nhận MessageService để dịch mã thông báo theo ngôn ngữ của
+     * request.
+     */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     public GlobalExceptionHandler(MessageService messageService) {
         this.messageService = messageService;
     }
 
+    /**
+     * Dịch mã thông báo sang ngôn ngữ của request. Tham số nào là mã tài nguyên ("resource.xxx") hoặc vai trò
+     * ("role.xxx") cũng được dịch trước khi ghép vào câu. Không có MessageService thì trả về defaultMessage.
+     */
     private String resolveMessage(String code, String defaultMessage, Object... args) {
         if (messageService != null) {
             Object[] resolvedArgs = args;
@@ -61,6 +73,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Xử lý lỗi nghiệp vụ tự định nghĩa (AppException và các lớp con): dùng mã HTTP, mã lỗi và message key mà
+     * service đã chọn.
+     *
      * Handles custom business application exceptions.
      */
     @ExceptionHandler(AppException.class)
@@ -79,6 +94,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Không tìm thấy tài nguyên (HTTP 404): dịch tên tài nguyên và mã định danh vào thông báo.
+     *
      * Handles ResourceNotFoundException specifically.
      */
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -95,6 +112,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Lỗi validate @Valid ở request body (HTTP 400): gom lỗi từng trường thành details để form hiển thị ngay
+     * dưới ô nhập.
+     *
      * Handles bean validation errors (@Valid on request bodies).
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -119,6 +139,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Lỗi validate tham số đường dẫn/query (@Validated, HTTP 400): gom theo tên tham số.
+     *
      * Handles constraint violation errors on query params or entities.
      */
     @ExceptionHandler(ConstraintViolationException.class)
@@ -138,6 +160,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Người dùng đã đăng nhập nhưng không đủ quyền (HTTP 403).
+     *
      * Handles Spring Security access denied (HTTP 403).
      */
     @ExceptionHandler(AccessDeniedException.class)
@@ -152,6 +176,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Chưa đăng nhập hoặc token không hợp lệ (HTTP 401).
+     *
      * Handles Spring Security authentication failures (HTTP 401).
      */
     @ExceptionHandler(AuthenticationException.class)
@@ -166,6 +192,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * IllegalArgumentException/IllegalStateException lọt ra từ code: trả HTTP 400 và dùng nguyên nội dung
+     * exception làm thông báo (nội dung này không được dịch, nên code nghiệp vụ nên ném AppException thay thế).
+     *
      * Handles illegal arguments and invalid states.
      */
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
@@ -180,6 +209,10 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Lỗi ràng buộc dữ liệu từ PostgreSQL (trigger, unique, foreign key, check). Đọc tên trigger/ràng buộc
+     * trong thông báo gốc của database để đổi thành mã lỗi và câu thông báo dễ hiểu: trùng lịch, quá sức chứa,
+     * gói hết hạn, trùng email/SĐT... Đây là cách giữ nguyên trigger bắt buộc mà vẫn trả lỗi HTTP thân thiện.
+     *
      * Handles database integrity and PostgreSQL trigger violations.
      * Invariants from AGENTS.md & PROJECT_MASTER_GUIDE.md:
      * - trg_enrollments_check_capacity (Capacity Exceeded)
@@ -194,6 +227,7 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
+            // Nhóm trigger đặt sân (tính năng cũ): mỗi trigger ứng với một mã lỗi và mã HTTP riêng.
             String courtCode = null;
             String courtKey = null;
             HttpStatus courtStatus = HttpStatus.CONFLICT;
@@ -228,6 +262,7 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(courtStatus).body(
                         ApiResponse.error(courtStatus.value(), courtCode, resolveMessage(key, key)));
             }
+            // Trigger của buổi PT 1:1: HLV cần nghỉ giữa hai buổi, hoặc lịch đang được cập nhật đồng thời.
             if (normalizedRootMsg.contains("trg_coach_bookings_rest_required")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "COACH_REST_REQUIRED",
@@ -290,6 +325,7 @@ public class GlobalExceptionHandler {
                                 resolveMessage("users.email_exists", "users.email_exists"))
                 );
             }
+            // Ràng buộc unique/khóa ngoại chung: trả về mã trùng dữ liệu hoặc vi phạm khóa ngoại.
             if (normalizedRootMsg.contains("duplicate") || normalizedRootMsg.contains("unique constraint") || normalizedRootMsg.contains("uq_")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "DUPLICATE_RESOURCE",
@@ -313,6 +349,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Body JSON sai cú pháp hoặc sai kiểu dữ liệu (HTTP 400).
+     *
      * Handles malformed JSON payloads.
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -331,6 +369,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler({org.springframework.web.bind.MissingServletRequestParameterException.class,
             org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
+    /** Tham số đường dẫn/query sai kiểu hoặc thiếu (HTTP 400). */
     public ResponseEntity<ApiResponse<Object>> handleBadParameter(Exception ex) {
         ApiResponse<Object> response = ApiResponse.error(
                 HttpStatus.BAD_REQUEST.value(),
@@ -341,6 +380,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Gọi sai phương thức HTTP cho một endpoint (HTTP 405).
+     *
      * Handles unsupported HTTP methods.
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
@@ -354,6 +395,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Đường dẫn không tồn tại (HTTP 404).
+     *
      * Handles non-existent API routes.
      */
     @ExceptionHandler(NoResourceFoundException.class)
@@ -367,6 +410,9 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Client đóng kết nối trước khi phản hồi xong (thường gặp với SSE/realtime): chỉ ghi log debug, không trả
+     * gì vì kết nối đã đóng.
+     *
      * Fallback for any unhandled exceptions (HTTP 500).
      */
     @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
@@ -381,6 +427,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({org.springframework.dao.PessimisticLockingFailureException.class,
             jakarta.persistence.PessimisticLockException.class,
             jakarta.persistence.LockTimeoutException.class})
+    /**
+     * Không lấy được khóa dòng (row lock) trong thời gian chờ hoặc bị chọn làm nạn nhân deadlock: chưa có gì
+     * được lưu, trả HTTP 409 để người dùng thử lại.
+     */
     public ResponseEntity<ApiResponse<Object>> handleLockBusy(Exception ex) {
         log.warn("Row lock not acquired ({})", ex.getClass().getSimpleName());
         ApiResponse<Object> response = ApiResponse.error(
@@ -391,6 +441,10 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
+    /**
+     * Lưới an toàn cuối cùng cho mọi lỗi chưa được xử lý: ghi log đầy đủ ở server, client chỉ nhận HTTP 500 với
+     * thông báo chung.
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Object>> handleGeneral(Exception ex) {
         log.error("Unhandled server error: ", ex);
