@@ -114,34 +114,31 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
             @Param("subscriptionIds") java.util.Collection<Long> subscriptionIds,
             @Param("subCreatedAt") LocalDateTime subCreatedAt
     );
-    /** Non-cancelled 1:1 sessions of every coach between two dates, newest first (desk view). */
+    /** Buổi 1:1 chưa hủy của mọi HLV trong khoảng ngày, mới nhất trước (màn điểm danh của lễ tân). */
     @Query("""
             select cb from CoachBooking cb
             where cb.status <> 'cancelled' and cb.bookingDate between :fromDate and :toDate
             order by cb.bookingDate desc, cb.startTime desc
             """)
-    /** Buổi 1:1 chưa hủy của mọi HLV trong khoảng ngày, mới nhất trước (màn điểm danh của lễ tân). */
     List<CoachBooking> findForAttendance(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
-    /** Non-cancelled 1:1 sessions of one coach between two dates, newest first. */
+    /** Buổi 1:1 chưa hủy của một HLV trong khoảng ngày, mới nhất trước. */
     @Query("""
             select cb from CoachBooking cb
             where cb.status <> 'cancelled' and cb.coach.userId = :coachId
               and cb.bookingDate between :fromDate and :toDate
             order by cb.bookingDate desc, cb.startTime desc
             """)
-    /** Buổi 1:1 chưa hủy của một HLV trong khoảng ngày, mới nhất trước. */
     List<CoachBooking> findForAttendanceByCoach(@Param("coachId") Long coachId,
                                                 @Param("fromDate") LocalDate fromDate,
                                                 @Param("toDate") LocalDate toDate);
 
 
-    /** Confirmed PT sessions between two dates: the ones the schedule trigger checks class sessions against. */
+    /** Buổi PT confirmed trong khoảng ngày kèm HLV; trigger lịch dùng để đối chiếu trùng với buổi lớp. */
     @Query("""
             select cb from CoachBooking cb join fetch cb.coach
             where cb.bookingDate between :fromDate and :toDate and cb.status = 'confirmed'
             """)
-    /** Buổi PT confirmed trong khoảng ngày kèm HLV; trigger lịch dùng để đối chiếu trùng với buổi lớp. */
     List<CoachBooking> findConfirmedBetween(@Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     @Query("""
@@ -153,17 +150,16 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
     /** Buổi confirmed của hội viên từ hôm nay trở đi. */
     List<CoachBooking> findFutureConfirmedByMember(@Param("memberId") Long memberId, @Param("today") LocalDate today);
 
-    /** Hourly sessions not yet paid for, past or upcoming; only a cancellation or a payment clears them. */
+    /**
+     * Đếm buổi 1:1 trả theo giờ của hội viên còn chờ thanh toán (đã qua hoặc sắp tới, trạng thái confirmed/completed);
+     * chỉ hủy hoặc thanh toán mới xóa được.
+     */
     @Query("""
             select count(cb) from CoachBooking cb
             where cb.member.userId = :memberId
               and cb.paymentStatus = 'pending'
               and cb.status in ('confirmed', 'completed')
             """)
-    /**
-     * Đếm buổi 1:1 trả theo giờ của hội viên còn chờ thanh toán (confirmed/completed); chỉ hủy hoặc thanh toán
-     * mới xóa được.
-     */
     long countUnpaid(@Param("memberId") Long memberId);
 
     @Query("""
@@ -220,15 +216,16 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
                                        @Param("endDate") LocalDate endDate);
 
     /**
-     * Chuyển buổi 1:1 confirmed diễn ra trước ngày cutoff sang completed; trả về số dòng cập nhật.
-     *
-     * Confirmed 1:1 sessions held before {@code cutoff} become completed.
+     * Chuyển các buổi 1:1 confirmed diễn ra trước ngày {@code cutoff} sang completed; trả về số dòng cập nhật.
      */
     @org.springframework.data.jpa.repository.Modifying
     @Query("update CoachBooking cb set cb.status = 'completed' where cb.status = 'confirmed' and cb.bookingDate < :cutoff")
     int completeHeldBefore(@Param("cutoff") LocalDate cutoff);
 
-    /** Confirmed hourly 1:1 sessions still unpaid past the hold window or too close to start time. */
+    /**
+     * Buổi 1:1 trả theo giờ ở trạng thái confirmed còn chưa thanh toán quá thời gian giữ chỗ, hoặc đã giữ tối thiểu
+     * mà quá sát giờ bắt đầu; job hết hạn sẽ nhả các buổi này.
+     */
     @Query("""
             select cb from CoachBooking cb
             where cb.status = 'confirmed'
@@ -240,10 +237,6 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
                      and (cb.bookingDate < :dueDate or (cb.bookingDate = :dueDate and cb.startTime <= :dueTime)))
               )
             """)
-    /**
-     * Buổi 1:1 trả theo giờ còn chưa thanh toán quá thời gian giữ chỗ, hoặc đã giữ tối thiểu mà sắp tới giờ
-     * học; job hết hạn sẽ nhả các buổi này.
-     */
     List<CoachBooking> findUnpaidStale(
             @Param("createdCutoff") LocalDateTime createdCutoff,
             @Param("minHoldCutoff") LocalDateTime minHoldCutoff,

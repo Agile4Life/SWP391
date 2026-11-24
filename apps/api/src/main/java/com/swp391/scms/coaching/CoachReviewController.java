@@ -20,9 +20,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * API đánh giá HLV (đã ngừng; chỉ bật khi app.coaching.reviews.enabled=true).
- *
- * Disabled by default: Coach Review endpoints have been removed from the active scope.
+ * API đánh giá HLV — tắt mặc định vì các endpoint đánh giá HLV đã được gỡ khỏi phạm vi hoạt động; chỉ bật khi
+ * {@code app.coaching.reviews.enabled=true}.
  */
 @ConditionalOnProperty(name = "app.coaching.reviews.enabled", havingValue = "true")
 @Tag(name = "Coach Reviews", description = "Hội viên đánh giá Huấn luyện viên (SCRUM-134)")

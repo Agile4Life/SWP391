@@ -24,9 +24,7 @@ public class CurrentCoachMembers {
  public CurrentCoachMembers(CurrentCoachMemberRepository members,Clock clock){this(members,clock,null);}
  @Autowired public CurrentCoachMembers(CurrentCoachMemberRepository members,Clock clock,@Autowired(required=false) MemberProgressLogRepository progressLogs){this.members=members;this.clock=clock;this.progressLogs=progressLogs;}
  /**
-  * Ngày hôm nay theo giờ trung tâm (để nơi gọi dùng cùng một mốc).
-  *
-  * Today in the center time zone, for callers that must apply the same "current" window.
+  * Ngày hôm nay theo múi giờ trung tâm, dành cho các nơi gọi cần áp dụng cùng một khung thời gian "hiện tại".
   */
  public LocalDate centerToday(){return today();}
  /** Ngày hôm nay theo giờ trung tâm. */

@@ -10,5 +10,5 @@ public record CoachAvailableSlotDto(
         LocalTime startTime,
         LocalTime endTime,
         boolean available,
-        String reason // null, "too_soon", "coach_busy", "member_busy"
+        String reason // Lý do nếu không trống: null, "too_soon" (quá sát giờ), "coach_busy" (HLV bận), "member_busy" (hội viên bận)
 ) {}

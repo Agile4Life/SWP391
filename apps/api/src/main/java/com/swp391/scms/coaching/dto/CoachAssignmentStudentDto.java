@@ -24,7 +24,7 @@ public record CoachAssignmentStudentDto(
         String nextSession,
         String status,
         Long referenceId,
-        /** Null when the plan is fine; FROZEN (on hold), NO_ACTIVE (no valid plan today) or NOT_COVERED (plan ends before the PT day). */
+        /** Null khi gói tập bình thường; FROZEN (đang bảo lưu), NO_ACTIVE (hôm nay không có gói hợp lệ) hoặc NOT_COVERED (gói kết thúc trước ngày PT). */
         String membershipIssue
 ) {
     /** Constructor rút gọn không có membershipIssue (mặc định null). */

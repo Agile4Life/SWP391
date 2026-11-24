@@ -9,8 +9,9 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Entity mapping monthly performance review, badges and ranking of coaches (SCRUM-134).
- * The feature was removed (#144); the entity stays only so the code-first schema still describes the existing table.
+ * Entity tổng kết đánh giá hiệu suất tháng, huy hiệu và xếp hạng của HLV (SCRUM-134, bảng coach_monthly_reviews):
+ * điểm trung bình, số đánh giá/buổi, xếp hạng, huy hiệu, thưởng và nhận xét của quản lý. Tính năng đã gỡ (#144);
+ * entity được giữ lại chỉ để schema code-first vẫn mô tả bảng hiện có.
  */
 @Entity
 @Table(name = "coach_monthly_reviews", indexes = {
@@ -19,10 +20,6 @@ import java.time.LocalDateTime;
 }, uniqueConstraints = {
         @UniqueConstraint(name = "uk_coach_month_review", columnNames = {"coach_id", "review_year", "review_month"})
 })
-/**
- * Entity tổng kết tháng của HLV (bảng coach_monthly_reviews): điểm trung bình, số đánh giá/buổi, xếp hạng, huy
- * hiệu, thưởng và nhận xét của quản lý.
- */
 public class CoachMonthlyReview {
 
     @Id
@@ -65,7 +62,7 @@ public class CoachMonthlyReview {
     private String managerFeedback;
 
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "published"; // draft, published
+    private String status = "published"; // Trạng thái: draft, published
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();

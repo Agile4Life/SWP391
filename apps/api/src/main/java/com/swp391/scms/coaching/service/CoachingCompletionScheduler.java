@@ -14,10 +14,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * Job nền hằng ngày chuyển buổi PT 1:1 đã diễn ra và giáo án đã hết hạn sang trạng thái completed.
- *
- * Settles held 1:1 sessions and ended training plans as {@code completed}. 1:1 sessions stay confirmed for
- * {@link #PT_GRACE_DAYS} days so the PT arrival sweep (3-day lookback) still sees them.
+ * Job nền hằng ngày chuyển các buổi PT 1:1 đã diễn ra và giáo án đã kết thúc sang trạng thái {@code completed}.
+ * Buổi 1:1 giữ trạng thái confirmed trong {@link #PT_GRACE_DAYS} ngày để tác vụ quét điểm danh PT (tra cứu 3 ngày)
+ * vẫn nhìn thấy chúng.
  */
 @Service
 public class CoachingCompletionScheduler {
@@ -51,10 +50,8 @@ public class CoachingCompletionScheduler {
     }
 
     /**
-     * Tính "hôm nay" theo giờ Việt Nam; hoàn tất buổi 1:1 cũ hơn PT_GRACE_DAYS ngày và giáo án đã kết thúc; trả
-     * về mảng {số buổi, số giáo án}.
-     *
-     * Returns {1:1 sessions, plans} moved to completed.
+     * Tính "hôm nay" theo giờ Việt Nam; chuyển buổi 1:1 cũ hơn PT_GRACE_DAYS ngày và giáo án đã kết thúc sang
+     * completed; trả về mảng {số buổi 1:1, số giáo án} đã chuyển.
      */
     @Transactional
     public int[] completeHeld() {

@@ -17,10 +17,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * API bộ môn yêu thích của hội viên (tính năng đã ngừng, chỉ bật khi
- * app.legacy.favorite-disciplines-enabled=true).
- *
- * SCRUM-133: REST Controller for member's favorite disciplines.
+ * API bộ môn yêu thích của hội viên (SCRUM-133; tính năng đã ngừng, chỉ bật khi
+ * {@code app.legacy.favorite-disciplines-enabled=true}).
  */
 @RestController
 @ConditionalOnProperty(name = "app.legacy.favorite-disciplines-enabled", havingValue = "true")

@@ -6,9 +6,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Job nền chạy định kỳ: nhả các slot PT 1:1 đang bị giữ bởi booking chưa thanh toán quá hạn.
- *
- * Periodically releases 1:1 PT slots held by bookings that were never paid.
+ * Job nền chạy định kỳ: giải phóng các khung giờ PT 1:1 đang bị giữ bởi các lịch đặt chưa từng thanh toán quá hạn.
  */
 @Component
 public class CoachBookingExpiryScheduler {

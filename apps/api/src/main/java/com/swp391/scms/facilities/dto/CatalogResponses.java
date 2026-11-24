@@ -7,9 +7,7 @@ import java.math.BigDecimal;
 import java.time.LocalTime;
 
 /**
- * Nhóm DTO phản hồi cho danh mục; entity không bao giờ đi ra ngoài tầng service.
- *
- * Response DTOs for the master catalogs; entities never leave the service layer.
+ * Nhóm DTO phản hồi cho danh mục gốc; entity không bao giờ rời khỏi tầng service.
  */
 public final class CatalogResponses {
     /** Lớp chỉ chứa các record, không cho tạo đối tượng. */

@@ -25,10 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * API đánh giá buổi tập (đã ngừng; chỉ bật khi app.coaching.evaluations.enabled=true).
- *
- * REST Controller for Coaching Session Evaluations (SCRUM-119).
- * Disabled by default: Session Evaluation endpoints have been removed from the active scope.
+ * API đánh giá buổi tập (SCRUM-119) — tắt mặc định vì các endpoint đánh giá buổi tập đã được gỡ khỏi phạm vi hoạt
+ * động; chỉ bật khi {@code app.coaching.evaluations.enabled=true}.
  */
 @ConditionalOnProperty(name = "app.coaching.evaluations.enabled", havingValue = "true")
 @Tag(name = "Session Evaluations", description = "Đánh giá buổi tập và nhận xét tiến độ học viên (SCRUM-119)")

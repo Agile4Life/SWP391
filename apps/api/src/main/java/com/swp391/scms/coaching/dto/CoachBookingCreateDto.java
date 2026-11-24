@@ -23,7 +23,7 @@ public record CoachBookingCreateDto(
         @NotNull(message = "{error.coach_booking.end_time_required}")
         LocalTime endTime,
 
-        String paymentMethod, // "package_quota", "cash", "bank_transfer", "online_wallet"
+        String paymentMethod, // Phương thức thanh toán: "package_quota", "cash", "bank_transfer", "online_wallet"
 
         String notes
 ) {}

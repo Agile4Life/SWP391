@@ -14,9 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Nghiệp vụ danh mục phòng tập.
- *
- * Business logic for the room catalog (SCRUM-59).
+ * Nghiệp vụ danh mục phòng tập (SCRUM-59).
  */
 @Service
 public class RoomService {
@@ -94,9 +92,8 @@ public class RoomService {
     private com.swp391.scms.facilities.repository.EquipmentRepository equipment;
 
     /**
-     * Xóa phòng chưa từng được dùng cho lớp, đặt sân hay thiết bị (đã dùng thì đổi trạng thái đóng cửa).
-     *
-     * A room that was ever used by a class, court booking, or equipment is kept (set status to closed instead).
+     * Xóa phòng chưa từng được dùng cho lớp học, đặt sân hay thiết bị; phòng đã từng sử dụng được giữ lại (chuyển trạng
+     * thái sang closed thay vì xóa).
      */
     @Transactional
     public void delete(Long id) {

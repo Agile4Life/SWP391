@@ -20,10 +20,8 @@ import java.time.ZoneId;
 import java.util.List;
 
 /**
- * API cho hội viên đánh dấu bài tập trong giáo án đã hoàn thành (đã ngừng; bật qua
- * app.coaching.completions.enabled).
- *
- * Disabled by default: Member training completion history endpoints have been removed from the active scope.
+ * API cho hội viên đánh dấu bài tập trong giáo án đã hoàn thành — tắt mặc định vì các endpoint lịch sử hoàn thành
+ * bài tập của hội viên đã được gỡ khỏi phạm vi hoạt động; chỉ bật qua {@code app.coaching.completions.enabled}.
  */
 @ConditionalOnProperty(name = "app.coaching.completions.enabled", havingValue = "true")
 @Tag(name = "Member Training Completions")

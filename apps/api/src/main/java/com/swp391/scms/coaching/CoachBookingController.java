@@ -16,9 +16,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * API đặt lịch PT 1:1: danh sách HLV, slot trống, hạn mức, đặt/hủy lịch, điểm danh và thu tiền buổi lẻ.
- *
- * SCRUM-133: REST Controller for 1-on-1 coach booking (PT hourly booking).
+ * API đặt lịch PT 1:1 theo giờ (SCRUM-133): danh sách HLV, slot trống, hạn mức, đặt/hủy lịch, điểm danh và thu tiền
+ * buổi lẻ.
  */
 @RestController
 @RequestMapping("/api/v1/coach-bookings")

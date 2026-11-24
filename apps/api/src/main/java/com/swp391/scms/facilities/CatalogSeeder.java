@@ -14,10 +14,8 @@ import org.springframework.stereotype.Component;
 
 /**
  * Chạy khi khởi động: tạo dữ liệu danh mục mẫu cho Gym (bộ môn Gym, phòng Gym tiêu chuẩn, gói trải nghiệm, các
- * gói 1/3/6 tháng Silver/Gold/Platinum, thiết bị ban đầu). Chạy lại nhiều lần không tạo trùng, và không ghi đè
- * gói mà quản lý đã chỉnh sửa.
- *
- * Seeds sample disciplines, rooms and packages into empty catalogs (idempotent).
+ * gói 1/3/6 tháng Silver/Gold/Platinum, thiết bị ban đầu) một cách lũy đẳng (idempotent — chạy lại nhiều lần không
+ * tạo trùng và không ghi đè gói mà quản lý đã chỉnh sửa).
  */
 @Component
 @Order(50)
@@ -190,15 +188,15 @@ public class CatalogSeeder implements ApplicationRunner {
             rooms.create(new RoomRequest("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", null, null, null, "STANDARD"));
         }
 
-        // Upsert 3-day trial package
+        // Tạo hoặc cập nhật gói trải nghiệm 3 ngày
         upsertPackageWithTier(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_PRICE, TRIAL_PACKAGE_DURATION, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, "GOLD TRIAL", "Gói Tập Thử 3 Ngày", "Gói Thử Gold");
 
-        // Upsert legacy 1-month base packages (outside the 3-12 month rule, see seedLegacyPackage)
+        // Tạo hoặc cập nhật các gói cơ bản 1 tháng kiểu cũ (nằm ngoài quy tắc 3–12 tháng, xem seedLegacyPackage)
         upsertLegacyPackage(SILVER_NAME, SILVER_DESC, SILVER_PRICE, SILVER_DURATION, SILVER_CREDIT_LIMIT, "The Essential");
         upsertLegacyPackage(GOLD_NAME, GOLD_DESC, GOLD_PRICE, GOLD_DURATION, GOLD_CREDIT_LIMIT, "The Sanctuary VIP");
         upsertLegacyPackage(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_PRICE, PLATINUM_DURATION, PLATINUM_CREDIT_LIMIT, "The Sovereign Annual");
 
-        // Upsert 3-month & 6-month long-term packages
+        // Tạo hoặc cập nhật các gói dài hạn 3 tháng & 6 tháng
         upsertPackageWithTier(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT, "SILVER");
         upsertPackageWithTier(SILVER_6M_NAME, SILVER_6M_DESC, SILVER_6M_PRICE, SILVER_6M_DURATION, SILVER_6M_CREDIT_LIMIT, "SILVER");
         upsertPackageWithTier(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_DURATION, GOLD_3M_CREDIT_LIMIT, "GOLD");
@@ -382,7 +380,7 @@ public class CatalogSeeder implements ApplicationRunner {
                             packages.update(pkg.id(), new PackageRequest(name, pkg.description(),
                                     correctedLegacyPrice(pkg.name(), pkg.price()), pkg.durationDays(), pkg.classCreditLimit(), pkg.status(), tier));
                         } catch (com.swp391.scms.common.exception.ConflictException sold) {
-                            // Already sold under the legacy name: keep history intact and seed the standard package below.
+                            // Đã từng bán dưới tên cũ: giữ nguyên lịch sử và tạo gói chuẩn ở bước bên dưới.
                             continue;
                         }
                         return;
@@ -398,11 +396,8 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
     /**
-     * Chỉ đổi giá seed gốc chưa chỉnh của các gói cũ ("The Essential"...) sang giá mới khi đổi tên lần đầu; giá
-     * quản lý đã chỉnh thì giữ nguyên.
-     *
-     * Preserves any price customized by a Manager in the database; only converts the original
-     * unedited seed prices when renaming legacy package aliases ("The Essential", etc.) for the first time.
+     * Bảo toàn mọi mức giá mà quản lý đã tùy chỉnh trong CSDL; chỉ chuyển đổi mức giá seed gốc chưa chỉnh sửa khi đổi
+     * tên các gói theo bí danh cũ ("The Essential", v.v.) lần đầu tiên.
      */
     private BigDecimal correctedLegacyPrice(String name, BigDecimal currentPrice) {
         if (currentPrice == null) return null;

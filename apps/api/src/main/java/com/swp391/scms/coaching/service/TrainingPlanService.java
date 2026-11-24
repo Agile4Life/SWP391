@@ -187,12 +187,10 @@ public class TrainingPlanService {
     }
 
     /**
-     * Đưa giáo án từ lịch sử trở lại áp dụng; giáo án hiện tại của cùng HLV vào lịch sử; giáo án đã hết hạn
-     * được cấp khoảng thời gian mới cùng độ dài bắt đầu từ hôm nay.
-     *
-     * Brings a plan from the member's history back as the active one. The plan the same coach has active for the
-     * member right now moves to history, so each member–coach pair has exactly one current plan. A plan whose period already ended gets a fresh
-     * window of the same length starting today, otherwise it would be "active" yet outside its dates.
+     * Đưa một giáo án từ lịch sử của hội viên trở lại làm giáo án đang áp dụng. Giáo án mà cùng HLV đang áp dụng cho
+     * hội viên sẽ chuyển vào lịch sử, đảm bảo mỗi cặp hội viên–HLV có đúng một giáo án hiện hành. Giáo án có khoảng
+     * thời gian đã kết thúc sẽ được cấp khung thời gian mới cùng độ dài bắt đầu từ hôm nay để tránh ở trạng thái
+     * "active" nhưng nằm ngoài ngày hiệu lực.
      */
     public TrainingPlanDto reapplyPlan(Long planId, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
@@ -215,11 +213,8 @@ public class TrainingPlanService {
     }
 
     /**
-     * Chuyển các giáo án đang áp dụng khác của cùng HLV cho hội viên sang lịch sử (superseded), không xóa; giáo
-     * án của HLV khác giữ nguyên.
-     *
-     * Each member–coach pair has one active plan; the plan it replaces stays as history instead of being deleted.
-     * Plans from the member's other coaches are left alone.
+     * Mỗi cặp hội viên–HLV chỉ có một giáo án đang áp dụng; các giáo án bị thay thế được chuyển sang lịch sử
+     * (superseded) thay vì xóa. Giáo án của các HLV khác của hội viên được giữ nguyên.
      */
     private void supersedeOtherActivePlans(TrainingPlan current) {
         if (current.getMember() == null || current.getMember().getUserId() == null
@@ -279,10 +274,8 @@ public class TrainingPlanService {
     }
 
     /**
-     * Xóa giáo án: nháp thì xóa hẳn; đang áp dụng/lịch sử thì chuyển cancelled để giữ bài tập và lịch sử hoàn
-     * thành của hội viên.
-     *
-     * Activated plans are withdrawn without deleting exercises or member completion history.
+     * Xóa giáo án: bản nháp thì xóa hẳn; giáo án đã kích hoạt hoặc trong lịch sử được thu hồi (chuyển cancelled)
+     * mà không xóa bài tập hay lịch sử hoàn thành của hội viên.
      */
     public void deletePlan(Long planId, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
@@ -303,12 +296,9 @@ public class TrainingPlanService {
     private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
 
     /**
-     * Hội viên có được xem giáo án không: hạng Silver không xem được (lên Gold/Platinum là thấy ngay); không có
-     * gói hiệu lực hoặc gói trải nghiệm thì vẫn xem.
-     *
-     * Silver members do not see the plans their coach writes (spec 2026-11-09): the coach may still create them and
-     * they appear as soon as the member moves to Gold or Platinum. A member with no active package keeps the old
-     * behaviour, and the trial follows Gold.
+     * Hội viên có được xem giáo án HLV soạn hay không (spec 2026-11-09): hội viên hạng Silver không thấy giáo án
+     * (HLV vẫn có thể tạo và giáo án sẽ hiện ngay khi hội viên lên Gold hoặc Platinum). Hội viên không có gói hiệu lực
+     * giữ nguyên hành vi cũ, còn gói trải nghiệm áp dụng theo hạng Gold.
      */
     boolean memberMaySeePlans(Long memberId) {
         if (subscriptionRepository == null || memberId == null) return true;
@@ -393,7 +383,7 @@ public class TrainingPlanService {
         if (isCoach(currentUserRole)) {
             requireCurrentAssignment(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
         }
-        // An unassigned plan belongs to management; only its own coach may change an assigned one.
+        // Giáo án chưa gán HLV thuộc quyền quản lý; giáo án đã gán thì chỉ HLV phụ trách giáo án đó được chỉnh sửa.
         if (currentUserId == null || planCoachId == null || !currentUserId.equals(planCoachId)) {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
                     "You can only modify your own training plans");
@@ -495,9 +485,7 @@ public class TrainingPlanService {
     private com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
 
     /**
-     * HLV chỉ soạn giáo án cá nhân cho hội viên đã có buổi PT với mình và đang có gói Gold/Platinum.
-     *
-     * A coach writes a personal plan only for a member with a registered 1:1 PT session with them and a Gold/Platinum package.
+     * HLV chỉ được soạn giáo án cá nhân cho hội viên đã đăng ký buổi PT 1:1 với mình và đang có gói Gold/Platinum.
      */
     private void requirePersonalPlanEligibility(Long coachId, Long memberId) {
         if (coachBookingRepository != null && !coachBookingRepository.existsForCoachAndMember(coachId, memberId)) {

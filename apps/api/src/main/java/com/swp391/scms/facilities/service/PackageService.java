@@ -11,9 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Nghiệp vụ danh mục gói tập.
- *
- * Business logic for the membership package catalog (SCRUM-60).
+ * Nghiệp vụ danh mục gói tập (SCRUM-60).
  */
 @Service
 public class PackageService {
@@ -42,13 +40,10 @@ public class PackageService {
     }
 
     /**
-     * Tạo gói 1 tháng kiểu cũ (có trước quy tắc 3-12 tháng) chỉ cho CatalogSeeder; không controller nào gọi nên
-     * người dùng luôn đi qua kiểm tra thời hạn.
-     *
-     * Seeds a catalog entry that predates the 3-12 month rule: the 1-month SILVER/GOLD/PLATINUM plans, which existing
-     * databases already hold and the demo dataset and older subscriptions reference. Seeding them keeps a fresh schema
-     * identical to deployed ones. Only {@code CatalogSeeder} calls this; no controller exposes it, so Manager/API
-     * callers always go through {@link #create(PackageRequest)} and {@code requireValidDuration}.
+     * Khởi tạo mục danh mục có trước quy tắc 3–12 tháng: các gói 1 tháng SILVER/GOLD/PLATINUM vốn đã có trong các
+     * CSDL hiện hành và được bộ dữ liệu mẫu cùng các kỳ gói cũ tham chiếu. Việc seed giúp schema mới đồng nhất với
+     * môi trường đã triển khai. Chỉ {@code CatalogSeeder} gọi hàm này; không controller nào mở ra ngoài, nên quản lý/API
+     * luôn đi qua {@link #create(PackageRequest)} và {@code requireValidDuration}.
      */
     @Transactional
     @Audited(action = "PACKAGE_CREATE", entity = "membership_packages")
@@ -71,8 +66,8 @@ public class PackageService {
         if (durationChanged) {
             requireValidDuration(request.durationDays());
         }
-        // Subscriptions point at the package row, so renaming/retiming a sold package would relabel history
-        // (e.g. a "GOLD 6 THÁNG" purchase suddenly reading "GOLD 12 THÁNG"). Create a new package instead.
+        // Các kỳ gói trỏ tới dòng gói tập này, nên đổi tên hoặc thời hạn của gói đã bán sẽ làm sai lệch lịch sử
+        // (ví dụ giao dịch mua "GOLD 6 THÁNG" bỗng hiển thị thành "GOLD 12 THÁNG"). Hãy tạo gói mới thay thế.
         if ((durationChanged || nameChanged) && subscriptions != null && subscriptions.existsByMembershipPackageId(id)) {
             throw new com.swp391.scms.common.exception.ConflictException(
                     "PACKAGE_IDENTITY_LOCKED", "catalog.package.identity_locked", null, null);
@@ -90,7 +85,7 @@ public class PackageService {
         return PackageDto.of(pkg);
     }
 
-    /** Sellable terms are 3 to 12 months; the 3-day trial is the only shorter package. */
+    /** Thời hạn mở bán từ 3 đến 12 tháng; gói trải nghiệm 3 ngày là gói ngắn hơn duy nhất. */
     public static final int TRIAL_DAYS = 3;
     public static final int MIN_TERM_DAYS = 90;
     public static final int MAX_TERM_DAYS = 365;
@@ -126,9 +121,7 @@ public class PackageService {
     private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptions;
 
     /**
-     * Xóa gói chưa từng bán; gói đã bán phải chuyển sang ngừng bán thay vì xóa.
-     *
-     * A package that was ever sold is kept for history (set status to inactive instead).
+     * Xóa gói chưa từng bán; gói đã từng bán được giữ lại cho lịch sử (chuyển trạng thái sang inactive thay vì xóa).
      */
     @Transactional
     @Audited(action = "PACKAGE_DELETE", entity = "membership_packages")

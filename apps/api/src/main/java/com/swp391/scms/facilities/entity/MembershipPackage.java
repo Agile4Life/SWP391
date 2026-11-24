@@ -7,10 +7,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Bảng membership_packages: gói tập (tên, mô tả, giá, số ngày, hạn mức buổi lớp, trạng thái mở bán, hạng, người
- * tạo).
- *
- * Entity mapping table membership_packages (Module B: Master Facilities).
+ * Entity ánh xạ bảng membership_packages (Module B: Danh mục cơ sở vật chất): gói tập gồm tên, mô tả, giá, số ngày,
+ * hạn mức buổi lớp, trạng thái mở bán, hạng và người tạo.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_packages_status", constraints = "status IN ('active','inactive')")
@@ -37,10 +35,10 @@ public class MembershipPackage {
     private Integer classCreditLimit;
 
     @Column(nullable = false, length = 20)
-    private String status = "active"; // active, inactive
+    private String status = "active"; // Trạng thái: active, inactive
 
     @Column(length = 30)
-    private String tier; // SILVER, GOLD, PLATINUM
+    private String tier; // Hạng gói: SILVER, GOLD, PLATINUM
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by")

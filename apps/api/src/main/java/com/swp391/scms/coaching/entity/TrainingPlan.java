@@ -9,10 +9,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Entity giáo án tập luyện (bảng training_plans): hội viên, HLV, lớp, mục tiêu, thời gian, trạng thái, nguồn AI
- * và mốc thời gian.
- *
- * Entity mapping table training_plans (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng training_plans (schema do Hibernate sinh code-first): hội viên, HLV, lớp, mục tiêu, thời gian,
+ * trạng thái, nguồn AI và các mốc thời gian.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_plans_status", constraints = "status IN ('draft','active','superseded','completed','cancelled')")

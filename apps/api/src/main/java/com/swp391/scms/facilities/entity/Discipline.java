@@ -5,9 +5,7 @@ import org.hibernate.Length;
 import java.time.LocalDateTime;
 
 /**
- * Bảng disciplines: bộ môn (tên duy nhất, mô tả, thời điểm tạo).
- *
- * Entity mapping table disciplines (Module B: Master Facilities).
+ * Entity ánh xạ bảng disciplines (Module B: Danh mục cơ sở vật chất): bộ môn gồm tên duy nhất, mô tả và thời điểm tạo.
  */
 @Entity
 @Table(name = "disciplines")

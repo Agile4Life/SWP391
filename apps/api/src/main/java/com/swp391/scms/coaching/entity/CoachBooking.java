@@ -11,8 +11,9 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 /**
- * SCRUM-133: Entity mapping 1-on-1 coach booking (PT private session).
- * Enforces hourly slot booking, minimum 2-hour advance booking, anti-conflict, and paid/quota verification.
+ * SCRUM-133: Entity ánh xạ lịch đặt PT 1:1 (buổi tập riêng với HLV, bảng coach_bookings): hội viên, HLV, bộ môn,
+ * subscription, ngày giờ, giá, thanh toán, trạng thái, điểm danh và thông tin hủy. Áp dụng quy tắc đặt theo khung giờ,
+ * đặt trước tối thiểu 2 giờ, chống trùng lịch và kiểm tra thanh toán/hạn mức.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_coach_bookings_status", constraints = "status IN ('confirmed','cancelled','completed')")
@@ -22,10 +23,6 @@ import java.time.LocalTime;
         @Index(name = "ix_coach_bookings_member_date", columnList = "member_id, booking_date"),
         @Index(name = "ix_coach_bookings_status", columnList = "status")
 })
-/**
- * Entity một buổi PT 1:1 (bảng coach_bookings): hội viên, HLV, bộ môn, subscription, ngày giờ, giá, thanh toán,
- * trạng thái, điểm danh và thông tin hủy.
- */
 public class CoachBooking {
 
     @Id
@@ -61,13 +58,13 @@ public class CoachBooking {
     private BigDecimal hourlyRate = new BigDecimal("200000.00");
 
     @Column(name = "payment_method", nullable = false, length = 30)
-    private String paymentMethod = "package_quota"; // package_quota, cash, bank_transfer, online_wallet
+    private String paymentMethod = "package_quota"; // Phương thức: package_quota, cash, bank_transfer, online_wallet
 
     @Column(name = "payment_status", nullable = false, length = 20)
-    private String paymentStatus = "used_quota"; // used_quota, paid, pending
+    private String paymentStatus = "used_quota"; // Trạng thái thanh toán: used_quota, paid, pending
 
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "confirmed"; // confirmed, cancelled, completed
+    private String status = "confirmed"; // Trạng thái lịch đặt: confirmed, cancelled, completed
 
     @Column(name = "notes", length = 500)
     private String notes;
@@ -75,11 +72,11 @@ public class CoachBooking {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
-    /** When the member was recorded as arriving for this session (gate scan or a visit covering it); null if not yet. */
+    /** Thời điểm hội viên được ghi nhận đến buổi tập (quét cổng hoặc lượt vào cổng bao phủ buổi tập); null nếu chưa có. */
     @Column(name = "attended_at")
     private LocalDateTime attendedAt;
 
-    /** Set when staff removed the arrival, so the list can say the mark was taken off on purpose. */
+    /** Đặt thành true khi nhân viên đã gỡ dấu có mặt, để danh sách hiển thị rõ việc gỡ dấu là chủ đích. */
     @Column(name = "attendance_locked")
     private Boolean attendanceLocked = false;
 
@@ -89,7 +86,7 @@ public class CoachBooking {
     @Column(name = "cancel_reason", length = 255)
     private String cancelReason;
 
-    /** A package slot cancelled by a hold too close to the session: it still counts against the monthly quota. */
+    /** Buổi dùng hạn mức gói bị hủy do bảo lưu quá sát giờ tập: vẫn bị tính vào hạn mức tháng. */
     @Column(name = "quota_forfeited")
     private Boolean quotaForfeited = false;
 

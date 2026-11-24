@@ -7,16 +7,13 @@ import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 
 /**
- * Nguồn duy nhất quy định quyền lợi của từng hạng gói (Silver/Gold/Platinum và gói trải nghiệm): suy ra từ hạng
- * gói (hoặc tên) và thời hạn, không kiểm tra tên rải rác.
- *
- * Single source of truth for what each membership tier includes (spec 2026-11-09-membership-benefits).
- * Everything is derived from the package tier (falling back to the name) and its duration, never from ad-hoc name checks.
+ * Nguồn duy nhất quy định quyền lợi của từng hạng gói hội viên (spec 2026-11-09-membership-benefits): mọi quyền lợi
+ * được suy ra từ hạng gói (dự phòng theo tên) và thời hạn, không bao giờ kiểm tra tên rải rác.
  */
 public final class PackageBenefits {
-    /** Length of one benefit cycle: PT sessions, court bookings and "monthly" perks reset every 30 days from the start date. */
+    /** Độ dài một chu kỳ quyền lợi: buổi PT, lượt đặt sân và các ưu đãi "theo tháng" làm mới mỗi 30 ngày kể từ ngày bắt đầu. */
     public static final int CYCLE_DAYS = 30;
-    /** Packages this short are the 3-day trial. */
+    /** Các gói ngắn tới mức này là gói trải nghiệm 3 ngày. */
     public static final int TRIAL_MAX_DAYS = 3;
     private static final int LONG_TERM_MIN_DAYS = 60;
 
@@ -32,9 +29,7 @@ public final class PackageBenefits {
     }
 
     /**
-     * Hạng của gói: SILVER, GOLD hoặc PLATINUM (gói trải nghiệm được tính là GOLD vì hưởng dịch vụ Gold).
-     *
-     * SILVER, GOLD or PLATINUM. The trial is reported as GOLD because it receives Gold services.
+     * Hạng của gói: SILVER, GOLD hoặc PLATINUM. Gói trải nghiệm được tính là GOLD vì hưởng dịch vụ của hạng Gold.
      */
     public static String tierOf(MembershipPackage pkg) {
         if (pkg == null) return "SILVER";
@@ -47,10 +42,8 @@ public final class PackageBenefits {
     }
 
     /**
-     * Số khóa học nhóm miễn phí của gói (tính năng cũ): Silver 1, Gold 2, Platinum 4 mỗi 30 ngày, nhân theo số
-     * tháng.
-     *
-     * Free group-fitness courses per package; the 3-month packages get three times the 1-month allowance.
+     * Số khóa học nhóm miễn phí của gói (tính năng cũ): Silver 1, Gold 2, Platinum 4 mỗi chu kỳ 30 ngày; gói 3 tháng
+     * được gấp ba lần hạn mức gói 1 tháng.
      */
     public static int courseCredits(String tier, int durationDays) {
         int base = switch (tier == null ? "" : tier) {
@@ -65,8 +58,6 @@ public final class PackageBenefits {
 
     /**
      * Số buổi PT 1:1 miễn phí mỗi chu kỳ 30 ngày: Platinum 6, Gold 3, gói trải nghiệm 1, Silver 0.
-     *
-     * Free 1:1 PT sessions per cycle: Gold 3, Platinum 6, trial 1, Silver none.
      */
     public static int ptSessionsPerCycle(MembershipPackage pkg) {
         if (pkg == null) return 0;
@@ -80,8 +71,6 @@ public final class PackageBenefits {
 
     /**
      * Số lượt đặt sân miễn phí mỗi chu kỳ (tính năng cũ): Platinum 3, Gold 2, Silver 1, trải nghiệm 0.
-     *
-     * Included court bookings per cycle: Platinum 3, Gold 2, Silver 1, trial none.
      */
     public static int courtBookingsPerCycle(MembershipPackage pkg) {
         String tier = paidTier(pkg);
@@ -94,9 +83,7 @@ public final class PackageBenefits {
     }
 
     /**
-     * Số ngày được đặt sân trước (tính năng cũ): trải nghiệm 3, Silver 7, Gold 14, Platinum 30.
-     *
-     * How many days ahead a member may book a court: trial 3, Silver 7, Gold 14, Platinum 30.
+     * Số ngày tối đa hội viên được đặt sân trước (tính năng cũ): trải nghiệm 3, Silver 7, Gold 14, Platinum 30.
      */
     public static int courtAdvanceDays(MembershipPackage pkg) {
         if (pkg == null || isTrial(pkg)) return 3;
@@ -108,10 +95,9 @@ public final class PackageBenefits {
     }
 
     /**
-     * Số lượt đặt sân sắp tới tối đa cùng lúc (tính năng cũ): trải nghiệm 1, Silver 3, Gold 5, Platinum 8.
-     *
-     * Upcoming court bookings a member may have at once, paid or not: trial 1, Silver 3, Gold 5, Platinum 8
-     * (the plan's included bookings, the unpaid holds, and one paid booking of headroom).
+     * Số lượt đặt sân sắp tới tối đa hội viên được giữ cùng lúc, bất kể đã trả tiền hay chưa (tính năng cũ): trải
+     * nghiệm 1, Silver 3, Gold 5, Platinum 8 (gồm lượt miễn phí theo gói, lượt giữ chưa trả và một lượt trả phí dự
+     * phòng).
      */
     public static int courtMaxUpcoming(MembershipPackage pkg) {
         if (pkg == null || isTrial(pkg)) return 1;
@@ -123,10 +109,8 @@ public final class PackageBenefits {
     }
 
     /**
-     * Số sân được giữ mà chưa trả tiền cùng lúc (tính năng cũ): trải nghiệm/Silver 1, Gold 2, Platinum 3.
-     *
-     * Court slots a member may hold at once without having paid for them (counter or VNPay): trial 1, Silver 1,
-     * Gold 2, Platinum 3. Stops one account from reserving many slots it never pays for.
+     * Số khung sân hội viên được giữ cùng lúc khi chưa thanh toán (tại quầy hoặc VNPay, tính năng cũ): trải nghiệm 1,
+     * Silver 1, Gold 2, Platinum 3 — nhằm chặn một tài khoản giữ quá nhiều khung mà không thanh toán.
      */
     public static int courtMaxUnpaidHolds(MembershipPackage pkg) {
         if (pkg == null || isTrial(pkg)) return 1;
@@ -138,10 +122,8 @@ public final class PackageBenefits {
     }
 
     /**
-     * Số ngày bảo lưu tối đa; 0 nghĩa là không được bảo lưu. Gói dài hạn (từ 60 ngày): Platinum 30, Gold 15,
-     * Silver 7; gói ngắn: chỉ Platinum 7; gói trải nghiệm không bảo lưu.
-     *
-     * Longest hold in days; 0 means the package cannot be held (1-month Silver/Gold, trial).
+     * Số ngày bảo lưu tối đa; 0 nghĩa là gói không được bảo lưu (Silver/Gold 1 tháng, gói trải nghiệm). Với gói dài
+     * hạn (từ 60 ngày): Platinum 30, Gold 15, Silver 7; gói ngắn chỉ Platinum được 7 ngày.
      */
     public static int holdMaxDays(MembershipPackage pkg) {
         String tier = paidTier(pkg);
@@ -156,9 +138,8 @@ public final class PackageBenefits {
     }
 
     /**
-     * Phần trăm giảm giá cho buổi PT thêm và các khoản phí: Platinum 20, Gold 10, còn lại 0.
-     *
-     * Percent off extra PT sessions, paid course fees and shop products: Gold 10, Platinum 20.
+     * Phần trăm giảm giá cho buổi PT thêm, học phí khóa học trả phí và sản phẩm cửa hàng: Gold 10, Platinum 20, còn
+     * lại 0.
      */
     public static int discountPercent(MembershipPackage pkg) {
         String tier = paidTier(pkg);
@@ -176,38 +157,31 @@ public final class PackageBenefits {
     }
 
     /**
-     * Có được đánh giá chuyên sâu (mỡ, cơ) không (chỉ Platinum).
-     *
-     * Body Fat and Muscle Mass (the in-depth assessment) are a Platinum service; the trial is not Platinum.
+     * Có được đánh giá chuyên sâu (tỷ lệ mỡ, khối lượng cơ) không: chỉ dành cho hạng Platinum (gói trải nghiệm không
+     * phải Platinum).
      */
     public static boolean allowsDeepAssessment(MembershipPackage pkg) {
         return hasVipRoomAccess(pkg);
     }
 
     /**
-     * Có được đánh giá định kỳ hằng tháng không (từ Gold trở lên, gói trải nghiệm như Gold).
-     *
-     * Monthly follow-up assessments start at Gold; Silver gets the first assessment only. The trial follows Gold.
+     * Có được đánh giá định kỳ hằng tháng không: bắt đầu từ Gold (Silver chỉ có lần đánh giá đầu tiên; gói trải nghiệm
+     * áp dụng theo Gold).
      */
     public static boolean allowsPeriodicAssessment(MembershipPackage pkg) {
         return pkg != null && !"SILVER".equals(tierOf(pkg));
     }
 
     /**
-     * Có được xem giáo án HLV soạn không (Silver không được).
-     *
-     * Silver members do not see the workout plans their coach writes. The trial follows Gold.
+     * Có được xem giáo án HLV soạn không: hội viên Silver không thấy giáo án; gói trải nghiệm áp dụng theo Gold.
      */
     public static boolean canViewWorkoutPlan(MembershipPackage pkg) {
         return pkg != null && !"SILVER".equals(tierOf(pkg));
     }
 
     /**
-     * Ngày bắt đầu tính chu kỳ quyền lợi: ngày bắt đầu kỳ gói, hoặc với kỳ nâng cấp thì là ngày bắt đầu của gói
-     * bị thay thế, để nâng cấp giữa chu kỳ không được cấp lại quyền lợi mới.
-     *
-     * The date benefit cycles are counted from: the start of the subscription, or for an upgrade the start of the plan
-     * it replaced, so upgrading mid-cycle never hands out a fresh PT, court or course allowance.
+     * Ngày gốc dùng để đếm các chu kỳ quyền lợi: ngày bắt đầu của kỳ gói, hoặc với gói nâng cấp thì là ngày bắt đầu
+     * của gói bị thay thế — để việc nâng cấp giữa chu kỳ không bao giờ cấp thêm hạn mức PT, đặt sân hay khóa học mới.
      */
     public static LocalDate cycleAnchor(com.swp391.scms.membership.entity.MembershipSubscription subscription) {
         var current = subscription;
@@ -226,10 +200,8 @@ public final class PackageBenefits {
     }
 
     /**
-     * Số ngày của đồng hồ chu kỳ đã trôi tới ngày cho trước, không tính các ngày bảo lưu (bảo lưu không làm mất
-     * chu kỳ).
-     *
-     * Days of the cycle clock that have run by {@code date}: held days do not count, so a hold never eats a cycle.
+     * Số ngày của đồng hồ chu kỳ đã trôi tới {@code date}: các ngày bảo lưu không được tính, nên bảo lưu không làm
+     * hao hụt chu kỳ.
      */
     private static long effectiveDays(LocalDate anchor, LocalDate holdStart, LocalDate holdEnd, LocalDate date) {
         long gap = Math.max(0, ChronoUnit.DAYS.between(anchor, holdStart));
@@ -239,10 +211,8 @@ public final class PackageBenefits {
     }
 
     /**
-     * Ngày thật ứng với ngày thứ offset của đồng hồ chu kỳ: các ngày từ lúc bảo lưu trở đi bị lùi thêm số ngày
-     * bảo lưu.
-     *
-     * Real date of the effective cycle day {@code offset}: days at or after the hold are pushed back by its length.
+     * Ngày thực tế tương ứng với ngày chu kỳ hiệu lực thứ {@code offset}: các ngày từ lúc bảo lưu trở đi được đẩy lùi
+     * thêm đúng độ dài đợt bảo lưu.
      */
     private static LocalDate realDate(LocalDate anchor, LocalDate holdStart, LocalDate holdEnd, long offset) {
         long gap = Math.max(0, ChronoUnit.DAYS.between(anchor, holdStart));
@@ -251,11 +221,8 @@ public final class PackageBenefits {
     }
 
     /**
-     * Ngày bắt đầu chu kỳ quyền lợi chứa ngày cho trước của kỳ gói (tính từ ngày neo, bỏ qua ngày bảo lưu nếu
-     * có).
-     *
-     * Start of the benefit cycle containing {@code date} for a subscription: counted from its start (or the plan an
-     * upgrade replaced) and, once a hold has been approved, not counting the held days.
+     * Ngày bắt đầu chu kỳ quyền lợi chứa {@code date} của một kỳ gói: tính từ ngày bắt đầu (hoặc ngày bắt đầu của gói
+     * bị thay thế khi nâng cấp) và, khi đã có bảo lưu được duyệt, không tính các ngày bảo lưu.
      */
     public static LocalDate cycleStart(com.swp391.scms.membership.entity.MembershipSubscription sub, LocalDate date) {
         LocalDate anchor = cycleAnchor(sub);
@@ -265,9 +232,7 @@ public final class PackageBenefits {
     }
 
     /**
-     * Ngày cuối chu kỳ đó, không vượt quá ngày kết thúc kỳ gói.
-     *
-     * Last day of that cycle, never past the end of the subscription.
+     * Ngày cuối của chu kỳ đó, không bao giờ vượt quá ngày kết thúc kỳ gói.
      */
     public static LocalDate cycleEnd(com.swp391.scms.membership.entity.MembershipSubscription sub, LocalDate date) {
         LocalDate anchor = cycleAnchor(sub);
@@ -278,9 +243,7 @@ public final class PackageBenefits {
     }
 
     /**
-     * Ngày bắt đầu chu kỳ 30 ngày chứa ngày cho trước, tính từ ngày bắt đầu kỳ gói.
-     *
-     * Start of the 30-day cycle that contains {@code date}, counted from the subscription start.
+     * Ngày bắt đầu chu kỳ 30 ngày chứa {@code date}, tính từ ngày bắt đầu kỳ gói.
      */
     public static LocalDate cycleStart(LocalDate subscriptionStart, LocalDate date) {
         long days = Math.max(0, ChronoUnit.DAYS.between(subscriptionStart, date));
@@ -288,9 +251,7 @@ public final class PackageBenefits {
     }
 
     /**
-     * Ngày cuối chu kỳ chứa ngày cho trước, không vượt quá ngày kết thúc kỳ gói.
-     *
-     * Last day of the cycle that contains {@code date}, never past the subscription end.
+     * Ngày cuối của chu kỳ chứa {@code date}, không bao giờ vượt quá ngày kết thúc kỳ gói.
      */
     public static LocalDate cycleEnd(LocalDate subscriptionStart, LocalDate subscriptionEnd, LocalDate date) {
         LocalDate end = cycleStart(subscriptionStart, date).plusDays(CYCLE_DAYS - 1L);

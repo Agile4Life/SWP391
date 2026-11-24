@@ -8,7 +8,8 @@ import org.hibernate.Length;
 import java.time.LocalDateTime;
 
 /**
- * Entity mapping member feedback and rating for a Coach (SCRUM-134).
+ * Entity ánh xạ phản hồi và đánh giá của hội viên cho HLV (SCRUM-134, bảng coach_reviews): HLV, hội viên, nguồn
+ * (booking/buổi lớp), số sao, nhận xét, ẩn danh, trạng thái duyệt và ghi chú quản lý.
  */
 @Entity
 @Table(name = "coach_reviews", uniqueConstraints = {
@@ -18,10 +19,6 @@ import java.time.LocalDateTime;
         @Index(name = "ix_coach_reviews_coach", columnList = "coach_id"),
         @Index(name = "ix_coach_reviews_member", columnList = "member_id")
 })
-/**
- * Entity đánh giá HLV (bảng coach_reviews): HLV, hội viên, nguồn (booking/buổi lớp), số sao, nhận xét, ẩn danh,
- * trạng thái duyệt và ghi chú quản lý.
- */
 public class CoachReview {
 
     @Id
@@ -43,7 +40,7 @@ public class CoachReview {
     private Long classSessionId;
 
     @Column(name = "rating", nullable = false)
-    private Integer rating; // 1 to 5
+    private Integer rating; // Số sao từ 1 đến 5
 
     @Column(name = "comment", length = Length.LONG32)
     private String comment;
@@ -52,7 +49,7 @@ public class CoachReview {
     private Boolean isAnonymous = false;
 
     @Column(name = "status", nullable = false, length = 20)
-    private String status = "approved"; // approved, pending, hidden
+    private String status = "approved"; // Trạng thái duyệt: approved, pending, hidden
 
     @Column(name = "manager_notes", length = Length.LONG32)
     private String managerNotes;

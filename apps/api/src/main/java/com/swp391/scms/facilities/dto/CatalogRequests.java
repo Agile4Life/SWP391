@@ -5,9 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalTime;
 
 /**
- * Nhóm DTO request cho danh mục (bộ môn, phòng, gói).
- *
- * Request DTOs for the master catalogs (disciplines, rooms, packages).
+ * Nhóm DTO yêu cầu cho danh mục gốc (bộ môn, phòng, gói tập).
  */
 public final class CatalogRequests {
     /** Lớp chỉ chứa các record, không cho tạo đối tượng. */

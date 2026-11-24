@@ -30,11 +30,11 @@ public record CoachBookingDto(
         LocalDateTime createdAt,
         LocalDateTime cancelledAt,
         String cancelReason,
-        /** When the coach or the desk recorded the member as present; null when not recorded. */
+        /** Thời điểm HLV hoặc quầy lễ tân ghi nhận hội viên có mặt; null nếu chưa ghi nhận. */
         LocalDateTime attendedAt,
-        /** True when staff removed the mark on purpose. */
+        /** True khi nhân viên chủ động gỡ dấu có mặt. */
         boolean attendanceLocked,
-        /** Gate check-in that covered the session (attendance list only), shown as a hint; null otherwise. */
+        /** Lượt check-in cổng bao phủ buổi tập (chỉ ở danh sách điểm danh), hiển thị như gợi ý; null nếu không có. */
         LocalDateTime gateCheckinAt,
         String membershipCode,
         String memberPhone,

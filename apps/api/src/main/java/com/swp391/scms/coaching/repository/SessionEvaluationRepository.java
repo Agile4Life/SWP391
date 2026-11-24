@@ -28,9 +28,8 @@ public interface SessionEvaluationRepository extends JpaRepository<SessionEvalua
      */
     List<SessionEvaluation> findBySessionIdOrderByEvaluatedAtDesc(Long sessionId);
 
-    /** Evaluation summary per session: [sessionId, count, average progress score, latest evaluatedAt]. */
+    /** Tổng hợp đánh giá theo từng buổi: [sessionId, số đánh giá, điểm tiến bộ trung bình, evaluatedAt gần nhất]. */
     @org.springframework.data.jpa.repository.Query("select e.session.id, count(e), avg(e.progressScore), max(e.evaluatedAt) "
             + "from SessionEvaluation e where e.session.id in :ids group by e.session.id")
-    /** Tổng hợp đánh giá theo từng buổi: [id buổi, số đánh giá, điểm tiến bộ trung bình, lần đánh giá gần nhất]. */
     List<Object[]> summarizeForSessions(@org.springframework.data.repository.query.Param("ids") java.util.Collection<Long> ids);
 }

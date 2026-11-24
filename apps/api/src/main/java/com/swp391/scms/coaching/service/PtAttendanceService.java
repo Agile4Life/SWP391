@@ -7,15 +7,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Hỗ trợ điểm danh buổi PT 1:1 dựa trên lượt quẹt cổng: chỉ gợi ý cho HLV/lễ tân, không tự ghi nhận có mặt.
- *
- * Gate check-ins around 1:1 sessions. A gate scan never records attendance: the coach or the desk marks it. The
- * check-in that covered a session is only shown to them as a hint. A session without an arrival after it ended is a
- * no-show: its quota stays used, as the plan has no make-up sessions.
+ * Lượt check-in cổng quanh các buổi PT 1:1: quét cổng không bao giờ tự ghi nhận điểm danh mà do HLV hoặc quầy lễ tân
+ * đánh dấu; lượt check-in bao phủ buổi tập chỉ được hiển thị như gợi ý. Buổi đã kết thúc mà không có ghi nhận đến
+ * được tính là vắng mặt (no-show): lượt hạn mức vẫn bị tính đã dùng vì gói không có buổi học bù.
  */
 @Service
 public class PtAttendanceService {
-    /** A visit that began up to this long before a session still covers it (the member came early and stayed). */
+    /** Lượt vào trung tâm bắt đầu trước giờ học tối đa từng này giờ vẫn bao phủ buổi tập (hội viên đến sớm và ở lại). */
     public static final int STAY_BEFORE_HOURS = 3;
 
     private final CenterCheckinRepository checkins;
@@ -26,11 +24,9 @@ public class PtAttendanceService {
     }
 
     /**
-     * Tìm thời điểm bắt đầu lượt check-in hợp lệ bao trùm buổi tập (bắt đầu tối đa STAY_BEFORE_HOURS giờ trước
-     * giờ học); thiếu dữ liệu booking thì trả null.
-     *
-     * Start of a granted gate check-in that was inside the center while the session ran (it began at most
-     * {@value #STAY_BEFORE_HOURS} hours before the start), or null. Shown to staff; it never records attendance.
+     * Thời điểm bắt đầu lượt check-in cổng hợp lệ khi hội viên ở trong trung tâm trong lúc buổi tập diễn ra
+     * (bắt đầu tối đa {@value #STAY_BEFORE_HOURS} giờ trước giờ bắt đầu), hoặc null nếu không có/thiếu dữ liệu booking.
+     * Chỉ hiển thị cho nhân viên làm gợi ý, không bao giờ tự ghi nhận điểm danh.
      */
     @Transactional(readOnly = true)
     public LocalDateTime gateCheckinFor(CoachBooking booking) {

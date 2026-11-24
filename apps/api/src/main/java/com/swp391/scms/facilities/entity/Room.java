@@ -4,10 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalTime;
 
 /**
- * Bảng rooms: phòng tập (tên, vị trí, sức chứa, trạng thái, hạng STANDARD/VIP); phòng gắn bộ môn và giờ mở/đóng
- * là sân (tính năng cũ).
- *
- * Entity mapping table rooms (Module B: Master Facilities).
+ * Entity ánh xạ bảng rooms (Module B: Danh mục cơ sở vật chất): phòng tập gồm tên, vị trí, sức chứa, trạng thái,
+ * hạng STANDARD/VIP; phòng gắn bộ môn và giờ mở/đóng là sân (tính năng cũ).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_rooms_status", constraints = "status IN ('available','maintenance','closed')")
@@ -28,7 +26,7 @@ public class Room {
     private int capacity;
 
     @Column(nullable = false, length = 20)
-    private String status = "available"; // available, maintenance, closed
+    private String status = "available"; // Trạng thái: available, maintenance, closed
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "discipline_id")
@@ -41,7 +39,7 @@ public class Room {
     private LocalTime closeTime;
 
     @Column(length = 30)
-    private String tier = "STANDARD"; // STANDARD, PLATINUM
+    private String tier = "STANDARD"; // Hạng phòng: STANDARD, PLATINUM
 
     /** Lấy giá trị trường id. */
     public Long getId() { return id; }

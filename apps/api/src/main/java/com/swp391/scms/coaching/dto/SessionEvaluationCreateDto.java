@@ -9,10 +9,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Dữ liệu HLV gửi khi đánh giá buổi tập: buổi lớp (tùy chọn), hội viên, HLV (tùy chọn), điểm tiến bộ 1–100 và
+ * DTO yêu cầu tạo đánh giá buổi tập (SCRUM-119): buổi lớp (tùy chọn), hội viên, HLV (tùy chọn), điểm tiến bộ 1–100 và
  * các nhận xét.
- *
- * Request DTO for creating a session evaluation (SCRUM-119).
  */
 public record SessionEvaluationCreateDto(
         Long sessionId,

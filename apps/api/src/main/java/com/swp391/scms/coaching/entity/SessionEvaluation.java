@@ -9,10 +9,8 @@ import java.time.LocalDateTime;
 import org.hibernate.Length;
 
 /**
- * Entity đánh giá buổi tập (bảng session_evaluations): buổi lớp, hội viên, HLV, nhận xét hiệu suất, điểm tiến
- * bộ, phản hồi và thời điểm đánh giá.
- *
- * Entity mapping table session_evaluations (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng session_evaluations (schema do Hibernate sinh code-first): buổi lớp, hội viên, HLV, nhận xét
+ * hiệu suất, điểm tiến bộ, phản hồi và thời điểm đánh giá.
  */
 @Entity
 @Table(name = "session_evaluations")

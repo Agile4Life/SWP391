@@ -121,7 +121,7 @@ public class CoachReviewService {
 
         CoachReview saved = reviewRepository.save(review);
 
-        // Send in-app notification to the Coach
+        // Gửi thông báo trong ứng dụng cho HLV
         if (notificationService != null) {
             String authorName = review.getIsAnonymous() ? msg("coaching.review.anonymous")
                     : (member.getUser() != null ? member.getUser().getFullName() : msg("coaching.review.member"));
@@ -196,7 +196,7 @@ public class CoachReviewService {
                     || !LocalDateTime.of(booking.getBookingDate(), booking.getEndTime()).isBefore(LocalDateTime.now(clock))) {
                 throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", null, "The session has not finished.");
             }
-            // Same rule as courses: only a session the coach or desk marked as attended can be reviewed.
+            // Quy tắc giống khóa học: chỉ buổi được HLV hoặc lễ tân đánh dấu có mặt mới được đánh giá.
             if (booking.getAttendedAt() == null) {
                 throw new ForbiddenException("REVIEW_NOT_ATTENDED", "error.review.not_attended", null,
                         "Only members who attended this session can review it.");
@@ -220,7 +220,7 @@ public class CoachReviewService {
                     || !LocalDateTime.of(session.getSessionDate(), session.getEndTime()).isBefore(LocalDateTime.now(clock))) {
                 throw new BadRequestException("REVIEW_SESSION_NOT_FINISHED", "error.review.not_finished", null, "The session has not finished.");
             }
-            // Being enrolled is not enough: the coach must have marked the member present or late.
+            // Chỉ ghi danh là chưa đủ: HLV phải đã đánh dấu hội viên có mặt hoặc đi muộn.
             if (attendanceRepository != null && attendanceRepository.findBySessionIdAndMemberUserId(session.getId(), memberId)
                     .filter(a -> "present".equalsIgnoreCase(a.getStatus()) || "late".equalsIgnoreCase(a.getStatus()))
                     .isEmpty()) {

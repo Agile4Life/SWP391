@@ -7,9 +7,7 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 /**
  * Truy vấn hội viên HLV đang phụ trách (giáo án còn hạn, PT sắp tới, lớp hoặc buổi lớp đã đặt); mỗi hội viên
- * chỉ một dòng.
- *
- * One row per member, even when multiple current relationships exist.
+ * chỉ trả về một dòng ngay cả khi tồn tại nhiều quan hệ hiện tại.
  */
 public interface CurrentCoachMemberRepository extends Repository<Member,Long> {
  @Query("""

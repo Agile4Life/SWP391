@@ -6,9 +6,8 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 /**
- * Dữ liệu cập nhật giáo án: mục tiêu, ngày bắt đầu/kết thúc và danh sách bài tập (mỗi phần tử không được null).
- *
- * Partial header update with optional full values for existing exercises; omitted items stay unchanged.
+ * Dữ liệu cập nhật một phần thông tin đầu mục giáo án (mục tiêu, ngày bắt đầu/kết thúc) kèm giá trị đầy đủ tùy chọn
+ * cho các bài tập hiện có (mỗi phần tử không được null; bài tập không gửi lên sẽ giữ nguyên).
  */
 public class TrainingPlanUpdateDto {
 

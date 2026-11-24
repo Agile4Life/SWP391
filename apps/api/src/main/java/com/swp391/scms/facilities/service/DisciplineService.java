@@ -11,9 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Nghiệp vụ danh mục bộ môn.
- *
- * Business logic for the discipline catalog (SCRUM-58).
+ * Nghiệp vụ danh mục bộ môn (SCRUM-58).
  */
 @Service
 public class DisciplineService {
@@ -80,10 +78,8 @@ public class DisciplineService {
     private com.swp391.scms.users.MemberRepository members;
 
     /**
-     * Xóa bộ môn: không xóa được nếu còn lớp, phòng hoặc buổi PT dùng; danh sách yêu thích của hội viên được
-     * dọn trước.
-     *
-     * A discipline still used by a class, room or 1:1 booking cannot be removed; member favourites are cleared.
+     * Xóa bộ môn: không thể xóa nếu vẫn đang được dùng bởi lớp học, phòng tập hoặc buổi đặt PT 1:1; danh sách bộ môn
+     * yêu thích của hội viên sẽ được dọn trước.
      */
     @Transactional
     public void delete(Long id) {

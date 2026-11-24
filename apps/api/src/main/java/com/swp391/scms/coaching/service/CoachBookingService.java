@@ -44,7 +44,7 @@ import java.util.List;
 public class CoachBookingService {
     private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
-    private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 hours
+    private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 giờ
     private static final int UNPAID_HOLD_MINUTES = 5;
     private static final int UNPAID_RELEASE_LEAD_MINUTES = 60;
     private static final int UNPAID_MIN_HOLD_MINUTES = 5;
@@ -232,10 +232,8 @@ public class CoachBookingService {
     }
 
     /**
-     * HLV có bị quá 3 buổi PT liên tiếp nếu nhận thêm khung này không (xét cả hai phía để đặt không theo thứ tự
-     * cũng không vượt).
-     *
-     * Check both sides so booking out of order cannot create four consecutive PT slots.
+     * HLV có bị quá 3 buổi PT liên tiếp nếu nhận thêm khung giờ này không (kiểm tra cả hai phía để đặt không theo
+     * thứ tự cũng không thể tạo thành bốn buổi PT liên tiếp).
      */
     private static boolean requiresCoachRest(List<CoachBooking> bookings, LocalTime start) {
         java.util.Set<Integer> hours = new java.util.HashSet<>();
@@ -251,9 +249,7 @@ public class CoachBookingService {
     }
 
     /**
-     * Số buổi PT miễn phí mỗi chu kỳ 30 ngày theo hạng gói (gói trải nghiệm 1 buổi).
-     *
-     * Free 1:1 sessions per 30-day cycle, from the package tier (spec 2026-11-09).
+     * Số buổi PT 1:1 miễn phí mỗi chu kỳ 30 ngày theo hạng gói (spec 2026-11-09; gói trải nghiệm 1 buổi).
      */
     private int ptQuotaOf(MembershipSubscription sub, boolean trial) {
         if (trial) return 1;
@@ -305,11 +301,8 @@ public class CoachBookingService {
     }
 
     /**
-     * Đếm số lượt PT miễn phí đã dùng của kỳ gói (gồm kỳ trước trong chuỗi nâng cấp giữa chu kỳ), để buổi PT
-     * của gói trải nghiệm không trừ vào lượt của gói mới mua.
-     *
-     * Counts PT quota sessions consumed by {@code sub} (and any non-trial predecessor in a mid-cycle upgrade chain)
-     * so a free Trial PT session never reduces the allowance of a newly purchased Gold/Platinum package.
+     * Đếm số lượt PT miễn phí đã dùng của {@code sub} (và bất kỳ gói trước không phải trải nghiệm trong chuỗi nâng
+     * cấp giữa chu kỳ), để buổi PT trải nghiệm miễn phí không bao giờ trừ vào hạn mức của gói Gold/Platinum mới mua.
      */
     private long countQuotaUsageForSubscription(Long memberUserId, MembershipSubscription sub,
                                                 LocalDate startMonth, LocalDate endMonth) {
@@ -351,7 +344,7 @@ public class CoachBookingService {
      */
     @Transactional
     public CoachBookingDto createBooking(AuthenticatedPrincipal principal, CoachBookingCreateDto request) {
-        // Row lock serializes concurrent bookings of one member so the quota count below stays exact.
+        // Khóa dòng tuần tự hóa các yêu cầu đặt lịch đồng thời của một hội viên để phép đếm hạn mức bên dưới luôn chính xác.
         Member member = memberRepository.findByUserIdForUpdate(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Member", principal.id()));
 
@@ -385,7 +378,7 @@ public class CoachBookingService {
                     "Choose a one-hour slot from 06:00 to 21:00.");
         }
 
-        // Rule 1: Advance booking requirement (at least 2 hours)
+        // Quy tắc 1: Yêu cầu đặt trước tối thiểu 2 giờ
         LocalDateTime bookingStart = LocalDateTime.of(request.bookingDate(), request.startTime());
         LocalDateTime now = LocalDateTime.now(clock);
         if (bookingStart.isBefore(now.plusMinutes(ADVANCE_MINUTES_REQUIRED))) {
@@ -397,7 +390,7 @@ public class CoachBookingService {
             );
         }
 
-        // Rule 2: Coach conflict check
+        // Quy tắc 2: Kiểm tra trùng lịch của HLV
         List<ClassSession> coachSessions = legacyClassesEnabled
                 ? classSessionRepository.findActiveByCoachAndDate(coach.getUserId(), request.bookingDate()) : List.of();
         for (ClassSession cs : coachSessions) {
@@ -427,7 +420,7 @@ public class CoachBookingService {
             throw new ConflictException("COACH_REST_REQUIRED", "error.coach_booking.rest_required", null, null);
         }
 
-        // Rule 3: Member conflict check
+        // Quy tắc 3: Kiểm tra trùng lịch của hội viên
         List<CoachBooking> memberBookings = coachBookingRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate());
         for (CoachBooking mb : memberBookings) {
             if (request.startTime().isBefore(mb.getEndTime()) && request.endTime().isAfter(mb.getStartTime())) {
@@ -467,7 +460,7 @@ public class CoachBookingService {
                     "Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.");
         }
 
-        // Rule 4: Payment / PT Quota verification
+        // Quy tắc 4: Kiểm tra thanh toán / hạn mức PT
         String paymentStatus = "used_quota";
         MembershipSubscription usedSubscription = null;
 
@@ -512,7 +505,7 @@ public class CoachBookingService {
                 );
             }
         } else {
-            // Hourly sessions are settled at the desk; cap unpaid ones so they cannot become free, unlimited booking.
+            // Buổi trả theo giờ được thanh toán tại quầy; giới hạn số buổi chưa trả để tránh đặt miễn phí không giới hạn.
             if (coachBookingRepository.countUnpaid(member.getUserId()) >= MAX_UNPAID_UPCOMING) {
                 throw new ConflictException("COACH_BOOKING_UNPAID_LIMIT", "error.coach_booking.unpaid_limit",
                         new Object[]{MAX_UNPAID_UPCOMING}, "Please settle your unpaid 1:1 sessions first.");
@@ -533,7 +526,7 @@ public class CoachBookingService {
         booking.setBookingDate(request.bookingDate());
         booking.setStartTime(request.startTime());
         booking.setEndTime(request.endTime());
-        // Extra 1:1 sessions are discounted for Gold (10%) and Platinum (20%); the discounted rate is what gets charged.
+        // Buổi 1:1 mua thêm được giảm giá cho hạng Gold (10%) và Platinum (20%); mức giá sau giảm là số tiền thực thu.
         int ptDiscount = "package_quota".equalsIgnoreCase(paymentMethod) || memberDiscounts == null
                 ? 0 : memberDiscounts.percentFor(member.getUserId());
         booking.setHourlyRate(MemberDiscountService.apply(DEFAULT_HOURLY_RATE, ptDiscount));
@@ -560,7 +553,7 @@ public class CoachBookingService {
             }
         }
 
-        // Notify the coach about the new 1:1 private booking
+        // Thông báo cho HLV về lịch đặt riêng 1:1 mới
         if (coach.getUser() != null && notificationService != null) {
             String memberName = member.getUser() != null ? member.getUser().getFullName() : "Hội viên";
             String title = msg("notifications.coaching.booking.coach.title");
@@ -569,7 +562,7 @@ public class CoachBookingService {
             notificationService.send(coach.getUserId(), title, message, "system", null, saved.getId(), "/coach/classes");
         }
 
-        // Notify the member about successful booking (or pending payment for hourly session)
+        // Thông báo cho hội viên về việc đặt lịch thành công (hoặc chờ thanh toán đối với buổi trả theo giờ)
         if (member.getUser() != null && notificationService != null) {
             String coachName = coach.getUser() != null ? coach.getUser().getFullName() : "Huấn luyện viên";
             String startStr = saved.getStartTime().toString().substring(0, 5);
@@ -607,15 +600,13 @@ public class CoachBookingService {
                 .toList();
     }
 
-    /** Longest range the attendance screen may read at once. */
+    /** Khoảng ngày tối đa mà màn điểm danh được phép đọc trong một lần truy vấn. */
     public static final int MAX_ATTENDANCE_DAYS = 62;
 
     /**
-     * Danh sách buổi PT cho màn điểm danh trong khoảng ngày (tối đa 62 ngày): HLV xem buổi của mình, quầy/quản
-     * lý xem tất cả; lọc theo kết quả (đã đến, vắng, sắp tới, tất cả) kèm giờ quét cổng để gợi ý.
-     *
-     * 1:1 sessions with their arrival for the attendance screen. A coach sees their own sessions; the desk and
-     * managers see everyone's. {@code outcome} is ATTENDED, MISSED (finished without an arrival), UPCOMING or ALL.
+     * Danh sách buổi PT 1:1 kèm trạng thái đến tập cho màn điểm danh trong khoảng ngày (tối đa 62 ngày): HLV chỉ
+     * xem buổi của mình, lễ tân và quản lý xem tất cả. {@code outcome} gồm ATTENDED (đã đến), MISSED (kết thúc mà
+     * không có ghi nhận đến), UPCOMING (sắp tới) hoặc ALL (tất cả), kèm giờ quét cổng để gợi ý.
      */
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getAttendance(AuthenticatedPrincipal principal, LocalDate from, LocalDate to, String outcome) {
@@ -642,12 +633,9 @@ public class CoachBookingService {
     }
 
     /**
-     * Ghi nhận hội viên đã đến buổi PT (HLV của buổi, quầy hoặc quản lý); buổi phải đã bắt đầu và chưa hủy; đã
-     * ghi rồi thì không đổi gì.
-     *
-     * A coach (for their own sessions), the desk or a manager records that the member did attend; a gate scan is only
-     * shown as a hint and never records it. The session must have started. Marking an already marked session changes
-     * nothing.
+     * HLV (đối với buổi của mình), lễ tân hoặc quản lý ghi nhận hội viên đã đến buổi PT; quét cổng chỉ hiển thị như
+     * gợi ý và không bao giờ tự ghi nhận. Buổi phải đã bắt đầu và chưa hủy; đánh dấu lại buổi đã ghi nhận không làm
+     * thay đổi gì.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_MARK", entity = "coach_bookings")
@@ -680,12 +668,9 @@ public class CoachBookingService {
     }
 
     /**
-     * Bỏ ghi nhận đến buổi do bấm nhầm; buổi được đánh dấu "đã bỏ ghi nhận" để biết là cố ý (ghi nhận lại sẽ
-     * xóa dấu này).
-     *
-     * Staff remove an arrival that was marked by mistake. The session is flagged (attendanceLocked) so the list shows
-     * the mark was taken off on purpose; marking it by hand clears the flag. Same people and same limits as
-     * {@link #markAttended}, except the session may be any past one.
+     * Nhân viên gỡ bỏ ghi nhận đến buổi đã đánh dấu nhầm. Buổi được gắn cờ (attendanceLocked) để danh sách thể hiện
+     * rõ việc gỡ dấu là chủ đích; đánh dấu lại thủ công sẽ xóa cờ này. Đối tượng được phép và giới hạn tương tự
+     * {@link #markAttended}, ngoại trừ có thể áp dụng cho bất kỳ buổi nào trong quá khứ.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_UNMARK", entity = "coach_bookings")
@@ -751,7 +736,7 @@ public class CoachBookingService {
             throw new BadRequestException("ALREADY_CANCELLED", "error.coach_booking.already_cancelled", null, "Lịch này đã được hủy trước đó.");
         }
         LocalDateTime now = LocalDateTime.now(clock);
-        // A session that was held (or has started) is part of attendance, quota and revenue history.
+        // Buổi đã diễn ra (hoặc đã bắt đầu) thuộc về lịch sử điểm danh, hạn mức và doanh thu.
         if ("completed".equalsIgnoreCase(booking.getStatus()) || booking.getBookingDate() == null
                 || booking.getStartTime() == null
                 || !LocalDateTime.of(booking.getBookingDate(), booking.getStartTime()).isAfter(now)) {
@@ -797,7 +782,7 @@ public class CoachBookingService {
         booking.setCancelledAt(LocalDateTime.now(clock));
         booking.setCancelReason(reason != null ? reason : "Hội viên yêu cầu hủy");
 
-        // Notify the coach about cancellation
+        // Thông báo cho HLV về việc hủy lịch
         if (booking.getCoach() != null && booking.getCoach().getUser() != null && notificationService != null) {
             String memberName = booking.getMember().getUser() != null ? booking.getMember().getUser().getFullName() : "Hội viên";
             String title = msg("notifications.coaching.booking.cancelled.title");
@@ -810,13 +795,11 @@ public class CoachBookingService {
     }
 
     /**
-     * Giải phóng buổi PT trả theo giờ chưa thanh toán: giữ quá 5 phút, hoặc còn dưới 60 phút là tới giờ (sau
-     * khi đã giữ ít nhất 5 phút); bỏ qua buổi đang có lượt VNPay. Khoản thu chờ chuyển failed và báo cho hội
-     * viên. Trả số buổi đã giải phóng.
-     *
-     * Releases 1:1 PT slots held by unpaid bookings older than {@link #UNPAID_HOLD_MINUTES}, or still unpaid
-     * within {@link #UNPAID_RELEASE_LEAD_MINUTES} of session start (after at least {@link #UNPAID_MIN_HOLD_MINUTES}).
-     * Bookings with an active VNPay checkout are skipped until the gateway attempt settles or expires.
+     * Giải phóng các khung giờ PT 1:1 bị giữ bởi booking chưa thanh toán quá {@link #UNPAID_HOLD_MINUTES} phút, hoặc
+     * vẫn chưa thanh toán trong vòng {@link #UNPAID_RELEASE_LEAD_MINUTES} phút trước giờ bắt đầu (sau khi đã giữ ít
+     * nhất {@link #UNPAID_MIN_HOLD_MINUTES} phút). Các booking đang có giao dịch VNPay hoạt động sẽ được bỏ qua cho
+     * tới khi cổng thanh toán hoàn tất hoặc hết hạn. Khoản thu chờ chuyển failed, báo cho hội viên và trả số buổi đã
+     * giải phóng.
      */
     @Transactional
     public int expireUnpaidBookings() {
@@ -859,9 +842,7 @@ public class CoachBookingService {
     }
 
     /**
-     * Các buổi PT trả theo giờ đang chờ quầy thu tiền, cũ nhất trước.
-     *
-     * Hourly 1:1 sessions waiting for the desk to collect payment, oldest first.
+     * Các buổi PT 1:1 trả theo giờ đang chờ quầy lễ tân thu tiền, cũ nhất trước.
      */
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getUnpaidBookings(AuthenticatedPrincipal principal) {
@@ -870,11 +851,9 @@ public class CoachBookingService {
     }
 
     /**
-     * Quầy xác nhận đã thu tiền buổi PT theo giờ: chặn khi có lượt VNPay chờ; ghi khoản thu thành công (dùng
-     * lại khoản đang chờ nếu có) để vào doanh thu, đánh dấu buổi đã trả và xuất hóa đơn.
-     *
-     * The desk records that an hourly 1:1 session was paid: the booking becomes paid and a successful payment
-     * is written so the money appears in revenue reports.
+     * Quầy lễ tân ghi nhận buổi PT 1:1 theo giờ đã được thanh toán: chặn khi có lượt VNPay đang chờ; đánh dấu booking
+     * đã trả và ghi khoản thu thành công (tái sử dụng khoản đang chờ nếu có) để tiền hiển thị trong báo cáo doanh thu,
+     * đồng thời tự động xuất hóa đơn.
      */
     @Transactional
     public CoachBookingDto confirmHourlyPayment(AuthenticatedPrincipal principal, Long bookingId, String method) {

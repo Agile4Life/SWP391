@@ -4,10 +4,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Thông tin một đánh giá buổi tập trả về client: buổi, hội viên, HLV, nhận xét hiệu suất, điểm tiến bộ, phản
- * hồi và các mốc thời gian.
- *
- * Response DTO for a session evaluation (SCRUM-119).
+ * DTO phản hồi thông tin một đánh giá buổi tập (SCRUM-119): buổi, hội viên, HLV, nhận xét hiệu suất, điểm tiến bộ,
+ * phản hồi và các mốc thời gian.
  */
 public record SessionEvaluationDto(
         Long id,

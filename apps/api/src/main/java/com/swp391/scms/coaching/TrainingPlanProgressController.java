@@ -11,9 +11,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
 
 /**
- * API xem tiến độ hoàn thành bài tập của giáo án (đã ngừng; bật qua app.coaching.progress.enabled).
- *
- * Disabled by default: Training plan progress endpoints have been removed from the active scope.
+ * API xem tiến độ hoàn thành bài tập của giáo án — tắt mặc định vì các endpoint tiến độ giáo án đã được gỡ khỏi phạm
+ * vi hoạt động; chỉ bật qua {@code app.coaching.progress.enabled}.
  */
 @ConditionalOnProperty(name = "app.coaching.progress.enabled", havingValue = "true")
 @RestController

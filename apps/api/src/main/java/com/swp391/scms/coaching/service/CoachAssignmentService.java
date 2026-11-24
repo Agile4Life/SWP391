@@ -120,7 +120,7 @@ public class CoachAssignmentService {
                         booking.getBookingDate(), booking.getBookingDate(), booking.getBookingDate() + " " + booking.getStartTime(),
                         booking.getStatus(), booking.getId()));
             }
-            // Collapse series enrollment and session bookings into one class/member relationship.
+            // Gộp đăng ký cả khóa và đặt từng buổi thành một quan hệ lớp/hội viên duy nhất.
             Set<String> classMembers = new HashSet<>();
             for (var enrollment : classEnrollmentRepository.findCurrentCoachAssignments(coachId, date, time)) {
                 if (classMembers.add(enrollment.getGymClass().getId() + ":" + enrollment.getMember().getUserId())) rows.add(student(enrollment.getMember(), "CLASS", enrollment.getGymClass().getName(), null, null, null,
@@ -224,10 +224,9 @@ public class CoachAssignmentService {
     }
 
     /**
-     * Lý do gói của hội viên đang chặn việc huấn luyện: FROZEN (đang bảo lưu), NO_ACTIVE (không có gói hiệu
-     * lực), hoặc buổi PT nằm ngoài thời hạn gói; null nếu không có vấn đề.
-     *
-     * Why the member's plan blocks coaching right now, or null when nothing is wrong (the page shows a tag only then).
+     * Lý do gói của hội viên đang chặn việc huấn luyện ở thời điểm hiện tại: FROZEN (đang bảo lưu), NO_ACTIVE (không
+     * có gói hiệu lực), hoặc NOT_COVERED (buổi PT nằm ngoài thời hạn gói); null nếu không có vấn đề (trang chỉ hiện
+     * nhãn khi khác null).
      */
     private String membershipIssue(Long memberId, String type, LocalDate sessionDate) {
         if (!subscriptionRepository.findByMemberUserIdAndStatus(memberId, "frozen").isEmpty()) return "FROZEN";
@@ -290,11 +289,8 @@ public class CoachAssignmentService {
     }
 
     /**
-     * Giáo án của học viên đi theo buổi PT sang HLV mới; nếu HLV mới đã có giáo án đang áp dụng cho học viên
-     * thì giữ cái đó, giáo án được chuyển sang vào lịch sử.
-     *
-     * The member's plans follow the PT session to the new coach, who edits them from there; the previous coach no longer
-     * owns them. If the new coach already has an active plan for the member, theirs stays and the inherited one goes to history.
+     * Giáo án của học viên đi theo buổi PT sang HLV mới để tiếp tục chỉnh sửa từ đó; HLV cũ không còn sở hữu chúng.
+     * Nếu HLV mới đã có giáo án đang áp dụng cho học viên thì giữ giáo án đó và đưa giáo án kế thừa vào lịch sử.
      */
     private void inheritPlans(Long memberId, Coach from, Coach to) {
         boolean toHasActive = !trainingPlanRepository.findOtherActiveForMemberAndCoach(memberId, to.getUserId(), -1L).isEmpty();
@@ -332,7 +328,7 @@ public class CoachAssignmentService {
 
     /** Ghi audit lần chuyển (cả HLV cũ và mới, loại và id phân công, lý do) kèm người thực hiện. */
     private void recordTransfer(CoachAssignmentReassignDto dto, String reason) {
-        // The existing coach audit stream stores both sides of the exact plan / PT relationship.
+        // Luồng audit HLV hiện có lưu cả hai phía của đúng quan hệ giáo án / PT.
         var oldValue = objectMapper.createObjectNode().put("assignmentType", dto.assignmentType()).put("referenceId", dto.referenceId())
                 .put("memberId", dto.memberId()).put("coachId", dto.fromCoachId());
         var newValue = oldValue.deepCopy().put("coachId", dto.toCoachId()).put("reason", reason);
@@ -384,9 +380,8 @@ public class CoachAssignmentService {
     }
 
     /**
-     * Lỗi "cần gói hiệu lực": gói đang bảo lưu có thông báo riêng.
-     *
-     * A frozen (on hold) membership gets its own message; anything else is the generic "needs an active plan".
+     * Lỗi thiếu gói tập hợp lệ: gói đang bảo lưu có thông báo riêng, các trường hợp khác dùng thông báo chung
+     * "cần gói đang hoạt động".
      */
     private BadRequestException membershipMissing(Long memberId) {
         return subscriptionRepository.findByMemberUserIdAndStatus(memberId, "frozen").isEmpty()

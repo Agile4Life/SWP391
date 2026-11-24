@@ -6,10 +6,8 @@ import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.Length;
 
 /**
- * Entity một bài tập trong giáo án (bảng training_plan_items): thứ trong tuần, tên, mô tả, thời gian nghỉ, số
- * hiệp/lần, thời lượng và thứ tự.
- *
- * Entity mapping table training_plan_items (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng training_plan_items (schema do Hibernate sinh code-first): một bài tập trong giáo án gồm thứ
+ * trong tuần, tên, mô tả, thời gian nghỉ, số hiệp/lần, thời lượng và thứ tự.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_plan_items_day", constraints = "day_of_week BETWEEN 1 AND 7")

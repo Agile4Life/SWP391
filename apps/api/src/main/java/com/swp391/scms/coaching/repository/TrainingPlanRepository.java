@@ -33,10 +33,8 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
     List<TrainingPlan> findByMemberUserIdAndStatusOrderByCreatedAtDesc(Long memberId, String status);
 
     /**
-     * Các giáo án active khác mà cùng HLV giao cho hội viên (trừ giáo án exceptId); giáo án của HLV khác không
-     * tính.
-     *
-     * The other active plans one coach gave one member; plans from the member's other coaches are not included.
+     * Các giáo án active khác mà cùng HLV giao cho một hội viên (trừ giáo án exceptId); không bao gồm giáo án từ các
+     * HLV khác của hội viên đó.
      */
     @org.springframework.data.jpa.repository.Query("select p from TrainingPlan p where p.member.userId = :memberId and p.coach.userId = :coachId and p.status = 'active' and p.id <> :exceptId")
     List<TrainingPlan> findOtherActiveForMemberAndCoach(@org.springframework.data.repository.query.Param("memberId") Long memberId,
@@ -69,10 +67,8 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
     boolean existsForCoachAndMember(@org.springframework.data.repository.query.Param("coachId") Long coachId, @org.springframework.data.repository.query.Param("memberId") Long memberId);
 
     /**
-     * Chuyển giáo án active đã hết hạn trước hôm nay sang completed và cập nhật updatedAt; trả về số dòng cập
-     * nhật.
-     *
-     * Active plans whose cycle ended before {@code today} become completed (state machine 7).
+     * Chuyển các giáo án active có chu kỳ kết thúc trước {@code today} sang completed và cập nhật updatedAt
+     * (máy trạng thái 7); trả về số dòng cập nhật.
      */
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("update TrainingPlan p set p.status = 'completed', p.updatedAt = :now where p.status = 'active' and p.endDate < :today")

@@ -23,9 +23,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Nghiệp vụ đánh giá buổi tập do HLV chấm cho hội viên (tính năng đã ngừng, chỉ bật qua app.coaching.*).
- *
- * Service handling session evaluations by coaches and progress tracking for members (SCRUM-119).
+ * Nghiệp vụ đánh giá buổi tập của HLV và theo dõi tiến độ cho hội viên (SCRUM-119; tính năng đã ngừng, chỉ bật qua
+ * app.coaching.*).
  */
 @Service
 @Transactional
@@ -116,7 +115,7 @@ public class SessionEvaluationService {
             try {
                 notificationService.notifyEvaluation(member.getUserId());
             } catch (ResourceNotFoundException ex) {
-                // Do not fail evaluation creation when member's user account is soft-deleted
+                // Không làm lỗi việc tạo đánh giá khi tài khoản người dùng của hội viên đã bị xóa mềm
             }
         }
         return toDto(saved);
@@ -165,7 +164,7 @@ public class SessionEvaluationService {
     @Transactional(readOnly = true)
     public List<SessionEvaluationDto> getSessionEvaluations(Long sessionId, Long currentUserId, String currentRole) {
         if ("COACH".equalsIgnoreCase(currentRole) && classSessionRepository != null) {
-            // A coach reads only the evaluations of sessions of classes assigned to them.
+            // HLV chỉ được đọc đánh giá các buổi thuộc lớp phân công cho mình.
             ClassSession session = classSessionRepository.findById(sessionId)
                     .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
             Coach sessionCoach = session.getGymClass() != null ? session.getGymClass().getCoach() : null;

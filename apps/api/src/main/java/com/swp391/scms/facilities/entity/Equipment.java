@@ -5,7 +5,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Entity mapping table equipment (Quản lý máy móc, trang thiết bị phòng gym).
+ * Entity ánh xạ bảng equipment (quản lý máy móc, trang thiết bị phòng gym): tên, mã, loại, phòng, số lượng, trạng
+ * thái, ngày mua/bảo trì và ghi chú.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_equipment_status", constraints = "status IN ('active','maintenance','broken','retired')")
@@ -13,7 +14,6 @@ import java.time.LocalDateTime;
         @Index(name = "ix_equipment_room", columnList = "room_id"),
         @Index(name = "ix_equipment_status", columnList = "status")
 })
-/** Bảng equipment: thiết bị (tên, mã, loại, phòng, số lượng, trạng thái, ngày mua/bảo trì, ghi chú). */
 public class Equipment {
 
     @Id
@@ -27,7 +27,7 @@ public class Equipment {
     private String code;
 
     @Column(length = 80)
-    private String category; // Cardio, Strength, Free Weights, Diagnostic, Recovery
+    private String category; // Nhóm thiết bị: Cardio, Strength, Free Weights, Diagnostic, Recovery
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_id")
@@ -37,7 +37,7 @@ public class Equipment {
     private int quantity = 1;
 
     @Column(nullable = false, length = 30)
-    private String status = "active"; // active, maintenance, broken, retired
+    private String status = "active"; // Trạng thái: active, maintenance, broken, retired
 
     @Column(name = "purchase_date")
     private LocalDate purchaseDate;
