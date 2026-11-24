@@ -17,7 +17,7 @@ import java.time.OffsetDateTime;
 /**
  * Đọc nhật ký kiểm toán cho màn hình Admin.
  *
- * Service for querying and formatting Audit Logs for management inspection (SCRUM-109).
+ * Service truy vấn và định dạng nhật ký audit cho việc kiểm tra của quản lý (SCRUM-109).
  */
 @Service
 public class AuditService {

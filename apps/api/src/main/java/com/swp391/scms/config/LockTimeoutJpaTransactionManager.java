@@ -14,12 +14,12 @@ import java.sql.Statement;
  * lock_timeout" để nếu phải chờ khóa quá lâu thì báo lỗi 409 "đang bận, thử lại" thay vì treo request và giữ
  * kết nối mãi.
  *
- * Starts each read-write transaction with {@code SET LOCAL lock_timeout}. A pessimistic lock ({@code FOR UPDATE})
- * blocked longer than that fails with SQLState 55P03, mapped to HTTP 409 "busy, try again", instead of holding the
- * request (and a pooled connection) open indefinitely.
+ * Bắt đầu mỗi transaction đọc-ghi bằng {@code SET LOCAL lock_timeout}. Khóa bi quan ({@code FOR UPDATE}) bị
+ * chặn lâu hơn mức đó sẽ lỗi với SQLState 55P03, được ánh xạ thành HTTP 409 "bận, thử lại", thay vì giữ
+ * request (và một kết nối trong pool) mở vô thời hạn.
  *
  * <p>{@code SET LOCAL} only lasts until commit/rollback, so it is safe behind a transaction pooler and leaves no
- * setting on the shared connection.
+ * cài đặt trên kết nối dùng chung.
  */
 public class LockTimeoutJpaTransactionManager extends JpaTransactionManager {
     private final long lockTimeoutMs;

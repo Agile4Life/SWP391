@@ -79,7 +79,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
      * Token có được cấp trước thời điểm đổi mật khẩu không (token cũ phải mất hiệu lực sau khi đổi mật khẩu).
      * Trường iat của JWT chỉ chính xác tới giây, nên token cấp trong cùng giây đổi mật khẩu vẫn được chấp nhận.
      *
-     * JWT {@code iat} has second precision, so a token issued in the same second as the change is still accepted.
+     * {@code iat} của JWT chỉ có độ chính xác giây, nên token cấp trong cùng giây với thay đổi vẫn được chấp
+     * nhận.
      */
     static boolean issuedBeforePasswordChange(java.util.Date issuedAt, java.time.LocalDateTime changedAt) {
         if (changedAt == null) return false;

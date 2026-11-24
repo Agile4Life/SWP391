@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Nhiều số đo của một lần đánh giá.
  *
- * Several measurements taken in one assessment, saved together (BMI is derived, never submitted).
+ * Nhiều số đo trong một buổi đánh giá, lưu cùng nhau (BMI được suy ra, không bao giờ gửi lên).
  */
 public record HealthMetricBatchDto(
         @NotEmpty(message = "{validation.health.metrics.not_empty}")

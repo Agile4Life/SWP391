@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 /**
  * Lỗi không tìm thấy tài nguyên (HTTP 404).
  *
- * Thrown when a requested resource is not found (HTTP 404).
+ * Ném khi tài nguyên được yêu cầu không tồn tại (HTTP 404).
  */
 public class ResourceNotFoundException extends AppException {
 

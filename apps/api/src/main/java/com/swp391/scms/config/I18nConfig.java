@@ -11,9 +11,8 @@ import java.util.Locale;
 /**
  * Cấu hình đa ngôn ngữ: đọc ngôn ngữ từ header Accept-Language, mặc định tiếng Việt, hỗ trợ thêm tiếng Anh.
  *
- * Internationalization (i18n) configuration for SCMS API.
- * Resolves request locale using HTTP 'Accept-Language' header.
- * Default locale is Vietnamese ('vi'), with full English ('en') support.
+ * Cấu hình quốc tế hóa (i18n) cho SCMS API. Xác định locale của request qua header HTTP 'Accept-Language'.
+ * Locale mặc định là tiếng Việt ('vi'), hỗ trợ đầy đủ tiếng Anh ('en').
  */
 @Configuration
 public class I18nConfig {

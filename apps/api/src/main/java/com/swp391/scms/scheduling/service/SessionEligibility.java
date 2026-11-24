@@ -68,7 +68,7 @@ final class SessionEligibility {
             throw new ForbiddenException("SCHEDULING_MEMBERSHIP_ON_HOLD", "error.scheduling.membership_on_hold",
                     new Object[]{sessionDate}, "Gói tập đang bảo lưu vào ngày " + sessionDate);
         }
-        // One currently active period must cover both dates; do not combine future renewals.
+        // Một kỳ đang hoạt động phải bao phủ cả hai ngày; không gộp các kỳ gia hạn tương lai.
         if (!subscriptions.hasActiveMembershipCoveringSession(memberId, today, sessionDate)) {
             throw new ForbiddenException("SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION",
                     "error.scheduling.membership_session_not_covered", new Object[]{sessionDate}, "Gói tập hiện tại không bao phủ ngày học " + sessionDate + ". Vui lòng chọn buổi học nằm trong thời hạn gói tập hoặc gia hạn thêm.");
@@ -79,8 +79,8 @@ final class SessionEligibility {
      * Khóa học phải kết thúc trong thời hạn gói: chu kỳ phủ ngày bắt đầu cộng các lần gia hạn liền mạch; nếu
      * không thì phải gia hạn trước.
      *
-     * A course must finish inside the membership: the active period covering its start plus any paid renewal that
-     * follows it without a gap. Otherwise the member has to renew first (spec 2026-11-09, section 1.3).
+     * Khóa học phải kết thúc trong thời hạn membership: kỳ đang hoạt động bao phủ ngày bắt đầu cộng mọi kỳ
+     * gia hạn đã trả nối tiếp liền mạch. Nếu không, hội viên phải gia hạn trước (spec 2026-11-09, mục 1.3).
      */
     static void ensureMembershipCoversCourse(MembershipSubscriptionRepository subscriptions,
                                             Long memberId, LocalDate startDate, LocalDate endDate) {
@@ -99,7 +99,7 @@ final class SessionEligibility {
     /**
      * Ngày cuối của chuỗi chu kỳ gói đã trả tiền liền mạch phủ ngày from; null nếu không chu kỳ nào phủ.
      *
-     * Last day of the unbroken run of paid periods that covers {@code from}; null when nothing covers it.
+     * Ngày cuối của chuỗi liên tục các kỳ đã trả bao phủ {@code from}; null khi không có gì bao phủ.
      */
     static LocalDate coverageEnd(MembershipSubscriptionRepository subscriptions, Long memberId, LocalDate from) {
         var paid = subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()

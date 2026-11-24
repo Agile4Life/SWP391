@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Dựng điều kiện truy vấn động cho audit log.
  *
- * Dynamic specifications for querying audit logs with optional filters (SCRUM-109).
+ * Specification động để truy vấn nhật ký audit với các bộ lọc tùy chọn (SCRUM-109).
  */
 public final class AuditSpecifications {
 

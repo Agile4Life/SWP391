@@ -26,8 +26,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
  * chạy rồi lưu vào audit_logs. Chạy bên trong transaction nghiệp vụ nên log chỉ được lưu khi thao tác thành
  * công.
  *
- * Captures selected fields before and after a successful {@link Audited} service call.
- * Transaction advice wraps this aspect, so the log participates in the business transaction.
+ * Ghi lại các trường được chọn trước và sau một lần gọi service {@link Audited} thành công. Transaction
+ * advice bao quanh aspect này, nên log tham gia vào transaction nghiệp vụ.
  */
 @Aspect
 @Component
@@ -172,7 +172,8 @@ public class AuditAspect {
                     if (session.getEndTime() != null) node.put("endTime", session.getEndTime().toString());
                 }
                 case "session_attendance" -> {
-                    // Who was marked what in the session (memberId -> status); no contact details in the log.
+                    // Ai được đánh dấu gì trong buổi (memberId -> status); không có thông tin liên hệ trong
+                    // log.
                     var records = node.putObject("records");
                     node.put("sessionId", id);
                     entityManager.createQuery("select a.member.userId, a.status from SessionAttendance a where a.session.id = :id "

@@ -93,7 +93,8 @@ public class StaffInternalRequestService {
             throw new BadRequestException("LEAVE_DATES_REQUIRED", "error.operations.request.leave_dates_required", null, "A leave request needs its start and end dates.");
         }
 
-        // A second leave on days already asked for is usually a mistake: warn first, send only once the user confirms.
+        // Đơn nghỉ thứ hai vào những ngày đã xin thường là nhầm: cảnh báo trước, chỉ gửi khi người dùng xác
+        // nhận.
         if ("LEAVE".equals(type) && !Boolean.TRUE.equals(requestDto.confirmOverlap())) {
             List<StaffInternalRequest> overlaps = requestRepository.findOverlappingLeaves(userId, requestDto.startDate(), requestDto.endDate());
             if (!overlaps.isEmpty()) {
@@ -108,7 +109,7 @@ public class StaffInternalRequestService {
             }
         }
 
-        // A replacement must be another active staff member who can actually cover the shift.
+        // Người thay thế phải là nhân viên đang hoạt động khác, có thể thực sự phủ ca.
         User replacement = null;
         if (requestDto.replacementUserId() != null) {
             replacement = userRepository.findByIdAndDeletedAtIsNull(requestDto.replacementUserId())
@@ -133,7 +134,7 @@ public class StaffInternalRequestService {
 
         StaffInternalRequest saved = requestRepository.save(req);
 
-        // Notify managers about new request
+        // Thông báo cho quản lý về yêu cầu mới.
         if (notificationService != null) {
             List<User> managers = userRepository.findActiveManagers().stream()
                     .filter(u -> u.getRole() != null && 
@@ -236,7 +237,7 @@ public class StaffInternalRequestService {
             reportLeaveImpact(saved, manager);
         }
 
-        // Send in-app notification to the requester
+        // Gửi thông báo trong ứng dụng cho người gửi yêu cầu.
         if (notificationService != null) {
             String title = msg("APPROVED".equals(newStatus) ? "notifications.operations.approved.title" : "notifications.operations.rejected.title");
             String message = msg("notifications.operations.reviewed.body", saved.getTitle(),
@@ -290,8 +291,8 @@ public class StaffInternalRequestService {
      * Khi duyệt đơn nghỉ của HLV: đếm số buổi lớp và buổi PT đã lên lịch trong thời gian nghỉ, nếu có thì báo
      * cho quản lý để sắp xếp người dạy thay. (Đơn nghỉ đã duyệt cũng chặn đặt PT mới trong thời gian đó.)
      *
-     * An approved coach leave keeps new 1:1 bookings away (see CoachBookingService); classes and sessions already
-     * scheduled in the period are reported to the approving manager so cover can be arranged.
+     * Nghỉ phép HLV đã duyệt chặn các lượt đặt 1:1 mới (xem CoachBookingService); các lớp và buổi đã xếp
+     * trong kỳ nghỉ được báo cho quản lý duyệt để sắp xếp người thay.
      */
     private void reportLeaveImpact(StaffInternalRequest leave, User manager) {
         if (!"LEAVE".equals(leave.getRequestType()) || leave.getStartDate() == null || notificationService == null) {

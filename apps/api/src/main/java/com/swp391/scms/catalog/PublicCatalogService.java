@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Dữ liệu công khai cho trang chủ, lấy từ cùng danh mục gói và hồ sơ HLV mà portal dùng.
  *
- * Public read model over the same catalogs and profiles used by the portal.
+ * Mô hình đọc công khai trên cùng các danh mục và hồ sơ mà portal dùng.
  */
 @Service
 public class PublicCatalogService {

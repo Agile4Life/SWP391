@@ -54,7 +54,8 @@ public class PostgreSqlTriggerProvider implements DatabaseTriggerProvider {
             try {
                 AuditEntityTypeSchemaUpgrade.allowCoachBookings(jdbcTemplate);
             } catch (RuntimeException failure) {
-                // Never block startup for an audit CHECK: only audited 1:1 attendance writes depend on it.
+                // Không bao giờ chặn khởi động vì CHECK của audit: chỉ các thao tác ghi điểm danh 1:1 có audit
+                // mới phụ thuộc vào nó.
                 log.error("Could not widen the audit entity-type CHECK for coach_bookings; 1:1 attendance changes "
                         + "will fail until it is fixed", failure);
             }

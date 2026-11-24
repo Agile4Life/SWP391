@@ -11,8 +11,8 @@ import java.util.Locale;
  * Dịch mã thông báo (message key) sang tiếng Việt hoặc tiếng Anh theo header Accept-Language của request, dùng
  * các file i18n/messages_vi.properties và messages_en.properties.
  *
- * Service for resolving localized messages from i18n message bundles.
- * Uses request locale from LocaleContextHolder (driven by Accept-Language header).
+ * Service phân giải thông báo đã bản địa hóa từ các bundle message i18n. Dùng locale của request từ
+ * LocaleContextHolder (theo header Accept-Language).
  */
 @Service
 public class MessageService {
@@ -27,7 +27,7 @@ public class MessageService {
     /**
      * Dịch mã thông báo theo ngôn ngữ của request hiện tại; không tìm thấy mã thì trả lại chính mã đó.
      *
-     * Resolves a message for the current thread's Locale.
+     * Phân giải một message theo Locale của luồng hiện tại.
      *
      * @param code the message code/key in messages.properties
      * @param args optional arguments for placeholder substitution ({0}, {1}, ...)
@@ -42,7 +42,7 @@ public class MessageService {
      * Dịch mã thông báo theo một ngôn ngữ chỉ định (dùng khi gửi thông báo cho người khác, không phải người
      * đang gọi API).
      *
-     * Resolves a message for a specific Locale.
+     * Phân giải một message theo một Locale cụ thể.
      *
      * @param code the message code/key
      * @param locale explicit locale
@@ -60,7 +60,7 @@ public class MessageService {
     /**
      * Dịch mã thông báo; nếu mã không tồn tại thì trả câu mặc định được truyền vào.
      *
-     * Resolves a message with a default fallback text if the code is not present.
+     * Phân giải một message kèm văn bản dự phòng nếu mã không tồn tại.
      *
      * @param code the message code/key
      * @param defaultMessage fallback text

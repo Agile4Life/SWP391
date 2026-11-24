@@ -90,7 +90,7 @@ public class QuoteService {
      * Báo giá có áp % giảm giá theo hạng thành viên cho tiền hàng (phí ship không giảm); hình thức nhận mặc
      * định là nhận tại quầy.
      *
-     * Quote with the shopper's tier discount applied to the products (shipping is never discounted).
+     * Báo giá có áp chiết khấu theo hạng của người mua lên các sản phẩm (phí ship không bao giờ được giảm).
      */
     public QuoteDto quote(QuoteRequest request, int discountPercent) {
         if (request == null) {
@@ -167,7 +167,7 @@ public class QuoteService {
         if (subtotal.compareTo(MAX_ORDER_TOTAL) > 0) {
             throw new BadRequestException("CART_TOO_LARGE", "error.shop.cart_too_large", null, "Order exceeds maximum total");
         }
-        // Free shipping is judged on the list price so a member discount never costs the shipping perk.
+        // Miễn phí ship được xét trên giá niêm yết để chiết khấu hội viên không làm mất ưu đãi ship.
         BigDecimal shippingFee = pricing.shippingFee(fulfillment, subtotal);
         BigDecimal discount = com.swp391.scms.membership.service.MemberDiscountService.discountOf(subtotal, discountPercent);
         BigDecimal total = subtotal.subtract(discount).add(shippingFee);

@@ -19,7 +19,7 @@ import java.util.TreeSet;
  * Bật Row Level Security (RLS) cho mọi bảng của ứng dụng khi chạy trên Supabase, để Supabase Data API (REST
  * công khai) không đọc/ghi được dữ liệu; chỉ backend (đã kiểm tra JWT riêng) truy cập database.
  *
- * Supabase Data API must not expose the tables managed by our JWT-protected backend.
+ * Supabase Data API không được lộ các bảng do backend bảo vệ bằng JWT quản lý.
  */
 @Component
 @Profile("supabase")
@@ -53,7 +53,7 @@ public class PostgreSqlDataSecurityInitializer implements ApplicationRunner {
             if (table != null && !table.name().isBlank()) {
                 tables.add(new Target(table.schema().isBlank() ? currentSchema : table.schema(), table.name()));
             }
-            // Join tables (role_permissions) also belong to the application schema.
+            // Các bảng nối (role_permissions) cũng thuộc schema ứng dụng.
             for (var field : type.getDeclaredFields()) {
                 JoinTable join = field.getAnnotation(JoinTable.class);
                 if (join != null && !join.name().isBlank()) {
@@ -66,7 +66,7 @@ public class PostgreSqlDataSecurityInitializer implements ApplicationRunner {
             }
         }
 
-        // Validate all owners first: our existing JWT is not a Supabase Auth JWT.
+        // Kiểm tra mọi chủ sở hữu trước: JWT hiện tại của ta không phải JWT của Supabase Auth.
         for (Target table : tables) {
             Boolean accessible = jdbc.queryForObject("""
                     select exists (

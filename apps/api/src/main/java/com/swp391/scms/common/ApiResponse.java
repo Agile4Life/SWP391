@@ -7,8 +7,8 @@ import java.time.LocalDateTime;
  * Khung phản hồi chung cho mọi API: success, status (mã HTTP), message (đã dịch theo Accept-Language), data (dữ
  * liệu trả về), code (mã lỗi máy đọc được) và details (chi tiết lỗi, ví dụ lỗi từng trường).
  *
- * Standard API Response Wrapper for all SCMS endpoints.
- * Provides unified structure for both success and error payloads.
+ * Lớp bọc phản hồi API chuẩn cho mọi endpoint SCMS. Cung cấp cấu trúc thống nhất cho cả payload thành công và
+ * lỗi.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {

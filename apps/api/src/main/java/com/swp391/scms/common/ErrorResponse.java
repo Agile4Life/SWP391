@@ -3,7 +3,7 @@ package com.swp391.scms.common;
 /**
  * Phản hồi lỗi dạng ApiResponse luôn có success=false và data=null.
  *
- * Standard Error Response class, extending ApiResponse for backward compatibility.
+ * Lớp phản hồi lỗi chuẩn, kế thừa ApiResponse để tương thích ngược.
  */
 public class ErrorResponse extends ApiResponse<Object> {
 

@@ -53,7 +53,7 @@ public class ProductOrderRefunds {
         if (paid == null) {
             return BigDecimal.ZERO;
         }
-        // A partial refund made earlier at the desk is already paid out.
+        // Khoản hoàn một phần làm trước đó ở quầy đã được chi trả rồi.
         BigDecimal amount = paid.netAmount();
         if (amount == null || amount.signum() <= 0) {
             return BigDecimal.ZERO;
@@ -74,8 +74,8 @@ public class ProductOrderRefunds {
      * VNPay báo thành công sau khi đơn đã hủy: hội viên đã bị trừ tiền nên cộng vào ví và ghi payment là
      * refunded.
      *
-     * A VNPay success that arrives after the order was already cancelled (its payment closed as failed): the member was
-     * charged, so the money goes to their wallet and the payment is recorded as refunded instead of being lost.
+     * VNPay báo thành công sau khi đơn đã hủy (thanh toán của nó đã đóng là failed): hội viên đã bị trừ tiền,
+     * nên tiền được cộng vào ví và thanh toán được ghi là refunded thay vì bị mất.
      */
     public BigDecimal refundLatePayment(ProductOrder order, Payment payment, BigDecimal amount, String reference) {
         if (order == null || payment == null || amount == null || amount.signum() <= 0) {

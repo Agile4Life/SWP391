@@ -20,8 +20,8 @@ import java.util.List;
  * Chạy ngay khi ứng dụng khởi động xong (sau khi Hibernate tạo/cập nhật bảng): cài các trigger nghiệp vụ bắt
  * buộc (kiểm tra sức chứa, trùng lịch...) vào database. Chỉ hỗ trợ PostgreSQL.
  *
- * Initializes invariant business database triggers after Hibernate Code-First
- * schema generation has completed, selecting the PostgreSQL provider.
+ * Khởi tạo các trigger nghiệp vụ bất biến của database sau khi Hibernate sinh xong schema code-first, chọn
+ * provider PostgreSQL.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)

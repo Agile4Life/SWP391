@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 /**
  * Job nền định kỳ hủy đơn shop quá hạn thanh toán và trả lại tồn kho đang giữ.
  *
- * Periodically releases stock held by product orders that were never paid within their window.
+ * Định kỳ nhả tồn kho bị giữ bởi các đơn hàng chưa bao giờ được thanh toán trong thời hạn.
  */
 @ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Component

@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
  * Lỗi xung đột trạng thái (HTTP 409): ví dụ trùng dữ liệu, đã có yêu cầu đang chờ, dữ liệu vừa bị người khác
  * thay đổi.
  *
- * Thrown when a conflict occurs with the current state of a resource (HTTP 409).
+ * Ném khi có xung đột với trạng thái hiện tại của tài nguyên (HTTP 409).
  */
 public class ConflictException extends AppException {
 

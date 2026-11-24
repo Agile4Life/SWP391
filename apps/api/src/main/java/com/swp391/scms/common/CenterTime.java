@@ -7,7 +7,7 @@ import java.util.TimeZone;
  * Múi giờ nghiệp vụ duy nhất của trung tâm (Asia/Ho_Chi_Minh): mọi giá trị ngày giờ API lưu hoặc so sánh đều
  * theo múi giờ này.
  *
- * The center's single business timezone: every wall-clock value the API stores or compares uses it.
+ * Múi giờ nghiệp vụ duy nhất của trung tâm: mọi giá trị giờ tường mà API lưu hoặc so sánh đều dùng nó.
  */
 public final class CenterTime {
     public static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
@@ -19,7 +19,8 @@ public final class CenterTime {
      * Đặt múi giờ mặc định của JVM về giờ Việt Nam để LocalDateTime.now() trả đúng giờ trung tâm dù server chạy
      * ở múi giờ nào.
      *
-     * Makes `LocalDateTime.now()` and `Clock.systemDefaultZone()` agree with {@link #ZONE}, whatever the host's timezone.
+     * Làm cho `LocalDateTime.now()` và `Clock.systemDefaultZone()` thống nhất với {@link #ZONE}, bất kể múi
+     * giờ của máy chủ.
      */
     public static void useAsDefault() {
         TimeZone.setDefault(TimeZone.getTimeZone(ZONE));

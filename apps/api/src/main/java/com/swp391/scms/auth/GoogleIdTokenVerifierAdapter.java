@@ -25,8 +25,8 @@ import java.util.List;
  * Cài đặt xác minh thông tin đăng nhập Google bằng thư viện Google API Client: ID Token, Access Token và
  * Authorization Code.
  *
- * Adapter implementing Google ID Token, OAuth2 Access Token, and OAuth2 Authorization Code verification
- * per BR-01 using Google API Client.
+ * Adapter hiện thực xác minh Google ID Token, OAuth2 Access Token và OAuth2 Authorization Code theo BR-01
+ * bằng Google API Client.
  */
 @Component
 public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {

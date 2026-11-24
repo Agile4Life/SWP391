@@ -235,7 +235,7 @@ public class ProductOrderService {
         order.setStatus(OrderStatus.pending_payment.name());
         order.setFulfillment(request.fulfillment());
         order.setPaymentMethod(request.paymentMethod());
-        // subtotal is what the member pays for the products, so total = subtotal + shipping still holds.
+        // subtotal là số hội viên trả cho sản phẩm, nên total = subtotal + phí ship vẫn đúng.
         order.setSubtotal(priced.subtotal().subtract(priced.discountAmount()));
         order.setMemberDiscountPercent(priced.discountPercent() > 0 ? priced.discountPercent() : null);
         order.setMemberDiscountAmount(priced.discountPercent() > 0 ? priced.discountAmount() : null);

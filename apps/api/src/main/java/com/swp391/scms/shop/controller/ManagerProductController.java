@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
  * API quản lý sản phẩm, ảnh, tồn kho và thống kê đơn cho quản lý trung tâm (đã ngừng; bật qua
  * app.shop.enabled).
  *
- * Disabled by default: Shop module removed from the active scope.
+ * Mặc định tắt: module cửa hàng đã bị gỡ khỏi phạm vi đang chạy.
  */
 @ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController

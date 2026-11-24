@@ -25,9 +25,8 @@ import java.util.Map;
  * Bộ xử lý lỗi toàn cục: bắt mọi exception ném ra từ controller/service và chuyển thành ApiResponse với mã HTTP
  * và thông báo đã dịch (vi/en), để client luôn nhận cùng một định dạng lỗi và không lộ chi tiết nội bộ.
  *
- * Centralized exception handler for all REST controllers.
- * Maps application and database errors into standardized API responses,
- * with i18n multi-language support.
+ * Bộ xử lý ngoại lệ tập trung cho mọi REST controller. Ánh xạ lỗi ứng dụng và database thành phản hồi API
+ * chuẩn, hỗ trợ đa ngôn ngữ i18n.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -76,7 +75,7 @@ public class GlobalExceptionHandler {
      * Xử lý lỗi nghiệp vụ tự định nghĩa (AppException và các lớp con): dùng mã HTTP, mã lỗi và message key mà
      * service đã chọn.
      *
-     * Handles custom business application exceptions.
+     * Xử lý các ngoại lệ nghiệp vụ tùy chỉnh của ứng dụng.
      */
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ApiResponse<Object>> handleAppException(AppException ex) {
@@ -96,7 +95,7 @@ public class GlobalExceptionHandler {
     /**
      * Không tìm thấy tài nguyên (HTTP 404): dịch tên tài nguyên và mã định danh vào thông báo.
      *
-     * Handles ResourceNotFoundException specifically.
+     * Xử lý riêng ResourceNotFoundException.
      */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ApiResponse<Object>> handleResourceNotFound(ResourceNotFoundException ex) {
@@ -115,7 +114,7 @@ public class GlobalExceptionHandler {
      * Lỗi validate @Valid ở request body (HTTP 400): gom lỗi từng trường thành details để form hiển thị ngay
      * dưới ô nhập.
      *
-     * Handles bean validation errors (@Valid on request bodies).
+     * Xử lý lỗi bean validation (@Valid trên request body).
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> handleValidation(MethodArgumentNotValidException ex) {
@@ -141,7 +140,7 @@ public class GlobalExceptionHandler {
     /**
      * Lỗi validate tham số đường dẫn/query (@Validated, HTTP 400): gom theo tên tham số.
      *
-     * Handles constraint violation errors on query params or entities.
+     * Xử lý lỗi vi phạm ràng buộc trên tham số truy vấn hoặc entity.
      */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Object>> handleConstraintViolation(ConstraintViolationException ex) {
@@ -162,7 +161,7 @@ public class GlobalExceptionHandler {
     /**
      * Người dùng đã đăng nhập nhưng không đủ quyền (HTTP 403).
      *
-     * Handles Spring Security access denied (HTTP 403).
+     * Xử lý Spring Security từ chối truy cập (HTTP 403).
      */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Object>> handleAccessDenied(AccessDeniedException ex) {
@@ -178,7 +177,7 @@ public class GlobalExceptionHandler {
     /**
      * Chưa đăng nhập hoặc token không hợp lệ (HTTP 401).
      *
-     * Handles Spring Security authentication failures (HTTP 401).
+     * Xử lý Spring Security xác thực thất bại (HTTP 401).
      */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Object>> handleAuthentication(AuthenticationException ex) {
@@ -195,7 +194,7 @@ public class GlobalExceptionHandler {
      * IllegalArgumentException/IllegalStateException lọt ra từ code: trả HTTP 400 và dùng nguyên nội dung
      * exception làm thông báo (nội dung này không được dịch, nên code nghiệp vụ nên ném AppException thay thế).
      *
-     * Handles illegal arguments and invalid states.
+     * Xử lý đối số không hợp lệ và trạng thái không hợp lệ.
      */
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
     public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(RuntimeException ex) {
@@ -213,8 +212,8 @@ public class GlobalExceptionHandler {
      * trong thông báo gốc của database để đổi thành mã lỗi và câu thông báo dễ hiểu: trùng lịch, quá sức chứa,
      * gói hết hạn, trùng email/SĐT... Đây là cách giữ nguyên trigger bắt buộc mà vẫn trả lỗi HTTP thân thiện.
      *
-     * Handles database integrity and PostgreSQL trigger violations.
-     * Invariants from AGENTS.md & PROJECT_MASTER_GUIDE.md:
+     * Xử lý lỗi toàn vẹn dữ liệu và vi phạm trigger PostgreSQL. Các bất biến từ AGENTS.md &
+     * PROJECT_MASTER_GUIDE.md:
      * - trg_enrollments_check_capacity (Capacity Exceeded)
      * - trg_sessions_check_conflict (Coach / Room Schedule Overlap)
      * - trg_member_schedule_conflict (one member in two overlapping classes)
@@ -351,7 +350,7 @@ public class GlobalExceptionHandler {
     /**
      * Body JSON sai cú pháp hoặc sai kiểu dữ liệu (HTTP 400).
      *
-     * Handles malformed JSON payloads.
+     * Xử lý payload JSON sai định dạng.
      */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Object>> handleMalformedJson(HttpMessageNotReadableException ex) {
@@ -365,7 +364,7 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handles missing or mistyped request parameters.
+     * Xử lý tham số request thiếu hoặc sai kiểu.
      */
     @ExceptionHandler({org.springframework.web.bind.MissingServletRequestParameterException.class,
             org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
@@ -382,7 +381,7 @@ public class GlobalExceptionHandler {
     /**
      * Gọi sai phương thức HTTP cho một endpoint (HTTP 405).
      *
-     * Handles unsupported HTTP methods.
+     * Xử lý phương thức HTTP không được hỗ trợ.
      */
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiResponse<Object>> handleMethodNotAllowed(HttpRequestMethodNotSupportedException ex) {
@@ -397,7 +396,7 @@ public class GlobalExceptionHandler {
     /**
      * Đường dẫn không tồn tại (HTTP 404).
      *
-     * Handles non-existent API routes.
+     * Xử lý route API không tồn tại.
      */
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ApiResponse<Object>> handleNoResourceFound(NoResourceFoundException ex) {
@@ -413,7 +412,7 @@ public class GlobalExceptionHandler {
      * Client đóng kết nối trước khi phản hồi xong (thường gặp với SSE/realtime): chỉ ghi log debug, không trả
      * gì vì kết nối đã đóng.
      *
-     * Fallback for any unhandled exceptions (HTTP 500).
+     * Phương án dự phòng cho mọi ngoại lệ chưa được xử lý (HTTP 500).
      */
     @ExceptionHandler(org.springframework.web.context.request.async.AsyncRequestNotUsableException.class)
     public void handleAsyncRequestNotUsable(org.springframework.web.context.request.async.AsyncRequestNotUsableException ex) {
@@ -421,8 +420,8 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * A row lock was not granted within {@code lock_timeout} (another operation on the same record is still running)
-     * or the database chose this transaction as a deadlock victim. Nothing was saved; the user can retry.
+     * Khóa dòng không được cấp trong {@code lock_timeout} (một thao tác khác trên cùng bản ghi vẫn đang chạy)
+     * hoặc database chọn transaction này làm nạn nhân deadlock. Chưa lưu gì; người dùng có thể thử lại.
      */
     @ExceptionHandler({org.springframework.dao.PessimisticLockingFailureException.class,
             jakarta.persistence.PessimisticLockException.class,

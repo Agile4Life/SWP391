@@ -20,7 +20,7 @@ public interface OtpChallengeRepository extends JpaRepository<OtpChallenge, Long
     @Query("select challenge from OtpChallenge challenge where lower(challenge.target) = lower(:target)")
     Optional<OtpChallenge> findByTargetForUpdate(@Param("target") String target);
 
-    // Bulk deletes run immediately so a following insert of the same unique target cannot collide
+    // Xóa hàng loạt chạy ngay để lần chèn tiếp theo cùng đích duy nhất không bị va chạm.
     /**
      * Xóa mọi mã OTP của địa chỉ đích; chạy ngay (flush) để lần thêm mã mới sau đó không trùng ràng buộc
      * unique.

@@ -11,8 +11,7 @@ import java.util.concurrent.Executor;
  * Bật chạy bất đồng bộ (@Async) và cung cấp một thread pool riêng để gửi thông báo, giúp request chính trả về
  * ngay mà không phải chờ gửi xong.
  *
- * Configuration for asynchronous task execution (SCRUM-108).
- * Provides a dedicated thread pool for non-blocking notification dispatching.
+ * Cấu hình thực thi tác vụ bất đồng bộ (SCRUM-108). Cung cấp thread pool riêng để gửi thông báo không chặn.
  */
 @Configuration
 @EnableAsync

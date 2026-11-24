@@ -11,7 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Tra cứu nhanh hội viên cho lễ tân theo mã hội viên, họ tên, email hoặc SĐT.
  *
- * Quick member lookup for the receptionist by membership code, name, email or phone.
+ * Tra cứu nhanh hội viên cho lễ tân theo mã membership, tên, email hoặc số điện thoại.
  */
 @Service
 public class MemberLookupService {

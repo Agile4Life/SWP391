@@ -21,9 +21,9 @@ import java.util.Objects;
  * Nơi duy nhất kiểm tra hội viên có rảnh trong một khung giờ trên mọi loại lịch: lớp học, đặt chỗ buổi, đặt sân
  * và PT 1:1.
  *
- * One place that decides whether a member is free in a time window across every kind of booking: class enrollments
- * and per-session bookings, court bookings and 1:1 coach bookings. Each booking flow used to check only its own kind,
- * so a member could hold a Yoga class, a Tennis court and a Gym coach in the same hour.
+ * Một nơi duy nhất quyết định hội viên có rảnh trong một khung giờ trên mọi loại đặt chỗ: ghi danh lớp và đặt
+ * chỗ theo buổi, đặt sân và đặt HLV 1:1. Trước đây mỗi luồng chỉ kiểm tra loại của mình nên hội viên có thể
+ * giữ lớp Yoga, sân Tennis và HLV Gym trong cùng một giờ.
  */
 @Component
 public class MemberScheduleGuard {
@@ -49,7 +49,7 @@ public class MemberScheduleGuard {
      * Ném ConflictException nếu hội viên đã có lớp, sân hoặc buổi PT trùng khung [start, end) trong ngày (bỏ
      * qua lớp excludeClassId); thiếu tham số thì bỏ qua.
      *
-     * Throws when the member already has something else in [start, end) on {@code date}.
+     * Ném lỗi khi hội viên đã có việc khác trong [start, end) vào {@code date}.
      */
     public void ensureFree(Long memberUserId, LocalDate date, LocalTime start, LocalTime end, Long excludeClassId) {
         if (memberUserId == null || date == null || start == null || end == null) {
@@ -82,7 +82,7 @@ public class MemberScheduleGuard {
     /**
      * Khóa học định kỳ chiếm lịch hội viên ở mọi buổi chưa hủy của nó: kiểm tra từng buổi bằng ensureFree.
      *
-     * A recurring course holds the member on every one of its sessions.
+     * Khóa học định kỳ giữ hội viên ở mọi buổi của nó.
      */
     public void ensureCourseFree(Long memberUserId, GymClass course) {
         if (memberUserId == null || course == null || course.getId() == null) {

@@ -7,7 +7,8 @@ import jakarta.validation.constraints.AssertTrue;
  * Thông tin Google gửi lên: ID Token hoặc Access Token (luồng popup), hoặc code + redirectUri (chỉ dùng nội bộ
  * trong luồng chuyển hướng đã kiểm tra state).
  *
- * Google credentials. HTTP popup requests accept tokens only; the state-validated redirect service uses code/redirectUri internally.
+ * Thông tin xác thực Google. Request popup HTTP chỉ nhận token; service redirect có kiểm tra state dùng
+ * code/redirectUri bên trong.
  */
 public record GoogleOAuthCallbackRequest(
         String idToken,

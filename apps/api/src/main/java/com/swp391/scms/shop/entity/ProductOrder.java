@@ -61,7 +61,7 @@ public class ProductOrder {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal total = BigDecimal.ZERO;
 
-    /** Tier discount already taken off {@code subtotal}; kept for reconciliation (list price = subtotal + amount). */
+    /** Chiết khấu theo hạng đã trừ khỏi {@code subtotal}; giữ để đối soát (giá niêm yết = subtotal + amount). */
     @Column(name = "member_discount_percent")
     private Integer memberDiscountPercent;
 

@@ -21,7 +21,7 @@ public record StaffInternalRequestCreateDto(
         LocalDate endDate,
         String targetShift,
         Long replacementUserId,
-        /** True when the user already saw the overlapping-leave warning and still wants to send this leave. */
+        /** True khi người dùng đã thấy cảnh báo trùng ngày nghỉ và vẫn muốn gửi đơn nghỉ này. */
         Boolean confirmOverlap
 ) {
     /** Constructor rút gọn không có cờ xác nhận trùng ngày. */

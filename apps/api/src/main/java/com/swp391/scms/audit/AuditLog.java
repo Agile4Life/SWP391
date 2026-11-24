@@ -9,7 +9,7 @@ import org.hibernate.type.SqlTypes;
  * Bảng audit_logs: một dòng nhật ký kiểm toán (người thực hiện, hành động, loại và id bản ghi, giá trị cũ/mới
  * dạng JSON, IP và thời điểm). Ràng buộc CHECK giới hạn các loại bản ghi được phép.
  *
- * Entity mapping table audit_logs.
+ * Entity ánh xạ bảng audit_logs.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_audit_entity_type", constraints = "entity_type IN ( 'users','members','coaches','receptionists','center_managers', 'membership_packages','membership_subscriptions', 'classes','class_sessions','class_enrollments','class_waitlists', 'center_checkins','session_attendance', 'payments','invoices','invoice_items', 'training_plans','training_plan_items','session_evaluations', 'notifications','support_requests','role_permissions', 'products','product_categories','product_variants','product_orders','coach_bookings' )")
@@ -23,7 +23,7 @@ public class AuditLog {
     @Column(name = "user_id")
     private Long userId;
 
-    /** Read-only mapping so the schema generator emits fk_audit_user; writes go through userId. */
+    /** Ánh xạ chỉ đọc để bộ sinh schema tạo fk_audit_user; việc ghi đi qua userId. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private com.swp391.scms.users.entity.User user;

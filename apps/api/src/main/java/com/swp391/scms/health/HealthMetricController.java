@@ -18,8 +18,8 @@ import java.util.List;
  * API chỉ số cơ thể của hội viên (tính năng đã ngừng, chỉ bật khi app.health.metrics.enabled=true): xem, thêm,
  * sửa, xóa số đo.
  *
- * Disabled by default: Member health metrics and body-progress tracking endpoints
- * have been removed from the active scope.
+ * Mặc định tắt: các endpoint chỉ số sức khỏe và theo dõi tiến độ cơ thể của hội viên đã bị gỡ khỏi phạm vi
+ * đang chạy.
  */
 @ConditionalOnProperty(name = "app.health.metrics.enabled", havingValue = "true")
 @Tag(name = "Health Metrics", description = "Quản lý và ghi nhận chỉ số sức khỏe của hội viên")

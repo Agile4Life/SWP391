@@ -125,7 +125,8 @@ public class ProductCatalogService {
             return found.map(p -> ProductMapper.toSummary(p, current));
         }
 
-        // Price and price-per-serving are derived from active variants; sort filtered active products in memory (capped at 500).
+        // Giá và giá mỗi khẩu phần được suy ra từ các biến thể đang hoạt động; sắp xếp các sản phẩm active đã
+        // lọc trong bộ nhớ (giới hạn 500).
         Page<Product> allMatching = products.searchPublic(
                 normQ, goal, normCat, inStock, PageRequest.of(0, MAX_IN_MEMORY_SORT_PRODUCTS, Sort.unsorted()));
         List<ProductSummaryDto> summaries = new ArrayList<>(

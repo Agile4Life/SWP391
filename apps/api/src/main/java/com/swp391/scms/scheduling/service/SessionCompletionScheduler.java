@@ -19,10 +19,10 @@ import java.time.ZoneId;
  * Job nền hằng ngày chuyển buổi học, lượt đặt chỗ và ghi danh khóa đã kết thúc sang completed (giữ lại
  * GRACE_DAYS ngày để điểm danh trễ).
  *
- * Settles held class sessions, their per-session bookings and finished course enrollments as {@code completed}.
+ * Chốt các buổi lớp đã diễn ra, lượt đặt theo buổi và ghi danh khóa học đã kết thúc là {@code completed}.
  *
  * <p>Rows stay open for {@link #GRACE_DAYS} days after the session so the auto-absent sweep (7-day lookback) and late
- * attendance corrections still see them as booked.
+ * việc sửa điểm danh vẫn thấy chúng ở trạng thái booked.
  */
 @Service
 @ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
@@ -63,13 +63,13 @@ public class SessionCompletionScheduler {
      * Tính mốc cutoff = hôm nay − GRACE_DAYS; hoàn tất đặt chỗ và ghi danh trước rồi mới tới buổi học; trả về
      * {số buổi, số đặt chỗ, số ghi danh}.
      *
-     * Returns {sessions, bookings, enrollments} moved to completed.
+     * Trả về {sessions, bookings, enrollments} đã chuyển sang completed.
      */
     @Transactional
     public int[] completeHeld() {
         LocalDateTime now = clock.instant().atZone(CENTER_ZONE).toLocalDateTime();
         LocalDate cutoff = now.toLocalDate().minusDays(GRACE_DAYS);
-        // Bookings and enrollments first: their queries read session dates, not session status.
+        // Lượt đặt và ghi danh trước: truy vấn của chúng đọc ngày của buổi, không đọc trạng thái buổi.
         int booked = bookings.completeHeldBefore(cutoff);
         int enrolled = enrollments.completeFinishedBefore(cutoff);
         int held = sessions.completeHeldBefore(cutoff, now);

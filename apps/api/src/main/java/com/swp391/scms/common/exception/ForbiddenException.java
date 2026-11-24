@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 /**
  * Lỗi không đủ quyền thực hiện thao tác (HTTP 403).
  *
- * Thrown when an authenticated user does not have permission for an action (HTTP 403).
+ * Ném khi người dùng đã xác thực không có quyền thực hiện hành động (HTTP 403).
  */
 public class ForbiddenException extends AppException {
 

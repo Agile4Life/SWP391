@@ -726,7 +726,7 @@ public class EnrollmentService {
     /**
      * Chặn ghi danh khi hội viên đang bị khóa đăng ký khóa học (do vắng quá 50% buổi của một khóa trước).
      *
-     * A member who missed more than half of a course cannot join another one until the block ends.
+     * Hội viên vắng hơn một nửa khóa học thì không được vào khóa khác cho đến khi lệnh chặn kết thúc.
      */
     private void ensureNotBlocked(Member member) {
         var until = member.getCourseEnrollBlockedUntil();
@@ -754,8 +754,8 @@ public class EnrollmentService {
         }
 
         LocalDate today = SessionEligibility.today(clock);
-        // Same rule as checkoutCourse: a course is joined as a whole, so once it has started it is closed. Checking it
-        // first keeps the member from seeing a misleading "membership does not cover <start date>" error instead.
+        // Cùng quy tắc với checkoutCourse: khóa học được tham gia trọn vẹn, nên khi đã bắt đầu thì đóng. Kiểm
+        // tra trước để hội viên không thấy lỗi gây hiểu nhầm "membership không bao phủ <ngày bắt đầu>".
         if (gymClass.getStartDate() != null && gymClass.getStartDate().isBefore(today)) {
             throw new BadRequestException("SCHEDULING_COURSE_ALREADY_STARTED", "error.scheduling.course_already_started", null,
                     "Khóa học đã bắt đầu, không thể đăng ký thêm.");
@@ -770,12 +770,13 @@ public class EnrollmentService {
                     "Member already has an active booking for this class");
         }
 
-        // A course holds the member in every session: no other class, court or 1:1 booking may overlap any of them.
+        // Khóa học giữ hội viên ở mọi buổi: không lớp khác, sân hay lượt đặt PT 1:1 nào được chồng lên bất kỳ
+        // buổi nào.
         if (scheduleGuard != null) {
             scheduleGuard.ensureCourseFree(member.getUserId(), gymClass);
         }
 
-        // Quota check
+        // Kiểm tra hạn mức.
         QuotaDto quota = getMemberCourseQuota(principal);
         if (!quota.unlimited() && quota.remainingCredits() <= 0) {
             throw new ForbiddenException("SCHEDULING_COURSE_QUOTA_EXCEEDED", "error.scheduling.course_quota_exceeded", null,
@@ -866,7 +867,7 @@ public class EnrollmentService {
         }
 
         BigDecimal listPrice = gymClass.getPrice() != null ? gymClass.getPrice() : BigDecimal.ZERO;
-        // Gold and Platinum members get 10% / 20% off the course fee once their free credits are used up.
+        // Hội viên Gold và Platinum được giảm 10% / 20% phí khóa học khi đã dùng hết lượt miễn phí.
         int discountPercent = memberDiscounts != null ? memberDiscounts.percentFor(member.getUserId()) : 0;
         BigDecimal price = MemberDiscountService.apply(listPrice, discountPercent);
         String normalizedMethod = method != null ? method.toLowerCase() : "cash";
@@ -874,7 +875,7 @@ public class EnrollmentService {
             normalizedMethod = "cash";
         }
 
-        // Paying from the wallet needs the money up front: no seat is held for a fee the wallet cannot cover.
+        // Trả bằng ví cần có tiền ngay: không giữ chỗ cho khoản phí mà ví không đủ trả.
         if ("online_wallet".equals(normalizedMethod) && wallets != null && price.compareTo(BigDecimal.ZERO) > 0) {
             BigDecimal balance = wallets.getMyWallet(member.getUserId()).balance();
             BigDecimal available = balance != null ? balance : BigDecimal.ZERO;
@@ -929,7 +930,8 @@ public class EnrollmentService {
                     );
                     paymentUrl = checkout.paymentUrl();
                 } catch (Exception ex) {
-                    // The payment stays pending so reception can still collect it; the member can retry online.
+                    // Khoản thanh toán vẫn ở trạng thái pending để lễ tân còn thu được; hội viên có thể thử lại
+                    // online.
                     org.slf4j.LoggerFactory.getLogger(EnrollmentService.class)
                             .warn("VNPay checkout could not be created for course payment {}", savedPayment.getId(), ex);
                 }
@@ -972,7 +974,8 @@ public class EnrollmentService {
         enrollment.setCancelledBy(member.getUser());
         enrollment.setCancelReason("Member requested cancellation");
 
-        // An unpaid course fee must not stay payable once the seat is released; a settled fee is refunded to the wallet.
+        // Phí khóa học chưa trả không được còn thanh toán được sau khi chỗ đã nhả; phí đã thanh toán được hoàn
+        // vào ví.
         if (paymentRepository != null) {
             paymentRepository.findByClassEnrollmentId(enrollment.getId()).ifPresent(payment -> {
                 if ("pending".equalsIgnoreCase(payment.getStatus())) {
@@ -1001,8 +1004,9 @@ public class EnrollmentService {
      * Nhả chỗ cho phí khóa học chưa thanh toán: phí online sau ONLINE_HOLD_MINUTES phút, phí tiền mặt khi khóa
      * bắt đầu; bỏ qua khoản VNPay còn có thể xác nhận; trả về số chỗ đã nhả.
      *
-     * Frees seats held for course fees that were never paid: an online (wallet/VNPay) fee after {@value #ONLINE_HOLD_MINUTES}
-     * minutes, and a counter (cash) fee once the course starts. Fees a payment gateway may still confirm are left alone.
+     * Giải phóng chỗ bị giữ bởi phí khóa học chưa bao giờ được trả: phí online (ví/VNPay) sau {@value
+     * #ONLINE_HOLD_MINUTES} phút, phí quầy (tiền mặt) khi khóa bắt đầu. Các khoản phí cổng thanh toán vẫn có
+     * thể xác nhận thì không đụng tới.
      */
     @Transactional
     public int expireUnpaidCourseEnrollments() {
@@ -1014,7 +1018,8 @@ public class EnrollmentService {
         int released = 0;
         for (Payment payment : paymentRepository.findPendingCourseFeesCreatedBefore(current)) {
             try {
-                // Closes attempts past expiry + IPN grace; one VNPay may still settle keeps the fee and the seat.
+                // Đóng các lần thử đã quá hạn cộng thời gian ân hạn IPN; lần VNPay còn có thể tất toán thì giữ
+                // phí và chỗ.
                 if (vnpayGuard != null) vnpayGuard.payment(payment.getId());
             } catch (RuntimeException awaitingGateway) {
                 continue;

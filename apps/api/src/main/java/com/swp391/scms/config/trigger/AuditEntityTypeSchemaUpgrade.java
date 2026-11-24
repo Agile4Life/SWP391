@@ -12,7 +12,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * Nâng cấp ràng buộc CHECK của bảng audit_logs một cách an toàn và chạy lại được nhiều lần, vì Hibernate không
  * tự cập nhật CHECK đã có. Mục đích: cho phép ghi audit với entity_type = 'coach_bookings' (điểm danh PT 1:1).
  *
- * Explicit, idempotent CHECK migration; Hibernate schema update does not reconcile existing CHECKs.
+ * Migration CHECK tường minh và idempotent; Hibernate schema update không đối soát các CHECK hiện có.
  */
 final class AuditEntityTypeSchemaUpgrade {
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(AuditEntityTypeSchemaUpgrade.class);
@@ -40,7 +40,7 @@ final class AuditEntityTypeSchemaUpgrade {
                 }
             }
             if (!exists) return null;
-            // Cheap check first, without a lock: after the first upgrade every startup stops here.
+            // Kiểm tra nhẹ trước, không khóa: sau lần nâng cấp đầu, mọi lần khởi động dừng ở đây.
             String current = predicate(connection, schema, table.name(), mapping.name());
             if (current == null || permits(connection, current)) return null;
             // Tự mở transaction nếu kết nối đang ở chế độ autocommit, để bước khóa bảng và thay CHECK là một khối.
@@ -48,14 +48,15 @@ final class AuditEntityTypeSchemaUpgrade {
             if (ownTransaction) connection.setAutoCommit(false);
             try {
                 String qualified = quoted(schema) + "." + quoted(table.name());
-                // Serialize inspection/replacement and bound the wait; no interval without the CHECK is committed.
+                // Tuần tự hóa việc kiểm tra/thay thế và giới hạn thời gian chờ; không commit khoảng thời gian
+                // nào thiếu CHECK.
                 try (var statement = connection.createStatement()) {
                     statement.execute("set local lock_timeout = '10s'");
                     statement.execute("lock table " + qualified + " in access exclusive mode");
                 }
                 String predicate = predicate(connection, schema, table.name(), mapping.name());
                 if (predicate != null && !permits(connection, predicate)) {
-                    // Retain the entire old predicate, including valid legacy types absent from today's Entity.
+                    // Giữ nguyên toàn bộ vị từ cũ, gồm các loại legacy hợp lệ không còn trong Entity hiện nay.
                     try (var statement = connection.createStatement()) {
                         statement.execute("alter table " + qualified + " drop constraint " + quoted(mapping.name())
                                 + ", add constraint " + quoted(mapping.name()) + " check ((" + predicate
@@ -95,7 +96,7 @@ final class AuditEntityTypeSchemaUpgrade {
      * Đọc biểu thức của ràng buộc CHECK trên cột entity_type từ catalog của PostgreSQL; trả null nếu bảng không
      * có ràng buộc này (khi đó mọi loại entity đều đã được phép).
      *
-     * The entity-type CHECK predicate, or null when the table has none (then every type is already allowed).
+     * Vị từ CHECK của loại entity, hoặc null khi bảng không có (khi đó mọi loại đã được cho phép).
      */
     private static String predicate(Connection connection, String schema, String table, String name) throws SQLException {
         try (var statement = connection.prepareStatement("""

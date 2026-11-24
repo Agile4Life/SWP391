@@ -117,7 +117,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
      * cho sinh QR động; 0 nghĩa là không giới hạn.
      */
     private int getRateLimitForUri(String uri) {
-        // The portal reads the current session on every load; it is authenticated and not a guessing target.
+        // Portal đọc phiên hiện tại mỗi lần tải; nó đã xác thực và không phải mục tiêu dò đoán.
         if (uri.equals(AUTH_ME_PATH)) {
             return 0;
         }
@@ -138,9 +138,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
      * (server.forward-headers-strategy=native); code không đọc header này trực tiếp nên client không giả IP để
      * né giới hạn được.
      *
-     * The client address. Behind the hosting proxy this is the real client only because
+     * Địa chỉ client. Sau proxy của hosting thì đây là client thật chỉ vì
      * {@code server.forward-headers-strategy=native} lets Tomcat take X-Forwarded-For from trusted internal proxies;
-     * the header is never read here directly, so a client cannot spoof it to dodge the limit.
+     * header không bao giờ được đọc trực tiếp ở đây, nên client không thể giả mạo nó để né giới hạn.
      */
     private String getClientIp(HttpServletRequest request) {
         return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";

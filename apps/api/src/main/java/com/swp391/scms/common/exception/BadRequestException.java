@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 /**
  * Lỗi dữ liệu đầu vào không hợp lệ (HTTP 400).
  *
- * Thrown when the client request is invalid or malformed (HTTP 400).
+ * Ném khi request của client không hợp lệ hoặc sai định dạng (HTTP 400).
  */
 public class BadRequestException extends AppException {
 

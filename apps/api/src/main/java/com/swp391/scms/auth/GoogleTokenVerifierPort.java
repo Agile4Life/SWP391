@@ -5,8 +5,8 @@ import com.swp391.scms.auth.dto.GoogleUserInfo;
 /**
  * Cổng (interface) xác minh thông tin đăng nhập Google; tách riêng để test có thể thay bằng bản giả.
  *
- * Port interface for verifying Google ID Tokens, Access Tokens, and Authorization Codes.
- * Follows Hexagonal / IoC Architecture to allow clean unit testing and mock verification.
+ * Interface cổng (port) để xác minh Google ID Token, Access Token và Authorization Code. Theo kiến trúc
+ * Hexagonal / IoC để unit test và mock xác minh gọn gàng.
  */
 public interface GoogleTokenVerifierPort {
     /** Xác minh Google ID Token và trả thông tin người dùng. */

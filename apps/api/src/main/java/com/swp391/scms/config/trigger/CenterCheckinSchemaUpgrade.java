@@ -13,7 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * Sửa ràng buộc NOT NULL cũ của cột member trong bảng check-in (Hibernate 6 không tự bỏ NOT NULL khi Entity đổi
  * thành cho phép null).
  *
- * Repairs legacy PostgreSQL nullability that Hibernate 6's table migrator does not apply.
+ * Sửa tính nullable cũ của PostgreSQL mà bộ migrate bảng của Hibernate 6 không áp dụng.
  */
 final class CenterCheckinSchemaUpgrade {
 
@@ -35,7 +35,7 @@ final class CenterCheckinSchemaUpgrade {
         } catch (NoSuchFieldException e) {
             throw new IllegalStateException("Cannot inspect check-in member mapping", e);
         }
-        // The entity remains authoritative if its mapping changes again.
+        // Entity vẫn là nguồn chuẩn nếu mapping của nó đổi lần nữa.
         if (!member.nullable() || !optional) {
             return;
         }
@@ -47,7 +47,7 @@ final class CenterCheckinSchemaUpgrade {
             DatabaseMetaData metadata = connection.getMetaData();
             try (var columns = metadata.getColumns(connection.getCatalog(), schema, table.name(), member.name())) {
                 while (columns.next()) {
-                    // JDBC metadata arguments are patterns: match exact names before changing anything.
+                    // Đối số metadata JDBC là mẫu (pattern): khớp đúng tên trước khi đổi bất cứ thứ gì.
                     if (!schema.equals(columns.getString("TABLE_SCHEM"))
                             || !table.name().equals(columns.getString("TABLE_NAME"))
                             || !member.name().equals(columns.getString("COLUMN_NAME"))

@@ -5,7 +5,7 @@ import org.springframework.http.HttpStatus;
 /**
  * Lỗi chưa xác thực hoặc thông tin đăng nhập sai (HTTP 401).
  *
- * Thrown when an unauthenticated user attempts an action (HTTP 401).
+ * Ném khi người dùng chưa xác thực cố thực hiện một hành động (HTTP 401).
  */
 public class UnauthorizedException extends AppException {
 

@@ -23,7 +23,7 @@ public class TransactionConfig {
      * transaction ghi chỉ chờ khóa dòng tối đa app.db.lock-timeout-ms (mặc định 10 giây) thay vì treo sau một
      * transaction bị kẹt.
      *
-     * Replaces Boot's JPA transaction manager so every read-write transaction waits at most
+     * Thay transaction manager JPA của Boot để mọi transaction đọc-ghi chờ tối đa
      * {@code app.db.lock-timeout-ms} for a row lock instead of hanging behind a stuck transaction.
      */
     @Bean

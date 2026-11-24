@@ -6,14 +6,14 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * Giao diện cho lớp cài trigger nghiệp vụ bắt buộc sau khi Hibernate đồng bộ schema. Hiện chỉ có bản
  * PostgreSQL.
  *
- * Installs mandatory PostgreSQL invariant triggers after Hibernate schema synchronization.
+ * Cài các trigger bất biến bắt buộc của PostgreSQL sau khi Hibernate đồng bộ schema.
  */
 public interface DatabaseTriggerProvider {
 
     /**
      * Cho biết provider này có hỗ trợ loại database (tên lấy từ JDBC metadata) hay không.
      *
-     * Determines whether this provider handles the specified database product.
+     * Xác định provider này có xử lý loại database đã cho không.
      *
      * @param databaseProductName the database metadata product name
      * @return true if supported
@@ -23,7 +23,7 @@ public interface DatabaseTriggerProvider {
     /**
      * Cài các trigger vào database qua JdbcTemplate.
      *
-     * Applies database-specific triggers after Hibernate Code-First schema generation.
+     * Áp dụng các trigger đặc thù database sau khi Hibernate sinh schema code-first.
      *
      * @param jdbcTemplate Spring JdbcTemplate for execution
      */

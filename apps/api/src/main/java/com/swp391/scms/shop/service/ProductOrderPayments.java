@@ -110,7 +110,7 @@ public class ProductOrderPayments {
                     "/member/orders/" + order.getId()
             );
         }
-        // Counter payments are taken by staff at the desk, so the "new order" broadcast is only for online payments.
+        // Thanh toán tại quầy do nhân viên thu ở quầy, nên thông báo "đơn mới" chỉ dành cho thanh toán online.
         if (notifications != null && users != null && !"counter".equalsIgnoreCase(order.getPaymentMethod())) {
             List<User> staffList = users.findActiveStaffUsers();
             if (staffList != null) {

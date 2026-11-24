@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
  * Lớp gốc cho mọi lỗi nghiệp vụ: mang mã HTTP, mã lỗi máy đọc được (errorCode), message key để dịch, tham số
  * của câu và details. GlobalExceptionHandler đọc các trường này để tạo phản hồi.
  *
- * Base custom runtime exception for SCMS application with i18n support.
+ * Ngoại lệ runtime tùy chỉnh gốc của ứng dụng SCMS có hỗ trợ i18n.
  */
 public class AppException extends RuntimeException {
 

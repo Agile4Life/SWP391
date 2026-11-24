@@ -72,7 +72,8 @@ public class HealthMetricService {
     /**
      * Số đo của chính hội viên, cũ nhất trước (để vẽ biểu đồ).
      *
-     * Returns member's own health metrics ordered ascending by recordedAt for Line Chart rendering (SCRUM-119).
+     * Trả các chỉ số sức khỏe của chính hội viên sắp tăng dần theo recordedAt để vẽ biểu đồ đường
+     * (SCRUM-119).
      */
     @Transactional(readOnly = true)
     public List<HealthMetricDto> getMyMetricsChronological(Long currentUserId) {
@@ -119,8 +120,8 @@ public class HealthMetricService {
      * Thêm nhiều số đo của một lần đánh giá trong cùng transaction: không cho gửi BMI (được tự tính), mỗi chỉ
      * số chỉ một lần; sau đó tính BMI một lần từ chiều cao và cân nặng mới nhất.
      *
-     * Records several measurements of one assessment atomically. BMI cannot be submitted: it is derived once from the
-     * resulting height and weight, so a batch with both never leaves an intermediate BMI behind.
+     * Ghi nhiều số đo của một buổi đánh giá một cách nguyên tử. Không được gửi BMI: nó được suy ra một lần từ
+     * chiều cao và cân nặng kết quả, nên batch có cả hai không bao giờ để lại BMI trung gian.
      */
     @Transactional
     public List<HealthMetricDto> addMetrics(Long memberId, com.swp391.scms.health.dto.HealthMetricBatchDto request,
@@ -245,7 +246,8 @@ public class HealthMetricService {
             throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
                     "Only assigned coaches and managers may record measurements.");
         }
-        // Every registered member gets a first assessment from any coach; later ones belong to the assigned coach.
+        // Mọi hội viên đã đăng ký được buổi đánh giá đầu tiên từ bất kỳ HLV nào; các buổi sau thuộc HLV được
+        // phân công.
         if (isCoach(role) && !(append && isFirstAssessmentBy(memberId, currentUserId))) {
             requireAssignedCoach(currentUserId, memberId);
         }
@@ -258,7 +260,8 @@ public class HealthMetricService {
      * Đây có phải lần đánh giá đầu tiên của hội viên do HLV này thực hiện không: hội viên chưa có số đo nào,
      * hoặc chỉ có số đo do chính HLV này ghi trong hôm nay.
      *
-     * True while the member has no measurements, or only ones this coach took today (an assessment in progress).
+     * True khi hội viên chưa có số đo nào, hoặc chỉ có các số đo HLV này đã đo hôm nay (buổi đánh giá đang
+     * diễn ra).
      */
     private boolean isFirstAssessmentBy(Long memberId, Long coachId) {
         if (memberId == null || coachId == null) return false;
@@ -274,7 +277,7 @@ public class HealthMetricService {
     /**
      * Các kỳ gói active đang hiệu lực hôm nay của hội viên.
      *
-     * The active subscriptions of the member today.
+     * Các subscription đang hoạt động của hội viên hôm nay.
      */
     private List<com.swp391.scms.membership.entity.MembershipSubscription> currentSubscriptions(Long memberId) {
         if (subscriptions == null) return List.of();
@@ -289,8 +292,8 @@ public class HealthMetricService {
      * Quyền lợi theo hạng gói: mỡ và cơ chỉ cho Platinum; gói không có đánh giá định kỳ chỉ được đánh giá ngày
      * đầu; còn lại mỗi chu kỳ 30 ngày một lần. Hội viên không có gói thì không giới hạn.
      *
-     * Service levels (spec 2026-11-09): Body Fat and Muscle Mass only for Platinum members; Silver members get the
-     * first assessment but no follow-up. Members without an active package are not restricted.
+     * Mức dịch vụ (spec 2026-11-09): Mỡ cơ thể và Khối lượng cơ chỉ dành cho hội viên Platinum; Silver được
+     * đánh giá lần đầu nhưng không có theo dõi. Hội viên không có gói đang hoạt động thì không bị giới hạn.
      */
     private void enforceAssessmentTier(Long memberId, String metricName) {
         List<com.swp391.scms.membership.entity.MembershipSubscription> current = currentSubscriptions(memberId);
@@ -320,9 +323,9 @@ public class HealthMetricService {
      * Mỗi chu kỳ 30 ngày chỉ một lần đánh giá: nếu đã đo vào một ngày khác trong chu kỳ thì báo lỗi kèm ngày đã
      * đo và ngày bắt đầu chu kỳ sau (nhiều số đo trong cùng ngày tính là một lần).
      *
-     * Gold and Platinum include one follow-up assessment per 30-day cycle (spec 2026-11-09): once measurements were
-     * taken on one day of the cycle, other days wait for the next cycle. Several measurements on the same day are
-     * one assessment.
+     * Gold và Platinum gồm một buổi đánh giá theo dõi mỗi chu kỳ 30 ngày (spec 2026-11-09): khi đã đo vào một
+     * ngày của chu kỳ, các ngày khác phải chờ chu kỳ sau. Nhiều số đo trong cùng một ngày là một buổi đánh
+     * giá.
      */
     private void enforceOneAssessmentPerCycle(Long memberId, List<com.swp391.scms.membership.entity.MembershipSubscription> current) {
         java.time.LocalDate today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));

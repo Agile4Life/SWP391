@@ -15,7 +15,7 @@ import java.util.List;
 /**
  * API công khai tra cứu tỉnh/thành và phường/xã (đã ngừng; bật qua app.shop.enabled).
  *
- * Disabled by default: Shop module removed from the active scope.
+ * Mặc định tắt: module cửa hàng đã bị gỡ khỏi phạm vi đang chạy.
  */
 @ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController

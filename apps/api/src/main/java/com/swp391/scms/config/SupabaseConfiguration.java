@@ -13,7 +13,7 @@ import java.util.Set;
  * Kiểm tra cấu hình kết nối database ngay khi khởi động, trước khi Hibernate hay connection pool mở kết nối:
  * bắt buộc profile "supabase", đủ thông tin đăng nhập và kết nối có mã hóa TLS.
  *
- * Reject unsafe cloud configuration before Hibernate or the pool opens a connection.
+ * Từ chối cấu hình cloud không an toàn trước khi Hibernate hay pool mở kết nối.
  */
 @Configuration(proxyBeanMethods = false)
 public class SupabaseConfiguration {

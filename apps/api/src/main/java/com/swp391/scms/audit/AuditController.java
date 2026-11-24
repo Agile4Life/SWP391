@@ -20,8 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * API xem nhật ký kiểm toán (/api/v1/admin/audit-logs), chỉ dành cho Admin.
  *
- * Controller for viewing system Audit Logs (SCRUM-109).
- * Strictly restricted to ADMIN.
+ * Controller xem nhật ký audit hệ thống (SCRUM-109). Chỉ dành cho ADMIN.
  */
 @RestController
 @RequestMapping("/api/v1/admin/audit-logs")

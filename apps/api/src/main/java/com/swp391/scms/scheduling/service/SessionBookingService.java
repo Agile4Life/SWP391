@@ -46,13 +46,13 @@ import org.springframework.transaction.annotation.Transactional;
  * Nghiệp vụ đặt chỗ từng buổi học: đặt một/nhiều buổi, hủy một/nhiều lượt, nhả lượt khi gói bảo lưu/hết hạn và
  * xem lịch của hội viên.
  *
- * Per-session class booking: a member reserves, and releases, individual sessions. A single booking, a whole week,
- * a whole month or any hand-picked set of sessions all go through {@link #bookOne}, so every session is checked on its
- * own (open and in the future, membership covering its date, no clash with another booking, free seat) and a session
- * that fails is reported back instead of failing the others.
+ * Đặt lớp theo từng buổi: hội viên giữ và nhả từng buổi riêng. Đặt một buổi, cả tuần, cả tháng hay bất kỳ tập
+ * buổi chọn tay đều đi qua {@link #bookOne}, nên mỗi buổi được kiểm tra riêng (còn mở và ở tương lai,
+ * membership bao phủ ngày đó, không đụng lượt đặt khác, còn chỗ) và buổi nào lỗi sẽ được báo lại thay vì làm
+ * hỏng các buổi khác.
  *
  * <p>Seats are counted per session: the booked sessions plus any class-wide {@link ClassEnrollment} of the class.
- * Database triggers repeat the capacity and membership checks and a unique index forbids booking a session twice.
+ * Trigger database lặp lại kiểm tra sức chứa và membership, và một unique index cấm đặt một buổi hai lần.
  */
 @Service
 public class SessionBookingService {
@@ -119,7 +119,7 @@ public class SessionBookingService {
                 return messageService.getMessage(e.getMessageKey(),
                         e.getMessageArgs() == null ? new Object[0] : e.getMessageArgs());
             } catch (RuntimeException ignored) {
-                // fall back to the error code
+                // quay về dùng mã lỗi.
             }
         }
         return e.getErrorCode();
@@ -143,7 +143,7 @@ public class SessionBookingService {
      * Đặt nhiều buổi: bỏ id trùng, sắp buổi theo lớp rồi thời gian để khóa dòng không deadlock, gắn chung
      * batchId; buổi nào lỗi thì ghi vào danh sách bỏ qua kèm lý do.
      *
-     * Books every listed session that can be booked and reports the rest with the reason for each.
+     * Đặt mọi buổi trong danh sách có thể đặt được và báo các buổi còn lại kèm lý do từng buổi.
      */
     @Transactional
     public BulkBookResult bookMany(AuthenticatedPrincipal principal, List<Long> sessionIds) {
@@ -159,7 +159,7 @@ public class SessionBookingService {
                 skipped.add(new Skipped(id, null, "NOT_FOUND", msg("resource.class_session")));
             }
         }
-        // Fixed order (class, then time) keeps the class row locks deadlock-free between concurrent requests.
+        // Thứ tự cố định (lớp rồi giờ) giữ khóa dòng lớp không bị deadlock giữa các request đồng thời.
         found.sort(Comparator.comparing((ClassSession s) -> s.getGymClass().getId())
                 .thenComparing(ClassSession::getSessionDate).thenComparing(ClassSession::getStartTime));
         String batchId = found.size() > 1 ? UUID.randomUUID().toString() : null;
@@ -231,7 +231,7 @@ public class SessionBookingService {
     /**
      * Hội viên không được giữ hai buổi trùng giờ, dù đặt từng buổi, qua ghi danh lớp hay buổi PT 1:1.
      *
-     * A member cannot hold two sessions that overlap in time, whether booked per session, through a class, or 1:1 PT.
+     * Hội viên không thể giữ hai buổi chồng giờ nhau, dù đặt theo buổi, qua lớp hay PT 1:1.
      */
     private void ensureNoOverlap(Long memberId, ClassSession target) {
         List<ClassSession> sameDay = sessions.findActiveByMemberAndDate(memberId, target.getSessionDate());
@@ -352,7 +352,7 @@ public class SessionBookingService {
      * Nhả các lượt đặt sắp tới của hội viên khi gói bị bảo lưu/hủy/hết hạn; giữ lại buổi mà gói vẫn phủ
      * (coveredOn) và buổi đã kết thúc hôm nay; trả về số lượt đã hủy.
      *
-     * Releases a member's upcoming per-session bookings when the membership is put on hold, cancelled or expires;
+     * Nhả các lượt đặt theo buổi sắp tới của hội viên khi membership bị tạm hoãn, hủy hoặc hết hạn;
      * {@code coveredOn} keeps the sessions whose date the membership still covers.
      */
     @Transactional

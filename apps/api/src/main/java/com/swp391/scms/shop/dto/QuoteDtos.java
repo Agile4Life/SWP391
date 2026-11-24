@@ -50,7 +50,10 @@ public final class QuoteDtos {
             BigDecimal shippingFee,
             BigDecimal total,
             boolean valid,
-            /** Member tier discount on the products, 0 for anonymous shoppers and Silver; already inside {@code total}. */
+            /**
+             * Chiết khấu theo hạng trên các sản phẩm, 0 cho người mua ẩn danh và Silver; đã nằm trong {@code
+             * total}.
+             */
             int discountPercent,
             BigDecimal discountAmount
     ) {

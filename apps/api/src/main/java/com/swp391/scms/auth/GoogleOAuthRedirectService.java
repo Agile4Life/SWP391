@@ -25,7 +25,7 @@ import java.util.Base64;
  * phút; sau khi xong, JWT được trao cho frontend qua một mã trao tay dùng một lần có bảo vệ PKCE (frontend gửi
  * verifier mà chỉ nó biết).
  *
- * Browser correlation for the redirect flow; application authentication remains JWT based.
+ * Liên kết trình duyệt cho luồng redirect; xác thực ứng dụng vẫn dựa trên JWT.
  */
 @Service
 public class GoogleOAuthRedirectService {
@@ -65,7 +65,7 @@ public class GoogleOAuthRedirectService {
         validateRedirect(requestedRedirect);
         if (clientId.isBlank()) return login().queryParam("google_oauth", "not_configured").build().encode().toUri();
         validateChallenge(challenge);
-        // Establish cookies on the callback host even when entry was accessed through a frontend proxy.
+        // Thiết lập cookie trên host callback kể cả khi vào qua proxy của frontend.
         return UriComponentsBuilder.fromUriString(redirectUri)
                 .replacePath("/api/v1/auth/google/authorize/start").replaceQuery(null)
                 .queryParam("code_challenge", challenge).build().toUri();

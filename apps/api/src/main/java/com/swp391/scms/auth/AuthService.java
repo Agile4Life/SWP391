@@ -325,8 +325,9 @@ public class AuthService {
      * email phải đã xác minh, tìm hoặc tạo tài khoản. Tài khoản active thì cấp JWT ngay; tài khoản chờ kích
      * hoạt thì gửi OTP.
      *
-     * Handles Google OAuth callback (via ID Token, OAuth2 Access Token, or Authorization Code):
-     * verifies identity and account restrictions, signs in active members, or sends activation OTP to pending members.
+     * Xử lý callback Google OAuth (qua ID Token, OAuth2 Access Token hoặc Authorization Code): xác minh danh
+     * tính và hạn chế tài khoản, đăng nhập hội viên đang hoạt động, hoặc gửi OTP kích hoạt cho hội viên đang
+     * chờ.
      */
     @Transactional
     public GoogleOAuthResult authenticateGoogle(GoogleOAuthCallbackRequest request) {
@@ -435,11 +436,11 @@ public class AuthService {
      * Họ tên hiển thị của người dùng cho phiên hiện tại (tìm theo id vì tài khoản nhân viên có thể không có tên
      * đăng nhập).
      *
-     * Display name for the current session (never the login identifier when the account has a real name).
+     * Tên hiển thị cho phiên hiện tại (không bao giờ là định danh đăng nhập khi tài khoản có tên thật).
      */
     @Transactional(readOnly = true)
     public String fullNameOf(Long userId) {
-        // By id: accounts provisioned with only an email (staff, demo, bootstrap admin) have no username to look up.
+        // Theo id: tài khoản chỉ có email (nhân viên, demo, admin bootstrap) không có username để tra.
         if (userId == null) return null;
         return userRepository.findByIdAndDeletedAtIsNull(userId).map(User::getFullName).orElse(null);
     }
@@ -561,7 +562,7 @@ public class AuthService {
                 } catch (RuntimeException deliveryFailure) {
                     otpService.invalidate(normalizedTarget);
                     log.warn("OTP delivery failed for {}", maskEmail(normalizedTarget), deliveryFailure);
-                    // afterCommit exceptions propagate to the caller, so the user is told the code was not sent.
+                    // Ngoại lệ afterCommit lan lên người gọi, nên người dùng được báo là mã chưa được gửi.
                     if (deliveryFailure instanceof com.swp391.scms.common.exception.AppException) {
                         throw deliveryFailure;
                     }
@@ -615,26 +616,26 @@ public class AuthService {
             throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google Token Verifier is not available");
         }
 
-        // BR-01: Verify token signature, aud, iss, exp
+        // BR-01: Xác minh chữ ký token, aud, iss, exp.
         GoogleUserInfo googleUser = googleTokenVerifierPort.verify(request.idToken());
 
-        // BR-02: Only accept email_verified = true
+        // BR-02: Chỉ chấp nhận email_verified = true.
         if (!googleUser.emailVerified()) {
             throw new UnauthorizedException("GOOGLE_EMAIL_NOT_VERIFIED", "auth.google.email_not_verified", null, "Google email is not verified");
         }
 
-        // BR-03 & BR-04: Match by googleSub/email or auto-create active MEMBER account
+        // BR-03 & BR-04: Khớp theo googleSub/email hoặc tự tạo tài khoản MEMBER đang hoạt động.
         User user = resolveOrCreateGoogleUser(googleUser, "active", false);
 
-        // Existing staff accounts retain the database role; new Google accounts are always Members.
+        // Tài khoản nhân viên hiện có giữ vai trò trong database; tài khoản Google mới luôn là Member.
         ensureGoogleOtpAccountAllowed(user);
 
-        // BR-06: Locked / inactive / deleted accounts rejected
+        // BR-06: Từ chối tài khoản bị khóa / không hoạt động / đã xóa.
         if (user.getDeletedAt() != null || !"active".equalsIgnoreCase(user.getStatus())) {
             throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, "Account is deactivated or locked");
         }
 
-        // BR-07: Issue standard JWT token and update last login time
+        // BR-07: Cấp JWT chuẩn và cập nhật thời điểm đăng nhập gần nhất.
         user.setLastLoginAt(LocalDateTime.now(clock));
         user.setUpdatedAt(LocalDateTime.now(clock));
         userRepository.save(user);
