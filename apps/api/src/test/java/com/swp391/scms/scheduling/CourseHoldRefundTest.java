@@ -47,6 +47,7 @@ class CourseHoldRefundTest {
     private EnrollmentService service;
     private Member member;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ ghi danh/tạm hoãn khóa học với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new EnrollmentService(enrollments, null, gymClasses,
@@ -58,6 +59,7 @@ class CourseHoldRefundTest {
         when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(member));
     }
 
+    /** Hàm trợ giúp của test: ghi danh hội viên vào khóa học với phương thức và trạng thái thanh toán cho trước. */
     private ClassEnrollment enroll(long id, LocalDate courseStart) {
         GymClass gymClass = new GymClass();
         gymClass.setId(id);
@@ -87,6 +89,7 @@ class CourseHoldRefundTest {
         return payment;
     }
 
+    /** Kiểm thử: lượt miễn phí được hoàn lại khi duyệt tạm hoãn trước khóa học 3 ngày. */
     @Test
     void freeCreditIsRestoredWhenTheHoldIsApprovedThreeDaysBeforeTheCourse() {
         ClassEnrollment enrollment = enroll(1L, today.plusDays(3));
@@ -100,6 +103,7 @@ class CourseHoldRefundTest {
         assertFalse(enrollment.isCreditForfeited());
     }
 
+    /** Kiểm thử: mất lượt miễn phí khi khóa học bắt đầu trong vòng chưa đến 3 ngày. */
     @Test
     void freeCreditIsLostWhenTheCourseStartsInUnderThreeDays() {
         ClassEnrollment enrollment = enroll(1L, today.plusDays(2));
@@ -113,6 +117,7 @@ class CourseHoldRefundTest {
         assertTrue(enrollment.isCreditForfeited());
     }
 
+    /** Kiểm thử: mất lượt miễn phí khi khóa học đã đang diễn ra. */
     @Test
     void freeCreditIsLostWhenTheCourseIsAlreadyRunning() {
         ClassEnrollment enrollment = enroll(1L, today.minusDays(5));
@@ -123,6 +128,7 @@ class CourseHoldRefundTest {
         assertTrue(enrollment.isCreditForfeited());
     }
 
+    /** Kiểm thử: phí đã trả được hoàn đủ vào ví khi tạm hoãn kịp thời. */
     @Test
     void paidFeeIsRefundedInFullToTheWalletWhenInTime() {
         ClassEnrollment enrollment = enroll(1L, today.plusDays(10));
@@ -137,6 +143,7 @@ class CourseHoldRefundTest {
         assertFalse(enrollment.isCreditForfeited());
     }
 
+    /** Kiểm thử: phí đã trả không được hoàn khi tạm hoãn quá muộn. */
     @Test
     void paidFeeIsNotRefundedWhenTheHoldIsTooLate() {
         ClassEnrollment enrollment = enroll(1L, today.plusDays(1));
@@ -152,6 +159,7 @@ class CourseHoldRefundTest {
         assertEquals("cancelled", enrollment.getStatus());
     }
 
+    /** Kiểm thử: phí chưa thanh toán được đóng lại mà không hoàn tiền. */
     @Test
     void unpaidFeeIsClosedWithoutAnyRefund() {
         ClassEnrollment enrollment = enroll(1L, today.plusDays(10));
@@ -165,6 +173,7 @@ class CourseHoldRefundTest {
         verifyNoInteractions(wallets);
     }
 
+    /** Kiểm thử: tạm hoãn có ngày chỉ ảnh hưởng khóa có buổi nằm trong khoảng tạm hoãn. */
     @Test
     void aDatedHoldOnlyAffectsCoursesWithASessionInsideItsWindow() {
         var sessions = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);

@@ -73,6 +73,7 @@ class ConcurrencyBookingIntegrationTest {
     private GymClass gymClass;
     private ClassSession session;
 
+    /** Chuẩn bị trước mỗi test: dựng dữ liệu thật (lớp, buổi, hội viên) cho test đồng thời. */
     @BeforeEach
     void setUp() {
         pessimisticDbLock = new ReentrantLock(true);
@@ -140,6 +141,7 @@ class ConcurrencyBookingIntegrationTest {
         });
     }
 
+    /** Dọn dẹp sau mỗi test: xóa dữ liệu đã tạo cho test đồng thời. */
     @AfterEach
     void tearDown() {
         if (executor != null) {
@@ -147,6 +149,7 @@ class ConcurrencyBookingIntegrationTest {
         }
     }
 
+    /** Kiểm thử: 50 yêu cầu đặt chỗ chạy đồng thời thì chỉ đúng một yêu cầu thành công. */
     @Test
     @DisplayName("SCRUM-114: 50 concurrent requests booking last seat -> Exactly 1 success, 49 conflicts, capacity respected")
     void testFiftyConcurrentBookingRequests_onlyOneSucceeds() throws Exception {

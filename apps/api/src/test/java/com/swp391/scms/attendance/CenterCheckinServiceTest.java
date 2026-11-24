@@ -67,6 +67,7 @@ class CenterCheckinServiceTest {
     private final AuthenticatedPrincipal centerManager = new AuthenticatedPrincipal(2L, "manager", "CENTER_MANAGER");
     private final AuthenticatedPrincipal memberPrincipal = new AuthenticatedPrincipal(10L, "member", "MEMBER");
 
+    /** Chuẩn bị trước mỗi test: tạo service check-in cùng repository và đồng hồ giả lập. */
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(Instant.parse("2026-10-12T10:00:00Z"), ZoneId.of("UTC"));
@@ -94,7 +95,11 @@ class CenterCheckinServiceTest {
     private final java.util.Map<String, String> codes = new java.util.HashMap<>();
     private long nextSubscriptionId = 500;
 
-    /** Gives the subscription an id and a valid rotating QR (the gate only accepts signed codes). */
+    /**
+     * Hàm trợ giúp của test: đăng ký một mã QR cho hội viên.
+     *
+     * Gives the subscription an id and a valid rotating QR (the gate only accepts signed codes).
+     */
     private void registerQr(String label, MembershipSubscription sub) {
         long id = nextSubscriptionId++;
         sub.setId(id);
@@ -102,6 +107,7 @@ class CenterCheckinServiceTest {
         codes.put(label, qrService.generate(sub.getMember().getUserId(), id, clock.millis()));
     }
 
+    /** Hàm trợ giúp của test: dựng mã QR (kèm chữ ký cổng) cho một hội viên. */
     private String qrFor(String label) {
         return codes.get(label);
     }
@@ -116,6 +122,7 @@ class CenterCheckinServiceTest {
         return sub;
     }
 
+    /** Kiểm thử: tự quét dùng membership của người đăng nhập, mã QR cổng đã ký và chặn quét lại (passback). */
     @Test
     void selfScanUsesPrincipalMembershipAndSignedGateAndPreventsPassback() {
         var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
@@ -136,6 +143,7 @@ class CenterCheckinServiceTest {
         verify(subscriptions, never()).findByQrCode(any());
     }
 
+    /** Kiểm thử: nhân viên không được tự quét, còn hội viên không được phát mã QR cổng. */
     @Test
     void selfScanRejectsStaffAndGateIssuanceRejectsMember() {
         assertThrows(ForbiddenException.class, () -> service.selfScan(receptionist, new CheckinRequests.SelfScan("anything")));
@@ -143,6 +151,7 @@ class CenterCheckinServiceTest {
         verifyNoInteractions(subscriptions, checkins);
     }
 
+    /** Kiểm thử: tự quét bằng QR cổng giả mạo hoặc hết hạn bị từ chối và ghi audit. */
     @Test
     void selfScanWithForgedOrExpiredGateQrAuditsDenial() {
         var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
@@ -158,6 +167,7 @@ class CenterCheckinServiceTest {
         verifyNoInteractions(subscriptions);
     }
 
+    /** Kiểm thử: tự check-out đóng lượt đang mở của chính mình và báo lỗi khi không có lượt nào. */
     @Test
     void selfCheckoutClosesOwnOpenVisitAndRejectsWhenNoneOpen() {
         var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
@@ -176,6 +186,7 @@ class CenterCheckinServiceTest {
         assertThrows(ForbiddenException.class, () -> selfService.selfCheckout(receptionist, request));
     }
 
+    /** Kiểm thử: lịch sử từ chối khoảng thời gian dài hơn một tháng hoặc ngày bắt đầu sau ngày kết thúc. */
     @Test
     void historyRejectsRangesLongerThanOneMonthOrReversed() {
         LocalDate today = LocalDate.now(clock);
@@ -183,6 +194,7 @@ class CenterCheckinServiceTest {
         assertThrows(BadRequestException.class, () -> service.history(memberPrincipal, today, today.minusDays(1)));
     }
 
+    /** Kiểm thử: tự quét khi chưa có subscription hiện hành thì bị từ chối và ghi audit. */
     @Test
     void selfScanWithoutCurrentSubscriptionAuditsDenial() {
         var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
@@ -196,6 +208,7 @@ class CenterCheckinServiceTest {
                 10L, "active", LocalDate.now(clock), LocalDate.now(clock));
     }
 
+    /** Kiểm thử: tự quét kiểm tra lại tài khoản đã xóa mềm dù subscription vẫn còn hạn. */
     @Test
     void selfScanRechecksDeletedAccountEvenWithCurrentSubscription() {
         var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
@@ -316,6 +329,7 @@ class CenterCheckinServiceTest {
         assertEquals("DENIED", captor.getValue().getStatus());
     }
 
+    /** Kiểm thử: quét đúng ngày hết hạn báo còn 0 ngày và không bịa ra ảnh đại diện. */
     @Test
     void scanOnExpiryDateReportsZeroRemainingDaysWithoutInventingPhoto() {
         Member member = mockMember(10L, "Hội viên");
@@ -331,6 +345,7 @@ class CenterCheckinServiceTest {
         assertNull(result.packageName());
     }
 
+    /** Kiểm thử: QR tĩnh bị từ chối kể cả khi khớp với một subscription đang hoạt động. */
     @Test
     void aStaticQrIsRejectedEvenWhenItMatchesAnActiveSubscription() {
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -344,6 +359,7 @@ class CenterCheckinServiceTest {
         verify(subscriptions, never()).findByQrCode(any());
     }
 
+    /** Kiểm thử: lượt vào cổng được chấp nhận không bao giờ ghi điểm danh cho khóa học hay buổi 1-1. */
     @Test
     void aGrantedEntryNeverRecordsAttendanceForCoursesOrOneToOneSessions() {
         Member member = mockMember(10L, "Nguyễn Văn E");
@@ -468,6 +484,7 @@ class CenterCheckinServiceTest {
         verify(checkins).findByCheckInTimeGreaterThanEqualAndCheckInTimeLessThanOrderByCheckInTimeDesc(any(), any());
     }
 
+    /** Kiểm thử: quét hội viên đã xóa mềm thì ghi nhận bị từ chối thay vì cho vào. */
     @Test
     void scanDeletedMember_logsDeniedInsteadOfGrantingAccess() {
         Member member = mockMember(10L, "Deleted member");
@@ -484,6 +501,7 @@ class CenterCheckinServiceTest {
         assertEquals("error.attendance.member_inactive", record.getValue().getDenialReason());
     }
 
+    /** Kiểm thử: quét hội viên bị khóa thì ghi nhận bị từ chối thay vì cho vào. */
     @Test
     void scanLockedMember_logsDeniedInsteadOfGrantingAccess() {
         Member member = mockMember(10L, "Locked member");
@@ -495,6 +513,7 @@ class CenterCheckinServiceTest {
         assertEquals("DENIED", service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-LOCKED"), "Gate A")).status());
     }
 
+    /** Kiểm thử: lý do từ chối được lưu bằng khóa ổn định và lịch sử dịch theo ngôn ngữ của request hiện tại. */
     @Test
     void denialStoresStableKeyAndHistoryUsesCurrentRequestLanguage() {
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -517,6 +536,7 @@ class CenterCheckinServiceTest {
         }
     }
 
+    /** Kiểm thử: lịch sử giữ nguyên lý do từ chối cũ đã được lưu dạng văn bản đã dịch. */
     @Test
     void historyPreservesLegacyTranslatedDenialReason() {
         CenterCheckin legacy = new CenterCheckin();

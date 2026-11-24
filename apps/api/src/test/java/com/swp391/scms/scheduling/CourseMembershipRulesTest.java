@@ -44,6 +44,7 @@ class CourseMembershipRulesTest {
     private final AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "m@test.com", "MEMBER");
     private EnrollmentService service;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ khóa học với dữ liệu membership giả lập. */
     @BeforeEach
     void setUp() {
         service = new EnrollmentService(enrollments, null, gymClasses, subscriptions, members, null, null, clock);
@@ -76,6 +77,7 @@ class CourseMembershipRulesTest {
         return s;
     }
 
+    /** Hàm trợ giúp của test: tạo khóa học theo ngày bắt đầu/kết thúc. */
     private GymClass course(LocalDate start, LocalDate end) {
         GymClass c = new GymClass();
         c.setId(50L);
@@ -89,6 +91,7 @@ class CourseMembershipRulesTest {
         return c;
     }
 
+    /** Kiểm thử: khóa kết thúc sau khi membership hết hạn bị từ chối cho đến khi hội viên gia hạn. */
     @Test
     void courseEndingAfterTheMembershipIsRejectedUntilTheMemberRenews() {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
@@ -99,6 +102,7 @@ class CourseMembershipRulesTest {
         assertEquals("SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP", ex.getErrorCode());
     }
 
+    /** Kiểm thử: gia hạn có trả phí nối tiếp không gián đoạn thì kéo dài thời gian được bao phủ. */
     @Test
     void aPaidRenewalThatFollowsWithoutAGapExtendsTheCoverage() {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
@@ -114,6 +118,7 @@ class CourseMembershipRulesTest {
         assertDoesNotThrow(() -> service.enrollCourse(principal, 50L));
     }
 
+    /** Kiểm thử: khoảng trống giữa các kỳ không làm kéo dài thời gian được bao phủ. */
     @Test
     void aGapBetweenPeriodsDoesNotExtendTheCoverage() {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
@@ -124,6 +129,7 @@ class CourseMembershipRulesTest {
         assertThrows(ForbiddenException.class, () -> service.enrollCourse(principal, 50L));
     }
 
+    /** Kiểm thử: nâng cấp gói vẫn giữ các lượt đã dùng ở gói trước. */
     @Test
     void upgradingKeepsTheCreditsAlreadySpentOnThePreviousPlan() {
         // Silver 1 credit, used 1 on Nov 2, upgraded to Gold (2 credits) on Nov 9: only one credit is left.
@@ -142,6 +148,7 @@ class CourseMembershipRulesTest {
         assertEquals(1, quota.remainingCredits());
     }
 
+    /** Kiểm thử: danh sách khóa của tôi hiển thị số buổi còn lại sau khi trừ buổi đã dự, vắng và được miễn. */
     @Test
     void theMyCoursesListShowsHowManySessionsAreLeftAfterAttendedMissedAndExcusedOnes() {
         com.swp391.scms.scheduling.repository.ClassSessionRepository sessionRepo =
@@ -170,6 +177,7 @@ class CourseMembershipRulesTest {
         assertEquals(Integer.valueOf(4), item.remainingSessions());
     }
 
+    /** Kiểm thử: gia hạn bắt đầu hạn mức mới. */
     @Test
     void aRenewalStartsAFreshAllowance() {
         MembershipSubscription first = sub(1, "GOLD", 2, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 30));
@@ -182,6 +190,7 @@ class CourseMembershipRulesTest {
         assertEquals(2, service.getMemberCourseQuota(principal).remainingCredits());
     }
 
+    /** Kiểm thử: hội viên bị chặn vì vắng gần hết khóa không đăng ký được đến khi hết lệnh chặn. */
     @Test
     void aMemberBlockedForMissingMostOfACourseCannotEnrollUntilTheBlockEnds() {
         Member blocked = new Member();
@@ -194,6 +203,7 @@ class CourseMembershipRulesTest {
         assertThrows(ForbiddenException.class, () -> service.checkoutCourse(principal, 50L, "cash"));
     }
 
+    /** Kiểm thử: hạn mức báo lệnh chặn để hội viên biết vì sao không đăng ký được. */
     @Test
     void theQuotaReportsTheBlockSoTheMemberSeesWhyEnrollingIsOff() {
         Member blocked = new Member();

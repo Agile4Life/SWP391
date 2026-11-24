@@ -37,6 +37,7 @@ class BookingDateEligibilityTest {
     private final ClassSession session = new ClassSession();
     private EnrollmentService enrollment;
 
+    /** Chuẩn bị trước mỗi test: cố định đồng hồ và dựng đối tượng kiểm tra điều kiện đặt chỗ theo ngày. */
     private void setup(String instant, LocalDate starts, LocalDate ends, String status) {
         Clock clock = Clock.fixed(Instant.parse(instant), ZoneOffset.UTC);
         var member = new Member();
@@ -62,20 +63,24 @@ class BookingDateEligibilityTest {
         enrollment = new EnrollmentService(enrollments, sessions, classes, memberships, members, notifications, null, clock);
     }
 
+    /** Hàm trợ giúp của test: tạo membership đang hoạt động vào một ngày. */
     private static boolean activeOn(String status, LocalDate starts, LocalDate ends, LocalDate date) {
         return "active".equals(status) && !date.isBefore(starts) && !date.isAfter(ends);
     }
 
+    /** Hàm trợ giúp của test: gọi kiểm tra đặt chỗ cho một buổi cụ thể. */
     private void perform() {
         enrollment.enroll(actor, 9L);
     }
 
+    /** Kiểm thử: cho phép đặt ở ngày cuối cùng (tính cả ngày đó) của membership. */
     @Test
     void allowsLastInclusiveMembershipDay() {
         setup("2026-11-01T03:00:00Z", TODAY.minusDays(10), TODAY.plusDays(1), "active");
         assertDoesNotThrow(() -> perform());
     }
 
+    /** Kiểm thử: từ chối buổi sau ngày hết hạn một ngày, trước khi ghi bất cứ dữ liệu nào. */
     @Test
     void rejectsSessionOneDayAfterExpiryBeforeAnyWrite() {
         setup("2026-11-01T03:00:00Z", TODAY.minusDays(10), TODAY, "active");
@@ -86,6 +91,7 @@ class BookingDateEligibilityTest {
         verifyNoInteractions(notifications);
     }
 
+    /** Kiểm thử: từ chối khi membership không còn hoạt động. */
     @ParameterizedTest
     @ValueSource(strings = {"frozen", "expired", "cancelled", "pending_payment"})
     void rejectsInactiveMembership(String status) {
@@ -95,12 +101,14 @@ class BookingDateEligibilityTest {
         verify(enrollments, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: kỳ membership trong tương lai không cấp quyền đặt chỗ hiện tại. */
     @Test
     void futurePeriodCannotGrantCurrentBookingRights() {
         setup("2026-11-01T03:00:00Z", TODAY.plusDays(1), TODAY.plusDays(30), "active");
         assertThrows(ForbiddenException.class, () -> perform());
     }
 
+    /** Kiểm thử: ngày hiệu lực theo giờ Việt Nam đúng ở các mốc 06:59 và 07:00 (UTC). */
     @ParameterizedTest
     @ValueSource(strings = {"2026-10-31T17:00:00Z", "2026-10-31T23:59:00Z", "2026-11-01T00:00:00Z"})
     void usesVietnamMembershipDateAtMidnight0659And0700(String instant) {
@@ -114,6 +122,7 @@ class BookingDateEligibilityTest {
     @ParameterizedTest
     @CsvSource({"2026-11-01T03:00:00Z,10:00", "2026-11-01T03:00:01Z,10:00", "2026-10-31T17:00:00Z,00:00",
             "2026-10-31T23:59:00Z,06:59", "2026-11-01T00:00:00Z,07:00"})
+    /** Kiểm thử: buổi đã bắt đầu bị từ chối theo giờ tường của trung tâm. */
     void rejectsStartedSessionUsingCenterWallTime(String instant, String localStart) {
         setup(instant, TODAY.minusDays(1), TODAY.plusDays(5), "active");
         session.setSessionDate(TODAY);
@@ -122,6 +131,7 @@ class BookingDateEligibilityTest {
         verify(enrollments, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: chấp nhận giờ địa phương trong tương lai dù đồng hồ được tiêm có múi giờ khác. */
     @Test
     void permitsFutureLocalTimeDespiteDifferentInjectedClockZone() {
         setup("2026-10-31T23:59:00Z", TODAY, TODAY.plusDays(5), "active");

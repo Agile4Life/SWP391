@@ -62,6 +62,7 @@ class SessionAttendanceServiceTest {
     private User memberUser;
     private AuthenticatedPrincipal coachPrincipal;
 
+    /** Chuẩn bị trước mỗi test: tạo service điểm danh buổi học với repository giả lập. */
     @BeforeEach
     void setUp() {
         coachPrincipal = new AuthenticatedPrincipal(10L, "coach@test.com", "COACH");
@@ -104,6 +105,7 @@ class SessionAttendanceServiceTest {
         lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
     }
 
+    /** Kiểm thử: lấy danh sách điểm danh buổi học thành công. */
     @Test
     void getSessionAttendanceRoster_success() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
@@ -134,6 +136,7 @@ class SessionAttendanceServiceTest {
         assertEquals("Coach John", response.members().get(0).recordedByCoachName());
     }
 
+    /** Kiểm thử: danh sách điểm danh hiển thị lượt vào cổng đã phủ buổi học. */
     @Test
     void getSessionAttendanceRoster_showsTheGateCheckinThatCoveredTheSession() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
@@ -154,6 +157,7 @@ class SessionAttendanceServiceTest {
         assertNull(item.attendanceStatus());
     }
 
+    /** Kiểm thử: HLV khác không được xem danh sách điểm danh của buổi. */
     @Test
     void getSessionAttendanceRoster_otherCoach_isForbidden() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
@@ -162,6 +166,7 @@ class SessionAttendanceServiceTest {
         assertThrows(ForbiddenException.class, () -> service.getSessionAttendanceRoster(100L, otherCoach));
     }
 
+    /** Kiểm thử: buổi học không tồn tại thì ném lỗi not found. */
     @Test
     void getSessionAttendanceRoster_notFound_throwsException() {
         when(sessionRepository.findById(999L)).thenReturn(Optional.empty());
@@ -169,6 +174,7 @@ class SessionAttendanceServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> service.getSessionAttendanceRoster(999L, coachPrincipal));
     }
 
+    /** Kiểm thử: ghi điểm danh hàng loạt thành công. */
     @Test
     void recordBatchAttendance_success() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
@@ -198,6 +204,7 @@ class SessionAttendanceServiceTest {
         verify(attendanceRepository, times(1)).saveAndFlush(any(SessionAttendance.class));
     }
 
+    /** Kiểm thử: ghi trùng khóa (đã có điểm danh) thì ném ConflictException. */
     @Test
     void recordBatchAttendance_duplicateKey_throwsConflictException() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
@@ -215,6 +222,7 @@ class SessionAttendanceServiceTest {
         assertThrows(ConflictException.class, () -> service.recordBatchAttendance(100L, request, coachPrincipal));
     }
 
+    /** Kiểm thử: chỉ gửi thông báo đánh giá khi HLV chọn công bố. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
     void evaluationNotificationsOnlyWhenCoachPublishes(boolean publish) {
@@ -233,6 +241,7 @@ class SessionAttendanceServiceTest {
         verify(notifications, times(publish ? 1 : 0)).notifyEvaluation(20L);
     }
 
+    /** Kiểm thử: công bố đánh giá vẫn thành công khi tài khoản hội viên đã bị xóa mềm. */
     @Test
     void recordBatchAttendance_publishEvaluations_succeedsWhenMemberUserIsSoftDeleted() {
         var evaluations = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.SessionEvaluationRepository.class);
@@ -255,6 +264,7 @@ class SessionAttendanceServiceTest {
         verify(evaluations).save(any(com.swp391.scms.coaching.entity.SessionEvaluation.class));
     }
 
+    /** Hàm trợ giúp của test: giả lập hội viên đã đặt chỗ cho buổi. */
     private void stubBookedEnrollment() {
         ClassEnrollment enrollment = new ClassEnrollment();
         enrollment.setGymClass(gymClass);
@@ -263,6 +273,7 @@ class SessionAttendanceServiceTest {
         when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(enrollment));
     }
 
+    /** Kiểm thử: từ chối điểm danh hội viên chưa đặt chỗ. */
     @Test
     void recordBatchAttendance_rejectsMemberWithoutBooking() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
@@ -276,6 +287,7 @@ class SessionAttendanceServiceTest {
         verify(attendanceRepository, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: từ chối điểm danh buổi đã hủy hoặc chưa bắt đầu. */
     @Test
     void recordBatchAttendance_rejectsCancelledAndNotYetStartedSessions() {
         when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
@@ -293,6 +305,7 @@ class SessionAttendanceServiceTest {
         verify(attendanceRepository, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: danh sách điểm danh gồm cả hội viên chỉ đặt riêng buổi này. */
     @Test
     void getSessionAttendanceRoster_includesMembersWhoBookedOnlyThisSession() {
         com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
@@ -320,6 +333,7 @@ class SessionAttendanceServiceTest {
         assertEquals(List.of(20L, 21L), response.members().stream().map(m -> m.memberId()).toList());
     }
 
+    /** Hàm trợ giúp của test: tạo hội viên đã đặt chỗ. */
     private void bookedMember() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
         ClassEnrollment enrollment = new ClassEnrollment();
@@ -331,6 +345,7 @@ class SessionAttendanceServiceTest {
         lenient().when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
     }
 
+    /** Kiểm thử: không sửa điểm danh quá 7 ngày sau buổi, nhưng vẫn sửa được đánh giá. */
     @Test
     void attendanceCannotChangeMoreThanSevenDaysAfterTheSessionButEvaluationsStillCan() {
         // The session was on 2026-10-25; the clock is now 2026-11-02, eight days later.
@@ -352,6 +367,7 @@ class SessionAttendanceServiceTest {
         assertEquals("present", service.recordBatchAttendance(100L, sameStatus, coachPrincipal).get(0).attendanceStatus());
     }
 
+    /** Kiểm thử: lịch sử liệt kê các buổi HLV đã ghi nhận cùng số liệu và khả năng còn sửa được. */
     @Test
     @SuppressWarnings("unchecked")
     void historyListsTheCoachsRecordedSessionsWithCountsAndWhetherTheyCanStillBeEdited() {

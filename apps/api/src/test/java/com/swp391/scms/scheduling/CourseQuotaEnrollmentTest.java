@@ -36,11 +36,13 @@ class CourseQuotaEnrollmentTest {
 
     private EnrollmentService enrollmentService;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ khóa học với hạn mức giả lập. */
     @BeforeEach
     void setUp() {
         enrollmentService = new EnrollmentService(enrollments, null, gymClasses, subscriptions, members, null, null, clock);
     }
 
+    /** Kiểm thử: tính hạn mức của hạng Silver. */
     @Test
     void testSilverQuotaCalculation() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -73,6 +75,7 @@ class CourseQuotaEnrollmentTest {
         assertFalse(quota.unlimited());
     }
 
+    /** Kiểm thử: đăng ký thất bại khi vượt hạn mức. */
     @Test
     void testEnrollFailsWhenQuotaExceeded() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");

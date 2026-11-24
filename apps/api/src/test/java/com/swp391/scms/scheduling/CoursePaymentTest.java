@@ -43,6 +43,7 @@ class CoursePaymentTest {
 
     private EnrollmentService enrollmentService;
 
+    /** Chuẩn bị trước mỗi test: dựng dịch vụ và dữ liệu thanh toán khóa học. */
     @BeforeEach
     void setUp() {
         enrollmentService = new EnrollmentService(
@@ -58,6 +59,7 @@ class CoursePaymentTest {
         enrollmentService.setPaymentRepository(paymentRepository);
     }
 
+    /** Kiểm thử: thanh toán tạo khoản pending khi vượt hạn mức. */
     @Test
     void testCheckoutCreatesPendingPaymentWhenQuotaExceeded() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -133,6 +135,7 @@ class CoursePaymentTest {
         assertEquals(777L, captured.getClassEnrollmentId());
     }
 
+    /** Kiểm thử: thanh toán tính chiết khấu theo hạng thành viên trên phí khóa học. */
     @Test
     void testCheckoutChargesTheTierDiscountOnTheCourseFee() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -182,6 +185,7 @@ class CoursePaymentTest {
         assertTrue(payment.getValue().getNote().contains("giảm 10%"));
     }
 
+    /** Kiểm thử: hủy trước khi bắt đầu làm thất bại khoản thanh toán khóa đang chờ. */
     @Test
     void testCancelBeforeStartFailsThePendingCoursePayment() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -218,6 +222,7 @@ class CoursePaymentTest {
         verify(paymentRepository).save(pending);
     }
 
+    /** Kiểm thử: hủy vẫn giữ khoản thanh toán khóa đã thanh toán để đi theo luồng hoàn tiền. */
     @Test
     void testCancelKeepsASettledCoursePaymentForTheRefundFlow() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");

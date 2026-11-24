@@ -40,6 +40,7 @@ class CourseCancellationRulesTest {
     private EnrollmentService service;
     private ClassEnrollment enrollment;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ ghi danh khóa học với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new EnrollmentService(enrollments, null, gymClasses, null, members, notifications, null, clock);
@@ -56,6 +57,7 @@ class CourseCancellationRulesTest {
         when(enrollments.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
+    /** Hàm trợ giúp của test: tạo khóa học bắt đầu vào một thời điểm cho trước. */
     private void courseStarting(LocalDate start) {
         GymClass gymClass = new GymClass();
         gymClass.setId(50L);
@@ -63,6 +65,7 @@ class CourseCancellationRulesTest {
         enrollment.setGymClass(gymClass);
     }
 
+    /** Kiểm thử: hội viên không được hủy khóa đã bắt đầu, nên lượt miễn phí không được hoàn lại. */
     @Test
     void aMemberCannotCancelACourseThatHasStartedSoTheCreditIsNotGivenBack() {
         courseStarting(LocalDate.of(2026, 11, 2));
@@ -76,6 +79,7 @@ class CourseCancellationRulesTest {
         assertThrows(BadRequestException.class, () -> service.cancel(member, 9L));
     }
 
+    /** Kiểm thử: lễ tân vẫn được hủy thay hội viên sau khi khóa đã bắt đầu. */
     @Test
     void theDeskMayStillCancelOnBehalfOfAMemberAfterTheStart() {
         courseStarting(LocalDate.of(2026, 11, 2));
@@ -85,6 +89,7 @@ class CourseCancellationRulesTest {
         assertEquals("cancelled", enrollment.getStatus());
     }
 
+    /** Kiểm thử: hủy trước khi khóa bắt đầu thì nhả chỗ và hủy khoản phí chưa thanh toán. */
     @Test
     void cancellingBeforeTheStartReleasesTheSeatAndVoidsTheUnpaidFee() {
         courseStarting(LocalDate.of(2026, 11, 20));

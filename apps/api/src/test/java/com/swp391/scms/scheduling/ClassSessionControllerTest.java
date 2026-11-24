@@ -42,6 +42,7 @@ class ClassSessionControllerTest {
     private ObjectMapper objectMapper;
     private AuthenticatedPrincipal principal;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller buổi học. */
     @BeforeEach
     void setUp() {
         principal = new AuthenticatedPrincipal(10L, "coach@test.com", "COACH");
@@ -70,6 +71,7 @@ class ClassSessionControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: hủy buổi học với dữ liệu hợp lệ trả 200 OK. */
     @Test
     void cancelSession_validPayload_returnsOk() throws Exception {
         CancelSessionRequest request = new CancelSessionRequest("Facility repair needed");
@@ -94,6 +96,7 @@ class ClassSessionControllerTest {
                 .andExpect(jsonPath("$.data.cancelReason").value("Facility repair needed"));
     }
 
+    /** Kiểm thử: hủy buổi học thiếu lý do trả 400 Bad Request. */
     @Test
     void cancelSession_blankReason_returnsBadRequest() throws Exception {
         CancelSessionRequest request = new CancelSessionRequest("");

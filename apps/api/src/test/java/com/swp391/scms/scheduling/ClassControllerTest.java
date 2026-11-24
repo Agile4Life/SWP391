@@ -45,6 +45,7 @@ class ClassControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller lớp học. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -58,6 +59,7 @@ class ClassControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: tạo lớp lẻ đã ngừng, được thay bằng khóa học định kỳ. */
     @Test
     void createClass_isRetiredInFavourOfRecurringCourses() throws Exception {
         CreateClassRequest request = new CreateClassRequest(
@@ -71,6 +73,7 @@ class ClassControllerTest {
         org.mockito.Mockito.verify(classService, org.mockito.Mockito.never()).createClass(any());
     }
 
+    /** Kiểm thử: từ chối cấp độ không hỗ trợ trước khi lưu dữ liệu. */
     @Test
     void createClass_rejectsUnsupportedLevelBeforePersistence() throws Exception {
         CreateClassRequest request = new CreateClassRequest("Yoga", 1L, 2L, 3L, 20, "expert", null);
@@ -85,6 +88,7 @@ class ClassControllerTest {
         verifyNoInteractions(classService);
     }
 
+    /** Kiểm thử: tạo buổi học trả 201 Created. */
     @Test
     void createSession_returnsCreated() throws Exception {
         CreateSessionRequest request = new CreateSessionRequest(
@@ -105,6 +109,7 @@ class ClassControllerTest {
                 .andExpect(jsonPath("$.data.status").value("scheduled"));
     }
 
+    /** Kiểm thử: liệt kê buổi học trả 200 OK. */
     @Test
     void listSessions_returnsOk() throws Exception {
         ClassSessionDto dto = new ClassSessionDto(
@@ -120,6 +125,7 @@ class ClassControllerTest {
                 .andExpect(jsonPath("$.data[0].id").value(10L));
     }
 
+    /** Kiểm thử: HLV chỉ thấy buổi của mình dù yêu cầu xem HLV khác. */
     @Test
     void listSessions_coachOnlySeesOwnSessionsEvenWhenAskingForAnotherCoach() throws Exception {
         com.swp391.scms.security.AuthenticatedPrincipal coach =
@@ -151,6 +157,7 @@ class ClassControllerTest {
         org.mockito.Mockito.verify(classService).searchSessions(null, null, null, 7L);
     }
 
+    /** Kiểm thử: liệt kê lớp học trả 200 OK. */
     @Test
     void listClasses_returnsOk() throws Exception {
         GymClassDto dto = new GymClassDto(

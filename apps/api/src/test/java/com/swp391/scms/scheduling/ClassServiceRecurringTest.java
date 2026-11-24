@@ -45,11 +45,13 @@ class ClassServiceRecurringTest {
 
     private ClassService classService;
 
+    /** Chuẩn bị trước mỗi test: tạo ClassService với repository giả lập. */
     @BeforeEach
     void setUp() {
         classService = new ClassService(gymClasses, sessions, enrollments, disciplines, coaches, rooms, mapper, clock);
     }
 
+    /** Kiểm thử: tạo lớp định kỳ thành công và sinh các buổi theo lịch. */
     @Test
     void testCreateRecurringClassSuccess() {
         Discipline discipline = mock(Discipline.class);
@@ -89,6 +91,7 @@ class ClassServiceRecurringTest {
         verify(sessions, atLeast(4)).saveAndFlush(any(ClassSession.class));
     }
 
+    /** Hàm trợ giúp của test: giả lập danh mục (phòng, bộ môn, HLV) cho việc tạo lớp. */
     private void stubCatalog() {
         Discipline discipline = mock(Discipline.class);
         when(discipline.getId()).thenReturn(1L);
@@ -109,12 +112,14 @@ class ClassServiceRecurringTest {
         });
     }
 
+    /** Hàm trợ giúp của test: lấy các ngày buổi học đã được lưu. */
     private List<LocalDate> savedDates() {
         var captor = org.mockito.ArgumentCaptor.forClass(ClassSession.class);
         verify(sessions, atLeastOnce()).saveAndFlush(captor.capture());
         return captor.getAllValues().stream().map(ClassSession::getSessionDate).sorted().toList();
     }
 
+    /** Kiểm thử: khóa học hằng tuần diễn ra vào các thứ đã chọn mỗi tuần. */
     @Test
     void aWeeklyCourseMeetsOnTheChosenWeekdaysEveryWeek() {
         stubCatalog();
@@ -128,6 +133,7 @@ class ClassServiceRecurringTest {
                 LocalDate.of(2026, 12, 9)), savedDates());
     }
 
+    /** Kiểm thử: khóa học hằng tuần vẫn bắt buộc chọn thứ trong tuần. */
     @Test
     void aWeeklyCourseStillNeedsWeekdays() {
         stubCatalog();

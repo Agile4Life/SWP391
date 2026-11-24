@@ -9,6 +9,7 @@ import org.springframework.core.env.StandardEnvironment;
 
 /** Bộ kiểm thử cho ClassFeatureDisabled (class feature disabled). */
 class ClassFeatureDisabledTest {
+    /** Kiểm thử: các endpoint lớp học và seeder lớp mẫu không được đăng ký khi tính năng đã tắt. */
     @Test
     void classEndpointsAndDemoSeederAreNotRegistered() {
         var scanner = new ClassPathScanningCandidateComponentProvider(true);

@@ -57,6 +57,7 @@ class ChatServiceTest {
         verify(conversations, never()).save(any());
     }
 
+    /** Kiểm thử: hội viên có thể bắt đầu chat với cả hai loại nhân viên. */
     @ParameterizedTest @ValueSource(strings = {"RECEPTIONIST", "COACH"})
     void memberCanStartWithEitherStaffRole(String role) {
         coach.setRole(user(20, role).getRole());
@@ -66,6 +67,7 @@ class ChatServiceTest {
         assertThat(result.peer().role()).isEqualTo(role);
     }
 
+    /** Kiểm thử: từ chối các vai trò liên hệ khác. */
     @ParameterizedTest @ValueSource(strings = {"MEMBER", "CENTER_MANAGER", "GUEST"})
     void rejectsOtherContactRoles(String role) {
         coach.setRole(user(20, role).getRole());
@@ -238,6 +240,7 @@ class ChatServiceTest {
         assertThatThrownBy(() -> service.send(member, 7L, new SendChatMessage(UUID.randomUUID(), "Hi"))).isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: từ chối tin nhắn trống. */
     @ParameterizedTest @ValueSource(strings = {"", "  \n  "})
     void rejectsBlankText(String text) {
         assertThatThrownBy(() -> service.send(member, 7L, new SendChatMessage(UUID.randomUUID(), text))).isInstanceOf(BadRequestException.class);

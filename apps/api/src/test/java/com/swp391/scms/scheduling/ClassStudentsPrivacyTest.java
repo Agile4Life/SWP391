@@ -37,6 +37,7 @@ class ClassStudentsPrivacyTest {
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
     private ClassService service;
 
+    /** Chuẩn bị trước mỗi test: dựng service lớp học và dữ liệu hội viên có ghi chú sức khỏe. */
     @BeforeEach
     void setUp() {
         service = new ClassService(gymClasses, sessions, enrollments, mock(DisciplineRepository.class), mock(CoachRepository.class),
@@ -61,17 +62,20 @@ class ClassStudentsPrivacyTest {
         when(enrollments.findByGymClassId(5L)).thenReturn(List.of(enrollment));
     }
 
+    /** Kiểm thử: HLV của lớp và quản lý xem được ghi chú sức khỏe của học viên. */
     @Test
     void theClassCoachAndManagersSeeTheHealthNotes() {
         assertEquals("Tiền sử tim mạch", service.getClassStudents(5L, new AuthenticatedPrincipal(20L, "hung", "COACH")).get(0).healthNotes());
         assertEquals("Tiền sử tim mạch", service.getClassStudents(5L, new AuthenticatedPrincipal(1L, "mgr", "CENTER_MANAGER")).get(0).healthNotes());
     }
 
+    /** Kiểm thử: HLV khác không đọc được danh sách học viên của lớp không phải của mình. */
     @Test
     void anotherCoachCannotReadTheStudentsOfAClassThatIsNotTheirs() {
         assertThrows(ForbiddenException.class, () -> service.getClassStudents(5L, new AuthenticatedPrincipal(99L, "other", "COACH")));
     }
 
+    /** Kiểm thử: lễ tân thấy thông tin liên hệ nhưng không thấy ghi chú y tế. */
     @Test
     void theDeskGetsContactDetailsWithoutTheMedicalNotes() {
         var student = service.getClassStudents(5L, new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST")).get(0);

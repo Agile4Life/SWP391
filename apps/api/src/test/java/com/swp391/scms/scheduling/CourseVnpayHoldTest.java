@@ -55,6 +55,7 @@ class CourseVnpayHoldTest {
     private ClassEnrollment enrollment;
     private Payment fee;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ khóa học và thanh toán VNPay giả lập. */
     @BeforeEach
     void setUp() {
         service = new EnrollmentService(enrollments, null, gymClasses, null, members, notifications, null, clock);
@@ -89,6 +90,7 @@ class CourseVnpayHoldTest {
         when(payments.findPendingCourseFeesCreatedBefore(any())).thenReturn(List.of(fee));
     }
 
+    /** Hàm trợ giúp của test: tạo lượt thanh toán VNPay hết hạn vào một thời điểm. */
     private VnpayTransaction attemptExpiringAt(LocalDateTime expiresAt) {
         VnpayTransaction attempt = new VnpayTransaction("REF1", fee, fee.getAmount(), expiresAt.minusMinutes(15), expiresAt, "127.0.0.1");
         when(transactions.findAllByPaymentId(77L)).thenReturn(List.of(attempt));
@@ -97,6 +99,7 @@ class CourseVnpayHoldTest {
         return attempt;
     }
 
+    /** Kiểm thử: hội viên không được hủy khi VNPay vẫn có thể xác nhận phí. */
     @Test
     void aMemberCannotCancelWhileVnpayMayStillConfirmTheFee() {
         attemptExpiringAt(now.plusMinutes(5));
