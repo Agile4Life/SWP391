@@ -70,16 +70,17 @@ export function CoachTrainingPlanPage() {
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
   const [memberSearch, setMemberSearch] = useState('');
 
+  // Lọc danh sách hội viên theo họ tên (bỏ dấu), mã thẻ hoặc mã định danh (#id).
   const filteredMembers = useMemo(() => {
-    if (!memberSearch.trim()) return members;
     const q = memberSearch.trim().toLowerCase();
+    if (!q) return members;
     const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
     return members.filter((m) => {
       const name = (m.fullName ?? '').toLowerCase();
       const nameNorm = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
       const code = (m.memberCode ?? '').toLowerCase();
       const idStr = String(m.id);
-      return name.includes(q) || nameNorm.includes(qNorm) || code.includes(q) || idStr === q;
+      return name.includes(q) || nameNorm.includes(qNorm) || code.includes(q) || idStr === q || `#${idStr}` === q;
     });
   }, [members, memberSearch]);
   // Manager phải chỉ định Coach phụ trách vì Manager không có hồ sơ Coach của riêng mình
@@ -177,6 +178,15 @@ export function CoachTrainingPlanPage() {
   const currentAiEntry = aiSelectedMemberId != null ? aiResultsByMember[aiSelectedMemberId] : undefined;
   const aiResult = currentAiEntry?.result ?? null;
   const [appliedRecommendationId, setAppliedRecommendationId] = useState<number | undefined>();
+
+  // Tự động chọn học viên đầu tiên khớp từ khóa nếu học viên đang chọn không nằm trong kết quả lọc.
+  useEffect(() => {
+    if (filteredMembers.length === 0 || filteredMembers.some((m) => m.id === selectedMemberId)) return;
+    const next = filteredMembers[0];
+    setSelectedMemberId(next.id);
+    setAppliedRecommendationId(undefined);
+    if (next.fitnessGoal) setPlanGoal(next.fitnessGoal);
+  }, [filteredMembers, selectedMemberId]);
 
   useEffect(() => {
     if (!hasAccess) return;
@@ -579,23 +589,23 @@ export function CoachTrainingPlanPage() {
 
           <div>
             <label className="portal-label" htmlFor="plan-member-search">
-              {t("Học viên thụ hưởng", "Beneficiary student")}</label>
+              {t("Học viên thụ hưởng")}</label>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <input
                 id="plan-member-search"
                 type="search"
                 className="portal-input"
                 style={{ width: '100%' }}
-                placeholder={t("Tìm theo tên hoặc mã thẻ (VD: MEM-44)…", "Search by name or card code (e.g. MEM-44)…")}
-                aria-label={t("Tìm kiếm học viên thụ hưởng", "Search beneficiary student")}
+                placeholder={t("Tìm theo tên hoặc mã thẻ (VD: MB-2026-014)…", "Search by name or card code (e.g. MB-2026-014)…")}
+                aria-label={t("Tìm kiếm học viên thụ hưởng", "Search assigned member")}
                 value={memberSearch}
                 onChange={(e) => setMemberSearch(e.target.value)}
               />
               <Select
                 id="plan-member-select"
                 className="portal-select"
-                aria-label={t("Chọn học viên thụ hưởng", "Select beneficiary student")}
-                value={selectedMemberId == null ? '' : String(selectedMemberId)}
+                aria-label={t("Chọn học viên thụ hưởng", "Select assigned member")}
+                value={filteredMembers.length === 0 || selectedMemberId == null ? '' : String(selectedMemberId)}
                 onChange={(e) => {
                   const id = Number(e.target.value);
                   setSelectedMemberId(id);
@@ -606,7 +616,7 @@ export function CoachTrainingPlanPage() {
               >
                 {filteredMembers.length === 0 ? (
                   <option value="" disabled>
-                    {t("Không tìm thấy học viên phù hợp", "No matching student found")}
+                    {t("Không tìm thấy học viên phù hợp", "No matching member found")}
                   </option>
                 ) : (
                   filteredMembers.map((m) => (
@@ -616,6 +626,11 @@ export function CoachTrainingPlanPage() {
                   ))
                 )}
               </Select>
+              {memberSearch.trim() && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--portal-muted)' }}>
+                  {t("Kết quả: ", "Results: ")}<strong>{filteredMembers.length} {t("học viên", filteredMembers.length === 1 ? "member" : "members")}</strong>
+                </span>
+              )}
             </div>
           </div>
 

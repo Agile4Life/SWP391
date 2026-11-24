@@ -586,4 +586,39 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(updatedCard.textContent).toContain('8p');
   });
 
+  it('filters beneficiary members by code or accent-free name, auto-selects the first match, and handles no matches', async () => {
+    await renderComponent();
+    const searchInput = host.querySelector('#plan-member-search') as HTMLInputElement;
+    expect(searchInput).not.toBeNull();
+
+    const setSearch = async (value: string) => {
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(searchInput, value);
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    };
+
+    // Tìm theo mã thẻ "014" -> tự chuyển sang Trần Thị Thu Thảo (id=2) và cập nhật mục tiêu theo hồ sơ.
+    await setSearch('014');
+    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Trần Thị Thu Thảo');
+    expect(host.textContent).toContain('1 học viên');
+    expect((host.querySelector('#plan-goal-input') as HTMLInputElement).value).toBe('Săn chắc cơ mông');
+
+    // Tìm theo tên không dấu "hoang long" -> quay lại Lê Hoàng Long (id=1).
+    await setSearch('hoang long');
+    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Lê Hoàng Long');
+
+    // Không có học viên khớp -> hiển thị trạng thái không tìm thấy mà không làm hỏng giao diện.
+    await setSearch('khong-ton-tai');
+    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Không tìm thấy học viên phù hợp');
+    expect(host.textContent).toContain('0 học viên');
+
+    // Tìm lại "014" và lưu giáo án -> gửi đúng memberId = 2.
+    await setSearch('014');
+    await openStep(3);
+    await act(async () => { saveButton()?.click(); });
+    expect(aiApi.saveTrainingPlan).toHaveBeenCalledWith(expect.objectContaining({ memberId: 2 }), true);
+  });
+
 });

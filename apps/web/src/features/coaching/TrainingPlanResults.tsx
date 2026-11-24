@@ -92,11 +92,11 @@ export function TrainingPlanResults({ plan }: TrainingPlanResultsProps) {
             <span style={{
               fontWeight: 600,
               color: 'var(--portal-salmon)',
-              background: 'rgba(232, 110, 80, 0.1)',
+              background: 'var(--portal-tint)',
               padding: '3px 10px',
               borderRadius: 6
             }}>
-              {itemsCount} {t("bài tập", "exercises")}
+              {itemsCount} {t("bài tập", itemsCount === 1 ? "exercise" : "exercises")}
             </span>
           </div>
         </div>
