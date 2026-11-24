@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/** Client gọi Google Gemini để soạn giáo án. */
 public class GeminiRestClient implements AiClient {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -19,16 +20,19 @@ public class GeminiRestClient implements AiClient {
     private final String model;
     private final RestClient restClient;
 
+    /** Tạo client với RestClient mặc định. */
     public GeminiRestClient(String apiKey, String model) {
         this(apiKey, model, defaultRestClient());
     }
 
+    /** Tạo client; model mặc định gemini-3-flash-preview. */
     public GeminiRestClient(String apiKey, String model, RestClient restClient) {
         this.apiKey = apiKey;
         this.model = (model != null && !model.isBlank()) ? model : "gemini-3-flash-preview";
         this.restClient = restClient != null ? restClient : defaultRestClient();
     }
 
+    /** RestClient với thời gian chờ kết nối 10 giây, đọc 30 giây. */
     private static RestClient defaultRestClient() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
@@ -39,6 +43,7 @@ public class GeminiRestClient implements AiClient {
                 .build();
     }
 
+    /** Tên nhà cung cấp: gemini. */
     @Override
     public String getProviderName() {
         return "gemini";
@@ -50,16 +55,22 @@ public class GeminiRestClient implements AiClient {
         return model;
     }
 
+    /** Sinh câu trả lời văn bản. */
     @Override
     public String generate(String systemPrompt, String userMessage) {
         return call(systemPrompt, userMessage, false);
     }
 
+    /** Sinh câu trả lời dạng JSON. */
     @Override
     public String generateJson(String systemPrompt, String userMessage) {
         return call(systemPrompt, userMessage, true);
     }
 
+    /**
+     * Gọi Gemini: không có key thì dùng bản mock; bật JSON mode khi cần, bỏ phần suy nghĩ của model, bỏ khung
+     * code; lỗi thì trả dữ liệu dự phòng.
+     */
     private String call(String systemPrompt, String userMessage, boolean json) {
         if (apiKey == null || apiKey.isBlank()) {
             return new MockAiClient(model).generate(systemPrompt, userMessage);
@@ -107,6 +118,7 @@ public class GeminiRestClient implements AiClient {
         return fallbackPayload(userMessage);
     }
 
+    /** Dữ liệu dự phòng dạng JSON khi không gọi được Gemini. */
     private String fallbackPayload(String userMessage) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("status", "success");

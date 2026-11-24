@@ -14,6 +14,10 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * Giới hạn số tin mỗi tài khoản gửi cho AI (mặc định 15 tin trong 10 phút trượt) vì mỗi tin tốn tiền gọi nhà
+ * cung cấp. Đếm từ tin đã lưu trong database (không mất khi khởi động lại, dùng chung giữa các instance) cộng
+ * các request đang chờ trong bộ nhớ (để nhiều tin gửi cùng lúc không lọt qua).
+ *
  * Caps how often one account can talk to the AI assistant (default 15 messages per rolling 10 minutes), because every
  * message costs a call to a paid provider. The count comes from the stored member messages, so it survives restarts and
  * is shared by every API instance; requests still waiting for the provider are counted in memory so a burst of
@@ -31,6 +35,7 @@ public class AiChatRateLimiter {
     private final Map<Long, Integer> inFlight = new ConcurrentHashMap<>();
     private final Map<Long, Object> locks = new ConcurrentHashMap<>();
 
+    /** Constructor Spring dùng: đọc số tin tối đa và độ dài cửa sổ từ cấu hình. */
     @Autowired
     public AiChatRateLimiter(AiChatMessageRepository messages,
                              @Value("${app.ai.chat.rate-limit.max-messages:15}") int maxMessages,
@@ -38,6 +43,7 @@ public class AiChatRateLimiter {
         this(messages, maxMessages, Duration.ofMinutes(windowMinutes), Clock.systemDefaultZone());
     }
 
+    /** Constructor cho test với Clock tùy chỉnh. */
     public AiChatRateLimiter(AiChatMessageRepository messages, int maxMessages, Duration window, Clock clock) {
         this.messages = messages;
         this.maxMessages = Math.max(1, maxMessages);
@@ -45,13 +51,19 @@ public class AiChatRateLimiter {
         this.clock = clock;
     }
 
-    /** A reserved slot; release it once the request finishes, whether or not the message was stored. */
+    /**
+     * Một suất gửi tin đã giữ chỗ; phải trả lại khi request xong, dù tin có được lưu hay không.
+     *
+     * A reserved slot; release it once the request finishes, whether or not the message was stored.
+     */
     public final class Permit {
         private final Long userId;
         private boolean released;
 
+        /** Tạo suất cho người dùng. */
         private Permit(Long userId) { this.userId = userId; }
 
+        /** Trả suất (chỉ một lần): giảm bộ đếm request đang chờ của người dùng. */
         public synchronized void release() {
             if (released || userId == null) return;
             released = true;
@@ -61,7 +73,11 @@ public class AiChatRateLimiter {
         }
     }
 
-    /** Reserves one message for the account or throws 429 with how long to wait. */
+    /**
+     * Giữ một suất gửi tin hoặc báo lỗi 429 kèm thời gian cần chờ.
+     *
+     * Reserves one message for the account or throws 429 with how long to wait.
+     */
     public Permit acquire(Long userId) {
         if (userId == null) {
             return new Permit(null);
@@ -79,6 +95,10 @@ public class AiChatRateLimiter {
         }
     }
 
+    /**
+     * Số giây cần chờ: tin cũ nhất phải ra khỏi cửa sổ thì mới có chỗ; nếu chỉ vướng request đang chờ thì đề
+     * nghị chờ 5 giây.
+     */
     private long retrySeconds(List<LocalDateTime> stored, int used, LocalDateTime now) {
         // Messages leave the window oldest first; this many must expire before there is room for one more.
         int mustExpire = used - maxMessages + 1;
@@ -89,6 +109,7 @@ public class AiChatRateLimiter {
         return Math.max(1, Duration.between(now, frees).toSeconds());
     }
 
+    /** Lỗi 429 với số tin tối đa, độ dài cửa sổ và số phút cần chờ. */
     private TooManyRequestsException limited(long retrySeconds) {
         long waitMinutes = Math.max(1, (retrySeconds + 59) / 60);
         return new TooManyRequestsException("AI_CHAT_RATE_LIMITED", "ai.chat.rate_limited",
@@ -97,6 +118,7 @@ public class AiChatRateLimiter {
                         + " phút. Vui lòng thử lại sau khoảng " + waitMinutes + " phút.");
     }
 
+    /** Đối tượng khóa riêng cho từng người dùng. */
     private Object lockFor(Long userId) {
         return locks.computeIfAbsent(userId == null ? -1L : userId, key -> new Object());
     }

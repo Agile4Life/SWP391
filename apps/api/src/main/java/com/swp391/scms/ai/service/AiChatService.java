@@ -27,6 +27,9 @@ import java.util.List;
 import java.util.function.Supplier;
 
 /**
+ * Nghiệp vụ chat với Sol AI: tạo phiên, gửi tin (kèm ngữ cảnh dữ liệu thật của trung tâm và hội viên), lưu lịch
+ * sử. Gọi AI ngoài transaction để không giữ kết nối database trong lúc chờ nhà cung cấp; có giới hạn tần suất.
+ *
  * Service managing 24/7 AI Chatbot sessions and messages for SCMS members (SCRUM-118).
  */
 @Service
@@ -89,6 +92,7 @@ public class AiChatService {
     @Autowired(required = false)
     private com.swp391.scms.users.UserRepository userRepository;
 
+    /** Constructor cho test với các repository tối thiểu. */
     public AiChatService(AiChatSessionRepository sessionRepository,
                          AiChatMessageRepository messageRepository,
                          MemberRepository memberRepository,
@@ -96,6 +100,7 @@ public class AiChatService {
         this(sessionRepository, messageRepository, memberRepository, messageService, null, null, null);
     }
 
+    /** Constructor cho test có nhà cung cấp chat. */
     public AiChatService(AiChatSessionRepository sessionRepository,
                          AiChatMessageRepository messageRepository,
                          MemberRepository memberRepository,
@@ -104,6 +109,7 @@ public class AiChatService {
         this(sessionRepository, messageRepository, memberRepository, messageService, chatProvider, null, null);
     }
 
+    /** Constructor cho test có dịch vụ ngữ cảnh RAG. */
     public AiChatService(AiChatSessionRepository sessionRepository,
                          AiChatMessageRepository messageRepository,
                          MemberRepository memberRepository,
@@ -113,6 +119,7 @@ public class AiChatService {
         this(sessionRepository, messageRepository, memberRepository, messageService, chatProvider, ragContextService, null);
     }
 
+    /** Constructor Spring dùng: tạo hai mẫu transaction (đọc và ghi) để chia nhỏ quá trình gửi tin. */
     @Autowired
     public AiChatService(AiChatSessionRepository sessionRepository,
                          AiChatMessageRepository messageRepository,
@@ -137,15 +144,19 @@ public class AiChatService {
         }
     }
 
+    /** Chạy hành động trong transaction chỉ đọc (không có trình quản lý transaction thì chạy thẳng). */
     private <T> T inReadOnlyTx(Supplier<T> action) {
         return readOnlyTx != null ? readOnlyTx.execute(status -> action.get()) : action.get();
     }
 
+    /** Chạy hành động trong transaction ghi (không có trình quản lý transaction thì chạy thẳng). */
     private <T> T inWriteTx(Supplier<T> action) {
         return writeTx != null ? writeTx.execute(status -> action.get()) : action.get();
     }
 
     /**
+     * Tạo phiên chat: nhân viên quầy có phiên "Hỏi đáp quầy lễ tân"; hội viên có phiên tư vấn của chính mình.
+     *
      * Creates a new AI chat session: a member's own session, or a desk session for reception and managers.
      */
     @Transactional
@@ -170,6 +181,8 @@ public class AiChatService {
     }
 
     /**
+     * Các phiên chat của hội viên.
+     *
      * Lists the current member's chat sessions.
      */
     @Transactional(readOnly = true)
@@ -178,6 +191,8 @@ public class AiChatService {
     }
 
     /**
+     * Các phiên chat của người gọi, mới nhất trước: phiên quầy với nhân viên, phiên cá nhân với hội viên.
+     *
      * Lists the caller's own chat sessions, newest first: a member's, or a staff account's desk sessions.
      */
     @Transactional(readOnly = true)
@@ -197,6 +212,9 @@ public class AiChatService {
     }
 
     /**
+     * Gửi nhanh: không có phiên thì dùng phiên đang mở gần nhất hoặc tạo phiên mới với chủ đề lấy từ câu hỏi
+     * (khóa dòng hội viên để hai tin cùng lúc dùng chung một phiên mới).
+     *
      * Quick-send message flow: if dto.sessionId() is provided, appends to that session;
      * otherwise reuses the member's most recent active session or auto-creates one.
      */
@@ -228,6 +246,7 @@ public class AiChatService {
         return sendMessage(sessionId, dto, currentUserId, currentRole);
     }
 
+    /** Chủ đề phiên: dùng chủ đề truyền vào, không có thì lấy tối đa 60 ký tự đầu của câu hỏi. */
     private String deriveTopicFromMessage(String explicitTopic, String rawMessage) {
         if (explicitTopic != null && !explicitTopic.isBlank()) {
             return explicitTopic.trim();
@@ -239,6 +258,7 @@ public class AiChatService {
         return cleaned.length() <= 60 ? cleaned : cleaned.substring(0, 57) + "...";
     }
 
+    /** Dữ liệu đã chuẩn bị cho một lần gọi AI: phiên, system prompt kèm ngữ cảnh, các lượt hội thoại và câu hỏi. */
     private record PreparedChatRequest(
             AiChatSession session,
             String effectiveSystemPrompt,
@@ -247,6 +267,9 @@ public class AiChatService {
     ) {}
 
     /**
+     * Gửi tin trong phiên: kiểm tra nội dung, giữ suất giới hạn tần suất trước khi làm gì, rồi trả suất sau khi
+     * xong.
+     *
      * Sends a member message in an existing chat session, generates the AI reply with session context,
      * and persists both messages in chronological order without holding a DB connection during the AI call.
      */
@@ -266,6 +289,11 @@ public class AiChatService {
         }
     }
 
+    /**
+     * Ba bước: (1) transaction đọc ngắn: kiểm tra quyền, đọc 6 tin gần nhất, dựng ngữ cảnh RAG (gộp cả câu hỏi
+     * trước để hiểu câu hỏi nối tiếp); (2) gọi AI ngoài transaction và bỏ ký hiệu Markdown; (3) transaction ghi
+     * ngắn: kiểm tra quyền lại rồi lưu tin hỏi và tin trả lời.
+     */
     private AiChatReplyDto replyTo(Long sessionId, AiChatMessageCreateDto dto, Long currentUserId, String currentRole) {
         String trimmedUserMessage = dto.message().trim();
 
@@ -335,6 +363,8 @@ public class AiChatService {
     }
 
     /**
+     * Lịch sử tin của phiên theo thứ tự thời gian (chỉ chủ phiên).
+     *
      * Retrieves chronological chat history for a session.
      */
     @Transactional(readOnly = true)
@@ -346,7 +376,12 @@ public class AiChatService {
                 .toList();
     }
 
-    /** Every session is private to its owner: a member reads only theirs, a staff account only its desk sessions. */
+    /**
+     * Phiên là riêng tư: hội viên chỉ đọc phiên của mình, nhân viên chỉ đọc phiên quầy của mình; không đúng thì
+     * 403.
+     *
+     * Every session is private to its owner: a member reads only theirs, a staff account only its desk sessions.
+     */
     private AiChatSession getAuthorizedSession(Long sessionId, Long currentUserId, String currentRole) {
         AiChatSession session = sessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("error.ai.chat.session.not_found", sessionId));
@@ -364,6 +399,7 @@ public class AiChatService {
         return session;
     }
 
+    /** Hội viên tạo phiên chỉ cho chính mình. */
     private Member resolveOwnMember(Long requestedMemberId, Long currentUserId, String currentRole) {
         requireMemberRole(currentRole);
         if (requestedMemberId != null && currentUserId != null && !requestedMemberId.equals(currentUserId)) {
@@ -374,6 +410,7 @@ public class AiChatService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", targetId));
     }
 
+    /** Tham chiếu tài khoản nhân viên đang gọi (cho phiên quầy). */
     private com.swp391.scms.users.entity.User staffUser(Long currentUserId) {
         if (userRepository == null || currentUserId == null) {
             throw new AccessDeniedException(msg("error.forbidden"));
@@ -381,17 +418,23 @@ public class AiChatService {
         return userRepository.getReferenceById(currentUserId);
     }
 
+    /** Vai trò được dùng chat quầy (lễ tân, quản lý trung tâm). */
     private static boolean isStaff(String role) {
         return role != null && STAFF_ROLES.contains(role.toUpperCase(java.util.Locale.ROOT));
     }
 
-    /** Coaches (and any other role) do not chat with the assistant; they use it for workout plans only. */
+    /**
+     * HLV và vai trò khác không chat với trợ lý (chỉ dùng AI để soạn giáo án).
+     *
+     * Coaches (and any other role) do not chat with the assistant; they use it for workout plans only.
+     */
     private void requireMemberRole(String role) {
         if (!"MEMBER".equalsIgnoreCase(role)) {
             throw new AccessDeniedException(msg("error.forbidden"));
         }
     }
 
+    /** Bỏ ký hiệu Markdown (tiêu đề, gạch đầu dòng, in đậm, code) khỏi câu trả lời để hiển thị văn bản thuần. */
     private static String stripMarkdown(String raw) {
         if (raw == null || raw.isBlank()) {
             return raw;
@@ -404,6 +447,7 @@ public class AiChatService {
                 .trim();
     }
 
+    /** Chuyển phiên sang DTO. */
     private AiChatSessionDto toSessionDto(AiChatSession session) {
         return new AiChatSessionDto(
                 session.getId(),
@@ -414,6 +458,7 @@ public class AiChatService {
         );
     }
 
+    /** Chuyển tin nhắn sang DTO. */
     private AiChatMessageDto toMessageDto(AiChatMessage message) {
         return new AiChatMessageDto(
                 message.getId(),
@@ -424,6 +469,7 @@ public class AiChatService {
         );
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         if (messageService == null) {
             return key;

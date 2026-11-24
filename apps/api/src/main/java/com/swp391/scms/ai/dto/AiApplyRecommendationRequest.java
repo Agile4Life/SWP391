@@ -7,6 +7,10 @@ import jakarta.validation.Valid;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Dữ liệu áp dụng gợi ý AI: ngày bắt đầu/kết thúc, lớp, HLV, mục tiêu, danh sách bài tập đã chỉnh và có kích
+ * hoạt ngay không.
+ */
 public class AiApplyRecommendationRequest {
 
     @JsonAlias("start_date")
@@ -28,6 +32,7 @@ public class AiApplyRecommendationRequest {
 
     private Boolean activate;
 
+    /** Constructor rỗng cho Jackson. */
     public AiApplyRecommendationRequest() {}
 
     /** Lấy giá trị trường startDate. */

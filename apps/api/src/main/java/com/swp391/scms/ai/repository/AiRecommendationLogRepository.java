@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/** Truy cập bảng ai_recommendation_logs (nhật ký gợi ý giáo án AI). */
 @Repository
 public interface AiRecommendationLogRepository extends JpaRepository<AiRecommendationLog, Long> {
 

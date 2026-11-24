@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
+ * Truy cập bảng ai_chat_messages (tin nhắn trong phiên chat AI).
+ *
  * Repository for {@link AiChatMessage}.
  */
 @Repository
@@ -28,5 +30,9 @@ public interface AiChatMessageRepository extends JpaRepository<AiChatMessage, Lo
     @Query("select m.createdAt from AiChatMessage m join m.session s left join s.member mem left join s.staffUser staff "
             + "where (mem.userId = :userId or staff.id = :userId) "
             + "and m.sender = 'member' and m.createdAt > :since order by m.createdAt asc")
+    /**
+     * Thời điểm các tin do chính người dùng gửi (không tính tin của AI) sau mốc since, cũ nhất trước; gồm cả
+     * phiên hội viên và phiên quầy. Dùng để giới hạn tần suất.
+     */
     List<LocalDateTime> memberMessageTimesSince(@Param("userId") Long userId, @Param("since") LocalDateTime since);
 }

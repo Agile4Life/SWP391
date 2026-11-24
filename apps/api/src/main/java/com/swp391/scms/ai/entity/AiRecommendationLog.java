@@ -7,7 +7,12 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/** Entity mapping table ai_recommendation_logs (schema is generated code-first by Hibernate). */
+/**
+ * Bảng ai_recommendation_logs: một lần AI đề xuất giáo án (HLV, hội viên, dữ liệu đầu vào JSON, nội dung đề
+ * xuất JSON, model, đã áp dụng chưa, thời điểm).
+ *
+ * Entity mapping table ai_recommendation_logs (schema is generated code-first by Hibernate).
+ */
 @Entity
 @Table(name = "ai_recommendation_logs")
 public class AiRecommendationLog {

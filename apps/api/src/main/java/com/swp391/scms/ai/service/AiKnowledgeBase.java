@@ -21,6 +21,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * Bộ quy định của trung tâm mà Sol AI dựa vào để trả lời, đọc một lần từ ai/sol-knowledge.md. Các con số trong
+ * file là chỗ giữ {{...}} được điền từ hằng số trong code (nên câu trả lời luôn khớp hệ thống), và chỉ những
+ * mục liên quan tới câu hỏi mới được đưa vào prompt.
+ *
  * Centre rules Sol AI answers from, read once from {@code ai/sol-knowledge.md}. Numbers in the file are
  * {@code {{placeholders}}} filled from the code and configuration that enforce them, so the answer cannot
  * drift from what the system actually does. Only the sections a question is about go into the prompt.
@@ -32,11 +36,16 @@ public class AiKnowledgeBase {
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([a-zA-Z0-9.]+)}}");
     private static final String KEYWORDS_PREFIX = "Từ khóa:";
 
-    /** One "## " section; {@code always} sections are sent with every question. */
+    /**
+     * Một mục "## " trong file: tiêu đề, từ khóa, có luôn gửi kèm không và nội dung.
+     *
+     * One "## " section; {@code always} sections are sent with every question.
+     */
     record Section(String title, List<String> keywords, boolean always, String body) {}
 
     private final List<Section> sections;
 
+    /** Đọc file, bỏ ghi chú biên tập, điền giá trị, tách thành các mục và thêm mục quyền lợi theo hạng gói. */
     public AiKnowledgeBase() {
         Map<String, String> values = values();
         // Editor notes are dropped first: they explain the {{placeholder}} syntax and must not be filled.
@@ -46,7 +55,12 @@ public class AiKnowledgeBase {
         this.sections = List.copyOf(parsed);
     }
 
-    /** The sections for this question: those whose keywords it mentions plus the always-on ones, or all when none match. */
+    /**
+     * Các mục cho câu hỏi: mục luôn gửi kèm cộng các mục có từ khóa xuất hiện trong câu hỏi; không mục nào khớp
+     * thì gửi tất cả.
+     *
+     * The sections for this question: those whose keywords it mentions plus the always-on ones, or all when none match.
+     */
     public String sectionsFor(String query) {
         String normalized = AiRagContextService.normalize(query);
         List<Section> matched = sections.stream()
@@ -62,10 +76,12 @@ public class AiKnowledgeBase {
         return sb.toString();
     }
 
+    /** Danh sách các mục (dùng cho test). */
     List<Section> sections() {
         return sections;
     }
 
+    /** Giá trị điền vào các chỗ giữ: số ngày dùng thử, thời gian sống QR, giờ tự check-out, quy định bảo lưu... */
     private static Map<String, String> values() {
         Map<String, String> v = new HashMap<>();
         v.put("trial.days", String.valueOf(MemberTrialService.TRIAL_DAYS));
@@ -79,6 +95,7 @@ public class AiKnowledgeBase {
         return v;
     }
 
+    /** Đọc nội dung file kiến thức trong resources; thiếu file thì dừng khởi động. */
     private static String read() {
         try (InputStream in = new ClassPathResource(RESOURCE).getInputStream()) {
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -87,7 +104,11 @@ public class AiKnowledgeBase {
         }
     }
 
-    /** Fails at startup on an unknown placeholder, so a typo never reaches a member as "{{...}}". */
+    /**
+     * Điền các chỗ giữ {{tên}}; gặp tên lạ thì dừng khởi động để lỗi gõ không bao giờ tới tay hội viên.
+     *
+     * Fails at startup on an unknown placeholder, so a typo never reaches a member as "{{...}}".
+     */
     static String fill(String text, Map<String, String> values) {
         Matcher m = PLACEHOLDER.matcher(text);
         StringBuilder sb = new StringBuilder();
@@ -102,6 +123,7 @@ public class AiKnowledgeBase {
         return sb.toString();
     }
 
+    /** Tách văn bản thành các mục theo tiêu đề "## ", đọc dòng "Từ khóa:" (dấu * nghĩa là luôn gửi kèm). */
     static List<Section> parse(String text) {
         List<Section> result = new ArrayList<>();
         for (String chunk : text.split("(?m)^## ")) {
@@ -132,7 +154,12 @@ public class AiKnowledgeBase {
         return result;
     }
 
-    /** Built from {@link PackageBenefits} so the AI quotes exactly what booking, holds and discounts enforce. */
+    /**
+     * Mục quyền lợi theo hạng gói (Silver/Gold/Platinum và gói trải nghiệm) dựng từ PackageBenefits, để AI nói
+     * đúng điều mà hệ thống áp dụng.
+     *
+     * Built from {@link PackageBenefits} so the AI quotes exactly what booking, holds and discounts enforce.
+     */
     private static Section tierBenefits() {
         StringBuilder sb = new StringBuilder();
         for (String tier : List.of("SILVER", "GOLD", "PLATINUM")) {
@@ -155,6 +182,7 @@ public class AiKnowledgeBase {
                 false, sb.toString());
     }
 
+    /** Tạo gói tạm theo hạng và số ngày để hỏi PackageBenefits. */
     private static MembershipPackage pkg(String tier, int days) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setName(tier != null ? tier : "");
@@ -163,6 +191,7 @@ public class AiKnowledgeBase {
         return pkg;
     }
 
+    /** Diễn đạt số ngày bảo lưu tối đa ("tối đa N ngày" hoặc "không bảo lưu được"). */
     private static String holdText(int days) {
         return days > 0 ? "tối đa " + days + " ngày" : "không bảo lưu được";
     }

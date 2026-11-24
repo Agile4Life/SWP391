@@ -27,6 +27,9 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
+ * API trò chuyện với trợ lý Sol AI (/api/v1/ai/chat) cho hội viên (tư vấn cá nhân) và lễ tân/quản lý (hỏi đáp
+ * tại quầy).
+ *
  * REST Controller for the 24/7 AI Chatbot consulting assistant (SCRUM-118).
  * Members chat with their own profile as context; reception and managers ask about centre rules, prices and
  * schedules. Coaches use the AI only for workout plan suggestions ({@code AiRecommendationController}).
@@ -39,16 +42,19 @@ public class AiChatController {
     private final AiChatService aiChatService;
     private final MessageService messageService;
 
+    /** Constructor Spring dùng. */
     @Autowired
     public AiChatController(AiChatService aiChatService, MessageService messageService) {
         this.aiChatService = aiChatService;
         this.messageService = messageService;
     }
 
+    /** Constructor cho test, không có MessageService. */
     public AiChatController(AiChatService aiChatService) {
         this(aiChatService, null);
     }
 
+    /** POST /sessions: tạo phiên chat mới. */
     @Operation(summary = "Tạo phiên trò chuyện AI mới")
     @PostMapping("/sessions")
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
@@ -62,6 +68,7 @@ public class AiChatController {
                 .body(ApiResponse.created(msg("success.ai.chat.session.created"), created));
     }
 
+    /** GET /sessions: các phiên chat của chính người gọi, mới nhất trước. */
     @Operation(summary = "Lấy danh sách phiên trò chuyện của hội viên hiện tại")
     @GetMapping("/sessions")
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
@@ -73,6 +80,10 @@ public class AiChatController {
         return ResponseEntity.ok(ApiResponse.ok(msg("success.ai.chat.session.created"), sessions));
     }
 
+    /**
+     * POST /message: gửi nhanh một tin; không chỉ định phiên thì dùng phiên đang mở gần nhất hoặc tạo phiên
+     * mới.
+     */
     @Operation(summary = "Gửi tin nhắn trực tiếp (tự tạo phiên nếu chưa truyền sessionId)")
     @PostMapping({"/message", "/messages"})
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
@@ -86,6 +97,7 @@ public class AiChatController {
                 .body(ApiResponse.created(msg("success.ai.chat.message.sent"), reply));
     }
 
+    /** POST /sessions/{id}/messages: gửi tin trong một phiên và nhận câu trả lời của AI. */
     @Operation(summary = "Gửi tin nhắn và nhận phản hồi từ AI Chatbot")
     @PostMapping("/sessions/{id}/messages")
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
@@ -100,6 +112,7 @@ public class AiChatController {
                 .body(ApiResponse.created(msg("success.ai.chat.message.sent"), reply));
     }
 
+    /** GET /sessions/{id}/history: lịch sử tin của một phiên theo thứ tự thời gian. */
     @Operation(summary = "Lấy lịch sử trò chuyện theo thứ tự thời gian")
     @GetMapping({"/sessions/{id}/history", "/sessions/{id}/messages"})
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
@@ -112,6 +125,7 @@ public class AiChatController {
         return ResponseEntity.ok(ApiResponse.ok(msg("success.ai.chat.message.sent"), history));
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) {
         if (messageService == null) {
             return key;

@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+/** Yêu cầu AI đề xuất giáo án: hội viên, HLV, yêu cầu thêm và số tuần. */
 public class AiWorkoutPlanRequest {
 
     @JsonAlias("member_id")
@@ -24,8 +25,10 @@ public class AiWorkoutPlanRequest {
     @Max(value = 52, message = "{validation.ai.duration_weeks.range}")
     private Integer durationWeeks;
 
+    /** Constructor rỗng cho Jackson. */
     public AiWorkoutPlanRequest() {}
 
+    /** Tạo yêu cầu với hội viên, yêu cầu thêm và số tuần. */
     public AiWorkoutPlanRequest(Long memberId, String additionalRequirements, Integer durationWeeks) {
         this.memberId = memberId;
         this.additionalRequirements = additionalRequirements;

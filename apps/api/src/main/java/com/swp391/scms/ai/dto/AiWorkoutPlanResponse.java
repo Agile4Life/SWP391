@@ -6,6 +6,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Gợi ý giáo án AI trả cho client: hội viên, HLV, model, đã áp dụng chưa, mục tiêu, phân tích, danh sách bài
+ * tập và thời điểm tạo.
+ */
 public class AiWorkoutPlanResponse {
 
     private Long id;
@@ -21,6 +25,7 @@ public class AiWorkoutPlanResponse {
     private List<TrainingPlanItemCreateDto> items;
     private LocalDateTime createdAt;
 
+    /** Constructor rỗng cho Jackson. */
     public AiWorkoutPlanResponse() {}
 
     /** Lấy giá trị trường id. */

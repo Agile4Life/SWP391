@@ -25,6 +25,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
+ * Dựng ngữ cảnh dữ liệu thật (RAG) cho Sol AI từ database: gói tập, HLV, hồ sơ và gói/giáo án của hội viên đang
+ * chat, cùng quy định trung tâm liên quan tới câu hỏi.
+ *
  * Retrieval-Augmented Generation (RAG) context builder over live Supabase PostgreSQL data.
  * Injects verified catalog (packages, coaches) and authenticated member context (profile,
  * active subscription, active workout plan) into AI prompts.
@@ -39,7 +42,9 @@ public class AiRagContextService {
     private static final long CATALOG_CACHE_TTL_MS = 60_000L;
     private static final long MEMBER_CACHE_TTL_MS = 30_000L;
 
+    /** Danh mục đã lưu tạm kèm thời điểm hết hạn. */
     private record CachedCatalog(CatalogDto catalog, long expiresAt) {}
+    /** Phần hồ sơ hội viên đã dựng sẵn kèm thời điểm hết hạn. */
     private record CachedMemberSnapshot(String memberSection, long expiresAt) {}
 
     private volatile CachedCatalog cachedCatalog;
@@ -59,6 +64,7 @@ public class AiRagContextService {
     @Autowired(required = false)
     private Clock clock;
 
+    /** Constructor Spring dùng; các phụ thuộc là tùy chọn để test dễ dựng. */
     @Autowired
     public AiRagContextService(
             @Autowired(required = false) PublicCatalogService catalogService,
@@ -71,6 +77,10 @@ public class AiRagContextService {
         this.trainingPlanItemRepository = trainingPlanItemRepository;
     }
 
+    /**
+     * Dựng khối dữ liệu hệ thống cho prompt: thời điểm hiện tại, hồ sơ hội viên (lưu tạm 30 giây), bảng giá và
+     * HLV (lưu tạm 60 giây), cùng các mục quy định liên quan tới câu hỏi.
+     */
     @Transactional(readOnly = true)
     public String buildRagContext(Member member, String userQuery) {
         LocalDateTime now = LocalDateTime.now((clock != null ? clock : Clock.system(CenterTime.ZONE)).withZone(CenterTime.ZONE));
@@ -107,6 +117,10 @@ public class AiRagContextService {
         return sb.toString().trim();
     }
 
+    /**
+     * Phần hồ sơ hội viên: mã, mục tiêu, trình độ, lưu ý sức khỏe, gói đang hoạt động và giáo án hiện tại (tối
+     * đa 10 bài).
+     */
     private void appendMemberContext(StringBuilder sb, Member member) {
         sb.append("\n1. HỒ SƠ HỘI VIÊN ĐANG TRÒ CHUYỆN:\n");
         sb.append("- Mã hội viên: ").append(member.getMembershipCode() != null ? member.getMembershipCode() : "#" + member.getUserId()).append("\n");
@@ -167,6 +181,7 @@ public class AiRagContextService {
         }
     }
 
+    /** Phần danh mục: bảng giá các gói đang bán và đội ngũ HLV. */
     private void appendCatalogContext(StringBuilder sb) {
         if (catalogService == null) {
             return;
@@ -214,10 +229,12 @@ public class AiRagContextService {
         return stripped.replaceAll("[^a-z0-9]+", " ").trim();
     }
 
+    /** Tên thứ trong tuần bằng tiếng Việt. */
     private static String weekdayLabel(LocalDate date) {
         return WEEKDAY_LABELS[date.getDayOfWeek().getValue() - 1];
     }
 
+    /** Lấy danh mục công khai, dùng bản lưu tạm nếu còn hạn. */
     private CatalogDto getCachedCatalog() {
         long now = System.currentTimeMillis();
         CachedCatalog current = this.cachedCatalog;
@@ -231,6 +248,7 @@ public class AiRagContextService {
         return fresh;
     }
 
+    /** Phần quy định và tiện ích của trung tâm, chỉ gồm các mục liên quan tới câu hỏi. */
     private void appendPolicyContext(StringBuilder sb, String userQuery) {
         AiKnowledgeBase base = knowledgeBase != null ? knowledgeBase : defaultKnowledgeBase();
         sb.append("\n4. QUY ĐỊNH & TIỆN ÍCH TRUNG TÂM SÖL:");
@@ -239,6 +257,7 @@ public class AiRagContextService {
 
     private static volatile AiKnowledgeBase fallbackKnowledgeBase;
 
+    /** Bộ kiến thức dự phòng khi không có bản Spring tiêm vào (unit test). */
     private static AiKnowledgeBase defaultKnowledgeBase() {
         AiKnowledgeBase base = fallbackKnowledgeBase;
         if (base == null) {

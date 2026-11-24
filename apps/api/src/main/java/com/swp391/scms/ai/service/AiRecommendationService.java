@@ -37,6 +37,10 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Supplier;
 
+/**
+ * Gợi ý giáo án bằng AI cho HLV/quản lý: lấy hồ sơ và số đo hội viên, xu hướng cân nặng, giáo án hiện tại; gọi
+ * AI ngoài transaction; đọc kết quả JSON một cách chịu lỗi; lưu nhật ký và có thể áp dụng thành giáo án thật.
+ */
 @Service
 public class AiRecommendationService {
 
@@ -74,12 +78,14 @@ public class AiRecommendationService {
     private final TransactionTemplate writeTx;
     private final TransactionTemplate readOnlyTx;
 
+    /** Constructor cho test với các phụ thuộc tối thiểu. */
     public AiRecommendationService(AiClient aiClient,
                                    AiRecommendationLogRepository recommendationLogRepository,
                                    MemberRepository memberRepository) {
         this(aiClient, recommendationLogRepository, memberRepository, null, null, null, new ObjectMapper(), null);
     }
 
+    /** Constructor cho test có thêm repository. */
     public AiRecommendationService(AiClient aiClient,
                                    AiRecommendationLogRepository recommendationLogRepository,
                                    MemberRepository memberRepository,
@@ -91,6 +97,7 @@ public class AiRecommendationService {
                 progressLogRepository, trainingPlanService, objectMapper, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public AiRecommendationService(AiClient aiClient,
                                    AiRecommendationLogRepository recommendationLogRepository,
@@ -117,14 +124,17 @@ public class AiRecommendationService {
         }
     }
 
+    /** Chạy hành động trong transaction chỉ đọc (không có trình quản lý transaction thì chạy thẳng). */
     private <T> T inReadOnlyTx(Supplier<T> action) {
         return readOnlyTx != null ? readOnlyTx.execute(status -> action.get()) : action.get();
     }
 
+    /** Chạy hành động trong transaction ghi (không có trình quản lý transaction thì chạy thẳng). */
     private <T> T inWriteTx(Supplier<T> action) {
         return writeTx != null ? writeTx.execute(status -> action.get()) : action.get();
     }
 
+    /** Gợi ý dạng văn bản tự do cho hội viên (cách cũ) và lưu nhật ký. */
     public String generateRecommendation(Long memberId, String healthContext) {
         // Phase 1: short read-only transaction
         Member member = inReadOnlyTx(() -> memberRepository.findById(memberId)
@@ -155,6 +165,7 @@ public class AiRecommendationService {
         return response;
     }
 
+    /** Ảnh chụp dữ liệu đọc được trước khi gọi AI: hội viên, HLV, số đo, dữ liệu đầu vào và ngữ cảnh truy xuất. */
     private record WorkoutPlanReadSnapshot(
             Member member,
             String memberName,
@@ -167,10 +178,16 @@ public class AiRecommendationService {
             String retrievedContext
     ) {}
 
+    /** Đề xuất giáo án (không chỉ rõ vai trò người gọi). */
     public AiWorkoutPlanResponse generateWorkoutPlan(AiWorkoutPlanRequest request, Long coachUserId) {
         return generateWorkoutPlan(request, coachUserId, null);
     }
 
+    /**
+     * Đề xuất giáo án: (1) đọc hồ sơ hội viên (phải còn active), HLV chỉ được soạn cho học viên mình phụ trách,
+     * số đo mới nhất và BMI; (2) kiểm tra giới hạn tần suất rồi gọi AI dạng JSON; (3) đọc mục tiêu, phân tích,
+     * bài tập (thiếu thì dùng mẫu mặc định) và lưu nhật ký.
+     */
     public AiWorkoutPlanResponse generateWorkoutPlan(AiWorkoutPlanRequest request, Long callerUserId, String callerRole) {
         // Phase 1: short read-only transaction
         WorkoutPlanReadSnapshot snapshot = inReadOnlyTx(() -> {
@@ -286,6 +303,10 @@ public class AiRecommendationService {
         return response;
     }
 
+    /**
+     * Áp dụng gợi ý thành giáo án: HLV chỉ áp dụng gợi ý của chính mình; ngày mặc định 4 tuần từ hôm nay; dùng
+     * mục tiêu và bài tập đã chỉnh (nếu có) hoặc từ gợi ý; tạo giáo án nháp và kích hoạt ngay nếu được yêu cầu.
+     */
     @Transactional
     public TrainingPlanDto applyRecommendation(Long recommendationId,
                                                AiApplyRecommendationRequest request,
@@ -358,6 +379,7 @@ public class AiRecommendationService {
         return created;
     }
 
+    /** Các gợi ý của một hội viên sau khi kiểm tra quyền (HLV phải đang phụ trách). */
     @Transactional(readOnly = true)
     public List<AiWorkoutPlanResponse> getMemberRecommendations(Long memberId, Long currentUserId, String currentRole) {
         if ("COACH".equalsIgnoreCase(currentRole) && currentCoachMembers != null) {
@@ -368,6 +390,7 @@ public class AiRecommendationService {
         return getMemberRecommendations(memberId);
     }
 
+    /** Các gợi ý AI của hội viên, mới nhất trước, đã đọc lại thành DTO. */
     @Transactional(readOnly = true)
     public List<AiWorkoutPlanResponse> getMemberRecommendations(Long memberId) {
         if (!memberRepository.existsById(memberId)) {
@@ -395,6 +418,7 @@ public class AiRecommendationService {
                 .toList();
     }
 
+    /** Giá trị mới nhất của từng loại số đo của hội viên. */
     private Map<String, BigDecimal> readLatestMetrics(Long memberId) {
         Map<String, BigDecimal> map = new HashMap<>();
         if (progressLogRepository == null || memberId == null) {
@@ -412,6 +436,10 @@ public class AiRecommendationService {
         return map;
     }
 
+    /**
+     * Câu tóm tắt thể trạng dự phòng: mã hội viên, trình độ, chiều cao/cân nặng/BMI, lưu ý sức khỏe và yêu cầu
+     * của HLV.
+     */
     private String buildAnalysisSummary(Member member, BigDecimal height, BigDecimal weight, BigDecimal bmi, String extra) {
         StringBuilder sb = new StringBuilder("Phân tích thể trạng hội viên ");
         sb.append(member.getMembershipCode() != null ? member.getMembershipCode() : "#" + member.getUserId());
@@ -433,6 +461,7 @@ public class AiRecommendationService {
         return sb.toString();
     }
 
+    /** Đọc chuỗi JSON thành cây; lỗi thì trả null. */
     private JsonNode tryReadTree(String json) {
         if (json == null || json.isBlank()) {
             return null;
@@ -444,6 +473,7 @@ public class AiRecommendationService {
         }
     }
 
+    /** Mục tiêu từ kết quả AI, không có thì dùng mặc định. */
     private String parseGoalOrDefault(JsonNode root, String defaultGoal) {
         if (root != null && root.hasNonNull("goal") && !root.get("goal").asText().isBlank()) {
             return root.get("goal").asText();
@@ -451,6 +481,7 @@ public class AiRecommendationService {
         return defaultGoal;
     }
 
+    /** Phần phân tích từ kết quả AI (hoặc trường content), không có thì dùng mặc định. */
     private String parseAnalysisOrDefault(JsonNode root, String defaultAnalysis) {
         if (root != null) {
             if (root.hasNonNull("analysis") && !root.get("analysis").asText().isBlank()) {
@@ -463,6 +494,7 @@ public class AiRecommendationService {
         return defaultAnalysis;
     }
 
+    /** Danh sách bài tập từ kết quả AI; không đọc được thì dùng 3 bài mẫu (có ghi chú sức khỏe và yêu cầu thêm). */
     private List<TrainingPlanItemCreateDto> parseOrBuildStructuredItems(JsonNode root, Member member, String extra) {
         List<TrainingPlanItemCreateDto> parsed = parseItems(root);
         if (!parsed.isEmpty()) {
@@ -486,6 +518,9 @@ public class AiRecommendationService {
     }
 
     /**
+     * Đọc từng bài tập một để một trường lạ không làm hỏng cả giáo án; đưa ngày, hiệp, lần, thời gian và thứ tự
+     * về khoảng hợp lệ; tối đa số bài cho phép.
+     *
      * Reads the model's items one by one, so a single odd field or out-of-range number
      * cannot discard the whole plan; values are brought into the ranges the plan form accepts.
      */
@@ -522,6 +557,7 @@ public class AiRecommendationService {
         return items;
     }
 
+    /** Lấy giá trị chữ của trường đầu tiên có giá trị trong các tên cho trước. */
     private static String text(JsonNode node, String... names) {
         for (String name : names) {
             JsonNode value = node.get(name);
@@ -532,6 +568,7 @@ public class AiRecommendationService {
         return null;
     }
 
+    /** Lấy số nguyên của trường đầu tiên có giá trị; với chuỗi như "10-12" hoặc "12 reps" thì lấy số đứng đầu. */
     private static Integer integer(JsonNode node, String... names) {
         for (String name : names) {
             JsonNode value = node.get(name);
@@ -550,11 +587,14 @@ public class AiRecommendationService {
         return null;
     }
 
+    /** Giữ giá trị nếu không nhỏ hơn min, không thì null. */
     private static Integer atLeast(Integer value, int min) {
         return value != null && value >= min ? value : null;
     }
 
     /**
+     * Ngữ cảnh truy xuất cho AI: chuyên môn HLV, số tuần giáo án, diễn biến cân nặng và giáo án đang áp dụng.
+     *
      * Retrieval for plan generation: what the model cannot know from the profile alone —
      * the requested length, how the member's weight has moved and the plan they are on now.
      */
@@ -574,6 +614,7 @@ public class AiRecommendationService {
         return sb.toString();
     }
 
+    /** Diễn biến cân nặng từ lần đo đầu tới lần đo gần nhất (cần ít nhất 2 lần đo). */
     private void appendWeightTrend(StringBuilder sb, Long memberId) {
         if (progressLogRepository == null) {
             return;
@@ -598,6 +639,7 @@ public class AiRecommendationService {
                 .append(weights.size()).append(" lần đo.");
     }
 
+    /** Giáo án đang áp dụng của hội viên (ưu tiên của HLV đang soạn) kèm các bài tập. */
     private void appendCurrentPlan(StringBuilder sb, Long memberId, Long targetCoachId) {
         if (trainingPlanRepository == null) {
             return;
@@ -635,6 +677,7 @@ public class AiRecommendationService {
         });
     }
 
+    /** Đọc chuỗi JSON thành Map; lỗi thì trả {raw: chuỗi gốc}. */
     private Map<String, Object> parseMapSafe(String json) {
         if (json == null || json.isBlank()) return Map.of();
         try {
@@ -644,6 +687,7 @@ public class AiRecommendationService {
         }
     }
 
+    /** Ghi đối tượng thành chuỗi JSON; lỗi thì trả "{}". */
     private String toJsonSafe(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -665,6 +709,10 @@ public class AiRecommendationService {
     @org.springframework.beans.factory.annotation.Value("${app.ai.recommend.rate-limit.window-minutes:10}")
     private int rateLimitWindowMinutes = 10;
 
+    /**
+     * Giới hạn số lần tạo gợi ý của mỗi người (mặc định 10 lần trong 10 phút) bằng cửa sổ trượt trong bộ nhớ;
+     * vượt thì báo 429 kèm thời gian chờ.
+     */
     private void enforceRateLimit(Long userId) {
         if (userId == null) {
             return;

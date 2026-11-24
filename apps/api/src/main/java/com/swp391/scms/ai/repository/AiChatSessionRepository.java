@@ -7,6 +7,8 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
+ * Truy cập bảng ai_chat_sessions (phiên chat AI).
+ *
  * Repository for {@link AiChatSession}.
  */
 @Repository

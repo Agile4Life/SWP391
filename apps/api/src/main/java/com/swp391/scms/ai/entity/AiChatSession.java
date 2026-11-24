@@ -6,6 +6,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
+ * Bảng ai_chat_sessions: phiên chat AI của một hội viên hoặc của một nhân viên quầy (chủ đề, thời điểm bắt
+ * đầu/kết thúc).
+ *
  * Entity mapping table ai_chat_sessions (schema is generated code-first by Hibernate).
  * A session belongs either to a member (with their profile as context) or to a front-desk staff account
  * (centre-wide data only); exactly one of {@code member} and {@code staffUser} is set.
