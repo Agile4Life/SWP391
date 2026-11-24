@@ -44,6 +44,7 @@ class CourseEnrollmentSecurityTest {
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
+    /** Kiểm thử: người chưa đăng nhập không đăng ký, thanh toán hay hủy khóa học được. */
     @Test
     void anonymousCannotEnrollCheckoutOrCancel() throws Exception {
         mvc.perform(post("/api/v1/classes/5/enroll")).andExpect(status().isUnauthorized());
@@ -52,6 +53,7 @@ class CourseEnrollmentSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: các vai trò nhân viên không thể thao tác thay vai hội viên. */
     @Test
     void staffRolesCannotActAsTheMember() throws Exception {
         for (String role : List.of("RECEPTIONIST", "COACH", "CENTER_MANAGER", "MANAGER")) {
@@ -65,6 +67,7 @@ class CourseEnrollmentSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: hội viên truy cập được đăng ký, thanh toán và hủy khóa học. */
     @Test
     void memberReachesEnrollCheckoutAndCancel() throws Exception {
         mvc.perform(post("/api/v1/classes/5/enroll").with(authentication(actor("MEMBER"))))

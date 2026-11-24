@@ -35,6 +35,7 @@ class AccountProvisioningSecurityTest {
                 List.of(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
+    /** Kiểm thử: quản lý không thể vượt quyền cấp tài khoản nhân viên qua endpoint user/role chung. */
     @Test
     void managerCannotBypassStaffProvisioningThroughGeneralUserOrRoleEndpoints() throws Exception {
         mvc.perform(get("/api/v1/users").with(authentication(actor("CENTER_MANAGER"))))
@@ -50,6 +51,7 @@ class AccountProvisioningSecurityTest {
         verifyNoInteractions(service, roles);
     }
 
+    /** Kiểm thử: admin dùng được chức năng quản trị tài khoản và vai trò. */
     @Test
     void adminCanUseAccountAndRoleAdministration() throws Exception {
         mvc.perform(get("/api/v1/users").with(authentication(actor("ADMIN"))))
@@ -62,6 +64,7 @@ class AccountProvisioningSecurityTest {
                 .andExpect(status().isCreated());
     }
 
+    /** Kiểm thử: quản lý và admin được cấp tài khoản nhân viên, các vai trò khác thì không. */
     @Test
     void managerAndAdminCanProvisionStaffButOtherRolesCannot() throws Exception {
         for (String role : List.of("CENTER_MANAGER", "ADMIN")) {
@@ -82,6 +85,7 @@ class AccountProvisioningSecurityTest {
                         .content(staffBody("COACH"))).andExpect(status().isUnauthorized());
     }
 
+    /** Kiểm thử: quản lý không thể nhét vai trò đặc quyền hay công khai vào việc cấp tài khoản nhân viên. */
     @Test
     void managerCannotInjectPrivilegedOrPublicRolesIntoStaffProvisioning() throws Exception {
         for (String role : List.of("CENTER_MANAGER", "MANAGER", "ADMIN", "MEMBER", "STAFF")) {
@@ -92,6 +96,7 @@ class AccountProvisioningSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Hàm trợ giúp của test: tạo body JSON để cấp tài khoản nhân viên. */
     private String staffBody(String role) {
         return "{\"fullName\":\"Staff\",\"email\":\"staff@gmail.com\",\"password\":\"Secret123\",\"gender\":\"other\",\"roleCode\":\"" + role + "\"}";
     }

@@ -21,17 +21,20 @@ class JwtAuthenticationFilterTest {
     private final JwtService jwt = new JwtService("test-only-signing-secret-with-at-least-32-bytes", 60000L);
     private final JwtAuthenticationFilter filter = new JwtAuthenticationFilter(jwt, users);
 
+    /** Dọn dẹp sau mỗi test: xóa SecurityContext. */
     @AfterEach
     void clearContext() {
         SecurityContextHolder.clearContext();
     }
 
+    /** Hàm trợ giúp của test: tạo request có header Authorization chứa token. */
     private void request(String token) throws Exception {
         var request = new MockHttpServletRequest("GET", "/api/v1/check-in/history");
         request.addHeader("Authorization", "Bearer " + token);
         filter.doFilter(request, new MockHttpServletResponse(), (req, res) -> {});
     }
 
+    /** Kiểm thử: xác thực từ trạng thái tài khoản dạng scalar mà không nạp hồ sơ người dùng. */
     @Test
     void authenticatesFromScalarAccountStateWithoutLoadingUserProfiles() throws Exception {
         when(users.findAuthenticationById(10L)).thenReturn(Optional.of(new AuthenticationUser(10L, "staff", "active", "RECEPTIONIST")));
@@ -44,6 +47,7 @@ class JwtAuthenticationFilterTest {
         verifyNoMoreInteractions(users);
     }
 
+    /** Kiểm thử: từ chối tài khoản không còn hoạt động. */
     @ParameterizedTest
     @ValueSource(strings = {"locked", "inactive"})
     void refusesAccountsThatAreNoLongerActive(String status) throws Exception {
@@ -52,6 +56,7 @@ class JwtAuthenticationFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /** Kiểm thử: từ chối tài khoản không tồn tại hoặc đã xóa mềm. */
     @Test
     void refusesMissingOrSoftDeletedAccounts() throws Exception {
         when(users.findAuthenticationById(10L)).thenReturn(Optional.empty());
@@ -59,6 +64,7 @@ class JwtAuthenticationFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /** Kiểm thử: kiểm tra lại trạng thái tài khoản hiện tại ở request kế tiếp. */
     @Test
     void checksCurrentAccountStateAgainForTheNextRequest() throws Exception {
         when(users.findAuthenticationById(10L))
@@ -72,6 +78,7 @@ class JwtAuthenticationFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /** Kiểm thử: từ chối token cấp trước khi đổi mật khẩu nhưng chấp nhận token mới hơn. */
     @Test
     void refusesTokensIssuedBeforeThePasswordChangedButAcceptsNewerOnes() throws Exception {
         var token = jwt.generateToken(10L, "member", "MEMBER");
@@ -87,6 +94,7 @@ class JwtAuthenticationFilterTest {
         assertNotNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /** Kiểm thử: đổi mật khẩu ghi dấu thời điểm đổi, còn đặt mật khẩu lần đầu thì không. */
     @Test
     void replacingAPasswordStampsTheChangeButSettingTheFirstOneDoesNot() {
         var user = new com.swp391.scms.users.entity.User();
@@ -96,6 +104,7 @@ class JwtAuthenticationFilterTest {
         assertNotNull(user.getPasswordChangedAt());
     }
 
+    /** Kiểm thử: từ chối token ký bằng secret khác trước khi truy cập database. */
     @Test
     void rejectsTokensSignedWithAnotherSecretBeforeAccessingTheDatabase() throws Exception {
         var otherSigner = new JwtService("another-test-signing-secret-with-at-least-32-bytes", 60000L);

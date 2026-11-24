@@ -40,57 +40,68 @@ class MethodSecurityPolicyTest {
     @Configuration
     @EnableMethodSecurity
     static class MethodSecurityConfig {
+        /** Hàm trợ giúp của test: tạo UserService giả cho test method security. */
         @Bean
         public UserService userService() {
             return mock(UserService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo PackageService giả. */
         @Bean
         public PackageService packageService() {
             return mock(PackageService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo SupportRequestService giả. */
         @Bean
         public SupportRequestService supportRequestService() {
             return mock(SupportRequestService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo MessageService giả. */
         @Bean
         public MessageService messageService() {
             return mock(MessageService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo UserController giả. */
         @Bean
         public UserController userController(UserService userService) {
             return new UserController(userService);
         }
 
+        /** Hàm trợ giúp của test: tạo PackageController giả. */
         @Bean
         public PackageController packageController(PackageService packageService, MessageService messageService) {
             return new PackageController(packageService, messageService);
         }
 
+        /** Hàm trợ giúp của test: tạo SupportRequestController giả. */
         @Bean
         public SupportRequestController supportRequestController(SupportRequestService service, MessageService messageService) {
             return new SupportRequestController(service, messageService);
         }
 
+        /** Hàm trợ giúp của test: tạo PaymentService giả. */
         @Bean
         public com.swp391.scms.finance.service.PaymentService paymentService() {
             return mock(com.swp391.scms.finance.service.PaymentService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo PaymentController giả. */
         @Bean
         public com.swp391.scms.finance.PaymentController paymentController(
                 com.swp391.scms.finance.service.PaymentService paymentService, MessageService messageService) {
             return new com.swp391.scms.finance.PaymentController(paymentService, messageService);
         }
 
+        /** Hàm trợ giúp của test: tạo ClassService giả. */
         @Bean
         public com.swp391.scms.scheduling.service.ClassService classService() {
             return mock(com.swp391.scms.scheduling.service.ClassService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo ClassController giả. */
         @Bean
         public com.swp391.scms.scheduling.ClassController classController(
                 com.swp391.scms.scheduling.service.ClassService classService, MessageService messageService) {
@@ -129,6 +140,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> userController.deleteUser(4L));
     }
 
+    /** Kiểm thử: admin xóa được người dùng. */
     @Test
     @WithMockUser(roles = "ADMIN")
     void adminCanDeleteUser() {
@@ -224,6 +236,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> paymentController.refundPayment(1L, req));
     }
 
+    /** Hàm trợ giúp của test: tạo người thực hiện (actor) cho yêu cầu hỗ trợ. */
     private static com.swp391.scms.security.AuthenticatedPrincipal supportActor() {
         return new com.swp391.scms.security.AuthenticatedPrincipal(1L, "actor", "RECEPTIONIST");
     }

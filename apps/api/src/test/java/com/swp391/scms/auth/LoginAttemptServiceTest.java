@@ -16,6 +16,7 @@ class LoginAttemptServiceTest {
     private MutableClock clock;
     private LoginAttemptService service;
 
+    /** Đồng hồ giả lập cho test, cho phép chỉnh thời gian bằng tay. */
     private static class MutableClock extends Clock {
         private Instant now;
         private final ZoneId zone;
@@ -25,32 +26,38 @@ class LoginAttemptServiceTest {
             this.zone = zone;
         }
 
+        /** Hàm trợ giúp của test: tua đồng hồ giả thêm số giây cho trước. */
         void advanceSeconds(long seconds) {
             this.now = this.now.plusSeconds(seconds);
         }
 
+        /** Trả về múi giờ của đồng hồ giả. */
         @Override
         public ZoneId getZone() {
             return zone;
         }
 
+        /** Tạo bản sao đồng hồ giả với múi giờ khác. */
         @Override
         public Clock withZone(ZoneId zone) {
             return new MutableClock(now, zone);
         }
 
+        /** Trả về thời điểm hiện tại của đồng hồ giả. */
         @Override
         public Instant instant() {
             return now;
         }
     }
 
+    /** Chuẩn bị trước mỗi test: tạo LoginAttemptService với đồng hồ giả. */
     @BeforeEach
     void setUp() {
         clock = new MutableClock(Instant.parse("2026-11-09T03:00:00Z"), ZoneId.of("UTC"));
         service = new LoginAttemptService(clock);
     }
 
+    /** Kiểm thử: trạng thái ban đầu chưa có lần thất bại nào. */
     @Test
     @DisplayName("Initial state has 5 remaining attempts and is not blocked")
     void initialState() {
@@ -59,6 +66,7 @@ class LoginAttemptServiceTest {
         assertEquals(0, service.getRemainingLockoutSeconds("testuser"));
     }
 
+    /** Kiểm thử: bốn lần thất bại đầu chưa khóa. */
     @Test
     @DisplayName("First 4 failures decrement remaining attempts without blocking")
     void firstFourFailures() {
@@ -75,6 +83,7 @@ class LoginAttemptServiceTest {
         assertFalse(service.isBlocked("testuser"));
     }
 
+    /** Kiểm thử: lần thất bại thứ năm khóa tài khoản một phút. */
     @Test
     @DisplayName("5th failure triggers lockout for 60 seconds (1 minute)")
     void fifthFailureLocksForOneMinute() {
@@ -96,6 +105,7 @@ class LoginAttemptServiceTest {
         assertEquals(0, service.getRemainingLockoutSeconds("testuser"));
     }
 
+    /** Kiểm thử: đăng nhập thành công đặt lại bộ đếm. */
     @Test
     @DisplayName("Successful login resets failed attempts")
     void loginSuccessResetsCounter() {
@@ -108,6 +118,7 @@ class LoginAttemptServiceTest {
         assertFalse(service.isBlocked("testuser"));
     }
 
+    /** Kiểm thử: định danh đăng nhập được chuẩn hóa (hoa/thường, khoảng trắng) trước khi đếm. */
     @Test
     @DisplayName("Username normalization treats case and whitespace equally")
     void normalization() {

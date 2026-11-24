@@ -36,6 +36,7 @@ class AuditOccupancySecurityTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Kiểm thử: admin đọc được audit và công suất nhưng không đọc được doanh thu. */
     @Test
     void adminCanReadAuditAndOccupancyButNotRevenue() throws Exception {
         mvc.perform(get("/api/v1/admin/audit-logs").with(user("admin").roles("ADMIN")))
@@ -48,6 +49,7 @@ class AuditOccupancySecurityTest {
         }
     }
 
+    /** Kiểm thử: quản lý vẫn xem được báo cáo nhưng không đọc được audit. */
     @ParameterizedTest
     @ValueSource(strings = {"MANAGER", "CENTER_MANAGER"})
     void managerKeepsReportsButCannotReadAudit(String role) throws Exception {
@@ -59,6 +61,7 @@ class AuditOccupancySecurityTest {
         }
     }
 
+    /** Kiểm thử: các vai trò khác không đọc được audit hoặc công suất. */
     @ParameterizedTest
     @ValueSource(strings = {"MEMBER", "COACH", "STAFF", "RECEPTIONIST"})
     void otherRolesCannotReadAuditOrOccupancy(String role) throws Exception {
@@ -67,12 +70,14 @@ class AuditOccupancySecurityTest {
         }
     }
 
+    /** Kiểm thử: người chưa đăng nhập không đọc được audit hoặc công suất. */
     @Test
     void anonymousCannotReadAuditOrOccupancy() throws Exception {
         mvc.perform(get("/api/v1/admin/audit-logs")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/reports/class-utilization")).andExpect(status().isUnauthorized());
     }
 
+    /** Kiểm thử: method security độc lập từ chối quản lý đọc audit. */
     @Test
     @WithMockUser(roles = "MANAGER")
     void methodSecurityIndependentlyRejectsManagerAudit() {
@@ -80,6 +85,7 @@ class AuditOccupancySecurityTest {
                 () -> auditController.getAuditLogs(null, null, null, null, null, 0, 8));
     }
 
+    /** Kiểm thử: method security vẫn từ chối admin đọc doanh thu. */
     @Test
     @WithMockUser(roles = "ADMIN")
     void methodSecurityStillRejectsAdminRevenue() {

@@ -34,11 +34,13 @@ class AuthSessionEndpointTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Kiểm thử: người gọi chưa đăng nhập bị từ chối. */
     @Test
     void anonymousCallerIsRejected() throws Exception {
         mvc.perform(get("/api/v1/auth/me")).andExpect(status().isUnauthorized());
     }
 
+    /** Kiểm thử: người đã đăng nhập nhận lại username và vai trò hiện tại. */
     @Test
     void authenticatedCallerReceivesCurrentUsernameAndRole() throws Exception {
         var auth = new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(7L, "manager01", "CENTER_MANAGER"),
@@ -49,6 +51,7 @@ class AuthSessionEndpointTest {
                 .andExpect(jsonPath("$.data.role").value("CENTER_MANAGER"));
     }
 
+    /** Kiểm thử: tài khoản chỉ có email thì tên đầy đủ được tra theo id. */
     @Test
     void emailOnlyAccountGetsItsFullNameLookedUpById() throws Exception {
         // Demo and staff accounts have no username: the principal carries the email, so the name must come by id.

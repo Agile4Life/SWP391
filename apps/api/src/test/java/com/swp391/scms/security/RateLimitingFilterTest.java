@@ -16,6 +16,7 @@ import static org.mockito.Mockito.*;
 /** Bộ kiểm thử cho bộ lọc RateLimitingFilter (rate limiting filter). */
 class RateLimitingFilterTest {
 
+    /** Kiểm thử: request auth bị giới hạn tần suất và trả đúng dạng phản hồi API. */
     @Test
     void authRequestsAreLimitedAndUseApiResponseShape() throws Exception {
         MockHttpServletResponse response = null;
@@ -31,6 +32,7 @@ class RateLimitingFilterTest {
         assertEquals(429, json.get("status").asInt());
     }
 
+    /** Kiểm thử: đọc phiên mỗi lần mở portal không tính vào hạn mức đăng nhập. */
     @Test
     void sessionReadOnEveryPortalLoadDoesNotUseTheLoginBudget() throws Exception {
         for (int i = 0; i < 100; i++) {
@@ -50,6 +52,7 @@ class RateLimitingFilterTest {
     private RateLimitingFilter filter;
     private FilterChain filterChain;
 
+    /** Chuẩn bị trước mỗi test: tạo bộ lọc giới hạn tần suất cho test. */
     @BeforeEach
     void setUp() {
         filter = new RateLimitingFilter();

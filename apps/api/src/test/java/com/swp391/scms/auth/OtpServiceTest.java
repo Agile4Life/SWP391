@@ -31,17 +31,20 @@ class OtpServiceTest {
     private final PasswordEncoder encoder = new BCryptPasswordEncoder();
     private OtpService service;
 
+    /** Chuẩn bị trước mỗi test: tạo OtpService với đồng hồ và repository giả. */
     @BeforeEach
     void setUp() {
         service = new OtpService(repository, encoder, CLOCK);
     }
 
+    /** Hàm trợ giúp của test: tạo thử thách OTP mẫu. */
     private OtpChallenge challenge(LocalDateTime expiresAt, int failedAttempts) {
         OtpChallenge c = new OtpChallenge("a@b.com", encoder.encode("123456"), expiresAt, NOW);
         c.setFailedAttempts(failedAttempts);
         return c;
     }
 
+    /** Kiểm thử: sinh OTP trả mã 6 chữ số và lưu bản băm. */
     @Test
     void generateOtpReturnsSixDigitCodeAndStoresHash() {
         String code = service.generateOtp(" A@B.com ");
@@ -51,6 +54,7 @@ class OtpServiceTest {
         verify(repository).save(any(OtpChallenge.class));
     }
 
+    /** Kiểm thử: nhập đúng mã thì xác thực thành công và tiêu thụ thử thách. */
     @Test
     void verifySucceedsWithCorrectCodeAndConsumesChallenge() {
         OtpChallenge c = challenge(NOW.plusMinutes(5), 0);
@@ -60,6 +64,7 @@ class OtpServiceTest {
         verify(repository).delete(c);
     }
 
+    /** Kiểm thử: báo mã OTP hết hạn. */
     @Test
     void verifyReportsExpiredCode() {
         when(repository.findByTargetForUpdate("a@b.com")).thenReturn(Optional.of(challenge(NOW.minusSeconds(1), 0)));
@@ -67,6 +72,7 @@ class OtpServiceTest {
         assertEquals(OtpService.VerifyResult.EXPIRED_OR_NOT_FOUND, service.verifyOtp("a@b.com", "123456").result());
     }
 
+    /** Kiểm thử: báo thiếu thử thách OTP. */
     @Test
     void verifyReportsMissingChallenge() {
         when(repository.findByTargetForUpdate("a@b.com")).thenReturn(Optional.empty());
@@ -74,6 +80,7 @@ class OtpServiceTest {
         assertEquals(OtpService.VerifyResult.EXPIRED_OR_NOT_FOUND, service.verifyOtp("a@b.com", "123456").result());
     }
 
+    /** Kiểm thử: nhập sai làm giảm số lần thử còn lại. */
     @Test
     void wrongCodeDecrementsRemainingAttempts() {
         OtpChallenge c = challenge(NOW.plusMinutes(5), 0);
@@ -86,6 +93,7 @@ class OtpServiceTest {
         assertEquals(1, c.getFailedAttempts());
     }
 
+    /** Kiểm thử: nhập sai lần thứ ba thì khóa. */
     @Test
     void thirdWrongCodeLocksOut() {
         OtpChallenge c = challenge(NOW.plusMinutes(5), 2);

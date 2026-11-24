@@ -21,5 +21,6 @@ class ReceptionHealthIntakeTest {
  @Test void missingCheckinOrOtherMemberIsRejected(){when(checkins.findFirstByMemberUserIdAndStatusAndCheckOutTimeIsNullOrderByCheckInTimeDesc(10L,"GRANTED")).thenReturn(Optional.empty());assertDenied();assertThatThrownBy(()->service.addMetric(11L,metric,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);}
  @Test void staffCannotEditDeleteOrReadHistory(){assertThatThrownBy(()->service.updateMetric(10L,1L,metric,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);assertThatThrownBy(()->service.deleteMetric(10L,1L,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);assertThatThrownBy(()->service.getMetrics(10L,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);verifyNoInteractions(logs);}
  @Test void inactiveMemberIsRejected(){member.getUser().setStatus("inactive");assertDenied();}
+ /** Hàm trợ giúp của test: khẳng định thao tác bị từ chối. */
  private void assertDenied(){assertThatThrownBy(()->service.addMetric(10L,metric,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);verifyNoInteractions(logs);}
 }

@@ -53,10 +53,12 @@ class HealthAssessmentTierTest {
     private final LocalDate today = LocalDate.of(2026, 11, 9);
     private Member member;
 
+    /** Hàm trợ giúp của test: tạo một chỉ số sức khỏe mẫu. */
     private HealthMetricDto metric(String name, String value, String unit) {
         return new HealthMetricDto(null, name, new BigDecimal(value), unit, 999L, LocalDateTime.of(2000, 1, 1, 0, 0));
     }
 
+    /** Chuẩn bị trước mỗi test: tạo service chỉ số sức khỏe với repository giả lập. */
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(service, "currentCoachMembers", access);
@@ -102,6 +104,7 @@ class HealthAssessmentTierTest {
         return sub;
     }
 
+    /** Kiểm thử: bất kỳ HLV nào cũng được nhận buổi đánh giá đầu tiên của hội viên đã đăng ký. */
     @Test
     void anyCoachTakesTheFirstAssessmentOfARegisteredMember() {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of());
@@ -111,6 +114,10 @@ class HealthAssessmentTierTest {
         verify(access, never()).requireCoachOf(any(), any());
     }
 
+    /**
+     * Kiểm thử: cùng HLV có thể hoàn thành đánh giá trong ngày nhưng không được đánh giá các ngày sau nếu chưa
+     * được phân công.
+     */
     @Test
     void theSameCoachCanFinishTheAssessmentTheSameDayButNotLaterOnesWithoutBeingAssigned() {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(18, 30))));
@@ -123,6 +130,7 @@ class HealthAssessmentTierTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: tài khoản đã xóa không có buổi đánh giá đầu tiên. */
     @Test
     void aDeletedAccountGetsNoFirstAssessment() {
         member.getUser().setDeletedAt(LocalDateTime.now());
@@ -133,6 +141,7 @@ class HealthAssessmentTierTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: mỡ cơ thể và khối lượng cơ chỉ dành cho hạng Platinum. */
     @Test
     void bodyFatAndMuscleMassAreOnlyForPlatinum() {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of());
@@ -147,6 +156,7 @@ class HealthAssessmentTierTest {
         assertThat(service.addMetric(10L, metric("muscle_mass", "30", "kg"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("muscle_mass");
     }
 
+    /** Kiểm thử: Silver chỉ có buổi đánh giá đầu tiên, Gold và Platinum có đánh giá theo dõi. */
     @Test
     void silverGetsTheFirstAssessmentOnlyWhileGoldAndPlatinumGetFollowUps() {
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("SILVER", 30)));
@@ -163,6 +173,7 @@ class HealthAssessmentTierTest {
         assertThat(service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("weight");
     }
 
+    /** Kiểm thử: Gold và Platinum có một ngày đánh giá mỗi chu kỳ 30 ngày. */
     @Test
     void goldAndPlatinumGetOneAssessmentDayPerThirtyDayCycle() {
         // Gold started 2 days ago: the cycle is today-2 .. today+27, so another day of it is already used.
@@ -186,10 +197,12 @@ class HealthAssessmentTierTest {
         assertThrows(ForbiddenException.class, () -> service.addMetric(10L, metric("body_fat", "18", "%"), 30L, "CENTER_MANAGER"));
     }
 
+    /** Hàm trợ giúp của test: tạo một mục đo cho request ghi hàng loạt. */
     private HealthMetricBatchDto.Item item(String name, String value, String unit) {
         return new HealthMetricBatchDto.Item(name, new BigDecimal(value), unit);
     }
 
+    /** Kiểm thử: ghi hàng loạt lưu mọi số đo và chỉ suy ra BMI một lần. */
     @Test
     void aBatchSavesEveryMeasurementAndDerivesBmiOnlyOnce() {
         MemberProgressLog height = row(20L, today.atTime(20, 0));
@@ -206,6 +219,7 @@ class HealthAssessmentTierTest {
                 .containsExactly("height", "weight", "body_fat", "bmi");
     }
 
+    /** Kiểm thử: ghi hàng loạt từ chối BMI nhập tay trùng và vi phạm hạng mà không lưu gì. */
     @Test
     void aBatchRejectsManualBmiDuplicatesAndTierViolationsWithoutSavingAnything() {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of());
@@ -223,6 +237,7 @@ class HealthAssessmentTierTest {
         verify(logs, never()).save(any());
     }
 
+    /** Kiểm thử: hội viên không có gói đang hoạt động thì không bị giới hạn. */
     @Test
     void membersWithoutAnActivePackageAreNotRestricted() {
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of());

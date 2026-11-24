@@ -38,6 +38,7 @@ class ProductAdminServiceTest {
     final byte[] pngBytes = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0};
     final String pngDataUrl = "data:image/png;base64," + Base64.getEncoder().encodeToString(pngBytes);
 
+    /** Chuẩn bị trước mỗi test: tạo ProductAdminService với repository giả lập. */
     @BeforeEach
     void setup() {
         products = mock(ProductRepository.class);
@@ -78,10 +79,12 @@ class ProductAdminServiceTest {
         );
     }
 
+    /** Hàm trợ giúp của test: tạo request biến thể sản phẩm. */
     static VariantUpsertRequest variantReq(Long id, String sku, String price, Integer initialStock) {
         return new VariantUpsertRequest(id, sku, "Sô-cô-la 2kg", new BigDecimal(price), 60, initialStock, true, 0);
     }
 
+    /** Hàm trợ giúp của test: tạo request sản phẩm hợp lệ. */
     static ProductUpsertRequest validReq(List<VariantUpsertRequest> vars, List<NutrientUpsertRequest> nuts) {
         return new ProductUpsertRequest(
                 "SÖL Whey Isolate",
@@ -102,6 +105,7 @@ class ProductAdminServiceTest {
         );
     }
 
+    /** Kiểm thử: tạo sản phẩm cần ít nhất một biến thể, một mục tiêu và tối đa một điểm nổi bật. */
     @Test
     void createProductRequiresAtLeastOneVariantAndOneGoalAndOneHighlightMax() {
         assertThatThrownBy(() -> service.create(validReq(List.of(), List.of())))
@@ -123,6 +127,7 @@ class ProductAdminServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "PRODUCT_INVALID");
     }
 
+    /** Kiểm thử: trùng tên báo lỗi slug đã dùng, trùng SKU báo lỗi SKU đã dùng. */
     @Test
     void duplicateNameYieldsSlugTakenAndDuplicateSkuYieldsSkuTaken() {
         when(products.existsBySlug("sol-whey-isolate")).thenReturn(true);
@@ -135,6 +140,7 @@ class ProductAdminServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "SKU_TAKEN");
     }
 
+    /** Kiểm thử: cập nhật không đổi tồn kho hiện có và vô hiệu biến thể bị gỡ nhưng đã có đơn. */
     @Test
     void updateDoesNotChangeExistingStockAndDeactivatesRemovedVariantsWithOrders() {
         Product existing = new Product();
@@ -180,6 +186,7 @@ class ProductAdminServiceTest {
         assertThat(updated.variants().get(1).active()).isFalse();
     }
 
+    /** Kiểm thử: từ chối xóa sản phẩm đã có dòng đơn hàng. */
     @Test
     void deleteWithOrderLinesIsRefused() {
         Product existing = new Product();
@@ -192,6 +199,7 @@ class ProductAdminServiceTest {
         verify(products, never()).delete(any());
     }
 
+    /** Kiểm thử: điều chỉnh tồn kho khóa biến thể, ghi lịch sử và từ chối kết quả âm. */
     @Test
     void stockAdjustmentLocksVariantRecordsMovementAndRejectsNegativeResult() {
         ProductVariant v = new ProductVariant();
@@ -211,6 +219,7 @@ class ProductAdminServiceTest {
         verify(movements).save(argThat(m -> m.getDelta() == 7 && "restock".equals(m.getReason())));
     }
 
+    /** Kiểm thử: giới hạn ảnh và thứ tự sắp xếp phải khớp với id ảnh hiện có. */
     @Test
     void imageLimitAndReorderMustMatchExistingIds() {
         Product p = new Product();
@@ -237,6 +246,7 @@ class ProductAdminServiceTest {
         assertThat(reordered.images()).extracting(i -> i.id()).containsExactly(6L, 5L, 4L, 3L, 2L, 1L);
     }
 
+    /** Kiểm thử: tổng quan đếm đúng các đơn thật. */
     @Test
     void summaryCountsRealOrders() {
         LocalDateTime paidRecent = LocalDateTime.of(2026, 11, 1, 10, 0);

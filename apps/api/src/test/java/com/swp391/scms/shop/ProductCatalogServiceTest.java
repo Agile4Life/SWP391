@@ -36,6 +36,7 @@ class ProductCatalogServiceTest {
     ShopProperties props;
     ProductCatalogService service;
 
+    /** Chuẩn bị trước mỗi test: tạo ProductCatalogService với repository giả lập. */
     @BeforeEach
     void setup() {
         products = mock(ProductRepository.class);
@@ -46,6 +47,7 @@ class ProductCatalogServiceTest {
                 Clock.fixed(Instant.parse("2026-11-05T07:00:00Z"), ZoneOffset.UTC));
     }
 
+    /** Hàm trợ giúp của test: tạo sản phẩm mẫu trong danh mục. */
     static Product product(Long id, String slug, boolean active) {
         ProductCategory cat = new ProductCategory();
         cat.setId(1L);
@@ -78,6 +80,7 @@ class ProductCatalogServiceTest {
         return v;
     }
 
+    /** Kiểm thử: trang chi tiết ẩn sản phẩm và biến thể không hoạt động. */
     @Test
     void detailHidesInactiveProductsAndInactiveVariants() {
         Product p = product(10L, "whey", true);
@@ -94,6 +97,7 @@ class ProductCatalogServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "PRODUCT_NOT_FOUND");
     }
 
+    /** Kiểm thử: tồn kho công khai bị chặn trần và đánh dấu sắp hết hàng. */
     @Test
     void publicStockIsCappedAndLowStockFlagged() {
         Product pHigh = product(1L, "high", true);
@@ -124,6 +128,7 @@ class ProductCatalogServiceTest {
         assertThat(page.getContent().get(2).lowStock()).isFalse();
     }
 
+    /** Kiểm thử: sắp xếp theo giá mỗi khẩu phần đặt sản phẩm không có khẩu phần ở cuối. */
     @Test
     void sortByPricePerServingPutsProductsWithoutServingsLast() {
         Product noServings = product(1L, "no-servings", true);

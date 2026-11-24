@@ -43,6 +43,7 @@ class TrainingPlanProgressSecurityTest {
         );
     }
 
+    /** Kiểm thử: các controller tiến độ và hoàn thành mặc định bị tắt. */
     @Test
     void progressAndCompletionControllersAreDisabledByDefault() throws Exception {
         ConditionalOnProperty progressCondition = TrainingPlanProgressController.class.getAnnotation(ConditionalOnProperty.class);

@@ -17,11 +17,13 @@ class PublicCatalogServiceTest {
     private final CoachRepository coaches = mock(CoachRepository.class);
     private final PublicCatalogService service = new PublicCatalogService(packages, coaches);
 
+    /** Kiểm thử: không công khai các buổi lớp nhóm cũ. */
     @Test
     void doesNotPublishLegacyGroupSessions() {
         assertTrue(service.getCatalog().sessions().isEmpty());
     }
 
+    /** Kiểm thử: trả giá hiện tại và chỉ các trường công khai của HLV. */
     @Test
     void returnsCurrentPricesAndOnlyPublicCoachFields() {
         var pkg = new MembershipPackage();
@@ -39,6 +41,7 @@ class PublicCatalogServiceTest {
         assertTrue(result.sessions().isEmpty());
     }
 
+    /** Kiểm thử: ảnh đại diện trống được chuẩn hóa. */
     @Test
     void normalizesBlankAvatar() {
         when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of());

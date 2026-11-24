@@ -54,6 +54,7 @@ class OperationsSecurityRegressionTest {
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
+    /** Kiểm thử: người chưa đăng nhập không đọc được lịch học hay lịch sử check-in. */
     @Test
     void anonymousCannotReadSchedulesOrCheckinHistory() throws Exception {
         mvc.perform(get("/api/v1/classes/sessions")).andExpect(status().isUnauthorized());
@@ -61,6 +62,7 @@ class OperationsSecurityRegressionTest {
         verifyNoInteractions(classes, checkins);
     }
 
+    /** Kiểm thử: hội viên không được quét, check-out hay tạo lớp. */
     @Test
     void memberCannotScanCheckoutOrCreateClasses() throws Exception {
         mvc.perform(post("/api/v1/check-in/scan").with(authentication(actor("MEMBER")))
@@ -74,6 +76,7 @@ class OperationsSecurityRegressionTest {
         verifyNoInteractions(checkins, classes);
     }
 
+    /** Kiểm thử: nhân viên và HLV không dùng được các chức năng dành riêng cho hội viên (đặt chỗ, subscription). */
     @Test
     void staffAndCoachCannotUseMemberOnlyBookingsOrSubscriptions() throws Exception {
         for (String role : List.of("RECEPTIONIST", "COACH", "CENTER_MANAGER")) {
@@ -90,6 +93,7 @@ class OperationsSecurityRegressionTest {
         verifyNoInteractions(enrollments, subscriptions);
     }
 
+    /** Kiểm thử: lễ tân và quản lý vào được endpoint POS và gia hạn, hội viên thì không. */
     @Test
     void receptionAndManagerReachPosRenewalEndpointsButMemberCannot() throws Exception {
         for (String path : List.of("/api/v1/memberships/subscriptions", "/api/v1/subscriptions")) {
@@ -106,6 +110,7 @@ class OperationsSecurityRegressionTest {
         }
     }
 
+    /** Kiểm thử: các matcher đã gộp vẫn cho hội viên đặt chỗ và lễ tân quét QR. */
     @Test
     void mergedMatchersAllowMemberBookingAndReceptionistScanning() throws Exception {
         when(checkins.scan(any(), any())).thenReturn(new CheckinDto(1L, 10L, "Member",

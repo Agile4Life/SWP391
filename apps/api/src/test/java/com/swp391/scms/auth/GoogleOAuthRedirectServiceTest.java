@@ -14,10 +14,12 @@ class GoogleOAuthRedirectServiceTest {
     private static final String CHALLENGE = "7w_YNF9DSfIdPf_pRjSq646_kPr-2-o9NAl16JGghdM";
     private final AuthService auth = mock(AuthService.class);
     private static final Instant NOW = Instant.parse("2026-10-21T12:00:00Z");
+    /** Hàm trợ giúp của test: tạo GoogleOAuthRedirectService với cấu hình mẫu. */
     private GoogleOAuthRedirectService service(Instant now, boolean debug) {
         return new GoogleOAuthRedirectService(auth, null, Clock.fixed(now, ZoneOffset.UTC), "client",
                 "https://api.example.com/api/v1/auth/google/callback", "https://web.example.com", debug);
     }
+    /** Hàm trợ giúp của test: lấy giá trị state OAuth từ URL chuyển hướng. */
     private String state(GoogleOAuthRedirectService service, MockHttpSession session) {
         return UriComponentsBuilder.fromUri(service.authorize(session, CHALLENGE)).build().getQueryParams().getFirst("state");
     }

@@ -64,6 +64,7 @@ class HealthMetricControllerTest {
         }
     };
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller chỉ số sức khỏe. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -74,6 +75,7 @@ class HealthMetricControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: lấy danh sách chỉ số thành công. */
     @Test
     @DisplayName("GET /api/v1/members/{id}/health-metrics returns member health metric list")
     void getMetricsSuccess() throws Exception {
@@ -89,6 +91,7 @@ class HealthMetricControllerTest {
                 .andExpect(jsonPath("$.data[0].metricValue").value(68.5));
     }
 
+    /** Kiểm thử: thêm chỉ số thành công. */
     @Test
     @DisplayName("POST /api/v1/members/{id}/health-metrics creates metric and returns 200")
     void addMetricSuccess() throws Exception {
@@ -109,6 +112,7 @@ class HealthMetricControllerTest {
                 .andExpect(jsonPath("$.data.metricName").value("weight"));
     }
 
+    /** Kiểm thử: thêm chỉ số với giá trị không hợp lệ bị từ chối. */
     @Test
     @DisplayName("POST /api/v1/members/{id}/health-metrics returns 400 on zero or negative metric value")
     void addMetricInvalidValue() throws Exception {
@@ -122,6 +126,7 @@ class HealthMetricControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Kiểm thử: cập nhật chỉ số thành công. */
     @Test
     @DisplayName("PUT /api/v1/members/{id}/health-metrics/{metricId} updates metric successfully")
     void updateMetricSuccess() throws Exception {
@@ -142,6 +147,7 @@ class HealthMetricControllerTest {
                 .andExpect(jsonPath("$.data.metricValue").value(72.5));
     }
 
+    /** Kiểm thử: xóa chỉ số thành công. */
     @Test
     @DisplayName("DELETE /api/v1/members/{id}/health-metrics/{metricId} deletes metric successfully")
     void deleteMetricSuccess() throws Exception {
@@ -152,6 +158,7 @@ class HealthMetricControllerTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    /** Kiểm thử: ghi nhận chỉ số thành công. */
     @Test
     @DisplayName("POST /api/v1/health/metrics records metric and returns 200")
     void recordMetricSuccess() throws Exception {
@@ -172,6 +179,7 @@ class HealthMetricControllerTest {
                 .andExpect(jsonPath("$.data.metricValue").value(76.0));
     }
 
+    /** Kiểm thử: chỉ số của tôi được trả theo thứ tự thời gian. */
     @Test
     @DisplayName("GET /api/v1/health/metrics/my returns chronological metrics for Line Chart")
     void getMyMetricsChronologicalSuccess() throws Exception {

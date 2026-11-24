@@ -30,6 +30,7 @@ class ManagerProductControllerTest {
     ProductAdminService service;
     MockMvc mvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller sản phẩm của quản lý. */
     @BeforeEach
     void setup() {
         service = mock(ProductAdminService.class);
@@ -51,6 +52,7 @@ class ManagerProductControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: liệt kê, xóa và trả tổng quan sản phẩm. */
     @Test
     void listsDeletesAndReturnsSummary() throws Exception {
         when(service.list(null, null, null, 0, 20)).thenReturn(new PageImpl<>(List.of(), org.springframework.data.domain.PageRequest.of(0, 20), 0));

@@ -42,6 +42,7 @@ class HealthMetricWriteSecurityTest {
         );
     }
 
+    /** Kiểm thử: controller ghi chỉ số sức khỏe mặc định bị tắt. */
     @Test
     void healthMetricControllerIsDisabledByDefault() throws Exception {
         ConditionalOnProperty condition = HealthMetricController.class.getAnnotation(ConditionalOnProperty.class);

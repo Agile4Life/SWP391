@@ -48,6 +48,7 @@ class SessionBookingSecurityTest {
 
     private static final String BULK = "{\"sessionIds\":[1,2,3]}";
 
+    /** Kiểm thử: người chưa đăng nhập không đặt hay đọc được lượt đặt chỗ. */
     @Test
     void anonymousCannotBookOrReadBookings() throws Exception {
         mvc.perform(post("/api/v1/classes/sessions/1/bookings")).andExpect(status().isUnauthorized());
@@ -55,6 +56,7 @@ class SessionBookingSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: chỉ hội viên được đặt và xem lượt đặt của chính mình. */
     @Test
     void onlyMembersBookAndListTheirOwnSessions() throws Exception {
         for (String role : List.of("RECEPTIONIST", "COACH", "CENTER_MANAGER", "ADMIN")) {
@@ -69,6 +71,7 @@ class SessionBookingSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: hội viên truy cập được các endpoint đặt chỗ. */
     @Test
     void memberReachesTheBookingEndpoints() throws Exception {
         // Booking single sessions is retired: members are authorized but the policy answers 400.
@@ -83,6 +86,7 @@ class SessionBookingSecurityTest {
         verify(service).myBookings(any(), any(), any(), any());
     }
 
+    /** Kiểm thử: yêu cầu đặt hàng loạt được validate. */
     @Test
     void bulkRequestIsValidated() throws Exception {
         mvc.perform(post("/api/v1/classes/session-bookings/bulk").with(authentication(actor("MEMBER")))
@@ -97,6 +101,7 @@ class SessionBookingSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: hội viên và lễ tân hủy được, HLV thì không. */
     @Test
     void membersAndFrontDeskCancelButCoachesCannot() throws Exception {
         when(service.cancelMany(any(), any())).thenReturn(new BulkCancelResult(List.of(), List.of()));

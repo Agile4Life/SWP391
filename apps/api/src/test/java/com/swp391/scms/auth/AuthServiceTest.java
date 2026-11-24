@@ -39,12 +39,14 @@ class AuthServiceTest {
     @Mock OtpDeliveryPort otpDeliveryPort;
     private AuthService service;
 
+    /** Chuẩn bị trước mỗi test: tạo AuthService với repository và mã hóa giả lập. */
     @BeforeEach
     void setUp() {
         service = new AuthService(userRepository, roleRepository, passwordEncoder, jwtService, otpService,
                 otpDeliveryPort, Clock.systemUTC(), false);
     }
 
+    /** Hàm trợ giúp của test: tạo người dùng ở trạng thái chờ kích hoạt. */
     private User pendingUser() {
         User user = new User();
         user.setEmail("a@b.com");
@@ -52,6 +54,7 @@ class AuthServiceTest {
         return user;
     }
 
+    /** Kiểm thử: đăng ký từ chối email trùng. */
     @Test
     void registerRejectsDuplicateEmail() {
         when(userRepository.findByUsernameIgnoreCase("newuser")).thenReturn(Optional.empty());
@@ -62,6 +65,7 @@ class AuthServiceTest {
         verify(userRepository, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: đăng ký từ chối username trùng. */
     @Test
     void registerRejectsDuplicateUsername() {
         when(userRepository.findByUsernameIgnoreCase("taken")).thenReturn(Optional.of(new User()));
@@ -70,6 +74,7 @@ class AuthServiceTest {
                 () -> service.register(new RegisterRequest("taken", "secret1", "x@y.com", null)));
     }
 
+    /** Kiểm thử: đăng ký lưu họ tên thật thay vì định danh đăng nhập. */
     @Test
     void registerStoresTheRealFullNameInsteadOfTheLoginIdentifier() {
         when(userRepository.findByUsernameIgnoreCase("an.nguyen@example.com")).thenReturn(Optional.empty());
@@ -81,6 +86,7 @@ class AuthServiceTest {
         assertEquals("Nguyễn Văn An", saved.getValue().getFullName());
     }
 
+    /** Kiểm thử: đăng ký không có họ tên thì dùng username thay thế. */
     @Test
     void registerWithoutFullNameStillFallsBackToTheUsername() {
         when(userRepository.findByUsernameIgnoreCase("legacy")).thenReturn(Optional.empty());
@@ -92,6 +98,7 @@ class AuthServiceTest {
         assertEquals("legacy", saved.getValue().getFullName());
     }
 
+    /** Kiểm thử: đăng ký từ chối số điện thoại trùng. */
     @Test
     void registerRejectsDuplicatePhone() {
         when(userRepository.findByUsernameIgnoreCase("newuser")).thenReturn(Optional.empty());
@@ -103,6 +110,7 @@ class AuthServiceTest {
         verify(userRepository, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: đăng ký từ chối số điện thoại quá ngắn và Gmail không hợp lệ. */
     @Test
     void registerRejectsShortPhoneAndInvalidGmail() {
         assertThrows(BadRequestException.class,
@@ -113,6 +121,7 @@ class AuthServiceTest {
                 () -> service.register(new RegisterRequest("newuser", "secret1", "valid@gmail.com", "091234", null)));
     }
 
+    /** Kiểm thử: xác thực OTP kích hoạt tài khoản đang chờ. */
     @Test
     void verifyOtpActivatesPendingAccount() {
         User user = pendingUser();
@@ -126,6 +135,7 @@ class AuthServiceTest {
         verify(userRepository).save(user);
     }
 
+    /** Kiểm thử: OTP hết hạn được ánh xạ thành lỗi 400. */
     @Test
     void verifyOtpMapsExpiredToBadRequest() {
         when(otpService.verifyOtp("a@b.com", "123456"))
@@ -134,6 +144,7 @@ class AuthServiceTest {
         assertThrows(BadRequestException.class, () -> service.verifyOtp(new VerifyOtpRequest("a@b.com", "123456")));
     }
 
+    /** Kiểm thử: mã OTP sai được ánh xạ thành lỗi 400. */
     @Test
     void verifyOtpMapsInvalidCodeToBadRequest() {
         when(otpService.verifyOtp("a@b.com", "000000"))
@@ -142,6 +153,7 @@ class AuthServiceTest {
         assertThrows(BadRequestException.class, () -> service.verifyOtp(new VerifyOtpRequest("a@b.com", "000000")));
     }
 
+    /** Kiểm thử: bị khóa do nhập sai nhiều lần được ánh xạ thành lỗi 429. */
     @Test
     void verifyOtpMapsLockoutToTooManyRequests() {
         when(otpService.verifyOtp("a@b.com", "000000"))
@@ -150,6 +162,7 @@ class AuthServiceTest {
         assertThrows(TooManyRequestsException.class, () -> service.verifyOtp(new VerifyOtpRequest("a@b.com", "000000")));
     }
 
+    /** Kiểm thử: không tạo OTP cho tài khoản không ở trạng thái chờ. */
     @Test
     void generateOtpRejectsAccountThatIsNotPending() {
         User active = pendingUser();
@@ -159,6 +172,7 @@ class AuthServiceTest {
         assertThrows(BadRequestException.class, () -> service.generateOtp("a@b.com"));
     }
 
+    /** Kiểm thử: yêu cầu OTP Google tạo hội viên chờ kích hoạt khi email chưa tồn tại. */
     @Test
     void requestGoogleOtpCreatesPendingMemberWhenEmailDoesNotExist() {
         Role memberRole = new Role();
@@ -176,6 +190,7 @@ class AuthServiceTest {
         verify(otpDeliveryPort).send("new@gmail.com", "123456");
     }
 
+    /** Kiểm thử: yêu cầu OTP Google từ chối tài khoản bị khóa hoặc đã xóa. */
     @Test
     void requestGoogleOtpRejectsLockedOrDeletedAccount() {
         User lockedUser = pendingUser();
@@ -191,6 +206,7 @@ class AuthServiceTest {
         assertThrows(ForbiddenException.class, () -> service.requestGoogleOtp("deleted@gmail.com"));
     }
 
+    /** Kiểm thử: xác thực OTP Google kích hoạt người dùng chờ và cấp JWT. */
     @Test
     void verifyGoogleOtpActivatesPendingUserAndIssuesJwt() {
         User user = pendingUser();
@@ -214,6 +230,7 @@ class AuthServiceTest {
         verify(userRepository).save(user);
     }
 
+    /** Kiểm thử: xác thực OTP Google từ chối tài khoản bị khóa và không kích hoạt lại. */
     @Test
     void verifyGoogleOtpRejectsLockedAccountWithoutReactivatingIt() {
         User locked = pendingUser();
@@ -227,6 +244,7 @@ class AuthServiceTest {
         verify(userRepository, org.mockito.Mockito.never()).save(any());
     }
 
+    /** Kiểm thử: gửi OTP Google để SMTP chạy sau commit và vô hiệu OTP nếu gửi thất bại. */
     @Test
     void requestGoogleOtpDefersSmtpDeliveryUntilAfterCommitAndInvalidatesOnFailure() {
         Role memberRole = new Role();
@@ -257,6 +275,7 @@ class AuthServiceTest {
         }
     }
 
+    /** Kiểm thử: yêu cầu OTP đặt lại mật khẩu gửi mã cho người dùng đang hoạt động. */
     @Test
     void requestPasswordResetOtpSendsCodeToActiveUser() {
         User active = pendingUser();
@@ -270,6 +289,7 @@ class AuthServiceTest {
         verify(otpDeliveryPort).send("a@b.com", "246810");
     }
 
+    /** Kiểm thử: đặt lại mật khẩu bằng OTP cập nhật mật khẩu đã mã hóa và kích hoạt tài khoản. */
     @Test
     void resetPasswordWithOtpUpdatesEncodedPasswordAndActivatesAccount() {
         User user = pendingUser();
@@ -286,6 +306,7 @@ class AuthServiceTest {
         verify(userRepository).save(user);
     }
 
+    /** Kiểm thử: đăng nhập sai 5 lần thì bị khóa 1 phút. */
     @Test
     void loginLocksAfterFiveFailedAttemptsForOneMinute() {
         User user = new User();

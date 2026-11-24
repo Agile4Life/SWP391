@@ -30,6 +30,7 @@ class AddressServiceTest {
     GeoService geo;
     AddressService service;
 
+    /** Chuẩn bị trước mỗi test: tạo AddressService với repository giả lập. */
     @BeforeEach
     void setup() {
         repo = mock(MemberAddressRepository.class);
@@ -54,10 +55,12 @@ class AddressServiceTest {
         });
     }
 
+    /** Hàm trợ giúp của test: tạo request địa chỉ mẫu. */
     static AddressRequest req(String province, String ward) {
         return new AddressRequest("Nguyễn An", "0901234567", province, ward, "12 Lê Lợi", null, false);
     }
 
+    /** Kiểm thử: địa chỉ đầu tiên thành mặc định và địa chỉ thứ sáu bị từ chối. */
     @Test
     void firstAddressBecomesDefaultAndSixthIsRejected() {
         when(repo.findAllByMember_UserIdOrderByIsDefaultDescCreatedAtDescIdDesc(1L)).thenReturn(List.of());
@@ -78,6 +81,7 @@ class AddressServiceTest {
         assertThat(service.createIfRoom(1L, req("79", "26740"))).isEmpty();
     }
 
+    /** Kiểm thử: mã vùng được phân giải từ danh mục đi kèm. */
     @Test
     void regionCodesAreResolvedFromTheBundledCatalogue() {
         when(geo.resolve("79", "26734")).thenReturn(Optional.empty());
@@ -85,6 +89,7 @@ class AddressServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ADDRESS_INVALID_REGION");
     }
 
+    /** Kiểm thử: xóa địa chỉ mặc định thì địa chỉ mới nhất còn lại lên thay. */
     @Test
     void deletingDefaultPromotesNewestRemaining() {
         MemberAddress def = new MemberAddress();
@@ -111,6 +116,7 @@ class AddressServiceTest {
         assertThat(remaining.getFirst().isDefault()).isTrue();
     }
 
+    /** Kiểm thử: địa chỉ của hội viên khác bị coi là không tìm thấy. */
     @Test
     void anotherMembersAddressIsNotFound() {
         when(repo.findAllByMember_UserIdOrderByIsDefaultDescCreatedAtDescIdDesc(1L)).thenReturn(List.of());
@@ -119,6 +125,7 @@ class AddressServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ADDRESS_NOT_FOUND");
     }
 
+    /** Kiểm thử: số điện thoại được chuẩn hóa về dạng bắt đầu bằng 0. */
     @Test
     void phoneIsNormalisedTo0Prefix() {
         when(repo.findAllByMember_UserIdOrderByIsDefaultDescCreatedAtDescIdDesc(1L)).thenReturn(List.of());
