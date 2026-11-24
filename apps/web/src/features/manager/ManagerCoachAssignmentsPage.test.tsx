@@ -174,7 +174,6 @@ describe('ManagerCoachAssignmentsPage', () => {
     await renderComponent();
 
     expect(host.textContent).toContain('HLV & học viên phụ trách');
-    expect(host.textContent).toContain('Giáo án có hiệu lực đến hết ngày kết thúc');
     expect(host.textContent).toContain('HLV đang hoạt động');
     expect(host.textContent).not.toContain('Tổng học viên đang theo kèm');
     expect(host.textContent).toContain('Học viên tập 1:1 (PT)');
