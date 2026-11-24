@@ -14,16 +14,19 @@ class NotificationLocalizerTest {
 
     private final NotificationLocalizer localizer = NotificationTestMessages.localizer();
 
+    /** Chuẩn bị trước mỗi test: đặt locale tiếng Việt. */
     @BeforeEach
     void useVietnameseLocale() {
         org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.forLanguageTag("vi"));
     }
 
+    /** Dọn dẹp sau mỗi test: xóa locale. */
     @AfterEach
     void clearLocale() {
         org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
     }
 
+    /** Kiểm thử: phân giải thông báo cũ qua MessageService. */
     @Test
     void resolvesLegacyPresentationThroughMessageService() {
         var source = new org.springframework.context.support.StaticMessageSource();
@@ -55,10 +58,12 @@ class NotificationLocalizerTest {
             "You have a new message from Trần Minh Quân in support request \"Booking help\".|Bạn có tin nhắn mới từ Trần Minh Quân trong yêu cầu \"Booking help\".",
             "Your membership package Gold 1 Month will expire in 3 day(s) (10/11/2026). Please renew to avoid workout interruption.|Gói tập Gold 1 Month của bạn sẽ hết hạn sau 3 ngày (10/11/2026). Vui lòng gia hạn để không gián đoạn tập luyện."
     })
+    /** Kiểm thử: dịch thông báo cũ có tên nhiều từ. */
     void translatesLegacyMessagesWithMultiwordNames(String original, String expected) {
         assertThat(localizer.localizeMessage(original)).isEqualTo(expected);
     }
 
+    /** Kiểm thử: bản địa hóa nhắc lớp học. */
     @Test
     @DisplayName("Localizes English upcoming class reminder title and body")
     void testLocalizeClassReminder() {
@@ -71,6 +76,7 @@ class NotificationLocalizerTest {
                 .isEqualTo("Lớp học \"Lớp boxing\" của bạn sẽ bắt đầu lúc 09:00 ngày 04/11/2026. Hãy chuẩn bị sẵn sàng!");
     }
 
+    /** Kiểm thử: bản địa hóa nhắc gói sắp hết hạn. */
     @Test
     @DisplayName("Localizes English membership package expiry title and body")
     void testLocalizePackageExpiry() {
@@ -86,6 +92,7 @@ class NotificationLocalizerTest {
                 .isEqualTo("Gói tập Gold của bạn sẽ hết hạn sau 3 ngày (10/11/2026). Vui lòng gia hạn để không gián đoạn tập luyện.");
     }
 
+    /** Kiểm thử: giữ nguyên nội dung tiếng Việt. */
     @Test
     @DisplayName("Preserves already Vietnamese notifications intact")
     void testPreservesVietnamese() {

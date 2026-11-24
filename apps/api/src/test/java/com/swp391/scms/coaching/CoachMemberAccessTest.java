@@ -31,6 +31,7 @@ class CoachMemberAccessTest {
     @Mock private MemberRepository members;
     @Mock private UserRepository users;
 
+    /** Kiểm thử: HLV chỉ truy cập được các hội viên mình dạy. */
     @Test
     void coachReachesOnlyMembersTheyTrain() {
         var access = new CoachMemberAccess(plans, bookings, enrollments);
@@ -41,6 +42,7 @@ class CoachMemberAccessTest {
         assertDoesNotThrow(() -> access.requireAccess(1L, "CENTER_MANAGER", 31L));
     }
 
+    /** Kiểm thử: HLV không đọc được chỉ số sức khỏe của người lạ. */
     @Test
     void coachCannotReadHealthMetricsOfAStranger() {
         var access = new CoachMemberAccess(plans, bookings, enrollments);

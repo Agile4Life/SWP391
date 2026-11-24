@@ -7,6 +7,7 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 
 /** Bộ kiểm thử cho EquipmentFeatureDisabled (equipment feature disabled). */
 class EquipmentFeatureDisabledTest {
+    /** Kiểm thử: controller quản lý thiết bị không được đăng ký khi tính năng đã tắt. */
     @Test
     void equipmentManagementControllerIsNotRegistered() {
         var scanner = new ClassPathScanningCandidateComponentProvider(true);

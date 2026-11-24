@@ -41,6 +41,7 @@ class EquipmentServiceTest {
     private Room sampleRoom;
     private Equipment sampleEquipment;
 
+    /** Chuẩn bị trước mỗi test: tạo EquipmentService với repository giả lập. */
     @BeforeEach
     void setUp() {
         sampleRoom = new Room();

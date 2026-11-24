@@ -75,6 +75,7 @@ public class NotificationControllerTest {
         }
     };
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller thông báo. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -97,6 +98,7 @@ public class NotificationControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: hộp thư theo header tiếng Anh, mặc định tiếng Việt mà không đổi văn bản đã lưu. */
     @Test
     void inboxHonorsEnglishHeaderAndDefaultsToVietnameseWithoutChangingStoredText() throws Exception {
         var repository = org.mockito.Mockito.mock(NotificationRepository.class);
@@ -128,6 +130,7 @@ public class NotificationControllerTest {
                 .isEqualTo("Your class \"Sunrise Yoga\" is starting at 07:00 on 2026-11-14. Get ready!");
     }
 
+    /** Kiểm thử: lấy danh sách thông báo thành công. */
     @Test
     @DisplayName("GET /api/v1/notifications returns user notifications")
     void getNotifications_Success() throws Exception {
@@ -143,6 +146,7 @@ public class NotificationControllerTest {
                 .andExpect(jsonPath("$.data.content[0].title").value("Test title"));
     }
 
+    /** Kiểm thử: lấy số thông báo chưa đọc thành công. */
     @Test
     @DisplayName("GET /api/v1/notifications/unread-count returns unread count")
     void getUnreadCount_Success() throws Exception {
@@ -155,6 +159,7 @@ public class NotificationControllerTest {
                 .andExpect(jsonPath("$.data.count").value(5));
     }
 
+    /** Kiểm thử: đánh dấu đã đọc thành công. */
     @Test
     @DisplayName("PATCH /api/v1/notifications/{id}/read marks as read")
     void markAsRead_Success() throws Exception {
@@ -165,6 +170,7 @@ public class NotificationControllerTest {
         verify(notificationService).markAsRead(1L, 101L);
     }
 
+    /** Kiểm thử: đánh dấu tất cả đã đọc thành công. */
     @Test
     @DisplayName("PATCH /api/v1/notifications/read-all marks all as read")
     void markAllAsRead_Success() throws Exception {

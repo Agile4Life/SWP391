@@ -27,6 +27,7 @@ class DisciplineServiceTest {
     @Mock DisciplineRepository disciplines;
     @InjectMocks DisciplineService service;
 
+    /** Kiểm thử: liệt kê mọi bộ môn mà không lọc theo tên. */
     @Test
     void listsEveryDisciplineWithoutFilteringByName() {
         Discipline gym = new Discipline(); gym.setName("Gym");
@@ -37,6 +38,7 @@ class DisciplineServiceTest {
                 .map(d -> d.name()).toList());
     }
 
+    /** Kiểm thử: tạo từ chối tên trùng. */
     @Test
     void createRejectsDuplicateName() {
         when(disciplines.existsByNameIgnoreCase("Yoga")).thenReturn(true);
@@ -45,6 +47,7 @@ class DisciplineServiceTest {
         verify(disciplines, never()).save(any());
     }
 
+    /** Kiểm thử: tạo sẽ cắt khoảng trắng và lưu. */
     @Test
     void createTrimsAndSaves() {
         when(disciplines.existsByNameIgnoreCase("Yoga")).thenReturn(false);
@@ -53,6 +56,7 @@ class DisciplineServiceTest {
         assertEquals("Yoga", service.create(new DisciplineRequest(" Yoga ", "d")).name());
     }
 
+    /** Kiểm thử: cập nhật bộ môn không tồn tại ném not found. */
     @Test
     void updateMissingThrowsNotFound() {
         when(disciplines.findById(9L)).thenReturn(Optional.empty());
@@ -60,6 +64,7 @@ class DisciplineServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> service.update(9L, new DisciplineRequest("A", null)));
     }
 
+    /** Kiểm thử: cập nhật từ chối tên đã dùng bởi bộ môn khác. */
     @Test
     void updateRejectsNameUsedByAnotherDiscipline() {
         when(disciplines.findById(1L)).thenReturn(Optional.of(new Discipline()));

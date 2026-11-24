@@ -41,6 +41,7 @@ class CoachAssignmentControllerTest {
     @InjectMocks
     private CoachAssignmentController controller;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller phân công HLV. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
@@ -49,6 +50,7 @@ class CoachAssignmentControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: lấy tổng quan phân công. */
     @Test
     @DisplayName("GET /api/v1/manager/coach-assignments returns overview data")
     void testGetOverview() throws Exception {
@@ -67,6 +69,7 @@ class CoachAssignmentControllerTest {
                 .andExpect(jsonPath("$.data.stats.totalCoaches").value(1));
     }
 
+    /** Kiểm thử: lấy tổng quan với tham số sắp xếp. */
     @Test
     @DisplayName("GET /api/v1/manager/coach-assignments forwards sortBy and sortDir parameters")
     void testGetOverviewWithSortParams() throws Exception {
@@ -83,6 +86,7 @@ class CoachAssignmentControllerTest {
         verify(coachAssignmentService).getOverview(null, "gym", "PT_1_1", "totalStudentsCount", "desc");
     }
 
+    /** Kiểm thử: chuyển HLV thành công. */
     @Test
     @DisplayName("POST /api/v1/manager/coach-assignments/reassign transfers student")
     void testReassign() throws Exception {
@@ -98,6 +102,7 @@ class CoachAssignmentControllerTest {
         verify(coachAssignmentService).reassignStudent(any(CoachAssignmentReassignDto.class));
     }
 
+    /** Kiểm thử: chuyển HLV bắt buộc có lý do. */
     @Test
     @DisplayName("POST /api/v1/manager/coach-assignments/reassign rejects a blank reason")
     void testReassignRequiresReason() throws Exception {
@@ -111,6 +116,7 @@ class CoachAssignmentControllerTest {
         verify(coachAssignmentService, never()).reassignStudent(any());
     }
 
+    /** Kiểm thử: gỡ phân công thành công. */
     @Test
     @DisplayName("DELETE /api/v1/manager/coach-assignments/{planId} removes assignment")
     void testRemove() throws Exception {

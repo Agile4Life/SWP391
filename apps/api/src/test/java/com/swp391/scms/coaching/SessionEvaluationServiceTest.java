@@ -51,6 +51,7 @@ class SessionEvaluationServiceTest {
     private Member member;
     private Coach coach;
 
+    /** Chuẩn bị trước mỗi test: tạo SessionEvaluationService với repository giả lập. */
     @BeforeEach
     void setUp() {
         evaluationService = new SessionEvaluationService(
@@ -65,6 +66,7 @@ class SessionEvaluationServiceTest {
         coach.setUserId(202L);
     }
 
+    /** Kiểm thử: tạo đánh giá với điểm hợp lệ thì lưu và trả DTO. */
     @Test
     void createEvaluation_WithValidScore_SavesAndReturnsDto() {
         when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
@@ -90,6 +92,7 @@ class SessionEvaluationServiceTest {
         verify(notifications).notifyEvaluation(101L);
     }
 
+    /** Kiểm thử: điểm ngoài khoảng ném BadRequest. */
     @Test
     void createEvaluation_WithOutOfRangeScore_ThrowsBadRequest() {
         SessionEvaluationCreateDto request = new SessionEvaluationCreateDto(
@@ -100,12 +103,14 @@ class SessionEvaluationServiceTest {
                 () -> evaluationService.createEvaluation(request, 202L, "COACH"));
     }
 
+    /** Kiểm thử: hội viên khác xem đánh giá thì ném Forbidden. */
     @Test
     void getMemberEvaluations_WhenOtherMember_ThrowsForbidden() {
         assertThrows(ForbiddenException.class,
                 () -> evaluationService.getMemberEvaluations(101L, 999L, "MEMBER"));
     }
 
+    /** Kiểm thử: hội viên xem đánh giá của mình. */
     @Test
     void getMyEvaluations_ForMember_ReturnsEvaluations() {
         SessionEvaluation eval = new SessionEvaluation();
@@ -121,6 +126,7 @@ class SessionEvaluationServiceTest {
         assertEquals(new BigDecimal("92.0"), list.get(0).progressScore());
     }
 
+    /** Kiểm thử: HLV của lớp khác không được xem đánh giá của buổi. */
     @Test
     void getSessionEvaluations_coachOfAnotherClass_isForbidden() {
         com.swp391.scms.scheduling.entity.GymClass gymClass = new com.swp391.scms.scheduling.entity.GymClass();
@@ -134,6 +140,7 @@ class SessionEvaluationServiceTest {
         org.mockito.Mockito.verifyNoInteractions(evaluationRepository);
     }
 
+    /** Kiểm thử: HLV được phân công xem được đánh giá của buổi. */
     @Test
     void getSessionEvaluations_assignedCoach_readsEvaluations() {
         com.swp391.scms.scheduling.entity.GymClass gymClass = new com.swp391.scms.scheduling.entity.GymClass();

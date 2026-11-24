@@ -29,6 +29,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
 
+    /** Kiểm thử: gửi thông báo giữ nguyên nội dung gốc cho lưu trữ và gửi ra ngoài. */
     @Test
     void sendPreservesOriginalContentForPersistenceAndExternalDelivery() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
@@ -47,6 +48,7 @@ class NotificationServiceTest {
                 java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.PUSH));
     }
 
+    /** Kiểm thử: các loại quan trọng còn được gửi qua email. */
     @Test
     void importantTypesAlsoGoByEmail() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
@@ -66,6 +68,7 @@ class NotificationServiceTest {
         verify(dispatcher).dispatch(101L, "T", "M", "package_expiry", "membership_subscription", 1L, emailAndPush);
     }
 
+    /** Kiểm thử: gửi đa kênh giữ nguyên nội dung gốc. */
     @Test
     void multiChannelDispatchPreservesOriginalContent() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
@@ -78,6 +81,7 @@ class NotificationServiceTest {
                 "Your class \"Sunrise Yoga\" is starting at 07:00 on 2026-11-14. Get ready!", "class_reminder", null, null);
     }
 
+    /** Kiểm thử: thông báo đánh giá có liên kết tiến độ an toàn và nội dung đã bản địa hóa. */
     @Test
     void evaluationNotificationHasSafeProgressLinkAndLocalizedCopy() {
         var messages = org.mockito.Mockito.mock(com.swp391.scms.common.i18n.MessageService.class);
@@ -93,6 +97,7 @@ class NotificationServiceTest {
         org.junit.jupiter.api.Assertions.assertEquals("View feedback", captured.getValue().getMessage());
     }
 
+    /** Kiểm thử: gửi qua kênh ngoài chỉ sau khi commit. */
     @Test
     void sendDispatchesExternalChannelsOnlyAfterCommit() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
@@ -114,6 +119,7 @@ class NotificationServiceTest {
         }
     }
 
+    /** Kiểm thử: gửi bị từ chối không làm hỏng sau commit. */
     @Test
     void rejectedDispatchDoesNotFailAfterCommit() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
@@ -146,6 +152,7 @@ class NotificationServiceTest {
     @InjectMocks
     private NotificationService notificationService;
 
+    /** Kiểm thử: lấy thông báo của người dùng thành công. */
     @Test
     @DisplayName("getUserNotifications returns paginated notifications for user")
     void getUserNotifications_Success() {
@@ -165,6 +172,7 @@ class NotificationServiceTest {
         assertThat(result.getContent().get(0).title()).isEqualTo("Title");
     }
 
+    /** Kiểm thử: lấy số chưa đọc thành công. */
     @Test
     @DisplayName("getUnreadCount returns count of unread notifications")
     void getUnreadCount_Success() {
@@ -173,6 +181,7 @@ class NotificationServiceTest {
         assertThat(notificationService.getUnreadCount(101L)).isEqualTo(3L);
     }
 
+    /** Kiểm thử: đánh dấu đã đọc thành công. */
     @Test
     @DisplayName("markAsRead marks unread notification as read")
     void markAsRead_Success() {
@@ -187,6 +196,7 @@ class NotificationServiceTest {
         verify(notificationRepository).save(notification);
     }
 
+    /** Kiểm thử: đánh dấu đã đọc không tìm thấy thông báo. */
     @Test
     @DisplayName("markAsRead throws 404 when notification not found or belongs to another user")
     void markAsRead_NotFound() {
@@ -196,6 +206,7 @@ class NotificationServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
     }
 
+    /** Kiểm thử: đánh dấu tất cả đã đọc thành công. */
     @Test
     @DisplayName("markAllAsRead delegates to repository")
     void markAllAsRead_Success() {
@@ -204,6 +215,7 @@ class NotificationServiceTest {
         verify(notificationRepository).markAllAsReadByUserId(101L);
     }
 
+    /** Kiểm thử: gửi thông báo thành công. */
     @Test
     @DisplayName("send saves notification when user is active and not soft-deleted")
     void send_Success() {
@@ -216,6 +228,7 @@ class NotificationServiceTest {
         verify(notificationRepository).save(any(Notification.class));
     }
 
+    /** Kiểm thử: gửi cho người dùng đã xóa mềm ném not found. */
     @Test
     @DisplayName("send throws ResourceNotFoundException when user is soft-deleted or missing")
     void send_SoftDeletedUser_ThrowsNotFound() {
@@ -226,6 +239,7 @@ class NotificationServiceTest {
         verify(notificationRepository, never()).save(any());
     }
 
+    /** Kiểm thử: thông báo đánh giá cho người dùng đã xóa mềm không ném lỗi. */
     @Test
     @DisplayName("notifyEvaluation skips without throwing when member user account is soft-deleted or missing")
     void notifyEvaluation_SoftDeletedUser_DoesNotThrow() {
@@ -236,6 +250,7 @@ class NotificationServiceTest {
         verify(notificationRepository, never()).save(any());
     }
 
+    /** Kiểm thử: gửi thông báo chuẩn hóa các giá trị ràng buộc CHECK của database. */
     @Test
     @DisplayName("send normalizes type and relatedEntityType to satisfy PostgreSQL check constraints while preserving raw values for external dispatch")
     void sendNormalizesDatabaseCheckConstraintValues() {
@@ -265,6 +280,7 @@ class NotificationServiceTest {
         assertThat(captured.get(2).getRelatedEntityType()).isNull();
     }
 
+    /** Kiểm thử: Spring context phân giải được constructor autowired. */
     @Test
     @DisplayName("Spring context verifies Autowired constructor exists and bean instantiates without NoSuchMethodException")
     void springContextResolvesAutowiredConstructor() {

@@ -35,6 +35,7 @@ class PtAttendanceServiceTest {
         return b;
     }
 
+    /** Kiểm thử: ghi nhận lượt vào bắt đầu tới ba giờ trước và phủ buổi PT. */
     @Test
     void reportsAVisitThatBeganUpToThreeHoursBeforeAndCoveredTheSession() {
         CoachBooking b = booking();
@@ -46,6 +47,7 @@ class PtAttendanceServiceTest {
         assertNull(b.getAttendedAt());
     }
 
+    /** Kiểm thử: không ghi nhận gì khi không có lượt vào phủ hoặc lượt đặt chưa hoàn tất. */
     @Test
     void reportsNothingWithoutACoveringVisitOrForAnIncompleteBooking() {
         assertNull(service.gateCheckinFor(booking()));

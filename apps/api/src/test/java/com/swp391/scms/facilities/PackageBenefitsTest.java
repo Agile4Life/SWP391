@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /** Bộ kiểm thử cho PackageBenefits (package benefits). */
 class PackageBenefitsTest {
+    /** Hàm trợ giúp của test: tạo gói tập mẫu. */
     private static MembershipPackage pkg(String name, String tier, int days) {
         MembershipPackage p = new MembershipPackage();
         p.setName(name);
@@ -16,6 +17,7 @@ class PackageBenefitsTest {
         return p;
     }
 
+    /** Kiểm thử: lượt khóa học tăng theo số chu kỳ 30 ngày. */
     @Test
     void courseCreditsScaleWithTheNumberOfThirtyDayCycles() {
         assertEquals(1, PackageBenefits.courseCredits("SILVER", 30));
@@ -26,6 +28,7 @@ class PackageBenefitsTest {
         assertEquals(12, PackageBenefits.courseCredits("PLATINUM", 90));
     }
 
+    /** Kiểm thử: số buổi PT theo hạng và gói thử có một buổi. */
     @Test
     void ptSessionsFollowTheTierAndTheTrialGetsOne() {
         assertEquals(0, PackageBenefits.ptSessionsPerCycle(pkg("SILVER", null, 30)));
@@ -34,6 +37,7 @@ class PackageBenefitsTest {
         assertEquals(1, PackageBenefits.ptSessionsPerCycle(pkg("Gói Trải Nghiệm 3 Ngày", "GOLD", 3)));
     }
 
+    /** Kiểm thử: lượt đặt sân theo hạng và gói thử không có. */
     @Test
     void courtBookingsFollowTheTierAndTheTrialGetsNone() {
         assertEquals(1, PackageBenefits.courtBookingsPerCycle(pkg("SILVER", null, 30)));
@@ -42,6 +46,7 @@ class PackageBenefitsTest {
         assertEquals(0, PackageBenefits.courtBookingsPerCycle(pkg("Gói Trải Nghiệm 3 Ngày", "GOLD", 3)));
     }
 
+    /** Kiểm thử: số ngày tạm hoãn khớp bảng chính sách. */
     @Test
     void holdAllowanceMatchesThePolicyTable() {
         assertEquals(7, PackageBenefits.holdMaxDays(pkg("SILVER 3 THÁNG", "SILVER", 90)));
@@ -53,6 +58,7 @@ class PackageBenefitsTest {
         assertEquals(0, PackageBenefits.holdMaxDays(pkg("Gói Trải Nghiệm 3 Ngày", "GOLD", 3)));
     }
 
+    /** Kiểm thử: giảm giá và phòng VIP chỉ cho Gold và Platinum đã trả phí. */
     @Test
     void discountsAndVipRoomAreForPaidGoldAndPlatinumOnly() {
         assertEquals(0, PackageBenefits.discountPercent(pkg("SILVER", null, 30)));
@@ -64,6 +70,7 @@ class PackageBenefitsTest {
         assertFalse(PackageBenefits.hasVipRoomAccess(pkg("Gói Trải Nghiệm 3 Ngày", "PLATINUM", 3)));
     }
 
+    /** Kiểm thử: Silver không xem được kế hoạch tập nhưng gói thử thì xem được. */
     @Test
     void silverCannotSeeWorkoutPlansButTheTrialCan() {
         assertFalse(PackageBenefits.canViewWorkoutPlan(pkg("SILVER", null, 30)));
@@ -71,6 +78,7 @@ class PackageBenefitsTest {
         assertTrue(PackageBenefits.canViewWorkoutPlan(pkg("Gói Trải Nghiệm 3 Ngày", "GOLD", 3)));
     }
 
+    /** Kiểm thử: các chu kỳ khởi động lại mỗi 30 ngày từ ngày bắt đầu. */
     @Test
     void cyclesRestartEveryThirtyDaysFromTheStartDate() {
         LocalDate start = LocalDate.of(2026, 11, 1);
@@ -80,6 +88,7 @@ class PackageBenefitsTest {
         assertEquals(LocalDate.of(2027, 1, 29), PackageBenefits.cycleEnd(start, LocalDate.of(2027, 1, 29), LocalDate.of(2027, 1, 20)));
     }
 
+    /** Kiểm thử: nâng cấp tiếp tục đếm chu kỳ từ gói bị thay, còn gia hạn bắt đầu mới. */
     @Test
     void anUpgradeKeepsCountingCyclesFromThePlanItReplacedButARenewalStartsFresh() {
         var silver = new com.swp391.scms.membership.entity.MembershipSubscription();
@@ -102,6 +111,7 @@ class PackageBenefitsTest {
         assertEquals(LocalDate.of(2026, 11, 1), PackageBenefits.cycleStart(PackageBenefits.cycleAnchor(gold), LocalDate.of(2026, 11, 25)));
     }
 
+    /** Kiểm thử: những ngày tạm hoãn không làm hao chu kỳ quyền lợi. */
     @Test
     void heldDaysDoNotEatTheBenefitCycle() {
         var sub = new com.swp391.scms.membership.entity.MembershipSubscription();

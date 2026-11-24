@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * Entity contract and rollback safety. Real PostgreSQL coverage lives in PtAttendanceIsolatedPostgreSqlTest.
  */
 class PtAttendanceTransactionDiagnosticTest {
+    /** Kiểm thử: entity hỗ trợ audit PT và lỗi audit thật vẫn rollback. */
     @Test
     void entitySupportsPtAuditAndGenuineAuditFailureStillRollsBack() throws Exception {
         String constraint = AuditLog.class.getAnnotation(Check.class).constraints();
@@ -93,6 +94,7 @@ class PtAttendanceTransactionDiagnosticTest {
         verify(audit).save(any());
     }
 
+    /** Transaction manager giả: giả lập giao dịch audit bị lỗi. */
     private static final class FailedAuditTransactionManager extends AbstractPlatformTransactionManager {
         final AuditTransaction transaction = new AuditTransaction();
         boolean committed;
@@ -102,6 +104,7 @@ class PtAttendanceTransactionDiagnosticTest {
         @Override protected void doCommit(DefaultTransactionStatus status) { committed = true; }
         @Override protected void doRollback(DefaultTransactionStatus status) { rolledBack = true; }
     }
+    /** Giao dịch giả hỗ trợ savepoint dùng cho test audit. */
     private static final class AuditTransaction implements SmartTransactionObject {
         boolean rollbackOnly;
         @Override public boolean isRollbackOnly() { return rollbackOnly; }

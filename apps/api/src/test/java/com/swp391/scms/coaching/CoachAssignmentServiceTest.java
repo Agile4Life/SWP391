@@ -65,6 +65,7 @@ class CoachAssignmentServiceTest {
     Coach from, to;
     Member member;
 
+    /** Chuẩn bị trước mỗi test: tạo CoachAssignmentService với repository giả lập. */
     @BeforeEach
     void setup() {
         service = new CoachAssignmentService(coaches, members, plans, bookings, enrollments, sessionBookings,
@@ -80,6 +81,7 @@ class CoachAssignmentServiceTest {
     private User user(Long id, String name) { User u = new User(); u.setId(id); u.setFullName(name); u.setStatus("active"); return u; }
     /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (coach). */
     private Coach coach(Long id, String name) { Coach c = new Coach(); c.setUserId(id); c.setUser(user(id, name)); c.setEmploymentStatus("active"); return c; }
+    /** Hàm trợ giúp của test: tạo kế hoạch tập mẫu. */
     private TrainingPlan plan(Long id, String status) {
         TrainingPlan p = new TrainingPlan(); p.setId(id); p.setMember(member); p.setCoach(from); p.setStatus(status);
         p.setStartDate(today.minusDays(3)); p.setEndDate(today.plusDays(30)); p.setGoal("Gain strength"); return p;
@@ -89,7 +91,9 @@ class CoachAssignmentServiceTest {
         CoachBooking b = new CoachBooking(); b.setId(id); b.setMember(member); b.setCoach(from); b.setStatus("confirmed");
         b.setBookingDate(today.plusDays(1)); b.setStartTime(LocalTime.of(10, 0)); b.setEndTime(LocalTime.of(11, 0)); return b;
     }
+    /** Hàm trợ giúp của test: thực hiện chuyển HLV. */
     private CoachAssignmentReassignDto transfer(String type, Long id) { return new CoachAssignmentReassignDto(100L, 10L, 20L, id, type, "Schedule adjustment"); }
+    /** Hàm trợ giúp của test: thiết lập tài khoản hội viên và HLV hợp lệ. */
     private void validAccounts() {
         when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(coaches.findById(20L)).thenReturn(Optional.of(to));
         when(members.findById(100L)).thenReturn(Optional.of(member)); when(subscriptions.hasActiveMembership(100L, today)).thenReturn(true);
@@ -112,6 +116,7 @@ class CoachAssignmentServiceTest {
         verify(messages).getMessage("manager.coach_assignments.notice.transferred.member", to.getUser().getFullName(), 501L, "Schedule adjustment");
     }
 
+    /** Kiểm thử: từ chối chuyển HLV không có lý do, trước khi ghi hay thông báo. */
     @ParameterizedTest @ValueSource(strings = {"", "   "})
     void rejectsTransferWithoutReasonBeforeWritingOrNotifying(String blank) {
         assertThatThrownBy(() -> service.reassignStudent(new CoachAssignmentReassignDto(100L, 10L, 20L, 501L, "TRAINING_PLAN", blank)))
@@ -204,6 +209,7 @@ class CoachAssignmentServiceTest {
         assertThat(selected.getCoach()).isSameAs(from); assertThat(selected.getMember()).isSameAs(member);
     }
 
+    /** Kiểm thử: kết thúc phân công đã hoàn thành giữ nguyên trạng thái lịch sử. */
     @ParameterizedTest @ValueSource(strings = {"completed", "cancelled", "draft"})
     void endingCompletedAssignmentPreservesItsHistoricalStatus(String status) {
         TrainingPlan selected = plan(501L, status); when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));

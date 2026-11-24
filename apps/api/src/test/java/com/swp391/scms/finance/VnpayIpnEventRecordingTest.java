@@ -27,6 +27,7 @@ import static org.mockito.Mockito.*;
 class VnpayIpnEventRecordingTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
+    /** Hàm trợ giúp của test: tạo dữ liệu callback VNPay mẫu. */
     private static Map<String, String> callback() {
         Map<String, String> p = new HashMap<>();
         p.put("vnp_TxnRef", "ABC123");
@@ -38,12 +39,14 @@ class VnpayIpnEventRecordingTest {
         return p;
     }
 
+    /** Hàm trợ giúp của test: tạo callback nhiều tham số. */
     private static LinkedMultiValueMap<String, String> multi(Map<String, String> p) {
         var m = new LinkedMultiValueMap<String, String>();
         p.forEach(m::add);
         return m;
     }
 
+    /** Kiểm thử: ghi lại mã đã trả lời cho VNPay. */
     @ParameterizedTest
     @ValueSource(strings = {"00", "02", "97"})
     void recordsTheCodeAnsweredToVnpay(String code) {
@@ -55,6 +58,7 @@ class VnpayIpnEventRecordingTest {
         verify(recorder).record(eq(VnpayIpnEvent.SOURCE_IPN), argThat(m -> "ABC123".equals(m.get("vnp_TxnRef"))), eq(code));
     }
 
+    /** Kiểm thử: quyết toán bị rollback được ghi là có thể thử lại. */
     @Test
     void rolledBackSettlementIsRecordedAsRetryable() {
         var service = mock(VnpayPaymentService.class);
@@ -64,6 +68,7 @@ class VnpayIpnEventRecordingTest {
         verify(recorder).record(eq(VnpayIpnEvent.SOURCE_IPN), anyMap(), eq("99"));
     }
 
+    /** Kiểm thử: lỗi của bộ ghi không bao giờ thay đổi câu trả lời. */
     @ParameterizedTest
     @ValueSource(strings = {"00", "99"})
     void recorderFailureNeverChangesTheAnswer(String code) {
@@ -77,6 +82,7 @@ class VnpayIpnEventRecordingTest {
         assertEquals(code, response.get("RspCode"));
     }
 
+    /** Kiểm thử: callback rỗng được ghi là không hợp lệ. */
     @Test
     void emptyCallbackIsRecordedAsInvalid() {
         var recorder = mock(VnpayIpnEventRecorder.class);
@@ -85,6 +91,7 @@ class VnpayIpnEventRecordingTest {
         verify(recorder).record(eq(VnpayIpnEvent.SOURCE_RETURN), eq(Map.of()), eq("97"));
     }
 
+    /** Kiểm thử: verifyReturn ghi nguồn là return. */
     @Test
     void verifyReturnRecordsReturnSource() {
         var payments = mock(VnpayPaymentService.class);
@@ -96,6 +103,7 @@ class VnpayIpnEventRecordingTest {
         verify(handler, never()).process(params);
     }
 
+    /** Kiểm thử: bộ ghi chỉ giữ các trường không nhạy cảm. */
     @Test
     void recorderKeepsOnlyNonSensitiveFields() {
         var repo = mock(VnpayIpnEventRepository.class);
@@ -118,6 +126,7 @@ class VnpayIpnEventRecordingTest {
         }
     }
 
+    /** Kiểm thử: bộ ghi chịu được dữ liệu rác và nuốt lỗi lưu. */
     @Test
     void recorderToleratesJunkAndSwallowsSaveErrors() {
         var repo = mock(VnpayIpnEventRepository.class);

@@ -42,6 +42,7 @@ class VnpayPaymentServiceTest {
         when(transactions.findById("ABC123")).thenReturn(Optional.of(transaction));
         when(members.findByUserIdForUpdate(7L)).thenReturn(Optional.of(member));
     }
+    /** Hàm trợ giúp của test: tạo dữ liệu callback VNPay mẫu. */
     Map<String,String> callback(String response, String status, String amount) {
         var data = new HashMap<>(Map.of("vnp_TmnCode","TEST1234", "vnp_TxnRef","ABC123", "vnp_Amount",amount,
                 "vnp_ResponseCode", response, "vnp_TransactionStatus", status, "vnp_TransactionNo","12345", "vnp_PayDate","20261103120100"));

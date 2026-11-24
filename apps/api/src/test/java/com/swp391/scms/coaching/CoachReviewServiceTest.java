@@ -54,6 +54,7 @@ class CoachReviewServiceTest {
     private User memberUser;
     private User coachUser;
 
+    /** Chuẩn bị trước mỗi test: tạo CoachReviewService với repository giả lập. */
     @BeforeEach
     void setUp() {
         reviewService = new CoachReviewService(reviewRepository, coachRepository, memberRepository, notificationService, null,
@@ -86,6 +87,7 @@ class CoachReviewServiceTest {
         lenient().when(bookingRepository.findById(55L)).thenReturn(Optional.of(booking));
     }
 
+    /** Kiểm thử: đánh giá PT cần buổi đã được đánh dấu đã dự. */
     @Test
     void ptReviewRequiresTheSessionToBeMarkedAttended() {
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
@@ -105,6 +107,7 @@ class CoachReviewServiceTest {
         verify(reviewRepository, never()).save(any());
     }
 
+    /** Kiểm thử: tạo đánh giá thành công, lưu và thông báo HLV. */
     @Test
     void createReview_success_savesAndNotifiesCoach() {
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
@@ -129,6 +132,7 @@ class CoachReviewServiceTest {
         verify(notificationService).send(eq(20L), anyString(), anyString(), eq("system"), isNull(), eq(100L));
     }
 
+    /** Kiểm thử: đánh giá ẩn danh giấu tên hội viên. */
     @Test
     void createReview_anonymous_hidesMemberName() {
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
@@ -150,6 +154,7 @@ class CoachReviewServiceTest {
         assertThat(result.classSessionId()).isNull();
     }
 
+    /** Kiểm thử: điểm đánh giá không hợp lệ ném BadRequest. */
     @Test
     void createReview_invalidRating_throwsBadRequest() {
         CoachReviewCreateDto request = new CoachReviewCreateDto(20L, 55L, null, 6, "Quá sao", false);
@@ -157,6 +162,7 @@ class CoachReviewServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: lấy đánh giá đã duyệt của HLV trả danh sách đã ánh xạ. */
     @Test
     void getApprovedReviewsForCoach_returnsMappedList() {
         CoachReview r = new CoachReview();
@@ -175,6 +181,7 @@ class CoachReviewServiceTest {
         assertThat(list.get(0).coachId()).isEqualTo(20L);
         assertThat(list.get(0).comment()).isEqualTo("Tuyệt vời");
     }
+    /** Kiểm thử: đánh giá công khai ẩn danh che chủ sở hữu và liên kết buổi. */
     @Test
     void publicAnonymousReviewRedactsOwnerAndSessionLinks() {
         CoachReview r = new CoachReview();
@@ -187,6 +194,7 @@ class CoachReviewServiceTest {
         assertThat(dto.classSessionId()).isNull();
     }
 
+    /** Kiểm thử: từ chối lượt đặt của hội viên khác. */
     @Test
     void rejectsOtherMembersBooking() {
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
@@ -199,6 +207,7 @@ class CoachReviewServiceTest {
         verify(reviewRepository, never()).save(any());
     }
 
+    /** Kiểm thử: từ chối đánh giá trùng cho cùng lượt đặt. */
     @Test
     void rejectsDuplicateBookingReview() {
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
@@ -210,6 +219,7 @@ class CoachReviewServiceTest {
         verify(reviewRepository, never()).save(any());
     }
 
+    /** Kiểm thử: đánh giá buổi lớp cần có điểm danh. */
     @Test
     void classSessionReviewRequiresAttendance() {
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));

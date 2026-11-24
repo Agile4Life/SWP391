@@ -30,6 +30,7 @@ class TrainingCompletionServiceTest {
     private TrainingPlanItem item;
     private final LocalDate date = LocalDate.of(2026, 10, 26);
 
+    /** Chuẩn bị trước mỗi test: tạo TrainingCompletionService với repository giả lập. */
     @BeforeEach
     void setup() {
         MockitoAnnotations.openMocks(this);

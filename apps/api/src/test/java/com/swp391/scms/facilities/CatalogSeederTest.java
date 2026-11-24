@@ -35,6 +35,7 @@ class CatalogSeederTest {
     @Mock RoomRepository roomRepository;
     @InjectMocks CatalogSeeder seeder;
 
+    /** Kiểm thử: thiết bị đã có không phải là đích seed. */
     @BeforeEach
     void existingEquipmentIsNotASeedTarget() {
         org.springframework.test.util.ReflectionTestUtils.setField(seeder, "equipmentRepository", equipmentRepository);
@@ -42,6 +43,7 @@ class CatalogSeederTest {
         org.mockito.Mockito.lenient().when(equipmentRepository.count()).thenReturn(1L);
     }
 
+    /** Kiểm thử: không tạo lại thiết bị demo đã xóa trong kho đã có. */
     @Test
     void doesNotRecreateDeletedDemoEquipmentInAnExistingInventory() {
         org.mockito.Mockito.lenient().when(roomRepository.findAll()).thenReturn(List.of(
@@ -52,6 +54,7 @@ class CatalogSeederTest {
         verify(equipmentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: seed kho trống vào các phòng gym đã đặt tên. */
     @Test
     void seedsAnEmptyInventoryIntoExistingNamedGymRooms() {
         when(equipmentRepository.count()).thenReturn(0L);
@@ -71,12 +74,14 @@ class CatalogSeederTest {
         verify(rooms, never()).create(any());
     }
 
+    /** Hàm trợ giúp của test: tạo phòng có tên. */
     private Room namedRoom(String name) {
         var room = new Room();
         room.setName(name);
         return room;
     }
 
+    /** Kiểm thử: seed các danh mục trống. */
     @Test
     void seedsEmptyCatalogs() {
         when(disciplines.list()).thenReturn(List.of());
@@ -97,7 +102,11 @@ class CatalogSeederTest {
                 .containsExactly(199000, 299000, 599000);
     }
 
-    /** Uses the real PackageService so its term validation runs: an empty catalog must seed without errors. */
+    /**
+     * Kiểm thử: seed danh mục trống qua PackageService có validate.
+     *
+     * Uses the real PackageService so its term validation runs: an empty catalog must seed without errors.
+     */
     @Test
     void seedsAnEmptyCatalogThroughTheValidatingPackageService() {
         var repository = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.MembershipPackageRepository.class);
@@ -131,6 +140,7 @@ class CatalogSeederTest {
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_6M_NAME, 180));
     }
 
+    /** Kiểm thử: không seed lại danh mục đã có. */
     @Test
     void doesNotSeedExistingCatalogs() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
@@ -145,6 +155,7 @@ class CatalogSeederTest {
         verify(packages, times(7)).create(any());
         verify(packages, times(3)).seedLegacyPackage(any());
     }
+    /** Kiểm thử: sửa giá gốc của danh mục mà không đổi điều khoản hay giá do quản lý đặt. */
     @Test
     void correctsOriginalCatalogPricesWithoutChangingTermsOrManagerPrices() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
@@ -164,6 +175,7 @@ class CatalogSeederTest {
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().classCreditLimit()).isEqualTo(8);
     }
 
+    /** Kiểm thử: giữ thay đổi của quản lý trên gói đã seed. */
     @Test
     void preservesManagerChangesToSeededPackage() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
@@ -174,6 +186,7 @@ class CatalogSeederTest {
         verify(packages, never()).update(any(), any());
     }
 
+    /** Kiểm thử: không đụng vào trạng thái gói do quản lý kiểm soát. */
     @Test
     void leavesManagerControlledPackageStatusAlone() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
@@ -189,6 +202,7 @@ class CatalogSeederTest {
         verify(packages, never()).update(any(), any());
     }
 
+    /** Kiểm thử: đổi tên bộ môn cũ sang danh sách chuẩn mà không tạo trùng. */
     @Test
     void renamesLegacyDisciplinesToTheCanonicalListWithoutDuplicatingThem() {
         when(disciplines.list()).thenReturn(List.of(
@@ -209,6 +223,7 @@ class CatalogSeederTest {
         verify(disciplines, never()).create(any());
     }
 
+    /** Kiểm thử: không đổi tên bí danh cũ khi bộ môn hoặc gói chuẩn đã tồn tại. */
     @Test
     void doesNotRenameLegacyAliasWhenCanonicalDisciplineOrPackageAlreadyExistsLaterInSortedList() {
         when(disciplines.list()).thenReturn(List.of(
@@ -231,6 +246,7 @@ class CatalogSeederTest {
         verify(packages, never()).update(any(), any());
     }
 
+    /** Kiểm thử: đồng bộ gói 3 và 6 tháng cũ sang mô tả mới và bật lại gói 6 tháng. */
     @Test
     void syncsLegacySeededThreeAndSixMonthPackagesToNewDescriptionsAndReactivatesSixMonth() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
@@ -261,6 +277,7 @@ class CatalogSeederTest {
                 );
     }
 
+    /** Kiểm thử: giữ trạng thái và giá do quản lý đặt trên gói đã migrate qua các lần khởi động lại. */
     @Test
     void keepsManagerStatusAndPriceOnMigratedPackagesAcrossRestarts() {
         when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
