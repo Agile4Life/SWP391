@@ -2,11 +2,13 @@ import * as THREE from 'three';
 
 import type { LevelCode } from '../../scene/schema';
 
+/** Một phần hình học kèm màu (hex) để gộp thành một hình duy nhất. */
 interface ColoredPart {
   readonly geometry: THREE.BufferGeometry;
   readonly color: string;
 }
 
+/** Thêm một khối hộp có kích thước, vị trí, xoay và màu vào danh sách phần. */
 function pushBox(
   parts: ColoredPart[],
   w: number,
@@ -36,6 +38,7 @@ function pushBox(
   parts.push({ geometry: geom, color });
 }
 
+/** Thêm một khối trụ (bán kính trên/dưới, chiều cao, vị trí, màu) vào danh sách phần. */
 function pushCylinder(
   parts: ColoredPart[],
   rTop: number,
@@ -66,6 +69,7 @@ function pushCylinder(
   parts.push({ geometry: geom, color });
 }
 
+/** Gộp các phần tô màu thành một BufferGeometry duy nhất (danh sách rỗng thì trả hình rỗng). */
 function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   if (parts.length === 0) {
     const empty = new THREE.BufferGeometry();
@@ -145,6 +149,10 @@ function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry 
   return merged;
 }
 
+/**
+ * Thêm đồ nội thất và chi tiết kiến trúc không tương tác của tầng B1 (phòng thay đồ, hồ bơi...), có thể giới
+ * hạn theo khu vực.
+ */
 function buildB1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
@@ -256,6 +264,7 @@ function buildB1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): vo
   }
 }
 
+/** Thêm chi tiết kiến trúc của tầng L1 (lễ tân, gym tiêu chuẩn, sân...). */
 function buildL1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
@@ -433,6 +442,7 @@ function buildL1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): vo
   // Ceiling coffers for L1 belong on the underside of L2 so Solo/Cutaway views never float panels.
 }
 
+/** Thêm các ô trần lõm (coffer) theo lưới trong khoảng x cho trước. */
 function appendCeilingCoffers(
   parts: ColoredPart[],
   opts: {
@@ -461,6 +471,7 @@ function appendCeilingCoffers(
   }
 }
 
+/** Thêm chi tiết kiến trúc của tầng L2 (studio PT, khu VIP...). */
 function buildL2Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
@@ -583,6 +594,7 @@ function buildL2Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): vo
   });
 }
 
+/** Thêm chi tiết kiến trúc của tầng thượng RF (sân hiên, khu nghỉ...). */
 function buildRFDetails(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
@@ -703,6 +715,7 @@ function buildRFDetails(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): vo
   });
 }
 
+/** Thêm chi tiết kiến trúc ngoài trời (sân, lối đi, cột đèn...). */
 function buildOUTDetails(parts: ColoredPart[]): void {
   const salmon = '#f07654';
   const darkSteel = '#1b202b';
@@ -789,6 +802,9 @@ function buildOUTDetails(parts: ColoredPart[]): void {
 }
 
 /**
+ * Dựng toàn bộ đồ nội thất kiến trúc không tương tác (gương, bục, bảng điểm, ghế hồ bơi, giàn che, cột đèn pha)
+ * của một tầng thành một BufferGeometry tô màu theo đỉnh (một lần vẽ mỗi tầng).
+ *
  * Builds all non-interactive architectural furnishings, mirrors, platforms, scoreboards,
  * poolside loungers, pergolas, and floodlight towers for a given level as a single
  * vertex-colored BufferGeometry (1 draw call per level).

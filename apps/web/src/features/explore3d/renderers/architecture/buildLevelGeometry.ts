@@ -19,6 +19,7 @@ export const ZONE_FLOOR_Y = 0.015;
 export const ZONE_BORDER_Y = 0.018;
 export const ZONE_BORDER_WIDTH = 0.05;
 
+/** Một đoạn tường con: tường, khoảng ngang u0–u1 và khoảng cao y0–y1. */
 export interface WallSubSegment {
   wallId: string;
   u0: number;
@@ -29,6 +30,7 @@ export interface WallSubSegment {
   openingId?: string;
 }
 
+/** Hình học sàn đã dựng của một khu vực: mã, vật liệu sàn, màu nhấn và hình học. */
 export interface ZoneFloorBuiltGeometry {
   zoneId: string;
   code: string;
@@ -39,6 +41,7 @@ export interface ZoneFloorBuiltGeometry {
   center: [number, number, number];
 }
 
+/** Bản ghi tường ngoài đã dựng: id, pháp tuyến, tâm, vật liệu và các hình học (đầy đủ, bản hạ thấp khi cắt tường, khung và kính). */
 export interface ExteriorWallBuiltRecord {
   wallId: string;
   normal: [number, number];
@@ -50,6 +53,7 @@ export interface ExteriorWallBuiltRecord {
   glassGeometry?: THREE.BufferGeometry;
 }
 
+/** Kết quả hình học của một tầng: sàn, viền sàn, sàn từng khu vực, tường ngoài theo pháp tuyến, tường trong đặc, tường kính và chi tiết nội thất. */
 export interface LevelBuiltGeometry {
   levelId: string;
   levelCode: LevelCode;
@@ -62,6 +66,7 @@ export interface LevelBuiltGeometry {
   interiorDetailsGeometry: THREE.BufferGeometry;
 }
 
+/** Tạo BufferGeometry rỗng (đủ thuộc tính position, normal, uv). */
 function createEmptyGeometry(): THREE.BufferGeometry {
   const geom = new THREE.BufferGeometry();
   geom.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
@@ -72,6 +77,8 @@ function createEmptyGeometry(): THREE.BufferGeometry {
 }
 
 /**
+ * Gộp nhiều BufferGeometry thành một hình có chỉ mục bằng mảng định kiểu (position, normal, uv, index).
+ *
  * Merges an array of BufferGeometries into a single indexed BufferGeometry
  * using typed arrays directly (`position`, `normal`, `uv`, `index`).
  */
@@ -175,6 +182,7 @@ export function mergeBufferGeometries(
   return merged;
 }
 
+/** Giới hạn lỗ cầu thang cắt trên sàn (minX, maxX, minZ, maxZ). */
 export const STAIRWELL_OPENING_BOUNDS = {
   minX: 8.65,
   maxX: 12.35,
@@ -182,6 +190,7 @@ export const STAIRWELL_OPENING_BOUNDS = {
   maxZ: 13.55,
 } as const;
 
+/** Dựng hình đa giác (THREE.Shape) từ danh sách đỉnh, có thể khoét lỗ cầu thang. */
 function createPolygonShape(
   polygon: Vec2[],
   holeBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
@@ -211,6 +220,7 @@ function createPolygonShape(
   return shape;
 }
 
+/** Dựng tấm sàn ép từ đa giác với độ dày cho trước (có thể khoét lỗ). */
 function buildSlabGeometry(
   polygon: Vec2[],
   thickness: number,
@@ -229,6 +239,7 @@ function buildSlabGeometry(
   return indexed;
 }
 
+/** Dựng dải viền chạy quanh chu vi đa giác với bề rộng, chiều cao và độ cao tâm cho trước. */
 function buildPerimeterStripGeometry(
   polygon: Vec2[],
   stripWidth: number,
@@ -255,6 +266,7 @@ function buildPerimeterStripGeometry(
   return merged;
 }
 
+/** Dựng sàn của một khu vực; khu vực chạm lỗ cầu thang thì khoét lỗ tương ứng. */
 function buildZoneFloorGeometry(
   zone: ZoneNode,
   holeBounds?: { minX: number; maxX: number; minZ: number; maxZ: number },
@@ -299,6 +311,8 @@ function buildZoneFloorGeometry(
 }
 
 /**
+ * Pháp tuyến đơn vị hướng ra ngoài (XZ) của một tường ngoài so với đa giác sàn của tầng.
+ *
  * Computes the outward XZ unit normal of an exterior wall relative to the level's slab polygon.
  */
 export function computeExteriorWallNormal(
@@ -334,6 +348,9 @@ export function computeExteriorWallNormal(
 }
 
 /**
+ * Chia một tường thành các đoạn hình chữ nhật quanh các lỗ mở (không dùng CSG): đoạn nguyên chiều cao, đoạn bệ
+ * dưới cửa sổ và đoạn lanh tô trên cửa.
+ *
  * Splits a wall into rectangular sub-segments around its openings without CSG:
  * - Left / intermediate / right full-height segments
  * - Sill segments (`0..sillHeight`) under windows
@@ -436,6 +453,7 @@ export function splitWallIntoSegments(
   return segments;
 }
 
+/** Dựng một khối hộp cho một đoạn tường theo khoảng ngang và khoảng cao. */
 function buildBoxForWallRange(
   wall: WallNode,
   u0: number,
@@ -472,6 +490,7 @@ function buildBoxForWallRange(
   return box;
 }
 
+/** Dựng hình học của một tường từ các đoạn con (đã tách quanh lỗ mở). */
 export function buildSegmentedWallGeometry(
   wall: WallNode,
   maxWallHeight?: number,
@@ -491,11 +510,13 @@ export function buildSegmentedWallGeometry(
   return merged;
 }
 
+/** Hình học chi tiết ô cửa đã dựng: khung đặc và các tấm kính. */
 interface OpeningBuiltGeometries {
   opaqueFrames: THREE.BufferGeometry[];
   glassPanes: THREE.BufferGeometry[];
 }
 
+/** Dựng khung và kính cho các lỗ mở (cửa, cửa sổ, vòm) của một tường. */
 function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometries {
   const opaqueFrames: THREE.BufferGeometry[] = [];
   const glassPanes: THREE.BufferGeometry[] = [];
@@ -687,6 +708,7 @@ function buildOpeningArchitecturalDetails(wall: WallNode): OpeningBuiltGeometrie
   return { opaqueFrames, glassPanes };
 }
 
+/** Dựng toàn bộ hình học của một tầng (sàn, tường, ô cửa, khu vực) theo id hoặc mã tầng. */
 export function buildLevelGeometry(
   doc: SceneDoc,
   levelIdOrCode: string,
