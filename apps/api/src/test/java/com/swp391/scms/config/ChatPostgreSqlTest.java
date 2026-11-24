@@ -15,9 +15,8 @@ import static org.assertj.core.api.Assertions.*;
 import static com.swp391.scms.config.SupabaseTestDatabase.credential;
 
 /**
- * Bộ kiểm thử cho ChatPostgreSql (chat postgre sql).
- *
- * Hibernate creates the tables in a disposable schema, never in public.
+ * Bộ kiểm thử tích hợp tính năng chat trên PostgreSQL.
+ * Hibernate tạo bảng trong một schema tạm dùng một lần, không bao giờ chạm tới schema public.
  */
 @SpringBootTest
 @ActiveProfiles("supabase")

@@ -27,9 +27,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Bộ kiểm thử cho ClassStudentsPrivacy (class students privacy).
+ * Bộ kiểm thử cho ClassStudentsPrivacy (quyền riêng tư thông tin học viên lớp học).
  *
- * Health notes are medical data: only the class's own coach and managers read them.
+ * Ghi chú sức khỏe là dữ liệu y tế: chỉ HLV phụ trách lớp đó và quản lý mới được đọc.
  */
 class ClassStudentsPrivacyTest {
     private final GymClassRepository gymClasses = mock(GymClassRepository.class);

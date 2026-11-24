@@ -26,8 +26,8 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 /**
- * Integration test proving that Spring Security's @EnableMethodSecurity is active
- * and @PreAuthorize annotations genuinely enforce RBAC policies on controllers.
+ * Kiểm thử tích hợp chứng minh @EnableMethodSecurity của Spring Security đang hoạt động
+ * và các annotation @PreAuthorize thực sự thực thi chính sách RBAC trên các controller.
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = {

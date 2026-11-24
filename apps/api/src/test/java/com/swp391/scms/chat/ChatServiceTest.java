@@ -98,7 +98,7 @@ class ChatServiceTest {
         var result = service.open(new AuthenticatedPrincipal(40L, "desk", "RECEPTIONIST"), 10L);
         assertThat(result.peer().id()).isEqualTo(10L);
         assertThat(result.peer().role()).isEqualTo("MEMBER");
-        verify(contacts).lockUser(10L); // pair creation is serialized on the member row
+        verify(contacts).lockUser(10L); // việc tạo cặp hội thoại được tuần tự hóa bằng khóa trên bản ghi hội viên
     }
 
     @Test void receptionistReusesAnExistingConversationWithTheMember() {

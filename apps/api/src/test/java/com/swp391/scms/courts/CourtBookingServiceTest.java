@@ -65,9 +65,8 @@ class CourtBookingServiceTest {
         lenient().when(subscriptions.findByMemberUserIdAndStatus(1L, "active")).thenReturn(List.of(sub));
     }
     /**
-     * Hàm trợ giúp của test: tạo số lượt đã dùng mẫu.
-     *
-     * Pretends {@code n} bookings of the month were already covered by the plan, then counts the ones made since.
+     * Hàm trợ giúp của test: giả lập {@code n} lượt đặt sân trong tháng đã dùng từ hạn mức gói,
+     * sau đó đếm thêm các lượt mới phát sinh.
      */
     void used(long n) {
         long[] extra = {0};
@@ -96,7 +95,7 @@ class CourtBookingServiceTest {
     }
     @Test void rejectsPastStart() { error("COURT_BOOKING_PAST_SLOT", () -> service.book(member, request(date, LocalTime.of(10, 0)))); }
     @Test void advanceWindowDependsOnThePlanTier() {
-        // Silver (the default plan here) may book 7 days ahead, Gold 14, Platinum 30.
+        // Silver (gói mặc định ở đây) được đặt trước 7 ngày, Gold 14 ngày, Platinum 30 ngày.
         when(subscriptions.hasActiveMembershipCoveringSession(eq(1L), any(), any())).thenReturn(true);
         assertEquals(date.plusDays(7), service.book(member, request(date.plusDays(7), LocalTime.NOON)).date());
         var silver = assertThrows(AppException.class, () -> service.book(member, request(date.plusDays(8), LocalTime.NOON)));
@@ -116,7 +115,7 @@ class CourtBookingServiceTest {
         var silver = assertThrows(AppException.class, () -> service.book(member, request(date, LocalTime.NOON)));
         assertEquals("COURT_BOOKING_UPCOMING_LIMIT", silver.getErrorCode());
         assertArrayEquals(new Object[]{3}, silver.getMessageArgs());
-        plan("GOLD"); // Gold may keep 5 open bookings
+        plan("GOLD"); // Gold được giữ tối đa 5 lượt đặt sắp tới
         assertEquals("booked", service.book(member, request(date, LocalTime.NOON)).status());
         when(bookings.countUpcomingBooked(eq(1L), any(), any())).thenReturn(5L);
         error("COURT_BOOKING_UPCOMING_LIMIT", () -> service.book(member, request(date, LocalTime.NOON)));
@@ -290,17 +289,17 @@ class CourtBookingServiceTest {
         when(bookings.findUnpaidOnlineBefore(any())).thenReturn(List.of());
         when(bookings.findUnpaidCashDue(any(), any(), any())).thenReturn(List.of());
         service.expireUnpaid();
-        // The fixed clock reads 10:00 in the centre zone: release anything starting by 12:00, held at least 30 minutes.
+        // Đồng hồ cố định đang là 10:00 theo múi giờ trung tâm: hủy mọi lượt bắt đầu muộn nhất 12:00 và đã giữ ít nhất 30 phút.
         verify(bookings).findUnpaidCashDue(eq(date), eq(LocalTime.of(12, 0)), eq(LocalDateTime.of(date, LocalTime.of(9, 30))));
     }
     @Test void unpaidHoldsAreCappedPerTier() {
-        used(1); // Silver's single included booking is gone, so the next one is paid
+        used(1); // Đã dùng hết 1 lượt miễn phí của gói Silver, nên lượt tiếp theo phải trả phí
         when(bookings.countUnpaidHolds(eq(1L), any())).thenReturn(1L);
         error("COURT_BOOKING_UNPAID_LIMIT", () -> service.book(member, paid(LocalTime.NOON, "cash")));
         var capped = assertThrows(AppException.class, () -> service.book(member, paid(LocalTime.NOON, "vnpay")));
         assertArrayEquals(new Object[]{1}, capped.getMessageArgs());
 
-        plan("GOLD"); used(2); // Gold may hold two unpaid slots
+        plan("GOLD"); used(2); // Gold được giữ tối đa 2 khung giờ chưa thanh toán
         assertEquals("pending", service.book(member, paid(LocalTime.NOON, "cash")).paymentStatus());
         when(bookings.countUnpaidHolds(eq(1L), any())).thenReturn(2L);
         error("COURT_BOOKING_UNPAID_LIMIT", () -> service.book(member, paid(LocalTime.NOON, "cash")));

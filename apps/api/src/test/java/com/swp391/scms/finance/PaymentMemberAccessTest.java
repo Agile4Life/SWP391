@@ -38,7 +38,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Exercises the real filter chain, method security and payment service together. */
+/** Kiểm thử kết hợp chuỗi filter bảo mật thật, method security và PaymentService. */
 @WebMvcTest(PaymentController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class, PaymentService.class})

@@ -228,28 +228,28 @@ class ProductOrderServiceTest {
         AddressRequest inlineAddr = new AddressRequest("Tran Van B", "0901234567", "79", "26734", "123 Le Loi", null, false);
         when(addresses.snapshot(1L, 10L)).thenReturn(new ShippingSnapshot("Tran Van B", "0901234567", "TP.HCM", "Phuong Ben Nghe", "123 Le Loi", null));
 
-        // counter + delivery -> PAYMENT_METHOD_NOT_ALLOWED
+        // Thanh toán tại quầy kết hợp giao hàng -> PAYMENT_METHOD_NOT_ALLOWED
         CreateOrderRequest counterDelivery = new CreateOrderRequest(
                 "req-counter-delivery", List.of(line(1L, 1)), "delivery", "counter", 10L, null, false, new BigDecimal("600000"));
         assertThatThrownBy(() -> service.create(member, counterDelivery))
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "PAYMENT_METHOD_NOT_ALLOWED");
 
-        // delivery with neither addressId nor shippingAddress -> FULFILLMENT_INVALID
+        // Giao hàng nhưng không có cả addressId lẫn shippingAddress -> FULFILLMENT_INVALID
         CreateOrderRequest deliveryNoAddr = new CreateOrderRequest(
                 "req-deliv-none", List.of(line(1L, 1)), "delivery", "online", null, null, false, new BigDecimal("600000"));
         assertThatThrownBy(() -> service.create(member, deliveryNoAddr))
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "FULFILLMENT_INVALID");
 
-        // delivery with both addressId and shippingAddress -> FULFILLMENT_INVALID
+        // Giao hàng nhưng có cả addressId và shippingAddress -> FULFILLMENT_INVALID
         CreateOrderRequest deliveryBothAddr = new CreateOrderRequest(
                 "req-deliv-both", List.of(line(1L, 1)), "delivery", "online", 10L, inlineAddr, false, new BigDecimal("600000"));
         assertThatThrownBy(() -> service.create(member, deliveryBothAddr))
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "FULFILLMENT_INVALID");
 
-        // pickup with addressId -> FULFILLMENT_INVALID
+        // Nhận tại quầy nhưng lại truyền addressId -> FULFILLMENT_INVALID
         CreateOrderRequest pickupWithAddr = new CreateOrderRequest(
                 "req-pickup-addr", List.of(line(1L, 1)), "pickup", "online", 10L, null, false, new BigDecimal("600000"));
         assertThatThrownBy(() -> service.create(member, pickupWithAddr))
@@ -385,7 +385,7 @@ class ProductOrderServiceTest {
     @Test
     void duplicateVariantLinesAreMergedAndCannotBypassStockCheck() {
         givenVariant(1L, "500000", 30, 3);
-        // 2 + 2 = 4 > stock (3), must be rejected without touching stock
+        // 2 + 2 = 4 > tồn kho (3), phải bị từ chối mà không làm thay đổi tồn kho
         assertThatThrownBy(() -> service.create(
                 member,
                 order(List.of(line(1L, 2), line(1L, 2)), "pickup", "online", "2000000")
@@ -432,11 +432,11 @@ class ProductOrderServiceTest {
         service.cancelInternal(order, "Lần 1", true, user);
         assertThat(v.getStock()).isEqualTo(5);
 
-        // Second cancelInternal on already-cancelled order is a no-op
+        // Lần gọi cancelInternal thứ hai trên đơn đã hủy sẽ không thực hiện gì thêm
         service.cancelInternal(order, "Lần 2", true, user);
         assertThat(v.getStock()).isEqualTo(5);
 
-        // Direct StockService.release when movement already exists is also a no-op
+        // Gọi trực tiếp StockService.release khi bản ghi biến động kho đã tồn tại cũng không thực hiện gì thêm
         when(movements.existsByOrderIdAndReason(9L, "order_release")).thenReturn(true);
         new StockService(variants, movements, clock).release(order, 1L);
         assertThat(v.getStock()).isEqualTo(5);

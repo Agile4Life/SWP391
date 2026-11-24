@@ -19,9 +19,8 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Bộ kiểm thử cho CenterCheckinSchemaUpgradePostgreSql (center checkin schema upgrade postgre sql).
- *
- * Exercises an existing database upgrade in a generated schema; never changes public.
+ * Bộ kiểm thử cho quá trình nâng cấp schema bảng center_checkins trên PostgreSQL.
+ * Diễn tập nâng cấp cơ sở dữ liệu hiện có trong một schema tự sinh; không bao giờ thay đổi schema public.
  */
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 class CenterCheckinSchemaUpgradePostgreSqlTest {
@@ -56,7 +55,7 @@ class CenterCheckinSchemaUpgradePostgreSqlTest {
                         + "values (?, now(), 'qr', 'DENIED') returning id", Long.class, member);
                 long foreignKey = memberForeignKey(jdbc, schema);
 
-                // Reproduce the real gap: ddl-auto=update retains the legacy NOT NULL column.
+                // Tái hiện đúng lỗ hổng thực tế: ddl-auto=update vẫn giữ ràng buộc NOT NULL cũ của cột.
                 synchronizeEntities(source, schema, "update");
                 assertEquals("NO", nullable(jdbc, schema));
                 assertThrows(DataIntegrityViolationException.class, () -> deniedUnknownMember(jdbc));

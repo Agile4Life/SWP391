@@ -84,7 +84,7 @@ class QuoteServiceTest {
 
         var gold = service.quote(new QuoteRequest(List.of(new QuoteLineRequest(1L, 2)), "delivery"), 10);
 
-        // 200,000 list price, 10% off = 20,000; shipping is added on top and is not discounted.
+        // Giá niêm yết 200.000, giảm 10% = 20.000; phí vận chuyển cộng thêm ở ngoài và không được giảm giá.
         assertThat(gold.subtotal()).isEqualByComparingTo("200000");
         assertThat(gold.discountPercent()).isEqualTo(10);
         assertThat(gold.discountAmount()).isEqualByComparingTo("20000");

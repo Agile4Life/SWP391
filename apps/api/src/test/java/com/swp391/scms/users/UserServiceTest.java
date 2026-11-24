@@ -306,7 +306,7 @@ class UserServiceTest {
     /** Kiểm thử: dọn dẹp xóa người dùng không hoạt động trừ subscription đang đóng băng. */
     @Test
     void cleanupInactiveUsersDeletesInactiveUsersExceptFrozenSubscriptions() {
-        // User 1: Inactive > 6 months, not frozen -> SHOULD BE DELETED
+        // Người dùng 1: Không hoạt động > 6 tháng, không đóng băng -> PHẢI BỊ XÓA
         User user1 = new User();
         user1.setId(10L);
         com.swp391.scms.users.entity.Role roleMember = new com.swp391.scms.users.entity.Role();
@@ -314,13 +314,13 @@ class UserServiceTest {
         user1.setRole(roleMember);
         user1.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(7));
 
-        // User 2: Inactive > 6 months, but has FROZEN subscription -> MUST BE PRESERVED
+        // Người dùng 2: Không hoạt động > 6 tháng, nhưng có gói đang ĐÓNG BĂNG -> PHẢI GIỮ LẠI
         User user2 = new User();
         user2.setId(20L);
         user2.setRole(roleMember);
         user2.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(8));
 
-        // User 3: CENTER_MANAGER inactive > 6 months -> MUST BE PRESERVED
+        // Người dùng 3: CENTER_MANAGER không hoạt động > 6 tháng -> PHẢI GIỮ LẠI
         User user3 = new User();
         user3.setId(30L);
         com.swp391.scms.users.entity.Role roleAdmin = new com.swp391.scms.users.entity.Role();

@@ -48,9 +48,8 @@ import java.util.function.Supplier;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Bộ kiểm thử cho OperationsConcurrencyPostgreSql (operations concurrency postgre sql).
- *
- * SCRUM-75 concurrency and membership boundaries against a dedicated Supabase test schema.
+ * Bộ kiểm thử đồng thời và biên gói thành viên trên PostgreSQL.
+ * SCRUM-75: Kiểm thử xử lý đồng thời và ranh giới hiệu lực gói thành viên trên schema test Supabase biệt lập.
  */
 @SpringBootTest
 @ActiveProfiles("supabase")
@@ -173,7 +172,7 @@ class OperationsConcurrencyPostgreSqlTest {
         CheckinDto winner = firstResult != null ? firstResult : secondResult;
         LocalDateTime storedCheckout = visits.findById(visit.id()).orElseThrow().getCheckOutTime();
         assertNotNull(winner.checkOutTime());
-        // PostgreSQL timestamps round Java nanoseconds to microseconds.
+        // Kiểu timestamp của PostgreSQL làm tròn nano giây của Java xuống micro giây.
         assertTrue(Duration.between(winner.checkOutTime(), storedCheckout).abs().toNanos() <= 1_000);
         assertEquals(originalCheckin, timestamp(visit.id(), "check_in_time"));
         assertEquals(1, countVisits(member, "status = 'GRANTED' and check_out_time is not null"));
@@ -185,7 +184,7 @@ class OperationsConcurrencyPostgreSqlTest {
     void scanWaitsForCancellationAndRejectsThatQrEvenWithAnotherActiveSubscription() throws Exception {
         long member = member();
         String cancelledQr = subscription(member, "active", -1, 30);
-        subscription(member, "active", -1, 30); // Keep the general membership trigger satisfied.
+        subscription(member, "active", -1, 30); // Đảm bảo trigger kiểm tra gói thành viên chung vẫn được thỏa mãn.
         var ready = new CountDownLatch(1);
         var scannerPid = new AtomicInteger();
         Future<CheckinDto> scan;
@@ -227,8 +226,8 @@ class OperationsConcurrencyPostgreSqlTest {
         }
     }
 
-    // SCRUM-74: real PostgreSQL locks, independent connections, bounded blocking barriers.
-    // These tests require the explicitly configured isolated Supabase test project/schema.
+    // SCRUM-74: khóa PostgreSQL thật, kết nối độc lập và rào chắn chặn có giới hạn thời gian.
+    // Các bài test này yêu cầu project/schema test Supabase biệt lập được cấu hình rõ ràng.
     /** Kiểm thử: hai hội viên tranh chỗ cuối cùng qua khóa lớp thật. */
     @Test
     void twoMembersCompeteForLastSeatThroughRealClassLock() throws Exception {
@@ -270,7 +269,7 @@ class OperationsConcurrencyPostgreSqlTest {
             }
         }
         hold.get(20, TimeUnit.SECONDS);
-        succeeded(enrollment); // Allowed to book before hold, or to be rejected after it; no deadlock is allowed.
+        succeeded(enrollment); // Cho phép ghi danh trước khi tạm hoãn hoặc bị từ chối sau đó; tuyệt đối không được xảy ra deadlock.
         assertEquals("frozen", jdbc.queryForObject("select status from membership_subscriptions where id = ?", String.class, subscriptionId));
         assertEquals(0, rowCount("class_enrollments", gymClass, "booked"));
     }

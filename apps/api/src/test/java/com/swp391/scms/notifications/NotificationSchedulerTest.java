@@ -87,7 +87,7 @@ class NotificationSchedulerTest {
     }
 
     // =========================================================================
-    // Job 1: Membership Subscription Expiry Tests
+    // Tác vụ 1: Kiểm thử thông báo hết hạn gói hội viên
     // =========================================================================
 
     @ParameterizedTest
@@ -181,7 +181,7 @@ class NotificationSchedulerTest {
     }
 
     // =========================================================================
-    // Job 2: Upcoming Class Reminder Tests
+    // Tác vụ 2: Kiểm thử nhắc nhở lớp học sắp diễn ra
     // =========================================================================
 
     @ParameterizedTest
@@ -194,7 +194,7 @@ class NotificationSchedulerTest {
     void scanAndNotifyUpcomingClasses_Success(String resolvedTitle, String resolvedBody) {
         LocalDateTime referenceTime = LocalDateTime.of(2026, 10, 22, 10, 0); // 10:00
         LocalDate sessionDate = LocalDate.of(2026, 10, 22);
-        LocalTime startTime = LocalTime.of(11, 0); // 11:00 (1 hour later, within 2h)
+        LocalTime startTime = LocalTime.of(11, 0); // 11:00 (sau 1 giờ, nằm trong khung 2 giờ)
         LocalTime endTime = LocalTime.of(12, 0);
 
         GymClass gymClass = new GymClass();
@@ -273,7 +273,7 @@ class NotificationSchedulerTest {
         when(enrollmentRepository.findByGymClassIdAndStatus(10L, "booked"))
                 .thenReturn(List.of(enrollment1));
 
-        // Already sent
+        // Đã gửi trước đó
         when(notificationRepository.existsNotification(101L, "class_reminder", "class_session", 301L))
                 .thenReturn(true);
 
@@ -297,7 +297,7 @@ class NotificationSchedulerTest {
         session.setId(301L);
         session.setGymClass(gymClass);
         session.setSessionDate(sessionDate);
-        session.setStartTime(LocalTime.of(13, 0)); // 3 hours later (> 2 hours window)
+        session.setStartTime(LocalTime.of(13, 0)); // sau 3 giờ (> khung 2 giờ)
         session.setEndTime(LocalTime.of(14, 0));
         session.setStatus("scheduled");
 
@@ -325,7 +325,7 @@ class NotificationSchedulerTest {
         session.setId(301L);
         session.setGymClass(gymClass);
         session.setSessionDate(sessionDate);
-        session.setStartTime(LocalTime.of(9, 0)); // 1 hour ago
+        session.setStartTime(LocalTime.of(9, 0)); // cách đây 1 giờ
         session.setEndTime(LocalTime.of(10, 0));
         session.setStatus("scheduled");
 

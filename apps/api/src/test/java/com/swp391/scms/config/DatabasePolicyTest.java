@@ -9,9 +9,8 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Bộ kiểm thử cho chính sách DatabasePolicy (database policy).
- *
- * Runs in CI: legacy reference SQL must never become an application dependency.
+ * Bộ kiểm thử chính sách cơ sở dữ liệu DatabasePolicy.
+ * Chạy trong CI: các file SQL tham chiếu lịch sử tuyệt đối không bao giờ được trở thành dependency của ứng dụng.
  */
 class DatabasePolicyTest {
     private static final Path ROOT = Path.of("..", "..");

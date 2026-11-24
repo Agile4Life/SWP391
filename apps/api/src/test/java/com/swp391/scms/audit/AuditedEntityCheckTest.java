@@ -12,9 +12,8 @@ import java.util.TreeSet;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Bộ kiểm thử cho AuditedEntityCheck (audited entity check).
- *
- * Every audited entity type must be allowed by the audit_logs CHECK, or the audited write rolls back.
+ * Bộ kiểm thử cho AuditedEntityCheck.
+ * Mọi loại entity được audit phải nằm trong ràng buộc CHECK của bảng audit_logs, nếu không thao tác ghi có audit sẽ bị rollback.
  */
 class AuditedEntityCheckTest {
 

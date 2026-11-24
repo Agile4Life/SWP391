@@ -38,17 +38,14 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * Bộ kiểm thử cho ConcurrencyBooking (concurrency booking).
+ * SCRUM-114: Bộ kiểm thử tích hợp đồng thời và chịu tải cho chức năng đặt lớp học.
  *
- * SCRUM-114: Concurrency & Stress Integration Test for Class Booking.
+ * Mô phỏng 50 luồng chạy đồng thời cùng đặt 1 chỗ trống cuối cùng của một buổi học bằng CountDownLatch.
  *
- * Simulates 50 concurrent threads attempting to book the 1 remaining slot
- * of a session simultaneously using CountDownLatch.
- *
- * Verifies:
- * 1. Exactly 1 request succeeds (HTTP 200/201).
- * 2. Exactly 49 requests receive ConflictException (HTTP 409).
- * 3. Class current booked capacity does not exceed max capacity.
+ * Kiểm chứng:
+ * 1. Đúng 1 yêu cầu thành công (HTTP 200/201).
+ * 2. Đúng 49 yêu cầu nhận ConflictException (HTTP 409).
+ * 3. Sức chứa đã đặt hiện tại của lớp không vượt quá sức chứa tối đa.
  */
 @ExtendWith(MockitoExtension.class)
 class ConcurrencyBookingIntegrationTest {
@@ -106,7 +103,7 @@ class ConcurrencyBookingIntegrationTest {
         session.setEndTime(LocalTime.of(15, 0));
         session.setStatus("scheduled");
 
-        // Model pessimistic locking SELECT FOR UPDATE behavior
+        // Mô phỏng hành vi khóa bi quan SELECT FOR UPDATE
         when(gymClasses.findByIdForUpdate(10L)).thenAnswer(invocation -> {
             pessimisticDbLock.lock();
             return Optional.of(gymClass);
@@ -118,7 +115,7 @@ class ConcurrencyBookingIntegrationTest {
         when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(any(), any(), eq("booked")))
                 .thenReturn(Optional.empty());
 
-        // Count of booked seats reflects current state under lock
+        // Số chỗ đã đặt phản ánh trạng thái hiện tại trong phạm vi khóa
         when(enrollments.countByGymClassIdAndStatus(eq(10L), eq("booked")))
                 .thenAnswer(invocation -> (long) currentBookedCount.get());
 
@@ -168,19 +165,19 @@ class ConcurrencyBookingIntegrationTest {
             executor.submit(() -> {
                 readyLatch.countDown();
                 try {
-                    // Wait for all 50 threads to be ready, then trigger simultaneously
+                    // Chờ cả 50 luồng sẵn sàng rồi đồng loạt kích hoạt
                     startLatch.await();
                     EnrollmentDto result = enrollmentService.enroll(principal, 100L);
                     if (result != null) {
                         successCount.incrementAndGet();
                     }
                 } catch (ConflictException ex) {
-                    // Expected when class capacity is reached (Trigger P2 behavior)
+                    // Hành vi kỳ vọng khi lớp đã đạt sức chứa tối đa (tương ứng Trigger P2)
                     conflictCount.incrementAndGet();
                 } catch (Exception ex) {
                     unexpectedErrorCount.incrementAndGet();
                 } finally {
-                    // Release the simulated database transaction lock for the next thread
+                    // Giải phóng khóa giao dịch cơ sở dữ liệu mô phỏng cho luồng tiếp theo
                     if (pessimisticDbLock.isHeldByCurrentThread()) {
                         pessimisticDbLock.unlock();
                     }
@@ -189,28 +186,28 @@ class ConcurrencyBookingIntegrationTest {
             });
         }
 
-        // Wait until all 50 threads are queued at the starting line
+        // Chờ tất cả 50 luồng vào vị trí xuất phát
         assertTrue(readyLatch.await(5, TimeUnit.SECONDS), "All 50 worker threads should be ready");
 
-        // Fire simultaneously!
+        // Phát lệnh chạy đồng thời
         startLatch.countDown();
 
-        // Wait for all 50 threads to finish
+        // Chờ cả 50 luồng hoàn tất
         assertTrue(doneLatch.await(10, TimeUnit.SECONDS), "All 50 worker threads should complete within timeout");
 
-        // Assert 1: Exactly 1 request succeeds (Booked successfully)
+        // Kiểm chứng 1: Đúng 1 yêu cầu thành công (đặt chỗ thành công)
         assertEquals(1, successCount.get(),
                 "Exactly 1 request must succeed in booking the last seat");
 
-        // Assert 2: Exactly 49 requests receive ConflictException (409 Conflict / Class full)
+        // Kiểm chứng 2: Đúng 49 yêu cầu nhận ConflictException (409 Conflict / Lớp đã đầy)
         assertEquals(49, conflictCount.get(),
                 "Exactly 49 requests must be rejected with ConflictException (class full)");
 
-        // Assert 3: No unexpected errors occurred
+        // Kiểm chứng 3: Không phát sinh lỗi ngoài dự kiến
         assertEquals(0, unexpectedErrorCount.get(),
                 "No unexpected errors should occur during concurrency burst");
 
-        // Assert 4: Capacity integrity: current booked capacity must NOT exceed max_capacity
+        // Kiểm chứng 4: Toàn vẹn sức chứa: số chỗ đã đặt không được vượt quá max_capacity
         int finalBookedCount = currentBookedCount.get();
         assertTrue(finalBookedCount <= MAX_CAPACITY,
                 "Current capacity (" + finalBookedCount + ") must not exceed max capacity (" + MAX_CAPACITY + ")");

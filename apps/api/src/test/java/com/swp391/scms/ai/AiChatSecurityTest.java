@@ -62,7 +62,7 @@ class AiChatSecurityTest {
         verify(service).getMySessions(30L, "RECEPTIONIST");
     }
 
-    /** Coaches use the AI only for workout plan suggestions, not the chat. */
+    /** Huấn luyện viên chỉ dùng AI để gợi ý kế hoạch tập luyện, không dùng tính năng chat. */
     @Test void rejectsCoach() {
         var coach = new AuthenticatedPrincipal(20L, "coach", "COACH");
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(coach, null,

@@ -86,7 +86,7 @@ class AuditServiceTest {
         assertThat(dto.entityType()).isEqualTo("membership_subscriptions");
         assertThat(dto.entityId()).isEqualTo(200L);
 
-        // Verify JSON is parsed into JsonNode tree structure
+        // Xác minh JSON được phân tích thành cấu trúc cây JsonNode
         assertThat(dto.oldValue()).isInstanceOf(JsonNode.class);
         assertThat(((JsonNode) dto.oldValue()).get("status").asText()).isEqualTo("pending_payment");
         assertThat(dto.newValue()).isInstanceOf(JsonNode.class);

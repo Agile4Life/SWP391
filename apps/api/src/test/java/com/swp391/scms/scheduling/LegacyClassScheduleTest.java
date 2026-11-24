@@ -12,10 +12,10 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Bộ kiểm thử cho LegacyClassSchedule (legacy class schedule).
+ * Bộ kiểm thử cho LegacyClassSchedule (lịch lớp học dữ liệu cũ).
  *
- * Reported: a class without recurring days showed "Mon, Wed, Fri" (a UI default) while its sessions ran on Tue/Thu.
- * The class list now derives the schedule from the real sessions.
+ * Lỗi đã báo cáo: lớp không có ngày lặp định kỳ lại hiển thị "Mon, Wed, Fri" (giá trị mặc định trên giao diện)
+ * trong khi các buổi học thực tế diễn ra vào Thứ 3/Thứ 5. Danh sách lớp nay suy ra lịch học từ các buổi học thực tế.
  */
 class LegacyClassScheduleTest {
 
@@ -35,10 +35,10 @@ class LegacyClassScheduleTest {
         GymClass legacy = new GymClass();
         legacy.setName("Boxing Cardio Chiều");
         List<ClassSession> sessions = List.of(
-                session(LocalDate.of(2026, 11, 5), "scheduled"),   // Thursday
-                session(LocalDate.of(2026, 11, 10), "scheduled"),  // Tuesday
-                session(LocalDate.of(2026, 11, 26), "scheduled"),  // Thursday
-                session(LocalDate.of(2026, 11, 30), "cancelled")); // Monday, cancelled: not part of the schedule
+                session(LocalDate.of(2026, 11, 5), "scheduled"),   // Thứ 5
+                session(LocalDate.of(2026, 11, 10), "scheduled"),  // Thứ 3
+                session(LocalDate.of(2026, 11, 26), "scheduled"),  // Thứ 5
+                session(LocalDate.of(2026, 11, 30), "cancelled")); // Thứ 2, đã hủy: không tính vào lịch học
 
         GymClassDto dto = new SchedulingMapper().toDto(legacy, sessions);
 

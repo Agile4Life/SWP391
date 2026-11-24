@@ -36,7 +36,7 @@ class SessionBookingServiceTest {
     final MembershipSubscriptionRepository subscriptions = mock(MembershipSubscriptionRepository.class);
     final MemberRepository members = mock(MemberRepository.class);
     final NotificationService notifications = mock(NotificationService.class);
-    // 2026-11-03 10:00 in the center's timezone
+    // 2026-11-03 10:00 theo múi giờ của trung tâm
     final Clock clock = Clock.fixed(Instant.parse("2026-11-03T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     final LocalDate today = LocalDate.of(2026, 11, 3);
     final AuthenticatedPrincipal owner = new AuthenticatedPrincipal(5L, "member", "MEMBER");
@@ -102,7 +102,7 @@ class SessionBookingServiceTest {
         return b;
     }
 
-    // ---------------------------------------------------------------- single booking
+    // ---------------------------------------------------------------- đặt lẻ từng buổi
 
     @Test void booksOneSessionAndNotifiesTheMember() {
         session(11, today.plusDays(1), 7);
@@ -163,13 +163,13 @@ class SessionBookingServiceTest {
         assertEquals("booked", service.book(owner, 18L).status());
     }
 
-    // ---------------------------------------------------------------- bulk booking
+    // ---------------------------------------------------------------- đặt hàng loạt
 
     @Test void bulkBooksWhatItCanAndReportsTheRest() {
         session(21, today.plusDays(1), 7);
         session(22, today.plusDays(3), 7);
         session(23, today.plusDays(5), 7);
-        when(bookings.countBySessionIdAndStatus(22L, "booked")).thenReturn(2L); // full
+        when(bookings.countBySessionIdAndStatus(22L, "booked")).thenReturn(2L); // đã đầy
         when(sessions.findById(404L)).thenReturn(Optional.empty());
 
         var result = service.bookMany(owner, List.of(23L, 21L, 22L, 404L, 21L));
@@ -199,7 +199,7 @@ class SessionBookingServiceTest {
         verify(notifications, never()).send(any(), any(), any(), any(), any(), any());
     }
 
-    // ---------------------------------------------------------------- cancelling
+    // ---------------------------------------------------------------- hủy đặt chỗ
 
     /** Hàm trợ giúp của test: giả lập việc khóa dòng đặt chỗ để xử lý đồng thời. */
     void lockBooking(SessionBooking booking) {
@@ -228,7 +228,7 @@ class SessionBookingServiceTest {
         done.setStatus("cancelled");
         lockBooking(done);
         error("SCHEDULING_BOOKING_NOT_BOOKED", () -> service.cancel(owner, 52L));
-        SessionBooking started = booked(53, session(44, today, 9), 5L); // 09:00 already started at 10:00
+        SessionBooking started = booked(53, session(44, today, 9), 5L); // buổi 09:00 đã bắt đầu khi đồng hồ là 10:00
         lockBooking(started);
         error("SCHEDULING_BOOKING_TOO_LATE", () -> service.cancel(owner, 53L));
         when(bookings.findClassIdById(999L)).thenReturn(Optional.empty());

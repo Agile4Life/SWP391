@@ -85,7 +85,7 @@ class CoursePaymentTest {
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
 
-        // Already 2 booked courses -> quota exceeded
+        // Đã đăng ký 2 khóa học -> vượt hạn mức
         when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(eq(100L), eq("booked"), any(), any()))
                 .thenReturn(2L);
 

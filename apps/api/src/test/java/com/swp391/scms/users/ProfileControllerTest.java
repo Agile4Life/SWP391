@@ -434,7 +434,7 @@ class ProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.fullName").value("NGUYEN VAN A"))
-                // A self-declared document waits for the desk: it does not verify the member.
+                // Giấy tờ hội viên tự khai báo phải chờ lễ tân duyệt: chưa xác minh ngay cho hội viên.
                 .andExpect(jsonPath("$.data.identityVerified").value(false))
                 .andExpect(jsonPath("$.data.kycStatus").value("PENDING"));
     }

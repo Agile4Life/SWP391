@@ -28,9 +28,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Bộ kiểm thử cho PostgreSqlDatabase (postgre sql database).
- *
- * Real Supabase PostgreSQL. Uses a fresh, uniquely named schema and never resets public.
+ * Bộ kiểm thử tích hợp trên cơ sở dữ liệu PostgreSQL.
+ * Chạy trên Supabase PostgreSQL thật, dùng schema mới đặt tên duy nhất và không bao giờ đặt lại schema public.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -50,7 +49,7 @@ class PostgreSqlDatabaseIntegrationTest {
     /** Hàm trợ giúp của test: lấy kết nối database test. */
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry properties) throws Exception {
-        // The schema name is generated here, never supplied by external configuration.
+        // Tên schema được sinh trực tiếp tại đây, không bao giờ lấy từ cấu hình bên ngoài.
         try (var connection = SupabaseTestDatabase.connect();
              var statement = connection.createStatement()) {
             statement.execute("create schema \"" + SCHEMA + "\"");
@@ -136,7 +135,7 @@ class PostgreSqlDatabaseIntegrationTest {
                     assertNull(events.poll(1200, TimeUnit.MILLISECONDS), "Rollback must not emit");
                 } finally { connection.rollback(); connection.setAutoCommit(true); }
             }
-            // Changing another member's payment must not reach this capability channel.
+            // Thay đổi khoản thanh toán của hội viên khác không được gửi tới kênh này.
             long other = member();
             jdbc.update("insert into payments (member_id,amount,method,status,created_at) values (?,499000,'cash','pending',now())", other);
             assertNull(events.poll(800, TimeUnit.MILLISECONDS));
@@ -340,7 +339,7 @@ class PostgreSqlDatabaseIntegrationTest {
 
     /** Hàm trợ giúp của test: khẳng định thao tác vi phạm trigger của database. */
     private static void assertTriggerViolation(DataIntegrityViolationException error, String expectedMessage) {
-        // PostgreSQL sends CONSTRAINT as a protocol field, not as part of getMessage().
+        // PostgreSQL gửi CONSTRAINT dưới dạng trường giao thức riêng, không nằm trong getMessage().
         var cause = assertInstanceOf(SQLException.class, error.getMostSpecificCause());
         assertEquals("23514", cause.getSQLState());
         assertTrue(cause.getMessage().contains(expectedMessage), cause.getMessage());
@@ -451,7 +450,7 @@ class PostgreSqlDatabaseIntegrationTest {
                 order by rolname limit 1
                 """, String.class);
         Assumptions.assumeFalse(roles.isEmpty(), "Test JDBC role must be allowed to SET ROLE anon or pg_read_all_data");
-        String role = roles.getFirst(); // Selected from a fixed allowlist, never user input.
+        String role = roles.getFirst(); // Chọn từ danh sách cho phép cố định, không bao giờ lấy từ đầu vào người dùng.
         new PostgreSqlDataSecurityInitializer(entities, jdbc).run(new DefaultApplicationArguments());
         jdbc.execute("grant usage on schema \"" + SCHEMA + "\" to \"" + role + "\"");
         jdbc.execute("grant select on all tables in schema \"" + SCHEMA + "\" to \"" + role + "\"");

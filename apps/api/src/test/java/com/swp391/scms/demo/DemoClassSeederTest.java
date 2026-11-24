@@ -100,8 +100,7 @@ class DemoClassSeederTest {
 
     /**
      * Kiểm thử: không xếp buổi học đè lên lịch PT đã xác nhận của HLV.
-     *
-     * The schedule trigger also rejects a class session that overlaps a confirmed PT booking of its coach.
+     * Trigger lịch học cũng từ chối buổi lớp trùng khung giờ với lịch PT đã xác nhận của cùng HLV.
      */
     @Test
     void doesNotPlaceAScheduledSessionOverAConfirmedPtBookingOfTheCoach() {

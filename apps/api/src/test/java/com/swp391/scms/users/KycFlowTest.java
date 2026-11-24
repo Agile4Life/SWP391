@@ -20,9 +20,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
- * Bộ kiểm thử cho KycFlow (kyc flow).
+ * Bộ kiểm thử cho KycFlow (luồng xác minh danh tính KYC).
  *
- * Identity documents: encrypted at rest, reviewed by the desk before they count (spec 2026-11-09 review).
+ * Giấy tờ tùy thân: được mã hóa khi lưu trữ và phải được lễ tân duyệt trước khi có hiệu lực (đặc tả 2026-11-09).
  */
 class KycFlowTest {
     private final UserRepository users = mock(UserRepository.class);
@@ -67,7 +67,7 @@ class KycFlowTest {
         assertTrue(member.getCitizenIdEncrypted().startsWith("enc:v1:"));
         assertFalse(member.getCitizenIdEncrypted().contains("012345678901"));
         assertEquals("012345678901", crypto.decrypt(member.getCitizenIdEncrypted()));
-        // Every encryption uses a fresh IV.
+        // Mỗi lần mã hóa sử dụng một IV mới.
         assertNotEquals(crypto.encrypt("012345678901"), crypto.encrypt("012345678901"));
         assertNull(crypto.decrypt("plain-text"));
     }
@@ -86,7 +86,7 @@ class KycFlowTest {
         assertTrue(member.getIdentityVerified());
         assertEquals("APPROVED", member.getKycStatus());
         assertNotNull(member.getIdentityVerifiedAt());
-        // A reviewed submission cannot be reviewed again.
+        // Hồ sơ đã duyệt không thể duyệt lại lần nữa.
         assertThrows(ConflictException.class, () -> review.approve(desk, 10L));
     }
 
@@ -101,7 +101,7 @@ class KycFlowTest {
         assertFalse(member.getIdentityVerified());
         assertEquals("REJECTED", member.getKycStatus());
         assertEquals("Ảnh mờ, không đọc được số", member.getKycRejectReason());
-        // The member can submit again, which puts the document back in the queue.
+        // Hội viên có thể gửi lại, đưa hồ sơ quay trở lại hàng chờ duyệt.
         submit();
         assertEquals("PENDING", member.getKycStatus());
         assertNull(member.getKycRejectReason());
@@ -131,7 +131,7 @@ class KycFlowTest {
         assertEquals("********8901", member.getCitizenId());
         assertEquals("012345678901", crypto.decrypt(member.getCitizenIdEncrypted()));
         verify(members).save(member);
-        // Running it again changes nothing: the column is already masked.
+        // Chạy lại một lần nữa không thay đổi gì: cột đã được che bớt rồi.
         clearInvocations(members);
         new KycBackfill(members, crypto).run(null);
         verify(members, never()).save(any());

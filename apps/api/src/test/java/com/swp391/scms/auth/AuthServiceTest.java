@@ -323,24 +323,24 @@ class AuthServiceTest {
         when(passwordEncoder.matches("correct_pwd", "hashed_real_password")).thenReturn(true);
         when(jwtService.generateToken(any(), any(), any())).thenReturn("mock_token");
 
-        // First 4 failures: UnauthorizedException with decreasing remaining attempts
+        // 4 lần thất bại đầu: ném UnauthorizedException với số lượt còn lại giảm dần
         for (int i = 1; i <= 4; i++) {
             UnauthorizedException ex = assertThrows(UnauthorizedException.class,
                     () -> service.login(new LoginRequest("testmember", "wrong_pwd")));
             assertEquals("INVALID_CREDENTIALS", ex.getErrorCode());
         }
 
-        // 5th failure: TooManyRequestsException (LOGIN_LOCKED)
+        // Lần thất bại thứ 5: ném TooManyRequestsException (LOGIN_LOCKED)
         TooManyRequestsException lockEx = assertThrows(TooManyRequestsException.class,
                 () -> service.login(new LoginRequest("testmember", "wrong_pwd")));
         assertEquals("LOGIN_LOCKED", lockEx.getErrorCode());
 
-        // 6th attempt even with correct password is blocked while locked
+        // Lần thử thứ 6 dù đúng mật khẩu vẫn bị chặn trong thời gian bị khóa
         TooManyRequestsException stillLocked = assertThrows(TooManyRequestsException.class,
                 () -> service.login(new LoginRequest("testmember", "correct_pwd")));
         assertEquals("LOGIN_LOCKED", stillLocked.getErrorCode());
 
-        // Reset and login with correct password succeeds
+        // Đặt lại bộ đếm và đăng nhập bằng mật khẩu đúng thì thành công
         service.getLoginAttemptService().reset("testmember");
         var tokenResponse = service.login(new LoginRequest("testmember", "correct_pwd"));
         assertNotNull(tokenResponse);

@@ -130,11 +130,11 @@ class ClassSessionServiceTest {
         assertEquals("booked", enrollment.getStatus());
         verify(enrollmentRepository, never()).save(any(ClassEnrollment.class));
 
-        // Verify notification sent
+        // Kiểm tra đã gửi thông báo
         verify(notificationService, times(1)).send(
                 eq(20L), any(), any(), eq("schedule_change"), eq("class_session"), eq(100L));
 
-        // Verify event published
+        // Kiểm tra đã phát sự kiện
         ArgumentCaptor<SessionCancelledEvent> captor = ArgumentCaptor.forClass(SessionCancelledEvent.class);
         verify(eventPublisher, times(1)).publishEvent(captor.capture());
         assertEquals(100L, captor.getValue().sessionId());

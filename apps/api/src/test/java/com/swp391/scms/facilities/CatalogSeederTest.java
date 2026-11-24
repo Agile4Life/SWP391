@@ -103,9 +103,8 @@ class CatalogSeederTest {
     }
 
     /**
-     * Kiểm thử: seed danh mục trống qua PackageService có validate.
-     *
-     * Uses the real PackageService so its term validation runs: an empty catalog must seed without errors.
+     * Kiểm thử: seed danh mục trống qua PackageService thật để chạy đầy đủ bước kiểm tra thời hạn;
+     * danh mục trống phải được seed thành công mà không phát sinh lỗi.
      */
     @Test
     void seedsAnEmptyCatalogThroughTheValidatingPackageService() {

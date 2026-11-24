@@ -11,9 +11,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Bộ kiểm thử cho AuditMigrationDeploymentGate (audit migration deployment gate).
- *
- * Spring property binding, without Boot startup, datasource, environment credentials or schema writes.
+ * Bộ kiểm thử cổng triển khai nâng cấp audit AuditMigrationDeploymentGate.
+ * Chỉ kiểm tra ánh xạ thuộc tính Spring, không khởi chạy Spring Boot, datasource, thông tin môi trường hay ghi schema.
  */
 class AuditMigrationDeploymentGateTest {
     /** Hàm trợ giúp của test: dựng ApplicationContext để thử cổng migration audit. */
@@ -39,7 +38,7 @@ class AuditMigrationDeploymentGateTest {
     private void check(PostgreSqlTriggerProvider provider, int callbacks) {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         provider.applyTriggers(jdbc);
-        // The check-in upgrade always runs; the audit upgrade adds a second callback unless turned off.
+        // Bước nâng cấp check-in luôn chạy; bước nâng cấp audit thêm callback thứ hai trừ khi bị tắt.
         verify(jdbc, times(callbacks)).execute(org.mockito.ArgumentMatchers.<ConnectionCallback<Void>>any());
         verify(jdbc).execute(contains("trg_pt_schedule_booking"));
     }

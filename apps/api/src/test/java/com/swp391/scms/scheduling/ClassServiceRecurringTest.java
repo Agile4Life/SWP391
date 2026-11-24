@@ -75,7 +75,7 @@ class ClassServiceRecurringTest {
             return c;
         });
 
-        // Advance schedule: 3 weeks later (2026-11-30 to 2026-12-11), Mon & Wed = 4 sessions
+        // Lịch mở trước: sau 3 tuần (2026-11-30 đến 2026-12-11), Thứ 2 & Thứ 4 = 4 buổi học
         CreateRecurringClassRequest req = new CreateRecurringClassRequest(
                 "Yoga Advance", 1L, 2L, 3L, 20, "beginner", "Description",
                 new BigDecimal("500000"),

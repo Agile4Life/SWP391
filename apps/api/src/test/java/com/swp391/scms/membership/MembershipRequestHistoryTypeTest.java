@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
 /**
- * Bộ kiểm thử cho MembershipRequestHistoryType (membership request history type).
+ * Bộ kiểm thử cho MembershipRequestHistoryType (phân loại lịch sử yêu cầu gói hội viên).
  *
- * The desk's request history labels each processed request as a registration, renewal or upgrade.
+ * Lịch sử yêu cầu tại quầy lễ tân gắn nhãn mỗi yêu cầu đã xử lý là đăng ký mới, gia hạn hoặc nâng cấp.
  */
 class MembershipRequestHistoryTypeTest {
 

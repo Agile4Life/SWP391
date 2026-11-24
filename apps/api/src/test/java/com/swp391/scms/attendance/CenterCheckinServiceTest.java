@@ -96,9 +96,7 @@ class CenterCheckinServiceTest {
     private long nextSubscriptionId = 500;
 
     /**
-     * Hàm trợ giúp của test: đăng ký một mã QR cho hội viên.
-     *
-     * Gives the subscription an id and a valid rotating QR (the gate only accepts signed codes).
+     * Hàm trợ giúp của test: gán id cho gói đăng ký và tạo mã QR động hợp lệ (cổng chỉ chấp nhận mã đã ký).
      */
     private void registerQr(String label, MembershipSubscription sub) {
         long id = nextSubscriptionId++;
@@ -372,7 +370,7 @@ class CenterCheckinServiceTest {
         org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
         try {
             assertEquals("GRANTED", service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-VALID"), "Gate A")).status());
-            // Attendance is recorded by the coach or the desk; the entry schedules no follow-up work.
+            // Điểm danh do huấn luyện viên hoặc lễ tân ghi nhận; lượt vào cổng không lên lịch tác vụ nối tiếp nào.
             assertTrue(org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations().isEmpty());
         } finally {
             org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();

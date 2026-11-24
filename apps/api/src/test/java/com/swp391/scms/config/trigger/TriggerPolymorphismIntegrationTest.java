@@ -16,9 +16,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Bộ kiểm thử cho TriggerPolymorphism (trigger polymorphism).
- *
- * PostgreSQL provider checks for mandatory P2, P3, and P4 triggers.
+ * Bộ kiểm thử đa hình trigger cho TriggerPolymorphism.
+ * Kiểm tra provider PostgreSQL nạp đủ các trigger bắt buộc P2, P3 và P4.
  */
 class TriggerPolymorphismIntegrationTest {
 
@@ -34,11 +33,11 @@ class TriggerPolymorphismIntegrationTest {
             sql = new String(is.readAllBytes(), StandardCharsets.UTF_8).toLowerCase();
         }
 
-        // P2: Capacity check
+        // P2: Kiểm tra sức chứa lớp học
         assertTrue(sql.contains("scms_check_enrollment_capacity"), "Must contain P2 capacity check function");
         assertTrue(sql.contains("trg_enrollments_check_capacity"), "Must contain P2 capacity trigger");
 
-        // P3: Schedule conflicts (Coach & Room)
+        // P3: Trùng lịch (Huấn luyện viên & Phòng tập)
         assertTrue(sql.contains("scms_check_session_conflict"), "Must contain P3 conflict check function");
         assertTrue(sql.contains("trg_sessions_check_conflict"), "Must contain P3 conflict trigger");
         assertTrue(sql.contains("scms_guard_member_class_overlap"), "Must forbid one member in two overlapping classes");
@@ -46,7 +45,7 @@ class TriggerPolymorphismIntegrationTest {
         assertTrue(sql.contains("coach_id"), "Must check coach time overlap");
         assertTrue(sql.contains("room_id"), "Must check room time overlap");
 
-        // P4: Membership invariants (Enrollments & Checkins)
+        // P4: Bất biến gói thành viên (Ghi danh & Check-in)
         assertTrue(sql.contains("scms_require_active_membership_for_enrollment"), "Must contain P4 enrollment membership check function");
         assertTrue(sql.contains("scms_require_active_membership_for_checkin"), "Must contain P4 checkin membership check function");
         assertTrue(sql.contains("trg_checkins_check_membership"), "Must contain P4 checkin trigger");

@@ -86,7 +86,7 @@ class MembershipCancellationServiceTest {
     /** Kiểm thử: yêu cầu gợi ý phần chưa dùng của số tiền đã trả chứ không phải giá danh mục. */
     @Test
     void requestSuggestsUnusedShareOfWhatWasPaidNotTheCatalogPrice() {
-        // Bought for 320,000; the manager has since raised the package to 500,000.
+        // Đã mua với giá 320.000; sau đó quản lý đã tăng giá gói lên 500.000.
         active.getMembershipPackage().setPrice(new java.math.BigDecimal("500000"));
         com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
         paid.setSubscriptionId(100L);
@@ -98,7 +98,7 @@ class MembershipCancellationServiceTest {
 
         CancellationDtos.Response result = service.request(owner, 100L, new CancellationDtos.Request("Moving"));
 
-        // 01/10–01/11 is 32 days; on 22/10, 11 days are left: 320,000 × 11/32 = 110,000.
+        // Từ 01/10–01/11 là 32 ngày; vào ngày 22/10 còn lại 11 ngày: 320.000 × 11/32 = 110.000.
         assertThat(result.refundAmount()).isEqualByComparingTo("110000");
     }
 
@@ -258,7 +258,7 @@ class MembershipCancellationServiceTest {
 
         service.decide(manager, 7L, true, new CancellationDtos.Decision("Approved", new java.math.BigDecimal("110000")));
         verify(walletService).creditRefund(10L, new java.math.BigDecimal("110000"), "CANCEL_REQ_7", "Moving");
-        // The payment carries the refund, so revenue drops and /payments/{id}/refund can only pay the rest.
+        // Khoản thanh toán ghi nhận phần đã hoàn, nên doanh thu giảm tương ứng và /payments/{id}/refund chỉ hoàn được phần còn lại.
         assertThat(paid.getRefundedAmount()).isEqualByComparingTo("110000");
         assertThat(paid.getStatus()).isEqualTo("success");
     }

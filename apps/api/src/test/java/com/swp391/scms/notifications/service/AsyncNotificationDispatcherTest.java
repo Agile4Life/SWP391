@@ -85,7 +85,7 @@ class AsyncNotificationDispatcherTest {
         dispatcher.dispatch(payload);
 
         verify(emailAdapter).send(payload);
-        verify(pushAdapter).send(payload); // Push still delivered successfully
+        verify(pushAdapter).send(payload); // Kênh Push vẫn được gửi thành công
     }
 
     /** Kiểm thử: dispatch với payload null không làm gì. */

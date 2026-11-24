@@ -37,9 +37,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Bộ kiểm thử cho ProductOrderPostgreSql (product order postgre sql).
+ * Bộ kiểm thử tích hợp PostgreSQL cho đơn hàng sản phẩm.
  *
- * Runs the actual Hibernate schema and PostgreSQL invariants for Supplement Shop on a dedicated test schema.
+ * Chạy schema Hibernate thật và kiểm chứng các bất biến PostgreSQL của cửa hàng thực phẩm bổ sung trên một schema kiểm thử riêng biệt.
  */
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)

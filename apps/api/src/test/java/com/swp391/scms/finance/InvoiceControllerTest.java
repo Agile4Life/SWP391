@@ -78,7 +78,7 @@ class InvoiceControllerTest {
     @DisplayName("POST /api/v1/invoices should return 400 Bad Request when missing paymentId or subtotal")
     void shouldRejectInvalidInvoiceRequest() throws Exception {
         InvoiceCreateDto request = new InvoiceCreateDto();
-        request.setSubtotalAmount(new BigDecimal("-100.00")); // negative amount, missing paymentId
+        request.setSubtotalAmount(new BigDecimal("-100.00")); // số tiền âm, thiếu paymentId
 
         mockMvc.perform(post("/api/v1/invoices")
                         .contentType(MediaType.APPLICATION_JSON)

@@ -25,9 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Bộ kiểm thử cho CourseCancellationRules (course cancellation rules).
+ * Bộ kiểm thử cho CourseCancellationRules (quy tắc hủy khóa học).
  *
- * A member cannot cancel a course that has started; before the start the unpaid fee is voided.
+ * Hội viên không thể hủy khóa học đã bắt đầu; nếu hủy trước khi bắt đầu thì khoản phí chưa thanh toán sẽ bị vô hiệu hóa.
  */
 class CourseCancellationRulesTest {
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
@@ -74,7 +74,7 @@ class CourseCancellationRulesTest {
 
         assertEquals("SCHEDULING_CANNOT_CANCEL_STARTED_COURSE", ex.getErrorCode());
         assertEquals("booked", enrollment.getStatus());
-        // The course starting today is also started.
+        // Khóa học bắt đầu ngay hôm nay cũng được tính là đã bắt đầu.
         courseStarting(LocalDate.of(2026, 11, 9));
         assertThrows(BadRequestException.class, () -> service.cancel(member, 9L));
     }

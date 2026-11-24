@@ -31,9 +31,9 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * Bộ kiểm thử cho CourseMembershipRules (course membership rules).
+ * Bộ kiểm thử cho CourseMembershipRules (quy tắc khóa học theo gói hội viên).
  *
- * Spec 2026-11-09 sections 1.3 and 1.5: a course must fit the membership; an upgrade keeps the credits already spent.
+ * Đặc tả 2026-11-09 mục 1.3 và 1.5: khóa học phải nằm trong thời hạn gói hội viên; khi nâng cấp gói vẫn giữ nguyên số lượt đã sử dụng.
  */
 class CourseMembershipRulesTest {
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
@@ -132,7 +132,7 @@ class CourseMembershipRulesTest {
     /** Kiểm thử: nâng cấp gói vẫn giữ các lượt đã dùng ở gói trước. */
     @Test
     void upgradingKeepsTheCreditsAlreadySpentOnThePreviousPlan() {
-        // Silver 1 credit, used 1 on Nov 2, upgraded to Gold (2 credits) on Nov 9: only one credit is left.
+        // Gói Silver có 1 lượt, đã dùng 1 vào ngày 02/11, nâng cấp lên Gold (2 lượt) vào ngày 09/11: chỉ còn 1 lượt.
         MembershipSubscription silver = sub(1, "SILVER", 1, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 8));
         MembershipSubscription gold = sub(2, "GOLD", 2, LocalDate.of(2026, 11, 9), LocalDate.of(2026, 12, 8));
         gold.setPreviousSubscription(silver);
@@ -165,7 +165,7 @@ class CourseMembershipRulesTest {
         enrollment.setMember(owner);
         enrollment.setStatus("booked");
         when(enrollments.findByMemberUserId(100L)).thenReturn(List.of(enrollment));
-        // 9 sessions; the member attended 3, missed 1 and 1 was excused: 5 are left.
+        // 9 buổi học; hội viên đã dự 3, vắng 1 và được miễn 1: đã ghi nhận 5 buổi (còn lại 4 buổi).
         when(sessionRepo.countByGymClassIdAndStatusNot(50L, "cancelled")).thenReturn(9L);
         when(attendanceRepo.countAttended(100L, 50L)).thenReturn(3L);
         when(attendanceRepo.countRecorded(100L, 50L)).thenReturn(5L);

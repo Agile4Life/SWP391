@@ -271,7 +271,7 @@ class TrainingPlanServiceTest {
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("SILVER")));
         assertTrue(service.getMyActivePlans(10L).isEmpty());
         assertThrows(ForbiddenException.class, () -> service.getPlanById(100L, 10L, "MEMBER"));
-        // The coach keeps access so the plan is ready when the member upgrades.
+        // Huấn luyện viên vẫn giữ quyền truy cập để giáo án sẵn sàng khi hội viên nâng cấp gói.
         assertDoesNotThrow(() -> service.getPlanById(100L, 20L, "CENTER_MANAGER"));
 
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("GOLD")));

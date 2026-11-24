@@ -39,9 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Bộ kiểm thử cho controller EnrollmentController (enrollment controller).
- *
- * SCRUM-73: enrollment endpoint contract tests.
+ * Bộ kiểm thử hợp đồng endpoint cho EnrollmentController (SCRUM-73).
  */
 @ExtendWith(MockitoExtension.class)
 class EnrollmentControllerTest {

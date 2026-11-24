@@ -35,7 +35,7 @@ class CourseAttendanceServiceTest {
     private final ClassSessionRepository sessions = mock(ClassSessionRepository.class);
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
     private final MemberRepository members = mock(MemberRepository.class);
-    // 2026-11-09 20:00 Asia/Ho_Chi_Minh
+    // 2026-11-09 20:00 (múi giờ Asia/Ho_Chi_Minh)
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T13:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private CourseAttendanceService service;
     private GymClass course;
@@ -110,7 +110,7 @@ class CourseAttendanceServiceTest {
         when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of(done));
         when(enrollments.findByGymClassIdAndStatus(5L, "booked")).thenReturn(List.of(enrollment(LocalDateTime.of(2026, 11, 1, 9, 0))));
         when(attendance.existsBySessionIdAndMemberUserId(1L, 100L)).thenReturn(false);
-        // The member walked in at 15:30, more than 30 minutes before the 17:00 start, and never left.
+        // Hội viên vào lúc 15:30, sớm hơn giờ bắt đầu 17:00 quá 30 phút, và chưa rời khỏi trung tâm.
         when(checkins.findCoveringVisitStart(100L, LocalDateTime.of(2026, 11, 9, 14, 0),
                 LocalDateTime.of(2026, 11, 9, 17, 0), LocalDateTime.of(2026, 11, 9, 18, 0)))
                 .thenReturn(LocalDateTime.of(2026, 11, 9, 15, 30));

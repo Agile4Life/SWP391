@@ -107,7 +107,7 @@ class AiRagContextServiceTest {
         assertTrue(context.contains("2026-11-14"));
         assertTrue(context.contains("Goblet Squat"));
 
-        // Second rapid call should reuse the cached catalog & member snapshot without re-querying DB
+        // Lần gọi nhanh thứ hai phải tái sử dụng bản chụp danh mục và hội viên trong cache mà không truy vấn lại CSDL
         String secondContext = ragContextService.buildRagContext(member, "Câu hỏi tiếp theo");
         assertTrue(secondContext.contains("SÖL Signature"));
         org.mockito.Mockito.verify(catalogService, org.mockito.Mockito.times(1)).getCatalog();

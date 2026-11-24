@@ -206,7 +206,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
         assertThat(result.memberId()).isEqualTo(10L);
-        // The price is fixed on the request, so a later catalog change does not alter what is collected.
+        // Giá được cố định trên yêu cầu, nên thay đổi danh mục sau đó không làm thay đổi số tiền thu.
         assertThat(result.quotedPrice()).isEqualByComparingTo("199000");
     }
 
@@ -531,7 +531,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.previousSubscriptionId()).isEqualTo(100L);
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(89));
-        // 26 of 31 days left (today included): 500,000 × 26/31 = 419,354 -> 419,000 credited, rest of 1,500,000 due.
+        // Còn 26/31 ngày (tính cả hôm nay): 500.000 × 26/31 = 419.354 -> khấu trừ 419.000, phần còn lại của 1.500.000 cần trả.
         assertThat(result.creditApplied()).isEqualByComparingTo("419000");
         assertThat(result.upgradeCharge()).isEqualByComparingTo("1081000");
     }
@@ -562,14 +562,14 @@ class MembershipSubscriptionServiceTest {
         when(packages.findById(2L)).thenReturn(Optional.of(gold));
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        // The manager raises the member's current package after it was bought: the credit must not grow with it.
+        // Quản lý tăng giá gói hiện tại sau khi hội viên đã mua: số tiền khấu trừ không được tăng theo.
         silver.setPrice(new BigDecimal("279000"));
         SubscriptionDto beforeTargetRaise = service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L));
-        // 15 of 30 days left: 199,000 × 15/30 = 99,500 -> 99,000.
+        // Còn 15/30 ngày: 199.000 × 15/30 = 99.500 -> 99.000.
         assertThat(beforeTargetRaise.creditApplied()).isEqualByComparingTo("99000");
         assertThat(beforeTargetRaise.upgradeCharge()).isEqualByComparingTo("200000");
 
-        // Raising the target package moves only the new price; the credit stays tied to what was paid.
+        // Tăng giá gói đích chỉ làm đổi giá mới; tiền khấu trừ vẫn bám theo số tiền đã trả.
         gold.setPrice(new BigDecimal("349000"));
         SubscriptionDto afterTargetRaise = service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L));
         assertThat(afterTargetRaise.creditApplied()).isEqualByComparingTo("99000");
@@ -588,7 +588,7 @@ class MembershipSubscriptionServiceTest {
         pack.setPrice(new BigDecimal("249000"));
         assertThat(pending.payableAmount()).isEqualByComparingTo("199000");
 
-        // Requests made before prices were fixed still follow the catalog.
+        // Các yêu cầu tạo trước khi chốt giá vẫn lấy theo giá danh mục.
         pending.setQuotedPrice(null);
         assertThat(pending.payableAmount()).isEqualByComparingTo("249000");
     }
@@ -611,7 +611,7 @@ class MembershipSubscriptionServiceTest {
         current.setEndDate(LocalDate.now(clock).plusDays(89));
         com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
         paid.setSubscriptionId(100L);
-        // Bought before the manager cut the price to 549,000.
+        // Đã mua trước khi quản lý giảm giá xuống 549.000.
         paid.setAmount(new BigDecimal("649000"));
         paid.setStatus("success");
         org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
@@ -1301,24 +1301,24 @@ class MembershipSubscriptionServiceTest {
     /** Kiểm thử: yêu cầu tạm hoãn theo quy tắc số ngày, thời hạn báo trước và giấy tờ của gói. */
     @Test
     void requestHold_followsThePackageAllowanceNoticeAndPaperworkRules() {
-        // 1-month Silver and Gold cannot be held at all.
+        // Gói Silver và Gold 1 tháng không được tạm hoãn.
         holdableSubscription("SILVER", 30);
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 3), medicalDocument()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("cannot be put on hold");
 
         MembershipSubscription gold = holdableSubscription("GOLD", 90);
-        // Gold 3 months: at most 15 days, at least 3 days.
+        // Gold 3 tháng: tối đa 15 ngày, tối thiểu 3 ngày.
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 2), medicalDocument()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("between 3 days");
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 16), medicalDocument()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("between 3 days");
-        // Less than 24 hours of notice (the clock is 10:00, so a start tomorrow is only 14 hours away).
+        // Báo trước ít hơn 24 giờ (đồng hồ đang ở 10:00 nên bắt đầu ngày mai chỉ cách 14 giờ).
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(1, 3), medicalDocument()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("24 hours");
-        // Outside the membership period.
+        // Nằm ngoài thời hạn gói hội viên.
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(gold.getEndDate().compareTo(LocalDate.now(clock)) , 3), medicalDocument()))
                 .isInstanceOf(BadRequestException.class);
-        // Paperwork is optional, but if provided must be JPG, PNG or PDF.
+        // Giấy tờ chứng minh là tùy chọn, nhưng nếu cung cấp thì phải là định dạng JPG, PNG hoặc PDF.
         SubscriptionDto withoutDocs = service.requestHold(principal, 100L, holdDays(2, 3), List.of());
         assertThat(withoutDocs.holdStatus()).isEqualTo("PENDING");
         gold.setHoldStatus(null);
@@ -1329,7 +1329,7 @@ class MembershipSubscriptionServiceTest {
                 new MembershipSubscriptionService.HoldDocumentUpload("x.exe", "application/octet-stream", new byte[]{1}))))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("JPG, PNG or PDF");
 
-        // A valid request: 15 days is allowed for Gold 3 months.
+        // Yêu cầu hợp lệ: gói Gold 3 tháng cho phép tạm hoãn 15 ngày.
         SubscriptionDto ok = service.requestHold(principal, 100L, holdDays(2, 15), medicalDocument());
         assertThat(ok.holdStatus()).isEqualTo("PENDING");
         assertThat(gold.getHoldStartDate()).isEqualTo(LocalDate.now(clock).plusDays(2));
@@ -1361,7 +1361,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.isHoldUsed()).isTrue();
         assertThat(sub.getEndDate()).isEqualTo(originalEnd.plusDays(10));
         assertThat(approved.endDate()).isEqualTo(originalEnd.plusDays(10));
-        // On its first day the sweep freezes it...
+        // Vào ngày đầu tiên, tác vụ quét sẽ đóng băng gói...
         sub.setHoldStartDate(LocalDate.now(clock));
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
         assertThat(service.startHold(100L)).isTrue();
@@ -1391,7 +1391,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.holdStatus()).isNull();
         assertThat(sub.isHoldUsed()).isFalse();
         assertThat(sub.getEndDate()).isEqualTo(originalEnd);
-        // A hold that already started is not withdrawn from the desk either.
+        // Lần tạm hoãn đã bắt đầu cũng không thể rút lại từ quầy.
         sub.setStatus("frozen");
         sub.setHoldStatus("APPROVED");
         sub.setHoldStartDate(today.minusDays(1));
@@ -1404,7 +1404,7 @@ class MembershipSubscriptionServiceTest {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
         LocalDate today = LocalDate.now(clock);
         sub.setHoldStatus("PENDING");
-        // Requested for 3 days ago..+3 days but only approved today: the 3 days already lived are not held.
+        // Yêu cầu từ 3 ngày trước đến +3 ngày nhưng hôm nay mới duyệt: 3 ngày đã qua không được tính tạm hoãn.
         sub.setHoldStartDate(today.minusDays(3));
         sub.setHoldEndDate(today.plusDays(3));
 
@@ -1452,7 +1452,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.getStatus()).isEqualTo("active");
         assertThat(sub.getEndDate()).isEqualTo(originalEnd);
         verify(attendance).releaseHoldExcuses(10L, today.plusDays(3));
-        // Once the hold has started it is no longer something to withdraw.
+        // Khi đợt tạm hoãn đã bắt đầu thì không thể rút lại được nữa.
         sub.setStatus("frozen");
         sub.setHoldStatus("APPROVED");
         assertThatThrownBy(() -> service.cancelHoldRequest(principal, 100L)).isInstanceOf(BadRequestException.class);
@@ -1481,7 +1481,7 @@ class MembershipSubscriptionServiceTest {
         sub.setHoldStartDate(today.minusDays(7));
         sub.setHoldEndDate(today.minusDays(1));
         sub.setHoldResolvedAt(today.minusDays(10).atStartOfDay());
-        // For dated holds, held days were added upon approval
+        // Với tạm hoãn có ngày cụ thể, số ngày tạm hoãn đã được cộng bù ngay lúc duyệt
         sub.setEndDate(originalEnd.plusDays(7));
         sub.setHoldDaysCredited(true);
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
@@ -1505,7 +1505,7 @@ class MembershipSubscriptionServiceTest {
         sub.setHoldStartDate(today.minusDays(7));
         sub.setHoldEndDate(today.minusDays(1));
         sub.setHoldResolvedAt(today.minusDays(10).atStartOfDay());
-        // holdDaysCredited stays null: this hold was approved before days were added at approval.
+        // holdDaysCredited vẫn là null: đợt tạm hoãn này được duyệt trước khi có quy tắc cộng ngày lúc duyệt.
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
 
         assertThat(service.autoResumeHold(100L)).isTrue();

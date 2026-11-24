@@ -71,7 +71,7 @@ class SubscriptionValueCalculatorTest {
                 payment("199000", "failed", null),
                 payment("199000", "pending", null)));
 
-        // 199,000 paid minus a 50,000 partial refund; failed/pending attempts and the repriced 349,000 do not count.
+        // Đã trả 199.000 trừ 50.000 hoàn một phần; các lần thử failed/pending và giá mới 349.000 không được tính.
         assertThat(calculator.paidValue(silver)).isEqualByComparingTo("149000");
     }
 
@@ -90,7 +90,7 @@ class SubscriptionValueCalculatorTest {
     /** Kiểm thử: nâng cấp cũ không lưu tín dụng thì dựng lại từ kỳ bị thay. */
     @Test
     void legacyUpgradeWithoutStoredCreditGetsItRebuiltFromTheReplacedPeriod() {
-        // Silver bought 01/11 for 199,000 (30 days), upgraded on 17/11 under the old rule: full 299,000 paid.
+        // Gói Silver mua ngày 01/11 giá 199.000 (30 ngày), nâng cấp ngày 17/11 theo quy tắc cũ: trả đủ 299.000.
         MembershipSubscription silver = period("249000");
         silver.setEndDate(START.plusDays(16));
         MembershipSubscription gold = period("399000");
@@ -106,8 +106,8 @@ class SubscriptionValueCalculatorTest {
         goldPayment.setSubscriptionId(8L);
         when(payments.findAllBySubscriptionId(8L)).thenReturn(List.of(goldPayment));
 
-        // 14 of Silver's original 30 days were left on 17/11: 199,000 × 14/30 = 92,866 -> 92,000, on top of 299,000.
-        // Repriced catalog prices (249,000 / 399,000) play no part.
+        // Vào ngày 17/11 còn 14/30 ngày gốc của Silver: 199.000 × 14/30 = 92.866 -> 92.000, cộng thêm vào 299.000.
+        // Giá danh mục sau khi điều chỉnh (249.000 / 399.000) không ảnh hưởng.
         assertThat(calculator.paidValue(gold)).isEqualByComparingTo("391000");
     }
 

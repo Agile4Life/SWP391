@@ -6,9 +6,8 @@ import java.sql.SQLException;
 import java.util.Properties;
 
 /**
- * Bộ kiểm thử cho SupabaseTestDatabase (supabase test database).
- *
- * Dedicated Supabase test credentials; callers isolate changes in generated schemas.
+ * Lớp tiện ích kết nối SupabaseTestDatabase cho kiểm thử tích hợp.
+ * Đọc thông tin đăng nhập cơ sở dữ liệu test Supabase riêng biệt; bên gọi tự cô lập thay đổi trong các schema tự sinh.
  */
 final class SupabaseTestDatabase {
     /** Constructor riêng tư: lớp tiện ích không cho khởi tạo. */

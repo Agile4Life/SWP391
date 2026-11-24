@@ -69,7 +69,7 @@ class EntitlementRevocationServiceTest {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
         var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, courtBookings, clock);
         LocalDate today = LocalDate.of(2026, 10, 11);
-        // Frozen 12-18 October (7 days held); the period 1 Oct - 30 Nov becomes 1 Oct - 7 Dec once it resumes.
+        // Đóng băng 12-18 tháng 10 (tạm hoãn 7 ngày); kỳ hạn 01/10 - 30/11 thành 01/10 - 07/12 khi mở lại.
         var frozen = new com.swp391.scms.membership.entity.MembershipSubscription();
         frozen.setStatus("frozen");
         frozen.setHoldStatus("APPROVED");
@@ -84,7 +84,7 @@ class EntitlementRevocationServiceTest {
         CoachBooking pastTheEnd = pt(LocalDate.of(2026, 12, 8));
         when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any(), any())).thenAnswer(inv -> {
             java.util.function.Predicate<LocalDate> covered = inv.getArgument(2);
-            // A course seat whose next session falls in the hold or right after it is kept.
+            // Chỗ học khóa có buổi tiếp theo rơi vào khoảng tạm hoãn hoặc ngay sau đó vẫn được giữ.
             assertTrue(covered.test(LocalDate.of(2026, 10, 14)));
             assertTrue(covered.test(LocalDate.of(2026, 10, 25)));
             assertFalse(covered.test(LocalDate.of(2026, 12, 8)));
@@ -191,7 +191,7 @@ class EntitlementRevocationServiceTest {
         var wallets = org.mockito.Mockito.mock(com.swp391.scms.wallet.WalletService.class);
         var service = holdService(payments, wallets);
         LocalDate today = LocalDate.of(2026, 10, 11);
-        // The clock is 10:00 UTC; 12:00 is exactly two hours ahead, 11:00 is one hour ahead.
+        // Đồng hồ ở 10:00 UTC; 12:00 là đúng 2 giờ nữa, 11:00 là 1 giờ nữa.
         CourtBooking inTime = court(today, LocalTime.of(12, 0), "vnpay", "paid");
         CourtBooking late = court(today, LocalTime.of(11, 0), "vnpay", "paid");
         inTime.setId(1L);

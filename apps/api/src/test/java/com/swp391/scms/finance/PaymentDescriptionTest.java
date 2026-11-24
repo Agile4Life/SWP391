@@ -15,9 +15,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
- * Bộ kiểm thử cho PaymentDescription (payment description).
+ * Bộ kiểm thử cho PaymentDescription (mô tả khoản thanh toán).
  *
- * A member's payment list says what each payment is for (reported: pending payments only showed an id and amount).
+ * Danh sách thanh toán của hội viên nêu rõ mục đích từng khoản thanh toán
+ * (lỗi đã báo cáo: các khoản đang chờ trước đây chỉ hiển thị id và số tiền).
  */
 class PaymentDescriptionTest {
 

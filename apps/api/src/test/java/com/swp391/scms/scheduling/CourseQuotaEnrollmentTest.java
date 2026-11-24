@@ -96,7 +96,7 @@ class CourseQuotaEnrollmentTest {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(sub));
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
-        // Already used 2 credits
+        // Đã sử dụng 2 lượt
         when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(100L, "booked", sub.getStartDate(), sub.getEndDate())).thenReturn(2L);
 
         GymClass gymClass = new GymClass();

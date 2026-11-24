@@ -156,7 +156,7 @@ class NotificationChannelAdaptersTest {
                 .build();
 
         adapter.send(payload);
-        // Logging executed safely without throwing
+        // Ghi log thực thi an toàn, không ném ngoại lệ
     }
 
     /** Kiểm thử: adapter webhook giả lập thành công. */
@@ -175,7 +175,7 @@ class NotificationChannelAdaptersTest {
                 .build();
 
         adapter.send(payload);
-        // Webhook executed safely without throwing
+        // Webhook thực thi an toàn, không ném ngoại lệ
     }
 
     /** Kiểm thử: adapter email gửi thông báo nạp ví qua Resend thành công. */

@@ -36,9 +36,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
- * Bộ kiểm thử cho HealthAssessmentTier (health assessment tier).
+ * Bộ kiểm thử cho HealthAssessmentTier (phân hạng đánh giá sức khỏe).
  *
- * Spec 2026-11-09: first assessment by any coach; Body Fat and Muscle Mass for Platinum; follow-ups from Gold.
+ * Đặc tả 2026-11-09: buổi đánh giá đầu tiên do bất kỳ HLV nào thực hiện;
+ * chỉ số mỡ cơ thể ({@code body_fat}) và khối lượng cơ ({@code muscle_mass}) dành cho hạng Platinum;
+ * đánh giá theo dõi định kỳ áp dụng từ hạng Gold trở lên.
  */
 class HealthAssessmentTierTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
@@ -48,7 +50,7 @@ class HealthAssessmentTierTest {
     private final CurrentCoachMembers access = mock(CurrentCoachMembers.class);
     private final MembershipSubscriptionRepository subscriptions = mock(MembershipSubscriptionRepository.class);
     private final HealthMetricService service = new HealthMetricService(logs, members, users);
-    // 2026-11-09 20:00 in Ho Chi Minh City
+    // 2026-11-09 20:00 tại TP. Hồ Chí Minh
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T13:00:00Z"), ZONE);
     private final LocalDate today = LocalDate.of(2026, 11, 9);
     private Member member;
@@ -123,7 +125,7 @@ class HealthAssessmentTierTest {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(18, 30))));
         assertThat(service.addMetric(10L, metric("height", "172", "cm"), 20L, "COACH").metricName()).isEqualTo("height");
 
-        // A month later the same member already has records: only the assigned coach may add more.
+        // Một tháng sau cùng hội viên đó đã có bản ghi: chỉ HLV được phân công mới được thêm số đo mới.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(30).atTime(9, 0))));
         doThrow(new ForbiddenException("X", "coaching.member.not_assigned", null, "Denied")).when(access).requireCoachOf(20L, 10L);
         assertThatThrownBy(() -> service.addMetric(10L, metric("weight", "69", "kg"), 20L, "COACH"))
@@ -160,11 +162,11 @@ class HealthAssessmentTierTest {
     @Test
     void silverGetsTheFirstAssessmentOnlyWhileGoldAndPlatinumGetFollowUps() {
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("SILVER", 30)));
-        // Same-day measurements are part of the first assessment.
+        // Các số đo trong cùng một ngày được tính là một phần của buổi đánh giá đầu tiên.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(9, 0))));
         assertThat(service.addMetric(10L, metric("height", "172", "cm"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("height");
 
-        // A measurement from an earlier day means a follow-up, which Silver does not include.
+        // Một số đo từ ngày trước đó đồng nghĩa với buổi đánh giá theo dõi, quyền lợi mà hạng Silver không bao gồm.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(35).atTime(9, 0))));
         assertThatThrownBy(() -> service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER"))
                 .isInstanceOf(ForbiddenException.class).hasMessageContaining("Gold");
@@ -176,7 +178,7 @@ class HealthAssessmentTierTest {
     /** Kiểm thử: Gold và Platinum có một ngày đánh giá mỗi chu kỳ 30 ngày. */
     @Test
     void goldAndPlatinumGetOneAssessmentDayPerThirtyDayCycle() {
-        // Gold started 2 days ago: the cycle is today-2 .. today+27, so another day of it is already used.
+        // Gói Gold bắt đầu 2 ngày trước: chu kỳ là today-2 .. today+27, nên một ngày khác trong chu kỳ này đã được dùng.
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("GOLD", 30)));
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(1).atTime(9, 0))));
 
@@ -184,11 +186,11 @@ class HealthAssessmentTierTest {
                 () -> service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER"));
         assertEquals("HEALTH_ASSESSMENT_CYCLE_USED", ex.getErrorCode());
 
-        // Several measurements on the same day are one assessment.
+        // Nhiều số đo trong cùng một ngày được tính là một buổi đánh giá.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(8, 0))));
         assertThat(service.addMetric(10L, metric("height", "172", "cm"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("height");
 
-        // Measurements from before the cycle (the first assessment, an earlier plan) do not use it up.
+        // Các số đo trước chu kỳ hiện tại (buổi đánh giá đầu tiên hoặc gói trước đó) không tiêu tốn lượt của chu kỳ này.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(40).atTime(9, 0))));
         assertThat(service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("weight");
 

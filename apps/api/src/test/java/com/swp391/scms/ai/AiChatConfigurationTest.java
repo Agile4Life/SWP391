@@ -14,7 +14,7 @@ class AiChatConfigurationTest {
     /** Hàm trợ giúp của test: tạo Environment giả với các thuộc tính cho trước. */
     private MockEnvironment environment(Map<String, Object> variables) throws IOException {
         var environment = new MockEnvironment();
-        // Synthetic environment only: no Spring application, actual secrets or database startup.
+        // Chỉ dùng môi trường giả lập: không khởi chạy ứng dụng Spring, secret thật hay cơ sở dữ liệu.
         environment.getPropertySources().addFirst(new MapPropertySource("test-variables", variables));
         for (var source : new YamlPropertySourceLoader().load("application", new ClassPathResource("application.yml"))) {
             environment.getPropertySources().addLast(source);

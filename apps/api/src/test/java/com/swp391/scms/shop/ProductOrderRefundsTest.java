@@ -57,7 +57,7 @@ class ProductOrderRefundsTest {
         assertThat(payment.getRefundedAmount()).isEqualByComparingTo("2580000");
         verify(wallet, times(1)).creditOrderRefund(1L, new BigDecimal("2580000"), "ORDER_REFUND_9", "Hoàn tiền đơn hàng SOL-261105-ABCD: Hủy đơn", 9L);
 
-        // Second call sees status="refunded" -> returns ZERO and does not credit wallet again
+        // Lần gọi thứ hai thấy status="refunded" -> trả về ZERO và không cộng tiền vào ví lần nữa
         BigDecimal second = service.refundIfPaid(order, "Hủy đơn");
         assertThat(second).isEqualByComparingTo("0");
         verify(wallet, times(1)).creditOrderRefund(1L, new BigDecimal("2580000"), "ORDER_REFUND_9", "Hoàn tiền đơn hàng SOL-261105-ABCD: Hủy đơn", 9L);

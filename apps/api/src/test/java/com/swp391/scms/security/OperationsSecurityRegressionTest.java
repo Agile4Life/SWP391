@@ -31,7 +31,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Exercises the merged SCRUM-71..75 matchers with the real security filter chain. */
+/** Kiểm thử các matcher đã gộp của SCRUM-71..75 với chuỗi filter bảo mật thật. */
 @WebMvcTest(controllers = {ClassController.class, EnrollmentController.class,
         CenterCheckinController.class, MembershipSubscriptionController.class},
         properties = "app.legacy.classes-enabled=true")
@@ -115,7 +115,7 @@ class OperationsSecurityRegressionTest {
     void mergedMatchersAllowMemberBookingAndReceptionistScanning() throws Exception {
         when(checkins.scan(any(), any())).thenReturn(new CheckinDto(1L, 10L, "Member",
                 LocalDateTime.of(2026, 10, 17, 10, 0), null, "qr", null, "GRANTED"));
-        // Per-session enrollment is retired: a member still passes authorization and gets a 400 from the policy.
+        // Ghi danh từng buổi đã ngừng hoạt động: hội viên vẫn qua bước phân quyền và nhận lỗi 400 từ chính sách nghiệp vụ.
         mvc.perform(post("/api/v1/classes/sessions/1/enroll").with(authentication(actor("MEMBER"))))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/classes/enrollments/my").with(authentication(actor("MEMBER"))))

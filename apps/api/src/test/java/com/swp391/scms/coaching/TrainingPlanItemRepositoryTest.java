@@ -11,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Bộ kiểm thử cho repository TrainingPlanItemRepository (training plan item repository). */
 class TrainingPlanItemRepositoryTest {
-    // Contract check only; PostgreSQL SQL execution/locking requires an isolated database.
+    // Chỉ kiểm tra hợp đồng phương thức; việc thực thi SQL và khóa trên PostgreSQL cần cơ sở dữ liệu biệt lập.
     @Test void completionLookupFetchesOwnershipGraphAndKeepsWriteLock() throws Exception {
         var method = TrainingPlanItemRepository.class.getMethod("findLockedById", Long.class);
         assertThat(method.getAnnotation(Lock.class).value()).isEqualTo(LockModeType.PESSIMISTIC_WRITE);

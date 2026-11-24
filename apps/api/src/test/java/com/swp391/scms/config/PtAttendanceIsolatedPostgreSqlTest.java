@@ -39,9 +39,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Bộ kiểm thử cho PtAttendanceIsolatedPostgreSql (pt attendance isolated postgre sql).
- *
- * Opt-in, real PostgreSQL. Never reads environment credentials or starts the application.
+ * Bộ kiểm thử điểm danh PT trên PostgreSQL biệt lập.
+ * Chỉ chạy khi được bật thủ công trên PostgreSQL thật; không bao giờ đọc thông tin đăng nhập từ biến môi trường hay khởi chạy ứng dụng.
  */
 @EnabledIfSystemProperty(named = "scms.pt.isolated.port", matches = "[0-9]{1,5}")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -73,7 +72,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
         registry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.connection.datasource", source)
                 .applySetting("hibernate.default_schema", schema)
-                .applySetting("hibernate.hbm2ddl.auto", "create") // Bootstrap only. Migration never calls update.
+                .applySetting("hibernate.hbm2ddl.auto", "create") // Chỉ dùng để khởi tạo ban đầu. Migration không bao giờ gọi update.
                 .applySetting("hibernate.hbm2ddl.halt_on_error", true).build();
         var mappings = new MetadataSources(registry);
         var scanner = new ClassPathScanningCandidateComponentProvider(false);
@@ -255,7 +254,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
         assertTrue(sqlError.getMessage().contains("trg_enrollments_check_membership"));
         assertThrows(RuntimeException.class, () -> service.unmarkAttended(receptionist, bookingId));
         assertEquals(before, booking());
-        // Current guard explicitly excludes completed bookings; do not weaken confirmed-booking validation here.
+        // Ràng buộc hiện tại loại trừ rõ ràng các buổi đã hoàn thành; không làm yếu phần kiểm tra cho buổi đang xác nhận ở đây.
         jdbc.update("update coach_bookings set status='completed' where id=?", bookingId);
         var removed = service.unmarkAttended(receptionist, bookingId);
         assertNull(removed.attendedAt()); assertEquals("completed", removed.status());

@@ -26,9 +26,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Bộ kiểm thử cho PtAttendanceSecurity (pt attendance security).
- *
- * Real production security chain with mock services. No Boot startup, dotenv, database or real account.
+ * Bộ kiểm thử cho PtAttendanceSecurity.
+ * Kiểm thử chuỗi bảo mật thật của môi trường production với các service giả lập; không khởi chạy Spring Boot, dotenv, cơ sở dữ liệu hay tài khoản thật.
  */
 class PtAttendanceSecurityTest {
     AnnotationConfigWebApplicationContext context;

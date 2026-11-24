@@ -24,8 +24,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Recurring-course enroll / checkout / cancel live under /api/v1/classes, where a catch-all matcher reserves writes
- * for the manager. These tests run the real filter chain to prove the member-only matchers are reached first.
+ * Các endpoint enroll / checkout / cancel khóa học định kỳ nằm dưới /api/v1/classes, nơi có matcher tổng quát
+ * dành quyền ghi cho quản lý. Các kiểm thử này chạy chuỗi filter bảo mật thật để chứng minh matcher riêng cho hội viên được khớp trước.
  */
 @WebMvcTest(controllers = EnrollmentController.class, properties = "app.legacy.classes-enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,

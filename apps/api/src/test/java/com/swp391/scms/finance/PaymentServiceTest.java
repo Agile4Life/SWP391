@@ -599,7 +599,7 @@ class PaymentServiceTest {
         User cashier = new User(); cashier.setId(1L);
         jakarta.persistence.EntityManager entityManager = mock(jakarta.persistence.EntityManager.class);
         org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "entityManager", entityManager);
-        // Refresh reloads the stored values and discards unflushed cashier edits.
+        // Refresh nạp lại giá trị đã lưu và bỏ các chỉnh sửa chưa flush của thu ngân.
         doAnswer(invocation -> {
             if (invocation.getArgument(0) != pendingPayment) return null;
             pendingPayment.setMethod("bank_transfer");
@@ -680,14 +680,14 @@ class PaymentServiceTest {
         MembershipSubscription upgrade = new MembershipSubscription();
         upgrade.setId(12L); upgrade.setMember(member); upgrade.setMembershipPackage(vip);
         upgrade.setPreviousSubscription(current); upgrade.setStatus("pending_payment");
-        // Quoted on 28/09: 17 of 30 days left of 199,000 paid -> 112,000 credit, 187,000 due.
+        // Báo giá ngày 28/09: còn 17/30 ngày của gói đã trả 199.000 -> khấu trừ 112.000, cần trả 187.000.
         upgrade.setStartDate(java.time.LocalDate.of(2026, 9, 28)); upgrade.setEndDate(java.time.LocalDate.of(2026, 10, 27));
         upgrade.setCreditApplied(new BigDecimal("112000")); upgrade.setUpgradeCharge(new BigDecimal("187000"));
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(12L)).thenReturn(Optional.of(upgrade));
         when(membershipSubscriptionRepository.findByMemberUserId(2L)).thenReturn(List.of(current, upgrade));
 
-        // A quote waiting for payment is not repriced: the raised catalog price is refused at the counter.
+        // Báo giá đang chờ thanh toán không bị tính lại giá: giá mới tăng trong danh mục bị từ chối tại quầy.
         basic.setPrice(new BigDecimal("249000"));
         vip.setPrice(new BigDecimal("399000"));
         PaymentProcessDto repriced = new PaymentProcessDto(2L, 12L, null, new BigDecimal("399000"), "pos", null, null);
@@ -695,14 +695,14 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(repriced));
         assertEquals("pending_payment", upgrade.getStatus());
 
-        // The member pays the quoted amount on 01/10.
+        // Hội viên thanh toán đúng số tiền đã báo giá vào ngày 01/10.
         PaymentProcessDto dto = new PaymentProcessDto(2L, 12L, null, new BigDecimal("187000"), "pos", null, null);
         dto.setPackageId(2L);
         paymentService.processPayment(dto);
 
         assertEquals("active", upgrade.getStatus());
         assertEquals(new BigDecimal("187000"), upgrade.payableAmount());
-        // New period runs from the quote day; the old one ends that day, so credited days are not used twice.
+        // Kỳ mới tính từ ngày báo giá; kỳ cũ kết thúc vào ngày đó để các ngày đã khấu trừ không bị dùng hai lần.
         assertEquals(java.time.LocalDate.of(2026, 9, 28), upgrade.getStartDate());
         assertEquals(java.time.LocalDate.of(2026, 10, 27), upgrade.getEndDate());
         assertEquals("expired", current.getStatus());
@@ -962,7 +962,7 @@ class PaymentServiceTest {
         dtoClosed.setStatus("pending");
         dtoClosed.setMethod("online_wallet");
 
-        // clock is 2026-10-01T10:00:00Z -> 17:00 in Asia/Ho_Chi_Minh
+        // clock là 2026-10-01T10:00:00Z -> 17:00 theo múi giờ Asia/Ho_Chi_Minh
         var liveAttempt = new com.swp391.scms.finance.entity.VnpayTransaction(
                 "LIVE1", activeOnline, BigDecimal.TEN,
                 LocalDateTime.of(2026, 10, 1, 16, 55), LocalDateTime.of(2026, 10, 1, 17, 10), "127.0.0.1");

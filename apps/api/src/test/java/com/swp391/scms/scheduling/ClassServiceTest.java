@@ -58,8 +58,7 @@ class ClassServiceTest {
     private RoomRepository rooms;
 
     private final SchedulingMapper mapper = new SchedulingMapper();
-    // Fixed clock: 2026-10-16 10:00:00 UTC
-    // 10:00 Vietnam time; session dates/times represent the center's wall time.
+    // Đồng hồ cố định: 10:00 giờ Việt Nam (03:00:00 UTC ngày 2026-10-16); ngày/giờ buổi học theo giờ địa phương của trung tâm.
     private final Clock clock = Clock.fixed(Instant.parse("2026-10-16T03:00:00Z"), ZoneId.of("UTC"));
 
     private ClassService service;
@@ -121,7 +120,7 @@ class ClassServiceTest {
     void createSession_rejectsPastStartTimeToday() {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
 
-        // Clock is at 10:00:00, session is at 09:00:00 today
+        // Đồng hồ đang ở 10:00:00, buổi học diễn ra lúc 09:00:00 hôm nay
         CreateSessionRequest request = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 LocalTime.of(9, 0),
@@ -143,7 +142,7 @@ class ClassServiceTest {
             return s;
         });
 
-        // Clock is at 10:00:00, session is at 11:00:00 today
+        // Đồng hồ đang ở 10:00:00, buổi học diễn ra lúc 11:00:00 hôm nay
         CreateSessionRequest request = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 LocalTime.of(11, 0),
@@ -163,7 +162,7 @@ class ClassServiceTest {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
         when(sessions.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Session 1: 14:00 - 15:00
+        // Buổi 1: 14:00 - 15:00
         CreateSessionRequest session1Req = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 LocalTime.of(14, 0),
@@ -173,7 +172,7 @@ class ClassServiceTest {
         assertThat(session1.startTime()).isEqualTo(LocalTime.of(14, 0));
         assertThat(session1.endTime()).isEqualTo(LocalTime.of(15, 0));
 
-        // Session 2: 15:00 - 16:00 (adjacent immediately after Session 1)
+        // Buổi 2: 15:00 - 16:00 (liền kề ngay sau Buổi 1)
         CreateSessionRequest session2Req = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 LocalTime.of(15, 0),
@@ -183,7 +182,7 @@ class ClassServiceTest {
         assertThat(session2.startTime()).isEqualTo(LocalTime.of(15, 0));
         assertThat(session2.endTime()).isEqualTo(LocalTime.of(16, 0));
 
-        // Verify adjacency: session1.endTime equals session2.startTime
+        // Kiểm tra tính liền kề: session1.endTime bằng session2.startTime
         assertThat(session1.endTime()).isEqualTo(session2.startTime());
     }
 

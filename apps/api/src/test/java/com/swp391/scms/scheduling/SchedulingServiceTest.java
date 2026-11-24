@@ -86,7 +86,7 @@ class SchedulingServiceTest {
     /** Chuẩn bị trước mỗi test: tạo SchedulingService với repository giả lập và đồng hồ cố định. */
     @BeforeEach
     void setUp() {
-        // Noon at the center, independently of the UTC Clock zone.
+        // 12:00 trưa theo giờ trung tâm, độc lập với múi giờ UTC của Clock.
         lenient().when(clock.instant()).thenReturn(Instant.parse("2026-10-17T05:00:00Z"));
         lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         Member member = new Member();

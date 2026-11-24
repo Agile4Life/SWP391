@@ -25,7 +25,7 @@ class VnpayPaymentGuardTest {
         var guard=new VnpayPaymentGuard(transactions,mock(PaymentRepository.class));
         assertThrows(ConflictException.class,()->guard.refund(9L));
     }
-    final Clock clock=Clock.fixed(Instant.parse("2026-11-03T05:00:00Z"),ZoneId.of("Asia/Ho_Chi_Minh")); // 12:00 at the center
+    final Clock clock=Clock.fixed(Instant.parse("2026-11-03T05:00:00Z"),ZoneId.of("Asia/Ho_Chi_Minh")); // 12:00 theo giờ trung tâm
     /** Hàm trợ giúp của test: tạo lần thử thanh toán VNPay mẫu. */
     VnpayTransaction attempt(String ref, LocalDateTime expires) {
         var payment=new Payment();payment.setId(9L);

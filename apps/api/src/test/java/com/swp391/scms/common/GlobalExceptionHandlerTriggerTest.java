@@ -29,9 +29,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Bộ kiểm thử cho GlobalExceptionHandlerTrigger (global exception handler trigger).
- *
- * SCRUM-80: PostgreSQL trigger failures must retain localized HTTP responses.
+ * Bộ kiểm thử cho GlobalExceptionHandlerTrigger.
+ * SCRUM-80: Lỗi từ trigger PostgreSQL phải giữ nguyên phản hồi HTTP đã bản địa hóa theo ngôn ngữ yêu cầu.
  */
 class GlobalExceptionHandlerTriggerTest {
 

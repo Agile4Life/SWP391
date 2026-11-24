@@ -23,13 +23,12 @@ import org.springframework.context.annotation.ClassPathScanningCandidateComponen
 import org.springframework.core.type.filter.AnnotationTypeFilter;
 
 /**
- * Bộ kiểm thử cho CodeFirstSchema (code first schema).
- *
- * Code-first guard: the JPA entities alone must be able to generate every table of
- * databaseschema.sql on PostgreSQL, without a live connection or hand-written runtime DDL.
+ * Bộ kiểm thử bảo vệ kiến trúc Code-First cho schema cơ sở dữ liệu.
+ * Chỉ riêng các JPA entity phải sinh ra đủ mọi bảng của databaseschema.sql trên PostgreSQL,
+ * không cần kết nối trực tiếp hay viết DDL thủ công lúc chạy.
  */
 class CodeFirstSchemaTest {
-    /** Tables and checks of features that were dropped; the reference schema is historical and untouched. */
+    /** Các bảng và ràng buộc CHECK thuộc tính năng đã loại bỏ; schema tham chiếu mang tính lịch sử nên giữ nguyên. */
     private static final Set<String> REMOVED_TABLES = Set.of("class_waitlists");
     private static final Set<String> REMOVED_CHECKS = Set.of("ck_waitlist_status");
 
@@ -103,7 +102,7 @@ class CodeFirstSchemaTest {
     /** Kiểm thử: entity sinh ra đủ mọi bảng của schema tham chiếu. */
     @Test
     void entitiesGenerateEveryTableOfTheReferenceSchema() throws Exception {
-        // The historical reference schema still lists the removed waitlist feature.
+        // Schema tham chiếu lịch sử vẫn còn liệt kê tính năng waitlist đã loại bỏ.
 
         assertTrue(Files.exists(SCHEMA), "db/databaseschema.sql must be reachable from the test working dir");
         String ddl = generateDdl();

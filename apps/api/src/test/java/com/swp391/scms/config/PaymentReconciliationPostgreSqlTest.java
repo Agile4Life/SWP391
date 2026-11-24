@@ -23,9 +23,8 @@ import static com.swp391.scms.config.SupabaseTestDatabase.credential;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Bộ kiểm thử cho PaymentReconciliationPostgreSql (payment reconciliation postgre sql).
- *
- * Runs the reconciliation JPQL on real PostgreSQL in a disposable schema created by Hibernate.
+ * Bộ kiểm thử đối soát thanh toán trên PostgreSQL.
+ * Chạy các truy vấn JPQL đối soát trên PostgreSQL thật trong schema tạm dùng một lần do Hibernate tạo.
  */
 @SpringBootTest
 @ActiveProfiles("supabase")
@@ -37,7 +36,7 @@ class PaymentReconciliationPostgreSqlTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired PaymentReconciliationService service;
     @Autowired VnpayIpnEventRecorder recorder;
-    /** Catalog data is not needed here; its seeder is kept out so this test depends only on payment tables. */
+    /** Không cần dữ liệu danh mục ở đây; loại bỏ seeder để bài test chỉ phụ thuộc vào các bảng thanh toán. */
     @org.springframework.boot.test.mock.mockito.MockBean com.swp391.scms.facilities.CatalogSeeder catalogSeeder;
 
     @DynamicPropertySource static void database(DynamicPropertyRegistry p) throws Exception {
@@ -68,7 +67,7 @@ class PaymentReconciliationPostgreSqlTest {
                 user, "RC" + user);
         long paid = payment(user, "success", now);
         long unpaid = payment(user, "pending", now);
-        long orphan = payment(user, "success", now); // online, paid, no attempt and no wallet debit
+        long orphan = payment(user, "success", now); // thanh toán trực tuyến, đã trả tiền, không có lượt thử và không trừ ví
         attempt("RECONSTALE1", paid, "failed", now.minusHours(2), now.minusHours(2).plusMinutes(15));
         attempt("RECONOK1", paid, "success", now.minusHours(1), now.minusMinutes(45));
         attempt("RECONBAD1", unpaid, "success", now.minusMinutes(30), now.minusMinutes(15));

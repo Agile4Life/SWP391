@@ -80,8 +80,8 @@ class PaymentControllerTest {
     @DisplayName("POST /api/v1/payments should return 400 Bad Request when missing memberId or invalid method")
     void shouldRejectInvalidPaymentRequest() throws Exception {
         PaymentCreateDto request = new PaymentCreateDto();
-        request.setAmount(new BigDecimal("-100.00")); // invalid negative amount
-        request.setMethod("crypto"); // invalid method
+        request.setAmount(new BigDecimal("-100.00")); // số tiền âm không hợp lệ
+        request.setMethod("crypto"); // phương thức thanh toán không hợp lệ
 
         mockMvc.perform(post("/api/v1/payments")
                         .contentType(MediaType.APPLICATION_JSON)

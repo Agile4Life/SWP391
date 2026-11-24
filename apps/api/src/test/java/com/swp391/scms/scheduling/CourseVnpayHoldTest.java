@@ -33,13 +33,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
- * Bộ kiểm thử cho CourseVnpayHold (course vnpay hold).
+ * Bộ kiểm thử cho CourseVnpayHold (giữ chỗ khóa học khi chờ VNPay).
  *
- * A course fee VNPay may still settle keeps its seat: neither a cancellation nor the unpaid-fee sweep releases it.
+ * Khoản học phí mà VNPay vẫn có thể tất toán sẽ giữ nguyên chỗ học: cả thao tác hủy lẫn lượt quét học phí chưa thanh toán đều không giải phóng chỗ này.
  */
 class CourseVnpayHoldTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    // 15:00 in the center's time zone.
+    // 15:00 theo múi giờ của trung tâm.
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T08:00:00Z"), ZONE);
     private final LocalDateTime now = LocalDateTime.of(2026, 11, 9, 15, 0);
 
@@ -117,7 +117,7 @@ class CourseVnpayHoldTest {
      */
     @Test
     void theUnpaidSweepKeepsASeatWhoseFeeIsInsideTheGatewayGracePeriod() {
-        // Past the 15-minute hold and the gateway expiry, but still inside the IPN grace period.
+        // Đã quá thời gian giữ chỗ 15 phút và quá hạn cổng thanh toán, nhưng vẫn nằm trong thời gian ân hạn IPN.
         attemptExpiringAt(now.minusMinutes(5));
 
         assertEquals(0, service.expireUnpaidCourseEnrollments());

@@ -94,12 +94,12 @@ class LoginAttemptServiceTest {
         assertTrue(service.isBlocked("testuser"));
         assertEquals(60, service.getRemainingLockoutSeconds("testuser"));
 
-        // Advance 30 seconds -> still blocked with 30s remaining
+        // Tua thêm 30 giây -> vẫn bị khóa với 30 giây còn lại
         clock.advanceSeconds(30);
         assertTrue(service.isBlocked("testuser"));
         assertEquals(30, service.getRemainingLockoutSeconds("testuser"));
 
-        // Advance another 31 seconds (total 61s) -> unblocked!
+        // Tua thêm 31 giây nữa (tổng 61 giây) -> đã mở khóa!
         clock.advanceSeconds(31);
         assertFalse(service.isBlocked("testuser"));
         assertEquals(0, service.getRemainingLockoutSeconds("testuser"));

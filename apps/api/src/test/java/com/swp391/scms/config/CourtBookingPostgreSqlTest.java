@@ -23,9 +23,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Bộ kiểm thử cho CourtBookingPostgreSql (court booking postgre sql).
- *
- * Runs the actual Hibernate schema and PostgreSQL triggers, with independent database transactions.
+ * Bộ kiểm thử đặt sân trên PostgreSQL.
+ * Chạy trên schema Hibernate thật và các trigger PostgreSQL thật với các giao dịch cơ sở dữ liệu độc lập.
  */
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -120,7 +119,7 @@ class CourtBookingPostgreSqlTest {
         constraint("trg_court_bookings_check_conflict", () -> session(jdbc, gymClass, 12));
         jdbc.update("update court_bookings set status='cancelled',cancelled_at=now() where id=?", booking);
         session(jdbc, gymClass, 12);
-        // Half-open intervals allow an adjacent hour.
+        // Khoảng nửa mở cho phép đặt khung giờ liền kề ngay sau đó.
         booking(jdbc, room, member, 13);
     }
 
@@ -182,7 +181,7 @@ class CourtBookingPostgreSqlTest {
                 var source = new SingleConnectionDataSource(upgrade, true);
                 var old = new JdbcTemplate(source);
                 synchronizeEntities(source, upgradeSchema, "create");
-                // Reproduce the pre-feature table while retaining all other entity-owned tables.
+                // Tái hiện bảng trước khi có tính năng đặt sân trong khi vẫn giữ nguyên tất cả các bảng khác do entity quản lý.
                 old.execute("alter table rooms drop column discipline_id, drop column open_time, drop column close_time");
                 long legacy = old.queryForObject("insert into rooms(name,capacity,status) values ('Legacy studio',20,'available') returning id", Long.class);
                 synchronizeEntities(source, upgradeSchema, "update");

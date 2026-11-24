@@ -31,9 +31,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
- * Bộ kiểm thử cho PtAttendanceTransactionDiagnostic (pt attendance transaction diagnostic).
- *
- * Entity contract and rollback safety. Real PostgreSQL coverage lives in PtAttendanceIsolatedPostgreSqlTest.
+ * Bộ kiểm thử chẩn đoán giao dịch cho PtAttendanceTransactionDiagnostic.
+ * Kiểm tra hợp đồng entity và an toàn rollback; kiểm thử trên PostgreSQL thật nằm ở PtAttendanceIsolatedPostgreSqlTest.
  */
 class PtAttendanceTransactionDiagnosticTest {
     /** Kiểm thử: entity hỗ trợ audit PT và lỗi audit thật vẫn rollback. */
@@ -60,7 +59,7 @@ class PtAttendanceTransactionDiagnosticTest {
         when(audit.save(any())).thenAnswer(invocation -> {
             AuditLog entry = invocation.getArgument(0);
             assertEquals(annotation.entity(), entry.getEntityType());
-            // Model PostgreSQL 23514 plus JPA marking the shared transaction rollback-only.
+            // Mô phỏng lỗi PostgreSQL 23514 cùng việc JPA đánh dấu giao dịch dùng chung là rollback-only.
             manager.transaction.rollbackOnly = true;
             throw new DataIntegrityViolationException("ck_audit_entity_type",
                     new java.sql.SQLException("violates check constraint ck_audit_entity_type", "23514"));

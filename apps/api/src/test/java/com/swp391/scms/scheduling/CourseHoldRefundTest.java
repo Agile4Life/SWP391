@@ -30,9 +30,9 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * Bộ kiểm thử cho CourseHoldRefund (course hold refund).
+ * Bộ kiểm thử cho CourseHoldRefund (hoàn quyền lợi khóa học khi tạm hoãn).
  *
- * A membership hold gives a course credit or fee back only when approved 3+ days before the course starts.
+ * Đợt tạm hoãn gói hội viên chỉ hoàn lại lượt khóa học hoặc học phí khi được duyệt trước ngày khai giảng từ 3 ngày trở lên.
  */
 class CourseHoldRefundTest {
 

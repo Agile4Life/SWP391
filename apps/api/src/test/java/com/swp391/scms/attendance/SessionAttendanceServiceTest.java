@@ -153,7 +153,7 @@ class SessionAttendanceServiceTest {
         MemberAttendanceItem item = service.getSessionAttendanceRoster(100L, coachPrincipal).members().get(0);
 
         assertEquals(LocalDateTime.of(2026, 10, 25, 8, 50), item.gateCheckinAt());
-        // The scan is only shown to the coach: nothing is recorded for the member.
+        // Lượt quét chỉ hiển thị cho huấn luyện viên: chưa có bản ghi điểm danh nào được lưu cho hội viên.
         assertNull(item.attendanceStatus());
     }
 
@@ -348,7 +348,7 @@ class SessionAttendanceServiceTest {
     /** Kiểm thử: không sửa điểm danh quá 7 ngày sau buổi, nhưng vẫn sửa được đánh giá. */
     @Test
     void attendanceCannotChangeMoreThanSevenDaysAfterTheSessionButEvaluationsStillCan() {
-        // The session was on 2026-10-25; the clock is now 2026-11-02, eight days later.
+        // Buổi học diễn ra ngày 2026-10-25; đồng hồ hiện tại là 2026-11-02, tức 8 ngày sau đó.
         when(clock.instant()).thenReturn(Instant.parse("2026-11-02T09:00:00Z"));
         bookedMember();
         SessionAttendance present = new SessionAttendance();

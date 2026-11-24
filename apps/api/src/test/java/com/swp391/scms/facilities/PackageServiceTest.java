@@ -72,7 +72,7 @@ class PackageServiceTest {
 
         assertThrows(com.swp391.scms.common.exception.ConflictException.class,
                 () -> service.update(1L, new PackageRequest("GOLD 9 THÁNG", null, BigDecimal.TEN, 270, 8, null)));
-        // price/benefit edits that keep the name and term stay allowed
+        // vẫn cho phép sửa giá hoặc quyền lợi nếu giữ nguyên tên và thời hạn
         assertEquals("GOLD 6 THÁNG", service.update(1L, new PackageRequest("GOLD 6 THÁNG", null, BigDecimal.ONE, 180, 8, null)).name());
     }
 

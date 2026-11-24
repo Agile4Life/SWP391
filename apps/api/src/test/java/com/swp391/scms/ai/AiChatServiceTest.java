@@ -113,7 +113,7 @@ class AiChatServiceTest {
         var limiter = new com.swp391.scms.ai.service.AiChatRateLimiter(messageRepository, 15, java.time.Duration.ofMinutes(10),
                 java.time.Clock.systemDefaultZone());
         ReflectionTestUtils.setField(aiChatService, "rateLimiter", limiter);
-        // 15 member messages already sent in the last 10 minutes.
+        // Đã có 15 tin nhắn của hội viên được gửi trong 10 phút gần nhất.
         List<LocalDateTime> recent = new java.util.ArrayList<>();
         for (int i = 0; i < 15; i++) recent.add(LocalDateTime.now().minusMinutes(9).plusSeconds(i));
         when(messageRepository.memberMessageTimesSince(eq(100L), any())).thenReturn(recent);
@@ -139,7 +139,7 @@ class AiChatServiceTest {
         when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
         when(chatProvider.generate(any(), any())).thenThrow(new IllegalStateException("provider down"));
 
-        // The 15th message is let through; the provider fails, so nothing is stored and the slot must come back.
+        // Tin nhắn thứ 15 được cho qua; provider lỗi nên không có gì được lưu và lượt phải được trả lại.
         assertThrows(IllegalStateException.class, () -> aiChatService.sendMessage(500L, new AiChatMessageCreateDto("câu thứ 15"), 100L, "MEMBER"));
         assertThrows(IllegalStateException.class, () -> aiChatService.sendMessage(500L, new AiChatMessageCreateDto("thử lại"), 100L, "MEMBER"));
         verify(chatProvider, times(2)).generate(any(), any());
@@ -313,7 +313,7 @@ class AiChatServiceTest {
         };
 
         var txActiveDuringProvider = new java.util.concurrent.atomic.AtomicBoolean(true);
-        // The session is read in the read-only phase and again, for the ownership re-check, in the write phase.
+        // Phiên được đọc ở pha chỉ đọc và đọc lại ở pha ghi để kiểm tra lại quyền sở hữu.
         when(sessionRepository.findById(500L)).thenAnswer(inv -> {
             org.junit.jupiter.api.Assertions.assertTrue(
                     org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
@@ -412,8 +412,7 @@ class AiChatServiceTest {
 
     /**
      * Kiểm thử: cả hai prompt đều đặt giới hạn quyền hạn của trợ lý.
-     *
-     * The assistant has no tools: both prompts must forbid claiming an action, promising exceptions and leaking internal data.
+     * Trợ lý không có công cụ thao tác: cả hai prompt phải cấm nhận đã thực hiện thao tác, hứa hẹn ngoại lệ và làm lộ dữ liệu nội bộ.
      */
     @Test
     void bothPromptsSetTheLimitsOfTheAssistantsAuthority() {
