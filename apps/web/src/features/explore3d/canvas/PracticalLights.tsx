@@ -23,8 +23,10 @@ const LAMP_BULBS = STREET_LAMPS.map(([x, z, dx, dz]) => ({
 }));
 
 const BULB_GEOMETRY = new THREE.BoxGeometry(1, 1, 1);
+/** Raycast rỗng để đèn không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
+/** Props của đèn thực tế: mức chất lượng, độ nhấc theo chiều dọc, hiển thị hay không và chế độ đi bộ. */
 export interface PracticalLightsProps {
   tier: QualityTier;
   /** Vertical offset of the ground campus (exploded / basement views). */
@@ -35,12 +37,16 @@ export interface PracticalLightsProps {
 }
 
 /**
+ * Đèn thực tế lúc chạng vạng: đầu đèn phát sáng HDR (một lần vẽ instanced) kèm một số đèn điểm thật chiếu ấm
+ * dưới đèn đường và trắng lạnh trên sân tennis.
+ *
  * Dusk practicals: HDR-emissive lamp heads (they bloom) plus a budgeted set of
  * real point lights that pool warm light under street lamps and cool white
  * light over the tennis courts. Emissive bulbs are one instanced draw call.
  */
 export function PracticalLights({ tier, offsetY, visible, walkMode = false }: PracticalLightsProps) {
   const bulbsRef = useRef<THREE.InstancedMesh>(null);
+  // Vật liệu phát sáng cho bóng đèn.
   const material = useMemo(
     () => new THREE.MeshBasicMaterial({ name: 'sol-practical-bulbs', toneMapped: false }),
     [],

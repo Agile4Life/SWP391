@@ -5,6 +5,10 @@ import { getAtmosphere } from './atmosphere';
 import { SkyProbe } from './SkyProbe';
 import { useExploreStore, type QualityTier } from '../state/exploreStore';
 
+/**
+ * Cấu hình ánh sáng dựa trên ảnh (IBL): bật hay tắt, độ phân giải, cường độ và các tấm đèn của probe phản
+ * chiếu.
+ */
 export interface ImageBasedLightingConfig {
   enabled: boolean;
   resolution: number;
@@ -22,6 +26,8 @@ export interface ImageBasedLightingConfig {
 }
 
 /**
+ * Tính cấu hình probe phản chiếu theo theme và mức chất lượng (tắt khi chất lượng thấp).
+ *
  * Procedural studio-style reflection probe. The scene materials already declare
  * `envMapIntensity` and metalness, but without an environment map metal and
  * glossy surfaces had nothing to reflect and read as flat plastic. The probe is
@@ -84,6 +90,10 @@ export function getImageBasedLightingConfig(
   };
 }
 
+/**
+ * Probe phản chiếu thủ tục kiểu studio để kim loại và bề mặt bóng có thứ để phản chiếu; dựng từ vài tấm đèn,
+ * không cần tải HDR.
+ */
 export function ImageBasedLighting() {
   const theme = useDocumentTheme();
   const tier = useExploreStore(s => s.tier);

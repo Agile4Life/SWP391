@@ -1,9 +1,13 @@
 import * as THREE from 'three';
 import type { ExploreTheme } from '../renderers/materials';
 
+/** Màu RGB tuyến tính [r, g, b]. */
 type RGB = [number, number, number];
 
 /**
+ * Bối cảnh theo thời điểm trong ngày: theme sáng là hoàng hôn vàng, theme tối là chạng vạng xanh có đèn thực tế
+ * bật; mọi màu ở không gian tuyến tính HDR.
+ *
  * Time-of-day art direction. Light theme = golden hour, dark theme = dusk /
  * blue hour with practical lights on. All colours are linear HDR.
  */
@@ -95,10 +99,12 @@ const DUSK: Atmosphere = {
   },
 };
 
+/** Lấy bối cảnh khí quyển theo theme. */
 export function getAtmosphere(theme: ExploreTheme): Atmosphere {
   return theme === 'light' ? GOLDEN_HOUR : DUSK;
 }
 
+/** Hướng ánh nắng (vector đơn vị) theo theme. */
 export function getSunDirection(theme: ExploreTheme, target = new THREE.Vector3()): THREE.Vector3 {
   const [x, y, z] = getAtmosphere(theme).sunPosition;
   return target.set(x, y, z).normalize();

@@ -34,6 +34,7 @@ import {
 } from './riggedInstance';
 import { useActorMotion } from './useActorMotion';
 
+/** Props của nhân vật có xương: cảnh và cờ benchmark. */
 export interface RiggedActorsProps {
   scene?: SceneDoc;
   benchEnabled?: boolean;
@@ -42,6 +43,7 @@ export interface RiggedActorsProps {
 /** Longest step fed to the mixers, so a long idle gap in the demand loop does not skip the pose. */
 const MAX_STEP_SEC = 0.1;
 
+/** Error boundary: nếu tải mô hình nhân vật lỗi thì không hiển thị gì thay vì làm hỏng cảnh. */
 class RiggedErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
 
@@ -58,6 +60,10 @@ class RiggedErrorBoundary extends Component<{ children: ReactNode }, { failed: b
   }
 }
 
+/**
+ * Phần dựng nhân vật có xương: tải các mô hình, kiểu tóc, hoạt ảnh và texture da rồi dựng và chạy hoạt ảnh cho
+ * các hoạt động có người.
+ */
 function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: RiggedActorsProps) {
   const hairNames = Object.keys(HUMAN_ASSET_URLS.hair) as (keyof typeof HUMAN_ASSET_URLS.hair)[];
   const gltfs = useGLTF(
@@ -81,6 +87,7 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
 
   const effectiveLevelMode = walkMode ? 'stacked' : levelMode;
 
+  // Gom các tài nguyên người (nhân vật, tóc, da) và các clip hoạt ảnh.
   const assets = useMemo(() => {
     const humans: HumanAssets = {
       characters: { male: gltfs[0]!.scene, female: gltfs[1]!.scene },
@@ -169,7 +176,11 @@ function RiggedActorsInner({ scene = SOL_CENTER_SCENE, benchEnabled = false }: R
   );
 }
 
-/** Skinned human characters for every activity that has a person in it. */
+/**
+ * Nhân vật có xương cho mọi hoạt động có người; bọc trong error boundary và Suspense.
+ *
+ * Skinned human characters for every activity that has a person in it.
+ */
 export function RiggedActors(props: RiggedActorsProps) {
   return (
     <RiggedErrorBoundary>

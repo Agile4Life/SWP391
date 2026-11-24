@@ -14,6 +14,7 @@ import {
 import type { ItemKind } from '../scene/schema';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Error boundary: tải mô hình GLB của một loại đồ vật lỗi thì bỏ qua và dùng hình học thủ tục. */
 class GlbErrorBoundary extends Component<
   { kind: ItemKind; children: ReactNode },
   { failed: boolean }
@@ -36,6 +37,7 @@ class GlbErrorBoundary extends Component<
   }
 }
 
+/** Tải một mô hình GLB cho một loại đồ vật và thay vào hình học khi sẵn sàng. */
 function ItemGlbKind({ kind, entry }: { kind: ItemKind; entry: ItemGlbEntry }) {
   // Draco is off so no decoder is fetched from a CDN; optimize models with meshopt or leave them uncompressed.
   const gltf = useGLTF(entry.url, false);
@@ -69,11 +71,16 @@ function ItemGlbKind({ kind, entry }: { kind: ItemKind; entry: ItemGlbEntry }) {
   return null;
 }
 
+/** Props của bộ tải GLB: bảng mô hình theo loại đồ vật. */
 export interface ItemGlbLoaderProps {
   manifest?: Partial<Record<ItemKind, ItemGlbEntry>>;
 }
 
-/** Loads the manifest models in the background; each kind swaps in when its file is ready. */
+/**
+ * Tải nền các mô hình trong bảng; loại nào xong trước thì thay vào trước (bỏ qua khi chất lượng thấp).
+ *
+ * Loads the manifest models in the background; each kind swaps in when its file is ready.
+ */
 export function ItemGlbLoader({ manifest = ITEM_GLB_MANIFEST }: ItemGlbLoaderProps) {
   const tier = useExploreStore(s => s.tier);
   if (tier === 'low') return null;

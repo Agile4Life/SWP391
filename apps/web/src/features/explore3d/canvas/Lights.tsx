@@ -21,6 +21,7 @@ const LEVEL_ELEVATION_BY_CODE: Record<LevelCode, number> = {
 
 const SUN_DISTANCE = 115;
 
+/** Cấu hình ngân sách ánh sáng: ánh sáng môi trường, bán cầu, ánh nắng định hướng và độ phân giải bản đồ bóng. */
 export interface LightingBudgetConfig {
   ambient: {
     color: string;
@@ -64,6 +65,7 @@ export interface LightingBudgetConfig {
   };
 }
 
+/** Tính cấu hình ánh sáng theo theme và mức chất lượng (nắng HDR mạnh kết hợp ánh sáng bầu trời). */
 export function getLightingBudgetConfig(
   theme: ExploreTheme,
   tier: QualityTier,
@@ -124,6 +126,10 @@ export function getLightingBudgetConfig(
   };
 }
 
+/**
+ * Ánh sáng của cảnh: nắng định hướng có bóng, ánh sáng môi trường và bán cầu theo theme, mức chất lượng, tầng
+ * đang xem và chế độ đi bộ.
+ */
 export function Lights() {
   const theme = useDocumentTheme();
   const tier = useExploreStore(s => s.tier);
