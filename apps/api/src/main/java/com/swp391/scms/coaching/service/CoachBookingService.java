@@ -235,7 +235,7 @@ public class CoachBookingService {
      * HLV có bị quá 3 buổi PT liên tiếp nếu nhận thêm khung giờ này không (kiểm tra cả hai phía để đặt không theo
      * thứ tự cũng không thể tạo thành bốn buổi PT liên tiếp).
      */
-    private static boolean requiresCoachRest(List<CoachBooking> bookings, LocalTime start) {
+    static boolean requiresCoachRest(List<CoachBooking> bookings, LocalTime start) {
         java.util.Set<Integer> hours = new java.util.HashSet<>();
         for (CoachBooking booking : bookings) {
             if (booking.getEndTime().equals(booking.getStartTime().plusHours(1))) {
