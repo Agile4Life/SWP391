@@ -18,8 +18,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * API hủy buổi học (đã ngừng; chỉ bật khi app.legacy.classes-enabled=true).
  *
- * SCRUM-113: Class Session Controller.
- * Provides endpoints to manage class sessions lifecycle such as cancellation and notification workflows.
+ * SCRUM-113: Controller buổi học. Cung cấp endpoint quản lý vòng đời buổi học như hủy và luồng thông báo.
  */
 @Tag(name = "Class Sessions", description = "Class session lifecycle and cancellation management (SCRUM-113)")
 @RestController

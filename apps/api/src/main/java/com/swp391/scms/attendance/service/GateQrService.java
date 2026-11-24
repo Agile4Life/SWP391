@@ -17,7 +17,7 @@ import java.util.Map;
  * Mã QR cổng có chữ ký HMAC riêng (tách biệt với QR thẻ hội viên), sống 60 giây: quầy hiển thị, hội viên quét
  * để vào/ra.
  *
- * Gate challenges have a separate signing domain from membership QR codes.
+ * Thử thách cổng có miền ký riêng, tách biệt với mã QR membership.
  */
 @Service
 public class GateQrService {

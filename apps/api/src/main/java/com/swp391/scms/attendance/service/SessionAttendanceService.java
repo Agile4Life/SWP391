@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
  * Nghiệp vụ điểm danh lớp nhóm (tính năng cũ): xem danh sách học viên của buổi, lịch sử điểm danh, điểm danh
  * hàng loạt kèm đánh giá.
  *
- * SCRUM-111: Session attendance service for retrieving rosters and batch recording attendance.
+ * SCRUM-111: Service điểm danh buổi học để lấy danh sách và ghi điểm danh hàng loạt.
  */
 @Service
 public class SessionAttendanceService {
@@ -115,7 +115,7 @@ public class SessionAttendanceService {
     /**
      * Danh sách học viên có chỗ trong buổi: đăng ký cả khóa cộng với người đặt riêng buổi đó (không trùng).
      *
-     * Everyone with a seat in this session: class-wide enrollments plus members who booked this session.
+     * Mọi người có chỗ trong buổi này: ghi danh toàn lớp cộng các hội viên đã đặt riêng buổi này.
      */
     private List<RosterEntry> rosterFor(ClassSession session) {
         Map<Long, RosterEntry> roster = new java.util.LinkedHashMap<>();
@@ -138,8 +138,8 @@ public class SessionAttendanceService {
      * Bảng điểm danh của buổi: HLV chỉ xem buổi của lớp mình; ghép danh sách học viên với bản ghi điểm danh,
      * kèm giờ quét cổng để gợi ý.
      *
-     * SCRUM-111 AC: GET /api/v1/attendance/sessions/{id}
-     * Returns list of enrolled students for the session with their attendance records if recorded.
+     * SCRUM-111 AC: GET /api/v1/attendance/sessions/{id} Trả danh sách học viên đã ghi danh của buổi cùng bản
+     * ghi điểm danh nếu đã ghi.
      */
     @Transactional(readOnly = true)
     public SessionAttendanceResponse getSessionAttendanceRoster(Long sessionId, AuthenticatedPrincipal principal) {
@@ -236,15 +236,15 @@ public class SessionAttendanceService {
         );
     }
 
-    /** Longest range the history tabs load at once. */
+    /** Khoảng dài nhất mà các tab lịch sử tải một lần. */
     public static final int MAX_HISTORY_DAYS = 31;
 
     /**
      * Lịch sử các buổi đã có điểm danh hoặc đánh giá trong khoảng ngày (mặc định gần nhất, giới hạn số ngày):
      * HLV chỉ thấy lớp mình, nhân viên thấy tất cả; kèm số liệu và cờ còn sửa được không.
      *
-     * Past class sessions with attendance or evaluations recorded, newest first: a coach sees their own classes,
-     * staff see every class. Defaults to the last {@value #MAX_HISTORY_DAYS} days.
+     * Các buổi lớp đã qua có điểm danh hoặc đánh giá được ghi nhận, mới nhất trước: HLV xem lớp của mình,
+     * nhân viên xem mọi lớp. Mặc định {@value #MAX_HISTORY_DAYS} ngày gần nhất.
      */
     @Transactional(readOnly = true)
     public List<com.swp391.scms.attendance.dto.CoachSessionHistoryItem> getHistory(AuthenticatedPrincipal principal,
@@ -308,8 +308,8 @@ public class SessionAttendanceService {
      * Điểm danh hàng loạt cho buổi: không cho buổi đã hủy hoặc chưa bắt đầu; chỉ học viên đang có chỗ; lưu hoặc
      * cập nhật bản ghi, có thể kèm đánh giá tiến bộ; ghi audit.
      *
-     * SCRUM-111 AC: POST /api/v1/attendance/sessions/{id}/batch
-     * Transactional batch attendance recording (and optional progress evaluation) by authenticated coach / staff.
+     * SCRUM-111 AC: POST /api/v1/attendance/sessions/{id}/batch Ghi điểm danh hàng loạt trong transaction (và
+     * đánh giá tiến độ tùy chọn) bởi HLV/nhân viên đã xác thực.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "CLASS_ATTENDANCE_RECORD", entity = "session_attendance")
@@ -333,7 +333,7 @@ public class SessionAttendanceService {
                     "attendance.error.session_not_started", new Object[]{sessionId},
                     "Attendance can be recorded once the session has started");
         }
-        // Only members holding a booking for this class (or one already completed) are on the roster.
+        // Chỉ hội viên có đặt chỗ cho lớp này (hoặc đã hoàn thành) nằm trong danh sách.
         Map<Long, String> enrollmentStatus = new HashMap<>();
         for (ClassEnrollment enrollment : enrollmentRepository.findByGymClassId(session.getGymClass().getId())) {
             if (enrollment.getMember() != null && ("booked".equalsIgnoreCase(enrollment.getStatus())
@@ -363,7 +363,7 @@ public class SessionAttendanceService {
             }
         }
 
-        // Attendance stays editable as long as the session is open (GRACE_DAYS after it); later only evaluations change.
+        // Điểm danh còn sửa được khi buổi còn mở (GRACE_DAYS ngày sau buổi); sau đó chỉ đánh giá được thay đổi.
         int editDays = com.swp391.scms.scheduling.service.SessionCompletionScheduler.GRACE_DAYS;
         boolean statusLocked = session.getSessionDate() != null
                 && session.getSessionDate().isBefore(now.toLocalDate().minusDays(editDays));
@@ -463,7 +463,7 @@ public class SessionAttendanceService {
         }
 
         if (courseAttendance != null) {
-            // A manual "absent" can tip a member over the 50% line of the course.
+            // Một lần đánh dấu "vắng" thủ công có thể đẩy hội viên vượt ngưỡng 50% của khóa học.
             for (BatchAttendanceRequest.AttendanceItem item : request.records()) {
                 if ("absent".equalsIgnoreCase(item.status().trim())) {
                     courseAttendance.evaluate(item.memberId(), session.getGymClass().getId());
@@ -479,7 +479,7 @@ public class SessionAttendanceService {
     /**
      * HLV chỉ được xem/điểm danh buổi của lớp mình phụ trách; nhân viên khác không bị giới hạn.
      *
-     * A coach may only read or record the sessions of classes assigned to them; staff roles are not limited.
+     * HLV chỉ đọc hoặc ghi các buổi của lớp được phân công cho mình; các vai trò nhân viên không bị giới hạn.
      */
     private static void requireAssignedCoach(AuthenticatedPrincipal principal, Coach sessionCoach) {
         if (principal != null && "COACH".equalsIgnoreCase(principal.role())
@@ -513,7 +513,7 @@ public class SessionAttendanceService {
             return coachOpt.get();
         }
 
-        // If the caller is staff/manager/receptionist, use the session's designated coach
+        // Nếu người gọi là nhân viên/quản lý/lễ tân, dùng HLV được chỉ định của buổi học.
         if (sessionCoach != null) {
             return sessionCoach;
         }

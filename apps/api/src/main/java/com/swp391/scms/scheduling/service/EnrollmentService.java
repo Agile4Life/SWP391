@@ -39,13 +39,12 @@ import java.util.Objects;
  * Nghiệp vụ ghi danh khóa học: ghi danh/thanh toán/hủy khóa, kiểm tra trùng lịch, xử lý khi bảo lưu gói, đóng
  * lớp và hết hạn thanh toán (trigger sức chứa/gói tập ở DB luôn được giữ).
  *
- * SCRUM-73 & SCRUM-132: member class booking, time-overlap guard, and cancellation.
+ * SCRUM-73 & SCRUM-132: đặt chỗ lớp của hội viên, chặn chồng giờ và hủy.
  *
  * <p>Invariant triggers are owned by the database and are never bypassed:
- * Trigger P2 ({@code trg_enrollments_check_capacity}) rejects a full class and
- * Trigger P4 ({@code trg_enrollments_check_membership}) rejects an inactive/expired
- * membership. Both are mirrored as a pre-check so the API returns a precise error
- * instead of a raw constraint violation.
+ * Trigger P2 ({@code trg_enrollments_check_capacity}) từ chối lớp đã đầy và Trigger P4 ({@code
+ * trg_enrollments_check_membership}) từ chối membership không hoạt động/hết hạn. Cả hai được phản chiếu thành
+ * bước kiểm tra trước để API trả lỗi chính xác thay vì lỗi ràng buộc thô.
  */
 @Service
 public class EnrollmentService {
@@ -86,7 +85,7 @@ public class EnrollmentService {
     @org.springframework.context.annotation.Lazy
     private com.swp391.scms.wallet.WalletService wallets;
 
-    /** Online (wallet/VNPay) course fees hold the seat this long; cash fees hold it until the course starts. */
+    /** Phí khóa học trả online (ví/VNPay) giữ chỗ trong khoảng này; phí tiền mặt giữ đến khi khóa bắt đầu. */
     public static final long ONLINE_HOLD_MINUTES = 15;
 
     /** Gán giá trị mới cho trường memberDiscounts. */
@@ -108,7 +107,7 @@ public class EnrollmentService {
         this.vnpayPaymentService = vnpayPaymentService;
     }
 
-    /** Blocks releasing a course fee while a VNPay attempt for it may still be settled by the gateway. */
+    /** Chặn nhả phí khóa học trong lúc cổng VNPay vẫn có thể tất toán một lần thử của nó. */
     @Autowired(required = false)
     private com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
@@ -149,9 +148,9 @@ public class EnrollmentService {
      * Ghi danh cả lớp theo kiểu cũ (giữ một chỗ ở mọi buổi): kiểm tra lớp active, buổi còn mở, gói tập, chưa
      * ghi danh, không trùng lịch và còn chỗ.
      *
-     * Class-wide enrollment (legacy): holds one seat in every session of the class. New bookings are made per
-     * session through {@link SessionBookingService}; this stays for existing enrollments and API clients.
-     * Rejects overlapping bookings across different classes in the same time slot.
+     * Ghi danh toàn lớp (cũ): giữ một chỗ ở mọi buổi của lớp. Đặt chỗ mới thực hiện theo buổi qua {@link
+     * SessionBookingService}; phần này còn lại cho các ghi danh và client API hiện có. Từ chối đặt chồng giờ
+     * ở các lớp khác nhau trong cùng khung giờ.
      */
     @Transactional
     public EnrollmentDto enroll(AuthenticatedPrincipal principal, Long sessionId) {
@@ -227,8 +226,8 @@ public class EnrollmentService {
      * Chặn ghi danh nếu hội viên đã có lớp khác (đang booked) có buổi trùng giờ với buổi mục tiêu; bỏ qua lớp
      * excludeClassId.
      *
-     * SCRUM-132: Rejects a booking if the member already holds an active booking in another class
-     * whose scheduled session overlaps in time.
+     * SCRUM-132: Từ chối lượt đặt nếu hội viên đã giữ lượt đặt đang hoạt động ở lớp khác có buổi đã xếp chồng
+     * giờ.
      */
     public void ensureNoMemberScheduleOverlap(Long memberId, ClassSession targetSession, Long excludeClassId) {
         if (memberId == null || targetSession == null
@@ -301,7 +300,7 @@ public class EnrollmentService {
     /**
      * Số lượt đặt chỗ lớn nhất trong một buổi bất kỳ của lớp.
      *
-     * Highest number of per-session bookings in any session of the class.
+     * Số lượt đặt theo buổi cao nhất ở bất kỳ buổi nào của lớp.
      */
     private long busiestSession(Long classId) {
         if (sessionBookings == null) return 0;
@@ -320,8 +319,8 @@ public class EnrollmentService {
      * Hủy một lượt ghi danh (soft delete, nhả chỗ ngay): khóa lớp và lượt, chỉ chủ sở hữu hoặc nhân viên, lượt
      * phải booked; hội viên không tự hủy khóa đã bắt đầu; hủy khoản phí chưa trả và gửi thông báo.
      *
-     * SCRUM-73 BR-05: cancel a booking. Soft delete, releases the seat immediately.
-     * Only the owner or Staff/Manager may cancel.
+     * SCRUM-73 BR-05: hủy một lượt đặt. Xóa mềm, nhả chỗ ngay lập tức. Chỉ chủ lượt đặt hoặc Staff/Manager
+     * được hủy.
      */
     @Transactional
     public EnrollmentDto cancel(AuthenticatedPrincipal principal, Long enrollmentId) {
@@ -350,8 +349,8 @@ public class EnrollmentService {
                     "Only a booked enrollment can be cancelled");
         }
 
-        // A member cannot walk away from a course that has started (the credit would come back and the fee is
-        // owed); the desk can still cancel on their behalf.
+        // Hội viên không thể bỏ một khóa học đã bắt đầu (lượt sẽ được hoàn lại và phí vẫn phải trả); quầy lễ
+        // tân vẫn hủy thay được.
         GymClass enrolledClass = enrollment.getGymClass();
         if (!isStaff && enrolledClass != null && enrolledClass.getStartDate() != null
                 && !enrolledClass.getStartDate().isAfter(SessionEligibility.today(clock))) {
@@ -360,7 +359,7 @@ public class EnrollmentService {
                     "Không thể hủy khóa học đã hoặc đang bắt đầu");
         }
 
-        // Releasing the seat while VNPay may still confirm the fee would take the member's money for nothing.
+        // Nhả chỗ trong lúc VNPay còn có thể xác nhận phí sẽ lấy tiền của hội viên mà không đem lại gì.
         if (vnpayGuard != null) vnpayGuard.enrollment(enrollment.getId());
 
         LocalDateTime now = LocalDateTime.now(clock);
@@ -368,7 +367,7 @@ public class EnrollmentService {
         enrollment.setCancelledAt(now);
         enrollment.setCancelReason(msg("scheduling.enrollment.cancelled_by_role", principal.role()));
 
-        // An unpaid course fee must not stay payable once the seat is released.
+        // Phí khóa học chưa trả không được còn thanh toán được sau khi chỗ đã nhả.
         if (paymentRepository != null) {
             paymentRepository.findByClassEnrollmentId(enrollment.getId())
                     .filter(payment -> "pending".equalsIgnoreCase(payment.getStatus()))
@@ -403,7 +402,7 @@ public class EnrollmentService {
      * Hủy các lượt ghi danh sắp tới của hội viên mà buổi kế tiếp không được gói phủ (coveredOn); khóa hội viên
      * và các lớp theo thứ tự tăng dần để tránh deadlock; trả về số lượt đã hủy.
      *
-     * Cancels the member's upcoming class bookings whose next session date is not
+     * Hủy các lượt đặt lớp sắp tới của hội viên mà ngày buổi kế tiếp không
      * {@code coveredOn}; a predicate that is always false cancels all of them (hold, cancellation).
      */
     @Transactional
@@ -416,11 +415,11 @@ public class EnrollmentService {
                 ? cancelReason
                 : msg("scheduling.enrollment.cancelled_by_hold");
 
-        // Membership hold/cancellation already owns this lock; standalone callers use it too.
+        // Tạm hoãn/hủy membership đã nắm khóa này; các lời gọi độc lập cũng dùng nó.
         lockMember(memberId);
         List<Long> classIds = enrollments.findBookedClassIdsByMemberId(memberId).stream()
                 .distinct().sorted().toList();
-        // Lock classes in ascending order before loading mutable enrollment state.
+        // Khóa các lớp theo thứ tự tăng dần trước khi nạp trạng thái ghi danh có thể thay đổi.
         List<GymClass> lockedClasses = classIds.stream().map(this::lockClass).toList();
         LocalDateTime now = SessionEligibility.now(clock);
         LocalDate today = now.toLocalDate();
@@ -450,14 +449,14 @@ public class EnrollmentService {
         return cancelledCount;
     }
 
-    /** A hold approved at least this many days before the course starts gives the credit or the fee back. */
+    /** Tạm hoãn được duyệt ít nhất số ngày này trước khi khóa bắt đầu sẽ trả lại lượt hoặc phí. */
     public static final int HOLD_REFUND_NOTICE_DAYS = 3;
 
     /**
      * Kết quả áp dụng bảo lưu gói lên các khóa học: số lượt hủy, credit được trả lại, credit bị mất và số tiền
      * hoàn.
      *
-     * What a membership hold did to the member's course enrollments.
+     * Việc tạm hoãn membership đã tác động gì lên các ghi danh khóa học của hội viên.
      */
     public record CourseHoldOutcome(int cancelled, int creditsRestored, int creditsLost, BigDecimal refunded) {
         public static final CourseHoldOutcome NONE = new CourseHoldOutcome(0, 0, 0, BigDecimal.ZERO);
@@ -467,11 +466,12 @@ public class EnrollmentService {
      * Áp dụng bảo lưu đã duyệt lên các khóa học: bảo lưu đủ sớm trước khi khóa bắt đầu thì trả credit hoặc hoàn
      * phí vào ví, muộn hơn thì mất; mọi lượt bị ảnh hưởng đều bị hủy.
      *
-     * Applies an approved membership hold to the member's course enrollments. A hold approved at least
+     * Áp dụng tạm hoãn membership đã duyệt lên các ghi danh khóa học của hội viên. Tạm hoãn được duyệt ít
+     * nhất
      * {@value #HOLD_REFUND_NOTICE_DAYS} days before the course starts restores the free credit, or refunds the paid
-     * fee in full to the wallet; a later hold, or one on a course already running, gives the credit or fee up.
-     * Every affected enrollment is cancelled. With {@code to == null} (an open hold) all unfinished courses are
-     * affected; with a dated hold only the courses that still have a session inside {@code from..to}.
+     * phí được hoàn đủ vào ví; tạm hoãn muộn hơn, hoặc khóa đã chạy, thì mất lượt hoặc phí. Mọi ghi danh bị
+     * ảnh hưởng đều bị hủy. Với {@code to == null} (tạm hoãn mở) mọi khóa chưa kết thúc bị ảnh hưởng; với tạm
+     * hoãn có ngày chỉ các khóa còn buổi nằm trong {@code from..to}.
      */
     @Transactional
     public CourseHoldOutcome releaseCoursesForHold(Long memberId, String cancelReason, LocalDate from, LocalDate to) {
@@ -561,7 +561,7 @@ public class EnrollmentService {
      * True nếu khóa học còn buổi chưa hủy và chưa hoàn tất nằm trong khoảng from..to (không rõ lịch thì coi như
      * có).
      *
-     * True when the course still has a session that is neither cancelled nor completed inside {@code from..to}.
+     * True khi khóa học còn buổi chưa hủy cũng chưa hoàn thành nằm trong {@code from..to}.
      */
     private boolean hasOpenSessionBetween(GymClass gymClass, LocalDate from, LocalDate to) {
         if (gymClass == null || gymClass.getId() == null || sessions == null) return true;
@@ -578,8 +578,8 @@ public class EnrollmentService {
      * Trung tâm đóng lớp: khoản phí chưa trả chuyển failed, khoản đã trả được hoàn toàn bộ vào ví; trả về số
      * tiền hoàn.
      *
-     * The centre closed the class: an unpaid fee is closed as failed, a settled fee is refunded in full to the wallet.
-     * Returns the amount refunded.
+     * Trung tâm đóng lớp: khoản phí chưa trả được đóng là failed, khoản đã thanh toán được hoàn đủ vào ví.
+     * Trả về số tiền đã hoàn.
      */
     @Transactional
     public BigDecimal settleFeeOnClassClosure(ClassEnrollment enrollment, String reason) {
@@ -602,7 +602,7 @@ public class EnrollmentService {
     /**
      * Hoàn toàn bộ phí đã thanh toán vào ví, đánh dấu payment là refunded; trả về số tiền hoàn.
      *
-     * Refunds the whole settled fee to the wallet and marks the payment refunded; returns the amount refunded.
+     * Hoàn toàn bộ phí đã thanh toán vào ví và đánh dấu khoản thanh toán refunded; trả về số tiền đã hoàn.
      */
     private BigDecimal refundCoursePayment(Payment payment, Long memberId, Long enrollmentId, String reason) {
         BigDecimal refundable = payment.netAmount();
@@ -618,7 +618,7 @@ public class EnrollmentService {
     /**
      * Ngày của buổi kế tiếp chưa kết thúc của lớp; không rõ lịch thì trả hôm nay, không còn buổi thì trả rỗng.
      *
-     * Date of the class's next session that has not ended; today when the schedule is unknown, empty when none.
+     * Ngày của buổi kế tiếp chưa kết thúc của lớp; hôm nay khi chưa biết lịch, rỗng khi không có.
      */
     private java.util.Optional<LocalDate> nextOpenSessionDate(GymClass gymClass, LocalDate today, LocalTime nowTime) {
         if (gymClass == null || gymClass.getId() == null || sessions == null) {
@@ -696,14 +696,14 @@ public class EnrollmentService {
         Integer creditLimit = pkg.getClassCreditLimit();
         boolean unlimited = (creditLimit == null);
 
-        // After an upgrade the credits already spent on the earlier plan still count against the new allowance.
+        // Sau khi nâng cấp, các lượt đã dùng ở gói trước vẫn tính vào hạn mức mới.
         long used = enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(
                 member.getUserId(),
                 BOOKED,
                 creditWindowStart(currentSub),
                 currentSub.getEndDate()
         );
-        // A credit given up to a late membership hold stays spent even though its enrollment was cancelled.
+        // Một lượt bị mất do tạm hoãn muộn vẫn tính là đã dùng dù ghi danh đã bị hủy.
         used += enrollments.countForfeitedCreditsBetween(
                 member.getUserId(), creditWindowStart(currentSub), currentSub.getEndDate());
 
@@ -717,7 +717,7 @@ public class EnrollmentService {
     /**
      * Ngày bắt đầu chu kỳ dùng chung credit: gói nâng cấp tiếp nối chu kỳ của gói cũ.
      *
-     * Start of the period whose credits are shared: an upgrade continues the plan it replaced.
+     * Mốc bắt đầu của kỳ mà các lượt được dùng chung: nâng cấp tiếp tục gói mà nó thay thế.
      */
     private static LocalDate creditWindowStart(com.swp391.scms.membership.entity.MembershipSubscription sub) {
         return com.swp391.scms.facilities.PackageBenefits.cycleAnchor(sub);

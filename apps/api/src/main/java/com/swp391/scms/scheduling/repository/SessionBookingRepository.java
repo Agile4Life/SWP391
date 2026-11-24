@@ -71,7 +71,7 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
     /**
      * Mọi lượt đặt chỗ booked của một lớp kèm hội viên và buổi.
      *
-     * Members holding a booked seat in any session of the class (class-level rosters).
+     * Các hội viên giữ chỗ đã đặt ở bất kỳ buổi nào của lớp (danh sách theo lớp).
      */
     @EntityGraph(attributePaths = {"member", "member.user", "session"})
     @Query("select b from SessionBooking b where b.session.gymClass.id = :classId and b.status = 'booked'")
@@ -94,7 +94,8 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
     /**
      * Như findForMemberBetween nhưng cho phép bỏ trống ngày đầu/cuối (thay bằng mốc rất xa).
      *
-     * A null bound means "unbounded". PostgreSQL cannot infer the type of a bare {@code ? is null} date parameter
+     * Cận null nghĩa là "không giới hạn". PostgreSQL không suy ra được kiểu của tham số ngày trần {@code ? is
+     * null}.
      * ("could not determine data type of parameter"), so open bounds are replaced by sentinel dates instead.
      */
     default List<SessionBooking> findForMember(Long memberId, String status, LocalDate fromDate, LocalDate toDate) {
@@ -102,7 +103,7 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
                 toDate != null ? toDate : LocalDate.of(9999, 12, 31));
     }
 
-    /** Booked seats of a member in sessions that have not started yet, for hold / cancellation / expiry clean-up. */
+    /** Các chỗ đã đặt của hội viên ở buổi chưa bắt đầu, phục vụ dọn dẹp khi tạm hoãn / hủy / hết hạn. */
     @EntityGraph(attributePaths = {"session", "session.gymClass"})
     @Query("""
             select b from SessionBooking b
@@ -143,7 +144,7 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
      */
     boolean existsBySessionGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
 
-    /** Bookings of sessions held before {@code cutoff} are settled as completed (state machine 12). */
+    /** Các lượt đặt của buổi đã diễn ra trước {@code cutoff} được chốt là completed (máy trạng thái 12). */
     @org.springframework.data.jpa.repository.Modifying
     @Query("""
             update SessionBooking b set b.status = 'completed'

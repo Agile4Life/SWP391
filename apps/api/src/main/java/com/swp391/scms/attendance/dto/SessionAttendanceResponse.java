@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * Bảng điểm danh của một buổi: thông tin buổi, HLV, phòng, các tổng số và danh sách học viên.
  *
- * SCRUM-111: Session attendance roster and member attendance status response.
+ * SCRUM-111: Phản hồi danh sách điểm danh buổi học và trạng thái điểm danh của từng hội viên.
  */
 public record SessionAttendanceResponse(
         Long sessionId,
@@ -46,7 +46,10 @@ public record SessionAttendanceResponse(
             String recordedByCoachName,
             String notes,
             Integer progressScore,
-            /** Gate check-in that covered this session, shown to the coach as a tag; null when none. */
+            /**
+             * Lượt check-in ở cổng đã bao phủ buổi này, hiển thị cho HLV dưới dạng thẻ nhãn; null khi không
+             * có.
+             */
             LocalDateTime gateCheckinAt
     ) {
         /** Constructor không có điểm tiến bộ và giờ quét cổng. */

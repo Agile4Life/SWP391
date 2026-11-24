@@ -24,7 +24,7 @@ public class ChatService {
     private final ChatMessageRepository messages;
     private final ChatContactRepository contacts;
 
-    /** Optional so the service stays constructible in unit tests; without it a coach cannot start chats. */
+    /** Tùy chọn để service vẫn dựng được trong unit test; thiếu nó thì HLV không bắt đầu chat được. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.coaching.service.CurrentCoachMembers coachMembers;
 
@@ -45,8 +45,8 @@ public class ChatService {
      * Danh bạ theo vai trò: hội viên thấy lễ tân và HLV đang dạy mình; lễ tân thấy mọi hội viên active; HLV
      * thấy học viên đang phụ trách. Từ khóa tối đa 80 ký tự.
      *
-     * Who the caller may start a chat with: a member finds receptionists and coaches, a receptionist finds any
-     * active member, a coach finds the members they currently train.
+     * Những người người gọi được phép bắt đầu chat: hội viên tìm lễ tân và HLV, lễ tân tìm mọi hội viên đang
+     * hoạt động, HLV tìm các hội viên họ đang dạy.
      */
     public Page<ChatContactDto> contacts(AuthenticatedPrincipal principal, String query, int page) {
         User actor = requireActor(principal);
@@ -123,14 +123,14 @@ public class ChatService {
      * viên để hai request song song không tạo trùng. Hội viên chỉ nhắn được HLV đang dạy mình; HLV chỉ nhắn học
      * viên đang phụ trách; lễ tân nhắn được mọi hội viên active.
      *
-     * Opens (or reuses) the unique conversation between a member and a receptionist/coach, started by either side.
+     * Mở (hoặc dùng lại) hội thoại duy nhất giữa hội viên và lễ tân/HLV, do bên nào bắt đầu cũng được.
      */
     @Transactional
     public ChatConversationDto open(AuthenticatedPrincipal principal, Long contactId) {
         User actor = requireActor(principal);
         if (contactId == null || contactId <= 0 || contactId.equals(principal.id())) throw invalid("validation.chat.contact");
         boolean memberStarts = "MEMBER".equals(role(actor));
-        // Serialize pair creation on the same Member row across all API instances.
+        // Tuần tự hóa việc tạo cặp trên cùng dòng Member ở mọi instance của API.
         Long memberLockId = memberStarts ? principal.id() : contactId;
         User lockedMember = contacts.lockUser(memberLockId).orElseGet(() -> {
             if (memberStarts) throw forbidden();
@@ -142,12 +142,14 @@ public class ChatService {
         User member, staff;
         if (memberStarts) {
             if (!STAFF.contains(role(other))) throw invalid("validation.chat.contact");
-            // A member may only write to coaches they currently have a class, 1:1 booking or plan with; the desk is always open.
+            // Hội viên chỉ được nhắn cho HLV mà họ đang có lớp, lượt đặt 1:1 hoặc kế hoạch; quầy lễ tân luôn
+            // mở.
             if ("COACH".equals(role(other))) requireCoachOfMember(other.getId(), lockedMember.getId());
             member = lockedMember; staff = other;
         } else {
             if (!"MEMBER".equals(role(other))) throw invalid("validation.chat.contact");
-            // A coach may only reach the members they currently train; the desk may reach any active member.
+            // HLV chỉ liên hệ được các hội viên họ đang dạy; quầy lễ tân liên hệ được mọi hội viên đang hoạt
+            // động.
             if ("COACH".equals(role(actor)) && (coachMembers == null)) throw forbidden();
             if ("COACH".equals(role(actor))) coachMembers.requireCoachOf(actor.getId(), contactId);
             member = other; staff = actor;

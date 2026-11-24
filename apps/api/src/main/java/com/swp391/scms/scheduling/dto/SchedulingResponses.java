@@ -7,7 +7,7 @@ import java.time.LocalTime;
 /**
  * Nhóm các DTO trả về cho nghiệp vụ lớp học và buổi học.
  *
- * SCRUM-72: response payloads for class and session read models.
+ * SCRUM-72: các payload phản hồi cho mô hình đọc của lớp và buổi học.
  */
 public final class SchedulingResponses {
 

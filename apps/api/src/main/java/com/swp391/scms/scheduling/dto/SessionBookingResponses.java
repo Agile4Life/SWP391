@@ -38,7 +38,7 @@ public final class SessionBookingResponses {
     /**
      * Một phần tử bị bỏ qua khi xử lý hàng loạt: id, ngày, mã lỗi và thông báo.
      *
-     * One id that could not be processed in a bulk request, with the API error code and a localised reason.
+     * Một id không xử lý được trong yêu cầu hàng loạt, kèm mã lỗi API và lý do đã bản địa hóa.
      */
     public record Skipped(Long id, LocalDate date, String code, String message) {
     }

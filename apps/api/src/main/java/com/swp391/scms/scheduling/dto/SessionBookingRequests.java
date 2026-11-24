@@ -7,7 +7,7 @@ import java.util.List;
 /**
  * Nhóm các DTO yêu cầu đặt/hủy nhiều buổi học; MAX_BULK giới hạn số phần tử mỗi lần.
  *
- * Request payloads for per-session booking, including the bulk (week / month / hand-picked) option.
+ * Các payload yêu cầu đặt chỗ theo buổi, gồm tùy chọn đặt hàng loạt (tuần / tháng / buổi chọn tay).
  */
 public final class SessionBookingRequests {
 
@@ -20,7 +20,7 @@ public final class SessionBookingRequests {
     /**
      * Yêu cầu đặt nhiều buổi: danh sách id buổi học.
      *
-     * Sessions to book in one go; the client resolves "whole week" or "whole month" into concrete session ids.
+     * Các buổi đặt trong một lần; client quy "cả tuần" hoặc "cả tháng" thành các id buổi cụ thể.
      */
     public record BulkBookRequest(
             @NotEmpty(message = "{validation.scheduling.bulk.empty}")

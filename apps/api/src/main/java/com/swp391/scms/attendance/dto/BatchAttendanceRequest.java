@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * Điểm danh hàng loạt: danh sách học viên và cờ có gửi kết quả đánh giá cho học viên không.
  *
- * SCRUM-111: Batch attendance request payload.
+ * SCRUM-111: Payload yêu cầu ghi điểm danh hàng loạt.
  */
 public record BatchAttendanceRequest(
         @NotEmpty(message = "{validation.attendance.records.not_empty}")

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 /**
  * Job nền định kỳ nhả chỗ khóa học đang giữ cho các khoản phí chưa thanh toán quá hạn.
  *
- * Periodically frees course seats held by fees that were never paid.
+ * Định kỳ giải phóng các chỗ khóa học bị giữ bởi khoản phí chưa bao giờ được trả.
  */
 @Component
 @ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")

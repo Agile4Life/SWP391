@@ -11,7 +11,7 @@ import java.util.Optional;
 /**
  * Truy vấn người dùng cho tính năng chat (danh bạ, khóa dòng).
  *
- * Chat-specific reads and pair-creation lock; does not change identity management behavior.
+ * Các truy vấn đọc riêng cho chat và khóa tạo cặp hội thoại; không thay đổi hành vi quản lý danh tính.
  */
 public interface ChatContactRepository extends Repository<User, Long> {
     /** Lấy người dùng kèm vai trò. */
@@ -24,9 +24,10 @@ public interface ChatContactRepository extends Repository<User, Long> {
     Optional<User> lockUser(@Param("id") Long id);
 
     /**
-     * What a member may write to: every receptionist, plus only the coaches they currently have something with
+     * Những người hội viên được phép nhắn: mọi lễ tân, cộng với chỉ những HLV mà họ hiện có lớp/lượt đặt/kế
+     * hoạch.
      * (an active training plan, a confirmed 1:1 booking, an enrolled class with upcoming sessions or a booked session).
-     * Coaches come first so an empty coach section is visible on the first page.
+     * HLV đứng trước để phần HLV trống vẫn hiện ra ở trang đầu.
      */
     @Query(value = """
             select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active'
@@ -64,7 +65,7 @@ public interface ChatContactRepository extends Repository<User, Long> {
     Page<User> searchForMember(@Param("memberId") Long memberId, @Param("today") java.time.LocalDate today,
                                @Param("query") String query, Pageable page);
 
-    /** Active members a receptionist may start a chat with, matched by name or email. */
+    /** Các hội viên đang hoạt động mà lễ tân được phép bắt đầu chat, khớp theo tên hoặc email. */
     @Query(value = "select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' "
             + "and r.code = 'MEMBER' and (lower(u.fullName) like lower(concat('%', :query, '%')) "
             + "or lower(u.email) like lower(concat('%', :query, '%'))) order by u.fullName, u.id",

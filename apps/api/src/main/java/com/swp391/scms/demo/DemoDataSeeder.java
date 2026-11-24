@@ -51,12 +51,12 @@ import org.springframework.transaction.annotation.Transactional;
  * hóa đơn, lượt check-in, buổi PT và số đo cơ thể. Ngày tháng tính theo ngày chạy; chạy lại sẽ bỏ qua khi tài
  * khoản quản lý demo đã tồn tại.
  *
- * Optional demo dataset (accounts, subscriptions, payments, classes, attendance, PT bookings, progress logs) with
- * past and current records, so a panel can be shown a lived-in system. Off by default
+ * Bộ dữ liệu demo tùy chọn (tài khoản, subscription, thanh toán, lớp, điểm danh, lượt đặt PT, nhật ký tiến
+ * độ) với bản ghi quá khứ và hiện tại, để hội đồng thấy một hệ thống đã được dùng. Mặc định tắt.
  * ({@code app.demo.seed-enabled}); idempotent: skipped once the demo manager account exists.
- * Dates are relative to the day the seeder runs, so seed on a fresh database shortly before the demo.
- * Past rows use terminal statuses (completed / DENIED) because the database triggers only accept new "booked" or
- * GRANTED rows for members whose subscription is active today.
+ * Ngày tháng tính tương đối theo ngày chạy seeder, nên hãy seed trên database mới ngay trước buổi demo. Các
+ * dòng quá khứ dùng trạng thái cuối (completed / DENIED) vì trigger database chỉ nhận dòng "booked" hoặc
+ * GRANTED mới cho hội viên có subscription còn hiệu lực hôm nay.
  */
 @Component
 @Order(200)
@@ -71,7 +71,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     /**
      * Hồ sơ một hội viên demo và tình huống gói tập của họ.
      *
-     * One member profile and the subscription story that goes with it.
+     * Một hồ sơ hội viên cùng câu chuyện subscription đi kèm.
      */
     private record MemberSpec(String key, String name, String gender, int age, String level, String goal,
                               String health, String pkg, String scenario, int joinedDaysAgo) {}
@@ -313,7 +313,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                         "pending_payment", null, receptionist);
                 yield subscriptions.save(sub);
             }
-            // Expired Silver month then renewed into Gold: shows the renewal chain.
+            // Tháng Silver đã hết hạn rồi gia hạn lên Gold: minh họa chuỗi gia hạn.
             case "RENEWED" -> {
                 MembershipPackage first = findPackage("SILVER");
                 MembershipSubscription old = subscribe(member, first, today.minusDays(50), today.minusDays(21),
@@ -354,7 +354,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     /**
      * Lưu kỳ gói đã trả tiền kèm khoản thanh toán thành công và hóa đơn.
      *
-     * Saves a paid subscription together with its payment and invoice.
+     * Lưu subscription đã thanh toán cùng khoản thanh toán và hóa đơn của nó.
      */
     private MembershipSubscription subscribe(Member member, MembershipPackage pkg, LocalDate start, LocalDate end,
                                              String status, MembershipSubscription previous, User receptionist,
@@ -398,7 +398,7 @@ public class DemoDataSeeder implements ApplicationRunner {
      * viên hết hạn để minh họa luồng từ chối.
      */
     private void createCheckins(Map<String, Member> memberByKey, User receptionist, LocalDate today) {
-        // key -> visits over the last N days (every 'step' days) for members whose plan is currently valid
+        // key -> số lượt vào trong N ngày gần nhất (cách mỗi 'step' ngày) cho hội viên có gói đang hiệu lực.
         Map<String, int[]> visits = Map.of("an", new int[]{35, 1}, "binh", new int[]{12, 2},
                 "chi", new int[]{5, 2}, "hieu", new int[]{26, 2}, "giang", new int[]{29, 2});
         visits.forEach((key, cfg) -> {
@@ -420,7 +420,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 checkins.save(checkin);
             }
         });
-        // Expired member turned away at the gate: shows the denial flow.
+        // Hội viên hết hạn bị từ chối ở cổng: minh họa luồng từ chối.
         Member expired = memberByKey.get("dung");
         for (int back : new int[]{15, 9, 3}) {
             CenterCheckin denied = new CenterCheckin();
@@ -440,7 +440,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private void createPtBookings(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {
         Map<String, Discipline> disciplineByName = new HashMap<>();
         disciplines.findAll().forEach(d -> disciplineByName.put(d.getName(), d));
-        // member, coach, days offset (negative = past), hour
+        // hội viên, HLV, độ lệch ngày (âm = quá khứ), giờ.
         Object[][] rows = {
                 {"an", "hung", -30, 7}, {"an", "hung", -23, 7}, {"an", "hung", -16, 7}, {"an", "hung", -9, 7},
                 {"an", "hung", -2, 7}, {"an", "hung", 3, 7}, {"an", "hung", 10, 7},
@@ -488,7 +488,8 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     /** Tạo số đo cân nặng, mỡ, BMI hằng tháng trong 4 tháng (và chiều cao lần đầu) để có biểu đồ tiến độ. */
     private void createProgress(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {
-        // key -> {start weight, monthly delta, start body fat, monthly fat delta, height cm, coach}
+        // key -> {cân nặng ban đầu, thay đổi mỗi tháng, mỡ cơ thể ban đầu, thay đổi mỡ mỗi tháng, chiều cao cm,
+        // HLV}.
         Object[][] rows = {
                 {"an", 82.0, -1.2, 22.0, -0.9, 176, "hung"},
                 {"binh", 70.0, -1.5, 31.0, -1.1, 162, "mai"},

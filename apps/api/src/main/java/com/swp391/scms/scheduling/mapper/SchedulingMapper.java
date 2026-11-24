@@ -47,7 +47,7 @@ public class SchedulingMapper {
      * True khi lớp thiếu dữ liệu lịch (ngày lặp, ngày bắt đầu/kết thúc) mà màn khóa học cần — thường là lớp tạo
      * trước khi có các trường này.
      *
-     * True when a class is missing the schedule fields the course screens rely on (classes made before them).
+     * True khi lớp thiếu các trường lịch mà màn khóa học cần (các lớp tạo trước khi có chúng).
      */
     public static boolean lacksSchedule(GymClass gymClass) {
         return gymClass.getRecurringDays() == null || gymClass.getRecurringDays().isBlank()
@@ -58,8 +58,8 @@ public class SchedulingMapper {
      * Như toDto(GymClass) nhưng nếu lớp thiếu lịch thì suy ra thứ trong tuần, ngày đầu/cuối và giờ học từ các
      * buổi thực tế (ưu tiên buổi chưa hủy).
      *
-     * Like {@link #toDto(GymClass)}, but fills a missing schedule (weekdays, first and last day, times) from the class's
-     * real sessions, so screens show the days it actually meets instead of guessing a default.
+     * Giống {@link #toDto(GymClass)}, nhưng điền lịch còn thiếu (thứ, ngày đầu và cuối, giờ) từ các buổi thật
+     * của lớp, để màn hình hiện đúng các ngày lớp thực sự học thay vì đoán mặc định.
      */
     public GymClassDto toDto(GymClass gymClass, List<ClassSession> classSessions) {
         GymClassDto dto = toDto(gymClass);

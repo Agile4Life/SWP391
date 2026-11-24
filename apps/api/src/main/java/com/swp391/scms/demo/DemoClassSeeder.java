@@ -42,15 +42,15 @@ import org.springframework.transaction.annotation.Transactional;
  * Mỗi lớp chỉ được xếp vào khung giờ HLV và phòng còn trống (tránh trigger trùng lịch từ chối); không xếp được
  * thì bỏ qua và ghi cảnh báo.
  *
- * Optional extra timetable that makes the center look busy: dozens of recurring courses (ongoing, upcoming and
- * finished) as if a manager had created them. Enabled together with {@link DemoDataSeeder}
+ * Thời khóa biểu bổ sung tùy chọn để trung tâm trông đông đúc: hàng chục khóa học định kỳ (đang diễn ra, sắp
+ * tới và đã kết thúc) như thể quản lý đã tạo. Bật cùng {@link DemoDataSeeder}.
  * ({@code app.demo.seed-enabled}) but independent of it: it can top up a database that was demo-seeded before, and it is
- * idempotent per class name, so a class that already exists is never duplicated or modified.
+ * Idempotent theo tên lớp: lớp đã tồn tại thì không bao giờ bị tạo trùng hay sửa đổi.
  *
  * <p>The database triggers reject a session that overlaps another session of the same coach or room, or a confirmed PT
- * booking of the same coach, so every course is placed only into a free slot (checked against the sessions and confirmed
- * PT bookings already stored); a course that cannot be placed is skipped with a warning.
- * Coaches are taken from the active staff by specialization, rooms by name, and no member or enrollment is created.
+ * Đặt chỗ của cùng HLV, nên mỗi khóa chỉ được xếp vào khung trống (kiểm tra với các buổi và lượt đặt PT đã
+ * xác nhận đang lưu); khóa không xếp được sẽ bị bỏ qua kèm cảnh báo. HLV lấy từ nhân viên đang hoạt động theo
+ * chuyên môn, phòng theo tên, và không tạo hội viên hay ghi danh nào.
  */
 @Component
 @Order(210)
@@ -61,15 +61,15 @@ public class DemoClassSeeder implements ApplicationRunner {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final LocalTime OPENING = LocalTime.of(6, 0);
     private static final LocalTime CLOSING = LocalTime.of(22, 0);
-    /** Minutes tried, in order, when the preferred start time is taken for a coach or room. */
+    /** Các số phút lần lượt được thử khi giờ bắt đầu ưa thích đã bị HLV hoặc phòng chiếm. */
     private static final int[] SHIFTS = {0, 60, 120, 180, 240, -60, -120};
 
     /**
      * Mô tả một khóa học mẫu: tên, bộ môn, phòng, trình độ, sức chứa, học phí, các thứ trong tuần, giờ bắt đầu,
      * thời lượng, khoảng ngày (tính từ hôm nay, âm là quá khứ), trạng thái và mô tả.
      *
-     * One course. {@code fromDay}/{@code toDay} bound its sessions relative to the seed day (negative = past); the class
-     * dates follow the first and last session.
+     * Một khóa học. {@code fromDay}/{@code toDay} giới hạn các buổi so với ngày seed (âm = quá khứ); ngày của
+     * lớp theo buổi đầu và buổi cuối.
      */
     record ClassSpec(String name, String discipline, String room, String level, int capacity, int price, String days,
                      String start, int minutes, int fromDay, int toDay, String status, String description) {
@@ -229,8 +229,8 @@ public class DemoClassSeeder implements ApplicationRunner {
         Set<String> existingNames = new HashSet<>();
         classes.findAll().forEach(c -> existingNames.add(c.getName()));
 
-        // Slots the database triggers would reject: every non-cancelled session, by coach and by room, and every
-        // confirmed PT booking of a coach (trg_sessions_check_conflict in scms_guard_pt_schedule), per day.
+        // Các khung mà trigger database sẽ từ chối: mọi buổi chưa hủy theo HLV và theo phòng, và mọi lượt đặt
+        // PT đã xác nhận của HLV (trg_sessions_check_conflict trong scms_guard_pt_schedule), theo từng ngày.
         Map<String, List<Slot>> busy = new HashMap<>();
         coachBookings.findConfirmedBetween(today.minusDays(150), today.plusDays(150)).forEach(b ->
                 reserve(busy, "coach", b.getCoach().getUserId(), b.getBookingDate(), b.getStartTime(), b.getEndTime()));
@@ -288,7 +288,7 @@ public class DemoClassSeeder implements ApplicationRunner {
      * Tìm cặp (HLV, giờ bắt đầu) đầu tiên còn trống ở mọi ngày học: thử giờ ưu tiên rồi lệch dần theo SHIFTS,
      * trong giờ mở cửa 06:00-22:00; không có thì trả null.
      *
-     * First (coach, start time) that is free on every session date; null when none fits.
+     * (HLV, giờ bắt đầu) đầu tiên rảnh ở mọi ngày học; null khi không có cái nào phù hợp.
      */
     private Placement place(ClassSpec spec, Room room, List<LocalDate> dates, List<Coach> candidates,
                             Map<String, List<Slot>> busy) {
@@ -315,7 +315,7 @@ public class DemoClassSeeder implements ApplicationRunner {
      * Danh sách HLV ứng viên: HLV đúng chuyên môn đứng trước (xoay vòng để chia đều), HLV khác chỉ dùng khi bất
      * đắc dĩ.
      *
-     * Coaches of the discipline first (rotated so the load spreads); any other active coach only as a last resort.
+     * Ưu tiên HLV của bộ môn (xoay vòng để dàn đều tải); HLV đang hoạt động khác chỉ dùng như phương án cuối.
      */
     private static List<Coach> candidateCoaches(List<Coach> all, String discipline, int turn) {
         String key = discipline.toLowerCase(Locale.ROOT);

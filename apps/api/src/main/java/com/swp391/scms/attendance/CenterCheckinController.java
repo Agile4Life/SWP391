@@ -22,7 +22,7 @@ import java.util.List;
  * API check-in/check-out tại cổng trung tâm (/api/v1/check-in): quầy hiển thị QR cổng và quét QR của hội viên;
  * hội viên tự quét QR cổng để vào/ra; xem lịch sử ra vào.
  *
- * Controller for center access QR check-in, checkout and daily history (SCRUM-75).
+ * Controller cho check-in QR vào trung tâm, check-out và lịch sử theo ngày (SCRUM-75).
  */
 @Tag(name = "Center Check-in", description = "QR check-in, checkout and daily history (SCRUM-75)")
 @RestController

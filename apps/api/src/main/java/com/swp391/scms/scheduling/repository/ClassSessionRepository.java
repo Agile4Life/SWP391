@@ -37,7 +37,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findByGymClassIdOrderBySessionDateAscStartTimeAsc(Long classId);
 
     /**
-     * Fetch all sessions with class, discipline, coach, and room details ordered by date and time.
+     * Lấy mọi buổi kèm thông tin lớp, bộ môn, HLV và phòng, sắp theo ngày và giờ.
      */
     @Query("""
             select s from ClassSession s
@@ -53,8 +53,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     /**
      * Lọc buổi học trong bộ nhớ theo khoảng ngày, bộ môn và HLV (tham số null thì bỏ qua điều kiện đó).
      *
-     * SCRUM-72 BR-06: schedule lookup with optional filters by date range, discipline and coach.
-     * Avoids PostgreSQL PSQLException ("could not determine data type of parameter $1") on (? is null).
+     * SCRUM-72 BR-06: tra cứu lịch với bộ lọc tùy chọn theo khoảng ngày, bộ môn và HLV. Tránh PSQLException
+     * của PostgreSQL ("could not determine data type of parameter $1") với (? is null).
      */
     default List<ClassSession> searchSessions(LocalDate fromDate,
                                               LocalDate toDate,
@@ -124,8 +124,8 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findActiveByMemberAndDate(@Param("memberId") Long memberId, @Param("date") LocalDate date);
 
     /**
-     * Scheduled sessions of other classes on {@code date} overlapping {@code [start, end)} that a member of this
-     * session also attends. Members of the session are those enrolled in {@code classId} or holding a seat in
+     * Các buổi đã xếp của lớp khác vào {@code date} chồng lên {@code [start, end)} mà một thành viên của buổi
+     * này cũng tham gia. Thành viên của buổi là người ghi danh vào {@code classId} hoặc giữ chỗ trong
      * {@code sessionId} (use -1 for a session that does not exist yet).
      */
     @Query("""
@@ -171,7 +171,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
                                        @Param("startDate") java.time.LocalDate startDate,
                                        @Param("endDate") java.time.LocalDate endDate);
 
-    /** Sessions held before {@code cutoff} become completed (state machine 4). */
+    /** Các buổi đã diễn ra trước {@code cutoff} chuyển thành completed (máy trạng thái 4). */
     @org.springframework.data.jpa.repository.Modifying
     @Query("""
             update ClassSession s set s.status = 'completed', s.updatedAt = :now

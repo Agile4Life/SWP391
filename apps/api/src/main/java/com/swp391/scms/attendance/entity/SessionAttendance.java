@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
  * Bảng session_attendance: điểm danh một học viên trong một buổi lớp (trạng thái, thời điểm, HLV ghi nhận, ghi
  * chú).
  *
- * Entity mapping table session_attendance (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng session_attendance (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_attendance_status", constraints = "status IN ('present','absent','late','excused')")

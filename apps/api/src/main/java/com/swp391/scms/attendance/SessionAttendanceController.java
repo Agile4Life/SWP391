@@ -21,8 +21,8 @@ import java.util.List;
 /**
  * API điểm danh lớp nhóm (tính năng cũ, chỉ bật khi app.legacy.classes-enabled=true).
  *
- * SCRUM-111: Session Attendance Controller.
- * Provides endpoints for coaches and staff to inspect attendance rosters and record batch attendance.
+ * SCRUM-111: Controller điểm danh buổi học. Cung cấp endpoint để HLV và nhân viên xem danh sách điểm danh và
+ * ghi điểm danh hàng loạt.
  */
 @Tag(name = "Session Attendance", description = "Class session attendance tracking (SCRUM-111)")
 @RestController

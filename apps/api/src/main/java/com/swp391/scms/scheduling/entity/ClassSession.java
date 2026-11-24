@@ -11,7 +11,7 @@ import org.hibernate.annotations.OnDeleteAction;
  * Entity một buổi học của lớp (bảng class_sessions): ngày, giờ bắt đầu/kết thúc, trạng thái, lý do hủy và mốc
  * thời gian.
  *
- * Entity mapping table class_sessions (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng class_sessions (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_sessions_status", constraints = "status IN ('scheduled','completed','cancelled')")

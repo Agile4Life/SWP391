@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Nghiệp vụ vòng đời buổi học: hủy buổi, hủy các lượt đặt chỗ liên quan và thông báo cho học viên.
  *
- * SCRUM-113: Class session lifecycle and cancellation notifications.
+ * SCRUM-113: Vòng đời buổi học và thông báo hủy buổi.
  */
 @Service
 public class ClassSessionService {
@@ -78,8 +78,8 @@ public class ClassSessionService {
      * Hủy một buổi học: báo lỗi nếu đã hủy, kiểm tra quyền, lưu lý do, gửi thông báo cho học viên đã ghi danh,
      * hủy các lượt đặt chỗ buổi này và phát sự kiện; ghi danh khóa vẫn giữ cho các buổi khác.
      *
-     * Cancel one session and notify enrolled members. Enrollments belong to the class,
-     * so they remain valid for the other sessions.
+     * Hủy một buổi và thông báo các hội viên đã ghi danh. Ghi danh thuộc về lớp nên vẫn còn hiệu lực cho các
+     * buổi khác.
      */
     @Transactional
     public ClassSessionDto cancelSession(Long sessionId, CancelSessionRequest request, AuthenticatedPrincipal principal) {
@@ -116,7 +116,7 @@ public class ClassSessionService {
                 Long memberId = member.getUserId();
                 affectedMemberUserIds.add(memberId);
 
-                // Send in-app notification of type schedule_change
+                // Gửi thông báo trong ứng dụng loại schedule_change.
                 notificationService.send(
                         memberId,
                         msg("notifications.session.cancelled.title"),
@@ -149,7 +149,7 @@ public class ClassSessionService {
                 }
             }
         }
-        // Emit SessionCancelledEvent for decoupled listeners
+        // Phát SessionCancelledEvent cho các listener tách rời.
         SessionCancelledEvent event = new SessionCancelledEvent(
                 sessionId,
                 classId,

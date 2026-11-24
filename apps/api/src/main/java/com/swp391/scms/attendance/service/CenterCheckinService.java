@@ -34,7 +34,7 @@ import java.util.Set;
  * Nghiệp vụ ra vào cổng: chỉ cho vào khi gói đang hiệu lực; ghi lại mọi lượt quét (được vào hay bị từ chối) với
  * giờ server; chống quẹt hộ (anti-passback) khi hội viên đã ở trong mà chưa ra; tự đóng lượt bị treo quá 8 giờ.
  *
- * Service managing center access QR check-in, checkout, audit trail and daily history (SCRUM-75).
+ * Service quản lý check-in QR vào trung tâm, check-out, nhật ký audit và lịch sử theo ngày (SCRUM-75).
  */
 @Service
 public class CenterCheckinService {
@@ -133,7 +133,8 @@ public class CenterCheckinService {
             String gateId = gateQrService.verify(request.gateQr(), clock.millis());
             gate = gateQrService.gateName(gateId);
         } catch (BadRequestException invalidGate) {
-            // Audit rejected gate challenges too (forged, malformed or expired) instead of dropping them silently.
+            // Cũng ghi audit các thử thách cổng bị từ chối (giả mạo, sai định dạng hoặc hết hạn) thay vì âm
+            // thầm bỏ qua.
             Member member = members.findByUserIdForUpdate(principal.id()).orElse(null);
             String reasonKey = "GATE_QR_EXPIRED".equals(invalidGate.getErrorCode())
                     ? "error.attendance.gate_qr_expired" : "error.attendance.gate_qr_invalid";
@@ -153,7 +154,7 @@ public class CenterCheckinService {
      * Hội viên tự quét QR cổng để ra: đóng lượt GRANTED đang mở của chính mình; không có lượt đang mở thì báo
      * lỗi.
      *
-     * Member leaves the center by scanning a valid gate QR; closes their own open GRANTED visit.
+     * Hội viên rời trung tâm bằng cách quét QR cổng hợp lệ; đóng lượt vào GRANTED đang mở của chính họ.
      */
     @Transactional
     public CheckinDto selfCheckout(AuthenticatedPrincipal principal, CheckinRequests.SelfScan request) {
@@ -210,8 +211,8 @@ public class CenterCheckinService {
                 return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.qr_invalid");
             }
         } else {
-            // A static code never expires, so a shared photo of a card would open the gate forever. Only the rotating
-            // signed code (60 seconds) is accepted; the member opens their card to get a fresh one.
+            // Mã tĩnh không bao giờ hết hạn, nên ảnh chụp thẻ bị chia sẻ sẽ mở cổng mãi mãi. Chỉ chấp nhận mã
+            // ký xoay vòng (60 giây); hội viên mở thẻ để lấy mã mới.
             return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.static_qr_rejected");
         }
 
@@ -237,7 +238,7 @@ public class CenterCheckinService {
             return saveDeniedRecord(null, now, gate, recorder, "error.attendance.member_not_found");
         }
 
-        // Serialize every QR belonging to the same member before checking for an open visit.
+        // Tuần tự hóa mọi QR của cùng một hội viên trước khi kiểm tra lượt vào đang mở.
         member = members.findByUserIdForUpdate(member.getUserId()).orElse(null);
         if (member == null) {
             return saveDeniedRecord(null, now, gate, recorder, "error.attendance.member_not_found");
@@ -384,7 +385,8 @@ public class CenterCheckinService {
      * Lịch sử ra vào trong khoảng ngày (mặc định hôm nay, tối đa số ngày cho phép): nhân viên xem tất cả, hội
      * viên chỉ xem của mình.
      *
-     * History for an inclusive date range (default today, at most {@link #MAX_HISTORY_DAYS} days).
+     * Lịch sử cho một khoảng ngày gồm cả hai đầu (mặc định là hôm nay, tối đa {@link #MAX_HISTORY_DAYS}
+     * ngày).
      */
     @Transactional(readOnly = true)
     public List<CheckinDto> history(AuthenticatedPrincipal principal, LocalDate from, LocalDate to) {

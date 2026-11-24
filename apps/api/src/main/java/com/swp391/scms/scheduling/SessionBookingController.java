@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * API đặt chỗ từng buổi học của hội viên (đã ngừng; chỉ bật khi app.legacy.classes-enabled=true).
  *
- * Per-session class booking: one session, any hand-picked set, a whole week or month, and their cancellation.
+ * Đặt chỗ lớp theo từng buổi: một buổi, tập buổi chọn tay, cả tuần hoặc cả tháng, và việc hủy chúng.
  */
 @Tag(name = "Session Bookings", description = "Book and cancel individual class sessions, singly or in bulk")
 @RestController

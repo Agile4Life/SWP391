@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * API ghi danh lớp/khóa học của hội viên (đã ngừng; chỉ bật khi app.legacy.classes-enabled=true).
  *
- * SCRUM-73: class booking and cancellation endpoints.
+ * SCRUM-73: endpoint đặt chỗ và hủy lớp học.
  */
 @Tag(name = "Class Enrollments", description = "Member class booking and cancellation (SCRUM-73)")
 @RestController

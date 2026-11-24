@@ -18,9 +18,10 @@ public interface CenterCheckinRepository extends JpaRepository<CenterCheckin, Lo
 
 
     /**
-     * A granted visit that was inside the center while a session ran: it began no earlier than {@code earliest} (a
-     * bound so a forgotten checkout from the morning does not cover an evening class), no later than the session end,
-     * and was still open or ended after the session start. Returns the earliest such check-in time.
+     * Lượt vào cổng hợp lệ đã ở trong trung tâm trong lúc buổi học diễn ra: bắt đầu không sớm hơn {@code
+     * earliest} (một mốc chặn để lượt quên check-out từ buổi sáng không phủ lớp buổi tối), không muộn hơn giờ
+     * kết thúc buổi, và còn mở hoặc kết thúc sau giờ bắt đầu buổi. Trả về thời điểm check-in sớm nhất thỏa
+     * điều kiện.
      */
     @Query("select min(c.checkInTime) from CenterCheckin c where c.member.userId = :memberId and c.status = 'GRANTED' "
             + "and c.checkInTime >= :earliest and c.checkInTime <= :end "

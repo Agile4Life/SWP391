@@ -61,7 +61,7 @@ public class ChatRealtimeService {
     /**
      * Phiên realtime cho khiếu nại: ký JWT 5 phút cho đúng chủ đề mà dịch vụ hỗ trợ đã kiểm tra quyền.
      *
-     * Signs a support capability after the support service authorizes its exact topic.
+     * Ký quyền (capability) hỗ trợ sau khi service hỗ trợ cấp phép đúng chủ đề đó.
      */
     public ChatRealtimeSession supportSession(Long actorId, String topic) {
         if (url.isBlank() || publishableKey.isBlank() || signingKey == null)

@@ -58,10 +58,10 @@ import java.util.Optional;
  * Nghiệp vụ quản lý lớp/khóa học và buổi học: tạo, sửa, đóng/xóa lớp, xếp và dời buổi, tra cứu lịch và học
  * viên; kiểm tra xung đột phòng/HLV ở service và trigger DB.
  *
- * SCRUM-72, SCRUM-131 & SCRUM-132: class and class-session management.
+ * SCRUM-72, SCRUM-131 & SCRUM-132: quản lý lớp học và buổi học.
  *
  * <p>Schedule-conflict (Trigger P3) is enforced both in the service layer (with detailed
- * room vs. coach conflict messages) and at the database level via trigger.
+ * Thông báo xung đột phòng và HLV) và ở tầng database qua trigger.
  */
 @Service
 public class ClassService {
@@ -150,10 +150,9 @@ public class ClassService {
      * Tạo lớp (một buổi, đã ngừng ở API): bộ môn/HLV/phòng phải tồn tại, HLV active, phòng sẵn sàng, sức chứa >
      * 0; nếu có ngày giờ thì kiểm tra xung đột rồi xếp buổi đầu tiên.
      *
-     * SCRUM-72 BR-01..BR-02, BR-05 & SCRUM-132: create a class. Disciplines/coach/room must exist,
-     * capacity &gt; 0, the room must be available and the coach must be active.
-     * If sessionDate, startTime, and endTime are provided, validates room/coach conflicts first
-     * and schedules the first session atomically.
+     * SCRUM-72 BR-01..BR-02, BR-05 & SCRUM-132: tạo lớp. Bộ môn/HLV/phòng phải tồn tại, sức chứa &gt; 0,
+     * phòng phải khả dụng và HLV phải đang hoạt động. Nếu có sessionDate, startTime, endTime thì kiểm tra
+     * xung đột phòng/HLV trước rồi xếp buổi đầu một cách nguyên tử.
      */
     @Transactional
     @Audited(action = "CLASS_CREATE", entity = "classes")
@@ -231,8 +230,8 @@ public class ClassService {
      * Tạo khóa định kỳ: kiểm tra bộ môn/HLV/phòng, sinh mọi buổi trong [startDate, endDate] theo các thứ đã
      * chọn và kiểm tra xung đột phòng/HLV cho từng buổi.
      *
-     * Create a recurring course: generates all sessions within [startDate, endDate]
-     * for the selected days of the week, validating room/coach conflicts across every session.
+     * Tạo khóa học định kỳ: sinh mọi buổi trong [startDate, endDate] cho các thứ đã chọn, kiểm tra xung đột
+     * phòng/HLV trên từng buổi.
      */
     @Transactional
     @Audited(action = "CLASS_CREATE_RECURRING", entity = "classes")
@@ -341,7 +340,7 @@ public class ClassService {
      * Quản lý cập nhật lớp: kiểm tra bộ môn/HLV/phòng và sức chứa; chuyển lớp sang ngừng hoạt động thì đóng lớp
      * như khi xóa để không còn lượt đặt sống.
      *
-     * SCRUM-131 & SCRUM-132: Manager updates an existing class.
+     * SCRUM-131 & SCRUM-132: Quản lý cập nhật lớp hiện có.
      */
     @Transactional
     @Audited(action = "CLASS_UPDATE", entity = "classes")
@@ -413,7 +412,8 @@ public class ClassService {
             boolean closing = !"cancelled".equalsIgnoreCase(gymClass.getStatus()) && !"archived".equalsIgnoreCase(gymClass.getStatus())
                     && ("cancelled".equalsIgnoreCase(request.status()) || "archived".equalsIgnoreCase(request.status()));
             if (closing) {
-                // Same cascade as deleting a class, so stopping a class never leaves live bookings behind.
+                // Cùng dây chuyền xử lý như khi xóa lớp, để việc dừng một lớp không bao giờ để sót lượt đặt còn
+                // hiệu lực.
                 closeClass(gymClass, enrollments.findByGymClassId(classId),
                         sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId), LocalDateTime.now(clock));
             }
@@ -442,8 +442,8 @@ public class ClassService {
      * Đóng lớp: hủy các buổi chưa bắt đầu, nhả lượt đặt chỗ và ghi danh khóa, hoàn phí đã trả vào ví và thông
      * báo cho hội viên.
      *
-     * Closing a class: cancels its sessions that have not started, releases their bookings and the course enrollments,
-     * refunds settled course fees to the wallet and notifies the members.
+     * Đóng lớp: hủy các buổi chưa bắt đầu, nhả lượt đặt và ghi danh khóa học, hoàn phí khóa đã thanh toán vào
+     * ví và thông báo hội viên.
      */
     private void closeClass(GymClass gymClass, List<ClassEnrollment> classEnrollments, List<ClassSession> classSessions,
                             LocalDateTime now) {
@@ -455,7 +455,7 @@ public class ClassService {
                 if (session == null || !SESSION_SCHEDULED.equalsIgnoreCase(session.getStatus())) {
                     continue;
                 }
-                // Sessions already held keep their history; they are settled as completed later.
+                // Các buổi đã diễn ra giữ nguyên lịch sử; chúng sẽ được chốt là completed sau.
                 if (session.getSessionDate() != null && session.getStartTime() != null
                         && !LocalDateTime.of(session.getSessionDate(), session.getStartTime()).isAfter(now)) {
                     continue;
@@ -533,7 +533,7 @@ public class ClassService {
                     enrollment.setCancelledAt(now);
                     enrollment.setCancelReason(CLASS_DEACTIVATED_REASON);
                     enrollments.save(enrollment);
-                    // The centre closed the course: a settled fee goes back to the member's wallet.
+                    // Trung tâm đóng khóa học: khoản phí đã thanh toán được hoàn vào ví hội viên.
                     if (enrollmentService != null) {
                         enrollmentService.settleFeeOnClassClosure(enrollment, CLASS_DEACTIVATED_REASON);
                     }
@@ -543,8 +543,8 @@ public class ClassService {
     }
 
     /**
-     * SCRUM-131 AC & A4: Manager deletes a class (after double confirmation on UI).
-     * If historical/dependent records exist, soft-deactivates the class, cancels upcoming
+     * SCRUM-131 AC & A4: Quản lý xóa lớp (sau khi xác nhận hai lần trên UI). Nếu có bản ghi lịch sử/phụ
+     * thuộc, hủy kích hoạt mềm lớp, hủy các buổi sắp tới.
      * scheduled sessions with reason "Lớp học ngừng hoạt động", and notifies booked members.
      */
     @Transactional
@@ -651,8 +651,8 @@ public class ClassService {
      * Xếp một buổi cho lớp: lớp active, giờ kết thúc sau giờ bắt đầu, buổi ở tương lai; kiểm tra trước xung đột
      * phòng/HLV và học viên rồi lưu.
      *
-     * SCRUM-72 BR-03 & SCRUM-132: schedule a session. End time must be after start time and the
-     * session may not be placed in the past. Pre-checks room and coach conflicts before saving.
+     * SCRUM-72 BR-03 & SCRUM-132: xếp một buổi. Giờ kết thúc phải sau giờ bắt đầu và buổi không được đặt
+     * trong quá khứ. Kiểm tra trước xung đột phòng và HLV khi lưu.
      */
     @Transactional
     @Audited(action = "SESSION_CREATE", entity = "class_sessions")
@@ -722,8 +722,8 @@ public class ClassService {
      * Quản lý dời lịch một buổi: buổi phải thuộc lớp, chưa hủy, lớp active; kiểm tra giờ, tương lai và xung đột
      * phòng/HLV/học viên (trigger DB kiểm tra lại).
      *
-     * SCRUM-131 & SCRUM-132: Manager reschedules an existing class session.
-     * Pre-checks room and coach conflicts and enforces Trigger P3 at the database.
+     * SCRUM-131 & SCRUM-132: Quản lý dời lịch buổi học hiện có. Kiểm tra trước xung đột phòng và HLV và áp
+     * dụng Trigger P3 ở database.
      */
     @Transactional
     @Audited(action = "SESSION_RESCHEDULE", entity = "class_sessions")
@@ -789,8 +789,8 @@ public class ClassService {
      * Kiểm tra trước xung đột: HLV không nghỉ phép đã duyệt, phòng không bị đặt sân, và không có buổi scheduled
      * khác cùng ngày trùng giờ ở cùng phòng hoặc cùng HLV.
      *
-     * SCRUM-132: Pre-check that no scheduled session on the same date overlaps in time
-     * for the same room or the same coach, and the coach is not on approved leave.
+     * SCRUM-132: Kiểm tra trước rằng không có buổi đã xếp cùng ngày chồng giờ với cùng phòng hoặc cùng HLV,
+     * và HLV không đang nghỉ phép đã duyệt.
      */
     private void ensureNoSessionConflict(Long coachId,
                                          Long roomId,
@@ -884,8 +884,8 @@ public class ClassService {
      * Học viên chỉ học một lớp tại một thời điểm: buổi mới/dời không được trùng giờ với lớp khác mà học viên
      * của lớp/buổi này đang học (trigger trg_member_schedule_conflict kiểm tra lại).
      *
-     * A member attends one class at a time: a new or moved session must not overlap another class that one of its
-     * members (class-wide enrollment or seat in this session) already attends. The database trigger
+     * Một hội viên chỉ học một lớp tại một thời điểm: buổi mới hoặc được dời không được chồng lên lớp khác mà
+     * một thành viên của nó (ghi danh toàn lớp hoặc chỗ trong buổi này) đang học. Trigger database
      * {@code trg_member_schedule_conflict} repeats this check.
      */
     private void ensureNoMemberOverlap(Long classId, Long sessionId, LocalDate sessionDate,
@@ -921,7 +921,7 @@ public class ClassService {
     /**
      * Tra cứu lịch buổi học cho mọi role đã đăng nhập, lọc theo ngày, bộ môn, HLV; kèm số chỗ đã đặt.
      *
-     * SCRUM-72 BR-06: schedule lookup for any authenticated role with optional filters.
+     * SCRUM-72 BR-06: tra cứu lịch cho mọi vai trò đã xác thực với bộ lọc tùy chọn.
      */
     @Transactional(readOnly = true)
     public List<ClassSessionDto> searchSessions(LocalDate fromDate,
@@ -937,7 +937,7 @@ public class ClassService {
     @Transactional(readOnly = true)
     public List<GymClassDto> listClasses() {
         return gymClasses.findAllByOrderByIdDesc().stream()
-                // Only legacy classes without schedule fields need their sessions read.
+                // Chỉ các lớp cũ không có trường lịch mới cần đọc các buổi của chúng.
                 .map(c -> SchedulingMapper.lacksSchedule(c)
                         ? mapper.toDto(c, sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(c.getId()))
                         : mapper.toDto(c))
@@ -983,7 +983,8 @@ public class ClassService {
     /**
      * Học viên của lớp theo người xem: HLV chỉ xem lớp mình, lễ tân không thấy ghi chú sức khỏe.
      *
-     * Students of a class for the caller: a coach only for their own class, the desk without the health notes
+     * Học viên của một lớp theo người gọi: HLV chỉ xem lớp của mình, quầy lễ tân xem không kèm ghi chú sức
+     * khỏe.
      * (medical data is for the coach who trains the member and for managers).
      */
     @Transactional(readOnly = true)
@@ -1018,7 +1019,7 @@ public class ClassService {
         if ("CENTER_MANAGER".equals(role) || "MANAGER".equals(role)) {
             return students;
         }
-        // Front desk: contact details are needed, medical notes are not.
+        // Quầy lễ tân: cần thông tin liên hệ, không cần ghi chú y tế.
         return students.stream().map(s -> new EnrolledStudentDto(s.id(), s.memberId(), s.membershipCode(), s.fullName(),
                 s.email(), s.phone(), s.avatarUrl(), s.fitnessGoal(), "", s.fitnessLevel(), s.emergencyContactName(),
                 s.emergencyContactPhone(), s.enrolledAt(), s.status())).toList();
@@ -1070,7 +1071,7 @@ public class ClassService {
     /**
      * Số chỗ đã chiếm trong một buổi: ghi danh cả lớp cộng lượt đặt riêng buổi đó.
      *
-     * Seats taken in one session: class-wide enrollments plus the members who booked this session.
+     * Số chỗ đã dùng trong một buổi: ghi danh toàn lớp cộng các hội viên đã đặt buổi này.
      */
     private long countBooked(ClassSession session) {
         long classWide = enrollments.countByGymClassIdAndStatus(session.getGymClass().getId(), ENROLLMENT_BOOKED);
@@ -1081,7 +1082,7 @@ public class ClassService {
     /**
      * Số lượt đặt chỗ lớn nhất trong một buổi bất kỳ của lớp.
      *
-     * Highest number of per-session bookings in any session of the class.
+     * Số lượt đặt theo buổi cao nhất ở bất kỳ buổi nào của lớp.
      */
     private long busiestSession(Long classId) {
         if (sessionBookings == null) return 0;

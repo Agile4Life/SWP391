@@ -15,7 +15,7 @@ import org.hibernate.Length;
  * Entity lớp/khóa học nhóm (bảng classes): tên, bộ môn, HLV, phòng, sức chứa, trình độ, giá, thời gian và lịch
  * lặp hằng tuần, người tạo.
  *
- * Entity mapping table classes (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng classes (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_classes_level", constraints = "level IN ('beginner','intermediate','advanced','all')")

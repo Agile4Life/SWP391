@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * Entity lượt ghi danh khóa học (bảng class_enrollments): lớp, hội viên, trạng thái, thời điểm ghi danh/hủy,
  * người hủy, lý do và có bị mất credit không.
  *
- * Entity mapping table class_enrollments (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng class_enrollments (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_enrollments_status", constraints = "status IN ('booked','cancelled','completed')")
@@ -45,8 +45,8 @@ public class ClassEnrollment {
     private String cancelReason;
 
     /**
-     * Set when a free course credit was given up for good (a membership hold that came too late to restore it): the
-     * cancelled enrollment keeps counting against the package's course allowance. Null/false for every other case.
+     * Được đặt khi một lượt khóa học miễn phí bị mất hẳn (tạm hoãn membership đến quá muộn để khôi phục): ghi
+     * danh đã hủy vẫn tính vào hạn mức khóa học của gói. Null/false cho mọi trường hợp khác.
      */
     @Column(name = "credit_forfeited")
     private Boolean creditForfeited;

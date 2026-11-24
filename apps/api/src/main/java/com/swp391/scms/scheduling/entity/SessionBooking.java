@@ -11,9 +11,9 @@ import org.hibernate.annotations.OnDeleteAction;
  * Entity lượt đặt chỗ một buổi học (bảng session_bookings): buổi, hội viên, trạng thái, thời điểm đặt, mã lô
  * đặt nhiều buổi và thông tin hủy.
  *
- * A member's seat in ONE class session. Unlike {@link ClassEnrollment}, which holds a seat for every session of a
- * class, a booking is made, cancelled and counted per session, so members can pick individual days, a whole week or a
- * whole month. Capacity and the one-booking-per-session rule are enforced by database triggers/indexes.
+ * Chỗ của một hội viên trong MỘT buổi học. Khác {@link ClassEnrollment} giữ chỗ cho mọi buổi của lớp, lượt
+ * đặt này được tạo, hủy và đếm theo từng buổi, nên hội viên chọn được từng ngày, cả tuần hoặc cả tháng. Sức
+ * chứa và quy tắc một-lượt-đặt-mỗi-buổi do trigger/index của database bảo đảm.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_session_bookings_status", constraints = "status IN ('booked','cancelled','completed')")
@@ -41,7 +41,7 @@ public class SessionBooking {
     @Column(name = "booked_at", nullable = false)
     private LocalDateTime bookedAt;
 
-    /** Groups the bookings created by one bulk request (week / month / hand-picked sessions). */
+    /** Gom các lượt đặt được tạo bởi một yêu cầu hàng loạt (tuần / tháng / các buổi chọn tay). */
     @Column(name = "batch_id", length = 36)
     private String batchId;
 

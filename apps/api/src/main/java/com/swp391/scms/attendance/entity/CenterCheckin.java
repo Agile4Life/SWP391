@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * Bảng center_checkins: một lượt ra vào cổng (hội viên, giờ vào/ra, cách thức, người ghi nhận, cổng, kết quả
  * GRANTED/DENIED, lý do từ chối, ghi chú).
  *
- * Entity mapping table center_checkins (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng center_checkins (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_checkins_method", constraints = "method IN ('qr','manual')")

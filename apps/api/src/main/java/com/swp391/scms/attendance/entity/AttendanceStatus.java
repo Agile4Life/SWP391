@@ -3,8 +3,8 @@ package com.swp391.scms.attendance.entity;
 /**
  * Trạng thái điểm danh, khớp ràng buộc CHECK của database: present, absent, late, excused.
  *
- * Attendance status enum matching database check constraint:
- * ck_attendance_status: status IN ('present','absent','late','excused')
+ * Enum trạng thái điểm danh khớp ràng buộc CHECK của database: ck_attendance_status: status IN
+ * ('present','absent','late','excused').
  */
 public enum AttendanceStatus {
     PRESENT("present"),

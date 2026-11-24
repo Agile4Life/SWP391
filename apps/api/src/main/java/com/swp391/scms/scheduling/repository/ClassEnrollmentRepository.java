@@ -67,7 +67,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
      * Tìm các bản ghi có gymClassId = tham số và memberUserId = tham số và status = tham số (Spring Data tự
      * sinh truy vấn từ tên hàm).
      *
-     * SCRUM-73 BR-03: a member may only hold one active booking per class.
+     * SCRUM-73 BR-03: hội viên chỉ được giữ một lượt đặt đang hoạt động cho mỗi lớp.
      */
     Optional<ClassEnrollment> findByGymClassIdAndMemberUserIdAndStatus(Long classId, Long memberId, String status);
 
@@ -120,7 +120,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 
-    /** Free credits given up for good (cancelled by a late membership hold) inside the allowance window. */
+    /** Các lượt miễn phí bị mất hẳn (hủy do tạm hoãn membership muộn) trong khoảng hạn mức. */
     @org.springframework.data.jpa.repository.Query("""
             select count(e) from ClassEnrollment e
             where e.member.userId = :memberId and e.status = 'cancelled' and e.creditForfeited = true
@@ -136,7 +136,7 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 
-    /** A course enrollment completes once every non-cancelled session of its class was held before {@code cutoff}. */
+    /** Ghi danh khóa học hoàn thành khi mọi buổi chưa hủy của lớp đã diễn ra trước {@code cutoff}. */
     @org.springframework.data.jpa.repository.Modifying
     @Query("""
             update ClassEnrollment e set e.status = 'completed'

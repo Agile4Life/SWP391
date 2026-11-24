@@ -7,7 +7,7 @@ import java.time.LocalTime;
 /**
  * Nhóm các DTO trả về cho nghiệp vụ ghi danh khóa học.
  *
- * SCRUM-73: response payloads for enrollments.
+ * SCRUM-73: các payload phản hồi cho ghi danh.
  */
 public final class EnrollmentResponses {
 
@@ -32,11 +32,11 @@ public final class EnrollmentResponses {
             LocalDateTime enrolledAt,
             LocalDateTime cancelledAt,
             String cancelReason,
-            /** Sessions of the course that are not cancelled; null when unknown. */
+            /** Các buổi của khóa chưa bị hủy; null khi chưa biết. */
             Integer totalSessions,
-            /** Sessions the member came to (present or late). */
+            /** Các buổi hội viên đã đến (có mặt hoặc đi trễ). */
             Integer attendedSessions,
-            /** Sessions not yet used up: total minus attended, missed and excused; a missed session is not made up. */
+            /** Các buổi chưa dùng hết: tổng trừ đã dự, vắng và được miễn; buổi vắng không được học bù. */
             Integer remainingSessions
     ) {
         /** Constructor rút gọn không có thông tin tiến độ (để null). */
@@ -59,7 +59,7 @@ public final class EnrollmentResponses {
             int remainingCredits,
             boolean unlimited,
             java.time.LocalDateTime enrollBlockedUntil,
-            /** Tier discount on the fee of a course beyond the free credits (0, 10 or 20). */
+            /** Chiết khấu theo hạng trên phí khóa học vượt quá số lượt miễn phí (0, 10 hoặc 20). */
             int discountPercent
     ) {
         /** Constructor rút gọn: không bị chặn ghi danh, giảm giá 0%. */
@@ -87,7 +87,7 @@ public final class EnrollmentResponses {
             String paymentMethod,
             String paymentStatus,
             String paymentUrl,
-            /** When the seat held for an unpaid fee is released; null for free enrollments. */
+            /** Thời điểm chỗ giữ cho khoản phí chưa trả được nhả; null với ghi danh miễn phí. */
             java.time.LocalDateTime expiresAt
     ) {
     }

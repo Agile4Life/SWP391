@@ -5,8 +5,8 @@ import com.swp391.scms.common.exception.BadRequestException;
 /**
  * Chính sách: lớp một buổi và ghi danh từng buổi đã ngừng, mọi lớp đều là khóa học định kỳ.
  *
- * One-off classes and per-session enrollment are retired: every class is a recurring course and a member
- * enrolls in the whole course (spec 2026-11-09-membership-benefits, section 1.3).
+ * Lớp lẻ và ghi danh theo buổi đã ngừng: mọi lớp là khóa học định kỳ và hội viên ghi danh cả khóa (spec
+ * 2026-11-09-membership-benefits, mục 1.3).
  */
 public final class SingleSessionPolicy {
     /** Constructor private: lớp tiện ích chỉ có hàm static. */

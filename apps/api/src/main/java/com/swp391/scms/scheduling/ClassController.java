@@ -28,8 +28,8 @@ import java.util.List;
 /**
  * API quản lý lớp học nhóm và buổi học (đã ngừng; chỉ bật khi app.legacy.classes-enabled=true).
  *
- * SCRUM-72 & SCRUM-131: class and schedule endpoints.
- * Writes are restricted to CENTER_MANAGER; schedule reads are open to every authenticated role.
+ * SCRUM-72 & SCRUM-131: endpoint lớp học và lịch. Thao tác ghi giới hạn cho CENTER_MANAGER; đọc lịch mở cho
+ * mọi vai trò đã xác thực.
  */
 @Tag(name = "Classes & Sessions", description = "Class management and class schedule (SCRUM-72, SCRUM-131)")
 @RestController
@@ -62,7 +62,7 @@ public class ClassController {
     @PostMapping
     @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ResponseEntity<ApiResponse<GymClassDto>> createClass(@Valid @RequestBody CreateClassRequest request) {
-        // One-off classes are retired; use POST /classes/recurring.
+        // Lớp lẻ đã ngừng; dùng POST /classes/recurring.
         throw SingleSessionPolicy.rejection();
     }
 
