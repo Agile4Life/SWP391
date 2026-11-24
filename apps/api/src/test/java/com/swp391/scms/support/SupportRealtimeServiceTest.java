@@ -33,6 +33,7 @@ class SupportRealtimeServiceTest {
         Role r = new Role(); r.setCode(role); u.setRole(r);
         when(users.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.of(u)); return u;
     }
+    /** Hàm trợ giúp của test: tạo ticket hỗ trợ mẫu. */
     SupportRequest ticket() {
         Member m = new Member(); m.setUserId(10L);
         SupportRequest t = new SupportRequest(m, "secret", "private"); t.setId(7L); return t;

@@ -47,6 +47,7 @@ class AiRagContextServiceTest {
 
     private AiRagContextService ragContextService;
 
+    /** Chuẩn bị trước mỗi test: tạo AiRagContextService với repository giả lập. */
     @BeforeEach
     void setUp() {
         ragContextService = new AiRagContextService(
@@ -57,6 +58,7 @@ class AiRagContextServiceTest {
         );
     }
 
+    /** Kiểm thử: ngữ cảnh RAG gồm danh mục và dữ liệu hội viên đã xác thực. */
     @Test
     void buildRagContext_IncludesCatalogAndAuthenticatedMemberData() {
         PackageDto pkg = new PackageDto(1L, "SÖL Signature", "Full gym & yoga", BigDecimal.valueOf(499000), 30, 12, "active");
@@ -111,6 +113,7 @@ class AiRagContextServiceTest {
         org.mockito.Mockito.verify(catalogService, org.mockito.Mockito.times(1)).getCatalog();
     }
 
+    /** Kiểm thử: ngữ cảnh RAG nêu rõ ngày hôm nay. */
     @Test
     void buildRagContext_StatesToday() {
         ReflectionTestUtils.setField(ragContextService, "clock", java.time.Clock.fixed(
@@ -122,6 +125,7 @@ class AiRagContextServiceTest {
         assertTrue(context.contains("Thứ Sáu 2026-11-13 10:00"));
     }
 
+    /** Kiểm thử: ngữ cảnh RAG gọi đúng tên Chủ nhật trong kế hoạch của hội viên. */
     @Test
     void buildRagContext_NamesSundayInTheMembersPlan() {
         when(catalogService.getCatalog()).thenReturn(new CatalogDto(List.of(), List.of(), List.of()));

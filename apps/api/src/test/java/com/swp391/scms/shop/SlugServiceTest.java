@@ -7,6 +7,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Bộ kiểm thử cho service SlugService (slug service). */
 class SlugServiceTest {
+    /** Kiểm thử: slugify xử lý được tiếng Việt có dấu. */
     @Test
     void slugifyHandlesVietnamese() {
         assertThat(SlugService.slugify("Sữa Whey Đạm Tách Béo – Vị Sô-cô-la"))

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /** Bộ kiểm thử cho CenterTime (center time). */
 class CenterTimeTest {
+    /** Kiểm thử: đồng hồ ứng dụng chạy theo múi giờ của trung tâm. */
     @Test
     void applicationClockRunsInTheCenterTimezone() {
         var clock = new WebConfig("http://localhost:5173").clock();
@@ -17,6 +18,7 @@ class CenterTimeTest {
         assertEquals((utcHour + 7) % 24, LocalDateTime.now(clock).getHour());
     }
 
+    /** Kiểm thử: múi giờ mặc định theo trung tâm. */
     @Test
     void defaultTimezoneFollowsTheCenter() {
         var previous = java.util.TimeZone.getDefault();

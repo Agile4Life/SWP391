@@ -71,6 +71,7 @@ class SupportRequestControllerTest {
         }
     };
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller yêu cầu hỗ trợ. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();

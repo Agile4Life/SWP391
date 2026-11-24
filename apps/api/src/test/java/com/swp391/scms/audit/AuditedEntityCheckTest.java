@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class AuditedEntityCheckTest {
 
+    /** Kiểm thử: mọi entity được audit đều được kiểm tra audit cho phép. */
     @Test
     void everyAuditedEntityIsAllowedByTheAuditCheck() throws Exception {
         String constraint = AuditLog.class.getAnnotation(Check.class).constraints();

@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /** Bộ kiểm thử cho ProductEntityMapping (product entity mapping). */
 class ProductEntityMappingTest {
 
+    /** Kiểm thử: giá mỗi khẩu phần làm tròn half-up và trả null khi thiếu số khẩu phần. */
     @Test
     void pricePerServingRoundsHalfUpAndReturnsNullWhenServingsMissing() {
         ProductVariant variant = new ProductVariant();
@@ -25,6 +26,7 @@ class ProductEntityMappingTest {
         assertThat(variant.pricePerServing()).isNull();
     }
 
+    /** Kiểm thử: sản phẩm mặc định là đang hoạt động và không nổi bật. */
     @Test
     void productDefaultsToActiveAndNotFeatured() {
         Product product = new Product();

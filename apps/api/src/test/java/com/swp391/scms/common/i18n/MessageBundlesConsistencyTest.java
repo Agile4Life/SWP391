@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 /** Bộ kiểm thử cho MessageBundlesConsistency (message bundles consistency). */
 class MessageBundlesConsistencyTest {
 
+    /** Hàm trợ giúp của test: nạp một bundle message. */
     private static Properties loadBundle(String file) throws Exception {
         Properties p = new Properties();
         try (InputStream in = MessageBundlesConsistencyTest.class.getResourceAsStream("/i18n/" + file)) {
@@ -32,10 +33,12 @@ class MessageBundlesConsistencyTest {
         return p;
     }
 
+    /** Hàm trợ giúp của test: lấy tập khóa của bundle. */
     private static Set<String> keys(String file) throws Exception {
         return new TreeSet<>(loadBundle(file).stringPropertyNames());
     }
 
+    /** Hàm trợ giúp của test: lấy các placeholder của một message. */
     private static Set<String> placeholders(String text) {
         Set<String> tokens = new TreeSet<>();
         Matcher matcher = Pattern.compile("\\{\\d+\\}").matcher(text);
@@ -45,6 +48,7 @@ class MessageBundlesConsistencyTest {
         return tokens;
     }
 
+    /** Hàm trợ giúp của test: tìm các khóa bị khai báo trùng. */
     private static List<String> duplicateKeys(String file) throws Exception {
         Set<String> seen = new LinkedHashSet<>();
         List<String> duplicates = new ArrayList<>();
@@ -68,6 +72,7 @@ class MessageBundlesConsistencyTest {
         return duplicates;
     }
 
+    /** Kiểm thử: các bundle có cùng tập khóa và không có khóa trùng. */
     @Test
     void allBundlesDefineTheSameKeysAndHaveNoDuplicates() throws Exception {
         Set<String> vi = keys("messages_vi.properties");
@@ -80,6 +85,7 @@ class MessageBundlesConsistencyTest {
         assertEquals(List.of(), duplicateKeys("messages.properties"), "Duplicate keys in messages.properties");
     }
 
+    /** Kiểm thử: mọi khóa message dùng trong code Java đều tồn tại trong bundle. */
     @Test
     void allReferencedJavaMessageKeysExistInBundles() throws Exception {
         Set<String> vi = keys("messages_vi.properties");
@@ -111,6 +117,7 @@ class MessageBundlesConsistencyTest {
         assertFalse(!missing.isEmpty(), "Missing i18n keys referenced in Java code: " + missing);
     }
 
+    /** Kiểm thử: placeholder khớp giữa các bundle và cú pháp MessageFormat hợp lệ. */
     @Test
     void allBundlesHaveMatchingPlaceholdersAndValidMessageFormatSyntax() throws Exception {
         Properties vi = loadBundle("messages_vi.properties");

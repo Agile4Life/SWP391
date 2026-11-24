@@ -36,6 +36,7 @@ class ShopModuleDisabledTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Hàm trợ giúp của test: tạo actor hội viên. */
     private static UsernamePasswordAuthenticationToken memberActor() {
         return new UsernamePasswordAuthenticationToken(
                 new AuthenticatedPrincipal(10L, "member", "MEMBER"),
@@ -44,6 +45,7 @@ class ShopModuleDisabledTest {
         );
     }
 
+    /** Kiểm thử: mọi controller và scheduler của shop mặc định bị tắt. */
     @Test
     void allShopControllersAndSchedulersAreDisabledByDefault() throws Exception {
         List<Class<?>> guardedBeans = List.of(

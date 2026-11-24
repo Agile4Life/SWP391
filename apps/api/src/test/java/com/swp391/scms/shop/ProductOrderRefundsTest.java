@@ -28,6 +28,7 @@ class ProductOrderRefundsTest {
     ProductOrderRefunds service;
     ProductOrder order;
 
+    /** Chuẩn bị trước mỗi test: tạo ProductOrderRefunds với repository và ví giả lập. */
     @BeforeEach
     void setUp() {
         service = new ProductOrderRefunds(payments, wallet);
@@ -40,6 +41,7 @@ class ProductOrderRefundsTest {
         order.setCode("SOL-261105-ABCD");
     }
 
+    /** Kiểm thử: đơn đã thanh toán cộng tiền vào ví, đánh dấu refunded và không hoàn lặp. */
     @Test
     void paidOrderCreditsWalletMarksPaymentRefundedAndIsIdempotent() {
         Payment payment = new Payment();
@@ -61,6 +63,7 @@ class ProductOrderRefundsTest {
         verify(wallet, times(1)).creditOrderRefund(1L, new BigDecimal("2580000"), "ORDER_REFUND_9", "Hoàn tiền đơn hàng SOL-261105-ABCD: Hủy đơn", 9L);
     }
 
+    /** Kiểm thử: đơn chưa thanh toán trả 0 và không gọi ví. */
     @Test
     void unpaidOrderReturnsZeroWithoutCallingWallet() {
         Payment pending = new Payment();
@@ -75,6 +78,7 @@ class ProductOrderRefundsTest {
         verifyNoInteractions(wallet);
     }
 
+    /** Kiểm thử: hoàn tiền đơn hàng không bao giờ bị gắn nhãn là hủy membership. */
     @Test
     void refundIsNeverLabelledAsAMembershipCancellation() {
         Payment payment = new Payment();
@@ -90,6 +94,7 @@ class ProductOrderRefundsTest {
         verify(wallet, never()).creditRefund(any(), any(), any(), any());
     }
 
+    /** Kiểm thử: thanh toán đến muộn được cộng ví đúng một lần và đánh dấu refunded. */
     @Test
     void latePaymentIsCreditedOnceAndMarkedRefunded() {
         Payment payment = new Payment();

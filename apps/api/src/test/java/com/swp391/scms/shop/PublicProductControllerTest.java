@@ -24,6 +24,7 @@ class PublicProductControllerTest {
     QuoteService quotes;
     MockMvc mvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller sản phẩm công khai. */
     @BeforeEach
     void setup() {
         catalog = mock(ProductCatalogService.class);
@@ -33,6 +34,7 @@ class PublicProductControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: từ chối sort không hợp lệ và chuyển size cho service tự giới hạn. */
     @Test
     void rejectsBogusSortAndPassesSizeToServiceForClamping() throws Exception {
         when(catalog.list(any(), any(), any(), anyBoolean(), anyBoolean(), eq("bogus"), anyInt(), anyInt()))

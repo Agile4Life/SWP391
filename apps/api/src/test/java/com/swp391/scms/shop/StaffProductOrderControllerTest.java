@@ -40,6 +40,7 @@ class StaffProductOrderControllerTest {
     final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
     MockMvc mvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller đơn hàng của nhân viên. */
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.standaloneSetup(new StaffProductOrderController(orders))
@@ -63,6 +64,7 @@ class StaffProductOrderControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: đếm trả số lượng theo tab và ship validate mã vận đơn. */
     @Test
     void countsReturnsTabCountsAndShipValidatesTrackingNumber() throws Exception {
         when(orders.counts()).thenReturn(new OrderCountsDto(3, 2, 1, 4, 5));

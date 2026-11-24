@@ -27,6 +27,7 @@ class QuoteServiceTest {
     ProductVariantRepository variants;
     QuoteService service;
 
+    /** Chuẩn bị trước mỗi test: tạo QuoteService với repository giả lập. */
     @BeforeEach
     void setup() {
         variants = mock(ProductVariantRepository.class);
@@ -57,6 +58,7 @@ class QuoteServiceTest {
         return v;
     }
 
+    /** Kiểm thử: báo giá gộp dòng trùng và đánh dấu thiếu tồn kho. */
     @Test
     void quoteMergesDuplicateLinesAndFlagsShortStock() {
         ProductVariant v1 = variant(1L, "200000", 4, true);
@@ -75,6 +77,7 @@ class QuoteServiceTest {
         assertThat(dto.subtotal()).isEqualByComparingTo("800000");
     }
 
+    /** Kiểm thử: giảm giá hội viên trừ vào sản phẩm chứ không trừ phí ship, và miễn ship tính theo giá niêm yết. */
     @Test
     void memberDiscountComesOffTheProductsButNeverOffShippingAndKeepsFreeShippingOnTheListPrice() {
         when(variants.findAllById(anyCollection())).thenReturn(new ArrayList<>(List.of(variant(1L, "100000", 10, true))));
@@ -96,6 +99,7 @@ class QuoteServiceTest {
         assertThat(silver.total()).isEqualByComparingTo("200000");
     }
 
+    /** Kiểm thử: báo giá từ chối giỏ hàng quá lớn. */
     @Test
     void quoteRejectsOversizedCarts() {
         assertThatThrownBy(() -> service.quote(new QuoteRequest(List.of(), "pickup")))
@@ -115,6 +119,7 @@ class QuoteServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "CART_TOO_LARGE");
     }
 
+    /** Kiểm thử: biến thể không tồn tại hoặc không hoạt động được báo lại thay vì ném lỗi. */
     @Test
     void unknownOrInactiveVariantsAreReportedNotThrown() {
         ProductVariant inactive = variant(2L, "200000", 5, false);

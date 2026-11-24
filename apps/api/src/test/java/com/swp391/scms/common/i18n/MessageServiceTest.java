@@ -15,6 +15,7 @@ class MessageServiceTest {
 
     private MessageService messageService;
 
+    /** Chuẩn bị trước mỗi test: tạo MessageService với bundle thật. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -24,6 +25,7 @@ class MessageServiceTest {
         this.messageService = new MessageService(messageSource);
     }
 
+    /** Kiểm thử: phân giải message tiếng Việt. */
     @Test
     @DisplayName("Should resolve Vietnamese message correctly")
     void shouldResolveVietnameseMessage() {
@@ -34,6 +36,7 @@ class MessageServiceTest {
         assertEquals("Tạo giao dịch thanh toán thành công", paymentCreated);
     }
 
+    /** Kiểm thử: phân giải message tiếng Anh. */
     @Test
     @DisplayName("Should resolve English message correctly")
     void shouldResolveEnglishMessage() {
@@ -44,6 +47,7 @@ class MessageServiceTest {
         assertEquals("Payment transaction created successfully", paymentCreated);
     }
 
+    /** Kiểm thử: định dạng message có tham số. */
     @Test
     @DisplayName("Should format parameterized arguments in messages")
     void shouldFormatParameterizedMessages() {
@@ -54,6 +58,7 @@ class MessageServiceTest {
         assertEquals("Invalid payment status: unknown_status", enMsg);
     }
 
+    /** Kiểm thử: nêu đúng thứ và ngày trong lỗi trùng lịch. */
     @Test
     @DisplayName("Schedule conflict messages name the weekday and date in both VI and EN")
     void shouldNameWeekdayAndDateInScheduleConflicts() {
@@ -75,6 +80,7 @@ class MessageServiceTest {
                 messageService.getMessage("error.scheduling.coach_conflict", Locale.ENGLISH, sunday));
     }
 
+    /** Kiểm thử: trả giá trị mặc định khi thiếu khóa. */
     @Test
     @DisplayName("Should return code or default message when key is not found")
     void shouldReturnDefaultWhenKeyMissing() {
@@ -85,6 +91,7 @@ class MessageServiceTest {
         assertEquals("Default Fallback", defaultMsg);
     }
 
+    /** Kiểm thử: phân giải khóa validation và resource. */
     @Test
     @DisplayName("Should resolve validation and resource keys in both VI and EN")
     void shouldResolveValidationAndResourceKeys() {

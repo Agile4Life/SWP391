@@ -65,6 +65,7 @@ class AiChatServiceTest {
     private Member member;
     private AiChatSession session;
 
+    /** Chuẩn bị trước mỗi test: tạo AiChatService với repository và provider giả lập. */
     @BeforeEach
     void setUp() {
         lenient().when(messageService.getMessage(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -82,6 +83,7 @@ class AiChatServiceTest {
         session.setStartedAt(LocalDateTime.now().minusMinutes(5));
     }
 
+    /** Kiểm thử: tạo phiên lưu và trả DTO phiên. */
     @Test
     void createSession_ShouldSaveAndReturnSessionDto() {
         when(memberRepository.findById(100L)).thenReturn(Optional.of(member));
@@ -97,6 +99,7 @@ class AiChatServiceTest {
         verify(sessionRepository).save(any(AiChatSession.class));
     }
 
+    /** Kiểm thử: từ chối tạo phiên cho hội viên khác. */
     @Test
     void createSession_RejectsAnotherMemberId() {
         assertThrows(AccessDeniedException.class, () -> aiChatService.createSession(
@@ -104,6 +107,7 @@ class AiChatServiceTest {
         verify(sessionRepository, never()).save(any());
     }
 
+    /** Kiểm thử: từ chối tin nhắn thứ 16 trong 10 phút trước khi gọi provider hay lưu gì. */
     @Test
     void sendMessage_RejectsTheSixteenthMessageInTenMinutesBeforeCallingTheProviderOrSavingAnything() {
         var limiter = new com.swp391.scms.ai.service.AiChatRateLimiter(messageRepository, 15, java.time.Duration.ofMinutes(10),
@@ -122,6 +126,7 @@ class AiChatServiceTest {
         verify(messageRepository, never()).save(any(AiChatMessage.class));
     }
 
+    /** Kiểm thử: cho phép tin thứ 15 và nhả lượt khi provider lỗi. */
     @Test
     void sendMessage_AllowsTheFifteenthMessageAndFreesItsSlotWhenTheProviderFails() {
         var limiter = new com.swp391.scms.ai.service.AiChatRateLimiter(messageRepository, 15, java.time.Duration.ofMinutes(10),
@@ -140,6 +145,7 @@ class AiChatServiceTest {
         verify(chatProvider, times(2)).generate(any(), any());
     }
 
+    /** Kiểm thử: lưu tin nhắn của hội viên và AI và duy trì ngữ cảnh. */
     @Test
     void sendMessage_ShouldPersistMemberAndAiMessagesAndMaintainContext() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
@@ -166,6 +172,7 @@ class AiChatServiceTest {
         verify(messageRepository, times(2)).save(any(AiChatMessage.class));
     }
 
+    /** Kiểm thử: chuyển hướng dẫn phạm vi cho provider. */
     @Test
     void sendMessage_ForwardsScopeInstructionsToProvider() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
@@ -183,6 +190,7 @@ class AiChatServiceTest {
         verify(chatProvider).generate(eq(AiChatService.SYSTEM_PROMPT), any());
     }
 
+    /** Kiểm thử: provider lỗi thì không lưu câu hỏi chưa được trả lời. */
     @Test
     void providerFailureDoesNotPersistAnUnansweredQuestion() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
@@ -193,6 +201,7 @@ class AiChatServiceTest {
         verify(messageRepository, never()).save(any());
     }
 
+    /** Kiểm thử: không có provider thì dùng câu trả lời dự phòng và không lưu tin nhắn. */
     @Test
     void absentProviderHasFallbackWithoutMessageServiceAndDoesNotSaveMessages() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
@@ -205,6 +214,7 @@ class AiChatServiceTest {
         verify(messageRepository, never()).save(any());
     }
 
+    /** Kiểm thử: hội viên khác thì không gọi provider. */
     @Test
     void sendMessage_WhenDifferentMember_DoesNotCallProvider() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
@@ -213,6 +223,7 @@ class AiChatServiceTest {
         verify(chatProvider, never()).generate(any(), any());
     }
 
+    /** Kiểm thử: xem lịch sử của hội viên khác ném AccessDenied. */
     @Test
     void getSessionHistory_WhenDifferentMember_ShouldThrowAccessDenied() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
@@ -221,6 +232,7 @@ class AiChatServiceTest {
                 () -> aiChatService.getSessionHistory(500L, 999L, "MEMBER"));
     }
 
+    /** Kiểm thử: lịch sử phiên trả tin nhắn theo thứ tự. */
     @Test
     void getSessionHistory_ShouldReturnOrderedMessages() {
         AiChatMessage m1 = new AiChatMessage();
@@ -247,6 +259,7 @@ class AiChatServiceTest {
         assertEquals("ai", history.get(1).sender());
     }
 
+    /** Kiểm thử: có ngữ cảnh RAG thì nối ngữ cảnh đã truy xuất vào system prompt. */
     @Test
     void sendMessage_WhenRagContextPresent_AppendsRetrievedContextToSystemPrompt() {
         AiRagContextService ragContextService = mock(AiRagContextService.class);
@@ -267,6 +280,7 @@ class AiChatServiceTest {
         );
     }
 
+    /** Kiểm thử: không giữ transaction trong lúc gọi provider. */
     @Test
     void sendMessage_ShouldNotHoldTransactionWhileCallingProvider() throws Exception {
         org.junit.jupiter.api.Assertions.assertFalse(AiChatService.class
@@ -277,16 +291,21 @@ class AiChatServiceTest {
                 .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class));
 
         var txManager = new org.springframework.transaction.support.AbstractPlatformTransactionManager() {
+            /** Transaction manager giả: lấy transaction (ghi nhận để kiểm tra). */
             @Override
             protected Object doGetTransaction() { return new Object(); }
+            /** Transaction manager giả: bắt đầu transaction. */
             @Override
             protected void doBegin(Object transaction, org.springframework.transaction.TransactionDefinition definition) {
                 org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
             }
+            /** Transaction manager giả: commit. */
             @Override
             protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) {}
+            /** Transaction manager giả: rollback. */
             @Override
             protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus status) {}
+            /** Transaction manager giả: dọn dẹp sau transaction. */
             @Override
             protected void doCleanupAfterCompletion(Object transaction) {
                 org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(false);
@@ -321,12 +340,14 @@ class AiChatServiceTest {
                 "Transaction must NOT be active while calling AiChatProvider.generate");
     }
 
+    /** Hàm trợ giúp của test: tạo tài khoản nhân viên. */
     private com.swp391.scms.users.entity.User staffAccount(long id) {
         var user = new com.swp391.scms.users.entity.User();
         ReflectionTestUtils.setField(user, "id", id);
         return user;
     }
 
+    /** Hàm trợ giúp của test: tạo phiên chat của quầy lễ tân. */
     private AiChatSession deskSession(com.swp391.scms.users.entity.User staff) {
         AiChatSession desk = new AiChatSession();
         ReflectionTestUtils.setField(desk, "id", 600L);
@@ -335,6 +356,7 @@ class AiChatServiceTest {
         return desk;
     }
 
+    /** Kiểm thử: lễ tân nhận phiên của quầy không gắn hội viên và dùng prompt của quầy. */
     @Test
     void receptionistGetsADeskSessionWithNoMemberAndTheDeskPrompt() {
         var users = mock(com.swp391.scms.users.UserRepository.class);
@@ -364,6 +386,7 @@ class AiChatServiceTest {
         verify(chatProvider).generate(eq(AiChatService.STAFF_SYSTEM_PROMPT), any());
     }
 
+    /** Kiểm thử: phiên chat riêng tư giữa hội viên và nhân viên. */
     @Test
     void sessionsArePrivateBetweenMembersAndStaff() {
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
@@ -376,6 +399,7 @@ class AiChatServiceTest {
         assertThrows(AccessDeniedException.class, () -> aiChatService.getSessionHistory(600L, 100L, "MEMBER"));
     }
 
+    /** Kiểm thử: HLV không chat được kể cả khi endpoint được gọi tới. */
     @Test
     void coachCannotChatEvenIfTheEndpointWereReached() {
         assertThrows(AccessDeniedException.class, () -> aiChatService.createSession(null, 20L, "COACH"));
@@ -386,7 +410,11 @@ class AiChatServiceTest {
         verify(chatProvider, never()).generate(any(), any());
     }
 
-    /** The assistant has no tools: both prompts must forbid claiming an action, promising exceptions and leaking internal data. */
+    /**
+     * Kiểm thử: cả hai prompt đều đặt giới hạn quyền hạn của trợ lý.
+     *
+     * The assistant has no tools: both prompts must forbid claiming an action, promising exceptions and leaking internal data.
+     */
     @Test
     void bothPromptsSetTheLimitsOfTheAssistantsAuthority() {
         for (String prompt : List.of(AiChatService.SYSTEM_PROMPT, AiChatService.STAFF_SYSTEM_PROMPT)) {

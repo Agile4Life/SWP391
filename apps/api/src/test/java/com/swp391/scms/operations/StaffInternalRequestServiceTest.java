@@ -45,6 +45,7 @@ class StaffInternalRequestServiceTest {
     private User staffUser;
     private User managerUser;
 
+    /** Chuẩn bị trước mỗi test: tạo StaffInternalRequestService với repository giả lập. */
     @BeforeEach
     void setUp() {
         var messages = new org.springframework.context.support.ResourceBundleMessageSource();
@@ -75,6 +76,7 @@ class StaffInternalRequestServiceTest {
         managerUser.setRole(managerRole);
     }
 
+    /** Dọn dẹp sau mỗi test: đặt lại locale mặc định. */
     @org.junit.jupiter.api.AfterEach
     void resetLocale() {
         org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
@@ -252,6 +254,7 @@ class StaffInternalRequestServiceTest {
 
         assertThrows(BadRequestException.class, () -> service.reviewRequest(1L, 200L, dto));
     }
+    /** Kiểm thử: tạo yêu cầu từ chối khoảng ngày bị đảo ngược. */
     @Test
     void createRequestRejectsReversedDateRange() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
@@ -261,6 +264,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: đơn nghỉ trùng ngày đã duyệt được cảnh báo trước và chỉ gửi sau khi xác nhận. */
     @Test
     void aLeaveOnDaysAlreadyApprovedIsWarnedFirstAndSentOnlyAfterConfirmation() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
@@ -286,6 +290,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository).save(any());
     }
 
+    /** Kiểm thử: người thay thế phải là nhân viên đang hoạt động khác. */
     @Test
     void replacementMustBeAnotherActiveStaffMember() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
@@ -304,6 +309,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: duyệt đơn nghỉ báo cho quản lý biết những ca cần người thay. */
     @Test
     void approvingLeaveTellsManagerWhatNeedsCover() {
         var sessions = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
@@ -332,6 +338,7 @@ class StaffInternalRequestServiceTest {
                 org.mockito.ArgumentMatchers.contains("2 buổi lớp và 1 buổi PT"), eq("system"), isNull(), eq(100L));
     }
 
+    /** Kiểm thử: giá trị lọc ALL được bỏ qua ở bộ lọc trạng thái và loại. */
     @Test
     void ignoresAllPlaceholderInStatusAndTypeFilters() {
         when(requestRepository.findByUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of());

@@ -43,6 +43,7 @@ class MemberLookupServiceTest {
     @Mock MemberRepository repository;
     @InjectMocks MemberLookupService service;
 
+    /** Kiểm thử: từ chối từ khóa quá ngắn. */
     @Test
     void rejectsTooShortKeyword() {
         assertThrows(BadRequestException.class, () -> service.search(" a "));
@@ -50,6 +51,7 @@ class MemberLookupServiceTest {
         verify(repository, never()).search(any(), any());
     }
 
+    /** Kiểm thử: tìm kiếm bằng mẫu wildcard viết thường và ánh xạ kết quả. */
     @Test
     void searchesWithLowercasedWildcardPatternAndMapsResult() {
         User user = new User();

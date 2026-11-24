@@ -44,6 +44,7 @@ class AuditControllerTest {
     @Mock
     private AuditService auditService;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho AuditController. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -62,6 +63,7 @@ class AuditControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: lấy audit log thành công. */
     @Test
     @DisplayName("GET /api/v1/admin/audit-logs returns 200 with paginated audit logs")
     void getAuditLogs_Success() throws Exception {
@@ -97,6 +99,7 @@ class AuditControllerTest {
         verify(auditService).getAuditLogs(isNull(), isNull(), isNull(), isNull(), isNull(), any(Pageable.class));
     }
 
+    /** Kiểm thử: lấy audit log kèm tham số truy vấn. */
     @Test
     @DisplayName("GET /api/v1/admin/audit-logs passes query parameters to service")
     void getAuditLogs_WithQueryParams() throws Exception {
@@ -119,6 +122,7 @@ class AuditControllerTest {
         verify(auditService).getAuditLogs(eq(10L), eq("payments"), eq("CREATE"), eq("2026-10-01"), eq("2026-10-31"), any(Pageable.class));
     }
 
+    /** Kiểm thử: ngày không đúng định dạng trả 400. */
     @Test
     @DisplayName("GET /api/v1/admin/audit-logs with invalid date returns 400 Bad Request with i18n error")
     void getAuditLogs_InvalidDateFormat_Returns400() throws Exception {
@@ -134,6 +138,7 @@ class AuditControllerTest {
                 .andExpect(jsonPath("$.message").value(containsString("invalid-date")));
     }
 
+    /** Kiểm thử: Spring context phân giải được constructor autowired. */
     @Test
     @DisplayName("Spring context verifies Autowired constructor exists and bean instantiates without NoSuchMethodException")
     void springContextResolvesAutowiredConstructor() {

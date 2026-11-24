@@ -78,6 +78,7 @@ class ProductOrderStaffServiceTest {
     User staffUser;
     ProductVariant variant;
 
+    /** Chuẩn bị trước mỗi test: tạo ProductOrderStaffService với repository giả lập. */
     @BeforeEach
     void setUp() {
         User memberUser = new User();
@@ -122,6 +123,7 @@ class ProductOrderStaffServiceTest {
         );
     }
 
+    /** Hàm trợ giúp của test: tạo đơn hàng ở trạng thái cho trước. */
     ProductOrder givenOrder(String status, String fulfillment, String paymentMethod) {
         ProductOrder o = new ProductOrder();
         o.setId(9L);
@@ -138,6 +140,7 @@ class ProductOrderStaffServiceTest {
         return o;
     }
 
+    /** Kiểm thử: giao hàng cần đơn giao tận nơi đang xử lý và có mã vận đơn. */
     @Test
     void shipRequiresDeliveryProcessingAndTrackingNumber() {
         givenOrder(OrderStatus.processing.name(), "pickup", "online");
@@ -150,6 +153,7 @@ class ProductOrderStaffServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: sẵn sàng nhận hàng từ chối đơn giao tận nơi. */
     @Test
     void readyForPickupRejectsDeliveryOrders() {
         givenOrder(OrderStatus.processing.name(), "delivery", "online");
@@ -158,6 +162,7 @@ class ProductOrderStaffServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_INVALID_TRANSITION");
     }
 
+    /** Kiểm thử: thanh toán quầy chỉ cho đơn quầy đang pending và tạo khoản thanh toán thành công. */
     @Test
     void counterPaymentOnlyForPendingCounterOrdersAndCreatesSuccessfulPayment() {
         givenOrder(OrderStatus.pending_payment.name(), "pickup", "online");
@@ -182,6 +187,7 @@ class ProductOrderStaffServiceTest {
         verify(orderPayments).markPaid(9L, "cash");
     }
 
+    /** Kiểm thử: hủy đơn đã thanh toán hoàn ví và nhập lại kho khi được yêu cầu. */
     @Test
     void cancelPaidOrderRefundsWalletAndRestocksWhenAsked() {
         ProductOrder o1 = givenOrder(OrderStatus.paid.name(), "pickup", "online");
@@ -196,6 +202,7 @@ class ProductOrderStaffServiceTest {
         verify(stock, never()).release(eq(o2), any());
     }
 
+    /** Kiểm thử: hủy đơn bắt buộc có lý do. */
     @Test
     void cancelRequiresReason() {
         givenOrder(OrderStatus.paid.name(), "pickup", "online");
@@ -203,6 +210,7 @@ class ProductOrderStaffServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: đơn đã hoàn tất hoặc đã hủy không đổi được. */
     @Test
     void completedOrCancelledOrdersCannotChange() {
         givenOrder(OrderStatus.completed.name(), "pickup", "online");
@@ -216,6 +224,7 @@ class ProductOrderStaffServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_INVALID_TRANSITION");
     }
 
+    /** Kiểm thử: các lần chuyển trạng thái thông báo hội viên kèm liên kết đơn. */
     @Test
     void transitionsNotifyMemberWithOrderLink() {
         givenOrder(OrderStatus.processing.name(), "delivery", "online");
@@ -223,6 +232,7 @@ class ProductOrderStaffServiceTest {
         verify(notifications).send(eq(1L), any(), any(), eq("order"), eq("product_order"), eq(9L), eq("/member/orders/9"));
     }
 
+    /** Kiểm thử: tìm kiếm khớp mã đơn, tên hội viên và số điện thoại. */
     @Test
     void searchMatchesCodeMemberNameAndPhone() {
         when(orders.searchStaff(eq("paid"), eq(false), eq("sol-26"), any()))

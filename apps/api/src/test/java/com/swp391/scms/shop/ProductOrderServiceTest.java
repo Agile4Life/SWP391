@@ -76,6 +76,7 @@ class ProductOrderServiceTest {
     Member memberProfile;
     ProductOrderService service;
 
+    /** Chuẩn bị trước mỗi test: tạo ProductOrderService với repository giả lập. */
     @BeforeEach
     void setUp() {
         user = new User();
@@ -112,6 +113,7 @@ class ProductOrderServiceTest {
         service.setNotifications(notifications);
     }
 
+    /** Hàm trợ giúp của test: giả lập một biến thể sản phẩm có sẵn. */
     ProductVariant givenVariant(Long id, String price, int servings, int stock) {
         ProductCategory cat = new ProductCategory();
         cat.setId(1L);
@@ -144,10 +146,12 @@ class ProductOrderServiceTest {
         return variantStore.get(id);
     }
 
+    /** Hàm trợ giúp của test: tạo một dòng đơn hàng trong request. */
     QuoteLineRequest line(Long variantId, int qty) {
         return new QuoteLineRequest(variantId, qty);
     }
 
+    /** Hàm trợ giúp của test: tạo request đơn hàng. */
     CreateOrderRequest order(List<QuoteLineRequest> lines, String fulfillment, String paymentMethod, String expectedTotal) {
         return new CreateOrderRequest(
                 "11111111-2222-3333-4444-555555555555",
@@ -161,6 +165,7 @@ class ProductOrderServiceTest {
         );
     }
 
+    /** Kiểm thử: tạo đơn giữ chỗ tồn kho, chụp lại giá và đặt thời hạn thanh toán. */
     @Test
     void createReservesStockSnapshotsPricesAndSetsPaymentWindow() {
         givenVariant(1L, "1290000", 68, 5);
@@ -172,6 +177,7 @@ class ProductOrderServiceTest {
         verify(movements).save(argThat(m -> m.getDelta() == -2 && "order_reserve".equals(m.getReason())));
     }
 
+    /** Kiểm thử: cùng client request id trả lại đơn cũ mà không đụng tới tồn kho. */
     @Test
     void sameClientRequestIdReturnsExistingOrderWithoutTouchingStock() {
         givenVariant(1L, "1290000", 68, 5);
@@ -195,6 +201,7 @@ class ProductOrderServiceTest {
         verify(orders, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: tổng dự kiến lệch thì báo giá đã thay đổi. */
     @Test
     void expectedTotalMismatchIsPriceChanged() {
         givenVariant(1L, "1290000", 68, 5);
@@ -204,6 +211,7 @@ class ProductOrderServiceTest {
         assertThat(variant(1L).getStock()).isEqualTo(5);
     }
 
+    /** Kiểm thử: không đủ tồn kho thì báo hết hàng. */
     @Test
     void insufficientStockIsOutOfStock() {
         givenVariant(1L, "1290000", 68, 1);
@@ -213,6 +221,7 @@ class ProductOrderServiceTest {
         assertThat(variant(1L).getStock()).isEqualTo(1);
     }
 
+    /** Kiểm thử: nhận tại quầy cần điểm nhận, giao hàng cần đúng một địa chỉ. */
     @Test
     void counterRequiresPickupAndDeliveryRequiresExactlyOneAddress() {
         givenVariant(1L, "600000", 30, 5);
@@ -248,6 +257,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "FULFILLMENT_INVALID");
     }
 
+    /** Kiểm thử: người dùng đã xóa hoặc không phải hội viên không đặt hàng được. */
     @Test
     void deletedOrNonMemberUsersCannotOrder() {
         givenVariant(1L, "600000", 30, 5);
@@ -262,6 +272,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "SHOP_MEMBER_REQUIRED");
     }
 
+    /** Kiểm thử: hội viên hủy đơn pending thì tồn kho được hoàn lại. */
     @Test
     void memberCancelsPendingOrderAndStockReturns() {
         ProductVariant v = givenVariant(1L, "1290000", 68, 3);
@@ -290,6 +301,7 @@ class ProductOrderServiceTest {
         verify(movements).save(argThat(m -> m.getDelta() == 2 && "order_release".equals(m.getReason())));
     }
 
+    /** Kiểm thử: hội viên không hủy được khi VNPay đang xử lý. */
     @Test
     void memberCannotCancelWhileVnpayIsSettling() {
         ProductOrder order = new ProductOrder();
@@ -305,6 +317,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_AWAITING_PAYMENT");
     }
 
+    /** Kiểm thử: hội viên không hủy được đơn đang xử lý. */
     @Test
     void memberCannotCancelProcessingOrder() {
         ProductOrder order = new ProductOrder();
@@ -318,6 +331,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_INVALID_TRANSITION");
     }
 
+    /** Kiểm thử: tác vụ hết hạn chỉ hủy các đơn quá hạn mà cổng thanh toán đã xong. */
     @Test
     void expiryCancelsOnlyOverdueOrdersWhoseGatewayIsDone() {
         ProductVariant v = givenVariant(1L, "500000", 30, 5);
@@ -348,6 +362,7 @@ class ProductOrderServiceTest {
         assertThat(v.getStock()).isEqualTo(7);
     }
 
+    /** Kiểm thử: đơn của hội viên khác bị coi là không tìm thấy. */
     @Test
     void otherMembersOrderIsNotFound() {
         Member otherMember = new Member();
@@ -366,6 +381,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_NOT_FOUND");
     }
 
+    /** Kiểm thử: các dòng trùng biến thể được gộp và không thể né kiểm tra tồn kho. */
     @Test
     void duplicateVariantLinesAreMergedAndCannotBypassStockCheck() {
         givenVariant(1L, "500000", 30, 3);
@@ -379,6 +395,7 @@ class ProductOrderServiceTest {
         assertThat(variant(1L).getStock()).isEqualTo(3);
     }
 
+    /** Kiểm thử: sản phẩm hoặc danh mục không hoạt động thì không đặt được. */
     @Test
     void inactiveProductOrCategoryCannotBeOrdered() {
         ProductVariant v = givenVariant(1L, "500000", 30, 5);
@@ -396,6 +413,7 @@ class ProductOrderServiceTest {
         assertThat(v.getStock()).isEqualTo(5);
     }
 
+    /** Kiểm thử: hủy hoặc nhả đơn hai lần không hoàn tồn kho hai lần. */
     @Test
     void cancellingOrReleasingTwiceDoesNotDoubleRestoreStock() {
         ProductVariant v = givenVariant(1L, "1290000", 68, 3);

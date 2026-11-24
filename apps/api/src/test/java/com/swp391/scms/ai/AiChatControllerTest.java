@@ -44,6 +44,7 @@ class AiChatControllerTest {
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller chat AI. */
     @BeforeEach
     void setUp() {
         lenient().when(messageService.getMessage(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -54,6 +55,7 @@ class AiChatControllerTest {
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     }
 
+    /** Kiểm thử: tạo phiên chat trả 201. */
     @Test
     void createSession_Returns201() throws Exception {
         AiChatSessionDto dto = new AiChatSessionDto(
@@ -70,6 +72,7 @@ class AiChatControllerTest {
                 .andExpect(jsonPath("$.data.topic").value("Tư vấn tập Gym"));
     }
 
+    /** Kiểm thử: gửi tin nhắn trả 201 kèm câu trả lời của AI. */
     @Test
     void sendMessage_Returns201WithAiReply() throws Exception {
         AiChatMessageDto memberMsg = new AiChatMessageDto(1L, 500L, "member", "Lịch tập Yoga?", LocalDateTime.now());
@@ -88,6 +91,7 @@ class AiChatControllerTest {
                 .andExpect(jsonPath("$.data.aiMessage.sender").value("ai"));
     }
 
+    /** Kiểm thử: lấy lịch sử phiên trả 200. */
     @Test
     void getSessionHistory_Returns200() throws Exception {
         AiChatMessageDto m1 = new AiChatMessageDto(1L, 500L, "member", "Xin chào", LocalDateTime.now());

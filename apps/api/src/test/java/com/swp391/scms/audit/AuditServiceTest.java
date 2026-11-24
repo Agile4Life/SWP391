@@ -36,12 +36,14 @@ class AuditServiceTest {
     private ObjectMapper objectMapper;
     private AuditService auditService;
 
+    /** Chuẩn bị trước mỗi test: tạo AuditService với repository giả lập. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
         auditService = new AuditService(auditLogRepository, objectMapper);
     }
 
+    /** Kiểm thử: lấy audit log thành công. */
     @Test
     @DisplayName("getAuditLogs returns paginated audit log DTOs with parsed JSON values")
     void getAuditLogs_Success() {
@@ -93,6 +95,7 @@ class AuditServiceTest {
         verify(auditLogRepository).findAll(any(Specification.class), any(Pageable.class));
     }
 
+    /** Kiểm thử: lấy audit log với ngày giờ ISO thành công. */
     @Test
     @DisplayName("getAuditLogs with ISO dateTime strings parses successfully")
     void getAuditLogs_WithISODateTime_Success() {
@@ -113,6 +116,7 @@ class AuditServiceTest {
         verify(auditLogRepository).findAll(any(Specification.class), any(Pageable.class));
     }
 
+    /** Kiểm thử: ngày bắt đầu không hợp lệ ném BadRequestException. */
     @Test
     @DisplayName("getAuditLogs with invalid from date throws BadRequestException HTTP 400")
     void getAuditLogs_InvalidFromDate_ThrowsBadRequestException() {
@@ -122,6 +126,7 @@ class AuditServiceTest {
                 .hasMessageContaining("invalid-date");
     }
 
+    /** Kiểm thử: ngày kết thúc không hợp lệ ném BadRequestException. */
     @Test
     @DisplayName("getAuditLogs with invalid to date throws BadRequestException HTTP 400")
     void getAuditLogs_InvalidToDate_ThrowsBadRequestException() {
@@ -131,6 +136,7 @@ class AuditServiceTest {
                 .hasMessageContaining("2026-99-99");
     }
 
+    /** Kiểm thử: toDto dùng văn bản thuần khi không phải JSON. */
     @Test
     @DisplayName("toDto handles plain text or invalid JSON gracefully without error")
     void toDto_PlainTextFallback() {
@@ -149,6 +155,7 @@ class AuditServiceTest {
         assertThat(dto.newValue()).isNull();
     }
 
+    /** Kiểm thử: specification bỏ qua giá trị lọc ALL. */
     @Test
     @DisplayName("AuditSpecifications ignores ALL placeholder for entityType and action")
     void specifications_IgnoresAllPlaceholder() {

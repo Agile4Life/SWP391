@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /** Bộ kiểm thử cho AiChatConfiguration (ai chat configuration). */
 class AiChatConfigurationTest {
+    /** Hàm trợ giúp của test: tạo Environment giả với các thuộc tính cho trước. */
     private MockEnvironment environment(Map<String, Object> variables) throws IOException {
         var environment = new MockEnvironment();
         // Synthetic environment only: no Spring application, actual secrets or database startup.

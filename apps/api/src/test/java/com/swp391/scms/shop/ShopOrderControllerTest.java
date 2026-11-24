@@ -40,6 +40,7 @@ class ShopOrderControllerTest {
     final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
     MockMvc mvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller đơn hàng. */
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.standaloneSetup(new ShopOrderController(orders))
@@ -74,6 +75,7 @@ class ShopOrderControllerTest {
         );
     }
 
+    /** Kiểm thử: tạo đơn mới trả 201, trùng client request id trả 200. */
     @Test
     void createReturns201ForNewOrderAnd200ForDuplicateClientRequestId() throws Exception {
         CreateOrderRequest req = new CreateOrderRequest(

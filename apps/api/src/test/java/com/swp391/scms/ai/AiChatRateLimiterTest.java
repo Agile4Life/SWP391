@@ -32,7 +32,11 @@ class AiChatRateLimiterTest {
         limiter = new AiChatRateLimiter(messages, 15, Duration.ofMinutes(10), clock);
     }
 
-    /** {@code n} stored messages, the first one {@code firstAgoSeconds} old and the rest one second apart after it. */
+    /**
+     * Hàm trợ giúp của test: tạo một bản ghi đã lưu trong bộ giới hạn tần suất.
+     *
+     * {@code n} stored messages, the first one {@code firstAgoSeconds} old and the rest one second apart after it.
+     */
     private void stored(long userId, int n, long firstAgoSeconds) {
         List<LocalDateTime> times = new ArrayList<>();
         for (int i = 0; i < n; i++) times.add(now.minusSeconds(firstAgoSeconds - i));

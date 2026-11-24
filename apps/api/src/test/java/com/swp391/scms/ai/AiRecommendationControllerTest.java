@@ -74,6 +74,7 @@ class AiRecommendationControllerTest {
     private AiRecommendationService recommendationService;
     private AiRecommendationController controller;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc và phụ thuộc giả lập cho controller gợi ý AI. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -111,6 +112,7 @@ class AiRecommendationControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: sinh kế hoạch tập có cấu trúc và ghi log. */
     @Test
     @DisplayName("POST /api/v1/ai/generate-workout-plan should read height, weight, BMI, fitness_goal, health_notes and save log")
     void shouldGenerateStructuredWorkoutPlanAndLog() throws Exception {
@@ -162,6 +164,7 @@ class AiRecommendationControllerTest {
         verify(recommendationLogRepository).save(any(AiRecommendationLog.class));
     }
 
+    /** Kiểm thử: áp dụng gợi ý AI vào kế hoạch tập. */
     @Test
     @DisplayName("POST /api/v1/ai/recommendations/{id}/apply should create training plan with is_ai_generated=true and mark log is_applied=true")
     void shouldApplyAiRecommendationToTrainingPlan() throws Exception {
@@ -204,6 +207,7 @@ class AiRecommendationControllerTest {
         verify(recommendationLogRepository).save(log);
     }
 
+    /** Kiểm thử: không giữ transaction trong lúc gọi AI. */
     @Test
     @DisplayName("AI generation must execute outside DB transaction between short read-only and write transactions")
     void shouldNotHoldTransactionDuringAiCalls() throws Exception {
@@ -217,16 +221,21 @@ class AiRecommendationControllerTest {
                 .isAnnotationPresent(org.springframework.transaction.annotation.Transactional.class));
 
         var txManager = new org.springframework.transaction.support.AbstractPlatformTransactionManager() {
+            /** Transaction manager giả: lấy transaction. */
             @Override
             protected Object doGetTransaction() { return new Object(); }
+            /** Transaction manager giả: bắt đầu transaction. */
             @Override
             protected void doBegin(Object transaction, org.springframework.transaction.TransactionDefinition definition) {
                 org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(true);
             }
+            /** Transaction manager giả: commit. */
             @Override
             protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) {}
+            /** Transaction manager giả: rollback. */
             @Override
             protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus status) {}
+            /** Transaction manager giả: dọn dẹp sau transaction. */
             @Override
             protected void doCleanupAfterCompletion(Object transaction) {
                 org.springframework.transaction.support.TransactionSynchronizationManager.setActualTransactionActive(false);
@@ -235,14 +244,17 @@ class AiRecommendationControllerTest {
 
         var txActiveDuringAi = new java.util.concurrent.atomic.AtomicBoolean(true);
         AiClient slowAiClient = new AiClient() {
+            /** AiClient giả: sinh nội dung và ghi nhận lời gọi. */
             @Override
             public String generate(String systemPrompt, String userMessage) {
                 txActiveDuringAi.set(
                         org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive());
                 return "{\"goal\":\"Test\",\"analysis\":\"OK\",\"items\":[]}";
             }
+            /** AiClient giả: trả tên model. */
             @Override
             public String getModelName() { return "test-model"; }
+            /** AiClient giả: trả tên provider. */
             @Override
             public String getProviderName() { return "test-provider"; }
         };
@@ -273,6 +285,7 @@ class AiRecommendationControllerTest {
         assertFalse(txActiveDuringAi.get(), "Transaction must NOT be active while calling AiClient.generate in generateWorkoutPlan");
     }
 
+    /** Kiểm thử: prompt có nền tảng dữ liệu và giữ các mục cần chỉnh sửa. */
     @Test
     @DisplayName("Plan generation sends the member's current plan, leaves out the retired equipment list, and keeps a plan whose items need tidying")
     void shouldGroundThePromptAndKeepItemsThatNeedTidying() {
@@ -297,6 +310,7 @@ class AiRecommendationControllerTest {
 
         var prompts = new java.util.ArrayList<String>();
         AiClient client = new AiClient() {
+            /** AiClient giả (ghi lại prompt): sinh nội dung. */
             @Override
             public String generate(String systemPrompt, String userMessage) {
                 prompts.add(systemPrompt);
@@ -307,8 +321,10 @@ class AiRecommendationControllerTest {
                           {"dayOfWeek":3,"exerciseName":"  "},
                           {"day_of_week":3,"exercise_name":"Plank","durationMinutes":0}]}""";
             }
+            /** AiClient giả (ghi lại prompt): trả tên model. */
             @Override
             public String getModelName() { return "test-model"; }
+            /** AiClient giả (ghi lại prompt): trả tên provider. */
             @Override
             public String getProviderName() { return "test-provider"; }
         };
@@ -338,6 +354,7 @@ class AiRecommendationControllerTest {
         assertNull(plank.getDurationMinutes());
     }
 
+    /** Kiểm thử: điền tên hội viên và từ chối hội viên đã xóa mềm. */
     @Test
     @DisplayName("Includes member fullName in response and history, and rejects soft-deleted members")
     void shouldPopulateMemberNameAndRejectSoftDeletedMember() {
@@ -377,6 +394,7 @@ class AiRecommendationControllerTest {
                 () -> recommendationService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 4), 20L));
     }
 
+    /** Kiểm thử: bắt buộc đúng phân công HLV hiện tại khi AI sinh kế hoạch. */
     @Test
     @DisplayName("Enforces current coach assignment during AI workout generation when CurrentCoachMembers is wired")
     void shouldEnforceCurrentCoachAssignmentDuringAiGeneration() {
@@ -397,6 +415,7 @@ class AiRecommendationControllerTest {
                 () -> recommendationService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 4), 20L));
     }
 
+    /** Kiểm thử: đưa chuyên môn HLV vào prompt và ưu tiên kế hoạch active của HLV đích. */
     @Test
     @DisplayName("Includes coach specialization and prefers the target coach's own active plan over another coach's plan")
     void shouldIncludeCoachSpecializationAndPreferTargetCoachActivePlan() throws Exception {

@@ -31,6 +31,7 @@ class ShopAddressControllerTest {
     AddressService service;
     MockMvc mvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller địa chỉ shop. */
     @BeforeEach
     void setup() {
         service = mock(AddressService.class);
@@ -52,6 +53,7 @@ class ShopAddressControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: liệt kê, tạo và validate địa chỉ. */
     @Test
     void listsCreatesAndValidatesAddresses() throws Exception {
         AddressDto dto = new AddressDto(10L, "Nguyễn An", "0901234567", "79", "TP.HCM", "26740", "Phường Sài Gòn", "12 Lê Lợi", null, true);

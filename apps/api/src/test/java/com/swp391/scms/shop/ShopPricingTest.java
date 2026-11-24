@@ -11,6 +11,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /** Bộ kiểm thử cho ShopPricing (shop pricing). */
 class ShopPricingTest {
+    /** Hàm trợ giúp của test: tạo cấu hình giá shop mẫu. */
     static ShopProperties props(long fee, long threshold) {
         ShopProperties p = new ShopProperties();
         p.setShippingFee(BigDecimal.valueOf(fee));
@@ -18,6 +19,7 @@ class ShopPricingTest {
         return p;
     }
 
+    /** Kiểm thử: miễn phí ship khi trên ngưỡng hoặc nhận tại quầy. */
     @Test
     void shippingIsFreeAboveThresholdAndForPickup() {
         var pricing = new ShopPricing(props(30000, 500000));

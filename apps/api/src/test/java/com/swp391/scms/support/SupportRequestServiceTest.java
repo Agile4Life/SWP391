@@ -69,6 +69,7 @@ class SupportRequestServiceTest {
     private User sampleUser;
     private SupportRequest sampleRequest;
 
+    /** Chuẩn bị trước mỗi test: tạo SupportRequestService với repository giả lập. */
     @BeforeEach
     void setUp() {
         sampleUser = new User();
@@ -562,6 +563,7 @@ class SupportRequestServiceTest {
         verify(notificationService, never()).send(eq(51L), any(), any(), any(), any(), any());
     }
 
+    /** Hàm trợ giúp của test: tạo tài khoản nhân viên. */
     private User staffUser(Long id, String roleCode) {
         User user = new User();
         user.setId(id);
@@ -573,6 +575,7 @@ class SupportRequestServiceTest {
         return user;
     }
 
+    /** Hàm trợ giúp của test: chuyển yêu cầu hỗ trợ thành DTO. */
     private SupportRequestDto dtoOf(SupportRequest request) {
         return new SupportRequestDto(request.getId(), 10L, "Nguyễn Văn A", null, null, request.getSubject(),
                 request.getDescription(), request.getStatus(), request.getCreatedAt(), null,
