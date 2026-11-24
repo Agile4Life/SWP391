@@ -12,7 +12,12 @@ import {
 import { benchPress } from './humanPoses';
 import type { PoseOverride } from './humanRetarget';
 
-/** Motion-captured clip played by an AnimationMixer. */
+/**
+ * Hoạt ảnh thu chuyển động (mocap) do AnimationMixer phát: tên clip (hoặc chọn theo nhân vật), hệ số tốc độ và
+ * chuỗi clip kết hợp.
+ *
+ * Motion-captured clip played by an AnimationMixer.
+ */
 export interface RiggedClipSpec {
   /** Animation clip name, or a pick per actor (e.g. jab or cross). */
   clip: string | ((actorId: string) => string);
@@ -24,7 +29,12 @@ export interface RiggedClipSpec {
   glovesInHands?: boolean;
 }
 
-/** Skeleton driven every frame from the activity's pose angles (`solveHumanPose`). */
+/**
+ * Bộ xương được điều khiển mỗi khung hình từ góc tư thế của hoạt động (solveHumanPose): khóa chân xuống đất, độ
+ * cao hông và vật cầm tay.
+ *
+ * Skeleton driven every frame from the activity's pose angles (`solveHumanPose`).
+ */
 export interface RiggedPoseSpec {
   /** Keep the lower foot on the ground by moving the hips; off for seated poses. */
   groundLock: boolean;
@@ -48,11 +58,16 @@ export interface RiggedPoseSpec {
   override?: (phase: number) => PoseOverride;
 }
 
-/** Same phase the procedural solver uses, so both figures stay in step. */
+/**
+ * Pha chuyển động giống bộ giải thủ tục để hai bản nhân vật luôn khớp nhịp nhau.
+ *
+ * Same phase the procedural solver uses, so both figures stay in step.
+ */
 export function getActorPhase(actor: LiveActorDefinition, timeSec: number): number {
   return timeSec * actor.speed * 3.2 + actor.phaseOffset;
 }
 
+/** Mã băm chuỗi ổn định (dùng để chọn biến thể theo nhân vật). */
 export function hashString(value: string): number {
   let hash = 0;
   for (let i = 0; i < value.length; i++) {
@@ -61,6 +76,7 @@ export function hashString(value: string): number {
   return hash;
 }
 
+/** Chọn giữa hai clip theo mã băm của nhân vật (chẵn chọn a, lẻ chọn b). */
 const pick = (a: string, b: string) => (actorId: string) => (hashString(actorId) % 2 === 0 ? a : b);
 
 /** Motion capture from the Universal Animation Library (clip names as in `human-animations.glb`). */
@@ -86,7 +102,12 @@ export const HUMAN_CLIP_ACTIVITIES: Partial<Record<ActorActivityKind, RiggedClip
   'swim-freestyle': { clip: 'Swim_Fwd_Loop', timeScale: 1 },
 };
 
-/** Racket in the hand on the code-built figure's right (+X, the rig's left hand `hand_l`). */
+/**
+ * Cây vợt cầm ở tay của hình dựng bằng mã (bên phải, +X; tay trái của bộ xương hand_l), cán theo trục nắm và
+ * nghiêng ngọn.
+ *
+ * Racket in the hand on the code-built figure's right (+X, the rig's left hand `hand_l`).
+ */
 const RACKET = {
   kind: 'racket',
   bone: 'hand_l',
@@ -119,6 +140,7 @@ export const HUMAN_POSE_ACTIVITIES: Partial<Record<ActorActivityKind, RiggedPose
   'tennis-player': {
     groundLock: true,
     handProp: { ...RACKET, size: 1.24 },
+    // Xoay cẳng tay theo pha (đánh thuận tay và trái tay luân phiên).
     forearmRoll: (phase, actor, timeSec) => {
       const c =
         actor && timeSec !== undefined
@@ -161,7 +183,12 @@ export const HUMAN_POSE_ACTIVITIES: Partial<Record<ActorActivityKind, RiggedPose
   },
 };
 
-/** The packed Quaternius files in `public/models/explore3d/humans/` (see `scripts/build-human-assets.py`). */
+/**
+ * Đường dẫn các file người đóng gói từ Quaternius trong public/models/explore3d/humans (xem
+ * scripts/build-human-assets.py).
+ *
+ * The packed Quaternius files in `public/models/explore3d/humans/` (see `scripts/build-human-assets.py`).
+ */
 export const HUMAN_ASSET_URLS = {
   male: '/models/explore3d/humans/human-male.glb',
   female: '/models/explore3d/humans/human-female.glb',
@@ -218,10 +245,12 @@ export const PROCEDURAL_BODY_PART_NAMES: ReadonlySet<string> = new Set([
   'rightShin',
 ]);
 
+/** Chuyển động của nhân vật có xương: phát clip hoặc giải tư thế theo góc. */
 export type RiggedMotion =
   | { kind: 'clip'; spec: RiggedClipSpec }
   | { kind: 'pose'; spec: RiggedPoseSpec };
 
+/** Lấy chuyển động của một hoạt động (clip hoặc tư thế); không có thì null. */
 export function getRiggedMotion(activity: ActorActivityKind): RiggedMotion | null {
   const clip = HUMAN_CLIP_ACTIVITIES[activity];
   if (clip) return { kind: 'clip', spec: clip };
@@ -229,10 +258,12 @@ export function getRiggedMotion(activity: ActorActivityKind): RiggedMotion | nul
   return pose ? { kind: 'pose', spec: pose } : null;
 }
 
+/** Hoạt động có dùng nhân vật có xương không. */
 export function isRiggedActivity(activity: ActorActivityKind): boolean {
   return getRiggedMotion(activity) !== null;
 }
 
+/** Vị trí, hướng và góc tư thế của nhân vật có xương. */
 export interface RiggedPlacement {
   position: Vec3;
   yaw: number;
@@ -240,6 +271,9 @@ export interface RiggedPlacement {
 }
 
 /**
+ * Vị trí đứng, hướng nhìn và góc tư thế của nhân vật có xương tại timeSec, theo cùng đường đi, độ đung đưa và
+ * hướng như bản dựng bằng mã mà nó thay thế.
+ *
  * Where a rigged character stands and which way it faces at `timeSec`, following the
  * same path, sway and yaw as the code-built figure it replaces; also the pose angles.
  */
@@ -274,15 +308,18 @@ export function computeRiggedPlacement(
 let riggedActorIds: ReadonlySet<string> = new Set();
 const listeners = new Set<() => void>();
 
+/** Đặt tập id các nhân vật đang dùng bản có xương và báo cho các listener. */
 export function setRiggedActorIds(ids: Iterable<string>): void {
   riggedActorIds = new Set(ids);
   for (const listener of listeners) listener();
 }
 
+/** Lấy tập id các nhân vật đang dùng bản có xương. */
 export function getRiggedActorIds(): ReadonlySet<string> {
   return riggedActorIds;
 }
 
+/** Đăng ký listener nhận thay đổi tập nhân vật có xương; trả về hàm hủy. */
 export function subscribeRiggedActors(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
@@ -290,6 +327,7 @@ export function subscribeRiggedActors(listener: () => void): () => void {
   };
 }
 
+/** Hook React đọc tập id nhân vật có xương và tự render lại khi đổi. */
 export function useRiggedActorIds(): ReadonlySet<string> {
   return useSyncExternalStore(subscribeRiggedActors, getRiggedActorIds, getRiggedActorIds);
 }

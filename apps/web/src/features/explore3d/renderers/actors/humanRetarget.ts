@@ -13,7 +13,11 @@ import type { HumanPoseAngles } from './liveActorsConfig';
  * stands in a T-pose at rest, with the character's left at +X.
  */
 
-/** Bone names of the rig for each joint this module drives. */
+/**
+ * Tên xương của bộ xương cho từng khớp mà module này điều khiển.
+ *
+ * Bone names of the rig for each joint this module drives.
+ */
 export const HUMAN_BONES = {
   Hips: 'pelvis',
   Spine: 'spine_01',
@@ -36,15 +40,21 @@ export const HUMAN_BONES = {
   RightLeg: 'calf_r',
   RightFoot: 'foot_r',
 } as const;
+/** Tên một khớp được điều khiển. */
 export type DrivenBone = keyof typeof HUMAN_BONES;
 const DRIVEN = Object.keys(HUMAN_BONES) as DrivenBone[];
 
-/** Limb segment pointing direction for a pitch (forward) and splay (sideways), actor frame. */
+/**
+ * Hướng đoạn chi theo góc gập (pitch) và góc dạng (splay) trong hệ nhân vật.
+ *
+ * Limb segment pointing direction for a pitch (forward) and splay (sideways), actor frame.
+ */
 export function limbDirection(pitch: number, splay: number): THREE.Vector3 {
   const cs = Math.cos(splay);
   return new THREE.Vector3(Math.sin(splay), -cs * Math.cos(pitch), cs * Math.sin(pitch));
 }
 
+/** Một xương của bộ xương: đối tượng, quay lúc nghỉ (cục bộ và thế giới) và hướng tới xương con. */
 interface RigBone {
   object: THREE.Object3D;
   restLocal: THREE.Quaternion;
@@ -64,7 +74,11 @@ const NEXT: Partial<Record<DrivenBone, DrivenBone>> = {
   RightLeg: 'RightFoot',
 };
 
-/** Limb segments a pose may aim at explicit world directions instead of pitch/splay angles. */
+/**
+ * Các đoạn chi có thể hướng tới một hướng thế giới cụ thể thay cho góc pitch/splay.
+ *
+ * Limb segments a pose may aim at explicit world directions instead of pitch/splay angles.
+ */
 export type AimBone =
   | 'LeftArm'
   | 'LeftForeArm'
@@ -76,6 +90,8 @@ export type AimBone =
   | 'RightLeg';
 
 /**
+ * Tư thế mà góc pitch/splay không diễn tả được (nằm): xoay thế giới cho thân và hướng cụ thể cho các chi.
+ *
  * Pose that the pitch/splay angles cannot express (lying down): world rotations for the
  * trunk and explicit directions for the limbs.
  */
@@ -89,6 +105,7 @@ export interface PoseOverride {
   footTurn?: THREE.Quaternion;
 }
 
+/** Tùy chọn retarget: khóa chân xuống đất bằng cách dời hông (tắt khi ngồi) và độ cao hông. */
 export interface RetargetOptions {
   /** Keep the lower foot on the ground by moving the hips; off for seated poses. */
   groundLock: boolean;
@@ -96,6 +113,10 @@ export interface RetargetOptions {
   hipsHeight?: number;
 }
 
+/**
+ * Bộ xương đã chuẩn bị để retarget: gốc, các xương được điều khiển, hông, vị trí hông lúc nghỉ và các tham số
+ * hệ trục.
+ */
 export interface RetargetRig {
   root: THREE.Object3D;
   bones: Map<DrivenBone, RigBone>;
@@ -113,6 +134,7 @@ const X = new THREE.Vector3(1, 0, 0);
 const Y = new THREE.Vector3(0, 1, 0);
 const Z = new THREE.Vector3(0, 0, 1);
 
+/** Quay thế giới của một nút (nhân các quaternion từ nút lên tới gốc). */
 function worldOf(object: THREE.Object3D, root?: THREE.Object3D): THREE.Quaternion {
   const result = new THREE.Quaternion();
   for (let node: THREE.Object3D | null = object; node && node !== root; node = node.parent) {
@@ -121,7 +143,11 @@ function worldOf(object: THREE.Object3D, root?: THREE.Object3D): THREE.Quaternio
   return result;
 }
 
-/** Call on a freshly cloned model that is still in its rest pose. */
+/**
+ * Chuẩn bị bộ retarget từ một mô hình vừa nhân bản còn ở tư thế nghỉ; thiếu xương cần thiết thì trả null.
+ *
+ * Call on a freshly cloned model that is still in its rest pose.
+ */
 export function createRetargetRig(model: THREE.Object3D, modelScale: number): RetargetRig | null {
   const bones = new Map<DrivenBone, RigBone>();
   for (const name of DRIVEN) {
@@ -154,7 +180,11 @@ export function createRetargetRig(model: THREE.Object3D, modelScale: number): Re
   return rig;
 }
 
-/** Ankle height above the hips (model units) for the lowest foot, given every bone's world rotation. */
+/**
+ * Độ cao mắt cá của chân thấp nhất so với hông (đơn vị mô hình), cho quay thế giới của từng xương.
+ *
+ * Ankle height above the hips (model units) for the lowest foot, given every bone's world rotation.
+ */
 function lowestAnkleRel(rig: RetargetRig, worlds: Map<THREE.Object3D, THREE.Quaternion>): number {
   let lowest = Infinity;
   for (const side of ['Left', 'Right'] as const) {
@@ -175,7 +205,11 @@ function lowestAnkleRel(rig: RetargetRig, worlds: Map<THREE.Object3D, THREE.Quat
 const quat = new THREE.Quaternion();
 const delta = new THREE.Quaternion();
 
-/** Writes the bone rotations (and hips height) for `pose` in the character's own frame (`rig.root`). */
+/**
+ * Ghi quay của các xương (và độ cao hông) cho một tư thế trong hệ nhân vật của rig.root.
+ *
+ * Writes the bone rotations (and hips height) for `pose` in the character's own frame (`rig.root`).
+ */
 export function applyRetargetPose(
   rig: RetargetRig,
   pose: HumanPoseAngles,
@@ -186,6 +220,7 @@ export function applyRetargetPose(
 ): void {
   const worlds = new Map<THREE.Object3D, THREE.Quaternion>();
   worlds.set(rig.root, new THREE.Quaternion());
+  // Lấy quay thế giới của xương (xương chưa được điều khiển thì lấy quay nghỉ cộng quay của cha).
   const worldOfBone = (object: THREE.Object3D): THREE.Quaternion => {
     const known = worlds.get(object);
     if (known) return known;
@@ -196,10 +231,12 @@ export function applyRetargetPose(
     return result;
   };
 
+  // Quay thế giới của nút cha của một xương.
   const parentWorld = (bone: RigBone) =>
     bone.object.parent ? worldOfBone(bone.object.parent) : new THREE.Quaternion();
 
   /** Rotate about world axes through the joint, on top of the parents' motion. */
+  // Xoay một xương quanh các trục thế giới qua khớp, chồng lên chuyển động của xương cha.
   const rotate = (name: DrivenBone, d: THREE.Quaternion) => {
     const bone = rig.bones.get(name)!;
     const pw = parentWorld(bone);
@@ -209,6 +246,7 @@ export function applyRetargetPose(
   };
 
   /** Point the segment toward `target` (shortest rotation from where the parents leave it). */
+  // Hướng đoạn chi tới mục tiêu (xoay ngắn nhất từ vị trí cha để lại).
   const aim = (name: DrivenBone, target: THREE.Vector3) => {
     const bone = rig.bones.get(name)!;
     const pw = parentWorld(bone);
@@ -217,6 +255,7 @@ export function applyRetargetPose(
     rotate(name, delta.setFromUnitVectors(current, target.clone().normalize()));
   };
 
+  // Xoay quanh một trục cho trước một góc.
   const axis = (a: THREE.Vector3, angle: number) => quat.clone().setFromAxisAngle(a, angle);
   const extra = override?.rotations;
 
@@ -307,6 +346,7 @@ export function applyRetargetPose(
   }
 
   // The hips live in the root bone's turned space: express the target in the character's frame.
+  // Đặt vị trí hông trong hệ nhân vật (đổi sang hệ không gian của xương gốc đã xoay).
   const placeHips = (x: number, y: number, z: number) => {
     rig.hips.position.set(x, y, z).applyQuaternion(rig.hipsParent.clone().invert());
   };
