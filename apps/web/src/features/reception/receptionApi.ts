@@ -2,8 +2,10 @@ import { apiFetch } from '../../shared/api/client';
 import { catalogApi, type MembershipPackage } from '../manager/catalogApi';
 import type { CoachBookingDto } from '../member/coachBookingApi';
 export type { MembershipPackage };
+/** Buổi PT 1:1 chưa thu tiền (dùng chung kiểu booking). */
 export type UnpaidCoachBooking = CoachBookingDto;
 
+/** Kết quả tra cứu hội viên: mã thẻ, họ tên, liên hệ, trạng thái và gói hiện tại. */
 export interface MemberLookupResult {
   userId: number;
   membershipCode: string;
@@ -16,6 +18,7 @@ export interface MemberLookupResult {
   endDate?: string;
 }
 
+/** Một đơn dùng thử chờ duyệt: hội viên, loại và số giấy tờ (đã che), họ tên trên giấy tờ và quốc tịch. */
 export interface ReceptionTrialItem {
   id: number;
   memberId: number;
@@ -42,7 +45,12 @@ export interface ReceptionTrialItem {
   subscriptionStatus?: string | null;
 }
 
-/** A membership request the desk already processed (GET /memberships/subscriptions/requests/history). */
+/**
+ * Một dòng lịch sử yêu cầu gói tập đã xử lý: loại (đăng ký, gia hạn, nâng cấp), kết quả, hội viên, gói, số tiền
+ * và phương thức.
+ *
+ * A membership request the desk already processed (GET /memberships/subscriptions/requests/history).
+ */
 export interface RequestHistoryItem {
   subscriptionId: number;
   type: 'REGISTER' | 'RENEW' | 'UPGRADE';
@@ -58,7 +66,11 @@ export interface RequestHistoryItem {
   processedByName: string | null;
 }
 
-/** A wallet top-up the desk took (GET /wallet/counter-topups). */
+/**
+ * Một lần nạp ví tại quầy: hội viên, số tiền, phương thức, thời điểm và người nhận.
+ *
+ * A wallet top-up the desk took (GET /wallet/counter-topups).
+ */
 export interface CounterTopupHistoryItem {
   paymentId: number;
   memberId: number;
@@ -70,6 +82,7 @@ export interface CounterTopupHistoryItem {
   receivedByName: string | null;
 }
 
+/** Một yêu cầu gói tập chờ thanh toán: hội viên, gói, thời hạn, giá, thời gian và trạng thái. */
 export interface PendingSubscriptionItem {
   id: number;
   memberId: number;
@@ -87,6 +100,7 @@ export interface PendingSubscriptionItem {
   createdAt: string;
 }
 
+/** Một kỳ gói có thể gia hạn: gói, thời gian, trạng thái, kỳ trước và giá trị còn lại. */
 export interface RenewalCandidate {
   id: number;
   memberId: number;
@@ -102,6 +116,7 @@ export interface RenewalCandidate {
   remainingValue?: number | null;
 }
 
+/** Một yêu cầu bảo lưu gói: hội viên, gói, thời gian, trạng thái, lý do và thời điểm yêu cầu. */
 export interface HoldRequestItem {
   id: number;
   memberId: number;
@@ -121,6 +136,7 @@ export interface HoldRequestItem {
   cancelledEnrollmentsCount: number;
 }
 
+/** Dữ liệu yêu cầu hủy gói do lễ tân tạo: hội viên, gói, lý do và số tiền hoàn. */
 export interface StaffCancellationRequestPayload {
   memberId: number;
   subscriptionId?: number;
@@ -128,6 +144,7 @@ export interface StaffCancellationRequestPayload {
   refundAmount?: number;
 }
 
+/** Một yêu cầu hủy gói: hội viên, gói, lý do, trạng thái duyệt và người xử lý. */
 export interface CancellationRequestItem {
   id: number;
   memberId: number;
@@ -145,8 +162,10 @@ export interface CancellationRequestItem {
   requestedByName?: string | null;
 }
 
+/** Phương thức thu tiền: tiền mặt, POS, chuyển khoản hoặc ví. */
 export type PaymentMethod = 'cash' | 'pos' | 'bank_transfer' | 'online_wallet';
 
+/** Dữ liệu thu tiền gói tập: hội viên, gói, số tiền, phương thức và ghi chú. */
 export interface ProcessPaymentPayload {
   memberId: number;
   packageId: number;
@@ -156,6 +175,7 @@ export interface ProcessPaymentPayload {
   notes?: string;
 }
 
+/** Kết quả thanh toán: id, hội viên, số tiền, phương thức, trạng thái, thời điểm và số hóa đơn. */
 export interface PaymentResponseDto {
   id: number;
   memberId: number;
@@ -167,6 +187,7 @@ export interface PaymentResponseDto {
   invoiceNumber?: string;
 }
 
+/** Tóm tắt biên lai của một khoản thanh toán: trạng thái và ảnh biên lai (nếu có). */
 export interface PaymentReceiptSummary {
   id: number;
   subscriptionId: number | null;
@@ -175,6 +196,7 @@ export interface PaymentReceiptSummary {
   receiptImage?: string | null;
 }
 
+/** Hóa đơn: số hóa đơn, tiền trước thuế, thuế, tổng tiền, ngày xuất và link PDF. */
 export interface InvoiceDto {
   id: number;
   invoiceNumber: string;
@@ -197,6 +219,7 @@ export function maskCitizenId(id?: string | null): string {
   return `${start}******${end}`;
 }
 
+/** Gom các hàm API nghiệp vụ lễ tân. */
 export const receptionApi = {
   /**
    * Tra cứu hội viên theo SĐT, Mã hội viên hoặc CCCD qua /api/v1/members/lookup
@@ -216,9 +239,11 @@ export const receptionApi = {
     return all.filter((p) => p.status === 'active');
   },
 
+  // Lấy các kỳ gói có thể gia hạn của hội viên.
   getRenewalCandidates: (memberId: number): Promise<RenewalCandidate[]> =>
     apiFetch(`/memberships/subscriptions/members/${memberId}/renewal-candidates`),
 
+  // Tạo gia hạn cho một kỳ gói của hội viên.
   createRenewal: (memberId: number, subscriptionId: number): Promise<RenewalCandidate> =>
     apiFetch(`/memberships/subscriptions/members/${memberId}/renew/${subscriptionId}`, { method: 'POST' }),
 

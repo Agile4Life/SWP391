@@ -12,7 +12,12 @@ import { approveKyc, listPendingKyc, rejectKyc, type KycSubmission } from './kyc
 /** How often the open page looks for new submissions, so the desk sees a member's upload without reloading. */
 const AUTO_REFRESH_MS = 30_000;
 
-/** Receptionists and managers compare the declared number with the document photos, then approve or reject. */
+/**
+ * Màn duyệt hồ sơ xác minh danh tính (KYC) của hội viên: xem giấy tờ, duyệt (có xác nhận) hoặc từ chối kèm lý
+ * do bắt buộc.
+ *
+ * Receptionists and managers compare the declared number with the document photos, then approve or reject.
+ */
 export function KycReviewPage() {
   const { t } = useI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -24,6 +29,7 @@ export function KycReviewPage() {
   const [reason, setReason] = useState('');
 
   // `silent` refreshes keep what is on screen: no skeleton, and a failed background refresh does not wipe the list.
+  // Tải danh sách hồ sơ chờ duyệt; chế độ silent không hiện trạng thái đang tải.
   const load = useCallback(async (silent = false) => {
     if (!silent) { setLoading(true); setError(null); }
     try {
@@ -44,6 +50,7 @@ export function KycReviewPage() {
 
   // The page used to load once on open, so a document sent while the receptionist already had it open never showed up.
   useEffect(() => {
+    // Tự tải lại ngầm khi tab đang hiển thị.
     const refresh = () => { if (document.visibilityState !== 'hidden') void load(true); };
     const timer = window.setInterval(refresh, AUTO_REFRESH_MS);
     window.addEventListener('focus', refresh);
@@ -55,6 +62,7 @@ export function KycReviewPage() {
     };
   }, [load]);
 
+  // Duyệt hoặc từ chối hồ sơ; từ chối bắt buộc có lý do.
   async function decide(item: KycSubmission, approve: boolean) {
     if (busyId !== null) return;
     if (!approve && !reason.trim()) {
@@ -77,6 +85,7 @@ export function KycReviewPage() {
     }
   }
 
+  // Xác nhận với nhân viên (kèm loại giấy tờ và số) trước khi duyệt.
   async function confirmApprove(item: KycSubmission) {
     if (busyId !== null) return;
     const docLabelVi = item.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD';

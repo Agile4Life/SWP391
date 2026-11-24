@@ -16,15 +16,22 @@ import { Link } from 'react-router-dom';
 const GATE = 'Turnstile A1 - Sảnh Chính';
 const GATE_ID = 'A1';
 
+/** Định dạng giờ:phút:giây theo múi giờ trung tâm. */
 const formatTime = (iso?: string | null): string => formatCenterTimeSeconds(iso, iso ?? '—');
 
+/** Lượt check-in được chấp nhận (GRANTED hoặc SUCCESS). */
 const isCheckinGranted = (status?: string | null): boolean => {
   if (!status) return false;
   const normalized = status.trim().toUpperCase();
   return normalized === 'GRANTED' || normalized === 'SUCCESS';
 };
 
-/** `in`: the desk scans a member's card and shows the gate QR members scan to enter. `out`: gate QR for leaving plus the visits still inside. */
+/**
+ * Màn check-in/out của lễ tân: chế độ in thì quét thẻ hội viên và hiện QR cổng cho hội viên tự quét; chế độ out
+ * thì hiện QR ra và danh sách lượt còn ở trong trung tâm.
+ *
+ * `in`: the desk scans a member's card and shows the gate QR members scan to enter. `out`: gate QR for leaving plus the visits still inside.
+ */
 export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) {
   const { t } = useStaffI18n();
   const checkingOut = mode === 'out';
@@ -49,6 +56,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [historyError, setHistoryError] = useState<StaffMessage | null>(null);
 
+  // Tải lịch sử check-in hôm nay.
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
     setHistoryError(null);
@@ -89,6 +97,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
     );
   }
 
+  // Quét mã thẻ hội viên: mã rỗng thì báo lỗi, mã QR cổng (SOL:GATE:) không dùng ở quầy, còn lại gửi lên backend.
   const executeScan = async (codeToScan: string) => {
     const trimmed = codeToScan.trim();
     if (!trimmed) {
@@ -132,11 +141,13 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
     }
   };
 
+  // Gửi biểu mẫu quét mã.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     void executeScan(scanCode);
   };
 
+  // Check-out một lượt và cập nhật dòng tương ứng trong danh sách.
   const handleCheckout = async (checkinId: number) => {
     if (checkoutBusy.current) return;
     checkoutBusy.current = true;

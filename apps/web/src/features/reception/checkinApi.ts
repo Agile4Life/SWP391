@@ -1,5 +1,9 @@
 import { apiFetch } from '../../shared/api/client';
 
+/**
+ * Một lượt check-in: hội viên, giờ vào/ra, phương thức, cổng, trạng thái, lý do từ chối, ảnh, gói và số ngày
+ * còn lại.
+ */
 export interface CheckinDto {
   id: number;
   memberId?: number | null;
@@ -15,11 +19,13 @@ export interface CheckinDto {
   remainingDays?: number | null;
 }
 
+/** Dữ liệu quét thẻ: mã QR và cổng (tùy chọn). */
 export interface ScanCheckinPayload {
   qrCode: string;
   gate?: string;
 }
 
+/** QR cổng: mã, cổng, thời điểm tạo/hết hạn và số giây còn hiệu lực. */
 export interface GateQrDto {
   qrCode: string;
   gateId: string;
@@ -29,13 +35,16 @@ export interface GateQrDto {
   expiresInSeconds: number;
 }
 
+/** Bộ lọc lịch sử check-in: hội viên và khoảng ngày. */
 export interface CheckinHistoryFilter {
   memberId?: number;
   fromDate?: string;
   toDate?: string;
 }
 
+/** Gom các hàm API check-in. */
 export const checkinApi = {
+  // Lấy mã QR hiện tại của một cổng.
   gateQr: (gateId: string, signal?: AbortSignal) => apiFetch<GateQrDto>(`/check-in/gate-qr?gate=${encodeURIComponent(gateId)}`, { cache: 'no-store', signal }),
   /**
    * Quét mã QR hội viên tại cổng/lễ tân (POST /api/v1/check-in/scan)

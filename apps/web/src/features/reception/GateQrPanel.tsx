@@ -5,7 +5,12 @@ import QRCode from 'qrcode';
 import { checkinApi } from './checkinApi';
 import '../checkin/qr-checkin.css';
 
-/** `purpose` only changes the copy: members scan the same gate QR to enter and to leave. */
+/**
+ * Bảng mã QR của cổng cho hội viên tự quét (vào hoặc ra): tạo ảnh QR từ backend, tự làm mới mỗi 45 giây và khi
+ * tab hiện lại, đếm ngược thời hạn theo cả đồng hồ thường lẫn đồng hồ đơn điệu.
+ *
+ * `purpose` only changes the copy: members scan the same gate QR to enter and to leave.
+ */
 export function GateQrPanel({ gateId, purpose = 'in' }: { gateId: string; purpose?: 'in' | 'out' }) {
   const { t } = useStaffI18n();
   const [qr, setQr] = useState<{ image: string; gateId: string; wallEnd: number; monotonicEnd: number } | null>(null);
@@ -17,6 +22,7 @@ export function GateQrPanel({ gateId, purpose = 'in' }: { gateId: string; purpos
     let active = true;
     let fetching = false;
     const controller = new AbortController();
+    // Lấy mã QR cổng mới và dựng ảnh; bỏ qua nếu đang tải hoặc tab đang ẩn, dữ liệu không khớp cổng thì báo lỗi.
     async function refresh() {
       if (fetching || document.hidden) return;
       fetching = true;
@@ -40,6 +46,7 @@ export function GateQrPanel({ gateId, purpose = 'in' }: { gateId: string; purpos
       if (active) setNow({ wall: Date.now(), monotonic: performance.now() });
     }, 500);
     const renew = window.setInterval(() => void refresh(), 45000);
+    // Tab hiện lại thì bỏ mã cũ và tải mã mới.
     const resume = () => {
       setQr(null);
       setNow({ wall: Date.now(), monotonic: performance.now() });

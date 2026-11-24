@@ -29,6 +29,10 @@ import {
 } from './receptionApi';
 import { Link } from 'react-router-dom';
 
+/**
+ * Màn làm việc của lễ tân: tra cứu hội viên, thu tiền gói tập/gia hạn/nâng cấp, nạp ví tại quầy, tạo yêu cầu
+ * hủy gói, và các hàng đợi cần xử lý (gói chờ thanh toán, bảo lưu, PT chưa thu tiền, đơn trải nghiệm).
+ */
 export function StaffReceptionPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -144,6 +148,7 @@ export function StaffReceptionPage() {
     return () => { active = false; };
   }, [hasAccess, selectedMemberId, walletRetry]);
 
+  // Mở hộp nạp ví tại quầy với giá trị mặc định 200.000 đ, tiền mặt.
   const handleOpenTopupModal = () => {
     if (!selectedMember) return;
     setTopupAmount('200000');
@@ -154,6 +159,7 @@ export function StaffReceptionPage() {
     setIsTopupModalOpen(true);
   };
 
+  // Nạp ví tại quầy: kiểm tra số tiền 10.000–100.000.000 đ, dùng một mã yêu cầu cho mỗi bộ (hội viên, số tiền, phương thức) để gửi lại không bị cộng hai lần.
   const handleSubmitCounterTopup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMember || isSubmittingTopup) return;
@@ -197,6 +203,7 @@ export function StaffReceptionPage() {
     }
   };
 
+  // Tải các yêu cầu gói tập chờ thanh toán (silent thì không hiện trạng thái tải).
   const loadPendingSubscriptions = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) setLoadingPending(true);
@@ -213,6 +220,7 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
+  // Tải các yêu cầu bảo lưu chờ xử lý.
   const loadPendingHolds = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) setLoadingHolds(true);
@@ -227,6 +235,7 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
+  // Tải các buổi PT 1:1 chưa thu tiền.
   const loadUnpaidPt = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) {
@@ -245,6 +254,7 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
+  // Tải các yêu cầu dùng thử chờ duyệt.
   const loadPendingTrials = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) setLoadingTrials(true);
@@ -263,6 +273,7 @@ export function StaffReceptionPage() {
   const loadingTodo = loadingPending || loadingHolds || loadingPt || loadingTrials;
   const todoErrors = { plan: pendingError, pt: ptError, trial: trialsError, hold: holdsError };
   const hasTodoError = Object.values(todoErrors).some(Boolean);
+  // Tải lại cả bốn hàng đợi.
   const reloadTodo = useCallback(() => Promise.all([
     loadPendingSubscriptions(), loadPendingHolds(), loadUnpaidPt(), loadPendingTrials(),
   ]), [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
@@ -273,6 +284,7 @@ export function StaffReceptionPage() {
     void loadUnpaidPt();
     void loadPendingTrials();
     if (!hasAccess) return;
+    // Đồng bộ ngầm bốn hàng đợi khi tab hiện, trừ lúc đang xử lý thanh toán.
     const syncQueues = () => {
       if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
       void loadPendingSubscriptions(true);
@@ -312,6 +324,7 @@ export function StaffReceptionPage() {
     return () => { active = false; };
   }, [hasAccess, selectedMemberId, selectedPendingId, offersRetry]);
 
+  // Kỳ gói đang hoạt động của hội viên được chọn.
   const activeCandidate = useMemo(
     () => renewalCandidates.find((c) => c.status?.toLowerCase() === 'active') ?? null,
     [renewalCandidates]
@@ -319,6 +332,7 @@ export function StaffReceptionPage() {
 
   // Mirrors the counter checkout rule (MEMBERSHIP_ALREADY_ACTIVE): a member with a paid period still running can only
   // renew, so "buy new" is not offered instead of failing after the cashier presses collect.
+  // Hội viên còn kỳ đã trả tiền đang chạy thì chỉ được gia hạn, không cho mua mới (giống quy tắc backend).
   const hasRunningPaidPeriod = useMemo(() => {
     const today = centerNowParts().date;
     return renewalCandidates.some((c) => {
@@ -327,6 +341,7 @@ export function StaffReceptionPage() {
     });
   }, [renewalCandidates]);
 
+  // Mở hộp yêu cầu hủy gói, đề xuất số hoàn theo phần chưa dùng do backend tính.
   const handleOpenCancelModal = () => {
     if (!selectedMember) return;
     setCancelReason('');
@@ -338,6 +353,7 @@ export function StaffReceptionPage() {
     setIsCancelModalOpen(true);
   };
 
+  // Gửi yêu cầu hủy gói kèm lý do bắt buộc và số tiền hoàn.
   const handleSubmitCancellationRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMember || isSubmittingCancel) return;
@@ -373,6 +389,7 @@ export function StaffReceptionPage() {
     }
   };
 
+  // Chọn một yêu cầu chờ thanh toán để thu tiền, đồng thời chọn hội viên tương ứng.
   const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
     setSelectedPending(item);
     setSelectedMember({
@@ -390,6 +407,7 @@ export function StaffReceptionPage() {
     checkoutRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   };
 
+  // Hủy một yêu cầu gói tập chờ thanh toán sau khi xác nhận.
   const handleCancelPendingItem = async (item: PendingSubscriptionItem) => {
     if (cancellingPendingId !== null || isSubmittingPayment) return;
     const ok = await confirm({
@@ -417,6 +435,7 @@ export function StaffReceptionPage() {
   };
 
 
+  // Xác nhận đã thu tiền buổi PT 1:1 theo phương thức đã chọn.
   const handleConfirmPt = async (item: UnpaidCoachBooking, method: string) => {
     if (processingPtId !== null) return;
     setProcessingPtId(item.id);
@@ -434,6 +453,7 @@ export function StaffReceptionPage() {
   };
 
 
+  // Duyệt đơn dùng thử.
   const handleApproveTrial = async (item: ReceptionTrialItem) => {
     if (processingTrialId !== null) return;
     setProcessingTrialId(item.id);
@@ -454,12 +474,14 @@ export function StaffReceptionPage() {
     }
   };
 
+  // Mở hộp từ chối đơn dùng thử.
   const handleOpenRejectTrial = (item: ReceptionTrialItem) => {
     setRejectingTrial(item);
     setTrialRejectReason('');
     setTrialRejectError(null);
   };
 
+  // Gửi lý do từ chối đơn dùng thử (bắt buộc).
   const handleSubmitRejectTrial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingTrial || isSubmittingTrialReject) return;

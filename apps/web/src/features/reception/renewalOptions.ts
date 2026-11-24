@@ -1,11 +1,13 @@
 import { staffMessage, type StaffMessage } from '../operations/staffI18n';
 import type { RenewalCandidate } from './receptionApi';
 
+/** Thông báo lỗi chung khi kỳ gói không gia hạn được. */
 const reviewPeriod = () => staffMessage(
   'Không thể gia hạn kỳ đã chọn. Vui lòng chọn kỳ khác hoặc nhờ quản lý kiểm tra.',
   'This period cannot be renewed. Choose another period or ask a manager to review it.',
 );
 
+/** Đọc ngày YYYY-MM-DD thành mốc thời gian UTC; ngày không tồn tại thì trả null. */
 function dateValue(value: string): number | null {
   const time = Date.parse(`${value}T00:00:00Z`);
   return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value ? time : null;

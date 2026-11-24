@@ -15,10 +15,16 @@ import {
   type HoldStatus,
 } from '../member/holdApi';
 
+/** Bộ lọc trạng thái yêu cầu bảo lưu (hoặc tất cả). */
 type Filter = HoldStatus | 'ALL';
 const FILTERS: Filter[] = ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'ALL'];
 
-/** Receptionist and manager screen: review hold requests with their medical paperwork and keep the history. */
+/**
+ * Màn lễ tân/quản lý xử lý yêu cầu bảo lưu: xem hồ sơ y tế đính kèm, duyệt hoặc từ chối (kèm lý do), rút yêu
+ * cầu hộ hội viên và xem lịch sử.
+ *
+ * Receptionist and manager screen: review hold requests with their medical paperwork and keep the history.
+ */
 export function HoldManagementPage() {
   const { t } = useI18n();
   const [filter, setFilter] = useState<Filter>('PENDING');
@@ -29,6 +35,7 @@ export function HoldManagementPage() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
+  // Tải danh sách yêu cầu theo bộ lọc.
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -52,6 +59,7 @@ export function HoldManagementPage() {
     ALL: t('Tất cả', 'All'),
   };
 
+  // Duyệt hoặc từ chối một yêu cầu; một thời điểm chỉ xử lý một yêu cầu.
   async function decide(item: HoldDetail, approve: boolean, reason?: string) {
     if (busyId !== null) return;
     setBusyId(item.id);
@@ -70,6 +78,7 @@ export function HoldManagementPage() {
     }
   }
 
+  // Rút yêu cầu bảo lưu thay hội viên.
   async function withdraw(item: HoldDetail) {
     if (busyId !== null) return;
     setBusyId(item.id);
@@ -86,6 +95,7 @@ export function HoldManagementPage() {
     }
   }
 
+  // Mở tài liệu đính kèm trong tab mới qua object URL (thu hồi sau 60 giây).
   async function openDocument(item: HoldDetail, documentId: number) {
     try {
       const blob = await fetchHoldDocument(item.id, documentId);
