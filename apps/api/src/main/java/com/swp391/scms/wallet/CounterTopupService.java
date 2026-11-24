@@ -144,8 +144,9 @@ public class CounterTopupService {
     @Transactional(readOnly = true)
     public List<TopupHistoryDto> history(Integer days) {
         int window = days == null ? DEFAULT_DAYS : Math.max(1, Math.min(MAX_DAYS, days));
-        LocalDateTime since = LocalDateTime.now(clock).minusDays(window);
-        return payments.findByNoteAndStatusAndPaidAtGreaterThanEqualOrderByPaidAtDesc(COUNTER_NOTE, "success", since)
+        // days=0 không cắt lịch sử; giữ mọi phương thức thu cũ để đối soát.
+        LocalDateTime since = days != null && days == 1 ? java.time.LocalDate.now(clock).atStartOfDay() : LocalDateTime.now(clock).minusDays(window);
+        return (days != null && days == 0 ? payments.findByNoteAndStatusOrderByPaidAtDesc(COUNTER_NOTE, "success") : payments.findByNoteAndStatusAndPaidAtGreaterThanEqualOrderByPaidAtDesc(COUNTER_NOTE, "success", since))
                 .stream()
                 .filter(p -> p.getMember() != null && p.getMember().getUser() != null
                         && p.getMember().getUser().getDeletedAt() == null)

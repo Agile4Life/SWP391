@@ -46,16 +46,17 @@ public class MembershipRequestHistoryService {
     @Transactional(readOnly = true)
     public List<RequestHistoryDto> history(Integer days) {
         int window = days == null ? DEFAULT_DAYS : Math.max(1, Math.min(MAX_DAYS, days));
-        LocalDateTime since = LocalDateTime.now(clock).minusDays(window);
+        // days=0 là toàn bộ lịch sử; Hôm nay bắt đầu lúc 00:00 theo Clock của hệ thống.
+        LocalDateTime since = days != null && days == 1 ? java.time.LocalDate.now(clock).atStartOfDay() : LocalDateTime.now(clock).minusDays(window);
         List<RequestHistoryDto> rows = new ArrayList<>();
         Set<Long> settled = new HashSet<>();
-        for (Payment payment : payments.findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(SETTLED, since)) {
+        for (Payment payment : (days != null && days == 0 ? payments.findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(SETTLED) : payments.findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(SETTLED, since))) {
             MembershipSubscription sub = payment.getSubscription();
             if (sub == null || !visible(sub) || !settled.add(sub.getId())) continue;
             rows.add(row(sub, "APPROVED", payment.getAmount(), payment.getMethod(), payment.getPaidAt(),
                     payment.getReceivedBy() == null ? null : payment.getReceivedBy().getFullName()));
         }
-        for (MembershipSubscription sub : subscriptions.findByStatusAndUpdatedAtGreaterThanEqualOrderByUpdatedAtDesc("cancelled", since)) {
+        for (MembershipSubscription sub : (days != null && days == 0 ? subscriptions.findByStatusOrderByUpdatedAtDesc("cancelled") : subscriptions.findByStatusAndUpdatedAtGreaterThanEqualOrderByUpdatedAtDesc("cancelled", since))) {
             if (settled.contains(sub.getId()) || !visible(sub)) continue;
             // Kỳ đã thanh toán rồi bị hủy về sau thuộc luồng hủy/hoàn tiền, không thuộc lịch sử yêu cầu này.
             boolean wasPaid = payments.findAllBySubscriptionId(sub.getId()).stream()
