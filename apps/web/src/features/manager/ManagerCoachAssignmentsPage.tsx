@@ -15,9 +15,14 @@ import { staffError as safeMessage, staffText } from '../operations/staffI18n';
 import './manager-coach-assignments.css';
 
 import { Select } from '../../shared/ui/Select';
-/** Short tag shown only when the member's plan blocks coaching; nothing is shown when the plan is fine. */
+/**
+ * Huy hiệu cảnh báo vấn đề gói tập của hội viên (đang bảo lưu, hết hiệu lực...) kèm gợi ý.
+ *
+ * Short tag shown only when the member's plan blocks coaching; nothing is shown when the plan is fine.
+ */
 function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['membershipIssue'] }) {
   if (!issue) return null;
+  // Bảng ánh xạ vấn đề sang class màu, nhãn và gợi ý.
   const tag = {
     FROZEN: { cls: 'badge-warning', label: staffText('Đang bảo lưu', 'On hold'), hint: staffText('Gói đang bảo lưu: chưa thể đặt hoặc điều chuyển buổi tập.', 'Plan on hold: sessions cannot be booked or transferred.') },
     NO_ACTIVE: { cls: 'badge-danger', label: staffText('Hết hiệu lực gói', 'No valid plan'), hint: staffText('Hội viên không còn gói active còn hạn hôm nay.', 'The member has no active plan valid today.') },
@@ -26,11 +31,13 @@ function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['members
   return <span className={`badge ${tag.cls} coach-membership-issue`} title={tag.hint}>{tag.label}</span>;
 }
 
+/** Mô tả lịch của một phân công: hạn giáo án hoặc buổi kế tiếp. */
 function assignmentSchedule(student: CoachAssignmentStudent): string | null {
   if (student.assignmentType === 'TRAINING_PLAN' && student.endDate) return staffText(`Hạn: ${formatCenterDate(student.endDate)}`, `Expires: ${formatCenterDate(student.endDate)}`);
   return student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), student.nextSession) : null;
 }
 
+/** Phân công của một hội viên (gom mọi phân công của hội viên đó). */
 interface MemberAssignmentGroup {
   memberId: number;
   fullName: string;
@@ -39,7 +46,11 @@ interface MemberAssignmentGroup {
   assignments: CoachAssignmentStudent[];
 }
 
-/** One member may hold several assignments with the same coach; show them under a single profile. */
+/**
+ * Gom các phân công theo hội viên.
+ *
+ * One member may hold several assignments with the same coach; show them under a single profile.
+ */
 function groupStudentsByMember(students: CoachAssignmentStudent[]): MemberAssignmentGroup[] {
   const groups = new Map<number, MemberAssignmentGroup>();
   for (const student of students) {
@@ -56,6 +67,10 @@ function groupStudentsByMember(students: CoachAssignmentStudent[]): MemberAssign
   return [...groups.values()];
 }
 
+/**
+ * Màn quản lý phân công HLV: xem học viên của từng HLV, lọc/sắp xếp, điều chuyển giáo án hoặc buổi PT sang HLV
+ * khác (kèm lý do) và kết thúc phân công.
+ */
 export function ManagerCoachAssignmentsPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -96,6 +111,7 @@ export function ManagerCoachAssignmentsPage() {
   const [targetCoachId, setTargetCoachId] = useState<number | ''>('');
   const [reassignReason, setReassignReason] = useState('');
 
+  // Tải tổng quan phân công; chỉ kết quả của lần gọi mới nhất được dùng.
   const load = useCallback(async () => {
     const generation = ++loadGeneration.current;
     setLoading(true);
@@ -125,10 +141,12 @@ export function ManagerCoachAssignmentsPage() {
     return () => { clearTimeout(timer); generation.current += 1; };
   }, [load]);
 
+  // Danh sách HLV có thể chọn khi điều chuyển.
   const allCoachesList = useMemo(() => {
     return data?.availableCoaches || [];
   }, [data]);
 
+  // Điều chuyển: bắt buộc chọn HLV mới và nhập lý do, lớp học chỉ xem, không điều chuyển.
   const handleReassignSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (busy || !reassignStudent || !targetCoachId || reassignStudent.student.assignmentType === 'CLASS') return;
@@ -161,6 +179,7 @@ export function ManagerCoachAssignmentsPage() {
     }
   };
 
+  // Kết thúc phân công giáo án (theo id tham chiếu) sau khi xác nhận.
   const handleRemoveAssignment = async (student: CoachAssignmentStudent) => {
     if (busy || !(await confirm({ title: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), message: staffMessage(`Hủy phân công giáo án của ${student.fullName}? Lịch sử giáo án được giữ lại.`, `Cancel the training plan assignment for ${student.fullName}? Training plan history will be retained.`), confirmLabel: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), danger: true }))) {
       return;
@@ -179,6 +198,7 @@ export function ManagerCoachAssignmentsPage() {
   };
 
   // Flat list for table view
+  // Làm phẳng học viên của mọi HLV thành một danh sách kèm thông tin HLV.
   const flattenedStudents = useMemo(() => {
     if (!data?.coaches) return [];
     return data.coaches.flatMap((coach) =>

@@ -10,16 +10,19 @@ import { centerNowParts, formatCenterDate, formatCenterTimeSeconds } from '../..
 import { reportsApi, type CancellationRequestDto, type ReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
 
+/** Định dạng số tiền VND (làm tròn). */
 const vnd = (n: number) => formatPrice(Math.round(n));
 const paymentMethods: Record<string, string> = {
   cash: 'Tiền mặt', pos: 'POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
 };
 
+/** Cộng/trừ số ngày vào ngày YYYY-MM-DD (tính theo UTC). */
 const addCenterDays = (isoDate: string, deltaDays: number) => {
   const [y, m, d] = isoDate.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + deltaDays)).toISOString().slice(0, 10);
 };
 
+/** Tách thời điểm thanh toán thành ngày và giờ theo múi giờ trung tâm. */
 const formatTransactionTime = (paidAt: string) => {
   if (!paidAt) return { date: '', time: '' };
   const date = formatCenterDate(paidAt, paidAt);
@@ -28,6 +31,10 @@ const formatTransactionTime = (paidAt: string) => {
 };
 
 // CSV quoting alone does not stop spreadsheet formula evaluation.
+/**
+ * Chuẩn hóa một ô CSV: thêm dấu nháy nếu bắt đầu bằng ký tự công thức (=, +, @, -) để chống chèn công thức, rồi
+ * bọc trong ngoặc kép.
+ */
 const csvText = (raw: string) => {
   // eslint-disable-next-line no-control-regex -- include leading control characters in the formula guard
   const unsafe = /^[\u0000-\u0020]*[=+@-]|^[\t\r\n]/.test(raw);
@@ -35,6 +42,10 @@ const csvText = (raw: string) => {
   return `"${value.replace(/"/g, '""')}"`;
 };
 
+/**
+ * Màn báo cáo của quản lý: doanh thu theo ngày/gói, giao dịch gần đây (tìm kiếm, xuất CSV), tỷ lệ gia hạn và
+ * duyệt hoặc từ chối yêu cầu hủy gói.
+ */
 export function ManagerReportsPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -48,6 +59,7 @@ export function ManagerReportsPage() {
 
   // Bộ lọc khoảng ngày mặc định: 30 ngày gần nhất
   const todayStr = useMemo(() => centerNowParts().date, []);
+  // Ngày bắt đầu mặc định là 30 ngày trước.
   const thirtyDaysAgoStr = useMemo(() => addCenterDays(todayStr, -30), [todayStr]);
 
   const [startDate, setStartDate] = useState(thirtyDaysAgoStr);
@@ -71,6 +83,7 @@ export function ManagerReportsPage() {
   const [txSearchTerm, setTxSearchTerm] = useState('');
 
   const recentTransactions = summary?.recentTransactions;
+  // Giao dịch sau khi lọc theo từ khóa.
   const filteredTransactions = useMemo(() => {
     if (!recentTransactions) return [];
     const term = txSearchTerm.trim().toLowerCase();
@@ -87,6 +100,7 @@ export function ManagerReportsPage() {
 
   const isInvalidRange = Boolean(startDate && endDate && startDate > endDate);
 
+  // Đổi ngày bắt đầu; nếu vượt ngày kết thúc thì kéo ngày kết thúc theo.
   const handleStartDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     setStartDate(val);
@@ -95,6 +109,7 @@ export function ManagerReportsPage() {
     }
   };
 
+  // Đổi ngày kết thúc; không cho nhỏ hơn ngày bắt đầu.
   const handleEndDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     if (startDate && val && val < startDate) {
@@ -104,6 +119,7 @@ export function ManagerReportsPage() {
     setEndDate(val);
   };
 
+  // Tải các yêu cầu hủy gói chờ quản lý.
   const loadCancellations = useCallback(async () => {
     if (!hasAccess || typeof reportsApi.getCancellationRequests !== 'function') return;
     setLoadingCancellations(true);
@@ -117,6 +133,7 @@ export function ManagerReportsPage() {
     }
   }, [hasAccess]);
 
+  // Tải báo cáo cho khoảng ngày; bỏ qua nếu khoảng sai hoặc đã có lần gọi mới hơn.
   const fetchReports = useCallback(async (start: string, end: string) => {
     if (start > end) return;
     const requestId = ++latestRequest.current;
@@ -142,6 +159,7 @@ export function ManagerReportsPage() {
     void loadCancellations();
   }, [hasAccess, fetchReports, loadCancellations, thirtyDaysAgoStr, todayStr]);
 
+  // Phê duyệt hủy gói và hoàn tiền về ví sau khi xác nhận.
   const handleApproveCancellation = async (item: CancellationRequestDto) => {
     if (decidingCancelId !== null || typeof reportsApi.approveCancellationRequest !== 'function') return;
     const confirmed = await confirm({
@@ -169,6 +187,7 @@ export function ManagerReportsPage() {
     }
   };
 
+  // Từ chối yêu cầu hủy gói sau khi xác nhận.
   const handleRejectCancellation = async (item: CancellationRequestDto) => {
     if (decidingCancelId !== null || typeof reportsApi.rejectCancellationRequest !== 'function') return;
     const confirmed = await confirm({
@@ -194,12 +213,14 @@ export function ManagerReportsPage() {
     }
   };
 
+  // Áp dụng bộ lọc khoảng ngày nếu hợp lệ.
   const handleApplyFilter = (e: React.FormEvent) => {
     e.preventDefault();
     if (isInvalidRange) return;
     void fetchReports(startDate, endDate);
   };
 
+  // Chọn nhanh khoảng ngày tính lùi từ hôm nay.
   const handleQuickRange = (days: number) => {
     const end = todayStr;
     const start = addCenterDays(todayStr, -days);
@@ -325,6 +346,7 @@ export function ManagerReportsPage() {
   const maxDailyRevenue = Math.max(...dailyData.map((d) => d.revenue), 1);
   // Mũi tên chỉ nhảy giữa các ngày có doanh thu để không phải bấm qua hàng loạt ngày trống.
   const revenueDays = dailyData.filter((d) => d.revenue > 0);
+  // Di chuyển chọn ngày trên biểu đồ sang ngày trước/sau bằng phím.
   const stepDay = (dir: -1 | 1) => {
     if (revenueDays.length === 0) return;
     const idx = revenueDays.findIndex((d) => d.date === hoveredBar?.date);

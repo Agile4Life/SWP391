@@ -7,7 +7,9 @@ import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
 
+/** Ba tab danh mục: bộ môn, phòng tập và gói tập. */
 type Tab = 'disciplines' | 'rooms' | 'packages';
+/** Dữ liệu biểu mẫu dạng cặp khóa–chuỗi. */
 type Form = Record<string, string>;
 
 const ROOM_STATUS_LABEL = { available: 'Đang hoạt động', maintenance: 'Bảo trì', closed: 'Đã đóng' } as const;
@@ -26,6 +28,7 @@ const QUICK_DURATION_PRESETS = [
 
 const vnd = formatPrice;
 
+/** Xác định hạng gói: dùng tier khai báo nếu hợp lệ, không thì suy ra từ tên gói. */
 function resolvePackageTier(pkg: { name?: string; tier?: string | null }): 'SILVER' | 'GOLD' | 'PLATINUM' {
   const explicit = pkg.tier?.trim().toUpperCase();
   if (explicit === 'SILVER' || explicit === 'GOLD' || explicit === 'PLATINUM') {
@@ -37,6 +40,7 @@ function resolvePackageTier(pkg: { name?: string; tier?: string | null }): 'SILV
   return 'SILVER';
 }
 
+/** Màn quản lý danh mục của quản lý: thêm/sửa/xóa bộ môn, phòng tập và gói tập, đổi nhanh giá và trạng thái gói. */
 export function ManagerCatalogsPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -51,6 +55,7 @@ export function ManagerCatalogsPage() {
   const [editing, setEditing] = useState<{ id: number | null; form: Form } | null>(null);
   const [quickPricePkg, setQuickPricePkg] = useState<{ pkg: MembershipPackage; price: string } | null>(null);
 
+  // Tải bộ môn, phòng và gói cùng lúc.
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -70,6 +75,7 @@ export function ManagerCatalogsPage() {
     void load();
   }, [load]);
 
+  // Chạy một thao tác ghi: bật trạng thái đang gửi, báo thành công rồi tải lại; lỗi thì hiện thông báo.
   const run = async (action: () => Promise<unknown>, successMsg: StaffMessage = 'Thao tác thành công!') => {
     setError('');
     setIsSubmitting(true);
@@ -88,6 +94,7 @@ export function ManagerCatalogsPage() {
     }
   };
 
+  // Biểu mẫu trống mặc định theo tab đang chọn.
   const emptyForm = (): Form =>
     tab === 'disciplines'
       ? { name: '', description: '' }
@@ -95,6 +102,7 @@ export function ManagerCatalogsPage() {
         ? { name: '', location: '', capacity: '10', status: 'available', disciplineId: '', openTime: '06:00', closeTime: '22:00', tier: 'STANDARD' }
         : { name: '', description: '', price: '199000', durationDays: '90', classCreditLimit: '', status: 'active', tier: 'SILVER' };
 
+  // Gửi biểu mẫu thêm/sửa theo tab hiện tại sau khi kiểm tra dữ liệu.
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing || isSubmitting) return;
@@ -148,6 +156,7 @@ export function ManagerCatalogsPage() {
     }, isNew ? 'Đã thêm mới danh mục thành công!' : 'Đã cập nhật danh mục thành công!');
   };
 
+  // Gửi giá mới của gói trong hộp đổi nhanh giá.
   const submitQuickPrice = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickPricePkg || isSubmitting) return;
@@ -172,12 +181,14 @@ export function ManagerCatalogsPage() {
     );
   };
 
+  // Mở hộp thêm/sửa với dữ liệu cho trước.
   const openEditor = (value: { id: number | null; form: Form }) => {
     setFormError('');
     setError('');
     setEditing(value);
   };
 
+  // Xóa một mục sau khi xác nhận; mục đã được dùng sẽ bị backend từ chối.
   const remove = async (what: string, name: string, action: () => Promise<unknown>) => {
     const confirmed = await confirm({
       title: staffMessage(`Xóa ${what}?`, `Delete ${staffTranslation(what)}?`),
@@ -188,11 +199,13 @@ export function ManagerCatalogsPage() {
     if (confirmed) void run(action, staffMessage(`Đã xóa ${what} "${name}".`, `Deleted ${staffTranslation(what)} "${name}".`));
   };
 
+  // Đổi một trường của biểu mẫu và xóa lỗi cũ.
   const set = (key: string, value: string) => {
     setFormError('');
     if (editing) setEditing({ ...editing, form: { ...editing.form, [key]: value } });
   };
 
+  // Tăng/giảm giá trong biểu mẫu (không âm).
   const adjustFormPrice = (delta: number) => {
     if (!editing) return;
     const current = Number(editing.form.price) || 0;
@@ -200,6 +213,7 @@ export function ManagerCatalogsPage() {
     set('price', String(next));
   };
 
+  // Tiêu đề hộp thoại theo tab và thêm/sửa.
   const modalTitle = () => {
     if (!editing) return '';
     const isNew = editing.id == null;

@@ -11,6 +11,7 @@ const initialForm: StaffAccountInput = {
   fullName: '', email: '', phone: '', password: '', gender: 'other', roleCode: 'COACH',
 };
 
+/** Kiểm tra email nhân sự: bắt buộc, đúng định dạng (cảnh báo gõ nhầm @gmail.co) và không trùng tài khoản khác. */
 function validateStaffEmail(raw: string, accounts: StaffAccount[] = []): string | undefined {
   const clean = raw.trim();
   if (!clean) return 'Vui lòng nhập email liên hệ.';
@@ -22,6 +23,7 @@ function validateStaffEmail(raw: string, accounts: StaffAccount[] = []): string 
   return undefined;
 }
 
+/** Kiểm tra số điện thoại nhân sự (không bắt buộc): đúng 10 số và không trùng tài khoản khác. */
 function validateStaffPhone(raw?: string, accounts: StaffAccount[] = []): string | undefined {
   const clean = (raw ?? '').trim();
   if (!clean) return undefined;
@@ -33,6 +35,7 @@ function validateStaffPhone(raw?: string, accounts: StaffAccount[] = []): string
   return undefined;
 }
 
+/** Màn quản lý tài khoản nhân sự (HLV, lễ tân): danh sách có sắp xếp, tạo tài khoản mới, khóa/mở khóa. */
 export function StaffAccountsPage() {
   const { t } = useStaffI18n();
   const [accounts, setAccounts] = useState<StaffAccount[]>([]);
@@ -45,6 +48,7 @@ export function StaffAccountsPage() {
   const [error, setError] = useState<StaffMessage>('');
   const [reload, setReload] = useState(0);
 
+  // Danh sách tài khoản sau khi sắp xếp theo lựa chọn.
   const sortedAccounts = useMemo(() => {
     return [...accounts].sort((a, b) => {
       switch (sortOption) {
@@ -84,6 +88,7 @@ export function StaffAccountsPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [confirm, confirmDialog] = useConfirm();
 
+  // Khóa hoặc mở khóa tài khoản sau khi xác nhận.
   async function toggleLock(account: StaffAccount) {
     if (busyId !== null) return;
     const lock = account.status === 'active';
@@ -108,6 +113,7 @@ export function StaffAccountsPage() {
     }
   }
 
+  // Tạo tài khoản nhân sự sau khi kiểm tra email và số điện thoại.
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;

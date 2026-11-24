@@ -16,6 +16,10 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { ActionMenu } from '../../shared/ui/ActionMenu';
 import { isValidEmailAddress, isValidPhoneNumber, normalizePhoneNumber, isValidPassword, PASSWORD_RULE_ERROR, PASSWORD_RULE_HINT } from '../auth/authValidation';
 
+/**
+ * Kiểm tra email người dùng: bắt buộc, đúng định dạng (cảnh báo gõ nhầm @gmail.co) và không trùng người dùng
+ * khác.
+ */
 function validateUserEmail(raw: string, existingUsers: UserAccount[] = []): string | undefined {
   const cleanEmail = raw.trim();
   if (!cleanEmail) return 'Vui lòng nhập email liên hệ.';
@@ -31,6 +35,10 @@ function validateUserEmail(raw: string, existingUsers: UserAccount[] = []): stri
   return undefined;
 }
 
+/**
+ * Kiểm tra số điện thoại người dùng: bắt buộc tùy cờ required, đúng 10 số và không trùng người dùng khác (trừ
+ * excludeUserId).
+ */
 function validateUserPhone(raw: string, required = true, existingUsers: UserAccount[] = [], excludeUserId?: string): string | undefined {
   const cleanPhone = raw.trim();
   if (!cleanPhone) return required ? 'Vui lòng nhập số điện thoại.' : undefined;
@@ -44,6 +52,10 @@ function validateUserPhone(raw: string, required = true, existingUsers: UserAcco
   return undefined;
 }
 
+/**
+ * Màn quản trị người dùng và phân quyền: danh sách và tài khoản đã xóa, tạo/sửa/khóa/xóa/khôi phục tài khoản,
+ * dọn dẹp tài khoản không hoạt động và bật/tắt quyền theo vai trò.
+ */
 export function UserManagerPage() {
   const { t } = useStaffI18n();
   const [users, setUsers] = useState<UserAccount[]>([]);
@@ -109,6 +121,7 @@ export function UserManagerPage() {
     void loadData();
   }, []);
 
+  // Tải người dùng, vai trò, quyền và tài khoản đã xóa.
   async function loadData() {
     setLoading(true);
     try {
@@ -130,6 +143,7 @@ export function UserManagerPage() {
     }
   }
 
+  // Người dùng sau khi lọc theo từ khóa (tên, email, số điện thoại) và vai trò.
   const filteredUsers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return users.filter((u) => {
@@ -143,6 +157,7 @@ export function UserManagerPage() {
     });
   }, [users, searchTerm, roleFilter]);
 
+  // Tài khoản đã xóa sau khi lọc theo từ khóa.
   const filteredDeletedUsers = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     return deletedUsers.filter((u) => {
@@ -156,6 +171,7 @@ export function UserManagerPage() {
     });
   }, [deletedUsers, searchTerm, roleFilter]);
 
+  // Khóa hoặc mở khóa tài khoản sau khi xác nhận.
   async function handleToggleLock(user: UserAccount) {
     const locking = user.status === 'ACTIVE';
     const confirmed = await confirm({
@@ -183,6 +199,7 @@ export function UserManagerPage() {
     }
   }
 
+  // Xác nhận xóa tài khoản đang chọn và chuyển nó sang danh sách tài khoản đã xóa.
   async function handleConfirmDelete() {
     if (!deletingUser) return;
     setIsDeleting(true);
@@ -201,6 +218,7 @@ export function UserManagerPage() {
     }
   }
 
+  // Khôi phục tài khoản đã xóa sau khi xác nhận.
   async function handleRestoreUser(user: UserAccount) {
     if (restoringUserId) return;
     const confirmed = await confirm({
@@ -230,6 +248,7 @@ export function UserManagerPage() {
     }
   }
 
+  // Chạy dọn dẹp tài khoản không hoạt động và báo số tài khoản đã dọn.
   async function handleRunCleanup() {
     setIsCleaning(true);
     try {
@@ -247,6 +266,7 @@ export function UserManagerPage() {
     }
   }
 
+  // Tạo người dùng mới sau khi kiểm tra tên, email, số điện thoại và mật khẩu.
   async function handleCreateUser(e: React.FormEvent) {
     e.preventDefault();
 
@@ -313,6 +333,7 @@ export function UserManagerPage() {
     }
   }
 
+  // Mở hộp chỉnh sửa với dữ liệu của người dùng.
   function handleOpenEdit(user: UserAccount) {
     setEditError(null);
     setEditingUser(user);
@@ -325,6 +346,7 @@ export function UserManagerPage() {
     setEditFieldErrors({});
   }
 
+  // Cập nhật tên, số điện thoại, vai trò và giới tính của người dùng.
   async function handleUpdateUser(e: React.FormEvent) {
     e.preventDefault();
     if (!editingUser) return;
@@ -373,6 +395,7 @@ export function UserManagerPage() {
     }
   }
 
+  // Bật/tắt một quyền của vai trò (cập nhật lạc quan, hoàn lại nếu lỗi; vai trò ADMIN không đổi).
   async function handleTogglePermission(role: SystemRole, permId: string) {
     if (role === 'ADMIN') return;
 
@@ -396,6 +419,7 @@ export function UserManagerPage() {
     }
   }
 
+  // Huy hiệu hiển thị tên vai trò.
   const getRoleBadge = (role: SystemRole) => {
     switch (role) {
       case 'ADMIN':
