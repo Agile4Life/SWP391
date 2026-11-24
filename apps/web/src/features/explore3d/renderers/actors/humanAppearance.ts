@@ -8,8 +8,11 @@ import type { ActorOutfitPalette } from './liveActorsConfig';
  * and optional beards parented to the head, and natural skin tones.
  */
 
+/** Giới tính của nhân vật: nam hoặc nữ. */
 export type Gender = 'male' | 'female';
+/** Kiểu trang phục: thể thao, bơi, đi chân đất hoặc nhân viên. */
 export type WearMode = 'athletic' | 'swim' | 'barefoot' | 'staff';
+/** Tên kiểu tóc có sẵn (cắt ngắn, dài, búi...). */
 export type HairStyleName =
   | 'hair-simpleparted'
   | 'hair-buzzed'
@@ -22,6 +25,7 @@ export const HAIR_STYLES: Record<Gender, readonly HairStyleName[]> = {
   female: ['hair-long', 'hair-buns', 'hair-buzzedfemale', 'hair-long'],
 };
 
+/** Tài nguyên mô hình người: nhân vật theo giới tính, kiểu tóc và texture da. */
 export interface HumanAssets {
   /** Character scenes by gender (body, eyes, eyebrows on the shared rig). */
   characters: Record<Gender, THREE.Object3D>;
@@ -31,7 +35,11 @@ export interface HumanAssets {
   skinLight: Record<Gender, THREE.Texture>;
 }
 
-/** What an actor wears; every flag changes the cut or the details of the sportswear. */
+/**
+ * Kiểu trang phục của nhân vật: mỗi cờ đổi đường cắt hoặc chi tiết đồ thể thao (tay áo, áo crop, legging...).
+ *
+ * What an actor wears; every flag changes the cut or the details of the sportswear.
+ */
 export interface OutfitVariant {
   /** Short sleeves, otherwise a tank top. */
   sleeves: boolean;
@@ -47,6 +55,7 @@ export interface OutfitVariant {
   headband: boolean;
 }
 
+/** Diện mạo của một nhân vật: giới tính, bảng màu, kiểu tóc, trang phục, mũ bơi và kiểu mặc. */
 export interface HumanLook {
   gender: Gender;
   palette: ActorOutfitPalette;
@@ -70,6 +79,7 @@ const TRIM = 5;
 const WAISTBAND = 6;
 const STRIPE = 7;
 
+/** Các mốc kích thước cơ thể theo giới (eo, gấu quần, gấu legging...). */
 interface GenderLandmarks {
   waist: number;
   shortsHem: number;
@@ -157,6 +167,7 @@ const LANDMARKS: Record<Gender, GenderLandmarks> = {
   },
 };
 
+/** Một lớp áo quần (shell): hình học và loại vải của từng đỉnh để tô màu theo bộ đồ. */
 interface Shell {
   geometry: THREE.BufferGeometry;
   /** Kind of cloth of every vertex, to colour the shell per outfit. */
@@ -166,12 +177,17 @@ interface Shell {
 const shells = new Map<string, Shell>();
 const occludedBodies = new Map<string, THREE.BufferGeometry>();
 
+/** Hàm làm mượt (smoothstep) trong [0, 1]. */
 const smooth = (t: number) => {
   const c = Math.min(1, Math.max(0, t));
   return c * c * (3 - 2 * c);
 };
 
-/** Roughness per cloth kind: matte cotton/poly jersey, sleek lycra, rubber outsole. */
+/**
+ * Độ nhám theo loại vải: jersey cotton/poly mờ, lycra bóng, đế cao su.
+ *
+ * Roughness per cloth kind: matte cotton/poly jersey, sleek lycra, rubber outsole.
+ */
 function roughnessForKind(kind: number, wear: WearMode, v: OutfitVariant): number {
   if (wear === 'swim') return 0.36;
   switch (kind) {
@@ -193,7 +209,11 @@ function roughnessForKind(kind: number, wear: WearMode, v: OutfitVariant): numbe
   }
 }
 
-/** The kind of cloth at a point on the rest-pose body, or -1 where the skin stays bare. */
+/**
+ * Loại vải tại một điểm trên cơ thể ở tư thế nghỉ; -1 nghĩa là da để trần.
+ *
+ * The kind of cloth at a point on the rest-pose body, or -1 where the skin stays bare.
+ */
 function clothAt(
   x: number,
   y: number,
@@ -297,7 +317,11 @@ function clothAt(
   return -1;
 }
 
-/** Stand-off thickness (metres) with natural drape, overhanging untucked hems, and snug tapered cuffs. */
+/**
+ * Độ dày đệm giữa vải và da (mét) kèm độ rủ tự nhiên, gấu áo thả và cổ tay áo ôm.
+ *
+ * Stand-off thickness (metres) with natural drape, overhanging untucked hems, and snug tapered cuffs.
+ */
 function standOff(kind: number, y: number, x: number, gender: Gender, wear: WearMode, v: OutfitVariant): number {
   const L = LANDMARKS[gender];
   if (wear === 'swim') {
@@ -369,6 +393,7 @@ function standOff(kind: number, y: number, x: number, gender: Gender, wear: Wear
   }
 }
 
+/** Một đỉnh góc của tam giác áo: vị trí, pháp tuyến và các ảnh hưởng xương (tối đa bốn) kèm trọng số. */
 interface Corner {
   p: THREE.Vector3;
   n: THREE.Vector3;
@@ -377,7 +402,11 @@ interface Corner {
   weights: number[];
 }
 
-/** Displaces a garment vertex, sculpting real athletic sneakers and preventing inner-thigh self-intersection. */
+/**
+ * Dịch chuyển đỉnh áo quần để tạo hình giày thể thao và tránh xuyên đùi trong.
+ *
+ * Displaces a garment vertex, sculpting real athletic sneakers and preventing inner-thigh self-intersection.
+ */
 function displaceClothVertex(
   c: Corner,
   kind: number,
@@ -446,7 +475,11 @@ function displaceClothVertex(
   outNor.copy(c.n);
 }
 
-/** The influences of two corners averaged, keeping the four strongest bones. */
+/**
+ * Trộn hai đỉnh góc (trung bình ảnh hưởng xương, giữ bốn xương mạnh nhất).
+ *
+ * The influences of two corners averaged, keeping the four strongest bones.
+ */
 function blend(a: Corner, b: Corner): Corner {
   const influence = new Map<number, number>();
   for (const corner of [a, b]) {
@@ -464,7 +497,11 @@ function blend(a: Corner, b: Corner): Corner {
 
 const MAX_SPLITS = 2;
 
-/** Builds and caches the sportswear shell for one body, wear mode and cut. */
+/**
+ * Dựng và cache lớp áo thể thao cho một thân, kiểu mặc và đường cắt.
+ *
+ * Builds and caches the sportswear shell for one body, wear mode and cut.
+ */
 function buildShell(
   body: THREE.SkinnedMesh,
   gender: Gender,
@@ -482,12 +519,14 @@ function buildShell(
   const skinWeight = source.getAttribute('skinWeight');
   const index = source.getIndex();
   const triangles = index ? index.count / 3 : position.count / 3;
+  // Tạo đỉnh góc từ chỉ số đỉnh của mesh thân.
   const corner = (id: number): Corner => ({
     p: new THREE.Vector3(position.getX(id), position.getY(id), position.getZ(id)),
     n: new THREE.Vector3(normal.getX(id), normal.getY(id), normal.getZ(id)),
     bones: [0, 1, 2, 3].map(w => skinIndex.getComponent(id, w)),
     weights: [0, 1, 2, 3].map(w => skinWeight.getComponent(id, w)),
   });
+  // Loại vải tại một đỉnh góc.
   const kindAt = (c: Corner) => clothAt(Math.abs(c.p.x), c.p.y, c.n.x, c.n.z, gender, wear, v);
 
   const outPosition: number[] = [];
@@ -499,6 +538,7 @@ function buildShell(
   const tmpPos = new THREE.Vector3();
   const tmpNor = new THREE.Vector3();
 
+  // Phát một tam giác (chia nhỏ khi nằm ở biên giữa da và vải).
   const emit = (c0: Corner, c1: Corner, c2: Corner, depth: number) => {
     const centre = blend(blend(c0, c1), c2);
     const kinds = [kindAt(c0), kindAt(c1), kindAt(c2), kindAt(centre)];
@@ -531,6 +571,7 @@ function buildShell(
   };
 
   for (let t = 0; t < triangles; t++) {
+    // Lấy chỉ số đỉnh thứ k của tam giác t.
     const id = (k: number) => (index ? index.getX(t * 3 + k) : t * 3 + k);
     emit(corner(id(0)), corner(id(1)), corner(id(2)), 0);
   }
@@ -547,6 +588,9 @@ function buildShell(
 }
 
 /**
+ * Sao chép nông hình học thân nhưng bỏ các tam giác nằm sâu hơn 3 cm trong áo đặc để da/đồ lót không lòi ra khi
+ * gập gối, hông, khuỷu.
+ *
  * Shallow-clones the body geometry with an index buffer that omits triangles strictly > 3 cm
  * inside opaque garments, eliminating skin/underwear poke-through when knees, hips or elbows bend.
  */
@@ -605,7 +649,11 @@ function occludedBodyGeometry(
 const outfitGeometries = new Map<string, THREE.BufferGeometry>();
 const jitter = new THREE.Color();
 
-/** The shell with this outfit's colours; shared by every actor that wears the same one. */
+/**
+ * Tạo hình học áo quần với màu của bộ đồ này; dùng chung cho mọi nhân vật mặc cùng bộ.
+ *
+ * The shell with this outfit's colours; shared by every actor that wears the same one.
+ */
 function outfitGeometry(
   shell: Shell,
   key: string,
@@ -651,7 +699,11 @@ function outfitGeometry(
 
 const hsl = { h: 0, s: 0, l: 0 };
 
-/** Sportswear preserves crisp whites/ivories while taming neon toy primaries into athletic dyes. */
+/**
+ * Làm dịu màu: giữ trắng/ngà sắc nét và giảm các màu nguyên sắc chói thành màu nhuộm thể thao.
+ *
+ * Sportswear preserves crisp whites/ivories while taming neon toy primaries into athletic dyes.
+ */
 function mute(hex: string): THREE.Color {
   const color = new THREE.Color(hex);
   color.getHSL(hsl);
@@ -661,7 +713,11 @@ function mute(hex: string): THREE.Color {
   return color.setHSL(hsl.h, hsl.s * satScale, Math.min(maxL, Math.max(0.09, hsl.l * 0.95)));
 }
 
-/** The colour table of an outfit, indexed by kind of cloth. */
+/**
+ * Bảng màu của bộ đồ, đánh chỉ mục theo loại vải.
+ *
+ * The colour table of an outfit, indexed by kind of cloth.
+ */
 function outfitColours(palette: ActorOutfitPalette): THREE.Color[] {
   const top = mute(palette.top);
   const bottom = mute(palette.bottom);
@@ -684,6 +740,9 @@ function outfitColours(palette: ActorOutfitPalette): THREE.Color[] {
 let fabric: THREE.MeshStandardMaterial | undefined;
 
 /**
+ * Vật liệu vải thể thao: dệt kim mịn, nếp căng nhẹ và độ nhám theo vùng (aRoughness) để áo, lycra, da giày và
+ * đế cao su khác nhau trong một lần vẽ.
+ *
  * Sportswear fabric: fine knit weave, soft tension folds, and per-zone roughness (`aRoughness`)
  * so jersey tees, compression lycra, leather uppers and rubber outsoles shade distinctly in one draw call.
  */
@@ -731,6 +790,7 @@ function fabricMaterial(): THREE.MeshStandardMaterial {
 }
 
 const skinMaterials = new Map<string, THREE.Material>();
+/** Tạo (có cache) vật liệu da từ vật liệu gốc, texture sáng và màu da. */
 function skinMaterial(source: THREE.Material, key: string, light: THREE.Texture | undefined, tint: THREE.Color): THREE.Material {
   const cached = skinMaterials.get(key);
   if (cached) return cached;
@@ -742,6 +802,7 @@ function skinMaterial(source: THREE.Material, key: string, light: THREE.Texture 
 }
 
 const hairMaterials = new Map<string, THREE.Material>();
+/** Tạo (có cache) vật liệu tóc từ vật liệu gốc và màu tóc (hoặc mũ bơi trơn). */
 function hairMaterial(source: THREE.Material, key: string, tint: THREE.Color, plain: boolean): THREE.Material {
   const cached = hairMaterials.get(key);
   if (cached) return cached;
@@ -759,7 +820,11 @@ function hairMaterial(source: THREE.Material, key: string, tint: THREE.Color, pl
 const headbands = new Map<string, THREE.Material>();
 const headbandGeometries = new Map<Gender, THREE.BufferGeometry>();
 
-/** A band around the forehead, calibrated per gender's rest-pose skull dimensions. */
+/**
+ * Dải băng quanh trán, căn theo kích thước hộp sọ của từng giới.
+ *
+ * A band around the forehead, calibrated per gender's rest-pose skull dimensions.
+ */
 function headband(gender: Gender, colour: string): THREE.Mesh {
   let geometry = headbandGeometries.get(gender);
   if (!geometry) {
@@ -797,6 +862,9 @@ const curl = new THREE.Quaternion();
 const curlAxis = new THREE.Vector3(1, 0, 0);
 
 /**
+ * Gập ngón tay: mô hình ở tư thế chữ T với ngón thẳng trông như búp bê nhựa; grip 1 là bàn tay thả lỏng, khoảng
+ * 2 là nắm chặt (vợt, tạ).
+ *
  * Bends the fingers: the rig stands in a T-pose with straight fingers, which reads as a
  * plastic doll. `grip` 1 is a relaxed hand, about 2 a closed fist (racket, barbell, dumbbell).
  */
@@ -811,6 +879,7 @@ export function relaxHands(model: THREE.Object3D, grip: number): void {
   }
 }
 
+/** Sao chép tóc mẫu và tô màu/vật liệu theo màu tóc. */
 function paintHairClone(template: THREE.Object3D, keyPrefix: string, tint: THREE.Color, plain: boolean): THREE.Object3D {
   const clone = template.clone();
   clone.traverse(object => {
@@ -822,6 +891,9 @@ function paintHairClone(template: THREE.Object3D, keyPrefix: string, tint: THREE
 }
 
 /**
+ * Mặc đồ cho nhân vật nhân bản ở tư thế nghỉ (trước khi co): màu da, loại bỏ lớp trong bị che, áo thể thao,
+ * tóc, râu và băng đô; mọi buffer và vật liệu đều được cache.
+ *
  * Dresses a cloned character in its rest pose, before it is scaled: skin tone, occluded under-cloth
  * culling, sportswear shell, hair, optional beard and headband. All buffers and materials are cached.
  */

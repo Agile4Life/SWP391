@@ -4,6 +4,7 @@ import { SOL_CENTER_SCENE } from '../../scene/solCenter.scene';
 import { allItems, getLevelByCode, getLevelWorldY, levelOf } from '../../scene/selectors';
 import type { LevelMode } from '../../state/exploreStore';
 
+/** Các loại hoạt động của người trong cảnh (chạy bộ, đạp xe, squat tạ, đẩy tạ, đánh vợt, bơi, yoga...). */
 export type ActorActivityKind =
   | 'treadmill-run'
   | 'upright-bike'
@@ -27,6 +28,7 @@ export type ActorActivityKind =
   | 'walking-patrol'
   | 'fountain-plume';
 
+/** Bảng màu trang phục của một nhân vật: da, tóc, áo, quần, giày và màu nhấn. */
 export interface ActorOutfitPalette {
   readonly skin: string;
   readonly hair: string;
@@ -36,6 +38,10 @@ export interface ActorOutfitPalette {
   readonly accent: string;
 }
 
+/**
+ * Định nghĩa một nhân vật hoạt động: id, tầng, khu vực, đồ vật liên quan, loại hoạt động, tốc độ, pha, bảng màu
+ * và vị trí trong InstancedMesh.
+ */
 export interface LiveActorDefinition {
   readonly id: string;
   readonly level: LevelCode;
@@ -55,6 +61,10 @@ export interface LiveActorDefinition {
   readonly instanceStartIndex: number;
 }
 
+/**
+ * Phép biến đổi đã tính của một phần cơ thể tại một thời điểm: nhân vật, tên phần, tầng, hiển thị hay không và
+ * vị trí/xoay/tỉ lệ.
+ */
 export interface EvaluatedPartTransform {
   readonly actorId: string;
   readonly partName: string;
@@ -68,6 +78,7 @@ export interface EvaluatedPartTransform {
 
 export const STATIC_POSE_TIME_SEC = 1.25;
 
+/** Người dùng có bật giảm chuyển động không. */
 export function prefersReducedMotion(): boolean {
   if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
     return false;
@@ -224,6 +235,7 @@ const TENNIS_PALETTES: readonly ActorOutfitPalette[] = [
   },
 ] as const;
 
+/** Số phần (instance) cần cho một loại hoạt động (người cộng thêm tạ nếu có). */
 export function getPartCountForActivity(activity: ActorActivityKind): number {
   switch (activity) {
     case 'barbell-squat':
@@ -254,6 +266,7 @@ export function getPartCountForActivity(activity: ActorActivityKind): number {
  */
 let cachedActorPartGeometry: THREE.BufferGeometry | null = null;
 
+/** Tạo (có cache) hình học đơn vị dùng chung cho mọi phần cơ thể của nhân vật thủ tục. */
 export function createActorPartGeometry(): THREE.BufferGeometry {
   if (cachedActorPartGeometry) {
     return cachedActorPartGeometry;
@@ -347,6 +360,9 @@ export function createActorPartGeometry(): THREE.BufferGeometry {
 }
 
 /**
+ * Dựng toàn bộ định nghĩa nhân vật và vật thể động từ tài liệu cảnh một cách xác định (cùng đầu vào cho cùng
+ * kết quả).
+ *
  * Deterministically builds all live human and dynamic object definitions from the scene document.
  */
 export function buildLiveActorDefinitions(
@@ -360,6 +376,7 @@ export function buildLiveActorDefinitions(
 
   const rawDefs: Array<Omit<LiveActorDefinition, 'partCount' | 'instanceStartIndex'>> = [];
   let paletteIdx = 0;
+  // Lấy bảng màu kế tiếp theo vòng quay.
   const nextPalette = (): ActorOutfitPalette => {
     const p = OUTFIT_PALETTES[paletteIdx % OUTFIT_PALETTES.length]!;
     paletteIdx += 1;
@@ -800,6 +817,7 @@ export function buildLiveActorDefinitions(
   const tennisCourts = ['item-out-tennis-01', 'item-out-tennis-02'];
   tennisCourts.forEach((courtId, idx) => {
     const rallyPhase = idx * 1.85 + 0.3;
+    // Thông số trận đánh qua lại ở sân (độ dài, độ rộng và độ cao lưới).
     const rallySpec = {
       rallySpanZ: 7.94,
       rallySpanX: 0.92,
@@ -907,12 +925,14 @@ export function buildLiveActorDefinitions(
   });
 }
 
+/** Tổng số instance cần cấp cho mọi nhân vật. */
 export function getTotalActorInstanceCount(defs: readonly LiveActorDefinition[]): number {
   if (defs.length === 0) return 0;
   const last = defs[defs.length - 1]!;
   return last.instanceStartIndex + last.partCount;
 }
 
+/** Tầng của nhân vật có đang hiển thị không (chế độ một tầng thì chỉ tầng đang xem). */
 export function isActorLevelVisible(
   level: LevelCode,
   levelMode: LevelMode,
@@ -928,6 +948,7 @@ export function isActorLevelVisible(
 // BIOMECHANICAL POSE SOLVER & FORWARD KINEMATICS
 // =========================================================================
 
+/** Các góc tư thế của người: dịch gốc, xoay thân, góc hông/gối/vai/khuỷu và các thông số bổ sung. */
 export interface HumanPoseAngles {
   rootOffset: Vec3;
   yawOffset: number;
@@ -954,6 +975,7 @@ export interface HumanPoseAngles {
   reclinedMode?: boolean;
 }
 
+/** Tư thế mặc định (đứng thẳng, mọi góc bằng 0). */
 function defaultPoseAngles(): HumanPoseAngles {
   return {
     rootOffset: [0, 0, 0],
@@ -979,6 +1001,7 @@ function defaultPoseAngles(): HumanPoseAngles {
   };
 }
 
+/** Hướng đoạn chi từ góc gập (pitch) và góc dạng (splay) trong hệ nhân vật. */
 function limbDirection(pitch: number, splay: number): Vec3 {
   const cp = Math.cos(pitch);
   const sp = Math.sin(pitch);
@@ -987,6 +1010,7 @@ function limbDirection(pitch: number, splay: number): Vec3 {
   return [ss, -cs * cp, cs * sp];
 }
 
+/** Đổi toạ độ cục bộ của nhân vật sang toạ độ thế giới theo vị trí neo và góc xoay. */
 function rotateLocalToWorld(
   anchor: Vec3,
   yaw: number,
@@ -1003,7 +1027,11 @@ function rotateLocalToWorld(
   ];
 }
 
-/** Lap path of a swimmer: shared by the procedural body and the rigged character. */
+/**
+ * Đường bơi vòng của một vận động viên bơi, dùng chung cho thân thủ tục và nhân vật có xương.
+ *
+ * Lap path of a swimmer: shared by the procedural body and the rigged character.
+ */
 export function solveSwimPath(
   actor: LiveActorDefinition,
   timeSec: number,
@@ -1033,6 +1061,7 @@ export function solveSwimPath(
   };
 }
 
+/** Kết quả giải tư thế: góc tư thế, vị trí thế giới của neo (di chuyển khi tuần tra) và hướng nhìn. */
 export interface HumanPoseSolution {
   pose: HumanPoseAngles;
   /** World position of the actor's anchor (moves for walking patrols). */
@@ -1041,6 +1070,9 @@ export interface HumanPoseSolution {
 }
 
 /**
+ * Giải góc tư thế của hoạt động cùng vị trí thế giới và hướng của nhân vật tại timeSec; dùng chung cho hình
+ * khớp thủ tục và nhân vật có xương để cùng đường đi và độ đung đưa.
+ *
  * Solves the activity's pose angles plus the actor's world position and yaw at `timeSec`.
  * Shared by the procedural jointed figure and the rigged characters so both follow the
  * same paths and swaying.
@@ -1075,6 +1107,7 @@ export function solveHumanPose(
 
     case 'upright-bike': {
       const crank = phase * 1.5;
+      // Giải IK bàn đạp: tính góc gối/hông cho bàn chân theo góc đạp.
       const solvePedalIk = (angle: number) => {
         const ty = 0.28 + 0.16 * Math.sin(angle);
         const tz = 0.28 + 0.16 * Math.cos(angle);
@@ -1244,6 +1277,7 @@ export function solveHumanPose(
       // 4-beat synchronized figure-8 rally (`c = 0`: Forehand drive, `c = 1` & `3`: center split-step, `c = 2`: Backhand drive).
       const c = (((timeSec * actor.speed * 0.55 + actor.phaseOffset / Math.PI) % 4) + 4) % 4;
       const spanX = actor.rallySpanX ?? 0.92;
+      // Hàm làm mượt (smoothstep) trong [0, 1].
       const ease = (t: number) => {
         const cl = Math.min(1, Math.max(0, t));
         return cl * cl * (3 - 2 * cl);
@@ -1495,6 +1529,7 @@ export function solveHumanPose(
         target[2] - actor.anchorPosition[2],
       );
       const turnWindow = 0.1;
+      // Hàm làm mượt cho đoạn quay đầu khi đi tuần.
       const easeTurn = (x: number) => {
         const c = Math.min(1, Math.max(0, x));
         return c * c * (3 - 2 * c);
@@ -1528,6 +1563,7 @@ export function solveHumanPose(
   return { pose, worldPos: actorWorldPos, yaw: actorYaw };
 }
 
+/** Bản đồ độ cao thế giới của từng tầng theo chế độ tầng. */
 export function resolveLevelWorldYMap(
   scene: SceneDoc,
   levelMode: LevelMode,
@@ -1548,7 +1584,11 @@ export function resolveLevelWorldYMap(
   return map;
 }
 
-/** World position of an actor's anchor (feet) for the current level layout. */
+/**
+ * Vị trí thế giới của điểm neo (chân) của nhân vật theo cách bố trí tầng hiện tại.
+ *
+ * World position of an actor's anchor (feet) for the current level layout.
+ */
 export function getActorWorldAnchor(
   actor: LiveActorDefinition,
   scene: SceneDoc,
@@ -1559,6 +1599,8 @@ export function getActorWorldAnchor(
 }
 
 /**
+ * Tính ma trận mọi phần cơ thể đã instanced tại timeSec cho một tập nhân vật.
+ *
  * Evaluates all instanced part transforms at `timeSec` for a given set of actor definitions.
  */
 export function evaluateActorPartsAtTime(
