@@ -28,6 +28,7 @@ import {
   isSessionCompleted,
 } from '../coachBookingUtils';
 
+/** Chuyển lỗi đặt lịch PT thành thông báo dễ hiểu (gói hết hạn, hết hạn mức...). */
 function coachBookingErrorMessage(err: unknown): string | SourceMessage {
   if (err instanceof ApiError) {
     if (err.code === 'MEMBERSHIP_INACTIVE_OR_EXPIRED') {
@@ -44,10 +45,12 @@ function coachBookingErrorMessage(err: unknown): string | SourceMessage {
   return memberError(err, 'Không thể đặt lịch. Vui lòng thử lại.');
 }
 
+/** Ngày hôm nay theo giờ trung tâm. */
 function localToday(): string {
   return centerNowParts().date;
 }
 
+/** Danh sách các ngày sắp tới (mặc định 14 ngày) kèm tên thứ, ngày, tháng và nhãn. */
 function nextDays(count = 14): Array<{
   iso: string;
   dayName: string;
@@ -84,6 +87,10 @@ function nextDays(count = 14): Array<{
   return days;
 }
 
+/**
+ * Giao diện đặt lịch PT 1:1 của hội viên: chọn HLV và ngày, xem khung giờ, đặt lịch (miễn phí theo hạn mức hoặc
+ * trả tiền), hủy lịch và xem các buổi đã đặt.
+ */
 export function MemberCoachBookingView({
   onBookingSuccess,
 }: {
@@ -134,6 +141,7 @@ export function MemberCoachBookingView({
   const watchedPendingBookingsRef = useRef<Set<number>>(new Set());
   const announcedPaidBookingsRef = useRef<Set<number>>(new Set());
 
+  // Tải lại các buổi đã đặt và hạn mức PT.
   const refreshBookingsAndQuota = useCallback(async () => {
     try {
       const [bookingsList, quota] = await Promise.all([
@@ -158,6 +166,7 @@ export function MemberCoachBookingView({
   // Tải HLV, lịch PT và quota thật; không gọi API đánh giá đã bỏ khỏi Member.
   useEffect(() => {
     let active = true;
+    // Tải HLV, buổi đã đặt và hạn mức khi vào màn hình.
     async function init() {
       setLoadingCoaches(true);
       setError('');
@@ -220,12 +229,14 @@ export function MemberCoachBookingView({
   // Real-time invalidation & visibility/focus synchronization for 1:1 booking payments
   useEffect(() => {
     let fallbackTimer: number | null = null;
+    // Dừng vòng hỏi định kỳ.
     const stopFallback = () => {
       if (fallbackTimer !== null) {
         window.clearInterval(fallbackTimer);
         fallbackTimer = null;
       }
     };
+    // Hỏi định kỳ khi có buổi đang chờ thanh toán.
     const startFallback = () => {
       if (!hasPendingPaymentBooking || fallbackTimer !== null) return;
       fallbackTimer = window.setInterval(() => {
@@ -242,11 +253,13 @@ export function MemberCoachBookingView({
       },
       startFallback,
     );
+    // Làm mới khi tab đang hiển thị.
     const refreshIfVisible = () => {
       if (document.visibilityState === 'visible') {
         void refreshBookingsAndQuota();
       }
     };
+    // Làm mới ngay (focus, có mạng hoặc ví vừa cập nhật).
     const refreshNow = () => {
       void refreshBookingsAndQuota();
     };
@@ -268,6 +281,7 @@ export function MemberCoachBookingView({
   useEffect(() => {
     if (!selectedCoachId || !slotDate) return;
     let active = true;
+    // Tải các khung giờ của HLV trong ngày đang chọn.
     async function loadSlots() {
       setLoadingSlots(true);
       setSlots([]);
@@ -292,6 +306,7 @@ export function MemberCoachBookingView({
 
   useEffect(() => { setCancelError(''); }, [cancelTarget]);
 
+  // Mở hộp xác nhận đặt lịch cho một khung giờ.
   function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
     setModalSlot(slot);
     setError('');
@@ -304,6 +319,7 @@ export function MemberCoachBookingView({
     }
   }
 
+  // Xác nhận đặt lịch PT và xử lý lỗi hiển thị theo mã lỗi.
   async function handleConfirmBooking() {
     if (!selectedCoach || !modalSlot) return;
     setSubmitting(true);
@@ -360,6 +376,7 @@ export function MemberCoachBookingView({
     }
   }
 
+  // Xác nhận hủy buổi PT (buổi đã trả tiền thì được hoàn về Ví SÖL).
   async function handleConfirmCancel() {
     if (!cancelTarget) return;
     setCancelling(true);
@@ -630,6 +647,7 @@ export function MemberCoachBookingView({
           return h >= 18;
         });
 
+        // Vẽ một ô khung giờ (đang chọn, trống hoặc bận kèm lý do).
         const renderSlotPill = (slot: CoachAvailableSlotDto) => {
           const startFmt = slot.startTime.slice(0, 5);
           const endFmt = slot.endTime.slice(0, 5);

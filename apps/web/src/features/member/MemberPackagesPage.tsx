@@ -38,11 +38,13 @@ import { trialApi, type TrialStatus } from './trialApi';
 import { getProfile, type Profile } from './profileApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 
+/** Trạng thái tải dữ liệu: đang tải, lỗi hoặc thành công kèm dữ liệu. */
 type LoadState<T> =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'success'; data: T };
 
+/** Kết quả sau khi tạo yêu cầu gói: đăng ký, gói và hành động (đăng ký mới, gia hạn hoặc nâng cấp). */
 interface RequestResult {
   subscription: MemberSubscription;
   membershipPackage: MembershipPackage;
@@ -55,19 +57,23 @@ const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay ho�
 
 // The backend VNPay guard decides whether a pending online attempt can still settle.
 // Cash receipts under review, settled payments and unknown states must remain blocked here.
+/** Khoản thanh toán có chặn việc hủy gói không (khoản thất bại hoặc ví đang chờ thì không chặn). */
 function blocksMemberCancellation(payment: Payment): boolean {
   return payment.status !== 'failed' && !(payment.status === 'pending' && payment.method === 'online_wallet');
 }
 
+/** Định dạng ngày (cắt phần giờ) theo múi giờ trung tâm. */
 function formatDate(value: string): string {
   return formatCenterDate(value.slice(0, 10));
 }
 
+/** Khóa ngày hôm nay dạng YYYY-MM-DD theo giờ máy. */
 function todayKey(): string {
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 }
 
+/** Gói đích có cao hơn gói hiện tại không (giá cao hơn, hoặc cùng giá nhưng thời hạn dài hơn). */
 function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: MembershipPackage): boolean {
   if (!currentPkg || currentPkg.id === targetPkg.id) return false;
   if (targetPkg.price > currentPkg.price) return true;
@@ -75,6 +81,7 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   return false;
 }
 
+/** Lỗi có phải do cần xác minh danh tính (KYC) không (theo mã lỗi hoặc nội dung). */
 function isKycRequiredError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const code = (error as { code?: string }).code;
@@ -82,6 +89,10 @@ function isKycRequiredError(error: unknown): boolean {
   return /kyc|cccd|căn cước|hộ chiếu|identity|error\.membership\.kyc_required/i.test(error.message);
 }
 
+/**
+ * Trang gói tập của hội viên: xem danh mục, đăng ký, gia hạn, nâng cấp, bảo lưu/mở lại, hủy yêu cầu chờ thanh
+ * toán, nhận gói trải nghiệm và theo dõi thanh toán; tự đồng bộ khi quay lại tab.
+ */
 export function MemberPackagesPage() {
   useLanguage();
   const { lang, t } = useI18n();
@@ -135,6 +146,7 @@ export function MemberPackagesPage() {
   const [trialError, setTrialError] = useState<string | Error | { vi: string; en: string } | SourceMessage>('');
   const [isClaimingTrial, setIsClaimingTrial] = useState(false);
 
+  // Tải trạng thái gói trải nghiệm (lỗi nền thì bỏ qua).
   const loadTrialStatus = useCallback(async () => {
     try {
       const res = await trialApi.getStatus();
@@ -144,6 +156,7 @@ export function MemberPackagesPage() {
     }
   }, []);
 
+  // Tải hồ sơ để biết hội viên đã xác minh danh tính chưa (lỗi nền thì bỏ qua).
   const loadKycProfile = useCallback(async () => {
     try {
       const res = await getProfile();
@@ -158,6 +171,7 @@ export function MemberPackagesPage() {
     void loadKycProfile();
   }, [loadTrialStatus, loadKycProfile]);
 
+  // Chọn ảnh giấy tờ cho gói trải nghiệm (tối đa 5MB), thu nhỏ trong trình duyệt để không vượt giới hạn body.
   const handleTrialImageUpload = (file: File, target: 'front' | 'back') => {
     if (file.size > 5 * 1024 * 1024) {
       setTrialError(memberMessage("Dung lượng ảnh tối đa là 5MB."));
@@ -179,6 +193,7 @@ export function MemberPackagesPage() {
     kycProfile.citizenId
   );
 
+  // Gửi yêu cầu gói trải nghiệm: dùng lại hồ sơ KYC có sẵn hoặc gửi giấy tờ mới.
   const handleClaimTrial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (hasReusableKyc) {
@@ -265,6 +280,7 @@ export function MemberPackagesPage() {
   const [releasingVnpay, setReleasingVnpay] = useState(false);
   const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
 
+  // Tải danh mục gói (chỉ lần gọi mới nhất được dùng).
   const loadPackages = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.packages;
@@ -275,6 +291,7 @@ export function MemberPackagesPage() {
     } catch { if (version === readVersions.current.packages) setPackagesState({ status: 'error' }); }
   }, []);
 
+  // Tải gói hiện tại.
   const loadCurrent = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.current;
@@ -285,6 +302,7 @@ export function MemberPackagesPage() {
     } catch { if (version === readVersions.current.current) setCurrentState({ status: 'error' }); }
   }, []);
 
+  // Tải lịch sử các kỳ gói.
   const loadHistory = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.history;
@@ -300,6 +318,7 @@ export function MemberPackagesPage() {
     catch { if (version === readVersions.current.history) setHistoryState({ status: 'error' }); }
   }, []);
 
+  // Tải lịch sử thanh toán.
   const loadPayments = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.payments;
@@ -315,6 +334,7 @@ export function MemberPackagesPage() {
     }
   }, []);
 
+  // Tải các yêu cầu hủy gói.
   const loadCancellations = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.cancellations;
@@ -364,6 +384,7 @@ export function MemberPackagesPage() {
     ? paymentsState.data.filter((payment) => payment.subscriptionId === pending.id) : [];
   const pendingPackage = pending ? packages.find((item) => item.id === pending.packageId) : null;
 
+  // Số lần gia hạn đang chiếm chỗ của một kỳ (chỉ pending_payment hoặc active chặn gia hạn, khớp backend).
   function renewalCount(subscriptionId: number): number {
     // Match MembershipSubscriptionService.renew(): only pending_payment/active block renewal.
     return historyState.status === 'success'
@@ -372,6 +393,7 @@ export function MemberPackagesPage() {
       : 0;
   }
 
+  // Phát hiện xung đột trong lịch sử kỳ đã trả tiền (kỳ chồng ngày hoặc dữ liệu sai); xung đột thì không cho thao tác.
   function paidHistoryConflict(): boolean {
     if (historyState.status !== 'success') return true;
     const paid = historyState.data.filter((item) => item.status === 'active' || item.status === 'expired');
@@ -390,6 +412,7 @@ export function MemberPackagesPage() {
     return false;
   }
 
+  // Tìm kỳ cuối của chuỗi gia hạn cho một kỳ; có xung đột hoặc đang bảo lưu thì báo conflict.
   function renewalPath(subscriptionId: number): { tail: MemberSubscription | null; conflict: boolean } {
     if (historyState.status !== 'success' || paidHistoryConflict()
       || historyState.data.some((item) => item.status === 'frozen')) return { tail: null, conflict: true };
@@ -439,6 +462,7 @@ export function MemberPackagesPage() {
   useEffect(() => {
     let disposed = false;
     let inFlight = false;
+    // Đồng bộ lại toàn bộ dữ liệu gói (bỏ qua khi tab ẩn hoặc đang bận, xếp hàng chạy lại sau); phát hiện thanh toán vừa thành công để báo.
     async function refresh() {
       if (disposed) return;
       if (inFlight || document.visibilityState === 'hidden' || requestBusy.current
@@ -493,7 +517,9 @@ export function MemberPackagesPage() {
       }
     }
 
+    // Làm mới theo sự kiện focus/online.
     const onRefresh = () => void refresh();
+    // Quay lại trang từ bộ nhớ đệm thì đồng bộ lại.
     const onRestore = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       syncVersion.current += 1;
@@ -540,6 +566,7 @@ export function MemberPackagesPage() {
     focusedSelection.current = selectedId;
   }, [isStatusSyncing, packagesState.status, selectedId]);
 
+  // Đăng ký, gia hạn hoặc nâng cấp gói: kiểm tra xung đột và yêu cầu KYC lần đầu, tính báo giá nâng cấp, xác nhận với hội viên rồi tạo yêu cầu thanh toán.
   async function handleMembershipAction(
     membershipPackage: MembershipPackage,
     renewFrom: MemberSubscription | null,
@@ -647,6 +674,7 @@ export function MemberPackagesPage() {
     }
   }
 
+  // Mở lại gói đang bảo lưu.
   async function handleResume() {
     if (!frozenSubscription || requestBusy.current) return;
     requestBusy.current = true;
@@ -670,6 +698,7 @@ export function MemberPackagesPage() {
   }
 
 
+  // Hủy yêu cầu gói đang chờ thanh toán.
   async function handleCancelPending(subscriptionId: number) {
     if (returnSyncing || syncError || isStatusSyncing || isCancellingPending || requestBusy.current) return;
     requestBusy.current = true;

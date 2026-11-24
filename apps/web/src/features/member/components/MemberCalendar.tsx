@@ -13,9 +13,12 @@ import {
 import '../../schedule/calendar.css';
 import './MemberCalendar.css';
 
+/** Kiểu xem lịch: tuần hoặc tháng. */
 type View = 'week' | 'month';
+/** Loại sự kiện trên lịch (hiện chỉ có buổi PT). */
 type Kind = 'pt';
 
+/** Một sự kiện trên lịch của hội viên: buổi PT với nơi tập, HLV, cờ đã hủy và mã đặt lịch. */
 export interface CalendarEvent extends TimetableEvent {
   kind: Kind;
   place: string;
@@ -29,11 +32,13 @@ const HOUR_PX = 76;
 const MINUTE_MS = 60_000;
 const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
+/** Thời điểm hiện tại theo giờ trung tâm: ngày và số phút trong ngày. */
 function centerNow() {
   const { date, time } = centerNowParts();
   return { date, minutes: toMinutes(time) };
 }
 
+/** Hook trả về thời điểm hiện tại theo giờ trung tâm, cập nhật mỗi phút. */
 function useCenterNow() {
   const [now, setNow] = useState(centerNow);
   useEffect(() => {
@@ -43,13 +48,16 @@ function useCenterNow() {
   return now;
 }
 
+/** Hook cho biết màn hình đang hẹp (dưới 768px) hay không. */
 function useNarrow(): boolean {
   const query = "(max-width: 767px)";
+  // Đọc trạng thái khớp hiện tại của media query.
   const read = () => typeof window.matchMedia === "function" && window.matchMedia(query).matches;
   const [matches, setMatches] = useState(read);
   useEffect(() => {
     if (typeof window.matchMedia !== "function") return;
     const list = window.matchMedia(query);
+    // Cập nhật khi media query đổi trạng thái.
     const update = () => setMatches(list.matches);
     list.addEventListener("change", update);
     return () => list.removeEventListener("change", update);
@@ -57,10 +65,12 @@ function useNarrow(): boolean {
   return matches;
 }
 
+/** Ngày đầu tháng của ngày cho trước. */
 function monthStart(iso: string) {
   return `${iso.slice(0, 7)}-01`;
 }
 
+/** Cộng/trừ số tháng vào ngày, trả về ngày 1 của tháng kết quả. */
 function addMonths(iso: string, months: number) {
   const date = parseISODate(monthStart(iso));
   date.setMonth(date.getMonth() + months);
@@ -77,6 +87,7 @@ function rangeOf(view: View, anchor: string): { from: string; to: string } {
   return { from, to: addDays(from, 41) };
 }
 
+/** Nhãn khoảng thời gian đang xem (tháng hoặc tuần) theo ngôn ngữ. */
 function rangeLabel(view: View, anchor: string, english = false) {
   if (view === 'month') {
     const [year, month] = anchor.split('-');
@@ -87,10 +98,12 @@ function rangeLabel(view: View, anchor: string, english = false) {
   return `${shortDate(from)} - ${shortDate(to)}/${to.slice(0, 4)}`;
 }
 
+/** Sự kiện đã kết thúc so với thời điểm hiện tại chưa. */
 function isEnded(event: Pick<CalendarEvent, 'date' | 'endTime'>, now: { date: string; minutes: number }) {
   return event.date < now.date || (event.date === now.date && toMinutes(event.endTime) <= now.minutes);
 }
 
+/** Chuỗi đếm ngược tới giờ bắt đầu ("còn x ngày y giờ", "đang diễn ra"...). */
 function countdown(event: CalendarEvent, now: { date: string; minutes: number }, english = false) {
   const days = Math.round((parseISODate(event.date).getTime() - parseISODate(now.date).getTime()) / 86_400_000);
   const total = days * 1440 + toMinutes(event.startTime) - now.minutes;
@@ -104,14 +117,17 @@ function countdown(event: CalendarEvent, now: { date: string; minutes: number },
   return `còn ${m} phút`;
 }
 
+/** Nhãn thứ viết tắt (T2...CN). */
 function weekdayShort(iso: string) {
   return weekdayLabel(iso).replace('Thứ ', 'T').replace('Chủ nhật', 'CN');
 }
 
+/** Sắp xếp sự kiện theo ngày, giờ bắt đầu rồi id. */
 function sortEvents(events: CalendarEvent[]) {
   return [...events].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime) || a.id.localeCompare(b.id));
 }
 
+/** Chuyển một buổi PT thành sự kiện lịch. */
 function ptEvent(booking: CoachBookingDto): CalendarEvent {
   const title = memberText(`Tập 1:1 cùng ${booking.coachName}`, `1:1 session with ${booking.coachName}`);
   return {
@@ -126,15 +142,23 @@ async function loadPtBookings(): Promise<CoachBookingDto[]> {
   return (await getMyCoachBookings()).filter(item => item.status !== 'cancelled');
 }
 
+/**
+ * Lịch của hội viên (tuần/tháng): các buổi PT 1:1, buổi sắp tới, chi tiết sự kiện trong hộp thoại, chuyển
+ * tuần/tháng và chế độ một ngày trên màn hẹp.
+ */
 export function MemberCalendar() {
   const { lang } = useLanguage();
   const labels = lang === 'en'
     ? { thisWeek: 'This week', pt: '1:1 session', empty: 'No bookings this week.' }
     : { thisWeek: 'Tuần này', pt: 'Buổi PT 1:1', empty: 'Tuần này bạn chưa có lịch nào.' };
   const english = lang === 'en';
+  // Chọn chuỗi theo ngôn ngữ.
   const text = (vi: string, en: string) => english ? en : vi;
+  // Tên thứ đầy đủ theo ngôn ngữ.
   const dayLabel = (day: string) => english ? new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(parseISODate(day)) : weekdayLabel(day);
+  // Tiêu đề của sự kiện.
   const title = (event: CalendarEvent) => event.title;
+  // Nhãn trợ năng của sự kiện: loại, tiêu đề, thứ và ngày.
   const eventLabel = (event: CalendarEvent) => [labels[event.kind], title(event), dayLabel(event.date), shortDate(event.date), hhmm(event.startTime) + '–' + hhmm(event.endTime), event.place, event.cancelled ? text('đã hủy', 'cancelled') : ''].filter(Boolean).join(', ');
   const weekdayHead = english ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : WEEKDAY_HEAD;
   const now = useCenterNow();
@@ -154,6 +178,7 @@ export function MemberCalendar() {
   // Quay lại tab/cửa sổ (ví dụ vừa đặt PT ở trang khác): tải lại lặng lẽ để lịch mới tự hiện.
   const quietRef = useRef(false);
   useEffect(() => {
+    // Làm mới ngầm khi tab đang hiển thị.
     const refresh = () => {
       if (document.visibilityState !== 'visible') return;
       quietRef.current = true;
@@ -181,17 +206,23 @@ export function MemberCalendar() {
     return () => { active = false; };
   }, [retry, today]);
 
+  // Các sự kiện PT dựng từ danh sách đặt lịch.
   const ptEvents = useMemo(() => pts.map(ptEvent), [pts]);
+  // Sự kiện nằm trong khoảng đang xem.
   const events = useMemo(() => sortEvents(ptEvents.filter(item => item.date >= from && item.date <= to)), [ptEvents, from, to]);
+  // Sự kiện sắp tới gần nhất chưa kết thúc.
   const nextUp = useMemo(() => sortEvents(ptEvents).find(item => !isEnded(item, now)) ?? null, [ptEvents, now]);
 
+  // Bảy ngày của tuần đang xem.
   const days = useMemo(() => weekDays(mondayOf(anchor)), [anchor]);
   // Màn hẹp: xem từng ngày, chọn ngày ở dải phía trên.
   const narrow = useNarrow();
   const [focusDay, setFocusDay] = useState<string | null>(null);
   const activeDay = focusDay && days.includes(focusDay) ? focusDay : days.includes(today) ? today : days[0];
   const visibleDays = narrow ? [activeDay] : days;
+  // Sự kiện trong tuần (chỉ khi đang xem theo tuần).
   const weekEvents = useMemo(() => (view === 'week' ? events : []), [view, events]);
+  // Khung giờ hiển thị: ít nhất 14 giờ để thấy vạch "bây giờ".
   const hours = useMemo(() => {
     // Ít nhất 14 giờ (ví dụ 07:00–21:00) để thấy vạch "bây giờ"; tuần trống: 07:00–21:00.
     const fitted = fitHourRange(weekEvents, 14);
@@ -210,20 +241,24 @@ export function MemberCalendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [from, loading, view, activeDay, narrow]);
 
+  // Chuyển tuần/tháng tiến hoặc lùi.
   function shift(step: number) {
     setFocusDay(null);
     setAnchor((value) => (view === 'week' ? addDays(value, step * 7) : addMonths(value, step)));
   }
 
+  // Mở chi tiết một sự kiện và nhớ phần tử để trả focus.
   function openEvent(event: CalendarEvent) {
     returnFocusRef.current = document.activeElement as HTMLElement | null;
     setSelected(event);
   }
 
+  // Đóng hộp thoại chi tiết.
   function closeDialog() {
     setSelected(null);
   }
 
+  // Gom sự kiện theo ngày.
   const eventsByDay = useMemo(() => {
     const map = new Map<string, CalendarEvent[]>();
     for (const item of events) {
@@ -234,6 +269,7 @@ export function MemberCalendar() {
     return map;
   }, [events]);
 
+  // Vẽ các chấm màu (tối đa 3) cho sự kiện của một ngày.
   const renderDots = (day: string) => {
     const list = eventsByDay.get(day) ?? [];
     const kinds = list.slice(0, 3).map((item) => item.kind);
