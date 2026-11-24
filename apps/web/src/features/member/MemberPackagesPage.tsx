@@ -1321,35 +1321,52 @@ export function MemberPackagesPage() {
                   {(() => {
                     const isExpanded = Boolean(expandedBenefitIds[membershipPackage.id]);
                     const shownHighlights = isExpanded ? highlights : highlights.slice(0, visibleCount);
+                    const hasMore = highlights.length > visibleCount;
                     return (
-                      <>
-                        <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
-                          {shownHighlights.map((benefit, index) => (
-                            <li key={index} className="package-benefit-item">
-                              <span>{benefit}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        {highlights.length > visibleCount && (
-                          <div className="package-benefit-more">
-                            <button
-                              type="button"
-                              className="package-benefit-more__toggle"
-                              aria-expanded={isExpanded}
-                              onClick={() =>
-                                setExpandedBenefitIds((prev) => ({
-                                  ...prev,
-                                  [membershipPackage.id]: !isExpanded,
-                                }))
-                              }
-                            >
-                              {isExpanded
-                                ? t("Thu gọn", "Show less")
-                                : `${t("Xem thêm ", "View more ")}${highlights.length - visibleCount} ${t("quyền lợi", "benefits")}`}
-                            </button>
+                      <div className="package-benefit-stack">
+                        <div className="package-benefit-stack__layer">
+                          <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
+                            {shownHighlights.map((benefit, index) => (
+                              <li key={index} className="package-benefit-item">
+                                <span>{benefit}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {hasMore && (
+                            <div className="package-benefit-more">
+                              <button
+                                type="button"
+                                className="package-benefit-more__toggle"
+                                aria-expanded={isExpanded}
+                                onClick={() =>
+                                  setExpandedBenefitIds((prev) => ({
+                                    ...prev,
+                                    [membershipPackage.id]: !isExpanded,
+                                  }))
+                                }
+                              >
+                                {isExpanded
+                                  ? t("Thu gọn", "Show less")
+                                  : `${t("Xem thêm ", "View more ")}${highlights.length - visibleCount} ${t("quyền lợi", "benefits")}`}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {hasMore && !isExpanded && (
+                          <div className="package-benefit-stack__layer package-benefit-stack__sizer" aria-hidden="true">
+                            <ul className="package-benefit-list">
+                              {highlights.map((benefit, index) => (
+                                <li key={index} className="package-benefit-item">
+                                  <span>{benefit}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="package-benefit-more">
+                              <span className="package-benefit-more__toggle">{t("Thu gọn", "Show less")}</span>
+                            </div>
                           </div>
                         )}
-                      </>
+                      </div>
                     );
                   })()}
 
