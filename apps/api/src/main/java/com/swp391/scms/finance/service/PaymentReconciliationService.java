@@ -33,11 +33,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Dữ liệu đối soát thanh toán cho Admin (chỉ đọc): tổng quan, lượt VNPay, hoàn tiền muộn, nhật ký callback và
- * dòng thời gian từng khoản thu, để phát hiện tiền bị treo hoặc bất thường.
- *
- * Read-only view of VNPay attempts, callbacks and the automatic late refunds for administrators. Nothing here changes
- * money or payment state; every change still goes through the existing payment flows.
+ * Dữ liệu đối soát thanh toán cho Admin (chỉ đọc): tổng quan, lượt VNPay, callback và hoàn tiền muộn tự động,
+ * cùng dòng thời gian từng khoản thu để phát hiện tiền bị treo hoặc bất thường. Không có thao tác nào ở đây làm thay
+ * đổi số tiền hay trạng thái thanh toán; mọi thay đổi vẫn đi qua các luồng thanh toán hiện có.
  */
 @Service
 @Transactional(readOnly = true)
@@ -68,9 +66,7 @@ public class PaymentReconciliationService {
     }
 
     /**
-     * Khoảng ngày đã kiểm tra (tính cả hai đầu).
-     *
-     * Inclusive date range resolved against the default and maximum window.
+     * Khoảng ngày đã kiểm tra (tính cả hai đầu) theo khoảng mặc định và giới hạn tối đa.
      */
     public record DateRange(LocalDate from, LocalDate to) {
         /** Thời điểm bắt đầu khoảng (đầu ngày from). */
@@ -139,7 +135,7 @@ public class PaymentReconciliationService {
             if (!STATUSES.contains(normalizedStatus)) throw invalidFilter("status");
         }
         boolean onlyStale = Boolean.TRUE.equals(stale);
-        // "Stale" is the current state of the queue, so it is not limited to the date range.
+        // "Treo" (stale) là trạng thái hiện tại của hàng đợi nên không giới hạn theo khoảng ngày.
         DateRange r = onlyStale ? null : range(from, to);
         Specification<VnpayTransaction> spec = attemptSpec(normalizedStatus, onlyStale, blankToNull(q), r, cutoff);
         Page<VnpayTransaction> result = attempts.findAll(spec, pageable);
@@ -259,7 +255,7 @@ public class PaymentReconciliationService {
         return new PaymentTimelineDto(info, attemptRows, eventRows, walletRows, entries);
     }
 
-    // --- helpers ---
+    // --- hàm trợ giúp ---
 
     /** Điều kiện truy vấn động cho lượt VNPay. */
     private Specification<VnpayTransaction> attemptSpec(String status, boolean onlyStale, String q, DateRange r,
@@ -320,9 +316,8 @@ public class PaymentReconciliationService {
     }
 
     /**
-     * Đối tượng của khoản thu (loại và id); không gắn gì thì là nạp ví.
-     *
-     * What the payment is for, with the same fallback as the gateway checkout: no linked record means a top-up.
+     * Đối tượng của khoản thu (loại và id), dùng cùng quy ước dự phòng với luồng thanh toán cổng:
+     * không gắn bản ghi liên kết nào nghĩa là nạp ví.
      */
     static String[] target(Payment p) {
         if (p == null) return new String[]{null, null};
@@ -335,9 +330,7 @@ public class PaymentReconciliationService {
     }
 
     /**
-     * Mã tham chiếu cổng lấy từ mã bút toán hoàn muộn ("<mã>:LATE_REFUND" hoặc "ORDER_LATE_REFUND_<mã>").
-     *
-     * Gateway reference from {@code <ref>:LATE_REFUND} or {@code ORDER_LATE_REFUND_<ref>}.
+     * Mã tham chiếu cổng lấy từ mã bút toán hoàn muộn ({@code <ref>:LATE_REFUND} hoặc {@code ORDER_LATE_REFUND_<ref>}).
      */
     static String gatewayReference(String walletReferenceId) {
         if (walletReferenceId == null) return null;

@@ -13,9 +13,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 import java.util.List;
 
 /**
- * Mapper (MapStruct tự sinh code) giữa hóa đơn/dòng hàng và DTO.
- *
- * MapStruct mapper for Invoice and InvoiceItem entities and DTOs.
+ * Mapper (MapStruct tự sinh code) giữa các entity Invoice, InvoiceItem và DTO tương ứng.
  */
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface InvoiceMapper {

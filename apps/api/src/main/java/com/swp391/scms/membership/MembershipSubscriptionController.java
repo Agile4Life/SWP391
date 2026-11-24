@@ -28,11 +28,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * API gói tập của hội viên (/api/v1/memberships/subscriptions): đăng ký, gia hạn, nâng cấp, hủy yêu cầu chờ
- * thanh toán, bảo lưu, tiếp tục, xem gói hiện tại/lịch sử, mã QR động; và các thao tác của quầy (gia hạn hộ,
- * danh sách chờ thanh toán, duyệt/từ chối/rút bảo lưu).
- *
- * Controller for managing membership subscriptions (SCRUM-71).
+ * Controller quản lý gói tập của hội viên (/api/v1/memberships/subscriptions, SCRUM-71): đăng ký, gia hạn,
+ * nâng cấp, hủy yêu cầu chờ thanh toán, bảo lưu, tiếp tục, xem gói hiện tại/lịch sử, mã QR động; và các thao tác
+ * của quầy (gia hạn hộ, danh sách chờ thanh toán, duyệt/từ chối/rút bảo lưu).
  */
 @Tag(name = "Membership Subscriptions", description = "Purchase, renewal, upgrade, hold and member subscription status (SCRUM-71)")
 @PreAuthorize("hasRole('MEMBER')")

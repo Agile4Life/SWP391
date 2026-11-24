@@ -40,7 +40,7 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
     /** Id các khoản thu có lượt VNPay đang chờ đã hết hạn trước mốc (để đóng lượt bị bỏ dở). */
     List<Long> findPaymentIdsWithPendingExpiredBefore(@Param("cutoff") LocalDateTime cutoff);
 
-    // --- Admin reconciliation (read only) ---
+    // --- Đối soát dành cho quản trị viên (chỉ đọc) ---
 
     /** Lượt VNPay theo điều kiện động, nạp sẵn khoản thu và hội viên (cho màn đối soát). */
     @Override

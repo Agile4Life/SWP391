@@ -4,7 +4,7 @@ import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-/** Medical paperwork attached to a hold request. Personal health data: only the owner and desk staff may read it. */
+/** Giấy tờ y tế đính kèm yêu cầu bảo lưu. Dữ liệu sức khỏe cá nhân: chỉ chủ sở hữu và nhân viên quầy mới được phép đọc. */
 @Entity
 @Table(name = "membership_hold_documents",
         indexes = {@Index(name = "ix_hold_documents_subscription", columnList = "subscription_id")})

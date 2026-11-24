@@ -11,11 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Giảm giá theo hạng gói (Gold 10%, Platinum 20%) cho buổi PT lẻ, học phí khóa học và sản phẩm; phần trăm lấy
- * từ gói đang hiệu lực vào ngày tạo khoản thu.
- *
- * Tier discount (Gold 10%, Platinum 20%) on extra PT sessions, course fees and shop products
- * (spec 2026-11-09, section 3.3). The percentage comes from the active membership on the day the charge is created.
+ * Giảm giá theo hạng gói (Gold 10%, Platinum 20%) cho buổi PT lẻ, học phí khóa học và sản phẩm cửa hàng
+ * (đặc tả 2026-11-09, mục 3.3). Phần trăm giảm giá lấy từ gói hội viên đang hiệu lực vào ngày tạo khoản thu.
  */
 @Service
 public class MemberDiscountService {
@@ -29,12 +26,9 @@ public class MemberDiscountService {
     }
 
     /**
-     * Phần trăm giảm cao nhất trong các kỳ gói active đang hiệu lực của hội viên; không có thì 0. Chạy trong
-     * transaction vì gói là quan hệ lazy.
-     *
-     * Best discount among the member's active, currently valid periods; 0 when none applies.
-     * Transactional because the package is a lazy association and callers such as the public quote
-     * endpoint run outside a transaction (open-in-view is off), which otherwise throws LazyInitializationException.
+     * Phần trăm giảm giá cao nhất trong các kỳ gói active đang hiệu lực của hội viên; trả về 0 khi không áp dụng.
+     * Đánh dấu Transactional vì gói hội viên là quan hệ tải lười (lazy) và các bên gọi như endpoint báo giá công khai
+     * chạy ngoài transaction (open-in-view đã tắt), nếu không sẽ ném LazyInitializationException.
      */
     @Transactional(readOnly = true)
     public int percentFor(Long memberId) {
@@ -49,8 +43,6 @@ public class MemberDiscountService {
 
     /**
      * Số tiền được giảm (làm tròn tới đồng).
-     *
-     * Amount of the discount in whole dong.
      */
     public static BigDecimal discountOf(BigDecimal amount, int percent) {
         if (amount == null || percent <= 0) return BigDecimal.ZERO;
@@ -58,9 +50,7 @@ public class MemberDiscountService {
     }
 
     /**
-     * Số tiền sau giảm, không bao giờ âm.
-     *
-     * The amount after the discount, never below zero.
+     * Số tiền sau khi giảm giá, không bao giờ nhỏ hơn 0.
      */
     public static BigDecimal apply(BigDecimal amount, int percent) {
         if (amount == null) return null;

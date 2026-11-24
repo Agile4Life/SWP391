@@ -183,7 +183,7 @@ public class VnpayPaymentService {
         return updatedWallet;
     }
 
-    // Compatibility helper and the membership checkout entry point.
+    // Hàm tương thích ngược và điểm vào thanh toán gói hội viên.
     /** Thanh toán gói qua VNPay (cách gọi cũ theo kỳ gói). */
     public Checkout checkout(AuthenticatedPrincipal principal, Long subscriptionId, String ip) {
         return checkout(principal, new CheckoutRequest(subscriptionId,null,null,null),ip);
@@ -206,7 +206,7 @@ public class VnpayPaymentService {
         if(existing.isPresent()) {
             VnpayTransaction current=existing.get();
             if(current.getExpiresAt().isAfter(now())) return checkoutDto(current, origin);
-            // The gateway refuses payment after expiry; wait out the IPN grace period, then start a fresh attempt.
+            // Cổng từ chối thanh toán sau khi hết hạn; chờ hết thời gian gia hạn IPN rồi mới tạo lượt mới.
             if(!current.getExpiresAt().plus(VnpayPaymentGuard.SETTLEMENT_GRACE).isBefore(now()))
                 throw new ConflictException("VNPAY_AWAITING_CONFIRMATION","finance.vnpay.awaiting_confirmation",null,null);
             current.setStatus("failed");
@@ -215,7 +215,7 @@ public class VnpayPaymentService {
         String reference=UUID.randomUUID().toString().replace("-","");
         var created=now();
         var transaction=new VnpayTransaction(reference,payment,payment.getAmount(),created,created.plusMinutes(gateway.timeoutMinutes()),ip);
-        Checkout response=checkoutDto(transaction, origin); // validate before persisting a payment attempt
+        Checkout response=checkoutDto(transaction, origin); // kiểm tra hợp lệ trước khi lưu lượt thanh toán
         payment.setMethod("online_wallet");
         transactions.save(transaction);
         return response;
@@ -253,10 +253,10 @@ public class VnpayPaymentService {
             payment.setCoachBookingId(booking.getId());
         } else if(request.productOrderId()!=null) {
             if (orderPayments == null) throw unavailable();
-            // Verify ownership before taking any row lock so a member can neither lock nor probe another member's order.
+            // Xác minh quyền sở hữu trước khi khóa dòng để hội viên không thể khóa hay dò đơn hàng của người khác.
             if (orders != null) {
                 var owned = orders.findById(request.productOrderId()).orElseThrow(this::unavailable);
-                // Same response as a missing order: another member's order must not be distinguishable.
+                // Trả cùng phản hồi như khi không tìm thấy đơn: không được để phân biệt được đơn của hội viên khác.
                 if (owned.getMember() == null || !principal.id().equals(owned.getMember().getUserId())) throw unavailable();
             }
             lockMember(principal.id());
@@ -309,11 +309,8 @@ public class VnpayPaymentService {
     }
 
     /**
-     * Hội viên thoát cổng mà chưa trả: đóng lượt chưa có mã giao dịch cổng; nếu IPN thành công đến muộn vẫn
-     * được xử lý (ghi nhận hoặc hoàn vào ví).
-     *
-     * Releases an unsettled VNPay checkout attempt when the owning member exits the gateway without paying.
-     * If a delayed successful IPN arrives later, {@link #ipn} still settles or refunds to the member's wallet.
+     * Giải phóng lượt thanh toán VNPay chưa quyết toán khi hội viên sở hữu thoát khỏi cổng mà chưa thanh toán.
+     * Nếu một IPN thành công đến muộn sau đó, {@link #ipn} vẫn quyết toán hoặc hoàn tiền về ví của hội viên.
      */
     public Status cancel(AuthenticatedPrincipal principal, String reference) {
         String normalizedRef = reference == null ? "" : reference.trim();
@@ -336,9 +333,7 @@ public class VnpayPaymentService {
     }
 
     /**
-     * Đóng mọi lượt đang chờ chưa có mã giao dịch của một đối tượng thuộc hội viên.
-     *
-     * Releases any unsettled pending VNPay attempts on a target payment/booking owned by the member.
+     * Giải phóng mọi lượt VNPay đang chờ chưa quyết toán trên khoản thanh toán/lịch đặt thuộc hội viên.
      */
     public void cancelTarget(AuthenticatedPrincipal principal, CheckoutRequest request) {
         requireMember(principal);
@@ -392,8 +387,8 @@ public class VnpayPaymentService {
         lockMember(p.getMember().getUserId());lockTargets(p);entities.refresh(t);entities.refresh(p);
         String amount=fields.get("vnp_Amount");
         if(amount==null || !amount.matches("[0-9]{1,12}") || t.getAmount().multiply(BigDecimal.valueOf(100)).compareTo(new BigDecimal(amount))!=0) return "04";
-        // An attempt closed locally after its gateway expiry may still report a delayed success: honour it while the
-        // payment is unsettled so the customer's money is never taken without the order being paid.
+        // Một lượt bị đóng cục bộ sau khi hết hạn trên cổng vẫn có thể báo thành công muộn: ghi nhận nó khi
+        // khoản thu chưa quyết toán để tiền của khách không bao giờ bị trừ mà đơn không được thanh toán.
         boolean lateAfterLocalExpiry="failed".equals(t.getStatus()) && t.getGatewayTransactionNo()==null
                 && "pending".equals(p.getStatus());
         String lateOrderCode=refundLateOrderPayment(fields,t,p,reference);
@@ -408,7 +403,7 @@ public class VnpayPaymentService {
             if(gatewayId==null || !gatewayId.matches("[0-9]{1,15}") || gatewayId.matches("0+")) return "97";
             validateBooking(p);
             t.setGatewayTransactionNo(gatewayId);t.setStatus("success");
-            transactions.saveAndFlush(t); // guard sees a terminal transaction in the same atomic settlement
+            transactions.saveAndFlush(t); // bộ chặn nhìn thấy giao dịch đã kết thúc trong cùng phép quyết toán nguyên tử
             settlement.updatePaymentStatus(p.getId(),"success");
             markBookingPaid(p);
             try {
@@ -434,21 +429,18 @@ public class VnpayPaymentService {
                 }
             }
         } else {
-            if (lateAfterLocalExpiry) return "02"; // already closed as failed
-            // Provisional/in-progress gateway status (05, 06, or 00 response with incomplete 01 status) stays pending;
-            // explicit non-00 failure/cancel responses (e.g. 24 + 01 on VNPay Sandbox cancel) close immediately.
+            if (lateAfterLocalExpiry) return "02"; // đã đóng ở trạng thái failed
+            // Trạng thái cổng tạm thời/đang xử lý (05, 06, hoặc mã phản hồi 00 kèm trạng thái 01 chưa hoàn tất) giữ nguyên pending;
+            // các phản hồi thất bại/hủy khác 00 rõ ràng (ví dụ 24 + 01 khi hủy trên VNPay Sandbox) đóng ngay lập tức.
             if (Set.of("05", "06").contains(status) || ("00".equals(response) && "01".equals(status))) return "99";
             closePendingAttempt(t, p);
         }
         return "00";
     }
     /**
-     * Đơn hàng đã hủy khi lượt VNPay chưa xong mà cổng vẫn báo thành công: hội viên đã bị trừ tiền nên cộng vào
-     * ví và ghi khoản thu đã hoàn. Trả mã IPN hoặc null nếu không phải trường hợp này.
-     *
-     * A product order cancelled while its VNPay attempt was unsettled closes the payment as {@code failed}. If the
-     * gateway still reports a success for that attempt, the member was charged: credit the money to their wallet and
-     * record the payment as refunded. Returns the IPN code to answer with, or {@code null} when this is not that case.
+     * Đơn hàng bị hủy khi lượt VNPay chưa quyết toán sẽ đóng khoản thanh toán thành {@code failed}. Nếu cổng vẫn báo
+     * thành công cho lượt đó thì hội viên đã bị trừ tiền: cộng tiền vào ví và ghi nhận khoản thanh toán là đã hoàn.
+     * Trả về mã IPN để phản hồi, hoặc {@code null} nếu không phải trường hợp này.
      */
     private String refundLateOrderPayment(Map<String,String> fields, VnpayTransaction t, Payment p, String reference) {
         if(p.getProductOrderId()==null || orders==null || orderRefunds==null) return null;
@@ -458,7 +450,7 @@ public class VnpayPaymentService {
         if(order==null || !"cancelled".equals(order.getStatus())) return null;
         String response=fields.get("vnp_ResponseCode"),status=fields.get("vnp_TransactionStatus");
         if(response==null || status==null || !response.matches("[0-9]{2}") || !status.matches("[0-9]{2}")) return "97";
-        if(!"00".equals(response) || !"00".equals(status)) return "02"; // nothing was charged, the attempt stays closed
+        if(!"00".equals(response) || !"00".equals(status)) return "02"; // không bị trừ tiền, lượt giữ nguyên trạng thái đã đóng
         String gatewayId=fields.get("vnp_TransactionNo");
         if(gatewayId==null || !gatewayId.matches("[0-9]{1,15}") || gatewayId.matches("0+")) return "97";
         t.setGatewayTransactionNo(gatewayId);t.setStatus("success");
@@ -471,19 +463,16 @@ public class VnpayPaymentService {
         return "00";
     }
     /**
-     * Cổng xác nhận trừ tiền cho lượt mà khoản thu đã không còn chờ (đã trả bằng cách khác hoặc đã đóng): hội
-     * viên bị trừ hai lần nên cộng vào ví. Trả mã IPN hoặc null nếu không phải trường hợp này.
-     *
-     * The gateway confirms a debit for an attempt whose payment is no longer pending: it was settled another way
-     * (cash, wallet, a newer VNPay attempt) or closed (cancelled booking) after this attempt expired locally. The
-     * member was charged twice, so the money is credited to their wallet and the attempt is recorded as settled.
-     * Returns the IPN code to answer with, or {@code null} when this is not that case.
+     * Cổng xác nhận trừ tiền cho lượt mà khoản thu không còn pending: khoản thu đã được quyết toán theo cách khác
+     * (tiền mặt, ví, lượt VNPay mới hơn) hoặc đã đóng (hủy lịch đặt) sau khi lượt này hết hạn cục bộ. Hội viên đã bị
+     * trừ tiền hai lần nên số tiền được cộng vào ví và lượt được ghi nhận đã quyết toán.
+     * Trả về mã IPN để phản hồi, hoặc {@code null} nếu không phải trường hợp này.
      */
     private String refundPaymentSettledElsewhere(Map<String,String> fields, VnpayTransaction t, Payment p, String reference) {
         if("pending".equals(p.getStatus()) || t.getGatewayTransactionNo()!=null
                 || !Set.of("pending","failed").contains(t.getStatus())) return null;
         String response=fields.get("vnp_ResponseCode"),status=fields.getOrDefault("vnp_TransactionStatus", response);
-        if(!"00".equals(response) || !"00".equals(status)) return null; // nothing was charged: answered as already handled
+        if(!"00".equals(response) || !"00".equals(status)) return null; // không bị trừ tiền: phản hồi như đã xử lý
         String gatewayId=fields.get("vnp_TransactionNo");
         if(gatewayId==null || !gatewayId.matches("[0-9]{1,15}") || gatewayId.matches("0+")) return "97";
         if(walletService==null) {
@@ -500,9 +489,7 @@ public class VnpayPaymentService {
     }
     private static final org.slf4j.Logger LATE_LOG = org.slf4j.LoggerFactory.getLogger(VnpayPaymentService.class);
     /**
-     * Trang hội viên quay về sau khi thanh toán, theo loại đối tượng.
-     *
-     * Where the member lands after paying; one place so wallet, VNPay and status always agree.
+     * Trang hội viên quay về sau khi thanh toán, gom về một chỗ để ví, VNPay và trạng thái luôn thống nhất.
      */
     private static String targetPath(Payment p) {
         if (p.getProductOrderId() != null) return "/member/orders/" + p.getProductOrderId();
@@ -514,9 +501,7 @@ public class VnpayPaymentService {
     }
 
     /**
-     * Dòng mô tả trong lịch sử ví cho khoản thanh toán.
-     *
-     * Wallet history line for a payment, the same whether it was paid from the wallet or through VNPay.
+     * Dòng mô tả trong lịch sử ví cho khoản thanh toán, giống nhau bất kể trả từ ví hay qua VNPay.
      */
     private String walletDescription(Payment p, String ref) {
         if (p.getProductOrderId() != null) return orderWalletDescription(p);

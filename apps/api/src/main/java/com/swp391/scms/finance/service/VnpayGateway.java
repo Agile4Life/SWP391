@@ -18,9 +18,7 @@ import java.util.stream.Collectors;
 
 /**
  * Adapter cổng VNPay (giao thức PAY 2.1.0): dựng link thanh toán với các trường sắp xếp, mã hóa URL và ký
- * HMAC-SHA512; kiểm tra chữ ký callback. Thông tin bí mật không ra khỏi lớp này.
- *
- * PAY 2.1.0: sorted, URL-encoded fields and HMAC-SHA512. Credentials never leave this adapter.
+ * HMAC-SHA512; kiểm tra chữ ký callback. Thông tin bí mật không bao giờ rời khỏi adapter này.
  */
 @Component
 @EnableConfigurationProperties(VnpayProperties.class)

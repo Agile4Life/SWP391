@@ -254,8 +254,8 @@ public class MembershipCancellationService {
             if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
                 throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
             }
-            // Enrollments reference member and class, not subscription. The member-wide
-            // cancellation below is safe only when this is the sole remaining entitlement.
+            // Đăng ký lớp tham chiếu tới hội viên và lớp học chứ không tham chiếu kỳ gói. Việc hủy trên toàn hội viên
+            // bên dưới chỉ an toàn khi đây là quyền lợi duy nhất còn lại.
             ensureSoleEntitlement(memberId, subscription);
             subscription.setStatus("cancelled");
             subscription.setUpdatedAt(LocalDateTime.now(clock));
@@ -286,7 +286,7 @@ public class MembershipCancellationService {
             ensureRefundWithinPaid(subscription, refundAmount);
             request.setRefundAmount(refundAmount);
             if (walletService != null && refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
-                // The payment must show the refund too, or revenue overstates it and /payments/{id}/refund can pay it again.
+                // Khoản thanh toán cũng phải thể hiện phần hoàn tiền, nếu không doanh thu sẽ bị tính thừa và /payments/{id}/refund có thể hoàn tiền lần nữa.
                 recordRefundOnPayments(subscription, refundAmount, request.getReason());
                 walletService.creditRefund(
                         memberId,
@@ -437,11 +437,8 @@ public class MembershipCancellationService {
     }
 
     /**
-     * Số tiền hoàn đề xuất: phần chưa dùng của số tiền thực trả cho kỳ này (gồm phần quy đổi từ gói cũ khi nâng
-     * cấp), không dựa vào giá niêm yết hiện tại. Quản lý vẫn có thể sửa.
-     *
-     * Suggested refund: the unused share of what the member actually paid for this period (including value carried
-     * over from an upgraded package), never the current catalog price. A manager may still override it.
+     * Số tiền hoàn đề xuất: phần chưa sử dụng của số tiền hội viên thực trả cho kỳ này (bao gồm giá trị chuyển sang
+     * từ gói đã nâng cấp), không bao giờ lấy theo giá niêm yết hiện tại. Quản lý vẫn có thể điều chỉnh.
      */
     private BigDecimal defaultRefund(MembershipSubscription subscription) {
         SubscriptionValueCalculator calculator = valueCalculator != null ? valueCalculator : new SubscriptionValueCalculator(payments);
@@ -449,10 +446,8 @@ public class MembershipCancellationService {
     }
 
     /**
-     * Số tiền hoàn không được vượt quá số hội viên thực trả cho kỳ này (tiền mặt cộng phần quy đổi); vượt thì
-     * báo 400.
-     *
-     * A refund may not exceed what the member actually paid for this period (cash plus credit carried over).
+     * Số tiền hoàn không được vượt quá số tiền hội viên đã thực trả cho kỳ này (tiền mặt cộng phần quy đổi chuyển sang);
+     * nếu vượt thì báo lỗi 400.
      */
     private void ensureRefundWithinPaid(MembershipSubscription subscription, BigDecimal refundAmount) {
         if (refundAmount == null) return;
@@ -465,11 +460,9 @@ public class MembershipCancellationService {
     }
 
     /**
-     * Chia số tiền hoàn lên các khoản thanh toán thành công của kỳ (khoản cũ trước), cập nhật số đã hoàn và ghi
-     * chú; khoản hoàn đủ thì chuyển trạng thái refunded. Nhờ vậy báo cáo doanh thu đúng và không hoàn trùng hai
-     * lần.
-     *
-     * Spreads the refund over the period's successful payments; a fully refunded payment becomes {@code refunded}.
+     * Phân bổ số tiền hoàn lên các khoản thanh toán thành công của kỳ (khoản cũ trước), cập nhật số đã hoàn và ghi
+     * chú; khoản thanh toán được hoàn đủ sẽ chuyển sang trạng thái {@code refunded}. Nhờ vậy báo cáo doanh thu chính
+     * xác và tránh hoàn trùng hai lần.
      */
     private void recordRefundOnPayments(MembershipSubscription subscription, BigDecimal refundAmount, String reason) {
         if (payments == null || subscription.getId() == null) return;

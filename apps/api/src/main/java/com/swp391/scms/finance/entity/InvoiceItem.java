@@ -5,7 +5,7 @@ import org.hibernate.annotations.GeneratedColumn;
 import java.math.BigDecimal;
 
 /**
- * Entity mapping table invoice_items on Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
+ * Entity ánh xạ bảng invoice_items trên Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
  * Chứa cột tính toán được lưu amount (quantity * unit_price).
  */
 @Entity
@@ -30,10 +30,10 @@ public class InvoiceItem {
     private BigDecimal unitPrice;
 
     /**
-     * [FIX 1NF-3NF §3.6] Computed column: AS (quantity * unit_price).
-     * @GeneratedColumn instructs Hibernate ORM (Code-First) to generate the database-agnostic
-     * DDL cột tính toán được lưu cho PostgreSQL.
-     * @Generated informs Hibernate to fetch the database-computed value upon INSERT and UPDATE.
+     * [FIX 1NF-3NF §3.6] Cột tính toán: AS (quantity * unit_price).
+     * Annotation @GeneratedColumn chỉ dẫn Hibernate ORM (Code-First) sinh DDL cột tính toán được lưu
+     * độc lập cơ sở dữ liệu cho PostgreSQL.
+     * Annotation @Generated thông báo cho Hibernate đọc lại giá trị do cơ sở dữ liệu tính sau INSERT và UPDATE.
      */
     @GeneratedColumn("quantity * unit_price")
     @Column(name = "amount", insertable = false, updatable = false, precision = 12, scale = 2)

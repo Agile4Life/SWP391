@@ -21,10 +21,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 /**
- * Nghiệp vụ hóa đơn điện tử: xuất thủ công hoặc tự động cho khoản thanh toán thành công, tra cứu theo id/số hóa
- * đơn/khoản thu. Tổng tiền và thành tiền do database tính (cột sinh tự động).
- *
- * Service managing invoices, invoice items, and PostgreSQL stored generated columns.
+ * Nghiệp vụ hóa đơn điện tử: quản lý hóa đơn, các dòng hàng và các cột tính toán lưu trữ của PostgreSQL;
+ * xuất thủ công hoặc tự động cho khoản thanh toán thành công, tra cứu theo id/số hóa đơn/khoản thu.
  */
 @Service
 @Transactional
@@ -52,11 +50,8 @@ public class InvoiceService {
     }
 
     /**
-     * Xuất hóa đơn thủ công: khoản thu không được thất bại hoặc đã hoàn, mỗi khoản thu chỉ một hóa đơn; số hóa
-     * đơn tự sinh nếu trống.
-     *
-     * Issues a new electronic invoice.
-     * The configured database computes total_amount and item amount through generated columns.
+     * Xuất hóa đơn điện tử thủ công: khoản thu không được thất bại hoặc đã hoàn, mỗi khoản thu chỉ một hóa đơn;
+     * số hóa đơn tự sinh nếu trống. Cơ sở dữ liệu cấu hình tự tính total_amount và thành tiền từng dòng qua cột sinh tự động.
      */
     public InvoiceDto createInvoice(InvoiceCreateDto dto) {
         Payment payment = paymentRepository.findById(dto.getPaymentId())
@@ -128,19 +123,16 @@ public class InvoiceService {
         Invoice invoice = invoiceRepository.findByPaymentIdAndPaymentMemberUserIdAndPaymentStatus(paymentId, userId, "success")
                 .orElseThrow(() -> new ResourceNotFoundException("resource.invoice_for_payment", paymentId));
         InvoiceDto dto = invoiceMapper.toDto(invoice);
-        // The member view must never substitute an in-memory calculation for the stored column.
+        // Giao diện hội viên không bao giờ được thay thế cột lưu trữ trong database bằng giá trị tính tạm trong bộ nhớ.
         dto.setTotalAmount(invoice.getPersistedTotalAmount());
-        dto.setPdfUrl(null); // Do not expose internal or third-party storage locations.
+        dto.setPdfUrl(null); // Không tiết lộ đường dẫn lưu trữ nội bộ hoặc của bên thứ ba.
         return dto;
     }
 
     /**
-     * Automatically generates and issues an electronic invoice for a successful payment.
-     */
-    // Callers treat auto-issue as best effort: a rejected issue must not mark the payment's transaction rollback-only.
-    /**
-     * Tự xuất hóa đơn cho khoản thu thành công (đã có thì trả hóa đơn cũ): dòng hàng theo đơn hàng (kèm phí
-     * giao hàng), nạp ví hoặc mô tả mặc định. Nơi gọi coi đây là việc phụ, lỗi không làm hỏng giao dịch chính.
+     * Tự động tạo và xuất hóa đơn điện tử cho khoản thu thành công (đã có thì trả hóa đơn cũ): dòng hàng theo đơn hàng
+     * (kèm phí giao hàng), nạp ví hoặc mô tả mặc định.
+     * Nơi gọi coi việc tự xuất là best-effort: nếu bị từ chối thì không được đánh dấu transaction thanh toán chính là rollback-only.
      */
     @Transactional(noRollbackFor = com.swp391.scms.common.exception.AppException.class)
     public InvoiceDto autoIssueInvoiceForPayment(Long paymentId) {

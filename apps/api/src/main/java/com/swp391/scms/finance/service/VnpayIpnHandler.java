@@ -8,10 +8,8 @@ import org.springframework.util.MultiValueMap;
 import java.util.*;
 
 /**
- * Xử lý callback VNPay bên ngoài transaction thanh toán, để lỗi database/commit được trả về mã 99 (VNPay sẽ gọi
- * lại).
- *
- * Outside the settlement transaction so database/commit errors are returned as retryable VNPay responses.
+ * Xử lý callback VNPay bên ngoài transaction thanh toán, để lỗi database/commit được trả về mã 99 (phản hồi
+ * cho phép VNPay gọi lại).
  */
 @Service
 public class VnpayIpnHandler {
@@ -57,9 +55,7 @@ public class VnpayIpnHandler {
         return response(code);
     }
     /**
-     * Ghi nhật ký callback (việc phụ, không làm đổi hay chậm câu trả lời).
-     *
-     * Recording is best effort: it never changes or delays the code returned to VNPay.
+     * Ghi nhật ký callback theo cơ chế best-effort: không bao giờ làm thay đổi hay trì hoãn mã trả về cho VNPay.
      */
     private void record(String source, Map<String,String> params, String code) {
         if (recorder == null) return;

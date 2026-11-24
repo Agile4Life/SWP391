@@ -9,10 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Job đóng các lượt VNPay bị bỏ dở trên trang cổng (không bao giờ có IPN), để đơn có thể thanh toán lại, thu ở
- * quầy hoặc hủy.
- *
- * Closes VNPay attempts abandoned on the gateway page (no IPN ever arrives), so the order can be paid again,
- * settled at the counter or cancelled, and unpaid court slots are released by their own expiry job.
+ * quầy hoặc hủy, đồng thời các khung sân chưa thanh toán sẽ được job hết hạn riêng giải phóng.
  */
 @Component
 public class VnpayExpiryScheduler {

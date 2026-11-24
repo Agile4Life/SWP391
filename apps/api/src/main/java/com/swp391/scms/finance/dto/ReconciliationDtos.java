@@ -30,10 +30,11 @@ public final class ReconciliationDtos {
             long multiAttemptPayments,
             AnomalyCounts anomalies) {}
 
-    /** {@code successAttemptUnpaid}: a successful VNPay attempt on a payment that is not paid or refunded;
-     * Số bất thường: lượt VNPay thành công trên khoản chưa trả, khoản trả online không có nguồn tiền, và tổng.
-     *
-     * {@code walletPaymentWithoutSource}: an online payment marked paid without a successful attempt or wallet debit. */
+    /**
+     * Số bất thường (từng loại và tổng):
+     * {@code successAttemptUnpaid}: lượt VNPay thành công trên một khoản thanh toán chưa được thanh toán hoặc chưa hoàn;
+     * {@code walletPaymentWithoutSource}: khoản thanh toán trực tuyến được đánh dấu đã thanh toán nhưng không có lượt thành công hay bút toán trừ ví.
+     */
     public record AnomalyCounts(long successAttemptUnpaid, long walletPaymentWithoutSource, long total) {}
 
     /** Thông tin ngắn của hội viên: id, họ tên, email, SĐT. */

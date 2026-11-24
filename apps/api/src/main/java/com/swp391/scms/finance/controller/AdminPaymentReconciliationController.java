@@ -16,9 +16,8 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 
 /**
- * API đối soát thanh toán cho Admin (/api/v1/admin/payments/reconciliation): chỉ đọc.
- *
- * Read-only payment reconciliation for administrators: VNPay attempts, callbacks and automatic late refunds.
+ * API đối soát thanh toán cho Admin (/api/v1/admin/payments/reconciliation): chỉ đọc, gồm các lượt VNPay,
+ * callback và hoàn tiền muộn tự động.
  */
 @RestController
 @RequestMapping("/api/v1/admin/payments/reconciliation")

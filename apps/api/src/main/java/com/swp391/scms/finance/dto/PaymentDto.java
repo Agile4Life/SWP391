@@ -20,8 +20,8 @@ public class PaymentDto {
     private Long subscriptionId;
     private Long classEnrollmentId;
     private BigDecimal amount;
-    private String method; // cash, pos, bank_transfer, online_wallet
-    private String status; // success, pending, failed, refunded
+    private String method; // Giá trị: cash, pos, bank_transfer, online_wallet
+    private String status; // Giá trị: success, pending, failed, refunded
     private LocalDateTime paidAt;
     private Long receivedById;
     private String receivedByName;

@@ -11,9 +11,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 import java.util.List;
 
 /**
- * Mapper (MapStruct tự sinh code) giữa khoản thanh toán và DTO.
- *
- * MapStruct mapper for Payment entity and DTOs.
+ * Mapper (MapStruct tự sinh code) giữa entity Payment và các DTO tương ứng.
  */
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface PaymentMapper {

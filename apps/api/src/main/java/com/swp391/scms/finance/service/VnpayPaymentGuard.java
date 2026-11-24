@@ -13,20 +13,17 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * Chặn thao tác trên khoản thu khi còn lượt VNPay có thể được cổng xác nhận. Lượt còn pending quá hạn cộng 15
- * phút chờ IPN (khách đã đóng trang cổng) được đóng thành failed; IPN thành công đến muộn vẫn được xử lý khi
- * khoản thu còn chờ.
+ * Chặn thao tác trên khoản thu khi còn lượt VNPay có thể được cổng xác nhận. Được gọi bên dưới khóa hội viên/lịch đặt
+ * hiện có trước khi thu ngân ghi nhận thanh toán hoặc hủy.
  *
- * Called under the existing member/booking lock before cashier settlement or cancellation.
- *
- * <p>A VNPay attempt blocks the order only while the gateway may still settle it. VNPay refuses payment after the
- * {@code vnp_ExpireDate} sent at checkout, so an attempt still pending {@link #SETTLEMENT_GRACE} after that moment
- * (the customer closed the gateway page and no IPN will come) is closed as {@code failed}. A late successful IPN for
- * such an attempt is still honoured while its payment is pending, see {@link VnpayPaymentService#ipn}.
+ * <p>Một lượt VNPay chỉ chặn đơn hàng trong khoảng thời gian cổng còn có thể quyết toán. VNPay từ chối thanh toán sau
+ * mốc {@code vnp_ExpireDate} đã gửi khi khởi tạo, nên lượt vẫn còn pending sau mốc đó một khoảng {@link #SETTLEMENT_GRACE}
+ * (khách đã đóng trang cổng và sẽ không có IPN) sẽ bị đóng thành {@code failed}. IPN thành công đến muộn cho lượt như vậy
+ * vẫn được xử lý khi khoản thu còn pending, xem {@link VnpayPaymentService#ipn}.
  */
 @Component
 public class VnpayPaymentGuard {
-    /** Time allowed after the gateway expiry for a delayed IPN before the attempt is closed locally. */
+    /** Thời gian chờ thêm sau khi hết hạn trên cổng cho IPN đến muộn trước khi đóng lượt tại hệ thống. */
     public static final Duration SETTLEMENT_GRACE = Duration.ofMinutes(15);
     private static final ZoneId CENTER_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
@@ -72,10 +69,8 @@ public class VnpayPaymentGuard {
     }
 
     /**
-     * Đóng các lượt VNPay của khoản thu đã quá hạn; nếu không còn lượt nào chờ/thành công thì khoản nạp ví đang
-     * chờ cũng chuyển failed.
-     *
-     * Closes this payment's attempts that the gateway can no longer settle.
+     * Đóng các lượt VNPay của khoản thu mà cổng không còn có thể quyết toán; nếu không còn lượt nào chờ/thành công
+     * thì khoản nạp ví đang chờ cũng chuyển sang failed.
      */
     public void expireStale(Long paymentId) {
         LocalDateTime now = now();
@@ -102,9 +97,7 @@ public class VnpayPaymentGuard {
     }
 
     /**
-     * Lượt đang chờ đã quá hạn cổng cộng thời gian chờ IPN chưa.
-     *
-     * True when an attempt is pending and past the gateway expiry plus the IPN grace period.
+     * Trả về true khi lượt đang ở trạng thái pending và đã quá hạn cổng cộng thêm thời gian chờ IPN.
      */
     public boolean isStale(VnpayTransaction attempt, LocalDateTime now) {
         return attempt != null && "pending".equals(attempt.getStatus()) && attempt.getExpiresAt() != null

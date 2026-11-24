@@ -37,9 +37,9 @@ public final class SubscriptionRequests {
             @NotBlank(message = "{validation.membership.hold_reason.not_blank}")
             @Size(max = 500, message = "{validation.membership.hold_reason.size}")
             String reason,
-            /** First day of the hold; must be at least 24 hours away. */
+            /** Ngày đầu tiên của đợt bảo lưu; phải cách thời điểm hiện tại ít nhất 24 giờ. */
             java.time.LocalDate startDate,
-            /** Last day of the hold, inclusive. */
+            /** Ngày cuối cùng của đợt bảo lưu (tính cả ngày này). */
             java.time.LocalDate endDate
     ) {
         /** Yêu cầu bảo lưu chỉ có lý do (dùng ở code cũ và test). */

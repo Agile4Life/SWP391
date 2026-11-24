@@ -7,16 +7,14 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Job hằng ngày cho vòng đời gói tập: bắt đầu các bảo lưu tới ngày, tự kết thúc bảo lưu hết hạn, và giải phóng
- * lịch đặt không còn gói nào bao phủ. Mỗi mục chạy transaction riêng nên một lỗi không chặn các mục khác.
- *
- * Daily membership housekeeping. Each item runs in its own transaction through the service proxies, so one
- * failure is logged and the rest still run.
+ * Job dọn dẹp vòng đời gói tập hằng ngày. Mỗi hạng mục chạy trong transaction riêng thông qua các service proxy,
+ * nên nếu một hạng mục lỗi sẽ được ghi log và các hạng mục còn lại vẫn chạy bình thường.
  * <ul>
- *   <li>Approved holds freeze on their first day and resume on their own the day after their last day (or at
- *   {@link MembershipSubscriptionService#MAX_HOLD_DAYS} for holds without dates).</li>
- *   <li>Classes, 1:1 sessions and courts booked for dates no active membership covers any more (it expired or
- *   was not renewed) are released so the seat or slot goes to someone else.</li>
+ *   <li>Các đợt bảo lưu đã duyệt sẽ chuyển sang trạng thái frozen vào ngày đầu tiên và tự động tiếp tục lại vào
+ *   ngày ngay sau ngày cuối cùng (hoặc khi đạt {@link MembershipSubscriptionService#MAX_HOLD_DAYS} với các bảo lưu
+ *   không có ngày cụ thể).</li>
+ *   <li>Các lớp học, buổi tập 1:1 và lượt đặt sân đã đặt cho những ngày không còn gói hội viên active nào bao phủ
+ *   (đã hết hạn hoặc không gia hạn) sẽ được giải phóng để nhường chỗ hoặc khung giờ cho người khác.</li>
  * </ul>
  */
 @Component
@@ -68,9 +66,7 @@ public class MembershipLifecycleScheduler {
     }
 
     /**
-     * Chuyển sang frozen các bảo lưu đã duyệt tới ngày bắt đầu; trả số kỳ đã chuyển.
-     *
-     * Freezes approved holds whose first day has arrived.
+     * Chuyển sang trạng thái frozen các đợt bảo lưu đã duyệt đã đến ngày bắt đầu; trả về số kỳ đã chuyển.
      */
     public int startDueHolds() {
         int started = 0;

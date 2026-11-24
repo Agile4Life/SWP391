@@ -5,8 +5,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * One VNPay callback (IPN or verified return) and the code the system answered. Only non-sensitive gateway fields
- * are kept: never the secure hash, the raw query string or the caller's address.
+ * Một callback từ VNPay (IPN hoặc trang quay về đã xác minh) và mã phản hồi mà hệ thống đã trả lời.
+ * Chỉ lưu các trường không nhạy cảm của cổng thanh toán: không bao giờ lưu secure hash, chuỗi query gốc hay địa chỉ của bên gọi.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_vnpay_ipn_events_source", constraints = "source IN ('IPN','RETURN')")

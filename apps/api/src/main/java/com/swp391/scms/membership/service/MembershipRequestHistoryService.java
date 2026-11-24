@@ -17,12 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Lịch sử các yêu cầu gói tập (đăng ký, gia hạn, nâng cấp) quầy đã xử lý: đã thanh toán và kích hoạt, hoặc đã
- * rút trước khi thanh toán. Hàng chờ chỉ có yêu cầu đang mở nên cần màn này để xem lại.
- *
- * History of the membership requests (register, renew, upgrade) the desk has processed: the ones paid and activated,
- * and the ones withdrawn before payment. The pending queue only lists open requests, so without this the desk could
- * not look back at what it approved.
+ * Lịch sử các yêu cầu gói tập (đăng ký, gia hạn, nâng cấp) mà quầy đã xử lý: các yêu cầu đã thanh toán và kích hoạt,
+ * cùng các yêu cầu đã rút trước khi thanh toán. Hàng chờ xử lý chỉ liệt kê các yêu cầu đang mở, nên không có màn này
+ * quầy sẽ không thể tra cứu lại những gì đã duyệt.
  */
 @Service
 public class MembershipRequestHistoryService {
@@ -60,7 +57,7 @@ public class MembershipRequestHistoryService {
         }
         for (MembershipSubscription sub : subscriptions.findByStatusAndUpdatedAtGreaterThanEqualOrderByUpdatedAtDesc("cancelled", since)) {
             if (settled.contains(sub.getId()) || !visible(sub)) continue;
-            // A paid period cancelled later belongs to the cancellation/refund flow, not to this request history.
+            // Kỳ đã thanh toán rồi bị hủy về sau thuộc luồng hủy/hoàn tiền, không thuộc lịch sử yêu cầu này.
             boolean wasPaid = payments.findAllBySubscriptionId(sub.getId()).stream()
                     .anyMatch(p -> SETTLED.contains(p.getStatus()));
             if (wasPaid) continue;

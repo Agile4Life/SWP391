@@ -142,9 +142,7 @@ public class MemberTrialService {
     }
 
     /**
-     * Ảnh giấy tờ phải là ảnh tải lên (JPEG/PNG/WebP, tối đa 2MB), không nhận link ngoài; để trống thì bỏ qua.
-     *
-     * Document photos are uploaded images only (JPEG/PNG/WebP, at most 2 MB), never outside links.
+     * Ảnh giấy tờ chỉ nhận ảnh tải lên (JPEG/PNG/WebP, tối đa 2 MB), không bao giờ nhận liên kết ngoài; để trống thì bỏ qua.
      */
     private static void validateDocumentImage(String dataUrl) {
         if (dataUrl == null || dataUrl.isBlank()) return;
@@ -350,7 +348,7 @@ public class MemberTrialService {
             throw new ConflictException("TRIAL_ALREADY_APPROVED", "trial.already_approved", null,
                     "Đơn đăng ký gói trải nghiệm này đã được phê duyệt trước đó.");
         }
-        // A rejected request no longer reserves its document; the member must resubmit before it can be approved.
+        // Yêu cầu đã bị từ chối không còn giữ chỗ giấy tờ; hội viên phải nộp lại trước khi có thể được duyệt.
         if (MemberTrialRedemption.STATUS_REJECTED.equalsIgnoreCase(redemption.getStatus())) {
             throw new ConflictException("TRIAL_REJECTED_RESUBMIT", "trial.rejected.resubmit_required", null,
                     "Rejected request: the member must resubmit it first.");
@@ -434,8 +432,8 @@ public class MemberTrialService {
         String rejectionReason = (reason != null && !reason.isBlank()) ? reason.trim() : "Thông tin giấy tờ không khớp";
         redemption.setStatus(MemberTrialRedemption.STATUS_REJECTED);
         redemption.setDocumentNumberEnc(null);
-        // A rejected document must not stay reserved: someone may have sent another person's ID. The owner can still
-        // resubmit, which writes the real hash again.
+        // Giấy tờ bị từ chối không được giữ chỗ: có thể ai đó đã gửi giấy tờ của người khác. Chủ sở hữu vẫn có thể
+        // nộp lại, khi đó hệ thống sẽ ghi lại mã băm thật.
         redemption.setCccdHash("rejected-" + redemption.getId());
         redemption.setRejectionReason(rejectionReason);
         redemption.setReviewedBy(reviewer != null ? reviewer.id() : null);
@@ -488,10 +486,8 @@ public class MemberTrialService {
     }
 
     /**
-     * Cách nhận gói trải nghiệm kiểu cũ (kích hoạt ngay, không qua duyệt), giữ lại để tương thích: kiểm tra
+     * Phương thức nhận gói trải nghiệm tương thích ngược để kích hoạt trực tiếp (không qua duyệt): kiểm tra
      * chưa nhận, giấy tờ chưa dùng, hội viên chưa có gói, rồi tạo kỳ gói 3 ngày và bản ghi nhận gói.
-     *
-     * Backward-compatible claim method for direct activation.
      */
     @Transactional
     public SubscriptionDto claimGoldTrial(AuthenticatedPrincipal principal, TrialClaimRequest request) {

@@ -31,11 +31,11 @@ public final class SubscriptionResponses {
             LocalDateTime holdResolvedAt,
             LocalDate paidThroughDate,
             java.math.BigDecimal upgradeCharge,
-            /** Pending registration or renewal: catalog price fixed when the request was made. */
+            /** Đăng ký hoặc gia hạn đang chờ thanh toán: giá niêm yết được chốt khi tạo yêu cầu. */
             java.math.BigDecimal quotedPrice,
-            /** Pending upgrade: unused value of the replaced period already deducted from the price. */
+            /** Nâng cấp đang chờ thanh toán: giá trị chưa sử dụng của kỳ bị thay thế đã được khấu trừ vào giá. */
             java.math.BigDecimal creditApplied,
-            /** Period active today: unused value that an upgrade would deduct (from the amount actually paid). */
+            /** Kỳ gói đang hoạt động hôm nay: giá trị chưa sử dụng sẽ được khấu trừ khi nâng cấp (tính từ số tiền thực trả). */
             java.math.BigDecimal remainingValue
     ) {
         /** Constructor rút gọn không có giá chốt, phần quy đổi và giá trị còn lại. */
@@ -105,12 +105,9 @@ public final class SubscriptionResponses {
     ) {}
 
     /**
-     * Một yêu cầu gói tập quầy đã xử lý: loại (REGISTER, RENEW, UPGRADE), kết quả (APPROVED đã thanh toán,
-     * CANCELLED đã rút trước khi thanh toán), hội viên, gói mới/cũ, số tiền, phương thức, thời điểm và người xử
-     * lý.
-     *
-     * A membership request the desk has finished with: {@code type} REGISTER, RENEW or UPGRADE; {@code outcome}
-     * APPROVED (paid and activated) or CANCELLED (withdrawn before payment).
+     * Một yêu cầu gói tập quầy đã xử lý xong: {@code type} gồm REGISTER, RENEW hoặc UPGRADE; {@code outcome}
+     * gồm APPROVED (đã thanh toán và kích hoạt) hoặc CANCELLED (đã rút trước khi thanh toán), kèm hội viên, gói
+     * mới/cũ, số tiền, phương thức, thời điểm và người xử lý.
      */
     public record RequestHistoryDto(
             Long subscriptionId,
@@ -165,10 +162,8 @@ public final class SubscriptionResponses {
     }
 
     /**
-     * Chính sách bảo lưu của gói (dùng để dựng form): có được bảo lưu không, đã dùng lượt chưa, số ngày tối
-     * thiểu/tối đa, số giờ báo trước, số file và dung lượng giấy tờ tối đa.
-     *
-     * What a member may ask for when putting this subscription on hold; drives the request form.
+     * Chính sách bảo lưu mà hội viên có thể yêu cầu cho gói này (dùng để điều khiển form yêu cầu): có được bảo lưu
+     * không, đã dùng lượt chưa, số ngày tối thiểu/tối đa, số giờ báo trước, số file và dung lượng giấy tờ tối đa.
      */
     public record HoldPolicyDto(
             boolean allowed,
@@ -181,9 +176,7 @@ public final class SubscriptionResponses {
     ) {}
 
     /**
-     * Thông tin một file giấy tờ bảo lưu (không kèm nội dung; tải qua endpoint riêng).
-     *
-     * Metadata of a medical document attached to a hold request; the bytes are fetched through the download endpoint.
+     * Siêu dữ liệu (metadata) của một file giấy tờ y tế đính kèm yêu cầu bảo lưu; nội dung byte được tải qua endpoint riêng.
      */
     public record HoldDocumentDto(
             Long id,

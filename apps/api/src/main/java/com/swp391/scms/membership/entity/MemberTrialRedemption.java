@@ -5,9 +5,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * Entity tracking 3-day free trial redemptions verified by Citizen Identity Card (CCCD) or Passport.
- * Each document hash and each Member can only redeem once.
- * Submissions initially stay in PENDING_APPROVAL until verified at the reception desk.
+ * Entity theo dõi các lượt nhận gói tập thử miễn phí 3 ngày được xác minh bằng CCCD hoặc Hộ chiếu.
+ * Mỗi mã băm giấy tờ và mỗi hội viên chỉ được nhận một lần.
+ * Yêu cầu ban đầu ở trạng thái PENDING_APPROVAL cho đến khi được xác minh tại quầy lễ tân.
  */
 @Entity
 @Table(name = "member_trial_redemptions", uniqueConstraints = {
@@ -51,7 +51,7 @@ public class MemberTrialRedemption {
     private String fullName;
 
     @Column(name = "document_type", length = 20)
-    private String documentType = DOC_CCCD; // CCCD, PASSPORT
+    private String documentType = DOC_CCCD; // Giá trị: CCCD, PASSPORT
 
     @Column(name = "nationality", length = 100)
     private String nationality;
@@ -63,7 +63,7 @@ public class MemberTrialRedemption {
     private String backImageUrl;
 
     @Column(name = "status", length = 30)
-    private String status = STATUS_PENDING; // PENDING_APPROVAL, APPROVED, REJECTED
+    private String status = STATUS_PENDING; // Giá trị: PENDING_APPROVAL, APPROVED, REJECTED
 
     @Column(name = "reviewed_by")
     private Long reviewedBy;

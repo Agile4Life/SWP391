@@ -37,7 +37,7 @@ public class MemberInvoicePdfService {
 
     /** Tải PDF hóa đơn: kiểm tra quyền sở hữu trước khi đọc nội dung, thiếu số tiền thì báo lỗi, rồi dựng PDF. */
     public byte[] download(Long paymentId, Long userId) {
-        // Ownership is resolved before any invoice content is read for rendering.
+        // Quyền sở hữu được xác minh trước khi đọc bất kỳ nội dung hóa đơn nào để kết xuất.
         InvoiceDto invoice = invoiceService.getMemberInvoiceByPaymentId(paymentId, userId);
         if (invoice.getTotalAmount() == null || invoice.getSubtotalAmount() == null || invoice.getTaxAmount() == null
                 || invoice.getInvoiceNumber() == null || invoice.getIssuedAt() == null || invoice.getPaymentId() == null) {

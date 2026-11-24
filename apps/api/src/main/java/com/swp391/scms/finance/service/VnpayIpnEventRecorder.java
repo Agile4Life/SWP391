@@ -14,11 +14,8 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Ghi nhật ký mỗi callback VNPay trong transaction riêng (vì xử lý chính có thể đã rollback); lỗi bị bỏ qua để
- * câu trả lời cho VNPay không đổi.
- *
- * Keeps an audit row for each VNPay callback in its own transaction: the settlement may have rolled back (code 99)
- * and the handler runs outside any transaction. Failures are swallowed so the answer to VNPay never changes.
+ * Ghi nhật ký đối soát cho mỗi callback VNPay trong transaction riêng: luồng thanh toán chính có thể đã rollback
+ * (mã 99) và handler chạy bên ngoài mọi transaction. Lỗi ghi nhật ký được bỏ qua để câu trả lời cho VNPay không bao giờ đổi.
  */
 @Service
 public class VnpayIpnEventRecorder {
@@ -43,10 +40,8 @@ public class VnpayIpnEventRecorder {
     }
 
     /**
-     * Dựng bản ghi từ các trường không nhạy cảm của cổng (mã tham chiếu, mã phản hồi, trạng thái, mã giao dịch,
-     * số tiền) và mã đã trả lời.
-     *
-     * Builds the row from the whitelisted, non-sensitive gateway fields only.
+     * Dựng bản ghi chỉ từ các trường không nhạy cảm nằm trong danh sách cho phép của cổng
+     * (mã tham chiếu, mã phản hồi, trạng thái, mã giao dịch, số tiền) và mã đã trả lời.
      */
     VnpayIpnEvent toEvent(String source, Map<String, String> params, String rspCode) {
         Map<String, String> p = params != null ? params : Map.of();

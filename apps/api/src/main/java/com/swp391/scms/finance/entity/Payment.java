@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Entity mapping table payments on Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
+ * Entity ánh xạ bảng payments trên Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_payments_method", constraints = "method IN ('cash','pos','bank_transfer','online_wallet')")
@@ -102,10 +102,10 @@ public class Payment {
     private BigDecimal refundedAmount;
 
     @Column(nullable = false, length = 20)
-    private String method; // cash, pos, bank_transfer, online_wallet
+    private String method; // Giá trị: cash, pos, bank_transfer, online_wallet
 
     @Column(nullable = false, length = 20)
-    private String status = "pending"; // success, pending, failed, refunded
+    private String status = "pending"; // Giá trị: success, pending, failed, refunded
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;

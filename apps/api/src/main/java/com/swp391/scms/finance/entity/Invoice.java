@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Entity mapping table invoices on Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
+ * Entity ánh xạ bảng invoices trên Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
  * Chứa cột tính toán được lưu total_amount (subtotal_amount + tax_amount).
  */
 @Entity
@@ -36,10 +36,10 @@ public class Invoice {
     private BigDecimal taxAmount = BigDecimal.ZERO;
 
     /**
-     * [FIX 1NF-3NF §3.6] Computed column: AS (subtotal_amount + tax_amount).
-     * @GeneratedColumn instructs Hibernate ORM (Code-First) to generate the database-agnostic
-     * DDL cột tính toán được lưu cho PostgreSQL.
-     * @Generated informs Hibernate to fetch the database-computed value upon INSERT and UPDATE.
+     * [FIX 1NF-3NF §3.6] Cột tính toán: AS (subtotal_amount + tax_amount).
+     * Annotation @GeneratedColumn chỉ dẫn Hibernate ORM (Code-First) sinh DDL cột tính toán được lưu
+     * độc lập cơ sở dữ liệu cho PostgreSQL.
+     * Annotation @Generated thông báo cho Hibernate đọc lại giá trị do cơ sở dữ liệu tính sau INSERT và UPDATE.
      */
     @GeneratedColumn("subtotal_amount + tax_amount")
     @Column(name = "total_amount", insertable = false, updatable = false, precision = 12, scale = 2)

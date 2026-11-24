@@ -149,7 +149,7 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
                                                @Param("today") LocalDate today,
                                                @Param("sessionDate") LocalDate sessionDate);
 
-    /** True when an approved hold (running or still to start) covers {@code date}; used to say "on hold" instead of "no plan". */
+    /** Trả về true khi một đợt bảo lưu đã duyệt (đang chạy hoặc sắp bắt đầu) bao phủ ngày {@code date}; dùng để báo "đang bảo lưu" thay vì "chưa có gói". */
     @Query("""
             select (count(s) > 0) from MembershipSubscription s
             where s.member.userId = :memberId and s.status in ('active', 'frozen')
@@ -170,7 +170,7 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
     /** Các kỳ gói active hết hạn đúng ngày cho trước, nạp sẵn hội viên, tài khoản và gói; dùng gửi nhắc gia hạn. */
     List<MembershipSubscription> findActiveSubscriptionsExpiringOn(@Param("endDate") LocalDate endDate);
 
-    /** A paid, frozen or awaiting-payment period that is still running or ended after {@code since}. */
+    /** Kỳ đã thanh toán, đang bảo lưu hoặc chờ thanh toán vẫn đang chạy hoặc kết thúc sau {@code since}. */
     @Query("""
             select (count(s) > 0) from MembershipSubscription s
             where s.member.userId = :memberId
@@ -190,7 +190,7 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
     List<MembershipSubscription> findByStatusAndHoldStatusAndHoldResolvedAtLessThanEqual(
             String status, String holdStatus, java.time.LocalDateTime resolvedBefore);
 
-    /** Approved holds that begin today or earlier but are still running as active memberships. */
+    /** Các đợt bảo lưu đã duyệt bắt đầu từ hôm nay trở về trước nhưng vẫn đang chạy ở trạng thái active. */
     @Query("""
             select s.id from MembershipSubscription s
             where s.status = 'active' and s.holdStatus = 'APPROVED'
@@ -199,7 +199,7 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
     /** Id các kỳ active có bảo lưu đã duyệt mà ngày bắt đầu bảo lưu đã tới (cần chuyển sang frozen). */
     List<Long> findHoldsDueToStart(@Param("today") LocalDate today);
 
-    /** Frozen memberships whose dated hold has ended before {@code today}. */
+    /** Các gói đang frozen có đợt bảo lưu theo ngày đã kết thúc trước {@code today}. */
     @Query("""
             select s.id from MembershipSubscription s
             where s.status = 'frozen' and s.holdStatus = 'APPROVED'

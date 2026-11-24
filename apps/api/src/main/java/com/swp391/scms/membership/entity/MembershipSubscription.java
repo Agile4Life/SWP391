@@ -9,11 +9,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * Bảng membership_subscriptions: một kỳ gói tập của hội viên (gói, kỳ trước trong chuỗi gia hạn/nâng cấp, thời
- * hạn, trạng thái pending_payment/active/frozen/expired/cancelled, mã QR, phí nâng cấp, phần quy đổi, giá chốt,
- * ngày kết thúc gốc của kỳ bị thay thế, và toàn bộ thông tin bảo lưu).
- *
- * Entity mapping table membership_subscriptions (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng membership_subscriptions (schema được Hibernate sinh tự động theo hướng code-first):
+ * một kỳ gói tập của hội viên (gói, kỳ trước trong chuỗi gia hạn/nâng cấp, thời hạn, trạng thái
+ * pending_payment/active/frozen/expired/cancelled, mã QR, phí nâng cấp, phần quy đổi, giá chốt,
+ * ngày kết thúc gốc của kỳ bị thay thế và toàn bộ thông tin bảo lưu).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_subscriptions_status", constraints = "status IN ('pending_payment','active','frozen','expired','cancelled')")
@@ -48,25 +47,25 @@ public class MembershipSubscription {
     @Column(name = "qr_code", length = 255, unique = true)
     private String qrCode;
 
-    /** Quoted amount for an upgrade: new package price minus {@link #creditApplied}; null for ordinary purchases and renewals. */
+    /** Số tiền báo giá cho lượt nâng cấp: giá gói mới trừ {@link #creditApplied}; null đối với mua mới thông thường và gia hạn. */
     @Column(name = "upgrade_charge", precision = 14, scale = 2)
     private BigDecimal upgradeCharge;
 
     /**
-     * For an upgrade: unused value of the replaced period carried into this one, fixed when the upgrade is quoted.
-     * It comes from what the member actually paid, so later catalog price changes never alter it.
+     * Dành cho nâng cấp: giá trị chưa sử dụng của kỳ bị thay thế được chuyển sang kỳ này, cố định tại thời điểm báo giá nâng cấp.
+     * Tính từ số tiền hội viên đã thực trả nên các thay đổi giá danh mục về sau không làm thay đổi giá trị này.
      */
     @Column(name = "credit_applied", precision = 14, scale = 2)
     private BigDecimal creditApplied;
 
     /**
-     * For a new registration or renewal: the catalog price when the request was made. Like an upgrade quote it is
-     * what the member pays even if the manager reprices the package before payment; null for older requests.
+     * Dành cho đăng ký mới hoặc gia hạn: giá danh mục tại thời điểm tạo yêu cầu. Tương tự báo giá nâng cấp, đây là
+     * số tiền hội viên phải trả ngay cả khi quản lý điều chỉnh giá gói trước khi thanh toán; null đối với các yêu cầu cũ hơn.
      */
     @Column(name = "quoted_price", precision = 14, scale = 2)
     private BigDecimal quotedPrice;
 
-    /** For an upgrade: the expiry the replaced period had before the upgrade cut it short. */
+    /** Dành cho nâng cấp: ngày hết hạn vốn có của kỳ bị thay thế trước khi việc nâng cấp cắt ngắn nó. */
     @Column(name = "replaced_end_date")
     private java.time.LocalDate replacedEndDate;
 
@@ -81,7 +80,7 @@ public class MembershipSubscription {
     @Column(name = "hold_reason", length = 500)
     private String holdReason;
 
-    /** Why reception rejected the hold request; shown to the member. Cleared when a new request is filed. */
+    /** Lý do lễ tân từ chối yêu cầu bảo lưu; hiển thị cho hội viên. Được xóa khi gửi yêu cầu mới. */
     @Column(name = "hold_rejection_reason", length = 500)
     private String holdRejectionReason;
 
@@ -95,18 +94,18 @@ public class MembershipSubscription {
     @JoinColumn(name = "hold_resolved_by")
     private User holdResolvedBy;
 
-    /** First and last day of the requested hold; both inclusive. Null on holds created before dated holds. */
+    /** Ngày đầu và ngày cuối của đợt bảo lưu được yêu cầu (tính cả hai ngày). Null với các bảo lưu tạo trước khi có bảo lưu theo ngày. */
     @Column(name = "hold_start_date")
     private LocalDate holdStartDate;
 
     @Column(name = "hold_end_date")
     private LocalDate holdEndDate;
 
-    /** A package may be held once; set when a hold is approved and never cleared. */
+    /** Mỗi gói chỉ được bảo lưu một lần; được đặt khi bảo lưu được duyệt và không bao giờ đặt lại. */
     @Column(name = "hold_used")
     private Boolean holdUsed = false;
 
-    /** True when the approved hold's days were already added to endDate; null for holds approved before that change. */
+    /** True khi số ngày bảo lưu đã duyệt đã được cộng vào endDate; null với các bảo lưu duyệt trước khi có thay đổi này. */
     @Column(name = "hold_days_credited")
     private Boolean holdDaysCredited;
 
@@ -171,11 +170,8 @@ public class MembershipSubscription {
     /** Gán giá trị mới cho trường quotedPrice. */
     public void setQuotedPrice(BigDecimal quotedPrice) { this.quotedPrice = quotedPrice; }
     /**
-     * Số tiền hội viên phải trả ở quầy hoặc qua VNPay: giá đã chốt khi tạo yêu cầu (phí nâng cấp hoặc giá niêm
-     * yết lúc đó). Chỉ yêu cầu cũ chưa chốt giá mới dùng giá gói hiện tại.
-     *
-     * What the member owes at the counter or on VNPay: the price fixed when the request was made (upgrade charge or
-     * quoted catalog price). Only requests created before prices were fixed fall back to the current package price.
+     * Số tiền hội viên phải trả tại quầy hoặc qua VNPay: mức giá đã chốt khi tạo yêu cầu (phí nâng cấp hoặc giá
+     * danh mục đã báo giá). Chỉ các yêu cầu tạo trước khi chốt giá mới dùng lại giá gói hiện tại.
      */
     public BigDecimal payableAmount() {
         if (upgradeCharge != null) return upgradeCharge;
@@ -215,9 +211,7 @@ public class MembershipSubscription {
     /** Gán giá trị mới cho trường holdDaysCredited. */
     public void setHoldDaysCredited(Boolean holdDaysCredited) { this.holdDaysCredited = holdDaysCredited; }
     /**
-     * Có bảo lưu đã duyệt bao phủ ngày cho trước không (ngày bảo lưu không được đặt lịch).
-     *
-     * True when an approved hold covers {@code date}: nothing may be booked on a held day.
+     * Trả về true khi có đợt bảo lưu đã duyệt bao phủ ngày {@code date}: không được đặt lịch vào ngày đang bảo lưu.
      */
     public boolean isHeldOn(LocalDate date) {
         return "APPROVED".equalsIgnoreCase(holdStatus) && holdStartDate != null && holdEndDate != null
