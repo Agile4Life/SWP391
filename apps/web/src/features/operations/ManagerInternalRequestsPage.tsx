@@ -31,6 +31,10 @@ const ROLE_DISPLAY: Record<string, { label: string; bg: string; color: string }>
   RECEPTIONIST: { label: 'Lễ tân quầy', bg: 'color-mix(in srgb, var(--portal-info) 12%, transparent)', color: 'var(--portal-info)' },
 };
 
+/**
+ * Màn quản lý duyệt đơn từ nội bộ của nhân sự: lọc theo trạng thái và loại, đếm đơn chờ, duyệt hoặc từ chối kèm
+ * ghi chú (từ chối bắt buộc có lý do).
+ */
 export function ManagerInternalRequestsPage() {
   const { t } = useStaffI18n();
   const [requests, setRequests] = useState<StaffInternalRequestDto[]>([]);
@@ -48,6 +52,7 @@ export function ManagerInternalRequestsPage() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [modalError, setModalError] = useState<StaffMessage>('');
 
+  // Tải toàn bộ đơn từ của nhân sự.
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -65,10 +70,12 @@ export function ManagerInternalRequestsPage() {
     void loadData();
   }, [loadData]);
 
+  // Số đơn đang chờ duyệt.
   const pendingCount = useMemo(() => {
     return requests.filter((r) => r.status === 'PENDING').length;
   }, [requests]);
 
+  // Đơn sau khi lọc theo trạng thái và loại.
   const filteredRequests = useMemo(() => {
     return requests.filter((r) => {
       const matchStatus = statusFilter === 'ALL' || r.status === statusFilter;
@@ -77,6 +84,7 @@ export function ManagerInternalRequestsPage() {
     });
   }, [requests, statusFilter, typeFilter]);
 
+  // Mở hộp duyệt đơn với ghi chú mặc định.
   function handleOpenApprove(r: StaffInternalRequestDto) {
     setReviewTarget(r);
     setReviewAction('APPROVED');
@@ -84,6 +92,7 @@ export function ManagerInternalRequestsPage() {
     setModalError('');
   }
 
+  // Mở hộp từ chối đơn (ghi chú để trống, bắt buộc nhập).
   function handleOpenReject(r: StaffInternalRequestDto) {
     setReviewTarget(r);
     setReviewAction('REJECTED');
@@ -91,6 +100,7 @@ export function ManagerInternalRequestsPage() {
     setModalError('');
   }
 
+  // Gửi kết quả duyệt/từ chối: từ chối cần lý do, thành công thì báo và tải lại danh sách.
   async function handleReviewSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!reviewTarget) return;

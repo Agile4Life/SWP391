@@ -31,6 +31,10 @@ const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }
   CANCELLED: { label: 'Đã hủy', bg: 'color-mix(in srgb, var(--portal-muted) 15%, transparent)', color: 'var(--portal-muted)' },
 };
 
+/**
+ * Màn nhân viên xem và gửi đơn từ của mình (nghỉ phép, đổi ca, đổi lịch...): lọc theo trạng thái, tạo đơn, hủy
+ * đơn đang chờ.
+ */
 export function StaffInternalRequestsPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -55,6 +59,7 @@ export function StaffInternalRequestsPage() {
   // Cancel target
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
+  // Tải đơn từ của chính người dùng.
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -72,11 +77,13 @@ export function StaffInternalRequestsPage() {
     void loadData();
   }, [loadData]);
 
+  // Đơn sau khi lọc theo trạng thái.
   const filteredRequests = useMemo(() => {
     if (statusFilter === 'ALL') return requests;
     return requests.filter((r) => r.status === statusFilter);
   }, [requests, statusFilter]);
 
+  // Kiểm tra và gửi đơn mới; nghỉ phép trùng ngày thì hỏi xác nhận rồi mới gửi lại với confirmOverlap.
   async function handleCreateSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!createTitle.trim()) {
@@ -98,6 +105,7 @@ export function StaffInternalRequestsPage() {
 
     setSubmitting(true);
     setFormError('');
+    // Dữ liệu đơn gửi lên backend.
     const payload = {
       requestType: createType,
       title: createTitle.trim(),
@@ -133,6 +141,7 @@ export function StaffInternalRequestsPage() {
     }
   }
 
+  // Đặt lại biểu mẫu tạo đơn.
   function resetForm() {
     setCreateType('LEAVE');
     setCreateTitle('');
@@ -143,6 +152,7 @@ export function StaffInternalRequestsPage() {
     setFormError('');
   }
 
+  // Hủy một đơn sau khi xác nhận, rồi tải lại danh sách.
   async function handleCancelRequest(id: number) {
     if (!(await confirm({ title: staffMessage('Hủy đơn từ?', staffTranslation('Hủy đơn từ?')), message: staffMessage('Đơn sẽ không còn được gửi tới quản lý để duyệt.', staffTranslation('Đơn sẽ không còn được gửi tới quản lý để duyệt.')), confirmLabel: staffMessage('Hủy đơn', staffTranslation('Hủy đơn')), cancelLabel: staffMessage('Giữ đơn', staffTranslation('Giữ đơn')), danger: true }))) return;
     setCancellingId(id);
