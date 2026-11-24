@@ -4,6 +4,10 @@ import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Bảng users: tài khoản đăng nhập của mọi vai trò (tên đăng nhập, email, SĐT, mật khẩu băm, vai trò, trạng
+ * thái, Google sub, thời điểm xóa mềm...) cùng các hồ sơ theo vai trò (Member, Coach, Receptionist).
+ */
 @Entity
 @org.hibernate.annotations.DynamicUpdate
 @org.hibernate.annotations.Check(name = "ck_users_gender", constraints = "gender IN ('male','female','other')")
@@ -78,6 +82,7 @@ public class User {
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private Receptionist receptionist;
 
+    /** Hibernate gọi trước khi cập nhật bản ghi: tự cập nhật updatedAt. */
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
@@ -115,6 +120,10 @@ public class User {
 
     /** Lấy giá trị trường passwordHash. */
     public String getPasswordHash() { return passwordHash; }
+    /**
+     * Đặt mật khẩu (bản băm). Khi thay một mật khẩu đã có (đặt lại/đổi), ghi lại thời điểm đổi để mọi JWT cấp
+     * trước đó mất hiệu lực; đặt mật khẩu lần đầu thì không.
+     */
     public void setPasswordHash(String passwordHash) {
         // Replacing an existing password (reset, change) revokes older tokens; setting the first one does not.
         if (this.passwordHash != null && !this.passwordHash.equals(passwordHash)) {

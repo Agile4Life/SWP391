@@ -3,6 +3,10 @@ package com.swp391.scms.users.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
+/**
+ * Bảng members: hồ sơ hội viên gắn 1-1 với tài khoản User (mã hội viên, ngày tham gia, sức khỏe, mục tiêu,
+ * trình độ, liên hệ khẩn cấp, giấy tờ tùy thân và trạng thái duyệt KYC...).
+ */
 @Entity
 @org.hibernate.annotations.DynamicUpdate
 @org.hibernate.annotations.Check(name = "ck_members_level", constraints = "fitness_level IN ('beginner','intermediate','advanced')")
@@ -121,6 +125,7 @@ public class Member {
 
     /** Lấy giá trị trường paymentRealtimeTopic. */
     public java.util.UUID getPaymentRealtimeTopic() { return paymentRealtimeTopic; }
+    /** Gán mã chủ đề realtime riêng của hội viên (dùng để báo frontend tải lại thanh toán, không chứa dữ liệu). */
     public void setPaymentRealtimeTopic(java.util.UUID topic) { paymentRealtimeTopic = topic; }
 
     /** Lấy giá trị trường documentType. */

@@ -3,6 +3,10 @@ package com.swp391.scms.users.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
+/**
+ * Bảng coaches: hồ sơ HLV (chuyên môn, giới thiệu, chứng chỉ, ngày vào làm, trạng thái làm việc), khóa chính
+ * trùng id người dùng.
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_coaches_status", constraints = "employment_status IN ('active','on_leave','terminated')")
 @Table(name = "coaches")

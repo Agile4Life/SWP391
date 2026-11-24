@@ -3,7 +3,7 @@ package com.swp391.scms.users.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
-/** Entity mapping table center_managers (schema is generated code-first by Hibernate). */
+/** Bảng center_managers: hồ sơ riêng của quản lý trung tâm (ngày vào làm), khóa chính trùng id người dùng. */
 @Entity
 @Table(name = "center_managers")
 public class CenterManager {

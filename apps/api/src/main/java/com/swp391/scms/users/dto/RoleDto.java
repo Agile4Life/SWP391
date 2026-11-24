@@ -1,5 +1,6 @@
 package com.swp391.scms.users.dto;
 
+/** Thông tin một vai trò trả cho client: id, mã, tên và mô tả. */
 public class RoleDto {
     private Long id;
     private String code;

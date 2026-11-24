@@ -3,6 +3,10 @@ package com.swp391.scms.users.dto;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * Thông tin người dùng trả cho màn quản trị: thông tin cá nhân, mã vai trò, trạng thái, thời điểm tạo/đăng nhập
+ * cuối/xóa mềm và cờ hội viên đang bảo lưu gói.
+ */
 public class UserDto {
     private Long id;
     private String roleCode;

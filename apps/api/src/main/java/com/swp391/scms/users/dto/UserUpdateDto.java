@@ -3,6 +3,7 @@ package com.swp391.scms.users.dto;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/** Dữ liệu sửa người dùng; trường nào null thì giữ nguyên. */
 public class UserUpdateDto {
     @Size(max = 150, message = "{validation.users.full_name.size}")
     private String fullName;

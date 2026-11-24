@@ -3,6 +3,7 @@ package com.swp391.scms.users.entity;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 
+/** Bảng receptionists: hồ sơ lễ tân (ca làm, ngày vào làm, trạng thái làm việc), khóa chính trùng id người dùng. */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_receptionists_status", constraints = "employment_status IN ('active','on_leave','terminated')")
 @Table(name = "receptionists")

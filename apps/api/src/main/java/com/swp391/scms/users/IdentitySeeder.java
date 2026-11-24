@@ -18,6 +18,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
+ * Chạy khi khởi động: tạo sẵn 6 quyền và 5 vai trò cốt lõi (ADMIN, CENTER_MANAGER, RECEPTIONIST, COACH, MEMBER)
+ * với quyền mặc định, và tạo tài khoản Admin đầu tiên nếu có cấu hình. Quản lý trung tâm do Admin tạo sau,
+ * không tạo tự động.
+ *
  * Seeds five core roles and an optional Admin. Managers are provisioned by an authenticated Admin.
  */
 @Component
@@ -53,6 +57,7 @@ public class IdentitySeeder implements ApplicationRunner {
     private final String adminEmail;
     private final String adminPassword;
 
+    /** Nhận các repository, bộ mã hóa mật khẩu và email/mật khẩu Admin khởi tạo (app.bootstrap.admin.*). */
     public IdentitySeeder(RoleRepository roles, PermissionRepository permissions, UserRepository users,
                           PasswordEncoder passwordEncoder,
                           @Value("${app.bootstrap.admin.email:}") String adminEmail,
@@ -65,6 +70,11 @@ public class IdentitySeeder implements ApplicationRunner {
         this.adminPassword = adminPassword;
     }
 
+    /**
+     * Tạo quyền còn thiếu; tạo vai trò còn thiếu và gán quyền mặc định nếu vai trò chưa có quyền nào; gỡ
+     * USER_MANAGE/ROLE_MANAGE khỏi CENTER_MANAGER (chỉ Admin được quản trị tài khoản); cuối cùng tạo Admin.
+     * Chạy lại nhiều lần không tạo trùng.
+     */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
@@ -99,6 +109,7 @@ public class IdentitySeeder implements ApplicationRunner {
         seedAdmin();
     }
 
+    /** Tạo tài khoản Admin từ cấu hình nếu có đủ email và mật khẩu và email đó chưa tồn tại. */
     private void seedAdmin() {
         if (adminEmail.isBlank() || adminPassword.isBlank()
                 || users.findByEmailIgnoreCase(adminEmail.trim()).isPresent()) {

@@ -1,5 +1,6 @@
 package com.swp391.scms.users.dto;
 
+/** Thông tin một quyền trả cho client: id, mã, tên và module. */
 public class PermissionDto {
     private Long id;
     private String code;

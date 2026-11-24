@@ -6,6 +6,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Dữ liệu Admin nhập khi tạo người dùng: họ tên, email, SĐT, mật khẩu, giới tính và vai trò (có validate kèm mã
+ * thông báo i18n).
+ */
 public class UserCreateDto {
     @NotBlank(message = "{validation.users.full_name.not_blank}")
     @Size(max = 150, message = "{validation.users.full_name.size}")

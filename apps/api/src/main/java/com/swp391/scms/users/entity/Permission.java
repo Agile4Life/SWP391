@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+/** Bảng permissions: một quyền (mã, tên, module). */
 @Entity
 @Table(name = "permissions")
 public class Permission {

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
 
+/** Bảng roles: vai trò (mã, tên) và tập quyền gán qua bảng nối role_permissions. */
 @Entity
 @Table(name = "roles")
 public class Role {

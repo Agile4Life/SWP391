@@ -23,8 +23,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 
+/**
+ * Nghiệp vụ quản trị tài khoản: tạo/sửa/xóa mềm/khôi phục/khóa người dùng, tài khoản nhân viên, kiểm tra trùng
+ * email/SĐT, bảo vệ Admin cuối cùng, chặn xóa khi còn cam kết, và tự dọn tài khoản hội viên không hoạt động.
+ */
 @Service
 public class UserService {
+    /** Danh sách tài khoản HLV và lễ tân chưa bị xóa (chỉ quản lý trung tâm hoặc Admin). */
     @Transactional(readOnly = true)
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CENTER_MANAGER', 'ADMIN')")
     public List<UserDto> getStaffAccounts() {
@@ -32,6 +37,10 @@ public class UserService {
                 .stream().map(userMapper::toDto).toList();
     }
 
+    /**
+     * Quản lý tạo tài khoản nhân viên: vai trò chỉ được là COACH hoặc RECEPTIONIST, rồi tạo như người dùng
+     * thường.
+     */
     @Transactional
     @Audited(action = "STAFF_ACCOUNT_CREATE", entity = "users")
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CENTER_MANAGER', 'ADMIN')")
@@ -51,7 +60,11 @@ public class UserService {
         return createUser(dto);
     }
 
-    /** Manager-level lock/unlock, limited to the Coach and Receptionist accounts a manager provisions. */
+    /**
+     * Quản lý khóa/mở khóa tài khoản nhân viên; chỉ áp dụng cho HLV và lễ tân.
+     *
+     * Manager-level lock/unlock, limited to the Coach and Receptionist accounts a manager provisions.
+     */
     @Transactional
     @Audited(action = "STAFF_ACCOUNT_STATUS_CHANGE", entity = "users")
     @org.springframework.security.access.prepost.PreAuthorize("hasAnyRole('CENTER_MANAGER', 'ADMIN')")
@@ -110,12 +123,14 @@ public class UserService {
     @Autowired(required = false)
     com.swp391.scms.membership.repository.MembershipCancellationRequestRepository cancellationRequestRepository;
 
+    /** Constructor cho test, không có repository gói tập. */
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
                        ReceptionistRepository receptionistRepository) {
         this(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, null, Clock.systemDefaultZone());
     }
 
+    /** Constructor cho test, dùng đồng hồ hệ thống. */
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
                        ReceptionistRepository receptionistRepository,
@@ -123,6 +138,7 @@ public class UserService {
         this(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, subscriptionRepository, Clock.systemDefaultZone());
     }
 
+    /** Constructor Spring dùng; repository gói tập và Clock là tùy chọn. */
     @org.springframework.beans.factory.annotation.Autowired
     public UserService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, UserMapper userMapper,
@@ -140,6 +156,7 @@ public class UserService {
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
+    /** Danh sách người dùng chưa bị xóa; với hội viên có thêm cờ "đang bảo lưu gói" (frozen). */
     @Transactional(readOnly = true)
     public List<UserDto> getAllUsers() {
         return userRepository.findAllByDeletedAtIsNullOrderByIdAsc().stream()
@@ -153,6 +170,7 @@ public class UserService {
                 .toList();
     }
 
+    /** Chi tiết người dùng chưa bị xóa; với hội viên có thêm cờ "đang bảo lưu gói". */
     @Transactional(readOnly = true)
     public UserDto getUserById(Long id) {
         User u = findActiveUser(id);
@@ -163,6 +181,10 @@ public class UserService {
         return dto;
     }
 
+    /**
+     * Chuẩn hóa SĐT: bỏ khoảng trắng, dấu chấm, gạch, ngoặc; đổi +84xxxxxxxxx hoặc 84xxxxxxxxx về 0xxxxxxxxx.
+     * Chuỗi rỗng trả null.
+     */
     public static String normalizePhone(String rawPhone) {
         if (rawPhone == null) return null;
         String compact = rawPhone.trim().replaceAll("[\\s.\\-()]+", "");
@@ -176,6 +198,10 @@ public class UserService {
         return compact;
     }
 
+    /**
+     * Email đã có người dùng chưa (so không phân biệt hoa thường và bỏ khoảng trắng; tính cả tài khoản đã xóa).
+     * Có nhiều kết quả cũng coi là đã tồn tại.
+     */
     public static boolean emailExists(UserRepository userRepository, String rawEmail) {
         if (rawEmail == null || rawEmail.isBlank()) return false;
         String clean = rawEmail.trim();
@@ -187,6 +213,10 @@ public class UserService {
         return userRepository.existsByNormalizedEmail(clean);
     }
 
+    /**
+     * SĐT đã có người khác dùng chưa (trừ người có id excludeUserId): thử mọi cách viết tương đương (0...,
+     * +84..., 84...) và cả dạng đã bỏ ký tự phân cách.
+     */
     public static boolean phoneExists(UserRepository userRepository, String rawPhone, Long excludeUserId) {
         String normalized = normalizePhone(rawPhone);
         if (normalized == null) return false;
@@ -213,6 +243,10 @@ public class UserService {
                 .anyMatch(u -> excludeUserId == null || !java.util.Objects.equals(u.getId(), excludeUserId));
     }
 
+    /**
+     * Tạo người dùng: email và SĐT không trùng, mật khẩu băm BCrypt, email chữ thường, ảnh mặc định, trạng thái
+     * active. Tạo kèm hồ sơ HLV/lễ tân theo vai trò, và hồ sơ hội viên (mã MEM-<id>) nếu là MEMBER.
+     */
     @Transactional
     @Audited(action = "USER_CREATE", entity = "users")
     public UserDto createUser(UserCreateDto dto) {
@@ -257,6 +291,7 @@ public class UserService {
         return userMapper.toDto(saved);
     }
 
+    /** Tạo hồ sơ HLV hoặc lễ tân (ngày vào làm là hôm nay) nếu vai trò yêu cầu mà chưa có. */
     private void initializeStaffProfile(User user) {
         if ("COACH".equalsIgnoreCase(user.getRole().getCode()) && user.getCoach() == null) {
             var coach = new com.swp391.scms.users.entity.Coach();
@@ -272,6 +307,10 @@ public class UserService {
         }
     }
 
+    /**
+     * Sửa người dùng: họ tên, SĐT (không trùng), giới tính. Khi đổi vai trò: không được bỏ Admin cuối cùng,
+     * không được đổi khi còn cam kết (gói tập, lịch đặt, lịch dạy), và tạo hồ sơ còn thiếu cho vai trò mới.
+     */
     @Transactional
     @Audited(action = "USER_UPDATE", entity = "users")
     public UserDto updateUser(Long id, UserUpdateDto dto) {
@@ -313,6 +352,10 @@ public class UserService {
         return userMapper.toDto(userRepository.save(user));
     }
 
+    /**
+     * Xóa mềm người dùng (đặt deletedAt) sau khi kiểm tra không phải Admin active cuối cùng và không còn cam
+     * kết dang dở.
+     */
     @Transactional
     @Audited(action = "USER_DELETE", entity = "users")
     public void deleteUser(Long id) {
@@ -325,6 +368,7 @@ public class UserService {
         userRepository.save(user);
     }
 
+    /** Danh sách người dùng đã bị xóa mềm, mới xóa trước. */
     @Transactional(readOnly = true)
     public List<UserDto> getDeletedUsers() {
         return userRepository.findAllByDeletedAtIsNotNullOrderByIdDesc().stream()
@@ -332,6 +376,7 @@ public class UserService {
                 .toList();
     }
 
+    /** Khôi phục người dùng đã xóa mềm và đặt lại trạng thái active; người chưa bị xóa thì báo lỗi 400. */
     @Transactional
     @Audited(action = "USER_RESTORE", entity = "users")
     public UserDto restoreUser(Long id) {
@@ -346,6 +391,10 @@ public class UserService {
         return userMapper.toDto(userRepository.save(user));
     }
 
+    /**
+     * Đặt trạng thái active hoặc locked. Không được khóa Admin active cuối cùng. Khi khóa: giải phóng các lịch
+     * còn treo (xem releaseCommitmentsOnLock).
+     */
     @Transactional
     @Audited(action = "USER_STATUS_CHANGE", entity = "users")
     public UserDto setStatus(Long id, String status) {
@@ -361,6 +410,10 @@ public class UserService {
     }
 
     /**
+     * Chặn xóa/đổi vai trò khi còn cam kết: hội viên còn gói hiệu lực/đang bảo lưu/chờ thanh toán hoặc còn lịch
+     * đặt sắp tới; HLV còn lớp hoặc buổi PT sắp tới. Riêng hội viên đã có yêu cầu hủy gói được duyệt thì các
+     * gói còn lại được chuyển sang cancelled trước.
+     *
      * A member who still holds a membership or upcoming bookings, or a coach who still teaches upcoming classes or
      * 1:1 sessions, keeps their account and role until a manager has settled those first.
      */
@@ -402,6 +455,9 @@ public class UserService {
     }
 
     /**
+     * Khi khóa tài khoản: HLV phải bàn giao lớp/buổi PT trước (kiểm tra như khi xóa); hội viên được hủy các chỗ
+     * đặt theo buổi sắp tới để người khác đặt. Các mục đã trả tiền để quầy hủy và hoàn tiền.
+     *
      * Locking must not leave a schedule behind: a coach first hands over upcoming classes and 1:1 sessions; a member's
      * upcoming per-session seats are freed so others can book them. Paid items (courses, courts, 1:1) stay for the
      * desk to cancel and refund.
@@ -417,11 +473,16 @@ public class UserService {
         }
     }
 
+    /** Lấy vai trò theo id; không thấy thì báo 404. */
     private Role findRole(Long roleId) {
         return roleRepository.findById(roleId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.role", roleId));
     }
 
+    /**
+     * Không cho khóa/xóa/đổi vai trò Admin active cuối cùng. Khóa dòng vai trò ADMIN trước khi đếm để hai
+     * request song song không cùng gỡ hai Admin cuối.
+     */
     private void protectLastActiveAdmin(User user) {
         if (user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().getCode())
                 && "active".equalsIgnoreCase(user.getStatus())) {
@@ -433,11 +494,13 @@ public class UserService {
         }
     }
 
+    /** Lấy người dùng chưa bị xóa; không thấy thì báo 404. */
     private User findActiveUser(Long id) {
         return userRepository.findByIdAndDeletedAtIsNull(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", id));
     }
 
+    /** Cập nhật ca làm của lễ tân (người dùng phải có vai trò RECEPTIONIST); chưa có hồ sơ thì tạo mới. */
     @Transactional
     @Audited(action = "RECEPTIONIST_PROFILE_UPDATE", entity = "receptionists")
     public void updateReceptionistShift(Long userId, com.swp391.scms.users.dto.ReceptionistProfileUpdateDto request) {
@@ -488,6 +551,9 @@ public class UserService {
     }
 
     /**
+     * Hội viên còn (hoặc gần đây còn) gói tập, hoặc đã check-in hay thanh toán trong khoảng thời gian xét thì
+     * coi là còn hoạt động. Không kiểm tra được gói tập thì giữ tài khoản cho an toàn.
+     *
      * True when the member still holds (or recently held) a membership, or scanned in or paid within the window.
      * Without the subscription source nothing can be verified, so the account is kept.
      */
