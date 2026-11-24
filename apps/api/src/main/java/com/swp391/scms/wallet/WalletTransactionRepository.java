@@ -5,6 +5,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/** Truy cập bảng wallet_transactions. */
 @Repository
 public interface WalletTransactionRepository extends JpaRepository<WalletTransaction, Long> {
 
@@ -28,6 +29,10 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
                     + " and w.createdAt >= :from and w.createdAt < :to order by w.createdAt desc, w.id desc",
             countQuery = "select count(w) from WalletTransaction w where " + LATE_REFUND_FILTER
                     + " and w.createdAt >= :from and w.createdAt < :to")
+    /**
+     * Các lần hoàn tiền VNPay xác nhận muộn trong khoảng thời gian (kèm ví và người dùng), mới nhất trước, có
+     * phân trang; dùng cho màn đối soát.
+     */
     org.springframework.data.domain.Page<WalletTransaction> findLateRefunds(
             @org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
             @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to,
@@ -35,11 +40,13 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
 
     @org.springframework.data.jpa.repository.Query("select count(w) from WalletTransaction w where " + LATE_REFUND_FILTER
             + " and w.createdAt >= :from and w.createdAt < :to")
+    /** Đếm số lần hoàn tiền VNPay muộn trong khoảng thời gian. */
     long countLateRefunds(@org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
                           @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to);
 
     @org.springframework.data.jpa.repository.Query("select coalesce(sum(w.amount), 0) from WalletTransaction w where " + LATE_REFUND_FILTER
             + " and w.createdAt >= :from and w.createdAt < :to")
+    /** Tổng số tiền hoàn VNPay muộn trong khoảng thời gian (không có thì 0). */
     java.math.BigDecimal sumLateRefunds(@org.springframework.data.repository.query.Param("from") java.time.LocalDateTime from,
                                         @org.springframework.data.repository.query.Param("to") java.time.LocalDateTime to);
 

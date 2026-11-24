@@ -14,6 +14,11 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Nghiệp vụ Ví SÖL: tạo ví, nạp tiền (VNPay, tại quầy), trừ tiền khi thanh toán, và hoàn tiền vào ví (hủy gói,
+ * hủy PT, hoàn VNPay muộn...). Mọi thay đổi số dư đều khóa dòng ví, ghi một dòng giao dịch kèm số dư sau, và
+ * chống cộng/trừ trùng nhờ mã tham chiếu.
+ */
 @Service
 public class WalletService {
 
@@ -24,6 +29,7 @@ public class WalletService {
     private final MessageService messageService;
     private CounterTopupService counterTopupService;
 
+    /** Constructor cho test, không có MessageService. */
     public WalletService(
             WalletRepository walletRepository,
             WalletTransactionRepository walletTransactionRepository,
@@ -32,6 +38,7 @@ public class WalletService {
         this(walletRepository, walletTransactionRepository, userRepository, notificationService, null);
     }
 
+    /** Constructor Spring dùng; thông báo và MessageService là tùy chọn. */
     @Autowired
     public WalletService(
             WalletRepository walletRepository,
@@ -56,18 +63,21 @@ public class WalletService {
         this.counterTopupService = counterTopupService;
     }
 
+    /** Lấy ví của người dùng, chưa có thì tạo mới với số dư 0. */
     @Transactional
     public Wallet getOrCreateWallet(Long userId) {
         return walletRepository.findByUser_Id(userId)
                 .orElseGet(() -> createWalletForUser(userId));
     }
 
+    /** Lấy ví và khóa dòng để ghi; chưa có thì tạo mới. */
     @Transactional
     public Wallet getOrCreateWalletForUpdate(Long userId) {
         return walletRepository.findByUserIdForUpdate(userId)
                 .orElseGet(() -> createWalletForUser(userId));
     }
 
+    /** Tạo ví số dư 0 cho người dùng chưa bị xóa; không thấy người dùng thì báo 404. */
     private Wallet createWalletForUser(Long userId) {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
@@ -78,12 +88,14 @@ public class WalletService {
         return walletRepository.saveAndFlush(wallet);
     }
 
+    /** Ví của người dùng dạng DTO (tự tạo nếu chưa có). */
     @Transactional
     public WalletDto getMyWallet(Long userId) {
         Wallet wallet = getOrCreateWallet(userId);
         return toDto(wallet);
     }
 
+    /** Chuyển ví sang DTO kèm 50 giao dịch gần nhất. */
     public WalletDto toDto(Wallet wallet) {
         List<WalletTransactionDto> txDtos = walletTransactionRepository
                 .findTop50ByWallet_IdOrderByCreatedAtDescIdDesc(wallet.getId())
@@ -102,6 +114,10 @@ public class WalletService {
         return new WalletDto(wallet.getBalance(), wallet.getUpdatedAt(), txDtos);
     }
 
+    /**
+     * Cộng tiền nạp qua VNPay vào ví (bỏ qua nếu dữ liệu không hợp lệ). Mã tham chiếu "<mã VNPay>:TOPUP" bảo
+     * đảm mỗi giao dịch VNPay chỉ cộng một lần; gửi thông báo kèm số dư mới.
+     */
     @Transactional
     public void creditTopup(Long userId, BigDecimal amount, String reference) {
         if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0 || reference == null || reference.isBlank()) {
@@ -155,6 +171,7 @@ public class WalletService {
         }
     }
 
+    /** Nạp tiền tại quầy, không có mã request phía client. */
     @Transactional
     public WalletDto creditByReceptionist(
             Long memberId,
@@ -166,6 +183,10 @@ public class WalletService {
     }
 
     /**
+     * Nạp tiền tại quầy: số tiền 10.000đ - 100.000.000đ; có mã request thì lần gửi lại chỉ trả ví hiện tại,
+     * không cộng lần nữa. Ghi giao dịch TOPUP_COUNTER với mô tả theo phương thức, ghi khoản thanh toán cho hóa
+     * đơn, rồi gửi thông báo.
+     *
      * Credits a counter top-up. With a {@code clientRequestId}, a resend of the same top-up (the desk retried after
      * the response was lost) returns the current wallet without crediting again.
      */
@@ -253,6 +274,10 @@ public class WalletService {
         return toDto(wallet);
     }
 
+    /**
+     * Trừ tiền ví để thanh toán: số tiền phải dương, số dư phải đủ (thiếu thì báo 400 kèm số dư hiện có), cùng
+     * mã tham chiếu chỉ trừ một lần. Ghi giao dịch PAYMENT_DEBIT và gửi thông báo.
+     */
     @Transactional
     public WalletDto debitForPayment(Long userId, BigDecimal amount, String referenceId, String serviceDescription, String actionPath) {
         if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {
@@ -317,6 +342,10 @@ public class WalletService {
         return toDto(wallet);
     }
 
+    /**
+     * Thanh toán VNPay đi qua ví: ghi một lần nạp và một lần trừ cùng số tiền (số dư không đổi) để lịch sử ví
+     * đầy đủ; mỗi mã VNPay chỉ ghi một lần.
+     */
     @Transactional
     public void recordVnpayTopupAndDebit(Long userId, BigDecimal amount, String reference, String serviceDescription) {
         if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0 || reference == null || reference.isBlank()) {
@@ -384,6 +413,7 @@ public class WalletService {
         }
     }
 
+    /** Hoàn tiền hủy gói tập vào ví (mỗi mã tham chiếu chỉ một lần). */
     @Transactional
     public void creditRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
         String description = (reason != null && !reason.isBlank())
@@ -392,14 +422,22 @@ public class WalletService {
         credit(userId, amount, referenceId, "CANCELLATION_REFUND", description, "/member/packages");
     }
 
-    /** Credits a product-order refund to the member's wallet; idempotent per {@code referenceId}. */
+    /**
+     * Hoàn tiền đơn hàng (cửa hàng cũ) vào ví (mỗi mã tham chiếu chỉ một lần).
+     *
+     * Credits a product-order refund to the member's wallet; idempotent per {@code referenceId}.
+     */
     @Transactional
     public void creditOrderRefund(Long userId, BigDecimal amount, String referenceId, String description, Long orderId) {
         credit(userId, amount, referenceId, "ORDER_REFUND", description,
                 orderId != null ? "/member/orders/" + orderId : "/member/orders");
     }
 
-    /** Credits a cancelled paid court-booking refund to the member's wallet; idempotent per {@code referenceId}. */
+    /**
+     * Hoàn tiền hủy sân đã trả tiền vào ví (mỗi mã tham chiếu chỉ một lần).
+     *
+     * Credits a cancelled paid court-booking refund to the member's wallet; idempotent per {@code referenceId}.
+     */
     @Transactional
     public void creditCourtRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
         String description = (reason != null && !reason.isBlank())
@@ -408,7 +446,11 @@ public class WalletService {
         credit(userId, amount, referenceId, "COURT_REFUND", description, "/member/courts");
     }
 
-    /** Credits a cancelled paid course-enrollment refund to the member's wallet; idempotent per {@code referenceId}. */
+    /**
+     * Hoàn học phí khóa học bị hủy vào ví (mỗi mã tham chiếu chỉ một lần).
+     *
+     * Credits a cancelled paid course-enrollment refund to the member's wallet; idempotent per {@code referenceId}.
+     */
     @Transactional
     public void creditCourseRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
         String description = (reason != null && !reason.isBlank())
@@ -417,7 +459,11 @@ public class WalletService {
         credit(userId, amount, referenceId, "COURSE_REFUND", description, "/member/classes");
     }
 
-    /** Credits a cancelled paid 1:1 coach-booking refund to the member's wallet; idempotent per {@code referenceId}. */
+    /**
+     * Hoàn tiền buổi PT 1:1 bị hủy vào ví (mỗi mã tham chiếu chỉ một lần).
+     *
+     * Credits a cancelled paid 1:1 coach-booking refund to the member's wallet; idempotent per {@code referenceId}.
+     */
     @Transactional
     public void creditCoachBookingRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
         String description = (reason != null && !reason.isBlank())
@@ -427,6 +473,9 @@ public class WalletService {
     }
 
     /**
+     * Hoàn vào ví khoản VNPay được xác nhận muộn khi khoản thu đã được thanh toán/đóng theo cách khác (mỗi mã
+     * VNPay chỉ một lần).
+     *
      * Credits a VNPay debit confirmed after its payment was already settled or closed another way; idempotent per
      * gateway reference.
      */
@@ -438,6 +487,10 @@ public class WalletService {
         credit(userId, amount, reference + ":LATE_REFUND", "VNPAY_LATE_REFUND", description, "/member/invoices");
     }
 
+    /**
+     * Cộng tiền hoàn vào ví: bỏ qua nếu dữ liệu không hợp lệ hoặc mã tham chiếu đã được ghi; ghi giao dịch
+     * REFUND_CREDIT (mô tả tối đa 500 ký tự), cập nhật số dư và gửi thông báo dẫn tới trang liên quan.
+     */
     private void credit(Long userId, BigDecimal amount, String referenceId, String referenceType,
                         String description, String actionPath) {
         if (userId == null || amount == null || amount.compareTo(BigDecimal.ZERO) <= 0) {

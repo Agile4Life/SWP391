@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/** Bảng wallets: Ví SÖL của một người dùng (mỗi người một ví), gồm số dư và thời điểm cập nhật. */
 @Entity
 @Table(name = "wallets")
 public class Wallet {
@@ -23,6 +24,7 @@ public class Wallet {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    /** Constructor rỗng cho JPA. */
     public Wallet() {}
 
     /** Lấy giá trị trường id. */

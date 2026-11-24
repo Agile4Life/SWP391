@@ -9,6 +9,10 @@ import java.time.LocalDateTime;
         @Index(name = "ix_wallet_tx_wallet_created", columnList = "wallet_id, created_at"),
         @Index(name = "ix_wallet_tx_reference", columnList = "reference_id")
 })
+/**
+ * Bảng wallet_transactions: một biến động của ví (loại nạp/trừ/hoàn, số tiền, số dư sau, loại và mã tham chiếu,
+ * mô tả, thời điểm).
+ */
 public class WalletTransaction {
 
     @Id
@@ -40,6 +44,7 @@ public class WalletTransaction {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /** Constructor rỗng cho JPA. */
     public WalletTransaction() {}
 
     /** Lấy giá trị trường id. */
