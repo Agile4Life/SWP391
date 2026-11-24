@@ -141,6 +141,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: lấy lịch sử điểm danh PT. */
     private List<String> history() {
         return jdbc.queryForList("select row_to_json(a)::text from audit_logs a where action='HISTORY' order by id", String.class);
     }
@@ -148,6 +149,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
     private Map<String, Object> booking() {
         return jdbc.queryForMap("select attended_at, attendance_locked, status from coach_bookings where id=?", bookingId);
     }
+    /** Hàm trợ giúp của test: chạy migration/đồng bộ schema cho test. */
     private void migrate() { new PostgreSqlTriggerProvider(true).applyTriggers(jdbc); }
 
     @Test void ordinaryStartupDoesNotMigrateTheAuditCheck() {

@@ -26,6 +26,10 @@ import static org.junit.jupiter.api.Assertions.*;
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 class CenterCheckinSchemaUpgradePostgreSqlTest {
 
+    /**
+     * Kiểm thử: nâng cấp schema check-in cũ sau Hibernate, giữ nguyên lịch sử, khóa ngoại và trigger
+     * membership.
+     */
     @Test
     void upgradesLegacyCheckinsAfterHibernateAndPreservesHistoryForeignKeyAndMembershipTrigger() throws Exception {
         String schema = "scrum91_upgrade_" + UUID.randomUUID().toString().replace("-", "");
@@ -87,6 +91,7 @@ class CenterCheckinSchemaUpgradePostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: đồng bộ entity vào schema bằng Hibernate. */
     private static void synchronizeEntities(SingleConnectionDataSource source, String schema, String action) throws Exception {
         var registry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.connection.datasource", source)
@@ -107,18 +112,21 @@ class CenterCheckinSchemaUpgradePostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: kiểm tra một cột có cho phép NULL hay không. */
     private static String nullable(JdbcTemplate jdbc, String schema) {
         return jdbc.queryForObject("select is_nullable from information_schema.columns "
                         + "where table_schema = ? and table_name = 'center_checkins' and column_name = 'member_id'",
                 String.class, schema);
     }
 
+    /** Hàm trợ giúp của test: lấy khóa ngoại của cột member trên bảng check-in. */
     private static long memberForeignKey(JdbcTemplate jdbc, String schema) {
         return jdbc.queryForObject("select oid from pg_constraint where conrelid = ?::regclass "
                         + "and contype = 'f' and pg_get_constraintdef(oid) like 'FOREIGN KEY (member_id)%'",
                 Long.class, schema + ".center_checkins");
     }
 
+    /** Hàm trợ giúp của test: tạo lượt check-in bị từ chối với hội viên không xác định. */
     private static void deniedUnknownMember(JdbcTemplate jdbc) {
         jdbc.update("insert into center_checkins (member_id, check_in_time, method, status, denial_reason) "
                 + "values (null, now(), 'qr', 'DENIED', 'Unknown QR fixture')");

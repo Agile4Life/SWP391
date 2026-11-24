@@ -22,6 +22,7 @@ class DatabasePolicyTest {
                     + "|\\bCREATE\\s+TABLE\\b|flyway|liquibase",
             Pattern.CASE_INSENSITIVE);
 
+    /** Kiểm thử: runtime và dependency chỉ dùng PostgreSQL. */
     @Test
     void runtimeAndDependenciesUsePostgresOnly() throws Exception {
         assertNoLegacySql(Path.of("pom.xml"));
@@ -38,6 +39,7 @@ class DatabasePolicyTest {
         }
     }
 
+    /** Kiểm thử: không được thêm migration schema viết tay mới. */
     @Test
     void newHandwrittenSchemaMigrationsCannotBeAdded() throws Exception {
         Set<String> historical = Set.of("databaseschema.sql", "migrations/V1__init_finance_computed_columns.sql",
@@ -53,6 +55,7 @@ class DatabasePolicyTest {
         }
     }
 
+    /** Kiểm thử: hướng dẫn cho contributor không giới thiệu các adapter database đã ngừng. */
     @Test
     void contributorInstructionsDoNotRecommendRetiredDatabaseAdapters() throws Exception {
         for (String guide : new String[]{".agents/README.md", ".agents/skills/scms-development/SKILL.md",
@@ -63,6 +66,7 @@ class DatabasePolicyTest {
         }
     }
 
+    /** Hàm trợ giúp của test: khẳng định nội dung không còn chứa SQL/adapter cũ. */
     private static void assertNoLegacySql(Path file) throws Exception {
         assertThat(LEGACY_DATABASE.matcher(Files.readString(file)).find())
                 .as("Retired database dependency or SQL syntax in %s", file).isFalse();

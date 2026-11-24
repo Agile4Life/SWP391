@@ -16,6 +16,7 @@ import static org.mockito.Mockito.*;
  * Spring property binding, without Boot startup, datasource, environment credentials or schema writes.
  */
 class AuditMigrationDeploymentGateTest {
+    /** Hàm trợ giúp của test: dựng ApplicationContext để thử cổng migration audit. */
     private ApplicationContextRunner context() {
         return new ApplicationContextRunner()
                 .withInitializer(ctx -> ctx.getEnvironment().getPropertySources().remove("systemEnvironment"))
@@ -26,6 +27,7 @@ class AuditMigrationDeploymentGateTest {
         context().run(ctx -> check(ctx.getBean(PostgreSqlTriggerProvider.class), 2));
     }
 
+    /** Kiểm thử: cờ cấu hình có thể tắt migration audit. */
     @ParameterizedTest
     @CsvSource({"false,1", "true,2"})
     void theFlagCanTurnTheAuditMigrationOff(String enabled, int callbacks) {
@@ -33,6 +35,7 @@ class AuditMigrationDeploymentGateTest {
                 .run(ctx -> check(ctx.getBean(PostgreSqlTriggerProvider.class), callbacks));
     }
 
+    /** Hàm trợ giúp của test: kiểm tra trạng thái của cổng migration. */
     private void check(PostgreSqlTriggerProvider provider, int callbacks) {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         provider.applyTriggers(jdbc);

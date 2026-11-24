@@ -68,6 +68,7 @@ class EnrollmentControllerTest {
         }
     };
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller ghi danh. */
     @BeforeEach
     void setUp() {
         new ObjectMapper().registerModule(new JavaTimeModule());
@@ -94,6 +95,7 @@ class EnrollmentControllerTest {
                 "booked", LocalDateTime.now(), null, null);
     }
 
+    /** Kiểm thử: ghi danh theo từng buổi đã ngừng hoạt động. */
     @Test
     void perSessionEnrollIsRetired() throws Exception {
         mockMvc.perform(post("/api/v1/classes/sessions/9/enroll"))
@@ -101,6 +103,7 @@ class EnrollmentControllerTest {
         org.mockito.Mockito.verify(enrollmentService, org.mockito.Mockito.never()).enroll(any(), anyLong());
     }
 
+    /** Kiểm thử: hủy ghi danh trả 200 OK. */
     @Test
     void cancelReturnsOk() throws Exception {
         when(enrollmentService.cancel(any(), anyLong())).thenReturn(sampleDto());
@@ -110,6 +113,7 @@ class EnrollmentControllerTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    /** Kiểm thử: endpoint danh sách ghi danh của tôi tồn tại. */
     @Test
     void myEnrollmentsEndpointExists() throws Exception {
         mockMvc.perform(get("/api/v1/classes/enrollments/my"))

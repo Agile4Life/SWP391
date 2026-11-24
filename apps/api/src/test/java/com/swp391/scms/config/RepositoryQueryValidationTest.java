@@ -32,6 +32,7 @@ class RepositoryQueryValidationTest {
     private static LocalContainerEntityManagerFactoryBean factoryBean;
     private static EntityManager entityManager;
 
+    /** Khởi động Hibernate (không cần database) để biên dịch các truy vấn của repository. */
     @BeforeAll
     static void bootHibernateWithoutDatabase() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource("jdbc:postgresql://localhost:1/never_connected");
@@ -47,6 +48,7 @@ class RepositoryQueryValidationTest {
         entityManager = SharedEntityManagerCreator.createSharedEntityManager(factoryBean.getObject());
     }
 
+    /** Đóng tài nguyên Hibernate sau khi kiểm tra xong. */
     @AfterAll
     static void close() {
         if (factoryBean != null && factoryBean.getObject() != null) {
@@ -54,9 +56,11 @@ class RepositoryQueryValidationTest {
         }
     }
 
+    /** Kiểm thử: mọi repository đều phân giải được các truy vấn của nó. */
     @Test
     void everyRepositoryResolvesItsQueries() throws Exception {
         ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false) {
+            /** Lọc ứng viên quét component: cho phép cả interface repository (isCandidateComponent). */
             @Override
             protected boolean isCandidateComponent(AnnotatedBeanDefinition definition) {
                 return definition.getMetadata().isInterface() && definition.getMetadata().isIndependent();

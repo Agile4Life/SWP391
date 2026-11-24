@@ -11,8 +11,10 @@ import java.util.Properties;
  * Dedicated Supabase test credentials; callers isolate changes in generated schemas.
  */
 final class SupabaseTestDatabase {
+    /** Constructor riêng tư: lớp tiện ích không cho khởi tạo. */
     private SupabaseTestDatabase() { }
 
+    /** Hàm trợ giúp: đọc thông tin đăng nhập database test từ môi trường. */
     static String credential(String name) {
         String value = System.getenv(name);
         if (value == null || value.isBlank()) {
@@ -21,6 +23,7 @@ final class SupabaseTestDatabase {
         return value;
     }
 
+    /** Hàm trợ giúp: mở kết nối tới database test. */
     static Connection connect() throws SQLException {
         Properties properties = new Properties();
         properties.setProperty("user", credential("SCMS_POSTGRES_TEST_USERNAME"));
@@ -31,6 +34,7 @@ final class SupabaseTestDatabase {
         return connect(credential("SCMS_POSTGRES_TEST_URL"), properties);
     }
 
+    /** Hàm trợ giúp: mở kết nối tới database test với URL/credential cho trước. */
     static Connection connect(String url, Properties properties) throws SQLException {
         SupabaseConfiguration.validateConnection(url, properties.getProperty("sslmode", "require"));
         return DriverManager.getConnection(url, properties);

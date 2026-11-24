@@ -47,6 +47,7 @@ class PostgreSqlDatabaseIntegrationTest {
     @Autowired ObjectMapper json;
     @Autowired DataSource dataSource;
 
+    /** Hàm trợ giúp của test: lấy kết nối database test. */
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry properties) throws Exception {
         // The schema name is generated here, never supplied by external configuration.
@@ -67,6 +68,7 @@ class PostgreSqlDatabaseIntegrationTest {
         properties.add("app.auth.otp.delivery", () -> "disabled");
     }
 
+    /** Dọn dẹp sau test: xóa dữ liệu và schema đã tạo. */
     @AfterAll
     static void cleanup() throws Exception {
         assertTrue(SCHEMA.matches("scrum91_test_[a-f0-9]{32}"));
@@ -78,6 +80,7 @@ class PostgreSqlDatabaseIntegrationTest {
 
     @Autowired com.swp391.scms.membership.service.MembershipRealtimeService realtime;
 
+    /** Kiểm thử: broadcast Supabase không chứa dữ liệu và chỉ được gửi sau khi commit. */
     @Test
     @EnabledIfEnvironmentVariable(named = "SUPABASE_PUBLISHABLE_KEY", matches = "sb_publishable_.+")
     void supabaseBroadcastIsDataFreeAndOnlyDeliveredAfterCommit() throws Exception {
@@ -156,6 +159,7 @@ class PostgreSqlDatabaseIntegrationTest {
         return id;
     }
 
+    /** Hàm trợ giúp của test: tạo subscription mẫu. */
     private void subscription(long member, String status, int startOffset, int endOffset) {
         jdbc.update("""
                 insert into membership_subscriptions
@@ -164,6 +168,7 @@ class PostgreSqlDatabaseIntegrationTest {
                 """, member, startOffset, endOffset, status);
     }
 
+    /** Hàm trợ giúp của test: tạo hội viên có membership đang hoạt động. */
     private long activeMember() {
         long id = member();
         subscription(id, "active", -1, 30);
@@ -183,6 +188,7 @@ class PostgreSqlDatabaseIntegrationTest {
                 Long.class, "Room " + UUID.randomUUID());
     }
 
+    /** Hàm trợ giúp của test: tạo lớp học mẫu. */
     private long gymClass(int capacity, long coach, long room) {
         return jdbc.queryForObject("""
                 insert into classes (name, discipline_id, coach_id, room_id, capacity, level, status, created_at, updated_at)
@@ -190,11 +196,13 @@ class PostgreSqlDatabaseIntegrationTest {
                 """, Long.class, "Class " + UUID.randomUUID(), coach, room, capacity);
     }
 
+    /** Hàm trợ giúp của test: ghi danh hội viên vào buổi học. */
     private void enroll(long gymClass, long member, String status) {
         jdbc.update("insert into class_enrollments (class_id, member_id, status, enrolled_at) values (?, ?, ?, now())",
                 gymClass, member, status);
     }
 
+    /** Hàm trợ giúp của test: tạo buổi học mẫu. */
     private void session(long gymClass, String start, String end, String status) {
         jdbc.update("""
                 insert into class_sessions (class_id, session_date, start_time, end_time, status, created_at, updated_at)
@@ -202,6 +210,7 @@ class PostgreSqlDatabaseIntegrationTest {
                 """, gymClass, start, end, status);
     }
 
+    /** Hàm trợ giúp của test: tạo lượt đặt PT mẫu. */
     private void ptBooking(long member, long coach, String start, String end) {
         jdbc.update("""
                 insert into coach_bookings (member_id, coach_id, booking_date, start_time, end_time,
@@ -210,6 +219,7 @@ class PostgreSqlDatabaseIntegrationTest {
                 """, member, coach, start, end);
     }
 
+    /** Kiểm thử: trigger PT yêu cầu thời gian nghỉ kể cả khi đặt không theo thứ tự thời gian. */
     @Test
     void ptTriggerRequiresRestEvenForOutOfOrderBookings() {
         for (int missing : new int[]{10, 11, 12, 13}) {
@@ -228,6 +238,7 @@ class PostgreSqlDatabaseIntegrationTest {
         ptBooking(activeMember(), coach, "14:00", "15:00");
     }
 
+    /** Kiểm thử: trigger PT từ chối trùng lịch hai chiều và yêu cầu membership. */
     @Test
     void ptTriggerRejectsConflictsInBothBookingDirectionsAndRequiresMembership() {
         long coach = coach(), member = activeMember();
@@ -246,6 +257,7 @@ class PostgreSqlDatabaseIntegrationTest {
         ptBooking(member, coach, "15:00", "16:00");
     }
 
+    /** Kiểm thử: các lượt đặt PT đồng thời không thể đặt trùng một HLV. */
     @Test
     void concurrentPtBookingsCannotDoubleBookCoach() throws Exception {
         long coach = coach(), first = activeMember(), second = activeMember();
@@ -258,6 +270,7 @@ class PostgreSqlDatabaseIntegrationTest {
         }
     }
 
+    /** Hàm trợ giúp của test: thực hiện đặt PT sau khi các luồng đã sẵn sàng (latch). */
     private boolean ptAfterLatch(CountDownLatch start, long member, long coach) throws Exception {
         start.await();
         try {
@@ -270,6 +283,7 @@ class PostgreSqlDatabaseIntegrationTest {
         }
     }
 
+    /** Kiểm thử: Hibernate khởi tạo đủ các bảng tham chiếu và các trigger bắt buộc. */
     @Test
     void hibernateBootstrapsAllReferenceTablesAndMandatoryTriggers() {
         assertTrue(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ?",
@@ -281,6 +295,7 @@ class PostgreSqlDatabaseIntegrationTest {
                 """, Integer.class, SCHEMA));
     }
 
+    /** Kiểm thử: trigger sức chứa từ chối vượt chỗ và rollback. */
     @Test
     void capacityTriggerRejectsOverflowAndRollsBack() {
         long gymClass = gymClass(1, coach(), room());
@@ -291,6 +306,7 @@ class PostgreSqlDatabaseIntegrationTest {
         assertEquals(1, jdbc.queryForObject("select count(*) from class_enrollments where class_id = ?", Integer.class, gymClass));
     }
 
+    /** Kiểm thử: các lượt đặt đồng thời không thể lấy cùng một chỗ cuối cùng. */
     @Test
     void concurrentBookingsCannotTakeTheSameLastSlot() throws Exception {
         long gymClass = gymClass(1, coach(), room());
@@ -310,6 +326,7 @@ class PostgreSqlDatabaseIntegrationTest {
         }
     }
 
+    /** Hàm trợ giúp của test: thực hiện đặt chỗ sau khi các luồng đã sẵn sàng (latch). */
     private boolean bookAfterLatch(CountDownLatch start, long gymClass, long member) throws Exception {
         assertTrue(start.await(10, TimeUnit.SECONDS));
         try {
@@ -321,6 +338,7 @@ class PostgreSqlDatabaseIntegrationTest {
         }
     }
 
+    /** Hàm trợ giúp của test: khẳng định thao tác vi phạm trigger của database. */
     private static void assertTriggerViolation(DataIntegrityViolationException error, String expectedMessage) {
         // PostgreSQL sends CONSTRAINT as a protocol field, not as part of getMessage().
         var cause = assertInstanceOf(SQLException.class, error.getMostSpecificCause());
@@ -328,6 +346,7 @@ class PostgreSqlDatabaseIntegrationTest {
         assertTrue(cause.getMessage().contains(expectedMessage), cause.getMessage());
     }
 
+    /** Kiểm thử: partial index cho phép lịch sử nhưng từ chối ghi danh active trùng. */
     @Test
     void partialIndexAllowsHistoryButRejectsDuplicateActiveEnrollment() {
         long gymClass = gymClass(10, coach(), room()), member = activeMember();
@@ -338,6 +357,7 @@ class PostgreSqlDatabaseIntegrationTest {
         assertTrue(duplicate.getMostSpecificCause().getMessage().contains("uq_enrollment_active"));
     }
 
+    /** Kiểm thử: trigger buổi học từ chối trùng HLV/phòng nhưng cho phép buổi liền kề hoặc đã hủy. */
     @Test
     void sessionTriggerRejectsCoachAndRoomOverlapButAllowsAdjacentOrCancelledSessions() {
         long coach = coach(), room = room();
@@ -353,6 +373,7 @@ class PostgreSqlDatabaseIntegrationTest {
         session(sameRoom, "09:30", "10:30", "cancelled");
     }
 
+    /** Kiểm thử: trigger membership từ chối subscription thiếu, hết hạn, không hoạt động hoặc ở tương lai. */
     @Test
     void membershipTriggersRejectMissingExpiredInactiveAndFutureSubscriptions() {
         long gymClass = gymClass(10, coach(), room());
@@ -373,6 +394,7 @@ class PostgreSqlDatabaseIntegrationTest {
         jdbc.update("insert into center_checkins (member_id, check_in_time, method) values (?, now(), 'qr')", valid);
     }
 
+    /** Kiểm thử: cột tính toán được lưu và database tự tính lại. */
     @Test
     void generatedColumnsAreStoredAndRecomputedByDatabase() {
         long member = activeMember();
@@ -393,6 +415,7 @@ class PostgreSqlDatabaseIntegrationTest {
         assertEquals(0, new BigDecimal("75").compareTo(jdbc.queryForObject("select amount from invoice_items where id = ?", BigDecimal.class, item)));
     }
 
+    /** Kiểm thử: JSON dùng kiểu JSONB gốc và từ chối dữ liệu không hợp lệ. */
     @Test
     void jsonIsNativeJsonbAndRejectsInvalidInput() {
         assertEquals("jsonb", jdbc.queryForObject("select udt_name from information_schema.columns where table_schema = ? and table_name = 'report_snapshots' and column_name = 'data'", String.class, SCHEMA));
@@ -401,6 +424,7 @@ class PostgreSqlDatabaseIntegrationTest {
                 "insert into report_snapshots (report_type, period_start, period_end, data, generated_at) values ('revenue', current_date, current_date, ?::jsonb, now())", "not-json"));
     }
 
+    /** Kiểm thử: ràng buộc CHECK của entity từ chối trạng thái nghiệp vụ sai ngay tại database. */
     @Test
     void entityChecksRejectInvalidBusinessStatesOnTheDatabase() {
         long gymClass = gymClass(10, coach(), room());
@@ -409,6 +433,7 @@ class PostgreSqlDatabaseIntegrationTest {
         assertTrue(error.getMostSpecificCause().getMessage().contains("ck_classes_status"));
     }
 
+    /** Kiểm thử: RLS của Supabase được bật cho các bảng ứng dụng và chủ sở hữu vẫn đọc được. */
     @Test
     void supabaseRlsIsEnabledForApplicationTablesAndOwnerCanStillRead() {
         new PostgreSqlDataSecurityInitializer(entities, jdbc).run(new DefaultApplicationArguments());
@@ -416,6 +441,7 @@ class PostgreSqlDatabaseIntegrationTest {
         assertTrue(jdbc.queryForObject("select count(*) from roles", Integer.class) >= 4);
     }
 
+    /** Kiểm thử: RLS từ chối đọc với role không bypass dù đã cấp quyền bảng. */
     @Test
     void rlsDeniesReadsForAnAvailableNonBypassRoleEvenWithTableGrants() throws Exception {
         var roles = jdbc.queryForList("""
@@ -444,6 +470,7 @@ class PostgreSqlDatabaseIntegrationTest {
         }
     }
 
+    /** Kiểm thử: các endpoint HTTP hiện có dùng persistence PostgreSQL thật và JWT. */
     @Test
     void existingHttpEndpointsUseRealPostgresPersistenceAndJwt() throws Exception {
         mvc.perform(get("/api/v1/health")).andExpect(status().isOk());

@@ -22,6 +22,7 @@ import static org.mockito.Mockito.*;
  */
 class TriggerPolymorphismIntegrationTest {
 
+    /** Kiểm thử: trigger PostgreSQL chứa đầy đủ các bất biến nghiệp vụ. */
     @Test
     @DisplayName("P2/P3/P4 triggers: PostgreSQL trigger script must contain all mandatory business invariants")
     void testPostgreSqlTriggersContainAllInvariants() throws Exception {
@@ -52,6 +53,7 @@ class TriggerPolymorphismIntegrationTest {
         assertTrue(sql.contains("active"), "Must verify subscription status is active");
     }
 
+    /** Kiểm thử: provider PostgreSQL được nhận diện và hỗ trợ đúng. */
     @ParameterizedTest
     @ValueSource(strings = {"PostgreSQL", "PostgreSQL 16", "postgresql"})
     @DisplayName("PostgreSqlTriggerProvider should correctly support PostgreSQL database names")
@@ -62,6 +64,7 @@ class TriggerPolymorphismIntegrationTest {
         assertFalse(provider.supports("MySQL"));
     }
 
+    /** Kiểm thử: luồng thực thi trigger chạy đúng từ đầu đến cuối. */
     @Test
     @DisplayName("DatabaseTriggerProvider should execute trigger statements cleanly")
     void testTriggerExecutionExecutionFlow() {

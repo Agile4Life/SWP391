@@ -39,6 +39,7 @@ class CodeFirstSchemaTest {
     private static SessionFactory sharedFactory;
     private static String sharedDdl;
 
+    /** Khởi tạo một lần metadata Hibernate dùng chung cho cả lớp test. */
     @BeforeAll
     static void initSharedHibernateMetadata() throws Exception {
         Path out = Files.createTempFile("ddl", ".sql");
@@ -64,6 +65,7 @@ class CodeFirstSchemaTest {
         Files.deleteIfExists(out);
     }
 
+    /** Đóng metadata Hibernate dùng chung sau khi chạy xong lớp test. */
     @AfterAll
     static void closeSharedHibernateMetadata() {
         if (sharedFactory != null) {
@@ -76,15 +78,18 @@ class CodeFirstSchemaTest {
         }
     }
 
+    /** Hàm trợ giúp của test: sinh DDL từ entity (phiên bản mặc định). */
     private static String generateDdl() {
         return sharedDdl;
     }
 
+    /** Hàm trợ giúp của test: sinh DDL từ entity cho một dialect cụ thể. */
     private static String generateDdl(java.util.function.Consumer<SessionFactory> verify) {
         verify.accept(sharedFactory);
         return sharedDdl;
     }
 
+    /** Hàm trợ giúp của test: lấy tập tên bảng từ DDL đã sinh. */
     private static Set<String> schemaTables() throws IOException {
         Matcher m = Pattern.compile("CREATE TABLE dbo\\.(\\w+)", Pattern.CASE_INSENSITIVE)
                 .matcher(Files.readString(SCHEMA, StandardCharsets.UTF_8));
@@ -95,6 +100,7 @@ class CodeFirstSchemaTest {
         return tables;
     }
 
+    /** Kiểm thử: entity sinh ra đủ mọi bảng của schema tham chiếu. */
     @Test
     void entitiesGenerateEveryTableOfTheReferenceSchema() throws Exception {
         // The historical reference schema still lists the removed waitlist feature.
@@ -112,6 +118,7 @@ class CodeFirstSchemaTest {
         }
     }
 
+    /** Kiểm thử: truy vấn hủy thanh toán biên dịch được với mapping entity mà không cần database. */
     @Test
     void cancellationPaymentQueryCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
         var method = com.swp391.scms.finance.repository.PaymentRepository.class.getMethod(
@@ -127,6 +134,7 @@ class CodeFirstSchemaTest {
         });
     }
 
+    /** Kiểm thử: truy vấn mức sử dụng lớp biên dịch được với mapping entity mà không cần database. */
     @Test
     void classUtilizationQueryCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
         var repository = com.swp391.scms.reports.repository.SessionAttendanceReportRepository.class;
@@ -149,6 +157,7 @@ class CodeFirstSchemaTest {
         });
     }
 
+    /** Kiểm thử: các truy vấn phân công HLV hiện tại biên dịch được với mapping entity mà không cần database. */
     @Test
     void currentCoachAssignmentQueriesCompileAgainstEntityMappingsWithoutDatabase() throws Exception {
         var plans = com.swp391.scms.coaching.repository.TrainingPlanRepository.class.getMethod(
@@ -171,6 +180,7 @@ class CodeFirstSchemaTest {
         });
     }
 
+    /** Kiểm thử: truy vấn lần thanh toán VNPay bị bỏ dở biên dịch được với mapping entity. */
     @Test
     void abandonedVnpayAttemptQueryCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
         var method = com.swp391.scms.finance.repository.VnpayTransactionRepository.class.getMethod(
@@ -183,6 +193,7 @@ class CodeFirstSchemaTest {
         });
     }
 
+    /** Kiểm thử: projection xác thực biên dịch được với mapping entity. */
     @Test
     void authenticationProjectionCompilesAgainstEntityMappingsWithoutDatabase() throws Exception {
         var method = com.swp391.scms.users.UserRepository.class.getMethod("findAuthenticationById", Long.class);
@@ -195,6 +206,7 @@ class CodeFirstSchemaTest {
         });
     }
 
+    /** Kiểm thử: truy vấn đếm ghi danh theo nhóm biên dịch được với mapping entity. */
     @Test
     void groupedEnrollmentCountsCompileAgainstEntityMappingsWithoutDatabase() throws Exception {
         var method = com.swp391.scms.scheduling.repository.ClassEnrollmentRepository.class.getMethod(
@@ -209,6 +221,7 @@ class CodeFirstSchemaTest {
         });
     }
 
+    /** Kiểm thử: các truy vấn tối ưu hiệu năng biên dịch được với mapping entity. */
     @Test
     void performanceOptimizedQueriesCompileAgainstEntityMappingsWithoutDatabase() throws Exception {
         var utilMethod = com.swp391.scms.reports.repository.SessionAttendanceReportRepository.class.getMethod(
@@ -231,6 +244,7 @@ class CodeFirstSchemaTest {
         });
     }
 
+    /** Kiểm thử: thanh toán tham chiếu tới subscription và ghi danh. */
     @Test
     void paymentsReferenceSubscriptionsAndEnrollments() throws Exception {
         String ddl = generateDdl();
@@ -238,6 +252,7 @@ class CodeFirstSchemaTest {
         assertTrue(ddl.contains("foreign key (class_enrollment_id) references class_enrollments"));
     }
 
+    /** Kiểm thử: các bảng sân là code-first và cấu hình phòng mới giữ nguyên tính nullable cũ. */
     @Test
     void courtsAreCodeFirstAndNewRoomConfigurationPreservesLegacyNullability() throws Exception {
         String ddl = generateDdl();
@@ -250,6 +265,7 @@ class CodeFirstSchemaTest {
         assertTrue(room.getDeclaredField("closeTime").getAnnotation(jakarta.persistence.Column.class).nullable());
     }
 
+    /** Kiểm thử: JPQL của đặt sân biên dịch được với mapping entity mà không cần kết nối database. */
     @Test
     void courtJpqlCompilesAgainstEntityMappingsWithoutConnectingToDatabase() throws Exception {
         Class<?> repository = Class.forName("com.swp391.scms.courts.repository.CourtBookingRepository");
@@ -266,6 +282,7 @@ class CodeFirstSchemaTest {
         });
     }
 
+    /** Kiểm thử: PostgreSQL sinh cột tính toán dạng stored và JSON gốc. */
     @Test
     void postgresGeneratesStoredComputedColumnsAndNativeJson() throws Exception {
         String ddl = generateDdl();
@@ -276,6 +293,7 @@ class CodeFirstSchemaTest {
         assertTrue(ddl.contains("recommended_content jsonb"), ddl);
     }
 
+    /** Kiểm thử: giữ các ràng buộc CHECK của schema tham chiếu, trừ JSON dùng mapping gốc. */
     @Test
     void preservesReferenceCheckConstraintsExceptJsonWhichUsesNativeMapping() throws Exception {
         String ddl = generateDdl();

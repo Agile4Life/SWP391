@@ -17,6 +17,7 @@ import static org.mockito.Mockito.*;
 
 /** Bộ kiểm thử cho PostgreSqlDataSecurityInitializer (postgre sql data security initializer). */
 class PostgreSqlDataSecurityInitializerTest {
+    /** Hàm trợ giúp của test: tạo danh sách entity giả cho initializer. */
     @SuppressWarnings("unchecked")
     private EntityManagerFactory entities() {
         EntityManagerFactory factory = mock(EntityManagerFactory.class);
@@ -30,6 +31,7 @@ class PostgreSqlDataSecurityInitializerTest {
         return factory;
     }
 
+    /** Kiểm thử: từ chối bật RLS khi backend sẽ mất quyền truy cập. */
     @Test
     void refusesToEnableRlsWhenBackendWouldLoseAccess() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
@@ -41,6 +43,7 @@ class PostgreSqlDataSecurityInitializerTest {
         verify(jdbc, never()).execute(anyString());
     }
 
+    /** Kiểm thử: chỉ bật RLS cho các bảng entity trong schema đang kết nối. */
     @Test
     void enablesRlsOnlyForEntityTablesInTheConnectedSchema() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);

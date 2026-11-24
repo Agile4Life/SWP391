@@ -46,6 +46,7 @@ class SessionBookingServiceTest {
     Member member;
     long nextBookingId = 100;
 
+    /** Chuẩn bị trước mỗi test: tạo SessionBookingService với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new SessionBookingService(bookings, sessions, enrollments, gymClasses, subscriptions, members,
@@ -84,10 +85,12 @@ class SessionBookingServiceTest {
         return s;
     }
 
+    /** Hàm trợ giúp của test: tạo ngoại lệ lỗi với mã lỗi cho trước. */
     void error(String code, Runnable action) {
         assertEquals(code, assertThrows(AppException.class, action::run).getErrorCode());
     }
 
+    /** Hàm trợ giúp của test: tạo bản ghi đặt chỗ buổi học mẫu. */
     SessionBooking booked(long id, ClassSession session, Long memberId) {
         Member m = new Member();
         m.setUserId(memberId);
@@ -198,6 +201,7 @@ class SessionBookingServiceTest {
 
     // ---------------------------------------------------------------- cancelling
 
+    /** Hàm trợ giúp của test: giả lập việc khóa dòng đặt chỗ để xử lý đồng thời. */
     void lockBooking(SessionBooking booking) {
         when(bookings.findClassIdById(booking.getId())).thenReturn(Optional.of(1L));
         when(bookings.findByIdForUpdate(booking.getId())).thenReturn(Optional.of(booking));

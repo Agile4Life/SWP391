@@ -29,6 +29,7 @@ class LegacyClassScheduleTest {
         return s;
     }
 
+    /** Kiểm thử: lớp không có lịch định kỳ thì lấy thứ trong tuần và ngày từ các buổi của nó. */
     @Test
     void classWithoutRecurringDaysTakesWeekdaysAndDatesFromItsSessions() {
         GymClass legacy = new GymClass();
@@ -47,6 +48,7 @@ class LegacyClassScheduleTest {
         assertThat(dto.startTime()).isEqualTo(LocalTime.of(17, 30));
     }
 
+    /** Kiểm thử: lớp đã có lịch riêng thì giữ nguyên, không bị ghi đè. */
     @Test
     void classWithItsOwnScheduleIsLeftAlone() {
         GymClass gymClass = new GymClass();

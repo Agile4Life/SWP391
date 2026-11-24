@@ -118,6 +118,7 @@ class PaymentReconciliationPostgreSqlTest {
                 user, status, "success".equals(status) ? now : null, now.minusHours(4));
     }
 
+    /** Hàm trợ giúp của test: tạo một lần thanh toán để đối soát. */
     private void attempt(String ref, long payment, String status, LocalDateTime created, LocalDateTime expires) {
         jdbc.update("insert into vnpay_transactions(reference,payment_id,amount,created_at,expires_at,ip_address,status) "
                 + "values (?,?,150000,?,?,'127.0.0.1',?)", ref, payment, created, expires, status);

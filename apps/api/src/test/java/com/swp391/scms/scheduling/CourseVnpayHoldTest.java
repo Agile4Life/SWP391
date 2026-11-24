@@ -111,6 +111,10 @@ class CourseVnpayHoldTest {
         assertEquals("pending", fee.getStatus());
     }
 
+    /**
+     * Kiểm thử: lượt quét giải phóng chỗ chưa thanh toán vẫn giữ chỗ khi phí còn trong thời gian ân hạn của
+     * cổng VNPay.
+     */
     @Test
     void theUnpaidSweepKeepsASeatWhoseFeeIsInsideTheGatewayGracePeriod() {
         // Past the 15-minute hold and the gateway expiry, but still inside the IPN grace period.
@@ -122,6 +126,7 @@ class CourseVnpayHoldTest {
         assertEquals("pending", fee.getStatus());
     }
 
+    /** Kiểm thử: lượt quét chưa thanh toán nhả chỗ khi lần thanh toán không còn khả năng hoàn tất. */
     @Test
     void theUnpaidSweepReleasesTheSeatOnceTheAttemptCanNoLongerSettle() {
         fee.setCreatedAt(now.minusMinutes(40));
@@ -134,6 +139,7 @@ class CourseVnpayHoldTest {
         assertEquals("cancelled", enrollment.getStatus());
     }
 
+    /** Kiểm thử: khoản phí không có lần thử VNPay nào vẫn được nhả chỗ sau thời gian giữ. */
     @Test
     void aFeeWithoutAnyVnpayAttemptIsStillReleasedAfterTheHold() {
         when(transactions.findAllByPaymentId(anyLong())).thenReturn(List.of());

@@ -25,6 +25,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 /** Bộ kiểm thử cho TriggerProviders (trigger providers). */
 class TriggerProvidersTest {
 
+    /** Kiểm thử: trigger membership của ghi danh dùng ngày nghiệp vụ Việt Nam, không phụ thuộc múi giờ database. */
     @Test
     void enrollmentMembershipUsesVietnamBusinessDateRegardlessOfDatabaseTimezone() throws Exception {
         List<String> sql = new ArrayList<>();
@@ -44,6 +45,7 @@ class TriggerProvidersTest {
         assertFalse(function.contains("CURRENT_DATE"));
     }
 
+    /** Kiểm thử: trigger check-in và đặt HLV dùng ngày nghiệp vụ Việt Nam. */
     @Test
     void checkinAndCoachBookingTriggersUseVietnamBusinessDate() throws Exception {
         List<String> sql = new ArrayList<>();
@@ -59,6 +61,7 @@ class TriggerProvidersTest {
         assertFalse(script.contains("CURRENT_DATE"));
     }
 
+    /** Kiểm thử: nâng cấp tính nullable của check-in cũ trước khi cài trigger và chỉ làm một lần. */
     @Test
     void upgradesLegacyCheckinNullabilityBeforeInstallingTriggersAndOnlyOnce() throws Exception {
         List<String> sql = new ArrayList<>();
@@ -76,6 +79,7 @@ class TriggerProvidersTest {
                 "The upgrade must still install the membership trigger");
     }
 
+    /** Kiểm thử: không đổi check-in nullable mới tạo và các bảng không được ánh xạ. */
     @Test
     void leavesFreshNullableCheckinsAndUnmappedTablesAlone() throws Exception {
         for (boolean exists : new boolean[]{true, false}) {
@@ -89,6 +93,7 @@ class TriggerProvidersTest {
         }
     }
 
+    /** Kiểm thử: không nâng cấp các schema khác mà JDBC metadata trả về theo pattern. */
     @Test
     void doesNotUpgradeOtherSchemasReturnedByJdbcMetadataPatterns() throws Exception {
         List<String> sql = new ArrayList<>();
@@ -102,6 +107,7 @@ class TriggerProvidersTest {
         assertFalse(sql.stream().anyMatch(statement -> statement.toLowerCase().startsWith("alter table")));
     }
 
+    /** Kiểm thử: từ chối đổi cột cũ có kiểu dữ liệu không như mong đợi. */
     @Test
     void refusesToChangeAnUnexpectedLegacyColumnType() throws Exception {
         List<String> sql = new ArrayList<>();
@@ -115,6 +121,7 @@ class TriggerProvidersTest {
         assertTrue(sql.isEmpty(), "An unexpected column type must fail before any schema or trigger changes");
     }
 
+    /** Hàm trợ giúp của test: tạo metadata giả của bảng check-in cũ. */
     private JdbcTemplate legacyCheckins(List<String> sql, boolean exists, int... nullability) throws Exception {
         DataSource source = mock(DataSource.class);
         Connection connection = mock(Connection.class);
@@ -143,10 +150,12 @@ class TriggerProvidersTest {
         return new JdbcTemplate(source);
     }
 
+    /** Hàm trợ giúp của test: dựng câu lệnh/ngữ pháp SQL phục vụ test. */
     private static BadSqlGrammarException grammar(SQLException cause) {
         return new BadSqlGrammarException("sql", "select", cause);
     }
 
+    /** Kiểm thử: PostgreSQL làm khởi động thất bại nếu thiếu bảng hoặc trigger bắt buộc. */
     @Test
     void postgresFailsStartupWhenMandatoryTablesOrTriggersAreMissing() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);

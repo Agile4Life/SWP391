@@ -10,6 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Bộ kiểm thử cho GymClassDomain (gym class domain). */
 class GymClassDomainTest {
 
+    /** Kiểm thử: các trường của khóa học định kỳ trong entity GymClass được lưu và đọc đúng. */
     @Test
     void testRecurringCourseFields() {
         GymClass gymClass = new GymClass();

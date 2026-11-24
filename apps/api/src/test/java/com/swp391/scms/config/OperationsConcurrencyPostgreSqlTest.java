@@ -73,6 +73,7 @@ class OperationsConcurrencyPostgreSqlTest {
     private ExecutorService workers;
     private AuthenticatedPrincipal staff;
 
+    /** Hàm trợ giúp của test: lấy kết nối database test dùng chung. */
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry properties) throws Exception {
         try (var connection = connectTestDatabase(); var statement = connection.createStatement()) {
@@ -91,6 +92,7 @@ class OperationsConcurrencyPostgreSqlTest {
         properties.add("app.auth.otp.delivery", () -> "disabled");
     }
 
+    /** Dọn dẹp sau test: xóa schema của test đồng thời. */
     @AfterAll
     static void cleanupSchema() throws Exception {
         assertTrue(SCHEMA.matches("operations_test_[a-f0-9]{32}"));
@@ -99,18 +101,21 @@ class OperationsConcurrencyPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: dựng các luồng worker và tài khoản nhân viên. */
     @BeforeEach
     void setupWorkersAndStaff() {
         workers = Executors.newFixedThreadPool(2);
         staff = new AuthenticatedPrincipal(user("CENTER_MANAGER"), "operations-test", "CENTER_MANAGER");
     }
 
+    /** Hàm trợ giúp của test: dừng các luồng worker. */
     @AfterEach
     void stopWorkers() throws InterruptedException {
         workers.shutdownNow();
         assertTrue(workers.awaitTermination(20, TimeUnit.SECONDS), "Database workers must finish before schema cleanup");
     }
 
+    /** Kiểm thử: nhiều QR khác nhau cùng lúc của một hội viên chỉ lưu một lượt cho vào và một lượt từ chối. */
     @Test
     void simultaneousDistinctQrsForOneMemberPersistOneGrantAndOneDenial() throws Exception {
         long member = member();
@@ -140,6 +145,7 @@ class OperationsConcurrencyPostgreSqlTest {
         assertEquals(1, countVisits(member, "status = 'DENIED' and denial_reason = 'error.attendance.already_checked_in'"));
     }
 
+    /** Kiểm thử: nhiều check-out cùng lúc chỉ có một người thắng và giữ nguyên thời điểm đã lưu. */
     @Test
     void simultaneousCheckoutsHaveOneWinnerAndPreserveItsTimestamp() throws Exception {
         long member = member();
@@ -174,6 +180,7 @@ class OperationsConcurrencyPostgreSqlTest {
         assertEquals(1, countVisits(member, "true"));
     }
 
+    /** Kiểm thử: quét chờ việc hủy hoàn tất rồi từ chối QR đó dù hội viên có subscription khác. */
     @Test
     void scanWaitsForCancellationAndRejectsThatQrEvenWithAnotherActiveSubscription() throws Exception {
         long member = member();
@@ -202,6 +209,10 @@ class OperationsConcurrencyPostgreSqlTest {
         assertTrue(subscriptions.hasActiveMembership(member, LocalDate.now(clock)));
     }
 
+    /**
+     * Kiểm thử: truy vấn membership đang hoạt động gồm cả hai ngày biên và loại trừ kỳ tương lai, hết hạn,
+     * không hoạt động.
+     */
     @Test
     void activeMembershipQueryIncludesBothDateBoundariesAndExcludesFutureExpiredOrInactive() {
         long missing = member();
@@ -218,6 +229,7 @@ class OperationsConcurrencyPostgreSqlTest {
 
     // SCRUM-74: real PostgreSQL locks, independent connections, bounded blocking barriers.
     // These tests require the explicitly configured isolated Supabase test project/schema.
+    /** Kiểm thử: hai hội viên tranh chỗ cuối cùng qua khóa lớp thật. */
     @Test
     void twoMembersCompeteForLastSeatThroughRealClassLock() throws Exception {
         long first = bookingMember();
@@ -231,6 +243,7 @@ class OperationsConcurrencyPostgreSqlTest {
         assertEquals(1, rowCount("class_enrollments", gymClass, "booked"));
     }
 
+    /** Kiểm thử: tạm hoãn membership và ghi danh được tuần tự hóa theo hội viên trước khi khóa lớp. */
     @Test
     void membershipHoldAndEnrollmentSerializeOnMemberBeforeClass() throws Exception {
         long owner = bookingMember();
@@ -262,6 +275,7 @@ class OperationsConcurrencyPostgreSqlTest {
         assertEquals(0, rowCount("class_enrollments", gymClass, "booked"));
     }
 
+    /** Kiểm thử: rollback không lưu việc hủy hay các thông báo. */
     @Test
     void rollbackDoesNotPersistCancellationOrNotifications() {
         long owner = bookingMember();
@@ -276,6 +290,7 @@ class OperationsConcurrencyPostgreSqlTest {
         assertEquals(0, notificationCount("class_enrollment", booking));
     }
 
+    /** Hàm trợ giúp của test: tạo cuộc đua giữa các luồng cho cùng một lớp. */
     private List<Future<Object>> raceOnClass(long gymClass, Supplier<?> first, Supplier<?> second) throws Exception {
         var ready = new CountDownLatch(2);
         var firstPid = new AtomicInteger();
@@ -297,6 +312,7 @@ class OperationsConcurrencyPostgreSqlTest {
         return List.of(a, b);
     }
 
+    /** Hàm trợ giúp của test: kiểm tra một thao tác đồng thời có thành công không. */
     private boolean succeeded(Future<?> result) {
         try {
             result.get(20, TimeUnit.SECONDS);
@@ -309,16 +325,19 @@ class OperationsConcurrencyPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: tạo principal của hội viên. */
     private AuthenticatedPrincipal memberPrincipal(long member) {
         return new AuthenticatedPrincipal(member, "booking-fixture", "MEMBER");
     }
 
+    /** Hàm trợ giúp của test: tạo hội viên dùng cho đặt chỗ. */
     private long bookingMember() {
         long member = member();
         subscription(member, "active", -1, 365);
         return member;
     }
 
+    /** Hàm trợ giúp của test: tạo lớp dùng cho đặt chỗ. */
     private long bookingClass(int capacity) {
         long coach = user("COACH");
         jdbc.update("insert into coaches (user_id, employment_status) values (?, 'active')", coach);
@@ -329,6 +348,7 @@ class OperationsConcurrencyPostgreSqlTest {
                 """, Long.class, "Concurrency-" + UUID.randomUUID(), coach, capacity);
     }
 
+    /** Hàm trợ giúp của test: tạo buổi học dùng cho đặt chỗ. */
     private long bookingSession(long gymClass) {
         return jdbc.queryForObject("""
                 insert into class_sessions (class_id, session_date, start_time, end_time, status, created_at, updated_at)
@@ -336,22 +356,26 @@ class OperationsConcurrencyPostgreSqlTest {
                 """, Long.class, gymClass, LocalDate.now(clock).plusDays(BOOKING_DAY.getAndIncrement()));
     }
 
+    /** Hàm trợ giúp của test: tạo bản ghi đặt chỗ. */
     private long booked(long gymClass, long member) {
         return jdbc.queryForObject("insert into class_enrollments (class_id, member_id, status, enrolled_at) values (?, ?, 'booked', now()) returning id",
                 Long.class, gymClass, member);
     }
 
+    /** Hàm trợ giúp của test: đếm số dòng của một bảng. */
     private int rowCount(String table, long gymClass, String status) {
         assertTrue(Set.of("class_enrollments").contains(table));
         return jdbc.queryForObject("select count(*) from " + table + " where class_id = ? and status = ?",
                 Integer.class, gymClass, status);
     }
 
+    /** Hàm trợ giúp của test: đếm số thông báo. */
     private int notificationCount(String type, long id) {
         return jdbc.queryForObject("select count(*) from notifications where related_entity_type = ? and related_entity_id = ?",
                 Integer.class, type, id);
     }
 
+    /** Hàm trợ giúp của test: gửi một tác vụ vào thread pool. */
     private <T> Future<T> submit(CountDownLatch ready, AtomicInteger backendPid, Supplier<T> action) {
         return workers.submit(() -> new TransactionTemplate(transactionManager).execute(status -> {
             jdbc.execute("set local statement_timeout = '15s'");
@@ -361,6 +385,7 @@ class OperationsConcurrencyPostgreSqlTest {
         }));
     }
 
+    /** Hàm trợ giúp của test: chờ cho đến khi một luồng bị chặn trên khóa. */
     private void awaitBlocked(CountDownLatch ready, AtomicInteger... backendPids) throws InterruptedException {
         assertTrue(ready.await(10, TimeUnit.SECONDS), "All workers must enter their transactions");
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
@@ -377,6 +402,7 @@ class OperationsConcurrencyPostgreSqlTest {
         fail("Every operation must actually wait on a PostgreSQL row lock before release");
     }
 
+    /** Hàm trợ giúp của test: giữ khóa một dòng để các luồng khác phải chờ. */
     private static void lockRow(Connection connection, String sql, long id) throws Exception {
         try (var statement = connection.prepareStatement(sql)) {
             statement.setLong(1, id);
@@ -386,6 +412,7 @@ class OperationsConcurrencyPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: thực hiện check-out và trả kết quả. */
     private static CheckinDto checkoutResult(Future<CheckinDto> result) throws Exception {
         try {
             return result.get(20, TimeUnit.SECONDS);
@@ -396,15 +423,18 @@ class OperationsConcurrencyPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: thực hiện quét QR và trả kết quả. */
     private CheckinDto scan(String qr) {
         return checkins.scan(staff, new CheckinRequests.Scan(qr, "Integration gate"));
     }
 
+    /** Hàm trợ giúp của test: đếm số lượt vào cổng của hội viên. */
     private int countVisits(long member, String condition) {
         return jdbc.queryForObject("select count(*) from center_checkins where member_id = ? and " + condition,
                 Integer.class, member);
     }
 
+    /** Hàm trợ giúp của test: tạo mốc thời gian dùng trong test. */
     private LocalDateTime timestamp(long visit, String column) {
         return jdbc.queryForObject("select " + column + " from center_checkins where id = ?", LocalDateTime.class, visit);
     }
@@ -437,12 +467,14 @@ class OperationsConcurrencyPostgreSqlTest {
         return qr;
     }
 
+    /** Hàm trợ giúp của test: tạo thông tin đăng nhập kết nối test. */
     private static String credential(String name) {
         String value = System.getenv(name);
         if (value == null || value.isBlank()) throw new IllegalStateException("Set " + name + " for Supabase tests");
         return value;
     }
 
+    /** Hàm trợ giúp của test: kết nối tới database test. */
     private static Connection connectTestDatabase() throws SQLException {
         String url = credential("SCMS_POSTGRES_TEST_URL");
         String sslMode = System.getenv().getOrDefault("DB_SSL_MODE", "require");
