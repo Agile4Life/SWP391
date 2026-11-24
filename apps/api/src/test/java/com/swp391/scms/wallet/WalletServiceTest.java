@@ -64,6 +64,15 @@ class WalletServiceTest {
     }
 
     /** Kiểm thử: nạp ví idempotent theo mã tham chiếu. */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"pos", "bank_transfer", "online_wallet", "unknown"})
+    void counterTopupRejectsNonCashBeforeWriting(String method) {
+        org.junit.jupiter.api.Assertions.assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> walletService.creditByReceptionist(7L, new BigDecimal("10000"), method, null, 99L));
+        verify(walletRepository, never()).saveAndFlush(any());
+        verify(walletTransactionRepository, never()).save(any());
+    }
+
     @Test
     void creditTopup_isIdempotentOnReference() {
         when(walletTransactionRepository.existsByWallet_IdAndReferenceId(100L, "REF123:TOPUP"))

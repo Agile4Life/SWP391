@@ -463,3 +463,11 @@ it('does not turn a missing renewal id into a new purchase when its number match
   expect(host.textContent).toContain('Kỳ gia hạn không còn trong danh sách. Vui lòng chọn lại.');
   expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
 });
+
+it('offers only cash for counter wallet topup', async () => {
+  await selectMember();
+  const open = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Nạp tiền vào Ví'))!;
+  await act(async () => open.click());
+  expect(host.querySelector('#counter-topup-method')).toBeNull();
+  expect(host.querySelector('[data-testid="counter-topup-cash"]')?.textContent).toContain('Tiền mặt tại quầy');
+});
