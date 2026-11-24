@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra giao diện cửa hàng thực phẩm bổ sung bằng API giả, không ghi database.
 // Browser verification for the Supplement Shop ("Sản phẩm") feature.
 // Uses intercepted API fixtures; never writes to a database.
 // NODE_PATH supplies the existing playwright-core installation. CHROME_PATH is optional.
@@ -129,12 +130,14 @@ const productDetail = {
   related: [productsSummary[1], productsSummary[2]],
 };
 
+// Tách chuỗi màu CSS rgb()/rgba() thành mảng số [r, g, b].
 function parseRgb(str) {
   const m = str.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
   if (!m) return [0, 0, 0];
   return [Number(m[1]), Number(m[2]), Number(m[3])];
 }
 
+// Tính độ sáng tương đối (relative luminance) của một màu theo công thức WCAG.
 function relLuminance([r, g, b]) {
   const chan = [r, g, b].map(v => {
     const s = v / 255;
@@ -143,6 +146,7 @@ function relLuminance([r, g, b]) {
   return 0.2126 * chan[0] + 0.7152 * chan[1] + 0.0722 * chan[2];
 }
 
+// Tính tỷ lệ tương phản giữa màu chữ và màu nền theo WCAG.
 function contrastRatio(fg, bg) {
   const l1 = relLuminance(parseRgb(fg));
   const l2 = relLuminance(parseRgb(bg));

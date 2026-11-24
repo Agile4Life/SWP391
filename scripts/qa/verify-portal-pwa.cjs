@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra portal hoạt động như PWA (manifest, service worker) trên bản preview production.
 // Run against `npm --prefix apps/web run preview -- --host 127.0.0.1`.
 // NODE_PATH supplies playwright-core. API fixtures never contact the real database.
 const assert = require('node:assert/strict');
@@ -15,6 +16,7 @@ const roles = [
 ];
 const qrPayload = `SOL:GATE:1:A1:${Date.now()}:${'a'.repeat(64)}`;
 
+// Chặn và giả lập các API của portal cho bài kiểm tra PWA.
 async function fixtures(page) {
   const submissions = [];
   await page.route('**/api/v1/**', async route => {
@@ -42,6 +44,7 @@ async function fixtures(page) {
   return submissions;
 }
 
+// Đặt phiên đăng nhập theo vai trò và theme (mặc định tối).
 async function session(page, role, theme = 'dark') {
   await page.addInitScript(({ role, theme }) => {
     localStorage.setItem('scms_theme', theme);
@@ -50,6 +53,7 @@ async function session(page, role, theme = 'dark') {
   }, { role, theme });
 }
 
+// Kiểm tra bố cục portal ở chế độ di động hoặc máy tính.
 async function layout(page, mobile) {
   const result = await page.evaluate(() => {
     const nav = document.querySelector('.portal-mobile-nav');

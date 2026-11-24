@@ -1,3 +1,4 @@
+// Mục đích: kiểm thử hồi quy: bấm thông báo đánh giá sẽ mở đúng phản hồi của HLV đã lưu.
 // Mocked browser regression: notification click opens persisted coach feedback.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');

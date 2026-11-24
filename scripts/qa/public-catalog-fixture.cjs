@@ -1,3 +1,4 @@
+// Mục đích: dữ liệu giả của danh mục công khai (gói tập, HLV) dùng cho các script kiểm thử trình duyệt.
 // Browser verification only. Production content always comes from /public/catalog.
 const packages = [30, 90, 365].map((durationDays, index) => ({
   id: index + 1, name: `Gói kiểm chứng ${durationDays} ngày`, description: 'Quyền lợi từ danh mục portal',

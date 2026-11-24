@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra màn lịch của hội viên với API giả, không đọc/ghi database dùng chung.
 // QA only: intercept every API request; never read/write a shared database.
 // NODE_PATH supplies playwright-core; CHROME_PATH selects installed Chromium.
 const assert = require('node:assert/strict');

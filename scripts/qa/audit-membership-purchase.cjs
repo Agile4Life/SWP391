@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra trải nghiệm mua gói membership; mọi request API của trình duyệt đều được chặn và giả lập.
 // UX audit: real catalog/health reads; every browser API request is intercepted.
 // Run with playwright-core via NODE_PATH and CHROME_PATH for a local Chrome install.
 const assert = require('node:assert/strict');
@@ -12,10 +13,12 @@ const results = [];
 const commit = require('node:child_process').execFileSync('git', ['rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim();
 let catalog;
 
+// Tạo dữ liệu giả của một subscription theo gói và trạng thái.
 function subscription(pkg, status = 'pending_payment', id = 9001) {
   return { id, memberId: 9001, packageId: pkg.id, packageName: pkg.name, previousSubscriptionId: null, startDate: '2026-10-26', endDate: '2026-11-24', status, qrCode: null, createdAt: '2026-10-26T09:00:00' };
 }
 
+// Dựng context trình duyệt và chặn/giả lập toàn bộ API cho luồng mua gói.
 async function setup(browser, options = {}) {
   const context = await browser.newContext({ viewport: { width: options.width || 1440, height: options.height || 900 }, timezoneId: 'Asia/Ho_Chi_Minh', reducedMotion: options.motion ? 'no-preference' : 'reduce', isMobile: !!options.mobile, hasTouch: !!options.mobile });
   const state = { packages: structuredClone(catalog.packages), history: [], current: null, payments: [], calls: [], registered: false, failures: {}, ...options.state };
@@ -81,6 +84,7 @@ async function setup(browser, options = {}) {
   return { context, page, state, errors };
 }
 
+// Chạy một kịch bản kiểm tra trong trang mới và ghi nhận kết quả đạt/lỗi.
 async function check(browser, id, title, fn, options = {}) {
   if (process.env.AUDIT_CASE_FILTER && !new RegExp(process.env.AUDIT_CASE_FILTER).test(id)) return;
   const env = await setup(browser, options);
@@ -98,15 +102,18 @@ async function check(browser, id, title, fn, options = {}) {
 }
 
 const createButtons = page => page.getByRole('button', { name: 'Đăng ký lần đầu', exact: true });
+// Mở trang danh sách gói tập.
 async function packages(page) {
   await page.goto(`${base}/member/packages`);
   await page.locator('.grid-3 article').first().waitFor();
   await page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'));
 }
+// Điền form đăng ký bằng dữ liệu mẫu (có thể ghi đè từng trường).
 async function fillRegister(page, overrides = {}) {
   const values = { username: 'ux_buyer', email: 'buyer@example.test', phone: '', password: 'Buyer123!', ...overrides };
   for (const [key, value] of Object.entries(values)) await page.locator(`#reg-${key}`).fill(value);
 }
+// Đăng nhập bằng tài khoản giả lập.
 async function login(page) {
   await page.locator('#login-identifier').fill('ux_buyer');
   await page.locator('#login-password').fill('Buyer123!');

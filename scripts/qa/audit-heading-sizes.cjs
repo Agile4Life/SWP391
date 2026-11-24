@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra (chỉ đọc) kích thước các tiêu đề trong giao diện bằng dữ liệu giả, không gọi API thật.
 // Read-only UI audit using the existing verification fixtures; no real API calls.
 const fs = require('node:fs');
 const vm = require('node:vm');
@@ -20,6 +21,7 @@ const output = 'docs/ui-review/heading-audit';
       const path = new URL(route.request().url()).pathname.replace(/^\/api\/v1/, '');
       return route.fulfill({ json: { success: true, data: /^\/roles\/\d+\/permissions$/.test(path) ? fixtures['/roles/permissions'] : fixtures[path] ?? [] } });
     });
+    // Mở một trang ở độ rộng cho trước và thu thập kích thước chữ của các tiêu đề.
     async function collect(path, width, state = 'page') {
       const headings = await page.locator('h1,h2,h3,h4,h5,h6,[role="heading"],.fit-faq-trigger,.member-discover-card strong,.member-digital-card > strong').evaluateAll(elements => elements.filter(el => {
         const css = getComputedStyle(el);

@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra hiệu ứng xuất hiện của component ở trang công khai (cuộn dọc native, tôn trọng reduced-motion).
 // Requires the local Vite server and Playwright through NODE_PATH.
 const assert = require('node:assert/strict');
 const path = require('node:path');

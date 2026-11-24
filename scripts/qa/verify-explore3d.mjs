@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Mục đích: kiểm tra cảnh 3D explore3d (khởi động, render, tương tác) bằng trình duyệt tự động.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -168,6 +169,7 @@ const SESSIONS_FIXTURE = [
   },
 ];
 
+// Gắn dữ liệu giả (fixture) cho các request API mà cảnh explore3d gọi.
 async function attachExploreFixtures(context, origin) {
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
@@ -269,6 +271,7 @@ async function attachExploreFixtures(context, origin) {
   });
 }
 
+// Khởi động server preview của web trên cổng cho trước và chờ sẵn sàng.
 async function startPreviewServer(port = 4179) {
   const proc = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort', '--host', '127.0.0.1'], {
     cwd: path.join(repoRoot, 'apps/web'),
@@ -291,11 +294,13 @@ async function startPreviewServer(port = 4179) {
   return { proc, baseUrl };
 }
 
+// Chờ cảnh 3D tải xong và sẵn sàng tương tác.
 async function waitFor3DReady(page) {
   await page.locator('.explore3d-page').waitFor({ state: 'visible', timeout: 15000 });
   await page.waitForTimeout(750);
 }
 
+// Khẳng định bố cục vừa một màn hình và các phần tử không đè lên nhau.
 async function assertSingleScreenAndNoCollisions(page, label) {
   const layoutCheck = await page.evaluate(() => {
     const docEl = document.documentElement;

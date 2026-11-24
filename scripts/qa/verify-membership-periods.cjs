@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra hiển thị các kỳ membership (gia hạn, nâng cấp) bằng dữ liệu giả, không đổi dữ liệu thật.
 // Run with the local Vite server and playwright-core available via NODE_PATH.
 // All API requests use fixtures; no membership data is changed.
 const assert = require('node:assert/strict');

@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra theme sáng/tối của giao diện; API dùng dữ liệu giả.
 // Local browser verification. API requests use fixtures and never change real data.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

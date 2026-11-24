@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra mọi màn hình có trạng thái loading, rỗng và lỗi; mọi API đều bị chặn và giả lập.
 // NODE_PATH supplies playwright-core. PUBLIC_UI_URL selects a local production preview.
 // Every API request is intercepted; no production data is read or written.
 const assert = require('node:assert/strict');
@@ -5,6 +6,7 @@ const { chromium } = require('playwright-core');
 const catalog = require('./public-catalog-fixture.cjs');
 const base = (process.env.PUBLIC_UI_URL || 'http://127.0.0.1:5173').replace(/\/$/, '');
 
+// Tạo một promise treo để giữ request ở trạng thái đang tải.
 function hold() {
   let release, requested;
   const response = new Promise(resolve => { release = resolve; });

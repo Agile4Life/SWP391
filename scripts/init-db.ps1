@@ -1,3 +1,4 @@
+# Mục đích: kiểm tra cấu hình database; schema do Hibernate tự tạo khi API khởi động nên script này không chạy DDL.
 # Validate configuration; Hibernate manages the Supabase/PostgreSQL schema on API startup.
 [CmdletBinding()]
 param([switch]$Force)

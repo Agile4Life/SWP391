@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra giao diện đồng bộ đúng với danh mục công khai (gói, giá, HLV).
 // NODE_PATH: playwright-core; CHROME_PATH: installed Chromium executable.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

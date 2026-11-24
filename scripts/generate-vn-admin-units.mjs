@@ -1,3 +1,4 @@
+// Mục đích: tải danh sách tỉnh/thành và phường/xã Việt Nam từ API công khai rồi sinh file dữ liệu địa giới hành chính cho ứng dụng.
 // scripts/generate-vn-admin-units.mjs — chạy: node scripts/generate-vn-admin-units.mjs
 // Nguồn: provinces.open-api.vn API v2 (cấu trúc 2 cấp sau 01/07/2025).
 import { mkdir, writeFile } from 'node:fs/promises';

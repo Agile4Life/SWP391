@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra giao diện trang công khai (landing, đăng nhập, đăng ký); phản hồi xác thực được giả lập.
 // Run with Playwright available through NODE_PATH, with the local Vite server running.
 // UI checks use intercepted auth responses and never create real accounts.
 const assert = require('node:assert/strict');

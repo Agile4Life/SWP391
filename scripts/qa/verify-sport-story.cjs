@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra câu chuyện cuộn các môn thể thao ở trang công khai trên Vite local.
 // Local Vite server; Playwright supplied through NODE_PATH. No production API writes.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');

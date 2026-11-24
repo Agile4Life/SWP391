@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra giao diện portal HLV dùng đúng theme (màu, nút) so với landing; API dùng dữ liệu giả.
 // Run against local Vite with playwright-core available. All API requests use fixtures.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');

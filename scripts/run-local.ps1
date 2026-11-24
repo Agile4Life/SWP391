@@ -1,3 +1,4 @@
+# Mục đích: chạy API (Spring Boot) và web (Vite) trên máy local cho môi trường Windows.
 <#
 .SYNOPSIS
     SCMS - Bo chay local du an (Sports Center Management System)
@@ -18,6 +19,7 @@ param(
 
 $Host.UI.RawUI.WindowTitle = "SCMS - Local Runner"
 
+# In tiêu đề (banner) của script ra màn hình.
 function Write-Header {
     Clear-Host
     Write-Host "=================================================================" -ForegroundColor Cyan
@@ -38,6 +40,7 @@ $apiDir = Join-Path $rootDir "apps\api"
 $webDir = Join-Path $rootDir "apps\web"
 . (Join-Path $scriptDir "database-config.ps1")
 
+# Kiểm tra một dịch vụ local (API/web) đã lắng nghe ở cổng cho trước hay chưa.
 function Test-ScmsLocalService {
     param([string]$Uri, [switch]$Api)
     try {
@@ -51,6 +54,7 @@ function Test-ScmsLocalService {
     } catch { return $false }
 }
 
+# Chờ một dịch vụ local sẵn sàng, quá thời gian chờ thì báo lỗi.
 function Wait-ScmsLocalService {
     param([string]$Name, [string]$Uri, [switch]$Api, [int]$TimeoutSeconds = 240)
     Write-Host "-> Dang cho $Name san sang: $Uri" -ForegroundColor Yellow

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Mục đích: đóng gói bộ nhân vật và thư viện hoạt ảnh Quaternius thành asset dùng cho cảnh 3D explore3d của web.
 """
 Packs the Quaternius "Universal Base Characters" and "Universal Animation Library"
 (Standard, free, CC0) into the web-sized files used by the 3D explore view.
@@ -34,6 +35,7 @@ HAIRS = ["Hair_SimpleParted", "Hair_Buzzed", "Hair_Beard", "Hair_Long", "Hair_Bu
 OUT = os.path.join(os.path.dirname(__file__), "..", "apps", "web", "public", "models", "explore3d", "humans")
 
 
+# Thu nhỏ ảnh texture về kích thước và định dạng mong muốn, ghi vào thư mục tạm.
 def resize_image(src, size, fmt, tmp):
     """Returns (bytes, mime) for `src` scaled to fit `size` px."""
     ext = "jpg" if fmt == "jpeg" else "png"
@@ -46,10 +48,12 @@ def resize_image(src, size, fmt, tmp):
     return open(dst, "rb").read(), "image/jpeg" if fmt == "jpeg" else "image/png"
 
 
+# Đệm dữ liệu cho chia hết cho 4 byte (yêu cầu căn chỉnh của định dạng GLB).
 def pad4(data, fill=b"\x00"):
     return data + fill * ((4 - len(data) % 4) % 4)
 
 
+# Ghi file .glb từ phần JSON glTF và dữ liệu nhị phân.
 def write_glb(path, gltf, binary):
     gltf["buffers"] = [{"byteLength": len(binary)}]
     j = pad4(json.dumps(gltf, separators=(",", ":")).encode(), b" ")
@@ -61,6 +65,7 @@ def write_glb(path, gltf, binary):
     print(f"  {os.path.relpath(path)}  {os.path.getsize(path) / 1024:.0f} KB")
 
 
+# Đóng gói một file glTF (cùng buffer, texture) thành một file .glb gọn, áp quy tắc xử lý ảnh.
 def pack_gltf(gltf_path, out_path, image_rule, tmp, normal_dir=None):
     """Embeds the .bin and re-encodes every image (image_rule(name) -> (size, fmt))."""
     base = os.path.dirname(gltf_path)
@@ -90,6 +95,7 @@ def pack_gltf(gltf_path, out_path, image_rule, tmp, normal_dir=None):
     write_glb(out_path, gltf, bytes(binary))
 
 
+# Chọn quy tắc nén/thu nhỏ texture phù hợp theo tên nhân vật.
 def character_rule(name):
     if "Eye" in name:
         return 256, "png"
@@ -98,6 +104,7 @@ def character_rule(name):
     return 1024, "jpeg"
 
 
+# Đóng gói các mô hình nhân vật cơ bản thành file .glb.
 def build_characters(base_dir, tmp):
     gltf_dir = os.path.join(base_dir, "Base Characters", "Godot - UE")
     tex_dir = os.path.join(base_dir, "Base Characters", "Textures")
@@ -116,6 +123,7 @@ def build_characters(base_dir, tmp):
         print(f"  skin-{gender}-light.jpg  {len(data) / 1024:.0f} KB")
 
 
+# Đóng gói các mô hình tóc thành file .glb.
 def build_hair(base_dir, tmp):
     hair_dir = os.path.join(base_dir, "Hairstyles", "Origin at 0", "glTF (Godot)")
     normals = os.path.join(base_dir, "Hairstyles", "Textures", "Normals Unity - Godot")
@@ -123,6 +131,7 @@ def build_hair(base_dir, tmp):
         pack_gltf(os.path.join(hair_dir, name + ".gltf"), os.path.join(OUT, name.lower().replace("_", "-") + ".glb"), character_rule, tmp, normals)
 
 
+# Đóng gói thư viện hoạt ảnh thành file .glb dùng chung cho các nhân vật.
 def build_animations(anim_dir):
     path = os.path.join(anim_dir, "Unreal-Godot", "UAL1_Standard.glb")
     data = open(path, "rb").read()
@@ -168,6 +177,7 @@ def build_animations(anim_dir):
     write_glb(os.path.join(OUT, "human-animations.glb"), gltf, bytes(new_binary))
 
 
+# Điểm vào của script: dựng toàn bộ asset nhân vật, tóc và hoạt ảnh.
 def main():
     if len(sys.argv) != 3:
         raise SystemExit(__doc__)

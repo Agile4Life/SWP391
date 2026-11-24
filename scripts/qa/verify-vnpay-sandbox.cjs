@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra luồng thanh toán VNPay bằng giả lập, không liên hệ VNPay hay ghi database thật.
 // Mocked browser check. Never contacts VNPay or writes to a real database.
 // NODE_PATH must resolve playwright-core; CHROME_PATH can select an installed browser.
 const assert = require('node:assert/strict');

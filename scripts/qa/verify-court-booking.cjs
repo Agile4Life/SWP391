@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra luồng đặt sân trên giao diện bằng API giả, không ghi database.
 // Browser verification uses intercepted API fixtures; it never writes to a database.
 // NODE_PATH supplies the existing playwright-core installation. CHROME_PATH is optional.
 const assert = require('node:assert/strict');

@@ -1,3 +1,4 @@
+// Mục đích: kiểm tra luồng giao diện theo từng vai trò bằng trình duyệt với API giả, không chạm database hay tài khoản Google.
 // Browser audit with intercepted API fixtures. No database or Google account is contacted.
 const fs = require('node:fs');
 const path = require('node:path');
@@ -10,6 +11,7 @@ const unknown = new Set();
 const profile = { userId: 1, fullName: 'Audit user', email: 'audit@example.test', phone: '0901234567', gender: 'other', dob: null, avatarUrl: null, address: null, membershipCode: 'MEM-1', healthNotes: null, fitnessGoal: null, fitnessLevel: 'beginner', emergencyContactName: null, emergencyContactPhone: null };
 const roleDtos = ['CENTER_MANAGER', 'COACH', 'RECEPTIONIST', 'MEMBER', 'ADMIN'].map((code, i) => ({ id: i + 1, code }));
 
+// Chặn và giả lập các API theo trạng thái (vai trò) của kịch bản.
 async function fixtures(page, state) {
   await page.route('**/api/v1/**', async route => {
     const req = route.request();
@@ -42,6 +44,7 @@ async function fixtures(page, state) {
   await page.route('https://**', route => route.abort());
 }
 
+// Chờ trang ổn định (tải xong, hết hiệu ứng) trước khi kiểm tra.
 async function waitPage(page) {
   await page.locator('.portal-v2').waitFor({ timeout: 6000 });
   await page.waitForTimeout(350);

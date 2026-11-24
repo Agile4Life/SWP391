@@ -1,3 +1,4 @@
+// Mục đích: luôn chạy Maven Wrapper đúng phiên bản của dự án, bất kể thư mục gọi lệnh, để build/test API nhất quán.
 import { spawnSync } from 'node:child_process';
 
 // Always use the versioned Maven Wrapper, regardless of the caller's directory.
