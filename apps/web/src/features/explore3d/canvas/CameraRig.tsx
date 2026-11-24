@@ -40,6 +40,7 @@ const _restTarget = new THREE.Vector3();
 const _currPosition = new THREE.Vector3();
 const _currTarget = new THREE.Vector3();
 
+/** Phần tử có đang nhận chữ gõ không (input, textarea, select hoặc contenteditable). */
 function isTypingElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
@@ -47,6 +48,10 @@ function isTypingElement(target: EventTarget | null): boolean {
   return target.isContentEditable;
 }
 
+/**
+ * Bộ điều khiển camera của cảnh: thực hiện lệnh bay từ store (toàn cảnh, nút, viền, góc nhìn, thu phóng, dịch),
+ * phím tắt, chuyển giữa chế độ quỹ đạo và đi bộ, giới hạn vị trí và lưu góc nhìn.
+ */
 export function CameraRig() {
   const controlsRef = useRef<CameraControlsImpl | null>(null);
   const initializedRef = useRef(false);
@@ -69,6 +74,7 @@ export function CameraRig() {
   const levelMode = useExploreStore(state => state.levelMode);
   const walkMode = useExploreStore(state => state.walkMode);
 
+  // Thu phóng vào/ra theo tỉ lệ khoảng cách (có hoạt ảnh trừ khi giảm chuyển động).
   const zoomByDirection = useCallback(
     (direction: 'in' | 'out') => {
       if (useExploreStore.getState().walkMode) return;
@@ -118,6 +124,7 @@ export function CameraRig() {
     [invalidate],
   );
 
+  // Bay camera tới một góc nhìn (bay hai chặng khi đổi giữa các tầng, hoặc tức thì khi cần).
   const applyViewpoint = useCallback(
     async (
       controls: CameraControlsImpl,
@@ -364,6 +371,7 @@ export function CameraRig() {
 
   // Keyboard shortcuts and custom zoom events
   useEffect(() => {
+    // Phím tắt điều khiển camera (khi không đang gõ chữ).
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       if (isTypingElement(event.target)) return;
@@ -429,6 +437,7 @@ export function CameraRig() {
       };
   }, []);
 
+  // Người dùng bắt đầu điều khiển bằng tay thì tạm dừng tour.
   const handleControlStart = useCallback(() => {
     const state = useExploreStore.getState();
     if (state.tourActive && !state.tourPaused) {
@@ -437,10 +446,12 @@ export function CameraRig() {
     invalidate();
   }, [invalidate]);
 
+  // Yêu cầu vẽ lại khung hình.
   const handleInvalidate = useCallback(() => {
     invalidate();
   }, [invalidate]);
 
+  // Khi camera thay đổi: làm sạch tư thế (giữ trong biên, không xuyên đất).
   const handleChange = useCallback(() => {
     const controls = controlsRef.current;
     if (
@@ -497,6 +508,7 @@ export function CameraRig() {
     invalidate();
   }, [invalidate]);
 
+  // Khi camera nghỉ: chốt vị trí cuối trong giới hạn và lưu góc nhìn của phiên.
   const handleRest = useCallback(() => {
     const controls = controlsRef.current;
     if (!controls) return;

@@ -99,11 +99,18 @@ void main() {
 }
 `;
 
+/**
+ * Tạo vật liệu shader của bầu trời theo theme: bản cho cảnh phản chiếu môi trường hoặc bầu trời hiển thị, kèm
+ * hàm cập nhật thời gian.
+ */
 function useSkyMaterial(theme: ExploreTheme, env: boolean) {
+  // Dựng vật liệu và các uniform màu một lần cho mỗi theme.
   const bundle = useMemo(() => {
     const { sky } = getAtmosphere(theme);
+    // Tạo uniform vector màu từ ba số.
     const v = (c: [number, number, number]) => ({ value: new THREE.Vector3(...c) });
     const timeUniform = { value: 0 };
+    // Cập nhật thời gian cho shader.
     const setTime = (t: number): void => {
       timeUniform.value = t;
     };
@@ -138,15 +145,24 @@ function useSkyMaterial(theme: ExploreTheme, env: boolean) {
 }
 
 const SKY_GEOMETRY = new THREE.SphereGeometry(1, 48, 24);
+/** Hàm raycast rỗng để bầu trời không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
-/** Sky rendered only inside the environment cube-camera bake (image-based sky light). */
+/**
+ * Bầu trời chỉ dùng khi dựng ánh sáng môi trường (cube camera).
+ *
+ * Sky rendered only inside the environment cube-camera bake (image-based sky light).
+ */
 export function SkyProbe({ theme }: { theme: ExploreTheme }) {
   const { material } = useSkyMaterial(theme, true);
   return <mesh geometry={SKY_GEOMETRY} material={material} scale={80} frustumCulled={false} />;
 }
 
-/** Visible sky backdrop; follows the camera so it always sits at the far distance. */
+/**
+ * Bầu trời nhìn thấy được, luôn bám theo camera để nằm ở xa.
+ *
+ * Visible sky backdrop; follows the camera so it always sits at the far distance.
+ */
 export function SkyDome({ theme }: { theme: ExploreTheme }) {
   const { material, setTime } = useSkyMaterial(theme, false);
   const ref = useRef<THREE.Mesh>(null);

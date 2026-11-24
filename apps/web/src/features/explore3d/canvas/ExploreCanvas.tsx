@@ -29,12 +29,14 @@ import { SelectionHighlight } from './SelectionHighlight';
 // Wider, edge-faded Vogel PCF; must run before the first material compiles.
 patchSoftShadowChunk();
 
+/** Props của canvas 3D: dữ liệu thật đã gắn vào cảnh và cờ chạy benchmark. */
 export interface ExploreCanvasProps {
   bindings?: ResolvedSceneBindings;
   benchEnabled?: boolean;
 }
 
 // AA comes from MSAA on the HDR render target + FXAA in the final pass.
+// Cấu hình WebGL: tắt MSAA gốc vì khử răng cưa do MSAA trên HDR target và FXAA ở bước cuối.
 const GL_CONFIG = {
   antialias: false,
   alpha: false,
@@ -43,6 +45,7 @@ const GL_CONFIG = {
   powerPreference: 'high-performance' as const,
 };
 
+/** Cấu hình camera ban đầu (vị trí, góc mở, mặt phẳng gần/xa). */
 const INITIAL_CAMERA_CONFIG = {
   position: [46, 36, 48] as [number, number, number],
   fov: 38,
@@ -50,6 +53,10 @@ const INITIAL_CAMERA_CONFIG = {
   far: 1200,
 };
 
+/**
+ * Canvas react-three-fiber của cảnh khám phá: dựng cảnh, camera, hậu kỳ, hiệu năng, benchmark và xử lý mất ngữ
+ * cảnh WebGL.
+ */
 export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasProps) {
   const tier = useExploreStore(s => s.tier);
   const dpr = useExploreStore(s => s.dpr);
@@ -64,6 +71,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
     };
   }, []);
 
+  // Khi canvas được tạo: bật bóng đổ và đăng ký các listener mất/khôi phục ngữ cảnh WebGL và rời trang.
   const handleCreated = useCallback((state: RootState) => {
     if (cleanupListenersRef.current) {
       cleanupListenersRef.current();
@@ -93,15 +101,18 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       return;
     }
 
+    // Mất ngữ cảnh WebGL: chặn mặc định và ghi nhận (từ lần thứ hai chuyển sang 2D).
     const onContextLost = (event: Event) => {
       event.preventDefault();
       useExploreStore.getState().recordContextLost();
     };
 
+    // Ngữ cảnh được khôi phục thì vẽ lại.
     const onContextRestored = () => {
       state.invalidate();
     };
 
+    // Rời trang thì chủ động bỏ ngữ cảnh WebGL (bỏ qua lỗi khi đóng trang).
     const onPageHide = () => {
       try {
         state.gl.forceContextLoss();

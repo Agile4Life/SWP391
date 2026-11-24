@@ -8,16 +8,19 @@ import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { getExploreUiAccent, useDocumentTheme } from '../renderers/materials';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
 
+/** Props của khung tô sáng: cảnh. */
 export interface SelectionHighlightProps {
   scene?: SceneDoc;
 }
 
+/** Mô tả khung tô sáng: vị trí, tỉ lệ và hộp bao. */
 export interface HighlightFrameSpec {
   position: Vec3;
   scale: Vec3;
   box: WorldBox;
 }
 
+/** Tính khung tô sáng cho một nút theo chế độ tầng (không có nút hoặc hộp bao thì null). */
 export function computeHighlightFrame(
   scene: SceneDoc,
   nodeId: string | null | undefined,
@@ -39,6 +42,9 @@ export function computeHighlightFrame(
 }
 
 /**
+ * Dựng hình khung đơn vị dùng lại cho mọi lần chọn/rê: vòng đáy đôi và các góc ở đỉnh, chỉ tốn 1–2 draw call và
+ * không cấp phát hình học lúc chạy.
+ *
  * Builds a reusable unit architectural bounding frame (x: -0.5..0.5, y: 0..1, z: -0.5..0.5)
  * with double base ring at y = 0 and corner brackets at y = 1 so selection + hover cost
  * only 1-2 draw calls and zero runtime geometry allocations.
@@ -46,6 +52,7 @@ export function computeHighlightFrame(
 export function buildUnitHighlightFrameGeometry(): THREE.BufferGeometry {
   const pts: number[] = [];
 
+  // Thêm bốn cạnh hình chữ nhật trong mặt phẳng XZ tại độ cao y.
   const pushRectXZ = (halfX: number, y: number, halfZ: number) => {
     pts.push(
       -halfX, y, -halfZ,  halfX, y, -halfZ,
@@ -78,6 +85,7 @@ export function buildUnitHighlightFrameGeometry(): THREE.BufferGeometry {
   return geometry;
 }
 
+/** Khung tô sáng đối tượng đang chọn và đang rê chuột (vật liệu theo màu nhấn của theme). */
 export function SelectionHighlight({ scene = SOL_CENTER_SCENE }: SelectionHighlightProps) {
   const r3fStore = useContext(r3fContext);
   const selectedId = useExploreStore(s => s.selectedId);
@@ -86,6 +94,7 @@ export function SelectionHighlight({ scene = SOL_CENTER_SCENE }: SelectionHighli
   const walkMode = useExploreStore(s => s.walkMode);
   const theme = useDocumentTheme();
 
+  // Tạo hình học và vật liệu một lần cho mỗi theme.
   const resources = useMemo(() => {
     const uiAccent = getExploreUiAccent(theme);
     const geometry = buildUnitHighlightFrameGeometry();
@@ -112,11 +121,13 @@ export function SelectionHighlight({ scene = SOL_CENTER_SCENE }: SelectionHighli
     };
   }, [resources]);
 
+  // Khung của đối tượng đang chọn.
   const selectedFrame = useMemo(
     () => computeHighlightFrame(scene, selectedId, levelMode),
     [scene, selectedId, levelMode],
   );
 
+  // Khung của đối tượng đang rê (không trùng với đối tượng đang chọn).
   const hoveredFrame = useMemo(() => {
     if (!hoveredId || hoveredId === selectedId) return null;
     return computeHighlightFrame(scene, hoveredId, levelMode);
