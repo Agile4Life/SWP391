@@ -1,4 +1,4 @@
-/** Only explicitly supplied profiles use named portraits; other images are illustrations. */
+/** Chỉ các hồ sơ được cung cấp tường minh mới dùng ảnh chân dung theo tên; các ảnh còn lại là ảnh minh họa. */
 const profilePortraits = new Map([
   ['huynh dac tai', '/images/fitness/coach-personal.jpg'],
   ['nguyen minh quan', '/images/fitness/coach-minh-quan.jpg'],

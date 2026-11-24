@@ -12,14 +12,13 @@ function translatedSource(value: string, lang: 'vi' | 'en'): string {
   const translated = Object.hasOwn(vietnamesePublicLabels, key)
     ? translateSource(vietnamesePublicLabels[key], key, lang)
     : translateSource(key, englishPublicLabels[key] ?? englishPublicLabels[value], lang);
-  // Keep intentional separators in fragments such as " and {0} other items".
+  // Giữ nguyên khoảng trắng phân cách có chủ đích trong các đoạn ghép như " and {0} other items".
   return value.slice(0, value.indexOf(trimmed)) + translated.trim() + value.slice(value.indexOf(trimmed) + trimmed.length);
 }
 
 /**
  * Trả về chuỗi hiển thị theo ngôn ngữ hiện tại cho chuỗi, Error hoặc cặp vi/en.
- *
- * Only call for source-owned copy; API errors and catalog/user fields stay verbatim.
+ * Chỉ gọi cho văn bản thuộc mã nguồn; lỗi API và các trường dữ liệu danh mục/người dùng phải giữ nguyên văn.
  */
 export function sourceText(value: string | Error | SourceMessage): string {
   if (value instanceof Error) {
@@ -41,9 +40,7 @@ export function sourcePair(source: string): SourceMessage {
 }
 
 /**
- * Giữ nguyên lỗi từ API; lỗi khác được thay bằng lỗi mang bản dịch song ngữ của fallback.
- *
- * Preserve backend messages, while retaining bilingual provenance for client fallbacks.
+ * Giữ nguyên thông báo lỗi từ backend, đồng thời bảo toàn nguồn gốc song ngữ cho chuỗi dự phòng phía client.
  */
 export function sourceError(error: unknown, fallback: string): Error {
   if (error instanceof Error && error.name === 'Error' && error.message) return error;
@@ -51,9 +48,8 @@ export function sourceError(error: unknown, fallback: string): Error {
 }
 
 /**
- * Hook để component render lại khi đổi ngôn ngữ (cho bảng tĩnh dịch lúc render).
- *
- * A subscription for source-owned static tables whose getters resolve during rendering.
+ * Hook đăng ký theo dõi ngôn ngữ để component render lại khi đổi ngôn ngữ (dùng cho các bảng tĩnh thuộc mã nguồn
+ * có getter phân giải trong lúc render).
  */
 export function useSourceLanguage(): void {
   useI18n();

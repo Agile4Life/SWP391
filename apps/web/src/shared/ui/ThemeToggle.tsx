@@ -28,7 +28,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f5f5f3' : '#202020');
-    try { localStorage.setItem('scms_theme', theme); } catch { /* Theme still works without storage. */ }
+    try { localStorage.setItem('scms_theme', theme); } catch { /* Giao diện vẫn hoạt động khi không có storage. */ }
   }, [theme]);
   // Đổi theme, dùng View Transitions để vòng tròn theme mới lan từ điểm bấm.
   const toggle = (origin?: ToggleOrigin) => {
@@ -37,7 +37,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const doc = document as ViewTransitionDocument;
     const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (typeof doc.startViewTransition !== 'function' || reduceMotion) { swap(); return; }
-    // The new theme grows as a circle from the toggle; browsers without View Transitions switch instantly.
+    // Theme mới lan ra thành hình tròn từ nút chuyển; trình duyệt không hỗ trợ View Transitions sẽ đổi ngay lập tức.
     const rootElement = document.documentElement;
     const x = origin?.x ?? window.innerWidth / 2;
     const y = origin?.y ?? window.innerHeight / 2;
@@ -49,7 +49,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
         { duration: REVEAL_MS, easing: 'cubic-bezier(.22, 1, .36, 1)', pseudoElement: '::view-transition-new(root)' },
       );
-    }).catch(() => { /* Transition skipped: the theme has already switched. */ });
+    }).catch(() => { /* Bỏ qua hiệu ứng chuyển cảnh: theme đã được đổi xong. */ });
     transition.finished.catch(() => undefined).finally(() => { delete rootElement.dataset.themeVt; });
   };
   return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;

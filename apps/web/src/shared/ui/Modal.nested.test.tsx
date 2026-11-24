@@ -56,7 +56,7 @@ it('closes on a backdrop click but not when a text selection is dragged out of a
   const dialog = host.querySelector('dialog')!;
   const input = host.querySelector('input')!;
 
-  // Press inside the field, release on the backdrop: the browser fires the click on the dialog itself.
+  // Nhấn chuột trong ô nhập rồi thả ở nền tối: trình duyệt phát sự kiện click lên chính thẻ dialog.
   await act(async () => input.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true })));
   await act(async () => dialog.dispatchEvent(new MouseEvent('click', { bubbles: true })));
   expect(onClose).not.toHaveBeenCalled();
@@ -70,11 +70,11 @@ it('stays open when a file picker inside it is dismissed', async () => {
   const onClose = vi.fn();
   await act(async () => root.render(<Modal title="Gói trải nghiệm" onClose={onClose}><input type="file" aria-label="Ảnh mặt trước" /></Modal>));
   const fileInput = host.querySelector('input[type="file"]')!;
-  // Browsers fire a bubbling `cancel` on the file input when its picker is closed without choosing a file.
+  // Trình duyệt phát sự kiện `cancel` nổi bọt trên input chọn tệp khi đóng hộp thoại chọn tệp mà không chọn gì.
   await act(async () => fileInput.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true })));
   expect(onClose).not.toHaveBeenCalled();
 
-  // The dialog's own cancel (Esc) still closes it.
+  // Sự kiện cancel của chính hộp thoại (phím Esc) vẫn đóng hộp thoại.
   await act(async () => host.querySelector('dialog')!.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true })));
   expect(onClose).toHaveBeenCalledTimes(1);
 });

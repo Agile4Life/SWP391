@@ -40,17 +40,17 @@ export function purchaseAuthPath(path: '/login' | '/register', search: string): 
 export function authDestination(role: UserSession['role'], search: string): string {
   if (role !== 'MEMBER') return homePath(role);
   let saved: string | null = null;
-  try { saved = sessionStorage.getItem(KEY); } catch { /* URL navigation still works without storage. */ }
+  try { saved = sessionStorage.getItem(KEY); } catch { /* Điều hướng bằng URL vẫn hoạt động khi không có storage. */ }
   return purchaseReturnPath(search) ?? purchaseReturnPath(`?returnTo=${encodeURIComponent(saved ?? '')}`) ?? homePath(role);
 }
 
 /** Lưu ý định mua gói vào sessionStorage để giữ qua các bước chuyển hướng đăng nhập. */
 export function rememberPurchaseIntent(search: string) {
   const target = purchaseReturnPath(search);
-  try { if (target) sessionStorage.setItem(KEY, target); } catch { /* Optional OAuth redirect continuity. */ }
+  try { if (target) sessionStorage.setItem(KEY, target); } catch { /* Tùy chọn để giữ mạch chuyển hướng OAuth. */ }
 }
 
 /** Xóa ý định mua gói đã lưu. */
 export function clearPurchaseIntent() {
-  try { sessionStorage.removeItem(KEY); } catch { /* Optional browser storage. */ }
+  try { sessionStorage.removeItem(KEY); } catch { /* Lưu trữ trình duyệt là tùy chọn. */ }
 }

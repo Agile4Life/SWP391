@@ -1,5 +1,4 @@
-/* Mục đích: Bề mặt kính mờ bằng CSS thuần cho các khung chat nổi. */
-/* Pure CSS translucent glass surface used by floating chat shells. */
+/* Mục đích: Bề mặt kính mờ bán trong suốt bằng CSS thuần dùng cho các khung chat nổi. */
 .glass-container {
   position: relative;
   display: inline-flex;

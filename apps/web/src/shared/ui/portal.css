@@ -1,6 +1,6 @@
 /* Mục đích: Kiểu dùng chung cho các màn hình portal: thẻ, bảng, form, nút, badge và trạng thái. */
 /* ==========================================================================
-   SCMS PORTAL UI DESIGN SYSTEM (MODERN LUXURY ENTERPRISE)
+   HỆ THỐNG THIẾT KẾ GIAO DIỆN PORTAL SCMS
    ========================================================================== */
 
 .portal-container {
@@ -82,7 +82,7 @@
   max-width: 560px;
 }
 
-/* Metric / KPI Cards */
+/* Thẻ chỉ số / KPI */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -153,7 +153,7 @@
   color: #b91c1c;
 }
 
-/* Luxury Card Panels */
+/* Thẻ nội dung (Card Panels) */
 .portal-card {
   background: #FFFFFF;
   border: 1px solid var(--color-border-subtle);
@@ -195,7 +195,7 @@
   line-height: 1.5;
 }
 
-/* Tab Navigation */
+/* Điều hướng theo thẻ tab */
 .portal-tabs {
   display: flex;
   gap: 8px;
@@ -229,7 +229,7 @@
   color: var(--color-accent-gold);
 }
 
-/* Data Tables */
+/* Bảng dữ liệu */
 .portal-table-wrapper {
   overflow-x: auto;
 }
@@ -271,7 +271,7 @@
 }
 
 
-/* Badges */
+/* Nhãn trạng thái (Badge) */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -308,12 +308,12 @@
   color: #475569;
 }
 
-/* Form Controls */
+/* Điều khiển biểu mẫu */
 .portal-form-group {
   margin-bottom: 18px;
 }
 
-/* Compact multi-column form: fields flow into 2-3 columns instead of one tall stack */
+/* Biểu mẫu nhiều cột gọn gàng: các trường chia thành 2–3 cột thay vì xếp dọc một cột dài */
 .portal-form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -372,7 +372,7 @@
   cursor: not-allowed;
 }
 
-/* Date & Time Picker Theme Styling (Modern Luxury Bronze-Gold) */
+/* Kiểu giao diện bộ chọn ngày và giờ */
 .portal-input[type="date"],
 .portal-input[type="time"],
 .portal-input[type="datetime-local"],
@@ -441,7 +441,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   margin-top: 8px;
 }
 
-/* Buttons */
+/* Các nút bấm */
 .btn-primary {
   background: linear-gradient(180deg, #2D2521 0%, #1A1614 100%);
   color: #FAF8F5;
@@ -514,7 +514,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   transform: translateY(0) scale(0.98);
 }
 
-/* Dedicated Luxury Login Submit Button */
+/* Nút gửi biểu mẫu đăng nhập chuyên biệt */
 .luxury-login-submit-btn {
   position: relative;
   background: linear-gradient(135deg, #2D2521 0%, #1A1614 100%);
@@ -590,7 +590,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   cursor: not-allowed;
 }
 
-/* Luxury Demo Role Cards */
+/* Thẻ chọn nhanh vai trò dùng thử */
 .demo-role-card {
   background: #FFFFFF;
   border: 1px solid rgba(33, 28, 24, 0.12);
@@ -646,7 +646,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ==========================================================================
-   AUTH STAGE (Split Layout for Login & Register)
+   MÀN HÌNH XÁC THỰC (Bố cục chia đôi cho Đăng nhập và Đăng ký)
    ========================================================================== */
 .auth-stage {
   padding: 80px 64px;
@@ -674,7 +674,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ==========================================================================
-   APP SHELL (sidebar + topbar)
+   KHUNG ỨNG DỤNG (thanh bên + thanh tiêu đề trên)
    ========================================================================== */
 .app-shell {
   min-height: 100vh;
@@ -971,7 +971,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ==========================================================================
-   PAGE STATES, ALERTS, DIALOG
+   TRẠNG THÁI TRANG, CẢNH BÁO VÀ HỘP THOẠI
    ========================================================================== */
 .portal-state {
   display: flex;
@@ -1190,7 +1190,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   font-size: 12px;
 }
 
-/* Grid Utilities */
+/* Lớp tiện ích lưới (Grid) */
 .grid-2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1226,7 +1226,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 
 
 /* ==========================================================================
-   EDITORIAL COMPONENTS (dùng chung cho các trang theo vai trò)
+   THÀNH PHẦN BỐ CỤC BIÊN TẬP (dùng chung cho các trang theo vai trò)
    ========================================================================== */
 .filter-chips {
   display: flex;
@@ -1409,7 +1409,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 }
 
 /* ==========================================================================
-   VISUAL LIFT: tăng chiều sâu và điểm nhấn vàng, giữ nguyên ngôn ngữ Quiet Luxury
+   NÂNG CHIỀU SÂU THỊ GIÁC: tăng chiều sâu và điểm nhấn vàng
    ========================================================================== */
 .app-shell {
   background:
@@ -1654,7 +1654,7 @@ textarea.portal-textarea:focus-visible,
 }
 
 /* ==========================================================================
-   UNIFIED SKELETON LOADING & PACKAGE BENEFIT LISTS
+   KHUNG CHỜ TẢI (SKELETON) THỐNG NHẤT VÀ DANH SÁCH QUYỀN LỢI GÓI TẬP
    ========================================================================== */
 .member-skeleton,
 .portal-skeleton {
@@ -1704,7 +1704,7 @@ textarea.portal-textarea:focus-visible,
 
 
 
-/* Health Metrics Compact Table & Action Buttons (No horizontal scrollbar) */
+/* Bảng chỉ số sức khỏe gọn và các nút thao tác (không xuất hiện thanh cuộn ngang) */
 .profile-metric-table-container {
   width: 100%;
   max-width: 100%;

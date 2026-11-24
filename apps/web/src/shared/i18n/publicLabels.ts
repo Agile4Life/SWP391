@@ -1,4 +1,4 @@
-// Source-owned public, authentication and shop copy. Never apply to API or user content.
+// Nội dung giao diện công khai, xác thực và cửa hàng thuộc mã nguồn. Không áp dụng cho dữ liệu API hoặc người dùng.
 export const englishPublicLabels: Readonly<Record<string, string>> = {
   "Vui lòng nhập họ tên người nhận.": "Please enter the recipient's name.",
   "Vui lòng nhập số điện thoại hợp lệ.": "Please enter a valid phone number.",
@@ -776,7 +776,7 @@ export const englishPublicLabels: Readonly<Record<string, string>> = {
   "Minh họa": "Illustration",
 };
 
-// Explicit translations for UI whose original source is English.
+// Bản dịch tường minh cho các thành phần giao diện có chuỗi nguồn gốc là tiếng Anh.
 export const vietnamesePublicLabels: Readonly<Record<string, string>> = {
   "Fuel &": "Năng lượng &",
   "Recovery": "Phục hồi",

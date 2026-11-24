@@ -9,7 +9,7 @@
   to { --sol-button-glow-angle: 360deg; }
 }
 
-/* Keep the light on the edge: static subtle rim at rest in Portal; animate orbit on hover/focus or public hero CTAs. */
+/* Giữ ánh sáng ở mép nút: viền nhẹ đứng yên khi nghỉ trong Portal; xoay viền sáng khi hover/focus hoặc ở CTA hero trang công khai. */
 @media (prefers-reduced-motion: no-preference) {
   :where(:root:not([data-theme='light'])) :where(
     .portal-v2 .btn-primary,
@@ -17,7 +17,7 @@
     .fit-auth .btn-primary,
     .fit-site .fit-round-arrow:not(:where(.fit-plan-featured *))
   ):not(:where(:disabled, [aria-disabled='true'], :disabled *, [aria-disabled='true'] *)) {
-    /* Low specificity preserves absolutely positioned arrow badges. */
+    /* Độ đặc hiệu thấp giúp giữ nguyên các huy hiệu mũi tên định vị tuyệt đối. */
     position: relative;
     isolation: isolate;
     --sol-button-glow-tone: var(--portal-salmon, var(--fit-salmon));

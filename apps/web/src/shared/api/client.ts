@@ -114,7 +114,7 @@ export class ApiError extends Error {
   }
 }
 
-// Map backend role codes to the UI session roles
+// Ánh xạ mã vai trò từ backend sang vai trò phiên trên giao diện
 const SESSION_ROLE: Record<string, UserSession['role']> = {
   ADMIN: 'ADMIN',
   MEMBER: 'MEMBER',
@@ -123,8 +123,8 @@ const SESSION_ROLE: Record<string, UserSession['role']> = {
   CENTER_MANAGER: 'MANAGER',
 };
 
-// Calls the real API with the stored JWT; unwraps ApiResponse.data and throws ApiError on failure
-/** Default wait before giving up on a request; uploads get longer. A caller passing its own `signal` controls it. */
+// Gọi API thật kèm JWT đã lưu; mở gói ApiResponse.data và ném ApiError khi thất bại
+/** Thời gian chờ mặc định trước khi hủy request; tải file lên có thời gian chờ dài hơn. Người gọi tự truyền `signal` sẽ toàn quyền kiểm soát. */
 export const API_TIMEOUT_MS = 30_000;
 export const API_UPLOAD_TIMEOUT_MS = 120_000;
 const TIMEOUT_MESSAGE = sourceMessage(
@@ -165,7 +165,7 @@ async function sendApiRequest<T>(path: string, init: RequestInit, token: string 
       ...init,
       ...(timeoutSignal ? { signal: timeoutSignal } : {}),
       headers: {
-        // A FormData body needs the browser's multipart boundary, so no JSON content type then.
+        // Body dạng FormData cần trình duyệt tự gắn multipart boundary nên không đặt Content-Type là JSON.
         ...(typeof FormData !== 'undefined' && init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         'Accept-Language': getLanguage(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -181,12 +181,12 @@ async function sendApiRequest<T>(path: string, init: RequestInit, token: string 
     if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED', sourceMessage(SESSION_REPLACED_MESSAGE, 'Your login session has changed. Please reload the page.'));
   }
   if (res.status === 413 && !body?.message) {
-    // The proxy rejects an oversized body before the API sees it, so there is no JSON message to show.
+    // Proxy từ chối payload quá lớn trước khi request tới API nên không có thông báo JSON để hiển thị.
     const tooLarge = 'Dữ liệu gửi lên quá lớn. Hãy chọn ảnh nhỏ hơn rồi thử lại.';
     throw new ApiError(tooLarge, 413, 'PAYLOAD_TOO_LARGE', sourceMessage(tooLarge, 'The upload is too large. Choose a smaller photo and try again.'));
   }
   if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code, body?.message ? undefined : sourceMessage(`Yêu cầu thất bại (HTTP ${res.status})`, `Request failed (HTTP ${res.status})`));
-  // ApiResponse omits null data (Jackson NON_NULL); never pass its HTTP status to feature DTOs.
+  // ApiResponse lược bỏ trường data khi null (Jackson NON_NULL); không truyền HTTP status của wrapper vào DTO tính năng.
   if (body && typeof body === 'object' && ('data' in body || body.success === true)) {
     return (body.data ?? null) as T;
   }
@@ -194,9 +194,7 @@ async function sendApiRequest<T>(path: string, init: RequestInit, token: string 
 }
 
 /**
- * Tải nội dung PDF (không bọc trong ApiResponse) kèm JWT; lỗi thì ném ApiError.
- *
- * Authenticated binary response for endpoints that do not use the JSON ApiResponse envelope.
+ * Tải nội dung nhị phân PDF có xác thực JWT cho các endpoint không dùng vỏ JSON ApiResponse; lỗi thì ném ApiError.
  */
 export async function apiFetchPdf(path: string): Promise<Blob> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
@@ -222,9 +220,7 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
 }
 
 /**
- * Tải nội dung nhị phân (vd. tài liệu y tế) kèm JWT; người gọi tự tạo object URL từ blob.
- *
- * Authenticated binary download (for example a medical document); the caller turns the blob into an object URL.
+ * Tải nội dung nhị phân có xác thực JWT (ví dụ tài liệu y tế); người gọi tự chuyển blob thành object URL.
  */
 export async function apiFetchBlob(path: string): Promise<Blob> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);

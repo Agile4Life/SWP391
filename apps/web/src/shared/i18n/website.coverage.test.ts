@@ -7,7 +7,7 @@ import { englishPublicLabels } from './publicLabels';
 import { clearMissingTranslations, getMissingTranslations, setLanguage, translateSource } from './language';
 import routerSource from '../../app/router.tsx?raw';
 
-// Inspect source-owned text only. This does not substitute for logged-in browser/E2E verification.
+// Chỉ kiểm tra văn bản thuộc mã nguồn. Không thay thế cho việc kiểm thử trình duyệt/E2E khi đã đăng nhập.
 const files = import.meta.glob<string>(['../../features/**/*.{ts,tsx}', '../../shared/**/*.{ts,tsx}', '!../../**/*.test.{ts,tsx}'], { query: '?raw', import: 'default', eager: true });
 const ast = new Map(Object.entries(files).map(([name, content]) => [name, ts.createSourceFile(name, content, ts.ScriptTarget.Latest, true, name.endsWith('tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)]));
 const router = ts.createSourceFile('router.tsx', routerSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
@@ -51,7 +51,7 @@ function catalog(file: string) {
 }
 afterEach(() => { localStorage.clear(); setLanguage('vi'); clearMissingTranslations(); });
 describe('active route source translation coverage', () => {
-  // Floor only proves route discovery works; scope reduction (Gym, PT 1:1) cut the route count to ~40.
+  // Ngưỡng tối thiểu chỉ chứng minh cơ chế tự phát hiện route hoạt động; việc thu gọn phạm vi (Gym, PT 1:1) đã giảm số route xuống khoảng 40.
   it('discovers every lazy route instead of maintaining a hand-picked screen list', () => { expect(routes.length).toBeGreaterThanOrEqual(35); });
   for (const { route, entry } of routes) it(route + ' has paired source labels and no raw Vietnamese JSX', () => {
     const errors: string[] = []; let labels = 0;

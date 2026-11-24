@@ -57,8 +57,7 @@ export function DatePicker({
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerPlaceholder = placeholder ?? t('Chọn ngày...', 'Select date...');
 
-  // Parse initial year & month from value or today
-  // Ngày dùng để mở lịch: giá trị hiện tại nếu hợp lệ, không thì hôm nay.
+  // Phân tích năm và tháng ban đầu từ giá trị hiện tại nếu hợp lệ, không thì lấy hôm nay.
   const initialDate = useMemo(() => {
     const source = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : centerNowParts().date;
     const [y, m, d] = source.split('-').map(Number);
@@ -71,7 +70,7 @@ export function DatePicker({
   const [yearMode, setYearMode] = useState(false);
   const [yearPageStart, setYearPageStart] = useState(initialDate.year - 4);
 
-  // Sync view when value changes from outside
+  // Đồng bộ tháng/năm đang xem khi giá trị thay đổi từ bên ngoài
   useEffect(() => {
     if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const [y, m] = value.split('-').map(Number);
@@ -80,7 +79,7 @@ export function DatePicker({
     }
   }, [value]);
 
-  // Click outside to close
+  // Bấm ra ngoài để đóng lịch
   useEffect(() => {
     if (!isOpen) return;
     // Bấm ra ngoài lịch thì đóng.
@@ -142,15 +141,14 @@ export function DatePicker({
     };
   }, [isOpen, yearMode, viewMonth, viewYear]);
 
-  // Format display text (DD/MM/YYYY)
-  // Nhãn hiển thị DD/MM/YYYY của giá trị hiện tại.
+  // Định dạng nhãn hiển thị DD/MM/YYYY của giá trị hiện tại.
   const displayLabel = useMemo(() => {
     if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
     const [y, m, d] = value.split('-');
     return `${d}/${m}/${y}`;
   }, [value]);
 
-  // Navigation handlers
+  // Các hàm điều hướng tháng/năm
   // Lùi một tháng (hoặc một trang năm khi đang chọn năm).
   const handlePrevMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -181,8 +179,7 @@ export function DatePicker({
     }
   };
 
-  // Build calendar grid days
-  // Danh sách ô ngày của tháng đang xem, kèm cờ tháng hiện tại, bị vô hiệu, được chọn và hôm nay.
+  // Xây dựng lưới ô ngày của tháng đang xem, kèm cờ tháng hiện tại, bị vô hiệu, được chọn và hôm nay.
   const calendarDays = useMemo(() => {
     const days: Array<{
       dateStr: string;
@@ -195,15 +192,15 @@ export function DatePicker({
 
     const todayStr = centerNowParts().date;
 
-    // First day of current month (0: Sunday, 1: Monday, ... 6: Saturday)
+    // Thứ của ngày đầu tháng hiện tại (0: Chủ Nhật, 1: Thứ Hai, ... 6: Thứ Bảy)
     const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
-    // Adjust to Monday-first (Monday = 0, Sunday = 6)
+    // Chuyển sang tuần bắt đầu từ Thứ Hai (Thứ Hai = 0, Chủ Nhật = 6)
     const shift = (firstDayIndex + 6) % 7;
 
     const daysInCurrentMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
     const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
 
-    // Previous month overflow days
+    // Các ngày tràn từ tháng trước
     for (let i = shift - 1; i >= 0; i--) {
       const dayNum = daysInPrevMonth - i;
       const prevMonth = viewMonth === 0 ? 11 : viewMonth - 1;
@@ -220,7 +217,7 @@ export function DatePicker({
       });
     }
 
-    // Current month days
+    // Các ngày trong tháng hiện tại
     for (let d = 1; d <= daysInCurrentMonth; d++) {
       const dateStr = `${viewYear}-${pad2(viewMonth + 1)}-${pad2(d)}`;
       const isDisabled = (min && dateStr < min) || (max && dateStr > max);
@@ -234,7 +231,7 @@ export function DatePicker({
       });
     }
 
-    // Next month fill days (up to multiple of 7, usually 35 or 42)
+    // Các ngày điền thêm của tháng sau (làm tròn theo bội số của 7, thường là 35 hoặc 42)
     const totalSlots = days.length <= 35 ? 35 : 42;
     const remaining = totalSlots - days.length;
     for (let d = 1; d <= remaining; d++) {
@@ -317,7 +314,7 @@ export function DatePicker({
         </span>
       </button>
 
-      {/* Hidden input for form validation if required */}
+      {/* Ô nhập ẩn phục vụ kiểm tra hợp lệ của form khi trường là bắt buộc */}
       {required && (
         <input
           tabIndex={-1}

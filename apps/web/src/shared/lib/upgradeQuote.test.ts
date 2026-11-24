@@ -5,13 +5,13 @@ const silver = { startDate: '2026-11-01', endDate: '2026-11-30' };
 
 describe('upgradeQuote', () => {
   it('deducts the unused value the backend computed from what was actually paid', () => {
-    // 15 of 30 days left of a 199,000 payment -> backend credits 99,000.
+    // Còn 15 trên 30 ngày của khoản thanh toán 199.000 -> backend khấu trừ 99.000.
     expect(upgradeQuote({ ...silver, remainingValue: 99_000 }, 299_000, '2026-11-16'))
       .toEqual({ amount: 200_000, credit: 99_000, remainingDays: 15, totalDays: 30, allowed: true });
   });
 
   it('follows a repriced target package but never the repriced current package', () => {
-    // The credit is fixed by the payment; only the new package price moves.
+    // Khoản khấu trừ cố định theo số tiền đã trả; chỉ giá gói mới thay đổi.
     expect(upgradeQuote({ ...silver, remainingValue: 99_000 }, 349_000, '2026-11-16')?.amount).toBe(250_000);
   });
 

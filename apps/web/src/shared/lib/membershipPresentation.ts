@@ -106,7 +106,7 @@ export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = ge
   const desc = pkg.description?.trim() || '';
   const lines = desc.split('\n').map((l) => l.trim()).filter(Boolean);
 
-  // Extract bullet points if present (lines starting with '-' or '•')
+  // Trích xuất các dòng gạch đầu dòng nếu có (các dòng bắt đầu bằng '-' hoặc '•')
   const bulletPerks = lines
     .filter((l) => l.startsWith('-') || l.startsWith('•'))
     .map((l) => localizeSeededPackageLine(l.replace(/^[-•]\s*/, '').trim(), lang));

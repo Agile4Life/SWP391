@@ -1,22 +1,20 @@
 /**
- * Prepares a photo (an identity document, usually a phone picture of 3-6 MB) for upload as a data URL.
+ * Chuẩn bị ảnh (giấy tờ tùy thân, thường là ảnh chụp điện thoại khoảng 3–6 MB) để tải lên dưới dạng data URL.
  *
- * Photos are sent inside a JSON body as base64, which adds a third to their size. Two full-size pictures easily pass the
- * proxy's body limit (nginx rejects with HTTP 413) and the server's per-image limit, so the request fails or never
- * reaches the desk. Documents stay perfectly readable at 1600 px, so every picture is scaled down and re-encoded as JPEG
- * in the browser first; small pictures are sent as they are.
+ * Ảnh được gửi trong JSON body ở dạng base64, làm dung lượng tăng thêm khoảng một phần ba. Hai ảnh gốc dễ vượt quá
+ * giới hạn kích thước body của proxy (nginx trả HTTP 413) và giới hạn mỗi ảnh phía server, khiến request lỗi hoặc
+ * không tới được quầy. Giấy tờ vẫn đọc rất rõ ở cạnh 1600 px nên mọi ảnh lớn đều được thu nhỏ và mã hóa lại thành JPEG
+ * ngay trên trình duyệt trước; ảnh nhỏ được giữ nguyên khi gửi.
  */
 
 export const MAX_UPLOAD_SIDE = 1600;
 export const JPEG_QUALITY = 0.85;
-/** Pictures at or under this size already fit comfortably and keep their original encoding. */
+/** Ảnh có dung lượng bằng hoặc nhỏ hơn ngưỡng này đã đủ gọn và giữ nguyên định dạng gốc. */
 export const KEEP_AS_IS_BYTES = 300 * 1024;
 const KEEP_AS_IS_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 /**
- * Kích thước sau khi thu nhỏ để cạnh dài nhất không quá maxSide; không bao giờ phóng to.
- *
- * Size after scaling so that the longer side is at most `maxSide`; never enlarges.
+ * Kích thước sau khi thu nhỏ để cạnh dài nhất không quá `maxSide`; không bao giờ phóng to.
  */
 export function fitWithin(width: number, height: number, maxSide = MAX_UPLOAD_SIDE): { width: number; height: number } {
   const longest = Math.max(width, height);
@@ -56,11 +54,8 @@ async function decode(file: Blob): Promise<{ source: CanvasImageSource; width: n
 }
 
 /**
- * Data URL để tải lên: giữ nguyên ảnh nếu đã nhỏ, ngược lại nén thành JPEG có cạnh dài tối đa 1600px; báo lỗi
- * nếu trình duyệt không giải mã được (vd. HEIC).
- *
- * Data URL for `file`: the original when it is already small, otherwise a JPEG no larger than 1600 px on its long side.
- * Rejects when the browser cannot decode the file (for example a HEIC picture in a browser without HEIC support).
+ * Tạo data URL cho `file`: giữ nguyên ảnh nếu đã nhỏ, ngược lại nén thành JPEG có cạnh dài tối đa 1600 px.
+ * Từ chối (reject) khi trình duyệt không giải mã được tệp (ví dụ ảnh HEIC trên trình duyệt không hỗ trợ HEIC).
  */
 export async function fileToUploadDataUrl(file: File): Promise<string> {
   if (file.size <= KEEP_AS_IS_BYTES && KEEP_AS_IS_TYPES.includes(file.type)) return readAsDataUrl(file);
@@ -72,7 +67,7 @@ export async function fileToUploadDataUrl(file: File): Promise<string> {
     canvas.height = height;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Canvas is not available');
-    // A white backdrop keeps transparent PNGs from turning black when saved as JPEG.
+    // Nền trắng giúp ảnh PNG có nền trong suốt không bị chuyển thành đen khi lưu dạng JPEG.
     context.fillStyle = '#ffffff';
     context.fillRect(0, 0, width, height);
     context.drawImage(picture.source, 0, 0, width, height);

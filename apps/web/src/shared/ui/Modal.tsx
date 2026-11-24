@@ -24,7 +24,7 @@ export function Modal({ title, onClose, children, busy = false, className, retur
     if (dialog && !dialog.open) dialog.showModal();
     return () => {
       if (dialog?.open) dialog.close();
-      // Successful cancellation replaces the pending panel with the catalog before cleanup.
+      // Khi hủy thành công, khung chờ được thay bằng danh mục trước khi cleanup chạy.
       // eslint-disable-next-line react-hooks/exhaustive-deps
       const returnTarget = returnFocusRef?.current;
       if (returnTarget?.isConnected) returnTarget.focus({ preventScroll: true });
@@ -53,15 +53,15 @@ export function Modal({ title, onClose, children, busy = false, className, retur
       }}
       tabIndex={-1}
       onCancel={(e) => {
-        // Dismissing a file picker fires a bubbling `cancel` on its <input type="file">: that is not the dialog's
-        // own Esc cancel, so it must not close the dialog (and lose what the user already filled in).
+        // Đóng hộp thoại chọn tệp phát sự kiện `cancel` nổi bọt từ <input type="file">: đó không phải thao tác bấm Esc
+        // của chính hộp thoại, nên không được đóng hộp thoại (tránh làm mất nội dung người dùng đã nhập).
         if (e.target !== e.currentTarget) return;
         e.stopPropagation();
         e.preventDefault();
         if (!busy) onClose();
       }}
-      // A click is fired on the dialog when a text selection starts in a field and ends on the backdrop; only a press
-      // that also started on the backdrop is a deliberate "click outside", so what was typed is not lost.
+      // Sự kiện click được phát trên dialog khi người dùng bôi đen chữ từ trong ô nhập kéo ra ngoài nền tối; chỉ thao tác
+      // nhấn bắt đầu ngay trên nền tối mới là chủ ý bấm ra ngoài, nhờ đó không làm mất dữ liệu đang nhập.
       onPointerDown={(e) => { pressStartedOnBackdrop.current = e.target === e.currentTarget; }}
       onClick={(e) => {
         const fromBackdrop = pressStartedOnBackdrop.current;

@@ -43,7 +43,7 @@ export function setLanguage(next: Language): void {
     try {
       window.localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
     } catch {
-      // ignore storage errors in restricted environments
+      // Bỏ qua lỗi lưu trữ trong các môi trường bị hạn chế
     }
   }
   applyDocumentLanguage(normalized);
@@ -109,7 +109,7 @@ export function useI18n() {
       return translation ? (lang === 'en' ? translation.en : translation.vi) : viText.message;
     }
     if (typeof viText !== 'string') return lang === 'en' ? viText.en : viText.vi;
-    // Explicit pairs own their spacing; catalog lookups preserve the source boundaries.
+    // Cặp chuỗi truyền tường minh tự giữ khoảng trắng của nó; tra bảng nhãn sẽ giữ nguyên ranh giới khoảng trắng nguồn.
     if (enText !== undefined) return lang === 'en' ? enText : viText;
     return translateSource(viText, undefined, lang);
   }, [lang]);
@@ -122,7 +122,7 @@ export function useI18n() {
   };
 }
 
-// Legacy compatibility for unmigrated screens only. New UI translates during React rendering.
+// Chỉ dùng để tương thích ngược cho các màn hình cũ chưa chuyển đổi. Giao diện mới dịch trực tiếp trong lúc React render.
 const VI_TO_EN_PHRASES: ReadonlyArray< readonly [string, string] > = [
   ['Trang chủ', 'Home'],
   ['Khám phá', 'Explore'],
@@ -265,15 +265,14 @@ export function useDomLanguageSync(containerRef?: RefObject<HTMLElement | null>)
 /** Cặp thông điệp song ngữ: bản tiếng Việt và tiếng Anh. */
 export interface SourceMessage { vi: string; en: string }
 /**
- * Tạo cặp thông điệp; không truyền bản tiếng Anh thì tra trong bảng nhãn.
- *
- * Explicit provenance for source-owned notices; never infer translations from API content.
+ * Tạo cặp thông điệp song ngữ có nguồn gốc rõ ràng cho thông báo thuộc mã nguồn (không truyền bản tiếng Anh thì tra
+ * bảng nhãn); tuyệt đối không suy diễn bản dịch từ nội dung API.
  */
 export function sourceMessage(vi: string, en?: string): SourceMessage {
   return { vi, en: en ?? translateSource(vi, undefined, 'en') };
 }
 
-/** Missing source-owned translations are observable in QA instead of silently passing as English. */
+/** Ghi nhận các bản dịch thuộc mã nguồn bị thiếu để QA quan sát được thay vì âm thầm giữ nguyên như tiếng Anh. */
 const missingTranslations = new Set<string>();
 /** Danh sách chuỗi chưa có bản dịch tiếng Anh, để QA kiểm tra. */
 export const getMissingTranslations = (): readonly string[] => [...missingTranslations];
@@ -282,8 +281,7 @@ export const clearMissingTranslations = () => missingTranslations.clear();
 
 /**
  * Dịch chuỗi thuộc mã nguồn sang tiếng Anh; chuỗi thiếu bản dịch được ghi nhận (và cảnh báo khi chạy dev).
- *
- * Only call for source-owned text; API content and user input must remain verbatim.
+ * Chỉ gọi cho văn bản thuộc mã nguồn; nội dung từ API và dữ liệu người dùng nhập phải giữ nguyên văn.
  */
 export function translateSource(vi: string, en?: string, lang: Language = getLanguage()): string {
   const key = vi.trim();

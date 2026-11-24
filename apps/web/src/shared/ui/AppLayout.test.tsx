@@ -143,14 +143,14 @@ describe('portal navigation', () => {
     expect(menu?.textContent).toContain('Ví của tôi');
     expect(menu?.textContent).toContain('250.000');
 
-    // Open wallet modal from dropdown
+    // Mở hộp thoại ví từ menu thả xuống
     const walletItem = host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-wallet"]')!;
     await act(async () => walletItem.click());
     expect(host.querySelector('[role="menu"]')).toBeNull();
     expect(host.querySelector('dialog')?.textContent).toContain('Ví điện tử SÖL');
     expect(host.querySelector('dialog')?.textContent).toContain('Hoàn tiền gói Silver');
 
-    // Close wallet modal via header dialog close button and navigate to profile via dropdown
+    // Đóng hộp thoại ví bằng nút đóng ở tiêu đề và chuyển tới trang hồ sơ qua menu thả xuống
     const closeBtn = host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!;
     await act(async () => closeBtn.click());
     await act(async () => avatarBtn!.click());

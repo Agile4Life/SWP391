@@ -1,18 +1,18 @@
-/* Mục đích: Chỉnh màu chỉ cho giao diện tối (màu nhấn bạc); giữ tên Volt từ phiên bản đầu nhưng không dùng Volt. */
-/* Dark-only accent corrections (silver accent; the file keeps its Volt name from the first palette). Everything here is scoped to Dark so Light keeps its salmon palette.
-   Colours must come from the --sol-accent* tokens in theme.css, never from hex values. */
+/* Mục đích: Tinh chỉnh màu nhấn chỉ dành cho giao diện tối (màu nhấn bạc; tệp giữ tên Volt từ bảng màu đầu tiên).
+   Mọi quy tắc ở đây chỉ áp dụng cho giao diện tối để giao diện sáng giữ nguyên bảng màu salmon.
+   Mọi màu sắc phải lấy từ bộ token --sol-accent* trong theme.css, không viết mã hex trực tiếp. */
 
-/* The legacy --color-salmon/--color-brand-salmon names now live in theme.css for both themes. */
+/* Các tên biến cũ --color-salmon/--color-brand-salmon hiện được định nghĩa trong theme.css cho cả hai theme. */
 :root:not([data-theme='light']) {
   accent-color: var(--sol-accent);
 }
 :root:not([data-theme='light']) :is(.portal-input[type='time'], .portal-input[type='datetime-local'], input[type='date'], input[type='time'], input[type='datetime-local']) { accent-color: var(--sol-accent); }
 
-/* Member calendar: the "class" type colour follows the accent (court stays blue, PT stays green). */
+/* Lịch hội viên: màu loại "class" theo màu nhấn (sân tập giữ xanh dương, PT giữ xanh lá). */
 :root:not([data-theme='light']) .mcal--member { --mcal-class: var(--sol-accent); }
 :root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class) { border-color: var(--sol-accent-deep); }
 
-/* Landing: pale salmon text and warm tints become Volt text / neutral. */
+/* Trang giới thiệu: chữ salmon nhạt và các sắc ấm chuyển sang màu chữ nhấn / trung tính. */
 :root:not([data-theme='light']) .fit-scroll-progress { background: linear-gradient(90deg, var(--sol-accent), var(--sol-accent-hover)); }
 :root:not([data-theme='light']) :is(.fit-trainer-story-cta, .fit-schedule-spots, .fit-preview-live) { color: var(--sol-accent-text); }
 :root:not([data-theme='light']) .fit-benefit-end p { color: var(--sol-on-accent); }
@@ -21,26 +21,26 @@
 :root:not([data-theme='light']) .fit-pointer-line, :root:not([data-theme='light']) .fit-pointer-head { stroke: var(--sol-accent-text); }
 :root:not([data-theme='light']) .fit-muscle-lit-image { filter: grayscale(1) brightness(1.55) contrast(1.2) drop-shadow(0 0 18px rgb(var(--sol-accent-rgb) / .5)); }
 
-/* Chat: own bubbles and the primary button use Volt with charcoal text. */
+/* Trò chuyện: bong bóng của chính mình và nút chính dùng màu nhấn kèm chữ màu than. */
 :root:not([data-theme='light']) .chat-widget .btn-primary { background: linear-gradient(135deg, var(--sol-accent), var(--sol-accent-deep)); border-color: rgb(var(--sol-accent-rgb) / .4); color: var(--sol-on-accent); }
 :root:not([data-theme='light']) .chat-widget .direct-chat__messages .is-mine .direct-chat__bubble { background: linear-gradient(135deg, rgb(var(--sol-accent-rgb) / .9) 0%, color-mix(in srgb, var(--sol-accent-deep) 92%, transparent) 100%); border-color: rgb(var(--sol-accent-rgb) / .5); color: var(--sol-on-accent); }
 
-/* Landing hero service cards: charcoal surface with a Volt edge instead of a large solid Volt block. */
+/* Thẻ dịch vụ hero trang giới thiệu: bề mặt màu than với viền màu nhấn thay vì khối màu đặc lớn. */
 :root:not([data-theme='light']) .fit-service-surface { fill: var(--color-bg-card); stroke: rgb(var(--sol-accent-rgb) / .55); stroke-width: 1.5; }
 :root:not([data-theme='light']) .fit-service-surface path { vector-effect: non-scaling-stroke; }
 :root:not([data-theme='light']) .fit-service:hover .fit-service-surface { fill: color-mix(in srgb, var(--color-bg-card) 92%, var(--sol-accent)); stroke: var(--sol-accent); }
 :root:not([data-theme='light']) .fit-service-rule { background: rgb(var(--sol-accent-rgb) / .4); }
 :root:not([data-theme='light']) .fit-service p { color: var(--fit-muted); }
 
-/* Calendars: class/mine events are a tinted surface with a Volt edge (a solid Volt block is too bright at this size). */
+/* Lịch: sự kiện lớp/của tôi dùng nền pha nhẹ kèm viền màu nhấn (khối đặc sẽ quá chói ở kích thước này). */
 :root:not([data-theme='light']) :is(.mcal__event--class, .mcal__event--mine) { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sol-accent) 60%, transparent); }
 :root:not([data-theme='light']) .mcal--member :is(.mcal__event--class, .mcal__chip--class):not(.is-past):not(.is-cancelled) { color: var(--portal-paper); border-color: var(--sol-accent); }
 :root:not([data-theme='light']) .mcal--member .mcal__chip--class { background: color-mix(in srgb, var(--sol-accent) 20%, var(--portal-raised)); }
 
-/* ---- LED / glow (Dark only). Limits: at most three box-shadow layers per element, no new looping animation,
-   no blur filters on large areas. The running edge light on primary buttons lives in button-glow.css. ---- */
+/* ---- Hiệu ứng LED / phát sáng (chỉ giao diện tối). Giới hạn: tối đa ba lớp box-shadow mỗi phần tử, không thêm
+   animation lặp vô hạn mới, không dùng bộ lọc làm mờ trên vùng lớn. Ánh sáng viền chạy trên nút chính nằm trong button-glow.css. ---- */
 
-/* Landing: scroll progress, hero halo, sport rail dot. */
+/* Trang giới thiệu: thanh tiến trình cuộn, quầng sáng hero, chấm trên thanh bộ môn. */
 :root:not([data-theme='light']) .fit-scroll-progress { box-shadow: 0 0 10px var(--sol-led-edge), 0 0 22px -2px var(--sol-led-glow); }
 :root:not([data-theme='light']) .fit-hero::before {
   content: '';
@@ -56,7 +56,7 @@
 }
 :root:not([data-theme='light']) .fit-sport-story-rail i { box-shadow: 0 0 0 4px var(--color-bg-base), 0 0 12px var(--sol-led-edge), 0 0 28px -2px var(--sol-led-glow); }
 
-/* Portal: the expanded sidebar gets a 1px LED line on its right edge that fades out at both ends. */
+/* Portal: thanh bên khi mở rộng có đường LED 1px ở cạnh phải mờ dần ở hai đầu. */
 :root:not([data-theme='light']) .portal-v2 .app-sidebar::after {
   content: '';
   position: absolute;
@@ -74,5 +74,5 @@
 }
 :root:not([data-theme='light']) .portal-v2 .app-sidebar:has(:focus-visible)::after { opacity: 1; }
 
-/* Inputs and pickers: accent border plus a low-alpha 3px ring while focused or open. */
+/* Ô nhập và bộ chọn: viền màu nhấn kèm vòng sáng 3px độ mờ thấp khi đang focus hoặc mở. */
 :root:not([data-theme='light']) :is(.ui-select__trigger.is-open, .luxury-datepicker-trigger.is-open) { border-color: var(--sol-accent); box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .2); }

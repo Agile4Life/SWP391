@@ -1,6 +1,6 @@
-/* Mục đích: Token thiết kế: màu nhấn --sol-accent*, màu nền/chữ của hai theme sáng/tối; nguồn duy nhất cho màu thương hiệu. */
-/* Accent tokens: the single source for the brand accent. Dark (silver) is the base; Light (salmon) overrides below.
-   New colours must go through these tokens, never a hex value (see DESIGN.md). */
+/* Mục đích: Token thiết kế — nguồn duy nhất cho màu nhấn thương hiệu --sol-accent* và màu nền/chữ của hai theme.
+   Giao diện tối (màu bạc) là nền tảng; giao diện sáng (màu salmon) ghi đè ở phía dưới.
+   Mọi màu mới phải đi qua các token này, không viết mã hex trực tiếp (xem DESIGN.md). */
 :root {
   --sol-accent: #c8cdd6;
   --sol-accent-hover: #e6e9ef;
@@ -8,11 +8,11 @@
   --sol-accent-deep: #9aa1ad;
   --sol-on-accent: #202020;
   --sol-accent-rgb: 200 205 214;
-  /* Legacy names still read by inline styles; without them Light fell back to off-brand coral/red hex values. */
+  /* Các tên biến cũ vẫn được inline style đọc; nếu thiếu thì giao diện sáng sẽ rơi về mã hex san hô/đỏ lệch thương hiệu. */
   --color-salmon: var(--sol-accent);
   --color-brand-salmon: var(--sol-accent);
   --color-primary: var(--sol-accent);
-  /* 7-step modular type scale (see DESIGN.md) */
+  /* Thang cỡ chữ mô-đun 7 bậc (xem DESIGN.md) */
   --text-xs: 0.75rem;
   --text-sm: 0.8125rem;
   --text-base: 0.875rem;
@@ -36,21 +36,21 @@
 :root[data-theme='light'] .theme-toggle { background: #fff; border-color: #e4e2de; color: #202020; }
 :root[data-theme='light'] .theme-toggle:hover { background: #f8eae4; border-color: #a35b49; }
 
-/* LED tokens are Dark-only: Light keeps flat surfaces and receives no glow. */
+/* Các token LED chỉ dùng cho giao diện tối: giao diện sáng giữ bề mặt phẳng và không có hiệu ứng phát sáng. */
 :root:not([data-theme='light']) {
   --sol-led-edge: rgb(var(--sol-accent-rgb) / .6);
   --sol-led-glow: rgb(var(--sol-accent-rgb) / .22);
   --sol-led-bloom: 0 0 0 1px rgb(var(--sol-accent-rgb) / .35), 0 0 18px rgb(var(--sol-accent-rgb) / .28), 0 0 48px -8px rgb(var(--sol-accent-rgb) / .22);
 }
 
-/* Theme switch (ThemeToggle.tsx): the page-transition rules in styles.css target the same root pseudo-elements,
-   so while data-theme-vt is set the default fades are disabled and the new theme is revealed by a circle. */
+/* Chuyển theme (ThemeToggle.tsx): các quy tắc chuyển trang trong styles.css tác động cùng phần tử giả ở root,
+   nên khi data-theme-vt đang bật thì tắt hiệu ứng mờ mặc định để theme mới lộ ra theo hình tròn. */
 :root[data-theme-vt]::view-transition-old(root),
 :root[data-theme-vt]::view-transition-new(root) { animation: none; mix-blend-mode: normal; }
 :root[data-theme-vt]::view-transition-old(root) { z-index: 1; }
 :root[data-theme-vt]::view-transition-new(root) { z-index: 2; }
 
-/* Light is an optional palette. Existing dark styles remain the default. */
+/* Giao diện sáng là bảng màu tùy chọn. Kiểu tối hiện có vẫn là mặc định. */
 :root[data-theme='light'] { color-scheme: light; background: #f5f5f3; }
 :root[data-theme='light']:has(.fit-site, .portal-backdrop),
 :root[data-theme='light'] body:has(.fit-site, .portal-backdrop) { background: #f5f5f3; color-scheme: light; scrollbar-width: none; -ms-overflow-style: none; }
@@ -180,7 +180,7 @@
 :root[data-theme='light'] .fit-benefit-card li { color: #68645f; }
 :root[data-theme='light'] .fit-benefit-card :is(ul, li) { border-color: #e4e2de; }
 
-/* Photographs retain their dark overlays and readable white captions. */
+/* Ảnh chụp giữ nguyên lớp phủ tối và chú thích chữ trắng dễ đọc. */
 :root[data-theme='light'] .fit-site :is(.fit-story, .fit-trainer-card, .fit-sport-card, .fit-space-image, .fit-trainer-portrait-card, .fit-auth-photo) { --fit-paper: #faf9f6; color: #faf9f6; }
 :root[data-theme='light'] .fit-site :is(.fit-image-caption, .fit-sport-trigger, .fit-benefit-end-btn) { color: #faf9f6; }
 :root[data-theme='light'] .fit-sport-trigger[aria-pressed='true'] { color: #202020; }

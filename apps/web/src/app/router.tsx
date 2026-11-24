@@ -11,7 +11,7 @@ export const router = createBrowserRouter([
   { path: '/login', lazy: async () => ({ Component: (await import('../features/auth/LoginPage')).LoginPage }) },
   { path: '/register', lazy: async () => ({ Component: (await import('../features/auth/RegisterPage')).RegisterPage }) },
 
-  // Protected Portal App Shell
+  // Khung ứng dụng Portal có bảo vệ đăng nhập
   {
     id: 'portal',
     // Khung portal (sidebar, topbar), tải lười AppLayout.
@@ -23,7 +23,7 @@ export const router = createBrowserRouter([
         children: [{ path: '/messages', lazy: async () => ({ Component: (await import('../features/chat/ChatPage')).ChatPage }) }],
       },
 
-      // Notifications (Shared between Member & Coach)
+      // Thông báo (dùng chung cho hội viên, HLV và các vai trò portal)
       {
         element: <RoleGuard allowedRoles={['MEMBER', 'COACH', 'MANAGER', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST', 'ADMIN']} />,
         children: [
@@ -35,7 +35,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Member-only Routes
+      // Các route chỉ dành cho hội viên
       {
         element: <RoleGuard allowedRoles={['MEMBER']} />,
         children: [
@@ -95,7 +95,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Member Classes Route
+      // Route lịch tập của hội viên
       {
         element: (
           <RoleGuard
@@ -140,7 +140,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Receptionist (STAFF) Dedicated Routes
+      // Các route dành riêng cho lễ tân (STAFF)
       {
         element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST']} />,
         children: [
@@ -179,7 +179,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Coach Dedicated Routes
+      // Các route dành riêng cho huấn luyện viên (COACH)
       {
         element: <RoleGuard allowedRoles={['COACH']} />,
         children: [
@@ -222,7 +222,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Staff & Coach Shared Internal Requests Route
+      // Route đơn nội bộ dùng chung cho nhân viên lễ tân và huấn luyện viên
       {
         element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'COACH']} />,
         children: [
@@ -234,7 +234,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Class Schedule & Product Orders (Receptionist & Manager)
+      // Lịch lớp và đơn hàng sản phẩm (lễ tân và quản lý)
       {
         element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
         children: [
@@ -253,7 +253,7 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Admin Dedicated Route
+      // Các route dành riêng cho quản trị viên (ADMIN)
       {
         element: <RoleGuard allowedRoles={['ADMIN']} />,
         children: [
@@ -262,7 +262,7 @@ export const router = createBrowserRouter([
           { path: '/admin/payments', lazy: async () => ({ Component: (await import('../features/admin/AdminPaymentReconciliationPage')).AdminPaymentReconciliationPage }) },
         ],
       },
-      // Center Manager Dedicated Routes
+      // Các route dành riêng cho quản lý trung tâm
       {
         element: (
           <RoleGuard allowedRoles={['MANAGER', 'CENTER_MANAGER']} />
@@ -332,7 +332,7 @@ export const router = createBrowserRouter([
     ].map(child => ({ ...child, ErrorBoundary: PortalRouteError })),
   },
 
-  // Unknown route
+  // Route không xác định
   {
     path: '*',
     element: <Navigate to="/" replace />,

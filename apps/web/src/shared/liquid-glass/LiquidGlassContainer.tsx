@@ -17,12 +17,9 @@ interface LiquidGlassContainerProps {
 }
 
 /**
- * Khung kính mờ bằng CSS thuần (backdrop-filter), thay cho pipeline WebGL cũ để không giật khi cuộn trên điện
- * thoại.
- *
- * Pure CSS frosted surface (`backdrop-filter: blur(22px) saturate(145%)`).
- * Replaces the former WebGL + html2canvas DOM snapshot pipeline to avoid
- * main-thread pauses and canvas composition overhead on mobile/scroll.
+ * Bề mặt kính mờ bằng CSS thuần (`backdrop-filter: blur(22px) saturate(145%)`).
+ * Thay thế pipeline chụp DOM WebGL + html2canvas cũ để tránh nghẽn main-thread và chi phí dựng canvas khi cuộn hoặc
+ * dùng trên thiết bị di động.
  */
 export function LiquidGlassContainer({
   shape = 'pill',

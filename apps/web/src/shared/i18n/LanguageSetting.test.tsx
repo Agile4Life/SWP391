@@ -55,7 +55,7 @@ it('preserves language endonyms and button nodes through legacy translation, Mem
     assertChoices('en');
     const viNode = button('footer', 'vi');
     const enNode = button('footer', 'en');
-    // A mapped legacy phrase inserted inside the managed controls must remain untouched.
+    // Cụm từ cũ đã ánh xạ khi chèn vào trong vùng điều khiển được quản lý phải được giữ nguyên.
     const probe = document.createElement('span');
     probe.textContent = 'Gói tập';
     await act(async () => { viNode.append(probe); await new Promise(resolve => setTimeout(resolve, 30)); });
