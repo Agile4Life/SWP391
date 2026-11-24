@@ -176,7 +176,8 @@ export function StaffReceptionPage() {
           `Credited +${formatPrice(parsed)} to ${selectedMember.fullName}'s SÖL Wallet. New balance: ${formatPrice(newBalance)}.`
         ),
         'success',
-        { record: true }
+        // Thông báo nạp ví mở lịch sử hiện có, không mở lại form nạp tiền.
+        { record: true, destination: '/staff/reception-history' }
       );
     } catch (err: unknown) {
       setTopupModalError(errorMessage(err, 'Không thể nạp tiền vào Ví hội viên. Vui lòng thử lại.'));
@@ -581,7 +582,7 @@ export function StaffReceptionPage() {
       setCompletedMemberName(selectedMember.fullName);
       setCompletedMembershipCode(selectedMember.membershipCode);
       setCompletedPayment(result);
-      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true });
+      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true, destination: '/staff/reception-history' });
       setSelectedMember(null);
       setSelectedPending(null);
       await loadPendingSubscriptions();

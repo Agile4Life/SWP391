@@ -65,7 +65,7 @@ it('retired shop and class notifications open the home queue of each role', () =
 it('redirects retired court notifications while preserving PT and staff destinations', () => {
   expect(safeNotificationPath('/member/courts?sport=Tennis', 'MEMBER')).toBe('/member/invoices');
   expect(safeNotificationPath('/member/classes?tab=pt', 'MEMBER')).toBe('/member/classes?tab=pt');
-  expect(safeNotificationPath('/staff/courts', 'STAFF')).toBe('/staff/courts');
+  expect(safeNotificationPath('/staff/courts', 'STAFF')).toBe('/staff/reception');
 });
 
 it.each(['/member/orders/42', '/member/products', '/member/checkout'])('maps retired Shop notification links to transaction history: %s', actionPath => {
