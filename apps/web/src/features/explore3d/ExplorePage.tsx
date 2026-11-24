@@ -17,6 +17,11 @@ import {
 import { useExploreStore } from './state/exploreStore';
 import { GuidedTour } from './tour/GuidedTour';
 
+/**
+ * Trang khám phá 3D của hội viên: đọc tham số URL, khôi phục hoặc áp dụng góc nhìn, hiển thị khung 3D (hoặc sơ
+ * đồ 2D khi WebGL lỗi), thanh công cụ, chuyển tầng, tour và tìm kiếm; bật chế độ hiệu năng/benchmark theo tham
+ * số.
+ */
 export function ExplorePage() {
   const [searchParams] = useSearchParams();
   const viewMode = useExploreStore(state => state.viewMode);

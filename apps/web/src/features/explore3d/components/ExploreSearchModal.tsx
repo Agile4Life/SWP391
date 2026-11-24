@@ -4,6 +4,7 @@ import { search, type SearchHit } from '../scene/selectors';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Phần tử có đang nhận chữ gõ không (input, textarea, select hoặc contenteditable). */
 function isTypingElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
@@ -11,6 +12,7 @@ function isTypingElement(target: EventTarget | null): boolean {
   return target.isContentEditable;
 }
 
+/** Hộp tìm kiếm trong cảnh 3D: phím / để mở, Esc để đóng, mũi tên để chọn, Enter để tới kết quả. */
 export function ExploreSearchModal() {
   const { lang, t } = useI18n();
   const searchOpen = useExploreStore(state => state.searchOpen);
@@ -21,10 +23,12 @@ export function ExploreSearchModal() {
   const [activeIndex, setActiveIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  // Kết quả tìm kiếm theo từ khóa hiện tại.
   const hits = useMemo(() => search(SOL_CENTER_SCENE, query), [query]);
 
   // Global `/` shortcut to open search modal
   useEffect(() => {
+    // Phím / mở hộp tìm (khi không đang gõ ở nơi khác) và Esc đóng hộp.
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === '/' && !searchOpen && !isTypingElement(event.target)) {
         event.preventDefault();
@@ -53,11 +57,13 @@ export function ExploreSearchModal() {
     return null;
   }
 
+  // Chọn một kết quả: chọn nút (đồng bộ tầng) rồi đóng hộp.
   const handleSelectHit = (hit: SearchHit) => {
     selectNode(hit.id, { syncLevel: true });
     setSearchOpen(false);
   };
 
+  // Điều khiển danh sách kết quả bằng bàn phím (mũi tên, Enter).
   const handleInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
@@ -81,6 +87,7 @@ export function ExploreSearchModal() {
     }
   };
 
+  // Nhãn loại kết quả (khu vực, thiết bị/sân, tính năng...).
   const getNodeTypeBadge = (nodeType: SearchHit['nodeType']) => {
     switch (nodeType) {
       case 'zone':

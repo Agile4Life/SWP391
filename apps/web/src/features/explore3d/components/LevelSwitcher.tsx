@@ -5,6 +5,7 @@ import { getLevels } from '../scene/selectors';
 import type { LevelCode } from '../scene/schema';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
 
+/** Một lựa chọn tầng: mã (hoặc tất cả), nhãn ngắn và nhãn song ngữ. */
 interface LevelOption {
   code: LevelCode | 'ALL';
   shortLabel: string;
@@ -24,6 +25,7 @@ const levelOptions: readonly LevelOption[] = [
 // Chỉ cho chọn tầng còn tồn tại trong scene; tránh chuyển camera tới sân đã bỏ.
 const LEVEL_OPTIONS = levelOptions.filter(option => option.code === 'ALL' || getLevels(SOL_CENTER_SCENE).some(level => level.code === option.code));
 
+/** Một lựa chọn chế độ xếp tầng: chế độ và nhãn song ngữ. */
 interface ModeOption {
   mode: LevelMode;
   labelVi: string;
@@ -36,6 +38,7 @@ const MODE_OPTIONS: readonly ModeOption[] = [
   { mode: 'solo', labelVi: 'Tầng đơn', labelEn: 'Solo' },
 ] as const;
 
+/** Bộ chuyển tầng và chế độ xếp tầng (gộp, tách, một tầng), điều khiển được bằng phím mũi tên. */
 export function LevelSwitcher() {
   const { lang, t } = useI18n();
   const focusLevel = useExploreStore(state => state.focusLevel);
@@ -43,6 +46,7 @@ export function LevelSwitcher() {
   const setFocusLevel = useExploreStore(state => state.setFocusLevel);
   const setLevelMode = useExploreStore(state => state.setLevelMode);
 
+  // Phím mũi tên chuyển sang tầng kế/trước và chọn nó.
   const handleLevelKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | null = null;
     if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {

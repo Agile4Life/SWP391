@@ -5,6 +5,10 @@ import { prefersReducedMotion } from '../camera/cameraMath';
 import { useExploreStore } from '../state/exploreStore';
 import { TOUR_STEPS } from './tourSteps';
 
+/**
+ * Thanh tour tham quan có hướng dẫn: tự chuyển qua các bước (chọn đối tượng, đổi tầng), có nút trước/sau, tạm
+ * dừng/tiếp tục và nút kêu gọi hành động; tự tạm dừng khi người dùng tương tác với canvas.
+ */
 export function GuidedTour() {
   const { lang, t } = useI18n();
   const navigate = useNavigate();
@@ -51,6 +55,7 @@ export function GuidedTour() {
   useEffect(() => {
     if (!tourActive || tourPaused) return;
 
+    // Người dùng bấm hoặc cuộn trên canvas 3D thì tạm dừng tour (bỏ qua thao tác trên chính thanh tour).
     const handleCanvasInteraction = (event: Event) => {
       const target = event.target;
       if (!(target instanceof Element)) return;
@@ -79,11 +84,13 @@ export function GuidedTour() {
   const captionText = lang === 'en' ? currentStep.caption.en : currentStep.caption.vi;
   const ctaText = lang === 'en' ? currentStep.ctaLabel.en : currentStep.ctaLabel.vi;
 
+  // Về bước trước (vòng lại bước cuối).
   const handlePrev = () => {
     const prevIdx = (safeIndex - 1 + totalSteps) % totalSteps;
     setTourStep(prevIdx);
   };
 
+  // Sang bước sau; hết bước thì dừng tour.
   const handleNext = () => {
     if (safeIndex + 1 < totalSteps) {
       setTourStep(safeIndex + 1);
@@ -92,6 +99,7 @@ export function GuidedTour() {
     }
   };
 
+  // Bật/tắt tạm dừng.
   const handleTogglePause = () => {
     if (tourPaused) {
       resumeTour();
@@ -100,6 +108,7 @@ export function GuidedTour() {
     }
   };
 
+  // Bấm nút hành động của bước: tạm dừng tour rồi chuyển tới trang đích.
   const handleCtaClick = () => {
     pauseTour();
     navigate(currentStep.ctaTo);

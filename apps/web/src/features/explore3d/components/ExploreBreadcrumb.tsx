@@ -6,6 +6,7 @@ import { breadcrumb } from '../scene/selectors';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Nhãn của một nút trong breadcrumb theo ngôn ngữ (khu đất, tầng, điểm nóng hoặc tên nút). */
 function getBreadcrumbLabel(node: SceneNode, lang: 'vi' | 'en'): string {
   if (node.type === 'site') {
     return lang === 'en' ? 'SÖL Center' : 'Tổ hợp SÖL';
@@ -22,6 +23,7 @@ function getBreadcrumbLabel(node: SceneNode, lang: 'vi' | 'en'): string {
   return node.id;
 }
 
+/** Thanh breadcrumb: đường đi từ khu đất tới đối tượng đang chọn, bấm vào từng mục để bay tới. */
 export function ExploreBreadcrumb() {
   const { lang, t } = useI18n();
   const selectedId = useExploreStore(state => state.selectedId);
@@ -35,6 +37,7 @@ export function ExploreBreadcrumb() {
     selectedId ?? (focusLevel !== 'ALL' ? `lvl-${focusLevel.toLowerCase()}` : 'site-sol');
   const trail = breadcrumb(SOL_CENTER_SCENE, effectiveTargetId);
 
+  // Bấm một mục: khu đất thì về toàn cảnh, tầng thì đặt tầng đang xem, còn lại thì chọn nút đó.
   const handleCrumbClick = (node: SceneNode) => {
     if (node.type === 'site') {
       flyToOverview();

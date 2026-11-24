@@ -25,19 +25,23 @@ import { useExploreStore } from '../state/exploreStore';
 
 const LEVEL_ORDER = getLevels(SOL_CENTER_SCENE).map(level => level.code);
 
+/** Props của sơ đồ 2D: dữ liệu thật đã gắn vào cảnh (tùy chọn). */
 export interface FloorPlan2DProps {
   bindings?: ResolvedSceneBindings;
 }
 
+/** Đổi đa giác thành chuỗi điểm cho thuộc tính points của SVG. */
 function polygonToSvgPoints(polygon: Vec2[]): string {
   return polygon.map(([x, z]) => `${x},${z}`).join(' ');
 }
 
+/** Tâm hộp bao của đa giác. */
 function polygonCentroid(polygon: Vec2[]): Vec2 {
   const b = polygonBounds2D(polygon);
   return [(b.minX + b.maxX) * 0.5, (b.minZ + b.maxZ) * 0.5];
 }
 
+/** Màu tô của đồ vật theo trạng thái (đang chọn dùng màu nhấn, hoạt động xanh, bảo trì cam...). */
 function getItemFillColor(status: NormalizedItemStatus, isSelected: boolean): string {
   if (isSelected) return 'var(--explore-accent)';
   switch (status) {
@@ -56,6 +60,10 @@ function getItemFillColor(status: NormalizedItemStatus, isSelected: boolean): st
   }
 }
 
+/**
+ * Sơ đồ mặt bằng 2D thay cho 3D khi WebGL không dùng được: chọn tầng, chọn khu vực/đồ vật, hiện trạng thái dữ
+ * liệu thật và phím tắt.
+ */
 export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
   const { lang, t } = useI18n();
   const focusLevel = useExploreStore(state => state.focusLevel);
@@ -63,6 +71,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
   const selectNode = useExploreStore(state => state.selectNode);
   const setFocusLevel = useExploreStore(state => state.setFocusLevel);
 
+  // Dữ liệu gắn vào cảnh (không có thì dùng ảnh chụp rỗng).
   const resolvedBindings = useMemo(
     () => bindings ?? resolveBindings(SOL_CENTER_SCENE, EMPTY_LIVE_SNAPSHOT),
     [bindings],
@@ -90,6 +99,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
 
   // Global keyboard shortcuts when 2D floor plan is active (0..5, F, R, Esc, /)
   useEffect(() => {
+    // Phần tử có đang nhận chữ gõ không.
     const isTypingElement = (target: EventTarget | null): boolean => {
       if (!(target instanceof HTMLElement)) return false;
       const tag = target.tagName;
@@ -97,6 +107,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
       return target.isContentEditable;
     };
 
+    // Phím tắt toàn cục: Esc đóng tìm kiếm/dừng tour/bỏ chọn, / mở tìm kiếm...
     const handleWindowKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.defaultPrevented) return;
       if (isTypingElement(event.target)) return;
@@ -165,6 +176,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
   const southExtraPad = levelNode.code === 'L1' ? 8.5 : 0;
   const viewBox = `${slabBounds.minX - pad} ${slabBounds.minZ - pad} ${slabBounds.maxX - slabBounds.minX + pad * 2} ${slabBounds.maxZ - slabBounds.minZ + pad * 2 + southExtraPad}`;
 
+  // Enter hoặc Space chọn phần tử SVG.
   const handleSvgKeySelect = (event: KeyboardEvent, nodeId: string) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
@@ -173,6 +185,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
     }
   };
 
+  // Chọn một tab tầng và đồng bộ tầng đang xem.
   const handleSelectLevelTab = (code: LevelCode) => {
     setActiveLevel(code);
     setFocusLevel(code);
@@ -530,6 +543,7 @@ export function FloorPlan2D({ bindings }: FloorPlan2DProps) {
                       ? t('Đóng cửa', 'Closed')
                       : null;
 
+              // Kiểu viền sáng quanh chữ để dễ đọc trên nền sơ đồ.
               const haloStyle = {
                 paintOrder: 'stroke',
                 stroke: 'rgba(18, 18, 18, 0.92)',

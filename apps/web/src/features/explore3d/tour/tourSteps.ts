@@ -1,5 +1,6 @@
 import type { BilingualText, LevelCode } from '../scene/schema';
 
+/** Một bước của tour: nút và tầng cần tới, thời lượng, tiêu đề, chú thích song ngữ và nút kêu gọi hành động. */
 export interface TourStep {
   id: string;
   nodeId: string;
