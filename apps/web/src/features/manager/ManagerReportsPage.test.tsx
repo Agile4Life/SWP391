@@ -51,18 +51,25 @@ it('shows a load error instead of an empty count and allows retry', async () => 
   await act(async () => refresh.click());
   expect(host.textContent).toContain('Hiện không có yêu cầu hủy gói tập');
 });
-it('filters the previous seven days without today and does not misreport today revenue', async () => {
+it('filters seven days including today and includes today revenue in exports', async () => {
   await act(async () => root.render(<ManagerReportsPage />));
   const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('7 ngày qua'))!;
   await act(async () => button.click());
-  expect(api.getSummary).toHaveBeenLastCalledWith('2026-11-17', '2026-11-23');
+  expect(api.getSummary).toHaveBeenLastCalledWith('2026-11-18', '2026-11-24');
   const todayMetric = [...host.querySelectorAll('.metric-label')].find(el => el.textContent?.includes('Doanh thu hôm nay'))!.parentElement!;
-  expect(todayMetric.querySelector('.metric-value')?.textContent).toBe('—');
+  expect(todayMetric.querySelector('.metric-value')?.textContent).toContain('100');
   const exportButton = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xuất báo cáo'))!;
   await act(async () => exportButton.click());
   const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
-  expect(await blob.text()).toContain('Doanh Thu Hôm Nay,—');
-  expect(JSON.parse(api.createSnapshot.mock.calls[0][0].data).todayRevenue).toBeNull();
+  expect(await blob.text()).toContain('Doanh Thu Hôm Nay,100 VNĐ');
+  expect(JSON.parse(api.createSnapshot.mock.calls[0][0].data).todayRevenue).toBe(100);
+});
+it('defaults to thirty days including today and uses the same quick range', async () => {
+  await act(async () => root.render(<ManagerReportsPage />));
+  expect(api.getSummary).toHaveBeenLastCalledWith('2026-10-26', '2026-11-24');
+  const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('30 ngày qua'))!;
+  await act(async () => button.click());
+  expect(api.getSummary).toHaveBeenLastCalledWith('2026-10-26', '2026-11-24');
 });
 it('protects every untrusted CSV text cell from spreadsheet formulas', async () => {
   await exportReport();

@@ -59,8 +59,8 @@ export function ManagerReportsPage() {
 
   // Bộ lọc khoảng ngày mặc định: 30 ngày gần nhất
   const todayStr = useMemo(() => centerNowParts().date, []);
-  // Ngày bắt đầu mặc định là 30 ngày trước.
-  const thirtyDaysAgoStr = useMemo(() => addCenterDays(todayStr, -30), [todayStr]);
+  // Khoảng mặc định gồm hôm nay và 29 ngày trước đó.
+  const thirtyDaysAgoStr = useMemo(() => addCenterDays(todayStr, -29), [todayStr]);
 
   const [startDate, setStartDate] = useState(thirtyDaysAgoStr);
   const [endDate, setEndDate] = useState(todayStr);
@@ -225,9 +225,9 @@ export function ManagerReportsPage() {
   };
 
   // Chọn nhanh khoảng ngày tính lùi từ hôm nay.
-  const handleQuickRange = (days: number, excludeToday = false) => {
-    const end = excludeToday ? addCenterDays(todayStr, -1) : todayStr;
-    const start = addCenterDays(todayStr, -days);
+  const handleQuickRange = (days: number) => {
+    const end = todayStr;
+    const start = addCenterDays(todayStr, 1 - days);
     setStartDate(start);
     setEndDate(end);
     void fetchReports(start, end);
@@ -431,7 +431,7 @@ export function ManagerReportsPage() {
               type="button"
               className="btn-secondary"
               style={{ padding: '6px 12px', fontSize: '0.82rem' }}
-              onClick={() => handleQuickRange(7, true)}
+              onClick={() => handleQuickRange(7)}
             >
               {t("7 ngày qua")}</button>
             <button
