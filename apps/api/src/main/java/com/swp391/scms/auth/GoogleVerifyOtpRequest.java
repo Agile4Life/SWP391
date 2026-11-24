@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/** Request xác thực OTP đăng nhập Google: email và mã OTP. */
 public record GoogleVerifyOtpRequest(
     @NotBlank(message = "{validation.auth.email.not_blank}")
     @Email(message = "{validation.auth.email.invalid}")

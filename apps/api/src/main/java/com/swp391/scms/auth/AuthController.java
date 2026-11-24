@@ -27,6 +27,10 @@ import java.net.URI;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * API xác thực (/api/v1/auth): đăng nhập, đăng ký, gửi/xác thực OTP, quên mật khẩu và đăng nhập Google (popup
+ * và chuyển hướng). Controller chỉ nhận request, gọi AuthService và đóng gói ApiResponse.
+ */
 @Tag(name = "Authentication", description = "Đăng ký tài khoản, đăng nhập JWT, Google OAuth và xác thực mã OTP")
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -37,14 +41,20 @@ public class AuthController {
     private final MessageService messageService;
     private final GoogleOAuthRedirectService googleOAuthRedirectService;
 
+    /** Constructor cho test: không có MessageService và luồng Google chuyển hướng. */
     public AuthController(AuthService authService, boolean debugOtpEnabled) {
         this(authService, debugOtpEnabled, null, null);
     }
 
+    /** Constructor cho test: có MessageService, không có luồng Google chuyển hướng. */
     public AuthController(AuthService authService, boolean debugOtpEnabled, MessageService messageService) {
         this(authService, debugOtpEnabled, messageService, null);
     }
 
+    /**
+     * Constructor Spring dùng. debugOtpEnabled (app.auth.debug-otp-enabled) chỉ bật ở môi trường dev để trả kèm
+     * mã OTP trong phản hồi, giúp test mà không cần email.
+     */
     @Autowired
     public AuthController(AuthService authService,
                           @Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
@@ -55,10 +65,12 @@ public class AuthController {
         this.googleOAuthRedirectService = googleOAuthRedirectService;
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** POST /login: đăng nhập bằng tên đăng nhập/email/SĐT và mật khẩu, trả JWT cùng vai trò. */
     @Operation(summary = "Đăng nhập hệ thống", description = "Xác thực tài khoản và trả về JWT Token cùng vai trò người dùng")
     @PostMapping("/login")
     public ApiResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request) {
@@ -67,11 +79,16 @@ public class AuthController {
 
     @Operation(summary = "Xác minh phiên hiện tại",
             description = "Trả về tên đăng nhập và vai trò hiện hành trong cơ sở dữ liệu để frontend đồng bộ phiên sau khi Admin đổi vai trò")
+    /**
+     * GET /me: trả tên đăng nhập, vai trò hiện tại trong database và họ tên, để frontend đồng bộ phiên (ví dụ
+     * sau khi Admin đổi vai trò).
+     */
     @GetMapping("/me")
     public ApiResponse<AuthSessionResponse> me(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("auth.me.success"), new AuthSessionResponse(principal.username(), principal.role(), authService.fullNameOf(principal.id())));
     }
 
+    /** POST /register: tạo tài khoản hội viên ở trạng thái chờ kích hoạt (inactive), trả HTTP 201. */
     @Operation(summary = "Đăng ký tài khoản", description = "Tạo tài khoản hội viên mới và gửi mã kích hoạt")
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<RegistrationResponse>> register(@Valid @RequestBody RegisterRequest request) {
@@ -79,6 +96,7 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(registered.message(), registered));
     }
 
+    /** POST /send-otp: gửi mã OTP 6 số tới email của tài khoản đang chờ kích hoạt. Mã có hiệu lực 5 phút. */
     @Operation(summary = "Gửi mã OTP", description = "Gửi mã OTP 6 chữ số đến email hoặc số điện thoại")
     @PostMapping("/send-otp")
     public ApiResponse<Map<String, Object>> sendOtp(@Valid @RequestBody OtpRequest request) {
@@ -96,6 +114,7 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.otp.sent"), data);
     }
 
+    /** POST /verify-otp: kiểm tra mã OTP và kích hoạt tài khoản. */
     @Operation(summary = "Xác thực mã OTP", description = "Xác thực mã OTP và kích hoạt tài khoản hội viên")
     @PostMapping("/verify-otp")
     public ApiResponse<Map<String, Object>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
@@ -103,6 +122,7 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.otp.verified"), Map.of("target", request.target(), "isVerified", true));
     }
 
+    /** POST /password/send-otp: gửi mã OTP đặt lại mật khẩu về email. */
     @Operation(summary = "Gửi mã OTP đặt lại mật khẩu", description = "Gửi mã OTP 6 chữ số qua email để đặt lại mật khẩu")
     @PostMapping("/password/send-otp")
     public ApiResponse<Map<String, Object>> sendPasswordResetOtp(@Valid @RequestBody GoogleOtpRequest request) {
@@ -120,6 +140,7 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.password.otp_sent"), data);
     }
 
+    /** POST /password/reset: kiểm tra mã OTP rồi đặt mật khẩu mới. */
     @Operation(summary = "Đặt lại mật khẩu bằng OTP", description = "Xác thực mã OTP 6 chữ số và cập nhật mật khẩu mới")
     @PostMapping("/password/reset")
     public ApiResponse<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
@@ -127,6 +148,7 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.password.reset_success"), Map.of("email", request.email().trim()));
     }
 
+    /** POST /google/send-otp: tạo tài khoản theo Gmail nếu chưa có và gửi mã OTP xác nhận về Gmail đó. */
     @Operation(summary = "Gửi mã OTP đăng nhập Google", description = "Tạo tài khoản nếu chưa có và gửi mã OTP xác nhận về Gmail")
     @PostMapping("/google/send-otp")
     public ApiResponse<Map<String, Object>> sendGoogleOtp(@Valid @RequestBody GoogleOtpRequest request) {
@@ -147,6 +169,10 @@ public class AuthController {
 
     @Operation(summary = "Authenticate Google members or request activation OTP (SCRUM-89)",
             description = "Active members receive authentication immediately; pending members receive activation OTP. Authorization codes use the state-protected redirect callback.")
+    /**
+     * POST /google/oauth-callback (luồng popup): hội viên đã kích hoạt được đăng nhập ngay; tài khoản chờ kích
+     * hoạt nhận OTP qua email.
+     */
     @PostMapping("/google/oauth-callback")
     public ApiResponse<GoogleOAuthResponse> handleGoogleOAuthCallback(@Valid @RequestBody GoogleOAuthCallbackRequest request) {
         GoogleOAuthResult result = authService.authenticateGoogle(request);
@@ -156,12 +182,20 @@ public class AuthController {
                 message, requiresOtp ? 5 : null, requiresOtp && debugOtpEnabled ? result.otpCode() : null));
     }
 
+    /**
+     * POST /google/handoff: đổi mã trao tay một lần (sau luồng chuyển hướng Google) lấy JWT; phải gửi kèm
+     * verifier PKCE khớp với challenge lúc bắt đầu. Không cho trình duyệt lưu cache phản hồi.
+     */
     @PostMapping("/google/handoff")
     public ResponseEntity<ApiResponse<AuthTokenResponse>> redeemGoogleHandoff(@Valid @RequestBody GoogleHandoffRequest request) {
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
                 .body(ApiResponse.ok(msg("auth.login.success"), googleOAuthRedirectService.redeem(request.code(), request.verifier())));
     }
 
+    /**
+     * GET /google/authorize: điểm bắt đầu luồng chuyển hướng Google; chuyển tiếp sang /google/authorize/start
+     * trên đúng host của callback để cookie phiên hoạt động.
+     */
     @GetMapping("/google/authorize")
     public ResponseEntity<Void> authorizeGoogleOAuth(
             @RequestParam(value = "redirect_uri", required = false) String redirectUri,
@@ -169,11 +203,19 @@ public class AuthController {
         return redirect(googleOAuthRedirectService.entry(redirectUri, challenge));
     }
 
+    /**
+     * GET /google/authorize/start: tạo state chống giả mạo trong session rồi chuyển hướng sang trang đăng nhập
+     * của Google.
+     */
     @GetMapping("/google/authorize/start")
     public ResponseEntity<Void> startGoogleOAuth(HttpServletRequest request, @RequestParam("code_challenge") String challenge) {
         return redirect(googleOAuthRedirectService.authorize(request.getSession(true), challenge));
     }
 
+    /**
+     * GET /google/callback: Google gọi lại sau khi người dùng đăng nhập; kiểm tra state, đổi code lấy thông tin
+     * người dùng rồi chuyển hướng về trang /login của frontend kèm kết quả.
+     */
     @GetMapping("/google/callback")
     public ResponseEntity<Void> googleOAuthRedirectCallback(HttpServletRequest request,
             @RequestParam(value = "state", required = false) String state,
@@ -183,10 +225,12 @@ public class AuthController {
         return redirect(googleOAuthRedirectService.complete(request.getSession(false), state, code, error, redirectUri));
     }
 
+    /** Tạo phản hồi HTTP 302 chuyển hướng tới địa chỉ cho trước, không cho cache. */
     private ResponseEntity<Void> redirect(URI location) {
         return ResponseEntity.status(HttpStatus.FOUND).cacheControl(org.springframework.http.CacheControl.noStore()).location(location).build();
     }
 
+    /** POST /google/verify-otp: kiểm tra OTP gửi về Gmail, kích hoạt tài khoản (nếu đang chờ) và trả JWT. */
     @Operation(summary = "Xác thực mã OTP Google và đăng nhập", description = "Xác thực mã OTP gửi về Gmail, kích hoạt tài khoản và trả về JWT Token")
     @PostMapping("/google/verify-otp")
     public ApiResponse<AuthTokenResponse> verifyGoogleOtp(@Valid @RequestBody GoogleVerifyOtpRequest request) {
@@ -199,6 +243,10 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.login.success"), response);
     }
 
+    /**
+     * POST /google: đăng nhập bằng Google ID Token; tự liên kết với tài khoản có sẵn hoặc tạo tài khoản MEMBER
+     * mới rồi cấp JWT.
+     */
     @Operation(summary = "Đăng nhập Google bằng ID Token (SCRUM-89)", description = "Xác thực Google ID Token, tự động liên kết hoặc tạo tài khoản MEMBER và cấp JWT")
     @PostMapping("/google")
     public ApiResponse<AuthTokenResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {

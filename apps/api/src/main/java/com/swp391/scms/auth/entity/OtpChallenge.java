@@ -9,6 +9,10 @@ import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
 
+/**
+ * Bảng otp_challenges: mỗi địa chỉ (email/SĐT) có tối đa một mã OTP đang chờ, lưu bản băm của mã, hạn dùng, số
+ * lần nhập sai và thời điểm tạo.
+ */
 @Entity
 @Table(name = "otp_challenges")
 public class OtpChallenge {
@@ -32,8 +36,10 @@ public class OtpChallenge {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** Constructor rỗng cho JPA. */
     protected OtpChallenge() {}
 
+    /** Tạo mã OTP mới với địa chỉ, bản băm, hạn dùng và thời điểm tạo; số lần sai bắt đầu từ 0. */
     public OtpChallenge(String target, String codeHash, LocalDateTime expiresAt, LocalDateTime createdAt) {
         this.target = target;
         this.codeHash = codeHash;
