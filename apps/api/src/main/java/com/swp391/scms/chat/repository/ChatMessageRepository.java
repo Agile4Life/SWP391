@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 import java.util.*;
 
+/** Truy cập bảng chat_messages. */
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
     /**
      * Tìm các bản ghi có conversationId = tham số và senderId = tham số và clientMessageId = tham số (Spring
@@ -13,12 +14,15 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
      */
     Optional<ChatMessage> findByConversationIdAndSenderIdAndClientMessageId(Long conversationId, Long senderId, UUID clientMessageId);
 
+    /** Tin cũ hơn mốc before (không có mốc thì lấy mới nhất), từ mới tới cũ. */
     @Query("select m from ChatMessage m where m.conversation.id = :id and (:before is null or m.id < :before) order by m.id desc")
     List<ChatMessage> older(@Param("id") Long id, @Param("before") Long before, Pageable page);
 
+    /** Tin mới hơn mốc after, từ cũ tới mới. */
     @Query("select m from ChatMessage m where m.conversation.id = :id and m.id > :after order by m.id asc")
     List<ChatMessage> newer(@Param("id") Long id, @Param("after") Long after, Pageable page);
 
+    /** Id tin mới nhất của hội thoại. */
     @Query("select max(m.id) from ChatMessage m where m.conversation.id = :id")
     Optional<Long> latestId(@Param("id") Long id);
 
@@ -33,6 +37,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     @Query("select c.id, count(m)" + UNREAD + " and c.id in :ids group by c.id")
     List<Object[]> unreadIn(@Param("userId") Long userId, @Param("ids") Collection<Long> ids);
 
+    /** Tổng số tin chưa đọc của người dùng trên mọi hội thoại (tin của người kia có id lớn hơn mốc đã đọc). */
     @Query("select count(m)" + UNREAD + " and (c.member.id = :userId or c.staff.id = :userId)")
     long unreadTotal(@Param("userId") Long userId);
 }

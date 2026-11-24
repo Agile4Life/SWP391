@@ -8,11 +8,17 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 import java.util.Optional;
 
-/** Chat-specific reads and pair-creation lock; does not change identity management behavior. */
+/**
+ * Truy vấn người dùng cho tính năng chat (danh bạ, khóa dòng).
+ *
+ * Chat-specific reads and pair-creation lock; does not change identity management behavior.
+ */
 public interface ChatContactRepository extends Repository<User, Long> {
+    /** Lấy người dùng kèm vai trò. */
     @Query("select u from User u join fetch u.role where u.id = :id")
     Optional<User> findUser(@Param("id") Long id);
 
+    /** Lấy người dùng và khóa dòng; dùng để xếp hàng việc tạo hội thoại cho cùng một hội viên. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from User u where u.id = :id")
     Optional<User> lockUser(@Param("id") Long id);
@@ -51,6 +57,10 @@ public interface ChatContactRepository extends Repository<User, Long> {
               or exists (select b.id from SessionBooking b where b.member.userId = :memberId and b.session.gymClass.coach.userId = u.id
                 and b.status = 'booked' and b.session.gymClass.status = 'active' and b.session.status = 'scheduled' and b.session.sessionDate >= :today))))
             """)
+    /**
+     * Danh bạ của hội viên: lễ tân luôn có; HLV chỉ khi hội viên đang có giáo án, buổi PT sắp tới hoặc lớp với
+     * HLV đó; lọc theo tên, HLV đứng trước, có phân trang.
+     */
     Page<User> searchForMember(@Param("memberId") Long memberId, @Param("today") java.time.LocalDate today,
                                @Param("query") String query, Pageable page);
 
@@ -61,5 +71,6 @@ public interface ChatContactRepository extends Repository<User, Long> {
             countQuery = "select count(u) from User u join u.role r where u.deletedAt is null and u.status = 'active' "
             + "and r.code = 'MEMBER' and (lower(u.fullName) like lower(concat('%', :query, '%')) "
             + "or lower(u.email) like lower(concat('%', :query, '%')))")
+    /** Danh bạ của lễ tân: mọi hội viên active, tìm theo tên hoặc email, có phân trang. */
     Page<User> searchMembers(@Param("query") String query, Pageable page);
 }

@@ -11,13 +11,16 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+/** API cấp phiên realtime cho chat. */
 @RestController
 public class ChatRealtimeController {
     private final ChatRealtimeService service;
     private final MessageService messages;
+    /** Constructor cho test, không có MessageService. */
     public ChatRealtimeController(ChatRealtimeService service) { this(service, null); }
     @Autowired public ChatRealtimeController(ChatRealtimeService service, MessageService messages) { this.service = service; this.messages = messages; }
 
+    /** POST /api/v1/chat/realtime-session: trả phiên realtime (token ngắn hạn) để nhận tin mới tức thì. */
     @PostMapping("/api/v1/chat/realtime-session")
     @PreAuthorize("hasAnyRole('MEMBER', 'RECEPTIONIST', 'COACH')")
     public ResponseEntity<ApiResponse<ChatRealtimeSession>> session(@AuthenticationPrincipal AuthenticatedPrincipal p) {

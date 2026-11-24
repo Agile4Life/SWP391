@@ -8,6 +8,7 @@ import java.util.UUID;
 @Entity
 @Table(name = "chat_messages", uniqueConstraints = @UniqueConstraint(name = "uk_chat_message_retry", columnNames = {"conversation_id", "sender_user_id", "client_message_id"}),
         indexes = @Index(name = "ix_chat_message_history", columnList = "conversation_id,id"))
+/** Bảng chat_messages: một tin nhắn (hội thoại, người gửi, mã tin phía client, nội dung, thời điểm). */
 public class ChatMessage {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) private Long id;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "conversation_id", nullable = false, updatable = false) private ChatConversation conversation;
@@ -16,7 +17,9 @@ public class ChatMessage {
     @Column(nullable = false, length = 2000, updatable = false) private String message;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
 
+    /** Constructor rỗng cho JPA. */
     protected ChatMessage() { }
+    /** Tạo tin nhắn mới. */
     public ChatMessage(ChatConversation conversation, User sender, UUID clientMessageId, String message, Instant now) {
         this.conversation = conversation; this.sender = sender; this.clientMessageId = clientMessageId; this.message = message; this.createdAt = now;
     }
