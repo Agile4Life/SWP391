@@ -1,4 +1,9 @@
-/** Build-time worker template. Only the public application bundle enters its cache. */
+/**
+ * Sinh mã nguồn service worker lúc build: chỉ cache bộ file công khai của ứng dụng (precache khi cài, cache
+ * thêm các file đã truy cập, dọn cache phiên bản cũ).
+ *
+ * Build-time worker template. Only the public application bundle enters its cache.
+ */
 export function createWorkerSource(version: string, assets: string[], precache: string[] = assets) {
   return `
 const CACHE = ${JSON.stringify(`sol-portal-${version}`)};

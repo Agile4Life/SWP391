@@ -4,10 +4,15 @@ import { Modal } from '../../shared/ui/Modal';
 import { applyPwaUpdate, capturePwaInstall, clearInstallPrompt, getInstallPrompt, getWaitingRegistration, subscribePwaInstall, subscribePwaUpdate } from './registerPwa';
 import './pwa.css';
 
+/** Cho biết ứng dụng đang chạy ở chế độ đã cài (standalone) trên trình duyệt thường hoặc iOS. */
 function standalone() {
   return window.matchMedia?.('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 }
 
+/**
+ * Hiển thị trạng thái PWA: báo mất mạng, nút cài ứng dụng (hướng dẫn thủ công khi chưa có lời nhắc cài) và nút
+ * cập nhật khi có bản mới; mode chọn hiện phần trạng thái, phần cài đặt hoặc cả hai.
+ */
 export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all' }) {
   useSourceLanguage();
   const [offline, setOffline] = useState(() => !navigator.onLine);
@@ -21,10 +26,14 @@ export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all
 
   useEffect(() => {
     capturePwaInstall();
+    // Có mạng lại.
     const online = () => setOffline(false);
+    // Mất mạng.
     const disconnected = () => setOffline(true);
+    // Cài xong thì đánh dấu đã cài và đóng phần hướng dẫn.
     const didInstall = () => { setInstalled(true); setHelp(false); };
     const mode = window.matchMedia?.('(display-mode: standalone)');
+    // Chế độ hiển thị đổi thì cập nhật trạng thái đã cài.
     const changedMode = () => setInstalled(standalone());
     window.addEventListener('online', online);
     window.addEventListener('offline', disconnected);
@@ -38,6 +47,7 @@ export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all
     };
   }, []);
 
+  // Cài ứng dụng: chưa có lời nhắc cài thì mở hướng dẫn, ngược lại hiện lời nhắc của trình duyệt và ghi nhận lựa chọn.
   const install = async () => {
     if (!installPrompt) { setHelp(true); return; }
     setBusy(true);
