@@ -204,40 +204,8 @@ export const receptionApi = {
   lookupMembers: async (query: string): Promise<MemberLookupResult[]> => {
     const q = query.trim();
     if (q.length < 2) return [];
-    try {
-      return await apiFetch<MemberLookupResult[]>(`/members/lookup?q=${encodeURIComponent(q)}`);
-    } catch {
-      // Fallback tìm kiếm trong /users nếu endpoint lookup chưa khớp schema
-      try {
-        const users = await apiFetch<Array<{
-          id: number;
-          roleCode: string;
-          fullName: string;
-          email: string;
-          phone: string | null;
-          status: string;
-        }>>('/users');
-        return users
-          .filter(
-            (u) =>
-              u.roleCode === 'MEMBER' &&
-              (u.fullName?.toLowerCase().includes(q.toLowerCase()) ||
-                u.phone?.includes(q) ||
-                u.email?.toLowerCase().includes(q.toLowerCase()))
-          )
-          .map((u) => ({
-            userId: u.id,
-            membershipCode: `MB-2026-${String(u.id).padStart(3, '0')}`,
-            fullName: u.fullName,
-            email: u.email,
-            phone: u.phone,
-            citizenId: null,
-            status: u.status?.toLowerCase() === 'active' ? 'ACTIVE' : 'INACTIVE',
-          }));
-      } catch {
-        return [];
-      }
-    }
+    // Chỉ dùng API tra cứu đúng quyền; để UI nhận lỗi thay vì tạo hội viên giả hoặc trả danh sách rỗng.
+    return apiFetch<MemberLookupResult[]>(`/members/lookup?q=${encodeURIComponent(q)}`);
   },
 
   /**
