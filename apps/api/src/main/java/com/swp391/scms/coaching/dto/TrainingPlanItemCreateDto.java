@@ -6,6 +6,10 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Dữ liệu một bài tập khi tạo giáo án: thứ trong tuần (1–7), tên bài, mô tả, thời gian nghỉ, số hiệp, số lần,
+ * thời lượng và thứ tự.
+ */
 public class TrainingPlanItemCreateDto {
 
     @JsonAlias("day_of_week")
@@ -37,8 +41,10 @@ public class TrainingPlanItemCreateDto {
     @JsonAlias("order_index")
     private Integer orderIndex;
 
+    /** Constructor rỗng cho Jackson khi đọc JSON. */
     public TrainingPlanItemCreateDto() {}
 
+    /** Constructor tiện lợi (không có thời gian nghỉ) dùng trong code và test. */
     public TrainingPlanItemCreateDto(Integer dayOfWeek, String exerciseName, String description,
                                      Integer sets, Integer reps, Integer durationMinutes, Integer orderIndex) {
         this.dayOfWeek = dayOfWeek;

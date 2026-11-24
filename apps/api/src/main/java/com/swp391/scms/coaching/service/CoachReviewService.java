@@ -25,6 +25,10 @@ import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ConflictException;
 import java.util.List;
 
+/**
+ * Nghiệp vụ đánh giá HLV của hội viên: tạo đánh giá, liệt kê đánh giá đã duyệt và đánh giá của chính mình (tính
+ * năng đã ngừng, chỉ bật qua app.coaching.*).
+ */
 @Service
 public class CoachReviewService {
 
@@ -44,12 +48,14 @@ public class CoachReviewService {
     @Autowired(required = false)
     private com.swp391.scms.attendance.repository.SessionAttendanceRepository attendanceRepository;
 
+    /** Constructor rút gọn cho test: chỉ có repository đánh giá, HLV và hội viên. */
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
                               MemberRepository memberRepository) {
         this(reviewRepository, coachRepository, memberRepository, null);
     }
 
+    /** Constructor rút gọn cho test: thêm NotificationService để gửi thông báo cho HLV. */
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
                               MemberRepository memberRepository,
@@ -57,6 +63,7 @@ public class CoachReviewService {
         this(reviewRepository, coachRepository, memberRepository, notificationService, null);
     }
 
+    /** Constructor rút gọn cho test: thêm MessageService để dịch thông báo. */
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
                               MemberRepository memberRepository,
@@ -64,6 +71,7 @@ public class CoachReviewService {
         this(reviewRepository, coachRepository, memberRepository, notificationService, messageService, null, null, null, Clock.systemDefaultZone());
     }
 
+    /** Constructor chính được Spring dùng: nhận đủ repository booking, buổi lớp, ghi danh và Clock. */
     @Autowired
     public CoachReviewService(CoachReviewRepository reviewRepository,
                               CoachRepository coachRepository,
@@ -82,6 +90,10 @@ public class CoachReviewService {
         this.clock = clock;
     }
 
+    /**
+     * Tạo đánh giá mới: kiểm tra điểm 1–5, kiểm tra nguồn (buổi 1:1 hoặc buổi lớp đã tham dự, chưa đánh giá),
+     * lưu và gửi thông báo cho HLV.
+     */
     @Transactional
     public CoachReviewDto createReview(Long memberUserId, CoachReviewCreateDto request) {
         if (request.rating() == null || request.rating() < 1 || request.rating() > 5) {
@@ -121,6 +133,7 @@ public class CoachReviewService {
         return mapToDto(saved, true);
     }
 
+    /** Lấy danh sách đánh giá đã được duyệt của một HLV (góc nhìn công khai). */
     @Transactional(readOnly = true)
     public List<CoachReviewDto> getApprovedReviewsForCoach(Long coachId) {
         return reviewRepository.findApprovedByCoachId(coachId).stream()
@@ -128,6 +141,7 @@ public class CoachReviewService {
                 .toList();
     }
 
+    /** Lấy toàn bộ đánh giá do hội viên hiện tại viết (góc nhìn chủ sở hữu). */
     @Transactional(readOnly = true)
     public List<CoachReviewDto> getMyReviews(Long memberUserId) {
         return reviewRepository.findByMemberId(memberUserId).stream()
@@ -135,6 +149,10 @@ public class CoachReviewService {
                 .toList();
     }
 
+    /**
+     * Chuyển entity CoachReview sang DTO; ownerView quyết định có hiện thông tin chỉ chủ đánh giá được thấy hay
+     * không.
+     */
     private CoachReviewDto mapToDto(CoachReview r, boolean ownerView) {
         String coachName = r.getCoach().getUser() != null ? r.getCoach().getUser().getFullName() : "Huấn luyện viên";
         String coachAvatar = r.getCoach().getUser() != null ? r.getCoach().getUser().getAvatarUrl() : null;
@@ -159,6 +177,10 @@ public class CoachReviewService {
                 r.getCreatedAt()
         );
     }
+    /**
+     * Kiểm tra nguồn đánh giá: phải chọn đúng một trong booking 1:1 hoặc buổi lớp, của chính hội viên, không bị
+     * hủy, đã điểm danh có mặt và chưa từng đánh giá.
+     */
     private void validateReviewSource(Long memberId, CoachReviewCreateDto request) {
         if ((request.bookingId() == null) == (request.classSessionId() == null)) {
             throw new BadRequestException("INVALID_REVIEW_SOURCE", "error.review.invalid_source", null, "Choose exactly one completed session.");
@@ -211,6 +233,7 @@ public class CoachReviewService {
         }
     }
 
+    /** Dịch message key qua MessageService; nếu không có MessageService (test) thì trả lại chính key. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }

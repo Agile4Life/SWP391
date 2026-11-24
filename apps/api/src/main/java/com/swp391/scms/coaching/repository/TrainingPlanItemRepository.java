@@ -11,6 +11,7 @@ import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập dữ liệu bài tập trong giáo án (bảng training_plan_items). */
 @Repository
 public interface TrainingPlanItemRepository extends JpaRepository<TrainingPlanItem, Long> {
 
@@ -28,6 +29,7 @@ public interface TrainingPlanItemRepository extends JpaRepository<TrainingPlanIt
             join fetch plan.member
             where item.id = :id
             """)
+    /** Lấy bài tập theo id kèm giáo án và hội viên, khóa dòng để đánh dấu hoàn thành không bị ghi trùng. */
     Optional<TrainingPlanItem> findLockedById(@Param("id") Long id);
 }
 

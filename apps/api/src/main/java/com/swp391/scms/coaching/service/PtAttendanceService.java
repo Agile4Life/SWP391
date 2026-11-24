@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
+ * Hỗ trợ điểm danh buổi PT 1:1 dựa trên lượt quẹt cổng: chỉ gợi ý cho HLV/lễ tân, không tự ghi nhận có mặt.
+ *
  * Gate check-ins around 1:1 sessions. A gate scan never records attendance: the coach or the desk marks it. The
  * check-in that covered a session is only shown to them as a hint. A session without an arrival after it ended is a
  * no-show: its quota stays used, as the plan has no make-up sessions.
@@ -18,11 +20,15 @@ public class PtAttendanceService {
 
     private final CenterCheckinRepository checkins;
 
+    /** Khởi tạo với repository lượt check-in tại trung tâm. */
     public PtAttendanceService(CenterCheckinRepository checkins) {
         this.checkins = checkins;
     }
 
     /**
+     * Tìm thời điểm bắt đầu lượt check-in hợp lệ bao trùm buổi tập (bắt đầu tối đa STAY_BEFORE_HOURS giờ trước
+     * giờ học); thiếu dữ liệu booking thì trả null.
+     *
      * Start of a granted gate check-in that was inside the center while the session ran (it began at most
      * {@value #STAY_BEFORE_HOURS} hours before the start), or null. Shown to staff; it never records attendance.
      */

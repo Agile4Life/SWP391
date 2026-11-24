@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/** Truy cập dữ liệu giáo án tập luyện (bảng training_plans). */
 @Repository
 public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long> {
 
@@ -16,10 +17,11 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
               and u.deletedAt is null and u.status = 'active'
             order by p.createdAt desc
             """)
+    /** Giáo án active đang trong thời hạn của một HLV với hội viên còn hoạt động, mới nhất trước. */
     List<TrainingPlan> findCurrentAssignments(@org.springframework.data.repository.query.Param("coachId") Long coachId,
             @org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
 
-    /** Tìm các bản ghi có idForUpdate = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
+    /** Lấy giáo án theo id và khóa dòng (PESSIMISTIC_WRITE) để cập nhật an toàn khi nhiều request cùng sửa. */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @org.springframework.data.jpa.repository.Query("select p from TrainingPlan p where p.id = :id")
     java.util.Optional<TrainingPlan> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
@@ -30,7 +32,12 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
      */
     List<TrainingPlan> findByMemberUserIdAndStatusOrderByCreatedAtDesc(Long memberId, String status);
 
-    /** The other active plans one coach gave one member; plans from the member's other coaches are not included. */
+    /**
+     * Các giáo án active khác mà cùng HLV giao cho hội viên (trừ giáo án exceptId); giáo án của HLV khác không
+     * tính.
+     *
+     * The other active plans one coach gave one member; plans from the member's other coaches are not included.
+     */
     @org.springframework.data.jpa.repository.Query("select p from TrainingPlan p where p.member.userId = :memberId and p.coach.userId = :coachId and p.status = 'active' and p.id <> :exceptId")
     List<TrainingPlan> findOtherActiveForMemberAndCoach(@org.springframework.data.repository.query.Param("memberId") Long memberId,
             @org.springframework.data.repository.query.Param("coachId") Long coachId,
@@ -57,10 +64,16 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
     /** Lấy mọi bản ghi, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<TrainingPlan> findAllByOrderByCreatedAtDesc();
 
+    /** Kiểm tra HLV đã từng lập giáo án cho hội viên chưa. */
     @org.springframework.data.jpa.repository.Query("select (count(p) > 0) from TrainingPlan p where p.coach.userId = :coachId and p.member.userId = :memberId")
     boolean existsForCoachAndMember(@org.springframework.data.repository.query.Param("coachId") Long coachId, @org.springframework.data.repository.query.Param("memberId") Long memberId);
 
-    /** Active plans whose cycle ended before {@code today} become completed (state machine 7). */
+    /**
+     * Chuyển giáo án active đã hết hạn trước hôm nay sang completed và cập nhật updatedAt; trả về số dòng cập
+     * nhật.
+     *
+     * Active plans whose cycle ended before {@code today} become completed (state machine 7).
+     */
     @org.springframework.data.jpa.repository.Modifying
     @org.springframework.data.jpa.repository.Query("update TrainingPlan p set p.status = 'completed', p.updatedAt = :now where p.status = 'active' and p.endDate < :today")
     int completeEndedBefore(@org.springframework.data.repository.query.Param("today") java.time.LocalDate today,

@@ -18,6 +18,10 @@ import java.time.LocalDateTime;
         @Index(name = "ix_coach_reviews_coach", columnList = "coach_id"),
         @Index(name = "ix_coach_reviews_member", columnList = "member_id")
 })
+/**
+ * Entity đánh giá HLV (bảng coach_reviews): HLV, hội viên, nguồn (booking/buổi lớp), số sao, nhận xét, ẩn danh,
+ * trạng thái duyệt và ghi chú quản lý.
+ */
 public class CoachReview {
 
     @Id
@@ -93,6 +97,7 @@ public class CoachReview {
 
     /** Lấy giá trị trường isAnonymous. */
     public Boolean getIsAnonymous() { return isAnonymous; }
+    /** Gán cờ ẩn danh cho đánh giá. */
     public void setIsAnonymous(Boolean anonymous) { isAnonymous = anonymous; }
 
     /** Lấy giá trị trường status. */

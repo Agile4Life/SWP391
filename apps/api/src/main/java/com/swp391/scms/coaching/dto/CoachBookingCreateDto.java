@@ -4,6 +4,10 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+/**
+ * Dữ liệu hội viên gửi khi đặt PT 1:1: HLV, bộ môn (tùy chọn), ngày, giờ bắt đầu/kết thúc và các thông tin kèm
+ * theo.
+ */
 public record CoachBookingCreateDto(
         @NotNull(message = "{error.coach_booking.coach_required}")
         Long coachId,

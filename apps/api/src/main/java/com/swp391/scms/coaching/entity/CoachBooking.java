@@ -22,6 +22,10 @@ import java.time.LocalTime;
         @Index(name = "ix_coach_bookings_member_date", columnList = "member_id, booking_date"),
         @Index(name = "ix_coach_bookings_status", columnList = "status")
 })
+/**
+ * Entity một buổi PT 1:1 (bảng coach_bookings): hội viên, HLV, bộ môn, subscription, ngày giờ, giá, thanh toán,
+ * trạng thái, điểm danh và thông tin hủy.
+ */
 public class CoachBooking {
 
     @Id
@@ -89,6 +93,7 @@ public class CoachBooking {
     @Column(name = "quota_forfeited")
     private Boolean quotaForfeited = false;
 
+    /** Constructor rỗng bắt buộc cho JPA. */
     public CoachBooking() {}
 
     /** Lấy giá trị trường id. */
@@ -146,6 +151,7 @@ public class CoachBooking {
     /** Gán giá trị mới cho trường paymentStatus. */
     public void setPaymentStatus(String paymentStatus) { this.paymentStatus = paymentStatus; }
 
+    /** True nếu buổi hủy vẫn bị trừ lượt hạn mức (null được coi là false). */
     public boolean isQuotaForfeited() { return Boolean.TRUE.equals(quotaForfeited); }
     /** Gán giá trị mới cho trường quotaForfeited. */
     public void setQuotaForfeited(boolean quotaForfeited) { this.quotaForfeited = quotaForfeited; }
@@ -164,6 +170,7 @@ public class CoachBooking {
     /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    /** True nếu kết quả điểm danh đã bị khóa, không cho sửa nữa (null được coi là false). */
     public boolean isAttendanceLocked() { return Boolean.TRUE.equals(attendanceLocked); }
     /** Gán giá trị mới cho trường attendanceLocked. */
     public void setAttendanceLocked(boolean attendanceLocked) { this.attendanceLocked = attendanceLocked; }

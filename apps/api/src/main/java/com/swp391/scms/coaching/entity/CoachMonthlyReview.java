@@ -19,6 +19,10 @@ import java.time.LocalDateTime;
 }, uniqueConstraints = {
         @UniqueConstraint(name = "uk_coach_month_review", columnNames = {"coach_id", "review_year", "review_month"})
 })
+/**
+ * Entity tổng kết tháng của HLV (bảng coach_monthly_reviews): điểm trung bình, số đánh giá/buổi, xếp hạng, huy
+ * hiệu, thưởng và nhận xét của quản lý.
+ */
 public class CoachMonthlyReview {
 
     @Id
@@ -69,6 +73,7 @@ public class CoachMonthlyReview {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /** Tự cập nhật updatedAt trước mỗi lần thêm mới hoặc cập nhật. */
     @PrePersist
     @PreUpdate
     public void onSave() {

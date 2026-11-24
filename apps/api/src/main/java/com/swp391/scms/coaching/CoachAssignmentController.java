@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
+/** API cho quản lý trung tâm xem và điều chỉnh phân công HLV (giáo án, buổi PT) cho hội viên. */
 @Tag(name = "Manager Coach Assignments", description = "Quản lý và theo dõi học viên đang được các HLV phụ trách (SCRUM Manager)")
 @RestController
 @RequestMapping("/api/v1/manager/coach-assignments")
@@ -23,6 +24,7 @@ public class CoachAssignmentController {
     private final CoachAssignmentService coachAssignmentService;
     private final MessageService messageService;
 
+    /** Khởi tạo controller với service phân công HLV và MessageService. */
     @Autowired
     public CoachAssignmentController(
             CoachAssignmentService coachAssignmentService,
@@ -32,10 +34,12 @@ public class CoachAssignmentController {
         this.messageService = messageService;
     }
 
+    /** Dịch message key sang thông báo theo ngôn ngữ của request. */
     private String msg(String code) {
         return messageService == null ? code : messageService.getMessage(code);
     }
 
+    /** GET: trả về tổng quan phân công, lọc theo HLV, từ khóa, loại và sắp xếp theo tham số truyền vào. */
     @Operation(summary = "Xem danh sách và tổng quan các HLV kèm học viên phụ trách")
     @GetMapping
     public ResponseEntity<ApiResponse<Map<String, Object>>> getOverview(
@@ -52,6 +56,7 @@ public class CoachAssignmentController {
         ));
     }
 
+    /** POST /reassign: chuyển giáo án hoặc buổi PT đã chọn sang HLV khác. */
     @Operation(summary = "Điều chuyển đúng giáo án hoặc buổi PT đã chọn; lớp học chỉ đọc")
     @PostMapping("/reassign")
     public ResponseEntity<ApiResponse<Void>> reassign(
@@ -64,6 +69,7 @@ public class CoachAssignmentController {
         ));
     }
 
+    /** DELETE /{planId}: hủy phân công một giáo án đang active, vẫn giữ lại lịch sử. */
     @Operation(summary = "Hủy phân công giáo án active chưa hết hạn, giữ lịch sử")
     @DeleteMapping("/{planId}")
     public ResponseEntity<ApiResponse<Void>> removeAssignment(

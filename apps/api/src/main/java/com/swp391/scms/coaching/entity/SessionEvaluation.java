@@ -8,7 +8,12 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import org.hibernate.Length;
 
-/** Entity mapping table session_evaluations (schema is generated code-first by Hibernate). */
+/**
+ * Entity đánh giá buổi tập (bảng session_evaluations): buổi lớp, hội viên, HLV, nhận xét hiệu suất, điểm tiến
+ * bộ, phản hồi và thời điểm đánh giá.
+ *
+ * Entity mapping table session_evaluations (schema is generated code-first by Hibernate).
+ */
 @Entity
 @Table(name = "session_evaluations")
 public class SessionEvaluation {

@@ -8,6 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
+ * Kiểm tra quan hệ HLV – hội viên: HLV chỉ được xem dữ liệu tập luyện/sức khỏe của hội viên mình đang phụ
+ * trách.
+ *
  * Decides whether a coach works with a member: they wrote a training plan for them, have a 1:1 session with them,
  * or teach a class the member is booked in or attended. Coaches see health and coaching data only for those members;
  * managers see everyone.
@@ -22,6 +25,7 @@ public class CoachMemberAccess {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
 
+    /** Khởi tạo với các repository giáo án, booking PT và ghi danh lớp dùng để xác định quan hệ. */
     public CoachMemberAccess(TrainingPlanRepository plans, CoachBookingRepository bookings,
                              ClassEnrollmentRepository enrollments) {
         this.plans = plans;
@@ -29,6 +33,10 @@ public class CoachMemberAccess {
         this.enrollments = enrollments;
     }
 
+    /**
+     * Trả về true nếu HLV có giáo án, buổi 1:1, lớp đã ghi danh hoặc buổi đặt chỗ với hội viên này; thiếu id
+     * thì trả false.
+     */
     @Transactional(readOnly = true)
     public boolean coachesMember(Long coachId, Long memberId) {
         if (coachId == null || memberId == null) return false;
@@ -38,13 +46,19 @@ public class CoachMemberAccess {
                 || (sessionBookings != null && sessionBookings.existsForCoachAndMember(coachId, memberId));
     }
 
-    /** Throws for a coach who does not work with the member; other roles are checked elsewhere. */
+    /**
+     * Chỉ áp dụng cho role COACH: ném lỗi nếu HLV không phụ trách hội viên; các role khác được kiểm tra ở nơi
+     * khác.
+     *
+     * Throws for a coach who does not work with the member; other roles are checked elsewhere.
+     */
     public void requireAccess(Long userId, String role, Long memberId) {
         if ("COACH".equalsIgnoreCase(role)) {
             requireCoachOf(userId, memberId);
         }
     }
 
+    /** Ném ForbiddenException (COACH_MEMBER_NOT_ASSIGNED) khi HLV không làm việc với hội viên. */
     public void requireCoachOf(Long coachId, Long memberId) {
         if (!coachesMember(coachId, memberId)) {
             throw new ForbiddenException("COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null,

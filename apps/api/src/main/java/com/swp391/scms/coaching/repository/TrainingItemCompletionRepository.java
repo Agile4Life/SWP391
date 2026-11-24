@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDate;
 import java.util.List;
 
+/** Truy cập dữ liệu bài tập đã hoàn thành theo ngày (bảng training_item_completions). */
 public interface TrainingItemCompletionRepository extends JpaRepository<TrainingItemCompletion, Long> {
     /**
      * Tìm các bản ghi có memberUserId = tham số và exerciseDate = tham số (Spring Data tự sinh truy vấn từ tên

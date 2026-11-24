@@ -11,6 +11,8 @@ import org.springframework.format.annotation.DateTimeFormat;
 import java.time.LocalDate;
 
 /**
+ * API xem tiến độ hoàn thành bài tập của giáo án (đã ngừng; bật qua app.coaching.progress.enabled).
+ *
  * Disabled by default: Training plan progress endpoints have been removed from the active scope.
  */
 @ConditionalOnProperty(name = "app.coaching.progress.enabled", havingValue = "true")
@@ -18,9 +20,12 @@ import java.time.LocalDate;
 @RequestMapping("/api/v1/coaching/training-plans")
 public class TrainingPlanProgressController {
  private final TrainingPlanProgressService service; private final MessageService messages;
+ /** Constructor cho test: không có MessageService. */
  public TrainingPlanProgressController(TrainingPlanProgressService service){this(service,null);}
+ /** Constructor chính: nhận service tiến độ và MessageService. */
  @org.springframework.beans.factory.annotation.Autowired
  public TrainingPlanProgressController(TrainingPlanProgressService service,MessageService messages){this.service=service;this.messages=messages;}
+ /** GET /{id}/completions: tiến độ giáo án trong ngày được chọn cho COACH/CENTER_MANAGER. */
  @GetMapping("/{id}/completions")
  @PreAuthorize("hasAnyRole('COACH','CENTER_MANAGER')")
  public ApiResponse<TrainingPlanProgressService.PlanProgress> get(@PathVariable Long id,

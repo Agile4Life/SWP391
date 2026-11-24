@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 @Table(name = "training_item_completions", uniqueConstraints =
         @UniqueConstraint(name = "uk_training_completion_member_item_date",
                 columnNames = {"member_id", "training_plan_item_id", "exercise_date"}))
+/** Entity ghi nhận hội viên đã hoàn thành một bài tập trong ngày (bảng training_item_completions). */
 public class TrainingItemCompletion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

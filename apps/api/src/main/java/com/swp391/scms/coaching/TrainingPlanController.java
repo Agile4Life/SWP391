@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** API giáo án tập luyện: HLV/quản lý tạo, sửa, kích hoạt, xóa; hội viên xem giáo án của mình. */
 @Tag(name = "Coaching & Training Plans", description = "Quản lý kế hoạch huấn luyện và bài tập (SCRUM-116)")
 @RestController
 @RequestMapping({"/api/v1/coaching/training-plans", "/api/v1/training-plans"})
@@ -27,20 +28,24 @@ public class TrainingPlanController {
     private final TrainingPlanService trainingPlanService;
     private final MessageService messageService;
 
+    /** Constructor cho test: không có MessageService. */
     public TrainingPlanController(TrainingPlanService trainingPlanService) {
         this(trainingPlanService, null);
     }
 
+    /** Constructor chính: nhận TrainingPlanService và MessageService. */
     @Autowired
     public TrainingPlanController(TrainingPlanService trainingPlanService, MessageService messageService) {
         this.trainingPlanService = trainingPlanService;
         this.messageService = messageService;
     }
 
+    /** Dịch message key; không có MessageService thì trả lại key. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** POST: tạo giáo án nháp mới cho hội viên. */
     @Operation(summary = "Tạo giáo án huấn luyện mới", description = "Tạo giáo án ở trạng thái draft kèm danh sách bài tập theo thứ tự")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PostMapping
@@ -54,6 +59,7 @@ public class TrainingPlanController {
                 .body(ApiResponse.created(msg("coaching.plan.created"), created));
     }
 
+    /** POST /{id}/items: thêm một bài tập vào giáo án. */
     @Operation(summary = "Thêm bài tập vào giáo án", description = "Bổ sung bài tập mới theo thứ tự vào giáo án huấn luyện")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PostMapping("/{id}/items")
@@ -68,6 +74,7 @@ public class TrainingPlanController {
                 .body(ApiResponse.created(msg("coaching.plan.item_added"), updated));
     }
 
+    /** PUT /{id}/activate: kích hoạt giáo án để hội viên bắt đầu áp dụng. */
     @Operation(summary = "Phê duyệt kích hoạt giáo án", description = "HLV phê duyệt kích hoạt giáo án sang trạng thái active")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PutMapping("/{id}/activate")
@@ -80,6 +87,10 @@ public class TrainingPlanController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.activated"), activated));
     }
 
+    /**
+     * PUT /{id}/reapply: áp dụng lại một giáo án trong lịch sử (superseded) thành active; giáo án đã hết hạn
+     * được dời ngày về hôm nay.
+     */
     @Operation(summary = "Áp dụng lại giáo án trong lịch sử", description = "Đưa giáo án lịch sử (superseded) về trạng thái đang áp dụng; giáo án đang áp dụng của cùng HLV cho hội viên này chuyển thành lịch sử")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PutMapping("/{id}/reapply")
@@ -92,6 +103,7 @@ public class TrainingPlanController {
                 trainingPlanService.reapplyPlan(id, userId, role)));
     }
 
+    /** GET /my: các giáo án đang active của hội viên đang đăng nhập. */
     @Operation(summary = "Xem giáo án đang hoạt động của hội viên", description = "Hội viên xem giáo án bài tập đang hoạt động của mình")
     @PreAuthorize("hasRole('MEMBER')")
     @GetMapping("/my")
@@ -102,6 +114,7 @@ public class TrainingPlanController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.my_list"), plans));
     }
 
+    /** GET: danh sách giáo án HLV/quản lý được xem, có thể lọc theo hội viên. */
     @Operation(summary = "Danh sách giáo án huấn luyện", description = "HLV hoặc Quản lý xem danh sách giáo án, lọc theo memberId")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @GetMapping
@@ -114,6 +127,7 @@ public class TrainingPlanController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.list"), plans));
     }
 
+    /** GET /{id}: chi tiết một giáo án (service kiểm tra người xem có quyền). */
     @Operation(summary = "Chi tiết giáo án huấn luyện")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'MEMBER')")
     @GetMapping("/{id}")
@@ -126,6 +140,7 @@ public class TrainingPlanController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.plan.detail"), plan));
     }
 
+    /** PUT /{id}: cập nhật thông tin và bài tập của giáo án. */
     @Operation(summary = "Cập nhật giáo án", description = "Sửa mục tiêu, thời gian và bài tập của giáo án nháp hoặc đang hoạt động")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PutMapping("/{id}")
@@ -139,6 +154,7 @@ public class TrainingPlanController {
                 trainingPlanService.updatePlan(id, dto, userId, role)));
     }
 
+    /** DELETE /{id}: xóa giáo án. */
     @Operation(summary = "Xóa hoặc ngừng áp dụng giáo án", description = "Bản nháp được xóa; giáo án active chuyển cancelled để giữ lịch sử tập")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @DeleteMapping("/{id}")

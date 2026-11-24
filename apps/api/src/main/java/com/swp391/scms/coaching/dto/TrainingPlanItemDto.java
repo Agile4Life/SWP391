@@ -1,5 +1,6 @@
 package com.swp391.scms.coaching.dto;
 
+/** Thông tin một bài tập trong giáo án trả về client. */
 public class TrainingPlanItemDto {
 
     private Long id;
@@ -14,8 +15,10 @@ public class TrainingPlanItemDto {
     private Integer durationMinutes;
     private int orderIndex;
 
+    /** Constructor rỗng cho Jackson. */
     public TrainingPlanItemDto() {}
 
+    /** Constructor đầy đủ để tạo DTO từ entity. */
     public TrainingPlanItemDto(Long id, Long trainingPlanId, Integer dayOfWeek, String exerciseName,
                                String description, Integer sets, Integer reps, Integer durationMinutes, int orderIndex) {
         this.id = id;

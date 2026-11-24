@@ -4,6 +4,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Thông tin giáo án trả về client: hội viên, HLV, lớp, mục tiêu, thời gian, trạng thái, nguồn AI, mốc thời gian
+ * và danh sách bài tập.
+ */
 public class TrainingPlanDto {
 
     private Long id;
@@ -22,6 +26,7 @@ public class TrainingPlanDto {
     private LocalDateTime updatedAt;
     private List<TrainingPlanItemDto> items;
 
+    /** Constructor rỗng cho Jackson và cho việc gán từng trường. */
     public TrainingPlanDto() {}
 
     /** Lấy giá trị trường id. */

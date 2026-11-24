@@ -8,6 +8,10 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * Dữ liệu tạo giáo án: hội viên, HLV, lớp, tiêu đề, mục tiêu, thời gian áp dụng, trạng thái, có kích hoạt ngay
+ * không, nguồn AI và danh sách bài tập.
+ */
 public class TrainingPlanCreateDto {
 
     @JsonAlias("member_id")
@@ -47,6 +51,7 @@ public class TrainingPlanCreateDto {
     @Valid
     private List<TrainingPlanItemCreateDto> items;
 
+    /** Constructor rỗng cho Jackson khi đọc JSON. */
     public TrainingPlanCreateDto() {}
 
     /** Lấy giá trị trường memberId. */

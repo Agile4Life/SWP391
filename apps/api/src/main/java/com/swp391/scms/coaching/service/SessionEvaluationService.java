@@ -23,6 +23,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
+ * Nghiệp vụ đánh giá buổi tập do HLV chấm cho hội viên (tính năng đã ngừng, chỉ bật qua app.coaching.*).
+ *
  * Service handling session evaluations by coaches and progress tracking for members (SCRUM-119).
  */
 @Service
@@ -38,6 +40,7 @@ public class SessionEvaluationService {
     private final ClassSessionRepository classSessionRepository;
     private final Clock clock;
 
+    /** Constructor rút gọn cho test: chỉ có repository đánh giá, hội viên và HLV. */
     public SessionEvaluationService(SessionEvaluationRepository evaluationRepository,
                                     MemberRepository memberRepository,
                                     CoachRepository coachRepository,
@@ -47,6 +50,7 @@ public class SessionEvaluationService {
 
     private final com.swp391.scms.notifications.NotificationService notificationService;
 
+    /** Constructor cho test: thêm repository buổi lớp và Clock (có thể vắng mặt). */
     public SessionEvaluationService(SessionEvaluationRepository evaluationRepository,
                                     MemberRepository memberRepository,
                                     CoachRepository coachRepository,
@@ -55,6 +59,7 @@ public class SessionEvaluationService {
         this(evaluationRepository, memberRepository, coachRepository, classSessionRepository, clock, null);
     }
 
+    /** Constructor chính được Spring dùng: thêm NotificationService để báo cho hội viên khi có đánh giá mới. */
     @Autowired
     public SessionEvaluationService(SessionEvaluationRepository evaluationRepository, MemberRepository memberRepository,
             CoachRepository coachRepository, ClassSessionRepository classSessionRepository, Clock clock,
@@ -67,6 +72,10 @@ public class SessionEvaluationService {
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
+    /**
+     * Tạo đánh giá buổi tập: kiểm tra điểm trong khoảng 1–100, xác định HLV chấm, kiểm tra buổi lớp, lưu và gửi
+     * thông báo cho hội viên (lỗi gửi không làm hỏng việc lưu).
+     */
     public SessionEvaluationDto createEvaluation(SessionEvaluationCreateDto request,
                                                  Long currentUserId,
                                                  String currentRole) {
@@ -113,6 +122,10 @@ public class SessionEvaluationService {
         return toDto(saved);
     }
 
+    /**
+     * Lấy danh sách đánh giá của người dùng hiện tại: HLV thấy đánh giá mình đã chấm, hội viên thấy đánh giá
+     * mình nhận được.
+     */
     @Transactional(readOnly = true)
     public List<SessionEvaluationDto> getMyEvaluations(Long currentUserId, String currentRole) {
         if ("COACH".equalsIgnoreCase(currentRole)) {
@@ -127,6 +140,10 @@ public class SessionEvaluationService {
                 .toList();
     }
 
+    /**
+     * Lấy đánh giá của một hội viên: hội viên chỉ xem của chính mình, HLV phải đang phụ trách hội viên đó, hội
+     * viên phải tồn tại.
+     */
     @Transactional(readOnly = true)
     public List<SessionEvaluationDto> getMemberEvaluations(Long memberId, Long currentUserId, String currentRole) {
         if ("MEMBER".equalsIgnoreCase(currentRole) && !memberId.equals(currentUserId)) {
@@ -144,6 +161,7 @@ public class SessionEvaluationService {
                 .toList();
     }
 
+    /** Lấy đánh giá theo buổi lớp: HLV chỉ xem được buổi thuộc lớp mình dạy. */
     @Transactional(readOnly = true)
     public List<SessionEvaluationDto> getSessionEvaluations(Long sessionId, Long currentUserId, String currentRole) {
         if ("COACH".equalsIgnoreCase(currentRole) && classSessionRepository != null) {
@@ -161,6 +179,10 @@ public class SessionEvaluationService {
                 .toList();
     }
 
+    /**
+     * Xác định HLV chấm điểm: HLV đang đăng nhập không được chấm thay HLV khác; role khác bắt buộc truyền
+     * coachId.
+     */
     private Long resolveCoachId(Long requestedCoachId, Long currentUserId, String currentRole) {
         if ("COACH".equalsIgnoreCase(currentRole)) {
             if (requestedCoachId != null && currentUserId != null && !requestedCoachId.equals(currentUserId)) {
@@ -175,6 +197,7 @@ public class SessionEvaluationService {
         return targetCoachId;
     }
 
+    /** Chuyển entity SessionEvaluation sang DTO trả về client. */
     private SessionEvaluationDto toDto(SessionEvaluation e) {
         return new SessionEvaluationDto(
                 e.getId(),

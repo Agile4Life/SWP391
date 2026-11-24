@@ -25,6 +25,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
+ * API đánh giá buổi tập (đã ngừng; chỉ bật khi app.coaching.evaluations.enabled=true).
+ *
  * REST Controller for Coaching Session Evaluations (SCRUM-119).
  * Disabled by default: Session Evaluation endpoints have been removed from the active scope.
  */
@@ -37,20 +39,24 @@ public class SessionEvaluationController {
     private final SessionEvaluationService evaluationService;
     private final MessageService messageService;
 
+    /** Constructor cho test: không có MessageService. */
     public SessionEvaluationController(SessionEvaluationService evaluationService) {
         this(evaluationService, null);
     }
 
+    /** Constructor chính: nhận service đánh giá và MessageService. */
     @Autowired
     public SessionEvaluationController(SessionEvaluationService evaluationService, MessageService messageService) {
         this.evaluationService = evaluationService;
         this.messageService = messageService;
     }
 
+    /** Dịch message key; không có MessageService thì trả lại key. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** POST: HLV/quản lý tạo đánh giá buổi tập cho hội viên. */
     @Operation(summary = "HLV chấm điểm buổi tập và ghi nhận đánh giá tiến độ")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @PostMapping
@@ -64,6 +70,7 @@ public class SessionEvaluationController {
                 .body(ApiResponse.created(msg("coaching.evaluation.created"), created));
     }
 
+    /** GET /my: đánh giá liên quan tới người dùng đang đăng nhập. */
     @Operation(summary = "Xem danh sách đánh giá buổi tập của cá nhân (Hội viên hoặc HLV)")
     @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER')")
     @GetMapping("/my")
@@ -75,6 +82,7 @@ public class SessionEvaluationController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.evaluation.list"), list));
     }
 
+    /** GET /member/{memberId}: đánh giá của một hội viên (có kiểm tra quyền xem). */
     @Operation(summary = "Xem lịch sử đánh giá buổi tập của một hội viên")
     @PreAuthorize("hasAnyRole('MEMBER', 'COACH', 'CENTER_MANAGER')")
     @GetMapping("/member/{memberId}")
@@ -87,6 +95,7 @@ public class SessionEvaluationController {
         return ResponseEntity.ok(ApiResponse.ok(msg("coaching.evaluation.list"), list));
     }
 
+    /** GET /session/{sessionId}: đánh giá của một buổi lớp. */
     @Operation(summary = "Xem danh sách đánh giá của một buổi học")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
     @GetMapping("/session/{sessionId}")

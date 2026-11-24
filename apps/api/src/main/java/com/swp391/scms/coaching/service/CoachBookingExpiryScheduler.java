@@ -5,16 +5,25 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** Periodically releases 1:1 PT slots held by bookings that were never paid. */
+/**
+ * Job nền chạy định kỳ: nhả các slot PT 1:1 đang bị giữ bởi booking chưa thanh toán quá hạn.
+ *
+ * Periodically releases 1:1 PT slots held by bookings that were never paid.
+ */
 @Component
 public class CoachBookingExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(CoachBookingExpiryScheduler.class);
     private final CoachBookingService service;
 
+    /** Khởi tạo job với CoachBookingService (nơi chứa logic hết hạn booking). */
     public CoachBookingExpiryScheduler(CoachBookingService service) {
         this.service = service;
     }
 
+    /**
+     * Chạy theo chu kỳ app.coaching.expiry-interval-ms (mặc định 60 giây): gọi expireUnpaidBookings, ghi log số
+     * booking được nhả; lỗi chỉ ghi cảnh báo để lần chạy sau thử lại.
+     */
     @Scheduled(fixedDelayString = "${app.coaching.expiry-interval-ms:60000}", initialDelayString = "${app.coaching.expiry-interval-ms:60000}")
     public void releaseUnpaid() {
         try {

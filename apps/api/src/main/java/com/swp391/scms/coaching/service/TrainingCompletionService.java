@@ -12,17 +12,23 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 
+/** Ghi nhận hội viên đã hoàn thành bài tập nào trong giáo án theo từng ngày. */
 @Service
 public class TrainingCompletionService {
     private final TrainingPlanItemRepository itemRepository;
     private final TrainingItemCompletionRepository completionRepository;
 
+    /** Khởi tạo với repository mục giáo án và repository bản ghi hoàn thành. */
     public TrainingCompletionService(TrainingPlanItemRepository itemRepository,
                                      TrainingItemCompletionRepository completionRepository) {
         this.itemRepository = itemRepository;
         this.completionRepository = completionRepository;
     }
 
+    /**
+     * Lấy id các bài tập hội viên đã đánh dấu hoàn thành trong một ngày; ngày trống hoặc ở tương lai thì báo
+     * lỗi.
+     */
     @Transactional(readOnly = true)
     public List<Long> getCompletedItemIds(Long memberUserId, LocalDate exerciseDate, LocalDate today) {
         if (exerciseDate == null || exerciseDate.isAfter(today)) {
@@ -33,6 +39,10 @@ public class TrainingCompletionService {
                 .map(completion -> completion.getTrainingPlanItem().getId()).toList();
     }
 
+    /**
+     * Đánh dấu/bỏ đánh dấu hoàn thành một bài tập: khóa dòng, kiểm tra giáo án thuộc hội viên, đang active,
+     * đúng ngày hôm nay và đúng thứ trong tuần; trả về trạng thái mới.
+     */
     @Transactional
     public boolean setCompleted(Long memberUserId, Long itemId, LocalDate exerciseDate, boolean completed, LocalDate today) {
         TrainingPlanItem item = itemRepository.findLockedById(itemId)

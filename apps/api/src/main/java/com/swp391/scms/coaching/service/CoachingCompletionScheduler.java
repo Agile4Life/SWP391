@@ -14,6 +14,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
+ * Job nền hằng ngày chuyển buổi PT 1:1 đã diễn ra và giáo án đã hết hạn sang trạng thái completed.
+ *
  * Settles held 1:1 sessions and ended training plans as {@code completed}. 1:1 sessions stay confirmed for
  * {@link #PT_GRACE_DAYS} days so the PT arrival sweep (3-day lookback) still sees them.
  */
@@ -27,12 +29,17 @@ public class CoachingCompletionScheduler {
     private final TrainingPlanRepository plans;
     private final Clock clock;
 
+    /** Khởi tạo với repository booking PT, repository giáo án và Clock (để test cố định thời gian). */
     public CoachingCompletionScheduler(CoachBookingRepository coachBookings, TrainingPlanRepository plans, Clock clock) {
         this.coachBookings = coachBookings;
         this.plans = plans;
         this.clock = clock;
     }
 
+    /**
+     * Chạy theo cron app.coaching.completion.cron (mặc định 00:35 mỗi ngày): gọi completeHeld và ghi log kết
+     * quả; lỗi chỉ ghi cảnh báo.
+     */
     @Scheduled(cron = "${app.coaching.completion.cron:0 35 0 * * ?}")
     public void sweep() {
         try {
@@ -43,7 +50,12 @@ public class CoachingCompletionScheduler {
         }
     }
 
-    /** Returns {1:1 sessions, plans} moved to completed. */
+    /**
+     * Tính "hôm nay" theo giờ Việt Nam; hoàn tất buổi 1:1 cũ hơn PT_GRACE_DAYS ngày và giáo án đã kết thúc; trả
+     * về mảng {số buổi, số giáo án}.
+     *
+     * Returns {1:1 sessions, plans} moved to completed.
+     */
     @Transactional
     public int[] completeHeld() {
         LocalDateTime now = clock.instant().atZone(CENTER_ZONE).toLocalDateTime();

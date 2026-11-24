@@ -5,7 +5,11 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-/** Partial header update with optional full values for existing exercises; omitted items stay unchanged. */
+/**
+ * Dữ liệu cập nhật giáo án: mục tiêu, ngày bắt đầu/kết thúc và danh sách bài tập (mỗi phần tử không được null).
+ *
+ * Partial header update with optional full values for existing exercises; omitted items stay unchanged.
+ */
 public class TrainingPlanUpdateDto {
 
     @Size(max = 255, message = "{validation.coaching.goal.size}")

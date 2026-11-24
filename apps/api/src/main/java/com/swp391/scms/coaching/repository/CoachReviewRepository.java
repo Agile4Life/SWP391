@@ -9,6 +9,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/** Truy cập dữ liệu đánh giá HLV (bảng coach_reviews). */
 @Repository
 public interface CoachReviewRepository extends JpaRepository<CoachReview, Long> {
     /**
@@ -27,20 +28,27 @@ public interface CoachReviewRepository extends JpaRepository<CoachReview, Long> 
 
     @Query("SELECT r FROM CoachReview r JOIN FETCH r.coach c JOIN FETCH c.user JOIN FETCH r.member m JOIN FETCH m.user " +
             "WHERE r.coach.userId = :coachId AND r.status = 'approved' ORDER BY r.createdAt DESC")
+    /** Đánh giá đã duyệt của một HLV kèm thông tin HLV và hội viên, mới nhất trước. */
     List<CoachReview> findApprovedByCoachId(@Param("coachId") Long coachId);
 
     @Query("SELECT r FROM CoachReview r JOIN FETCH r.coach c JOIN FETCH c.user JOIN FETCH r.member m JOIN FETCH m.user " +
             "WHERE r.member.userId = :memberId ORDER BY r.createdAt DESC")
+    /** Mọi đánh giá do một hội viên viết kèm thông tin HLV, mới nhất trước. */
     List<CoachReview> findByMemberId(@Param("memberId") Long memberId);
 
     @Query("SELECT AVG(r.rating) FROM CoachReview r WHERE r.coach.userId = :coachId " +
             "AND r.createdAt >= :start AND r.createdAt <= :end AND r.status = 'approved'")
+    /**
+     * Điểm sao trung bình của các đánh giá đã duyệt của HLV trong khoảng thời gian (null nếu không có đánh
+     * giá).
+     */
     Double getAverageRatingForPeriod(@Param("coachId") Long coachId,
                                      @Param("start") LocalDateTime start,
                                      @Param("end") LocalDateTime end);
 
     @Query("SELECT COUNT(r) FROM CoachReview r WHERE r.coach.userId = :coachId " +
             "AND r.createdAt >= :start AND r.createdAt <= :end AND r.status = 'approved'")
+    /** Đếm số đánh giá đã duyệt của HLV trong khoảng thời gian. */
     long countReviewsForPeriod(@Param("coachId") Long coachId,
                                @Param("start") LocalDateTime start,
                                @Param("end") LocalDateTime end);
