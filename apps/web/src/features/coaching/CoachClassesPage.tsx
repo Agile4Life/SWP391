@@ -19,6 +19,7 @@ import { parseISODate } from '../schedule/timetable';
 import { ptBookingEvents } from './coachTimetable';
 import './coach-classes.css';
 import { formatCenterDate } from '../../shared/lib/centerTime';
+import { matchPtSearch } from './ptSearch';
 
 function getWeekMonday(date: Date): Date {
   const d = new Date(date);
@@ -36,12 +37,14 @@ function formatYmd(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+
 export function CoachClassesPage() {
   const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
 
   // Tab chuyển đổi: 'schedule' (Thời khóa biểu PT 1-1) hoặc 'students' (Học viên phụ trách)
   const [activeTab, setActiveTab] = useState<'schedule' | 'students'>('schedule');
+  const [scheduleSearch, setScheduleSearch] = useState('');
 
   const [currentMonday, setCurrentMonday] = useState<Date>(() => getWeekMonday(new Date()));
   const [selectedPt, setSelectedPt] = useState<CoachBookingDto | null>(null);
@@ -97,6 +100,10 @@ export function CoachClassesPage() {
       return matchSearch && matchLevel;
     });
   }, [allStudents, allStudentsSearch, allStudentsLevelFilter]);
+
+  const filteredPtBookings = useMemo(() => {
+    return coach1on1Bookings.filter((b) => matchPtSearch(b, scheduleSearch));
+  }, [coach1on1Bookings, scheduleSearch]);
 
   const loadWeeklySessions = useCallback(async () => {
     setLoading(true);
@@ -177,23 +184,47 @@ export function CoachClassesPage() {
           TAB 1: THỜI KHÓA BIỂU DẠY KÈM PT 1-1
           ==================================================================== */}
       {activeTab === 'schedule' && (
-        <WeeklyTimetable
-          label={t("Thời khóa biểu dạy kèm PT 1-1 của tôi", "My 1:1 PT Timetable")}
-          weekStart={formatYmd(currentMonday)}
-          events={ptBookingEvents(coach1on1Bookings)}
-          loading={loading}
-          error={t(error)}
-          onRetry={() => void loadWeeklySessions()}
-          onWeekChange={(iso) => setCurrentMonday(getWeekMonday(parseISODate(iso)))}
-          onEventClick={handleEventClick}
-          emptyLabel={t("Tuần này bạn chưa có buổi kèm PT 1-1 nào.", "You have no 1:1 sessions scheduled this week.")}
-          legendNote={t("Bấm vào buổi kèm để xem chi tiết học viên hoặc hủy lịch", "Click a session to view trainee details or cancel")}
-          legend={[
-            { tone: 'mine', label: t('Kèm riêng 1:1') },
-            { tone: 'past', label: t('Đã qua') },
-            { tone: 'cancelled', label: t('Đã hủy') },
-          ]}
-        />
+        <div className="coach-schedule-section">
+          <div className="coach-schedule-filter-bar" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+            <div style={{ flex: '1 1 320px', maxWidth: 460 }}>
+              <input
+                type="search"
+                className="portal-input"
+                style={{ width: '100%' }}
+                placeholder={t("Tìm theo tên học viên, mã thẻ, SĐT hoặc email…", "Search by student name, card code, phone or email…")}
+                aria-label={t("Tìm kiếm buổi tập PT 1-1", "Search 1:1 PT sessions")}
+                value={scheduleSearch}
+                onChange={(e) => setScheduleSearch(e.target.value)}
+              />
+            </div>
+            {scheduleSearch.trim() && (
+              <span className="coach-students-count" style={{ fontSize: '0.88rem', color: 'var(--sol-text-muted)' }}>
+                {t("Kết quả tìm kiếm: ", "Search results: ")}<strong>{filteredPtBookings.length} {t("buổi tập", "sessions")}</strong>
+              </span>
+            )}
+          </div>
+          <WeeklyTimetable
+            label={t("Thời khóa biểu dạy kèm PT 1-1 của tôi", "My 1:1 PT Timetable")}
+            weekStart={formatYmd(currentMonday)}
+            events={ptBookingEvents(filteredPtBookings)}
+            loading={loading}
+            error={t(error)}
+            onRetry={() => void loadWeeklySessions()}
+            onWeekChange={(iso) => setCurrentMonday(getWeekMonday(parseISODate(iso)))}
+            onEventClick={handleEventClick}
+            emptyLabel={
+              scheduleSearch.trim()
+                ? t("Không tìm thấy buổi kèm PT 1-1 nào của học viên phù hợp trong tuần này.", "No matching 1:1 PT sessions found for this student in this week.")
+                : t("Tuần này bạn chưa có buổi kèm PT 1-1 nào.", "You have no 1:1 sessions scheduled this week.")
+            }
+            legendNote={t("Bấm vào buổi kèm để xem chi tiết học viên hoặc hủy lịch", "Click a session to view trainee details or cancel")}
+            legend={[
+              { tone: 'mine', label: t('Kèm riêng 1:1') },
+              { tone: 'past', label: t('Đã qua') },
+              { tone: 'cancelled', label: t('Đã hủy') },
+            ]}
+          />
+        </div>
       )}
 
       {selectedPt && (

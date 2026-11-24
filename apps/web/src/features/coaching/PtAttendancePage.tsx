@@ -10,6 +10,7 @@ import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import type { CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { getPtAttendance, markPtAttended, unmarkPtAttended, type PtOutcome } from './ptAttendanceApi';
+import { matchPtSearch } from './ptSearch';
 
 const FILTERS: PtOutcome[] = ['ALL', 'ATTENDED', 'MISSED', 'UPCOMING'];
 
@@ -31,6 +32,7 @@ function outcomeOf(booking: CoachBookingDto, now: Date): Exclude<PtOutcome, 'ALL
   return hasStarted(booking, now) ? 'IN_PROGRESS' : 'UPCOMING';
 }
 
+
 /** Attendance of 1:1 sessions for coaches (their own) and for the front desk and managers (everyone's). */
 export function PtAttendancePage() {
   const { t } = useI18n();
@@ -39,6 +41,7 @@ export function PtAttendancePage() {
   const [from, setFrom] = useState(addDays(today, -13));
   const [to, setTo] = useState(today);
   const [filter, setFilter] = useState<PtOutcome>('ALL');
+  const [search, setSearch] = useState('');
   const [rows, setRows] = useState<CoachBookingDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | Error | null>(null);
@@ -94,7 +97,11 @@ export function PtAttendancePage() {
   }, []);
   const counts = { ATTENDED: 0, MISSED: 0, UPCOMING: 0, IN_PROGRESS: 0 };
   for (const row of rows) counts[outcomeOf(row, now)] += 1;
-  const visible = rows.filter((row) => filter === 'ALL' || outcomeOf(row, now) === filter);
+  const visible = rows.filter((row) => {
+    const matchFilter = filter === 'ALL' || outcomeOf(row, now) === filter;
+    const matchSearch = matchPtSearch(row, search);
+    return matchFilter && matchSearch;
+  });
 
   const filterLabel: Record<PtOutcome | 'IN_PROGRESS', string> = {
     ALL: t('Tất cả', 'All'),
@@ -151,18 +158,35 @@ export function PtAttendancePage() {
         </div>
       </div>
       {invalidRange && <div className="portal-alert" role="alert">{t('Ngày bắt đầu phải trước ngày kết thúc.', 'The start date must be before the end date.')}</div>}
-      <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo kết quả', 'Filter by outcome')} style={{ marginTop: 16 }}>
-        {FILTERS.map((value) => (
-          <button key={value} type="button" role="tab" aria-selected={filter === value}
-            className={`portal-tab ${filter === value ? 'active' : ''}`} onClick={() => setFilter(value)}>
-            {filterLabel[value]}{value !== 'ALL' ? ` (${counts[value]})` : ` (${rows.length})`}
-          </button>
-        ))}
+      <div className="pt-filter-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12, marginTop: 16 }}>
+        <div className="portal-tabs" role="tablist" aria-label={t('Lọc theo kết quả', 'Filter by outcome')} style={{ margin: 0 }}>
+          {FILTERS.map((value) => (
+            <button key={value} type="button" role="tab" aria-selected={filter === value}
+              className={`portal-tab ${filter === value ? 'active' : ''}`} onClick={() => setFilter(value)}>
+              {filterLabel[value]}{value !== 'ALL' ? ` (${counts[value]})` : ` (${rows.length})`}
+            </button>
+          ))}
+        </div>
+        <div className="pt-search-box" style={{ display: 'flex', alignItems: 'center', minWidth: 260, flex: '1 1 320px', maxWidth: 460 }}>
+          <input
+            type="search"
+            className="portal-input"
+            style={{ width: '100%' }}
+            placeholder={t("Tìm theo tên học viên, mã thẻ, SĐT hoặc email…", "Search by student name, card code, phone or email…")}
+            aria-label={t("Tìm theo tên học viên, mã thẻ, SĐT hoặc email", "Search by student name, card code, phone or email")}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
       </div>
       {error && <div className="portal-alert" role="alert"><strong>{t(error)}</strong> <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null || loading} onClick={() => void load()}>{t('Thử lại', 'Retry')}</button></div>}
       {busyId !== null && <p role="status">{t('Đang cập nhật điểm danh…', 'Updating attendance…')}</p>}
       {loading && rows.length === 0 ? <LoadingSkeleton label={t('Đang tải điểm danh', 'Loading attendance')} /> : visible.length === 0 ? (
-        <div className="portal-card" role="status">{t('Không có buổi PT nào trong khoảng này.', 'No 1:1 sessions in this range.')}</div>
+        <div className="portal-card" role="status">
+          {search.trim()
+            ? t('Không tìm thấy học viên phù hợp.', 'No matching student found.')
+            : t('Không có buổi PT nào trong khoảng này.', 'No 1:1 sessions in this range.')}
+        </div>
       ) : (
         <ul className="stack" style={{ listStyle: 'none', padding: 0 }} aria-label={t('Danh sách buổi PT', '1:1 sessions')}>
           {visible.map((row) => {
@@ -172,7 +196,18 @@ export function PtAttendancePage() {
                 style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <div>
                   <strong>{formatCenterDate(row.bookingDate)} · {row.startTime.slice(0, 5)}–{row.endTime.slice(0, 5)}</strong>
-                  <div>{t('Hội viên', 'Member')}: {row.memberName}{!isCoach && <> · {t('HLV', 'Coach')}: {row.coachName}</>}</div>
+                  <div>
+                    {t('Hội viên', 'Member')}: <strong>{row.memberName}</strong>
+                    {row.membershipCode ? <span className="muted" style={{ marginLeft: 6 }}>({row.membershipCode})</span> : row.memberId ? <span className="muted" style={{ marginLeft: 6 }}>(#{row.memberId})</span> : null}
+                    {!isCoach && <> · {t('HLV', 'Coach')}: {row.coachName}</>}
+                  </div>
+                  {(row.memberPhone || row.memberEmail) && (
+                    <div className="muted" style={{ fontSize: '0.82rem', marginTop: 2 }}>
+                      {row.memberPhone}
+                      {((row.memberPhone) && (row.memberEmail)) ? ' · ' : ''}
+                      {row.memberEmail}
+                    </div>
+                  )}
                   {row.gateCheckinAt && (
                     <span className="badge badge-info pt-gate-tag">{t(`Đã check-in ${formatCenterTime(row.gateCheckinAt)}`, `Checked in ${formatCenterTime(row.gateCheckinAt)}`)}</span>
                   )}

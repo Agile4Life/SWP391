@@ -150,10 +150,10 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
               <tr>
                 <th scope="col">{t("Học viên")}</th>
                 <th scope="col">{t("Mục tiêu")}</th>
-                <th scope="col">{t("Thời gian")}</th>
-                <th scope="col">{t("Bài tập")}</th>
-                <th scope="col">{t("Trạng thái")}</th>
-                <th scope="col">{t("Thao tác")}</th>
+                <th scope="col" style={{ whiteSpace: 'nowrap' }}>{t("Thời gian")}</th>
+                <th scope="col" style={{ whiteSpace: 'nowrap', textAlign: 'center' }}>{t("Bài tập")}</th>
+                <th scope="col" style={{ whiteSpace: 'nowrap' }}>{t("Trạng thái")}</th>
+                <th scope="col" className="actions" style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>{t("Thao tác")}</th>
               </tr>
             </thead>
             <tbody>
@@ -162,27 +162,27 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                 return (
                   <tr data-i18n-managed key={plan.id}>
                     <td className="saved-plan-member"><strong>{plan.memberName ?? `#${plan.memberId}`}</strong>{plan.coachName && <div className="muted">{t("HLV")}: {plan.coachName}</div>}</td>
-                    <td>{plan.goal || <span className="muted">—</span>}</td>
-                    <td>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</td>
-                    <td>{plan.items?.length ?? 0}</td>
-                    <td>
+                    <td style={{ minWidth: '180px' }}>{plan.goal || <span className="muted">—</span>}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</td>
+                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{plan.items?.length ?? 0}</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <span className={`badge ${plan.status === 'active' ? 'badge-success' : plan.status === 'superseded' ? 'badge-neutral' : 'badge-warning'}`}>
                         {t(STATUS_LABEL[plan.status]) || plan.status}
                       </span>
                     </td>
-                    <td className="actions">
-                      <div className="saved-plan-actions">
-                      <button type="button" className="btn-secondary btn-sm" onClick={() => setResultPlan(plan)}>{t("Kết quả")}</button>
+                    <td className="actions" style={{ whiteSpace: 'nowrap', width: '1%' }}>
+                      <div className="saved-plan-actions" style={{ display: 'inline-flex', flexWrap: 'nowrap', gap: '8px' }}>
+                      <button type="button" className="btn-secondary btn-sm" style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setResultPlan(plan)}>{t("Kết quả")}</button>
                       {plan.status === 'superseded' && (
-                        <button data-i18n-managed type="button" className="btn-primary btn-sm" disabled={busyId !== null} onClick={() => void reapply(plan)}>
+                        <button data-i18n-managed type="button" className="btn-primary btn-sm" style={{ whiteSpace: 'nowrap', flexShrink: 0 }} disabled={busyId !== null} onClick={() => void reapply(plan)}>
                           {t("Áp dụng lại")}</button>
                       )}
                       {editable && (
-                        <button data-i18n-managed type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => openEditor(plan)}>
+                        <button data-i18n-managed type="button" className="btn-secondary btn-sm" style={{ whiteSpace: 'nowrap', flexShrink: 0 }} disabled={busyId !== null} onClick={() => openEditor(plan)}>
                           {t("Sửa")}</button>
                       )}
                       {(editable || plan.status === 'superseded') && (
-                        <button data-i18n-managed type="button" className="btn-danger btn-sm" disabled={busyId !== null} onClick={() => void remove(plan)}>
+                        <button data-i18n-managed type="button" className="btn-danger btn-sm" style={{ whiteSpace: 'nowrap', flexShrink: 0 }} disabled={busyId !== null} onClick={() => void remove(plan)}>
                           {t("Xóa")}</button>
                       )}
                       </div>
