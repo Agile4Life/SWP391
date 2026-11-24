@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 
+/** Tên các biểu tượng SVG có sẵn của portal. */
 export type PortalIconName = 'board' | 'package' | 'calendar' | 'card' | 'receipt' | 'users' | 'check' | 'scan' | 'catalog' | 'chart' | 'profile' | 'home' | 'logout' | 'search' | 'menu' | 'arrow' | 'building' | 'bell' | 'support' | 'inbox' | 'file' | 'feedback' | 'dumbbell' | 'star' | 'history' | 'clock' | 'refresh' | 'bag' | 'box' | 'cube' | 'compass' | 'badge' | 'shield';
 
 const paths: Record<PortalIconName, string> = {
@@ -38,6 +39,7 @@ const paths: Record<PortalIconName, string> = {
   compass: 'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z M16.24 7.76l-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12Z M12 12h.01',
 };
 
+/** Vẽ biểu tượng portal theo tên bằng SVG (nét theo màu chữ hiện tại), kích thước mặc định 20. */
 export function PortalIcon({ name, size = 20, style }: { name: PortalIconName; size?: number; style?: CSSProperties }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" style={{ display: 'block', flexShrink: 0, ...style }}>
     <path d={paths[name]} />

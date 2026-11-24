@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import type { Language } from '../../shared/i18n';
 import { getTabLabel, type PortalNavTab } from './portalNavigation';
 
+/** Props của thanh tab nhóm: nhãn trợ năng, các tab, đường dẫn hiện tại và ngôn ngữ. */
 interface PortalSectionTabsProps {
   label: string;
   tabs: PortalNavTab[];

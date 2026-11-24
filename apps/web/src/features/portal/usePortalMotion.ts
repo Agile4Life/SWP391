@@ -60,14 +60,17 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
         part.style.setProperty('--portal-part', String(Math.min(index++, MAX_PARTS)));
       });
     };
+    // Xóa đánh dấu phần con (data-reveal-part) và biến CSS của khối.
     const clearParts = (element: HTMLElement) => {
       element.querySelectorAll<HTMLElement>('[data-reveal-part]').forEach((part) => {
         delete part.dataset.revealPart;
         part.style.removeProperty('--portal-part');
       });
     };
+    // Khối đủ điều kiện reveal: không thuộc vùng loại trừ và không nằm trong một khối reveal khác.
     const eligible = (element: HTMLElement) =>
       !element.closest(EXCLUDED) && !element.parentElement?.closest(PORTAL_REVEAL_SELECTOR);
+    // Đăng ký khối vào bộ quan sát và gán chỉ số cho các phần con.
     const register = (element: HTMLElement) => {
       if (!observer || targets.has(element) || !eligible(element)) return;
       targets.add(element);
@@ -75,6 +78,7 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
       markParts(element);
       observer.observe(element);
     };
+    // Hủy đăng ký khối và trả lại trạng thái ban đầu.
     const unregister = (element: HTMLElement) => {
       if (!targets.delete(element)) return;
       observer?.unobserve(element);
@@ -83,11 +87,13 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
       element.style.removeProperty('--portal-reveal-delay');
       delete element.dataset.revealDirection;
     };
+    // Duyệt node và các node con khớp selector reveal.
     const visit = (node: Node, callback: (element: HTMLElement) => void) => {
       if (!(node instanceof HTMLElement)) return;
       if (node.matches(PORTAL_REVEAL_SELECTOR)) callback(node);
       node.querySelectorAll<HTMLElement>(PORTAL_REVEAL_SELECTOR).forEach(callback);
     };
+    // Khi khối vào/ra viewport: ra hẳn thì đặt lại và ghi hướng, vào thì hiện lần lượt theo thứ tự trên-xuống kèm độ trễ so le.
     const onIntersect: IntersectionObserverCallback = (entries) => {
       const entering: IntersectionObserverEntry[] = [];
       entries.forEach((entry) => {
@@ -108,6 +114,7 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
           element.classList.add('is-visible');
         });
     };
+    // Cấu hình lại bộ quan sát; người dùng bật giảm chuyển động thì không đăng ký khối nào.
     const configure = () => {
       observer?.disconnect();
       observer = undefined;
@@ -116,6 +123,7 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
       observer = new IntersectionObserver(onIntersect, { threshold: 0 });
       root.querySelectorAll<HTMLElement>(PORTAL_REVEAL_SELECTOR).forEach(register);
     };
+    // Khối nhận focus bàn phím mà chưa hiện thì hiện ngay không trễ.
     const onFocus = (event: FocusEvent) => {
       if (!(event.target instanceof HTMLElement)) return;
       const element = event.target.closest<HTMLElement>('.portal-reveal-ready');

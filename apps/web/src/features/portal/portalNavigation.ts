@@ -15,6 +15,7 @@ export const ROLE_LABELS_EN: Record<UserSession['role'], string> = {
   MANAGER: 'Center Manager',
 };
 
+/** Nhãn vai trò theo ngôn ngữ. */
 export function getRoleLabel(role: UserSession['role'], lang: Language = 'vi'): string {
   return lang === 'en' ? ROLE_LABELS_EN[role] : ROLE_LABELS[role];
 }
@@ -22,6 +23,10 @@ export function getRoleLabel(role: UserSession['role'], lang: Language = 'vi'): 
 /** Một tab con của mục sidebar gộp; mỗi tab vẫn là một route riêng nên URL cũ không đổi. */
 export interface PortalNavTab { to: string; label: string; en: string }
 
+/**
+ * Một mục điều hướng của portal: đường dẫn, nhãn, biểu tượng, các vai trò được thấy và tùy chọn gộp nhiều màn
+ * con.
+ */
 export interface PortalNavItem {
   to: string;
   label: string;
@@ -85,6 +90,7 @@ export function isPortalNavActive(item: Pick<PortalNavItem, 'to' | 'tabs'>, path
   return portalNavRoutes(item).some(route => pathname === route || pathname.startsWith(`${route}/`));
 }
 
+/** Nhãn của một tab con theo ngôn ngữ. */
 export function getTabLabel(tab: PortalNavTab, lang: Language = 'vi'): string {
   return lang === 'en' ? tab.en : tab.label;
 }
@@ -115,6 +121,7 @@ export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/member/profile': 'Member profile',
 };
 
+/** Nhãn mục điều hướng theo ngôn ngữ (tiếng Anh tra bảng, không có thì dùng nhãn tiếng Việt). */
 export function getNavLabel(to: string, fallbackVi: string, lang: Language = 'vi'): string {
   if (lang === 'en') {
     return PORTAL_NAV_EN_LABELS[to] ?? fallbackVi;
@@ -167,6 +174,7 @@ export const MOBILE_PRIMARY_NAV_EN_LABELS: Record<string, string> = {
   '/staff/requests': 'Requests',
 };
 
+/** Nhãn ngắn của mục điều hướng trên di động theo ngôn ngữ. */
 export function getMobileNavLabel(to: string, fallbackVi: string, lang: Language = 'vi'): string {
   if (lang === 'en') {
     return MOBILE_PRIMARY_NAV_EN_LABELS[to] ?? fallbackVi;
