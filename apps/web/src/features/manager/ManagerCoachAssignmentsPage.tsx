@@ -31,9 +31,12 @@ function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['members
 }
 
 /** Mô tả lịch của một phân công: hạn giáo án hoặc buổi kế tiếp. */
-function assignmentSchedule(student: CoachAssignmentStudent): string | null {
-  if (student.assignmentType === 'TRAINING_PLAN' && student.endDate) return staffText(`Ngày kết thúc giáo án: ${formatCenterDate(student.endDate)}`, `Training plan end date: ${formatCenterDate(student.endDate)}`);
-  return student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), student.nextSession) : null;
+function assignmentSchedule(student: CoachAssignmentStudent, compact = false): string | null {
+  if (student.assignmentType === 'TRAINING_PLAN') {
+    const date = formatCenterDate(student.endDate, '');
+    return date ? (compact ? date : staffText(`Ngày kết thúc giáo án: ${date}`, `Training plan end date: ${date}`)) : null;
+  }
+  return student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), '') || null : null;
 }
 
 /** Phân công của một hội viên (gom mọi phân công của hội viên đó). */
@@ -447,7 +450,7 @@ export function ManagerCoachAssignmentsPage() {
                 <th>{t("HLV phụ trách")}</th>
                 <th>{t("Hình thức")}</th>
                 <th>{t("Chi tiết & Mục tiêu")}</th>
-                <th>{t('Ngày kết thúc giáo án / Lịch PT', 'Plan end date / PT session')}</th>
+                <th>{t('Ngày kết thúc / Giờ bắt đầu PT', 'Plan end date / PT start time')}</th>
                 <th>{t("Thao tác")}</th>
               </tr>
             </thead>
@@ -477,7 +480,7 @@ export function ManagerCoachAssignmentsPage() {
                     </span>
                   </td>
                   <td>{item.assignmentType === 'TRAINING_PLAN' ? item.detail : '—'} <MembershipIssueTag issue={item.membershipIssue} /></td>
-                  <td>{assignmentSchedule(item) || t('Đang hoạt động')}</td>
+                  <td>{assignmentSchedule(item, true) || t('Chưa có thông tin', 'Not available')}</td>
                   <td>
                     <div className="coach-student-actions">
                       <button

@@ -236,6 +236,20 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(host.querySelector('.coach-table-container')).toBeTruthy();
     expect(host.textContent).toContain('MEM-001');
     expect(host.textContent).toContain('MEM-002');
+    expect(host.textContent).toContain('Ngày kết thúc / Giờ bắt đầu PT');
+    const rows = [...host.querySelectorAll('.coach-table tbody tr')];
+    expect(rows.find(row => row.textContent?.includes('MEM-001'))?.querySelectorAll('td')[4]?.textContent).toBe('09:00 10/11/2026');
+    expect(rows.find(row => row.textContent?.includes('MEM-002'))?.querySelectorAll('td')[4]?.textContent).toBe('05/12/2026');
+  });
+
+  it('shows unavailable schedule data without claiming the assignment is active', async () => {
+    const coach = mockData.coaches[0];
+    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({
+      ...mockData, coaches: [{ ...coach, students: [{ ...coach.students[0], nextSession: null }] }],
+    });
+    await renderComponent();
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Bảng danh sách'))?.click(); });
+    expect(host.querySelector('.coach-table tbody tr td:nth-child(5)')?.textContent).toBe('Chưa có thông tin');
   });
 
   it('shows a member once per coach even when they hold several assignments', async () => {
