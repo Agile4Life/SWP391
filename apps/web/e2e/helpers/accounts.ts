@@ -3,6 +3,7 @@ export const API_URL = process.env.E2E_API_URL ?? 'http://localhost:8080';
 export const API = `${API_URL}/api/v1`;
 export const DEMO_PASSWORD = 'Demo@12345';
 
+// Khóa các tài khoản kiểm thử theo vai trò.
 export type RoleKey = 'admin' | 'manager' | 'staff' | 'coach' | 'coachYoga' | 'an' | 'binh' | 'chi' | 'dung' | 'em' | 'phuc' | 'lan' | 'hieu' | 'khoa' | 'giang';
 
 export const ACCOUNTS: Record<RoleKey, { username: string; password: string; role: string }> = {
@@ -23,4 +24,5 @@ export const ACCOUNTS: Record<RoleKey, { username: string; password: string; rol
   khoa: { username: 'khoa@demo.sol.vn', password: DEMO_PASSWORD, role: 'MEMBER' }, // gói đã hủy
 };
 
+// Đường dẫn file lưu phiên đăng nhập của một tài khoản.
 export const authFile = (key: RoleKey) => `e2e/.auth/${key}.json`;

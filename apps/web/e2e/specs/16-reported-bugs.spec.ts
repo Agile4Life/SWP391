@@ -6,6 +6,7 @@ import { contextFor, memberWithPlan, PACKAGES } from '../helpers/session';
 test.describe.configure({ mode: 'serial' });
 
 const COACH_MAI = 5; // HLV Yoga (mai@demo)
+// Ngày YYYY-MM-DD theo giờ Việt Nam, lệch offset ngày so với hôm nay.
 const isoDay = (offset: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(Date.now() + offset * 86_400_000));
 
 test.describe('Lỗi 1 — nút "Quản lý lịch PT" mở đúng trang lịch PT', () => {
@@ -137,6 +138,7 @@ test.describe('Lỗi 6 — gói Trải nghiệm nâng được lên mọi gói t
 });
 
 test.describe('Lỗi 7 — lễ tân và HLV chủ động nhắn tin cho hội viên', () => {
+  // Gửi một tin nhắn vào hội thoại qua API bằng token.
   const send = (token: string, conversationId: number, message: string) =>
     apiWith(token, 'POST', `/chat/conversations/${conversationId}/messages`, { clientMessageId: crypto.randomUUID(), message });
 

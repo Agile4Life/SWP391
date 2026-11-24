@@ -34,6 +34,7 @@ test.describe('HLV: soạn giáo án', () => {
     await openPlanStep(page, 2);
     await expect(page.locator('#exercise-name-input')).toBeVisible();
     await page.waitForTimeout(1000);
+    // Số thẻ bài tập đang hiển thị.
     const total = async () => page.locator('.exercise-item-card').count();
     const before = await total();
     expect(before).not.toBeNaN();

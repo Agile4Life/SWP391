@@ -2,6 +2,7 @@ import { test, expect } from '../fixtures';
 import { API, authFile, type RoleKey } from '../helpers/accounts';
 import { sessionFor } from '../helpers/api';
 
+// Các vai trò được kiểm tra phân quyền.
 type R = 'member' | 'staff' | 'coach' | 'manager' | 'admin';
 const KEY: Record<R, RoleKey> = { member: 'an', staff: 'staff', coach: 'coach', manager: 'manager', admin: 'admin' };
 const HOME: Record<R, RegExp> = { member: /member\/dashboard/, staff: /staff\/reception/, coach: /coach\/pt-attendance/, manager: /manager\/reports/, admin: /admin\/users/ };
@@ -60,6 +61,7 @@ const API_MATRIX: [string, string, R[]][] = [
 test.describe('Phân quyền API: backend luôn kiểm tra vai trò (ẩn menu không phải là bảo mật)', () => {
   for (const [method, path, allowed] of API_MATRIX) {
     test(`${method} ${path}`, async () => {
+      // Gọi API (có hoặc không có token) và trả về mã trạng thái.
       const call = async (token?: string) => {
         const res = await fetch(`${API}${path}`, { method, headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: method === 'GET' ? undefined : '{}' });
         return res.status;

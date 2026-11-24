@@ -9,6 +9,7 @@ import { apiWith, createMemberWithKycPending, type FreshMember } from '../helper
 test.describe.configure({ mode: 'serial' });
 
 let member: FreshMember;
+// Tạo storage state (token và phiên) cho hội viên mới.
 const storageFor = (m: FreshMember) => ({
   cookies: [],
   origins: [{

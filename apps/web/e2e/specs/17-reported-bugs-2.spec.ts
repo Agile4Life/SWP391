@@ -9,6 +9,7 @@ import { contextFor, memberWithPlan, PACKAGES } from '../helpers/session';
 test.describe.configure({ mode: 'serial' });
 
 const COACH_MAI = 5; // HLV Yoga (mai@demo)
+// Ngày YYYY-MM-DD theo giờ Việt Nam, lệch offset ngày so với hôm nay.
 const isoDay = (offset: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(Date.now() + offset * 86_400_000));
 
 test.describe('Mục 4 — nâng cấp gói: chỉ gói mới còn hoạt động', () => {
