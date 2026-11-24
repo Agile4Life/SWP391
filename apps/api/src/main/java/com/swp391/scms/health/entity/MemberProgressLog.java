@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/** Bảng member_progress_logs: một số đo cơ thể của hội viên (tên chỉ số, giá trị, đơn vị, người ghi, thời điểm). */
 @Entity
 @Table(name = "member_progress_logs")
 public class MemberProgressLog {

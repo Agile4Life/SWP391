@@ -7,6 +7,8 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 /**
+ * Dữ liệu ghi một số đo: hội viên (tùy chọn), tên chỉ số, giá trị và đơn vị.
+ *
  * Request DTO for recording a health metric via POST /api/v1/health/metrics (SCRUM-119).
  */
 public record HealthMetricCreateDto(

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+/** Doanh thu một ngày: ngày, tổng tiền thực thu và số giao dịch. */
 @Schema(description = "Báo cáo doanh thu tài chính theo từng ngày")
 public class DailyRevenueDto {
 
@@ -16,8 +17,10 @@ public class DailyRevenueDto {
     @Schema(description = "Số lượng giao dịch thành công trong ngày", example = "12")
     private int transactionCount;
 
+    /** Constructor rỗng cho Jackson. */
     public DailyRevenueDto() {}
 
+    /** Tạo dòng doanh thu theo ngày. */
     public DailyRevenueDto(LocalDate date, BigDecimal revenue, int transactionCount) {
         this.date = date;
         this.revenue = revenue;

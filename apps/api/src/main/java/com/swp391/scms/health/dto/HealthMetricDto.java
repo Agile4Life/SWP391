@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/** Một số đo trả cho client: id, tên chỉ số, giá trị, đơn vị, người ghi và thời điểm ghi. */
 public record HealthMetricDto(
     Long id,
     @NotBlank(message = "{validation.health.metric_name.not_blank}")

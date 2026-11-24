@@ -18,6 +18,10 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * Nghiệp vụ chỉ số cơ thể (tính năng đã ngừng): cân nặng, chiều cao, BMI, mỡ, cơ, vòng eo. Kiểm tra quyền theo
+ * vai trò, quyền lợi theo hạng gói và tự tính BMI.
+ */
 @Service
 public class HealthMetricService {
 
@@ -27,6 +31,7 @@ public class HealthMetricService {
 
     private java.time.Clock clock = java.time.Clock.system(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
 
+    /** Spring tiêm Clock để test có thể cố định thời gian. */
     @org.springframework.beans.factory.annotation.Autowired
     void useClock(java.time.Clock clock) { this.clock = clock; }
 
@@ -37,6 +42,7 @@ public class HealthMetricService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.coaching.service.CoachMemberAccess coachMemberAccess;
 
+    /** Nhận repository số đo, hội viên và người dùng. */
     public HealthMetricService(MemberProgressLogRepository progressLogRepository,
                                MemberRepository memberRepository,
                                UserRepository userRepository) {
@@ -45,6 +51,7 @@ public class HealthMetricService {
         this.userRepository = userRepository;
     }
 
+    /** Lịch sử số đo: hội viên chỉ xem của mình; HLV chỉ xem học viên mình phụ trách; quản lý xem tất cả. */
     @Transactional(readOnly = true)
     public List<HealthMetricDto> getMetrics(Long memberId, Long currentUserId, String currentUserRole) {
         if (!("MEMBER".equals(currentUserRole) || isCoach(currentUserRole) || isManager(currentUserRole)))
@@ -63,6 +70,8 @@ public class HealthMetricService {
     }
 
     /**
+     * Số đo của chính hội viên, cũ nhất trước (để vẽ biểu đồ).
+     *
      * Returns member's own health metrics ordered ascending by recordedAt for Line Chart rendering (SCRUM-119).
      */
     @Transactional(readOnly = true)
@@ -75,6 +84,10 @@ public class HealthMetricService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Thêm một số đo: kiểm tra quyền, tên chỉ số, đơn vị và quyền lợi theo hạng gói; khi đo cân nặng hoặc chiều
+     * cao thì tự tính và lưu thêm BMI.
+     */
     @Transactional
     public HealthMetricDto addMetric(Long memberId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
         ensureCanModify(memberId, currentUserId, currentUserRole, true);
@@ -103,6 +116,9 @@ public class HealthMetricService {
     }
 
     /**
+     * Thêm nhiều số đo của một lần đánh giá trong cùng transaction: không cho gửi BMI (được tự tính), mỗi chỉ
+     * số chỉ một lần; sau đó tính BMI một lần từ chiều cao và cân nặng mới nhất.
+     *
      * Records several measurements of one assessment atomically. BMI cannot be submitted: it is derived once from the
      * resulting height and weight, so a batch with both never leaves an intermediate BMI behind.
      */
@@ -147,6 +163,10 @@ public class HealthMetricService {
         return saved.stream().map(this::toDto).toList();
     }
 
+    /**
+     * Tính BMI từ chiều cao/cân nặng (lấy giá trị vừa đo, thiếu thì lấy lần đo gần nhất) và lưu thành một số đo
+     * BMI nếu hợp lệ.
+     */
     private void recordAutoCalculatedBmi(Member member, User recordedBy, java.time.LocalDateTime recordedAt,
                                          String updatedMetricName, java.math.BigDecimal updatedValue) {
         if (member == null || member.getUserId() == null) return;
@@ -178,6 +198,7 @@ public class HealthMetricService {
         }
     }
 
+    /** Sửa một số đo của hội viên (tên, giá trị, đơn vị) sau khi kiểm tra quyền và đơn vị. */
     @Transactional
     public HealthMetricDto updateMetric(Long memberId, Long metricId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
         ensureCanModify(memberId, currentUserId, currentUserRole, false);
@@ -196,6 +217,7 @@ public class HealthMetricService {
         return toDto(progressLogRepository.save(log));
     }
 
+    /** Xóa một số đo của hội viên sau khi kiểm tra quyền. */
     @Transactional
     public void deleteMetric(Long memberId, Long metricId, Long currentUserId, String currentUserRole) {
         ensureCanModify(memberId, currentUserId, currentUserRole, false);
@@ -203,6 +225,7 @@ public class HealthMetricService {
         progressLogRepository.delete(log);
     }
 
+    /** Ghi một số đo cho hội viên trong body (mặc định là người gọi), dùng lại logic addMetric. */
     @Transactional
     public HealthMetricDto recordMetric(HealthMetricCreateDto request, Long currentUserId, String currentUserRole) {
         Long targetMemberId = request.memberId() != null ? request.memberId() : currentUserId;
@@ -212,6 +235,10 @@ public class HealthMetricService {
         return addMetric(targetMemberId, dto, currentUserId, currentUserRole);
     }
 
+    /**
+     * Quyền ghi số đo: lễ tân chỉ được thêm khi chính mình vừa check-in hội viên hôm nay; HLV và quản lý được
+     * ghi; HLV chỉ ghi cho học viên mình phụ trách, trừ lần đánh giá đầu tiên.
+     */
     private void ensureCanModify(Long memberId, Long currentUserId, String role, boolean append) {
         if ("RECEPTIONIST".equals(role) && append) { requireIntake(memberId, currentUserId); return; }
         if (!isCoach(role) && !isManager(role)) {
@@ -227,7 +254,12 @@ public class HealthMetricService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptions;
 
-    /** True while the member has no measurements, or only ones this coach took today (an assessment in progress). */
+    /**
+     * Đây có phải lần đánh giá đầu tiên của hội viên do HLV này thực hiện không: hội viên chưa có số đo nào,
+     * hoặc chỉ có số đo do chính HLV này ghi trong hôm nay.
+     *
+     * True while the member has no measurements, or only ones this coach took today (an assessment in progress).
+     */
     private boolean isFirstAssessmentBy(Long memberId, Long coachId) {
         if (memberId == null || coachId == null) return false;
         var member = memberRepository.findById(memberId).orElse(null);
@@ -239,7 +271,11 @@ public class HealthMetricService {
                 && row.getRecordedAt() != null && row.getRecordedAt().toLocalDate().equals(today));
     }
 
-    /** The active subscriptions of the member today. */
+    /**
+     * Các kỳ gói active đang hiệu lực hôm nay của hội viên.
+     *
+     * The active subscriptions of the member today.
+     */
     private List<com.swp391.scms.membership.entity.MembershipSubscription> currentSubscriptions(Long memberId) {
         if (subscriptions == null) return List.of();
         java.time.LocalDate today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
@@ -250,6 +286,9 @@ public class HealthMetricService {
     }
 
     /**
+     * Quyền lợi theo hạng gói: mỡ và cơ chỉ cho Platinum; gói không có đánh giá định kỳ chỉ được đánh giá ngày
+     * đầu; còn lại mỗi chu kỳ 30 ngày một lần. Hội viên không có gói thì không giới hạn.
+     *
      * Service levels (spec 2026-11-09): Body Fat and Muscle Mass only for Platinum members; Silver members get the
      * first assessment but no follow-up. Members without an active package are not restricted.
      */
@@ -278,6 +317,9 @@ public class HealthMetricService {
     }
 
     /**
+     * Mỗi chu kỳ 30 ngày chỉ một lần đánh giá: nếu đã đo vào một ngày khác trong chu kỳ thì báo lỗi kèm ngày đã
+     * đo và ngày bắt đầu chu kỳ sau (nhiều số đo trong cùng ngày tính là một lần).
+     *
      * Gold and Platinum include one follow-up assessment per 30-day cycle (spec 2026-11-09): once measurements were
      * taken on one day of the cycle, other days wait for the next cycle. Several measurements on the same day are
      * one assessment.
@@ -305,6 +347,7 @@ public class HealthMetricService {
         }
     }
 
+    /** HLV phải đang phụ trách hội viên; không kiểm tra được thì từ chối. */
     private void requireAssignedCoach(Long coachId, Long memberId) {
         if (currentCoachMembers == null) throw new ForbiddenException("FORBIDDEN", "health.metrics.forbidden_update", null,
                 "Coach member access cannot be verified.");
@@ -316,6 +359,10 @@ public class HealthMetricService {
     @org.springframework.beans.factory.annotation.Autowired
     private com.swp391.scms.attendance.repository.CenterCheckinRepository checkins;
 
+    /**
+     * Lễ tân chỉ được ghi số đo khi có lượt check-in đang mở hôm nay do chính lễ tân đó ghi nhận, và hội viên
+     * còn active.
+     */
     private void requireIntake(Long memberId, Long staffId) {
         var today = java.time.LocalDate.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
         var now = java.time.LocalDateTime.now(clock.withZone(java.time.ZoneId.of("Asia/Ho_Chi_Minh")));
@@ -334,6 +381,10 @@ public class HealthMetricService {
         }
     }
 
+    /**
+     * Kiểm tra giá trị (0,01 tới 99.999.999,99, tối đa 2 chữ số thập phân, mỡ không quá 100%) và đơn vị đúng
+     * theo chỉ số (kg, cm, %; BMI không có đơn vị). Trả đơn vị chuẩn.
+     */
     private String validatedUnit(String name, java.math.BigDecimal value, String unit) {
         String expected = switch (name) {
             case "weight", "muscle_mass" -> "kg";
@@ -352,6 +403,10 @@ public class HealthMetricService {
         return expected.isEmpty() ? null : expected;
     }
 
+    /**
+     * Tên chỉ số phải thuộc danh sách cho phép (weight, height, bmi, body_fat, muscle_mass, waist); trả tên chữ
+     * thường.
+     */
     private String validateAndNormalizeMetricName(String rawName) {
         String metricName = rawName == null ? "" : rawName.toLowerCase(Locale.ROOT);
         if (!ALLOWED_METRICS.contains(metricName)) {
@@ -361,6 +416,7 @@ public class HealthMetricService {
         return metricName;
     }
 
+    /** Lấy số đo theo id và bắt buộc thuộc đúng hội viên. */
     private MemberProgressLog findOwnedMetric(Long memberId, Long metricId) {
         MemberProgressLog log = progressLogRepository.findById(metricId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.health_metric", metricId));
@@ -371,6 +427,7 @@ public class HealthMetricService {
         return log;
     }
 
+    /** Chuyển số đo sang DTO. */
     private HealthMetricDto toDto(MemberProgressLog log) {
         return new HealthMetricDto(
                 log.getId(),
@@ -382,10 +439,12 @@ public class HealthMetricService {
         );
     }
 
+    /** Vai trò có phải quản lý không (CENTER_MANAGER hoặc MANAGER). */
     private boolean isManager(String role) {
         return "CENTER_MANAGER".equalsIgnoreCase(role) || "MANAGER".equalsIgnoreCase(role);
     }
 
+    /** Vai trò có phải HLV không. */
     private boolean isCoach(String role) {
         return "COACH".equalsIgnoreCase(role);
     }

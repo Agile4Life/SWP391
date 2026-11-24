@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/** Ảnh chụp báo cáo trả cho client: loại, khoảng ngày, dữ liệu JSON, người tạo (id, tên) và thời điểm tạo. */
 @Schema(description = "Thông tin chi tiết ảnh chụp báo cáo")
 public class ReportSnapshotDto {
 
@@ -31,6 +32,7 @@ public class ReportSnapshotDto {
     @Schema(description = "Thời điểm lưu ảnh chụp báo cáo")
     private LocalDateTime generatedAt;
 
+    /** Constructor rỗng cho Jackson. */
     public ReportSnapshotDto() {}
 
     /** Lấy giá trị trường id. */

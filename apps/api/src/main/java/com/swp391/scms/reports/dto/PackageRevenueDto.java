@@ -3,6 +3,7 @@ package com.swp391.scms.reports.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.math.BigDecimal;
 
+/** Doanh thu một gói: id và tên gói, tổng tiền, số lượt mua và tỷ trọng (%) trên tổng doanh thu gói. */
 @Schema(description = "Báo cáo doanh thu và tỷ trọng theo từng gói tập")
 public class PackageRevenueDto {
 
@@ -21,8 +22,10 @@ public class PackageRevenueDto {
     @Schema(description = "Tỷ trọng doanh thu (%) so với tổng", example = "35.5")
     private Double percentage;
 
+    /** Constructor rỗng cho Jackson. */
     public PackageRevenueDto() {}
 
+    /** Tạo dòng doanh thu theo gói. */
     public PackageRevenueDto(Long packageId, String packageName, BigDecimal revenue, int subscriptionCount, Double percentage) {
         this.packageId = packageId;
         this.packageName = packageName;

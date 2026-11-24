@@ -9,6 +9,7 @@ import org.springframework.data.repository.Repository;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/** Truy vấn báo cáo trên bảng thanh toán (chỉ đọc). */
 public interface TransactionReportRepository extends Repository<Payment, Long> {
     @Query("""
             select new com.swp391.scms.reports.dto.RecentTransactionDto(
@@ -23,6 +24,10 @@ public interface TransactionReportRepository extends Repository<Payment, Long> {
                 and p.paidAt >= :start and p.paidAt < :endExclusive
             order by p.paidAt desc, p.id desc
             """)
+    /**
+     * Các giao dịch thành công trong khoảng thời gian của hội viên chưa bị xóa, bỏ qua nạp ví (chỉ là chuyển
+     * tiền vào ví), mới nhất trước, có phân trang; kèm số hóa đơn và tên gói/lớp.
+     */
     List<RecentTransactionDto> findRecentTransactions(LocalDateTime start, LocalDateTime endExclusive,
                                                      Pageable pageable);
 }

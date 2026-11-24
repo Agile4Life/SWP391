@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 
+/** Dữ liệu lưu ảnh chụp báo cáo: loại báo cáo, khoảng ngày, dữ liệu JSON và người tạo (tùy chọn). */
 @Schema(description = "Yêu cầu lưu ảnh chụp báo cáo định kỳ")
 public class ReportSnapshotCreateDto {
 
@@ -28,8 +29,10 @@ public class ReportSnapshotCreateDto {
     @Schema(description = "ID người thực hiện tạo báo cáo (tùy chọn)", example = "1")
     private Long generatedById;
 
+    /** Constructor rỗng cho Jackson. */
     public ReportSnapshotCreateDto() {}
 
+    /** Tạo yêu cầu lưu ảnh chụp với đầy đủ trường. */
     public ReportSnapshotCreateDto(String reportType, LocalDate periodStart, LocalDate periodEnd, String data, Long generatedById) {
         this.reportType = reportType;
         this.periodStart = periodStart;

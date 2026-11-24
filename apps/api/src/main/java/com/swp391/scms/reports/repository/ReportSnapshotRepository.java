@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.List;
 
+/** Truy cập bảng report_snapshots (ảnh chụp số liệu báo cáo). */
 @Repository
 public interface ReportSnapshotRepository extends JpaRepository<ReportSnapshot, Long> {
 

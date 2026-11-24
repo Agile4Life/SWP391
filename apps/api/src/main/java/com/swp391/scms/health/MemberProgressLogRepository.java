@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/** Truy cập bảng member_progress_logs (số đo cơ thể của hội viên). */
 @Repository
 public interface MemberProgressLogRepository extends JpaRepository<MemberProgressLog, Long> {
     /**
