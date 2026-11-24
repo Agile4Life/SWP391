@@ -64,6 +64,20 @@ export function CoachTrainingPlanPage() {
   const [membersError, setMembersError] = useState<StaffMessage>('');
   const [membersAttempt, setMembersAttempt] = useState(0);
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
+  const [memberSearch, setMemberSearch] = useState('');
+
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return members;
+    const q = memberSearch.trim().toLowerCase();
+    const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+    return members.filter((m) => {
+      const name = (m.fullName ?? '').toLowerCase();
+      const nameNorm = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+      const code = (m.memberCode ?? '').toLowerCase();
+      const idStr = String(m.id);
+      return name.includes(q) || nameNorm.includes(qNorm) || code.includes(q) || idStr === q;
+    });
+  }, [members, memberSearch]);
   // Manager phải chỉ định Coach phụ trách vì Manager không có hồ sơ Coach của riêng mình
   const [coaches, setCoaches] = useState<CoachOption[]>([]);
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
@@ -582,26 +596,45 @@ export function CoachTrainingPlanPage() {
           </div>
 
           <div>
-            <label className="portal-label" htmlFor="plan-member-select">
-              {t("Học viên thụ hưởng")}</label>
-            <Select
-              id="plan-member-select"
-              className="portal-select"
-              value={String(selectedMemberId)}
-              onChange={(e) => {
-                const id = Number(e.target.value);
-                setSelectedMemberId(id);
-                setAppliedRecommendationId(undefined);
-                const m = members.find((item) => item.id === id);
-                if (m?.fitnessGoal) setPlanGoal(m.fitnessGoal);
-              }}
-            >
-              {members.map((m) => (
-                <option data-i18n-managed key={m.id} value={String(m.id)}>
-                  {m.fullName} ({m.memberCode})
-                </option>
-              ))}
-            </Select>
+            <label className="portal-label" htmlFor="plan-member-search">
+              {t("Học viên thụ hưởng", "Beneficiary student")}</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <input
+                id="plan-member-search"
+                type="search"
+                className="portal-input"
+                style={{ width: '100%' }}
+                placeholder={t("Tìm theo tên hoặc mã thẻ (VD: MEM-44)…", "Search by name or card code (e.g. MEM-44)…")}
+                aria-label={t("Tìm kiếm học viên thụ hưởng", "Search beneficiary student")}
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+              />
+              <Select
+                id="plan-member-select"
+                className="portal-select"
+                aria-label={t("Chọn học viên thụ hưởng", "Select beneficiary student")}
+                value={selectedMemberId == null ? '' : String(selectedMemberId)}
+                onChange={(e) => {
+                  const id = Number(e.target.value);
+                  setSelectedMemberId(id);
+                  setAppliedRecommendationId(undefined);
+                  const m = members.find((item) => item.id === id);
+                  if (m?.fitnessGoal) setPlanGoal(m.fitnessGoal);
+                }}
+              >
+                {filteredMembers.length === 0 ? (
+                  <option value="" disabled>
+                    {t("Không tìm thấy học viên phù hợp", "No matching student found")}
+                  </option>
+                ) : (
+                  filteredMembers.map((m) => (
+                    <option data-i18n-managed key={m.id} value={String(m.id)}>
+                      {m.fullName} ({m.memberCode})
+                    </option>
+                  ))
+                )}
+              </Select>
+            </div>
           </div>
 
           {isManager && <div>

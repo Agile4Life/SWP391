@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -8,6 +8,24 @@ import { aiApi, type MemberOption } from './aiApi';
 import { CoachHealthMetrics } from './CoachHealthMetrics';
 import './coach-training-plan.css';
 
+function matchMemberSearch(m: MemberOption, query: string): boolean {
+  if (!query) return true;
+  const q = query.trim().toLowerCase();
+  const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+
+  // 1. Tên học viên
+  const name = (m.fullName ?? '').toLowerCase();
+  const nameNorm = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
+  if (name.includes(q) || nameNorm.includes(qNorm)) return true;
+
+  // 2. Mã thẻ / mã học viên
+  const code = (m.memberCode ?? '').toLowerCase();
+  const idStr = String(m.id);
+  if (code.includes(q) || idStr === q) return true;
+
+  return false;
+}
+
 /** Health metrics tab: pick one of the coach's members, then record and review their measurements. */
 export function CoachHealthMetricsPage() {
   const { t } = useStaffI18n();
@@ -15,6 +33,7 @@ export function CoachHealthMetricsPage() {
   const hasAccess = role === 'COACH' || role === 'MANAGER';
   const [members, setMembers] = useState<MemberOption[]>([]);
   const [memberId, setMemberId] = useState<number | null>(null);
+  const [memberSearch, setMemberSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<StaffMessage>('');
   const [attempt, setAttempt] = useState(0);
@@ -34,6 +53,17 @@ export function CoachHealthMetricsPage() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [hasAccess, attempt]);
+
+  const filteredMembers = useMemo(() => {
+    return members.filter((m) => matchMemberSearch(m, memberSearch));
+  }, [members, memberSearch]);
+
+  // Tự động chuyển sang học viên đầu tiên nếu danh sách lọc không chứa học viên đang chọn
+  useEffect(() => {
+    if (filteredMembers.length > 0 && !filteredMembers.some((m) => m.id === memberId)) {
+      setMemberId(filteredMembers[0].id);
+    }
+  }, [filteredMembers, memberId]);
 
   const member = members.find((m) => m.id === memberId);
 
@@ -57,12 +87,41 @@ export function CoachHealthMetricsPage() {
       ) : (
         <>
           <div className="portal-card" style={{ marginBottom: 20, maxWidth: 520 }}>
-            <label className="portal-label" htmlFor="health-member-select">{t("Học viên thụ hưởng")}</label>
-            <Select id="health-member-select" className="portal-select" value={String(member.id)} onChange={(e) => setMemberId(Number(e.target.value))}>
-              {members.map((m) => (
-                <option data-i18n-managed key={m.id} value={String(m.id)}>{m.fullName} ({m.memberCode})</option>
-              ))}
-            </Select>
+            <label className="portal-label" htmlFor="health-member-search">{t("Học viên thụ hưởng", "Beneficiary student")}</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input
+                id="health-member-search"
+                type="search"
+                className="portal-input"
+                style={{ width: '100%' }}
+                placeholder={t("Tìm theo tên hoặc mã thẻ (VD: MEM-44)…", "Search by name or card code (e.g. MEM-44)…")}
+                aria-label={t("Tìm kiếm học viên", "Search student")}
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+              />
+              <Select
+                id="health-member-select"
+                className="portal-select"
+                aria-label={t("Chọn học viên thụ hưởng", "Select beneficiary student")}
+                value={member ? String(member.id) : ''}
+                onChange={(e) => setMemberId(Number(e.target.value))}
+              >
+                {filteredMembers.length === 0 ? (
+                  <option value="" disabled>
+                    {t("Không tìm thấy học viên phù hợp", "No matching student found")}
+                  </option>
+                ) : (
+                  filteredMembers.map((m) => (
+                    <option data-i18n-managed key={m.id} value={String(m.id)}>{m.fullName} ({m.memberCode})</option>
+                  ))
+                )}
+              </Select>
+              {memberSearch.trim() && (
+                <span style={{ fontSize: '0.82rem', color: 'var(--sol-text-muted)' }}>
+                  {t("Kết quả: ", "Results: ")}<strong>{filteredMembers.length} {t("học viên", "students")}</strong>
+                </span>
+              )}
+            </div>
           </div>
           <CoachHealthMetrics memberId={member.id} memberName={member.fullName} />
         </>

@@ -59,3 +59,20 @@ it('shows an empty state when the coach has no members and a retry when the rost
   await act(async () => root.render(<CoachHealthMetricsPage key="again" />));
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không thể tải danh sách học viên');
 });
+
+it('filters members by name or card code with search input', async () => {
+  await act(async () => root.render(<CoachHealthMetricsPage />));
+  const searchInput = host.querySelector('#health-member-search') as HTMLInputElement;
+  expect(searchInput).not.toBeNull();
+
+  // Search by code "014" -> matches Trần Thị Thu Thảo (MB-2026-014)
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(searchInput, '014');
+    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  expect(host.textContent).toContain('Trần Thị Thu Thảo');
+  expect(host.textContent).toContain('Kết quả:');
+  expect(host.textContent).toContain('1 học viên');
+});
