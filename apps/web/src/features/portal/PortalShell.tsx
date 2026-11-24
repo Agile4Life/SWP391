@@ -256,11 +256,9 @@ function PortalShellContent({ user }: { user: UserSession }) {
       setDialog('wallet');
     };
     window.addEventListener('wallet-updated', refreshWallet);
-    window.addEventListener('member-notifications-changed', refreshWallet);
     window.addEventListener('open-wallet-modal', handleOpenWalletModal);
     return () => {
       window.removeEventListener('wallet-updated', refreshWallet);
-      window.removeEventListener('member-notifications-changed', refreshWallet);
       window.removeEventListener('open-wallet-modal', handleOpenWalletModal);
     };
   }, [refreshWallet]);
