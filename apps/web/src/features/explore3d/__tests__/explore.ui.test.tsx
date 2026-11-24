@@ -152,26 +152,26 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     const bindings = resolveBindings(SOL_CENTER_SCENE, SEED_SNAPSHOT);
     renderUi(<FloorPlan2D bindings={bindings} />);
 
-    // Default active level is L1
+    // Tầng đang hoạt động mặc định là L1
     expect(getByTestId('floorplan-svg-L1')).toBeTruthy();
     expect(getByTestId('floorplan-zone-zone-l1-gym')).toBeTruthy();
 
     clickTestId('floorplan-zone-zone-l1-gym');
     expect(useExploreStore.getState().selectedId).toBe('zone-l1-gym');
 
-    // Switch to B1
+    // Chuyển sang tầng B1
     clickTestId('floorplan-tab-B1');
     expect(getByTestId('floorplan-svg-B1')).toBeTruthy();
     clickTestId('floorplan-zone-zone-b1-locker');
     expect(useExploreStore.getState().selectedId).toBe('zone-b1-locker');
 
-    // Switch to L2
+    // Chuyển sang tầng L2
     clickTestId('floorplan-tab-L2');
     expect(getByTestId('floorplan-svg-L2')).toBeTruthy();
     clickTestId('floorplan-zone-zone-l2-pt-studio');
     expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
-    // Switch to RF
+    // Chuyển sang tầng RF
     clickTestId('floorplan-tab-RF');
     expect(getByTestId('floorplan-svg-RF')).toBeTruthy();
     clickTestId('floorplan-zone-zone-rf-terrace');
@@ -191,35 +191,35 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
       </>,
     );
 
-    // LevelSwitcher switches levels
+    // LevelSwitcher chuyển đổi tầng
     clickTestId('explore3d-level-L2');
     expect(useExploreStore.getState().focusLevel).toBe('L2');
 
     clickTestId('explore3d-level-ALL');
     expect(useExploreStore.getState().focusLevel).toBe('ALL');
 
-    // LevelSwitcher switches levelMode
+    // LevelSwitcher chuyển đổi chế độ tầng (levelMode)
     clickTestId('explore3d-levelmode-exploded');
     expect(useExploreStore.getState().levelMode).toBe('exploded');
 
     clickTestId('explore3d-levelmode-solo');
     expect(useExploreStore.getState().levelMode).toBe('solo');
 
-    // ExploreToolbar switches wallMode
+    // ExploreToolbar chuyển đổi chế độ tường (wallMode)
     clickTestId('explore3d-wallmode-down');
     expect(useExploreStore.getState().wallMode).toBe('down');
 
     clickTestId('explore3d-wallmode-up');
     expect(useExploreStore.getState().wallMode).toBe('up');
 
-    // ExploreToolbar toggles viewMode (3d <-> 2d)
+    // ExploreToolbar chuyển đổi qua lại viewMode (3d <-> 2d)
     expect(useExploreStore.getState().viewMode).toBe('3d');
     clickTestId('explore3d-btn-viewmode');
     expect(useExploreStore.getState().viewMode).toBe('2d');
     clickTestId('explore3d-btn-viewmode');
     expect(useExploreStore.getState().viewMode).toBe('3d');
 
-    // Search trigger opens search modal and selecting a hit selects the node
+    // Nút tìm kiếm mở hộp thoại tìm kiếm và chọn kết quả sẽ chọn nút tương ứng
     clickTestId('explore3d-search-trigger');
     expect(useExploreStore.getState().searchOpen).toBe(true);
     clickTestId('explore3d-search-hit-zone-l1-gym');
@@ -241,26 +241,26 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     });
     expect(useExploreStore.getState().selectedId).toBe('zone-l1-gym');
 
-    // Press '3' -> switches to L2 (and selects lvl-l2)
+    // Nhấn phím '3' -> chuyển sang tầng L2 (và chọn lvl-l2)
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true, cancelable: true }));
     });
     expect(useExploreStore.getState().focusLevel).toBe('L2');
     expect(useExploreStore.getState().selectedId).toBe('lvl-l2');
 
-    // Select a zone on L2
+    // Chọn một phân khu ở tầng L2
     act(() => {
       useExploreStore.getState().selectNode('zone-l2-pt-studio');
     });
     expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
-    // Press '/' -> opens search modal
+    // Nhấn phím '/' -> mở hộp thoại tìm kiếm
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true }));
     });
     expect(useExploreStore.getState().searchOpen).toBe(true);
 
-    // Focus close button inside modal (non-input) and press Escape: closes modal ONLY, preserves selectedId
+    // Focus nút đóng trong hộp thoại (không phải ô nhập) rồi nhấn Escape: CHỈ đóng hộp thoại, giữ nguyên selectedId
     const closeBtn = container.querySelector<HTMLElement>('[data-testid="explore3d-search-close"]');
     closeBtn?.focus();
     act(() => {
@@ -269,7 +269,7 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     expect(useExploreStore.getState().searchOpen).toBe(false);
     expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
-    // Pressing Escape again with modal closed clears selectedId
+    // Nhấn Escape thêm lần nữa khi hộp thoại đã đóng sẽ xóa selectedId
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     });
@@ -315,7 +315,7 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     });
     expect(container.textContent).toContain('Tầng B1');
 
-    // Climbing from B1 onto L1 updates focusLevel AND replaces stale B1 item selection with lvl-l1
+    // Leo từ B1 lên L1 sẽ cập nhật focusLevel VÀ thay lựa chọn thiết bị B1 cũ bằng lvl-l1
     act(() => {
       useExploreStore.getState().syncWalkLevel('L1');
     });
@@ -324,7 +324,7 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     expect(container.textContent).not.toContain('Tầng B1');
     expect(container.textContent).toContain('Tầng L1');
 
-    // SelectionHighlight must render null while walkMode is active so CAD wireframes never cut across sky/rooms
+    // SelectionHighlight phải render null khi walkMode đang bật để khung dây CAD không cắt ngang bầu trời/phòng
     expect(container.querySelector('lineSegments')).toBeNull();
   });
 });

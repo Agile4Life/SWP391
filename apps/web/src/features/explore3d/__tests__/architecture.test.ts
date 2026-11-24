@@ -87,13 +87,13 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       assertValidBufferGeometry(built.slabGeometry);
       assertValidBufferGeometry(built.slabEdgeGeometry);
 
-      // Verify slab sits from -slabThickness (-0.28) to 0
+      // Kiểm tra sàn bê tông nằm từ -slabThickness (-0.28) đến 0
       built.slabGeometry.computeBoundingBox();
       const slabBox = built.slabGeometry.boundingBox!;
       expect(slabBox.min.y).toBeCloseTo(-0.28, 3);
       expect(slabBox.max.y).toBeCloseTo(0, 3);
 
-      // Verify all zones on the level have floor and border geometries at y ~ 0.015
+      // Kiểm tra tất cả phân khu trên tầng đều có hình học nền và viền ở y ~ 0.015
       expect(built.zoneFloorGeometries).toHaveLength(expectedZones.length);
       for (const zf of built.zoneFloorGeometries) {
         assertValidBufferGeometry(zf.geometry);
@@ -101,7 +101,7 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
         expect(zf.center[1]).toBeCloseTo(0.015, 3);
       }
 
-      // Verify exterior walls have valid full and lowCut geometries
+      // Kiểm tra tường ngoại thất có hình học fullGeometry và lowCutGeometry hợp lệ
       expect(built.exteriorWallsByNormal.length).toBeGreaterThanOrEqual(3);
       for (const ext of built.exteriorWallsByNormal) {
         assertValidBufferGeometry(ext.fullGeometry);
@@ -112,11 +112,11 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
         expect(lowBox.max.y).toBeLessThanOrEqual(CUTAWAY_WALL_HEIGHT + 1e-3);
       }
 
-      // Interior opaque & glass wall buckets must be valid (OUT has only exterior fence walls)
+      // Các nhóm tường nội thất đục và tường kính phải hợp lệ (khu OUT chỉ có tường rào ngoài)
       assertValidBufferGeometry(built.interiorOpaqueGeometry);
       assertValidBufferGeometry(built.glassWallGeometry);
 
-      // Interior details geometry must be non-empty and vertex-colored on all 5 levels
+      // Hình học chi tiết nội thất phải không rỗng và có màu đỉnh (vertex color) trên cả 5 tầng
       expect(built.interiorDetailsGeometry.getAttribute('position').count).toBeGreaterThan(100);
       expect(built.interiorDetailsGeometry.getAttribute('color')).toBeDefined();
     });
@@ -185,7 +185,7 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(southWall.openings.some(o => o.id === 'op-l1-main-entry')).toBe(true);
 
       const segments = splitWallIntoSegments(southWall);
-      // 1 door opening with sillHeight=0 and height=3.0 on a 4.2m wall -> left solid + header + right solid = 3 segments
+      // 1 ô cửa có sillHeight=0 và height=3.0 trên bức tường cao 4,2 m -> mảng đặc trái + dầm trên cửa + mảng đặc phải = 3 đoạn
       expect(segments).toHaveLength(3);
       expect(segments.map(s => s.kind)).toEqual(['solid', 'header', 'solid']);
 
@@ -207,7 +207,7 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       ]);
 
       const segments = splitWallIntoSegments(northWall);
-      // 2 windows -> left solid + (sill + header) + middle solid + (sill + header) + right solid = 7 segments
+      // 2 cửa sổ -> mảng đặc trái + (bệ dưới + dầm trên) + mảng đặc giữa + (bệ dưới + dầm trên) + mảng đặc phải = 7 đoạn
       expect(segments).toHaveLength(7);
       expect(segments.filter(s => s.kind === 'sill')).toHaveLength(2);
       expect(segments.filter(s => s.kind === 'header')).toHaveLength(2);
@@ -238,7 +238,7 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       const descriptors = collectSceneExteriorWallDescriptors();
       expect(descriptors.length).toBeGreaterThanOrEqual(15);
 
-      // Camera in front of South facade at [0, 42] XZ
+      // Camera đặt trước mặt đứng phía Nam tại [0, 42] trên mặt phẳng XZ
       const southCamCut = computeCutawayWallIds(descriptors, [0, 42], 'cutaway');
       expect(southCamCut.has('wall-l1-south')).toBe(true);
       expect(southCamCut.has('wall-l2-south')).toBe(true);
@@ -246,20 +246,20 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(southCamCut.has('wall-l1-west')).toBe(false);
       expect(southCamCut.has('wall-l1-east')).toBe(false);
 
-      // Camera at overview position [46, 48] XZ (South-East) cuts both South and East walls
+      // Camera ở vị trí toàn cảnh [46, 48] XZ (Đông-Nam) sẽ cắt cả tường phía Nam và tường phía Đông
       const seCamCut = computeCutawayWallIds(descriptors, [46, 48], 'cutaway');
       expect(seCamCut.has('wall-l1-south')).toBe(true);
       expect(seCamCut.has('wall-l1-east')).toBe(true);
       expect(seCamCut.has('wall-l1-north')).toBe(false);
       expect(seCamCut.has('wall-l1-west')).toBe(false);
 
-      // wallMode='up' cuts nothing; wallMode='down' cuts everything
+      // wallMode='up' không cắt tường nào; wallMode='down' cắt tất cả
       expect(computeCutawayWallIds(descriptors, [46, 48], 'up').size).toBe(0);
       expect(computeCutawayWallIds(descriptors, [46, 48], 'down').size).toBe(
         descriptors.length,
       );
 
-      // Verify exact dot threshold behavior
+      // Kiểm tra chính xác hành vi của ngưỡng tích vô hướng
       expect(computeWallCameraDot([0, 1], [0, 16], [0, 42])).toBeCloseTo(1, 5);
       expect(isWallFacingCamera([0, 1], [0, 16], [0, 42], CUTAWAY_DOT_THRESHOLD)).toBe(
         true,
@@ -281,7 +281,7 @@ describe('EXP-03 & EXP-11 Architecture, Cutaway, Materials & Lighting', () => {
       expect(computeLevelTargetY(l2, 'stacked')).toBeCloseTo(5.76, 4);
       expect(computeLevelTargetY(l2, 'exploded')).toBeCloseTo(11.76, 4);
 
-      // In solo mode focused on L1, B1 and L1 and OUT remain visible while L2 and RF are hidden
+      // Ở chế độ solo tập trung vào tầng L1, các tầng B1, L1 và OUT vẫn hiển thị còn L2 và RF bị ẩn
       expect(isLevelVisibleInMode(b1, 'solo', 'L1')).toBe(true);
       expect(isLevelVisibleInMode(l1, 'solo', 'L1')).toBe(true);
       expect(isLevelVisibleInMode(l2, 'solo', 'L1')).toBe(false);
@@ -397,7 +397,7 @@ describe('Phase 2 foliage buckets & structural stairwell cutouts', () => {
     b1SlabMesh.updateMatrixWorld(true);
     expect(downRay.intersectObject(b1SlabMesh, false).length).toBeGreaterThan(0);
 
-    // RF stairwell headhouse must use real transparent glass walls up to the canopy rather than opaque grey vertex boxes
+    // Tum cầu thang tầng RF phải dùng tường kính trong suốt thật lên tới mái che thay vì khối hộp xám đục tô màu đỉnh
     const rfWest = SOL_CENTER_SCENE.nodes['wall-rf-stair-west'] as WallNode;
     const rfEast = SOL_CENTER_SCENE.nodes['wall-rf-stair-east'] as WallNode;
     const rfSouth = SOL_CENTER_SCENE.nodes['wall-rf-stair-south'] as WallNode;
@@ -494,7 +494,7 @@ describe('Soft ray-traced gym glass, rooftop sky & street sightlines', () => {
     assertValidBufferGeometry(l2WestExt.glassGeometry!);
     assertValidBufferGeometry(l2WestExt.frameGeometry!);
 
-    // Rooftop parapets must be glass balustrades and free of eye-level opaque sign backboards
+    // Lan can tầng mái phải là lan can kính và không có bảng hiệu mặt sau đục che ngang tầm mắt
     for (const pid of [
       'wall-rf-parapet-n',
       'wall-rf-parapet-s',
@@ -520,7 +520,7 @@ describe('Soft ray-traced gym glass, rooftop sky & street sightlines', () => {
     expect(blockingPerimeterVerts).toBe(0);
     rfDetails.dispose();
 
-    // GymCrown leaves the East Rooftop Sky Deck (x > 9.5) open to the sky
+    // Mái GymCrown để mở khu Sky Deck tầng mái phía Đông (x > 9.5) hướng ra bầu trời
     const crown = buildGymCrown('dark');
     crown.glassGeometry.computeBoundingBox();
     expect(crown.glassGeometry.boundingBox!.max.x).toBeLessThanOrEqual(9.5);

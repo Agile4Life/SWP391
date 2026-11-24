@@ -34,7 +34,7 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
       expect(activities.has(act)).toBe(true);
     }
 
-    // Verify contiguous non-overlapping instance ranges
+    // Kiểm tra các khoảng chỉ số instance liên tiếp, không chồng lấn
     let expectedCursor = 0;
     for (const def of defs) {
       expect(def.instanceStartIndex).toBe(expectedCursor);
@@ -91,8 +91,7 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
       expect(p.scale[2]).toBeGreaterThan(0);
     }
 
-    // Verify dynamic movement across key activities (shuttlecock, tennis ball, swimmer, barbell squat, runner)
-    // Kiểm tra nhân vật có di chuyển giữa hai thời điểm.
+    // Kiểm tra chuyển động ở các hoạt động chính (cầu lông, bóng tennis, bơi lội, gánh tạ đòn, chạy bộ) giữa hai thời điểm.
     const checkActorMoved = (actorId: string) => {
       const a0 = partsT0.filter(p => p.actorId === actorId);
       const a1 = partsT1.filter(p => p.actorId === actorId);
@@ -134,12 +133,12 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
       focusLevel: 'ALL',
     });
 
-    // B1 has explodedOffset = -6.0, RF has explodedOffset = +12.0, L2 has explodedOffset = +6.0
+    // B1 có explodedOffset = -6.0, RF có explodedOffset = +12.0, L2 có explodedOffset = +6.0
     const l2Idx = stacked.findIndex(p => p.level === 'L2');
 
     expect(exploded[l2Idx]!.position[1] - stacked[l2Idx]!.position[1]).toBeCloseTo(6.0, 3);
 
-    // Solo mode on L1 hides all non-L1 actors by scaling them to [0, 0, 0]
+    // Chế độ solo trên tầng L1 ẩn toàn bộ nhân vật không thuộc L1 bằng cách thu nhỏ tỉ lệ về [0, 0, 0]
     const soloL1 = evaluateActorPartsAtTime(defs, 1.25, {
       scene: SOL_CENTER_SCENE,
       levelMode: 'solo',

@@ -14,7 +14,7 @@ describe('Image based lighting probe', () => {
     expect(high.enabled).toBe(true);
     expect(medium.enabled).toBe(true);
     expect(high.resolution).toBeGreaterThan(medium.resolution);
-    // The baked sky is the main ambient source now, but must stay below the sun.
+    // Bầu trời đã nướng (baked sky) hiện là nguồn sáng môi trường chính, nhưng cường độ phải thấp hơn mặt trời.
     expect(high.intensity).toBeGreaterThan(0.5);
     expect(high.intensity).toBeLessThanOrEqual(1.5);
   });

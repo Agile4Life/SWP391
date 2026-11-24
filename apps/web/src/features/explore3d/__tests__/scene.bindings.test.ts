@@ -10,7 +10,7 @@ import {
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 
 /**
- * Exact seed constants mirrored from:
+ * Các hằng số dữ liệu mẫu (seed) đối chiếu chính xác từ:
  * - `apps/api/src/main/java/com/swp391/scms/facilities/CatalogSeeder.java`
  * - `apps/api/src/main/java/com/swp391/scms/courts/CourtSeeder.java`
  */
@@ -266,7 +266,7 @@ describe('resolveBindings against CatalogSeeder & CourtSeeder constants', () => 
     const resolved = resolveBindings(SOL_CENTER_SCENE, createSeedSnapshot());
     expect(resolved.hasLiveData).toBe(true);
 
-    // 1. Standard Gym (cap 50, available, 29 equipment units)
+    // 1. Phòng Gym Tiêu chuẩn (sức chứa 50, sẵn sàng, 29 thiết bị)
     const gymZone = resolved.zones['zone-l1-gym'];
     expect(gymZone.hasLiveData).toBe(true);
     expect(gymZone.roomStatus).toBe('available');
@@ -288,7 +288,7 @@ describe('resolveBindings against CatalogSeeder & CourtSeeder constants', () => 
 
     const resolved = resolveBindings(SOL_CENTER_SCENE, snapshot);
 
-    // Slots 0..4 (items 1..5) are visible; slots 5..7 (items 6..8) are hidden
+    // Các vị trí 0..4 (thiết bị 1..5) hiển thị; các vị trí 5..7 (thiết bị 6..8) bị ẩn
     for (let i = 1; i <= 8; i++) {
       const itemBinding = resolved.items[`item-l1-run-${i}`];
       expect(itemBinding.visible).toBe(i <= 5);
@@ -307,7 +307,7 @@ describe('resolveBindings against CatalogSeeder & CourtSeeder constants', () => 
   it('computes overflowCount (+N) when live quantity exceeds scene slots', () => {
     const snapshot = createSeedSnapshot();
     const runEq = snapshot.equipment.find(e => e.code === 'EQ-RUN-01')!;
-    runEq.quantity = 12; // Scene has 8 slots -> overflow of +4
+    runEq.quantity = 12; // Cảnh có 8 vị trí -> vượt quá +4
 
     const resolved = resolveBindings(SOL_CENTER_SCENE, snapshot);
 
@@ -330,9 +330,9 @@ describe('resolveBindings against CatalogSeeder & CourtSeeder constants', () => 
 
   it('maps equipment status (active, maintenance, broken, retired) to item status and zone unit counts', () => {
     const snapshot = createSeedSnapshot();
-    snapshot.equipment.find(e => e.code === 'EQ-BIKE-01')!.status = 'maintenance'; // 6 units
-    snapshot.equipment.find(e => e.code === 'EQ-SMI-01')!.status = 'broken'; // 3 units
-    snapshot.equipment.find(e => e.code === 'EQ-LAT-01')!.status = 'retired'; // 2 units
+    snapshot.equipment.find(e => e.code === 'EQ-BIKE-01')!.status = 'maintenance'; // 6 thiết bị
+    snapshot.equipment.find(e => e.code === 'EQ-SMI-01')!.status = 'broken'; // 3 thiết bị
+    snapshot.equipment.find(e => e.code === 'EQ-LAT-01')!.status = 'retired'; // 2 thiết bị
 
     const resolved = resolveBindings(SOL_CENTER_SCENE, snapshot);
 

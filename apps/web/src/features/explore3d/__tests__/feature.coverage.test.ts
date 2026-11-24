@@ -33,7 +33,7 @@ describe('Explore 3D Member Feature Coverage', () => {
       ).toBe(true);
     }
 
-    // Also verify extended member routes mentioned in Section 10 of the plan
+    // Đồng thời kiểm tra các tuyến hội viên mở rộng được nêu ở Mục 10 của kế hoạch
     expect(reachableRoutes.has('/member/streak')).toBe(false);
     expect(reachableRoutes.has('/member/packages/checkout')).toBe(true);
     expect(reachableRoutes.has('/member/products')).toBe(false);
