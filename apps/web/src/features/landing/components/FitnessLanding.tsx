@@ -263,6 +263,10 @@ const faqs = [
   },
 ];
 
+/**
+ * Chỉ số đếm tăng dần tới giá trị cuối khi cuộn tới (hiển thị luôn giá trị cuối nếu người dùng giảm chuyển
+ * động).
+ */
 function CountUpMetric({ value, countTo, format }: { value: string; countTo: number; format: (n: number) => string }) {
   useSourceLanguage();
   const ref = useRef<HTMLElement>(null);
@@ -283,6 +287,7 @@ function CountUpMetric({ value, countTo, format }: { value: string; countTo: num
           cancelAnimationFrame(rafId);
           const start = performance.now();
           const duration = 1200;
+          // Mỗi khung hình tính giá trị đếm theo đường cong ease-out trong 1,2 giây.
           const step = (now: number) => {
             const elapsed = Math.min(1, (now - start) / duration);
             const eased = 1 - ((1 - elapsed) ** 3);
@@ -304,6 +309,7 @@ function CountUpMetric({ value, countTo, format }: { value: string; countTo: num
   return <strong ref={ref}>{display}</strong>;
 }
 
+/** Biểu tượng SVG minh họa cho từng loại dịch vụ (tạ, huấn luyện, vận động). */
 function ServiceIcon({ type }: { type: string }) {
   useSourceLanguage();
   return <svg className="fit-service-icon" viewBox="0 0 64 64" fill="none" stroke="#805e50" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -320,6 +326,7 @@ function ServiceIcon({ type }: { type: string }) {
   </svg>;
 }
 
+/** Hiệu ứng nghiêng nhẹ theo vị trí con trỏ trên thẻ (đặt biến CSS --fit-px, --fit-py). */
 const handleCardPointerMove = (event: PointerEvent<HTMLElement>) => {
   const rect = event.currentTarget.getBoundingClientRect();
   const px = (((event.clientX - rect.left) / Math.max(1, rect.width)) - 0.5) * -10;
@@ -328,11 +335,13 @@ const handleCardPointerMove = (event: PointerEvent<HTMLElement>) => {
   event.currentTarget.style.setProperty('--fit-py', `${py.toFixed(2)}px`);
 };
 
+/** Đưa thẻ về vị trí gốc khi con trỏ rời đi. */
 const handleCardPointerLeave = (event: PointerEvent<HTMLElement>) => {
   event.currentTarget.style.setProperty('--fit-px', '0px');
   event.currentTarget.style.setProperty('--fit-py', '0px');
 };
 
+/** Đọc chiều cao/cân nặng từ chuỗi hoặc số (chấp nhận dấu phẩy thập phân); không hợp lệ thì trả NaN. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function parseBmiMetric(raw: string | number | null | undefined): number {
   if (typeof raw === 'number') return Number.isFinite(raw) ? raw : Number.NaN;
@@ -343,6 +352,10 @@ export function parseBmiMetric(raw: string | number | null | undefined): number 
   return Number.isFinite(value) ? value : Number.NaN;
 }
 
+/**
+ * Tính BMI = cân nặng / chiều cao² làm tròn một chữ số; chiều cao ngoài 100–240 cm hoặc cân nặng ngoài 30–250
+ * kg thì trả null.
+ */
 // eslint-disable-next-line react-refresh/only-export-components
 export function calculateBmi(
   heightInput: string | number | null | undefined,
@@ -366,6 +379,10 @@ export function calculateBmi(
   return Number(rawBmi.toFixed(1));
 }
 
+/**
+ * Trang giới thiệu chính của SÖL Fitness: hero, manifesto, dịch vụ, mô hình cơ thể, gói tập, HLV, lợi ích và
+ * câu hỏi thường gặp.
+ */
 export function FitnessLanding() {
   const manifestoWords = sourceText('Mạnh mẽ trong phòng tạ. Linh hoạt qua từng chuyển động. Bền bỉ sau mỗi hiệp tập.').split(' ');
   useSourceLanguage();
@@ -395,6 +412,7 @@ export function FitnessLanding() {
     setActiveMuscleId(id);
   };
 
+  // Bỏ chọn nhóm cơ ngay lập tức và hủy hẹn giờ đóng.
   const clearMuscleImmediately = () => {
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current);

@@ -7,6 +7,10 @@ import { PublicLayout, RoundArrow } from './PublicLayout';
 import { CatalogStatus } from './CatalogSections';
 import { localizeSeededCatalogText, usePublicCatalog } from '../publicCatalog';
 
+/**
+ * Trang hồ sơ HLV công khai: chọn HLV theo trainerId trên URL (mặc định HLV đầu tiên) từ catalog trực tiếp, kèm
+ * ảnh chân dung và nút đặt PT theo vai trò đăng nhập.
+ */
 export function LiveTrainerProfile() {
   useSourceLanguage();
   const { trainerId } = useParams<{ trainerId?: string }>();

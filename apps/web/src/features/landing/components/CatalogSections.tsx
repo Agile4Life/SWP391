@@ -9,6 +9,7 @@ import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllus
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 
+/** Trạng thái của vùng catalog: khung chờ khi đang tải, thông báo lỗi kèm nút thử lại khi không tải được. */
 export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
   loading: boolean; retry: () => void; kind?: 'packages' | 'trainers' | 'schedule';
 }) {
@@ -21,6 +22,7 @@ export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
   </div>;
 }
 
+/** Bảng các gói tập đang bán (bỏ gói trải nghiệm), chuyển giữa nhóm ngắn hạn và dài hạn, kèm nút tham gia. */
 export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog; joinPath: string }) {
   useSourceLanguage();
   const [longTerm, setLongTerm] = useState(false);
@@ -65,6 +67,7 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
   </>;
 }
 
+/** Danh sách HLV nổi bật, chia trang hai HLV mỗi trang. */
 export function CatalogTrainers({ catalog }: { catalog: PublicCatalog }) {
   useSourceLanguage();
   const [page, setPage] = useState(0);

@@ -10,26 +10,34 @@ interface PublicClassSession {
   status: string; cancelReason: string | null; capacity: number; bookedCount: number;
 }
 
+/** Thông tin công khai của một HLV: tên, chuyên môn, giới thiệu, chứng chỉ và ảnh. */
 export interface PublicCoach {
   id: number; name: string; specialization: string | null; bio: string | null;
   certification: string | null; avatarUrl: string | null;
 }
+/** Danh mục công khai: gói tập, HLV và buổi học. */
 export interface PublicCatalog {
   packages: MembershipPackage[];
   coaches: PublicCoach[];
   sessions: PublicClassSession[];
 }
 
+/**
+ * Hook tải danh mục công khai từ /public/catalog (không dùng dữ liệu mẫu): tự tải lại mỗi 60 giây, khi tab hiện
+ * lại hoặc lấy lại focus, hủy request khi rời trang, và có hàm retry.
+ */
 export function usePublicCatalog() {
   // State riêng cho dữ liệu, lỗi và lần thử lại; không thay catalog bằng dữ liệu mẫu.
   const [catalog, setCatalog] = useState<PublicCatalog | null>(null);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // Thử tải lại bằng cách tăng số lần thử.
   const retry = useCallback(() => setAttempt(value => value + 1), []);
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
     let sequence = 0;
+    // Tải catalog; chỉ kết quả của lần gọi mới nhất được dùng, lỗi thì xóa dữ liệu cũ để UI báo lỗi.
     const load = async () => {
       const request = ++sequence;
       setError(false);
@@ -53,6 +61,7 @@ export function usePublicCatalog() {
       }
     };
     void load();
+    // Tải lại khi tab đang hiển thị.
     const refresh = () => { if (document.visibilityState === 'visible') void load(); };
     const timer = window.setInterval(refresh, 60_000);
     window.addEventListener('focus', refresh);
@@ -68,6 +77,7 @@ export function usePublicCatalog() {
   return { catalog, error, retry };
 }
 
+/** Định dạng ngày buổi học theo ngôn ngữ hiện tại (thứ, ngày/tháng); chuỗi sai thì giữ nguyên. */
 export function sessionDate(value: string) {
   const [year, month, day] = (value || '').split('-').map(Number);
   if (!year || !month || !day) return value;
@@ -91,6 +101,10 @@ const SEEDED_CATALOG_TEXT_EN: Readonly<Record<string, string>> = {
     'Swimming coach with 7 years of experience in stroke technique and aquatic endurance.',
 };
 
+/**
+ * Dịch sang tiếng Anh các tên/mô tả của dữ liệu mẫu trong catalog khi đang ở bản tiếng Anh; chuỗi khác giữ
+ * nguyên.
+ */
 export function localizeSeededCatalogText(
   value: string | null | undefined,
   lang: 'vi' | 'en' = getLanguage(),

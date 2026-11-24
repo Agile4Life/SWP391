@@ -13,6 +13,10 @@ const content = {
   programs: ['Kỹ thuật tập tạ', 'Sức mạnh toàn thân', 'Thể lực và sức bền'],
 };
 // The existing import remains stable; this section now uses a scrolling story rather than a deck.
+/**
+ * Khu giới thiệu không gian Gym theo kiểu kể chuyện khi cuộn: bước nào ở giữa màn hình thì hiện ảnh tương ứng,
+ * hỗ trợ focus bàn phím và giảm chuyển động.
+ */
 export function SportStack({ ptPath, heading }: { ptPath: string; heading?: ReactNode }) {
   useSourceLanguage();
   const sports = [{ ...MAIN_DISCIPLINE, ...content }];
@@ -29,6 +33,7 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
     let active = 0;
     let displayed = 0;
     let timer = 0;
+    // Hiện ảnh của bước được chọn và bỏ trạng thái rời.
     const show = (index: number) => {
       window.clearTimeout(timer);
       timer = 0;
@@ -38,6 +43,7 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
       });
       displayed = index;
     };
+    // Chọn bước đang xem; ảnh cũ chạy hiệu ứng rời trước khi ảnh mới vào, cuộn nhanh thì luôn chọn bước mới nhất.
     const select = (index: number) => {
       active = index;
       steps.forEach((step, i) => step.classList.toggle('is-active', i === index));
@@ -52,10 +58,12 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
       if (!timer) timer = window.setTimeout(() => show(active), 500);
     };
     let observer: IntersectionObserver | null = null;
+    // Focus bàn phím vào một bước thì chọn bước đó.
     const focus = (event: FocusEvent) => {
       const index = steps.findIndex(step => step.contains(event.target as Node));
       if (index >= 0) select(index);
     };
+    // Đo lại chiều cao header và dải quan sát ở giữa màn hình (10%).
     const measure = () => {
       const top = header ? Math.ceil(header.getBoundingClientRect().height) + 12 : 90;
       section.style.setProperty('--sport-story-top', `${top}px`);
@@ -74,6 +82,7 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
     };
     const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     if (header) resize?.observe(header);
+    // Người dùng đổi tùy chọn giảm chuyển động thì hiện lại bước hiện tại ngay.
     const motion = () => show(active);
     section.addEventListener('focusin', focus);
     preference.addEventListener('change', motion);
@@ -90,6 +99,7 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
     };
   }, [sports.length]);
 
+  // Ảnh minh họa kèm chú thích của một môn.
   const illustration = (sport: typeof sports[number]) => <>
     <LoadingImage src={sport.image} alt={sourceFormat("Ảnh minh họa không gian {0}", sport.name.toLowerCase())} loading="lazy" decoding="async" />
     <figcaption>{sourceText("Ảnh minh họa · ")}{sourceText(sport.name)}</figcaption>

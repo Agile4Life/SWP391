@@ -17,6 +17,7 @@ const links: { to: string; hash?: string; label: string; labelEn: string }[] = [
   { to: '/#packages', hash: 'packages', label: 'Gói tập', labelEn: 'Memberships' },
 ];
 
+/** Cuộn mượt tới phần tử theo id; trả false nếu không tìm thấy. */
 const scrollToSection = (targetId: string) => {
   const element = document.getElementById(targetId);
   if (!element) return false;
@@ -24,6 +25,7 @@ const scrollToSection = (targetId: string) => {
   return true;
 };
 
+/** Mũi tên tròn trang trí (thẳng hoặc chéo) cho các nút. */
 export function RoundArrow({ diagonal = false }: { diagonal?: boolean }) {
   useSourceLanguage();
   return <span className="fit-round-arrow" aria-hidden="true">
@@ -33,6 +35,10 @@ export function RoundArrow({ diagonal = false }: { diagonal?: boolean }) {
   </span>;
 }
 
+/**
+ * Khung trang công khai: header, điều hướng (đánh dấu mục đang xem), menu di động, footer, đặt tiêu đề tab,
+ * cuộn tới neo #hash và hiệu ứng xuất hiện theo component; minimal bỏ bớt phần phụ cho trang đăng nhập/đăng ký.
+ */
 export function PublicLayout({ children, minimal = false }: { children: ReactNode; minimal?: boolean }) {
   useSourceLanguage();
   const { lang, t } = useI18n();
@@ -41,6 +47,7 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
   const user = getCurrentUser();
   const root = useRef<HTMLDivElement>(null);
   useComponentReveal(root, pathname);
+  // Mục điều hướng có đang được chọn theo đường dẫn và neo hay không.
   const isNavActive = (to: string, target?: string) => {
     if (target === 'trainers') return pathname.startsWith('/trainers') || (pathname === '/' && hash === '#trainers');
     if (target) return pathname === '/' && hash === `#${target}`;
@@ -60,6 +67,7 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
       const targetId = hash.slice(1);
       let attempts = 0;
       let timerId = 0;
+      // Thử cuộn tới neo, lặp tối đa 10 lần mỗi 50ms vì nội dung có thể chưa render.
       const tryScroll = () => {
         if (scrollToSection(targetId) || attempts >= 10) return;
         attempts += 1;
@@ -153,6 +161,7 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
   </div>;
 }
 
+/** Khung trang đăng nhập/đăng ký: giới thiệu bên trái và biểu mẫu bên phải trong PublicLayout tối giản. */
 export function AuthLayout({ children, mode }: { children: ReactNode; mode: 'login' | 'register' }) {
   useSourceLanguage();
   const { lang, t } = useI18n();
