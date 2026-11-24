@@ -14,8 +14,10 @@ import {
 import { allItems, getLevelWorldY, levelOf } from '../../scene/selectors';
 import type { LevelMode } from '../../state/exploreStore';
 
+/** Mức chi tiết của hình học đồ vật: cao hoặc thấp. */
 export type ItemDetailLevel = 'high' | 'low';
 
+/** Bảng màu dùng chung của đồ vật (than chì, kim loại, hồng salmon, gỗ, đá, kính, lá cây...). */
 export const ITEM_PALETTE = {
   charcoal: '#26262a',
   charcoalDeep: '#19191c',
@@ -110,12 +112,17 @@ const SURFACE_BY_COLOR: Record<string, readonly [number, number]> = {
 };
 const DEFAULT_SURFACE: readonly [number, number] = [0.5, 0];
 
-/** Declare how a colour should shade (roughness, metalness). */
+/**
+ * Khai báo một màu sẽ được đổ bóng thế nào (độ nhám, độ kim loại); trả lại chính mã màu.
+ *
+ * Declare how a colour should shade (roughness, metalness).
+ */
 export function registerItemSurface(colorHex: string, roughness: number, metalness: number): string {
   SURFACE_BY_COLOR[colorHex] = [roughness, metalness];
   return colorHex;
 }
 
+/** Tô màu và biến đổi (vị trí, xoay, tỉ lệ) một hình học, ghi màu và thuộc tính bề mặt vào từng đỉnh. */
 function paintGeometry(
   geom: THREE.BufferGeometry,
   colorHex: string,
@@ -167,6 +174,9 @@ export const ITEM_BEVEL_MAX = 0.03;
 const ITEM_BEVEL_MIN_DIMENSION = 0.08;
 
 /**
+ * Khối hộp vát 45° ở mọi cạnh (44 tam giác); dải vát có pháp tuyến chéo riêng nên cạnh bắt sáng mảnh thay vì
+ * đường đen/trắng gắt của hộp thường, mà không tốn nhiều tam giác.
+ *
  * Box with a single 45 degree chamfer on every edge (44 triangles). The bevel
  * strips carry their own diagonal normals so edges catch a thin highlight
  * instead of the hard black/white seam of a plain box, without the ~100+
@@ -189,6 +199,7 @@ export function buildChamferBoxGeometry(
   const positions: number[] = [];
   const normals: number[] = [];
 
+  // Thêm một tam giác (tính diện tích từ ba điểm) với pháp tuyến n.
   const pushTri = (a: Vec3, b: Vec3, c: Vec3, n: Vec3) => {
     const ux = b[0] - a[0];
     const uy = b[1] - a[1];
@@ -210,6 +221,7 @@ export function buildChamferBoxGeometry(
       normals.push(nx, ny, nz);
     }
   };
+  // Thêm một hình tứ giác bằng hai tam giác cùng pháp tuyến.
   const pushQuad = (a: Vec3, b: Vec3, c: Vec3, e: Vec3, n: Vec3) => {
     pushTri(a, b, c, n);
     pushTri(a, c, e, n);
@@ -297,6 +309,7 @@ export const ITEM_HIGH_DETAIL_TRIANGLE_BUDGET = 9000;
 
 let bevelEnabled = true;
 
+/** Tạo khối hộp (w, h, d) có màu, vị trí và xoay. */
 function box(
   w: number,
   h: number,
@@ -313,6 +326,7 @@ function box(
   return paintGeometry(buildChamferBoxGeometry(w, h, d, bevel), colorHex, pos, rot);
 }
 
+/** Tạo khối trụ (bán kính trên/dưới, chiều cao) có màu, vị trí và xoay. */
 function cyl(
   rTop: number,
   rBottom: number,
@@ -330,6 +344,7 @@ function cyl(
   );
 }
 
+/** Tạo hình cầu có màu, vị trí và tỉ lệ. */
 function sphere(
   radius: number,
   colorHex: string,
@@ -347,6 +362,7 @@ function sphere(
   );
 }
 
+/** Gộp nhiều phần thành một hình học và co vừa kích thước đích (tỉ lệ đều, đáy ở y = 0, căn giữa X/Z). */
 export function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec3): THREE.BufferGeometry {
   let totalVertices = 0;
   let totalIndices = 0;
@@ -483,7 +499,11 @@ export function mergeAndFit(parts: THREE.BufferGeometry[], targetDimensions: Vec
   return merged;
 }
 
-/** Soft-edged box for upholstery, shrouds and housings. */
+/**
+ * Khối hộp bo cạnh mềm dùng cho đồ bọc, vỏ máy và thân thiết bị.
+ *
+ * Soft-edged box for upholstery, shrouds and housings.
+ */
 function roundedBox(
   w: number,
   h: number,
@@ -498,6 +518,9 @@ function roundedBox(
 }
 
 /**
+ * Ống thép uốn qua các điểm: đoạn thẳng nối bằng khúc cua bo tròn và hai đầu bán cầu — đúng dạng khung, tay lái
+ * và ray thật thay vì thanh vuông.
+ *
  * Bent steel tube through `points`: straight runs joined by rounded bends,
  * closed with hemispherical ends. This is what frames, handlebars and rails
  * are actually made of, instead of square sticks.
@@ -541,7 +564,11 @@ function tube(
   return [body, capA, capB];
 }
 
-/** Disc / wheel / weight plate whose axis runs along X (default), Y or Z. */
+/**
+ * Đĩa/bánh xe/đĩa tạ có trục theo X (mặc định), Y hoặc Z.
+ *
+ * Disc / wheel / weight plate whose axis runs along X (default), Y or Z.
+ */
 function disc(
   radius: number,
   thickness: number,
@@ -560,7 +587,11 @@ function disc(
   );
 }
 
-/** Wraps any geometry (capsule, lathe...) with a palette colour and transform. */
+/**
+ * Bọc bất kỳ hình học nào (capsule, lathe...) bằng màu bảng màu và phép biến đổi.
+ *
+ * Wraps any geometry (capsule, lathe...) with a palette colour and transform.
+ */
 function shape(
   geometry: THREE.BufferGeometry,
   colorHex: string,
@@ -577,6 +608,7 @@ function shape(
 // HIGH-DETAIL ITEM BUILDERS (36 recognizable silhouettes, <= 900 tris each)
 // ============================================================================
 
+/** Dựng hình học bản chi tiết của máy chạy bộ từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildTreadmill(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -605,6 +637,7 @@ function buildTreadmill(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của xe đạp tập đứng từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildUprightBike(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -634,6 +667,7 @@ function buildUprightBike(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của máy elliptical từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildElliptical(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -662,6 +696,7 @@ function buildElliptical(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của máy Smith từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildSmithMachine(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -695,6 +730,7 @@ function buildSmithMachine(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của máy kéo xô từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildLatPulldown(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -722,6 +758,7 @@ function buildLatPulldown(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của giá squat từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildSquatRack(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -753,6 +790,7 @@ function buildSquatRack(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của giá tạ tay từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildDumbbellRack(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
@@ -781,6 +819,7 @@ function buildDumbbellRack(): THREE.BufferGeometry {
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['dumbbell-rack']);
 }
 
+/** Dựng hình học bản chi tiết của ghế tập điều chỉnh từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildAdjustableBench(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -804,6 +843,7 @@ function buildAdjustableBench(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của máy Kinesis đa năng từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildKinesisStation(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -835,6 +875,7 @@ function buildKinesisStation(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của máy phân tích InBody từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildInbodyAnalyzer(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -860,6 +901,7 @@ function buildInbodyAnalyzer(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của sàn đấu boxing từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildBoxingRing(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
@@ -891,6 +933,7 @@ function buildBoxingRing(): THREE.BufferGeometry {
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['boxing-ring']);
 }
 
+/** Dựng hình học bản chi tiết của bao cát nặng từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildHeavyBag(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -910,6 +953,7 @@ function buildHeavyBag(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của bao tốc độ từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildSpeedBag(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -927,6 +971,7 @@ function buildSpeedBag(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của sân cầu lông từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildBadmintonCourt(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -952,6 +997,7 @@ function buildBadmintonCourt(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của sân tennis từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildTennisCourt(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -979,6 +1025,7 @@ function buildTennisCourt(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của làn bơi từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildSwimLane(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
@@ -1010,6 +1057,7 @@ function buildSwimLane(): THREE.BufferGeometry {
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['swim-lane']);
 }
 
+/** Dựng hình học bản chi tiết của bục xuất phát hồ bơi từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildStartingBlock(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1029,6 +1077,7 @@ function buildStartingBlock(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của thảm yoga từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildYogaMat(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1044,6 +1093,7 @@ function buildYogaMat(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của gối thiền từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildMeditationBolster(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1060,6 +1110,7 @@ function buildMeditationBolster(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của quầy lễ tân từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildReceptionDesk(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
@@ -1084,6 +1135,7 @@ function buildReceptionDesk(): THREE.BufferGeometry {
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['reception-desk']);
 }
 
+/** Dựng hình học bản chi tiết của cổng soát vé QR từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildQrTurnstile(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1106,6 +1158,10 @@ function buildQrTurnstile(): THREE.BufferGeometry {
   );
 }
 
+/**
+ * Dựng hình học bản chi tiết của máy check-in tự phục vụ từ các khối, ống và đĩa rồi co vừa kích thước mặc
+ * định.
+ */
 function buildKioskCheckin(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1123,6 +1179,7 @@ function buildKioskCheckin(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của máy in thẻ hội viên từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildCardPrinter(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1142,6 +1199,7 @@ function buildCardPrinter(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của kệ thực phẩm bổ sung từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildSupplementShelf(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
@@ -1171,6 +1229,7 @@ function buildSupplementShelf(): THREE.BufferGeometry {
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['supplement-shelf']);
 }
 
+/** Dựng hình học bản chi tiết của bảng dinh dưỡng từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildNutritionBoard(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1194,6 +1253,7 @@ function buildNutritionBoard(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của trụ trưng bày cúp từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildTrophyTotem(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
@@ -1217,6 +1277,7 @@ function buildTrophyTotem(): THREE.BufferGeometry {
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['trophy-totem']);
 }
 
+/** Dựng hình học bản chi tiết của bục HLV từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildCoachPodium(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1235,6 +1296,7 @@ function buildCoachPodium(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của phòng tư vấn (pod) từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildConsultationPod(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1255,6 +1317,7 @@ function buildConsultationPod(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của dãy tủ khóa từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildLockerBank(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
@@ -1282,6 +1345,7 @@ function buildLockerBank(): THREE.BufferGeometry {
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['locker-bank']);
 }
 
+/** Dựng hình học bản chi tiết của ghế sauna từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildSaunaBench(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1299,6 +1363,7 @@ function buildSaunaBench(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của bồn jacuzzi từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildJacuzziTub(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1317,6 +1382,7 @@ function buildJacuzziTub(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của ghế sofa phòng chờ từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildLoungeSofa(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1339,6 +1405,7 @@ function buildLoungeSofa(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của quầy nước ép từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildJuiceBar(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1358,6 +1425,7 @@ function buildJuiceBar(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của lõi cầu thang từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildStairCore(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
@@ -1394,6 +1462,7 @@ function buildStairCore(): THREE.BufferGeometry {
   return mergeAndFit(parts, DEFAULT_ITEM_DIMENSIONS['stair-core']);
 }
 
+/** Dựng hình học bản chi tiết của lõi thang máy từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildElevatorCore(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1419,6 +1488,7 @@ function buildElevatorCore(): THREE.BufferGeometry {
   );
 }
 
+/** Dựng hình học bản chi tiết của chậu cây từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
 function buildPlanterTree(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
@@ -1504,6 +1574,10 @@ Object.assign(
 // LOW-DETAIL LOD PROXY BUILDER (<= 72 triangles per item)
 // ============================================================================
 
+/**
+ * Dựng bản chi tiết thấp (ít khối) của một loại đồ vật theo kích thước mặc định, dùng khi ở xa hoặc chất lượng
+ * thấp.
+ */
 function buildLowDetailGeometry(kind: ItemKind): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const dims = DEFAULT_ITEM_DIMENSIONS[kind];
@@ -1590,12 +1664,17 @@ const geometryOverrides = new Map<ItemKind, THREE.BufferGeometry>();
 const geometryListeners = new Set<() => void>();
 let geometryRevision = 0;
 
+/** Tăng số phiên bản hình học và báo cho các listener. */
 function notifyGeometryChange(): void {
   geometryRevision += 1;
   for (const listener of geometryListeners) listener();
 }
 
-/** useSyncExternalStore subscription so instanced batches rebuild when a model is swapped. */
+/**
+ * Đăng ký listener cho useSyncExternalStore để các lô instanced dựng lại khi mô hình bị thay; trả về hàm hủy.
+ *
+ * useSyncExternalStore subscription so instanced batches rebuild when a model is swapped.
+ */
 export function subscribeItemGeometries(listener: () => void): () => void {
   geometryListeners.add(listener);
   return () => {
@@ -1603,11 +1682,15 @@ export function subscribeItemGeometries(listener: () => void): () => void {
   };
 }
 
+/** Số phiên bản hiện tại của hình học đồ vật. */
 export function getItemGeometryRevision(): number {
   return geometryRevision;
 }
 
 /**
+ * Thay hình học bản chi tiết cao của một loại đồ vật (ví dụ bằng mô hình .glb); bản thấp và bộ dựng thủ tục vẫn
+ * là phương án dự phòng.
+ *
  * Replace the high-detail geometry of an item kind (for example with a model
  * loaded from a .glb). Low detail proxies and the procedural builder stay
  * available as the fallback.
@@ -1623,6 +1706,7 @@ export function registerItemGeometryOverride(
   notifyGeometryChange();
 }
 
+/** Bỏ bản hình học thay thế của một loại đồ vật (có thể chỉ bỏ nếu đúng hình học đã đăng ký). */
 export function unregisterItemGeometryOverride(
   kind: ItemKind,
   geometry?: THREE.BufferGeometry,
@@ -1634,10 +1718,12 @@ export function unregisterItemGeometryOverride(
   notifyGeometryChange();
 }
 
+/** Loại đồ vật có đang dùng hình học thay thế không. */
 export function hasItemGeometryOverride(kind: ItemKind): boolean {
   return geometryOverrides.has(kind);
 }
 
+/** Lấy hình học của một loại đồ vật theo mức chi tiết (có cache, ưu tiên bản thay thế ở mức cao). */
 export function getItemGeometry(
   kind: ItemKind,
   detail: ItemDetailLevel = 'high',
@@ -1679,6 +1765,7 @@ export function getItemGeometry(
   return geometry;
 }
 
+/** Đếm số tam giác của một hình học. */
 export function getGeometryTriangleCount(geometry: THREE.BufferGeometry): number {
   const index = geometry.getIndex();
   if (index) {
@@ -1688,6 +1775,7 @@ export function getGeometryTriangleCount(geometry: THREE.BufferGeometry): number
   return pos ? Math.floor(pos.count / 3) : 0;
 }
 
+/** Xóa cache hình học (giải phóng bộ nhớ). */
 export function clearItemGeometryCache(): void {
   for (const geom of geometryCache.values()) {
     geom.dispose();
@@ -1699,6 +1787,7 @@ export function clearItemGeometryCache(): void {
   geometryOverrides.clear();
 }
 
+/** Dựng sẵn hình học mức cao và thấp của mọi loại đồ vật. */
 export function warmAllItemGeometries(): void {
   for (const kind of ALL_ITEM_KINDS) {
     getItemGeometry(kind, 'high');
@@ -1710,20 +1799,24 @@ export function warmAllItemGeometries(): void {
 // INSTANCING & STATUS HELPERS
 // ============================================================================
 
+/** Trạng thái đã gắn dữ liệu thật của một đồ vật: hiển thị không và trạng thái. */
 export interface ResolvedItemBindingState {
   visible: boolean;
   status: string;
 }
 
+/** Bản đồ trạng thái đồ vật theo id (object hoặc Map). */
 export type ResolvedItemsMap =
   | Record<string, ResolvedItemBindingState>
   | Map<string, ResolvedItemBindingState>;
 
+/** Một đồ vật trong nhóm theo loại: nút đồ vật và tầng chứa nó. */
 export interface GroupedItemEntry {
   item: ItemNode;
   level: LevelNode | null;
 }
 
+/** Màu tô của đồ vật theo trạng thái (mặc định, nổi bật, bảo trì, hỏng, đã loại). */
 export const ITEM_STATUS_COLORS = {
   default: '#ffffff',
   highlight: '#ffe0d6',
@@ -1732,6 +1825,7 @@ export const ITEM_STATUS_COLORS = {
   retired: '#6b7280',
 } as const;
 
+/** Tra trạng thái dữ liệu thật của một đồ vật theo id. */
 export function lookupResolvedItem(
   resolvedItems: ResolvedItemsMap | undefined,
   itemId: string,
@@ -1743,6 +1837,10 @@ export function lookupResolvedItem(
   return resolvedItems[itemId];
 }
 
+/**
+ * Màu của một instance: nổi bật khi được chọn hoặc rê, màu cảnh báo khi bảo trì/hỏng/đã loại, còn lại màu mặc
+ * định.
+ */
 export function resolveItemInstanceColor(
   status: string | undefined,
   isSelected: boolean,
@@ -1764,6 +1862,7 @@ export function resolveItemInstanceColor(
   return ITEM_STATUS_COLORS.default;
 }
 
+/** Instance có hiển thị không: ẩn khi dữ liệu thật báo ẩn hoặc khi chỉ xem một tầng khác. */
 export function isItemInstanceVisible(
   entry: GroupedItemEntry,
   levelMode: LevelMode,
@@ -1781,6 +1880,7 @@ export function isItemInstanceVisible(
   return true;
 }
 
+/** Tính ma trận của một instance (vị trí theo độ cao tầng, xoay Y; ẩn thì co về 0). */
 export function computeItemInstanceMatrix(
   entry: GroupedItemEntry,
   levelMode: LevelMode,
@@ -1808,6 +1908,7 @@ export function computeItemInstanceMatrix(
   return target.compose(tempPosition, tempQuaternion, tempScale);
 }
 
+/** Nhóm các đồ vật của cảnh theo loại. */
 export function groupItemsByKind(scene: SceneDoc): Map<ItemKind, GroupedItemEntry[]> {
   const groups = new Map<ItemKind, GroupedItemEntry[]>();
   for (const kind of ALL_ITEM_KINDS) {
