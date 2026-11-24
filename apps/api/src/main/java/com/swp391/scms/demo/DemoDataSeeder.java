@@ -46,6 +46,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
+ * Tạo bộ dữ liệu demo (chỉ bật khi app.demo.seed-enabled=true): quản lý, lễ tân, HLV, hội viên với nhiều tình
+ * huống gói tập (đang tập, sắp hết hạn, hết hạn, bảo lưu, chờ thanh toán, đã gia hạn, đã hủy), thanh toán và
+ * hóa đơn, lượt check-in, buổi PT và số đo cơ thể. Ngày tháng tính theo ngày chạy; chạy lại sẽ bỏ qua khi tài
+ * khoản quản lý demo đã tồn tại.
+ *
  * Optional demo dataset (accounts, subscriptions, payments, classes, attendance, PT bookings, progress logs) with
  * past and current records, so a panel can be shown a lived-in system. Off by default
  * ({@code app.demo.seed-enabled}); idempotent: skipped once the demo manager account exists.
@@ -63,7 +68,11 @@ public class DemoDataSeeder implements ApplicationRunner {
     static final String DOMAIN = "@demo.sol.vn";
     static final String MANAGER_EMAIL = "manager" + DOMAIN;
 
-    /** One member profile and the subscription story that goes with it. */
+    /**
+     * Hồ sơ một hội viên demo và tình huống gói tập của họ.
+     *
+     * One member profile and the subscription story that goes with it.
+     */
     private record MemberSpec(String key, String name, String gender, int age, String level, String goal,
                               String health, String pkg, String scenario, int joinedDaysAgo) {}
 
@@ -89,6 +98,7 @@ public class DemoDataSeeder implements ApplicationRunner {
             new MemberSpec("lan", "Hồ Mỹ Lan", "female", 27, "beginner", "Chưa chọn gói", null,
                     null, "NO_PLAN", 2));
 
+    /** Hồ sơ một HLV demo. */
     private record CoachSpec(String key, String name, String gender, String specialization, String certification,
                              String bio, String discipline) {}
 
@@ -117,6 +127,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final String demoPassword;
 
+    /** Nhận các repository, bộ mã hóa mật khẩu và mật khẩu chung của tài khoản demo (app.demo.password). */
     public DemoDataSeeder(UserRepository users, RoleRepository roles, MemberRepository members,
                           CoachRepository coaches, ReceptionistRepository receptionists,
                           MembershipPackageRepository packages, MembershipSubscriptionRepository subscriptions,
@@ -140,6 +151,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.demoPassword = demoPassword;
     }
 
+    /**
+     * Tạo toàn bộ dữ liệu demo theo thứ tự: nhân viên, HLV, hội viên kèm gói tập, check-in, buổi PT, số đo; bỏ
+     * qua nếu đã có dữ liệu demo.
+     */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
@@ -174,6 +189,10 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     // ---- accounts -------------------------------------------------------------------------------------------
 
+    /**
+     * Tạo tài khoản demo với email <key>@demo.sol.vn, SĐT sinh từ khóa, ngày sinh theo tuổi, ngày tạo lùi về
+     * quá khứ và đã đăng nhập hôm qua.
+     */
     private User newUser(String role, String key, String name, String gender, String hash, LocalDate today, int age,
                          int createdDaysAgo) {
         User user = new User();
@@ -193,6 +212,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         return users.save(user);
     }
 
+    /** Tạo tài khoản nhân viên; lễ tân có thêm hồ sơ ca sáng. */
     private User createStaff(String role, String key, String name, String gender, String hash, LocalDate today) {
         User user = newUser(role, key, name, gender, hash, today, 34, 400);
         if ("RECEPTIONIST".equals(role)) {
@@ -206,6 +226,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         return user;
     }
 
+    /** Tạo tài khoản HLV kèm hồ sơ chuyên môn, chứng chỉ và giới thiệu. */
     private Coach createCoach(CoachSpec spec, String hash, LocalDate today) {
         User user = newUser("COACH", spec.key(), spec.name(), spec.gender(), hash, today, 32, 400);
         Coach coach = new Coach();
@@ -218,6 +239,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         return coaches.save(coach);
     }
 
+    /**
+     * Tạo hội viên kèm hồ sơ (mã DEMO-<id>, mục tiêu, trình độ, sức khỏe, liên hệ khẩn cấp); hội viên chưa có
+     * gói hoặc chờ thanh toán thì KYC đang chờ duyệt, còn lại đã duyệt.
+     */
     private Member createMember(MemberSpec spec, String hash, LocalDate today) {
         User user = newUser("MEMBER", spec.key(), spec.name(), spec.gender(), hash, today, spec.age(),
                 spec.joinedDaysAgo());
@@ -244,6 +269,10 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     // ---- subscriptions & payments ---------------------------------------------------------------------------
 
+    /**
+     * Tạo các kỳ gói theo tình huống của hội viên (đang tập lâu, mới đăng ký, hết hạn, đang bảo lưu, chờ thanh
+     * toán, đã gia hạn, sắp hết hạn, đã hủy).
+     */
     private MembershipSubscription createSubscriptions(MemberSpec spec, Member member, User receptionist,
                                                        LocalDate today) {
         if (spec.pkg() == null) {
@@ -303,6 +332,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         };
     }
 
+    /** Tạo đối tượng kỳ gói (chưa lưu) với giá chốt bằng giá gói và mã QR ngẫu nhiên. */
     private MembershipSubscription newSubscription(Member member, MembershipPackage pkg, LocalDate start,
                                                    LocalDate end, String status, MembershipSubscription previous,
                                                    User createdBy) {
@@ -321,7 +351,11 @@ public class DemoDataSeeder implements ApplicationRunner {
         return sub;
     }
 
-    /** Saves a paid subscription together with its payment and invoice. */
+    /**
+     * Lưu kỳ gói đã trả tiền kèm khoản thanh toán thành công và hóa đơn.
+     *
+     * Saves a paid subscription together with its payment and invoice.
+     */
     private MembershipSubscription subscribe(Member member, MembershipPackage pkg, LocalDate start, LocalDate end,
                                              String status, MembershipSubscription previous, User receptionist,
                                              String method) {
@@ -350,6 +384,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         return sub;
     }
 
+    /** Tìm gói theo tên; thiếu gói (chưa chạy CatalogSeeder) thì báo lỗi. */
     private MembershipPackage findPackage(String name) {
         return packages.findAllByOrderByPriceAsc().stream()
                 .filter(p -> name.equalsIgnoreCase(p.getName())).findFirst()
@@ -358,6 +393,10 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     // ---- center check-ins -----------------------------------------------------------------------------------
 
+    /**
+     * Tạo lịch sử check-in cho các hội viên đang có gói (cách ngày đều đặn), và vài lượt bị từ chối của hội
+     * viên hết hạn để minh họa luồng từ chối.
+     */
     private void createCheckins(Map<String, Member> memberByKey, User receptionist, LocalDate today) {
         // key -> visits over the last N days (every 'step' days) for members whose plan is currently valid
         Map<String, int[]> visits = Map.of("an", new int[]{35, 1}, "binh", new int[]{12, 2},
@@ -397,6 +436,7 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     // ---- PT bookings ----------------------------------------------------------------------------------------
 
+    /** Tạo buổi PT 1:1 quá khứ (đã hoàn thành) và sắp tới (đã xác nhận), dùng lượt PT của gói. */
     private void createPtBookings(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {
         Map<String, Discipline> disciplineByName = new HashMap<>();
         disciplines.findAll().forEach(d -> disciplineByName.put(d.getName(), d));
@@ -439,12 +479,14 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
     }
 
+    /** Bộ môn của HLV demo theo khóa. */
     private String coachDiscipline(String coachKey) {
         return COACHES.stream().filter(c -> c.key().equals(coachKey)).findFirst().orElseThrow().discipline();
     }
 
     // ---- progress -------------------------------------------------------------------------------------------
 
+    /** Tạo số đo cân nặng, mỡ, BMI hằng tháng trong 4 tháng (và chiều cao lần đầu) để có biểu đồ tiến độ. */
     private void createProgress(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {
         // key -> {start weight, monthly delta, start body fat, monthly fat delta, height cm, coach}
         Object[][] rows = {
@@ -470,6 +512,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
     }
 
+    /** Lưu một số đo (làm tròn 1 chữ số thập phân). */
     private void addMetric(Member member, User recordedBy, LocalDateTime at, String metric, double value, String unit) {
         MemberProgressLog entry = new MemberProgressLog();
         entry.setMember(member);
