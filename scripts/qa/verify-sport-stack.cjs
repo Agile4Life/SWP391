@@ -1,3 +1,2 @@
-// Mục đích: điểm vào tương thích cũ, chuyển sang verify-sport-story.cjs.
-// Compatibility entry point: the sports stack has been replaced by a scrolling story.
+// Mục đích: điểm vào tương thích cũ — khối xếp chồng bộ môn đã được thay bằng câu chuyện cuộn, chuyển sang verify-sport-story.cjs.
 require('./verify-sport-story.cjs');

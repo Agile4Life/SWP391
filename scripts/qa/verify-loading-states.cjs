@@ -1,6 +1,5 @@
-// Mục đích: kiểm tra mọi màn hình có trạng thái loading, rỗng và lỗi; mọi API đều bị chặn và giả lập.
-// NODE_PATH supplies playwright-core. PUBLIC_UI_URL selects a local production preview.
-// Every API request is intercepted; no production data is read or written.
+// Mục đích: kiểm tra mọi màn hình có trạng thái đang tải, rỗng và lỗi; mọi request API đều bị chặn và giả lập, không đọc/ghi dữ liệu production.
+// Biến NODE_PATH cung cấp playwright-core; PUBLIC_UI_URL chọn URL bản production preview cục bộ.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const catalog = require('./public-catalog-fixture.cjs');

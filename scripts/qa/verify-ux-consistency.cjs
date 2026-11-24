@@ -1,6 +1,5 @@
-// Mục đích: kiểm tra tính nhất quán UX giữa các màn hình; mọi API bị chặn và giả lập.
-// NODE_PATH supplies playwright-core; CHROME_PATH optionally selects Chromium.
-// All API traffic is intercepted. PUBLIC_UI_URL can select a production preview.
+// Mục đích: kiểm tra tính nhất quán UX giữa các màn hình; toàn bộ lưu lượng API đều bị chặn và giả lập.
+// Biến NODE_PATH cung cấp playwright-core; CHROME_PATH chọn tùy chọn Chromium; PUBLIC_UI_URL có thể trỏ tới bản production preview.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');

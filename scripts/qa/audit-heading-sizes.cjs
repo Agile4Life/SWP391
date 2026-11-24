@@ -1,5 +1,4 @@
-// Mục đích: kiểm tra (chỉ đọc) kích thước các tiêu đề trong giao diện bằng dữ liệu giả, không gọi API thật.
-// Read-only UI audit using the existing verification fixtures; no real API calls.
+// Mục đích: kiểm tra (chỉ đọc) kích thước các tiêu đề trong giao diện bằng dữ liệu giả kiểm chứng có sẵn, không gọi API thật.
 const fs = require('node:fs');
 const vm = require('node:vm');
 const { chromium } = require('playwright-core');

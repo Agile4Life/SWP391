@@ -1,6 +1,5 @@
-// Mục đích: kiểm tra trải nghiệm mua gói membership; mọi request API của trình duyệt đều được chặn và giả lập.
-// UX audit: real catalog/health reads; every browser API request is intercepted.
-// Run with playwright-core via NODE_PATH and CHROME_PATH for a local Chrome install.
+// Mục đích: kiểm tra trải nghiệm mua gói tập (đọc thật danh mục công khai và health; mọi request API từ trình duyệt đều được chặn và giả lập).
+// Chạy với playwright-core qua NODE_PATH và CHROME_PATH trỏ tới bản Chrome đã cài đặt cục bộ.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -93,7 +92,7 @@ async function check(browser, id, title, fn, options = {}) {
   try { await fn({ ...env, note: x => notes.push(x) }); }
   catch (e) { status = e.code === 'ERR_ASSERTION' ? 'ISSUE' : 'ERROR'; detail = e.message; }
   if (options.capture || status !== 'PASS') {
-    try { await env.page.screenshot({ path: path.join(output, `${id}.png`), fullPage: false }); } catch { /* A navigation can close the page. */ }
+    try { await env.page.screenshot({ path: path.join(output, `${id}.png`), fullPage: false }); } catch { /* Thao tác điều hướng có thể đã đóng trang. */ }
   }
   results.push({ id, title, status, detail, notes, runtimeErrors: env.errors, requests: env.state.calls });
   console.log(`${status} ${id}: ${title}${detail ? ' — ' + detail.split('\n')[0] : ''}`);

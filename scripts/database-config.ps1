@@ -1,5 +1,5 @@
 # Mục đích: đọc và kiểm tra cấu hình kết nối Supabase PostgreSQL từ biến môi trường cho các script chạy trên Windows.
-# Supabase PostgreSQL is the only database supported by the Windows runner.
+# Supabase PostgreSQL là cơ sở dữ liệu duy nhất được bộ chạy Windows hỗ trợ.
 function Resolve-ScmsDatabaseConfig {
     param([string]$Profiles, [string]$JdbcUrl)
     $selected = @($Profiles.Split(',') | ForEach-Object { $_.Trim().ToLowerInvariant() } | Where-Object { $_ })

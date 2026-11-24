@@ -1,7 +1,7 @@
 // Mục đích: luôn chạy Maven Wrapper đúng phiên bản của dự án, bất kể thư mục gọi lệnh, để build/test API nhất quán.
 import { spawnSync } from 'node:child_process';
 
-// Always use the versioned Maven Wrapper, regardless of the caller's directory.
+// Luôn sử dụng Maven Wrapper đúng phiên bản của dự án, bất kể thư mục gọi lệnh.
 const result = spawnSync(
   process.platform === 'win32' ? 'mvnw.cmd' : './mvnw',
   process.argv.slice(2),

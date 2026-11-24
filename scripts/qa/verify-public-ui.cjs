@@ -1,6 +1,5 @@
-// Mục đích: kiểm tra giao diện trang công khai (landing, đăng nhập, đăng ký); phản hồi xác thực được giả lập.
-// Run with Playwright available through NODE_PATH, with the local Vite server running.
-// UI checks use intercepted auth responses and never create real accounts.
+// Mục đích: kiểm tra giao diện trang công khai (landing, đăng nhập, đăng ký) bằng phản hồi xác thực giả lập, không tạo tài khoản thật.
+// Chạy khi máy chủ Vite cục bộ đang hoạt động và Playwright có sẵn thông qua biến NODE_PATH.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -54,7 +53,7 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
     assert.equal(await page.locator('.fit-site--landing').count(),1);
     assert.equal(await page.locator('h1,h2').evaluateAll(elements=>elements.every(element=>{
       const style=getComputedStyle(element);
-      // DESIGN.md: the sport-story heading has its own 800-weight reference scale.
+      // DESIGN.md: tiêu đề phần câu chuyện thể thao (sport-story) có thang độ đậm tham chiếu riêng là 800.
       const weight = element.matches('#multisport h2') ? '800' : '900';
       return style.fontFamily.includes('Plus Jakarta Sans') && style.fontWeight===weight && style.textTransform==='uppercase';
     })),true,'landing display typography matches the membership-benefits reference');

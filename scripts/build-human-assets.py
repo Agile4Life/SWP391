@@ -76,11 +76,11 @@ def pack_gltf(gltf_path, out_path, image_rule, tmp, normal_dir=None):
         size, fmt = image_rule(name)
         src = os.path.join(base, name)
         if normal_dir and "Normal" in name:
-            # glTF uses OpenGL normals (+Y up); the pack's Unity/Godot folder has those,
-            # the UE copy next to the glTF is flipped and makes the skin look scaly.
+            # glTF dùng pháp tuyến theo chuẩn OpenGL (+Y hướng lên); thư mục Unity/Godot của gói có đúng định dạng này,
+            # còn bản sao cho UE nằm cạnh file glTF bị đảo ngược trục nên làm da nhân vật trông như có vảy.
             src = os.path.join(normal_dir, name.replace("_png.png", ".png"))
         elif not os.path.exists(src):
-            # Some glTFs name textures "X_png.png" while the pack ships "X.png".
+            # Một số file glTF đặt tên texture là "X_png.png" trong khi gói tài nguyên cung cấp "X.png".
             src = os.path.join(base, name.replace("_png.png", ".png"))
         data, mime = resize_image(src, size, fmt, tmp)
         while len(binary) % 4:
@@ -116,7 +116,7 @@ def build_characters(base_dir, tmp):
             tmp,
             os.path.join(tex_dir, "Normals Unity - Godot"),
         )
-    # Light skin variants (the packed characters use the dark texture).
+    # Các biến thể da sáng (nhân vật đã đóng gói mặc định dùng texture da tối).
     for gender, name in (("male", "T_Superhero_Male_Ligh.png"), ("female", "T_Superhero_Female_Light_BaseColor.png")):
         data, _ = resize_image(os.path.join(tex_dir, name), 1024, "jpeg", tmp)
         open(os.path.join(OUT, f"skin-{gender}-light.jpg"), "wb").write(data)
@@ -145,7 +145,7 @@ def build_animations(anim_dir):
     if missing:
         raise SystemExit(f"clips not found: {missing}")
 
-    # Keep only the accessors the clips read, re-packed into a fresh buffer.
+    # Chỉ giữ lại các accessor mà các clip hoạt ảnh sử dụng, đóng gói lại vào một buffer mới.
     used = sorted({s[k] for a in gltf["animations"] for s in a["samplers"] for k in ("input", "output")})
     remap = {}
     new_binary = bytearray()

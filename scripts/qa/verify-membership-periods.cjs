@@ -1,6 +1,5 @@
-// Mục đích: kiểm tra hiển thị các kỳ membership (gia hạn, nâng cấp) bằng dữ liệu giả, không đổi dữ liệu thật.
-// Run with the local Vite server and playwright-core available via NODE_PATH.
-// All API requests use fixtures; no membership data is changed.
+// Mục đích: kiểm tra hiển thị các kỳ gói tập (gia hạn, nâng cấp) bằng dữ liệu giả, không thay đổi dữ liệu thật.
+// Chạy với máy chủ Vite cục bộ và playwright-core thông qua biến NODE_PATH.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');

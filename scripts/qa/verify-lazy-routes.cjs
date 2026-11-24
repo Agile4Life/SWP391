@@ -1,5 +1,4 @@
-// Mục đích: kiểm tra các route tải lười (lazy) hoạt động đúng trên bản production preview.
-// Run against the production preview with NODE_PATH supplying playwright-core.
+// Mục đích: kiểm tra các route tải lười (lazy) hoạt động đúng trên bản production preview với biến NODE_PATH cung cấp playwright-core.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const base = process.env.PERF_UI_URL || 'http://127.0.0.1:4173';

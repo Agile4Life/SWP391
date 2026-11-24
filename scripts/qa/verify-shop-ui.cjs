@@ -1,7 +1,5 @@
-// Mục đích: kiểm tra giao diện cửa hàng thực phẩm bổ sung bằng API giả, không ghi database.
-// Browser verification for the Supplement Shop ("Sản phẩm") feature.
-// Uses intercepted API fixtures; never writes to a database.
-// NODE_PATH supplies the existing playwright-core installation. CHROME_PATH is optional.
+// Mục đích: kiểm tra trình duyệt cho tính năng cửa hàng thực phẩm bổ sung ("Sản phẩm") bằng API giả lập, không ghi cơ sở dữ liệu.
+// Biến NODE_PATH cung cấp bản cài đặt playwright-core có sẵn; CHROME_PATH là tùy chọn.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -528,7 +526,7 @@ function contrastRatio(fg, bg) {
       return;
     }
 
-    // (1) Responsive matrix & themes: 390x844, 768, 1440, 1920 + dark/light
+    // (1) Ma trận responsive & chủ đề: 390x844, 768, 1440, 1920 + tối/sáng
     for (const theme of ['dark', 'light']) {
       for (const width of [390, 768, 1440, 1920]) {
         const height = width === 390 ? 844 : 1000;
@@ -559,7 +557,7 @@ function contrastRatio(fg, bg) {
     }
     console.log('PASS (1) Landing #products shelf & topbar link across 390/768/1440/1920 and dark/light with 0 overflow');
 
-    // (2)-(5) Public catalog -> Product detail -> Cart drawer -> Guest login redirect -> Member Checkout -> VNPay checkout
+    // (2)-(5) Danh mục công khai -> Chi tiết sản phẩm -> Ngăn giỏ hàng -> Chuyển hướng đăng nhập khách -> Thanh toán hội viên -> Thanh toán VNPay
     for (const theme of ['dark', 'light']) {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 1000 },
@@ -572,19 +570,19 @@ function contrastRatio(fg, bg) {
       }, theme);
       await attachRoutes(page);
 
-      // (2) /products filter chip updates URL
+      // (2) Chip lọc trên /products cập nhật URL
       await page.goto(`${base}/products`);
       await page.getByRole('heading', { name: 'SÖL Whey Isolate' }).waitFor();
       await page.getByRole('button', { name: 'Phục hồi' }).click();
       await page.waitForFunction(() => window.location.search.includes('goal=recovery'));
       await page.screenshot({ path: path.join(output, `products-${theme}-1440.png`), fullPage: true });
 
-      // (3) Product detail: select variant, add to cart, badge = 1, NutritionFacts contrast >= 4.5:1
+      // (3) Chi tiết sản phẩm: chọn biến thể, thêm vào giỏ, badge = 1, độ tương phản NutritionFacts >= 4.5:1
       await page.getByRole('link', { name: 'SÖL Whey Isolate' }).first().click();
       await page.waitForURL('**/products/sol-whey-isolate');
       await page.locator('.shop-facts').waitFor({ state: 'visible' });
 
-      // (9) Check NutritionFacts contrast >= 4.5:1 in both themes
+      // (9) Kiểm tra độ tương phản NutritionFacts >= 4.5:1 trên cả hai chế độ sáng/tối
       const factsColors = await page.locator('.shop-facts').evaluate(el => {
         const cs = getComputedStyle(el);
         const cap = el.querySelector('caption');
@@ -599,13 +597,13 @@ function contrastRatio(fg, bg) {
       const cartBtn = page.locator('button[aria-label="Giỏ hàng · 1 sản phẩm"]');
       await cartBtn.waitFor({ state: 'visible' });
 
-      // (8) prefers-reduced-motion disables badge animation
+      // (8) prefers-reduced-motion vô hiệu hóa hoạt ảnh của badge
       const badgeAnim = await cartBtn.evaluate(el => getComputedStyle(el).animationName);
       assert.equal(badgeAnim, 'none', 'CartButton must have no animation under prefers-reduced-motion');
 
       await page.screenshot({ path: path.join(output, `product-detail-${theme}-1440.png`), fullPage: true });
 
-      // (4) Drawer -> Thanh toán redirects guest to /login?returnTo=%2Fcheckout
+      // (4) Ngăn giỏ hàng -> Thanh toán chuyển hướng khách tới /login?returnTo=%2Fcheckout
       await cartBtn.click();
       await page.locator('.shop-drawer').waitFor({ state: 'visible' });
       await page.locator('.shop-drawer__item').first().waitFor({ state: 'visible' });
@@ -617,7 +615,7 @@ function contrastRatio(fg, bg) {
         await page.locator('.shop-drawer').getByRole('button', { name: 'Thanh toán' }).click();
         await page.waitForFunction(() => window.location.pathname === '/login' && window.location.search.includes('returnTo=%2Fcheckout'));
 
-        // (5) Simulate authenticated member -> /checkout -> select province/ward -> place order -> calls /payments/vnpay/checkout with productOrderId
+        // (5) Giả lập hội viên đã đăng nhập -> /checkout -> chọn tỉnh/phường -> đặt hàng -> gọi /payments/vnpay/checkout kèm productOrderId
         await page.evaluate(() => {
           localStorage.setItem(
             'fitcenter_auth_session',
@@ -629,7 +627,7 @@ function contrastRatio(fg, bg) {
         await page.getByLabel(/Họ tên người nhận/).fill('Nguyễn Minh Quân');
         await page.getByLabel(/Số điện thoại/).fill('0901234567');
 
-        // Select province & ward
+        // Chọn tỉnh/thành phố và phường/xã
         await page.getByLabel('Tỉnh / Thành phố').selectOption('79');
         await page.getByLabel('Phường / Xã').selectOption('26734');
         await page.getByLabel(/Số nhà, tên đường/).fill('120 Hai Bà Trưng');
@@ -642,16 +640,16 @@ function contrastRatio(fg, bg) {
           'Checkout must call /payments/vnpay/checkout with productOrderId: 42',
         );
 
-        // (6) /member/orders/42 renders timeline
+        // (6) /member/orders/42 hiển thị dòng thời gian đơn hàng
         await page.locator('.shop-timeline').waitFor({ state: 'visible' });
         await page.screenshot({ path: path.join(output, 'member-order-detail-dark-1440.png'), fullPage: true });
 
-        // /member/orders dark
+        // /member/orders chế độ tối
         await page.goto(`${base}/member/orders`);
         await page.getByText('SOL-261105-A1B2').first().waitFor({ state: 'visible' });
         await page.screenshot({ path: path.join(output, 'member-orders-dark-1440.png'), fullPage: true });
 
-        // /member/orders?tab=shop dark (in-portal product catalog)
+        // /member/orders?tab=shop chế độ tối (danh mục sản phẩm bên trong portal)
         await page.getByRole('tab', { name: 'Sản phẩm' }).click();
         await page.getByRole('heading', { name: 'SÖL Whey Isolate' }).waitFor({ state: 'visible' });
         await page.screenshot({ path: path.join(output, 'member-shop-dark-1440.png'), fullPage: true });
@@ -679,7 +677,7 @@ function contrastRatio(fg, bg) {
     }
     console.log('PASS (2)-(6), (8)-(9) Catalog filter, detail variant/cart, NutritionFacts contrast, guest redirect, checkout VNPay, member timeline');
 
-    // (7) /staff/orders transitions status from paid -> processing
+    // (7) /staff/orders chuyển trạng thái từ paid -> processing
     {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 1000 },
@@ -707,7 +705,7 @@ function contrastRatio(fg, bg) {
     }
     console.log('PASS (7) /staff/orders transitions order status');
 
-    // (10) Mobile 390x844 input font-size >= 16px & mobile checkout screenshot
+    // (10) Màn hình di động 390x844: cỡ chữ ô nhập liệu >= 16px và chụp ảnh trang thanh toán di động
     {
       const context = await browser.newContext({
         viewport: { width: 390, height: 844 },
@@ -743,7 +741,7 @@ function contrastRatio(fg, bg) {
       assert.ok(checkoutFontSize >= 16, `Mobile checkout input font-size must be >= 16px, got ${checkoutFontSize}px`);
       await page.screenshot({ path: path.join(output, 'checkout-dark-390.png'), fullPage: true });
 
-      // Mobile Member Portal Shop (/member/orders?tab=shop) at 390x844
+      // Cửa hàng trong portal hội viên trên di động (/member/orders?tab=shop) ở kích thước 390x844
       await page.goto(`${base}/member/orders?tab=shop`);
       await page.locator('#portal-shop-search').waitFor({ state: 'visible' });
       const portalShopFontSize = await page
@@ -757,7 +755,7 @@ function contrastRatio(fg, bg) {
     }
     console.log('PASS (10) Mobile 390x844 input font-size >= 16px');
 
-    // Manager portal: /manager/products (dark + light) and /manager/products/new (dark)
+    // Portal quản lý: /manager/products (chế độ tối + sáng) và /manager/products/new (chế độ tối)
     for (const theme of ['dark', 'light']) {
       const context = await browser.newContext({
         viewport: { width: 1440, height: 1000 },

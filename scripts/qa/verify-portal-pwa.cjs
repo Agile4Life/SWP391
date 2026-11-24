@@ -1,6 +1,6 @@
 // Mục đích: kiểm tra portal hoạt động như PWA (manifest, service worker) trên bản preview production.
-// Run against `npm --prefix apps/web run preview -- --host 127.0.0.1`.
-// NODE_PATH supplies playwright-core. API fixtures never contact the real database.
+// Chạy đối chiếu với `npm --prefix apps/web run preview -- --host 127.0.0.1`.
+// Biến NODE_PATH cung cấp playwright-core; các API giả lập không bao giờ kết nối cơ sở dữ liệu thật.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -140,7 +140,7 @@ async function layout(page, mobile) {
     await gatePage.screenshot({ path: path.join(output, 'staff-gate-qr-mobile.png'), fullPage: true });
     await gateContext.close(); console.log('PASS staff web displays gate QR at desktop and mobile sizes');
 
-    // Decode a real QR image from a synthetic camera stream, with the native decoder removed.
+    // Giải mã một ảnh QR thật từ luồng camera tổng hợp khi đã gỡ bỏ bộ giải mã gốc của trình duyệt.
     const cameraContext = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     const cameraPage = await cameraContext.newPage();
     cameraPage.on('pageerror', e => errors.push(e.message));
@@ -155,7 +155,7 @@ async function layout(page, mobile) {
         const draw = () => { const ctx = canvas.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, 600, 600); ctx.drawImage(image, 100, 100, 400, 400); };
         draw();
         const stream = canvas.captureStream(8);
-        // Keep the source alive and produce new frames for browser video pipelines.
+        // Giữ nguồn video hoạt động và phát khung hình mới liên tục cho pipeline video của trình duyệt.
         const timer = setInterval(draw, 125);
         for (const track of stream.getTracks()) {
           const stop = track.stop.bind(track);

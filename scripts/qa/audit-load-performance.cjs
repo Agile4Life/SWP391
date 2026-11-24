@@ -1,5 +1,4 @@
-// Mục đích: đo hiệu năng tải trang trên bản build production preview, không gọi API hay nội dung bên ngoài.
-// Production preview only. NODE_PATH supplies playwright-core; no real API or external content is requested.
+// Mục đích: đo hiệu năng tải trang trên bản build production preview; biến NODE_PATH cung cấp playwright-core và không gọi API thật hay nội dung bên ngoài.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');
