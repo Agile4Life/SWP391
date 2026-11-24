@@ -5,11 +5,16 @@ export const PHONE_REGEX = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
 export const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)\S{8,50}$/;
 export const PASSWORD_RULE_ERROR = 'Mật khẩu phải dài 8–50 ký tự, có ít nhất 1 chữ cái và 1 chữ số, không chứa khoảng trắng.';
 export const PASSWORD_RULE_HINT = '8–50 ký tự, có chữ cái và chữ số, không khoảng trắng';
+/** Kiểm tra mật khẩu theo quy tắc chung (8–50 ký tự, có chữ và số, không khoảng trắng). */
 export const isValidPassword = (value: string) => PASSWORD_REGEX.test(value);
 export const EMAIL_REGEX = /^[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*@([a-zA-Z0-9-]+\.)+[a-zA-Z]{2,}$/;
 const GMAIL_LOCAL_REGEX = /^[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*(\+[a-zA-Z0-9._-]+)?$/;
 const INVALID_GMAIL_DOMAIN_REGEX = /^(gmail\.(?!com$).+|(gmai|gmial|gmal|gamil)\..+)$/i;
 
+/**
+ * Kiểm tra email: đúng định dạng và loại bỏ tên miền gmail gõ sai (gmai, gmial...); email Gmail còn kiểm tra
+ * phần trước @.
+ */
 export function isValidEmailAddress(raw: string): boolean {
   const value = raw.trim();
   if (!EMAIL_REGEX.test(value)) return false;
@@ -22,6 +27,7 @@ export function isValidEmailAddress(raw: string): boolean {
   return true;
 }
 
+/** Chuẩn hóa số điện thoại Việt Nam: bỏ khoảng trắng, dấu chấm, gạch, ngoặc và đổi +84/84 thành 0. */
 export function normalizePhoneNumber(raw?: string | null): string {
   if (!raw) return '';
   const compact = raw.trim().replace(/[\s.\-()]+/g, '');
@@ -30,6 +36,7 @@ export function normalizePhoneNumber(raw?: string | null): string {
   return compact;
 }
 
+/** Kiểm tra số điện thoại Việt Nam hợp lệ sau khi chuẩn hóa. */
 export function isValidPhoneNumber(raw: string): boolean {
   return PHONE_REGEX.test(normalizePhoneNumber(raw));
 }
@@ -50,8 +57,10 @@ export const loginSchema = z.object({
 });
 
 export const otpSchema = z.string().trim().regex(/^\d{6}$/, 'Mã OTP gồm đúng 6 chữ số.');
+/** Kiểu dữ liệu đầu vào của biểu mẫu đăng ký. */
 export type RegistrationFields = z.input<typeof registrationSchema>;
 
+/** Kiểm tra một trường của biểu mẫu đăng ký; trả về thông báo lỗi đầu tiên hoặc undefined nếu hợp lệ. */
 export function validateRegistrationField(field: keyof RegistrationFields, value: string): string | undefined {
   const parsed = registrationSchema.shape[field].safeParse(value);
   return parsed.success ? undefined : parsed.error.issues[0]?.message;

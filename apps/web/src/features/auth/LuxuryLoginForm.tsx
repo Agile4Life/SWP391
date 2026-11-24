@@ -18,6 +18,7 @@ import {
   type GoogleOAuthCallbackInput,
 } from './authApi';
 
+/** Props của biểu mẫu đăng nhập: hàm gọi sau khi đăng nhập thành công (tùy chọn). */
 interface LuxuryLoginFormProps {
   onSuccess?: () => void;
 }
@@ -30,8 +31,16 @@ const ROLE_NAMES: Record<UserSession['role'], string> = {
   get MANAGER() { return sourceText('Quản lý trung tâm'); },
 };
 
+/**
+ * Các bước của biểu mẫu: đăng nhập thường, nhập OTP khi vào bằng Google, nhập email quên mật khẩu, đặt lại mật
+ * khẩu.
+ */
 type AuthMode = 'standard' | 'google_otp' | 'forgot_email' | 'forgot_reset';
 
+/**
+ * Biểu mẫu đăng nhập: tài khoản/mật khẩu, đăng nhập Google (OAuth, mã OTP khi cần) và quên mật khẩu bằng OTP
+ * email.
+ */
 export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   useSourceLanguage();
   const navigate = useNavigate();
@@ -96,11 +105,13 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     return () => clearInterval(timer);
   }, [lockCountdown]);
 
+  // Hiện lỗi và kích hoạt hiệu ứng rung của biểu mẫu.
   const fail = useCallback((msg: string | Error) => {
     setFormError(msg);
     setShaking(true);
   }, []);
 
+  // Hoàn tất đăng nhập Google: lưu phiên, báo thành công và chuyển tới trang đích theo vai trò.
   const completeGoogleLogin = useCallback((authentication: GoogleVerifyResponse) => {
     const user = setAuthSession(authentication.token, authentication.username, authentication.role, authentication.fullName);
     setIsExpired(false);
@@ -110,6 +121,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     navigate(authDestination(user.role, search), { viewTransition: true });
   }, [navigate, onSuccess, search]);
 
+  // Xử lý kết quả OAuth Google: đăng nhập luôn, hoặc chuyển sang bước nhập OTP gửi tới email; nhân sự và tài khoản bị khóa được báo lỗi riêng.
   const processGoogleOAuthCallback = useCallback(async (payload: GoogleOAuthCallbackInput) => {
     setIsGoogleLoading(true);
     setFormError('');
@@ -149,6 +161,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }
   }, [fail, completeGoogleLogin]);
 
+  // Đổi mã handoff (sau khi Google chuyển hướng về) lấy phiên đăng nhập.
   const redeemGoogleRedirect = useCallback(async (code: string) => {
     setIsGoogleLoading(true);
     setFormError('');
@@ -170,6 +183,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
     if (!oauthStatus && !code) return;
 
+    // Xóa các tham số OAuth khỏi URL sau khi xử lý.
     const cleanSearchParams = () => {
       const nextParams = new URLSearchParams(window.location.search);
       nextParams.delete('google_oauth');
@@ -242,6 +256,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   }, [fail, redeemGoogleRedirect]);
 
   // One Google entry point: popup when ready, otherwise the state-protected backend redirect.
+  // Bắt đầu đăng nhập Google: dùng token client của Google nếu có, không thì chuyển hướng toàn trang.
   const handleGoogleOAuthLogin = async () => {
     setFormError('');
     if (googleClientId && !window.google?.accounts?.oauth2?.initTokenClient) {
@@ -253,6 +268,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           client_id: googleClientId,
           scope: 'openid email profile',
           prompt: 'select_account',
+          // Có access token thì gửi lên backend, lỗi thì báo.
           callback: (response) => {
             if (response?.access_token) {
               void processGoogleOAuthCallback({ accessToken: response.access_token });
@@ -260,6 +276,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
               fail(response.error_description || 'Đã hủy hoặc không thể xác thực với Google.');
             }
           },
+          // Không mở được cửa sổ xác thực Google.
           error_callback: () => {
             fail('Không thể mở cửa sổ xác thực Google OAuth.');
           },
@@ -285,6 +302,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     fail('Google chưa được cấu hình. Vui lòng liên hệ quản trị viên.');
   };
 
+  // Gửi biểu mẫu đăng nhập thường sau khi kiểm tra tên đăng nhập và mật khẩu.
   const handleStandardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsExpired(false);
@@ -373,6 +391,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }
   };
 
+  // Gửi mã OTP đặt lại mật khẩu tới email sau khi kiểm tra định dạng.
   const handleRequestPasswordResetOtp = async (e?: React.SyntheticEvent) => {
     e?.preventDefault();
     const cleanEmail = resetEmail.trim();
@@ -402,6 +421,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }
   };
 
+  // Đặt mật khẩu mới: kiểm tra mã OTP 6 số và quy tắc mật khẩu rồi gửi lên backend.
   const handleResetPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanOtp = otpCode.trim();
