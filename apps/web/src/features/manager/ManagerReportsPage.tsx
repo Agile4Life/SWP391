@@ -441,107 +441,6 @@ export function ManagerReportsPage() {
         </form>
       </div>
 
-      {/* Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (từ Lễ tân) */}
-      <div className="portal-card" style={{ marginBottom: '24px' }}>
-        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h2 className="portal-card-title">
-              {t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{cancellationRequests.filter((r) => r.status === 'PENDING').length})
-            </h2>
-          </div>
-          <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
-        </div>
-
-        {loadingCancellations ? (
-          <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
-        ) : cancellationRequests.length === 0 ? (
-          <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
-            {t("Hiện không có yêu cầu hủy gói tập & hoàn tiền nào cần duyệt.")}</div>
-        ) : (
-          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
-            {cancellationRequests.map((req) => {
-              const isBusy = decidingCancelId === req.id;
-              const isPending = req.status === 'PENDING';
-              return (
-                <div data-i18n-managed
-                  key={req.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: '14px',
-                    padding: '16px 18px',
-                    borderRadius: '10px',
-                    border: isPending ? '1px solid var(--portal-salmon)' : '1px solid var(--portal-border)',
-                    backgroundColor: isPending ? 'var(--portal-raised)' : 'var(--portal-surface)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 260 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
-                        {t("Yêu cầu #")}{req.id}
-                      </span>
-                      <strong>{req.memberName || t(`Hội viên #${req.memberId}`, `Member #${req.memberId}`)}</strong>
-                      <span
-                        className={`badge ${
-                          req.status === 'PENDING'
-                            ? 'badge-warning'
-                            : req.status === 'APPROVED'
-                              ? 'badge-success'
-                              : 'badge-neutral'
-                        }`}
-                      >
-                        {req.status === 'PENDING' ? t('CHỜ DUYỆT') : req.status === 'APPROVED' ? t('ĐÃ HOÀN VỀ VÍ') : t('ĐÃ TỪ CHỐI')}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
-                      {t("Gói tập: ")}<strong>{req.packageName}</strong> {t(" • Số tiền hoàn về Ví:")}{' '}
-                      <strong style={{ color: 'var(--portal-success, #86efac)' }}>{vnd(Number(req.refundAmount ?? 0))}</strong>
-                      {req.requestedByName && <span> {t(" • Trình bởi: ")}{req.requestedByName}</span>}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: '8px',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--portal-surface)',
-                        border: '1px solid var(--portal-border)',
-                        fontSize: '0.88rem',
-                        color: 'var(--portal-paper)',
-                      }}
-                    >
-                      <strong>{t("Lý do hủy gói:")}</strong> {req.reason}
-                    </div>
-                  </div>
-
-                  {isPending && (
-                    <div data-i18n-managed style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        disabled={decidingCancelId !== null}
-                        onClick={() => void handleRejectCancellation(req)}
-                      >
-                        {isBusy ? t('Đang xử lý...') : t('Từ chối')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-primary btn-sm"
-                        disabled={decidingCancelId !== null}
-                        onClick={() => void handleApproveCancellation(req)}
-                      >
-                        {isBusy ? t('Đang xử lý...') : t('Phê duyệt & Hoàn tiền về Ví')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
       {/* Trạng thái lỗi */}
       {error && !loading && (
         <div data-i18n-managed className="portal-card" style={{ marginBottom: '24px' }}>
@@ -735,6 +634,107 @@ export function ManagerReportsPage() {
           </div>
         </div>
       )}
+
+      {/* Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (từ Lễ tân) */}
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2 className="portal-card-title">
+              {t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{cancellationRequests.filter((r) => r.status === 'PENDING').length})
+            </h2>
+          </div>
+          <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
+        </div>
+
+        {loadingCancellations ? (
+          <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
+        ) : cancellationRequests.length === 0 ? (
+          <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
+            {t("Hiện không có yêu cầu hủy gói tập & hoàn tiền nào cần duyệt.")}</div>
+        ) : (
+          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
+            {cancellationRequests.map((req) => {
+              const isBusy = decidingCancelId === req.id;
+              const isPending = req.status === 'PENDING';
+              return (
+                <div data-i18n-managed
+                  key={req.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    padding: '16px 18px',
+                    borderRadius: '10px',
+                    border: isPending ? '1px solid var(--portal-salmon)' : '1px solid var(--portal-border)',
+                    backgroundColor: isPending ? 'var(--portal-raised)' : 'var(--portal-surface)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
+                        {t("Yêu cầu #")}{req.id}
+                      </span>
+                      <strong>{req.memberName || t(`Hội viên #${req.memberId}`, `Member #${req.memberId}`)}</strong>
+                      <span
+                        className={`badge ${
+                          req.status === 'PENDING'
+                            ? 'badge-warning'
+                            : req.status === 'APPROVED'
+                              ? 'badge-success'
+                              : 'badge-neutral'
+                        }`}
+                      >
+                        {req.status === 'PENDING' ? t('CHỜ DUYỆT') : req.status === 'APPROVED' ? t('ĐÃ HOÀN VỀ VÍ') : t('ĐÃ TỪ CHỐI')}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
+                      {t("Gói tập: ")}<strong>{req.packageName}</strong> {t(" • Số tiền hoàn về Ví:")}{' '}
+                      <strong style={{ color: 'var(--portal-success, #86efac)' }}>{vnd(Number(req.refundAmount ?? 0))}</strong>
+                      {req.requestedByName && <span> {t(" • Trình bởi: ")}{req.requestedByName}</span>}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--portal-surface)',
+                        border: '1px solid var(--portal-border)',
+                        fontSize: '0.88rem',
+                        color: 'var(--portal-paper)',
+                      }}
+                    >
+                      <strong>{t("Lý do hủy gói:")}</strong> {req.reason}
+                    </div>
+                  </div>
+
+                  {isPending && (
+                    <div data-i18n-managed style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        disabled={decidingCancelId !== null}
+                        onClick={() => void handleRejectCancellation(req)}
+                      >
+                        {isBusy ? t('Đang xử lý...') : t('Từ chối')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary btn-sm"
+                        disabled={decidingCancelId !== null}
+                        onClick={() => void handleApproveCancellation(req)}
+                      >
+                        {isBusy ? t('Đang xử lý...') : t('Phê duyệt & Hoàn tiền về Ví')}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Bảng danh sách giao dịch gần nhất */}
       {!loading && !error && summary && (

@@ -29,6 +29,13 @@ async function exportReport() {
   const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xuất báo cáo'))!;
   await act(async () => button.click());
 }
+it('shows cancellation requests below daily revenue and before recent transactions', async () => {
+  await act(async () => root.render(<ManagerReportsPage />));
+  const text = host.textContent ?? '';
+  expect(text.indexOf('Doanh thu theo ngày')).toBeGreaterThan(-1);
+  expect(text.indexOf('Doanh thu theo ngày')).toBeLessThan(text.indexOf('Duyệt yêu cầu hủy'));
+  expect(text.indexOf('Duyệt yêu cầu hủy')).toBeLessThan(text.indexOf('Giao dịch gần đây'));
+});
 it('protects every untrusted CSV text cell from spreadsheet formulas', async () => {
   await exportReport();
   const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
