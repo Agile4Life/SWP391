@@ -74,4 +74,4 @@
 :root:not([data-theme='light']) .portal-v2 .app-sidebar:has(:focus-visible)::after { opacity: 1; }
 
 /* Inputs and pickers: accent border plus a low-alpha 3px ring while focused or open. */
-:root:not([data-theme='light']) :is(.ui-select__trigger.is-open, .luxury-datepicker-trigger.is-open, .luxury-timepicker-trigger.is-open) { border-color: var(--sol-accent); box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .2); }
+:root:not([data-theme='light']) :is(.ui-select__trigger.is-open, .luxury-datepicker-trigger.is-open) { border-color: var(--sol-accent); box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .2); }
