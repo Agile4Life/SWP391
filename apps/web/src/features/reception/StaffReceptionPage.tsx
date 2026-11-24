@@ -1,5 +1,6 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { sourceMessage } from '../../shared/i18n';
+import { renewalOptionError } from './renewalOptions';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
@@ -489,6 +490,8 @@ export function StaffReceptionPage() {
   const selectedCandidate = offerKind === 'renew' ? renewalCandidates.find((item) => item.id === Number(offerId)) : undefined;
   const selectedPackage = packages.find((item) => item.id === (selectedCandidate?.packageId ?? Number(offerId)));
   const currentPrice = selectedPending ? selectedPending.packagePrice : selectedPackage?.price ?? 0;
+  const renewalError = !selectedPending && selectedCandidate
+    ? renewalOptionError(selectedCandidate, renewalCandidates, packages, centerNowParts().date) : null;
 
   // Xử lý tra cứu hội viên
   const handleSearch = async (e: React.FormEvent) => {
@@ -526,7 +529,16 @@ export function StaffReceptionPage() {
   // BR-03 & BR-04: Xác nhận thanh toán cho yêu cầu gói tập đang chờ của hội viên
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSearching) return;
+    if (isSearching || loadingPending || loadingOffers || (!selectedPending && offersError)) return;
+    // Chặn cả gửi form trực tiếp: kỳ không hợp lệ không được tạo renewal hoặc thu tiền.
+    const blockedRenewal = !selectedPending && selectedCandidate
+      ? renewalOptionError(selectedCandidate, renewalCandidates, packages, centerNowParts().date) : null;
+    if (blockedRenewal) { setPaymentError(blockedRenewal); return; }
+    if (!selectedPending && offerKind === 'renew' && !selectedCandidate) {
+      setPaymentError(staffMessage('Kỳ gia hạn không còn trong danh sách. Vui lòng chọn lại.',
+        'This renewal period is no longer listed. Please select it again.'));
+      return;
+    }
 
     const invalid = !selectedMember || (!selectedPending && !selectedPackage) ? 'Vui lòng chọn hội viên và gói tập cần thanh toán.'
       : !paymentMethod ? 'Vui lòng chọn hình thức thanh toán (Tiền mặt).' : null;
@@ -538,10 +550,13 @@ export function StaffReceptionPage() {
 
     paymentInFlight.current = true;
     setIsSubmittingPayment(true);
+    let creatingRenewal = false;
     try {
       let pending = selectedPending;
       if (!pending && selectedCandidate && selectedPackage) {
+        creatingRenewal = true;
         const created = await receptionApi.createRenewal(selectedMember.userId, selectedCandidate.id);
+        creatingRenewal = false;
         pending = {
           id: created.id, memberId: created.memberId, membershipCode: selectedMember.membershipCode,
           memberName: selectedMember.fullName, memberEmail: selectedMember.email, memberPhone: selectedMember.phone,
@@ -571,7 +586,13 @@ export function StaffReceptionPage() {
       setSelectedPending(null);
       await loadPendingSubscriptions();
     } catch (err: unknown) {
-      setPaymentError(errorMessage(err, 'Giao dịch thanh toán thất bại.')); await loadPendingSubscriptions();
+      // Backend có dữ liệu mới nhất; lỗi gia hạn dừng tại đây, không chuyển sang mua mới hay thu tiền khác.
+      const renewalConflict = creatingRenewal && err instanceof Error && 'code' in err && err.code === 'MEMBERSHIP_RENEWAL_CONFLICT';
+      setPaymentError(renewalConflict
+        ? staffMessage('Không thể gia hạn kỳ đã chọn. Vui lòng tải lại danh sách hoặc nhờ quản lý kiểm tra.',
+          'This period cannot be renewed. Reload the list or ask a manager to review it.')
+        : errorMessage(err, 'Giao dịch thanh toán thất bại.'));
+      await loadPendingSubscriptions();
     } finally {
       paymentInFlight.current = false;
       setIsSubmittingPayment(false);
@@ -1223,16 +1244,17 @@ export function StaffReceptionPage() {
                   disabled readOnly />
               ) : loadingOffers ? <LoadingSkeleton label={t("Đang tải gói tập và lựa chọn gia hạn…")} count={1} /> : (
                 <Select id="pos-package" className="portal-select" value={selectedOffer}
-                  onChange={(event) => setSelectedOffer(event.target.value)}
+                  onChange={(event) => { setSelectedOffer(event.target.value); setPaymentError(null); }}
                   disabled={!selectedMember || loadingPending || loadingOffers || !!offersError || isSubmittingPayment}>
                   <option value="">{t("Chọn gói tập")}</option>
                   {renewalCandidates
                     .filter((candidate) => packages.some((pkg) => pkg.id === candidate.packageId))
-                    .map((candidate) => (
-                      <option data-i18n-managed key={`renew:${candidate.id}`} value={`renew:${candidate.id}`}>
-                        {t("Gia hạn: ")}{candidate.packageName} {t(" — kỳ đến ")}{formatCenterDate(candidate.endDate)}
-                      </option>
-                    ))}
+                    .map((candidate) => {
+                      const reason = renewalOptionError(candidate, renewalCandidates, packages, centerNowParts().date);
+                      return <option data-i18n-managed key={`renew:${candidate.id}`} value={`renew:${candidate.id}`} disabled={!!reason}>
+                        {t("Gia hạn: ")}{candidate.packageName} {t(" — kỳ đến ")}{formatCenterDate(candidate.endDate)}{reason ? ` — ${t(reason)}` : ''}
+                      </option>;
+                    })}
                   {!hasRunningPaidPeriod && packages.map((pkg) => (
                     <option data-i18n-managed key={`buy:${pkg.id}`} value={`buy:${pkg.id}`}>
                       {t("Mua mới: ")}{pkg.name} — {formatPrice(pkg.price)}
@@ -1242,7 +1264,7 @@ export function StaffReceptionPage() {
               )}
               {!selectedPending && !loadingOffers && selectedMember && hasRunningPaidPeriod && (
                 <p data-testid="reception-renew-only-hint" style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--portal-muted)' }}>
-                  {t('Hội viên còn gói đang hiệu lực nên chỉ gia hạn được; không thể mua thêm gói mới song song.', 'This member still has a running membership, so it can only be renewed; a second new package cannot be bought alongside it.')}
+                  {t('Gói hiện tại còn hạn. Vui lòng chọn kỳ gia hạn hợp lệ.', 'The current membership is still valid. Please choose an eligible renewal period.')}
                 </p>
               )}
               {offersError && <p role="alert">{t(offersError)} <button type="button" className="btn-secondary" onClick={() => setOffersRetry((n) => n + 1)}>{t("Thử lại")}</button></p>}
@@ -1303,12 +1325,12 @@ export function StaffReceptionPage() {
               />
             </div>
 
-            {paymentError && <p className="form-error" role="alert">{t(paymentError)}</p>}
+            {(paymentError || renewalError) && <p className="form-error" role="alert">{t(paymentError || renewalError)}</p>}
             <button
               type="submit"
               className="btn-primary"
               style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}
-              disabled={isSearching || isSubmittingPayment || !selectedMember || loadingPending || loadingOffers || (!selectedPending && !selectedPackage)}
+              disabled={isSearching || isSubmittingPayment || !selectedMember || loadingPending || loadingOffers || !!renewalError || (!selectedPending && (!!offersError || !selectedPackage))}
             >
               {isSubmittingPayment ? (
                 <>

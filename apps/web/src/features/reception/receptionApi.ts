@@ -96,6 +96,8 @@ export interface RenewalCandidate {
   endDate: string;
   status: string;
   createdAt: string;
+  /** Có sẵn trong SubscriptionDto: nối tới kỳ trước để xác định đúng cuối chuỗi gia hạn. */
+  previousSubscriptionId?: number | null;
   /** Kỳ đang hiệu lực hôm nay: phần chưa dùng của số tiền thực trả, cũng là số tiền hoàn đề xuất khi hủy gói. */
   remainingValue?: number | null;
 }
