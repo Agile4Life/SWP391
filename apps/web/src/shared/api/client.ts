@@ -1,5 +1,6 @@
 import { clearNotices } from '../lib/portalNotices';
 import { getLanguage, sourceMessage, type SourceMessage } from '../i18n';
+/** Thông tin phiên đăng nhập lưu ở trình duyệt: id, tên hiển thị, tên đăng nhập và vai trò trên portal. */
 export interface UserSession {
   id: string;
   name: string;
@@ -7,6 +8,7 @@ export interface UserSession {
   role: 'MEMBER' | 'STAFF' | 'COACH' | 'MANAGER' | 'ADMIN';
 }
 
+/** Kết quả đăng nhập: JWT và thông tin phiên. */
 export interface LoginResponse {
   token: string;
   user: UserSession;
@@ -18,6 +20,7 @@ export const TOKEN_STORAGE_KEY = 'fitcenter_token';
 
 const sessionListeners = new Set<() => void>();
 
+/** Báo cho mọi listener trong tab hiện tại rằng phiên đăng nhập vừa thay đổi. */
 function notifySessionChange(): void {
   sessionListeners.forEach((listener) => listener());
 }
@@ -25,6 +28,7 @@ function notifySessionChange(): void {
 /** Theo dõi thay đổi session ở tab hiện tại và (qua sự kiện `storage`) ở các tab khác. */
 export function subscribeAuthSession(listener: () => void): () => void {
   sessionListeners.add(listener);
+  // Tab khác đổi/xóa phiên (hoặc xóa toàn bộ storage) thì báo listener.
   const onStorage = (event: StorageEvent) => {
     if (event.key === null || event.key === AUTH_STORAGE_KEY || event.key === TOKEN_STORAGE_KEY) listener();
   };
@@ -44,6 +48,7 @@ export function readRawAuthSession(): string | null {
   }
 }
 
+/** Đọc chuỗi JSON phiên và chuẩn hóa mã vai trò backend sang vai trò portal; chuỗi lỗi hoặc rỗng trả null. */
 export function parseAuthSession(raw: string | null): UserSession | null {
   try {
     if (!raw) return null;
@@ -87,11 +92,16 @@ function handleUnauthorized(token: string): boolean {
 
 const SESSION_REPLACED_MESSAGE = 'Phiên đăng nhập đã thay đổi. Vui lòng tải lại trang.';
 
+/** Đường dẫn trang đăng nhập khi phiên hết hạn; đang ở trang chọn gói thì kèm returnTo để quay lại. */
 function expiredLoginPath(): string {
   const target = window.location.pathname === '/member/packages' ? window.location.pathname + window.location.search : null;
   return '/login?expired=1' + (target ? `&returnTo=${encodeURIComponent(target)}` : '');
 }
 
+/**
+ * Lỗi khi gọi API: giữ mã HTTP, mã lỗi backend và bản dịch hai ngôn ngữ (thông báo hiển thị theo ngôn ngữ hiện
+ * tại).
+ */
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -122,6 +132,10 @@ const TIMEOUT_MESSAGE = sourceMessage(
   'The server took too long to respond. Check your connection and try again. If you were paying, check your transaction history before retrying.',
 );
 
+/**
+ * Gọi API backend kèm JWT: tự hủy sau API_TIMEOUT_MS (tải file thì lâu hơn) trừ khi người gọi tự truyền signal;
+ * quá giờ thì ném ApiError TIMEOUT.
+ */
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   const isUpload = typeof FormData !== 'undefined' && init.body instanceof FormData;
@@ -140,6 +154,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 }
 
+/**
+ * Gửi request thật tới /api/v1: gắn ngôn ngữ và JWT, xử lý lỗi mạng, 401 (phiên bị thay/hết hạn), 413 (file quá
+ * lớn), lỗi HTTP khác, rồi trả về phần data của ApiResponse.
+ */
 async function sendApiRequest<T>(path: string, init: RequestInit, token: string | null, timeoutSignal?: AbortSignal): Promise<T> {
   let res: Response;
   try {
@@ -175,7 +193,11 @@ async function sendApiRequest<T>(path: string, init: RequestInit, token: string 
   return body as T;
 }
 
-/** Authenticated binary response for endpoints that do not use the JSON ApiResponse envelope. */
+/**
+ * Tải nội dung PDF (không bọc trong ApiResponse) kèm JWT; lỗi thì ném ApiError.
+ *
+ * Authenticated binary response for endpoints that do not use the JSON ApiResponse envelope.
+ */
 export async function apiFetchPdf(path: string): Promise<Blob> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   let res: Response;
@@ -199,7 +221,11 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
   return res.blob();
 }
 
-/** Authenticated binary download (for example a medical document); the caller turns the blob into an object URL. */
+/**
+ * Tải nội dung nhị phân (vd. tài liệu y tế) kèm JWT; người gọi tự tạo object URL từ blob.
+ *
+ * Authenticated binary download (for example a medical document); the caller turns the blob into an object URL.
+ */
 export async function apiFetchBlob(path: string): Promise<Blob> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   let res: Response;
@@ -220,6 +246,7 @@ export async function apiFetchBlob(path: string): Promise<Blob> {
   return res.blob();
 }
 
+/** Đăng nhập bằng tên đăng nhập/mật khẩu, lưu JWT và phiên rồi trả về thông tin người dùng. */
 export async function loginApi(identifier: string, password: string): Promise<LoginResponse> {
   const data = await apiFetch<{ token: string; username: string; role: string; fullName?: string | null }>('/auth/login', {
     method: 'POST',

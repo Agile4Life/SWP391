@@ -7,6 +7,7 @@ import './qr-checkin.css';
 
 const DEFAULT_HINT = 'Quét mã QR cổng tại quầy lễ tân.';
 
+/** Tắt mọi track camera đang gắn vào thẻ video và gỡ stream. */
 function stopStream(element: HTMLVideoElement | null) {
   if (!element) return;
   const stream = element.srcObject;
@@ -14,6 +15,10 @@ function stopStream(element: HTMLVideoElement | null) {
   element.srcObject = null;
 }
 
+/**
+ * Ô quét mã QR bằng camera: xin quyền camera, quét liên tục và gọi onScan khi đọc được mã; tự tắt camera khi bị
+ * vô hiệu, ẩn tab hoặc rời trang.
+ */
 export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT }: { onScan: (code: string) => void; disabled?: boolean; hint?: string }) {
   const { lang } = useLanguage();
 
@@ -25,6 +30,7 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
   const [phase, setPhase] = useState<'ready' | 'starting' | 'scanning' | 'done'>('ready');
   const [error, setError] = useState<string | SourceMessage>('');
 
+  // Hủy lượt quét hiện tại, giải phóng bộ giải mã và tắt camera.
   const release = useCallback(() => {
     run.current += 1;
     scanner.current?.destroy();
@@ -33,9 +39,11 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
   }, []);
 
   useEffect(() => {
+    // Tab bị ẩn thì tắt camera để không chạy nền.
     const hide = () => {
       if (document.hidden) { release(); setPhase('ready'); }
     };
+    // Rời trang (pagehide) thì tắt camera.
     const pagehide = () => { release(); setPhase('ready'); };
     document.addEventListener('visibilitychange', hide);
     window.addEventListener('pagehide', pagehide);
@@ -46,6 +54,7 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
     if (disabled) { release(); setPhase((current) => current === 'done' ? 'done' : 'ready'); }
   }, [disabled, release]);
 
+  // Bắt đầu quét: kiểm tra HTTPS và hỗ trợ camera, mở camera sau rồi khởi tạo bộ giải mã QR.
   async function start() {
     if (disabled || phase === 'starting' || phase === 'scanning') return;
     setError('');

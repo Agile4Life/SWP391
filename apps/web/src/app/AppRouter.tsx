@@ -3,6 +3,10 @@ import { matchRoutes, RouterProvider } from 'react-router-dom';
 import { router } from './router';
 import { RouteLoading } from '../shared/ui/RouteState';
 
+/**
+ * Gốc router của ứng dụng: hiện lớp loading khi đang chuyển trang (trừ khi chuyển giữa các trang trong portal)
+ * và khóa tương tác nội dung lúc đó.
+ */
 export function AppRouter() {
   const navigating = useSyncExternalStore(router.subscribe, () => {
     const { initialized, navigation, matches } = router.state;
