@@ -66,6 +66,7 @@ class MemberTrialServiceTest {
     private Member testMember;
     private MembershipPackage goldPackage;
 
+    /** Chuẩn bị trước mỗi test: tạo MemberTrialService với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new MemberTrialService(
@@ -96,6 +97,7 @@ class MemberTrialServiceTest {
         goldPackage.setDurationDays(30);
     }
 
+    /** Kiểm thử: trạng thái dùng thử khi đủ điều kiện. */
     @Test
     @DisplayName("getTrialStatus: Eligible when never claimed and never held a subscription")
     void testGetTrialStatus_Eligible() {
@@ -110,6 +112,7 @@ class MemberTrialServiceTest {
         assertNull(status.cccd());
     }
 
+    /** Kiểm thử: trạng thái dùng thử khi đã nhận. */
     @Test
     @DisplayName("getTrialStatus: Ineligible when already claimed trial")
     void testGetTrialStatus_AlreadyClaimed() {
@@ -127,6 +130,7 @@ class MemberTrialServiceTest {
         assertEquals(101L, status.subscriptionId());
     }
 
+    /** Kiểm thử: trạng thái dùng thử khi đang có subscription hoạt động. */
     @Test
     @DisplayName("getTrialStatus: Ineligible when member already had a subscription")
     void testGetTrialStatus_HasActiveSubscription() {
@@ -140,6 +144,7 @@ class MemberTrialServiceTest {
         assertFalse(status.alreadyClaimed());
     }
 
+    /** Kiểm thử: nhận gói Gold dùng thử thành công. */
     @Test
     @DisplayName("claimGoldTrial: Successfully claims 3-day Gold trial")
     void testClaimGoldTrial_Success() {
@@ -172,6 +177,7 @@ class MemberTrialServiceTest {
         verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("membership_subscription"), eq(200L));
     }
 
+    /** Kiểm thử: hội viên đã nhận gói dùng thử thì không nhận lại được. */
     @Test
     @DisplayName("claimGoldTrial: Throws ConflictException when member already claimed")
     void testClaimGoldTrial_MemberAlreadyClaimed() {
@@ -184,6 +190,7 @@ class MemberTrialServiceTest {
         verify(subscriptions, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: CCCD đã được dùng nhận gói thử. */
     @Test
     @DisplayName("claimGoldTrial: Throws ConflictException when CCCD is already used")
     void testClaimGoldTrial_CccdAlreadyUsed() {
@@ -197,6 +204,7 @@ class MemberTrialServiceTest {
         verify(subscriptions, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: không nhận được khi đã có subscription hoạt động. */
     @Test
     @DisplayName("claimGoldTrial: Throws ConflictException when member already had a subscription")
     void testClaimGoldTrial_ActiveSubExists() {
@@ -223,6 +231,7 @@ class MemberTrialServiceTest {
         assertNotEquals(h, new CccdHasher("other").hash("001200001234"));
         assertEquals("1234", hasher.last4("001200001234"));
     }
+    /** Kiểm thử: phân loại trùng theo tên ràng buộc thay vì tên cột SQL. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"uq_trial_member,TRIAL_ALREADY_CLAIMED", "uq_trial_cccd_hash,TRIAL_CCCD_ALREADY_USED"})
     void classifiesDuplicateByConstraintRatherThanSqlColumnNames(String constraintName, String expectedCode) {
@@ -241,6 +250,7 @@ class MemberTrialServiceTest {
         verifyNoInteractions(notifications);
     }
 
+    /** Kiểm thử: giữ nguyên lỗi toàn vẹn lạ thay vì báo đã nhận. */
     @Test
     void preservesUnknownIntegrityFailuresInsteadOfReportingAlreadyClaimed() {
         when(members.findById(10L)).thenReturn(Optional.of(testMember));
@@ -253,6 +263,7 @@ class MemberTrialServiceTest {
         verifyNoInteractions(notifications);
     }
 
+    /** Kiểm thử: yêu cầu dùng thử bằng CCCD thành công. */
     @Test
     @DisplayName("requestTrial: Successfully submits CCCD trial request in PENDING_APPROVAL status")
     void testRequestTrial_CccdSuccess() {
@@ -279,6 +290,7 @@ class MemberTrialServiceTest {
         verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("member_trial_redemption"), eq(50L));
     }
 
+    /** Kiểm thử: yêu cầu dùng thử bằng hộ chiếu nước ngoài thành công. */
     @Test
     @DisplayName("requestTrial: Successfully submits foreign passport request in PENDING_APPROVAL status")
     void testRequestTrial_ForeignPassportSuccess() {
@@ -303,6 +315,7 @@ class MemberTrialServiceTest {
         assertEquals("John Doe", status.fullName());
     }
 
+    /** Kiểm thử: yêu cầu dùng thử bằng hộ chiếu Việt Nam bị từ chối. */
     @Test
     @DisplayName("requestTrial: Rejects Vietnamese citizen trying to use Passport")
     void testRequestTrial_VietnamesePassportRejected() {
@@ -313,6 +326,7 @@ class MemberTrialServiceTest {
         assertEquals("TRIAL_PASSPORT_FOREIGN_ONLY", ex.getErrorCode());
     }
 
+    /** Kiểm thử: định dạng hộ chiếu không hợp lệ bị từ chối. */
     @Test
     @DisplayName("requestTrial: Rejects invalid passport number format")
     void testRequestTrial_InvalidPassportFormat() {
@@ -323,6 +337,7 @@ class MemberTrialServiceTest {
         assertEquals("TRIAL_PASSPORT_INVALID", ex.getErrorCode());
     }
 
+    /** Kiểm thử: duyệt yêu cầu dùng thử thành công. */
     @Test
     @DisplayName("approveTrial: Receptionist approves trial, syncs user fullName, and creates 3-day active subscription")
     void testApproveTrial_Success() {
@@ -354,6 +369,7 @@ class MemberTrialServiceTest {
         verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("membership_subscription"), eq(300L));
     }
 
+    /** Kiểm thử: từ chối yêu cầu dùng thử thành công. */
     @Test
     @DisplayName("rejectTrial: Receptionist rejects trial with a stated reason")
     void testRejectTrial_Success() {
@@ -374,6 +390,7 @@ class MemberTrialServiceTest {
         verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("member_trial_redemption"), eq(56L));
     }
 
+    /** Kiểm thử: liệt kê các yêu cầu dùng thử. */
     @Test
     @DisplayName("listTrials: Filters by status and search keyword")
     void testListTrials() {
@@ -397,6 +414,7 @@ class MemberTrialServiceTest {
         assertEquals("Alice Smith", results.get(0).documentFullName());
     }
 
+    /** Kiểm thử: từ chối giải phóng giấy tờ và yêu cầu đã bị từ chối không duyệt lại được. */
     @Test
     void rejectingFreesTheDocumentAndARejectedRequestCannotBeApproved() {
         MemberTrialRedemption rejected = new MemberTrialRedemption();
@@ -413,6 +431,7 @@ class MemberTrialServiceTest {
         assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.approveTrial(desk, 70L));
     }
 
+    /** Kiểm thử: ảnh giấy tờ phải là ảnh tải lên chứ không phải liên kết. */
     @Test
     void documentPhotosMustBeUploadedImagesNotLinks() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
@@ -421,6 +440,7 @@ class MemberTrialServiceTest {
         assertThrows(com.swp391.scms.common.exception.BadRequestException.class, () -> service.requestTrial(principal, request));
     }
 
+    /** Kiểm thử: yêu cầu dùng thử tái dùng KYC đã xác minh khi request không nêu thông tin giấy tờ. */
     @Test
     void requestTrialReusesVerifiedMemberKycWhenRequestOmitsDocumentDetails() {
         testMember.getUser().setFullName("Nguyen Van Test");
@@ -457,6 +477,7 @@ class MemberTrialServiceTest {
         assertEquals(validPngDataUrl, captor.getValue().getBackImageUrl());
     }
 
+    /** Kiểm thử: yêu cầu dùng thử tái dùng KYC cũ dạng plaintext khi chưa có bản mã hóa. */
     @Test
     void requestTrialReusesLegacyPlainKycWhenNoEncryptedCopyExists() {
         testMember.setKycStatus("APPROVED");

@@ -35,6 +35,7 @@ class EntitlementRevocationServiceTest {
     @Mock private CoachBookingRepository coachBookings;
     @Mock private CourtBookingRepository courtBookings;
 
+    /** Kiểm thử: chỉ nhả các đặt chỗ ở những ngày không còn membership nào bao phủ. */
     @Test
     void releasesOnlyBookingsOnDatesNoActiveMembershipCovers() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
@@ -59,6 +60,10 @@ class EntitlementRevocationServiceTest {
         assertEquals("cancelled", court.getStatus());
     }
 
+    /**
+     * Kiểm thử: membership đóng băng có tạm hoãn theo ngày vẫn bao phủ các ngày sau tạm hoãn nên lượt quét đêm
+     * giữ các đặt chỗ đó.
+     */
     @Test
     void aFrozenMembershipWithADatedHoldStillCoversTheDaysAfterTheHoldSoTheNightlySweepKeepsThoseBookings() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
@@ -95,6 +100,7 @@ class EntitlementRevocationServiceTest {
         assertEquals("cancelled", pastTheEnd.getStatus());
     }
 
+    /** Hàm trợ giúp của test: tạo dịch vụ tạm hoãn với phụ thuộc giả lập. */
     private EntitlementRevocationService holdService(com.swp391.scms.finance.repository.PaymentRepository payments,
                                                      com.swp391.scms.wallet.WalletService wallets) {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
@@ -104,6 +110,7 @@ class EntitlementRevocationServiceTest {
         return service;
     }
 
+    /** Hàm trợ giúp của test: tạo khoản thanh toán thành công mẫu. */
     private static com.swp391.scms.finance.entity.Payment successPayment(String amount) {
         var payment = new com.swp391.scms.finance.entity.Payment();
         payment.setAmount(new java.math.BigDecimal(amount));
@@ -111,6 +118,7 @@ class EntitlementRevocationServiceTest {
         return payment;
     }
 
+    /** Hàm trợ giúp của test: tạo đặt sân mẫu. */
     private static CourtBooking court(LocalDate date, LocalTime start, String method, String paymentStatus) {
         CourtBooking court = new CourtBooking();
         court.setBookingDate(date);
@@ -124,6 +132,7 @@ class EntitlementRevocationServiceTest {
         return court;
     }
 
+    /** Kiểm thử: tạm hoãn chỉ hoàn lượt PT khi được duyệt trước 3 ngày. */
     @Test
     void holdReturnsAPtQuotaSlotOnlyWhenApprovedThreeDaysAhead() {
         var service = holdService(null, null);
@@ -143,6 +152,7 @@ class EntitlementRevocationServiceTest {
         assertTrue(late.isQuotaForfeited());
     }
 
+    /** Kiểm thử: tạm hoãn chỉ hoàn tiền buổi PT đã trả vào ví khi được duyệt trước 3 ngày. */
     @Test
     void holdRefundsAPaidPtSessionToTheWalletOnlyWhenApprovedThreeDaysAhead() {
         var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
@@ -174,6 +184,7 @@ class EntitlementRevocationServiceTest {
         org.mockito.Mockito.verifyNoMoreInteractions(wallets);
     }
 
+    /** Kiểm thử: tạm hoãn chỉ hoàn tiền sân đã trả khi được duyệt trước 2 giờ. */
     @Test
     void holdRefundsAPaidCourtOnlyWhenApprovedTwoHoursAhead() {
         var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
@@ -200,6 +211,7 @@ class EntitlementRevocationServiceTest {
         org.mockito.Mockito.verifyNoMoreInteractions(wallets);
     }
 
+    /** Kiểm thử: tạm hoãn trong vòng 2 giờ thì mất lượt đặt sân. */
     @Test
     void holdForfeitsACourtQuotaSlotWithinTwoHours() {
         var service = holdService(null, null);
@@ -215,6 +227,7 @@ class EntitlementRevocationServiceTest {
         assertTrue(late.isQuotaForfeited());
     }
 
+    /** Hàm trợ giúp của test: tạo lượt đặt PT mẫu. */
     private static CoachBooking pt(LocalDate date) {
         CoachBooking booking = new CoachBooking();
         booking.setBookingDate(date);

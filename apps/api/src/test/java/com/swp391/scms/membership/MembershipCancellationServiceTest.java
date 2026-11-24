@@ -53,6 +53,7 @@ class MembershipCancellationServiceTest {
     AuthenticatedPrincipal owner = new AuthenticatedPrincipal(10L, "member", "MEMBER");
     AuthenticatedPrincipal manager = new AuthenticatedPrincipal(20L, "manager", "CENTER_MANAGER");
 
+    /** Chuẩn bị trước mỗi test: tạo MembershipCancellationService với repository giả lập. */
     @BeforeEach
     void setup() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-22T08:00:00Z"), ZoneOffset.UTC);
@@ -68,6 +69,7 @@ class MembershipCancellationServiceTest {
         lenient().when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
     }
 
+    /** Kiểm thử: yêu cầu hủy giữ membership còn hiệu lực và từ chối yêu cầu trùng. */
     @Test
     void requestKeepsMembershipActiveAndRejectsDuplicate() {
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
@@ -81,6 +83,7 @@ class MembershipCancellationServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: yêu cầu gợi ý phần chưa dùng của số tiền đã trả chứ không phải giá danh mục. */
     @Test
     void requestSuggestsUnusedShareOfWhatWasPaidNotTheCatalogPrice() {
         // Bought for 320,000; the manager has since raised the package to 500,000.
@@ -99,6 +102,7 @@ class MembershipCancellationServiceTest {
         assertThat(result.refundAmount()).isEqualByComparingTo("110000");
     }
 
+    /** Kiểm thử: yêu cầu cần đúng chủ sở hữu và lý do không trống. */
     @Test
     void requestRequiresOwnerAndNonblankReason() {
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
@@ -109,6 +113,7 @@ class MembershipCancellationServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: duyệt chỉ kết thúc membership duy nhất và đặt chỗ tương lai trong cùng transaction. */
     @Test
     void approvalEndsOnlySoleMembershipAndFutureBookingInSameTransaction() {
         stubDecision();
@@ -124,6 +129,7 @@ class MembershipCancellationServiceTest {
         verify(enrollments).cancelFutureEnrollmentsForMember(eq(10L), any());
     }
 
+    /** Kiểm thử: duyệt giữ nguyên lớp sắp tới đã trả riêng. */
     @Test
     void approvalPreservesSeparatelyPaidUpcomingClass() {
         stubDecision();
@@ -137,6 +143,7 @@ class MembershipCancellationServiceTest {
         verify(subscriptions, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: duyệt từ chối kỳ tương lai đã trả hoặc quyền lợi khác mà không thay đổi gì. */
     @Test
     void approvalRejectsPaidFutureOrOtherEntitlementWithoutMutation() {
         stubDecision();
@@ -151,6 +158,7 @@ class MembershipCancellationServiceTest {
         verifyNoInteractions(enrollments);
     }
 
+    /** Kiểm thử: từ chối giữ membership và cho phép yêu cầu mới. */
     @Test
     void rejectionPreservesMembershipAndAllowsNewRequest() {
         when(requests.findById(7L)).thenReturn(Optional.of(pending));
@@ -164,6 +172,7 @@ class MembershipCancellationServiceTest {
         verifyNoInteractions(enrollments);
     }
 
+    /** Kiểm thử: hội viên không quyết định được và thử lại không hủy lặp. */
     @Test
     void memberCannotDecideAndRetryDoesNotRepeatCancellation() {
         assertThatThrownBy(() -> service.decide(owner, 7L, true, new CancellationDtos.Decision(null)))
@@ -176,6 +185,7 @@ class MembershipCancellationServiceTest {
         verifyNoInteractions(enrollments);
     }
 
+    /** Kiểm thử: yêu cầu và duyệt bị từ chối khi đang có yêu cầu tạm hoãn chờ xử lý. */
     @Test
     void requestAndApproveRejectWhenHoldRequestIsPending() {
         active.setHoldStatus("PENDING");
@@ -191,12 +201,14 @@ class MembershipCancellationServiceTest {
         verifyNoInteractions(enrollments);
     }
 
+    /** Hàm trợ giúp của test: giả lập các repository cho bước quyết định. */
     private void stubDecision() {
         when(requests.findById(7L)).thenReturn(Optional.of(pending));
         when(requests.findByIdForUpdate(7L)).thenReturn(Optional.of(pending));
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
     }
 
+    /** Kiểm thử: danh sách dùng truy vấn dành cho quản lý thay vì findAll. */
     @Test
     void all_UsesFindAllForManagerQueryInsteadOfFindAll() {
         when(requests.findAllForManager()).thenReturn(List.of(pending));
@@ -207,6 +219,7 @@ class MembershipCancellationServiceTest {
         verify(requests, never()).findAll();
     }
 
+    /** Kiểm thử: yêu cầu của nhân viên cần vai trò nhân viên, lý do không trống và subscription đang hoạt động. */
     @Test
     void staffRequest_requiresStaffRoleNonBlankReasonAndActiveSubscription() {
         var receptionist = new AuthenticatedPrincipal(30L, "desk", "RECEPTIONIST");
@@ -226,6 +239,7 @@ class MembershipCancellationServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: quyết định hoàn ví khi tiền hoàn dương và bỏ qua ví khi bằng 0. */
     @Test
     void decide_creditsWalletWhenRefundPositiveAndSkipsWalletWhenRefundZero() {
         var walletService = mock(com.swp391.scms.wallet.WalletService.class);
@@ -249,6 +263,7 @@ class MembershipCancellationServiceTest {
         assertThat(paid.getStatus()).isEqualTo("success");
     }
 
+    /** Kiểm thử: từ chối khoản hoàn vượt quá số đã trả. */
     @Test
     void decide_rejectsRefundAboveWhatWasPaid() {
         var walletService = mock(com.swp391.scms.wallet.WalletService.class);

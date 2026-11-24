@@ -64,6 +64,7 @@ class MembershipSubscriptionControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller subscription. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -78,6 +79,7 @@ class MembershipSubscriptionControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: tiếp tục trả subscription hoạt động và thông báo đã bản địa hóa. */
     @Test
     void resume_returnsActiveSubscriptionAndLocalizedMessage() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(100L, 10L, 1L, "Essential", null,
@@ -90,6 +92,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.message").value("Subscription resumed successfully at no additional charge."));
     }
 
+    /** Kiểm thử: tạo subscription trả 201. */
     @Test
     void create_returnsCreated() throws Exception {
         SubscriptionRequests.Create request = new SubscriptionRequests.Create(1L);
@@ -107,6 +110,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.data.status").value("pending_payment"));
     }
 
+    /** Kiểm thử: thiếu packageId thì validation báo lỗi. */
     @Test
     void create_validationFailsWhenPackageIdNull() throws Exception {
         mockMvc.perform(post("/api/v1/memberships/subscriptions")
@@ -116,6 +120,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: gia hạn trả 201. */
     @Test
     void renew_returnsCreated() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(
@@ -130,6 +135,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.data.previousSubscriptionId").value(100L));
     }
 
+    /** Kiểm thử: nâng cấp trả 201. */
     @Test
     void upgrade_returnsCreated() throws Exception {
         SubscriptionRequests.Upgrade request = new SubscriptionRequests.Upgrade(2L);
@@ -148,6 +154,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.data.previousSubscriptionId").value(100L));
     }
 
+    /** Kiểm thử: yêu cầu tạm hoãn nhận multipart gồm ngày và giấy tờ. */
     @Test
     void requestHold_acceptsMultipartWithDatesAndDocuments() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(
@@ -179,6 +186,7 @@ class MembershipSubscriptionControllerTest {
         org.assertj.core.api.Assertions.assertThat(docs.getValue().get(0).fileName()).isEqualTo("giay-ra-vien.pdf");
     }
 
+    /** Kiểm thử: liệt kê tạm hoãn chuyển bộ lọc trạng thái cho service. */
     @Test
     void listHolds_passesTheStatusFilterToTheService() throws Exception {
         when(service.listHolds("PENDING")).thenReturn(List.of());
@@ -188,6 +196,7 @@ class MembershipSubscriptionControllerTest {
         org.mockito.Mockito.verify(service).listHolds("PENDING");
     }
 
+    /** Kiểm thử: duyệt tạm hoãn trả 200 kèm số mục đã hủy. */
     @Test
     void approveHold_returnsOkWithCancelledCount() throws Exception {
         HoldRequestDto dto = new HoldRequestDto(
@@ -204,6 +213,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.data.cancelledEnrollmentsCount").value(2));
     }
 
+    /** Kiểm thử: hủy yêu cầu đang chờ trả 200. */
     @Test
     void cancelPending_returnsOk() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(
@@ -218,6 +228,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.data.status").value("cancelled"));
     }
 
+    /** Kiểm thử: lấy subscription của tôi trả 200 kèm đối tượng. */
     @Test
     void getMy_returnsOk_withSubscriptionObject() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(
@@ -236,6 +247,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.data.id").value(100L));
     }
 
+    /** Kiểm thử: lấy subscription của tôi trả 200 với null khi không có gói hoạt động. */
     @Test
     void getMy_returnsOk_withNullWhenNoActiveSubscription() throws Exception {
         when(service.current(any())).thenReturn(null);
@@ -245,6 +257,7 @@ class MembershipSubscriptionControllerTest {
                 .andExpect(jsonPath("$.data").doesNotExist());
     }
 
+    /** Kiểm thử: lấy lịch sử trả danh sách. */
     @Test
     void getHistory_returnsList() throws Exception {
         SubscriptionDto dto = new SubscriptionDto(

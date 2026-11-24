@@ -25,6 +25,7 @@ class PackageServiceTest {
     @Mock MembershipPackageRepository packages;
     @InjectMocks PackageService service;
 
+    /** Kiểm thử: tạo gói mặc định ở trạng thái hoạt động khi không nêu trạng thái. */
     @Test
     void createDefaultsToActiveWhenStatusOmitted() {
         when(packages.save(any(MembershipPackage.class))).thenAnswer(i -> i.getArgument(0));
@@ -35,6 +36,7 @@ class PackageServiceTest {
         assertEquals(90, dto.durationDays());
     }
 
+    /** Kiểm thử: tạo gói từ chối thời hạn ngoài khoảng 3-12 tháng. */
     @Test
     void createRejectsTermsOutsideThreeToTwelveMonths() {
         assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
@@ -43,6 +45,7 @@ class PackageServiceTest {
                 () -> service.create(new PackageRequest("Long", null, BigDecimal.TEN, 400, 8, null)));
     }
 
+    /** Kiểm thử: seed gói cũ giữ các gói một tháng mà thao tác tạo sẽ từ chối. */
     @Test
     void seedLegacyPackageKeepsTheOneMonthPlansThatCreateRejects() {
         when(packages.save(any(MembershipPackage.class))).thenAnswer(i -> i.getArgument(0));
@@ -55,6 +58,7 @@ class PackageServiceTest {
                 () -> service.create(new PackageRequest("SILVER", null, BigDecimal.TEN, 30, 1, "active", null)));
     }
 
+    /** Kiểm thử: gói đã bán không được đổi tên hay đổi thời hạn. */
     @Test
     void soldPackageCannotBeRenamedOrRetimed() {
         MembershipPackage pkg = new MembershipPackage();
@@ -72,6 +76,7 @@ class PackageServiceTest {
         assertEquals("GOLD 6 THÁNG", service.update(1L, new PackageRequest("GOLD 6 THÁNG", null, BigDecimal.ONE, 180, 8, null)).name());
     }
 
+    /** Kiểm thử: cập nhật trạng thái để vô hiệu hóa gói. */
     @Test
     void updateStatusDeactivates() {
         MembershipPackage pkg = new MembershipPackage();
@@ -81,6 +86,7 @@ class PackageServiceTest {
         assertEquals("inactive", service.updateStatus(1L, "inactive").status());
     }
 
+    /** Kiểm thử: cập nhật gói không tồn tại ném not found. */
     @Test
     void updateMissingThrowsNotFound() {
         when(packages.findById(9L)).thenReturn(Optional.empty());
@@ -89,6 +95,7 @@ class PackageServiceTest {
                 () -> service.update(9L, new PackageRequest("A", null, BigDecimal.ONE, 90, null, null)));
     }
 
+    /** Kiểm thử: xóa được gói chưa từng bán. */
     @Test
     void deleteRemovesPackageThatWasNeverSold() {
         MembershipPackage pkg = new MembershipPackage();
@@ -99,6 +106,7 @@ class PackageServiceTest {
         org.mockito.Mockito.verify(packages).delete(pkg);
     }
 
+    /** Kiểm thử: chặn xóa gói đã bán. */
     @Test
     void deleteBlockedWhenPackageWasSold() {
         var subscriptions = org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);

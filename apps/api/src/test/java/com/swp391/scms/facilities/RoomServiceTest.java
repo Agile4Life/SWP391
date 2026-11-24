@@ -29,6 +29,7 @@ class RoomServiceTest {
     @Mock DisciplineRepository disciplines;
     @InjectMocks RoomService service;
 
+    /** Kiểm thử: liệt kê mọi phòng mà không lọc theo tên. */
     @Test
     void listsEveryRoomWithoutFilteringByName() {
         Room standard = new Room(); standard.setName("Phòng Gym Tiêu chuẩn");
@@ -39,6 +40,7 @@ class RoomServiceTest {
                 service.list().stream().map(room -> room.name()).toList());
     }
 
+    /** Kiểm thử: tạo phòng mặc định là khả dụng khi không nêu trạng thái. */
     @Test
     void createDefaultsToAvailableWhenStatusOmitted() {
         when(rooms.save(any(Room.class))).thenAnswer(i -> i.getArgument(0));
@@ -46,6 +48,7 @@ class RoomServiceTest {
         assertEquals("available", service.create(new RoomRequest("Studio", "L1", 10, null)).status());
     }
 
+    /** Kiểm thử: cập nhật đổi trạng thái và sức chứa. */
     @Test
     void updateChangesStatusAndCapacity() {
         when(rooms.findById(1L)).thenReturn(Optional.of(new Room()));
@@ -56,6 +59,7 @@ class RoomServiceTest {
         assertEquals(15, dto.capacity());
     }
 
+    /** Kiểm thử: cập nhật phòng không tồn tại ném not found. */
     @Test
     void updateMissingThrowsNotFound() {
         when(rooms.findById(9L)).thenReturn(Optional.empty());

@@ -64,6 +64,7 @@ class ReceptionTrialControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller dùng thử của lễ tân. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();

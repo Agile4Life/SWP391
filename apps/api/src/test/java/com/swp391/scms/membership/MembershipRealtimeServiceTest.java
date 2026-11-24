@@ -12,6 +12,7 @@ import static org.mockito.Mockito.*;
 
 /** Bộ kiểm thử cho service MembershipRealtimeService (membership realtime service). */
 class MembershipRealtimeServiceTest {
+    /** Kiểm thử: chỉ trả kênh ẩn danh của chủ sở hữu và từ chối vai trò khác. */
     @Test
     void returnsOnlyOwnersOpaqueChannelAndRejectsOtherRoles() {
         var members = mock(MemberRepository.class);
@@ -30,6 +31,7 @@ class MembershipRealtimeServiceTest {
         verifyNoMoreInteractions(members);
     }
 
+    /** Kiểm thử: không bao giờ trả bí mật backend và không giả vờ có realtime khi thiếu cấu hình. */
     @Test
     void neverReturnsBackendSecretsAndDoesNotPretendMissingConfigIsRealtime() {
         var members = mock(MemberRepository.class);

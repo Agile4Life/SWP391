@@ -14,6 +14,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Bộ kiểm thử cho service DynamicQrService (dynamic qr service). */
 class DynamicQrServiceTest {
 
+    /** Kiểm thử: bean Spring dùng secret ký và thời hạn đã cấu hình. */
     @Test
     void springBeanUsesConfiguredSigningSecretAndLifetime() {
         try (var context = new AnnotationConfigApplicationContext()) {
@@ -35,6 +36,7 @@ class DynamicQrServiceTest {
     private static final String SECRET = "test-secret-key-for-hmac-sha256-scms-project";
     private static final long TTL_SECONDS = 60;
 
+    /** Chuẩn bị trước mỗi test: tạo DynamicQrService với secret và đồng hồ cố định. */
     @BeforeEach
     void setUp() {
         qrService = new DynamicQrService(SECRET, TTL_SECONDS);

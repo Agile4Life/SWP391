@@ -77,6 +77,7 @@ class RevenueReportServiceTest {
     private Clock clock;
     private RevenueReportService service;
 
+    /** Chuẩn bị trước mỗi test: tạo RevenueReportService với repository giả lập. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -88,6 +89,7 @@ class RevenueReportServiceTest {
                 classEnrollmentRepository, sessionAttendanceReportRepository);
     }
 
+    /** Kiểm thử: trả giao dịch thật với ngày kết thúc tính cả ngày đó và giới hạn 10 giao dịch. */
     @Test
     void returnsRealTransactionsWithInclusiveEndDateAndLimitOfTen() {
         LocalDate start = LocalDate.of(2026, 10, 1);
@@ -100,6 +102,7 @@ class RevenueReportServiceTest {
         assertEquals(List.of(transaction), service.getRecentTransactions(start, end));
     }
 
+    /** Kiểm thử: từ chối khoảng ngày giao dịch bị đảo ngược. */
     @Test
     void rejectsReversedTransactionDateRange() {
         assertThrows(BadRequestException.class, () -> service.getRecentTransactions(
@@ -107,6 +110,7 @@ class RevenueReportServiceTest {
         verifyNoInteractions(transactionReportRepository);
     }
 
+    /** Kiểm thử: khoảng giao dịch mặc định dùng đồng hồ của ứng dụng. */
     @Test
     void defaultsTransactionPeriodUsingApplicationClock() {
         when(transactionReportRepository.findRecentTransactions(LocalDate.of(2026, 9, 5).atStartOfDay(),
@@ -114,6 +118,7 @@ class RevenueReportServiceTest {
         assertTrue(service.getRecentTransactions(null, null).isEmpty());
     }
 
+    /** Kiểm thử: tỷ lệ gia hạn chỉ tính các kỳ đã trả và hết hạn trong nhóm được chọn. */
     @Test
     void renewalRateCountsOnlyExpiredPaidPeriodsInSelectedCohort() {
         LocalDate start = LocalDate.of(2026, 10, 1);
@@ -128,6 +133,7 @@ class RevenueReportServiceTest {
         assertEquals(75.0, result.renewalRate());
     }
 
+    /** Kiểm thử: tỷ lệ gia hạn không khả dụng khi nhóm rỗng. */
     @Test
     void renewalRateIsUnavailableForAnEmptyCohort() {
         var result = service.getRenewalRate(LocalDate.of(2026, 10, 5), LocalDate.of(2026, 10, 10));
@@ -137,6 +143,7 @@ class RevenueReportServiceTest {
         verifyNoInteractions(subscriptionRepository);
     }
 
+    /** Kiểm thử: tỷ lệ gia hạn không khả dụng khi chưa có kỳ trả phí nào hết hạn. */
     @Test
     void renewalRateIsUnavailableWhenNoPaidPeriodsExpired() {
         LocalDate start = LocalDate.of(2026, 10, 1);
@@ -147,6 +154,7 @@ class RevenueReportServiceTest {
         verify(subscriptionRepository, never()).countRenewedExpiredPaidPeriods(any(), any());
     }
 
+    /** Kiểm thử: tỷ lệ gia hạn từ chối khoảng ngày bị đảo ngược. */
     @Test
     void renewalRateRejectsReversedDateRange() {
         assertThrows(BadRequestException.class, () -> service.getRenewalRate(
@@ -154,6 +162,7 @@ class RevenueReportServiceTest {
         verifyNoInteractions(subscriptionRepository);
     }
 
+    /** Kiểm thử: tính đúng doanh thu theo ngày. */
     @Test
     @DisplayName("Should calculate daily revenue correctly for date range")
     void shouldCalculateDailyRevenueCorrectly() {
@@ -187,6 +196,7 @@ class RevenueReportServiceTest {
         assertEquals(1, result.get(1).getTransactionCount());
     }
 
+    /** Kiểm thử: ném lỗi khi ngày bắt đầu sau ngày kết thúc. */
     @Test
     @DisplayName("Should throw BadRequestException when start date is after end date")
     void shouldThrowWhenStartDateAfterEndDate() {
@@ -196,6 +206,7 @@ class RevenueReportServiceTest {
         assertThrows(BadRequestException.class, () -> service.getDailyRevenue(start, end));
     }
 
+    /** Kiểm thử: tính đúng doanh thu theo gói. */
     @Test
     @DisplayName("Should calculate revenue by package with correct percentages")
     void shouldCalculateRevenueByPackageCorrectly() {
@@ -231,6 +242,7 @@ class RevenueReportServiceTest {
         assertEquals(100.0, result.get(0).getPercentage());
     }
 
+    /** Kiểm thử: tính mức sử dụng lớp học an toàn. */
     @Test
     @DisplayName("Should calculate class utilization and safely handle zero capacity or zero booked")
     void shouldCalculateClassUtilizationSafely() {
@@ -271,6 +283,7 @@ class RevenueReportServiceTest {
         verifyNoInteractions(gymClassRepository, classEnrollmentRepository);
     }
 
+    /** Kiểm thử: tạo ảnh chụp khi JSON hợp lệ. */
     @Test
     @DisplayName("Should generate snapshot when json data is valid including class_utilization type")
     void shouldGenerateSnapshotWhenJsonIsValid() {
@@ -294,6 +307,7 @@ class RevenueReportServiceTest {
         verify(snapshotRepository).save(any(ReportSnapshot.class));
     }
 
+    /** Kiểm thử: từ chối ảnh chụp khi JSON không hợp lệ. */
     @Test
     @DisplayName("Should reject snapshot generation when json data is invalid syntax")
     void shouldRejectSnapshotWhenJsonIsInvalid() {

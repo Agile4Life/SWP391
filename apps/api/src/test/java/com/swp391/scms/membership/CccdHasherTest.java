@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 
 /** Bộ kiểm thử cho CccdHasher (cccd hasher). */
 class CccdHasherTest {
+    /** Kiểm thử: số giấy tờ mã hóa giải mã lại đúng và không bao giờ chứa số gốc. */
     @Test
     void encryptedDocumentNumberRoundTripsAndNeverContainsThePlainNumber() {
         CccdHasher hasher = new CccdHasher("pepper-for-tests");
@@ -16,6 +17,7 @@ class CccdHasherTest {
         assertEquals("079204001234", hasher.decrypt(encrypted));
     }
 
+    /** Kiểm thử: giải mã trả null khi thiếu dữ liệu hoặc đổi khóa. */
     @Test
     void decryptFallsBackToNullWhenDataIsMissingOrKeyChanged() {
         String encrypted = new CccdHasher("old-pepper").encrypt("079204001234");

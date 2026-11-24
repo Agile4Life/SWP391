@@ -36,6 +36,7 @@ class MemberDiscountServiceTest {
         return s;
     }
 
+    /** Kiểm thử: Gold giảm 10%, Platinum 20%, Silver và gói thử không giảm. */
     @Test
     void goldGetsTenPercentPlatinumTwentyAndSilverAndTrialNothing() {
         LocalDate today = LocalDate.of(2026, 11, 9);
@@ -51,6 +52,7 @@ class MemberDiscountServiceTest {
         assertThat(service.percentFor(null)).isZero();
     }
 
+    /** Kiểm thử: kỳ hết hạn hoặc ở tương lai không được tính. */
     @Test
     void anExpiredOrFuturePeriodDoesNotCount() {
         LocalDate today = LocalDate.of(2026, 11, 9);
@@ -61,6 +63,7 @@ class MemberDiscountServiceTest {
         assertThat(service.percentFor(1L)).isZero();
     }
 
+    /** Kiểm thử: số tiền làm tròn đến đồng và không bao giờ âm. */
     @Test
     void amountsAreRoundedToWholeDongAndNeverGoNegative() {
         assertThat(MemberDiscountService.apply(new BigDecimal("200000"), 10)).isEqualByComparingTo("180000");

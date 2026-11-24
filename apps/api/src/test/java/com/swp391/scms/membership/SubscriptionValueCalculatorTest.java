@@ -47,6 +47,7 @@ class SubscriptionValueCalculatorTest {
         return payment;
     }
 
+    /** Kiểm thử: tín dụng giảm tuyến tính, không có bước nhảy ở nửa thời hạn. */
     @Test
     void creditFallsLinearlyWithNoCliffAtHalfTerm() {
         MembershipSubscription silver = period("199000");
@@ -61,6 +62,7 @@ class SubscriptionValueCalculatorTest {
         assertThat(calculator.remainingValue(silver, START.minusDays(3))).isEqualByComparingTo("199000");
     }
 
+    /** Kiểm thử: giá trị lấy từ khoản thanh toán chứ không phải giá danh mục hiện tại. */
     @Test
     void valueComesFromPaymentsNotTheCurrentCatalogPrice() {
         MembershipSubscription silver = period("349000");
@@ -73,6 +75,7 @@ class SubscriptionValueCalculatorTest {
         assertThat(calculator.paidValue(silver)).isEqualByComparingTo("149000");
     }
 
+    /** Kiểm thử: kỳ nâng cấp có giá trị bằng khoản phí cộng tín dụng mang sang. */
     @Test
     void upgradedPeriodIsWorthItsChargePlusTheCarriedCredit() {
         MembershipSubscription gold = period("599000");
@@ -84,6 +87,7 @@ class SubscriptionValueCalculatorTest {
         assertThat(calculator.remainingValue(gold, START.plusDays(15))).isEqualByComparingTo("149000");
     }
 
+    /** Kiểm thử: nâng cấp cũ không lưu tín dụng thì dựng lại từ kỳ bị thay. */
     @Test
     void legacyUpgradeWithoutStoredCreditGetsItRebuiltFromTheReplacedPeriod() {
         // Silver bought 01/11 for 199,000 (30 days), upgraded on 17/11 under the old rule: full 299,000 paid.
@@ -107,6 +111,7 @@ class SubscriptionValueCalculatorTest {
         assertThat(calculator.paidValue(gold)).isEqualByComparingTo("391000");
     }
 
+    /** Kiểm thử: gói dùng thử không có thanh toán thì không có giá trị. */
     @Test
     void trialWithoutPaymentIsWorthNothing() {
         MembershipSubscription trial = period("299000");
@@ -116,6 +121,7 @@ class SubscriptionValueCalculatorTest {
         assertThat(calculator.remainingValue(trial, START)).isEqualByComparingTo("0");
     }
 
+    /** Kiểm thử: phí nâng cấp bằng giá gói đích trừ tín dụng. */
     @Test
     void upgradeChargeIsTargetPriceMinusCredit() {
         assertThat(SubscriptionValueCalculator.upgradeCharge(new BigDecimal("299000"), new BigDecimal("99000")))

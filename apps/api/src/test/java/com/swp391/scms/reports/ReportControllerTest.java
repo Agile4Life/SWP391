@@ -47,6 +47,7 @@ class ReportControllerTest {
     @InjectMocks
     private ReportController reportController;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller báo cáo. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -56,6 +57,7 @@ class ReportControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: lấy doanh thu theo ngày. */
     @Test
     @DisplayName("GET /api/v1/reports/revenue/daily should return 200 OK")
     void shouldGetDailyRevenue() throws Exception {
@@ -68,6 +70,7 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.data[0].transactionCount").value(5));
     }
 
+    /** Kiểm thử: lấy doanh thu theo gói. */
     @Test
     @DisplayName("GET /api/v1/reports/revenue/by-package should return 200 OK")
     void shouldGetRevenueByPackage() throws Exception {
@@ -80,6 +83,7 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.data[0].packageName").value("Gold"));
     }
 
+    /** Kiểm thử: lấy tỷ lệ gia hạn theo khoảng thời gian yêu cầu. */
     @Test
     void getsRenewalRateForRequestedPeriod() throws Exception {
         when(reportService.getRenewalRate(LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5)))
@@ -91,6 +95,7 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.data.renewalRate").value(75.0));
     }
 
+    /** Kiểm thử: lấy mức sử dụng lớp học. */
     @Test
     @DisplayName("GET /api/v1/reports/class-utilization should return 200 OK")
     void shouldGetClassUtilization() throws Exception {
@@ -109,6 +114,7 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.data[0].attendanceRate").value(80.0));
     }
 
+    /** Kiểm thử: tạo ảnh chụp báo cáo. */
     @Test
     @DisplayName("POST /api/v1/reports/snapshots/generate should return 201 Created")
     void shouldGenerateSnapshot() throws Exception {
@@ -134,6 +140,7 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.data.id").value(10L));
     }
 
+    /** Kiểm thử: lấy danh sách ảnh chụp báo cáo. */
     @Test
     @DisplayName("GET /api/v1/reports/snapshots should return 200 OK")
     void shouldGetSnapshotsList() throws Exception {
@@ -147,6 +154,7 @@ class ReportControllerTest {
                 .andExpect(jsonPath("$.data[0].id").value(1L));
     }
 
+    /** Kiểm thử: lộ ra các giao dịch gần đây của khoảng thời gian đã chọn. */
     @Test
     void shouldExposeRecentTransactionsForSelectedPeriod() throws Exception {
         var start = LocalDate.of(2026, 10, 1);
