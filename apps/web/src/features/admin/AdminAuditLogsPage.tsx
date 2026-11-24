@@ -12,8 +12,13 @@ import {
 import './admin-audit-logs.css';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
+/** Hai tab của trang: nhật ký thao tác (audit) và mức lấp đầy lớp học. */
 type ActiveTab = 'audit' | 'occupancy';
 
+/**
+ * Trang quản trị: xem nhật ký thao tác hệ thống (lọc theo người, đối tượng, hành động, khoảng ngày, xem khác
+ * biệt giá trị cũ/mới) và thống kê mức lấp đầy, tỷ lệ đi học của các lớp.
+ */
 export function AdminAuditLogsPage() {
   const { t } = useStaffI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>('audit');
@@ -44,6 +49,7 @@ export function AdminAuditLogsPage() {
   // Fetch Audit Logs
   useEffect(() => {
     let mounted = true;
+    // Tải nhật ký thao tác theo bộ lọc và trang hiện tại.
     const fetchAudit = async () => {
       setLoadingLogs(true);
       setLogsError('');
@@ -79,6 +85,7 @@ export function AdminAuditLogsPage() {
   // Fetch Occupancy
   useEffect(() => {
     let mounted = true;
+    // Tải thống kê mức lấp đầy của các lớp.
     const fetchOccupancy = async () => {
       setLoadingOccupancy(true);
       setOccupancyError('');
@@ -106,6 +113,7 @@ export function AdminAuditLogsPage() {
   }, [activeTab, occupancyReload]);
 
   // Filter logs by actor search locally
+  // Nhật ký sau khi lọc theo tên/email người thực hiện.
   const filteredLogs = useMemo(() => {
     if (!actorSearch.trim()) return logs;
     const q = actorSearch.toLowerCase().trim();
@@ -117,6 +125,7 @@ export function AdminAuditLogsPage() {
   }, [logs, actorSearch]);
 
   // Overall Occupancy Metrics
+  // Chỉ số tổng hợp: tỷ lệ lấp đầy trung bình, lớp cao nhất, tổng sức chứa và tổng ghi danh.
   const occupancyMetrics = useMemo(() => {
     if (occupancyList.length === 0) {
       return { avgUtilization: 0, highestClass: '—', totalCapacity: 0, totalEnrolled: 0 };
@@ -134,6 +143,7 @@ export function AdminAuditLogsPage() {
     };
   }, [occupancyList]);
 
+  // Định dạng giá trị JSON (chuỗi JSON được parse lại) thành văn bản thụt lề dễ đọc.
   const formatJsonPretty = (val: unknown) => {
     if (val === null || val === undefined) {
       return 'null';
@@ -148,6 +158,7 @@ export function AdminAuditLogsPage() {
     return JSON.stringify(val, null, 2);
   };
 
+  // Chuyển mã dạng camelCase/snake_case thành câu dễ đọc, viết hoa chữ đầu.
   const humanizeCode = (raw?: string | null) => {
     if (!raw) return '';
     const cleaned = raw
@@ -160,6 +171,7 @@ export function AdminAuditLogsPage() {
     return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : '';
   };
 
+  // Đọc giá trị (đối tượng hoặc chuỗi JSON) thành object thuần; không phải object thì trả null.
   const parseRecordObject = (val: unknown): Record<string, unknown> | null => {
     if (val === null || val === undefined) return null;
     if (typeof val === 'string') {
@@ -179,6 +191,7 @@ export function AdminAuditLogsPage() {
     return null;
   };
 
+  // Hiển thị IP; địa chỉ loopback IPv6 được đổi thành 127.0.0.1.
   const formatIpAddress = (ip?: string | null) => {
     if (!ip) return '';
     const trimmed = ip.trim();
@@ -186,6 +199,7 @@ export function AdminAuditLogsPage() {
     return trimmed;
   };
 
+  // Chọn class màu của huy hiệu theo loại hành động (tạo, sửa, xóa, hủy...).
   const getActionBadgeClass = (act: string) => {
     const a = (act ?? '').trim().toUpperCase();
     if (
@@ -262,6 +276,7 @@ export function AdminAuditLogsPage() {
     return '';
   };
 
+  // Nhãn tiếng Việt/Anh của loại hành động.
   const getActionLabel = (act: string) => {
     const a = (act ?? '').trim().toUpperCase();
     switch (a) {
@@ -330,6 +345,7 @@ export function AdminAuditLogsPage() {
     }
   };
 
+  // Nhãn tiếng Việt/Anh của loại đối tượng (tài khoản, hội viên...).
   const getEntityLabel = (type: string) => {
     const normalized = (type ?? '').trim().toLowerCase();
     switch (normalized) {
@@ -368,6 +384,7 @@ export function AdminAuditLogsPage() {
     }
   };
 
+  // Nhãn tiếng Việt/Anh của tên trường trong bảng khác biệt.
   const getDiffFieldLabel = (key: string) => {
     switch (key) {
       case 'id': return 'ID';
@@ -409,6 +426,7 @@ export function AdminAuditLogsPage() {
     }
   };
 
+  // Định dạng giá trị của một trường khác biệt (rỗng là "—", boolean là Có/Không, object là JSON).
   const formatDiffFieldValue = (val: unknown) => {
     if (val === null || val === undefined || val === '') return '—';
     if (typeof val === 'boolean') return val ? t('Có', 'Yes') : t('Không', 'No');
