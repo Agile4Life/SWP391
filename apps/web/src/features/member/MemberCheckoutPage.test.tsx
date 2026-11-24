@@ -148,7 +148,7 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.textContent).toContain('Tóm tắt đơn hàng');
     expect(host.textContent).toContain('Gói Tiêu Chuẩn 1 Tháng');
     expect(host.textContent).toContain('30 ngày tập');
-    expect(host.textContent).toContain('Tối đa 12 buổi');
+    expect(host.textContent).not.toContain('Lớp học:');
     expect(host.textContent).toContain('650.000');
   });
 
