@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho các trang công khai (landing, đăng nhập, đăng ký, OTP) theo thiết kế SÖL Fitness; chỉ áp dụng trong layout công khai. */
 /* Public page styles, scoped to the active public layout. */
 html:has(.fit-site) {
   background: #202020;

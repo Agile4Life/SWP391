@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho trang đối soát thanh toán của admin (tái dùng bố cục trang audit). */
 /* Admin payment reconciliation: reuses the audit page layout; colours come from portal tokens only. */
 .recon-intro {
   margin: -8px 0 16px;

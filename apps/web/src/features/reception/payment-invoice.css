@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho phần hóa đơn và thông báo thanh toán thành công ở quầy lễ tân. */
 .payment-invoice__success {
   margin: 0 0 16px;
   color: #166534;

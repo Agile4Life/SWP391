@@ -1,3 +1,4 @@
+/* Mục đích: Hiệu ứng viền phát sáng của nút dùng @property cho góc xoay. */
 @property --sol-button-glow-angle {
   syntax: '<angle>';
   inherits: false;

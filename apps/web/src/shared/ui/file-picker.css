@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho FilePicker, thay thế ô chọn file mặc định của trình duyệt. */
 /* FilePicker.tsx — themed replacement for the browser's file input. Colours come from the portal tokens. */
 .file-picker {
   position: relative;

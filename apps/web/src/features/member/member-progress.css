@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho màn hình tiến độ của hội viên. */
 .member-progress { display: grid; gap: 20px; }
 .member-progress-exercises { list-style: none; padding: 0; margin: 0; }
 .member-progress-exercises li { display: flex; align-items: flex-start; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--portal-border); }

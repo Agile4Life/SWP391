@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho phần câu chuyện cuộn các môn thể thao ở landing. */
 .fit-sport-story { --sport-story-top: 90px; --sport-story-ease: cubic-bezier(.22, 1, .36, 1); padding-top: 12px; }
 .fit-sport-story > .fit-section-heading { text-align: left; max-width: 640px; }
 .fit-sport-story > .fit-section-heading h2 { text-wrap: balance; }

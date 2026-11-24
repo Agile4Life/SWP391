@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho danh sách thông báo của hội viên. */
 .notification-list { overflow: hidden; border: 1px solid var(--portal-border); border-radius: 14px; background: var(--portal-surface); }
 .notification-item { display: flex; align-items: flex-start; gap: 20px; width: 100%; padding: 22px 26px; border: 0; border-bottom: 1px solid var(--portal-border); background: var(--portal-surface); color: var(--portal-paper); text-align: left; cursor: pointer; font: inherit; }
 .notification-item:last-child { border-bottom: 0; }

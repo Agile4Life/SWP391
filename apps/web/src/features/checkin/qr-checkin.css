@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho màn hình check-in bằng mã QR. */
 .qr-checkin-layout { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px; align-items: start; }
 .qr-checkin-layout > * { min-width: 0; }
 .qr-camera__preview { position: relative; aspect-ratio: 1.2; max-height: 420px; overflow: hidden; background: #202020; border-radius: 18px; }

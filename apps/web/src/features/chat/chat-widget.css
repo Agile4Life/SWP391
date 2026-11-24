@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho cửa sổ chat nổi (widget) và hộp tin nhắn của trợ lý AI. */
 .chat-widget {
   --chat-salmon: var(--sol-accent);
   --chat-ink: #202020;

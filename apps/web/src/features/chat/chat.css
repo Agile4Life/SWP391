@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho trang tin nhắn trực tiếp (danh sách hội thoại và khung chat). */
 .direct-chat { color: var(--portal-paper, #f5f5f5); }
 .direct-chat .portal-header { margin-bottom: 24px; }
 .direct-chat__intro { color: var(--portal-muted, #a8a8a8); margin: 12px 0 0; }

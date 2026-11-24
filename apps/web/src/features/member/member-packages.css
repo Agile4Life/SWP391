@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho màn hình chọn và mua gói tập của hội viên. */
 /* Local to SCRUM-86; shared portal and theme tokens remain authoritative. */
 .member-packages :is(.portal-skeleton, .portal-skeleton-line) {
   animation: none;

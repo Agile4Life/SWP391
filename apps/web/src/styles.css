@@ -1,3 +1,4 @@
+/* Mục đích: Điểm vào CSS toàn cục: import token, nút phát sáng, reset và các kiểu nền tảng của ứng dụng. */
 @import './shared/ui/button-glow.css';
 
 :root {

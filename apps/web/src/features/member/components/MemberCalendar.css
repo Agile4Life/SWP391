@@ -1,3 +1,4 @@
+/* Mục đích: Màu theo loại sự kiện trên lịch hội viên, giữ rõ ở cả hai theme. */
 /* Member-only type colors stay distinct in both themes and for past events. */
 .mcal--member { --mcal-court: #b8dcff; --mcal-class: #f2a38f; --mcal-pt: #b7e3c8; }
 .mcal--member :is(.mcal__event--court, .mcal__chip--court) { border: 1px solid #24649b; }

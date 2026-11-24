@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho lịch tuần/tháng dùng chung cho mọi vai trò. */
 /* Lịch tuần/tháng dùng chung cho mọi role: một thẻ, điều hướng tròn, cột giờ bên trái, ngày hôm nay là vòng salmon. */
 .mcal {
   --mcal-hour: 64px;

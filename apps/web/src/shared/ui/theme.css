@@ -1,3 +1,4 @@
+/* Mục đích: Token thiết kế: màu nhấn --sol-accent*, màu nền/chữ của hai theme sáng/tối; nguồn duy nhất cho màu thương hiệu. */
 /* Accent tokens: the single source for the brand accent. Dark (silver) is the base; Light (salmon) overrides below.
    New colours must go through these tokens, never a hex value (see DESIGN.md). */
 :root {

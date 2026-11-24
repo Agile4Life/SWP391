@@ -1,3 +1,4 @@
+/* Mục đích: Hiệu ứng chuyển động của portal (xuất hiện component, chuyển trang), tôn trọng prefers-reduced-motion. */
 /*
  * Chuyển động portal: reveal từng component theo viewport (usePortalMotion) và vi tương tác bằng CSS.
  * Chỉ dùng opacity/transform, không đổi bố cục; toàn bộ nằm trong no-preference nên reduced motion

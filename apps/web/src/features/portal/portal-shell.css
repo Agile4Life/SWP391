@@ -1,3 +1,4 @@
+/* Mục đích: Khung portal (sidebar icon, topbar, lưới dashboard bốn cột) và màu theo bảng màu landing; giữ nguyên tổ chức component ban đầu. */
 /* Landing palette; original component organization preserved. */
 /* Palette adapters only: keep component sizes, placement and behavior. */
 html:has(.portal-backdrop),
