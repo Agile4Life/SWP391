@@ -6,6 +6,10 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.*;
 
+/**
+ * Entity một lượt đặt sân (bảng court_bookings): sân, hội viên, ngày giờ, trạng thái, mốc tạo/hủy, lý do, mất
+ * lượt, giá và thanh toán.
+ */
 @Entity
 @Table(name = "court_bookings", indexes = {
         @Index(name = "ix_court_bookings_room_date", columnList = "room_id, booking_date"),
@@ -44,34 +48,46 @@ public class CourtBooking {
     public void setMember(User member) { this.member = member; }
     /** Lấy giá trị trường bookingDate. */
     public LocalDate getBookingDate() { return bookingDate; }
+    /** Gán giá trị mới cho trường bookingDate. */
     public void setBookingDate(LocalDate value) { bookingDate = value; }
     /** Lấy giá trị trường startTime. */
     public LocalTime getStartTime() { return startTime; }
+    /** Gán giá trị mới cho trường startTime. */
     public void setStartTime(LocalTime value) { startTime = value; }
     /** Lấy giá trị trường endTime. */
     public LocalTime getEndTime() { return endTime; }
+    /** Gán giá trị mới cho trường endTime. */
     public void setEndTime(LocalTime value) { endTime = value; }
     /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String value) { status = value; }
     /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime value) { createdAt = value; }
     /** Lấy giá trị trường cancelledAt. */
     public LocalDateTime getCancelledAt() { return cancelledAt; }
+    /** Gán giá trị mới cho trường cancelledAt. */
     public void setCancelledAt(LocalDateTime value) { cancelledAt = value; }
+    /** Cho biết quota forfeited (trường boolean). */
     public boolean isQuotaForfeited() { return Boolean.TRUE.equals(quotaForfeited); }
+    /** Gán giá trị mới cho trường quotaForfeited. */
     public void setQuotaForfeited(boolean value) { quotaForfeited = value; }
     /** Lấy giá trị trường cancelReason. */
     public String getCancelReason() { return cancelReason; }
+    /** Gán giá trị mới cho trường cancelReason. */
     public void setCancelReason(String value) { cancelReason = value; }
     /** Lấy giá trị trường price. */
     public BigDecimal getPrice() { return price; }
+    /** Gán giá trị mới cho trường price. */
     public void setPrice(BigDecimal value) { price = value; }
     /** Lấy giá trị trường paymentMethod. */
     public String getPaymentMethod() { return paymentMethod; }
+    /** Gán giá trị mới cho trường paymentMethod. */
     public void setPaymentMethod(String value) { paymentMethod = value; }
     /** Lấy giá trị trường paymentStatus. */
     public String getPaymentStatus() { return paymentStatus; }
+    /** Gán giá trị mới cho trường paymentStatus. */
     public void setPaymentStatus(String value) { paymentStatus = value; }
 }
