@@ -19,7 +19,7 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
      */
     Page<SupportRequest> findByMemberUserIdOrderByCreatedAtDesc(Long memberId, Pageable pageable);
 
-    /** Tìm các bản ghi có  = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
+    /** Lấy mọi bản ghi, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     Page<SupportRequest> findAllByOrderByCreatedAtDesc(Pageable pageable);
 
     /**

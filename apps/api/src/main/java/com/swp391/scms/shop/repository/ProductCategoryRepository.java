@@ -15,7 +15,7 @@ public interface ProductCategoryRepository extends JpaRepository<ProductCategory
      */
     List<ProductCategory> findAllByActiveTrueOrderBySortOrderAscIdAsc();
     /**
-     * Tìm các bản ghi có  = tham số, sắp xếp theo sortOrder tăng dần, id tăng dần (Spring Data tự sinh truy vấn
+     * Lấy mọi bản ghi, sắp xếp theo sortOrder tăng dần, id tăng dần (Spring Data tự sinh truy vấn
      * từ tên hàm).
      */
     List<ProductCategory> findAllByOrderBySortOrderAscIdAsc();

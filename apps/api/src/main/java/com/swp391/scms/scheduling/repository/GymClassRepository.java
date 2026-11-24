@@ -19,7 +19,7 @@ public interface GymClassRepository extends JpaRepository<GymClass, Long> {
     /** Kiểm tra có tồn tại bản ghi có disciplineId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByDisciplineId(Long disciplineId);
 
-    /** Tìm các bản ghi có  = tham số, sắp xếp theo id giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
+    /** Lấy mọi bản ghi, sắp xếp theo id giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<GymClass> findAllByOrderByIdDesc();
 
     /** Tìm các bản ghi có status = tham số, sắp xếp theo id giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */

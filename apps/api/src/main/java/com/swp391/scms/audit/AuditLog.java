@@ -5,7 +5,12 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-/** Entity mapping table audit_logs. */
+/**
+ * Bảng audit_logs: một dòng nhật ký kiểm toán (người thực hiện, hành động, loại và id bản ghi, giá trị cũ/mới
+ * dạng JSON, IP và thời điểm). Ràng buộc CHECK giới hạn các loại bản ghi được phép.
+ *
+ * Entity mapping table audit_logs.
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_audit_entity_type", constraints = "entity_type IN ( 'users','members','coaches','receptionists','center_managers', 'membership_packages','membership_subscriptions', 'classes','class_sessions','class_enrollments','class_waitlists', 'center_checkins','session_attendance', 'payments','invoices','invoice_items', 'training_plans','training_plan_items','session_evaluations', 'notifications','support_requests','role_permissions', 'products','product_categories','product_variants','product_orders','coach_bookings' )")
 @Table(name = "audit_logs", indexes = @Index(name = "ix_audit_entity", columnList = "entity_type, entity_id"))

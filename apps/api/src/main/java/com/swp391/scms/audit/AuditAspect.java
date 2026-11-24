@@ -22,6 +22,10 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
+ * Ghi nhật ký kiểm toán (audit log) tự động cho mọi hàm service gắn @Audited: chụp dữ liệu trước và sau khi
+ * chạy rồi lưu vào audit_logs. Chạy bên trong transaction nghiệp vụ nên log chỉ được lưu khi thao tác thành
+ * công.
+ *
  * Captures selected fields before and after a successful {@link Audited} service call.
  * Transaction advice wraps this aspect, so the log participates in the business transaction.
  */
@@ -36,10 +40,12 @@ public class AuditAspect {
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
 
+    /** Constructor cho test, không chụp dữ liệu từ database. */
     public AuditAspect(AuditLogRepository repository, ObjectMapper objectMapper) {
         this(repository, objectMapper, null);
     }
 
+    /** Constructor Spring dùng: có EntityManager để chụp dữ liệu trước/sau. */
     @Autowired
     public AuditAspect(AuditLogRepository repository, ObjectMapper objectMapper, EntityManager entityManager) {
         this.repository = repository;
@@ -47,6 +53,10 @@ public class AuditAspect {
         this.entityManager = entityManager;
     }
 
+    /**
+     * Bao quanh hàm @Audited: xác định id bản ghi (tham số đầu tiên, hoặc tham số thứ hai với buổi lớp), chụp
+     * dữ liệu cũ, chạy hàm, chụp dữ liệu mới rồi ghi log.
+     */
     @Around("@annotation(audited)")
     public Object around(ProceedingJoinPoint joinPoint, Audited audited) throws Throwable {
         Object[] args = joinPoint.getArgs();
@@ -61,10 +71,16 @@ public class AuditAspect {
         return result;
     }
 
+    /** Ghi log khi chỉ có kết quả trả về (không chụp dữ liệu trước/sau). */
     public void record(JoinPoint joinPoint, Audited audited, Object result) {
         record(joinPoint, audited, result, null, null);
     }
 
+    /**
+     * Tạo bản ghi audit: người thực hiện, hành động, loại và id bản ghi, giá trị cũ/mới (dạng JSON) và IP. Với
+     * cập nhật hồ sơ, ảnh và KYC thì không lưu giá trị mới để tránh ghi dữ liệu cá nhân nhạy cảm. Lỗi khi ghi
+     * log chỉ cảnh báo, không làm hỏng thao tác chính.
+     */
     private void record(JoinPoint joinPoint, Audited audited, Object result, JsonNode oldValue, JsonNode snapshot) {
         try {
             JsonNode newValue = snapshot != null ? snapshot : result == null
@@ -86,6 +102,11 @@ public class AuditAspect {
         }
     }
 
+    /**
+     * Chụp các trường quan trọng của bản ghi theo loại (người dùng, HLV, lễ tân, yêu cầu hỗ trợ, gói tập, thanh
+     * toán, lớp, buổi lớp, điểm danh, quyền của vai trò). Đọc kèm khóa ghi để dữ liệu không đổi giữa lúc chụp
+     * và lúc lưu. Loại không hỗ trợ thì trả null.
+     */
     private JsonNode snapshot(String entity, Long id, Object[] args) {
         if (entityManager == null || id == null) return null;
         try {
@@ -176,6 +197,10 @@ public class AuditAspect {
         }
     }
 
+    /**
+     * Id bản ghi để lưu vào log: id buổi lớp (tham số thứ hai), tham số đầu tiên kiểu Long, hoặc trường id
+     * trong kết quả trả về.
+     */
     private Long resolveEntityId(String entity, Object[] args, JsonNode newValue) {
         if ("class_sessions".equals(entity) && args.length > 1 && args[1] instanceof Long sessionId) {
             return sessionId;
@@ -186,11 +211,13 @@ public class AuditAspect {
         return newValue != null && newValue.hasNonNull("id") ? newValue.get("id").asLong() : null;
     }
 
+    /** Id người đang đăng nhập (null nếu chạy ngoài request, ví dụ job định kỳ). */
     private Long currentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.getPrincipal() instanceof AuthenticatedPrincipal principal ? principal.id() : null;
     }
 
+    /** Địa chỉ IP của request hiện tại (null nếu chạy ngoài request). */
     private String currentIp() {
         return RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attrs
                 ? ((HttpServletRequest) attrs.getRequest()).getRemoteAddr()

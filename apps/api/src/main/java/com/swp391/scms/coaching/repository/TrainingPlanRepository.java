@@ -54,7 +54,7 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
      */
     List<TrainingPlan> findByCoachUserIdOrderByCreatedAtDesc(Long coachId);
 
-    /** Tìm các bản ghi có  = tham số, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
+    /** Lấy mọi bản ghi, sắp xếp theo createdAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<TrainingPlan> findAllByOrderByCreatedAtDesc();
 
     @org.springframework.data.jpa.repository.Query("select (count(p) > 0) from TrainingPlan p where p.coach.userId = :coachId and p.member.userId = :memberId")

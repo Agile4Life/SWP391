@@ -15,6 +15,6 @@ public interface DisciplineRepository extends JpaRepository<Discipline, Long> {
      * Data tự sinh truy vấn từ tên hàm).
      */
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
-    /** Tìm các bản ghi có  = tham số, sắp xếp theo name tăng dần (Spring Data tự sinh truy vấn từ tên hàm). */
+    /** Lấy mọi bản ghi, sắp xếp theo name tăng dần (Spring Data tự sinh truy vấn từ tên hàm). */
     List<Discipline> findAllByOrderByNameAsc();
 }

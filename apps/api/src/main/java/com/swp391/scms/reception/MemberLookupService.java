@@ -8,7 +8,11 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Quick member lookup for the receptionist by membership code, name, email or phone. */
+/**
+ * Tra cứu nhanh hội viên cho lễ tân theo mã hội viên, họ tên, email hoặc SĐT.
+ *
+ * Quick member lookup for the receptionist by membership code, name, email or phone.
+ */
 @Service
 public class MemberLookupService {
 
@@ -17,10 +21,15 @@ public class MemberLookupService {
 
     private final MemberRepository repository;
 
+    /** Nhận repository hội viên. */
     public MemberLookupService(MemberRepository repository) {
         this.repository = repository;
     }
 
+    /**
+     * Từ khóa phải có ít nhất 2 ký tự (sau khi bỏ khoảng trắng); tìm không phân biệt hoa thường, trả tối đa 20
+     * hội viên chưa bị xóa.
+     */
     @Transactional(readOnly = true)
     public List<MemberLookupDto> search(String query) {
         String keyword = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);

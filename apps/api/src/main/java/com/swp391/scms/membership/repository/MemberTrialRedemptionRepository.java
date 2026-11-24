@@ -27,7 +27,7 @@ public interface MemberTrialRedemptionRepository extends JpaRepository<MemberTri
      */
     List<MemberTrialRedemption> findByStatusOrderByRedeemedAtDesc(String status);
     /**
-     * Tìm các bản ghi có  = tham số, sắp xếp theo redeemedAt giảm dần (Spring Data tự sinh truy vấn từ tên
+     * Lấy mọi bản ghi, sắp xếp theo redeemedAt giảm dần (Spring Data tự sinh truy vấn từ tên
      * hàm).
      */
     List<MemberTrialRedemption> findAllByOrderByRedeemedAtDesc();

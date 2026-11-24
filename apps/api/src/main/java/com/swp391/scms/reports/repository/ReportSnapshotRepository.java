@@ -17,7 +17,7 @@ public interface ReportSnapshotRepository extends JpaRepository<ReportSnapshot, 
     List<ReportSnapshot> findByPeriodStartBetween(LocalDate start, LocalDate end);
 
     /**
-     * Tìm các bản ghi có  = tham số, sắp xếp theo generatedAt giảm dần (Spring Data tự sinh truy vấn từ tên
+     * Lấy mọi bản ghi, sắp xếp theo generatedAt giảm dần (Spring Data tự sinh truy vấn từ tên
      * hàm).
      */
     List<ReportSnapshot> findAllByOrderByGeneratedAtDesc();

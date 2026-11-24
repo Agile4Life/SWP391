@@ -19,6 +19,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * API đơn từ nội bộ của nhân viên (/api/v1/operations/requests): HLV/lễ tân gửi và hủy đơn (nghỉ phép, đổi
+ * ca...), quản lý xem và duyệt.
+ */
 @Tag(name = "Internal Staff Requests", description = "Hệ thống đơn từ nội bộ giữa Nhân viên/HLV và Quản lý (SCRUM-135)")
 @RestController
 @RequestMapping("/api/v1/operations/requests")
@@ -27,20 +31,24 @@ public class StaffInternalRequestController {
     private final StaffInternalRequestService requestService;
     private final MessageService messageService;
 
+    /** Constructor cho test, không có MessageService. */
     public StaffInternalRequestController(StaffInternalRequestService requestService) {
         this(requestService, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public StaffInternalRequestController(StaffInternalRequestService requestService, MessageService messageService) {
         this.requestService = requestService;
         this.messageService = messageService;
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** POST: nhân viên gửi đơn mới (HTTP 201). */
     @Operation(summary = "Tạo đơn từ nội bộ mới", description = "Nhân viên lễ tân / HLV tạo đơn xin nghỉ phép, đổi ca hoặc đổi lịch dạy")
     @PreAuthorize("hasAnyRole('STAFF', 'COACH', 'RECEPTIONIST')")
     @PostMapping
@@ -52,6 +60,7 @@ public class StaffInternalRequestController {
                 .body(ApiResponse.created(msg("operations.request.create.success"), created));
     }
 
+    /** GET /my: các đơn của chính nhân viên, lọc theo trạng thái. */
     @Operation(summary = "Xem danh sách đơn từ của tôi", description = "Nhân viên / HLV xem các đơn từ đã gửi của chính mình")
     @PreAuthorize("hasAnyRole('STAFF', 'COACH', 'RECEPTIONIST')")
     @GetMapping("/my")
@@ -62,6 +71,7 @@ public class StaffInternalRequestController {
         return ApiResponse.ok(msg("operations.request.list.success"), list);
     }
 
+    /** PUT /{id}/cancel: nhân viên hủy đơn đang chờ duyệt. */
     @Operation(summary = "Hủy đơn từ đang chờ duyệt", description = "Nhân viên / HLV tự hủy đơn khi còn ở trạng thái PENDING")
     @PreAuthorize("hasAnyRole('STAFF', 'COACH', 'RECEPTIONIST')")
     @PutMapping("/{id}/cancel")
@@ -72,6 +82,7 @@ public class StaffInternalRequestController {
         return ApiResponse.ok(msg("operations.request.cancel.success"), cancelled);
     }
 
+    /** GET: quản lý xem mọi đơn, lọc theo trạng thái và loại đơn. */
     @Operation(summary = "Quản lý xem danh sách đơn từ nội bộ", description = "Quản lý / Giám đốc xem tất cả đơn từ nhân viên gửi lên")
     @PreAuthorize("hasAnyRole('MANAGER', 'CENTER_MANAGER')")
     @GetMapping
@@ -82,6 +93,7 @@ public class StaffInternalRequestController {
         return ApiResponse.ok(msg("operations.request.list.success"), list);
     }
 
+    /** PUT /{id}/review: quản lý duyệt hoặc từ chối đơn (từ chối phải có lý do). */
     @Operation(summary = "Phê duyệt hoặc từ chối đơn từ", description = "Quản lý duyệt (APPROVED) hoặc từ chối (REJECTED) đơn từ")
     @PreAuthorize("hasAnyRole('MANAGER', 'CENTER_MANAGER')")
     @PutMapping("/{id}/review")

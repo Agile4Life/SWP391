@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
         @Index(name = "idx_staff_req_status", columnList = "status"),
         @Index(name = "idx_staff_req_type", columnList = "request_type")
 })
+/**
+ * Bảng staff_internal_requests: đơn từ nội bộ (người gửi, loại, tiêu đề, lý do, khoảng ngày, ca, người thay ca,
+ * trạng thái, ghi chú và người/thời điểm duyệt).
+ */
 public class StaffInternalRequest {
 
     @Id
@@ -62,6 +66,7 @@ public class StaffInternalRequest {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /** Constructor rỗng cho JPA. */
     public StaffInternalRequest() {}
 
     /** Lấy giá trị trường id. */
