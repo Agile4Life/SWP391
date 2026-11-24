@@ -4,15 +4,22 @@ import { useI18n } from '../i18n';
 import './theme.css';
 import './dark-volt.css';
 
+/** Chế độ giao diện: sáng hoặc tối. */
 type Theme = 'light' | 'dark';
+/** Vị trí (tọa độ màn hình) nơi hiệu ứng chuyển theme bắt đầu lan ra. */
 type ToggleOrigin = { x: number; y: number };
 const ThemeContext = createContext<{ theme: Theme; toggle: (origin?: ToggleOrigin) => void } | null>(null);
 const REVEAL_MS = 450;
 
+/** Document có thêm API View Transitions (có thể chưa được trình duyệt hỗ trợ). */
 type ViewTransitionDocument = Document & {
   startViewTransition?: (update: () => void) => { ready: Promise<void>; finished: Promise<void> };
 };
 
+/**
+ * Cấp theme cho cả ứng dụng: đọc/lưu lựa chọn trong localStorage, gắn data-theme và màu thanh trình duyệt, đổi
+ * theme có hiệu ứng lan tròn (bỏ qua khi tắt animation).
+ */
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     try { return localStorage.getItem('scms_theme') === 'dark' ? 'dark' : 'light'; }
@@ -23,7 +30,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f5f5f3' : '#202020');
     try { localStorage.setItem('scms_theme', theme); } catch { /* Theme still works without storage. */ }
   }, [theme]);
+  // Đổi theme, dùng View Transitions để vòng tròn theme mới lan từ điểm bấm.
   const toggle = (origin?: ToggleOrigin) => {
+    // Đảo giữa sáng và tối.
     const swap = () => setTheme(current => current === 'dark' ? 'light' : 'dark');
     const doc = document as ViewTransitionDocument;
     const reduceMotion = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -46,6 +55,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
 }
 
+/** Nút đổi theme sáng/tối, hiệu ứng lan ra từ chính vị trí nút. */
 export function ThemeToggle() {
   const context = useContext(ThemeContext);
   const { t } = useI18n();

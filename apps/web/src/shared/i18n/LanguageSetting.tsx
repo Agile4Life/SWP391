@@ -1,11 +1,13 @@
 import type { FC } from 'react';
 import { useI18n } from './language';
 
+/** Props của ô chọn ngôn ngữ: kiểu hiển thị (trong menu avatar hoặc ở chân trang) và class tùy chọn. */
 export interface LanguageSettingProps {
   variant: 'menu' | 'footer';
   className?: string;
 }
 
+/** Ô chọn ngôn ngữ Việt/Anh; variant quyết định bố cục menu hay chân trang. */
 export const LanguageSetting: FC<LanguageSettingProps> = ({ variant, className = '' }) => {
   const { lang, setLanguage: selectLanguage, t } = useI18n();
 

@@ -2,6 +2,7 @@ import { forwardRef, useState, type ChangeEvent } from 'react';
 import { useI18n } from '../i18n';
 import './file-picker.css';
 
+/** Props của ô chọn tệp: id, loại tệp, chọn nhiều, nhãn nút, tên tệp hiển thị và sự kiện onChange. */
 interface FilePickerProps {
   id?: string;
   accept?: string;
@@ -15,6 +16,7 @@ interface FilePickerProps {
   /** Names to show beside the button. Pass it when the parent owns the selection (so a reset clears the text);
    *  otherwise the picker shows the names of the files picked last. */
   fileNames?: string[];
+  // Sự kiện thay đổi của input tệp gốc.
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }
 

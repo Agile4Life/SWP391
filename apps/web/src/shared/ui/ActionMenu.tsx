@@ -12,10 +12,13 @@ export function ActionMenu({ label, children }: { label?: string; children: Reac
   const [placement, setPlacement] = useState<PopoverPlacement>({ v: 'down', h: 'right' });
 
   useEffect(() => {
+    // Đóng menu bằng cách bỏ thuộc tính open của <details>.
     const close = () => root.current?.removeAttribute('open');
+    // Bấm ra ngoài menu thì đóng.
     const outside = (event: PointerEvent) => {
       if (root.current?.open && event.target instanceof Node && !root.current.contains(event.target)) close();
     };
+    // Nhấn Esc thì đóng và trả focus về nút mở menu.
     const escape = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && root.current?.open) { close(); root.current.querySelector('summary')?.focus(); }
     };

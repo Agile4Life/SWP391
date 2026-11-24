@@ -1,12 +1,14 @@
 import { englishLabels } from './translations';
 import { useCallback, useEffect, useSyncExternalStore, type RefObject } from 'react';
 
+/** Ngôn ngữ giao diện được hỗ trợ: tiếng Việt hoặc tiếng Anh. */
 export type Language = 'vi' | 'en';
 
 export const LANGUAGE_STORAGE_KEY = 'scms_lang';
 
 const listeners = new Set<() => void>();
 
+/** Chuẩn hóa mã ngôn ngữ: bắt đầu bằng "en" thì là tiếng Anh, còn lại mặc định tiếng Việt. */
 function normalizeLanguage(value: string | null | undefined): Language {
   if (value && /^en(?:[-_]|$)/i.test(value)) {
     return 'en';
@@ -14,6 +16,7 @@ function normalizeLanguage(value: string | null | undefined): Language {
   return 'vi';
 }
 
+/** Đọc ngôn ngữ đã lưu trong localStorage (mặc định tiếng Việt, kể cả khi không có window hoặc storage lỗi). */
 export function getLanguage(): Language {
   if (typeof window === 'undefined') {
     return 'vi';
@@ -25,6 +28,7 @@ export function getLanguage(): Language {
   }
 }
 
+/** Ghi ngôn ngữ vào thuộc tính lang và data-lang của thẻ html. */
 function applyDocumentLanguage(lang: Language): void {
   if (typeof document !== 'undefined' && document.documentElement) {
     document.documentElement.lang = lang;
@@ -32,6 +36,7 @@ function applyDocumentLanguage(lang: Language): void {
   }
 }
 
+/** Đổi ngôn ngữ: lưu vào localStorage (bỏ qua lỗi storage), áp lên tài liệu và báo cho các listener. */
 export function setLanguage(next: Language): void {
   const normalized = normalizeLanguage(next);
   if (typeof window !== 'undefined') {
@@ -48,9 +53,11 @@ export function setLanguage(next: Language): void {
   }
 }
 
+/** Đăng ký listener nhận thay đổi ngôn ngữ (cả từ tab khác qua sự kiện storage); trả về hàm hủy đăng ký. */
 export function subscribeLanguage(listener: () => void): () => void {
   listeners.add(listener);
   if (typeof window !== 'undefined') {
+    // Tab khác đổi ngôn ngữ thì áp lại lên tài liệu và báo listener.
     const onStorage = (event: StorageEvent) => {
       if (event.key === null || event.key === LANGUAGE_STORAGE_KEY) {
         applyDocumentLanguage(getLanguage());
@@ -68,6 +75,7 @@ export function subscribeLanguage(listener: () => void): () => void {
   };
 }
 
+/** Hook React trả về ngôn ngữ hiện tại cùng hàm đổi và đảo ngôn ngữ; tự đồng bộ thuộc tính lang của tài liệu. */
 export function useLanguage() {
   const lang = useSyncExternalStore(subscribeLanguage, getLanguage, () => 'vi' as Language);
 
@@ -75,6 +83,7 @@ export function useLanguage() {
     applyDocumentLanguage(lang);
   }, [lang]);
 
+  // Đảo giữa tiếng Việt và tiếng Anh.
   const toggleLanguage = () => {
     setLanguage(lang === 'vi' ? 'en' : 'vi');
   };
@@ -86,9 +95,14 @@ export function useLanguage() {
   };
 }
 
+/**
+ * Hook dịch cho giao diện: trả về ngôn ngữ và hàm t() nhận chuỗi, Error hoặc cặp vi/en; không có bản dịch rõ
+ * ràng thì tra bảng nhãn.
+ */
 export function useI18n() {
   const { lang, setLanguage: updateLanguage, toggleLanguage } = useLanguage();
 
+  // Dịch một thông điệp: Error và cặp vi/en dùng bản dịch đi kèm, nếu không thì dùng enText hoặc tra bảng.
   const t = useCallback((viText: string | Error | SourceMessage, enText?: string): string => {
     if (viText instanceof Error) {
       const translation = (viText as Error & { translation?: SourceMessage }).translation;
@@ -176,6 +190,7 @@ const VI_TO_EN_MAP = new Map<string, string>(VI_TO_EN_PHRASES);
 
 const originalTextMap = new WeakMap<Text, string>();
 
+/** Duyệt các node chữ trong một vùng DOM và đổi cụm tiếng Việt sang tiếng Anh (chỉ để tương thích màn cũ). */
 function translateDomSubtree(root: ParentNode, lang: Language): void {
   if (typeof document === 'undefined' || typeof NodeFilter === 'undefined') {
     return;
@@ -209,6 +224,10 @@ function translateDomSubtree(root: ParentNode, lang: Language): void {
   }
 }
 
+/**
+ * Hook tự dịch DOM sang tiếng Anh và theo dõi thay đổi bằng MutationObserver khi đang ở bản tiếng Anh (chỉ để
+ * tương thích màn cũ).
+ */
 export function useDomLanguageSync(containerRef?: RefObject<HTMLElement | null>): void {
   const { lang } = useLanguage();
 
@@ -243,18 +262,29 @@ export function useDomLanguageSync(containerRef?: RefObject<HTMLElement | null>)
   }, [lang, containerRef]);
 }
 
+/** Cặp thông điệp song ngữ: bản tiếng Việt và tiếng Anh. */
 export interface SourceMessage { vi: string; en: string }
-/** Explicit provenance for source-owned notices; never infer translations from API content. */
+/**
+ * Tạo cặp thông điệp; không truyền bản tiếng Anh thì tra trong bảng nhãn.
+ *
+ * Explicit provenance for source-owned notices; never infer translations from API content.
+ */
 export function sourceMessage(vi: string, en?: string): SourceMessage {
   return { vi, en: en ?? translateSource(vi, undefined, 'en') };
 }
 
 /** Missing source-owned translations are observable in QA instead of silently passing as English. */
 const missingTranslations = new Set<string>();
+/** Danh sách chuỗi chưa có bản dịch tiếng Anh, để QA kiểm tra. */
 export const getMissingTranslations = (): readonly string[] => [...missingTranslations];
+/** Xóa danh sách chuỗi thiếu bản dịch. */
 export const clearMissingTranslations = () => missingTranslations.clear();
 
-/** Only call for source-owned text; API content and user input must remain verbatim. */
+/**
+ * Dịch chuỗi thuộc mã nguồn sang tiếng Anh; chuỗi thiếu bản dịch được ghi nhận (và cảnh báo khi chạy dev).
+ *
+ * Only call for source-owned text; API content and user input must remain verbatim.
+ */
 export function translateSource(vi: string, en?: string, lang: Language = getLanguage()): string {
   const key = vi.trim();
   const translated = en ?? (Object.hasOwn(englishLabels, key) ? englishLabels[key] : undefined);

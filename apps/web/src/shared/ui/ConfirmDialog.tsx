@@ -2,6 +2,7 @@ import { useI18n, type SourceMessage } from '../i18n';
 import { useCallback, useRef, useState, type ReactNode } from 'react';
 import { Modal } from './Modal';
 
+/** Tùy chọn của hộp xác nhận: tiêu đề, nội dung, nhãn hai nút và có phải thao tác nguy hiểm không. */
 export interface ConfirmOptions {
   title: string | SourceMessage;
   message: ReactNode | SourceMessage;
@@ -21,6 +22,7 @@ export function useConfirm() {
   const resolver = useRef<((value: boolean) => void) | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
 
+  // Mở hộp xác nhận và trả Promise<boolean>; hộp đang mở dở thì được coi là hủy, đồng thời nhớ phần tử để trả focus.
   const confirm = useCallback((next: ConfirmOptions) => new Promise<boolean>((resolve) => {
     resolver.current?.(false);
     resolver.current = resolve;
@@ -28,6 +30,7 @@ export function useConfirm() {
     setOptions(next);
   }), []);
 
+  // Đóng hộp và trả kết quả cho Promise đang chờ.
   const settle = (value: boolean) => {
     resolver.current?.(value);
     resolver.current = null;
@@ -36,6 +39,7 @@ export function useConfirm() {
 
   const message = options?.message;
   const renderedMessage = message && typeof message === 'object' && 'vi' in message && 'en' in message ? t(message as SourceMessage) : message as ReactNode;
+  // Dịch nhãn nếu là cặp vi/en, chuỗi thường giữ nguyên.
   const renderLabel = (value: string | SourceMessage) => typeof value === 'string' ? value : t(value);
   const dialog = options && <Modal title={renderLabel(options.title)} onClose={() => settle(false)} returnFocusRef={returnFocus}>
     <div className="portal-subtitle confirm-dialog__message">{renderedMessage}</div>

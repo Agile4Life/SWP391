@@ -3,10 +3,12 @@ import { useI18n } from '../i18n/language';
 import { centerNowParts } from '../lib/centerTime';
 import './datepicker.css';
 
+/** Props của ô chọn ngày: giá trị YYYY-MM-DD, giới hạn min/max, trạng thái và các thuộc tính trợ năng. */
 export interface DatePickerProps {
   id?: string;
   name?: string;
   value: string; // YYYY-MM-DD
+  // Gọi lại theo dạng sự kiện giả { target: { value } } để dùng thay thẻ input gốc.
   onChange: (e: { target: { value: string } }) => void;
   min?: string; // YYYY-MM-DD
   max?: string; // YYYY-MM-DD
@@ -25,8 +27,13 @@ const WEEKDAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const POPOVER_WIDTH = 296;
 const POPOVER_HEIGHT = 412;
 
+// Thêm số 0 đứng trước cho số nhỏ hơn 10.
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
+/**
+ * Ô chọn ngày với lịch popup tự vẽ (tuần bắt đầu từ thứ Hai, theo giờ trung tâm): chọn ngày, chọn năm, nút Hôm
+ * nay và Xóa, tôn trọng min/max và phím Esc.
+ */
 export function DatePicker({
   id,
   name,
@@ -51,6 +58,7 @@ export function DatePicker({
   const triggerPlaceholder = placeholder ?? t('Chọn ngày...', 'Select date...');
 
   // Parse initial year & month from value or today
+  // Ngày dùng để mở lịch: giá trị hiện tại nếu hợp lệ, không thì hôm nay.
   const initialDate = useMemo(() => {
     const source = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : centerNowParts().date;
     const [y, m, d] = source.split('-').map(Number);
@@ -75,11 +83,13 @@ export function DatePicker({
   // Click outside to close
   useEffect(() => {
     if (!isOpen) return;
+    // Bấm ra ngoài lịch thì đóng.
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
+    // Nhấn Esc thì chỉ đóng lịch (không đóng hộp thoại chứa nó).
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -104,6 +114,7 @@ export function DatePicker({
       setPosition(null);
       return;
     }
+    // Tính lại vị trí và hướng mở popup cho vừa viewport.
     const reposition = () => {
       const trigger = containerRef.current?.querySelector<HTMLElement>('.luxury-datepicker-trigger');
       if (!trigger) return;
@@ -132,6 +143,7 @@ export function DatePicker({
   }, [isOpen, yearMode, viewMonth, viewYear]);
 
   // Format display text (DD/MM/YYYY)
+  // Nhãn hiển thị DD/MM/YYYY của giá trị hiện tại.
   const displayLabel = useMemo(() => {
     if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
     const [y, m, d] = value.split('-');
@@ -139,6 +151,7 @@ export function DatePicker({
   }, [value]);
 
   // Navigation handlers
+  // Lùi một tháng (hoặc một trang năm khi đang chọn năm).
   const handlePrevMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (yearMode) {
@@ -153,6 +166,7 @@ export function DatePicker({
     }
   };
 
+  // Tiến một tháng (hoặc một trang năm khi đang chọn năm).
   const handleNextMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (yearMode) {
@@ -168,6 +182,7 @@ export function DatePicker({
   };
 
   // Build calendar grid days
+  // Danh sách ô ngày của tháng đang xem, kèm cờ tháng hiện tại, bị vô hiệu, được chọn và hôm nay.
   const calendarDays = useMemo(() => {
     const days: Array<{
       dateStr: string;
@@ -240,18 +255,21 @@ export function DatePicker({
     return days;
   }, [viewYear, viewMonth, value, min, max]);
 
+  // Chọn một ngày (bỏ qua ngày bị vô hiệu), báo giá trị mới và đóng lịch.
   const handleSelectDate = (dateStr: string, isDisabled: boolean) => {
     if (isDisabled || disabled) return;
     onChange({ target: { value: dateStr } });
     setIsOpen(false);
   };
 
+  // Xóa giá trị đã chọn và đóng lịch.
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange({ target: { value: '' } });
     setIsOpen(false);
   };
 
+  // Về tháng hôm nay và chọn hôm nay nếu nằm trong khoảng min/max.
   const handleToday = (e: React.MouseEvent) => {
     e.stopPropagation();
     const todayStr = centerNowParts().date;

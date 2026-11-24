@@ -1,8 +1,10 @@
 import { useI18n } from '../i18n';
 import { useEffect, useId, useRef, type ReactNode, type RefObject } from 'react';
 
+/** Props của hộp thoại: tiêu đề, hàm đóng, nội dung, đang bận, class và phần tử nhận lại focus khi đóng. */
 interface ModalProps {
   title: ReactNode;
+  // Gọi khi người dùng đóng hộp thoại.
   onClose: () => void;
   children: ReactNode;
   busy?: boolean;
