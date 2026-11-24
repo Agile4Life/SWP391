@@ -70,6 +70,13 @@ class CourseAttendanceServiceTest {
     }
 
     @Test
+    void sweepDoesNothingWhileGroupClassesAreOutOfScope() {
+        service.sweep();
+
+        verifyNoInteractions(sessions);
+    }
+
+    @Test
     void anUnrecordedFinishedSessionBecomesAnAbsence() {
         ClassSession done = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(17, 0), LocalTime.of(18, 0));
         when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of(done));

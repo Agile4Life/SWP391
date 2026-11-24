@@ -49,6 +49,10 @@ public class CourseAttendanceService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.attendance.repository.CenterCheckinRepository checkins;
 
+    /** Group classes are out of scope; the sweep stays off with them so legacy rows are not swept. */
+    @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
+    private boolean classesEnabled;
+
     /** A visit that began up to this long before a session still covers it (the member came early and stayed). */
     private static final int STAY_BEFORE_HOURS = 3;
 
@@ -63,6 +67,7 @@ public class CourseAttendanceService {
 
     @Scheduled(cron = "${app.attendance.auto-absent.cron:0 */30 * * * ?}")
     public void sweep() {
+        if (!classesEnabled) return;
         try {
             int marked = markMissedSessions();
             if (marked > 0) log.info("[CourseAttendance] marked {} missed session(s) as absent", marked);

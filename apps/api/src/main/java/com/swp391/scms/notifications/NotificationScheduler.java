@@ -42,6 +42,9 @@ public class NotificationScheduler {
     private final NotificationService notificationService;
     private final MessageService messageService;
     private final Clock clock;
+    /** Group classes are out of scope; reminders stay off with them so legacy sessions are not announced. */
+    @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
+    private boolean classesEnabled;
 
     @Autowired
     public NotificationScheduler(
@@ -167,6 +170,7 @@ public class NotificationScheduler {
     @Scheduled(cron = "${app.scheduler.class-reminder.cron:0 */30 * * * ?}")
     @Transactional
     public void scheduleClassReminderJob() {
+        if (!classesEnabled) return;
         log.info("[NotificationScheduler] Running class reminder job...");
         LocalDateTime now = LocalDateTime.now(clock);
         int sentCount = scanAndNotifyUpcomingClasses(now);

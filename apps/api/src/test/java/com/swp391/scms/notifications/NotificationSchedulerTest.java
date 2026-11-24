@@ -332,12 +332,21 @@ class NotificationSchedulerTest {
     @Test
     @DisplayName("Job 2: scheduleClassReminderJob executes properly every 30 minutes")
     void scheduleClassReminderJob_ExecutesProperly() {
+        org.springframework.test.util.ReflectionTestUtils.setField(notificationScheduler, "classesEnabled", true);
         when(sessionRepository.findScheduledSessionsBetweenDates(any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(Collections.emptyList());
 
         notificationScheduler.scheduleClassReminderJob();
 
         verify(sessionRepository).findScheduledSessionsBetweenDates(any(LocalDate.class), any(LocalDate.class));
+    }
+
+    @Test
+    @DisplayName("Job 2 does nothing while group classes are out of scope")
+    void scheduleClassReminderJob_SkipsWhenClassesDisabled() {
+        notificationScheduler.scheduleClassReminderJob();
+
+        verify(sessionRepository, never()).findScheduledSessionsBetweenDates(any(LocalDate.class), any(LocalDate.class));
     }
 
     @Test
