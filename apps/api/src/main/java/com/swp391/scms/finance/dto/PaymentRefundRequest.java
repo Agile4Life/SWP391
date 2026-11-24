@@ -8,7 +8,7 @@ import java.math.BigDecimal;
 /**
  * Yêu cầu hoàn tiền: lý do và số tiền (trống là hoàn toàn bộ phần còn lại).
  *
- * Data Transfer Object for refunding a payment transaction.
+ * DTO hoàn tiền một giao dịch thanh toán.
  */
 @Schema(description = "Yêu cầu hoàn tiền và hủy giao dịch")
 public class PaymentRefundRequest {

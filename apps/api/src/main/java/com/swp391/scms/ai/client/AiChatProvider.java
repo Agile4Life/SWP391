@@ -15,13 +15,13 @@ import java.util.Map;
 /**
  * Nhà cung cấp AI cho chat (OpenAI, Groq hoặc Gemini); không bao giờ trả nội dung giả khi lỗi.
  *
- * Chat-only provider; never falls back to generated mock content.
+ * Provider chỉ dành cho chat; không bao giờ quay về nội dung mock tự sinh.
  */
 @Component
 public class AiChatProvider {
     /** Một lượt hội thoại: vai trò (user/assistant) và nội dung. */
     public record Turn(String role, String content) {}
-    /** Room for a short Vietnamese answer that lists a few classes without being cut mid-sentence. */
+    /** Chừa chỗ cho câu trả lời tiếng Việt ngắn liệt kê vài lớp mà không bị cắt giữa câu. */
     static final int MAX_OUTPUT_TOKENS = 600;
     private final String provider;
     private final String apiKey;
@@ -154,7 +154,7 @@ public class AiChatProvider {
             if (content.isBlank()) throw unavailable();
             return content;
         } catch (RestClientException exception) {
-            // Do not expose upstream bodies, credentials or prompts in errors/logs.
+            // Không để lộ nội dung upstream, thông tin xác thực hay prompt trong lỗi/log.
             throw unavailable();
         }
     }

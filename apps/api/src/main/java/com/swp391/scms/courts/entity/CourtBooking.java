@@ -27,9 +27,9 @@ public class CourtBooking {
     @Column(name = "created_at", nullable = false, updatable = false) private LocalDateTime createdAt;
     @Column(name = "cancelled_at") private LocalDateTime cancelledAt;
     @Column(name = "cancel_reason", length = 255) private String cancelReason;
-    /** A package slot cancelled by a hold too close to the start: it still counts against the monthly quota. */
+    /** Một khung của gói bị hủy do tạm hoãn quá gần giờ bắt đầu: vẫn tính vào hạn mức tháng. */
     @Column(name = "quota_forfeited") private Boolean quotaForfeited = false;
-    /** Court fee for the slot; null on bookings made before pricing existed (they were free). */
+    /** Phí sân cho khung; null với các lượt đặt tạo trước khi có bảng giá (chúng miễn phí). */
     @Column(precision = 12, scale = 2) private BigDecimal price;
     /** {@code package_quota} when the plan covered the slot, otherwise the method paid at booking time. */
     @Column(name = "payment_method", length = 20) private String paymentMethod;

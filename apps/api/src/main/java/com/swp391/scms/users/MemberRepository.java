@@ -21,7 +21,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     /**
      * Hội viên theo trạng thái KYC (kèm User), hồ sơ nộp sớm nhất đứng trước; dùng cho hàng chờ duyệt giấy tờ.
      *
-     * Registered, active members nobody has measured yet: the people a coach may give a first assessment.
+     * Hội viên đã đăng ký, đang hoạt động mà chưa ai đo: những người mà HLV có thể đánh giá lần đầu.
      */
     @Query("select m from Member m join fetch m.user where m.kycStatus = :status order by m.kycSubmittedAt asc")
     List<Member> findByKycStatusOrderByKycSubmittedAtAsc(@Param("status") String status);

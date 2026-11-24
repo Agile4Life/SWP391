@@ -30,9 +30,9 @@ import java.util.List;
  * API trò chuyện với trợ lý Sol AI (/api/v1/ai/chat) cho hội viên (tư vấn cá nhân) và lễ tân/quản lý (hỏi đáp
  * tại quầy).
  *
- * REST Controller for the 24/7 AI Chatbot consulting assistant (SCRUM-118).
- * Members chat with their own profile as context; reception and managers ask about centre rules, prices and
- * schedules. Coaches use the AI only for workout plan suggestions ({@code AiRecommendationController}).
+ * REST Controller cho trợ lý tư vấn chatbot AI 24/7 (SCRUM-118). Hội viên chat với hồ sơ của mình làm ngữ
+ * cảnh; lễ tân và quản lý hỏi về quy định, giá và lịch của trung tâm. HLV chỉ dùng AI để gợi ý kế hoạch tập
+ * ({@code AiRecommendationController}).
  */
 @Tag(name = "AI Chatbot", description = "Trợ lý ảo AI tư vấn thể thao và dinh dưỡng 24/7 (SCRUM-118)")
 @RestController

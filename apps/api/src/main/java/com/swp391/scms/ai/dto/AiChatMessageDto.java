@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 /**
  * Một tin trong phiên chat AI: phiên, người gửi (member hoặc ai), nội dung và thời điểm.
  *
- * Response DTO representing a single message in an AI chat session.
+ * DTO phản hồi biểu diễn một tin nhắn trong phiên chat AI.
  */
 public record AiChatMessageDto(
         Long id,

@@ -18,14 +18,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * cung cấp. Đếm từ tin đã lưu trong database (không mất khi khởi động lại, dùng chung giữa các instance) cộng
  * các request đang chờ trong bộ nhớ (để nhiều tin gửi cùng lúc không lọt qua).
  *
- * Caps how often one account can talk to the AI assistant (default 15 messages per rolling 10 minutes), because every
- * message costs a call to a paid provider. The count comes from the stored member messages, so it survives restarts and
- * is shared by every API instance; requests still waiting for the provider are counted in memory so a burst of
- * simultaneous sends cannot slip past the limit before any of them is saved.
+ * Giới hạn tần suất một tài khoản nói chuyện với trợ lý AI (mặc định 15 tin trong 10 phút trượt), vì mỗi tin
+ * tốn một lần gọi nhà cung cấp trả phí. Số đếm lấy từ các tin của hội viên đã lưu, nên bền qua khởi động lại
+ * và dùng chung giữa mọi instance API; các request còn chờ nhà cung cấp được đếm trong bộ nhớ để một loạt lần
+ * gửi đồng thời không lọt qua giới hạn trước khi kịp lưu.
  */
 @Component
 public class AiChatRateLimiter {
-    /** Delay suggested when the limit is held up only by requests that are still in flight. */
+    /** Độ trễ gợi ý khi giới hạn chỉ bị giữ bởi các request còn đang xử lý. */
     private static final long IN_FLIGHT_RETRY_SECONDS = 5;
 
     private final AiChatMessageRepository messages;
@@ -54,7 +54,7 @@ public class AiChatRateLimiter {
     /**
      * Một suất gửi tin đã giữ chỗ; phải trả lại khi request xong, dù tin có được lưu hay không.
      *
-     * A reserved slot; release it once the request finishes, whether or not the message was stored.
+     * Một chỗ đã đặt trước; hãy nhả nó khi request kết thúc, dù tin nhắn có được lưu hay không.
      */
     public final class Permit {
         private final Long userId;
@@ -76,7 +76,7 @@ public class AiChatRateLimiter {
     /**
      * Giữ một suất gửi tin hoặc báo lỗi 429 kèm thời gian cần chờ.
      *
-     * Reserves one message for the account or throws 429 with how long to wait.
+     * Đặt trước một tin nhắn cho tài khoản hoặc ném 429 kèm thời gian phải chờ.
      */
     public Permit acquire(Long userId) {
         if (userId == null) {
@@ -100,7 +100,8 @@ public class AiChatRateLimiter {
      * nghị chờ 5 giây.
      */
     private long retrySeconds(List<LocalDateTime> stored, int used, LocalDateTime now) {
-        // Messages leave the window oldest first; this many must expire before there is room for one more.
+        // Các tin rời khỏi cửa sổ theo thứ tự cũ nhất trước; cần hết hạn chừng này tin mới có chỗ cho thêm một
+        // tin.
         int mustExpire = used - maxMessages + 1;
         if (mustExpire > stored.size()) {
             return IN_FLIGHT_RETRY_SECONDS;

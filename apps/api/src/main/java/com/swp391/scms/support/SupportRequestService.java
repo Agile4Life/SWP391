@@ -122,7 +122,7 @@ public class SupportRequestService {
 
         SupportRequest request = new SupportRequest(member, dto.subject(), dto.description());
         SupportRequest saved = supportRequestRepository.save(request);
-        // A new complaint reaches the receptionists first; managers are only notified once it is escalated
+        // Khiếu nại mới đến lễ tân trước; quản lý chỉ được thông báo khi nó được chuyển lên.
         // (they are not allowed to open a complaint that has not been escalated).
         notifyStaff(RECEPTIONIST, "notifications.support.new_request.title", "notifications.support.new_request.body",
                 saved.getId(), dto.subject());
@@ -133,7 +133,8 @@ public class SupportRequestService {
      * Hội viên đóng phiếu của mình: chỉ khi phiếu đang mở (rút lại) hoặc đã giải quyết (xác nhận); cả hai đều
      * thành closed.
      *
-     * Member withdraws an open ticket or confirms a resolved one; both end in {@code closed}.
+     * Hội viên rút lại ticket đang mở hoặc xác nhận ticket đã giải quyết; cả hai đều kết thúc ở {@code
+     * closed}.
      */
     @Transactional
     @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
@@ -157,7 +158,7 @@ public class SupportRequestService {
     /**
      * Đóng các phiếu đã giải quyết mà hội viên không phản hồi quá 72 giờ; trả số phiếu đã đóng.
      *
-     * Resolved tickets the member did not answer for 72 hours are closed automatically.
+     * Ticket đã giải quyết mà hội viên không phản hồi trong 72 giờ sẽ được đóng tự động.
      */
     @Transactional
     public int closeStaleResolved() {
@@ -177,7 +178,7 @@ public class SupportRequestService {
         try {
             closeStaleResolved();
         } catch (RuntimeException ignored) {
-            // Retried on the next hourly run.
+            // Được thử lại ở lần chạy theo giờ kế tiếp.
         }
     }
 
@@ -329,7 +330,7 @@ public class SupportRequestService {
         }
 
         // 1-step convenience: when staff replies to an open ticket, auto-transition to in_progress
-        // and auto-assign if unassigned so staff don't have to make a separate status PATCH first.
+        // và tự gán nếu chưa có người xử lý, để nhân viên không phải PATCH trạng thái riêng trước.
         if (staff) {
             boolean updatedTicket = false;
             if ("open".equalsIgnoreCase(request.getStatus())) {
@@ -351,7 +352,7 @@ public class SupportRequestService {
                 ? supportRequestMessageRepository.save(message)
                 : message;
 
-        // Auto send in-app notification to the counterpart
+        // Tự động gửi thông báo trong ứng dụng cho phía đối diện.
         if (notificationService != null) {
             String senderName = sender.getFullName() != null && !sender.getFullName().isBlank()
                     ? sender.getFullName()
@@ -365,16 +366,17 @@ public class SupportRequestService {
 
             Long targetRequestId = request.getId() != null ? request.getId() : requestId;
             if (staff) {
-                // If staff replies, notify the member (a deleted account has no inbox to notify)
+                // Nếu nhân viên trả lời, thông báo cho hội viên (tài khoản đã xóa không có hộp thư để thông
+                // báo).
                 if (memberUserId != null && memberReachable(request)) {
                     notificationService.send(memberUserId, title, body, "support_reply", "support_request", targetRequestId);
                 }
             } else {
-                // If member sends message, notify the assigned handler (if assigned)
+                // Nếu hội viên gửi tin nhắn, thông báo cho người xử lý được gán (nếu có).
                 if (request.getAssignedTo() != null && request.getAssignedTo().getId() != null) {
                     notificationService.send(request.getAssignedTo().getId(), title, body, "support_reply", "support_request", targetRequestId);
                 } else {
-                    // Unassigned: tell whoever handles it now, receptionists first and managers once escalated.
+                    // Chưa gán: báo cho người đang xử lý, lễ tân trước và quản lý khi đã chuyển lên.
                     notifyStaff(request.isEscalated() ? MANAGER : RECEPTIONIST,
                             "notifications.support.new_message.title", "notifications.support.new_message.body",
                             targetRequestId, senderName, request.getSubject());
@@ -469,7 +471,7 @@ public class SupportRequestService {
     /**
      * Nhân viên xử lý khiếu nại chỉ gồm lễ tân và quản lý (HLV không tham gia).
      *
-     * Coaches no longer take part in complaints: only receptionists and managers are staff here.
+     * HLV không còn tham gia xử lý khiếu nại: chỉ lễ tân và quản lý là nhân viên ở đây.
      */
     private boolean isStaffRole(String role) {
         return isManager(role) || isReceptionist(role);
@@ -485,7 +487,7 @@ public class SupportRequestService {
     /**
      * Lễ tân xem mọi phiếu; quản lý chỉ xem phiếu đã chuyển lên.
      *
-     * Receptionists see every complaint; managers only the ones escalated to them.
+     * Lễ tân thấy mọi khiếu nại; quản lý chỉ thấy những khiếu nại được chuyển lên.
      */
     private void requireReadable(SupportRequest request, String role) {
         if (isManager(role) && !request.isEscalated()) {
@@ -496,7 +498,7 @@ public class SupportRequestService {
     /**
      * Lễ tân xử lý phiếu cho tới khi chuyển lên; sau đó chỉ quản lý được thao tác.
      *
-     * The receptionist handles a complaint until it is escalated; from then on only a manager may act on it.
+     * Lễ tân xử lý khiếu nại cho đến khi nó được chuyển lên; từ đó chỉ quản lý được thao tác.
      */
     private void requireHandler(SupportRequest request, String role) {
         if (isManager(role)) {
@@ -516,7 +518,7 @@ public class SupportRequestService {
      * Lễ tân chuyển phiếu đang mở/đang xử lý lên quản lý: lưu thời điểm, người chuyển, lý do, bỏ người phụ
      * trách cũ; báo cho quản lý và hội viên.
      *
-     * Hand a complaint the receptionist cannot resolve up to the managers.
+     * Chuyển lên cho quản lý khiếu nại mà lễ tân không giải quyết được.
      */
     @Transactional
     @Audited(action = "SUPPORT_ESCALATE", entity = "support_requests")
@@ -558,8 +560,8 @@ public class SupportRequestService {
      * Hội viên còn nhận được thông báo không (tài khoản chưa bị xóa); phiếu của tài khoản đã xóa vẫn xử lý được
      * nhưng bỏ qua thông báo.
      *
-     * Notifications resolve the recipient among non-deleted users. Replying to or updating a complaint
-     * of a deleted member must still work, so skip the in-app notice instead of failing the whole write.
+     * Thông báo xác định người nhận trong các người dùng chưa bị xóa. Việc trả lời hay cập nhật khiếu nại của
+     * hội viên đã xóa vẫn phải hoạt động, nên bỏ qua thông báo trong ứng dụng thay vì làm hỏng cả lần ghi.
      */
     private static boolean memberReachable(SupportRequest request) {
         Member member = request.getMember();
@@ -596,7 +598,8 @@ public class SupportRequestService {
             return;
         }
         boolean valid = switch (currentStatus == null ? "" : currentStatus.toLowerCase()) {
-            // Staff take a ticket before resolving it; closing comes after resolving (member confirms or 72h pass).
+            // Nhân viên nhận ticket trước khi giải quyết; đóng ticket diễn ra sau khi giải quyết (hội viên xác
+            // nhận hoặc qua 72 giờ).
             case "open" -> "in_progress".equalsIgnoreCase(targetStatus);
             case "in_progress" -> "open".equalsIgnoreCase(targetStatus) || "resolved".equalsIgnoreCase(targetStatus);
             case "resolved" -> "in_progress".equalsIgnoreCase(targetStatus) || "closed".equalsIgnoreCase(targetStatus);

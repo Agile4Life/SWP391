@@ -18,8 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Lễ tân/quản lý duyệt giấy tờ tùy thân trước khi hội viên được mua gói: đối chiếu số giấy tờ đã khai với ảnh
  * chụp.
  *
- * The desk reviews identity documents before a member can buy a package: the declared number is checked against
- * the photos. Only receptionists and managers reach these methods.
+ * Quầy duyệt giấy tờ định danh trước khi hội viên mua gói: số khai báo được đối chiếu với ảnh. Chỉ lễ tân và
+ * quản lý gọi được các phương thức này.
  */
 @Service
 public class MemberKycReviewService {
@@ -31,7 +31,7 @@ public class MemberKycReviewService {
      * Một hồ sơ chờ duyệt: thông tin hội viên, loại giấy tờ, số giấy tờ đọc được, quốc tịch, ảnh mặt trước/sau
      * và thời điểm nộp.
      *
-     * One submission waiting for review, with the readable number the reviewer compares to the photos.
+     * Một hồ sơ đang chờ duyệt, kèm số đọc được để người duyệt so với ảnh.
      */
     public record KycReviewDto(Long memberId, String membershipCode, String fullName, String documentType,
                                String citizenId, String nationality, String frontImageUrl, String backImageUrl,

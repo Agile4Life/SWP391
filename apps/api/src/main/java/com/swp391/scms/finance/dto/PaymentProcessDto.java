@@ -12,7 +12,7 @@ import java.math.BigDecimal;
  * Dữ liệu thu tiền một bước tại quầy: hội viên, kỳ gói hoặc gói (để tạo kỳ mới), khóa học, số tiền, phương
  * thức, người nhận và ghi chú.
  *
- * Data Transfer Object for processing a checkout payment and activating subscriptions/enrollments.
+ * DTO xử lý thanh toán checkout và kích hoạt subscription/ghi danh.
  */
 @Schema(description = "Yêu cầu xử lý thanh toán mua gói tập hoặc ghi danh lớp học")
 public class PaymentProcessDto {

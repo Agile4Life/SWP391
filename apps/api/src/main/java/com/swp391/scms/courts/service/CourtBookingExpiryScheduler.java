@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 /**
  * Job nền định kỳ nhả các khung sân đang giữ bởi lượt đặt chưa thanh toán quá hạn.
  *
- * Periodically frees court slots held by bookings that were never paid.
+ * Định kỳ giải phóng các khung sân bị giữ bởi lượt đặt chưa bao giờ được trả.
  */
 @Component
 @ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")

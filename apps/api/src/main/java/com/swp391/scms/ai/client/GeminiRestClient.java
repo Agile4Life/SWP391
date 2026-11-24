@@ -113,7 +113,7 @@ public class GeminiRestClient implements AiClient {
                 return cleaned;
             }
         } catch (Exception ignored) {
-            // Fall through to deterministic fallback payload when upstream is unreachable
+            // Rơi về payload dự phòng có tính xác định khi upstream không truy cập được.
         }
         return fallbackPayload(userMessage);
     }

@@ -4,7 +4,7 @@ package com.swp391.scms.users.dto;
  * Thông tin tối thiểu để xác thực JWT: id, tên đăng nhập, trạng thái, mã vai trò và thời điểm đổi mật khẩu
  * cuối.
  *
- * Scalar account state for request authentication; does not hydrate profile entities.
+ * Trạng thái tài khoản dạng scalar cho xác thực request; không nạp các entity hồ sơ.
  */
 public record AuthenticationUser(Long id, String username, String status, String roleCode,
                                  java.time.LocalDateTime passwordChangedAt) {

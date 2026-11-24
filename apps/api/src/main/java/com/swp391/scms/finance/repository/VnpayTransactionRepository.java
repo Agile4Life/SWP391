@@ -32,7 +32,7 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
     /** Kiểm tra có tồn tại bản ghi có paymentId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByPaymentId(Long paymentId);
 
-    /** Payments with a pending attempt whose gateway expiry passed before {@code cutoff}. */
+    /** Các thanh toán có lần thử đang chờ mà hạn của cổng đã qua trước {@code cutoff}. */
     @Query("""
             select distinct t.payment.id from VnpayTransaction t
             where t.status = 'pending' and t.expiresAt < :cutoff
@@ -53,7 +53,7 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
     /** Đếm số bản ghi có status = tham số và expiresAt ≥ tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByStatusAndExpiresAtGreaterThanEqual(String status, LocalDateTime cutoff);
 
-    /** Payments with two or more attempts, at least one of them created in {@code [from, to)}. */
+    /** Các thanh toán có từ hai lần thử trở lên, ít nhất một lần tạo trong {@code [from, to)}. */
     @Query("""
             select count(p) from Payment p
             where (select count(t) from VnpayTransaction t where t.payment = p) > 1
@@ -63,7 +63,10 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
     /** Số khoản thu có từ hai lượt VNPay trở lên, có ít nhất một lượt tạo trong khoảng thời gian. */
     long countMultiAttemptPayments(@Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    /** Successful attempts whose payment is neither paid nor refunded: should never happen. */
+    /**
+     * Các lần thử thành công mà thanh toán không phải đã trả cũng không phải đã hoàn: không bao giờ được xảy
+     * ra.
+     */
     @Query("""
             select count(t) from VnpayTransaction t
             where t.status = 'success' and t.payment.status not in ('success', 'refunded')
@@ -71,7 +74,7 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
     /** Số lượt VNPay thành công mà khoản thu chưa trả hoặc chưa hoàn: lẽ ra không bao giờ xảy ra. */
     long countSuccessAttemptsOnUnpaidPayments();
 
-    /** Rows of {@code [paymentId, attemptCount]} for the given payments. */
+    /** Các dòng {@code [paymentId, attemptCount]} cho các thanh toán đã cho. */
     @Query("""
             select t.payment.id, count(t) from VnpayTransaction t
             where t.payment.id in :paymentIds group by t.payment.id

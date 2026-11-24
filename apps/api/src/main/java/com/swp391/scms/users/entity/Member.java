@@ -64,11 +64,11 @@ public class Member {
     @Column(name = "identity_verified_at")
     private java.time.LocalDateTime identityVerifiedAt;
 
-    /** The identity number encrypted (AES-GCM); {@code citizenId} keeps only the masked form. */
+    /** Số định danh đã mã hóa (AES-GCM); {@code citizenId} chỉ giữ dạng che. */
     @Column(name = "citizen_id_encrypted", columnDefinition = "TEXT")
     private String citizenIdEncrypted;
 
-    /** PENDING (waiting for the desk), APPROVED or REJECTED; null for members verified before reviews existed. */
+    /** PENDING (chờ quầy), APPROVED hoặc REJECTED; null với hội viên được xác minh trước khi có bước duyệt. */
     @Column(name = "kyc_status", length = 20)
     private String kycStatus;
 
@@ -110,7 +110,7 @@ public class Member {
     /** Gán giá trị mới cho trường kycRejectReason. */
     public void setKycRejectReason(String value) { this.kycRejectReason = value; }
 
-    /** Set when the member missed more than half of a course; no new course can be joined until then. */
+    /** Được đặt khi hội viên vắng hơn một nửa khóa học; đến lúc đó mới được vào khóa mới. */
     @Column(name = "course_enroll_blocked_until")
     private java.time.LocalDateTime courseEnrollBlockedUntil;
 
@@ -119,7 +119,8 @@ public class Member {
     /** Gán giá trị mới cho trường courseEnrollBlockedUntil. */
     public void setCourseEnrollBlockedUntil(java.time.LocalDateTime value) { this.courseEnrollBlockedUntil = value; }
 
-    // Capability for data-free Realtime invalidations; never serialized in member DTOs.
+    // Capability cho các thông báo Realtime không chứa dữ liệu; không bao giờ được serialize trong DTO hội
+    // viên.
     @Column(name = "payment_realtime_topic")
     private java.util.UUID paymentRealtimeTopic;
 
@@ -163,7 +164,7 @@ public class Member {
     /** Gán giá trị mới cho trường identityVerifiedAt. */
     public void setIdentityVerifiedAt(java.time.LocalDateTime identityVerifiedAt) { this.identityVerifiedAt = identityVerifiedAt; }
 
-    // Getters and Setters
+    // Getter và Setter.
     /** Lấy giá trị trường userId. */
     public Long getUserId() { return userId; }
     /** Gán giá trị mới cho trường userId. */

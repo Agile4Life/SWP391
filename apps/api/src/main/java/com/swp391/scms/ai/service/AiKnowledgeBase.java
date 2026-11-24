@@ -25,9 +25,10 @@ import java.util.regex.Pattern;
  * file là chỗ giữ {{...}} được điền từ hằng số trong code (nên câu trả lời luôn khớp hệ thống), và chỉ những
  * mục liên quan tới câu hỏi mới được đưa vào prompt.
  *
- * Centre rules Sol AI answers from, read once from {@code ai/sol-knowledge.md}. Numbers in the file are
+ * Quy định trung tâm mà Sol AI dùng để trả lời, đọc một lần từ {@code ai/sol-knowledge.md}. Các con số trong
+ * file
  * {@code {{placeholders}}} filled from the code and configuration that enforce them, so the answer cannot
- * drift from what the system actually does. Only the sections a question is about go into the prompt.
+ * lệch khỏi những gì hệ thống thực sự làm. Chỉ các mục mà câu hỏi nhắc tới mới được đưa vào prompt.
  */
 @Component
 public class AiKnowledgeBase {
@@ -39,7 +40,7 @@ public class AiKnowledgeBase {
     /**
      * Một mục "## " trong file: tiêu đề, từ khóa, có luôn gửi kèm không và nội dung.
      *
-     * One "## " section; {@code always} sections are sent with every question.
+     * Một mục "## "; các mục {@code always} được gửi kèm mọi câu hỏi.
      */
     record Section(String title, List<String> keywords, boolean always, String body) {}
 
@@ -48,7 +49,7 @@ public class AiKnowledgeBase {
     /** Đọc file, bỏ ghi chú biên tập, điền giá trị, tách thành các mục và thêm mục quyền lợi theo hạng gói. */
     public AiKnowledgeBase() {
         Map<String, String> values = values();
-        // Editor notes are dropped first: they explain the {{placeholder}} syntax and must not be filled.
+        // Ghi chú cho người soạn bị bỏ trước: chúng giải thích cú pháp {{placeholder}} và không được điền.
         String text = read().replaceAll("(?s)<!--.*?-->", "");
         List<Section> parsed = new ArrayList<>(parse(fill(text, values)));
         parsed.add(tierBenefits());
@@ -59,7 +60,8 @@ public class AiKnowledgeBase {
      * Các mục cho câu hỏi: mục luôn gửi kèm cộng các mục có từ khóa xuất hiện trong câu hỏi; không mục nào khớp
      * thì gửi tất cả.
      *
-     * The sections for this question: those whose keywords it mentions plus the always-on ones, or all when none match.
+     * Các mục cho câu hỏi này: những mục có từ khóa mà câu hỏi nhắc tới cộng các mục luôn bật, hoặc tất cả
+     * khi không mục nào khớp.
      */
     public String sectionsFor(String query) {
         String normalized = AiRagContextService.normalize(query);
@@ -107,7 +109,8 @@ public class AiKnowledgeBase {
     /**
      * Điền các chỗ giữ {{tên}}; gặp tên lạ thì dừng khởi động để lỗi gõ không bao giờ tới tay hội viên.
      *
-     * Fails at startup on an unknown placeholder, so a typo never reaches a member as "{{...}}".
+     * Lỗi ngay lúc khởi động khi gặp placeholder lạ, để lỗi gõ không bao giờ đến hội viên dưới dạng
+     * "{{...}}".
      */
     static String fill(String text, Map<String, String> values) {
         Matcher m = PLACEHOLDER.matcher(text);
@@ -158,7 +161,8 @@ public class AiKnowledgeBase {
      * Mục quyền lợi theo hạng gói (Silver/Gold/Platinum và gói trải nghiệm) dựng từ PackageBenefits, để AI nói
      * đúng điều mà hệ thống áp dụng.
      *
-     * Built from {@link PackageBenefits} so the AI quotes exactly what booking, holds and discounts enforce.
+     * Được dựng từ {@link PackageBenefits} để AI trích dẫn đúng những gì việc đặt chỗ, tạm hoãn và giảm giá
+     * thực thi.
      */
     private static Section tierBenefits() {
         StringBuilder sb = new StringBuilder();

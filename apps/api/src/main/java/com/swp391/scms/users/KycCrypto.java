@@ -15,8 +15,8 @@ import org.springframework.stereotype.Component;
  * Mã hóa số CCCD/hộ chiếu khi lưu bằng AES-256-GCM. Database không bao giờ chứa số đọc được; hội viên chỉ thấy
  * dạng che, người duyệt giải mã qua màn duyệt KYC.
  *
- * Encrypts identity numbers (CCCD or passport) at rest with AES-256-GCM. The readable number never sits in the
- * database; the member sees only the masked form, and reviewers decrypt it through the review endpoint.
+ * Mã hóa số định danh (CCCD hoặc hộ chiếu) khi lưu bằng AES-256-GCM. Số đọc được không bao giờ nằm trong
+ * database; hội viên chỉ thấy dạng che, còn người duyệt giải mã nó qua endpoint duyệt.
  */
 @Component
 public class KycCrypto {
@@ -62,7 +62,7 @@ public class KycCrypto {
      * Giải mã chuỗi do encrypt() tạo ra; trả null nếu thiếu, sai định dạng hoặc không giải mã được (khóa sai,
      * dữ liệu bị sửa).
      *
-     * The readable number, or null when the value is missing or was not produced by {@link #encrypt}.
+     * Số đọc được, hoặc null khi giá trị thiếu hoặc không do {@link #encrypt} tạo ra.
      */
     public String decrypt(String stored) {
         if (stored == null || !stored.startsWith(PREFIX)) return null;

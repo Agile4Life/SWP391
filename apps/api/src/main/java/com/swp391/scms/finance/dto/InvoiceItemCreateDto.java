@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 /**
  * Một dòng hàng khi tạo hóa đơn: mô tả, số lượng và đơn giá.
  *
- * Data Transfer Object for creating an Invoice line item.
+ * DTO dùng để tạo một dòng hàng của hóa đơn.
  */
 @Schema(description = "Yêu cầu tạo chi tiết dòng hóa đơn")
 public class InvoiceItemCreateDto {

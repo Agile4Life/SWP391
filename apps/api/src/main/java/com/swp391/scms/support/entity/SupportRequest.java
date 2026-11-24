@@ -10,7 +10,7 @@ import org.hibernate.Length;
  * Bảng support_requests: phiếu khiếu nại của hội viên (người phụ trách, tiêu đề, mô tả, trạng thái, thời điểm
  * tạo/giải quyết, thông tin chuyển lên quản lý).
  *
- * Entity mapping table support_requests (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng support_requests (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_support_status", constraints = "status IN ('open','in_progress','resolved','closed')")
@@ -44,7 +44,7 @@ public class SupportRequest {
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
 
-    /** Set when the receptionist hands the complaint up; managers only ever see escalated requests. */
+    /** Được đặt khi lễ tân chuyển khiếu nại lên; quản lý chỉ thấy các yêu cầu đã chuyển lên. */
     @Column(name = "escalated_at")
     private LocalDateTime escalatedAt;
 

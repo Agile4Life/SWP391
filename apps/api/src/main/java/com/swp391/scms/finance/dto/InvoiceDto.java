@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Hóa đơn trả cho client: số hóa đơn, ngày xuất, tiền trước thuế, thuế, tổng, link PDF và các dòng hàng.
  *
- * Data Transfer Object for Invoice response.
+ * DTO phản hồi hóa đơn.
  */
 @Schema(description = "Thông tin hóa đơn điện tử")
 public class InvoiceDto {

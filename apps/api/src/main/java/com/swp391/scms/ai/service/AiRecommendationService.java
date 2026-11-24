@@ -136,17 +136,17 @@ public class AiRecommendationService {
 
     /** Gợi ý dạng văn bản tự do cho hội viên (cách cũ) và lưu nhật ký. */
     public String generateRecommendation(Long memberId, String healthContext) {
-        // Phase 1: short read-only transaction
+        // Giai đoạn 1: transaction đọc ngắn.
         Member member = inReadOnlyTx(() -> memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId)));
         String membershipCode = member.getMembershipCode();
 
-        // Phase 2: call AI outside transaction (no DB connection held)
+        // Giai đoạn 2: gọi AI ngoài transaction (không giữ kết nối DB).
         String systemPrompt = "Bạn là chuyên gia thể hình và sức khỏe tại Trung tâm Thể thao SCMS.";
         String userMessage = "Tạo gợi ý bài tập cho hội viên " + membershipCode + ": " + healthContext;
         String response = aiClient.generate(systemPrompt, userMessage);
 
-        // Phase 3: short write transaction
+        // Giai đoạn 3: transaction ghi ngắn.
         inWriteTx(() -> {
             if (recommendationLogRepository != null) {
                 AiRecommendationLog log = new AiRecommendationLog();
@@ -189,7 +189,7 @@ public class AiRecommendationService {
      * bài tập (thiếu thì dùng mẫu mặc định) và lưu nhật ký.
      */
     public AiWorkoutPlanResponse generateWorkoutPlan(AiWorkoutPlanRequest request, Long callerUserId, String callerRole) {
-        // Phase 1: short read-only transaction
+        // Giai đoạn 1: transaction đọc ngắn.
         WorkoutPlanReadSnapshot snapshot = inReadOnlyTx(() -> {
             Member member = memberRepository.findById(request.getMemberId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.member", request.getMemberId()));
@@ -203,7 +203,8 @@ public class AiRecommendationService {
             Coach callerCoach = (!isManagerCaller && callerUserId != null && coachRepository != null)
                     ? coachRepository.findById(callerUserId).orElse(null)
                     : null;
-            // A coach (not a manager, who has no coach profile) plans only for members currently assigned to them.
+            // HLV (không phải quản lý, người không có hồ sơ HLV) chỉ lập kế hoạch cho hội viên đang được phân
+            // công cho mình.
             if (callerCoach != null) {
                 if (currentCoachMembers != null) {
                     currentCoachMembers.requireCoachOf(callerCoach.getUserId(), member.getUserId());
@@ -246,7 +247,7 @@ public class AiRecommendationService {
 
         enforceRateLimit(callerUserId);
 
-        // Phase 2: call AI outside transaction (no DB connection held)
+        // Giai đoạn 2: gọi AI ngoài transaction (không giữ kết nối DB).
         String userPrompt = "DỮ LIỆU\nHồ sơ thể chất hội viên (JSON): " + snapshot.inputContextJson()
                 + snapshot.retrievedContext();
         String rawAiOutput = aiClient.generateJson(WORKOUT_SYSTEM_PROMPT, userPrompt);
@@ -270,7 +271,7 @@ public class AiRecommendationService {
         recommendedContentMap.put("items", structuredItems);
         String recommendedContentJson = toJsonSafe(recommendedContentMap);
 
-        // Phase 3: short write transaction
+        // Giai đoạn 3: transaction ghi ngắn.
         AiRecommendationLog saved = inWriteTx(() -> {
             AiRecommendationLog log = new AiRecommendationLog();
             if (coach != null) {
@@ -521,8 +522,8 @@ public class AiRecommendationService {
      * Đọc từng bài tập một để một trường lạ không làm hỏng cả giáo án; đưa ngày, hiệp, lần, thời gian và thứ tự
      * về khoảng hợp lệ; tối đa số bài cho phép.
      *
-     * Reads the model's items one by one, so a single odd field or out-of-range number
-     * cannot discard the whole plan; values are brought into the ranges the plan form accepts.
+     * Đọc từng mục mà mô hình trả về, để một trường lạ hay số ngoài khoảng không làm bỏ cả kế hoạch; giá trị
+     * được đưa về các khoảng mà form kế hoạch chấp nhận.
      */
     private List<TrainingPlanItemCreateDto> parseItems(JsonNode root) {
         JsonNode itemsNode = root != null ? root.get("items") : null;
@@ -578,7 +579,7 @@ public class AiRecommendationService {
             if (value.isNumber()) {
                 return value.asInt();
             }
-            // Models sometimes answer "10-12" or "12 reps"; the leading number is the usable part.
+            // Mô hình đôi khi trả "10-12" hoặc "12 reps"; số đứng đầu là phần dùng được.
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d{1,4}").matcher(value.asText());
             if (m.find()) {
                 return Integer.valueOf(m.group());
@@ -595,8 +596,8 @@ public class AiRecommendationService {
     /**
      * Ngữ cảnh truy xuất cho AI: chuyên môn HLV, số tuần giáo án, diễn biến cân nặng và giáo án đang áp dụng.
      *
-     * Retrieval for plan generation: what the model cannot know from the profile alone —
-     * the requested length, how the member's weight has moved and the plan they are on now.
+     * Truy xuất cho việc sinh kế hoạch: những gì mô hình không thể biết chỉ từ hồ sơ — độ dài yêu cầu, cân
+     * nặng của hội viên đã thay đổi ra sao và kế hoạch họ đang theo.
      */
     private String buildRetrievedPlanContext(Long memberId, Coach coach, Integer durationWeeks) {
         StringBuilder sb = new StringBuilder();
@@ -745,7 +746,7 @@ public class AiRecommendationService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.coaching.service.CoachMemberAccess coachMemberAccess;
 
-    /** Retrieval sources for plan generation; optional so the service stays constructible in unit tests. */
+    /** Các nguồn truy xuất cho việc sinh kế hoạch; tùy chọn để service vẫn dựng được trong unit test. */
     @Autowired(required = false)
     private TrainingPlanRepository trainingPlanRepository;
 

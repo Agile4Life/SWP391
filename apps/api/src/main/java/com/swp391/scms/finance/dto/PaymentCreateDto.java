@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  * Dữ liệu tạo khoản thanh toán: hội viên, kỳ gói hoặc khóa học, số tiền, phương thức, trạng thái, thời điểm
  * trả, người nhận tiền, ghi chú và ảnh biên lai.
  *
- * Data Transfer Object for creating a new Payment transaction.
+ * DTO dùng để tạo một giao dịch thanh toán mới.
  */
 @Schema(description = "Yêu cầu tạo mới giao dịch thanh toán")
 public class PaymentCreateDto {

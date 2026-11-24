@@ -36,7 +36,7 @@ public class Payment {
     @Column(name = "subscription_id")
     private Long subscriptionId;
 
-    /** Read-only mapping so the schema generator emits fk_payments_subscription; writes go through subscriptionId. */
+    /** Ánh xạ chỉ đọc để bộ sinh schema tạo fk_payments_subscription; việc ghi đi qua subscriptionId. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subscription_id", insertable = false, updatable = false)
     private MembershipSubscription subscription;
@@ -74,7 +74,7 @@ public class Payment {
     /**
      * Lấy giá trị trường subscription.
      *
-     * Read-only views of the linked records (the *_id fields are the writable side).
+     * Các view chỉ đọc của các bản ghi liên kết (các trường *_id là phía ghi được).
      */
     public MembershipSubscription getSubscription() { return subscription; }
     /** Lấy giá trị trường coachBooking. */
@@ -89,7 +89,7 @@ public class Payment {
     @Column(name = "class_enrollment_id")
     private Long classEnrollmentId;
 
-    /** Read-only mapping so the schema generator emits fk_payments_enrollment; writes go through classEnrollmentId. */
+    /** Ánh xạ chỉ đọc để bộ sinh schema tạo fk_payments_enrollment; việc ghi đi qua classEnrollmentId. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "class_enrollment_id", insertable = false, updatable = false)
     private ClassEnrollment classEnrollment;
@@ -97,7 +97,7 @@ public class Payment {
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
-    /** Money already returned to the member; a partial refund keeps the payment successful. */
+    /** Số tiền đã trả lại cho hội viên; hoàn một phần vẫn giữ thanh toán ở trạng thái thành công. */
     @Column(name = "refunded_amount", precision = 12, scale = 2)
     private BigDecimal refundedAmount;
 
@@ -117,7 +117,7 @@ public class Payment {
     @Column(length = 255)
     private String note;
 
-    /** Receipt photo (data URL) a member attaches to a cash payment for the receptionist to verify. */
+    /** Ảnh biên nhận (data URL) mà hội viên đính kèm vào thanh toán tiền mặt để lễ tân xác minh. */
     @Column(name = "receipt_image", columnDefinition = "text")
     private String receiptImage;
 
@@ -273,7 +273,7 @@ public class Payment {
     /**
      * Số tiền trung tâm giữ lại: đã trả trừ đã hoàn.
      *
-     * Amount the centre keeps: what was paid minus what was refunded.
+     * Số tiền trung tâm giữ lại: số đã trả trừ số đã hoàn.
      */
     public BigDecimal netAmount() {
         if (amount == null) return BigDecimal.ZERO;

@@ -47,7 +47,7 @@ public record ProfileDto(
     String frontImageUrl,
     String backImageUrl,
     Boolean identityVerified,
-    /** PENDING, APPROVED or REJECTED; null for members verified before reviews existed. */
+    /** PENDING, APPROVED hoặc REJECTED; null với hội viên được xác minh trước khi có bước duyệt. */
     String kycStatus,
     String kycRejectReason
 ) {

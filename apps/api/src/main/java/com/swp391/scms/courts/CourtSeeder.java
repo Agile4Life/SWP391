@@ -15,7 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Seeds bookable courts (Tennis, Cầu lông, Bơi lội) so members can book a court straight away (idempotent).
- * A court is a room that has a court discipline and whole-hour opening hours; existing rooms are never touched.
+ * Sân là phòng có bộ môn sân và giờ mở theo giờ tròn; các phòng hiện có không bao giờ bị đụng tới.
  */
 @Component
 @ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")

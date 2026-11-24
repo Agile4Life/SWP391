@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 /**
  * Một dòng hàng trả cho client: mô tả, số lượng, đơn giá và thành tiền.
  *
- * Data Transfer Object for Invoice line item response.
+ * DTO phản hồi dòng hàng của hóa đơn.
  */
 @Schema(description = "Chi tiết một dòng sản phẩm/dịch vụ trên hóa đơn")
 public class InvoiceItemDto {

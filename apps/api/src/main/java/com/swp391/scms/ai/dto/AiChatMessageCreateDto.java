@@ -6,7 +6,7 @@ import jakarta.validation.constraints.Size;
 /**
  * Tin nhắn gửi cho AI: phiên (tùy chọn), chủ đề (tùy chọn) và nội dung.
  *
- * Request payload for sending a message in an AI chat session.
+ * Payload yêu cầu gửi một tin nhắn trong phiên chat AI.
  */
 public record AiChatMessageCreateDto(
         Long sessionId,

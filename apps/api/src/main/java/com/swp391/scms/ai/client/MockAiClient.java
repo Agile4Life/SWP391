@@ -3,7 +3,7 @@ package com.swp391.scms.ai.client;
 /**
  * Client AI giả cho test và khi chạy không có mạng/API key: luôn trả cùng một nội dung.
  *
- * Deterministic fallback mock AI client for test environments and offline operations.
+ * Client AI mock dự phòng có tính xác định cho môi trường test và hoạt động ngoại tuyến.
  */
 public class MockAiClient implements AiClient {
 

@@ -8,7 +8,7 @@ import java.util.List;
 /**
  * Nhóm DTO cho màn đối soát thanh toán của Admin.
  *
- * Read-only views for the admin payment reconciliation page.
+ * Các view chỉ đọc cho trang đối soát thanh toán của admin.
  */
 public final class ReconciliationDtos {
     /** Lớp chỉ chứa các record, không cho tạo đối tượng. */
@@ -110,8 +110,9 @@ public final class ReconciliationDtos {
     /**
      * Một mốc trên dòng thời gian của khoản thanh toán.
      *
-     * One step in a payment's history. {@code type} is one of PAYMENT_CREATED, ATTEMPT_CREATED, CALLBACK_RECEIVED,
-     * WALLET_TRANSACTION, PAYMENT_PAID, INVOICE_ISSUED; the other fields are filled when they apply.
+     * Một bước trong lịch sử của một thanh toán. {@code type} là một trong PAYMENT_CREATED, ATTEMPT_CREATED,
+     * CALLBACK_RECEIVED, WALLET_TRANSACTION, PAYMENT_PAID, INVOICE_ISSUED; các trường khác được điền khi áp
+     * dụng.
      */
     public record TimelineEntryDto(
             LocalDateTime at,

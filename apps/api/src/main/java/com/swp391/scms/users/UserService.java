@@ -63,7 +63,7 @@ public class UserService {
     /**
      * Quản lý khóa/mở khóa tài khoản nhân viên; chỉ áp dụng cho HLV và lễ tân.
      *
-     * Manager-level lock/unlock, limited to the Coach and Receptionist accounts a manager provisions.
+     * Khóa/mở khóa cấp quản lý, giới hạn ở các tài khoản HLV và lễ tân mà quản lý cấp.
      */
     @Transactional
     @Audited(action = "STAFF_ACCOUNT_STATUS_CHANGE", entity = "users")
@@ -85,12 +85,12 @@ public class UserService {
     private final com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
     private final Clock clock;
 
-    /** Roles whose accounts are managed by people, never by the inactivity sweep. */
+    /** Các vai trò có tài khoản do con người quản lý, không bao giờ bị tác vụ quét không hoạt động xử lý. */
     private static final java.util.Set<String> NEVER_AUTO_DELETED =
             java.util.Set.of("ADMIN", "CENTER_MANAGER", "MANAGER", "COACH", "RECEPTIONIST", "STAFF");
 
-    // Optional activity sources; a member who scans in at the gate or pays at the desk is active
-    // even if they never sign in to the app.
+    // Các nguồn hoạt động tùy chọn; hội viên quét ở cổng hoặc thanh toán ở quầy vẫn được coi là hoạt động dù
+    // chưa đăng nhập ứng dụng.
     @Autowired(required = false)
     com.swp391.scms.attendance.repository.CenterCheckinRepository checkinRepository;
 
@@ -104,7 +104,7 @@ public class UserService {
     @Autowired(required = false)
     com.swp391.scms.common.i18n.MessageService messageService;
 
-    // Commitment sources checked before an account is removed or changes role.
+    // Các nguồn cam kết được kiểm tra trước khi một tài khoản bị xóa hoặc đổi vai trò.
     @Autowired(required = false)
     com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollmentRepository;
 
@@ -414,7 +414,7 @@ public class UserService {
      * đặt sắp tới; HLV còn lớp hoặc buổi PT sắp tới. Riêng hội viên đã có yêu cầu hủy gói được duyệt thì các
      * gói còn lại được chuyển sang cancelled trước.
      *
-     * A member who still holds a membership or upcoming bookings, or a coach who still teaches upcoming classes or
+     * Hội viên còn membership hoặc lượt đặt sắp tới, hoặc HLV còn dạy lớp sắp tới hoặc
      * 1:1 sessions, keeps their account and role until a manager has settled those first.
      */
     private void ensureNoOpenCommitments(User user) {
@@ -458,9 +458,9 @@ public class UserService {
      * Khi khóa tài khoản: HLV phải bàn giao lớp/buổi PT trước (kiểm tra như khi xóa); hội viên được hủy các chỗ
      * đặt theo buổi sắp tới để người khác đặt. Các mục đã trả tiền để quầy hủy và hoàn tiền.
      *
-     * Locking must not leave a schedule behind: a coach first hands over upcoming classes and 1:1 sessions; a member's
-     * upcoming per-session seats are freed so others can book them. Paid items (courses, courts, 1:1) stay for the
-     * desk to cancel and refund.
+     * Việc khóa không được để lại lịch: HLV trước hết bàn giao các lớp và buổi 1:1 sắp tới; chỗ theo buổi sắp
+     * tới của hội viên được nhả để người khác đặt. Các mục đã trả tiền (khóa học, sân, 1:1) để quầy hủy và
+     * hoàn tiền.
      */
     private void releaseCommitmentsOnLock(User user) {
         String role = user.getRole() == null ? "" : user.getRole().getCode().toUpperCase(Locale.ROOT);
@@ -486,7 +486,8 @@ public class UserService {
     private void protectLastActiveAdmin(User user) {
         if (user.getRole() != null && "ADMIN".equalsIgnoreCase(user.getRole().getCode())
                 && "active".equalsIgnoreCase(user.getStatus())) {
-            // Serialize removals against the shared role row so concurrent requests cannot remove both Admins.
+            // Tuần tự hóa các thao tác gỡ trên dòng vai trò dùng chung để các request đồng thời không gỡ được
+            // cả hai Admin.
             roleRepository.lockByCode("ADMIN");
             if (userRepository.countByRole_CodeAndDeletedAtIsNullAndStatus("ADMIN", "active") <= 1) {
                 throw new ConflictException("LAST_ACTIVE_ADMIN", "users.last_active_admin", null, null);
@@ -528,7 +529,7 @@ public class UserService {
         List<User> users = userRepository.findAllByDeletedAtIsNullOrderByIdAsc();
         int count = 0;
         for (User user : users) {
-            // Staff accounts are retired by a manager, never by the sweep; an unknown role is not guessed at.
+            // Tài khoản nhân viên do quản lý cho nghỉ, không bao giờ do tác vụ quét; vai trò lạ không bị đoán.
             if (user.getRole() == null || user.getRole().getCode() == null
                     || NEVER_AUTO_DELETED.contains(user.getRole().getCode().toUpperCase(Locale.ROOT))) {
                 continue;
@@ -554,8 +555,8 @@ public class UserService {
      * Hội viên còn (hoặc gần đây còn) gói tập, hoặc đã check-in hay thanh toán trong khoảng thời gian xét thì
      * coi là còn hoạt động. Không kiểm tra được gói tập thì giữ tài khoản cho an toàn.
      *
-     * True when the member still holds (or recently held) a membership, or scanned in or paid within the window.
-     * Without the subscription source nothing can be verified, so the account is kept.
+     * True khi hội viên còn (hoặc vừa có) membership, hoặc đã quét vào hay thanh toán trong khoảng thời gian.
+     * Thiếu nguồn subscription thì không xác minh được gì, nên giữ tài khoản.
      */
     private boolean hasRecentUseOrEntitlement(Long userId, LocalDateTime since) {
         if (subscriptionRepository == null

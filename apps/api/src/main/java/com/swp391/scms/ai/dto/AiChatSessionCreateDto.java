@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 /**
  * Dữ liệu tạo phiên chat: hội viên (phải là chính người gọi) và chủ đề.
  *
- * Request payload for creating a new AI chat session.
+ * Payload yêu cầu tạo phiên chat AI mới.
  */
 public record AiChatSessionCreateDto(
         Long memberId,

@@ -103,7 +103,7 @@ public class ProfileService {
                     user.getId()
             );
         }
-        // The change revokes every older token; this session keeps working with a fresh one.
+        // Thay đổi này thu hồi mọi token cũ; phiên hiện tại tiếp tục hoạt động với token mới.
         if (jwtService == null) return null;
         String username = user.getUsername() == null ? user.getEmail() : user.getUsername();
         String role = user.getRole() != null ? user.getRole().getCode() : null;
@@ -264,7 +264,7 @@ public class ProfileService {
             } catch (BadRequestException ex) {
                 throw ex;
             } catch (Exception ignored) {
-                // Synthetic test payloads that are not full raster images are still allowed
+                // Các payload test giả lập không phải ảnh raster đầy đủ vẫn được phép.
             }
         } else if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("/")) {
             throw new BadRequestException(
@@ -386,14 +386,15 @@ public class ProfileService {
                     "Vui lòng tải lên ảnh mặt trước của giấy tờ.");
         }
 
-        // Only an uploaded image is kept: an outside link would make staff browsers load a URL a stranger chose.
+        // Chỉ giữ ảnh đã tải lên: liên kết bên ngoài sẽ khiến trình duyệt của nhân viên tải một URL do người lạ
+        // chọn.
         validateDocumentImage(request.frontImageUrl());
         if (request.backImageUrl() != null && !request.backImageUrl().isBlank()) {
             validateDocumentImage(request.backImageUrl());
         }
 
         member.setDocumentType(docType);
-        // The number is stored encrypted; the readable column keeps only the masked form.
+        // Số được lưu mã hóa; cột đọc được chỉ giữ dạng che.
         if (kycCrypto != null) {
             member.setCitizenIdEncrypted(kycCrypto.encrypt(citizenId));
             member.setCitizenId(KycCrypto.mask(citizenId));
@@ -404,7 +405,7 @@ public class ProfileService {
         if (request.backImageUrl() != null && !request.backImageUrl().isBlank()) {
             member.setBackImageUrl(request.backImageUrl().trim());
         }
-        // Self-declared documents are not trusted: the desk reviews the photos before the member can buy a package.
+        // Giấy tờ tự khai không được tin: quầy duyệt ảnh trước khi hội viên mua gói.
         member.setIdentityVerified(false);
         member.setIdentityVerifiedAt(null);
         member.setKycStatus("PENDING");

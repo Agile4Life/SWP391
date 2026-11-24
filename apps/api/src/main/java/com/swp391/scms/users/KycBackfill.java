@@ -13,8 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Dọn dữ liệu một lần (chạy lại an toàn): số CCCD/hộ chiếu cũ còn lưu dạng chữ rõ được mã hóa, và cột đọc được
  * thay bằng dạng che (********1234).
  *
- * One-time, idempotent cleanup: identity numbers stored in the clear before encryption existed are encrypted and the
- * readable column is replaced by its masked form.
+ * Dọn dẹp một lần, idempotent: các số định danh lưu dạng rõ trước khi có mã hóa được mã hóa và cột đọc được
+ * được thay bằng dạng che.
  */
 @Component
 @Order(60)

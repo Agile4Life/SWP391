@@ -9,7 +9,7 @@ import org.hibernate.Length;
 /**
  * Bảng ai_chat_messages: một tin trong phiên chat AI (người gửi member/ai, nội dung, thời điểm).
  *
- * Entity mapping table ai_chat_messages (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng ai_chat_messages (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_chat_sender", constraints = "sender IN ('member','ai')")

@@ -98,7 +98,8 @@ public class OpenAiRestClient implements AiClient {
             body.put("messages", messages);
             body.put("stream", false);
             if (json) {
-                // OpenAI and Groq both accept JSON mode; it needs the word "JSON" in the prompt, which the plan prompt has.
+                // OpenAI và Groq đều nhận chế độ JSON; nó cần từ "JSON" trong prompt, mà prompt kế hoạch có
+                // sẵn.
                 body.put("response_format", Map.of("type", "json_object"));
                 body.put("max_completion_tokens", MAX_JSON_OUTPUT_TOKENS);
             }
@@ -115,7 +116,7 @@ public class OpenAiRestClient implements AiClient {
                 return cleaned;
             }
         } catch (Exception ignored) {
-            // Fall through to deterministic fallback payload when upstream is unreachable
+            // Rơi về payload dự phòng có tính xác định khi upstream không truy cập được.
         }
         return fallbackPayload(userMessage);
     }

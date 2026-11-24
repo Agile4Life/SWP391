@@ -35,7 +35,7 @@ public class UserCreateDto {
     @Pattern(regexp = "^(male|female|other)$", message = "{validation.users.gender.invalid}")
     private String gender;
 
-    // Getters and Setters
+    // Getter và Setter.
     /** Lấy giá trị trường fullName. */
     public String getFullName() { return fullName; }
     /** Gán giá trị mới cho trường fullName. */

@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * với quyền mặc định, và tạo tài khoản Admin đầu tiên nếu có cấu hình. Quản lý trung tâm do Admin tạo sau,
  * không tạo tự động.
  *
- * Seeds five core roles and an optional Admin. Managers are provisioned by an authenticated Admin.
+ * Seed năm vai trò cốt lõi và một Admin tùy chọn. Quản lý do Admin đã xác thực cấp.
  */
 @Component
 @Order(0)

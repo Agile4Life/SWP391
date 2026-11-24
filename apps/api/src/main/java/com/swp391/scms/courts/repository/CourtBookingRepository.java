@@ -51,8 +51,8 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
     List<CourtBooking> findUnpaidOnlineBefore(@Param("cutoff") LocalDateTime cutoff);
 
     /**
-     * Counter (cash) bookings still unpaid whose slot starts at or before the given moment, and that have been held
-     * long enough to give the member a fair chance to reach the desk.
+     * Các lượt đặt tại quầy (tiền mặt) chưa trả mà khung giờ bắt đầu tại hoặc trước thời điểm cho trước, và
+     * đã được giữ đủ lâu để hội viên có cơ hội hợp lý đến quầy.
      */
     @Query("select b from CourtBooking b where b.status = 'booked' and b.paymentStatus = 'pending' "
             + "and b.paymentMethod = 'cash' and b.createdAt < :createdBefore "
@@ -61,13 +61,13 @@ public interface CourtBookingRepository extends JpaRepository<CourtBooking, Long
     List<CourtBooking> findUnpaidCashDue(@Param("date") LocalDate date, @Param("time") LocalTime time,
                                          @Param("createdBefore") LocalDateTime createdBefore);
 
-    /** Bookings that have not finished yet (paid or not): later days, or today with the slot still ahead. */
+    /** Các lượt đặt chưa kết thúc (đã trả hay chưa): các ngày sau, hoặc hôm nay với khung giờ còn ở phía trước. */
     @Query("select count(b) from CourtBooking b where b.member.id = :memberId and b.status = 'booked' "
             + "and (b.bookingDate > :today or (b.bookingDate = :today and b.endTime > :time))")
     /** Đếm lượt đặt sân booked chưa kết thúc của hội viên. */
     long countUpcomingBooked(@Param("memberId") Long memberId, @Param("today") LocalDate today, @Param("time") LocalTime time);
 
-    /** Slots a member is holding without having paid yet (counter or VNPay), from {@code today} on. */
+    /** Các khung hội viên đang giữ mà chưa trả (quầy hoặc VNPay), từ {@code today} trở đi. */
     @Query("select count(b) from CourtBooking b where b.member.id = :memberId and b.status = 'booked' "
             + "and b.paymentStatus = 'pending' and b.bookingDate >= :today")
     /** Đếm lượt đặt sân booked còn chờ thanh toán từ hôm nay của hội viên. */

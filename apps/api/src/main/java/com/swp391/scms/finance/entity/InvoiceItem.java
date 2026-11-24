@@ -6,7 +6,7 @@ import java.math.BigDecimal;
 
 /**
  * Entity mapping table invoice_items on Supabase PostgreSQL (Module F: Thanh toán & Báo cáo).
- * Contains stored generated column amount (quantity * unit_price).
+ * Chứa cột tính toán được lưu amount (quantity * unit_price).
  */
 @Entity
 @Table(name = "invoice_items")
@@ -32,7 +32,7 @@ public class InvoiceItem {
     /**
      * [FIX 1NF-3NF §3.6] Computed column: AS (quantity * unit_price).
      * @GeneratedColumn instructs Hibernate ORM (Code-First) to generate the database-agnostic
-     * stored generated column DDL for PostgreSQL.
+     * DDL cột tính toán được lưu cho PostgreSQL.
      * @Generated informs Hibernate to fetch the database-computed value upon INSERT and UPDATE.
      */
     @GeneratedColumn("quantity * unit_price")
@@ -52,7 +52,7 @@ public class InvoiceItem {
     /**
      * Tính tạm thành tiền (đơn giá × số lượng) trong bộ nhớ, dùng trước khi lưu.
      *
-     * Helper calculation method for in-memory / preview before persistence.
+     * Phương thức tính trợ giúp cho bộ nhớ / xem trước trước khi lưu.
      */
     public BigDecimal calculateComputedAmount() {
         if (quantity == null || unitPrice == null) {

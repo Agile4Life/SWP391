@@ -13,7 +13,7 @@ import java.util.List;
  * Dữ liệu tạo hóa đơn: khoản thanh toán, số hóa đơn (tự sinh nếu trống), ngày xuất, tiền trước thuế, thuế, link
  * PDF và các dòng hàng.
  *
- * Data Transfer Object for creating an Invoice.
+ * DTO dùng để tạo hóa đơn.
  */
 @Schema(description = "Yêu cầu phát hành hóa đơn mới")
 public class InvoiceCreateDto {

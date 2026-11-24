@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * Truy cập bảng ai_chat_sessions (phiên chat AI).
  *
- * Repository for {@link AiChatSession}.
+ * Repository cho {@link AiChatSession}.
  */
 @Repository
 public interface AiChatSessionRepository extends JpaRepository<AiChatSession, Long> {

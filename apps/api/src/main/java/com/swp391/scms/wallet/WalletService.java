@@ -56,7 +56,8 @@ public class WalletService {
     /**
      * Gán giá trị mới cho trường counterTopupService.
      *
-     * Optional: records a front-desk top-up as a settled payment so it reaches the member's invoices.
+     * Tùy chọn: ghi khoản nạp tại quầy như một thanh toán đã tất toán để nó xuất hiện trong hóa đơn của hội
+     * viên.
      */
     @Autowired(required = false)
     public void setCounterTopupService(@org.springframework.context.annotation.Lazy CounterTopupService counterTopupService) {
@@ -187,8 +188,8 @@ public class WalletService {
      * không cộng lần nữa. Ghi giao dịch TOPUP_COUNTER với mô tả theo phương thức, ghi khoản thanh toán cho hóa
      * đơn, rồi gửi thông báo.
      *
-     * Credits a counter top-up. With a {@code clientRequestId}, a resend of the same top-up (the desk retried after
-     * the response was lost) returns the current wallet without crediting again.
+     * Cộng khoản nạp tại quầy. Với {@code clientRequestId}, gửi lại cùng khoản nạp (quầy thử lại sau khi mất
+     * phản hồi) trả về ví hiện tại mà không cộng thêm.
      */
     @Transactional
     public WalletDto creditByReceptionist(
@@ -425,7 +426,7 @@ public class WalletService {
     /**
      * Hoàn tiền đơn hàng (cửa hàng cũ) vào ví (mỗi mã tham chiếu chỉ một lần).
      *
-     * Credits a product-order refund to the member's wallet; idempotent per {@code referenceId}.
+     * Cộng hoàn tiền đơn hàng vào ví hội viên; idempotent theo {@code referenceId}.
      */
     @Transactional
     public void creditOrderRefund(Long userId, BigDecimal amount, String referenceId, String description, Long orderId) {
@@ -436,7 +437,7 @@ public class WalletService {
     /**
      * Hoàn tiền hủy sân đã trả tiền vào ví (mỗi mã tham chiếu chỉ một lần).
      *
-     * Credits a cancelled paid court-booking refund to the member's wallet; idempotent per {@code referenceId}.
+     * Cộng hoàn tiền đặt sân đã trả và bị hủy vào ví hội viên; idempotent theo {@code referenceId}.
      */
     @Transactional
     public void creditCourtRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
@@ -449,7 +450,7 @@ public class WalletService {
     /**
      * Hoàn học phí khóa học bị hủy vào ví (mỗi mã tham chiếu chỉ một lần).
      *
-     * Credits a cancelled paid course-enrollment refund to the member's wallet; idempotent per {@code referenceId}.
+     * Cộng hoàn tiền ghi danh khóa học đã trả và bị hủy vào ví hội viên; idempotent theo {@code referenceId}.
      */
     @Transactional
     public void creditCourseRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
@@ -462,7 +463,7 @@ public class WalletService {
     /**
      * Hoàn tiền buổi PT 1:1 bị hủy vào ví (mỗi mã tham chiếu chỉ một lần).
      *
-     * Credits a cancelled paid 1:1 coach-booking refund to the member's wallet; idempotent per {@code referenceId}.
+     * Cộng hoàn tiền đặt HLV 1:1 đã trả và bị hủy vào ví hội viên; idempotent theo {@code referenceId}.
      */
     @Transactional
     public void creditCoachBookingRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
@@ -476,8 +477,8 @@ public class WalletService {
      * Hoàn vào ví khoản VNPay được xác nhận muộn khi khoản thu đã được thanh toán/đóng theo cách khác (mỗi mã
      * VNPay chỉ một lần).
      *
-     * Credits a VNPay debit confirmed after its payment was already settled or closed another way; idempotent per
-     * gateway reference.
+     * Cộng khoản VNPay đã trừ được xác nhận sau khi thanh toán của nó đã tất toán hoặc đóng theo cách khác;
+     * idempotent theo mã tham chiếu của cổng.
      */
     @Transactional
     public void creditLateGatewayPayment(Long userId, BigDecimal amount, String reference) {

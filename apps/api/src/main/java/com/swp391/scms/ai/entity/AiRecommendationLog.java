@@ -11,7 +11,7 @@ import org.hibernate.type.SqlTypes;
  * Bảng ai_recommendation_logs: một lần AI đề xuất giáo án (HLV, hội viên, dữ liệu đầu vào JSON, nội dung đề
  * xuất JSON, model, đã áp dụng chưa, thời điểm).
  *
- * Entity mapping table ai_recommendation_logs (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng ai_recommendation_logs (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @Table(name = "ai_recommendation_logs")

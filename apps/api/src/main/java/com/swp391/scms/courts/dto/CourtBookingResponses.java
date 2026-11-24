@@ -15,12 +15,12 @@ public final class CourtBookingResponses {
         /** Constructor rút gọn không có giá. */
         public SlotDto(LocalTime startTime, LocalTime endTime, String status) { this(startTime, endTime, status, null); }
     }
-    /** Court bookings the member's plan still covers in the month of the requested date. */
+    /** Các lượt đặt sân mà gói của hội viên còn bao phủ trong tháng của ngày được yêu cầu. */
     /**
      * Hạn mức đặt sân của hội viên: tên gói, số lượt miễn phí/chu kỳ, đã dùng, còn lại, số ngày được đặt trước,
      * giới hạn lượt sắp tới, giới hạn lượt chưa trả và thời điểm nhả chỗ.
      *
-     * Included bookings plus the per-tier court rules and how much of them the member is using.
+     * Các lượt đặt đã bao gồm cùng quy tắc sân theo hạng và mức hội viên đang dùng.
      */
     public record QuotaDto(String packageName, int monthlyQuota, int used, int remaining,
                            int advanceDays, int maxUpcoming, int upcoming, int maxUnpaid, int unpaid, int releaseLeadMinutes) {}

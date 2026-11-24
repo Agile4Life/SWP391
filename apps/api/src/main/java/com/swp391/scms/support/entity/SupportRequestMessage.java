@@ -10,7 +10,7 @@ import org.hibernate.Length;
 /**
  * Bảng support_request_messages: một tin nhắn trong phiếu (người gửi, nội dung, thời điểm, mã tin phía client).
  *
- * Entity mapping table support_request_messages (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng support_request_messages (schema được Hibernate sinh theo hướng code-first).
  */
 @Entity
 @Table(name = "support_request_messages", uniqueConstraints = @UniqueConstraint(name = "uq_support_message_client", columnNames = {"support_request_id", "sender_user_id", "client_message_id"}))

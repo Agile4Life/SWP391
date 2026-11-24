@@ -57,7 +57,7 @@ public class User {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
-    /** Tokens issued before this moment are rejected, so a password change signs out every other session. */
+    /** Token cấp trước thời điểm này bị từ chối, nên đổi mật khẩu sẽ đăng xuất mọi phiên khác. */
     @Column(name = "password_changed_at")
     private LocalDateTime passwordChangedAt;
 
@@ -88,7 +88,7 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 
-    // Getters and Setters
+    // Getter và Setter.
     /** Lấy giá trị trường id. */
     public Long getId() { return id; }
     /** Gán giá trị mới cho trường id. */
@@ -125,7 +125,7 @@ public class User {
      * trước đó mất hiệu lực; đặt mật khẩu lần đầu thì không.
      */
     public void setPasswordHash(String passwordHash) {
-        // Replacing an existing password (reset, change) revokes older tokens; setting the first one does not.
+        // Thay mật khẩu đã có (đặt lại, đổi) thu hồi các token cũ; đặt mật khẩu đầu tiên thì không.
         if (this.passwordHash != null && !this.passwordHash.equals(passwordHash)) {
             this.passwordChangedAt = LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         }

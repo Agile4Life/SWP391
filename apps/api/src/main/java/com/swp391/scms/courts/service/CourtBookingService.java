@@ -47,14 +47,14 @@ public class CourtBookingService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private MessageService messages;
 
-    /** Optional so the service stays constructible in unit tests; without it no revenue row is written. */
+    /** Tùy chọn để service vẫn dựng được trong unit test; thiếu nó thì không ghi dòng doanh thu. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository payments;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.wallet.WalletService wallets;
     @org.springframework.beans.factory.annotation.Value("${app.vnpay.timeout-minutes:15}")
     private int vnpayTimeoutMinutes = 15;
-    /** An unpaid counter booking is released this long before its slot starts, so the slot is bookable again. */
+    /** Lượt đặt quầy chưa trả được nhả trước giờ bắt đầu khoảng này, để khung giờ đặt lại được. */
     @org.springframework.beans.factory.annotation.Value("${app.courts.cash-release-lead-minutes:120}")
     private int cashReleaseLeadMinutes = 120;
     /** ...but never sooner than this after it was made, so a last-minute booking still has time to be paid. */
@@ -111,7 +111,7 @@ public class CourtBookingService {
     /**
      * Chỉ chặn ngày trống hoặc ở quá khứ; giới hạn đặt trước bao xa tùy hạng gói (xem bookOne).
      *
-     * Only rejects missing/past dates; how far ahead a member may book depends on their plan tier (see bookOne).
+     * Chỉ từ chối ngày thiếu/quá khứ; hội viên được đặt trước bao xa phụ thuộc hạng gói (xem bookOne).
      */
     private void dateWindow(LocalDate date) {
         if (date == null) throw invalid("invalid_slot");
@@ -184,7 +184,7 @@ public class CourtBookingService {
                 || !subscriptions.hasActiveMembershipCoveringSession(principal.id(), now().toLocalDate(), date)) {
             throw forbidden("membership_invalid");
         }
-        // Plan-tier rules (PackageBenefits): how far ahead, and how many bookings may be open at once.
+        // Quy tắc theo hạng gói (PackageBenefits): đặt trước được bao xa, và được mở bao nhiêu lượt cùng lúc.
         MembershipSubscription plan = activeSubscription(principal.id(), now().toLocalDate());
         com.swp391.scms.facilities.entity.MembershipPackage pkg = plan == null ? null : plan.getMembershipPackage();
         int advanceDays = com.swp391.scms.facilities.PackageBenefits.courtAdvanceDays(pkg);
@@ -202,7 +202,7 @@ public class CourtBookingService {
                 ? null : paymentMethod.trim().toLowerCase(Locale.ROOT);
         if (method != null && !PAYMENT_METHODS.contains(method)) throw invalid("invalid_payment_method");
         BigDecimal price = CourtPricing.priceFor(start);
-        // The plan covers the first bookings of the month; every extra court or hour is paid when booking.
+        // Gói bao phủ các lượt đặt đầu tiên của tháng; mọi sân hoặc giờ thêm đều trả khi đặt.
         boolean covered = quotaUsed(principal.id(), date) < monthlyQuota(principal.id(), date);
         if (!covered && method == null) throw invalid("payment_required");
         if (!covered) {
@@ -259,7 +259,7 @@ public class CourtBookingService {
      * Hạn mức đặt sân của hội viên trong chu kỳ chứa ngày được chọn (mặc định hôm nay) cùng các giới hạn theo
      * hạng gói.
      *
-     * Included bookings the member has left in the month of {@code date} (today when null).
+     * Số lượt đặt đã bao gồm mà hội viên còn lại trong tháng của {@code date} (hôm nay khi null).
      */
     public QuotaDto quota(AuthenticatedPrincipal principal, LocalDate date) {
         if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
@@ -333,7 +333,8 @@ public class CourtBookingService {
         }
         if ("paid".equals(booking.getPaymentStatus())) {
             booking.setPaymentStatus("refunded");
-            // Only legacy bookings paid without a payment row fall back to the price; a payment already refunded must not pay twice.
+            // Chỉ các lượt đặt cũ trả không có dòng thanh toán mới quay về dùng giá; thanh toán đã hoàn không
+            // được trả hai lần.
             if (!hasPaymentRows && refundedTotal.compareTo(BigDecimal.ZERO) == 0
                     && booking.getPrice() != null && booking.getPrice().compareTo(BigDecimal.ZERO) > 0) {
                 refundedTotal = booking.getPrice();
@@ -353,7 +354,7 @@ public class CourtBookingService {
     /**
      * Lễ tân xác nhận đã thu tiền mặt: lượt đặt chuyển paid và ghi nhận doanh thu.
      *
-     * The desk records that a counter (cash) court fee was collected: the booking becomes paid and revenue is written.
+     * Quầy ghi nhận phí sân tại quầy (tiền mặt) đã thu: lượt đặt chuyển sang đã trả và doanh thu được ghi.
      */
     @Transactional
     public BookingDto confirmPayment(AuthenticatedPrincipal principal, Long id) {
@@ -373,9 +374,9 @@ public class CourtBookingService {
      * Nhả khung sân chưa thanh toán: VNPay quá thời gian chờ cổng, tiền mặt sắp tới giờ mà vẫn chưa trả; bỏ qua
      * khoản VNPay còn có thể xác nhận; trả về số lượt đã nhả.
      *
-     * Frees slots held by unpaid bookings: a VNPay booking not paid within the gateway timeout, and a counter booking
-     * still unpaid {@code cashReleaseLeadMinutes} before its slot starts (held at least {@code cashMinHoldMinutes}).
-     * Bookings VNPay may still confirm are left for reconciliation.
+     * Giải phóng các khung bị giữ bởi lượt đặt chưa trả: lượt VNPay không trả trong thời gian chờ của cổng,
+     * và lượt đặt quầy vẫn chưa trả {@code cashReleaseLeadMinutes} phút trước giờ bắt đầu (đã giữ ít nhất
+     * {@code cashMinHoldMinutes}). Các lượt VNPay còn có thể xác nhận được để lại cho đối soát.
      */
     @Transactional
     public int expireUnpaid() {

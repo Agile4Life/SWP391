@@ -21,7 +21,10 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
      */
     boolean existsByWallet_IdAndReferenceId(Long walletId, String referenceId);
 
-    /** Automatic refunds of VNPay money confirmed too late: wallet credits keyed by the gateway reference. */
+    /**
+     * Hoàn tiền tự động cho tiền VNPay được xác nhận quá muộn: các khoản cộng ví gắn theo mã tham chiếu của
+     * cổng.
+     */
     String LATE_REFUND_FILTER = "(w.referenceType = 'VNPAY_LATE_REFUND' or w.referenceId like 'ORDER!_LATE!_REFUND!_%' escape '!')";
 
     @org.springframework.data.jpa.repository.Query(

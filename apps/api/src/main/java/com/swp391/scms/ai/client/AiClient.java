@@ -16,8 +16,8 @@ public interface AiClient {
      * Yêu cầu trả lời đúng dạng JSON (dùng khi cần đọc kết quả như giáo án); client không hỗ trợ thì sinh như
      * thường.
      *
-     * Same as {@link #generate} but asks the provider to answer with a JSON object only,
-     * for callers that parse the reply (workout plans). Clients without such a mode just generate.
+     * Giống {@link #generate} nhưng yêu cầu nhà cung cấp chỉ trả lời bằng một đối tượng JSON, cho các nơi gọi
+     * cần phân tích câu trả lời (kế hoạch tập). Client không có chế độ như vậy thì chỉ sinh nội dung.
      */
     default String generateJson(String systemPrompt, String userMessage) {
         return generate(systemPrompt, userMessage);

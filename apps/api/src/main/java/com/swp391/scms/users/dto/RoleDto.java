@@ -7,7 +7,7 @@ public class RoleDto {
     private String name;
     private String description;
 
-    // Getters and Setters
+    // Getter và Setter.
     /** Lấy giá trị trường id. */
     public Long getId() { return id; }
     /** Gán giá trị mới cho trường id. */

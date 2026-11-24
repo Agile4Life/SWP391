@@ -39,7 +39,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Tìm các bản ghi có subscriptionId đã có giá trị và status thuộc danh sách tham số và paidAt ≥ tham số,
      * sắp xếp theo paidAt giảm dần (Spring Data tự sinh truy vấn từ tên hàm).
      *
-     * Membership payments settled since a moment, newest first: the desk's history of processed requests.
+     * Các thanh toán membership đã tất toán từ một thời điểm, mới nhất trước: lịch sử các yêu cầu đã xử lý
+     * của quầy.
      */
     List<Payment> findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(
             java.util.Collection<String> statuses, java.time.LocalDateTime since);
@@ -48,7 +49,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Tìm các bản ghi có note = tham số và status = tham số và paidAt ≥ tham số, sắp xếp theo paidAt giảm dần
      * (Spring Data tự sinh truy vấn từ tên hàm).
      *
-     * Wallet top-ups taken at the front desk since a moment, newest first.
+     * Các khoản nạp ví thu tại quầy từ một thời điểm, mới nhất trước.
      */
     @EntityGraph(attributePaths = {"member", "member.user", "receivedBy"})
     List<Payment> findByNoteAndStatusAndPaidAtGreaterThanEqualOrderByPaidAtDesc(
@@ -90,7 +91,7 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /**
      * Các khoản học phí khóa học đang chờ được tạo trước mốc thời gian (để tự hủy khi quá hạn).
      *
-     * Unpaid course fees (pending, tied to a class enrollment) created before the cutoff.
+     * Các phí khóa học chưa trả (pending, gắn với ghi danh lớp) được tạo trước mốc cutoff.
      */
     @org.springframework.data.jpa.repository.Query("select p from Payment p where p.status = 'pending' and p.classEnrollmentId is not null and p.createdAt < :before")
     java.util.List<Payment> findPendingCourseFeesCreatedBefore(@org.springframework.data.repository.query.Param("before") java.time.LocalDateTime before);
@@ -119,8 +120,8 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     boolean existsByMemberUserIdAndPaidAtGreaterThanEqual(Long memberId, java.time.LocalDateTime since);
 
     /**
-     * Self-service online payments (no cashier) marked paid without a successful VNPay attempt and without the wallet
-     * debit {@code WALLET_PAY_<id>}: should never happen.
+     * Thanh toán online tự phục vụ (không có thu ngân) bị đánh dấu đã trả mà không có lần thử VNPay thành
+     * công và không có khoản trừ ví {@code WALLET_PAY_<id>}: không bao giờ được xảy ra.
      */
     @Query("""
             select count(p) from Payment p

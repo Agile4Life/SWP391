@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 /**
  * API duyệt giấy tờ tùy thân của hội viên (/api/v1/members/kyc) cho lễ tân và quản lý.
  *
- * Desk review of member identity documents (receptionist and manager).
+ * Quầy duyệt giấy tờ định danh của hội viên (lễ tân và quản lý).
  */
 @Tag(name = "Member KYC review", description = "Approve or reject identity documents before a first package")
 @RestController

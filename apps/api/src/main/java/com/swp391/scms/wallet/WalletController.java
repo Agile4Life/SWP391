@@ -54,7 +54,10 @@ public class WalletController {
             String paymentMethod,
             @Size(max = 500)
             String note,
-            /** Same value on every retry of one top-up, so a resend after a lost response credits only once. */
+            /**
+             * Cùng một giá trị ở mọi lần thử lại của một lần nạp, nên gửi lại sau khi mất phản hồi chỉ cộng
+             * một lần.
+             */
             @Size(min = 8, max = 64)
             @jakarta.validation.constraints.Pattern(regexp = "[A-Za-z0-9-]+")
             String clientRequestId

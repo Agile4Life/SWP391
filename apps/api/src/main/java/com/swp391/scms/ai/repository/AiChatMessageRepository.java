@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Truy cập bảng ai_chat_messages (tin nhắn trong phiên chat AI).
  *
- * Repository for {@link AiChatMessage}.
+ * Repository cho {@link AiChatMessage}.
  */
 @Repository
 public interface AiChatMessageRepository extends JpaRepository<AiChatMessage, Long> {
@@ -24,8 +24,9 @@ public interface AiChatMessageRepository extends JpaRepository<AiChatMessage, Lo
     List<AiChatMessage> findBySessionIdOrderByCreatedAtAscIdAsc(Long sessionId);
 
     /**
-     * When the account's own messages (not the AI's) were sent after {@code since}, oldest first; feeds the rate limit.
-     * Covers the account's sessions as a member and as front-desk staff. The asking side is stored as sender 'member'.
+     * Các tin nhắn của chính tài khoản (không phải của AI) được gửi sau {@code since}, cũ nhất trước; dùng
+     * cho giới hạn tần suất. Bao gồm các phiên của tài khoản với tư cách hội viên và nhân viên quầy. Phía đặt
+     * câu hỏi được lưu với người gửi 'member'.
      */
     @Query("select m.createdAt from AiChatMessage m join m.session s left join s.member mem left join s.staffUser staff "
             + "where (mem.userId = :userId or staff.id = :userId) "

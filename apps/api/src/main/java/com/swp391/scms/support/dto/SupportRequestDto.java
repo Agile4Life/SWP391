@@ -32,7 +32,7 @@ public record SupportRequestDto(
     /**
      * Bản dành cho hội viên: cho biết phiếu đã được chuyển lên, nhưng ẩn người chuyển và lý do nội bộ.
      *
-     * What a member may see: that the complaint was escalated, not the receptionist's internal reason.
+     * Điều hội viên được thấy: rằng khiếu nại đã được chuyển lên, chứ không phải lý do nội bộ của lễ tân.
      */
     public SupportRequestDto forMember() {
         return new SupportRequestDto(id, memberId, memberName, assignedTo, assignedToName, subject, description,

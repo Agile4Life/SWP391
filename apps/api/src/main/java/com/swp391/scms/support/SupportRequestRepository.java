@@ -44,7 +44,7 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
      * Phiếu đã chuyển lên quản lý, lọc theo trạng thái (trống là tất cả); quản lý chỉ làm việc với các phiếu
      * này.
      *
-     * Managers only ever work the requests a receptionist has escalated.
+     * Quản lý chỉ xử lý các yêu cầu mà lễ tân đã chuyển lên.
      */
     default Page<SupportRequest> findEscalatedByStatus(String status, Pageable pageable) {
         if (status == null || status.isBlank()) {

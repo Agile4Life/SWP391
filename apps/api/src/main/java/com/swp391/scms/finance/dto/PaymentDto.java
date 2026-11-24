@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
  * đã hoàn, phương thức, trạng thái, người nhận, ghi chú, số hóa đơn, biên lai, loại và tên dịch vụ, và cờ đang
  * chờ VNPay.
  *
- * Data Transfer Object for Payment response.
+ * DTO phản hồi thanh toán.
  */
 @Schema(description = "Thông tin giao dịch thanh toán")
 public class PaymentDto {
@@ -206,10 +206,10 @@ public class PaymentDto {
         this.refundedAmount = refundedAmount;
     }
 
-    /** What the payment is for: MEMBERSHIP, CLASS, PT, COURT, SHOP or OTHER. */
+    /** Thanh toán dành cho việc gì: MEMBERSHIP, CLASS, PT, COURT, SHOP hoặc OTHER. */
     @Schema(description = "Loại dịch vụ: MEMBERSHIP, CLASS, PT, COURT, SHOP, OTHER")
     private String serviceType;
-    /** The paid item as stored data (package, class, coach and slot, court and slot, order code); not translated. */
+    /** Mục đã trả dưới dạng dữ liệu lưu (gói, lớp, HLV và khung, sân và khung, mã đơn); không dịch. */
     @Schema(description = "Tên dịch vụ cụ thể (gói tập, khóa học, HLV + giờ, sân + giờ, mã đơn)")
     private String serviceName;
     private Long coachBookingId;

@@ -23,7 +23,7 @@ public class UserDto {
     private LocalDateTime deletedAt;
     private Boolean subscriptionFrozen;
 
-    // Getters and Setters
+    // Getter và Setter.
     /** Lấy giá trị trường id. */
     public Long getId() { return id; }
     /** Gán giá trị mới cho trường id. */

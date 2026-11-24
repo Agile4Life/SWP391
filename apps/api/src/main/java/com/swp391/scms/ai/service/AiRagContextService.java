@@ -28,9 +28,9 @@ import java.util.Optional;
  * Dựng ngữ cảnh dữ liệu thật (RAG) cho Sol AI từ database: gói tập, HLV, hồ sơ và gói/giáo án của hội viên đang
  * chat, cùng quy định trung tâm liên quan tới câu hỏi.
  *
- * Retrieval-Augmented Generation (RAG) context builder over live Supabase PostgreSQL data.
- * Injects verified catalog (packages, coaches) and authenticated member context (profile,
- * active subscription, active workout plan) into AI prompts.
+ * Bộ dựng ngữ cảnh RAG (Retrieval-Augmented Generation) trên dữ liệu PostgreSQL Supabase trực tiếp. Đưa vào
+ * prompt AI danh mục đã xác minh (gói, HLV) và ngữ cảnh hội viên đã xác thực (hồ sơ, subscription đang hoạt
+ * động, kế hoạch tập đang hoạt động).
  */
 @Service
 public class AiRagContextService {
@@ -56,11 +56,11 @@ public class AiRagContextService {
     private final TrainingPlanRepository trainingPlanRepository;
     private final TrainingPlanItemRepository trainingPlanItemRepository;
 
-    /** Centre rules; built from the bundled file when the context does not provide one (unit tests). */
+    /** Quy định trung tâm; dựng từ file đi kèm khi context không cung cấp (unit test). */
     @Autowired(required = false)
     private AiKnowledgeBase knowledgeBase;
 
-    /** Optional so tests can pin "today"; the centre's own clock otherwise. */
+    /** Tùy chọn để test cố định "hôm nay"; nếu không thì dùng đồng hồ của trung tâm. */
     @Autowired(required = false)
     private Clock clock;
 
