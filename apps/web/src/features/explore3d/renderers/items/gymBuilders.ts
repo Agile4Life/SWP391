@@ -1,12 +1,19 @@
 import * as THREE from 'three';
 import type { ItemKind, Vec3 } from '../../scene/schema';
 
+/** Viết tắt cho THREE.BufferGeometry. */
 type Geo = THREE.BufferGeometry;
 
-/** Geometry helpers owned by itemGeometries.ts (passed in to avoid a circular import). */
+/**
+ * Các hàm trợ giúp hình học do itemGeometries.ts cung cấp (truyền vào để tránh import vòng): bảng màu, kích
+ * thước, hộp, trụ, ống, đĩa, hình tùy ý, bề mặt và co vừa kích thước.
+ *
+ * Geometry helpers owned by itemGeometries.ts (passed in to avoid a circular import).
+ */
 export interface GymBuilderHelpers {
   P: Readonly<Record<string, string>>;
   dims: Readonly<Record<ItemKind, Vec3>>;
+  // Tạo khối hộp (w, h, d) có màu, vị trí và xoay tùy chọn.
   box: (w: number, h: number, d: number, color: string, pos?: Vec3, rot?: Vec3) => Geo;
   cyl: (
     rTop: number,
@@ -34,6 +41,7 @@ export interface GymBuilderHelpers {
     pos?: Vec3,
     rot?: Vec3,
   ) => Geo;
+  // Tạo ống đi qua các điểm với bán kính và màu (có thể uốn cong).
   tube: (points: readonly Vec3[], radius: number, color: string, radialSegments?: number, bend?: number) => Geo[];
   disc: (
     radius: number,
@@ -43,12 +51,18 @@ export interface GymBuilderHelpers {
     axis?: 'x' | 'y' | 'z',
     segments?: number,
   ) => Geo;
+  // Biến đổi một hình học có sẵn (màu, vị trí, xoay, tỉ lệ).
   shape: (geometry: Geo, color: string, pos?: Vec3, rot?: Vec3, scale?: Vec3) => Geo;
+  // Đăng ký một bề mặt (màu, độ nhám, độ kim loại) và trả về mã màu mã hóa bề mặt.
   surface: (color: string, roughness: number, metalness: number) => string;
+  // Gộp các phần và co vừa kích thước đồ vật (đáy ở y = 0).
   fit: (parts: Geo[], dimensions: Vec3) => Geo;
 }
 
 /**
+ * Tạo các hàm dựng thiết bị gym thương mại thực tế: vị trí người tập ngồi/đứng/nắm khớp bản dựng hộp cũ để nhân
+ * vật vẫn khớp, còn cấu trúc theo máy thật.
+ *
  * Realistic commercial gym equipment. Layout (where the user stands, sits or
  * grips) matches the earlier box-built versions so the live actors still line
  * up; the construction now follows real machines: bent round-tube frames,
@@ -71,7 +85,11 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
   const cable = surface('#0a0a0b', 0.6, 0.3);
   const PI2 = Math.PI / 2;
 
-  /** Thin tilted panel (screen) sitting `lift` in front of a console rotated about X by `tilt`. */
+  /**
+   * Tấm màn hình mỏng nghiêng đặt phía trước bảng điều khiển (tilt quanh trục X, lift là độ nhô ra).
+   *
+   * Thin tilted panel (screen) sitting `lift` in front of a console rotated about X by `tilt`.
+   */
   const screenOn = (w: number, hh: number, center: Vec3, tilt: number, lift: number, color = P.screen): Geo =>
     box(w, hh, 0.012, color, [center[0], center[1] - Math.sin(tilt) * lift, center[2] + Math.cos(tilt) * lift], [
       tilt,
@@ -79,7 +97,11 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
       0,
     ]);
 
-  /** Olympic bar along X with sleeves, bumper plates and collars. */
+  /**
+   * Thanh tạ Olympic theo trục X với ống tay, đĩa cao su và khóa.
+   *
+   * Olympic bar along X with sleeves, bumper plates and collars.
+   */
   const barbell = (y: number, z: number, length: number, plateX: number): Geo[] => [
     cyl(0.014, 0.014, length, chrome, [0, y, z], [0, 0, PI2], 10),
     ...[-1, 1].flatMap(s => [
@@ -92,7 +114,11 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     ]),
   ];
 
-  /** Selectorised weight stack between two chrome guide rods. */
+  /**
+   * Cột tạ chọn mức (selectorised) giữa hai thanh dẫn chrome.
+   *
+   * Selectorised weight stack between two chrome guide rods.
+   */
   const weightStack = (x: number, z: number, baseY: number, plates: number, w = 0.34, d = 0.12): Geo[] => {
     const parts: Geo[] = [];
     for (let i = 0; i < plates; i++) {
@@ -104,6 +130,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     return parts;
   };
 
+  /** Máy chạy bộ: băng chạy, khung, tay vịn và bảng điều khiển nghiêng. */
   const buildTreadmill = (): Geo => {
     const tilt = -0.42;
     const consoleCenter: Vec3 = [0, 1.28, -0.86];
@@ -161,6 +188,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     );
   };
 
+  /** Xe đạp tập đứng: chân đế cao su, khung, yên, bàn đạp và màn hình. */
   const buildUprightBike = (): Geo =>
     fit(
       [
@@ -230,6 +258,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
       dims['upright-bike'],
     );
 
+  /** Máy elliptical: thanh ray đế, tay cầm, bàn đạp và bảng điều khiển. */
   const buildElliptical = (): Geo =>
     fit(
       [
@@ -337,6 +366,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
       dims.elliptical,
     );
 
+  /** Máy Smith: đế, hai trụ dẫn hướng, thanh tạ trượt và móc. */
   const buildSmithMachine = (): Geo => {
     const parts: Geo[] = [
       // base
@@ -369,6 +399,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     return fit(parts, dims['smith-machine']);
   };
 
+  /** Máy kéo xô (lat pulldown): đế, khung, thanh kéo, ghế và cột tạ. */
   const buildLatPulldown = (): Geo =>
     fit(
       [
@@ -430,6 +461,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
       dims['lat-pulldown'],
     );
 
+  /** Giá squat: bục cao su và gỗ sồi, trụ, móc và thanh an toàn. */
   const buildSquatRack = (): Geo => {
     const parts: Geo[] = [
       // platform: rubber wings, oak centre
@@ -471,6 +503,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     return fit(parts, dims['squat-rack']);
   };
 
+  /** Giá tạ tay: ba khung bằng ống uốn và hai khay nghiêng. */
   const buildDumbbellRack = (): Geo => {
     const parts: Geo[] = [];
     // three side frames from bent tube, two angled trays
@@ -497,6 +530,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     parts.push(box(2.5, 0.05, 0.02, steel, [0, 0.75, 0.055], [0.2, 0, 0]));
     parts.push(box(2.5, 0.05, 0.02, steel, [0, 0.385, 0.275], [0.2, 0, 0]));
     // hex rubber dumbbells, heavier toward the right and on the bottom tray
+    // Một quả tạ tay lục giác bọc cao su (nặng hơn về phía phải và khay dưới).
     const dumbbell = (x: number, y: number, z: number, r: number): Geo[] => [
       cyl(0.014, 0.014, 0.16, chrome, [x, y, z], [PI2 + 0.2, 0, 0], 8),
       cyl(r, r, 0.085, rubber, [x, y + 0.021, z - 0.105], [PI2 + 0.2, 0, 0], 6),
@@ -513,6 +547,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     return fit(parts, dims['dumbbell-rack']);
   };
 
+  /** Ghế tập điều chỉnh độ nghiêng: chân có nắp cao su và bánh xe, khung, đệm lưng và đệm ngồi. */
   const buildAdjustableBench = (): Geo =>
     fit(
       [
@@ -554,6 +589,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
       dims['adjustable-bench'],
     );
 
+  /** Máy Kinesis đa năng: đế, vỏ, ròng rọc và cột tạ. */
   const buildKinesisStation = (): Geo => {
     const parts: Geo[] = [
       box(2.34, 0.06, 1.48, frame, [0, 0.03, 0]),
@@ -602,6 +638,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     return fit(parts, dims['kinesis-station']);
   };
 
+  /** Bao cát nặng: chân đế ba chân, trụ đỡ, dây treo và thân bao. */
   const buildHeavyBag = (): Geo => {
     const parts: Geo[] = [
       // tripod base and stanchion
@@ -668,6 +705,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     return fit(parts, dims['heavy-bag']);
   };
 
+  /** Bao tốc độ: thân giọt nước xoay quanh trục Y, bản gỗ và khung treo. */
   const buildSpeedBag = (): Geo => {
     // teardrop profile revolved around Y
     const profile = [
@@ -705,6 +743,7 @@ export function createGymBuilders(h: GymBuilderHelpers): Partial<Record<ItemKind
     );
   };
 
+  /** Sàn đấu boxing: tạp dề, thảm canvas, biểu tượng giữa, cột góc và dây. */
   const buildBoxingRing = (): Geo => {
     const parts: Geo[] = [
       // apron skirt, canvas, centre emblem

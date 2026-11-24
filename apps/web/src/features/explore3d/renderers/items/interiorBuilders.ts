@@ -2,9 +2,13 @@ import * as THREE from 'three';
 import type { ItemKind } from '../../scene/schema';
 import type { GymBuilderHelpers } from './gymBuilders';
 
+/** Viết tắt cho THREE.BufferGeometry. */
 type Geo = THREE.BufferGeometry;
 
 /**
+ * Tạo các hàm dựng nội thất sảnh, dịch vụ, spa và lối đi thực tế: diện tích và hướng mỗi món khớp bản hộp cũ,
+ * cấu trúc theo mộc và phụ kiện thật (chân đế, đá, gỗ).
+ *
  * Realistic lobby, service, spa and circulation furniture. Footprints and the
  * side each piece faces match the earlier box-built versions; construction now
  * follows real joinery and fittings: plinths with shadow gaps, slatted timber,
@@ -32,7 +36,11 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
   const glass = P.glass;
   const PI2 = Math.PI / 2;
 
-  /** Flat display on a small stand, facing +Z, tilted back by `tilt`. */
+  /**
+   * Màn hình phẳng trên chân đế nhỏ, hướng +Z, ngả ra sau một góc tilt.
+   *
+   * Flat display on a small stand, facing +Z, tilted back by `tilt`.
+   */
   const monitor = (x: number, y: number, z: number, w = 0.5, hh = 0.3, tilt = -0.12, ry = 0): Geo[] => [
     disc(0.09, 0.012, steel, [x, y + 0.006, z], 'y', 16),
     cyl(0.012, 0.012, hh * 0.6, steel, [x, y + hh * 0.3, z], undefined, 8),
@@ -40,7 +48,11 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     box(w - 0.03, hh - 0.03, 0.004, P.screen, [x, y + hh * 0.75, z + 0.023], [tilt, ry, 0]),
   ];
 
-  /** Row of vertical timber battens along X on a dark backing. */
+  /**
+   * Hàng nan gỗ dọc theo trục X trên nền tối.
+   *
+   * Row of vertical timber battens along X on a dark backing.
+   */
   const battens = (width: number, height: number, y: number, z: number, color: string, pitch = 0.11): Geo[] => {
     const parts: Geo[] = [box(width, height, 0.02, plinth, [0, y, z - 0.02])];
     const n = Math.floor(width / pitch);
@@ -50,6 +62,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     return parts;
   };
 
+  /** Quầy lễ tân: chân đế lõm, thân, mặt trước ốp nan gỗ và mặt đá. */
   const buildReceptionDesk = (): Geo =>
     fit(
       [
@@ -74,6 +87,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['reception-desk'],
     );
 
+  /** Cổng soát vé QR (turnstile): trụ hai bên, cánh chắn và đầu đọc. */
   const buildQrTurnstile = (): Geo =>
     fit(
       [
@@ -96,6 +110,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['qr-turnstile'],
     );
 
+  /** Máy check-in tự phục vụ (kiosk): đế, thân, màn hình và đầu quét. */
   const buildKioskCheckin = (): Geo =>
     fit(
       [
@@ -113,6 +128,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['kiosk-checkin'],
     );
 
+  /** Máy in thẻ hội viên: thân máy, khay và màn hình. */
   const buildCardPrinter = (): Geo =>
     fit(
       [
@@ -136,6 +152,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['card-printer'],
     );
 
+  /** Kệ trưng bày thực phẩm bổ sung: chân đế, vách sau, vách bên, tiêu đề và các tầng kệ. */
   const buildSupplementShelf = (): Geo => {
     const parts: Geo[] = [
       // gondola: plinth, back panel, end panels, header
@@ -163,6 +180,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     return fit(parts, dims['supplement-shelf']);
   };
 
+  /** Bảng dinh dưỡng: hai trụ và bảng hiển thị. */
   const buildNutritionBoard = (): Geo =>
     fit(
       [
@@ -183,6 +201,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['nutrition-board'],
     );
 
+  /** Trụ trưng bày cúp: đế đá, thân và các ngăn kính. */
   const buildTrophyTotem = (): Geo => {
     const parts: Geo[] = [
       rbox(0.96, 0.16, 0.56, 0.02, stone, [0, 0.08, 0]),
@@ -202,6 +221,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     return fit(parts, dims['trophy-totem']);
   };
 
+  /** Bục HLV: bệ, mặt và phần trang trí. */
   const buildCoachPodium = (): Geo =>
     fit(
       [
@@ -220,7 +240,9 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['coach-podium'],
     );
 
+  /** Phòng tư vấn (pod): bàn và hai ghế bọc vải ôm lưng. */
   const buildConsultationPod = (): Geo => {
+    // Ghế bọc: chân thép mảnh, đệm ngồi và lưng ôm (s là bên trái/phải).
     const chair = (s: number): Geo[] => [
       // slim steel legs, upholstered seat and wrap-around back
       ...[-0.22, 0.22].flatMap(z => [
@@ -247,6 +269,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     );
   };
 
+  /** Tủ khóa: đế, thân tủ, cánh tủ và tay khóa. */
   const buildLockerBank = (): Geo => {
     const parts: Geo[] = [
       box(3.1, 0.08, 0.5, plinth, [0, 0.04, -0.14]),
@@ -283,8 +306,10 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     return fit(parts, dims['locker-bank']);
   };
 
+  /** Ghế sauna bằng nan gỗ theo bậc. */
   const buildSaunaBench = (): Geo => {
     const parts: Geo[] = [];
+    // Một hàng nan ghế gồm n thanh dài len tại vị trí cho trước.
     const slats = (cx: number, y: number, z0: number, n: number, len: number, color: string) => {
       for (let i = 0; i < n; i++) parts.push(rbox(len, 0.035, 0.11, 0.01, color, [cx, y, z0 + i * 0.125]));
     };
@@ -321,6 +346,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     return fit(parts, dims['sauna-bench']);
   };
 
+  /** Bồn jacuzzi: thành bồn ốp, đá viền quanh lòng bồn mở và vòi. */
   const buildJacuzziTub = (): Geo => {
     const parts: Geo[] = [
       // surround: plinth, clad walls, polished stone coping around an open basin
@@ -365,7 +391,9 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     return fit(parts, dims['jacuzzi-tub']);
   };
 
+  /** Quầy nước ép: quầy, máy xay, ghế và kệ. */
   const buildJuiceBar = (): Geo => {
+    // Máy xay sinh tố (cối kính, đế, nắp) tại vị trí x.
     const blender = (x: number, lid: string): Geo[] => [
       rbox(0.16, 0.12, 0.18, 0.025, plinth, [x, 1.1, -0.1]),
       cyl(0.075, 0.055, 0.24, glass, [x, 1.28, -0.1], undefined, 14),
@@ -423,6 +451,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     return fit(parts, dims['juice-bar']);
   };
 
+  /** Lõi cầu thang: các vế thang, chiếu nghỉ, lan can và vách bao. */
   const buildStairCore = (): Geo => {
     const parts: Geo[] = [];
     const treadW = 3.04;
@@ -549,6 +578,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
     return fit(parts, dims['stair-core']);
   };
 
+  /** Lõi thang máy: bệ granite chạm đất và mũ penthouse than chì nhô ra với viền salmon đặc trưng của SÖL. */
   const buildElevatorCore = (): Geo =>
     fit(
       [
@@ -590,6 +620,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['elevator-core'],
     );
 
+  /** Bục xuất phát hồ bơi. */
   const buildStartingBlock = (): Geo =>
     fit(
       [
@@ -617,6 +648,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['starting-block'],
     );
 
+  /** Thảm yoga. */
   const buildYogaMat = (): Geo =>
     fit(
       [
@@ -629,6 +661,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['yoga-mat'],
     );
 
+  /** Gối thiền (zafu) và thảm zabuton, kèm chuông xướng. */
   const buildMeditationBolster = (): Geo =>
     fit(
       [
@@ -642,6 +675,7 @@ export function createInteriorBuilders(h: GymBuilderHelpers): Partial<Record<Ite
       dims['meditation-bolster'],
     );
 
+  /** Máy phân tích thành phần cơ thể InBody: bục cân và điện cực inox. */
   const buildInbodyAnalyzer = (): Geo =>
     fit(
       [
