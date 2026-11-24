@@ -229,7 +229,7 @@ export function buildChamferBoxGeometry(
 
   const signs = [-1, 1] as const;
 
-  // Six inset faces.
+  // Sáu mặt đã thu nhỏ vào trong (inset).
   for (const s of signs) {
     pushQuad(
       [s * hx, -iy, -iz],
@@ -254,10 +254,10 @@ export function buildChamferBoxGeometry(
     );
   }
 
-  // Twelve bevel strips (four per axis).
+  // Mười hai dải vát (bevel), mỗi trục bốn dải.
   for (const sa of signs) {
     for (const sb of signs) {
-      // Edge along X, between the Y and Z faces.
+      // Cạnh dọc theo trục X, nằm giữa mặt Y và mặt Z.
       pushQuad(
         [-ix, sa * hy, sb * iz],
         [ix, sa * hy, sb * iz],
@@ -265,7 +265,7 @@ export function buildChamferBoxGeometry(
         [-ix, sa * iy, sb * hz],
         [0, sa, sb],
       );
-      // Edge along Y, between the X and Z faces.
+      // Cạnh dọc theo trục Y, nằm giữa mặt X và mặt Z.
       pushQuad(
         [sa * hx, -iy, sb * iz],
         [sa * hx, iy, sb * iz],
@@ -273,7 +273,7 @@ export function buildChamferBoxGeometry(
         [sa * ix, -iy, sb * hz],
         [sa, 0, sb],
       );
-      // Edge along Z, between the X and Y faces.
+      // Cạnh dọc theo trục Z, nằm giữa mặt X và mặt Y.
       pushQuad(
         [sa * hx, sb * iy, -iz],
         [sa * hx, sb * iy, iz],
@@ -284,7 +284,7 @@ export function buildChamferBoxGeometry(
     }
   }
 
-  // Eight corner triangles.
+  // Tám tam giác ở các góc.
   for (const sx of signs) {
     for (const sy of signs) {
       for (const sz of signs) {
@@ -605,7 +605,7 @@ function shape(
 }
 
 // ============================================================================
-// HIGH-DETAIL ITEM BUILDERS (36 recognizable silhouettes, <= 900 tris each)
+// BỘ DỰNG HÌNH CHI TIẾT CAO CHO CÁC ITEM (36 hình dáng dễ nhận biết, mỗi cái <= 900 tam giác)
 // ============================================================================
 
 /** Dựng hình học bản chi tiết của máy chạy bộ từ các khối, ống và đĩa rồi co vừa kích thước mặc định. */
@@ -613,21 +613,21 @@ function buildTreadmill(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Deck base & running belt
+      // Đế máy và băng chạy.
       box(0.92, 0.14, 1.94, P.charcoal, [0, 0.07, 0]),
       box(0.68, 0.04, 1.66, P.charcoalDeep, [0, 0.15, 0.08]),
-      // Side salmon step rails
+      // Hai thanh bậc đứng màu salmon hai bên.
       box(0.09, 0.05, 1.72, P.salmon, [-0.41, 0.155, 0.05]),
       box(0.09, 0.05, 1.72, P.salmon, [0.41, 0.155, 0.05]),
-      // Front motor hood
+      // Nắp động cơ phía trước.
       box(0.94, 0.24, 0.42, P.charcoalSoft, [0, 0.18, -0.76]),
-      // Left & right angled uprights
+      // Hai trụ nghiêng bên trái và bên phải.
       box(0.09, 1.18, 0.12, P.charcoal, [-0.42, 0.72, -0.68], [0.16, 0, 0]),
       box(0.09, 1.18, 0.12, P.charcoal, [0.42, 0.72, -0.68], [0.16, 0, 0]),
-      // Side handrails
+      // Hai tay vịn hai bên.
       box(0.07, 0.07, 0.72, P.metal, [-0.42, 1.12, -0.38], [0.12, 0, 0]),
       box(0.07, 0.07, 0.72, P.metal, [0.42, 1.12, -0.38], [0.12, 0, 0]),
-      // Console bridge & touchscreen
+      // Cầu bảng điều khiển và màn hình cảm ứng.
       box(0.96, 0.14, 0.28, P.charcoalSoft, [0, 1.24, -0.62]),
       box(0.62, 0.34, 0.08, P.charcoal, [0, 1.34, -0.64], [-0.42, 0, 0]),
       box(0.54, 0.26, 0.03, P.screen, [0, 1.35, -0.61], [-0.42, 0, 0]),
@@ -642,21 +642,21 @@ function buildUprightBike(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Stabilizer feet
+      // Chân cân bằng.
       box(0.64, 0.07, 0.12, P.charcoal, [0, 0.035, -0.48]),
       box(0.64, 0.07, 0.12, P.charcoal, [0, 0.035, 0.48]),
       box(0.14, 0.07, 0.96, P.charcoal, [0, 0.035, 0]),
-      // Flywheel shroud & crank housing
+      // Vỏ bánh đà và hộp trục quay pedal.
       cyl(0.28, 0.28, 0.18, P.charcoalSoft, [0, 0.38, -0.1], [0, 0, Math.PI / 2], 10),
       box(0.2, 0.48, 0.56, P.charcoal, [0, 0.34, 0.04], [-0.2, 0, 0]),
       box(0.21, 0.08, 0.44, P.salmon, [0, 0.42, 0.02], [-0.2, 0, 0]),
-      // Pedals
+      // Bàn đạp.
       box(0.14, 0.04, 0.18, P.charcoalDeep, [-0.18, 0.24, -0.05]),
       box(0.14, 0.04, 0.18, P.charcoalDeep, [0.18, 0.46, -0.14]),
-      // Seat post & ergonomic saddle
+      // Cột yên và yên xe công thái học.
       box(0.08, 0.62, 0.08, P.metal, [0, 0.66, 0.28], [0.22, 0, 0]),
       box(0.26, 0.09, 0.32, P.charcoalDeep, [0, 0.96, 0.34]),
-      // Handlebar mast, dual horns & display
+      // Trụ tay lái, hai tay cầm và màn hình hiển thị.
       box(0.08, 0.88, 0.09, P.charcoal, [0, 0.72, -0.34], [-0.18, 0, 0]),
       box(0.56, 0.06, 0.06, P.metal, [0, 1.14, -0.38]),
       box(0.06, 0.18, 0.24, P.charcoalDeep, [-0.25, 1.2, -0.28], [0.3, 0, 0]),
@@ -672,21 +672,21 @@ function buildElliptical(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Base frame rails
+      // Hai thanh khung đế.
       box(0.88, 0.08, 1.98, P.charcoal, [0, 0.04, 0]),
-      // Rear drive drum
+      // Trống dẫn động phía sau.
       cyl(0.38, 0.38, 0.28, P.charcoalSoft, [0, 0.44, 0.56], [0, 0, Math.PI / 2], 10),
       cyl(0.24, 0.24, 0.3, P.salmon, [0, 0.44, 0.56], [0, 0, Math.PI / 2], 8),
-      // Foot pedal tracks & oversized foot pads
+      // Ray bàn đạp chân và tấm đặt chân cỡ lớn.
       box(0.1, 0.06, 1.35, P.metal, [-0.26, 0.24, 0.1], [0.08, 0, 0]),
       box(0.1, 0.06, 1.35, P.metal, [0.26, 0.24, 0.1], [-0.05, 0, 0]),
       box(0.2, 0.07, 0.44, P.charcoalDeep, [-0.26, 0.3, 0.12]),
       box(0.2, 0.07, 0.44, P.charcoalDeep, [0.26, 0.26, -0.04]),
-      // Central console tower
+      // Trụ bảng điều khiển ở giữa.
       box(0.18, 1.28, 0.22, P.charcoal, [0, 0.72, -0.68], [-0.16, 0, 0]),
       box(0.48, 0.3, 0.08, P.screen, [0, 1.44, -0.74], [-0.42, 0, 0]),
       box(0.5, 0.05, 0.09, P.salmon, [0, 1.58, -0.78], [-0.42, 0, 0]),
-      // Dual moving stride arms
+      // Hai tay sải chuyển động.
       box(0.06, 1.32, 0.08, P.metal, [-0.36, 0.92, -0.46], [0.18, 0, 0]),
       box(0.06, 1.32, 0.08, P.metal, [0.36, 0.92, -0.54], [-0.14, 0, 0]),
       box(0.08, 0.28, 0.08, P.charcoalDeep, [-0.36, 1.48, -0.34]),
@@ -701,28 +701,28 @@ function buildSmithMachine(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Left and right base runners
+      // Hai thanh chạy đế bên trái và bên phải.
       box(0.14, 0.1, 1.52, P.charcoal, [-0.82, 0.05, 0]),
       box(0.14, 0.1, 1.52, P.charcoal, [0.82, 0.05, 0]),
       box(1.78, 0.08, 0.14, P.charcoal, [0, 0.05, -0.66]),
-      // Main vertical columns & angled rear braces
+      // Các cột đứng chính và thanh chống nghiêng phía sau.
       box(0.12, 2.18, 0.12, P.charcoal, [-0.82, 1.12, -0.18]),
       box(0.12, 2.18, 0.12, P.charcoal, [0.82, 1.12, -0.18]),
       box(0.1, 2.16, 0.1, P.charcoalSoft, [-0.82, 1.1, -0.58], [0.18, 0, 0]),
       box(0.1, 2.16, 0.1, P.charcoalSoft, [0.82, 1.1, -0.58], [0.18, 0, 0]),
-      // Top crossbeam & salmon header badge
+      // Xà ngang phía trên và huy hiệu đầu màu salmon.
       box(1.84, 0.14, 0.24, P.charcoal, [0, 2.16, -0.26]),
       box(0.92, 0.08, 0.26, P.salmon, [0, 2.16, -0.26]),
-      // Twin chrome guide rods
+      // Hai thanh dẫn hướng chrome.
       cyl(0.025, 0.025, 2.04, P.metalLight, [-0.72, 1.08, -0.02], undefined, 6),
       cyl(0.025, 0.025, 2.04, P.metalLight, [0.72, 1.08, -0.02], undefined, 6),
-      // Guided Olympic barbell & weight plates
+      // Thanh tạ Olympic được dẫn hướng cùng các đĩa tạ.
       cyl(0.028, 0.028, 2.18, P.metalLight, [0, 1.15, -0.02], [0, 0, Math.PI / 2], 8),
       cyl(0.22, 0.22, 0.08, P.charcoalDeep, [-0.94, 1.15, -0.02], [0, 0, Math.PI / 2], 8),
       cyl(0.22, 0.22, 0.08, P.charcoalDeep, [0.94, 1.15, -0.02], [0, 0, Math.PI / 2], 8),
       cyl(0.16, 0.16, 0.06, P.salmon, [-1.02, 1.15, -0.02], [0, 0, Math.PI / 2], 8),
       cyl(0.16, 0.16, 0.06, P.salmon, [1.02, 1.15, -0.02], [0, 0, Math.PI / 2], 8),
-      // Side plate storage pegs
+      // Chốt cất đĩa tạ hai bên.
       box(0.22, 0.05, 0.05, P.metal, [-0.96, 0.65, -0.45]),
       box(0.22, 0.05, 0.05, P.metal, [0.96, 0.65, -0.45]),
     ],
@@ -735,20 +735,20 @@ function buildLatPulldown(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Base runners
+      // Các thanh chạy ở đế.
       box(1.1, 0.08, 1.44, P.charcoal, [0, 0.04, 0]),
-      // Enclosed weight stack tower
+      // Tháp khối tạ được bao kín.
       box(0.68, 2.08, 0.36, P.charcoalSoft, [0, 1.06, -0.52]),
       box(0.46, 1.56, 0.24, P.charcoalDeep, [0, 0.96, -0.5]),
       box(0.48, 0.08, 0.28, P.salmon, [0, 1.24, -0.5]),
-      // Overhead dual pulley boom
+      // Cần puly kép phía trên.
       box(0.24, 0.12, 0.96, P.charcoal, [0, 2.12, -0.18]),
       cyl(0.09, 0.09, 0.06, P.salmon, [0, 2.08, 0.22], [0, 0, Math.PI / 2], 8),
-      // Wide lat bar suspended below boom
+      // Thanh kéo xô rộng treo dưới cần.
       cyl(0.022, 0.022, 1.24, P.metalLight, [0, 1.82, 0.22], [0, 0, Math.PI / 2], 8),
       box(0.18, 0.05, 0.05, P.charcoalDeep, [-0.66, 1.78, 0.22], [0, 0, 0.35]),
       box(0.18, 0.05, 0.05, P.charcoalDeep, [0.66, 1.78, 0.22], [0, 0, -0.35]),
-      // Seat post, seat pad & thigh hold-down rollers
+      // Cột ghế, đệm ngồi và con lăn giữ đùi.
       box(0.12, 0.44, 0.12, P.charcoal, [0, 0.24, 0.28]),
       box(0.38, 0.08, 0.44, P.charcoalDeep, [0, 0.48, 0.3]),
       cyl(0.08, 0.08, 0.48, P.charcoalDeep, [0, 0.66, 0.12], [0, 0, Math.PI / 2], 8),
@@ -763,23 +763,23 @@ function buildSquatRack(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Lifting platform base (oak center + rubber wings)
+      // Bệ nâng tạ (giữa bằng gỗ sồi, hai cánh cao su).
       box(1.66, 0.06, 1.74, P.charcoalDeep, [0, 0.03, 0]),
       box(0.86, 0.065, 1.72, P.wood, [0, 0.033, 0]),
-      // 4 heavy uprights
+      // Bốn trụ đứng chắc chắn.
       box(0.1, 2.22, 0.1, P.charcoal, [-0.62, 1.14, -0.56]),
       box(0.1, 2.22, 0.1, P.charcoal, [0.62, 1.14, -0.56]),
       box(0.1, 2.22, 0.1, P.charcoal, [-0.62, 1.14, 0.26]),
       box(0.1, 2.22, 0.1, P.charcoal, [0.62, 1.14, 0.26]),
-      // Top crossbeams & pull-up bar
+      // Các xà ngang phía trên và thanh kéo xà.
       box(0.1, 0.12, 0.92, P.charcoal, [-0.62, 2.2, -0.15]),
       box(0.1, 0.12, 0.92, P.charcoal, [0.62, 2.2, -0.15]),
       box(1.34, 0.14, 0.12, P.salmon, [0, 2.2, -0.56]),
       cyl(0.026, 0.026, 1.28, P.metal, [0, 2.18, 0.26], [0, 0, Math.PI / 2], 8),
-      // Safety spotter arms
+      // Tay đỡ an toàn cho người hỗ trợ (spotter).
       box(0.08, 0.07, 0.92, P.metal, [-0.62, 0.88, -0.15]),
       box(0.08, 0.07, 0.92, P.metal, [0.62, 0.88, -0.15]),
-      // Olympic barbell + bumper plates
+      // Thanh tạ Olympic cùng đĩa tạ bumper.
       cyl(0.026, 0.026, 1.68, P.metalLight, [0, 1.38, 0.28], [0, 0, Math.PI / 2], 8),
       cyl(0.22, 0.22, 0.08, P.charcoalDeep, [-0.74, 1.38, 0.28], [0, 0, Math.PI / 2], 8),
       cyl(0.22, 0.22, 0.08, P.charcoalDeep, [0.74, 1.38, 0.28], [0, 0, Math.PI / 2], 8),
@@ -794,24 +794,24 @@ function buildSquatRack(): THREE.BufferGeometry {
 function buildDumbbellRack(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // Left, center, right A-frame legs
+    // Chân hình chữ A bên trái, giữa và bên phải.
     box(0.1, 0.88, 0.72, P.charcoal, [-1.18, 0.44, 0]),
     box(0.1, 0.88, 0.72, P.charcoal, [0, 0.44, 0]),
     box(0.1, 0.88, 0.72, P.charcoal, [1.18, 0.44, 0]),
-    // Upper and lower shelf rails
+    // Thanh kệ tầng trên và tầng dưới.
     box(2.52, 0.07, 0.28, P.charcoalSoft, [0, 0.78, -0.08], [0.18, 0, 0]),
     box(2.52, 0.07, 0.32, P.charcoalSoft, [0, 0.42, 0.08], [0.18, 0, 0]),
     box(2.54, 0.03, 0.04, P.salmon, [0, 0.81, 0.06]),
     box(2.54, 0.03, 0.04, P.salmon, [0, 0.45, 0.23]),
   ];
 
-  // 6 dumbbell pairs across top & bottom shelves
+  // 6 cặp tạ tay trải trên kệ trên và kệ dưới.
   for (let i = 0; i < 6; i++) {
     const x = -1.0 + i * 0.4;
-    // Top dumbbell
+    // Tạ tay ở kệ trên.
     parts.push(box(0.12, 0.12, 0.32, P.charcoalDeep, [x - 0.07, 0.86, -0.08]));
     parts.push(box(0.12, 0.12, 0.32, P.charcoalDeep, [x + 0.07, 0.86, -0.08]));
-    // Bottom heavier dumbbell
+    // Tạ tay nặng hơn ở kệ dưới.
     parts.push(box(0.14, 0.14, 0.36, P.charcoalDeep, [x, 0.52, 0.08]));
     parts.push(box(0.06, 0.06, 0.38, P.metalLight, [x, 0.52, 0.08]));
   }
@@ -824,19 +824,19 @@ function buildAdjustableBench(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // H-frame steel base
+      // Đế thép hình chữ H.
       box(0.68, 0.06, 0.12, P.charcoal, [0, 0.03, -0.56]),
       box(0.54, 0.06, 0.12, P.charcoal, [0, 0.03, 0.56]),
       box(0.1, 0.07, 1.24, P.charcoal, [0, 0.04, 0]),
-      // Vertical support posts
+      // Các trụ đỡ đứng.
       box(0.09, 0.38, 0.09, P.charcoal, [0, 0.22, 0.32]),
       box(0.09, 0.38, 0.09, P.charcoal, [0, 0.22, -0.22]),
-      // Seat pad
+      // Đệm ngồi.
       box(0.34, 0.08, 0.38, P.charcoalDeep, [0, 0.44, 0.36], [-0.12, 0, 0]),
-      // Inclined backrest pad + salmon trim
+      // Đệm tựa lưng nghiêng cùng viền salmon.
       box(0.36, 0.09, 0.82, P.charcoalDeep, [0, 0.64, -0.22], [0.46, 0, 0]),
       box(0.38, 0.03, 0.83, P.salmon, [0, 0.62, -0.23], [0.46, 0, 0]),
-      // Adjustment prop bar
+      // Thanh chống để điều chỉnh độ nghiêng.
       box(0.06, 0.42, 0.05, P.metal, [0, 0.44, -0.34], [-0.45, 0, 0]),
     ],
     DEFAULT_ITEM_DIMENSIONS['adjustable-bench'],
@@ -848,27 +848,27 @@ function buildKinesisStation(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Base platform
+      // Bệ đế.
       box(2.34, 0.08, 1.48, P.charcoal, [0, 0.04, 0]),
-      // Architectural wood-and-charcoal vertical wall core
+      // Lõi tường đứng kết hợp gỗ và than theo phong cách kiến trúc.
       box(2.28, 2.16, 0.24, P.charcoalSoft, [0, 1.12, -0.56]),
       box(1.42, 2.08, 0.06, P.wood, [0, 1.12, -0.42]),
       box(1.44, 0.08, 0.08, P.salmon, [0, 2.12, -0.41]),
-      // Left & right weight towers
+      // Hai tháp tạ bên trái và bên phải.
       box(0.38, 2.1, 0.32, P.charcoal, [-0.92, 1.1, -0.52]),
       box(0.38, 2.1, 0.32, P.charcoal, [0.92, 1.1, -0.52]),
-      // Upper 3D pulley arms
+      // Các tay puly 3D phía trên.
       box(0.07, 0.07, 0.92, P.metalLight, [-0.88, 1.96, -0.02], [0.1, -0.18, 0]),
       box(0.07, 0.07, 0.92, P.metalLight, [0.88, 1.96, -0.02], [0.1, 0.18, 0]),
       cyl(0.08, 0.08, 0.06, P.salmon, [-0.78, 1.92, 0.4], [0, 0, Math.PI / 2], 8),
       cyl(0.08, 0.08, 0.06, P.salmon, [0.78, 1.92, 0.4], [0, 0, Math.PI / 2], 8),
-      // Mid 3D pulley arms
+      // Các tay puly 3D ở giữa.
       box(0.07, 0.07, 0.78, P.metal, [-0.96, 1.16, -0.08], [0, -0.25, 0]),
       box(0.07, 0.07, 0.78, P.metal, [0.96, 1.16, -0.08], [0, 0.25, 0]),
-      // Lower pulley arms
+      // Các tay puly phía dưới.
       box(0.07, 0.07, 0.68, P.metal, [-0.86, 0.32, -0.14]),
       box(0.07, 0.07, 0.68, P.metal, [0.86, 0.32, -0.14]),
-      // Central touch display
+      // Màn hình cảm ứng ở giữa.
       box(0.44, 0.56, 0.05, P.screen, [0, 1.42, -0.38]),
     ],
     DEFAULT_ITEM_DIMENSIONS['kinesis-station'],
@@ -880,19 +880,19 @@ function buildInbodyAnalyzer(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Scale base platform + 4 metallic foot electrodes
+      // Bệ cân kèm 4 điện cực kim loại cho chân.
       cyl(0.42, 0.44, 0.09, P.charcoalSoft, [0, 0.045, 0.12], undefined, 10),
       box(0.14, 0.02, 0.32, P.metalLight, [-0.14, 0.095, 0.14]),
       box(0.14, 0.02, 0.32, P.metalLight, [0.14, 0.095, 0.14]),
-      // Sleek clinical column
+      // Trụ máy gọn gàng theo phong cách y tế.
       box(0.18, 1.16, 0.16, P.white, [0, 0.64, -0.28], [-0.1, 0, 0]),
       box(0.2, 0.48, 0.18, P.charcoal, [0, 0.3, -0.24], [-0.1, 0, 0]),
-      // Articulated left & right hand-electrode arms
+      // Hai tay điện cực khớp nối bên trái và bên phải.
       box(0.32, 0.05, 0.06, P.metal, [-0.24, 0.96, -0.28], [0, 0, -0.2]),
       box(0.32, 0.05, 0.06, P.metal, [0.24, 0.96, -0.28], [0, 0, 0.2]),
       cyl(0.032, 0.032, 0.28, P.charcoalDeep, [-0.38, 0.94, -0.12], [1.1, 0, 0], 8),
       cyl(0.032, 0.032, 0.28, P.charcoalDeep, [0.38, 0.94, -0.12], [1.1, 0, 0], 8),
-      // Clinical display head
+      // Đầu màn hình y tế.
       box(0.38, 0.3, 0.07, P.charcoal, [0, 1.22, -0.34], [-0.38, 0, 0]),
       box(0.32, 0.22, 0.03, P.screenGlow, [0, 1.23, -0.31], [-0.38, 0, 0]),
       box(0.38, 0.04, 0.08, P.salmon, [0, 1.34, -0.38], [-0.38, 0, 0]),
@@ -905,20 +905,20 @@ function buildInbodyAnalyzer(): THREE.BufferGeometry {
 function buildBoxingRing(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // Raised ring platform apron & canvas mat
+    // Tạp dề sàn đài nâng và tấm thảm đấu.
     box(5.5, 0.44, 5.5, P.charcoal, [0, 0.22, 0]),
     box(5.28, 0.06, 5.28, P.charcoalSoft, [0, 0.46, 0]),
-    // Center SÖL emblem square on canvas
+    // Hình vuông biểu tượng SÖL ở giữa thảm.
     box(1.8, 0.02, 1.8, P.salmon, [0, 0.495, 0]),
     box(1.4, 0.022, 1.4, P.charcoalDeep, [0, 0.498, 0]),
-    // Corner posts (4 corners)
+    // Các cột góc (4 góc).
     cyl(0.09, 0.09, 1.15, P.salmon, [-2.55, 1.02, -2.55], undefined, 8),
     cyl(0.09, 0.09, 1.15, P.white, [2.55, 1.02, 2.55], undefined, 8),
     cyl(0.09, 0.09, 1.15, P.charcoalDeep, [-2.55, 1.02, 2.55], undefined, 8),
     cyl(0.09, 0.09, 1.15, P.charcoalDeep, [2.55, 1.02, -2.55], undefined, 8),
   ];
 
-  // 3 horizontal rope tiers around all 4 sides
+  // 3 tầng dây thừng ngang bao quanh cả 4 cạnh.
   const ropeHeights = [0.78, 1.1, 1.42];
   const ropeColors = [P.white, P.salmon, P.white];
   for (let i = 0; i < 3; i++) {
@@ -938,13 +938,13 @@ function buildHeavyBag(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Weighted floor base legs
+      // Các chân đế có tạ giữ vững.
       box(0.86, 0.07, 0.12, P.charcoal, [0, 0.035, -0.36]),
       box(0.12, 0.07, 0.86, P.charcoal, [0, 0.035, 0]),
-      // Vertical steel stanchion & overhead arm
+      // Trụ thép đứng và cần phía trên.
       box(0.11, 2.22, 0.11, P.charcoal, [0, 1.14, -0.36]),
       box(0.1, 0.1, 0.56, P.charcoal, [0, 2.22, -0.12]),
-      // Swivel chain & heavy leather punching bag
+      // Xích xoay và bao cát nặng bằng da.
       cyl(0.03, 0.03, 0.28, P.metalLight, [0, 2.04, 0.1], undefined, 6),
       cyl(0.22, 0.22, 1.26, P.charcoalDeep, [0, 1.28, 0.1], undefined, 10),
       cyl(0.226, 0.226, 0.22, P.salmon, [0, 1.42, 0.1], undefined, 10),
@@ -958,13 +958,13 @@ function buildSpeedBag(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Base plate & upright post
+      // Tấm đế và cột đứng.
       cyl(0.36, 0.38, 0.08, P.charcoal, [0, 0.04, 0], undefined, 10),
       box(0.1, 2.0, 0.1, P.charcoal, [0, 1.04, -0.24]),
       box(0.1, 0.1, 0.42, P.metal, [0, 1.88, -0.06]),
-      // Circular wooden rebound drum board
+      // Mặt trống phản hồi tròn bằng gỗ.
       cyl(0.34, 0.34, 0.05, P.wood, [0, 1.78, 0.08], undefined, 12),
-      // Teardrop speed bag
+      // Bao tốc độ hình giọt nước.
       sphere(0.13, P.salmon, [0, 1.56, 0.08], [0.85, 1.35, 0.85], 8, 6),
     ],
     DEFAULT_ITEM_DIMENSIONS['speed-bag'],
@@ -976,19 +976,19 @@ function buildBadmintonCourt(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Subtle corner boundary pins so bounding box matches court footprint [5.6, 1.55, 5.2]
+      // Các chốt ranh giới nhỏ ở góc để hộp bao khớp với diện tích sân [5.6, 1.55, 5.2].
       box(0.08, 0.02, 0.08, P.white, [-2.76, 0.01, -2.56]),
       box(0.08, 0.02, 0.08, P.white, [2.76, 0.01, -2.56]),
       box(0.08, 0.02, 0.08, P.white, [-2.76, 0.01, 2.56]),
       box(0.08, 0.02, 0.08, P.white, [2.76, 0.01, 2.56]),
-      // Net posts & weighted bases at x = ±2.72, z = 0
+      // Cột lưới và đế nặng tại x = ±2.72, z = 0.
       cyl(0.18, 0.2, 0.08, P.charcoal, [-2.6, 0.04, 0], undefined, 8),
       cyl(0.18, 0.2, 0.08, P.charcoal, [2.6, 0.04, 0], undefined, 8),
       cyl(0.035, 0.035, 1.52, P.charcoal, [-2.6, 0.78, 0], undefined, 8),
       cyl(0.035, 0.035, 1.52, P.charcoal, [2.6, 0.78, 0], undefined, 8),
       cyl(0.042, 0.042, 0.08, P.salmon, [-2.6, 1.51, 0], undefined, 8),
       cyl(0.042, 0.042, 0.08, P.salmon, [2.6, 1.51, 0], undefined, 8),
-      // Stretched mesh net & crisp white top tape
+      // Lưới căng và dải băng trắng phía trên.
       box(5.16, 0.72, 0.025, P.charcoalSoft, [0, 1.12, 0]),
       box(5.2, 0.06, 0.035, P.white, [0, 1.5, 0]),
       box(5.18, 0.03, 0.03, P.salmon, [0, 0.76, 0]),
@@ -1002,21 +1002,21 @@ function buildTennisCourt(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Baseline corner markers so bounding box spans [9.5, 1.1, 22.0]
+      // Các mốc góc ở đường biên cuối sân để hộp bao trải dài [9.5, 1.1, 22.0].
       box(0.12, 0.03, 0.12, P.white, [-4.68, 0.015, -10.94]),
       box(0.12, 0.03, 0.12, P.white, [4.68, 0.015, -10.94]),
       box(0.12, 0.03, 0.12, P.white, [-4.68, 0.015, 10.94]),
       box(0.12, 0.03, 0.12, P.white, [4.68, 0.015, 10.94]),
-      // Heavy tennis net posts at x = ±4.35, z = 0
+      // Cột lưới tennis nặng tại x = ±4.35, z = 0.
       cyl(0.06, 0.06, 1.07, P.charcoal, [-4.35, 0.535, 0], undefined, 8),
       cyl(0.06, 0.06, 1.07, P.charcoal, [4.35, 0.535, 0], undefined, 8),
       cyl(0.07, 0.07, 0.08, P.salmon, [-4.35, 1.05, 0], undefined, 8),
       cyl(0.07, 0.07, 0.08, P.salmon, [4.35, 1.05, 0], undefined, 8),
-      // Tennis net body, white top band, and center strap
+      // Thân lưới tennis, dải trắng phía trên và dây giữa.
       box(8.64, 0.88, 0.035, P.charcoalDeep, [0, 0.48, 0]),
       box(8.7, 0.07, 0.05, P.white, [0, 0.94, 0]),
       box(0.07, 0.92, 0.055, P.white, [0, 0.48, 0]),
-      // Umpire chair at x = 4.55, z = 0
+      // Ghế trọng tài tại x = 4.55, z = 0.
       box(0.5, 1.04, 0.56, P.charcoal, [4.48, 0.52, 0]),
       box(0.46, 0.06, 0.44, P.wood, [4.48, 0.82, 0]),
       box(0.46, 0.24, 0.06, P.salmon, [4.68, 0.96, 0]),
@@ -1029,17 +1029,17 @@ function buildTennisCourt(): THREE.BufferGeometry {
 function buildSwimLane(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // End wall stainless anchor brackets
+    // Giá neo inox ở hai đầu tường hồ.
     box(0.18, 0.22, 0.18, P.metalLight, [-12.4, 0.18, -1.65]),
     box(0.18, 0.22, 0.18, P.metalLight, [12.4, 0.18, -1.65]),
     box(0.18, 0.22, 0.18, P.metalLight, [-12.4, 0.18, 1.65]),
     box(0.18, 0.22, 0.18, P.metalLight, [12.4, 0.18, 1.65]),
-    // Tension cables along z = ±1.65
+    // Dây căng dọc theo z = ±1.65.
     box(24.8, 0.03, 0.03, P.charcoal, [0, 0.18, -1.65]),
     box(24.8, 0.03, 0.03, P.charcoal, [0, 0.18, 1.65]),
   ];
 
-  // Segmented wave-quelling float cylinders (salmon 5m turn zones, white mid-pool)
+  // Các phao hình trụ chia đoạn chống sóng (vùng quay đầu 5m màu salmon, giữa hồ màu trắng).
   const segments = 12;
   const segLen = 24.0 / segments;
   for (let i = 0; i < segments; i++) {
@@ -1062,13 +1062,13 @@ function buildStartingBlock(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Anchor pedestal base & angled stainless column
+      // Bệ neo và cột inox nghiêng.
       box(0.56, 0.08, 0.56, P.metalLight, [0, 0.04, 0]),
       box(0.24, 0.54, 0.28, P.charcoalSoft, [0, 0.32, 0.06], [-0.18, 0, 0]),
-      // Non-slip angled top deck & adjustable track-start kick wedge
+      // Mặt bục trên nghiêng chống trượt và nêm đạp xuất phát kiểu track-start điều chỉnh được.
       box(0.72, 0.08, 0.74, P.charcoalDeep, [0, 0.62, 0], [0.16, 0, 0]),
       box(0.52, 0.12, 0.14, P.salmon, [0, 0.7, 0.24], [-0.35, 0, 0]),
-      // Front backstroke grab handles
+      // Tay nắm phía trước dành cho bơi ngửa.
       box(0.64, 0.04, 0.04, P.metalLight, [0, 0.42, -0.34]),
       box(0.04, 0.22, 0.14, P.metal, [-0.28, 0.48, -0.28]),
       box(0.04, 0.22, 0.14, P.metal, [0.28, 0.48, -0.28]),
@@ -1082,10 +1082,10 @@ function buildYogaMat(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Outer charcoal perimeter & inner salmon cork surface
+      // Viền than bên ngoài và mặt bần màu salmon bên trong.
       box(0.8, 0.018, 1.85, P.charcoal, [0, 0.009, 0]),
       box(0.74, 0.016, 1.78, P.salmon, [0, 0.02, 0]),
-      // Center alignment line & rolled towel at top
+      // Đường căn giữa và khăn cuộn ở đầu thảm.
       box(0.02, 0.006, 1.5, P.charcoalDeep, [0, 0.03, 0.04]),
       cyl(0.022, 0.022, 0.52, P.white, [0, 0.032, -0.74], [0, 0, Math.PI / 2], 8),
     ],
@@ -1098,12 +1098,12 @@ function buildMeditationBolster(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Woven floor zabuton mat
+      // Tấm thảm zabuton dệt trên sàn.
       cyl(0.32, 0.32, 0.04, P.woodLight, [0, 0.02, 0], undefined, 10),
-      // Plump cylindrical zafu bolster cushion
+      // Gối zafu hình trụ đầy đặn.
       cyl(0.24, 0.25, 0.18, P.terracotta, [0, 0.13, 0], undefined, 12),
       cyl(0.21, 0.24, 0.06, P.salmon, [0, 0.24, 0], undefined, 12),
-      // Singing bowl accent
+      // Chi tiết nhấn là bát hát (singing bowl).
       cyl(0.06, 0.04, 0.05, P.metalLight, [0.22, 0.06, 0.18], undefined, 8),
     ],
     DEFAULT_ITEM_DIMENSIONS['meditation-bolster'],
@@ -1114,19 +1114,19 @@ function buildMeditationBolster(): THREE.BufferGeometry {
 function buildReceptionDesk(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // Salmon recessed LED toe-kick base
+    // Chân đế đèn LED âm màu salmon.
     box(5.16, 0.08, 1.36, P.salmon, [0, 0.04, 0]),
-    // Main charcoal counter body
+    // Thân quầy chính màu than.
     box(5.32, 0.96, 1.48, P.charcoal, [0, 0.54, 0]),
-    // Travertine stone transaction top & lower work counter
+    // Mặt quầy giao dịch bằng đá travertine và quầy làm việc phía dưới.
     box(5.4, 0.1, 0.64, P.stone, [0, 1.08, 0.46]),
     box(5.1, 0.06, 0.82, P.charcoalSoft, [0, 0.86, -0.26]),
-    // Dual POS computer screens
+    // Hai màn hình máy POS.
     box(0.48, 0.3, 0.05, P.screen, [-1.2, 1.04, -0.1], [0.25, 0, 0]),
     box(0.48, 0.3, 0.05, P.screen, [1.2, 1.04, -0.1], [0.25, 0, 0]),
   ];
 
-  // Architectural wood slats across the front facade
+  // Các nan gỗ kiến trúc dọc mặt tiền.
   for (let i = 0; i < 11; i++) {
     const x = -2.3 + i * 0.46;
     parts.push(box(0.14, 0.9, 0.06, P.wood, [x, 0.54, 0.75]));
@@ -1140,15 +1140,15 @@ function buildQrTurnstile(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Left and right brushed steel & charcoal gate cabinets
+      // Hai tủ cổng bằng thép xước và than bên trái, bên phải.
       box(0.24, 0.98, 1.56, P.charcoal, [-0.48, 0.49, 0]),
       box(0.24, 0.98, 1.56, P.charcoal, [0.48, 0.49, 0]),
       box(0.26, 0.06, 1.58, P.metalLight, [-0.48, 1.0, 0]),
       box(0.26, 0.06, 1.58, P.metalLight, [0.48, 1.0, 0]),
-      // QR reader scanner window on right cabinet front
+      // Ô đọc mã QR ở mặt trước tủ bên phải.
       box(0.18, 0.05, 0.24, P.salmonBright, [0.48, 1.04, 0.58], [0.2, 0, 0]),
       box(0.18, 0.05, 0.24, P.screenGlow, [-0.48, 1.04, 0.58], [0.2, 0, 0]),
-      // Retractable glass swing wings in lane center
+      // Hai cánh kính xoay thu gọn được ở giữa làn.
       box(0.32, 0.76, 0.04, P.glass, [-0.19, 0.52, 0]),
       box(0.32, 0.76, 0.04, P.glass, [0.19, 0.52, 0]),
       box(0.32, 0.05, 0.05, P.salmon, [-0.19, 0.91, 0]),
@@ -1166,11 +1166,11 @@ function buildKioskCheckin(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Weighted floor base
+      // Đế nặng đặt sàn.
       box(0.76, 0.06, 0.62, P.charcoal, [0, 0.03, 0]),
-      // Angled totem pedestal
+      // Bệ trụ totem nghiêng.
       box(0.46, 0.96, 0.22, P.charcoalSoft, [0, 0.52, -0.06], [-0.12, 0, 0]),
-      // Portrait interactive screen enclosure
+      // Hộp màn hình tương tác dạng dọc.
       box(0.64, 0.78, 0.09, P.charcoalDeep, [0, 1.14, 0.02], [-0.22, 0, 0]),
       box(0.54, 0.64, 0.03, P.screen, [0, 1.15, 0.06], [-0.22, 0, 0]),
       box(0.64, 0.06, 0.1, P.salmon, [0, 1.5, -0.06], [-0.22, 0, 0]),
@@ -1184,14 +1184,14 @@ function buildCardPrinter(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Credenza cabinet
+      // Tủ credenza.
       box(1.06, 0.82, 0.74, P.charcoal, [0, 0.41, 0]),
       box(0.98, 0.7, 0.04, P.wood, [0, 0.41, 0.37]),
       box(1.1, 0.05, 0.78, P.stone, [0, 0.84, 0]),
-      // Thermal RFID card printer box
+      // Hộp máy in thẻ RFID nhiệt.
       box(0.38, 0.28, 0.44, P.charcoalSoft, [-0.24, 1.0, 0]),
       box(0.22, 0.06, 0.08, P.salmon, [-0.24, 0.98, 0.23]),
-      // Encoding screen & stack of SÖL passes
+      // Màn hình ghi mã và chồng thẻ SÖL.
       box(0.42, 0.32, 0.05, P.screen, [0.24, 1.06, -0.1], [-0.2, -0.2, 0]),
       box(0.16, 0.05, 0.22, P.salmonBright, [0.22, 0.89, 0.18]),
     ],
@@ -1203,19 +1203,19 @@ function buildCardPrinter(): THREE.BufferGeometry {
 function buildSupplementShelf(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // Upright gondola frame + warm wood back panel
+    // Khung kệ đứng và tấm lưng gỗ ấm.
     box(1.96, 2.06, 0.1, P.charcoal, [0, 1.03, -0.32]),
     box(1.84, 1.88, 0.04, P.wood, [0, 1.0, -0.25]),
-    // Top salmon lightbox header
+    // Hộp đèn tiêu đề màu salmon phía trên.
     box(1.98, 0.2, 0.46, P.salmon, [0, 1.98, -0.12]),
-    // Base plinth & 3 upper shelves
+    // Bệ đế và 3 tầng kệ phía trên.
     box(1.96, 0.16, 0.74, P.charcoal, [0, 0.08, 0]),
     box(1.92, 0.05, 0.62, P.charcoalSoft, [0, 0.58, -0.04]),
     box(1.92, 0.05, 0.58, P.charcoalSoft, [0, 1.06, -0.06]),
     box(1.92, 0.05, 0.54, P.charcoalSoft, [0, 1.52, -0.08]),
   ];
 
-  // Whey protein tubs & BCAA jars on shelves
+  // Hũ whey protein và lọ BCAA trên các kệ.
   const shelfYs = [0.28, 0.74, 1.21, 1.66];
   for (let s = 0; s < shelfYs.length; s++) {
     const y = shelfYs[s];
@@ -1234,15 +1234,15 @@ function buildNutritionBoard(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Freestanding base feet & vertical steel stanchions
+      // Chân đế tự đứng và các trụ thép đứng.
       box(0.16, 0.06, 0.48, P.charcoal, [-0.96, 0.03, 0]),
       box(0.16, 0.06, 0.48, P.charcoal, [0.96, 0.03, 0]),
       box(0.1, 1.86, 0.1, P.charcoal, [-0.96, 0.94, 0]),
       box(0.1, 1.86, 0.1, P.charcoal, [0.96, 0.94, 0]),
-      // Framed Nutrition Facts board
+      // Bảng thông tin dinh dưỡng có khung.
       box(2.26, 1.38, 0.12, P.wood, [0, 1.18, 0]),
       box(2.12, 1.24, 0.14, P.charcoalDeep, [0, 1.18, 0]),
-      // Graphic header & macro rows
+      // Tiêu đề đồ họa và các hàng macro.
       box(1.92, 0.18, 0.16, P.white, [0, 1.62, 0]),
       box(1.92, 0.1, 0.16, P.salmon, [0, 1.36, 0]),
       box(1.4, 0.08, 0.16, P.metalLight, [-0.26, 1.14, 0]),
@@ -1257,14 +1257,14 @@ function buildNutritionBoard(): THREE.BufferGeometry {
 function buildTrophyTotem(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // Stone plinth & charcoal monolith column
+    // Bệ đá và cột monolith màu than.
     box(0.96, 0.18, 0.56, P.stone, [0, 0.09, 0]),
     box(0.76, 1.72, 0.34, P.charcoal, [0, 1.02, 0]),
-    // Top SÖL streak emblem crown
+    // Vương miện biểu tượng chuỗi streak SÖL phía trên.
     cyl(0.22, 0.22, 0.1, P.salmon, [0, 1.96, 0], [Math.PI / 2, 0, 0], 10),
   ];
 
-  // Snake-grid illuminated streak cells on front face
+  // Các ô streak phát sáng dạng lưới con rắn ở mặt trước.
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 3; c++) {
       const x = -0.2 + c * 0.2;
@@ -1282,11 +1282,11 @@ function buildCoachPodium(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Base platform & slanted lectern body
+      // Bệ đế và thân bục giảng nghiêng.
       box(1.34, 0.08, 0.92, P.charcoal, [0, 0.04, 0]),
       box(1.24, 0.98, 0.68, P.charcoalSoft, [0, 0.54, 0]),
       box(1.12, 0.86, 0.05, P.wood, [0, 0.54, 0.35]),
-      // Angled top desk & dual tablets
+      // Mặt bàn nghiêng phía trên và hai máy tính bảng.
       box(1.36, 0.08, 0.82, P.stone, [0, 1.06, 0], [0.16, 0, 0]),
       box(1.36, 0.04, 0.06, P.salmon, [0, 1.02, 0.41]),
       box(0.42, 0.24, 0.04, P.screen, [-0.28, 1.15, -0.06], [-0.45, 0, 0]),
@@ -1301,15 +1301,15 @@ function buildConsultationPod(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Round wooden table & central pedestal
+      // Bàn gỗ tròn và chân trụ giữa.
       cyl(0.42, 0.46, 0.05, P.charcoal, [0, 0.025, 0], undefined, 10),
       cyl(0.08, 0.08, 0.72, P.charcoal, [0, 0.38, 0], undefined, 8),
       cyl(0.58, 0.58, 0.06, P.wood, [0, 0.74, 0], undefined, 12),
       box(0.28, 0.03, 0.2, P.screen, [0, 0.78, 0]),
-      // Left lounge chair
+      // Ghế lounge bên trái.
       box(0.56, 0.42, 0.58, P.charcoalDeep, [-0.68, 0.24, 0]),
       box(0.14, 0.46, 0.58, P.salmon, [-0.9, 0.64, 0]),
-      // Right lounge chair
+      // Ghế lounge bên phải.
       box(0.56, 0.42, 0.58, P.charcoalDeep, [0.68, 0.24, 0]),
       box(0.14, 0.46, 0.58, P.salmon, [0.9, 0.64, 0]),
     ],
@@ -1321,23 +1321,23 @@ function buildConsultationPod(): THREE.BufferGeometry {
 function buildLockerBank(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // Main charcoal carcass & top cornice
+    // Thân tủ chính màu than và gờ trên.
     box(3.16, 1.96, 0.58, P.charcoal, [0, 0.98, -0.14]),
     box(3.2, 0.08, 0.64, P.charcoalSoft, [0, 1.96, -0.12]),
-    // Integrated front wooden changing bench
+    // Ghế gỗ thay đồ tích hợp ở mặt trước.
     box(3.08, 0.07, 0.36, P.woodLight, [0, 0.44, 0.26]),
     box(0.1, 0.42, 0.32, P.charcoal, [-1.36, 0.21, 0.26]),
     box(0.1, 0.42, 0.32, P.charcoal, [0, 0.21, 0.26]),
     box(0.1, 0.42, 0.32, P.charcoal, [1.36, 0.21, 0.26]),
   ];
 
-  // 6 columns × 2 tiers of wood locker doors + RFID reader badges
+  // 6 cột × 2 tầng cửa tủ gỗ kèm huy hiệu đầu đọc RFID.
   for (let col = 0; col < 6; col++) {
     const x = -1.25 + col * 0.5;
-    // Upper door
+    // Cửa tầng trên.
     parts.push(box(0.44, 0.66, 0.04, P.wood, [x, 1.54, 0.16]));
     parts.push(box(0.06, 0.09, 0.05, P.salmon, [x + 0.14, 1.54, 0.17]));
-    // Lower door
+    // Cửa tầng dưới.
     parts.push(box(0.44, 0.66, 0.04, P.wood, [x, 0.82, 0.16]));
     parts.push(box(0.06, 0.09, 0.05, P.salmon, [x + 0.14, 0.82, 0.17]));
   }
@@ -1350,11 +1350,11 @@ function buildSaunaBench(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Two-tier stepped cedar wood bench + backrest
+      // Ghế gỗ tuyết tùng hai bậc kèm tựa lưng.
       box(3.28, 0.44, 0.82, P.wood, [-0.42, 0.22, 0.36]),
       box(3.28, 0.86, 0.86, P.woodLight, [-0.42, 0.43, -0.44]),
       box(3.28, 0.24, 0.08, P.wood, [-0.42, 0.98, -0.82]),
-      // Himalayan salt-stone heater stove on right end
+      // Lò đá muối Himalaya ở đầu bên phải.
       box(0.72, 0.82, 0.72, P.charcoal, [1.68, 0.41, -0.18]),
       box(0.58, 0.22, 0.58, P.salmonBright, [1.68, 0.86, -0.18]),
       box(0.82, 0.06, 0.82, P.woodLight, [1.68, 0.92, -0.18]),
@@ -1368,12 +1368,12 @@ function buildJacuzziTub(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Outer slatted cedar & charcoal tub enclosure
+      // Vỏ bồn ngoài bằng nan tuyết tùng và than.
       box(3.56, 0.84, 3.16, P.charcoal, [0, 0.42, 0]),
       box(3.6, 0.1, 3.2, P.stone, [0, 0.88, 0]),
-      // Inner recessed hydro-therapy water surface
+      // Mặt nước trị liệu âm ở bên trong.
       box(2.96, 0.08, 2.56, P.water, [0, 0.89, 0]),
-      // Corner cushioned headrests & entry steps
+      // Gối tựa đầu ở góc và bậc lên xuống.
       box(0.64, 0.09, 0.24, P.white, [-0.9, 0.95, -1.36]),
       box(0.64, 0.09, 0.24, P.white, [0.9, 0.95, -1.36]),
       box(1.4, 0.38, 0.44, P.wood, [0, 0.19, 1.48]),
@@ -1387,17 +1387,17 @@ function buildLoungeSofa(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Warm timber platform base
+      // Bệ gỗ ấm.
       box(2.58, 0.16, 1.36, P.wood, [0, 0.08, 0]),
-      // 3 deep seat cushions
+      // 3 đệm ngồi sâu.
       box(0.78, 0.24, 1.12, P.charcoalDeep, [-0.8, 0.28, 0.08]),
       box(0.78, 0.24, 1.12, P.charcoalDeep, [0, 0.28, 0.08]),
       box(0.78, 0.24, 1.12, P.charcoalDeep, [0.8, 0.28, 0.08]),
-      // Backrest & wide armrests
+      // Tựa lưng và tay vịn rộng.
       box(2.52, 0.46, 0.28, P.charcoal, [0, 0.62, -0.52]),
       box(0.24, 0.38, 1.32, P.charcoal, [-1.16, 0.56, 0]),
       box(0.24, 0.38, 1.32, P.charcoal, [1.16, 0.56, 0]),
-      // Salmon throw pillows
+      // Gối tựa màu salmon.
       box(0.42, 0.28, 0.14, P.salmon, [-0.76, 0.54, -0.32], [0.2, 0.15, 0]),
       box(0.42, 0.28, 0.14, P.salmonBright, [0.76, 0.54, -0.32], [0.2, -0.15, 0]),
     ],
@@ -1410,11 +1410,11 @@ function buildJuiceBar(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Bar body + slatted front + stone counter
+      // Thân quầy, mặt trước nan và mặt quầy bằng đá.
       box(3.76, 0.96, 1.28, P.charcoal, [0, 0.48, 0]),
       box(3.64, 0.84, 0.05, P.wood, [0, 0.48, 0.65]),
       box(3.8, 0.08, 1.38, P.stone, [0, 1.0, 0]),
-      // Chilled bottle display vitrine + protein shaker blenders
+      // Tủ trưng bày chai lạnh và máy xay shaker protein.
       box(1.36, 0.28, 0.52, P.glass, [-1.05, 1.14, 0.16]),
       box(1.38, 0.04, 0.54, P.salmon, [-1.05, 1.29, 0.16]),
       cyl(0.12, 0.14, 0.28, P.metalLight, [0.42, 1.16, 0], undefined, 8),
@@ -1429,18 +1429,18 @@ function buildJuiceBar(): THREE.BufferGeometry {
 function buildStairCore(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   const parts: THREE.BufferGeometry[] = [
-    // Bottom threshold (y = 0..0.08), mid-landing (y = 1.90), top arrival bridge (y = 3.80)
+    // Ngưỡng dưới (y = 0..0.08), chiếu nghỉ giữa (y = 1.90), cầu đến phía trên (y = 3.80).
     box(3.2, 0.08, 0.52, P.stone, [0, 0.04, 1.88]),
     box(3.2, 0.12, 0.64, P.stone, [0, 1.84, 0]),
     box(3.2, 0.14, 0.52, P.stone, [0, 3.73, -1.88]),
-    // Twin side stringers (lower & upper flights) + outer brackets to 3.60 m width
+    // Hai dầm bên (các đợt thang dưới và trên) cùng giá đỡ ngoài rộng 3.60 m.
     box(0.08, 0.24, 1.9, P.charcoal, [-1.46, 0.88, 0.98], [-0.82, 0, 0]),
     box(0.08, 0.24, 1.9, P.charcoal, [1.46, 0.88, 0.98], [-0.82, 0, 0]),
     box(0.08, 0.24, 1.9, P.charcoal, [-1.46, 2.78, -0.98], [-0.82, 0, 0]),
     box(0.08, 0.24, 1.9, P.charcoal, [1.46, 2.78, -0.98], [-0.82, 0, 0]),
     box(0.08, 0.06, 0.14, P.metal, [-1.76, 1.92, 0]),
     box(0.08, 0.06, 0.14, P.metal, [1.76, 1.92, 0]),
-    // Open steel stanchions + top handrails peaking at y = 4.56 (zero center wall or opaque glass)
+    // Các trụ thép hở và tay vịn phía trên đạt đỉnh y = 4.56 (không tường giữa hoặc dùng kính đặc).
     box(0.04, 0.74, 0.05, P.charcoal, [-1.66, 0.45, 1.94]),
     box(0.04, 0.74, 0.05, P.charcoal, [1.66, 0.45, 1.94]),
     box(0.04, 0.74, 0.05, P.charcoal, [-1.66, 2.27, 0]),
@@ -1467,21 +1467,21 @@ function buildElevatorCore(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Base pit & roof machine cap
+      // Hố đáy và nắp máy trên mái.
       box(2.58, 0.18, 2.58, P.charcoal, [0, 0.09, 0]),
       box(2.58, 0.24, 2.58, P.charcoal, [0, 3.68, 0]),
-      // 4 structural steel corner columns
+      // 4 cột thép kết cấu ở các góc.
       box(0.18, 3.6, 0.18, P.charcoal, [-1.2, 1.88, -1.2]),
       box(0.18, 3.6, 0.18, P.charcoal, [1.2, 1.88, -1.2]),
       box(0.18, 3.6, 0.18, P.charcoal, [-1.2, 1.88, 1.2]),
       box(0.18, 3.6, 0.18, P.charcoal, [1.2, 1.88, 1.2]),
-      // Panoramic glass shaft enclosure
+      // Vỏ giếng thang bằng kính toàn cảnh.
       box(2.26, 3.4, 2.26, P.glass, [0, 1.88, 0]),
-      // Internal elevator cab & brushed steel doors
+      // Cabin thang máy bên trong và cửa thép xước.
       box(1.96, 2.4, 1.96, P.charcoalSoft, [0, 1.38, -0.06]),
       box(0.76, 2.15, 0.06, P.metalLight, [-0.4, 1.26, 1.18]),
       box(0.76, 2.15, 0.06, P.metalLight, [0.4, 1.26, 1.18]),
-      // Salmon floor indicator header above doors
+      // Hộp chỉ báo tầng màu salmon phía trên cửa.
       box(1.68, 0.14, 0.08, P.salmon, [0, 2.48, 1.22]),
     ],
     DEFAULT_ITEM_DIMENSIONS['elevator-core'],
@@ -1493,15 +1493,15 @@ function buildPlanterTree(): THREE.BufferGeometry {
   const P = ITEM_PALETTE;
   return mergeAndFit(
     [
-      // Tapered architectural planter pot + terracotta inner rim
+      // Chậu cây thon kiểu kiến trúc cùng viền trong màu đất nung.
       cyl(0.56, 0.42, 0.68, P.charcoal, [0, 0.34, 0], undefined, 10),
       cyl(0.58, 0.56, 0.08, P.salmon, [0, 0.68, 0], undefined, 10),
       cyl(0.5, 0.5, 0.04, P.wood, [0, 0.71, 0], undefined, 8),
-      // Multi-stem sculpted olive/bamboo trunks
+      // Thân ô liu/tre nhiều nhánh được tạo hình.
       cyl(0.055, 0.08, 1.35, P.wood, [0, 1.34, 0], [0.06, 0, -0.05], 6),
       cyl(0.04, 0.055, 0.85, P.woodLight, [0.16, 1.62, 0.08], [0.15, 0, 0.28], 6),
       cyl(0.04, 0.055, 0.82, P.woodLight, [-0.15, 1.58, -0.08], [-0.15, 0, -0.26], 6),
-      // Layered organic canopy clusters
+      // Các cụm tán lá hữu cơ nhiều lớp.
       sphere(0.56, P.foliage, [0, 2.14, 0], [1.15, 0.78, 1.15], 8, 6),
       sphere(0.42, P.foliageLight, [0.28, 1.94, 0.18], [1.1, 0.75, 1.1], 8, 6),
       sphere(0.4, P.foliageLight, [-0.26, 1.9, -0.16], [1.1, 0.75, 1.1], 8, 6),
@@ -1549,8 +1549,8 @@ const HIGH_DETAIL_BUILDERS: Record<ItemKind, () => THREE.BufferGeometry> = {
   'planter-tree': buildPlanterTree,
 };
 
-// Realistic gym equipment and interior furniture replace the box-built
-// silhouettes for these kinds.
+// Thiết bị gym và nội thất thực tế thay thế các hình dạng dựng bằng hộp
+// cho các loại item này.
 const BUILDER_HELPERS: GymBuilderHelpers = {
   P: ITEM_PALETTE,
   dims: DEFAULT_ITEM_DIMENSIONS,
@@ -1571,7 +1571,7 @@ Object.assign(
 );
 
 // ============================================================================
-// LOW-DETAIL LOD PROXY BUILDER (<= 72 triangles per item)
+// BỘ DỰNG PROXY LOD ĐỘ CHI TIẾT THẤP (<= 72 tam giác mỗi item)
 // ============================================================================
 
 /**
@@ -1655,7 +1655,7 @@ function buildLowDetailGeometry(kind: ItemKind): THREE.BufferGeometry {
 }
 
 // ============================================================================
-// GEOMETRY CACHE & PUBLIC API
+// BỘ NHỚ ĐỆM HÌNH HỌC VÀ API CÔNG KHAI
 // ============================================================================
 
 const geometryCache = new Map<string, THREE.BufferGeometry>();
@@ -1750,7 +1750,7 @@ export function getItemGeometry(
   } else {
     geometry = builder();
     if (getGeometryTriangleCount(geometry) > ITEM_HIGH_DETAIL_TRIANGLE_BUDGET) {
-      // Too many parts to afford chamfers: fall back to plain boxes for this kind.
+      // Quá nhiều bộ phận nên không đủ ngân sách để vát cạnh: quay về dùng hộp phẳng cho loại này.
       geometry.dispose();
       bevelEnabled = false;
       try {
@@ -1796,7 +1796,7 @@ export function warmAllItemGeometries(): void {
 }
 
 // ============================================================================
-// INSTANCING & STATUS HELPERS
+// INSTANCING VÀ CÁC HÀM TRỢ GIÚP TRẠNG THÁI
 // ============================================================================
 
 /** Trạng thái đã gắn dữ liệu thật của một đồ vật: hiển thị không và trạng thái. */
