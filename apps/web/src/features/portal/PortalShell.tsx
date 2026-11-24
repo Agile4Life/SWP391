@@ -14,6 +14,7 @@ import { usePortalMotion } from './usePortalMotion';
 import './portal-motion.css';
 import { PortalSectionTabs } from './PortalSectionTabs';
 import { getMobileNavLabel, getNavLabel, getRoleLabel, getTabLabel, isPortalNavActive, MOBILE_PRIMARY_NAV, PORTAL_NAV } from './portalNavigation';
+import { useReceptionAlerts } from '../reception/useReceptionAlerts';
 import { getUnreadCount } from '../member/notificationsApi';
 import { subscribeMembershipChanges } from '../member/membershipRealtime';
 import { getProfile } from '../member/profileApi';
@@ -72,6 +73,7 @@ function searchable(value: string) {
  */
 export function PortalShell() {
   const user = useCurrentUser();
+  useReceptionAlerts(user?.role ?? '', user?.id ?? '');
   if (!user) return <Navigate to="/login" replace />;
   return <PortalShellContent key={sessionIdentityKey(user)} user={user} />;
 }

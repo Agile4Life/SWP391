@@ -323,6 +323,7 @@ public class MemberTrialService {
             );
         }
 
+        if (notifications != null) notifications.notifyReceptionists("trial", saved.getId());
         return toStatusDto(saved);
     }
 

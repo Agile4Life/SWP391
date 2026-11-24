@@ -1,0 +1,9 @@
+openapi: 3.0.3
+info: {title: Reception request notification behavior, version: 1.0.0}
+servers: [{url: /api/v1}]
+paths:
+  /notifications:
+    get:
+      description: Existing authenticated user notification list. New KYC, trial, membership hold and package requests persist system notifications only for active Receptionists. actionPath uses existing /staff/kyc, /staff/holds or /staff/reception. No document number or images are included. Existing support notifications continue to use /messages?tab=support. Reading a notification does not process or approve a request.
+      responses:
+        '200': {description: Existing paginated NotificationDto response including actionPath and isRead}

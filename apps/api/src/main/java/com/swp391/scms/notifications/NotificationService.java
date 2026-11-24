@@ -65,6 +65,26 @@ public class NotificationService {
         this.notificationDispatcher = notificationDispatcher;
     }
 
+    /** Gửi đúng lễ tân đang hoạt động; nội dung chỉ mô tả loại việc, không chứa giấy tờ hoặc ảnh. */
+    @Transactional
+    public void notifyReceptionists(String kind, Long requestId) {
+        String path = switch (kind) {
+            case "kyc" -> "/staff/kyc";
+            case "hold" -> "/staff/holds";
+            case "trial", "payment" -> "/staff/reception";
+            default -> throw new IllegalArgumentException("Unsupported reception request");
+        };
+        String titleKey = "notifications.reception." + kind + ".title";
+        String bodyKey = "notifications.reception." + kind + ".body";
+        String title = messageService != null ? messageService.getMessage(titleKey) : titleKey;
+        String body = messageService != null ? messageService.getMessage(bodyKey) : bodyKey;
+        for (User user : userRepository.findAllByDeletedAtIsNullAndRole_CodeInOrderByIdAsc(java.util.List.of("RECEPTIONIST", "ROLE_RECEPTIONIST"))) {
+            if (user.getDeletedAt() == null && "active".equalsIgnoreCase(user.getStatus())) {
+                send(user.getId(), title, body, "system", null, requestId, path);
+            }
+        }
+    }
+
     /** Thông báo của người dùng, mới nhất trước, có phân trang. */
     @Transactional(readOnly = true)
     public Page<NotificationDto> getUserNotifications(Long userId, Pageable pageable) {
