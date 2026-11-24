@@ -172,7 +172,7 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                     </td>
                     <td className="actions" style={{ whiteSpace: 'nowrap', width: '1%' }}>
                       <div className="saved-plan-actions" style={{ display: 'inline-flex', flexWrap: 'nowrap', gap: '8px' }}>
-                      <button type="button" className="btn-secondary btn-sm" style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setResultPlan(plan)}>{t("Kết quả")}</button>
+                      <button type="button" className="btn-secondary btn-sm" style={{ whiteSpace: 'nowrap', flexShrink: 0 }} onClick={() => setResultPlan(plan)}>{t("Chi tiết", "Details")}</button>
                       {plan.status === 'superseded' && (
                         <button data-i18n-managed type="button" className="btn-primary btn-sm" style={{ whiteSpace: 'nowrap', flexShrink: 0 }} disabled={busyId !== null} onClick={() => void reapply(plan)}>
                           {t("Áp dụng lại")}</button>
