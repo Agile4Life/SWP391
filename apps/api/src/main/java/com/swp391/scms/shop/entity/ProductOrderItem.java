@@ -11,6 +11,10 @@ import java.math.RoundingMode;
     name = "product_order_items",
     indexes = @Index(name = "ix_product_order_items_order", columnList = "order_id")
 )
+/**
+ * Entity một dòng sản phẩm trong đơn (bảng product_order_items): biến thể, tên/nhãn/SKU chụp lại tại lúc đặt,
+ * đơn giá, số lượng, thành tiền.
+ */
 @Check(name = "ck_product_order_items_qty", constraints = "quantity between 1 and 20")
 public class ProductOrderItem {
     @Id
@@ -43,6 +47,7 @@ public class ProductOrderItem {
     @Column(name = "line_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal lineTotal;
 
+    /** Tạo dòng đơn từ biến thể: chụp lại tên, nhãn, SKU, đơn giá làm tròn tới đồng và tính thành tiền. */
     public static ProductOrderItem snapshot(ProductVariant variant, int quantity) {
         ProductOrderItem item = new ProductOrderItem();
         item.setVariant(variant);

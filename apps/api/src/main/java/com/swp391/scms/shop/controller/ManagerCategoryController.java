@@ -15,7 +15,11 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/** Disabled by default: Shop module removed from the active scope. */
+/**
+ * API quản lý danh mục sản phẩm cho quản lý trung tâm (đã ngừng; bật qua app.shop.enabled).
+ *
+ * Disabled by default: Shop module removed from the active scope.
+ */
 @ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/manager/product-categories")
@@ -24,36 +28,43 @@ public class ManagerCategoryController {
     private final CategoryAdminService categories;
     private final MessageService messages;
 
+    /** Constructor cho test: không có MessageService. */
     public ManagerCategoryController(CategoryAdminService categories) {
         this(categories, null);
     }
 
+    /** Constructor chính: nhận CategoryAdminService và MessageService. */
     @Autowired
     public ManagerCategoryController(CategoryAdminService categories, MessageService messages) {
         this.categories = categories;
         this.messages = messages;
     }
 
+    /** Dịch message key; không có MessageService thì trả lại key. */
     private String msg(String key) {
         return messages == null ? key : messages.getMessage(key);
     }
 
+    /** GET: danh sách danh mục kèm số sản phẩm. */
     @GetMapping
     public ApiResponse<List<CategoryAdminDto>> list() {
         return ApiResponse.ok(msg("success.shop.categories"), categories.list());
     }
 
+    /** POST: tạo danh mục mới. */
     @PostMapping
     public ResponseEntity<ApiResponse<CategoryAdminDto>> create(@Valid @RequestBody CategoryUpsertRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("success.shop.product_saved"), categories.create(request)));
     }
 
+    /** PUT /{id}: cập nhật danh mục. */
     @PutMapping("/{id}")
     public ApiResponse<CategoryAdminDto> update(@PathVariable Long id, @Valid @RequestBody CategoryUpsertRequest request) {
         return ApiResponse.ok(msg("success.shop.product_saved"), categories.update(id, request));
     }
 
+    /** DELETE /{id}: xóa danh mục (trả 204). */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         categories.delete(id);

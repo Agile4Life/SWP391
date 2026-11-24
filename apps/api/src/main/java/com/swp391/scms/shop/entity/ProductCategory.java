@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
         @UniqueConstraint(name = "uq_product_categories_name", columnNames = "name")
     }
 )
+/** Entity danh mục sản phẩm (bảng product_categories): tên, slug, thứ tự hiển thị và trạng thái hoạt động. */
 public class ProductCategory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

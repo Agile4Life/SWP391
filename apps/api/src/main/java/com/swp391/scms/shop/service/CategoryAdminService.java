@@ -15,23 +15,27 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/** Nghiệp vụ quản lý danh mục sản phẩm cho quản lý. */
 @Service
 @Transactional(readOnly = true)
 public class CategoryAdminService {
     private final ProductCategoryRepository categories;
     private final ProductRepository products;
 
+    /** Khởi tạo với repository danh mục và sản phẩm. */
     public CategoryAdminService(ProductCategoryRepository categories, ProductRepository products) {
         this.categories = categories;
         this.products = products;
     }
 
+    /** Danh sách mọi danh mục theo thứ tự hiển thị kèm số sản phẩm. */
     public List<CategoryAdminDto> list() {
         return categories.findAllByOrderBySortOrderAscIdAsc().stream()
                 .map(c -> toDto(c, products.countByCategory_Id(c.getId())))
                 .toList();
     }
 
+    /** Tạo danh mục: kiểm tra tên, sinh slug, chặn trùng tên/slug rồi lưu (ghi audit). */
     @Transactional
     @Audited(action = "CREATE_PRODUCT_CATEGORY", entity = "product_categories")
     public CategoryAdminDto create(CategoryUpsertRequest request) {
@@ -53,6 +57,7 @@ public class CategoryAdminService {
         return toDto(saved, 0L);
     }
 
+    /** Cập nhật danh mục: kiểm tra tên, sinh lại slug, chặn trùng với danh mục khác rồi lưu. */
     @Transactional
     @Audited(action = "UPDATE_PRODUCT_CATEGORY", entity = "product_categories")
     public CategoryAdminDto update(Long id, CategoryUpsertRequest request) {
@@ -75,6 +80,7 @@ public class CategoryAdminService {
         return toDto(saved, products.countByCategory_Id(saved.getId()));
     }
 
+    /** Xóa danh mục; còn sản phẩm thì báo lỗi CATEGORY_IN_USE. */
     @Transactional
     @Audited(action = "DELETE_PRODUCT_CATEGORY", entity = "product_categories")
     public void delete(Long id) {
@@ -86,12 +92,14 @@ public class CategoryAdminService {
         categories.delete(category);
     }
 
+    /** Tên danh mục phải có 2–80 ký tự sau khi bỏ khoảng trắng. */
     private static void validate(CategoryUpsertRequest request) {
         if (request == null || request.name() == null || request.name().trim().length() < 2 || request.name().trim().length() > 80) {
             throw new BadRequestException("PRODUCT_INVALID", "error.shop.product_invalid", new Object[]{"name"}, "Invalid category name");
         }
     }
 
+    /** Chuyển danh mục sang DTO kèm số sản phẩm. */
     private static CategoryAdminDto toDto(ProductCategory c, long count) {
         return new CategoryAdminDto(c.getId(), c.getName(), c.getSlug(), c.getSortOrder(), c.isActive(), count);
     }

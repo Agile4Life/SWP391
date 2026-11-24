@@ -23,7 +23,12 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-/** Disabled by default: Shop module removed from the active scope. */
+/**
+ * API shop công khai: danh mục, sản phẩm, ảnh, cấu hình và báo giá giỏ hàng (đã ngừng; bật qua
+ * app.shop.enabled).
+ *
+ * Disabled by default: Shop module removed from the active scope.
+ */
 @ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/public")
@@ -35,10 +40,12 @@ public class PublicProductController {
     private com.swp391.scms.membership.service.MemberDiscountService discounts;
     private final MessageService messages;
 
+    /** Constructor cho test: không có MessageService. */
     public PublicProductController(ProductCatalogService catalog, QuoteService quotes) {
         this(catalog, quotes, null);
     }
 
+    /** Constructor chính: nhận service danh mục sản phẩm, báo giá và MessageService. */
     @Autowired
     public PublicProductController(ProductCatalogService catalog, QuoteService quotes, MessageService messages) {
         this.catalog = catalog;
@@ -46,15 +53,18 @@ public class PublicProductController {
         this.messages = messages;
     }
 
+    /** Dịch message key; không có MessageService thì trả lại key. */
     private String msg(String key) {
         return messages == null ? key : messages.getMessage(key);
     }
 
+    /** GET /product-categories: danh mục đang hoạt động. */
     @GetMapping("/product-categories")
     public ApiResponse<List<CategoryDto>> categories() {
         return ApiResponse.ok(msg("success.shop.categories"), catalog.categories());
     }
 
+    /** GET /products: tìm sản phẩm theo từ khóa, mục tiêu, danh mục, còn hàng và sắp xếp; phân trang. */
     @GetMapping("/products")
     public ApiResponse<Page<ProductSummaryDto>> list(
             @RequestParam(required = false) String q,
@@ -72,11 +82,16 @@ public class PublicProductController {
         );
     }
 
+    /** GET /products/{slug}: chi tiết sản phẩm kèm sản phẩm liên quan. */
     @GetMapping("/products/{slug}")
     public ApiResponse<ProductDetailDto> detail(@PathVariable String slug) {
         return ApiResponse.ok(msg("success.shop.product"), catalog.detail(slug));
     }
 
+    /**
+     * GET /products/images/{imageId}: kiểm tra và giải mã data URL của ảnh (tối đa 2MB) rồi trả nội dung kèm
+     * ETag và cache công khai 1 ngày.
+     */
     @GetMapping("/products/images/{imageId}")
     public ResponseEntity<byte[]> image(@PathVariable Long imageId) {
         ProductImage img = catalog.image(imageId);
@@ -90,11 +105,13 @@ public class PublicProductController {
                 .body(validated.bytes());
     }
 
+    /** GET /shop/config: cấu hình shop cho client. */
     @GetMapping("/shop/config")
     public ApiResponse<ShopConfigDto> config() {
         return ApiResponse.ok(msg("success.shop.config"), catalog.config());
     }
 
+    /** POST /shop/quote: báo giá giỏ hàng (áp giảm giá thành viên nếu đã đăng nhập). */
     @PostMapping("/shop/quote")
     public ApiResponse<QuoteDto> quote(@Valid @RequestBody QuoteRequest request,
                                        @org.springframework.security.core.annotation.AuthenticationPrincipal

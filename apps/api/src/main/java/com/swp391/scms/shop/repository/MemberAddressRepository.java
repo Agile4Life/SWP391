@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập dữ liệu địa chỉ giao hàng của hội viên (bảng member_addresses). */
 @Repository
 public interface MemberAddressRepository extends JpaRepository<MemberAddress, Long> {
     /**

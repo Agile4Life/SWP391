@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
+/** Truy cập dữ liệu lịch sử biến động tồn kho (bảng product_stock_movements). */
 @Repository
 public interface StockMovementRepository extends JpaRepository<StockMovement, Long> {
     /**

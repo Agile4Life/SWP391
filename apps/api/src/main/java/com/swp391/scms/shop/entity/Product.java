@@ -13,6 +13,10 @@ import java.util.Set;
     uniqueConstraints = @UniqueConstraint(name = "uq_products_slug", columnNames = "slug"),
     indexes = @Index(name = "ix_products_active_created", columnList = "active, created_at")
 )
+/**
+ * Entity sản phẩm thực phẩm bổ sung (bảng products): danh mục, tên, slug, dạng bào chế, mô tả, khẩu phần, hướng
+ * dẫn, cảnh báo, mục tiêu, biến thể và thành phần dinh dưỡng.
+ */
 public class Product {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -82,6 +86,7 @@ public class Product {
     @OrderBy("sortOrder ASC, id ASC")
     private List<ProductImage> images = new ArrayList<>();
 
+    /** Tự cập nhật updatedAt trước mỗi lần cập nhật. */
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
@@ -116,6 +121,7 @@ public class Product {
     public String getForm() { return form; }
     /** Gán giá trị mới cho trường form. */
     public void setForm(String form) { this.form = form; }
+    /** Gán dạng bào chế (lưu tên enum dạng chuỗi, null giữ null). */
     public void setForm(ProductForm form) { this.form = form == null ? null : form.name(); }
 
     /** Lấy giá trị trường shortDescription. */

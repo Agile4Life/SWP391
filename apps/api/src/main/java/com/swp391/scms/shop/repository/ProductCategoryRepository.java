@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập dữ liệu danh mục sản phẩm (bảng product_categories). */
 @Repository
 public interface ProductCategoryRepository extends JpaRepository<ProductCategory, Long> {
     /**

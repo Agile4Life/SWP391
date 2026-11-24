@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
     name = "product_images",
     indexes = @Index(name = "ix_product_images_product", columnList = "product_id")
 )
+/** Entity ảnh sản phẩm (bảng product_images) lưu dạng data URL kèm loại nội dung. */
 public class ProductImage {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

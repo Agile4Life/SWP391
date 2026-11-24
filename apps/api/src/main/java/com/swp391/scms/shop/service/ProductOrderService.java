@@ -44,10 +44,15 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+/**
+ * Nghiệp vụ đơn hàng shop của hội viên: đặt đơn chống gửi trùng, xem/hủy đơn và hủy tự động đơn quá hạn thanh
+ * toán.
+ */
 @Service
 public class ProductOrderService {
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
+    /** Kết quả đặt đơn: đơn đã tạo (hoặc đơn cũ cùng clientRequestId) và có phải vừa tạo mới không. */
     public record CreateResult(OrderDto order, boolean created) {}
 
     private final ProductOrderRepository orders;
@@ -71,6 +76,7 @@ public class ProductOrderService {
     private MessageService messages;
     private TransactionTemplate requiresNewTx;
 
+    /** Constructor rút gọn không có các phụ thuộc tùy chọn (dùng trong test). */
     public ProductOrderService(ProductOrderRepository orders,
                                ProductVariantRepository variants,
                                MemberRepository members,
@@ -85,6 +91,10 @@ public class ProductOrderService {
                 null, null, null, null, null, null);
     }
 
+    /**
+     * Constructor chính: nhận các repository và service bắt buộc cùng VnpayPaymentGuard, thanh toán, hoàn tiền,
+     * thông báo, MessageService và transaction manager (tùy chọn).
+     */
     @Autowired
     public ProductOrderService(ProductOrderRepository orders,
                                ProductVariantRepository variants,
@@ -149,6 +159,10 @@ public class ProductOrderService {
         this.messages = messages;
     }
 
+    /**
+     * Đặt đơn trong transaction riêng; nếu trùng clientRequestId do gửi đồng thời thì trả về đơn đã có thay vì
+     * lỗi.
+     */
     public CreateResult createIdempotent(AuthenticatedPrincipal principal, CreateOrderRequest request) {
         try {
             if (requiresNewTx != null) {
@@ -167,6 +181,11 @@ public class ProductOrderService {
         }
     }
 
+    /**
+     * Đặt đơn: chỉ hội viên đang hoạt động; trả lại đơn cũ nếu trùng clientRequestId; kiểm tra hình thức
+     * nhận/thanh toán, khóa biến thể, tính giá, so với tổng dự kiến, chụp địa chỉ (có thể lưu), sinh mã, đặt
+     * hạn thanh toán và giữ hàng.
+     */
     @Transactional
     public CreateResult create(AuthenticatedPrincipal principal, CreateOrderRequest request) {
         requireMember(principal);
@@ -238,6 +257,10 @@ public class ProductOrderService {
         return new CreateResult(mapper.toDto(saved, false), true);
     }
 
+    /**
+     * Danh sách đơn của hội viên theo nhóm (all, pending, active, done/completed, cancelled), tối đa 20 mỗi
+     * trang.
+     */
     @Transactional(readOnly = true)
     public Page<OrderSummaryDto> myOrders(Long userId, String group, int page, int size) {
         int safePage = Math.max(0, page);
@@ -263,6 +286,7 @@ public class ProductOrderService {
                 .map(mapper::toSummaryDto);
     }
 
+    /** Chi tiết một đơn của hội viên; đơn của người khác thì báo không tìm thấy. */
     @Transactional(readOnly = true)
     public OrderDto myOrder(Long userId, Long id) {
         ProductOrder order = orders.findByIdAndMember_UserId(id, userId)
@@ -271,6 +295,10 @@ public class ProductOrderService {
         return mapper.toDto(order, false);
     }
 
+    /**
+     * Hội viên hủy đơn: chỉ đơn chờ thanh toán (không đang chờ VNPay xác nhận) hoặc đã thanh toán; hoàn kho và
+     * hoàn tiền nếu đã trả.
+     */
     @Transactional
     public OrderDto cancelByMember(Long userId, Long id, String reason) {
         members.findByUserIdForUpdate(userId);
@@ -294,6 +322,10 @@ public class ProductOrderService {
         return mapper.toDto(order, false);
     }
 
+    /**
+     * Hủy đơn nội bộ: ghi trạng thái/lý do/người hủy, hoàn kho nếu cần, đóng giao dịch chờ (failed), hoàn tiền
+     * nếu đã thanh toán và thông báo hội viên.
+     */
     @Transactional
     public void cancelInternal(ProductOrder order, String reason, boolean restock, User actor) {
         if (order == null || OrderStatus.cancelled.name().equals(order.getStatus())) {
@@ -346,6 +378,7 @@ public class ProductOrderService {
         }
     }
 
+    /** Hủy các đơn quá hạn thanh toán, mỗi đơn trong transaction riêng; trả về số đơn đã hủy. */
     @Transactional
     public int expireUnpaid() {
         LocalDateTime now = now();
@@ -365,6 +398,10 @@ public class ProductOrderService {
         return cancelled;
     }
 
+    /**
+     * Hủy một đơn quá hạn: khóa hội viên và đơn, bỏ qua nếu không còn chờ thanh toán hoặc VNPay còn có thể xác
+     * nhận.
+     */
     private boolean expireSingle(ProductOrder candidate) {
         if (candidate.getMember() != null && candidate.getMember().getUserId() != null) {
             members.findByUserIdForUpdate(candidate.getMember().getUserId());
@@ -386,6 +423,11 @@ public class ProductOrderService {
         return true;
     }
 
+    /**
+     * Kiểm tra hình thức nhận (delivery/pickup), phương thức thanh toán (online/counter) — trả tại quầy chỉ khi
+     * nhận tại quầy ; giao hàng cần đúng một trong addressId hoặc địa chỉ mới, nhận tại quầy thì không được kèm
+     * địa chỉ.
+     */
     private static void validateFulfillment(CreateOrderRequest request) {
         String fulfillment = request.fulfillment();
         String paymentMethod = request.paymentMethod();
@@ -411,24 +453,29 @@ public class ProductOrderService {
         }
     }
 
+    /** Chỉ role MEMBER được đặt/xem đơn. */
     private static void requireMember(AuthenticatedPrincipal principal) {
         if (principal == null || !"MEMBER".equals(principal.role())) {
             throw memberRequired();
         }
     }
 
+    /** Tạo lỗi chỉ hội viên được dùng shop. */
     private static ForbiddenException memberRequired() {
         return new ForbiddenException("SHOP_MEMBER_REQUIRED", "error.shop.member_required", null, "Members only");
     }
 
+    /** Tạo lỗi không tìm thấy đơn hàng. */
     private static ResourceNotFoundException notFound() {
         return new ResourceNotFoundException("ORDER_NOT_FOUND", "error.shop.order_not_found", null, "Order not found");
     }
 
+    /** Thời điểm hiện tại theo giờ Việt Nam. */
     private LocalDateTime now() {
         return LocalDateTime.ofInstant(clock.instant(), VN_ZONE);
     }
 
+    /** Dịch message key kèm tham số; không có MessageService thì trả lại key. */
     private String msg(String key, Object... args) {
         if (messages != null) {
             String resolved = messages.getMessage(key, args);

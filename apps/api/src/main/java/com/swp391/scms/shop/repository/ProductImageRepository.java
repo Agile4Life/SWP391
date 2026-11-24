@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập dữ liệu ảnh sản phẩm (bảng product_images). */
 @Repository
 public interface ProductImageRepository extends JpaRepository<ProductImage, Long> {
     /**
@@ -23,6 +24,7 @@ public interface ProductImageRepository extends JpaRepository<ProductImage, Long
      */
     List<ProductImage> findAllByProduct_IdOrderBySortOrderAscIdAsc(Long productId);
 
+    /** Lấy ảnh theo id kèm sản phẩm sở hữu. */
     @Query("select i from ProductImage i join fetch i.product p where i.id = :id")
     Optional<ProductImage> findByIdWithProduct(@Param("id") Long id);
 }

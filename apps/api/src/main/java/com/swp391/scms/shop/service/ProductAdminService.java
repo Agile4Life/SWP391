@@ -28,6 +28,10 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.regex.Pattern;
 
+/**
+ * Nghiệp vụ quản lý sản phẩm cho quản lý: tìm, tạo/sửa/xóa sản phẩm và biến thể, ảnh, điều chỉnh tồn kho và
+ * thống kê đơn hàng.
+ */
 @Service
 @Transactional(readOnly = true)
 public class ProductAdminService {
@@ -37,11 +41,16 @@ public class ProductAdminService {
     public static final int MAX_IMAGES = 6;
     public static final long MAX_IMAGE_BYTES = 1_500_000L;
 
+    /** Một dòng số liệu đơn dùng cho thống kê: trạng thái, tổng tiền và thời điểm thanh toán. */
     public record OrderMetricRow(String status, BigDecimal total, LocalDateTime paidAt) {}
 
+    /** Giao diện kiểm tra sản phẩm/biến thể đã có đơn và lấy số liệu đơn (dùng để thay thế trong test). */
     public interface OrderUsageChecker {
+        /** Mặc định: coi như sản phẩm chưa có đơn nào. */
         default boolean hasOrdersForProduct(Long productId) { return false; }
+        /** Mặc định: coi như biến thể chưa có đơn nào. */
         default boolean hasOrdersForVariant(Long variantId) { return false; }
+        /** Mặc định: không có số liệu đơn. */
         default List<OrderMetricRow> findRecentAndActiveOrders(LocalDateTime since) { return List.of(); }
     }
 
@@ -62,6 +71,7 @@ public class ProductAdminService {
     @Autowired(required = false)
     private ProductOrderRepository orderRepository;
 
+    /** Constructor rút gọn: dùng giờ Việt Nam, không có OrderUsageChecker. */
     public ProductAdminService(
             ProductRepository products,
             ProductCategoryRepository categories,
@@ -72,6 +82,7 @@ public class ProductAdminService {
         this(products, categories, variants, images, movements, Clock.system(CENTER_ZONE), null);
     }
 
+    /** Constructor nhận Clock (null thì giờ Việt Nam) và OrderUsageChecker. */
     public ProductAdminService(
             ProductRepository products,
             ProductCategoryRepository categories,
@@ -90,6 +101,10 @@ public class ProductAdminService {
         this.orderUsageChecker = orderUsageChecker;
     }
 
+    /**
+     * Constructor chính được Spring dùng: thêm EntityManager (tùy chọn) để truy vấn trực tiếp khi không có
+     * repository đơn.
+     */
     @Autowired
     public ProductAdminService(
             ProductRepository products,
@@ -110,10 +125,12 @@ public class ProductAdminService {
         this.orderUsageChecker = orderUsageChecker;
     }
 
+    /** Thời điểm hiện tại theo giờ Việt Nam. */
     private LocalDateTime now() {
         return LocalDateTime.ofInstant(clock.instant(), CENTER_ZONE);
     }
 
+    /** Tìm sản phẩm cho quản lý theo từ khóa, trạng thái và sắp hết hàng; mới nhất trước, tối đa 50 mỗi trang. */
     public Page<ProductAdminSummaryDto> list(String q, Boolean active, Boolean lowStock, int page, int size) {
         int safePage = Math.max(0, page);
         int safeSize = Math.min(Math.max(1, size), 50);
@@ -128,17 +145,23 @@ public class ProductAdminService {
         return found.map(this::toAdminSummaryDto);
     }
 
+    /** Chi tiết sản phẩm cho quản lý. */
     public ProductAdminDto get(Long id) {
         Product product = products.findById(id).orElseThrow(ProductAdminService::notFound);
         return toAdminDto(product);
     }
 
+    /** Tạo sản phẩm không ghi người thực hiện. */
     @Transactional
     @Audited(action = "CREATE_PRODUCT", entity = "products")
     public ProductAdminDto create(ProductUpsertRequest request) {
         return create(null, request);
     }
 
+    /**
+     * Tạo sản phẩm: kiểm tra dữ liệu, danh mục, slug không trùng, SKU không trùng; lưu biến thể (tồn ban đầu
+     * được ghi lịch sử) và thành phần dinh dưỡng.
+     */
     @Transactional
     @Audited(action = "CREATE_PRODUCT", entity = "products")
     public ProductAdminDto create(AuthenticatedPrincipal principal, ProductUpsertRequest request) {
@@ -195,12 +218,17 @@ public class ProductAdminService {
         return toAdminDto(saved);
     }
 
+    /** Cập nhật sản phẩm không ghi người thực hiện. */
     @Transactional
     @Audited(action = "UPDATE_PRODUCT", entity = "products")
     public ProductAdminDto update(Long id, ProductUpsertRequest request) {
         return update(null, id, request);
     }
 
+    /**
+     * Cập nhật sản phẩm: kiểm tra dữ liệu, slug và SKU; biến thể bị bỏ mà đã có đơn thì chỉ tắt bán, chưa có
+     * đơn thì xóa; biến thể mới được tạo kèm tồn ban đầu; thay toàn bộ dinh dưỡng.
+     */
     @Transactional
     @Audited(action = "UPDATE_PRODUCT", entity = "products")
     public ProductAdminDto update(AuthenticatedPrincipal principal, Long id, ProductUpsertRequest request) {
@@ -294,6 +322,7 @@ public class ProductAdminService {
         return toAdminDto(saved);
     }
 
+    /** Bật/tắt bán sản phẩm. */
     @Transactional
     @Audited(action = "UPDATE_PRODUCT_STATUS", entity = "products")
     public ProductAdminDto setActive(Long id, boolean active) {
@@ -302,6 +331,7 @@ public class ProductAdminService {
         return toAdminDto(products.save(product));
     }
 
+    /** Xóa sản phẩm; nếu sản phẩm hoặc biến thể đã có đơn thì báo lỗi PRODUCT_HAS_ORDERS. */
     @Transactional
     @Audited(action = "DELETE_PRODUCT", entity = "products")
     public void delete(Long id) {
@@ -315,6 +345,7 @@ public class ProductAdminService {
         products.delete(product);
     }
 
+    /** Thêm ảnh từ yêu cầu tải lên (mô tả ảnh 1–160 ký tự). */
     @Transactional
     @Audited(action = "ADD_PRODUCT_IMAGE", entity = "products")
     public ProductAdminDto addImage(Long productId, ImageUploadRequest request) {
@@ -324,6 +355,7 @@ public class ProductAdminService {
         return addImage(productId, request.dataUrl(), request.altText().trim());
     }
 
+    /** Thêm ảnh: kiểm tra mô tả, kiểm tra data URL (tối đa 1,5MB), tối đa 6 ảnh mỗi sản phẩm, ảnh mới đặt cuối. */
     @Transactional
     @Audited(action = "ADD_PRODUCT_IMAGE", entity = "products")
     public ProductAdminDto addImage(Long productId, String dataUrl, String altText) {
@@ -345,6 +377,7 @@ public class ProductAdminService {
         return toAdminDto(products.save(product));
     }
 
+    /** Xóa một ảnh của sản phẩm và đánh lại thứ tự các ảnh còn lại. */
     @Transactional
     @Audited(action = "REMOVE_PRODUCT_IMAGE", entity = "products")
     public ProductAdminDto removeImage(Long productId, Long imageId) {
@@ -360,6 +393,7 @@ public class ProductAdminService {
         return toAdminDto(products.save(product));
     }
 
+    /** Sắp xếp lại ảnh: danh sách id phải đúng và đủ các ảnh hiện có, không trùng. */
     @Transactional
     @Audited(action = "REORDER_PRODUCT_IMAGES", entity = "products")
     public ProductAdminDto reorderImages(Long productId, List<Long> imageIds) {
@@ -385,12 +419,17 @@ public class ProductAdminService {
         return toAdminDto(products.save(product));
     }
 
+    /** Điều chỉnh tồn kho không ghi người thực hiện. */
     @Transactional
     @Audited(action = "ADJUST_PRODUCT_STOCK", entity = "product_variants")
     public VariantAdminDto adjustStock(Long variantId, StockAdjustmentRequest request) {
         return adjustStock(null, variantId, request);
     }
 
+    /**
+     * Điều chỉnh tồn kho biến thể: delta khác 0 trong ±9999, lý do restock/adjustment, ghi chú tối đa 200 ký
+     * tự; tồn không được âm; khóa dòng và ghi lịch sử biến động.
+     */
     @Transactional
     @Audited(action = "ADJUST_PRODUCT_STOCK", entity = "product_variants")
     public VariantAdminDto adjustStock(AuthenticatedPrincipal principal, Long variantId, StockAdjustmentRequest request) {
@@ -422,6 +461,10 @@ public class ProductAdminService {
         return toVariantAdminDto(saved);
     }
 
+    /**
+     * Thống kê cho quản lý: số đơn chờ xử lý, doanh thu 30 ngày (không tính đơn hủy) và số biến thể sắp hết
+     * hàng.
+     */
     public ManagerOrderSummaryDto summary() {
         LocalDateTime since = now().minusDays(30);
         List<OrderMetricRow> rows = fetchOrderMetricRows(since);
@@ -437,6 +480,10 @@ public class ProductAdminService {
         return new ManagerOrderSummaryDto(pendingFulfillment, revenue30d, lowStock);
     }
 
+    /**
+     * Kiểm tra sản phẩm đã có trong đơn nào chưa (qua checker, repository hoặc EntityManager; lỗi truy vấn coi
+     * như chưa có).
+     */
     private boolean hasOrdersForProduct(Long productId) {
         if (orderUsageChecker != null) {
             return orderUsageChecker.hasOrdersForProduct(productId);
@@ -458,6 +505,10 @@ public class ProductAdminService {
         return false;
     }
 
+    /**
+     * Kiểm tra biến thể đã có trong đơn nào chưa (qua checker, repository hoặc EntityManager; lỗi truy vấn coi
+     * như chưa có).
+     */
     private boolean hasOrdersForVariant(Long variantId) {
         if (orderUsageChecker != null) {
             return orderUsageChecker.hasOrdersForVariant(variantId);
@@ -479,6 +530,10 @@ public class ProductAdminService {
         return false;
     }
 
+    /**
+     * Lấy số liệu đơn đang chờ xử lý hoặc đã thanh toán từ mốc since (qua checker, repository hoặc
+     * EntityManager).
+     */
     private List<OrderMetricRow> fetchOrderMetricRows(LocalDateTime since) {
         if (orderUsageChecker != null) {
             return orderUsageChecker.findRecentAndActiveOrders(since);
@@ -505,6 +560,10 @@ public class ProductAdminService {
         return List.of();
     }
 
+    /**
+     * Gán các trường chung của sản phẩm từ yêu cầu (danh mục, tên, slug, mô tả, khẩu phần, mục tiêu, trạng
+     * thái...).
+     */
     private static void applyCommonFields(
             Product product,
             ProductCategory category,
@@ -528,6 +587,7 @@ public class ProductAdminService {
         product.setGoals(new LinkedHashSet<>(request.goals()));
     }
 
+    /** Thay toàn bộ thành phần dinh dưỡng của sản phẩm bằng danh sách mới. */
     private static void replaceNutrients(Product product, List<NutrientUpsertRequest> requests) {
         product.getNutrients().clear();
         if (requests == null) {
@@ -547,6 +607,10 @@ public class ProductAdminService {
         }
     }
 
+    /**
+     * Kiểm tra yêu cầu tạo/sửa sản phẩm: tên, danh mục, dạng bào chế hợp lệ, mô tả, khẩu phần, biến thể (SKU
+     * đúng định dạng, không trùng trong yêu cầu) và dinh dưỡng.
+     */
     private static void validateUpsertRequest(ProductUpsertRequest req) {
         if (req == null) {
             throw invalid("request");
@@ -612,6 +676,10 @@ public class ProductAdminService {
         }
     }
 
+    /**
+     * Chuyển sản phẩm sang DTO tóm tắt cho quản lý: số biến thể, tổng tồn, sắp hết hàng, giá thấp nhất, ảnh và
+     * hàng mới.
+     */
     private ProductAdminSummaryDto toAdminSummaryDto(Product p) {
         List<ProductVariant> allVariants = p.getVariants() == null ? List.of() : p.getVariants();
         List<ProductVariant> activeVariants = allVariants.stream().filter(ProductVariant::isActive).toList();
@@ -641,6 +709,7 @@ public class ProductAdminService {
         );
     }
 
+    /** Chuyển sản phẩm sang DTO chi tiết cho quản lý: ảnh, biến thể và dinh dưỡng. */
     private static ProductAdminDto toAdminDto(Product p) {
         List<ImageDto> imgs = p.getImages() == null
                 ? List.of()
@@ -688,6 +757,7 @@ public class ProductAdminService {
         );
     }
 
+    /** Chuyển biến thể sang DTO cho quản lý. */
     private static VariantAdminDto toVariantAdminDto(ProductVariant v) {
         return new VariantAdminDto(
                 v.getId(),
@@ -702,6 +772,7 @@ public class ProductAdminService {
         );
     }
 
+    /** Bỏ khoảng trắng hai đầu; chuỗi rỗng thành null. */
     private static String trimOrNull(String s) {
         if (s == null || s.isBlank()) {
             return null;
@@ -709,10 +780,12 @@ public class ProductAdminService {
         return s.trim();
     }
 
+    /** Tạo lỗi dữ liệu sản phẩm không hợp lệ kèm tên trường. */
     private static BadRequestException invalid(String field) {
         return new BadRequestException("PRODUCT_INVALID", "error.shop.product_invalid", new Object[]{field}, "Invalid product field: " + field);
     }
 
+    /** Tạo lỗi 404 khi không tìm thấy sản phẩm. */
     private static AppException notFound() {
         return new AppException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "error.shop.product_not_found", null, "Product not found");
     }

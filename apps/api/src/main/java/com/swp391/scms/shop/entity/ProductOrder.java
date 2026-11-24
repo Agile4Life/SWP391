@@ -23,6 +23,10 @@ import java.util.List;
         @Index(name = "ix_product_orders_status_created", columnList = "status, created_at")
     }
 )
+/**
+ * Entity đơn hàng shop (bảng product_orders): mã đơn, hội viên, mã yêu cầu chống gửi trùng, trạng thái, tiền,
+ * thanh toán, thông tin giao hàng và các dòng sản phẩm.
+ */
 @Check(name = "ck_product_orders_total", constraints = "total = subtotal + shipping_fee")
 public class ProductOrder {
     @Id
@@ -129,11 +133,13 @@ public class ProductOrder {
     @OrderBy("id ASC")
     private List<ProductOrderItem> items = new ArrayList<>();
 
+    /** Tự cập nhật updatedAt trước mỗi lần cập nhật. */
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
 
+    /** Ghi snapshot địa chỉ giao hàng vào đơn (null thì xóa hết thông tin giao hàng, dùng cho nhận tại quầy). */
     public void applyShipping(ShippingSnapshot ship) {
         if (ship == null) {
             this.shipRecipientName = null;
@@ -152,6 +158,7 @@ public class ProductOrder {
         }
     }
 
+    /** Thêm một dòng sản phẩm vào đơn và gắn ngược đơn cho dòng đó. */
     public void addItem(ProductOrderItem item) {
         if (item != null) {
             item.setOrder(this);
@@ -294,6 +301,7 @@ public class ProductOrder {
 
     /** Lấy giá trị trường cancelledBy. */
     public User getCancelledBy() { return cancelledBy; }
+    /** Gán giá trị mới cho trường cancelledBy. */
     public void setCancelledBy(User cancelledBy) {
         this.cancelledBy = cancelledBy;
         this.cancelledById = cancelledBy == null ? null : cancelledBy.getId();

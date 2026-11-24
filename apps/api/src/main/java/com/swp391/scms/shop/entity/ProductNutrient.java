@@ -8,6 +8,10 @@ import java.math.BigDecimal;
     name = "product_nutrients",
     indexes = @Index(name = "ix_product_nutrients_product", columnList = "product_id")
 )
+/**
+ * Entity một dòng thành phần dinh dưỡng của sản phẩm (bảng product_nutrients): tên, lượng, đơn vị, % nhu cầu
+ * hằng ngày.
+ */
 public class ProductNutrient {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

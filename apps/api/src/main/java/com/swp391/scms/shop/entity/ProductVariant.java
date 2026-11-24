@@ -11,6 +11,10 @@ import org.hibernate.annotations.Check;
     uniqueConstraints = @UniqueConstraint(name = "uq_product_variants_sku", columnNames = "sku"),
     indexes = @Index(name = "ix_product_variants_product", columnList = "product_id")
 )
+/**
+ * Entity biến thể sản phẩm (bảng product_variants): SKU, nhãn, giá, số khẩu phần mỗi hộp, tồn kho, trạng thái
+ * và thứ tự.
+ */
 @Check(name = "ck_product_variants_stock_nonneg", constraints = "stock >= 0 and price > 0")
 public class ProductVariant {
     @Id
@@ -42,6 +46,7 @@ public class ProductVariant {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 
+    /** Giá mỗi khẩu phần = giá / số khẩu phần (làm tròn tới đồng); thiếu dữ liệu thì trả null. */
     public BigDecimal pricePerServing() {
         return servingsPerContainer == null || servingsPerContainer < 1 || price == null
                 ? null

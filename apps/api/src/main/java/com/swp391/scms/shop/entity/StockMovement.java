@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
     name = "product_stock_movements",
     indexes = @Index(name = "ix_stock_movements_variant", columnList = "variant_id, created_at")
 )
+/** Entity lịch sử biến động tồn kho (bảng product_stock_movements): biến thể, số lượng tăng/giảm và lý do. */
 public class StockMovement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -77,6 +78,7 @@ public class StockMovement {
 
     /** Lấy giá trị trường actor. */
     public User getActor() { return actor; }
+    /** Gán giá trị mới cho trường actor. */
     public void setActor(User actor) {
         this.actor = actor;
         this.actorId = actor == null ? null : actor.getId();

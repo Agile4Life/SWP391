@@ -25,7 +25,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Disabled by default: Shop module removed from the active scope. */
+/**
+ * API đơn hàng shop của hội viên (đã ngừng; bật qua app.shop.enabled).
+ *
+ * Disabled by default: Shop module removed from the active scope.
+ */
 @ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/shop/orders")
@@ -34,10 +38,12 @@ public class ShopOrderController {
     private final ProductOrderService orders;
     private final MessageService messages;
 
+    /** Constructor cho test: không có MessageService. */
     public ShopOrderController(ProductOrderService orders) {
         this(orders, null);
     }
 
+    /** Constructor chính: nhận ProductOrderService và MessageService. */
     @Autowired
     public ShopOrderController(ProductOrderService orders,
                                @Autowired(required = false) MessageService messages) {
@@ -45,6 +51,7 @@ public class ShopOrderController {
         this.messages = messages;
     }
 
+    /** POST: đặt đơn hàng mới (chống gửi trùng bằng clientRequestId). */
     @PostMapping
     public ResponseEntity<ApiResponse<OrderDto>> create(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -57,6 +64,7 @@ public class ShopOrderController {
         return ResponseEntity.status(status).body(body);
     }
 
+    /** GET: danh sách đơn của hội viên, lọc theo trạng thái (tùy chọn), phân trang. */
     @GetMapping
     public ApiResponse<Page<OrderSummaryDto>> list(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -67,6 +75,7 @@ public class ShopOrderController {
         return ApiResponse.ok(msg("success.shop.orders"), orders.myOrders(userId, status, page, size));
     }
 
+    /** GET /{id}: chi tiết một đơn của hội viên. */
     @GetMapping("/{id}")
     public ApiResponse<OrderDto> get(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -75,6 +84,7 @@ public class ShopOrderController {
         return ApiResponse.ok(msg("success.shop.order"), orders.myOrder(userId, id));
     }
 
+    /** POST /{id}/cancel: hội viên hủy đơn kèm lý do. */
     @PostMapping("/{id}/cancel")
     public ApiResponse<OrderDto> cancel(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -85,6 +95,7 @@ public class ShopOrderController {
         return ApiResponse.ok(msg("success.shop.order_cancelled"), orders.cancelByMember(userId, id, reason));
     }
 
+    /** Dịch message key; không có MessageService thì trả lại key. */
     private String msg(String key) {
         return messages != null ? messages.getMessage(key) : key;
     }

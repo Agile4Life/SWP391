@@ -23,7 +23,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Disabled by default: Shop module removed from the active scope. */
+/**
+ * API xử lý đơn hàng shop cho lễ tân/nhân viên/quản lý (đã ngừng; bật qua app.shop.enabled).
+ *
+ * Disabled by default: Shop module removed from the active scope.
+ */
 @ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @RestController
 @RequestMapping("/api/v1/staff/product-orders")
@@ -32,10 +36,12 @@ public class StaffProductOrderController {
     private final ProductOrderStaffService orders;
     private final MessageService messages;
 
+    /** Constructor cho test: không có MessageService. */
     public StaffProductOrderController(ProductOrderStaffService orders) {
         this(orders, null);
     }
 
+    /** Constructor chính: nhận ProductOrderStaffService và MessageService. */
     @Autowired
     public StaffProductOrderController(ProductOrderStaffService orders,
                                        @Autowired(required = false) MessageService messages) {
@@ -43,6 +49,7 @@ public class StaffProductOrderController {
         this.messages = messages;
     }
 
+    /** GET: tìm đơn theo trạng thái, chờ thu tại quầy và từ khóa; phân trang. */
     @GetMapping
     public ApiResponse<Page<OrderDto>> list(
             @RequestParam(required = false) String status,
@@ -52,16 +59,19 @@ public class StaffProductOrderController {
         return ApiResponse.ok(msg("success.shop.orders"), orders.list(status, q, page, size));
     }
 
+    /** GET /counts: số đơn theo từng trạng thái cần xử lý. */
     @GetMapping("/counts")
     public ApiResponse<OrderCountsDto> counts() {
         return ApiResponse.ok(msg("success.shop.orders"), orders.counts());
     }
 
+    /** GET /{id}: chi tiết một đơn (kèm thông tin hội viên). */
     @GetMapping("/{id}")
     public ApiResponse<OrderDto> get(@PathVariable Long id) {
         return ApiResponse.ok(msg("success.shop.order"), orders.get(id));
     }
 
+    /** POST /{id}/start-processing: chuyển đơn đã thanh toán sang đang xử lý. */
     @PostMapping("/{id}/start-processing")
     public ApiResponse<OrderDto> startProcessing(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -69,6 +79,7 @@ public class StaffProductOrderController {
         return ApiResponse.ok(msg("success.shop.order_updated"), orders.startProcessing(principal, id));
     }
 
+    /** POST /{id}/ship: giao đơn cho đơn vị vận chuyển kèm mã vận đơn. */
     @PostMapping("/{id}/ship")
     public ApiResponse<OrderDto> ship(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -77,6 +88,7 @@ public class StaffProductOrderController {
         return ApiResponse.ok(msg("success.shop.order_updated"), orders.ship(principal, id, request));
     }
 
+    /** POST /{id}/ready-for-pickup: đánh dấu đơn sẵn sàng nhận tại quầy. */
     @PostMapping("/{id}/ready-for-pickup")
     public ApiResponse<OrderDto> readyForPickup(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -84,6 +96,7 @@ public class StaffProductOrderController {
         return ApiResponse.ok(msg("success.shop.order_updated"), orders.readyForPickup(principal, id));
     }
 
+    /** POST /{id}/complete: hoàn tất đơn. */
     @PostMapping("/{id}/complete")
     public ApiResponse<OrderDto> complete(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -91,6 +104,7 @@ public class StaffProductOrderController {
         return ApiResponse.ok(msg("success.shop.order_updated"), orders.complete(principal, id));
     }
 
+    /** POST /{id}/counter-payment: xác nhận đã thu tiền tại quầy. */
     @PostMapping("/{id}/counter-payment")
     public ApiResponse<OrderDto> counterPayment(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -99,6 +113,7 @@ public class StaffProductOrderController {
         return ApiResponse.ok(msg("success.shop.order_updated"), orders.counterPayment(principal, id, request));
     }
 
+    /** POST /{id}/cancel: nhân viên hủy đơn kèm lý do, có thể hoàn kho. */
     @PostMapping("/{id}/cancel")
     public ApiResponse<OrderDto> cancel(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -107,6 +122,7 @@ public class StaffProductOrderController {
         return ApiResponse.ok(msg("success.shop.order_cancelled"), orders.cancel(principal, id, request));
     }
 
+    /** Dịch message key; không có MessageService thì trả lại key. */
     private String msg(String key) {
         return messages != null ? messages.getMessage(key) : key;
     }

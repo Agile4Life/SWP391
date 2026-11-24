@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Hoàn tiền đơn hàng shop vào ví hội viên. */
 @Service
 @Transactional
 public class ProductOrderRefunds {
@@ -18,10 +19,12 @@ public class ProductOrderRefunds {
     private final WalletService walletService;
     private final MessageService messages;
 
+    /** Constructor rút gọn không có MessageService. */
     public ProductOrderRefunds(PaymentRepository payments, WalletService walletService) {
         this(payments, walletService, null);
     }
 
+    /** Constructor chính: nhận repository thanh toán, WalletService và MessageService (tùy chọn). */
     @Autowired
     public ProductOrderRefunds(PaymentRepository payments,
                                @Autowired(required = false) WalletService walletService,
@@ -31,6 +34,10 @@ public class ProductOrderRefunds {
         this.messages = messages;
     }
 
+    /**
+     * Nếu đơn đã thanh toán thành công thì hoàn phần còn lại (trừ phần đã hoàn trước đó) vào ví, đánh dấu
+     * payment refunded; trả về số tiền hoàn.
+     */
     public BigDecimal refundIfPaid(ProductOrder order, String reason) {
         if (order == null || order.getId() == null) {
             return BigDecimal.ZERO;
@@ -64,6 +71,9 @@ public class ProductOrderRefunds {
     }
 
     /**
+     * VNPay báo thành công sau khi đơn đã hủy: hội viên đã bị trừ tiền nên cộng vào ví và ghi payment là
+     * refunded.
+     *
      * A VNPay success that arrives after the order was already cancelled (its payment closed as failed): the member was
      * charged, so the money goes to their wallet and the payment is recorded as refunded instead of being lost.
      */
@@ -84,6 +94,7 @@ public class ProductOrderRefunds {
         return amount;
     }
 
+    /** Mô tả giao dịch hoàn tiền trong ví (kèm lý do nếu có). */
     private String refundDescription(ProductOrder order, String reason) {
         String code = orderCode(order);
         if (reason != null && !reason.isBlank()) {
@@ -92,10 +103,12 @@ public class ProductOrderRefunds {
         return msg("wallet.description.product_order_refund", "Hoàn tiền đơn hàng " + code, code);
     }
 
+    /** Mã đơn để hiển thị; thiếu mã thì dùng "#id". */
     private static String orderCode(ProductOrder order) {
         return order.getCode() != null && !order.getCode().isBlank() ? order.getCode() : "#" + order.getId();
     }
 
+    /** Nối thêm ghi chú vào payment, cắt tối đa 255 ký tự. */
     private static void appendNote(Payment payment, String text) {
         if (text == null || text.isBlank()) {
             return;
@@ -106,6 +119,7 @@ public class ProductOrderRefunds {
         payment.setNote(combined.length() > 255 ? combined.substring(0, 255) : combined);
     }
 
+    /** Dịch message key kèm tham số; không dịch được thì dùng chuỗi dự phòng. */
     private String msg(String key, String fallback, Object... args) {
         if (messages != null) {
             String resolved = messages.getMessage(key, args);

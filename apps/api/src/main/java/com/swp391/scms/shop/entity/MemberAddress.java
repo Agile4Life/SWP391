@@ -9,6 +9,10 @@ import java.time.LocalDateTime;
     name = "member_addresses",
     indexes = @Index(name = "ix_member_addresses_member", columnList = "member_id")
 )
+/**
+ * Entity địa chỉ giao hàng của hội viên (bảng member_addresses): người nhận, số điện thoại, tỉnh/phường, địa
+ * chỉ chi tiết, mặc định hay không.
+ */
 public class MemberAddress {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -51,6 +55,7 @@ public class MemberAddress {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    /** Tự cập nhật updatedAt trước mỗi lần cập nhật. */
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
