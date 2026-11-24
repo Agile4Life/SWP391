@@ -5,8 +5,10 @@ import { STATION_X, metroPosition } from '../renderers/architecture/metroMotion'
 import { useDocumentTheme } from '../renderers/materials';
 import { createWaterSurfaceMaterial } from '../renderers/surfaceDetail';
 
+/** Raycast rỗng để các vật trên trời không bắt sự kiện chuột. */
 const NOOP = () => null;
 
+/** Một phần hình học kèm màu (r, g, b) để gộp thành một hình duy nhất. */
 interface MeshPart {
   geom: THREE.BufferGeometry;
   r: number;
@@ -14,6 +16,7 @@ interface MeshPart {
   b: number;
 }
 
+/** Gộp nhiều phần hình học thành một BufferGeometry (chuyển về dạng không chỉ mục, ghi màu từng đỉnh). */
 function mergeMeshParts(parts: readonly MeshPart[]): THREE.BufferGeometry {
   const nonIdx = parts.map(p => {
     const g = p.geom.index ? p.geom.toNonIndexed() : p.geom;
@@ -48,6 +51,7 @@ function mergeMeshParts(parts: readonly MeshPart[]): THREE.BufferGeometry {
 const CAR_LEN = 13;
 const CARS = 4;
 
+/** Dựng hình đoàn tàu metro từ các khối hộp (thân hoặc phần phát sáng với độ sáng bright). */
 function buildTrain(glow: boolean, bright: number): THREE.BufferGeometry {
   const parts: MeshPart[] = [];
   const addBox = (
@@ -175,14 +179,20 @@ const TRACKS = [
   { z: -58.4, dir: 1, speed: 15, phase: 0 },
   { z: -54.6, dir: -1, speed: 13, phase: 30 },
 ] as const;
-/** Two metro trainsets shuttling along the elevated viaduct. */
+/**
+ * Hai đoàn tàu metro chạy qua lại trên cầu cạn.
+ */
 function Metro({ isLight }: { isLight: boolean }) {
+  // Hình thân tàu.
   const bodyGeo = useMemo(() => buildTrain(false, 1), []);
+  // Hình phần phát sáng của tàu (đèn, cửa sổ), sáng hơn khi theme tối.
   const glowGeo = useMemo(() => buildTrain(true, isLight ? 0.9 : 3.2), [isLight]);
+  // Vật liệu thân tàu (kim loại, màu theo đỉnh).
   const bodyMat = useMemo(
     () => new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.3, metalness: 0.55, envMapIntensity: 1.3 }),
     [],
   );
+  // Vật liệu phát sáng, không tone map.
   const glowMat = useMemo(() => new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }), []);
   useEffect(() => () => { bodyGeo.dispose(); bodyMat.dispose(); glowMat.dispose(); }, [bodyGeo, bodyMat, glowMat]);
   useEffect(() => () => glowGeo.dispose(), [glowGeo]);
@@ -210,24 +220,27 @@ function Metro({ isLight }: { isLight: boolean }) {
 
 const BIRDS = 28;
 
-/** A loose flock circling high over the campus in daylight. */
+/**
+ * Đàn chim bay lượn trên cao khuôn viên vào ban ngày.
+ */
 function Birds() {
   const ref = useRef<THREE.InstancedMesh>(null);
+  // Hình học một con chim: thân mảnh và hai cánh gập hai đoạn.
   const geometry = useMemo(() => {
     const g = new THREE.BufferGeometry();
-    // Slender body spine + swept two-segment gull/swallow wings (continuous centerline chord, no bowtie pinch)
+    // Sống thân mảnh + cánh chim hải âu/én hai đoạn vuốt ngược (dây cung trục giữa liên tục, không bị thắt hình nơ)
     g.setAttribute(
       'position',
       new THREE.Float32BufferAttribute(
         [
-          // Body spine left & right
+          // Sống thân trái và phải
           0, 0, 0.44, -0.11, 0, -0.04, 0, 0, -0.42,
           0, 0, 0.44, 0, 0, -0.42, 0.11, 0, -0.04,
-          // Left inner wing + outer swept tip
+          // Cánh trái đoạn trong + đầu cánh ngoài vuốt ngược
           0, 0, 0.24, -0.62, 0.11, 0.05, -0.46, 0.07, -0.18,
           0, 0, 0.24, -0.46, 0.07, -0.18, 0, 0, -0.14,
           -0.62, 0.11, 0.05, -1.28, 0.02, -0.3, -0.46, 0.07, -0.18,
-          // Right inner wing + outer swept tip
+          // Cánh phải đoạn trong + đầu cánh ngoài vuốt ngược
           0, 0, 0.24, -0.0, 0, -0.14, 0.46, 0.07, -0.18,
           0, 0, 0.24, 0.46, 0.07, -0.18, 0.62, 0.11, 0.05,
           0.62, 0.11, 0.05, 0.46, 0.07, -0.18, 1.28, 0.02, -0.3,
@@ -238,12 +251,18 @@ function Birds() {
     g.computeVertexNormals();
     return g;
   }, []);
+  // Vật liệu chim.
   const material = useMemo(() => new THREE.MeshBasicMaterial({ color: '#383e47', side: THREE.DoubleSide }), []);
   useEffect(() => () => { geometry.dispose(); material.dispose(); }, [geometry, material]);
+  // Ma trận dùng lại để tránh cấp phát mỗi khung hình.
   const m = useMemo(() => new THREE.Matrix4(), []);
+  // Quaternion dùng lại mỗi khung hình.
   const q = useMemo(() => new THREE.Quaternion(), []);
+  // Góc Euler dùng lại mỗi khung hình.
   const eul = useMemo(() => new THREE.Euler(0, 0, 0, 'YXZ'), []);
+  // Vector vị trí dùng lại mỗi khung hình.
   const p = useMemo(() => new THREE.Vector3(), []);
+  // Vector tỉ lệ dùng lại mỗi khung hình.
   const sc = useMemo(() => new THREE.Vector3(), []);
   useFrame(({ clock }) => {
     const mesh = ref.current;
@@ -269,22 +288,35 @@ function Birds() {
 const WATER = { x: 6, z: 55.1, w: 80.2, d: 6.0, y: 0.27 };
 const DUCKS = 7;
 
-/** Animated canal water surface with drifting mallards inside the south-park basin. */
+/**
+ * Mặt nước kênh chuyển động cùng đàn vịt trời trôi trong bể công viên phía nam.
+ */
 function CanalLife({ isLight }: { isLight: boolean }) {
   const bodyRef = useRef<THREE.InstancedMesh>(null);
   const headRef = useRef<THREE.InstancedMesh>(null);
+  // Hình mặt nước.
   const waterGeo = useMemo(() => new THREE.PlaneGeometry(WATER.w, WATER.d).rotateX(-Math.PI / 2), []);
+  // Vật liệu mặt nước chuyển động.
   const waterBundle = useMemo(() => createWaterSurfaceMaterial('sol-canal-water', isLight), [isLight]);
+  // Hình thân vịt.
   const bodyGeo = useMemo(() => new THREE.SphereGeometry(0.21, 8, 6).scale(1.38, 0.66, 0.88), []);
+  // Hình đầu vịt.
   const headGeo = useMemo(() => new THREE.SphereGeometry(0.095, 8, 6), []);
+  // Vật liệu thân vịt.
   const bodyMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#d8d2c5', roughness: 0.78 }), []);
+  // Vật liệu đầu vịt.
   const headMat = useMemo(() => new THREE.MeshStandardMaterial({ color: '#274e3b', roughness: 0.65 }), []);
   useEffect(() => () => waterBundle.material.dispose(), [waterBundle]);
   useEffect(() => () => { waterGeo.dispose(); bodyGeo.dispose(); headGeo.dispose(); bodyMat.dispose(); headMat.dispose(); }, [waterGeo, bodyGeo, headGeo, bodyMat, headMat]);
+  // Ma trận dùng lại mỗi khung hình.
   const m = useMemo(() => new THREE.Matrix4(), []);
+  // Quaternion dùng lại mỗi khung hình.
   const q = useMemo(() => new THREE.Quaternion(), []);
+  // Vector vị trí dùng lại mỗi khung hình.
   const p = useMemo(() => new THREE.Vector3(), []);
+  // Vector tỉ lệ dùng lại mỗi khung hình.
   const sc = useMemo(() => new THREE.Vector3(), []);
+  // Vector hướng lên trên (trục y).
   const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
   useFrame(({ clock }) => {
     const t = clock.elapsedTime;
@@ -316,6 +348,7 @@ function CanalLife({ isLight }: { isLight: boolean }) {
   );
 }
 
+/** Bầu trời sống động của thành phố: tàu metro, đàn chim và kênh nước có vịt. */
 export function CitySky() {
   const isLight = useDocumentTheme() === 'light';
   return (

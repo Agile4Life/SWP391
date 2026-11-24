@@ -8,13 +8,14 @@ import java.time.LocalDateTime;
 import java.util.Map;
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Bộ kiểm thử cho VnpayGateway (vnpay gateway). */
 class VnpayGatewayTest {
     private final VnpayProperties config = new VnpayProperties(true, "TEST1234", "test-secret",
             "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", "https://example.test/member/payments/vnpay/return", 15);
     private final VnpayGateway gateway = new VnpayGateway(config);
 
     @Test void signsSortedEncodedValuesAndExcludesHashFields() {
-        // Independent HMAC vector generated with Python's hmac/hashlib.
+        // Vector HMAC độc lập được tạo bằng thư viện hmac/hashlib của Python.
         assertEquals("3ee11a2a58002440975b50b6de187e788983c80b575a9d5827cabbc02face3d9e6a4b0fdbf27bedd76b924c2c2ce65947a6502c417d77829e7e23fe430cc811a", gateway.sign(Map.of("vnp_TxnRef", "ABC123", "vnp_OrderInfo", "SOL payment 12")));
         var fields = new java.util.HashMap<>(Map.of("vnp_TmnCode", "TEST1234", "vnp_Amount", "65000000", "vnp_TxnRef", "ABC123"));
         fields.put("vnp_SecureHash", gateway.sign(fields));

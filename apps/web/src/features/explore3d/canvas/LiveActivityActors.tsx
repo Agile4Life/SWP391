@@ -20,11 +20,13 @@ import {
 } from '../renderers/actors/riggedActors';
 import { useActorMotion } from './useActorMotion';
 
+/** Props của người hoạt động trong cảnh: cảnh và cờ benchmark. */
 export interface LiveActivityActorsProps {
   scene?: SceneDoc;
   benchEnabled?: boolean;
 }
 
+/** Raycast rỗng để các nhân vật không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 const HIDDEN_MATRIX = new THREE.Matrix4().makeScale(0, 0, 0);
 
@@ -35,6 +37,7 @@ const tempQuaternion = new THREE.Quaternion();
 const tempScale = new THREE.Vector3();
 const tempColor = new THREE.Color();
 
+/** Ghi ma trận và màu của các phần cơ thể vào InstancedMesh (nhân vật bị ẩn thì dùng ma trận ẩn). */
 function applyPartsToInstancedMesh(
   mesh: THREE.InstancedMesh,
   parts: readonly EvaluatedPartTransform[],
@@ -79,6 +82,10 @@ function applyPartsToInstancedMesh(
   }
 }
 
+/**
+ * Người hoạt động dựng bằng hình học thủ tục trong một InstancedMesh: tính chuyển động theo thời gian và ẩn
+ * người đã có bản có xương.
+ */
 export function LiveActivityActors({
   scene = SOL_CENTER_SCENE,
   benchEnabled = false,
@@ -89,16 +96,20 @@ export function LiveActivityActors({
   const walkMode = useExploreStore(s => s.walkMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
   const invalidate = useThree(s => s.invalidate);
-  // Actors drawn as skinned characters are hidden here once their model has loaded.
+  // Các nhân vật được vẽ dạng skinned character sẽ được ẩn ở đây sau khi mô hình của chúng tải xong.
   const riggedActorIds = useRiggedActorIds();
   const { reducedMotion, shouldAnimate } = useActorMotion(benchEnabled);
 
   const effectiveLevelMode = walkMode ? 'stacked' : levelMode;
 
+  // Định nghĩa các nhân vật hoạt động từ cảnh.
   const actorDefs = useMemo(() => buildLiveActorDefinitions(scene), [scene]);
+  // Tổng số instance cần cấp.
   const totalInstances = useMemo(() => getTotalActorInstanceCount(actorDefs), [actorDefs]);
+  // Hình học đơn vị dùng chung cho mọi phần cơ thể.
   const unitGeometry = useMemo(() => createActorPartGeometry(), []);
 
+  // Vật liệu dùng chung cho mọi phần cơ thể.
   const sharedMaterial = useMemo(
     () =>
       new THREE.MeshStandardMaterial({
@@ -121,6 +132,7 @@ export function LiveActivityActors({
     colorsWrittenRef.current = false;
   }, [actorDefs, totalInstances]);
 
+  // Áp dụng chuyển động của mọi phần tại thời điểm timeSec.
   const applyTransforms = useCallback(
     (timeSec: number) => {
       const mesh = meshRef.current;
@@ -138,13 +150,13 @@ export function LiveActivityActors({
     [actorDefs, totalInstances, scene, effectiveLevelMode, focusLevel, riggedActorIds],
   );
 
-  // Apply initial / static pose immediately whenever definitions or level visibility changes
+  // Áp dụng tư thế ban đầu / tĩnh ngay lập tức khi định nghĩa nhân vật hoặc trạng thái hiển thị tầng thay đổi
   useLayoutEffect(() => {
     applyTransforms(STATIC_POSE_TIME_SEC);
     invalidate();
   }, [applyTransforms, reducedMotion, shouldAnimate, invalidate]);
 
-  // Smooth 60 FPS animation synchronized natively with R3F's render loop
+  // Hoạt ảnh mượt 60 FPS đồng bộ trực tiếp với vòng lặp render của R3F
   useFrame(({ clock }) => {
     if (!shouldAnimate || totalInstances === 0) return;
     applyTransforms(STATIC_POSE_TIME_SEC + clock.getElapsedTime());

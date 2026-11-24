@@ -10,15 +10,19 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 
+/** Nhóm các DTO cho màn quản lý sản phẩm của quản lý. */
 public final class ProductAdminDtos {
+    /** Constructor private: chỉ dùng làm nơi chứa các record. */
     private ProductAdminDtos() {}
 
+    /** Yêu cầu tạo/sửa danh mục: tên, thứ tự hiển thị và trạng thái. */
     public record CategoryUpsertRequest(
             @NotBlank @Size(min = 2, max = 80) String name,
             int sortOrder,
             boolean active
     ) {}
 
+    /** Thông tin danh mục cho quản lý kèm số sản phẩm. */
     public record CategoryAdminDto(
             Long id,
             String name,
@@ -28,6 +32,10 @@ public final class ProductAdminDtos {
             long productCount
     ) {}
 
+    /**
+     * Tóm tắt sản phẩm cho quản lý: danh mục, số biến thể, tổng tồn, sắp hết hàng, trạng thái, nổi bật, ảnh,
+     * giá thấp nhất và có phải hàng mới không.
+     */
     public record ProductAdminSummaryDto(
             Long id,
             String name,
@@ -42,6 +50,7 @@ public final class ProductAdminDtos {
             BigDecimal minPrice,
             boolean isNew
     ) {
+        /** Constructor rút gọn không có giá thấp nhất và cờ hàng mới. */
         public ProductAdminSummaryDto(
                 Long id,
                 String name,
@@ -58,6 +67,10 @@ public final class ProductAdminDtos {
         }
     }
 
+    /**
+     * Thông tin biến thể cho quản lý: SKU, nhãn, giá, số khẩu phần, giá mỗi khẩu phần, tồn kho, trạng thái và
+     * thứ tự.
+     */
     public record VariantAdminDto(
             Long id,
             String sku,
@@ -70,6 +83,10 @@ public final class ProductAdminDtos {
             int sortOrder
     ) {}
 
+    /**
+     * Chi tiết sản phẩm cho quản lý: thông tin mô tả, danh mục, dạng, mục tiêu, số đăng ký, trạng thái, ảnh,
+     * biến thể và thành phần dinh dưỡng.
+     */
     public record ProductAdminDto(
             Long id,
             String slug,
@@ -93,6 +110,10 @@ public final class ProductAdminDtos {
             List<NutrientDto> nutrients
     ) {}
 
+    /**
+     * Yêu cầu tạo/sửa biến thể: SKU (A-Z, 0-9, -), nhãn, giá 1.000–100.000.000, số khẩu phần, tồn ban đầu,
+     * trạng thái và thứ tự.
+     */
     public record VariantUpsertRequest(
             Long id,
             @NotBlank @Pattern(regexp = "^[A-Z0-9-]{3,40}$") String sku,
@@ -104,6 +125,7 @@ public final class ProductAdminDtos {
             int sortOrder
     ) {}
 
+    /** Yêu cầu tạo/sửa một dòng dinh dưỡng: tên, lượng, đơn vị, % nhu cầu, dòng con, có nổi bật không và thứ tự. */
     public record NutrientUpsertRequest(
             @NotBlank @Size(min = 1, max = 80) String name,
             @NotNull @DecimalMin("0") @DecimalMax("100000") BigDecimal amount,
@@ -114,6 +136,10 @@ public final class ProductAdminDtos {
             int sortOrder
     ) {}
 
+    /**
+     * Yêu cầu tạo/sửa sản phẩm: tên, danh mục, dạng, thương hiệu, mô tả, khẩu phần, hướng dẫn, cảnh báo, số
+     * đăng ký, mục tiêu, trạng thái, nổi bật, biến thể và dinh dưỡng.
+     */
     public record ProductUpsertRequest(
             @NotBlank @Size(min = 2, max = 160) String name,
             @NotNull Long categoryId,
@@ -132,23 +158,28 @@ public final class ProductAdminDtos {
             @Size(max = 30) List<@Valid NutrientUpsertRequest> nutrients
     ) {}
 
+    /** Yêu cầu bật/tắt hoạt động. */
     public record SetActiveRequest(boolean active) {}
 
+    /** Yêu cầu tải ảnh: data URL và mô tả ảnh. */
     public record ImageUploadRequest(
             @NotBlank String dataUrl,
             @NotBlank @Size(min = 1, max = 160) String altText
     ) {}
 
+    /** Yêu cầu sắp xếp lại ảnh: danh sách id ảnh theo thứ tự mới. */
     public record ImageOrderRequest(
             @NotEmpty List<Long> imageIds
     ) {}
 
+    /** Yêu cầu điều chỉnh tồn kho: số lượng tăng/giảm, lý do và ghi chú. */
     public record StockAdjustmentRequest(
             int delta,
             @NotBlank String reason,
             @Size(max = 200) String note
     ) {}
 
+    /** Số liệu tổng quan cho quản lý: đơn chờ xử lý, doanh thu 30 ngày và số biến thể sắp hết hàng. */
     public record ManagerOrderSummaryDto(
             long pendingFulfillment,
             BigDecimal revenue30d,

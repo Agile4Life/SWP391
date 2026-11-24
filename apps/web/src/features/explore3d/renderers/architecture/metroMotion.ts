@@ -1,10 +1,13 @@
-/** Metro shuttle timetable: cruise, brake into the station, dwell, accelerate away. */
+/** Lịch trình tàu metro con thoi: chạy đều, phanh vào ga, dừng đón trả khách rồi tăng tốc rời đi. */
 export const LOOP = 760;
 export const STATION_X = 4;
 export const DWELL_S = 7;
 export const BRAKE_M = 16;
 
-/** Position along the travel axis (-380..380). */
+/**
+ * Vị trí của tàu dọc trục di chuyển (-380..380) theo thời gian: chạy với vận tốc v, phanh vào ga, dừng chờ rồi
+ * tăng tốc đi tiếp trong một vòng lặp.
+ */
 export function metroPosition(time: number, v: number, stationS: number): number {
   const s0 = -LOOP / 2;
   const tA = (stationS - BRAKE_M - s0) / v;

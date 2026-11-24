@@ -14,7 +14,9 @@ import java.time.LocalDateTime;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho MemberInvoicePdf (member invoice pdf). */
 class MemberInvoicePdfTest {
+    /** Kiểm thử: tạo bản tải PDF từ hóa đơn đã lưu của chính hội viên. */
     @Test
     void generatesDownloadFromOwnedPersistedInvoice() throws Exception {
         InvoiceService invoiceService = mock(InvoiceService.class);
@@ -42,6 +44,7 @@ class MemberInvoicePdfTest {
         verify(invoiceService).getMemberInvoiceByPaymentId(12L, 7L);
     }
 
+    /** Kiểm thử: từ chối khi thiếu tổng tiền đã lưu. */
     @Test
     void refusesMissingPersistedTotal() {
         InvoiceService invoiceService = mock(InvoiceService.class);

@@ -16,16 +16,19 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: mockList }),
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: mockCreated }),
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: { ...mockCreated, name: 'Hot Yoga' } }),
       });
     vi.stubGlobal('fetch', mockFetch);
@@ -56,6 +59,7 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: [mockRoom] }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -66,6 +70,7 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
   });
 
   it('handles packages list, save, and status update', async () => {
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const mockPackage = {
       id: 10,
       name: 'Monthly Gold',
@@ -81,11 +86,13 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: [mockPackage] }),
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
+        // Giả lập phần thân JSON của phản hồi API.
         json: async () => ({ success: true, data: { ...mockPackage, status: 'inactive' } }),
       });
     vi.stubGlobal('fetch', mockFetch);
@@ -107,9 +114,11 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
 
   it('deletes disciplines, rooms and packages with DELETE and surfaces an in-use conflict', async () => {
     const ok = { ok: true, status: 200, json: async () => ({ success: true, data: null }) };
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const conflict = {
       ok: false,
       status: 409,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: false, code: 'ROOM_IN_USE', message: 'Phòng đang được dùng' }),
     };
     const mockFetch = vi.fn()

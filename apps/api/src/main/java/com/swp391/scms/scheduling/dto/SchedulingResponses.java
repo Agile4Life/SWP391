@@ -5,13 +5,17 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 /**
- * SCRUM-72: response payloads for class and session read models.
+ * Nhóm các DTO trả về cho nghiệp vụ lớp học và buổi học.
+ *
+ * SCRUM-72: các payload phản hồi cho mô hình đọc của lớp và buổi học.
  */
 public final class SchedulingResponses {
 
+    /** Constructor private: chỉ dùng làm nơi chứa các record. */
     private SchedulingResponses() {
     }
 
+    /** Thông tin lớp/khóa học: bộ môn, HLV, phòng, sức chứa, trình độ, mô tả, trạng thái, giá và lịch định kỳ. */
     public record GymClassDto(
             Long id,
             String name,
@@ -32,6 +36,7 @@ public final class SchedulingResponses {
             LocalTime startTime,
             LocalTime endTime
     ) {
+        /** Constructor rút gọn không có giá và lịch (giá mặc định 0). */
         public GymClassDto(
                 Long id,
                 String name,
@@ -50,6 +55,10 @@ public final class SchedulingResponses {
         }
     }
 
+    /**
+     * Thông tin một buổi học: lớp, bộ môn, HLV, phòng, ngày giờ, trạng thái, lý do hủy, sức chứa và số chỗ đã
+     * đặt.
+     */
     public record ClassSessionDto(
             Long id,
             Long classId,
@@ -70,6 +79,10 @@ public final class SchedulingResponses {
     ) {
     }
 
+    /**
+     * Thông tin một học viên trong lớp/buổi: liên hệ, mục tiêu, ghi chú sức khỏe, trình độ, người liên hệ khẩn
+     * cấp, thời điểm ghi danh và trạng thái.
+     */
     public record EnrolledStudentDto(
             Long id,
             Long memberId,
@@ -88,6 +101,7 @@ public final class SchedulingResponses {
     ) {
     }
 
+    /** Một lựa chọn HLV khi xếp lớp: id, họ tên, liên hệ, trạng thái và giới tính. */
     public record CoachOptionDto(
             Long id,
             String fullName,
@@ -96,6 +110,7 @@ public final class SchedulingResponses {
             String status,
             String gender
     ) {
+        /** Constructor rút gọn không có giới tính. */
         public CoachOptionDto(Long id, String fullName, String email, String phone, String status) {
             this(id, fullName, email, phone, status, null);
         }

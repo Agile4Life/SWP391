@@ -1,8 +1,11 @@
 import type { KeyboardEvent } from 'react';
 import { useI18n } from '../../../shared/i18n';
+import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
+import { getLevels } from '../scene/selectors';
 import type { LevelCode } from '../scene/schema';
 import { useExploreStore, type LevelMode } from '../state/exploreStore';
 
+/** Một lựa chọn tầng: mã (hoặc tất cả), nhãn ngắn và nhãn song ngữ. */
 interface LevelOption {
   code: LevelCode | 'ALL';
   shortLabel: string;
@@ -10,15 +13,19 @@ interface LevelOption {
   labelEn: string;
 }
 
-const LEVEL_OPTIONS: readonly LevelOption[] = [
+const levelOptions: readonly LevelOption[] = [
   { code: 'ALL', shortLabel: 'ALL', labelVi: 'Tất cả', labelEn: 'All' },
-  { code: 'RF', shortLabel: 'RF', labelVi: 'RF · Zen', labelEn: 'RF · Zen' },
-  { code: 'L2', shortLabel: 'L2', labelVi: 'L2 · VIP', labelEn: 'L2 · VIP' },
+  { code: 'RF', shortLabel: 'RF', labelVi: 'RF · Sân hiên', labelEn: 'RF · Terrace' },
+  { code: 'L2', shortLabel: 'L2', labelVi: 'L2 · PT', labelEn: 'L2 · PT' },
   { code: 'L1', shortLabel: 'L1', labelVi: 'L1 · Sảnh & Gym', labelEn: 'L1 · Main' },
-  { code: 'B1', shortLabel: 'B1', labelVi: 'B1 · Hồ bơi', labelEn: 'B1 · Pool' },
+  { code: 'B1', shortLabel: 'B1', labelVi: 'B1 · Thay đồ', labelEn: 'B1 · Changing' },
   { code: 'OUT', shortLabel: 'OUT', labelVi: 'OUT · Tennis', labelEn: 'OUT · Tennis' },
 ] as const;
 
+// Chỉ cho chọn tầng còn tồn tại trong scene; tránh chuyển camera tới sân đã bỏ.
+const LEVEL_OPTIONS = levelOptions.filter(option => option.code === 'ALL' || getLevels(SOL_CENTER_SCENE).some(level => level.code === option.code));
+
+/** Một lựa chọn chế độ xếp tầng: chế độ và nhãn song ngữ. */
 interface ModeOption {
   mode: LevelMode;
   labelVi: string;
@@ -31,6 +38,7 @@ const MODE_OPTIONS: readonly ModeOption[] = [
   { mode: 'solo', labelVi: 'Tầng đơn', labelEn: 'Solo' },
 ] as const;
 
+/** Bộ chuyển tầng và chế độ xếp tầng (gộp, tách, một tầng), điều khiển được bằng phím mũi tên. */
 export function LevelSwitcher() {
   const { lang, t } = useI18n();
   const focusLevel = useExploreStore(state => state.focusLevel);
@@ -38,6 +46,7 @@ export function LevelSwitcher() {
   const setFocusLevel = useExploreStore(state => state.setFocusLevel);
   const setLevelMode = useExploreStore(state => state.setLevelMode);
 
+  // Phím mũi tên chuyển sang tầng kế/trước và chọn nó.
   const handleLevelKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let nextIndex: number | null = null;
     if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {

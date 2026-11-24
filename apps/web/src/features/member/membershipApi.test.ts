@@ -33,6 +33,7 @@ describe('SCRUM-86 payment API', () => {
   it.each([400, 403, 409])('propagates HTTP %i and backend code', async (status) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false, status,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ code: 'PAYMENT_REJECTED', message: 'Yêu cầu bị từ chối' }),
     }));
     await expect(createPaymentRequest(subscription, 500000)).rejects.toMatchObject({

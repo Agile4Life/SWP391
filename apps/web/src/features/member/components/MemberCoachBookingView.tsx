@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { subscribeMembershipChanges } from '../membershipRealtime';
 import { Modal } from '../../../shared/ui/Modal';
-import { centerNowParts, formatCenterDate } from '../../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, parseCenterTime } from '../../../shared/lib/centerTime';
 import { addDays, parseISODate } from '../../schedule/timetable';
 import {
   getCoaches,
@@ -20,23 +20,15 @@ import {
   type CoachBookingDto,
   type CoachQuotaStatusDto,
 } from '../coachBookingApi';
-import {
-  createCoachReview,
-  getMyCoachReviews,
-  type CoachReviewDto,
-} from '../../coaching/coachReviewApi';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
-import { notify } from '../../../shared/lib/portalNotices';
 import { ApiError } from '../../../shared/api/client';
 import {
   formatCoachName,
   isSessionCompleted,
-  COACH_FILTER_DISCIPLINES,
-  matchesCoachDiscipline,
-  type CoachDisciplineFilter,
 } from '../coachBookingUtils';
 
+/** Chuyển lỗi đặt lịch PT thành thông báo dễ hiểu (gói hết hạn, hết hạn mức...). */
 function coachBookingErrorMessage(err: unknown): string | SourceMessage {
   if (err instanceof ApiError) {
     if (err.code === 'MEMBERSHIP_INACTIVE_OR_EXPIRED') {
@@ -53,10 +45,12 @@ function coachBookingErrorMessage(err: unknown): string | SourceMessage {
   return memberError(err, 'Không thể đặt lịch. Vui lòng thử lại.');
 }
 
+/** Ngày hôm nay theo giờ trung tâm. */
 function localToday(): string {
   return centerNowParts().date;
 }
 
+/** Danh sách các ngày sắp tới (mặc định 14 ngày) kèm tên thứ, ngày, tháng và nhãn. */
 function nextDays(count = 14): Array<{
   iso: string;
   dayName: string;
@@ -93,6 +87,10 @@ function nextDays(count = 14): Array<{
   return days;
 }
 
+/**
+ * Giao diện đặt lịch PT 1:1 của hội viên: chọn HLV và ngày, xem khung giờ, đặt lịch (miễn phí theo hạn mức hoặc
+ * trả tiền), hủy lịch và xem các buổi đã đặt.
+ */
 export function MemberCoachBookingView({
   onBookingSuccess,
 }: {
@@ -101,18 +99,18 @@ export function MemberCoachBookingView({
   useLanguage();
   const navigate = useNavigate();
   const [coaches, setCoaches] = useState<CoachPublicDto[]>([]);
-  const [coachDiscipline, setCoachDiscipline] = useState<CoachDisciplineFilter>('ALL');
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [selectedDate, setSelectedDate] = useState<string>(localToday());
   const [slots, setSlots] = useState<CoachAvailableSlotDto[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<CoachAvailableSlotDto | null>(null);
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
+  const [bookingDateFilter, setBookingDateFilter] = useState<string>('');
   const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined | SourceMessage>();
   // Lỗi gửi của hộp thoại hiện ngay trong hộp thoại (không dùng banner đầu trang nằm sau lớp nền mờ).
   const [bookingError, setBookingError] = useState<string | SourceMessage>('');
   const [cancelError, setCancelError] = useState<string | SourceMessage>('');
-  // quotaStatus stays null while loading or when the request fails; only a loaded answer without a package means none.
+  // quotaStatus giữ null khi đang tải hoặc khi yêu cầu lỗi; chỉ kết quả đã tải xong mà không có gói mới nghĩa là chưa có gói.
   const hasNoPackage = quotaStatus !== null && !quotaStatus.packageName;
   const isTrial = Boolean(
     quotaStatus &&
@@ -125,7 +123,6 @@ export function MemberCoachBookingView({
   const displayedPackageName = isTrial
     ? 'Gói Trải Nghiệm 3 Ngày'
     : (quotaStatus?.packageName || 'Gold / Platinum');
-  const [myReviews, setMyReviews] = useState<CoachReviewDto[]>([]);
 
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -133,17 +130,18 @@ export function MemberCoachBookingView({
 
   const [error, setError] = useState<string | SourceMessage>('');
 
-  // Booking Modal State
+  // Trạng thái hộp thoại đặt lịch
   const [modalSlot, setModalSlot] = useState<CoachAvailableSlotDto | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'package_quota' | 'hourly_pay'>('package_quota');
   const [notes, setNotes] = useState('');
   const slotDate = selectedDate;
 
-  // Payment Checkout Modal State
+  // Trạng thái hộp thoại thanh toán
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
   const watchedPendingBookingsRef = useRef<Set<number>>(new Set());
   const announcedPaidBookingsRef = useRef<Set<number>>(new Set());
 
+  // Tải lại các buổi đã đặt và hạn mức PT.
   const refreshBookingsAndQuota = useCallback(async () => {
     try {
       const [bookingsList, quota] = await Promise.all([
@@ -153,41 +151,35 @@ export function MemberCoachBookingView({
       setMyBookings(bookingsList);
       if (quota) setQuotaStatus(quota);
     } catch {
-      // Silent background refresh
+      // Làm mới ngầm khi có lỗi
     }
   }, []);
 
-  // Review Modal State
-  const [reviewTargetBooking, setReviewTargetBooking] = useState<CoachBookingDto | null>(null);
-  const [reviewRating, setReviewRating] = useState<number>(5);
-  const [reviewComment, setReviewComment] = useState<string>('');
-  const [reviewAnonymous, setReviewAnonymous] = useState<boolean>(false);
-  const [reviewSubmitting, setReviewSubmitting] = useState<boolean>(false);
-
-  // Cancel Modal State
+  // Trạng thái hộp thoại hủy lịch
   const [cancelTarget, setCancelTarget] = useState<CoachBookingDto | null>(null);
+  // Thời điểm mở hộp thoại hủy, dùng để báo trước có được hoàn lượt (quy tắc 2 giờ) hay không.
+  const [cancelOpenedAt, setCancelOpenedAt] = useState(0);
   const [cancelling, setCancelling] = useState(false);
 
   const daysList = nextDays(10);
 
-  // Load coaches, member bookings and reviews
+  // Tải HLV, lịch PT và quota thật; không gọi API đánh giá đã bỏ khỏi Member.
   useEffect(() => {
     let active = true;
+    // Tải HLV, buổi đã đặt và hạn mức khi vào màn hình.
     async function init() {
       setLoadingCoaches(true);
       setError('');
       try {
-        const [coachList, bookingsList, quota, reviews] = await Promise.all([
+        const [coachList, bookingsList, quota] = await Promise.all([
           getCoaches(),
           getMyCoachBookings(),
           getMemberQuotaStatus().catch(() => null),
-          getMyCoachReviews().catch(() => []),
         ]);
         if (!active) return;
         setCoaches(coachList);
         setMyBookings(bookingsList);
         if (quota) setQuotaStatus(quota);
-        setMyReviews(reviews);
         setSelectedCoachId((current) => current ?? coachList[0]?.id ?? null);
       } catch (err: unknown) {
         if (active) setError((memberError(err, 'Không thể tải danh sách huấn luyện viên.')));
@@ -199,7 +191,7 @@ export function MemberCoachBookingView({
     return () => { active = false; };
   }, []);
 
-  // Track pending paid 1:1 bookings and announce real-time payment confirmation
+  // Theo dõi các buổi 1:1 trả phí đang chờ thanh toán và thông báo theo thời gian thực khi thanh toán được xác nhận
   useEffect(() => {
     for (const b of myBookings) {
       if (b.status !== 'cancelled' && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending') {
@@ -234,15 +226,17 @@ export function MemberCoachBookingView({
     (b) => b.status !== 'cancelled' && b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending',
   );
 
-  // Real-time invalidation & visibility/focus synchronization for 1:1 booking payments
+  // Làm mới theo thời gian thực và đồng bộ khi hiển thị/focus cho thanh toán lịch 1:1
   useEffect(() => {
     let fallbackTimer: number | null = null;
+    // Dừng vòng hỏi định kỳ.
     const stopFallback = () => {
       if (fallbackTimer !== null) {
         window.clearInterval(fallbackTimer);
         fallbackTimer = null;
       }
     };
+    // Hỏi định kỳ khi có buổi đang chờ thanh toán.
     const startFallback = () => {
       if (!hasPendingPaymentBooking || fallbackTimer !== null) return;
       fallbackTimer = window.setInterval(() => {
@@ -259,11 +253,13 @@ export function MemberCoachBookingView({
       },
       startFallback,
     );
+    // Làm mới khi tab đang hiển thị.
     const refreshIfVisible = () => {
       if (document.visibilityState === 'visible') {
         void refreshBookingsAndQuota();
       }
     };
+    // Làm mới ngay (focus, có mạng hoặc ví vừa cập nhật).
     const refreshNow = () => {
       void refreshBookingsAndQuota();
     };
@@ -281,10 +277,11 @@ export function MemberCoachBookingView({
     };
   }, [hasPendingPaymentBooking, refreshBookingsAndQuota]);
 
-  // Load slots when coach or date changes
+  // Tải danh sách khung giờ khi đổi HLV hoặc đổi ngày
   useEffect(() => {
     if (!selectedCoachId || !slotDate) return;
     let active = true;
+    // Tải các khung giờ của HLV trong ngày đang chọn.
     async function loadSlots() {
       setLoadingSlots(true);
       setSlots([]);
@@ -303,25 +300,13 @@ export function MemberCoachBookingView({
   }, [selectedCoachId, slotDate]);
 
   const selectedCoach = coaches.find((c) => c.id === selectedCoachId);
-  const filteredCoaches = coaches.filter((c) => matchesCoachDiscipline(c, coachDiscipline));
 
-  function handleFilterCoachDiscipline(discipline: CoachDisciplineFilter) {
-    setCoachDiscipline(discipline);
-    const nextFiltered = coaches.filter((c) => matchesCoachDiscipline(c, discipline));
-    if (nextFiltered.length > 0) {
-      if (!nextFiltered.some((c) => c.id === selectedCoachId)) {
-        setSelectedCoachId(nextFiltered[0].id);
-        setError('');
-      }
-    } else {
-      setSelectedCoachId(null);
-    }
-  }
 
   const hasRemainingQuota = (quotaStatus?.remainingQuota ?? 0) > 0;
 
   useEffect(() => { setCancelError(''); }, [cancelTarget]);
 
+  // Mở hộp xác nhận đặt lịch cho một khung giờ.
   function handleOpenBookingModal(slot: CoachAvailableSlotDto) {
     setModalSlot(slot);
     setError('');
@@ -334,6 +319,7 @@ export function MemberCoachBookingView({
     }
   }
 
+  // Xác nhận đặt lịch PT và xử lý lỗi hiển thị theo mã lỗi.
   async function handleConfirmBooking() {
     if (!selectedCoach || !modalSlot) return;
     setSubmitting(true);
@@ -390,33 +376,7 @@ export function MemberCoachBookingView({
     }
   }
 
-  async function handleConfirmReview() {
-    if (!reviewTargetBooking) return;
-    setReviewSubmitting(true);
-    setError('');
-    try {
-      await createCoachReview({
-        coachId: reviewTargetBooking.coachId,
-        bookingId: reviewTargetBooking.id,
-        rating: reviewRating,
-        comment: reviewComment.trim() || undefined,
-        isAnonymous: reviewAnonymous,
-      });
-
-      const updatedReviews = await getMyCoachReviews().catch(() => []);
-      setMyReviews(updatedReviews);
-
-      memberNotify(memberMessage(`Cảm ơn bạn! Đã gửi đánh giá ${reviewRating} sao cho HLV ${formatCoachName(reviewTargetBooking.coachName)} thành công.`, `Thank you! Your ${reviewRating}-star review for coach ${formatCoachName(reviewTargetBooking.coachName)} was submitted.`), 'success');
-      setReviewTargetBooking(null);
-      setReviewComment('');
-    } catch (err: unknown) {
-      const errMsg = memberError(err, 'Không thể gửi đánh giá.');
-      notify(memberRenderMessage(errMsg), 'error', typeof errMsg === 'string' ? {} : { translation: errMsg });
-    } finally {
-      setReviewSubmitting(false);
-    }
-  }
-
+  // Xác nhận hủy buổi PT (buổi đã trả tiền thì được hoàn về Ví SÖL).
   async function handleConfirmCancel() {
     if (!cancelTarget) return;
     setCancelling(true);
@@ -496,7 +456,7 @@ export function MemberCoachBookingView({
         </div>
       )}
 
-      {/* Quota Info Banner */}
+      {/* Banner thông tin hạn mức */}
       <div
         className="portal-card"
         style={{
@@ -582,31 +542,11 @@ export function MemberCoachBookingView({
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
             {memberText("Chọn Huấn luyện viên cá nhân (PT 1:1)")}</h3>
           <span className="row-card__meta" style={{ fontSize: 13 }}>
-            {memberText("Phí tập tiêu chuẩn: ")}<strong>{formatPrice(200000)}{memberText(" / giờ")}</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Miễn phí với gói Gold/Platinum")})
+            {memberText("Phí tập tiêu chuẩn: ")}<strong>{formatPrice(200000)}{memberText(" / giờ")}</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Gold giảm 10% / Platinum giảm 20%", "Gold 10% off / Platinum 20% off")})
           </span>
         </div>
 
-        {/* Lọc HLV theo bộ môn: Tất cả bộ môn, Gym, Boxing, Yoga */}
-        <div
-          className="filter-chips tt-chips"
-          role="group"
-          aria-label={memberText("Lọc huấn luyện viên theo bộ môn")}
-          style={{ marginBottom: 14 }}
-        >
-          {COACH_FILTER_DISCIPLINES.map((value) => (
-            <button
-              key={value}
-              type="button"
-              className={`filter-chip ${coachDiscipline === value ? 'is-active' : ''}`}
-              aria-pressed={coachDiscipline === value}
-              onClick={() => handleFilterCoachDiscipline(value)}
-            >
-              {value === 'ALL' ? memberText("Tất cả bộ môn") : value}
-            </button>
-          ))}
-        </div>
-
-        {filteredCoaches.length === 0 ? (
+        {coaches.length === 0 ? (
           <div
             className="portal-card"
             style={{
@@ -619,14 +559,8 @@ export function MemberCoachBookingView({
             }}
           >
             <p style={{ margin: '0 0 10px', fontSize: 14 }}>
-              {memberText("Chưa có huấn luyện viên nào cho bộ môn ")}<strong>{coachDiscipline}</strong>.
+              {memberText("Chưa có huấn luyện viên nào.")}
             </p>
-            <button
-              type="button"
-              className="btn-secondary btn-sm"
-              onClick={() => handleFilterCoachDiscipline('ALL')}
-            >
-              {memberText("Xem tất cả huấn luyện viên")}</button>
           </div>
         ) : (
           <div
@@ -636,7 +570,7 @@ export function MemberCoachBookingView({
               gap: 14,
             }}
           >
-            {filteredCoaches.map((c) => {
+            {coaches.map((c) => {
               const isSelected = c.id === selectedCoachId;
               return (
                 <button
@@ -713,6 +647,7 @@ export function MemberCoachBookingView({
           return h >= 18;
         });
 
+        // Vẽ một ô khung giờ (đang chọn, trống hoặc bận kèm lý do).
         const renderSlotPill = (slot: CoachAvailableSlotDto) => {
           const startFmt = slot.startTime.slice(0, 5);
           const endFmt = slot.endTime.slice(0, 5);
@@ -813,7 +748,7 @@ export function MemberCoachBookingView({
                 {memberText("Chọn ngày và khung giờ")}</h3>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <span className="row-card__meta" style={{ fontSize: 13, color: 'var(--portal-star)' }}>
-                  {memberText("Quy tắc: Đặt trước ")}<strong>{memberText("2 tiếng")}</strong>
+                  {memberText("Quy tắc: Đặt và hủy trước ", "Rule: Book and cancel at least ")}<strong>{memberText("2 tiếng")}</strong>
                 </span>
                 {selectedCoach && (
                   <span className="row-card__meta" style={{ fontSize: 13 }}>
@@ -823,7 +758,7 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            {/* Calendar Day Cards Row */}
+            {/* Hàng thẻ chọn ngày trên lịch */}
             <div>
               <div
                 style={{
@@ -925,7 +860,7 @@ export function MemberCoachBookingView({
             <p className="row-card__meta" style={{ margin: 0 }}>
               {memberText("Khung giờ cho ngày ")}{slotDate.split('-').reverse().join('/')} {memberText(" · HLV nghỉ 1 slot sau 3 slot 1:1 liên tiếp.")}</p>
 
-            {/* Time Slots Grouped by Time of Day */}
+            {/* Các khung giờ được nhóm theo buổi trong ngày */}
             {loadingSlots ? (
               <div style={{ padding: '24px 0', textAlign: 'center' }}>
                 <p className="row-card__meta" style={{ margin: 0 }}>
@@ -968,7 +903,7 @@ export function MemberCoachBookingView({
                   </div>
                 )}
 
-                {/* Selected Slot Summary Action */}
+                {/* Tóm tắt và nút hành động cho khung giờ đã chọn */}
                 {selectedSlot && (
                   <div
                     style={{
@@ -1027,27 +962,78 @@ export function MemberCoachBookingView({
 
       {/* Danh sách Lịch 1:1 đã đặt của Hội viên */}
       <section data-i18n-managed style={{ marginTop: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
-            {memberText("Lịch tập HLV 1:1 của tôi (")}{myBookings.filter((b) => b.status === 'confirmed' && !isSessionCompleted(b)).length} {memberText(" buổi sắp tới")}{myBookings.some((b) => b.status === 'confirmed' && isSessionCompleted(b))
-              ? memberText(` • ${myBookings.filter((b) => b.status === 'confirmed' && isSessionCompleted(b)).length} buổi đã kết thúc`, ` • ${myBookings.filter((b) => b.status === 'confirmed' && isSessionCompleted(b)).length} completed sessions`)
-              : ''}
-            )
+            {memberText("Lịch tập HLV 1:1 của tôi", "My 1:1 coaching schedule")}
           </h3>
+          {myBookings.length > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <input
+                type="date"
+                aria-label={memberText('Tìm lịch theo ngày', 'Filter bookings by date')}
+                value={bookingDateFilter}
+                onChange={(e) => setBookingDateFilter(e.target.value)}
+                style={{
+                  fontSize: 13,
+                  padding: '6px 10px',
+                  borderRadius: 8,
+                  border: '1px solid var(--portal-border)',
+                  background: 'var(--portal-surface)',
+                  color: 'var(--portal-paper)',
+                }}
+              />
+              {bookingDateFilter && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: 13, padding: '6px 12px' }}
+                  onClick={() => setBookingDateFilter('')}
+                >
+                  {memberText('Tất cả ngày', 'All days')}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
-        {myBookings.length === 0 ? (
-          <div className="portal-card" style={{ padding: 24, textAlign: 'center' }}>
-            <p className="row-card__meta" style={{ margin: 0 }}>
-              {memberText("Chưa có lịch hẹn 1:1.")}</p>
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: 10 }}>
-            {myBookings.map((b) => {
+        {(() => {
+          const visibleBookings = [...myBookings]
+            .filter((b) => !bookingDateFilter || b.bookingDate === bookingDateFilter)
+            .sort((a, b) => `${a.bookingDate}T${a.startTime}`.localeCompare(`${b.bookingDate}T${b.startTime}`));
+
+          if (myBookings.length === 0) {
+            return (
+              <div className="portal-card" style={{ padding: 24, textAlign: 'center' }}>
+                <p className="row-card__meta" style={{ margin: 0 }}>
+                  {memberText("Chưa có lịch hẹn 1:1.")}</p>
+              </div>
+            );
+          }
+
+          if (visibleBookings.length === 0) {
+            return (
+              <div className="portal-card" style={{ padding: 24, textAlign: 'center', display: 'grid', gap: 10, justifyItems: 'center' }}>
+                <p className="row-card__meta" style={{ margin: 0 }}>
+                  {memberText(`Không có lịch hẹn 1:1 vào ngày ${formatCenterDate(bookingDateFilter)}.`, `No 1:1 bookings on ${formatCenterDate(bookingDateFilter)}.`)}
+                </p>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ fontSize: 13, padding: '6px 12px' }}
+                  onClick={() => setBookingDateFilter('')}
+                >
+                  {memberText('Xem tất cả ngày', 'Show all days')}
+                </button>
+              </div>
+            );
+          }
+
+          return (
+            <div style={{ display: 'grid', gap: 10 }}>
+              {visibleBookings.map((b) => {
               const isCancelled = b.status === 'cancelled';
               const hasEnded = isSessionCompleted(b);
               const isConfirmed = !isCancelled;
-              const existingReview = myReviews.find((r) => r.bookingId === b.id);
               const coachDisplayName = formatCoachName(b.coachName);
 
               return (
@@ -1125,10 +1111,6 @@ export function MemberCoachBookingView({
                           <span className="badge badge-success" style={{ fontSize: 12 }}>
                             {memberText("Đã thanh toán", "Paid")}</span>
                         )}
-                        {existingReview && (
-                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--portal-star)' }}>
-                            {memberText("Đã đánh giá (")}{existingReview.rating} {memberText(" sao)", " stars)")}</span>
-                        )}
                       </div>
                       <p className="row-card__meta" style={{ margin: '3px 0 0' }}>
                         {memberText("Ngày ")}<strong>{formatCenterDate(b.bookingDate)}</strong> • <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? memberText("Quyền lợi gói tập") : memberText(`Trả phí: ${formatPrice(b.hourlyRate)}`, `Paid session: ${formatPrice(b.hourlyRate)}`)}
@@ -1143,43 +1125,7 @@ export function MemberCoachBookingView({
 
                   {isConfirmed && (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-                      {/* Đánh giá HLV sau khi kết thúc buổi */}
-                      {hasEnded ? (
-                        !existingReview && !b.attendedAt ? (
-                          <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
-                            {memberText("Không có mặt · không thể đánh giá", "Not marked present · cannot review")}</span>
-                        ) : !existingReview ? (
-                          <button
-                            type="button"
-                            className="btn-primary btn-sm"
-                            onClick={() => {
-                              setReviewTargetBooking(b);
-                              setReviewRating(5);
-                              setReviewComment('');
-                              setReviewAnonymous(false);
-                            }}
-                          >
-                            {memberText("Đánh giá HLV")}</button>
-                        ) : (
-                          <span style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
-                            {memberText("Đã gửi review")}</span>
-                        )
-                      ) : (
-                        <span
-                          className="badge badge-neutral"
-                          style={{
-                            fontSize: 12,
-                            color: 'var(--portal-muted)',
-                            padding: '4px 8px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                          }}
-                          title={memberText("Hệ thống sẽ mở đánh giá HLV sau khi buổi học kết thúc")}
-                        >
-                          {memberText("Đánh giá sau khi kết thúc buổi")}</span>
-                      )}
-
+                      {/* Giữ thanh toán và hủy lịch PT độc lập với chức năng đánh giá đã bỏ. */}
                       {b.paymentMethod !== 'package_quota' && b.paymentStatus === 'pending' && (
                         <VnpayPayButton
                           target={{ coachBookingId: b.id }}
@@ -1205,7 +1151,7 @@ export function MemberCoachBookingView({
                           type="button"
                           className="btn-secondary btn-sm"
                           style={{ color: 'var(--portal-danger)', borderColor: 'var(--portal-danger)' }}
-                          onClick={() => setCancelTarget(b)}
+                          onClick={() => { setCancelTarget(b); setCancelOpenedAt(Date.now()); }}
                         >
                           {memberText("Hủy lịch hẹn")}</button>
                       )}
@@ -1214,111 +1160,10 @@ export function MemberCoachBookingView({
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+          );
+        })()}
       </section>
-
-      {/* Modal Đánh giá Huấn luyện viên */}
-      {reviewTargetBooking && (
-        <Modal
-          title={memberText(`Đánh giá Huấn luyện viên: ${formatCoachName(reviewTargetBooking.coachName)}`, `Review coach: ${formatCoachName(reviewTargetBooking.coachName)}`)}
-          onClose={() => setReviewTargetBooking(null)}
-          busy={reviewSubmitting}
-        >
-          <div style={{ display: 'grid', gap: 16 }}>
-            <div
-              style={{
-                padding: 12,
-                borderRadius: 10,
-                background: 'var(--portal-raised)',
-                color: 'var(--portal-paper)',
-                fontSize: 13,
-                border: '1px solid var(--portal-border)',
-              }}
-            >
-              {memberText("Buổi tập 1:1 đã kết thúc ngày ")}<strong>{formatCenterDate(reviewTargetBooking.bookingDate)}</strong> ({reviewTargetBooking.startTime.slice(0, 5)} - {reviewTargetBooking.endTime.slice(0, 5)})
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 8, color: 'var(--portal-paper)' }}>
-                {memberText("Mức độ hài lòng của bạn:")}</label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button
-                    key={star}
-                    type="button"
-                    onClick={() => setReviewRating(star)}
-                    style={{
-                      border: '1px solid',
-                      borderColor: star <= reviewRating ? 'var(--portal-star)' : 'var(--portal-border)',
-                      background: star <= reviewRating ? 'color-mix(in srgb, var(--portal-star) 15%, transparent)' : 'transparent',
-                      borderRadius: 8,
-                      padding: '8px 12px',
-                      cursor: 'pointer',
-                      fontSize: 18,
-                    }}
-                  >
-                    {star <= reviewRating ? '⭐' : '☆'}
-                  </button>
-                ))}
-                <span style={{ alignSelf: 'center', fontWeight: 700, fontSize: 14, color: 'var(--portal-star)', marginLeft: 8 }}>
-                  {reviewRating === 5
-                    ? memberText("Xuất sắc (5 sao)")
-                    : reviewRating === 4
-                      ? memberText("Rất tốt (4 sao)")
-                      : reviewRating === 3
-                        ? memberText("Bình thường (3 sao)")
-                        : reviewRating === 2
-                          ? memberText("Chưa hài lòng (2 sao)")
-                          : memberText("Rất thất vọng (1 sao)")}
-                </span>
-              </div>
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 700, marginBottom: 6, color: 'var(--portal-paper)' }}>
-                {memberText("Nhận xét chi tiết (Gửi tới Quản lý và Huấn luyện viên):")}</label>
-              <textarea
-                rows={4}
-                className="portal-input"
-                style={{ width: '100%', resize: 'vertical', color: 'var(--portal-paper)' }}
-                placeholder={memberText("Nhận xét về HLV...")}
-                value={reviewComment}
-                onChange={(e) => setReviewComment(e.target.value)}
-              />
-            </div>
-
-            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: 13, color: 'var(--portal-paper)' }}>
-              <input
-                type="checkbox"
-                checked={reviewAnonymous}
-                onChange={(e) => setReviewAnonymous(e.target.checked)}
-              />
-              <span>{memberText("Đánh giá ẩn danh")}</span>
-            </label>
-
-            {/* Review modal is for already completed sessions; no active package alert needed here */}
-            <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={reviewSubmitting}
-                onClick={() => setReviewTargetBooking(null)}
-              >
-                {memberText("Hủy", "Cancel")}
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={reviewSubmitting}
-                onClick={() => void handleConfirmReview()}
-              >
-                {reviewSubmitting ? memberText("Đang gửi…", "Sending…") : memberText("Gửi đánh giá", "Submit review")}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
 
       {/* Modal Xác nhận Đặt lịch */}
       {modalSlot && selectedCoach && (
@@ -1358,7 +1203,7 @@ export function MemberCoachBookingView({
           busy={submitting}
         >
           <div style={{ display: 'grid', gap: 18 }}>
-            {/* Coach & Session Info Card */}
+            {/* Thẻ thông tin HLV và buổi tập */}
             <div
               style={{
                 padding: '16px 20px',
@@ -1372,7 +1217,7 @@ export function MemberCoachBookingView({
                 flexWrap: 'wrap',
               }}
             >
-              {/* Coach */}
+              {/* Huấn luyện viên */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 200, flex: '1 1 auto' }}>
                 <div style={{ position: 'relative', width: 62, height: 62, flexShrink: 0 }}>
                   <img
@@ -1420,7 +1265,7 @@ export function MemberCoachBookingView({
                 </div>
               </div>
 
-              {/* Time */}
+              {/* Thời gian */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 140, flex: '1 1 auto' }}>
                 <span style={{ color: 'var(--portal-muted)', marginTop: 2, flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1442,7 +1287,7 @@ export function MemberCoachBookingView({
                 </div>
               </div>
 
-              {/* Cost */}
+              {/* Chi phí */}
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, minWidth: 140, flex: '1 1 auto' }}>
                 <span style={{ color: 'var(--portal-muted)', marginTop: 2, flexShrink: 0 }}>
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1461,7 +1306,7 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            {/* Payment Method Section */}
+            {/* Khu vực chọn phương thức thanh toán */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 12 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1473,7 +1318,7 @@ export function MemberCoachBookingView({
               </div>
 
               <div role="radiogroup" aria-label={memberText("Phương thức thanh toán", "Payment method")} style={{ display: 'grid', gap: 10 }}>
-                {/* Option 1: Gói tập */}
+                {/* Lựa chọn 1: Gói tập */}
                 <div
                   role="radio"
                   aria-checked={paymentMethod === 'package_quota'}
@@ -1573,7 +1418,7 @@ export function MemberCoachBookingView({
                   </div>
                 </div>
 
-                {/* Option 2: Trả phí theo giờ */}
+                {/* Lựa chọn 2: Trả phí theo giờ */}
                 <div
                   role="radio"
                   aria-checked={paymentMethod === 'hourly_pay'}
@@ -1654,7 +1499,7 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            {/* Notes Section */}
+            {/* Khu vực ghi chú */}
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 8 }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--portal-salmon)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1721,7 +1566,7 @@ export function MemberCoachBookingView({
               </div>
             )}
 
-            {/* Footer Action Buttons */}
+            {/* Các nút hành động cuối hộp thoại */}
             <div className="form-actions" style={{ justifyContent: 'flex-end', marginTop: 10 }}>
               <button
                 type="button"
@@ -1839,6 +1684,23 @@ export function MemberCoachBookingView({
               {memberText("Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV ")}<strong>{formatCoachName(cancelTarget.coachName)}</strong>{memberText(" vào")}{' '}
               <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)}{memberText(" ngày ")}{formatCenterDate(cancelTarget.bookingDate)}</strong>?
             </p>
+            {cancelTarget.paymentMethod === 'package_quota' && (() => {
+              const sessionStart = parseCenterTime(`${cancelTarget.bookingDate}T${cancelTarget.startTime.slice(0, 5)}:00`);
+              const isWithinTwoHours = sessionStart !== null && sessionStart.getTime() - cancelOpenedAt < 2 * 60 * 60 * 1000;
+              return (
+                <p style={{ margin: 0, fontSize: '0.88rem', color: isWithinTwoHours ? 'var(--portal-danger)' : 'var(--portal-text-muted)' }}>
+                  {isWithinTwoHours
+                    ? memberText(
+                        "Lưu ý: Hủy trong vòng 2 giờ trước khi buổi tập bắt đầu sẽ không được hoàn lại lượt đăng ký HLV 1:1.",
+                        "Note: Cancelling within 2 hours before the session starts will not refund your 1:1 PT booking slot.",
+                      )
+                    : memberText(
+                        "Hủy trước ít nhất 2 giờ nên lượt đăng ký HLV 1:1 sẽ được hoàn lại vào gói.",
+                        "Cancelling at least 2 hours ahead will refund your 1:1 PT booking slot.",
+                      )}
+                </p>
+              );
+            })()}
             {cancelError && <p className="form-error" role="alert">{memberRenderMessage(cancelError)}</p>}
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
               <button

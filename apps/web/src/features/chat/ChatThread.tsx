@@ -7,9 +7,14 @@ import { ChatComposer } from './ChatComposer';
 import { useI18n } from '../../shared/i18n';
 import type { useChatConversation } from './useChatConversation';
 
+/** Kiểu trạng thái của hook useChatConversation. */
 type ChatState = ReturnType<typeof useChatConversation>;
 
 
+/**
+ * Khung một hội thoại trực tiếp: danh sách tin nhắn, tải tin cũ hơn, tự đánh dấu đã đọc, thích tin nhắn và ô
+ * soạn tin.
+ */
 export function ChatThread({ conversation, chat, onBack, active = true, canMarkRead = active, onRead }: {
   conversation: ChatConversation; chat: ChatState; onBack: () => void; active?: boolean; canMarkRead?: boolean; onRead?: (conversationId: number) => void;
 }) {
@@ -45,6 +50,7 @@ export function ChatThread({ conversation, chat, onBack, active = true, canMarkR
 
   const unavailable = !conversation.peer.available;
 
+  // Bật/tắt dấu thích của một tin nhắn (chỉ lưu trên giao diện).
   function toggleLike(id: number) {
     setLikedIds(prev => {
       const next = new Set(prev);

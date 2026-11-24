@@ -25,7 +25,9 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.resetAllMocks(); vi.unstubAllGlobals(); });
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const button = (text: string) => [...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))!;
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<ChatPage />));
 
 it('keeps a skeleton in each pending chat region and renders responses immediately', async () => {
@@ -79,7 +81,7 @@ it('coach and receptionist can start a chat with a member from the directory', a
     await render();
     expect(button('Cuộc trò chuyện mới')).toBeDefined();
     await act(async () => button('Cuộc trò chuyện mới').click());
-    // Staff look for a member, not for another receptionist/coach.
+    // Nhân sự tìm hội viên, không tìm lễ tân hoặc HLV khác.
     expect(host.textContent).toContain('Tìm hội viên');
     expect(host.textContent).not.toContain('Tìm lễ tân hoặc huấn luyện viên');
     await act(async () => host.querySelector<HTMLButtonElement>('button[data-contact-id="10"]')!.click());
@@ -188,7 +190,7 @@ it('tells a member without any coach class that only the front desk can be messa
   await act(async () => button('Cuộc trò chuyện mới').click());
   const notice = host.querySelector('[data-testid="chat-no-coach"]');
   expect(notice?.textContent).toContain('Chưa có huấn luyện viên để nhắn tin');
-  expect(notice?.querySelector('a')?.getAttribute('href')).toBe('/member/classes');
+  expect(notice?.querySelector('a')?.getAttribute('href')).toBe('/member/classes?tab=pt');
   expect(host.querySelector('[data-contact-id="3"]')).not.toBeNull();
 });
 
@@ -248,6 +250,7 @@ it('offers SÖL AI to members and receptionists but not to coaches, who use AI o
 
 it('opens Support & Tickets when a notification links to ?tab=support while Messages is already open', async () => {
   let go!: (to: string) => void;
+  // Component phụ chỉ phục vụ kiểm thử.
   function Nav() { go = useNavigate(); return null; }
   await act(async () => root.render(<MemoryRouter initialEntries={['/messages']}><Nav /><ChatPage /></MemoryRouter>));
   await vi.waitFor(() => expect(host.querySelector('.direct-chat__person--support')).not.toBeNull());

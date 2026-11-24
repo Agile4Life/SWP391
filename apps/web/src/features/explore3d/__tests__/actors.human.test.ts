@@ -15,7 +15,6 @@ import {
 } from '../renderers/actors/humanRetarget';
 import {
   buildLiveActorDefinitions,
-  evaluateActorPartsAtTime,
   solveHumanPose,
   type ActorActivityKind,
   type LiveActorDefinition,
@@ -37,16 +36,18 @@ import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 
 const defs = buildLiveActorDefinitions(SOL_CENTER_SCENE);
 
+// Đọc phần JSON của một file GLB.
 function readGlbJson(url: string): { animations?: { name: string }[]; nodes?: { name?: string }[] } {
   const data = readFileSync(resolve(process.cwd(), 'public', url.replace(/^\//, '')));
   const jsonLength = data.readUInt32LE(12);
   return JSON.parse(data.subarray(20, 20 + jsonLength).toString('utf8'));
 }
 
+// Tải một mô hình GLB.
 async function load(url: string): Promise<THREE.Object3D> {
   const data = readFileSync(resolve(process.cwd(), 'public', url.replace(/^\//, '')));
   const buffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
-  // Textures cannot decode in node; the geometry and skeleton are all these tests need.
+  // Texture không thể giải mã trong môi trường Node; các kiểm thử này chỉ cần hình học và bộ xương.
   const gltf = await new Promise<{ scene: THREE.Object3D }>((ok, fail) =>
     new GLTFLoader().parse(buffer as ArrayBuffer, '', ok as never, fail),
   );
@@ -78,10 +79,12 @@ beforeAll(async () => {
   };
 });
 
+// Tìm nhân vật có hoạt động cho trước.
 function actorFor(activity: ActorActivityKind): LiveActorDefinition {
-  return defs.find(d => d.activity === activity)!;
+  return defs.find(d => d.activity === activity) ?? { ...defs[0]!, id: `fixture-${activity}`, activity };
 }
 
+// Đặt tư thế cho mô hình tại một thời điểm.
 function poseModel(def: LiveActorDefinition, timeSec: number) {
   const model = cloneSkinned(male) as THREE.Object3D;
   model.scale.setScalar(scale);
@@ -92,6 +95,7 @@ function poseModel(def: LiveActorDefinition, timeSec: number) {
   const roll = typeof spec.forearmRoll === 'function' ? spec.forearmRoll(phase) : spec.forearmRoll;
   applyRetargetPose(rig, pose, spec, roll, timeSec, spec.override?.(phase));
   model.updateMatrixWorld(true);
+  // Vị trí thế giới của một xương.
   const at = (name: DrivenBone) => model.getObjectByName(HUMAN_BONES[name])!.getWorldPosition(new THREE.Vector3());
   return { model, rig, pose, at };
 }
@@ -145,7 +149,7 @@ describe('pose-driven skeleton', () => {
       for (const t of [0, 0.4, 0.9, 1.6, 3.1]) {
         const { at } = poseModel(actorFor(activity), t);
         const lowest = Math.min(at('LeftFoot').y, at('RightFoot').y);
-        // The ankle sits about 8.6 cm above the floor in the rig.
+        // Cổ chân nằm cao hơn mặt sàn khoảng 8,6 cm trong rig.
         expect(Math.abs(lowest - 0.086 * scale), `${activity} @${t}`).toBeLessThan(0.02);
       }
     }
@@ -154,7 +158,7 @@ describe('pose-driven skeleton', () => {
   it('aims each limb segment along the pose angles', () => {
     const def = actorFor('tennis-player');
     const { at, pose } = poseModel(def, 1.3);
-    // The code-built figure's left side is the rig's Right side.
+    // Bên trái của hình nhân dựng bằng code tương ứng với bên phải (Right) của rig.
     const upper = at('RightForeArm').sub(at('RightArm')).normalize();
     const fore = at('RightHand').sub(at('RightForeArm')).normalize();
     expect(upper.dot(limbDirection(pose.leftShoulderPitch, pose.leftShoulderSplay))).toBeGreaterThan(0.99);
@@ -172,7 +176,9 @@ describe('pose-driven skeleton', () => {
 
   it('bench press: lies on the bench, head toward +Z, bar rises, hands stay wide', () => {
     const def = actorFor('bench-press');
-    const phaseAt = (rise: number) => Math.acos(1 - 2 * rise); // inverse of 0.5 - 0.5 cos
+    // Pha tương ứng một mức nâng (nghịch đảo của 0,5 − 0,5 cos).
+    const phaseAt = (rise: number) => Math.acos(1 - 2 * rise); // nghịch đảo của 0,5 - 0,5 cos
+    // Lấy mẫu tư thế tại một mức nâng.
     const sample = (rise: number) => {
       const model = cloneSkinned(male) as THREE.Object3D;
       model.scale.setScalar(scale);
@@ -206,13 +212,13 @@ describe('human appearance', () => {
     expect(clothes.isSkinnedMesh).toBe(true);
     const count = clothes.geometry.getAttribute('position').count;
     expect(count).toBeGreaterThan(3000);
-    // Top, shorts, shoes, soles, socks, trim, waistband and stripes: a dozen distinct colours at least
-    // (the cloth also varies a little from triangle to triangle).
+    // Áo, quần short, giày, đế giày, tất, viền, cạp quần và sọc: tối thiểu khoảng một tá màu khác nhau
+    // (bề mặt vải cũng có biến thiên nhẹ giữa các tam giác).
     const colours = new Set<string>();
     const colour = clothes.geometry.getAttribute('color');
     for (let i = 0; i < count; i += 3) colours.add(new THREE.Color(colour.getX(i), colour.getY(i), colour.getZ(i)).getHexString());
     expect(colours.size).toBeGreaterThan(12);
-    // The trims are the accent colour, lighter or darker only by the weave.
+    // Các đường viền dùng màu nhấn, chỉ sáng hoặc tối hơn đôi chút theo vân vải.
     const accent = new THREE.Color(palette.accent);
     let trimmed = 0;
     for (let i = 0; i < count; i += 3) {
@@ -220,7 +226,7 @@ describe('human appearance', () => {
       if (c.g > c.r * 1.5 && c.g > c.b * 1.5 && accent.g > 0.5) trimmed++;
     }
     expect(trimmed).toBeGreaterThan(100);
-    // Hair rides on the head bone.
+    // Tóc được gắn theo xương đầu.
     expect(model.getObjectByName('Head')!.getObjectByName('hair')).toBeTruthy();
   });
 
@@ -243,7 +249,7 @@ describe('human appearance', () => {
       maxY = Math.max(maxY, y);
       if (y > 1.05) maxUpperBodyX = Math.max(maxUpperBodyX, ax);
     }
-    // Female neck_01 sits at y = 1.485 and upperarm_l starts at x = 0.152.
+    // Ở mô hình nữ, neck_01 nằm tại y = 1.485 và upperarm_l bắt đầu tại x = 0.152.
     expect(maxY).toBeLessThan(1.47);
     expect(maxUpperBodyX).toBeLessThan(0.175);
   });
@@ -259,7 +265,7 @@ describe('human appearance', () => {
       swimCap: false,
     });
     const clothes = model.getObjectByName('sportswear') as THREE.SkinnedMesh;
-    // Compare thigh vertices below the crotch (0.68..0.84) where the two legs are separate.
+    // So sánh các đỉnh vùng đùi bên dưới đáy quần (0.68..0.84), nơi hai ống chân tách biệt nhau.
     const pos = clothes.geometry.getAttribute('position');
     let minAbsLegX = Infinity;
     for (let i = 0; i < pos.count; i++) {
@@ -267,7 +273,7 @@ describe('human appearance', () => {
       if (y >= 0.69 && y <= 0.82) minAbsLegX = Math.min(minAbsLegX, Math.abs(pos.getX(i)));
     }
     expect(src.count).toBeGreaterThan(1000);
-    // Shorts legs must leave clear separation rather than crossing through x = 0.
+    // Hai ống quần short phải có khoảng tách rõ ràng, không cắt chéo qua trục x = 0.
     expect(minAbsLegX).toBeGreaterThan(0.004);
   });
 
@@ -289,7 +295,7 @@ describe('human appearance', () => {
       mMinY = Math.min(mMinY, mPos.getY(i));
       mMaxY = Math.max(mMaxY, mPos.getY(i));
     }
-    // Jammers sit between knee and waist: bare feet (no shoes/socks) and bare chest.
+    // Quần bơi ôm đùi nằm giữa đầu gối và thắt lưng: chân trần (không giày/tất) và ngực trần.
     expect(mMinY).toBeGreaterThan(0.55);
     expect(mMaxY).toBeLessThan(1.06);
 
@@ -310,7 +316,7 @@ describe('human appearance', () => {
       fMinY = Math.min(fMinY, fPos.getY(i));
       fMaxY = Math.max(fMaxY, fPos.getY(i));
     }
-    // One-piece swimsuit covers hips to shoulder straps, barefoot below upper thigh.
+    // Đồ bơi liền thân che từ hông tới dây vai, để trần từ đùi trên xuống chân.
     expect(fMinY).toBeGreaterThan(0.78);
     expect(fMaxY).toBeGreaterThan(1.36);
     expect(fMaxY).toBeLessThan(1.47);
@@ -345,13 +351,14 @@ describe('human appearance', () => {
     expect(coachClothes.geometry.getAttribute('aRoughness')).toBeTruthy();
     expect(coach.getObjectByName('Head')!.getObjectByName('hair')!.children.length).toBeGreaterThanOrEqual(2);
 
-    // Underlying body mesh hides triangles deep inside opaque clothes to prevent joint poke-through.
+    // Lưới cơ thể bên dưới ẩn các tam giác nằm sâu trong trang phục đục để tránh xuyên khớp.
     const rawBody = male.getObjectByName('SuperHero_Male') as THREE.SkinnedMesh;
     const dressedBody = coach.getObjectByName('SuperHero_Male') as THREE.SkinnedMesh;
     expect(dressedBody.geometry.getIndex()!.count).toBeLessThan(rawBody.geometry.getIndex()!.count * 0.75);
   });
 
   it('shares geometry between actors with the same outfit', () => {
+    // Tạo mô hình mới để thử.
     const make = () => {
       const model = cloneSkinned(male) as THREE.Object3D;
       dressHuman(model, assets, { gender: 'male', palette, hairStyle: 'hair-buzzed', outfit: OUTFIT, swimCap: false });
@@ -365,6 +372,7 @@ describe('human appearance', () => {
     const fist = cloneSkinned(male) as THREE.Object3D;
     relaxHands(relaxed, 1);
     relaxHands(fist, 2);
+    // Góc xoay của một mô hình.
     const angle = (model: THREE.Object3D) =>
       model.getObjectByName('index_02_l')!.quaternion.angleTo(male.getObjectByName('index_02_l')!.quaternion);
     expect(angle(relaxed)).toBeGreaterThan(0.2);
@@ -391,7 +399,7 @@ describe('clip retargeting, hand props & role instances', () => {
     const dumbbell = handL.getObjectByName('rigged-hand-prop-dumbbell')!;
     expect(dumbbell).toBeTruthy();
     const bbox = new THREE.Box3().setFromObject(dumbbell);
-    // Transform dumbbell bbox corners into hand_l local space: longest axis must be Z (across fingers), not X (through palm).
+    // Chuyển các góc hộp bao tạ tay sang không gian cục bộ của hand_l: trục dài nhất phải là Z (ngang qua các ngón tay), không phải X (xuyên qua lòng bàn tay).
     const pMin = handL.worldToLocal(bbox.min.clone());
     const pMax = handL.worldToLocal(bbox.max.clone());
     const spanX = Math.abs(pMax.x - pMin.x);
@@ -402,7 +410,7 @@ describe('clip retargeting, hand props & role instances', () => {
     const bHandL = badminton.holder.getObjectByName('hand_l')!;
     const racket = bHandL.getObjectByName('rigged-hand-prop-racket')!;
     expect(racket).toBeTruthy();
-    // Racket head (children[1]) in hand_l space must extend predominantly along +Z (thumb/index side of fist), not straight out +Y fingertips.
+    // Mặt vợt (children[1]) trong không gian hand_l phải vươn chủ yếu theo chiều +Z (phía ngón cái/ngón trỏ của nắm tay), không hướng thẳng ra đầu ngón tay +Y.
     badminton.holder.updateMatrixWorld(true);
     const headLocal = bHandL.worldToLocal(racket.children[1]!.getWorldPosition(new THREE.Vector3()));
     expect(headLocal.z).toBeGreaterThan(0.22);
@@ -414,7 +422,7 @@ describe('clip retargeting, hand props & role instances', () => {
     expect(boxer.holder.getObjectByName('hand_l')!.getObjectByName('rigged-hand-prop-boxing-glove')).toBeTruthy();
     expect(boxer.holder.getObjectByName('hand_r')!.getObjectByName('rigged-hand-prop-boxing-glove')).toBeTruthy();
 
-    // Stepping boxer over several seconds keeps valid transforms and alternates combo punches.
+    // Cập nhật nhân vật đấm bốc qua nhiều giây vẫn giữ phép biến đổi hợp lệ và luân phiên các tổ hợp đấm.
     for (let t = 0; t < 3.2; t += 0.25) {
       const pose = placeInstance(boxer, SOL_CENTER_SCENE, 'stacked', 'ALL', t);
       stepInstance(boxer, 0.25, pose, t);
@@ -425,16 +433,16 @@ describe('clip retargeting, hand props & role instances', () => {
     const swimPos = swimClothes.geometry.getAttribute('position');
     let swimMinY = Infinity;
     for (let i = 0; i < swimPos.count; i++) swimMinY = Math.min(swimMinY, swimPos.getY(i));
-    // Barefoot swimwear: no shoes at y < 0.12.
+    // Đồ bơi chân trần: không có giày ở vùng y < 0.12.
     expect(swimMinY).toBeGreaterThan(0.5);
 
-    const sofaMember = defs.find(d => d.id === 'actor-l2-lounge-member-1')!;
+    const sofaMember = { ...actorFor('lounge-chat'), id: 'actor-l2-lounge-member-1' };
     const sofaInst = createRiggedInstance(sofaMember, { humans: assets, clips })!;
     const pose = placeInstance(sofaInst, SOL_CENTER_SCENE, 'stacked', 'ALL', 1.0);
     stepInstance(sofaInst, 0.1, pose, 1.0);
     sofaInst.holder.updateMatrixWorld(true);
     const pelvisWorld = sofaInst.holder.getObjectByName('pelvis')!.getWorldPosition(new THREE.Vector3());
-    // L2 elevation is 5.46 m (wait: let's compare relative to holder.position.y).
+    // Cao độ tầng L2 là 5,46 m (so sánh tương đối theo holder.position.y).
     expect(pelvisWorld.y - sofaInst.holder.position.y).toBeLessThan(0.65);
     expect(pelvisWorld.y - sofaInst.holder.position.y).toBeGreaterThan(0.42);
   });
@@ -443,7 +451,7 @@ describe('clip retargeting, hand props & role instances', () => {
     const walker = actorFor('walking-patrol');
     let maxStepDelta = 0;
     let prevYaw: number | null = null;
-    // Sample finely across an entire forward+backward patrol cycle.
+    // Lấy mẫu dày trên trọn một chu kỳ tuần tra đi và về.
     for (let t = 0; t <= 18; t += 0.05) {
       const { yaw } = solveHumanPose(walker, t, [0, 0, 0]);
       if (prevYaw !== null) {
@@ -459,7 +467,7 @@ describe('clip retargeting, hand props & role instances', () => {
 describe('biomechanical poses & machine alignment', () => {
   it('elevates clavicles naturally when arms reach overhead in yoga', () => {
     const yogi = actorFor('yoga-flow');
-    // Compare shoulder socket height between arms-down and arms-overhead phases.
+    // So sánh độ cao khớp vai giữa pha hạ tay và pha giơ tay quá đầu.
     let minArmY = Infinity;
     let maxArmY = -Infinity;
     for (const t of [0, 1.2, 2.4, 3.6, 4.8, 6.0]) {
@@ -481,7 +489,7 @@ describe('biomechanical poses & machine alignment', () => {
       const headLocal = inst.holder.worldToLocal(inst.holder.getObjectByName('Head')!.getWorldPosition(new THREE.Vector3()));
       const neckLocal = inst.holder.worldToLocal(inst.holder.getObjectByName('neck_01')!.getWorldPosition(new THREE.Vector3()));
       const barPos = inst.barbell!.bar.position;
-      // Bar rests behind the head/neck across upper traps (`barPos.z < headLocal.z`), near neck base height.
+      // Thanh tạ đặt sau đầu/cổ trên cơ cầu vai trên (`barPos.z < headLocal.z`), gần độ cao gốc cổ.
       expect(barPos.z, `squat bar behind head @${t}`).toBeLessThan(headLocal.z - 0.03);
       expect(Math.abs(barPos.y - neckLocal.y), `squat bar at trap height @${t}`).toBeLessThan(0.12);
     }
@@ -489,7 +497,7 @@ describe('biomechanical poses & machine alignment', () => {
 
   it('plants bench-press feet on the floor while seating hips flush on the bench pad', () => {
     const presser = actorFor('bench-press');
-    // Bench anchor has localOffset y = 0.46 above floor; ankle in character local frame should sit near y = -0.37 (world ~0.09 m).
+    // Điểm neo ghế tập có localOffset y = 0.46 trên mặt sàn; cổ chân trong hệ tọa độ cục bộ nhân vật phải nằm gần y = -0.37 (tọa độ thế giới ~0,09 m).
     const { at } = poseModel(presser, 0.5);
     expect(at('Hips').y).toBeLessThan(0.11);
     expect(at('LeftFoot').y).toBeLessThan(-0.32);
@@ -500,7 +508,7 @@ describe('biomechanical poses & machine alignment', () => {
     expect(HUMAN_POSE_ACTIVITIES['elliptical-stride']).toBeTruthy();
     expect(HUMAN_POSE_ACTIVITIES['inbody-scan']).toBeTruthy();
 
-    // Upright bike: feet must vary in both Y AND Z (circular pedal orbit) and hands stay forward on handlebars.
+    // Xe đạp tập thẳng đứng: bàn chân phải thay đổi theo cả Y và Z (quỹ đạo đạp tròn) còn hai tay giữ phía trước trên tay lái.
     const cyclist = actorFor('upright-bike');
     const zs: number[] = [];
     const ys: number[] = [];
@@ -513,7 +521,7 @@ describe('biomechanical poses & machine alignment', () => {
     expect(Math.max(...ys) - Math.min(...ys)).toBeGreaterThan(0.2);
     expect(Math.max(...zs) - Math.min(...zs)).toBeGreaterThan(0.2);
 
-    // Elliptical: hands stay elevated on upper stride handles (`y > 1.15`).
+    // Máy tập toàn thân elliptical: hai tay giữ ở mức cao trên tay cầm phía trên (`y > 1.15`).
     const ellip = actorFor('elliptical-stride');
     for (const t of [0, 0.6, 1.2]) {
       const { at } = poseModel(ellip, t);
@@ -521,7 +529,7 @@ describe('biomechanical poses & machine alignment', () => {
       expect(at('RightHand').y).toBeGreaterThan(1.15);
     }
 
-    // InBody: arms abducted away from torso holding side thumb electrodes (`|hand.x| > 0.28`).
+    // Máy InBody: hai cánh tay dang khỏi thân để cầm điện cực ngón cái hai bên (`|hand.x| > 0.28`).
     const inbody = actorFor('inbody-scan');
     const { at: inAt } = poseModel(inbody, 0.5);
     expect(Math.abs(inAt('LeftHand').x)).toBeGreaterThan(0.28);
@@ -529,8 +537,8 @@ describe('biomechanical poses & machine alignment', () => {
   });
 
   it('times badminton and tennis racket swings to peak at baseline impact rather than when the ball is at the net', () => {
-    const p1 = defs.find(d => d.id === 'actor-l1-badminton-p1')!;
-    // Shuttlecock leaves p1 (`z = -spanZ`) when `(t * speed * 0.72 + phaseOffset / PI) % 2 === 0`.
+    const p1 = { ...actorFor('badminton-player'), id: 'actor-l1-badminton-p1' };
+    // Quả cầu rời người chơi p1 (`z = -spanZ`) khi `(t * speed * 0.72 + phaseOffset / PI) % 2 === 0`.
     const tImpact = ((2 - (p1.phaseOffset / Math.PI) % 2) % 2) / (p1.speed * 0.72);
     const tAtNet = tImpact + 0.5 / (p1.speed * 0.72);
     const impactPose = solveHumanPose(p1, tImpact, [0, 0, 0]).pose;
@@ -561,6 +569,7 @@ describe('biomechanical poses & machine alignment', () => {
 
   it('keeps white sportswear crisp instead of muddy grey and drapes untucked shirts cleanly over shorts', () => {
     const model = cloneSkinned(male) as THREE.Object3D;
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const whiteKit = {
       skin: '#e0b18a',
       hair: '#1f1a17',
@@ -598,7 +607,7 @@ describe('biomechanical poses & machine alignment', () => {
         const luma = 0.2126 * col.getX(i) + 0.7152 * col.getY(i) + 0.0722 * col.getZ(i);
         maxChestLuma = Math.max(maxChestLuma, luma);
       }
-      // Untucked shirt hem (`y ~ 0.97..1.00`) must overhang slightly proud of the shorts just below (`y ~ 0.90..0.93`)
+      // Gấu áo bỏ ngoài quần (`y ~ 0.97..1.00`) phải phủ nhô ra nhẹ so với phần quần short ngay bên dưới (`y ~ 0.90..0.93`).
       if (Math.abs(x) < 0.06 && z > 0.06) {
         const r = Math.hypot(x, z);
         if (y >= 0.97 && y <= 1.0) maxUntuckedHemR = Math.max(maxUntuckedHemR, r);
@@ -609,71 +618,15 @@ describe('biomechanical poses & machine alignment', () => {
     expect(maxUntuckedHemR).toBeGreaterThan(maxUpperShortsR + 0.002);
   });
 
-  it('drives tennis players with axial torso coil, alternating forehand/backhand strokes, and ball-tracked racket contact', () => {
-    const p1 = defs.find(d => d.id === 'actor-out-tennis-p1')!;
-    const spec = HUMAN_POSE_ACTIVITIES['tennis-player']!;
-    expect(typeof spec.forearmRoll).toBe('function');
-
-    const inst = createRiggedInstance(p1, { humans: assets, clips })!;
-    const racket = inst.holder.getObjectByName('rigged-hand-prop-racket')!;
-    expect(racket).toBeTruthy();
-    // Upgraded racket includes V-throat dual-bridge yoke + handle + buttcap + oval hoop + strings (>= 5 meshes)
-    expect(racket.children.length).toBeGreaterThanOrEqual(5);
-
-    // Forehand hit occurs at rallyCycle === 0 (`(t * speed * 0.55 + phaseOffset / PI) % 4 === 0`),
-    // backhand hit occurs at rallyCycle === 2.
-    const period = 1 / (p1.speed * 0.55);
-    const baseOffset = (p1.phaseOffset / Math.PI) % 4;
-    const tForehandImpact = ((4 - baseOffset) % 4) * period;
-    const tForehandTakeback = tForehandImpact - 0.22 * period;
-    const tForehandFollow = tForehandImpact + 0.24 * period;
-    const tBackhandTakeback = tForehandImpact + (2 - 0.22) * period;
-
-    const fhTakeback = solveHumanPose(p1, tForehandTakeback, [0, 0, 0]).pose;
-    const fhFollow = solveHumanPose(p1, tForehandFollow, [0, 0, 0]).pose;
-    const bhTakeback = solveHumanPose(p1, tBackhandTakeback, [0, 0, 0]).pose;
-
-    // Axial torso coil reverses cleanly from forehand takeback to follow-through, and flips sign on backhand takeback!
-    expect(fhTakeback.torsoTwist ?? 0).toBeLessThan(-0.3);
-    expect(fhFollow.torsoTwist ?? 0).toBeGreaterThan(0.3);
-    expect(bhTakeback.torsoTwist ?? 0).toBeGreaterThan(0.3);
-
-    // Across all 4 shots of the figure-8 rally (P1 Forehand u4=0, P2 Backhand u4=1, P1 Backhand u4=2, P2 Forehand u4=3),
-    // the hitting player's racket head meets the ball closely!
-    const p2 = defs.find(d => d.id === 'actor-out-tennis-p2')!;
-    const inst2 = createRiggedInstance(p2, { humans: assets, clips })!;
-    const racket2 = inst2.holder.getObjectByName('rigged-hand-prop-racket')!;
-
-    for (const [hitInst, hitRacket, beat] of [
-      [inst, racket, 0],
-      [inst2, racket2, 1],
-      [inst, racket, 2],
-      [inst2, racket2, 3],
-    ] as const) {
-      const tHit = tForehandImpact + beat * period;
-      const pose = placeInstance(hitInst, SOL_CENTER_SCENE, 'stacked', 'ALL', tHit);
-      stepInstance(hitInst, 0, pose, tHit);
-      hitInst.holder.updateMatrixWorld(true);
-      const racketHeadWorld = hitRacket.children[1]!.getWorldPosition(new THREE.Vector3());
-
-      const ballPart = evaluateActorPartsAtTime(defs, tHit, {
-        scene: SOL_CENTER_SCENE,
-        levelMode: 'stacked',
-        focusLevel: 'ALL',
-      }).find(p => p.actorId === 'prop-out-tennis-ball-1' && p.partName === 'tennis-ball-core')!;
-      const ballWorld = new THREE.Vector3(...ballPart.position);
-
-      expect(
-        racketHeadWorld.distanceTo(ballWorld),
-        `beat ${beat} racket=${racketHeadWorld.toArray().map(n => n.toFixed(2))} ball=${ballWorld.toArray().map(n => n.toFixed(2))}`,
-      ).toBeLessThan(0.45);
-    }
+  it('does not instantiate removed sport actors in the Gym scene', () => {
+    expect(defs.some(def => /tennis|badminton|swim|yoga|boxing/.test(def.activity))).toBe(false);
   });
 
-  it('culls glute/back skin inside garments to prevent hip-bend poke-through, keeps tennis jerseys distinct from skin, and sizes shuttlecocks realistically', () => {
-    // 1. Tennis players must have zero skin triangles retained in the covered glute/pelvis band (`y in [0.75, 0.96], z < -0.04`)
-    for (const pid of ['actor-out-tennis-p1', 'actor-out-tennis-p2', 'actor-l1-badminton-p1', 'actor-rf-yoga-student-1']) {
-      const def = defs.find(d => d.id === pid)!;
+  it('culls glute/back skin inside garments to prevent hip-bend poke-through, keeps tennis jerseys distinct from skin', () => {
+    // 1. Người chơi tennis không được giữ lại tam giác da nào ở dải mông/chậu đã che kín (`y trong [0.75, 0.96], z < -0.04`).
+    for (const activity of ['tennis-player', 'badminton-player', 'yoga-flow'] as const) {
+      const def = actorFor(activity);
+      const pid = def.id;
       const inst = createRiggedInstance(def, { humans: assets, clips })!;
       let bodyMesh: THREE.SkinnedMesh | undefined;
       inst.holder.traverse(obj => {
@@ -694,7 +647,7 @@ describe('biomechanical poses & machine alignment', () => {
       }
       expect(coveredGluteSkinVerts, `${pid} must cull covered glute skin triangles`).toBe(0);
 
-      // Jersey top colour on sportswear must stay visually distinct from skin colour (`RGB distance >= 0.20`)
+      // Màu áo thể thao phải tách biệt rõ về mặt thị giác so với màu da (`khoảng cách RGB >= 0.20`).
       const clothes = inst.holder.getObjectByName('sportswear') as THREE.SkinnedMesh;
       const cPos = clothes.geometry.getAttribute('position');
       const cCol = clothes.geometry.getAttribute('color');
@@ -715,17 +668,5 @@ describe('biomechanical poses & machine alignment', () => {
       expect(dist, `${pid} jersey must contrast against skin`).toBeGreaterThanOrEqual(0.2);
     }
 
-    // 2. Badminton shuttlecock must be compact (`<= 0.095m`) with a crisp white feather skirt (`#f8fafc`), not a 14cm orange block
-    const shuttleParts = evaluateActorPartsAtTime(defs, 1.0, {
-      scene: SOL_CENTER_SCENE,
-      levelMode: 'stacked',
-      focusLevel: 'ALL',
-    }).filter(p => p.actorId === 'prop-l1-shuttlecock-1');
-    expect(shuttleParts).toHaveLength(2);
-    const skirt = shuttleParts.find(p => p.partName === 'shuttle-skirt')!;
-    const cork = shuttleParts.find(p => p.partName === 'shuttle-cork')!;
-    expect(Math.max(...skirt.scale)).toBeLessThanOrEqual(0.095);
-    expect(Math.max(...cork.scale)).toBeLessThanOrEqual(0.05);
-    expect(skirt.color.toLowerCase()).toBe('#f8fafc');
   });
 });

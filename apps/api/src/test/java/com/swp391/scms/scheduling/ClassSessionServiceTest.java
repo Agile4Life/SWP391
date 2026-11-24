@@ -39,6 +39,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service ClassSessionService (class session service). */
 @ExtendWith(MockitoExtension.class)
 class ClassSessionServiceTest {
 
@@ -59,6 +60,7 @@ class ClassSessionServiceTest {
     private AuthenticatedPrincipal coachPrincipal;
     private AuthenticatedPrincipal managerPrincipal;
 
+    /** Chuẩn bị trước mỗi test: tạo ClassSessionService với repository giả lập. */
     @BeforeEach
     void setUp() {
         coachPrincipal = new AuthenticatedPrincipal(10L, "coach@test.com", "COACH");
@@ -111,6 +113,7 @@ class ClassSessionServiceTest {
         enrollment.setStatus("booked");
     }
 
+    /** Kiểm thử: HLV được phân công hủy buổi thành công. */
     @Test
     void cancelSession_byAssignedCoach_success() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
@@ -127,17 +130,18 @@ class ClassSessionServiceTest {
         assertEquals("booked", enrollment.getStatus());
         verify(enrollmentRepository, never()).save(any(ClassEnrollment.class));
 
-        // Verify notification sent
+        // Kiểm tra đã gửi thông báo
         verify(notificationService, times(1)).send(
                 eq(20L), any(), any(), eq("schedule_change"), eq("class_session"), eq(100L));
 
-        // Verify event published
+        // Kiểm tra đã phát sự kiện
         ArgumentCaptor<SessionCancelledEvent> captor = ArgumentCaptor.forClass(SessionCancelledEvent.class);
         verify(eventPublisher, times(1)).publishEvent(captor.capture());
         assertEquals(100L, captor.getValue().sessionId());
         assertEquals(List.of(20L), captor.getValue().affectedMemberUserIds());
     }
 
+    /** Kiểm thử: hủy buổi đã hủy rồi thì ném ConflictException. */
     @Test
     void cancelSession_alreadyCancelled_throwsConflictException() {
         session.setStatus("cancelled");
@@ -148,6 +152,7 @@ class ClassSessionServiceTest {
         assertThrows(ConflictException.class, () -> sessionService.cancelSession(100L, request, coachPrincipal));
     }
 
+    /** Kiểm thử: HLV không được phân công hủy buổi thì ném ForbiddenException. */
     @Test
     void cancelSession_byUnassignedCoach_throwsForbiddenException() {
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
@@ -158,6 +163,7 @@ class ClassSessionServiceTest {
         assertThrows(ForbiddenException.class, () -> sessionService.cancelSession(100L, request, otherCoach));
     }
 
+    /** Kiểm thử: hủy buổi không tồn tại thì ném ResourceNotFoundException. */
     @Test
     void cancelSession_notFound_throwsResourceNotFoundException() {
         when(sessionRepository.findById(999L)).thenReturn(Optional.empty());
@@ -167,6 +173,7 @@ class ClassSessionServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> sessionService.cancelSession(999L, request, managerPrincipal));
     }
 
+    /** Kiểm thử: hủy buổi cũng nhả các đặt chỗ riêng từng buổi mà không thông báo hội viên hai lần. */
     @Test
     void cancelSession_alsoReleasesPerSessionBookingsWithoutNotifyingAMemberTwice() {
         com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);

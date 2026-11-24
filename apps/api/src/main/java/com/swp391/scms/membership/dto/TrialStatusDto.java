@@ -2,6 +2,10 @@ package com.swp391.scms.membership.dto;
 
 import java.time.LocalDateTime;
 
+/**
+ * Trạng thái gói trải nghiệm của hội viên: đủ điều kiện không, đã nhận chưa, trạng thái yêu cầu, giấy tờ (số
+ * che), họ tên, quốc tịch, ảnh, lý do từ chối, thời điểm gửi, kỳ gói đã tạo, tên gói và số buổi PT kèm theo.
+ */
 public record TrialStatusDto(
         boolean eligible,
         boolean alreadyClaimed,
@@ -18,6 +22,7 @@ public record TrialStatusDto(
         String packageName,
         Integer coachSessionQuota
 ) {
+    /** Constructor rút gọn kiểu cũ. */
     public TrialStatusDto(
             boolean eligible,
             boolean alreadyClaimed,
@@ -44,10 +49,12 @@ public record TrialStatusDto(
         );
     }
 
+    /** Lấy giá trị trường documentNumberMasked. */
     public String getDocumentNumberMasked() {
         return cccd;
     }
 
+    /** Lấy giá trị trường requestedAt. */
     public LocalDateTime getRequestedAt() {
         return redeemedAt;
     }

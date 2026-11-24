@@ -15,7 +15,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 
-/** Read-only payment reconciliation for administrators: VNPay attempts, callbacks and automatic late refunds. */
+/**
+ * API đối soát thanh toán cho Admin (/api/v1/admin/payments/reconciliation): chỉ đọc, gồm các lượt VNPay,
+ * callback và hoàn tiền muộn tự động.
+ */
 @RestController
 @RequestMapping("/api/v1/admin/payments/reconciliation")
 @PreAuthorize("hasRole('ADMIN')")
@@ -25,6 +28,7 @@ public class AdminPaymentReconciliationController {
     private final PaymentReconciliationService reconciliation;
     private final MessageService messages;
 
+    /** Nhận dịch vụ đối soát và MessageService. */
     @Autowired
     public AdminPaymentReconciliationController(PaymentReconciliationService reconciliation,
                                                 @Autowired(required = false) MessageService messages) {
@@ -32,8 +36,10 @@ public class AdminPaymentReconciliationController {
         this.messages = messages;
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) { return messages != null ? messages.getMessage(key) : key; }
 
+    /** GET /summary: tổng quan đối soát trong khoảng ngày. */
     @GetMapping("/summary")
     @Operation(summary = "Reconciliation overview for a date range (default: last 7 days)")
     public ApiResponse<ReconciliationSummaryDto> summary(
@@ -42,6 +48,7 @@ public class AdminPaymentReconciliationController {
         return ApiResponse.ok(msg("finance.reconciliation.summary"), reconciliation.summary(from, to));
     }
 
+    /** GET /attempts: danh sách lượt VNPay, lọc theo trạng thái, treo hay không, từ khóa và ngày, có phân trang. */
     @GetMapping("/attempts")
     @Operation(summary = "VNPay attempts with filters")
     public ApiResponse<Page<VnpayAttemptRowDto>> attempts(
@@ -56,6 +63,7 @@ public class AdminPaymentReconciliationController {
                 reconciliation.attempts(status, stale, q, from, to, page, size));
     }
 
+    /** GET /late-refunds: các lần hoàn tiền VNPay xác nhận muộn. */
     @GetMapping("/late-refunds")
     @Operation(summary = "Automatic wallet refunds for VNPay payments confirmed too late")
     public ApiResponse<Page<LateRefundRowDto>> lateRefunds(
@@ -66,6 +74,7 @@ public class AdminPaymentReconciliationController {
         return ApiResponse.ok(msg("finance.reconciliation.late_refunds"), reconciliation.lateRefunds(from, to, page, size));
     }
 
+    /** GET /ipn-events: nhật ký callback VNPay, lọc theo mã, nguồn, mã tham chiếu và ngày. */
     @GetMapping("/ipn-events")
     @Operation(summary = "Recorded VNPay callbacks (IPN and verified returns)")
     public ApiResponse<Page<IpnEventRowDto>> ipnEvents(
@@ -80,6 +89,7 @@ public class AdminPaymentReconciliationController {
                 reconciliation.ipnEvents(rspCode, source, reference, from, to, page, size));
     }
 
+    /** GET /payments/{paymentId}/timeline: dòng thời gian đầy đủ của một khoản thanh toán. */
     @GetMapping("/payments/{paymentId}/timeline")
     @Operation(summary = "Full history of one payment")
     public ApiResponse<PaymentTimelineDto> timeline(@PathVariable Long paymentId) {

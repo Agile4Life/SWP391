@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho controller CourtBookingController (court booking controller). */
 class CourtBookingControllerTest {
     CourtBookingService service;
     MockMvc mvc;
@@ -29,7 +30,9 @@ class CourtBookingControllerTest {
         mvc = MockMvcBuilders.standaloneSetup(new CourtBookingController(service))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     public boolean supportsParameter(MethodParameter parameter) { return parameter.getParameterType() == AuthenticatedPrincipal.class; }
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     public Object resolveArgument(MethodParameter p, ModelAndViewContainer c, NativeWebRequest r, WebDataBinderFactory f) {
                         return new AuthenticatedPrincipal(1L, "member", "MEMBER");
                     }

@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { StaffReceptionPage } from './StaffReceptionPage';
 import { getCurrentUser } from '../../shared/api/client';
 import { checkinApi } from './checkinApi';
+import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 
 const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), cancelPendingSubscription: vi.fn(), getPendingHoldRequests: vi.fn(),
@@ -26,7 +27,7 @@ const member = { userId: 10, membershipCode: 'MB-10', fullName: 'An', email: 'an
 const pkg = { id: 2, name: 'Gold', price: 200, durationDays: 30, status: 'active' };
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  vi.resetAllMocks();
+  vi.resetAllMocks(); clearNotices();
   api.getRequestHistory.mockResolvedValue([]);
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role: 'STAFF' });
   vi.mocked(checkinApi.gateQr).mockResolvedValue({ qrCode: 'SOL:GATE:1:A1:signed', gateId: 'A1', gate: 'Turnstile A1 - Sảnh Chính',
@@ -72,6 +73,7 @@ it('keeps the gate QR hidden from members on reception', async () => {
   expect(checkinApi.gateQr).not.toHaveBeenCalled();
 });
 
+// Chọn một hội viên trong kết quả tra cứu.
 async function selectMember() {
   await act(async () => root.render(<StaffReceptionPage />));
   const input = host.querySelector('input[placeholder^="Nhập Số điện thoại"]') as HTMLInputElement;
@@ -83,6 +85,7 @@ async function selectMember() {
   expect(api.lookupMembers).toHaveBeenCalledWith('1234');
 }
 
+// Chọn phương thức rồi thu tiền.
 async function chooseAndPay(value: string) {
   const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
   expect(Array.from(select.options).map((option) => option.value)).toContain(value);
@@ -90,11 +93,84 @@ async function chooseAndPay(value: string) {
   await act(async () => select.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 }
 
+it('shows a lookup failure separately from a successful empty search', async () => {
+  api.lookupMembers.mockRejectedValueOnce(new Error('Lookup unavailable'));
+  await selectMember();
+  expect(host.querySelector('#reception-search-error')?.textContent).toContain('Lookup unavailable');
+  expect(host.textContent).not.toContain('Không tìm thấy hội viên');
+  api.lookupMembers.mockResolvedValueOnce([]);
+  const input = host.querySelector('input[placeholder^="Nhập Số điện thoại"]')!;
+  await act(async () => input.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(host.querySelector('#reception-search-error')).toBeNull();
+  expect(host.textContent).toContain('Không tìm thấy hội viên');
+});
+
+it('does not invent a zero wallet balance on failure and retries the read without making a transaction', async () => {
+  api.getMemberWallet.mockRejectedValueOnce(new Error('Wallet unavailable'));
+  await selectMember();
+  expect(host.textContent).toContain('Không thể tải số dư ví. Vui lòng thử lại.');
+  expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).not.toMatch(/0\s*[đ₫]/);
+  await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="open-counter-topup-modal-btn"]')!.click());
+  expect(document.body.querySelectorAll('dialog strong')[1]?.textContent).not.toMatch(/0\s*[đ₫]/);
+  api.getMemberWallet.mockResolvedValueOnce({ balance: 250000 });
+  const retry = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find(b => b.getAttribute('aria-label') === 'Tải lại số dư ví')!;
+  await act(async () => retry.click());
+  expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).toContain('250.000');
+  expect(host.textContent).not.toContain('Không thể tải số dư ví. Vui lòng thử lại.');
+  expect(api.topupMemberWallet).not.toHaveBeenCalled();
+  expect(api.processPayment).not.toHaveBeenCalled();
+});
+
+it('displays a genuine zero balance returned by the wallet API', async () => {
+  api.getMemberWallet.mockResolvedValueOnce({ balance: 0 });
+  await selectMember();
+  expect(host.querySelector('[data-testid="member-wallet-balance"]')?.textContent).toMatch(/0\s*[đ₫]/);
+  expect(host.textContent).not.toContain('Không thể tải số dư ví. Vui lòng thử lại.');
+});
+
+it.each([
+  ['getPendingSubscriptions', 'gói tập chờ thanh toán', 'Tải lại gói tập chờ thanh toán', 'plan'],
+  ['getPendingHoldRequests', 'yêu cầu bảo lưu', 'Tải lại yêu cầu bảo lưu', 'hold'],
+  ['getPendingTrials', 'yêu cầu dùng thử', 'Tải lại yêu cầu dùng thử', 'trial'],
+] as const)('shows %s errors instead of empty queues and clears the error after retry', async (method, label, retryLabel, filter) => {
+  api[method].mockRejectedValue(new Error('Offline'));
+  await act(async () => root.render(<StaffReceptionPage />));
+  const card = host.querySelector('.reception-top__queue')!;
+  expect(card.textContent).toContain(`Không thể tải ${label}. Vui lòng thử lại.`);
+  expect(card.textContent).not.toContain('Không có việc nào cần xử lý');
+  const tabs = { plan: 'Gói tập', hold: 'Bảo lưu', trial: 'Trải nghiệm' };
+  const tab = [...card.querySelectorAll<HTMLButtonElement>('.filter-chip')].find(b => b.textContent?.startsWith(tabs[filter]))!;
+  await act(async () => tab.click());
+  expect(card.textContent).not.toContain('Không có mục nào trong nhóm đã chọn');
+  api[method].mockResolvedValue([]);
+  const retry = card.querySelector<HTMLButtonElement>(`button[aria-label="${retryLabel}"]`)!;
+  await act(async () => retry.click());
+  expect(card.textContent).not.toContain(`Không thể tải ${label}`);
+  expect(card.textContent).toContain('Không có việc nào cần xử lý');
+});
+
+it('keeps successful queue data when another queue fails and when its own refresh fails', async () => {
+  const pending = { id: 77, memberId: 10, membershipCode: 'MB-10', memberName: 'An', memberEmail: 'an@example.test',
+    memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30, packagePrice: 200000,
+    startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01' };
+  api.getPendingSubscriptions.mockResolvedValueOnce([pending]).mockRejectedValue(new Error('Offline'));
+  api.getPendingTrials.mockRejectedValue(new Error('Offline'));
+  await act(async () => root.render(<StaffReceptionPage />));
+  const card = host.querySelector('.reception-top__queue')!;
+  expect(card.textContent).toContain('Yêu cầu #77');
+  // Refresh nền thất bại phải giữ bản ghi cũ và báo lỗi, không đổi thành danh sách rỗng.
+  await act(async () => window.dispatchEvent(new Event('online')));
+  expect(card.textContent).toContain('Yêu cầu #77');
+  expect(card.textContent).toContain('Không thể tải gói tập chờ thanh toán');
+  expect(card.textContent).toContain('Không thể tải yêu cầu dùng thử');
+});
+
 it('sells an active package at the counter for a member without a pending order', async () => {
   await selectMember();
   await chooseAndPay('buy:2');
   expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ memberId: 10, packageId: 2, amount: 200 }));
   expect(api.createRenewal).not.toHaveBeenCalled();
+  expect(getNotices()[0].destination).toBe('/staff/reception-history');
   expect(host.textContent).toContain('Hóa đơn thực');
 });
 
@@ -177,6 +253,7 @@ it('lets the desk record payment for an unpaid hourly 1:1 session', async () => 
 });
 
 it('renders pending trial applications and lets the desk approve a trial with name sync', async () => {
+  // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const trialItem = {
     id: 55,
     memberId: 10,
@@ -209,6 +286,7 @@ it('renders pending trial applications and lets the desk approve a trial with na
 });
 
 it('renders passport document type and nationality for foreign trial applicants', async () => {
+  // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const passportItem = {
     id: 56,
     memberId: 12,
@@ -260,6 +338,7 @@ it('lets the receptionist top up a selected member wallet at the counter', async
   const submitBtn = document.body.querySelector<HTMLButtonElement>('[data-testid="submit-counter-topup-btn"]')!;
   await act(async () => submitBtn.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 
+  expect(getNotices()[0].destination).toBe('/staff/reception-history');
   expect(api.topupMemberWallet).toHaveBeenCalledWith(10, {
     amount: 500000,
     paymentMethod: 'cash',
@@ -278,6 +357,7 @@ it('resends the same request id when the receptionist retries a top-up after a n
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(amountInput, '500000');
     amountInput.dispatchEvent(new Event('input', { bubbles: true }));
   });
+  // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
   const submit = async () => act(async () => document.body.querySelector<HTMLButtonElement>('[data-testid="submit-counter-topup-btn"]')!
     .closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
 
@@ -302,6 +382,7 @@ it('offers only renewal, not a second new package, while the member still has a 
 });
 
 it('asks confirmation before cancelling a pending membership request at the desk', async () => {
+  // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const pendingItem = {
     id: 77, memberId: 10, membershipCode: 'MB-10', memberName: 'An',
     memberEmail: 'an@example.test', memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30,
@@ -321,4 +402,64 @@ it('asks confirmation before cancelling a pending membership request at the desk
   expect(dialogConfirmBtn).toBeDefined();
   await act(async () => dialogConfirmBtn.click());
   expect(api.cancelPendingSubscription).toHaveBeenCalledWith(77);
+});
+
+const runningGold = { id: 50, memberId: 10, packageId: 2, packageName: 'GOLD 9 THÁNG', previousSubscriptionId: null,
+  startDate: '2026-11-21', endDate: '2027-08-16', status: 'active', createdAt: '2026-11-21' };
+const oldSilver = { ...runningGold, id: 40, packageId: 3, packageName: 'SILVER 9 THÁNG',
+  startDate: '2026-02-24', endDate: '2026-11-20', status: 'expired' };
+// Component phụ chỉ phục vụ kiểm thử.
+function useConflictHistory() {
+  vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date('2026-11-23T05:00:00Z'));
+  api.getActivePackages.mockResolvedValue([{ ...pkg, name: runningGold.packageName, durationDays: 270 },
+    { ...pkg, id: 3, name: oldSilver.packageName, durationDays: 270 }]);
+  api.getRenewalCandidates.mockResolvedValue([runningGold, oldSilver]);
+}
+afterEach(() => vi.useRealTimers());
+it('disables conflicting history but keeps Gold renewable and blocks a forced Silver submission', async () => {
+  useConflictHistory(); await selectMember();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
+  expect(select.querySelector<HTMLOptionElement>('[value="renew:40"]')!.disabled).toBe(true);
+  expect(select.querySelector<HTMLOptionElement>('[value="renew:50"]')!.disabled).toBe(false);
+  await chooseAndPay('renew:40');
+  expect(host.textContent).toContain('Không thể gia hạn gói SILVER 9 THÁNG vì trùng thời hạn với gói GOLD 9 THÁNG hiện tại. Vui lòng chọn gói hợp lệ.');
+  expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
+  expect((select.closest('form')!.querySelector('button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
+});
+it('still renews Gold when an unrelated old Silver renewal is blocked', async () => {
+  useConflictHistory(); api.createRenewal.mockResolvedValue({ ...runningGold, id: 51, status: 'pending_payment' });
+  await selectMember(); await chooseAndPay('renew:50');
+  expect(api.createRenewal).toHaveBeenCalledWith(10, 50);
+  expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ subscriptionId: 51, packageId: 2 }));
+  expect(host.textContent).toContain('Hóa đơn thực');
+});
+it('explains candidate loading failures and prevents a forced payment', async () => {
+  api.getRenewalCandidates.mockRejectedValue(new Error('offline')); await selectMember();
+  expect(host.textContent).toContain('Không tải được gói tập hoặc lịch sử gia hạn. Vui lòng thử lại.');
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
+  await act(async () => select.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
+});
+it('keeps backend renewal rejection clear and never falls back to collecting a new purchase', async () => {
+  api.getRenewalCandidates.mockResolvedValue([{ ...runningGold, endDate: '2099-08-16' }]);
+  api.createRenewal.mockRejectedValue(Object.assign(new Error('Subscription chain needs review before renewal'), { code: 'MEMBERSHIP_RENEWAL_CONFLICT' }));
+  await selectMember(); await chooseAndPay('renew:50');
+  expect(host.textContent).toContain('Không thể gia hạn kỳ đã chọn. Vui lòng tải lại danh sách hoặc nhờ quản lý kiểm tra.');
+  expect(host.textContent).not.toContain('Subscription chain'); expect(api.processPayment).not.toHaveBeenCalled();
+});
+it('preserves a backend rejection for a different business reason', async () => {
+  api.getRenewalCandidates.mockResolvedValue([{ ...runningGold, endDate: '2099-08-16' }]);
+  api.createRenewal.mockRejectedValue(new Error('Gói đang chờ duyệt bảo lưu.'));
+  await selectMember(); await chooseAndPay('renew:50');
+  expect(host.textContent).toContain('Gói đang chờ duyệt bảo lưu.'); expect(api.processPayment).not.toHaveBeenCalled();
+});
+
+it('does not turn a missing renewal id into a new purchase when its number matches a package id', async () => {
+  await selectMember();
+  const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
+  const staleOption = document.createElement('option');
+  staleOption.value = 'renew:2'; staleOption.textContent = 'Stale renewal'; select.add(staleOption);
+  await chooseAndPay('renew:2');
+  expect(host.textContent).toContain('Kỳ gia hạn không còn trong danh sách. Vui lòng chọn lại.');
+  expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
 });

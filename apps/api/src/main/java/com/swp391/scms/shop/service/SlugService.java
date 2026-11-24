@@ -3,11 +3,17 @@ package com.swp391.scms.shop.service;
 import java.text.Normalizer;
 import java.util.Locale;
 
+/** Tạo slug URL từ chuỗi tiếng Việt (bỏ dấu, chữ thường, nối bằng dấu gạch ngang). */
 public final class SlugService {
     private static final int MAX_LENGTH = 180;
 
+    /** Constructor private: lớp tiện ích chỉ có hàm static. */
     private SlugService() {}
 
+    /**
+     * Chuyển chuỗi thành slug: bỏ dấu, đổi đ thành d, chỉ giữ a-z0-9 nối bằng "-", cắt tối đa 180 ký tự; chuỗi
+     * rỗng trả "".
+     */
     public static String slugify(String input) {
         if (input == null || input.isBlank()) {
             return "";

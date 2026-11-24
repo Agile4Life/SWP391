@@ -27,6 +27,7 @@ it('becomes usable again when the browser restores the page after leaving VNPay 
  await act(async()=>root.render(<VnpayPayButton target={{coachBookingId:81}} />));
  const button=host.querySelector('button')!;await act(async()=>button.click());
  expect(button.disabled).toBe(true);expect(button.textContent).toContain('Đang chuyển');
+ // Tạo sự kiện pageshow giả (persisted hay không).
  const pageshow=(persisted:boolean)=>Object.assign(new Event('pageshow'),{persisted});
  await act(async()=>{window.dispatchEvent(pageshow(false));});expect(button.disabled).toBe(true);
  await act(async()=>{window.dispatchEvent(pageshow(true));});
@@ -35,7 +36,7 @@ it('becomes usable again when the browser restores the page after leaving VNPay 
 });
 it('allows retry after an API error and shows the error inline',async()=>{
  vi.mocked(api.createVnpayCheckout).mockRejectedValue(new Error('private error'));
- await act(async()=>root.render(<VnpayPayButton target={{courtBookingId:82}} />));
+ await act(async()=>root.render(<VnpayPayButton target={{coachBookingId:82}} />));
  await act(async()=>host.querySelector('button')!.click());
  expect(host.querySelector('[role="alert"]')).not.toBeNull();expect(host.querySelector('button')!.disabled).toBe(false);
  await act(async()=>host.querySelector('button')!.click());expect(api.createVnpayCheckout).toHaveBeenCalledTimes(2);

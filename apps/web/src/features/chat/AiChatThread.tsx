@@ -12,6 +12,7 @@ import { useI18n } from '../../shared/i18n';
 /** Lỗi mà máy chủ đã hoàn tác tin của người dùng: giữ lại nội dung để gửi lại. */
 /** AI_CHAT_RATE_LIMITED (15 tin / 10 phút / tài khoản): bị từ chối trước khi lưu gì, nên cũng giữ lại nội dung để gửi lại sau. */
 const ROLLED_BACK = ['AI_CHAT_NOT_CONFIGURED', 'AI_CHAT_UNAVAILABLE', 'AI_CHAT_RATE_LIMITED'];
+/** Tạo lỗi hiển thị cho lỗi kết nối trợ lý AI (giữ nguyên lỗi từ server, nếu không dùng câu dự phòng song ngữ). */
 const errorText = (cause: unknown) => chatError(cause, 'Không thể kết nối trợ lý AI. Vui lòng thử lại.', 'Unable to connect to the AI assistant. Please try again.');
 
 /**
@@ -40,6 +41,7 @@ export function AiChatThread({ onBack, active = true, audience = 'member' }: { o
     if (node) node.scrollTop = node.scrollHeight;
   }, [messages, pending, sending, loading]);
 
+  // Tải lịch sử của phiên AI (mặc định phiên gần nhất); bỏ qua nếu đang bận.
   const load = useCallback(async (id?: number | null) => {
     if (busy.current) return;
     busy.current = true; setLoading(true); setError(null);
@@ -53,6 +55,7 @@ export function AiChatThread({ onBack, active = true, audience = 'member' }: { o
   }, []);
   useEffect(() => { void load(); }, [load]);
 
+  // Tạo phiên trò chuyện AI mới.
   async function newSession() {
     if (busy.current) return;
     busy.current = true; setLoading(true); setError(null); setSendError(null);
@@ -64,6 +67,7 @@ export function AiChatThread({ onBack, active = true, audience = 'member' }: { o
     finally { busy.current = false; if (alive.current) setLoading(false); }
   }
 
+  // Gửi tin nhắn cho AI (tối đa 2000 ký tự) và hiện câu trả lời.
   async function send() {
     const text = draft.trim();
     if (!text || text.length > 2000 || busy.current) return;
@@ -123,8 +127,8 @@ export function AiChatThread({ onBack, active = true, audience = 'member' }: { o
       {loading ? <LoadingSkeleton label={t("Đang tải hội thoại với SÖL AI…", "Loading SÖL AI conversation…")} count={3} />
         : messages.length === 0 && !pending && !error
           ? <div className="direct-chat__empty direct-chat__ai-intro"><ChatAvatar contact={AI_PEER} /><p><strong>SÖL AI</strong>{audience === 'staff'
-            ? t(' giúp lễ tân tra nhanh bảng giá, quyền lợi gói, lịch lớp, đặt sân và quy định trung tâm để trả lời khách.', ' helps the front desk look up prices, membership benefits, classes, court booking and centre rules to answer customers.')
-            : t(' trả lời về gói tập, lịch lớp, huấn luyện viên và tập luyện dựa trên dữ liệu của trung tâm.', ' answers questions about memberships, classes, coaches and training using center data.')}</p></div>
+            ? t(' giúp lễ tân tra nhanh bảng giá, quyền lợi gói và quy định trung tâm để trả lời khách.', ' helps the front desk look up prices, membership benefits and centre rules to answer customers.')
+            : t(' trả lời về gói tập, huấn luyện viên và tập luyện dựa trên dữ liệu của trung tâm.', ' answers questions about memberships, coaches and training using center data.')}</p></div>
           : null}
       {!loading && <ol className="direct-chat__messages">
         {messages.map(message => {

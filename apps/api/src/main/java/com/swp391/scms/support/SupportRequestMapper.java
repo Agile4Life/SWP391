@@ -6,9 +6,11 @@ import com.swp391.scms.support.entity.SupportRequest;
 import com.swp391.scms.support.entity.SupportRequestMessage;
 import org.springframework.stereotype.Component;
 
+/** Chuyển entity phiếu hỗ trợ và tin nhắn sang DTO. */
 @Component
 public class SupportRequestMapper {
 
+    /** Chuyển phiếu sang DTO kèm tên hội viên, người phụ trách và thông tin chuyển lên quản lý. */
     public SupportRequestDto toDto(SupportRequest entity) {
         if (entity == null) return null;
 
@@ -29,6 +31,7 @@ public class SupportRequestMapper {
         );
     }
 
+    /** Chuyển tin nhắn sang DTO kèm tên và vai trò người gửi. */
     public SupportRequestMessageDto toMessageDto(SupportRequestMessage entity) {
         if (entity == null) return null;
 

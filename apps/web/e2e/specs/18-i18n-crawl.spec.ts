@@ -3,17 +3,17 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { authFile, type RoleKey } from '../helpers/accounts';
 
 /**
- * Audit (mục 13): visit every route per role in English and write the visible text that is still Vietnamese to
- * e2e/.results/i18n-crawl.json. Not part of the normal run: `I18N_AUDIT=1 npx playwright test 18-i18n-crawl`.
- * Data (package/class/room/person names) is expected to stay Vietnamese; everything else in the report is a gap.
+ * Kiểm tra i18n (mục 13): truy cập từng route của mỗi vai trò bằng tiếng Anh và ghi các văn bản hiển thị còn tiếng Việt vào
+ * e2e/.results/i18n-crawl.json. Không chạy trong bộ test thông thường: `I18N_AUDIT=1 npx playwright test 18-i18n-crawl`.
+ * Dữ liệu động (tên gói/lớp/phòng/người) được phép giữ nguyên tiếng Việt; mọi nội dung còn lại trong báo cáo là phần bị thiếu dịch.
  */
 const ROUTES: Record<string, string[]> = {
-  an: ['/member/dashboard', '/member/packages', '/member/hold', '/member/card', '/member/check-in', '/member/invoices', '/member/orders', '/member/products', '/member/progress', '/member/support', '/member/classes', '/member/classes?tab=pt', '/member/courts', '/member/streak', '/member/profile', '/member/notifications', '/messages', '/member/explore'],
+  an: ['/member/dashboard', '/member/packages', '/member/hold', '/member/card', '/member/check-in', '/member/invoices', '/member/progress', '/member/support', '/member/classes', '/member/classes?tab=pt', '/member/profile', '/member/notifications', '/messages', '/member/explore'],
   em: ['/member/dashboard', '/member/packages', '/member/hold'],
   lan: ['/member/dashboard', '/member/packages'],
-  staff: ['/staff/reception', '/staff/check-in', '/staff/support', '/staff/courts', '/staff/attendance', '/staff/coach-classes', '/staff/requests', '/staff/pt-attendance', '/staff/kyc', '/staff/holds', '/staff/classes', '/staff/orders', '/messages', '/profile'],
-  coach: ['/coach/classes', '/coach/pt-attendance', '/coach/training-plans', '/coach/health-metrics', '/coach/saved-plans', '/staff/requests', '/messages', '/profile'],
-  manager: ['/manager/reports', '/manager/catalogs', '/manager/products', '/manager/products/new', '/manager/equipment', '/manager/coach-assignments', '/manager/staff-accounts', '/manager/users', '/manager/cancellations', '/manager/coach-reviews', '/manager/support', '/manager/requests', '/staff/classes', '/profile'],
+  staff: ['/staff/reception', '/staff/check-in', '/staff/support', '/staff/coach-classes', '/staff/requests', '/staff/kyc', '/staff/holds', '/messages', '/profile'],
+  coach: ['/coach/classes', '/coach/pt-attendance', '/coach/training-plans', '/coach/saved-plans', '/staff/requests', '/messages', '/profile'],
+  manager: ['/manager/reports', '/manager/catalogs', '/manager/coach-assignments', '/manager/staff-accounts', '/manager/users', '/manager/cancellations', '/manager/support', '/manager/requests', '/profile'],
   admin: ['/admin/users', '/admin/audit-logs', '/profile'],
 };
 const VI = /[ăâđêôơưạảấầẩẫậắằẳẵặẹẻẽếềểễệỉịọỏốồổỗộớờởỡợụủứừửữựỳỵỷỹàáèéìíòóùúýÀ-Ỹ]/;
@@ -24,14 +24,14 @@ test('crawl English UI for leftover Vietnamese', async ({ browser }) => {
   const report: Record<string, string[]> = {};
   for (const [role, routes] of Object.entries(ROUTES)) {
     const context = await browser.newContext({ storageState: authFile(role as RoleKey) });
-    await context.addInitScript(() => { try { localStorage.setItem('scms_lang', 'en'); } catch { /* ignore */ } });
+    await context.addInitScript(() => { try { localStorage.setItem('scms_lang', 'en'); } catch { /* bỏ qua */ } });
     const page = await context.newPage();
     for (const route of routes) {
       try {
         await page.goto(route, { waitUntil: 'networkidle', timeout: 20_000 });
-      } catch { /* keep what rendered */ }
+      } catch { /* giữ lại phần đã hiển thị */ }
       await page.waitForTimeout(1200);
-      // Scroll so appear-on-scroll components render their text.
+      // Cuộn trang để các component hiện theo thao tác cuộn kịp render văn bản.
       await page.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 600) { window.scrollTo(0, y); await new Promise((r) => setTimeout(r, 60)); } });
       const texts = await page.evaluate((pattern) => {
         const re = new RegExp(pattern);

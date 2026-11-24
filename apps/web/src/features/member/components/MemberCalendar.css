@@ -1,4 +1,4 @@
-/* Member-only type colors stay distinct in both themes and for past events. */
+/* Mục đích: Màu theo loại sự kiện trên lịch hội viên, giữ rõ ở cả hai giao diện sáng/tối và cho cả sự kiện đã qua. */
 .mcal--member { --mcal-court: #b8dcff; --mcal-class: #f2a38f; --mcal-pt: #b7e3c8; }
 .mcal--member :is(.mcal__event--court, .mcal__chip--court) { border: 1px solid #24649b; }
 .mcal--member :is(.mcal__event--class, .mcal__chip--class) { border: 1px solid #a83e2d; }
@@ -10,7 +10,7 @@
 .mcal--member .mcal__type--pt { background: var(--mcal-pt); }
 .mcal--member .mcal__chip .mcal__type { display: block; opacity: 1; }
 
-/* Keep the name readable inside the actual time height, including overlapping 30-minute bookings. */
+/* Giữ tên sự kiện dễ đọc trong chiều cao thực của khung giờ, kể cả các lịch 30 phút trùng nhau. */
 .mcal--member .mcal__event-top { flex: none; width: 100%; }
 .mcal--member .mcal__event-title { flex: none; }
 .mcal--member .mcal__event-top { flex-wrap: wrap; justify-content: flex-start; gap: 2px 6px; }

@@ -1,6 +1,7 @@
 import { staffSourceError } from '../operations/staffI18n';
 import { apiFetch } from '../../shared/api/client';
 
+/** Một dòng nhật ký thao tác: người thực hiện, hành động, đối tượng, giá trị cũ/mới, IP và thời điểm. */
 export interface AuditLogItem {
   id: number;
   userId: number | null;
@@ -15,6 +16,7 @@ export interface AuditLogItem {
   createdAt: string;
 }
 
+/** Bộ lọc nhật ký: người, đối tượng, hành động, khoảng ngày và phân trang. */
 export interface AuditLogFilter {
   userId?: number;
   entityType?: string;
@@ -25,6 +27,7 @@ export interface AuditLogFilter {
   size?: number;
 }
 
+/** Kết quả phân trang chuẩn của backend: nội dung, tổng phần tử/trang, số trang và kích thước. */
 export interface PageResult<T> {
   content: T[];
   totalElements: number;
@@ -33,6 +36,7 @@ export interface PageResult<T> {
   size: number;
 }
 
+/** Thống kê lấp đầy của một lớp: sức chứa, đã ghi danh, có mặt, tỷ lệ lấp đầy và tỷ lệ đi học. */
 export interface ClassOccupancyItem {
   classId: number;
   className: string;
@@ -46,6 +50,7 @@ export interface ClassOccupancyItem {
   attendanceRate: number; // Tỷ lệ đi học % (present / enrolled * 100)
 }
 
+/** Gom các hàm API nhật ký thao tác và thống kê lớp học. */
 export const auditApi = {
   /**
    * Lấy danh sách Audit Log có lọc và phân trang (GET /api/v1/admin/audit-logs, ADMIN only)

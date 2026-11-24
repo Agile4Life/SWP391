@@ -21,9 +21,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * Background Scheduler for automated system notifications (SCRUM-107).
- * - Job 1: Daily scan at 08:00 AM for membership subscriptions expiring in exactly 7 days.
- * - Job 2: Periodic scan every 30 minutes for class sessions starting within the next 2 hours.
+ * Trình lập lịch nền cho các thông báo hệ thống tự động (SCRUM-107):
+ * - Job 1: Quét hằng ngày lúc 08:00 sáng các gói hội viên sắp hết hạn trong đúng 7 ngày.
+ * - Job 2: Quét định kỳ mỗi 30 phút các buổi lớp học sắp bắt đầu trong vòng 2 giờ tới (tính năng cũ, chỉ chạy
+ *   khi bật cờ lớp nhóm).
  */
 @Component
 public class NotificationScheduler {
@@ -42,7 +43,11 @@ public class NotificationScheduler {
     private final NotificationService notificationService;
     private final MessageService messageService;
     private final Clock clock;
+    /** Lớp học nhóm nằm ngoài phạm vi; nhắc lịch cũng tắt theo để không gửi thông báo cho các buổi cũ. */
+    @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
+    private boolean classesEnabled;
 
+    /** Constructor Spring dùng; MessageService và Clock là tùy chọn. */
     @Autowired
     public NotificationScheduler(
             MembershipSubscriptionRepository subscriptionRepository,
@@ -62,6 +67,7 @@ public class NotificationScheduler {
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
+    /** Constructor cho test không có MessageService. */
     public NotificationScheduler(
             MembershipSubscriptionRepository subscriptionRepository,
             ClassSessionRepository sessionRepository,
@@ -73,6 +79,7 @@ public class NotificationScheduler {
         this(subscriptionRepository, sessionRepository, enrollmentRepository, notificationRepository, notificationService, messageService, null);
     }
 
+    /** Constructor cho test có thêm repository đặt buổi. */
     public NotificationScheduler(
             MembershipSubscriptionRepository subscriptionRepository,
             ClassSessionRepository sessionRepository,
@@ -87,7 +94,7 @@ public class NotificationScheduler {
      * Job 1 (Hết hạn gói): Chạy lúc 08:00 sáng mỗi ngày.
      * Quét các membership_subscriptions có end_date còn đúng 7 ngày; tạo notification package_expiry.
      */
-    // The scan below is called on this instance, which bypasses its proxy; the job method owns the transaction.
+    // Hàm quét bên dưới được gọi trực tiếp trên this (bỏ qua proxy), nên hàm job giữ transaction.
     @Scheduled(cron = "${app.scheduler.package-expiry.cron:0 0 8 * * ?}")
     @Transactional
     public void schedulePackageExpiryJob() {
@@ -98,10 +105,11 @@ public class NotificationScheduler {
     }
 
     /**
-     * Business logic for scanning expiring subscriptions.
+     * Nghiệp vụ quét các kỳ gói active hết hạn đúng ngày đích và gửi nhắc gia hạn; bỏ qua hội viên đã trả tiền
+     * kỳ tiếp theo và kỳ đã được nhắc rồi.
      *
-     * @param targetDate the expiration date to scan for (typically LocalDate.now().plusDays(7))
-     * @return the number of notifications sent
+     * @param targetDate ngày hết hạn cần quét (thường là LocalDate.now().plusDays(7))
+     * @return số thông báo đã gửi
      */
     @Transactional
     public int scanAndNotifyExpiringSubscriptions(LocalDate targetDate) {
@@ -118,12 +126,12 @@ public class NotificationScheduler {
                 continue;
             }
             Long userId = sub.getMember().getUserId();
-            // A member who already paid the next period is not running out.
+            // Hội viên đã thanh toán kỳ tiếp theo thì không bị sắp hết hạn.
             if (subscriptionRepository.existsByPreviousSubscriptionIdAndStatusIn(sub.getId(), java.util.List.of("active", "expired"))) {
                 continue;
             }
 
-            // Idempotency check: avoid duplicate notifications for this subscription
+            // Kiểm tra idempotency: tránh gửi trùng thông báo cho cùng một kỳ gói
             boolean alreadySent = notificationRepository.existsNotification(
                     userId,
                     "package_expiry",
@@ -167,6 +175,7 @@ public class NotificationScheduler {
     @Scheduled(cron = "${app.scheduler.class-reminder.cron:0 */30 * * * ?}")
     @Transactional
     public void scheduleClassReminderJob() {
+        if (!classesEnabled) return;
         log.info("[NotificationScheduler] Running class reminder job...");
         LocalDateTime now = LocalDateTime.now(clock);
         int sentCount = scanAndNotifyUpcomingClasses(now);
@@ -174,10 +183,11 @@ public class NotificationScheduler {
     }
 
     /**
-     * Business logic for scanning upcoming classes.
+     * Nghiệp vụ quét các buổi lớp sắp diễn ra trong 2 giờ tới và gửi nhắc cho hội viên đã đăng ký (mỗi buổi
+     * chỉ nhắc một lần).
      *
-     * @param referenceTime current reference time
-     * @return the number of reminder notifications sent
+     * @param referenceTime mốc thời gian tham chiếu hiện tại
+     * @return số thông báo nhắc lịch đã gửi
      */
     @Transactional
     public int scanAndNotifyUpcomingClasses(LocalDateTime referenceTime) {
@@ -239,7 +249,7 @@ public class NotificationScheduler {
 
             for (Long userId : recipients) {
 
-                // Idempotency check: do not resend class reminder for the same session to the same user
+                // Kiểm tra idempotency: không gửi lại nhắc lịch lớp học cho cùng buổi học tới cùng người dùng
                 boolean alreadySent = notificationRepository.existsNotification(
                         userId,
                         "class_reminder",
@@ -265,6 +275,7 @@ public class NotificationScheduler {
         return sentCount;
     }
 
+    /** Dịch mã thông báo; không dịch được thì dùng câu dự phòng. */
     private String resolveMessage(String code, String fallback, Object... args) {
         if (messageService == null) {
             return fallback;

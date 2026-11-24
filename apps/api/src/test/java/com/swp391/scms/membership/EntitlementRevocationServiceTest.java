@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service EntitlementRevocationService (entitlement revocation service). */
 @ExtendWith(MockitoExtension.class)
 class EntitlementRevocationServiceTest {
 
@@ -34,6 +35,7 @@ class EntitlementRevocationServiceTest {
     @Mock private CoachBookingRepository coachBookings;
     @Mock private CourtBookingRepository courtBookings;
 
+    /** Kiểm thử: chỉ nhả các đặt chỗ ở những ngày không còn membership nào bao phủ. */
     @Test
     void releasesOnlyBookingsOnDatesNoActiveMembershipCovers() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
@@ -58,12 +60,16 @@ class EntitlementRevocationServiceTest {
         assertEquals("cancelled", court.getStatus());
     }
 
+    /**
+     * Kiểm thử: membership đóng băng có tạm hoãn theo ngày vẫn bao phủ các ngày sau tạm hoãn nên lượt quét đêm
+     * giữ các đặt chỗ đó.
+     */
     @Test
     void aFrozenMembershipWithADatedHoldStillCoversTheDaysAfterTheHoldSoTheNightlySweepKeepsThoseBookings() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
         var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, courtBookings, clock);
         LocalDate today = LocalDate.of(2026, 10, 11);
-        // Frozen 12-18 October (7 days held); the period 1 Oct - 30 Nov becomes 1 Oct - 7 Dec once it resumes.
+        // Đóng băng 12-18 tháng 10 (tạm hoãn 7 ngày); kỳ hạn 01/10 - 30/11 thành 01/10 - 07/12 khi mở lại.
         var frozen = new com.swp391.scms.membership.entity.MembershipSubscription();
         frozen.setStatus("frozen");
         frozen.setHoldStatus("APPROVED");
@@ -78,7 +84,7 @@ class EntitlementRevocationServiceTest {
         CoachBooking pastTheEnd = pt(LocalDate.of(2026, 12, 8));
         when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any(), any())).thenAnswer(inv -> {
             java.util.function.Predicate<LocalDate> covered = inv.getArgument(2);
-            // A course seat whose next session falls in the hold or right after it is kept.
+            // Chỗ học khóa có buổi tiếp theo rơi vào khoảng tạm hoãn hoặc ngay sau đó vẫn được giữ.
             assertTrue(covered.test(LocalDate.of(2026, 10, 14)));
             assertTrue(covered.test(LocalDate.of(2026, 10, 25)));
             assertFalse(covered.test(LocalDate.of(2026, 12, 8)));
@@ -94,6 +100,7 @@ class EntitlementRevocationServiceTest {
         assertEquals("cancelled", pastTheEnd.getStatus());
     }
 
+    /** Hàm trợ giúp của test: tạo dịch vụ tạm hoãn với phụ thuộc giả lập. */
     private EntitlementRevocationService holdService(com.swp391.scms.finance.repository.PaymentRepository payments,
                                                      com.swp391.scms.wallet.WalletService wallets) {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
@@ -103,6 +110,7 @@ class EntitlementRevocationServiceTest {
         return service;
     }
 
+    /** Hàm trợ giúp của test: tạo khoản thanh toán thành công mẫu. */
     private static com.swp391.scms.finance.entity.Payment successPayment(String amount) {
         var payment = new com.swp391.scms.finance.entity.Payment();
         payment.setAmount(new java.math.BigDecimal(amount));
@@ -110,6 +118,7 @@ class EntitlementRevocationServiceTest {
         return payment;
     }
 
+    /** Hàm trợ giúp của test: tạo đặt sân mẫu. */
     private static CourtBooking court(LocalDate date, LocalTime start, String method, String paymentStatus) {
         CourtBooking court = new CourtBooking();
         court.setBookingDate(date);
@@ -123,6 +132,7 @@ class EntitlementRevocationServiceTest {
         return court;
     }
 
+    /** Kiểm thử: tạm hoãn chỉ hoàn lượt PT khi được duyệt trước 3 ngày. */
     @Test
     void holdReturnsAPtQuotaSlotOnlyWhenApprovedThreeDaysAhead() {
         var service = holdService(null, null);
@@ -142,6 +152,7 @@ class EntitlementRevocationServiceTest {
         assertTrue(late.isQuotaForfeited());
     }
 
+    /** Kiểm thử: tạm hoãn chỉ hoàn tiền buổi PT đã trả vào ví khi được duyệt trước 3 ngày. */
     @Test
     void holdRefundsAPaidPtSessionToTheWalletOnlyWhenApprovedThreeDaysAhead() {
         var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
@@ -173,13 +184,14 @@ class EntitlementRevocationServiceTest {
         org.mockito.Mockito.verifyNoMoreInteractions(wallets);
     }
 
+    /** Kiểm thử: tạm hoãn chỉ hoàn tiền sân đã trả khi được duyệt trước 2 giờ. */
     @Test
     void holdRefundsAPaidCourtOnlyWhenApprovedTwoHoursAhead() {
         var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
         var wallets = org.mockito.Mockito.mock(com.swp391.scms.wallet.WalletService.class);
         var service = holdService(payments, wallets);
         LocalDate today = LocalDate.of(2026, 10, 11);
-        // The clock is 10:00 UTC; 12:00 is exactly two hours ahead, 11:00 is one hour ahead.
+        // Đồng hồ ở 10:00 UTC; 12:00 là đúng 2 giờ nữa, 11:00 là 1 giờ nữa.
         CourtBooking inTime = court(today, LocalTime.of(12, 0), "vnpay", "paid");
         CourtBooking late = court(today, LocalTime.of(11, 0), "vnpay", "paid");
         inTime.setId(1L);
@@ -199,6 +211,7 @@ class EntitlementRevocationServiceTest {
         org.mockito.Mockito.verifyNoMoreInteractions(wallets);
     }
 
+    /** Kiểm thử: tạm hoãn trong vòng 2 giờ thì mất lượt đặt sân. */
     @Test
     void holdForfeitsACourtQuotaSlotWithinTwoHours() {
         var service = holdService(null, null);
@@ -214,6 +227,7 @@ class EntitlementRevocationServiceTest {
         assertTrue(late.isQuotaForfeited());
     }
 
+    /** Hàm trợ giúp của test: tạo lượt đặt PT mẫu. */
     private static CoachBooking pt(LocalDate date) {
         CoachBooking booking = new CoachBooking();
         booking.setBookingDate(date);

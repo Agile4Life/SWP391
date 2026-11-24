@@ -40,6 +40,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service ClassService (class service). */
 @ExtendWith(MockitoExtension.class)
 class ClassServiceTest {
 
@@ -57,13 +58,13 @@ class ClassServiceTest {
     private RoomRepository rooms;
 
     private final SchedulingMapper mapper = new SchedulingMapper();
-    // Fixed clock: 2026-10-16 10:00:00 UTC
-    // 10:00 Vietnam time; session dates/times represent the center's wall time.
+    // Đồng hồ cố định: 10:00 giờ Việt Nam (03:00:00 UTC ngày 2026-10-16); ngày/giờ buổi học theo giờ địa phương của trung tâm.
     private final Clock clock = Clock.fixed(Instant.parse("2026-10-16T03:00:00Z"), ZoneId.of("UTC"));
 
     private ClassService service;
     private GymClass gymClass;
 
+    /** Kiểm thử: tạo buổi học kiểm tra cả lượt đặt sân dù không có lớp nào khác. */
     @Test
     void sessionCreationChecksCourtBookingsEvenWhenThereAreNoOtherClasses() {
         var courts = org.mockito.Mockito.mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
@@ -85,6 +86,7 @@ class ClassServiceTest {
         org.mockito.Mockito.verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Chuẩn bị trước mỗi test: tạo ClassService với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new ClassService(gymClasses, sessions, enrollments, disciplines, coaches, rooms, mapper, clock);
@@ -95,6 +97,7 @@ class ClassServiceTest {
         gymClass.setStatus("active");
     }
 
+    /** Kiểm thử: từ chối tạo buổi có ngày trong quá khứ. */
     @Test
     @DisplayName("createSession rejects when sessionDate is in the past")
     void createSession_rejectsPastSessionDate() {
@@ -111,12 +114,13 @@ class ClassServiceTest {
                 .hasMessageContaining("Session must start in the future");
     }
 
+    /** Kiểm thử: từ chối giờ bắt đầu đã qua trong ngày hôm nay. */
     @Test
     @DisplayName("createSession rejects when session is today but start time has already passed")
     void createSession_rejectsPastStartTimeToday() {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
 
-        // Clock is at 10:00:00, session is at 09:00:00 today
+        // Đồng hồ đang ở 10:00:00, buổi học diễn ra lúc 09:00:00 hôm nay
         CreateSessionRequest request = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 LocalTime.of(9, 0),
@@ -128,6 +132,7 @@ class ClassServiceTest {
                 .hasMessageContaining("Session must start in the future");
     }
 
+    /** Kiểm thử: cho phép giờ bắt đầu trong tương lai của hôm nay. */
     @Test
     @DisplayName("createSession allows session today when start time is in the future")
     void createSession_allowsFutureStartTimeToday() {
@@ -137,7 +142,7 @@ class ClassServiceTest {
             return s;
         });
 
-        // Clock is at 10:00:00, session is at 11:00:00 today
+        // Đồng hồ đang ở 10:00:00, buổi học diễn ra lúc 11:00:00 hôm nay
         CreateSessionRequest request = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 LocalTime.of(11, 0),
@@ -150,13 +155,14 @@ class ClassServiceTest {
         assertThat(result.endTime()).isEqualTo(LocalTime.of(12, 0));
     }
 
+    /** Kiểm thử: cho phép các buổi liền kề nhau. */
     @Test
     @DisplayName("createSession allows two adjacent sessions (end time of first equals start time of second)")
     void createSession_allowsAdjacentSessions() {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
         when(sessions.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Session 1: 14:00 - 15:00
+        // Buổi 1: 14:00 - 15:00
         CreateSessionRequest session1Req = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 LocalTime.of(14, 0),
@@ -166,7 +172,7 @@ class ClassServiceTest {
         assertThat(session1.startTime()).isEqualTo(LocalTime.of(14, 0));
         assertThat(session1.endTime()).isEqualTo(LocalTime.of(15, 0));
 
-        // Session 2: 15:00 - 16:00 (adjacent immediately after Session 1)
+        // Buổi 2: 15:00 - 16:00 (liền kề ngay sau Buổi 1)
         CreateSessionRequest session2Req = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 LocalTime.of(15, 0),
@@ -176,10 +182,11 @@ class ClassServiceTest {
         assertThat(session2.startTime()).isEqualTo(LocalTime.of(15, 0));
         assertThat(session2.endTime()).isEqualTo(LocalTime.of(16, 0));
 
-        // Verify adjacency: session1.endTime equals session2.startTime
+        // Kiểm tra tính liền kề: session1.endTime bằng session2.startTime
         assertThat(session1.endTime()).isEqualTo(session2.startTime());
     }
 
+    /** Kiểm thử: từ chối khoảng giờ không hợp lệ. */
     @Test
     @DisplayName("createSession rejects when end time is before or equal to start time")
     void createSession_rejectsInvalidTimeRange() {
@@ -196,6 +203,7 @@ class ClassServiceTest {
                 .hasMessageContaining("End time must be after start time");
     }
 
+    /** Kiểm thử: cập nhật lớp học thành công các trường được sửa. */
     @Test
     @DisplayName("SCRUM-131: updateClass updates class info when capacity is valid")
     void updateClass_updatesFieldsSuccessfully() {
@@ -226,6 +234,7 @@ class ClassServiceTest {
         assertThat(updated.level()).isEqualTo("intermediate");
     }
 
+    /** Kiểm thử: từ chối giảm sức chứa xuống dưới số chỗ đã đặt. */
     @Test
     @DisplayName("SCRUM-131: updateClass rejects when new capacity is below booked student count")
     void updateClass_rejectsCapacityBelowBooked() {
@@ -250,6 +259,7 @@ class ClassServiceTest {
                 .hasMessageContaining("Capacity cannot be less than current booked students");
     }
 
+    /** Kiểm thử: dời lịch buổi học cập nhật ngày và giờ. */
     @Test
     @DisplayName("SCRUM-131: rescheduleSession updates date and time of scheduled session")
     void rescheduleSession_updatesDateAndTime() throws Exception {
@@ -280,6 +290,7 @@ class ClassServiceTest {
         assertThat(dto.endTime()).isEqualTo(LocalTime.of(19, 30));
     }
 
+    /** Kiểm thử: từ chối dời lịch khi hội viên bị trùng lịch. */
     @Test
     @DisplayName("rescheduleSession rejects a time that overlaps another class a booked member already attends")
     void rescheduleSession_rejectsMemberOverlap() throws Exception {
@@ -314,6 +325,7 @@ class ClassServiceTest {
         verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any(ClassSession.class));
     }
 
+    /** Kiểm thử: xóa lớp sẽ xóa luôn các dữ liệu con. */
     @Test
     @DisplayName("SCRUM-131: deleteClass removes child enrollments, sessions and the class")
     void deleteClass_removesClassAndChildren() {
@@ -327,6 +339,7 @@ class ClassServiceTest {
         verify(gymClasses).flush();
     }
 
+    /** Kiểm thử: từ chối khi phòng bị trùng giờ với buổi khác. */
     @Test
     @DisplayName("SCRUM-132: createSession rejects when another class overlaps in the same room")
     void createSession_rejectsRoomConflictWhenOverlapping() throws Exception {
@@ -373,6 +386,7 @@ class ClassServiceTest {
                 .isEqualTo("SCHEDULING_ROOM_CONFLICT");
     }
 
+    /** Kiểm thử: từ chối khi HLV bị trùng giờ với buổi khác. */
     @Test
     @DisplayName("SCRUM-132: createSession rejects when the same coach is assigned to two overlapping classes")
     void createSession_rejectsCoachConflictWhenOverlapping() throws Exception {
@@ -421,6 +435,10 @@ class ClassServiceTest {
                 .isEqualTo("SCHEDULING_COACH_CONFLICT");
     }
 
+    /**
+     * Kiểm thử: liệt kê HLV đang hoạt động bằng truy vấn database và các entity vai trò dùng quan hệ one-to-one
+     * lazy.
+     */
     @Test
     void listActiveCoaches_UsesDatabaseQueryAndRoleEntitiesUseLazyOneToOne() throws Exception {
         for (Class<?> entityClass : new Class<?>[]{
@@ -453,6 +471,7 @@ class ClassServiceTest {
         verify(coaches, org.mockito.Mockito.never()).findAll();
     }
 
+    /** Kiểm thử: danh sách học viên của buổi gộp ghi danh toàn lớp với đặt chỗ riêng từng buổi. */
     @Test
     void sessionStudentsMergeClassWideEnrollmentsWithPerSessionBookings() {
         com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
@@ -485,6 +504,7 @@ class ClassServiceTest {
                 students.stream().map(s -> s.memberId()).toList());
     }
 
+    /** Kiểm thử: xóa lớp có dữ liệu lịch sử thì chỉ hủy kích hoạt mềm và thông báo, không gửi trùng. */
     @Test
     @DisplayName("deleteClass soft-deactivates class, cancels scheduled sessions and deduplicates notifications when historical data exists")
     void deleteClass_softDeactivatesAndNotifiesWithoutDuplicatesWhenHistoricalDataExists() {
@@ -575,6 +595,7 @@ class ClassServiceTest {
         verify(gymClasses, org.mockito.Mockito.never()).delete(any());
     }
 
+    /** Kiểm thử: xóa lớp đã có thanh toán hoặc đánh giá thì chỉ hủy kích hoạt mềm. */
     @Test
     @DisplayName("deleteClass soft-deactivates when payment or coach review exists for the class")
     void deleteClass_softDeactivatesWhenPaymentsOrReviewsExist() {

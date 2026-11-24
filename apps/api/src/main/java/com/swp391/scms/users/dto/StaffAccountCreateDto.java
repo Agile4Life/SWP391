@@ -2,6 +2,10 @@ package com.swp391.scms.users.dto;
 
 import jakarta.validation.constraints.*;
 
+/**
+ * Dữ liệu quản lý nhập khi tạo tài khoản nhân viên: họ tên, email, SĐT, mật khẩu, giới tính và vai trò
+ * (COACH/RECEPTIONIST).
+ */
 public record StaffAccountCreateDto(
         @NotBlank(message = "{validation.users.full_name.not_blank}")
         @Size(max = 150, message = "{validation.users.full_name.size}") String fullName,

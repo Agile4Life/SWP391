@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho CoursePayment (course payment). */
 class CoursePaymentTest {
 
     private ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
@@ -42,6 +43,7 @@ class CoursePaymentTest {
 
     private EnrollmentService enrollmentService;
 
+    /** Chuẩn bị trước mỗi test: dựng dịch vụ và dữ liệu thanh toán khóa học. */
     @BeforeEach
     void setUp() {
         enrollmentService = new EnrollmentService(
@@ -57,6 +59,7 @@ class CoursePaymentTest {
         enrollmentService.setPaymentRepository(paymentRepository);
     }
 
+    /** Kiểm thử: thanh toán tạo khoản pending khi vượt hạn mức. */
     @Test
     void testCheckoutCreatesPendingPaymentWhenQuotaExceeded() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -82,7 +85,7 @@ class CoursePaymentTest {
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
 
-        // Already 2 booked courses -> quota exceeded
+        // Đã đăng ký 2 khóa học -> vượt hạn mức
         when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(eq(100L), eq("booked"), any(), any()))
                 .thenReturn(2L);
 
@@ -132,6 +135,7 @@ class CoursePaymentTest {
         assertEquals(777L, captured.getClassEnrollmentId());
     }
 
+    /** Kiểm thử: thanh toán tính chiết khấu theo hạng thành viên trên phí khóa học. */
     @Test
     void testCheckoutChargesTheTierDiscountOnTheCourseFee() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -181,6 +185,7 @@ class CoursePaymentTest {
         assertTrue(payment.getValue().getNote().contains("giảm 10%"));
     }
 
+    /** Kiểm thử: hủy trước khi bắt đầu làm thất bại khoản thanh toán khóa đang chờ. */
     @Test
     void testCancelBeforeStartFailsThePendingCoursePayment() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -217,6 +222,7 @@ class CoursePaymentTest {
         verify(paymentRepository).save(pending);
     }
 
+    /** Kiểm thử: hủy vẫn giữ khoản thanh toán khóa đã thanh toán để đi theo luồng hoàn tiền. */
     @Test
     void testCancelKeepsASettledCoursePaymentForTheRefundFlow() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");

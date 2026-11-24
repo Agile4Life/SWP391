@@ -13,16 +13,19 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/** Trả lỗi 401 dạng JSON (ApiResponse) khi request cần đăng nhập mà không có token hoặc token không hợp lệ. */
 @Component
 public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
     private final ObjectMapper objectMapper;
     private final MessageService messageService;
 
+    /** Nhận ObjectMapper để ghi JSON và MessageService để dịch thông báo. */
     public JsonAuthenticationEntryPoint(ObjectMapper objectMapper, MessageService messageService) {
         this.objectMapper = objectMapper;
         this.messageService = messageService;
     }
 
+    /** Ghi phản hồi HTTP 401 với mã UNAUTHORIZED và thông báo đã dịch. */
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException exception)
             throws IOException, ServletException {

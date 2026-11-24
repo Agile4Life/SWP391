@@ -14,12 +14,14 @@ import { cardStatus } from './cardStatus';
 import { centerNowParts } from '../../shared/lib/centerTime';
 import { getMembershipHistory, getMySubscription, getDynamicQr, type CardSubscription } from './memberCardApi';
 
+/** Định dạng ngày YYYY-MM-DD thành dd/MM/yyyy (không hợp lệ thì "—"). */
 function displayDate(value: string) {
   if (!validDate(value)) return '—';
   const [year, month, day] = value.split('-');
   return `${day}/${month}/${year}`;
 }
 
+/** Kiểm tra chuỗi ngày YYYY-MM-DD hợp lệ. */
 function validDate(value: string | null | undefined) {
   if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
   const [year, month, day] = value.split('-').map(Number);
@@ -27,6 +29,7 @@ function validDate(value: string | null | undefined) {
   return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 }
 
+/** Thẻ hội viên: ảnh, họ tên, mã thẻ, gói, hạn dùng và mã QR động tự đổi; có nút tải thẻ thành ảnh. */
 export function MemberCard({ profile, subscription }: { profile: Profile; subscription: CardSubscription }) {
   useLanguage();
   const cardRef = useRef<HTMLDivElement>(null);
@@ -48,12 +51,13 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     Boolean(subscription.qrCode?.trim());
   const border = status === 'warning' ? '#D6A638' : status === 'active' ? '#ce9180' : '#A45A53';
 
-  // Fetch dynamic QR on interval
+  // Lấy mã QR động theo chu kỳ
   useEffect(() => {
     if (!canShowQr || typeof getDynamicQr !== 'function') return;
 
     let mounted = true;
 
+    // Lấy mã QR động mới.
     async function fetchDynamic() {
       try {
         const res = await getDynamicQr();
@@ -61,7 +65,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
           setDynamicQr(res.qrCode);
         }
       } catch {
-        // Keep the last rotating code; a static code is no longer accepted at the gate.
+        // Giữ lại mã luân phiên gần nhất; mã tĩnh không còn được chấp nhận tại cổng.
       }
     }
 
@@ -76,7 +80,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     };
   }, [canShowQr]);
 
-  // Only the rotating signed code works at the gate; the static identifier is never shown as a scannable QR.
+  // Chỉ mã ký số luân phiên mới hợp lệ tại cổng; mã định danh tĩnh không bao giờ hiển thị dạng QR để quét.
   const activeQrCode = dynamicQr;
 
   useEffect(() => {
@@ -91,6 +95,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     return () => { cancelled = true; };
   }, [canShowQr, activeQrCode]);
 
+  // Tải thẻ thành ảnh PNG bằng html2canvas khi QR đã sẵn sàng.
   async function downloadCard() {
     if (!cardRef.current || !canShowQr || !qrImage || !qrLoaded || qrError || downloading) return;
     setDownloading(true);
@@ -195,6 +200,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   );
 }
 
+/** Trang thẻ hội viên: tải hồ sơ và gói hiện tại rồi hiển thị thẻ, kèm lịch sử các kỳ gói. */
 export function MemberCardPage() {
   useLanguage();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -203,6 +209,7 @@ export function MemberCardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | SourceMessage>('');
 
+  // Tải hồ sơ, gói hiện tại và lịch sử (silent thì không hiện trạng thái tải).
   async function loadCard(silent = false) {
     if (!silent) {
       setLoading(true);
@@ -227,6 +234,7 @@ export function MemberCardPage() {
 
   useEffect(() => {
     void loadCard();
+    // Làm mới ngầm khi tab đang hiển thị.
     const syncCard = () => {
       if (document.visibilityState === 'hidden') return;
       void loadCard(true);

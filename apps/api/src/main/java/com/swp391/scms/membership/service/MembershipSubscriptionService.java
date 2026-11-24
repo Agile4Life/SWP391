@@ -34,7 +34,10 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Service managing membership subscriptions (SCRUM-71).
+ * Dịch vụ quản lý gói tập của hội viên (SCRUM-71): đăng ký/gia hạn/nâng cấp gói, chuỗi gia hạn liên tiếp, bảo lưu
+ * (gửi yêu cầu, duyệt, bắt đầu, tự kết thúc, rút đơn, tiếp tục sớm), danh sách chờ thanh toán ở quầy và mã QR động
+ * để check-in. Mọi thao tác thay đổi gói của một hội viên đều khóa dòng hội viên trước để các request song song
+ * xếp hàng.
  */
 @Service
 public class MembershipSubscriptionService {
@@ -47,11 +50,11 @@ public class MembershipSubscriptionService {
 
     private static final String HOLD_PENDING = "PENDING";
     private static final String HOLD_APPROVED = "APPROVED";
-    /** Longest a membership may stay frozen; later it resumes on its own with this many days added back. */
+    /** Thời gian tối đa một gói tập có thể ở trạng thái frozen; sau mốc này gói tự động tiếp tục lại và được cộng bù đúng số ngày đó. */
     public static final int MAX_HOLD_DAYS = 90;
-    /** Shortest hold a member may request. */
+    /** Thời gian bảo lưu ngắn nhất mà hội viên có thể yêu cầu. */
     public static final int MIN_HOLD_DAYS = 3;
-    /** A hold request must be filed at least this long before its first day. */
+    /** Yêu cầu bảo lưu phải được gửi trước ngày bắt đầu ít nhất khoảng thời gian này. */
     public static final int HOLD_NOTICE_HOURS = 24;
     public static final long MAX_HOLD_DOCUMENT_BYTES = 5L * 1024 * 1024;
     public static final int MAX_HOLD_DOCUMENTS = 5;
@@ -96,10 +99,12 @@ public class MembershipSubscriptionService {
     @Autowired(required = false)
     private com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRedemptionRepository;
 
+    /** Gán giá trị mới cho trường trialRedemptionRepository. */
     public void setTrialRedemptionRepository(com.swp391.scms.membership.repository.MemberTrialRedemptionRepository repo) {
         this.trialRedemptionRepository = repo;
     }
 
+    /** Constructor cho test với các phụ thuộc tối thiểu. */
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
             MembershipPackageRepository packages,
             MemberRepository members,
@@ -107,6 +112,7 @@ public class MembershipSubscriptionService {
         this(subscriptions, packages, members, clock, new DynamicQrService(), null, null, null, null);
     }
 
+    /** Constructor cho test có DynamicQrService. */
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
             MembershipPackageRepository packages,
             MemberRepository members,
@@ -115,6 +121,7 @@ public class MembershipSubscriptionService {
         this(subscriptions, packages, members, clock, dynamicQrService, null, null, null, null);
     }
 
+    /** Constructor Spring dùng; các dịch vụ phụ (đăng ký lớp, thông báo, dịch) là tùy chọn. */
     @Autowired
     public MembershipSubscriptionService(MembershipSubscriptionRepository subscriptions,
             MembershipPackageRepository packages,
@@ -136,6 +143,7 @@ public class MembershipSubscriptionService {
         this.messageService = messageService;
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
@@ -222,6 +230,10 @@ public class MembershipSubscriptionService {
         return renewForOwner(requested, principal.id(), previousId);
     }
 
+    /**
+     * Lễ tân/quản lý xem các kỳ gói đã thanh toán (active hoặc expired) của một hội viên chưa bị xóa để chọn kỳ
+     * gia hạn.
+     */
     @Transactional(readOnly = true)
     public List<SubscriptionDto> renewalCandidatesForStaff(AuthenticatedPrincipal principal, Long memberId) {
         ensureReceptionStaff(principal);
@@ -233,6 +245,10 @@ public class MembershipSubscriptionService {
                 .filter(this::isPaidPeriod).map(this::toDto).toList();
     }
 
+    /**
+     * Lễ tân gia hạn hộ hội viên: kỳ được chọn phải thuộc đúng hội viên và hội viên chưa bị xóa, rồi dùng chung
+     * logic gia hạn với hội viên tự gia hạn.
+     */
     @Transactional
     public SubscriptionDto renewForMember(AuthenticatedPrincipal principal, Long memberId, Long previousId) {
         ensureReceptionStaff(principal);
@@ -247,6 +263,7 @@ public class MembershipSubscriptionService {
         return renewForOwner(requested, memberId, previousId);
     }
 
+    /** Chỉ lễ tân hoặc quản lý trung tâm được thao tác thay hội viên; người khác bị 403. */
     private void ensureReceptionStaff(AuthenticatedPrincipal principal) {
         if (principal == null || !("RECEPTIONIST".equalsIgnoreCase(principal.role())
                 || "CENTER_MANAGER".equalsIgnoreCase(principal.role()))) {
@@ -254,13 +271,20 @@ public class MembershipSubscriptionService {
         }
     }
 
+    /**
+     * Tạo kỳ gia hạn chờ thanh toán. Khóa dòng hội viên rồi đọc lại toàn bộ lịch sử. Từ chối nếu: có bảo lưu
+     * đang chờ, các kỳ đã trả tiền chồng ngày nhau (trừ trường hợp nâng cấp), chuỗi gia hạn rẽ nhánh/lặp vòng,
+     * đang có kỳ chờ thanh toán hoặc đang bảo lưu. Đi theo chuỗi các kỳ cùng gói tới kỳ cuối; kỳ mới bắt đầu từ
+     * hôm nay (nếu kỳ cuối đã hết hạn) hoặc ngay ngày sau kỳ cuối, dài đúng số ngày của gói, và không được
+     * trùng kỳ đã trả tiền nào.
+     */
     private SubscriptionDto renewForOwner(MembershipSubscription requested, Long memberId, Long previousId) {
         if (!isPaidPeriod(requested)) {
             throw new BadRequestException("MEMBERSHIP_INVALID_RENEWAL_STATUS",
                     "membership.subscription.invalid_renewal_status", new Object[]{requested.getStatus()},
                     "Only a paid subscription can be renewed");
         }
-        // Serialize all renewal requests for this member, then read the chain afresh.
+        // Tuần tự hóa mọi yêu cầu gia hạn cho hội viên này, sau đó đọc lại chuỗi kỳ gói mới nhất.
         members.findByUserIdForUpdate(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
         if (entityManager != null) entityManager.refresh(requested);
@@ -343,6 +367,7 @@ public class MembershipSubscriptionService {
         return toDto(subscriptions.saveAndFlush(renewal));
     }
 
+    /** Kỳ gói phải thuộc người đang đăng nhập; không thì báo 403. */
     private void ensureOwner(MembershipSubscription subscription, AuthenticatedPrincipal principal) {
         if (principal == null || subscription.getMember() == null || !principal.id().equals(subscription.getMember().getUserId())) {
             throw new ForbiddenException(
@@ -353,6 +378,7 @@ public class MembershipSubscriptionService {
         }
     }
 
+    /** Kỳ gói có đang active và hiệu lực vào ngày cho trước không. */
     private boolean isActiveOn(MembershipSubscription subscription, LocalDate date) {
         return STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
                 && validPeriod(subscription)
@@ -360,16 +386,22 @@ public class MembershipSubscriptionService {
                 && !subscription.getEndDate().isBefore(date);
     }
 
+    /** Kỳ gói đã được thanh toán chưa (trạng thái active hoặc expired). */
     private boolean isPaidPeriod(MembershipSubscription subscription) {
         return subscription != null && (STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
                 || "expired".equalsIgnoreCase(subscription.getStatus()));
     }
 
+    /** Kỳ gói có ngày bắt đầu, ngày kết thúc và kết thúc không trước bắt đầu. */
     private boolean validPeriod(MembershipSubscription subscription) {
         return subscription.getStartDate() != null && subscription.getEndDate() != null
                 && !subscription.getEndDate().isBefore(subscription.getStartDate());
     }
 
+    /**
+     * Hai kỳ có phải là một lần nâng cấp nối tiếp không: kỳ mới trỏ về kỳ cũ, khác gói (hoặc có phí nâng cấp),
+     * và kỳ mới bắt đầu đúng ngày kỳ cũ kết thúc. Trường hợp này được phép trùng một ngày.
+     */
     private boolean isUpgradeTransition(MembershipSubscription a, MembershipSubscription b) {
         MembershipSubscription newer = b.getPreviousSubscription() != null
                 && a.getId().equals(b.getPreviousSubscription().getId()) ? b
@@ -383,6 +415,7 @@ public class MembershipSubscriptionService {
                 && older.getEndDate().equals(newer.getStartDate());
     }
 
+    /** Lỗi 409 "chuỗi gói cần quản lý kiểm tra trước khi gia hạn". */
     private ConflictException renewalConflict() {
         return new ConflictException("MEMBERSHIP_RENEWAL_CONFLICT", "error.membership.renewal_conflict",
                 null, "Subscription chain needs review before renewal");
@@ -522,9 +555,9 @@ public class MembershipSubscriptionService {
                 throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
                         "error.membership.cancel_payment_unsettled", null, null);
             }
-            // A VNPay attempt the gateway may still settle blocks everyone; an abandoned one is closed here.
+            // Một lượt VNPay mà cổng vẫn còn có thể quyết toán sẽ chặn mọi người; lượt bị bỏ dở sẽ được đóng tại đây.
             if (vnpayGuard != null) vnpayGuard.subscription(subscriptionId);
-            // A member may withdraw an unpaid online checkout; a cash receipt under review is decided by reception.
+            // Hội viên có thể rút lượt thanh toán trực tuyến chưa trả; biên lai tiền mặt đang chờ duyệt do lễ tân quyết định.
             if (!isStaff && subPayments.stream().anyMatch(payment -> "pending".equalsIgnoreCase(payment.getStatus())
                     && !"online_wallet".equalsIgnoreCase(payment.getMethod()))) {
                 throw new ConflictException("MEMBERSHIP_CANCEL_PAYMENT_UNSETTLED",
@@ -544,10 +577,15 @@ public class MembershipSubscriptionService {
         return toDto(subscriptions.saveAndFlush(subscription));
     }
 
+    /** Bộ tính giá trị còn lại của gói (dùng bản Spring tiêm vào, không có thì tự tạo). */
     private SubscriptionValueCalculator valueCalculator() {
         return valueCalculator != null ? valueCalculator : new SubscriptionValueCalculator(paymentRepository);
     }
 
+    /**
+     * Gói đích có "cao hơn" gói hiện tại không: giá cao hơn, hoặc cùng giá nhưng dài ngày hơn. Cùng gói thì
+     * không.
+     */
     private boolean isHigherPackage(MembershipPackage currentPackage, MembershipPackage targetPackage) {
         if (currentPackage == null || targetPackage == null) {
             return false;
@@ -576,9 +614,10 @@ public class MembershipSubscriptionService {
     }
 
     /**
-     * Files a hold request (spec 2026-11-09, section 1.6): the package must allow holds and not have used its one hold,
-     * the dates must start at least 24 hours away and last between 3 days and the package allowance, and medical
-     * paperwork must be attached.
+     * Gửi yêu cầu bảo lưu (đặc tả 2026-11-09, mục 1.6): gói phải đang hiệu lực, cho phép bảo lưu và chưa dùng lượt
+     * bảo lưu duy nhất; ngày bắt đầu cách hiện tại ít nhất 24 giờ, kéo dài từ 3 ngày đến hạn mức của gói và nằm trong
+     * thời hạn gói; phải đính kèm giấy tờ y tế (tối đa 5 file JPG/PNG/PDF, mỗi file tối đa 5 MB). Không được có kỳ chờ
+     * thanh toán, gia hạn trả trước hoặc yêu cầu hủy đang chờ.
      */
     @Transactional
     public SubscriptionDto requestHold(AuthenticatedPrincipal principal, Long subscriptionId,
@@ -653,9 +692,15 @@ public class MembershipSubscriptionService {
         return toDto(saved);
     }
 
-    /** Bytes of one uploaded medical document, already read from the multipart request. */
+    /**
+     * Dữ liệu byte của một file giấy tờ y tế đã tải lên, đã được đọc sẵn từ request multipart.
+     */
     public record HoldDocumentUpload(String fileName, String contentType, byte[] content) {}
 
+    /**
+     * Kiểm tra khoảng bảo lưu và giấy tờ theo các quy tắc ở requestHold; vi phạm thì báo lỗi 400/409 với mã
+     * riêng.
+     */
     private void validateHoldWindow(MembershipSubscription subscription, SubscriptionRequests.HoldRequest request,
                                     List<HoldDocumentUpload> documents, LocalDateTime now) {
         int maxDays = com.swp391.scms.facilities.PackageBenefits.holdMaxDays(subscription.getMembershipPackage());
@@ -705,6 +750,10 @@ public class MembershipSubscriptionService {
         }
     }
 
+    /**
+     * Lưu giấy tờ bảo lưu vào database (thay toàn bộ giấy tờ cũ của kỳ gói), ghi tên file (tối đa 255 ký tự),
+     * loại, dung lượng, thời điểm và người tải lên.
+     */
     private void storeHoldDocuments(MembershipSubscription subscription, AuthenticatedPrincipal principal,
                                     List<HoldDocumentUpload> documents) {
         if (holdDocuments == null || documents == null) return;
@@ -725,6 +774,10 @@ public class MembershipSubscriptionService {
         }
     }
 
+    /**
+     * Chặn bảo lưu khi hội viên còn kỳ chờ thanh toán, đã trả trước một kỳ gia hạn trong tương lai, hoặc gói
+     * đang có yêu cầu hủy chờ duyệt.
+     */
     private void ensureNoPendingOrCancellationHoldConflicts(Long memberId, Long subscriptionId, LocalDate today) {
         if (subscriptions.existsByMemberUserIdAndStatus(memberId, STATUS_PENDING_PAYMENT)) {
             throw new ConflictException(
@@ -746,6 +799,12 @@ public class MembershipSubscriptionService {
         }
     }
 
+    /**
+     * Hội viên quay lại tập sớm (tiếp tục gói đang bảo lưu): gói phải đang frozen với bảo lưu đã duyệt và đã
+     * bắt đầu; không được có gói active khác, kỳ chờ thanh toán hay gia hạn trả trước. Nếu ngày bảo lưu đã được
+     * cộng lúc duyệt thì trừ lại số ngày chưa dùng; bảo lưu cũ chưa cộng thì cộng số ngày đã bảo lưu (tối đa
+     * 90). Gói trở lại active và các buổi học trong phần bảo lưu còn lại không còn được miễn điểm danh.
+     */
     @Transactional
     public SubscriptionDto resume(AuthenticatedPrincipal principal, Long subscriptionId) {
         members.findByUserIdForUpdate(principal.id())
@@ -768,9 +827,9 @@ public class MembershipSubscriptionService {
                 || hasPaidFutureRenewal(principal.id(), today)) {
             throw new ConflictException("MEMBERSHIP_RESUME_CONFLICT", "error.membership.resume_conflict", null, null);
         }
-        // Preserve the original paid period and class-credit usage; only extend its expiry, by at most MAX_HOLD_DAYS.
-        // Holds approved since days are credited at approval give back the unused days; older approved holds were not
-        // credited yet, so they still get their held days added now.
+        // Giữ nguyên kỳ đã thanh toán gốc và lượt sử dụng lớp học; chỉ gia hạn ngày hết hạn thêm tối đa MAX_HOLD_DAYS.
+        // Các đợt bảo lưu được duyệt từ khi áp dụng cộng ngày lúc duyệt sẽ trừ lại số ngày chưa dùng; các đợt bảo lưu cũ
+        // chưa được cộng ngày lúc duyệt thì nay vẫn được cộng bù số ngày đã bảo lưu.
         if (subscription.isHoldDaysCredited() && subscription.getHoldEndDate() != null) {
             if (today.isBefore(subscription.getHoldEndDate())) {
                 long unusedDays = java.time.temporal.ChronoUnit.DAYS.between(today, subscription.getHoldEndDate());
@@ -785,12 +844,14 @@ public class MembershipSubscriptionService {
         subscription.setHoldDaysCredited(null);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
         MembershipSubscription resumed = subscriptions.saveAndFlush(subscription);
-        // Coming back early: the rest of the hold window no longer excuses course sessions.
+        // Quay lại tập sớm: phần thời gian còn lại của đợt bảo lưu không còn miễn điểm danh cho các buổi khóa học.
         if (courseAttendance != null) courseAttendance.releaseHoldExcuses(principal.id(), today);
         return toDto(resumed);
     }
 
-    /** Frozen memberships whose hold reached MAX_HOLD_DAYS. */
+    /**
+     * Các gói đang bảo lưu (frozen) không có ngày kết thúc cụ thể đã đạt mốc MAX_HOLD_DAYS (cần tự tiếp tục).
+     */
     @Transactional(readOnly = true)
     public List<Long> findHoldsDueForResume() {
         LocalDateTime cutoff = LocalDateTime.now(clock).minusDays(MAX_HOLD_DAYS);
@@ -798,19 +859,26 @@ public class MembershipSubscriptionService {
                 .stream().filter(sub -> sub.getHoldEndDate() == null).map(MembershipSubscription::getId).toList();
     }
 
-    /** Frozen memberships whose dated hold ended before today. */
+    /**
+     * Các gói đang bảo lưu (frozen) có ngày kết thúc cụ thể đã qua trước hôm nay (cần tự tiếp tục).
+     */
     @Transactional(readOnly = true)
     public List<Long> findDatedHoldsDueForResume() {
         return subscriptions.findDatedHoldsDueForResume(LocalDate.now(clock));
     }
 
-    /** Approved holds whose first day has arrived but are still counted as active memberships. */
+    /**
+     * Các đợt bảo lưu đã duyệt đã đến ngày bắt đầu nhưng gói vẫn đang được tính ở trạng thái active (cần chuyển sang frozen).
+     */
     @Transactional(readOnly = true)
     public List<Long> findHoldsDueToStart() {
         return subscriptions.findHoldsDueToStart(LocalDate.now(clock));
     }
 
-    /** Freezes an approved hold on its first day; the bookings of the window were already released at approval. */
+    /**
+     * Chuyển sang frozen một đợt bảo lưu đã duyệt vào ngày đầu tiên: khóa dòng hội viên và gói, kiểm tra lại điều kiện
+     * rồi chuyển trạng thái; các lịch đặt trong khoảng bảo lưu đã được giải phóng từ lúc duyệt. Trả về true nếu đã chuyển.
+     */
     @Transactional
     public boolean startHold(Long subscriptionId) {
         MembershipSubscription lookup = subscriptions.findById(subscriptionId).orElse(null);
@@ -832,7 +900,11 @@ public class MembershipSubscriptionService {
         return true;
     }
 
-    /** Ends a hold that reached MAX_HOLD_DAYS: the membership runs again with those days added to its expiry. */
+    /**
+     * Tự kết thúc đợt bảo lưu đã đạt MAX_HOLD_DAYS hoặc đã qua ngày cuối (với bảo lưu có ngày cụ thể): gói tập chạy
+     * lại ở trạng thái active với số ngày bảo lưu được cộng vào hạn gói (nếu lúc duyệt chưa cộng) và gửi thông báo
+     * hạn mới cho hội viên. Trả về true nếu đã kết thúc.
+     */
     @Transactional
     public boolean autoResumeHold(Long subscriptionId) {
         MembershipSubscription lookup = subscriptions.findById(subscriptionId).orElse(null);
@@ -845,7 +917,7 @@ public class MembershipSubscriptionService {
         LocalDateTime now = LocalDateTime.now(clock);
         long heldDays;
         if (subscription.getHoldEndDate() != null) {
-            // Dated hold: it covers its first to last day inclusive and ends the day after.
+            // Bảo lưu có ngày cụ thể: bao phủ từ ngày đầu đến ngày cuối (tính cả hai ngày) và kết thúc vào ngày hôm sau.
             if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
                     || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
                     || subscription.getEndDate() == null
@@ -855,7 +927,7 @@ public class MembershipSubscriptionService {
             LocalDate from = subscription.getHoldStartDate() != null ? subscription.getHoldStartDate()
                     : subscription.getHoldEndDate();
             heldDays = java.time.temporal.ChronoUnit.DAYS.between(from, subscription.getHoldEndDate()) + 1;
-            // Holds approved with days credited already have them in endDate; older approved holds get them now.
+            // Các bảo lưu đã duyệt có cộng ngày sẵn thì endDate đã bao gồm số ngày này; các bảo lưu duyệt cũ hơn được cộng ngay lúc này.
             if (!subscription.isHoldDaysCredited()) {
                 subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
             }
@@ -900,7 +972,10 @@ public class MembershipSubscriptionService {
                 .toList();
     }
 
-    /** Every hold request and hold history row for the desk screens; {@code status} filters PENDING/APPROVED/REJECTED/COMPLETED. */
+    /**
+     * Mọi yêu cầu bảo lưu và dòng lịch sử bảo lưu cho màn hình quầy; {@code status} lọc theo PENDING/APPROVED/REJECTED/COMPLETED
+     * (rỗng hoặc ALL là tất cả); bỏ qua hội viên đã bị xóa.
+     */
     @Transactional(readOnly = true)
     public List<HoldRequestDto> listHolds(String status) {
         String wanted = status == null || status.isBlank() || "ALL".equalsIgnoreCase(status)
@@ -913,7 +988,9 @@ public class MembershipSubscriptionService {
                 .toList();
     }
 
-    /** Hold details of one subscription for its owner or desk staff. */
+    /**
+     * Chi tiết bảo lưu của một kỳ gói dành cho chủ gói hoặc nhân viên quầy.
+     */
     @Transactional(readOnly = true)
     public HoldRequestDto getHold(AuthenticatedPrincipal principal, Long subscriptionId) {
         MembershipSubscription subscription = subscriptions.findById(subscriptionId)
@@ -922,7 +999,9 @@ public class MembershipSubscriptionService {
         return toHoldRequestDto(subscription, 0);
     }
 
-    /** A document of a hold request, for its owner or desk staff only. */
+    /**
+     * Lấy một file giấy tờ của yêu cầu bảo lưu, chỉ dành cho chủ gói hoặc nhân viên quầy; file phải thuộc đúng kỳ gói.
+     */
     @Transactional(readOnly = true)
     public com.swp391.scms.membership.entity.MembershipHoldDocument getHoldDocument(
             AuthenticatedPrincipal principal, Long subscriptionId, Long documentId) {
@@ -936,7 +1015,10 @@ public class MembershipSubscriptionService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.hold_document", documentId));
     }
 
-    /** The hold allowance of a subscription of the authenticated member. */
+    /**
+     * Hạn mức và chính sách bảo lưu của một kỳ gói thuộc hội viên đang đăng nhập: có được bảo lưu không, đã dùng lượt
+     * chưa, số ngày tối thiểu/tối đa, số giờ báo trước, số file và dung lượng giấy tờ tối đa.
+     */
     @Transactional(readOnly = true)
     public com.swp391.scms.membership.dto.SubscriptionResponses.HoldPolicyDto holdPolicy(
             AuthenticatedPrincipal principal, Long subscriptionId) {
@@ -949,7 +1031,9 @@ public class MembershipSubscriptionService {
                 MAX_HOLD_DOCUMENTS, MAX_HOLD_DOCUMENT_BYTES);
     }
 
-    /** The member withdraws a hold request that has not been decided yet. */
+    /**
+     * Hội viên tự rút một yêu cầu bảo lưu chưa được quyết định (hoặc bảo lưu đã duyệt nhưng chưa bắt đầu).
+     */
     @Transactional
     public SubscriptionDto cancelHoldRequest(AuthenticatedPrincipal principal, Long subscriptionId) {
         MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
@@ -959,8 +1043,8 @@ public class MembershipSubscriptionService {
     }
 
     /**
-     * Desk staff withdraw a hold on behalf of a member (the member asked at the counter): a pending request, or an
-     * approved hold that has not started. The member is notified.
+     * Nhân viên quầy rút bảo lưu thay hội viên (hội viên yêu cầu tại quầy): áp dụng cho yêu cầu đang chờ duyệt hoặc
+     * đợt bảo lưu đã duyệt nhưng chưa bắt đầu. Hội viên sẽ nhận được thông báo.
      */
     @Transactional
     public SubscriptionDto withdrawHoldForMember(AuthenticatedPrincipal principal, Long subscriptionId) {
@@ -981,6 +1065,11 @@ public class MembershipSubscriptionService {
         return result;
     }
 
+    /**
+     * Rút bảo lưu: chỉ khi đang chờ duyệt, hoặc đã duyệt mà chưa tới ngày bắt đầu. Trường hợp đã duyệt: trả lại
+     * lượt bảo lưu, bỏ miễn điểm danh, trừ lại số ngày đã cộng vào hạn gói; các lịch đã hủy lúc duyệt không
+     * khôi phục. Xóa giấy tờ và mọi thông tin bảo lưu của kỳ gói.
+     */
     private SubscriptionDto withdrawHold(MembershipSubscription subscription) {
         Long subscriptionId = subscription.getId();
         LocalDate today = LocalDate.now(clock);
@@ -992,7 +1081,7 @@ public class MembershipSubscriptionService {
                     "Subscription does not have a hold request that can still be withdrawn");
         }
         if (approvedNotStarted) {
-            // The hold never started, so the package gets its one hold back. Bookings released at approval stay released.
+            // Đợt bảo lưu chưa từng bắt đầu nên gói tập được hoàn lại 1 lượt bảo lưu. Các lịch đặt đã hủy lúc duyệt vẫn giữ nguyên trạng thái đã hủy.
             subscription.setHoldUsed(false);
             if (courseAttendance != null) courseAttendance.releaseHoldExcuses(subscription.getMember().getUserId(), subscription.getHoldStartDate());
             if (subscription.isHoldDaysCredited() && subscription.getHoldStartDate() != null
@@ -1012,12 +1101,17 @@ public class MembershipSubscriptionService {
         return toDto(subscriptions.saveAndFlush(subscription));
     }
 
+    /** Cho phép nhân viên quầy (lễ tân, quản lý); người khác phải là chủ kỳ gói. */
     private void ensureOwnerOrDesk(MembershipSubscription subscription, AuthenticatedPrincipal principal) {
         String role = principal == null || principal.role() == null ? "" : principal.role().toUpperCase(java.util.Locale.ROOT);
         if ("RECEPTIONIST".equals(role) || "CENTER_MANAGER".equals(role) || "MANAGER".equals(role)) return;
         ensureOwner(subscription, principal);
     }
 
+    /**
+     * Trạng thái bảo lưu để hiển thị: trạng thái hiện tại, hoặc COMPLETED nếu gói đã dùng lượt bảo lưu và không
+     * còn yêu cầu nào.
+     */
     private static String effectiveHoldStatus(MembershipSubscription s) {
         if (s.getHoldStatus() != null) return s.getHoldStatus().toUpperCase(java.util.Locale.ROOT);
         return s.isHoldUsed() ? "COMPLETED" : null;
@@ -1060,7 +1154,7 @@ public class MembershipSubscriptionService {
                         "The requested hold period has already passed");
             }
             if (holdStart.isBefore(today)) {
-                // Approved late: the days the member already lived through are not held, so no days are added for them.
+                // Duyệt muộn: những ngày hội viên đã trải qua không được tính bảo lưu, nên không cộng bù ngày cho các ngày đó.
                 holdStart = today;
                 subscription.setHoldStartDate(today);
             }
@@ -1070,7 +1164,7 @@ public class MembershipSubscriptionService {
                 subscription.setHoldDaysCredited(true);
             }
         }
-        // A dated hold stays active until its first day; the daily sweep freezes it then.
+        // Đợt bảo lưu có ngày cụ thể vẫn ở trạng thái active cho tới ngày đầu tiên; job quét hằng ngày sẽ chuyển sang frozen vào lúc đó.
         if (holdStart == null || !holdStart.isAfter(today)) {
             subscription.setStatus(STATUS_FROZEN);
         }
@@ -1087,21 +1181,21 @@ public class MembershipSubscriptionService {
         int cancelledCount = 0;
         if (saved.getMember() != null && saved.getMember().getUserId() != null) {
             String cancelReason = msg("scheduling.enrollment.cancelled_by_hold");
-            // Courses first: a hold approved 3+ days before a course starts gives the credit or fee back, a later one
-            // (or one on a running course) gives it up. The 1:1 sessions and courts below never touch enrollments.
+            // Xử lý khóa học trước: bảo lưu được duyệt trước ngày khai giảng từ 3 ngày trở lên sẽ hoàn lại lượt hoặc học phí,
+            // duyệt muộn hơn (hoặc với khóa đang diễn ra) sẽ mất lượt/phí. Các buổi PT 1:1 và đặt sân bên dưới không đụng tới đăng ký khóa học.
             if (enrollmentService != null) {
                 var courses = enrollmentService.releaseCoursesForHold(
                         saved.getMember().getUserId(), cancelReason, holdStart, holdEnd);
                 if (courses != null) cancelledCount += courses.cancelled();
             }
             if (holdStart != null && holdEnd != null) {
-                // Only the held window is released for 1:1 sessions and courts.
+                // Chỉ giải phóng các buổi PT 1:1 và lượt đặt sân rơi vào khoảng thời gian bảo lưu.
                 if (entitlementRevocation != null) {
                     cancelledCount += entitlementRevocation.releaseBookingsBetween(
                             saved.getMember().getUserId(), holdStart, holdEnd, cancelReason);
                 }
             } else if (entitlementRevocation != null) {
-                // A frozen period covers no date, so classes, 1:1 sessions and courts are all released.
+                // Kỳ đang frozen không bao phủ ngày nào, nên lớp học, buổi PT 1:1 và đặt sân đều bị giải phóng.
                 cancelledCount += entitlementRevocation.revokeUncoveredBookings(saved.getMember().getUserId(), cancelReason);
             } else if (enrollmentService != null) {
                 cancelledCount += enrollmentService.cancelFutureEnrollmentsForMember(
@@ -1199,6 +1293,10 @@ public class MembershipSubscriptionService {
                 .orElse(null);
     }
 
+    /**
+     * Ngày hết hạn thực tế đã trả tiền: đi tiếp theo chuỗi các kỳ gia hạn active cùng gói nối liền ngày (kỳ sau
+     * bắt đầu ngay ngày sau kỳ trước) và trả ngày kết thúc của kỳ cuối.
+     */
     private LocalDate paidThroughDate(MembershipSubscription current, List<MembershipSubscription> history) {
         MembershipSubscription tail = current;
         java.util.Set<Long> visited = new java.util.HashSet<>();
@@ -1232,6 +1330,7 @@ public class MembershipSubscriptionService {
                 .toList();
     }
 
+    /** Hội viên đã trả tiền trước cho một kỳ gia hạn bắt đầu trong tương lai chưa. */
     private boolean hasPaidFutureRenewal(Long memberId, LocalDate today) {
         return subscriptions.findByMemberUserId(memberId).stream()
                 .anyMatch(item -> item.getPreviousSubscription() != null
@@ -1239,17 +1338,20 @@ public class MembershipSubscriptionService {
                         && item.getStartDate().isAfter(today));
     }
 
+    /** Lỗi 409 "đã có kỳ gia hạn trả trước, cần quản lý kiểm tra". */
     private ConflictException futurePaidConflict() {
         return new ConflictException("MEMBERSHIP_FUTURE_PAID_RENEWAL",
                 "error.membership.future_paid_renewal", null,
                 "Paid future renewal requires manager review");
     }
 
+    /** Lấy hội viên theo id; không thấy thì báo 404. */
     private Member findMember(Long userId) {
         return members.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", userId));
     }
 
+    /** Lấy gói đang mở bán (trạng thái active, số ngày > 0); không có thì báo 404, đã ngừng bán thì báo 400. */
     private MembershipPackage findActivePackage(Long packageId) {
         MembershipPackage membershipPackage = packages.findById(packageId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.package", packageId));
@@ -1264,6 +1366,7 @@ public class MembershipSubscriptionService {
         return membershipPackage;
     }
 
+    /** Danh sách kỳ gói đang chờ thanh toán (mới nhất trước) cho quầy, bỏ hội viên đã bị xóa. */
     @Transactional(readOnly = true)
     public List<com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto> listPending() {
         return subscriptions.findByStatusOrderByCreatedAtDesc(STATUS_PENDING_PAYMENT).stream()
@@ -1274,6 +1377,10 @@ public class MembershipSubscriptionService {
                 .toList();
     }
 
+    /**
+     * Sinh mã QR động để check-in: hội viên phải có gói đang active; trả chuỗi QR, thời gian sống (giây) và
+     * thời điểm tạo.
+     */
     @Transactional(readOnly = true)
     public com.swp391.scms.membership.dto.SubscriptionResponses.DynamicQrDto generateDynamicQr(AuthenticatedPrincipal principal) {
         SubscriptionDto sub = current(principal);
@@ -1290,10 +1397,15 @@ public class MembershipSubscriptionService {
                 qr, dynamicQrService.getTtlSeconds(), LocalDateTime.now(clock));
     }
 
+    /** Chuyển kỳ gói sang SubscriptionDto (không có ngày hết hạn thực tế). */
     private SubscriptionDto toDto(MembershipSubscription s) {
         return toDto(s, null);
     }
 
+    /**
+     * Chuyển kỳ gói sang SubscriptionDto: tên gói (gói dùng thử hiển thị tên chuẩn), thông tin kỳ, bảo lưu,
+     * giá, phí nâng cấp, phần trừ và giá trị còn lại (chỉ tính khi gói đang hiệu lực).
+     */
     private SubscriptionDto toDto(MembershipSubscription s, LocalDate paidThroughDate) {
         String pkgName;
         if (isTrialSubscription(s)) {
@@ -1323,6 +1435,10 @@ public class MembershipSubscriptionService {
                 isActiveOn(s, LocalDate.now(clock)) ? valueCalculator().remainingValue(s, LocalDate.now(clock)) : null);
     }
 
+    /**
+     * Chuyển kỳ chờ thanh toán sang DTO cho quầy: thông tin hội viên, gói và số tiền cần thu (nếu có đúng một
+     * khoản thanh toán đang chờ thì lấy số tiền của khoản đó).
+     */
     private com.swp391.scms.membership.dto.SubscriptionResponses.PendingSubscriptionDto toPendingDto(MembershipSubscription s) {
         Member m = s.getMember();
         com.swp391.scms.users.entity.User u = m != null ? m.getUser() : null;
@@ -1353,6 +1469,7 @@ public class MembershipSubscriptionService {
                 s.getCreatedAt());
     }
 
+    /** Danh sách thông tin giấy tờ bảo lưu (không kèm nội dung file) của một kỳ gói. */
     private List<com.swp391.scms.membership.dto.SubscriptionResponses.HoldDocumentDto> holdDocumentDtos(MembershipSubscription s) {
         if (holdDocuments == null || s.getId() == null) return List.of();
         return holdDocuments.findBySubscriptionIdOrderByIdAsc(s.getId()).stream()
@@ -1361,6 +1478,10 @@ public class MembershipSubscriptionService {
                 .toList();
     }
 
+    /**
+     * Chuyển kỳ gói sang HoldRequestDto cho màn bảo lưu: hội viên, gói, thời hạn, trạng thái, lý do, các mốc
+     * thời gian, khoảng bảo lưu, giấy tờ và lý do từ chối.
+     */
     private HoldRequestDto toHoldRequestDto(MembershipSubscription s, int cancelledEnrollmentsCount) {
         Member m = s.getMember();
         com.swp391.scms.users.entity.User u = m != null ? m.getUser() : null;
@@ -1388,6 +1509,7 @@ public class MembershipSubscriptionService {
                 s.getHoldRejectionReason());
     }
 
+    /** Đây có phải gói dùng thử không: tên gói chứa "TRẢI NGHIỆM"/"TRIAL", hoặc gói/kỳ chỉ dài tối đa 3 ngày. */
     private boolean isTrialSubscription(MembershipSubscription sub) {
         if (sub == null) return false;
         if (sub.getMembershipPackage() != null) {

@@ -27,6 +27,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.Clock;
 import java.util.Optional;
 
+/** Bộ kiểm thử cho service GoogleAuthService (google auth service). */
 @ExtendWith(MockitoExtension.class)
 class GoogleAuthServiceTest {
 
@@ -41,12 +42,14 @@ class GoogleAuthServiceTest {
     private AuthService authService;
     private com.swp391.scms.audit.AuditLogRepository auditRepository;
 
+    /** Kiểm thử: thông tin xác thực không bao giờ lọt vào lưu audit. */
     @org.junit.jupiter.api.AfterEach
     void authenticationCredentialsNeverReachAuditPersistence() {
         verifyNoInteractions(auditRepository);
     }
 
 
+    /** Chuẩn bị trước mỗi test: tạo GoogleAuthService với phụ thuộc giả lập. */
     @BeforeEach
     void setUp() {
         authService = new AuthService(
@@ -67,6 +70,7 @@ class GoogleAuthServiceTest {
         authService = proxyFactory.getProxy();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (create role). */
     private Role createRole(String code) {
         Role role = new Role();
         role.setCode(code);
@@ -74,6 +78,7 @@ class GoogleAuthServiceTest {
         return role;
     }
 
+    /** Kiểm thử: từ chối thay thế danh tính Google đã có. */
     @Test
     void rejectsReplacingExistingGoogleIdentity() {
         var existing = new User();
@@ -87,6 +92,7 @@ class GoogleAuthServiceTest {
         verifyNoInteractions(jwtService);
     }
 
+    /** Kiểm thử: liên kết email bên thứ ba cần xác minh bổ sung. */
     @Test
     void requiresAdditionalVerificationToLinkThirdPartyEmail() {
         var existing = new User();
@@ -99,6 +105,7 @@ class GoogleAuthServiceTest {
         verifyNoInteractions(jwtService);
     }
 
+    /** Kiểm thử: Case 1: Token hợp lệ - Người dùng mới -> Tự tạo tài khoản MEMBER active và cấp JWT */
     @Test
     @DisplayName("Case 1: Token hợp lệ - Người dùng mới -> Tự tạo tài khoản MEMBER active và cấp JWT")
     void testGoogleLogin_ValidToken_NewUser() {
@@ -130,6 +137,7 @@ class GoogleAuthServiceTest {
         verify(userRepository, atLeastOnce()).save(any(User.class));
     }
 
+    /** Kiểm thử: Case 2: Token hợp lệ - Email đã tồn tại vai trò MEMBER -> Đăng nhập và liên kết google_sub */
     @Test
     @DisplayName("Case 2: Token hợp lệ - Email đã tồn tại vai trò MEMBER -> Đăng nhập và liên kết google_sub")
     void testGoogleLogin_ValidToken_ExistingUser() {
@@ -162,6 +170,7 @@ class GoogleAuthServiceTest {
         verify(userRepository).save(existingUser);
     }
 
+    /** Kiểm thử: Case 3: Token sai / Chữ ký không hợp lệ / Hết hạn -> Ném lỗi UnauthorizedException (401) */
     @Test
     @DisplayName("Case 3: Token sai / Chữ ký không hợp lệ / Hết hạn -> Ném lỗi UnauthorizedException (401)")
     void testGoogleLogin_InvalidToken() {
@@ -173,6 +182,10 @@ class GoogleAuthServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    /**
+     * Kiểm thử: Case 4: Email chưa được Google xác minh (email_verified = false) -> Ném lỗi
+     * UnauthorizedException (401)
+     */
     @Test
     @DisplayName("Case 4: Email chưa được Google xác minh (email_verified = false) -> Ném lỗi UnauthorizedException (401)")
     void testGoogleLogin_EmailNotVerified() {
@@ -191,6 +204,7 @@ class GoogleAuthServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Manager vẫn dùng đăng nhập thường */
     @Test
     @DisplayName("Manager vẫn dùng đăng nhập thường")
     void testGoogleLogin_StaffNotAllowed() {
@@ -218,6 +232,7 @@ class GoogleAuthServiceTest {
         verify(jwtService, never()).generateToken(any(), any(), any());
     }
 
+    /** Kiểm thử: Case 6: Tài khoản bị khóa (locked hoặc inactive) -> Ném lỗi ForbiddenException (403) */
     @Test
     @DisplayName("Case 6: Tài khoản bị khóa (locked hoặc inactive) -> Ném lỗi ForbiddenException (403)")
     void testGoogleLogin_LockedAccount() {
@@ -245,6 +260,7 @@ class GoogleAuthServiceTest {
         verify(jwtService, never()).generateToken(any(), any(), any());
     }
 
+    /** Kiểm thử: OAuth Callback -> Xác thực Google thành công, gửi mã OTP về email thay vì cấp JWT ngay */
     @Test
     @DisplayName("OAuth Callback -> Xác thực Google thành công, gửi mã OTP về email thay vì cấp JWT ngay")
     void testRequestGoogleOAuthOtp_SendsEmailOtpInsteadOfImmediateJwt() {
@@ -279,6 +295,7 @@ class GoogleAuthServiceTest {
         verify(otpDeliveryPort).send("oauthmember@gmail.com", "482910");
         verifyNoInteractions(jwtService);
     }
+    /** Kiểm thử: email Google đổi tên vẫn giữ OTP gắn với tài khoản nội bộ đã phân giải. */
     @Test
     void renamedGoogleEmailKeepsOtpBoundToResolvedLocalAccount() {
         User member = new User();
@@ -296,6 +313,7 @@ class GoogleAuthServiceTest {
         verifyNoInteractions(jwtService);
     }
 
+    /** Kiểm thử: hội viên Google quay lại đang hoạt động đăng nhập mà không gửi thêm OTP. */
     @Test
     void activeReturningGoogleMemberSignsInWithoutSendingAnotherOtp() {
         User member = new User();
@@ -317,6 +335,7 @@ class GoogleAuthServiceTest {
         assertNotNull(member.getLastLoginAt());
     }
 
+    /** Kiểm thử: email đã có và hoạt động có thể liên kết danh tính Google đáng tin mà không cần OTP. */
     @Test
     void activeExistingEmailCanLinkTrustedGoogleIdentityWithoutAnotherOtp() {
         var member = new User();
@@ -335,6 +354,7 @@ class GoogleAuthServiceTest {
         verifyNoInteractions(otpService, otpDeliveryPort);
     }
 
+    /** Kiểm thử: callback Google vẫn từ chối nhân viên bị khóa và tài khoản đã xóa. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"locked,MEMBER,false", "locked,COACH,false", "active,CENTER_MANAGER,false", "active,ADMIN,false", "active,RECEPTIONIST,true", "active,MEMBER,true"})
     void googleCallbackStillRejectsLockedStaffAndDeletedAccounts(String status, String role, boolean deleted) {
@@ -350,6 +370,7 @@ class GoogleAuthServiceTest {
         verifyNoInteractions(jwtService, otpService, otpDeliveryPort);
     }
 
+    /** Kiểm thử: khớp email Google không bao giờ liên kết hay lưu tài khoản bị chặn. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"locked,MEMBER,false", "active,CENTER_MANAGER,false", "active,ADMIN,false", "active,MEMBER,true"})
     void googleEmailMatchNeverLinksOrSavesBlockedAccounts(String status, String role, boolean deleted) {
@@ -370,6 +391,7 @@ class GoogleAuthServiceTest {
         verifyNoInteractions(jwtService, otpService, otpDeliveryPort);
     }
 
+    /** Kiểm thử: callback Google của nhân viên được cấp sẵn liên kết theo email và giữ nguyên vai trò. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
     void provisionedStaffGoogleCallbackLinksByEmailAndKeepsRole(String role) {
@@ -392,6 +414,7 @@ class GoogleAuthServiceTest {
         verifyNoInteractions(roleRepository, otpService, otpDeliveryPort);
     }
 
+    /** Kiểm thử: nhân viên đã liên kết đăng nhập Google trực tiếp vẫn giữ vai trò trong database. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
     void linkedStaffDirectGoogleLoginKeepsDatabaseRole(String role) {

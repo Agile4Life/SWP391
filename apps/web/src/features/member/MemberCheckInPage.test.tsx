@@ -21,6 +21,7 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+// Dựng component vào DOM giả để kiểm thử.
 async function render() { await act(async () => root.render(<MemoryRouter><MemberCheckInPage /></MemoryRouter>)); }
 it('submits the decoded gate code once and waits for the server before showing success', async () => {
   await render();

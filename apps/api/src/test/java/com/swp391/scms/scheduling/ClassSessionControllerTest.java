@@ -31,6 +31,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ClassSessionController (class session controller). */
 @ExtendWith(MockitoExtension.class)
 class ClassSessionControllerTest {
 
@@ -41,6 +42,7 @@ class ClassSessionControllerTest {
     private ObjectMapper objectMapper;
     private AuthenticatedPrincipal principal;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller buổi học. */
     @BeforeEach
     void setUp() {
         principal = new AuthenticatedPrincipal(10L, "coach@test.com", "COACH");
@@ -51,11 +53,13 @@ class ClassSessionControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(MethodParameter parameter) {
                         return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(MethodParameter parameter,
                                                   ModelAndViewContainer mavContainer,
@@ -67,6 +71,7 @@ class ClassSessionControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: hủy buổi học với dữ liệu hợp lệ trả 200 OK. */
     @Test
     void cancelSession_validPayload_returnsOk() throws Exception {
         CancelSessionRequest request = new CancelSessionRequest("Facility repair needed");
@@ -91,6 +96,7 @@ class ClassSessionControllerTest {
                 .andExpect(jsonPath("$.data.cancelReason").value("Facility repair needed"));
     }
 
+    /** Kiểm thử: hủy buổi học thiếu lý do trả 400 Bad Request. */
     @Test
     void cancelSession_blankReason_returnsBadRequest() throws Exception {
         CancelSessionRequest request = new CancelSessionRequest("");

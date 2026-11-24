@@ -1,22 +1,21 @@
 package com.swp391.scms.notifications.port;
 
 /**
- * Adapter interface for individual notification channels (SCRUM-108).
- * Implementations handle specific delivery channels (e.g. IN_APP, EMAIL, PUSH, WEBHOOK).
+ * Giao diện adapter cho từng kênh thông báo riêng lẻ (SCRUM-108).
+ * Các lớp triển khai xử lý từng kênh gửi cụ thể (ví dụ: IN_APP, EMAIL, PUSH, WEBHOOK).
  */
 public interface NotificationChannelAdapter {
 
-    /**
-     * The notification channel supported by this adapter.
-     */
+    /** Kênh thông báo được adapter này hỗ trợ. */
     NotificationChannel getChannel();
 
-    /**
-     * Deliver the notification payload via this adapter's channel.
-     */
+    /** Gửi payload thông báo qua kênh của adapter này. */
     void send(NotificationPayload payload);
 
-    /** Durable transport supplies a stable key. Real providers should use it for their idempotency API. */
+    /**
+     * Gửi kèm khóa giao hàng ổn định do tầng truyền tải bền vững cung cấp (mặc định bỏ qua khóa). Các nhà cung
+     * cấp thật nên dùng khóa này cho API idempotency để chống gửi trùng.
+     */
     default void send(NotificationPayload payload, String deliveryKey) {
         send(payload);
     }

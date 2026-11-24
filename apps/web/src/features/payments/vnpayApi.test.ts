@@ -44,6 +44,7 @@ it('records vnp_TxnRef on navigateToVnpay and releases it when returning outside
   expect(assignSpy).toHaveBeenCalledTimes(1);
 
   const events: string[] = [];
+  // Biến/hàm phụ để ghi lại kết quả trong kiểm thử.
   const onReleased = (e: Event) => events.push((e as CustomEvent<{ reference: string }>).detail.reference);
   window.addEventListener('vnpay-attempt-released', onReleased);
 
@@ -54,7 +55,7 @@ it('records vnp_TxnRef on navigateToVnpay and releases it when returning outside
   expect(client.apiFetch).toHaveBeenCalledWith('/payments/vnpay/transactions/TXN999/cancel', { method: 'POST' });
   expect(events).toEqual(['TXN999']);
 
-  // Subsequent calls are no-ops because the active reference was cleared.
+  // Các lần gọi tiếp theo không làm gì vì mã tham chiếu đang hoạt động đã được xóa.
   expect(await releaseAbandonedVnpay()).toBe(false);
   expect(client.apiFetch).toHaveBeenCalledTimes(1);
   vi.unstubAllGlobals();

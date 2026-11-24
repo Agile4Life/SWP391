@@ -23,11 +23,15 @@ const METHOD_LABELS: Record<string, StaffMessage> = {
   bank_transfer: staffMessage('Chuyển khoản', 'Bank transfer'),
   online_wallet: staffMessage('VNPay / Ví SÖL', 'VNPay / SÖL Wallet'),
 };
+/** Định dạng số tiền VND (rỗng là "—"). */
 const vnd = (amount: number | null) => (amount == null ? '—' : formatPrice(Number(amount)));
 
+/** Bộ lọc theo loại yêu cầu: đăng ký, gia hạn, nâng cấp hoặc tất cả. */
 type Filter = 'ALL' | RequestHistoryItem['type'];
 
-/** Requests the desk already processed (paid or cancelled), so approved upgrades can be looked up and reconciled. */
+/**
+ * Lịch sử yêu cầu gói tập quầy lễ tân đã xử lý (đã thu tiền hoặc đã hủy), phục vụ tra cứu và đối soát các lần nâng cấp đã duyệt.
+ */
 export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: number }) {
   const { t } = useStaffI18n();
   const [items, setItems] = useState<RequestHistoryItem[]>([]);

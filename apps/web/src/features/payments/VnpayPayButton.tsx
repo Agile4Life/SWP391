@@ -8,12 +8,17 @@ import { payWithWallet } from '../wallet/walletApi';
 import { createVnpayCheckout, navigateToVnpay, type VnpayTarget } from './vnpayApi';
 import { cancelVnpayTarget, releaseAbandonedVnpay, rememberActiveVnpay } from './vnpaySession';
 
+/** Lỗi cho biết giao dịch VNPay trước đó vẫn đang chờ xác nhận (nên cần mở khóa). */
 function isAwaitingVnpayError(cause: unknown): boolean {
   if (!cause || typeof cause !== 'object') return false;
   const code = (cause as { code?: string }).code;
   return code === 'VNPAY_AWAITING_CONFIRMATION' || code === 'ORDER_AWAITING_PAYMENT';
 }
 
+/**
+ * Nút thanh toán một khoản bằng VNPay hoặc Ví SÖL: lấy đối tượng thanh toán (target hoặc prepare), mở cổng
+ * VNPay hay trừ ví, và cho phép mở khóa giao dịch đang chờ xác nhận.
+ */
 export function VnpayPayButton({
   target,
   prepare,
@@ -38,6 +43,7 @@ export function VnpayPayButton({
     if (typeof releaseAbandonedVnpay === 'function') {
       void releaseAbandonedVnpay();
     }
+    // Quay lại trang từ bộ nhớ đệm thì mở lại nút và hủy phiên VNPay bỏ dở.
     const restore = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       sending.current = false;
@@ -51,6 +57,7 @@ export function VnpayPayButton({
     return () => window.removeEventListener('pageshow', restore);
   }, []);
 
+  // Thanh toán qua VNPay: chuẩn bị đối tượng, tạo phiên thanh toán rồi chuyển sang cổng VNPay.
   async function pay() {
     if (sending.current || disabled) return;
     sending.current = true;
@@ -77,6 +84,7 @@ export function VnpayPayButton({
     }
   }
 
+  // Thanh toán bằng số dư Ví SÖL, thành công thì cập nhật ví/thông báo và gọi onPaid.
   async function handlePayWithWallet() {
     if (sending.current || disabled) return;
     sending.current = true;
@@ -104,6 +112,7 @@ export function VnpayPayButton({
     }
   }
 
+  // Mở khóa giao dịch VNPay đang chờ xác nhận bằng cách hủy nó.
   async function handleUnlock() {
     const lockTarget = awaitingLockTarget ?? target;
     if (!lockTarget || unlockBusy || typeof cancelVnpayTarget !== 'function') return;

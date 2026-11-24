@@ -10,12 +10,17 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.util.List;
 
-/** Several measurements taken in one assessment, saved together (BMI is derived, never submitted). */
+/**
+ * Nhiều số đo của một lần đánh giá.
+ *
+ * Nhiều số đo trong một buổi đánh giá, lưu cùng nhau (BMI được suy ra, không bao giờ gửi lên).
+ */
 public record HealthMetricBatchDto(
         @NotEmpty(message = "{validation.health.metrics.not_empty}")
         @Size(max = 10, message = "{validation.health.metrics.max}")
         List<@Valid Item> metrics
 ) {
+    /** Một số đo trong lần đánh giá: tên chỉ số, giá trị và đơn vị. */
     public record Item(
             @NotBlank(message = "{validation.health.metric_name.not_blank}")
             String metricName,

@@ -28,6 +28,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller SessionEvaluationController (session evaluation controller). */
 @ExtendWith(MockitoExtension.class)
 class SessionEvaluationControllerTest {
 
@@ -40,6 +41,7 @@ class SessionEvaluationControllerTest {
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller đánh giá buổi tập. */
     @BeforeEach
     void setUp() {
         lenient().when(messageService.getMessage(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -50,6 +52,7 @@ class SessionEvaluationControllerTest {
         objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     }
 
+    /** Kiểm thử: tạo đánh giá trả 201. */
     @Test
     void createEvaluation_Returns201() throws Exception {
         SessionEvaluationDto dto = new SessionEvaluationDto(
@@ -72,6 +75,7 @@ class SessionEvaluationControllerTest {
                 .andExpect(jsonPath("$.data.progressScore").value(85.0));
     }
 
+    /** Kiểm thử: điểm vượt 100 trả 400. */
     @Test
     void createEvaluation_WhenScoreExceeds100_Returns400() throws Exception {
         SessionEvaluationCreateDto req = new SessionEvaluationCreateDto(
@@ -84,6 +88,7 @@ class SessionEvaluationControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Kiểm thử: lấy đánh giá của tôi trả 200. */
     @Test
     void getMyEvaluations_Returns200() throws Exception {
         SessionEvaluationDto dto = new SessionEvaluationDto(

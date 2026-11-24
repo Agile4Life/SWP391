@@ -18,8 +18,13 @@ export interface UpgradeQuote {
   allowed: boolean;
 }
 
+/** Số thứ tự ngày (tính từ 1970-01-01 UTC) của chuỗi YYYY-MM-DD. */
 const dayNumber = (date: string) => Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
 
+/**
+ * Báo giá nâng cấp gói: tiền phải trả = giá gói mới − giá trị còn lại của gói hiện tại (không âm), kèm số ngày
+ * còn lại/tổng số ngày; chỉ cho nâng cấp khi phải trả thêm.
+ */
 export function upgradeQuote(
   current: { startDate: string; endDate: string; remainingValue?: number | null },
   targetPrice: number,

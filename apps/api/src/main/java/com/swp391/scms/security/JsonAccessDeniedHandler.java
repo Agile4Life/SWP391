@@ -13,16 +13,22 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
+/**
+ * Trả lỗi 403 dạng JSON (ApiResponse) khi người dùng đã đăng nhập nhưng không đủ quyền, thay cho trang lỗi mặc
+ * định của Spring Security.
+ */
 @Component
 public class JsonAccessDeniedHandler implements AccessDeniedHandler {
     private final ObjectMapper objectMapper;
     private final MessageService messageService;
 
+    /** Nhận ObjectMapper để ghi JSON và MessageService để dịch thông báo. */
     public JsonAccessDeniedHandler(ObjectMapper objectMapper, MessageService messageService) {
         this.objectMapper = objectMapper;
         this.messageService = messageService;
     }
 
+    /** Ghi phản hồi HTTP 403 với mã FORBIDDEN và thông báo đã dịch. */
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException exception)
             throws IOException, ServletException {

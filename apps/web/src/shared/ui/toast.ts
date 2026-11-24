@@ -4,6 +4,7 @@ let activeToastTimer: number | null = null;
 let unsubscribeLanguage: (() => void) | null = null;
 let unsubscribeKeydown: (() => void) | null = null;
 
+/** Đóng thông báo đang hiện: hủy hẹn giờ, gỡ các listener ngôn ngữ/phím và xóa phần tử khỏi DOM. */
 function clearActive() {
   if (activeToastTimer !== null) {
     window.clearTimeout(activeToastTimer);
@@ -20,6 +21,7 @@ function clearActive() {
   });
 }
 
+/** Hiện thông báo nổi (một lúc chỉ một thông báo), tự đổi ngôn ngữ nếu có bản dịch, đóng bằng nút × hoặc Esc. */
 export function toast(message: string, type: 'success' | 'error' = 'success', translation?: SourceMessage) {
   clearActive();
 
@@ -49,6 +51,7 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'sol-toast__close';
+  // Cập nhật chữ theo ngôn ngữ hiện tại (nội dung, nhãn nút đóng, nhãn trợ năng).
   const renderLanguage = () => {
     const english = getLanguage() === 'en';
     if (translation) body.textContent = english ? translation.en : translation.vi;
@@ -65,6 +68,7 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
 
   // Esc hoặc nút đóng đều tắt thông báo mà không chiếm focus khi mới hiện.
   el.addEventListener('cancel', (event) => { event.preventDefault(); clearActive(); });
+  // Esc thì tắt thông báo.
   const handleEscape = (event: KeyboardEvent) => {
     if (event.key === 'Escape') clearActive();
   };

@@ -2,26 +2,28 @@ import { forwardRef, useState, type ChangeEvent } from 'react';
 import { useI18n } from '../i18n';
 import './file-picker.css';
 
+/** Props của ô chọn tệp: id, loại tệp, chọn nhiều, nhãn nút, tên tệp hiển thị và sự kiện onChange. */
 interface FilePickerProps {
   id?: string;
   accept?: string;
   multiple?: boolean;
   disabled?: boolean;
   className?: string;
-  /** Visible button text; defaults to "Chọn tệp" / "Choose file". */
+  /** Nhãn hiển thị trên nút; mặc định là "Chọn tệp" / "Choose file". */
   buttonLabel?: string;
-  /** Accessible name when no visible <label htmlFor> points at this picker. */
+  /** Tên trợ năng (accessible name) khi không có thẻ <label htmlFor> hiển thị nào trỏ tới ô chọn tệp này. */
   ariaLabel?: string;
-  /** Names to show beside the button. Pass it when the parent owns the selection (so a reset clears the text);
-   *  otherwise the picker shows the names of the files picked last. */
+  /** Danh sách tên tệp hiển thị cạnh nút. Truyền khi component cha quản lý lựa chọn (để khi reset sẽ xóa chữ);
+   *  ngược lại ô chọn tệp sẽ tự hiển thị tên các tệp được chọn gần nhất. */
   fileNames?: string[];
+  // Sự kiện thay đổi của input tệp gốc.
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }
 
 /**
- * Themed file picker: the browser's own "Choose File / No file chosen" text follows the browser language,
- * so the native input is visually hidden (still focusable and labelled) and the visible part is our own,
- * translated through useI18n.
+ * Ô chọn tệp đồng bộ giao diện: chuỗi "Choose File / No file chosen" gốc của trình duyệt phụ thuộc vào ngôn ngữ
+ * trình duyệt, nên input gốc được ẩn về mặt hiển thị (vẫn focus và gắn nhãn được) còn phần hiển thị do ứng dụng tự
+ * dựng và dịch qua useI18n.
  */
 export const FilePicker = forwardRef<HTMLInputElement, FilePickerProps>(function FilePicker(
   { id, accept, multiple, disabled, className = '', buttonLabel, ariaLabel, fileNames, onChange },

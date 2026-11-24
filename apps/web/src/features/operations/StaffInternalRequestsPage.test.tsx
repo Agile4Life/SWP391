@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { StaffInternalRequestsPage } from './StaffInternalRequestsPage';
 import * as staffRequestApi from './staffRequestApi';
 
-// Plain inputs stand in for the date picker so a test can type the leave dates.
+// Thay DatePicker bằng ô nhập thường để ca kiểm thử có thể nhập trực tiếp ngày nghỉ phép.
 vi.mock('../../shared/ui/DatePicker', () => ({
   DatePicker: (props: { id: string; value: string; onChange: (e: { target: { value: string } }) => void }) => (
     <input id={props.id} value={props.value} onChange={(e) => props.onChange({ target: { value: e.target.value } })} />
@@ -83,6 +83,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() {
     await act(async () => {
       root.render(<StaffInternalRequestsPage />);
@@ -129,7 +130,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
       b.textContent?.includes('Gửi đơn tới Quản Lý')
     );
 
-    // Click without filling fields -> triggers validation error
+    // Bấm gửi khi chưa điền trường bắt buộc -> kích hoạt lỗi kiểm tra hợp lệ
     await act(async () => {
       submitBtn?.click();
     });
@@ -178,6 +179,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
       .mockResolvedValueOnce({ ...mockRequests[0], id: 9 });
     await render();
     await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Tạo đơn từ mới'))?.click(); });
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const fill = (selector: string, value: string, proto: typeof HTMLInputElement | typeof HTMLTextAreaElement = HTMLInputElement) => {
       const el = host.querySelector(selector) as HTMLInputElement;
       Object.getOwnPropertyDescriptor(proto.prototype, 'value')?.set?.call(el, value);

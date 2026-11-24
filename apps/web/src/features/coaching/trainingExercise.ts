@@ -1,3 +1,4 @@
+/** Giá trị một bài tập khi nhập: tên, mô tả, thứ, số hiệp/reps, thời lượng và nghỉ. */
 export interface ExerciseValues {
   exerciseName: string;
   description?: string | null;
@@ -8,6 +9,10 @@ export interface ExerciseValues {
   restSeconds?: number | null;
 }
 
+/**
+ * Kiểm tra bài tập: tên 1–150 ký tự, các số là số nguyên ≥ tối thiểu, thứ từ 1–7, và khi required thì cần thứ
+ * cùng (hiệp & reps hoặc thời lượng); trả thông báo lỗi hoặc null.
+ */
 export function validateExercise(values: ExerciseValues, required = false): string | null {
   if (!values.exerciseName.trim() || values.exerciseName.trim().length > 150) return 'Tên bài tập phải có từ 1 đến 150 ký tự.';
   if (required && values.dayOfWeek == null) return 'Ngày tập phải là số nguyên từ 1 trở lên.';

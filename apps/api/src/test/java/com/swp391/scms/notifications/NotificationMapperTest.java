@@ -13,20 +13,24 @@ import java.util.Locale;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho mapper NotificationMapper (notification mapper). */
 class NotificationMapperTest {
 
     private final NotificationMapper mapper = new NotificationMapper(NotificationTestMessages.localizer());
 
+    /** Chuẩn bị trước mỗi test: đặt locale request tiếng Việt. */
     @BeforeEach
     void useVietnameseRequestLocale() {
         LocaleContextHolder.setLocale(Locale.forLanguageTag("vi"));
     }
 
+    /** Dọn dẹp sau mỗi test: xóa locale request. */
     @AfterEach
     void clearRequestLocale() {
         LocaleContextHolder.resetLocaleContext();
     }
 
+    /** Kiểm thử: giữ nội dung tiếng Anh gốc khi request dùng tiếng Anh. */
     @Test
     void keepsOriginalEnglishContentForEnglishRequest() {
         LocaleContextHolder.setLocale(Locale.ENGLISH);
@@ -40,6 +44,7 @@ class NotificationMapperTest {
         assertThat(dto.message()).isEqualTo("You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).");
     }
 
+    /** Kiểm thử: toDto bản địa hóa nội dung tiếng Anh sang tiếng Việt. */
     @Test
     @DisplayName("Maps legacy English notification entity to localized Vietnamese DTO")
     void testToDto_LocalizesEnglishToVietnamese() {

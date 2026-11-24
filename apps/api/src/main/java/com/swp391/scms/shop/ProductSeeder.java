@@ -23,9 +23,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Tạo dữ liệu sản phẩm mẫu khi khởi động (tắt mặc định vì shop đã ngừng): chỉ chạy khi bật seedSamples và chưa
+ * có sản phẩm.
+ *
+ * Mặc định tắt: module cửa hàng đã bị gỡ khỏi phạm vi đang chạy.
+ */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Component
 public class ProductSeeder implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(ProductSeeder.class);
@@ -36,12 +44,14 @@ public class ProductSeeder implements ApplicationRunner {
     private final ProductRepository products;
     private final Clock clock;
 
+    /** Constructor dùng múi giờ Việt Nam mặc định. */
     public ProductSeeder(ShopProperties props,
                          ProductCategoryRepository categories,
                          ProductRepository products) {
         this(props, categories, products, Clock.system(VN_ZONE));
     }
 
+    /** Constructor đầy đủ nhận Clock (null thì dùng giờ Việt Nam). */
     @Autowired
     public ProductSeeder(ShopProperties props,
                          ProductCategoryRepository categories,
@@ -53,6 +63,7 @@ public class ProductSeeder implements ApplicationRunner {
         this.clock = clock != null ? clock : Clock.system(VN_ZONE);
     }
 
+    /** Chạy khi ứng dụng khởi động: tạo các danh mục và sản phẩm mẫu kèm biến thể, thành phần dinh dưỡng. */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
@@ -227,6 +238,7 @@ public class ProductSeeder implements ApplicationRunner {
         log.info("Seeded 6 sample SÖL Nutrition products across 6 categories");
     }
 
+    /** Lấy danh mục theo slug, chưa có thì tạo mới. */
     private ProductCategory category(String name, String slug, int sortOrder, LocalDateTime now) {
         return categories.findBySlug(slug).orElseGet(() -> {
             ProductCategory c = new ProductCategory();
@@ -240,6 +252,7 @@ public class ProductSeeder implements ApplicationRunner {
         });
     }
 
+    /** Tạo và lưu một sản phẩm mẫu với mục tiêu, biến thể và thành phần dinh dưỡng. */
     private Product product(ProductCategory category,
                             String name,
                             String slug,
@@ -299,6 +312,7 @@ public class ProductSeeder implements ApplicationRunner {
         return p;
     }
 
+    /** Tạo một biến thể mẫu (SKU, nhãn, giá, số khẩu phần, tồn kho, thứ tự). */
     private static ProductVariant variant(String sku, String label, String price, int servings, int stock, int sortOrder) {
         ProductVariant v = new ProductVariant();
         v.setSku(sku);
@@ -311,6 +325,7 @@ public class ProductSeeder implements ApplicationRunner {
         return v;
     }
 
+    /** Tạo một dòng thành phần dinh dưỡng mẫu. */
     private static ProductNutrient nutrient(String name,
                                             String amount,
                                             String unit,

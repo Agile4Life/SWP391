@@ -1,6 +1,5 @@
 package com.swp391.scms.ai.service;
 
-import com.swp391.scms.shop.ShopProperties;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -9,10 +8,12 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Bộ kiểm thử cho AiKnowledgeBase (ai knowledge base). */
 class AiKnowledgeBaseTest {
 
     private final AiKnowledgeBase base = new AiKnowledgeBase();
 
+    /** Kiểm thử: mọi placeholder trong file kiến thức đi kèm đều được điền. */
     @Test
     void everyPlaceholderInTheBundledFileIsFilled() {
         base.sections().forEach(section -> {
@@ -21,44 +22,39 @@ class AiKnowledgeBaseTest {
         });
     }
 
+    /** Kiểm thử: các con số lấy từ chính code áp dụng quy tắc đó. */
     @Test
-    void numbersComeFromTheCodeAndConfigurationThatEnforceThem() {
-        ShopProperties shop = new ShopProperties();
-        shop.setPaymentWindowMinutes(45);
-        shop.setCounterHoldHours(12);
-        String all = new AiKnowledgeBase(shop, 20, 90).sectionsFor("");
+    void numbersComeFromTheCodeThatEnforcesThem() {
+        String all = base.sectionsFor("");
 
-        assertTrue(all.contains("giữ hàng 45 phút"));
-        assertTrue(all.contains("được giữ 12 giờ"));
-        assertTrue(all.contains("hoàn tất trong 20 phút"));
-        assertTrue(all.contains("bị hủy 90 phút trước giờ chơi"));
-        assertTrue(all.contains("Giá 100.000 VNĐ/giờ"));
-        assertTrue(all.contains("từ 18:00 trở đi là 125.000 VNĐ/giờ"));
         assertTrue(all.contains("ít nhất 24 giờ; mỗi lần tối thiểu 3 ngày"));
     }
 
+    /** Kiểm thử: quyền lợi theo hạng khớp với quyền lợi của gói tập. */
     @Test
     void tierBenefitsMatchPackageBenefits() {
         String tiers = base.sectionsFor("gói gold khác platinum thế nào");
 
-        assertTrue(tiers.contains("- Platinum: khóa học nhóm miễn phí 4 khóa cho mỗi 30 ngày thời hạn gói (gói 3 tháng 12 khóa"));
+        assertTrue(tiers.contains("- Platinum: PT 1:1 miễn phí 6 buổi"));
         assertTrue(tiers.contains("PT 1:1 miễn phí 6 buổi"));
         assertTrue(tiers.contains("bảo lưu: tối đa 30 ngày (gói 1 tháng cũ: tối đa 7 ngày)"));
         assertTrue(tiers.contains("- Silver:") && tiers.contains("bảo lưu: tối đa 7 ngày (gói 1 tháng cũ: không bảo lưu được)"));
         assertTrue(tiers.contains("giảm 20%"));
-        assertTrue(tiers.contains("phòng VIP"));
+        assertFalse(tiers.contains("khóa học nhóm miễn phí") || tiers.contains("đặt sân miễn phí") || tiers.contains("khóa học có phí và sản phẩm"));
     }
 
+    /** Kiểm thử: chỉ gửi các mục liên quan đến câu hỏi cộng phần giới thiệu. */
     @Test
     void sendsOnlyTheSectionsTheQuestionIsAboutPlusTheIntroduction() {
         String aboutHold = base.sectionsFor("Mình muốn bảo lưu gói 2 tuần được không?");
 
         assertTrue(aboutHold.contains("Bảo lưu gói tập:"));
         assertTrue(aboutHold.contains("Giới thiệu:"));
-        assertFalse(aboutHold.contains("Cửa hàng sản phẩm:"));
+        assertFalse(aboutHold.contains("Ví SÖL:"));
         assertFalse(aboutHold.contains("Check-in và check-out:"));
     }
 
+    /** Kiểm thử: gửi toàn bộ khi không có mục nào khớp. */
     @Test
     void sendsEverythingWhenNoSectionMatches() {
         String general = base.sectionsFor("Xin chào");
@@ -66,6 +62,7 @@ class AiKnowledgeBaseTest {
         base.sections().forEach(section -> assertTrue(general.contains(section.title() + ":\n"), section.title()));
     }
 
+    /** Kiểm thử: placeholder lạ làm lỗi thay vì lọt tới hội viên. */
     @Test
     void unknownPlaceholderFailsInsteadOfReachingTheMember() {
         assertThrows(IllegalStateException.class, () -> AiKnowledgeBase.fill("Giá {{court.typo}}", Map.of()));

@@ -1,4 +1,5 @@
-// NODE_PATH: playwright-core; CHROME_PATH: installed Chromium executable.
+// Mục đích: kiểm tra giao diện đồng bộ đúng với danh mục công khai (gói, giá, HLV).
+// NODE_PATH cung cấp playwright-core; CHROME_PATH trỏ tới file thực thi Chromium đã cài đặt.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');
@@ -37,7 +38,7 @@ const base = process.env.PUBLIC_UI_URL || 'http://127.0.0.1:5173';
     assert.equal(await page.locator('.fit-schedule-card').count(), 2);
     await page.goto(`${base}/trainers/missing`);
     await page.getByRole('heading', { name: 'Không tìm thấy huấn luyện viên' }).waitFor();
-    // A new price and coach biography reach landing without editing frontend constants.
+    // Giá mới và tiểu sử HLV hiển thị lên trang landing mà không cần sửa hằng số ở frontend.
     catalog.packages[0].price = 899000; catalog.coaches[0].bio = 'Hồ sơ vừa sửa';
     await page.goto(base); await page.locator('.fit-plan').first().filter({ hasText: '899.000' }).waitFor();
     await page.evaluate(() => localStorage.setItem('fitcenter_auth_session', JSON.stringify({ id: '1', identifier: 'review', name: 'Nguyễn An', role: 'MEMBER' })));

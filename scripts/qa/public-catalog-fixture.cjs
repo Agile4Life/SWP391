@@ -1,4 +1,4 @@
-// Browser verification only. Production content always comes from /public/catalog.
+// Mục đích: dữ liệu giả của danh mục công khai (gói tập, HLV) chỉ dùng cho kiểm thử trình duyệt; nội dung production luôn lấy từ /public/catalog.
 const packages = [30, 90, 365].map((durationDays, index) => ({
   id: index + 1, name: `Gói kiểm chứng ${durationDays} ngày`, description: 'Quyền lợi từ danh mục portal',
   price: [789000, 2100000, 7000000][index], durationDays, classCreditLimit: index ? null : 8, status: 'active',

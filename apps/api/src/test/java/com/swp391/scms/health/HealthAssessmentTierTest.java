@@ -35,7 +35,13 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** Spec 2026-11-09: first assessment by any coach; Body Fat and Muscle Mass for Platinum; follow-ups from Gold. */
+/**
+ * Bộ kiểm thử cho HealthAssessmentTier (phân hạng đánh giá sức khỏe).
+ *
+ * Đặc tả 2026-11-09: buổi đánh giá đầu tiên do bất kỳ HLV nào thực hiện;
+ * chỉ số mỡ cơ thể ({@code body_fat}) và khối lượng cơ ({@code muscle_mass}) dành cho hạng Platinum;
+ * đánh giá theo dõi định kỳ áp dụng từ hạng Gold trở lên.
+ */
 class HealthAssessmentTierTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private final MemberProgressLogRepository logs = mock(MemberProgressLogRepository.class);
@@ -44,15 +50,17 @@ class HealthAssessmentTierTest {
     private final CurrentCoachMembers access = mock(CurrentCoachMembers.class);
     private final MembershipSubscriptionRepository subscriptions = mock(MembershipSubscriptionRepository.class);
     private final HealthMetricService service = new HealthMetricService(logs, members, users);
-    // 2026-11-09 20:00 in Ho Chi Minh City
+    // 2026-11-09 20:00 tại TP. Hồ Chí Minh
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T13:00:00Z"), ZONE);
     private final LocalDate today = LocalDate.of(2026, 11, 9);
     private Member member;
 
+    /** Hàm trợ giúp của test: tạo một chỉ số sức khỏe mẫu. */
     private HealthMetricDto metric(String name, String value, String unit) {
         return new HealthMetricDto(null, name, new BigDecimal(value), unit, 999L, LocalDateTime.of(2000, 1, 1, 0, 0));
     }
 
+    /** Chuẩn bị trước mỗi test: tạo service chỉ số sức khỏe với repository giả lập. */
     @BeforeEach
     void setUp() {
         ReflectionTestUtils.setField(service, "currentCoachMembers", access);
@@ -71,6 +79,7 @@ class HealthAssessmentTierTest {
         when(logs.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (row). */
     private MemberProgressLog row(Long recorderId, LocalDateTime at) {
         MemberProgressLog log = new MemberProgressLog();
         log.setMember(member);
@@ -83,6 +92,7 @@ class HealthAssessmentTierTest {
         return log;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (active). */
     private MembershipSubscription active(String tier, int days) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setName(tier);
@@ -96,6 +106,7 @@ class HealthAssessmentTierTest {
         return sub;
     }
 
+    /** Kiểm thử: bất kỳ HLV nào cũng được nhận buổi đánh giá đầu tiên của hội viên đã đăng ký. */
     @Test
     void anyCoachTakesTheFirstAssessmentOfARegisteredMember() {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of());
@@ -105,18 +116,23 @@ class HealthAssessmentTierTest {
         verify(access, never()).requireCoachOf(any(), any());
     }
 
+    /**
+     * Kiểm thử: cùng HLV có thể hoàn thành đánh giá trong ngày nhưng không được đánh giá các ngày sau nếu chưa
+     * được phân công.
+     */
     @Test
     void theSameCoachCanFinishTheAssessmentTheSameDayButNotLaterOnesWithoutBeingAssigned() {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(18, 30))));
         assertThat(service.addMetric(10L, metric("height", "172", "cm"), 20L, "COACH").metricName()).isEqualTo("height");
 
-        // A month later the same member already has records: only the assigned coach may add more.
+        // Một tháng sau cùng hội viên đó đã có bản ghi: chỉ HLV được phân công mới được thêm số đo mới.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(30).atTime(9, 0))));
         doThrow(new ForbiddenException("X", "coaching.member.not_assigned", null, "Denied")).when(access).requireCoachOf(20L, 10L);
         assertThatThrownBy(() -> service.addMetric(10L, metric("weight", "69", "kg"), 20L, "COACH"))
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: tài khoản đã xóa không có buổi đánh giá đầu tiên. */
     @Test
     void aDeletedAccountGetsNoFirstAssessment() {
         member.getUser().setDeletedAt(LocalDateTime.now());
@@ -127,6 +143,7 @@ class HealthAssessmentTierTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: mỡ cơ thể và khối lượng cơ chỉ dành cho hạng Platinum. */
     @Test
     void bodyFatAndMuscleMassAreOnlyForPlatinum() {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of());
@@ -141,14 +158,15 @@ class HealthAssessmentTierTest {
         assertThat(service.addMetric(10L, metric("muscle_mass", "30", "kg"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("muscle_mass");
     }
 
+    /** Kiểm thử: Silver chỉ có buổi đánh giá đầu tiên, Gold và Platinum có đánh giá theo dõi. */
     @Test
     void silverGetsTheFirstAssessmentOnlyWhileGoldAndPlatinumGetFollowUps() {
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("SILVER", 30)));
-        // Same-day measurements are part of the first assessment.
+        // Các số đo trong cùng một ngày được tính là một phần của buổi đánh giá đầu tiên.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(9, 0))));
         assertThat(service.addMetric(10L, metric("height", "172", "cm"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("height");
 
-        // A measurement from an earlier day means a follow-up, which Silver does not include.
+        // Một số đo từ ngày trước đó đồng nghĩa với buổi đánh giá theo dõi, quyền lợi mà hạng Silver không bao gồm.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(35).atTime(9, 0))));
         assertThatThrownBy(() -> service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER"))
                 .isInstanceOf(ForbiddenException.class).hasMessageContaining("Gold");
@@ -157,9 +175,10 @@ class HealthAssessmentTierTest {
         assertThat(service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("weight");
     }
 
+    /** Kiểm thử: Gold và Platinum có một ngày đánh giá mỗi chu kỳ 30 ngày. */
     @Test
     void goldAndPlatinumGetOneAssessmentDayPerThirtyDayCycle() {
-        // Gold started 2 days ago: the cycle is today-2 .. today+27, so another day of it is already used.
+        // Gói Gold bắt đầu 2 ngày trước: chu kỳ là today-2 .. today+27, nên một ngày khác trong chu kỳ này đã được dùng.
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("GOLD", 30)));
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(1).atTime(9, 0))));
 
@@ -167,11 +186,11 @@ class HealthAssessmentTierTest {
                 () -> service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER"));
         assertEquals("HEALTH_ASSESSMENT_CYCLE_USED", ex.getErrorCode());
 
-        // Several measurements on the same day are one assessment.
+        // Nhiều số đo trong cùng một ngày được tính là một buổi đánh giá.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.atTime(8, 0))));
         assertThat(service.addMetric(10L, metric("height", "172", "cm"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("height");
 
-        // Measurements from before the cycle (the first assessment, an earlier plan) do not use it up.
+        // Các số đo trước chu kỳ hiện tại (buổi đánh giá đầu tiên hoặc gói trước đó) không tiêu tốn lượt của chu kỳ này.
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of(row(20L, today.minusDays(40).atTime(9, 0))));
         assertThat(service.addMetric(10L, metric("weight", "69", "kg"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("weight");
 
@@ -180,10 +199,12 @@ class HealthAssessmentTierTest {
         assertThrows(ForbiddenException.class, () -> service.addMetric(10L, metric("body_fat", "18", "%"), 30L, "CENTER_MANAGER"));
     }
 
+    /** Hàm trợ giúp của test: tạo một mục đo cho request ghi hàng loạt. */
     private HealthMetricBatchDto.Item item(String name, String value, String unit) {
         return new HealthMetricBatchDto.Item(name, new BigDecimal(value), unit);
     }
 
+    /** Kiểm thử: ghi hàng loạt lưu mọi số đo và chỉ suy ra BMI một lần. */
     @Test
     void aBatchSavesEveryMeasurementAndDerivesBmiOnlyOnce() {
         MemberProgressLog height = row(20L, today.atTime(20, 0));
@@ -200,6 +221,7 @@ class HealthAssessmentTierTest {
                 .containsExactly("height", "weight", "body_fat", "bmi");
     }
 
+    /** Kiểm thử: ghi hàng loạt từ chối BMI nhập tay trùng và vi phạm hạng mà không lưu gì. */
     @Test
     void aBatchRejectsManualBmiDuplicatesAndTierViolationsWithoutSavingAnything() {
         when(logs.findByMemberUserIdOrderByRecordedAtDesc(10L)).thenReturn(List.of());
@@ -217,6 +239,7 @@ class HealthAssessmentTierTest {
         verify(logs, never()).save(any());
     }
 
+    /** Kiểm thử: hội viên không có gói đang hoạt động thì không bị giới hạn. */
     @Test
     void membersWithoutAnActivePackageAreNotRestricted() {
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of());

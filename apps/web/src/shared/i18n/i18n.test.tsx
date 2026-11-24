@@ -71,11 +71,11 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
       root.render(<RouterProvider router={router} />);
     });
 
-    // The portal footer only carries the brand; language lives in the avatar menu
+    // Footer của portal chỉ hiển thị thương hiệu; cài đặt ngôn ngữ nằm trong menu ảnh đại diện
     expect(host.querySelector('[data-testid="footer-language-setting"]')).toBeNull();
     expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness');
 
-    // Open user avatar menu
+    // Mở menu ảnh đại diện của người dùng
     const avatarTrigger = host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]');
     expect(avatarTrigger).not.toBeNull();
     await act(async () => {
@@ -89,7 +89,7 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
     const enAvatarBtn = host.querySelector<HTMLButtonElement>('[data-testid="avatar-lang-en"]');
     expect(enAvatarBtn).not.toBeNull();
 
-    // Switch to English via avatar settings menu
+    // Chuyển sang tiếng Anh qua menu cài đặt ở ảnh đại diện
     await act(async () => {
       enAvatarBtn!.click();
     });
@@ -102,7 +102,7 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
     expect(host.querySelector('[data-testid="avatar-menu-logout"]')?.textContent).toContain('Sign out');
     expect(host.querySelector('.portal-workspace-footer')?.textContent).toContain('SÖL Fitness');
 
-    // Switch back to Vietnamese via the avatar menu
+    // Chuyển lại tiếng Việt qua menu ảnh đại diện
     const viAvatarBtn = host.querySelector<HTMLButtonElement>('[data-testid="avatar-lang-vi"]');
     expect(viAvatarBtn).not.toBeNull();
     await act(async () => {

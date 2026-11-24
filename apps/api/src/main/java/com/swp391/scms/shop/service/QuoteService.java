@@ -17,6 +17,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Báo giá giỏ hàng: gộp dòng trùng, kiểm tra giới hạn, tính tiền từng dòng theo tồn kho, giảm giá thành viên và
+ * phí giao hàng.
+ */
 @Service
 @Transactional(readOnly = true)
 public class QuoteService {
@@ -24,10 +28,18 @@ public class QuoteService {
     public static final int MAX_LINE_QUANTITY = 20;
     public static final BigDecimal MAX_ORDER_TOTAL = new BigDecimal("100000000");
 
+    /**
+     * Một dòng đã tính giá: biến thể, số lượng được duyệt, thành tiền và vấn đề (không tìm thấy, ngừng bán,
+     * hết/thiếu hàng).
+     */
     public record PricedLine(ProductVariant variant, int quantity, BigDecimal lineTotal, String problem) {}
-    /** {@code subtotal} is the list price of the lines; {@code total = subtotal - discountAmount + shippingFee}. */
+    /**
+     * Kết quả tính giá: các dòng, tạm tính ({@code subtotal}) theo giá niêm yết của các dòng, phí giao hàng,
+     * tổng ({@code total = subtotal - discountAmount + shippingFee}), hợp lệ hay không, % và số tiền giảm.
+     */
     public record Priced(List<PricedLine> lines, BigDecimal subtotal, BigDecimal shippingFee, BigDecimal total, boolean valid,
                          int discountPercent, BigDecimal discountAmount) {
+        /** Constructor rút gọn không có giảm giá. */
         public Priced(List<PricedLine> lines, BigDecimal subtotal, BigDecimal shippingFee, BigDecimal total, boolean valid) {
             this(lines, subtotal, shippingFee, total, valid, 0, BigDecimal.ZERO);
         }
@@ -36,11 +48,16 @@ public class QuoteService {
     private final ProductVariantRepository variants;
     private final ShopPricing pricing;
 
+    /** Khởi tạo với repository biến thể và bộ tính phí giao hàng. */
     public QuoteService(ProductVariantRepository variants, ShopPricing pricing) {
         this.variants = variants;
         this.pricing = pricing;
     }
 
+    /**
+     * Gộp các dòng cùng biến thể (giữ thứ tự); báo lỗi nếu giỏ rỗng, dòng sai, một dòng quá 20 sản phẩm hoặc
+     * quá 30 dòng.
+     */
     public static LinkedHashMap<Long, Integer> merge(List<QuoteLineRequest> items) {
         if (items == null || items.isEmpty()) {
             throw new BadRequestException("CART_EMPTY", "error.shop.cart_empty", null, "Cart is empty");
@@ -62,11 +79,17 @@ public class QuoteService {
         return merged;
     }
 
+    /** Báo giá không giảm giá. */
     public QuoteDto quote(QuoteRequest request) {
         return quote(request, 0);
     }
 
-    /** Quote with the shopper's tier discount applied to the products (shipping is never discounted). */
+    /**
+     * Báo giá có áp % giảm giá theo hạng thành viên cho tiền hàng (phí ship không giảm); hình thức nhận mặc
+     * định là nhận tại quầy.
+     *
+     * Báo giá có áp chiết khấu theo hạng của người mua lên các sản phẩm (phí ship không bao giờ được giảm).
+     */
     public QuoteDto quote(QuoteRequest request, int discountPercent) {
         if (request == null) {
             throw new BadRequestException("CART_EMPTY", "error.shop.cart_empty", null, "Cart is empty");
@@ -79,10 +102,15 @@ public class QuoteService {
         return buildQuote(merged, loaded, fulfillment, discountPercent);
     }
 
+    /** Tính giá trên các biến thể đã khóa, không giảm giá. */
     public Priced price(List<QuoteLineRequest> items, List<ProductVariant> lockedVariants, String fulfillment) {
         return price(items, lockedVariants, fulfillment, 0);
     }
 
+    /**
+     * Tính giá từng dòng (giới hạn theo tồn kho, đánh dấu vấn đề), kiểm tra tổng không vượt 100 triệu, xét miễn
+     * phí ship theo giá niêm yết rồi trừ giảm giá.
+     */
     public Priced price(List<QuoteLineRequest> items, List<ProductVariant> lockedVariants, String fulfillment,
                         int discountPercent) {
         LinkedHashMap<Long, Integer> merged = merge(items);
@@ -137,7 +165,7 @@ public class QuoteService {
         if (subtotal.compareTo(MAX_ORDER_TOTAL) > 0) {
             throw new BadRequestException("CART_TOO_LARGE", "error.shop.cart_too_large", null, "Order exceeds maximum total");
         }
-        // Free shipping is judged on the list price so a member discount never costs the shipping perk.
+        // Miễn phí ship được xét trên giá niêm yết để chiết khấu hội viên không làm mất ưu đãi ship.
         BigDecimal shippingFee = pricing.shippingFee(fulfillment, subtotal);
         BigDecimal discount = com.swp391.scms.membership.service.MemberDiscountService.discountOf(subtotal, discountPercent);
         BigDecimal total = subtotal.subtract(discount).add(shippingFee);
@@ -147,6 +175,7 @@ public class QuoteService {
         return new Priced(List.copyOf(lines), subtotal, shippingFee, total, valid, Math.max(0, discountPercent), discount);
     }
 
+    /** Dựng QuoteDto từ kết quả tính giá: thêm tên, slug, ảnh, đơn giá, tồn kho hiển thị cho từng dòng. */
     private QuoteDto buildQuote(LinkedHashMap<Long, Integer> merged, List<ProductVariant> loaded, String fulfillment,
                                 int discountPercent) {
         List<QuoteLineRequest> normalizedRequests = merged.entrySet().stream()

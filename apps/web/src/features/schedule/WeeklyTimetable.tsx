@@ -24,17 +24,23 @@ import {
 } from './timetable';
 import './calendar.css';
 
+/** Một khung giờ trống được bấm trên lịch: ngày, giờ bắt đầu và kết thúc. */
 export interface TimetableSlot {
   date: string;
   startTime: string;
   endTime: string;
 }
 
+/** Một mục chú giải màu của lịch: tông màu (hoặc "free") và nhãn. */
 export interface TimetableLegendItem {
   tone: TimetableTone | 'free';
   label: string;
 }
 
+/**
+ * Props của lịch tuần: tuần đang xem, danh sách buổi, trạng thái tải/lỗi, các sự kiện đổi tuần/bấm buổi/bấm ô
+ * trống, khối đang chọn và phần chú giải.
+ */
 interface WeeklyTimetableProps {
   /** Thứ Hai (YYYY-MM-DD) của tuần đang xem. */
   weekStart: string;
@@ -42,7 +48,9 @@ interface WeeklyTimetableProps {
   loading?: boolean;
   error?: string | null;
   onRetry?: () => void;
+  // Gọi khi người dùng chuyển sang tuần khác (truyền thứ Hai của tuần đó).
   onWeekChange: (weekStart: string) => void;
+  // Gọi khi bấm một khối buổi học.
   onEventClick: (eventId: string) => void;
   /** Khối đang được chọn (ví dụ buổi đang điểm danh). */
   selectedId?: string;
@@ -67,8 +75,10 @@ const NARROW_QUERY = '(max-width: 767px)';
 const HOUR_PX = 64;
 const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 const WEEKDAY_CHIP: [string, string][] = [['T2', 'Mon'], ['T3', 'Tue'], ['T4', 'Wed'], ['T5', 'Thu'], ['T6', 'Fri'], ['T7', 'Sat'], ['CN', 'Sun']];
+/** Nhãn số buổi học theo ngôn ngữ ("3 buổi học" / "3 sessions"). */
 const sessionCount = (count: number) => memberText(`${count} buổi học`, `${count} ${count === 1 ? 'session' : 'sessions'}`);
 
+/** Hook trả về thời điểm hiện tại, cập nhật mỗi phút. */
 function useNow(): Date {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
@@ -78,12 +88,15 @@ function useNow(): Date {
   return now;
 }
 
+/** Hook theo dõi một media query và trả về có đang khớp hay không. */
 function useMediaQuery(query: string): boolean {
+  // Đọc trạng thái khớp hiện tại của media query.
   const read = () => typeof window.matchMedia === 'function' && window.matchMedia(query).matches;
   const [matches, setMatches] = useState(read);
   useEffect(() => {
     if (typeof window.matchMedia !== 'function') return;
     const list = window.matchMedia(query);
+    // Cập nhật khi media query đổi trạng thái.
     const update = () => setMatches(list.matches);
     update();
     list.addEventListener('change', update);
@@ -92,10 +105,16 @@ function useMediaQuery(query: string): boolean {
   return matches;
 }
 
+/** Khóa duy nhất của một ô giờ theo ngày và giờ. */
 function slotKey(date: string, hour: number) {
   return `${date}|${hour}`;
 }
 
+/**
+ * Lịch tuần dạng lưới giờ × ngày: xếp các buổi chồng giờ thành làn song song, đánh dấu giờ đã qua, thu gọn
+ * khung giờ theo dữ liệu, tự cuộn tới buổi đầu tiên, hỗ trợ điều khiển bằng phím mũi tên và chế độ một ngày
+ * trên màn hẹp.
+ */
 export function WeeklyTimetable({
   weekStart, events, loading = false, error = null, onRetry, onWeekChange, onEventClick, selectedId, disabled = false,
   emptyLabel = 'Tuần này chưa có buổi học nào', onSlotClick, slotActionLabel = 'tạo lịch', legend, legendNote, toolbar, label,
@@ -105,6 +124,7 @@ export function WeeklyTimetable({
   const now = useNow();
   const today = todayISO(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  // Danh sách 7 ngày của tuần đang xem.
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const narrow = useMediaQuery(NARROW_QUERY);
   const [focusDay, setFocusDay] = useState<string | null>(null);
@@ -117,13 +137,16 @@ export function WeeklyTimetable({
   const [rovingKey, setRovingKey] = useState<string | null>(null);
   // Bảng chỉ xem mặc định thu gọn theo lịch của tuần; Quản lý cần bấm mọi ô giờ nên mặc định hiện đủ.
   const [fullDay, setFullDay] = useState(Boolean(onSlotClick));
+  // Các buổi nằm trong tuần đang xem.
   const weekEvents = useMemo(() => events.filter((event) => days.includes(event.date)), [events, days]);
+  // Khung giờ vừa khít với các buổi của tuần.
   const fittedHours = useMemo(() => fitHourRange(weekEvents), [weekEvents]);
   const canCompact = fittedHours.length < TIMETABLE_HOURS.length;
   const hours = fullDay || !canCompact ? TIMETABLE_HOURS : fittedHours;
   const firstHour = hours[0];
   const endHour = hours[hours.length - 1] + 1;
 
+  // Gom các buổi theo ngày.
   const eventsByDay = useMemo(() => {
     const map = new Map<string, TimetableEvent[]>();
     for (const day of days) map.set(day, []);
@@ -136,6 +159,7 @@ export function WeeklyTimetable({
   const thisWeek = mondayOf(today);
   const emptyText = emptyLabel.replace(/\.$/, '');
 
+  // Ô giờ này đã qua so với hiện tại chưa.
   const isPastSlot = (date: string, hour: number) =>
     date < today || (date === today && (hour + 1) * 60 <= nowMinutes);
 
@@ -143,6 +167,7 @@ export function WeeklyTimetable({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hasMoreBelow, setHasMoreBelow] = useState(false);
 
+  // Cập nhật dấu hiệu "còn nội dung phía dưới" theo vị trí cuộn.
   const syncScrollCue = useCallback(() => {
     const box = scrollRef.current;
     if (!box) {
@@ -186,6 +211,7 @@ export function WeeklyTimetable({
   const firstKey = slotKey(visibleDays[0], firstHour);
   const activeKey = rovingKey && visibleDays.some((day) => rovingKey.startsWith(`${day}|`)) ? rovingKey : firstKey;
 
+  // Di chuyển focus giữa các ô giờ bằng phím mũi tên, Home và End.
   function moveFocus(event: KeyboardEvent<HTMLButtonElement>, dayIndex: number, hour: number) {
     const hourIndex = hours.indexOf(hour);
     let nextDay = dayIndex;

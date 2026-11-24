@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho màn hình hỗ trợ và khiếu nại của hội viên. */
 .member-support { --member-support-success: #8cbd95; display: grid; gap: 20px; }
 :root[data-theme='light'] .member-support { --member-support-success: #226442; }
 .member-support-grid { display: grid; grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.5fr); gap: 20px; align-items: start; }

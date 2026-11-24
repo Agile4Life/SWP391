@@ -33,7 +33,7 @@ describe('rigged actors', () => {
   const rigged = defs.filter(d => isRiggedActivity(d.activity));
 
   it('draws every person as the Quaternius human and only objects stay procedural', () => {
-    // Every activity that has a person in it.
+    // Mọi hoạt động có nhân vật người.
     for (const activity of [
       'treadmill-run',
       'walking-patrol',
@@ -55,7 +55,7 @@ describe('rigged actors', () => {
     ] as const) {
       expect(isRiggedActivity(activity), activity).toBe(true);
     }
-    // Not a person at all.
+    // Hoàn toàn không phải nhân vật người.
     for (const activity of [
       'heavy-bag-sway',
       'badminton-shuttlecock',
@@ -64,10 +64,10 @@ describe('rigged actors', () => {
     ] as const) {
       expect(isRiggedActivity(activity), activity).toBe(false);
     }
-    // Every actor that is not a prop or an effect.
+    // Mọi actor không phải đạo cụ hay hiệu ứng.
     const objects = new Set(['heavy-bag-sway', 'badminton-shuttlecock', 'tennis-ball', 'fountain-plume']);
     expect(rigged.length).toBe(defs.filter(d => !objects.has(d.activity)).length);
-    expect(rigged.length).toBe(53);
+    expect(rigged.length).toBe(20);
   });
 
   it('gives each activity exactly one way to move', () => {
@@ -98,7 +98,7 @@ describe('rigged actors', () => {
   });
 
   it('places actors on their level in stacked and exploded layouts', () => {
-    const l2Runner = rigged.find(d => d.activity === 'treadmill-run' && d.level === 'L2')!;
+    const l2Runner = rigged.find(d => d.activity === 'pt-coach-tablet' && d.level === 'L2')!;
     const stacked = getActorWorldAnchor(l2Runner, SOL_CENTER_SCENE, 'stacked');
     const exploded = getActorWorldAnchor(l2Runner, SOL_CENTER_SCENE, 'exploded');
     expect(stacked[1]).toBeCloseTo(
@@ -116,13 +116,13 @@ describe('rigged actors', () => {
     expect(moved).toBeGreaterThan(0.5);
   });
 
-  it('keeps cyclists on their bike and swimmers on their lap path', () => {
+  it('keeps cyclists on their bike and preserves the shared swimmer renderer', () => {
     const cyclist = rigged.find(d => d.activity === 'upright-bike')!;
     const anchor = getActorWorldAnchor(cyclist, SOL_CENTER_SCENE, 'stacked');
     const placement = computeRiggedPlacement(cyclist, SOL_CENTER_SCENE, 'stacked', 1.25);
     expect(Math.hypot(placement.position[0] - anchor[0], placement.position[2] - anchor[2])).toBeLessThan(0.3);
 
-    const swimmer = rigged.find(d => d.activity === 'swim-freestyle')!;
+    const swimmer = { ...cyclist, id: 'fixture-swimmer', activity: 'swim-freestyle' as const };
     const a = computeRiggedPlacement(swimmer, SOL_CENTER_SCENE, 'stacked', 0);
     const b = computeRiggedPlacement(swimmer, SOL_CENTER_SCENE, 'stacked', 40);
     expect(Math.hypot(b.position[0] - a.position[0], b.position[2] - a.position[2])).toBeGreaterThan(2);
@@ -140,10 +140,10 @@ describe('rigged actors', () => {
     for (const name of ['racketShaft', 'racketHead', 'coachTablet', 'dumbbellLeft', 'dumbbellRight']) {
       expect(PROCEDURAL_HAND_PROP_NAMES.has(name)).toBe(true);
     }
-    // Nothing a rigged actor still draws procedurally may be left visible: every part is hidden.
+    // Không được để lộ bất kỳ bộ phận nào mà nhân vật gắn rig vẫn dựng theo kiểu thủ tục: mọi phần đều phải ẩn.
     const sample = evaluateActorPartsAtTime(rigged, 1.25, { scene: SOL_CENTER_SCENE });
     for (const part of sample) {
-      // The swimmers' water spray is an effect around the kicking feet and stays drawn.
+      // Tia nước bắn của người bơi là hiệu ứng quanh bàn chân đạp nước nên vẫn được giữ lại.
       if (part.partName.startsWith('splash')) continue;
       expect(
         PROCEDURAL_BODY_PART_NAMES.has(part.partName) ||
@@ -160,7 +160,7 @@ describe('rigged actors', () => {
     const scaled = buildHandProp(racket, 2.5);
     expect(small.children.length).toBeGreaterThanOrEqual(3);
     expect(scaled.scale.x * 2.5).toBeCloseTo(small.scale.x * 1, 6);
-    // Geometry and materials are shared between props.
+    // Hình học và vật liệu được dùng chung giữa các đạo cụ.
     const a = small.children[0] as THREE.Mesh;
     const b = scaled.children[0] as THREE.Mesh;
     expect(a.geometry).toBe(b.geometry);

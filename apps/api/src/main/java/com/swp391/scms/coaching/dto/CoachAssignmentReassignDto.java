@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Dữ liệu yêu cầu điều chuyển: hội viên, HLV cũ, HLV mới, id bản ghi được chuyển (giáo án hoặc buổi PT) và loại
+ * phân công.
+ */
 public record CoachAssignmentReassignDto(
         @NotNull(message = "{validation.coach_assignment.member_id.not_null}")
         Long memberId,

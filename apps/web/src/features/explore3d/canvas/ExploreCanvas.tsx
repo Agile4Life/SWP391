@@ -22,18 +22,20 @@ import { Lights } from './Lights';
 import { LiveActivityActors } from './LiveActivityActors';
 import { Picking, handleCanvasPointerMissed } from './Picking';
 import { Pool } from './Pool';
+import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { RiggedActors } from './RiggedActors';
 import { SelectionHighlight } from './SelectionHighlight';
 
-// Wider, edge-faded Vogel PCF; must run before the first material compiles.
+// Bộ lọc Vogel PCF rộng hơn và mờ dần ở mép; phải chạy trước khi vật liệu đầu tiên được biên dịch.
 patchSoftShadowChunk();
 
+/** Props của canvas 3D: dữ liệu thật đã gắn vào cảnh và cờ chạy benchmark. */
 export interface ExploreCanvasProps {
   bindings?: ResolvedSceneBindings;
   benchEnabled?: boolean;
 }
 
-// AA comes from MSAA on the HDR render target + FXAA in the final pass.
+// Cấu hình WebGL: tắt antialias gốc vì khử răng cưa do MSAA trên HDR render target kết hợp FXAA ở bước cuối đảm nhiệm.
 const GL_CONFIG = {
   antialias: false,
   alpha: false,
@@ -42,6 +44,7 @@ const GL_CONFIG = {
   powerPreference: 'high-performance' as const,
 };
 
+/** Cấu hình camera ban đầu (vị trí, góc mở, mặt phẳng gần/xa). */
 const INITIAL_CAMERA_CONFIG = {
   position: [46, 36, 48] as [number, number, number],
   fov: 38,
@@ -49,6 +52,10 @@ const INITIAL_CAMERA_CONFIG = {
   far: 1200,
 };
 
+/**
+ * Canvas react-three-fiber của cảnh khám phá: dựng cảnh, camera, hậu kỳ, hiệu năng, benchmark và xử lý mất ngữ
+ * cảnh WebGL.
+ */
 export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasProps) {
   const tier = useExploreStore(s => s.tier);
   const dpr = useExploreStore(s => s.dpr);
@@ -63,6 +70,7 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
     };
   }, []);
 
+  // Khi canvas được tạo: bật bóng đổ và đăng ký các listener mất/khôi phục ngữ cảnh WebGL và rời trang.
   const handleCreated = useCallback((state: RootState) => {
     if (cleanupListenersRef.current) {
       cleanupListenersRef.current();
@@ -71,18 +79,18 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
 
     if (state.gl.shadowMap) {
       state.gl.shadowMap.enabled = true;
-      // PCFSoftShadowMap was removed in r186; softness comes from the patched Vogel filter.
+      // PCFSoftShadowMap đã bị gỡ bỏ ở r186; độ mềm của bóng đến từ bộ lọc Vogel đã vá.
       state.gl.shadowMap.type = THREE.PCFShadowMap;
     }
 
-    // Only used by the forward fallback: the cinematic pipeline tone maps itself
-    // (three skips renderer tone mapping when drawing into render targets).
+    // Chỉ dùng cho chế độ dự phòng forward: pipeline điện ảnh tự thực hiện tone mapping
+    // (Three.js bỏ qua tone mapping của renderer khi vẽ vào render target).
     if ('toneMapping' in state.gl) {
       state.gl.toneMapping = THREE.ACESFilmicToneMapping;
       state.gl.toneMappingExposure = 1.06;
     }
 
-    // Scanned PBR surface sets stream in; materials use procedural detail until then.
+    // Bộ bề mặt PBR quét sẽ tải dần vào; các vật liệu dùng chi tiết thủ tục cho đến khi tải xong.
     if (useExploreStore.getState().tier !== 'low') {
       loadSurfaceTextures(() => state.invalidate(), Math.min(4, state.gl.capabilities?.getMaxAnisotropy?.() ?? 4));
     }
@@ -92,20 +100,23 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       return;
     }
 
+    // Mất ngữ cảnh WebGL: chặn mặc định và ghi nhận (từ lần thứ hai chuyển sang 2D).
     const onContextLost = (event: Event) => {
       event.preventDefault();
       useExploreStore.getState().recordContextLost();
     };
 
+    // Ngữ cảnh được khôi phục thì vẽ lại.
     const onContextRestored = () => {
       state.invalidate();
     };
 
+    // Rời trang thì chủ động bỏ ngữ cảnh WebGL (bỏ qua lỗi khi đóng trang).
     const onPageHide = () => {
       try {
         state.gl.forceContextLoss();
       } catch {
-        // Ignore teardown errors during page navigation
+        // Bỏ qua lỗi dọn dẹp khi điều hướng rời trang
       }
     };
 
@@ -142,7 +153,8 @@ export function ExploreCanvas({ bindings, benchEnabled = false }: ExploreCanvasP
       <Picking>
         <LevelStack />
         <Courts />
-        <Pool />
+        {/* Không dựng nước/bể procedural khi khu hồ bơi đã bỏ khỏi scene. */}
+        {SOL_CENTER_SCENE.nodes['zone-b1-pool'] && <Pool />}
         <ItemInstances resolvedItems={bindings?.items} />
       </Picking>
       <LiveActivityActors benchEnabled={benchEnabled} />

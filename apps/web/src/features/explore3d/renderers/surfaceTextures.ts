@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 
-/** CC0 PBR sets from Poly Haven, served from /textures/explore3d (see docs/3D_ASSETS.md). */
+/**
+ * Tên các bộ texture PBR CC0 từ Poly Haven, phục vụ từ /textures/explore3d (xem docs/3D_ASSETS.md).
+ */
 export type SurfaceTextureName =
   | 'asphalt_02'
   | 'smooth_concrete_floor'
@@ -16,21 +18,25 @@ export type SurfaceTextureName =
 
 export const SURFACE_TEXTURE_BASE_URL = '/textures/explore3d';
 
-/** Shared uniform objects: every material using the set sees the texture the moment it loads. */
+/**
+ * Bộ uniform texture dùng chung: mọi vật liệu sử dụng bộ này đều thấy texture ngay khi tải xong
+ * (albedo, normal, ARM, cờ ready và các giá trị trung bình).
+ */
 export interface SurfaceTextureSet {
   name: SurfaceTextureName;
   albedo: THREE.IUniform<THREE.Texture>;
   normal: THREE.IUniform<THREE.Texture>;
   arm: THREE.IUniform<THREE.Texture>;
-  /** 0 until all three maps are decoded; shaders fall back to the procedural detail. */
+  /** Bằng 0 cho đến khi cả ba bản đồ được giải mã xong; shader sẽ tạm dùng chi tiết thủ tục. */
   ready: THREE.IUniform<number>;
-  /** Mean linear albedo, so the texture adds detail without replacing the palette colour. */
+  /** Albedo tuyến tính trung bình để texture bổ sung chi tiết mà không thay thế màu của bảng màu. */
   mean: THREE.IUniform<THREE.Vector3>;
-  /** Mean roughness (ARM green channel). */
+  /** Độ nhám trung bình (kênh xanh lá của bản đồ ARM). */
   meanRoughness: THREE.IUniform<number>;
   requested: boolean;
 }
 
+/** Tạo texture một điểm ảnh làm giá trị tạm trong lúc chưa tải xong. */
 function placeholder(r: number, g: number, b: number): THREE.DataTexture {
   const tex = new THREE.DataTexture(new Uint8Array([r, g, b, 255]), 1, 1);
   tex.needsUpdate = true;
@@ -39,6 +45,7 @@ function placeholder(r: number, g: number, b: number): THREE.DataTexture {
 
 const sets = new Map<SurfaceTextureName, SurfaceTextureSet>();
 
+/** Lấy (hoặc tạo) bộ texture theo tên với giá trị tạm; chưa tải thì shader dùng chi tiết thủ tục. */
 export function getSurfaceTextureSet(name: SurfaceTextureName): SurfaceTextureSet {
   let set = sets.get(name);
   if (!set) {
@@ -57,11 +64,13 @@ export function getSurfaceTextureSet(name: SurfaceTextureName): SurfaceTextureSe
   return set;
 }
 
+/** Đổi một kênh màu sRGB (0–255) sang tuyến tính. */
 function srgbToLinear(c: number): number {
   const v = c / 255;
   return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
 }
 
+/** Tính màu trung bình (tuyến tính) của ảnh bằng cách vẽ nhỏ 8×8 lên canvas; lỗi thì null. */
 function averagePixel(image: CanvasImageSource): [number, number, number] | null {
   try {
     const canvas = document.createElement('canvas');
@@ -87,9 +96,8 @@ function averagePixel(image: CanvasImageSource): [number, number, number] | null
 }
 
 /**
- * Starts loading every texture set that a material has asked for. Safe to call
- * repeatedly; does nothing without a DOM (unit tests) so materials keep their
- * procedural detail there.
+ * Bắt đầu tải mọi bộ texture mà vật liệu đã yêu cầu. Gọi lặp lại an toàn; không làm gì khi không
+ * có DOM (unit test) để vật liệu giữ nguyên chi tiết thủ tục ở môi trường kiểm thử.
  */
 export function loadSurfaceTextures(onLoaded: () => void, anisotropy = 4): void {
   if (typeof document === 'undefined') return;
@@ -97,7 +105,9 @@ export function loadSurfaceTextures(onLoaded: () => void, anisotropy = 4): void 
   for (const set of sets.values()) {
     if (set.requested) continue;
     set.requested = true;
+    // Dựng URL của một bản đồ (diff/nor/arm) của bộ texture.
     const url = (suffix: string) => `${SURFACE_TEXTURE_BASE_URL}/${set.name}_${suffix}.webp`;
+    // Cấu hình texture: lặp, độ dị hướng và không gian màu.
     const prepare = (tex: THREE.Texture, srgb: boolean) => {
       tex.wrapS = THREE.RepeatWrapping;
       tex.wrapT = THREE.RepeatWrapping;

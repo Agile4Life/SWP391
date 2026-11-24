@@ -6,13 +6,16 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+/** Bộ kiểm thử cho GoogleIdTokenVerifierAdapter (google id token verifier adapter). */
 class GoogleIdTokenVerifierAdapterTest {
+    /** Kiểm thử: từ chối đăng nhập Google khi chưa cấu hình client id. */
     @Test
     void rejectsGoogleLoginWhenClientIdIsNotConfigured() {
         var verifier = new GoogleIdTokenVerifierAdapter("");
         var error = assertThrows(UnauthorizedException.class, () -> verifier.verify("unused-token"));
         assertEquals("GOOGLE_LOGIN_NOT_CONFIGURED", error.getErrorCode());
     }
+    /** Kiểm thử: từ chối access token cấp cho client khác trước khi nạp thông tin người dùng. */
     @Test
     void rejectsAccessTokenIssuedToAnotherClientBeforeLoadingUserInfo() {
         var transport = new com.google.api.client.testing.http.MockHttpTransport.Builder()
@@ -25,6 +28,7 @@ class GoogleIdTokenVerifierAdapterTest {
         org.junit.jupiter.api.Assertions.assertTrue(transport.getLowLevelHttpRequest().getUrl().contains("tokeninfo"));
     }
 
+    /** Kiểm thử: từ chối authorization code có redirect chưa cấu hình trước khi gọi mạng. */
     @Test
     void rejectsAuthorizationCodeWithUnconfiguredRedirectBeforeNetworkRequest() {
         var verifier = new GoogleIdTokenVerifierAdapter("our-client", "secret", "http://localhost/callback");
@@ -32,6 +36,7 @@ class GoogleIdTokenVerifierAdapterTest {
                 () -> verifier.verifyAuthorizationCode("code", "https://attacker.example/callback"));
     }
 
+    /** Kiểm thử: chỉ chấp nhận access token gắn đúng client, chưa hết hạn và khớp subject. */
     @Test
     void acceptsOnlyClientBoundUnexpiredAccessTokensWithMatchingSubject() {
         var transport = new com.google.api.client.http.HttpTransport() {
@@ -53,6 +58,7 @@ class GoogleIdTokenVerifierAdapterTest {
         "{\"audience\":\"our-client\",\"issued_to\":\"our-client\",\"expires_in\":0}",
         "{\"audience\":\"our-client\",\"issued_to\":\"our-client\"}"
     })
+    /** Kiểm thử: từ chối sai bên trình diện, token hết hạn hoặc thiếu hạn. */
     void rejectsWrongPresenterOrExpiredOrMissingExpiry(String metadata) {
         var transport = new com.google.api.client.testing.http.MockHttpTransport.Builder()
                 .setLowLevelHttpResponse(new com.google.api.client.testing.http.MockLowLevelHttpResponse()
@@ -61,6 +67,7 @@ class GoogleIdTokenVerifierAdapterTest {
         assertThrows(UnauthorizedException.class, () -> verifier.verifyAccessToken("access-token"));
     }
 
+    /** Kiểm thử: lỗi từ nhà cung cấp không làm lộ token hay secret. */
     @Test
     void providerErrorsDoNotExposeTokensOrSecrets() {
         var transport = new com.google.api.client.testing.http.MockHttpTransport.Builder()

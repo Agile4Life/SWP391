@@ -5,7 +5,12 @@ import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
-/** Entity mapping table class_enrollments (schema is generated code-first by Hibernate). */
+/**
+ * Entity lượt ghi danh khóa học (bảng class_enrollments): lớp, hội viên, trạng thái, thời điểm ghi danh/hủy,
+ * người hủy, lý do và có bị mất credit không.
+ *
+ * Entity ánh xạ bảng class_enrollments (schema được Hibernate sinh theo hướng code-first).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_enrollments_status", constraints = "status IN ('booked','cancelled','completed')")
 @Table(name = "class_enrollments", indexes = {@Index(name = "ix_enrollments_member_status", columnList = "member_id, status"), @Index(name = "ix_enrollments_class_status", columnList = "class_id, status")})
@@ -40,28 +45,46 @@ public class ClassEnrollment {
     private String cancelReason;
 
     /**
-     * Set when a free course credit was given up for good (a membership hold that came too late to restore it): the
-     * cancelled enrollment keeps counting against the package's course allowance. Null/false for every other case.
+     * Được đặt khi một lượt khóa học miễn phí bị mất hẳn (tạm hoãn membership đến quá muộn để khôi phục): ghi
+     * danh đã hủy vẫn tính vào hạn mức khóa học của gói. Null/false cho mọi trường hợp khác.
      */
     @Column(name = "credit_forfeited")
     private Boolean creditForfeited;
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường gymClass. */
     public GymClass getGymClass() { return gymClass; }
+    /** Gán giá trị mới cho trường gymClass. */
     public void setGymClass(GymClass gymClass) { this.gymClass = gymClass; }
+    /** Lấy giá trị trường member. */
     public Member getMember() { return member; }
+    /** Gán giá trị mới cho trường member. */
     public void setMember(Member member) { this.member = member; }
+    /** Lấy giá trị trường status. */
     public String getStatus() { return status; }
+    /** Gán giá trị mới cho trường status. */
     public void setStatus(String status) { this.status = status; }
+    /** Lấy giá trị trường enrolledAt. */
     public LocalDateTime getEnrolledAt() { return enrolledAt; }
+    /** Gán giá trị mới cho trường enrolledAt. */
     public void setEnrolledAt(LocalDateTime enrolledAt) { this.enrolledAt = enrolledAt; }
+    /** Lấy giá trị trường cancelledAt. */
     public LocalDateTime getCancelledAt() { return cancelledAt; }
+    /** Gán giá trị mới cho trường cancelledAt. */
     public void setCancelledAt(LocalDateTime cancelledAt) { this.cancelledAt = cancelledAt; }
+    /** Lấy giá trị trường cancelledBy. */
     public User getCancelledBy() { return cancelledBy; }
+    /** Gán giá trị mới cho trường cancelledBy. */
     public void setCancelledBy(User cancelledBy) { this.cancelledBy = cancelledBy; }
+    /** Lấy giá trị trường cancelReason. */
     public String getCancelReason() { return cancelReason; }
+    /** Gán giá trị mới cho trường cancelReason. */
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
+    /** Cho biết credit forfeited (trường boolean). */
     public boolean isCreditForfeited() { return Boolean.TRUE.equals(creditForfeited); }
+    /** Gán giá trị mới cho trường creditForfeited. */
     public void setCreditForfeited(boolean creditForfeited) { this.creditForfeited = creditForfeited; }
 }

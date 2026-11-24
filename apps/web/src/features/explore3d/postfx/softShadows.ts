@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
 /**
- * Three r187's PCF filter takes 5 Vogel-disk taps. Following the Saltline PCSS
- * notes we widen it to 4 IGN-rotated Vogel taps (each a hardware 2×2 compare,
- * ≈48 filtered samples) and fade the shadow out near the shadow-map border so the
- * frustum edge never shows as a hard line. Patched once, before any program compiles.
+ * Bộ lọc PCF của Three r187 dùng 5 mẫu Vogel-disk. Theo ghi chú PCSS của Saltline,
+ * ta điều chỉnh sang 4 mẫu Vogel xoay theo IGN (mỗi mẫu là phép so sánh phần cứng 2×2,
+ * ≈48 mẫu đã lọc) và làm mờ bóng dần gần mép shadow map để rìa frustum không bị
+ * lộ đường cắt cứng. Chỉ vá một lần trước khi bất kỳ chương trình shader nào biên dịch.
  */
 export const SOFT_SHADOW_TAPS = 4;
 
@@ -21,6 +21,10 @@ const SOFT_BLOCK = `shadow = 0.0;
 
 let patched = false;
 
+/**
+ * Vá đoạn shader PCF của three.js thành bộ lọc bóng mềm 4 mẫu và làm mờ bóng gần mép shadow map; chỉ vá một
+ * lần, trả true nếu đã vá.
+ */
 export function patchSoftShadowChunk(chunks: Record<string, string> = THREE.ShaderChunk): boolean {
   if (patched && chunks === THREE.ShaderChunk) return true;
   const source = chunks.shadowmap_pars_fragment;

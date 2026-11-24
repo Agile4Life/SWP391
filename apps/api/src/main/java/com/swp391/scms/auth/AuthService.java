@@ -30,6 +30,10 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * Nghiệp vụ xác thực: đăng nhập (có khóa tạm khi sai nhiều lần), đăng ký hội viên, OTP kích hoạt/quên mật khẩu,
+ * đăng nhập Google và cấp JWT.
+ */
 @Service
 public class AuthService {
 
@@ -46,6 +50,7 @@ public class AuthService {
     private final com.swp391.scms.notifications.NotificationService notificationService;
     private final LoginAttemptService loginAttemptService;
 
+    /** Constructor cho test với tập phụ thuộc tối thiểu. */
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
@@ -53,6 +58,7 @@ public class AuthService {
         this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null, null, null);
     }
 
+    /** Constructor cho test có MessageService. */
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
@@ -61,6 +67,7 @@ public class AuthService {
         this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, null, null);
     }
 
+    /** Constructor cho test có thêm bộ xác minh Google. */
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
@@ -70,6 +77,7 @@ public class AuthService {
         this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, null, null);
     }
 
+    /** Constructor cho test có thêm NotificationService. */
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
@@ -80,6 +88,10 @@ public class AuthService {
         this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, notificationService, null);
     }
 
+    /**
+     * Constructor Spring dùng: các phụ thuộc tùy chọn (Google, thông báo, chống dò mật khẩu) có thể vắng mặt;
+     * thiếu LoginAttemptService thì tự tạo bản mặc định.
+     */
     @org.springframework.beans.factory.annotation.Autowired
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
@@ -103,14 +115,22 @@ public class AuthService {
         this.loginAttemptService = loginAttemptService != null ? loginAttemptService : new LoginAttemptService(clock);
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** Lấy giá trị trường loginAttemptService. */
     public LoginAttemptService getLoginAttemptService() {
         return loginAttemptService;
     }
 
+    /**
+     * Đăng nhập: nếu định danh đang bị khóa tạm thì báo 429 kèm số giây còn lại. Sai mật khẩu thì tăng bộ đếm
+     * và báo còn bao nhiêu lần thử (hết lượt thì khóa). Tài khoản không active thì báo 403. Thành công thì xóa
+     * bộ đếm, cập nhật lần đăng nhập cuối và cấp JWT. Thông báo sai không phân biệt "sai tên" hay "sai mật
+     * khẩu" để không lộ tài khoản nào tồn tại.
+     */
     @Transactional
     public AuthTokenResponse login(LoginRequest request) {
         String identifier = normalize(request.username());
@@ -147,6 +167,10 @@ public class AuthService {
         return issueTokenForUser(user);
     }
 
+    /**
+     * Đăng ký hội viên: kiểm tra email hợp lệ, tên đăng nhập/email/SĐT chưa ai dùng (SĐT được chuẩn hóa trước
+     * khi so), rồi tạo tài khoản MEMBER ở trạng thái chờ kích hoạt.
+     */
     @Transactional
     public RegistrationResponse register(RegisterRequest request) {
         if (!isValidEmail(request.email())) {
@@ -178,6 +202,7 @@ public class AuthService {
                 user.getId(), username);
     }
 
+    /** Kiểm tra OTP rồi kích hoạt tài khoản đang chờ. */
     @Transactional
     public OtpService.Status verifyOtp(VerifyOtpRequest request) {
         OtpService.Status status = verifyOtpChallenge(request.target(), request.otpCode());
@@ -185,6 +210,7 @@ public class AuthService {
         return status;
     }
 
+    /** Tìm tài khoản chưa xóa theo email (nếu chuỗi có @) hoặc theo SĐT; không thấy thì báo 404. */
     @Transactional(readOnly = true)
     public User findOtpTarget(String target) {
         String normalizedTarget = normalize(target);
@@ -194,11 +220,13 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.account", target));
     }
 
+    /** Gửi OTP kích hoạt: chỉ cho tài khoản đang chờ kích hoạt. */
     public String generateOtp(String target) {
         findPendingUser(target);
         return issueAndSendOtp(normalize(target));
     }
 
+    /** Gửi OTP đặt lại mật khẩu: email phải hợp lệ, tài khoản phải tồn tại và không bị khóa. */
     public String requestPasswordResetOtp(String rawEmail) {
         if (!isValidEmail(rawEmail)) {
             throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
@@ -212,6 +240,10 @@ public class AuthService {
         return issueAndSendOtp(email);
     }
 
+    /**
+     * Đặt lại mật khẩu bằng OTP: kiểm tra OTP, mã hóa mật khẩu mới bằng BCrypt, tài khoản đang chờ kích hoạt
+     * được kích hoạt luôn (vì đã chứng minh sở hữu email), rồi gửi thông báo "mật khẩu đã đổi".
+     */
     @Transactional
     public void resetPasswordWithOtp(ResetPasswordRequest request) {
         if (request == null || !isValidEmail(request.email())) {
@@ -248,6 +280,7 @@ public class AuthService {
         }
     }
 
+    /** Chuyển tài khoản đang chờ sang active. */
     private void activateAccount(String target) {
         User user = findPendingUser(target);
         user.setStatus("active");
@@ -255,6 +288,7 @@ public class AuthService {
         userRepository.save(user);
     }
 
+    /** Lấy tài khoản theo email/SĐT và bắt buộc phải đang ở trạng thái chờ kích hoạt (inactive). */
     private User findPendingUser(String target) {
         User user = findOtpTarget(target);
         if (!"inactive".equalsIgnoreCase(user.getStatus())) {
@@ -263,6 +297,10 @@ public class AuthService {
         return user;
     }
 
+    /**
+     * Gửi OTP đăng nhập Google: chưa có tài khoản thì tạo tài khoản chờ kích hoạt với mật khẩu ngẫu nhiên; có
+     * rồi thì kiểm tra vai trò/trạng thái được phép.
+     */
     @Transactional
     public String requestGoogleOtp(String rawEmail) {
         if (!isValidEmail(rawEmail)) {
@@ -283,8 +321,13 @@ public class AuthService {
     }
 
     /**
-     * Handles Google OAuth callback (via ID Token, OAuth2 Access Token, or Authorization Code):
-     * verifies identity and account restrictions, signs in active members, or sends activation OTP to pending members.
+     * Xử lý thông tin Google trả về (ID Token, Access Token hoặc Authorization Code): xác minh với Google,
+     * email phải đã xác minh, tìm hoặc tạo tài khoản. Tài khoản active thì cấp JWT ngay; tài khoản chờ kích
+     * hoạt thì gửi OTP.
+     *
+     * Xử lý callback Google OAuth (qua ID Token, OAuth2 Access Token hoặc Authorization Code): xác minh danh
+     * tính và hạn chế tài khoản, đăng nhập hội viên đang hoạt động, hoặc gửi OTP kích hoạt cho hội viên đang
+     * chờ.
      */
     @Transactional
     public GoogleOAuthResult authenticateGoogle(GoogleOAuthCallbackRequest request) {
@@ -326,6 +369,7 @@ public class AuthService {
         return new GoogleOAuthResult(accountEmail, otpCode);
     }
 
+    /** Kiểm tra OTP đăng nhập Google, kích hoạt tài khoản nếu đang chờ, cập nhật lần đăng nhập cuối và cấp JWT. */
     @Transactional
     public AuthTokenResponse verifyGoogleOtp(String rawEmail, String otpCode) {
         if (!isValidEmail(rawEmail)) {
@@ -352,6 +396,10 @@ public class AuthService {
         return issueTokenForUser(user);
     }
 
+    /**
+     * Tạo tên đăng nhập duy nhất từ phần trước @ của email (bỏ ký tự đặc biệt, tối thiểu 3, tối đa 40 ký tự);
+     * trùng thì thêm số 1, 2, 3...
+     */
     private String generateUniqueUsernameFromEmail(String email) {
         String baseUsername = email.substring(0, email.indexOf('@')).replaceAll("[^a-zA-Z0-9_]", "");
         if (baseUsername.length() < 3) {
@@ -368,24 +416,38 @@ public class AuthService {
         return username;
     }
 
+    /** Tạo tài khoản hội viên chờ kích hoạt khi không có họ tên. */
     private User createPendingMemberUser(String username, String email, String phone, String rawPassword) {
         return createPendingMemberUser(username, null, email, phone, rawPassword);
     }
 
-    /** {@code fullName} is what the desk, coaches and check-in screens show; it falls back to the username only when absent. */
+    /**
+     * Tạo tài khoản hội viên chờ kích hoạt. {@code fullName} là tên hiển thị ở quầy, màn hình HLV và màn check-in;
+     * chỉ dùng tên đăng nhập làm giá trị dự phòng khi không có họ tên.
+     */
     private User createPendingMemberUser(String username, String fullName, String email, String phone, String rawPassword) {
         String name = fullName == null ? null : fullName.trim().replaceAll("\\s+", " ");
         return createMemberAccount(username, name == null || name.isBlank() ? username : name, email, phone, rawPassword, null, null, "inactive");
     }
 
-    /** Display name for the current session (never the login identifier when the account has a real name). */
+    /**
+     * Họ tên hiển thị của người dùng cho phiên hiện tại (tìm theo id vì tài khoản nhân viên có thể không có tên
+     * đăng nhập).
+     *
+     * Tên hiển thị cho phiên hiện tại (không bao giờ là định danh đăng nhập khi tài khoản có tên thật).
+     */
     @Transactional(readOnly = true)
     public String fullNameOf(Long userId) {
-        // By id: accounts provisioned with only an email (staff, demo, bootstrap admin) have no username to look up.
+        // Theo id: tài khoản chỉ có email (nhân viên, demo, admin bootstrap) không có username để tra.
         if (userId == null) return null;
         return userRepository.findByIdAndDeletedAtIsNull(userId).map(User::getFullName).orElse(null);
     }
 
+    /**
+     * Tạo bản ghi User với vai trò MEMBER (mật khẩu mã hóa BCrypt, ảnh đại diện mặc định nếu không có), lưu để
+     * có id, rồi tạo hồ sơ Member đi kèm với mã hội viên "MEM-<id>", ngày tham gia hôm nay và trình độ
+     * beginner.
+     */
     private User createMemberAccount(
             String username,
             String fullName,
@@ -423,6 +485,12 @@ public class AuthService {
         return user;
     }
 
+    /**
+     * Tìm tài khoản cho người dùng Google: ưu tiên theo Google sub, sau đó theo email. Khi liên kết theo email:
+     * từ chối nếu tài khoản đã liên kết với Google sub khác, hoặc email không phải Gmail/Google Workspace mà
+     * chưa liên kết trước (tránh chiếm tài khoản qua email trùng). Bổ sung ảnh và họ tên nếu còn trống. Không
+     * tìm thấy thì tạo tài khoản MEMBER mới.
+     */
     private User resolveOrCreateGoogleUser(
             GoogleUserInfo googleUser,
             String initialStatusForNewUser,
@@ -479,6 +547,10 @@ public class AuthService {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthService.class);
 
+    /**
+     * Sinh OTP và gửi email sau khi transaction commit (để không gửi mã cho dữ liệu bị rollback). Gửi lỗi thì
+     * hủy mã đã sinh và báo lỗi 503 cho người dùng. Ở chế độ debug OTP thì không gửi email.
+     */
     private String issueAndSendOtp(String normalizedTarget) {
         String code = otpService.generateOtp(normalizedTarget);
         if (!debugOtpEnabled) {
@@ -488,7 +560,7 @@ public class AuthService {
                 } catch (RuntimeException deliveryFailure) {
                     otpService.invalidate(normalizedTarget);
                     log.warn("OTP delivery failed for {}", maskEmail(normalizedTarget), deliveryFailure);
-                    // afterCommit exceptions propagate to the caller, so the user is told the code was not sent.
+                    // Ngoại lệ afterCommit lan lên người gọi, nên người dùng được báo là mã chưa được gửi.
                     if (deliveryFailure instanceof com.swp391.scms.common.exception.AppException) {
                         throw deliveryFailure;
                     }
@@ -500,10 +572,12 @@ public class AuthService {
         return code;
     }
 
+    /** Chạy hành động sau khi transaction hiện tại commit; nếu không có transaction thì chạy ngay. */
     private void runAfterCommit(Runnable action) {
         if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
             org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
                     new org.springframework.transaction.support.TransactionSynchronization() {
+                        /** Được Spring gọi khi transaction commit thành công. */
                         @Override
                         public void afterCommit() {
                             action.run();
@@ -514,6 +588,7 @@ public class AuthService {
         }
     }
 
+    /** Che email khi ghi log, ví dụ "a***@gmail.com", để không lộ thông tin cá nhân. */
     private static String maskEmail(String target) {
         if (target == null || target.isBlank()) {
             return "***";
@@ -525,6 +600,10 @@ public class AuthService {
         return target.charAt(0) + "***" + target.substring(at);
     }
 
+    /**
+     * Đăng nhập Google bằng ID Token: xác minh chữ ký/audience/hạn dùng, email phải đã xác minh, tìm hoặc tạo
+     * tài khoản MEMBER active, từ chối tài khoản bị khóa/xóa, rồi cấp JWT.
+     */
     @Transactional
     public AuthTokenResponse loginWithGoogle(GoogleLoginRequest request) {
         if (request == null || request.idToken() == null || request.idToken().isBlank()) {
@@ -535,26 +614,26 @@ public class AuthService {
             throw new UnauthorizedException("INVALID_GOOGLE_TOKEN", "auth.google.invalid_token", null, "Google Token Verifier is not available");
         }
 
-        // BR-01: Verify token signature, aud, iss, exp
+        // BR-01: Xác minh chữ ký token, aud, iss, exp.
         GoogleUserInfo googleUser = googleTokenVerifierPort.verify(request.idToken());
 
-        // BR-02: Only accept email_verified = true
+        // BR-02: Chỉ chấp nhận email_verified = true.
         if (!googleUser.emailVerified()) {
             throw new UnauthorizedException("GOOGLE_EMAIL_NOT_VERIFIED", "auth.google.email_not_verified", null, "Google email is not verified");
         }
 
-        // BR-03 & BR-04: Match by googleSub/email or auto-create active MEMBER account
+        // BR-03 & BR-04: Khớp theo googleSub/email hoặc tự tạo tài khoản MEMBER đang hoạt động.
         User user = resolveOrCreateGoogleUser(googleUser, "active", false);
 
-        // Existing staff accounts retain the database role; new Google accounts are always Members.
+        // Tài khoản nhân viên hiện có giữ vai trò trong database; tài khoản Google mới luôn là Member.
         ensureGoogleOtpAccountAllowed(user);
 
-        // BR-06: Locked / inactive / deleted accounts rejected
+        // BR-06: Từ chối tài khoản bị khóa / không hoạt động / đã xóa.
         if (user.getDeletedAt() != null || !"active".equalsIgnoreCase(user.getStatus())) {
             throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, "Account is deactivated or locked");
         }
 
-        // BR-07: Issue standard JWT token and update last login time
+        // BR-07: Cấp JWT chuẩn và cập nhật thời điểm đăng nhập gần nhất.
         user.setLastLoginAt(LocalDateTime.now(clock));
         user.setUpdatedAt(LocalDateTime.now(clock));
         userRepository.save(user);
@@ -562,6 +641,10 @@ public class AuthService {
         return issueTokenForUser(user);
     }
 
+    /**
+     * Kiểm tra OTP và đổi kết quả thành lỗi tương ứng: hết hạn/không có (400), sai quá số lần (429), sai mã
+     * (400 kèm số lần còn lại).
+     */
     private OtpService.Status verifyOtpChallenge(String target, String otpCode) {
         OtpService.Status status = otpService.verifyOtp(target, otpCode);
         return switch (status.result()) {
@@ -573,6 +656,10 @@ public class AuthService {
         };
     }
 
+    /**
+     * Chỉ cho đăng nhập Google/OTP với vai trò MEMBER, COACH, RECEPTIONIST (quản lý/admin phải dùng mật khẩu).
+     * Tài khoản phải active, riêng hội viên được phép đang chờ kích hoạt; tài khoản đã xóa bị từ chối.
+     */
     private void ensureGoogleOtpAccountAllowed(User user) {
         if (user.getRole() == null || !java.util.Set.of("MEMBER", "COACH", "RECEPTIONIST")
                 .contains(user.getRole().getCode().toUpperCase(Locale.ROOT))) {
@@ -586,12 +673,17 @@ public class AuthService {
         }
     }
 
+    /** Cấp JWT cho người dùng (dùng email làm tên nếu không có tên đăng nhập) kèm vai trò và họ tên. */
     private AuthTokenResponse issueTokenForUser(User user) {
         String username = user.getUsername() == null ? user.getEmail() : user.getUsername();
         String role = user.getRole().getCode();
         return new AuthTokenResponse(jwtService.generateToken(user.getId(), username, role), username, role, user.getFullName());
     }
 
+    /**
+     * Kiểm tra email: tối đa 150 ký tự, đúng dạng, chặn các domain gõ nhầm của Gmail (gmail.co, gmial.com...),
+     * và với Gmail thì phần trước @ chỉ được chữ, số, dấu chấm và dấu +.
+     */
     private boolean isValidEmail(String rawEmail) {
         if (rawEmail == null) {
             return false;
@@ -613,10 +705,12 @@ public class AuthService {
         return true;
     }
 
+    /** SĐT Việt Nam: bắt đầu bằng 0 hoặc +84, tiếp theo là đầu số 3/5/7/8/9 và 8 chữ số. */
     private boolean isValidPhone(String rawPhone) {
         return rawPhone != null && rawPhone.matches("^(0|\\+84)(3|5|7|8|9)[0-9]{8}$");
     }
 
+    /** Chuẩn hóa chuỗi: bỏ khoảng trắng hai đầu và chuyển chữ thường. */
     private String normalize(String value) {
         return value.trim().toLowerCase(Locale.ROOT);
     }

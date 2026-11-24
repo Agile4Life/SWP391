@@ -1,6 +1,7 @@
 import { useI18n } from '../../../shared/i18n';
 import { useExploreStore, type WallMode } from '../state/exploreStore';
 
+/** Một lựa chọn chế độ tường: chế độ và nhãn song ngữ. */
 interface WallModeOption {
   mode: WallMode;
   labelVi: string;
@@ -13,6 +14,7 @@ const WALL_MODES: readonly WallModeOption[] = [
   { mode: 'down', labelVi: 'Hạ tường', labelEn: 'Walls down' },
 ] as const;
 
+/** Thanh công cụ của cảnh 3D: về toàn cảnh, chọn chế độ tường, bật/tắt tour, đi bộ, 2D/3D và tìm kiếm. */
 export function ExploreToolbar() {
   const { lang, t } = useI18n();
   const wallMode = useExploreStore(state => state.wallMode);
@@ -26,6 +28,7 @@ export function ExploreToolbar() {
   const stopTour = useExploreStore(state => state.stopTour);
   const setWalkMode = useExploreStore(state => state.setWalkMode);
 
+  // Bật/tắt tour tham quan.
   const handleToggleTour = () => {
     if (tourActive) {
       stopTour();
@@ -34,10 +37,12 @@ export function ExploreToolbar() {
     }
   };
 
+  // Bật/tắt chế độ đi bộ.
   const handleToggleWalk = () => {
     setWalkMode(!walkMode);
   };
 
+  // Chuyển giữa 3D và 2D.
   const handleToggleViewMode = () => {
     setViewMode(viewMode === '3d' ? '2d' : '3d');
   };

@@ -8,9 +8,14 @@ import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import org.junit.jupiter.api.Test;
 
-/** The desk's request history labels each processed request as a registration, renewal or upgrade. */
+/**
+ * Bộ kiểm thử cho MembershipRequestHistoryType (phân loại lịch sử yêu cầu gói hội viên).
+ *
+ * Lịch sử yêu cầu tại quầy lễ tân gắn nhãn mỗi yêu cầu đã xử lý là đăng ký mới, gia hạn hoặc nâng cấp.
+ */
 class MembershipRequestHistoryTypeTest {
 
+    /** Hàm trợ giúp của test: xác định loại của một kỳ trong lịch sử yêu cầu. */
     private static String typeOf(MembershipSubscription sub) throws Exception {
         Method method = com.swp391.scms.membership.service.MembershipRequestHistoryService.class
                 .getDeclaredMethod("typeOf", MembershipSubscription.class);
@@ -18,6 +23,7 @@ class MembershipRequestHistoryTypeTest {
         return (String) method.invoke(null, sub);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sub). */
     private static MembershipSubscription sub(long packageId) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setId(packageId);
@@ -26,11 +32,13 @@ class MembershipRequestHistoryTypeTest {
         return sub;
     }
 
+    /** Kiểm thử: kỳ đầu tiên là đăng ký mới. */
     @Test
     void firstPeriodIsARegistration() throws Exception {
         assertThat(typeOf(sub(1))).isEqualTo("REGISTER");
     }
 
+    /** Kiểm thử: cùng gói sau một kỳ trước là gia hạn. */
     @Test
     void samePackageAfterAPreviousPeriodIsARenewal() throws Exception {
         MembershipSubscription renewal = sub(1);
@@ -38,6 +46,7 @@ class MembershipRequestHistoryTypeTest {
         assertThat(typeOf(renewal)).isEqualTo("RENEW");
     }
 
+    /** Kiểm thử: gói khác hoặc khoản phí nâng cấp là nâng cấp. */
     @Test
     void otherPackageOrUpgradeChargeIsAnUpgrade() throws Exception {
         MembershipSubscription upgrade = sub(3);

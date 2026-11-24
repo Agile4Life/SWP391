@@ -7,8 +7,10 @@ import type { Page } from '@playwright/test';
  * đè lên ("intercepts pointer events"), nên spec này bắt đúng lỗi "nút nhìn thấy nhưng không ấn được".
  */
 const widget = (page: Page) => page.locator('.chat-widget');
+// Hộp thoại chat "Tin nhắn SÖL".
 const panel = (page: Page) => page.getByRole('dialog', { name: 'Tin nhắn SÖL' });
 
+// Mở nút chat nổi và chờ panel hiện.
 async function openWidget(page: Page) {
   await page.goto('/member/dashboard');
   await settled(page);
@@ -89,6 +91,7 @@ test.describe('Tin nhắn — widget nổi (hội viên)', () => {
   });
 
   test('đang trong hội thoại (người và SÖL AI): nút Mở rộng và Đóng ở góc phải vẫn bấm được', async ({ page }) => {
+    // Nút trên tiêu đề panel chat theo tên.
     const header = (name: string | RegExp) => panel(page).getByRole('button', { name });
     for (const kind of ['ai', 'human'] as const) {
       await openWidget(page);

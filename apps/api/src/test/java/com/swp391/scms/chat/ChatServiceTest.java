@@ -18,6 +18,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service ChatService (chat service). */
 class ChatServiceTest {
     final ChatConversationRepository conversations = mock(ChatConversationRepository.class);
     final ChatMessageRepository messages = mock(ChatMessageRepository.class);
@@ -43,6 +44,7 @@ class ChatServiceTest {
         when(messages.save(any())).thenAnswer(inv -> { ChatMessage m = inv.getArgument(0); m.setId(100L); return m; });
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     static User user(long id, String code) {
         var role = new Role(); role.setCode(code);
         var u = new User(); u.setId(id); u.setFullName("User " + id); u.setRole(role); u.setStatus("active"); return u;
@@ -55,6 +57,7 @@ class ChatServiceTest {
         verify(conversations, never()).save(any());
     }
 
+    /** Kiểm thử: hội viên có thể bắt đầu chat với cả hai loại nhân viên. */
     @ParameterizedTest @ValueSource(strings = {"RECEPTIONIST", "COACH"})
     void memberCanStartWithEitherStaffRole(String role) {
         coach.setRole(user(20, role).getRole());
@@ -64,6 +67,7 @@ class ChatServiceTest {
         assertThat(result.peer().role()).isEqualTo(role);
     }
 
+    /** Kiểm thử: từ chối các vai trò liên hệ khác. */
     @ParameterizedTest @ValueSource(strings = {"MEMBER", "CENTER_MANAGER", "GUEST"})
     void rejectsOtherContactRoles(String role) {
         coach.setRole(user(20, role).getRole());
@@ -94,7 +98,7 @@ class ChatServiceTest {
         var result = service.open(new AuthenticatedPrincipal(40L, "desk", "RECEPTIONIST"), 10L);
         assertThat(result.peer().id()).isEqualTo(10L);
         assertThat(result.peer().role()).isEqualTo("MEMBER");
-        verify(contacts).lockUser(10L); // pair creation is serialized on the member row
+        verify(contacts).lockUser(10L); // việc tạo cặp hội thoại được tuần tự hóa bằng khóa trên bản ghi hội viên
     }
 
     @Test void receptionistReusesAnExistingConversationWithTheMember() {
@@ -236,6 +240,7 @@ class ChatServiceTest {
         assertThatThrownBy(() -> service.send(member, 7L, new SendChatMessage(UUID.randomUUID(), "Hi"))).isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: từ chối tin nhắn trống. */
     @ParameterizedTest @ValueSource(strings = {"", "  \n  "})
     void rejectsBlankText(String text) {
         assertThatThrownBy(() -> service.send(member, 7L, new SendChatMessage(UUID.randomUUID(), text))).isInstanceOf(BadRequestException.class);

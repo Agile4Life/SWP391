@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller SessionAttendanceController (session attendance controller). */
 @ExtendWith(MockitoExtension.class)
 class SessionAttendanceControllerTest {
 
@@ -46,6 +47,7 @@ class SessionAttendanceControllerTest {
     private ObjectMapper objectMapper;
     private AuthenticatedPrincipal coachPrincipal;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller điểm danh buổi học. */
     @BeforeEach
     void setUp() {
         coachPrincipal = new AuthenticatedPrincipal(10L, "coach@test.com", "COACH");
@@ -56,11 +58,13 @@ class SessionAttendanceControllerTest {
         mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(MethodParameter parameter) {
                         return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(MethodParameter parameter,
                                                   ModelAndViewContainer mavContainer,
@@ -72,6 +76,7 @@ class SessionAttendanceControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: lấy danh sách điểm danh của buổi học trả 200 OK. */
     @Test
     void getSessionAttendanceRoster_returnsOk() throws Exception {
         SessionAttendanceResponse response = new SessionAttendanceResponse(
@@ -97,6 +102,7 @@ class SessionAttendanceControllerTest {
                 .andExpect(jsonPath("$.data.members[0].attendanceStatus").value("present"));
     }
 
+    /** Kiểm thử: ghi điểm danh hàng loạt với dữ liệu hợp lệ trả 200 OK. */
     @Test
     void recordBatchAttendance_validPayload_returnsOk() throws Exception {
         BatchAttendanceRequest request = new BatchAttendanceRequest(List.of(

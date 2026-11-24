@@ -9,6 +9,7 @@ const fake = vi.hoisted(() => {
 vi.mock('../../shared/api/client', () => ({ apiFetch: vi.fn() }));
 vi.mock('@supabase/supabase-js', () => ({ createClient: fake.createClient }));
 const session = { enabled: true, userId: 42, url: 'https://test.supabase.co', publishableKey: 'sb_publishable_test', topic: 'scms:chat:42', token: 'signed-token', expiresAt: '2026-10-29T01:05:00Z' };
+// Biến/hàm phụ để ghi lại kết quả trong kiểm thử.
 let dispose = () => {};
 beforeEach(() => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2026-10-29T01:00:00Z'));
@@ -19,6 +20,7 @@ beforeEach(() => {
   vi.mocked(apiFetch).mockResolvedValue(session);
 });
 afterEach(() => { dispose(); vi.useRealTimers(); vi.clearAllMocks(); });
+// Chạy hết các tác vụ chờ của đồng hồ giả.
 const settle = async () => { await vi.advanceTimersByTimeAsync(0); };
 
 it('authenticates before joining a private channel and catches up on subscribe and broadcast', async () => {
@@ -87,7 +89,7 @@ it('keeps the scoped token when the installed SDK refreshes auth on connect or h
   let realClient: ReturnType<typeof sdk.createClient> | undefined;
   fake.createClient.mockImplementationOnce((url, key, options) => {
     realClient = sdk.createClient(url, key, options);
-    // Keep the real SDK's auth machinery; replace only the external socket boundary.
+    // Giữ nguyên cơ chế xác thực thật của SDK; chỉ thay thế ranh giới socket bên ngoài.
     vi.spyOn(realClient, 'channel').mockReturnValue({ on: fake.on } as unknown as ReturnType<typeof realClient.channel>);
     return realClient;
   });

@@ -15,6 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho SubscriptionValueCalculator (subscription value calculator). */
 class SubscriptionValueCalculatorTest {
 
     private static final LocalDate START = LocalDate.of(2026, 11, 1);
@@ -22,6 +23,7 @@ class SubscriptionValueCalculatorTest {
     private final PaymentRepository payments = mock(PaymentRepository.class);
     private final SubscriptionValueCalculator calculator = new SubscriptionValueCalculator(payments);
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (period). */
     private MembershipSubscription period(String listPrice) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setId(1L);
@@ -35,6 +37,7 @@ class SubscriptionValueCalculatorTest {
         return subscription;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (payment). */
     private static Payment payment(String amount, String status, String refunded) {
         Payment payment = new Payment();
         payment.setSubscriptionId(7L);
@@ -44,6 +47,7 @@ class SubscriptionValueCalculatorTest {
         return payment;
     }
 
+    /** Kiểm thử: tín dụng giảm tuyến tính, không có bước nhảy ở nửa thời hạn. */
     @Test
     void creditFallsLinearlyWithNoCliffAtHalfTerm() {
         MembershipSubscription silver = period("199000");
@@ -58,6 +62,7 @@ class SubscriptionValueCalculatorTest {
         assertThat(calculator.remainingValue(silver, START.minusDays(3))).isEqualByComparingTo("199000");
     }
 
+    /** Kiểm thử: giá trị lấy từ khoản thanh toán chứ không phải giá danh mục hiện tại. */
     @Test
     void valueComesFromPaymentsNotTheCurrentCatalogPrice() {
         MembershipSubscription silver = period("349000");
@@ -66,10 +71,11 @@ class SubscriptionValueCalculatorTest {
                 payment("199000", "failed", null),
                 payment("199000", "pending", null)));
 
-        // 199,000 paid minus a 50,000 partial refund; failed/pending attempts and the repriced 349,000 do not count.
+        // Đã trả 199.000 trừ 50.000 hoàn một phần; các lần thử failed/pending và giá mới 349.000 không được tính.
         assertThat(calculator.paidValue(silver)).isEqualByComparingTo("149000");
     }
 
+    /** Kiểm thử: kỳ nâng cấp có giá trị bằng khoản phí cộng tín dụng mang sang. */
     @Test
     void upgradedPeriodIsWorthItsChargePlusTheCarriedCredit() {
         MembershipSubscription gold = period("599000");
@@ -81,9 +87,10 @@ class SubscriptionValueCalculatorTest {
         assertThat(calculator.remainingValue(gold, START.plusDays(15))).isEqualByComparingTo("149000");
     }
 
+    /** Kiểm thử: nâng cấp cũ không lưu tín dụng thì dựng lại từ kỳ bị thay. */
     @Test
     void legacyUpgradeWithoutStoredCreditGetsItRebuiltFromTheReplacedPeriod() {
-        // Silver bought 01/11 for 199,000 (30 days), upgraded on 17/11 under the old rule: full 299,000 paid.
+        // Gói Silver mua ngày 01/11 giá 199.000 (30 ngày), nâng cấp ngày 17/11 theo quy tắc cũ: trả đủ 299.000.
         MembershipSubscription silver = period("249000");
         silver.setEndDate(START.plusDays(16));
         MembershipSubscription gold = period("399000");
@@ -99,11 +106,12 @@ class SubscriptionValueCalculatorTest {
         goldPayment.setSubscriptionId(8L);
         when(payments.findAllBySubscriptionId(8L)).thenReturn(List.of(goldPayment));
 
-        // 14 of Silver's original 30 days were left on 17/11: 199,000 × 14/30 = 92,866 -> 92,000, on top of 299,000.
-        // Repriced catalog prices (249,000 / 399,000) play no part.
+        // Vào ngày 17/11 còn 14/30 ngày gốc của Silver: 199.000 × 14/30 = 92.866 -> 92.000, cộng thêm vào 299.000.
+        // Giá danh mục sau khi điều chỉnh (249.000 / 399.000) không ảnh hưởng.
         assertThat(calculator.paidValue(gold)).isEqualByComparingTo("391000");
     }
 
+    /** Kiểm thử: gói dùng thử không có thanh toán thì không có giá trị. */
     @Test
     void trialWithoutPaymentIsWorthNothing() {
         MembershipSubscription trial = period("299000");
@@ -113,6 +121,7 @@ class SubscriptionValueCalculatorTest {
         assertThat(calculator.remainingValue(trial, START)).isEqualByComparingTo("0");
     }
 
+    /** Kiểm thử: phí nâng cấp bằng giá gói đích trừ tín dụng. */
     @Test
     void upgradeChargeIsTargetPriceMinusCredit() {
         assertThat(SubscriptionValueCalculator.upgradeCharge(new BigDecimal("299000"), new BigDecimal("99000")))

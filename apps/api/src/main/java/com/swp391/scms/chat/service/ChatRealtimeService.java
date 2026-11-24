@@ -13,6 +13,10 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
+/**
+ * Cấp token realtime Supabase ngắn hạn (5 phút) chỉ cho phép nghe đúng chủ đề của người dùng; kiểm tra cấu hình
+ * an toàn ngay khi khởi động (HTTPS, khóa publishable, secret đủ 32 byte).
+ */
 @Service
 public class ChatRealtimeService {
     private final ChatService chat;
@@ -20,6 +24,7 @@ public class ChatRealtimeService {
     private final String publishableKey;
     private final SecretKey signingKey;
 
+    /** Đọc cấu hình Supabase và tạo khóa ký token; cấu hình sai thì dừng khởi động. */
     public ChatRealtimeService(ChatService chat, @Value("${app.supabase.url:}") String url,
             @Value("${app.supabase.publishable-key:}") String publishableKey,
             @Value("${app.supabase.chat-jwt-secret:}") String secret) {
@@ -35,6 +40,10 @@ public class ChatRealtimeService {
         this.signingKey = secret.isBlank() ? null : Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
     }
 
+    /**
+     * Phiên realtime chat của người dùng: chưa cấu hình thì trả "chưa bật"; có thì ký JWT 5 phút chỉ để nhận
+     * tin trên chủ đề scms:chat:<id>.
+     */
     @Transactional(readOnly = true)
     public ChatRealtimeSession open(AuthenticatedPrincipal principal) {
         chat.requireActor(principal);
@@ -49,7 +58,11 @@ public class ChatRealtimeService {
                 .issuedAt(Date.from(now)).expiration(Date.from(expires)).signWith(signingKey, Jwts.SIG.HS256).compact();
         return new ChatRealtimeSession(true, principal.id(), url, publishableKey, "scms:chat:" + userId, token, expires);
     }
-    /** Signs a support capability after the support service authorizes its exact topic. */
+    /**
+     * Phiên realtime cho khiếu nại: ký JWT 5 phút cho đúng chủ đề mà dịch vụ hỗ trợ đã kiểm tra quyền.
+     *
+     * Ký quyền (capability) hỗ trợ sau khi service hỗ trợ cấp phép đúng chủ đề đó.
+     */
     public ChatRealtimeSession supportSession(Long actorId, String topic) {
         if (url.isBlank() || publishableKey.isBlank() || signingKey == null)
             return new ChatRealtimeSession(false, actorId, null, null, null, null, null);

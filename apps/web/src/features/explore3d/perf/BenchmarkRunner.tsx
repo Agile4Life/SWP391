@@ -3,6 +3,10 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { useEffect, useRef } from 'react';
 import { useExploreStore } from '../state/exploreStore';
 
+/**
+ * Báo cáo benchmark: trạng thái, p50/p95 thời gian khung, FPS trung bình, draw call/tam giác lớn nhất, số
+ * geometry và texture.
+ */
 export interface ExploreBenchmarkReport {
   status: 'running' | 'complete';
   p50FrameMs: number;
@@ -15,10 +19,12 @@ export interface ExploreBenchmarkReport {
   stepsCompleted: number;
 }
 
+/** Kiểu window có chỗ lưu báo cáo benchmark (__EXPLORE3D_BENCH__). */
 type BenchWindow = {
   __EXPLORE3D_BENCH__?: ExploreBenchmarkReport;
 };
 
+/** Tính phân vị từ mảng đã sắp xếp (rỗng thì trả 8,0). */
 export function computePercentile(sortedValues: readonly number[], percentile: number): number {
   if (sortedValues.length === 0) return 8.0;
   const clamped = Math.min(1, Math.max(0, percentile));
@@ -29,6 +35,10 @@ export function computePercentile(sortedValues: readonly number[], percentile: n
   return sortedValues[index];
 }
 
+/**
+ * Chạy benchmark: khởi động vài khung, thực hiện kịch bản camera theo thời gian, đo thời gian khung và xuất báo
+ * cáo ra window.
+ */
 export function BenchmarkRunner() {
   const invalidate = useThree(s => s.invalidate);
   const gl = useThree(s => s.gl);
@@ -94,30 +104,35 @@ export function BenchmarkRunner() {
     const stepActions: Array<{ delayMs: number; run: () => void }> = [
       {
         delayMs: 0,
+        // Bay về toàn cảnh.
         run: () => {
           useExploreStore.getState().flyToOverview();
         },
       },
       {
         delayMs: 620,
+        // Tách tầng.
         run: () => {
           useExploreStore.getState().setLevelMode('exploded');
         },
       },
       {
         delayMs: 1240,
+        // Chọn khu gym tầng L1.
         run: () => {
           useExploreStore.getState().selectNode('zone-l1-gym');
         },
       },
       {
         delayMs: 1860,
+        // Chọn khu VIP tầng L2.
         run: () => {
           useExploreStore.getState().selectNode('zone-l2-vip-gym');
         },
       },
       {
         delayMs: 2480,
+        // Chuyển sang tầng B1 và chọn hồ bơi.
         run: () => {
           useExploreStore.getState().setFocusLevel('B1');
           useExploreStore.getState().selectNode('zone-b1-pool');
@@ -125,12 +140,14 @@ export function BenchmarkRunner() {
       },
       {
         delayMs: 3100,
+        // Chọn máy InBody VIP và vừa khung.
         run: () => {
           useExploreStore.getState().selectNode('item-l2-vip-inbody-1', { fit: true });
         },
       },
       {
         delayMs: 3720,
+        // Về lại toàn cảnh.
         run: () => {
           useExploreStore.getState().flyToOverview();
         },

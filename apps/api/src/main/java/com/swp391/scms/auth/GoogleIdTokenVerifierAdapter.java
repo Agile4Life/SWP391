@@ -22,8 +22,11 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Adapter implementing Google ID Token, OAuth2 Access Token, and OAuth2 Authorization Code verification
- * per BR-01 using Google API Client.
+ * Cài đặt xác minh thông tin đăng nhập Google bằng thư viện Google API Client: ID Token, Access Token và
+ * Authorization Code.
+ *
+ * Adapter hiện thực xác minh Google ID Token, OAuth2 Access Token và OAuth2 Authorization Code theo BR-01
+ * bằng Google API Client.
  */
 @Component
 public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
@@ -38,10 +41,12 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
     private final GsonFactory jsonFactory;
     private final GoogleIdTokenVerifier verifier;
 
+    /** Constructor cho test: chỉ có client id. */
     public GoogleIdTokenVerifierAdapter(String clientId) {
         this(clientId, "", "http://localhost:8080/api/v1/auth/google/callback");
     }
 
+    /** Constructor Spring dùng: đọc client id, client secret và địa chỉ callback từ cấu hình. */
     @Autowired
     public GoogleIdTokenVerifierAdapter(
             @Value("${app.google.client-id:${GOOGLE_CLIENT_ID:}}") String clientId,
@@ -67,6 +72,10 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
         this.verifier = builder.build();
     }
 
+    /**
+     * Xác minh Google ID Token: chữ ký, audience (phải là client id của ứng dụng), issuer và hạn dùng; trả
+     * thông tin người dùng. Chưa cấu hình client id hoặc token sai thì báo 401.
+     */
     @Override
     public GoogleUserInfo verify(String idTokenString) {
         if (clientId == null || clientId.isBlank()) {
@@ -96,6 +105,10 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
         }
     }
 
+    /**
+     * Xác minh Access Token: hỏi Google tokeninfo xem token có cấp cho đúng ứng dụng và còn hạn không, rồi lấy
+     * thông tin người dùng từ userinfo; userId hai bên phải khớp.
+     */
     @Override
     public GoogleUserInfo verifyAccessToken(String accessToken) {
         if (clientId == null || clientId.isBlank()) {
@@ -137,6 +150,7 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
         }
     }
 
+    /** Gửi GET tới Google (có thể kèm Bearer token) với thời gian chờ 10 giây và đọc JSON trả về. */
     private GenericJson fetchJson(GenericUrl url, String bearer) throws java.io.IOException {
         HttpRequest request = transport.createRequestFactory(req -> {
             req.setParser(new JsonObjectParser(jsonFactory));
@@ -153,6 +167,10 @@ public class GoogleIdTokenVerifierAdapter implements GoogleTokenVerifierPort {
         }
     }
 
+    /**
+     * Đổi Authorization Code lấy token tại Google (redirect phải đúng địa chỉ đã cấu hình), rồi xác minh ID
+     * Token hoặc Access Token nhận được.
+     */
     @Override
     public GoogleUserInfo verifyAuthorizationCode(String code, String redirectUri) {
         if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank()) {

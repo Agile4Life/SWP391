@@ -42,6 +42,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service MembershipSubscriptionService (membership subscription service). */
 @ExtendWith(MockitoExtension.class)
 class MembershipSubscriptionServiceTest {
 
@@ -69,6 +70,7 @@ class MembershipSubscriptionServiceTest {
     private final AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member01", "MEMBER");
     private final AuthenticatedPrincipal staffPrincipal = new AuthenticatedPrincipal(2L, "staff01", "RECEPTIONIST");
 
+    /** Chuẩn bị trước mỗi test: tạo MembershipSubscriptionService với repository giả lập. */
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
@@ -79,6 +81,7 @@ class MembershipSubscriptionServiceTest {
         org.mockito.Mockito.lenient().when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(lockedMember));
     }
 
+    /** Kiểm thử: không mua được khi subscription đang đóng băng. */
     @Test
     void create_rejectsPurchaseWhileSubscriptionIsFrozen() {
         Member member = new Member();
@@ -96,6 +99,7 @@ class MembershipSubscriptionServiceTest {
         verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: tiếp tục giữ subscription đã trả và kéo dài hạn thêm số ngày đã đóng băng. */
     @Test
     void resume_preservesPaidSubscriptionAndExtendsExpiryByFrozenDays() {
         MembershipSubscription frozen = frozenSubscription();
@@ -113,6 +117,7 @@ class MembershipSubscriptionServiceTest {
         org.mockito.Mockito.verifyNoInteractions(paymentRepository, packages, enrollmentService);
     }
 
+    /** Kiểm thử: tiếp tục từ chối subscription của hội viên khác. */
     @Test
     void resume_rejectsAnotherMembersSubscription() {
         MembershipSubscription frozen = frozenSubscription();
@@ -122,6 +127,7 @@ class MembershipSubscriptionServiceTest {
         verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: tiếp tục từ chối yêu cầu lặp lại mà không kéo dài thêm lần nữa. */
     @Test
     void resume_rejectsRepeatedRequestWithoutExtendingAgain() {
         MembershipSubscription frozen = frozenSubscription();
@@ -131,6 +137,7 @@ class MembershipSubscriptionServiceTest {
         verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: tiếp tục cần ngày tạm hoãn đáng tin và số ngày còn lại. */
     @Test
     void resume_requiresReliableHoldDateAndRemainingDays() {
         MembershipSubscription frozen = frozenSubscription();
@@ -142,6 +149,7 @@ class MembershipSubscriptionServiceTest {
         verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: tiếp tục bị chặn khi có lượt mua chờ hoặc kỳ active khác. */
     @Test
     void resume_blocksPendingPurchaseOrAnotherActivePeriod() {
         MembershipSubscription frozen = frozenSubscription();
@@ -154,6 +162,7 @@ class MembershipSubscriptionServiceTest {
         verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Hàm trợ giúp của test: tạo subscription đang đóng băng. */
     private MembershipSubscription frozenSubscription() {
         Member member = new Member();
         member.setUserId(10L);
@@ -172,6 +181,7 @@ class MembershipSubscriptionServiceTest {
         return frozen;
     }
 
+    /** Kiểm thử: tạo subscription thành công. */
     @Test
     void create_success() {
         Member member = new Member();
@@ -196,10 +206,11 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
         assertThat(result.memberId()).isEqualTo(10L);
-        // The price is fixed on the request, so a later catalog change does not alter what is collected.
+        // Giá được cố định trên yêu cầu, nên thay đổi danh mục sau đó không làm thay đổi số tiền thu.
         assertThat(result.quotedPrice()).isEqualByComparingTo("199000");
     }
 
+    /** Kiểm thử: tạo thất bại khi hội viên đã có subscription hoạt động. */
     @Test
     void create_failsWhenMemberAlreadyHasActiveSubscription() {
         Member member = new Member();
@@ -219,6 +230,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: tạo thành công khi subscription cũ đã hết hạn dù trạng thái vẫn active. */
     @Test
     void create_succeedsWhenMemberHasExpiredSubscriptionEvenWithActiveStatus() {
         Member member = new Member();
@@ -243,6 +255,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
     }
 
+    /** Kiểm thử: tạo thất bại khi gói không hoạt động. */
     @Test
     void create_failsWhenPackageInactive() {
         Member member = new Member();
@@ -259,6 +272,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: tạo thất bại khi mua lần đầu mà KYC chưa xác minh. */
     @Test
     void create_failsWhenFirstTimeSubscriptionAndKycNotVerified() {
         Member member = new Member();
@@ -284,6 +298,7 @@ class MembershipSubscriptionServiceTest {
                 .hasMessageContaining("error.membership.kyc_required");
     }
 
+    /** Kiểm thử: hội viên có giấy tờ đang được duyệt được báo chờ. */
     @Test
     void create_tellsAMemberWhoseIdentityDocumentIsStillBeingReviewedToWait() {
         Member member = new Member();
@@ -307,6 +322,7 @@ class MembershipSubscriptionServiceTest {
                 .hasMessageContaining("error.membership.kyc_pending");
     }
 
+    /** Kiểm thử: tạo thành công khi mua lần đầu với KYC đã xác minh. */
     @Test
     void create_succeedsWhenFirstTimeSubscriptionWithVerifiedKyc() {
         Member member = new Member();
@@ -331,6 +347,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.status()).isEqualTo("pending_payment");
     }
 
+    /** Kiểm thử: gia hạn nối từ ngày kết thúc kỳ trước khi chưa hết hạn. */
     @Test
     void renew_extendsFromPreviousEndDateWhenNotExpired() {
         Member member = new Member();
@@ -364,6 +381,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(40));
     }
 
+    /** Kiểm thử: nhân viên gia hạn giữ hội viên và subscription trước đó. */
     @Test
     void staffRenewalPreservesMemberAndPreviousSubscription() {
         Member member = new Member();
@@ -387,6 +405,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.status()).isEqualTo("pending_payment");
     }
 
+    /** Kiểm thử: nhân viên gia hạn từ chối hội viên khác và vai trò không được phép. */
     @Test
     void staffRenewalRejectsOtherMemberAndUnauthorizedRole() {
         Member owner = new Member(); owner.setUserId(10L);
@@ -400,6 +419,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: gia hạn bắt đầu từ hôm nay khi kỳ trước đã hết hạn. */
     @Test
     void renew_startsFromTodayWhenPreviousAlreadyExpired() {
         Member member = new Member();
@@ -431,6 +451,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(29));
     }
 
+    /** Kiểm thử: gia hạn thất bại khi không phải chủ sở hữu. */
     @Test
     void renew_failsWhenNotOwner() {
         Member otherMember = new Member();
@@ -446,6 +467,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    /** Kiểm thử: gia hạn thất bại khi kỳ trước đang chờ hoặc đã hủy. */
     @Test
     void renew_failsWhenPreviousIsPendingOrCancelled() {
         Member member = new Member();
@@ -464,6 +486,7 @@ class MembershipSubscriptionServiceTest {
         }
     }
 
+    /** Kiểm thử: nâng cấp tạo subscription chờ cho gói cao hơn. */
     @Test
     void upgrade_createsPendingSubscriptionForHigherPackage() {
         Member member = new Member();
@@ -508,11 +531,12 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.previousSubscriptionId()).isEqualTo(100L);
         assertThat(result.startDate()).isEqualTo(LocalDate.now(clock));
         assertThat(result.endDate()).isEqualTo(LocalDate.now(clock).plusDays(89));
-        // 26 of 31 days left (today included): 500,000 × 26/31 = 419,354 -> 419,000 credited, rest of 1,500,000 due.
+        // Còn 26/31 ngày (tính cả hôm nay): 500.000 × 26/31 = 419.354 -> khấu trừ 419.000, phần còn lại của 1.500.000 cần trả.
         assertThat(result.creditApplied()).isEqualByComparingTo("419000");
         assertThat(result.upgradeCharge()).isEqualByComparingTo("1081000");
     }
 
+    /** Kiểm thử: nâng cấp tính tiền đã trả chứ không phải giá danh mục đã đổi. */
     @Test
     void upgrade_creditsWhatWasPaidNotTheRepricedCatalogPrice() {
         Member member = new Member();
@@ -538,20 +562,21 @@ class MembershipSubscriptionServiceTest {
         when(packages.findById(2L)).thenReturn(Optional.of(gold));
         when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
-        // The manager raises the member's current package after it was bought: the credit must not grow with it.
+        // Quản lý tăng giá gói hiện tại sau khi hội viên đã mua: số tiền khấu trừ không được tăng theo.
         silver.setPrice(new BigDecimal("279000"));
         SubscriptionDto beforeTargetRaise = service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L));
-        // 15 of 30 days left: 199,000 × 15/30 = 99,500 -> 99,000.
+        // Còn 15/30 ngày: 199.000 × 15/30 = 99.500 -> 99.000.
         assertThat(beforeTargetRaise.creditApplied()).isEqualByComparingTo("99000");
         assertThat(beforeTargetRaise.upgradeCharge()).isEqualByComparingTo("200000");
 
-        // Raising the target package moves only the new price; the credit stays tied to what was paid.
+        // Tăng giá gói đích chỉ làm đổi giá mới; tiền khấu trừ vẫn bám theo số tiền đã trả.
         gold.setPrice(new BigDecimal("349000"));
         SubscriptionDto afterTargetRaise = service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L));
         assertThat(afterTargetRaise.creditApplied()).isEqualByComparingTo("99000");
         assertThat(afterTargetRaise.upgradeCharge()).isEqualByComparingTo("250000");
     }
 
+    /** Kiểm thử: yêu cầu đang chờ giữ giá đã báo khi danh mục đổi. */
     @Test
     void pendingRequestsKeepTheirQuotedPriceWhenTheCatalogChanges() {
         MembershipPackage pack = new MembershipPackage();
@@ -563,11 +588,12 @@ class MembershipSubscriptionServiceTest {
         pack.setPrice(new BigDecimal("249000"));
         assertThat(pending.payableAmount()).isEqualByComparingTo("199000");
 
-        // Requests made before prices were fixed still follow the catalog.
+        // Các yêu cầu tạo trước khi chốt giá vẫn lấy theo giá danh mục.
         pending.setQuotedPrice(null);
         assertThat(pending.payableAmount()).isEqualByComparingTo("249000");
     }
 
+    /** Kiểm thử: nâng cấp bị từ chối khi giá trị chưa dùng đã đủ trả gói mới. */
     @Test
     void upgrade_rejectsWhenUnusedValueAlreadyCoversTheTargetPrice() {
         Member member = new Member();
@@ -585,7 +611,7 @@ class MembershipSubscriptionServiceTest {
         current.setEndDate(LocalDate.now(clock).plusDays(89));
         com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
         paid.setSubscriptionId(100L);
-        // Bought before the manager cut the price to 549,000.
+        // Đã mua trước khi quản lý giảm giá xuống 549.000.
         paid.setAmount(new BigDecimal("649000"));
         paid.setStatus("success");
         org.springframework.test.util.ReflectionTestUtils.setField(service, "paymentRepository", paymentRepository);
@@ -599,6 +625,7 @@ class MembershipSubscriptionServiceTest {
         verify(subscriptions, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: nâng cấp thất bại khi gói đích thấp hơn hoặc bằng. */
     @Test
     void upgrade_failsWhenTargetPackageIsLowerOrEqual() {
         Member member = new Member();
@@ -633,6 +660,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: duyệt tạm hoãn từ chối kỳ đã hết hạn trong lúc chờ duyệt. */
     @Test
     void approveHold_rejectsPeriodThatExpiredWhileAwaitingApproval() {
         MembershipSubscription subscription = frozenSubscription();
@@ -644,6 +672,7 @@ class MembershipSubscriptionServiceTest {
         verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: yêu cầu và duyệt tạm hoãn chỉ nhả khoảng thời gian bị giữ. */
     @Test
     void requestHold_and_approveHold_releasesOnlyTheHeldWindow() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -672,6 +701,7 @@ class MembershipSubscriptionServiceTest {
         verify(revocation, org.mockito.Mockito.never()).revokeUncoveredBookings(any(), any());
     }
 
+    /** Kiểm thử: từ chối tạm hoãn giữ subscription hoạt động và đánh dấu bị từ chối. */
     @Test
     void rejectHold_keepsSubscriptionActiveAndMarksHoldRejected() {
         Member member = new Member();
@@ -700,6 +730,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(rejected.cancelledEnrollmentsCount()).isZero();
     }
 
+    /** Kiểm thử: hủy yêu cầu chờ của chủ sở hữu hoặc nhân viên. */
     @Test
     void cancelPending_cancelsPendingSubscriptionForOwnerOrStaff() {
         Member member = new Member();
@@ -726,6 +757,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(cancelled.id()).isEqualTo(150L);
     }
 
+    /** Kiểm thử: hủy yêu cầu chờ thất bại khi đã hoạt động. */
     @Test
     void cancelPending_failsWhenAlreadyActive() {
         Member member = new Member();
@@ -744,6 +776,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
     }
 
+    /** Kiểm thử: hủy yêu cầu chờ bị từ chối khi thanh toán chưa tất toán và giữ nguyên yêu cầu. */
     @Test
     void cancelPending_rejectsUnsettledPaymentAndPreservesRequest() {
         Member member = new Member(); member.setUserId(10L);
@@ -759,6 +792,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.getStatus()).isEqualTo("pending_payment");
     }
 
+    /** Kiểm thử: hội viên rút lại checkout online chưa trả khi không còn lần thử cổng nào hiệu lực. */
     @Test
     void cancelPending_memberWithdrawsUnpaidOnlineCheckoutOnceNoGatewayAttemptIsLive() {
         Member member = new Member(); member.setUserId(10L);
@@ -779,6 +813,7 @@ class MembershipSubscriptionServiceTest {
         org.mockito.Mockito.verify(guard).subscription(150L);
     }
 
+    /** Kiểm thử: nhân viên không hủy được khi cổng thanh toán vẫn có thể tất toán. */
     @Test
     void cancelPending_staffCannotCancelWhileGatewayMayStillSettle() {
         Member member = new Member(); member.setUserId(10L);
@@ -801,6 +836,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(payment.getStatus()).isEqualTo("pending");
     }
 
+    /** Kiểm thử: danh sách của tôi trả theo thứ tự. */
     @Test
     void mine_returnsListOrdered() {
         Member member = new Member();
@@ -827,6 +863,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(list.get(0).status()).isEqualTo("active");
     }
 
+    /** Kiểm thử: hiện tại báo ngày đã trả qua bốn kỳ mà không đổi QR hay ngày hiện tại. */
     @Test
     void current_reportsPaidThroughDateAcrossFourPeriodsWithoutChangingCurrentQrOrDates() {
         Member member = new Member(); member.setUserId(10L);
@@ -848,6 +885,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.qrCode()).isEqualTo("current-qr");
     }
 
+    /** Kiểm thử: hiện tại không kéo dài ngày đã trả với gia hạn không khả dụng hoặc hỏng. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"pending_payment", "cancelled", "frozen", "expired", "gap", "branch", "different_package"})
     void current_doesNotExtendPaidThroughDateForUnavailableOrBrokenRenewals(String scenario) {
@@ -870,6 +908,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(service.current(principal).paidThroughDate()).isEqualTo(first.getEndDate());
     }
 
+    /** Kiểm thử: hiện tại trả subscription hoạt động còn hạn. */
     @Test
     void current_returnsActiveSubscription_whenValidAndUnexpired() {
         Member member = new Member();
@@ -900,6 +939,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.qrCode()).isEqualTo("QR-TEST-123");
     }
 
+    /** Kiểm thử: hiện tại trả null khi không có subscription hoạt động. */
     @Test
     void current_returnsNull_whenNoActiveSubscriptionExists() {
         Member member = new Member();
@@ -915,6 +955,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result).isNull();
     }
 
+    /** Kiểm thử: hiện tại bỏ qua kỳ gia hạn tương lai, chỉ trả kỳ đang hiệu lực. */
     @Test
     void current_ignoresFutureRenewalSubscription_returnsCurrentlyActiveOnly() {
         Member member = new Member();
@@ -945,6 +986,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.qrCode()).isEqualTo("QR-CURRENT-ACTIVE");
     }
 
+    /** Kiểm thử: danh sách chờ loại hội viên đã xóa mềm. */
     @Test
     void listPending_excludesSoftDeletedMembers() {
         com.swp391.scms.users.entity.User activeUser = new com.swp391.scms.users.entity.User();
@@ -992,6 +1034,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.get(0).memberName()).isEqualTo("Active Member");
     }
 
+    /** Kiểm thử: gia hạn tìm phần đuôi đã trả và tạo kỳ thứ tư. */
     @Test
     void renew_findsPaidTailAndCreatesFourthPeriod() {
         Member member = new Member(); member.setUserId(10L);
@@ -1013,6 +1056,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.status()).isEqualTo("pending_payment");
     }
 
+    /** Kiểm thử: gia hạn bị chặn bởi kỳ nối tiếp đang chờ và nhánh rẽ. */
     @Test
     void renew_blocksPendingAndBranchedSuccessors() {
         Member member = new Member(); member.setUserId(10L);
@@ -1029,6 +1073,7 @@ class MembershipSubscriptionServiceTest {
         assertThatThrownBy(() -> service.renew(principal, 100L)).isInstanceOf(ConflictException.class);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (period). */
     private MembershipSubscription period(long id, Member member, MembershipPackage pack,
             MembershipSubscription previous, LocalDate start, LocalDate end) {
         MembershipSubscription sub = new MembershipSubscription();
@@ -1038,6 +1083,7 @@ class MembershipSubscriptionServiceTest {
         return sub;
     }
 
+    /** Kiểm thử: gia hạn bỏ qua lần thử đã hủy và không viết lại các kỳ trước. */
     @Test
     void renew_ignoresCancelledAttemptButNeverRewritesEarlierPeriods() {
         Member member = new Member(); member.setUserId(10L);
@@ -1059,6 +1105,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(failed.getStatus()).isEqualTo("cancelled");
     }
 
+    /** Kiểm thử: nâng cấp bị chặn bởi kỳ gia hạn tương lai đã trả và không đổi nó. */
     @Test
     void upgrade_blocksPaidFutureRenewalWithoutChangingIt() {
         Member member = new Member(); member.setUserId(10L);
@@ -1079,6 +1126,7 @@ class MembershipSubscriptionServiceTest {
         org.mockito.Mockito.verify(subscriptions, org.mockito.Mockito.never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: duyệt tạm hoãn bị chặn bởi kỳ gia hạn tương lai đã trả, không đóng băng hay hủy đặt chỗ. */
     @Test
     void approveHold_blocksPaidFutureRenewalWithoutFreezingOrCancellingBookings() {
         Member member = new Member(); member.setUserId(10L);
@@ -1098,6 +1146,7 @@ class MembershipSubscriptionServiceTest {
                 .cancelFutureEnrollmentsForMember(any(), any());
     }
 
+    /** Kiểm thử: gia hạn từ chối nguồn đóng băng hoặc bị thay thế nhưng chấp nhận phần đuôi nâng cấp. */
     @Test
     void renew_rejectsFrozenSourceAndSupersededSourceButAcceptsUpgradeTail() {
         Member member = new Member(); member.setUserId(10L);
@@ -1124,6 +1173,10 @@ class MembershipSubscriptionServiceTest {
         assertThat(next.startDate()).isEqualTo(today.plusDays(90));
     }
 
+    /**
+     * Kiểm thử: yêu cầu tạm hoãn từ chối người không phải chủ, gói không hoạt động, hết hạn, tương lai và lý do
+     * không hợp lệ.
+     */
     @Test
     void requestHold_rejectsNonOwnerNonActiveExpiredFutureAndInvalidReasons() {
         Member member = new Member(); member.setUserId(10L);
@@ -1160,6 +1213,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: yêu cầu tạm hoãn từ chối gói dùng thử. */
     @Test
     void requestHold_rejectsTrialSubscription() {
         Member member = new Member(); member.setUserId(10L);
@@ -1176,6 +1230,10 @@ class MembershipSubscriptionServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("MEMBERSHIP_TRIAL_CANNOT_HOLD"));
     }
 
+    /**
+     * Kiểm thử: yêu cầu tạm hoãn từ chối khi trùng yêu cầu chờ, thanh toán chờ, gia hạn tương lai đã trả và yêu
+     * cầu hủy đang chờ.
+     */
     @Test
     void requestHold_rejectsDuplicatePendingHoldPendingPaymentPaidFutureRenewalAndPendingCancellation() {
         org.springframework.test.util.ReflectionTestUtils.setField(service, "cancellationRequests", cancellationRequests);
@@ -1206,6 +1264,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    /** Hàm trợ giúp của test: tạo gói có thể tạm hoãn. */
     private MembershipPackage holdablePackage(String tier, int days) {
         MembershipPackage pack = new MembershipPackage();
         pack.setId(1L);
@@ -1215,11 +1274,13 @@ class MembershipSubscriptionServiceTest {
         return pack;
     }
 
+    /** Hàm trợ giúp của test: tạo giấy tờ y tế mẫu. */
     private List<MembershipSubscriptionService.HoldDocumentUpload> medicalDocument() {
         return List.of(new MembershipSubscriptionService.HoldDocumentUpload(
                 "giay-kham.pdf", "application/pdf", new byte[]{1, 2, 3}));
     }
 
+    /** Hàm trợ giúp của test: tạo subscription có thể tạm hoãn. */
     private MembershipSubscription holdableSubscription(String tier, int days) {
         Member member = new Member(); member.setUserId(10L);
         LocalDate today = LocalDate.now(clock);
@@ -1230,32 +1291,34 @@ class MembershipSubscriptionServiceTest {
         return sub;
     }
 
+    /** Hàm trợ giúp của test: tạo yêu cầu tạm hoãn với số ngày cho trước. */
     private SubscriptionRequests.HoldRequest holdDays(int startOffset, int length) {
         LocalDate today = LocalDate.now(clock);
         return new SubscriptionRequests.HoldRequest("Phẫu thuật", today.plusDays(startOffset),
                 today.plusDays(startOffset + length - 1L));
     }
 
+    /** Kiểm thử: yêu cầu tạm hoãn theo quy tắc số ngày, thời hạn báo trước và giấy tờ của gói. */
     @Test
     void requestHold_followsThePackageAllowanceNoticeAndPaperworkRules() {
-        // 1-month Silver and Gold cannot be held at all.
+        // Gói Silver và Gold 1 tháng không được tạm hoãn.
         holdableSubscription("SILVER", 30);
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 3), medicalDocument()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("cannot be put on hold");
 
         MembershipSubscription gold = holdableSubscription("GOLD", 90);
-        // Gold 3 months: at most 15 days, at least 3 days.
+        // Gold 3 tháng: tối đa 15 ngày, tối thiểu 3 ngày.
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 2), medicalDocument()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("between 3 days");
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(2, 16), medicalDocument()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("between 3 days");
-        // Less than 24 hours of notice (the clock is 10:00, so a start tomorrow is only 14 hours away).
+        // Báo trước ít hơn 24 giờ (đồng hồ đang ở 10:00 nên bắt đầu ngày mai chỉ cách 14 giờ).
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(1, 3), medicalDocument()))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("24 hours");
-        // Outside the membership period.
+        // Nằm ngoài thời hạn gói hội viên.
         assertThatThrownBy(() -> service.requestHold(principal, 100L, holdDays(gold.getEndDate().compareTo(LocalDate.now(clock)) , 3), medicalDocument()))
                 .isInstanceOf(BadRequestException.class);
-        // Paperwork is optional, but if provided must be JPG, PNG or PDF.
+        // Giấy tờ chứng minh là tùy chọn, nhưng nếu cung cấp thì phải là định dạng JPG, PNG hoặc PDF.
         SubscriptionDto withoutDocs = service.requestHold(principal, 100L, holdDays(2, 3), List.of());
         assertThat(withoutDocs.holdStatus()).isEqualTo("PENDING");
         gold.setHoldStatus(null);
@@ -1266,13 +1329,14 @@ class MembershipSubscriptionServiceTest {
                 new MembershipSubscriptionService.HoldDocumentUpload("x.exe", "application/octet-stream", new byte[]{1}))))
                 .isInstanceOf(BadRequestException.class).hasMessageContaining("JPG, PNG or PDF");
 
-        // A valid request: 15 days is allowed for Gold 3 months.
+        // Yêu cầu hợp lệ: gói Gold 3 tháng cho phép tạm hoãn 15 ngày.
         SubscriptionDto ok = service.requestHold(principal, 100L, holdDays(2, 15), medicalDocument());
         assertThat(ok.holdStatus()).isEqualTo("PENDING");
         assertThat(gold.getHoldStartDate()).isEqualTo(LocalDate.now(clock).plusDays(2));
         assertThat(gold.getHoldEndDate()).isEqualTo(LocalDate.now(clock).plusDays(16));
     }
 
+    /** Kiểm thử: mỗi gói chỉ được một lần tạm hoãn. */
     @Test
     void requestHold_allowsOnlyOneHoldPerPackage() {
         MembershipSubscription platinum = holdableSubscription("PLATINUM", 90);
@@ -1281,6 +1345,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: duyệt tạm hoãn tương lai giữ membership hoạt động tới ngày đầu tiên của nó. */
     @Test
     void approvingAFutureHoldKeepsTheMembershipActiveUntilItsFirstDay() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1296,13 +1361,17 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.isHoldUsed()).isTrue();
         assertThat(sub.getEndDate()).isEqualTo(originalEnd.plusDays(10));
         assertThat(approved.endDate()).isEqualTo(originalEnd.plusDays(10));
-        // On its first day the sweep freezes it...
+        // Vào ngày đầu tiên, tác vụ quét sẽ đóng băng gói...
         sub.setHoldStartDate(LocalDate.now(clock));
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
         assertThat(service.startHold(100L)).isTrue();
         assertThat(sub.getStatus()).isEqualTo("frozen");
     }
 
+    /**
+     * Kiểm thử: quầy rút được tạm hoãn đã duyệt chưa bắt đầu, còn hội viên và người khác không dùng được đường
+     * này.
+     */
     @Test
     void deskStaffCanWithdrawAnApprovedHoldThatHasNotStartedButMembersAndOthersCannotUseThatPath() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1322,19 +1391,20 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.holdStatus()).isNull();
         assertThat(sub.isHoldUsed()).isFalse();
         assertThat(sub.getEndDate()).isEqualTo(originalEnd);
-        // A hold that already started is not withdrawn from the desk either.
+        // Lần tạm hoãn đã bắt đầu cũng không thể rút lại từ quầy.
         sub.setStatus("frozen");
         sub.setHoldStatus("APPROVED");
         sub.setHoldStartDate(today.minusDays(1));
         assertThatThrownBy(() -> service.withdrawHoldForMember(staffPrincipal, 100L)).isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: duyệt tạm hoãn sau ngày đầu chỉ tính số ngày còn lại. */
     @Test
     void approvingAHoldAfterItsFirstDayCountsOnlyTheDaysLeft() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
         LocalDate today = LocalDate.now(clock);
         sub.setHoldStatus("PENDING");
-        // Requested for 3 days ago..+3 days but only approved today: the 3 days already lived are not held.
+        // Yêu cầu từ 3 ngày trước đến +3 ngày nhưng hôm nay mới duyệt: 3 ngày đã qua không được tính tạm hoãn.
         sub.setHoldStartDate(today.minusDays(3));
         sub.setHoldEndDate(today.plusDays(3));
 
@@ -1345,6 +1415,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(approved.holdStartDate()).isEqualTo(today);
     }
 
+    /** Kiểm thử: không duyệt được tạm hoãn đã qua hết thời gian. */
     @Test
     void aHoldWhoseWholePeriodHasPassedCannotBeApproved() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1357,6 +1428,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.isHoldUsed()).isFalse();
     }
 
+    /** Kiểm thử: hội viên rút được tạm hoãn đã duyệt chưa bắt đầu và được hoàn lại. */
     @Test
     void theMemberCanWithdrawAnApprovedHoldThatHasNotStartedAndGetsTheHoldBack() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1380,12 +1452,13 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.getStatus()).isEqualTo("active");
         assertThat(sub.getEndDate()).isEqualTo(originalEnd);
         verify(attendance).releaseHoldExcuses(10L, today.plusDays(3));
-        // Once the hold has started it is no longer something to withdraw.
+        // Khi đợt tạm hoãn đã bắt đầu thì không thể rút lại được nữa.
         sub.setStatus("frozen");
         sub.setHoldStatus("APPROVED");
         assertThatThrownBy(() -> service.cancelHoldRequest(principal, 100L)).isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: tạm hoãn bắt đầu hôm nay thì đóng băng ngay. */
     @Test
     void aHoldThatStartsTodayFreezesAtOnce() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1396,6 +1469,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(service.approveHold(staffPrincipal, 100L).status()).isEqualTo("frozen");
     }
 
+    /** Kiểm thử: tạm hoãn có ngày tự tiếp tục vào ngày sau ngày cuối và cộng thêm số ngày đã giữ. */
     @Test
     void aDatedHoldResumesTheDayAfterItsLastDayAndAddsTheHeldDays() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1407,7 +1481,7 @@ class MembershipSubscriptionServiceTest {
         sub.setHoldStartDate(today.minusDays(7));
         sub.setHoldEndDate(today.minusDays(1));
         sub.setHoldResolvedAt(today.minusDays(10).atStartOfDay());
-        // For dated holds, held days were added upon approval
+        // Với tạm hoãn có ngày cụ thể, số ngày tạm hoãn đã được cộng bù ngay lúc duyệt
         sub.setEndDate(originalEnd.plusDays(7));
         sub.setHoldDaysCredited(true);
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
@@ -1419,6 +1493,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.isHoldUsed()).isTrue();
     }
 
+    /** Kiểm thử: tạm hoãn có ngày duyệt trước khi cộng ngày vẫn nhận đủ ngày khi tiếp tục và giữ khi rút. */
     @Test
     void aDatedHoldApprovedBeforeDaysWereCreditedStillGetsItsDaysAtResumeAndKeepsThemOnWithdraw() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1430,7 +1505,7 @@ class MembershipSubscriptionServiceTest {
         sub.setHoldStartDate(today.minusDays(7));
         sub.setHoldEndDate(today.minusDays(1));
         sub.setHoldResolvedAt(today.minusDays(10).atStartOfDay());
-        // holdDaysCredited stays null: this hold was approved before days were added at approval.
+        // holdDaysCredited vẫn là null: đợt tạm hoãn này được duyệt trước khi có quy tắc cộng ngày lúc duyệt.
         when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
 
         assertThat(service.autoResumeHold(100L)).isTrue();
@@ -1452,6 +1527,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(future.getEndDate()).isEqualTo(futureEnd);
     }
 
+    /** Kiểm thử: tạm hoãn có ngày còn đang chạy thì chưa tiếp tục. */
     @Test
     void aDatedHoldStillRunningIsNotResumedYet() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1466,6 +1542,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(sub.getStatus()).isEqualTo("frozen");
     }
 
+    /** Kiểm thử: hội viên rút được yêu cầu tạm hoãn đang chờ nhưng không rút được yêu cầu đã quyết định. */
     @Test
     void theMemberCanWithdrawAPendingHoldButNotADecidedOne() {
         MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
@@ -1482,6 +1559,7 @@ class MembershipSubscriptionServiceTest {
         assertThatThrownBy(() -> service.cancelHoldRequest(principal, 100L)).isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: yêu cầu tạm hoãn thành công sau khi bị từ chối và xóa metadata xử lý. */
     @Test
     void requestHold_succeedsAfterRejectedHoldAndClearsResolutionMetadata() {
         Member member = new Member(); member.setUserId(10L);
@@ -1501,6 +1579,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(result.holdResolvedAt()).isNull();
     }
 
+    /** Kiểm thử: duyệt và từ chối tạm hoãn bắt buộc đúng trạng thái chờ và chặn xung đột. */
     @Test
     void approveHold_and_rejectHold_enforcePendingStateAndBlockConflicts() {
         org.springframework.test.util.ReflectionTestUtils.setField(service, "cancellationRequests", cancellationRequests);
@@ -1522,6 +1601,7 @@ class MembershipSubscriptionServiceTest {
         assertThatThrownBy(() -> service.approveHold(staffPrincipal, 100L)).isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: danh sách tạm hoãn chờ chỉ trả các yêu cầu còn xử lý được, còn hạn của hội viên chưa xóa. */
     @Test
     void listPendingHolds_returnsOnlyActionableActiveUnexpiredHoldsForNonDeletedMembers() {
         LocalDate today = LocalDate.now(clock);
@@ -1552,6 +1632,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(list.get(0).id()).isEqualTo(100L);
     }
 
+    /** Kiểm thử: tiếp tục xử lý đúng đóng băng trong cùng ngày và ngày cuối. */
     @Test
     void resume_handlesSameDayAndLastDayFreezeCorrectly() {
         LocalDate today = LocalDate.now(clock);
@@ -1579,6 +1660,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(lastDay.getHoldStatus()).isNull();
     }
 
+    /** Kiểm thử: gia hạn và nâng cấp bị từ chối khi đang có yêu cầu tạm hoãn chờ. */
     @Test
     void renew_and_upgrade_rejectWhenHoldRequestIsPending() {
         Member member = new Member(); member.setUserId(10L);
@@ -1595,6 +1677,7 @@ class MembershipSubscriptionServiceTest {
                 .isInstanceOf(ConflictException.class);
     }
 
+    /** Kiểm thử: báo giá chờ của thu ngân dùng số tiền thanh toán hiện có sau khi giá đổi. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
     void pendingCashierQuoteUsesExistingPaymentAmountAfterRepricing(boolean hasPendingPayment) {
@@ -1613,6 +1696,7 @@ class MembershipSubscriptionServiceTest {
     }
 
 
+    /** Kiểm thử: tạm hoãn đủ 90 ngày tiếp tục và cộng lại 90 ngày. */
     @Test
     void holdReachingNinetyDaysResumesWithNinetyDaysAddedBack() {
         Member member = new Member();
@@ -1638,6 +1722,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(held.getEndDate()).isEqualTo(java.time.LocalDate.of(2026, 10, 30));
     }
 
+    /** Kiểm thử: tạm hoãn gần đây không tự động tiếp tục. */
     @Test
     void recentHoldIsNotResumedAutomatically() {
         Member member = new Member();
@@ -1657,6 +1742,7 @@ class MembershipSubscriptionServiceTest {
         assertThat(held.getEndDate()).isEqualTo(java.time.LocalDate.of(2026, 11, 1));
     }
 
+    /** Kiểm thử: cho phép nâng cấp từ gói thử 3 ngày lên bất kỳ gói trả phí nào. */
     @Test
     void upgrade_allowsUpgradingFromThreeDayTrialToAnyPaidPackage() {
         Member member = new Member();

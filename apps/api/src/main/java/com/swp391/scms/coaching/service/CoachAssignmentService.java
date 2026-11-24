@@ -33,6 +33,10 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 
+/**
+ * Quản lý phân công HLV cho quản lý trung tâm: xem HLV và học viên hiện tại (giáo án, PT 1:1, lớp nhóm cũ),
+ * chuyển học viên sang HLV khác, kết thúc phân công giáo án; ghi audit cho mỗi lần chuyển.
+ */
 @Service
 @Transactional
 public class CoachAssignmentService {
@@ -51,6 +55,7 @@ public class CoachAssignmentService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
 
+    /** Constructor Spring dùng. */
     public CoachAssignmentService(CoachRepository coachRepository, MemberRepository memberRepository,
             TrainingPlanRepository trainingPlanRepository, CoachBookingRepository coachBookingRepository,
             ClassEnrollmentRepository classEnrollmentRepository, SessionBookingRepository sessionBookingRepository,
@@ -73,12 +78,27 @@ public class CoachAssignmentService {
         this.clock = clock;
     }
 
+    /** Ngày hôm nay. */
     private LocalDate today() { return LocalDate.now(clock); }
+    /** Dịch mã thông báo trong nhóm manager.coach_assignments. */
     private String msg(String key, Object... args) { return messageService == null ? "manager.coach_assignments." + key : messageService.getMessage("manager.coach_assignments." + key, args); }
+    /** Lỗi 400 với mã lỗi và message key trong nhóm manager.coach_assignments. */
     private BadRequestException invalid(String code, String key) { return new BadRequestException(code, "manager.coach_assignments." + key, null, msg(key)); }
 
+    /** Tổng quan phân công (không sắp xếp). */
     @Transactional(readOnly = true)
     public Map<String, Object> getOverview(Long filterCoachId, String search, String assignmentType) {
+        return getOverview(filterCoachId, search, assignmentType, null, null);
+    }
+
+    /**
+     * Tổng quan phân công: mỗi HLV đang làm việc kèm học viên hiện tại theo loại (giáo án, PT 1:1, lớp; gộp
+     * đăng ký cả khóa và đặt từng buổi của cùng lớp thành một), lọc theo HLV, loại, từ khóa và sắp xếp; kèm
+     * danh sách HLV để chọn khi chuyển.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getOverview(Long filterCoachId, String search, String assignmentType,
+                                           String sortBy, String sortDir) {
         List<Coach> availableCoaches = coachRepository.findActiveWithUser();
         LocalDate date = today();
         LocalTime time = LocalTime.now(clock);
@@ -100,7 +120,7 @@ public class CoachAssignmentService {
                         booking.getBookingDate(), booking.getBookingDate(), booking.getBookingDate() + " " + booking.getStartTime(),
                         booking.getStatus(), booking.getId()));
             }
-            // Collapse series enrollment and session bookings into one class/member relationship.
+            // Gộp đăng ký cả khóa và đặt từng buổi thành một quan hệ lớp/hội viên duy nhất.
             Set<String> classMembers = new HashSet<>();
             for (var enrollment : classEnrollmentRepository.findCurrentCoachAssignments(coachId, date, time)) {
                 if (classMembers.add(enrollment.getGymClass().getId() + ":" + enrollment.getMember().getUserId())) rows.add(student(enrollment.getMember(), "CLASS", enrollment.getGymClass().getName(), null, null, null,
@@ -124,23 +144,76 @@ public class CoachAssignmentService {
                     coach.getUser().getPhone(), coach.getSpecialization(), coach.getBio(), coach.getEmploymentStatus(),
                     distinct.size(), pt.size(), plans.size(), classes.size(), filtered));
         }
+        sortCoaches(coaches, sortBy, sortDir);
         return Map.of("coaches", coaches, "availableCoaches", availableCoaches.stream()
                         .map(c -> new CoachAssignmentCoachOptionDto(c.getUserId(), c.getUser().getFullName(), c.getSpecialization())).toList(),
                 "stats", new CoachAssignmentSummaryStatsDto(availableCoaches.size(), availableCoaches.size(), allStudents.size(), allPt.size(), allPlans.size(), allClasses.size()));
     }
 
+    /** Sắp xếp danh sách HLV theo trường và chiều (asc/desc) được chọn; không chọn thì giữ nguyên. */
+    private void sortCoaches(List<CoachAssignmentOverviewDto> coaches, String sortBy, String sortDir) {
+        boolean hasSortBy = sortBy != null && !sortBy.isBlank();
+        boolean hasSortDir = sortDir != null && !sortDir.isBlank();
+        if (!hasSortBy && !hasSortDir) {
+            return;
+        }
+
+        String normalizedDir = hasSortDir ? sortDir.trim().toLowerCase(Locale.ROOT) : "asc";
+        if (!"asc".equals(normalizedDir) && !"desc".equals(normalizedDir)) {
+            throw invalid("INVALID_SORT_DIRECTION", "invalid_sort_dir");
+        }
+
+        String normalizedKey = hasSortBy ? sortBy.trim().toLowerCase(Locale.ROOT) : "name";
+        Comparator<CoachAssignmentOverviewDto> primary = switch (normalizedKey) {
+            case "name", "coachname", "fullname" ->
+                    Comparator.comparing(c -> safeText(c.coachName()), String.CASE_INSENSITIVE_ORDER);
+            case "students", "totalstudents", "totalstudentscount", "studentcount" ->
+                    Comparator.comparingInt(CoachAssignmentOverviewDto::totalStudentsCount);
+            case "pt", "ptstudents", "ptstudentscount" ->
+                    Comparator.comparingInt(CoachAssignmentOverviewDto::ptStudentsCount);
+            case "plans", "planstudents", "planstudentscount" ->
+                    Comparator.comparingInt(CoachAssignmentOverviewDto::planStudentsCount);
+            case "classes", "classstudents", "classstudentscount" ->
+                    Comparator.comparingInt(CoachAssignmentOverviewDto::classStudentsCount);
+            case "specialization" ->
+                    Comparator.comparing(c -> safeText(c.specialization()), String.CASE_INSENSITIVE_ORDER);
+            case "status", "employmentstatus" ->
+                    Comparator.comparing(c -> safeText(c.employmentStatus()), String.CASE_INSENSITIVE_ORDER);
+            default -> throw invalid("INVALID_SORT_FIELD", "invalid_sort");
+        };
+
+        if ("desc".equals(normalizedDir)) {
+            primary = primary.reversed();
+        }
+
+        coaches.sort(primary
+                .thenComparing(c -> safeText(c.coachName()), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(CoachAssignmentOverviewDto::coachId, Comparator.nullsLast(Long::compareTo)));
+    }
+
+    /** Chuỗi null thành rỗng, bỏ khoảng trắng hai đầu. */
+    private static String safeText(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    /** Id các học viên có phân công thuộc một loại. */
     private Set<Long> studentsOfType(List<CoachAssignmentStudentDto> rows, String type) {
         Set<Long> ids = new HashSet<>();
         rows.stream().filter(s -> type.equals(s.assignmentType())).forEach(s -> ids.add(s.memberId()));
         return ids;
     }
 
+    /** Chuỗi dùng để tìm kiếm: họ tên, mã hội viên, SĐT, email của học viên và tên HLV. */
     private String searchable(CoachAssignmentStudentDto row, Coach coach) {
         return String.join(" ", Objects.toString(row.fullName(), ""), Objects.toString(row.membershipCode(), ""),
                 Objects.toString(row.phone(), ""), Objects.toString(row.email(), ""), Objects.toString(row.detail(), ""),
                 Objects.toString(coach.getUser().getFullName(), "")).toLowerCase(Locale.ROOT);
     }
 
+    /**
+     * Tạo dòng học viên trong tổng quan: thông tin liên hệ, mục tiêu, loại phân công, chi tiết, thời gian, buổi
+     * tới, trạng thái, id tham chiếu và vấn đề về gói.
+     */
     private CoachAssignmentStudentDto student(Member member, String type, String detail, LocalDate start, LocalDate end,
             String nextSession, String status, Long referenceId) {
         var user = member.getUser();
@@ -150,7 +223,11 @@ public class CoachAssignmentService {
                 membershipIssue(member.getUserId(), type, start));
     }
 
-    /** Why the member's plan blocks coaching right now, or null when nothing is wrong (the page shows a tag only then). */
+    /**
+     * Lý do gói của hội viên đang chặn việc huấn luyện ở thời điểm hiện tại: FROZEN (đang bảo lưu), NO_ACTIVE (không
+     * có gói hiệu lực), hoặc NOT_COVERED (buổi PT nằm ngoài thời hạn gói); null nếu không có vấn đề (trang chỉ hiện
+     * nhãn khi khác null).
+     */
     private String membershipIssue(Long memberId, String type, LocalDate sessionDate) {
         if (!subscriptionRepository.findByMemberUserIdAndStatus(memberId, "frozen").isEmpty()) return "FROZEN";
         if (!subscriptionRepository.hasActiveMembership(memberId, today())) return "NO_ACTIVE";
@@ -159,6 +236,11 @@ public class CoachAssignmentService {
         return null;
     }
 
+    /**
+     * Chuyển học viên sang HLV khác (chỉ giáo án hoặc buổi PT 1:1): bắt buộc lý do, hai HLV phải khác nhau và
+     * đều đang làm; với buổi PT thì buổi phải sắp tới, gói còn bao phủ, HLV mới rảnh và không nghỉ phép; giáo
+     * án đi theo HLV mới; gửi thông báo và ghi audit.
+     */
     public void reassignStudent(CoachAssignmentReassignDto dto) {
         if (dto.referenceId() == null || dto.assignmentType() == null || !Set.of("TRAINING_PLAN", "PT_1_1").contains(dto.assignmentType())) {
             throw invalid("INVALID_ASSIGNMENT_TYPE", "invalid_type");
@@ -207,8 +289,8 @@ public class CoachAssignmentService {
     }
 
     /**
-     * The member's plans follow the PT session to the new coach, who edits them from there; the previous coach no longer
-     * owns them. If the new coach already has an active plan for the member, theirs stays and the inherited one goes to history.
+     * Giáo án của học viên đi theo buổi PT sang HLV mới để tiếp tục chỉnh sửa từ đó; HLV cũ không còn sở hữu chúng.
+     * Nếu HLV mới đã có giáo án đang áp dụng cho học viên thì giữ giáo án đó và đưa giáo án kế thừa vào lịch sử.
      */
     private void inheritPlans(Long memberId, Coach from, Coach to) {
         boolean toHasActive = !trainingPlanRepository.findOtherActiveForMemberAndCoach(memberId, to.getUserId(), -1L).isEmpty();
@@ -222,12 +304,14 @@ public class CoachAssignmentService {
         }
     }
 
+    /** Học viên và HLV cũ phải khớp với dữ liệu yêu cầu. */
     private void requireRelationship(Member member, Coach coach, CoachAssignmentReassignDto dto) {
         if (member == null || coach == null || !Objects.equals(member.getUserId(), dto.memberId()) || !Objects.equals(coach.getUserId(), dto.fromCoachId())) {
             throw invalid("ASSIGNMENT_MISMATCH", "relationship_mismatch");
         }
     }
 
+    /** HLV mới phải không nghỉ phép và không trùng lịch lớp/PT vào giờ buổi PT. */
     private void requireCoachAvailable(Long coachId, CoachBooking booking) {
         if (staffRequestRepository.existsApprovedLeaveOn(coachId, booking.getBookingDate())) throw invalid("COACH_ON_LEAVE", "coach_unavailable");
         boolean classConflict = classSessionRepository.findActiveByCoachAndDate(coachId, booking.getBookingDate()).stream()
@@ -237,12 +321,14 @@ public class CoachAssignmentService {
         if (classConflict || ptConflict) throw invalid("COACH_SCHEDULE_CONFLICT", "coach_unavailable");
     }
 
+    /** Buổi PT có giao với khung giờ cho trước không. */
     private boolean overlaps(CoachBooking booking, LocalTime start, LocalTime end) {
         return booking.getStartTime().isBefore(end) && booking.getEndTime().isAfter(start);
     }
 
+    /** Ghi audit lần chuyển (cả HLV cũ và mới, loại và id phân công, lý do) kèm người thực hiện. */
     private void recordTransfer(CoachAssignmentReassignDto dto, String reason) {
-        // The existing coach audit stream stores both sides of the exact plan / PT relationship.
+        // Luồng audit HLV hiện có lưu cả hai phía của đúng quan hệ giáo án / PT.
         var oldValue = objectMapper.createObjectNode().put("assignmentType", dto.assignmentType()).put("referenceId", dto.referenceId())
                 .put("memberId", dto.memberId()).put("coachId", dto.fromCoachId());
         var newValue = oldValue.deepCopy().put("coachId", dto.toCoachId()).put("reason", reason);
@@ -254,6 +340,7 @@ public class CoachAssignmentService {
         auditRepository.save(entry);
     }
 
+    /** Kết thúc phân công giáo án: giáo án phải đang áp dụng và còn hạn, chuyển sang cancelled và báo cho HLV. */
     public void removeAssignment(Long planId) {
         TrainingPlan plan = trainingPlanRepository.findByIdForUpdate(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
@@ -264,30 +351,38 @@ public class CoachAssignmentService {
                 "system", "training_plan", plan.getId(), "/coach/training-plans");
     }
 
+    /** Giáo án phải đang active và chưa hết hạn. */
     private void requireActivePlan(TrainingPlan plan) {
         if (!"active".equals(plan.getStatus()) || plan.getEndDate() == null || plan.getEndDate().isBefore(today())) {
             throw invalid("ASSIGNMENT_NOT_CURRENT", "not_current");
         }
     }
 
+    /** HLV phải tồn tại, đang làm việc và tài khoản active. */
     private Coach activeCoach(Long id) {
         Coach coach = coachRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.coach", id));
         if (!"active".equals(coach.getEmploymentStatus()) || !activeAccount(coach.getUser())) throw invalid("COACH_INACTIVE", "coach_inactive");
         return coach;
     }
 
+    /** Hội viên phải tồn tại và tài khoản active. */
     private Member activeMember(Long id) {
         Member member = memberRepository.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.member", id));
         if (!activeAccount(member.getUser())) throw invalid("MEMBER_INACTIVE", "member_inactive");
         return member;
     }
 
+    /** Tài khoản active và chưa bị xóa. */
     private boolean activeAccount(User user) { return user != null && user.getDeletedAt() == null && "active".equals(user.getStatus()); }
+    /** Hội viên phải có gói hiệu lực hôm nay. */
     private void requireMembership(Long memberId) {
         if (!subscriptionRepository.hasActiveMembership(memberId, today())) throw membershipMissing(memberId);
     }
 
-    /** A frozen (on hold) membership gets its own message; anything else is the generic "needs an active plan". */
+    /**
+     * Lỗi thiếu gói tập hợp lệ: gói đang bảo lưu có thông báo riêng, các trường hợp khác dùng thông báo chung
+     * "cần gói đang hoạt động".
+     */
     private BadRequestException membershipMissing(Long memberId) {
         return subscriptionRepository.findByMemberUserIdAndStatus(memberId, "frozen").isEmpty()
                 ? invalid("NO_ACTIVE_SUBSCRIPTION", "no_membership")

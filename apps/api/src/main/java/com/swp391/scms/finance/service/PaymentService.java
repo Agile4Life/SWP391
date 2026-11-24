@@ -35,7 +35,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Service managing Payments transactions.
+ * Dịch vụ quản lý các giao dịch thanh toán: tạo khoản thu, thu tiền một bước ở quầy, đổi trạng thái (kích hoạt gói khi thành công),
+ * hoàn tiền (thu hồi quyền lợi khi hoàn toàn bộ) và mô tả khoản thu cho hội viên. Mọi thay đổi trên khoản thu
+ * đang có lượt VNPay chờ đều bị chặn.
  */
 @Service
 @Transactional
@@ -80,10 +82,12 @@ public class PaymentService {
     @Autowired(required = false)
     private com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository;
 
+    /** Gán giá trị mới cho trường vnpayTransactionRepository. */
     public void setVnpayTransactionRepository(com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository) {
         this.vnpayTransactionRepository = vnpayTransactionRepository;
     }
 
+    /** Constructor cho test với các phụ thuộc tối thiểu. */
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
@@ -91,6 +95,7 @@ public class PaymentService {
         this(paymentRepository, memberRepository, userRepository, null, null, paymentMapper, clock);
     }
 
+    /** Constructor cho test có thêm repository. */
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
@@ -100,6 +105,7 @@ public class PaymentService {
         this(paymentRepository, memberRepository, userRepository, membershipSubscriptionRepository, classEnrollmentRepository, paymentMapper, clock, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
@@ -117,7 +123,10 @@ public class PaymentService {
         this.clock = clock;
     }
 
-    /** Member requests are pending only; staff retain the existing cashier workflow. */
+    /**
+     * Tạo khoản thu theo vai trò: yêu cầu của hội viên chỉ ở trạng thái pending (thanh toán tiền mặt phải kèm
+     * ảnh biên lai); nhân viên giữ nguyên quy trình thu ngân hiện có.
+     */
     public PaymentDto createPayment(AuthenticatedPrincipal principal, PaymentCreateDto dto) {
         if (principal == null) {
             throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, null);
@@ -142,6 +151,10 @@ public class PaymentService {
         return createPayment(dto);
     }
 
+    /**
+     * Kiểm tra đối tượng hội viên tự thanh toán: phải là kỳ gói chờ thanh toán của mình với đúng số tiền, hoặc
+     * khóa học của mình còn trả được.
+     */
     private void validateMemberPaymentTarget(Long memberId, PaymentCreateDto dto) {
         if (dto.getSubscriptionId() == null && dto.getClassEnrollmentId() == null) {
             throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null, null);
@@ -171,6 +184,10 @@ public class PaymentService {
         }
     }
 
+    /**
+     * Tạo khoản thu: ảnh biên lai đúng định dạng; với kỳ gói thì khóa hội viên, kỳ phải đang chờ thanh toán,
+     * chưa có khoản thu nào và số tiền đúng giá đã chốt; khoản cho kỳ gói luôn bắt đầu ở trạng thái pending.
+     */
     public PaymentDto createPayment(PaymentCreateDto dto) {
         if (dto.getReceiptImage() != null && !RECEIPT_DATA_URL.matcher(dto.getReceiptImage()).matches()) {
             throw new BadRequestException("PAYMENT_RECEIPT_INVALID", "finance.payment.receipt_invalid", null, null);
@@ -231,6 +248,7 @@ public class PaymentService {
         return paymentMapper.toDto(saved);
     }
 
+    /** Chi tiết khoản thu kèm ảnh biên lai và cờ đang chờ VNPay. */
     @Transactional(readOnly = true)
     public PaymentDto getPaymentById(Long id) {
         Payment payment = paymentRepository.findById(id)
@@ -243,6 +261,7 @@ public class PaymentService {
         return dto;
     }
 
+    /** Các khoản thu của hội viên kèm mô tả dịch vụ và cờ đang chờ VNPay. */
     @Transactional(readOnly = true)
     public List<PaymentDto> getPaymentsByMemberId(Long memberId) {
         if (!memberRepository.existsById(memberId)) {
@@ -260,6 +279,7 @@ public class PaymentService {
         return dtos;
     }
 
+    /** Đánh dấu khoản thu đang có lượt VNPay còn hiệu lực (chưa quá hạn cộng thời gian chờ IPN). */
     private void populateVnpayPending(Payment payment, PaymentDto dto) {
         if (payment == null || dto == null || payment.getId() == null || vnpayTransactionRepository == null) return;
         if (!"pending".equalsIgnoreCase(payment.getStatus())) {
@@ -278,8 +298,9 @@ public class PaymentService {
     }
 
     /**
-     * Says what a payment is for, so a member can tell their pending and past payments apart. Read inside the
-     * transaction because the linked records are lazy.
+     * Mô tả mục đích của khoản thu để hội viên phân biệt được các khoản chờ và khoản đã thanh toán:
+     * loại dịch vụ (gói, khóa học, PT, sân, đơn hàng, nạp ví, khác) và tên (gói, lớp, HLV/sân kèm ngày giờ, mã đơn).
+     * Đọc trong transaction vì các bản ghi liên kết được tải lười (lazy).
      */
     static PaymentDto describe(Payment payment, PaymentDto dto) {
         java.time.format.DateTimeFormatter day = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
@@ -320,6 +341,7 @@ public class PaymentService {
         return dto;
     }
 
+    /** Nối các phần không trống bằng " · ". */
     private static String join(String... parts) {
         String joined = java.util.Arrays.stream(parts).filter(p -> p != null && !p.isBlank())
                 .collect(java.util.stream.Collectors.joining(" · "));
@@ -327,9 +349,10 @@ public class PaymentService {
     }
 
     /**
-     * Desk/manager status change. Court, 1:1, shop and wallet top-up payments have their own confirmation that also
-     * marks the booking/order paid or credits the wallet; settling them here would take the money and leave the target
-     * unpaid. (VNPay settlement calls {@link #updatePaymentStatus} directly and handles those targets itself.)
+     * Đổi trạng thái do quầy/quản lý thực hiện. Các khoản thanh toán đặt sân, PT 1:1, cửa hàng và nạp ví có luồng
+     * xác nhận riêng để đồng thời đánh dấu lịch đặt/đơn hàng đã thanh toán hoặc cộng ví; quyết toán tại đây sẽ ghi nhận
+     * tiền nhưng bỏ sót trạng thái đối tượng. (Luồng quyết toán VNPay gọi trực tiếp {@link #updatePaymentStatus} và tự
+     * xử lý các đối tượng đó.)
      */
     public PaymentDto updatePaymentStatusByStaff(Long id, String status) {
         Payment payment = paymentRepository.findById(id)
@@ -343,6 +366,11 @@ public class PaymentService {
         return updatePaymentStatus(id, status);
     }
 
+    /**
+     * Đổi trạng thái khoản thu (khóa hội viên, chặn khi có lượt VNPay chờ): chỉ pending → success/failed hoặc
+     * failed → pending; hoàn tiền phải qua refundPayment. Thành công thì kích hoạt kỳ gói/khóa học và xuất hóa
+     * đơn; thất bại thì hủy đăng ký khóa học hoặc kỳ gia hạn.
+     */
     public PaymentDto updatePaymentStatus(Long id, String status) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", id));
@@ -368,7 +396,7 @@ public class PaymentService {
             boolean allowed = switch (currentStatus) {
                 case "pending" -> "success".equals(normalizedStatus) || "failed".equals(normalizedStatus);
                 case "failed" -> "pending".equals(normalizedStatus);
-                // Refunds go through refundPayment (manager-only, audited, with reason).
+                // Hoàn tiền đi qua refundPayment (chỉ dành cho quản lý, có kiểm toán và ghi nhận lý do).
                 default -> false;
             };
             if (!allowed) {
@@ -402,6 +430,11 @@ public class PaymentService {
         return dto;
     }
 
+    /**
+     * Thu tiền một bước tại quầy: theo kỳ gói chờ thanh toán có sẵn, theo gói (dùng lại kỳ chờ hoặc tạo kỳ mới
+     * nếu hội viên chưa có kỳ đã trả/đang bảo lưu/gia hạn trả trước), hoặc theo khóa học. Kiểm tra số tiền, ghi
+     * khoản thu thành công, kích hoạt quyền lợi và xuất hóa đơn.
+     */
     public PaymentDto processPayment(PaymentProcessDto dto) {
         if (dto.getSubscriptionId() == null && dto.getPackageId() == null && dto.getClassEnrollmentId() == null) {
             throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null,
@@ -573,12 +606,17 @@ public class PaymentService {
         return resultDto;
     }
 
+    /**
+     * Hoàn tiền (quản lý): khóa dòng khoản thu, chỉ khoản thành công, số tiền trong phần còn lại. Hoàn toàn bộ
+     * thì hủy kỳ gói/khóa học liên quan, khôi phục kỳ cũ bị thay khi nâng cấp và hủy lịch không còn quyền lợi;
+     * khoản sân/PT/đơn hàng phải hoàn bằng cách hủy lịch/đơn. Hoàn một phần thì gói vẫn tiếp tục.
+     */
     @Audited(action = "PAYMENT_REFUND", entity = "payments")
     public PaymentDto refundPayment(Long paymentId, PaymentRefundRequest request) {
         if (vnpayGuard != null) vnpayGuard.refund(paymentId);
         Payment payment = paymentRepository.findById(paymentId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", paymentId));
-        // Two concurrent refunds must not both read the same refundedAmount.
+        // Hai yêu cầu hoàn tiền đồng thời không được cùng đọc một giá trị refundedAmount.
         if (entityManager != null) entityManager.refresh(payment, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE);
 
         String currentStatus = payment.getStatus() != null ? payment.getStatus().toLowerCase(Locale.ROOT) : "";
@@ -597,15 +635,15 @@ public class PaymentService {
 
         BigDecimal totalRefunded = alreadyRefunded.add(refundAmount);
         boolean fullRefund = totalRefunded.compareTo(payment.getAmount()) == 0;
-        // Court, 1:1 and shop payments are fully refunded by cancelling the booking/order, which also frees the slot or
-        // stock; refunding them here would leave the booking live and let its later cancellation pay again.
+        // Các khoản thanh toán đặt sân, PT 1:1 và cửa hàng được hoàn toàn bộ bằng cách hủy lịch đặt/đơn hàng để
+        // đồng thời giải phóng khung giờ hoặc tồn kho; hoàn tại đây sẽ để lịch đặt còn sống và cho phép hủy sau đó hoàn tiền lần nữa.
         if (fullRefund && (payment.getCourtBookingId() != null || payment.getCoachBookingId() != null
                 || payment.getProductOrderId() != null)) {
             throw new BadRequestException("REFUND_VIA_CANCELLATION", "finance.payment.refund_via_cancellation", null,
                     "Cancel the booking or order to refund it in full");
         }
         payment.setRefundedAmount(totalRefunded);
-        // A partial refund keeps the payment successful and the membership running; only the full amount ends it.
+        // Hoàn tiền một phần vẫn giữ khoản thanh toán thành công và gói hội viên tiếp tục chạy; chỉ hoàn toàn bộ mới kết thúc nó.
         if (fullRefund) {
             payment.setStatus("refunded");
         }
@@ -626,6 +664,7 @@ public class PaymentService {
         return paymentMapper.toDto(saved);
     }
 
+    /** Khi hoàn toàn bộ: hủy kỳ gói và đăng ký khóa học gắn với khoản thu. */
     private void cancelLinkedTargetsOnRefund(Payment payment, String cancelReason) {
         if (payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
             membershipSubscriptionRepository.findById(payment.getSubscriptionId()).ifPresent(sub -> {
@@ -651,8 +690,8 @@ public class PaymentService {
     }
 
     /**
-     * Refunding an upgrade gives back the period it replaced: the old package returns to active with the expiry
-     * it had before the upgrade cut it to the upgrade day, unless that date has already passed.
+     * Hoàn tiền một kỳ nâng cấp sẽ trả lại kỳ nó đã thay thế: gói cũ quay lại trạng thái active với ngày hết hạn
+     * vốn có trước khi việc nâng cấp cắt ngắn về ngày nâng cấp, trừ khi ngày đó đã qua.
      */
     private void restorePeriodReplacedByUpgrade(MembershipSubscription refunded) {
         MembershipSubscription previous = refunded.getPreviousSubscription();
@@ -662,7 +701,7 @@ public class PaymentService {
         java.time.LocalDate originalEnd = refunded.getReplacedEndDate();
         if (originalEnd == null && previous.getStartDate() != null && previous.getMembershipPackage() != null
                 && previous.getEndDate() != null && previous.getEndDate().equals(refunded.getStartDate())) {
-            // Upgrades activated before replacedEndDate existed: rebuild the term from the package length.
+            // Các kỳ nâng cấp kích hoạt trước khi có trường replacedEndDate: tính lại thời hạn từ độ dài của gói.
             originalEnd = previous.getStartDate().plusDays(Math.max(1, previous.getMembershipPackage().getDurationDays()) - 1L);
         }
         java.time.LocalDate today = java.time.LocalDate.now(clock);
@@ -675,6 +714,7 @@ public class PaymentService {
         membershipSubscriptionRepository.save(previous);
     }
 
+    /** Kỳ này có phải là nâng cấp từ kỳ trước không (khác gói hoặc có phí nâng cấp). */
     private static boolean isUpgradeOf(MembershipSubscription subscription, MembershipSubscription previous) {
         return subscription.getMembershipPackage() != null && previous.getMembershipPackage() != null
                 && previous.getMembershipPackage().getId() != null
@@ -682,12 +722,14 @@ public class PaymentService {
                     || subscription.getUpgradeCharge() != null);
     }
 
-    /** A refunded membership grants no booking rights, unless another paid period still covers the member. */
+    /**
+     * Gói hội viên đã hoàn tiền không còn cấp quyền đặt lịch, trừ khi vẫn còn một kỳ đã thanh toán khác bao phủ hội viên.
+     */
     private void cancelFutureBookingsWithoutEntitlement(MembershipSubscription refunded, String reason) {
         if (refunded.getMember() == null) return;
         Long memberId = refunded.getMember().getUserId();
         if (entitlementRevocation != null) {
-            // Checks every booking date, so a gap before a later renewal is released too.
+            // Kiểm tra từng ngày đặt lịch, nên khoảng trống trước kỳ gia hạn về sau cũng được giải phóng.
             entitlementRevocation.revokeUncoveredBookings(memberId, reason != null && !reason.isBlank() ? reason : "Refunded membership");
             return;
         }
@@ -711,6 +753,7 @@ public class PaymentService {
         }
     }
 
+    /** Gắn số hóa đơn tự xuất vào DTO trả về (lỗi xuất hóa đơn bỏ qua). */
     private void attachAutoIssuedInvoiceNumber(Payment payment, PaymentDto dto) {
         if (invoiceService == null || payment == null || payment.getId() == null || dto == null) {
             return;
@@ -724,10 +767,11 @@ public class PaymentService {
                 dto.setInvoiceNumber(issued.getInvoiceNumber());
             }
         } catch (Exception ignored) {
-            // Best-effort auto-issue in 1-step checkout flow
+            // Tự xuất hóa đơn theo cơ chế best-effort trong luồng thanh toán 1 bước.
         }
     }
 
+    /** Khóa dòng hội viên của kỳ gói gắn với khoản thu để các thao tác thanh toán song song xếp hàng. */
     private void lockSubscriptionMember(Payment payment) {
         if (payment.getSubscriptionId() == null || membershipSubscriptionRepository == null) return;
         MembershipSubscription target = membershipSubscriptionRepository.findById(payment.getSubscriptionId())
@@ -739,7 +783,9 @@ public class PaymentService {
             entityManager.refresh(target);
         }
     }
-    /** A course fee that failed never secured the seat: release it so the class and the member's quota are freed. */
+    /**
+     * Học phí khóa học thanh toán thất bại chưa từng giữ chỗ: giải phóng đăng ký để lớp học và hạn mức của hội viên được trả lại.
+     */
     private void cancelEnrollmentOfFailedPayment(Payment payment) {
         if (payment.getClassEnrollmentId() == null || classEnrollmentRepository == null) return;
         classEnrollmentRepository.findById(payment.getClassEnrollmentId()).ifPresent(enrollment -> {
@@ -751,12 +797,13 @@ public class PaymentService {
             }
         });
     }
+    /** Kỳ gia hạn thanh toán thất bại chưa từng có hiệu lực: hủy để hội viên tạo yêu cầu mới. */
     private void cancelFailedRenewal(Payment payment) {
         if (payment.getSubscriptionId() == null || membershipSubscriptionRepository == null) return;
         membershipSubscriptionRepository.findById(payment.getSubscriptionId()).ifPresent(subscription -> {
             if (subscription.getPreviousSubscription() != null
                     && "pending_payment".equals(subscription.getStatus())) {
-                // A failed renewal has never granted rights; allow a fresh request on its paid parent.
+                // Kỳ gia hạn thất bại chưa từng cấp quyền lợi; cho phép tạo yêu cầu mới trên kỳ cha đã thanh toán.
                 subscription.setStatus("cancelled");
                 subscription.setUpdatedAt(LocalDateTime.now(clock));
                 membershipSubscriptionRepository.save(subscription);
@@ -764,6 +811,7 @@ public class PaymentService {
         });
     }
 
+    /** Khi thanh toán thành công: kích hoạt kỳ gói và xác nhận khóa học gắn với khoản thu. */
     private void activateLinkedTargetsOnSuccess(Payment payment) {
         if (payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
             membershipSubscriptionRepository.findById(payment.getSubscriptionId()).ifPresent(this::activateSubscription);
@@ -774,7 +822,10 @@ public class PaymentService {
         }
     }
 
-    /** Paying never changes an enrollment; a booked or attended one may be paid, a cancelled one may not. */
+    /**
+     * Việc thanh toán không làm thay đổi trạng thái đăng ký khóa học; đăng ký ở trạng thái booked hoặc attended có thể
+     * thanh toán, còn đăng ký đã cancelled thì không.
+     */
     private void requirePayableEnrollment(ClassEnrollment enrollment) {
         if ("cancelled".equalsIgnoreCase(enrollment.getStatus())) {
             throw new ConflictException("PAYMENT_ENROLLMENT_NOT_PAYABLE", "finance.payment.enrollment_not_payable",
@@ -782,6 +833,11 @@ public class PaymentService {
         }
     }
 
+    /**
+     * Kích hoạt kỳ gói đã trả: chặn khi có kỳ khác đang hiệu lực trùng; với nâng cấp thì kỳ mới bắt đầu từ ngày
+     * báo giá (đã tính phần quy đổi) và kỳ cũ bị cắt về ngày đó; kỳ gia hạn trả muộn vẫn giữ đủ số ngày; tạo mã
+     * QR nếu chưa có.
+     */
     private void activateSubscription(MembershipSubscription subscription) {
         if (!"pending_payment".equalsIgnoreCase(subscription.getStatus())) {
             throw new ConflictException("PAYMENT_SUBSCRIPTION_NOT_PENDING", "finance.payment.subscription_not_pending", null, null);
@@ -816,8 +872,8 @@ public class PaymentService {
                     "error.membership.future_paid_renewal", null,
                     "Paid future renewal requires manager review");
         }
-        // A prorated quote credits the old period up to its quote day, so the new period runs from that day too and
-        // days used between quoting and paying are not credited twice. Legacy quotes (no credit) start on payment day.
+        // Báo giá quy đổi (prorated) đã khấu trừ phần giá trị kỳ cũ tính đến ngày báo giá, nên kỳ mới cũng chạy từ ngày đó
+        // để các ngày sử dụng giữa lúc báo giá và lúc thanh toán không bị khấu trừ hai lần. Báo giá kiểu cũ (không có credit) bắt đầu từ ngày thanh toán.
         java.time.LocalDate upgradeStart = isUpgrade ? proratedUpgradeStart(subscription, previous, today) : today;
         if (isUpgrade && "active".equalsIgnoreCase(previous.getStatus())) {
             previous.setStatus("expired");
@@ -841,7 +897,7 @@ public class PaymentService {
         } else if (subscription.getPreviousSubscription() != null && !isUpgrade
                 && subscription.getStartDate() != null && subscription.getEndDate() != null
                 && subscription.getStartDate().isBefore(today)) {
-            // A renewal paid after its planned start keeps its full length instead of losing the unpaid days.
+            // Kỳ gia hạn thanh toán sau ngày bắt đầu dự kiến vẫn giữ đủ thời lượng thay vì bị mất những ngày chưa thanh toán.
             long lengthDays = java.time.temporal.ChronoUnit.DAYS.between(subscription.getStartDate(), subscription.getEndDate());
             subscription.setStartDate(today);
             subscription.setEndDate(today.plusDays(lengthDays));
@@ -855,8 +911,8 @@ public class PaymentService {
     }
 
     /**
-     * Start of a paid upgrade: its quote day when the charge was prorated, never before the replaced period began
-     * nor after today; otherwise (quotes made before proration existed) the payment day.
+     * Ngày bắt đầu của kỳ nâng cấp đã thanh toán: là ngày báo giá khi phí được tính quy đổi, không bao giờ trước ngày
+     * bắt đầu kỳ bị thay thế và không sau hôm nay; trường hợp khác (báo giá tạo trước khi có quy đổi) là ngày thanh toán.
      */
     private static java.time.LocalDate proratedUpgradeStart(MembershipSubscription upgrade, MembershipSubscription previous,
                                                             java.time.LocalDate today) {
@@ -866,8 +922,9 @@ public class PaymentService {
         return quotedOn;
     }
 
+    /** Số tiền thu phải đúng: khoản đang chờ có sẵn giữ nguyên số tiền ban đầu dù giá danh mục đã đổi. */
     private void validateCheckoutAmount(BigDecimal amount, BigDecimal payable, Payment existing) {
-        // A stored pending payment keeps its original amount after catalog repricing.
+        // Khoản thanh toán pending đã lưu giữ nguyên số tiền gốc ngay cả khi giá danh mục thay đổi sau đó.
         BigDecimal expected = existing != null ? existing.getAmount() : payable;
         if (expected != null && amount.compareTo(expected) != 0) {
             throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
@@ -875,6 +932,10 @@ public class PaymentService {
         }
     }
 
+    /**
+     * Khoản thu đang chờ có thể dùng lại cho kỳ gói/khóa học (chỉ khi có đúng một khoản chưa xong ở trạng thái
+     * pending).
+     */
     private Payment payableExistingPayment(Long memberId, Long subscriptionId, BigDecimal amount, Long enrollmentId) {
         List<Payment> related = paymentRepository.findAllBySubscriptionId(subscriptionId);
         if (related == null || related.isEmpty()) return null;
@@ -893,6 +954,7 @@ public class PaymentService {
         return unsettled.get(0);
     }
 
+    /** Ghi chú hoàn tiền đã dịch kèm số tiền và lý do. */
     private String resolveRefundNote(BigDecimal refundAmount, String reason) {
         String fallback = "[HOÀN TIỀN: " + refundAmount + " VNĐ] Lý do: " + reason;
         if (messageService == null) {
@@ -904,6 +966,7 @@ public class PaymentService {
                 : resolved;
     }
 
+    /** Gán thời điểm trả khi trạng thái là success và chưa có. */
     private void markPaidIfSuccess(Payment payment, String status) {
         if ("success".equals(status) && payment.getPaidAt() == null) {
             payment.setPaidAt(LocalDateTime.now(clock));

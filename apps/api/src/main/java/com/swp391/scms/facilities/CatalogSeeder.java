@@ -12,7 +12,11 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-/** Seeds sample disciplines, rooms and packages into empty catalogs (idempotent). */
+/**
+ * Chạy khi khởi động: tạo dữ liệu danh mục mẫu cho Gym (bộ môn Gym, phòng Gym tiêu chuẩn, gói trải nghiệm, các
+ * gói 1/3/6 tháng Silver/Gold/Platinum, thiết bị ban đầu) một cách lũy đẳng (idempotent — chạy lại nhiều lần không
+ * tạo trùng và không ghi đè gói mà quản lý đã chỉnh sửa).
+ */
 @Component
 @Order(50)
 public class CatalogSeeder implements ApplicationRunner {
@@ -21,11 +25,11 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final String TRIAL_PACKAGE_NAME = "Gói Trải Nghiệm 3 Ngày";
     public static final String TRIAL_PACKAGE_DESC = "GÓI TRẢI NGHIỆM – Khám phá SÖL Fitness trong 3 ngày\n"
             + "Quyền lợi:\n"
-            + "- Nhận các dịch vụ của gói Gold (không gồm phòng VIP).\n"
+            + "- Nhận các dịch vụ của gói Gold.\n"
             + "- Toàn quyền sử dụng khu vực gym tiêu chuẩn và trang thiết bị hiện đại.\n"
             + "- 01 buổi tập Personal Trainer 1:1 cùng Huấn luyện viên chuyên nghiệp.\n"
             + "- Sử dụng tủ khóa và tiện ích phòng thay đồ.\n"
-            + "- Không đăng ký lớp Group Fitness và không áp dụng chính sách bảo lưu.";
+            + "- Không áp dụng chính sách bảo lưu.";
     public static final BigDecimal TRIAL_PACKAGE_PRICE = BigDecimal.ZERO;
     public static final int TRIAL_PACKAGE_DURATION = 3;
     public static final Integer TRIAL_PACKAGE_CREDIT_LIMIT = 0;
@@ -40,9 +44,7 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Tập luyện không giới hạn trong giờ hoạt động.\n"
             + "- Sử dụng khu vực tập luyện tiêu chuẩn.\n"
             + "- Sử dụng phòng thay đồ và tủ khóa chung.\n"
-            + "- Miễn phí nước uống.\n"
-            + "- 1 lượt đăng ký khóa Group Fitness cơ bản theo lịch.\n"
-            + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
+            + "- Miễn phí nước uống.";
     public static final BigDecimal SILVER_PRICE = new BigDecimal("199000");
     public static final int SILVER_DURATION = 30;
     public static final Integer SILVER_CREDIT_LIMIT = 1;
@@ -54,10 +56,8 @@ public class CatalogSeeder implements ApplicationRunner {
             + "- Sử dụng khu vực máy tập nâng cao.\n"
             + "- Cung cấp khăn tập riêng trong mỗi buổi tập.\n"
             + "- Tủ khóa cá nhân cố định.\n"
-            + "- Được đánh giá thể trạng định kỳ mỗi tháng.\n"
             + "- Xây dựng kế hoạch tập luyện cá nhân cơ bản.\n"
-            + "- 2 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
+            + "- Giảm 10% dịch vụ PT bổ sung.";
     public static final BigDecimal GOLD_PRICE = new BigDecimal("299000");
     public static final int GOLD_DURATION = 30;
     public static final Integer GOLD_CREDIT_LIMIT = 2;
@@ -66,59 +66,95 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final String PLATINUM_DESC = "VIP – Cao cấp\n"
             + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
             + "- 06 buổi tập Personal Trainer 1:1 mỗi tháng.\n"
-            + "- Đặc quyền sử dụng phòng tập VIP riêng biệt.\n"
             + "- Sử dụng hệ thống máy tập cao cấp và thiết bị chuyên biệt.\n"
             + "- Khăn tập và khăn tắm cá nhân theo tiêu chuẩn VIP.\n"
             + "- Tủ đồ cá nhân cao cấp, có khóa riêng.\n"
             + "- Sử dụng phòng xông hơi.\n"
             + "- Miễn phí nước khoáng và đồ uống thể thao.\n"
-            + "- Đánh giá chỉ số cơ thể chuyên sâu: BMI, Body Fat, Muscle Mass.\n"
             + "- Thiết kế giáo án tập luyện riêng theo mục tiêu.\n"
             + "- Tư vấn dinh dưỡng cơ bản cùng huấn luyện viên.\n"
-            + "- 4 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.\n"
+            + "- Giảm 20% dịch vụ PT bổ sung.\n"
             + "- Được mời tham gia các sự kiện và chương trình độc quyền.";
     public static final BigDecimal PLATINUM_PRICE = new BigDecimal("599000");
     public static final int PLATINUM_DURATION = 30;
     public static final Integer PLATINUM_CREDIT_LIMIT = 4;
 
-    // --- 3 THÁNG (90 NGÀY) - ĐỒNG HÀNH DÀI HẠN (giá thấp hơn mua 3 lần gói 1 tháng) ---
+    // --- 3 THÁNG (90 NGÀY) & 6 THÁNG (180 NGÀY) ---
     public static final String SILVER_3M_NAME = "SILVER 3 THÁNG";
-    public static final String SILVER_3M_DESC = "BASIC – Đồng hành 3 tháng (Tiết kiệm 8%)\n"
+    public static final String SILVER_3M_DESC = "BASIC – Đồng hành 3 tháng\n"
             + "Quyền lợi:\n"
-            + "- Tập luyện không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
-            + "- Sử dụng khu vực tập luyện tiêu chuẩn, phòng thay đồ và tủ khóa chung.\n"
-            + "- Miễn phí nước uống.\n"
-            + "- 3 lượt đăng ký khóa Group Fitness cơ bản theo lịch.\n"
-            + "- Đánh giá thể trạng và chỉ số BMI ban đầu.";
+            + "- Tập luyện Gym không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
+            + "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.\n"
+            + "- Sử dụng đầy đủ khu vực tạ tự do, máy cardio và máy tập tiêu chuẩn.\n"
+            + "- Sử dụng phòng thay đồ, tủ khóa chung và miễn phí nước uống.\n"
+            + "- Hỗ trợ bảo lưu tối đa 07 ngày (khi có lý do hợp lệ).\n"
+            + "- Có thể đặt thêm buổi tập PT 1:1 tính phí theo giờ khi có nhu cầu.";
     public static final BigDecimal SILVER_3M_PRICE = new BigDecimal("549000");
     public static final int SILVER_3M_DURATION = 90;
     public static final Integer SILVER_3M_CREDIT_LIMIT = 3;
 
+    public static final String SILVER_6M_NAME = "SILVER 6 THÁNG";
+    public static final String SILVER_6M_DESC = "BASIC – Đồng hành 6 tháng (Tiết kiệm ~10%)\n"
+            + "Quyền lợi:\n"
+            + "- Tập luyện Gym không giới hạn trong giờ hoạt động suốt 180 ngày.\n"
+            + "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.\n"
+            + "- Sử dụng đầy đủ khu vực tạ tự do, máy cardio và máy tập tiêu chuẩn.\n"
+            + "- Sử dụng phòng thay đồ, tủ khóa chung và miễn phí nước uống.\n"
+            + "- Hỗ trợ bảo lưu tối đa 07 ngày (khi có lý do hợp lệ).\n"
+            + "- Có thể đặt thêm buổi tập PT 1:1 tính phí theo giờ khi có nhu cầu.";
+    public static final BigDecimal SILVER_6M_PRICE = new BigDecimal("990000");
+    public static final int SILVER_6M_DURATION = 180;
+    public static final Integer SILVER_6M_CREDIT_LIMIT = 6;
+
     public static final String GOLD_3M_NAME = "GOLD 3 THÁNG";
-    public static final String GOLD_3M_DESC = "STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
+    public static final String GOLD_3M_DESC = "STANDARD – Gym + PT 1:1 & Giáo án (3 tháng)\n"
             + "Toàn bộ quyền lợi Silver, cộng thêm:\n"
-            + "- 09 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
-            + "- Sử dụng khu vực máy tập nâng cao và khăn tập riêng mỗi buổi.\n"
-            + "- Tủ khóa cá nhân cố định.\n"
-            + "- 6 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 10% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
+            + "- Tặng 09 buổi tập Personal Trainer 1:1 (03 buổi / mỗi chu kỳ 30 ngày).\n"
+            + "- Được Huấn luyện viên xây dựng Giáo án tập luyện cá nhân hóa.\n"
+            + "- Sử dụng tủ khóa cố định và khăn tập mỗi buổi.\n"
+            + "- Hỗ trợ bảo lưu tối đa 15 ngày.\n"
+            + "- Giảm 10% phí khi đặt thêm các buổi tập PT 1:1 ngoài định mức.";
     public static final BigDecimal GOLD_3M_PRICE = new BigDecimal("799000");
     public static final int GOLD_3M_DURATION = 90;
     public static final Integer GOLD_3M_CREDIT_LIMIT = 6;
 
+    public static final String GOLD_6M_NAME = "GOLD 6 THÁNG";
+    public static final String GOLD_6M_DESC = "STANDARD – Gym + PT 1:1 & Giáo án (6 tháng · Tiết kiệm ~10%)\n"
+            + "Toàn bộ quyền lợi Silver, cộng thêm:\n"
+            + "- Tặng 18 buổi tập Personal Trainer 1:1 (03 buổi / mỗi chu kỳ 30 ngày).\n"
+            + "- Được Huấn luyện viên xây dựng và điều chỉnh Giáo án tập luyện cá nhân hóa.\n"
+            + "- Sử dụng tủ khóa cố định và khăn tập mỗi buổi.\n"
+            + "- Hỗ trợ bảo lưu tối đa 15 ngày.\n"
+            + "- Giảm 10% phí khi đặt thêm các buổi tập PT 1:1 ngoài định mức.";
+    public static final BigDecimal GOLD_6M_PRICE = new BigDecimal("1449000");
+    public static final int GOLD_6M_DURATION = 180;
+    public static final Integer GOLD_6M_CREDIT_LIMIT = 12;
+
     public static final String PLATINUM_3M_NAME = "PLATINUM 3 THÁNG";
-    public static final String PLATINUM_3M_DESC = "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)\n"
+    public static final String PLATINUM_3M_DESC = "VIP – Gym + PT 1:1 chuyên sâu (3 tháng)\n"
             + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
-            + "- 18 buổi tập Personal Trainer 1:1 trong 3 tháng.\n"
-            + "- Đặc quyền sử dụng phòng tập VIP riêng biệt và phòng xông hơi.\n"
-            + "- Khăn tập, khăn tắm và tủ đồ cá nhân cao cấp.\n"
-            + "- Giáo án tập luyện riêng và tư vấn dinh dưỡng cơ bản.\n"
-            + "- 12 lượt đăng ký khóa Group Fitness.\n"
-            + "- Giảm 20% dịch vụ PT bổ sung và sản phẩm tại trung tâm.";
+            + "- Tặng 18 buổi tập Personal Trainer 1:1 (06 buổi / mỗi chu kỳ 30 ngày).\n"
+            + "- Thiết kế Giáo án tập luyện chuyên sâu theo mục tiêu từng giai đoạn.\n"
+            + "- Tủ đồ cá nhân cao cấp có khóa riêng, khăn tập & khăn tắm VIP.\n"
+            + "- Miễn phí nước khoáng và đồ uống thể thao.\n"
+            + "- Hỗ trợ bảo lưu tối đa 30 ngày.\n"
+            + "- Giảm 20% phí khi đặt thêm các buổi tập PT 1:1 ngoài định mức.";
     public static final BigDecimal PLATINUM_3M_PRICE = new BigDecimal("1599000");
     public static final int PLATINUM_3M_DURATION = 90;
     public static final Integer PLATINUM_3M_CREDIT_LIMIT = 12;
+
+    public static final String PLATINUM_6M_NAME = "PLATINUM 6 THÁNG";
+    public static final String PLATINUM_6M_DESC = "VIP – Gym + PT 1:1 chuyên sâu (6 tháng · Tiết kiệm ~10%)\n"
+            + "Toàn bộ quyền lợi Gold, cộng thêm:\n"
+            + "- Tặng 36 buổi tập Personal Trainer 1:1 (06 buổi / mỗi chu kỳ 30 ngày).\n"
+            + "- Thiết kế Giáo án tập luyện chuyên sâu theo mục tiêu từng giai đoạn.\n"
+            + "- Tủ đồ cá nhân cao cấp có khóa riêng, khăn tập & khăn tắm VIP.\n"
+            + "- Miễn phí nước khoáng và đồ uống thể thao.\n"
+            + "- Hỗ trợ bảo lưu tối đa 30 ngày.\n"
+            + "- Giảm 20% phí khi đặt thêm các buổi tập PT 1:1 ngoài định mức.";
+    public static final BigDecimal PLATINUM_6M_PRICE = new BigDecimal("2899000");
+    public static final int PLATINUM_6M_DURATION = 180;
+    public static final Integer PLATINUM_6M_CREDIT_LIMIT = 24;
 
 
     private final DisciplineService disciplines;
@@ -131,51 +167,56 @@ public class CatalogSeeder implements ApplicationRunner {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.facilities.repository.RoomRepository roomRepository;
 
+    /** Nhận dịch vụ bộ môn, phòng và gói tập. */
     public CatalogSeeder(DisciplineService disciplines, RoomService rooms, PackageService packages) {
         this.disciplines = disciplines;
         this.rooms = rooms;
         this.packages = packages;
     }
 
+    /**
+     * Tạo/cập nhật dữ liệu mẫu: bộ môn và phòng Gym, gói trải nghiệm, gói 3 và 6 tháng; đồng bộ một lần các gói
+     * còn mô tả seed cũ sang quyền lợi mới; tạo thiết bị ban đầu nếu chưa có thiết bị nào. Không tự bật/tắt gói
+     * (quản lý toàn quyền).
+     */
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
-        // Bộ môn chuẩn: Gym là bộ môn chính; Bơi lội, Boxing, Tennis, Cầu lông, Yoga là bộ môn phụ.
+        // Chỉ tạo dữ liệu mẫu cho Gym; dữ liệu lịch sử được giữ nguyên.
         upsertDiscipline("Gym", "Sức mạnh, thể lực và kỹ thuật tập tạ", "Olympic Strength");
-        upsertDiscipline("Bơi lội", "Kỹ thuật bơi, sức bền dưới nước và phục hồi", "Thermal Aquatics");
-        upsertDiscipline("Boxing", "Kỹ thuật đấm, phản xạ và thể lực theo hiệp", "Boxing & Kickfit");
-        upsertDiscipline("Tennis", "Kỹ thuật đánh bóng, di chuyển và đánh đôi");
-        upsertDiscipline("Cầu lông", "Bộ chân, phản xạ và kỹ thuật đánh cầu");
-        upsertDiscipline("Yoga", "Hơi thở, thăng bằng và giãn cơ", "Mindful Yoga");
         if (rooms.list().isEmpty()) {
             rooms.create(new RoomRequest("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", null, null, null, "STANDARD"));
-            rooms.create(new RoomRequest("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", null, null, null, "PLATINUM"));
-            rooms.create(new RoomRequest("Zen Garden Studio", "Penthouse", 18, "available", null, null, null, "STANDARD"));
-            rooms.create(new RoomRequest("Ring Arena 01", "Level 1 - East Wing", 14, "maintenance", null, null, null, "STANDARD"));
-            rooms.create(new RoomRequest("Oasis Lap Pool", "Sub-level Oasis", 20, "available", null, null, null, "STANDARD"));
         }
 
-        // Upsert 3-day trial package
+        // Tạo hoặc cập nhật gói trải nghiệm 3 ngày
         upsertPackageWithTier(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_PRICE, TRIAL_PACKAGE_DURATION, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, "GOLD TRIAL", "Gói Tập Thử 3 Ngày", "Gói Thử Gold");
 
-        // Upsert legacy 1-month base packages (outside the 3-12 month rule, see seedLegacyPackage)
+        // Tạo hoặc cập nhật các gói cơ bản 1 tháng kiểu cũ (nằm ngoài quy tắc 3–12 tháng, xem seedLegacyPackage)
         upsertLegacyPackage(SILVER_NAME, SILVER_DESC, SILVER_PRICE, SILVER_DURATION, SILVER_CREDIT_LIMIT, "The Essential");
         upsertLegacyPackage(GOLD_NAME, GOLD_DESC, GOLD_PRICE, GOLD_DURATION, GOLD_CREDIT_LIMIT, "The Sanctuary VIP");
         upsertLegacyPackage(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_PRICE, PLATINUM_DURATION, PLATINUM_CREDIT_LIMIT, "The Sovereign Annual");
 
-        // Upsert 3-month long-term packages
-        upsertPackage(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT);
-        upsertPackage(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_DURATION, GOLD_3M_CREDIT_LIMIT);
-        upsertPackage(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_DURATION, PLATINUM_3M_CREDIT_LIMIT);
+        // Tạo hoặc cập nhật các gói dài hạn 3 tháng & 6 tháng
+        upsertPackageWithTier(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_DURATION, SILVER_3M_CREDIT_LIMIT, "SILVER");
+        upsertPackageWithTier(SILVER_6M_NAME, SILVER_6M_DESC, SILVER_6M_PRICE, SILVER_6M_DURATION, SILVER_6M_CREDIT_LIMIT, "SILVER");
+        upsertPackageWithTier(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_DURATION, GOLD_3M_CREDIT_LIMIT, "GOLD");
+        upsertPackageWithTier(GOLD_6M_NAME, GOLD_6M_DESC, GOLD_6M_PRICE, GOLD_6M_DURATION, GOLD_6M_CREDIT_LIMIT, "GOLD");
+        upsertPackageWithTier(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_DURATION, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM");
+        upsertPackageWithTier(PLATINUM_6M_NAME, PLATINUM_6M_DESC, PLATINUM_6M_PRICE, PLATINUM_6M_DURATION, PLATINUM_6M_CREDIT_LIMIT, "PLATINUM");
 
-        // Đồng bộ quyền lợi mới (spec 2026-11-09) vào các gói đã seed từ trước.
+        // Đồng bộ lại mô tả, giá và trạng thái active cho 6 gói (3 tháng & 6 tháng) nếu trong DB vẫn là bản seed cũ.
+        syncSeededPackage(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_PRICE, SILVER_3M_CREDIT_LIMIT, "SILVER");
+        syncSeededPackage(SILVER_6M_NAME, SILVER_6M_DESC, SILVER_6M_PRICE, SILVER_6M_CREDIT_LIMIT, "SILVER");
+        syncSeededPackage(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_PRICE, GOLD_3M_CREDIT_LIMIT, "GOLD");
+        syncSeededPackage(GOLD_6M_NAME, GOLD_6M_DESC, GOLD_6M_PRICE, GOLD_6M_CREDIT_LIMIT, "GOLD");
+        syncSeededPackage(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_PRICE, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM");
+        syncSeededPackage(PLATINUM_6M_NAME, PLATINUM_6M_DESC, PLATINUM_6M_PRICE, PLATINUM_6M_CREDIT_LIMIT, "PLATINUM");
+
+        // Đồng bộ quyền lợi cho Trial & legacy 1-month nếu còn nguyên mô tả seed cũ.
         alignBenefits(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, 3);
         alignBenefits(SILVER_NAME, SILVER_DESC, SILVER_CREDIT_LIMIT, "SILVER", 2);
         alignBenefits(GOLD_NAME, GOLD_DESC, GOLD_CREDIT_LIMIT, "GOLD", 5);
         alignBenefits(PLATINUM_NAME, PLATINUM_DESC, PLATINUM_CREDIT_LIMIT, "PLATINUM", null);
-        alignBenefits(SILVER_3M_NAME, SILVER_3M_DESC, SILVER_3M_CREDIT_LIMIT, "SILVER", 6);
-        alignBenefits(GOLD_3M_NAME, GOLD_3M_DESC, GOLD_3M_CREDIT_LIMIT, "GOLD", 15);
-        alignBenefits(PLATINUM_3M_NAME, PLATINUM_3M_DESC, PLATINUM_3M_CREDIT_LIMIT, "PLATINUM", null);
 
         // Không tự đổi trạng thái gói ở đây: việc ngừng bán gói 6/12 tháng cũ đã chạy trên mọi CSDL,
         // từ nay Manager toàn quyền bật/tắt gói (chạy lại mỗi lần khởi động sẽ tắt gói Manager vừa bật).
@@ -185,15 +226,12 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
 
+    /** Tạo bộ thiết bị ban đầu cho phòng Gym tiêu chuẩn. */
     private void seedInitialEquipment() {
         upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
-        upsertRoom("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", "PLATINUM");
         var allRooms = roomRepository.findAll();
         com.swp391.scms.facilities.entity.Room standard = allRooms.stream()
                 .filter(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.getName()))
-                .findFirst().orElse(null);
-        com.swp391.scms.facilities.entity.Room vip = allRooms.stream()
-                .filter(r -> "Phòng Gym VIP".equalsIgnoreCase(r.getName()))
                 .findFirst().orElse(null);
 
         if (standard != null) {
@@ -205,21 +243,16 @@ public class CatalogSeeder implements ApplicationRunner {
             seedEquipmentIfMissing("Khung gánh tạ Squat Rack", "EQ-SQUAT-01", "Strength", standard, 2, "active");
             seedEquipmentIfMissing("Ghế đẩy ngực đa năng Adjustable Bench", "EQ-BENCH-01", "Free Weights", standard, 6, "active");
         }
-        if (vip != null) {
-            seedEquipmentIfMissing("Máy chạy bộ cao cấp Technogym Artis Run", "EQ-VIP-RUN-01", "Cardio", vip, 4, "active");
-            seedEquipmentIfMissing("Máy tập toàn thân Synchro Elliptical VIP", "EQ-VIP-SYN-01", "Cardio", vip, 3, "active");
-            seedEquipmentIfMissing("Dàn tạ khối thông minh Technogym Kinesis One", "EQ-VIP-KIN-01", "Strength", vip, 2, "active");
-            seedEquipmentIfMissing("Dàn tạ đơn Urethane bọc crôm VIP", "EQ-VIP-DUMB-01", "Free Weights", vip, 1, "active");
-            seedEquipmentIfMissing("Máy đo chỉ số cơ thể chuyên sâu InBody 770", "EQ-VIP-INBODY-01", "Diagnostic", vip, 1, "active");
-        }
     }
 
+    /** Tạo thiết bị nếu chưa có thiết bị nào cùng mã. */
     private void seedEquipmentIfMissing(String name, String code, String category, com.swp391.scms.facilities.entity.Room room, int quantity, String status) {
         if (equipmentRepository != null && !equipmentRepository.existsByCode(code)) {
             equipmentRepository.save(new com.swp391.scms.facilities.entity.Equipment(name, code, category, room, quantity, status));
         }
     }
 
+    /** Tạo phòng nếu chưa có; phòng đã có thì chỉ cập nhật hạng phòng nếu khác. */
     private void upsertRoom(String name, String location, int capacity, String status, String tier) {
         for (var r : rooms.list()) {
             if (name.equalsIgnoreCase(r.name())) {
@@ -257,6 +290,44 @@ public class CatalogSeeder implements ApplicationRunner {
      * Chuyển gói seed cũ sang quyền lợi mới (spec 2026-11-09). Chỉ đụng vào gói còn nguyên mô tả và hạn mức seed cũ;
      * gói mà Manager đã chỉnh sửa thì giữ nguyên, kể cả giá.
      */
+    // Dòng đầu mô tả của các bản seed 3/6 tháng trước đây; chỉ gói còn nguyên một trong các dòng này mới được chuyển đổi.
+    private static final java.util.Set<String> OLD_SEEDED_FIRST_LINES = java.util.Set.of(
+            "BASIC – Đồng hành 3 tháng (Tiết kiệm 8%)",
+            "STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)",
+            "VIP – Đồng hành 3 tháng (Tiết kiệm 11%)",
+            "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (3 tháng)",
+            "BASIC – Đồng hành 6 tháng (Tiết kiệm 16%)",
+            "STANDARD – Đồng hành 6 tháng (Tiết kiệm 17%)",
+            "VIP – Đồng hành 6 tháng (Đặc quyền VIP - Tiết kiệm 17%)",
+            "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (6 tháng · Tiết kiệm ~10%)");
+
+    /**
+     * Chuyển một lần gói 3/6 tháng còn mô tả seed cũ sang mô tả, giá, hạn mức mới và mở bán lại.
+     * Sau khi chuyển, mô tả không còn khớp bản cũ nên các lần khởi động sau không đụng tới:
+     * Manager toàn quyền đổi giá, mô tả và bật/tắt gói.
+     */
+    private void syncSeededPackage(String name, String desc, BigDecimal price, Integer creditLimit, String tier) {
+        for (var pkg : packages.list()) {
+            if (!name.equalsIgnoreCase(pkg.name())) continue;
+            if (isOldSeededDescription(pkg.description())) {
+                packages.update(pkg.id(), new PackageRequest(
+                        pkg.name(), desc, price, pkg.durationDays(), creditLimit, "active", tier));
+            }
+            return;
+        }
+    }
+
+    /** Mô tả có phải bản seed cũ không (dòng đầu khớp một trong các dòng seed cũ đã biết). */
+    private static boolean isOldSeededDescription(String description) {
+        if (description == null) return false;
+        String firstLine = description.strip().lines().findFirst().orElse("").strip();
+        return OLD_SEEDED_FIRST_LINES.contains(firstLine);
+    }
+
+    /**
+     * Cập nhật quyền lợi (mô tả, hạn mức, hạng) cho gói còn nguyên bản seed cũ; gói quản lý đã chỉnh thì giữ
+     * nguyên.
+     */
     private void alignBenefits(String name, String desc, Integer creditLimit, String tier, Integer legacyCreditLimit) {
         String marker = desc.substring(0, desc.indexOf('\n'));
         for (var pkg : packages.list()) {
@@ -274,18 +345,25 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
 
+    /** Tạo gói (không có hạng) nếu chưa có, hoặc đổi tên gói cũ theo bí danh. */
     private void upsertPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
         upsertPackageWithTier(name, desc, price, duration, creditLimit, null, false, legacyAliases);
     }
 
+    /** Tạo gói 1 tháng kiểu cũ (ngoài quy tắc 3-12 tháng) nếu chưa có. */
     private void upsertLegacyPackage(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String... legacyAliases) {
         upsertPackageWithTier(name, desc, price, duration, creditLimit, null, true, legacyAliases);
     }
 
+    /** Tạo gói có hạng nếu chưa có. */
     private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier, String... legacyAliases) {
         upsertPackageWithTier(name, desc, price, duration, creditLimit, tier, false, legacyAliases);
     }
 
+    /**
+     * Tạo gói nếu chưa có tên này; nếu có gói mang tên cũ (bí danh) thì đổi tên gói đó (giữ giá quản lý đã
+     * chỉnh), trừ khi gói đã bán thì bỏ qua để giữ lịch sử và tạo gói chuẩn mới.
+     */
     private void upsertPackageWithTier(String name, String desc, BigDecimal price, int duration, Integer creditLimit, String tier,
                                        boolean legacyTerm, String... legacyAliases) {
         var existingList = packages.list();
@@ -302,7 +380,7 @@ public class CatalogSeeder implements ApplicationRunner {
                             packages.update(pkg.id(), new PackageRequest(name, pkg.description(),
                                     correctedLegacyPrice(pkg.name(), pkg.price()), pkg.durationDays(), pkg.classCreditLimit(), pkg.status(), tier));
                         } catch (com.swp391.scms.common.exception.ConflictException sold) {
-                            // Already sold under the legacy name: keep history intact and seed the standard package below.
+                            // Đã từng bán dưới tên cũ: giữ nguyên lịch sử và tạo gói chuẩn ở bước bên dưới.
                             continue;
                         }
                         return;
@@ -318,8 +396,8 @@ public class CatalogSeeder implements ApplicationRunner {
         }
     }
     /**
-     * Preserves any price customized by a Manager in the database; only converts the original
-     * unedited seed prices when renaming legacy package aliases ("The Essential", etc.) for the first time.
+     * Bảo toàn mọi mức giá mà quản lý đã tùy chỉnh trong CSDL; chỉ chuyển đổi mức giá seed gốc chưa chỉnh sửa khi đổi
+     * tên các gói theo bí danh cũ ("The Essential", v.v.) lần đầu tiên.
      */
     private BigDecimal correctedLegacyPrice(String name, BigDecimal currentPrice) {
         if (currentPrice == null) return null;

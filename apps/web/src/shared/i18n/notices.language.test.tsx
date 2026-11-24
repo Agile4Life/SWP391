@@ -5,6 +5,7 @@ import { clearNotices, getNotices, notify, usePortalNotices } from '../lib/porta
 import { ApiError } from '../api/client';
 import { sourceMessage, setLanguage, useI18n } from './language';
 import { localizableError } from '../lib/errorMessage';
+// Component phụ chỉ phục vụ kiểm thử.
 function Notices() { const notices = usePortalNotices(); const { t } = useI18n(); return <>{notices.map(n => <p key={n.id}>{n.translation ? t(n.translation) : n.message}</p>)}</>; }
 afterEach(() => { clearNotices(); setLanguage('vi'); vi.useRealTimers(); vi.unstubAllGlobals(); });
 it('updates already-visible source notices/toasts, preserving untagged API content and stored message strings', async () => {

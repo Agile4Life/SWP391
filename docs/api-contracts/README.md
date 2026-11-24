@@ -1,5 +1,11 @@
 # API contract workflow
 
+The Gym-only scope retires the class, session attendance, equipment-management, court-booking,
+and member favorite-discipline endpoints, plus coach reviews, session evaluations, monthly coach reviews, the coach leaderboard,
+health metrics, training completion/progress, the check-in streak and the Supplement Shop. Their historical
+schemas below remain for reference; the removed operations are no longer part of the active API.
+PT 1:1, training plans and center check-in remain available.
+
 The API team publishes an OpenAPI YAML/JSON export here when an endpoint is ready for frontend integration. Every change must specify request, successful response and common error response.
 
 Frontend may use a local mock matching the contract, but must remove the mock before the Jira ticket is moved to Done.
@@ -16,11 +22,10 @@ Frontend may use a local mock matching the contract, but must remove the mock be
 
 ## Sprint 3 Contract Files
 - `openapi-sprint3-operations.yaml`: Session attendance and class session cancellation (`SCRUM-111` to `SCRUM-115`).
-- `openapi-sprint3-coaching-analytics.yaml`: Training plans, AI workout recommendations, session evaluations, and class utilization reports (`SCRUM-116`, `SCRUM-117`, `SCRUM-119`, `SCRUM-120`).
+- `openapi-sprint3-coaching-analytics.yaml`: Training plans, AI workout recommendations and class utilization reports (`SCRUM-116`, `SCRUM-117`, `SCRUM-120`).
 - `openapi-sprint3-ai-chat.yaml`: Member AI Chatbot sessions and messages (`SCRUM-118`, `SCRUM-126`).
-- `openapi-sprint3-member-progress.yaml`: Member training item completion checklist (`SCRUM-129`).
 
 [`openapi-gym-rooms-equipment-trial.yaml`](openapi-gym-rooms-equipment-trial.yaml) defines room tiers (STANDARD/PLATINUM), equipment management and the 3-day Gold trial verified by CCCD. Member package cancellation requests can no longer be created (the `POST /memberships/cancellations/subscriptions/{id}` endpoint was removed); manager list/approve/reject remain only to resolve legacy pending requests.
 
-[`openapi-shop.yaml`](openapi-shop.yaml) defines the Supplement Shop ("Sản phẩm") public catalog, server-side cart quote, 2-tier Vietnamese administrative regions (`34` provinces/cities and `3.321` wards/communes), member shipping address book, member product orders, staff order fulfillment, and manager catalog/stock/order administration.
+
 

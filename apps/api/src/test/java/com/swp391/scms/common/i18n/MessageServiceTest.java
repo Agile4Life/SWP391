@@ -9,11 +9,13 @@ import java.util.Locale;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Bộ kiểm thử cho service MessageService (message service). */
 @DisplayName("MessageService i18n Unit Tests")
 class MessageServiceTest {
 
     private MessageService messageService;
 
+    /** Chuẩn bị trước mỗi test: tạo MessageService với bundle thật. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -23,6 +25,7 @@ class MessageServiceTest {
         this.messageService = new MessageService(messageSource);
     }
 
+    /** Kiểm thử: phân giải message tiếng Việt. */
     @Test
     @DisplayName("Should resolve Vietnamese message correctly")
     void shouldResolveVietnameseMessage() {
@@ -33,6 +36,7 @@ class MessageServiceTest {
         assertEquals("Tạo giao dịch thanh toán thành công", paymentCreated);
     }
 
+    /** Kiểm thử: phân giải message tiếng Anh. */
     @Test
     @DisplayName("Should resolve English message correctly")
     void shouldResolveEnglishMessage() {
@@ -43,6 +47,7 @@ class MessageServiceTest {
         assertEquals("Payment transaction created successfully", paymentCreated);
     }
 
+    /** Kiểm thử: định dạng message có tham số. */
     @Test
     @DisplayName("Should format parameterized arguments in messages")
     void shouldFormatParameterizedMessages() {
@@ -53,6 +58,29 @@ class MessageServiceTest {
         assertEquals("Invalid payment status: unknown_status", enMsg);
     }
 
+    /** Kiểm thử: nêu đúng thứ và ngày trong lỗi trùng lịch. */
+    @Test
+    @DisplayName("Schedule conflict messages name the weekday and date in both VI and EN")
+    void shouldNameWeekdayAndDateInScheduleConflicts() {
+        Locale vi = Locale.forLanguageTag("vi");
+        Object[] monday = {"Arena 02 (Strength)", "Boxing", "08:00", "09:00", 1, "23/11/2026"};
+        assertEquals(
+                "Trùng lịch phòng tập: Phòng \"Arena 02 (Strength)\" đã có lớp \"Boxing\" hoạt động trong khung giờ 08:00 – 09:00 vào Thứ 2, ngày 23/11/2026.",
+                messageService.getMessage("error.scheduling.room_conflict", vi, monday));
+        assertEquals(
+                "Room schedule conflict: Room \"Arena 02 (Strength)\" is already booked for class \"Boxing\" during 08:00 – 09:00 on Monday, 23/11/2026.",
+                messageService.getMessage("error.scheduling.room_conflict", Locale.ENGLISH, monday));
+
+        Object[] sunday = {"HLV Quân", "Yoga", "18:00", "19:00", 7, "29/11/2026"};
+        assertEquals(
+                "Trùng lịch Huấn luyện viên: HLV \"HLV Quân\" đã có lịch dạy lớp \"Yoga\" trong khung giờ 18:00 – 19:00 vào Chủ nhật, ngày 29/11/2026.",
+                messageService.getMessage("error.scheduling.coach_conflict", vi, sunday));
+        assertEquals(
+                "Coach schedule conflict: Coach \"HLV Quân\" is already teaching class \"Yoga\" during 18:00 – 19:00 on Sunday, 29/11/2026.",
+                messageService.getMessage("error.scheduling.coach_conflict", Locale.ENGLISH, sunday));
+    }
+
+    /** Kiểm thử: trả giá trị mặc định khi thiếu khóa. */
     @Test
     @DisplayName("Should return code or default message when key is not found")
     void shouldReturnDefaultWhenKeyMissing() {
@@ -63,6 +91,7 @@ class MessageServiceTest {
         assertEquals("Default Fallback", defaultMsg);
     }
 
+    /** Kiểm thử: phân giải khóa validation và resource. */
     @Test
     @DisplayName("Should resolve validation and resource keys in both VI and EN")
     void shouldResolveValidationAndResourceKeys() {

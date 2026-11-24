@@ -13,9 +13,12 @@ const METHOD_LABELS: Record<string, StaffMessage> = {
   pos: staffMessage('Thẻ (POS)', 'Card (POS)'),
   bank_transfer: staffMessage('Chuyển khoản', 'Bank transfer'),
 };
+/** Định dạng số tiền VND. */
 const vnd = (amount: number) => formatPrice(Number(amount));
 
-/** Wallet top-ups the desk took, so the cash it collected can be looked up and reconciled. */
+/**
+ * Lịch sử các lần nạp ví tại quầy lễ tân, phục vụ tra cứu và đối soát số tiền mặt đã thu.
+ */
 export function WalletTopupHistory({ refreshKey = 0 }: { refreshKey?: number }) {
   const { t } = useStaffI18n();
   const [items, setItems] = useState<CounterTopupHistoryItem[]>([]);

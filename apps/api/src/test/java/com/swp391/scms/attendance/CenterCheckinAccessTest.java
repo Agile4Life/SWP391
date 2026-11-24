@@ -23,21 +23,14 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho CenterCheckinAccess (center checkin access). */
 @WebMvcTest(CenterCheckinController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class, JsonAccessDeniedHandler.class})
 class CenterCheckinAccessTest {
-    @Test void streakIsPrivateToTheMemberAndNeverCached() throws Exception {
-        var today = java.time.LocalDate.of(2026, 11, 5);
-        when(service.streak(any())).thenReturn(new CheckinResponses.StreakDto(2, 5, 8, today.minusWeeks(12), today, List.of(today)));
+    @Test void streakEndpointIsRemoved() throws Exception {
         mvc.perform(get("/api/v1/check-in/streak").with(authentication(actor("MEMBER"))))
-                .andExpect(status().isOk())
-                .andExpect(header().string("Cache-Control", "no-store"))
-                .andExpect(jsonPath("$.data.currentStreak").value(2));
-        verify(service).streak(new AuthenticatedPrincipal(10L, "actor", "MEMBER"));
-        for (String role : List.of("COACH", "RECEPTIONIST", "CENTER_MANAGER", "ADMIN")) {
-            mvc.perform(get("/api/v1/check-in/streak").with(authentication(actor(role)))).andExpect(status().isForbidden());
-        }
-        mvc.perform(get("/api/v1/check-in/streak")).andExpect(status().isUnauthorized());
+                .andExpect(status().isNotFound());
+        verifyNoInteractions(service);
     }
     @Autowired MockMvc mvc;
     @MockitoBean CenterCheckinService service;
@@ -45,6 +38,7 @@ class CenterCheckinAccessTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private UsernamePasswordAuthenticationToken actor(String role) {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(10L, "actor", role), null,
                 List.of(new SimpleGrantedAuthority("ROLE_" + role)));

@@ -3,8 +3,10 @@ import type { QualityTier } from '../../state/exploreStore';
 import type { ExploreTheme } from '../materials';
 import { mergeFoliageCards, type FoliageCard } from './buildCampusGeometry';
 
+/** Trục đường của đèn giao thông: đông–tây hoặc bắc–nam. */
 export type TrafficAxis = 'EW' | 'NS';
 
+/** Vị trí neo của một đèn tín hiệu: id, giao lộ, trục và toạ độ. */
 export interface TrafficSignalAnchor {
   readonly id: string;
   readonly intersectionId: string;
@@ -13,6 +15,7 @@ export interface TrafficSignalAnchor {
   readonly rotationY: number;
 }
 
+/** Vị trí neo của một biển/biểu ngữ dọc đại lộ. */
 export interface BoulevardBannerAnchor {
   readonly id: string;
   readonly x: number;
@@ -21,6 +24,10 @@ export interface BoulevardBannerAnchor {
   readonly side: 1 | -1;
 }
 
+/**
+ * Các hình học của thành phố nền đã gộp theo vật liệu (đặc, kim loại, kính, phát sáng, tán lá) kèm các điểm
+ * neo.
+ */
 export interface CityMetropolisGeometries {
   readonly opaqueGeometry: THREE.BufferGeometry;
   readonly metalGeometry: THREE.BufferGeometry;
@@ -32,6 +39,7 @@ export interface CityMetropolisGeometries {
   readonly boulevardBannerAnchors: ReadonlyArray<BoulevardBannerAnchor>;
 }
 
+/** Một phần hình học kèm màu và hệ số sáng HDR để gộp. */
 interface ColoredPart {
   readonly geometry: THREE.BufferGeometry;
   readonly color: string;
@@ -40,6 +48,7 @@ interface ColoredPart {
   readonly metalness?: number;
 }
 
+/** Các nhóm phần theo vật liệu (đặc, kim loại, kính, phát sáng...). */
 interface CityBuckets {
   opaque: ColoredPart[];
   metal: ColoredPart[];
@@ -48,6 +57,7 @@ interface CityBuckets {
   foliage: FoliageCard[];
 }
 
+/** Bộ sinh số giả ngẫu nhiên có hạt giống (cùng seed cho cùng dãy số). */
 function seededRandom(seed: number): () => number {
   let t = (seed | 0) + 0x6d2b79f5;
   return () => {
@@ -57,6 +67,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
+/** Biến đổi hình học (dịch, xoay, co giãn) trước khi thêm vào nhóm. */
 function transformGeom(
   geom: THREE.BufferGeometry,
   x: number,
@@ -81,6 +92,7 @@ function transformGeom(
   return geom;
 }
 
+/** Thêm một khối hộp có kích thước, vị trí, xoay và màu vào nhóm. */
 function pushBox(
   target: ColoredPart[],
   w: number,
@@ -102,6 +114,7 @@ function pushBox(
   target.push({ geometry: geom, color, hdrScale, roughness, metalness });
 }
 
+/** Thêm một khối trụ (bán kính trên/dưới, chiều cao, vị trí, màu) vào nhóm. */
 function pushCylinder(
   target: ColoredPart[],
   rTop: number,
@@ -132,6 +145,7 @@ function pushCylinder(
   target.push({ geometry: geom, color, hdrScale, roughness, metalness });
 }
 
+/** Gộp các phần của thành phố thành một BufferGeometry duy nhất (rỗng thì trả hộp nhỏ dự phòng). */
 function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   if (parts.length === 0) {
     const fallback = new THREE.BoxGeometry(0.01, 0.01, 0.01);
@@ -245,6 +259,7 @@ function mergeCityParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   return merged;
 }
 
+/** Thêm một tấm lá cho tán cây thành phố. */
 function addCityFoliageCard(
   target: FoliageCard[],
   cx: number,
@@ -328,6 +343,7 @@ function addCityFoliageCard(
   });
 }
 
+/** Thêm một cây của thành phố (thân và tán lá) tại vị trí cho trước. */
 function addCityTree(
   buckets: CityBuckets,
   x: number,
@@ -448,6 +464,7 @@ function addCityTree(
   }
 }
 
+/** Thêm một cột đèn đường dọc đại lộ. */
 function addBoulevardStreetLamp(
   buckets: CityBuckets,
   x: number,
@@ -476,6 +493,7 @@ function addBoulevardStreetLamp(
   }
 }
 
+/** Thêm một giàn treo đèn tín hiệu và ghi các điểm neo đèn. */
 function addSignalGantry(
   buckets: CityBuckets,
   anchors: TrafficSignalAnchor[],
@@ -488,11 +506,11 @@ function addSignalGantry(
   isLight: boolean,
 ): void {
   const darkSteel = isLight ? '#2c3442' : '#1b212b';
-  // Vertical mast on intersection corner
+  // Trụ đứng tại góc giao lộ
   pushCylinder(buckets.metal, 0.16, 0.22, 5.9, x, 2.95, z, darkSteel, 8);
   const cos = Math.cos(rotY);
   const sin = Math.sin(rotY);
-  // Cantilever mast arm reaching 5.4m out over the traffic lanes
+  // Cần vươn console dài 5.4 m ra phía trên các làn xe
   const armCenter = 2.7;
   pushBox(
     buckets.metal,
@@ -507,7 +525,7 @@ function addSignalGantry(
     rotY,
     0,
   );
-  // Signal housing boxes along the cantilever arm
+  // Hộp đèn tín hiệu dọc theo cần vươn console
   for (const offset of [2.4, 4.4]) {
     const hx = x + cos * offset;
     const hz = z - sin * offset;
@@ -522,6 +540,7 @@ function addSignalGantry(
   }
 }
 
+/** Mô tả một tòa tháp: vị trí, kích thước, kiểu dáng và vòng (gần hay chân trời). */
 interface TowerSpec {
   readonly x: number;
   readonly z: number;
@@ -542,6 +561,7 @@ const GLASS_DUSK = ['#192534', '#1d2b3b', '#14202e', '#212d3c', '#182433'] as co
 const WINDOW_DAY_TINTS = ['#364859', '#405366', '#4c5f70', '#334252'] as const;
 const WINDOW_DUSK_WARM = ['#ffcf8c', '#ffe2ad', '#ffb86e', '#d6e8ff', '#fff0d1'] as const;
 
+/** Dựng một tòa nhà chọc trời theo mô tả (thân, vật liệu kính/đá, đỉnh) và ghi điểm neo đèn báo. */
 function addSkyscraper(
   buckets: CityBuckets,
   beaconAnchors: Array<readonly [number, number, number]>,
@@ -557,10 +577,10 @@ function addSkyscraper(
   const hdrWindow = isLight ? 0.55 : 2.55;
   const hdrCrown = isLight ? 0.8 : 3.2;
 
-  // Grounded stone/granite podium (first 7.5m..11m or 22% height)
+  // Khối đế đá/granite vững chãi (7.5 m..11 m đầu hoặc 22% chiều cao)
   const podiumH = Math.min(11.5, Math.max(5.5, h * 0.18));
   pushBox(buckets.opaque, w, podiumH, d, x, podiumH * 0.5, z, facadeTone);
-  // Dark recessed ground-floor retail band + warm arcade lighting
+  // Dải cửa hàng tầng trệt giật vào tối màu + ánh sáng hành lang mái vòm ấm
   const retailH = Math.min(3.8, podiumH * 0.52);
   pushBox(buckets.glass, w + 0.14, retailH, d + 0.14, x, retailH * 0.5 + 0.2, z, glassTone);
   if (!isLight || detailLevel === 'full') {
@@ -569,11 +589,11 @@ function addSkyscraper(
     pushBox(buckets.emissive, w * 0.78, retailH * 0.58, d + 0.22, x, retailH * 0.5 + 0.2, z, retailGlow, 0, 0, 0, retailScale);
     pushBox(buckets.emissive, w + 0.22, retailH * 0.58, d * 0.78, x, retailH * 0.5 + 0.2, z, retailGlow, 0, 0, 0, retailScale);
   }
-  // Podium cornice collar
+  // Gờ phào đỉnh khối đế
   pushBox(buckets.metal, w + 0.45, 0.48, d + 0.45, x, podiumH + 0.1, z, mullionTone);
 
   if (detailLevel === 'silhouette') {
-    // Clean horizon skyscraper silhouette + upper setback + glowing horizon office bands
+    // Hình bóng tòa nhà chọc trời đường chân trời gọn nét + giật cấp tầng trên + các dải văn phòng phát sáng
     const shaftH = h - podiumH;
     const midW = w * 0.86;
     const midD = d * 0.86;
@@ -585,7 +605,7 @@ function addSkyscraper(
     pushBox(buckets.opaque, upperW + 0.4, 0.8, upperD + 0.4, x, h + 0.4, z, darkSlate);
 
     if (!isLight) {
-      // Sparse glowing horizontal window strips on distant horizon towers
+      // Các dải cửa sổ ngang phát sáng thưa trên những tòa tháp xa ở đường chân trời
       const bandCount = Math.max(2, Math.min(6, Math.floor(shaftH / 16)));
       for (let b = 0; b < bandCount; b += 1) {
         const by = podiumH + 6 + (b + 0.5) * ((shaftH * 0.72) / bandCount);
@@ -605,7 +625,7 @@ function addSkyscraper(
     return;
   }
 
-  // Main shaft (2-tier stepped tower for architectural variety)
+  // Thân tháp chính (tháp giật 2 cấp tạo sự đa dạng kiến trúc)
   const mainRatio = spec.style === 'residential-terrace' ? 0.62 : 0.72;
   const shaft1H = (h - podiumH) * mainRatio;
   const shaft2H = h - podiumH - shaft1H;
@@ -617,11 +637,11 @@ function addSkyscraper(
   const y1Start = podiumH;
   const y2Start = y1Start + shaft1H;
 
-  // Reflective curtain-wall glazing cores
+  // Lõi mặt dựng kính phản xạ
   pushBox(buckets.glass, sw1, shaft1H, sd1, x, y1Start + shaft1H * 0.5, z, glassTone);
   pushBox(buckets.glass, sw2, shaft2H, sd2, x, y2Start + shaft2H * 0.5, z, glassTone);
 
-  // Structural corner piers & architectural vertical mullions (metal & precast ribs)
+  // Trụ góc kết cấu & đố đứng kiến trúc (sườn kim loại & bê tông đúc sẵn)
   const finMat = spec.style === 'residential-terrace' ? buckets.opaque : buckets.metal;
   const finColor = spec.style === 'residential-terrace' ? facadeTone : mullionTone;
   const pierSize = 0.65;
@@ -650,7 +670,7 @@ function addSkyscraper(
     }
   }
 
-  // Mid-face vertical aluminum fins (gives strong specular breaks under golden-hour & dusk lighting)
+  // Lam nhôm đứng giữa mặt tiền (tạo điểm ngắt phản xạ mạnh dưới ánh nắng giờ vàng & hoàng hôn)
   const finStepsX = detailLevel === 'full' ? 3 : 2;
   for (let i = 1; i < finStepsX; i += 1) {
     const fx = x - sw1 * 0.5 + (i / finStepsX) * sw1;
@@ -662,12 +682,12 @@ function addSkyscraper(
     pushBox(buckets.metal, sw1 + 0.16, shaft1H, 0.24, x, y1Start + shaft1H * 0.5, fz, mullionTone);
   }
 
-  // Horizontal structural floor spandrel bands & terrace ledge
+  // Dải dầm viền sàn kết cấu ngang & gờ sân thượng
   const floorStep = detailLevel === 'full' ? 4.2 : 6.2;
   for (let fy = y1Start + floorStep; fy < y2Start - 1.5; fy += floorStep) {
     pushBox(buckets.opaque, sw1 + 0.22, 0.34, sd1 + 0.22, x, fy, z, facadeTone);
   }
-  // Setback sky-terrace parapet + greenery on inner residential buildings
+  // Tường chắn sân trời giật cấp + mảng xanh trên các tòa chung cư vòng trong
   pushBox(buckets.opaque, sw1 + 0.35, 0.65, sd1 + 0.35, x, y2Start + 0.2, z, facadeTone);
   if (spec.style === 'residential-terrace' && detailLevel === 'full') {
     const shrubTone = isLight ? '#385c34' : '#223821';
@@ -678,7 +698,7 @@ function addSkyscraper(
     pushBox(buckets.opaque, sw2 + 0.2, 0.32, sd2 + 0.2, x, fy, z, facadeTone);
   }
 
-  // Coherent grouped illuminated window bays (not a noisy grid!)
+  // Nhóm ô cửa sổ sáng đèn liền mạch (không tạo lưới nhiễu vụn)
   const storyH = 3.8;
   const stories1 = Math.max(2, Math.floor((shaft1H - 1.5) / storyH));
   const stories2 = Math.max(1, Math.floor((shaft2H - 1.5) / storyH));
@@ -715,7 +735,7 @@ function addSkyscraper(
     emitted += 1;
   }
 
-  // Shopfront signs along the podium so the ground floor reads as a lived-in street.
+  // Biển hiệu cửa hàng dọc khối đế để tầng trệt mang dáng dấp khu phố có người sinh sống.
   const signPalette = ['#f07654', '#4fd1c5', '#f6c453', '#8ea7ff', '#ff5d8f'] as const;
   const signHdr = isLight ? 0.75 : 3.1;
   const signY = retailH + 1.05;
@@ -735,7 +755,7 @@ function addSkyscraper(
     }
   }
 
-  // Balconies with glass rails and split-system condensers on mid-rise residential faces.
+  // Ban công có lan can kính và cục nóng điều hòa rời trên các mặt tiền chung cư trung tầng.
   if (detailLevel === 'full') {
     const acTone = isLight ? '#d9dde2' : '#69717d';
     const balconyCount = spec.style === 'residential-terrace' ? stories1 : Math.floor(stories1 / 3);
@@ -752,13 +772,13 @@ function addSkyscraper(
     }
   }
 
-  // Rooftop mechanical penthouse, cooling louvered units, helipad / spire + beacon
+  // Tum kỹ thuật trên mái, cụm làm mát có lam chớp, bãi đáp trực thăng / chóp nhọn + đèn báo
   pushBox(buckets.opaque, sw2 + 0.65, 1.15, sd2 + 0.65, x, h + 0.55, z, darkSlate);
   const pentW = sw2 * 0.56;
   const pentD = sd2 * 0.56;
   const pentH = Math.min(4.6, 2.2 + h * 0.02);
   pushBox(buckets.metal, pentW, pentH, pentD, x - sw2 * 0.1, h + 1.1 + pentH * 0.5, z, mullionTone);
-  // Rooftop condensers and a water tank break up the skyline silhouette.
+  // Cục nóng trên mái và bồn nước giúp phá vỡ đường nét đơn điệu của đường chân trời.
   const roofTone = isLight ? '#9aa1aa' : '#4a525e';
   for (let r = 0; r < 3; r += 1) {
     pushBox(
@@ -767,12 +787,12 @@ function addSkyscraper(
     );
   }
   pushCylinder(buckets.opaque, 1.1, 1.1, 2.2, x + sw2 * 0.28, h + 2.2, z - sd2 * 0.25, isLight ? '#7b6a58' : '#3a3530', 10);
-  // Illuminated architectural crown strip on prestige towers
+  // Dải vương miện kiến trúc phát sáng trên các tòa tháp hạng sang
   if (spec.style === 'diagrid-crown' || h >= 72) {
     const crownColor = isLight ? '#b89476' : '#f4cbb4';
     pushBox(buckets.emissive, sw2 + 0.72, 0.34, sd2 + 0.72, x, h + 0.95, z, crownColor, 0, 0, 0, hdrCrown);
   }
-  // Helipad pad on medium/tall landmark towers
+  // Bãi đáp trực thăng trên các tòa tháp điểm nhấn trung/cao tầng
   if (detailLevel === 'full' && h >= 68 && h <= 140 && rand() > 0.5) {
     const padY = h + 1.16;
     const padSize = Math.min(sw2, sd2) * 0.55;
@@ -782,7 +802,7 @@ function addSkyscraper(
     pushBox(buckets.emissive, 0.32, 0.06, padSize * 0.52, x + sw2 * 0.14 + padSize * 0.18, padY + 0.14, z, '#e2e8f0', 0, 0, 0, isLight ? 0.9 : 2.1);
   }
 
-  // Spire & red aviation obstruction beacon anchor on tall towers
+  // Chóp nhọn & điểm neo đèn báo chướng ngại hàng không màu đỏ trên các tòa tháp cao
   if (h >= 78) {
     const spireH = 9 + (h - 78) * 0.08;
     const spireX = x - sw2 * 0.12;
@@ -791,6 +811,7 @@ function addSkyscraper(
   }
 }
 
+/** Dựng cầu cạn metro trên cao và nhà ga theo theme và mức chất lượng. */
 function addElevatedMetroViaductAndStation(
   buckets: CityBuckets,
   isLight: boolean,
@@ -806,18 +827,18 @@ function addElevatedMetroViaductAndStation(
   const stationGlow = isLight ? '#cbd5e1' : '#ffe4be';
   const hdrStation = isLight ? 0.8 : 2.8;
 
-  // Main prestressed concrete box-girder viaduct deck spanning East-West along z = -56.5
+  // Mặt cầu cạn dầm hộp bê tông dự ứng lực chính chạy theo trục Đông–Tây dọc z = -56.5
   pushBox(buckets.opaque, spanLength, 1.35, 8.2, 0, deckY - 0.68, viaductZ, darkConcrete);
   pushBox(buckets.opaque, spanLength, 0.35, 9.4, 0, deckY + 0.16, viaductZ, concrete);
-  // Translucent acoustic side parapets
+  // Tường chắn chống ồn bán trong suốt hai bên
   pushBox(buckets.glass, spanLength, 0.95, 0.14, 0, deckY + 0.78, viaductZ - 4.58, canopyGlass);
   pushBox(buckets.glass, spanLength, 0.95, 0.14, 0, deckY + 0.78, viaductZ + 4.58, canopyGlass);
-  // Twin steel running rails (north track z = -58.4, south track z = -54.6)
+  // Hai tuyến ray thép chạy tàu (tuyến Bắc z = -58.4, tuyến Nam z = -54.6)
   for (const trackZ of [-58.8, -58.0, -55.0, -54.2]) {
     pushBox(buckets.metal, spanLength, 0.16, 0.14, 0, deckY + 0.4, trackZ, '#94a3b8');
   }
 
-  // Tapered hammerhead concrete piers placed cleanly between avenue carriageways
+  // Trụ bê tông hình chữ T thuôn đặt gọn giữa các làn đại lộ
   const pierXs = [
     -380, -335, -290, -210, -180, -120, -88, -32, 0, 32, 92, 128, 195, 232, 300, 345, 385,
   ];
@@ -828,30 +849,31 @@ function addElevatedMetroViaductAndStation(
     pushBox(buckets.opaque, 3.2, 0.42, 3.2, px, 0.21, viaductZ, darkConcrete);
   }
 
-  // Architectural "SÖL Center" Elevated Skytrain Station (x = -18..+26, z = -56.5)
+  // Ga tàu điện trên cao kiến trúc "SÖL Center" (x = -18..+26, z = -56.5)
   const stX = 4;
   const stW = 44;
-  // Island & side concourse platforms
+  // Ke ga trung tâm & sảnh hai bên
   pushBox(buckets.opaque, stW, 0.45, 12.6, stX, deckY + 0.48, viaductZ, concrete);
-  // Curved sculptural steel arch ribs & gullwing roof canopy
+  // Sườn vòm thép uốn điêu khắc & mái che cánh hải âu
   pushBox(buckets.metal, stW + 2.5, 0.36, 13.6, stX, deckY + 5.25, viaductZ, steel);
   pushBox(buckets.glass, stW + 1.2, 0.14, 12.2, stX, deckY + 5.45, viaductZ, canopyGlass);
   pushBox(buckets.emissive, stW - 2.0, 0.18, 0.38, stX, deckY + 4.96, viaductZ + 5.1, stationGlow, 0, 0, 0, hdrStation);
   pushBox(buckets.emissive, stW - 2.0, 0.18, 0.38, stX, deckY + 4.96, viaductZ - 5.1, stationGlow, 0, 0, 0, hdrStation);
-  // SÖL Salmon architectural accent stripe on the station fascia facing campus
+  // Dải điểm nhấn kiến trúc màu SÖL Salmon trên diềm mái ga hướng về khuôn viên
   pushBox(buckets.emissive, stW * 0.72, 0.22, 0.18, stX, deckY + 5.26, viaductZ + 6.82, '#f07654', 0, 0, 0, isLight ? 1.0 : 2.3);
 
   for (let rx = stX - 18; rx <= stX + 18; rx += 9) {
     pushBox(buckets.metal, 0.32, 4.9, 0.32, rx, deckY + 2.8, viaductZ + 6.0, steel);
     pushBox(buckets.metal, 0.32, 4.9, 0.32, rx, deckY + 2.8, viaductZ - 6.0, steel);
   }
-  // Escalator / Glass Bridge Concourse connecting Station South side to North Boulevard sidewalk (z = -50.2)
+  // Thang cuốn / cầu kính sảnh nối phía Nam nhà ga xuống vỉa hè Đại lộ Bắc (z = -50.2)
   pushBox(buckets.metal, 7.6, 3.2, 4.4, 21.5, deckY - 0.8, -51.4, steel);
   pushBox(buckets.glass, 7.2, 2.7, 4.0, 21.5, deckY - 0.8, -51.4, canopyGlass);
   pushBox(buckets.metal, 4.2, 9.0, 4.4, 23.0, 4.5, -49.6, steel);
   pushBox(buckets.glass, 3.8, 8.4, 4.0, 23.0, 4.5, -49.6, canopyGlass);
 }
 
+/** Dựng mạng đường (lề, vạch kẻ, đèn tín hiệu, biển ngữ) và công viên phía nam có kênh nước. */
 function addRoadNetworkAndSouthPark(
   buckets: CityBuckets,
   signalAnchors: TrafficSignalAnchor[],
@@ -870,7 +892,7 @@ function addRoadNetworkAndSouthPark(
   const gridSpan = tier === 'low' ? 460 : 840;
 
   // =========================================================================
-  // 1. SOUTH GRAND BOULEVARD (Splices seamlessly onto x=-40 and x=+52 at z=23.8..29.4)
+  // 1. ĐẠI LỘ LỚN PHÍA NAM (nối liền mạch vào x=-40 và x=+52 tại z=23.8..29.4)
   // =========================================================================
   const westWingW = gridSpan * 0.5 - 40.02;
   const westCenterX = -40.02 - westWingW * 0.5;
@@ -884,14 +906,14 @@ function addRoadNetworkAndSouthPark(
   pushBox(buckets.opaque, eastWingW, 0.12, 0.28, eastCenterX, 0.06, 23.75, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.opaque, eastWingW, 0.12, 0.28, eastCenterX, 0.06, 29.45, curb, 0, 0, 0, 1, 0.86, 0);
 
-  // Full Southbound Carriageway (+X Eastbound RHT, z = 32.15..38.75) across entire boulevard
+  // Toàn tuyến làn xe phía Nam (hướng Đông +X đi bên phải, z = 32.15..38.75) dọc toàn đại lộ
   pushBox(buckets.opaque, gridSpan, 0.06, 6.6, 0, 0.005, 35.45, asphalt, 0, 0, 0, 1, 0.82, 0);
   pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, 32.1, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, 38.8, curb, 0, 0, 0, 1, 0.86, 0);
-  // Bus Lay-by pocket (x = 16..34, z = 38.8..40.5)
+  // Vịnh dừng xe buýt (x = 16..34, z = 38.8..40.5)
   pushBox(buckets.opaque, 18, 0.06, 1.8, 25, 0.005, 39.7, asphalt, 0, 0, 0, 1, 0.82, 0);
 
-  // Landscaped Central Median Segments (broken cleanly at intersections x = -255, -152, -60.5, +70.5, +162, +265)
+  // Các đoạn dải phân cách giữa trồng cây cảnh quan (ngắt gọn tại các giao lộ x = -255, -152, -60.5, +70.5, +162, +265)
   const medianIntervals: ReadonlyArray<readonly [number, number]> = [
     [-380, -264],
     [-246, -161],
@@ -909,7 +931,7 @@ function addRoadNetworkAndSouthPark(
     pushBox(buckets.opaque, len - 0.8, 0.24, 1.75, cx, 0.12, 30.8, grass, 0, 0, 0, 1, 0.93, 0);
   }
 
-  // Median Double-Arm Streetlamps + Trees + Boulevard Banners
+  // Đèn đường hai cần trên dải phân cách + cây xanh + biểu ngữ đại lộ
   for (let x = -168; x <= 186; x += 22) {
     const inIntersection =
       Math.abs(x + 152) < 10 ||
@@ -932,7 +954,7 @@ function addRoadNetworkAndSouthPark(
     }
   }
 
-  // Boulevard Dashed Lane Stripes & Eastbound Lane Lines
+  // Vạch phân làn nét đứt trên đại lộ & vạch làn hướng Đông
   for (let x = -220; x <= 230; x += 5.0) {
     const inInter =
       Math.abs(x + 152) < 7.5 ||
@@ -947,23 +969,23 @@ function addRoadNetworkAndSouthPark(
   }
 
   // =========================================================================
-  // 2. NORTH BOULEVARD (z = -48.5..-38.5) & WEST / EAST CROSS AVENUES
+  // 2. ĐẠI LỘ BẮC (z = -48.5..-38.5) & CÁC ĐẠI LỘ NGANG TÂY / ĐÔNG
   // =========================================================================
   pushBox(buckets.opaque, gridSpan, 0.06, 10.0, 0, 0.005, -43.5, asphalt, 0, 0, 0, 1, 0.82, 0);
   pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, -38.45, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.opaque, gridSpan, 0.12, 0.28, 0, 0.06, -48.55, curb, 0, 0, 0, 1, 0.86, 0);
-  // Amber center divider along North Boulevard
+  // Vạch phân cách giữa màu vàng hổ phách dọc Đại lộ Bắc
   for (const [x0, x1] of medianIntervals) {
     if (Math.abs(x0) > gridSpan * 0.5 && Math.abs(x1) > gridSpan * 0.5) continue;
     pushBox(buckets.opaque, x1 - x0, 0.05, 0.16, (x0 + x1) * 0.5, 0.036, -43.5, stripeAmber, 0, 0, 0, 1, 0.58, 0);
   }
 
-  // North-South Avenues (West x=-60.5, East x=+70.5, Outer -152, +162, -255, +265)
+  // Các đại lộ Bắc–Nam (Tây x=-60.5, Đông x=+70.5, vòng ngoài -152, +162, -255, +265)
   const nsAvenues = tier === 'low' ? [-152, -60.5, 70.5, 162] : [-255, -152, -60.5, 70.5, 162, 265];
   for (const ax of nsAvenues) {
     pushBox(buckets.opaque, 12.0, 0.06, gridSpan, ax, 0.006, 0, asphalt, 0, 0, 0, 1, 0.82, 0);
     pushBox(buckets.opaque, 0.16, 0.04, gridSpan, ax, 0.038, 0, stripeAmber, 0, 0, 0, 1, 0.58, 0);
-    // Dashed lane dividers on each carriageway
+    // Vạch phân làn nét đứt trên mỗi chiều xe chạy
     for (let z = -190; z <= 190; z += 5.5) {
       if (Math.abs(z - 31) < 9 || Math.abs(z + 43.5) < 9 || Math.abs(z - 74) < 9 || Math.abs(z + 132) < 9) {
         continue;
@@ -973,14 +995,14 @@ function addRoadNetworkAndSouthPark(
     }
   }
 
-  // Outer East-West Grid Arterials (z = -235, -132, +74, +168)
+  // Các trục đường lưới Đông–Tây vòng ngoài (z = -235, -132, +74, +168)
   const ewArterials = tier === 'low' ? [-132, 74] : [-235, -132, 74, 168];
   for (const az of ewArterials) {
     pushBox(buckets.opaque, gridSpan, 0.06, 11.0, 0, 0.005, az, asphalt, 0, 0, 0, 1, 0.82, 0);
     pushBox(buckets.opaque, gridSpan, 0.04, 0.16, 0, 0.036, az, stripeAmber, 0, 0, 0, 1, 0.58, 0);
   }
 
-  // Signalized Intersections & Crosswalks around SÖL Campus Corners
+  // Các giao lộ có đèn tín hiệu & vạch qua đường quanh bốn góc khuôn viên SÖL
   const mainIntersections: ReadonlyArray<{ id: string; x: number; z: number }> = [
     { id: 'int-sw', x: -60.5, z: 31.2 },
     { id: 'int-se', x: 70.5, z: 31.2 },
@@ -988,7 +1010,7 @@ function addRoadNetworkAndSouthPark(
     { id: 'int-ne', x: 70.5, z: -43.5 },
   ];
   for (const inter of mainIntersections) {
-    // 4-leg Zebra Crosswalks
+    // Vạch kẻ qua đường cho người đi bộ ở 4 nhánh giao lộ
     for (let i = -2; i <= 2; i += 1) {
       const zOff = i * 1.15;
       pushBox(buckets.opaque, 2.2, 0.04, 0.52, inter.x - 8.2, 0.04, inter.z + zOff, stripeWhite, 0, 0, 0, 1, 0.58, 0);
@@ -999,19 +1021,19 @@ function addRoadNetworkAndSouthPark(
       pushBox(buckets.opaque, 0.52, 0.04, 2.2, inter.x + xOff, 0.04, inter.z - 8.6, stripeWhite, 0, 0, 0, 1, 0.58, 0);
       pushBox(buckets.opaque, 0.52, 0.04, 2.2, inter.x + xOff, 0.04, inter.z + 8.6, stripeWhite, 0, 0, 0, 1, 0.58, 0);
     }
-    // EW Traffic Signal (controls East-West lanes)
+    // Đèn tín hiệu trục EW (điều tiết các làn Đông–Tây)
     addSignalGantry(buckets, signalAnchors, `${inter.id}-ew`, inter.id, 'EW', inter.x - 7.5, inter.z + 8.6, 0, isLight);
-    // NS Traffic Signal (controls North-South lanes)
+    // Đèn tín hiệu trục NS (điều tiết các làn Bắc–Nam)
     addSignalGantry(buckets, signalAnchors, `${inter.id}-ns`, inter.id, 'NS', inter.x + 7.5, inter.z - 8.6, Math.PI / 2, isLight);
   }
 
-  // Sidewalks Framing West (-54.4..-45.05) and East (+58.05..+64.4) Edges of Campus
+  // Vỉa hè ôm hai cạnh Tây (-54.4..-45.05) và Đông (+58.05..+64.4) của khuôn viên
   pushBox(buckets.opaque, 9.3, 0.14, 62.2, -49.75, 0.03, -7.4, sidewalk, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.opaque, 6.3, 0.14, 62.2, 61.25, 0.03, -7.4, sidewalk, 0, 0, 0, 1, 0.86, 0);
-  // North Rear Service Promenade (z = -38.4..-30.05)
+  // Lối đi bộ kỹ thuật phía sau hướng Bắc (z = -38.4..-30.05)
   pushBox(buckets.opaque, 103, 0.14, 8.3, 6.5, 0.03, -34.25, sidewalk, 0, 0, 0, 1, 0.86, 0);
 
-  // Avenue Trees flanking West, East & North Promenades
+  // Hàng cây đại lộ dọc các lối đi bộ phía Tây, Đông & Bắc
   for (let z = -26; z <= 22; z += 12) {
     addCityTree(buckets, -51.8, z, 0.95, isLight);
     addCityTree(buckets, 61.8, z, 0.95, isLight);
@@ -1023,51 +1045,51 @@ function addRoadNetworkAndSouthPark(
   }
 
   // =========================================================================
-  // 3. SOUTH LINEAR ESPLANADE PARK, REFLECTING CANAL, BUS SHELTER & CAFE (z=38.8..68.5)
-  //    Strictly low-rise (max H <= 5.2m) to keep Hero Camera sightline [46,36,48] 100% open!
+  // 3. CÔNG VIÊN DẢI DỌC PHÍA NAM, KÊNH NƯỚC PHẢN CHIẾU, NHÀ CHỜ XE BUÝT & QUÁN CÀ PHÊ (z=38.8..68.5)
+  //    Bắt buộc thấp tầng (H tối đa <= 5.2 m) để giữ thông thoáng 100% đường ngắm Hero Camera [46,36,48]
   // =========================================================================
-  // Esplanade Granite Sidewalk
+  // Vỉa hè đá granite quảng trường dạo bộ
   pushBox(buckets.opaque, 118, 0.16, 8.2, 5, 0.04, 43.0, sidewalk, 0, 0, 0, 1, 0.86, 0);
-  // Park Lawns Flanking the Canal
+  // Thảm cỏ công viên hai bên kênh nước
   pushBox(buckets.opaque, 118, 0.12, 21.0, 5, 0.02, 57.6, grass, 0, 0, 0, 1, 0.93, 0);
-  // Park Jogging Track Loop (running cleanly parallel to South Boulevard)
+  // Vòng đường chạy bộ công viên (chạy song song gọn gàng với Đại lộ Nam)
   pushBox(buckets.opaque, 112, 0.08, 2.2, 5, 0.05, 48.2, isLight ? '#8f5f52' : '#4a3531', 0, 0, 0, 1, 0.88, 0);
   pushBox(buckets.opaque, 112, 0.08, 2.2, 5, 0.05, 64.8, isLight ? '#8f5f52' : '#4a3531', 0, 0, 0, 1, 0.88, 0);
 
-  // Reflecting Urban Canal (x = -35..+47, z = 51.3..58.9) — recessed stone coping + dark bed (water mesh in CitySky)
+  // Kênh nước đô thị phản chiếu (x = -35..+47, z = 51.3..58.9) — thành đá âm + lòng kênh tối (mesh nước nằm ở CitySky)
   pushBox(buckets.opaque, 82, 0.36, 0.8, 6, 0.12, 51.7, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.opaque, 82, 0.36, 0.8, 6, 0.12, 58.5, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.opaque, 0.9, 0.36, 6.0, -34.55, 0.12, 55.1, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.opaque, 0.9, 0.36, 6.0, 46.55, 0.12, 55.1, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.opaque, 80.2, 0.06, 6.0, 6, 0.12, 55.1, isLight ? '#132630' : '#09131a', 0, 0, 0, 1, 0.9, 0);
-  // Arched Timber-Steel Footbridge across the Canal at x = 6.5 (aligned with Main Gate!)
+  // Cầu đi bộ vòm gỗ–thép bắc qua kênh tại x = 6.5 (thẳng hàng với Cổng Chính)
   pushBox(buckets.metal, 4.4, 0.32, 8.4, 6.5, 0.62, 55.1, steel);
   pushBox(buckets.opaque, 3.8, 0.14, 8.2, 6.5, 0.78, 55.1, timber, 0, 0, 0, 1, 0.66, 0);
   for (const bx of [4.6, 8.4]) {
     pushBox(buckets.metal, 0.12, 0.92, 8.2, bx, 1.24, 55.1, steel);
   }
 
-  // Modern Glass Transit Bus Shelter (x = 24.5, z = 40.9, height 3.1m — clear below camera ray!)
+  // Nhà chờ xe buýt kính hiện đại (x = 24.5, z = 40.9, cao 3.1 m — nằm hẳn dưới tia nhìn camera)
   pushBox(buckets.metal, 9.2, 0.14, 2.4, 24.5, 2.95, 40.9, steel);
   pushBox(buckets.glass, 9.0, 0.06, 2.2, 24.5, 3.04, 40.9, isLight ? '#8bb0c6' : '#2a4156');
   pushBox(buckets.glass, 8.6, 2.45, 0.08, 24.5, 1.5, 42.0, isLight ? '#8bb0c6' : '#2a4156');
   pushBox(buckets.opaque, 4.8, 0.42, 0.6, 24.5, 0.46, 41.3, timber, 0, 0, 0, 1, 0.66, 0);
-  // Backlit Digital Transit Route Totem (blooms softly at dusk)
+  // Trụ bảng tuyến giao thông điện tử có đèn nền (tỏa sáng dịu lúc hoàng hôn)
   pushBox(buckets.metal, 1.25, 2.65, 0.36, 19.6, 1.48, 41.2, steel);
   pushBox(buckets.emissive, 0.92, 1.85, 0.42, 19.6, 1.55, 41.2, isLight ? '#d8e6f0' : '#ffcf9e', 0, 0, 0, isLight ? 0.9 : 2.8);
 
-  // Metro South Underpass Glass Entrance Pavilion (x = 44.5, z = 43.2, height 3.8m)
+  // Sảnh kính lối xuống hầm bộ hành Metro phía Nam (x = 44.5, z = 43.2, cao 3.8 m)
   pushBox(buckets.opaque, 6.8, 0.95, 5.2, 44.5, 0.48, 43.2, curb, 0, 0, 0, 1, 0.86, 0);
   pushBox(buckets.metal, 6.6, 3.2, 4.8, 44.5, 2.1, 43.2, steel);
   pushBox(buckets.glass, 6.2, 2.75, 4.4, 44.5, 2.0, 43.2, isLight ? '#86abc2' : '#263c52');
   pushBox(buckets.emissive, 5.8, 0.24, 0.25, 44.5, 3.35, 40.76, '#f07654', 0, 0, 0, isLight ? 1.0 : 3.1);
 
-  // Esplanade Park Café Kiosk & Timber Patio (x = -20, z = 43.6, height 3.4m)
+  // Quầy cà phê công viên dạo bộ & sàn gỗ ngoài trời (x = -20, z = 43.6, cao 3.4 m)
   pushBox(buckets.opaque, 12.0, 0.18, 6.8, -20, 0.14, 44.0, timber, 0, 0, 0, 1, 0.68, 0);
   pushBox(buckets.opaque, 5.6, 3.2, 3.6, -22, 1.8, 43.2, isLight ? '#383d46' : '#1b2029', 0, 0, 0, 1, 0.78, 0);
   pushBox(buckets.metal, 6.6, 0.2, 4.8, -22, 3.45, 43.4, steel);
   pushBox(buckets.emissive, 4.8, 2.1, 3.2, -22, 1.4, 43.2, isLight ? '#4a5568' : '#ffd59a', 0, 0, 0, isLight ? 0.7 : 2.6);
-  // Café patio tables & architectural umbrellas
+  // Bàn sân hiên cà phê & ô che nắng kiến trúc
   for (const [tx, tz] of [
     [-16.2, 42.8],
     [-16.2, 45.2],
@@ -1079,7 +1101,7 @@ function addRoadNetworkAndSouthPark(
     pushCylinder(buckets.opaque, 0.48, 0.48, 0.08, tx, 0.92, tz, timber, 8, 0, 0, 0, 1, 0.66, 0);
   }
 
-  // Linear Park Trees & Benches
+  // Cây xanh & ghế nghỉ công viên tuyến tính
   const parkTrees: ReadonlyArray<readonly [number, number, number]> = [
     [-40, 41.2, 1.0],
     [-31, 41.2, 0.92],
@@ -1100,11 +1122,14 @@ function addRoadNetworkAndSouthPark(
   }
 }
 
+/** Sinh các tòa tháp của các quận xung quanh một cách xác định (seed cố định) theo mức chất lượng và theme. */
 function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[] {
   const rand = seededRandom(20261114);
   const stones = isLight ? STONE_DAY : STONE_DUSK;
   const glasses = isLight ? GLASS_DAY : GLASS_DUSK;
+  // Chọn ngẫu nhiên một vật liệu đá.
   const pickStone = () => stones[Math.floor(rand() * stones.length)]!;
+  // Chọn ngẫu nhiên một vật liệu kính.
   const pickGlass = () => glasses[Math.floor(rand() * glasses.length)]!;
   const styles: ReadonlyArray<TowerSpec['style']> = [
     'curtain-stepped',
@@ -1112,11 +1137,12 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
     'diagrid-crown',
     'residential-terrace',
   ];
+  // Chọn ngẫu nhiên một kiểu dáng tòa nhà.
   const pickStyle = () => styles[Math.floor(rand() * styles.length)]!;
 
   const specs: TowerSpec[] = [];
 
-  // Curated Signature North Skyline CBD (frames the backdrop behind SÖL Fitness Center!)
+  // Khu CBD đường chân trời phía Bắc được tuyển chọn (tạo phông nền phía sau SÖL Fitness Center)
   const signatureNorthCBD: ReadonlyArray<Omit<TowerSpec, 'facadeTone' | 'glassTone'>> = [
     { x: -34, z: -96, w: 26, d: 24, h: 118, ring: 'mid', style: 'diagrid-crown' },
     { x: 0, z: -102, w: 30, d: 26, h: 158, ring: 'mid', style: 'curtain-stepped' },
@@ -1125,7 +1151,7 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
     { x: -116, z: -112, w: 28, d: 26, h: 138, ring: 'mid', style: 'diagrid-crown' },
     { x: 108, z: -84, w: 24, d: 22, h: 86, ring: 'inner', style: 'residential-terrace' },
     { x: 124, z: -110, w: 28, d: 24, h: 146, ring: 'mid', style: 'curtain-stepped' },
-    // Mixed-use inner blocks just across North Viaduct (z = -84..-116)
+    // Các khối hỗn hợp vòng trong ngay bên kia cầu cạn phía Bắc (z = -84..-116)
     { x: -24, z: -78, w: 19, d: 17, h: 42, ring: 'inner', style: 'residential-terrace' },
     { x: 8, z: -78, w: 21, d: 17, h: 48, ring: 'inner', style: 'curtain-stepped' },
     { x: 38, z: -76, w: 18, d: 16, h: 36, ring: 'inner', style: 'residential-terrace' },
@@ -1134,9 +1160,9 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
     specs.push({ ...s, facadeTone: pickStone(), glassTone: pickGlass() });
   }
 
-  // West & East District Inner & Mid-Rise Urban Blocks (flanking West Ave x=-60.5 & East Ave x=+70.5)
+  // Các khu đô thị vòng trong & trung tầng ở quận Tây & Đông (hai bên Đại lộ Tây x=-60.5 & Đại lộ Đông x=+70.5)
   const sideParcels: ReadonlyArray<readonly [number, number, number, number, number, 'inner' | 'mid']> = [
-    // West side across West Ave (-135..-80)
+    // Phía Tây bên kia Đại lộ Tây (-135..-80)
     [-92, -32, 22, 20, 44, 'inner'],
     [-92, 0, 20, 22, 56, 'inner'],
     [-92, 48, 22, 22, 34, 'inner'],
@@ -1145,7 +1171,7 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
     [-122, 52, 24, 20, 52, 'inner'],
     [-98, 96, 26, 24, 88, 'mid'],
     [-128, 98, 26, 26, 114, 'mid'],
-    // East side across East Ave (+90..+145)
+    // Phía Đông bên kia Đại lộ Đông (+90..+145)
     [98, -32, 22, 20, 52, 'inner'],
     [102, 0, 22, 22, 64, 'inner'],
     [104, 48, 20, 18, 32, 'inner'],
@@ -1154,7 +1180,7 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
     [134, 52, 22, 20, 46, 'inner'],
     [106, 98, 24, 24, 72, 'mid'],
     [136, 102, 26, 24, 96, 'mid'],
-    // South District behind the Linear Park (z >= 96, low-stepped in front of camera so overview [46,36,48] is unobstructed)
+    // Quận Nam phía sau Công viên tuyến tính (z >= 96, hạ thấp bậc trước camera để góc nhìn toàn cảnh [46,36,48] không bị che)
     [-36, 98, 22, 20, 38, 'inner'],
     [4, 98, 24, 20, 44, 'inner'],
     [44, 98, 22, 20, 34, 'inner'],
@@ -1178,7 +1204,7 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
     });
   }
 
-  // Mid-North & Outer CBD Financial Towers (z = -155..-220)
+  // Các tháp tài chính khu trung Bắc & CBD vòng ngoài (z = -155..-220)
   const midNorthCenters: ReadonlyArray<readonly [number, number, number]> = [
     [-202, -96, 112],
     [-196, -158, 148],
@@ -1210,19 +1236,19 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
     });
   }
 
-  // Far Horizon 360° Skyline Ring (240m..460m radius, scaled smoothly by QualityTier)
+  // Vòng đường chân trời xa 360° (bán kính 240 m..460 m, điều chỉnh mượt theo QualityTier)
   const horizonCount = tier === 'high' ? 56 : tier === 'medium' ? 32 : 16;
   for (let i = 0; i < horizonCount; i += 1) {
     const angle = (i / horizonCount) * Math.PI * 2 + rand() * 0.08;
     const radius = 265 + rand() * 195;
     const tx = Math.round(Math.cos(angle) * radius);
     const tz = Math.round(Math.sin(angle) * radius);
-    // Avoid landing directly inside arterial strips
+    // Tránh đặt tòa nhà rơi thẳng lên các dải trục đường chính
     const onNS = [-255, -152, -60.5, 70.5, 162, 265].some(ax => Math.abs(tx - ax) < 16);
     const onEW = [-235, -132, -56.5, -43.5, 31, 74, 168].some(az => Math.abs(tz - az) < 16);
     if (onNS || onEW) continue;
 
-    // Taller supertalls clustered in the iconic North/NW skyline arc
+    // Tập trung các tòa siêu cao tầng dọc cung đường chân trời biểu tượng phía Bắc/Tây Bắc
     const northBias = tz < -100 ? 1.35 : 0.92;
     const h = Math.round((72 + rand() * 135) * northBias);
     specs.push({
@@ -1241,6 +1267,7 @@ function generateDistrictTowers(tier: QualityTier, isLight: boolean): TowerSpec[
   return specs;
 }
 
+/** Hộp va chạm (tâm, nửa rộng/sâu, chiều cao) của một tòa tháp để đẩy camera ra khỏi tòa nhà. */
 export interface CityCollider {
   readonly x: number;
   readonly z: number;
@@ -1251,7 +1278,10 @@ export interface CityCollider {
 
 let colliderCache: readonly CityCollider[] | null = null;
 
-/** Footprints of the non-horizon towers; the camera is pushed out of them so it never sits inside a building. */
+/**
+ * Mặt bằng chân đế của các tòa tháp không thuộc đường chân trời; camera được đẩy ra ngoài
+ * để không bao giờ nằm bên trong một tòa nhà.
+ */
 export function getCityColliders(): readonly CityCollider[] {
   colliderCache ??= generateDistrictTowers('high', true)
     .filter(t => t.ring !== 'horizon')
@@ -1262,7 +1292,9 @@ export function getCityColliders(): readonly CityCollider[] {
 const metropolisCache = new Map<string, CityMetropolisGeometries>();
 
 
-/** SÖL Beacon: a slender landmark mast beside the campus that gives the gym a taller silhouette. */
+/**
+ * Tháp biểu tượng SÖL Beacon: cột mốc mảnh đặt cạnh khuôn viên giúp phòng gym có hình khối cao nổi bật hơn.
+ */
 function addSolBeacon(
   buckets: CityBuckets,
   beaconAnchors: Array<readonly [number, number, number]>,
@@ -1277,13 +1309,13 @@ function addSolBeacon(
   pushBox(buckets.opaque, 7.5, 0.9, 7.5, x, 0.45, z, isLight ? '#a69d91' : '#2e333d');
   pushBox(buckets.metal, 5.6, 0.5, 5.6, x, 1.15, z, steel);
   const shaftH = 38;
-  // Four lattice legs that taper toward the crown.
+  // Bốn chân giàn lưới thuôn dần về phía đỉnh tháp.
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
       pushCylinder(buckets.metal, 0.16, 0.34, shaftH, x + sx * 1.3, 1.4 + shaftH / 2, z + sz * 1.3, steel, 8, sz * 0.012, 0, -sx * 0.012);
     }
   }
-  // Cross bracing rings + glass elevator core with salmon light ribbons.
+  // Các vòng giằng ngang + lõi thang máy kính có dải sáng màu salmon.
   for (let y = 4; y < shaftH; y += 4.5) {
     const k = 1 - y / (shaftH * 1.5);
     pushBox(buckets.metal, 3.0 * k + 0.4, 0.16, 3.0 * k + 0.4, x, 1.4 + y, z, steel);
@@ -1294,7 +1326,7 @@ function addSolBeacon(
       pushBox(buckets.emissive, 0.12, shaftH - 8, 0.12, x + sx * 0.95, 1.4 + (shaftH - 8) / 2 + 3, z + sz * 0.95, salmon, 0, 0, 0, hdr);
     }
   }
-  // Observation ring and crown halo.
+  // Vòng đài quan sát và vầng sáng đỉnh tháp.
   pushCylinder(buckets.metal, 3.1, 2.4, 1.1, x, 1.4 + shaftH - 5, z, steel, 16);
   pushCylinder(buckets.glass, 2.7, 2.7, 1.3, x, 1.4 + shaftH - 3.7, z, glass, 16);
   pushCylinder(buckets.emissive, 3.2, 3.2, 0.18, x, 1.4 + shaftH - 5.6, z, salmon, 24, 0, 0, 0, hdr);
@@ -1303,6 +1335,7 @@ function addSolBeacon(
 }
 
 
+/** Các hình học của mũ mái phòng gym gộp theo vật liệu (đặc, kim loại, kính, phát sáng). */
 export interface GymCrownGeometries {
   readonly opaqueGeometry: THREE.BufferGeometry;
   readonly metalGeometry: THREE.BufferGeometry;
@@ -1312,13 +1345,13 @@ export interface GymCrownGeometries {
 
 const gymCrownCache = new Map<ExploreTheme, GymCrownGeometries>();
 
-/** Top of the penthouse walls: RF elevation 11.26 m + RF height 3.9 m. */
+/** Đỉnh tường tầng áp mái penthouse: cao độ RF 11.26 m + chiều cao RF 3.9 m. */
 const GYM_ROOF_Y = 15.16;
 
 /**
- * The gym's weather roof: a glazed steel canopy that floats just above the penthouse walls on
- * slender columns, so the building reads as one tall covered volume (~1.3x the old height)
- * while the translucent panels still let the cutaway interior show from above.
+ * Mái che thời tiết của phòng gym: mái kính khung thép nổi ngay phía trên tường penthouse
+ * trên các cột mảnh, giúp tòa nhà trông như một khối có mái cao hơn (~1.3x chiều cao cũ)
+ * trong khi các tấm kính mờ vẫn cho phép nhìn xuyên nội thất mặt cắt từ trên xuống; có cache theo theme.
  */
 export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
   const cached = gymCrownCache.get(theme);
@@ -1340,8 +1373,8 @@ export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
   const d = z1 - z0;
   const cxMid = (x0 + x1) * 0.5;
 
-  // Skylight glass canopy covers the Penthouse Yoga Studio (x = -22.6..8.8) while leaving
-  // the East Rooftop Sky Deck (x = 8.8..22) genuinely open-air to the sky above.
+  // Mái kính giếng trời che phủ Studio Yoga tầng áp mái (x = -22.6..8.8) đồng thời giữ cho
+  // Sàn trời sân thượng phía Đông (x = 8.8..22) hoàn toàn lộ thiên hướng lên bầu trời.
   pushBox(b.glass, w, 0.12, d, cxMid, roofY, 0, glass);
   const nx = 6;
   const nz = 6;
@@ -1351,7 +1384,7 @@ export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
   for (let j = 0; j <= nz; j += 1) {
     pushBox(b.metal, w + 0.2, 0.28, 0.2, cxMid, roofY + 0.04, z0 + (j / nz) * d, steel);
   }
-  // Deep fascia with a salmon LED line around the Penthouse skylight crown.
+  // Diềm mái bản rộng có đường đèn LED màu salmon chạy quanh vương miện giếng trời tầng áp mái.
   pushBox(b.metal, w + 0.6, 0.5, 0.28, cxMid, roofY + 0.08, z0 - 0.14, steel);
   pushBox(b.metal, w + 0.6, 0.5, 0.28, cxMid, roofY + 0.08, z1 + 0.14, steel);
   pushBox(b.metal, 0.28, 0.5, d + 0.6, x0 - 0.14, roofY + 0.08, 0, steel);
@@ -1360,7 +1393,7 @@ export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
   pushBox(b.emissive, w + 0.7, 0.08, 0.09, cxMid, roofY - 0.18, z1 + 0.31, salmon, 0, 0, 0, hdrLed);
   pushBox(b.emissive, 0.09, 0.08, d + 0.7, x0 - 0.31, roofY - 0.18, 0, salmon, 0, 0, 0, hdrLed);
   pushBox(b.emissive, 0.09, 0.08, d + 0.7, x1 + 0.31, roofY - 0.18, 0, salmon, 0, 0, 0, hdrLed);
-  // Slender perimeter columns carry the Penthouse canopy along its wall lines.
+  // Các cột chu vi mảnh đỡ mái che tầng áp mái dọc theo các trục tường.
   const colXs = [x0 + 0.4, x0 + w * 0.33, x0 + w * 0.67, x1 - 0.4];
   const colZs = [z0 + 0.4, z1 - 0.4];
   for (const cx of colXs) {
@@ -1382,9 +1415,8 @@ export function buildGymCrown(theme: ExploreTheme): GymCrownGeometries {
 }
 
 /**
- * Generates the entire 360° AAA surrounding metropolis around SÖL Campus as 4
- * batched BufferGeometry buckets (`opaque`, `metal`, `glass`, `emissive`), cached
- * per `(theme, tier)` for instant zero-hitch theme toggling.
+ * Sinh toàn bộ đô thị chất lượng cao 360° bao quanh khuôn viên SÖL thành 4 nhóm BufferGeometry gộp
+ * (`opaque`, `metal`, `glass`, `emissive`), được cache theo `(theme, tier)` để chuyển theme tức thì không giật.
  */
 export function buildCityMetropolis(
   theme: ExploreTheme,

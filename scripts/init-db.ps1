@@ -1,4 +1,4 @@
-# Validate configuration; Hibernate manages the Supabase/PostgreSQL schema on API startup.
+# Mục đích: kiểm tra cấu hình cơ sở dữ liệu; Hibernate tự quản lý và cập nhật schema Supabase/PostgreSQL khi API khởi động nên script này không chạy DDL.
 [CmdletBinding()]
 param([switch]$Force)
 $ErrorActionPreference = 'Stop'

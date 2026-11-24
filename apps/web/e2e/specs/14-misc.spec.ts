@@ -55,7 +55,7 @@ test.describe('Di động (375px)', () => {
       await page.goto('/member/dashboard');
       await settled(page);
       await expect(page.getByRole('navigation', { name: /Điều hướng nhanh/ })).toBeVisible();
-      for (const path of ['/member/packages', '/member/classes', '/member/courts']) {
+      for (const path of ['/member/packages', '/member/classes']) {
         await page.goto(path);
         await settled(page);
         const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);

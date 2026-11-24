@@ -4,10 +4,10 @@ import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
 import { allHotspots } from '../scene/selectors';
 
 describe('Explore 3D Member Feature Coverage', () => {
-  it('ensures every MEMBER route in PORTAL_NAV (except /member/explore) is reachable from at least one 3D hotspot', () => {
+  it('ensures every MEMBER route in PORTAL_NAV (except Explore and removed sport areas) is reachable from at least one 3D hotspot', () => {
     // Mục gộp (vd. Thẻ & Check-in) tính cả từng tab con: mỗi màn vẫn phải có lối vào từ cảnh 3D.
     const memberRoutes = PORTAL_NAV.filter(
-      item => item.roles.includes('MEMBER') && item.to !== '/member/explore',
+      item => item.roles.includes('MEMBER') && item.to !== '/member/explore' && item.to !== '/member/courts',
     ).flatMap(item => portalNavRoutes(item));
 
     expect(memberRoutes.length).toBeGreaterThanOrEqual(10);
@@ -33,10 +33,10 @@ describe('Explore 3D Member Feature Coverage', () => {
       ).toBe(true);
     }
 
-    // Also verify extended member routes mentioned in Section 10 of the plan
-    expect(reachableRoutes.has('/member/streak')).toBe(true);
+    // Đồng thời kiểm tra các tuyến hội viên mở rộng được nêu ở Mục 10 của kế hoạch
+    expect(reachableRoutes.has('/member/streak')).toBe(false);
     expect(reachableRoutes.has('/member/packages/checkout')).toBe(true);
-    expect(reachableRoutes.has('/member/products')).toBe(true);
+    expect(reachableRoutes.has('/member/products')).toBe(false);
     expect(reachableRoutes.has('/messages')).toBe(true);
     expect(reachableRoutes.has('/trainers')).toBe(true);
   });

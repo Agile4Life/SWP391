@@ -1,13 +1,14 @@
+# Mục đích: chạy API (Spring Boot) và web (Vite) trên máy local cho môi trường Windows.
 <#
 .SYNOPSIS
-    SCMS - Bo chay local du an (Sports Center Management System)
+    SCMS - Bộ chạy local dự án (Sports Center Management System)
 .DESCRIPTION
-    Tu dong kiem tra moi truong (Node, Java, database profile),
-    va khoi chay dong thoi Spring Boot API (8080) va React Web (5173).
+    Tự động kiểm tra môi trường (Node, Java, database profile),
+    và khởi chạy đồng thời Spring Boot API (8080) và React Web (5173).
 .PARAMETER Only
-    Chi chay mot thanh phan: 'all', 'web', 'api', 'db'
+    Chỉ chạy một thành phần: 'all', 'web', 'api', 'db'
 .PARAMETER NoBrowser
-    Khong tu dong mo trinh duyet
+    Không tự động mở trình duyệt
 #>
 [CmdletBinding()]
 param(
@@ -18,6 +19,7 @@ param(
 
 $Host.UI.RawUI.WindowTitle = "SCMS - Local Runner"
 
+# In tiêu đề (banner) của script ra màn hình.
 function Write-Header {
     Clear-Host
     Write-Host "=================================================================" -ForegroundColor Cyan
@@ -38,6 +40,7 @@ $apiDir = Join-Path $rootDir "apps\api"
 $webDir = Join-Path $rootDir "apps\web"
 . (Join-Path $scriptDir "database-config.ps1")
 
+# Kiểm tra một dịch vụ local (API/web) đã lắng nghe ở cổng cho trước hay chưa.
 function Test-ScmsLocalService {
     param([string]$Uri, [switch]$Api)
     try {
@@ -51,6 +54,7 @@ function Test-ScmsLocalService {
     } catch { return $false }
 }
 
+# Chờ một dịch vụ local sẵn sàng, quá thời gian chờ thì báo lỗi.
 function Wait-ScmsLocalService {
     param([string]$Name, [string]$Uri, [switch]$Api, [int]$TimeoutSeconds = 240)
     Write-Host "-> Dang cho $Name san sang: $Uri" -ForegroundColor Yellow
@@ -65,7 +69,7 @@ function Wait-ScmsLocalService {
     throw "$Name chua san sang sau $TimeoutSeconds giay. Kiem tra api.log, api-error.log, web.log va web-error.log."
 }
 
-# 1. Kiem tra file .env
+# 1. Kiểm tra file .env
 $envFile = Join-Path $rootDir ".env"
 $envExample = Join-Path $rootDir ".env.example"
 if (-not (Test-Path $envFile)) {
@@ -76,7 +80,7 @@ if (-not (Test-Path $envFile)) {
     }
 }
 
-# Load local environment values for the API and frontend subprocesses.
+# Nạp các giá trị biến môi trường cục bộ cho tiến trình con API và frontend.
 if (Test-Path $envFile) {
     Get-Content $envFile | ForEach-Object {
         $line = $_.Trim()
@@ -91,7 +95,7 @@ if (Test-Path $envFile) {
     }
 }
 
-# Validate the PostgreSQL/Supabase configuration before starting the API.
+# Kiểm tra hợp lệ cấu hình PostgreSQL/Supabase trước khi khởi chạy API.
 if ($Only -in @("all", "api", "db")) {
     $databaseConfig = Resolve-ScmsDatabaseConfig -Profiles $env:SPRING_PROFILES_ACTIVE -JdbcUrl $env:SPRING_DATASOURCE_URL
     $env:SPRING_PROFILES_ACTIVE = $databaseConfig.Profiles
@@ -104,7 +108,7 @@ if ($Only -in @("all", "api", "db")) {
         throw 'Set APP_JWT_SECRET in .env for Supabase.'
     }
 }
-# 2. Pre-flight check: Node.js & npm
+# 2. Kiểm tra điều kiện tiên quyết: Node.js & npm
 if ($Only -in @("all", "web")) {
     $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
     $npmCmd = Get-Command npm -ErrorAction SilentlyContinue
@@ -116,7 +120,7 @@ if ($Only -in @("all", "web")) {
     $nodeVer = (& node -v).Trim()
     Write-Host "[CHECK] Node.js: $nodeVer" -ForegroundColor Green
 
-    # Kiem tra node_modules trong apps/web
+    # Kiểm tra node_modules trong apps/web
     $webModules = Join-Path $webDir "node_modules"
     if (-not (Test-Path $webModules)) {
         Write-Host "-> Thu muc node_modules chua ton tai, dang chay 'npm install' cho apps/web ..." -ForegroundColor Yellow
@@ -127,7 +131,7 @@ if ($Only -in @("all", "web")) {
     }
 }
 
-# 3. Pre-flight check: Java & Maven
+# 3. Kiểm tra điều kiện tiên quyết: Java & Maven
 if ($Only -in @("all", "api")) {
     $knownJdks = @(
         $env:JAVA_HOME,
@@ -158,14 +162,14 @@ if ($Only -in @("all", "api")) {
     $firstLine = ($javaVerOutput -split "`r?`n")[0]
     Write-Host "[CHECK] $firstLine" -ForegroundColor Green
 
-    # Kiem tra Maven Wrapper
+    # Kiểm tra Maven Wrapper
     $mvnwCmd = Join-Path $apiDir "mvnw.cmd"
     if (-not (Test-Path $mvnwCmd)) {
         Write-Host "[CANH BAO] Khong thay mvnw.cmd tai apps/api." -ForegroundColor Yellow
     }
 }
 
-# Hibernate owns schema creation and upgrades when the API starts.
+# Hibernate chịu trách nhiệm tạo và nâng cấp schema khi API khởi động.
 if (($Only -in @("all", "api", "db")) -and $databaseConfig.Provider -eq 'postgresql') {
     Write-Host '[INFO] PostgreSQL selected: Hibernate creates tables and installs triggers when API starts.' -ForegroundColor Cyan
 }
@@ -180,7 +184,7 @@ Write-Host "=================================================================" -
 Write-Host "               KHOI CHAY CAC DICH VU                             " -ForegroundColor Cyan
 Write-Host "=================================================================" -ForegroundColor Cyan
 
-# Giai phong cac port truoc khi chay tranh bi conflict
+# Giải phóng các port trước khi chạy để tránh xung đột
 $conn8080 = Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue
 $conn5173 = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue
 
@@ -193,7 +197,7 @@ if ($Only -in @("all", "web") -and $conn5173) {
     Write-Host "  Neu can giai phong, hay chay: .\stop-local.ps1" -ForegroundColor Yellow
 }
 
-# Khoi chay Backend API trong cua so moi
+# Khởi chạy Backend API trong cửa sổ mới
 if ($Only -in @("all", "api") -and -not (Test-ScmsLocalService -Uri 'http://localhost:8080/api/v1/health' -Api)) {
     Write-Host "-> Dang khoi chay Backend API (Spring Boot) tren cong 8080..." -ForegroundColor Cyan
     $mvnExecutable = ".\mvnw.cmd"
@@ -207,12 +211,12 @@ if ($Only -in @("all", "api") -and -not (Test-ScmsLocalService -Uri 'http://loca
     Write-Host "  [+] API dang khoi dong nen; xem api.log / api-error.log." -ForegroundColor Green
 }
 
-# Do not open the login screen while its upstream API is still booting.
+# Không mở màn hình đăng nhập trong khi API phía sau vẫn đang khởi động.
 if ($Only -in @("all", "api")) {
     Wait-ScmsLocalService -Name 'Backend API' -Uri 'http://localhost:8080/api/v1/health' -Api
 }
 
-# Khoi chay Frontend Web trong cua so moi
+# Khởi chạy Frontend Web trong cửa sổ mới
 if ($Only -in @("all", "web") -and -not (Test-ScmsLocalService -Uri 'http://localhost:5173')) {
     Write-Host "-> Dang khoi chay Frontend Web (React + Vite) tren cong 5173..." -ForegroundColor Cyan
     $webProcessCmd = "cd /d `"$webDir`" && title SCMS Web (React Vite 5173) && npm run dev -- --port 5173 --strictPort"
@@ -232,7 +236,7 @@ Write-Host "  Dich vu chay nen; xem api.log, api-error.log, web.log va web-error
 Write-Host "  De dung ca 2 server, chay: .\stop-local.bat hoac .\stop-local.ps1" -ForegroundColor Gray
 Write-Host "=================================================================" -ForegroundColor Green
 
-# Both requested services have passed readiness checks before opening the browser.
+# Cả hai dịch vụ được yêu cầu đã vượt qua kiểm tra sẵn sàng trước khi mở trình duyệt.
 if (-not $NoBrowser -and ($Only -in @("all", "web"))) {
     Start-Process "http://localhost:5173"
 }

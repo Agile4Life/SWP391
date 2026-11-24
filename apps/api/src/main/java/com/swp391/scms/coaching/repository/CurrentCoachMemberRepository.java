@@ -5,7 +5,10 @@ import java.util.List;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
-/** One row per member, even when multiple current relationships exist. */
+/**
+ * Truy vấn hội viên HLV đang phụ trách (giáo án còn hạn, PT sắp tới, lớp hoặc buổi lớp đã đặt); mỗi hội viên
+ * chỉ trả về một dòng ngay cả khi tồn tại nhiều quan hệ hiện tại.
+ */
 public interface CurrentCoachMemberRepository extends Repository<Member,Long> {
  @Query("""
  select m from Member m join fetch m.user u

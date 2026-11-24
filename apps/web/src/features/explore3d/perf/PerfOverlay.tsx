@@ -1,16 +1,22 @@
 import { useI18n } from '../../../shared/i18n';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Props của lớp phủ hiệu năng: có hiển thị không. */
 export interface PerfOverlayProps {
   visible?: boolean;
 }
 
+/** Bật lớp phủ hiệu năng khi URL có perf=1 hoặc bench=1. */
 function isPerfQueryEnabled(): boolean {
   if (typeof window === 'undefined') return false;
   const params = new URLSearchParams(window.location.search);
   return params.get('perf') === '1' || params.get('bench') === '1';
 }
 
+/**
+ * Lớp phủ số đo hiệu năng (FPS, thời gian khung, draw call, tam giác, mức chất lượng, DPR) hiện khi được yêu
+ * cầu hoặc URL bật.
+ */
 export function PerfOverlay({ visible }: PerfOverlayProps) {
   const { t } = useI18n();
   const perfMetrics = useExploreStore(s => s.perfMetrics);

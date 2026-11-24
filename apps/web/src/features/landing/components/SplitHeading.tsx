@@ -1,6 +1,10 @@
-import { useSourceLanguage, sourceText } from "../../shop/shopI18n";
+import { useSourceLanguage, sourceText } from "../../../shared/i18n/sourceText";
 import type { CSSProperties } from 'react';
 
+/**
+ * Tiêu đề chia từng từ để chạy hiệu ứng xuất hiện lần lượt (chỉ số từ trong biến CSS --word-index); từ cuối có
+ * thêm dấu chấm.
+ */
 export function SplitHeading({ id, lines }: { id: string; lines: string[] }) {
   useSourceLanguage();
   let wordIndex = 0;

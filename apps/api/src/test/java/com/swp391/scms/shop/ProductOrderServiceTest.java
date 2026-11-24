@@ -56,6 +56,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho service ProductOrderService (product order service). */
 class ProductOrderServiceTest {
     final ProductOrderRepository orders = mock(ProductOrderRepository.class);
     final ProductVariantRepository variants = mock(ProductVariantRepository.class);
@@ -75,6 +76,7 @@ class ProductOrderServiceTest {
     Member memberProfile;
     ProductOrderService service;
 
+    /** Chuẩn bị trước mỗi test: tạo ProductOrderService với repository giả lập. */
     @BeforeEach
     void setUp() {
         user = new User();
@@ -111,6 +113,7 @@ class ProductOrderServiceTest {
         service.setNotifications(notifications);
     }
 
+    /** Hàm trợ giúp của test: giả lập một biến thể sản phẩm có sẵn. */
     ProductVariant givenVariant(Long id, String price, int servings, int stock) {
         ProductCategory cat = new ProductCategory();
         cat.setId(1L);
@@ -138,14 +141,17 @@ class ProductOrderServiceTest {
         return v;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (variant). */
     ProductVariant variant(Long id) {
         return variantStore.get(id);
     }
 
+    /** Hàm trợ giúp của test: tạo một dòng đơn hàng trong request. */
     QuoteLineRequest line(Long variantId, int qty) {
         return new QuoteLineRequest(variantId, qty);
     }
 
+    /** Hàm trợ giúp của test: tạo request đơn hàng. */
     CreateOrderRequest order(List<QuoteLineRequest> lines, String fulfillment, String paymentMethod, String expectedTotal) {
         return new CreateOrderRequest(
                 "11111111-2222-3333-4444-555555555555",
@@ -159,6 +165,7 @@ class ProductOrderServiceTest {
         );
     }
 
+    /** Kiểm thử: tạo đơn giữ chỗ tồn kho, chụp lại giá và đặt thời hạn thanh toán. */
     @Test
     void createReservesStockSnapshotsPricesAndSetsPaymentWindow() {
         givenVariant(1L, "1290000", 68, 5);
@@ -170,6 +177,7 @@ class ProductOrderServiceTest {
         verify(movements).save(argThat(m -> m.getDelta() == -2 && "order_reserve".equals(m.getReason())));
     }
 
+    /** Kiểm thử: cùng client request id trả lại đơn cũ mà không đụng tới tồn kho. */
     @Test
     void sameClientRequestIdReturnsExistingOrderWithoutTouchingStock() {
         givenVariant(1L, "1290000", 68, 5);
@@ -193,6 +201,7 @@ class ProductOrderServiceTest {
         verify(orders, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: tổng dự kiến lệch thì báo giá đã thay đổi. */
     @Test
     void expectedTotalMismatchIsPriceChanged() {
         givenVariant(1L, "1290000", 68, 5);
@@ -202,6 +211,7 @@ class ProductOrderServiceTest {
         assertThat(variant(1L).getStock()).isEqualTo(5);
     }
 
+    /** Kiểm thử: không đủ tồn kho thì báo hết hàng. */
     @Test
     void insufficientStockIsOutOfStock() {
         givenVariant(1L, "1290000", 68, 1);
@@ -211,34 +221,35 @@ class ProductOrderServiceTest {
         assertThat(variant(1L).getStock()).isEqualTo(1);
     }
 
+    /** Kiểm thử: nhận tại quầy cần điểm nhận, giao hàng cần đúng một địa chỉ. */
     @Test
     void counterRequiresPickupAndDeliveryRequiresExactlyOneAddress() {
         givenVariant(1L, "600000", 30, 5);
         AddressRequest inlineAddr = new AddressRequest("Tran Van B", "0901234567", "79", "26734", "123 Le Loi", null, false);
         when(addresses.snapshot(1L, 10L)).thenReturn(new ShippingSnapshot("Tran Van B", "0901234567", "TP.HCM", "Phuong Ben Nghe", "123 Le Loi", null));
 
-        // counter + delivery -> PAYMENT_METHOD_NOT_ALLOWED
+        // Thanh toán tại quầy kết hợp giao hàng -> PAYMENT_METHOD_NOT_ALLOWED
         CreateOrderRequest counterDelivery = new CreateOrderRequest(
                 "req-counter-delivery", List.of(line(1L, 1)), "delivery", "counter", 10L, null, false, new BigDecimal("600000"));
         assertThatThrownBy(() -> service.create(member, counterDelivery))
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "PAYMENT_METHOD_NOT_ALLOWED");
 
-        // delivery with neither addressId nor shippingAddress -> FULFILLMENT_INVALID
+        // Giao hàng nhưng không có cả addressId lẫn shippingAddress -> FULFILLMENT_INVALID
         CreateOrderRequest deliveryNoAddr = new CreateOrderRequest(
                 "req-deliv-none", List.of(line(1L, 1)), "delivery", "online", null, null, false, new BigDecimal("600000"));
         assertThatThrownBy(() -> service.create(member, deliveryNoAddr))
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "FULFILLMENT_INVALID");
 
-        // delivery with both addressId and shippingAddress -> FULFILLMENT_INVALID
+        // Giao hàng nhưng có cả addressId và shippingAddress -> FULFILLMENT_INVALID
         CreateOrderRequest deliveryBothAddr = new CreateOrderRequest(
                 "req-deliv-both", List.of(line(1L, 1)), "delivery", "online", 10L, inlineAddr, false, new BigDecimal("600000"));
         assertThatThrownBy(() -> service.create(member, deliveryBothAddr))
                 .isInstanceOf(AppException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "FULFILLMENT_INVALID");
 
-        // pickup with addressId -> FULFILLMENT_INVALID
+        // Nhận tại quầy nhưng lại truyền addressId -> FULFILLMENT_INVALID
         CreateOrderRequest pickupWithAddr = new CreateOrderRequest(
                 "req-pickup-addr", List.of(line(1L, 1)), "pickup", "online", 10L, null, false, new BigDecimal("600000"));
         assertThatThrownBy(() -> service.create(member, pickupWithAddr))
@@ -246,6 +257,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "FULFILLMENT_INVALID");
     }
 
+    /** Kiểm thử: người dùng đã xóa hoặc không phải hội viên không đặt hàng được. */
     @Test
     void deletedOrNonMemberUsersCannotOrder() {
         givenVariant(1L, "600000", 30, 5);
@@ -260,6 +272,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "SHOP_MEMBER_REQUIRED");
     }
 
+    /** Kiểm thử: hội viên hủy đơn pending thì tồn kho được hoàn lại. */
     @Test
     void memberCancelsPendingOrderAndStockReturns() {
         ProductVariant v = givenVariant(1L, "1290000", 68, 3);
@@ -288,6 +301,7 @@ class ProductOrderServiceTest {
         verify(movements).save(argThat(m -> m.getDelta() == 2 && "order_release".equals(m.getReason())));
     }
 
+    /** Kiểm thử: hội viên không hủy được khi VNPay đang xử lý. */
     @Test
     void memberCannotCancelWhileVnpayIsSettling() {
         ProductOrder order = new ProductOrder();
@@ -303,6 +317,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_AWAITING_PAYMENT");
     }
 
+    /** Kiểm thử: hội viên không hủy được đơn đang xử lý. */
     @Test
     void memberCannotCancelProcessingOrder() {
         ProductOrder order = new ProductOrder();
@@ -316,6 +331,7 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_INVALID_TRANSITION");
     }
 
+    /** Kiểm thử: tác vụ hết hạn chỉ hủy các đơn quá hạn mà cổng thanh toán đã xong. */
     @Test
     void expiryCancelsOnlyOverdueOrdersWhoseGatewayIsDone() {
         ProductVariant v = givenVariant(1L, "500000", 30, 5);
@@ -346,6 +362,7 @@ class ProductOrderServiceTest {
         assertThat(v.getStock()).isEqualTo(7);
     }
 
+    /** Kiểm thử: đơn của hội viên khác bị coi là không tìm thấy. */
     @Test
     void otherMembersOrderIsNotFound() {
         Member otherMember = new Member();
@@ -364,10 +381,11 @@ class ProductOrderServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "ORDER_NOT_FOUND");
     }
 
+    /** Kiểm thử: các dòng trùng biến thể được gộp và không thể né kiểm tra tồn kho. */
     @Test
     void duplicateVariantLinesAreMergedAndCannotBypassStockCheck() {
         givenVariant(1L, "500000", 30, 3);
-        // 2 + 2 = 4 > stock (3), must be rejected without touching stock
+        // 2 + 2 = 4 > tồn kho (3), phải bị từ chối mà không làm thay đổi tồn kho
         assertThatThrownBy(() -> service.create(
                 member,
                 order(List.of(line(1L, 2), line(1L, 2)), "pickup", "online", "2000000")
@@ -377,6 +395,7 @@ class ProductOrderServiceTest {
         assertThat(variant(1L).getStock()).isEqualTo(3);
     }
 
+    /** Kiểm thử: sản phẩm hoặc danh mục không hoạt động thì không đặt được. */
     @Test
     void inactiveProductOrCategoryCannotBeOrdered() {
         ProductVariant v = givenVariant(1L, "500000", 30, 5);
@@ -394,6 +413,7 @@ class ProductOrderServiceTest {
         assertThat(v.getStock()).isEqualTo(5);
     }
 
+    /** Kiểm thử: hủy hoặc nhả đơn hai lần không hoàn tồn kho hai lần. */
     @Test
     void cancellingOrReleasingTwiceDoesNotDoubleRestoreStock() {
         ProductVariant v = givenVariant(1L, "1290000", 68, 3);
@@ -412,11 +432,11 @@ class ProductOrderServiceTest {
         service.cancelInternal(order, "Lần 1", true, user);
         assertThat(v.getStock()).isEqualTo(5);
 
-        // Second cancelInternal on already-cancelled order is a no-op
+        // Lần gọi cancelInternal thứ hai trên đơn đã hủy sẽ không thực hiện gì thêm
         service.cancelInternal(order, "Lần 2", true, user);
         assertThat(v.getStock()).isEqualTo(5);
 
-        // Direct StockService.release when movement already exists is also a no-op
+        // Gọi trực tiếp StockService.release khi bản ghi biến động kho đã tồn tại cũng không thực hiện gì thêm
         when(movements.existsByOrderIdAndReason(9L, "order_release")).thenReturn(true);
         new StockService(variants, movements, clock).release(order, 1L);
         assertThat(v.getStock()).isEqualTo(5);

@@ -2,8 +2,9 @@ import { test, expect } from '../fixtures';
 import { ACCOUNTS, API, type RoleKey } from '../helpers/accounts';
 import { createActiveMember, unique } from '../helpers/api';
 
-const HOME: Record<string, string> = { ADMIN: '/admin/users', MANAGER: '/manager/reports', STAFF: '/staff/reception', COACH: '/staff/attendance', MEMBER: '/member/dashboard' };
+const HOME: Record<string, string> = { ADMIN: '/admin/users', MANAGER: '/manager/reports', STAFF: '/staff/reception', COACH: '/coach/pt-attendance', MEMBER: '/member/dashboard' };
 
+// Đăng nhập bằng tên đăng nhập và mật khẩu trên trang login.
 async function login(page: import('@playwright/test').Page, username: string, password: string) {
   await page.goto('/login');
   await page.locator('#login-identifier').fill(username);
@@ -33,6 +34,7 @@ test.describe('Đăng nhập', () => {
 
   test('tài khoản không tồn tại hiện lỗi chung, không lộ việc tài khoản có tồn tại hay không', async ({ page }) => {
     await login(page, `khong-co-${unique()}@example.com`, 'Abcdef@123');
+    // Bỏ phần "Bạn còn N lần thử" khỏi thông báo để so sánh ổn định.
     const strip = (text: string) => text.replace(/Bạn còn \d+ lần thử\.?/, '').trim();
     const wrong = strip(await page.getByRole('alert').innerText());
     await page.goto('/login');

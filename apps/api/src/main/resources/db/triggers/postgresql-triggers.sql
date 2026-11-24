@@ -1,5 +1,5 @@
--- Invariant business triggers for PostgreSQL
--- Automatically initialized after Hibernate Code-First schema generation
+-- Các trigger nghiệp vụ bất biến cho PostgreSQL
+-- Tự động khởi tạo sau khi Hibernate sinh schema theo hướng Code-First
 
 CREATE OR REPLACE FUNCTION scms_touch_updated_at()
 RETURNS trigger
@@ -36,13 +36,13 @@ BEGIN
     ORDER BY id
     FOR UPDATE;
 
-    -- Re-saving a seat already held in the same class takes no new seat.
+    -- Lưu lại chỗ đã được giữ sẵn trong cùng lớp thì không chiếm thêm chỗ mới.
     IF NEW.status = 'booked' AND NOT (TG_OP = 'UPDATE' AND OLD.status = 'booked' AND OLD.class_id = NEW.class_id) THEN
         SELECT capacity INTO class_capacity FROM classes WHERE id = NEW.class_id;
         SELECT COUNT(*) INTO booked_count
         FROM class_enrollments
         WHERE class_id = NEW.class_id AND status = 'booked';
-        -- Per-session bookings occupy seats too: a class-wide seat must fit the busiest session.
+        -- Lượt đặt theo từng buổi cũng chiếm chỗ: một suất đăng ký cả lớp phải vừa với buổi đông nhất.
         SELECT COALESCE(MAX(per_session), 0) INTO busiest_session
         FROM (SELECT COUNT(*) AS per_session
               FROM session_bookings b JOIN class_sessions s ON s.id = b.session_id
@@ -124,8 +124,8 @@ CREATE TRIGGER trg_sessions_check_conflict
 AFTER INSERT OR UPDATE OF class_id, session_date, start_time, end_time, status ON class_sessions
 FOR EACH ROW EXECUTE FUNCTION scms_check_session_conflict();
 
--- Room and member locks serialize independent application instances as well as direct SQL.
--- The room key is shared with class-session creation/rescheduling above.
+-- Khóa phòng và hội viên giúp tuần tự hóa cả các instance ứng dụng độc lập lẫn truy vấn SQL trực tiếp.
+-- Khóa phòng dùng chung với thao tác tạo/dời buổi lớp học ở trên.
 CREATE OR REPLACE FUNCTION scms_guard_court_booking()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
@@ -201,7 +201,7 @@ CREATE TRIGGER trg_court_bookings_check_conflict
 BEFORE INSERT OR UPDATE OF room_id, member_id, booking_date, start_time, end_time, status ON court_bookings
 FOR EACH ROW EXECUTE FUNCTION scms_guard_court_booking();
 
--- Changing the room of an existing class moves its sessions without updating their rows.
+-- Đổi phòng của một lớp hiện có sẽ chuyển phòng cho các buổi của lớp mà không cập nhật từng dòng buổi học.
 CREATE OR REPLACE FUNCTION scms_guard_class_court_room()
 RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
@@ -252,8 +252,8 @@ CREATE TRIGGER trg_enrollments_check_membership
 BEFORE INSERT OR UPDATE OF member_id, status ON class_enrollments
 FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_enrollment();
 
--- Per-session bookings: each session has its own seats. Class-wide enrollments (legacy rows) also occupy a seat in
--- every session of their class, so both are counted against the class capacity.
+-- Đặt chỗ theo buổi: mỗi buổi có danh sách chỗ riêng. Các lượt ghi danh toàn lớp (dữ liệu cũ) cũng chiếm một chỗ trong
+-- mọi buổi của lớp đó, nên cả hai đều được cộng lại để đối chiếu với sức chứa lớp.
 CREATE OR REPLACE FUNCTION scms_check_session_booking_capacity()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -358,7 +358,7 @@ CREATE TRIGGER trg_checkins_check_membership
 BEFORE INSERT ON center_checkins
 FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_checkin();
 
--- Filtered unique indexes (cannot be expressed portably in JPA)
+-- Các unique index có điều kiện lọc (không thể biểu diễn độc lập nền tảng trong JPA)
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_username ON users (username) WHERE username IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone ON users (phone) WHERE phone IS NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_enrollment_active ON class_enrollments (class_id, member_id) WHERE status = 'booked';
@@ -376,7 +376,7 @@ BEGIN
         EXECUTE format('ALTER TABLE %I.notifications ALTER COLUMN message DROP NOT NULL', current_schema());
     END IF;
 
-    -- Reception and managers have their own AI chat sessions with no member attached (staff_user_id instead).
+    -- Lễ tân và quản lý có các phiên chat AI riêng không gắn với hội viên (dùng staff_user_id thay thế).
     IF EXISTS (
         SELECT 1
         FROM information_schema.columns
@@ -398,7 +398,7 @@ BEGIN
         EXECUTE format('ALTER TABLE %I.membership_subscriptions ADD CONSTRAINT ck_subscriptions_status CHECK (status IN (''pending_payment'',''active'',''frozen'',''expired'',''cancelled''))', current_schema());
     END IF;
 
-    -- Each member–coach pair has one active plan; the plan it replaces is kept as history ('superseded') and can be re-applied.
+    -- Mỗi cặp hội viên–HLV chỉ có một giáo án đang hoạt động; giáo án bị thay thế được lưu làm lịch sử ('superseded') và có thể áp dụng lại.
     IF EXISTS (
         SELECT 1
         FROM information_schema.tables
@@ -407,8 +407,8 @@ BEGIN
     ) THEN
         EXECUTE format('ALTER TABLE %I.training_plans DROP CONSTRAINT IF EXISTS ck_plans_status', current_schema());
         EXECUTE format('ALTER TABLE %I.training_plans ADD CONSTRAINT ck_plans_status CHECK (status IN (''draft'',''active'',''superseded'',''completed'',''cancelled''))', current_schema());
-        -- Plans activated before this rule may leave one coach with several active plans for a member: keep the newest
-        -- per member–coach pair, move the rest to history. Plans from the member's other coaches stay active.
+        -- Các giáo án được kích hoạt trước quy tắc này có thể để một HLV có nhiều giáo án active cho cùng hội viên: giữ lại bản mới nhất
+        -- cho mỗi cặp hội viên–HLV và chuyển phần còn lại sang lịch sử. Giáo án từ các HLV khác của hội viên vẫn giữ trạng thái active.
         EXECUTE format('UPDATE %1$I.training_plans p SET status = ''superseded'' WHERE p.status = ''active'' AND EXISTS (SELECT 1 FROM %1$I.training_plans newer WHERE newer.member_id = p.member_id AND newer.coach_id = p.coach_id AND newer.status = ''active'' AND (newer.created_at > p.created_at OR (newer.created_at = p.created_at AND newer.id > p.id)))', current_schema());
     END IF;
 
@@ -533,11 +533,11 @@ BEGIN
         WHERE table_schema = current_schema()
           AND table_name = 'vnpay_transactions'
     ) THEN
-        -- Only expire transactions past expires_at; a restart must not fail a payment still open at the gateway.
+        -- Chỉ đánh dấu hết hạn các giao dịch đã quá expires_at; khởi động lại không được làm lỗi thanh toán vẫn còn mở trên cổng.
         EXECUTE format('UPDATE %I.vnpay_transactions SET status = ''failed'' WHERE status = ''pending'' AND gateway_transaction_no IS NULL AND expires_at < CURRENT_TIMESTAMP', current_schema());
     END IF;
 
-    -- Normalize legacy notification values, then enforce the same lists as Notification.java.
+    -- Chuẩn hóa các giá trị thông báo cũ, sau đó áp dụng cùng danh sách ràng buộc như Notification.java.
     IF EXISTS (
         SELECT 1
         FROM information_schema.tables
@@ -554,9 +554,9 @@ BEGIN
 END;
 $$;
 
--- SCRUM-86: Supabase Broadcast carries no payment/member/amount/status data.
--- The opaque capability is returned only to its authenticated owner by the API.
--- The send participates in the transaction, so rolled-back payments emit no event.
+-- SCRUM-86: Supabase Broadcast không mang dữ liệu thanh toán/hội viên/số tiền/trạng thái.
+-- Mã kênh ẩn danh chỉ được API trả về cho đúng chủ sở hữu đã xác thực.
+-- Lệnh gửi tham gia cùng transaction nên thanh toán bị rollback sẽ không phát sự kiện.
 CREATE OR REPLACE FUNCTION scms_membership_realtime_invalidation()
 RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
 DECLARE channel_id uuid;
@@ -570,7 +570,7 @@ BEGIN
     END IF;
     RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
-    -- A notification outage must never roll back a valid payment.
+    -- Sự cố dịch vụ thông báo không bao giờ được làm rollback một thanh toán hợp lệ.
     RAISE WARNING 'Membership invalidation unavailable (SQLSTATE %)', SQLSTATE;
     RETURN NEW;
 END;
@@ -580,7 +580,7 @@ DROP TRIGGER IF EXISTS trg_payments_realtime ON payments;
 CREATE TRIGGER trg_payments_realtime AFTER INSERT OR UPDATE ON payments
 FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
 
--- SCRUM-106: private chat invalidation; message text never leaves the authenticated API.
+-- SCRUM-106: vô hiệu hóa cache cho chat riêng tư; nội dung tin nhắn không bao giờ rời khỏi API đã xác thực.
 CREATE OR REPLACE FUNCTION scms_chat_realtime_invalidation()
 RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
 DECLARE member_id bigint; staff_id bigint;
@@ -594,7 +594,7 @@ BEGIN
     PERFORM realtime.send('{}'::jsonb, 'changed', 'scms:chat:' || staff_id::text, true);
     RETURN NEW;
 EXCEPTION WHEN OTHERS THEN
-    -- Persist messages even during a Realtime outage; reconnect/focus fetches missed data.
+    -- Vẫn lưu tin nhắn ngay cả khi Realtime gián đoạn; khi kết nối lại hoặc quay lại cửa sổ sẽ tải phần dữ liệu bị lỡ.
     RAISE WARNING 'Chat invalidation unavailable (SQLSTATE %)', SQLSTATE;
     RETURN NEW;
 END;
@@ -604,9 +604,9 @@ DROP TRIGGER IF EXISTS trg_chat_message_realtime ON chat_messages;
 CREATE TRIGGER trg_chat_message_realtime AFTER INSERT ON chat_messages
 FOR EACH ROW EXECUTE FUNCTION scms_chat_realtime_invalidation();
 
--- Only the public application installation owns these named global policies.
--- Isolated integration-test schemas must never change realtime.messages policies.
--- RLS is already enabled on Supabase's table; do not ALTER it.
+-- Chỉ bản cài đặt ứng dụng ở schema public mới sở hữu các global policy đặt tên này.
+-- Các schema integration-test cô lập tuyệt đối không được thay đổi policy trên realtime.messages.
+-- RLS đã được bật sẵn trên bảng của Supabase; không dùng ALTER để thay đổi.
 DO $$
 BEGIN
     IF current_schema() = 'public' AND to_regclass('realtime.messages') IS NOT NULL THEN
@@ -616,8 +616,8 @@ BEGIN
             AND (auth.jwt() ->> 'scms_chat_scope') = 'receive'
             AND realtime.topic() = 'scms:chat:' || (auth.jwt() ->> 'scms_chat_user_id'));
 
-        -- PostgreSQL ORs permissive policies: also constrain chat topics restrictively
-        -- so an existing broad receive policy cannot expose another user's inbox.
+        -- PostgreSQL gộp các permissive policy bằng toán tử OR: cần thêm ràng buộc restrictive cho các topic chat
+        -- để một receive policy rộng có sẵn không thể làm lộ hộp thư của người dùng khác.
         DROP POLICY IF EXISTS scms_chat_receive_guard ON realtime.messages;
         CREATE POLICY scms_chat_receive_guard ON realtime.messages AS RESTRICTIVE FOR SELECT TO authenticated
         USING (realtime.topic() NOT LIKE 'scms:chat:%' OR (
@@ -638,7 +638,7 @@ DROP TRIGGER IF EXISTS trg_coach_bookings_realtime ON coach_bookings;
 CREATE TRIGGER trg_coach_bookings_realtime AFTER INSERT OR UPDATE ON coach_bookings
 FOR EACH ROW EXECUTE FUNCTION scms_membership_realtime_invalidation();
 
--- SCRUM-128: transactional private invalidations, containing no ticket/message data.
+-- SCRUM-128: vô hiệu hóa cache riêng tư theo transaction, không chứa dữ liệu phiếu hỗ trợ/tin nhắn.
 CREATE OR REPLACE FUNCTION scms_support_realtime_invalidation()
 RETURNS trigger LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
 DECLARE ticket_id bigint;
@@ -681,21 +681,21 @@ BEGIN
 END;
 $$;
 
--- SCRUM-133: PT and group scheduling must share the same database guard.
+-- SCRUM-133: Lịch tập PT và lịch lớp nhóm phải dùng chung bộ bảo vệ ở tầng database.
 CREATE OR REPLACE FUNCTION scms_guard_pt_schedule()
 RETURNS trigger LANGUAGE plpgsql AS $$
 DECLARE
     target_coach BIGINT;
     schedule_conflict BOOLEAN := FALSE;
 BEGIN
-    -- Rows leaving the active state (cancel, complete) cannot create a conflict: skip the lock entirely.
+    -- Các dòng rời khỏi trạng thái đang hoạt động (hủy, hoàn thành) không thể gây trùng lịch: bỏ qua hoàn toàn bước khóa.
     IF (TG_TABLE_NAME = 'coach_bookings' AND NEW.status <> 'confirmed')
        OR (TG_TABLE_NAME IN ('class_enrollments', 'session_bookings') AND NEW.status <> 'booked')
        OR (TG_TABLE_NAME = 'class_sessions' AND NEW.status <> 'scheduled') THEN
         RETURN NEW;
     END IF;
-    -- ponytail: serialize schedule writes for this MVP; use ordered participant locks if contention grows.
-    -- Never wait while a caller may already hold a class row lock.
+    -- ponytail: tuần tự hóa các thao tác ghi lịch trong phạm vi MVP này; chuyển sang khóa theo thứ tự từng bên tham gia nếu tranh chấp tăng cao.
+    -- Không bao giờ chờ khóa khi bên gọi có thể đang giữ sẵn khóa dòng trên bảng classes.
     IF NOT pg_try_advisory_xact_lock(hashtext(current_schema()), 391133) THEN
         RAISE EXCEPTION 'trg_pt_schedule_busy'
             USING ERRCODE = '23514', CONSTRAINT = 'trg_pt_schedule_busy';
@@ -729,8 +729,8 @@ BEGIN
                   SELECT 1 FROM session_bookings sb WHERE sb.session_id = s.id
                     AND sb.member_id = NEW.member_id AND sb.status = 'booked'))
         ) INTO schedule_conflict;
-        -- Reject any four-hour PT run containing the candidate, including out-of-order inserts.
-        -- The schedule advisory lock above also serializes concurrent bookings and coach reassignments.
+        -- Từ chối mọi chuỗi 4 giờ PT liên tiếp chứa buổi đang xét, kể cả khi chèn không theo thứ tự thời gian.
+        -- Advisory lock lịch ở trên cũng tuần tự hóa các lượt đặt đồng thời và việc đổi HLV.
         IF EXISTS (
             SELECT 1 FROM generate_series(0, 3) AS offsets(hours_before)
             WHERE (SELECT count(DISTINCT b.start_time) FROM coach_bookings b

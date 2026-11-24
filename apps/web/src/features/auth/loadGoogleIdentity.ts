@@ -1,5 +1,6 @@
 let googleIdentityPromise: Promise<void> | null = null;
 
+/** Nạp script Google Identity Services một lần duy nhất; lỗi tải thì cho phép thử lại. */
 export function loadGoogleIdentity(): Promise<void> {
   if (typeof window !== 'undefined' && window.google?.accounts) {
     return Promise.resolve();

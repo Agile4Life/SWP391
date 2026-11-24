@@ -14,8 +14,6 @@ import com.swp391.scms.coaching.entity.TrainingPlan;
 import com.swp391.scms.coaching.entity.TrainingPlanItem;
 import com.swp391.scms.coaching.repository.TrainingPlanItemRepository;
 import com.swp391.scms.coaching.repository.TrainingPlanRepository;
-import com.swp391.scms.facilities.entity.Equipment;
-import com.swp391.scms.facilities.repository.EquipmentRepository;
 import com.swp391.scms.coaching.dto.TrainingPlanDto;
 import com.swp391.scms.coaching.dto.TrainingPlanItemCreateDto;
 import com.swp391.scms.coaching.service.TrainingPlanService;
@@ -39,6 +37,10 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Supplier;
 
+/**
+ * Gợi ý giáo án bằng AI cho HLV/quản lý: lấy hồ sơ và số đo hội viên, xu hướng cân nặng, giáo án hiện tại; gọi
+ * AI ngoài transaction; đọc kết quả JSON một cách chịu lỗi; lưu nhật ký và có thể áp dụng thành giáo án thật.
+ */
 @Service
 public class AiRecommendationService {
 
@@ -65,7 +67,6 @@ public class AiRecommendationService {
 
     private static final int MAX_PLAN_ITEMS = 40;
     private static final int MAX_CONTEXT_PLAN_ITEMS = 20;
-    private static final int MAX_CONTEXT_EQUIPMENT = 40;
 
     private final AiClient aiClient;
     private final AiRecommendationLogRepository recommendationLogRepository;
@@ -77,12 +78,14 @@ public class AiRecommendationService {
     private final TransactionTemplate writeTx;
     private final TransactionTemplate readOnlyTx;
 
+    /** Constructor cho test với các phụ thuộc tối thiểu. */
     public AiRecommendationService(AiClient aiClient,
                                    AiRecommendationLogRepository recommendationLogRepository,
                                    MemberRepository memberRepository) {
         this(aiClient, recommendationLogRepository, memberRepository, null, null, null, new ObjectMapper(), null);
     }
 
+    /** Constructor cho test có thêm repository. */
     public AiRecommendationService(AiClient aiClient,
                                    AiRecommendationLogRepository recommendationLogRepository,
                                    MemberRepository memberRepository,
@@ -94,6 +97,7 @@ public class AiRecommendationService {
                 progressLogRepository, trainingPlanService, objectMapper, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public AiRecommendationService(AiClient aiClient,
                                    AiRecommendationLogRepository recommendationLogRepository,
@@ -120,26 +124,29 @@ public class AiRecommendationService {
         }
     }
 
+    /** Chạy hành động trong transaction chỉ đọc (không có trình quản lý transaction thì chạy thẳng). */
     private <T> T inReadOnlyTx(Supplier<T> action) {
         return readOnlyTx != null ? readOnlyTx.execute(status -> action.get()) : action.get();
     }
 
+    /** Chạy hành động trong transaction ghi (không có trình quản lý transaction thì chạy thẳng). */
     private <T> T inWriteTx(Supplier<T> action) {
         return writeTx != null ? writeTx.execute(status -> action.get()) : action.get();
     }
 
+    /** Gợi ý dạng văn bản tự do cho hội viên (cách cũ) và lưu nhật ký. */
     public String generateRecommendation(Long memberId, String healthContext) {
-        // Phase 1: short read-only transaction
+        // Giai đoạn 1: transaction đọc ngắn.
         Member member = inReadOnlyTx(() -> memberRepository.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId)));
         String membershipCode = member.getMembershipCode();
 
-        // Phase 2: call AI outside transaction (no DB connection held)
+        // Giai đoạn 2: gọi AI ngoài transaction (không giữ kết nối DB).
         String systemPrompt = "Bạn là chuyên gia thể hình và sức khỏe tại Trung tâm Thể thao SCMS.";
         String userMessage = "Tạo gợi ý bài tập cho hội viên " + membershipCode + ": " + healthContext;
         String response = aiClient.generate(systemPrompt, userMessage);
 
-        // Phase 3: short write transaction
+        // Giai đoạn 3: transaction ghi ngắn.
         inWriteTx(() -> {
             if (recommendationLogRepository != null) {
                 AiRecommendationLog log = new AiRecommendationLog();
@@ -158,6 +165,7 @@ public class AiRecommendationService {
         return response;
     }
 
+    /** Ảnh chụp dữ liệu đọc được trước khi gọi AI: hội viên, HLV, số đo, dữ liệu đầu vào và ngữ cảnh truy xuất. */
     private record WorkoutPlanReadSnapshot(
             Member member,
             String memberName,
@@ -170,12 +178,18 @@ public class AiRecommendationService {
             String retrievedContext
     ) {}
 
+    /** Đề xuất giáo án (không chỉ rõ vai trò người gọi). */
     public AiWorkoutPlanResponse generateWorkoutPlan(AiWorkoutPlanRequest request, Long coachUserId) {
         return generateWorkoutPlan(request, coachUserId, null);
     }
 
+    /**
+     * Đề xuất giáo án: (1) đọc hồ sơ hội viên (phải còn active), HLV chỉ được soạn cho học viên mình phụ trách,
+     * số đo mới nhất và BMI; (2) kiểm tra giới hạn tần suất rồi gọi AI dạng JSON; (3) đọc mục tiêu, phân tích,
+     * bài tập (thiếu thì dùng mẫu mặc định) và lưu nhật ký.
+     */
     public AiWorkoutPlanResponse generateWorkoutPlan(AiWorkoutPlanRequest request, Long callerUserId, String callerRole) {
-        // Phase 1: short read-only transaction
+        // Giai đoạn 1: transaction đọc ngắn.
         WorkoutPlanReadSnapshot snapshot = inReadOnlyTx(() -> {
             Member member = memberRepository.findById(request.getMemberId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.member", request.getMemberId()));
@@ -189,7 +203,8 @@ public class AiRecommendationService {
             Coach callerCoach = (!isManagerCaller && callerUserId != null && coachRepository != null)
                     ? coachRepository.findById(callerUserId).orElse(null)
                     : null;
-            // A coach (not a manager, who has no coach profile) plans only for members currently assigned to them.
+            // HLV (không phải quản lý, người không có hồ sơ HLV) chỉ lập kế hoạch cho hội viên đang được phân
+            // công cho mình.
             if (callerCoach != null) {
                 if (currentCoachMembers != null) {
                     currentCoachMembers.requireCoachOf(callerCoach.getUserId(), member.getUserId());
@@ -232,7 +247,7 @@ public class AiRecommendationService {
 
         enforceRateLimit(callerUserId);
 
-        // Phase 2: call AI outside transaction (no DB connection held)
+        // Giai đoạn 2: gọi AI ngoài transaction (không giữ kết nối DB).
         String userPrompt = "DỮ LIỆU\nHồ sơ thể chất hội viên (JSON): " + snapshot.inputContextJson()
                 + snapshot.retrievedContext();
         String rawAiOutput = aiClient.generateJson(WORKOUT_SYSTEM_PROMPT, userPrompt);
@@ -256,7 +271,7 @@ public class AiRecommendationService {
         recommendedContentMap.put("items", structuredItems);
         String recommendedContentJson = toJsonSafe(recommendedContentMap);
 
-        // Phase 3: short write transaction
+        // Giai đoạn 3: transaction ghi ngắn.
         AiRecommendationLog saved = inWriteTx(() -> {
             AiRecommendationLog log = new AiRecommendationLog();
             if (coach != null) {
@@ -289,6 +304,10 @@ public class AiRecommendationService {
         return response;
     }
 
+    /**
+     * Áp dụng gợi ý thành giáo án: HLV chỉ áp dụng gợi ý của chính mình; ngày mặc định 4 tuần từ hôm nay; dùng
+     * mục tiêu và bài tập đã chỉnh (nếu có) hoặc từ gợi ý; tạo giáo án nháp và kích hoạt ngay nếu được yêu cầu.
+     */
     @Transactional
     public TrainingPlanDto applyRecommendation(Long recommendationId,
                                                AiApplyRecommendationRequest request,
@@ -361,6 +380,7 @@ public class AiRecommendationService {
         return created;
     }
 
+    /** Các gợi ý của một hội viên sau khi kiểm tra quyền (HLV phải đang phụ trách). */
     @Transactional(readOnly = true)
     public List<AiWorkoutPlanResponse> getMemberRecommendations(Long memberId, Long currentUserId, String currentRole) {
         if ("COACH".equalsIgnoreCase(currentRole) && currentCoachMembers != null) {
@@ -371,6 +391,7 @@ public class AiRecommendationService {
         return getMemberRecommendations(memberId);
     }
 
+    /** Các gợi ý AI của hội viên, mới nhất trước, đã đọc lại thành DTO. */
     @Transactional(readOnly = true)
     public List<AiWorkoutPlanResponse> getMemberRecommendations(Long memberId) {
         if (!memberRepository.existsById(memberId)) {
@@ -398,6 +419,7 @@ public class AiRecommendationService {
                 .toList();
     }
 
+    /** Giá trị mới nhất của từng loại số đo của hội viên. */
     private Map<String, BigDecimal> readLatestMetrics(Long memberId) {
         Map<String, BigDecimal> map = new HashMap<>();
         if (progressLogRepository == null || memberId == null) {
@@ -415,6 +437,10 @@ public class AiRecommendationService {
         return map;
     }
 
+    /**
+     * Câu tóm tắt thể trạng dự phòng: mã hội viên, trình độ, chiều cao/cân nặng/BMI, lưu ý sức khỏe và yêu cầu
+     * của HLV.
+     */
     private String buildAnalysisSummary(Member member, BigDecimal height, BigDecimal weight, BigDecimal bmi, String extra) {
         StringBuilder sb = new StringBuilder("Phân tích thể trạng hội viên ");
         sb.append(member.getMembershipCode() != null ? member.getMembershipCode() : "#" + member.getUserId());
@@ -436,6 +462,7 @@ public class AiRecommendationService {
         return sb.toString();
     }
 
+    /** Đọc chuỗi JSON thành cây; lỗi thì trả null. */
     private JsonNode tryReadTree(String json) {
         if (json == null || json.isBlank()) {
             return null;
@@ -447,6 +474,7 @@ public class AiRecommendationService {
         }
     }
 
+    /** Mục tiêu từ kết quả AI, không có thì dùng mặc định. */
     private String parseGoalOrDefault(JsonNode root, String defaultGoal) {
         if (root != null && root.hasNonNull("goal") && !root.get("goal").asText().isBlank()) {
             return root.get("goal").asText();
@@ -454,6 +482,7 @@ public class AiRecommendationService {
         return defaultGoal;
     }
 
+    /** Phần phân tích từ kết quả AI (hoặc trường content), không có thì dùng mặc định. */
     private String parseAnalysisOrDefault(JsonNode root, String defaultAnalysis) {
         if (root != null) {
             if (root.hasNonNull("analysis") && !root.get("analysis").asText().isBlank()) {
@@ -466,6 +495,7 @@ public class AiRecommendationService {
         return defaultAnalysis;
     }
 
+    /** Danh sách bài tập từ kết quả AI; không đọc được thì dùng 3 bài mẫu (có ghi chú sức khỏe và yêu cầu thêm). */
     private List<TrainingPlanItemCreateDto> parseOrBuildStructuredItems(JsonNode root, Member member, String extra) {
         List<TrainingPlanItemCreateDto> parsed = parseItems(root);
         if (!parsed.isEmpty()) {
@@ -489,8 +519,11 @@ public class AiRecommendationService {
     }
 
     /**
-     * Reads the model's items one by one, so a single odd field or out-of-range number
-     * cannot discard the whole plan; values are brought into the ranges the plan form accepts.
+     * Đọc từng bài tập một để một trường lạ không làm hỏng cả giáo án; đưa ngày, hiệp, lần, thời gian và thứ tự
+     * về khoảng hợp lệ; tối đa số bài cho phép.
+     *
+     * Đọc từng mục mà mô hình trả về, để một trường lạ hay số ngoài khoảng không làm bỏ cả kế hoạch; giá trị
+     * được đưa về các khoảng mà form kế hoạch chấp nhận.
      */
     private List<TrainingPlanItemCreateDto> parseItems(JsonNode root) {
         JsonNode itemsNode = root != null ? root.get("items") : null;
@@ -525,6 +558,7 @@ public class AiRecommendationService {
         return items;
     }
 
+    /** Lấy giá trị chữ của trường đầu tiên có giá trị trong các tên cho trước. */
     private static String text(JsonNode node, String... names) {
         for (String name : names) {
             JsonNode value = node.get(name);
@@ -535,6 +569,7 @@ public class AiRecommendationService {
         return null;
     }
 
+    /** Lấy số nguyên của trường đầu tiên có giá trị; với chuỗi như "10-12" hoặc "12 reps" thì lấy số đứng đầu. */
     private static Integer integer(JsonNode node, String... names) {
         for (String name : names) {
             JsonNode value = node.get(name);
@@ -544,7 +579,7 @@ public class AiRecommendationService {
             if (value.isNumber()) {
                 return value.asInt();
             }
-            // Models sometimes answer "10-12" or "12 reps"; the leading number is the usable part.
+            // Mô hình đôi khi trả "10-12" hoặc "12 reps"; số đứng đầu là phần dùng được.
             java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d{1,4}").matcher(value.asText());
             if (m.find()) {
                 return Integer.valueOf(m.group());
@@ -553,14 +588,16 @@ public class AiRecommendationService {
         return null;
     }
 
+    /** Giữ giá trị nếu không nhỏ hơn min, không thì null. */
     private static Integer atLeast(Integer value, int min) {
         return value != null && value >= min ? value : null;
     }
 
     /**
-     * Retrieval for plan generation: what the model cannot know from the profile alone —
-     * the requested length, how the member's weight has moved, the plan they are on now,
-     * and the equipment the centre actually has in service.
+     * Ngữ cảnh truy xuất cho AI: chuyên môn HLV, số tuần giáo án, diễn biến cân nặng và giáo án đang áp dụng.
+     *
+     * Truy xuất cho việc sinh kế hoạch: những gì mô hình không thể biết chỉ từ hồ sơ — độ dài yêu cầu, cân
+     * nặng của hội viên đã thay đổi ra sao và kế hoạch họ đang theo.
      */
     private String buildRetrievedPlanContext(Long memberId, Coach coach, Integer durationWeeks) {
         StringBuilder sb = new StringBuilder();
@@ -575,10 +612,10 @@ public class AiRecommendationService {
             appendWeightTrend(sb, memberId);
             appendCurrentPlan(sb, memberId, coach != null ? coach.getUserId() : null);
         }
-        appendEquipment(sb);
         return sb.toString();
     }
 
+    /** Diễn biến cân nặng từ lần đo đầu tới lần đo gần nhất (cần ít nhất 2 lần đo). */
     private void appendWeightTrend(StringBuilder sb, Long memberId) {
         if (progressLogRepository == null) {
             return;
@@ -603,6 +640,7 @@ public class AiRecommendationService {
                 .append(weights.size()).append(" lần đo.");
     }
 
+    /** Giáo án đang áp dụng của hội viên (ưu tiên của HLV đang soạn) kèm các bài tập. */
     private void appendCurrentPlan(StringBuilder sb, Long memberId, Long targetCoachId) {
         if (trainingPlanRepository == null) {
             return;
@@ -640,37 +678,7 @@ public class AiRecommendationService {
         });
     }
 
-    private void appendEquipment(StringBuilder sb) {
-        if (equipmentRepository == null) {
-            return;
-        }
-        List<Equipment> all = equipmentRepository.findAllWithRoom();
-        if (all == null) {
-            return;
-        }
-        Map<String, Set<String>> byCategory = new LinkedHashMap<>();
-        int count = 0;
-        for (Equipment equipment : all) {
-            if (count >= MAX_CONTEXT_EQUIPMENT) {
-                break;
-            }
-            if (!"active".equalsIgnoreCase(equipment.getStatus()) || equipment.getName() == null) {
-                continue;
-            }
-            String category = equipment.getCategory() != null && !equipment.getCategory().isBlank()
-                    ? equipment.getCategory() : "Khác";
-            if (byCategory.computeIfAbsent(category, key -> new LinkedHashSet<>()).add(equipment.getName().trim())) {
-                count++;
-            }
-        }
-        if (byCategory.isEmpty()) {
-            return;
-        }
-        sb.append("\nThiết bị sẵn có tại trung tâm:");
-        byCategory.forEach((category, names) ->
-                sb.append("\n- ").append(category).append(": ").append(String.join(", ", names)));
-    }
-
+    /** Đọc chuỗi JSON thành Map; lỗi thì trả {raw: chuỗi gốc}. */
     private Map<String, Object> parseMapSafe(String json) {
         if (json == null || json.isBlank()) return Map.of();
         try {
@@ -680,6 +688,7 @@ public class AiRecommendationService {
         }
     }
 
+    /** Ghi đối tượng thành chuỗi JSON; lỗi thì trả "{}". */
     private String toJsonSafe(Object value) {
         try {
             return objectMapper.writeValueAsString(value);
@@ -688,6 +697,7 @@ public class AiRecommendationService {
         }
     }
 
+    /** Lấy giá trị trường aiClient. */
     public AiClient getAiClient() {
         return aiClient;
     }
@@ -700,6 +710,10 @@ public class AiRecommendationService {
     @org.springframework.beans.factory.annotation.Value("${app.ai.recommend.rate-limit.window-minutes:10}")
     private int rateLimitWindowMinutes = 10;
 
+    /**
+     * Giới hạn số lần tạo gợi ý của mỗi người (mặc định 10 lần trong 10 phút) bằng cửa sổ trượt trong bộ nhớ;
+     * vượt thì báo 429 kèm thời gian chờ.
+     */
     private void enforceRateLimit(Long userId) {
         if (userId == null) {
             return;
@@ -732,13 +746,10 @@ public class AiRecommendationService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.coaching.service.CoachMemberAccess coachMemberAccess;
 
-    /** Retrieval sources for plan generation; optional so the service stays constructible in unit tests. */
+    /** Các nguồn truy xuất cho việc sinh kế hoạch; tùy chọn để service vẫn dựng được trong unit test. */
     @Autowired(required = false)
     private TrainingPlanRepository trainingPlanRepository;
 
     @Autowired(required = false)
     private TrainingPlanItemRepository trainingPlanItemRepository;
-
-    @Autowired(required = false)
-    private EquipmentRepository equipmentRepository;
 }

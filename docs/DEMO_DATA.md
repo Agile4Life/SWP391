@@ -15,7 +15,7 @@ Khởi động lại API một lần. Seeder idempotent (bỏ qua nếu `manager
 
 - Chỉ bật trên DB demo/dev, **không** bật trên DB thật.
 - Ngày tháng tính theo ngày chạy seed (múi giờ Asia/Ho_Chi_Minh): seed **1–2 ngày trước buổi demo** để "sắp hết hạn", "buổi sắp tới" còn đúng.
-- Cần CatalogSeeder chạy trước (gói, bộ môn, phòng). Gói GOLD/SILVER/PLATINUM(+3 THÁNG) phải tồn tại.
+- Cần CatalogSeeder chạy trước (gói, bộ môn Gym, Phòng Gym Tiêu chuẩn). Gói GOLD/SILVER/PLATINUM(+3 THÁNG) phải tồn tại.
 - Muốn seed lại: xóa các user `*@demo.sol.vn` (và dữ liệu liên quan) rồi khởi động lại.
 
 ## Tài khoản (mật khẩu chung: `APP_DEMO_PASSWORD`)
@@ -24,39 +24,34 @@ Khởi động lại API một lần. Seeder idempotent (bỏ qua nếu `manager
 |---|---|---|
 | Quản lý | `manager@demo.sol.vn` | |
 | Lễ tân | `letan@demo.sol.vn` | nhận thanh toán, check-in thủ công |
-| HLV Gym | `hung@demo.sol.vn` | Strength Foundation, PT 1:1 |
-| HLV Yoga | `mai@demo.sol.vn` | Morning Flow Yoga |
-| HLV Boxing | `long@demo.sol.vn` | Boxing Cardio Rounds |
-| HLV Bơi | `thao@demo.sol.vn` | Aqua Technique |
+| HLV Gym – Sức mạnh | `hung@demo.sol.vn` | PT 1:1 với `an@`, `hieu@` |
+| HLV Gym – Phục hồi | `mai@demo.sol.vn` | PT 1:1 với `binh@`, `chi@` |
+| HLV Gym – Thể lực | `long@demo.sol.vn` | PT 1:1 với `giang@` |
+| HLV Gym – Sức bền | `thao@demo.sol.vn` | Chưa có lịch PT |
 | Admin | theo `APP_BOOTSTRAP_ADMIN_EMAIL` | không do seeder tạo |
 
 ## Hội viên và kịch bản
 
 | Email | Gói / trạng thái | Câu chuyện để demo |
 |---|---|---|
-| `an@` | PLATINUM 3 THÁNG, active | Gia hạn từ Gold cũ; lịch sử 35 ngày check-in, lớp, PT, chỉ số 4 tháng |
-| `binh@` | GOLD, active | Yoga + bơi, PT với HLV Yoga |
+| `an@` | PLATINUM 3 THÁNG, active | Gia hạn từ Gold cũ; lịch sử check-in và PT 1:1 với `hung@` |
+| `binh@` | GOLD, active | Giảm cân, PT 1:1 với `mai@` |
 | `chi@` | SILVER, active | Hội viên mới 5 ngày |
 | `dung@` | GOLD, **hết hạn** | Check-in bị từ chối (DENIED) |
 | `em@` | SILVER, **bảo lưu** | Đang trong thời gian bảo lưu đã duyệt |
 | `phuc@` | GOLD, **chờ thanh toán** | KYC chờ duyệt |
-| `giang@` | GOLD, active | Gia hạn từ Silver đã hết hạn; Boxing + Yoga |
+| `giang@` | GOLD, active | Gia hạn từ Silver đã hết hạn; PT 1:1 với `long@` |
 | `hieu@` | PLATINUM, **sắp hết hạn (3 ngày)** | Nhắc gia hạn |
 | `khoa@` | SILVER, **đã hủy** | |
 | `lan@` | chưa có gói | Mới đăng ký, KYC chờ duyệt |
 
 (Tất cả email có hậu tố `@demo.sol.vn`.)
 
-Dữ liệu đi kèm: thanh toán + hóa đơn cho mỗi gói đã trả (cash/pos/bank_transfer/online_wallet), 4 lớp với buổi 4 tuần trước (completed, có điểm danh present/late/absent) và 2 tuần tới (scheduled); hội viên đăng ký **trọn khóa** (`class_enrollments`), không có đặt từng buổi, check-in cổng, đặt PT quá khứ (completed) và sắp tới (confirmed), chỉ số cơ thể theo tháng.
+Dữ liệu đi kèm: thanh toán + hóa đơn cho mỗi gói đã trả (cash/pos/bank_transfer/online_wallet), check-in cổng, buổi PT 1:1 quá khứ (completed) và sắp tới (confirmed). Seeder vẫn ghi số đo theo tháng (`health_metrics`) cho `an@`, `binh@`, `giang@`, `hieu@` nhưng tính năng chỉ số cơ thể đã ngừng nên không màn hình nào hiển thị. Không còn lớp học nhóm.
 
-## Thời khóa biểu dày hơn (`DemoClassSeeder`)
+## Lớp học nhóm (`DemoClassSeeder`) — đã tắt
 
-Cùng cờ `APP_DEMO_SEED_ENABLED=true`, nhưng chạy **độc lập** với `DemoDataSeeder` nên bổ sung được cho DB đã seed trước đó (chỉ cần khởi động lại API).
-
-- Thêm 26 khóa học định kỳ do quản lý tạo: Gym, Yoga, Boxing, Bơi lội. Gồm khóa đang chạy (3 tuần trước → 5 tuần tới, buổi quá khứ `completed`), khóa sắp khai giảng (`scheduled`) và khóa đã kết thúc (lớp `archived`). Có lớp miễn phí và lớp có phí.
-- Idempotent theo **tên lớp**: lớp đã tồn tại thì bỏ qua, không sửa. Không tạo hội viên hay ghi danh.
-- HLV lấy từ HLV `active` theo chuyên môn, phòng theo tên (bỏ qua phòng không `available`, ví dụ Ring Arena đang bảo trì). Mỗi khóa chỉ được đặt vào khung giờ trống của HLV và phòng (trigger DB không cho trùng); nếu giờ ưa thích bận thì dịch ±1–4 giờ trong 06:00–22:00, không xếp được thì bỏ qua và ghi cảnh báo trong log.
-- Muốn nạp lại: xóa các lớp này (và buổi học của chúng) rồi khởi động lại API.
+Lớp học nhóm đã ngừng (22/11/2026), nên `DemoClassSeeder` chỉ chạy khi bật **cả** `APP_DEMO_SEED_ENABLED=true` và `app.legacy.classes-enabled=true`. Mặc định nó không tạo khóa học nào.
 
 ## Ghi chú kỹ thuật
 

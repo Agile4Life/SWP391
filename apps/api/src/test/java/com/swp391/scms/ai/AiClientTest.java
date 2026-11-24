@@ -32,6 +32,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+/** Bộ kiểm thử cho AiClient (ai client). */
 @ExtendWith(MockitoExtension.class)
 class AiClientTest {
 
@@ -41,6 +42,7 @@ class AiClientTest {
     @Mock
     private MemberRepository memberRepository;
 
+    /** Kiểm thử: MockAiClient trả kết quả giả. */
     @Test
     @DisplayName("MockAiClient should return valid model name and non-empty response")
     void testMockAiClient() {
@@ -53,6 +55,7 @@ class AiClientTest {
         assertTrue(response.contains("Gợi ý"));
     }
 
+    /** Kiểm thử: AiClientConfig dùng phương án dự phòng. */
     @Test
     @DisplayName("AiClientConfig should fallback to MockAiClient when apiKey is empty")
     void testAiClientConfigFallback() {
@@ -66,6 +69,7 @@ class AiClientTest {
         assertEquals("mock", client.getProviderName());
     }
 
+    /** Kiểm thử: OpenAiRestClient gọi HTTP đúng. */
     @Test
     @DisplayName("OpenAiRestClient should call OpenAI chat completions endpoint and strip markdown fences")
     void testOpenAiRestClientHttpCall() {
@@ -85,6 +89,7 @@ class AiClientTest {
         server.verify();
     }
 
+    /** Kiểm thử: GeminiRestClient gọi HTTP đúng. */
     @Test
     @DisplayName("GeminiRestClient should call Gemini generateContent endpoint and extract candidate text")
     void testGeminiRestClientHttpCall() {
@@ -104,6 +109,7 @@ class AiClientTest {
         server.verify();
     }
 
+    /** Kiểm thử: chế độ JSON chỉ dùng cho generateJson. */
     @Test
     @DisplayName("JSON mode is requested only by generateJson, for both OpenAI-compatible and Gemini clients")
     void testJsonModeOnlyForGenerateJson() {
@@ -136,6 +142,7 @@ class AiClientTest {
         gemini.verify();
     }
 
+    /** Kiểm thử: AiRecommendationService hoạt động đúng. */
     @Test
     @DisplayName("AiRecommendationService should generate recommendation and save log")
     void testAiRecommendationService() {

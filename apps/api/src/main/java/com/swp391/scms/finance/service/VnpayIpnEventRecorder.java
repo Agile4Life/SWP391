@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 import java.util.Map;
 
 /**
- * Keeps an audit row for each VNPay callback in its own transaction: the settlement may have rolled back (code 99)
- * and the handler runs outside any transaction. Failures are swallowed so the answer to VNPay never changes.
+ * Ghi nhật ký đối soát cho mỗi callback VNPay trong transaction riêng: luồng thanh toán chính có thể đã rollback
+ * (mã 99) và handler chạy bên ngoài mọi transaction. Lỗi ghi nhật ký được bỏ qua để câu trả lời cho VNPay không bao giờ đổi.
  */
 @Service
 public class VnpayIpnEventRecorder {
@@ -23,11 +23,13 @@ public class VnpayIpnEventRecorder {
     private final VnpayIpnEventRepository events;
     private final Clock clock;
 
+    /** Nhận repository nhật ký callback và Clock. */
     public VnpayIpnEventRecorder(VnpayIpnEventRepository events, Clock clock) {
         this.events = events;
         this.clock = clock;
     }
 
+    /** Lưu một bản ghi callback trong transaction riêng; lỗi chỉ ghi cảnh báo. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void record(String source, Map<String, String> params, String rspCode) {
         try {
@@ -37,7 +39,10 @@ public class VnpayIpnEventRecorder {
         }
     }
 
-    /** Builds the row from the whitelisted, non-sensitive gateway fields only. */
+    /**
+     * Dựng bản ghi chỉ từ các trường không nhạy cảm nằm trong danh sách cho phép của cổng
+     * (mã tham chiếu, mã phản hồi, trạng thái, mã giao dịch, số tiền) và mã đã trả lời.
+     */
     VnpayIpnEvent toEvent(String source, Map<String, String> params, String rspCode) {
         Map<String, String> p = params != null ? params : Map.of();
         String normalizedSource = VnpayIpnEvent.SOURCE_RETURN.equals(source) ? VnpayIpnEvent.SOURCE_RETURN : VnpayIpnEvent.SOURCE_IPN;
@@ -52,6 +57,7 @@ public class VnpayIpnEventRecorder {
                 LocalDateTime.now(clock));
     }
 
+    /** Cắt chuỗi về độ dài tối đa; trống thì null. */
     private static String clip(String value, int max) {
         if (value == null) return null;
         String trimmed = value.trim();
@@ -59,6 +65,7 @@ public class VnpayIpnEventRecorder {
         return trimmed.length() > max ? trimmed.substring(0, max) : trimmed;
     }
 
+    /** Đổi số tiền VNPay (đơn vị xu, nhân 100) về đồng; giá trị không hợp lệ hoặc quá lớn thì null. */
     private static BigDecimal amount(String raw) {
         if (raw == null || !raw.matches("[0-9]{1,14}")) return null;
         BigDecimal value = new BigDecimal(raw).movePointLeft(2);

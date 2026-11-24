@@ -12,7 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Adapter for persisting in-app notifications to the database (SCRUM-108).
+ * Adapter kênh thông báo trong ứng dụng: lưu thông báo in-app vào database (SCRUM-108).
  */
 @Component
 public class InAppNotificationChannelAdapter implements NotificationChannelAdapter {
@@ -22,6 +22,7 @@ public class InAppNotificationChannelAdapter implements NotificationChannelAdapt
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
 
+    /** Nhận repository thông báo và người dùng. */
     public InAppNotificationChannelAdapter(
             NotificationRepository notificationRepository,
             UserRepository userRepository
@@ -30,11 +31,16 @@ public class InAppNotificationChannelAdapter implements NotificationChannelAdapt
         this.userRepository = userRepository;
     }
 
+    /** Kênh IN_APP. */
     @Override
     public NotificationChannel getChannel() {
         return NotificationChannel.IN_APP;
     }
 
+    /**
+     * Lưu thông báo cho người dùng chưa bị xóa; thiếu userId hoặc không thấy người dùng thì bỏ qua và ghi cảnh
+     * báo.
+     */
     @Override
     public void send(NotificationPayload payload) {
         if (payload == null || payload.userId() == null) {

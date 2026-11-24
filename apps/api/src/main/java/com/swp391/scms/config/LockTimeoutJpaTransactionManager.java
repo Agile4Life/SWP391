@@ -10,21 +10,30 @@ import org.springframework.transaction.TransactionDefinition;
 import java.sql.Statement;
 
 /**
- * Starts each read-write transaction with {@code SET LOCAL lock_timeout}. A pessimistic lock ({@code FOR UPDATE})
- * blocked longer than that fails with SQLState 55P03, mapped to HTTP 409 "busy, try again", instead of holding the
- * request (and a pooled connection) open indefinitely.
+ * Trình quản lý transaction JPA có thêm giới hạn thời gian chờ khóa dòng: mỗi transaction ghi chạy "SET LOCAL
+ * lock_timeout" để nếu phải chờ khóa quá lâu thì báo lỗi 409 "đang bận, thử lại" thay vì treo request và giữ
+ * kết nối mãi.
  *
- * <p>{@code SET LOCAL} only lasts until commit/rollback, so it is safe behind a transaction pooler and leaves no
- * setting on the shared connection.
+ * Bắt đầu mỗi transaction đọc-ghi bằng {@code SET LOCAL lock_timeout}. Khóa bi quan ({@code FOR UPDATE}) bị
+ * chặn lâu hơn mức đó sẽ lỗi với SQLState 55P03, được ánh xạ thành HTTP 409 "bận, thử lại", thay vì giữ
+ * request (và một kết nối trong pool) mở vô thời hạn.
+ *
+ * <p>{@code SET LOCAL} chỉ có hiệu lực cho tới khi commit/rollback, nên an toàn khi chạy sau transaction pooler
+ * và không để lại cài đặt nào trên kết nối dùng chung.
  */
 public class LockTimeoutJpaTransactionManager extends JpaTransactionManager {
     private final long lockTimeoutMs;
 
+    /** Tạo trình quản lý với số mili giây tối đa được chờ khóa (0 hoặc âm nghĩa là không giới hạn). */
     public LockTimeoutJpaTransactionManager(EntityManagerFactory emf, long lockTimeoutMs) {
         super(emf);
         this.lockTimeoutMs = lockTimeoutMs;
     }
 
+    /**
+     * Mở transaction như bình thường rồi, với transaction ghi, đặt lock_timeout chỉ trong phạm vi transaction
+     * đó (SET LOCAL tự hết hiệu lực khi commit/rollback nên không ảnh hưởng kết nối dùng chung).
+     */
     @Override
     protected void doBegin(Object transaction, TransactionDefinition definition) {
         super.doBegin(transaction, definition);

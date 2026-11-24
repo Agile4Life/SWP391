@@ -1,6 +1,7 @@
 import { getIntlLocale, getLanguage } from '../i18n/language';
 import type { MembershipPackage } from '../../features/member/membershipApi';
 
+/** Định dạng số tiền theo VND và ngôn ngữ hiện tại. */
 export const formatPrice = (price: number) => new Intl.NumberFormat(getIntlLocale(), {
   style: 'currency', currency: 'VND',
 }).format(price);
@@ -27,6 +28,10 @@ const SEEDED_PACKAGE_LINE_EN: Readonly<Record<string, string>> = {
   'STANDARD – Đồng hành 3 tháng (Tiết kiệm 11%)': 'STANDARD – 3-month commitment (Save 11%)',
   'VIP – Đồng hành 3 tháng (Tiết kiệm 11%)': 'VIP – 3-month commitment (Save 11%)',
   'Nhận các dịch vụ của gói Gold (không gồm phòng VIP).': 'Access Gold tier services (excluding VIP studio).',
+  'Nhận các dịch vụ của gói Gold.': 'Access Gold tier services.',
+  'Không áp dụng chính sách bảo lưu.': 'Membership hold policies do not apply.',
+  'Giảm 10% dịch vụ PT bổ sung.': '10% off extra PT sessions.',
+  'Giảm 20% dịch vụ PT bổ sung.': '20% off extra PT sessions.',
   'Toàn quyền sử dụng khu vực gym tiêu chuẩn và trang thiết bị hiện đại.': 'Full access to the standard gym floor and modern training equipment.',
   '01 buổi tập Personal Trainer 1:1 cùng Huấn luyện viên chuyên nghiệp.': '1 Personal Trainer 1:1 session with a certified coach.',
   'Sử dụng tủ khóa và tiện ích phòng thay đồ.': 'Locker room and changing amenities included.',
@@ -71,16 +76,19 @@ const SEEDED_PACKAGE_LINE_EN: Readonly<Record<string, string>> = {
   '12 lượt đăng ký khóa Group Fitness.': '12 Group Fitness course enrollments.',
 };
 
+/** Dịch tên gói mẫu sang tiếng Anh khi đang ở bản tiếng Anh (gói không có bản dịch thì giữ nguyên). */
 export function localizeSeededPackageName(name: string, lang: 'vi' | 'en' = getLanguage()): string {
   if (!name || lang !== 'en') return name;
   return SEEDED_PACKAGE_NAME_EN[name.trim()] ?? name;
 }
 
+/** Dịch một dòng mô tả gói mẫu sang tiếng Anh khi đang ở bản tiếng Anh. */
 function localizeSeededPackageLine(line: string, lang: 'vi' | 'en'): string {
   if (!line || lang !== 'en') return line;
   return SEEDED_PACKAGE_LINE_EN[line.trim()] ?? line;
 }
 
+/** True nếu là gói trải nghiệm (miễn phí 3 ngày hoặc tên có "trải nghiệm"/"trial"). */
 export function isTrialPackage(pkg: { price?: number; durationDays?: number; name?: string }): boolean {
   if (pkg.price === 0 && pkg.durationDays === 3) return true;
   const name = (pkg.name || '').toLowerCase();
@@ -91,12 +99,14 @@ export function isTrialPackage(pkg: { price?: number; durationDays?: number; nam
 export const MIN_TERM_DAYS = 90;
 export const LONG_TERM_DAYS = 180;
 
+// Hiển thị quyền lợi thật từ catalog; không tự sửa quyền lợi để khớp scope Gym ở frontend.
 export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = getLanguage()) {
+  // Chọn chuỗi theo ngôn ngữ hiển thị.
   const t = (vi: string, en: string) => lang === 'en' ? en : vi;
   const desc = pkg.description?.trim() || '';
   const lines = desc.split('\n').map((l) => l.trim()).filter(Boolean);
 
-  // Extract bullet points if present (lines starting with '-' or '•')
+  // Trích xuất các dòng gạch đầu dòng nếu có (các dòng bắt đầu bằng '-' hoặc '•')
   const bulletPerks = lines
     .filter((l) => l.startsWith('-') || l.startsWith('•'))
     .map((l) => localizeSeededPackageLine(l.replace(/^[-•]\s*/, '').trim(), lang));
@@ -116,8 +126,7 @@ export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = ge
 
   const defaultBenefits = [
     t(`Hiệu lực ${pkg.durationDays} ngày kể từ khi kích hoạt`, `Valid for ${pkg.durationDays} days from activation`),
-    pkg.classCreditLimit != null ? t(`Tối đa ${pkg.classCreditLimit} lượt đặt lớp mỗi kỳ`, `Up to ${pkg.classCreditLimit} class bookings per period`) : t('Không giới hạn lượt đặt lớp', 'Unlimited class bookings'),
-    t('Đặt lớp và check-in khi gói còn hiệu lực', 'Book classes and check in while your membership is valid'),
+    t('Check-in và đặt lịch PT 1:1 khi gói còn hiệu lực', 'Check in and book 1:1 PT sessions while your membership is valid'),
     t('Thanh toán và kích hoạt tại quầy lễ tân', 'Payment and activation at reception'),
   ];
 
@@ -125,7 +134,7 @@ export function getPackageDetails(pkg: MembershipPackage, lang: 'vi' | 'en' = ge
   if (pkg.durationDays >= 360) {
     tierBadge = t(`Gói 12 tháng • 365 ngày (Tiết kiệm 25%)`, `12-month plan • 365 days (Save 25%)`);
   } else if (pkg.durationDays >= 170) {
-    tierBadge = t(`Gói 6 tháng • 180 ngày (Tiết kiệm ~17%)`, `6-month plan • 180 days (Save ~17%)`);
+    tierBadge = t(`Gói 6 tháng • 180 ngày`, `6-month plan • 180 days`);
   } else if (pkg.durationDays === 90) {
     tierBadge = t(`Gói 3 tháng • 90 ngày`, `3-month plan • 90 days`);
   } else if (pkg.durationDays === 30) {

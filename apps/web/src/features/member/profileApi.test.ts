@@ -1,15 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  addHealthMetric,
-  deleteHealthMetric,
   getProfile,
-  listHealthMetrics,
-  updateHealthMetric,
   updateProfile,
   type Profile,
 } from './profileApi';
 
-describe('profileApi.ts (Profile & Health Metrics)', () => {
+describe('profileApi.ts (Profile)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -35,6 +31,7 @@ describe('profileApi.ts (Profile & Health Metrics)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: mockProfile }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -66,6 +63,7 @@ describe('profileApi.ts (Profile & Health Metrics)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: updatedData }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -77,90 +75,25 @@ describe('profileApi.ts (Profile & Health Metrics)', () => {
       '/api/v1/profile',
       expect.objectContaining({
         method: 'PUT',
-        body: JSON.stringify(updatedData),
+        body: JSON.stringify({ ...updatedData, avatarUrl: undefined }),
       }),
     );
   });
 
-  it('listHealthMetrics and addHealthMetric call members health metrics endpoint', async () => {
-    const mockMetric = {
-      id: 1,
-      metricName: 'weight',
-      metricValue: 70.5,
-      unit: 'kg',
-      recordedAt: '2026-09-25T14:30:00',
-    };
-
-    const mockFetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ success: true, data: [mockMetric] }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ success: true, data: mockMetric }),
-      });
+  it('updateProfile leaves avatar and identity image data URLs out of the PUT body', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: {} }) });
     vi.stubGlobal('fetch', mockFetch);
-
-    const list = await listHealthMetrics(101);
-    expect(list).toEqual([mockMetric]);
-    expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/v1/members/101/health-metrics', expect.anything());
-
-    await addHealthMetric(101, { metricName: 'weight', metricValue: 70.5, unit: 'kg' });
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      2,
-      '/api/v1/members/101/health-metrics',
-      expect.objectContaining({
-        method: 'POST',
-        body: JSON.stringify({ metricName: 'weight', metricValue: 70.5, unit: 'kg' }),
-      }),
-    );
+    await updateProfile({
+      userId: 1, fullName: 'A', email: null, phone: null, dob: null, gender: null,
+      avatarUrl: 'data:image/png;base64,AAAA', address: null, membershipCode: null, healthNotes: null,
+      fitnessGoal: null, fitnessLevel: null, emergencyContactName: null, emergencyContactPhone: null,
+      frontImageUrl: 'data:image/jpeg;base64,BBBB', backImageUrl: 'data:image/jpeg;base64,CCCC',
+    });
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body).not.toHaveProperty('avatarUrl');
+    expect(body).not.toHaveProperty('frontImageUrl');
+    expect(body).not.toHaveProperty('backImageUrl');
+    expect(body.fullName).toBe('A');
   });
 
-  it('updateHealthMetric and deleteHealthMetric send PUT and DELETE requests', async () => {
-    const mockMetric = {
-      id: 5,
-      metricName: 'height',
-      metricValue: 175,
-      unit: 'cm',
-      recordedAt: '2026-10-01T10:00:00',
-    };
-
-    const mockFetch = vi
-      .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ success: true, data: mockMetric }),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        json: async () => ({ success: true, data: null }),
-      });
-    vi.stubGlobal('fetch', mockFetch);
-
-    const updated = await updateHealthMetric(101, 5, { metricName: 'height', metricValue: 175, unit: 'cm' });
-    expect(updated).toEqual(mockMetric);
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      1,
-      '/api/v1/members/101/health-metrics/5',
-      expect.objectContaining({
-        method: 'PUT',
-        body: JSON.stringify({ metricName: 'height', metricValue: 175, unit: 'cm' }),
-      }),
-    );
-
-    await deleteHealthMetric(101, 5);
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      2,
-      '/api/v1/members/101/health-metrics/5',
-      expect.objectContaining({
-        method: 'DELETE',
-      }),
-    );
-  });
 });

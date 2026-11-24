@@ -9,9 +9,18 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
 
-/** Reject unsafe cloud configuration before Hibernate or the pool opens a connection. */
+/**
+ * Kiểm tra cấu hình kết nối database ngay khi khởi động, trước khi Hibernate hay connection pool mở kết nối:
+ * bắt buộc profile "supabase", đủ thông tin đăng nhập và kết nối có mã hóa TLS.
+ *
+ * Từ chối cấu hình cloud không an toàn trước khi Hibernate hay pool mở kết nối.
+ */
 @Configuration(proxyBeanMethods = false)
 public class SupabaseConfiguration {
+    /**
+     * Bean chạy rất sớm (BeanFactoryPostProcessor): dừng khởi động nếu không dùng profile "supabase", có
+     * profile database khác, thiếu URL/tài khoản/mật khẩu/JWT secret, hoặc kết nối không mã hóa.
+     */
     @Bean
     static BeanFactoryPostProcessor validateSupabaseConnection(Environment environment) {
         return beanFactory -> {
@@ -32,6 +41,10 @@ public class SupabaseConfiguration {
         };
     }
 
+    /**
+     * Kiểm tra URL JDBC: phải là PostgreSQL và không nhúng user/password/ssl trong URL; chế độ SSL phải là
+     * require, verify-ca hoặc verify-full.
+     */
     static void validateConnection(String url, String sslMode) {
         if (!url.startsWith("jdbc:postgresql:") || url.matches("(?is).*[?&](?:user|password|ssl|sslmode|sslfactory)=.*")) {
             throw new IllegalStateException("Use a PostgreSQL JDBC URL; configure credentials and TLS separately");

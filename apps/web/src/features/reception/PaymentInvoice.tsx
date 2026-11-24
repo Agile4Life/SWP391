@@ -5,6 +5,7 @@ import type { PaymentResponseDto } from './receptionApi';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import './payment-invoice.css';
 
+/** Props hóa đơn: khoản thanh toán, hội viên, mã thẻ, tên gói và thu ngân. */
 interface InvoiceProps {
   payment: PaymentResponseDto;
   memberName: string;
@@ -17,6 +18,7 @@ const methods: Record<string, string> = {
   cash: 'Tiền mặt', pos: 'Thẻ / POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
 };
 
+/** Nội dung hóa đơn thanh toán (số hóa đơn, hội viên, gói, phương thức, số tiền) để xem và in. */
 function InvoiceDocument({ payment, memberName, membershipCode, packageName, cashierName }: InvoiceProps) {
   const { t } = useStaffI18n();
   const money = new Intl.NumberFormat(staffLocale(), { style: 'currency', currency: 'VND' });
@@ -56,6 +58,7 @@ function InvoiceDocument({ payment, memberName, membershipCode, packageName, cas
   </article>;
 }
 
+/** Hộp thoại hóa đơn sau khi ghi nhận thanh toán, kèm bản xem trước và nút đóng. */
 export function PaymentInvoice({ onClose, ...invoice }: InvoiceProps & { onClose: () => void }) {
   const { t } = useStaffI18n();
   return <>

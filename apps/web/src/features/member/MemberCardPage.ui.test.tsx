@@ -21,16 +21,19 @@ let host: HTMLDivElement;
 let root: Root;
 let clipboardDescriptor: PropertyDescriptor | undefined;
 
+// Dựng component vào DOM giả để kiểm thử.
 async function renderPage() {
   await act(async () => { root.render(<MemoryRouter><MemberCardPage /></MemoryRouter>); });
 }
 
+// Chờ cho mã QR tải xong.
 async function finishQrLoading() {
   const image = host.querySelector('img[alt="Mã QR check-in của hội viên"]');
   expect(image).not.toBeNull();
   await act(async () => { image?.dispatchEvent(new Event('load')); });
 }
 
+// Ngày theo giờ trung tâm lệch offsetDays so với hôm nay.
 function offsetCenterDate(offsetDays: number): string {
   const base = parseCenterTime(centerNowParts().date)!;
   base.setDate(base.getDate() + offsetDays);
@@ -47,7 +50,7 @@ beforeEach(() => {
   vi.mocked(getProfile).mockResolvedValue(profile as never);
   vi.mocked(getMySubscription).mockResolvedValue(subscription as never);
   vi.mocked(getMembershipHistory).mockResolvedValue([]);
-  // Only the rotating signed code is a scannable QR; the static identifier is never rendered.
+  // Chỉ mã ký số luân phiên mới là mã QR quét được; mã định danh tĩnh không bao giờ được hiển thị.
   vi.mocked(getDynamicQr).mockResolvedValue({ qrCode: 'DYN:9:1:123:signed', expiresInSeconds: 60, generatedAt: '2026-10-21T12:00:00' });
   vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,AA' as never);
 });

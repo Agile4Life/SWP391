@@ -15,8 +15,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The desk reviews identity documents before a member can buy a package: the declared number is checked against
- * the photos. Only receptionists and managers reach these methods.
+ * Lễ tân/quản lý duyệt giấy tờ tùy thân trước khi hội viên được mua gói: đối chiếu số giấy tờ đã khai với ảnh
+ * chụp.
+ *
+ * Quầy duyệt giấy tờ định danh trước khi hội viên mua gói: số khai báo được đối chiếu với ảnh. Chỉ lễ tân và
+ * quản lý gọi được các phương thức này.
  */
 @Service
 public class MemberKycReviewService {
@@ -24,7 +27,12 @@ public class MemberKycReviewService {
     public static final String APPROVED = "APPROVED";
     public static final String REJECTED = "REJECTED";
 
-    /** One submission waiting for review, with the readable number the reviewer compares to the photos. */
+    /**
+     * Một hồ sơ chờ duyệt: thông tin hội viên, loại giấy tờ, số giấy tờ đọc được, quốc tịch, ảnh mặt trước/sau
+     * và thời điểm nộp.
+     *
+     * Một hồ sơ đang chờ duyệt, kèm số đọc được để người duyệt so với ảnh.
+     */
     public record KycReviewDto(Long memberId, String membershipCode, String fullName, String documentType,
                                String citizenId, String nationality, String frontImageUrl, String backImageUrl,
                                LocalDateTime submittedAt) {}
@@ -39,6 +47,7 @@ public class MemberKycReviewService {
     @Autowired(required = false)
     private MessageService messages;
 
+    /** Nhận repository hội viên/người dùng, bộ mã hóa KycCrypto và Clock. */
     public MemberKycReviewService(MemberRepository members, UserRepository users, KycCrypto crypto, Clock clock) {
         this.members = members;
         this.users = users;
@@ -46,6 +55,7 @@ public class MemberKycReviewService {
         this.clock = clock;
     }
 
+    /** Danh sách hồ sơ PENDING (nộp sớm nhất trước), bỏ tài khoản đã xóa, kèm số giấy tờ đã giải mã. */
     @Transactional(readOnly = true)
     public List<KycReviewDto> listPending() {
         return members.findByKycStatusOrderByKycSubmittedAtAsc(PENDING).stream()
@@ -56,6 +66,10 @@ public class MemberKycReviewService {
                 .toList();
     }
 
+    /**
+     * Duyệt: đánh dấu đã xác minh danh tính, lưu thời điểm và người duyệt, xóa lý do từ chối cũ, gửi thông báo
+     * cho hội viên.
+     */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "MEMBER_KYC_APPROVE", entity = "members")
     public void approve(AuthenticatedPrincipal reviewer, Long memberId) {
@@ -71,6 +85,10 @@ public class MemberKycReviewService {
         notify(memberId, "notifications.kyc.approved.title", "notifications.kyc.approved.body", null);
     }
 
+    /**
+     * Từ chối: lý do bắt buộc (cắt còn 255 ký tự), đánh dấu chưa xác minh, lưu người duyệt và gửi thông báo kèm
+     * lý do.
+     */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "MEMBER_KYC_REJECT", entity = "members")
     public void reject(AuthenticatedPrincipal reviewer, Long memberId, String reason) {
@@ -90,6 +108,7 @@ public class MemberKycReviewService {
         notify(memberId, "notifications.kyc.rejected.title", "notifications.kyc.rejected.body", trimmed);
     }
 
+    /** Lấy hội viên và bắt buộc hồ sơ đang ở trạng thái PENDING; không thì báo 409. */
     private Member pending(Long memberId) {
         Member member = members.findById(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
@@ -100,11 +119,16 @@ public class MemberKycReviewService {
         return member;
     }
 
+    /** Số giấy tờ đọc được: ưu tiên bản giải mã, dữ liệu cũ chưa mã hóa thì dùng cột thường. */
     private String readableNumber(Member member) {
         String plain = crypto.decrypt(member.getCitizenIdEncrypted());
         return plain != null ? plain : member.getCitizenId();
     }
 
+    /**
+     * Gửi thông báo trong ứng dụng cho hội viên với tiêu đề/nội dung đã dịch (bỏ qua nếu không có dịch vụ thông
+     * báo).
+     */
     private void notify(Long memberId, String titleKey, String bodyKey, String arg) {
         if (notifications == null || messages == null) return;
         notifications.send(memberId, messages.getMessage(titleKey),

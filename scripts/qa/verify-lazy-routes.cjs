@@ -1,8 +1,9 @@
-// Run against the production preview with NODE_PATH supplying playwright-core.
+// Mục đích: kiểm tra các route tải lười (lazy) hoạt động đúng trên bản production preview với biến NODE_PATH cung cấp playwright-core.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const base = process.env.PERF_UI_URL || 'http://127.0.0.1:4173';
 
+// Chặn và giả lập các API cần cho việc duyệt các route lazy.
 async function fixtures(context) {
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());

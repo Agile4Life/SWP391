@@ -2,7 +2,6 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import { DatePicker } from './DatePicker';
-import { TimePicker } from './TimePicker';
 import { Select } from './Select';
 let host: HTMLDivElement;
 let root: Root;
@@ -17,29 +16,22 @@ it('associates a date label with the visible trigger and preserves the submitted
   expect(trigger.getAttribute('aria-invalid')).toBe('true');
   expect(new FormData(host.querySelector('form')!).get('custom-date')).toBe('2026-10-31');
 });
-it('forwards name, data-field, aria-label and aria-invalid on TimePicker and Select', async () => {
+it('forwards name, data-field, aria-label and aria-invalid on Select', async () => {
   await act(async () => root.render(
     <form>
-      <TimePicker id="session-time" name="custom-time" data-field="startTime" aria-label="Giờ bắt đầu" aria-invalid="true" value="08:00" onChange={() => {}} />
       <Select id="room-select" name="roomId" data-field="roomId" aria-label="Chọn phòng" aria-invalid="true" value="1" onChange={() => {}}>
         <option value="1">Phòng 1</option>
       </Select>
     </form>
   ));
-  const timeBtn = host.querySelector<HTMLButtonElement>('#session-time')!;
-  expect(timeBtn.getAttribute('data-field')).toBe('startTime');
-  expect(timeBtn.getAttribute('aria-label')).toBe('Giờ bắt đầu');
-  expect(timeBtn.getAttribute('aria-invalid')).toBe('true');
-  expect(new FormData(host.querySelector('form')!).get('custom-time')).toBe('08:00');
   const selectBtn = host.querySelector<HTMLButtonElement>('#room-select')!;
   expect(selectBtn.getAttribute('data-field')).toBe('roomId');
   expect(selectBtn.getAttribute('aria-label')).toBe('Chọn phòng');
   expect(selectBtn.getAttribute('aria-invalid')).toBe('true');
   expect(new FormData(host.querySelector('form')!).get('roomId')).toBe('1');
 });
-it.each(['date', 'time'])('consumes Escape inside an open %s picker and restores trigger focus', async (kind) => {
-  const Picker = kind === 'date' ? DatePicker : TimePicker;
-  await act(async () => root.render(<Picker value={kind === 'date' ? '2026-10-21' : '08:00'} onChange={() => {}} />));
+it('consumes Escape inside an open date picker and restores trigger focus', async () => {
+  await act(async () => root.render(<DatePicker value="2026-10-21" onChange={() => {}} />));
   const trigger = host.querySelector('button')!;
   await act(async () => trigger.click());
   expect(host.querySelector('[role=dialog]')).not.toBeNull();
@@ -48,11 +40,6 @@ it.each(['date', 'time'])('consumes Escape inside an open %s picker and restores
   expect(escape.defaultPrevented).toBe(true);
   expect(host.querySelector('[role=dialog]')).toBeNull();
   expect(document.activeElement).toBe(trigger);
-});
-it('allows existing schedules at any minute instead of rounding to five-minute intervals', async () => {
-  await act(async () => root.render(<TimePicker value="08:03" onChange={() => {}} />));
-  await act(async () => host.querySelector('button')!.click());
-  expect([...host.querySelectorAll('.ltp-col:last-child .ltp-col-scroll button')].some(b => b.textContent === '03')).toBe(true);
 });
 it('keeps Select option scrolling inside the listbox without calling scrollIntoView on ancestors', async () => {
   const scrollIntoView = vi.spyOn(HTMLElement.prototype, 'scrollIntoView');

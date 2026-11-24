@@ -13,8 +13,10 @@ import java.io.IOException;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho bộ lọc RateLimitingFilter (rate limiting filter). */
 class RateLimitingFilterTest {
 
+    /** Kiểm thử: request auth bị giới hạn tần suất và trả đúng dạng phản hồi API. */
     @Test
     void authRequestsAreLimitedAndUseApiResponseShape() throws Exception {
         MockHttpServletResponse response = null;
@@ -30,6 +32,7 @@ class RateLimitingFilterTest {
         assertEquals(429, json.get("status").asInt());
     }
 
+    /** Kiểm thử: đọc phiên mỗi lần mở portal không tính vào hạn mức đăng nhập. */
     @Test
     void sessionReadOnEveryPortalLoadDoesNotUseTheLoginBudget() throws Exception {
         for (int i = 0; i < 100; i++) {
@@ -49,12 +52,14 @@ class RateLimitingFilterTest {
     private RateLimitingFilter filter;
     private FilterChain filterChain;
 
+    /** Chuẩn bị trước mỗi test: tạo bộ lọc giới hạn tần suất cho test. */
     @BeforeEach
     void setUp() {
         filter = new RateLimitingFilter();
         filterChain = mock(FilterChain.class);
     }
 
+    /** Kiểm thử: Các request bình thường dưới ngưỡng limit được cho qua */
     @Test
     @DisplayName("Các request bình thường dưới ngưỡng limit được cho qua")
     void requestsUnderLimit_passThrough() throws ServletException, IOException {
@@ -68,6 +73,10 @@ class RateLimitingFilterTest {
         verify(filterChain).doFilter(request, response);
     }
 
+    /**
+     * Kiểm thử: Vượt quá rate limit (quét cạn > 60 req/phút) -> Trả về HTTP 429 Too Many Requests kèm
+     * Retry-After
+     */
     @Test
     @DisplayName("Vượt quá rate limit (quét cạn > 60 req/phút) -> Trả về HTTP 429 Too Many Requests kèm Retry-After")
     void requestsExceedingLimit_return429TooManyRequests() throws ServletException, IOException {

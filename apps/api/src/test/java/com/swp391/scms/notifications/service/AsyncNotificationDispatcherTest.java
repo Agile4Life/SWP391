@@ -15,6 +15,7 @@ import java.util.Set;
 
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho AsyncNotificationDispatcher (async notification dispatcher). */
 @ExtendWith(MockitoExtension.class)
 class AsyncNotificationDispatcherTest {
 
@@ -32,6 +33,7 @@ class AsyncNotificationDispatcherTest {
 
     private AsyncNotificationDispatcher dispatcher;
 
+    /** Chuẩn bị trước mỗi test: tạo AsyncNotificationDispatcher với adapter giả lập. */
     @BeforeEach
     void setUp() {
         lenient().when(inAppAdapter.getChannel()).thenReturn(NotificationChannel.IN_APP);
@@ -44,6 +46,7 @@ class AsyncNotificationDispatcherTest {
         ));
     }
 
+    /** Kiểm thử: dispatch gửi tới các kênh phù hợp. */
     @Test
     @DisplayName("Dispatch sends payload to all requested channels")
     void dispatch_SendsToMatchingChannels() {
@@ -65,6 +68,7 @@ class AsyncNotificationDispatcherTest {
         verify(webhookAdapter, never()).send(any());
     }
 
+    /** Kiểm thử: dispatch xử lý êm khi adapter ném lỗi. */
     @Test
     @DisplayName("Dispatch handles adapter exceptions gracefully without failing other adapters")
     void dispatch_HandlesAdapterExceptionGracefully() {
@@ -81,9 +85,10 @@ class AsyncNotificationDispatcherTest {
         dispatcher.dispatch(payload);
 
         verify(emailAdapter).send(payload);
-        verify(pushAdapter).send(payload); // Push still delivered successfully
+        verify(pushAdapter).send(payload); // Kênh Push vẫn được gửi thành công
     }
 
+    /** Kiểm thử: dispatch với payload null không làm gì. */
     @Test
     @DisplayName("Dispatch discards null payload safely")
     void dispatch_NullPayload_NoOp() {
@@ -93,6 +98,7 @@ class AsyncNotificationDispatcherTest {
         verify(emailAdapter, never()).send(any());
     }
 
+    /** Kiểm thử: dispatch bản overload dùng kênh mặc định. */
     @Test
     @DisplayName("Overloaded dispatch creates payload with default channels (IN_APP, EMAIL, PUSH)")
     void dispatch_Overload_DefaultChannels() {

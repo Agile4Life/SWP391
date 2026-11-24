@@ -39,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * SCRUM-73: enrollment endpoint contract tests.
+ * Bộ kiểm thử hợp đồng endpoint cho EnrollmentController (SCRUM-73).
  */
 @ExtendWith(MockitoExtension.class)
 class EnrollmentControllerTest {
@@ -52,11 +52,13 @@ class EnrollmentControllerTest {
     private EnrollmentController controller;
 
     private final HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+        /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
         @Override
         public boolean supportsParameter(MethodParameter parameter) {
             return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
         }
 
+        /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                 NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
@@ -64,6 +66,7 @@ class EnrollmentControllerTest {
         }
     };
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller ghi danh. */
     @BeforeEach
     void setUp() {
         new ObjectMapper().registerModule(new JavaTimeModule());
@@ -83,12 +86,14 @@ class EnrollmentControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample dto). */
     private EnrollmentDto sampleDto() {
         return new EnrollmentDto(1L, 5L, "Yoga Flow", 12L, 9L,
                 LocalDate.now().plusDays(1), LocalTime.of(18, 0), LocalTime.of(19, 0),
                 "booked", LocalDateTime.now(), null, null);
     }
 
+    /** Kiểm thử: ghi danh theo từng buổi đã ngừng hoạt động. */
     @Test
     void perSessionEnrollIsRetired() throws Exception {
         mockMvc.perform(post("/api/v1/classes/sessions/9/enroll"))
@@ -96,6 +101,7 @@ class EnrollmentControllerTest {
         org.mockito.Mockito.verify(enrollmentService, org.mockito.Mockito.never()).enroll(any(), anyLong());
     }
 
+    /** Kiểm thử: hủy ghi danh trả 200 OK. */
     @Test
     void cancelReturnsOk() throws Exception {
         when(enrollmentService.cancel(any(), anyLong())).thenReturn(sampleDto());
@@ -105,6 +111,7 @@ class EnrollmentControllerTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    /** Kiểm thử: endpoint danh sách ghi danh của tôi tồn tại. */
     @Test
     void myEnrollmentsEndpointExists() throws Exception {
         mockMvc.perform(get("/api/v1/classes/enrollments/my"))

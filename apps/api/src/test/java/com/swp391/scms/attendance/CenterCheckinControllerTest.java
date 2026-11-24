@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller CenterCheckinController (center checkin controller). */
 @ExtendWith(MockitoExtension.class)
 class CenterCheckinControllerTest {
 
@@ -47,11 +48,13 @@ class CenterCheckinControllerTest {
     private CenterCheckinController controller;
 
     private final HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+        /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
         @Override
         public boolean supportsParameter(MethodParameter parameter) {
             return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
         }
 
+        /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                       NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
@@ -61,6 +64,7 @@ class CenterCheckinControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc và các mock phụ thuộc của controller check-in. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -75,6 +79,7 @@ class CenterCheckinControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: quét QR hợp lệ trả 201 Created. */
     @Test
     void scan_returnsCreated() throws Exception {
         CheckinRequests.Scan request = new CheckinRequests.Scan("QR-UUID-VALID", "Cổng chính A");
@@ -91,6 +96,7 @@ class CenterCheckinControllerTest {
                 .andExpect(jsonPath("$.data.status").value("GRANTED"));
     }
 
+    /** Kiểm thử: quét QR bị từ chối vẫn trả 201 Created kèm kết quả denied. */
     @Test
     void scan_returnsCreatedWhenDenied() throws Exception {
         CheckinRequests.Scan request = new CheckinRequests.Scan("QR-INVALID", "Cổng chính A");
@@ -108,6 +114,7 @@ class CenterCheckinControllerTest {
                 .andExpect(jsonPath("$.data.denialReason").value("Mã QR không tồn tại"));
     }
 
+    /** Kiểm thử: quét QR bị trống thì validation báo lỗi 400. */
     @Test
     void scan_validationFailsWhenQrBlank() throws Exception {
         CheckinRequests.Scan request = new CheckinRequests.Scan("", "Cổng chính A");
@@ -119,6 +126,7 @@ class CenterCheckinControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: tên cổng dài hơn cột trong database bị chặn ngay trước khi gọi service. */
     @Test
     void scan_rejectsGateLongerThanDatabaseColumnBeforeCallingService() throws Exception {
         CheckinDto dto = new CheckinDto(1L, 10L, "Member", LocalDateTime.now(), null, "qr", "Gate", "GRANTED");
@@ -133,6 +141,7 @@ class CenterCheckinControllerTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: tên cổng đúng bằng giới hạn độ dài của cột vẫn được chấp nhận. */
     @Test
     void scan_acceptsGateAtDatabaseColumnLimit() throws Exception {
         CheckinDto dto = new CheckinDto(1L, 10L, "Member", LocalDateTime.now(), null, "qr", "G".repeat(50), "GRANTED");
@@ -144,6 +153,7 @@ class CenterCheckinControllerTest {
                 .andExpect(status().isCreated());
     }
 
+    /** Kiểm thử: check-out trả 200 OK. */
     @Test
     void checkout_returnsOk() throws Exception {
         CheckinDto dto = new CheckinDto(
@@ -157,6 +167,7 @@ class CenterCheckinControllerTest {
                 .andExpect(jsonPath("$.data.checkOutTime").isNotEmpty());
     }
 
+    /** Kiểm thử: xem lịch sử check-in trả 200 OK. */
     @Test
     void history_returnsOk() throws Exception {
         CheckinDto dto = new CheckinDto(

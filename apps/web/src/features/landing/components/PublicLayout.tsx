@@ -1,4 +1,4 @@
-import { sourceText, useSourceLanguage } from "../../shop/shopI18n";
+import { sourceText, useSourceLanguage } from "../../../shared/i18n/sourceText";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { purchaseAuthPath } from '../../../shared/lib/purchaseIntent';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -8,18 +8,16 @@ import { LanguageSetting, useI18n } from '../../../shared/i18n';
 import { useComponentReveal } from '../hooks/useComponentReveal';
 import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
 import { ChatWidget } from '../../chat/ChatWidget';
-import { CartButton } from '../../shop/components/CartButton';
 import '../fitness-public.css';
-import { SPORT_PAGES, sportIdFromPath } from '../sportPages';
 
 const links: { to: string; hash?: string; label: string; labelEn: string }[] = [
   { to: '/#about', hash: 'about', get label() { return sourceText('Về SÖL'); }, labelEn: 'About SÖL' },
-  { to: '/#multisport', hash: 'multisport', label: 'Bộ môn', labelEn: 'Disciplines' },
+  { to: '/#multisport', hash: 'multisport', label: 'Gym', labelEn: 'Gym' },
   { to: '/#trainers', hash: 'trainers', get label() { return sourceText('Huấn luyện viên'); }, labelEn: 'Coaches' },
   { to: '/#packages', hash: 'packages', label: 'Gói tập', labelEn: 'Memberships' },
-  { to: '/products', get label() { return sourceText('Sản phẩm'); }, labelEn: 'Products' },
 ];
 
+/** Cuộn mượt tới phần tử theo id; trả false nếu không tìm thấy. */
 const scrollToSection = (targetId: string) => {
   const element = document.getElementById(targetId);
   if (!element) return false;
@@ -27,6 +25,7 @@ const scrollToSection = (targetId: string) => {
   return true;
 };
 
+/** Mũi tên tròn trang trí (thẳng hoặc chéo) cho các nút. */
 export function RoundArrow({ diagonal = false }: { diagonal?: boolean }) {
   useSourceLanguage();
   return <span className="fit-round-arrow" aria-hidden="true">
@@ -36,6 +35,10 @@ export function RoundArrow({ diagonal = false }: { diagonal?: boolean }) {
   </span>;
 }
 
+/**
+ * Khung trang công khai: header, điều hướng (đánh dấu mục đang xem), menu di động, footer, đặt tiêu đề tab,
+ * cuộn tới neo #hash và hiệu ứng xuất hiện theo component; minimal bỏ bớt phần phụ cho trang đăng nhập/đăng ký.
+ */
 export function PublicLayout({ children, minimal = false }: { children: ReactNode; minimal?: boolean }) {
   useSourceLanguage();
   const { lang, t } = useI18n();
@@ -44,12 +47,10 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
   const user = getCurrentUser();
   const root = useRef<HTMLDivElement>(null);
   useComponentReveal(root, pathname);
+  // Mục điều hướng có đang được chọn theo đường dẫn và neo hay không.
   const isNavActive = (to: string, target?: string) => {
-    const sportTarget = sportIdFromPath(to);
-    if (sportTarget && to === SPORT_PAGES[sportTarget].path) return sportIdFromPath(pathname) === sportTarget;
     if (target === 'trainers') return pathname.startsWith('/trainers') || (pathname === '/' && hash === '#trainers');
     if (target) return pathname === '/' && hash === `#${target}`;
-    if (to === '/products') return pathname.startsWith('/products');
     return pathname === to;
   };
 
@@ -58,20 +59,15 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
       ? (lang === 'en' ? 'Sign In' : 'Đăng nhập')
       : pathname === '/register'
         ? (lang === 'en' ? 'Member Registration' : 'Đăng ký hội viên')
-        : sportIdFromPath(pathname)
-          ? SPORT_PAGES[sportIdFromPath(pathname)!].title
-          : pathname.startsWith('/trainers')
-            ? (lang === 'en' ? 'Coaches' : 'Huấn luyện viên')
-            : pathname.startsWith('/products')
-              ? (lang === 'en' ? 'Products' : 'Sản phẩm')
-              : pathname.startsWith('/checkout')
-                ? (lang === 'en' ? 'Checkout' : 'Thanh toán')
-                : 'Build your body. Find your balance.';
+        : pathname.startsWith('/trainers')
+          ? (lang === 'en' ? 'Coaches' : 'Huấn luyện viên')
+          : 'Build your body. Find your balance.';
     document.title = `${pageTitle} · SÖL Fitness`;
     if (hash) {
       const targetId = hash.slice(1);
       let attempts = 0;
       let timerId = 0;
+      // Thử cuộn tới neo, lặp tối đa 10 lần mỗi 50ms vì nội dung có thể chưa render.
       const tryScroll = () => {
         if (scrollToSection(targetId) || attempts >= 10) return;
         attempts += 1;
@@ -98,7 +94,6 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
               key={label}
               to={to}
               data-nav-target={target}
-              aria-current={!target && to === '/products' && pathname.startsWith('/products') ? 'page' : undefined}
               className={isNavActive(to, target) ? 'is-active' : undefined}
               onClick={(event) => {
                 setMenuOpen(false);
@@ -117,7 +112,6 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
         <div className="fit-header-actions">
           {minimal && <LanguageSetting variant="footer" className="fit-auth-lang" />}
           <ThemeToggle />
-          {!minimal && <CartButton />}
           <Link to={user ? homePath(user.role) : pathname === '/login' ? purchaseAuthPath('/register', search) : purchaseAuthPath('/login', search)} className="fit-pill fit-header-cta">
             <span className="fit-header-cta-label">{user ? t('Vào portal', 'Enter portal') : pathname === '/login' ? t('Tham gia ngay', 'Join now') : t('Đăng nhập', 'Sign in')}</span><RoundArrow />
           </Link>
@@ -167,6 +161,7 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
   </div>;
 }
 
+/** Khung trang đăng nhập/đăng ký: giới thiệu bên trái và biểu mẫu bên phải trong PublicLayout tối giản. */
 export function AuthLayout({ children, mode }: { children: ReactNode; mode: 'login' | 'register' }) {
   useSourceLanguage();
   const { lang, t } = useI18n();

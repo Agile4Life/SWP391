@@ -12,9 +12,15 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/** Nhóm các DTO cho đơn hàng shop của hội viên. */
 public final class OrderDtos {
+    /** Constructor private: chỉ dùng làm nơi chứa các record. */
     private OrderDtos() {}
 
+    /**
+     * Yêu cầu đặt hàng: mã yêu cầu chống gửi trùng, các dòng sản phẩm, hình thức nhận, phương thức thanh toán,
+     * địa chỉ có sẵn hoặc mới, có lưu địa chỉ không và tổng tiền dự kiến.
+     */
     public record CreateOrderRequest(
             @NotBlank @Size(min = 8, max = 36) String clientRequestId,
             @NotEmpty @Size(min = 1, max = 30) List<@Valid QuoteLineRequest> items,
@@ -25,6 +31,7 @@ public final class OrderDtos {
             boolean saveAddress,
             @NotNull @DecimalMin("0") BigDecimal expectedTotal
     ) {
+        /** Constructor rút gọn cho đơn nhận tại quầy (không có địa chỉ). */
         public CreateOrderRequest(
                 String clientRequestId,
                 List<QuoteLineRequest> items,
@@ -36,10 +43,12 @@ public final class OrderDtos {
         }
     }
 
+    /** Yêu cầu hủy đơn: lý do tối đa 255 ký tự. */
     public record CancelOrderRequest(
             @Size(max = 255) String reason
     ) {}
 
+    /** Một dòng sản phẩm trong đơn: biến thể, tên, nhãn, SKU, đơn giá, số lượng, thành tiền, slug và ảnh. */
     public record OrderItemDto(
             Long variantId,
             String productName,
@@ -52,6 +61,7 @@ public final class OrderDtos {
             String imageUrl
     ) {}
 
+    /** Thông tin giao hàng của đơn: người nhận, số điện thoại, tỉnh, phường, địa chỉ chi tiết và ghi chú. */
     public record OrderShippingDto(
             String recipientName,
             String phone,
@@ -61,12 +71,17 @@ public final class OrderDtos {
             String note
     ) {}
 
+    /** Thông tin hội viên đặt đơn: id, họ tên và số điện thoại. */
     public record OrderMemberDto(
             Long id,
             String fullName,
             String phone
     ) {}
 
+    /**
+     * Chi tiết đơn hàng: mã, trạng thái, hình thức nhận, thanh toán, các dòng, tiền, giao hàng, địa chỉ nhận
+     * tại quầy và các mốc thời gian.
+     */
     public record OrderDto(
             Long id,
             String code,
@@ -96,6 +111,10 @@ public final class OrderDtos {
             OrderMemberDto member
     ) {}
 
+    /**
+     * Tóm tắt đơn trong danh sách: mã, trạng thái, hình thức nhận, thanh toán, tổng tiền, số dòng, tên sản phẩm
+     * đầu và có thanh toán được không.
+     */
     public record OrderSummaryDto(
             Long id,
             String code,

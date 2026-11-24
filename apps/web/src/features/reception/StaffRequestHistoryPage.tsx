@@ -6,10 +6,13 @@ import { useStaffI18n } from '../operations/staffI18n';
 import { MembershipRequestHistory } from './MembershipRequestHistory';
 import { WalletTopupHistory } from './WalletTopupHistory';
 
-/** History tab of the front desk: membership requests it processed and wallet top-ups it took. */
+/**
+ * Tab lịch sử của quầy lễ tân: yêu cầu gói tập đã xử lý và các lần nạp ví đã thu; chỉ quản lý và nhân viên được xem.
+ */
 export function StaffRequestHistoryPage() {
   const { t } = useStaffI18n();
   const role = getCurrentUser()?.role;
+  // Chỉ quản lý và nhân viên có quyền xem.
   const hasAccess = useMemo(() => role === 'MANAGER' || role === 'STAFF', [role]);
   if (!hasAccess) {
     return (

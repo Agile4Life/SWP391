@@ -1,4 +1,4 @@
-// Run against local Vite with playwright-core available. All API requests use fixtures.
+// Mục đích: kiểm tra giao diện portal HLV dùng đúng theme (màu, nút) so với landing khi chạy với Vite cục bộ và playwright-core; mọi request API đều dùng dữ liệu giả.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const base = process.env.PUBLIC_UI_URL || 'http://localhost:5173';
@@ -13,7 +13,7 @@ const fixtures = {
   '/reports/class-utilization': [{ classId: 1, className: session.className, disciplineName: 'Tennis', capacity: 10, enrolledCount: 8, presentCount: 6, utilizationRate: 80, attendanceRate: 75 }],
 };
 
-// Composite translucent backgrounds through the actual ancestor chain before measuring WCAG contrast.
+// Pha trộn các lớp nền bán trong suốt theo chuỗi phần tử cha thực tế trước khi đo độ tương phản WCAG.
 async function contrast(locator) {
   return locator.evaluate(el => {
     const rgba = value => value.match(/[\d.]+/g).map(Number);

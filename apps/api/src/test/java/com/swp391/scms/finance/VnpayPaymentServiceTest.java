@@ -17,6 +17,7 @@ import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service VnpayPaymentService (vnpay payment service). */
 class VnpayPaymentServiceTest {
     final VnpayTransactionRepository transactions = mock(VnpayTransactionRepository.class);
     final PaymentRepository payments = mock(PaymentRepository.class);
@@ -41,6 +42,7 @@ class VnpayPaymentServiceTest {
         when(transactions.findById("ABC123")).thenReturn(Optional.of(transaction));
         when(members.findByUserIdForUpdate(7L)).thenReturn(Optional.of(member));
     }
+    /** Hàm trợ giúp của test: tạo dữ liệu callback VNPay mẫu. */
     Map<String,String> callback(String response, String status, String amount) {
         var data = new HashMap<>(Map.of("vnp_TmnCode","TEST1234", "vnp_TxnRef","ABC123", "vnp_Amount",amount,
                 "vnp_ResponseCode", response, "vnp_TransactionStatus", status, "vnp_TransactionNo","12345", "vnp_PayDate","20261103120100"));
@@ -117,12 +119,12 @@ class VnpayPaymentServiceTest {
         when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));when(payments.save(payment)).thenReturn(payment);
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L,"pending")).thenReturn(Optional.of(transaction));
         assertEquals("ABC123",service.checkout(owner,11L,"127.0.0.1").reference());verify(transactions,never()).save(any());
-        // Expired 10 minutes ago: a delayed IPN may still arrive, so the order stays blocked.
+        // Hết hạn 10 phút trước: IPN đến muộn vẫn có thể về, nên đơn hàng vẫn bị chặn.
         var recent=new VnpayTransaction("RECENT",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,35),LocalDateTime.of(2026,11,3,11,50),"127.0.0.1");
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L,"pending")).thenReturn(Optional.of(recent));
         assertThrows(com.swp391.scms.common.exception.ConflictException.class,()->service.checkout(owner,11L,"127.0.0.1"));verify(transactions,never()).save(any());
         assertEquals("pending",recent.getStatus());
-        // Abandoned a day ago: closed as failed and the member can pay again.
+        // Bỏ dở từ một ngày trước: đóng thành failed để hội viên có thể thanh toán lại.
         var abandoned=new VnpayTransaction("OLD",payment,payment.getAmount(),LocalDateTime.of(2026,11,2,12,0),LocalDateTime.of(2026,11,2,12,15),"127.0.0.1");
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L,"pending")).thenReturn(Optional.of(abandoned));
         var fresh=service.checkout(owner,11L,"127.0.0.1");
@@ -156,14 +158,14 @@ class VnpayPaymentServiceTest {
         var walletService = mock(com.swp391.scms.wallet.WalletService.class);
         service.setWalletService(walletService);
         var closed=new VnpayTransaction("ABC123",payment,payment.getAmount(),LocalDateTime.of(2026,11,3,11,0),LocalDateTime.of(2026,11,3,11,15),"127.0.0.1");
-        closed.setStatus("failed");payment.setStatus("success"); // paid at the counter after the attempt expired
+        closed.setStatus("failed");payment.setStatus("success"); // đã thanh toán tại quầy sau khi lần thử hết hạn
         when(transactions.findById("ABC123")).thenReturn(Optional.of(closed));
 
         assertEquals("00",service.ipn(callback("00","00","65000000")));
         verify(walletService).creditLateGatewayPayment(7L,new BigDecimal("650000"),"ABC123");
         verifyNoInteractions(settlement,invoices);
 
-        // VNPay retries the same callback: the attempt is now settled, nothing is credited again.
+        // VNPay gửi lại cùng callback: lần thử đã được tất toán nên không cộng tiền lại nữa.
         assertEquals("02",service.ipn(callback("00","00","65000000")));
         verify(walletService,times(1)).creditLateGatewayPayment(any(),any(),any());
     }
@@ -289,7 +291,7 @@ class VnpayPaymentServiceTest {
         verify(notifications).send(eq(7L), any(), any(), eq("order"), eq("product_order"), eq(9L), eq("/member/orders/9"));
         verifyNoInteractions(settlement, invoices);
 
-        // A repeated callback finds the attempt already settled and refunds nothing more.
+        // Callback lặp lại thấy lần thử đã tất toán nên không hoàn tiền thêm.
         assertEquals("02", service.ipn(callback("00","00","65000000")));
         verify(refunds, times(1)).refundLatePayment(any(), any(), any(), any());
     }
@@ -320,14 +322,14 @@ class VnpayPaymentServiceTest {
         when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));
         when(payments.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
 
-        // Live pending VNPay transaction blocks wallet payment before debiting wallet
+        // Giao dịch VNPay đang pending còn hiệu lực sẽ chặn thanh toán bằng ví trước khi trừ tiền ví
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.of(transaction));
         var conflict = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
                 () -> service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null)));
         assertEquals("VNPAY_AWAITING_CONFIRMATION", conflict.getErrorCode());
         verifyNoInteractions(walletService);
 
-        // Abandoned VNPay transaction older than grace period is closed and wallet payment succeeds
+        // Giao dịch VNPay bị bỏ dở quá thời gian ân hạn sẽ bị đóng và thanh toán bằng ví thành công
         var abandoned = new VnpayTransaction("OLD", payment, payment.getAmount(),
                 LocalDateTime.of(2026, 11, 2, 12, 0), LocalDateTime.of(2026, 11, 2, 12, 15), "127.0.0.1");
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.of(abandoned));
@@ -383,12 +385,12 @@ class VnpayPaymentServiceTest {
     }
 
     @Test void customerCancelledVnpayReturnWithIncompleteStatus01ClosesTransactionImmediately() {
-        // VNPay Sandbox sends vnp_ResponseCode=24 with vnp_TransactionStatus=01 ("Giao dịch chưa hoàn tất") on cancel.
+        // VNPay Sandbox gửi vnp_ResponseCode=24 cùng vnp_TransactionStatus=01 ("Giao dịch chưa hoàn tất") khi hủy.
         assertEquals("00", service.ipn(callback("24", "01", "65000000")));
         assertEquals("failed", transaction.getStatus());
         assertEquals("pending", payment.getStatus());
 
-        // Ambiguous/provisional gateway states (response=00 + status=01, or status=05/06) still stay pending (99).
+        // Các trạng thái cổng thanh toán mơ hồ/tạm thời (response=00 + status=01, hoặc status=05/06) vẫn giữ ở trạng thái pending (99).
         var pendingAmbiguous = new VnpayTransaction("AMB001", payment, payment.getAmount(),
                 LocalDateTime.of(2026, 11, 3, 12, 0), LocalDateTime.of(2026, 11, 3, 12, 15), "127.0.0.1");
         when(transactions.findById("AMB001")).thenReturn(Optional.of(pendingAmbiguous));
@@ -415,7 +417,7 @@ class VnpayPaymentServiceTest {
         assertEquals("failed", transaction.getStatus());
         assertEquals("pending", payment.getStatus());
 
-        // Settled transactions can never be downgraded by a late browser cancel call.
+        // Giao dịch đã tất toán không bao giờ bị hạ trạng thái bởi lời gọi hủy muộn từ trình duyệt.
         var settled = new VnpayTransaction("PAID99", payment, payment.getAmount(),
                 LocalDateTime.of(2026, 11, 3, 12, 0), LocalDateTime.of(2026, 11, 3, 12, 15), "127.0.0.1");
         settled.setStatus("success");
@@ -424,7 +426,7 @@ class VnpayPaymentServiceTest {
         assertEquals("success", service.cancel(owner, "PAID99").status());
         assertEquals("success", settled.getStatus());
 
-        // Once ABC123 is closed, no pending attempt remains: member can immediately start a fresh VNPay checkout.
+        // Khi ABC123 đã đóng, không còn lần thử pending nào: hội viên có thể bắt đầu ngay phiên thanh toán VNPay mới.
         var sub = new MembershipSubscription();
         sub.setId(11L); sub.setMember(payment.getMember()); sub.setStatus("pending_payment");
         when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
@@ -437,7 +439,7 @@ class VnpayPaymentServiceTest {
     }
 
     @Test void cancelTargetAndAbandonedWalletTopupCleanUpPendingStateSafely() {
-        // 1. cancelTarget closes pending attempts on a subscription payment while keeping the payment payable.
+        // 1. cancelTarget đóng các lần thử đang pending của khoản thanh toán gói tập nhưng vẫn giữ khoản thanh toán có thể trả tiếp.
         var sub = new MembershipSubscription();
         sub.setId(11L); sub.setMember(payment.getMember()); sub.setStatus("pending_payment");
         when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
@@ -448,8 +450,8 @@ class VnpayPaymentServiceTest {
         assertEquals("failed", transaction.getStatus());
         assertEquals("pending", payment.getStatus());
 
-        // 2. Abandoning a standalone WALLET_TOPUP also closes its Payment so it does not linger in pending invoices,
-        // while a delayed successful IPN still credits the member's wallet via refundPaymentSettledElsewhere.
+        // 2. Bỏ dở giao dịch WALLET_TOPUP độc lập cũng đóng bản ghi Payment để không tồn đọng trong hóa đơn chờ,
+        // trong khi IPN thành công đến muộn vẫn cộng tiền vào ví hội viên qua refundPaymentSettledElsewhere.
         var walletService = mock(com.swp391.scms.wallet.WalletService.class);
         service.setWalletService(walletService);
         var topupPayment = new Payment();

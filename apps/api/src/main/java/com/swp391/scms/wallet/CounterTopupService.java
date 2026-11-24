@@ -23,7 +23,7 @@ import java.util.Locale;
 
 /**
  * Records a front-desk wallet top-up as a settled payment, so it shows up in the member's "Giao dịch & hóa đơn" like a
- * VNPay top-up does, and lets the desk look back at the top-ups it took.
+ * của VNPay và cho phép quầy xem lại các khoản nạp mà quầy đã thu.
  */
 @Service
 public class CounterTopupService {
@@ -33,6 +33,10 @@ public class CounterTopupService {
     public static final int MAX_DAYS = 180;
     private static final List<String> COUNTER_METHODS = List.of("cash", "pos", "bank_transfer");
 
+    /**
+     * Một lần nạp Ví tại quầy trong lịch sử: khoản thanh toán, hội viên (id, mã, tên), số tiền, phương thức,
+     * thời điểm và người nhận tiền.
+     */
     public record TopupHistoryDto(
             Long paymentId,
             Long memberId,
@@ -50,6 +54,7 @@ public class CounterTopupService {
     private final Clock clock;
     private TransactionTemplate invoiceTransaction;
 
+    /** Nhận repository thanh toán/hội viên/người dùng, dịch vụ hóa đơn và Clock. */
     public CounterTopupService(PaymentRepository payments, MemberRepository members, UserRepository users,
                                InvoiceService invoices, Clock clock) {
         this.payments = payments;
@@ -59,7 +64,12 @@ public class CounterTopupService {
         this.clock = clock;
     }
 
-    /** The invoice gets its own transaction so a failure there can never roll back the wallet top-up. */
+    /**
+     * Spring tiêm trình quản lý transaction: hóa đơn được tạo trong transaction riêng (REQUIRES_NEW) để lỗi hóa
+     * đơn không thể hoàn tác lần nạp tiền.
+     *
+     * Hóa đơn có transaction riêng để lỗi ở đó không bao giờ làm rollback khoản nạp ví.
+     */
     @Autowired(required = false)
     void setTransactionManager(PlatformTransactionManager transactionManager) {
         TransactionTemplate template = new TransactionTemplate(transactionManager);
@@ -67,12 +77,23 @@ public class CounterTopupService {
         this.invoiceTransaction = template;
     }
 
-    /** Maps the desk's method code onto the payment methods the table allows; anything unknown is cash. */
+    /**
+     * Đổi mã phương thức của quầy sang giá trị bảng thanh toán cho phép (cash, pos, bank_transfer); giá trị lạ
+     * coi là tiền mặt.
+     *
+     * Ánh xạ mã phương thức của quầy sang các phương thức thanh toán mà bảng cho phép; cái nào lạ thì là tiền
+     * mặt.
+     */
     static String normalizeMethod(String method) {
         String value = method == null ? "cash" : method.trim().toLowerCase(Locale.ROOT);
         return COUNTER_METHODS.contains(value) ? value : "cash";
     }
 
+    /**
+     * Ghi lần nạp Ví tại quầy thành một khoản thanh toán thành công (ghi chú WALLET_TOPUP:COUNTER, người nhận
+     * tiền) để hiện trong "Giao dịch & hóa đơn" của hội viên; hóa đơn được xuất sau khi transaction nạp tiền đã
+     * commit.
+     */
     @Transactional
     public void record(Long memberId, BigDecimal amount, String paymentMethod, Long staffUserId) {
         Member member = members.findById(memberId).orElse(null);
@@ -88,10 +109,11 @@ public class CounterTopupService {
             users.findByIdAndDeletedAtIsNull(staffUserId).ifPresent(payment::setReceivedBy);
         }
         Long paymentId = payments.save(payment).getId();
-        // Issue the invoice only after the top-up has committed: an invoice error then cannot mark the top-up's
-        // transaction rollback-only and undo the money the member already handed over.
+        // Chỉ phát hành hóa đơn sau khi khoản nạp đã commit: lỗi hóa đơn khi đó không thể đánh dấu transaction
+        // của khoản nạp là rollback-only và hoàn tác số tiền hội viên đã đưa.
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
             TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                /** Được Spring gọi khi transaction nạp tiền commit thành công: xuất hóa đơn. */
                 @Override
                 public void afterCommit() {
                     issueInvoice(paymentId);
@@ -102,6 +124,7 @@ public class CounterTopupService {
         }
     }
 
+    /** Xuất hóa đơn cho khoản thanh toán (trong transaction riêng nếu có); lỗi thì bỏ qua vì tiền đã nạp xong. */
     private void issueInvoice(Long paymentId) {
         try {
             if (invoiceTransaction != null) {
@@ -110,10 +133,14 @@ public class CounterTopupService {
                 invoices.autoIssueInvoiceForPayment(paymentId);
             }
         } catch (RuntimeException ignored) {
-            // The invoice is best effort; the top-up itself is already committed.
+            // Hóa đơn là cố gắng tối đa (best effort); khoản nạp đã được commit rồi.
         }
     }
 
+    /**
+     * Lịch sử nạp Ví tại quầy trong số ngày gần đây (mặc định 30, tối đa 180), bỏ hội viên đã bị xóa, mới nhất
+     * trước.
+     */
     @Transactional(readOnly = true)
     public List<TopupHistoryDto> history(Integer days) {
         int window = days == null ? DEFAULT_DAYS : Math.max(1, Math.min(MAX_DAYS, days));

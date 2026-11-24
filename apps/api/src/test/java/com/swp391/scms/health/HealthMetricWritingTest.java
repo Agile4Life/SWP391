@@ -12,11 +12,13 @@ import java.time.*;
 import java.util.*;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
+/** Bộ kiểm thử cho HealthMetricWriting (health metric writing). */
 class HealthMetricWritingTest {
  MemberProgressLogRepository logs=mock(MemberProgressLogRepository.class);
  MemberRepository members=mock(MemberRepository.class); UserRepository users=mock(UserRepository.class);
  CurrentCoachMembers access=mock(CurrentCoachMembers.class);
  HealthMetricService service=new HealthMetricService(logs,members,users);
+ /** Hàm trợ giúp của test: tạo một chỉ số sức khỏe mẫu. */
  HealthMetricDto metric(String name,String value,String unit){return new HealthMetricDto(null,name,new BigDecimal(value),unit,999L,LocalDateTime.of(2000,1,1,0,0));}
  @BeforeEach void setup(){ReflectionTestUtils.setField(service,"currentCoachMembers",access);}
  @Test void memberCannotWriteOwnMetrics(){assertThatThrownBy(()->service.addMetric(10L,metric("weight","70","kg"),10L,"MEMBER")).isInstanceOf(ForbiddenException.class);verifyNoInteractions(logs);}

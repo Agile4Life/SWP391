@@ -14,7 +14,10 @@ import java.util.concurrent.*;
 import static org.assertj.core.api.Assertions.*;
 import static com.swp391.scms.config.SupabaseTestDatabase.credential;
 
-/** Hibernate creates the tables in a disposable schema, never in public. */
+/**
+ * Bộ kiểm thử tích hợp tính năng chat trên PostgreSQL.
+ * Hibernate tạo bảng trong một schema tạm dùng một lần, không bao giờ chạm tới schema public.
+ */
 @SpringBootTest
 @ActiveProfiles("supabase")
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
@@ -89,6 +92,7 @@ class ChatPostgreSqlTest {
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private long user(String role) {
         return jdbc.queryForObject("insert into users(role_id,full_name,email,username,password_hash,status,created_at,updated_at) "
                 + "select id,'Chat fixture',?,?,'unused','active',now(),now() from roles where code = ? returning id", Long.class,

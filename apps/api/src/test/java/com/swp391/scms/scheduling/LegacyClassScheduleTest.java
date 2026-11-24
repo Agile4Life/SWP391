@@ -12,11 +12,14 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 
 /**
- * Reported: a class without recurring days showed "Mon, Wed, Fri" (a UI default) while its sessions ran on Tue/Thu.
- * The class list now derives the schedule from the real sessions.
+ * Bộ kiểm thử cho LegacyClassSchedule (lịch lớp học dữ liệu cũ).
+ *
+ * Lỗi đã báo cáo: lớp không có ngày lặp định kỳ lại hiển thị "Mon, Wed, Fri" (giá trị mặc định trên giao diện)
+ * trong khi các buổi học thực tế diễn ra vào Thứ 3/Thứ 5. Danh sách lớp nay suy ra lịch học từ các buổi học thực tế.
  */
 class LegacyClassScheduleTest {
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (session). */
     private static ClassSession session(LocalDate date, String status) {
         ClassSession s = new ClassSession();
         s.setSessionDate(date);
@@ -26,15 +29,16 @@ class LegacyClassScheduleTest {
         return s;
     }
 
+    /** Kiểm thử: lớp không có lịch định kỳ thì lấy thứ trong tuần và ngày từ các buổi của nó. */
     @Test
     void classWithoutRecurringDaysTakesWeekdaysAndDatesFromItsSessions() {
         GymClass legacy = new GymClass();
         legacy.setName("Boxing Cardio Chiều");
         List<ClassSession> sessions = List.of(
-                session(LocalDate.of(2026, 11, 5), "scheduled"),   // Thursday
-                session(LocalDate.of(2026, 11, 10), "scheduled"),  // Tuesday
-                session(LocalDate.of(2026, 11, 26), "scheduled"),  // Thursday
-                session(LocalDate.of(2026, 11, 30), "cancelled")); // Monday, cancelled: not part of the schedule
+                session(LocalDate.of(2026, 11, 5), "scheduled"),   // Thứ 5
+                session(LocalDate.of(2026, 11, 10), "scheduled"),  // Thứ 3
+                session(LocalDate.of(2026, 11, 26), "scheduled"),  // Thứ 5
+                session(LocalDate.of(2026, 11, 30), "cancelled")); // Thứ 2, đã hủy: không tính vào lịch học
 
         GymClassDto dto = new SchedulingMapper().toDto(legacy, sessions);
 
@@ -44,6 +48,7 @@ class LegacyClassScheduleTest {
         assertThat(dto.startTime()).isEqualTo(LocalTime.of(17, 30));
     }
 
+    /** Kiểm thử: lớp đã có lịch riêng thì giữ nguyên, không bị ghi đè. */
     @Test
     void classWithItsOwnScheduleIsLeftAlone() {
         GymClass gymClass = new GymClass();

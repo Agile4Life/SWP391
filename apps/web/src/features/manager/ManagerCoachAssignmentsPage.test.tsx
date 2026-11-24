@@ -159,11 +159,12 @@ describe('ManagerCoachAssignmentsPage', () => {
     vi.useRealTimers();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderComponent() {
     await act(async () => {
       root.render(<ManagerCoachAssignmentsPage />);
     });
-    // Wait for the 200ms debounce timer + load promise resolution
+    // Chờ bộ hẹn giờ debounce 200ms và hoàn tất promise tải dữ liệu
     await act(async () => {
       await new Promise((r) => setTimeout(r, 260));
     });

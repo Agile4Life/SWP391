@@ -13,6 +13,7 @@ export function SupportIcon({ size = 26 }: { size?: number }) {
 
 /** Tiêu đề hội thoại giống ChatThread: nút quay lại, avatar, tên + dòng phụ, hành động bên phải. */
 export function SupportHeader({ onBack, title, subtitle, active, children }: {
+  // Props: nút quay lại, tiêu đề, phụ đề, trạng thái đang xem và nội dung con.
   onBack: () => void; title: string; subtitle: ReactNode; active: boolean; children?: ReactNode;
 }) {
   const { t } = useI18n();
@@ -36,6 +37,7 @@ export function SupportHeader({ onBack, title, subtitle, active, children }: {
   </header>;
 }
 
+/** Nút hành động nhỏ trên tiêu đề khung chat (có nhãn trợ năng và trạng thái bật/tắt). */
 export function HeaderAction({ label, onClick, disabled, pressed, children }: {
   label: string; onClick: () => void; disabled?: boolean; pressed?: boolean; children: ReactNode;
 }) {

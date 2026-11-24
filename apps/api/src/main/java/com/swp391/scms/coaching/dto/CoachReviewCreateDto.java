@@ -5,6 +5,10 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Dữ liệu tạo đánh giá HLV: HLV, booking 1:1 hoặc buổi lớp (chọn một), số sao 1–5, nhận xét tối đa 2000 ký tự
+ * và có ẩn danh không.
+ */
 public record CoachReviewCreateDto(
         @NotNull Long coachId,
         Long bookingId,

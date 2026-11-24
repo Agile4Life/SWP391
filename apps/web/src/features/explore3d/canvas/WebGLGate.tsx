@@ -2,6 +2,7 @@
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from 'react';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Props của cổng WebGL: nội dung 3D và nội dung thay thế. */
 export interface WebGLGateProps {
   children: ReactNode;
   fallback: ReactNode;
@@ -9,6 +10,7 @@ export interface WebGLGateProps {
 
 let cachedWebGLSupport: boolean | null = null;
 
+/** Kiểm tra trình duyệt hỗ trợ WebGL (có cache kết quả); không có document thì false. */
 export function probeWebGLSupport(): boolean {
   if (typeof document === 'undefined') {
     return false;
@@ -31,16 +33,20 @@ export function probeWebGLSupport(): boolean {
   }
 }
 
+/** Props của error boundary quanh canvas: nội dung, nội dung thay thế và hàm báo lỗi. */
 interface CanvasErrorBoundaryProps {
   children: ReactNode;
   fallback: ReactNode;
+  // Gọi khi canvas gặp lỗi khi hiển thị.
   onError: (error: Error, info: ErrorInfo) => void;
 }
 
+/** Trạng thái của error boundary: đã có lỗi chưa. */
 interface CanvasErrorBoundaryState {
   hasError: boolean;
 }
 
+/** Error boundary bắt lỗi khi dựng canvas 3D và hiển thị nội dung thay thế. */
 class CanvasErrorBoundary extends Component<
   CanvasErrorBoundaryProps,
   CanvasErrorBoundaryState
@@ -63,6 +69,10 @@ class CanvasErrorBoundary extends Component<
   }
 }
 
+/**
+ * Cổng WebGL: chỉ hiện cảnh 3D khi WebGL dùng được, ngược lại (không hỗ trợ, đánh dấu lỗi hoặc mất ngữ cảnh từ
+ * lần thứ hai) hiện nội dung thay thế.
+ */
 export function WebGLGate({ children, fallback }: WebGLGateProps) {
   const webglUnavailable = useExploreStore(s => s.webglUnavailable);
   const contextLostCount = useExploreStore(s => s.contextLostCount);

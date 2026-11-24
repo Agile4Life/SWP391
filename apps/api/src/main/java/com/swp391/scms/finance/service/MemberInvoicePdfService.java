@@ -16,15 +16,18 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 
+/** Tạo file PDF hóa đơn cho hội viên tải về (dùng thư viện PDFBox với font hỗ trợ tiếng Việt). */
 @Service
 public class MemberInvoicePdfService {
     private final InvoiceService invoiceService;
     private final MessageService messageService;
 
+    /** Constructor cho test, không có MessageService. */
     public MemberInvoicePdfService(InvoiceService invoiceService) {
         this(invoiceService, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public MemberInvoicePdfService(InvoiceService invoiceService,
                                    @Autowired(required = false) MessageService messageService) {
@@ -32,8 +35,9 @@ public class MemberInvoicePdfService {
         this.messageService = messageService;
     }
 
+    /** Tải PDF hóa đơn: kiểm tra quyền sở hữu trước khi đọc nội dung, thiếu số tiền thì báo lỗi, rồi dựng PDF. */
     public byte[] download(Long paymentId, Long userId) {
-        // Ownership is resolved before any invoice content is read for rendering.
+        // Quyền sở hữu được xác minh trước khi đọc bất kỳ nội dung hóa đơn nào để kết xuất.
         InvoiceDto invoice = invoiceService.getMemberInvoiceByPaymentId(paymentId, userId);
         if (invoice.getTotalAmount() == null || invoice.getSubtotalAmount() == null || invoice.getTaxAmount() == null
                 || invoice.getInvoiceNumber() == null || invoice.getIssuedAt() == null || invoice.getPaymentId() == null) {
@@ -42,6 +46,7 @@ public class MemberInvoicePdfService {
         return render(invoice);
     }
 
+    /** Dựng trang PDF: tiêu đề, số hóa đơn, ngày, các dòng hàng và tổng tiền; thiếu font thì báo 503. */
     private byte[] render(InvoiceDto invoice) {
         try (PDDocument document = new PDDocument();
              InputStream fontStream = PDDocument.class.getResourceAsStream(
@@ -82,6 +87,7 @@ public class MemberInvoicePdfService {
         }
     }
 
+    /** Dịch mã thông báo kèm tham số; không dịch được thì dùng câu dự phòng. */
     private String msg(String key, String fallback, Object... args) {
         if (messageService == null) {
             return fallback;
@@ -94,6 +100,7 @@ public class MemberInvoicePdfService {
         }
     }
 
+    /** Ghi một dòng chữ vào PDF ở vị trí y và trả vị trí y của dòng tiếp theo. */
     private float line(PDPageContentStream content, PDType0Font font, int size, float y, String value)
             throws IOException {
         content.beginText();
@@ -104,6 +111,7 @@ public class MemberInvoicePdfService {
         return y - 28;
     }
 
+    /** Lỗi 503 "không tạo được PDF hóa đơn". */
     private ServiceUnavailableException unavailable() {
         return new ServiceUnavailableException("INVOICE_PDF_UNAVAILABLE", "finance.invoice.pdf_unavailable", null,
                 "This invoice PDF is not available yet");

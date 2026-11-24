@@ -10,21 +10,26 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Business logic for the membership package catalog (SCRUM-60). */
+/**
+ * Nghiệp vụ danh mục gói tập (SCRUM-60).
+ */
 @Service
 public class PackageService {
 
     private final MembershipPackageRepository packages;
 
+    /** Nhận repository gói tập. */
     public PackageService(MembershipPackageRepository packages) {
         this.packages = packages;
     }
 
+    /** Danh sách gói theo giá tăng dần. */
     @Transactional(readOnly = true)
     public List<PackageDto> list() {
         return packages.findAllByOrderByPriceAsc().stream().map(PackageDto::of).toList();
     }
 
+    /** Tạo gói: thời hạn phải hợp lệ (3 ngày cho gói trải nghiệm, hoặc 90-365 ngày); có ghi audit. */
     @Transactional
     @Audited(action = "PACKAGE_CREATE", entity = "membership_packages")
     public PackageDto create(PackageRequest request) {
@@ -35,10 +40,10 @@ public class PackageService {
     }
 
     /**
-     * Seeds a catalog entry that predates the 3-12 month rule: the 1-month SILVER/GOLD/PLATINUM plans, which existing
-     * databases already hold and the demo dataset and older subscriptions reference. Seeding them keeps a fresh schema
-     * identical to deployed ones. Only {@code CatalogSeeder} calls this; no controller exposes it, so Manager/API
-     * callers always go through {@link #create(PackageRequest)} and {@code requireValidDuration}.
+     * Khởi tạo mục danh mục có trước quy tắc 3–12 tháng: các gói 1 tháng SILVER/GOLD/PLATINUM vốn đã có trong các
+     * CSDL hiện hành và được bộ dữ liệu mẫu cùng các kỳ gói cũ tham chiếu. Việc seed giúp schema mới đồng nhất với
+     * môi trường đã triển khai. Chỉ {@code CatalogSeeder} gọi hàm này; không controller nào mở ra ngoài, nên quản lý/API
+     * luôn đi qua {@link #create(PackageRequest)} và {@code requireValidDuration}.
      */
     @Transactional
     @Audited(action = "PACKAGE_CREATE", entity = "membership_packages")
@@ -48,6 +53,10 @@ public class PackageService {
         return PackageDto.of(packages.save(pkg));
     }
 
+    /**
+     * Sửa gói: thời hạn mới phải hợp lệ; gói đã bán không được đổi tên/thời hạn (sẽ làm sai lịch sử mua) mà
+     * phải tạo gói mới.
+     */
     @Transactional
     @Audited(action = "PACKAGE_UPDATE", entity = "membership_packages")
     public PackageDto update(Long id, PackageRequest request) {
@@ -57,8 +66,8 @@ public class PackageService {
         if (durationChanged) {
             requireValidDuration(request.durationDays());
         }
-        // Subscriptions point at the package row, so renaming/retiming a sold package would relabel history
-        // (e.g. a "GOLD 6 THÁNG" purchase suddenly reading "GOLD 12 THÁNG"). Create a new package instead.
+        // Các kỳ gói trỏ tới dòng gói tập này, nên đổi tên hoặc thời hạn của gói đã bán sẽ làm sai lệch lịch sử
+        // (ví dụ giao dịch mua "GOLD 6 THÁNG" bỗng hiển thị thành "GOLD 12 THÁNG"). Hãy tạo gói mới thay thế.
         if ((durationChanged || nameChanged) && subscriptions != null && subscriptions.existsByMembershipPackageId(id)) {
             throw new com.swp391.scms.common.exception.ConflictException(
                     "PACKAGE_IDENTITY_LOCKED", "catalog.package.identity_locked", null, null);
@@ -67,6 +76,7 @@ public class PackageService {
         return PackageDto.of(pkg);
     }
 
+    /** Bật/tắt mở bán gói. */
     @Transactional
     @Audited(action = "PACKAGE_STATUS_CHANGE", entity = "membership_packages")
     public PackageDto updateStatus(Long id, String status) {
@@ -75,11 +85,12 @@ public class PackageService {
         return PackageDto.of(pkg);
     }
 
-    /** Sellable terms are 3 to 12 months; the 3-day trial is the only shorter package. */
+    /** Thời hạn mở bán từ 3 đến 12 tháng; gói trải nghiệm 3 ngày là gói ngắn hơn duy nhất. */
     public static final int TRIAL_DAYS = 3;
     public static final int MIN_TERM_DAYS = 90;
     public static final int MAX_TERM_DAYS = 365;
 
+    /** Thời hạn hợp lệ: đúng 3 ngày (gói trải nghiệm) hoặc 90-365 ngày. */
     private static void requireValidDuration(int days) {
         if (days != TRIAL_DAYS && (days < MIN_TERM_DAYS || days > MAX_TERM_DAYS)) {
             throw new com.swp391.scms.common.exception.BadRequestException(
@@ -88,10 +99,12 @@ public class PackageService {
         }
     }
 
+    /** Lấy gói theo id; không thấy thì 404. */
     private MembershipPackage find(Long id) {
         return packages.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.package", id));
     }
 
+    /** Gán dữ liệu từ request vào gói; hạng được suy ra nếu không truyền. */
     private void apply(MembershipPackage pkg, PackageRequest request) {
         pkg.setName(request.name().trim());
         pkg.setDescription(request.description());
@@ -107,7 +120,9 @@ public class PackageService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptions;
 
-    /** A package that was ever sold is kept for history (set status to inactive instead). */
+    /**
+     * Xóa gói chưa từng bán; gói đã từng bán được giữ lại cho lịch sử (chuyển trạng thái sang inactive thay vì xóa).
+     */
     @Transactional
     @Audited(action = "PACKAGE_DELETE", entity = "membership_packages")
     public void delete(Long id) {

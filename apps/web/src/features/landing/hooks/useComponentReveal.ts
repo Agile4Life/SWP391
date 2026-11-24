@@ -1,8 +1,12 @@
 import { useLayoutEffect, type RefObject } from 'react';
 
+/** Giới hạn giá trị trong khoảng [min, max]. */
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
-/** Replay entrances on viewport re-entry and drive scroll-linked UI progress; document scrolling stays native. */
+/**
+ * Hook phát lại hiệu ứng xuất hiện khi component vào lại viewport và cập nhật các hiệu ứng theo tiến độ cuộn
+ * (thanh tiến độ, hero, manifesto, CTA); giữ nguyên cuộn tài liệu tự nhiên và tôn trọng tùy chọn giảm chuyển động.
+ */
 export function useComponentReveal(container: RefObject<HTMLDivElement | null>, route: string) {
   useLayoutEffect(() => {
     const root = container.current;
@@ -24,11 +28,13 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
     const manifestos = [...root.querySelectorAll<HTMLElement>('[data-scroll-scrub="manifesto"]')]
       .map(element => ({ element, words: [...element.querySelectorAll<HTMLElement>('.fit-manifesto-word > span')] }));
     let scrollFrame = 0;
+    // Gán thuộc tính style chỉ khi giá trị thay đổi để tránh invalidate không cần thiết.
     const setProperty = (element: HTMLElement | null | undefined, name: string, value: string) => {
       if (element && element.style.getPropertyValue(name) !== value) element.style.setProperty(name, value);
     };
+    // Tính các hiệu ứng theo cuộn: đọc hình học trước rồi mới ghi style để tránh layout lặp.
     const syncScrollEffects = () => {
-      // Read geometry first. Writing inherited styles between reads forces repeated layouts.
+      // Đọc toàn bộ thông số hình học trước. Ghi style kế thừa xen giữa các lần đọc sẽ ép trình duyệt tính layout lặp lại.
       const currentScrollY = window.scrollY;
       const viewportHeight = window.innerHeight;
       const maxScroll = Math.max(1, document.documentElement.scrollHeight - viewportHeight);
@@ -39,7 +45,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       const manifestoRects = preference.matches ? [] : manifestos.map(({ element }) => element.getBoundingClientRect());
       const ctaRect = !preference.matches ? finalCta?.getBoundingClientRect() : undefined;
 
-      // The progress bar consumes this value directly; changing a variable on root invalidates the whole page.
+      // Thanh tiến độ dùng trực tiếp giá trị này; đổi biến CSS trên root sẽ làm trình duyệt tính lại toàn bộ trang.
       setProperty(progressBar, 'transform', `scaleX(${progress.toFixed(4)})`);
       header?.classList.toggle('is-scrolled', currentScrollY > 36);
       if (benefits && benefitRect) {
@@ -63,11 +69,13 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
         setProperty(finalCta, '--fit-cta-progress', ctaProgress.toFixed(3));
       }
     };
+    // Gom việc cập nhật hiệu ứng cuộn vào một khung hình.
     const scheduleScrollEffects = () => {
       if (scrollFrame) return;
       scrollFrame = requestAnimationFrame(() => { scrollFrame = 0; syncScrollEffects(); });
     };
 
+    // Khi cuộn: cập nhật hiệu ứng và đổi hướng reveal cho các khối chưa hiện khi đảo chiều cuộn.
     const onScroll = () => {
       const currentScrollY = window.scrollY;
       scheduleScrollEffects();
@@ -81,10 +89,12 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       });
     };
 
+    // Hiện khối (không làm gì khi giảm chuyển động).
     const reveal = (element: HTMLElement) => {
       if (preference.matches) return;
       element.classList.add('is-visible');
     };
+    // Đăng ký một khối vào bộ quan sát reveal.
     const register = (element: HTMLElement) => {
       if (preference.matches || targets.has(element)) return;
       if (element.matches(heroSelector)) element.dataset.reveal = 'hero';
@@ -92,17 +102,20 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       element.classList.add('fit-reveal-ready');
       observer?.observe(element);
     };
+    // Hủy đăng ký khối và trả lại trạng thái ban đầu.
     const unregister = (element: HTMLElement) => {
       observer?.unobserve(element);
       targets.delete(element);
       element.classList.remove('fit-reveal-ready', 'is-visible');
       delete element.dataset.revealDirection;
     };
+    // Duyệt node và các node con khớp selector reveal.
     const visit = (node: Node, callback: (element: HTMLElement) => void) => {
       if (!(node instanceof HTMLElement)) return;
       if (node.matches(selector)) callback(node);
       node.querySelectorAll<HTMLElement>(selector).forEach(callback);
     };
+    // Cấu hình lại các bộ quan sát; giảm chuyển động thì tắt hiệu ứng và đưa các giá trị về trạng thái tĩnh.
     const configure = () => {
       observer?.disconnect();
       sectionObserver?.disconnect();
@@ -136,6 +149,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       if (route === '/') {
         const trackedSections = root.querySelectorAll<HTMLElement>('section[id]');
         if (trackedSections.length > 0) {
+          // Quy đổi #id của section sang mục điều hướng tương ứng.
           const mapSectionToNav = (id: string): string => {
             if (id === 'about' || id === 'disciplines') return 'about';
             if (id === 'multisport') return 'multisport';
@@ -161,6 +175,7 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
 
       syncScrollEffects();
     };
+    // Khối nhận focus bàn phím thì hiện ngay.
     const onFocus = (event: FocusEvent) => {
       const element = (event.target as HTMLElement).closest<HTMLElement>('[data-reveal]');
       if (element && root.contains(element)) reveal(element);

@@ -20,22 +20,28 @@ import {
 import './admin-audit-logs.css';
 import './admin-reconciliation.css';
 
+/** Ba tab đối soát: lượt thanh toán VNPay, hoàn tiền trễ và sự kiện IPN. */
 type Tab = 'attempts' | 'refunds' | 'ipn';
+/** Kiểu hàm dịch của useStaffI18n. */
 type Translate = ReturnType<typeof useStaffI18n>['t'];
 
 const PAGE_SIZE = 20;
 const DEFAULT_DAYS = 7;
 
+/** Cộng/trừ số ngày vào ngày YYYY-MM-DD (tính theo UTC). */
 function shiftIsoDate(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d + days));
   return date.toISOString().slice(0, 10);
 }
 
-/** Loads one page of a list while `enabled`; `key` changes whenever the request parameters change. */
+/**
+ * Hook tải một trang danh sách khi `enabled` được bật; mỗi khi `key` đổi (tham số yêu cầu đổi) thì tải lại, bỏ qua
+ * kết quả khi component đã gỡ, và cung cấp hàm retry.
+ */
 function usePaged<T>(load: () => Promise<PageResult<T>>, key: string, enabled: boolean, fallback: string) {
   const loader = useRef(load);
-  // Declared before the loading effect, so the request below always uses the latest filters.
+  // Khai báo trước effect tải dữ liệu để yêu cầu bên dưới luôn dùng bộ lọc mới nhất.
   useEffect(() => { loader.current = load; });
   const [data, setData] = useState<PageResult<T> | null>(null);
   const [loading, setLoading] = useState(enabled);
@@ -62,6 +68,10 @@ function usePaged<T>(load: () => Promise<PageResult<T>>, key: string, enabled: b
   return { data, loading, error, retry: () => setReload((n) => n + 1) };
 }
 
+/**
+ * Trang quản trị đối soát thanh toán VNPay: tóm tắt bất thường, danh sách lượt thanh toán, hoàn tiền trễ, sự
+ * kiện IPN và dòng thời gian của một khoản thanh toán, lọc theo khoảng ngày (mặc định 7 ngày).
+ */
 export function AdminPaymentReconciliationPage() {
   const { t } = useStaffI18n();
   const today = centerNowParts().date;
@@ -69,9 +79,10 @@ export function AdminPaymentReconciliationPage() {
   const [to, setTo] = useState(today);
   const [tab, setTab] = useState<Tab>('attempts');
 
+  // Định dạng số tiền (rỗng là "—").
   const formatOptionalPrice = (n: number | null | undefined) => (n == null ? '—' : formatPrice(Math.round(Number(n))));
 
-  // Summary
+  // Tóm tắt đối soát
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [summaryError, setSummaryError] = useState<StaffMessage>('');
@@ -93,7 +104,7 @@ export function AdminPaymentReconciliationPage() {
     return () => { mounted = false; };
   }, [from, to, summaryReload]);
 
-  // Attempts tab
+  // Tab lượt thanh toán
   const [attemptStatus, setAttemptStatus] = useState('ALL');
   const [staleOnly, setStaleOnly] = useState(false);
   const [searchDraft, setSearchDraft] = useState('');
@@ -106,7 +117,7 @@ export function AdminPaymentReconciliationPage() {
     'Không thể tải danh sách lượt VNPay.',
   );
 
-  // Late refunds tab
+  // Tab hoàn tiền trễ
   const [refundPage, setRefundPage] = useState(0);
   const refunds = usePaged<LateRefundRow>(
     () => reconciliationApi.getLateRefunds({ from, to, page: refundPage, size: PAGE_SIZE }),
@@ -115,7 +126,7 @@ export function AdminPaymentReconciliationPage() {
     'Không thể tải danh sách hoàn tiền tự động.',
   );
 
-  // IPN events tab
+  // Tab sự kiện IPN
   const [rspCode, setRspCode] = useState('ALL');
   const [source, setSource] = useState('ALL');
   const [referenceDraft, setReferenceDraft] = useState('');
@@ -128,7 +139,7 @@ export function AdminPaymentReconciliationPage() {
     'Không thể tải sự kiện IPN.',
   );
 
-  // Timeline modal
+  // Hộp thoại dòng thời gian
   const [timelineId, setTimelineId] = useState<number | null>(null);
   const [timeline, setTimeline] = useState<PaymentTimeline | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
@@ -148,8 +159,10 @@ export function AdminPaymentReconciliationPage() {
     return () => { mounted = false; };
   }, [timelineId, timelineReload]);
 
+  // Về trang đầu của cả ba danh sách khi đổi bộ lọc.
   const resetPages = () => { setAttemptPage(0); setRefundPage(0); setIpnPage(0); };
 
+  // Ô hiển thị hội viên: tên và email (hoặc số điện thoại).
   const memberCell = (member: MemberRef | null) => (
     <div className="actor-meta">
       <span className="actor-name">{member?.fullName || '—'}</span>
@@ -157,7 +170,9 @@ export function AdminPaymentReconciliationPage() {
     </div>
   );
 
+  // Mở dòng thời gian của một khoản thanh toán.
   const openTimeline = (paymentId: number | null) => { if (paymentId != null) setTimelineId(paymentId); };
+  // Nút mở dòng thời gian, hiện "—" nếu không có payment.
   const timelineButton = (paymentId: number | null) => paymentId == null ? <span className="recon-muted">—</span> : (
     <button
       type="button"
@@ -483,19 +498,23 @@ export function AdminPaymentReconciliationPage() {
   );
 }
 
+/** Trạng thái một danh sách phân trang: dữ liệu, đang tải, lỗi và hàm thử lại. */
 interface ListState<T> {
   data: PageResult<T> | null;
   loading: boolean;
   error: StaffMessage;
+  // Thử tải lại danh sách.
   retry: () => void;
 }
 
+/** Thẻ danh sách phân trang dùng chung: trạng thái đang tải, lỗi, rỗng, bảng dữ liệu và nút chuyển trang. */
 function ListCard<T>({ t, state, loadingLabel, emptyLabel, page, setPage, tableLabel, head, rows }: {
   t: Translate;
   state: ListState<T>;
   loadingLabel: string;
   emptyLabel: string;
   page: number;
+  // Đổi trang.
   setPage: (updater: (p: number) => number) => void;
   tableLabel: string;
   head: string[];
@@ -539,6 +558,7 @@ function ListCard<T>({ t, state, loadingLabel, emptyLabel, page, setPage, tableL
   );
 }
 
+/** Class màu huy hiệu của lượt thanh toán: quá hạn là đỏ, thành công xanh, đang chờ vàng, còn lại trung tính. */
 function attemptBadge(row: VnpayAttemptRow): string {
   if (row.stale) return 'badge-danger';
   if (row.status === 'success') return 'badge-success';
@@ -546,6 +566,7 @@ function attemptBadge(row: VnpayAttemptRow): string {
   return 'badge-neutral';
 }
 
+/** Class màu huy hiệu theo mã phản hồi IPN (00 thành công, 99 tạm thời, 02 đã xử lý, còn lại lỗi). */
 function rspBadge(code: string): string {
   if (code === '00') return 'badge-success';
   if (code === '99') return 'badge-warning';
@@ -553,6 +574,7 @@ function rspBadge(code: string): string {
   return 'badge-danger';
 }
 
+/** Nhãn trạng thái lượt thanh toán. */
 function attemptStatusLabel(t: Translate, status: string | null): string {
   switch (status) {
     case 'pending': return t('Đang chờ', 'Pending');
@@ -562,6 +584,7 @@ function attemptStatusLabel(t: Translate, status: string | null): string {
   }
 }
 
+/** Nhãn trạng thái khoản thanh toán. */
 function paymentStatusLabel(t: Translate, status: string | null): string {
   switch (status) {
     case 'pending': return t('Chờ thanh toán', 'Awaiting payment');
@@ -572,6 +595,7 @@ function paymentStatusLabel(t: Translate, status: string | null): string {
   }
 }
 
+/** Nhãn phương thức thanh toán. */
 function methodLabel(t: Translate, method: string | null): string {
   switch (method) {
     case 'online_wallet': return t('Trực tuyến', 'Online');
@@ -582,6 +606,7 @@ function methodLabel(t: Translate, method: string | null): string {
   }
 }
 
+/** Nhãn đối tượng thanh toán (gói tập, buổi PT, đặt sân, đơn hàng, khóa học, nạp ví) kèm id. */
 function targetLabel(t: Translate, type: string | null, id: number | null): string {
   const suffix = id != null ? ` #${id}` : '';
   switch (type) {
@@ -595,6 +620,7 @@ function targetLabel(t: Translate, type: string | null, id: number | null): stri
   }
 }
 
+/** Nhãn ý nghĩa mã phản hồi IPN. */
 function rspLabel(t: Translate, code: string): string {
   switch (code) {
     case '00': return t('Đã ghi nhận', 'Accepted');
@@ -607,6 +633,7 @@ function rspLabel(t: Translate, code: string): string {
   }
 }
 
+/** Nhãn loại mục trong dòng thời gian thanh toán. */
 function entryLabel(t: Translate, type: string): string {
   switch (type) {
     case 'PAYMENT_CREATED': return t('Tạo khoản thanh toán', 'Payment created');
@@ -619,9 +646,14 @@ function entryLabel(t: Translate, type: string): string {
   }
 }
 
+/**
+ * Mô tả chi tiết một mục trong dòng thời gian: mã tham chiếu, trạng thái, nguồn/mã phản hồi hoặc phương thức
+ * tùy loại mục.
+ */
 function entryDetail(
   t: Translate,
   entry: PaymentTimeline['entries'][number],
+  // Hàm định dạng số tiền.
   formatAmount: (n: number | null | undefined) => string,
 ): string {
   const parts: string[] = [];

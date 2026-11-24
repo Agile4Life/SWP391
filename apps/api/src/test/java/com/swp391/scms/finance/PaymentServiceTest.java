@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service PaymentService (payment service). */
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
 
@@ -63,6 +64,7 @@ class PaymentServiceTest {
     private Clock clock;
     private PaymentService paymentService;
 
+    /** Chuẩn bị trước mỗi test: tạo PaymentService với repository giả lập. */
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(Instant.parse("2026-10-01T10:00:00Z"), ZoneOffset.UTC);
@@ -70,6 +72,7 @@ class PaymentServiceTest {
                 membershipSubscriptionRepository, classEnrollmentRepository, paymentMapper, clock);
     }
 
+    /** Kiểm thử: tạo thanh toán thành công. */
     @Test
     @DisplayName("Should create payment successfully when member and cashier are valid")
     void shouldCreatePaymentSuccessfully() {
@@ -102,6 +105,7 @@ class PaymentServiceTest {
         verify(paymentRepository).save(payment);
     }
 
+    /** Kiểm thử: ném lỗi khi tạo thanh toán cho hội viên không tồn tại. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when member does not exist")
     void shouldThrowWhenCreatingPaymentWithNonExistentMember() {
@@ -114,6 +118,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: ném lỗi khi thu ngân đã bị xóa mềm. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when cashier receiver is soft-deleted")
     void shouldThrowWhenCreatingPaymentWithSoftDeletedCashier() {
@@ -128,6 +133,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: lấy thanh toán theo id. */
     @Test
     @DisplayName("Should return PaymentDto by ID when payment exists")
     void shouldGetPaymentById() {
@@ -143,6 +149,7 @@ class PaymentServiceTest {
         assertEquals(5L, result.getId());
     }
 
+    /** Kiểm thử: ném lỗi khi không tìm thấy thanh toán. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when payment ID not found")
     void shouldThrowWhenPaymentNotFound() {
@@ -150,6 +157,7 @@ class PaymentServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> paymentService.getPaymentById(999L));
     }
 
+    /** Kiểm thử: lấy thanh toán theo hội viên. */
     @Test
     @DisplayName("Should return list of payments for existing member")
     void shouldGetPaymentsByMemberId() {
@@ -162,6 +170,7 @@ class PaymentServiceTest {
         assertEquals(1, results.size());
     }
 
+    /** Kiểm thử: ném lỗi khi không tìm thấy hội viên cho lịch sử thanh toán. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when querying payments for non-existent member")
     void shouldThrowWhenMemberNotFoundForPaymentsHistory() {
@@ -169,6 +178,7 @@ class PaymentServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> paymentService.getPaymentsByMemberId(999L));
     }
 
+    /** Kiểm thử: cập nhật trạng thái từ pending sang success. */
     @Test
     @DisplayName("Should update payment status from pending to success and set paidAt")
     void shouldUpdatePaymentStatusFromPendingToSuccess() {
@@ -185,6 +195,7 @@ class PaymentServiceTest {
         assertEquals(LocalDateTime.now(clock), payment.getPaidAt());
     }
 
+    /** Kiểm thử: từ chối chuyển từ success sang refunded qua cập nhật trạng thái. */
     @Test
     @DisplayName("Should reject success to refunded on the status endpoint; refunds go through refundPayment")
     void shouldRejectStatusUpdateFromSuccessToRefunded() {
@@ -199,6 +210,7 @@ class PaymentServiceTest {
         assertEquals("success", payment.getStatus());
     }
 
+    /** Kiểm thử: từ chối các chuyển trạng thái không được phép. */
     @Test
     @DisplayName("Should throw BadRequestException for invalid status transitions (e.g., refunded -> success)")
     void shouldRejectDisallowedStatusTransitions() {
@@ -211,6 +223,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatus(1L, "success"));
     }
 
+    /** Kiểm thử: từ chối chuỗi trạng thái không hợp lệ. */
     @Test
     @DisplayName("Should throw BadRequestException when status string is unknown")
     void shouldRejectInvalidStatusString() {
@@ -222,6 +235,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatus(1L, "invalid_status"));
     }
 
+    /** Kiểm thử: xử lý thanh toán và kích hoạt subscription. */
     @Test
     @DisplayName("Should process payment and activate subscription with QR code generation")
     void shouldProcessPaymentAndActivateSubscription() {
@@ -253,6 +267,7 @@ class PaymentServiceTest {
         verify(paymentRepository).save(any(Payment.class));
     }
 
+    /** Kiểm thử: POS không kích hoạt được subscription đã hủy. */
     @Test
     void posCannotActivateCancelledSubscription() {
         Member member = new Member(); member.setUserId(2L);
@@ -267,6 +282,7 @@ class PaymentServiceTest {
         assertEquals("cancelled", cancelled.getStatus());
     }
 
+    /** Kiểm thử: POS tất toán thanh toán pending có sẵn mà không tạo bản trùng. */
     @Test
     void posSettlesExistingPendingPaymentWithoutCreatingDuplicate() {
         Member member = new Member(); member.setUserId(2L);
@@ -291,6 +307,7 @@ class PaymentServiceTest {
         verify(paymentRepository, times(1)).save(any());
     }
 
+    /** Kiểm thử: thanh toán subscription có sẵn không tất toán được ghi danh khác. */
     @Test
     void existingSubscriptionPaymentCannotSettleAnotherEnrollment() {
         Member member = new Member(); member.setUserId(2L);
@@ -313,6 +330,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: xác nhận thanh toán không kích hoạt lại yêu cầu đã hủy. */
     @Test
     void paymentConfirmationCannotReactivateCancelledRequest() {
         Member member = new Member(); member.setUserId(2L);
@@ -327,6 +345,7 @@ class PaymentServiceTest {
         assertEquals("cancelled", cancelled.getStatus());
     }
 
+    /** Kiểm thử: từ chối thanh toán khi số tiền không khớp. */
     @Test
     @DisplayName("Should reject payment processing when amount does not match package price")
     void shouldRejectPaymentWhenAmountMismatches() {
@@ -348,6 +367,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
     }
 
+    /** Kiểm thử: từ chối thanh toán khi thiếu đối tượng thanh toán. */
     @Test
     @DisplayName("Should reject payment processing when target subscription and enrollment are both null")
     void shouldRejectPaymentWhenTargetIsMissing() {
@@ -355,6 +375,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
     }
 
+    /** Kiểm thử: hoàn tiền thanh toán thành công và hủy subscription. */
     @Test
     @DisplayName("Should refund payment successfully and cancel associated subscription")
     void shouldRefundPaymentSuccessfullyAndCancelSubscription() {
@@ -382,6 +403,7 @@ class PaymentServiceTest {
         verify(paymentRepository).save(payment);
     }
 
+    /** Kiểm thử: từ chối hoàn tiền khi thanh toán chưa thành công. */
     @Test
     @DisplayName("Should reject refund when payment is not in success status")
     void shouldRejectRefundWhenPaymentNotSuccess() {
@@ -395,6 +417,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.refundPayment(10L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Lỗi thu ngân")));
     }
 
+    /** Kiểm thử: từ chối hoàn tiền khi số tiền vượt quá khoản thanh toán. */
     @Test
     @DisplayName("Should reject refund when refund amount is invalid or exceeds payment amount")
     void shouldRejectRefundWhenAmountExceedsPayment() {
@@ -407,6 +430,7 @@ class PaymentServiceTest {
 
         assertThrows(BadRequestException.class, () -> paymentService.refundPayment(10L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Nhầm", new BigDecimal("2000000.00"))));
     }
+    /** Kiểm thử: thanh toán gia hạn thất bại hủy kỳ chờ mà không kích hoạt nó. */
     @Test
     void failedRenewalPaymentCancelsPendingPeriodWithoutActivatingIt() {
         Member member = new Member(); member.setUserId(2L);
@@ -426,6 +450,7 @@ class PaymentServiceTest {
         assertNull(renewal.getQrCode());
         verify(membershipSubscriptionRepository).save(renewal);
     }
+    /** Kiểm thử: số tiền gia hạn được kiểm tra theo giá gói phía server. */
     @Test
     void renewalPaymentAmountIsCheckedAgainstServerPackagePrice() {
         Member member = new Member(); member.setUserId(2L);
@@ -444,6 +469,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.createPayment(dto));
         verify(paymentRepository, never()).save(any());
     }
+    /** Kiểm thử: yêu cầu thanh toán gia hạn không thể tạo hai lần. */
     @Test
     void renewalPaymentRequestCannotBeCreatedTwice() {
         Member member = new Member(); member.setUserId(2L);
@@ -464,6 +490,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: POS với packageId từ chối kỳ gia hạn đang chờ và không đổi gói của nó. */
     @Test
     void posPackageIdRejectsPendingRenewalWithoutChangingItsPackage() {
         Member member = new Member(); member.setUserId(2L);
@@ -486,6 +513,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: POS với packageId không đổi được lượt mua đang chờ hay tạo thanh toán trùng. */
     @Test
     void posPackageIdCannotChangePendingPurchaseOrDuplicateItsPayment() {
         Member member = new Member(); member.setUserId(2L);
@@ -510,6 +538,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: xác nhận cùng một khoản gia hạn hai lần chỉ kích hoạt một lần. */
     @Test
     void confirmingSameRenewalPaymentTwiceActivatesOnlyOnce() {
         Member member = new Member(); member.setUserId(2L);
@@ -529,6 +558,7 @@ class PaymentServiceTest {
         verify(membershipSubscriptionRepository, times(1)).save(renewal);
     }
 
+    /** Kiểm thử: POS lần mua đầu vẫn tạo subscription đã thanh toán. */
     @Test
     void posFirstPurchaseStillCreatesPaidSubscription() {
         Member member = new Member(); member.setUserId(2L);
@@ -552,6 +582,7 @@ class PaymentServiceTest {
         verify(paymentRepository, times(1)).save(any(Payment.class));
     }
 
+    /** Kiểm thử: POS xác nhận khoản gia hạn đang chờ mà không tạo thêm khoản khác. */
     @Test
     void posConfirmsExistingPendingRenewalPaymentWithoutCreatingAnother() {
         Member member = new Member(); member.setUserId(2L);
@@ -568,7 +599,7 @@ class PaymentServiceTest {
         User cashier = new User(); cashier.setId(1L);
         jakarta.persistence.EntityManager entityManager = mock(jakarta.persistence.EntityManager.class);
         org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "entityManager", entityManager);
-        // Refresh reloads the stored values and discards unflushed cashier edits.
+        // Refresh nạp lại giá trị đã lưu và bỏ các chỉnh sửa chưa flush của thu ngân.
         doAnswer(invocation -> {
             if (invocation.getArgument(0) != pendingPayment) return null;
             pendingPayment.setMethod("bank_transfer");
@@ -594,6 +625,7 @@ class PaymentServiceTest {
         verify(membershipSubscriptionRepository, times(1)).save(renewal);
     }
 
+    /** Kiểm thử: POS với packageId từ chối kỳ tương lai đã thanh toán. */
     @Test
     void posPackageIdRejectsAlreadyPaidFuturePeriod() {
         Member member = new Member(); member.setUserId(2L);
@@ -617,6 +649,7 @@ class PaymentServiceTest {
         order.verify(membershipSubscriptionRepository).findByMemberUserId(2L);
     }
 
+    /** Kiểm thử: thanh toán gói qua POS từ chối packageId không khớp. */
     @Test
     void posSubscriptionCheckoutRejectsMismatchedPackageId() {
         Member member = new Member(); member.setUserId(2L);
@@ -632,6 +665,7 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
         verify(paymentRepository, never()).save(any());
     }
+    /** Kiểm thử: nâng cấp tính theo tỷ lệ giữ nguyên báo giá sau khi giá đổi. */
     @Test
     @DisplayName("A prorated upgrade paid later keeps its quote: price, credit and start day survive catalog repricing")
     void proratedUpgradeKeepsItsQuoteAfterRepricing() {
@@ -646,14 +680,14 @@ class PaymentServiceTest {
         MembershipSubscription upgrade = new MembershipSubscription();
         upgrade.setId(12L); upgrade.setMember(member); upgrade.setMembershipPackage(vip);
         upgrade.setPreviousSubscription(current); upgrade.setStatus("pending_payment");
-        // Quoted on 28/09: 17 of 30 days left of 199,000 paid -> 112,000 credit, 187,000 due.
+        // Báo giá ngày 28/09: còn 17/30 ngày của gói đã trả 199.000 -> khấu trừ 112.000, cần trả 187.000.
         upgrade.setStartDate(java.time.LocalDate.of(2026, 9, 28)); upgrade.setEndDate(java.time.LocalDate.of(2026, 10, 27));
         upgrade.setCreditApplied(new BigDecimal("112000")); upgrade.setUpgradeCharge(new BigDecimal("187000"));
         when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
         when(membershipSubscriptionRepository.findById(12L)).thenReturn(Optional.of(upgrade));
         when(membershipSubscriptionRepository.findByMemberUserId(2L)).thenReturn(List.of(current, upgrade));
 
-        // A quote waiting for payment is not repriced: the raised catalog price is refused at the counter.
+        // Báo giá đang chờ thanh toán không bị tính lại giá: giá mới tăng trong danh mục bị từ chối tại quầy.
         basic.setPrice(new BigDecimal("249000"));
         vip.setPrice(new BigDecimal("399000"));
         PaymentProcessDto repriced = new PaymentProcessDto(2L, 12L, null, new BigDecimal("399000"), "pos", null, null);
@@ -661,14 +695,14 @@ class PaymentServiceTest {
         assertThrows(BadRequestException.class, () -> paymentService.processPayment(repriced));
         assertEquals("pending_payment", upgrade.getStatus());
 
-        // The member pays the quoted amount on 01/10.
+        // Hội viên thanh toán đúng số tiền đã báo giá vào ngày 01/10.
         PaymentProcessDto dto = new PaymentProcessDto(2L, 12L, null, new BigDecimal("187000"), "pos", null, null);
         dto.setPackageId(2L);
         paymentService.processPayment(dto);
 
         assertEquals("active", upgrade.getStatus());
         assertEquals(new BigDecimal("187000"), upgrade.payableAmount());
-        // New period runs from the quote day; the old one ends that day, so credited days are not used twice.
+        // Kỳ mới tính từ ngày báo giá; kỳ cũ kết thúc vào ngày đó để các ngày đã khấu trừ không bị dùng hai lần.
         assertEquals(java.time.LocalDate.of(2026, 9, 28), upgrade.getStartDate());
         assertEquals(java.time.LocalDate.of(2026, 10, 27), upgrade.getEndDate());
         assertEquals("expired", current.getStatus());
@@ -676,6 +710,7 @@ class PaymentServiceTest {
         assertEquals(java.time.LocalDate.of(2026, 10, 14), upgrade.getReplacedEndDate());
     }
 
+    /** Kiểm thử: POS không xác nhận nâng cấp khi xuất hiện kỳ gia hạn tương lai đã trả. */
     @Test
     void posCannotConfirmUpgradeWhenPaidFutureRenewalAppears() {
         Member member = new Member(); member.setUserId(2L);
@@ -707,6 +742,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: POS không kích hoạt gia hạn đang chờ khi gói nguồn đang đóng băng. */
     @Test
     void posCannotActivatePendingRenewalWhileSourceIsFrozen() {
         Member member = new Member(); member.setUserId(2L);
@@ -729,6 +765,7 @@ class PaymentServiceTest {
         verify(paymentRepository, never()).save(any());
     }
 
+    /** Kiểm thử: POS tất toán đúng số tiền chờ ban đầu sau khi giá danh mục giảm. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
     void posSettlesOriginalPendingAmountAfterCatalogPriceReduction(boolean explicitSubscription) {
@@ -762,6 +799,7 @@ class PaymentServiceTest {
     }
 
 
+    /** Kiểm thử: hoàn tiền một phần giữ membership cho tới khi hoàn đủ. */
     @Test
     @DisplayName("A partial refund keeps the payment successful and the membership running; the rest ends it")
     void partialRefundKeepsMembershipUntilFullyRefunded() {
@@ -792,6 +830,7 @@ class PaymentServiceTest {
         assertEquals("cancelled", sub.getStatus());
     }
 
+    /** Kiểm thử: hoàn tiền nâng cấp khôi phục kỳ đã bị thay. */
     @Test
     @DisplayName("Refunding an upgrade restores the period it replaced with its original expiry")
     void refundingUpgradeRestoresReplacedPeriod() {
@@ -827,6 +866,7 @@ class PaymentServiceTest {
         assertEquals(java.time.LocalDate.of(2026, 12, 31), previous.getEndDate());
     }
 
+    /** Kiểm thử: gia hạn trả muộn vẫn giữ đủ độ dài. */
     @Test
     @DisplayName("A renewal paid after its planned start keeps its full length from the payment day")
     void lateRenewalPaymentKeepsFullLength() {
@@ -864,6 +904,7 @@ class PaymentServiceTest {
         assertEquals(java.time.LocalDate.of(2026, 10, 30), renewal.getEndDate());
     }
 
+    /** Kiểm thử: thanh toán ghi danh không bao giờ đổi trạng thái của nó. */
     @Test
     @DisplayName("Paying for an attended enrollment never reopens it; a cancelled one cannot be paid")
     void enrollmentPaymentNeverChangesItsStatus() {
@@ -892,6 +933,7 @@ class PaymentServiceTest {
         assertEquals("cancelled", cancelled.getStatus());
     }
 
+    /** Kiểm thử: danh sách thanh toán của hội viên chỉ đánh dấu VNPay pending khi còn lần thử chưa hết hạn. */
     @Test
     @DisplayName("getPaymentsByMemberId sets vnpayPending only when a non-stale pending VnpayTransaction exists")
     void getPaymentsByMemberIdMarksVnpayPendingOnlyWhileUnexpiredAttemptExists() {
@@ -920,7 +962,7 @@ class PaymentServiceTest {
         dtoClosed.setStatus("pending");
         dtoClosed.setMethod("online_wallet");
 
-        // clock is 2026-10-01T10:00:00Z -> 17:00 in Asia/Ho_Chi_Minh
+        // clock là 2026-10-01T10:00:00Z -> 17:00 theo múi giờ Asia/Ho_Chi_Minh
         var liveAttempt = new com.swp391.scms.finance.entity.VnpayTransaction(
                 "LIVE1", activeOnline, BigDecimal.TEN,
                 LocalDateTime.of(2026, 10, 1, 16, 55), LocalDateTime.of(2026, 10, 1, 17, 10), "127.0.0.1");
@@ -941,6 +983,7 @@ class PaymentServiceTest {
         assertFalse(result.get(1).isVnpayPending());
     }
 
+    /** Kiểm thử: nhân viên không tất toán được thanh toán sân, HLV, đơn hàng hay nạp ví theo trạng thái. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"court", "coach", "order", "topup"})
     void staffCannotSettleCourtCoachOrderOrTopupPaymentsByStatus(String kind) {

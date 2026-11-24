@@ -13,6 +13,7 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.clearAllMocks(); vi.unstubAllGlobals(); });
+// Dựng component vào DOM giả để kiểm thử.
 const render = (value = 'Hello', sending = false) => act(async () => root.render(<ChatComposer id="composer" label="Message" value={value} onChange={() => {}} onSubmit={onSubmit} sending={sending} />));
 
 it('sends on physical Enter while preserving Shift+Enter and IME composition', async () => {

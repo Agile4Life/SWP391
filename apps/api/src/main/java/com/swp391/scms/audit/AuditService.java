@@ -15,7 +15,9 @@ import java.time.LocalTime;
 import java.time.OffsetDateTime;
 
 /**
- * Service for querying and formatting Audit Logs for management inspection (SCRUM-109).
+ * Đọc nhật ký kiểm toán cho màn hình Admin.
+ *
+ * Service truy vấn và định dạng nhật ký audit cho việc kiểm tra của quản lý (SCRUM-109).
  */
 @Service
 public class AuditService {
@@ -23,11 +25,16 @@ public class AuditService {
     private final AuditLogRepository auditLogRepository;
     private final ObjectMapper objectMapper;
 
+    /** Nhận repository audit và ObjectMapper để đọc giá trị JSON. */
     public AuditService(AuditLogRepository auditLogRepository, ObjectMapper objectMapper) {
         this.auditLogRepository = auditLogRepository;
         this.objectMapper = objectMapper;
     }
 
+    /**
+     * Lọc audit log theo người thực hiện, loại bản ghi, hành động và khoảng thời gian (chuỗi ngày hoặc ngày
+     * giờ), có phân trang.
+     */
     @Transactional(readOnly = true)
     public Page<AuditLogDto> getAuditLogs(
             Long userId,
@@ -44,6 +51,7 @@ public class AuditService {
         return auditLogRepository.findAll(spec, pageable).map(this::toDto);
     }
 
+    /** Chuyển bản ghi audit sang DTO: kèm họ tên/email người thực hiện và giá trị cũ/mới đã đọc thành JSON. */
     public AuditLogDto toDto(AuditLog entity) {
         if (entity == null) {
             return null;
@@ -74,6 +82,7 @@ public class AuditService {
         );
     }
 
+    /** Đọc chuỗi JSON thành cây JSON; lỗi thì trả nguyên chuỗi. */
     private Object parseJson(String json) {
         if (json == null || json.isBlank()) {
             return null;
@@ -85,6 +94,10 @@ public class AuditService {
         }
     }
 
+    /**
+     * Đọc chuỗi thời gian: có giờ (kể cả có múi giờ) thì đọc trực tiếp; chỉ có ngày thì lấy đầu ngày, hoặc cuối
+     * ngày nếu là mốc kết thúc.
+     */
     private LocalDateTime parseDateTime(String text, boolean endOfDay) {
         if (text == null || text.isBlank()) {
             return null;

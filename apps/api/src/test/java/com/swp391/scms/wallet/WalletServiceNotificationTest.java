@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho WalletServiceNotification (wallet service notification). */
 @ExtendWith(MockitoExtension.class)
 class WalletServiceNotificationTest {
 
@@ -37,6 +38,7 @@ class WalletServiceNotificationTest {
 
     private WalletService walletService;
 
+    /** Chuẩn bị trước mỗi test: tạo WalletService với repository và thông báo giả lập. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -52,6 +54,7 @@ class WalletServiceNotificationTest {
         );
     }
 
+    /** Kiểm thử: nạp ví gửi thông báo kèm phương thức thanh toán VNPay. */
     @Test
     void creditTopupSendsNotificationIncludingVnpayPaymentMethod() {
         User user = new User();
@@ -84,6 +87,7 @@ class WalletServiceNotificationTest {
                 .contains("350000");
     }
 
+    /** Kiểm thử: lễ tân nạp ví gửi thông báo kèm phương thức thanh toán quầy. */
     @Test
     void creditByReceptionistSendsNotificationIncludingCounterPaymentMethod() {
         User user = new User();

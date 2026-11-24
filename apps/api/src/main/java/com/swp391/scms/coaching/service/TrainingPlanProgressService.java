@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.*;
 import java.util.*;
+/** Cho HLV/quản lý xem tiến độ hoàn thành bài tập của hội viên trong một giáo án theo ngày. */
 @Service
 public class TrainingPlanProgressService {
  private final TrainingPlanRepository plans;
@@ -12,12 +13,19 @@ public class TrainingPlanProgressService {
  private final TrainingItemCompletionRepository completions;
  private final CurrentCoachMembers access;
  private final Clock clock;
+ /** Khởi tạo với các repository giáo án, mục giáo án, bản ghi hoàn thành, bộ kiểm tra quyền HLV và Clock. */
  public TrainingPlanProgressService(TrainingPlanRepository plans, TrainingPlanItemRepository items,
   TrainingItemCompletionRepository completions, CurrentCoachMembers access, Clock clock){
   this.plans=plans;this.items=items;this.completions=completions;this.access=access;this.clock=clock;
  }
+ /** Tiến độ một bài tập: id, tên bài và đã hoàn thành hay chưa. */
  public record ItemProgress(Long itemId,String exerciseName,boolean completed) {}
+ /** Tiến độ cả giáo án trong một ngày: id giáo án, ngày tập và danh sách bài tập. */
  public record PlanProgress(Long planId,LocalDate exerciseDate,List<ItemProgress> items) {}
+ /**
+  * Trả về tiến độ giáo án trong ngày: chỉ COACH/CENTER_MANAGER, ngày không ở tương lai, HLV không sở hữu giáo
+  * án phải đang phụ trách hội viên; ngày ngoài thời hạn giáo án trả danh sách rỗng.
+  */
  @Transactional(readOnly=true)
  public PlanProgress get(Long planId,LocalDate date,Long userId,String role){
   if(userId==null || !("COACH".equals(role)||"CENTER_MANAGER".equals(role))) throw new ForbiddenException("FORBIDDEN","coaching.plan.not_owner",null,"Access denied.");

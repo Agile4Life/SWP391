@@ -4,6 +4,7 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
+/** Request đặt lại mật khẩu: email, mã OTP và mật khẩu mới (theo PasswordPolicy). */
 public record ResetPasswordRequest(
         @NotBlank(message = "{validation.auth.email.not_blank}")
         @Email(message = "{validation.auth.email.invalid}")

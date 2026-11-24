@@ -1,3 +1,4 @@
+// Mục đích: đo hiệu năng cảnh cuộn "sport stack" trên trang công khai bằng Playwright.
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');

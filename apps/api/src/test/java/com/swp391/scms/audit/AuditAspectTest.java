@@ -20,9 +20,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+/** Bộ kiểm thử cho AuditAspect (audit aspect). */
 @ExtendWith(MockitoExtension.class)
 class AuditAspectTest {
 
+    /** Kiểm thử: ghi trạng thái user cũ và mới nhưng không có mật khẩu. */
     @Test
     void capturesOldAndNewUserStateWithoutPassword() throws Throwable {
         var entityManager = mock(jakarta.persistence.EntityManager.class);
@@ -48,6 +50,7 @@ class AuditAspectTest {
         org.junit.jupiter.api.Assertions.assertFalse(captor.getValue().getNewValue().contains("c2Vuc2l0aXZlLWltYWdl"));
     }
 
+    /** Kiểm thử: điểm danh lớp ghi ai được đánh dấu gì trước và sau, không kèm thông tin liên hệ. */
     @Test
     @SuppressWarnings("unchecked")
     void classAttendanceLogsWhoWasMarkedWhatBeforeAndAfterWithoutContactDetails() throws Throwable {
@@ -77,11 +80,13 @@ class AuditAspectTest {
     @Mock AuditLogRepository repository;
     @Mock JoinPoint joinPoint;
 
+    /** Dọn dẹp sau mỗi test: xóa SecurityContext. */
     @AfterEach
     void clearContext() {
         SecurityContextHolder.clearContext();
     }
 
+    /** Hàm trợ giúp của test: phương thức mẫu gắn @Audited. */
     private Audited audited(String action, String entity) {
         Audited audited = mock(Audited.class);
         when(audited.action()).thenReturn(action);
@@ -89,6 +94,7 @@ class AuditAspectTest {
         return audited;
     }
 
+    /** Kiểm thử: ghi actor, id thực thể từ đối số đầu và JSON kết quả. */
     @Test
     void recordsActorEntityIdFromFirstArgAndResultJson() {
         SecurityContextHolder.getContext().setAuthentication(
@@ -108,6 +114,7 @@ class AuditAspectTest {
         assertEquals(true, log.getNewValue().contains("locked"));
     }
 
+    /** Kiểm thử: lấy id thực thể từ kết quả khi đối số đầu không phải id. */
     @Test
     void takesEntityIdFromResultWhenFirstArgIsNotAnId() {
         when(joinPoint.getArgs()).thenReturn(new Object[]{"dto"});
@@ -121,6 +128,7 @@ class AuditAspectTest {
         assertNull(captor.getValue().getUserId());
     }
 
+    /** Kiểm thử: lỗi repository không bao giờ làm hỏng nghiệp vụ chính. */
     @Test
     void repositoryFailureNeverBreaksTheBusinessCall() {
         when(joinPoint.getArgs()).thenReturn(new Object[]{1L});

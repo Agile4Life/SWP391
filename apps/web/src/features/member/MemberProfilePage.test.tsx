@@ -3,7 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemberProfilePage } from './MemberProfilePage';
-import type { Profile, HealthMetric } from './profileApi';
+import type { Profile } from './profileApi';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { setLanguage } from '../../shared/i18n';
 
@@ -14,10 +14,6 @@ const mockApi = vi.hoisted(() => ({
   updateReceptionistProfile: vi.fn(),
   uploadAvatar: vi.fn(),
   changePassword: vi.fn(),
-  listHealthMetrics: vi.fn(),
-  addHealthMetric: vi.fn(),
-  updateHealthMetric: vi.fn(),
-  deleteHealthMetric: vi.fn(),
 }));
 
 vi.mock('./profileApi', () => ({
@@ -27,10 +23,6 @@ vi.mock('./profileApi', () => ({
   updateReceptionistProfile: mockApi.updateReceptionistProfile,
   uploadAvatar: mockApi.uploadAvatar,
   changePassword: mockApi.changePassword,
-  listHealthMetrics: mockApi.listHealthMetrics,
-  addHealthMetric: mockApi.addHealthMetric,
-  updateHealthMetric: mockApi.updateHealthMetric,
-  deleteHealthMetric: mockApi.deleteHealthMetric,
 }));
 
 const sampleProfile: Profile = {
@@ -50,16 +42,6 @@ const sampleProfile: Profile = {
   fitnessLevel: 'beginner',
 };
 
-const sampleMetrics: HealthMetric[] = [
-  {
-    id: 1,
-    metricName: 'weight',
-    metricValue: 70,
-    unit: 'kg',
-    recordedAt: '2026-10-01T08:00:00Z',
-  },
-];
-
 describe('MemberProfilePage role-based profile & avatar upload', () => {
   let host: HTMLDivElement;
   let root: Root;
@@ -75,13 +57,8 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     mockApi.updateCoachProfile.mockReset();
     mockApi.updateReceptionistProfile.mockReset();
     mockApi.uploadAvatar.mockReset();
-    mockApi.listHealthMetrics.mockReset();
-    mockApi.addHealthMetric.mockReset();
-    mockApi.updateHealthMetric.mockReset();
-    mockApi.deleteHealthMetric.mockReset();
 
     mockApi.getProfile.mockResolvedValue(sampleProfile);
-    mockApi.listHealthMetrics.mockResolvedValue(sampleMetrics);
     mockApi.updateCoachProfile.mockResolvedValue(undefined);
     mockApi.updateReceptionistProfile.mockResolvedValue(undefined);
   });
@@ -94,6 +71,7 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderPage() {
     await act(async () => {
       root.render(
@@ -113,7 +91,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.querySelector('h1')?.textContent).toBe('Hồ sơ cá nhân');
@@ -134,9 +111,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
     await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
     expect(mockApi.updateProfile).toHaveBeenCalledWith(sampleProfile);
-    expect(mockApi.addHealthMetric).not.toHaveBeenCalled();
-    expect(mockApi.updateHealthMetric).not.toHaveBeenCalled();
-    expect(mockApi.deleteHealthMetric).not.toHaveBeenCalled();
   });
 
   it('retains profile form and reports save failure', async () => {
@@ -154,6 +128,7 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     mockApi.uploadAvatar.mockImplementation(() => new Promise(resolve => { finish = resolve; }));
     await renderPage();
     const name = host.querySelector<HTMLInputElement>('#fullName')!;
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const editName = async (value: string) => act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, value);
       name.dispatchEvent(new Event('input', { bubbles: true }));
@@ -212,7 +187,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
@@ -251,7 +225,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
@@ -276,7 +249,6 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await renderPage();
 
     expect(mockApi.getProfile).toHaveBeenCalled();
-    expect(mockApi.listHealthMetrics).not.toHaveBeenCalled();
 
     expect(host.textContent).not.toContain('Chỉ số sức khỏe');
     expect(host.textContent).not.toContain('Mã hội viên');
@@ -288,9 +260,12 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     mockApi.getProfile.mockResolvedValue({ ...sampleProfile, avatarUrl: 'https://broken.example.test/avatar.png' });
 
     const OrigFileReader = globalThis.FileReader;
+    // Lớp giả lập dùng trong kiểm thử.
     class MockFileReader {
       result: string | null = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+      // Callback khi đọc file thành công.
       onload: (() => void) | null = null;
+      // Callback khi đọc file lỗi.
       onerror: (() => void) | null = null;
       readAsDataURL() {
         if (this.onload) this.onload();
@@ -298,12 +273,15 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     }
     vi.stubGlobal('FileReader', MockFileReader as unknown as typeof FileReader);
 
+    // Lớp giả lập dùng trong kiểm thử.
     class MockTinyImage {
       naturalWidth = 50;
       naturalHeight = 50;
       width = 50;
       height = 50;
+      // Callback khi tải ảnh thành công.
       onload: (() => void) | null = null;
+      // Callback khi tải ảnh lỗi.
       onerror: (() => void) | null = null;
       set src(_val: string) {
         if (this.onload) this.onload();
@@ -377,6 +355,7 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' }));
     await renderPage();
     await act(async () => host.querySelector<HTMLButtonElement>('#toggle-password-change-btn')!.click());
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const type = (id: string, value: string) => {
       const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);

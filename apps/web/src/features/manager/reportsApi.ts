@@ -1,12 +1,14 @@
 import { apiFetch } from '../../shared/api/client';
 import { centerNowParts } from '../../shared/lib/centerTime';
 
+/** Doanh thu một ngày: số tiền và số giao dịch. */
 export interface DailyRevenue {
   date: string;
   revenue: number;
   transactionCount: number;
 }
 
+/** Doanh thu theo gói: số tiền, số lượt đăng ký và phần trăm. */
 export interface PackageRevenue {
   packageId: number;
   packageName: string;
@@ -15,6 +17,7 @@ export interface PackageRevenue {
   percentage: number;
 }
 
+/** Giao dịch gần đây: hóa đơn, hội viên, gói, số tiền, phương thức và thời điểm. */
 export interface RecentTransaction {
   id: number;
   invoiceNumber: string | null;
@@ -27,6 +30,10 @@ export interface RecentTransaction {
   paidAt: string;
 }
 
+/**
+ * Tóm tắt báo cáo: doanh thu kỳ và hôm nay, số gói bán, tỷ lệ gia hạn (null khi mẫu số 0), doanh thu theo
+ * ngày/gói và giao dịch gần đây.
+ */
 export interface ReportSummary {
   periodRevenue: number;
   todayRevenue: number;
@@ -37,6 +44,7 @@ export interface ReportSummary {
   recentTransactions: RecentTransaction[];
 }
 
+/** Yêu cầu hủy gói: hội viên, gói, lý do, trạng thái duyệt, số tiền hoàn và người xử lý. */
 export interface CancellationRequestDto {
   id: number;
   memberId: number;
@@ -54,7 +62,9 @@ export interface CancellationRequestDto {
   requestedByName?: string | null;
 }
 
+/** Gom các hàm API báo cáo và yêu cầu hủy gói. */
 export const reportsApi = {
+  // Lấy doanh thu theo ngày trong khoảng.
   getDailyRevenue: async (startDate?: string, endDate?: string): Promise<DailyRevenue[]> => {
     const params = new URLSearchParams();
     if (startDate) params.set('startDate', startDate);
@@ -63,6 +73,7 @@ export const reportsApi = {
     return apiFetch<DailyRevenue[]>(`/reports/revenue/daily${qs}`);
   },
 
+  // Lấy doanh thu theo gói trong khoảng.
   getPackageRevenue: async (startDate?: string, endDate?: string): Promise<PackageRevenue[]> => {
     const params = new URLSearchParams();
     if (startDate) params.set('startDate', startDate);
@@ -71,6 +82,7 @@ export const reportsApi = {
     return apiFetch<PackageRevenue[]>(`/reports/revenue/by-package${qs}`);
   },
 
+  // Tổng hợp báo cáo: gọi song song doanh thu ngày/gói, giao dịch gần đây và tỷ lệ gia hạn, rồi tính doanh thu kỳ, hôm nay và số gói bán.
   getSummary: async (startDate: string, endDate: string): Promise<ReportSummary> => {
     const params = new URLSearchParams({ startDate, endDate });
     const [daily, packages, recentTransactions, renewal] = await Promise.all([
@@ -125,6 +137,7 @@ export const reportsApi = {
     return apiFetch<CancellationRequestDto[]>('/memberships/cancellations');
   },
 
+  // Quản lý phê duyệt yêu cầu hủy gói (kèm ghi chú và số tiền hoàn).
   approveCancellationRequest: async (id: number, note?: string, refundAmount?: number): Promise<CancellationRequestDto> => {
     return apiFetch<CancellationRequestDto>(`/memberships/cancellations/${id}/approve`, {
       method: 'POST',
@@ -132,6 +145,7 @@ export const reportsApi = {
     });
   },
 
+  // Quản lý từ chối yêu cầu hủy gói (kèm ghi chú).
   rejectCancellationRequest: async (id: number, note?: string): Promise<CancellationRequestDto> => {
     return apiFetch<CancellationRequestDto>(`/memberships/cancellations/${id}/reject`, {
       method: 'POST',
@@ -140,6 +154,7 @@ export const reportsApi = {
   },
 };
 
+/** Dữ liệu tạo ảnh chụp báo cáo: loại, khoảng thời gian và nội dung. */
 export interface CreateSnapshotPayload {
   reportType: 'revenue' | 'membership' | 'class_utilization';
   periodStart: string;
@@ -148,6 +163,7 @@ export interface CreateSnapshotPayload {
   generatedById?: number;
 }
 
+/** Một ảnh chụp báo cáo đã lưu: loại, khoảng thời gian, nội dung, người tạo và thời điểm. */
 export interface ReportSnapshotDto {
   id: number;
   reportType: string;

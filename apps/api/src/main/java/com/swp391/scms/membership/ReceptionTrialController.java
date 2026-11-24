@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** API duyệt gói trải nghiệm cho quầy (/api/v1/reception/trials), dành cho lễ tân, quản lý và Admin. */
 @Tag(name = "Reception Trial Approvals", description = "Lễ tân xác minh CCCD/Hộ chiếu và phê duyệt/từ chối gói trải nghiệm 3 ngày")
 @RestController
 @RequestMapping({"/api/v1/reception/trials", "/api/v1/memberships/trial/requests"})
@@ -25,16 +26,19 @@ public class ReceptionTrialController {
     private final MemberTrialService trialService;
     private final MessageService messageService;
 
+    /** Nhận MemberTrialService và MessageService. */
     @Autowired
     public ReceptionTrialController(MemberTrialService trialService, MessageService messageService) {
         this.trialService = trialService;
         this.messageService = messageService;
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** GET: danh sách yêu cầu gói trải nghiệm, lọc theo trạng thái và từ khóa. */
     @Operation(summary = "Lấy danh sách đơn đăng ký gói trải nghiệm 3 ngày")
     @GetMapping
     public ApiResponse<List<ReceptionTrialDto>> listTrials(
@@ -45,6 +49,7 @@ public class ReceptionTrialController {
         return ApiResponse.ok(msg("trial.list.loaded"), list);
     }
 
+    /** POST /{id}/approve: duyệt yêu cầu và tạo kỳ gói dùng thử 3 ngày. */
     @Operation(summary = "Phê duyệt đơn đăng ký gói trải nghiệm (kích hoạt gói 3 ngày & đồng bộ họ tên tài khoản theo CCCD/Hộ chiếu)")
     @PostMapping("/{id}/approve")
     public ApiResponse<ReceptionTrialDto> approveTrial(
@@ -55,6 +60,7 @@ public class ReceptionTrialController {
         return ApiResponse.ok(msg("trial.approved.success"), result);
     }
 
+    /** POST /{id}/reject: từ chối yêu cầu kèm lý do. */
     @Operation(summary = "Từ chối đơn đăng ký gói trải nghiệm kèm lý do")
     @PostMapping("/{id}/reject")
     public ApiResponse<ReceptionTrialDto> rejectTrial(

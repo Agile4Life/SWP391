@@ -8,24 +8,30 @@ import org.springframework.stereotype.Service;
 import java.util.Locale;
 
 /**
- * Service for resolving localized messages from i18n message bundles.
- * Uses request locale from LocaleContextHolder (driven by Accept-Language header).
+ * Dịch mã thông báo (message key) sang tiếng Việt hoặc tiếng Anh theo header Accept-Language của request, dùng
+ * các file i18n/messages_vi.properties và messages_en.properties.
+ *
+ * Service phân giải thông báo đã bản địa hóa từ các bundle message i18n. Dùng locale của request từ
+ * LocaleContextHolder (theo header Accept-Language).
  */
 @Service
 public class MessageService {
 
     private final MessageSource messageSource;
 
+    /** Nhận MessageSource của Spring (đã cấu hình đọc các file messages_*.properties). */
     public MessageService(MessageSource messageSource) {
         this.messageSource = messageSource;
     }
 
     /**
-     * Resolves a message for the current thread's Locale.
+     * Dịch mã thông báo theo ngôn ngữ của request hiện tại; không tìm thấy mã thì trả lại chính mã đó.
      *
-     * @param code the message code/key in messages.properties
-     * @param args optional arguments for placeholder substitution ({0}, {1}, ...)
-     * @return the localized message, or the code itself if not found
+     * Phân giải một message theo Locale của luồng hiện tại.
+     *
+     * @param code mã/khóa thông báo trong messages.properties
+     * @param args các tham số tùy chọn để thay thế placeholder ({0}, {1}, ...)
+     * @return thông báo đã bản địa hóa, hoặc chính mã nếu không tìm thấy
      */
     public String getMessage(String code, Object... args) {
         Locale locale = LocaleContextHolder.getLocale();
@@ -33,12 +39,15 @@ public class MessageService {
     }
 
     /**
-     * Resolves a message for a specific Locale.
+     * Dịch mã thông báo theo một ngôn ngữ chỉ định (dùng khi gửi thông báo cho người khác, không phải người
+     * đang gọi API).
      *
-     * @param code the message code/key
-     * @param locale explicit locale
-     * @param args optional arguments
-     * @return the localized message, or the code itself if not found
+     * Phân giải một message theo một Locale cụ thể.
+     *
+     * @param code mã/khóa thông báo
+     * @param locale locale chỉ định
+     * @param args các tham số tùy chọn
+     * @return thông báo đã bản địa hóa, hoặc chính mã nếu không tìm thấy
      */
     public String getMessage(String code, Locale locale, Object... args) {
         try {
@@ -49,12 +58,14 @@ public class MessageService {
     }
 
     /**
-     * Resolves a message with a default fallback text if the code is not present.
+     * Dịch mã thông báo; nếu mã không tồn tại thì trả câu mặc định được truyền vào.
      *
-     * @param code the message code/key
-     * @param defaultMessage fallback text
-     * @param args optional arguments
-     * @return the localized message or defaultMessage
+     * Phân giải một message kèm văn bản dự phòng nếu mã không tồn tại.
+     *
+     * @param code mã/khóa thông báo
+     * @param defaultMessage chuỗi dự phòng
+     * @param args các tham số tùy chọn
+     * @return thông báo đã bản địa hóa hoặc defaultMessage
      */
     public String getMessageOrDefault(String code, String defaultMessage, Object... args) {
         Locale locale = LocaleContextHolder.getLocale();

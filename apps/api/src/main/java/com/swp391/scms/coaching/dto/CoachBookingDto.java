@@ -5,6 +5,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+/**
+ * Thông tin một booking PT 1:1 trả về client: hội viên, HLV, bộ môn, ngày giờ, giá theo giờ, thanh toán, trạng
+ * thái, ghi chú và thông tin điểm danh.
+ */
 public record CoachBookingDto(
         Long id,
         Long memberId,
@@ -26,16 +30,17 @@ public record CoachBookingDto(
         LocalDateTime createdAt,
         LocalDateTime cancelledAt,
         String cancelReason,
-        /** When the coach or the desk recorded the member as present; null when not recorded. */
+        /** Thời điểm HLV hoặc quầy lễ tân ghi nhận hội viên có mặt; null nếu chưa ghi nhận. */
         LocalDateTime attendedAt,
-        /** True when staff removed the mark on purpose. */
+        /** True khi nhân viên chủ động gỡ dấu có mặt. */
         boolean attendanceLocked,
-        /** Gate check-in that covered the session (attendance list only), shown as a hint; null otherwise. */
+        /** Lượt check-in cổng bao phủ buổi tập (chỉ ở danh sách điểm danh), hiển thị như gợi ý; null nếu không có. */
         LocalDateTime gateCheckinAt,
         String membershipCode,
         String memberPhone,
         String memberEmail
 ) {
+    /** Constructor rút gọn dùng ở các chỗ không cần đủ mọi trường mở rộng; các trường còn lại để mặc định. */
     public CoachBookingDto(
             Long id, Long memberId, String memberName, Long coachId, String coachName,
             String coachSpecialization, String coachAvatarUrl, Long disciplineId, String disciplineName,

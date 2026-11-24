@@ -10,20 +10,23 @@ import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import type { CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { getPtAttendance, markPtAttended, unmarkPtAttended, type PtOutcome } from './ptAttendanceApi';
+import { matchPtSearch } from './ptSearch';
 
 const FILTERS: PtOutcome[] = ['ALL', 'ATTENDED', 'MISSED', 'UPCOMING'];
 
+/** Cộng/trừ số ngày vào ngày YYYY-MM-DD (theo giờ địa phương). */
 function addDays(iso: string, days: number): string {
   const date = new Date(`${iso}T00:00:00`);
   date.setDate(date.getDate() + days);
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
-/** Outcome of one session: arrived, finished without an arrival, or still ahead. */
+/** Buổi kèm đã bắt đầu chưa (theo giờ trung tâm). */
 function hasStarted(booking: CoachBookingDto, now: Date): boolean {
   return (parseCenterTime(`${booking.bookingDate}T${booking.startTime}`)?.getTime() ?? Infinity) <= now.getTime();
 }
 
+/** Kết quả một buổi: đã có mặt, đã kết thúc mà không có mặt (vắng), đang diễn ra hoặc sắp tới. */
 function outcomeOf(booking: CoachBookingDto, now: Date): Exclude<PtOutcome, 'ALL'> | 'IN_PROGRESS' {
   if (booking.attendedAt) return 'ATTENDED';
   const ended = (parseCenterTime(`${booking.bookingDate}T${booking.endTime}`)?.getTime() ?? Infinity) <= now.getTime();
@@ -31,34 +34,11 @@ function outcomeOf(booking: CoachBookingDto, now: Date): Exclude<PtOutcome, 'ALL
   return hasStarted(booking, now) ? 'IN_PROGRESS' : 'UPCOMING';
 }
 
-function matchesSearch(row: CoachBookingDto, query: string): boolean {
-  if (!query) return true;
-  const q = query.trim().toLowerCase();
-  const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
 
-  // 1. Tên học viên
-  const name = (row.memberName ?? '').toLowerCase();
-  const nameNorm = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-  if (name.includes(q) || nameNorm.includes(qNorm)) return true;
-
-  // 2. Mã thẻ / mã học viên
-  const code = (row.membershipCode ?? '').toLowerCase();
-  const idStr = String(row.memberId ?? '');
-  if (code.includes(q) || idStr === q || `mem-${idStr}`.includes(q) || `#${idStr}`.includes(q)) return true;
-
-  // 3. Số điện thoại
-  const phone = (row.memberPhone ?? row.phone ?? '').toLowerCase().replace(/\s+/g, '');
-  const qPhone = q.replace(/\s+/g, '');
-  if (phone && phone.includes(qPhone)) return true;
-
-  // 4. Email
-  const email = (row.memberEmail ?? row.email ?? '').toLowerCase();
-  if (email && email.includes(q)) return true;
-
-  return false;
-}
-
-/** Attendance of 1:1 sessions for coaches (their own) and for the front desk and managers (everyone's). */
+/**
+ * Trang điểm danh buổi kèm 1:1: HLV thấy của mình, lễ tân và quản lý thấy của mọi HLV; lọc theo khoảng ngày,
+ * kết quả và tìm kiếm, ghi nhận hoặc bỏ ghi nhận có mặt.
+ */
 export function PtAttendancePage() {
   const { t } = useI18n();
   const isCoach = getCurrentUser()?.role === 'COACH';
@@ -76,6 +56,7 @@ export function PtAttendancePage() {
   const [now, setNow] = useState(() => new Date());
   const [confirm, confirmDialog] = useConfirm();
 
+  // Tải danh sách buổi trong khoảng ngày; bỏ qua kết quả của lần gọi cũ khi đã có lần gọi mới.
   const load = useCallback(async () => {
     const current = ++requestId.current;
     setError(null);
@@ -103,7 +84,9 @@ export function PtAttendancePage() {
 
   useEffect(() => {
     void load();
+    // Làm các lần tải đang bay trở nên vô hiệu.
     const invalidateRequests = () => { requestId.current++; };
+    // Tự tải lại khi tab hiện lại hoặc lấy lại focus, trừ lúc đang thao tác.
     const refresh = () => { if (!busy.current && document.visibilityState !== 'hidden') void load(); };
     window.addEventListener('focus', refresh);
     window.addEventListener('pageshow', refresh);
@@ -124,7 +107,7 @@ export function PtAttendancePage() {
   for (const row of rows) counts[outcomeOf(row, now)] += 1;
   const visible = rows.filter((row) => {
     const matchFilter = filter === 'ALL' || outcomeOf(row, now) === filter;
-    const matchSearch = matchesSearch(row, search);
+    const matchSearch = matchPtSearch(row, search);
     return matchFilter && matchSearch;
   });
 
@@ -138,9 +121,10 @@ export function PtAttendancePage() {
   const badge = { ATTENDED: 'badge-success', MISSED: 'badge-warning', UPCOMING: 'badge-info', IN_PROGRESS: 'badge-info' };
   const invalidRange = from > to;
 
+  // Ghi nhận hoặc bỏ ghi nhận có mặt; bỏ ghi nhận khi hội viên đã quét cổng thì hỏi xác nhận trước.
   async function markAttended(row: CoachBookingDto, attended: boolean) {
     if (busy.current || loading) return;
-    // The member scanned in at the gate around this session: removing the mark needs a second look.
+    // Hội viên đã quét mã vào cổng quanh thời điểm buổi tập này: cần xác nhận lại trước khi bỏ ghi nhận.
     if (!attended && row.gateCheckinAt && !(await confirm({
       title: { vi: 'Bỏ ghi nhận có mặt?', en: 'Remove the attended mark?' },
       message: {
@@ -226,11 +210,11 @@ export function PtAttendancePage() {
                     {row.membershipCode ? <span className="muted" style={{ marginLeft: 6 }}>({row.membershipCode})</span> : row.memberId ? <span className="muted" style={{ marginLeft: 6 }}>(#{row.memberId})</span> : null}
                     {!isCoach && <> · {t('HLV', 'Coach')}: {row.coachName}</>}
                   </div>
-                  {(row.memberPhone || row.phone || row.memberEmail || row.email) && (
+                  {(row.memberPhone || row.memberEmail) && (
                     <div className="muted" style={{ fontSize: '0.82rem', marginTop: 2 }}>
-                      {row.memberPhone || row.phone}
-                      {((row.memberPhone || row.phone) && (row.memberEmail || row.email)) ? ' · ' : ''}
-                      {row.memberEmail || row.email}
+                      {row.memberPhone}
+                      {((row.memberPhone) && (row.memberEmail)) ? ' · ' : ''}
+                      {row.memberEmail}
                     </div>
                   )}
                   {row.gateCheckinAt && (

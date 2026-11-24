@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
     name = "product_stock_movements",
     indexes = @Index(name = "ix_stock_movements_variant", columnList = "variant_id, created_at")
 )
+/** Entity lịch sử biến động tồn kho (bảng product_stock_movements): biến thể, số lượng tăng/giảm và lý do. */
 public class StockMovement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -40,33 +41,51 @@ public class StockMovement {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
 
+    /** Lấy giá trị trường variant. */
     public ProductVariant getVariant() { return variant; }
+    /** Gán giá trị mới cho trường variant. */
     public void setVariant(ProductVariant variant) { this.variant = variant; }
 
+    /** Lấy giá trị trường delta. */
     public int getDelta() { return delta; }
+    /** Gán giá trị mới cho trường delta. */
     public void setDelta(int delta) { this.delta = delta; }
 
+    /** Lấy giá trị trường reason. */
     public String getReason() { return reason; }
+    /** Gán giá trị mới cho trường reason. */
     public void setReason(String reason) { this.reason = reason; }
 
+    /** Lấy giá trị trường orderId. */
     public Long getOrderId() { return orderId; }
+    /** Gán giá trị mới cho trường orderId. */
     public void setOrderId(Long orderId) { this.orderId = orderId; }
 
+    /** Lấy giá trị trường note. */
     public String getNote() { return note; }
+    /** Gán giá trị mới cho trường note. */
     public void setNote(String note) { this.note = note; }
 
+    /** Lấy giá trị trường actorId. */
     public Long getActorId() { return actorId; }
+    /** Gán giá trị mới cho trường actorId. */
     public void setActorId(Long actorId) { this.actorId = actorId; }
 
+    /** Lấy giá trị trường actor. */
     public User getActor() { return actor; }
+    /** Gán giá trị mới cho trường actor. */
     public void setActor(User actor) {
         this.actor = actor;
         this.actorId = actor == null ? null : actor.getId();
     }
 
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

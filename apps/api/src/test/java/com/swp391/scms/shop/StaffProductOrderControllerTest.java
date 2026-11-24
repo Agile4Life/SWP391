@@ -33,21 +33,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller StaffProductOrderController (staff product order controller). */
 class StaffProductOrderControllerTest {
     final ProductOrderStaffService orders = mock(ProductOrderStaffService.class);
     final AuthenticatedPrincipal staff = new AuthenticatedPrincipal(3L, "receptionist", "RECEPTIONIST");
     final ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
     MockMvc mvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller đơn hàng của nhân viên. */
     @BeforeEach
     void setUp() {
         mvc = MockMvcBuilders.standaloneSetup(new StaffProductOrderController(orders))
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(MethodParameter parameter) {
                         return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(MethodParameter parameter,
                                                   ModelAndViewContainer mavContainer,
@@ -60,6 +64,7 @@ class StaffProductOrderControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: đếm trả số lượng theo tab và ship validate mã vận đơn. */
     @Test
     void countsReturnsTabCountsAndShipValidatesTrackingNumber() throws Exception {
         when(orders.counts()).thenReturn(new OrderCountsDto(3, 2, 1, 4, 5));

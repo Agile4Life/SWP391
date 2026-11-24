@@ -37,35 +37,39 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Optional extra timetable that makes the center look busy: dozens of recurring courses (ongoing, upcoming and
- * finished) as if a manager had created them. Enabled together with {@link DemoDataSeeder}
- * ({@code app.demo.seed-enabled}) but independent of it: it can top up a database that was demo-seeded before, and it is
- * idempotent per class name, so a class that already exists is never duplicated or modified.
+ * Tạo thêm thời khóa biểu lớp nhóm mẫu (đang diễn ra, sắp mở, đã kết thúc) để trung tâm trông đông đúc như thể
+ * quản lý đã tạo. Bật cùng {@link DemoDataSeeder} ({@code app.demo.seed-enabled}) và cờ
+ * {@code app.legacy.classes-enabled} nhưng hoạt động độc lập: có thể bổ sung vào database đã seed demo trước đó
+ * và mang tính idempotent theo tên lớp (lớp đã tồn tại sẽ không bao giờ bị tạo trùng hay sửa đổi).
  *
- * <p>The database triggers reject a session that overlaps another session of the same coach or room, or a confirmed PT
- * booking of the same coach, so every course is placed only into a free slot (checked against the sessions and confirmed
- * PT bookings already stored); a course that cannot be placed is skipped with a warning.
- * Coaches are taken from the active staff by specialization, rooms by name, and no member or enrollment is created.
+ * <p>Trigger database sẽ từ chối buổi học trùng giờ với buổi khác của cùng HLV hoặc phòng, hoặc trùng với lượt
+ * đặt PT đã xác nhận của cùng HLV, nên mỗi khóa chỉ được xếp vào khung trống (kiểm tra với các buổi và lượt đặt
+ * PT đã xác nhận đang lưu); khóa không xếp được sẽ bị bỏ qua kèm cảnh báo. HLV lấy từ nhân viên đang hoạt động
+ * theo chuyên môn, phòng lấy theo tên, và không tạo hội viên hay ghi danh nào.
  */
 @Component
 @Order(210)
-@ConditionalOnProperty(name = "app.demo.seed-enabled", havingValue = "true")
+@ConditionalOnProperty(name = {"app.demo.seed-enabled", "app.legacy.classes-enabled"}, havingValue = "true")
 public class DemoClassSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoClassSeeder.class);
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final LocalTime OPENING = LocalTime.of(6, 0);
     private static final LocalTime CLOSING = LocalTime.of(22, 0);
-    /** Minutes tried, in order, when the preferred start time is taken for a coach or room. */
+    /** Các số phút lần lượt được thử khi giờ bắt đầu ưa thích đã bị HLV hoặc phòng chiếm. */
     private static final int[] SHIFTS = {0, 60, 120, 180, 240, -60, -120};
 
     /**
-     * One course. {@code fromDay}/{@code toDay} bound its sessions relative to the seed day (negative = past); the class
-     * dates follow the first and last session.
+     * Mô tả một khóa học mẫu: tên, bộ môn, phòng, trình độ, sức chứa, học phí, các thứ trong tuần, giờ bắt đầu,
+     * thời lượng, khoảng ngày (tính từ hôm nay, âm là quá khứ), trạng thái và mô tả.
+     *
+     * Một khóa học. {@code fromDay}/{@code toDay} giới hạn các buổi so với ngày seed (âm = quá khứ); ngày của
+     * lớp theo buổi đầu và buổi cuối.
      */
     record ClassSpec(String name, String discipline, String room, String level, int capacity, int price, String days,
                      String start, int minutes, int fromDay, int toDay, String status, String description) {
 
+        /** Đổi chuỗi các thứ (ví dụ "MON,WED") thành tập ngày trong tuần. */
         Set<DayOfWeek> dayOfWeeks() {
             Set<DayOfWeek> result = EnumSet.noneOf(DayOfWeek.class);
             for (String token : days.split(",")) {
@@ -84,12 +88,14 @@ public class DemoClassSeeder implements ApplicationRunner {
     private static final String ZEN = "Zen Garden Studio";
     private static final String POOL = "Oasis Lap Pool";
 
+    /** Tạo mô tả khóa đang diễn ra (bắt đầu 21 ngày trước, kết thúc sau 35 ngày). */
     private static ClassSpec ongoing(String name, String discipline, String room, String level, int capacity,
                                      int price, String days, String start, int minutes, String description) {
         return new ClassSpec(name, discipline, room, level, capacity, price, days, start, minutes, -21, 35, "active",
                 description);
     }
 
+    /** Tạo mô tả khóa sắp mở, bắt đầu sau startsIn ngày và kéo dài 6 tuần. */
     private static ClassSpec upcoming(String name, String discipline, String room, String level, int capacity,
                                       int price, String days, String start, int minutes, int startsIn,
                                       String description) {
@@ -97,6 +103,7 @@ public class DemoClassSeeder implements ApplicationRunner {
                 startsIn + 42, "active", description);
     }
 
+    /** Tạo mô tả khóa đã kết thúc endedDaysAgo ngày trước, đã lưu trữ. */
     private static ClassSpec finished(String name, String discipline, String room, String level, int capacity,
                                       int price, String days, String start, int minutes, int endedDaysAgo,
                                       String description) {
@@ -162,7 +169,9 @@ public class DemoClassSeeder implements ApplicationRunner {
             finished("Bơi Trẻ Hóa Sau Làm Việc", "Bơi lội", POOL, "all", 12, 0, "TUE,THU", "19:30", 60, 25,
                     "Khóa bơi thư giãn buổi tối đã hoàn thành."));
 
+    /** Một khung giờ đã bận (giờ bắt đầu, giờ kết thúc). */
     private record Slot(LocalTime start, LocalTime end) {
+        /** Hai khung giờ có giao nhau không. */
         boolean overlaps(LocalTime otherStart, LocalTime otherEnd) {
             return otherStart.isBefore(end) && otherEnd.isAfter(start);
         }
@@ -176,6 +185,7 @@ public class DemoClassSeeder implements ApplicationRunner {
     private final UserRepository users;
     private final CoachBookingRepository coachBookings;
 
+    /** Nhận các repository cần thiết để tạo lớp, buổi học và kiểm tra lịch bận. */
     public DemoClassSeeder(GymClassRepository classes, ClassSessionRepository sessions, CoachRepository coaches,
                            RoomRepository rooms, DisciplineRepository disciplines, UserRepository users,
                            CoachBookingRepository coachBookings) {
@@ -188,6 +198,11 @@ public class DemoClassSeeder implements ApplicationRunner {
         this.coachBookings = coachBookings;
     }
 
+    /**
+     * Lấy HLV đang làm việc, phòng sẵn sàng, bộ môn và tên các lớp đã có; ghi lại mọi khung đã bận (buổi lớp,
+     * buổi PT đã xác nhận) trong ±150 ngày; với từng lớp mẫu chưa có thì tìm HLV và giờ trống rồi lưu lớp cùng
+     * các buổi học, cập nhật lịch bận. Cuối cùng ghi log số lớp đã tạo/bỏ qua.
+     */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
@@ -209,8 +224,8 @@ public class DemoClassSeeder implements ApplicationRunner {
         Set<String> existingNames = new HashSet<>();
         classes.findAll().forEach(c -> existingNames.add(c.getName()));
 
-        // Slots the database triggers would reject: every non-cancelled session, by coach and by room, and every
-        // confirmed PT booking of a coach (trg_sessions_check_conflict in scms_guard_pt_schedule), per day.
+        // Các khung mà trigger database sẽ từ chối: mọi buổi chưa hủy theo HLV và theo phòng, và mọi lượt đặt
+        // PT đã xác nhận của HLV (trg_sessions_check_conflict trong scms_guard_pt_schedule), theo từng ngày.
         Map<String, List<Slot>> busy = new HashMap<>();
         coachBookings.findConfirmedBetween(today.minusDays(150), today.plusDays(150)).forEach(b ->
                 reserve(busy, "coach", b.getCoach().getUserId(), b.getBookingDate(), b.getStartTime(), b.getEndTime()));
@@ -261,9 +276,15 @@ public class DemoClassSeeder implements ApplicationRunner {
         log.info("Demo class seed: {} classes created, {} skipped (already present or no free slot).", created, skipped);
     }
 
+    /** Kết quả xếp lớp: HLV, giờ bắt đầu và giờ kết thúc. */
     private record Placement(Coach coach, LocalTime start, LocalTime end) {}
 
-    /** First (coach, start time) that is free on every session date; null when none fits. */
+    /**
+     * Tìm cặp (HLV, giờ bắt đầu) đầu tiên còn trống ở mọi ngày học: thử giờ ưu tiên rồi lệch dần theo SHIFTS,
+     * trong giờ mở cửa 06:00-22:00; không có thì trả null.
+     *
+     * (HLV, giờ bắt đầu) đầu tiên rảnh ở mọi ngày học; null khi không có cái nào phù hợp.
+     */
     private Placement place(ClassSpec spec, Room room, List<LocalDate> dates, List<Coach> candidates,
                             Map<String, List<Slot>> busy) {
         LocalTime preferred = LocalTime.parse(spec.start());
@@ -285,7 +306,12 @@ public class DemoClassSeeder implements ApplicationRunner {
         return null;
     }
 
-    /** Coaches of the discipline first (rotated so the load spreads); any other active coach only as a last resort. */
+    /**
+     * Danh sách HLV ứng viên: HLV đúng chuyên môn đứng trước (xoay vòng để chia đều), HLV khác chỉ dùng khi bất
+     * đắc dĩ.
+     *
+     * Ưu tiên HLV của bộ môn (xoay vòng để dàn đều tải); HLV đang hoạt động khác chỉ dùng như phương án cuối.
+     */
     private static List<Coach> candidateCoaches(List<Coach> all, String discipline, int turn) {
         String key = discipline.toLowerCase(Locale.ROOT);
         List<Coach> matching = new ArrayList<>(all.stream()
@@ -300,6 +326,7 @@ public class DemoClassSeeder implements ApplicationRunner {
         return result;
     }
 
+    /** Các ngày học của khóa: những ngày trong khoảng đã định rơi vào đúng các thứ trong tuần. */
     private static List<LocalDate> datesOf(ClassSpec spec, LocalDate today) {
         Set<DayOfWeek> days = spec.dayOfWeeks();
         List<LocalDate> dates = new ArrayList<>();
@@ -311,6 +338,10 @@ public class DemoClassSeeder implements ApplicationRunner {
         return dates;
     }
 
+    /**
+     * Lưu lớp (sức chứa không vượt sức chứa phòng, ngày tạo giả lập 14 ngày trước buổi đầu) và tạo từng buổi
+     * học; buổi đã qua đánh dấu completed, còn lại scheduled.
+     */
     private void save(ClassSpec spec, Discipline discipline, Room room, Placement placement, List<LocalDate> dates,
                       User manager, LocalDateTime now) {
         GymClass gymClass = new GymClass();
@@ -344,21 +375,25 @@ public class DemoClassSeeder implements ApplicationRunner {
         }
     }
 
+    /** Quản lý tạo lớp: ưu tiên tài khoản quản lý demo, không có thì lấy quản lý đầu tiên. */
     private User findManager() {
         List<User> managers = users.findAllByDeletedAtIsNullAndRole_CodeInOrderByIdAsc(List.of("CENTER_MANAGER"));
         return managers.stream().filter(u -> DemoDataSeeder.MANAGER_EMAIL.equalsIgnoreCase(u.getEmail())).findFirst()
                 .orElse(managers.isEmpty() ? null : managers.get(0));
     }
 
+    /** Khóa tra cứu lịch bận theo loại (coach/room), id và ngày. */
     private static String key(String kind, Long id, LocalDate date) {
         return kind + ":" + id + ":" + date;
     }
 
+    /** Ghi một khung giờ bận của HLV hoặc phòng vào ngày cho trước. */
     private static void reserve(Map<String, List<Slot>> busy, String kind, Long id, LocalDate date, LocalTime start,
                                 LocalTime end) {
         busy.computeIfAbsent(key(kind, id, date), k -> new ArrayList<>()).add(new Slot(start, end));
     }
 
+    /** HLV/phòng có bận trong khung giờ đó vào ngày cho trước không. */
     private static boolean isBusy(Map<String, List<Slot>> busy, String kind, Long id, LocalDate date, LocalTime start,
                                   LocalTime end) {
         return busy.getOrDefault(key(kind, id, date), List.of()).stream().anyMatch(s -> s.overlaps(start, end));

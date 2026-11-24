@@ -12,12 +12,21 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập dữ liệu sản phẩm (bảng products). */
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
+    /** Tìm các bản ghi có slug = tham số và active là true (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Product> findBySlugAndActiveTrue(String slug);
+    /** Tìm các bản ghi có slug = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Product> findBySlug(String slug);
+    /** Kiểm tra có tồn tại bản ghi có slug = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsBySlug(String slug);
+    /**
+     * Kiểm tra có tồn tại bản ghi có slug = tham số và id khác tham số (Spring Data tự sinh truy vấn từ tên
+     * hàm).
+     */
     boolean existsBySlugAndIdNot(String slug, Long id);
+    /** Đếm số bản ghi có category_Id = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByCategory_Id(Long categoryId);
 
     @Query("""
@@ -28,6 +37,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
           and (:category = '' or c.slug = :category)
           and (:inStock = false or exists (select 1 from ProductVariant v where v.product = p and v.active = true and v.stock > 0))
         """)
+    /**
+     * Tìm sản phẩm công khai: sản phẩm và danh mục đang hoạt động, lọc theo từ khóa, mục tiêu, slug danh mục và
+     * còn hàng, phân trang.
+     */
     Page<Product> searchPublic(
             @Param("q") String q,
             @Param("goal") ProductGoal goal,
@@ -40,6 +53,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
         where p.active = true and c.active = true and c.id = :categoryId and p.id <> :excludeId
         order by p.featured desc, p.createdAt desc, p.id desc
         """)
+    /** Sản phẩm liên quan cùng danh mục (trừ sản phẩm đang xem), ưu tiên nổi bật và mới nhất. */
     List<Product> findRelatedPublic(
             @Param("categoryId") Long categoryId,
             @Param("excludeId") Long excludeId,
@@ -51,6 +65,10 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
           and (:active is null or p.active = :active)
           and (:lowStock = false or exists (select 1 from ProductVariant v where v.product = p and v.active = true and v.stock < 10))
         """)
+    /**
+     * Tìm sản phẩm cho quản lý: lọc theo từ khóa (tên/slug), trạng thái hoạt động và sắp hết hàng (tồn < 10),
+     * phân trang.
+     */
     Page<Product> searchAdmin(
             @Param("q") String q,
             @Param("active") Boolean active,

@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service TrainingPlanService (training plan service). */
 @ExtendWith(MockitoExtension.class)
 class TrainingPlanServiceTest {
 
@@ -60,6 +61,7 @@ class TrainingPlanServiceTest {
 
     @Mock private com.swp391.scms.coaching.service.CurrentCoachMembers currentCoachMembers;
 
+    /** Chuẩn bị trước mỗi test: tạo TrainingPlanService với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new TrainingPlanService(
@@ -73,6 +75,7 @@ class TrainingPlanServiceTest {
         org.springframework.test.util.ReflectionTestUtils.setField(service,"currentCoachMembers",currentCoachMembers);
     }
 
+    /** Kiểm thử: tạo kế hoạch ở trạng thái nháp kèm các mục tập. */
     @Test
     @DisplayName("Should create training plan in draft status with ordered items")
     void shouldCreatePlanInDraftWithItems() {
@@ -126,6 +129,7 @@ class TrainingPlanServiceTest {
         assertEquals(2, created.getItems().get(1).getOrderIndex());
     }
 
+    /** Kiểm thử: từ chối khoảng ngày không hợp lệ. */
     @Test
     @DisplayName("Should reject plan creation when startDate is after endDate")
     void shouldRejectInvalidDateRange() {
@@ -137,6 +141,7 @@ class TrainingPlanServiceTest {
         assertThrows(BadRequestException.class, () -> service.createPlan(dto, 20L, "COACH"));
     }
 
+    /** Kiểm thử: kích hoạt kế hoạch nháp. */
     @Test
     @DisplayName("Should activate draft plan when owned by coach")
     void shouldActivateDraftPlan() {
@@ -161,6 +166,7 @@ class TrainingPlanServiceTest {
         verify(trainingPlanRepository).save(plan);
     }
 
+    /** Kiểm thử: cấm kích hoạt kế hoạch của HLV khác. */
     @Test
     @DisplayName("Should forbid activating another coach's training plan")
     void shouldForbidActivatingOtherCoachPlan() {
@@ -176,6 +182,7 @@ class TrainingPlanServiceTest {
         assertThrows(ForbiddenException.class, () -> service.activatePlan(100L, 99L, "COACH"));
     }
 
+    /** Kiểm thử: từ chối kích hoạt kế hoạch đã hủy. */
     @Test
     @DisplayName("Should reject activating cancelled training plan")
     void shouldRejectActivatingCancelledPlan() {
@@ -191,6 +198,7 @@ class TrainingPlanServiceTest {
         assertThrows(ConflictException.class, () -> service.activatePlan(100L, 20L, "COACH"));
     }
 
+    /** Kiểm thử: trả các kế hoạch đang hoạt động của tôi. */
     @Test
     @DisplayName("Should return active training plans for member")
     void shouldReturnMyActivePlans() {
@@ -228,6 +236,7 @@ class TrainingPlanServiceTest {
         assertEquals("Plank Hold", plans.get(0).getItems().get(0).getExerciseName());
     }
 
+    /** Hàm trợ giúp của test: tạo subscription đang hoạt động. */
     private com.swp391.scms.membership.entity.MembershipSubscription activeSubscription(String tier) {
         com.swp391.scms.facilities.entity.MembershipPackage pkg = new com.swp391.scms.facilities.entity.MembershipPackage();
         pkg.setName(tier);
@@ -242,6 +251,7 @@ class TrainingPlanServiceTest {
         return sub;
     }
 
+    /** Kiểm thử: hội viên Silver không thấy kế hoạch tập. */
     @Test
     @DisplayName("Silver members do not see plans; Gold and Platinum do; the coach can still create them")
     void silverMembersDoNotSeeTrainingPlans() {
@@ -261,7 +271,7 @@ class TrainingPlanServiceTest {
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("SILVER")));
         assertTrue(service.getMyActivePlans(10L).isEmpty());
         assertThrows(ForbiddenException.class, () -> service.getPlanById(100L, 10L, "MEMBER"));
-        // The coach keeps access so the plan is ready when the member upgrades.
+        // Huấn luyện viên vẫn giữ quyền truy cập để giáo án sẵn sàng khi hội viên nâng cấp gói.
         assertDoesNotThrow(() -> service.getPlanById(100L, 20L, "CENTER_MANAGER"));
 
         when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(activeSubscription("GOLD")));
@@ -272,6 +282,7 @@ class TrainingPlanServiceTest {
         assertEquals(1, service.getMyActivePlans(10L).size());
     }
 
+    /** Kiểm thử: tạo kế hoạch đánh dấu gợi ý AI đã được áp dụng. */
     @Test
     @DisplayName("Should mark AI recommendation as applied when creating plan with aiRecommendationId")
     void shouldMarkAiRecommendationAppliedOnCreate() {
@@ -307,6 +318,7 @@ class TrainingPlanServiceTest {
         verify(aiRecommendationLogRepository).save(recoLog);
     }
 
+    /** Kiểm thử: cấm HLV sửa kế hoạch của hội viên không được phân công. */
     @Test
     @DisplayName("Should forbid a coach from changing a plan no coach is assigned to")
     void shouldForbidCoachEditingUnassignedPlan() {
@@ -318,6 +330,7 @@ class TrainingPlanServiceTest {
         assertThrows(ForbiddenException.class, () -> service.activatePlan(101L, 20L, "COACH"));
     }
 
+    /** Hàm trợ giúp của test: tạo kế hoạch thuộc về HLV. */
     private TrainingPlan ownedPlan(String status) {
         Coach coach = new Coach();
         coach.setUserId(20L);
@@ -333,6 +346,7 @@ class TrainingPlanServiceTest {
         return plan;
     }
 
+    /** Kiểm thử: cập nhật kế hoạch của chính mình. */
     @Test
     @DisplayName("Should update goal and dates of an owned plan")
     void shouldUpdateOwnedPlan() {
@@ -349,6 +363,7 @@ class TrainingPlanServiceTest {
         assertEquals(LocalDate.of(2026, 11, 1), updated.getStartDate());
     }
 
+    /** Kiểm thử: từ chối các cập nhật không hợp lệ. */
     @Test
     @DisplayName("Should reject update with start after end and update of completed plan")
     void shouldRejectInvalidUpdates() {
@@ -362,6 +377,7 @@ class TrainingPlanServiceTest {
         verify(trainingPlanRepository, never()).save(any());
     }
 
+    /** Kiểm thử: chỉ xóa được kế hoạch nháp. */
     @Test
     @DisplayName("Should delete only draft plans owned by the caller")
     void shouldDeleteDraftPlanOnly() {
@@ -442,6 +458,7 @@ class TrainingPlanServiceTest {
   verify(trainingPlanRepository,never()).save(any());
  }
 
+    /** Kiểm thử: kích hoạt một kế hoạch thay thế kế hoạch active khác của hội viên. */
     @Test
     @DisplayName("Activating a plan moves the same coach's other active plan for the member into history")
     void activatingAPlanSupersedesTheMembersOtherActivePlan() {
@@ -458,6 +475,7 @@ class TrainingPlanServiceTest {
         verify(trainingPlanRepository).save(previous);
     }
 
+    /** Kiểm thử: áp dụng lại kế hoạch lịch sử hoán đổi với kế hoạch đang hoạt động. */
     @Test
     @DisplayName("Re-applying a history plan makes it active and moves the current plan to history")
     void reapplyingAHistoryPlanSwapsItWithTheActiveOne() {
@@ -477,6 +495,7 @@ class TrainingPlanServiceTest {
         assertEquals(LocalDate.now().plusDays(18), result.getEndDate(), "A plan still in its period keeps its dates");
     }
 
+    /** Kiểm thử: áp dụng lại kế hoạch đã hết hạn dời ngày về hôm nay. */
     @Test
     @DisplayName("Re-applying a plan whose period ended gives it a new window of the same length")
     void reapplyingAnExpiredPlanShiftsItsDatesToToday() {
@@ -493,6 +512,7 @@ class TrainingPlanServiceTest {
         assertEquals(today.plusDays(28), result.getEndDate());
     }
 
+    /** Kiểm thử: từ chối áp dụng lại kế hoạch ngoài lịch sử. */
     @Test
     @DisplayName("Only plans in history can be re-applied")
     void reapplyRejectsPlansOutsideHistory() {
@@ -502,6 +522,7 @@ class TrainingPlanServiceTest {
         verify(trainingPlanRepository, never()).save(any());
     }
 
+    /** Kiểm thử: kích hoạt kế hoạch chỉ xét các kế hoạch của cùng HLV. */
     @Test
     @DisplayName("Activating a plan leaves the active plans of the member's other coaches alone")
     void activatingAPlanOnlyLooksAtTheSameCoachsPlans() {

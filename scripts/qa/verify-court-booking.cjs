@@ -1,5 +1,5 @@
-// Browser verification uses intercepted API fixtures; it never writes to a database.
-// NODE_PATH supplies the existing playwright-core installation. CHROME_PATH is optional.
+// Mục đích: kiểm tra luồng đặt sân trên giao diện bằng các API giả lập, không bao giờ ghi vào cơ sở dữ liệu.
+// Biến NODE_PATH cung cấp bản cài đặt playwright-core có sẵn; CHROME_PATH là tùy chọn.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');
@@ -21,7 +21,7 @@ const booking = { id: 1, roomId: 1, roomName: court.name, disciplineName: 'Tenni
   const errors = [];
   try {
     for (const width of [390, 1440]) {
-      // The current router assigns these pages to members and receptionists.
+      // Router hiện tại phân quyền các trang này cho hội viên và lễ tân.
       for (const role of ['MEMBER', 'STAFF']) {
         const page = await browser.newPage({ viewport: { width, height: 1000 }, reducedMotion: 'reduce' });
         page.on('pageerror', error => errors.push(error.message));

@@ -23,6 +23,7 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+// Bấm xuất báo cáo CSV.
 async function exportReport() {
   await act(async () => root.render(<ManagerReportsPage />));
   const button = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xuất báo cáo'))!;

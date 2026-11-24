@@ -12,6 +12,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho controller ChatController (chat controller). */
 class ChatControllerTest {
     ChatService service = mock(ChatService.class);
     MockMvc mvc;

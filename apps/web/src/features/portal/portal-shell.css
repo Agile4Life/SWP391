@@ -1,5 +1,4 @@
-/* Landing palette; original component organization preserved. */
-/* Palette adapters only: keep component sizes, placement and behavior. */
+/* Mục đích: Khung portal (sidebar icon, topbar, lưới dashboard bốn cột) và bộ thích ứng bảng màu theo landing; giữ nguyên tổ chức, kích thước, vị trí và hành vi component ban đầu. */
 html:has(.portal-backdrop),
 body:has(.portal-backdrop) {
   background: #202020;
@@ -23,7 +22,7 @@ body:has(.portal-backdrop) .click-ripple {
   border-color: var(--sol-accent);
 }
 
-.portal-v2 :is(.ui-select.is-open .ui-select__trigger, .luxury-datepicker-trigger.is-open, .luxury-timepicker-trigger.is-open) {
+.portal-v2 :is(.ui-select.is-open .ui-select__trigger, .luxury-datepicker-trigger.is-open) {
   outline: none;
   outline-offset: 0;
   border-color: var(--portal-salmon);
@@ -97,13 +96,13 @@ body:has(.portal-backdrop) .click-ripple {
   color: #fca5a5;
 }
 
-.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .luxury-datepicker-trigger, .luxury-timepicker-trigger):disabled {
+.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .luxury-datepicker-trigger):disabled {
   background: var(--portal-ink);
   color: var(--portal-muted);
   border-color: var(--portal-border);
 }
 
-.portal-v2 :is(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover) {
+.portal-v2 :is(.ui-select__menu, .luxury-datepicker-popover) {
   background: var(--portal-surface);
   color: var(--portal-paper);
   border: 1px solid var(--portal-border-strong);
@@ -118,7 +117,7 @@ body:has(.portal-backdrop) .click-ripple {
   color: var(--portal-paper);
 }
 
-.portal-v2 :is(.luxury-datepicker-trigger, .luxury-timepicker-trigger) {
+.portal-v2 :is(.luxury-datepicker-trigger) {
   min-height: 44px;
   border-radius: 10px;
   border: 1px solid var(--portal-border-strong);
@@ -140,31 +139,16 @@ body:has(.portal-backdrop) .click-ripple {
   color: var(--portal-salmon);
 }
 
-.portal-v2 .ltp-item-btn {
-  background: transparent;
-  color: var(--portal-paper);
-}
-
-.portal-v2 .ltp-item-btn:hover:not(.is-active) {
-  background: var(--portal-tint);
-  color: var(--portal-salmon);
-}
-
-.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, .luxury-timepicker-trigger, select:not(.ui-select__native)):hover:not(:disabled) {
+.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, select:not(.ui-select__native)):hover:not(:disabled) {
   background: var(--portal-raised);
   border-color: var(--portal-salmon);
 }
 
-.portal-v2 :is(.ldp-header, .ltp-header, .ldp-footer, .ltp-footer, .package-benefit-list, .ltp-col-scroll) {
+.portal-v2 :is(.ldp-header, .ldp-footer, .package-benefit-list) {
   border-color: var(--portal-border);
 }
 
-.portal-v2 .ltp-col-scroll {
-  background: var(--portal-ink);
-  scrollbar-color: var(--portal-salmon) transparent;
-}
-
-.portal-v2 :is(.ldp-title, .ltp-title, .ldp-day-cell, .package-benefit-item) {
+.portal-v2 :is(.ldp-title, .ldp-day-cell, .package-benefit-item) {
   color: var(--portal-paper);
 }
 
@@ -173,15 +157,15 @@ body:has(.portal-backdrop) .click-ripple {
   opacity: .45;
 }
 
-.portal-v2 :is(.luxury-datepicker-placeholder, .luxury-timepicker-placeholder, .ldp-weekday, .ltp-col-label) {
+.portal-v2 :is(.luxury-datepicker-placeholder, .ldp-weekday) {
   color: var(--portal-muted);
 }
 
-.portal-v2 :is(.luxury-datepicker-icon, .luxury-timepicker-icon, .ldp-action-btn) {
+.portal-v2 :is(.luxury-datepicker-icon, .ldp-action-btn) {
   color: var(--portal-salmon);
 }
 
-.portal-v2 :is(.luxury-datepicker-trigger:hover .luxury-datepicker-icon, .luxury-timepicker-trigger:hover .luxury-timepicker-icon) {
+.portal-v2 :is(.luxury-datepicker-trigger:hover .luxury-datepicker-icon) {
   color: var(--portal-hover);
 }
 
@@ -227,18 +211,7 @@ body:has(.portal-backdrop) .click-ripple {
   opacity: .4;
 }
 
-.portal-v2 :is(.ltp-item-btn.is-active, .ltp-done-btn) {
-  background: var(--portal-salmon);
-  color: var(--portal-ink);
-  box-shadow: none;
-}
-
-.portal-v2 .ltp-done-btn:hover {
-  background: var(--portal-hover);
-  color: var(--portal-ink);
-}
-
-.portal-v2 :is(.package-benefit-check, .ltp-preview-badge) {
+.portal-v2 :is(.package-benefit-check) {
   background: var(--portal-tint);
   color: var(--portal-salmon);
 }
@@ -878,7 +851,7 @@ html:root .portal-logo.portal-logo--mark {
   color: var(--portal-muted);
 }
 
-/* Adapt the existing feature screens to the same visual language. */
+/* Đồng bộ các màn hình tính năng hiện có sang cùng ngôn ngữ thị giác. */
 .portal-v2 .portal-card,
 .portal-v2 .metric-card {
   min-width: 0;
@@ -895,7 +868,7 @@ html:root .portal-logo.portal-logo--mark {
   overflow-wrap: anywhere;
 }
 
-.portal-v2 .portal-card:has(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover, .action-menu[open]) {
+.portal-v2 .portal-card:has(.ui-select__menu, .luxury-datepicker-popover, .action-menu[open]) {
   z-index: 40;
   overflow: visible;
 }
@@ -1300,7 +1273,7 @@ html:root .portal-logo.portal-logo--mark {
   border-radius: inherit;
 }
 
-.portal-v2 .portal-table-wrapper:has(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover, .action-menu[open]) {
+.portal-v2 .portal-table-wrapper:has(.ui-select__menu, .luxury-datepicker-popover, .action-menu[open]) {
   overflow: visible;
 }
 
@@ -1312,7 +1285,7 @@ html:root .portal-logo.portal-logo--mark {
   border-top-right-radius: 19px;
 }
 
-.portal-v2 .portal-table :is(tr, td):has(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover, .action-menu[open]) {
+.portal-v2 .portal-table :is(tr, td):has(.ui-select__menu, .luxury-datepicker-popover, .action-menu[open]) {
   position: relative;
   z-index: 30;
 }
@@ -1351,7 +1324,7 @@ html:root .portal-logo.portal-logo--mark {
   color: var(--portal-muted);
 }
 
-.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, .luxury-timepicker-trigger, select:not(.ui-select__native)):is(:focus, :focus-visible) {
+.portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, select:not(.ui-select__native)):is(:focus, :focus-visible) {
   outline: none;
   outline-offset: 0;
   border-color: var(--portal-salmon);
@@ -2030,7 +2003,7 @@ html:root .portal-logo.portal-logo--mark {
     max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   }
 
-  .portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, .luxury-timepicker-trigger, select:not(.ui-select__native)) {
+  .portal-v2 :is(.portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, select:not(.ui-select__native)) {
     font-size: 16px;
     min-height: 44px;
   }
@@ -2178,7 +2151,7 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 
-/* Health Metrics Compact Table & Action Buttons (No horizontal scrollbar) */
+/* Bảng chỉ số sức khỏe gọn gàng & nút thao tác (không có thanh cuộn ngang) */
 .portal-v2 .profile-metric-table-container {
   width: 100%;
   max-width: 100%;
@@ -2327,7 +2300,7 @@ html:root .portal-logo.portal-logo--mark {
 
 /* Màn hình cảm ứng và tablet (<=1024px): cỡ chữ 16px ngăn iOS/iPadOS tự zoom khi chạm ô nhập */
 @media (max-width: 1024px), (pointer: coarse) {
-  .portal-v2 :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), textarea, .portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, .luxury-timepicker-trigger, select:not(.ui-select__native)) {
+  .portal-v2 :is(input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']), textarea, .portal-input, .portal-select, .portal-textarea, .ui-select__trigger, .luxury-datepicker-trigger, select:not(.ui-select__native)) {
     font-size: 16px;
     min-height: 44px;
   }
@@ -2350,7 +2323,7 @@ html:root .portal-logo.portal-logo--mark {
   }
 }
 
-/* Dark accents mark the current location and primary actions; ordinary cards stay quiet. */
+/* Điểm nhấn chế độ tối đánh dấu vị trí hiện tại và thao tác chính; các thẻ thông thường giữ dịu mắt. */
 :root:not([data-theme='light']) .portal-backdrop {
   --portal-led-edge: var(--sol-led-edge);
   --portal-led-glow: var(--sol-led-glow);
@@ -2403,7 +2376,7 @@ html:root .portal-logo.portal-logo--mark {
 }
 
 
-/* Multi-language setting in avatar dropdown and workspace footer */
+/* Cài đặt đa ngôn ngữ trong menu ảnh đại diện và chân trang không gian làm việc */
 .portal-avatar-settings-block {
   padding: 10px 12px;
   margin-bottom: 6px;

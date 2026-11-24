@@ -1,12 +1,16 @@
-import { useSourceLanguage, sourceText } from "../../shop/shopI18n";
+import { useSourceLanguage, sourceText } from "../../../shared/i18n/sourceText";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { Link, useParams } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { PublicLayout, RoundArrow } from './PublicLayout';
-import { CatalogSchedule, CatalogStatus } from './CatalogSections';
+import { CatalogStatus } from './CatalogSections';
 import { localizeSeededCatalogText, usePublicCatalog } from '../publicCatalog';
 
+/**
+ * Trang hồ sơ HLV công khai: chọn HLV theo trainerId trên URL (mặc định HLV đầu tiên) từ catalog trực tiếp, kèm
+ * ảnh chân dung và nút đặt PT theo vai trò đăng nhập.
+ */
 export function LiveTrainerProfile() {
   useSourceLanguage();
   const { trainerId } = useParams<{ trainerId?: string }>();
@@ -15,7 +19,7 @@ export function LiveTrainerProfile() {
   const avatarUrl = coach?.avatarUrl?.trim() || null;
   const portrait = coach ? coachPortrait(coach.name) : undefined;
   const user = getCurrentUser();
-  const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
+  const ptPath = user ? user.role === 'MEMBER' ? '/member/classes?tab=pt' : homePath(user.role) : '/login';
   return <PublicLayout>
     <main id="public-main" className="fit-trainer-story-page">
       <section className="fit-section fit-trainer-story-hero" aria-labelledby="trainer-story-title">
@@ -37,11 +41,9 @@ export function LiveTrainerProfile() {
               <h1 id="trainer-story-title">{coach.name}<span className="fit-title-dot">.</span><small>{coach.specialization ? localizeSeededCatalogText(coach.specialization) : sourceText('Huấn luyện thể thao')}</small></h1>
               <p className="fit-coach-bio">{coach.bio ? localizeSeededCatalogText(coach.bio) : sourceText('Thông tin giới thiệu đang được cập nhật.')}</p>
               {coach.certification && <div className="fit-trainer-specialty-box"><span className="fit-kicker">{sourceText("CHỨNG CHỈ")}</span><p>{coach.certification}</p></div>}
-              <Link to={classPath} className="fit-pill">{sourceText("Xem lịch & đặt lớp")}<RoundArrow diagonal /></Link>
+              <Link to={ptPath} className="fit-pill">{sourceText({ vi: 'Đặt lịch HLV 1:1', en: 'Book a 1:1 coach' })}<RoundArrow diagonal /></Link>
             </div>
           </div>
-          <h2 className="fit-catalog-heading">{sourceText("Lịch lớp của ")}{coach.name}</h2>
-          <CatalogSchedule catalog={catalog} coachId={coach.id} joinPath={classPath} />
         </>}
       </section>
     </main>

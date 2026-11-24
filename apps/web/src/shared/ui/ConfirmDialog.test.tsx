@@ -7,10 +7,12 @@ import { toast } from './toast';
 let host: HTMLDivElement, root: Root;
 const results: Promise<boolean>[] = [];
 let pending: ConfirmOptions;
+// Component phụ chỉ phục vụ kiểm thử.
 function Harness() {
   const [confirm, dialog] = useConfirm();
   return <><button type="button" data-open onClick={() => { results.push(confirm(pending)); }}>open</button>{dialog}</>;
 }
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function ask(options: ConfirmOptions) {
   pending = options;
   await act(async () => host.querySelector<HTMLButtonElement>('[data-open]')!.click());
@@ -22,6 +24,7 @@ beforeEach(async () => {
   await act(async () => root.render(<Harness />));
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); document.querySelectorAll('.sol-toast').forEach((n) => n.remove()); vi.unstubAllGlobals(); });
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const button = (text: string) => Array.from(host.querySelectorAll('button')).find((b) => b.textContent === text)!;
 
 it('resolves true when confirmed and uses the danger style for destructive actions', async () => {

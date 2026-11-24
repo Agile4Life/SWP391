@@ -21,6 +21,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Nghiệp vụ đơn từ nội bộ: nhân viên gửi/hủy đơn, quản lý duyệt/từ chối; thông báo cho quản lý khi có đơn mới
+ * và cho người gửi khi có kết quả.
+ */
 @Service
 public class StaffInternalRequestService {
 
@@ -41,17 +45,20 @@ public class StaffInternalRequestService {
     @Autowired(required = false)
     private com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
 
+    /** Constructor cho test với repository bắt buộc. */
     public StaffInternalRequestService(StaffInternalRequestRepository requestRepository,
                                        UserRepository userRepository) {
         this(requestRepository, userRepository, null);
     }
 
+    /** Constructor cho test có NotificationService. */
     public StaffInternalRequestService(StaffInternalRequestRepository requestRepository,
                                        UserRepository userRepository,
                                        NotificationService notificationService) {
         this(requestRepository, userRepository, notificationService, null);
     }
 
+    /** Constructor Spring dùng; NotificationService là tùy chọn. */
     @Autowired
     public StaffInternalRequestService(StaffInternalRequestRepository requestRepository,
                                        UserRepository userRepository,
@@ -62,6 +69,11 @@ public class StaffInternalRequestService {
         this.messageService = messageService;
     }
 
+    /**
+     * Tạo đơn: loại đơn phải hợp lệ, ngày kết thúc không trước ngày bắt đầu, đơn nghỉ bắt buộc có ngày. Đơn
+     * nghỉ trùng ngày với đơn khác thì báo trước, chỉ gửi khi người dùng xác nhận. Người thay ca phải là nhân
+     * viên khác đang hoạt động có vai trò phù hợp. Lưu đơn ở trạng thái PENDING và báo cho mọi quản lý.
+     */
     @Transactional
     public StaffInternalRequestDto createRequest(Long userId, StaffInternalRequestCreateDto requestDto) {
         User user = userRepository.findById(userId)
@@ -81,7 +93,8 @@ public class StaffInternalRequestService {
             throw new BadRequestException("LEAVE_DATES_REQUIRED", "error.operations.request.leave_dates_required", null, "A leave request needs its start and end dates.");
         }
 
-        // A second leave on days already asked for is usually a mistake: warn first, send only once the user confirms.
+        // Đơn nghỉ thứ hai vào những ngày đã xin thường là nhầm: cảnh báo trước, chỉ gửi khi người dùng xác
+        // nhận.
         if ("LEAVE".equals(type) && !Boolean.TRUE.equals(requestDto.confirmOverlap())) {
             List<StaffInternalRequest> overlaps = requestRepository.findOverlappingLeaves(userId, requestDto.startDate(), requestDto.endDate());
             if (!overlaps.isEmpty()) {
@@ -96,7 +109,7 @@ public class StaffInternalRequestService {
             }
         }
 
-        // A replacement must be another active staff member who can actually cover the shift.
+        // Người thay thế phải là nhân viên đang hoạt động khác, có thể thực sự phủ ca.
         User replacement = null;
         if (requestDto.replacementUserId() != null) {
             replacement = userRepository.findByIdAndDeletedAtIsNull(requestDto.replacementUserId())
@@ -121,7 +134,7 @@ public class StaffInternalRequestService {
 
         StaffInternalRequest saved = requestRepository.save(req);
 
-        // Notify managers about new request
+        // Thông báo cho quản lý về yêu cầu mới.
         if (notificationService != null) {
             List<User> managers = userRepository.findActiveManagers().stream()
                     .filter(u -> u.getRole() != null && 
@@ -144,6 +157,7 @@ public class StaffInternalRequestService {
         return mapToDto(saved);
     }
 
+    /** Các đơn của một nhân viên, lọc theo trạng thái (ALL hoặc trống là tất cả), mới nhất trước. */
     @Transactional(readOnly = true)
     public List<StaffInternalRequestDto> getMyRequests(Long userId, String status) {
         List<StaffInternalRequest> list;
@@ -155,6 +169,7 @@ public class StaffInternalRequestService {
         return list.stream().map(this::mapToDto).toList();
     }
 
+    /** Nhân viên hủy đơn của chính mình; chỉ hủy được khi đơn đang chờ duyệt. */
     @Transactional
     public StaffInternalRequestDto cancelRequest(Long userId, Long requestId) {
         StaffInternalRequest req = requestRepository.findByIdForUpdate(requestId)
@@ -174,6 +189,7 @@ public class StaffInternalRequestService {
         return mapToDto(updated);
     }
 
+    /** Mọi đơn cho quản lý, lọc theo trạng thái và loại (ALL hoặc trống là bỏ qua). */
     @Transactional(readOnly = true)
     public List<StaffInternalRequestDto> getAllRequests(String status, String requestType) {
         String cleanStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status.trim())) ? status.toUpperCase().trim() : null;
@@ -183,6 +199,10 @@ public class StaffInternalRequestService {
                 .toList();
     }
 
+    /**
+     * Quản lý duyệt hoặc từ chối đơn đang chờ (từ chối phải có ghi chú); lưu người và thời điểm duyệt. Duyệt
+     * đơn nghỉ thì báo cho quản lý số lớp/buổi PT bị ảnh hưởng. Gửi thông báo kết quả cho người gửi.
+     */
     @Transactional
     public StaffInternalRequestDto reviewRequest(Long managerUserId, Long requestId, StaffInternalRequestReviewDto reviewDto) {
         StaffInternalRequest req = requestRepository.findByIdForUpdate(requestId)
@@ -217,7 +237,7 @@ public class StaffInternalRequestService {
             reportLeaveImpact(saved, manager);
         }
 
-        // Send in-app notification to the requester
+        // Gửi thông báo trong ứng dụng cho người gửi yêu cầu.
         if (notificationService != null) {
             String title = msg("APPROVED".equals(newStatus) ? "notifications.operations.approved.title" : "notifications.operations.rejected.title");
             String message = msg("notifications.operations.reviewed.body", saved.getTitle(),
@@ -237,6 +257,7 @@ public class StaffInternalRequestService {
         return mapToDto(saved);
     }
 
+    /** Chuyển đơn sang DTO trả cho client. */
     private StaffInternalRequestDto mapToDto(StaffInternalRequest r) {
         return new StaffInternalRequestDto(
                 r.getId(),
@@ -261,13 +282,17 @@ public class StaffInternalRequestService {
                 r.getUpdatedAt()
         );
     }
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
     /**
-     * An approved coach leave keeps new 1:1 bookings away (see CoachBookingService); classes and sessions already
-     * scheduled in the period are reported to the approving manager so cover can be arranged.
+     * Khi duyệt đơn nghỉ của HLV: đếm số buổi lớp và buổi PT đã lên lịch trong thời gian nghỉ, nếu có thì báo
+     * cho quản lý để sắp xếp người dạy thay. (Đơn nghỉ đã duyệt cũng chặn đặt PT mới trong thời gian đó.)
+     *
+     * Nghỉ phép HLV đã duyệt chặn các lượt đặt 1:1 mới (xem CoachBookingService); các lớp và buổi đã xếp
+     * trong kỳ nghỉ được báo cho quản lý duyệt để sắp xếp người thay.
      */
     private void reportLeaveImpact(StaffInternalRequest leave, User manager) {
         if (!"LEAVE".equals(leave.getRequestType()) || leave.getStartDate() == null || notificationService == null) {

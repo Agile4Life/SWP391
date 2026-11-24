@@ -1,8 +1,14 @@
 import { apiFetch } from '../../shared/api/client';
 
+/** Mã vai trò hệ thống phía backend. */
 export type SystemRole = 'CENTER_MANAGER' | 'COACH' | 'RECEPTIONIST' | 'MEMBER' | 'ADMIN';
+/** Giới tính người dùng. */
 export type UserGender = 'male' | 'female' | 'other';
 
+/**
+ * Tài khoản người dùng ở phía giao diện: tên, email, điện thoại, vai trò, giới tính, trạng thái khóa/xóa và lần
+ * đăng nhập cuối.
+ */
 export interface UserAccount {
   id: string;
   name: string;
@@ -17,6 +23,7 @@ export interface UserAccount {
   is_frozen?: boolean;
 }
 
+/** Một quyền: mã, tên và nhóm chức năng. */
 export interface Permission {
   id: string;
   code: string;
@@ -24,7 +31,7 @@ export interface Permission {
   module: string;
 }
 
-// Backend role codes; the portal displays CENTER_MANAGER as Manager.
+// Mã vai trò phía backend; cổng quản trị hiển thị CENTER_MANAGER là Quản lý trung tâm.
 export const CORE_ROLES: { id: SystemRole; name: string; description: string }[] = [
   { id: 'ADMIN', name: 'Quản trị hệ thống', description: 'Quản trị tài khoản và phân quyền' },
   { id: 'CENTER_MANAGER', name: 'Quản lý trung tâm', description: 'Quản lý vận hành và tạo tài khoản nhân sự' },
@@ -33,6 +40,7 @@ export const CORE_ROLES: { id: SystemRole; name: string; description: string }[]
   { id: 'MEMBER', name: 'Hội viên', description: 'Đặt lớp, quản lý thẻ thành viên và xem lịch tập' },
 ];
 
+/** Dữ liệu người dùng backend trả về. */
 interface UserDto {
   id: number;
   roleCode: SystemRole;
@@ -47,11 +55,13 @@ interface UserDto {
   subscriptionFrozen?: boolean;
 }
 
+/** Dữ liệu vai trò backend trả về. */
 interface RoleDto {
   id: number;
   code: SystemRole;
 }
 
+/** Dữ liệu quyền backend trả về. */
 interface PermissionDto {
   id: number;
   code: string;
@@ -59,11 +69,13 @@ interface PermissionDto {
   module: string;
 }
 
+/** Chuẩn hóa giới tính (giá trị lạ thành "other"). */
 const normalizeGender = (g?: string | null): UserGender => {
   if (g === 'male' || g === 'female' || g === 'other') return g;
   return 'other';
 };
 
+/** Chuyển dữ liệu backend sang UserAccount (id thành chuỗi, trạng thái active thành ACTIVE, ngày cắt phần giờ). */
 const toAccount = (u: UserDto): UserAccount => ({
   id: String(u.id),
   name: u.fullName,
@@ -78,9 +90,11 @@ const toAccount = (u: UserDto): UserAccount => ({
   is_frozen: Boolean(u.subscriptionFrozen),
 });
 
+/** Lấy bảng ánh xạ mã vai trò sang id. */
 const roleIds = async (): Promise<Record<string, number>> =>
   Object.fromEntries((await apiFetch<RoleDto[]>('/roles')).map((r) => [r.code, r.id]));
 
+/** Dữ liệu tạo người dùng: tên, email, điện thoại, mật khẩu, vai trò và giới tính. */
 export interface CreateUserPayload {
   name: string;
   email: string;
@@ -90,6 +104,7 @@ export interface CreateUserPayload {
   gender?: UserGender;
 }
 
+/** Dữ liệu cập nhật người dùng: tên, điện thoại, vai trò và giới tính. */
 export interface UpdateUserPayload {
   name: string;
   phone?: string;
@@ -97,6 +112,7 @@ export interface UpdateUserPayload {
   gender?: UserGender;
 }
 
+/** Gom các hàm API quản lý người dùng, vai trò và quyền. */
 export const userApi = {
   async getUsers(): Promise<UserAccount[]> {
     return (await apiFetch<UserDto[]>('/users')).map(toAccount);

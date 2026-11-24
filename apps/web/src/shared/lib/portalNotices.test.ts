@@ -23,6 +23,13 @@ describe('portalNotices', () => {
     expect(getNotices()).toHaveLength(0);
   });
 
+  it('records an explicit result page while preserving the default source page for other notices', () => {
+    notify('Đã thu tiền', 'success', { record: true, destination: '/staff/reception-history' });
+    expect(getNotices()[0].destination).toBe('/staff/reception-history');
+    notify('Thao tác khác', 'info', { record: true });
+    expect(getNotices()[0].destination).toBe(window.location.pathname);
+  });
+
   it('marks notices read and caps the list', () => {
     for (let index = 0; index < 40; index++) notify(`Thông báo ${index}`, 'info', { record: true });
     expect(getNotices()).toHaveLength(30);

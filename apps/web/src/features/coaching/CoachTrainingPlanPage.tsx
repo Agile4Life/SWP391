@@ -1,9 +1,8 @@
 import { useStaffI18n, type StaffMessage, staffError, staffMessage, staffNotify as notify } from '../operations/staffI18n';
-import { calculateAutoBmi, summarizeHealthMetrics, type HealthMetricsSummary } from './coachHealthUtils';
-import { listHealthMetrics } from '../member/profileApi';
+import { calculateAutoBmi } from './coachHealthUtils';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise, type ExerciseValues } from './trainingExercise';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -43,14 +42,19 @@ const PLAN_STEPS = [
   { id: 2, vi: 'Bài tập theo ngày', en: 'Daily exercises' },
   { id: 3, vi: 'Xem lại & kích hoạt', en: 'Review & activate' },
 ] as const;
+/** Mã bước của trình soạn giáo án (lấy từ PLAN_STEPS). */
 type PlanStep = (typeof PLAN_STEPS)[number]['id'];
 
+/**
+ * Trình soạn giáo án nhiều bước cho HLV/quản lý: chọn học viên và thông tin chung, soạn bài tập (thủ công hoặc
+ * gợi ý AI), xem lại rồi lưu và kích hoạt; quản lý phải chọn HLV phụ trách.
+ */
 export function CoachTrainingPlanPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
-  // Role authorization
+  // Phân quyền theo vai trò: chỉ HLV và quản lý được dùng màn này.
   const hasAccess = useMemo(() => {
     if (!currentUser) return false;
     return currentUser.role === 'COACH' || currentUser.role === 'MANAGER';
@@ -82,10 +86,12 @@ export function CoachTrainingPlanPage() {
   const [coaches, setCoaches] = useState<CoachOption[]>([]);
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
   const [planGoal, setPlanGoal] = useState('Tăng cường sức mạnh và cải thiện tư thế');
+  // Cộng/trừ số ngày vào ngày YYYY-MM-DD (tính theo UTC để không lệch múi giờ).
   const addCenterDays = (isoDate: string, days: number): string => {
     const [y, m, d] = isoDate.split('-').map(Number);
     return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
   };
+  // Số tuần giữa hai ngày, làm tròn, giới hạn 1–52 (mặc định 4 nếu khoảng ngày không hợp lệ).
   const weeksBetween = (startIso: string, endIso: string): number => {
     const [sy, sm, sd] = startIso.split('-').map(Number);
     const [ey, em, ed] = endIso.split('-').map(Number);
@@ -94,11 +100,13 @@ export function CoachTrainingPlanPage() {
     return Math.min(52, Math.max(1, Math.round(diffDays / 7) || 1));
   };
 
+  // Ngày hôm nay theo giờ trung tâm.
   const todayStr = useMemo(() => centerNowParts().date, []);
 
   const [startDate, setStartDate] = useState(() => centerNowParts().date);
   const [endDate, setEndDate] = useState(() => addCenterDays(centerNowParts().date, 28));
 
+  // Đổi ngày bắt đầu; nếu vượt ngày kết thúc thì đẩy ngày kết thúc lên 28 ngày sau.
   const handleStartDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     setStartDate(val);
@@ -107,6 +115,7 @@ export function CoachTrainingPlanPage() {
     }
   };
 
+  // Đổi ngày kết thúc; không cho nhỏ hơn ngày bắt đầu.
   const handleEndDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     if (val && startDate && val < startDate) {
@@ -195,36 +204,6 @@ export function CoachTrainingPlanPage() {
       active = false;
     };
   }, [hasAccess, isManager, membersAttempt]);
-
-  const handleHealthMetricsChange = useCallback((summary: HealthMetricsSummary) => {
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== summary.memberId) return m;
-        const heightCm = summary.heightCm ?? m.heightCm;
-        const weightKg = summary.weightKg ?? m.weightKg;
-        const bmi = calculateAutoBmi(heightCm, weightKg) ?? summary.bmi ?? m.bmi;
-        if (m.heightCm === heightCm && m.weightKg === weightKg && m.bmi === bmi) return m;
-        return { ...m, heightCm, weightKg, bmi };
-      })
-    );
-  }, []);
-
-  useEffect(() => {
-    if (!isAiModalOpen || aiSelectedMemberId == null) return;
-    let active = true;
-    void listHealthMetrics(aiSelectedMemberId)
-      .then((rows) => {
-        if (active && Array.isArray(rows) && rows.length > 0) {
-          handleHealthMetricsChange(summarizeHealthMetrics(aiSelectedMemberId, rows));
-        }
-      })
-      .catch(() => {
-        // Giữ nguyên dữ liệu hiện có của học viên nếu không tải thêm được lịch sử số đo
-      });
-    return () => {
-      active = false;
-    };
-  }, [isAiModalOpen, aiSelectedMemberId, handleHealthMetricsChange]);
 
   // Học viên đang chọn trong form
   const selectedMember: MemberOption | undefined = useMemo(() => {
@@ -421,6 +400,7 @@ export function CoachTrainingPlanPage() {
       : startDate && endDate && endDate < startDate ? 'Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.'
         : isManager && selectedCoachId == null ? 'Quản lý cần chọn huấn luyện viên phụ trách trước khi lưu giáo án.'
           : null;
+  // Chuyển bước; sang bước sau phải qua kiểm tra thông tin chung, lỗi thì quay về bước 1.
   const goToStep = (next: PlanStep) => {
     if (next > 1) {
       const invalid = planInfoError();
@@ -433,6 +413,7 @@ export function CoachTrainingPlanPage() {
 
   // Lưu & Kích hoạt giáo án
   const [isSaving, setIsSaving] = useState(false);
+  // Lưu và kích hoạt giáo án sau khi kiểm tra có bài tập, mục tiêu, khoảng ngày hợp lệ, đã chọn học viên (và HLV với quản lý).
   const handleSavePlan = async () => {
     const trimmedGoal = planGoal.trim();
     const invalid =
@@ -511,6 +492,7 @@ export function CoachTrainingPlanPage() {
     </div>;
   }
 
+  // Mô tả liều tập của bài AI gợi ý: ưu tiên hiệp × lần, rồi hiệp · phút, phút, hiệp, lần; thiếu hết thì "—".
   const formatAiExerciseDose = (item: WorkoutExerciseItem): string => {
     if (item.sets != null && item.reps != null) return `${item.sets} ${t('hiệp', 'sets')} × ${item.reps} ${t('lần', 'reps')}`;
     if (item.sets != null && item.durationMinutes != null) return `${item.sets} ${t('hiệp', 'sets')} · ${item.durationMinutes} ${t('phút', 'min')}`;
@@ -678,7 +660,7 @@ export function CoachTrainingPlanPage() {
           </div>
         </div>
 
-        {/* Member Physical Summary Preview */}
+        {/* Xem trước tóm tắt thể chất của hội viên */}
         <div
           style={{
             marginTop: '16px',

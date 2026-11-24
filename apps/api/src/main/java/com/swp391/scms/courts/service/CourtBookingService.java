@@ -24,6 +24,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Nghiệp vụ đặt sân: danh sách sân, khung giờ trống, đặt/hủy, hạn mức theo gói, thanh toán tại quầy/VNPay và
+ * nhả chỗ chưa thanh toán.
+ */
 @Service
 @Transactional(readOnly = true)
 public class CourtBookingService {
@@ -43,26 +47,28 @@ public class CourtBookingService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private MessageService messages;
 
-    /** Optional so the service stays constructible in unit tests; without it no revenue row is written. */
+    /** Tùy chọn để service vẫn dựng được trong unit test; thiếu nó thì không ghi dòng doanh thu. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private PaymentRepository payments;
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.wallet.WalletService wallets;
     @org.springframework.beans.factory.annotation.Value("${app.vnpay.timeout-minutes:15}")
     private int vnpayTimeoutMinutes = 15;
-    /** An unpaid counter booking is released this long before its slot starts, so the slot is bookable again. */
+    /** Lượt đặt quầy chưa trả được nhả trước giờ bắt đầu khoảng này, để khung giờ đặt lại được. */
     @org.springframework.beans.factory.annotation.Value("${app.courts.cash-release-lead-minutes:120}")
     private int cashReleaseLeadMinutes = 120;
-    /** ...but never sooner than this after it was made, so a last-minute booking still has time to be paid. */
+    /** ...nhưng không bao giờ sớm hơn khoảng này sau khi tạo, để lượt đặt sát giờ vẫn còn thời gian thanh toán. */
     @org.springframework.beans.factory.annotation.Value("${app.courts.cash-min-hold-minutes:30}")
     private int cashMinHoldMinutes = 30;
     private static final Set<String> PAYMENT_METHODS = Set.of("cash", "vnpay");
 
+    /** Constructor rút gọn không có VnpayPaymentGuard (dùng trong test). */
     public CourtBookingService(CourtBookingRepository bookings, RoomRepository rooms,
                                MembershipSubscriptionRepository subscriptions, MemberRepository members, Clock clock) {
         this(bookings, rooms, subscriptions, members, clock, null);
     }
 
+    /** Constructor chính: nhận repository đặt sân, phòng, gói, hội viên, Clock và VnpayPaymentGuard. */
     @org.springframework.beans.factory.annotation.Autowired
     public CourtBookingService(CourtBookingRepository bookings, RoomRepository rooms,
                                MembershipSubscriptionRepository subscriptions, MemberRepository members, Clock clock,
@@ -72,33 +78,46 @@ public class CourtBookingService {
         this.members = members; this.clock = clock;
     }
 
+    /** True nếu tên bộ môn là môn có sân (Tennis, Cầu lông, Bơi lội). */
     public static boolean isCourtDiscipline(String name) { return COURT_DISCIPLINES.contains(name); }
+    /** True nếu thời điểm đúng tròn giờ (phút, giây, nano đều bằng 0). */
     private static boolean wholeHour(LocalTime time) {
         return time != null && time.getMinute() == 0 && time.getSecond() == 0 && time.getNano() == 0;
     }
+    /** Giờ mở/đóng cửa hợp lệ: cả hai tròn giờ và giờ mở trước giờ đóng. */
     public static boolean validHours(LocalTime open, LocalTime close) {
         return wholeHour(open) && wholeHour(close) && open.isBefore(close);
     }
+    /** Thời điểm hiện tại theo giờ Việt Nam. */
     private LocalDateTime now() { return LocalDateTime.ofInstant(clock.instant(), CENTER_ZONE); }
+    /** Tạo BadRequestException với mã COURT_BOOKING_* và message key error.courts.*. */
     private static BadRequestException invalid(String suffix, Object... args) {
         return new BadRequestException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix,
                 args == null || args.length == 0 ? null : args, null);
     }
+    /** Tạo ConflictException với mã COURT_BOOKING_* và message key error.courts.*. */
     private static ConflictException conflict(String suffix, Object... args) {
         return new ConflictException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix,
                 args == null || args.length == 0 ? null : args, null);
     }
+    /** Tạo ForbiddenException với mã COURT_BOOKING_* và message key error.courts.*. */
     private static ForbiddenException forbidden(String suffix) {
         return new ForbiddenException("COURT_BOOKING_" + suffix.toUpperCase(Locale.ROOT), "error.courts." + suffix, null, null);
     }
+    /** Tạo lỗi 404 khi không tìm thấy sân hoặc lượt đặt. */
     private static AppException notFound() {
         return new AppException(HttpStatus.NOT_FOUND, "COURT_BOOKING_NOT_FOUND", "error.courts.not_found", null, null);
     }
-    /** Only rejects missing/past dates; how far ahead a member may book depends on their plan tier (see bookOne). */
+    /**
+     * Chỉ chặn ngày trống hoặc ở quá khứ; giới hạn đặt trước bao xa tùy hạng gói (xem bookOne).
+     *
+     * Chỉ từ chối ngày thiếu/quá khứ; hội viên được đặt trước bao xa phụ thuộc hạng gói (xem bookOne).
+     */
     private void dateWindow(LocalDate date) {
         if (date == null) throw invalid("invalid_slot");
         if (date.isBefore(now().toLocalDate())) throw invalid("past_slot");
     }
+    /** Lấy sân theo id: phải tồn tại, đang available, thuộc môn có sân và có giờ mở cửa hợp lệ. */
     private Room court(Long id) {
         if (id == null) throw invalid("invalid_court");
         Room room = rooms.findById(id).orElseThrow(CourtBookingService::notFound);
@@ -108,12 +127,14 @@ public class CourtBookingService {
         return room;
     }
 
+    /** Danh sách sân đang mở, lọc theo tên bộ môn (rỗng là tất cả). */
     public List<CourtDto> listCourts(String discipline) {
         return rooms.findAvailableCourts(discipline == null ? "" : discipline.trim()).stream()
                 .map(r -> new CourtDto(r.getId(), r.getName(), r.getLocation(), r.getDiscipline().getId(),
                         r.getDiscipline().getName(), r.getOpenTime(), r.getCloseTime())).toList();
     }
 
+    /** Các khung 1 giờ của sân trong ngày: đánh dấu đã qua, có lớp học, đã đặt hoặc trống, kèm giá. */
     public List<SlotDto> availability(Long roomId, LocalDate date) {
         dateWindow(date);
         Room room = court(roomId);
@@ -132,15 +153,22 @@ public class CourtBookingService {
         return result;
     }
 
+    /** True nếu hai khoảng giờ giao nhau. */
     private static boolean overlaps(LocalTime start, LocalTime end, LocalTime otherStart, LocalTime otherEnd) {
         return start.isBefore(otherEnd) && end.isAfter(otherStart);
     }
 
+    /** Hội viên đặt một khung sân theo yêu cầu. */
     @Transactional
     public BookingDto book(AuthenticatedPrincipal principal, BookRequest request) {
         return bookOne(principal, request.roomId(), request.date(), request.startTime(), request.paymentMethod());
     }
 
+    /**
+     * Đặt một khung sân: chỉ MEMBER, ngày/giờ hợp lệ trong giờ mở cửa, gói còn hiệu lực, trong giới hạn đặt
+     * trước và số lượt sắp tới, không trùng sân/lịch hội viên; còn hạn mức thì miễn phí, hết thì phải chọn
+     * phương thức trả tiền.
+     */
     private BookingDto bookOne(AuthenticatedPrincipal principal, Long roomId, LocalDate date, LocalTime start,
                                String paymentMethod) {
         if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
@@ -156,7 +184,7 @@ public class CourtBookingService {
                 || !subscriptions.hasActiveMembershipCoveringSession(principal.id(), now().toLocalDate(), date)) {
             throw forbidden("membership_invalid");
         }
-        // Plan-tier rules (PackageBenefits): how far ahead, and how many bookings may be open at once.
+        // Quy tắc theo hạng gói (PackageBenefits): đặt trước được bao xa, và được mở bao nhiêu lượt cùng lúc.
         MembershipSubscription plan = activeSubscription(principal.id(), now().toLocalDate());
         com.swp391.scms.facilities.entity.MembershipPackage pkg = plan == null ? null : plan.getMembershipPackage();
         int advanceDays = com.swp391.scms.facilities.PackageBenefits.courtAdvanceDays(pkg);
@@ -174,7 +202,7 @@ public class CourtBookingService {
                 ? null : paymentMethod.trim().toLowerCase(Locale.ROOT);
         if (method != null && !PAYMENT_METHODS.contains(method)) throw invalid("invalid_payment_method");
         BigDecimal price = CourtPricing.priceFor(start);
-        // The plan covers the first bookings of the month; every extra court or hour is paid when booking.
+        // Gói bao phủ các lượt đặt đầu tiên của tháng; mọi sân hoặc giờ thêm đều trả khi đặt.
         boolean covered = quotaUsed(principal.id(), date) < monthlyQuota(principal.id(), date);
         if (!covered && method == null) throw invalid("payment_required");
         if (!covered) {
@@ -197,6 +225,7 @@ public class CourtBookingService {
         return dto(saved, principal);
     }
 
+    /** Chu kỳ gói active phủ ngày cho trước; nếu nhiều thì chọn gói có hạn mức sân cao nhất. */
     private MembershipSubscription activeSubscription(Long memberId, LocalDate date) {
         return subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
                 .filter(s -> s.getStartDate() != null && s.getEndDate() != null
@@ -205,15 +234,18 @@ public class CourtBookingService {
                         : CourtPricing.cycleQuota(s.getMembershipPackage())))
                 .orElse(null);
     }
+    /** Số lượt đặt sân chưa thanh toán tối đa theo hạng gói. */
     private int maxUnpaidHolds(Long memberId, LocalDate date) {
         MembershipSubscription subscription = activeSubscription(memberId, date);
         return com.swp391.scms.facilities.PackageBenefits.courtMaxUnpaidHolds(subscription == null ? null : subscription.getMembershipPackage());
     }
+    /** Số lượt đặt sân miễn phí mỗi chu kỳ của gói đang phủ ngày cho trước. */
     private int monthlyQuota(Long memberId, LocalDate date) {
         MembershipSubscription subscription = activeSubscription(memberId, date);
         return subscription == null || subscription.getMembershipPackage() == null ? 0
                 : CourtPricing.cycleQuota(subscription.getMembershipPackage());
     }
+    /** Số lượt đã dùng hạn mức trong chu kỳ gói chứa ngày cho trước. */
     private long quotaUsed(Long memberId, LocalDate date) {
         MembershipSubscription subscription = activeSubscription(memberId, date);
         if (subscription == null) return 0;
@@ -223,7 +255,12 @@ public class CourtBookingService {
                 CourtPricing.PACKAGE_QUOTA);
     }
 
-    /** Included bookings the member has left in the month of {@code date} (today when null). */
+    /**
+     * Hạn mức đặt sân của hội viên trong chu kỳ chứa ngày được chọn (mặc định hôm nay) cùng các giới hạn theo
+     * hạng gói.
+     *
+     * Số lượt đặt đã bao gồm mà hội viên còn lại trong tháng của {@code date} (hôm nay khi null).
+     */
     public QuotaDto quota(AuthenticatedPrincipal principal, LocalDate date) {
         if (principal == null || !"MEMBER".equals(principal.role())) throw forbidden("forbidden");
         LocalDate day = date == null ? now().toLocalDate() : date;
@@ -243,11 +280,13 @@ public class CourtBookingService {
                 (int) bookings.countUnpaidHolds(principal.id(), today), cashReleaseLeadMinutes);
     }
 
+    /** Lịch sử đặt sân của hội viên đang đăng nhập, mới nhất trước, phân trang. */
     public Page<BookingDto> my(AuthenticatedPrincipal principal, int page, int size) {
         return bookings.findByMemberIdOrderByBookingDateDescStartTimeDescIdDesc(principal.id(), page(page, size))
                 .map(b -> dto(b, principal));
     }
 
+    /** Nhân viên xem lượt đặt sân trong ngày (lọc theo sân nếu có), phân trang. */
     public Page<BookingDto> daily(AuthenticatedPrincipal principal, LocalDate date, Long roomId, int page, int size) {
         if (!STAFF_ROLES.contains(principal.role())) throw forbidden("forbidden");
         if (date == null) throw invalid("invalid_slot");
@@ -255,11 +294,16 @@ public class CourtBookingService {
         Page<CourtBooking> found = roomId == null ? bookings.findDaily(date, pageable) : bookings.findDailyByRoom(date, roomId, pageable);
         return found.map(b -> dto(b, principal));
     }
+    /** Tạo Pageable sau khi kiểm tra page ≥ 0 và size trong 1..100. */
     private Pageable page(int page, int size) {
         if (page < 0 || size < 1 || size > 100) throw invalid("invalid_slot");
         return PageRequest.of(page, size);
     }
 
+    /**
+     * Hủy lượt đặt sân: chủ sở hữu hoặc nhân viên, đúng hạn hủy; khoản chưa trả chuyển failed, khoản đã trả
+     * hoàn vào ví.
+     */
     @Transactional
     public BookingDto cancel(AuthenticatedPrincipal principal, Long id, String reason) {
         CourtBooking booking = bookings.findByIdForUpdate(id).orElseThrow(CourtBookingService::notFound);
@@ -289,7 +333,8 @@ public class CourtBookingService {
         }
         if ("paid".equals(booking.getPaymentStatus())) {
             booking.setPaymentStatus("refunded");
-            // Only legacy bookings paid without a payment row fall back to the price; a payment already refunded must not pay twice.
+            // Chỉ các lượt đặt cũ trả không có dòng thanh toán mới quay về dùng giá; thanh toán đã hoàn không
+            // được trả hai lần.
             if (!hasPaymentRows && refundedTotal.compareTo(BigDecimal.ZERO) == 0
                     && booking.getPrice() != null && booking.getPrice().compareTo(BigDecimal.ZERO) > 0) {
                 refundedTotal = booking.getPrice();
@@ -306,7 +351,11 @@ public class CourtBookingService {
         return dto(bookings.saveAndFlush(booking), principal);
     }
 
-    /** The desk records that a counter (cash) court fee was collected: the booking becomes paid and revenue is written. */
+    /**
+     * Lễ tân xác nhận đã thu tiền mặt: lượt đặt chuyển paid và ghi nhận doanh thu.
+     *
+     * Quầy ghi nhận phí sân tại quầy (tiền mặt) đã thu: lượt đặt chuyển sang đã trả và doanh thu được ghi.
+     */
     @Transactional
     public BookingDto confirmPayment(AuthenticatedPrincipal principal, Long id) {
         if (principal == null || !STAFF_ROLES.contains(principal.role())) throw forbidden("forbidden");
@@ -322,9 +371,12 @@ public class CourtBookingService {
     }
 
     /**
-     * Frees slots held by unpaid bookings: a VNPay booking not paid within the gateway timeout, and a counter booking
-     * still unpaid {@code cashReleaseLeadMinutes} before its slot starts (held at least {@code cashMinHoldMinutes}).
-     * Bookings VNPay may still confirm are left for reconciliation.
+     * Nhả khung sân chưa thanh toán: VNPay quá thời gian chờ cổng, tiền mặt sắp tới giờ mà vẫn chưa trả; bỏ qua
+     * khoản VNPay còn có thể xác nhận; trả về số lượt đã nhả.
+     *
+     * Giải phóng các khung bị giữ bởi lượt đặt chưa trả: lượt VNPay không trả trong thời gian chờ của cổng,
+     * và lượt đặt quầy vẫn chưa trả {@code cashReleaseLeadMinutes} phút trước giờ bắt đầu (đã giữ ít nhất
+     * {@code cashMinHoldMinutes}). Các lượt VNPay còn có thể xác nhận được để lại cho đối soát.
      */
     @Transactional
     public int expireUnpaid() {
@@ -352,6 +404,10 @@ public class CourtBookingService {
         return cancelled;
     }
 
+    /**
+     * Có được hủy không: nhân viên được hủy trước giờ bắt đầu, hội viên chỉ được hủy lượt của mình trước giờ
+     * bắt đầu ít nhất 2 tiếng.
+     */
     private boolean canCancel(CourtBooking b, AuthenticatedPrincipal principal) {
         if (!"booked".equals(b.getStatus())) return false;
         LocalDateTime start = b.getBookingDate().atTime(b.getStartTime());
@@ -359,6 +415,7 @@ public class CourtBookingService {
         return "MEMBER".equals(principal.role()) && principal.id().equals(b.getMember().getId())
                 && !start.isBefore(now().plusHours(2));
     }
+    /** Chuyển lượt đặt sân sang DTO (giá null thành 0), kèm cờ được hủy theo người xem. */
     private BookingDto dto(CourtBooking b, AuthenticatedPrincipal principal) {
         return new BookingDto(b.getId(), b.getRoom().getId(), b.getRoom().getName(),
                 b.getRoom().getDiscipline() == null ? null : b.getRoom().getDiscipline().getName(),

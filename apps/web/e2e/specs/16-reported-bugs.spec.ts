@@ -6,6 +6,7 @@ import { contextFor, memberWithPlan, PACKAGES } from '../helpers/session';
 test.describe.configure({ mode: 'serial' });
 
 const COACH_MAI = 5; // HLV Yoga (mai@demo)
+// Ngày YYYY-MM-DD theo giờ Việt Nam, lệch offset ngày so với hôm nay.
 const isoDay = (offset: number) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date(Date.now() + offset * 86_400_000));
 
 test.describe('Lỗi 1 — nút "Quản lý lịch PT" mở đúng trang lịch PT', () => {
@@ -29,113 +30,6 @@ test.describe('Lỗi 1 — nút "Quản lý lịch PT" mở đúng trang lịch 
     await expect(page).toHaveURL(/\/member\/classes\?tab=pt/);
     await expect(page.getByRole('tab', { name: /Đặt lịch HLV 1:1/ })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByRole('tab', { name: 'Lịch của tôi' })).toHaveAttribute('aria-selected', 'false');
-    await context.close();
-  });
-});
-
-const TENNIS = 6;
-/** Đặt sân tennis ở một giờ ngẫu nhiên của ngày `offset`; thử giờ khác khi bị trùng (DB e2e dùng chung giữa các spec). */
-async function bookCourt(token: string, offset: number, method: 'cash' | 'vnpay' | undefined) {
-  let last: Awaited<ReturnType<typeof apiWith>> | undefined;
-  for (let attempt = 0; attempt < 12; attempt++) {
-    const hour = 7 + Math.floor(Math.random() * 13);
-    last = await apiWith(token, 'POST', '/court-bookings', { roomId: TENNIS, date: isoDay(offset), startTime: `${String(hour).padStart(2, '0')}:00`, paymentMethod: method });
-    if (last.status !== 409 || last.body?.code !== 'COURT_BOOKING_SLOT_TAKEN') return last;
-  }
-  return last!;
-}
-
-test.describe('Lỗi 2 — không giữ chỗ sân vô hạn bằng lượt chưa thanh toán', () => {
-  test('hạng Silver chỉ giữ được 1 lượt chưa thanh toán; hủy lượt cũ thì đặt tiếp được', async () => {
-    const m = await memberWithPlan(PACKAGES.SILVER_3M, 549000);
-    // Lượt đầu nằm trong quyền lợi của gói (miễn phí, không phải "giữ chỗ chưa trả tiền").
-    const included = await bookCourt(m.token, 3, undefined);
-    expect(included.status, JSON.stringify(included.body)).toBe(201);
-    expect(included.data.paymentStatus).toBe('covered');
-
-    // Lượt thứ hai phải trả tiền: thanh toán tại quầy tạo một lượt đang chờ thanh toán.
-    const held = await bookCourt(m.token, 4, 'cash');
-    expect(held.status, JSON.stringify(held.body)).toBe(201);
-    expect(held.data.paymentStatus).toBe('pending');
-
-    // Lượt trả tiền thứ ba bị chặn: Silver chỉ giữ tối đa 1 lượt chưa thanh toán.
-    const blocked = await bookCourt(m.token, 5, 'cash');
-    expect(blocked.status, JSON.stringify(blocked.body)).toBe(409);
-    expect(blocked.body.code).toBe('COURT_BOOKING_UNPAID_LIMIT');
-    expect(blocked.body.message).toContain('chưa thanh toán');
-    const blockedVnpay = await bookCourt(m.token, 5, 'vnpay');
-    expect(blockedVnpay.body.code).toBe('COURT_BOOKING_UNPAID_LIMIT');
-
-    // Hủy lượt đang giữ thì giải phóng chỗ và được đặt lượt khác.
-    const cancel = await apiWith(m.token, 'PATCH', `/court-bookings/${held.data.id}/cancel`, {});
-    expect(cancel.status, JSON.stringify(cancel.body)).toBe(200);
-    const again = await bookCourt(m.token, 5, 'cash');
-    expect(again.status, JSON.stringify(again.body)).toBe(201);
-  });
-});
-
-test.describe('Lỗi 3 — quy định đặt sân theo hạng gói', () => {
-  test('API trả đúng quy định của từng hạng và chặn đặt quá xa', async () => {
-    const silver = await memberWithPlan(PACKAGES.SILVER_3M, 549000);
-    const gold = await memberWithPlan(PACKAGES.GOLD_3M, 799000);
-    const plat = await memberWithPlan(PACKAGES.PLATINUM_3M, 1599000);
-    const rules = async (token: string) => (await apiWith(token, 'GET', '/court-bookings/quota')).data as any;
-    const s = await rules(silver.token), g = await rules(gold.token), p = await rules(plat.token);
-    expect([s.advanceDays, s.maxUpcoming, s.maxUnpaid, s.monthlyQuota]).toEqual([7, 3, 1, 1]);
-    expect([g.advanceDays, g.maxUpcoming, g.maxUnpaid, g.monthlyQuota]).toEqual([14, 5, 2, 2]);
-    expect([p.advanceDays, p.maxUpcoming, p.maxUnpaid, p.monthlyQuota]).toEqual([30, 8, 3, 3]);
-    expect(s.releaseLeadMinutes).toBe(120);
-
-    // Quá giới hạn đặt trước của hạng → 400 TOO_FAR, kèm số ngày trong thông báo.
-    const tooFar = await bookCourt(silver.token, 8, undefined);
-    expect(tooFar.status, JSON.stringify(tooFar.body)).toBe(400);
-    expect(tooFar.body.code).toBe('COURT_BOOKING_TOO_FAR');
-    expect(tooFar.body.message).toContain('7 ngày');
-    // Cùng ngày xa (+10) thì Gold đặt được, Silver thì không.
-    expect((await bookCourt(silver.token, 10, undefined)).body.code).toBe('COURT_BOOKING_TOO_FAR');
-    const goldFar = await bookCourt(gold.token, 10, undefined);
-    expect(goldFar.status, JSON.stringify(goldFar.body)).toBe(201);
-    // Gold không đặt được quá 14 ngày, Platinum thì được đến 30.
-    expect((await bookCourt(gold.token, 15, undefined)).body.code).toBe('COURT_BOOKING_TOO_FAR');
-    const platFar = await bookCourt(plat.token, 29, undefined);
-    expect(platFar.status, JSON.stringify(platFar.body)).toBe(201);
-    expect((await bookCourt(plat.token, 31, undefined)).body.code).toBe('COURT_BOOKING_TOO_FAR');
-  });
-
-  test('Silver chỉ giữ tối đa 3 lượt chưa diễn ra (kể cả đã trả); giải phóng một lượt thì đặt tiếp được', async () => {
-    const m = await memberWithPlan(PACKAGES.SILVER_3M, 549000);
-    const deskConfirm = async (id: number) => (await api('staff', 'PATCH', `/court-bookings/${id}/confirm-payment`, {})).status;
-    const first = await bookCourt(m.token, 2, undefined); // trong quyền lợi gói
-    const second = await bookCourt(m.token, 3, 'cash');
-    expect([first.status, second.status], JSON.stringify([first.body, second.body])).toEqual([201, 201]);
-    expect(await deskConfirm(second.data.id)).toBe(200); // lễ tân đã thu tiền → không còn là lượt "giữ chỗ"
-    const third = await bookCourt(m.token, 4, 'cash');
-    expect(third.status, JSON.stringify(third.body)).toBe(201);
-    expect(await deskConfirm(third.data.id)).toBe(200);
-    expect((await apiWith(m.token, 'GET', '/court-bookings/quota')).data.upcoming).toBe(3);
-
-    // Đã có 3 lượt chưa diễn ra (dù đã trả) → lượt thứ tư bị chặn bởi giới hạn lượt chưa diễn ra.
-    const fourth = await bookCourt(m.token, 5, 'cash');
-    expect(fourth.status, JSON.stringify(fourth.body)).toBe(409);
-    expect(fourth.body.code).toBe('COURT_BOOKING_UPCOMING_LIMIT');
-    const cancel = await apiWith(m.token, 'PATCH', `/court-bookings/${first.data.id}/cancel`, {});
-    expect(cancel.status, JSON.stringify(cancel.body)).toBe(200);
-    expect((await bookCourt(m.token, 5, 'cash')).status).toBe(201);
-  });
-
-  test('màn Đặt sân hiển thị quy định của gói và chỉ cho chọn ngày trong hạn đặt trước', async ({ browser }) => {
-    const m = await memberWithPlan(PACKAGES.GOLD_3M, 799000);
-    const context = await contextFor(browser, m);
-    const page = await context.newPage();
-    await page.goto('/member/courts');
-    await settled(page);
-    const card = page.locator('.court-policy');
-    await expect(card).toBeVisible();
-    await expect(card).toContainText('Quy định đặt sân của gói');
-    await expect(card).toContainText('Đặt trước tối đa 14 ngày');
-    await expect(card).toContainText('Tối đa 5 lượt chưa diễn ra cùng lúc (hiện có 0)');
-    await expect(card).toContainText('Tối đa 2 lượt chưa thanh toán cùng lúc (hiện giữ 0)');
-    await expect(card).toContainText('2 giờ trước giờ bắt đầu');
     await context.close();
   });
 });
@@ -195,23 +89,6 @@ test.describe('Lỗi 4 — hiển thị họ tên thật thay vì email/tên đ�
   });
 });
 
-test.describe('Lỗi 5 — Lịch lớp học chỉ còn danh sách khóa học', () => {
-  test.use({ storageState: 'e2e/.auth/binh.json' });
-
-  test('chỉ còn danh sách khóa học: không chế độ buổi theo tuần, không lọc tuần/thứ', async ({ page }) => {
-    await page.goto('/member/classes?tab=list');
-    await settled(page);
-    await expect(page.getByRole('tab', { name: 'Lịch lớp học' })).toHaveAttribute('aria-selected', 'true');
-    // Đăng ký theo khóa học nên chế độ "Buổi học theo tuần" và các bộ lọc tuần/thứ đã bị gỡ hẳn.
-    await expect(page.getByRole('group', { name: 'Chế độ xem lịch lớp học' })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Buổi học theo tuần' })).toHaveCount(0);
-    await expect(page.getByRole('group', { name: 'Lọc theo tuần' })).toHaveCount(0);
-    await expect(page.getByLabel('Thứ trong tuần')).toHaveCount(0);
-    await expect(page.getByRole('group', { name: 'Lọc theo bộ môn' })).toBeVisible();
-    await expect(page.getByTestId('course-count')).toHaveText(/\d+ khóa học/);
-  });
-});
-
 /** Hội viên mới đang dùng gói Trải nghiệm 3 ngày (lễ tân đã duyệt). */
 async function trialMember() {
   const m = await createActiveMember('e2etrial');
@@ -261,6 +138,7 @@ test.describe('Lỗi 6 — gói Trải nghiệm nâng được lên mọi gói t
 });
 
 test.describe('Lỗi 7 — lễ tân và HLV chủ động nhắn tin cho hội viên', () => {
+  // Gửi một tin nhắn vào hội thoại qua API bằng token.
   const send = (token: string, conversationId: number, message: string) =>
     apiWith(token, 'POST', `/chat/conversations/${conversationId}/messages`, { clientMessageId: crypto.randomUUID(), message });
 
@@ -423,25 +301,5 @@ test.describe('Lỗi 9 — gửi CCCD: ảnh lớn không còn làm yêu cầu b
     expect(mine, 'lễ tân phải thấy hồ sơ').toBeTruthy();
     expect(String(mine.frontImageUrl)).toMatch(/^data:image\/jpeg;base64,/);
     await context.close();
-  });
-});
-
-test.describe('Hạn mức khóa học chỉ hiện khi hội viên đã có gói', () => {
-  test('chưa có gói: không hiện "Còn 0/0 khóa học miễn phí"; có gói thì hiện', async ({ browser }) => {
-    const noPlan = await browser.newContext({ storageState: 'e2e/.auth/lan.json' });
-    const lan = await noPlan.newPage();
-    await lan.goto('/member/classes');
-    await settled(lan);
-    await expect(lan.getByRole('tab', { name: 'Lịch của tôi' })).toBeVisible();
-    await expect(lan.getByTestId('course-quota-banner')).toHaveCount(0);
-    await expect(lan.getByText(/Còn 0\/0 khóa học miễn phí/)).toHaveCount(0);
-    await noPlan.close();
-
-    const withPlan = await browser.newContext({ storageState: 'e2e/.auth/binh.json' });
-    const binh = await withPlan.newPage();
-    await binh.goto('/member/classes');
-    await settled(binh);
-    await expect(binh.getByTestId('course-quota-banner')).toBeVisible();
-    await withPlan.close();
   });
 });

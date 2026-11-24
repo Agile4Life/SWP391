@@ -28,6 +28,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho AdminPaymentReconciliationSecurity (admin payment reconciliation security). */
 @WebMvcTest(AdminPaymentReconciliationController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class, JsonAccessDeniedHandler.class})
 class AdminPaymentReconciliationSecurityTest {
@@ -40,12 +41,14 @@ class AdminPaymentReconciliationSecurityTest {
     @MockBean UserRepository users;
     @MockBean MessageService messages;
 
+    /** Kiểm thử: người chưa đăng nhập bị từ chối. */
     @Test
     void anonymousIsRejected() throws Exception {
         for (String path : PATHS) mvc.perform(get(BASE + path)).andExpect(status().isUnauthorized());
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: vai trò không phải admin bị cấm. */
     @ParameterizedTest
     @ValueSource(strings = {"MEMBER", "COACH", "RECEPTIONIST", "CENTER_MANAGER"})
     void nonAdminRolesAreForbidden(String role) throws Exception {
@@ -55,6 +58,7 @@ class AdminPaymentReconciliationSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: admin đọc được mọi màn đối soát. */
     @Test
     @WithMockUser(roles = "ADMIN")
     void adminReadsEveryView() throws Exception {
@@ -79,6 +83,7 @@ class AdminPaymentReconciliationSecurityTest {
         mvc.perform(get(BASE + "/payments/1/timeline")).andExpect(status().isOk());
     }
 
+    /** Kiểm thử: dòng thời gian của khoản thanh toán không tồn tại trả not found. */
     @Test
     @WithMockUser(roles = "ADMIN")
     void unknownPaymentTimelineIsNotFound() throws Exception {

@@ -2,6 +2,10 @@ import { staffSourceError } from '../operations/staffI18n';
 import type { ExerciseValues } from './trainingExercise';
 import { apiFetch } from '../../shared/api/client';
 
+/**
+ * Một bài tập trong giáo án: thứ (1 = thứ Hai … 7 = Chủ nhật), tên, mô tả, số hiệp/lần, thời lượng, nghỉ và thứ
+ * tự.
+ */
 export interface WorkoutExerciseItem {
   id?: string;
   dayOfWeek: number; // 1 = Thứ 2, 2 = Thứ 3, ..., 7 = Chủ Nhật
@@ -14,6 +18,7 @@ export interface WorkoutExerciseItem {
   orderIndex?: number;
 }
 
+/** Dữ liệu yêu cầu AI sinh giáo án: học viên, HLV, yêu cầu thêm và số tuần. */
 export interface GenerateWorkoutPlanPayload {
   memberId: number;
   coachId?: number;
@@ -21,6 +26,7 @@ export interface GenerateWorkoutPlanPayload {
   durationWeeks?: number;
 }
 
+/** Kết quả giáo án do AI sinh: học viên, mô hình, mục tiêu, phân tích và danh sách bài tập. */
 export interface AiWorkoutPlanResult {
   id: number;
   memberId: number;
@@ -34,6 +40,10 @@ export interface AiWorkoutPlanResult {
   createdAt?: string;
 }
 
+/**
+ * Dữ liệu lưu giáo án: học viên, HLV (quản lý bắt buộc), tiêu đề, mục tiêu, khoảng ngày, bài tập, trạng thái và
+ * nguồn AI.
+ */
 export interface TrainingPlanPayload {
   memberId: number;
   /** Bắt buộc khi Manager soạn giáo án; Coach luôn dùng danh tính của chính mình. */
@@ -48,6 +58,7 @@ export interface TrainingPlanPayload {
   aiRecommendationLogId?: number;
 }
 
+/** Học viên có thể chọn khi soạn giáo án, kèm mục tiêu, sức khỏe, chỉ số cơ thể và quyền xem giáo án. */
 export interface MemberOption {
   id: number;
   memberCode: string;
@@ -61,14 +72,17 @@ export interface MemberOption {
   canViewWorkoutPlan?: boolean;
 }
 
+/** HLV có thể chọn khi quản lý soạn giáo án. */
 export interface CoachOption {
   id: number;
   fullName: string;
   email?: string;
 }
 
+/** Một bài tập của giáo án đã lưu (kèm id). */
 export interface SavedTrainingPlanItem extends ExerciseValues { id: number }
 
+/** Giáo án đã lưu trên server: học viên, HLV, mục tiêu, khoảng ngày, trạng thái, nguồn AI và bài tập. */
 export interface SavedTrainingPlan {
   id: number;
   memberId: number;
@@ -83,6 +97,7 @@ export interface SavedTrainingPlan {
   items?: SavedTrainingPlanItem[];
 }
 
+/** Gom các hàm API giáo án và gợi ý AI. */
 export const aiApi = {
   /** Giáo án đã lưu trên server: Coach thấy của mình, Manager thấy tất cả. */
   listTrainingPlans: (memberId?: number) =>
@@ -92,6 +107,7 @@ export const aiApi = {
   reapplyTrainingPlan: (id: number) =>
     apiFetch<SavedTrainingPlan>(`/coaching/training-plans/${id}/reapply`, { method: 'PUT' }),
 
+  // Cập nhật mục tiêu, khoảng ngày và bài tập của giáo án đã lưu.
   updateTrainingPlan: (id: number, input: { goal: string; startDate: string; endDate: string; items?: SavedTrainingPlanItem[] }) =>
     apiFetch<SavedTrainingPlan>(`/coaching/training-plans/${id}`, {
       method: 'PUT',

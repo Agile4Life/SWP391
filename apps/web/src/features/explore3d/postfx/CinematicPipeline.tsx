@@ -8,9 +8,8 @@ import { getAtmosphere, getSunDirection } from '../canvas/atmosphere';
 import * as THREE from 'three';
 
 /**
- * Takes over R3F rendering (useFrame priority 1) and runs the cinematic HDR
- * post chain. Render targets are rebuilt per quality tier; theme changes only
- * retune uniforms.
+ * Thành phần R3F tiếp quản luồng kết xuất (useFrame priority 1) và chạy chuỗi hậu kỳ HDR điện ảnh.
+ * Các render target được dựng lại theo mức chất lượng; khi đổi theme chỉ điều chỉnh lại các uniform.
  */
 export function CinematicPipeline() {
   const gl = useThree(s => s.gl);
@@ -20,7 +19,7 @@ export function CinematicPipeline() {
   const rendererRef = useRef<CinematicRenderer | null>(null);
 
   useEffect(() => {
-    // Debug escape hatch (like Saltline's ?mb=1): ?fx=0 renders the plain forward path.
+    // Lối thoát gỡ lỗi (tương tự ?mb=1 của Saltline): ?fx=0 sẽ kết xuất theo luồng forward thông thường.
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('fx') === '0') {
       return;
     }

@@ -10,7 +10,9 @@ import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Bộ kiểm thử cho DatabaseProfiles (database profiles). */
 class DatabaseProfilesTest {
+    /** Hàm trợ giúp của test: tạo cấu hình môi trường giả cho database. */
     private ApplicationContextRunner database() {
         return new ApplicationContextRunner()
                 .withInitializer(context -> {
@@ -25,10 +27,12 @@ class DatabaseProfilesTest {
                         "APP_JWT_SECRET=test-only-signing-secret");
     }
 
+    /** Hàm trợ giúp của test: tạo cấu hình profile supabase mẫu. */
     private ApplicationContextRunner supabase() {
         return database().withPropertyValues("spring.profiles.active=supabase");
     }
 
+    /** Kiểm thử: cấu hình mặc định dùng Supabase với SSL và không có OTP debug cục bộ. */
     @Test
     void defaultConfigurationUsesSupabaseSslWithoutLocalDebugOtp() {
         database().run(context -> {
@@ -40,6 +44,7 @@ class DatabaseProfilesTest {
         });
     }
 
+    /** Kiểm thử: profile supabase dùng PostgreSQL với SSL, pool có giới hạn và không có OTP cục bộ. */
     @Test
     void supabaseUsesPostgresWithSslAndBoundedPoolWithoutLocalOtp() {
         supabase().run(context -> {
@@ -56,6 +61,7 @@ class DatabaseProfilesTest {
         });
     }
 
+    /** Kiểm thử: có thể bật xác minh chứng chỉ SSL qua biến môi trường. */
     @Test
     void sslCertificateVerificationCanBeEnabledThroughEnvironment() {
         supabase().withPropertyValues("DB_SSL_MODE=verify-full", "DB_SSL_ROOT_CERT=C:/certs/root.crt")
@@ -67,6 +73,7 @@ class DatabaseProfilesTest {
                 });
     }
 
+    /** Kiểm thử: từ chối profile local và SSL dạng plaintext trên Supabase. */
     @Test
     void rejectsLocalProfileAndPlaintextSslOnSupabase() {
         supabase().withPropertyValues("spring.profiles.active=supabase,local")
@@ -79,6 +86,7 @@ class DatabaseProfilesTest {
                 .run(context -> assertThat(context).hasFailed());
     }
 
+    /** Kiểm thử: từ chối thiếu thông tin đăng nhập trước khi kết nối. */
     @Test
     void rejectsMissingCredentialsBeforeConnecting() {
         supabase().withPropertyValues("SPRING_DATASOURCE_PASSWORD=")
@@ -87,6 +95,7 @@ class DatabaseProfilesTest {
                 .run(context -> assertThat(context).hasFailed());
     }
 
+    /** Kiểm thử: từ chối các profile database độc lập bỏ qua Supabase. */
     @Test
     void rejectsStandaloneDatabaseProfilesThatBypassSupabase() {
         for (String profile : new String[]{"postgresql", "local", "sqlserver", "h2"}) {
@@ -95,6 +104,7 @@ class DatabaseProfilesTest {
         }
     }
 
+    /** Kiểm thử: từ chối profile development khi kết hợp với supabase. */
     @Test
     void rejectsDevelopmentProfileWhenCombinedWithSupabase() {
         for (String profile : new String[]{"postgresql", "local", "sqlserver", "h2"}) {
@@ -103,6 +113,7 @@ class DatabaseProfilesTest {
         }
     }
 
+    /** Kiểm thử: kết nối tích hợp trực tiếp từ chối TLS và URL không an toàn trước khi mở JDBC. */
     @Test
     void directIntegrationConnectionsRejectUnsafeTlsAndUrlBeforeOpeningJdbc() {
         var settings = new java.util.Properties();

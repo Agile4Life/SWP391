@@ -52,6 +52,7 @@ paths:
                             avatarUrl: { type: string, nullable: true }
                       sessions:
                         type: array
+                        description: Retained for compatibility; always empty because group classes are disabled.
                         items:
                           type: object
                           properties:

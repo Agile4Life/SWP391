@@ -4,6 +4,7 @@ import { isModuleLoadError } from '../lib/routeErrors';
 import { LoadingSkeleton } from './LoadingSkeleton';
 import './route-state.css';
 
+/** Màn hình chờ toàn trang khi route đang tải. */
 export function RouteLoading() {
   const { t } = useI18n();
   return <main className="route-state route-state--loading">
@@ -11,6 +12,7 @@ export function RouteLoading() {
   </main>;
 }
 
+/** Màn hình lỗi toàn trang khi route không tải được (lỗi mạng hoặc lỗi hiển thị) kèm nút tải lại. */
 export function RouteLoadError() {
   const { t } = useI18n();
   const network = isModuleLoadError(useRouteError());

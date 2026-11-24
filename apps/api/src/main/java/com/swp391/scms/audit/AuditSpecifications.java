@@ -8,12 +8,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Dynamic specifications for querying audit logs with optional filters (SCRUM-109).
+ * Dựng điều kiện truy vấn động cho audit log.
+ *
+ * Specification động để truy vấn nhật ký audit với các bộ lọc tùy chọn (SCRUM-109).
  */
 public final class AuditSpecifications {
 
+    /** Lớp tiện ích static, không cho tạo đối tượng. */
     private AuditSpecifications() {}
 
+    /**
+     * Điều kiện lọc: đúng người thực hiện; loại bản ghi khớp hoặc chứa từ khóa (bỏ qua nếu ALL); hành động chứa
+     * từ khóa; thời điểm trong khoảng. Điều kiện nào trống thì bỏ qua.
+     */
     public static Specification<AuditLog> filter(
             Long userId,
             String entityType,

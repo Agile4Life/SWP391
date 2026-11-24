@@ -4,9 +4,15 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/** Nhóm các DTO cho địa chỉ giao hàng. */
 public final class AddressDtos {
+    /** Constructor private: chỉ dùng làm nơi chứa các record. */
     private AddressDtos() {}
 
+    /**
+     * Yêu cầu tạo/sửa địa chỉ: người nhận, số điện thoại Việt Nam, mã tỉnh/phường, địa chỉ chi tiết, ghi chú và
+     * có đặt làm mặc định không.
+     */
     public record AddressRequest(
             @NotBlank(message = "{validation.shop.address.recipient_required}")
             @Size(min = 2, max = 80, message = "{validation.shop.address.recipient_size}")
@@ -32,6 +38,10 @@ public final class AddressDtos {
             boolean makeDefault
     ) {}
 
+    /**
+     * Thông tin địa chỉ trả về client: người nhận, số điện thoại, tỉnh, phường, địa chỉ chi tiết, ghi chú và cờ
+     * mặc định.
+     */
     public record AddressDto(
             Long id,
             String recipientName,

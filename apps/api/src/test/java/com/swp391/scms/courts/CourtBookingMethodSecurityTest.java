@@ -17,6 +17,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 
+/** Bộ kiểm thử cho CourtBookingMethodSecurity (court booking method security). */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = CourtBookingMethodSecurityTest.Config.class)
 class CourtBookingMethodSecurityTest {

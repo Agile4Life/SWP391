@@ -13,6 +13,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service ChatRealtimeService (chat realtime service). */
 class ChatRealtimeServiceTest {
     final ChatService chat = mock(ChatService.class);
     final AuthenticatedPrincipal p = new AuthenticatedPrincipal(42L, "private-name", "MEMBER");

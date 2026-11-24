@@ -21,6 +21,7 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+/** Bộ kiểm thử cho service CounterTopupService (counter topup service). */
 class CounterTopupServiceTest {
     private final PaymentRepository payments = mock(PaymentRepository.class);
     private final MemberRepository members = mock(MemberRepository.class);
@@ -29,6 +30,7 @@ class CounterTopupServiceTest {
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-12T15:50:00Z"), ZoneOffset.UTC);
     private final CounterTopupService service = new CounterTopupService(payments, members, users, invoices, clock);
 
+    /** Kiểm thử: phương thức không biết được ghi nhận là tiền mặt. */
     @Test
     void unknownMethodsAreRecordedAsCash() {
         assertThat(CounterTopupService.normalizeMethod(null)).isEqualTo("cash");
@@ -37,6 +39,7 @@ class CounterTopupServiceTest {
         assertThat(CounterTopupService.normalizeMethod("crypto")).isEqualTo("cash");
     }
 
+    /** Kiểm thử: ghi nhận khoản nạp ví đã thanh toán và phát hành hóa đơn. */
     @Test
     void recordsASettledWalletTopupPaymentAndIssuesItsInvoice() {
         Member member = new Member();
@@ -62,6 +65,7 @@ class CounterTopupServiceTest {
         verify(invoices).autoIssueInvoiceForPayment(99L);
     }
 
+    /** Kiểm thử: hóa đơn lỗi không làm hoàn tác việc nạp ví. */
     @Test
     void aFailingInvoiceDoesNotUndoTheTopup() {
         when(members.findById(7L)).thenReturn(Optional.of(new Member()));

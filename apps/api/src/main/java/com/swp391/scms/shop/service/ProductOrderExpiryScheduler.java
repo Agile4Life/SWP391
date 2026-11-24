@@ -2,19 +2,30 @@ package com.swp391.scms.shop.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** Periodically releases stock held by product orders that were never paid within their window. */
+/**
+ * Job nền định kỳ hủy đơn shop quá hạn thanh toán và trả lại tồn kho đang giữ.
+ *
+ * Định kỳ nhả tồn kho bị giữ bởi các đơn hàng chưa bao giờ được thanh toán trong thời hạn.
+ */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Component
 public class ProductOrderExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(ProductOrderExpiryScheduler.class);
     private final ProductOrderService service;
 
+    /** Khởi tạo job với ProductOrderService. */
     public ProductOrderExpiryScheduler(ProductOrderService service) {
         this.service = service;
     }
 
+    /**
+     * Chạy theo chu kỳ app.shop.expiry-interval-ms (mặc định 60 giây): gọi expireUnpaid và ghi log; lỗi chỉ ghi
+     * cảnh báo.
+     */
     @Scheduled(fixedDelayString = "${app.shop.expiry-interval-ms:60000}", initialDelayString = "${app.shop.expiry-interval-ms:60000}")
     public void releaseUnpaid() {
         try {

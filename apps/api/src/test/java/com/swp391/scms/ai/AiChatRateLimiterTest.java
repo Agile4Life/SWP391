@@ -20,6 +20,7 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho AiChatRateLimiter (ai chat rate limiter). */
 class AiChatRateLimiterTest {
     static final Instant NOW = Instant.parse("2026-11-12T03:00:00Z");
     final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
@@ -31,7 +32,10 @@ class AiChatRateLimiterTest {
         limiter = new AiChatRateLimiter(messages, 15, Duration.ofMinutes(10), clock);
     }
 
-    /** {@code n} stored messages, the first one {@code firstAgoSeconds} old and the rest one second apart after it. */
+    /**
+     * Hàm trợ giúp của test: giả lập {@code n} tin nhắn đã lưu trong bộ giới hạn tần suất,
+     * trong đó tin nhắn đầu tiên cách đây {@code firstAgoSeconds} giây và các tin còn lại cách nhau 1 giây sau đó.
+     */
     private void stored(long userId, int n, long firstAgoSeconds) {
         List<LocalDateTime> times = new ArrayList<>();
         for (int i = 0; i < n; i++) times.add(now.minusSeconds(firstAgoSeconds - i));
@@ -40,11 +44,11 @@ class AiChatRateLimiterTest {
 
     @Test void allowsUpToFifteenMessagesInTheWindow() {
         stored(1L, 14, 300);
-        assertThat(limiter.acquire(1L)).isNotNull(); // the 15th
+        assertThat(limiter.acquire(1L)).isNotNull(); // tin nhắn thứ 15
     }
 
     @Test void rejectsTheSixteenthMessageWithTheWaitTimeUntilTheOldestLeavesTheWindow() {
-        stored(1L, 15, 540); // oldest sent 9 minutes ago -> room again in 1 minute
+        stored(1L, 15, 540); // tin cũ nhất gửi cách đây 9 phút -> còn 1 phút nữa có lượt trở lại
         assertThatThrownBy(() -> limiter.acquire(1L)).isInstanceOfSatisfying(TooManyRequestsException.class, e -> {
             assertThat(e.getStatus().value()).isEqualTo(429);
             assertThat(e.getErrorCode()).isEqualTo("AI_CHAT_RATE_LIMITED");
@@ -54,7 +58,7 @@ class AiChatRateLimiterTest {
     }
 
     @Test void waitIsRoundedUpToWholeMinutes() {
-        stored(1L, 15, 60); // oldest 1 minute old -> 9 minutes left
+        stored(1L, 15, 60); // tin cũ nhất gửi cách đây 1 phút -> còn lại 9 phút
         assertThatThrownBy(() -> limiter.acquire(1L)).isInstanceOfSatisfying(TooManyRequestsException.class,
                 e -> assertThat(e.getMessageArgs()[2]).isEqualTo(9L));
     }
@@ -74,10 +78,10 @@ class AiChatRateLimiterTest {
     @Test void requestsStillWaitingForTheProviderCountAgainstTheLimit() {
         when(messages.memberMessageTimesSince(eq(1L), any())).thenReturn(List.of());
         List<AiChatRateLimiter.Permit> held = new ArrayList<>();
-        for (int i = 0; i < 15; i++) held.add(limiter.acquire(1L)); // 15 sends at once, none stored yet
+        for (int i = 0; i < 15; i++) held.add(limiter.acquire(1L)); // 15 lượt gửi cùng lúc, chưa có tin nào được lưu
         assertThatThrownBy(() -> limiter.acquire(1L)).isInstanceOfSatisfying(TooManyRequestsException.class,
                 e -> assertThat(e.getMessageArgs()[2]).isEqualTo(1L));
-        held.get(0).release(); // one finished without being stored (e.g. the provider failed)
+        held.get(0).release(); // một lượt kết thúc mà không được lưu (ví dụ: provider bị lỗi)
         assertThat(limiter.acquire(1L)).isNotNull();
     }
 
@@ -87,7 +91,7 @@ class AiChatRateLimiterTest {
         for (int i = 0; i < 14; i++) limiter.acquire(1L);
         first.release();
         first.release();
-        limiter.acquire(1L); // exactly one slot came back
+        limiter.acquire(1L); // chỉ có đúng một lượt được trả lại
         assertThatThrownBy(() -> limiter.acquire(1L)).isInstanceOf(TooManyRequestsException.class);
     }
 

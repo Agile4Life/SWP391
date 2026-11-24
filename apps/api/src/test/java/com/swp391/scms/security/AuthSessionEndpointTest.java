@@ -21,10 +21,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** GET /auth/me must expose the role currently stored in the database, never an anonymous caller. */
+/** GET /auth/me phải trả về vai trò hiện đang lưu trong cơ sở dữ liệu, tuyệt đối không chấp nhận người gọi ẩn danh. */
 @WebMvcTest(AuthController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
+/** Bộ kiểm thử cho AuthSessionEndpoint (auth session endpoint). */
 class AuthSessionEndpointTest {
     @Autowired MockMvc mvc;
     @MockitoBean AuthService authService;
@@ -33,11 +34,13 @@ class AuthSessionEndpointTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Kiểm thử: người gọi chưa đăng nhập bị từ chối. */
     @Test
     void anonymousCallerIsRejected() throws Exception {
         mvc.perform(get("/api/v1/auth/me")).andExpect(status().isUnauthorized());
     }
 
+    /** Kiểm thử: người đã đăng nhập nhận lại username và vai trò hiện tại. */
     @Test
     void authenticatedCallerReceivesCurrentUsernameAndRole() throws Exception {
         var auth = new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(7L, "manager01", "CENTER_MANAGER"),
@@ -48,9 +51,10 @@ class AuthSessionEndpointTest {
                 .andExpect(jsonPath("$.data.role").value("CENTER_MANAGER"));
     }
 
+    /** Kiểm thử: tài khoản chỉ có email thì tên đầy đủ được tra theo id. */
     @Test
     void emailOnlyAccountGetsItsFullNameLookedUpById() throws Exception {
-        // Demo and staff accounts have no username: the principal carries the email, so the name must come by id.
+        // Tài khoản demo và nhân viên không có username: principal chứa email, nên phải tra họ tên theo id.
         org.mockito.Mockito.when(authService.fullNameOf(7L)).thenReturn("Nguyễn Minh An");
         var auth = new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(7L, "an@demo.sol.vn", "MEMBER"),
                 null, List.of(new SimpleGrantedAuthority("ROLE_MEMBER")));

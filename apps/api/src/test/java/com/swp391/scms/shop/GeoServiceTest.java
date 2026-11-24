@@ -5,9 +5,11 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/** Bộ kiểm thử cho service GeoService (geo service). */
 class GeoServiceTest {
     final GeoService geo = new GeoService(new com.fasterxml.jackson.databind.ObjectMapper());
 
+    /** Kiểm thử: nạp đủ 34 tỉnh thành cùng các phường/xã. */
     @Test
     void loadsThirtyFourProvincesWithWards() {
         assertThat(geo.provinces()).hasSize(34);
@@ -15,6 +17,7 @@ class GeoServiceTest {
         assertThat(geo.wards(first.code())).isNotEmpty();
     }
 
+    /** Kiểm thử: chỉ phân giải đúng tỉnh và phường/xã trùng khớp. */
     @Test
     void resolvesOnlyMatchingProvinceAndWard() {
         var p = geo.provinces().getFirst();

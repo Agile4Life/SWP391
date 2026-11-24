@@ -40,6 +40,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service CoachBookingService (coach booking service). */
 @ExtendWith(MockitoExtension.class)
 class CoachBookingServiceTest {
 
@@ -58,9 +59,10 @@ class CoachBookingServiceTest {
     private Coach coach;
     private AuthenticatedPrincipal principal;
 
+    /** Chuẩn bị trước mỗi test: tạo CoachBookingService với repository giả lập. */
     @BeforeEach
     void setUp() {
-        // Fix clock at 2026-10-31 08:00:00
+        // Cố định đồng hồ tại 2026-10-31 08:00:00
         Instant fixedInstant = LocalDateTime.of(2026, 10, 31, 8, 0, 0)
                 .atZone(com.swp391.scms.common.CenterTime.ZONE).toInstant();
         fixedClock = Clock.fixed(fixedInstant, com.swp391.scms.common.CenterTime.ZONE);
@@ -98,6 +100,7 @@ class CoachBookingServiceTest {
         principal = new AuthenticatedPrincipal(10L, "khoa", "MEMBER");
     }
 
+    /** Kiểm thử: Đặt lịch 1:1 thành công với hình thức trả phí theo giờ */
     @Test
     @DisplayName("Đặt lịch 1:1 thành công với hình thức trả phí theo giờ")
     void createBooking_success_hourlyPay() {
@@ -118,7 +121,7 @@ class CoachBookingServiceTest {
             return b;
         });
 
-        // Booking at 14:00 (more than 2 hours from 08:00)
+        // Đặt lịch lúc 14:00 (cách 08:00 hơn 2 tiếng)
         CoachBookingCreateDto request = new CoachBookingCreateDto(
                 20L,
                 null,
@@ -138,13 +141,14 @@ class CoachBookingServiceTest {
         assertThat(result.status()).isEqualTo("confirmed");
     }
 
+    /** Kiểm thử: Chặn đặt lịch nếu thời gian bắt đầu cách dưới 2 tiếng */
     @Test
     @DisplayName("Chặn đặt lịch nếu thời gian bắt đầu cách dưới 2 tiếng")
     void createBooking_throws_whenTooSoon() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
 
-        // Attempt booking at 09:00 (only 1 hour from 08:00, less than 2 hours!)
+        // Thử đặt lịch lúc 09:00 (chỉ cách 08:00 đúng 1 tiếng, ít hơn 2 tiếng!)
         CoachBookingCreateDto request = new CoachBookingCreateDto(
                 20L,
                 null,
@@ -160,6 +164,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("COACH_BOOKING_TOO_SOON"));
     }
 
+    /** Kiểm thử: Chặn đặt lịch nếu Huấn luyện viên đã có lịch dạy lớp trùng giờ */
     @Test
     @DisplayName("Chặn đặt lịch nếu Huấn luyện viên đã có lịch dạy lớp trùng giờ")
     void createBooking_throws_whenCoachBusy() {
@@ -191,6 +196,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((ConflictException) e).getErrorCode()).isEqualTo("COACH_SCHEDULE_CONFLICT"));
     }
 
+    /** Kiểm thử: Thành công trừ lượt PT của gói GOLD khi còn hạn mức */
     @Test
     @DisplayName("Thành công trừ lượt PT của gói GOLD khi còn hạn mức")
     void createBooking_success_withPackageQuota() {
@@ -210,7 +216,7 @@ class CoachBookingServiceTest {
         sub.setEndDate(LocalDate.of(2026, 11, 30));
 
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
-        // Used 1 quota out of 3
+        // Đã dùng 1 trên tổng số 3 lượt
         when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(1L);
 
         when(coachBookingRepository.save(any(CoachBooking.class))).thenAnswer(inv -> {
@@ -234,6 +240,7 @@ class CoachBookingServiceTest {
         assertThat(result.status()).isEqualTo("confirmed");
     }
 
+    /** Kiểm thử: Thành công trừ lượt PT của Gói Trải Nghiệm 3 Ngày (tối đa 1 lượt) */
     @Test
     @DisplayName("Thành công trừ lượt PT của Gói Trải Nghiệm 3 Ngày (tối đa 1 lượt)")
     void createBooking_success_withTrialQuota() {
@@ -254,7 +261,7 @@ class CoachBookingServiceTest {
         sub.setEndDate(LocalDate.of(2026, 11, 2));
 
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
-        // Used 0 quota out of 1
+        // Đã dùng 0 trên tổng số 1 lượt
         when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(0L);
 
         when(coachBookingRepository.save(any(CoachBooking.class))).thenAnswer(inv -> {
@@ -278,6 +285,7 @@ class CoachBookingServiceTest {
         assertThat(result.status()).isEqualTo("confirmed");
     }
 
+    /** Kiểm thử: Báo lỗi khi Gói Trải Nghiệm 3 Ngày đã dùng hết 1 buổi PT 1:1 */
     @Test
     @DisplayName("Báo lỗi khi Gói Trải Nghiệm 3 Ngày đã dùng hết 1 buổi PT 1:1")
     void createBooking_throws_whenTrialQuotaExceeded() {
@@ -298,7 +306,7 @@ class CoachBookingServiceTest {
         sub.setEndDate(LocalDate.of(2026, 11, 2));
 
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
-        // Already used 1 session
+        // Đã dùng 1 buổi
         when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(1L);
 
         CoachBookingCreateDto request = new CoachBookingCreateDto(
@@ -316,6 +324,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("COACH_BOOKING_TRIAL_QUOTA_EXCEEDED"));
     }
 
+    /** Kiểm thử: Báo lỗi khi gói tập không có quyền lợi PT (như SILVER) mà chọn trừ lượt gói */
     @Test
     @DisplayName("Báo lỗi khi gói tập không có quyền lợi PT (như SILVER) mà chọn trừ lượt gói")
     void createBooking_throws_whenSilverHasNoPtQuota() {
@@ -351,6 +360,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("COACH_BOOKING_PACKAGE_NO_QUOTA"));
     }
 
+    /** Kiểm thử: Kiểm tra khung giờ khả dụng: đánh dấu slot dưới 2 tiếng là too_soon */
     @Test
     @DisplayName("Kiểm tra khung giờ khả dụng: đánh dấu slot dưới 2 tiếng là too_soon")
     void getAvailableSlots_marks_tooSoon() {
@@ -360,15 +370,16 @@ class CoachBookingServiceTest {
 
         List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, LocalDate.of(2026, 10, 31), 10L);
 
-        // At 08:00, slots 06:00, 07:00, 08:00, 09:00 are too soon or past
+        // Tại 08:00, các khung 06:00, 07:00, 08:00, 09:00 đã qua hoặc quá sát giờ
         CoachAvailableSlotDto slot9 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(9, 0))).findFirst().orElseThrow();
         assertThat(slot9.available()).isFalse();
         assertThat(slot9.reason()).isEqualTo("too_soon");
 
-        // Slot 11:00 (more than 2 hours) should be available
+        // Khung 11:00 (cách hơn 2 tiếng) phải còn trống
         CoachAvailableSlotDto slot11 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(11, 0))).findFirst().orElseThrow();
         assertThat(slot11.available()).isTrue();
     }
+    /** Kiểm thử: HLV không liên quan không hủy được buổi của HLV khác. */
     @Test
     void unrelatedCoachCannotCancelAnotherCoachBooking() {
         CoachBooking booking = new CoachBooking();
@@ -382,6 +393,7 @@ class CoachBookingServiceTest {
         assertThat(booking.getStatus()).isEqualTo("confirmed");
     }
 
+    /** Kiểm thử: hội viên không hủy được buổi đã bắt đầu hoặc đã hoàn thành. */
     @Test
     void memberCannotCancelASessionThatStartedOrWasCompleted() {
         CoachBooking started = new CoachBooking();
@@ -404,6 +416,7 @@ class CoachBookingServiceTest {
         assertThat(completed.getStatus()).isEqualTo("completed");
     }
 
+    /** Kiểm thử: đặt có phí cần membership đang hoạt động. */
     @Test
     void paidBookingRequiresActiveMembership() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
@@ -415,6 +428,7 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("MEMBERSHIP_INACTIVE_OR_EXPIRED"));
         verify(coachBookingRepository, never()).save(any());
     }
+    /** Kiểm thử: từ chối đặt nhiều giờ nhưng tính một buổi. */
     @Test
     void rejectsMultiHourBookingChargedAsOneSession() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
@@ -427,6 +441,7 @@ class CoachBookingServiceTest {
         verify(coachBookingRepository, never()).save(any());
     }
 
+    /** Kiểm thử: lịch trống tính cả lớp nhóm của hội viên. */
     @Test
     void availabilityIncludesMembersGroupClass() {
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
@@ -438,6 +453,7 @@ class CoachBookingServiceTest {
         assertThat(slot.available()).isFalse();
         assertThat(slot.reason()).isEqualTo("member_busy");
     }
+    /** Kiểm thử: từ chối phương thức thanh toán không biết. */
     @Test
     void rejectsUnknownPaymentMethod() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
@@ -450,6 +466,7 @@ class CoachBookingServiceTest {
         verify(coachBookingRepository, never()).save(any());
     }
 
+    /** Kiểm thử: từ chối đặt theo giờ khi đã chạm giới hạn chưa thanh toán. */
     @Test
     void rejectsHourlyBookingWhenUnpaidLimitReached() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
@@ -467,6 +484,7 @@ class CoachBookingServiceTest {
         verify(coachBookingRepository, never()).save(any());
     }
 
+    /** Kiểm thử: quầy xác nhận thanh toán theo giờ và ghi nhận doanh thu. */
     @Test
     void deskConfirmsHourlyPaymentAndRecordsRevenue() {
         var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
@@ -511,6 +529,7 @@ class CoachBookingServiceTest {
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
     }
 
+    /** Kiểm thử: Đặt lịch 1:1 trả phí tạo khoản chờ thanh toán và gửi thông báo thanh toán */
     @Test
     @DisplayName("Đặt lịch 1:1 trả phí tạo khoản chờ thanh toán và gửi thông báo thanh toán")
     void createHourlyBookingCreatesPendingPaymentAndSendsPaymentNotification() {
@@ -561,6 +580,7 @@ class CoachBookingServiceTest {
         );
     }
 
+    /** Kiểm thử: Hủy buổi tập 1:1 đã thanh toán trước giờ bắt đầu hoàn tiền về Ví hội viên */
     @Test
     @DisplayName("Hủy buổi tập 1:1 đã thanh toán trước giờ bắt đầu hoàn tiền về Ví hội viên")
     void cancelPaidBookingBeforeStartRefundsToWallet() {
@@ -598,6 +618,227 @@ class CoachBookingServiceTest {
         verify(wallets).creditCoachBookingRefund(10L, new BigDecimal("200000.00"), "COACH_REFUND_160", "Bận việc đột xuất");
     }
 
+    /**
+     * Kiểm thử: Học viên hủy buổi tập 1:1 dùng lượt gói trước 2 tiếng được hoàn lại lượt; hủy trong vòng 2
+     * tiếng bị mất lượt
+     */
+    @Test
+    @DisplayName("Học viên hủy buổi tập 1:1 dùng lượt gói trước 2 tiếng được hoàn lại lượt; hủy trong vòng 2 tiếng bị mất lượt")
+    void memberCancelPackageQuotaRespectsTwoHourRefundWindow() {
+        CoachBooking earlyBooking = new CoachBooking();
+        earlyBooking.setId(161L);
+        earlyBooking.setMember(member);
+        earlyBooking.setCoach(coach);
+        earlyBooking.setStatus("confirmed");
+        earlyBooking.setPaymentMethod("package_quota");
+        earlyBooking.setBookingDate(LocalDate.now(fixedClock));
+        earlyBooking.setStartTime(LocalTime.now(fixedClock).plusHours(2));
+        earlyBooking.setEndTime(LocalTime.now(fixedClock).plusHours(3));
+
+        CoachBooking lateBooking = new CoachBooking();
+        lateBooking.setId(162L);
+        lateBooking.setMember(member);
+        lateBooking.setCoach(coach);
+        lateBooking.setStatus("confirmed");
+        lateBooking.setPaymentMethod("package_quota");
+        lateBooking.setBookingDate(LocalDate.now(fixedClock));
+        lateBooking.setStartTime(LocalTime.now(fixedClock).plusMinutes(90));
+        lateBooking.setEndTime(LocalTime.now(fixedClock).plusMinutes(150));
+
+        when(coachBookingRepository.findByIdForUpdate(161L)).thenReturn(Optional.of(earlyBooking));
+        when(coachBookingRepository.findByIdForUpdate(162L)).thenReturn(Optional.of(lateBooking));
+
+        AuthenticatedPrincipal memberPrincipal = new AuthenticatedPrincipal(member.getUserId(), "member", "MEMBER");
+
+        service.cancelBooking(memberPrincipal, 161L, "Đổi lịch sớm");
+        service.cancelBooking(memberPrincipal, 162L, "Hủy sát giờ");
+
+        assertThat(earlyBooking.getStatus()).isEqualTo("cancelled");
+        assertThat(earlyBooking.isQuotaForfeited()).isFalse();
+        assertThat(lateBooking.getStatus()).isEqualTo("cancelled");
+        assertThat(lateBooking.isQuotaForfeited()).isTrue();
+    }
+
+    /** Kiểm thử: HLV hoặc quản lý hủy buổi tập trong vòng 2 tiếng không làm mất lượt gói của học viên */
+    @Test
+    @DisplayName("HLV hoặc quản lý hủy buổi tập trong vòng 2 tiếng không làm mất lượt gói của học viên")
+    void staffCancelWithinTwoHoursDoesNotForfeitMemberQuota() {
+        CoachBooking booking = new CoachBooking();
+        booking.setId(163L);
+        booking.setMember(member);
+        booking.setCoach(coach);
+        booking.setStatus("confirmed");
+        booking.setPaymentMethod("package_quota");
+        booking.setBookingDate(LocalDate.now(fixedClock));
+        booking.setStartTime(LocalTime.now(fixedClock).plusMinutes(60));
+        booking.setEndTime(LocalTime.now(fixedClock).plusMinutes(120));
+
+        when(coachBookingRepository.findByIdForUpdate(163L)).thenReturn(Optional.of(booking));
+        AuthenticatedPrincipal coachPrincipal = new AuthenticatedPrincipal(coach.getUserId(), "coach", "COACH");
+
+        service.cancelBooking(coachPrincipal, 163L, "HLV bận đột xuất");
+
+        assertThat(booking.getStatus()).isEqualTo("cancelled");
+        assertThat(booking.isQuotaForfeited()).isFalse();
+    }
+
+    /** Kiểm thử: Tự động hủy lịch PT 1:1 treo quá hạn chưa thanh toán và đóng giao dịch pending */
+    @Test
+    @DisplayName("Tự động hủy lịch PT 1:1 treo quá hạn chưa thanh toán và đóng giao dịch pending")
+    void expireUnpaidBookingsCancelsStaleAndSkipsActiveVnpay() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var guard = org.mockito.Mockito.mock(com.swp391.scms.finance.service.VnpayPaymentGuard.class);
+        CoachBookingService target = new CoachBookingService(
+                coachBookingRepository, coachRepository, memberRepository, classSessionRepository,
+                classEnrollmentRepository, subscriptionRepository, disciplineRepository,
+                null, fixedClock, null, guard);
+        org.springframework.test.util.ReflectionTestUtils.setField(target, "paymentRepository", payments);
+
+        CoachBooking stale = new CoachBooking();
+        stale.setId(170L);
+        stale.setMember(member);
+        stale.setCoach(coach);
+        stale.setStatus("confirmed");
+        stale.setPaymentMethod("cash");
+        stale.setPaymentStatus("pending");
+        stale.setBookingDate(LocalDate.now(fixedClock).plusDays(1));
+        stale.setStartTime(LocalTime.of(10, 0));
+        stale.setEndTime(LocalTime.of(11, 0));
+
+        CoachBooking activeVnpay = new CoachBooking();
+        activeVnpay.setId(171L);
+        activeVnpay.setMember(member);
+        activeVnpay.setCoach(coach);
+        activeVnpay.setStatus("confirmed");
+        activeVnpay.setPaymentMethod("bank_transfer");
+        activeVnpay.setPaymentStatus("pending");
+        activeVnpay.setBookingDate(LocalDate.now(fixedClock).plusDays(1));
+        activeVnpay.setStartTime(LocalTime.of(14, 0));
+        activeVnpay.setEndTime(LocalTime.of(15, 0));
+
+        com.swp391.scms.finance.entity.Payment pendingPayment = new com.swp391.scms.finance.entity.Payment();
+        pendingPayment.setStatus("pending");
+
+        when(coachBookingRepository.findUnpaidStale(any(), any(), any(), any())).thenReturn(List.of(stale, activeVnpay));
+        when(payments.findAllByCoachBookingId(170L)).thenReturn(List.of(pendingPayment));
+        org.mockito.Mockito.doNothing().when(guard).coach(170L);
+        org.mockito.Mockito.doThrow(new ConflictException("VNPAY_PENDING", "error", null, "pending")).when(guard).coach(171L);
+
+        int cancelled = target.expireUnpaidBookings();
+
+        verify(coachBookingRepository).findUnpaidStale(any(), any(), any(), any());
+        verify(guard).coach(170L);
+        verify(payments).findAllByCoachBookingId(170L);
+        assertThat(cancelled).isEqualTo(1);
+        assertThat(stale.getStatus()).isEqualTo("cancelled");
+        assertThat(stale.getCancelledAt()).isNotNull();
+        assertThat(pendingPayment.getStatus()).isEqualTo("failed");
+        assertThat(activeVnpay.getStatus()).isEqualTo("confirmed");
+        verify(coachBookingRepository).save(stale);
+    }
+
+    /**
+     * Kiểm thử: Khi tắt lớp học nhóm (legacyClassesEnabled=false), các ClassSession cũ không chặn slot PT 1:1
+     * của HLV
+     */
+    @Test
+    @DisplayName("Khi tắt lớp học nhóm (legacyClassesEnabled=false), các ClassSession cũ không chặn slot PT 1:1 của HLV")
+    void legacyClassSessionsAreIgnoredWhenClassesDisabled() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "legacyClassesEnabled", false);
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+
+        List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, LocalDate.of(2026, 11, 26), 10L);
+        CoachAvailableSlotDto slot17 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(17, 0))).findFirst().orElseThrow();
+
+        assertThat(slot17.available()).isTrue();
+        verify(classSessionRepository, never()).findActiveByCoachAndDate(any(), any());
+        verify(classSessionRepository, never()).findActiveByMemberAndDate(any(), any());
+    }
+
+    /** Kiểm thử: Lượt PT miễn phí đã dùng ở gói Trial không trừ vào 3 lượt của gói Gold mới mua */
+    @Test
+    @DisplayName("Lượt PT miễn phí đã dùng ở gói Trial không trừ vào 3 lượt của gói Gold mới mua")
+    void trialQuotaUsageDoesNotReduceSubsequentGoldPackageQuota() {
+        MembershipPackage goldPkg = new MembershipPackage();
+        goldPkg.setId(2L);
+        goldPkg.setName("GOLD 3 THÁNG");
+        goldPkg.setTier("GOLD");
+        goldPkg.setDurationDays(90);
+
+        MembershipSubscription goldSub = new MembershipSubscription();
+        goldSub.setId(500L);
+        goldSub.setMember(member);
+        goldSub.setMembershipPackage(goldPkg);
+        goldSub.setStatus("active");
+        goldSub.setStartDate(LocalDate.now(fixedClock));
+        goldSub.setEndDate(LocalDate.now(fixedClock).plusDays(90));
+        goldSub.setCreatedAt(LocalDateTime.now(fixedClock));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(goldSub));
+        when(coachBookingRepository.countSubscriptionQuotaUsage(
+                eq(10L), any(), any(), eq("package_quota"), eq(List.of(500L)), eq(goldSub.getCreatedAt())))
+                .thenReturn(0L);
+
+        var quota = service.getMemberQuotaStatus(10L);
+
+        assertThat(quota.monthlyQuota()).isEqualTo(3);
+        assertThat(quota.usedThisMonth()).isEqualTo(0);
+        assertThat(quota.remainingQuota()).isEqualTo(3);
+    }
+
+    /** Kiểm thử: Nâng cấp từ Gold lên Platinum ngay trong ngày vẫn giữ đủ 3 lượt PT đã dùng của Gold */
+    @Test
+    @DisplayName("Nâng cấp từ Gold lên Platinum ngay trong ngày vẫn giữ đủ 3 lượt PT đã dùng của Gold")
+    void upgradingGoldToPlatinumSameDayCarriesOverGoldPtUsage() {
+        MembershipPackage goldPkg = new MembershipPackage();
+        goldPkg.setId(2L);
+        goldPkg.setName("GOLD 3 THÁNG");
+        goldPkg.setTier("GOLD");
+        goldPkg.setDurationDays(90);
+
+        MembershipPackage platPkg = new MembershipPackage();
+        platPkg.setId(3L);
+        platPkg.setName("PLATINUM 3 THÁNG");
+        platPkg.setTier("PLATINUM");
+        platPkg.setDurationDays(90);
+
+        LocalDate today = LocalDate.now(fixedClock);
+        // Khi nâng cấp Gold ngay trong ngày, endDate bị cắt về hôm nay (khoảng 0 ngày),
+        // nên KHÔNG được phân loại nhầm thành gói dùng thử 3 ngày.
+        MembershipSubscription goldSub = new MembershipSubscription();
+        goldSub.setId(68L);
+        goldSub.setMember(member);
+        goldSub.setMembershipPackage(goldPkg);
+        goldSub.setStatus("expired");
+        goldSub.setStartDate(today);
+        goldSub.setEndDate(today);
+        goldSub.setCreatedAt(LocalDateTime.now(fixedClock).minusHours(1));
+
+        MembershipSubscription platSub = new MembershipSubscription();
+        platSub.setId(69L);
+        platSub.setMember(member);
+        platSub.setMembershipPackage(platPkg);
+        platSub.setPreviousSubscription(goldSub);
+        platSub.setUpgradeCharge(new BigDecimal("800000.00"));
+        platSub.setStatus("active");
+        platSub.setStartDate(today);
+        platSub.setEndDate(today.plusDays(89));
+        platSub.setCreatedAt(LocalDateTime.now(fixedClock));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(platSub));
+        when(coachBookingRepository.countSubscriptionQuotaUsage(
+                eq(10L), any(), any(), eq("package_quota"), eq(List.of(69L, 68L)), eq(goldSub.getCreatedAt())))
+                .thenReturn(3L);
+
+        var quota = service.getMemberQuotaStatus(10L);
+
+        assertThat(quota.monthlyQuota()).isEqualTo(6);
+        assertThat(quota.usedThisMonth()).isEqualTo(3);
+        assertThat(quota.remainingQuota()).isEqualTo(3);
+    }
+
+    /** Kiểm thử: HLV đang nghỉ phép được duyệt không đặt được và không có khung trống. */
     @Test
     void coachOnApprovedLeaveCannotBeBookedAndShowsNoFreeSlots() {
         var leaves = org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class);
@@ -620,6 +861,7 @@ class CoachBookingServiceTest {
         verify(coachBookingRepository, never()).save(any());
     }
 
+    /** Kiểm thử: getMemberQuotaStatus: Trả về đúng 1 lượt cho Gói Trải Nghiệm 3 Ngày (dù tên cũ là GOLD) */
     @Test
     @DisplayName("getMemberQuotaStatus: Trả về đúng 1 lượt cho Gói Trải Nghiệm 3 Ngày (dù tên cũ là GOLD)")
     void getMemberQuotaStatus_returnsTrialQuotaCorrectly() {
@@ -631,7 +873,7 @@ class CoachBookingServiceTest {
         sub.setMembershipPackage(pkg);
         sub.setStatus("active");
         sub.setStartDate(LocalDate.of(2026, 10, 30));
-        sub.setEndDate(LocalDate.of(2026, 11, 2)); // 3 days
+        sub.setEndDate(LocalDate.of(2026, 11, 2)); // 3 ngày
 
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
         when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(0L);
@@ -642,6 +884,7 @@ class CoachBookingServiceTest {
         assertThat(quota.remainingQuota()).isEqualTo(1);
     }
 
+    /** Kiểm thử: getMemberQuotaStatus: Trả về đúng 3 lượt cho Gói GOLD 30 ngày chuẩn */
     @Test
     @DisplayName("getMemberQuotaStatus: Trả về đúng 3 lượt cho Gói GOLD 30 ngày chuẩn")
     void getMemberQuotaStatus_returnsGoldQuotaCorrectly() {
@@ -653,7 +896,7 @@ class CoachBookingServiceTest {
         sub.setMembershipPackage(pkg);
         sub.setStatus("active");
         sub.setStartDate(LocalDate.of(2026, 10, 1));
-        sub.setEndDate(LocalDate.of(2026, 11, 30)); // 60 days
+        sub.setEndDate(LocalDate.of(2026, 11, 30)); // 60 ngày
 
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
         when(coachBookingRepository.countMonthlyQuotaUsage(eq(10L), any(), any(), eq("package_quota"))).thenReturn(1L);
@@ -664,6 +907,7 @@ class CoachBookingServiceTest {
         assertThat(quota.usedThisMonth()).isEqualTo(1);
         assertThat(quota.remainingQuota()).isEqualTo(2);
     }
+    /** Kiểm thử: HLV nghỉ sau ba khung PT liên tiếp và làm lại sau một giờ. */
     @Test
     void coachRestsAfterThreeConsecutivePtSlotsAndResumesAfterAnHour() {
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
@@ -676,6 +920,7 @@ class CoachBookingServiceTest {
         assertThat(slots.stream().filter(s -> s.startTime().getHour() == 14).findFirst().orElseThrow().available()).isTrue();
     }
 
+    /** Kiểm thử: từ chối khung PT liên tiếp thứ tư kể cả khi chèn vào giữa. */
     @Test
     void rejectsFourthConsecutivePtSlotIncludingInsertionInTheMiddle() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
@@ -692,6 +937,7 @@ class CoachBookingServiceTest {
         verify(coachBookingRepository, never()).save(any());
     }
 
+    /** Hàm trợ giúp của test: tạo danh sách khung PT. */
     private List<CoachBooking> ptSlots(int... hours) {
         return java.util.Arrays.stream(hours).mapToObj(hour -> {
             CoachBooking booking = new CoachBooking();
@@ -702,6 +948,7 @@ class CoachBookingServiceTest {
     }
 
 
+    /** Hàm trợ giúp của test: tạo một buổi PT. */
     private com.swp391.scms.coaching.entity.CoachBooking ptSession(long id, LocalDate date, LocalTime start, LocalTime end,
                                                                     LocalDateTime attendedAt) {
         com.swp391.scms.coaching.entity.CoachBooking b = new com.swp391.scms.coaching.entity.CoachBooking();
@@ -716,9 +963,10 @@ class CoachBookingServiceTest {
         return b;
     }
 
+    /** Kiểm thử: màn điểm danh chia buổi thành đã dự, vắng và sắp tới, và giới hạn HLV trong buổi của mình. */
     @Test
     void attendanceScreenSplitsSessionsIntoAttendedMissedAndUpcomingAndScopesCoachesToTheirOwn() {
-        // The clock is 2026-10-31 08:00.
+        // Đồng hồ đang ở 2026-10-31 08:00.
         var attended = ptSession(1, LocalDate.of(2026, 10, 30), LocalTime.of(9, 0), LocalTime.of(10, 0), LocalDateTime.of(2026, 10, 30, 8, 50));
         var missed = ptSession(2, LocalDate.of(2026, 10, 30), LocalTime.of(15, 0), LocalTime.of(16, 0), null);
         var upcoming = ptSession(3, LocalDate.of(2026, 10, 31), LocalTime.of(17, 0), LocalTime.of(18, 0), null);
@@ -734,10 +982,11 @@ class CoachBookingServiceTest {
         assertThat(service.getAttendance(desk, null, null, "UPCOMING")).extracting(d -> d.id()).containsExactly(3L);
         assertThat(service.getAttendance(coachPrincipal, null, null, null)).hasSize(3);
         verify(coachBookingRepository).findForAttendanceByCoach(eq(20L), any(), any());
-        // A coach never reads the desk-wide query.
+        // Huấn luyện viên không bao giờ gọi truy vấn toàn quầy lễ tân.
         verify(coachBookingRepository, org.mockito.Mockito.times(4)).findForAttendance(any(), any());
     }
 
+    /** Kiểm thử: danh sách điểm danh hiện lượt vào cổng làm gợi ý mà không đánh dấu đã đến. */
     @Test
     void attendanceListShowsTheGateCheckinAsAHintWithoutMarkingTheArrival() {
         var missed = ptSession(2, LocalDate.of(2026, 10, 30), LocalTime.of(15, 0), LocalTime.of(16, 0), null);
@@ -752,6 +1001,7 @@ class CoachBookingServiceTest {
         assertThat(row.attendedAt()).isNull();
     }
 
+    /** Kiểm thử: màn điểm danh từ chối hội viên và khoảng dài hơn hai tháng. */
     @Test
     void attendanceScreenRejectsMembersAndRangesLongerThanTwoMonths() {
         assertThatThrownBy(() -> service.getAttendance(principal, null, null, "ALL"))
@@ -763,9 +1013,10 @@ class CoachBookingServiceTest {
                 .isInstanceOf(BadRequestException.class);
     }
 
+    /** Kiểm thử: HLV, quầy hoặc quản lý đánh dấu được đã dự, nhưng chỉ đúng HLV của buổi. */
     @Test
     void aCoachDeskOrManagerCanMarkAStartedSessionAttendedButOnlyTheOwnCoach() {
-        // The clock is 2026-10-31 08:00; this session started at 07:00.
+        // Đồng hồ đang ở 2026-10-31 08:00; buổi này bắt đầu lúc 07:00.
         var started = ptSession(7, LocalDate.of(2026, 10, 31), LocalTime.of(7, 0), LocalTime.of(8, 0), null);
         when(coachBookingRepository.findById(7L)).thenReturn(Optional.of(started));
         var otherCoach = new AuthenticatedPrincipal(99L, "other", "COACH");
@@ -778,12 +1029,13 @@ class CoachBookingServiceTest {
 
         assertThat(dto.attendedAt()).isEqualTo(LocalDateTime.of(2026, 10, 31, 8, 0));
         verify(coachBookingRepository).save(started);
-        // A second mark by the desk keeps the first time and saves nothing more.
+        // Lễ tân đánh dấu lần hai sẽ giữ nguyên mốc giờ đầu tiên và không lưu thêm gì.
         var again = service.markAttended(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 7L);
         assertThat(again.attendedAt()).isEqualTo(LocalDateTime.of(2026, 10, 31, 8, 0));
         verify(coachBookingRepository, times(1)).save(started);
     }
 
+    /** Kiểm thử: buổi tương lai hoặc đã hủy không đánh dấu đã dự được. */
     @Test
     void aFutureOrCancelledSessionCannotBeMarkedAttended() {
         var future = ptSession(8, LocalDate.of(2026, 10, 31), LocalTime.of(17, 0), LocalTime.of(18, 0), null);
@@ -798,6 +1050,7 @@ class CoachBookingServiceTest {
         verify(coachBookingRepository, never()).save(any());
     }
 
+    /** Kiểm thử: bỏ đánh dấu gỡ lượt đến và khóa buổi khỏi lượt quét và tác vụ quét. */
     @Test
     void unmarkingRemovesTheArrivalAndLocksTheSessionAgainstTheScanAndTheSweep() {
         var attended = ptSession(11, LocalDate.of(2026, 10, 30), LocalTime.of(9, 0), LocalTime.of(10, 0), LocalDateTime.of(2026, 10, 30, 8, 55));
@@ -815,7 +1068,7 @@ class CoachBookingServiceTest {
         assertThat(dto.status()).isEqualTo("confirmed");
         assertThat(attended.isAttendanceLocked()).isTrue();
         verify(coachBookingRepository).save(attended);
-        // Unmarking again changes nothing; marking by hand unlocks it.
+        // Bỏ đánh dấu lần nữa không thay đổi gì; đánh dấu thủ công sẽ mở khóa lại.
         service.unmarkAttended(new AuthenticatedPrincipal(20L, "hung", "COACH"), 11L);
         verify(coachBookingRepository, times(1)).save(attended);
         service.markAttended(new AuthenticatedPrincipal(20L, "hung", "COACH"), 11L);
@@ -823,6 +1076,7 @@ class CoachBookingServiceTest {
         assertThat(attended.isAttendanceLocked()).isFalse();
     }
 
+    /** Kiểm thử: buổi đã hủy không bỏ đánh dấu được. */
     @Test
     void aCancelledSessionCannotBeUnmarked() {
         var cancelled = ptSession(12, LocalDate.of(2026, 10, 30), LocalTime.of(9, 0), LocalTime.of(10, 0), null);
@@ -833,6 +1087,7 @@ class CoachBookingServiceTest {
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
     }
 
+    /** Kiểm thử: danh sách sắp tới loại buổi đang diễn ra và đã kết thúc theo mốc giờ Việt Nam. */
     @Test
     void upcomingExcludesOngoingAndEndedSessionsAtVietnamBoundaries() {
         var ended = ptSession(1, LocalDate.of(2026, 10, 31), LocalTime.of(7, 0), LocalTime.of(8, 0), null);
@@ -845,6 +1100,7 @@ class CoachBookingServiceTest {
         assertThat(service.getAttendance(desk, null, null, "ALL")).hasSize(3);
     }
 
+    /** Kiểm thử: ngày điểm danh mặc định dùng giờ Việt Nam kể cả khi đồng hồ ở UTC. */
     @Test
     void defaultAttendanceDatesUseVietnamEvenWhenClockZoneIsUtc() {
         org.springframework.test.util.ReflectionTestUtils.setField(service, "clock",

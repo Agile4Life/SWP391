@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import org.hibernate.Length;
 import java.time.LocalDateTime;
 
-/** Entity mapping table disciplines (Module B: Master Facilities). */
+/**
+ * Entity ánh xạ bảng disciplines (Module B: Danh mục cơ sở vật chất): bộ môn gồm tên duy nhất, mô tả và thời điểm tạo.
+ */
 @Entity
 @Table(name = "disciplines")
 public class Discipline {
@@ -22,15 +24,22 @@ public class Discipline {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    /** Hibernate gọi trước khi thêm bản ghi: gán thời điểm tạo. */
     @PrePersist
     void onCreate() {
         createdAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Lấy giá trị trường name. */
     public String getName() { return name; }
+    /** Gán giá trị mới cho trường name. */
     public void setName(String name) { this.name = name; }
+    /** Lấy giá trị trường description. */
     public String getDescription() { return description; }
+    /** Gán giá trị mới cho trường description. */
     public void setDescription(String description) { this.description = description; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
 }

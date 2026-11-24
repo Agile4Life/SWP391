@@ -38,7 +38,10 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Opt-in, real PostgreSQL. Never reads environment credentials or starts the application. */
+/**
+ * Bộ kiểm thử điểm danh PT trên PostgreSQL biệt lập.
+ * Chỉ chạy khi được bật thủ công trên PostgreSQL thật; không bao giờ đọc thông tin đăng nhập từ biến môi trường hay khởi chạy ứng dụng.
+ */
 @EnabledIfSystemProperty(named = "scms.pt.isolated.port", matches = "[0-9]{1,5}")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PtAttendanceIsolatedPostgreSqlTest {
@@ -69,7 +72,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
         registry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.connection.datasource", source)
                 .applySetting("hibernate.default_schema", schema)
-                .applySetting("hibernate.hbm2ddl.auto", "create") // Bootstrap only. Migration never calls update.
+                .applySetting("hibernate.hbm2ddl.auto", "create") // Chỉ dùng để khởi tạo ban đầu. Migration không bao giờ gọi update.
                 .applySetting("hibernate.hbm2ddl.halt_on_error", true).build();
         var mappings = new MetadataSources(registry);
         var scanner = new ClassPathScanningCandidateComponentProvider(false);
@@ -93,7 +96,9 @@ class PtAttendanceIsolatedPostgreSqlTest {
         service = proxy.getProxy();
         mvc = MockMvcBuilders.standaloneSetup(new CoachBookingController(service, null))
                 .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     public boolean supportsParameter(org.springframework.core.MethodParameter p) { return p.getParameterType() == AuthenticatedPrincipal.class; }
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     public Object resolveArgument(org.springframework.core.MethodParameter p,
                             org.springframework.web.method.support.ModelAndViewContainer c,
                             org.springframework.web.context.request.NativeWebRequest r,
@@ -106,6 +111,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
         jdbc.update("insert into membership_packages(name,price,duration_days,status,tier,created_at,updated_at) values ('PT test',100,90,'active','GOLD',now(),now())");
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private long user(String role) {
         long roleId = jdbc.queryForObject("insert into roles(code,name,created_at) values (?,?,now()) returning id", Long.class, role, role);
         return jdbc.queryForObject("insert into users(role_id,full_name,email,password_hash,status,created_at,updated_at) values (?,?,?,'unused','active',now(),now()) returning id",
@@ -134,12 +140,15 @@ class PtAttendanceIsolatedPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: lấy lịch sử điểm danh PT. */
     private List<String> history() {
         return jdbc.queryForList("select row_to_json(a)::text from audit_logs a where action='HISTORY' order by id", String.class);
     }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private Map<String, Object> booking() {
         return jdbc.queryForMap("select attended_at, attendance_locked, status from coach_bookings where id=?", bookingId);
     }
+    /** Hàm trợ giúp của test: chạy migration/đồng bộ schema cho test. */
     private void migrate() { new PostgreSqlTriggerProvider(true).applyTriggers(jdbc); }
 
     @Test void ordinaryStartupDoesNotMigrateTheAuditCheck() {
@@ -245,7 +254,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
         assertTrue(sqlError.getMessage().contains("trg_enrollments_check_membership"));
         assertThrows(RuntimeException.class, () -> service.unmarkAttended(receptionist, bookingId));
         assertEquals(before, booking());
-        // Current guard explicitly excludes completed bookings; do not weaken confirmed-booking validation here.
+        // Ràng buộc hiện tại loại trừ rõ ràng các buổi đã hoàn thành; không làm yếu phần kiểm tra cho buổi đang xác nhận ở đây.
         jdbc.update("update coach_bookings set status='completed' where id=?", bookingId);
         var removed = service.unmarkAttended(receptionist, bookingId);
         assertNull(removed.attendedAt()); assertEquals("completed", removed.status());

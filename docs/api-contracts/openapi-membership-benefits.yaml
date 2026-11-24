@@ -8,61 +8,6 @@ info:
 servers:
   - url: /api/v1
 paths:
-  /classes:
-    post:
-      deprecated: true
-      summary: Retired - one-off classes are no longer created; use POST /classes/recurring
-      responses:
-        '400':
-          description: SCHEDULING_SINGLE_SESSION_DISABLED
-  /classes/sessions/{id}/enroll:
-    post:
-      deprecated: true
-      summary: Retired - enroll in the whole course with POST /classes/{id}/enroll
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '400':
-          description: SCHEDULING_SINGLE_SESSION_DISABLED
-  /classes/sessions/{id}/bookings:
-    post:
-      deprecated: true
-      summary: Retired - per-session booking; enroll in the whole course instead
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '400':
-          description: SCHEDULING_SINGLE_SESSION_DISABLED
-  /classes/session-bookings/bulk:
-    post:
-      deprecated: true
-      summary: Retired - bulk per-session booking
-      responses:
-        '400':
-          description: SCHEDULING_SINGLE_SESSION_DISABLED
-  /classes/{id}/enroll:
-    post:
-      summary: Enroll the member in a recurring course
-      description: |
-        Consumes one course credit of the active package. The course must end on or before the last day of the
-        unbroken run of paid membership periods that covers its start date, otherwise
-        403 SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP (renew first). After an upgrade, credits already spent on the
-        previous plan still count against the new allowance.
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '201': { description: Enrolled }
-        '403': { description: SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP or SCHEDULING_COURSE_QUOTA_EXCEEDED }
-  /classes/my-quota:
-    get:
-      summary: Course credits of the member's active package
-      description: |
-        Adds `enrollBlockedUntil` (date-time, nullable). It is set when the member missed more than 50% of the
-        sessions of a course; enrolling or checking out a new course answers 403 SCHEDULING_COURSE_ENROLL_BLOCKED
-        until then (30 days). Finished sessions nobody recorded are marked `absent` automatically; late arrivals
-        count as present and `excused` sessions are not absences.
-      responses:
-        '200': { description: Quota with optional enrollBlockedUntil }
   /subscriptions/{id}/hold:
     post:
       summary: Request a hold (multipart/form-data)
@@ -122,67 +67,12 @@ paths:
       responses:
         '200':
           description: "{allowed, alreadyUsed, minDays, maxDays, noticeHours, maxDocuments, maxDocumentBytes}"
-  /shop/quote:
-    post:
-      summary: Quote a cart; a signed-in Gold or Platinum member gets the tier discount on the products
-      description: |
-        The response adds `discountPercent` (0, 10, 20) and `discountAmount`. `subtotal` stays the list price and
-        `total = subtotal - discountAmount + shippingFee`. Shipping is never discounted and free shipping is judged on
-        the list price. Creating the order applies the same percentage; the order stores
-        `subtotal = list - discount` plus memberDiscountPercent/memberDiscountAmount so `total = subtotal + shippingFee` holds.
-      responses:
-        '200': { description: Quote with discountPercent and discountAmount }
-  /classes/{id}/checkout:
-    post:
-      summary: Pay the fee of a course beyond the free credits
-      description: The fee is reduced by the tier discount of the active package (Gold 10%, Platinum 20%); the payment note records the percentage and the list price. `GET /classes/my-quota` returns `discountPercent`.
-      responses:
-        '201': { description: Checkout with the discounted amount }
-  /members/{memberId}/health-metrics/batch:
-    post:
-      summary: Record several measurements of one assessment at once
-      description: |
-        Coach, manager and receptionist (intake). Body `{ metrics: [{ metricName, metricValue, unit }] }` with 1-10 distinct
-        items among weight (kg), height (cm), body_fat (%), muscle_mass (kg), waist (cm). BMI is never submitted: it is derived
-        once from the resulting height and weight (400 HEALTH_BMI_AUTOMATIC when sent, 400 HEALTH_DUPLICATE_METRIC for a
-        repeated measurement). Tier rules of POST /health/metrics apply to every item and the batch is atomic.
-        Any coach may measure a member who has no measurements yet; later ones belong to the assigned coach.
-      responses:
-        '200': { description: The recorded measurements (the derived BMI row is not included) }
-  /health/metrics:
-    post:
-      summary: Record a measurement (tier rules)
-      description: |
-        body_fat and muscle_mass need an active Platinum package (403 HEALTH_DEEP_ASSESSMENT_PLATINUM). A member whose
-        active package is Silver gets the first assessment only: a measurement after the day of the first one answers
-        403 HEALTH_PERIODIC_ASSESSMENT_GOLD. Members without an active package are not restricted.
-      responses:
-        '201': { description: Recorded }
   /coaching/training-plans/my:
     get:
       summary: The member's active training plans
       description: Empty for members whose active package is Silver; GET /coaching/training-plans/{id} answers 403 COACHING_PLAN_TIER_REQUIRED for them. Coaches and managers still see and write plans, which appear after an upgrade.
       responses:
         '200': { description: Plans (empty for Silver) }
-  /classes/enrollments/my:
-    get:
-      summary: The member's course enrollments with progress
-      description: |
-        Each item adds `totalSessions` (not cancelled), `attendedSessions` (present or late) and `remainingSessions`
-        (total minus attended, missed and excused: a missed session is not made up). Entering the center through the
-        gate from 30 minutes before a booked course session until its end marks it `present` (`late` when the scan is
-        more than 15 minutes after the start); a coach's own record is never overwritten.
-      responses:
-        '200': { description: Enrollments with totalSessions, attendedSessions, remainingSessions }
-  /classes/recurring:
-    post:
-      summary: Create a recurring course that repeats weekly
-      description: |
-        A course needs `recurringDays` (MONDAY...) and meets on those weekdays every week between `startDate` and
-        `endDate` (400 SCHEDULING_NO_RECURRING_DAYS when none is chosen). Monthly repetition (`repeatType`,
-        `monthDays`) was removed: the fields are no longer accepted nor returned.
-      responses:
-        '201': { description: Course with all its sessions }
   /coaching/bookings:
     get:
       summary: 1:1 sessions (CoachBookingDto)
@@ -208,7 +98,7 @@ paths:
         - { name: to, in: query, schema: { type: string, format: date } }
         - { name: outcome, in: query, schema: { type: string, enum: [ALL, ATTENDED, MISSED, UPCOMING, IN_PROGRESS] } }
       responses:
-        '200': { description: "List of CoachBookingDto including attendedAt, attendanceLocked (whether staff removed the mark; false for legacy null locks) and gateCheckinAt (start of a GRANTED gate check-in that began up to 3 hours before the session and was still inside at its start; a hint only, never recorded as attendance; null when none)" }
+        '200': { description: "List of CoachBookingDto including attendedAt, attendanceLocked (whether staff removed the mark; false for legacy null locks) and gateCheckinAt (start of a GRANTED gate check-in that began up to 3 hours before the session and was still inside at its start; a hint only, never recorded as attendance; null when none), plus membershipCode, memberPhone and memberEmail of the booking's member (null when unknown)" }
   /coach-bookings/{id}/mark-attended:
     post:
       summary: Record that the member attended a 1:1 session (gate scans never record it)
@@ -246,34 +136,12 @@ paths:
       responses:
         '200': { description: Rejected }
         '400': { description: KYC_REJECT_REASON_REQUIRED }
-  /classes/{classId}/students:
-    get:
-      summary: Students of a class
-      description: A coach reads only the classes they teach (403 otherwise). The front desk gets contact details with `healthNotes` blanked. Managers see everything. The same rules apply to /classes/sessions/{id}/students.
-      responses:
-        '200': { description: Students }
   /check-in/scan:
     post:
       summary: Gate scan
       description: Only rotating signed codes (`DYN:...`, 60 seconds) are accepted. A static code is recorded as DENIED with error.attendance.static_qr_rejected.
       responses:
         '201': { description: Check-in record (GRANTED or DENIED) }
-  /classes/enrollments/{id}:
-    delete:
-      summary: Cancel a course enrollment
-      description: A member cannot cancel once the course has started (400 SCHEDULING_CANNOT_CANCEL_STARTED_COURSE), so the credit is not handed back; the desk can. Cancelling before the start voids the unpaid fee.
-      responses:
-        '200': { description: Cancelled }
-  /health/metrics#cycle:
-    post:
-      summary: One assessment day per 30-day cycle (Gold, Platinum, trial)
-      description: |
-        Measurements taken on one day are one assessment. Once a day of the current cycle (counted from the plan, an
-        upgrade keeps the original start) has measurements, another day answers 403 HEALTH_ASSESSMENT_CYCLE_USED with the
-        day used and the start of the next cycle. Measurements from before the cycle, such as the first assessment, do
-        not count.
-      responses:
-        '403': { description: HEALTH_ASSESSMENT_CYCLE_USED }
   /subscriptions/{id}/resume:
     post:
       summary: Resume a frozen membership early

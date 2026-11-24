@@ -9,6 +9,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.test.util.ReflectionTestUtils;
 import java.math.BigDecimal;import java.time.*;import java.util.*;
 import static org.mockito.Mockito.*;import static org.assertj.core.api.Assertions.*;
+/** Bộ kiểm thử cho ReceptionHealthIntake (reception health intake). */
 class ReceptionHealthIntakeTest {
  MemberProgressLogRepository logs=mock(MemberProgressLogRepository.class);MemberRepository members=mock(MemberRepository.class);UserRepository users=mock(UserRepository.class);CenterCheckinRepository checkins=mock(CenterCheckinRepository.class);
  HealthMetricService service=new HealthMetricService(logs,members,users);CenterCheckin checkin;Member member;User staff;LocalDateTime now=LocalDateTime.of(2026,11,4,0,5);
@@ -20,5 +21,6 @@ class ReceptionHealthIntakeTest {
  @Test void missingCheckinOrOtherMemberIsRejected(){when(checkins.findFirstByMemberUserIdAndStatusAndCheckOutTimeIsNullOrderByCheckInTimeDesc(10L,"GRANTED")).thenReturn(Optional.empty());assertDenied();assertThatThrownBy(()->service.addMetric(11L,metric,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);}
  @Test void staffCannotEditDeleteOrReadHistory(){assertThatThrownBy(()->service.updateMetric(10L,1L,metric,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);assertThatThrownBy(()->service.deleteMetric(10L,1L,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);assertThatThrownBy(()->service.getMetrics(10L,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);verifyNoInteractions(logs);}
  @Test void inactiveMemberIsRejected(){member.getUser().setStatus("inactive");assertDenied();}
+ /** Hàm trợ giúp của test: khẳng định thao tác bị từ chối. */
  private void assertDenied(){assertThatThrownBy(()->service.addMetric(10L,metric,20L,"RECEPTIONIST")).isInstanceOf(ForbiddenException.class);verifyNoInteractions(logs);}
 }

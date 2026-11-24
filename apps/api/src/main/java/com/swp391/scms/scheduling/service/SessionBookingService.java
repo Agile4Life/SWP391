@@ -43,13 +43,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Per-session class booking: a member reserves, and releases, individual sessions. A single booking, a whole week,
- * a whole month or any hand-picked set of sessions all go through {@link #bookOne}, so every session is checked on its
- * own (open and in the future, membership covering its date, no clash with another booking, free seat) and a session
- * that fails is reported back instead of failing the others.
+ * Nghiệp vụ đặt lớp theo từng buổi: hội viên giữ và nhả từng buổi riêng (đặt/hủy một hoặc nhiều buổi, nhả lượt
+ * khi gói bảo lưu/hết hạn và xem lịch). Đặt một buổi, cả tuần, cả tháng hay bất kỳ tập buổi chọn tay đều đi qua
+ * {@link #bookOne}, nên mỗi buổi được kiểm tra riêng (còn mở và ở tương lai, gói hội viên bao phủ ngày đó, không
+ * đụng lượt đặt khác, còn chỗ) và buổi nào lỗi sẽ được báo lại thay vì làm hỏng các buổi khác.
  *
- * <p>Seats are counted per session: the booked sessions plus any class-wide {@link ClassEnrollment} of the class.
- * Database triggers repeat the capacity and membership checks and a unique index forbids booking a session twice.
+ * <p>Số chỗ được đếm theo từng buổi: gồm các lượt đặt theo buổi cộng với mọi ghi danh toàn lớp
+ * {@link ClassEnrollment} của lớp đó. Trigger database lặp lại kiểm tra sức chứa và gói hội viên, và một unique
+ * index cấm đặt một buổi hai lần.
  */
 @Service
 public class SessionBookingService {
@@ -71,6 +72,7 @@ public class SessionBookingService {
     @Autowired(required = false)
     private CoachBookingRepository coachBookingRepository;
 
+    /** Constructor rút gọn (không có CoachBookingRepository) dùng trong test. */
     public SessionBookingService(SessionBookingRepository bookings, ClassSessionRepository sessions,
                                  ClassEnrollmentRepository enrollments, GymClassRepository gymClasses,
                                  MembershipSubscriptionRepository subscriptions, MemberRepository members,
@@ -78,6 +80,10 @@ public class SessionBookingService {
         this(bookings, sessions, enrollments, gymClasses, subscriptions, members, notifications, messageService, clock, null);
     }
 
+    /**
+     * Constructor chính được Spring dùng: nhận đủ repository, NotificationService, MessageService, Clock và
+     * repository PT (tùy chọn).
+     */
     @Autowired
     public SessionBookingService(SessionBookingRepository bookings, ClassSessionRepository sessions,
                                  ClassEnrollmentRepository enrollments, GymClassRepository gymClasses,
@@ -99,24 +105,27 @@ public class SessionBookingService {
     @Autowired(required = false)
     private MemberScheduleGuard scheduleGuard;
 
+    /** Dịch message key kèm tham số; không có MessageService thì trả lại key. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** Lấy lý do dễ đọc từ AppException (dịch message key nếu được), nếu không thì trả mã lỗi. */
     private String reason(AppException e) {
         if (messageService != null && e.getMessageKey() != null) {
             try {
                 return messageService.getMessage(e.getMessageKey(),
                         e.getMessageArgs() == null ? new Object[0] : e.getMessageArgs());
             } catch (RuntimeException ignored) {
-                // fall back to the error code
+                // quay về dùng mã lỗi.
             }
         }
         return e.getErrorCode();
     }
 
-    // ------------------------------------------------------------------ booking
+    // ------------------------------------------------------------------ đặt chỗ
 
+    /** Hội viên đặt một buổi: khóa dòng hội viên, gọi bookOne rồi gửi thông báo đặt thành công. */
     @Transactional
     public SessionBookingDto book(AuthenticatedPrincipal principal, Long sessionId) {
         Member member = lockMember(principal.id());
@@ -128,7 +137,12 @@ public class SessionBookingService {
         return toDto(booking);
     }
 
-    /** Books every listed session that can be booked and reports the rest with the reason for each. */
+    /**
+     * Đặt nhiều buổi: bỏ id trùng, sắp buổi theo lớp rồi thời gian để khóa dòng không deadlock, gắn chung
+     * batchId; buổi nào lỗi thì ghi vào danh sách bỏ qua kèm lý do.
+     *
+     * Đặt mọi buổi trong danh sách có thể đặt được và báo các buổi còn lại kèm lý do từng buổi.
+     */
     @Transactional
     public BulkBookResult bookMany(AuthenticatedPrincipal principal, List<Long> sessionIds) {
         List<Long> ids = distinctIds(sessionIds);
@@ -143,7 +157,7 @@ public class SessionBookingService {
                 skipped.add(new Skipped(id, null, "NOT_FOUND", msg("resource.class_session")));
             }
         }
-        // Fixed order (class, then time) keeps the class row locks deadlock-free between concurrent requests.
+        // Thứ tự cố định (lớp rồi giờ) giữ khóa dòng lớp không bị deadlock giữa các request đồng thời.
         found.sort(Comparator.comparing((ClassSession s) -> s.getGymClass().getId())
                 .thenComparing(ClassSession::getSessionDate).thenComparing(ClassSession::getStartTime));
         String batchId = found.size() > 1 ? UUID.randomUUID().toString() : null;
@@ -165,6 +179,10 @@ public class SessionBookingService {
         return new BulkBookResult(booked, skipped);
     }
 
+    /**
+     * Đặt một buổi: khóa lớp, lớp phải active, buổi còn mở, gói tập phủ ngày học, chưa đặt/ghi danh, không
+     * trùng lịch, còn chỗ; rồi lưu lượt đặt.
+     */
     private SessionBooking bookOne(Member member, ClassSession session, String batchId) {
         Long memberId = member.getUserId();
         Long classId = session.getGymClass().getId();
@@ -208,7 +226,11 @@ public class SessionBookingService {
         return bookings.saveAndFlush(booking);
     }
 
-    /** A member cannot hold two sessions that overlap in time, whether booked per session, through a class, or 1:1 PT. */
+    /**
+     * Hội viên không được giữ hai buổi trùng giờ, dù đặt từng buổi, qua ghi danh lớp hay buổi PT 1:1.
+     *
+     * Hội viên không thể giữ hai buổi chồng giờ nhau, dù đặt theo buổi, qua lớp hay PT 1:1.
+     */
     private void ensureNoOverlap(Long memberId, ClassSession target) {
         List<ClassSession> sameDay = sessions.findActiveByMemberAndDate(memberId, target.getSessionDate());
         if (sameDay != null) {
@@ -241,8 +263,9 @@ public class SessionBookingService {
         }
     }
 
-    // ------------------------------------------------------------------ cancelling
+    // ------------------------------------------------------------------ hủy chỗ
 
+    /** Hủy một lượt đặt chỗ (khóa dòng, kiểm tra quyền và thời gian) rồi gửi thông báo cho hội viên. */
     @Transactional
     public SessionBookingDto cancel(AuthenticatedPrincipal principal, Long bookingId) {
         SessionBooking booking = lockBooking(bookingId);
@@ -254,6 +277,10 @@ public class SessionBookingService {
         return dto;
     }
 
+    /**
+     * Hủy nhiều lượt đặt chỗ; lượt lỗi được bỏ qua kèm lý do; gửi một thông báo gộp (hoặc thông báo đơn nếu chỉ
+     * hủy một lượt).
+     */
     @Transactional
     public BulkCancelResult cancelMany(AuthenticatedPrincipal principal, List<Long> bookingIds) {
         List<Long> ids = distinctIds(bookingIds);
@@ -282,6 +309,7 @@ public class SessionBookingService {
         return new BulkCancelResult(cancelled, skipped);
     }
 
+    /** Khóa dòng lớp rồi khóa dòng lượt đặt chỗ (đúng thứ tự để tránh deadlock) và trả về lượt đặt. */
     private SessionBooking lockBooking(Long bookingId) {
         Long classId = bookings.findClassIdById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.session_booking", bookingId));
@@ -291,6 +319,10 @@ public class SessionBookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.session_booking", bookingId));
     }
 
+    /**
+     * Hủy lượt đặt đã khóa: chỉ chủ sở hữu hoặc nhân viên, lượt phải đang booked và buổi chưa bắt đầu; ghi thời
+     * điểm và lý do hủy.
+     */
     private SessionBookingDto cancelLocked(AuthenticatedPrincipal principal, SessionBooking booking) {
         boolean staff = STAFF_ROLES.contains(principal.role());
         boolean owner = booking.getMember() != null && booking.getMember().getUserId().equals(principal.id());
@@ -315,8 +347,9 @@ public class SessionBookingService {
     }
 
     /**
-     * Releases a member's upcoming per-session bookings when the membership is put on hold, cancelled or expires;
-     * {@code coveredOn} keeps the sessions whose date the membership still covers.
+     * Nhả các lượt đặt theo buổi sắp tới của hội viên khi gói hội viên bị bảo lưu, hủy hoặc hết hạn;
+     * {@code coveredOn} giữ lại các buổi có ngày vẫn được gói hội viên bao phủ (và giữ lại buổi đã kết thúc hôm
+     * nay); trả về số lượt đã hủy.
      */
     @Transactional
     public int cancelFutureForMember(Long memberId, String reason, Predicate<LocalDate> coveredOn) {
@@ -345,8 +378,9 @@ public class SessionBookingService {
         return cancelled;
     }
 
-    // ------------------------------------------------------------------ reading
+    // ------------------------------------------------------------------ tra cứu
 
+    /** Lấy lượt đặt chỗ của hội viên đang đăng nhập, lọc theo trạng thái (chuẩn hóa chữ thường) và khoảng ngày. */
     @Transactional(readOnly = true)
     public List<SessionBookingDto> myBookings(AuthenticatedPrincipal principal, String status,
                                               LocalDate from, LocalDate to) {
@@ -356,8 +390,9 @@ public class SessionBookingService {
         return bookings.findForMember(principal.id(), normalized, from, to).stream().map(this::toDto).toList();
     }
 
-    // ------------------------------------------------------------------ helpers
+    // ------------------------------------------------------------------ hàm hỗ trợ
 
+    /** Chuẩn hóa danh sách id: bỏ null/âm/trùng, báo lỗi nếu rỗng hoặc vượt MAX_BULK phần tử. */
     private List<Long> distinctIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             throw new BadRequestException("SCHEDULING_BULK_EMPTY", "error.scheduling.bulk_empty", null, null);
@@ -378,29 +413,35 @@ public class SessionBookingService {
         return new ArrayList<>(distinct);
     }
 
+    /** Lấy hội viên theo id và khóa dòng để tránh đặt chỗ đồng thời. */
     private Member lockMember(Long memberId) {
         return members.findByUserIdForUpdate(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
     }
 
+    /** Lấy buổi học theo id, không có thì báo không tìm thấy. */
     private ClassSession findSession(Long sessionId) {
         return sessions.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.class_session", sessionId));
     }
 
+    /** Định dạng giờ thành chuỗi HH:mm. */
     private static String hhmm(LocalTime time) {
         String raw = time.toString();
         return raw.length() >= 5 ? raw.substring(0, 5) : raw;
     }
 
+    /** Tên lớp của buổi trong lượt đặt chỗ. */
     private static String className(SessionBooking booking) {
         return booking.getSession().getGymClass().getName();
     }
 
+    /** Khung giờ của buổi dạng "HH:mm–HH:mm". */
     private static String timeRange(ClassSession session) {
         return hhmm(session.getStartTime()) + "–" + hhmm(session.getEndTime());
     }
 
+    /** Chuyển lượt đặt chỗ sang DTO kèm thông tin buổi, lớp, phòng và HLV. */
     private SessionBookingDto toDto(SessionBooking booking) {
         ClassSession session = booking.getSession();
         GymClass gymClass = session.getGymClass();

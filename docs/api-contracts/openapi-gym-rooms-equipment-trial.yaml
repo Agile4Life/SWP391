@@ -3,9 +3,7 @@ info:
   title: SCMS gym room tiers, equipment management and 3-day Gold trial
   version: 1.0.0
   description: >
-    Three related extensions. (1) Rooms carry a tier: STANDARD rooms are open to every active member, PLATINUM
-    (VIP) rooms only accept class enrollment and session booking from members whose active subscription covering
-    the session date is a PLATINUM package. (2) Managers maintain gym equipment per room. (3) A new member (one who
+    Equipment management and class booking endpoints are disabled; trial endpoints remain available. A new member (one who
     has never held a membership package) can claim a free 3-day GOLD trial once, verified by identity card (CCCD).
     The CCCD is never stored in clear text: the server keeps an HMAC-SHA256 digest (peppered by
     app.trial.cccd-pepper) to detect reuse and only the last four digits for display. Trial subscriptions create no
@@ -39,78 +37,6 @@ paths:
         '200': { description: 'ApiResponse.data = Room' }
         '400': { description: Validation error }
         '404': { description: Room not found }
-  /classes/sessions/{id}/bookings:
-    post:
-      summary: Book a session; extra rule for PLATINUM rooms
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '403': { description: SCHEDULING_ROOM_PLATINUM_REQUIRED when the room tier is PLATINUM and the member has no active PLATINUM package covering the session date }
-  /equipment:
-    get:
-      summary: List equipment, optionally filtered by room (any authenticated user)
-      parameters:
-        - { name: roomId, in: query, required: false, schema: { type: integer, format: int64 } }
-      responses:
-        '200': { description: 'ApiResponse.data = Equipment[]' }
-    post:
-      summary: Create equipment (CENTER_MANAGER, MANAGER)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/EquipmentRequest' }
-      responses:
-        '201': { description: 'ApiResponse.data = Equipment' }
-        '400': { description: Validation error }
-        '404': { description: Room not found }
-        '409': { description: EQUIPMENT_CODE_EXISTS }
-  /equipment/{id}:
-    get:
-      summary: Equipment detail
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '200': { description: 'ApiResponse.data = Equipment' }
-        '404': { description: Not found }
-    put:
-      summary: Update equipment (CENTER_MANAGER, MANAGER)
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/EquipmentRequest' }
-      responses:
-        '200': { description: 'ApiResponse.data = Equipment' }
-        '404': { description: Not found }
-        '409': { description: EQUIPMENT_CODE_EXISTS }
-    delete:
-      summary: Delete equipment (CENTER_MANAGER, MANAGER)
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      responses:
-        '200': { description: Deleted }
-        '404': { description: Not found }
-  /equipment/{id}/status:
-    patch:
-      summary: Quick status update (CENTER_MANAGER, MANAGER, STAFF, RECEPTIONIST)
-      parameters:
-        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [status]
-              properties:
-                status: { type: string, enum: [active, maintenance, broken, retired] }
-      responses:
-        '200': { description: 'ApiResponse.data = Equipment' }
-        '400': { description: EQUIPMENT_INVALID_STATUS }
-        '404': { description: Not found }
   /memberships/trial/status:
     get:
       summary: Trial eligibility of the current member (MEMBER)
@@ -210,12 +136,15 @@ components:
         note: { type: string, maxLength: 500 }
     TrialClaimRequest:
       type: object
-      required: [fullName]
+      description: >-
+        When documentNumber/cccd is omitted and the member has a PENDING or APPROVED KYC on file,
+        the stored document type, number, nationality, full name and photos are reused.
+        Otherwise documentNumber and fullName are required (400 TRIAL_FULL_NAME_REQUIRED when fullName is missing).
       properties:
         documentType: { type: string, enum: [CCCD, PASSPORT], default: CCCD }
         documentNumber: { type: string, description: 'CCCD (9/12 digits) or Passport (6-15 alphanumeric)' }
         cccd: { type: string, description: 'Legacy alias for documentNumber' }
-        fullName: { type: string, maxLength: 150 }
+        fullName: { type: string, maxLength: 150, description: 'Optional when reusing stored KYC; falls back to the account full name' }
         nationality: { type: string, maxLength: 100 }
         frontImageUrl: { type: string, description: 'data:image/(jpeg|png|webp);base64,… ≤ 2 MB; outside links are rejected (400 KYC_IMAGE_INVALID)' }
         backImageUrl: { type: string, description: 'data:image/(jpeg|png|webp);base64,… ≤ 2 MB; outside links are rejected (400 KYC_IMAGE_INVALID)' }

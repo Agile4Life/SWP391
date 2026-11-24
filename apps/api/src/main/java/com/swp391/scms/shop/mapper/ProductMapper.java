@@ -13,13 +13,22 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+/**
+ * Các hàm static chuyển entity sản phẩm sang DTO công khai; giới hạn tồn hiển thị, ngưỡng sắp hết hàng và số
+ * ngày coi là hàng mới.
+ */
 public final class ProductMapper {
     public static final int PUBLIC_STOCK_CAP = 99;
     public static final int LOW_STOCK_THRESHOLD = 9;
     public static final int NEW_PRODUCT_DAYS = 2;
 
+    /** Constructor private: lớp tiện ích chỉ có hàm static. */
     private ProductMapper() {}
 
+    /**
+     * URL công khai của ảnh sản phẩm, kèm tham số phiên bản theo thời điểm tạo để trình duyệt không dùng cache
+     * cũ.
+     */
     public static String imageUrl(ProductImage image) {
         if (image == null || image.getId() == null) {
             return null;
@@ -28,6 +37,7 @@ public final class ProductMapper {
         return "/api/v1/public/products/images/" + image.getId() + "?v=" + v;
     }
 
+    /** URL ảnh đầu tiên của sản phẩm, không có ảnh thì null. */
     public static String firstImageUrl(Product product) {
         if (product == null || product.getImages() == null || product.getImages().isEmpty()) {
             return null;
@@ -35,6 +45,10 @@ public final class ProductMapper {
         return imageUrl(product.getImages().getFirst());
     }
 
+    /**
+     * Chuyển sản phẩm sang thẻ danh sách: chỉ tính biến thể đang bán, tính còn hàng, sắp hết hàng, giá thấp
+     * nhất, giá mỗi khẩu phần, chỉ số nổi bật và hàng mới.
+     */
     public static ProductSummaryDto toSummary(Product product, LocalDateTime now) {
         List<ProductVariant> activeVariants = product.getVariants() == null
                 ? List.of()
@@ -97,6 +111,10 @@ public final class ProductMapper {
         );
     }
 
+    /**
+     * Chuyển biến thể sang DTO công khai: tồn kho bị giới hạn tối đa PUBLIC_STOCK_CAP, còn bán khi đang hoạt
+     * động và tồn > 0.
+     */
     public static VariantDto toPublicVariant(ProductVariant variant) {
         int cappedStock = Math.min(Math.max(0, variant.getStock()), PUBLIC_STOCK_CAP);
         boolean available = variant.isActive() && variant.getStock() > 0;
@@ -112,6 +130,10 @@ public final class ProductMapper {
         );
     }
 
+    /**
+     * Chuyển sản phẩm sang chi tiết công khai: ảnh, biến thể đang bán, thành phần dinh dưỡng và sản phẩm liên
+     * quan.
+     */
     public static ProductDetailDto toDetail(Product product, List<ProductSummaryDto> related) {
         List<ImageDto> images = product.getImages() == null
                 ? List.of()

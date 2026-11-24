@@ -2,14 +2,12 @@
 import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { DetailPanel } from '../components/DetailPanel';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ExploreBreadcrumb } from '../components/ExploreBreadcrumb';
 import { ExploreSearchModal } from '../components/ExploreSearchModal';
 import { ExploreToolbar } from '../components/ExploreToolbar';
 import { LevelSwitcher } from '../components/LevelSwitcher';
 import {
-  EMPTY_LIVE_SNAPSHOT,
   resolveBindings,
   type LiveCenterSnapshot,
 } from '../data/bindings';
@@ -32,7 +30,7 @@ const SEED_SNAPSHOT: LiveCenterSnapshot = {
     },
     {
       id: 'room-2',
-      name: 'Phòng Gym VIP',
+      name: 'Studio HLV 1:1',
       location: 'Tầng 2 - Khu VIP Platinum',
       capacity: 25,
       status: 'available',
@@ -62,7 +60,7 @@ const SEED_SNAPSHOT: LiveCenterSnapshot = {
       name: 'Máy đo chỉ số cơ thể chuyên sâu InBody 770',
       code: 'EQ-VIP-INBODY-01',
       category: 'Diagnostic',
-      roomName: 'Phòng Gym VIP',
+      roomName: 'Studio HLV 1:1',
       quantity: 1,
       status: 'active',
     },
@@ -110,12 +108,14 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
   let container: HTMLDivElement;
   let root: Root;
 
+  // Dựng component vào DOM giả để kiểm thử.
   const renderUi = (node: ReactNode) => {
     act(() => {
       root.render(<MemoryRouter>{node}</MemoryRouter>);
     });
   };
 
+  // Lấy phần tử theo data-testid.
   const getByTestId = (testId: string): HTMLElement => {
     const el = container.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
     if (!el) {
@@ -124,6 +124,7 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     return el;
   };
 
+  // Bấm phần tử theo data-testid.
   const clickTestId = (testId: string) => {
     const el = getByTestId(testId);
     act(() => {
@@ -151,86 +152,34 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     const bindings = resolveBindings(SOL_CENTER_SCENE, SEED_SNAPSHOT);
     renderUi(<FloorPlan2D bindings={bindings} />);
 
-    // Default active level is L1
+    // Tầng đang hoạt động mặc định là L1
     expect(getByTestId('floorplan-svg-L1')).toBeTruthy();
     expect(getByTestId('floorplan-zone-zone-l1-gym')).toBeTruthy();
 
     clickTestId('floorplan-zone-zone-l1-gym');
     expect(useExploreStore.getState().selectedId).toBe('zone-l1-gym');
 
-    // Switch to B1
+    // Chuyển sang tầng B1
     clickTestId('floorplan-tab-B1');
     expect(getByTestId('floorplan-svg-B1')).toBeTruthy();
-    clickTestId('floorplan-zone-zone-b1-pool');
-    expect(useExploreStore.getState().selectedId).toBe('zone-b1-pool');
+    clickTestId('floorplan-zone-zone-b1-locker');
+    expect(useExploreStore.getState().selectedId).toBe('zone-b1-locker');
 
-    // Switch to L2
+    // Chuyển sang tầng L2
     clickTestId('floorplan-tab-L2');
     expect(getByTestId('floorplan-svg-L2')).toBeTruthy();
-    clickTestId('floorplan-zone-zone-l2-vip-gym');
-    expect(useExploreStore.getState().selectedId).toBe('zone-l2-vip-gym');
+    clickTestId('floorplan-zone-zone-l2-pt-studio');
+    expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
-    // Switch to RF
+    // Chuyển sang tầng RF
     clickTestId('floorplan-tab-RF');
     expect(getByTestId('floorplan-svg-RF')).toBeTruthy();
-    clickTestId('floorplan-zone-zone-rf-zen');
-    expect(useExploreStore.getState().selectedId).toBe('zone-rf-zen');
+    clickTestId('floorplan-zone-zone-rf-terrace');
+    expect(useExploreStore.getState().selectedId).toBe('zone-rf-terrace');
 
-    // Switch to OUT
-    clickTestId('floorplan-tab-OUT');
-    expect(getByTestId('floorplan-svg-OUT')).toBeTruthy();
-    clickTestId('floorplan-zone-zone-out-tennis');
-    expect(useExploreStore.getState().selectedId).toBe('zone-out-tennis');
+    expect(container.querySelector('[data-testid="floorplan-tab-OUT"]')).toBeNull();
   });
 
-  it('renders mandatory simulation badge, seed room/equipment data, offline state without fake numbers, and dispatches scms:open-chat', () => {
-    const liveBindings = resolveBindings(SOL_CENTER_SCENE, SEED_SNAPSHOT);
-    act(() => {
-      useExploreStore.getState().selectNode('zone-l1-gym');
-    });
-
-    renderUi(<DetailPanel bindings={liveBindings} snapshot={SEED_SNAPSHOT} />);
-
-    // Mandatory transparency badge
-    expect(getByTestId('detail-sim-badge').textContent).toMatch(
-      /Mô phỏng minh hoạ|Illustrative simulation/,
-    );
-
-    // Seed room capacity (50) and equipment code EQ-RUN-01
-    expect(getByTestId('detail-zone-capacity').textContent).toBe('50');
-    expect(getByTestId('detail-eq-row-EQ-RUN-01')).toBeTruthy();
-
-    // When live data is unavailable, shows "Không có dữ liệu trực tiếp" and does not render fake capacity
-    const emptyBindings = resolveBindings(SOL_CENTER_SCENE, EMPTY_LIVE_SNAPSHOT);
-    const onRefresh = vi.fn();
-    renderUi(
-      <DetailPanel
-        bindings={emptyBindings}
-        snapshot={EMPTY_LIVE_SNAPSHOT}
-        onRefresh={onRefresh}
-      />,
-    );
-
-    expect(getByTestId('explore3d-no-live-data').textContent).toMatch(
-      /Không có dữ liệu trực tiếp|No live data available/,
-    );
-    expect(container.querySelector('[data-testid="detail-zone-capacity"]')).toBeNull();
-
-    clickTestId('explore3d-retry-btn');
-    expect(onRefresh).toHaveBeenCalledTimes(1);
-
-    // Select Lobby zone and click open-chat CTA
-    act(() => {
-      useExploreStore.getState().selectNode('zone-l1-lobby');
-    });
-    renderUi(<DetailPanel bindings={liveBindings} snapshot={SEED_SNAPSHOT} />);
-
-    const chatListener = vi.fn();
-    window.addEventListener('scms:open-chat', chatListener);
-    clickTestId('hotspot-cta-hs-l1-chat');
-    expect(chatListener).toHaveBeenCalledTimes(1);
-    window.removeEventListener('scms:open-chat', chatListener);
-  });
 
   it('switches levels, levelMode, wallMode, and viewMode via LevelSwitcher and ExploreToolbar', () => {
     renderUi(
@@ -242,35 +191,35 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
       </>,
     );
 
-    // LevelSwitcher switches levels
+    // LevelSwitcher chuyển đổi tầng
     clickTestId('explore3d-level-L2');
     expect(useExploreStore.getState().focusLevel).toBe('L2');
 
     clickTestId('explore3d-level-ALL');
     expect(useExploreStore.getState().focusLevel).toBe('ALL');
 
-    // LevelSwitcher switches levelMode
+    // LevelSwitcher chuyển đổi chế độ tầng (levelMode)
     clickTestId('explore3d-levelmode-exploded');
     expect(useExploreStore.getState().levelMode).toBe('exploded');
 
     clickTestId('explore3d-levelmode-solo');
     expect(useExploreStore.getState().levelMode).toBe('solo');
 
-    // ExploreToolbar switches wallMode
+    // ExploreToolbar chuyển đổi chế độ tường (wallMode)
     clickTestId('explore3d-wallmode-down');
     expect(useExploreStore.getState().wallMode).toBe('down');
 
     clickTestId('explore3d-wallmode-up');
     expect(useExploreStore.getState().wallMode).toBe('up');
 
-    // ExploreToolbar toggles viewMode (3d <-> 2d)
+    // ExploreToolbar chuyển đổi qua lại viewMode (3d <-> 2d)
     expect(useExploreStore.getState().viewMode).toBe('3d');
     clickTestId('explore3d-btn-viewmode');
     expect(useExploreStore.getState().viewMode).toBe('2d');
     clickTestId('explore3d-btn-viewmode');
     expect(useExploreStore.getState().viewMode).toBe('3d');
 
-    // Search trigger opens search modal and selecting a hit selects the node
+    // Nút tìm kiếm mở hộp thoại tìm kiếm và chọn kết quả sẽ chọn nút tương ứng
     clickTestId('explore3d-search-trigger');
     expect(useExploreStore.getState().searchOpen).toBe(true);
     clickTestId('explore3d-search-hit-zone-l1-gym');
@@ -292,35 +241,35 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     });
     expect(useExploreStore.getState().selectedId).toBe('zone-l1-gym');
 
-    // Press '3' -> switches to L2 (and selects lvl-l2)
+    // Nhấn phím '3' -> chuyển sang tầng L2 (và chọn lvl-l2)
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', bubbles: true, cancelable: true }));
     });
     expect(useExploreStore.getState().focusLevel).toBe('L2');
     expect(useExploreStore.getState().selectedId).toBe('lvl-l2');
 
-    // Select a zone on L2
+    // Chọn một phân khu ở tầng L2
     act(() => {
-      useExploreStore.getState().selectNode('zone-l2-vip-gym');
+      useExploreStore.getState().selectNode('zone-l2-pt-studio');
     });
-    expect(useExploreStore.getState().selectedId).toBe('zone-l2-vip-gym');
+    expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
-    // Press '/' -> opens search modal
+    // Nhấn phím '/' -> mở hộp thoại tìm kiếm
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true }));
     });
     expect(useExploreStore.getState().searchOpen).toBe(true);
 
-    // Focus close button inside modal (non-input) and press Escape: closes modal ONLY, preserves selectedId
+    // Focus nút đóng trong hộp thoại (không phải ô nhập) rồi nhấn Escape: CHỈ đóng hộp thoại, giữ nguyên selectedId
     const closeBtn = container.querySelector<HTMLElement>('[data-testid="explore3d-search-close"]');
     closeBtn?.focus();
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     });
     expect(useExploreStore.getState().searchOpen).toBe(false);
-    expect(useExploreStore.getState().selectedId).toBe('zone-l2-vip-gym');
+    expect(useExploreStore.getState().selectedId).toBe('zone-l2-pt-studio');
 
-    // Pressing Escape again with modal closed clears selectedId
+    // Nhấn Escape thêm lần nữa khi hộp thoại đã đóng sẽ xóa selectedId
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
     });
@@ -341,9 +290,9 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     expect(hotspotLink.level).toBe('L1');
 
     const bilingualNameLink = parseExploreSearchParams(
-      new URLSearchParams('focus=Phòng Gym VIP'),
+      new URLSearchParams('focus=Studio Huấn luyện viên Cá nhân 1:1 (PT)'),
     );
-    expect(bilingualNameLink.selectedId).toBe('zone-l2-vip-gym');
+    expect(bilingualNameLink.selectedId).toBe('zone-l2-pt-studio');
     expect(bilingualNameLink.level).toBe('L2');
   });
 
@@ -366,7 +315,7 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     });
     expect(container.textContent).toContain('Tầng B1');
 
-    // Climbing from B1 onto L1 updates focusLevel AND replaces stale B1 item selection with lvl-l1
+    // Leo từ B1 lên L1 sẽ cập nhật focusLevel VÀ thay lựa chọn thiết bị B1 cũ bằng lvl-l1
     act(() => {
       useExploreStore.getState().syncWalkLevel('L1');
     });
@@ -375,7 +324,7 @@ describe('Explore 3D DOM UI & 2D Floor Plan Fallback', () => {
     expect(container.textContent).not.toContain('Tầng B1');
     expect(container.textContent).toContain('Tầng L1');
 
-    // SelectionHighlight must render null while walkMode is active so CAD wireframes never cut across sky/rooms
+    // SelectionHighlight phải render null khi walkMode đang bật để khung dây CAD không cắt ngang bầu trời/phòng
     expect(container.querySelector('lineSegments')).toBeNull();
   });
 });

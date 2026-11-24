@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
+/**
+ * Hồ sơ cá nhân đầy đủ trả cho client: thông tin chung, phần hội viên (mã, sức khỏe, mục tiêu, trình độ, liên
+ * hệ khẩn cấp, giấy tờ KYC), phần HLV (chuyên môn, giới thiệu, chứng chỉ) và phần lễ tân (ca làm).
+ */
 public record ProfileDto(
     Long userId,
     @NotBlank(message = "{validation.users.full_name.not_blank}")
@@ -43,10 +47,11 @@ public record ProfileDto(
     String frontImageUrl,
     String backImageUrl,
     Boolean identityVerified,
-    /** PENDING, APPROVED or REJECTED; null for members verified before reviews existed. */
+    /** PENDING, APPROVED hoặc REJECTED; null với hội viên được xác minh trước khi có bước duyệt. */
     String kycStatus,
     String kycRejectReason
 ) {
+    /** Constructor rút gọn không có các trường KYC (dùng ở code cũ và test). */
     public ProfileDto(
         Long userId, String fullName, String email, String phone, LocalDate dob, String gender, String avatarUrl,
         String address, String membershipCode, String healthNotes, String fitnessGoal, String fitnessLevel,
@@ -59,6 +64,7 @@ public record ProfileDto(
             shift, documentType, citizenId, nationality, frontImageUrl, backImageUrl, identityVerified, null, null);
     }
 
+    /** Constructor rút gọn có giấy tờ nhưng chưa có trạng thái duyệt KYC. */
     public ProfileDto(
         Long userId,
         String fullName,

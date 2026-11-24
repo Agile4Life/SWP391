@@ -13,17 +13,20 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 import java.util.List;
 
 /**
- * MapStruct mapper for Invoice and InvoiceItem entities and DTOs.
+ * Mapper (MapStruct tự sinh code) giữa các entity Invoice, InvoiceItem và DTO tương ứng.
  */
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface InvoiceMapper {
 
+    /** Chuyển hóa đơn sang DTO. */
     @Mapping(source = "payment.id", target = "paymentId")
     @Mapping(source = "items", target = "items")
     InvoiceDto toDto(Invoice entity);
 
+    /** Chuyển danh sách hóa đơn sang DTO. */
     List<InvoiceDto> toDtoList(List<Invoice> entities);
 
+    /** Tạo entity hóa đơn từ dữ liệu tạo mới. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "payment", ignore = true)
     @Mapping(target = "totalAmount", ignore = true)
@@ -31,15 +34,19 @@ public interface InvoiceMapper {
     @Mapping(target = "items", ignore = true)
     Invoice toEntity(InvoiceCreateDto dto);
 
+    /** Chuyển dòng hàng sang DTO. */
     @Mapping(source = "invoice.id", target = "invoiceId")
     InvoiceItemDto toItemDto(InvoiceItem entity);
 
+    /** Chuyển danh sách dòng hàng sang DTO. */
     List<InvoiceItemDto> toItemDtoList(List<InvoiceItem> entities);
 
+    /** Tạo entity dòng hàng từ dữ liệu tạo mới. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "invoice", ignore = true)
     @Mapping(target = "amount", ignore = true)
     InvoiceItem toItemEntity(InvoiceItemCreateDto dto);
 
+    /** Tạo danh sách entity dòng hàng. */
     List<InvoiceItem> toItemEntityList(List<InvoiceItemCreateDto> dtos);
 }

@@ -1,3 +1,4 @@
+/** Hướng mở của popover: lên/xuống và căn trái/phải. */
 export interface PopoverPlacement {
   v: 'down' | 'up';
   h: 'left' | 'right';

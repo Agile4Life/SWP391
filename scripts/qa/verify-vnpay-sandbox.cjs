@@ -1,5 +1,5 @@
-// Mocked browser check. Never contacts VNPay or writes to a real database.
-// NODE_PATH must resolve playwright-core; CHROME_PATH can select an installed browser.
+// Mục đích: kiểm tra luồng thanh toán VNPay trên trình duyệt giả lập — không bao giờ kết nối VNPay hay ghi cơ sở dữ liệu thật.
+// Biến NODE_PATH phải trỏ tới playwright-core; CHROME_PATH có thể chọn trình duyệt đã cài đặt.
 const assert = require('node:assert/strict');
 const { chromium } = require('playwright-core');
 const base = process.env.PUBLIC_UI_URL || 'http://127.0.0.1:5173';

@@ -19,8 +19,10 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+/** Bộ kiểm thử cho ResendOtpDeliveryAdapter (resend otp delivery adapter). */
 class ResendOtpDeliveryAdapterTest {
 
+    /** Kiểm thử: gửi email OTP tới API Resend. */
     @Test
     void sendPostsOtpEmailToResendApi() {
         RestClient.Builder builder = RestClient.builder().baseUrl("https://api.resend.com");
@@ -54,6 +56,7 @@ class ResendOtpDeliveryAdapterTest {
         server.verify();
     }
 
+    /** Kiểm thử: từ chối đích gửi không phải email. */
     @Test
     void sendRejectsNonEmailDestination() {
         ResendOtpDeliveryAdapter adapter = new ResendOtpDeliveryAdapter(
@@ -70,6 +73,7 @@ class ResendOtpDeliveryAdapterTest {
         assertEquals("SMS_DELIVERY_DISABLED", ex.getErrorCode());
     }
 
+    /** Kiểm thử: từ chối khi thiếu API key. */
     @Test
     void sendRejectsMissingApiKey() {
         ResendOtpDeliveryAdapter adapter = new ResendOtpDeliveryAdapter(

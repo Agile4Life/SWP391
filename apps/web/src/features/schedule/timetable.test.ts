@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { addDays, fitHourRange, layoutDayEvents, mondayOf, overlapsHour, weekDays, type TimetableEvent } from './timetable';
 
+// Tạo một sự kiện lịch mẫu từ id và giờ bắt đầu/kết thúc.
 const ev = (id: string, startTime: string, endTime: string): TimetableEvent => ({
   id, date: '2026-11-09', startTime, endTime, title: id, tone: 'open', ariaLabel: id,
 });

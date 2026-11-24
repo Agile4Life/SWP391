@@ -10,8 +10,6 @@ import { useLiveCenterData } from './data/useLiveCenterData';
 import './explore3d.css';
 import { FloorPlan2D } from './fallback/FloorPlan2D';
 import { PerfOverlay } from './perf/PerfOverlay';
-import { SOL_CENTER_SCENE } from './scene/solCenter.scene';
-import { zoneOf } from './scene/selectors';
 import {
   loadExploreSessionView,
   parseExploreSearchParams,
@@ -19,16 +17,20 @@ import {
 import { useExploreStore } from './state/exploreStore';
 import { GuidedTour } from './tour/GuidedTour';
 
+/**
+ * Trang khám phá 3D của hội viên: đọc tham số URL, khôi phục hoặc áp dụng góc nhìn, hiển thị khung 3D (hoặc sơ
+ * đồ 2D khi WebGL lỗi), thanh công cụ, chuyển tầng, tour và tìm kiếm; bật chế độ hiệu năng/benchmark theo tham
+ * số.
+ */
 export function ExplorePage() {
   const [searchParams] = useSearchParams();
-  const selectedId = useExploreStore(state => state.selectedId);
   const viewMode = useExploreStore(state => state.viewMode);
 
   const parsedParams = parseExploreSearchParams(searchParams);
   const perfEnabled = Boolean(parsedParams.perf || parsedParams.bench);
   const benchEnabled = Boolean(parsedParams.bench);
 
-  // Sync URL deep-link params or restore previous session view on mount / param change
+  // Đồng bộ tham số deep-link từ URL hoặc khôi phục góc nhìn của phiên trước khi mount / tham số thay đổi
   useEffect(() => {
     const parsed = parseExploreSearchParams(searchParams);
     const hasUrlOverrides = Boolean(
@@ -64,10 +66,7 @@ export function ExplorePage() {
     }
   }, [searchParams]);
 
-  const activeZone = zoneOf(SOL_CENTER_SCENE, selectedId);
-  const { bindings } = useLiveCenterData(
-    activeZone?.id ?? null,
-  );
+  const { bindings } = useLiveCenterData();
 
   return (
     <div className="explore3d-page" data-testid="explore3d-page">

@@ -10,8 +10,10 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+/** Bộ kiểm thử cho InvoiceComputedColumn (invoice computed column). */
 class InvoiceComputedColumnTest {
 
+    /** Kiểm thử: tính tổng tiền hóa đơn. */
     @Test
     @DisplayName("Should accurately compute total_amount as (subtotal_amount + tax_amount)")
     void shouldComputeInvoiceTotalAmount() {
@@ -23,6 +25,7 @@ class InvoiceComputedColumnTest {
         assertEquals(expectedTotal, invoice.getTotalAmount());
     }
 
+    /** Kiểm thử: tính tổng tiền khi thuế bằng 0 hoặc null. */
     @Test
     @DisplayName("Should accurately compute total_amount when tax is null or zero")
     void shouldComputeInvoiceTotalAmountWithZeroOrNullTax() {
@@ -36,6 +39,7 @@ class InvoiceComputedColumnTest {
         assertEquals(new BigDecimal("1500000.00"), invoice.getTotalAmount());
     }
 
+    /** Kiểm thử: giữ tổng tiền do database điền sẵn. */
     @Test
     @DisplayName("Should preserve database-populated total_amount if set")
     void shouldPreserveDatabasePopulatedTotalAmount() {
@@ -47,6 +51,7 @@ class InvoiceComputedColumnTest {
         assertEquals(new BigDecimal("1100000.00"), invoice.getTotalAmount());
     }
 
+    /** Kiểm thử: tính thành tiền của dòng hóa đơn. */
     @Test
     @DisplayName("Should accurately compute item amount as (quantity * unit_price)")
     void shouldComputeInvoiceItemAmount() {
@@ -59,6 +64,7 @@ class InvoiceComputedColumnTest {
         assertEquals(expectedAmount, item.getAmount());
     }
 
+    /** Kiểm thử: xử lý số lượng hoặc đơn giá null. */
     @Test
     @DisplayName("Should return ZERO for item amount when quantity or unit price is null")
     void shouldHandleNullQuantityOrUnitPrice() {
@@ -72,6 +78,7 @@ class InvoiceComputedColumnTest {
         assertEquals(BigDecimal.ZERO, item.getAmount());
     }
 
+    /** Kiểm thử: giữ thành tiền do database điền sẵn. */
     @Test
     @DisplayName("Should preserve database-populated item amount if set")
     void shouldPreserveDatabasePopulatedItemAmount() {
@@ -83,6 +90,7 @@ class InvoiceComputedColumnTest {
         assertEquals(new BigDecimal("100000.00"), item.getAmount());
     }
 
+    /** Kiểm thử: hỗ trợ quan hệ dòng hóa đơn của hóa đơn. */
     @Test
     @DisplayName("Should support adding and removing items with cascading relationship")
     void shouldSupportInvoiceItemsRelationship() {

@@ -94,10 +94,9 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
       root.render(<ManagerCatalogsPage />);
     });
 
-    expect(host.textContent).toContain('Gym');
-    expect(host.textContent).not.toContain('Reformer Pilates');
+    expect(host.textContent).toContain('Reformer Pilates');
 
-    // Switch to Gói tập tab
+    // Chuyển sang tab Gói tập
     const pkgTabBtn = [...host.querySelectorAll('button')].find((b) =>
       b.textContent?.includes('Gói tập (')
     )!;
@@ -108,7 +107,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     expect(host.textContent).toContain('599.000\u00a0₫');
     expect(host.textContent).toContain('+ Tạo gói tập mới');
 
-    // Quick price update on SILVER package
+    // Cập nhật giá nhanh cho gói SILVER
     const quickPriceBtn = [...host.querySelectorAll('button')].find((b) =>
       b.textContent === 'Sửa giá nhanh'
     )!;

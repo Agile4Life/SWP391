@@ -10,13 +10,14 @@ afterEach(() => vi.unstubAllGlobals());
 
 it('renders a member without a subscription using the real API client and an omitted data field', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  // ApiResponse uses NON_NULL: no current subscription omits data entirely.
+  // ApiResponse dùng NON_NULL: khi chưa có gói hiện tại thì bỏ qua hoàn toàn trường data.
   vi.stubGlobal('fetch', vi.fn(async (url: string) => ({
     ok: true,
     status: 200,
+    // Giả lập phần thân JSON của phản hồi API.
     json: async () => ({
       success: true, status: 200, message: 'OK', timestamp: '2026-10-18T22:45:00',
-      ...(url.includes('/enrollments/') ? { data: [] } : {}),
+      ...(url.includes('/coach-bookings/') ? { data: [] } : {}),
     }),
   })));
   const host = document.createElement('div');
@@ -25,9 +26,12 @@ it('renders a member without a subscription using the real API client and an omi
   try {
     await act(async () => root.render(<MemoryRouter><MemberDashboardPage /></MemoryRouter>));
     expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
-    expect(host.textContent).toContain('Bạn chưa có lớp học đang đặt.');
+    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
     expect(host.querySelector('a[href="/member/packages"]')).not.toBeNull();
-    // The same transport fix must cover packages and member cards as well.
+    const paths = vi.mocked(fetch).mock.calls.map(([path]) => String(path));
+    expect(paths.some(path => path.includes('/classes/') || path.includes('/court-bookings'))).toBe(false);
+    expect(paths.some(path => path.includes('/coach-bookings/my'))).toBe(true);
+    // Bản sửa lỗi truyền tải tương tự cũng phải áp dụng cho gói tập và thẻ hội viên.
     await expect(getCurrentMembership()).resolves.toBeNull();
     await expect(getMySubscription()).resolves.toBeNull();
   } finally {

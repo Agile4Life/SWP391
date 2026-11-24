@@ -2,6 +2,7 @@ import { useStaffI18n } from '../operations/staffI18n';
 import type { ExerciseValues } from './trainingExercise';
 
 import { Select } from '../../shared/ui/Select';
+/** Các ô nhập một bài tập: tên, mô tả, thứ, số hiệp, số reps, thời lượng và thời gian nghỉ. */
 export function TrainingExerciseFields({ prefix, value, onChange }: { prefix: string; value: ExerciseValues; onChange: (value: ExerciseValues) => void }) {
   const { t } = useStaffI18n();
   const numbers = [

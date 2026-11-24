@@ -25,10 +25,15 @@ import org.springframework.web.bind.annotation.RestController;
 import java.math.BigDecimal;
 import java.util.List;
 
+/**
+ * API Ví SÖL (/api/v1/wallet): hội viên xem ví, nạp qua VNPay, thanh toán bằng ví; quầy xem ví hội viên, nạp
+ * tiền tại quầy và xem lịch sử nạp.
+ */
 @RestController
 @RequestMapping("/api/v1/wallet")
 public class WalletController {
 
+    /** Body nạp tiền qua VNPay: số tiền từ 10.000đ đến 100.000.000đ. */
     public record TopupRequest(
             @NotNull(message = "{validation.wallet.amount.not_null}")
             @DecimalMin(value = "10000", message = "{validation.wallet.amount.min}")
@@ -36,6 +41,10 @@ public class WalletController {
             BigDecimal amount
     ) {}
 
+    /**
+     * Body nạp tiền tại quầy: số tiền (10.000đ - 100.000.000đ), phương thức, ghi chú và mã request phía client
+     * (giống nhau ở mọi lần gửi lại, để mất phản hồi rồi gửi lại cũng chỉ cộng một lần).
+     */
     public record StaffTopupRequest(
             @NotNull(message = "{validation.wallet.amount.not_null}")
             @DecimalMin(value = "10000", message = "{validation.wallet.amount.min}")
@@ -45,11 +54,15 @@ public class WalletController {
             String paymentMethod,
             @Size(max = 500)
             String note,
-            /** Same value on every retry of one top-up, so a resend after a lost response credits only once. */
+            /**
+             * Cùng một giá trị ở mọi lần thử lại của một lần nạp, nên gửi lại sau khi mất phản hồi chỉ cộng
+             * một lần.
+             */
             @Size(min = 8, max = 64)
             @jakarta.validation.constraints.Pattern(regexp = "[A-Za-z0-9-]+")
             String clientRequestId
     ) {
+        /** Constructor rút gọn không có mã request phía client. */
         public StaffTopupRequest(BigDecimal amount, String paymentMethod, String note) {
             this(amount, paymentMethod, note, null);
         }
@@ -60,19 +73,23 @@ public class WalletController {
     private final VnpayPaymentService vnpayPaymentService;
     private CounterTopupService counterTopupService;
 
+    /** Gán giá trị mới cho trường counterTopupService. */
     @Autowired(required = false)
     public void setCounterTopupService(CounterTopupService counterTopupService) {
         this.counterTopupService = counterTopupService;
     }
 
+    /** Constructor cho test, chỉ có WalletService. */
     public WalletController(WalletService walletService) {
         this(walletService, null, null);
     }
 
+    /** Constructor cho test, có MessageService. */
     public WalletController(WalletService walletService, MessageService messageService) {
         this(walletService, messageService, null);
     }
 
+    /** Constructor Spring dùng; MessageService và dịch vụ VNPay là tùy chọn. */
     @Autowired
     public WalletController(
             WalletService walletService,
@@ -83,6 +100,7 @@ public class WalletController {
         this.vnpayPaymentService = vnpayPaymentService;
     }
 
+    /** GET /my: ví của người đang đăng nhập (số dư và 50 giao dịch gần nhất). */
     @GetMapping("/my")
     @PreAuthorize("isAuthenticated()")
     public ApiResponse<WalletDto> getMyWallet(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -90,6 +108,7 @@ public class WalletController {
         return ApiResponse.ok(msg, walletService.getMyWallet(principal.id()));
     }
 
+    /** POST /topup/vnpay: tạo liên kết thanh toán VNPay để nạp tiền vào ví. */
     @PostMapping("/topup/vnpay")
     @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<VnpayDtos.Checkout> topupWithVnpay(
@@ -106,6 +125,7 @@ public class WalletController {
         return ApiResponse.ok(msg, vnpayPaymentService.topupWallet(principal, body.amount(), ip, origin));
     }
 
+    /** POST /pay: thanh toán một khoản (gói, PT...) bằng số dư ví. */
     @PostMapping("/pay")
     @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<WalletDto> payWithWallet(
@@ -117,6 +137,7 @@ public class WalletController {
         return ApiResponse.ok(msg, vnpayPaymentService.payWithWallet(principal, body));
     }
 
+    /** GET /members/{memberId}: quầy xem ví của hội viên. */
     @GetMapping("/members/{memberId}")
     @PreAuthorize("hasAnyRole('RECEPTIONIST','STAFF','CENTER_MANAGER','MANAGER')")
     public ApiResponse<WalletDto> getMemberWallet(@PathVariable Long memberId) {
@@ -126,6 +147,7 @@ public class WalletController {
         return ApiResponse.ok(msg, walletService.getMyWallet(memberId));
     }
 
+    /** POST /members/{memberId}/topup: quầy nạp tiền vào ví hội viên. */
     @PostMapping("/members/{memberId}/topup")
     @PreAuthorize("hasAnyRole('RECEPTIONIST','STAFF','CENTER_MANAGER','MANAGER')")
     public ApiResponse<WalletDto> topupMemberWalletAtCounter(
@@ -147,6 +169,7 @@ public class WalletController {
         return ApiResponse.ok(msg, dto);
     }
 
+    /** GET /counter-topups?days=: lịch sử nạp ví tại quầy. */
     @GetMapping("/counter-topups")
     @PreAuthorize("hasAnyRole('RECEPTIONIST','STAFF','CENTER_MANAGER','MANAGER')")
     public ApiResponse<List<CounterTopupService.TopupHistoryDto>> counterTopupHistory(

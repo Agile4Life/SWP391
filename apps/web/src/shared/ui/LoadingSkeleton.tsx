@@ -1,5 +1,6 @@
 import './loading-skeleton.css';
 
+/** Props của khung chờ: nhãn đọc cho trình đọc màn hình, kiểu (thẻ, hàng, bảng, hồ sơ), số mục và class. */
 interface LoadingSkeletonProps {
   label: string;
   variant?: 'cards' | 'rows' | 'table' | 'profile';
@@ -7,6 +8,10 @@ interface LoadingSkeletonProps {
   className?: string;
 }
 
+/**
+ * Khung chờ (skeleton) báo trạng thái đang tải; phần hình chỉ để trang trí, nhãn chỉ dành cho trình đọc màn
+ * hình.
+ */
 export function LoadingSkeleton({ label, variant = 'rows', count = 4, className = '' }: LoadingSkeletonProps) {
   return <div className={`loading-skeleton loading-skeleton--${variant} ${className}`} role="status" aria-live="polite" aria-busy="true">
     <span className="sr-only">{label}</span>

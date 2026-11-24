@@ -10,8 +10,11 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * One-time, idempotent cleanup: identity numbers stored in the clear before encryption existed are encrypted and the
- * readable column is replaced by its masked form.
+ * Dọn dữ liệu một lần (chạy lại an toàn): số CCCD/hộ chiếu cũ còn lưu dạng chữ rõ được mã hóa, và cột đọc được
+ * thay bằng dạng che (********1234).
+ *
+ * Dọn dẹp một lần, idempotent: các số định danh lưu dạng rõ trước khi có mã hóa được mã hóa và cột đọc được
+ * được thay bằng dạng che.
  */
 @Component
 @Order(60)
@@ -20,11 +23,13 @@ public class KycBackfill implements ApplicationRunner {
     private final MemberRepository members;
     private final KycCrypto crypto;
 
+    /** Nhận repository hội viên và bộ mã hóa KycCrypto. */
     public KycBackfill(MemberRepository members, KycCrypto crypto) {
         this.members = members;
         this.crypto = crypto;
     }
 
+    /** Duyệt mọi hội viên, mã hóa số giấy tờ chưa được che rồi lưu dạng che; ghi log số bản ghi đã chuyển. */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {

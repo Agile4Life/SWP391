@@ -18,6 +18,7 @@ afterEach(async () => {
   host.remove();
   vi.restoreAllMocks();
 });
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<ThemeProvider><ThemeToggle /></ThemeProvider>));
 
 it('defaults to light, toggles both ways and saves the choice', async () => {

@@ -4,7 +4,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 /**
- * SCRUM-113: Request payload to cancel a class session with a mandatory reason.
+ * Dữ liệu yêu cầu hủy buổi học: lý do hủy.
+ *
+ * SCRUM-113: Payload yêu cầu hủy buổi học, bắt buộc có lý do.
  */
 public record CancelSessionRequest(
         @NotBlank(message = "{validation.scheduling.cancel_reason.not_blank}")

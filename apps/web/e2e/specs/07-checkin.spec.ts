@@ -3,6 +3,7 @@ import { authFile } from '../helpers/accounts';
 import { api, apiWith } from '../helpers/api';
 import { memberWithPlan, PACKAGES } from '../helpers/session';
 
+// Lấy mã QR động của thẻ hội viên theo vai trò.
 async function dynamicQr(role: 'binh' | 'an' | 'chi' | 'hieu'): Promise<string> {
   const res = await api<{ qrCode: string }>(role, 'GET', '/memberships/subscriptions/my/dynamic-qr');
   expect(res.status).toBe(200);

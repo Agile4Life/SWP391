@@ -1,6 +1,6 @@
 import { DaysLeft } from './DaysLeft';
 import { memberText } from './memberI18n';
-import { getMyQuota, type QuotaDto } from './memberClassesApi';
+import { getMyCoachBookings, type CoachBookingDto } from './coachBookingApi';
 import { useLanguage } from '../../shared/i18n/language';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { useCallback, useEffect, useState } from 'react';
@@ -12,14 +12,13 @@ import { PortalIcon } from '../portal/PortalIcon';
 import './member-board.css';
 import {
   getCurrentMembership,
-  getBookedEnrollments,
-  type BookedClass,
   type MemberSubscription,
 } from './memberDashboardApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 
 const DAY_MS = 86_400_000;
 
+/** Kiểm tra chuỗi ngày YYYY-MM-DD hợp lệ (ngày có thật trên lịch). */
 function validDate(value: string | null | undefined): boolean {
   if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return false;
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
@@ -31,17 +30,20 @@ function validDate(value: string | null | undefined): boolean {
   );
 }
 
+/** Đổi chuỗi ngày thành Date theo giờ địa phương. */
 function localDate(value: string): Date {
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
   return new Date(year, month - 1, day);
 }
 
+/** Số thứ tự ngày của một Date (bỏ phần giờ). */
 function dayNumber(date: Date): number {
   return Math.floor(
     Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS,
   );
 }
 
+/** Tiến độ gói đã trôi qua (phần trăm) từ ngày bắt đầu đến ngày kết thúc/đã trả tiền tới. */
 function membershipProgress(
   subscription: MemberSubscription,
   today: Date,
@@ -56,20 +58,27 @@ function membershipProgress(
   return Math.min(100, Math.max(0, (used / duration) * 100));
 }
 
+/** Định dạng ngày thành dd/MM/yyyy. */
 function formatDate(value: string): string {
   return formatCenterDate(value.slice(0, 10));
 }
 
+/** Trạng thái tải gói: đang tải, lỗi hoặc thành công kèm gói (có thể chưa có). */
 type MembershipState =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'success'; membership: MemberSubscription | null };
 
-type ClassesState =
+/** Trạng thái tải lịch PT: đang tải, lỗi hoặc thành công kèm danh sách buổi. */
+type PtState =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'success'; classes: BookedClass[] };
+  | { status: 'success'; bookings: CoachBookingDto[] };
 
+/**
+ * Bảng điều khiển của hội viên: gói tập hiện tại và tiến độ, các buổi PT sắp tới; tự làm mới khi quay lại tab
+ * hoặc có mạng.
+ */
 export function MemberDashboardPage() {
   useLanguage();
   const userName = useCurrentUser()?.name || memberText('Hội viên');
@@ -77,9 +86,10 @@ export function MemberDashboardPage() {
   const [membershipState, setMembershipState] =
     useState<MembershipState>({ status: 'loading' });
 
-  const [classesState, setClassesState] =
-    useState<ClassesState>({ status: 'loading' });
+  const [ptState, setPtState] =
+    useState<PtState>({ status: 'loading' });
 
+  // Tải gói hiện tại (silent thì không hiện trạng thái đang tải).
   const loadMembership = useCallback(async (silent = false) => {
     if (!silent) setMembershipState({ status: 'loading' });
 
@@ -91,36 +101,27 @@ export function MemberDashboardPage() {
     }
   }, []);
 
-  const [quota, setQuota] = useState<QuotaDto | null>(null);
-  const loadQuota = useCallback(async () => {
-    try {
-      const data = await getMyQuota();
-      setQuota(data && typeof data === 'object' ? data : null);
-    } catch {
-      setQuota(null);
-    }
-  }, []);
-
-  const loadClasses = useCallback(async (silent = false) => {
-    if (!silent) setClassesState({ status: 'loading' });
+  // Tải lịch PT 1:1 của hội viên.
+  const loadPtBookings = useCallback(async (silent = false) => {
+    if (!silent) setPtState({ status: 'loading' });
 
     try {
-      const classes = await getBookedEnrollments();
-      setClassesState({ status: 'success', classes });
+      // Dashboard chỉ lấy lịch PT thật, không gọi quota hay ghi danh lớp nhóm.
+      const bookings = await getMyCoachBookings();
+      setPtState({ status: 'success', bookings });
     } catch {
-      if (!silent) setClassesState({ status: 'error' });
+      if (!silent) setPtState({ status: 'error' });
     }
   }, []);
 
   useEffect(() => {
     void loadMembership();
-    void loadClasses();
-    void loadQuota();
+    void loadPtBookings();
+    // Làm mới ngầm khi tab đang hiển thị.
     const syncDashboard = () => {
       if (document.visibilityState === 'hidden') return;
       void loadMembership(true);
-      void loadClasses(true);
-      void loadQuota();
+      void loadPtBookings(true);
     };
     window.addEventListener('focus', syncDashboard);
     window.addEventListener('online', syncDashboard);
@@ -130,7 +131,7 @@ export function MemberDashboardPage() {
       window.removeEventListener('online', syncDashboard);
       document.removeEventListener('visibilitychange', syncDashboard);
     };
-  }, [loadMembership, loadClasses, loadQuota]);
+  }, [loadMembership, loadPtBookings]);
 
   const today = new Date();
 
@@ -144,18 +145,17 @@ export function MemberDashboardPage() {
       ? membershipState.membership
       : null;
 
-  const classes =
-    classesState.status === 'success'
-      ? classesState.classes.filter(
-          (item) => item.status?.toLowerCase() === 'booked',
-        )
-      : [];
+  // Chỉ hiện buổi PT đã xác nhận và chưa kết thúc; lịch sử vẫn ở màn quản lý PT.
+  const bookings = ptState.status === 'success'
+    ? ptState.bookings.filter(item => item.status === 'confirmed' && new Date(item.bookingDate + 'T' + item.endTime + '+07:00').getTime() > today.getTime())
+        .sort((a, b) => a.bookingDate.localeCompare(b.bookingDate) || a.startTime.localeCompare(b.startTime))
+    : [];
 
   return (
     <div data-i18n-managed className="portal-container member-overview">
       <PageHeader
         title={memberText(`Xin chào, ${userName}`, `Hello, ${userName}`)}
-        actions={<Link className="btn-primary" to="/member/classes">{memberText("Khám phá lịch học")}</Link>}
+        actions={<Link className="btn-primary" to="/member/classes?tab=pt">{memberText("Đặt lịch HLV 1:1")}</Link>}
       />
 
       <div className="member-board" aria-label={memberText("Tổng quan hội viên")}>
@@ -264,7 +264,7 @@ export function MemberDashboardPage() {
         </section>
 
         <section data-i18n-managed className="member-board-column member-board-column--orange" aria-labelledby="board-classes">
-          <div className="member-column-heading"><h2 id="board-classes">{memberText("Lịch tập của tôi")}</h2><Link to="/member/classes" aria-label={memberText("Xem lịch lớp học")}><PortalIcon name="arrow" size={16} /></Link></div>
+          <div className="member-column-heading"><h2 id="board-classes">{memberText("Lịch tập của tôi")}</h2><Link to="/member/classes" aria-label={memberText("Xem lịch PT", "View PT schedule")}><PortalIcon name="arrow" size={16} /></Link></div>
 
           <section
             className="portal-card member-classes-card"
@@ -275,61 +275,47 @@ export function MemberDashboardPage() {
                 id="upcoming-title"
                 className="portal-card-title"
               >
-                {memberText("Lớp đã đăng ký")}</h2>
-              {membership && quota && (quota.unlimited || quota.totalCredits != null) && (
-                <span
-                  className={`badge ${!quota.unlimited && quota.remainingCredits <= 0 ? 'badge-warning' : 'badge-success'}`}
-                  data-testid="dashboard-course-quota"
-                >
-                  {quota.unlimited
-                    ? memberText('Khóa học không giới hạn', 'Unlimited courses')
-                    : memberText(
-                        `Còn ${quota.remainingCredits}/${quota.totalCredits} khóa miễn phí`,
-                        `${quota.remainingCredits}/${quota.totalCredits} free courses left`,
-                      )}
-                </span>
-              )}
+                {memberText("Lịch PT đã đặt", "Booked PT sessions")}</h2>
             </div>
 
-            {classesState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label={memberText("Xem lịch lớp học của tôi")} />}
-            {classesState.status === 'loading' && (
-              <LoadingSkeleton label={memberText("Đang tải lịch học…")} count={3} />
+            {ptState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label={memberText("Xem lịch PT của tôi", "View my PT schedule")} />}
+            {ptState.status === 'loading' && (
+              <LoadingSkeleton label={memberText("Đang tải lịch PT…", "Loading PT schedule…")} count={3} />
             )}
 
-            {classesState.status === 'error' && (
+            {ptState.status === 'error' && (
               <div role="alert">
                 <p className="row-card__meta">
-                  {memberText("Chưa thể tải lịch học lúc này.")}</p>
+                  {memberText("Chưa thể tải lịch PT lúc này.", "Unable to load PT sessions right now.")}</p>
 
                 <button
                   type="button"
                   className="btn-secondary"
                   style={{ marginTop: 16 }}
-                  onClick={() => void loadClasses()}
+                  onClick={() => void loadPtBookings()}
                 >
                   {memberText("Thử lại")}</button>
               </div>
             )}
 
-            {classesState.status === 'success' &&
-              classes.length === 0 && (
-                <div className="member-board-empty"><p className="row-card__meta">{memberText("Bạn chưa có lớp học đang đặt.")}</p><Link className="member-text-link" to="/member/classes">{memberText("Tìm lớp phù hợp")}<PortalIcon name="arrow" size={14} /></Link></div>
+            {ptState.status === 'success' &&
+              bookings.length === 0 && (
+                <div className="member-board-empty"><p className="row-card__meta">{memberText("Bạn chưa có lịch PT sắp tới.", "You have no upcoming PT sessions.")}</p><Link className="member-text-link" to="/member/classes?tab=pt">{memberText("Đặt lịch HLV 1:1")}<PortalIcon name="arrow" size={14} /></Link></div>
               )}
 
-            {classesState.status === 'success' &&
-              classes.length > 0 && (
+            {ptState.status === 'success' &&
+              bookings.length > 0 && (
                 <div className="stack">
-                  {classes.map((item) => (
+                  {bookings.map((item) => (
                     <div key={item.id} className="row-card member-booking-row">
                       <div>
                         <h3 className="row-card__title">
-                          {item.className}
+                          {item.coachName}
                         </h3>
                         <div className="row-card__meta">
                           {[
-                            validDate(item.sessionDate) ? formatDate(item.sessionDate!) : '',
+                            validDate(item.bookingDate) ? formatDate(item.bookingDate!) : '',
                             item.startTime && item.endTime ? `${item.startTime.slice(0, 5)}–${item.endTime.slice(0, 5)}` : '',
-                            item.roomName ?? '',
                           ].filter(Boolean).join(' · ')}
                         </div>
                       </div>
@@ -352,8 +338,8 @@ export function MemberDashboardPage() {
         </section>
 
         <section data-i18n-managed className="member-board-column member-board-column--green" aria-labelledby="board-wellness">
-          <div className="member-column-heading"><h2 id="board-wellness">{memberText("Sức khỏe")}</h2><Link to="/member/profile" aria-label={memberText("Xem hồ sơ và sức khỏe")}><PortalIcon name="arrow" size={16} /></Link></div>
-          <Link className="member-profile-card" to="/member/profile"><h3>{memberText("Hồ sơ sức khỏe")}</h3><span className="member-text-link">{memberText("Cập nhật chỉ số cơ thể")}<PortalIcon name="arrow" size={14} /></span></Link>
+          <div className="member-column-heading"><h2 id="board-wellness">{memberText("Hồ sơ hội viên", "Member profile")}</h2><Link to="/member/profile" aria-label={memberText("Xem hồ sơ hội viên", "View member profile")}><PortalIcon name="arrow" size={16} /></Link></div>
+          <Link className="member-profile-card" to="/member/profile"><h3>{memberText("Hồ sơ tài khoản", "Account profile")}</h3><span className="member-text-link">{memberText("Cập nhật thông tin cá nhân", "Update personal details")}<PortalIcon name="arrow" size={14} /></span></Link>
         </section>
       </div>
     </div>

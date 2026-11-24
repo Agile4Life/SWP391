@@ -12,8 +12,9 @@ import type {
   ZoneNode,
 } from './schema';
 
+/** Đa giác chữ nhật từ hai góc (ngược chiều kim đồng hồ trong mặt phẳng XZ). */
 function rectPolygon(minX: number, minZ: number, maxX: number, maxZ: number): Vec2[] {
-  // Counter-clockwise in XZ plane
+  // Ngược chiều kim đồng hồ trên mặt phẳng XZ
   return [
     [minX, minZ],
     [maxX, minZ],
@@ -24,6 +25,7 @@ function rectPolygon(minX: number, minZ: number, maxX: number, maxZ: number): Ve
 
 const nodes: Record<string, SceneNode> = {};
 
+/** Đăng ký một nút vào bảng nút của cảnh và trả lại chính nó. */
 function register<T extends SceneNode>(node: T): T {
   nodes[node.id] = node;
   return node;
@@ -89,7 +91,7 @@ const buildingNode: BuildingNode = register({
 });
 
 // ============================================================================
-// LEVEL B1 — Tầng hầm Oasis (elevation = -4.5m)
+// TẦNG B1 — Tầng hầm Oasis (cao độ = -4.5m)
 // ============================================================================
 
 const B1_Y = -4.5;
@@ -123,7 +125,7 @@ const levelB1: LevelNode = register({
   ],
 });
 
-// Zones on B1
+// Các khu vực tầng B1
 const zoneB1Pool: ZoneNode = register({
   id: 'zone-b1-pool',
   type: 'zone',
@@ -271,7 +273,7 @@ const zoneB1Core: ZoneNode = register({
 });
 
 // ============================================================================
-// LEVEL L1 — Tầng 1 · Sảnh chính & Khu tập luyện tiêu chuẩn (elevation = 0.0m)
+// TẦNG L1 — Tầng 1 · Sảnh chính & Khu tập luyện tiêu chuẩn (cao độ = 0.0m)
 // ============================================================================
 
 const L1_Y = 0.0;
@@ -347,8 +349,8 @@ const zoneL1Gate: ZoneNode = register({
   code: 'L1-GATE',
   name: { vi: 'Cổng Quét QR Check-in Tự động', en: 'Automated QR Check-in Gate' },
   description: {
-    vi: 'Cổng kiểm soát ra vào tự động bằng mã QR trên Thẻ hội viên; tự động ghi nhận Streak tập luyện mỗi ngày.',
-    en: 'Turnstile gate scanning your Member QR code and recording your daily workout streak.',
+    vi: 'Cổng kiểm soát ra vào tự động bằng mã QR trên Thẻ hội viên; ghi nhận lượt check-in của hội viên.',
+    en: 'Turnstile gate scanning your Member QR code for check-in.',
   },
   category: 'circulation',
   polygon: rectPolygon(-6, 2, 6, 6),
@@ -564,7 +566,7 @@ const zoneL1Core: ZoneNode = register({
 });
 
 // ============================================================================
-// LEVEL L2 — Tầng 2 · Khu VIP Platinum & Tư vấn Thể chất (elevation = 5.76m)
+// TẦNG L2 — Tầng 2 · Khu VIP Platinum & Tư vấn Thể chất (cao độ = 5.76m)
 // ============================================================================
 
 const L2_Y = 5.76;
@@ -743,7 +745,7 @@ const zoneL2Lounge: ZoneNode = register({
 });
 
 // ============================================================================
-// LEVEL RF — Tầng thượng Penthouse · Zen Garden Studio (elevation = 11.26m)
+// TẦNG RF — Tầng thượng Penthouse · Zen Garden Studio (cao độ = 11.26m)
 // ============================================================================
 
 const RF_Y = 11.26;
@@ -824,8 +826,8 @@ const zoneRfTerrace: ZoneNode = register({
   code: 'RF-TERRACE',
   name: { vi: 'Vườn Thiền & Sân Thượng Ngắm Cảnh', en: 'Rooftop Mindful Terrace & Sky Deck' },
   description: {
-    vi: 'Không gian cây xanh thoáng đãng bao quanh Penthouse để hít thở, giãn cơ và theo dõi chuỗi ngày tập (Streak).',
-    en: 'Landscaped sky deck surrounding the Penthouse for breathwork, stretching and celebrating your workout streak.',
+    vi: 'Không gian cây xanh thoáng đãng bao quanh Penthouse để hít thở, giãn cơ và nghỉ ngơi sau buổi tập.',
+    en: 'Landscaped sky deck surrounding the Penthouse for breathwork, stretching and resting after training.',
   },
   category: 'lounge',
   polygon: rectPolygon(8, -14, 20, 14),
@@ -852,7 +854,7 @@ const zoneRfTerrace: ZoneNode = register({
 });
 
 // ============================================================================
-// LEVEL OUT — Khu Thể thao Ngoài trời · Sân Tennis 01 & 02 (elevation = 0.0m)
+// KHU NGOÀI TRỜI (OUT) — Khu Thể thao Ngoài trời · Sân Tennis 01 & 02 (cao độ = 0.0m)
 // ============================================================================
 
 const OUT_Y = 0.0;
@@ -926,9 +928,10 @@ const zoneOutTennis: ZoneNode = register({
 });
 
 // ============================================================================
-// WALLS (Exterior & Interior Partitions per Level)
+// TƯỜNG (Tường ngoài & vách ngăn bên trong theo từng tầng)
 // ============================================================================
 
+/** Thêm một tường vào tầng với tùy chọn ngoài/trong, vật liệu, chiều cao và lỗ mở. */
 function addWall(
   level: LevelNode,
   idSuffix: string,
@@ -958,7 +961,7 @@ function addWall(
   return wall;
 }
 
-// B1 Walls
+// Tường tầng B1
 addWall(levelB1, 'north', [-22, -16], [22, -16], { exterior: true });
 addWall(levelB1, 'south', [-22, 16], [22, 16], { exterior: true });
 addWall(levelB1, 'west', [-22, -16], [-22, 16], { exterior: true });
@@ -989,7 +992,7 @@ addWall(levelB1, 'stair-north', [8.7, 9.4], [12.3, 9.4], {
   height: 3.6,
 });
 
-// L1 Walls
+// Tường tầng L1
 addWall(levelL1, 'north', [-22, -16], [22, -16], {
   exterior: true,
   openings: [
@@ -1033,14 +1036,6 @@ addWall(levelL1, 'boxing-south', [4, -4], [20, -4], {
   material: 'glass',
   openings: [{ id: 'op-l1-boxing-south-door', kind: 'glass-door', offset: 8, width: 2.6, height: 2.6, sillHeight: 0 }],
 });
-addWall(levelL1, 'shop-west', [8, -4], [8, 6], {
-  material: 'glass',
-  openings: [{ id: 'op-l1-shop-west-door', kind: 'glass-door', offset: 4, width: 2.4, height: 2.6, sillHeight: 0 }],
-});
-addWall(levelL1, 'shop-south', [8, 6], [20, 6], {
-  material: 'glass',
-  openings: [{ id: 'op-l1-shop-south-door', kind: 'glass-door', offset: 5, width: 2.6, height: 2.6, sillHeight: 0 }],
-});
 addWall(levelL1, 'lobby-west', [-6, 2], [-6, 15], {
   material: 'glass',
   openings: [{ id: 'op-l1-badminton-door', kind: 'glass-door', offset: 5, width: 2.8, height: 2.6, sillHeight: 0 }],
@@ -1057,7 +1052,7 @@ addWall(levelL1, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
   height: 1.15,
 });
 
-// L2 Walls
+// Tường tầng L2
 addWall(levelL2, 'north', [-22, -16], [22, -16], {
   exterior: true,
   openings: [{ id: 'op-l2-n-win', kind: 'window', offset: 2.5, width: 39, height: 3.7, sillHeight: 0.55 }],
@@ -1104,7 +1099,7 @@ addWall(levelL2, 'stair-east', [12.3, 9.4], [12.3, 13.6], {
   height: 1.15,
 });
 
-// RF Walls (Penthouse glass pavilion + panoramic structural glass balustrades around sky deck)
+// Tường tầng RF (Nhà kính Penthouse + lan can kính kết cấu toàn cảnh quanh sân thượng)
 addWall(levelRF, 'parapet-n', [-22, -16], [22, -16], {
   exterior: true,
   material: 'glass',
@@ -1154,15 +1149,16 @@ addWall(levelRF, 'stair-south', [8.65, 13.6], [12.35, 13.6], {
   height: 2.62,
 });
 
-// OUT Fence Perimeter
+// Hàng rào bao quanh khu ngoài trời (OUT)
 addWall(levelOUT, 'fence-n', [23, -16], [46, -16], { exterior: true, material: 'glass', height: 2.6, thickness: 0.08 });
 addWall(levelOUT, 'fence-s', [23, 16], [46, 16], { exterior: true, material: 'glass', height: 2.6, thickness: 0.08 });
 addWall(levelOUT, 'fence-e', [46, -16], [46, 16], { exterior: true, material: 'glass', height: 2.6, thickness: 0.08 });
 
 // ============================================================================
-// ITEMS HELPER
+// HÀM HỖ TRỢ THÊM ĐỒ VẬT
 // ============================================================================
 
+/** Thêm một đồ vật vào khu vực và đăng ký vào cảnh. */
 function addItem(
   zone: ZoneNode,
   spec: Omit<ItemNode, 'type' | 'parentId'>,
@@ -1176,7 +1172,7 @@ function addItem(
   return item;
 }
 
-// --- B1 Items ---
+// --- Đồ vật tầng B1 ---
 addItem(zoneB1Pool, {
   id: 'item-b1-lane-01',
   kind: 'swim-lane',
@@ -1265,7 +1261,7 @@ addItem(zoneB1Core, {
   dimensions: [2.6, 4.5, 2.6],
 });
 
-// --- L1 Lobby, Gate, Shop & Core Items ---
+// --- Đồ vật Sảnh, Cổng QR, Cửa hàng & Lõi thang tầng L1 ---
 addItem(zoneL1Lobby, {
   id: 'item-l1-reception-desk',
   kind: 'reception-desk',
@@ -1332,7 +1328,7 @@ addItem(zoneL1Shop, {
   dimensions: [2.4, 1.9, 0.5],
 });
 
-// --- L1 Standard Gym Equipment (Matches CatalogSeeder exact codes & quantities) ---
+// --- Thiết bị Gym Tiêu chuẩn tầng L1 (Khớp chính xác mã và số lượng trong CatalogSeeder) ---
 // 8x EQ-RUN-01 (Máy chạy bộ điện Commercial Pro)
 for (let i = 0; i < 8; i++) {
   addItem(zoneL1Gym, {
@@ -1452,7 +1448,7 @@ for (let i = 0; i < 2; i++) {
   });
 }
 
-// --- L1 Boxing Items ---
+// --- Đồ vật khu Boxing tầng L1 ---
 addItem(zoneL1Boxing, {
   id: 'item-l1-boxing-ring',
   kind: 'boxing-ring',
@@ -1482,7 +1478,7 @@ for (let i = 0; i < 2; i++) {
   });
 }
 
-// --- L1 Badminton Courts 01..04 ---
+// --- Các sân Cầu lông 01..04 tầng L1 ---
 const badmintonCoords: Array<{ code: number; x: number; z: number }> = [
   { code: 1, x: -16.5, z: 5.5 },
   { code: 2, x: -9.8, z: 5.5 },
@@ -1501,7 +1497,7 @@ for (const c of badmintonCoords) {
   });
 }
 
-// --- L1 Core ---
+// --- Lõi thang tầng L1 ---
 addItem(zoneL1Core, {
   id: 'item-l1-stairs',
   kind: 'stair-core',
@@ -1519,7 +1515,7 @@ addItem(zoneL1Core, {
   dimensions: [2.6, 5.76, 2.6],
 });
 
-// --- L2 VIP Gym Equipment (Matches CatalogSeeder exact codes & quantities) ---
+// --- Thiết bị Gym VIP tầng L2 (Khớp chính xác mã và số lượng trong CatalogSeeder) ---
 // 4x EQ-VIP-RUN-01 (Máy chạy bộ cao cấp Technogym Artis Run)
 for (let i = 0; i < 4; i++) {
   addItem(zoneL2VipGym, {
@@ -1586,7 +1582,7 @@ addItem(zoneL2VipGym, {
   liveEquipmentBinding: { equipmentCode: 'EQ-VIP-DUMB-01', instanceSlot: 0 },
 });
 
-// --- L2 InBody 770 Lab ---
+// --- Phòng đo InBody 770 tầng L2 ---
 addItem(zoneL2Inbody, {
   id: 'item-l2-vip-inbody-1',
   kind: 'inbody-analyzer',
@@ -1617,7 +1613,7 @@ addItem(zoneL2Inbody, {
   dimensions: [2.0, 0.9, 2.0],
 });
 
-// --- L2 PT Studio ---
+// --- Studio PT tầng L2 ---
 addItem(zoneL2PtStudio, {
   id: 'item-l2-coach-podium',
   kind: 'coach-podium',
@@ -1652,7 +1648,7 @@ addItem(zoneL2PtStudio, {
   dimensions: [2.6, 5.5, 2.6],
 });
 
-// --- L2 Lounge ---
+// --- Khu thư giãn tầng L2 ---
 for (let i = 0; i < 3; i++) {
   addItem(zoneL2Lounge, {
     id: `item-l2-sofa-${i + 1}`,
@@ -1672,7 +1668,7 @@ addItem(zoneL2Lounge, {
   dimensions: [3.8, 1.15, 1.4],
 });
 
-// --- RF Zen Garden Studio & Terrace ---
+// --- Studio Zen Garden & Sân thượng tầng RF ---
 for (let row = 0; row < 3; row++) {
   for (let col = 0; col < 4; col++) {
     const idx = row * 4 + col + 1;
@@ -1732,7 +1728,7 @@ addItem(zoneRfTerrace, {
   dimensions: [2.6, 3.8, 2.6],
 });
 
-// --- OUT Tennis Courts 01 & 02 ---
+// --- Sân Tennis ngoài trời 01 & 02 ---
 addItem(zoneOutTennis, {
   id: 'item-out-tennis-01',
   kind: 'tennis-court',
@@ -1769,9 +1765,10 @@ addItem(zoneOutTennis, {
 });
 
 // ============================================================================
-// HOTSPOTS (Covers 100% of MEMBER routes in PORTAL_NAV + open-chat + level jumps)
+// ĐIỂM NÓNG (Bao phủ 100% route MEMBER trong PORTAL_NAV + mở chat + chuyển tầng)
 // ============================================================================
 
+/** Thêm một điểm nóng vào khu vực (đổi toạ độ cục bộ sang toạ độ thế giới theo độ cao tầng). */
 function addHotspot(
   zone: ZoneNode,
   spec: Omit<HotspotNode, 'type' | 'parentId' | 'position'> & { localPosition: Vec3 },
@@ -1794,7 +1791,7 @@ function addHotspot(
   return hs;
 }
 
-// 1. /member/dashboard — Lobby Overview Kiosk
+// 1. /member/dashboard — Kiosk tổng quan tại sảnh
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-dashboard',
   localPosition: [-3.5, 2.1, 11.2],
@@ -1814,7 +1811,7 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 2. /member/packages & /member/packages/checkout — Reception Concierge
+// 2. /member/packages & /member/packages/checkout — Quầy lễ tân & tư vấn gói tập
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-packages',
   localPosition: [2.0, 2.3, 9.5],
@@ -1836,7 +1833,7 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 3. /member/invoices — POS & Billing Counter
+// 3. /member/invoices — Quầy thu ngân POS & hóa đơn
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-invoices',
   localPosition: [4.8, 2.0, 10.2],
@@ -1856,7 +1853,7 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 4. /member/card — Card Issuance Station
+// 4. /member/card — Trạm cấp thẻ hội viên
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-card',
   localPosition: [6.8, 2.1, 9.6],
@@ -1876,7 +1873,7 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 5. /member/notifications — Notification Board in Lobby
+// 5. /member/notifications — Bảng thông báo tại sảnh
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-notifications',
   localPosition: [-1.2, 2.2, 13.2],
@@ -1896,7 +1893,7 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 6. /member/support — Member Support Desk
+// 6. /member/support — Bàn hỗ trợ hội viên
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-support',
   localPosition: [-0.8, 2.0, 9.5],
@@ -1916,7 +1913,7 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 7. open-chat (/messages fallback) — Live Concierge & SÖL AI
+// 7. open-chat (dự phòng /messages) — Hỗ trợ trực tuyến & SÖL AI
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-chat',
   localPosition: [2.2, 2.4, 13.0],
@@ -1936,27 +1933,7 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 8. /member/streak — Workout Streak Totem
-addHotspot(zoneL1Lobby, {
-  id: 'hs-l1-streak',
-  localPosition: [-3.8, 2.4, 8.2],
-  title: { vi: 'Cột Mốc Streak Tập luyện', en: 'Workout Streak Totem' },
-  subtitle: {
-    vi: 'Theo dõi chuỗi ngày tập liên tiếp 13 tuần trên biểu đồ lưới rắn SÖL.',
-    en: 'Track your 13-week consecutive workout streak on the SÖL snake grid.',
-  },
-  badge: 'L1 · STREAK',
-  icon: 'star',
-  priority: 'secondary',
-  liveSummaryKey: 'streak',
-  action: {
-    type: 'navigate',
-    to: '/member/streak',
-    ctaLabel: { vi: 'Xem Streak tập luyện', en: 'View Workout Streak' },
-  },
-});
-
-// 9. /member/check-in — QR Turnstile Gate
+// 9. /member/check-in — Cổng xoay quét QR
 addHotspot(zoneL1Gate, {
   id: 'hs-l1-checkin',
   localPosition: [0, 2.1, 4.0],
@@ -1976,7 +1953,7 @@ addHotspot(zoneL1Gate, {
   },
 });
 
-// 10. /member/orders & /member/products — Supplement Shop
+// 10. /member/orders & /member/products — Cửa hàng thực phẩm bổ sung
 addHotspot(zoneL1Shop, {
   id: 'hs-l1-shop',
   localPosition: [14.5, 2.4, 0.8],
@@ -1998,30 +1975,29 @@ addHotspot(zoneL1Shop, {
   },
 });
 
-// 11. /member/classes?discipline=Gym — Standard Gym Arena
+// 11. /member/packages — Khu Gym tiêu chuẩn
 addHotspot(zoneL1Gym, {
   id: 'hs-l1-gym',
   localPosition: [-8.0, 2.5, -6.0],
-  title: { vi: 'Phòng Gym Tiêu chuẩn · Lịch lớp & Thiết bị', en: 'Standard Gym · Schedule & Equipment' },
+  title: { vi: 'Phòng Gym Tiêu chuẩn · Gói tập & Thiết bị', en: 'Standard Gym · Membership & Equipment' },
   subtitle: {
-    vi: 'Xem trạng thái trực tiếp 29 máy tập Cardio/Strength và đặt lịch lớp Gym.',
-    en: 'Inspect live status of 29 Cardio/Strength machines and book Gym classes.',
+    vi: 'Xem trạng thái trực tiếp 29 máy tập Cardio/Strength và xem gói tập Gym.',
+    en: 'Inspect live status of 29 Cardio/Strength machines and view Gym membership packages.',
   },
   badge: 'L1 · GYM',
   icon: 'dumbbell',
   priority: 'primary',
-  liveSummaryKey: 'classes',
+  liveSummaryKey: 'membership',
   action: {
     type: 'navigate',
-    to: '/member/classes',
-    query: { discipline: 'Gym' },
-    ctaLabel: { vi: 'Xem Lịch lớp Gym', en: 'View Gym Schedule' },
+    to: '/member/packages',
+    ctaLabel: { vi: 'Xem gói tập', en: 'View memberships' },
     secondaryTo: '/member/progress',
     secondaryLabel: { vi: 'Mở Giáo án của tôi', en: 'My Training Plan' },
   },
 });
 
-// 12. /member/classes?discipline=Boxing — Boxing Ring Arena 01
+// 12. /member/classes?discipline=Boxing — Võ đài Boxing Ring Arena 01
 addHotspot(zoneL1Boxing, {
   id: 'hs-l1-boxing',
   localPosition: [10.5, 2.5, -9.2],
@@ -2042,7 +2018,7 @@ addHotspot(zoneL1Boxing, {
   },
 });
 
-// 13. /member/courts?sport=Cầu lông — Badminton Courts 01..04
+// 13. /member/courts?sport=Cầu lông — Các sân Cầu lông 01..04
 addHotspot(zoneL1Badminton, {
   id: 'hs-l1-badminton',
   localPosition: [-13.0, 2.4, 8.5],
@@ -2065,7 +2041,7 @@ addHotspot(zoneL1Badminton, {
   },
 });
 
-// 14. L1 Core -> Focus L2
+// 14. Lõi thang L1 -> Chuyển lên tầng L2
 addHotspot(zoneL1Core, {
   id: 'hs-l1-core',
   localPosition: [13.5, 2.4, 11.5],
@@ -2084,7 +2060,7 @@ addHotspot(zoneL1Core, {
   },
 });
 
-// 15. B1 Pool -> /member/courts?sport=Bơi lội
+// 15. Hồ bơi B1 -> /member/courts?sport=Bơi lội
 addHotspot(zoneB1Pool, {
   id: 'hs-b1-pool',
   localPosition: [-6.0, 1.8, -5.5],
@@ -2107,7 +2083,7 @@ addHotspot(zoneB1Pool, {
   },
 });
 
-// 16. B1 Thermal -> /member/packages
+// 16. Khu xông hơi B1 -> /member/packages
 addHotspot(zoneB1Thermal, {
   id: 'hs-b1-thermal',
   localPosition: [14.0, 2.0, -4.5],
@@ -2129,7 +2105,7 @@ addHotspot(zoneB1Thermal, {
   },
 });
 
-// 17. B1 Locker -> /member/card
+// 17. Tủ đồ B1 -> /member/card
 addHotspot(zoneB1Locker, {
   id: 'hs-b1-locker',
   localPosition: [-6.0, 2.2, 9.0],
@@ -2149,7 +2125,7 @@ addHotspot(zoneB1Locker, {
   },
 });
 
-// 18. B1 Core -> Focus L1
+// 18. Lõi thang B1 -> Chuyển lên tầng L1
 addHotspot(zoneB1Core, {
   id: 'hs-b1-core',
   localPosition: [13.5, 2.2, 11.5],
@@ -2168,7 +2144,7 @@ addHotspot(zoneB1Core, {
   },
 });
 
-// 19. L2 VIP Gym -> /member/packages
+// 19. Phòng Gym VIP L2 -> /member/packages
 addHotspot(zoneL2VipGym, {
   id: 'hs-l2-vip-gym',
   localPosition: [-7.0, 2.4, -4.5],
@@ -2190,49 +2166,27 @@ addHotspot(zoneL2VipGym, {
   },
 });
 
-// 20. /member/progress — L2 InBody 770 Lab
-addHotspot(zoneL2Inbody, {
-  id: 'hs-l2-inbody',
-  localPosition: [11.5, 2.2, -9.5],
-  title: { vi: 'Phân tích InBody 770 · Tiến độ & Giáo án', en: 'InBody 770 · Progress & Training Plans' },
-  subtitle: {
-    vi: 'Theo dõi lịch sử BMI, % mỡ cơ thể, khối lượng cơ và giáo án HLV thiết kế riêng.',
-    en: 'Track your BMI, body fat %, muscle mass history and personalized training plans.',
-  },
-  badge: 'L2 · INBODY 770',
-  icon: 'chart',
-  priority: 'primary',
-  liveSummaryKey: 'progress',
-  action: {
-    type: 'navigate',
-    to: '/member/progress',
-    ctaLabel: { vi: 'Mở Tiến độ & Giáo án', en: 'Open Progress & Plans' },
-    secondaryTo: '/member/profile',
-    secondaryLabel: { vi: 'Cập nhật Hồ sơ Sức khỏe', en: 'Update Health Profile' },
-  },
-});
-
-// 21. /member/profile — Health & Profile Consultation Pod
-addHotspot(zoneL2Inbody, {
+// Hồ sơ hội viên đặt tại sảnh để không phụ thuộc khu số đo đã bỏ.
+addHotspot(zoneL1Lobby, {
   id: 'hs-l2-profile',
-  localPosition: [16.2, 2.0, -7.2],
-  title: { vi: 'Hồ sơ Cá nhân & Chỉ số Sức khỏe', en: 'Member Profile & Health Records' },
+  localPosition: [2, 2, 10],
+  title: { vi: 'Hồ sơ hội viên', en: 'Member profile' },
   subtitle: {
-    vi: 'Cập nhật thông tin cá nhân, mục tiêu tập luyện và hồ sơ thể trạng của bạn.',
-    en: 'Manage your personal profile, fitness goals and baseline health metrics.',
+    vi: 'Cập nhật thông tin cá nhân, mục tiêu tập luyện và thông tin liên hệ của bạn.',
+    en: 'Manage your personal profile, fitness goals and contact details.',
   },
-  badge: 'L2 · PROFILE',
+  badge: 'L1 · PROFILE',
   icon: 'profile',
   priority: 'primary',
   liveSummaryKey: 'profile',
   action: {
     type: 'navigate',
     to: '/member/profile',
-    ctaLabel: { vi: 'Mở Hồ sơ & Sức khỏe', en: 'Open Profile & Health' },
+    ctaLabel: { vi: 'Mở hồ sơ hội viên', en: 'Open member profile' },
   },
 });
 
-// 22. /member/classes?tab=pt — L2 1:1 PT Studio
+// 22. /member/classes?tab=pt — Studio HLV 1:1 tầng L2
 addHotspot(zoneL2PtStudio, {
   id: 'hs-l2-pt-studio',
   localPosition: [13.5, 2.3, 5.5],
@@ -2255,7 +2209,7 @@ addHotspot(zoneL2PtStudio, {
   },
 });
 
-// 23. L2 Lounge -> /member/orders
+// 23. Khu thư giãn L2 -> /member/orders
 addHotspot(zoneL2Lounge, {
   id: 'hs-l2-lounge',
   localPosition: [-6.0, 2.1, 10.2],
@@ -2275,7 +2229,7 @@ addHotspot(zoneL2Lounge, {
   },
 });
 
-// 24. RF Zen Garden -> /member/classes?discipline=Yoga
+// 24. Vườn thiền RF -> /member/classes?discipline=Yoga
 addHotspot(zoneRfZen, {
   id: 'hs-rf-zen',
   localPosition: [-3.0, 2.2, -1.5],
@@ -2296,27 +2250,7 @@ addHotspot(zoneRfZen, {
   },
 });
 
-// 25. RF Terrace -> /member/streak
-addHotspot(zoneRfTerrace, {
-  id: 'hs-rf-terrace',
-  localPosition: [15.0, 2.1, 0],
-  title: { vi: 'Vườn Thiền Sân Thượng · Chuỗi Ngày tập', en: 'Mindful Sky Deck · Workout Streak' },
-  subtitle: {
-    vi: 'Duy trì thói quen rèn luyện mỗi ngày và kiểm tra kỷ lục Streak của bạn.',
-    en: 'Celebrate daily consistency and view your all-time workout streak.',
-  },
-  badge: 'RF · SKY DECK',
-  icon: 'star',
-  priority: 'secondary',
-  liveSummaryKey: 'streak',
-  action: {
-    type: 'navigate',
-    to: '/member/streak',
-    ctaLabel: { vi: 'Xem Streak tập luyện', en: 'View Workout Streak' },
-  },
-});
-
-// 26. OUT Tennis -> /member/courts?sport=Tennis
+// 26. Sân Tennis ngoài trời -> /member/courts?sport=Tennis
 addHotspot(zoneOutTennis, {
   id: 'hs-out-tennis',
   localPosition: [34.6, 2.4, 0],
@@ -2339,7 +2273,7 @@ addHotspot(zoneOutTennis, {
   },
 });
 
-// 27. Main Entrance Gate & Porte-Cochère Plaza -> /member/check-in
+// 27. Cổng chính & Quảng trường sảnh đón Porte-Cochère -> /member/check-in
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-main-gate',
   localPosition: [12.4, 3.6, 21.6],
@@ -2361,7 +2295,7 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// 28. Executive Car & EV Parking + Covered Motorbike Shelter -> /member/card
+// 28. Bãi đỗ ô tô & sạc EV + Nhà xe máy có mái che -> /member/card
 addHotspot(zoneL1Lobby, {
   id: 'hs-l1-parking',
   localPosition: [21.2, 2.6, 20.2],
@@ -2381,7 +2315,17 @@ addHotspot(zoneL1Lobby, {
   },
 });
 
-// Register zones into their parent levels
+addHotspot(zoneL1Lobby, {
+  id: 'hs-l1-membership-hold',
+  localPosition: [4, 2, 9],
+  title: { vi: 'Bảo lưu gói tập', en: 'Membership hold' },
+  subtitle: { vi: 'Quản lý yêu cầu bảo lưu gói tập hiện có.', en: 'Manage your membership hold requests.' },
+  icon: 'card',
+  priority: 'secondary',
+  action: { type: 'navigate', to: '/member/hold', ctaLabel: { vi: 'Xem bảo lưu', en: 'View holds' } },
+});
+
+// Đăng ký các khu vực vào tầng cha tương ứng
 levelB1.children.unshift(zoneB1Pool.id, zoneB1Thermal.id, zoneB1Locker.id, zoneB1Core.id);
 levelL1.children.unshift(
   zoneL1Lobby.id,
@@ -2395,6 +2339,32 @@ levelL1.children.unshift(
 levelL2.children.unshift(zoneL2VipGym.id, zoneL2Inbody.id, zoneL2PtStudio.id, zoneL2Lounge.id);
 levelRF.children.unshift(zoneRfZen.id, zoneRfTerrace.id);
 levelOUT.children.unshift(zoneOutTennis.id);
+
+// Bỏ cả cây con để search, deep link, hotspot và viewpoint không tham chiếu khu đã loại.
+// Bỏ cây số đo và các khu đã giảm scope; giữ Gym, PT, check-in và liên kết Giáo án.
+const removedNodeIds = [
+  'item-l1-trophy-totem', 'zone-l2-inbody', 'zone-l1-shop', 'zone-b1-pool', 'zone-b1-thermal', 'zone-l1-boxing', 'zone-l1-badminton',
+  'zone-l2-vip-gym', 'zone-l2-lounge', 'zone-rf-zen', 'lvl-out',
+];
+/** Xóa một nút cùng toàn bộ nút con khỏi cảnh. */
+function removeSceneSubtree(id: string): void {
+  const node = nodes[id];
+  if (!node) return;
+  if ('children' in node) node.children.forEach(removeSceneSubtree);
+  delete nodes[id];
+}
+removedNodeIds.forEach(removeSceneSubtree);
+for (const node of Object.values(nodes)) {
+  if ('children' in node) node.children = node.children.filter(id => Boolean(nodes[id]));
+}
+levelB1.name = { vi: 'Tầng B1 · Thay đồ', en: 'B1 · Changing rooms' };
+levelB1.subtitle = { vi: 'Phòng thay đồ và tủ khóa', en: 'Changing rooms and lockers' };
+levelL1.subtitle = { vi: 'Gym tiêu chuẩn, lễ tân và cổng QR', en: 'Standard Gym, reception and QR gate' };
+levelL2.name = { vi: 'Tầng 2 · Huấn luyện cá nhân', en: 'L2 · Personal training' };
+levelL2.subtitle = { vi: 'Studio PT và khu hỗ trợ hội viên', en: 'PT studio and member support' };
+levelRF.name = { vi: 'Tầng thượng · Sân hiên', en: 'Rooftop · Terrace' };
+levelRF.subtitle = { vi: 'Sân hiên và khu nghỉ', en: 'Terrace and rest area' };
+buildingNode.name = { vi: 'Trung tâm Gym SÖL', en: 'SÖL Gym Center' };
 
 export const SOL_CENTER_SCENE: SceneDoc = {
   version: 1,

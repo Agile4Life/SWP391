@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/** Quản lý tồn kho biến thể: giữ hàng khi đặt đơn, trả hàng khi hủy và ghi lịch sử biến động. */
 @Service
 @Transactional
 public class StockService {
@@ -29,14 +30,17 @@ public class StockService {
     private final UserRepository users;
     private final Clock clock;
 
+    /** Constructor rút gọn: không có UserRepository, dùng giờ Việt Nam. */
     public StockService(ProductVariantRepository variants, StockMovementRepository movements) {
         this(variants, movements, null, Clock.system(VN_ZONE));
     }
 
+    /** Constructor rút gọn: không có UserRepository, nhận Clock. */
     public StockService(ProductVariantRepository variants, StockMovementRepository movements, Clock clock) {
         this(variants, movements, null, clock);
     }
 
+    /** Constructor chính: nhận repository biến thể, lịch sử tồn, người dùng (tùy chọn) và Clock. */
     @Autowired
     public StockService(ProductVariantRepository variants,
                         StockMovementRepository movements,
@@ -48,6 +52,10 @@ public class StockService {
         this.clock = clock != null ? clock : Clock.system(VN_ZONE);
     }
 
+    /**
+     * Giữ hàng cho đơn: khóa các biến thể, báo hết hàng nếu không đủ tồn, trừ tồn và ghi biến động
+     * order_reserve.
+     */
     public void reserve(ProductOrder order, Map<Long, Integer> qtyByVariant, Long actorId) {
         Map<Long, ProductVariant> byId = new HashMap<>();
         if (order != null && order.getItems() != null) {
@@ -86,6 +94,10 @@ public class StockService {
         }
     }
 
+    /**
+     * Trả hàng của đơn về kho (chỉ một lần, bỏ qua nếu đã có biến động order_release): khóa biến thể theo id
+     * tăng dần, cộng tồn và ghi lịch sử.
+     */
     public void release(ProductOrder order, Long actorId) {
         if (order == null || order.getItems() == null || order.getItems().isEmpty()) {
             return;
@@ -128,6 +140,7 @@ public class StockService {
         }
     }
 
+    /** Lấy người thực hiện theo id (không có thì null). */
     private User resolveActor(Long actorId) {
         if (actorId == null || users == null) {
             return null;

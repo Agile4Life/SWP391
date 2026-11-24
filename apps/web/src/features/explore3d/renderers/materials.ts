@@ -7,10 +7,14 @@ import {
   applySurfaceDetail,
 } from './surfaceDetail';
 
+/** Chế độ giao diện của cảnh khám phá: tối hoặc sáng. */
 export type ExploreTheme = 'dark' | 'light';
+/** Loại vật liệu sàn (lấy từ ZoneNode). */
 export type FloorMaterialKind = ZoneNode['floorMaterial'];
+/** Loại vật liệu tường (lấy từ WallNode). */
 export type WallMaterialKind = WallNode['material'];
 
+/** Bảng màu của cảnh theo theme: nền, sương mù, các bề mặt, màu nhấn và màu tường/sàn. */
 export interface ExploreThemePalette {
   theme: ExploreTheme;
   canvasBg: string;
@@ -152,17 +156,22 @@ export const LIGHT_PALETTE: ExploreThemePalette = {
   },
 };
 
+/** Lấy bảng màu theo theme. */
 export function getExploreThemePalette(theme: ExploreTheme): ExploreThemePalette {
   return theme === 'light' ? LIGHT_PALETTE : DARK_PALETTE;
 }
 
-/** Interface accent (selection highlight, pins): silver in Dark, salmon in Light. Scene materials keep their own colours. */
+/**
+ * Màu nhấn giao diện (khung chọn, ghim): bạc ở theme tối, hồng salmon ở theme sáng; vật liệu cảnh giữ màu
+ * riêng.
+ */
 export function getExploreUiAccent(theme: ExploreTheme): { accent: string; hover: string } {
   return theme === 'light'
     ? { accent: '#ce9180', hover: '#e1aa98' }
     : { accent: DARK_PALETTE.accentSalmon, hover: DARK_PALETTE.accentSalmonHover };
 }
 
+/** Đọc theme hiện tại từ thuộc tính data-theme của tài liệu (không có document thì tối). */
 export function detectDocumentTheme(): ExploreTheme {
   if (typeof document === 'undefined') {
     return 'dark';
@@ -175,6 +184,7 @@ export function detectDocumentTheme(): ExploreTheme {
   return 'dark';
 }
 
+/** Kho vật liệu của cảnh (sàn, tường, kính...) có thể đổi màu theo theme mà không dựng lại. */
 export class MaterialRegistry {
   private currentTheme: ExploreTheme;
 
@@ -275,7 +285,7 @@ export class MaterialRegistry {
       }),
     };
 
-    // Never use MeshPhysicalMaterial with transmission — use MeshStandardMaterial for glass
+    // Không bao giờ dùng MeshPhysicalMaterial kèm transmission — dùng MeshStandardMaterial cho kính
     const wallConcrete = new THREE.MeshStandardMaterial({
       name: 'wall-concrete',
       color: p.walls.concrete,
@@ -480,7 +490,7 @@ export class MaterialRegistry {
     this.applySurfaceDetails();
   }
 
-  /** Saltline-style world-space macro variation so flat colours catch the light unevenly. */
+  /** Biến thiên vĩ mô trong không gian thế giới kiểu Saltline giúp mảng màu phẳng bắt sáng không bị đều cứng. */
   private applySurfaceDetails(): void {
     const f = this.floors;
     applySurfaceDetail(f['rubber-dark'], SD.rubber);
@@ -586,6 +596,7 @@ export class MaterialRegistry {
   }
 }
 
+/** Tạo kho vật liệu theo theme (mặc định theme của tài liệu). */
 export function createMaterialLibrary(
   mode: ExploreTheme = detectDocumentTheme(),
 ): MaterialRegistry {
@@ -594,6 +605,7 @@ export function createMaterialLibrary(
 
 let sharedRegistry: MaterialRegistry | null = null;
 
+/** Lấy kho vật liệu dùng chung (tạo lần đầu, các lần sau chỉ áp lại theme). */
 export function getSharedMaterialRegistry(theme?: ExploreTheme): MaterialRegistry {
   if (!sharedRegistry) {
     sharedRegistry = new MaterialRegistry(theme ?? detectDocumentTheme());
@@ -603,6 +615,7 @@ export function getSharedMaterialRegistry(theme?: ExploreTheme): MaterialRegistr
   return sharedRegistry;
 }
 
+/** Hook theo dõi theme của tài liệu bằng MutationObserver và đồng bộ kho vật liệu dùng chung. */
 export function useDocumentTheme(): ExploreTheme {
   const [theme, setTheme] = useState<ExploreTheme>(() => detectDocumentTheme());
 
@@ -611,6 +624,7 @@ export function useDocumentTheme(): ExploreTheme {
       return;
     }
 
+    // Đọc lại theme, cập nhật state và áp vào kho vật liệu.
     const syncTheme = () => {
       const detected = detectDocumentTheme();
       setTheme(detected);
@@ -631,6 +645,7 @@ export function useDocumentTheme(): ExploreTheme {
   return theme;
 }
 
+/** Hook trả về kho vật liệu dùng chung theo theme chỉ định (hoặc theme của tài liệu). */
 export function useExploreMaterials(explicitTheme?: ExploreTheme): MaterialRegistry {
   const docTheme = useDocumentTheme();
   const activeTheme = explicitTheme ?? docTheme;

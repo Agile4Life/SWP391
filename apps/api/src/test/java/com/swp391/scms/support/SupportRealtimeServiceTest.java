@@ -15,6 +15,7 @@ import java.util.*;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service SupportRealtimeService (support realtime service). */
 class SupportRealtimeServiceTest {
     final String secret = "unit-supabase-chat-key-with-at-least-32-bytes";
     final SupportRequestRepository tickets = mock(SupportRequestRepository.class);
@@ -26,11 +27,13 @@ class SupportRealtimeServiceTest {
     final SupportRealtimeService realtime = new SupportRealtimeService(support, signer);
     final AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "private", "MEMBER");
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     User actor(Long id, String role) {
         User u = new User(); u.setId(id); u.setStatus("active");
         Role r = new Role(); r.setCode(role); u.setRole(r);
         when(users.findByIdAndDeletedAtIsNull(id)).thenReturn(Optional.of(u)); return u;
     }
+    /** Hàm trợ giúp của test: tạo ticket hỗ trợ mẫu. */
     SupportRequest ticket() {
         Member m = new Member(); m.setUserId(10L);
         SupportRequest t = new SupportRequest(m, "secret", "private"); t.setId(7L); return t;

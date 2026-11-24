@@ -26,12 +26,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Per-session booking endpoints live under /api/v1/classes, where a catch-all matcher reserves writes for the
- * manager. These tests run the real filter chain to prove the member-only matchers are reached first.
+ * Các endpoint đặt chỗ theo từng buổi nằm dưới /api/v1/classes, nơi có matcher tổng quát dành quyền ghi cho
+ * quản lý. Các kiểm thử này chạy chuỗi filter bảo mật thật để chứng minh matcher riêng cho hội viên được khớp trước.
  */
-@WebMvcTest(SessionBookingController.class)
+@WebMvcTest(controllers = SessionBookingController.class, properties = "app.legacy.classes-enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
+/** Bộ kiểm thử cho SessionBookingSecurity (session booking security). */
 class SessionBookingSecurityTest {
     @Autowired MockMvc mvc;
     @MockitoBean SessionBookingService service;
@@ -39,6 +40,7 @@ class SessionBookingSecurityTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(10L, "review-user", role),
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
@@ -46,6 +48,7 @@ class SessionBookingSecurityTest {
 
     private static final String BULK = "{\"sessionIds\":[1,2,3]}";
 
+    /** Kiểm thử: người chưa đăng nhập không đặt hay đọc được lượt đặt chỗ. */
     @Test
     void anonymousCannotBookOrReadBookings() throws Exception {
         mvc.perform(post("/api/v1/classes/sessions/1/bookings")).andExpect(status().isUnauthorized());
@@ -53,6 +56,7 @@ class SessionBookingSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: chỉ hội viên được đặt và xem lượt đặt của chính mình. */
     @Test
     void onlyMembersBookAndListTheirOwnSessions() throws Exception {
         for (String role : List.of("RECEPTIONIST", "COACH", "CENTER_MANAGER", "ADMIN")) {
@@ -67,9 +71,10 @@ class SessionBookingSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: hội viên truy cập được các endpoint đặt chỗ. */
     @Test
     void memberReachesTheBookingEndpoints() throws Exception {
-        // Booking single sessions is retired: members are authorized but the policy answers 400.
+        // Đặt lẻ từng buổi đã ngừng hoạt động: hội viên được cấp quyền truy cập nhưng chính sách nghiệp vụ trả về 400.
         mvc.perform(post("/api/v1/classes/sessions/1/bookings").with(authentication(actor("MEMBER"))))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/api/v1/classes/session-bookings/bulk").with(authentication(actor("MEMBER")))
@@ -81,6 +86,7 @@ class SessionBookingSecurityTest {
         verify(service).myBookings(any(), any(), any(), any());
     }
 
+    /** Kiểm thử: yêu cầu đặt hàng loạt được validate. */
     @Test
     void bulkRequestIsValidated() throws Exception {
         mvc.perform(post("/api/v1/classes/session-bookings/bulk").with(authentication(actor("MEMBER")))
@@ -95,6 +101,7 @@ class SessionBookingSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: hội viên và lễ tân hủy được, HLV thì không. */
     @Test
     void membersAndFrontDeskCancelButCoachesCannot() throws Exception {
         when(service.cancelMany(any(), any())).thenReturn(new BulkCancelResult(List.of(), List.of()));

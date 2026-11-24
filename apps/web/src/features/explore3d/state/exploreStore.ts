@@ -1,13 +1,21 @@
 import { create } from 'zustand';
 import type { LevelCode, Viewpoint } from '../scene/schema';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
-import { getNode, levelOf } from '../scene/selectors';
+import { getLevelByCode, getNode, levelOf } from '../scene/selectors';
 
+/** Chế độ xếp tầng: chồng lên nhau, tách rời hoặc chỉ một tầng. */
 export type LevelMode = 'stacked' | 'exploded' | 'solo';
+/** Chế độ tường: dựng lên, cắt bớt hoặc hạ xuống. */
 export type WallMode = 'up' | 'cutaway' | 'down';
+/** Chế độ xem: 3D hoặc sơ đồ 2D. */
 export type ViewMode = '3d' | '2d';
+/** Mức chất lượng đồ họa: cao, vừa, thấp. */
 export type QualityTier = 'high' | 'medium' | 'low';
 
+/**
+ * Lệnh điều khiển camera kèm số thứ tự (để phát hiện lệnh mới): về toàn cảnh, tới đối tượng, vừa khung, góc
+ * nhìn, thu phóng hoặc dịch.
+ */
 export interface CameraCommand {
   seq: number;
   kind: 'overview' | 'node' | 'fit' | 'viewpoint' | 'zoom' | 'nudge';
@@ -17,6 +25,7 @@ export interface CameraCommand {
   nudge?: [number, number];
 }
 
+/** Số đo hiệu năng: khung hình/giây, thời gian mỗi khung, draw call, tam giác, geometry và texture. */
 export interface PerfMetrics {
   fps: number;
   frameTimeMs: number;
@@ -26,6 +35,10 @@ export interface PerfMetrics {
   textures: number;
 }
 
+/**
+ * Trạng thái của màn khám phá 3D: lựa chọn, tầng, chế độ, chất lượng, tour, đi bộ, tìm kiếm, camera, hiệu năng
+ * và tình trạng WebGL.
+ */
 export interface ExploreState {
   selectedId: string | null;
   hoveredId: string | null;
@@ -46,34 +59,59 @@ export interface ExploreState {
   contextLostCount: number;
 
   // Actions
+  // Chọn một đối tượng (tùy chọn bay tới và đồng bộ tầng).
   selectNode: (id: string | null, options?: { fit?: boolean; syncLevel?: boolean }) => void;
+  // Đồng bộ tầng khi đi bộ sang tầng khác.
   syncWalkLevel: (level: LevelCode) => void;
+  // Đặt đối tượng đang rê chuột.
   setHoveredId: (id: string | null) => void;
+  // Đặt tầng đang xem (hoặc tất cả).
   setFocusLevel: (level: LevelCode | 'ALL') => void;
+  // Đặt chế độ xếp tầng.
   setLevelMode: (mode: LevelMode) => void;
+  // Đặt chế độ tường.
   setWallMode: (mode: WallMode) => void;
+  // Đặt chế độ 2D/3D.
   setViewMode: (mode: ViewMode) => void;
+  // Đặt mức chất lượng (và DPR tùy chọn).
   setQualityTier: (tier: QualityTier, dpr?: number) => void;
+  // Bắt đầu tour tham quan.
   startTour: () => void;
+  // Tạm dừng tour.
   pauseTour: () => void;
+  // Tiếp tục tour.
   resumeTour: () => void;
+  // Dừng tour.
   stopTour: () => void;
+  // Đặt bước hiện tại của tour.
   setTourStep: (index: number) => void;
+  // Bật/tắt chế độ đi bộ.
   setWalkMode: (active: boolean) => void;
+  // Mở/đóng hộp tìm kiếm.
   setSearchOpen: (open: boolean) => void;
+  // Bay camera về toàn cảnh.
   flyToOverview: () => void;
+  // Bay camera tới một đối tượng.
   flyToNode: (nodeId: string, fit?: boolean) => void;
+  // Bay camera tới một góc nhìn định sẵn.
   flyToViewpoint: (viewpoint: Viewpoint) => void;
+  // Thu phóng camera.
   zoomCamera: (delta: number) => void;
+  // Dịch camera theo trục x, z.
   nudgeCamera: (dx: number, dz: number) => void;
+  // Cập nhật một phần số đo hiệu năng.
   setPerfMetrics: (metrics: Partial<PerfMetrics>) => void;
+  // Đánh dấu WebGL không dùng được (chuyển sang 2D).
   markWebglUnavailable: () => void;
+  // Ghi nhận mất ngữ cảnh WebGL (từ lần thứ hai chuyển sang 2D).
   recordContextLost: () => void;
+  // Đặt lại toàn bộ trạng thái khám phá.
   resetExplore: () => void;
 }
 
 let commandSeq = 1;
 
+/** Tăng và trả về số thứ tự lệnh camera. */
 function nextSeq(): number {
   commandSeq += 1;
   return commandSeq;
@@ -111,6 +149,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
   webglUnavailable: false,
   contextLostCount: 0,
 
+  // Chọn đối tượng: đồng bộ tầng và chuyển sang chế độ một tầng nếu cần.
   selectNode: (id, options) => {
     if (!id) {
       set({ selectedId: null });
@@ -178,6 +217,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
   },
 
   syncWalkLevel: level => {
+    if (!getLevelByCode(SOL_CENTER_SCENE, level)) return;
     const current = get();
     const selectedLevel = current.selectedId
       ? levelOf(SOL_CENTER_SCENE, current.selectedId)?.code
@@ -196,6 +236,8 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
   },
 
   setFocusLevel: level => {
+    // Bỏ qua tầng đã loại, kể cả lời gọi từ phím tắt hoặc session cũ.
+    if (level !== 'ALL' && !getLevelByCode(SOL_CENTER_SCENE, level)) return;
     const current = get();
     if (level === 'ALL') {
       set({
@@ -247,12 +289,14 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       walkMode: mode === '2d' ? false : get().walkMode,
     }),
 
+  // Đặt mức chất lượng và DPR (mặc định theo mức).
   setQualityTier: (tier, dpr) =>
     set({
       tier,
       dpr: dpr ?? DEFAULT_DPR_BY_TIER[tier],
     }),
 
+  // Bắt đầu tour: về chế độ xếp chồng, tường cắt, tắt đi bộ.
   startTour: () =>
     set({
       tourActive: true,
@@ -263,8 +307,11 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       wallMode: 'cutaway',
     }),
 
+  // Tạm dừng tour.
   pauseTour: () => set({ tourPaused: true }),
+  // Tiếp tục tour.
   resumeTour: () => set({ tourPaused: false }),
+  // Dừng tour.
   stopTour: () => set({ tourActive: false, tourPaused: false }),
   setTourStep: index => set({ tourStepIndex: index }),
 
@@ -286,6 +333,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
 
   setSearchOpen: open => set({ searchOpen: open }),
 
+  // Bay về toàn cảnh: bỏ chọn và hiện mọi tầng.
   flyToOverview: () =>
     set({
       selectedId: null,
@@ -295,6 +343,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       cameraCommand: { seq: nextSeq(), kind: 'overview' },
     }),
 
+  // Bay tới đối tượng (fit = vừa khung) và đồng bộ tầng nếu đang xem một tầng.
   flyToNode: (nodeId, fit = false) => {
     const lvl = levelOf(SOL_CENTER_SCENE, nodeId);
     const current = get();
@@ -327,6 +376,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       },
     }),
 
+  // Dịch camera theo (dx, dz).
   nudgeCamera: (dx, dz) =>
     set({
       cameraCommand: {
@@ -341,12 +391,14 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
       perfMetrics: { ...state.perfMetrics, ...metrics },
     })),
 
+  // Đánh dấu WebGL không dùng được và chuyển sang 2D.
   markWebglUnavailable: () =>
     set({
       webglUnavailable: true,
       viewMode: '2d',
     }),
 
+  // Ghi nhận mất ngữ cảnh WebGL; từ lần thứ hai chuyển sang 2D.
   recordContextLost: () => {
     const nextCount = get().contextLostCount + 1;
     set({
@@ -355,6 +407,7 @@ export const useExploreStore = create<ExploreState>((set, get) => ({
     });
   },
 
+  // Đặt lại trạng thái khám phá về mặc định.
   resetExplore: () =>
     set({
       selectedId: null,

@@ -65,7 +65,9 @@ describe('AdminPaymentReconciliationPage', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   const render = async () => { await act(async () => { root.render(<AdminPaymentReconciliationPage />); }); };
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const click = async (el: Element | null) => { expect(el).not.toBeNull(); await act(async () => { (el as HTMLElement).click(); }); };
 
   it('shows a loading state, then the overview and attempts with a 7-day default range', async () => {
@@ -121,6 +123,7 @@ describe('AdminPaymentReconciliationPage', () => {
 
   it('switches tabs and passes filters to the API', async () => {
     await render();
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const tab = (label: string) => Array.from(host.querySelectorAll('[role="tab"]')).find((b) => b.textContent === label) ?? null;
     await click(tab('Hoàn tiền tự động'));
     expect(reconciliationApi.getLateRefunds).toHaveBeenCalledWith(expect.objectContaining({ page: 0 }));

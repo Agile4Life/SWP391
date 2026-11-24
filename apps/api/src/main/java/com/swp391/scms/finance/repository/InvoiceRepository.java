@@ -6,14 +6,22 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
+/** Truy cập bảng invoices (hóa đơn điện tử). */
 @Repository
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
 
+    /** Tìm các bản ghi có invoiceNumber = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Invoice> findByInvoiceNumber(String invoiceNumber);
 
+    /** Tìm các bản ghi có paymentId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<Invoice> findByPaymentId(Long paymentId);
 
+    /**
+     * Tìm các bản ghi có paymentId = tham số và paymentMemberUserId = tham số và paymentStatus = tham số
+     * (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     Optional<Invoice> findByPaymentIdAndPaymentMemberUserIdAndPaymentStatus(Long paymentId, Long userId, String status);
 
+    /** Kiểm tra có tồn tại bản ghi có invoiceNumber = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByInvoiceNumber(String invoiceNumber);
 }

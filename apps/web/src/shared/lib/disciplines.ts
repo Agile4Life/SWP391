@@ -11,6 +11,7 @@ export const DISCIPLINES = [
   { id: 'yoga', name: 'Yoga', tier: 'secondary' },
 ] as const;
 
+/** Mã bộ môn hợp lệ lấy từ danh sách DISCIPLINES. */
 export type DisciplineId = typeof DISCIPLINES[number]['id'];
 
 export const MAIN_DISCIPLINE = DISCIPLINES[0];
@@ -26,6 +27,10 @@ const ALIASES: Record<DisciplineId, RegExp> = {
   yoga: /yoga|mindful/i,
 };
 
+/**
+ * Tên bộ môn có khớp bộ môn đang lọc không: bộ môn chuẩn thì so theo bí danh, bộ môn khác thì so chuỗi con
+ * (không phân biệt hoa thường).
+ */
 export function matchesDiscipline(name: string | null | undefined, selected: string | null | undefined): boolean {
   const value = (name ?? '').trim().toLocaleLowerCase('vi');
   const filter = (selected ?? '').trim().toLocaleLowerCase('vi');

@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho job nền NotificationScheduler (notification scheduler). */
 @ExtendWith(MockitoExtension.class)
 class NotificationSchedulerTest {
 
@@ -61,6 +62,7 @@ class NotificationSchedulerTest {
     private Member member2;
     private MembershipPackage membershipPackage;
 
+    /** Chuẩn bị trước mỗi test: tạo NotificationScheduler với repository giả lập. */
     @BeforeEach
     void setUp() {
         user1 = new User();
@@ -85,7 +87,7 @@ class NotificationSchedulerTest {
     }
 
     // =========================================================================
-    // Job 1: Membership Subscription Expiry Tests
+    // Tác vụ 1: Kiểm thử thông báo hết hạn gói hội viên
     // =========================================================================
 
     @ParameterizedTest
@@ -93,6 +95,7 @@ class NotificationSchedulerTest {
             "Gói tập sắp hết hạn|Gói tập Platinum sắp hết hạn",
             "Membership package expiring soon|Your membership package \"Gold 1 Month\" will expire on 29/10/2026 (in 7 days). Please renew to continue using our services."
     })
+    /** Kiểm thử: quét và thông báo gói sắp hết hạn thành công. */
     @DisplayName("Job 1: Sends package_expiry notification when subscription expires in 7 days")
     void scanAndNotifyExpiringSubscriptions_Success(String resolvedTitle, String resolvedBody) {
         LocalDate targetDate = LocalDate.of(2026, 10, 29);
@@ -126,6 +129,7 @@ class NotificationSchedulerTest {
         );
     }
 
+    /** Kiểm thử: bỏ qua gói đã được thông báo. */
     @Test
     @DisplayName("Job 1: Skips notification if already sent (Idempotency)")
     void scanAndNotifyExpiringSubscriptions_AlreadySent_Skips() {
@@ -149,6 +153,7 @@ class NotificationSchedulerTest {
         verify(notificationService, never()).send(anyLong(), anyString(), anyString(), anyString(), anyString(), anyLong());
     }
 
+    /** Kiểm thử: không có dữ liệu thì trả 0. */
     @Test
     @DisplayName("Job 1: Returns 0 when no subscriptions are expiring on target date")
     void scanAndNotifyExpiringSubscriptions_NoData_ReturnsZero() {
@@ -163,6 +168,7 @@ class NotificationSchedulerTest {
         verify(notificationService, never()).send(anyLong(), anyString(), anyString(), anyString(), anyString(), anyLong());
     }
 
+    /** Kiểm thử: job hết hạn gói chạy đúng. */
     @Test
     @DisplayName("Job 1: schedulePackageExpiryJob executes properly at 08:00")
     void schedulePackageExpiryJob_ExecutesProperly() {
@@ -175,7 +181,7 @@ class NotificationSchedulerTest {
     }
 
     // =========================================================================
-    // Job 2: Upcoming Class Reminder Tests
+    // Tác vụ 2: Kiểm thử nhắc nhở lớp học sắp diễn ra
     // =========================================================================
 
     @ParameterizedTest
@@ -183,11 +189,12 @@ class NotificationSchedulerTest {
             "Nhắc nhở lịch học|Lớp học sắp bắt đầu",
             "Upcoming class reminder|Your class \"Yoga Vinyasa\" is starting at 11:00 on 22/10/2026. Get ready!"
     })
+    /** Kiểm thử: quét và nhắc các buổi học sắp tới thành công. */
     @DisplayName("Job 2: Sends class_reminder notification for booked members within 2 hours")
     void scanAndNotifyUpcomingClasses_Success(String resolvedTitle, String resolvedBody) {
         LocalDateTime referenceTime = LocalDateTime.of(2026, 10, 22, 10, 0); // 10:00
         LocalDate sessionDate = LocalDate.of(2026, 10, 22);
-        LocalTime startTime = LocalTime.of(11, 0); // 11:00 (1 hour later, within 2h)
+        LocalTime startTime = LocalTime.of(11, 0); // 11:00 (sau 1 giờ, nằm trong khung 2 giờ)
         LocalTime endTime = LocalTime.of(12, 0);
 
         GymClass gymClass = new GymClass();
@@ -236,6 +243,7 @@ class NotificationSchedulerTest {
         verify(notificationService).send(eq(102L), eq(resolvedTitle), eq(resolvedBody), eq("class_reminder"), eq("class_session"), eq(301L));
     }
 
+    /** Kiểm thử: bỏ qua buổi đã nhắc. */
     @Test
     @DisplayName("Job 2: Skips members who already received class_reminder (Idempotency)")
     void scanAndNotifyUpcomingClasses_AlreadySent_Skips() {
@@ -265,7 +273,7 @@ class NotificationSchedulerTest {
         when(enrollmentRepository.findByGymClassIdAndStatus(10L, "booked"))
                 .thenReturn(List.of(enrollment1));
 
-        // Already sent
+        // Đã gửi trước đó
         when(notificationRepository.existsNotification(101L, "class_reminder", "class_session", 301L))
                 .thenReturn(true);
 
@@ -275,6 +283,7 @@ class NotificationSchedulerTest {
         verify(notificationService, never()).send(anyLong(), anyString(), anyString(), anyString(), anyString(), anyLong());
     }
 
+    /** Kiểm thử: bỏ qua buổi cách hơn hai giờ. */
     @Test
     @DisplayName("Job 2: Ignores class sessions starting after 2 hours")
     void scanAndNotifyUpcomingClasses_AfterTwoHours_Ignored() {
@@ -288,7 +297,7 @@ class NotificationSchedulerTest {
         session.setId(301L);
         session.setGymClass(gymClass);
         session.setSessionDate(sessionDate);
-        session.setStartTime(LocalTime.of(13, 0)); // 3 hours later (> 2 hours window)
+        session.setStartTime(LocalTime.of(13, 0)); // sau 3 giờ (> khung 2 giờ)
         session.setEndTime(LocalTime.of(14, 0));
         session.setStatus("scheduled");
 
@@ -302,6 +311,7 @@ class NotificationSchedulerTest {
         verify(notificationService, never()).send(anyLong(), anyString(), anyString(), anyString(), anyString(), anyLong());
     }
 
+    /** Kiểm thử: bỏ qua buổi đã qua. */
     @Test
     @DisplayName("Job 2: Ignores class sessions in the past")
     void scanAndNotifyUpcomingClasses_InThePast_Ignored() {
@@ -315,7 +325,7 @@ class NotificationSchedulerTest {
         session.setId(301L);
         session.setGymClass(gymClass);
         session.setSessionDate(sessionDate);
-        session.setStartTime(LocalTime.of(9, 0)); // 1 hour ago
+        session.setStartTime(LocalTime.of(9, 0)); // cách đây 1 giờ
         session.setEndTime(LocalTime.of(10, 0));
         session.setStatus("scheduled");
 
@@ -329,9 +339,11 @@ class NotificationSchedulerTest {
         verify(notificationService, never()).send(anyLong(), anyString(), anyString(), anyString(), anyString(), anyLong());
     }
 
+    /** Kiểm thử: job nhắc lớp học chạy đúng. */
     @Test
     @DisplayName("Job 2: scheduleClassReminderJob executes properly every 30 minutes")
     void scheduleClassReminderJob_ExecutesProperly() {
+        org.springframework.test.util.ReflectionTestUtils.setField(notificationScheduler, "classesEnabled", true);
         when(sessionRepository.findScheduledSessionsBetweenDates(any(LocalDate.class), any(LocalDate.class)))
                 .thenReturn(Collections.emptyList());
 
@@ -340,6 +352,16 @@ class NotificationSchedulerTest {
         verify(sessionRepository).findScheduledSessionsBetweenDates(any(LocalDate.class), any(LocalDate.class));
     }
 
+    /** Kiểm thử: job nhắc lớp bị bỏ qua khi tính năng lớp đã tắt. */
+    @Test
+    @DisplayName("Job 2 does nothing while group classes are out of scope")
+    void scheduleClassReminderJob_SkipsWhenClassesDisabled() {
+        notificationScheduler.scheduleClassReminderJob();
+
+        verify(sessionRepository, never()).findScheduledSessionsBetweenDates(any(LocalDate.class), any(LocalDate.class));
+    }
+
+    /** Kiểm thử: Spring context phân giải được constructor autowired. */
     @Test
     @DisplayName("Spring context verifies Autowired constructor exists and bean instantiates without NoSuchMethodException")
     void springContextResolvesAutowiredConstructor() {

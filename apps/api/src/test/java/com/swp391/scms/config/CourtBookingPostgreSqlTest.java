@@ -22,7 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/** Runs the actual Hibernate schema and PostgreSQL triggers, with independent database transactions. */
+/**
+ * Bộ kiểm thử đặt sân trên PostgreSQL.
+ * Chạy trên schema Hibernate thật và các trigger PostgreSQL thật với các giao dịch cơ sở dữ liệu độc lập.
+ */
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CourtBookingPostgreSqlTest {
@@ -33,6 +36,7 @@ class CourtBookingPostgreSqlTest {
     private long membershipPackage;
     private LocalDate tomorrow;
 
+    /** Chuẩn bị trước mỗi test: tạo schema Hibernate biệt lập trên database test. */
     @BeforeAll
     void createIsolatedHibernateSchema() throws Exception {
         connection = SupabaseTestDatabase.connect();
@@ -53,6 +57,7 @@ class CourtBookingPostgreSqlTest {
         tomorrow = jdbc.queryForObject("select (statement_timestamp() at time zone 'Asia/Ho_Chi_Minh')::date + 1", LocalDate.class);
     }
 
+    /** Dọn dẹp sau test: chỉ xóa schema do test sinh ra. */
     @AfterAll
     void removeOnlyGeneratedSchema() throws Exception {
         if (connection == null) return;
@@ -62,6 +67,7 @@ class CourtBookingPostgreSqlTest {
         }
     }
 
+    /** Kiểm thử: nhiều hội viên cùng tranh một sân thì chỉ đúng một người thắng. */
     @Test
     void concurrentMembersCompetingForOneCourtHaveExactlyOneWinner() throws Exception {
         long room = room();
@@ -74,6 +80,7 @@ class CourtBookingPostgreSqlTest {
         assertEquals(1, count("room_id = " + room));
     }
 
+    /** Kiểm thử: nhiều sân trùng giờ cho cùng một hội viên chỉ đúng một lượt thành công. */
     @Test
     void concurrentOverlappingCourtsForOneMemberHaveExactlyOneWinner() throws Exception {
         long firstRoom = room();
@@ -86,6 +93,7 @@ class CourtBookingPostgreSqlTest {
         assertEquals(1, count("member_id = " + member));
     }
 
+    /** Kiểm thử: hội viên đặt được hơn bốn khung giờ không trùng nhau trong một ngày. */
     @Test
     void memberCanBookMoreThanFourNonOverlappingSlotsInOneDay() {
         long firstRoom = room();
@@ -99,6 +107,7 @@ class CourtBookingPostgreSqlTest {
         assertEquals(5, count("member_id = " + member));
     }
 
+    /** Kiểm thử: lớp học và đặt sân chặn nhau hai chiều, hủy sẽ nhả khung giờ. */
     @Test
     void classesAndBookingsBlockEachOtherInBothDirectionsAndCancellationReleasesSlot() {
         long room = room();
@@ -110,10 +119,11 @@ class CourtBookingPostgreSqlTest {
         constraint("trg_court_bookings_check_conflict", () -> session(jdbc, gymClass, 12));
         jdbc.update("update court_bookings set status='cancelled',cancelled_at=now() where id=?", booking);
         session(jdbc, gymClass, 12);
-        // Half-open intervals allow an adjacent hour.
+        // Khoảng nửa mở cho phép đặt khung giờ liền kề ngay sau đó.
         booking(jdbc, room, member, 13);
     }
 
+    /** Kiểm thử: thêm lớp và thêm lượt đặt sân đồng thời thì chỉ đúng một bên thắng. */
     @Test
     void concurrentClassAndCourtInsertionHaveExactlyOneWinner() throws Exception {
         long room = room();
@@ -128,6 +138,7 @@ class CourtBookingPostgreSqlTest {
         assertEquals(1, booked + classes);
     }
 
+    /** Kiểm thử: chuyển một lớp vào sân đã có người đặt thì bị từ chối. */
     @Test
     void movingAClassIntoAnOccupiedCourtIsRejected() {
         long source = room();
@@ -139,6 +150,7 @@ class CourtBookingPostgreSqlTest {
         assertEquals(source, jdbc.queryForObject("select room_id from classes where id=?", Long.class, gymClass));
     }
 
+    /** Kiểm thử: SQL trực tiếp không thể vượt qua kiểm tra membership, sân và giờ. */
     @Test
     void directSqlCannotBypassMembershipCoverageOrCourtAndTimeRules() {
         long room = room();
@@ -158,6 +170,7 @@ class CourtBookingPostgreSqlTest {
         constraint("trg_court_bookings_check_membership", () -> insertBooking(jdbc, room, member, tomorrow.plusDays(11), "10:00", "11:00"));
     }
 
+    /** Kiểm thử: nâng cấp phòng cũ giữ nguyên dòng dữ liệu và thêm cấu hình sân nullable. */
     @Test
     void upgradingLegacyRoomsPreservesRowsAndAddsNullableCourtConfiguration() throws Exception {
         String upgradeSchema = "court_upgrade_" + UUID.randomUUID().toString().replace("-", "");
@@ -168,7 +181,7 @@ class CourtBookingPostgreSqlTest {
                 var source = new SingleConnectionDataSource(upgrade, true);
                 var old = new JdbcTemplate(source);
                 synchronizeEntities(source, upgradeSchema, "create");
-                // Reproduce the pre-feature table while retaining all other entity-owned tables.
+                // Tái hiện bảng trước khi có tính năng đặt sân trong khi vẫn giữ nguyên tất cả các bảng khác do entity quản lý.
                 old.execute("alter table rooms drop column discipline_id, drop column open_time, drop column close_time");
                 long legacy = old.queryForObject("insert into rooms(name,capacity,status) values ('Legacy studio',20,'available') returning id", Long.class);
                 synchronizeEntities(source, upgradeSchema, "update");
@@ -186,6 +199,7 @@ class CourtBookingPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: chạy hai thao tác đồng thời để thử đua và trả kết quả từng bên. */
     private void race(String resource, SqlAction first, SqlAction second, String expectedConstraint) throws Exception {
         var workers = Executors.newFixedThreadPool(2);
         var ready = new CountDownLatch(2);
@@ -222,6 +236,7 @@ class CourtBookingPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: thực hiện một lần ghi trong luồng riêng để mô phỏng đồng thời. */
     private String concurrentWrite(CountDownLatch ready, AtomicInteger pid, SqlAction action) throws Exception {
         try (var worker = workerConnection()) {
             worker.setAutoCommit(false);
@@ -242,12 +257,14 @@ class CourtBookingPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: mở kết nối riêng cho luồng worker. */
     private Connection workerConnection() throws SQLException {
         Connection worker = SupabaseTestDatabase.connect();
         worker.setSchema(schema);
         return worker;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (member). */
     private long member(boolean active) {
         long id = user("MEMBER");
         jdbc.update("insert into members (user_id,membership_code,join_date,fitness_level) values (?, ?, current_date, 'beginner')", id, "COURT-" + id);
@@ -258,6 +275,7 @@ class CourtBookingPostgreSqlTest {
         return id;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private long user(String role) {
         return jdbc.queryForObject("""
                 insert into users (role_id,full_name,email,password_hash,status,created_at,updated_at)
@@ -265,6 +283,7 @@ class CourtBookingPostgreSqlTest {
                 """, Long.class, role, UUID.randomUUID() + "@example.invalid");
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (room). */
     private long room() {
         return jdbc.queryForObject("""
                 insert into rooms (name,capacity,status,discipline_id,open_time,close_time)
@@ -272,6 +291,7 @@ class CourtBookingPostgreSqlTest {
                 """, Long.class, discipline);
     }
 
+    /** Hàm trợ giúp của test: tạo lớp học mẫu. */
     private long gymClass(long room) {
         long coach = user("COACH");
         jdbc.update("insert into coaches (user_id,employment_status) values (?,'active')", coach);
@@ -281,10 +301,12 @@ class CourtBookingPostgreSqlTest {
                 """, Long.class, discipline, coach, room);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private long booking(JdbcTemplate db, long room, long member, int hour) {
         return insertBooking(db, room, member, tomorrow, "%02d:00".formatted(hour), "%02d:00".formatted(hour + 1));
     }
 
+    /** Hàm trợ giúp của test: chèn một lượt đặt sân bằng SQL. */
     private long insertBooking(JdbcTemplate db, long room, long member, LocalDate date, String start, String end) {
         return db.queryForObject("""
                 insert into court_bookings (room_id,member_id,booking_date,start_time,end_time,status,created_at)
@@ -292,6 +314,7 @@ class CourtBookingPostgreSqlTest {
                 """, Long.class, room, member, date, start, end);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (session). */
     private long session(JdbcTemplate db, long gymClass, int hour) {
         return db.queryForObject("""
                 insert into class_sessions (class_id,session_date,start_time,end_time,status,created_at,updated_at)
@@ -299,10 +322,12 @@ class CourtBookingPostgreSqlTest {
                 """, Long.class, gymClass, tomorrow, "%02d:00".formatted(hour), "%02d:00".formatted(hour + 1));
     }
 
+    /** Hàm trợ giúp của test: đếm số dòng thỏa điều kiện. */
     private int count(String condition) {
         return jdbc.queryForObject("select count(*) from court_bookings where status='booked' and " + condition, Integer.class);
     }
 
+    /** Hàm trợ giúp của test: tạo ràng buộc kiểm tra cho test. */
     private static void constraint(String name, Runnable action) {
         var error = assertThrows(DataIntegrityViolationException.class, action::run);
         var sql = assertInstanceOf(org.postgresql.util.PSQLException.class, error.getMostSpecificCause());
@@ -310,6 +335,7 @@ class CourtBookingPostgreSqlTest {
         assertEquals(name, sql.getServerErrorMessage().getConstraint());
     }
 
+    /** Hàm trợ giúp của test: đồng bộ entity vào schema bằng Hibernate. */
     private static void synchronizeEntities(SingleConnectionDataSource source, String schema, String action) throws Exception {
         var registry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.connection.datasource", source)
@@ -329,6 +355,7 @@ class CourtBookingPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: chạy một đoạn SQL/logic trên kết nối cho trước. */
     @FunctionalInterface
     private interface SqlAction { void run(JdbcTemplate db); }
 }

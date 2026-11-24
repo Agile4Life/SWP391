@@ -1,28 +1,10 @@
 import { expect, it } from 'vitest';
-import { activePlans, planDays, weeklyMeasurements } from './progressPresentation';
+import { activePlans, planDays } from './progressPresentation';
 import type { TrainingPlan } from './memberProgressApi';
 
-it('uses the latest persisted weight and BMI in each week without inventing gaps', () => {
-  const points = weeklyMeasurements([
-    { id: 1, metricName: 'weight', metricValue: 70, unit: 'kg', recordedAt: '2026-10-05T08:00:00' },
-    { id: 2, metricName: 'weight', metricValue: 69, unit: 'kg', recordedAt: '2026-10-07T08:00:00' },
-    { id: 3, metricName: 'bmi', metricValue: 23.5, unit: null, recordedAt: '2026-10-07T08:00:00' },
-    { id: 4, metricName: 'weight', metricValue: 68, unit: 'kg', recordedAt: '2026-10-19T08:00:00' },
-  ]);
-  expect(points.map((point) => [point.weight, point.bmi])).toEqual([[69, 23.5], [null, null], [68, null]]);
-});
-
-it('keeps height, body fat and muscle mass from the coach assessment in their week', () => {
-  expect(weeklyMeasurements([
-    { id: 1, metricName: 'height', metricValue: 170, unit: 'cm', recordedAt: '2026-10-19T08:00:00' },
-    { id: 2, metricName: 'body_fat', metricValue: 20, unit: '%', recordedAt: '2026-10-19T08:00:00' },
-    { id: 3, metricName: 'muscle_mass', metricValue: 31, unit: 'kg', recordedAt: '2026-10-19T08:00:00' },
-    { id: 4, metricName: 'weight', metricValue: 150, unit: 'lb', recordedAt: '2026-10-26T08:00:00' },
-    { id: 5, metricName: 'waist', metricValue: 80, unit: 'cm', recordedAt: '2026-10-26T08:00:00' },
-  ])).toEqual([{ weekStart: '2026-10-19', weight: null, bmi: null, height: 170, bodyFat: 20, muscleMass: 31 }]);
-});
-
+// Tạo một bài tập mẫu.
 const item = (id: number, dayOfWeek: number | null, orderIndex: number) => ({ id, dayOfWeek, exerciseName: `E${id}`, description: null, sets: null, reps: null, durationMinutes: 10, orderIndex });
+// Tạo một giáo án mẫu (ghi đè được từng trường).
 const plan = (over: Partial<TrainingPlan> = {}): TrainingPlan => ({ id: 1, status: 'active', startDate: '2026-10-01', endDate: '2026-10-31', goal: null, coachName: 'Coach', items: [], ...over });
 
 it('prefers active plans covering today and falls back to any active plan', () => {

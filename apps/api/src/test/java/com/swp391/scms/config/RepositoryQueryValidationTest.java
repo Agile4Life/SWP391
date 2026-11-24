@@ -21,15 +21,17 @@ import org.springframework.orm.jpa.SharedEntityManagerCreator;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 
 /**
- * Builds every Spring Data repository against the real entity model without a database: derived query method names
- * and every {@code @Query} (JPQL) are parsed and resolved exactly as at application start, so a typo fails here
- * instead of stopping the API from booting.
+ * Bộ kiểm thử kiểm tra tính hợp lệ truy vấn cho tất cả Spring Data repository.
+ * Khởi tạo mọi Spring Data repository trên mô hình entity thật mà không cần cơ sở dữ liệu: tên phương thức truy vấn dẫn xuất
+ * và mọi {@code @Query} (JPQL) đều được phân tích cú pháp và phân giải giống hệt lúc ứng dụng khởi động, giúp lỗi gõ nhầm phát hiện ngay tại đây
+ * thay vì làm API không khởi động được.
  */
 class RepositoryQueryValidationTest {
 
     private static LocalContainerEntityManagerFactoryBean factoryBean;
     private static EntityManager entityManager;
 
+    /** Khởi động Hibernate (không cần database) để biên dịch các truy vấn của repository. */
     @BeforeAll
     static void bootHibernateWithoutDatabase() {
         DriverManagerDataSource dataSource = new DriverManagerDataSource("jdbc:postgresql://localhost:1/never_connected");
@@ -45,6 +47,7 @@ class RepositoryQueryValidationTest {
         entityManager = SharedEntityManagerCreator.createSharedEntityManager(factoryBean.getObject());
     }
 
+    /** Đóng tài nguyên Hibernate sau khi kiểm tra xong. */
     @AfterAll
     static void close() {
         if (factoryBean != null && factoryBean.getObject() != null) {
@@ -52,9 +55,11 @@ class RepositoryQueryValidationTest {
         }
     }
 
+    /** Kiểm thử: mọi repository đều phân giải được các truy vấn của nó. */
     @Test
     void everyRepositoryResolvesItsQueries() throws Exception {
         ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false) {
+            /** Lọc ứng viên quét component: cho phép cả interface repository (isCandidateComponent). */
             @Override
             protected boolean isCandidateComponent(AnnotatedBeanDefinition definition) {
                 return definition.getMetadata().isInterface() && definition.getMetadata().isIndependent();
