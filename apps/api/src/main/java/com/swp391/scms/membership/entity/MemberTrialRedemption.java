@@ -14,6 +14,11 @@ import java.time.LocalDateTime;
         @UniqueConstraint(name = "uq_trial_cccd_hash", columnNames = {"cccd_hash"}),
         @UniqueConstraint(name = "uq_trial_member", columnNames = {"member_id"})
 })
+/**
+ * Bảng member_trial_redemptions: yêu cầu nhận gói trải nghiệm của hội viên, gồm mã băm và 4 số cuối giấy tờ
+ * (không lưu số đầy đủ; bản mã hóa chỉ giữ khi đang chờ duyệt), họ tên, quốc tịch, ảnh, trạng thái, người/thời
+ * điểm duyệt, lý do từ chối và kỳ gói đã tạo. Mỗi hội viên và mỗi giấy tờ chỉ có một bản ghi.
+ */
 public class MemberTrialRedemption {
 
     public static final String STATUS_PENDING = "PENDING_APPROVAL";
@@ -76,8 +81,10 @@ public class MemberTrialRedemption {
     @Column(name = "redeemed_at", nullable = false)
     private LocalDateTime redeemedAt = LocalDateTime.now();
 
+    /** Constructor rỗng cho JPA. */
     public MemberTrialRedemption() {}
 
+    /** Tạo bản ghi nhận gói kiểu cũ (kích hoạt ngay) với hội viên, mã băm, 4 số cuối, họ tên và kỳ gói. */
     public MemberTrialRedemption(Member member, String cccdHash, String cccdLast4, String fullName, MembershipSubscription subscription) {
         this.member = member;
         this.cccdHash = cccdHash;

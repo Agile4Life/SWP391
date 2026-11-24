@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập bảng member_trial_redemptions (yêu cầu/lượt nhận gói trải nghiệm). */
 @Repository
 public interface MemberTrialRedemptionRepository extends JpaRepository<MemberTrialRedemption, Long> {
     /** Kiểm tra có tồn tại bản ghi có cccdHash = tham số (Spring Data tự sinh truy vấn từ tên hàm). */

@@ -12,17 +12,23 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+/** API mở kênh realtime (Supabase) để trang gói tập của hội viên tự tải lại khi thanh toán xong. */
 @RestController
 @PreAuthorize("hasRole('MEMBER')")
 public class MembershipRealtimeController {
     private final MembershipRealtimeService service;
     private final MessageService messages;
 
+    /** Nhận MembershipRealtimeService và MessageService. */
     public MembershipRealtimeController(MembershipRealtimeService service, MessageService messages) {
         this.service = service;
         this.messages = messages;
     }
 
+    /**
+     * POST /api/v1/memberships/subscriptions/realtime-session: trả thông tin kết nối realtime (hoặc báo chưa
+     * bật).
+     */
     @PostMapping("/api/v1/memberships/subscriptions/realtime-session")
     public ResponseEntity<ApiResponse<MembershipRealtimeSession>> open(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(

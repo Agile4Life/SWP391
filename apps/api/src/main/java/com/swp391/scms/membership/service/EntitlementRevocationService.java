@@ -16,6 +16,10 @@ import java.time.LocalTime;
 import java.util.function.Predicate;
 
 /**
+ * Giải phóng lịch đặt của hội viên khi gói không còn bao phủ (bảo lưu, hủy gói, hoàn tiền). Lớp học, buổi PT
+ * 1:1 và sân đều cần gói còn hiệu lực vào ngày diễn ra, nên mỗi lịch sắp tới chỉ được giữ khi có kỳ gói active
+ * bao phủ ngày đó.
+ *
  * Releases what a member booked once their membership no longer covers it (hold, cancellation, refund).
  * Classes, 1:1 coach sessions and courts all require an active membership on the day they take place,
  * so each upcoming booking is kept only while some active period still covers its date.
@@ -52,6 +56,7 @@ public class EntitlementRevocationService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
 
+    /** Nhận repository gói, dịch vụ đăng ký lớp, repository buổi PT và đặt sân, cùng Clock. */
     public EntitlementRevocationService(MembershipSubscriptionRepository subscriptions,
                                         EnrollmentService enrollmentService,
                                         CoachBookingRepository coachBookings,
@@ -64,7 +69,12 @@ public class EntitlementRevocationService {
         this.clock = clock;
     }
 
-    /** Cancels upcoming bookings whose date no active period covers; returns how many were cancelled. */
+    /**
+     * Hủy các lịch sắp tới (đăng ký lớp, buổi PT, sân) mà không còn kỳ gói active nào (hoặc bảo lưu có ngày đã
+     * duyệt) bao phủ ngày diễn ra; bỏ qua lịch đã bắt đầu. Thông báo cho hội viên và HLV. Trả số lịch đã hủy.
+     *
+     * Cancels upcoming bookings whose date no active period covers; returns how many were cancelled.
+     */
     @Transactional
     public int revokeUncoveredBookings(Long memberId, String reason) {
         if (memberId == null) return 0;
@@ -109,6 +119,10 @@ public class EntitlementRevocationService {
     }
 
     /**
+     * Gói đang bảo lưu có ngày cụ thể đã duyệt vẫn bao phủ thời hạn của nó: các ngày bảo lưu và các ngày sau đó
+     * tới hạn mới đã được lùi thêm số ngày bảo lưu. Không có kiểm tra này, job hằng đêm sẽ hủy mọi lịch đặt sau
+     * bảo lưu.
+     *
      * A frozen membership with an approved, dated hold still covers its own period: the days of the hold itself
      * and the days after it, up to the end date pushed back by the held days.
      * Without this the nightly sweep would cancel everything booked after the hold, as the member is "not active" yet.
@@ -125,6 +139,10 @@ public class EntitlementRevocationService {
     }
 
     /**
+     * Hủy buổi PT và sân nằm trong khoảng bảo lưu đã duyệt. Buổi PT chỉ được trả lại (lượt gói hoặc tiền) nếu
+     * duyệt trước ít nhất 3 ngày; sân nếu duyệt trước ít nhất 2 giờ; muộn hơn thì lượt/tiền bị mất. Thông báo
+     * cho hội viên kèm kết quả và cho HLV.
+     *
      * Cancels upcoming 1:1 sessions and courts that fall inside {@code from..to} (an approved hold). Package slots and
      * paid fees go back to the member only inside the notice windows; course enrollments are handled by {@code EnrollmentService#releaseCoursesForHold}.
      */
@@ -192,6 +210,9 @@ public class EntitlementRevocationService {
     }
 
     /**
+     * Xử lý thanh toán của buổi PT bị hủy do bảo lưu: khoản đang chờ chuyển failed; khoản đã thu được hoàn vào
+     * Ví nếu kịp hạn. Trả {đã trả, đã hoàn}.
+     *
      * Closes the payments of a 1:1 session cancelled by a hold. Returns {paid, refunded}: what the member had paid,
      * and what went back to the wallet (nothing when {@code inTime} is false).
      */
@@ -221,7 +242,12 @@ public class EntitlementRevocationService {
         return new java.math.BigDecimal[]{paid, refunded};
     }
 
-    /** Same as {@link #settleCoachPayments} for a court booking, including legacy bookings paid without a payment row. */
+    /**
+     * Giống settleCoachPayments nhưng cho đặt sân, gồm cả lịch đặt cũ đã trả tiền mà không có bản ghi thanh
+     * toán.
+     *
+     * Same as {@link #settleCoachPayments} for a court booking, including legacy bookings paid without a payment row.
+     */
     private java.math.BigDecimal[] settleCourtPayments(CourtBooking booking, boolean inTime, String reason) {
         java.math.BigDecimal paid = java.math.BigDecimal.ZERO;
         java.math.BigDecimal refunded = java.math.BigDecimal.ZERO;
@@ -254,7 +280,11 @@ public class EntitlementRevocationService {
         return new java.math.BigDecimal[]{paid, refunded};
     }
 
-    /** Members holding a class booking, an upcoming 1:1 session or an upcoming court; the daily sweep checks each. */
+    /**
+     * Danh sách hội viên đang có lịch đặt sắp tới (lớp, buổi PT, sân); job hằng ngày kiểm tra từng người.
+     *
+     * Members holding a class booking, an upcoming 1:1 session or an upcoming court; the daily sweep checks each.
+     */
     @Transactional(readOnly = true)
     public java.util.Set<Long> membersWithUpcomingBookings() {
         LocalDate today = LocalDate.now(clock);
@@ -267,23 +297,28 @@ public class EntitlementRevocationService {
         return ids;
     }
 
+    /** Gửi thông báo "lịch đặt đã được giải phóng" kèm ngày giờ. */
     private void notifyReleased(Long memberId, String bodyKey, Long bookingId, LocalDate date, LocalTime start) {
         notify(memberId, "notifications.membership.booking_released.title", msg(bodyKey, date, hhmm(start)), bookingId);
     }
 
+    /** Gửi thông báo trong ứng dụng cho người dùng (bỏ qua nếu không có dịch vụ thông báo). */
     private void notify(Long userId, String titleKey, String body, Long bookingId) {
         if (notificationService == null || userId == null) return;
         notificationService.send(userId, msg(titleKey), body, "system", null, bookingId);
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** Định dạng giờ HH:mm. */
     private static String hhmm(LocalTime time) {
         return time == null ? "" : time.toString().substring(0, 5);
     }
 
+    /** Lịch đã bắt đầu chưa (ngày đã qua, hoặc hôm nay và giờ bắt đầu không sau hiện tại). */
     private static boolean started(LocalDate date, LocalTime start, LocalDate today, LocalTime nowTime) {
         return date.isBefore(today) || (date.isEqual(today) && start != null && !start.isAfter(nowTime));
     }

@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+/** Truy cập bảng membership_hold_documents (giấy tờ y tế đính kèm yêu cầu bảo lưu). */
 @Repository
 public interface MembershipHoldDocumentRepository extends JpaRepository<MembershipHoldDocument, Long> {
     /**

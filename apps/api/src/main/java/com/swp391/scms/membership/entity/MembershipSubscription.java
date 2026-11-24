@@ -8,7 +8,13 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/** Entity mapping table membership_subscriptions (schema is generated code-first by Hibernate). */
+/**
+ * Bảng membership_subscriptions: một kỳ gói tập của hội viên (gói, kỳ trước trong chuỗi gia hạn/nâng cấp, thời
+ * hạn, trạng thái pending_payment/active/frozen/expired/cancelled, mã QR, phí nâng cấp, phần quy đổi, giá chốt,
+ * ngày kết thúc gốc của kỳ bị thay thế, và toàn bộ thông tin bảo lưu).
+ *
+ * Entity mapping table membership_subscriptions (schema is generated code-first by Hibernate).
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_subscriptions_status", constraints = "status IN ('pending_payment','active','frozen','expired','cancelled')")
 @Table(name = "membership_subscriptions", indexes = {@Index(name = "ix_subscriptions_member_status", columnList = "member_id, status"), @Index(name = "ix_subscriptions_end_date", columnList = "end_date")})
@@ -114,6 +120,7 @@ public class MembershipSubscription {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt = LocalDateTime.now();
 
+    /** Hibernate gọi trước khi cập nhật bản ghi: tự cập nhật updatedAt. */
     @PreUpdate
     void touch() {
         updatedAt = LocalDateTime.now();
@@ -164,6 +171,9 @@ public class MembershipSubscription {
     /** Gán giá trị mới cho trường quotedPrice. */
     public void setQuotedPrice(BigDecimal quotedPrice) { this.quotedPrice = quotedPrice; }
     /**
+     * Số tiền hội viên phải trả ở quầy hoặc qua VNPay: giá đã chốt khi tạo yêu cầu (phí nâng cấp hoặc giá niêm
+     * yết lúc đó). Chỉ yêu cầu cũ chưa chốt giá mới dùng giá gói hiện tại.
+     *
      * What the member owes at the counter or on VNPay: the price fixed when the request was made (upgrade charge or
      * quoted catalog price). Only requests created before prices were fixed fall back to the current package price.
      */
@@ -200,14 +210,20 @@ public class MembershipSubscription {
     public LocalDate getHoldEndDate() { return holdEndDate; }
     /** Gán giá trị mới cho trường holdEndDate. */
     public void setHoldEndDate(LocalDate holdEndDate) { this.holdEndDate = holdEndDate; }
+    /** Ngày bảo lưu đã được cộng vào hạn gói lúc duyệt chưa (null coi là chưa). */
     public boolean isHoldDaysCredited() { return Boolean.TRUE.equals(holdDaysCredited); }
     /** Gán giá trị mới cho trường holdDaysCredited. */
     public void setHoldDaysCredited(Boolean holdDaysCredited) { this.holdDaysCredited = holdDaysCredited; }
-    /** True when an approved hold covers {@code date}: nothing may be booked on a held day. */
+    /**
+     * Có bảo lưu đã duyệt bao phủ ngày cho trước không (ngày bảo lưu không được đặt lịch).
+     *
+     * True when an approved hold covers {@code date}: nothing may be booked on a held day.
+     */
     public boolean isHeldOn(LocalDate date) {
         return "APPROVED".equalsIgnoreCase(holdStatus) && holdStartDate != null && holdEndDate != null
                 && !date.isBefore(holdStartDate) && !date.isAfter(holdEndDate);
     }
+    /** Gói đã dùng lượt bảo lưu duy nhất chưa (null coi là chưa). */
     public boolean isHoldUsed() { return Boolean.TRUE.equals(holdUsed); }
     /** Gán giá trị mới cho trường holdUsed. */
     public void setHoldUsed(boolean holdUsed) { this.holdUsed = holdUsed; }

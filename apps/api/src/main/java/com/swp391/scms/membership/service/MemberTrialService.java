@@ -33,6 +33,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+/**
+ * Gói trải nghiệm 3 ngày miễn phí cho hội viên mới: hội viên gửi yêu cầu kèm giấy tờ, lễ tân duyệt thì tạo kỳ
+ * gói dùng thử. Mỗi giấy tờ (theo mã băm) và mỗi tài khoản chỉ được nhận một lần.
+ */
 @Service
 public class MemberTrialService {
 
@@ -49,6 +53,7 @@ public class MemberTrialService {
     private final CccdHasher cccdHasher;
     private final com.swp391.scms.users.KycCrypto kycCrypto;
 
+    /** Constructor Spring dùng; thông báo, dịch, Clock và bộ mã hóa KYC là tùy chọn. */
     @Autowired
     public MemberTrialService(
             MemberTrialRedemptionRepository trialRedemptions,
@@ -72,10 +77,15 @@ public class MemberTrialService {
         this.kycCrypto = kycCrypto;
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /**
+     * Trạng thái gói trải nghiệm của hội viên: đã có yêu cầu thì trả theo yêu cầu đó; chưa có thì cho biết có
+     * đủ điều kiện không (chỉ khi chưa từng có gói tập nào).
+     */
     @Transactional(readOnly = true)
     public TrialStatusDto getTrialStatus(Long memberId) {
         var existing = trialRedemptions.findByMemberUserId(memberId);
@@ -103,6 +113,10 @@ public class MemberTrialService {
         );
     }
 
+    /**
+     * Kiểm tra số giấy tờ: bắt buộc nhập; hộ chiếu chỉ cho người nước ngoài và gồm 6-15 ký tự chữ số; CCCD phải
+     * 9 hoặc 12 chữ số.
+     */
     public void validateDocument(String docType, String docNumber, String nationality) {
         if (docNumber == null || docNumber.isBlank()) {
             throw new BadRequestException("TRIAL_DOCUMENT_REQUIRED", "validation.trial.document_number.required", null,
@@ -127,7 +141,11 @@ public class MemberTrialService {
         }
     }
 
-    /** Document photos are uploaded images only (JPEG/PNG/WebP, at most 2 MB), never outside links. */
+    /**
+     * Ảnh giấy tờ phải là ảnh tải lên (JPEG/PNG/WebP, tối đa 2MB), không nhận link ngoài; để trống thì bỏ qua.
+     *
+     * Document photos are uploaded images only (JPEG/PNG/WebP, at most 2 MB), never outside links.
+     */
     private static void validateDocumentImage(String dataUrl) {
         if (dataUrl == null || dataUrl.isBlank()) return;
         com.swp391.scms.common.image.ImageDataUrlValidator.validate(dataUrl, MAX_DOCUMENT_IMAGE_BYTES,
@@ -143,12 +161,19 @@ public class MemberTrialService {
         return plain != null && !com.swp391.scms.users.KycCrypto.isMasked(plain) ? plain : null;
     }
 
+    /** Quốc tịch có phải Việt Nam không (VN, VNM, VIETNAM, VIỆT NAM, VIET NAM). */
     private boolean isVietnamese(String nationality) {
         if (nationality == null) return false;
         String s = nationality.trim().toUpperCase(Locale.ROOT);
         return s.equals("VN") || s.equals("VNM") || s.equals("VIETNAM") || s.equals("VIỆT NAM") || s.equals("VIET NAM");
     }
 
+    /**
+     * Gửi yêu cầu gói trải nghiệm: chỉ hội viên chưa từng có gói. Không nhập số giấy tờ thì dùng lại KYC đã nộp
+     * (đang chờ hoặc đã duyệt). Kiểm tra họ tên, giấy tờ, ảnh; số giấy tờ không được tài khoản khác dùng (so
+     * bằng mã băm). Yêu cầu bị từ chối trước đó được cập nhật để duyệt lại; đang chờ hoặc đã duyệt thì báo
+     * trùng. Lưu mã băm, 4 số cuối và bản mã hóa số giấy tờ, rồi gửi thông báo đã nhận yêu cầu.
+     */
     @Transactional
     public TrialStatusDto requestTrial(AuthenticatedPrincipal principal, TrialClaimRequest request) {
         if (principal == null || principal.id() == null) {
@@ -303,6 +328,7 @@ public class MemberTrialService {
         return toStatusDto(saved);
     }
 
+    /** Lễ tân duyệt yêu cầu gói trải nghiệm và trả thông tin yêu cầu sau khi duyệt. */
     @Transactional
     public ReceptionTrialDto approveTrial(AuthenticatedPrincipal reviewer, Long trialId) {
         MembershipSubscription savedSub = approveTrialInternal(reviewer, trialId);
@@ -311,6 +337,11 @@ public class MemberTrialService {
         return toReceptionDto(updated);
     }
 
+    /**
+     * Duyệt: yêu cầu không được đã duyệt hoặc đang bị từ chối. Đồng bộ họ tên và giấy tờ sang hồ sơ hội viên
+     * (đánh dấu đã xác minh), tìm gói trải nghiệm (không có thì dùng gói Gold), tạo kỳ gói active 3 ngày từ hôm
+     * nay với mã QR mới, xóa bản mã hóa số giấy tờ, lưu người duyệt và gửi thông báo.
+     */
     private MembershipSubscription approveTrialInternal(AuthenticatedPrincipal reviewer, Long trialId) {
         MemberTrialRedemption redemption = trialRedemptions.findById(trialId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.trial", trialId));
@@ -385,6 +416,11 @@ public class MemberTrialService {
         return savedSub;
     }
 
+    /**
+     * Từ chối yêu cầu (không áp dụng cho yêu cầu đã duyệt): lưu lý do (mặc định "thông tin giấy tờ không
+     * khớp"), xóa bản mã hóa và thay mã băm bằng giá trị giả để giấy tờ không bị giữ chỗ (phòng trường hợp ai
+     * đó dùng giấy tờ người khác), rồi gửi thông báo kèm lý do.
+     */
     @Transactional
     public ReceptionTrialDto rejectTrial(AuthenticatedPrincipal reviewer, Long trialId, String reason) {
         MemberTrialRedemption redemption = trialRedemptions.findById(trialId)
@@ -421,6 +457,10 @@ public class MemberTrialService {
         return toReceptionDto(saved);
     }
 
+    /**
+     * Danh sách yêu cầu gói trải nghiệm cho quầy (mới nhất trước), lọc theo trạng thái và tìm theo họ tên, 4 số
+     * cuối giấy tờ, mã hội viên, email hoặc SĐT.
+     */
     @Transactional(readOnly = true)
     public List<ReceptionTrialDto> listTrials(String status, String search) {
         List<MemberTrialRedemption> list;
@@ -448,6 +488,9 @@ public class MemberTrialService {
     }
 
     /**
+     * Cách nhận gói trải nghiệm kiểu cũ (kích hoạt ngay, không qua duyệt), giữ lại để tương thích: kiểm tra
+     * chưa nhận, giấy tờ chưa dùng, hội viên chưa có gói, rồi tạo kỳ gói 3 ngày và bản ghi nhận gói.
+     *
      * Backward-compatible claim method for direct activation.
      */
     @Transactional
@@ -532,6 +575,10 @@ public class MemberTrialService {
         return toSubscriptionDto(savedSub);
     }
 
+    /**
+     * Chuyển yêu cầu sang TrialStatusDto cho hội viên (số giấy tờ chỉ hiện dạng che); dữ liệu cũ thiếu trạng
+     * thái thì suy ra từ việc đã có kỳ gói hay chưa.
+     */
     private TrialStatusDto toStatusDto(MemberTrialRedemption r) {
         String effectiveStatus = r.getStatus() != null
                 ? r.getStatus()
@@ -558,6 +605,7 @@ public class MemberTrialService {
         );
     }
 
+    /** Chuyển yêu cầu sang ReceptionTrialDto cho màn hình quầy, kèm thông tin hội viên và người duyệt. */
     private ReceptionTrialDto toReceptionDto(MemberTrialRedemption r) {
         Member m = r.getMember();
         User u = m != null ? m.getUser() : null;
@@ -594,6 +642,7 @@ public class MemberTrialService {
         );
     }
 
+    /** Chuyển kỳ gói trải nghiệm sang SubscriptionDto. */
     private SubscriptionDto toSubscriptionDto(MembershipSubscription s) {
         return new SubscriptionDto(
                 s.getId(),

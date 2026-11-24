@@ -30,6 +30,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Yêu cầu hủy gói tập và hoàn tiền: hội viên hoặc lễ tân gửi yêu cầu, quản lý duyệt hoặc từ chối. Khi duyệt,
+ * các gói còn lại bị hủy, lịch đặt không còn được gói nào bao phủ bị hủy và tiền hoàn được cộng vào Ví hội
+ * viên.
+ */
 @Service
 public class MembershipCancellationService {
     private final MembershipCancellationRequestRepository requests;
@@ -64,6 +69,7 @@ public class MembershipCancellationService {
         this.notificationService = notificationService;
     }
 
+    /** Constructor Spring dùng với các repository và dịch vụ bắt buộc. */
     public MembershipCancellationService(MembershipCancellationRequestRepository requests,
             MembershipSubscriptionRepository subscriptions, MemberRepository members,
             UserRepository users, EnrollmentService enrollments, MessageService messages, Clock clock,
@@ -79,6 +85,10 @@ public class MembershipCancellationService {
         this.entityManager = entityManager;
     }
 
+    /**
+     * Hội viên gửi yêu cầu hủy gói của chính mình: gói phải đang hiệu lực, không có bảo lưu đang chờ, phải có
+     * lý do và chưa có yêu cầu hủy nào đang chờ. Số tiền hoàn đề xuất là phần chưa dùng của số tiền thực trả.
+     */
     @Transactional
     public CancellationDtos.Response request(AuthenticatedPrincipal principal, Long subscriptionId, CancellationDtos.Request body) {
         Member member = lockMember(principal.id());
@@ -108,6 +118,11 @@ public class MembershipCancellationService {
         return toDto(requests.saveAndFlush(request));
     }
 
+    /**
+     * Lễ tân/quản lý gửi yêu cầu hủy thay hội viên (theo kỳ gói hoặc theo hội viên, khi đó lấy gói đang hiệu
+     * lực mới nhất). Có thể nhập số tiền hoàn (không vượt số đã trả). Gửi thông báo cho mọi quản lý đang hoạt
+     * động để duyệt.
+     */
     @Transactional
     public CancellationDtos.Response staffRequest(AuthenticatedPrincipal principal, CancellationDtos.StaffRequest body) {
         if (principal == null || !("RECEPTIONIST".equalsIgnoreCase(principal.role())
@@ -194,17 +209,26 @@ public class MembershipCancellationService {
         return toDto(saved);
     }
 
+    /** Các yêu cầu hủy của hội viên đang đăng nhập, mới nhất trước. */
     @Transactional(readOnly = true)
     public List<CancellationDtos.Response> mine(AuthenticatedPrincipal principal) {
         return requests.findByMemberUserIdOrderByRequestedAtDesc(principal.id()).stream().map(this::toDto).toList();
     }
 
+    /** Mọi yêu cầu hủy cho màn hình quản lý. */
     @Transactional(readOnly = true)
     public List<CancellationDtos.Response> all() {
         return requests.findAllForManager().stream()
                 .map(this::toDto).toList();
     }
 
+    /**
+     * Quản lý duyệt/từ chối yêu cầu hủy (khóa hội viên và yêu cầu; yêu cầu phải đang chờ). Duyệt: gói phải còn
+     * hiệu lực, là quyền lợi duy nhất còn lại, chuyển gói này và mọi gói active/frozen/chờ thanh toán sang
+     * cancelled, hủy lịch không còn được bao phủ, ghi nhận hoàn tiền trên các khoản thanh toán và cộng vào Ví,
+     * rồi thông báo hội viên và lễ tân đã gửi yêu cầu. Từ chối: thông báo kèm ghi chú. Cuối cùng lưu người
+     * quyết định, thời điểm và ghi chú.
+     */
     @Transactional
     public CancellationDtos.Response decide(AuthenticatedPrincipal principal, Long requestId,
             boolean approve, CancellationDtos.Decision body) {
@@ -366,6 +390,10 @@ public class MembershipCancellationService {
         return toDto(requests.saveAndFlush(request));
     }
 
+    /**
+     * Chỉ cho hủy khi đây là quyền lợi duy nhất: không còn khoản thanh toán khóa học chưa xong, không có kỳ gia
+     * hạn trả trước trong tương lai, không có kỳ chờ thanh toán.
+     */
     private void ensureSoleEntitlement(Long memberId, MembershipSubscription cancelling) {
         LocalDate today = LocalDate.now(clock);
         if (payments.hasUnsettledUpcomingEnrollmentPayment(memberId, today, LocalDateTime.now(clock).toLocalTime())) {
@@ -394,11 +422,13 @@ public class MembershipCancellationService {
         }
     }
 
+    /** Khóa dòng hội viên để các thao tác trên cùng hội viên xếp hàng; không thấy thì báo 404. */
     private Member lockMember(Long memberId) {
         return members.findByUserIdForUpdate(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
     }
 
+    /** Khóa dòng kỳ gói và đọc lại dữ liệu mới nhất từ database; không thấy thì báo 404. */
     private MembershipSubscription lockSubscription(Long subscriptionId) {
         MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
@@ -407,6 +437,9 @@ public class MembershipCancellationService {
     }
 
     /**
+     * Số tiền hoàn đề xuất: phần chưa dùng của số tiền thực trả cho kỳ này (gồm phần quy đổi từ gói cũ khi nâng
+     * cấp), không dựa vào giá niêm yết hiện tại. Quản lý vẫn có thể sửa.
+     *
      * Suggested refund: the unused share of what the member actually paid for this period (including value carried
      * over from an upgraded package), never the current catalog price. A manager may still override it.
      */
@@ -415,7 +448,12 @@ public class MembershipCancellationService {
         return calculator.remainingValue(subscription, LocalDate.now(clock));
     }
 
-    /** A refund may not exceed what the member actually paid for this period (cash plus credit carried over). */
+    /**
+     * Số tiền hoàn không được vượt quá số hội viên thực trả cho kỳ này (tiền mặt cộng phần quy đổi); vượt thì
+     * báo 400.
+     *
+     * A refund may not exceed what the member actually paid for this period (cash plus credit carried over).
+     */
     private void ensureRefundWithinPaid(MembershipSubscription subscription, BigDecimal refundAmount) {
         if (refundAmount == null) return;
         SubscriptionValueCalculator calculator = valueCalculator != null ? valueCalculator : new SubscriptionValueCalculator(payments);
@@ -426,7 +464,13 @@ public class MembershipCancellationService {
         }
     }
 
-    /** Spreads the refund over the period's successful payments; a fully refunded payment becomes {@code refunded}. */
+    /**
+     * Chia số tiền hoàn lên các khoản thanh toán thành công của kỳ (khoản cũ trước), cập nhật số đã hoàn và ghi
+     * chú; khoản hoàn đủ thì chuyển trạng thái refunded. Nhờ vậy báo cáo doanh thu đúng và không hoàn trùng hai
+     * lần.
+     *
+     * Spreads the refund over the period's successful payments; a fully refunded payment becomes {@code refunded}.
+     */
     private void recordRefundOnPayments(MembershipSubscription subscription, BigDecimal refundAmount, String reason) {
         if (payments == null || subscription.getId() == null) return;
         BigDecimal remaining = refundAmount;
@@ -451,12 +495,14 @@ public class MembershipCancellationService {
         }
     }
 
+    /** Kỳ gói đang active và chưa hết hạn tính tới hôm nay. */
     private boolean isActiveNow(MembershipSubscription subscription) {
         LocalDate today = LocalDate.now(clock);
         return "active".equalsIgnoreCase(subscription.getStatus())
                 && subscription.getEndDate() != null && !subscription.getEndDate().isBefore(today);
     }
 
+    /** Chuyển yêu cầu hủy sang DTO trả cho client (thiếu số tiền hoàn thì tính số đề xuất). */
     private CancellationDtos.Response toDto(MembershipCancellationRequest request) {
         Member member = request.getMember();
         MembershipSubscription subscription = request.getSubscription();

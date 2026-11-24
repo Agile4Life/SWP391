@@ -8,6 +8,10 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "membership_hold_documents",
         indexes = {@Index(name = "ix_hold_documents_subscription", columnList = "subscription_id")})
+/**
+ * Bảng membership_hold_documents: một file giấy tờ y tế của yêu cầu bảo lưu (tên file, loại, dung lượng, nội
+ * dung byte, người và thời điểm tải lên).
+ */
 public class MembershipHoldDocument {
 
     @Id

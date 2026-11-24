@@ -7,6 +7,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
+ * Job hằng ngày cho vòng đời gói tập: bắt đầu các bảo lưu tới ngày, tự kết thúc bảo lưu hết hạn, và giải phóng
+ * lịch đặt không còn gói nào bao phủ. Mỗi mục chạy transaction riêng nên một lỗi không chặn các mục khác.
+ *
  * Daily membership housekeeping. Each item runs in its own transaction through the service proxies, so one
  * failure is logged and the rest still run.
  * <ul>
@@ -25,6 +28,7 @@ public class MembershipLifecycleScheduler {
     private final EntitlementRevocationService revocation;
     private final MessageService messages;
 
+    /** Nhận dịch vụ gói tập, dịch vụ thu hồi quyền lợi và MessageService. */
     public MembershipLifecycleScheduler(MembershipSubscriptionService subscriptions,
                                         EntitlementRevocationService revocation,
                                         MessageService messages) {
@@ -33,6 +37,10 @@ public class MembershipLifecycleScheduler {
         this.messages = messages;
     }
 
+    /**
+     * Chạy lúc 00:15 hằng ngày (cấu hình app.membership.lifecycle.cron): bắt đầu bảo lưu, kết thúc bảo lưu,
+     * giải phóng lịch, rồi ghi log số lượng.
+     */
     @Scheduled(cron = "${app.membership.lifecycle.cron:0 15 0 * * ?}")
     public void runDaily() {
         int started = startDueHolds();
@@ -41,6 +49,10 @@ public class MembershipLifecycleScheduler {
         log.info("[MembershipLifecycle] started {} hold(s), resumed {} hold(s), released {} booking(s)", started, resumed, released);
     }
 
+    /**
+     * Tự kết thúc các bảo lưu đã hết hạn (đủ 90 ngày hoặc qua ngày cuối); lỗi từng kỳ chỉ ghi log. Trả số kỳ đã
+     * kết thúc.
+     */
     public int resumeExpiredHolds() {
         int resumed = 0;
         java.util.Set<Long> due = new java.util.LinkedHashSet<>(subscriptions.findHoldsDueForResume());
@@ -55,7 +67,11 @@ public class MembershipLifecycleScheduler {
         return resumed;
     }
 
-    /** Freezes approved holds whose first day has arrived. */
+    /**
+     * Chuyển sang frozen các bảo lưu đã duyệt tới ngày bắt đầu; trả số kỳ đã chuyển.
+     *
+     * Freezes approved holds whose first day has arrived.
+     */
     public int startDueHolds() {
         int started = 0;
         for (Long id : subscriptions.findHoldsDueToStart()) {
@@ -68,6 +84,10 @@ public class MembershipLifecycleScheduler {
         return started;
     }
 
+    /**
+     * Với mỗi hội viên có lịch sắp tới, hủy các lịch không còn gói nào bao phủ (gói hết hạn hoặc không gia
+     * hạn); trả số lịch đã hủy.
+     */
     public int releaseUncoveredBookings() {
         String reason = messages != null ? messages.getMessage("scheduling.enrollment.cancelled_by_expiry") : null;
         int released = 0;

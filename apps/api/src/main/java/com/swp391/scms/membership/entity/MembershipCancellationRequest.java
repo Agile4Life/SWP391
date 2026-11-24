@@ -11,6 +11,10 @@ import java.time.LocalDateTime;
         @Index(name = "ix_cancellation_member_status", columnList = "member_id, status"),
         @Index(name = "ix_cancellation_subscription", columnList = "subscription_id")
 })
+/**
+ * Bảng membership_cancellation_requests: yêu cầu hủy gói (hội viên, kỳ gói, lý do, số tiền hoàn, người gửi,
+ * trạng thái, thời điểm gửi/quyết định, người quyết định và ghi chú).
+ */
 @org.hibernate.annotations.Check(name = "ck_cancellation_status", constraints = "status IN ('PENDING','APPROVED','REJECTED')")
 public class MembershipCancellationRequest {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
