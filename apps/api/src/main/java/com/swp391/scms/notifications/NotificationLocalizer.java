@@ -7,6 +7,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
+ * Hiển thị tiếng Việt cho các thông báo cũ được lưu bằng câu tiếng Anh cố định: nhận diện tiêu đề/nội dung theo
+ * mẫu rồi dịch qua MessageService. Dữ liệu lưu trong database không bị đổi.
+ *
  * Vietnamese presentation of recognized legacy English notification templates.
  * Stored content and outbound payloads retain the sender's resolved language.
  */
@@ -15,6 +18,7 @@ public final class NotificationLocalizer {
 
     private final MessageService messageService;
 
+    /** Nhận MessageService để lấy câu tiếng Việt. */
     public NotificationLocalizer(MessageService messageService) {
         this.messageService = messageService;
     }
@@ -64,6 +68,7 @@ public final class NotificationLocalizer {
     private static final Pattern VNPAY_BODY =
             Pattern.compile("Received ([0-9,.]+) VND for transaction (.+)\\.", Pattern.CASE_INSENSITIVE);
 
+    /** Dịch tiêu đề tiếng Anh cũ đã biết sang câu tương ứng; tiêu đề lạ thì giữ nguyên. */
     public String localizeTitle(String title) {
         if (title == null || title.isBlank()) {
             return title;
@@ -130,6 +135,10 @@ public final class NotificationLocalizer {
         }
     }
 
+    /**
+     * Dịch nội dung tiếng Anh cũ theo các mẫu (nhắc lớp, gói sắp hết hạn, hỗ trợ, đặt lớp, PT, đánh giá,
+     * VNPay...) và chèn lại các giá trị trích được; không khớp mẫu nào thì giữ nguyên.
+     */
     public String localizeMessage(String message) {
         if (message == null || message.isBlank()) {
             return message;

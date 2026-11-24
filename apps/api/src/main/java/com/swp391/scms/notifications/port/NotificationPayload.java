@@ -5,6 +5,9 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
+ * Nội dung một thông báo cần phát: người nhận, email, tiêu đề, nội dung, loại, bản ghi liên quan, các kênh và
+ * thời điểm. Không chỉ định kênh thì mặc định trong ứng dụng, email và đẩy.
+ *
  * Immutable payload data transferring notification information across channels (SCRUM-108).
  */
 public record NotificationPayload(
@@ -29,10 +32,12 @@ public record NotificationPayload(
         }
     }
 
+    /** Bắt đầu dựng payload theo kiểu builder. */
     public static Builder builder() {
         return new Builder();
     }
 
+    /** Builder để dựng NotificationPayload từng trường một. */
     public static class Builder {
         private Long userId;
         private String recipientEmail;
@@ -44,51 +49,61 @@ public record NotificationPayload(
         private Set<NotificationChannel> channels;
         private LocalDateTime timestamp;
 
+        /** Gán người nhận. */
         public Builder userId(Long userId) {
             this.userId = userId;
             return this;
         }
 
+        /** Gán email người nhận. */
         public Builder recipientEmail(String recipientEmail) {
             this.recipientEmail = recipientEmail;
             return this;
         }
 
+        /** Gán tiêu đề. */
         public Builder title(String title) {
             this.title = title;
             return this;
         }
 
+        /** Gán nội dung. */
         public Builder message(String message) {
             this.message = message;
             return this;
         }
 
+        /** Gán loại thông báo. */
         public Builder type(String type) {
             this.type = type;
             return this;
         }
 
+        /** Gán loại bản ghi liên quan. */
         public Builder relatedEntityType(String relatedEntityType) {
             this.relatedEntityType = relatedEntityType;
             return this;
         }
 
+        /** Gán id bản ghi liên quan. */
         public Builder relatedEntityId(Long relatedEntityId) {
             this.relatedEntityId = relatedEntityId;
             return this;
         }
 
+        /** Gán các kênh gửi. */
         public Builder channels(Set<NotificationChannel> channels) {
             this.channels = channels;
             return this;
         }
 
+        /** Gán thời điểm. */
         public Builder timestamp(LocalDateTime timestamp) {
             this.timestamp = timestamp;
             return this;
         }
 
+        /** Tạo payload từ các giá trị đã gán. */
         public NotificationPayload build() {
             return new NotificationPayload(
                     userId,

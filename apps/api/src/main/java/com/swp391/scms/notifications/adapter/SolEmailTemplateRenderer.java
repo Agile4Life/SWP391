@@ -5,6 +5,9 @@ import com.swp391.scms.notifications.port.NotificationPayload;
 import java.util.Locale;
 
 /**
+ * Dựng email HTML giao dịch đơn giản (mã OTP và thông báo quan trọng): một thẻ sáng, một nội dung, một nút hành
+ * động, không có khối quảng cáo.
+ *
  * Renders plain transactional HTML emails (OTP and important notifications).
  * One light card, one message, one action — no marketing blocks.
  */
@@ -13,9 +16,14 @@ public final class SolEmailTemplateRenderer {
     private static final String DEFAULT_PUBLIC_ORIGIN = "https://scms.bluesymphony.site";
     private static final String FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif";
 
+    /** Lớp tiện ích static, không cho tạo đối tượng. */
     private SolEmailTemplateRenderer() {
     }
 
+    /**
+     * Địa chỉ website công khai dùng trong link email: bỏ dấu / cuối; trống hoặc là localhost thì dùng địa chỉ
+     * mặc định.
+     */
     public static String resolvePublicOrigin(String configuredOrigin) {
         if (configuredOrigin == null || configuredOrigin.isBlank()) {
             return DEFAULT_PUBLIC_ORIGIN;
@@ -31,6 +39,7 @@ public final class SolEmailTemplateRenderer {
         return trimmed;
     }
 
+    /** Dựng email OTP: mã lớn ở giữa, hiệu lực 5 phút, cảnh báo không chia sẻ mã. */
     public static String renderOtpHtml(String otpCode, String subject, String plainTextBody, String configuredOrigin) {
         String baseUrl = resolvePublicOrigin(configuredOrigin);
         String code = escapeHtml(otpCode != null ? otpCode.trim() : "");
@@ -45,6 +54,7 @@ public final class SolEmailTemplateRenderer {
         return wrap(title, "Mã của bạn là " + code + ". Có hiệu lực trong 5 phút.", body, null, null, baseUrl);
     }
 
+    /** Dựng email thông báo: lời chào theo tên, nội dung và một nút hành động theo loại thông báo. */
     public static String renderNotificationHtml(
             NotificationPayload payload,
             String recipientName,
@@ -68,7 +78,12 @@ public final class SolEmailTemplateRenderer {
         return wrap(title, message, body, cta[0], baseUrl + cta[1], baseUrl);
     }
 
-    /** @return {label, path} of the single action button, chosen by notification type. */
+    /**
+     * Chọn nhãn và đường dẫn nút hành động theo loại thông báo (đổi mật khẩu, thanh toán, đổi lịch, gói sắp hết
+     * hạn, mặc định).
+     *
+     * @return {label, path} of the single action button, chosen by notification type.
+     */
     private static String[] resolveCta(String type) {
         return switch (type) {
             case "password_changed" -> new String[]{"Kiểm tra tài khoản", "/member/profile"};
@@ -79,6 +94,10 @@ public final class SolEmailTemplateRenderer {
         };
     }
 
+    /**
+     * Ghép khung email HTML chung (tiêu đề, dòng xem trước, nội dung, nút) với style inline để hiển thị ổn trên
+     * mọi ứng dụng email.
+     */
     private static String wrap(String title, String preheader, String bodyHtml, String ctaLabel, String ctaUrl, String baseUrl) {
         String button = ctaLabel == null ? "" : """
                 <p style="margin: 24px 0 0 0;">
@@ -130,6 +149,7 @@ public final class SolEmailTemplateRenderer {
         );
     }
 
+    /** Thoát ký tự HTML đặc biệt để chèn dữ liệu người dùng vào email an toàn. */
     public static String escapeHtml(String input) {
         if (input == null) {
             return "";

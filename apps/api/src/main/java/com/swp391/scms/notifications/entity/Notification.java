@@ -4,6 +4,10 @@ import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
+/**
+ * Bảng notifications: thông báo trong ứng dụng của một người dùng (tiêu đề, nội dung, loại, bản ghi liên quan,
+ * đã đọc, thời điểm tạo, đường dẫn mở trang). Loại và loại bản ghi bị giới hạn theo danh sách cho phép.
+ */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_notifications_type", constraints = "type IN ('schedule_change','package_expiry','class_reminder','system','support_reply','payment')")
 @org.hibernate.annotations.Check(name = "ck_notifications_entity_type", constraints = "related_entity_type IS NULL OR related_entity_type IN ('class_session','membership_subscription','payment','support_request','class_enrollment','training_plan')")
@@ -55,6 +59,10 @@ public class Notification {
             "class_session", "membership_subscription", "payment", "support_request", "class_enrollment", "training_plan"
     );
 
+    /**
+     * Chuẩn hóa loại thông báo về danh sách cho phép: order/wallet thành payment, booking thành class_reminder,
+     * còn lại không hợp lệ thành system.
+     */
     public static String normalizeType(String rawType) {
         if (rawType == null || rawType.isBlank()) {
             return "system";
@@ -72,6 +80,10 @@ public class Notification {
         return "system";
     }
 
+    /**
+     * Chuẩn hóa loại bản ghi liên quan: wallet/product_order thành payment, booking/session_booking thành
+     * class_session, không hợp lệ thành null.
+     */
     public static String normalizeEntityType(String rawEntityType) {
         if (rawEntityType == null || rawEntityType.isBlank()) {
             return null;
@@ -89,8 +101,10 @@ public class Notification {
         return null;
     }
 
+    /** Constructor rỗng cho JPA. */
     public Notification() {}
 
+    /** Tạo thông báo chưa đọc với loại và loại bản ghi đã chuẩn hóa. */
     public Notification(User user, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
         this.user = user;
         this.title = title;
@@ -124,10 +138,12 @@ public class Notification {
     
     /** Lấy giá trị trường type. */
     public String getType() { return type; }
+    /** Gán loại thông báo (được chuẩn hóa). */
     public void setType(String type) { this.type = normalizeType(type); }
     
     /** Lấy giá trị trường relatedEntityType. */
     public String getRelatedEntityType() { return relatedEntityType; }
+    /** Gán loại bản ghi liên quan (được chuẩn hóa). */
     public void setRelatedEntityType(String relatedEntityType) { this.relatedEntityType = normalizeEntityType(relatedEntityType); }
 
     /** Lấy giá trị trường relatedEntityId. */

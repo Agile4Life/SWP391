@@ -21,6 +21,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
+ * Job gửi thông báo định kỳ: nhắc gói sắp hết hạn trước 7 ngày (8 giờ sáng hằng ngày) và nhắc lớp nhóm sắp bắt
+ * đầu (tính năng cũ, chỉ chạy khi bật cờ lớp nhóm).
+ *
  * Background Scheduler for automated system notifications (SCRUM-107).
  * - Job 1: Daily scan at 08:00 AM for membership subscriptions expiring in exactly 7 days.
  * - Job 2: Periodic scan every 30 minutes for class sessions starting within the next 2 hours.
@@ -46,6 +49,7 @@ public class NotificationScheduler {
     @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
     private boolean classesEnabled;
 
+    /** Constructor Spring dùng; MessageService và Clock là tùy chọn. */
     @Autowired
     public NotificationScheduler(
             MembershipSubscriptionRepository subscriptionRepository,
@@ -65,6 +69,7 @@ public class NotificationScheduler {
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
+    /** Constructor cho test không có MessageService. */
     public NotificationScheduler(
             MembershipSubscriptionRepository subscriptionRepository,
             ClassSessionRepository sessionRepository,
@@ -76,6 +81,7 @@ public class NotificationScheduler {
         this(subscriptionRepository, sessionRepository, enrollmentRepository, notificationRepository, notificationService, messageService, null);
     }
 
+    /** Constructor cho test có thêm repository đặt buổi. */
     public NotificationScheduler(
             MembershipSubscriptionRepository subscriptionRepository,
             ClassSessionRepository sessionRepository,
@@ -101,6 +107,9 @@ public class NotificationScheduler {
     }
 
     /**
+     * Quét các kỳ gói active hết hạn đúng ngày đích và gửi nhắc gia hạn; bỏ qua hội viên đã trả tiền kỳ tiếp
+     * theo và kỳ đã được nhắc rồi. Trả số thông báo đã gửi.
+     *
      * Business logic for scanning expiring subscriptions.
      *
      * @param targetDate the expiration date to scan for (typically LocalDate.now().plusDays(7))
@@ -178,6 +187,9 @@ public class NotificationScheduler {
     }
 
     /**
+     * Quét các buổi lớp diễn ra trong 2 giờ tới và gửi nhắc cho hội viên đã đăng ký (mỗi buổi chỉ nhắc một
+     * lần); trả số thông báo đã gửi.
+     *
      * Business logic for scanning upcoming classes.
      *
      * @param referenceTime current reference time
@@ -269,6 +281,7 @@ public class NotificationScheduler {
         return sentCount;
     }
 
+    /** Dịch mã thông báo; không dịch được thì dùng câu dự phòng. */
     private String resolveMessage(String code, String fallback, Object... args) {
         if (messageService == null) {
             return fallback;

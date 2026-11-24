@@ -19,6 +19,10 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.util.Set;
 
+/**
+ * Gửi và đọc thông báo: lưu thông báo trong ứng dụng, rồi sau khi transaction commit thì phát ra các kênh ngoài
+ * (đẩy, và email cho loại quan trọng như đổi mật khẩu, thanh toán, đổi lịch, gói sắp hết hạn).
+ */
 @Service
 public class NotificationService {
 
@@ -32,6 +36,7 @@ public class NotificationService {
     private final NotificationMapper notificationMapper;
     private final NotificationDispatcher notificationDispatcher;
 
+    /** Constructor cho test, không có kênh ngoài. */
     public NotificationService(NotificationRepository notificationRepository, 
                                UserRepository userRepository,
                                NotificationMapper notificationMapper) {
@@ -40,6 +45,7 @@ public class NotificationService {
 
     private final com.swp391.scms.common.i18n.MessageService messageService;
 
+    /** Constructor cho test, có bộ phát kênh ngoài. */
     public NotificationService(NotificationRepository notificationRepository, 
                                UserRepository userRepository,
                                NotificationMapper notificationMapper,
@@ -47,6 +53,7 @@ public class NotificationService {
         this(notificationRepository, userRepository, notificationMapper, notificationDispatcher, null);
     }
 
+    /** Constructor Spring dùng; bộ phát kênh ngoài và MessageService là tùy chọn. */
     @Autowired
     public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository,
             NotificationMapper notificationMapper, @Autowired(required = false) NotificationDispatcher notificationDispatcher,
@@ -58,17 +65,20 @@ public class NotificationService {
         this.notificationDispatcher = notificationDispatcher;
     }
 
+    /** Thông báo của người dùng, mới nhất trước, có phân trang. */
     @Transactional(readOnly = true)
     public Page<NotificationDto> getUserNotifications(Long userId, Pageable pageable) {
         return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
                 .map(notificationMapper::toDto);
     }
 
+    /** Số thông báo chưa đọc của người dùng. */
     @Transactional(readOnly = true)
     public long getUnreadCount(Long userId) {
         return notificationRepository.countByUserIdAndIsReadFalse(userId);
     }
 
+    /** Đánh dấu một thông báo là đã đọc (phải thuộc đúng người dùng, không thì 404). */
     @Transactional
     public void markAsRead(Long id, Long userId) {
         Notification notification = notificationRepository.findByIdAndUserId(id, userId)
@@ -79,20 +89,24 @@ public class NotificationService {
         }
     }
 
+    /** Đánh dấu mọi thông báo của người dùng là đã đọc. */
     @Transactional
     public void markAllAsRead(Long userId) {
         notificationRepository.markAllAsReadByUserId(userId);
     }
 
+    /** Gửi thông báo không kèm đường dẫn mở trang. */
     @Transactional(noRollbackFor = RuntimeException.class)
     public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
         send(userId, title, message, type, relatedEntityType, relatedEntityId, null);
     }
 
+    /** Dịch mã thông báo đánh giá tiến độ; không có MessageService thì trả lại chính mã. */
     private String evaluationMessage(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** Báo cho hội viên có đánh giá tiến độ mới (bỏ qua nếu tài khoản không còn). */
     @Transactional(noRollbackFor = RuntimeException.class)
     public void notifyEvaluation(Long memberId) {
         if (memberId == null) return;
@@ -105,6 +119,11 @@ public class NotificationService {
         }
     }
 
+    /**
+     * Gửi thông báo: lưu vào database (chuẩn hóa loại và loại bản ghi liên quan, kèm đường dẫn mở trang), rồi
+     * sau khi transaction commit thì phát ra kênh ngoài. Lỗi ở kênh ngoài chỉ ghi log và không làm hỏng thao
+     * tác chính.
+     */
     @Transactional(noRollbackFor = RuntimeException.class)
     public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId, String actionPath) {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
@@ -145,6 +164,8 @@ public class NotificationService {
     }
 
     /**
+     * Phát thông báo qua nhiều kênh bất đồng bộ; không có bộ phát thì chỉ lưu thông báo trong ứng dụng.
+     *
      * Dispatches notification asynchronously across multiple channels (Port & Adapter) (SCRUM-108).
      */
     public void dispatchMultiChannel(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
