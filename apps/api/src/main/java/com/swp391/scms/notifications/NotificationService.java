@@ -164,9 +164,8 @@ public class NotificationService {
     }
 
     /**
-     * Phát thông báo qua nhiều kênh bất đồng bộ; không có bộ phát thì chỉ lưu thông báo trong ứng dụng.
-     *
-     * Dispatches notification asynchronously across multiple channels (Port & Adapter) (SCRUM-108).
+     * Phát thông báo bất đồng bộ qua nhiều kênh theo kiến trúc Port & Adapter (SCRUM-108); nếu không có bộ phát
+     * thì chỉ lưu thông báo trong ứng dụng.
      */
     public void dispatchMultiChannel(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
         if (notificationDispatcher != null) {

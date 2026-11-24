@@ -102,10 +102,8 @@ public class MemberScheduleGuard {
     }
 
     /**
-     * Tạo ConflictException mô tả loại lịch bị trùng (được dịch theo ngôn ngữ người gọi), ngày, khung giờ và
-     * tên.
-     *
-     * {@code kind} is a message-key suffix so the booking type is translated with the caller's language.
+     * Tạo ConflictException mô tả loại lịch bị trùng, ngày, khung giờ và tên.
+     * {@code kind} là hậu tố của message key để loại đặt lịch được dịch theo ngôn ngữ của người gọi.
      */
     private static ConflictException conflict(String kind, String kindVi, LocalDate date, LocalTime start, LocalTime end, String name) {
         String range = start + "–" + end;

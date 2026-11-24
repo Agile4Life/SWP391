@@ -55,13 +55,11 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Nghiệp vụ quản lý lớp/khóa học và buổi học: tạo, sửa, đóng/xóa lớp, xếp và dời buổi, tra cứu lịch và học
- * viên; kiểm tra xung đột phòng/HLV ở service và trigger DB.
+ * SCRUM-72, SCRUM-131 & SCRUM-132: Nghiệp vụ quản lý lớp/khóa học và buổi học: tạo, sửa, đóng/xóa lớp, xếp và
+ * dời buổi, tra cứu lịch và học viên.
  *
- * SCRUM-72, SCRUM-131 & SCRUM-132: quản lý lớp học và buổi học.
- *
- * <p>Schedule-conflict (Trigger P3) is enforced both in the service layer (with detailed
- * Thông báo xung đột phòng và HLV) và ở tầng database qua trigger.
+ * <p>Kiểm tra trùng lịch (Trigger P3) được thực thi cả ở tầng service (kèm thông báo chi tiết về xung đột phòng
+ * và HLV) và ở tầng database qua trigger.
  */
 @Service
 public class ClassService {
@@ -544,8 +542,8 @@ public class ClassService {
 
     /**
      * SCRUM-131 AC & A4: Quản lý xóa lớp (sau khi xác nhận hai lần trên UI). Nếu có bản ghi lịch sử/phụ
-     * thuộc, hủy kích hoạt mềm lớp, hủy các buổi sắp tới.
-     * scheduled sessions with reason "Lớp học ngừng hoạt động", and notifies booked members.
+     * thuộc, hủy kích hoạt mềm lớp, hủy các buổi đã xếp sắp tới với lý do "Lớp học ngừng hoạt động" và thông
+     * báo cho các hội viên đã đặt chỗ.
      */
     @Transactional
     @Audited(action = "CLASS_DELETE", entity = "classes")
@@ -881,12 +879,9 @@ public class ClassService {
     }
 
     /**
-     * Học viên chỉ học một lớp tại một thời điểm: buổi mới/dời không được trùng giờ với lớp khác mà học viên
-     * của lớp/buổi này đang học (trigger trg_member_schedule_conflict kiểm tra lại).
-     *
      * Một hội viên chỉ học một lớp tại một thời điểm: buổi mới hoặc được dời không được chồng lên lớp khác mà
-     * một thành viên của nó (ghi danh toàn lớp hoặc chỗ trong buổi này) đang học. Trigger database
-     * {@code trg_member_schedule_conflict} repeats this check.
+     * một thành viên của nó (ghi danh toàn lớp hoặc đặt chỗ trong buổi này) đang học. Trigger database
+     * {@code trg_member_schedule_conflict} kiểm tra lặp lại quy tắc này.
      */
     private void ensureNoMemberOverlap(Long classId, Long sessionId, LocalDate sessionDate,
                                        LocalTime startTime, LocalTime endTime) {
@@ -981,11 +976,8 @@ public class ClassService {
     }
 
     /**
-     * Học viên của lớp theo người xem: HLV chỉ xem lớp mình, lễ tân không thấy ghi chú sức khỏe.
-     *
-     * Học viên của một lớp theo người gọi: HLV chỉ xem lớp của mình, quầy lễ tân xem không kèm ghi chú sức
-     * khỏe.
-     * (medical data is for the coach who trains the member and for managers).
+     * Học viên của một lớp theo người gọi: HLV chỉ xem lớp mình phụ trách, quầy lễ tân xem không kèm ghi chú
+     * sức khỏe (dữ liệu y tế chỉ dành cho HLV huấn luyện hội viên và quản lý).
      */
     @Transactional(readOnly = true)
     public List<EnrolledStudentDto> getClassStudents(Long classId, com.swp391.scms.security.AuthenticatedPrincipal principal) {

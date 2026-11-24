@@ -8,7 +8,7 @@ package com.swp391.scms.auth;
  * mật khẩu cũ.
  */
 public final class PasswordPolicy {
-    /** 8-50 characters, at least one letter and one digit, no whitespace. */
+    /** Từ 8-50 ký tự, có ít nhất một chữ cái và một chữ số, không chứa khoảng trắng. */
     public static final String REGEX = "^(?=.*[A-Za-z])(?=.*\\d)\\S{8,50}$";
 
     /** Lớp chỉ chứa hằng số, không cho tạo đối tượng. */

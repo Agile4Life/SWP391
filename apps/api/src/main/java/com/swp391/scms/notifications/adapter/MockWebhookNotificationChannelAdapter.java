@@ -8,9 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Kênh webhook mô phỏng: chỉ ghi log (chưa gọi hệ thống ngoài).
- *
- * Adapter for simulated webhook dispatching (SCRUM-108).
+ * Adapter kênh webhook mô phỏng (SCRUM-108): chỉ ghi log, chưa gọi hệ thống ngoài.
  */
 @Component
 public class MockWebhookNotificationChannelAdapter implements NotificationChannelAdapter {

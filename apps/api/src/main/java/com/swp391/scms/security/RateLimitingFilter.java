@@ -130,17 +130,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         if (uri.endsWith(DYNAMIC_QR_PATH)) {
             return DYNAMIC_QR_LIMIT_PER_MINUTE;
         }
-        return 0; // Not rate limited
+        return 0; // Không giới hạn tần suất
     }
 
     /**
-     * Địa chỉ IP của client. Sau proxy của hosting, Tomcat đã lấy IP thật từ X-Forwarded-For của proxy tin cậy
-     * (server.forward-headers-strategy=native); code không đọc header này trực tiếp nên client không giả IP để
-     * né giới hạn được.
-     *
-     * Địa chỉ client. Sau proxy của hosting thì đây là client thật chỉ vì
-     * {@code server.forward-headers-strategy=native} lets Tomcat take X-Forwarded-For from trusted internal proxies;
-     * header không bao giờ được đọc trực tiếp ở đây, nên client không thể giả mạo nó để né giới hạn.
+     * Địa chỉ IP của client. Sau proxy của hosting, đây là địa chỉ client thật nhờ cấu hình
+     * {@code server.forward-headers-strategy=native} cho phép Tomcat lấy X-Forwarded-For từ các proxy nội bộ tin
+     * cậy; header này không bao giờ được đọc trực tiếp ở đây nên client không thể giả mạo IP để né giới hạn.
      */
     private String getClientIp(HttpServletRequest request) {
         return request.getRemoteAddr() != null ? request.getRemoteAddr() : "unknown";

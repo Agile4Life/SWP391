@@ -46,17 +46,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Tạo bộ dữ liệu demo (chỉ bật khi app.demo.seed-enabled=true): quản lý, lễ tân, HLV, hội viên với nhiều tình
- * huống gói tập (đang tập, sắp hết hạn, hết hạn, bảo lưu, chờ thanh toán, đã gia hạn, đã hủy), thanh toán và
- * hóa đơn, lượt check-in, buổi PT và số đo cơ thể. Ngày tháng tính theo ngày chạy; chạy lại sẽ bỏ qua khi tài
- * khoản quản lý demo đã tồn tại.
- *
- * Bộ dữ liệu demo tùy chọn (tài khoản, subscription, thanh toán, lớp, điểm danh, lượt đặt PT, nhật ký tiến
- * độ) với bản ghi quá khứ và hiện tại, để hội đồng thấy một hệ thống đã được dùng. Mặc định tắt.
- * ({@code app.demo.seed-enabled}); idempotent: skipped once the demo manager account exists.
- * Ngày tháng tính tương đối theo ngày chạy seeder, nên hãy seed trên database mới ngay trước buổi demo. Các
- * dòng quá khứ dùng trạng thái cuối (completed / DENIED) vì trigger database chỉ nhận dòng "booked" hoặc
- * GRANTED mới cho hội viên có subscription còn hiệu lực hôm nay.
+ * Bộ dữ liệu demo tùy chọn (tài khoản quản lý, lễ tân, HLV, hội viên với nhiều tình huống gói tập, thanh toán,
+ * hóa đơn, check-in, buổi PT và số đo cơ thể) gồm bản ghi quá khứ và hiện tại, để hội đồng thấy một hệ thống
+ * đã được vận hành. Mặc định tắt ({@code app.demo.seed-enabled}); mang tính idempotent: tự bỏ qua khi tài khoản
+ * quản lý demo đã tồn tại. Ngày tháng tính tương đối theo ngày chạy seeder, nên hãy seed trên database mới ngay
+ * trước buổi demo. Các dòng quá khứ dùng trạng thái cuối (completed / DENIED) vì trigger database chỉ nhận dòng
+ * "booked" hoặc GRANTED mới cho hội viên có subscription còn hiệu lực hôm nay.
  */
 @Component
 @Order(200)
@@ -187,7 +182,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 COACHES.size(), MEMBERS.size());
     }
 
-    // ---- accounts -------------------------------------------------------------------------------------------
+    // ---- tài khoản ------------------------------------------------------------------------------------------
 
     /**
      * Tạo tài khoản demo với email <key>@demo.sol.vn, SĐT sinh từ khóa, ngày sinh theo tuổi, ngày tạo lùi về
@@ -267,7 +262,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         return members.save(member);
     }
 
-    // ---- subscriptions & payments ---------------------------------------------------------------------------
+    // ---- gói hội viên & thanh toán --------------------------------------------------------------------------
 
     /**
      * Tạo các kỳ gói theo tình huống của hội viên (đang tập lâu, mới đăng ký, hết hạn, đang bảo lưu, chờ thanh
@@ -281,7 +276,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         MembershipPackage pkg = findPackage(spec.pkg());
         int days = pkg.getDurationDays();
         return switch (spec.scenario()) {
-            // 3 months bought 40 days ago -> a Gold month before it (history), a long active run now.
+            // Gói 3 tháng mua 40 ngày trước -> có một tháng Gold trước đó (lịch sử), hiện đang chạy kỳ dài hạn.
             case "ACTIVE_LONG" -> {
                 MembershipPackage first = findPackage("GOLD");
                 MembershipSubscription old = subscribe(member, first, today.minusDays(120), today.minusDays(91),
@@ -391,7 +386,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 .orElseThrow(() -> new IllegalStateException("Demo seed needs package '" + name + "' (CatalogSeeder)"));
     }
 
-    // ---- center check-ins -----------------------------------------------------------------------------------
+    // ---- check-in trung tâm ----------------------------------------------------------------------------------
 
     /**
      * Tạo lịch sử check-in cho các hội viên đang có gói (cách ngày đều đặn), và vài lượt bị từ chối của hội
@@ -434,7 +429,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
     }
 
-    // ---- PT bookings ----------------------------------------------------------------------------------------
+    // ---- buổi đặt PT -----------------------------------------------------------------------------------------
 
     /** Tạo buổi PT 1:1 quá khứ (đã hoàn thành) và sắp tới (đã xác nhận), dùng lượt PT của gói. */
     private void createPtBookings(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {
@@ -484,7 +479,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         return COACHES.stream().filter(c -> c.key().equals(coachKey)).findFirst().orElseThrow().discipline();
     }
 
-    // ---- progress -------------------------------------------------------------------------------------------
+    // ---- tiến độ ---------------------------------------------------------------------------------------------
 
     /** Tạo số đo cân nặng, mỡ, BMI hằng tháng trong 4 tháng (và chiều cao lần đầu) để có biểu đồ tiến độ. */
     private void createProgress(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {

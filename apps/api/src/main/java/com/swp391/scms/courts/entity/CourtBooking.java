@@ -31,7 +31,7 @@ public class CourtBooking {
     @Column(name = "quota_forfeited") private Boolean quotaForfeited = false;
     /** Phí sân cho khung; null với các lượt đặt tạo trước khi có bảng giá (chúng miễn phí). */
     @Column(precision = 12, scale = 2) private BigDecimal price;
-    /** {@code package_quota} when the plan covered the slot, otherwise the method paid at booking time. */
+    /** {@code package_quota} khi gói tập chi trả khung giờ này, ngược lại là phương thức đã thanh toán lúc đặt. */
     @Column(name = "payment_method", length = 20) private String paymentMethod;
     @Column(name = "payment_status", length = 20) private String paymentStatus;
     /** Lấy giá trị trường id. */

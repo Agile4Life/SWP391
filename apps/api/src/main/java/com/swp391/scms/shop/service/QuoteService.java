@@ -34,10 +34,8 @@ public class QuoteService {
      */
     public record PricedLine(ProductVariant variant, int quantity, BigDecimal lineTotal, String problem) {}
     /**
-     * Kết quả tính giá: các dòng, tạm tính theo giá niêm yết, phí ship, tổng = tạm tính − giảm giá + phí ship,
-     * hợp lệ hay không, % và số tiền giảm.
-     *
-     * {@code subtotal} is the list price of the lines; {@code total = subtotal - discountAmount + shippingFee}.
+     * Kết quả tính giá: các dòng, tạm tính ({@code subtotal}) theo giá niêm yết của các dòng, phí giao hàng,
+     * tổng ({@code total = subtotal - discountAmount + shippingFee}), hợp lệ hay không, % và số tiền giảm.
      */
     public record Priced(List<PricedLine> lines, BigDecimal subtotal, BigDecimal shippingFee, BigDecimal total, boolean valid,
                          int discountPercent, BigDecimal discountAmount) {

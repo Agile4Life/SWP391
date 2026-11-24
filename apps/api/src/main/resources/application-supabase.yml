@@ -14,7 +14,7 @@ spring:
       data-source-properties:
         sslmode: ${DB_SSL_MODE:require}
         sslrootcert: ${DB_SSL_ROOT_CERT:}
-        # Safe if a transaction pooler is selected; session pooler is preferred.
+        # An toàn khi dùng transaction pooler; ưu tiên session pooler.
         prepareThreshold: 0
         tcpKeepAlive: true
   jpa:

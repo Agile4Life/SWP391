@@ -122,8 +122,8 @@ public class SupportRequestService {
 
         SupportRequest request = new SupportRequest(member, dto.subject(), dto.description());
         SupportRequest saved = supportRequestRepository.save(request);
-        // Khiếu nại mới đến lễ tân trước; quản lý chỉ được thông báo khi nó được chuyển lên.
-        // (they are not allowed to open a complaint that has not been escalated).
+        // Khiếu nại mới đến lễ tân trước; quản lý chỉ được thông báo khi phiếu được chuyển lên
+        // (quản lý không được phép mở khiếu nại chưa được chuyển lên).
         notifyStaff(RECEPTIONIST, "notifications.support.new_request.title", "notifications.support.new_request.body",
                 saved.getId(), dto.subject());
         return supportRequestMapper.toDto(saved).forMember();
@@ -329,7 +329,7 @@ public class SupportRequestService {
             );
         }
 
-        // 1-step convenience: when staff replies to an open ticket, auto-transition to in_progress
+        // Tiện ích 1 bước: khi nhân viên trả lời một phiếu đang mở, tự động chuyển sang in_progress
         // và tự gán nếu chưa có người xử lý, để nhân viên không phải PATCH trạng thái riêng trước.
         if (staff) {
             boolean updatedTicket = false;

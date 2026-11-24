@@ -22,14 +22,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Quy tắc vắng mặt cho khóa học nhóm (tính năng cũ): đánh vắng buổi đã kết thúc mà chưa điểm danh, vắng quá nửa
- * khóa thì bị chặn đăng ký khóa mới 30 ngày; đến muộn tính là có mặt, buổi có phép do bảo lưu không tính vắng.
- *
- * Quy tắc vắng mặt cho các khóa học định kỳ (spec 2026-11-09, mục 1.4).
+ * Quy tắc vắng mặt cho các khóa học định kỳ (spec 2026-11-09, mục 1.4, tính năng cũ).
  * <ul>
- *   <li>A booked member with no attendance row for a finished session is marked {@code absent}.</li>
- *   <li>Missing more than half of a course's sessions blocks joining a new course for {@link #BLOCK_DAYS} days.</li>
- *   <li>Late arrivals count as present; excused sessions (an approved hold) are not absences.</li>
+ *   <li>Hội viên đã đăng ký nhưng không có dòng điểm danh cho buổi học đã kết thúc sẽ bị đánh dấu {@code absent}.</li>
+ *   <li>Vắng quá một nửa số buổi của một khóa học sẽ bị chặn tham gia khóa học mới trong {@link #BLOCK_DAYS} ngày.</li>
+ *   <li>Đến muộn được tính là có mặt; buổi học được miễn phép (bảo lưu đã duyệt) không tính là vắng mặt.</li>
  * </ul>
  */
 @Service
@@ -141,12 +138,9 @@ public class CourseAttendanceService {
     }
 
     /**
-     * Giờ vào của lượt quét cổng còn ở trong trung tâm lúc buổi diễn ra (vào sớm tối đa 3 giờ); chỉ để HLV tham
-     * khảo, không tự ghi điểm danh.
-     *
      * Thời điểm bắt đầu của lượt check-in cổng hợp lệ đã ở trong trung tâm trong lúc buổi học diễn ra (bắt
-     * đầu tối đa
-     * {@value #STAY_BEFORE_HOURS} hours before the start), or null. Shown to the coach; it never records attendance.
+     * đầu tối đa {@value #STAY_BEFORE_HOURS} giờ trước khi buổi học bắt đầu), hoặc null. Chỉ hiển thị để HLV
+     * tham khảo; không bao giờ tự động ghi nhận điểm danh.
      */
     public LocalDateTime gateCheckinFor(Long memberId, ClassSession session) {
         if (checkins == null || session.getSessionDate() == null) return null;

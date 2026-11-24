@@ -37,7 +37,7 @@ public class ApiResponse<T> {
         this.timestamp = LocalDateTime.now();
     }
 
-    // --- Success Factory Methods ---
+    // --- Phương thức khởi tạo phản hồi thành công ---
 
     /** Phản hồi thành công HTTP 200 kèm thông báo và dữ liệu. */
     public static <T> ApiResponse<T> ok(String message, T data) {
@@ -49,7 +49,7 @@ public class ApiResponse<T> {
         return new ApiResponse<>(true, 201, message, data, null, null);
     }
 
-    // --- Error Factory Methods ---
+    // --- Phương thức khởi tạo phản hồi lỗi ---
 
     /** Phản hồi lỗi với mã HTTP, mã lỗi (code) và thông báo; không có details. */
     public static <T> ApiResponse<T> error(int status, String code, String message) {
@@ -61,7 +61,7 @@ public class ApiResponse<T> {
         return new ApiResponse<>(false, status, message, null, code, details);
     }
 
-    // --- Getters and Setters ---
+    // --- Getter và Setter ---
 
     /** Cho biết success (trường boolean). */
     public boolean isSuccess() {

@@ -16,13 +16,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * Job nền hằng ngày chuyển buổi học, lượt đặt chỗ và ghi danh khóa đã kết thúc sang completed (giữ lại
- * GRACE_DAYS ngày để điểm danh trễ).
+ * Job nền hằng ngày chốt các buổi lớp đã diễn ra, lượt đặt theo buổi và ghi danh khóa học đã kết thúc sang
+ * trạng thái {@code completed}.
  *
- * Chốt các buổi lớp đã diễn ra, lượt đặt theo buổi và ghi danh khóa học đã kết thúc là {@code completed}.
- *
- * <p>Rows stay open for {@link #GRACE_DAYS} days after the session so the auto-absent sweep (7-day lookback) and late
- * việc sửa điểm danh vẫn thấy chúng ở trạng thái booked.
+ * <p>Các bản ghi được giữ mở thêm {@link #GRACE_DAYS} ngày sau buổi học để lượt quét tự động đánh vắng (nhìn lại
+ * 7 ngày) và việc chỉnh sửa điểm danh trễ vẫn thấy chúng ở trạng thái booked.
  */
 @Service
 @ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")

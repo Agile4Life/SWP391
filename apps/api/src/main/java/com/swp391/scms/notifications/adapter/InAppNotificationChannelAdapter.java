@@ -12,9 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Kênh thông báo trong ứng dụng: lưu thông báo vào database.
- *
- * Adapter for persisting in-app notifications to the database (SCRUM-108).
+ * Adapter kênh thông báo trong ứng dụng: lưu thông báo in-app vào database (SCRUM-108).
  */
 @Component
 public class InAppNotificationChannelAdapter implements NotificationChannelAdapter {

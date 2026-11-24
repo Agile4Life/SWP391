@@ -19,9 +19,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Kênh email: luôn ghi log mô phỏng, và gửi email thật qua Resend nếu có API key và địa chỉ nhận hợp lệ.
- *
- * Adapter for email notification dispatching with Resend HTTP API support and structured logging (SCRUM-108).
+ * Adapter kênh email: hỗ trợ gửi email qua Resend HTTP API (khi có API key và địa chỉ nhận hợp lệ) và luôn ghi
+ * log có cấu trúc (SCRUM-108).
  */
 @Component
 public class MockEmailNotificationChannelAdapter implements NotificationChannelAdapter {

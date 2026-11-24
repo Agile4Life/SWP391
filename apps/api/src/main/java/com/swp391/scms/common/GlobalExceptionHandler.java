@@ -214,10 +214,10 @@ public class GlobalExceptionHandler {
      *
      * Xử lý lỗi toàn vẹn dữ liệu và vi phạm trigger PostgreSQL. Các bất biến từ AGENTS.md &
      * PROJECT_MASTER_GUIDE.md:
-     * - trg_enrollments_check_capacity (Capacity Exceeded)
-     * - trg_sessions_check_conflict (Coach / Room Schedule Overlap)
-     * - trg_member_schedule_conflict (one member in two overlapping classes)
-     * - trg_enrollments_check_membership & trg_checkins_check_membership (Active Subscription)
+     * - trg_enrollments_check_capacity (vượt quá sức chứa)
+     * - trg_sessions_check_conflict (trùng lịch HLV / phòng tập)
+     * - trg_member_schedule_conflict (một hội viên trùng giờ giữa hai lớp)
+     * - trg_enrollments_check_membership & trg_checkins_check_membership (gói hội viên còn hiệu lực)
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ApiResponse<Object>> handleDataIntegrity(DataIntegrityViolationException ex) {

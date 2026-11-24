@@ -7,11 +7,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Hiển thị tiếng Việt cho các thông báo cũ được lưu bằng câu tiếng Anh cố định: nhận diện tiêu đề/nội dung theo
- * mẫu rồi dịch qua MessageService. Dữ liệu lưu trong database không bị đổi.
- *
- * Vietnamese presentation of recognized legacy English notification templates.
- * Stored content and outbound payloads retain the sender's resolved language.
+ * Hiển thị tiếng Việt cho các mẫu thông báo tiếng Anh cũ đã được nhận diện: nhận diện tiêu đề/nội dung theo
+ * mẫu rồi dịch qua MessageService. Nội dung lưu trong database và payload gửi đi vẫn giữ nguyên ngôn ngữ đã
+ * phân giải của người gửi.
  */
 @Component
 public final class NotificationLocalizer {

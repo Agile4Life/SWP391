@@ -26,7 +26,7 @@ public class StaffInternalRequest {
     private User user;
 
     @Column(name = "request_type", nullable = false, length = 50)
-    private String requestType; // LEAVE, SHIFT_EXCHANGE, SCHEDULE_CHANGE, OTHER
+    private String requestType; // Giá trị hợp lệ: LEAVE, SHIFT_EXCHANGE, SCHEDULE_CHANGE, OTHER
 
     @Column(name = "title", nullable = false, length = 200)
     private String title;
@@ -48,7 +48,7 @@ public class StaffInternalRequest {
     private User replacementUser;
 
     @Column(name = "status", nullable = false, length = 30)
-    private String status = "PENDING"; // PENDING, APPROVED, REJECTED, CANCELLED
+    private String status = "PENDING"; // Giá trị hợp lệ: PENDING, APPROVED, REJECTED, CANCELLED
 
     @Column(name = "manager_notes", columnDefinition = "TEXT")
     private String managerNotes;

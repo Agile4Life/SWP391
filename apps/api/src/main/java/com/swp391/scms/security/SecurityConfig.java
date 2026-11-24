@@ -198,7 +198,7 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/cancel").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/court-bookings/**", "/api/v1/courts/**").denyAll()
 
-                    // 1:1 Coach Bookings & Favorite Disciplines (SCRUM-133)
+                    // Đặt lịch HLV 1:1 & Bộ môn yêu thích (SCRUM-133)
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coaches").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/available-slots").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/quota-status").hasRole("MEMBER")

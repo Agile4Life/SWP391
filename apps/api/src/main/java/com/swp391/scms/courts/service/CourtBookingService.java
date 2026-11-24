@@ -57,7 +57,7 @@ public class CourtBookingService {
     /** Lượt đặt quầy chưa trả được nhả trước giờ bắt đầu khoảng này, để khung giờ đặt lại được. */
     @org.springframework.beans.factory.annotation.Value("${app.courts.cash-release-lead-minutes:120}")
     private int cashReleaseLeadMinutes = 120;
-    /** ...but never sooner than this after it was made, so a last-minute booking still has time to be paid. */
+    /** ...nhưng không bao giờ sớm hơn khoảng này sau khi tạo, để lượt đặt sát giờ vẫn còn thời gian thanh toán. */
     @org.springframework.beans.factory.annotation.Value("${app.courts.cash-min-hold-minutes:30}")
     private int cashMinHoldMinutes = 30;
     private static final Set<String> PAYMENT_METHODS = Set.of("cash", "vnpay");

@@ -24,9 +24,8 @@ public interface ChatContactRepository extends Repository<User, Long> {
     Optional<User> lockUser(@Param("id") Long id);
 
     /**
-     * Những người hội viên được phép nhắn: mọi lễ tân, cộng với chỉ những HLV mà họ hiện có lớp/lượt đặt/kế
-     * hoạch.
-     * (an active training plan, a confirmed 1:1 booking, an enrolled class with upcoming sessions or a booked session).
+     * Những người hội viên được phép nhắn: mọi lễ tân, cộng với chỉ những HLV mà họ hiện có liên kết
+     * (giáo án đang hoạt động, buổi đặt 1:1 đã xác nhận, lớp đã đăng ký còn buổi sắp tới hoặc buổi học đã đặt).
      * HLV đứng trước để phần HLV trống vẫn hiện ra ở trang đầu.
      */
     @Query(value = """

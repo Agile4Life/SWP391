@@ -15,8 +15,8 @@ public interface DatabaseTriggerProvider {
      *
      * Xác định provider này có xử lý loại database đã cho không.
      *
-     * @param databaseProductName the database metadata product name
-     * @return true if supported
+     * @param databaseProductName tên sản phẩm database lấy từ metadata
+     * @return true nếu được hỗ trợ
      */
     boolean supports(String databaseProductName);
 
@@ -25,7 +25,7 @@ public interface DatabaseTriggerProvider {
      *
      * Áp dụng các trigger đặc thù database sau khi Hibernate sinh schema code-first.
      *
-     * @param jdbcTemplate Spring JdbcTemplate for execution
+     * @param jdbcTemplate Spring JdbcTemplate dùng để thực thi
      */
     void applyTriggers(JdbcTemplate jdbcTemplate);
 }

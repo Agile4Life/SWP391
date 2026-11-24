@@ -8,9 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Kênh thông báo đẩy mô phỏng: chỉ ghi log (chưa tích hợp dịch vụ push thật).
- *
- * Adapter for simulated mock push notifications with structured logging (SCRUM-108).
+ * Adapter kênh thông báo đẩy mô phỏng kèm ghi log có cấu trúc (SCRUM-108); chưa tích hợp dịch vụ push thật.
  */
 @Component
 public class MockPushNotificationChannelAdapter implements NotificationChannelAdapter {

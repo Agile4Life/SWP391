@@ -77,9 +77,8 @@ public class KycCrypto {
     }
 
     /**
-     * Che số giấy tờ, chỉ giữ 4 số cuối: "********1234" (dạng hội viên và màn hồ sơ thấy).
-     *
-     * "********1234": what the member and the profile screens see.
+     * Che số giấy tờ, chỉ giữ 4 ký tự cuối dạng "********1234" — đây là định dạng hiển thị cho hội viên và trên
+     * các màn hình hồ sơ.
      */
     public static String mask(String plain) {
         if (plain == null || plain.isBlank()) return null;

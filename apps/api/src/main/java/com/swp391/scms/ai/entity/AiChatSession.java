@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
  * đầu/kết thúc).
  *
  * Entity ánh xạ bảng ai_chat_sessions (schema được Hibernate sinh theo hướng code-first). Một phiên thuộc về
- * một hội viên (với hồ sơ của họ làm ngữ cảnh) hoặc một tài khoản nhân viên quầy.
- * (centre-wide data only); exactly one of {@code member} and {@code staffUser} is set.
+ * một hội viên (với hồ sơ của họ làm ngữ cảnh) hoặc một tài khoản nhân viên quầy (chỉ dùng dữ liệu chung của
+ * trung tâm); đúng một trong hai trường {@code member} hoặc {@code staffUser} được gán giá trị.
  */
 @Entity
 @Table(name = "ai_chat_sessions")

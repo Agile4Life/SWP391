@@ -19,12 +19,9 @@ import org.springframework.transaction.annotation.EnableTransactionManagement;
 public class TransactionConfig {
 
     /**
-     * Thay trình quản lý transaction mặc định của Spring Boot bằng LockTimeoutJpaTransactionManager: mỗi
-     * transaction ghi chỉ chờ khóa dòng tối đa app.db.lock-timeout-ms (mặc định 10 giây) thay vì treo sau một
-     * transaction bị kẹt.
-     *
-     * Thay transaction manager JPA của Boot để mọi transaction đọc-ghi chờ tối đa
-     * {@code app.db.lock-timeout-ms} for a row lock instead of hanging behind a stuck transaction.
+     * Thay trình quản lý transaction JPA mặc định của Spring Boot bằng LockTimeoutJpaTransactionManager để mọi
+     * transaction đọc-ghi chỉ chờ tối đa {@code app.db.lock-timeout-ms} (mặc định 10 giây) cho khóa dòng thay vì
+     * bị treo sau một transaction bị kẹt.
      */
     @Bean
     public JpaTransactionManager transactionManager(EntityManagerFactory entityManagerFactory,

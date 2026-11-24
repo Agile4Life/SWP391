@@ -20,9 +20,8 @@ public record RecentTransactionDto(Long id, String invoiceNumber, String memberN
     }
 
     /**
-     * Constructor tính số tiền giữ lại = số tiền đã thu trừ phần đã hoàn (không có email, SĐT).
-     *
-     * Report rows show what the centre kept: the paid amount minus any partial refund.
+     * Các dòng báo cáo hiển thị số tiền trung tâm thực giữ: số tiền đã thu trừ đi phần hoàn tiền một phần (nếu
+     * có), không bao gồm email và SĐT.
      */
     public RecentTransactionDto(Long id, String invoiceNumber, String memberName,
                                 String packageName, BigDecimal amount, BigDecimal refundedAmount, String method, LocalDateTime paidAt) {

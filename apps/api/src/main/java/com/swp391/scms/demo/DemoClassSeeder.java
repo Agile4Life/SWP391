@@ -37,20 +37,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Tạo thêm thời khóa biểu lớp nhóm mẫu (đang diễn ra, sắp mở, đã kết thúc) để trung tâm trông đông đúc khi
- * demo. Chỉ chạy khi bật cả app.demo.seed-enabled và app.legacy.classes-enabled; mỗi tên lớp chỉ tạo một lần.
- * Mỗi lớp chỉ được xếp vào khung giờ HLV và phòng còn trống (tránh trigger trùng lịch từ chối); không xếp được
- * thì bỏ qua và ghi cảnh báo.
+ * Tạo thêm thời khóa biểu lớp nhóm mẫu (đang diễn ra, sắp mở, đã kết thúc) để trung tâm trông đông đúc như thể
+ * quản lý đã tạo. Bật cùng {@link DemoDataSeeder} ({@code app.demo.seed-enabled}) và cờ
+ * {@code app.legacy.classes-enabled} nhưng hoạt động độc lập: có thể bổ sung vào database đã seed demo trước đó
+ * và mang tính idempotent theo tên lớp (lớp đã tồn tại sẽ không bao giờ bị tạo trùng hay sửa đổi).
  *
- * Thời khóa biểu bổ sung tùy chọn để trung tâm trông đông đúc: hàng chục khóa học định kỳ (đang diễn ra, sắp
- * tới và đã kết thúc) như thể quản lý đã tạo. Bật cùng {@link DemoDataSeeder}.
- * ({@code app.demo.seed-enabled}) but independent of it: it can top up a database that was demo-seeded before, and it is
- * Idempotent theo tên lớp: lớp đã tồn tại thì không bao giờ bị tạo trùng hay sửa đổi.
- *
- * <p>The database triggers reject a session that overlaps another session of the same coach or room, or a confirmed PT
- * Đặt chỗ của cùng HLV, nên mỗi khóa chỉ được xếp vào khung trống (kiểm tra với các buổi và lượt đặt PT đã
- * xác nhận đang lưu); khóa không xếp được sẽ bị bỏ qua kèm cảnh báo. HLV lấy từ nhân viên đang hoạt động theo
- * chuyên môn, phòng theo tên, và không tạo hội viên hay ghi danh nào.
+ * <p>Trigger database sẽ từ chối buổi học trùng giờ với buổi khác của cùng HLV hoặc phòng, hoặc trùng với lượt
+ * đặt PT đã xác nhận của cùng HLV, nên mỗi khóa chỉ được xếp vào khung trống (kiểm tra với các buổi và lượt đặt
+ * PT đã xác nhận đang lưu); khóa không xếp được sẽ bị bỏ qua kèm cảnh báo. HLV lấy từ nhân viên đang hoạt động
+ * theo chuyên môn, phòng lấy theo tên, và không tạo hội viên hay ghi danh nào.
  */
 @Component
 @Order(210)

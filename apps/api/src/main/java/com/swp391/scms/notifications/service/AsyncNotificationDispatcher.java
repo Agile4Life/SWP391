@@ -11,10 +11,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Bộ phát thông báo đa kênh chạy bất đồng bộ trên thread pool riêng, không làm chậm request chính.
- *
- * Asynchronous Multi-Channel Notification Dispatcher implementation (SCRUM-108).
- * Dispatches notifications concurrently across Port & Adapter channels without blocking main request threads.
+ * Triển khai bộ phát thông báo đa kênh bất đồng bộ (SCRUM-108).
+ * Phát thông báo đồng thời qua các kênh Port & Adapter trên thread pool riêng mà không chặn luồng xử lý request chính.
  */
 @Service
 @Async("notificationTaskExecutor")

@@ -10,8 +10,8 @@ scms:
 
 server:
   port: 8080
-  # Behind the hosting proxy (Render), take the client address from X-Forwarded-For sent by trusted internal
-  # proxies only; rate limiting and VNPay vnp_IpAddr would otherwise see one proxy address for every user.
+  # Đứng sau proxy của nền tảng hosting (Render), chỉ lấy địa chỉ client từ X-Forwarded-For do các proxy nội bộ
+  # tin cậy gửi lên; nếu không, rate limiting và VNPay vnp_IpAddr sẽ chỉ thấy cùng một địa chỉ proxy cho mọi người dùng.
   forward-headers-strategy: native
   servlet:
     session:
@@ -24,7 +24,7 @@ server:
 spring:
   servlet:
     multipart:
-      # Hold requests carry up to five optional supporting documents of at most 5 MB each.
+      # Yêu cầu bảo lưu cho phép đính kèm tối đa 5 tài liệu minh chứng tùy chọn, mỗi tệp tối đa 5 MB.
       max-file-size: 6MB
       max-request-size: 32MB
   profiles:
@@ -50,7 +50,7 @@ spring:
         hbm2ddl.halt_on_error: true
         default_batch_fetch_size: 50
 
-# The spec lists every endpoint; keep it off unless a deployment opts in with SWAGGER_ENABLED=true.
+# Tài liệu OpenAPI liệt kê mọi endpoint; giữ tắt trừ khi môi trường triển khai chủ động bật bằng SWAGGER_ENABLED=true.
 springdoc:
   api-docs:
     path: /v3/api-docs

@@ -411,11 +411,9 @@ public class UserService {
 
     /**
      * Chặn xóa/đổi vai trò khi còn cam kết: hội viên còn gói hiệu lực/đang bảo lưu/chờ thanh toán hoặc còn lịch
-     * đặt sắp tới; HLV còn lớp hoặc buổi PT sắp tới. Riêng hội viên đã có yêu cầu hủy gói được duyệt thì các
-     * gói còn lại được chuyển sang cancelled trước.
-     *
-     * Hội viên còn membership hoặc lượt đặt sắp tới, hoặc HLV còn dạy lớp sắp tới hoặc
-     * 1:1 sessions, keeps their account and role until a manager has settled those first.
+     * đặt sắp tới, hoặc HLV còn dạy lớp hay buổi 1:1 sắp tới thì phải giữ nguyên tài khoản và vai trò cho tới
+     * khi quản lý xử lý xong trước. Riêng hội viên đã có yêu cầu hủy gói được duyệt thì các gói còn lại được
+     * chuyển sang cancelled trước.
      */
     private void ensureNoOpenCommitments(User user) {
         if (user.getRole() == null || user.getId() == null) return;

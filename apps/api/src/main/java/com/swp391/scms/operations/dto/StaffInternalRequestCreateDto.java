@@ -9,7 +9,7 @@ import java.time.LocalDate;
  */
 public record StaffInternalRequestCreateDto(
         @NotBlank(message = "{error.operations.request.type_required}")
-        String requestType, // LEAVE, SHIFT_EXCHANGE, SCHEDULE_CHANGE, OTHER
+        String requestType, // Giá trị hợp lệ: LEAVE, SHIFT_EXCHANGE, SCHEDULE_CHANGE, OTHER
 
         @NotBlank(message = "{error.operations.request.title_required}")
         String title,

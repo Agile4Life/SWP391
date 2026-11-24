@@ -29,9 +29,9 @@ public class MessageService {
      *
      * Phân giải một message theo Locale của luồng hiện tại.
      *
-     * @param code the message code/key in messages.properties
-     * @param args optional arguments for placeholder substitution ({0}, {1}, ...)
-     * @return the localized message, or the code itself if not found
+     * @param code mã/khóa thông báo trong messages.properties
+     * @param args các tham số tùy chọn để thay thế placeholder ({0}, {1}, ...)
+     * @return thông báo đã bản địa hóa, hoặc chính mã nếu không tìm thấy
      */
     public String getMessage(String code, Object... args) {
         Locale locale = LocaleContextHolder.getLocale();
@@ -44,10 +44,10 @@ public class MessageService {
      *
      * Phân giải một message theo một Locale cụ thể.
      *
-     * @param code the message code/key
-     * @param locale explicit locale
-     * @param args optional arguments
-     * @return the localized message, or the code itself if not found
+     * @param code mã/khóa thông báo
+     * @param locale locale chỉ định
+     * @param args các tham số tùy chọn
+     * @return thông báo đã bản địa hóa, hoặc chính mã nếu không tìm thấy
      */
     public String getMessage(String code, Locale locale, Object... args) {
         try {
@@ -62,10 +62,10 @@ public class MessageService {
      *
      * Phân giải một message kèm văn bản dự phòng nếu mã không tồn tại.
      *
-     * @param code the message code/key
-     * @param defaultMessage fallback text
-     * @param args optional arguments
-     * @return the localized message or defaultMessage
+     * @param code mã/khóa thông báo
+     * @param defaultMessage chuỗi dự phòng
+     * @param args các tham số tùy chọn
+     * @return thông báo đã bản địa hóa hoặc defaultMessage
      */
     public String getMessageOrDefault(String code, String defaultMessage, Object... args) {
         Locale locale = LocaleContextHolder.getLocale();

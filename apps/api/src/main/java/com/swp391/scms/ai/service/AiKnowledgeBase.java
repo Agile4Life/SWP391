@@ -21,14 +21,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Bộ quy định của trung tâm mà Sol AI dựa vào để trả lời, đọc một lần từ ai/sol-knowledge.md. Các con số trong
- * file là chỗ giữ {{...}} được điền từ hằng số trong code (nên câu trả lời luôn khớp hệ thống), và chỉ những
- * mục liên quan tới câu hỏi mới được đưa vào prompt.
- *
- * Quy định trung tâm mà Sol AI dùng để trả lời, đọc một lần từ {@code ai/sol-knowledge.md}. Các con số trong
- * file
- * {@code {{placeholders}}} filled from the code and configuration that enforce them, so the answer cannot
- * lệch khỏi những gì hệ thống thực sự làm. Chỉ các mục mà câu hỏi nhắc tới mới được đưa vào prompt.
+ * Bộ quy định của trung tâm mà Sol AI dựa vào để trả lời, đọc một lần từ {@code ai/sol-knowledge.md}. Các con số
+ * trong file dùng {@code {{placeholders}}} được điền từ code và cấu hình thực thi tương ứng, nhờ đó câu trả lời
+ * không thể lệch khỏi những gì hệ thống thực sự áp dụng. Chỉ các mục liên quan tới câu hỏi mới được đưa vào prompt.
  */
 @Component
 public class AiKnowledgeBase {
@@ -132,7 +127,7 @@ public class AiKnowledgeBase {
         for (String chunk : text.split("(?m)^## ")) {
             int newline = chunk.indexOf('\n');
             if (newline < 0 || chunk.startsWith("#")) {
-                continue; // the file title, before the first section
+                continue; // tiêu đề file, trước mục đầu tiên
             }
             String title = chunk.substring(0, newline).trim();
             List<String> keywords = new ArrayList<>();

@@ -422,10 +422,8 @@ public class AuthService {
     }
 
     /**
-     * Tạo tài khoản hội viên chờ kích hoạt; họ tên là tên hiển thị ở quầy, HLV và màn check-in, nếu trống thì
-     * dùng tạm tên đăng nhập.
-     *
-     * {@code fullName} is what the desk, coaches and check-in screens show; it falls back to the username only when absent.
+     * Tạo tài khoản hội viên chờ kích hoạt. {@code fullName} là tên hiển thị ở quầy, màn hình HLV và màn check-in;
+     * chỉ dùng tên đăng nhập làm giá trị dự phòng khi không có họ tên.
      */
     private User createPendingMemberUser(String username, String fullName, String email, String phone, String rawPassword) {
         String name = fullName == null ? null : fullName.trim().replaceAll("\\s+", " ");

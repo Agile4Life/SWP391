@@ -126,7 +126,7 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     /**
      * Các buổi đã xếp của lớp khác vào {@code date} chồng lên {@code [start, end)} mà một thành viên của buổi
      * này cũng tham gia. Thành viên của buổi là người ghi danh vào {@code classId} hoặc giữ chỗ trong
-     * {@code sessionId} (use -1 for a session that does not exist yet).
+     * {@code sessionId} (dùng -1 cho buổi học chưa tồn tại).
      */
     @Query("""
             select s from ClassSession s

@@ -8,9 +8,8 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 /**
- * Bảng report_snapshots: ảnh chụp số liệu báo cáo (loại, khoảng ngày, dữ liệu JSON, người và thời điểm tạo).
- *
- * Entity mapping table report_snapshots (schema is generated code-first by Hibernate).
+ * Entity ánh xạ bảng report_snapshots (schema được Hibernate sinh theo hướng code-first): ảnh chụp số liệu báo
+ * cáo gồm loại, khoảng ngày, dữ liệu JSON, người và thời điểm tạo.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_report_type", constraints = "report_type IN ('revenue','membership','class_utilization')")

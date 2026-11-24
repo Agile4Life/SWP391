@@ -6,10 +6,7 @@ import java.util.Locale;
 
 /**
  * Dựng email HTML giao dịch đơn giản (mã OTP và thông báo quan trọng): một thẻ sáng, một nội dung, một nút hành
- * động, không có khối quảng cáo.
- *
- * Renders plain transactional HTML emails (OTP and important notifications).
- * One light card, one message, one action — no marketing blocks.
+ * động — không có khối quảng cáo.
  */
 public final class SolEmailTemplateRenderer {
 
@@ -82,7 +79,7 @@ public final class SolEmailTemplateRenderer {
      * Chọn nhãn và đường dẫn nút hành động theo loại thông báo (đổi mật khẩu, thanh toán, đổi lịch, gói sắp hết
      * hạn, mặc định).
      *
-     * @return {label, path} of the single action button, chosen by notification type.
+     * @return mảng {label, path} của nút hành động duy nhất, được chọn theo loại thông báo.
      */
     private static String[] resolveCta(String type) {
         return switch (type) {

@@ -18,8 +18,8 @@ import java.sql.Statement;
  * chặn lâu hơn mức đó sẽ lỗi với SQLState 55P03, được ánh xạ thành HTTP 409 "bận, thử lại", thay vì giữ
  * request (và một kết nối trong pool) mở vô thời hạn.
  *
- * <p>{@code SET LOCAL} only lasts until commit/rollback, so it is safe behind a transaction pooler and leaves no
- * cài đặt trên kết nối dùng chung.
+ * <p>{@code SET LOCAL} chỉ có hiệu lực cho tới khi commit/rollback, nên an toàn khi chạy sau transaction pooler
+ * và không để lại cài đặt nào trên kết nối dùng chung.
  */
 public class LockTimeoutJpaTransactionManager extends JpaTransactionManager {
     private final long lockTimeoutMs;

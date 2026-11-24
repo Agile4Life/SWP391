@@ -5,11 +5,8 @@ import java.time.LocalTime;
 import java.util.List;
 
 /**
- * Sự kiện phát ra khi HLV/quản lý hủy một buổi lớp: buổi, lớp, ngày giờ, lý do và danh sách hội viên bị ảnh
- * hưởng để gửi thông báo.
- *
- * SCRUM-113: Event emitted when a class session is cancelled by a coach or manager.
- * Informs listeners to notify affected enrolled members.
+ * SCRUM-113: Sự kiện phát ra khi HLV hoặc quản lý hủy một buổi lớp học, báo cho các listener gửi thông báo tới
+ * danh sách hội viên đã đăng ký bị ảnh hưởng.
  */
 public record SessionCancelledEvent(
         Long sessionId,

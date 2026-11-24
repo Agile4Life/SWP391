@@ -19,10 +19,8 @@ public class PublicCatalogService {
     public record CoachDto(Long id, String name, String specialization, String bio,
                            String certification, String avatarUrl) {}
     /**
-     * Danh mục công khai: gói tập, HLV và danh sách buổi lớp (luôn rỗng vì lớp nhóm đã ngừng, giữ trường để
-     * client cũ không lỗi).
-     *
-     * {@code sessions} stays in the contract for existing clients but is always empty: group classes are out of scope.
+     * Danh mục công khai: gói tập, HLV và danh sách buổi lớp. {@code sessions} được giữ lại trong contract
+     * cho các client cũ nhưng luôn rỗng vì lớp học nhóm nằm ngoài phạm vi.
      */
     public record CatalogDto(List<PackageDto> packages, List<CoachDto> coaches,
                              List<ClassSessionDto> sessions) {}

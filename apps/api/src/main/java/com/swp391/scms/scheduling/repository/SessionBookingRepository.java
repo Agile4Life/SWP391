@@ -92,11 +92,9 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
                                               @Param("fromDate") LocalDate fromDate, @Param("toDate") LocalDate toDate);
 
     /**
-     * Như findForMemberBetween nhưng cho phép bỏ trống ngày đầu/cuối (thay bằng mốc rất xa).
-     *
-     * Cận null nghĩa là "không giới hạn". PostgreSQL không suy ra được kiểu của tham số ngày trần {@code ? is
-     * null}.
-     * ("could not determine data type of parameter"), so open bounds are replaced by sentinel dates instead.
+     * Như findForMemberBetween nhưng cho phép bỏ trống ngày đầu/cuối. Cận null nghĩa là "không giới hạn"; do
+     * PostgreSQL không suy ra được kiểu của tham số ngày trần {@code ? is null} ("could not determine data type
+     * of parameter"), các cận mở được thay bằng các ngày mốc rất xa.
      */
     default List<SessionBooking> findForMember(Long memberId, String status, LocalDate fromDate, LocalDate toDate) {
         return findForMemberBetween(memberId, status, fromDate != null ? fromDate : LocalDate.of(1900, 1, 1),

@@ -146,7 +146,7 @@ public class RevenueReportService {
 
         Map<LocalDate, List<Payment>> byDate = payments.stream()
                 .filter(p -> p.getPaidAt() != null)
-                // A wallet top-up only moves money into the wallet; the revenue is booked when it is spent.
+                // Nạp tiền vào ví chỉ chuyển tiền vào ví; doanh thu chỉ được ghi nhận khi tiền đó được chi tiêu.
                 .filter(p -> p.getNote() == null || !p.getNote().startsWith("WALLET_TOPUP"))
                 .collect(Collectors.groupingBy(p -> p.getPaidAt().toLocalDate()));
 
@@ -218,12 +218,9 @@ public class RevenueReportService {
     }
 
     /**
-     * Mức sử dụng lớp nhóm (dữ liệu cũ): tỷ lệ lấp đầy = đăng ký / sức chứa, tỷ lệ điểm danh = có mặt / đăng
-     * ký, tối đa 100%, xử lý an toàn khi chia cho 0. Không có repository (tính năng tắt) thì trả danh sách
-     * rỗng.
-     *
-     * SCRUM-120: Calculates class utilization (enrolled / capacity) and attendance rate (present / booked)
-     * filtered by optional date range and disciplineId. Safely handles division by zero when capacity = 0 or booked = 0.
+     * SCRUM-120: Tính tỷ lệ sử dụng lớp nhóm (đăng ký / sức chứa) và tỷ lệ điểm danh (có mặt / đã đặt), lọc theo
+     * khoảng ngày và disciplineId (tùy chọn), giới hạn tối đa 100%, xử lý an toàn khi chia cho 0 (capacity = 0
+     * hoặc booked = 0). Trả danh sách rỗng nếu không có repository (tính năng lớp nhóm đang tắt).
      */
     @Transactional(readOnly = true)
     public List<ClassUtilizationDto> getClassUtilization(LocalDate startDate,

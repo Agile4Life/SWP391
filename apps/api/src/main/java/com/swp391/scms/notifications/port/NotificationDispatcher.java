@@ -3,33 +3,18 @@ package com.swp391.scms.notifications.port;
 import java.util.Set;
 
 /**
- * Cổng (interface) phát thông báo ra nhiều kênh.
- *
- * Port interface for multi-channel notification dispatching (SCRUM-108).
- * Submits in-app, simulated email, push and webhook delivery to the selected transport.
+ * Giao diện cổng (port) cho việc phát thông báo đa kênh (SCRUM-108).
+ * Gửi yêu cầu phát thông báo trong ứng dụng, email mô phỏng, thông báo đẩy và webhook tới tầng truyền tải đã chọn.
  */
 public interface NotificationDispatcher {
 
-    /**
-     * Phát theo payload có sẵn.
-     *
-     * Dispatches notification across channels specified in the payload.
-     * Delivery is asynchronous.
-     */
+    /** Phát thông báo tới các kênh được chỉ định trong payload (thực hiện bất đồng bộ). */
     void dispatch(NotificationPayload payload);
 
-    /**
-     * Phát tới các kênh mặc định.
-     *
-     * Dispatches notification to all standard channels (IN_APP, EMAIL, PUSH).
-     */
+    /** Phát thông báo tới toàn bộ các kênh mặc định (IN_APP, EMAIL, PUSH). */
     void dispatch(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId);
 
-    /**
-     * Phát tới các kênh chỉ định.
-     *
-     * Dispatches notification with explicitly selected channels.
-     */
+    /** Phát thông báo tới tập kênh được chỉ định tường minh. */
     void dispatch(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId, Set<NotificationChannel> channels);
 }
 

@@ -36,15 +36,13 @@ import java.util.stream.Stream;
 import java.util.Objects;
 
 /**
- * Nghiệp vụ ghi danh khóa học: ghi danh/thanh toán/hủy khóa, kiểm tra trùng lịch, xử lý khi bảo lưu gói, đóng
- * lớp và hết hạn thanh toán (trigger sức chứa/gói tập ở DB luôn được giữ).
+ * SCRUM-73 & SCRUM-132: Nghiệp vụ ghi danh khóa học của hội viên, chặn chồng giờ, thanh toán, hủy khóa, xử lý
+ * khi bảo lưu gói, đóng lớp và hết hạn thanh toán.
  *
- * SCRUM-73 & SCRUM-132: đặt chỗ lớp của hội viên, chặn chồng giờ và hủy.
- *
- * <p>Invariant triggers are owned by the database and are never bypassed:
- * Trigger P2 ({@code trg_enrollments_check_capacity}) từ chối lớp đã đầy và Trigger P4 ({@code
- * trg_enrollments_check_membership}) từ chối membership không hoạt động/hết hạn. Cả hai được phản chiếu thành
- * bước kiểm tra trước để API trả lỗi chính xác thay vì lỗi ràng buộc thô.
+ * <p>Các trigger bất biến thuộc về database và không bao giờ bị bỏ qua: Trigger P2
+ * ({@code trg_enrollments_check_capacity}) từ chối lớp đã đầy và Trigger P4
+ * ({@code trg_enrollments_check_membership}) từ chối gói hội viên không hoạt động/hết hạn. Cả hai được phản
+ * chiếu thành bước kiểm tra trước để API trả lỗi chính xác thay vì lỗi ràng buộc thô.
  */
 @Service
 public class EnrollmentService {
@@ -399,11 +397,9 @@ public class EnrollmentService {
     }
 
     /**
-     * Hủy các lượt ghi danh sắp tới của hội viên mà buổi kế tiếp không được gói phủ (coveredOn); khóa hội viên
-     * và các lớp theo thứ tự tăng dần để tránh deadlock; trả về số lượt đã hủy.
-     *
-     * Hủy các lượt đặt lớp sắp tới của hội viên mà ngày buổi kế tiếp không
-     * {@code coveredOn}; a predicate that is always false cancels all of them (hold, cancellation).
+     * Hủy các lượt đặt lớp sắp tới của hội viên mà ngày buổi kế tiếp không thỏa {@code coveredOn} (một điều kiện
+     * luôn false sẽ hủy toàn bộ, ví dụ khi bảo lưu hoặc hủy gói); khóa hội viên và các lớp theo thứ tự tăng dần
+     * để tránh deadlock; trả về số lượt đã hủy.
      */
     @Transactional
     public int cancelFutureEnrollmentsForMember(Long memberId, String cancelReason,
@@ -463,15 +459,11 @@ public class EnrollmentService {
     }
 
     /**
-     * Áp dụng bảo lưu đã duyệt lên các khóa học: bảo lưu đủ sớm trước khi khóa bắt đầu thì trả credit hoặc hoàn
-     * phí vào ví, muộn hơn thì mất; mọi lượt bị ảnh hưởng đều bị hủy.
-     *
-     * Áp dụng tạm hoãn membership đã duyệt lên các ghi danh khóa học của hội viên. Tạm hoãn được duyệt ít
-     * nhất
-     * {@value #HOLD_REFUND_NOTICE_DAYS} days before the course starts restores the free credit, or refunds the paid
-     * phí được hoàn đủ vào ví; tạm hoãn muộn hơn, hoặc khóa đã chạy, thì mất lượt hoặc phí. Mọi ghi danh bị
-     * ảnh hưởng đều bị hủy. Với {@code to == null} (tạm hoãn mở) mọi khóa chưa kết thúc bị ảnh hưởng; với tạm
-     * hoãn có ngày chỉ các khóa còn buổi nằm trong {@code from..to}.
+     * Áp dụng bảo lưu gói hội viên đã duyệt lên các ghi danh khóa học của hội viên. Bảo lưu được duyệt ít nhất
+     * {@value #HOLD_REFUND_NOTICE_DAYS} ngày trước khi khóa bắt đầu sẽ khôi phục lượt miễn phí hoặc hoàn đủ phí
+     * đã thanh toán vào ví; bảo lưu muộn hơn hoặc khi khóa đã chạy thì mất lượt hoặc phí. Mọi ghi danh bị ảnh
+     * hưởng đều bị hủy. Với {@code to == null} (bảo lưu mở) mọi khóa chưa kết thúc bị ảnh hưởng; với bảo lưu có
+     * ngày thì chỉ các khóa còn buổi nằm trong {@code from..to}.
      */
     @Transactional
     public CourseHoldOutcome releaseCoursesForHold(Long memberId, String cancelReason, LocalDate from, LocalDate to) {
@@ -510,7 +502,7 @@ public class EnrollmentService {
                 try {
                     if (vnpayGuard != null) vnpayGuard.enrollment(enrollment.getId());
                 } catch (RuntimeException awaitingGateway) {
-                    continue; // The gateway may still settle this fee: leave the seat for the expiry sweep.
+                    continue; // Cổng thanh toán vẫn có thể tất toán khoản phí này: giữ lại chỗ cho lượt quét hết hạn.
                 }
             }
 
@@ -1118,9 +1110,8 @@ public class EnrollmentService {
     }
 
     /**
-     * Tiến độ khóa của hội viên {tổng buổi, đã dự, còn lại}; trả null nếu thiếu dữ liệu lịch/điểm danh.
-     *
-     * {total, attended, remaining} sessions of the member's course, or nulls when the course has no schedule data.
+     * Mảng {tổng số buổi, số buổi đã dự, số buổi còn lại} trong khóa học của hội viên, hoặc các giá trị null
+     * khi khóa học không có dữ liệu lịch/điểm danh.
      */
     private Integer[] courseProgress(ClassEnrollment enrollment) {
         GymClass gymClass = enrollment.getGymClass();

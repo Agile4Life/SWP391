@@ -5,10 +5,9 @@ import java.util.Collections;
 import java.util.Set;
 
 /**
- * Nội dung một thông báo cần phát: người nhận, email, tiêu đề, nội dung, loại, bản ghi liên quan, các kênh và
- * thời điểm. Không chỉ định kênh thì mặc định trong ứng dụng, email và đẩy.
- *
- * Immutable payload data transferring notification information across channels (SCRUM-108).
+ * Dữ liệu payload bất biến truyền tải thông tin thông báo qua các kênh (SCRUM-108): người nhận, email, tiêu đề,
+ * nội dung, loại, bản ghi liên quan, các kênh và thời điểm. Nếu không chỉ định kênh thì mặc định gồm trong ứng
+ * dụng, email và đẩy.
  */
 public record NotificationPayload(
         Long userId,

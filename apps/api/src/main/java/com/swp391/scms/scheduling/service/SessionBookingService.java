@@ -43,16 +43,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Nghiệp vụ đặt chỗ từng buổi học: đặt một/nhiều buổi, hủy một/nhiều lượt, nhả lượt khi gói bảo lưu/hết hạn và
- * xem lịch của hội viên.
+ * Nghiệp vụ đặt lớp theo từng buổi: hội viên giữ và nhả từng buổi riêng (đặt/hủy một hoặc nhiều buổi, nhả lượt
+ * khi gói bảo lưu/hết hạn và xem lịch). Đặt một buổi, cả tuần, cả tháng hay bất kỳ tập buổi chọn tay đều đi qua
+ * {@link #bookOne}, nên mỗi buổi được kiểm tra riêng (còn mở và ở tương lai, gói hội viên bao phủ ngày đó, không
+ * đụng lượt đặt khác, còn chỗ) và buổi nào lỗi sẽ được báo lại thay vì làm hỏng các buổi khác.
  *
- * Đặt lớp theo từng buổi: hội viên giữ và nhả từng buổi riêng. Đặt một buổi, cả tuần, cả tháng hay bất kỳ tập
- * buổi chọn tay đều đi qua {@link #bookOne}, nên mỗi buổi được kiểm tra riêng (còn mở và ở tương lai,
- * membership bao phủ ngày đó, không đụng lượt đặt khác, còn chỗ) và buổi nào lỗi sẽ được báo lại thay vì làm
- * hỏng các buổi khác.
- *
- * <p>Seats are counted per session: the booked sessions plus any class-wide {@link ClassEnrollment} of the class.
- * Trigger database lặp lại kiểm tra sức chứa và membership, và một unique index cấm đặt một buổi hai lần.
+ * <p>Số chỗ được đếm theo từng buổi: gồm các lượt đặt theo buổi cộng với mọi ghi danh toàn lớp
+ * {@link ClassEnrollment} của lớp đó. Trigger database lặp lại kiểm tra sức chứa và gói hội viên, và một unique
+ * index cấm đặt một buổi hai lần.
  */
 @Service
 public class SessionBookingService {
@@ -125,7 +123,7 @@ public class SessionBookingService {
         return e.getErrorCode();
     }
 
-    // ------------------------------------------------------------------ booking
+    // ------------------------------------------------------------------ đặt chỗ
 
     /** Hội viên đặt một buổi: khóa dòng hội viên, gọi bookOne rồi gửi thông báo đặt thành công. */
     @Transactional
@@ -265,7 +263,7 @@ public class SessionBookingService {
         }
     }
 
-    // ------------------------------------------------------------------ cancelling
+    // ------------------------------------------------------------------ hủy chỗ
 
     /** Hủy một lượt đặt chỗ (khóa dòng, kiểm tra quyền và thời gian) rồi gửi thông báo cho hội viên. */
     @Transactional
@@ -349,11 +347,9 @@ public class SessionBookingService {
     }
 
     /**
-     * Nhả các lượt đặt sắp tới của hội viên khi gói bị bảo lưu/hủy/hết hạn; giữ lại buổi mà gói vẫn phủ
-     * (coveredOn) và buổi đã kết thúc hôm nay; trả về số lượt đã hủy.
-     *
-     * Nhả các lượt đặt theo buổi sắp tới của hội viên khi membership bị tạm hoãn, hủy hoặc hết hạn;
-     * {@code coveredOn} keeps the sessions whose date the membership still covers.
+     * Nhả các lượt đặt theo buổi sắp tới của hội viên khi gói hội viên bị bảo lưu, hủy hoặc hết hạn;
+     * {@code coveredOn} giữ lại các buổi có ngày vẫn được gói hội viên bao phủ (và giữ lại buổi đã kết thúc hôm
+     * nay); trả về số lượt đã hủy.
      */
     @Transactional
     public int cancelFutureForMember(Long memberId, String reason, Predicate<LocalDate> coveredOn) {
@@ -382,7 +378,7 @@ public class SessionBookingService {
         return cancelled;
     }
 
-    // ------------------------------------------------------------------ reading
+    // ------------------------------------------------------------------ tra cứu
 
     /** Lấy lượt đặt chỗ của hội viên đang đăng nhập, lọc theo trạng thái (chuẩn hóa chữ thường) và khoảng ngày. */
     @Transactional(readOnly = true)
@@ -394,7 +390,7 @@ public class SessionBookingService {
         return bookings.findForMember(principal.id(), normalized, from, to).stream().map(this::toDto).toList();
     }
 
-    // ------------------------------------------------------------------ helpers
+    // ------------------------------------------------------------------ hàm hỗ trợ
 
     /** Chuẩn hóa danh sách id: bỏ null/âm/trùng, báo lỗi nếu rỗng hoặc vượt MAX_BULK phần tử. */
     private List<Long> distinctIds(List<Long> ids) {
