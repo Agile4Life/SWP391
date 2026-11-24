@@ -12,6 +12,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
+/**
+ * Cấu hình Spring Security: API không trạng thái (stateless) dùng JWT, tắt CSRF, bật CORS, trả lỗi 401/403 dạng
+ * JSON và khai báo quyền truy cập cho từng nhóm đường dẫn. Lưu ý: nhiều kiểm tra quyền chi tiết vẫn nằm trong
+ * service (backend luôn kiểm tra vai trò).
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -22,12 +27,17 @@ public class SecurityConfig {
     private final JsonAccessDeniedHandler accessDeniedHandler;
     private final RateLimitingFilter rateLimitingFilter;
 
+    /** Constructor cho test: tự tạo RateLimitingFilter mặc định. */
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
             JsonAuthenticationEntryPoint authenticationEntryPoint,
             JsonAccessDeniedHandler accessDeniedHandler) {
         this(jwtAuthenticationFilter, authenticationEntryPoint, accessDeniedHandler, new RateLimitingFilter());
     }
 
+    /**
+     * Constructor Spring dùng: nhận các bộ lọc và bộ xử lý lỗi; nếu không có RateLimitingFilter thì tạo bản mặc
+     * định.
+     */
     @org.springframework.beans.factory.annotation.Autowired
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
             JsonAuthenticationEntryPoint authenticationEntryPoint,
@@ -39,6 +49,11 @@ public class SecurityConfig {
         this.rateLimitingFilter = rateLimitingFilter != null ? rateLimitingFilter : new RateLimitingFilter();
     }
 
+    /**
+     * Chuỗi bộ lọc bảo mật: không dùng session, quy tắc quyền theo đường dẫn và phương thức HTTP (đặt quy tắc
+     * cụ thể trước quy tắc chung), mọi đường dẫn còn lại phải đăng nhập. Bộ lọc giới hạn tần suất và bộ lọc JWT
+     * chạy trước bộ lọc đăng nhập mặc định.
+     */
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -48,6 +63,7 @@ public class SecurityConfig {
             .exceptionHandling(errors -> errors
                     .authenticationEntryPoint(authenticationEntryPoint)
                     .accessDeniedHandler(accessDeniedHandler))
+            // Quy tắc phân quyền: Spring áp dụng quy tắc khớp đầu tiên, nên các đường dẫn công khai và quy tắc hẹp phải đứng trước.
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/catalog").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
@@ -203,11 +219,13 @@ public class SecurityConfig {
                     .requestMatchers("/api/v1/disciplines/**", "/api/v1/rooms/**", "/api/v1/packages/**", "/api/v1/equipment/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .requestMatchers("/api/v1/manager/coach-assignments/**", "/api/v1/manager/coach-assignments").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .anyRequest().authenticated())
+            // Giới hạn tần suất chạy trước, rồi mới giải mã JWT.
             .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 
+    /** Mã hóa mật khẩu bằng BCrypt (có salt ngẫu nhiên, không giải ngược được). */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();

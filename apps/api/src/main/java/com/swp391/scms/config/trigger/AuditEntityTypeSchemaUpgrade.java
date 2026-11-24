@@ -8,11 +8,22 @@ import org.hibernate.annotations.Check;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Explicit, idempotent CHECK migration; Hibernate schema update does not reconcile existing CHECKs. */
+/**
+ * Nâng cấp ràng buộc CHECK của bảng audit_logs một cách an toàn và chạy lại được nhiều lần, vì Hibernate không
+ * tự cập nhật CHECK đã có. Mục đích: cho phép ghi audit với entity_type = 'coach_bookings' (điểm danh PT 1:1).
+ *
+ * Explicit, idempotent CHECK migration; Hibernate schema update does not reconcile existing CHECKs.
+ */
 final class AuditEntityTypeSchemaUpgrade {
     private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(AuditEntityTypeSchemaUpgrade.class);
+    /** Lớp tiện ích static, không cho tạo đối tượng. */
     private AuditEntityTypeSchemaUpgrade() { }
 
+    /**
+     * Nếu CHECK hiện tại chưa cho phép 'coach_bookings' thì khóa bảng, đọc lại CHECK và thay bằng CHECK mới =
+     * (điều kiện cũ) OR entity_type = 'coach_bookings'. Giữ nguyên toàn bộ điều kiện cũ để không làm hỏng dữ
+     * liệu audit cũ. Mọi thứ chạy trong một transaction, lỗi thì rollback.
+     */
     static void allowCoachBookings(JdbcTemplate jdbc) {
         Table table = AuditLog.class.getAnnotation(Table.class);
         Check mapping = AuditLog.class.getAnnotation(Check.class);
@@ -32,6 +43,7 @@ final class AuditEntityTypeSchemaUpgrade {
             // Cheap check first, without a lock: after the first upgrade every startup stops here.
             String current = predicate(connection, schema, table.name(), mapping.name());
             if (current == null || permits(connection, current)) return null;
+            // Tự mở transaction nếu kết nối đang ở chế độ autocommit, để bước khóa bảng và thay CHECK là một khối.
             boolean ownTransaction = connection.getAutoCommit();
             if (ownTransaction) connection.setAutoCommit(false);
             try {
@@ -64,6 +76,10 @@ final class AuditEntityTypeSchemaUpgrade {
         });
     }
 
+    /**
+     * Chạy thử điều kiện CHECK với giá trị 'coach_bookings' để biết ràng buộc hiện tại đã cho phép giá trị này
+     * chưa.
+     */
     private static boolean permits(Connection connection, String predicate) throws SQLException {
         try (var statement = connection.prepareStatement("select coalesce((" + predicate
                 + "), false) from (select cast(? as varchar) as entity_type) as candidate")) {
@@ -75,7 +91,12 @@ final class AuditEntityTypeSchemaUpgrade {
         }
     }
 
-    /** The entity-type CHECK predicate, or null when the table has none (then every type is already allowed). */
+    /**
+     * Đọc biểu thức của ràng buộc CHECK trên cột entity_type từ catalog của PostgreSQL; trả null nếu bảng không
+     * có ràng buộc này (khi đó mọi loại entity đều đã được phép).
+     *
+     * The entity-type CHECK predicate, or null when the table has none (then every type is already allowed).
+     */
     private static String predicate(Connection connection, String schema, String table, String name) throws SQLException {
         try (var statement = connection.prepareStatement("""
                 select pg_get_expr(c.conbin, c.conrelid)
@@ -92,5 +113,6 @@ final class AuditEntityTypeSchemaUpgrade {
         }
     }
 
+    /** Đặt tên trong dấu ngoặc kép an toàn cho SQL. */
     private static String quoted(String name) { return "\"" + name.replace("\"", "\"\"") + "\""; }
 }

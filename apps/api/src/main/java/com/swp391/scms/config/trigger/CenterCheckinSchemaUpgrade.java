@@ -9,11 +9,21 @@ import java.sql.Types;
 import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Repairs legacy PostgreSQL nullability that Hibernate 6's table migrator does not apply. */
+/**
+ * Sửa ràng buộc NOT NULL cũ của cột member trong bảng check-in (Hibernate 6 không tự bỏ NOT NULL khi Entity đổi
+ * thành cho phép null).
+ *
+ * Repairs legacy PostgreSQL nullability that Hibernate 6's table migrator does not apply.
+ */
 final class CenterCheckinSchemaUpgrade {
 
+    /** Lớp tiện ích static, không cho tạo đối tượng. */
     private CenterCheckinSchemaUpgrade() { }
 
+    /**
+     * Nếu Entity CenterCheckin cho phép member rỗng mà cột trong database vẫn NOT NULL thì chạy "ALTER COLUMN
+     * ... DROP NOT NULL". Chỉ thay đổi khi đúng tên schema/bảng/cột và kiểu BIGINT, để không sửa nhầm.
+     */
     static void relaxMemberNullability(JdbcTemplate jdbc) {
         Table table = CenterCheckin.class.getAnnotation(Table.class);
         JoinColumn member;
@@ -58,6 +68,7 @@ final class CenterCheckinSchemaUpgrade {
         });
     }
 
+    /** Đặt tên trong dấu ngoặc kép an toàn cho SQL. */
     private static String quoted(String identifier) {
         return "\"" + identifier.replace("\"", "\"\"") + "\"";
     }

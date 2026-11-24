@@ -41,16 +41,19 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private final ObjectMapper objectMapper;
     private final MessageService messageService;
 
+    /** Constructor cho test: dùng ObjectMapper mới và không dịch thông báo. */
     public RateLimitingFilter() {
         this(new ObjectMapper().findAndRegisterModules(), null);
     }
 
+    /** Constructor Spring dùng: nhận ObjectMapper và MessageService để trả lỗi 429 đã dịch. */
     @Autowired
     public RateLimitingFilter(ObjectMapper objectMapper, MessageService messageService) {
         this.objectMapper = objectMapper;
         this.messageService = messageService;
     }
 
+    /** Bộ đếm số request của một khóa (đường dẫn + IP) trong một phút; sang phút mới thì đếm lại từ 1. */
     private static class WindowCounter {
         long windowStartMinute;
         final AtomicInteger count = new AtomicInteger(0);
@@ -61,6 +64,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         }
     }
 
+    /**
+     * Đếm request theo từng phút cho các đường dẫn nhạy cảm (đăng nhập/OTP, quét QR check-in, sinh QR động).
+     * Vượt giới hạn thì trả HTTP 429 kèm Retry-After: 60 và thông báo đã dịch; còn lại cho đi tiếp.
+     */
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -72,11 +79,13 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             String clientIp = getClientIp(request);
             String key = (uri.startsWith(AUTH_PATH) ? AUTH_PATH : uri) + ":" + clientIp;
             long currentMinute = System.currentTimeMillis() / 60000L;
+            // Mỗi phút dọn một lần các bộ đếm của phút cũ để bộ nhớ không phình mãi; compareAndSet đảm bảo chỉ một luồng dọn.
             long previousCleanup = lastCleanupMinute.get();
             if (previousCleanup != currentMinute && lastCleanupMinute.compareAndSet(previousCleanup, currentMinute)) {
                 requestCounts.entrySet().removeIf(entry -> entry.getValue().windowStartMinute < currentMinute);
             }
 
+            // Tăng bộ đếm một cách an toàn giữa nhiều luồng; sang phút mới thì tạo bộ đếm mới.
             WindowCounter counter = requestCounts.compute(key, (k, existing) -> {
                 if (existing == null || existing.windowStartMinute != currentMinute) {
                     return new WindowCounter(currentMinute);
@@ -85,6 +94,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                 return existing;
             });
 
+            // Vượt giới hạn: trả 429 bằng ngôn ngữ của request (mặc định tiếng Việt).
             if (counter.count.get() > limit) {
                 response.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
                 response.setHeader("Retry-After", "60");
@@ -102,6 +112,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 
+    /**
+     * Giới hạn số request mỗi phút cho đường dẫn: 60 cho /auth/** (trừ /auth/me), 60 cho quét QR check-in, 30
+     * cho sinh QR động; 0 nghĩa là không giới hạn.
+     */
     private int getRateLimitForUri(String uri) {
         // The portal reads the current session on every load; it is authenticated and not a guessing target.
         if (uri.equals(AUTH_ME_PATH)) {
@@ -120,6 +134,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     }
 
     /**
+     * Địa chỉ IP của client. Sau proxy của hosting, Tomcat đã lấy IP thật từ X-Forwarded-For của proxy tin cậy
+     * (server.forward-headers-strategy=native); code không đọc header này trực tiếp nên client không giả IP để
+     * né giới hạn được.
+     *
      * The client address. Behind the hosting proxy this is the real client only because
      * {@code server.forward-headers-strategy=native} lets Tomcat take X-Forwarded-For from trusted internal proxies;
      * the header is never read here directly, so a client cannot spoof it to dodge the limit.

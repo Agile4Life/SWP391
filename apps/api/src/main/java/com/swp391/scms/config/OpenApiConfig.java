@@ -16,6 +16,9 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 /**
+ * Cấu hình tài liệu Swagger/OpenAPI: thông tin API, nhóm chức năng (tag) và cách nhập JWT Bearer để thử API
+ * ngay trên Swagger UI.
+ *
  * OpenAPI 3 / Swagger documentation configuration for SCMS API.
  * Configures JWT Bearer authentication scheme, server endpoints, and module tags.
  */
@@ -24,6 +27,10 @@ public class OpenApiConfig {
 
     private static final String SECURITY_SCHEME_NAME = "BearerAuth";
 
+    /**
+     * Mô tả tổng quan API: tiêu đề, phiên bản, liên hệ, máy chủ (dùng đường dẫn tương đối nên chạy được ở mọi
+     * môi trường), các tag và cơ chế xác thực Bearer JWT.
+     */
     @Bean
     public OpenAPI scmsOpenAPI() {
         return new OpenAPI()
@@ -57,6 +64,7 @@ public class OpenApiConfig {
                                 .description("Nhập chuỗi JWT Token vào ô bên dưới (Ví dụ: Bearer <token>)")));
     }
 
+    /** Gom mọi endpoint dưới /api/v1/** vào một nhóm tài liệu "scms-public-api". */
     @Bean
     public GroupedOpenApi publicApi() {
         return GroupedOpenApi.builder()
