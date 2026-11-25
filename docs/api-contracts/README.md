@@ -1,10 +1,8 @@
 # API contract workflow
 
-The Gym-only scope retires the class, session attendance, equipment-management, court-booking,
-and member favorite-discipline endpoints, plus coach reviews, session evaluations, monthly coach reviews, the coach leaderboard,
-health metrics, training completion/progress, the check-in streak and the Supplement Shop. Their historical
-schemas below remain for reference; the removed operations are no longer part of the active API.
-PT 1:1, training plans and center check-in remain available.
+Group classes (recurring courses `/api/v1/classes/**`) and session attendance (`/api/v1/attendance/**`) were restored on 25/11/2026 (`app.legacy.classes-enabled=true`), keeping `SingleSessionPolicy` (per-session / one-off booking remains disabled) and bidirectional PT 1:1 ↔ group-class conflict guards; see [`openapi-group-classes-restored.yaml`](openapi-group-classes-restored.yaml) and `openapi-sprint3-operations.yaml`.
+Equipment-management, court-booking, and member favorite-discipline endpoints, plus coach reviews, session evaluations, monthly coach reviews, the coach leaderboard, health metrics, training completion/progress, the check-in streak and the Supplement Shop remain retired. Their historical schemas below remain for reference; the removed operations are no longer part of the active API.
+PT 1:1, recurring group classes, session attendance, training plans and center check-in are active.
 
 The API team publishes an OpenAPI YAML/JSON export here when an endpoint is ready for frontend integration. Every change must specify request, successful response and common error response.
 
