@@ -415,6 +415,12 @@ export function CoachTrainingPlanPage() {
 
   const [lastSavedTime, setLastSavedTime] = useState<string | null>(null);
 
+  // Mở khóa lại nút Lưu khi HLV chỉnh sửa nội dung giáo án hoặc chuyển sang học viên/HLV khác.
+  useEffect(() => {
+    setLastSavedTime(null);
+    setSavedPlanLink(false);
+  }, [selectedMemberId, selectedCoachId, planGoal, startDate, endDate, exercises]);
+
   // Bước 1 phải hợp lệ trước khi đi tiếp: có mục tiêu, ngày hợp lệ và (Quản lý) đã chọn HLV phụ trách.
   const planInfoError = (): StaffMessage | null =>
     !planGoal.trim() ? staffMessage('Vui lòng nhập mục tiêu giáo án.', 'Please enter a training plan goal.')

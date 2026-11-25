@@ -67,6 +67,10 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
   // Thông báo Streak cũ về Dashboard; bỏ anchor cũ để mở trang Giáo án hiện tại.
   if (role === 'MEMBER' && /^\/member\/streak(?:[?/#]|$)/.test(path)) return '/member/dashboard';
   if (role === 'MEMBER' && /^\/member\/progress(?:[?/#]|$)/.test(path)) return '/member/progress';
+  // Thông báo chỉ số cơ thể / điểm danh cũ của HLV trỏ về màn còn giữ theo phạm vi Gym.
+  if (role === 'COACH' && /^\/coach\/health-metrics(?:[?/#]|$)/.test(path)) return '/coach/training-plans';
+  if (role === 'COACH' && /^\/staff\/attendance(?:[?/#]|$)/.test(path)) return '/coach/pt-attendance';
+  if (role === 'COACH' && path === '/staff/coach-classes') return '/coach/classes';
   const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
   return path.startsWith(prefix) ||
     path.startsWith('/member/profile') ||
@@ -77,16 +81,15 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
 
 export type NotificationTarget = Partial<Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath' | 'title' | 'message'>>;
 
+/**
+ * Chọn trang đích khi bấm thông báo: ưu tiên đường dẫn hợp lệ trong thông báo, rồi theo vai trò và loại đối
+ * tượng liên quan.
+ */
 export function notificationDestination(notification: NotificationTarget, role = 'MEMBER'): string {
   const explicit = safeNotificationPath(notification.actionPath, role);
   if (explicit) return explicit;
-  if (role === 'COACH') {
-    if (notification.actionPath === '/staff/attendance' || notification.actionPath?.startsWith('/staff/attendance?')) {
-      return '/coach/pt-attendance';
-    }
-    if (notification.actionPath === '/staff/coach-classes' || notification.actionPath === '/staff/classes') {
-      return '/coach/classes';
-    }
+  if (role === 'COACH' && notification.actionPath === '/staff/classes') {
+    return '/coach/classes';
   }
 
   const rawEntity = (notification.relatedEntityType ?? '').toLowerCase().trim();
@@ -103,25 +106,21 @@ export function notificationDestination(notification: NotificationTarget, role =
     // Ưu tiên metadata thật; lịch sử hiện có chỉ chứa yêu cầu gói đã xử lý và nạp ví.
     if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
     if (notification.relatedEntityType === 'payment' || notification.type === 'payment') return '/staff/reception-history';
+    if (['staff_internal_request', 'internal_request', 'staff_request', 'leave_request'].includes(rawEntity) || rawType === 'staff_request') {
+      return '/staff/requests';
+    }
     // Đơn nội bộ hiện gửi system/null, không có actionPath: chỉ nhận đúng tiêu đề VI/EN của backend.
     if (notification.type === 'system' && !notification.relatedEntityType && [
       'Your request was approved', 'Your request was rejected',
       'Đơn từ của bạn đã được duyệt', 'Đơn từ của bạn bị từ chối',
     ].includes(notification.title ?? '')) return '/staff/requests';
-    if (
-      ['staff_internal_request', 'internal_request', 'staff_request', 'leave_request'].includes(rawEntity) ||
-      rawType === 'staff_request' ||
-      /đơn từ|nội bộ|nghỉ phép|đổi ca|đề xuất|internal request|leave request|shift change|leave_impact|phê duyệt|từ chối|chờ duyệt|approved|rejected/.test(text)
-    ) {
-      return '/staff/requests';
-    }
     // Thiếu thông tin thì về quầy; không suy luận bản ghi hoặc chức năng từ nội dung tự do.
     return '/staff/reception';
   }
 
   if (role === 'COACH') {
-    // 1. Hỗ trợ / Khiếu nại / Tin nhắn
-    if (rawEntity === 'support_request' || rawType === 'support_reply' || /support|hỗ trợ|khiếu nại|tin nhắn|message/.test(text)) {
+    // 1. Hỗ trợ / Khiếu nại (ưu tiên metadata hoặc tiêu đề hỗ trợ rõ ràng để không bắt nhầm nội dung tự do)
+    if (rawEntity === 'support_request' || rawType === 'support_reply' || /hỗ trợ|khiếu nại|support request|support reply/.test(rawTitle)) {
       return '/messages?tab=support';
     }
 
@@ -129,12 +128,12 @@ export function notificationDestination(notification: NotificationTarget, role =
     if (
       ['staff_internal_request', 'internal_request', 'staff_request', 'leave_request'].includes(rawEntity) ||
       rawType === 'staff_request' ||
-      /đơn từ|nội bộ|nghỉ phép|đổi ca|đề xuất|internal request|leave request|shift change|leave_impact|phê duyệt|từ chối|chờ duyệt|approved|rejected/.test(text)
+      /đơn từ|nội bộ|nghỉ phép|đổi ca|internal request|leave request|shift change|leave_impact|your request was approved|your request was rejected/.test(text)
     ) {
       return '/staff/requests';
     }
 
-    // 3. Điểm danh PT 1-1 & Đánh giá buổi tập PT
+    // 3. Điểm danh PT 1-1 & Đánh giá buổi tập cũ
     if (
       ['session_attendance', 'session_evaluation', 'pt_attendance', 'attendance', 'evaluation'].includes(rawEntity) ||
       rawType === 'evaluation' ||
@@ -143,12 +142,12 @@ export function notificationDestination(notification: NotificationTarget, role =
       return '/coach/pt-attendance';
     }
 
-    // 4. Chỉ số sức khỏe học viên
+    // 4. Chỉ số sức khỏe cũ -> chuyển về màn Soạn giáo án còn giữ (không trỏ màn đã bỏ /coach/health-metrics)
     if (
       ['health_metric', 'health_metrics', 'member_metrics'].includes(rawEntity) ||
       /chỉ số sức khỏe|chỉ số thể chất|health metric|bmi|inbody|số đo/.test(text)
     ) {
-      return '/coach/health-metrics';
+      return '/coach/training-plans';
     }
 
     // 5. Giáo án huấn luyện (Soạn giáo án vs Giáo án đã lưu)
@@ -163,7 +162,7 @@ export function notificationDestination(notification: NotificationTarget, role =
       return '/coach/training-plans';
     }
 
-    // 6. Đánh giá từ học viên / Vinh danh & Thành tích HLV
+    // 6. Đánh giá từ học viên / Vinh danh cũ -> về hồ sơ cá nhân
     if (
       ['coach_review', 'monthly_review', 'coach_monthly_review', 'review'].includes(rawEntity) ||
       /đánh giá mới từ học viên|đánh giá của học viên|vinh danh|bảng vinh danh|monthly review|xếp hạng|leaderboard|star review/.test(text)
@@ -219,7 +218,7 @@ export function notificationDestination(notification: NotificationTarget, role =
       if (rawType === 'payment') return '/member/invoices';
       if (rawType === 'order') return '/member/invoices';
       if (rawType === 'support_reply') return '/messages?tab=support';
-      if (/đánh giá|nhận xét|evaluation|tiến độ|progress/.test(text)) return '/member/progress#coach-evaluations';
+      if (/đánh giá|nhận xét|evaluation|tiến độ|progress/.test(text)) return '/member/progress';
       return '/member/dashboard';
   }
 }

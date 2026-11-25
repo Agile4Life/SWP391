@@ -1086,15 +1086,18 @@ class CoachBookingServiceTest {
 
         assertThatThrownBy(() -> service.markAttended(coachPrincipal, 13L))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("COACH_BOOKING_ATTENDANCE_EXPIRED");
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_BOOKING_ATTENDANCE_EXPIRED");
 
         assertThatThrownBy(() -> service.unmarkAttended(coachPrincipal, 13L))
                 .isInstanceOf(BadRequestException.class)
-                .hasMessageContaining("COACH_BOOKING_ATTENDANCE_EXPIRED");
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_BOOKING_ATTENDANCE_EXPIRED");
 
-        // Lễ tân vẫn có thể ghi nhận buổi ngày hôm trước
+        // Lễ tân vẫn có thể ghi nhận và gỡ ghi nhận buổi ngày hôm trước
         var deskDto = service.markAttended(deskPrincipal, 13L);
         assertThat(deskDto.attendedAt()).isNotNull();
+        var deskUnmarked = service.unmarkAttended(deskPrincipal, 13L);
+        assertThat(deskUnmarked.attendedAt()).isNull();
+        assertThat(deskUnmarked.attendanceLocked()).isTrue();
     }
 
     /** Kiểm thử: buổi đã hủy không bỏ đánh dấu được. */

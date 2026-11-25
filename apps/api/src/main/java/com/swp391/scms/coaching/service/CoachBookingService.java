@@ -674,8 +674,8 @@ public class CoachBookingService {
 
     /**
      * Nhân viên gỡ bỏ ghi nhận đến buổi đã đánh dấu nhầm. Buổi được gắn cờ (attendanceLocked) để danh sách thể hiện
-     * rõ việc gỡ dấu là chủ đích; đánh dấu lại thủ công sẽ xóa cờ này. Đối tượng được phép và giới hạn tương tự
-     * {@link #markAttended}, ngoại trừ có thể áp dụng cho bất kỳ buổi nào trong quá khứ.
+     * rõ việc gỡ dấu là chủ đích; đánh dấu lại thủ công sẽ xóa cờ này. HLV chỉ thao tác trong ngày diễn ra buổi tập;
+     * lễ tân và quản lý vẫn chỉnh được các ngày trước.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_UNMARK", entity = "coach_bookings")

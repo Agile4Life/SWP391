@@ -125,7 +125,7 @@ export function PtAttendancePage() {
   async function markAttended(row: CoachBookingDto, attended: boolean) {
     if (busy.current || loading) return;
     if (isCoach && row.bookingDate !== today) {
-      setError(localizableError(new Error(t('Buổi tập đã qua ngày. Huấn luyện viên chỉ được điểm danh và sửa trong ngày diễn ra buổi tập.', 'The session date has passed. Coaches can only mark and edit attendance on the day of the session.'))));
+      setError(t('Buổi tập đã qua ngày. Huấn luyện viên chỉ được điểm danh và sửa trong ngày diễn ra buổi tập.', 'The session date has passed. Coaches can only mark and edit attendance on the day of the session.'));
       return;
     }
     // Hội viên đã quét mã vào cổng quanh thời điểm buổi tập này: cần xác nhận lại trước khi bỏ ghi nhận.

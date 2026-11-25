@@ -103,12 +103,14 @@ paths:
     post:
       summary: Record that the member attended a 1:1 session (gate scans never record it)
       description: |
-        Coach (own sessions only), receptionist or manager. The session must have started (400 COACH_BOOKING_NOT_STARTED)
-        and not be cancelled (409). Sets `attendedAt` to now; marking again keeps the first time. Audited as PT_ATTENDANCE_MARK.
+        Coach (own sessions only, same day only — otherwise 400 COACH_BOOKING_ATTENDANCE_EXPIRED), receptionist or manager.
+        The session must have started (400 COACH_BOOKING_NOT_STARTED) and not be cancelled (409). Sets `attendedAt` to now;
+        marking again keeps the first time. Audited as PT_ATTENDANCE_MARK.
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
         '200': { description: The booking with attendedAt }
+        '400': { description: COACH_BOOKING_NOT_STARTED or COACH_BOOKING_ATTENDANCE_EXPIRED (coach outside session date) }
   /members/kyc/pending:
     get:
       summary: Identity submissions waiting for review (receptionist, manager)
@@ -152,13 +154,15 @@ paths:
     post:
       summary: Remove a wrong attendance mark of a 1:1 session
       description: |
-        Coach (own sessions), receptionist or manager. Clears `attendedAt` and sets `attendanceLocked=true`
+        Coach (own sessions, same day only — otherwise 400 COACH_BOOKING_ATTENDANCE_EXPIRED), receptionist or manager.
+        Clears `attendedAt` and sets `attendanceLocked=true`
         so the list shows the mark was removed on purpose; marking by hand clears the flag.
         Booking status is unchanged. No ABSENT value is persisted; an ended session without an arrival is derived MISSED.
         Audited as PT_ATTENDANCE_UNMARK. On startup the PostgreSQL provider widens the legacy audit CHECK to allow
         coach_bookings (on by default; app.database.audit-entity-type-upgrade-enabled=false turns it off).
       responses:
         '200': { description: The booking without attendedAt }
+        '400': { description: COACH_BOOKING_ATTENDANCE_EXPIRED (coach outside session date) }
   /subscriptions/{id}/hold#approval:
     post:
       summary: Hold approval, late approval and withdrawal

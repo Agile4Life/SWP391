@@ -104,12 +104,12 @@ describe('PtAttendancePage', () => {
     expect(host.querySelector('[data-testid="pt-row-22"]')?.textContent).toContain('Đã khóa (chỉ sửa trong ngày)');
 
     // Buổi hôm nay có nút thao tác bình thường
-    const markTodayBtn = host.querySelector('[data-testid="pt-row-23"] button');
+    const markTodayBtn = host.querySelector<HTMLButtonElement>('[data-testid="pt-row-23"] button');
     expect(markTodayBtn?.textContent).toBe('Đánh dấu có mặt');
     await act(async () => markTodayBtn?.click());
     expect(mocks.mark).toHaveBeenCalledWith(23);
 
-    const unmarkTodayBtn = host.querySelector('[data-testid="pt-row-24"] button');
+    const unmarkTodayBtn = host.querySelector<HTMLButtonElement>('[data-testid="pt-row-24"] button');
     expect(unmarkTodayBtn?.textContent).toBe('Bỏ đánh dấu có mặt');
     await act(async () => unmarkTodayBtn?.click());
     expect(mocks.unmark).toHaveBeenCalledWith(24);
