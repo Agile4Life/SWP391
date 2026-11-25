@@ -623,9 +623,6 @@ export function CreateClassOrSessionModal({
                     setError(null);
                   }}
                 />
-                <p className="class-wizard__hint">
-                  {t('0đ = miễn phí theo gói tập.', '0 VND = included with membership.')}
-                </p>
               </div>
             </div>
 
@@ -1022,9 +1019,7 @@ export function CreateClassOrSessionModal({
               <div className="kv-row">
                 <span>{t('Học phí ngoài gói', 'Extra fee')}</span>
                 <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
-                  {parsedPrice > 0
-                    ? formatPrice(parsedPrice)
-                    : t('Miễn phí theo gói', 'Included with membership')}
+                  {formatPrice(parsedPrice)}
                 </strong>
               </div>
               {description.trim() && (
