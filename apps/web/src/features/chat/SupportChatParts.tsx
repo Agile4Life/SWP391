@@ -46,19 +46,37 @@ export function HeaderAction({ label, onClick, disabled, pressed, children }: {
   </button>;
 }
 
-/** Vùng tin nhắn dạng bong bóng, tự cuộn xuống tin mới nhất. */
+/** Vùng tin nhắn dạng bong bóng, chỉ tự cuộn xuống cuối khi người dùng đang ở đáy hoặc tự gửi tin mới. */
 export function SupportTranscript({ label, bubbles, pending, loading, empty, fallbackName }: {
   label: string; bubbles: SupportBubble[]; pending?: string | null; loading: boolean; empty: ReactNode; fallbackName: string;
 }) {
   const { t } = useI18n();
   const scroll = useRef<HTMLDivElement>(null);
-  const last = bubbles.at(-1)?.id;
+  const atBottom = useRef(true);
+  const prevLast = useRef<string | undefined>(undefined);
+  const lastBubble = bubbles.at(-1);
+  const last = lastBubble?.id;
   useLayoutEffect(() => {
     const node = scroll.current;
-    if (node) node.scrollTop = node.scrollHeight;
-  }, [last, bubbles.length, pending, loading]);
+    if (!node) return;
+    if (loading) {
+      atBottom.current = true;
+      prevLast.current = undefined;
+      return;
+    }
+    const appendedMine = Boolean(pending) || (last !== undefined && last !== prevLast.current && Boolean(lastBubble?.mine));
+    if (atBottom.current || appendedMine) {
+      node.scrollTop = node.scrollHeight;
+      atBottom.current = true;
+    }
+    prevLast.current = last;
+  }, [last, lastBubble?.mine, bubbles.length, pending, loading]);
   const showEmpty = !loading && bubbles.length === 0 && !pending;
-  return <div className="direct-chat__transcript" ref={scroll} role="region" aria-label={label} tabIndex={0} aria-busy={loading}>
+  return <div className="direct-chat__transcript" ref={scroll} role="region" aria-label={label} tabIndex={0} aria-busy={loading}
+    onScroll={() => {
+      const node = scroll.current;
+      if (node) atBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 64;
+    }}>
     {loading ? <LoadingSkeleton label={t('Đang tải tin nhắn…', 'Loading messages…')} count={3} /> : showEmpty ? empty : null}
     {!loading && <ol className="direct-chat__messages">
       {bubbles.map(bubble => <li key={bubble.id} className={bubble.mine ? 'is-mine' : undefined}>

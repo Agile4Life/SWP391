@@ -2,7 +2,7 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
-import { AUTH_STORAGE_KEY } from '../../shared/api/client';
+import { AUTH_STORAGE_KEY, TOKEN_STORAGE_KEY } from '../../shared/api/client';
 import { PortalShell } from './PortalShell';
 
 afterEach(() => {
@@ -12,6 +12,14 @@ afterEach(() => {
 
 it('keeps portal navigation and shows a skeleton until a pending route resolves', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url.includes('/auth/me')) {
+      return new Response(JSON.stringify({ success: true, data: { username: 'coach', role: 'COACH', fullName: 'Coach' } }));
+    }
+    return new Response(JSON.stringify({ success: true, data: {} }));
+  }));
+  localStorage.setItem(TOKEN_STORAGE_KEY, 'test-token');
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'coach', name: 'Coach', identifier: 'coach', role: 'COACH' }));
   let finishRoute!: (value: { Component: () => React.ReactNode }) => void;
   const pendingRoute = new Promise<{ Component: () => React.ReactNode }>(resolve => { finishRoute = resolve; });

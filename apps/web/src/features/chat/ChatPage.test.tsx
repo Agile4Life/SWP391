@@ -296,3 +296,40 @@ it('P0-07: remounts ChatWorkspace on account switch and closes Realtime on logou
   expect(unsubscribeB).toHaveBeenCalledTimes(1);
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('Bạn không có quyền truy cập chat riêng');
 });
+
+it('P3-FE-30 & P3-FE-32: formats EN singular unread/time labels, uses "center", and preserves likedIds across thread switches while resetting on account switch', async () => {
+  const oneDayAgo = new Date(Date.now() - 25 * 3600 * 1000).toISOString();
+  const secondConv: api.ChatConversation = {
+    id: 8, peer: { id: 21, name: 'Lễ tân Hoa', role: 'RECEPTIONIST', available: true },
+    createdAt: oneDayAgo, lastActivityAt: oneDayAgo,
+  };
+  vi.mocked(api.getConversations).mockResolvedValue({
+    content: [{ ...conversation, unreadCount: 1, lastMessage: 'Hi', lastActivityAt: oneDayAgo }, secondConv],
+    totalPages: 1, number: 0,
+  });
+  vi.mocked(api.getHistory).mockImplementation(async (id: number) => ({
+    items: [{ id: id * 10, conversationId: id, clientMessageId: `m-${id}`, senderId: 20, mine: false, message: `Msg ${id}`, createdAt: oneDayAgo }],
+    hasMore: false,
+  }));
+
+  await render();
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('[aria-label="1 unread message"]')).not.toBeNull();
+  expect(host.textContent).toContain('1 day');
+  expect(host.textContent).not.toContain('1 days');
+
+  // Like message in conversation 7, switch to 8, switch back to 7 -> like preserved!
+  await act(async () => button('Coach Linh').click());
+  await act(async () => host.querySelector<HTMLButtonElement>('.direct-chat__react-trigger')!.click());
+  expect(host.querySelector('.direct-chat__reaction-pill')?.textContent).toBe('❤️');
+  await act(async () => button('Lễ tân Hoa').click());
+  await act(async () => button('Coach Linh').click());
+  expect(host.querySelector('.direct-chat__reaction-pill')?.textContent).toBe('❤️');
+
+  // Switching to staff resets likedIds and checks American English "center rules" (not "centre rules")
+  await act(async () => {
+    setCurrentUser({ id: 'staff', identifier: 'staff', name: 'Staff', role: 'STAFF' });
+  });
+  expect(host.querySelector('.direct-chat__person--ai')?.textContent).toContain('center rules');
+  expect(host.querySelector('.direct-chat__person--ai')?.textContent).not.toContain('centre');
+});

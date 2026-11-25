@@ -1,6 +1,7 @@
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { useLanguage } from '../../shared/i18n/language';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 import { memberText } from './memberI18n';
 import { activePlans, planDays } from './progressPresentation';
 import type { TrainingItem, TrainingPlan } from './memberProgressApi';
@@ -21,9 +22,6 @@ function dayLabel(day: number | null): string {
     default: return memberText('Không cố định ngày', 'Any day');
   }
 }
-
-/** Định dạng ngày thành dd/MM/yyyy. */
-const formatDate = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');
 
 /** Hiển thị liều tập của một bài: số hiệp × reps, thời lượng và thời gian nghỉ. */
 function Dose({ item }: { item: TrainingItem }) {
@@ -50,7 +48,7 @@ export function ActiveTrainingPlan({ state, today, onRetry }: { state: PlanLoadS
           <p className="member-progress-plan__meta">
             <span>{plan.coachName || memberText('Huấn luyện viên')}</span>
             <span aria-hidden="true">·</span>
-            <time>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</time>
+            <time style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCenterDate(plan.startDate)} – {formatCenterDate(plan.endDate)}</time>
           </p>
         </header>
         {plan.items.length === 0 ? <p className="portal-empty">{memberText('Giáo án này chưa có bài tập nào.')}</p>

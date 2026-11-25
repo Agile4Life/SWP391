@@ -26,9 +26,35 @@ const WEEKDAYS_VI = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 const WEEKDAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const POPOVER_WIDTH = 296;
 const POPOVER_HEIGHT = 412;
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 // Thêm số 0 đứng trước cho số nhỏ hơn 10.
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+
+// Kẹp chuỗi YYYY-MM-DD vào trong khoảng [min, max] nếu hợp lệ.
+function clampDateToRange(dateStr: string, min?: string, max?: string): string {
+  let result = dateStr;
+  if (min && ISO_DATE_RE.test(min) && result < min) result = min;
+  if (max && ISO_DATE_RE.test(max) && result > max) result = max;
+  return result;
+}
+
+// Cộng/trừ số ngày trên chuỗi YYYY-MM-DD bằng UTC để tránh lệch giờ mùa hè.
+function addIsoDays(dateStr: string, deltaDays: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d + deltaDays));
+  return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;
+}
+
+// Cộng/trừ số tháng trên chuỗi YYYY-MM-DD (kẹp ngày vào cuối tháng đích).
+function addIsoMonths(dateStr: string, deltaMonths: number): string {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const monthIndex = y * 12 + (m - 1) + deltaMonths;
+  const ty = Math.floor(monthIndex / 12);
+  const tm = ((monthIndex % 12) + 12) % 12;
+  const maxDay = new Date(Date.UTC(ty, tm + 1, 0)).getUTCDate();
+  return `${ty}-${pad2(tm + 1)}-${pad2(Math.min(d, maxDay))}`;
+}
 
 /**
  * Ô chọn ngày với lịch popup tự vẽ (tuần bắt đầu từ thứ Hai, theo giờ trung tâm): chọn ngày, chọn năm, nút Hôm
@@ -55,29 +81,71 @@ export function DatePicker({
   const [position, setPosition] = useState<{ top: number; left: number; v: 'up' | 'down' } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const pendingFocusDateRef = useRef<string | null>(null);
   const triggerPlaceholder = placeholder ?? t('Chọn ngày...', 'Select date...');
 
-  // Phân tích năm và tháng ban đầu từ giá trị hiện tại nếu hợp lệ, không thì lấy hôm nay.
+  const focusTrigger = () => {
+    containerRef.current?.querySelector<HTMLButtonElement>('.luxury-datepicker-trigger')?.focus();
+  };
+
+  // Phân tích năm và tháng ban đầu từ giá trị hiện tại nếu hợp lệ; khi rỗng thì kẹp hôm nay vào [min, max].
   const initialDate = useMemo(() => {
-    const source = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : centerNowParts().date;
+    const source = value && ISO_DATE_RE.test(value)
+      ? value
+      : clampDateToRange(centerNowParts().date, min, max);
     const [y, m, d] = source.split('-').map(Number);
     return { year: y, month: m - 1, day: d };
-  }, [value]);
+  }, [value, min, max]);
 
   const [viewYear, setViewYear] = useState(initialDate.year);
   const [viewMonth, setViewMonth] = useState(initialDate.month);
+  const [focusedDate, setFocusedDate] = useState<string | null>(null);
   // Chế độ chọn năm: bấm vào tiêu đề tháng để nhảy nhanh (ví dụ ngày sinh)
   const [yearMode, setYearMode] = useState(false);
   const [yearPageStart, setYearPageStart] = useState(initialDate.year - 4);
 
-  // Đồng bộ tháng/năm đang xem khi giá trị thay đổi từ bên ngoài
+  const todayStr = centerNowParts().date;
+  const minYear = min && ISO_DATE_RE.test(min) ? Number(min.slice(0, 4)) : null;
+  const minMonth = min && ISO_DATE_RE.test(min) ? Number(min.slice(5, 7)) - 1 : null;
+  const minYm = minYear !== null && minMonth !== null ? minYear * 12 + minMonth : null;
+  const maxYear = max && ISO_DATE_RE.test(max) ? Number(max.slice(0, 4)) : null;
+  const maxMonth = max && ISO_DATE_RE.test(max) ? Number(max.slice(5, 7)) - 1 : null;
+  const maxYm = maxYear !== null && maxMonth !== null ? maxYear * 12 + maxMonth : null;
+  const viewYm = viewYear * 12 + viewMonth;
+  const isPrevDisabled = yearMode
+    ? (minYear !== null && yearPageStart <= minYear)
+    : (minYm !== null && viewYm <= minYm);
+  const isNextDisabled = yearMode
+    ? (maxYear !== null && yearPageStart + 11 >= maxYear)
+    : (maxYm !== null && viewYm >= maxYm);
+  const isTodayDisabled = disabled
+    || Boolean((min && ISO_DATE_RE.test(min) && todayStr < min) || (max && ISO_DATE_RE.test(max) && todayStr > max));
+
+  // Đồng bộ tháng/năm đang xem khi giá trị hoặc phạm vi [min, max] thay đổi từ bên ngoài.
   useEffect(() => {
-    if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    if (value && ISO_DATE_RE.test(value)) {
       const [y, m] = value.split('-').map(Number);
       setViewYear(y);
       setViewMonth(m - 1);
+      return;
     }
-  }, [value]);
+    const clamped = clampDateToRange(centerNowParts().date, min, max);
+    const [y, m] = clamped.split('-').map(Number);
+    setViewYear(y);
+    setViewMonth(m - 1);
+  }, [value, min, max]);
+
+  useEffect(() => {
+    if (disabled && isOpen) setIsOpen(false);
+  }, [disabled, isOpen]);
+
+  // Sau khi chuyển tháng bằng phím mũi tên, đưa focus sang đúng ô ngày đích.
+  useEffect(() => {
+    if (!isOpen || !pendingFocusDateRef.current) return;
+    const targetDate = pendingFocusDateRef.current;
+    pendingFocusDateRef.current = null;
+    popoverRef.current?.querySelector<HTMLButtonElement>(`button.ldp-day-cell[data-date="${targetDate}"]:not(:disabled)`)?.focus();
+  }, [isOpen, viewYear, viewMonth]);
 
   // Bấm ra ngoài để đóng lịch
   useEffect(() => {
@@ -152,6 +220,7 @@ export function DatePicker({
   // Lùi một tháng (hoặc một trang năm khi đang chọn năm).
   const handlePrevMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isPrevDisabled) return;
     if (yearMode) {
       setYearPageStart((y) => y - 12);
       return;
@@ -167,6 +236,7 @@ export function DatePicker({
   // Tiến một tháng (hoặc một trang năm khi đang chọn năm).
   const handleNextMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (isNextDisabled) return;
     if (yearMode) {
       setYearPageStart((y) => y + 12);
       return;
@@ -252,31 +322,89 @@ export function DatePicker({
     return days;
   }, [viewYear, viewMonth, value, min, max]);
 
-  // Chọn một ngày (bỏ qua ngày bị vô hiệu), báo giá trị mới và đóng lịch.
+  const tabbableDate = useMemo(() => {
+    const enabled = calendarDays.filter((d) => !d.isDisabled);
+    if (enabled.length === 0) return null;
+    if (focusedDate && enabled.some((d) => d.dateStr === focusedDate)) return focusedDate;
+    const selectedDay = enabled.find((d) => d.isSelected);
+    if (selectedDay) return selectedDay.dateStr;
+    const todayDay = enabled.find((d) => d.isToday);
+    if (todayDay) return todayDay.dateStr;
+    const firstCurrent = enabled.find((d) => d.isCurrentMonth);
+    return (firstCurrent ?? enabled[0]).dateStr;
+  }, [calendarDays, focusedDate]);
+
+  // Điều hướng lưới ngày bằng bàn phím (mũi tên, Home/End, PageUp/PageDown).
+  const handleDayKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>, dateStr: string, index: number) => {
+    let target: string;
+    switch (e.key) {
+      case 'ArrowRight':
+        target = addIsoDays(dateStr, 1);
+        break;
+      case 'ArrowLeft':
+        target = addIsoDays(dateStr, -1);
+        break;
+      case 'ArrowDown':
+        target = addIsoDays(dateStr, 7);
+        break;
+      case 'ArrowUp':
+        target = addIsoDays(dateStr, -7);
+        break;
+      case 'Home':
+        target = addIsoDays(dateStr, -(index % 7));
+        break;
+      case 'End':
+        target = addIsoDays(dateStr, 6 - (index % 7));
+        break;
+      case 'PageUp':
+        target = addIsoMonths(dateStr, -1);
+        break;
+      case 'PageDown':
+        target = addIsoMonths(dateStr, 1);
+        break;
+      default:
+        return;
+    }
+    e.preventDefault();
+    const clamped = clampDateToRange(target, min, max);
+    if (clamped === dateStr) return;
+    setFocusedDate(clamped);
+    const [ty, tm] = clamped.split('-').map(Number);
+    if (ty !== viewYear || tm - 1 !== viewMonth) {
+      pendingFocusDateRef.current = clamped;
+      setViewYear(ty);
+      setViewMonth(tm - 1);
+    } else {
+      popoverRef.current?.querySelector<HTMLButtonElement>(`button.ldp-day-cell[data-date="${clamped}"]:not(:disabled)`)?.focus();
+    }
+  };
+
+  // Chọn một ngày (bỏ qua ngày bị vô hiệu), báo giá trị mới, đóng lịch và trả focus về nút kích hoạt.
   const handleSelectDate = (dateStr: string, isDisabled: boolean) => {
     if (isDisabled || disabled) return;
     onChange({ target: { value: dateStr } });
     setIsOpen(false);
+    focusTrigger();
   };
 
-  // Xóa giá trị đã chọn và đóng lịch.
+  // Xóa giá trị đã chọn, đóng lịch và trả focus về nút kích hoạt.
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange({ target: { value: '' } });
     setIsOpen(false);
+    focusTrigger();
   };
 
   // Về tháng hôm nay và chọn hôm nay nếu nằm trong khoảng min/max.
   const handleToday = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const todayStr = centerNowParts().date;
-    if (min && todayStr < min) return;
-    if (max && todayStr > max) return;
+    if (isTodayDisabled) return;
     const [ty, tm] = todayStr.split('-').map(Number);
     setViewYear(ty);
     setViewMonth(tm - 1);
     onChange({ target: { value: todayStr } });
     setIsOpen(false);
+    focusTrigger();
   };
 
   return (
@@ -318,13 +446,17 @@ export function DatePicker({
       {required && (
         <input
           tabIndex={-1}
+          aria-hidden="true"
+          disabled={disabled}
           required={required}
           value={value}
           onChange={() => {}}
           onInvalid={(event) => {
             event.preventDefault();
-            setIsOpen(true);
-            containerRef.current?.querySelector<HTMLButtonElement>('.luxury-datepicker-trigger')?.focus();
+            if (!disabled) {
+              setIsOpen(true);
+              focusTrigger();
+            }
           }}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
         />
@@ -368,6 +500,7 @@ export function DatePicker({
               <button
                 type="button"
                 className="ldp-nav-btn"
+                disabled={isPrevDisabled}
                 onClick={handlePrevMonth}
                 aria-label={yearMode ? t('Các năm trước', 'Earlier years') : t('Tháng trước', 'Previous month')}
               >
@@ -376,6 +509,7 @@ export function DatePicker({
               <button
                 type="button"
                 className="ldp-nav-btn"
+                disabled={isNextDisabled}
                 onClick={handleNextMonth}
                 aria-label={yearMode ? t('Các năm sau', 'Later years') : t('Tháng sau', 'Next month')}
               >
@@ -387,7 +521,7 @@ export function DatePicker({
           {yearMode ? (
             <div className="ldp-years-grid" role="group" aria-label={t('Chọn năm', 'Choose year')}>
               {Array.from({ length: 12 }, (_, i) => yearPageStart + i).map((y) => {
-                const outOfRange = (min && y < Number(min.slice(0, 4))) || (max && y > Number(max.slice(0, 4)));
+                const outOfRange = (minYear !== null && y < minYear) || (maxYear !== null && y > maxYear);
                 return (
                   <button
                     key={y}
@@ -396,7 +530,11 @@ export function DatePicker({
                     disabled={!!outOfRange}
                     aria-pressed={y === viewYear}
                     onClick={() => {
+                      let nextMonth = viewMonth;
+                      if (minYear !== null && minMonth !== null && y === minYear && nextMonth < minMonth) nextMonth = minMonth;
+                      if (maxYear !== null && maxMonth !== null && y === maxYear && nextMonth > maxMonth) nextMonth = maxMonth;
                       setViewYear(y);
+                      setViewMonth(nextMonth);
                       setYearMode(false);
                     }}
                   >
@@ -431,11 +569,15 @@ export function DatePicker({
                 <button
                   key={`${d.dateStr}-${index}`}
                   type="button"
+                  data-date={d.dateStr}
                   className={classNames}
                   disabled={d.isDisabled}
+                  tabIndex={d.dateStr === tabbableDate ? 0 : -1}
                   aria-label={d.dateStr}
                   aria-pressed={d.isSelected}
                   aria-current={d.isToday ? 'date' : undefined}
+                  onFocus={() => setFocusedDate(d.dateStr)}
+                  onKeyDown={(e) => handleDayKeyDown(e, d.dateStr, index)}
                   onClick={() => handleSelectDate(d.dateStr, d.isDisabled)}
                 >
                   {d.dayNum}
@@ -451,7 +593,7 @@ export function DatePicker({
             <button type="button" className="ldp-action-btn btn-clear" onClick={handleClear}>
               {t('Xóa ngày', 'Clear')}
             </button>
-            <button type="button" className="ldp-action-btn" onClick={handleToday}>
+            <button type="button" className="ldp-action-btn" disabled={isTodayDisabled} onClick={handleToday}>
               {t('Hôm nay', 'Today')}
             </button>
           </div>

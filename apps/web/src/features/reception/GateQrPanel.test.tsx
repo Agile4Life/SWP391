@@ -43,3 +43,7 @@ it('removes a suspended tab code immediately on return before renewal resolves',
   await act(async () => document.dispatchEvent(new Event('visibilitychange')));
   expect(host.querySelector('img')).toBeNull();
 });
+it('uses check-out alt text when purpose is out (P3-FE-29)', async () => {
+  await act(async () => root.render(<GateQrPanel gateId="A1" purpose="out" />));
+  expect(host.querySelector('img')?.getAttribute('alt')).toBe('Mã QR cổng check-out');
+});

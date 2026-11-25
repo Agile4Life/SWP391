@@ -3,7 +3,7 @@
  * thay lỗi lập trình (TypeError, SyntaxError…) bằng câu chung để không lộ chi tiết kỹ thuật.
  */
 export function errorMessage(error: unknown, fallback: string): string {
-  if (error instanceof Error && error.name === 'Error' && error.message) return error.message;
+  if (error instanceof Error && error.name === 'Error' && error.message.trim()) return error.message;
   return fallback;
 }
 
@@ -12,5 +12,5 @@ export function errorMessage(error: unknown, fallback: string): string {
  * nội dung riêng.
  */
 export function localizableError(error: unknown, fallback: string): string | Error {
-  return error instanceof Error && error.name === 'Error' && error.message ? error : fallback;
+  return error instanceof Error && error.name === 'Error' && error.message.trim() ? error : fallback;
 }

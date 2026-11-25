@@ -1,4 +1,4 @@
-import { memberError, memberRenderMessage, memberText } from '../memberI18n';
+import { memberError, memberRenderMessage } from '../memberI18n';
 import type { SourceMessage } from '../../../shared/i18n/language';
 import { useLanguage } from '../../../shared/i18n/language';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import { centerNowParts } from '../../../shared/lib/centerTime';
 import { getMyCoachBookings, type CoachBookingDto } from '../coachBookingApi';
+import { formatCoachName } from '../coachBookingUtils';
 import { getMyEnrollments, getSessionsBetween, type ClassSessionDto, type EnrollmentDto } from '../memberClassesApi';
 import {
   SCHEDULE_SLOTS,
@@ -135,19 +136,23 @@ function sortEvents(events: CalendarEvent[]) {
   return [...events].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime) || a.id.localeCompare(b.id));
 }
 
-/** Chuyển một buổi PT thành sự kiện lịch. */
-function ptEvent(booking: CoachBookingDto): CalendarEvent {
-  const title = memberText(`Tập 1:1 cùng ${booking.coachName}`, `1:1 session with ${booking.coachName}`);
+/** Chuyển một buổi PT thành sự kiện lịch (chuẩn hóa tên HLV không lặp "HLV " ở chế độ EN). */
+function ptEvent(booking: CoachBookingDto, lang: 'vi' | 'en'): CalendarEvent {
+  const coachName = formatCoachName(booking.coachName);
+  const title = lang === 'en' ? `1:1 session with ${coachName}` : `Tập 1:1 cùng HLV ${coachName}`;
   return {
     id: `pt-${booking.id}`, kind: 'pt', date: booking.bookingDate, startTime: booking.startTime, endTime: booking.endTime,
-    title, place: '', coach: booking.coachName, cancelled: false, seat: { type: 'pt', id: booking.id }, tone: 'neutral',
+    title, place: '', coach: coachName, cancelled: false, seat: { type: 'pt', id: booking.id }, tone: 'neutral',
     ariaLabel: `${title}, ${weekdayLabel(booking.bookingDate)} ${shortDate(booking.bookingDate)}, ${formatSlotShort(booking.startTime, booking.endTime)}`,
   };
 }
 
 /** Chuyển một buổi lớp nhóm thành sự kiện lịch. */
-function classEvent(session: ClassSessionDto, enrollmentId: number): CalendarEvent {
+function classEvent(session: ClassSessionDto, enrollmentId: number, lang: 'vi' | 'en'): CalendarEvent {
   const cancelled = session.status === 'cancelled';
+  const coach = session.coachName
+    ? (lang === 'en' ? formatCoachName(session.coachName) : session.coachName)
+    : undefined;
   return {
     id: `class-${session.id}`,
     kind: 'class',
@@ -156,7 +161,7 @@ function classEvent(session: ClassSessionDto, enrollmentId: number): CalendarEve
     endTime: session.endTime,
     title: session.className,
     place: session.roomName || '',
-    coach: session.coachName || undefined,
+    coach,
     cancelled,
     seat: { type: 'enrollment', id: enrollmentId },
     tone: cancelled ? 'cancelled' : 'mine',
@@ -169,23 +174,7 @@ async function loadPtBookings(): Promise<CoachBookingDto[]> {
   return (await getMyCoachBookings()).filter(item => item.status !== 'cancelled');
 }
 
-/** Lấy các buổi lớp nhóm mà hội viên đang ghi danh (`booked`) trong khoảng thời gian. */
-async function loadEnrolledClassEvents(from: string, to: string): Promise<CalendarEvent[]> {
-  const [enrollments, sessions] = await Promise.all([
-    getMyEnrollments(),
-    getSessionsBetween(from, to),
-  ]);
-  const bookedByClass = new Map<number, EnrollmentDto>();
-  for (const item of Array.isArray(enrollments) ? enrollments : []) {
-    if (String(item.status).toLowerCase() === 'booked') {
-      bookedByClass.set(item.classId, item);
-    }
-  }
-  if (bookedByClass.size === 0 || !Array.isArray(sessions)) return [];
-  return sessions
-    .filter((s) => bookedByClass.has(s.classId))
-    .map((s) => classEvent(s, bookedByClass.get(s.classId)!.id));
-}
+const NEXT_UP_LOOKAHEAD_DAYS = 30;
 
 /**
  * Lịch của hội viên (tuần 5 Slot cố định / tháng): gộp buổi lớp học nhóm đã đăng ký và buổi PT 1:1,
@@ -219,9 +208,14 @@ export function MemberCalendar() {
   const [view, setView] = useState<View>('week');
   const [anchor, setAnchor] = useState(now.date);
   const [pts, setPts] = useState<CoachBookingDto[]>([]);
-  const [classEvents, setClassEvents] = useState<CalendarEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | SourceMessage>('');
+  const [enrollments, setEnrollments] = useState<EnrollmentDto[]>([]);
+  const [upcomingSessions, setUpcomingSessions] = useState<ClassSessionDto[]>([]);
+  const [rangeSessions, setRangeSessions] = useState<ClassSessionDto[]>([]);
+  const [coreLoading, setCoreLoading] = useState(true);
+  const [rangeLoading, setRangeLoading] = useState(true);
+  const [ptLoadError, setPtLoadError] = useState<unknown>(null);
+  const [upcomingClassError, setUpcomingClassError] = useState<unknown>(null);
+  const [rangeClassError, setRangeClassError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -230,12 +224,14 @@ export function MemberCalendar() {
   const today = now.date;
 
   // Quay lại tab/cửa sổ (ví dụ vừa đặt PT hoặc đăng ký lớp ở trang khác): tải lại lặng lẽ để lịch mới tự hiện.
-  const quietRef = useRef(false);
+  const retryRef = useRef(0);
+  useEffect(() => { retryRef.current = retry; }, [retry]);
+  const quietRetryRef = useRef(-1);
   useEffect(() => {
     // Làm mới ngầm khi tab đang hiển thị.
     const refresh = () => {
       if (document.visibilityState !== 'visible') return;
-      quietRef.current = true;
+      quietRetryRef.current = retryRef.current + 1;
       setRetry((value) => value + 1);
     };
     window.addEventListener('focus', refresh);
@@ -246,37 +242,119 @@ export function MemberCalendar() {
     };
   }, []);
 
-  // Tải song song lịch PT 1:1 và lịch lớp học nhóm đã đăng ký.
+  // Tải độc lập lịch PT 1:1, danh sách ghi danh và lịch lớp nhóm 30 ngày tới cho banner "Tiếp theo"
+  // (không phụ thuộc tuần/tháng đang xem).
   useEffect(() => {
     let active = true;
-    const quiet = quietRef.current;
-    quietRef.current = false;
-    if (!quiet) setLoading(true);
-    setError('');
-    Promise.allSettled([loadPtBookings(), loadEnrolledClassEvents(from, to)])
-      .then(([ptResult, classResult]) => {
+    const quiet = quietRetryRef.current === retry;
+    if (!quiet) setCoreLoading(true);
+    setPtLoadError(null);
+    setUpcomingClassError(null);
+    const lookaheadTo = addDays(today, NEXT_UP_LOOKAHEAD_DAYS);
+    Promise.allSettled([
+      loadPtBookings(),
+      getMyEnrollments(),
+      getSessionsBetween(today, lookaheadTo),
+    ])
+      .then(([ptResult, enrollResult, upcomingResult]) => {
         if (!active) return;
-        const ptFailed = ptResult.status === 'rejected';
-        const classFailed = classResult.status === 'rejected';
-        setPts(ptResult.status === 'fulfilled' ? ptResult.value : []);
-        setClassEvents(classResult.status === 'fulfilled' ? classResult.value : []);
-        if (ptFailed && classFailed) {
-          setError(memberError(ptResult.reason, 'Không thể tải lịch của bạn.'));
-        } else if (ptFailed) {
-          setError(memberError(ptResult.reason, 'Không thể tải lịch PT 1:1 của bạn.'));
+        if (ptResult.status === 'fulfilled') {
+          setPts(ptResult.value);
+        } else {
+          setPts([]);
+          setPtLoadError(ptResult.reason ?? new Error(''));
+        }
+        if (enrollResult.status === 'fulfilled') {
+          setEnrollments(Array.isArray(enrollResult.value) ? enrollResult.value : []);
+        } else {
+          setEnrollments([]);
+        }
+        if (upcomingResult.status === 'fulfilled') {
+          setUpcomingSessions(Array.isArray(upcomingResult.value) ? upcomingResult.value : []);
+        } else {
+          setUpcomingSessions([]);
+        }
+        if (enrollResult.status === 'rejected') {
+          setUpcomingClassError(enrollResult.reason ?? new Error(''));
+        } else if (upcomingResult.status === 'rejected') {
+          setUpcomingClassError(upcomingResult.reason ?? new Error(''));
         }
       })
-      .finally(() => { if (active) setLoading(false); });
+      .finally(() => { if (active) setCoreLoading(false); });
     return () => { active = false; };
-  }, [retry, today, from, to]);
+  }, [retry, today]);
 
-  // Gộp sự kiện PT và lớp học nhóm.
-  const ptEvents = useMemo(() => pts.map(ptEvent), [pts]);
-  const allEvents = useMemo(() => sortEvents([...ptEvents, ...classEvents]), [ptEvents, classEvents]);
+  // Tải buổi lớp nhóm trong khoảng tuần/tháng đang xem.
+  useEffect(() => {
+    let active = true;
+    const quiet = quietRetryRef.current === retry;
+    if (!quiet) setRangeLoading(true);
+    setRangeClassError(null);
+    getSessionsBetween(from, to)
+      .then((sessions) => {
+        if (!active) return;
+        setRangeSessions(Array.isArray(sessions) ? sessions : []);
+      })
+      .catch((reason) => {
+        if (!active) return;
+        setRangeSessions([]);
+        setRangeClassError(reason ?? new Error(''));
+      })
+      .finally(() => { if (active) setRangeLoading(false); });
+    return () => { active = false; };
+  }, [retry, from, to]);
+
+  const loading = coreLoading || rangeLoading;
+  const ptFailed = ptLoadError !== null;
+  const classErrorReason = rangeClassError ?? upcomingClassError;
+  const classFailed = classErrorReason !== null;
+  const error: string | SourceMessage = useMemo(() => {
+    if (ptFailed && classFailed) {
+      return memberError(ptLoadError, 'Không thể tải lịch của bạn.');
+    }
+    if (ptFailed) {
+      return memberError(ptLoadError, 'Không thể tải lịch PT 1:1 của bạn.', 'Unable to load your 1:1 PT schedule.');
+    }
+    if (classFailed) {
+      return memberError(classErrorReason, 'Không thể tải lịch lớp học nhóm của bạn.', 'Unable to load your group class schedule.');
+    }
+    return '';
+  }, [ptFailed, classFailed, ptLoadError, classErrorReason]);
+
+  const bookedByClass = useMemo(() => {
+    const map = new Map<number, EnrollmentDto>();
+    for (const item of enrollments) {
+      if (String(item.status).toLowerCase() === 'booked') {
+        map.set(item.classId, item);
+      }
+    }
+    return map;
+  }, [enrollments]);
+
+  // Gộp sự kiện PT và lớp học nhóm theo ngôn ngữ hiện tại.
+  const ptEvents = useMemo(() => pts.map((item) => ptEvent(item, lang)), [pts, lang]);
+  const classEvents = useMemo(
+    () => rangeSessions
+      .filter((s) => bookedByClass.has(s.classId))
+      .map((s) => classEvent(s, bookedByClass.get(s.classId)!.id, lang)),
+    [rangeSessions, bookedByClass, lang],
+  );
+  const upcomingClassEvents = useMemo(
+    () => upcomingSessions
+      .filter((s) => bookedByClass.has(s.classId))
+      .map((s) => classEvent(s, bookedByClass.get(s.classId)!.id, lang)),
+    [upcomingSessions, bookedByClass, lang],
+  );
   // Sự kiện nằm trong khoảng đang xem.
-  const events = useMemo(() => allEvents.filter(item => item.date >= from && item.date <= to), [allEvents, from, to]);
-  // Sự kiện sắp tới gần nhất chưa kết thúc.
-  const nextUp = useMemo(() => allEvents.find(item => !item.cancelled && !isEnded(item, now)) ?? null, [allEvents, now]);
+  const events = useMemo(
+    () => sortEvents([...ptEvents, ...classEvents]).filter(item => item.date >= from && item.date <= to),
+    [ptEvents, classEvents, from, to],
+  );
+  // Sự kiện sắp tới gần nhất chưa kết thúc (độc lập với tuần/tháng đang xem).
+  const nextUp = useMemo(() => {
+    const upcoming = sortEvents([...ptEvents, ...upcomingClassEvents]);
+    return upcoming.find(item => !item.cancelled && !isEnded(item, now)) ?? null;
+  }, [ptEvents, upcomingClassEvents, now]);
 
   // Bảy ngày của tuần đang xem.
   const days = useMemo(() => weekDays(mondayOf(anchor)), [anchor]);

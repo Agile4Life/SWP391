@@ -33,22 +33,22 @@
 }
 
 .action-badge.is-create {
-  background: rgba(34, 197, 94, 0.15);
-  color: light-dark(#226442, #4ade80);
-  border: 1px solid rgba(34, 197, 94, 0.35);
+  background: color-mix(in srgb, var(--portal-success) 15%, transparent);
+  color: var(--portal-success);
+  border: 1px solid color-mix(in srgb, var(--portal-success) 35%, transparent);
 }
 
 .action-badge.is-update {
-  background: rgba(245, 158, 11, 0.15);
-  color: light-dark(#805400, #fbbf24);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: color-mix(in srgb, var(--portal-warning) 15%, transparent);
+  color: var(--portal-warning);
+  border: 1px solid color-mix(in srgb, var(--portal-warning) 35%, transparent);
 }
 
 .action-badge.is-delete,
 .action-badge.is-cancel {
-  background: rgba(239, 68, 68, 0.15);
-  color: light-dark(#a33030, #fca5a5);
-  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: color-mix(in srgb, var(--portal-danger) 15%, transparent);
+  color: var(--portal-danger);
+  border: 1px solid color-mix(in srgb, var(--portal-danger) 35%, transparent);
 }
 
 .action-badge.is-scan {
@@ -71,6 +71,7 @@
 .actor-email {
   font-size: 0.76rem;
   color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Pagination bar */
@@ -78,10 +79,13 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   padding: 14px 20px;
   background: var(--portal-surface);
   border-top: 1px solid var(--portal-border);
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
   color: var(--portal-muted);
 }
 
@@ -106,6 +110,7 @@
   gap: 10px;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--portal-border);
+  font-variant-numeric: tabular-nums;
 }
 
 .diff-grid-comparison {
@@ -139,11 +144,11 @@
 }
 
 .diff-box.is-old .diff-box-title {
-  color: light-dark(#a33030, #f87171);
+  color: var(--portal-danger);
 }
 
 .diff-box.is-new .diff-box-title {
-  color: light-dark(#226442, #4ade80);
+  color: var(--portal-success);
 }
 
 .diff-code-content {
@@ -211,13 +216,13 @@
 }
 
 .diff-box.is-old .diff-kv-row.is-changed {
-  border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.08);
+  border-color: color-mix(in srgb, var(--portal-danger) 35%, transparent);
+  background: color-mix(in srgb, var(--portal-danger) 8%, transparent);
 }
 
 .diff-box.is-new .diff-kv-row.is-changed {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.08);
+  border-color: color-mix(in srgb, var(--portal-success) 35%, transparent);
+  background: color-mix(in srgb, var(--portal-success) 8%, transparent);
 }
 
 .diff-raw-details {
@@ -291,7 +296,12 @@
 .discipline-rate-badge {
   font-weight: 800;
   font-size: 0.95rem;
+  font-variant-numeric: tabular-nums;
   color: var(--portal-salmon);
+}
+
+.occupancy-stat-card .metric-value {
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-track-bg {
@@ -313,6 +323,9 @@
 .discipline-chart-footer {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
   font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
   color: var(--portal-muted);
 }

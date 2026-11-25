@@ -1,13 +1,12 @@
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
-import { useI18n } from '../../shared/i18n';
+import { sourceMessage, useI18n } from '../../shared/i18n';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { getNotifications, getUnreadCount, markAllNotificationsRead, markNotificationRead, notificationDestination, safeNotificationPath, type MemberNotification, type NotificationPage } from './notificationsApi';
 import './notifications.css';
 import { getCurrentUser } from '../../shared/api/client';
-import { localizableError as safeMessage } from '../../shared/lib/errorMessage';
 import { markNoticesRead, usePortalNotices } from '../../shared/lib/portalNotices';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { localizeTitle, localizeMessage } from './notificationLocalizer';
@@ -25,8 +24,10 @@ const category: Record<string, { label: string; en: string }> = {
 };
 
 /** Lỗi hiển thị khi không tải được thông báo. */
-function errorMessage(error: unknown): string | Error {
-  return safeMessage(error, 'Không thể tải thông báo. Vui lòng thử lại.');
+function errorMessage(error: unknown): Error | SourceMessage {
+  return error instanceof Error && error.name === 'Error' && error.message
+    ? error
+    : sourceMessage('Không thể tải thông báo. Vui lòng thử lại.', 'Unable to load notifications. Please try again.');
 }
 
 /** Trang Thông báo: chuyển hướng tới màn chính của vai trò (kèm yêu cầu mở khung thông báo). */
@@ -146,7 +147,7 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
         {notificationItems.map((item) => {
           const cat = category[item.type?.toLowerCase()] ?? category.system;
           return <button key={item.id} type="button" className={`notification-item${item.isRead ? '' : ' notification-item--unread'}`} disabled={busy} onClick={() => void open(item)}>
-          <span className="notification-copy"><small className="notification-category">{t(cat.label, cat.en)}</small><strong>{lang === 'vi' ? localizeTitle(item.title) : item.title}</strong><span>{lang === 'vi' ? localizeMessage(item.message) : item.message}</span><small>{formatCenterDateTime(item.createdAt)}</small></span>
+          <span className="notification-copy"><small className="notification-category">{t(cat.label, cat.en)}</small><strong>{lang === 'vi' ? localizeTitle(item.title) : item.title}</strong><span>{localizeMessage(item.message, lang)}</span><small>{formatCenterDateTime(item.createdAt)}</small></span>
           {!item.isRead && <span className="notification-dot" aria-label={t("Chưa đọc", "Unread")} />}
         </button>;
         })}

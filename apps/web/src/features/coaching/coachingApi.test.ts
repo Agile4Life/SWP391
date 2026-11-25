@@ -23,16 +23,33 @@ describe('coachingApi', () => {
     expect(await coachingApi.getSessionStudents(3)).toEqual([]);
     await expect(coachingApi.getSessionStudents(3)).rejects.toThrow('Không thể tải');
   });
-  it('loads assigned students through real coach sessions and deduplicates members', async () => {
-    const student = { id: 5, memberId: 9, fullName: 'Actual member' };
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [{ id: 1, classId: 10 }, { id: 2, classId: 11 }] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [student] })))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [student] })));
+  it('P1-FE-53: loads assigned students (including pure PT 1:1) from /coaching/members with deduplication and null-safe defaults', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          success: true,
+          data: [
+            { id: 9, memberCode: 'MB-009', fullName: 'PT Only Member', fitnessGoal: null, healthNotes: null, fitnessLevel: null },
+            { id: 9, memberCode: 'MB-009', fullName: 'PT Only Member', fitnessGoal: 'Core', healthNotes: '', fitnessLevel: 'beginner' },
+          ],
+        }),
+      ),
+    );
     vi.stubGlobal('fetch', fetchMock);
-    expect(await coachingApi.getAllAssignedStudents(42)).toEqual([student]);
-    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/classes/sessions?coachId=42');
-    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const students = await coachingApi.getAllAssignedStudents();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/coaching/members');
+    expect(students).toEqual([
+      expect.objectContaining({
+        id: 9,
+        memberId: 9,
+        membershipCode: 'MB-009',
+        fullName: 'PT Only Member',
+        fitnessGoal: 'Core',
+        fitnessLevel: 'beginner',
+        email: '',
+      }),
+    ]);
   });
 
   it('keeps assigned students empty and surfaces failed requests', async () => {
@@ -40,8 +57,8 @@ describe('coachingApi', () => {
       .mockResolvedValueOnce(new Response(JSON.stringify({ success: true, data: [] })))
       .mockResolvedValueOnce(new Response(JSON.stringify({ message: 'Unavailable' }), { status: 500 }));
     vi.stubGlobal('fetch', fetchMock);
-    expect(await coachingApi.getAllAssignedStudents(42)).toEqual([]);
-    await expect(coachingApi.getAllAssignedStudents(42)).rejects.toThrow('Unavailable');
+    expect(await coachingApi.getAllAssignedStudents()).toEqual([]);
+    await expect(coachingApi.getAllAssignedStudents()).rejects.toThrow('Unavailable');
   });
 
   it('P0-06: omits coachId query param when omitted or when a non-numeric username string is passed', async () => {

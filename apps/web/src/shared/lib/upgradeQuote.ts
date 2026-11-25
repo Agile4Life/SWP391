@@ -18,8 +18,27 @@ export interface UpgradeQuote {
   allowed: boolean;
 }
 
-/** Số thứ tự ngày (tính từ 1970-01-01 UTC) của chuỗi YYYY-MM-DD. */
-const dayNumber = (date: string) => Math.floor(Date.parse(`${date}T00:00:00Z`) / 86_400_000);
+const ISO_DATE_PREFIX_RE = /^(\d{4})-(\d{2})-(\d{2})(?:$|[T ])/;
+
+/** Số thứ tự ngày (tính từ 1970-01-01 UTC) của chuỗi YYYY-MM-DD (chấp nhận cắt bỏ phần giờ ISO); sai trả null. */
+function dayNumber(date: string): number | null {
+  if (typeof date !== 'string') return null;
+  const match = ISO_DATE_PREFIX_RE.exec(date.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const utcMs = Date.UTC(year, month - 1, day);
+  const check = new Date(utcMs);
+  if (
+    check.getUTCFullYear() !== year ||
+    check.getUTCMonth() !== month - 1 ||
+    check.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return Math.floor(utcMs / 86_400_000);
+}
 
 /**
  * Báo giá nâng cấp gói: tiền phải trả = giá gói mới − giá trị còn lại của gói hiện tại (không âm), kèm số ngày
@@ -30,9 +49,14 @@ export function upgradeQuote(
   targetPrice: number,
   today: string,
 ): UpgradeQuote | null {
-  if (typeof current.remainingValue !== 'number') return null;
-  const totalDays = dayNumber(current.endDate) - dayNumber(current.startDate) + 1;
-  const remainingDays = Math.min(totalDays, Math.max(0, dayNumber(current.endDate) - dayNumber(today) + 1));
+  if (typeof current.remainingValue !== 'number' || !Number.isFinite(current.remainingValue)) return null;
+  if (typeof targetPrice !== 'number' || !Number.isFinite(targetPrice) || targetPrice < 0) return null;
+  const startDay = dayNumber(current.startDate);
+  const endDay = dayNumber(current.endDate);
+  const todayDay = dayNumber(today);
+  if (startDay === null || endDay === null || todayDay === null) return null;
+  const totalDays = Math.max(0, endDay - startDay + 1);
+  const remainingDays = Math.min(totalDays, Math.max(0, endDay - todayDay + 1));
   const credit = current.remainingValue;
   const amount = targetPrice - credit;
   return { amount: Math.max(0, amount), credit, remainingDays, totalDays, allowed: amount > 0 };

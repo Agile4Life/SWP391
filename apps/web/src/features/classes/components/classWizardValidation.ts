@@ -184,12 +184,12 @@ export function validateClassCapacity(
   return null;
 }
 
-/** Chuẩn hóa danh sách phòng cho Bước 3 (ưu tiên dữ liệu khả dụng từ server). */
+/** Chuẩn hóa danh sách phòng cho Bước 3 (ưu tiên tuyệt đối kết quả kiểm tra khả dụng từ server, kể cả khi rỗng). */
 export function resolveWizardRooms(
   availability: RecurringAvailabilityDto | null,
   fallbackRooms: readonly Room[],
 ): RoomAvailabilityDto[] {
-  if (availability && availability.rooms.length > 0) {
+  if (availability !== null && availability.validSchedule) {
     return availability.rooms;
   }
   return fallbackRooms.map((room) => ({
@@ -204,12 +204,12 @@ export function resolveWizardRooms(
   }));
 }
 
-/** Chuẩn hóa danh sách HLV cho Bước 3 (ưu tiên dữ liệu khả dụng từ server). */
+/** Chuẩn hóa danh sách HLV cho Bước 3 (ưu tiên tuyệt đối kết quả kiểm tra khả dụng từ server, kể cả khi rỗng). */
 export function resolveWizardCoaches(
   availability: RecurringAvailabilityDto | null,
   fallbackCoaches: readonly CoachUser[],
 ): CoachAvailabilityDto[] {
-  if (availability && availability.coaches.length > 0) {
+  if (availability !== null && availability.validSchedule) {
     return availability.coaches;
   }
   return fallbackCoaches.map((coach) => ({

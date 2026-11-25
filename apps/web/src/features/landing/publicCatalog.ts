@@ -2,7 +2,7 @@ import { getIntlLocale, getLanguage } from '../../shared/i18n';
 import { useCallback, useEffect, useState } from 'react';
 import { apiFetch } from '../../shared/api/client';
 import type { MembershipPackage } from '../member/membershipApi';
-// DTO lịch còn nằm trong catalog dùng chung của backend; Public không hiển thị hay đăng ký lớp.
+/** Buổi học lớp nhóm công khai trong 7 ngày tới do /api/v1/public/catalog trả về. */
 interface PublicClassSession {
   id: number; classId: number; className: string; disciplineId: number;
   disciplineName: string; coachId: number; coachName: string; roomId: number;

@@ -14,7 +14,8 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 // Dựng component vào DOM giả để kiểm thử.
-const render = (value = 'Hello', sending = false) => act(async () => root.render(<ChatComposer id="composer" label="Message" value={value} onChange={() => {}} onSubmit={onSubmit} sending={sending} />));
+const render = (value = 'Hello', sending = false, extra: { disabled?: boolean; maxLength?: number; onChange?: (text: string) => void } = {}) =>
+  act(async () => root.render(<ChatComposer id="composer" label="Message" value={value} onChange={extra.onChange ?? (() => {})} onSubmit={onSubmit} sending={sending} disabled={extra.disabled} maxLength={extra.maxLength} />));
 
 it('sends on physical Enter while preserving Shift+Enter and IME composition', async () => {
   await render();
@@ -49,4 +50,31 @@ it('updates the visible send label, tooltip and emoji accessible name with langu
   expect(send.title).toBe('Send');
   expect(host.querySelector('[aria-label="Choose emoji"]')).not.toBeNull();
   expect(host.querySelector('textarea')!.placeholder).toBe('Message...');
+});
+
+it('P2-FE-79: enforces maxLength on emoji insertion and canSend, and closes emoji picker when disabled', async () => {
+  const onChange = vi.fn();
+  await render('a'.repeat(1999), false, { maxLength: 2000, onChange });
+  const emojiToggle = host.querySelector<HTMLButtonElement>('[aria-label="Chọn biểu tượng cảm xúc"]')!;
+  await act(async () => emojiToggle.click());
+  const muscleBtn = host.querySelector<HTMLButtonElement>('[aria-label="Chèn 💪"]')!;
+  // '💪' has length 2 -> 1999 + 2 = 2001 > 2000 so button is disabled and insert is blocked
+  expect(muscleBtn.disabled).toBe(true);
+  await act(async () => muscleBtn.click());
+  expect(onChange).not.toHaveBeenCalled();
+
+  // Over-length value disables Send button and blocks submit
+  await render('a'.repeat(2001), false, { maxLength: 2000, onChange });
+  expect(host.querySelector<HTMLButtonElement>('button[type="submit"]')!.disabled).toBe(true);
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(onSubmit).not.toHaveBeenCalled();
+
+  // Opening emoji picker, then disabling and re-enabling composer keeps emoji picker closed
+  await render('Hi', false, { disabled: false, onChange });
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Chọn biểu tượng cảm xúc"]')!.click());
+  expect(host.querySelector('.direct-chat__emoji-bar')).not.toBeNull();
+  await render('Hi', false, { disabled: true, onChange });
+  expect(host.querySelector('.direct-chat__emoji-bar')).toBeNull();
+  await render('Hi', false, { disabled: false, onChange });
+  expect(host.querySelector('.direct-chat__emoji-bar')).toBeNull();
 });

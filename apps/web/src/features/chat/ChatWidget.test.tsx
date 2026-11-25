@@ -272,3 +272,81 @@ it('P0-07: remounts widget and clears cached drafts/messages when switching acco
   expect(host.textContent).toContain('Lễ tân Mai');
   expect(host.textContent).not.toContain('Coach Linh');
 });
+
+it('P1-FE-62: ignores Escape when a native <dialog open> is active so modals close without trapping inert top layer', async () => {
+  await render();
+  await act(async () => button('Mở tin nhắn').click());
+  await settle();
+  const panel = host.querySelector<HTMLElement>('#sol-direct-chat')!;
+  expect(panel.hidden).toBe(false);
+
+  const nativeDialog = document.createElement('dialog');
+  nativeDialog.setAttribute('open', '');
+  document.body.append(nativeDialog);
+  try {
+    const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true });
+    await act(async () => { document.dispatchEvent(event); });
+    expect(event.defaultPrevented).toBe(false);
+    expect(panel.hidden).toBe(false);
+  } finally {
+    nativeDialog.remove();
+  }
+});
+
+it('P2-FE-26 & P2-FE-80 & P3-FE-30 & P3-FE-32: omits nested LiquidGlassContainer, renders reconnecting status outside header-title, updates disabled copy, and falls back broken mini avatars', async () => {
+  let setStatus!: (state: 'connecting' | 'connected' | 'reconnecting' | 'disabled') => void;
+  vi.mocked(subscribeChat).mockImplementation((_changed, status) => {
+    setStatus = status;
+    return vi.fn();
+  });
+  await render();
+  expect(host.querySelector('.glass-container')).toBeNull();
+
+  await act(async () => button('Mở tin nhắn').click());
+  await settle();
+  expect(host.querySelector('.glass-container')).toBeNull();
+
+  // Mini avatar falls back to placeholder SVG on image load error
+  const miniImg = host.querySelector<HTMLImageElement>('.chat-widget__mini-avatar img')!;
+  expect(miniImg).not.toBeNull();
+  await act(async () => { miniImg.dispatchEvent(new Event('error')); });
+  expect(host.querySelector('.chat-widget__mini-avatar img')).toBeNull();
+
+  // Status banner lives outside .chat-widget__header-title so it remains visible when a thread is open
+  await act(async () => { setStatus('reconnecting'); });
+  const statusEl = host.querySelector('.chat-widget__status.is-reconnecting')!;
+  expect(statusEl).not.toBeNull();
+  expect(statusEl.closest('.chat-widget__header-title')).toBeNull();
+
+  // Disabled status reports auto-sync copy (not outdated "Bấm làm mới")
+  await act(async () => { setStatus('disabled'); });
+  expect(host.querySelector('.chat-widget__status')?.textContent).toBe('Tự động đồng bộ tin nhắn');
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('.chat-widget__status')?.textContent).toBe('Auto-syncing messages');
+});
+
+it('P2-FE-77: ignores non-finite stored coordinates and clamps off-screen desktop coordinates to viewport on mount', async () => {
+  // Non-finite / corrupt stored position falls back cleanly to default CSS anchor
+  window.localStorage.setItem('sol-chat-widget-position', JSON.stringify({ x: null, y: 'bad' }));
+  await render();
+  expect(host.querySelector<HTMLElement>('.chat-widget')!.style.left).toBe('');
+  await act(async () => root.unmount());
+  root = createRoot(host);
+
+  // Off-screen coordinates from a wider screen are clamped inside current viewport on mount
+  const origInnerWidth = window.innerWidth;
+  const origInnerHeight = window.innerHeight;
+  Object.defineProperty(window, 'innerWidth', { value: 390, configurable: true });
+  Object.defineProperty(window, 'innerHeight', { value: 640, configurable: true });
+  window.localStorage.setItem('sol-chat-widget-position', JSON.stringify({ x: 1800, y: 1200 }));
+  try {
+    await render();
+    const widget = host.querySelector<HTMLElement>('.chat-widget')!;
+    expect(Number.parseFloat(widget.style.left)).toBeLessThanOrEqual(390 - 8);
+    expect(Number.parseFloat(widget.style.top)).toBeLessThanOrEqual(640 - 8);
+  } finally {
+    Object.defineProperty(window, 'innerWidth', { value: origInnerWidth, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: origInnerHeight, configurable: true });
+    window.localStorage.removeItem('sol-chat-widget-position');
+  }
+});

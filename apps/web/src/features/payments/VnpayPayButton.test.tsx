@@ -99,3 +99,21 @@ it('P0-04: asks confirmation before charging SÖL Wallet and only calls payWithW
   window.removeEventListener('member-notifications-changed', notifChanged);
  }
 });
+it('P1-FE-26 & P3-FE-23: shows formatted amount in wallet confirmation and guards handleUnlock with a ref against double click',async()=>{
+ await act(async()=>root.render(<VnpayPayButton target={{paymentId:55}} amount={450000} />));
+ const walletBtn = host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')!;
+ await act(async()=>walletBtn.click());
+ expect(host.querySelector('dialog')?.textContent).toContain('450.000');
+ const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Hủy')!;
+ await act(async()=>cancelBtn.click());
+
+ let finishUnlock!: () => void;
+ vi.mocked(session.cancelVnpayTarget).mockReturnValueOnce(new Promise<void>((res) => { finishUnlock = res; }));
+ const conflict = Object.assign(new Error('Giao dịch VNPay đang chờ xác nhận.'), { code: 'VNPAY_AWAITING_CONFIRMATION' });
+ vi.mocked(api.createVnpayCheckout).mockRejectedValueOnce(conflict);
+ await act(async()=>host.querySelector('button')!.click());
+ const unlockBtn = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Mở khóa'))!;
+ await act(async()=>{ unlockBtn.click(); unlockBtn.click(); });
+ expect(session.cancelVnpayTarget).toHaveBeenCalledTimes(1);
+ await act(async()=>{ finishUnlock(); });
+});

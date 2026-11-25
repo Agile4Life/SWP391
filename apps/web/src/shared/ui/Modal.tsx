@@ -10,46 +10,86 @@ interface ModalProps {
   busy?: boolean;
   className?: string;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  role?: 'dialog' | 'alertdialog';
+  ariaDescribedBy?: string;
 }
 
+const FOCUSABLE_SELECTOR = [
+  'button',
+  'a[href]',
+  'input',
+  'select',
+  'textarea',
+  'summary',
+  '[contenteditable]:not([contenteditable="false"])',
+  '[tabindex]',
+].join(', ');
+
 /** Hộp thoại dựa trên <dialog> gốc: có sẵn focus trap, phím Esc và backdrop. */
-export function Modal({ title, onClose, children, busy = false, className, returnFocusRef }: ModalProps) {
+export function Modal({
+  title,
+  onClose,
+  children,
+  busy = false,
+  className,
+  returnFocusRef,
+  role = 'dialog',
+  ariaDescribedBy,
+}: ModalProps) {
   const { t } = useI18n();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const pressStartedOnBackdrop = useRef(false);
+  const returnFocusTargetRef = useRef(returnFocusRef);
+
+  useEffect(() => {
+    returnFocusTargetRef.current = returnFocusRef;
+  }, [returnFocusRef]);
 
   useEffect(() => {
     const dialog = ref.current;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     if (dialog && !dialog.open) dialog.showModal();
     return () => {
+      const activeBeforeClose = document.activeElement;
+      const focusWasInsideDialog = !activeBeforeClose || activeBeforeClose === document.body || Boolean(dialog?.contains(activeBeforeClose));
       if (dialog?.open) dialog.close();
-      // Khi hủy thành công, khung chờ được thay bằng danh mục trước khi cleanup chạy.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      const returnTarget = returnFocusRef?.current;
-      if (returnTarget?.isConnected) returnTarget.focus({ preventScroll: true });
+      if (focusWasInsideDialog) {
+        // Khi hủy thành công, khung chờ được thay bằng danh mục trước khi cleanup chạy.
+        const returnTarget = returnFocusTargetRef.current?.current ?? previouslyFocused;
+        if (returnTarget?.isConnected) returnTarget.focus({ preventScroll: true });
+      }
     };
-  }, [returnFocusRef]);
+  }, []);
 
   return (
     <dialog
       ref={ref}
-      role="dialog"
+      role={role}
       aria-modal="true"
       aria-busy={busy}
       className={`portal-dialog ${className || ''}`.trim()}
       aria-labelledby={titleId}
+      aria-describedby={ariaDescribedBy}
       onKeyDown={event => {
         if (event.key !== 'Tab') return;
         const dialog = event.currentTarget;
         if (event.target instanceof Element && event.target.closest('dialog') !== dialog) return;
-        const controls = [...dialog.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]')]
-          .filter(element => element.closest('dialog') === dialog && element.tabIndex >= 0 && !element.matches(':disabled') && element.getClientRects().length > 0);
+        const controls = [...dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)]
+          .filter((element) => {
+            if (element.closest('dialog') !== dialog) return false;
+            if (element.tabIndex < 0) return false;
+            if (element.matches(':disabled')) return false;
+            if (element.getAttribute('aria-hidden') === 'true') return false;
+            const closedDetails = element.closest('details:not([open])');
+            if (closedDetails && !(element.tagName === 'SUMMARY' && element.parentElement === closedDetails)) return false;
+            return element.getClientRects().length > 0;
+          });
         const first = controls[0];
         const last = controls.at(-1);
         if (!first) { event.preventDefault(); dialog.focus(); }
-        else if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
-        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+        else if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) { event.preventDefault(); last?.focus(); }
+        else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) { event.preventDefault(); first.focus(); }
       }}
       tabIndex={-1}
       onCancel={(e) => {

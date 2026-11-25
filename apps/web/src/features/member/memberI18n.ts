@@ -21,19 +21,30 @@ export function memberRenderMessage(message: string | SourceMessage | null | und
   return typeof message === 'string' ? message : getLanguage() === 'en' ? message.en : message.vi;
 }
 /** Giữ nguyên lỗi từ backend (kèm bản dịch nếu có); lỗi khác dùng câu dự phòng song ngữ. */
-export function memberError(reason: unknown, fallback: string): string | SourceMessage {
+export function memberError(reason: unknown, fallback: string, english?: string): string | SourceMessage {
   if (reason instanceof Error && reason.name === 'Error' && reason.message) {
     const translated = (reason as Error & { translation?: SourceMessage }).translation;
     return translated ?? reason.message;
   }
-  return memberMessage(fallback);
+  return memberMessage(fallback, english);
 }
 import { notify, type PortalNoticeType } from '../../shared/lib/portalNotices';
 
 /**
  * Hiện thông báo portal kèm nguồn gốc song ngữ tường minh để khi đổi ngôn ngữ thì thông báo đang mở cũng đồng bộ theo.
+ * Chuỗi lỗi động trả về từ API (không có trong từ điển nguồn) được giữ nguyên văn.
  */
 export function memberNotify(message: SourceMessage | string, type: PortalNoticeType, options: Parameters<typeof notify>[2] = {}) {
-  const translation = typeof message === 'string' ? memberMessage(message) : message;
-  notify(memberRenderMessage(translation), type, { ...options, translation });
+  if (typeof message !== 'string') {
+    notify(memberRenderMessage(message), type, { ...options, translation: message });
+    return;
+  }
+  const key = message.trim().replace(/\s+/g, ' ');
+  const known = memberLabels[key] ?? englishLabels[key];
+  if (known) {
+    const translation = sourceMessage(message, known);
+    notify(memberRenderMessage(translation), type, { ...options, translation });
+  } else {
+    notify(message, type, options);
+  }
 }

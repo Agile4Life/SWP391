@@ -134,3 +134,45 @@ it('shows empty state when neither PT nor enrolled classes exist', async () => {
   await render();
   expect(host.textContent).toContain('Tuần này bạn chưa có lịch nào.');
 });
+
+it('surfaces group class load failure with Retry and translates alerts in EN mode (P1-FE-33)', async () => {
+  setLanguage('en');
+  mocks.enrollments.mockRejectedValueOnce(new TypeError('network down'));
+  await render();
+  const alert = host.querySelector('[role="alert"]');
+  expect(alert).not.toBeNull();
+  expect(alert?.textContent).toContain('Unable to load your group class schedule.');
+  await act(async () => button('Retry').click());
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+  expect(host.querySelectorAll('.mcal__event--class')).toHaveLength(1);
+});
+
+it('updates PT event titles when toggling VI/EN and strips duplicate HLV prefix in EN (P2-FE-54)', async () => {
+  mocks.pt.mockResolvedValue([{ ...booking, coachName: 'HLV Hùng' }]);
+  await render();
+  expect(host.querySelector('.mcal__event--pt')?.textContent).toContain('Tập 1:1 cùng HLV Hùng');
+  expect(host.querySelector('.mcal__event--pt')?.textContent).not.toContain('HLV HLV');
+
+  await act(async () => { setLanguage('en'); });
+  expect(host.querySelector('.mcal__event--pt')?.textContent).toContain('1:1 session with Hùng');
+  expect(host.querySelector('.mcal__event--pt')?.textContent).not.toContain('HLV');
+});
+
+it('keeps Next Up banner stable across week navigation and includes next-week group class from rolling lookahead (P1-FE-35)', async () => {
+  const nextWeekClass = { ...classSession, id: 502, sessionDate: '2099-01-12', startTime: '07:00:00', endTime: '09:30:00', className: 'Boxing Thứ Hai' };
+  mocks.pt.mockResolvedValue([]);
+  mocks.sessionsBetween.mockImplementation(async (from: string, to: string) => {
+    // Current week is 2099-01-05..2099-01-11; rolling lookahead is 2099-01-07..2099-02-06
+    if (to >= '2099-01-12' && from <= '2099-01-12') return [nextWeekClass];
+    return [];
+  });
+  await render();
+
+  // Even though current week (2099-01-05..2099-01-11) has no sessions, Next Up shows Monday's class
+  expect(host.querySelector('.mcal__next')?.textContent).toContain('Boxing Thứ Hai');
+  expect(host.querySelector('.mcal__next')?.textContent).toContain('Slot 1 · 07:00 – 09:30');
+
+  // Navigating to a past week does not drop or alter the Next Up banner
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Tuần trước"]')!.click());
+  expect(host.querySelector('.mcal__next')?.textContent).toContain('Boxing Thứ Hai');
+});

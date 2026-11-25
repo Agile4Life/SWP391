@@ -7,6 +7,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { clearPurchaseIntent, selectedPackageId } from '../../shared/lib/purchaseIntent';
 import { formatPrice, getPackageDetails, isTrialPackage, LONG_TERM_DAYS, MIN_TERM_DAYS } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { FilePicker } from '../../shared/ui/FilePicker';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -32,11 +33,14 @@ import {
   type MembershipCancellationRequest,
   type Payment,
 } from './membershipApi';
-import { localizableError } from '../../shared/lib/errorMessage';
 import { cancelVnpayTarget } from '../payments/vnpaySession';
 import { trialApi, type TrialStatus } from './trialApi';
 import { getProfile, type Profile } from './profileApi';
-import { formatCenterDate } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
+
+function toLocalizableError(error: unknown, vi: string, en: string): Error | SourceMessage {
+  return error instanceof Error && error.name === 'Error' && error.message ? error : sourceMessage(vi, en);
+}
 
 /** Trạng thái tải dữ liệu: đang tải, lỗi hoặc thành công kèm dữ liệu. */
 type LoadState<T> =
@@ -67,10 +71,9 @@ function formatDate(value: string): string {
   return formatCenterDate(value.slice(0, 10));
 }
 
-/** Khóa ngày hôm nay dạng YYYY-MM-DD theo giờ máy. */
+/** Khóa ngày hôm nay dạng YYYY-MM-DD theo múi giờ trung tâm (Asia/Ho_Chi_Minh). */
 function todayKey(): string {
-  const today = new Date();
-  return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+  return centerNowParts().date;
 }
 
 /** Gói đích có cao hơn gói hiện tại không (giá cao hơn, hoặc cùng giá nhưng thời hạn dài hơn). */
@@ -85,7 +88,7 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
 function isKycRequiredError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const code = (error as { code?: string }).code;
-  if (code === 'MEMBERSHIP_KYC_REQUIRED') return true;
+  if (code === 'MEMBERSHIP_KYC_REQUIRED' || code === 'MEMBERSHIP_KYC_PENDING') return true;
   return /kyc|cccd|căn cước|hộ chiếu|identity|error\.membership\.kyc_required/i.test(error.message);
 }
 
@@ -119,7 +122,7 @@ export function MemberPackagesPage() {
   const readVersions = useRef({ packages: 0, current: 0, history: 0, payments: 0, cancellations: 0 });
   const refreshNow = useRef<() => void>(() => {});
   const refreshQueued = useRef(false);
-  const [blockedMessage, setBlockedMessage] = useState<string | Error | null>(null);
+  const [blockedMessage, setBlockedMessage] = useState<string | Error | SourceMessage | null>(null);
   const [blockedKycPackageId, setBlockedKycPackageId] = useState<number | null>(null);
   const watchedPending = useRef(new Set<number>());
   const announcedPayments = useRef(new Set<number>());
@@ -145,6 +148,7 @@ export function MemberPackagesPage() {
   const [trialBackImage, setTrialBackImage] = useState('');
   const [trialError, setTrialError] = useState<string | Error | { vi: string; en: string } | SourceMessage>('');
   const [isClaimingTrial, setIsClaimingTrial] = useState(false);
+  const claimingTrialRef = useRef(false);
 
   // Tải trạng thái gói trải nghiệm (lỗi nền thì bỏ qua).
   const loadTrialStatus = useCallback(async () => {
@@ -196,7 +200,9 @@ export function MemberPackagesPage() {
   // Gửi yêu cầu gói trải nghiệm: dùng lại hồ sơ KYC có sẵn hoặc gửi giấy tờ mới.
   const handleClaimTrial = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (claimingTrialRef.current) return;
     if (hasReusableKyc) {
+      claimingTrialRef.current = true;
       setIsClaimingTrial(true);
       setTrialError('');
       try {
@@ -207,8 +213,9 @@ export function MemberPackagesPage() {
         setIsTrialModalOpen(false);
         await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
       } catch (err) {
-        setTrialError(localizableError(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.'));
+        setTrialError(toLocalizableError(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.', 'Unable to submit trial application. Please check your details.'));
       } finally {
+        claimingTrialRef.current = false;
         setIsClaimingTrial(false);
       }
       return;
@@ -221,7 +228,7 @@ export function MemberPackagesPage() {
       }
     } else {
       if (!/^[A-Za-z0-9]{6,15}$/.test(docClean)) {
-        setTrialError(memberMessage("Số Hộ chiếu không hợp lệ (từ 6 đến 20 ký tự)."));
+        setTrialError(sourceMessage('Số Hộ chiếu không hợp lệ (6 đến 15 ký tự chữ và số).', 'Invalid passport number (6 to 15 letters and digits).'));
         return;
       }
       const natClean = trialNationality.trim();
@@ -232,7 +239,7 @@ export function MemberPackagesPage() {
       if (/^(vn|vnm|vietnam|việt nam|viet nam)$/i.test(natClean)) {
         setTrialError(sourceMessage(
           "Hộ chiếu chỉ áp dụng cho người nước ngoài. Công dân Việt Nam vui lòng sử dụng CCCD.",
-          "Passports are only accepted for foreign nationals. Vietnamese citizens must use a identity card.",
+          "Passports are only accepted for foreign nationals. Vietnamese citizens must use an identity card.",
         ));
         return;
       }
@@ -249,6 +256,7 @@ export function MemberPackagesPage() {
       setTrialError(memberMessage("Vui lòng tải lên ảnh chụp mặt sau của CCCD."));
       return;
     }
+    claimingTrialRef.current = true;
     setIsClaimingTrial(true);
     setTrialError('');
     try {
@@ -258,7 +266,7 @@ export function MemberPackagesPage() {
         documentType: trialDocType,
         nationality: trialDocType === 'PASSPORT' ? trialNationality.trim() : undefined,
         frontImageUrl: trialFrontImage,
-        backImageUrl: trialBackImage || undefined,
+        backImageUrl: trialDocType === 'CCCD' && trialBackImage ? trialBackImage : undefined,
       });
       notify(t("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."),  record: true });
       setIsTrialModalOpen(false);
@@ -269,8 +277,9 @@ export function MemberPackagesPage() {
       setTrialBackImage('');
       await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
     } catch (err) {
-      setTrialError(localizableError(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.'));
+      setTrialError(toLocalizableError(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.', 'Unable to submit trial application. Please check your details.'));
     } finally {
+      claimingTrialRef.current = false;
       setIsClaimingTrial(false);
     }
   };
@@ -448,6 +457,19 @@ export function MemberPackagesPage() {
     currentState.status === 'loading' ||
     historyState.status === 'loading' ||
     paymentsState.status === 'loading';
+  const allLoaded = !isStatusSyncing && packagesState.status !== 'loading' && cancellationsState.status !== 'loading';
+  const loadingFlagsRef = useRef({
+    isStatusSyncing,
+    packagesLoading: packagesState.status === 'loading',
+    cancellationsLoading: cancellationsState.status === 'loading',
+  });
+  useEffect(() => {
+    loadingFlagsRef.current = {
+      isStatusSyncing,
+      packagesLoading: packagesState.status === 'loading',
+      cancellationsLoading: cancellationsState.status === 'loading',
+    };
+  }, [isStatusSyncing, packagesState.status, cancellationsState.status]);
 
   useEffect(() => {
     if (historyState.status === 'success') {
@@ -464,8 +486,9 @@ export function MemberPackagesPage() {
     // Đồng bộ lại toàn bộ dữ liệu gói (bỏ qua khi tab ẩn hoặc đang bận, xếp hàng chạy lại sau); phát hiện thanh toán vừa thành công để báo.
     async function refresh() {
       if (disposed) return;
+      const flags = loadingFlagsRef.current;
       if (inFlight || document.visibilityState === 'hidden' || requestBusy.current
-        || isStatusSyncing || packagesState.status === 'loading' || cancellationsState.status === 'loading') {
+        || flags.isStatusSyncing || flags.packagesLoading || flags.cancellationsLoading) {
         refreshQueued.current = true;
         return;
       }
@@ -509,7 +532,8 @@ export function MemberPackagesPage() {
         }
       } finally {
         inFlight = false;
-        if (!disposed && refreshQueued.current && !requestBusy.current && !isStatusSyncing) {
+        const latestFlags = loadingFlagsRef.current;
+        if (!disposed && refreshQueued.current && !requestBusy.current && !latestFlags.isStatusSyncing && !latestFlags.packagesLoading && !latestFlags.cancellationsLoading) {
           refreshQueued.current = false;
           void refresh();
         }
@@ -543,7 +567,13 @@ export function MemberPackagesPage() {
       window.removeEventListener('vnpay-attempt-released', onRefresh);
       document.removeEventListener('visibilitychange', onRefresh);
     };
-  }, [isStatusSyncing, packagesState.status, cancellationsState.status, submittingPackageId, loadTrialStatus, loadKycProfile]);
+  }, [loadTrialStatus, loadKycProfile]);
+
+  useEffect(() => {
+    if (allLoaded && refreshQueued.current && !requestBusy.current) {
+      refreshNow.current();
+    }
+  }, [allLoaded]);
 
   useEffect(() => {
     if (syncError) {
@@ -655,7 +685,7 @@ export function MemberPackagesPage() {
         setBlockedKycPackageId(null);
       }
       setBlockedMessage(
-        localizableError(error, 'Không thể xử lý yêu cầu. Vui lòng thử lại.'),
+        toLocalizableError(error, 'Không thể xử lý yêu cầu. Vui lòng thử lại.', 'Unable to process request. Please try again.'),
       );
     } finally {
       await loadHistory();
@@ -680,7 +710,7 @@ export function MemberPackagesPage() {
         : previous);
       notify(t("Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên.", "Membership resumed. Your remaining time is unchanged."), 'success', { translation: sourceMessage("Đã mở lại gói tập. Thời hạn còn lại được giữ nguyên.", "Membership resumed. Your remaining time is unchanged."),  record: true });
     } catch (error) {
-      setActionError(localizableError(error, 'Không thể mở lại gói tập. Vui lòng thử lại.'));
+      setActionError(toLocalizableError(error, 'Không thể mở lại gói tập. Vui lòng thử lại.', 'Unable to resume membership. Please try again.'));
     } finally {
       setIsResuming(false);
       requestBusy.current = false;
@@ -715,7 +745,7 @@ export function MemberPackagesPage() {
       setPendingToCancel(null);
       notify(t(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, `Membership request #${cancelled.id} cancelled.`), 'success', { translation: sourceMessage(`Đã hủy yêu cầu gói tập #${cancelled.id}.`, `Membership request #${cancelled.id} cancelled.`),  record: true });
     } catch (error) {
-      setActionError(localizableError(error, 'Không thể hủy yêu cầu gói tập. Vui lòng thử lại.'));
+      setActionError(toLocalizableError(error, 'Không thể hủy yêu cầu gói tập. Vui lòng thử lại.', 'Unable to cancel membership request. Please try again.'));
     } finally {
       await Promise.all([loadCurrent(), loadHistory(), loadPayments()]);
       setIsCancellingPending(false);
@@ -825,7 +855,7 @@ export function MemberPackagesPage() {
             >
               {t("Chờ lễ tân phê duyệt tại quầy", "Awaiting approval at reception")}</span>
             <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-              {t(" Đã nộp: ", "Submitted:")}{(trialStatus.requestedAt ?? trialStatus.redeemedAt) ? formatCenterDate((trialStatus.requestedAt ?? trialStatus.redeemedAt)!) : t("Gần đây", "Recently")}
+              {t("Đã nộp: ", "Submitted: ")}{(trialStatus.requestedAt ?? trialStatus.redeemedAt) ? formatCenterDate((trialStatus.requestedAt ?? trialStatus.redeemedAt)!) : t("Gần đây", "Recently")}
             </span>
             <RefreshButton
               label={t("Kiểm tra lại trạng thái", "Check status") as string}
@@ -855,7 +885,7 @@ export function MemberPackagesPage() {
               <h3 style={{ margin: '0 0 6px', fontSize: 17, fontWeight: 700, color: 'var(--portal-danger)' }}>
                 {t(" Đơn đăng ký Gói Trải Nghiệm 3 Ngày bị từ chối ", "Your 3-day trial application was declined")}</h3>
               <p className="row-card__meta" style={{ margin: 0 }}>
-                {t(" Lý do từ Lễ tân: ", "Reception's reason:")}<strong>{trialStatus.rejectionReason || t("Thông tin giấy tờ không khớp bản gốc.", "The document details do not match the original.")}</strong>{t(". Bạn có thể kiểm tra và nộp lại đơn mới. ", ". Check your details and submit a new application.")}</p>
+                {t("Lý do từ Lễ tân: ", "Reception's reason: ")}<strong>{trialStatus.rejectionReason || t("Thông tin giấy tờ không khớp bản gốc.", "The document details do not match the original.")}</strong>{t(". Bạn có thể kiểm tra và nộp lại đơn mới.", ". Check your details and submit a new application.")}</p>
             </div>
             <button
               type="button"
@@ -960,7 +990,7 @@ export function MemberPackagesPage() {
                 {displayedPackageName}
               </h2>
               <p className="row-card__meta" style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
-                <span>{t(" Hiệu lực từ ", "Valid from")}{formatDate(current.startDate)} {t("đến ", "to")}<strong>{formatDate(current.paidThroughDate ?? current.endDate)}</strong></span>
+                <span>{t("Hiệu lực từ ", "Valid from ")}{formatDate(current.startDate)} {t("đến ", "to ")}<strong>{formatDate(current.paidThroughDate ?? current.endDate)}</strong></span>
                 <DaysLeft endDate={current.paidThroughDate ?? current.endDate} />
               </p>
             </div>
@@ -999,15 +1029,15 @@ export function MemberPackagesPage() {
             {frozenSubscription.packageName}
           </h2>
           <p className="row-card__meta" style={{ marginTop: 4 }}>
-            {t(" Thời hạn gói: ", "Membership period:")}{formatDate(frozenSubscription.startDate)} {t("đến ", "to")}{formatDate(frozenSubscription.endDate)}
+            {t("Thời hạn gói: ", "Membership period: ")}{formatDate(frozenSubscription.startDate)} {t("đến ", "to ")}{formatDate(frozenSubscription.endDate)}
           </p>
           {frozenSubscription.holdReason && (
             <p className="row-card__meta" style={{ marginTop: 4, fontWeight: 600 }}>
-              {t(" Lý do bảo lưu: \"", "Pause reason: \"")}{frozenSubscription.holdReason}"
+              {t("Lý do bảo lưu: \"", "Pause reason: \"")}{frozenSubscription.holdReason}"
             </p>
           )}
           <p className="row-card__meta" style={{ marginTop: 6 }}>
-            {t(" Gói tập đang được bảo lưu. Các buổi PT 1:1 trong giai đoạn bảo lưu đã bị hủy. ", "Your membership is on hold. 1:1 PT sessions within the hold period have been cancelled.")}</p>
+            {t("Gói tập đang được bảo lưu. Các khóa học nhóm và buổi PT 1:1 trong giai đoạn bảo lưu đã bị hủy.", "Your membership is on hold. Group courses and 1:1 PT sessions within the hold period have been cancelled.")}</p>
           <p className="row-card__meta">{t("Mở lại để dùng tiếp số ngày còn lại, không cần thanh toán lại.", "Resume to use your remaining days; no new payment needed.")}</p>
           <button type="button" className="btn-primary" disabled={isResuming || isStatusSyncing || pendingItems.length > 0}
             onClick={() => void handleResume()}>
@@ -1057,7 +1087,7 @@ export function MemberPackagesPage() {
                   setActionError(null);
                   void cancelVnpayTarget({ subscriptionId: pending.id })
                     .then(() => loadPayments())
-                    .catch((err) => setActionError(localizableError(err, 'Không thể mở khóa giao dịch VNPay.')))
+                    .catch((err) => setActionError(toLocalizableError(err, 'Không thể mở khóa giao dịch VNPay.', 'Unable to unlock VNPay transaction.')))
                     .finally(() => setReleasingVnpay(false));
                 }}
               >
@@ -1225,18 +1255,18 @@ export function MemberPackagesPage() {
               hasLowerOrNonUpgradableCurrentPackage ||
               upgradeCovered;
 
-            const blockedReason = syncError ? memberText("Chờ đồng bộ trạng thái mới nhất.")
-              : hasPendingHold ? memberText("Yêu cầu bảo lưu đang chờ xử lý. Gói hiện tại vẫn có hiệu lực.")
-              : isStatusSyncing ? memberText("Đang kiểm tra gói và thanh toán.")
+            const blockedReason: SourceMessage | null = syncError ? memberMessage("Chờ đồng bộ trạng thái mới nhất.")
+              : hasPendingHold ? memberMessage("Yêu cầu bảo lưu đang chờ xử lý. Gói hiện tại vẫn có hiệu lực.")
+              : isStatusSyncing ? memberMessage("Đang kiểm tra gói và thanh toán.")
               : currentState.status === 'error' || historyState.status === 'error' || paymentsState.status === 'error'
-                ? memberText("Không thể xác minh trạng thái. Vui lòng thử tải lại.")
-              : pendingItems.length > 0 ? current ? memberText("Yêu cầu đang chờ xử lý. Gói hiện tại vẫn giữ nguyên hiệu lực.") : memberText("Yêu cầu đang chờ thanh toán.")
-              : hasPaidFutureUpgrade ? memberText("Kỳ tiếp theo đã thanh toán. Liên hệ nhân viên để nâng cấp.")
-              : nextRenewals > 0 ? memberText("Đã có kỳ tiếp theo; vui lòng liên hệ nhân viên trước khi nâng cấp.")
-              : frozenSubscription ? memberText("Mở lại gói bảo lưu trước khi tiếp tục.")
-              : hasLowerOrNonUpgradableCurrentPackage ? memberText("Chỉ có thể gia hạn gói hiện tại hoặc nâng lên gói cao hơn.")
-              : upgradeCovered ? memberText("Giá trị còn lại của gói hiện tại đã bằng hoặc vượt giá gói này.")
-              : ambiguousRenewal ? memberText("Có nhiều kỳ cùng ngày kết thúc. Vui lòng liên hệ nhân viên.") : null;
+                ? memberMessage("Không thể xác minh trạng thái. Vui lòng thử tải lại.")
+              : pendingItems.length > 0 ? current ? memberMessage("Yêu cầu đang chờ xử lý. Gói hiện tại vẫn giữ nguyên hiệu lực.") : memberMessage("Yêu cầu đang chờ thanh toán.")
+              : hasPaidFutureUpgrade ? memberMessage("Kỳ tiếp theo đã thanh toán. Liên hệ nhân viên để nâng cấp.")
+              : nextRenewals > 0 ? memberMessage("Đã có kỳ tiếp theo; vui lòng liên hệ nhân viên trước khi nâng cấp.")
+              : frozenSubscription ? memberMessage("Mở lại gói bảo lưu trước khi tiếp tục.")
+              : hasLowerOrNonUpgradableCurrentPackage ? memberMessage("Chỉ có thể gia hạn gói hiện tại hoặc nâng lên gói cao hơn.")
+              : upgradeCovered ? memberMessage("Giá trị còn lại của gói hiện tại đã bằng hoặc vượt giá gói này.")
+              : ambiguousRenewal ? memberMessage("Có nhiều kỳ cùng ngày kết thúc. Vui lòng liên hệ nhân viên.") : null;
 
             let buttonText = historyState.status === 'success' && historyState.data.length === 0
               ? t("Đăng ký lần đầu", "First registration") : t("Đăng ký gói mới", "Register a new membership");
@@ -1285,7 +1315,7 @@ export function MemberPackagesPage() {
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <div className="meta-label">
-                      {selectedId === membershipPackage.id ? t("Gói bạn đã chọn · ", "Your selected plan ·") : ''}{details.tierBadge}
+                      {selectedId === membershipPackage.id ? t("Gói bạn đã chọn · ", "Your selected plan · ") : ''}{details.tierBadge}
                     </div>
                     {isCurrent && <span className="badge badge-success">{t("Gói hiện tại", "Current membership")}</span>}
                   </div>
@@ -1370,7 +1400,7 @@ export function MemberPackagesPage() {
                     <p className="row-card__meta" data-testid="upgrade-quote" style={{ margin: '8px 0 0' }}>
                       {quote.allowed ? (
                         <>
-                          <strong>{t("Nâng cấp: thanh toán ", "Upgrade: pay")}{formatPrice(quote.amount)}</strong>
+                          <strong>{t("Nâng cấp: thanh toán ", "Upgrade: pay ")}{formatPrice(quote.amount)}</strong>
                           {t(` — đã trừ ${formatPrice(quote.credit)} giá trị còn lại của gói hiện tại (${quote.remainingDays}/${quote.totalDays} ngày chưa dùng).`, ` — includes ${formatPrice(quote.credit)} credit from your current membership (${quote.remainingDays}/${quote.totalDays} unused days).`)}
                           {' '}{t("Gói mới tính từ hôm nay; gói hiện tại kết thúc khi thanh toán được xác nhận. ", "The new membership starts today; your current membership ends when payment is confirmed.")}</>
                       ) : (
@@ -1388,8 +1418,8 @@ export function MemberPackagesPage() {
                     onClick={() => {
                       if (disabled) {
                         setBlockedMessage(blockedReason ?? (renewalConflict || nextRenewals > 1
-                          ? memberText("Lịch sử gói bất thường. Liên hệ nhân viên để kiểm tra.")
-                          : memberText("Chưa thể thao tác với gói này. Tải lại trang hoặc liên hệ lễ tân.")));
+                          ? memberMessage("Lịch sử gói bất thường. Liên hệ nhân viên để kiểm tra.")
+                          : memberMessage("Chưa thể thao tác với gói này. Tải lại trang hoặc liên hệ lễ tân.")));
                         return;
                       }
                       void handleMembershipAction(
@@ -1429,10 +1459,10 @@ export function MemberPackagesPage() {
             <p>{requestResult.action === 'upgrade' ? t("Nâng cấp gói tập", "Upgrade membership") : requestResult.action === 'renew' ? t("Gia hạn gói tập", "Renew membership") : t("Đăng ký gói tập", "Register membership")} · #{requestResult.subscription.id}</p>
             <p>{t("Yêu cầu của bạn đang chờ xử lý.", "Your request is pending.")}</p>
             {requestResult.action === 'upgrade' && requestResult.subscription.upgradeCharge != null
-              ? <p className="row-card__meta">{t("Số tiền cần thanh toán để nâng cấp: ", "Upgrade amount due:")}<strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> {t(" (giá gói mới ", "(new plan price")}{formatPrice(requestResult.membershipPackage.price)}{requestResult.subscription.creditApplied ? t(`, đã trừ ${formatPrice(requestResult.subscription.creditApplied)} giá trị còn lại của gói hiện tại`, `, less ${formatPrice(requestResult.subscription.creditApplied)} remaining value from your current membership`) : ''}{t("). Giá đã được chốt. Gói hiện tại kết thúc khi thanh toán được xác nhận.", "). This amount is locked even if the plan price changes before payment. Your current membership ends when payment is confirmed.")}</p>
+              ? <p className="row-card__meta">{t("Số tiền cần thanh toán để nâng cấp: ", "Upgrade amount due: ")}<strong>{formatPrice(requestResult.subscription.upgradeCharge)}</strong> {t("(giá gói mới ", "(new plan price ")}{formatPrice(requestResult.membershipPackage.price)}{requestResult.subscription.creditApplied ? t(`, đã trừ ${formatPrice(requestResult.subscription.creditApplied)} giá trị còn lại của gói hiện tại`, `, less ${formatPrice(requestResult.subscription.creditApplied)} remaining value from your current membership`) : ''}{t("). Giá đã được chốt. Gói hiện tại kết thúc khi thanh toán được xác nhận.", "). This amount is locked even if the plan price changes before payment. Your current membership ends when payment is confirmed.")}</p>
               : requestResult.subscription.quotedPrice != null
-                ? <p className="row-card__meta">{t("Số tiền cần thanh toán: ", "Amount due:")}<strong>{formatPrice(requestResult.subscription.quotedPrice)}</strong>{t(". Giá đã được chốt.", ". This price is locked.")}</p>
-                : <p className="row-card__meta">{t("Giá catalog tham khảo: ", "Reference catalog price:")}{formatPrice(requestResult.membershipPackage.price)}.</p>}
+                ? <p className="row-card__meta">{t("Số tiền cần thanh toán: ", "Amount due: ")}<strong>{formatPrice(requestResult.subscription.quotedPrice)}</strong>{t(". Giá đã được chốt.", ". This price is locked.")}</p>
+                : <p className="row-card__meta">{t("Giá catalog tham khảo: ", "Reference catalog price: ")}{formatPrice(requestResult.membershipPackage.price)}.</p>}
             <p className="row-card__meta">{t(paymentInstructionsNotice)}</p>
             <div className="package-result__actions">
               <Link
@@ -1455,7 +1485,7 @@ export function MemberPackagesPage() {
       {pendingToCancel && (
         <Modal returnFocusRef={membershipFocus} title={t("Hủy yêu cầu đăng ký?", "Cancel registration request?")} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
 <p className="row-card__meta" style={{ marginTop: 12 }}>
-              {t(" Yêu cầu ", "Request")}{pendingToCancel.packageName} {t("sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận. ", "will be cancelled. You can register for another plan after confirmation.")}</p>
+              {t("Yêu cầu ", "Request ")}{pendingToCancel.packageName} {t("sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận.", "will be cancelled. You can register for another plan after confirmation.")}</p>
             {actionError && <p role="alert" className="portal-alert">{t(actionError)}</p>}
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
               <button type="button" className="btn-secondary" autoFocus disabled={isCancellingPending}
@@ -1481,7 +1511,7 @@ export function MemberPackagesPage() {
 
           <form onSubmit={(e) => void handleClaimTrial(e)} style={{ marginTop: 16 }}>
             {hasReusableKyc ? (
-              <div className="portal-card" style={{ padding: 14, background: 'var(--portal-surface-2, rgba(255,255,255,0.04))', marginBottom: 12 }}>
+              <div className="trial-kyc-summary">
                 <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>
                   {t("Sử dụng thông tin định danh đã nộp", "Using your submitted identity details")}
                 </div>
@@ -1495,21 +1525,38 @@ export function MemberPackagesPage() {
             {/* Chọn loại giấy tờ */}
             <div className="portal-form-group">
               <label className="portal-label">{t("Loại giấy tờ tùy thân *", "Identity document type *")}</label>
-              <div style={{ display: 'flex', gap: 12, marginTop: 6 }}>
-                <button
-                  type="button"
-                  className={`btn-sm ${trialDocType === 'CCCD' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => { setTrialDocType('CCCD'); setTrialError(''); }}
-                  style={{ flex: 1 }}
-                >
-                  {t(" Căn cước công dân (Việt Nam) ", "Identity card (Vietnam)")}</button>
-                <button
-                  type="button"
-                  className={`btn-sm ${trialDocType === 'PASSPORT' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => { setTrialDocType('PASSPORT'); setTrialError(''); }}
-                  style={{ flex: 1 }}
-                >
-                  {t(" Hộ chiếu (Người nước ngoài) ", "Passport (foreign nationals)")}</button>
+              <div className="trial-doc-radios" role="radiogroup" aria-label={t("Loại giấy tờ tùy thân", "Identity document type")}>
+                <label className={`trial-doc-radio${trialDocType === 'CCCD' ? ' is-selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="trialDocType"
+                    value="CCCD"
+                    checked={trialDocType === 'CCCD'}
+                    disabled={isClaimingTrial}
+                    onChange={() => {
+                      setTrialDocType('CCCD');
+                      setTrialDocumentNumber('');
+                      setTrialError('');
+                    }}
+                  />
+                  <span>{t("Căn cước công dân (Việt Nam)", "Identity card (Vietnam)")}</span>
+                </label>
+                <label className={`trial-doc-radio${trialDocType === 'PASSPORT' ? ' is-selected' : ''}`}>
+                  <input
+                    type="radio"
+                    name="trialDocType"
+                    value="PASSPORT"
+                    checked={trialDocType === 'PASSPORT'}
+                    disabled={isClaimingTrial}
+                    onChange={() => {
+                      setTrialDocType('PASSPORT');
+                      setTrialDocumentNumber('');
+                      setTrialBackImage('');
+                      setTrialError('');
+                    }}
+                  />
+                  <span>{t("Hộ chiếu (Người nước ngoài)", "Passport (foreign nationals)")}</span>
+                </label>
               </div>
             </div>
 
@@ -1532,7 +1579,7 @@ export function MemberPackagesPage() {
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="trial-full-name">
-                {t(" Họ và tên trên ", "Full name on ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "passport") : t("CCCD", "identity card")} *
+                {t("Họ và tên trên ", "Full name on ")}{trialDocType === 'PASSPORT' ? t("Hộ chiếu", "passport") : t("CCCD", "identity card")} *
               </label>
               <input
                 id="trial-full-name"
@@ -1546,19 +1593,19 @@ export function MemberPackagesPage() {
                 disabled={isClaimingTrial}
               />
               <span style={{ fontSize: '0.78rem', color: 'var(--portal-muted)', display: 'block', marginTop: 4 }}>
-                {t(" Họ tên tài khoản sẽ được đồng bộ theo tên này sau khi Lễ tân duyệt. ", "Your account name will match this name after reception approval.")}</span>
+                {t("Họ tên tài khoản sẽ được đồng bộ theo tên này sau khi Lễ tân duyệt.", "Your account name will match this name after reception approval.")}</span>
             </div>
 
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="trial-cccd">
-                {trialDocType === 'PASSPORT' ? t("Số hộ chiếu", "Passport number") : t("Số CCCD (12 chữ số)", "Identity card number (12 digits)")} *
+                {trialDocType === 'PASSPORT' ? t("Số hộ chiếu (6–15 ký tự)", "Passport number (6–15 characters)") : t("Số CCCD (9 hoặc 12 chữ số)", "Identity card number (9 or 12 digits)")} *
               </label>
               <input
                 id="trial-cccd"
                 className="portal-input"
                 type="text"
                 required
-                maxLength={trialDocType === 'CCCD' ? 12 : 20}
+                maxLength={trialDocType === 'CCCD' ? 12 : 15}
                 placeholder={trialDocType === 'CCCD' ? t('Vd: 001200001234', 'e.g. 001200001234') : t('Vd: M12345678', 'e.g. M12345678')}
                 value={trialDocumentNumber}
                 onChange={(e) => setTrialDocumentNumber(
@@ -1569,108 +1616,76 @@ export function MemberPackagesPage() {
             </div>
 
             {/* Upload ảnh mặt trước & mặt sau */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: trialDocType === 'CCCD' ? '1fr 1fr' : '1fr', gap: 12, marginTop: 12 }}>
               <div>
-                <label className="portal-label" style={{ fontSize: '0.82rem' }}>
+                <label className="portal-label" htmlFor="trial-front-image" style={{ fontSize: '0.82rem', display: 'block', marginBottom: 6 }}>
                   {trialDocType === 'PASSPORT' ? t("Ảnh mặt trước Hộ chiếu", "Front of passport") : t("Ảnh mặt trước CCCD", "Front of identity card")} *
                 </label>
                 {trialFrontImage ? (
-                  <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img src={trialFrontImage} alt={t("Mặt trước", "Front")} style={{ maxHeight: 110, maxWidth: '100%', objectFit: 'contain' }} />
+                  <div className="trial-kyc-preview">
+                    <img src={trialFrontImage} alt={t("Mặt trước", "Front")} className="trial-kyc-preview__img" />
                     <button
                       type="button"
+                      className="trial-kyc-preview__remove"
                       onClick={() => setTrialFrontImage('')}
-                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12 }}
-                      title={t("Xóa ảnh", "Remove image")}
+                      aria-label={t("Xóa ảnh mặt trước", "Remove front image")}
                     >
-                      ✕
+                      {t("Xóa", "Remove")}
                     </button>
                   </div>
                 ) : (
-                  <label
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: 110,
-                      marginTop: 6,
-                      borderRadius: 8,
-                      border: '1px dashed var(--portal-border)',
-                      cursor: 'pointer',
-                      background: 'var(--portal-surface)',
-                      fontSize: '0.8rem',
-                      color: 'var(--portal-muted)',
-                      textAlign: 'center',
-                      padding: 8,
-                    }}
-                  >
-                    <span>{t("Chọn ảnh mặt trước", "Choose front image")}</span>
-                    <span style={{ fontSize: '0.75rem', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
-                    <input
-                      type="file"
+                  <>
+                    <FilePicker
+                      id="trial-front-image"
                       accept="image/*"
-                      style={{ display: 'none' }}
                       disabled={isClaimingTrial}
+                      buttonLabel={t("Chọn ảnh mặt trước", "Choose front image")}
+                      ariaLabel={t("Ảnh mặt trước", "Front image")}
                       onChange={(e) => {
                         const file = e.target.files?.[0];
                         if (file) handleTrialImageUpload(file, 'front');
                       }}
                     />
-                  </label>
+                    <span className="form-hint" style={{ display: 'block', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
+                  </>
                 )}
               </div>
 
-              <div>
-                <label className="portal-label" style={{ fontSize: '0.82rem' }}>
-                  {t(" Ảnh mặt sau ", "Back image ")}{trialDocType === 'PASSPORT' ? t("(Tùy chọn)", "(Optional)") : '*'}
-                </label>
-                {trialBackImage ? (
-                  <div style={{ position: 'relative', marginTop: 6, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--portal-border)', height: 110, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img src={trialBackImage} alt={t("Mặt sau", "Back")} style={{ maxHeight: 110, maxWidth: '100%', objectFit: 'contain' }} />
-                    <button
-                      type="button"
-                      onClick={() => setTrialBackImage('')}
-                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 12 }}
-                      title={t("Xóa ảnh", "Remove image")}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <label
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      height: 110,
-                      marginTop: 6,
-                      borderRadius: 8,
-                      border: '1px dashed var(--portal-border)',
-                      cursor: 'pointer',
-                      background: 'var(--portal-surface)',
-                      fontSize: '0.8rem',
-                      color: 'var(--portal-muted)',
-                      textAlign: 'center',
-                      padding: 8,
-                    }}
-                  >
-                    <span>{t("Chọn ảnh mặt sau", "Choose back image")}</span>
-                    <span style={{ fontSize: '0.75rem', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      disabled={isClaimingTrial}
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) handleTrialImageUpload(file, 'back');
-                      }}
-                    />
+              {trialDocType === 'CCCD' && (
+                <div>
+                  <label className="portal-label" htmlFor="trial-back-image" style={{ fontSize: '0.82rem', display: 'block', marginBottom: 6 }}>
+                    {t("Ảnh mặt sau CCCD", "Back of identity card")} *
                   </label>
-                )}
-              </div>
+                  {trialBackImage ? (
+                    <div className="trial-kyc-preview">
+                      <img src={trialBackImage} alt={t("Mặt sau", "Back")} className="trial-kyc-preview__img" />
+                      <button
+                        type="button"
+                        className="trial-kyc-preview__remove"
+                        onClick={() => setTrialBackImage('')}
+                        aria-label={t("Xóa ảnh mặt sau", "Remove back image")}
+                      >
+                        {t("Xóa", "Remove")}
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <FilePicker
+                        id="trial-back-image"
+                        accept="image/*"
+                        disabled={isClaimingTrial}
+                        buttonLabel={t("Chọn ảnh mặt sau", "Choose back image")}
+                        ariaLabel={t("Ảnh mặt sau", "Back image")}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleTrialImageUpload(file, 'back');
+                        }}
+                      />
+                      <span className="form-hint" style={{ display: 'block', marginTop: 4 }}>{memberText("JPG, PNG (Tối đa 5MB)", "JPG, PNG (Max 5MB)")}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
               </>
             )}

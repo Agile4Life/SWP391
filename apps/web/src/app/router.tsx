@@ -2,7 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RoleGuard } from '../shared/ui/RoleGuard';
 import { PortalHome } from '../shared/ui/PortalHome';
 import { PortalRouteError, RouteLoading, RouteLoadError } from '../shared/ui/RouteState';
-import { LegacyAttendanceRedirect, LegacyClassesRedirect } from './LegacyRedirects';
+import { LegacyAttendanceRedirect, LegacyClassesRedirect, LegacyStaffRouteRedirect } from './LegacyRedirects';
 
 export const router = createBrowserRouter([
   // Public 3 bộ môn chuẩn (Gym trên trang chủ, Boxing & Yoga có trang riêng); giữ route gói, lớp nhóm, PT và quản lý.
@@ -50,6 +50,18 @@ export const router = createBrowserRouter([
           },
           {
             path: '/member/explore',
+            element: <Navigate to="/member/dashboard" replace />,
+          },
+          {
+            path: '/member/orders',
+            element: <Navigate to="/member/dashboard" replace />,
+          },
+          {
+            path: '/member/orders/*',
+            element: <Navigate to="/member/dashboard" replace />,
+          },
+          {
+            path: '/member/streak',
             element: <Navigate to="/member/dashboard" replace />,
           },
           {
@@ -246,13 +258,13 @@ export const router = createBrowserRouter([
         ],
       },
 
-      // Lịch lớp và đơn hàng sản phẩm (lễ tân và quản lý)
+      // Lịch lớp và các liên kết lễ tân đã ngừng (lễ tân và quản lý)
       {
         element: <RoleGuard allowedRoles={['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER']} />,
         children: [
           {
             path: '/staff/pt-attendance',
-            element: <Navigate to="/staff/reception" replace />,
+            element: <LegacyStaffRouteRedirect />,
           },
           {
             path: '/staff/classes',
@@ -260,7 +272,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/orders',
-            element: <Navigate to="/staff/reception" replace />,
+            element: <LegacyStaffRouteRedirect />,
           },
         ],
       },

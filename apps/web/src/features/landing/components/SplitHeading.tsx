@@ -5,7 +5,7 @@ import type { CSSProperties } from 'react';
  * Tiêu đề chia từng từ để chạy hiệu ứng xuất hiện lần lượt (chỉ số từ trong biến CSS --word-index); từ cuối có
  * thêm dấu chấm.
  */
-export function SplitHeading({ id, lines }: { id: string; lines: string[] }) {
+export function SplitHeading({ id, lines }: { id: string; lines: (string | { vi: string; en: string })[] }) {
   useSourceLanguage();
   let wordIndex = 0;
   return (

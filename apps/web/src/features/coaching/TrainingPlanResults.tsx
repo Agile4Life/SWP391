@@ -1,18 +1,13 @@
 import { useStaffI18n } from '../operations/staffI18n';
 import { useMemo } from 'react';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 import type { SavedTrainingPlan, SavedTrainingPlanItem } from './aiApi';
-
-/** Kết quả tập luyện của giáo án theo ngày: từng bài và đã hoàn thành hay chưa. */
-export interface PlanResults { planId: number; exerciseDate: string; items: { itemId: number; exerciseName: string; completed: boolean }[] }
 
 /** Props của bảng giáo án: id và dữ liệu giáo án. */
 export interface TrainingPlanResultsProps {
   planId?: number;
   plan?: SavedTrainingPlan | null;
 }
-
-/** Định dạng ngày YYYY-MM-DD thành dd/MM/yyyy (rỗng nếu không có). */
-const formatDate = (iso?: string | null) => (iso ? iso.split('-').reverse().join('/') : '');
 
 /** Nhãn thứ trong tuần theo ngôn ngữ; ngày 0 hoặc ngoài 1–7 là "linh hoạt". */
 function getDayLabel(day: number, t: (vi: string, en?: string) => string): string {
@@ -86,12 +81,13 @@ export function TrainingPlanResults({ plan }: TrainingPlanResultsProps) {
             borderTop: '1px solid var(--portal-border)',
             fontSize: '0.85rem'
           }}>
-            <span style={{ color: 'var(--portal-muted)' }}>
-              {formatDate(plan.startDate)} – {formatDate(plan.endDate)}
+            <span style={{ color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
+              {formatCenterDate(plan.startDate)} – {formatCenterDate(plan.endDate)}
             </span>
             <span style={{
               fontWeight: 600,
-              color: 'var(--portal-salmon)',
+              fontVariantNumeric: 'tabular-nums',
+              color: 'var(--sol-accent-text)',
               background: 'var(--portal-tint)',
               padding: '3px 10px',
               borderRadius: 6
@@ -131,7 +127,7 @@ export function TrainingPlanResults({ plan }: TrainingPlanResultsProps) {
                     }}>
                       <div style={{ flex: 1, minWidth: 200 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--portal-tint)', color: 'var(--portal-salmon)', display: 'inline-grid', placeItems: 'center', fontSize: '0.75rem', fontWeight: 700, flexShrink: 0 }}>
+                          <span style={{ width: 22, height: 22, borderRadius: '50%', background: 'var(--portal-tint)', color: 'var(--sol-accent-text)', display: 'inline-grid', placeItems: 'center', fontSize: '0.75rem', fontWeight: 700, fontVariantNumeric: 'tabular-nums', flexShrink: 0 }}>
                             {idx + 1}
                           </span>
                           <strong style={{ fontSize: '0.92rem', color: 'var(--portal-paper)' }}>{item.exerciseName}</strong>
@@ -141,10 +137,23 @@ export function TrainingPlanResults({ plan }: TrainingPlanResultsProps) {
                         )}
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                        {item.sets != null && item.reps != null && (
+                        {item.sets != null && item.reps != null ? (
                           <span className="exercise-spec-pill">
                             <strong>{item.sets}</strong> {t("hiệp", "sets")} {'×'} <strong>{item.reps}</strong> {t("lần", "reps")}
                           </span>
+                        ) : (
+                          <>
+                            {item.sets != null && (
+                              <span className="exercise-spec-pill">
+                                <strong>{item.sets}</strong> {t("hiệp", "sets")}
+                              </span>
+                            )}
+                            {item.reps != null && (
+                              <span className="exercise-spec-pill">
+                                <strong>{item.reps}</strong> {t("lần", "reps")}
+                              </span>
+                            )}
+                          </>
                         )}
                         {item.durationMinutes != null && (
                           <span className="exercise-spec-pill">

@@ -280,16 +280,21 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 
-.ldp-action-btn:hover {
+.ldp-action-btn:hover:not(:disabled) {
   background: var(--portal-tint, rgb(var(--sol-accent-rgb) / .12));
 }
 
-.ldp-action-btn.btn-clear {
-  color: var(--portal-danger, #fca5a5);
+.ldp-action-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }
 
-.ldp-action-btn.btn-clear:hover {
-  background: rgba(252, 165, 165, 0.12);
+.ldp-action-btn.btn-clear {
+  color: var(--portal-danger, #a33030);
+}
+
+.ldp-action-btn.btn-clear:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--portal-danger, #a33030) 14%, transparent);
 }
 
 @media (prefers-reduced-motion: reduce) {

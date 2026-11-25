@@ -1,6 +1,7 @@
-import { staffLocale, useStaffI18n } from '../operations/staffI18n';
+import { useStaffI18n } from '../operations/staffI18n';
 import { createPortal } from 'react-dom';
 import { Modal } from '../../shared/ui/Modal';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import type { PaymentResponseDto } from './receptionApi';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import './payment-invoice.css';
@@ -21,7 +22,7 @@ const methods: Record<string, string> = {
 /** Nội dung hóa đơn thanh toán (số hóa đơn, hội viên, gói, phương thức, số tiền) để xem và in. */
 function InvoiceDocument({ payment, memberName, membershipCode, packageName, cashierName }: InvoiceProps) {
   const { t } = useStaffI18n();
-  const money = new Intl.NumberFormat(staffLocale(), { style: 'currency', currency: 'VND' });
+  const formattedAmount = formatPrice(payment.amount);
   return <article data-i18n-managed className="invoice-document" aria-label={t("Hóa đơn thanh toán")}>
     <header className="invoice-document__header">
       <strong className="invoice-document__brand">{t("SÖL")}</strong>
@@ -44,10 +45,10 @@ function InvoiceDocument({ payment, memberName, membershipCode, packageName, cas
       <colgroup><col /><col className="invoice-document__amount-column" /></colgroup>
       <thead><tr><th scope="col">{t("Nội dung")}</th><th scope="col">{t("Thành tiền")}</th></tr></thead>
       <tbody><tr>
-        <td><strong>{packageName}</strong><small>{t("1 × ")}{money.format(payment.amount)}</small></td>
-        <td>{money.format(payment.amount)}</td>
+        <td><strong>{packageName}</strong><small>{t("1 × ")}{formattedAmount}</small></td>
+        <td>{formattedAmount}</td>
       </tr></tbody>
-      <tfoot><tr><th scope="row">{t("Tổng tiền đã thu")}</th><td>{money.format(payment.amount)}</td></tr></tfoot>
+      <tfoot><tr><th scope="row">{t("Tổng tiền đã thu")}</th><td>{formattedAmount}</td></tr></tfoot>
     </table>
 
     <footer className="invoice-document__footer">

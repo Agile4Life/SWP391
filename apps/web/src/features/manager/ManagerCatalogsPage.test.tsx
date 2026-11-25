@@ -1,6 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setLanguage } from '../../shared/i18n/language';
 import { ManagerCatalogsPage } from './ManagerCatalogsPage';
 import { catalogApi } from './catalogApi';
 
@@ -83,6 +84,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
   afterEach(async () => {
     await act(async () => root.unmount());
     host.remove();
+    setLanguage('vi');
     vi.unstubAllGlobals();
   });
 
@@ -94,8 +96,8 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     expect(host.textContent).toContain('Reformer Pilates');
 
     // Chuyển sang tab Gói tập
-    const pkgTabBtn = [...host.querySelectorAll('button')].find((b) =>
-      b.textContent?.includes('Gói tập (')
+    const pkgTabBtn = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((b) =>
+      b.textContent?.includes('Gói tập')
     )!;
     await act(async () => pkgTabBtn.click());
 
@@ -139,8 +141,8 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
       root.render(<ManagerCatalogsPage />);
     });
 
-    const pkgTabBtn = [...host.querySelectorAll('button')].find((b) =>
-      b.textContent?.includes('Gói tập (')
+    const pkgTabBtn = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((b) =>
+      b.textContent?.includes('Gói tập')
     )!;
     await act(async () => pkgTabBtn.click());
 
@@ -175,5 +177,85 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
         status: 'active',
       })
     );
+  });
+
+  it('P2-FE-43, P2-FE-45 & P3-FE-21: respects explicit room tier, separates loadError/formError, hides table on loadError, enforces trim/maxLength, uses btn-danger and accessible tabs, and translates EN strings', async () => {
+    vi.mocked(catalogApi.rooms).mockResolvedValueOnce([
+      {
+        id: 5,
+        name: 'Phòng VIP Tiêu chuẩn',
+        location: 'Tầng 1',
+        capacity: 25,
+        status: 'available',
+        tier: 'STANDARD',
+      },
+    ]);
+
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+
+    // Accessible tablist & portal-tab-count
+    expect(host.querySelector('[role="tablist"]')).not.toBeNull();
+    const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    expect(tabs).toHaveLength(3);
+    expect(tabs[0].getAttribute('aria-selected')).toBe('true');
+    expect(tabs[0].querySelector('.portal-tab-count')?.textContent).toBe('2');
+
+    // Delete buttons use btn-danger btn-sm
+    const deleteBtns = [...host.querySelectorAll<HTMLButtonElement>('tbody button')].filter((b) => b.textContent?.trim() === 'Xóa');
+    expect(deleteBtns[0].className).toContain('btn-danger');
+    expect(deleteBtns[0].className).toContain('btn-sm');
+
+    // Room with explicit tier STANDARD stays Standard even if name includes "VIP"
+    await act(async () => tabs[1].click());
+    expect(host.querySelector('tbody')?.textContent).toContain('Tiêu chuẩn');
+    expect(host.querySelector('tbody')?.textContent).not.toContain('Cao cấp (Platinum)');
+
+    // Modal form error does not duplicate on page level & trims blank name
+    vi.mocked(catalogApi.saveRoom).mockRejectedValueOnce(new Error('Trùng tên phòng'));
+    const addBtn = [...host.querySelectorAll<HTMLButtonElement>('.portal-header button')].find((b) => b.textContent?.includes('Thêm mới'))!;
+    await act(async () => addBtn.click());
+    const nameInput = host.querySelector<HTMLInputElement>('#cat-name')!;
+    expect(nameInput.maxLength).toBe(100);
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(nameInput, '   ');
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(catalogApi.saveRoom).not.toHaveBeenCalled();
+    expect(host.querySelectorAll('[role="alert"]')).toHaveLength(1);
+
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(nameInput, 'Studio Mới');
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    // Error stays inside modal only (1 alert, not 2)
+    expect(host.querySelectorAll('[role="alert"]')).toHaveLength(1);
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Trùng tên phòng');
+
+    // EN translations for 9 months preset & duration rule
+    await act(async () => {
+      setLanguage('en');
+    });
+    await act(async () => tabs[2].click());
+    const addPkgBtn = host.querySelector<HTMLButtonElement>('.portal-header .btn-primary')!;
+    await act(async () => addPkgBtn.click());
+    expect(host.textContent).toContain('9 months (270 days)');
+
+    // Load error hides empty table completely
+    vi.mocked(catalogApi.disciplines).mockRejectedValueOnce(new Error('Catalog offline'));
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Catalog offline');
+    expect(host.querySelector('table')).toBeNull();
   });
 });

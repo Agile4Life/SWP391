@@ -32,7 +32,14 @@ self.addEventListener('fetch', event => {
   if (request.method !== 'GET' || url.origin !== self.location.origin || request.headers.has('Authorization') || url.pathname === '/api' || url.pathname.startsWith('/api/')) return;
   if (request.mode === 'navigate') {
     // Never store a navigation response: authenticated HTML must not enter Cache Storage.
-    event.respondWith(fetch(request).catch(() => caches.open(CACHE).then(cache => cache.match('/index.html'))));
+    event.respondWith(fetch(request).catch(async () => {
+      try {
+        const cache = await caches.open(CACHE);
+        const cached = await cache.match('/index.html');
+        if (cached) return cached;
+      } catch { /* Cache storage unavailable; fall through to offline response. */ }
+      return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }));
   } else if (ASSETS.includes(url.pathname) && !url.search) {
     event.respondWith(caches.open(CACHE).then(async cache => {
       const cached = await cache.match(url.pathname);

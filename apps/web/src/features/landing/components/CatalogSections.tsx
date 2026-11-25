@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';
 import { localizeSeededCatalogText, sessionDate } from '../publicCatalog';
-import { DISCIPLINES, isStandardDiscipline, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
+import { DISCIPLINES, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
 import { formatPrice, getPackageDetails, isTrialPackage, localizeSeededPackageName, LONG_TERM_DAYS, MIN_TERM_DAYS } from '../../../shared/lib/membershipPresentation';
 import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
@@ -75,12 +75,12 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
 }) {
   useSourceLanguage();
   const [discipline, setDiscipline] = useState('all');
-  const sportName = DISCIPLINES.find((item) => item.id === sport)?.name;
-  const matchesSport = (value: string | null | undefined) => (sportName ? matchesDiscipline(value, sportName) : isStandardDiscipline(value));
+  const sportName = sport ? DISCIPLINES.find((item) => item.id === sport)?.name : undefined;
+  const matchesSport = (value: string | null | undefined) => (sportName ? matchesDiscipline(value, sportName) : true);
   const sessions = catalog.sessions.filter((session) => (!session.status || session.status === 'scheduled')
     && matchesSport(session.disciplineName)
     && (!coachId || session.coachId === coachId));
-  const disciplines = [...new Set(sessions.map((session) => session.disciplineName))];
+  const disciplines = [...new Set(sessions.map((session) => session.disciplineName).filter(Boolean))];
   const activeDiscipline = disciplines.includes(discipline) ? discipline : 'all';
   const visible = sessions.filter((session) => activeDiscipline === 'all' || session.disciplineName === activeDiscipline);
 
@@ -104,9 +104,10 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
     )}
     <div className="fit-schedule-grid" key={activeDiscipline}>
       {visible.map((session) => {
-        const canonicalDiscipline = DISCIPLINES.find((d) => matchesDiscipline(session.disciplineName, d.name))?.name;
-        const sessionJoinPath = joinPath === '/member/classes' && canonicalDiscipline
-          ? `/member/classes?tab=classes&discipline=${encodeURIComponent(canonicalDiscipline)}`
+        const targetDiscipline = DISCIPLINES.find((d) => matchesDiscipline(session.disciplineName, d.name))?.name
+          ?? session.disciplineName?.trim();
+        const sessionJoinPath = joinPath === '/member/classes' && targetDiscipline
+          ? `/member/classes?tab=classes&discipline=${encodeURIComponent(targetDiscipline)}`
           : joinPath;
         return (
           <article key={session.id} className="fit-schedule-card" data-reveal="lift">

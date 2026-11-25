@@ -1,4 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
+import { sourceMessage } from '../../shared/i18n';
 import {
   cancelVnpayTarget,
   cancelVnpayTransaction,
@@ -40,7 +41,9 @@ export const verifyVnpayReturn = (params: Record<string, string>) =>
 export function navigateToVnpay(paymentUrl: string) {
   const url = new URL(paymentUrl);
   if (url.origin !== 'https://sandbox.vnpayment.vn' || url.pathname !== '/paymentv2/vpcpay.html') {
-    throw new Error('Địa chỉ VNPay không hợp lệ.');
+    throw Object.assign(new Error('Địa chỉ VNPay không hợp lệ.'), {
+      translation: sourceMessage('Địa chỉ VNPay không hợp lệ.', 'Invalid VNPay payment URL.'),
+    });
   }
   const txnRef = url.searchParams.get('vnp_TxnRef');
   if (txnRef) rememberActiveVnpay(txnRef);

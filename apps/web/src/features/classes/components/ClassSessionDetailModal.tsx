@@ -73,6 +73,22 @@ export function ClassSessionDetailModal({
 
   const hasActions = Boolean((parentClass && onEditClass) || isScheduled);
 
+  const fitnessLevelLabel = (raw?: string | null): string | null => {
+    if (!raw) return null;
+    switch (raw.trim().toLowerCase()) {
+      case 'beginner':
+        return t('Cơ bản', 'Beginner');
+      case 'intermediate':
+        return t('Trung cấp', 'Intermediate');
+      case 'advanced':
+        return t('Nâng cao', 'Advanced');
+      case 'all':
+        return t('Mọi trình độ', 'All levels');
+      default:
+        return t('Cơ bản', 'Beginner');
+    }
+  };
+
   return (
     <Modal title={title} onClose={onClose}>
       <div className="kv-list" data-testid="session-detail-content">
@@ -128,7 +144,8 @@ export function ClassSessionDetailModal({
 
       <div style={{ marginTop: 18 }}>
         <h3 style={{ margin: '0 0 10px', fontSize: 14, fontWeight: 700 }}>
-          {t('Học viên đã ghi danh', 'Enrolled members')} ({students.length})
+          {t('Học viên đã ghi danh', 'Enrolled members')}
+          {!loadingStudents && !studentsError ? ` (${students.length})` : ''}
         </h3>
         {loadingStudents ? (
           <p className="mcal__note" role="status">{t('Đang tải danh sách học viên...', 'Loading enrolled members...')}</p>
@@ -138,15 +155,18 @@ export function ClassSessionDetailModal({
           <p className="mcal__note">{t('Chưa có học viên nào đăng ký buổi học này.', 'No members enrolled in this session yet.')}</p>
         ) : (
           <div className="mcal__overflow-list" data-testid="session-detail-students">
-            {students.map((st) => (
-              <div key={st.id} className="mcal__overflow-row" style={{ cursor: 'default' }}>
-                <span className="mcal__overflow-main">
-                  <strong>{st.fullName}</strong>
-                  <small>{[st.membershipCode, st.phone, st.email].filter(Boolean).join(' · ')}</small>
-                </span>
-                {st.fitnessLevel && <span className="mcal__overflow-badge">{st.fitnessLevel}</span>}
-              </div>
-            ))}
+            {students.map((st) => {
+              const levelText = fitnessLevelLabel(st.fitnessLevel);
+              return (
+                <div key={st.id} className="mcal__overflow-row" style={{ cursor: 'default' }}>
+                  <span className="mcal__overflow-main">
+                    <strong>{st.fullName}</strong>
+                    <small>{[st.membershipCode, st.phone, st.email].filter(Boolean).join(' · ')}</small>
+                  </span>
+                  {levelText && <span className="mcal__overflow-badge">{levelText}</span>}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

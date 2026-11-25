@@ -58,7 +58,7 @@ export interface TrainingPlanPayload {
   aiRecommendationLogId?: number;
 }
 
-/** Học viên có thể chọn khi soạn giáo án, kèm mục tiêu, sức khỏe, chỉ số cơ thể và quyền xem giáo án. */
+/** Học viên có thể chọn khi soạn giáo án, kèm mục tiêu, sức khỏe, trình độ và quyền xem giáo án. */
 export interface MemberOption {
   id: number;
   memberCode: string;
@@ -66,9 +66,6 @@ export interface MemberOption {
   fitnessGoal?: string;
   healthNotes?: string;
   fitnessLevel?: string;
-  heightCm?: number;
-  weightKg?: number;
-  bmi?: number;
   canViewWorkoutPlan?: boolean;
 }
 

@@ -34,7 +34,7 @@
 .theme-toggle:hover { border-color: var(--sol-accent); background: rgb(var(--sol-accent-rgb) / .12); }
 .theme-toggle:focus-visible { outline: 2px solid var(--sol-accent); outline-offset: 4px; }
 :root[data-theme='light'] .theme-toggle { background: #fff; border-color: #e4e2de; color: #202020; }
-:root[data-theme='light'] .theme-toggle:hover { background: #f8eae4; border-color: #a35b49; }
+:root[data-theme='light'] .theme-toggle:hover { background: #f8eae4; border-color: var(--sol-accent-text); }
 
 /* Các token LED chỉ dùng cho giao diện tối: giao diện sáng giữ bề mặt phẳng và không có hiệu ứng phát sáng. */
 :root:not([data-theme='light']) {
@@ -80,9 +80,10 @@
   --portal-info: #1d4ed8;
   --portal-violet: #7e22ce;
   --portal-star: #92560a;
+  --portal-dropdown-shadow: 0 18px 42px -12px rgba(28, 25, 23, 0.16), 0 4px 12px rgba(28, 25, 23, 0.08);
   color-scheme: light;
 }
-:root[data-theme='light'] .portal-v2 :is(.btn-primary, .filter-chip.is-active, .portal-section-tab.active, .portal-tab.active .portal-tab-count, .portal-rail-link.active, .ltp-item-btn.is-active, .ltp-done-btn, .ldp-day-cell.is-selected),
+:root[data-theme='light'] .portal-v2 :is(.btn-primary, .filter-chip.is-active, .portal-section-tab.active, .portal-tab.active .portal-tab-count, .portal-rail-link.active, .ltp-item-btn.is-active, .ltp-done-btn, .ldp-day-cell.is-selected, .portal-avatar-lang-btn.active),
 :root[data-theme='light'] .portal-logo { background: var(--sol-accent); border-color: var(--sol-accent); color: #202020; }
 :root[data-theme='light'] .portal-v2 .ldp-day-cell.is-selected { color: #202020 !important; }
 :root[data-theme='light'] .portal-logo > span { color: #202020; }
@@ -115,7 +116,7 @@
 :root[data-theme='light'] .fit-canvas { background: #f5f5f3; }
 :root[data-theme='light'] .fit-header.is-scrolled { background: #f5f5f3ed; border-color: #e4e2de; }
 :root[data-theme='light'] .fit-nav a { color: #45423f; }
-:root[data-theme='light'] .fit-nav a:is(:hover, .is-active) { color: #a35b49; }
+:root[data-theme='light'] .fit-nav a:is(:hover, .is-active) { color: var(--sol-accent-text); }
 :root[data-theme='light'] .fit-site :is(.fit-service, .fit-service h2, .fit-service p) { color: #202020; }
 :root[data-theme='light'] .fit-service-rule { background: #20202030; }
 :root[data-theme='light'] .fit-site :is(.fit-hero-action > span, .fit-hero-index) { color: #68645f; }
@@ -146,11 +147,11 @@
 :root[data-theme='light'] .fit-plan:not(.fit-plan-featured) { background: #fff; border: 1px solid #e4e2de; }
 :root[data-theme='light'] .fit-site :is(.fit-plan:not(.fit-plan-featured) > p, .fit-rhythm-copy li, .fit-sport-pillar p, .fit-sport-spec-item dt, .fit-footer nav, .fit-footer address, .fit-footer-bottom, .fit-disclosure) { color: #68645f; }
 :root[data-theme='light'] .fit-site :is(.fit-trainer-chip, .fit-slot-pill, .fit-chat-bot, .fit-rhythm-tabs button, .fit-bmi-goals button) { color: #202020; background: #eeefec; border-color: #e4e2de; }
-:root[data-theme='light'] .fit-site :is(.fit-schedule-spots, .fit-intro-pillar-badge, .fit-preview-live, .fit-sport-pillar-metric, .fit-kicker, .fit-trainer-chip strong) { color: #a35b49; }
+:root[data-theme='light'] .fit-site :is(.fit-schedule-spots, .fit-intro-pillar-badge, .fit-preview-live, .fit-sport-pillar-metric, .fit-kicker, .fit-trainer-chip strong) { color: var(--sol-accent-text); }
 :root[data-theme='light'] .fit-site :is(.fit-rhythm-tabs button.is-active, .fit-slot-pill.is-selected, .fit-bmi-goals button[aria-pressed='true']) { background: var(--sol-accent); color: #202020; }
 :root[data-theme='light'] .fit-site :is(.fit-rhythm-body, .fit-sport-spec-item, .fit-footer-bottom) { border-color: #e4e2de; }
 :root[data-theme='light'] .fit-footer-watermark { color: #2020200c; }
-:root[data-theme='light'] .fit-faq-icon { background: #eeefec; color: #a35b49; }
+:root[data-theme='light'] .fit-faq-icon { background: #eeefec; color: var(--sol-accent-text); }
 :root[data-theme='light'] .fit-site :is(input, select, textarea) { background: #fff; color: #202020; border-color: #ccc8c2; color-scheme: light; }
 :root[data-theme='light'] .fit-site :is(input, textarea)::placeholder { color: #77716b; }
 :root[data-theme='light'] .fit-auth-form :is(.luxury-login-container, .fit-auth-card) { background: #fff !important; border-color: #e4e2de; }
@@ -160,11 +161,11 @@
 :root[data-theme='light'] .fit-auth .portal-alert { color: #8d4230; }
 :root[data-theme='light'] .fit-muscle-callout { background: #fff; color: #202020; }
 :root[data-theme='light'] .fit-muscle-goal { color: #68645f; }
-:root[data-theme='light'] .fit-muscle-zone-badge { background: #f8eae4; color: #a35b49; }
+:root[data-theme='light'] .fit-muscle-zone-badge { background: #f8eae4; color: var(--sol-accent-text); }
 :root[data-theme='light'] .fit-muscle-exercises { background: #f5f5f3; border-color: #e4e2de; }
 :root[data-theme='light'] .fit-muscle-exercises li { background: transparent; color: #45423f; }
-:root[data-theme='light'] .fit-muscle-exercises li > span { color: #a35b49; }
-:root[data-theme='light'] :is(.fit-pointer-line, .fit-pointer-head) { stroke: #a35b49; }
+:root[data-theme='light'] .fit-muscle-exercises li > span { color: var(--sol-accent-text); }
+:root[data-theme='light'] :is(.fit-pointer-line, .fit-pointer-head) { stroke: var(--sol-accent-text); }
 :root[data-theme='light'] .fit-muscle-callout { box-shadow: 0 12px 32px #20202018; }
 :root[data-theme='light'] .fit-hero-lines, :root[data-theme='light'] .fit-hero-lines::after { border-color: #20202012; }
 :root[data-theme='light'] .fit-site :is(.fit-trainer-switch-pill, .fit-trainer-quote, .fit-trainer-stat-box, .fit-trainer-story-article, .fit-trainer-milestones, .fit-trainer-action-banner, .fit-milestone-item, .fit-trainer-specialty-box, .fit-trainer-step-card, .fit-trainer-schedule-card, .fit-sport-page-program-card, .fit-back-link) { background: #fff; border-color: #e4e2de; color: #202020; }

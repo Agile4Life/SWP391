@@ -59,10 +59,34 @@ describe('KycReviewPage', () => {
     expect(mocks.reject).toHaveBeenCalledWith(10, 'Ảnh mờ');
   });
 
-  it('shows an empty state and an error state', async () => {
+  it('shows an empty state and hides empty state on load error with Retry (P2-FE-71)', async () => {
     mocks.list.mockResolvedValueOnce([]);
     await render();
     expect(host.textContent).toContain('Không có hồ sơ nào chờ duyệt');
+
+    mocks.list.mockRejectedValueOnce(new Error('Mất kết nối KYC'));
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Làm mới danh sách hồ sơ"]')!.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Mất kết nối KYC');
+    expect(host.textContent).not.toContain('Không có hồ sơ nào chờ duyệt');
+  });
+
+  it('preserves action errors on failed approval and opens in-app image zoom lightbox (P1-FE-55, P2-FE-68)', async () => {
+    mocks.list.mockResolvedValue([submission]);
+    mocks.approve.mockRejectedValueOnce(new Error('Hồ sơ đã bị thay đổi'));
+    await render();
+
+    // Clicking front photo opens in-app lightbox with zoom control
+    const frontBtn = host.querySelector<HTMLButtonElement>('button[aria-label="Phóng to ảnh Mặt trước"]')!;
+    expect(frontBtn).not.toBeNull();
+    await act(async () => frontBtn.click());
+    expect(host.querySelector('.document-lightbox')).not.toBeNull();
+    expect(host.textContent).toContain('Phóng to (200%)');
+    await act(async () => host.querySelector<HTMLButtonElement>('.portal-dialog__close')!.click());
+
+    // Action error survives silent refresh
+    await act(async () => button('Duyệt').click());
+    await act(async () => button('Xác nhận duyệt').click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Hồ sơ đã bị thay đổi');
   });
 
   it('picks up a submission sent after the page was opened: refresh button, timer and window focus', async () => {

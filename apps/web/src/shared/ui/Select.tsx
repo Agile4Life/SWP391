@@ -94,6 +94,7 @@ export function Select({
   const options = collect(children);
   const selectedIndex = options.findIndex((o) => o.value === value);
   const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
+  const firstEnabledIndex = options.findIndex((o) => !o.disabled);
 
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -106,8 +107,22 @@ export function Select({
     if (disabled) return;
     setMounted(true);
     setOpen(true);
-    setActive(selectedIndex >= 0 ? selectedIndex : options.findIndex((o) => !o.disabled));
-  }, [disabled, selectedIndex, options]);
+    setActive(selectedIndex >= 0 ? selectedIndex : firstEnabledIndex);
+  }, [disabled, selectedIndex, firstEnabledIndex]);
+
+  // Dọn hẹn giờ gõ tìm kiếm nhanh khi unmount.
+  useEffect(() => {
+    const tr = typeRef.current;
+    return () => window.clearTimeout(tr.t);
+  }, []);
+
+  // Kẹp chỉ số active khi danh sách options rút ngắn trong lúc menu đang mở.
+  useEffect(() => {
+    if (!open) return;
+    if (active >= options.length) {
+      setActive(selectedIndex >= 0 ? selectedIndex : firstEnabledIndex);
+    }
+  }, [open, active, options.length, selectedIndex, firstEnabledIndex]);
 
   // Đóng menu, tùy chọn trả focus về nút kích hoạt.
   const closeMenu = useCallback((refocus = true) => {
@@ -161,21 +176,23 @@ export function Select({
     else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
   }, [open, active]);
 
-  // Chọn một mục (bỏ qua mục bị vô hiệu), báo giá trị mới nếu khác giá trị cũ rồi đóng menu.
-  const pick = (opt: Opt) => {
-    if (opt.disabled) return;
+  // Chọn một mục (bỏ qua mục bị vô hiệu hoặc ngoài biên), báo giá trị mới nếu khác giá trị cũ rồi đóng menu.
+  const pick = (opt: Opt | undefined) => {
+    if (!opt || opt.disabled) return;
     if (opt.value !== value) onChange({ target: { value: opt.value } });
     closeMenu();
   };
 
   // Di chuyển mục đang trỏ lên/xuống theo vòng, bỏ qua mục bị vô hiệu.
   const move = (dir: 1 | -1, from = active) => {
-    if (!options.some((o) => !o.disabled)) return;
-    let i = from;
+    if (options.length === 0 || !options.some((o) => !o.disabled)) return;
+    let i = from >= 0 && from < options.length ? from : (dir === 1 ? -1 : 0);
+    let steps = 0;
     do {
       i = (i + dir + options.length) % options.length;
-    } while (options[i].disabled);
-    setActive(i);
+      steps += 1;
+    } while (options[i]?.disabled && steps <= options.length);
+    if (options[i] && !options[i].disabled) setActive(i);
   };
 
   // Điều khiển bằng bàn phím: mũi tên, Home/End, Enter/Space, Esc và Tab.
@@ -197,7 +214,7 @@ export function Select({
       case ' ':
         e.preventDefault();
         if (!open) openMenu();
-        else if (active >= 0) pick(options[active]);
+        else if (active >= 0 && active < options.length) pick(options[active]);
         return;
       case 'Escape':
         if (open) {
@@ -238,8 +255,8 @@ export function Select({
         role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls={listId}
-        aria-activedescendant={open && active >= 0 ? `${uid}-opt-${active}` : undefined}
+        aria-controls={mounted ? listId : undefined}
+        aria-activedescendant={open && active >= 0 && active < options.length ? `${uid}-opt-${active}` : undefined}
         aria-label={aria['aria-label']}
         aria-invalid={aria['aria-invalid']}
         data-field={aria['data-field']}
@@ -265,6 +282,10 @@ export function Select({
           disabled={disabled}
           value={value}
           onChange={(e) => onChange({ target: { value: e.target.value } })}
+          onInvalid={(e) => {
+            e.preventDefault();
+            if (!disabled) triggerRef.current?.focus();
+          }}
         >
           {!options.some((o) => o.value === value) && <option value={value} />}
           {options.map((o, i) => (
@@ -291,6 +312,7 @@ export function Select({
               aria-disabled={o.disabled || undefined}
               className={`ui-select__option${o.value === value ? ' is-selected' : ''}${i === active ? ' is-active' : ''}${o.disabled ? ' is-disabled' : ''}`}
               style={{ '--i': i } as CSSProperties}
+              onMouseDown={(e) => e.preventDefault()}
               onPointerEnter={() => !o.disabled && setActive(i)}
               onClick={() => pick(o)}
             >

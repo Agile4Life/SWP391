@@ -173,9 +173,11 @@ export function ClassListTable({
                     </td>
                     <td>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                        <button type="button" className="btn-secondary btn-sm" onClick={() => onViewClassSchedule(cls)}>
-                          {t('Xem lịch', 'Schedule')}
-                        </button>
+                        {isActive && (
+                          <button type="button" className="btn-secondary btn-sm" onClick={() => onViewClassSchedule(cls)}>
+                            {t('Xem lịch', 'Schedule')}
+                          </button>
+                        )}
                         <button type="button" className="btn-secondary btn-sm" onClick={() => onEditClass(cls)}>
                           {t('Sửa', 'Edit')}
                         </button>

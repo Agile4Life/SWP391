@@ -1,6 +1,7 @@
 import { apiFetch } from '../../shared/api/client';
 import { catalogApi, type MembershipPackage } from '../manager/catalogApi';
 import type { CoachBookingDto } from '../member/coachBookingApi';
+import { staffText } from '../operations/staffI18n';
 export type { MembershipPackage };
 /** Buổi PT 1:1 chưa thu tiền (dùng chung kiểu booking). */
 export type UnpaidCoachBooking = CoachBookingDto;
@@ -230,7 +231,7 @@ export interface InvoiceDto {
  * BR-05: Che một phần (masked) dữ liệu nhạy cảm CCCD (ví dụ: 079******123)
  */
 export function maskCitizenId(id?: string | null): string {
-  if (!id) return 'Chưa cập nhật';
+  if (!id) return staffText('Chưa cập nhật', 'Not updated');
   const clean = id.trim();
   if (clean.length < 6) return '******';
   const start = clean.slice(0, 3);
@@ -368,7 +369,7 @@ export const receptionApi = {
         packageId: payload.packageId,
         amount: payload.amount,
         method: payload.method,
-        note: payload.notes || 'Thu tiền tại quầy Lễ tân POS',
+        note: payload.notes || staffText('Thu tiền tại quầy Lễ tân POS', 'Front desk POS payment'),
       }),
     });
 

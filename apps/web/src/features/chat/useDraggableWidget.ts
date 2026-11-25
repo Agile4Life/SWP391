@@ -10,13 +10,15 @@ const DRAG_THRESHOLD = 6;
 const PANEL_HANDLE = '.chat-widget__header, .direct-chat__thread-header, .direct-chat__inbox-heading';
 const INTERACTIVE = 'button, a, input, textarea, select, [role="button"], [contenteditable="true"]';
 
-/** Đọc vị trí đã lưu từ localStorage; dữ liệu sai hoặc không có thì null. */
+/** Đọc vị trí đã lưu từ localStorage; dữ liệu sai, NaN/Infinity hoặc không có thì null. */
 function readStored(): WidgetPosition | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
-    const value = JSON.parse(raw) as Partial<WidgetPosition>;
-    return typeof value.x === 'number' && typeof value.y === 'number' ? { x: value.x, y: value.y } : null;
+    const value = JSON.parse(raw) as Partial<WidgetPosition> | null;
+    return value && typeof value.x === 'number' && Number.isFinite(value.x) && typeof value.y === 'number' && Number.isFinite(value.y)
+      ? { x: value.x, y: value.y }
+      : null;
   } catch {
     return null;
   }
@@ -87,6 +89,19 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
     setPanelPos(prev => (prev && prev.left === next.left && prev.top === next.top ? prev : next));
   }, [pos]);
 
+  // Khi mount, kẹp lại vị trí đã lưu vào viewport hiện tại để tránh nút chat bị rơi ra ngoài màn hình hẹp.
+  useLayoutEffect(() => {
+    const host = widget.current;
+    if (!host) return;
+    const width = host.offsetWidth || host.getBoundingClientRect().width;
+    const height = host.offsetHeight || host.getBoundingClientRect().height;
+    setPos(prev => {
+      if (!prev) return prev;
+      const clamped = clampToViewport(prev, width, height);
+      return clamped.x === prev.x && clamped.y === prev.y ? prev : clamped;
+    });
+  }, []);
+
   useLayoutEffect(() => { placePanel(); }, [placePanel, open, expanded]);
 
   // Panel đổi kích thước (mở rộng có transition) hoặc cửa sổ đổi cỡ: đặt lại cho vừa màn hình.
@@ -95,7 +110,15 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
     // Cửa sổ đổi cỡ thì giữ nút trong viewport và đặt lại panel.
     const onResize = () => {
       const host = widget.current;
-      if (host) setPos(prev => (prev ? clampToViewport(prev, host.offsetWidth, host.offsetHeight) : prev));
+      if (host) {
+        const width = host.offsetWidth || host.getBoundingClientRect().width;
+        const height = host.offsetHeight || host.getBoundingClientRect().height;
+        setPos(prev => {
+          if (!prev) return prev;
+          const clamped = clampToViewport(prev, width, height);
+          return clamped.x === prev.x && clamped.y === prev.y ? prev : clamped;
+        });
+      }
       placePanel();
     };
     window.addEventListener('resize', onResize);

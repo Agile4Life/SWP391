@@ -9,6 +9,8 @@ import { MemberDashboardPage } from './MemberDashboardPage';
 const api = vi.hoisted(() => ({
   membership: vi.fn(),
   bookings: vi.fn(),
+  enrollments: vi.fn(),
+  sessions: vi.fn(),
 }));
 
 vi.mock('./memberDashboardApi', () => ({
@@ -16,6 +18,10 @@ vi.mock('./memberDashboardApi', () => ({
 }));
 
 vi.mock('./coachBookingApi', () => ({ getMyCoachBookings: api.bookings }));
+vi.mock('./memberClassesApi', () => ({
+  getMyEnrollments: api.enrollments,
+  getSessionsBetween: api.sessions,
+}));
 
 // Component phụ chỉ phục vụ kiểm thử.
 function LocationProbe() {
@@ -42,8 +48,12 @@ describe('SCRUM-85 dashboard', () => {
     root = createRoot(host);
     api.membership.mockReset();
     api.bookings.mockReset();
+    api.enrollments.mockReset();
+    api.sessions.mockReset();
     api.membership.mockResolvedValue(membership);
     api.bookings.mockResolvedValue([]);
+    api.enrollments.mockResolvedValue([]);
+    api.sessions.mockResolvedValue([]);
   });
 
   afterEach(async () => {
@@ -111,23 +121,23 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.querySelector('[data-testid="location"]')?.textContent).toBe('/member/card');
     expect(host.querySelector('.member-board-info')).toBeNull();
   });
-  it('shows an empty PT list independently of membership', async () => {
+  it('shows an empty schedule list independently of membership', async () => {
     await renderDashboard();
     expect(host.textContent).toContain('Essential');
-    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
+    expect(host.textContent).toContain('Bạn chưa có lịch tập sắp tới.');
   });
 
-  it('keeps membership when PT booking fails and retries only PT booking', async () => {
+  it('keeps membership when schedule fails and retries only schedule', async () => {
     api.bookings.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce([]);
     await renderDashboard();
     expect(host.textContent).toContain('Essential');
-    expect(host.textContent).toContain('Chưa thể tải lịch PT lúc này.');
+    expect(host.textContent).toContain('Chưa thể tải lịch tập lúc này.');
 
     const retry = [...host.querySelectorAll('button')].find((button) => button.textContent === 'Thử lại');
     await act(async () => retry?.click());
     expect(api.bookings).toHaveBeenCalledTimes(2);
     expect(api.membership).toHaveBeenCalledTimes(1);
-    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
+    expect(host.textContent).toContain('Bạn chưa có lịch tập sắp tới.');
   });
 
   it('keeps PT booking result when membership fails', async () => {
@@ -160,7 +170,33 @@ describe('SCRUM-85 dashboard', () => {
     await renderDashboard();
     expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
     expect(host.textContent).not.toContain('PT Cancelled');
-    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
+    expect(host.textContent).toContain('Bạn chưa có lịch tập sắp tới.');
+  });
+  it('P2-FE-52: displays Slot N labels for both group class sessions and PT 1:1 bookings and removes hourly PT copy', async () => {
+    api.bookings.mockResolvedValue([{
+      id: 21, coachName: 'HLV Minh',
+      bookingDate: '2099-10-18', startTime: '17:00:00', endTime: '19:30:00',
+      status: 'confirmed', createdAt: '2026-10-16T10:00:00',
+      cancelledAt: null, cancelReason: null,
+    }]);
+    api.enrollments.mockResolvedValue([{
+      id: 31, classId: 501, className: 'Boxing Nền Tảng', memberId: 1,
+      sessionId: null, sessionDate: null, startTime: null, endTime: null,
+      status: 'enrolled', enrolledAt: '2026-10-16T10:00:00', cancelledAt: null, cancelReason: null,
+    }]);
+    api.sessions.mockResolvedValue([{
+      id: 701, classId: 501, className: 'Boxing Nền Tảng', disciplineId: 2, disciplineName: 'Boxing',
+      coachId: 5, coachName: 'HLV Hùng', roomId: 4, roomName: 'Ring Arena 01',
+      sessionDate: '2099-10-17', startTime: '07:00:00', endTime: '09:30:00',
+      status: 'scheduled', cancelReason: null, capacity: 12, bookedCount: 5,
+    }]);
+    await renderDashboard();
+    expect(host.textContent).toContain('Boxing Nền Tảng');
+    expect(host.textContent).toContain('Slot 1 (07:00–09:30)');
+    expect(host.textContent).toContain('HLV Minh');
+    expect(host.textContent).toContain('Slot 5 (17:00–19:30)');
+    expect(host.textContent).not.toContain('PT kèm riêng theo giờ');
+    expect(host.textContent).toContain('5 Slot cố định');
   });
   it('switches the mounted dashboard and preserves server membership names', async () => {
     await renderDashboard();

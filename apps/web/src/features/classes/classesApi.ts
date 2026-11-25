@@ -176,14 +176,6 @@ export interface CreateClassPayload {
   endTime: string;
 }
 
-/** Payload thêm một buổi học cho lớp đã có. */
-export interface CreateSessionPayload {
-  classId: number;
-  sessionDate: string;
-  startTime: string;
-  endTime: string;
-}
-
 /** Payload dời ngày/giờ một buổi học. */
 export interface RescheduleSessionPayload {
   classId: number;
@@ -252,17 +244,6 @@ export const classesApi = {
     await apiFetch<void>(`/classes/${classId}`, { method: 'DELETE' });
   },
 
-  /** Thêm một buổi học cho khóa học đã có. */
-  createSession: (payload: CreateSessionPayload) =>
-    apiFetch<ClassSessionDto>(`/classes/${payload.classId}/sessions`, {
-      method: 'POST',
-      body: JSON.stringify({
-        sessionDate: payload.sessionDate,
-        startTime: payload.startTime,
-        endTime: payload.endTime,
-      }),
-    }),
-
   /** Dời ngày/giờ một buổi học. */
   rescheduleSession: (payload: RescheduleSessionPayload) =>
     apiFetch<ClassSessionDto>(`/classes/${payload.classId}/sessions/${payload.sessionId}`, {
@@ -295,26 +276,10 @@ export const classesApi = {
 
   /** Lấy danh sách HLV đang hoạt động (`active`). */
   getActiveCoaches: async (): Promise<CoachUser[]> => {
-    try {
-      const coaches = await apiFetch<CoachUser[]>('/classes/coaches');
-      if (Array.isArray(coaches)) {
-        return coaches
-          .filter((u) => (!('roleCode' in u) || (u as unknown as UserDto).roleCode === 'COACH') && u.status === 'active')
-          .map((u) => ({
-            id: u.id,
-            fullName: u.fullName,
-            email: u.email,
-            phone: u.phone,
-            status: u.status,
-            gender: u.gender ?? null,
-          }));
-      }
-    } catch {
-      // Fallback sang /users nếu cần.
-    }
-    const users = await apiFetch<UserDto[]>('/users');
-    return users
-      .filter((u) => u.roleCode === 'COACH' && u.status === 'active')
+    const coaches = await apiFetch<CoachUser[]>('/classes/coaches');
+    if (!Array.isArray(coaches)) return [];
+    return coaches
+      .filter((u) => (!('roleCode' in u) || (u as unknown as UserDto).roleCode === 'COACH') && u.status === 'active')
       .map((u) => ({
         id: u.id,
         fullName: u.fullName,

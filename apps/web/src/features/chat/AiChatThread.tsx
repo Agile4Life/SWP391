@@ -19,7 +19,7 @@ const errorText = (cause: unknown) => chatError(cause, 'Không thể kết nối
  * Hội thoại với SÖL AI trong cùng khung Tin nhắn: SÖL AI xuất hiện như một người trong danh sách.
  * Dùng phiên AI gần nhất; “Cuộc trò chuyện mới” mở phiên khác.
  */
-export function AiChatThread({ onBack, active = true, audience = 'member' }: { onBack: () => void; active?: boolean; audience?: 'member' | 'staff' }) {
+export function AiChatThread({ onBack, active = true, audience = 'member' }: { onBack: () => void; active?: boolean; audience?: 'member' | 'staff' | 'manager' }) {
   const { t } = useI18n();
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<AiChatMessage[]>([]);
@@ -126,9 +126,11 @@ export function AiChatThread({ onBack, active = true, audience = 'member' }: { o
     <div className="direct-chat__transcript" ref={scroll} role="region" aria-label={t("Lịch sử trò chuyện với SÖL AI", "SÖL AI conversation history")} tabIndex={0} aria-busy={loading || sending}>
       {loading ? <LoadingSkeleton label={t("Đang tải hội thoại với SÖL AI…", "Loading SÖL AI conversation…")} count={3} />
         : messages.length === 0 && !pending && !error
-          ? <div className="direct-chat__empty direct-chat__ai-intro"><ChatAvatar contact={AI_PEER} /><p><strong>SÖL AI</strong>{audience === 'staff'
-            ? t(' giúp lễ tân tra nhanh bảng giá, quyền lợi gói và quy định trung tâm để trả lời khách.', ' helps the front desk look up prices, membership benefits and centre rules to answer customers.')
-            : t(' trả lời về gói tập, huấn luyện viên và tập luyện dựa trên dữ liệu của trung tâm.', ' answers questions about memberships, coaches and training using center data.')}</p></div>
+          ? <div className="direct-chat__empty direct-chat__ai-intro"><ChatAvatar contact={AI_PEER} /><p><strong>SÖL AI</strong>{audience === 'manager'
+            ? t(' giúp quản lý tra nhanh bảng giá, quyền lợi gói và quy định trung tâm.', ' helps managers look up prices, membership benefits and center rules.')
+            : audience === 'staff'
+              ? t(' giúp lễ tân tra nhanh bảng giá, quyền lợi gói và quy định trung tâm để trả lời khách.', ' helps the front desk look up prices, membership benefits and center rules to answer customers.')
+              : t(' trả lời về gói tập, huấn luyện viên và tập luyện dựa trên dữ liệu của trung tâm.', ' answers questions about memberships, coaches and training using center data.')}</p></div>
           : null}
       {!loading && <ol className="direct-chat__messages">
         {messages.map(message => {
@@ -147,6 +149,6 @@ export function AiChatThread({ onBack, active = true, audience = 'member' }: { o
     </div>
     <ChatComposer id="chat-ai-message" label={t('Câu hỏi cho SÖL AI', 'Question for SÖL AI')} value={draft} onChange={text => { setDraft(text); setSendError(null); }}
       onSubmit={() => void send()} disabled={loading || sending} sending={sending} failed={!!sendError} error={sendError ? t(sendError) : null}
-      placeholder={audience === 'staff' ? t('Hỏi SÖL AI về gói tập, lịch lớp, quy định…', 'Ask SÖL AI about memberships, classes, rules…') : t('Hỏi SÖL AI về tập luyện…', 'Ask SÖL AI about training…')} />
+      placeholder={audience !== 'member' ? t('Hỏi SÖL AI về gói tập, lịch lớp, quy định…', 'Ask SÖL AI about memberships, classes, rules…') : t('Hỏi SÖL AI về tập luyện…', 'Ask SÖL AI about training…')} />
   </section>;
 }

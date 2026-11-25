@@ -49,3 +49,22 @@ it('renders all plan exercises grouped by day without daily progress scoring', a
   expect(host.textContent).toContain('Bench Press');
   expect(host.querySelector('#tab-daily-progress')).toBeNull();
 });
+
+it('P2-FE-65: renders sets-only and reps-only pills independently and formats missing dates safely', async () => {
+  const partialPlan = {
+    id: 11,
+    memberId: 5,
+    goal: 'Phục hồi',
+    startDate: null as unknown as string,
+    endDate: null as unknown as string,
+    status: 'completed',
+    items: [
+      { id: 201, exerciseName: 'Dead Hang', dayOfWeek: 2, sets: 3, reps: null, restSeconds: 30, durationMinutes: null, description: null },
+      { id: 202, exerciseName: 'Burpees', dayOfWeek: 2, sets: null, reps: 25, restSeconds: 0, durationMinutes: null, description: null },
+    ],
+  };
+  await act(async () => root.render(<TrainingPlanResults plan={partialPlan} planId={11} />));
+  expect(host.textContent).toContain('— – —');
+  expect(host.textContent).toContain('3 hiệp');
+  expect(host.textContent).toContain('25 lần');
+});

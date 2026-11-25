@@ -58,7 +58,14 @@ function Screen() {
     <div className="portal-card" id="card"><div className="row-card" id="nested"><button id="inside">x</button></div></div>
     <div className="row-card" id="row"><strong id="row-title" /><div className="stack"><span id="meta-1" /><span id="meta-2" /></div><table id="row-table" />{extra && <em id="late-part" />}</div>
     <dialog><div className="portal-card" id="in-dialog" /></dialog>
+    <div role="dialog"><div className="portal-card" id="in-role-dialog" /></div>
+    <div className="loading-skeleton"><div className="portal-card" id="in-skeleton" /></div>
     <div data-motion="off"><div className="portal-card" id="opted-out" /></div>
+    <div className="portal-card" id="picker-card">
+      <div className="luxury-datepicker-wrap" id="dp-wrap"><button id="dp-btn" /><span id="dp-inner" /></div>
+      <div className="luxury-timepicker-wrap" id="tp-wrap"><button id="tp-btn" /><span id="tp-inner" /></div>
+      <label className="file-picker" id="fp-wrap"><input id="fp-input" /><span id="fp-inner" /></label>
+    </div>
     {extra && <div className="portal-card" id="late" />}
     <button id="add" onClick={() => setExtra(true)}>add</button>
   </main>;
@@ -68,10 +75,20 @@ const el = (id: string) => host.querySelector<HTMLElement>(`#${id}`)!;
 // Bộ quan sát (observer) được tạo gần nhất.
 const current = () => observers[observers.length - 1];
 
-it('registers only top-level components outside dialogs and opted-out regions', async () => {
+it('registers only top-level components outside dialogs, role="dialog", loading skeletons, and opted-out regions', async () => {
   await act(async () => root.render(<Screen />));
-  expect(['header', 'card', 'row'].every(id => el(id).classList.contains('portal-reveal-ready'))).toBe(true);
-  expect(['nested', 'in-dialog', 'opted-out'].some(id => el(id).classList.contains('portal-reveal-ready'))).toBe(false);
+  expect(['header', 'card', 'row', 'picker-card'].every(id => el(id).classList.contains('portal-reveal-ready'))).toBe(true);
+  expect(['nested', 'in-dialog', 'in-role-dialog', 'in-skeleton', 'opted-out'].some(id => el(id).classList.contains('portal-reveal-ready'))).toBe(false);
+});
+
+it('treats DatePicker, TimePicker, and FilePicker wrappers as atomic reveal parts', async () => {
+  await act(async () => root.render(<Screen />));
+  expect(el('dp-wrap').dataset.revealPart).toBe('');
+  expect(el('tp-wrap').dataset.revealPart).toBe('');
+  expect(el('fp-wrap').dataset.revealPart).toBe('');
+  expect(el('dp-btn').dataset.revealPart).toBeUndefined();
+  expect(el('tp-btn').dataset.revealPart).toBeUndefined();
+  expect(el('fp-inner').dataset.revealPart).toBeUndefined();
 });
 
 it('staggers components entering together and replays after they fully leave the viewport', async () => {
@@ -111,7 +128,14 @@ it('leaves content untouched under reduced motion, including when the setting ch
   expect(el('card').classList.contains('portal-reveal-ready')).toBe(true);
 });
 
-it('numbers the small parts inside a component, through layout groups, and picks up parts added later', async () => {
+it('numbers the small parts inside a component, through layout groups, and batches dynamically added parts via requestAnimationFrame', async () => {
+  const rafQueue: FrameRequestCallback[] = [];
+  vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => {
+    rafQueue.push(cb);
+    return rafQueue.length;
+  });
+  vi.stubGlobal('cancelAnimationFrame', () => {});
+
   await act(async () => root.render(<Screen />));
   // Giá trị biến CSS thứ tự phần con của một phần tử.
   const order = (id: string) => el(id).style.getPropertyValue('--portal-part');
@@ -120,6 +144,13 @@ it('numbers the small parts inside a component, through layout groups, and picks
   expect(el('nested').dataset.revealPart).toBe('');
 
   await act(async () => el('add').click());
+  // MutationObserver gom vào rAF thay vì chạy đồng bộ.
+  expect(el('late-part').dataset.revealPart).toBeUndefined();
+  expect(rafQueue.length).toBeGreaterThan(0);
+
+  act(() => {
+    while (rafQueue.length > 0) rafQueue.shift()!(0);
+  });
   expect(el('late-part').dataset.revealPart).toBe('');
   expect(order('late-part')).toBe('0');
   expect(order('row-title')).toBe('0');

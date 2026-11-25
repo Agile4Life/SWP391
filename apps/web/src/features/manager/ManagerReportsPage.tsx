@@ -1,4 +1,4 @@
-import { staffLocale, useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
@@ -6,7 +6,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
-import { centerNowParts, formatCenterDate, formatCenterTimeSeconds } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, formatCenterDateTime, formatCenterTimeSeconds } from '../../shared/lib/centerTime';
 import { reportsApi, type CancellationRequestDto, type ReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
 
@@ -261,7 +261,8 @@ export function ManagerReportsPage() {
       csv += t('SÖL FITNESS - BÁO CÁO DOANH THU\n', "SÖL FITNESS - REVENUE REPORT\n");
       csv += t(`Kỳ Báo Cáo: Từ ngày ${appliedRange.startDate} đến ngày ${appliedRange.endDate}\n`, `Report period: From ${appliedRange.startDate} to ${appliedRange.endDate}
 `);
-      csv += t(`Thời gian Xuất: ${new Date().toLocaleString(staffLocale())}\n`, `Exported at: ${new Date().toLocaleString(staffLocale())}\n`);
+      const exportedAt = formatCenterDateTime(new Date().toISOString());
+      csv += t(`Thời gian Xuất: ${exportedAt}\n`, `Exported at: ${exportedAt}\n`);
       csv += t(`Người xuất: Quản lý trung tâm\n\n`, "Exported by: Center manager\n\n");
 
       csv += t('1. TỔNG QUAN CHỈ SỐ KPI\n', "1. KPI OVERVIEW\n");
@@ -429,15 +430,13 @@ export function ManagerReportsPage() {
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
             <button
               type="button"
-              className="btn-secondary"
-              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              className="btn-secondary btn-sm"
               onClick={() => handleQuickRange(7)}
             >
               {t("7 ngày qua")}</button>
             <button
               type="button"
-              className="btn-secondary"
-              style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+              className="btn-secondary btn-sm"
               onClick={() => handleQuickRange(30)}
             >
               {t("30 ngày qua")}</button>
@@ -834,13 +833,13 @@ export function ManagerReportsPage() {
                         </div>
                       </td>
                       <td>{tx.packageName ?? '—'}</td>
-                      <td style={{ fontWeight: 600, color: 'var(--portal-success, #86efac)' }}>{vnd(tx.amount)}</td>
+                      <td style={{ fontWeight: 600, color: 'var(--portal-success, #86efac)', fontVariantNumeric: 'tabular-nums' }}>{vnd(tx.amount)}</td>
                       <td>
                         <span className="badge badge-success">
-                          {t(paymentMethods[tx.method]) ?? tx.method}
+                          {paymentMethods[tx.method] ? t(paymentMethods[tx.method]) : tx.method}
                         </span>
                       </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
+                      <td style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                         {(() => {
                           const { date, time } = formatTransactionTime(tx.paidAt);
                           return (

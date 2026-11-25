@@ -73,3 +73,31 @@ it('never cancels while on /member/payments/vnpay/return and clearActiveVnpay pr
   expect(await releaseAbandonedVnpay()).toBe(false);
   expect(client.apiFetch).not.toHaveBeenCalled();
 });
+
+it('P1-FE-30: preserves ACTIVE_VNPAY_KEY when unauthenticated or on transient 5xx/network error, and clears on 404/409/success', async () => {
+  rememberActiveVnpay('TXN500');
+  window.localStorage.removeItem('fitcenter_token');
+  expect(await releaseAbandonedVnpay()).toBe(false);
+  expect(window.localStorage.getItem('scms_active_vnpay_ref')).toBe('TXN500');
+
+  window.localStorage.setItem('fitcenter_token', 'test-member-jwt');
+  vi.mocked(client.apiFetch).mockRejectedValueOnce(Object.assign(new Error('Server error'), { status: 503 }));
+  expect(await releaseAbandonedVnpay()).toBe(false);
+  expect(window.localStorage.getItem('scms_active_vnpay_ref')).toBe('TXN500');
+
+  vi.mocked(client.apiFetch).mockRejectedValueOnce(Object.assign(new Error('Not found'), { status: 404 }));
+  expect(await releaseAbandonedVnpay()).toBe(false);
+  expect(window.localStorage.getItem('scms_active_vnpay_ref')).toBeNull();
+});
+
+it('P2-FE-50: navigateToVnpay rejects untrusted URL with bilingual error translation', () => {
+  try {
+    navigateToVnpay('https://evil.example.com/pay');
+    expect.unreachable();
+  } catch (err) {
+    expect((err as Error & { translation?: { vi: string; en: string } }).translation).toEqual({
+      vi: 'Địa chỉ VNPay không hợp lệ.',
+      en: 'Invalid VNPay payment URL.',
+    });
+  }
+});

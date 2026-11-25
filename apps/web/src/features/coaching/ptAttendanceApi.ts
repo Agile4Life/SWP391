@@ -8,8 +8,10 @@ export type PtOutcome = 'ALL' | 'ATTENDED' | 'MISSED' | 'UPCOMING';
  * Lấy các buổi kèm 1:1 trong khoảng ngày kèm trạng thái đến: HLV thấy của mình, lễ tân và quản lý thấy của mọi
  * người.
  */
-export const getPtAttendance = (from: string, to: string, outcome: PtOutcome) =>
-  apiFetch<CoachBookingDto[]>(`/coach-bookings/attendance?from=${from}&to=${to}&outcome=${outcome}`);
+export const getPtAttendance = (from: string, to: string, outcome: PtOutcome) => {
+  const params = new URLSearchParams({ from, to, outcome });
+  return apiFetch<CoachBookingDto[]>(`/coach-bookings/attendance?${params.toString()}`);
+};
 
 /**
  * HLV hoặc lễ tân ghi nhận hội viên đã có mặt ở buổi đã bắt đầu; quẹt cổng không tự ghi nhận.

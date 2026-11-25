@@ -77,3 +77,52 @@ it('does not offer a first installation as an update and tolerates blocked regis
   expect(getWaitingRegistration()).toBeNull();
   expect(applyPwaUpdate()).toBe(false);
 });
+
+it('clears waitingRegistration and notifies listeners on controllerchange or worker activation/redundancy (P2-FE-09)', async () => {
+  vi.stubEnv('PROD', true);
+  const waitingWorker = Object.assign(new EventTarget(), {
+    state: 'installed' as ServiceWorkerState,
+    postMessage: vi.fn(),
+  });
+  const registration = Object.assign(new EventTarget(), {
+    waiting: waitingWorker as unknown as ServiceWorker | null,
+    installing: null as ServiceWorker | null,
+    update: vi.fn().mockResolvedValue(undefined),
+  });
+  const container = Object.assign(new EventTarget(), {
+    controller: { postMessage: vi.fn() },
+    register: vi.fn().mockResolvedValue(registration),
+  });
+  Object.defineProperty(navigator, 'serviceWorker', { configurable: true, value: container });
+  const { registerPwa, getWaitingRegistration, subscribePwaUpdate } = await import('./registerPwa');
+  const onUpdate = vi.fn();
+  const unsubscribe = subscribePwaUpdate(onUpdate);
+  await registerPwa();
+  expect(getWaitingRegistration()).toBe(registration);
+  expect(onUpdate).toHaveBeenCalledTimes(1);
+
+  // Tab 1 activates the waiting worker -> Tab 2 receives controllerchange -> banner clears immediately
+  registration.waiting = null;
+  container.dispatchEvent(new Event('controllerchange'));
+  expect(getWaitingRegistration()).toBeNull();
+  expect(onUpdate).toHaveBeenCalledTimes(2);
+
+  // Re-trigger update via updatefound -> installing -> installed -> redundant clears cleanly
+  const nextWorker = Object.assign(new EventTarget(), {
+    state: 'installing' as ServiceWorkerState,
+    postMessage: vi.fn(),
+  });
+  registration.installing = nextWorker as unknown as ServiceWorker;
+  registration.dispatchEvent(new Event('updatefound'));
+  nextWorker.state = 'installed';
+  registration.waiting = nextWorker as unknown as ServiceWorker;
+  nextWorker.dispatchEvent(new Event('statechange'));
+  expect(getWaitingRegistration()).toBe(registration);
+  expect(onUpdate).toHaveBeenCalledTimes(3);
+
+  nextWorker.state = 'redundant';
+  nextWorker.dispatchEvent(new Event('statechange'));
+  expect(getWaitingRegistration()).toBeNull();
+  expect(onUpdate).toHaveBeenCalledTimes(4);
+  unsubscribe();
+});

@@ -11,7 +11,9 @@ import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PaymentInvoice } from './PaymentInvoice';
+import { DocumentImageLightbox, type LightboxImage } from './DocumentImageLightbox';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
+import { formatSlotLabel } from '../schedule/slots';
 import './staff-reception.css';
 import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
 import {
@@ -84,9 +86,14 @@ export function StaffReceptionPage() {
 
   // Form thanh toán
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('cash');
-  const [paymentNotes, setPaymentNotes] = useState('Thanh toán gói tập tại quầy Lễ tân');
+  const defaultPaymentNote = t('Thanh toán gói tập tại quầy Lễ tân', 'Membership payment at the front desk');
+  const [customPaymentNotes, setCustomPaymentNotes] = useState<string | null>(null);
+  const paymentNotes = customPaymentNotes ?? defaultPaymentNote;
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [loadingSelectedMemberProfile, setLoadingSelectedMemberProfile] = useState(false);
+  const [zoomImage, setZoomImage] = useState<LightboxImage | null>(null);
   const paymentInFlight = useRef(false);
+  const pendingSelectSeqRef = useRef(0);
   const selectedMemberRef = useRef<number | null>(null);
   useEffect(() => { selectedMemberRef.current = selectedMember?.userId ?? null; }, [selectedMember?.userId]);
   // Đọc lại API trước khi thu tiền; không áp dữ liệu cho hội viên đã đổi.
@@ -263,7 +270,7 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
-  // Tải các buổi PT 1:1 chưa thu tiền.
+  // Tải các buổi PT 1:1 chưa thu tiền (luôn xóa ptError khi fetch thành công, kể cả khi poll nền silent).
   const loadUnpaidPt = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) {
@@ -272,6 +279,7 @@ export function StaffReceptionPage() {
     }
     try {
       setUnpaidPt(await receptionApi.getUnpaidCoachBookings());
+      setPtError('');
     } catch (err: unknown) {
       if (!silent) {
         setUnpaidPt([]);
@@ -438,8 +446,10 @@ export function StaffReceptionPage() {
     }
   };
 
-  // Chọn một yêu cầu chờ thanh toán để thu tiền, đồng thời chọn hội viên tương ứng.
+  // Chọn một yêu cầu chờ thanh toán để thu tiền, đồng thời tải lại hồ sơ đầy đủ (KYC/CCCD) của hội viên với khóa chống stale.
   const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
+    const selectSeq = ++pendingSelectSeqRef.current;
+    selectedMemberRef.current = item.memberId;
     setSelectedPending(item);
     setSelectedMember({
       userId: item.memberId,
@@ -448,12 +458,37 @@ export function StaffReceptionPage() {
       email: item.memberEmail,
       phone: item.memberPhone,
       citizenId: null,
+      identityVerified: undefined,
+      kycStatus: undefined,
       status: 'PENDING_PAYMENT',
       currentPackage: item.packageName,
       endDate: `${formatCenterDate(item.startDate)} → ${formatCenterDate(item.endDate)}`,
     });
     // Form thanh toán nằm phía trên danh sách chờ: đưa lễ tân tới bước xác nhận
     checkoutRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+
+    const lookupQuery = item.membershipCode || item.memberEmail || item.memberPhone || '';
+    if (lookupQuery.trim().length >= 2) {
+      setLoadingSelectedMemberProfile(true);
+      void receptionApi.lookupMembers(lookupQuery)
+        .then((results) => {
+          if (pendingSelectSeqRef.current !== selectSeq || selectedMemberRef.current !== item.memberId) return;
+          const fresh = results.find((candidate) => candidate.userId === item.memberId);
+          if (fresh) {
+            setSelectedMember(fresh);
+          }
+        })
+        .catch(() => {
+          // Giữ lại thông tin cơ bản từ hàng đợi; trước khi thu tiền hệ thống vẫn refreshSelectedMember() bắt buộc.
+        })
+        .finally(() => {
+          if (pendingSelectSeqRef.current === selectSeq) {
+            setLoadingSelectedMemberProfile(false);
+          }
+        });
+    } else {
+      setLoadingSelectedMemberProfile(false);
+    }
   };
 
   // Hủy một yêu cầu gói tập chờ thanh toán sau khi xác nhận.
@@ -534,13 +569,27 @@ export function StaffReceptionPage() {
     }
   };
 
-  // Xác nhận đã thu tiền buổi PT 1:1 theo phương thức đã chọn.
+  // Xác nhận đã thu tiền buổi PT 1:1 sau khi xác nhận hộp thoại rõ tên hội viên, khung giờ và số tiền.
   const handleConfirmPt = async (item: UnpaidCoachBooking, method: string) => {
     if (processingPtId !== null) return;
+    const methodVi = method === 'cash' ? 'tiền mặt' : 'chuyển khoản';
+    const methodEn = method === 'cash' ? 'cash' : 'bank transfer';
+    const dateText = formatCenterDate(item.bookingDate);
+    const slotText = formatSlotLabel(item.startTime, item.endTime);
+    const ok = await confirm({
+      title: sourceMessage('Xác nhận thu tiền buổi PT 1:1?', 'Confirm 1:1 PT session payment?'),
+      message: sourceMessage(
+        `Xác nhận đã thu ${formatPrice(item.hourlyRate)} (${methodVi}) cho buổi PT 1:1 của hội viên ${item.memberName} với HLV ${item.coachName} (${dateText} · ${slotText})?`,
+        `Confirm collecting ${formatPrice(item.hourlyRate)} (${methodEn}) for ${item.memberName}'s 1:1 PT session with Coach ${item.coachName} (${dateText} · ${slotText})?`,
+      ),
+      confirmLabel: sourceMessage('Xác nhận đã thu', 'Confirm payment'),
+      cancelLabel: sourceMessage('Để sau', 'Later'),
+    });
+    if (!ok) return;
     setProcessingPtId(item.id);
     try {
       await receptionApi.confirmCoachBookingPayment(item.id, method);
-      notify(staffMessage(`Đã thu ${formatPrice(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, `Collected ${formatPrice(item.hourlyRate)} PT sessions for ${item.memberName} (${formatCenterDate(item.bookingDate)}).`), 'success', { record: true });
+      notify(staffMessage(`Đã thu ${formatPrice(item.hourlyRate)} buổi PT của ${item.memberName} (${dateText}).`, `Collected ${formatPrice(item.hourlyRate)} for ${item.memberName}'s PT session (${dateText}).`), 'success', { record: true });
       await loadUnpaidPt();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Xác nhận thu tiền buổi PT thất bại.');
@@ -552,14 +601,30 @@ export function StaffReceptionPage() {
   };
 
 
-  // Duyệt đơn dùng thử.
+  // Duyệt đơn dùng thử 3 ngày sau khi xác nhận rõ việc đồng bộ họ tên tài khoản theo giấy tờ.
   const handleApproveTrial = async (item: ReceptionTrialItem) => {
     if (processingTrialId !== null) return;
+    const docLabelVi = item.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD';
+    const docLabelEn = item.documentType === 'PASSPORT' ? 'Passport' : 'identity card';
+    const docNumber = item.documentNumber ?? item.documentNumberMasked;
+    const ok = await confirm({
+      title: sourceMessage('Xác nhận duyệt gói trải nghiệm 3 ngày?', 'Confirm 3-day trial approval?'),
+      message: sourceMessage(
+        `Phê duyệt đơn trải nghiệm #${item.id} cho ${item.memberName} (${docLabelVi}: ${docNumber})? Hệ thống sẽ cập nhật họ tên tài khoản thành "${item.documentFullName}" và kích hoạt gói trải nghiệm 3 ngày miễn phí cùng 01 buổi HLV 1:1.`,
+        `Approve trial application #${item.id} for ${item.memberName} (${docLabelEn}: ${docNumber})? This will update the account full name to "${item.documentFullName}" and activate the 3-day trial pass with 1 complimentary 1:1 PT session.`,
+      ),
+      confirmLabel: sourceMessage('Xác nhận duyệt & kích hoạt', 'Confirm approve & activate'),
+      cancelLabel: sourceMessage('Hủy', 'Cancel'),
+    });
+    if (!ok) return;
     setProcessingTrialId(item.id);
     try {
       await receptionApi.approveTrial(item.id);
       notify(
-        staffMessage(`Đã kích hoạt Gói Trải Nghiệm 3 Ngày cho ${item.memberName}. Họ tên đã đồng bộ theo ${item.documentType}: "${item.documentFullName}".`, `Activated the 3-Day Trial for ${item.memberName}. Account name synchronized with ${item.documentType}: "${item.documentFullName}".`),
+        staffMessage(
+          `Đã kích hoạt Gói Trải Nghiệm 3 Ngày cho ${item.memberName}. Họ tên đã đồng bộ theo ${docLabelVi}: "${item.documentFullName}".`,
+          `Activated the 3-Day Trial for ${item.memberName}. Account name synchronized with ${docLabelEn}: "${item.documentFullName}".`,
+        ),
         'success',
         { record: true }
       );
@@ -701,6 +766,38 @@ export function StaffReceptionPage() {
           'The member has not completed identity verification. Ask them to complete verification before registering a membership.'));
         return;
       }
+
+      const targetPackage = selectedPackage;
+      const confirmPkgName = selectedPending?.packageName ?? targetPackage!.name;
+      const confirmAmount = selectedPending?.packagePrice ?? targetPackage!.price;
+      const methodLabelVi = paymentMethod === 'bank_transfer' ? 'chuyển khoản'
+        : paymentMethod === 'pos' ? 'thẻ (POS)'
+          : paymentMethod === 'online_wallet' ? 'ví điện tử' : 'tiền mặt';
+      const methodLabelEn = paymentMethod === 'bank_transfer' ? 'bank transfer'
+        : paymentMethod === 'pos' ? 'card (POS)'
+          : paymentMethod === 'online_wallet' ? 'e-wallet' : 'cash';
+      const actionDescVi = selectedPending
+        ? `yêu cầu #${selectedPending.id} (${confirmPkgName})`
+        : selectedCandidate
+          ? `gia hạn gói "${confirmPkgName}"`
+          : `đăng ký mới gói "${confirmPkgName}"`;
+      const actionDescEn = selectedPending
+        ? `request #${selectedPending.id} (${confirmPkgName})`
+        : selectedCandidate
+          ? `renewal of "${confirmPkgName}"`
+          : `new membership "${confirmPkgName}"`;
+
+      const confirmed = await confirm({
+        title: sourceMessage('Xác nhận thu tiền gói tập?', 'Confirm membership payment?'),
+        message: sourceMessage(
+          `Xác nhận đã thu ${formatPrice(confirmAmount)} (${methodLabelVi}) cho ${actionDescVi} của hội viên ${fresh.fullName}? Hệ thống sẽ kích hoạt gói và xuất hóa đơn ngay lập tức.`,
+          `Confirm collecting ${formatPrice(confirmAmount)} (${methodLabelEn}) for ${actionDescEn} of ${fresh.fullName}? The membership will be activated and an invoice issued immediately.`,
+        ),
+        confirmLabel: sourceMessage('Xác nhận đã thu', 'Confirm payment'),
+        cancelLabel: sourceMessage('Hủy', 'Cancel'),
+      });
+      if (!confirmed) return;
+
       let pending = selectedPending;
       if (!pending && selectedCandidate && selectedPackage) {
         creatingRenewal = true;
@@ -716,7 +813,6 @@ export function StaffReceptionPage() {
         };
         setSelectedPending(pending);
       }
-      const targetPackage = selectedPackage;
       const result = await receptionApi.processPayment({
         memberId: selectedMember.userId,
         subscriptionId: pending?.id,
@@ -746,6 +842,17 @@ export function StaffReceptionPage() {
     } finally {
       paymentInFlight.current = false;
       setIsSubmittingPayment(false);
+    }
+  };
+
+  // Chuyển mã trạng thái tài khoản hội viên sang nhãn VI/EN, không lộ ACTIVE/INACTIVE thô.
+  const formatMemberStatus = (status?: string | null) => {
+    switch ((status ?? '').trim().toUpperCase()) {
+      case 'ACTIVE': return t('Đang hoạt động', 'Active');
+      case 'INACTIVE': return t('Ngưng hoạt động', 'Inactive');
+      case 'SUSPENDED': return t('Tạm khóa', 'Suspended');
+      case 'PENDING_PAYMENT': return t('Chờ thanh toán', 'Awaiting payment');
+      default: return status || '—';
     }
   };
 
@@ -805,13 +912,13 @@ export function StaffReceptionPage() {
                     <button data-i18n-managed
                       key={m.userId}
                       type="button"
-                      className={`btn-secondary btn-sm ${selectedMember?.userId === m.userId ? 'btn-primary' : ''}`}
+                      className={selectedMember?.userId === m.userId ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
                       onClick={() => {
                         setSelectedMember(m);
                         setSelectedPending(pendingList.find((p) => p.memberId === m.userId) ?? null);
                       }}
                     >
-                      {m.fullName} ({m.membershipCode || m.phone})
+                      {m.fullName} ({m.membershipCode || m.phone || t('Chưa cấp thẻ', 'No card issued')})
                     </button>
                   ))}
                 </div>
@@ -949,7 +1056,7 @@ export function StaffReceptionPage() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--portal-paper)', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontWeight: 700, fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)', whiteSpace: 'nowrap' }}>
                                 {formatPrice(item.packagePrice)}
                               </div>
                               <span className="badge badge-neutral" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
@@ -968,8 +1075,8 @@ export function StaffReceptionPage() {
                             </button>
                             <button
                               type="button"
-                              className="btn-secondary btn-sm"
-                              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)', whiteSpace: 'nowrap', flexShrink: 0 }}
+                              className="btn-danger btn-sm"
+                              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                               disabled={cancellingPendingId !== null || isSubmittingPayment}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1090,9 +1197,9 @@ export function StaffReceptionPage() {
                               <strong>{item.memberName}</strong>
                               {item.status === 'completed' && <span className="badge badge-warning">{t("ĐÃ TẬP")}</span>}
                             </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
-                              {t("HLV")}{item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
-                              <strong>{formatPrice(item.hourlyRate)}</strong>
+                            <div style={{ fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)', marginTop: '6px' }}>
+                              {t('HLV', 'Coach')} {item.coachName} • {formatCenterDate(item.bookingDate)} · {formatSlotLabel(item.startTime, item.endTime)} •{' '}
+                              <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(item.hourlyRate)}</strong>
                             </div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -1177,8 +1284,10 @@ export function StaffReceptionPage() {
                                   fontWeight: 700,
                                   padding: '2px 8px',
                                   borderRadius: '99px',
-                                  background: item.documentType === 'PASSPORT' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 88, 12, 0.15)',
-                                  color: item.documentType === 'PASSPORT' ? '#2563eb' : 'var(--portal-salmon)',
+                                  background: item.documentType === 'PASSPORT'
+                                    ? 'color-mix(in srgb, var(--portal-info) 15%, transparent)'
+                                    : 'var(--portal-tint)',
+                                  color: item.documentType === 'PASSPORT' ? 'var(--portal-info)' : 'var(--sol-accent-text)',
                                 }}
                               >
                                 {item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Foreign'})`) : t('CCCD', 'Identity card')}
@@ -1195,14 +1304,14 @@ export function StaffReceptionPage() {
                                   </span>
                                 )}
                               </div>
-                              <div>
+                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 <strong>{t("Số giấy tờ:")}</strong> {item.documentNumber ?? item.documentNumberMasked}
                                 {item.nationality && t(` • Quốc tịch: ${item.nationality}`, ` • Nationality: ${item.nationality}`)}
                               </div>
-                              <div>
+                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 <strong>{t("Email/SĐT:")}</strong> {item.memberEmail} {item.memberPhone ? `• ${item.memberPhone}` : ''}
                               </div>
-                              <div>
+                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 <strong>{t("Thời gian nộp:")}</strong> {formatCenterDate(item.requestedAt)}
                               </div>
                             </div>
@@ -1225,8 +1334,7 @@ export function StaffReceptionPage() {
                             </button>
                             <button
                               type="button"
-                              className="btn-secondary btn-sm"
-                              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                              className="btn-danger btn-sm"
                               disabled={isBusy}
                               onClick={() => handleOpenRejectTrial(item)}
                             >
@@ -1349,7 +1457,7 @@ export function StaffReceptionPage() {
             <h2 className="portal-card-title">{t("Thông tin hội viên")}</h2>
             {selectedMember && (
               <span data-i18n-managed className={`badge ${selectedMember.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                {selectedPending ? t('CHỜ THANH TOÁN') : selectedMember.status?.toUpperCase()}
+                {selectedPending ? t('CHỜ THANH TOÁN', 'AWAITING PAYMENT') : formatMemberStatus(selectedMember.status)}
               </span>
             )}
           </div>
@@ -1365,13 +1473,13 @@ export function StaffReceptionPage() {
                 <div className="kv-row">
                   <span>{t("Mã hội viên")}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                    {selectedMember.membershipCode || `MB-2026-${String(selectedMember.userId).padStart(3, '0')}`}
+                    {selectedMember.membershipCode || t('Chưa cấp thẻ', 'No card issued')}
                   </span>
                 </div>
 
                 <div className="kv-row">
                   <span>{t("Số điện thoại")}</span>
-                  <strong>{selectedMember.phone || t('Chưa cập nhật')}</strong>
+                  <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{selectedMember.phone || t('Chưa cập nhật')}</strong>
                 </div>
 
                 <div className="kv-row">
@@ -1380,13 +1488,23 @@ export function StaffReceptionPage() {
                 </div>
 
                 <div className="kv-row" data-testid="pos-kyc-status"><span>{t('Trạng thái KYC', 'Identity verification')}</span><span>
-                  {selectedMember.kycStatus === 'PENDING' ? t('Chờ duyệt', 'Pending review') : selectedMember.kycStatus === 'REJECTED' ? t('Bị từ chối', 'Rejected') : selectedMember.identityVerified ? t('Đã xác thực', 'Verified') : t('Chưa xác thực', 'Not verified')}
+                  {loadingSelectedMemberProfile && selectedMember.identityVerified === undefined && selectedMember.kycStatus === undefined
+                    ? t('Đang kiểm tra…', 'Checking…')
+                    : selectedMember.kycStatus === 'PENDING'
+                      ? t('Chờ duyệt', 'Pending review')
+                      : selectedMember.kycStatus === 'REJECTED'
+                        ? t('Bị từ chối', 'Rejected')
+                        : selectedMember.identityVerified
+                          ? t('Đã xác thực', 'Verified')
+                          : t('Chưa xác thực', 'Not verified')}
                 </span></div>
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
                   <span>{selectedMember.documentType === 'PASSPORT' ? t('Số hộ chiếu', 'Passport number') : t('Số CCCD', 'Identity card number')}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)' }}>
-                    {selectedMember.citizenId || (selectedMember.identityVerified ? t('Đã xác thực, không có số hiển thị', 'Verified; number unavailable') : t('Chưa cập nhật'))}
+                    {loadingSelectedMemberProfile && selectedMember.citizenId == null && selectedMember.identityVerified === undefined
+                      ? t('Đang tải…', 'Loading…')
+                      : selectedMember.citizenId || (selectedMember.identityVerified ? t('Đã xác thực, không có số hiển thị', 'Verified; number unavailable') : t('Chưa cập nhật'))}
                   </span>
                 </div>
 
@@ -1403,7 +1521,7 @@ export function StaffReceptionPage() {
 
                 <div className="kv-row">
                   <span>{t("Thời hạn gói")}</span>
-                  <span style={{ color: 'var(--portal-salmon)', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--portal-salmon)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                     {selectedPending
                       ? t(`${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} ngày)`, `${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} days)`)
                       : activeCandidate
@@ -1415,7 +1533,7 @@ export function StaffReceptionPage() {
                 <div className="kv-row" style={{ alignItems: 'center' }}>
                   <span>{t('Số dư Ví SÖL', 'SÖL Wallet balance')}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <strong data-testid="member-wallet-balance" style={{ color: 'var(--portal-salmon, #fb923c)', fontSize: '0.96rem' }}>
+                    <strong data-testid="member-wallet-balance" style={{ color: 'var(--sol-accent-text)', fontSize: '0.96rem', fontVariantNumeric: 'tabular-nums' }}>
                       {walletBalanceContent}
                     </strong>
                     <button
@@ -1432,13 +1550,23 @@ export function StaffReceptionPage() {
                 {selectedPending && receiptImage && (
                   <div data-i18n-managed className="kv-row" style={{ display: 'block' }}>
                     <span>{t("Ảnh hóa đơn hội viên đã gửi")}</span>
-                    <a href={receiptImage} target="_blank" rel="noreferrer">
+                    <button
+                      type="button"
+                      className="document-photo-trigger"
+                      style={{ marginTop: 8 }}
+                      aria-label={t('Phóng to ảnh hóa đơn thanh toán tiền mặt', 'Zoom cash payment receipt image')}
+                      onClick={() => setZoomImage({
+                        url: receiptImage,
+                        title: t('Ảnh hóa đơn hội viên đã gửi', "Member's submitted receipt image"),
+                        alt: t('Ảnh hóa đơn thanh toán tiền mặt', 'Cash payment receipt image'),
+                      })}
+                    >
                       <img
                         src={receiptImage}
                         alt={t("Ảnh hóa đơn thanh toán tiền mặt")}
-                        style={{ display: 'block', marginTop: 8, maxWidth: '100%', maxHeight: 280, borderRadius: 8 }}
                       />
-                    </a>
+                      <span className="document-photo-trigger__caption">{t('Bấm để phóng to', 'Click to zoom')}</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -1449,8 +1577,7 @@ export function StaffReceptionPage() {
                     {t("Hủy gói & hoàn tiền về Ví (Quản lý duyệt):")}</span>
                   <button
                     type="button"
-                    className="btn-secondary btn-sm"
-                    style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                    className="btn-danger btn-sm"
                     onClick={handleOpenCancelModal}
                   >
                     {t("Yêu cầu hủy gói & hoàn tiền")}</button>
@@ -1486,7 +1613,10 @@ export function StaffReceptionPage() {
               </label>
               {selectedPending ? (
                 <input data-i18n-managed id="pos-package" type="text" className="portal-input"
-                  value={`${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`}
+                  value={t(
+                    `${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`,
+                    `${selectedPending.packageName} (${selectedPending.durationDays} days — Request #${selectedPending.id})`,
+                  )}
                   disabled readOnly />
               ) : loadingOffers ? <LoadingSkeleton label={t("Đang tải gói tập và lựa chọn gia hạn…")} count={1} /> : (
                 <Select id="pos-package" className="portal-select" value={selectedOffer}
@@ -1534,6 +1664,7 @@ export function StaffReceptionPage() {
                   style={{
                     fontWeight: 700,
                     fontSize: '1rem',
+                    fontVariantNumeric: 'tabular-nums',
                     color: 'var(--portal-salmon)',
                     backgroundColor: 'var(--portal-raised)',
                     cursor: 'not-allowed',
@@ -1566,7 +1697,7 @@ export function StaffReceptionPage() {
                 className="portal-input"
                 placeholder={t("Ghi chú thêm về giao dịch...")}
                 value={paymentNotes}
-                onChange={(e) => setPaymentNotes(e.target.value)}
+                onChange={(e) => setCustomPaymentNotes(e.target.value)}
                 disabled={isSubmittingPayment}
               />
             </div>
@@ -1600,10 +1731,10 @@ export function StaffReceptionPage() {
           <form onSubmit={(e) => void handleSubmitCounterTopup(e)} style={{ display: 'grid', gap: '14px' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
               {t('Hội viên: ', 'Member: ')}
-              <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
+              <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || t('Chưa cấp thẻ', 'No card issued')})
               <br />
               {t('Số dư hiện tại: ', 'Current balance: ')}
-              <strong style={{ color: 'var(--portal-salmon, #fb923c)' }}>
+              <strong style={{ color: 'var(--sol-accent-text)', fontVariantNumeric: 'tabular-nums' }}>
                 {walletBalanceContent}
               </strong>
             </div>
@@ -1672,7 +1803,7 @@ export function StaffReceptionPage() {
                 disabled={isSubmittingTopup}
                 onClick={() => setIsTopupModalOpen(false)}
               >
-                {t('Đóng', 'Close')}
+                {t('Hủy', 'Cancel')}
               </button>
               <button
                 type="submit"
@@ -1695,7 +1826,7 @@ export function StaffReceptionPage() {
         >
           <form onSubmit={(e) => void handleSubmitCancellationRequest(e)} style={{ display: 'grid', gap: '14px' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
-              {t("Hội viên: ")}<strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
+              {t("Hội viên: ")}<strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || t('Chưa cấp thẻ', 'No card issued')})
               {activeCandidate && (
                 <>
                   <br data-i18n-managed />
@@ -1709,7 +1840,7 @@ export function StaffReceptionPage() {
                 {t("Lý do hủy gói tập (bắt buộc trình Quản lý) *")}</label>
               <textarea
                 id="reception-cancel-reason"
-                className="portal-input"
+                className="portal-textarea"
                 rows={4}
                 maxLength={500}
                 required
@@ -1750,7 +1881,7 @@ export function StaffReceptionPage() {
                 disabled={isSubmittingCancel}
                 onClick={() => setIsCancelModalOpen(false)}
               >
-                {t("Đóng")}</button>
+                {t('Hủy', 'Cancel')}</button>
               <button
                 type="submit"
                 className="btn-primary"
@@ -1774,11 +1905,11 @@ export function StaffReceptionPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.9rem' }}>
               <div>
                 <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Hội viên")}</span>
-                <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || t('Chưa cấp thẻ')})
+                <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || t('Chưa cấp thẻ', 'No card issued')})
               </div>
               <div>
                 <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Loại giấy tờ")}</span>
-                <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Foreign'})`) : t('Căn cước công dân (CCCD)')}</strong>
+                <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Foreign'})`) : t('Căn cước công dân (CCCD)', 'Identity card')}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>
@@ -1802,8 +1933,8 @@ export function StaffReceptionPage() {
             >
               <strong>{t("Lưu ý nghiệp vụ:")}</strong> {t(" Khi Lễ tân bấm ")}<strong>{t("Duyệt & Kích hoạt")}</strong>{t(", hệ thống sẽ tự động đồng bộ họ tên tài khoản thành ")}<strong>&quot;{inspectingTrial.documentFullName}&quot;</strong> {t(" và kích hoạt gói 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.")}</div>
 
-            {/* Ảnh mặt trước & mặt sau */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '4px' }}>
+            {/* Ảnh mặt trước & mặt sau: lưới responsive & phóng to bằng Lightbox */}
+            <div className="document-photo-grid" style={{ marginTop: '4px' }}>
               <div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--portal-muted)' }}>
                   {t('Ảnh mặt trước (', 'Front photo (')}
@@ -1811,13 +1942,22 @@ export function StaffReceptionPage() {
                   {')'}
                 </div>
                 {inspectingTrial.frontImageUrl ? (
-                  <div data-i18n-managed style={{ border: '1px solid var(--portal-border-strong)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img data-i18n-managed
+                  <button
+                    type="button"
+                    className="document-photo-trigger"
+                    aria-label={t('Phóng to ảnh mặt trước giấy tờ', 'Zoom front document image')}
+                    onClick={() => setZoomImage({
+                      url: inspectingTrial.frontImageUrl!,
+                      title: `${inspectingTrial.memberName} · ${t('Mặt trước', 'Front')}`,
+                      alt: t('Mặt trước giấy tờ', 'Front of document'),
+                    })}
+                  >
+                    <img
                       src={inspectingTrial.frontImageUrl}
-                      alt={t("Mặt trước giấy tờ")}
-                      style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }}
+                      alt={t("Mặt trước giấy tờ", "Front of document")}
                     />
-                  </div>
+                    <span className="document-photo-trigger__caption">{t('Bấm để phóng to', 'Click to zoom')}</span>
+                  </button>
                 ) : (
                   <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--portal-surface)', borderRadius: '8px', border: '1px dashed var(--portal-border-strong)', color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                     {t("Chưa có ảnh mặt trước")}</div>
@@ -1826,16 +1966,27 @@ export function StaffReceptionPage() {
 
               <div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--portal-muted)' }}>
-                  {t("Ảnh mặt sau (")}{inspectingTrial.documentType === 'PASSPORT' ? t('Trang thị thực (tùy chọn)') : t('Mặt sau CCCD')})
+                  {t('Ảnh mặt sau (', 'Back photo (')}
+                  {inspectingTrial.documentType === 'PASSPORT' ? t('Trang thị thực (tùy chọn)', 'Visa page (optional)') : t('Mặt sau CCCD', 'Back of identity card')}
+                  {')'}
                 </div>
                 {inspectingTrial.backImageUrl ? (
-                  <div data-i18n-managed style={{ border: '1px solid var(--portal-border-strong)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img data-i18n-managed
+                  <button
+                    type="button"
+                    className="document-photo-trigger"
+                    aria-label={t('Phóng to ảnh mặt sau giấy tờ', 'Zoom back document image')}
+                    onClick={() => setZoomImage({
+                      url: inspectingTrial.backImageUrl!,
+                      title: `${inspectingTrial.memberName} · ${t('Mặt sau', 'Back')}`,
+                      alt: t('Mặt sau giấy tờ', 'Back of document'),
+                    })}
+                  >
+                    <img
                       src={inspectingTrial.backImageUrl}
-                      alt={t("Mặt sau giấy tờ")}
-                      style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }}
+                      alt={t("Mặt sau giấy tờ", "Back of document")}
                     />
-                  </div>
+                    <span className="document-photo-trigger__caption">{t('Bấm để phóng to', 'Click to zoom')}</span>
+                  </button>
                 ) : (
                   <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--portal-surface)', borderRadius: '8px', border: '1px dashed var(--portal-border-strong)', color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                     {t("Chưa có ảnh mặt sau")}</div>
@@ -1846,8 +1997,7 @@ export function StaffReceptionPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--portal-border-strong)', paddingTop: '14px' }}>
               <button
                 type="button"
-                className="btn-secondary"
-                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                className="btn-danger"
                 disabled={processingTrialId === inspectingTrial.id}
                 onClick={() => handleOpenRejectTrial(inspectingTrial)}
               >
@@ -1881,11 +2031,11 @@ export function StaffReceptionPage() {
                 {t("Lý do từ chối *")}</label>
               <textarea
                 id="trial-reject-reason"
-                className="portal-input"
+                className="portal-textarea"
                 rows={3}
                 maxLength={500}
                 required
-                placeholder={t("Vd: ảnh mờ, số CCCD không khớp bản gốc")}
+                placeholder={t("Vd: ảnh mờ, số giấy tờ không khớp bản gốc", "e.g. blurry photo, document number does not match")}
                 value={trialRejectReason}
                 onChange={(e) => setTrialRejectReason(e.target.value)}
                 disabled={isSubmittingTrialReject}
@@ -1909,8 +2059,7 @@ export function StaffReceptionPage() {
                 {t("Hủy")}</button>
               <button
                 type="submit"
-                className="btn-primary"
-                style={{ background: 'var(--portal-danger, #ef4444)' }}
+                className="btn-danger"
                 disabled={isSubmittingTrialReject}
               >
                 {isSubmittingTrialReject ? t('Đang từ chối…') : t('Xác nhận từ chối')}
@@ -1931,6 +2080,7 @@ export function StaffReceptionPage() {
           onClose={() => setCompletedPayment(null)}
         />
       )}
+      <DocumentImageLightbox image={zoomImage} onClose={() => setZoomImage(null)} />
       {confirmDialog}
     </div>
   );

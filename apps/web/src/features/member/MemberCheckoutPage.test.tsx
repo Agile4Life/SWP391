@@ -29,10 +29,10 @@ describe('MemberCheckoutPage Component', () => {
   const mockPackages: membershipApi.MembershipPackage[] = [
     {
       id: 1,
-      name: 'Gói Tiêu Chuẩn 1 Tháng',
+      name: 'Gói Tiêu Chuẩn 3 Tháng',
       description: 'Sử dụng phòng tập và lớp nhóm cơ bản.',
       price: 650000,
-      durationDays: 30,
+      durationDays: 90,
       classCreditLimit: 12,
       status: 'active',
     },
@@ -135,7 +135,7 @@ describe('MemberCheckoutPage Component', () => {
   async function renderCheckout(initialEntry = '/member/packages/checkout?packageId=1') {
     await act(async () => {
       root.render(
-        <MemoryRouter initialEntries={[initialEntry]}>
+        <MemoryRouter key={initialEntry} initialEntries={[initialEntry]}>
           <MemberCheckoutPage />
         </MemoryRouter>
       );
@@ -167,8 +167,8 @@ describe('MemberCheckoutPage Component', () => {
     await renderCheckout('/member/packages/checkout?packageId=1');
 
     expect(host.textContent).toContain('Tóm tắt đơn hàng');
-    expect(host.textContent).toContain('Gói Tiêu Chuẩn 1 Tháng');
-    expect(host.textContent).toContain('30 ngày tập');
+    expect(host.textContent).toContain('Gói Tiêu Chuẩn 3 Tháng');
+    expect(host.textContent).toContain('90 ngày tập');
     expect(host.textContent).not.toContain('Lớp học:');
     expect(host.textContent).toContain('650.000');
   });
@@ -255,7 +255,7 @@ describe('MemberCheckoutPage Component', () => {
     await renderCheckout('/member/packages/checkout?packageId=1');
 
     expect(host.textContent).toContain('Xác minh danh tính trước khi đăng ký gói tập đầu tiên');
-    expect(host.textContent).toContain('Số Căn cước công dân (12 chữ số)');
+    expect(host.textContent).toContain('Số Căn cước công dân (9 hoặc 12 chữ số)');
     expect(host.textContent).toContain('Họ tên tài khoản sẽ được đồng bộ theo tên này');
   });
 
@@ -412,6 +412,39 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.querySelector(kycStatus === 'PENDING' ? '[data-testid="kyc-pending"]' : '[data-testid="kyc-rejected"]')).not.toBeNull();
     expect(host.querySelector('.kyc-verified')).toBeNull();
     expect(host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')?.disabled).toBe(false);
+  });
+
+  it('P1-FE-23: defaults to first active non-trial purchasable package and rejects trial/legacy package without subscriptionId', async () => {
+    const trialPkg: membershipApi.MembershipPackage = {
+      id: 10, name: 'Gói Trải Nghiệm 3 Ngày', description: 'Trial', price: 0, durationDays: 3, classCreditLimit: 0, status: 'active',
+    };
+    const legacyPkg: membershipApi.MembershipPackage = {
+      id: 11, name: 'Gói 1 Tháng Cũ', description: 'Legacy', price: 500000, durationDays: 30, classCreditLimit: 4, status: 'active',
+    };
+    vi.mocked(membershipApi.getMembershipPackages).mockResolvedValue([trialPkg, legacyPkg, ...mockPackages]);
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([]);
+
+    await renderCheckout('/member/packages/checkout');
+    expect(host.textContent).toContain('Gói Tiêu Chuẩn 3 Tháng');
+    expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày');
+
+    await renderCheckout('/member/packages/checkout?packageId=10');
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('không mở bán trực tuyến');
+
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([
+      { ...pendingUpgrade, id: 88, packageId: 11, packageName: 'Gói 1 Tháng Cũ', upgradeCharge: null, quotedPrice: 500000 },
+    ]);
+    await renderCheckout('/member/packages/checkout?packageId=11&subscriptionId=88');
+    expect(host.textContent).toContain('Gói 1 Tháng Cũ');
+    expect(host.querySelector('.order-breakdown-row.total')?.textContent).toContain('500.000');
+  });
+
+  it('P1-FE-24 & P2-FE-50: displays quoted upgradeCharge even when opened by packageId without subscriptionId, and fixes EN grammar/spacing', async () => {
+    await renderCheckout('/member/packages/checkout?packageId=2');
+    expect(host.querySelector('.order-breakdown-row.total')?.textContent).toContain('1.150.000');
+
+    await act(async () => setLanguage('en'));
+    expect(host.textContent).toContain('Duration: 90 training days');
   });
 
 });

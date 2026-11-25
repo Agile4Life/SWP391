@@ -3,23 +3,39 @@ import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
 import { sourceMessage, useI18n } from '../../shared/i18n';
 import { FilePicker } from '../../shared/ui/FilePicker';
+import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { VnpayPayButton } from '../payments/VnpayPayButton';
 import { useEffect, useRef, useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { formatPrice } from '../../shared/lib/membershipPresentation';
+import { formatPrice, isTrialPackage, MIN_TERM_DAYS } from '../../shared/lib/membershipPresentation';
 import {
   getMembershipHistory,
   getMembershipPackages,
   createMembershipSubscription,
-  MembershipPackage,
+  type MemberSubscription,
+  type MembershipPackage,
 } from './membershipApi';
 import { getProfile, submitMemberKyc, Profile } from './profileApi';
 import { fileToUploadDataUrl } from '../../shared/lib/imageUpload';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './member-checkout.css';
 import { trialApi } from './trialApi';
-import { localizableError } from '../../shared/lib/errorMessage';
+
+function isPurchasablePackage(pkg: MembershipPackage): boolean {
+  return pkg.status === 'active' && !isTrialPackage(pkg) && pkg.durationDays >= MIN_TERM_DAYS;
+}
+
+function toLocalizableError(err: unknown, vi: string, en: string): Error | SourceMessage {
+  return err instanceof Error && err.name === 'Error' && err.message ? err : sourceMessage(vi, en);
+}
+
+function parsePositiveIntParam(raw: string | null): number | null | 'invalid' {
+  if (!raw) return null;
+  if (!/^\d+$/.test(raw)) return 'invalid';
+  const parsed = Number(raw);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 'invalid';
+}
 
 /**
  * Trang thanh toán gói tập: chọn gói, xác minh danh tính (KYC) nếu cần rồi thanh toán bằng VNPay hoặc Ví SÖL
@@ -32,12 +48,16 @@ export function MemberCheckoutPage() {
   const navigate = useNavigate();
 
   const packageIdParam = searchParams.get('packageId');
-  const parsedPackageId = packageIdParam ? parseInt(packageIdParam, 10) : null;
+  const parsedPackageIdRaw = parsePositiveIntParam(packageIdParam);
+  const parsedPackageId = typeof parsedPackageIdRaw === 'number' ? parsedPackageIdRaw : null;
   const subscriptionIdParam = searchParams.get('subscriptionId');
-  const existingSubscriptionId = subscriptionIdParam ? parseInt(subscriptionIdParam, 10) : null;
+  const parsedSubscriptionIdRaw = parsePositiveIntParam(subscriptionIdParam);
+  const existingSubscriptionId = typeof parsedSubscriptionIdRaw === 'number' ? parsedSubscriptionIdRaw : null;
 
   const preparedSubscriptionId = useRef<number | null>(existingSubscriptionId);
+  const kycSubmittingRef = useRef(false);
   const [loading, setLoading] = useState(true);
+  const [reload, setReload] = useState(0);
   const [error, setError] = useState<string | Error | { vi: string; en: string } | null | SourceMessage>(null);
   const [selectedPackage, setSelectedPackage] = useState<MembershipPackage | null>(null);
   // Số tiền thật phải thanh toán: yêu cầu nâng cấp hoặc gia hạn đã được backend báo giá
@@ -56,7 +76,7 @@ export function MemberCheckoutPage() {
   const [kycBackImage, setKycBackImage] = useState('');
   const [kycSubmitting, setKycSubmitting] = useState(false);
   const [kycError, setKycError] = useState<string | Error | SourceMessage>('');
-  const [kycSuccess, setKycSuccess] = useState('');
+  const [kycSuccess, setKycSuccess] = useState<string | SourceMessage>('');
   const [refreshingKyc, setRefreshingKyc] = useState(false);
 
   // Tải lại hồ sơ để cập nhật trạng thái xác minh danh tính.
@@ -65,8 +85,9 @@ export function MemberCheckoutPage() {
     try {
       const updated = await getProfile();
       setProfile(updated);
-      if (updated?.identityVerified) {
-        setKycSuccess(t('Đã xác minh thành công! Bạn có thể tiến hành thanh toán.', 'Verification approved! You can now proceed to payment.') as string);
+      const approved = updated?.kycStatus === 'APPROVED' || Boolean(updated?.identityVerified && updated.kycStatus !== 'PENDING' && updated.kycStatus !== 'REJECTED');
+      if (approved) {
+        setKycSuccess(sourceMessage('Đã xác minh thành công! Bạn có thể tiến hành thanh toán.', 'Verification approved! You can now proceed to payment.'));
         window.dispatchEvent(new Event('profile-updated'));
       }
     } catch { /* bỏ qua */ }
@@ -82,6 +103,16 @@ export function MemberCheckoutPage() {
       const version = ++request;
       setLoading(true);
       setError(null);
+      setQuotedAmount(null);
+      setSelectedPackage(null);
+      setIsLinkedRequest(false);
+
+      if (parsedPackageIdRaw === 'invalid' || parsedSubscriptionIdRaw === 'invalid') {
+        setError(sourceMessage('Tham số thanh toán không hợp lệ. Hãy quay lại danh mục gói tập.', 'Invalid checkout parameters. Please return to the membership catalog.'));
+        setLoading(false);
+        return;
+      }
+
       try {
         const [packages, history, userProfile, trialStatus] = await Promise.all([
           getMembershipPackages(),
@@ -93,14 +124,12 @@ export function MemberCheckoutPage() {
 
         setProfile(userProfile);
         setApprovedTrial(trialStatus?.status === 'APPROVED');
-        // Chỉ kỳ gia hạn/nâng cấp liên kết thật mới giữ chính sách thanh toán cũ.
-        const target = history.find(item => item.id === preparedSubscriptionId.current) ?? history.find(item => item.packageId === parsedPackageId && item.status === 'pending_payment');
-        setIsLinkedRequest(Boolean(target?.previousSubscriptionId));
 
         if (userProfile?.fullName) {
           setKycFullName(userProfile.fullName);
         }
 
+        let target: MemberSubscription | undefined;
         const subscriptionId = preparedSubscriptionId.current;
         if (subscriptionId) {
           const subscription = history.find((item) => item.id === subscriptionId);
@@ -108,24 +137,54 @@ export function MemberCheckoutPage() {
             setError(memberMessage("Yêu cầu gói không còn hợp lệ. Hãy quay lại danh mục."));
             return;
           }
-          const quoted = subscription.upgradeCharge ?? subscription.quotedPrice;
-          setQuotedAmount(typeof quoted === 'number' ? quoted : null);
+          target = subscription;
         }
 
+        let chosen: MembershipPackage | undefined;
         if (parsedPackageId) {
-          const found = packages.find((p) => p.id === parsedPackageId);
-          if (found) {
-            setSelectedPackage(found);
-          } else {
+          chosen = packages.find((p) => p.id === parsedPackageId);
+          if (!chosen) {
             setError({ vi: `Không tìm thấy thông tin gói tập #${parsedPackageId}.`, en: `Membership #${parsedPackageId} not found.` });
+            return;
           }
-        } else if (packages.length > 0) {
-          setSelectedPackage(packages[0]);
+          if (!target) {
+            target = history.find((item) => item.packageId === chosen!.id && item.status === 'pending_payment');
+          }
+          const allowedViaSubscription = Boolean(subscriptionId && target && target.packageId === chosen.id);
+          if (!isPurchasablePackage(chosen) && !allowedViaSubscription) {
+            setError(sourceMessage(
+              'Gói tập này hiện không mở bán trực tuyến. Vui lòng chọn gói khác.',
+              'This membership plan is not available for online purchase. Please choose another plan.',
+            ));
+            return;
+          }
+        } else if (target) {
+          chosen = packages.find((p) => p.id === target!.packageId);
+          if (!chosen) {
+            setError({ vi: `Không tìm thấy thông tin gói tập #${target.packageId}.`, en: `Membership #${target.packageId} not found.` });
+            return;
+          }
         } else {
-          setError(memberMessage("Hiện tại chưa có gói tập nào trong hệ thống."));
+          chosen = packages.find(isPurchasablePackage);
+          if (!chosen) {
+            setError(sourceMessage(
+              'Hiện tại chưa có gói tập nào khả dụng để thanh toán.',
+              'No purchasable membership plans are currently available.',
+            ));
+            return;
+          }
+          target = history.find((item) => item.packageId === chosen!.id && item.status === 'pending_payment');
         }
+
+        setSelectedPackage(chosen);
+        // Chỉ kỳ gia hạn/nâng cấp liên kết thật mới giữ chính sách thanh toán cũ.
+        setIsLinkedRequest(Boolean(target?.previousSubscriptionId));
+        const quoted = target?.status === 'pending_payment' ? (target.upgradeCharge ?? target.quotedPrice) : null;
+        setQuotedAmount(typeof quoted === 'number' ? quoted : null);
       } catch (err) {
-        if (active && version === request) setError(localizableError(err, 'Không thể tải thông tin gói tập.'));
+        if (active && version === request) {
+          setError(toLocalizableError(err, 'Không thể tải thông tin gói tập.', 'Unable to load membership details.'));
+        }
       } finally {
         if (active && version === request) setLoading(false);
       }
@@ -139,10 +198,11 @@ export function MemberCheckoutPage() {
       active = false;
       window.removeEventListener('pageshow', restore);
     };
-  }, [parsedPackageId, existingSubscriptionId]);
+  }, [parsedPackageId, parsedPackageIdRaw, existingSubscriptionId, parsedSubscriptionIdRaw, reload]);
 
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
-  const isKycVerified = Boolean((profile?.identityVerified && profile.kycStatus !== 'PENDING' && profile.kycStatus !== 'REJECTED'));
+  const isKycVerified = profile?.kycStatus === 'APPROVED'
+    || Boolean(profile?.identityVerified && profile.kycStatus !== 'PENDING' && profile.kycStatus !== 'REJECTED');
 
   // Trial đã duyệt có thể còn KYC PENDING/REJECTED cũ; giữ nguyên trạng thái hiển thị.
   const canPurchase = isLinkedRequest || approvedTrial || isKycVerified;
@@ -168,18 +228,19 @@ export function MemberCheckoutPage() {
   // Gửi hồ sơ xác minh danh tính sau khi kiểm tra số giấy tờ và ảnh.
   async function handleKycSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (kycSubmittingRef.current) return;
     setKycError('');
     if (!kycNumber.trim()) {
       setKycError(memberMessage("Vui lòng nhập số CCCD hoặc Hộ chiếu."));
       return;
     }
     if (kycDocType === 'CCCD' && !/^(\d{9}|\d{12})$/.test(kycNumber.trim())) {
-      setKycError(memberMessage("Số Căn cước công dân (CCCD) phải bao gồm đúng 12 chữ số."));
+      setKycError(sourceMessage('Số Căn cước công dân (CCCD) phải gồm 9 hoặc 12 chữ số.', 'Identity card number must be 9 or 12 digits.'));
       return;
     }
     if (kycDocType === 'PASSPORT') {
       if (!/^[A-Za-z0-9]{6,15}$/.test(kycNumber.trim())) {
-        setKycError(memberMessage("Số Hộ chiếu không hợp lệ (từ 6 đến 20 ký tự)."));
+        setKycError(sourceMessage('Số Hộ chiếu không hợp lệ (6 đến 15 ký tự chữ và số).', 'Invalid passport number (6 to 15 letters and digits).'));
         return;
       }
       if (!kycNationality.trim()) {
@@ -205,6 +266,7 @@ export function MemberCheckoutPage() {
       return;
     }
 
+    kycSubmittingRef.current = true;
     setKycSubmitting(true);
     try {
       const updated = await submitMemberKyc({
@@ -217,10 +279,11 @@ export function MemberCheckoutPage() {
       });
       setProfile(updated);
       window.dispatchEvent(new Event('profile-updated'));
-      setKycSuccess('Đã gửi hồ sơ. Lễ tân sẽ kiểm tra giấy tờ của bạn.');
+      setKycSuccess(sourceMessage('Đã gửi hồ sơ. Lễ tân sẽ kiểm tra giấy tờ của bạn.', 'Verification submitted. Reception will review your documents.'));
     } catch (err) {
-      setKycError(localizableError(err, 'Không thể gửi xác minh danh tính. Vui lòng kiểm tra lại.'));
+      setKycError(toLocalizableError(err, 'Không thể gửi xác minh danh tính. Vui lòng kiểm tra lại.', 'Unable to submit identity verification. Please check your details.'));
     } finally {
+      kycSubmittingRef.current = false;
       setKycSubmitting(false);
     }
   }
@@ -246,10 +309,10 @@ export function MemberCheckoutPage() {
 
   if (loading) {
     return (
-      <div data-i18n-managed className="portal-container checkout-container" >
-        <div className="portal-state" style={{ minHeight: '300px' }}>
-          <div className="spinner" />
-          <p style={{ marginTop: 12 }}>{t("Đang tải thông tin thanh toán gói tập...", "Loading membership payment details…")}</p>
+      <div data-i18n-managed className="portal-container checkout-container">
+        <PageHeader title={t("Thanh toán gói tập", "Membership payment")} />
+        <div className="portal-card">
+          <LoadingSkeleton label={t("Đang tải thông tin thanh toán gói tập...", "Loading membership payment details…")} count={3} />
         </div>
       </div>
     );
@@ -257,13 +320,19 @@ export function MemberCheckoutPage() {
 
   if (error || !selectedPackage) {
     return (
-      <div data-i18n-managed className="portal-container checkout-container" >
+      <div data-i18n-managed className="portal-container checkout-container">
         <div className="portal-card" style={{ textAlign: 'center', padding: '40px 20px' }}>
           <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '1.1rem', marginBottom: 16 }}>
             {error ? t(error) : t("Không tìm thấy thông tin gói tập.", "Membership details not found.")}
           </p>
-          <Link to="/member/packages" className="btn-primary">
-            {t("Quay lại danh mục gói tập", "Back to membership catalog")}</Link>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button type="button" className="btn-secondary" onClick={() => setReload((n) => n + 1)}>
+              {t("Thử lại", "Try again")}
+            </button>
+            <Link to="/member/packages" className="btn-primary">
+              {t("Quay lại danh mục gói tập", "Back to membership catalog")}
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -304,7 +373,7 @@ export function MemberCheckoutPage() {
                   {t("Xác minh danh tính trước khi đăng ký gói tập đầu tiên", "Verify your identity before your first membership")}</h2>
               </div>
               <p className="hold-notice hold-notice--warn">
-                {t("Hội viên mới cần xác minh CCCD (hoặc Hộ chiếu cho người nước ngoài). Họ tên tài khoản sẽ khớp với giấy tờ.", "New members must verify a identity card (or passport for foreign nationals). Your account name will match the document.")}</p>
+                {t("Hội viên mới cần xác minh CCCD (hoặc Hộ chiếu cho người nước ngoài). Họ tên tài khoản sẽ khớp với giấy tờ.", "New members must verify an identity card (or passport for foreign nationals). Your account name will match the document.")}</p>
 
               {profile?.kycStatus === 'REJECTED' && (
                 <div role="alert" data-testid="kyc-rejected" className="hold-notice hold-notice--danger">
@@ -325,14 +394,18 @@ export function MemberCheckoutPage() {
               <form onSubmit={handleKycSubmit} className="stack" style={{ gap: 14 }}>
                 <div>
                   <label className="portal-label" style={{ display: 'block', marginBottom: 6 }}>{t("Loại giấy tờ định danh:", "Identity document type:")}</label>
-                  <div style={{ display: 'flex', gap: 16 }}>
+                  <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                     <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontSize: '0.95rem' }}>
                       <input
                         type="radio"
                         name="checkoutDocType"
                         value="CCCD"
                         checked={kycDocType === 'CCCD'}
-                        onChange={() => setKycDocType('CCCD')}
+                        onChange={() => {
+                          setKycDocType('CCCD');
+                          setKycNumber('');
+                          setKycError('');
+                        }}
                       />
                       <span>{t("Căn cước công dân (Việt Nam)", "Identity card (Vietnam)")}</span>
                     </label>
@@ -342,7 +415,12 @@ export function MemberCheckoutPage() {
                         name="checkoutDocType"
                         value="PASSPORT"
                         checked={kycDocType === 'PASSPORT'}
-                        onChange={() => setKycDocType('PASSPORT')}
+                        onChange={() => {
+                          setKycDocType('PASSPORT');
+                          setKycNumber('');
+                          setKycBackImage('');
+                          setKycError('');
+                        }}
                       />
                       <span>{t("Hộ chiếu (Người nước ngoài)", "Passport (foreign nationals)")}</span>
                     </label>
@@ -368,16 +446,16 @@ export function MemberCheckoutPage() {
 
                 <div>
                   <label htmlFor="checkout-doc-number" className="portal-label" style={{ display: 'block', marginBottom: 6 }}>
-                    {kycDocType === 'CCCD' ? t("Số Căn cước công dân (12 chữ số)", "Identity card number (12 digits)") : t("Số Hộ chiếu", "Passport number")} <span className="required-mark" aria-hidden="true">*</span>
+                    {kycDocType === 'CCCD' ? t("Số Căn cước công dân (9 hoặc 12 chữ số)", "Identity card number (9 or 12 digits)") : t("Số Hộ chiếu", "Passport number")} <span className="required-mark" aria-hidden="true">*</span>
                   </label>
                   <input
                     id="checkout-doc-number"
                     type="text"
                     className="portal-input"
-                    placeholder={kycDocType === 'CCCD' ? t("Nhập 12 chữ số CCCD", "Enter 12-digit identity card") : t("Nhập mã số hộ chiếu", "Enter passport number")}
+                    placeholder={kycDocType === 'CCCD' ? t("Nhập 9 hoặc 12 chữ số CCCD", "Enter 9 or 12-digit identity card") : t("Nhập 6–15 ký tự hộ chiếu", "Enter 6–15 character passport number")}
                     value={kycNumber}
                     onChange={(e) => setKycNumber(e.target.value)}
-                    maxLength={30}
+                    maxLength={kycDocType === 'CCCD' ? 12 : 15}
                     required
                   />
                 </div>
@@ -405,9 +483,9 @@ export function MemberCheckoutPage() {
                       {kycDocType === 'PASSPORT' ? t("Ảnh mặt trước Hộ chiếu", "Front of passport") : t("Ảnh mặt trước CCCD", "Front of identity card")} <span className="required-mark" aria-hidden="true">*</span>
                     </label>
                     {kycFrontImage ? (
-                      <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
-                        <img src={kycFrontImage} alt={t("Mặt trước", "Front")} style={{ width: '100%', height: 110, objectFit: 'cover' }} />
-                        <button type="button" onClick={() => setKycFrontImage('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}>{t("Xóa", "Remove")}</button>
+                      <div className="checkout-kyc-preview">
+                        <img src={kycFrontImage} alt={t("Mặt trước", "Front")} className="checkout-kyc-preview__img" />
+                        <button type="button" className="checkout-kyc-preview__remove" onClick={() => setKycFrontImage('')}>{t("Xóa", "Remove")}</button>
                       </div>
                     ) : (
                       <FilePicker accept="image/*" buttonLabel={t("Chọn ảnh", "Choose image")} ariaLabel={t("Ảnh mặt trước", "Front image")} onChange={(e) => handleImageUpload(e, 'front')} />
@@ -420,9 +498,9 @@ export function MemberCheckoutPage() {
                         {t("Ảnh mặt sau CCCD", "Back of identity card")}<span className="required-mark" aria-hidden="true">*</span>
                       </label>
                       {kycBackImage ? (
-                        <div style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)' }}>
-                          <img src={kycBackImage} alt={t("Mặt sau", "Back")} style={{ width: '100%', height: 110, objectFit: 'cover' }} />
-                          <button type="button" onClick={() => setKycBackImage('')} style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.7)', border: 'none', color: '#fff', borderRadius: 4, padding: '2px 6px', fontSize: '0.75rem', cursor: 'pointer' }}>{t("Xóa", "Remove")}</button>
+                        <div className="checkout-kyc-preview">
+                          <img src={kycBackImage} alt={t("Mặt sau", "Back")} className="checkout-kyc-preview__img" />
+                          <button type="button" className="checkout-kyc-preview__remove" onClick={() => setKycBackImage('')}>{t("Xóa", "Remove")}</button>
                         </div>
                       ) : (
                         <FilePicker accept="image/*" buttonLabel={t("Chọn ảnh", "Choose image")} ariaLabel={t("Ảnh mặt sau", "Back image")} onChange={(e) => handleImageUpload(e, 'back')} />
@@ -455,6 +533,7 @@ export function MemberCheckoutPage() {
                 {t("Hoàn tất xác minh danh tính ở trên để thanh toán.", "Complete identity verification above to pay.")}</p>
             )}
             <VnpayPayButton
+              amount={amount}
               disabled={!canPurchase}
               prepare={preparePaymentTarget}
               onPaid={() => navigate('/member/packages', { replace: true })}
@@ -475,7 +554,7 @@ export function MemberCheckoutPage() {
             <div className="order-package-info">
               <div className="order-package-name">{selectedPackage.name}</div>
               <div className="order-package-term">
-                <span>{t("Thời hạn: ", "Duration:")}{selectedPackage.durationDays} {t("ngày tập", "training days")}</span>
+                <span>{t("Thời hạn: ", "Duration: ")}{selectedPackage.durationDays} {t("ngày tập", "training days")}</span>
               </div>
             </div>
 

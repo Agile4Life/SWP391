@@ -1,12 +1,15 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { setLanguage } from '../../shared/i18n';
-import { CatalogPackages, CatalogTrainers } from './components/CatalogSections';
+import { CatalogPackages, CatalogSchedule, CatalogTrainers } from './components/CatalogSections';
 import { calculateBmi, FitnessLanding, parseBmiMetric } from './components/FitnessLanding';
 import { usePublicCatalog } from './publicCatalog';
 import type { PublicCatalog } from './publicCatalog';
+import { SCHEDULE_SLOTS } from '../schedule/slots';
 
 const catalog: PublicCatalog = {
   packages: [{ id: 1, name: 'Gói mới', price: 789000, durationDays: 90, classCreditLimit: 8, description: 'Quyền lợi mới', status: 'active' }],
@@ -183,7 +186,7 @@ it('localizes seeded package perks and coach specialization in English while lea
   const seededAndCustom: PublicCatalog = {
     packages: [
       {
-        id: 1,
+        id: 101,
         name: 'SILVER',
         price: 199000,
         durationDays: 90,
@@ -218,4 +221,109 @@ it('localizes seeded package perks and coach specialization in English while lea
   expect(host.textContent).toContain('Unlimited gym access during operating hours.');
   expect(host.textContent).toContain('Gym - Strength');
   expect(host.textContent).toContain('Quyền lợi mới');
+});
+
+it('fixes misleading free-account copy, translates landing copy cleanly, uses 5 fixed schedule slots, personalizes BMI goals, and wires a11y tabs/buttons (P1-FE-04, P2-FE-05..08, P2-FE-12)', async () => {
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({ data: catalog }), { status: 200 }))));
+  root = createRoot(host);
+  await act(async () => root.render(<MemoryRouter><FitnessLanding /></MemoryRouter>));
+
+  // P1-FE-04: accurate membership requirement copy
+  const benefitEnd = host.querySelector('.fit-benefit-end')!;
+  expect(benefitEnd.textContent).not.toContain('miễn phí để đặt PT');
+  expect(benefitEnd.textContent).toContain('gói hội viên đang hoạt động');
+
+  // P2-FE-05 & P2-FE-06: translated VI headings/labels, no mixed VI+EN
+  expect(host.querySelector('#faq-title')?.textContent).toContain('Câu Hỏi');
+  expect(host.querySelector('.fit-space-tabs')?.textContent).toContain('Khu tập sức mạnh');
+  expect(host.querySelector('.fit-space-tabs')?.textContent).toContain('Khu tạ rời');
+  expect(host.textContent).toContain('HUẤN LUYỆN CÁ NHÂN 1:1');
+  expect(host.textContent).not.toContain('bảo lưu (Freeze)');
+
+  // P2-FE-07: Your First Week preview shows the 5 fixed schedule slots instead of legacy times
+  const slotPills = [...host.querySelectorAll('.fit-preview-slots .fit-slot-pill')].map((el) => el.textContent);
+  expect(slotPills).toHaveLength(SCHEDULE_SLOTS.length);
+  for (const slot of SCHEDULE_SLOTS) {
+    expect(slotPills.some((text) => text?.includes(slot.label) && text.includes(`${slot.startTime}–${slot.endTime}`))).toBe(true);
+  }
+  expect(slotPills.join(' ')).not.toMatch(/06:30|17:30|18:30/);
+
+  // P2-FE-08: BMI goalType personalizes guidance and inputs have no invalid min/max attributes
+  const heightInput = host.querySelector<HTMLInputElement>('#fit-bmi-height')!;
+  const weightInput = host.querySelector<HTMLInputElement>('#fit-bmi-weight')!;
+  expect(heightInput.hasAttribute('min')).toBe(false);
+  expect(heightInput.hasAttribute('max')).toBe(false);
+  expect(weightInput.hasAttribute('min')).toBe(false);
+  expect(weightInput.hasAttribute('max')).toBe(false);
+  const bmiResultText = () => host.querySelector('.fit-bmi-result')?.textContent ?? '';
+  const muscleGuidance = bmiResultText();
+  const [leanBtn, , balanceBtn] = [...host.querySelectorAll<HTMLButtonElement>('.fit-bmi-goals button')];
+  await act(async () => leanBtn.click());
+  const leanGuidance = bmiResultText();
+  await act(async () => balanceBtn.click());
+  const balanceGuidance = bmiResultText();
+  expect(leanGuidance).not.toBe(muscleGuidance);
+  expect(balanceGuidance).not.toBe(leanGuidance);
+
+  // P2-FE-12: journeySteps are interactive buttons & rhythm tabs wire tabpanel/aria-controls
+  const stepButtons = host.querySelectorAll<HTMLButtonElement>('.fit-step-item button.fit-step-trigger');
+  expect(stepButtons).toHaveLength(3);
+  await act(async () => stepButtons[1].click());
+  expect(stepButtons[1].getAttribute('aria-pressed')).toBe('true');
+
+  const rhythmTabs = [...host.querySelectorAll<HTMLButtonElement>('.fit-rhythm-tabs [role="tab"]')];
+  expect(rhythmTabs).toHaveLength(4);
+  const activePanelId = rhythmTabs[0].getAttribute('aria-controls');
+  expect(activePanelId).toBeTruthy();
+  const panel = host.querySelector(`[role="tabpanel"]#${activePanelId}`);
+  expect(panel?.getAttribute('aria-labelledby')).toBe(rhythmTabs[0].id);
+
+  // Switch to EN and verify EN copy
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('#faq-title')?.textContent).toContain('Frequently Asked');
+  expect(benefitEnd.textContent).toContain('require an active membership');
+});
+
+it('renders newly created manager disciplines in CatalogSchedule without hardcoded name filtering (P2-FE-22)', async () => {
+  root = createRoot(host);
+  const customDisciplineCatalog: PublicCatalog = {
+    ...catalog,
+    sessions: [
+      ...catalog.sessions,
+      {
+        id: 55,
+        classId: 9,
+        className: 'Calisthenics Flow',
+        disciplineId: 99,
+        disciplineName: 'Calisthenics',
+        coachId: 2,
+        coachName: 'HLV An',
+        roomId: 1,
+        roomName: 'Phòng 1',
+        sessionDate: '2999-02-01',
+        startTime: '17:00:00',
+        endTime: '19:30:00',
+        status: 'scheduled',
+        cancelReason: null,
+        capacity: 12,
+        bookedCount: 3,
+      },
+    ],
+  };
+  await act(async () => root.render(<MemoryRouter><CatalogSchedule catalog={customDisciplineCatalog} joinPath="/member/classes" /></MemoryRouter>));
+  expect(host.textContent).toContain('Calisthenics Flow');
+  expect(host.textContent).toContain('Calisthenics');
+  expect(host.querySelector('a[href="/member/classes?tab=classes&discipline=Calisthenics"]')).not.toBeNull();
+});
+
+it('enforces WCAG contrast tokens and eliminates raw salmon/blur leaks in fitness-public.css (P1-FE-05, P2-FE-01, P2-FE-02, P2-FE-12, P3-FE-06)', () => {
+  const css = readFileSync(resolve(__dirname, 'fitness-public.css'), 'utf8');
+  expect(css).toMatch(/\.fit-round-arrow\s*\{[^}]*color:\s*var\(--sol-on-accent\)/);
+  expect(css).toMatch(/\.fit-review-arrow\s*\{[^}]*color:\s*var\(--sol-on-accent\)/);
+  expect(css).toMatch(/\.fit-auth \.fit-auth-link\s*\{[^}]*color:\s*var\(--sol-accent-text\)/);
+  expect(css).toMatch(/\.fit-auth-bottom a\s*\{[^}]*color:\s*var\(--sol-accent-text\)/);
+  expect(css).toMatch(/\.fit-menu\s*\{[^}]*width:\s*44px;\s*height:\s*44px/);
+  for (const forbidden of ['#a35b49', '#d89e8e', '#ebdad3', '#f3c8b9', '#f4d3c7', '#efb49c80', '#ffd2c0', 'blur(20px)']) {
+    expect(css).not.toContain(forbidden);
+  }
 });

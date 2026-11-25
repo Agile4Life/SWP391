@@ -56,14 +56,17 @@ describe('PtAttendancePage', () => {
   async function render() { await act(async () => root.render(<PtAttendancePage />)); }
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const tab = (label: string) => [...host.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].find((button) => button.textContent?.startsWith(label))!;
+  const tabCount = (label: string) => tab(label)?.querySelector('.portal-tab-count')?.textContent;
 
-  it('splits sessions into attended, missed and upcoming with counts, and shows the coach to the desk', async () => {
+  it('splits sessions into in-progress, attended, missed and upcoming with counts summing to ALL, and shows the coach to the desk', async () => {
     mocks.load.mockResolvedValue([upcoming, missed, attended]);
     await render();
     expect(mocks.load).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), 'ALL');
-    expect(tab('Tất cả').textContent).toContain('(3)');
-    expect(tab('Đã có mặt').textContent).toContain('(1)');
-    expect(tab('Không có mặt').textContent).toContain('(1)');
+    expect(tabCount('Tất cả')).toBe('3');
+    expect(tabCount('Đang diễn ra')).toBe('0');
+    expect(tabCount('Đã có mặt')).toBe('1');
+    expect(tabCount('Không có mặt')).toBe('1');
+    expect(tabCount('Sắp diễn ra')).toBe('1');
     expect(host.querySelector('[data-testid="pt-row-1"]')?.textContent).toContain('HLV Hùng');
     await act(async () => tab('Không có mặt').click());
     expect(host.querySelector('[data-testid="pt-row-2"]')).not.toBeNull();
@@ -171,8 +174,8 @@ describe('PtAttendancePage', () => {
     await render();
     await act(async () => tab('Đã có mặt').click());
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
-    expect(tab('Đã có mặt').textContent).toContain('(0)');
-    expect(tab('Không có mặt').textContent).toContain('(1)');
+    expect(tabCount('Đã có mặt')).toBe('0');
+    expect(tabCount('Không có mặt')).toBe('1');
     expect(host.querySelector('[data-testid="pt-row-1"]')).toBeNull();
     await act(async () => tab('Không có mặt').click());
     expect(host.querySelector('[data-testid="pt-row-1"]')).not.toBeNull();
@@ -180,7 +183,7 @@ describe('PtAttendancePage', () => {
     await act(async () => root.unmount());
     root = createRoot(host);
     await render();
-    expect(tab('Đã có mặt').textContent).toContain('(0)');
+    expect(tabCount('Đã có mặt')).toBe('0');
   });
 
   it.each(['Không có quyền', 'API unavailable'])('retains attendance on unmark failure: %s', async (message) => {
@@ -189,7 +192,7 @@ describe('PtAttendancePage', () => {
     await render();
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
     expect(host.querySelector('[role="alert"]')?.textContent).toContain(message);
-    expect(tab('Đã có mặt').textContent).toContain('(1)');
+    expect(tabCount('Đã có mặt')).toBe('1');
     expect(host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.disabled).toBe(false);
   });
 
@@ -209,8 +212,8 @@ describe('PtAttendancePage', () => {
     mocks.load.mockResolvedValueOnce([attended]).mockResolvedValue([{ ...attended, attendedAt: null }]);
     await render();
     await act(async () => window.dispatchEvent(new Event('focus')));
-    expect(tab('Đã có mặt').textContent).toContain('(0)');
-    expect(tab('Không có mặt').textContent).toContain('(1)');
+    expect(tabCount('Đã có mặt')).toBe('0');
+    expect(tabCount('Không có mặt')).toBe('1');
   });
 
   it('ignores a slow response for the previous date range', async () => {
@@ -223,7 +226,7 @@ describe('PtAttendancePage', () => {
     await act(async () => finishOld([attended]));
     expect(host.querySelector('[data-testid="pt-row-1"]')).toBeNull();
     expect(host.querySelector('[data-testid="pt-row-2"]')).not.toBeNull();
-    expect(tab('Đã có mặt').textContent).toContain('(0)');
+    expect(tabCount('Đã có mặt')).toBe('0');
   });
 
   it('excludes cancelled sessions and keeps attendance unchanged until the backend reload completes', async () => {
@@ -232,17 +235,17 @@ describe('PtAttendancePage', () => {
     mocks.load.mockImplementationOnce(() => new Promise((resolve) => { finishReload = resolve; }));
     mocks.unmark.mockResolvedValue({ ...attended, attendedAt: null });
     await render();
-    expect(tab('Tất cả').textContent).toContain('(1)');
+    expect(tabCount('Tất cả')).toBe('1');
     expect(host.querySelector('[data-testid="pt-row-3"]')).toBeNull();
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
     expect(host.textContent).toContain('Đang cập nhật điểm danh');
     expect(host.querySelector<HTMLButtonElement>('#pt-from')!.disabled).toBe(true);
     await act(async () => finishReload([{ ...attended, attendedAt: null }]));
-    expect(tab('Không có mặt').textContent).toContain('(1)');
+    expect(tabCount('Không có mặt')).toBe('1');
     expect(host.querySelector<HTMLButtonElement>('#pt-from')!.disabled).toBe(false);
   });
 
-  it('keeps ongoing sessions out of upcoming and recomputes counts at the Vietnam end boundary', async () => {
+  it('P1-FE-46: filters IN_PROGRESS sessions cleanly, keeps ongoing sessions out of upcoming, and recomputes counts at Vietnam end boundary', async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-11-12T17:30:00Z')); // 00:30 ngày 13/11 theo giờ Việt Nam
     mocks.load.mockResolvedValue([
@@ -251,14 +254,41 @@ describe('PtAttendancePage', () => {
     ]);
     try {
       await render();
-      expect(tab('Sắp diễn ra').textContent).toContain('(1)');
+      expect(tabCount('Tất cả')).toBe('2');
+      expect(tabCount('Đang diễn ra')).toBe('1');
+      expect(tabCount('Sắp diễn ra')).toBe('1');
       expect(host.querySelector('[data-testid="pt-row-4"]')?.textContent).toContain('Đang diễn ra');
+      await act(async () => tab('Đang diễn ra').click());
+      expect(host.querySelector('[data-testid="pt-row-4"]')).not.toBeNull();
+      expect(host.querySelector('[data-testid="pt-row-3"]')).toBeNull();
       await act(async () => tab('Sắp diễn ra').click());
       expect(host.querySelector('[data-testid="pt-row-4"]')).toBeNull();
       expect(host.querySelector('[data-testid="pt-row-3"] button')).toBeNull();
       await act(async () => vi.advanceTimersByTime(60000));
-      expect(tab('Không có mặt').textContent).toContain('(1)');
+      expect(tabCount('Đang diễn ra')).toBe('0');
+      expect(tabCount('Không có mặt')).toBe('1');
     } finally { vi.useRealTimers(); }
+  });
+
+  it('P1-FE-47: blocks focus refresh while confirm dialog is open and preserves existing rows on same-range refresh error', async () => {
+    mocks.load.mockResolvedValueOnce([{ ...attended, gateCheckinAt: '2020-01-02T08:40:00' }])
+      .mockRejectedValueOnce(new Error('Mất kết nối tạm thời'));
+    await render();
+    expect(mocks.load).toHaveBeenCalledTimes(1);
+
+    // Mở hộp thoại xác nhận bỏ ghi nhận -> bắn focus trong lúc hộp thoại đang mở -> không được gọi load()
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
+    expect(document.body.textContent).toContain('Bỏ ghi nhận có mặt?');
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(mocks.load).toHaveBeenCalledTimes(1);
+
+    // Đóng hộp thoại (Xem lại), sau đó focus refresh thất bại cùng khoảng ngày -> giữ nguyên dòng đã tải
+    const cancelBtn = [...document.body.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Xem lại')!;
+    await act(async () => cancelBtn.click());
+    await act(async () => window.dispatchEvent(new Event('focus')));
+    expect(mocks.load).toHaveBeenCalledTimes(2);
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Mất kết nối tạm thời');
+    expect(host.querySelector('[data-testid="pt-row-1"]')).not.toBeNull();
   });
 
   it('filters sessions by student name, card code, phone or email search query', async () => {

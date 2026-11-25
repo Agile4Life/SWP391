@@ -93,4 +93,15 @@ describe('portal service worker', () => {
     expect(w.storage.delete).toHaveBeenCalledWith('sol-portal-old');
     expect(w.storage.delete).not.toHaveBeenCalledWith('other-app');
   });
+
+  it('returns a 503 Offline Response instead of undefined when /index.html was evicted from cache (P2-FE-10)', async () => {
+    const w = worker(true);
+    w.cache.match.mockResolvedValue(undefined);
+    const navigation = w.request('/member/dashboard', 'navigate');
+    expect(navigation).toHaveBeenCalledOnce();
+    const response = await navigation.mock.calls[0][0];
+    expect(response).toBeInstanceOf(Response);
+    expect(response.status).toBe(503);
+    expect(await response.text()).toBe('Offline');
+  });
 });

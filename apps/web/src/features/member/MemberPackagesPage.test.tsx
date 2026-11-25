@@ -1030,4 +1030,56 @@ describe('SCRUM-86 packages', () => {
     expect(host.querySelector('dialog')).not.toBeNull();
   });
 
+  it('P1-FE-28: recognizes MEMBERSHIP_KYC_PENDING in Vietnamese and offers checkout KYC link', async () => {
+    api.create.mockRejectedValueOnce(
+      Object.assign(new Error('Hồ sơ định danh của bạn đang chờ lễ tân duyệt. Vui lòng đợi.'), {
+        code: 'MEMBERSHIP_KYC_PENDING',
+      }),
+    );
+    await render();
+    await act(async () => button('Đăng ký lần đầu')?.click());
+    await act(async () => button('Gửi yêu cầu')?.click());
+    const kycLink = host.querySelector<HTMLAnchorElement>('dialog a.btn-primary');
+    expect(kycLink).not.toBeNull();
+    expect(kycLink?.getAttribute('href')).toBe('/member/packages/checkout?packageId=5');
+  });
+
+  it('P2-FE-46 & P2-FE-49: trial modal uses FilePicker, semantic radio, no nested portal-card, and aligns passport 6-15 rules', async () => {
+    trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
+    await render();
+    await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.querySelector('.portal-card')).toBeNull();
+    expect(dialog.querySelectorAll('input[type="file"].file-picker__input').length).toBe(2);
+    expect([...dialog.querySelectorAll<HTMLInputElement>('input[type="file"]')].every((el) => el.style.display !== 'none')).toBe(true);
+
+    const passportRadio = dialog.querySelector<HTMLInputElement>('input[type="radio"][value="PASSPORT"]')!;
+    await act(async () => { passportRadio.click(); });
+    const docInput = dialog.querySelector<HTMLInputElement>('#trial-cccd')!;
+    expect(docInput.maxLength).toBe(15);
+    expect(dialog.querySelector('#trial-back-image')).toBeNull();
+  });
+
+  it('P2-FE-50: keeps proper English spacing on current validity and upgrade quote', async () => {
+    const futureEnd = new Date(Date.now() + 45 * 86400000).toLocaleDateString('en-CA');
+    const pastStart = new Date(Date.now() - 45 * 86400000).toLocaleDateString('en-CA');
+    const currentSub = {
+      ...pending,
+      id: 21,
+      packageId: membershipPackage.id,
+      packageName: membershipPackage.name,
+      startDate: pastStart,
+      endDate: futureEnd,
+      status: 'active',
+      remainingValue: 250000,
+    };
+    api.packages.mockResolvedValue([membershipPackage, higherPackage]);
+    api.current.mockResolvedValue(currentSub);
+    api.history.mockResolvedValue([currentSub]);
+    await render();
+    await act(async () => setLanguage('en'));
+    expect(host.textContent).toMatch(/Valid from \d{2}\/\d{2}\/\d{4} to \d{2}\/\d{2}\/\d{4}/);
+    expect(host.querySelector('[data-testid="upgrade-quote"]')?.textContent).toMatch(/Upgrade: pay /);
+  });
+
 });

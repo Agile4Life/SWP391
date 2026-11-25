@@ -157,4 +157,54 @@ describe('AdminPaymentReconciliationPage', () => {
     expect(host.textContent).toContain('Membership #30');
     expect(host.textContent).not.toContain('Hoàn tiền tự động');
   });
+
+  it('uses portal-table-wrapper and clears search when jumping to stuck attempts (P2-FE-75)', async () => {
+    vi.mocked(reconciliationApi.getSummary).mockResolvedValue({
+      ...summary, staleAttempts: 1,
+    });
+    await render();
+    expect(host.querySelector('.portal-table-wrapper table')).not.toBeNull();
+    expect(host.querySelector('.recon-table-scroll')).toBeNull();
+
+    const searchInput = host.querySelector('input[aria-label="Tìm theo mã giao dịch, email hoặc SĐT"]') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(searchInput, 'OLDREF');
+      searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { searchInput.form!.requestSubmit(); });
+    expect(reconciliationApi.getAttempts).toHaveBeenLastCalledWith(expect.objectContaining({ q: 'OLDREF' }));
+
+    await click(Array.from(host.querySelectorAll('button')).find((b) => b.textContent === 'Xem lượt treo') ?? null);
+    expect(reconciliationApi.getAttempts).toHaveBeenLastCalledWith(expect.objectContaining({ stale: true, q: '' }));
+    expect(searchInput.value).toBe('');
+  });
+
+  it('does not flash empty state while loading a newly opened tab (P2-FE-75)', async () => {
+    let resolveRefunds: (v: Awaited<ReturnType<typeof reconciliationApi.getLateRefunds>>) => void = () => {};
+    vi.mocked(reconciliationApi.getLateRefunds).mockReturnValueOnce(new Promise((r) => { resolveRefunds = r; }));
+    await render();
+    const refundsTab = Array.from(host.querySelectorAll('[role="tab"]')).find((b) => b.textContent === 'Hoàn tiền tự động') ?? null;
+    await click(refundsTab);
+    expect(host.textContent).toContain('Đang tải hoàn tiền tự động');
+    expect(host.textContent).not.toContain('Không có khoản hoàn tiền tự động nào');
+    await act(async () => { resolveRefunds(page([])); });
+    expect(host.textContent).toContain('Không có khoản hoàn tiền tự động nào');
+  });
+
+  it('blocks API calls client-side when selected date range exceeds 92 days (P2-FE-75)', async () => {
+    await render();
+    const initialSummaryCalls = vi.mocked(reconciliationApi.getSummary).mock.calls.length;
+    const fromTrigger = host.querySelector<HTMLButtonElement>('#recon-from')!;
+    await act(async () => fromTrigger.click());
+    // Switch to year picker, select an earlier year (>92 days before `to`), and pick a day
+    const titleBtn = host.querySelector<HTMLButtonElement>('.ldp-title-btn')!;
+    await act(async () => titleBtn.click());
+    const earlierYear = [...host.querySelectorAll<HTMLButtonElement>('.ldp-year-cell')].find((b) => !b.disabled && !b.classList.contains('is-selected'))!;
+    await act(async () => earlierYear.click());
+    const enabledDay = [...host.querySelectorAll<HTMLButtonElement>('.ldp-day-cell')].find((b) => !b.disabled && b.classList.contains('is-current-month'))!;
+    await act(async () => enabledDay.click());
+
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('92 ngày');
+    expect(vi.mocked(reconciliationApi.getSummary).mock.calls.length).toBe(initialSummaryCalls);
+  });
 });

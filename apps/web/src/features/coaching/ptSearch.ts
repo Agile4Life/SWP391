@@ -1,7 +1,7 @@
 import type { CoachBookingDto } from '../member/coachBookingApi';
 
 /** Chuẩn hóa chuỗi để so khớp: chữ thường, bỏ dấu và đổi đ thành d. */
-const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
+const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
 
 /**
  * Buổi kèm có khớp từ khóa không: tên (không phân biệt dấu), mã thẻ, đúng #id, số điện thoại hoặc email.

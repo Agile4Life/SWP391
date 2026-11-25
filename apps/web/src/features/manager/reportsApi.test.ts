@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { setLanguage } from '../../shared/i18n/language';
 import { reportsApi } from './reportsApi';
 import { centerNowParts } from '../../shared/lib/centerTime';
 import * as client from '../../shared/api/client';
@@ -10,6 +11,11 @@ vi.mock('../../shared/api/client', () => ({
 describe('reportsApi', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    setLanguage('vi');
+  });
+
+  afterEach(() => {
+    setLanguage('vi');
   });
 
   it('fetches daily revenue with query params', async () => {
@@ -80,6 +86,36 @@ describe('reportsApi', () => {
       .mockResolvedValueOnce([])
       .mockResolvedValueOnce({ expiredCount: 0, renewedCount: 0, renewalRate: null });
     expect((await reportsApi.getSummary('2026-10-01', '2026-10-05')).recentTransactions).toEqual([]);
+  });
+
+  it('P2-FE-44: localizes default approve/reject notes for EN mode and removes dead getSnapshots', async () => {
+    expect('getSnapshots' in reportsApi).toBe(false);
+
+    vi.mocked(client.apiFetch).mockResolvedValue({ id: 1, status: 'APPROVED' });
+    setLanguage('en');
+
+    await reportsApi.approveCancellationRequest(7, undefined, 500000);
+    expect(client.apiFetch).toHaveBeenLastCalledWith(
+      '/memberships/cancellations/7/approve',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          note: 'Center manager approved membership cancellation and wallet refund',
+          refundAmount: 500000,
+        }),
+      }),
+    );
+
+    await reportsApi.rejectCancellationRequest(8);
+    expect(client.apiFetch).toHaveBeenLastCalledWith(
+      '/memberships/cancellations/8/reject',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          note: 'Center manager rejected membership cancellation request',
+        }),
+      }),
+    );
   });
 
 });

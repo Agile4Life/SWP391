@@ -71,8 +71,11 @@ export function MemberInvoicesPage() {
     let active = true;
     getMyPayments().then((data) => {
       if (!active) return;
-      setPending(data.filter(payment => payment.status === 'pending'));
-      setPayments(data.filter((payment) => payment.status.toLowerCase() === 'success')
+      setPending(data.filter((payment) => payment.status.toLowerCase() === 'pending'));
+      setPayments(data.filter((payment) => {
+        const status = payment.status.toLowerCase();
+        return status === 'success' || status === 'refunded';
+      })
         .sort((a, b) => (b.paidAt ?? '').localeCompare(a.paidAt ?? '') || b.id - a.id));
       setError(false);
     }).catch(() => { if (active) setError(true); })
@@ -88,6 +91,7 @@ export function MemberInvoicesPage() {
   }, []);
 
   useEffect(() => {
+    setDownloadError(false);
     if (!selected) return;
     let active = true;
     setInvoice(null);
@@ -131,10 +135,11 @@ export function MemberInvoicesPage() {
         {pending.map(payment => <div className="row-card" key={payment.id} data-testid={`pending-payment-${payment.id}`}>
           <span className="stack" style={{ gap: 2 }}>
             <ServiceCell payment={payment} />
-            <span className="muted">{memberText("Giao dịch #")}{payment.id} · {formatPrice(payment.amount)} · {memberRenderMessage(STATUS_LABELS.pending)}</span>
+            <span className="muted member-invoices__pending-meta">{memberText("Giao dịch #")}{payment.id} · {formatPrice(payment.amount)} · {memberRenderMessage(STATUS_LABELS.pending)}</span>
           </span>
           <VnpayPayButton
             target={{ paymentId: payment.id }}
+            amount={payment.amount}
             allowWallet={String(payment.serviceType ?? '').toUpperCase() !== 'WALLET_TOPUP'}
             onPaid={() => setReload((n) => n + 1)}
           />
@@ -159,7 +164,7 @@ export function MemberInvoicesPage() {
           </div>
         )}
       </section>
-      {selected && <Modal title={memberText("Hóa đơn điện tử")} onClose={() => setSelected(null)}>
+      {selected && <Modal title={memberText("Hóa đơn điện tử")} busy={downloading} onClose={() => setSelected(null)}>
         <div className="member-invoices__invoice">
           {invoiceLoading ? <LoadingSkeleton label={memberText("Đang tải hóa đơn…")} variant="profile" /> : invoiceError ? <p role="alert">{memberRenderMessage(invoiceError)}</p> : invoice && <>
             <p className="member-invoices__number">{invoice.invoiceNumber}</p>

@@ -1,10 +1,12 @@
 import { sourceText, useSourceLanguage, sourceFormat, sourceError, sourceToast as toast, sourceFormatPair } from '../../shared/i18n/sourceText';
-import React, { useCallback, useEffect, useState } from 'react';
+import type { SourceMessage } from '../../shared/i18n';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { clearAuthSession, getCurrentUser, loginApi, setAuthSession, ApiError, type UserSession } from '../../shared/api/client';
+import { useCurrentUser } from '../../shared/api/useCurrentUser';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { authDestination, purchaseAuthPath, rememberPurchaseIntent } from '../../shared/lib/purchaseIntent';
-import { loginSchema, isValidPassword, PASSWORD_RULE_ERROR, PASSWORD_RULE_HINT } from './authValidation';
+import { loginSchema, isValidEmailAddress, isValidPassword, PASSWORD_RULE_ERROR, PASSWORD_RULE_HINT } from './authValidation';
 import { loadGoogleIdentity } from './loadGoogleIdentity';
 import {
   getGoogleOAuthAuthorizeUrl,
@@ -31,6 +33,87 @@ const ROLE_NAMES: Record<UserSession['role'], string> = {
   get MANAGER() { return sourceText('Quản lý trung tâm'); },
 };
 
+const GOOGLE_OAUTH_ERROR_FALLBACK: SourceMessage = {
+  vi: 'Xác thực Google OAuth thất bại. Vui lòng thử lại.',
+  en: 'Google OAuth authentication failed. Please try again.',
+};
+
+/** Danh sách mã lỗi Google OAuth được phép ánh xạ từ URL (tuyệt đối không phản chiếu chuỗi tự do từ query string). */
+const GOOGLE_OAUTH_ERROR_ALLOWLIST: Readonly<Record<string, SourceMessage>> = {
+  access_denied: {
+    vi: 'Bạn đã hủy đăng nhập Google.',
+    en: 'Google sign-in was cancelled.',
+  },
+  state_invalid: {
+    vi: 'Phiên đăng nhập Google đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.',
+    en: 'Your Google sign-in session expired or is invalid. Please try again.',
+  },
+  'auth.google.state_invalid': {
+    vi: 'Phiên đăng nhập Google đã hết hạn hoặc không hợp lệ. Vui lòng thử lại.',
+    en: 'Your Google sign-in session expired or is invalid. Please try again.',
+  },
+  invalid_token: {
+    vi: 'Xác thực Google không hợp lệ. Vui lòng thử lại.',
+    en: 'Google authentication failed. Please try again.',
+  },
+  'auth.google.invalid_token': {
+    vi: 'Xác thực Google không hợp lệ. Vui lòng thử lại.',
+    en: 'Google authentication failed. Please try again.',
+  },
+  redirect_invalid: {
+    vi: 'Địa chỉ chuyển hướng Google không hợp lệ.',
+    en: 'Invalid Google redirect URI.',
+  },
+  'auth.google.redirect_invalid': {
+    vi: 'Địa chỉ chuyển hướng Google không hợp lệ.',
+    en: 'Invalid Google redirect URI.',
+  },
+  handoff_invalid: {
+    vi: 'Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.',
+    en: 'Invalid Google sign-in session. Please sign in again.',
+  },
+  'auth.google.handoff_invalid': {
+    vi: 'Phiên đăng nhập Google không hợp lệ. Vui lòng đăng nhập lại.',
+    en: 'Invalid Google sign-in session. Please sign in again.',
+  },
+  staff_not_allowed: {
+    vi: 'Vai trò này chưa hỗ trợ đăng nhập Google.',
+    en: 'Google sign-in is not supported for this role.',
+  },
+  google_staff_not_allowed: {
+    vi: 'Vai trò này chưa hỗ trợ đăng nhập Google.',
+    en: 'Google sign-in is not supported for this role.',
+  },
+  'auth.google.staff_not_allowed': {
+    vi: 'Vai trò này chưa hỗ trợ đăng nhập Google.',
+    en: 'Google sign-in is not supported for this role.',
+  },
+  account_locked: {
+    vi: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.',
+    en: 'Your account has been locked. Please contact an administrator.',
+  },
+  'auth.account_locked': {
+    vi: 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.',
+    en: 'Your account has been locked. Please contact an administrator.',
+  },
+  not_configured: {
+    vi: 'Google chưa được cấu hình. Vui lòng liên hệ quản trị viên.',
+    en: 'Google sign-in is not configured. Please contact an administrator.',
+  },
+  google_not_configured: {
+    vi: 'Google chưa được cấu hình. Vui lòng liên hệ quản trị viên.',
+    en: 'Google sign-in is not configured. Please contact an administrator.',
+  },
+};
+
+function resolveGoogleOAuthError(params: URLSearchParams): SourceMessage {
+  const rawCode = (params.get('error_code') || params.get('error') || '').trim().toLowerCase();
+  if (rawCode && Object.hasOwn(GOOGLE_OAUTH_ERROR_ALLOWLIST, rawCode)) {
+    return GOOGLE_OAUTH_ERROR_ALLOWLIST[rawCode];
+  }
+  return GOOGLE_OAUTH_ERROR_FALLBACK;
+}
+
 /**
  * Các bước của biểu mẫu: đăng nhập thường, nhập OTP khi vào bằng Google, nhập email quên mật khẩu, đặt lại mật
  * khẩu.
@@ -45,9 +128,30 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   useSourceLanguage();
   const navigate = useNavigate();
   const { search } = useLocation();
+
+  const currentUser = useCurrentUser();
+  const hasExpiredParam =
+    new URLSearchParams(search).get('expired') === '1'
+    || (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('expired') === '1');
+  const [isExpired, setIsExpired] = useState(hasExpiredParam);
+  const expiredClearedRef = useRef(false);
+
+  // Khi quay về từ phiên 401 (?expired=1), xóa phiên cũ trước khi lưu purchase intent để không làm mất returnTo.
+  useEffect(() => {
+    if (!hasExpiredParam) {
+      expiredClearedRef.current = false;
+      return;
+    }
+    if (expiredClearedRef.current) return;
+    expiredClearedRef.current = true;
+    setIsExpired(true);
+    if (getCurrentUser()) {
+      clearAuthSession();
+    }
+  }, [hasExpiredParam]);
+
   useEffect(() => rememberPurchaseIntent(search), [search]);
 
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(() => getCurrentUser());
   const [mode, setMode] = useState<AuthMode>('standard');
 
   // Biểu mẫu đăng nhập thường
@@ -62,14 +166,14 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   // Biểu mẫu đăng nhập Google
   const [googleEmail, setGoogleEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
-  const [otpMessage, setOtpMessage] = useState<string | Error | import('../../shared/i18n').SourceMessage>('');
+  const [otpMessage, setOtpMessage] = useState<string | Error | SourceMessage>('');
   const [debugOtpCode, setDebugOtpCode] = useState('');
   const [countdown, setCountdown] = useState(0);
   const [lockCountdown, setLockCountdown] = useState(0);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [formError, setFormError] = useState<string | Error>('');
+  const [formError, setFormError] = useState<string | Error | SourceMessage>('');
   const [shaking, setShaking] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -82,31 +186,42 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     }
   }, [googleClientId]);
 
-  const [isExpired, setIsExpired] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return new URLSearchParams(window.location.search).get('expired') === '1';
-  });
-
-  // Bộ đếm ngược thời gian gửi lại mã OTP
+  const countdownActive = countdown > 0;
+  // Bộ đếm ngược thời gian gửi lại mã OTP (chỉ khởi tạo interval một lần khi đếm ngược đang chạy).
   useEffect(() => {
-    if (countdown <= 0) return;
+    if (!countdownActive) return;
     const timer = window.setInterval(() => {
-      setCountdown((prev) => Math.max(0, prev - 1));
+      setCountdown((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [countdown]);
+  }, [countdownActive]);
 
-  // Bộ đếm ngược thời gian khóa đăng nhập
+  const lockCountdownActive = lockCountdown > 0;
+  // Bộ đếm ngược thời gian khóa đăng nhập.
   useEffect(() => {
-    if (lockCountdown <= 0) return;
+    if (!lockCountdownActive) return;
     const timer = window.setInterval(() => {
-      setLockCountdown((prev) => Math.max(0, prev - 1));
+      setLockCountdown((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [lockCountdown]);
+  }, [lockCountdownActive]);
+
+  // Chuyển chế độ an toàn và xóa các dữ liệu nhạy cảm / trạng thái hiển thị mật khẩu trước đó.
+  const resetToStandardMode = useCallback((clearGoogle = false) => {
+    setFormError('');
+    setShowPassword(false);
+    setResetNewPassword('');
+    setOtpCode('');
+    setDebugOtpCode('');
+    if (clearGoogle) {
+      setGoogleEmail('');
+      setOtpMessage('');
+    }
+    setMode('standard');
+  }, []);
 
   // Hiện lỗi và kích hoạt hiệu ứng rung của biểu mẫu.
-  const fail = useCallback((msg: string | Error) => {
+  const fail = useCallback((msg: string | Error | SourceMessage) => {
     setFormError(msg);
     setShaking(true);
   }, []);
@@ -136,22 +251,31 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       setOtpMessage(
         (res.message ? new Error(res.message) : null) || sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", verifiedEmail)
       );
-      if (res.debugOtp) {
+      if (import.meta.env.DEV && res.debugOtp) {
         setDebugOtpCode(res.debugOtp);
         setOtpCode(res.debugOtp);
       } else {
         setDebugOtpCode('');
         setOtpCode('');
       }
+      setShowPassword(false);
       setMode('google_otp');
       setCountdown(30);
       toast(sourceFormatPair("Mã xác nhận đã được gửi đến {0}", verifiedEmail));
     } catch (err: unknown) {
       const msg = sourceError(err, 'Đăng nhập Google thất bại.');
       // BR-04 & BR-05: Chặn nhân sự (403) và tài khoản bị khóa
-      if (msg.message.includes('nhân sự') || msg.message.toLowerCase().includes('staff') || msg.message.includes('403')) {
+      const isStaffForbidden =
+        (err instanceof ApiError && err.status === 403)
+        || msg.message.includes('nhân sự')
+        || msg.message.toLowerCase().includes('staff');
+      const isAccountLocked =
+        (err instanceof ApiError && (err.status === 423 || err.code === 'ACCOUNT_LOCKED'))
+        || msg.message.toLowerCase().includes('khóa')
+        || msg.message.toLowerCase().includes('locked');
+      if (isStaffForbidden) {
         fail('Vai trò này chưa hỗ trợ đăng nhập Google.');
-      } else if (msg.message.toLowerCase().includes('khóa') || msg.message.toLowerCase().includes('locked')) {
+      } else if (isAccountLocked) {
         fail('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.');
       } else {
         fail(msg);
@@ -193,6 +317,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       nextParams.delete('debugOtp');
       nextParams.delete('state');
       nextParams.delete('error');
+      nextParams.delete('error_code');
       nextParams.delete('code');
       nextParams.delete('scope');
       nextParams.delete('authuser');
@@ -215,31 +340,27 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
     if (oauthStatus === 'callback') {
       const email = (params.get('email') || '').trim();
-      const message = (params.get('message') ? new Error(params.get('message')!) : null) || sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", email);
-      const debugOtp = params.get('debug_otp') || params.get('debugOtp') || '';
       cleanSearchParams();
-      if (email) {
+      if (isValidEmailAddress(email)) {
         setGoogleEmail(email);
-        setOtpMessage(message);
-        if (debugOtp) {
-          setDebugOtpCode(debugOtp);
-          setOtpCode(debugOtp);
-        } else {
-          setDebugOtpCode('');
-          setOtpCode('');
-        }
+        setOtpMessage(sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", email));
+        setDebugOtpCode('');
+        setOtpCode('');
+        setShowPassword(false);
         setFormError('');
         setMode('google_otp');
         setCountdown(30);
         toast(sourceFormatPair("Mã xác nhận đã được gửi đến {0}", email));
+      } else {
+        fail(GOOGLE_OAUTH_ERROR_FALLBACK);
       }
       return;
     }
 
     if (oauthStatus === 'error') {
-      const errorMsg = params.get('error') || 'Xác thực Google OAuth thất bại.';
+      const resolvedError = resolveGoogleOAuthError(params);
       cleanSearchParams();
-      fail(errorMsg);
+      fail(resolvedError);
       return;
     }
 
@@ -272,18 +393,32 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             if (response?.access_token) {
               void processGoogleOAuthCallback({ accessToken: response.access_token });
             } else if (response?.error) {
-              fail(response.error_description || 'Đã hủy hoặc không thể xác thực với Google.');
+              fail(
+                response.error === 'access_denied'
+                  ? GOOGLE_OAUTH_ERROR_ALLOWLIST.access_denied
+                  : { vi: 'Đã hủy hoặc không thể xác thực với Google.', en: 'Cancelled or unable to authenticate with Google.' },
+              );
             }
           },
-          // Không mở được cửa sổ xác thực Google.
-          error_callback: () => {
-            fail('Không thể mở cửa sổ xác thực Google OAuth.');
+          // Không mở được cửa sổ xác thực hoặc người dùng chủ động đóng popup.
+          error_callback: (error) => {
+            if (error?.type === 'popup_closed') {
+              fail({
+                vi: 'Bạn đã đóng cửa sổ đăng nhập Google.',
+                en: 'You closed the Google sign-in window.',
+              });
+              return;
+            }
+            fail({
+              vi: 'Không thể mở cửa sổ xác thực Google OAuth.',
+              en: 'Unable to open the Google sign-in window.',
+            });
           },
         });
         tokenClient.requestAccessToken({ prompt: 'select_account' });
         return;
-      } catch (err) {
-        console.warn('Google OAuth2 tokenClient fallback to redirect:', err);
+      } catch {
+        // Rơi xuống luồng chuyển hướng toàn trang có bảo vệ state/PKCE của backend.
       }
     }
 
@@ -338,7 +473,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   const handleGoogleSendOtp = async (e?: React.SyntheticEvent) => {
     e?.preventDefault();
     const cleanEmail = googleEmail.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
+    if (!isValidEmailAddress(cleanEmail)) {
       fail('Vui lòng nhập đúng địa chỉ Gmail.');
       return;
     }
@@ -349,13 +484,14 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     try {
       const res = await googleSendOtp(cleanEmail);
       setOtpMessage((res.message ? new Error(res.message) : null) || sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", cleanEmail));
-      if (res.debugOtp) {
+      if (import.meta.env.DEV && res.debugOtp) {
         setDebugOtpCode(res.debugOtp);
         setOtpCode(res.debugOtp);
       } else {
         setDebugOtpCode('');
         setOtpCode('');
       }
+      setShowPassword(false);
       setMode('google_otp');
       setCountdown(30);
       toast(sourceFormatPair("Mã xác nhận đã được gửi đến {0}", cleanEmail));
@@ -394,7 +530,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
   const handleRequestPasswordResetOtp = async (e?: React.SyntheticEvent) => {
     e?.preventDefault();
     const cleanEmail = resetEmail.trim();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(cleanEmail)) {
+    if (!isValidEmailAddress(cleanEmail)) {
       fail('Vui lòng nhập đúng địa chỉ email.');
       return;
     }
@@ -403,13 +539,15 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
     setFormError('');
     try {
       const res = await sendPasswordResetOtp(cleanEmail);
-      if (res.debugOtp) {
+      if (import.meta.env.DEV && res.debugOtp) {
         setDebugOtpCode(res.debugOtp);
         setOtpCode(res.debugOtp);
       } else {
         setDebugOtpCode('');
         setOtpCode('');
       }
+      setShowPassword(false);
+      setResetNewPassword('');
       setMode('forgot_reset');
       setCountdown(30);
       toast(sourceFormatPair('Mã OTP đặt lại mật khẩu đã gửi đến {0}', cleanEmail));
@@ -440,9 +578,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       toast('Đặt lại mật khẩu thành công!', 'success');
       setIdentifier(resetEmail.trim());
       setPassword('');
-      setOtpCode('');
-      setResetNewPassword('');
-      setMode('standard');
+      resetToStandardMode();
     } catch (err: unknown) {
       fail(sourceError(err, 'Không thể đặt lại mật khẩu.'));
     } finally {
@@ -465,20 +601,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
         }}
       >
         <div style={{ marginBottom: '20px' }}>
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: '54px',
-              height: '54px',
-              borderRadius: '50%',
-              backgroundColor: 'rgba(82, 183, 136, 0.15)',
-              color: '#2d6a4f',
-              fontSize: '1.6rem',
-              fontWeight: 700,
-            }}
-          >
+          <span className="fit-session-badge" aria-hidden="true">
             ✓
           </span>
         </div>
@@ -512,7 +635,6 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             className="btn-secondary"
             onClick={() => {
               clearAuthSession();
-              setCurrentUser(null);
             }}
           >
             {sourceText("Đăng xuất tài khoản này")}</button>
@@ -566,7 +688,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       {/* CHẾ ĐỘ 1: Đăng nhập thường bằng tên đăng nhập/mật khẩu */}
       {mode === 'standard' && (
         <>
-          <form onSubmit={handleStandardSubmit}>
+          <form onSubmit={handleStandardSubmit} noValidate>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="login-identifier">
                 {sourceText("Tên đăng nhập hoặc Email")}</label>
@@ -591,6 +713,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                   {sourceText("Mật Khẩu")}</label>
                 <button
                   type="button"
+                  aria-pressed={showPassword}
                   onClick={() => setShowPassword(!showPassword)}
                   style={{
                     background: 'none',
@@ -621,19 +744,20 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 <button
                   type="button"
                   id="forgot-password-btn"
+                  className="fit-auth-link"
                   onClick={() => {
                     setFormError('');
+                    setShowPassword(false);
+                    setOtpCode('');
+                    setDebugOtpCode('');
+                    setResetNewPassword('');
                     setResetEmail(identifier.includes('@') ? identifier.trim() : '');
                     setMode('forgot_email');
                   }}
                   style={{
-                    background: 'none',
-                    border: 'none',
                     fontSize: '0.78rem',
-                    color: 'var(--fit-salmon, var(--sol-accent))',
-                    cursor: 'pointer',
-                    padding: 0,
                     fontWeight: 600,
+                    minHeight: 'auto',
                   }}
                 >
                   {sourceText('Quên mật khẩu?')}
@@ -691,16 +815,16 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             <span>{sourceText("Đăng nhập bằng Google")}</span>
           </button>
           {isGoogleLoading && <p role="status" style={{ textAlign: 'center', marginTop: 8 }}>{sourceText("Đang xác thực Google và gửi mã OTP...")}</p>}
-          <p style={{ marginTop: '20px', fontSize: '0.85rem', textAlign: 'center' }}>
+          <p className="fit-auth-bottom" style={{ marginTop: '20px', fontSize: '0.85rem', textAlign: 'center' }}>
             {sourceText("Chưa có tài khoản?")}{' '}
-            <Link to={purchaseAuthPath('/register', search)} viewTransition style={{ color: 'var(--fit-salmon, var(--sol-accent))', fontWeight: 600 }}>
+            <Link to={purchaseAuthPath('/register', search)} viewTransition style={{ color: 'var(--sol-accent-text)', fontWeight: 600 }}>
               {sourceText("Đăng ký hội viên")}</Link>
           </p>
         </>
       )}
 
       {mode === 'forgot_email' && (
-        <form onSubmit={handleRequestPasswordResetOtp}>
+        <form onSubmit={handleRequestPasswordResetOtp} noValidate>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="reset-email-input">
               {sourceText('Email tài khoản')}
@@ -708,6 +832,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             <input
               id="reset-email-input"
               type="email"
+              autoComplete="email"
               className="portal-input"
               placeholder={sourceText('Nhập email đã đăng ký')}
               value={resetEmail}
@@ -722,10 +847,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           <div style={{ textAlign: 'center', marginTop: '14px' }}>
             <button
               type="button"
-              onClick={() => {
-                setFormError('');
-                setMode('standard');
-              }}
+              onClick={() => resetToStandardMode()}
               style={{
                 background: 'none',
                 border: 'none',
@@ -742,7 +864,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       )}
 
       {mode === 'forgot_reset' && (
-        <form onSubmit={handleResetPasswordSubmit}>
+        <form onSubmit={handleResetPasswordSubmit} noValidate>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="reset-otp-input">
               {sourceText('Mã OTP (6 chữ số)')}
@@ -760,12 +882,30 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
             />
           </div>
           <div className="portal-form-group">
-            <label className="portal-label" htmlFor="reset-new-password-input">
-              {sourceText('Mật khẩu mới')}
-            </label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+              <label className="portal-label" htmlFor="reset-new-password-input" style={{ margin: 0 }}>
+                {sourceText('Mật khẩu mới')}
+              </label>
+              <button
+                type="button"
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '0.75rem',
+                  color: 'var(--fit-muted)',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                {showPassword ? sourceText('Ẩn mật khẩu') : sourceText('Hiện mật khẩu')}
+              </button>
+            </div>
             <input
               id="reset-new-password-input"
               type={showPassword ? 'text' : 'password'}
+              autoComplete="new-password"
               className="portal-input"
               placeholder={sourceText(PASSWORD_RULE_HINT)}
               value={resetNewPassword}
@@ -780,26 +920,22 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
             <button
               type="button"
+              className="fit-auth-link"
               disabled={countdown > 0 || isLoading}
               onClick={handleRequestPasswordResetOtp}
               style={{
-                background: 'none',
-                border: 'none',
                 fontSize: '0.82rem',
-                color: 'var(--fit-salmon, var(--sol-accent))',
+                color: 'var(--sol-accent-text)',
                 cursor: countdown > 0 || isLoading ? 'not-allowed' : 'pointer',
-                padding: 0,
                 fontWeight: 600,
+                minHeight: 'auto',
               }}
             >
               {countdown > 0 ? sourceFormat('Gửi lại mã sau ({0}s)', countdown) : sourceText('Gửi lại mã xác nhận')}
             </button>
             <button
               type="button"
-              onClick={() => {
-                setFormError('');
-                setMode('standard');
-              }}
+              onClick={() => resetToStandardMode()}
               style={{
                 background: 'none',
                 border: 'none',
@@ -817,32 +953,23 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
       {/* CHẾ ĐỘ 3: Xác thực OTP Google (Hiển thị sau khi Google OAuth callback hoặc gửi OTP qua mail) */}
       {mode === 'google_otp' && (
-        <form onSubmit={handleGoogleVerifyOtp}>
-          {/* Hộp thông báo màu xanh theo đúng yêu cầu đề bài */}
-          <div
-            style={{
-              background: '#E8F5E9',
-              border: '1px solid #A5D6A7',
-              borderRadius: '6px',
-              padding: '16px',
-              marginBottom: '20px',
-              textAlign: 'center',
-            }}
-          >
-            
-            <div style={{ fontSize: '0.92rem', color: '#1B5E20', fontWeight: 600, lineHeight: 1.4 }}>
+        <form onSubmit={handleGoogleVerifyOtp} noValidate>
+          <div className="fit-otp-notice" role="status">
+            <div className="fit-otp-notice__title">
               {sourceText(otpMessage)}
             </div>
             {googleEmail && (
-              <div style={{ fontSize: '0.8rem', color: '#2E7D32', marginTop: '6px' }}>
+              <div className="fit-otp-notice__email">
                 {sourceText("Tài khoản Google: ")}<strong>{googleEmail}</strong>
               </div>
             )}
           </div>
 
-          {debugOtpCode && (
+          {import.meta.env.DEV && debugOtpCode && (
             <div className="fit-debug-otp" style={{ textAlign: 'center' }}>
-              ⚙️ <strong>{sourceText("Chế độ Test (Không cần mở mail):")}</strong> {sourceText(" Đã tự động điền mã xác nhận ")}<strong>{debugOtpCode}</strong>
+              <strong>{sourceText({ vi: 'Chế độ thử nghiệm (không cần mở hộp thư):', en: 'Test mode (no inbox needed):' })}</strong>{' '}
+              {sourceText({ vi: 'Đã tự động điền mã xác nhận ', en: 'Verification code auto-filled: ' })}
+              <strong>{debugOtpCode}</strong>
             </div>
           )}
 
@@ -891,15 +1018,14 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px' }}>
             <button
               type="button"
+              className="fit-auth-link"
               style={{
-                background: 'none',
-                border: 'none',
                 fontSize: '0.82rem',
-                color: 'var(--fit-salmon, var(--sol-accent))',
+                color: 'var(--sol-accent-text)',
                 cursor: countdown > 0 || isLoading || success ? 'not-allowed' : 'pointer',
                 opacity: countdown > 0 || isLoading || success ? 0.6 : 1,
-                padding: 0,
                 fontWeight: 600,
+                minHeight: 'auto',
               }}
               disabled={countdown > 0 || isLoading || success}
               onClick={handleGoogleSendOtp}
@@ -919,14 +1045,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
                 padding: 0,
               }}
               disabled={isLoading || success}
-              onClick={() => {
-                setFormError('');
-                setOtpCode('');
-                setDebugOtpCode('');
-                setGoogleEmail('');
-                setOtpMessage('');
-                setMode('standard');
-              }}
+              onClick={() => resetToStandardMode(true)}
             >
               {sourceText("Chọn tài khoản Google khác")}</button>
           </div>

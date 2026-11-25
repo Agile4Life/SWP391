@@ -45,43 +45,120 @@ export const markNotificationRead = (id: number) =>
 export const markAllNotificationsRead = () =>
   apiFetch<void>('/notifications/read-all', { method: 'PATCH' });
 
+const MEMBER_ACTIVE_PATHS = new Set([
+  '/member/dashboard',
+  '/member/packages',
+  '/member/packages/checkout',
+  '/member/payments/vnpay/return',
+  '/member/hold',
+  '/member/card',
+  '/member/check-in',
+  '/member/invoices',
+  '/member/progress',
+  '/member/classes',
+  '/member/profile',
+  '/profile',
+  '/member/notifications',
+]);
+
+const STAFF_ACTIVE_PATHS = new Set([
+  '/staff/reception',
+  '/staff/check-in',
+  '/staff/check-out',
+  '/staff/reception-history',
+  '/staff/kyc',
+  '/staff/holds',
+  '/staff/requests',
+  '/profile',
+  '/member/notifications',
+]);
+
+const COACH_ACTIVE_PATHS = new Set([
+  '/coach/pt-attendance',
+  '/coach/attendance',
+  '/coach/classes',
+  '/coach/training-plans',
+  '/coach/saved-plans',
+  '/staff/requests',
+  '/member/profile',
+  '/profile',
+  '/member/notifications',
+]);
+
+const MANAGER_ACTIVE_PATHS = new Set([
+  '/manager/classes',
+  '/manager/catalogs',
+  '/manager/coach-assignments',
+  '/manager/staff-accounts',
+  '/manager/reports',
+  '/manager/requests',
+  '/member/profile',
+  '/profile',
+  '/member/notifications',
+]);
+
+const ADMIN_ACTIVE_PATHS = new Set([
+  '/admin/users',
+  '/admin/audit-logs',
+  '/admin/payments',
+  '/member/profile',
+  '/profile',
+  '/member/notifications',
+]);
+
 /**
- * Chỉ chấp nhận đường dẫn nội bộ của portal (không bao giờ mở URL tùy ý từ nội dung thông báo) và đổi đường dẫn
- * cũ/đã bỏ về màn phù hợp theo vai trò; đường dẫn lạ trả null.
+ * Chỉ chấp nhận đường dẫn nội bộ hợp lệ theo allowlist của từng vai trò (không mở URL tùy ý, không mở `/messages`
+ * cho ADMIN) và ánh xạ các đường dẫn đã ngừng/cũ về màn hình thay thế còn hoạt động; đường dẫn lạ trả null.
  */
 export function safeNotificationPath(path: string | null | undefined, role = 'MEMBER'): string | null {
   if (!path || !/^\/[a-z0-9/-]+(?:\?[a-zA-Z0-9_=&%-]+)?(?:#[a-z0-9-]+)?$/.test(path)) return null;
-  // Lễ tân chỉ mở màn hiện có; bỏ query/anchor không được màn danh sách hỗ trợ, không đoán ID.
+  const pathname = path.split(/[?#]/)[0];
+
+  // /messages chỉ mở cho MEMBER, STAFF/RECEPTIONIST, COACH, MANAGER/CENTER_MANAGER — tuyệt đối không cho ADMIN.
+  if (pathname === '/messages') {
+    if (role === 'ADMIN') return null;
+    return path === '/messages' || path === '/messages?tab=support' ? path : null;
+  }
+
   if (role === 'STAFF' || role === 'RECEPTIONIST') {
-    if (path === '/messages' || path === '/messages?tab=support') return path;
-    const pathname = path.split(/[?#]/)[0];
     if (pathname === '/staff/support') return '/messages?tab=support';
     if (/^\/staff\/(?:orders|classes|pt-attendance|attendance)(?:\/|$)/.test(pathname)) return '/staff/reception';
-    return ['/staff/reception', '/staff/check-in', '/staff/check-out', '/staff/reception-history',
-      '/staff/kyc', '/staff/holds', '/staff/requests'].includes(pathname) ? pathname : null;
+    return STAFF_ACTIVE_PATHS.has(pathname) ? pathname : null;
   }
-  // Thông báo đơn hàng cũ dẫn về lịch sử giao dịch, không mở màn Shop đã bỏ.
-  if (role === 'MEMBER' && /^\/member\/(?:orders|products|checkout)(?:[?/#]|$)/.test(path)) return '/member/invoices';
-  // Thông báo Streak cũ về Dashboard; bỏ anchor cũ để mở trang Giáo án hiện tại.
-  if (role === 'MEMBER' && /^\/member\/streak(?:[?/#]|$)/.test(path)) return '/member/dashboard';
-  if (role === 'MEMBER' && /^\/member\/progress(?:[?/#]|$)/.test(path)) return '/member/progress';
-  // Chuẩn hóa param cũ ?tab=coach_booking của thông báo chuyển HLV PT sang ?tab=pt.
-  if (role === 'MEMBER' && path === '/member/classes?tab=coach_booking') return '/member/classes?tab=pt';
-  // Thông báo chỉ số cơ thể cũ của HLV về Soạn giáo án; liên kết điểm danh lớp nhóm giữ nguyên sessionId.
-  if (role === 'COACH' && /^\/coach\/health-metrics(?:[?/#]|$)/.test(path)) return '/coach/training-plans';
-  if (role === 'COACH' && /^\/staff\/attendance(?:\/(\d+))?(?:[?#].*)?$/.test(path)) {
-    const match = path.match(/^\/staff\/attendance(?:\/(\d+))?/);
-    return match?.[1] ? `/coach/attendance/${match[1]}` : '/coach/attendance';
+
+  if (role === 'COACH') {
+    if (/^\/coach\/health-metrics(?:\/|$)/.test(pathname)) return '/coach/training-plans';
+    if (/^\/staff\/attendance(?:\/(\d+))?$/.test(pathname)) {
+      const match = pathname.match(/^\/staff\/attendance(?:\/(\d+))?$/);
+      return match?.[1] ? `/coach/attendance/${match[1]}` : '/coach/attendance';
+    }
+    if (pathname === '/staff/coach-classes') return '/coach/classes';
+    if (/^\/coach\/attendance\/\d+$/.test(pathname)) return pathname;
+    if (pathname === '/staff/requests') return path.startsWith('/staff/requests?') ? path : '/staff/requests';
+    return COACH_ACTIVE_PATHS.has(pathname) ? path : null;
   }
-  if (role === 'COACH' && path === '/staff/coach-classes') return '/coach/classes';
-  // Liên kết cũ /staff/classes của Quản lý dẫn thẳng sang màn Quản lý lớp học mới.
-  if (['MANAGER', 'CENTER_MANAGER'].includes(role) && /^\/staff\/classes(?:[?/#]|$)/.test(path)) return '/manager/classes';
-  const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
-  return path.startsWith(prefix) ||
-    path.startsWith('/member/profile') ||
-    (role === 'COACH' && (path === '/staff/requests' || path.startsWith('/staff/requests?'))) ||
-    path === '/messages' ||
-    path === '/messages?tab=support' ? path : null;
+
+  if (role === 'MANAGER' || role === 'CENTER_MANAGER') {
+    if (/^\/staff\/classes(?:\/|$)/.test(pathname)) return '/manager/classes';
+    if (/^\/manager\/(?:products|cancellations|audit-logs)(?:\/|$)/.test(pathname)) return '/manager/reports';
+    if (/^\/manager\/equipment(?:\/|$)/.test(pathname)) return '/manager/catalogs';
+    if (/^\/manager\/coach-reviews(?:\/|$)/.test(pathname)) return '/manager/coach-assignments';
+    if (/^\/manager\/users(?:\/|$)/.test(pathname)) return '/manager/staff-accounts';
+    if (/^\/manager\/support(?:\/|$)/.test(pathname)) return '/messages?tab=support';
+    return MANAGER_ACTIVE_PATHS.has(pathname) ? path : null;
+  }
+
+  if (role === 'ADMIN') {
+    return ADMIN_ACTIVE_PATHS.has(pathname) ? path : null;
+  }
+
+  // MEMBER (mặc định)
+  if (/^\/member\/(?:orders|products|checkout)(?:\/|$)/.test(pathname)) return '/member/invoices';
+  if (/^\/member\/(?:streak|explore|courts)(?:\/|$)/.test(pathname)) return '/member/dashboard';
+  if (/^\/member\/support(?:\/|$)/.test(pathname)) return '/messages?tab=support';
+  if (pathname === '/member/progress') return '/member/progress';
+  if (path === '/member/classes?tab=coach_booking') return '/member/classes?tab=pt';
+  return MEMBER_ACTIVE_PATHS.has(pathname) ? path : null;
 }
 
 export type NotificationTarget = Partial<Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath' | 'title' | 'message'>>;

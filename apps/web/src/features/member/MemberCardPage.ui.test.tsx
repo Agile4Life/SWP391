@@ -327,6 +327,58 @@ describe('MemberCardPage', () => {
     expect(host.textContent).not.toContain('Bạn không còn gói tập hiệu lực');
     expect(host.textContent).not.toContain('Gói tập đã hết hạn.');
   });
+
+  it('P1-FE-29: shows error banner with retry button instead of infinite skeleton when dynamic QR fails', async () => {
+    vi.mocked(getDynamicQr)
+      .mockRejectedValueOnce(new Error('offline'))
+      .mockResolvedValueOnce({ qrCode: 'DYN:9:1:999:fresh', expiresInSeconds: 60, generatedAt: '2026-10-21T12:01:00' });
+    await renderPage();
+    expect(host.querySelector('[data-testid="dynamic-qr-error"]')).not.toBeNull();
+    expect(host.querySelector('.portal-skeleton')).toBeNull();
+
+    await act(async () => {
+      host.querySelector<HTMLButtonElement>('[data-testid="qr-retry-btn"]')?.click();
+    });
+    expect(host.querySelector('[data-testid="dynamic-qr-error"]')).toBeNull();
+    expect(host.querySelector('img[alt="Mã QR check-in của hội viên"]')).not.toBeNull();
+  });
+
+  it('P1-FE-29: masks expired QR after TTL, pauses polling while tab is hidden, and refreshes immediately on visibilitychange', async () => {
+    vi.useFakeTimers();
+    const origVisibility = Object.getOwnPropertyDescriptor(document, 'visibilityState');
+    let visState: DocumentVisibilityState = 'visible';
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => visState });
+    try {
+      vi.mocked(getDynamicQr)
+        .mockResolvedValueOnce({ qrCode: 'DYN:1:1:1:first', expiresInSeconds: 60, generatedAt: '2026-10-21T12:00:00' })
+        .mockRejectedValueOnce(new Error('network blip'))
+        .mockResolvedValueOnce({ qrCode: 'DYN:1:1:2:second', expiresInSeconds: 60, generatedAt: '2026-10-21T12:02:00' });
+
+      await renderPage();
+      expect(host.querySelector('img[alt="Mã QR check-in của hội viên"]')).not.toBeNull();
+      expect(getDynamicQr).toHaveBeenCalledTimes(1);
+
+      // Hide tab: polling must pause (no extra calls over 35s)
+      visState = 'hidden';
+      await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+      await act(async () => { await vi.advanceTimersByTimeAsync(35_000); });
+      expect(getDynamicQr).toHaveBeenCalledTimes(1);
+
+      // Past 60s expiry: QR must be hidden/masked immediately
+      await act(async () => { await vi.advanceTimersByTimeAsync(30_000); });
+      expect(host.querySelector('img[alt="Mã QR check-in của hội viên"]')).toBeNull();
+      expect(host.querySelector('[data-testid="dynamic-qr-error"]')?.textContent).toContain('hết hạn');
+
+      // Return to visible tab: triggers immediate refresh
+      visState = 'visible';
+      await act(async () => { document.dispatchEvent(new Event('visibilitychange')); });
+      expect(getDynamicQr).toHaveBeenCalledTimes(2);
+    } finally {
+      if (origVisibility) Object.defineProperty(document, 'visibilityState', origVisibility);
+      else Reflect.deleteProperty(document, 'visibilityState');
+      vi.useRealTimers();
+    }
+  });
 });
 
 it('switches the mounted card, accessibility labels, and local load error without translating member data', async () => {

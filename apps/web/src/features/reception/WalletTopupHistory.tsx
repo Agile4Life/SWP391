@@ -68,9 +68,16 @@ export function WalletTopupHistory({ refreshKey = 0 }: { refreshKey?: number }) 
       {loading ? (
         <LoadingSkeleton label={t('Đang tải lịch sử…')} variant="table" count={3} />
       ) : error ? (
-        <div role="alert"><p>{t(error)}</p><button type="button" className="btn-secondary btn-sm" onClick={() => setReload((n) => n + 1)}>{t('Thử lại')}</button></div>
+        <div className="portal-alert" role="alert">
+          <span>{t(error)}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setReload((n) => n + 1)}>{t('Thử lại', 'Retry')}</button>
+        </div>
       ) : visible.length === 0 ? (
-        <p className="muted" style={{ padding: '16px 0' }}>{t('Chưa có giao dịch nạp ví nào tại quầy trong khoảng thời gian này.')}</p>
+        <p className="muted" style={{ padding: '16px 0' }}>
+          {items.length > 0
+            ? t('Không có giao dịch nạp ví nào khớp từ khóa hoặc bộ lọc hiện tại.', 'No wallet top-ups match your search or current filters.')
+            : t('Chưa có giao dịch nạp ví nào tại quầy trong khoảng thời gian này.', 'No counter wallet top-ups in this period.')}
+        </p>
       ) : (
         <div className="portal-table-wrapper">
           <table className="portal-table">
@@ -86,9 +93,9 @@ export function WalletTopupHistory({ refreshKey = 0 }: { refreshKey?: number }) 
             <tbody>
               {visible.map((item) => (
                 <tr key={item.paymentId}>
-                  <td>{item.paidAt ? formatCenterDateTime(item.paidAt) : '—'}</td>
-                  <td>#{item.paymentId} · {item.memberName}{item.membershipCode ? <span className="muted"> · {item.membershipCode}</span> : null}</td>
-                  <td>{vnd(item.amount)}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{item.paidAt ? formatCenterDateTime(item.paidAt) : '—'}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>#{item.paymentId} · {item.memberName}{item.membershipCode ? <span className="muted"> · {item.membershipCode}</span> : null}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{vnd(item.amount)}</td>
                   <td>{item.paymentMethod ? t(METHOD_LABELS[item.paymentMethod] ?? item.paymentMethod) : '—'}</td>
                   <td>{item.receivedByName ?? '—'}</td>
                 </tr>

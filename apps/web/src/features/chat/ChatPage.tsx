@@ -34,9 +34,9 @@ function formatRelativeChatTime(iso: string, t: (vi: string, en: string) => stri
   const diffHour = Math.floor(diffMin / 60);
   if (diffHour < 24) return t(`${diffHour} giờ`, `${diffHour} hr`);
   const diffDay = Math.floor(diffHour / 24);
-  if (diffDay < 7) return t(`${diffDay} ngày`, `${diffDay} days`);
+  if (diffDay < 7) return t(`${diffDay} ngày`, diffDay === 1 ? '1 day' : `${diffDay} days`);
   const diffWeek = Math.floor(diffDay / 7);
-  if (diffWeek < 52) return t(`${diffWeek} tuần`, `${diffWeek} weeks`);
+  if (diffWeek < 52) return t(`${diffWeek} tuần`, diffWeek === 1 ? '1 week' : `${diffWeek} weeks`);
   return formatCenterDate(iso);
 }
 
@@ -57,7 +57,7 @@ export function ChatPage({ embedded = false, visible = true, realtime, onPeersCh
   const manager = user.role === 'MANAGER';
   const support = user.role === 'MEMBER' ? 'member' : user.role === 'STAFF' ? 'staff' : manager ? 'manager' : null;
   // SÖL AI: hội viên hỏi về bản thân, lễ tân/quản lý tra nhanh quy định; huấn luyện viên chỉ dùng AI để gợi ý giáo án.
-  const ai = support === 'member' ? 'member' : support ? 'staff' : null;
+  const ai: SupportAudience | null = support;
   return <ChatWorkspace key={sessionIdentityKey(user)} member={user.role === 'MEMBER'} direct={!manager} support={support} ai={ai} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
 }
 
@@ -65,7 +65,7 @@ export function ChatPage({ embedded = false, visible = true, realtime, onPeersCh
  * Không gian làm việc của Tin nhắn: danh sách hội thoại, khung nội dung, chọn người mới và chuyển giữa chat
  * trực tiếp, hỗ trợ và AI (trên di động chuyển giữa danh sách và nội dung).
  */
-function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtime, onPeersChange }: { member: boolean; direct: boolean; support: SupportAudience | null; ai: 'member' | 'staff' | null; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
+function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtime, onPeersChange }: { member: boolean; direct: boolean; support: SupportAudience | null; ai: SupportAudience | null; embedded: boolean; visible: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
   const { t } = useI18n();
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [selected, setSelected] = useState<ChatConversation | null>(null);
@@ -84,6 +84,15 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
   const [mobileThread, setMobileThread] = useState(openSupportFromUrl);
   const [aiOpen, setAiOpen] = useState(false);
   const [supportOpen, setSupportOpen] = useState(openSupportFromUrl || !direct);
+  const [likedIds, setLikedIds] = useState<Set<number>>(() => new Set());
+  const toggleLike = useCallback((id: number) => {
+    setLikedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
   const pageRef = useRef(0), listSequence = useRef(0), opening = useRef(false), mounted = useRef(true);
   const onPeersRef = useRef(onPeersChange);
   const listTitle = useRef<HTMLHeadingElement>(null);
@@ -197,7 +206,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
             <ChatAvatar contact={AI_PEER} />
             <span className="direct-chat__person-info">
               <strong>{AI_PEER.name}</strong>
-              <span className="direct-chat__person-sub"><small className="direct-chat__preview">{ai === 'staff' ? t("Trợ lý AI · Tra nhanh bảng giá, lịch lớp, quy định", "AI assistant · Look up prices, classes and centre rules") : t("Trợ lý AI · Hỏi về gói tập, lịch lớp, tập luyện", "AI assistant · Ask about memberships, classes and training")}</small></span>
+              <span className="direct-chat__person-sub"><small className="direct-chat__preview">{ai !== 'member' ? t("Trợ lý AI · Tra nhanh bảng giá, lịch lớp, quy định", "AI assistant · Look up prices, classes and center rules") : t("Trợ lý AI · Hỏi về gói tập, lịch lớp, tập luyện", "AI assistant · Ask about memberships, classes and training")}</small></span>
             </span>
           </button></li>}
         </ul>
@@ -218,7 +227,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
                 </span>
               </span>
               <span className="direct-chat__meta">
-                {!!c.unreadCount && <span className="direct-chat__unread" aria-label={t(`${c.unreadCount} tin chưa đọc`, `${c.unreadCount} unread messages`)}>{c.unreadCount > 99 ? '99+' : c.unreadCount}</span>}
+                {!!c.unreadCount && <span className="direct-chat__unread" aria-label={t(`${c.unreadCount} tin chưa đọc`, c.unreadCount === 1 ? '1 unread message' : `${c.unreadCount} unread messages`)}>{c.unreadCount > 99 ? '99+' : c.unreadCount}</span>}
                 <span className="direct-chat__more" aria-hidden="true">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
                     <circle cx="5" cy="12" r="1.8" />
@@ -237,7 +246,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
       </aside>
       {supportOpen && support ? <SupportThread audience={support} active={mobileThread} onBack={backToList} />
         : aiOpen && ai ? <AiChatThread audience={ai} active={mobileThread} onBack={backToList} />
-        : selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} canMarkRead={visible && mobileThread} onRead={onRead} onBack={backToList} />
+        : selected ? <ChatThread key={selected.id} conversation={selected} chat={chat} active={mobileThread} canMarkRead={visible && mobileThread} onRead={onRead} onBack={backToList} likedIds={likedIds} onToggleLike={toggleLike} />
         : <section className="direct-chat__placeholder"><h2>{t("Chọn một cuộc trò chuyện", "Choose a conversation")}</h2><p>{t("Tin nhắn riêng của bạn được lưu tại đây.", "Your private messages are saved here.")}</p></section>}
     </div>
   </div>;

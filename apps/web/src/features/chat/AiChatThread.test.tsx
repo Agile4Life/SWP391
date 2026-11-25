@@ -124,3 +124,16 @@ it('translates AI loading and retry labels on toggle while preserving the server
   expect(host.textContent).toContain('Tải lại hội thoại');
   expect(host.textContent).toContain('SERVER: Gửi');
 });
+
+it('P3-FE-30: shows manager-specific intro copy and American English "center" instead of receptionist copy', async () => {
+  vi.mocked(ai.listAiChatSessions).mockResolvedValue([]);
+  await act(async () => root.render(<AiChatThread audience="manager" onBack={() => {}} />));
+  expect(host.textContent).toContain('giúp quản lý');
+  expect(host.textContent).not.toContain('giúp lễ tân');
+
+  await act(async () => setLanguage('en'));
+  expect(host.textContent).toContain('helps managers');
+  expect(host.textContent).toContain('center rules');
+  expect(host.textContent).not.toContain('front desk');
+  expect(host.textContent).not.toContain('centre');
+});

@@ -1,6 +1,7 @@
 import { staffTranslation, useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { getCurrentUser } from '../../shared/api/client';
 import { Select } from '../../shared/ui/Select';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   userApi,
   UserAccount,
@@ -108,7 +109,14 @@ export function UserManagerPage() {
 
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<StaffMessage>('');
+  const [deletedLoadError, setDeletedLoadError] = useState<StaffMessage>('');
+  const [loadingDeleted, setLoadingDeleted] = useState(false);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+
+  const [lockingUserIds, setLockingUserIds] = useState<Set<string>>(() => new Set());
+  const lockingUserIdsRef = useRef<Set<string>>(new Set());
+  const [togglingPermKeys, setTogglingPermKeys] = useState<Set<string>>(() => new Set());
+  const togglingPermKeysRef = useRef<Set<string>>(new Set());
 
   const [deletingUser, setDeletingUser] = useState<UserAccount | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -117,25 +125,96 @@ export function UserManagerPage() {
   const [showCleanupModal, setShowCleanupModal] = useState(false);
   const [cleanupResult, setCleanupResult] = useState<{ deletedCount: number; message?: string } | null>(null);
 
+  const currentUser = getCurrentUser();
+  const activeAdminCount = useMemo(
+    () => users.filter((u) => u.role === 'ADMIN' && u.status === 'ACTIVE').length,
+    [users],
+  );
+  const totalAdminCount = useMemo(
+    () => users.filter((u) => u.role === 'ADMIN').length,
+    [users],
+  );
+
+  function getAccountProtection(u: UserAccount) {
+    const isSelf = Boolean(
+      currentUser &&
+        (currentUser.id === u.id ||
+          (currentUser.identifier && currentUser.identifier.toLowerCase() === u.email.toLowerCase())),
+    );
+    const isLastActiveAdmin = u.role === 'ADMIN' && u.status === 'ACTIVE' && activeAdminCount <= 1;
+    const isLastAdmin = u.role === 'ADMIN' && totalAdminCount <= 1;
+    const lockDisabled = isSelf || (u.status === 'ACTIVE' && isLastActiveAdmin);
+    const deleteDisabled = isSelf || isLastActiveAdmin || isLastAdmin;
+    const lockReason = isSelf
+      ? t('Không thể khóa tài khoản của chính bạn', 'Cannot lock your own account')
+      : u.status === 'ACTIVE' && isLastActiveAdmin
+        ? t('Không thể khóa tài khoản Quản trị hệ thống hoạt động cuối cùng', 'Cannot lock the last active administrator account')
+        : u.status === 'ACTIVE'
+          ? t('Khóa tài khoản', 'Lock account')
+          : t('Mở khóa tài khoản', 'Unlock account');
+    const deleteReason = isSelf
+      ? t('Không thể xóa tài khoản của chính bạn', 'Cannot delete your own account')
+      : isLastActiveAdmin || isLastAdmin
+        ? t('Không thể xóa tài khoản Quản trị hệ thống cuối cùng', 'Cannot delete the last administrator account')
+        : t('Xóa tài khoản', 'Delete account');
+    return { lockDisabled, deleteDisabled, lockReason, deleteReason };
+  }
+
   useEffect(() => {
     void loadData();
   }, []);
 
-  // Tải người dùng, vai trò, quyền và tài khoản đã xóa.
+  async function reloadDeletedUsers() {
+    if (typeof userApi.getDeletedUsers !== 'function') {
+      setDeletedUsers([]);
+      setDeletedLoadError('');
+      return;
+    }
+    setLoadingDeleted(true);
+    setDeletedLoadError('');
+    try {
+      const deleted = await userApi.getDeletedUsers();
+      setDeletedUsers(deleted);
+    } catch (err) {
+      setDeletedLoadError(
+        err instanceof Error && err.name === 'Error' && err.message
+          ? err
+          : staffMessage('Không thể tải danh sách tài khoản đã xóa.', 'Could not load deleted accounts.'),
+      );
+    } finally {
+      setLoadingDeleted(false);
+    }
+  }
+
+  // Tải người dùng, vai trò, quyền và tài khoản đã xóa (không nuốt lỗi thùng rác).
   async function loadData() {
     setLoading(true);
+    setLoadError('');
+    setDeletedLoadError('');
     try {
-      setLoadError('');
-      const [u, r, p, d] = await Promise.all([
+      const [u, r, p] = await Promise.all([
         userApi.getUsers(),
         userApi.getRolePermissions(),
         userApi.getPermissions(),
-        typeof userApi.getDeletedUsers === 'function' ? userApi.getDeletedUsers().catch(() => []) : Promise.resolve([]),
       ]);
       setUsers(u);
       setRolePerms(r);
       setPermissions(p);
-      setDeletedUsers(d);
+
+      if (typeof userApi.getDeletedUsers === 'function') {
+        try {
+          const d = await userApi.getDeletedUsers();
+          setDeletedUsers(d);
+        } catch (trashErr) {
+          setDeletedLoadError(
+            trashErr instanceof Error && trashErr.name === 'Error' && trashErr.message
+              ? trashErr
+              : staffMessage('Không thể tải danh sách tài khoản đã xóa.', 'Could not load deleted accounts.'),
+          );
+        }
+      } else {
+        setDeletedUsers([]);
+      }
     } catch (err) {
       setLoadError(errorMessage(err, 'Không thể tải dữ liệu.'));
     } finally {
@@ -171,8 +250,9 @@ export function UserManagerPage() {
     });
   }, [deletedUsers, searchTerm, roleFilter]);
 
-  // Khóa hoặc mở khóa tài khoản sau khi xác nhận.
+  // Khóa hoặc mở khóa tài khoản sau khi xác nhận (kèm khóa in-flight theo từng dòng để tránh đảo trạng thái khi click đúp).
   async function handleToggleLock(user: UserAccount) {
+    if (lockingUserIdsRef.current.has(user.id)) return;
     const locking = user.status === 'ACTIVE';
     const confirmed = await confirm({
       title: locking ? staffMessage('Khóa tài khoản?', staffTranslation('Khóa tài khoản?')) : staffMessage('Mở khóa tài khoản?', staffTranslation('Mở khóa tài khoản?')),
@@ -182,10 +262,12 @@ export function UserManagerPage() {
       confirmLabel: locking ? staffMessage('Khóa tài khoản', staffTranslation('Khóa tài khoản')) : staffMessage('Mở khóa', staffTranslation('Mở khóa')),
       danger: locking,
     });
-    if (!confirmed) return;
+    if (!confirmed || lockingUserIdsRef.current.has(user.id)) return;
 
+    lockingUserIdsRef.current.add(user.id);
+    setLockingUserIds(new Set(lockingUserIdsRef.current));
     try {
-      const updated = await userApi.toggleLockUser(user.id);
+      const updated = await userApi.toggleLockUser(user.id, locking);
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
       notify(
         updated.status === 'ACTIVE'
@@ -196,6 +278,9 @@ export function UserManagerPage() {
     } catch (err) {
       const msg = errorMessage(err, 'Thao tác thất bại.');
       notify(msg, 'error');
+    } finally {
+      lockingUserIdsRef.current.delete(user.id);
+      setLockingUserIds(new Set(lockingUserIdsRef.current));
     }
   }
 
@@ -242,22 +327,28 @@ export function UserManagerPage() {
         'success'
       );
     } catch (err) {
-      notify(errorMessage(err, 'Không thể khôi phục tài khoản.'), 'error');
+      notify(
+        err instanceof Error && err.name === 'Error' && err.message
+          ? err
+          : staffMessage('Không thể khôi phục tài khoản.', 'Could not restore account.'),
+        'error',
+      );
     } finally {
       setRestoringUserId(null);
     }
   }
 
-  // Chạy dọn dẹp tài khoản không hoạt động và báo số tài khoản đã dọn.
+  // Chạy dọn dẹp tài khoản không hoạt động và làm mới đồng thời cả danh sách chính lẫn thùng rác.
   async function handleRunCleanup() {
     setIsCleaning(true);
     try {
       const res = await userApi.cleanupInactiveUsers();
       setCleanupResult(res);
       notify(res.message ? new Error(res.message) : staffMessage(`Đã dọn dẹp ${res.deletedCount} tài khoản không hoạt động.`, `Cleaned up ${res.deletedCount} inactive accounts.`), 'success');
-      // Làm mới danh sách người dùng
+      // Làm mới danh sách người dùng và tab tài khoản đã xóa
       const u = await userApi.getUsers();
       setUsers(u);
+      await reloadDeletedUsers();
     } catch (err) {
       const msg = errorMessage(err, 'Dọn dẹp tài khoản thất bại.');
       notify(msg, 'error');
@@ -379,7 +470,7 @@ export function UserManagerPage() {
     try {
       const updated = await userApi.updateUser(editingUser.id, {
         name: cleanName,
-        phone: normalizePhoneNumber(cleanPhone) || undefined,
+        phone: cleanPhone ? normalizePhoneNumber(cleanPhone) : '',
         role: editFormData.role,
         gender: editFormData.gender,
       });
@@ -395,27 +486,35 @@ export function UserManagerPage() {
     }
   }
 
-  // Bật/tắt một quyền của vai trò (cập nhật lạc quan, hoàn lại nếu lỗi; vai trò ADMIN không đổi).
+  // Bật/tắt một quyền của vai trò (kèm khóa in-flight từng ô và gửi trạng thái đích tường minh để chống click đúp).
   async function handleTogglePermission(role: SystemRole, permId: string) {
     if (role === 'ADMIN') return;
+    const permKey = `${role}:${permId}`;
+    if (togglingPermKeysRef.current.has(permKey)) return;
 
     // Cập nhật lạc quan
     const previous = rolePerms[role] ?? [];
     const hasPerm = previous.includes(permId);
+    const shouldGrant = !hasPerm;
     const updatedList = hasPerm
       ? previous.filter((id) => id !== permId)
       : [...previous, permId];
 
+    togglingPermKeysRef.current.add(permKey);
+    setTogglingPermKeys(new Set(togglingPermKeysRef.current));
     setRolePerms((prev) => ({ ...prev, [role]: updatedList }));
 
     try {
-      await userApi.toggleRolePermission(role, permId);
+      await userApi.toggleRolePermission(role, permId, shouldGrant);
       notify('Đã cập nhật quyền.', 'success');
     } catch (err) {
       // Hoàn tác khi có lỗi
       setRolePerms((prev) => ({ ...prev, [role]: previous }));
       const msg = errorMessage(err, 'Không thể cập nhật quyền.');
       notify(msg, 'error');
+    } finally {
+      togglingPermKeysRef.current.delete(permKey);
+      setTogglingPermKeys(new Set(togglingPermKeysRef.current));
     }
   }
 
@@ -439,37 +538,65 @@ export function UserManagerPage() {
     <div data-i18n-managed className="portal-container">
       <PageHeader
         title={t("Tài khoản & phân quyền")}
+        actions={
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => {
+              setFieldErrors({});
+              setCreateError(null);
+              setIsModalOpen(true);
+            }}
+          >
+            {t("Thêm tài khoản", "Add account")}
+          </button>
+        }
       />
 
       {/* Các tab */}
-      <div className="portal-tabs">
+      <div className="portal-tabs" role="tablist" aria-label={t('Mục quản lý tài khoản', 'Account management sections')}>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'USERS'}
           className={`portal-tab ${activeTab === 'USERS' ? 'active' : ''}`}
           onClick={() => setActiveTab('USERS')}
         >
-          {t("Danh sách tài khoản (")}{users.length})
+          {t('Danh sách tài khoản', 'Accounts')}
+          <span className="portal-tab-count">{users.length}</span>
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'DELETED'}
           className={`portal-tab ${activeTab === 'DELETED' ? 'active' : ''}`}
           onClick={() => setActiveTab('DELETED')}
         >
-          {t("Tài khoản đã xóa (")}{deletedUsers.length})
+          {t('Tài khoản đã xóa', 'Deleted accounts')}
+          <span className="portal-tab-count">{deletedUsers.length}</span>
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={activeTab === 'ROLES'}
           className={`portal-tab ${activeTab === 'ROLES' ? 'active' : ''}`}
           onClick={() => setActiveTab('ROLES')}
         >
-          {t("Phân quyền")}</button>
+          {t('Phân quyền', 'Permissions')}
+        </button>
       </div>
 
       {loadError && (
-        <div data-i18n-managed role="alert" className="portal-alert">
+        <div
+          data-i18n-managed
+          role="alert"
+          className="portal-alert portal-alert--error"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}
+        >
           <span>{t(loadError)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void loadData()}>
-            {t("Thử lại")}</button>
+            {t("Thử lại", "Retry")}
+          </button>
         </div>
       )}
 
@@ -482,19 +609,21 @@ export function UserManagerPage() {
             ))}
           </div>
         </div>
-      ) : activeTab === 'USERS' ? (
+      ) : loadError ? null : activeTab === 'USERS' ? (
         <div data-i18n-managed>
           {/* Thanh điều khiển / bộ lọc */}
           <div className="portal-toolbar">
             <input
               type="text"
               className="portal-input"
+              aria-label={t('Tìm kiếm tài khoản', 'Search accounts')}
               placeholder={t("Tìm kiếm theo họ tên, email hoặc SĐT...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Select
               className="portal-select"
+              aria-label={t('Lọc theo vai trò', 'Filter by role')}
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
             >
@@ -505,21 +634,11 @@ export function UserManagerPage() {
               <option value="RECEPTIONIST">{t("Lễ tân")}</option>
               <option value="MEMBER">{t("Hội viên")}</option>
             </Select>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => {
-                setFieldErrors({});
-                setCreateError(null);
-                setIsModalOpen(true);
-              }}
-            >
-              {t("Thêm tài khoản")}</button>
             <ActionMenu label={t("Tùy chọn quản trị")}>
               <button
                 type="button"
                 className="btn-secondary btn-sm"
-                title={t("Tài khoản không đăng nhập quá 6 tháng sẽ tự động bị xóa (trừ hội viên đang bảo lưu).")}
+                title={t("Tài khoản hội viên không đăng nhập quá 6 tháng sẽ tự động bị xóa (trừ hội viên đang bảo lưu).", "Member accounts inactive for over 6 months will be soft-deleted (excluding accounts on hold).")}
                 onClick={() => {
                   setCleanupResult(null);
                   setShowCleanupModal(true);
@@ -563,11 +682,14 @@ export function UserManagerPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredUsers.map((u) => (
+                    {filteredUsers.map((u) => {
+                      const protection = getAccountProtection(u);
+                      const isRowLocking = lockingUserIds.has(u.id);
+                      return (
                       <tr data-i18n-managed key={u.id}>
                         <td>
                           <strong>{u.name}</strong>
-                          <div className="muted">ID: {u.id}</div>
+                          <div className="muted" style={{ fontVariantNumeric: 'tabular-nums' }}>ID: {u.id}</div>
                         </td>
                         <td>
                           {u.gender === 'male' ? (
@@ -580,7 +702,7 @@ export function UserManagerPage() {
                         </td>
                         <td>
                           <div>{u.email}</div>
-                          <div className="muted">{u.phone || '—'}</div>
+                          <div className="muted" style={{ fontVariantNumeric: 'tabular-nums' }}>{u.phone || '—'}</div>
                         </td>
                         <td>{getRoleBadge(u.role)}</td>
                         <td>
@@ -605,7 +727,7 @@ export function UserManagerPage() {
                             )}
                           </div>
                         </td>
-                        <td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums' }}>
                           <div style={{ fontSize: '0.85rem' }}>
                             {u.last_login_at ? (
                               <span data-i18n-managed>{t("Đăng nhập: ")}{formatCenterDateTime(u.last_login_at.replace(' ', 'T'))}</span>
@@ -628,28 +750,21 @@ export function UserManagerPage() {
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
-                              disabled={u.role === 'CENTER_MANAGER'}
-                              title={
-                                u.role === 'CENTER_MANAGER'
-                                  ? t('Không thể khóa tài khoản Quản lý trung tâm')
-                                  : u.status === 'ACTIVE'
-                                    ? t('Khóa tài khoản')
-                                    : t('Mở khóa tài khoản')
-                              }
-                              onClick={() => handleToggleLock(u)}
+                              disabled={protection.lockDisabled || isRowLocking}
+                              title={protection.lockReason}
+                              onClick={() => void handleToggleLock(u)}
                             >
-                              {u.status === 'ACTIVE' ? t('Khóa') : t('Kích hoạt')}
+                              {isRowLocking
+                                ? t('Đang xử lý...', 'Working...')
+                                : u.status === 'ACTIVE'
+                                  ? t('Khóa')
+                                  : t('Kích hoạt')}
                             </button>
                             <button
                               type="button"
-                              className="btn-secondary btn-sm"
-                              style={{ color: 'var(--portal-danger)', borderColor: 'color-mix(in srgb, var(--portal-danger) 35%, transparent)' }}
-                              disabled={u.role === 'CENTER_MANAGER'}
-                              title={
-                                u.role === 'CENTER_MANAGER'
-                                  ? t('Không thể xóa tài khoản Quản lý trung tâm')
-                                  : t('Xóa tài khoản')
-                              }
+                              className="btn-danger btn-sm"
+                              disabled={protection.deleteDisabled}
+                              title={protection.deleteReason}
                               onClick={() => setDeletingUser(u)}
                             >
                               {t("Xóa")}</button>
@@ -657,7 +772,8 @@ export function UserManagerPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -671,12 +787,14 @@ export function UserManagerPage() {
             <input
               type="text"
               className="portal-input"
+              aria-label={t('Tìm kiếm trong tài khoản đã xóa', 'Search deleted accounts')}
               placeholder={t("Tìm kiếm trong tài khoản đã xóa...")}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <Select
               className="portal-select"
+              aria-label={t('Lọc tài khoản đã xóa theo vai trò', 'Filter deleted accounts by role')}
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
             >
@@ -689,7 +807,22 @@ export function UserManagerPage() {
             </Select>
           </div>
 
+          {deletedLoadError && (
+            <div
+              data-i18n-managed
+              role="alert"
+              className="portal-alert portal-alert--error"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 14 }}
+            >
+              <span>{t(deletedLoadError)}</span>
+              <button type="button" className="btn-secondary btn-sm" disabled={loadingDeleted} onClick={() => void reloadDeletedUsers()}>
+                {t("Thử lại", "Retry")}
+              </button>
+            </div>
+          )}
+
           {/* Bảng danh sách tài khoản đã xóa */}
+          {!deletedLoadError && (
           <div className="portal-card portal-card--flush">
             {filteredDeletedUsers.length === 0 ? (
               <div data-i18n-managed className="portal-state" style={{ minHeight: '180px' }}>
@@ -730,7 +863,7 @@ export function UserManagerPage() {
                       <tr data-i18n-managed key={u.id} style={{ opacity: 0.9 }}>
                         <td>
                           <strong>{u.name}</strong>
-                          <div className="muted">ID: {u.id}</div>
+                          <div className="muted" style={{ fontVariantNumeric: 'tabular-nums' }}>ID: {u.id}</div>
                         </td>
                         <td>
                           {u.gender === 'male' ? (
@@ -743,7 +876,7 @@ export function UserManagerPage() {
                         </td>
                         <td>
                           <div>{u.email}</div>
-                          <div className="muted">{u.phone || '—'}</div>
+                          <div className="muted" style={{ fontVariantNumeric: 'tabular-nums' }}>{u.phone || '—'}</div>
                         </td>
                         <td>{getRoleBadge(u.role)}</td>
                         <td>
@@ -759,7 +892,7 @@ export function UserManagerPage() {
                             {t("Đã xóa mềm")}
                           </span>
                         </td>
-                        <td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums' }}>
                           <div style={{ fontSize: '0.85rem' }}>
                             {u.deleted_at ? (
                               <span data-i18n-managed>{formatCenterDateTime(u.deleted_at.replace(' ', 'T'))}</span>
@@ -787,6 +920,7 @@ export function UserManagerPage() {
               </div>
             )}
           </div>
+          )}
         </div>
       ) : (
         /* Matrix Phân quyền RBAC */
@@ -795,6 +929,11 @@ export function UserManagerPage() {
             <h2 className="portal-card-title">{t("Phân quyền vai trò")}</h2>
           </div>
 
+          {permissions.length === 0 ? (
+            <div className="portal-empty" role="status" style={{ padding: '32px 24px' }}>
+              <p style={{ margin: 0 }}>{t('Chưa có quyền hạn nào để cấu hình.', 'No permissions available to configure.')}</p>
+            </div>
+          ) : (
           <div className="portal-table-wrapper">
             <table className="portal-table">
               <thead>
@@ -814,8 +953,9 @@ export function UserManagerPage() {
                       <strong>{perm.name}</strong>
                     </td>
                     {CORE_ROLES.map((role) => {
-                      const isManager = role.id === 'ADMIN';
+                      const isAdminRole = role.id === 'ADMIN';
                       const isChecked = rolePerms[role.id]?.includes(perm.id) ?? false;
+                      const isToggling = togglingPermKeys.has(`${role.id}:${perm.id}`);
 
                       return (
                         <td data-i18n-managed key={role.id} style={{ textAlign: 'center' }}>
@@ -826,26 +966,26 @@ export function UserManagerPage() {
                               justifyContent: 'center',
                               minWidth: 44,
                               minHeight: 44,
-                              cursor: isManager ? 'not-allowed' : 'pointer',
+                              cursor: isAdminRole || isToggling ? 'not-allowed' : 'pointer',
                             }}
                           >
                             <input data-i18n-managed
                               type="checkbox"
                               checked={isChecked}
-                              disabled={isManager}
-                              aria-label={`${perm.name} — ${role.name}`}
+                              disabled={isAdminRole || isToggling}
+                              aria-label={`${perm.name} — ${t(role.name)}`}
                               title={
-                                isManager
+                                isAdminRole
                                   ? t('Quyền quản trị hệ thống')
                                   : t('Nhấp để gán hoặc hủy quyền')
                               }
-                              onChange={() => handleTogglePermission(role.id, perm.id)}
+                              onChange={() => void handleTogglePermission(role.id, perm.id)}
                               style={{
                                 width: '18px',
                                 height: '18px',
                                 accentColor: 'var(--portal-salmon)',
-                                cursor: isManager ? 'not-allowed' : 'pointer',
-                                opacity: isManager ? 0.7 : 1,
+                                cursor: isAdminRole || isToggling ? 'not-allowed' : 'pointer',
+                                opacity: isAdminRole || isToggling ? 0.7 : 1,
                               }}
                             />
                           </label>
@@ -857,6 +997,7 @@ export function UserManagerPage() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 
@@ -960,7 +1101,7 @@ export function UserManagerPage() {
                 type="password"
                 className="portal-input"
                 autoComplete="new-password"
-                placeholder={t(PASSWORD_RULE_HINT)}
+                placeholder={t(PASSWORD_RULE_HINT, '8–50 characters, with letters and numbers, no spaces')}
                 value={formData.password}
                 onChange={(e) => {
                   setFormData({ ...formData, password: e.target.value });
@@ -969,7 +1110,7 @@ export function UserManagerPage() {
               />
               {fieldErrors.password && (
                 <div data-i18n-managed className="form-error">
-                  {t(fieldErrors.password)}
+                  {t(fieldErrors.password, 'Password must be 8–50 characters with at least 1 letter and 1 number, and no spaces.')}
                 </div>
               )}
             </div>
@@ -1144,7 +1285,7 @@ export function UserManagerPage() {
               </Select>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 14 }}>
               {editError && <p className="form-error" role="alert" style={{ flexBasis: '100%' }}>{t(editError)}</p>}
               <button
                 type="button"
@@ -1174,6 +1315,7 @@ export function UserManagerPage() {
       {/* Modal Xác nhận xóa tài khoản */}
       {deletingUser && (
         <Modal
+          busy={isDeleting}
           title={t("Xác nhận xóa tài khoản")}
           onClose={() => {
             if (!isDeleting) setDeletingUser(null);
@@ -1235,6 +1377,7 @@ export function UserManagerPage() {
       {/* Modal Quét & dọn dẹp tài khoản > 6 tháng */}
       {showCleanupModal && (
         <Modal
+          busy={isCleaning}
           title={t("Quét & dọn dẹp tài khoản quá 6 tháng")}
           onClose={() => {
             if (!isCleaning) {
@@ -1245,11 +1388,22 @@ export function UserManagerPage() {
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <p style={{ margin: 0, lineHeight: 1.5 }}>
-              {t("Tự động xóa các tài khoản thỏa điều kiện:")}</p>
+              {t("Tự động xóa mềm các tài khoản hội viên thỏa điều kiện:", "Automatically soft-deletes member accounts matching all criteria:")}</p>
             <ul style={{ margin: 0, paddingLeft: 20, fontSize: '0.88rem', display: 'grid', gap: 6 }}>
-              <li>{t("Không đăng nhập trong vòng ")}<strong>{t("6 tháng qua")}</strong> {t(" (hoặc tạo quá 6 tháng nhưng chưa từng đăng nhập).")}</li>
-              <li><strong>{t("Không")}</strong> {t(" xóa tài khoản Quản lý trung tâm.")}</li>
-              <li><strong>{t("Không")}</strong> {t(" xóa tài khoản hội viên đang có gói dịch vụ trong trạng thái ")}<strong>{t("bảo lưu tập (frozen)")}</strong>.</li>
+              <li>
+                {t('Chỉ áp dụng cho tài khoản ', 'Applies only to ')}
+                <strong>{t('Hội viên', 'Member')}</strong>
+                {t(' không đăng nhập trong vòng 6 tháng qua (hoặc tạo quá 6 tháng nhưng chưa từng đăng nhập).', ' accounts inactive for over 6 months (or created over 6 months ago with no login).')}
+              </li>
+              <li>
+                <strong>{t('Không', 'Does not')}</strong>
+                {t(' xóa tài khoản Quản trị hệ thống, Quản lý trung tâm, Huấn luyện viên hoặc Lễ tân.', ' delete Admin, Center Manager, Coach, or Receptionist accounts.')}
+              </li>
+              <li>
+                <strong>{t('Không', 'Does not')}</strong>
+                {t(' xóa tài khoản hội viên đang có gói tập trong trạng thái ', ' delete member accounts with a membership plan currently ')}
+                <strong>{t('bảo lưu tập', 'on hold')}</strong>.
+              </li>
             </ul>
 
             {cleanupResult && (
@@ -1263,7 +1417,10 @@ export function UserManagerPage() {
                   color: 'var(--portal-success)',
                 }}
               >
-                {cleanupResult.message || t(`Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`, `Cleanup completed successfully ${cleanupResult.deletedCount} inactive accounts.`)}
+                {cleanupResult.message || t(
+                  `Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`,
+                  `Successfully cleaned up ${cleanupResult.deletedCount} inactive ${cleanupResult.deletedCount === 1 ? 'account' : 'accounts'}.`,
+                )}
               </div>
             )}
 

@@ -1,10 +1,11 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { SportPage } from './SportPage';
 import { SPORT_PAGES, sportIdFromPath } from './sportPages';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
+import { setLanguage } from '../../shared/i18n';
 import type { PublicCatalog } from './publicCatalog';
 
 const defaultCatalog: PublicCatalog = {
@@ -44,12 +45,19 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  setLanguage('vi');
   vi.unstubAllGlobals();
 });
+
+function LocationProbe() {
+  const { pathname } = useLocation();
+  return <output data-testid="redirected-path">{pathname}</output>;
+}
 
 const render = (path: string) => act(async () => root.render(
   <MemoryRouter initialEntries={[path]}>
     <Routes>
+      <Route path="/" element={<LocationProbe />} />
       <Route path="/sports/:sportId" element={<SportPage />} />
       <Route path="/:any" element={<SportPage />} />
     </Routes>
@@ -92,4 +100,30 @@ it.each([
   await render(path);
   const cta = [...host.querySelectorAll('a.fit-pill')].find((link) => link.textContent?.includes('Đăng ký lớp'));
   expect(cta?.getAttribute('href')).toBe(`/member/classes?tab=classes&discipline=${encodeURIComponent(name)}`);
+});
+
+it.each([
+  '/sports/swimming',
+  '/sports/tennis',
+  '/sports/badminton',
+  '/sports/courts',
+  '/sports/unknown',
+])('redirects retired or unknown sport path %s back to / instead of falling back to Boxing (P1-FE-01)', async (path) => {
+  await render(path);
+  expect(host.querySelector('[data-testid="redirected-path"]')?.textContent).toBe('/');
+  expect(host.querySelector('h1')).toBeNull();
+});
+
+it('localizes club names in VI and EN and highlights Disciplines nav for /sports/boxing and /sports/yoga (P1-FE-01, P2-FE-05)', async () => {
+  setLanguage('vi');
+  await render('/sports/boxing');
+  expect(host.textContent).toContain('Câu lạc bộ Boxing');
+  expect(host.textContent).toContain('Phòng tập Yoga');
+  expect(document.title).toContain('Phòng Tập Boxing');
+  expect(host.querySelector('.fit-nav a[data-nav-target="multisport"]')?.classList.contains('is-active')).toBe(true);
+
+  await act(async () => setLanguage('en'));
+  expect(host.textContent).toContain('Boxing Club');
+  expect(host.textContent).toContain('Yoga Studio');
+  expect(document.title).toContain('Boxing Ring Arena');
 });

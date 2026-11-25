@@ -2,8 +2,16 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTH_STORAGE_KEY, type UserSession } from '../api/client';
+import { AUTH_STORAGE_KEY, TOKEN_STORAGE_KEY, type UserSession } from '../api/client';
 import { AppLayout } from './AppLayout';
+
+const BACKEND_ROLE: Record<UserSession['role'], string> = {
+  MEMBER: 'MEMBER',
+  STAFF: 'RECEPTIONIST',
+  COACH: 'COACH',
+  MANAGER: 'CENTER_MANAGER',
+  ADMIN: 'ADMIN',
+};
 
 describe('portal navigation', () => {
   let host: HTMLDivElement;
@@ -11,7 +19,21 @@ describe('portal navigation', () => {
 
   beforeEach(() => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: true, data: [] }))));
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const stored = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) ?? '{}');
+      if (url.includes('/auth/me')) {
+        return new Response(JSON.stringify({
+          success: true,
+          data: { username: stored.identifier ?? 'an', role: BACKEND_ROLE[stored.role as UserSession['role']] ?? 'MEMBER', fullName: stored.name ?? 'Nguyễn An' },
+        }));
+      }
+      if (url.includes('/wallet/my')) {
+        return new Response(JSON.stringify({ success: true, data: { balance: 0, transactions: [] } }));
+      }
+      return new Response(JSON.stringify({ success: true, data: [] }));
+    }));
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'test-token');
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
       id: '1', name: 'Nguyễn An', identifier: 'an', role: 'MEMBER',
     }));
@@ -33,6 +55,7 @@ describe('portal navigation', () => {
 
   // Dựng component vào DOM giả để kiểm thử.
   async function renderPortal(role: UserSession['role'] = 'MEMBER') {
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'test-token');
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
       id: '1', name: 'Nguyễn An', identifier: 'an', role,
     }));
@@ -120,8 +143,14 @@ describe('portal navigation', () => {
     },
   );
 
-  it('opens avatar dropdown menu with wallet balance, profile link, and logout option', async () => {
+  it('opens avatar dropdown menu with wallet balance formatted via formatPrice, LanguageSetting outside role="menu", profile link, and logout option', async () => {
     vi.stubGlobal('fetch', vi.fn((url: string) => {
+      if (url.includes('/auth/me')) {
+        return Promise.resolve(new Response(JSON.stringify({
+          success: true,
+          data: { username: 'an', role: 'MEMBER', fullName: 'Nguyễn An' },
+        })));
+      }
       if (url.includes('/wallet/my')) {
         return Promise.resolve(new Response(JSON.stringify({
           success: true,
@@ -138,10 +167,16 @@ describe('portal navigation', () => {
     expect(avatarBtn).not.toBeNull();
     await act(async () => avatarBtn!.click());
 
+    const dropdown = host.querySelector<HTMLElement>('.portal-avatar-dropdown')!;
+    expect(dropdown.style.boxShadow).toBe('');
     const menu = host.querySelector('[role="menu"]');
     expect(menu).not.toBeNull();
+    // LanguageSetting phải nằm ngoài role="menu" để đúng chuẩn ARIA.
+    expect(menu?.querySelector('[data-testid="avatar-language-setting"]')).toBeNull();
+    expect(dropdown.querySelector('[data-testid="avatar-language-setting"]')).not.toBeNull();
     expect(menu?.textContent).toContain('Ví của tôi');
     expect(menu?.textContent).toContain('250.000');
+    expect(menu?.textContent).toContain('₫');
 
     // Mở hộp thoại ví từ menu thả xuống
     const walletItem = host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-wallet"]')!;

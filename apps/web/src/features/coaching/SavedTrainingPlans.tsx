@@ -2,11 +2,12 @@ import { staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffE
 import { TrainingPlanResults } from './TrainingPlanResults';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise } from './trainingExercise';
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
+import { formatCenterDate } from '../../shared/lib/centerTime';
 import { aiApi, type SavedTrainingPlan, type SavedTrainingPlanItem } from './aiApi';
 
 const STATUS_LABEL: Record<string, string> = {
@@ -17,11 +18,8 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: 'Đã hủy',
 };
 
-/** Định dạng ngày YYYY-MM-DD thành dd/MM/yyyy. */
-const formatDate = (iso: string) => iso.split('-').reverse().join('/');
-
 /** Chỉnh sửa giáo án và bài tập trên server; giữ ID bài tập và lịch sử tập của hội viên. */
-export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) {
+export function SavedTrainingPlans({ refreshKey = 0, hideHeading = false }: { refreshKey?: number; hideHeading?: boolean }) {
   const { t } = useStaffI18n();
   const [resultPlan, setResultPlan] = useState<SavedTrainingPlan | null>(null);
   const [confirm, confirmDialog] = useConfirm();
@@ -32,6 +30,15 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
   const [busyId, setBusyId] = useState<number | null>(null);
   const [editing, setEditing] = useState<{ plan: SavedTrainingPlan; goal: string; startDate: string; endDate: string; items: SavedTrainingPlanItem[] } | null>(null);
   const [formError, setFormError] = useState<StaffMessage>('');
+  const busyRef = useRef(false);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Tải lại danh sách giáo án bằng cách tăng số lần thử.
   const load = useCallback(() => setAttempt((value) => value + 1), []);
@@ -50,19 +57,26 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
   // Mở hộp chỉnh sửa giáo án với dữ liệu hiện có.
   const openEditor = (plan: SavedTrainingPlan) => {
     setFormError('');
-    setEditing({ plan, goal: plan.goal ?? '', startDate: plan.startDate, endDate: plan.endDate, items: (plan.items ?? []).map(item => ({ ...item })) });
+    setEditing({
+      plan,
+      goal: plan.goal ?? '',
+      startDate: plan.startDate ?? '',
+      endDate: plan.endDate ?? '',
+      items: (plan.items ?? []).map(item => ({ ...item })),
+    });
   };
 
-  // Lưu chỉnh sửa: kiểm tra khoảng ngày và từng bài tập rồi gửi lên server.
+  // Lưu chỉnh sửa: kiểm tra khoảng ngày và từng bài tập bắt buộc rồi gửi lên server.
   const submitEdit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!editing || busyId !== null) return;
+    if (!editing || busyId !== null || busyRef.current) return;
     if (!editing.startDate || !editing.endDate || editing.endDate < editing.startDate) {
       setFormError('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu.');
       return;
     }
-    const invalidExercise = editing.items.map(item => validateExercise(item)).find(Boolean);
+    const invalidExercise = editing.items.map(item => validateExercise(item, true)).find(Boolean);
     if (invalidExercise) { setFormError(invalidExercise); return; }
+    busyRef.current = true;
     setFormError('');
     setBusyId(editing.plan.id);
     try {
@@ -72,73 +86,94 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
         endDate: editing.endDate,
         items: editing.items,
       });
+      if (!mountedRef.current) return;
       setPlans((current) => current.map((item) => (item.id === updated.id ? { ...item, ...updated } : item)));
       setEditing(null);
       notify('Đã cập nhật giáo án.', 'success');
     } catch (err) {
-      setFormError(errorMessage(err, 'Không thể cập nhật giáo án.'));
+      if (mountedRef.current) setFormError(errorMessage(err, 'Không thể cập nhật giáo án.'));
     } finally {
-      setBusyId(null);
+      busyRef.current = false;
+      if (mountedRef.current) setBusyId(null);
     }
   };
 
   // Xóa giáo án (giáo án trong lịch sử thì gỡ khỏi lịch sử) sau khi xác nhận.
   const remove = async (plan: SavedTrainingPlan) => {
-    if (busyId !== null) return;
-    const confirmed = await confirm({
-      title: plan.status === 'superseded' ? staffMessage('Xóa giáo án khỏi lịch sử?', 'Remove this plan from history?') : plan.status === 'active' ? staffMessage('Ngừng áp dụng giáo án?', staffTranslation('Ngừng áp dụng giáo án?')) : staffMessage('Xóa giáo án nháp?', staffTranslation('Xóa giáo án nháp?')),
-      message: plan.status === 'superseded' ? staffMessage('Giáo án sẽ bị gỡ khỏi lịch sử và không thể áp dụng lại. Lịch sử tập đã ghi nhận được giữ lại.', 'The plan is removed from history and can no longer be re-applied. Recorded workout history is kept.') : plan.status === 'active' ? staffMessage('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.', staffTranslation('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.')) : staffMessage(`Giáo án của ${plan.memberName ?? `hội viên #${plan.memberId}`} sẽ bị xóa cùng toàn bộ bài tập. Không thể hoàn tác.`, `Training plan for ${plan.memberName ?? `member #${plan.memberId}`} will be deleted with all exercises. This cannot be undone.`),
-      confirmLabel: staffMessage('Xóa', staffTranslation('Xóa')),
-      danger: true,
-    });
-    if (!confirmed) return;
-    setBusyId(plan.id);
+    if (busyId !== null || busyRef.current) return;
+    busyRef.current = true;
     try {
+      const confirmed = await confirm({
+        title: plan.status === 'superseded' ? staffMessage('Xóa giáo án khỏi lịch sử?', 'Remove this plan from history?') : plan.status === 'active' ? staffMessage('Ngừng áp dụng giáo án?', staffTranslation('Ngừng áp dụng giáo án?')) : staffMessage('Xóa giáo án nháp?', staffTranslation('Xóa giáo án nháp?')),
+        message: plan.status === 'superseded' ? staffMessage('Giáo án sẽ bị gỡ khỏi lịch sử và không thể áp dụng lại. Lịch sử tập đã ghi nhận được giữ lại.', 'The plan is removed from history and can no longer be re-applied. Recorded workout history is kept.') : plan.status === 'active' ? staffMessage('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.', staffTranslation('Giáo án sẽ ngừng hiển thị cho hội viên. Lịch sử tập đã ghi nhận được giữ lại.')) : staffMessage(`Giáo án của ${plan.memberName ?? `hội viên #${plan.memberId}`} sẽ bị xóa cùng toàn bộ bài tập. Không thể hoàn tác.`, `Training plan for ${plan.memberName ?? `member #${plan.memberId}`} will be deleted with all exercises. This cannot be undone.`),
+        confirmLabel: staffMessage('Xóa', staffTranslation('Xóa')),
+        danger: true,
+      });
+      if (!confirmed || !mountedRef.current) return;
+      setBusyId(plan.id);
       await aiApi.deleteTrainingPlan(plan.id);
+      if (!mountedRef.current) return;
       setPlans((current) => current.filter((item) => item.id !== plan.id));
       notify(plan.status === 'superseded' ? 'Đã gỡ giáo án khỏi lịch sử.' : plan.status === 'active' ? 'Đã ngừng áp dụng giáo án.' : 'Đã xóa giáo án nháp.', 'success');
     } catch (err) {
-      notify(errorMessage(err, 'Không thể xóa giáo án.'), 'error');
+      if (mountedRef.current) notify(errorMessage(err, 'Không thể xóa giáo án.'), 'error');
     } finally {
-      setBusyId(null);
+      busyRef.current = false;
+      if (mountedRef.current) setBusyId(null);
     }
   };
 
   // Áp dụng lại giáo án trong lịch sử: giáo án đang áp dụng của cùng HLV cho hội viên đó sẽ chuyển vào lịch sử, có xác nhận trước.
   const reapply = async (plan: SavedTrainingPlan) => {
-    if (busyId !== null) return;
-    // Chỉ giáo án đang áp dụng của cùng HLV cho hội viên này bị chuyển vào lịch sử; giáo án của HLV khác giữ nguyên.
-    const current = plans.find((item) => item.status === 'active' && item.memberId === plan.memberId && item.coachId === plan.coachId);
-    const confirmed = await confirm({
-      title: staffMessage('Áp dụng lại giáo án này?', 'Re-apply this training plan?'),
-      message: staffMessage(
-        current
-          ? `Giáo án này sẽ trở thành giáo án đang áp dụng của ${plan.memberName ?? `hội viên #${plan.memberId}`}. Giáo án "${current.goal || 'đang áp dụng'}" hiện tại sẽ chuyển vào lịch sử.`
-          : `Giáo án này sẽ trở thành giáo án đang áp dụng của ${plan.memberName ?? `hội viên #${plan.memberId}`}.`,
-        current
-          ? `This plan becomes the active plan for ${plan.memberName ?? `member #${plan.memberId}`}. The current plan "${current.goal || 'in use'}" moves to history.`
-          : `This plan becomes the active plan for ${plan.memberName ?? `member #${plan.memberId}`}.`),
-      confirmLabel: staffMessage('Áp dụng lại', 'Re-apply'),
-    });
-    if (!confirmed) return;
-    setBusyId(plan.id);
+    if (busyId !== null || busyRef.current) return;
+    busyRef.current = true;
     try {
+      // Chỉ giáo án đang áp dụng của cùng HLV cho hội viên này bị chuyển vào lịch sử; giáo án của HLV khác giữ nguyên.
+      const current = plans.find((item) => item.status === 'active' && item.memberId === plan.memberId && item.coachId === plan.coachId);
+      const confirmed = await confirm({
+        title: staffMessage('Áp dụng lại giáo án này?', 'Re-apply this training plan?'),
+        message: staffMessage(
+          current
+            ? `Giáo án này sẽ trở thành giáo án đang áp dụng của ${plan.memberName ?? `hội viên #${plan.memberId}`}. Giáo án "${current.goal || 'đang áp dụng'}" hiện tại sẽ chuyển vào lịch sử.`
+            : `Giáo án này sẽ trở thành giáo án đang áp dụng của ${plan.memberName ?? `hội viên #${plan.memberId}`}.`,
+          current
+            ? `This plan becomes the active plan for ${plan.memberName ?? `member #${plan.memberId}`}. The current plan "${current.goal || 'in use'}" moves to history.`
+            : `This plan becomes the active plan for ${plan.memberName ?? `member #${plan.memberId}`}.`),
+        confirmLabel: staffMessage('Áp dụng lại', 'Re-apply'),
+      });
+      if (!confirmed || !mountedRef.current) return;
+      setBusyId(plan.id);
       await aiApi.reapplyTrainingPlan(plan.id);
+      if (!mountedRef.current) return;
       load();
       notify(current
         ? staffMessage('Đã áp dụng lại giáo án. Giáo án trước đó của HLV này được chuyển vào lịch sử.', "Training plan re-applied. This coach's previous plan moved to history.")
         : staffMessage('Đã áp dụng lại giáo án.', 'Training plan re-applied.'), 'success');
     } catch (err) {
-      notify(errorMessage(err, 'Không thể áp dụng lại giáo án.'), 'error');
+      if (mountedRef.current) notify(errorMessage(err, 'Không thể áp dụng lại giáo án.'), 'error');
     } finally {
-      setBusyId(null);
+      busyRef.current = false;
+      if (mountedRef.current) setBusyId(null);
     }
   };
 
+  const statusBadgeClass = (status: string): string => {
+    if (status === 'active') return 'badge-success';
+    if (status === 'completed') return 'badge-info';
+    if (status === 'superseded') return 'badge-neutral';
+    return 'badge-warning';
+  };
+
   return (
-    <section data-i18n-managed className="portal-card" aria-labelledby="saved-plans-heading" style={{ marginTop: '24px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-        <h2 id="saved-plans-heading" className="portal-card-title">{t("Giáo án đã lưu")}</h2>
+    <section
+      data-i18n-managed
+      className="portal-card"
+      aria-labelledby={hideHeading ? undefined : 'saved-plans-heading'}
+      aria-label={hideHeading ? t('Danh sách giáo án đã lưu', 'Saved training plans list') : undefined}
+      style={{ marginTop: hideHeading ? 0 : '24px' }}
+    >
+      <div style={{ display: 'flex', justifyContent: hideHeading ? 'flex-end' : 'space-between', alignItems: 'center', gap: '12px', marginBottom: hideHeading ? '12px' : undefined }}>
+        {!hideHeading && <h2 id="saved-plans-heading" className="portal-card-title">{t("Giáo án đã lưu")}</h2>}
         <button type="button" className="btn-secondary btn-sm" onClick={load} disabled={loading}>{t("Tải lại")}</button>
       </div>
       {loading ? (
@@ -169,10 +204,10 @@ export function SavedTrainingPlans({ refreshKey = 0 }: { refreshKey?: number }) 
                   <tr data-i18n-managed key={plan.id}>
                     <td className="saved-plan-member"><strong>{plan.memberName ?? `#${plan.memberId}`}</strong>{plan.coachName && <div className="muted">{t("HLV")}: {plan.coachName}</div>}</td>
                     <td style={{ minWidth: '180px' }}>{plan.goal || <span className="muted">—</span>}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{formatDate(plan.startDate)} – {formatDate(plan.endDate)}</td>
-                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{plan.items?.length ?? 0}</td>
+                    <td style={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{formatCenterDate(plan.startDate)} – {formatCenterDate(plan.endDate)}</td>
+                    <td style={{ textAlign: 'center', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{plan.items?.length ?? 0}</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <span className={`badge ${plan.status === 'active' ? 'badge-success' : plan.status === 'superseded' ? 'badge-neutral' : 'badge-warning'}`}>
+                      <span className={`badge ${statusBadgeClass(plan.status)}`}>
                         {t(STATUS_LABEL[plan.status]) || plan.status}
                       </span>
                     </td>

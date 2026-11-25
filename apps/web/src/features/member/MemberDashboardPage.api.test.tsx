@@ -17,7 +17,7 @@ it('renders a member without a subscription using the real API client and an omi
     // Giả lập phần thân JSON của phản hồi API.
     json: async () => ({
       success: true, status: 200, message: 'OK', timestamp: '2026-10-18T22:45:00',
-      ...(url.includes('/coach-bookings/') ? { data: [] } : {}),
+      ...(url.includes('/coach-bookings/') || url.includes('/classes/') ? { data: [] } : {}),
     }),
   })));
   const host = document.createElement('div');
@@ -26,10 +26,10 @@ it('renders a member without a subscription using the real API client and an omi
   try {
     await act(async () => root.render(<MemoryRouter><MemberDashboardPage /></MemoryRouter>));
     expect(host.textContent).toContain('Chưa có gói tập đang hoạt động');
-    expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
+    expect(host.textContent).toContain('Bạn chưa có lịch tập sắp tới.');
     expect(host.querySelector('a[href="/member/packages"]')).not.toBeNull();
     const paths = vi.mocked(fetch).mock.calls.map(([path]) => String(path));
-    expect(paths.some(path => path.includes('/classes/'))).toBe(false);
+    expect(paths.some(path => path.includes('/classes/enrollments/my'))).toBe(true);
     expect(paths.some(path => path.includes('/coach-bookings/my'))).toBe(true);
     // Bản sửa lỗi truyền tải tương tự cũng phải áp dụng cho gói tập và thẻ hội viên.
     await expect(getCurrentMembership()).resolves.toBeNull();

@@ -1,4 +1,4 @@
-import { createContext, useContext, useLayoutEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 import { useI18n } from '../i18n';
 import './theme.css';
@@ -21,6 +21,7 @@ type ViewTransitionDocument = Document & {
  * theme có hiệu ứng lan tròn (bỏ qua khi tắt animation).
  */
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  const vtSeqRef = useRef(0);
   const [theme, setTheme] = useState<Theme>(() => {
     try { return localStorage.getItem('scms_theme') === 'dark' ? 'dark' : 'light'; }
     catch { return 'light'; }
@@ -30,6 +31,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'light' ? '#f5f5f3' : '#202020');
     try { localStorage.setItem('scms_theme', theme); } catch { /* Giao diện vẫn hoạt động khi không có storage. */ }
   }, [theme]);
+  useEffect(() => () => {
+    vtSeqRef.current += 1;
+    delete document.documentElement.dataset.themeVt;
+  }, []);
   // Đổi theme, dùng View Transitions để vòng tròn theme mới lan từ điểm bấm.
   const toggle = (origin?: ToggleOrigin) => {
     // Đảo giữa sáng và tối.
@@ -42,15 +47,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const x = origin?.x ?? window.innerWidth / 2;
     const y = origin?.y ?? window.innerHeight / 2;
     const radius = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
+    const seq = ++vtSeqRef.current;
     rootElement.dataset.themeVt = '';
     const transition = doc.startViewTransition(() => { flushSync(swap); });
     transition.ready.then(() => {
+      if (vtSeqRef.current !== seq) return;
       rootElement.animate(
         { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
         { duration: REVEAL_MS, easing: 'cubic-bezier(.22, 1, .36, 1)', pseudoElement: '::view-transition-new(root)' },
       );
     }).catch(() => { /* Bỏ qua hiệu ứng chuyển cảnh: theme đã được đổi xong. */ });
-    transition.finished.catch(() => undefined).finally(() => { delete rootElement.dataset.themeVt; });
+    transition.finished.catch(() => undefined).finally(() => {
+      if (vtSeqRef.current === seq) delete rootElement.dataset.themeVt;
+    });
   };
   return <ThemeContext.Provider value={{ theme, toggle }}>{children}</ThemeContext.Provider>;
 }

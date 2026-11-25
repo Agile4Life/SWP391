@@ -160,3 +160,46 @@ it('keeps an escalated ticket read-only for the receptionist', async () => {
   await vi.waitFor(() => expect(host.querySelector('[data-testid="escalation-info"]')).not.toBeNull());
   expect(host.querySelector('textarea#staff-support-message')).toBeNull();
 });
+
+it('P1-FE-65: isolates sendError from escalation and status-change errors so ChatComposer stays healthy', async () => {
+  vi.mocked(supportApi.escalateSupportTicket).mockRejectedValueOnce(new ApiError('Không chuyển được', 500));
+  vi.mocked(supportApi.updateSupportStatus).mockRejectedValueOnce(new ApiError('Lỗi đổi trạng thái', 500));
+  await openTicket();
+  await type('Đang soạn trả lời');
+  const sendBtn = host.querySelector<HTMLButtonElement>('form.direct-chat__compose button[type="submit"]')!;
+  expect(sendBtn.textContent).toBe('Gửi');
+
+  // Escalation failure stays inside modal and cancelling does not turn Send into "Gửi lại"
+  await act(async () => (host.querySelector('button[aria-label="Chuyển lên quản lý"]') as HTMLButtonElement).click());
+  const reason = host.querySelector<HTMLTextAreaElement>('#staff-support-escalation')!;
+  await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(reason, 'Cần hỗ trợ'); reason.dispatchEvent(new Event('input', { bubbles: true })); });
+  await act(async () => host.querySelector('dialog form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Không chuyển được');
+  expect(sendBtn.textContent).toBe('Gửi');
+
+  await act(async () => (host.querySelector('dialog button.btn-secondary') as HTMLButtonElement).click());
+  expect(host.querySelector('dialog')).toBeNull();
+  expect(sendBtn.textContent).toBe('Gửi');
+  expect(host.querySelector('#staff-support-message-error')).toBeNull();
+
+  // Status update failure shows its own alert without turning Send into "Gửi lại"
+  await act(async () => byText('Đang xử lý').click());
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Lỗi đổi trạng thái');
+  expect(sendBtn.textContent).toBe('Gửi');
+  expect(host.querySelector('#staff-support-message-error')).toBeNull();
+});
+
+it('P3-FE-30: localizes category prefix [Thiết bị]/[Gói tập] in English mode while preserving ticket title', async () => {
+  const pkgTicket = { ...ticket, id: 9, subject: '[Gói tập] Gia hạn hội viên' } as supportApi.SupportTicket;
+  vi.mocked(supportApi.getSupportInbox).mockResolvedValue({ content: [pkgTicket], totalPages: 1 });
+  vi.mocked(supportApi.getSupportTicket).mockResolvedValue(pkgTicket);
+  await render();
+  await vi.waitFor(() => expect(host.querySelector('[data-support-ticket="9"]')).not.toBeNull());
+  expect(host.querySelector('[data-support-ticket="9"] strong')?.textContent).toBe('#9 · [Gói tập] Gia hạn hội viên');
+
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('[data-support-ticket="9"] strong')?.textContent).toBe('#9 · [Membership] Gia hạn hội viên');
+
+  await act(async () => (host.querySelector('[data-support-ticket="9"]') as HTMLButtonElement).click());
+  await vi.waitFor(() => expect(host.querySelector('.support-chat__ticketbar-subject')?.textContent).toBe('[Membership] Gia hạn hội viên'));
+});

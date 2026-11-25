@@ -9,7 +9,7 @@ import type { ChatConnection } from './chatRealtime';
 import type { ChatError } from './chatMessages';
 import { ChatComposer } from './ChatComposer';
 import { HeaderAction, SupportHeader, SupportTranscript } from './SupportChatParts';
-import { SUPPORT_MESSAGE_MAX, SUPPORT_STATUS_LABEL, isAccessDenied, supportBubbles, supportError, uniqueMessages } from './supportChat';
+import { SUPPORT_MESSAGE_MAX, SUPPORT_STATUS_LABEL, isAccessDenied, localizedSubject, supportBubbles, supportError, uniqueMessages } from './supportChat';
 import '../member/member-support.css';
 import './support-chat.css';
 
@@ -39,7 +39,9 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const [accessDenied, setAccessDenied] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
+  const [sendError, setSendError] = useState<ChatError | null>(null);
   const [actionError, setActionError] = useState<ChatError | null>(null);
+  const [escalationError, setEscalationError] = useState<ChatError | null>(null);
   const [pending, setPending] = useState<string | null>(null);
   const [escalating, setEscalating] = useState(false);
   const [reason, setReason] = useState('');
@@ -49,7 +51,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const listGeneration = useRef(0);
   const detailGeneration = useRef(0);
   const listQuery = useRef<{ page: number; filter: '' | Status }>({ page: 0, filter: '' });
-  const busyRef = useRef(false);
+  const busyIds = useRef(new Set<number>());
   const sendKeys = useRef(new Map<number, { text: string; key: string }>());
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; selection.current = null; }; }, []);
@@ -124,13 +126,17 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   function open(item: SupportTicket) {
     detailGeneration.current++;
     selection.current = item.id;
-    setTicket(item); setMessages([]); setDetailError(null); setAccessDenied(false); setActionError(null); setPending(null);
+    setTicket(item); setMessages([]); setDetailError(null); setAccessDenied(false);
+    setSendError(null); setActionError(null); setEscalationError(null); setPending(null);
+    setBusy(busyIds.current.has(item.id));
     setDetailLoading(true); setEscalating(false); setReason(''); setSelected(item.id);
   }
   // Đóng phiếu đang xem, quay về danh sách và tải lại.
   function close() {
     selection.current = null; detailGeneration.current++;
-    setSelected(null); setTicket(null); setMessages([]); setActionError(null); setPending(null); setEscalating(false); setReason('');
+    setSelected(null); setTicket(null); setMessages([]);
+    setSendError(null); setActionError(null); setEscalationError(null); setPending(null);
+    setBusy(false); setEscalating(false); setReason('');
     void loadList(true);
   }
   // Đổi trang hoặc bộ lọc trạng thái rồi tải lại danh sách.
@@ -145,30 +151,42 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const canEscalate = canAct && !manager && (ticket!.status === 'open' || ticket!.status === 'in_progress');
   const draft = selected != null ? drafts[selected] ?? '' : '';
 
-  // Thực hiện một thao tác lên phiếu (gửi, đổi trạng thái, chuyển cấp...) với khóa chống bấm đúp.
-  async function act(operation: () => Promise<unknown>, onDone?: () => void) {
-    if (!ticket || busyRef.current || detailLoading || accessDenied) return;
+  // Thực hiện một thao tác lên phiếu (gửi, đổi trạng thái, chuyển cấp...) với khóa chống bấm đúp và tách lỗi riêng.
+  async function act(kind: 'send' | 'status' | 'escalate', operation: () => Promise<unknown>, onDone?: () => void) {
+    if (!ticket || busyIds.current.has(ticket.id) || detailLoading || accessDenied) return;
     const id = ticket.id;
-    busyRef.current = true; setBusy(true); setActionError(null);
+    busyIds.current.add(id); setBusy(true);
+    if (kind === 'send') setSendError(null);
+    else if (kind === 'status') setActionError(null);
+    else setEscalationError(null);
     try {
       await operation();
       if (!alive.current) return;
       onDone?.();
       void loadList(true);
       if (selection.current === id) await loadDetail(id, true);
-    } catch (cause) { if (alive.current) setActionError(supportError(cause)); }
-    finally { busyRef.current = false; if (alive.current) { setBusy(false); setPending(null); } }
+    } catch (cause) {
+      if (alive.current && selection.current === id) {
+        const err = supportError(cause);
+        if (kind === 'send') setSendError(err);
+        else if (kind === 'status') setActionError(err);
+        else setEscalationError(err);
+      }
+    } finally {
+      busyIds.current.delete(id);
+      if (alive.current && selection.current === id) { setBusy(false); setPending(null); }
+    }
   }
   // Gửi tin nhắn trả lời; mỗi nội dung dùng một khóa riêng để gửi lại không bị trùng.
   function send() {
-    if (!ticket || !canAct || ticket.status === 'closed') return;
+    if (!ticket || !canAct || ticket.status === 'closed' || busyIds.current.has(ticket.id) || detailLoading || accessDenied) return;
     const id = ticket.id, text = draft.trim();
     if (!text || text.length > SUPPORT_MESSAGE_MAX) return;
     let attempt = sendKeys.current.get(id);
     if (!attempt || attempt.text !== text) { attempt = { text, key: crypto.randomUUID() }; sendKeys.current.set(id, attempt); }
     const key = attempt.key;
     setPending(text);
-    void act(() => sendSupportMessage(id, text, key), () => {
+    void act('send', () => sendSupportMessage(id, text, key), () => {
       sendKeys.current.delete(id);
       setDrafts(values => values[id] === draft ? { ...values, [id]: '' } : values);
     });
@@ -176,21 +194,31 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   // Đổi trạng thái phiếu theo các chuyển đổi cho phép.
   function changeStatus(status: Status) {
     if (!ticket || status === ticket.status) return;
-    void act(() => updateSupportStatus(ticket.id, status));
+    const id = ticket.id;
+    void act('status', () => updateSupportStatus(id, status));
   }
   // Gửi chuyển cấp khiếu nại lên quản lý kèm lý do tối đa 500 ký tự.
   function submitEscalation(event: FormEvent) {
     event.preventDefault();
     const text = reason.trim();
     if (!ticket || !canEscalate || !text || text.length > 500) return;
-    void act(() => escalateSupportTicket(ticket.id, text), () => { setEscalating(false); setReason(''); });
+    const id = ticket.id;
+    void act('escalate', () => escalateSupportTicket(id, text), () => {
+      if (selection.current === id) { setEscalating(false); setReason(''); setEscalationError(null); }
+    });
   }
 
   // Các bong bóng chat dựng từ phiếu và tin nhắn (nhân sự là "tôi").
   const bubbles = useMemo(() => supportBubbles(ticket, messages, false), [ticket, messages]);
   // Tên hội viên của phiếu (không có tên thì hiện "Hội viên #id").
   const memberName = (item: SupportTicket) => item.memberName || t(`Hội viên #${item.memberId}`, `Member #${item.memberId}`);
-  const connectionText = connection === 'reconnecting' ? t('Mất kết nối trực tiếp · đang thử lại', 'Live connection lost · reconnecting') : connection === 'connected' ? t('Cập nhật trực tiếp', 'Live updates') : t('Tự động đồng bộ phiếu', 'Auto-syncing tickets');
+  const connectionText = connection === 'reconnecting'
+    ? t('Mất kết nối trực tiếp · đang thử lại', 'Live connection lost · reconnecting')
+    : connection === 'connected'
+      ? t('Cập nhật trực tiếp', 'Live updates')
+      : connection === 'connecting'
+        ? t('Đang kết nối…', 'Connecting…')
+        : t('Tự động đồng bộ phiếu', 'Auto-syncing tickets');
 
   if (selected === null) {
     return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
@@ -211,7 +239,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
                 const pair = SUPPORT_STATUS_LABEL[item.status];
                 return <li key={item.id}><button type="button" data-support-ticket={item.id} className="direct-chat__person" onClick={() => open(item)}>
                   <span className="direct-chat__person-info">
-                    <strong data-i18n-managed>#{item.id} · {item.subject}</strong>
+                    <strong data-i18n-managed>#{item.id} · {localizedSubject(item.subject, t)}</strong>
                     <span className="direct-chat__person-sub"><small data-i18n-managed className="direct-chat__preview">{memberName(item)} · {formatCenterDate(item.createdAt)}{item.assignedToName ? ` · ${item.assignedToName}` : ''}</small></span>
                   </span>
                   <span className="support-chat__badges">
@@ -232,34 +260,35 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const closed = ticket?.status === 'closed';
   return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
     <SupportHeader onBack={close} active={active} title={ticket ? memberName(ticket) : `#${selected}`} subtitle={ticket ? `#${ticket.id} · ${pair ? t(...pair) : ticket.status}${ticket.assignedToName ? ` · ${ticket.assignedToName}` : ''}` : t('Đang tải phiếu…', 'Loading ticket…')}>
-      {canEscalate && <HeaderAction label={t('Chuyển lên quản lý', 'Escalate to management')} disabled={busy || detailLoading} onClick={() => { setReason(''); setActionError(null); setEscalating(true); }}>
+      {canEscalate && <HeaderAction label={t('Chuyển lên quản lý', 'Escalate to management')} disabled={busy || detailLoading} onClick={() => { setReason(''); setEscalationError(null); setEscalating(true); }}>
         <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
       </HeaderAction>}
     </SupportHeader>
     {detailError && <div role="alert" className="direct-chat__error"><p>{t(detailError)}</p>{!accessDenied && <button type="button" className="direct-chat__link" onClick={() => void loadDetail(selected)}>{t('Thử lại', 'Retry')}</button>}</div>}
-    {ticket && <div className="support-chat__toolbar"><p className="support-chat__ticketbar" title={ticket.subject}><span className="support-chat__ticketbar-subject">{ticket.subject}</span>
+    {ticket && <div className="support-chat__toolbar"><p className="support-chat__ticketbar" title={localizedSubject(ticket.subject, t)}><span className="support-chat__ticketbar-subject">{localizedSubject(ticket.subject, t)}</span>
       {ticket.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}</p></div>}
     {ticket?.escalatedAt && <p role="status" data-testid="escalation-info" className="direct-chat__muted support-chat__note">
       {t('Đã chuyển lên quản lý', 'Escalated to management')}{ticket.escalatedByName ? ` · ${ticket.escalatedByName}` : ''} · {formatCenterDateTime(ticket.escalatedAt)}{ticket.escalationReason ? ` — ${ticket.escalationReason}` : ''}. {manager ? t('Trả lời hội viên và cập nhật trạng thái tại đây.', 'Reply to the member and update the status here.') : t('Quản lý đang xử lý, lễ tân chỉ xem.', 'A manager is handling it; the front desk can only view.')}</p>}
     {canAct && ticket && !closed && <div className="support-chat__categories" role="radiogroup" aria-label={t('Trạng thái phiếu', 'Ticket status')}>
       {STATUSES.filter(value => TRANSITIONS[ticket.status].includes(value)).map(value => <button key={value} type="button" role="radio" aria-checked={ticket.status === value} className={`support-chat__chip${ticket.status === value ? ' is-selected' : ''}`} disabled={busy || detailLoading} onClick={() => changeStatus(value)}>{t(...SUPPORT_STATUS_LABEL[value])}</button>)}
     </div>}
+    {actionError && <p role="alert" className="direct-chat__error">{t(actionError)}</p>}
     <SupportTranscript label={t('Lịch sử hỗ trợ', 'Support history')} bubbles={bubbles} pending={pending} loading={detailLoading && messages.length === 0} fallbackName={t('Hội viên', 'Member')}
       empty={<p className="direct-chat__empty">{t('Chưa có tin nhắn.', 'No messages yet.')}</p>} />
     {closed
       ? <div className="direct-chat__compose support-chat__closed"><p className="direct-chat__muted">{t('Phiếu đã đóng, không thể gửi thêm tin nhắn.', 'This ticket is closed. No further messages can be sent.')}</p></div>
       : canAct
-        ? <ChatComposer id="staff-support-message" label={t('Trả lời hội viên', 'Reply to member')} value={draft} onChange={value => { setDrafts(values => ({ ...values, [selected]: value })); setActionError(null); }} onSubmit={send}
-          disabled={detailLoading || accessDenied || !ticket} sending={busy && !!pending} failed={!!actionError && !!draft} maxLength={SUPPORT_MESSAGE_MAX} placeholder={t('Nhập nội dung phản hồi…', 'Enter your reply…')}
-          error={actionError ? t(actionError) : null} />
-        : actionError ? <p role="alert" className="direct-chat__error">{t(actionError)}</p> : null}
-    {escalating && ticket && <Modal title={t(`Chuyển lên quản lý · Phiếu #${ticket.id}`, `Escalate to management · Ticket #${ticket.id}`)} busy={busy} onClose={() => { if (!busy) setEscalating(false); }}>
+        ? <ChatComposer id="staff-support-message" label={t('Trả lời hội viên', 'Reply to member')} value={draft} onChange={value => { setDrafts(values => ({ ...values, [selected]: value })); setSendError(null); }} onSubmit={send}
+          disabled={detailLoading || accessDenied || !ticket} sending={busy && !!pending} failed={!!sendError} maxLength={SUPPORT_MESSAGE_MAX} placeholder={t('Nhập nội dung phản hồi…', 'Enter your reply…')}
+          error={sendError ? t(sendError) : null} />
+        : null}
+    {escalating && ticket && <Modal title={t(`Chuyển lên quản lý · Phiếu #${ticket.id}`, `Escalate to management · Ticket #${ticket.id}`)} busy={busy} onClose={() => { if (!busy) { setEscalating(false); setEscalationError(null); } }}>
       <form className="member-support-compose" onSubmit={submitEscalation}>
         <p className="member-support-context">{t('Sau khi chuyển, Quản lý sẽ xử lý phiếu này.', 'Once escalated, a manager will handle this ticket.')}</p>
         <label className="portal-label" htmlFor="staff-support-escalation">{t('Lý do chuyển lên quản lý', 'Reason for escalation')}</label>
         <textarea id="staff-support-escalation" className="portal-textarea" rows={3} maxLength={500} required value={reason} onChange={event => setReason(event.target.value)} />
-        {actionError && <p role="alert" className="member-support-error">{t(actionError)}</p>}
-        <div className="form-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => setEscalating(false)}>{t('Hủy', 'Cancel')}</button><button type="submit" className="btn-primary" disabled={busy || !reason.trim()}>{busy ? t('Đang chuyển…', 'Escalating…') : t('Chuyển lên quản lý', 'Escalate to management')}</button></div>
+        {escalationError && <p role="alert" className="member-support-error">{t(escalationError)}</p>}
+        <div className="form-actions"><button type="button" className="btn-secondary" disabled={busy} onClick={() => { setEscalating(false); setEscalationError(null); }}>{t('Hủy', 'Cancel')}</button><button type="submit" className="btn-primary" disabled={busy || !reason.trim()}>{busy ? t('Đang chuyển…', 'Escalating…') : t('Chuyển lên quản lý', 'Escalate to management')}</button></div>
       </form>
     </Modal>}
   </section>;

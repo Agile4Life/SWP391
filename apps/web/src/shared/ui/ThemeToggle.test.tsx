@@ -79,3 +79,34 @@ it('switches instantly when the user prefers reduced motion', async () => {
   vi.unstubAllGlobals();
   delete (document as unknown as { startViewTransition?: unknown }).startViewTransition;
 });
+
+it('keeps data-theme-vt intact on rapid clicks until the latest view transition finishes', async () => {
+  const finishResolvers: Array<() => void> = [];
+  const animate = vi.fn();
+  (document.documentElement as unknown as { animate: unknown }).animate = animate;
+  const start = vi.fn((update: () => void) => {
+    update();
+    return {
+      ready: Promise.resolve(),
+      finished: new Promise<void>((resolve) => { finishResolvers.push(resolve); }),
+    };
+  });
+  (document as unknown as { startViewTransition: unknown }).startViewTransition = start;
+  try {
+    await render();
+    const button = host.querySelector('button')!;
+    await act(async () => button.click());
+    await act(async () => button.click());
+    expect(document.documentElement.hasAttribute('data-theme-vt')).toBe(true);
+
+    // Kết thúc transition cũ hơn trước -> không được xóa sớm data-theme-vt của transition mới
+    await act(async () => { finishResolvers[0](); await Promise.resolve(); });
+    expect(document.documentElement.hasAttribute('data-theme-vt')).toBe(true);
+
+    await act(async () => { finishResolvers[1](); await Promise.resolve(); });
+    expect(document.documentElement.hasAttribute('data-theme-vt')).toBe(false);
+  } finally {
+    delete (document as unknown as { startViewTransition?: unknown }).startViewTransition;
+    delete (document.documentElement as unknown as { animate?: unknown }).animate;
+  }
+});

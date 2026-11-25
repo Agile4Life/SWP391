@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { ApiError } from '../../../shared/api/client';
 import { Modal } from '../../../shared/ui/Modal';
 import { Select } from '../../../shared/ui/Select';
 import { DatePicker } from '../../../shared/ui/DatePicker';
@@ -6,7 +7,6 @@ import { useI18n } from '../../../shared/i18n';
 import { formatCenterDate } from '../../../shared/lib/centerTime';
 import { errorMessage } from '../../../shared/lib/errorMessage';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
-import { addDays } from '../../../shared/lib/recurrence';
 import type { Discipline, Room } from '../../manager/catalogApi';
 import {
   SCHEDULE_SLOTS,
@@ -14,7 +14,7 @@ import {
   type ScheduleSlot,
   type ScheduleSlotCode,
 } from '../../schedule/slots';
-import { disciplineAccentColor, todayISO } from '../../schedule/timetable';
+import { addDays, disciplineAccentColor, todayISO } from '../../schedule/timetable';
 import {
   classesApi,
   type ClassItem,
@@ -46,7 +46,7 @@ type WizardStep = 1 | 2 | 3 | 4;
 
 function weekdayCodeForIso(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number);
-  return JS_DAY_TO_CODE[new Date(y, m - 1, d, 12).getDay()] ?? 'MONDAY';
+  return JS_DAY_TO_CODE[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] ?? 'MONDAY';
 }
 
 function ScheduleSlotPicker({
@@ -156,11 +156,15 @@ export function CreateClassOrSessionModal({
     return matched?.code ?? SCHEDULE_SLOTS[0].code;
   });
 
-  // Trạng thái kiểm tra lịch trống trực tiếp từ backend
-  const [availability, setAvailability] = useState<RecurringAvailabilityDto | null>(null);
+  // Trạng thái kiểm tra lịch trống trực tiếp từ backend (gắn chữ ký đầu vào để vô hiệu hóa dữ liệu cũ ngay khi sửa lịch)
+  const [availabilityState, setAvailabilityState] = useState<{
+    key: string;
+    data: RecurringAvailabilityDto;
+  } | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [availabilityRetryTick, setAvailabilityRetryTick] = useState(0);
+  const [needsStep3Recheck, setNeedsStep3Recheck] = useState(false);
   const availabilityReqRef = useRef(0);
 
   // Bước 3: Phòng tập, sĩ số & HLV
@@ -179,6 +183,15 @@ export function CreateClassOrSessionModal({
   const selectedSlot: ScheduleSlot = useMemo(
     () => SCHEDULE_SLOTS.find((slot) => slot.code === selectedSlotCode) ?? SCHEDULE_SLOTS[0],
     [selectedSlotCode],
+  );
+
+  const currentAvailabilityKey = `${disciplineId}|${startDate}|${endDate}|${sortedDaysKey}|${selectedSlot.number}`;
+  const availability =
+    availabilityState && availabilityState.key === currentAvailabilityKey
+      ? availabilityState.data
+      : null;
+  const isAvailabilityStale = Boolean(
+    availabilityState && availabilityState.key !== currentAvailabilityKey,
   );
 
   const selectedDiscipline = useMemo(
@@ -216,19 +229,24 @@ export function CreateClassOrSessionModal({
     [capacity, selectedRoom, t],
   );
 
-  // Tự động kiểm tra lịch trống 5 Slot, phòng và HLV mỗi khi vào Bước 2 hoặc đổi lịch/slot/bộ môn.
+  // Tự động kiểm tra lịch trống 5 Slot, phòng và HLV mỗi khi vào Bước 2, đổi lịch/slot/bộ môn,
+  // hoặc quay về Bước 3 sau lỗi 409 Conflict ở Bước 4 / bấm kiểm tra lại trên Bước 3.
   useEffect(() => {
-    if (step !== 2) return;
+    const isStep2 = step === 2;
+    const isStep3Recheck = step === 3 && needsStep3Recheck;
+    if (!isStep2 && !isStep3Recheck) return;
     if (!disciplineId || step2LocalError) {
       availabilityReqRef.current += 1;
       setCheckingAvailability(false);
-      setAvailability(null);
+      setAvailabilityState(null);
       setAvailabilityError(null);
+      if (isStep3Recheck) setNeedsStep3Recheck(false);
       return;
     }
 
     let alive = true;
     const reqId = ++availabilityReqRef.current;
+    const requestKey = currentAvailabilityKey;
     setCheckingAvailability(true);
     setAvailabilityError(null);
 
@@ -244,11 +262,19 @@ export function CreateClassOrSessionModal({
       })
       .then((res) => {
         if (!alive || availabilityReqRef.current !== reqId) return;
-        setAvailability(res);
+        setAvailabilityState({ key: requestKey, data: res });
+        if (isStep3Recheck) {
+          setNeedsStep3Recheck(false);
+          if (res.validSchedule) {
+            setRoomId((prev) => (res.rooms.some((r) => String(r.id) === prev && r.available) ? prev : ''));
+            setCoachId((prev) => (res.coaches.some((c) => String(c.id) === prev && c.available) ? prev : ''));
+          }
+        }
       })
       .catch((err) => {
         if (!alive || availabilityReqRef.current !== reqId) return;
-        setAvailability(null);
+        setAvailabilityState(null);
+        if (isStep3Recheck) setNeedsStep3Recheck(false);
         setAvailabilityError(
           errorMessage(
             err,
@@ -269,12 +295,14 @@ export function CreateClassOrSessionModal({
     };
   }, [
     step,
+    needsStep3Recheck,
     disciplineId,
     startDate,
     endDate,
     sortedDaysKey,
     selectedSlot.startApi,
     selectedSlot.endApi,
+    currentAvailabilityKey,
     step2LocalError,
     availabilityRetryTick,
     t,
@@ -282,6 +310,8 @@ export function CreateClassOrSessionModal({
 
   const toggleDay = (code: string) => {
     setError(null);
+    setAvailabilityState(null);
+    setAvailabilityError(null);
     setRecurringDays((prev) =>
       prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code],
     );
@@ -403,6 +433,15 @@ export function CreateClassOrSessionModal({
       });
       onSuccess(t('Đã tạo khóa học định kỳ thành công.', 'Recurring course created successfully.'));
     } catch (err) {
+      const isConflict =
+        (err instanceof ApiError && err.status === 409) ||
+        (typeof err === 'object' &&
+          err !== null &&
+          'status' in err &&
+          (err as { status?: number }).status === 409);
+      if (isConflict) {
+        setNeedsStep3Recheck(true);
+      }
       setError(
         errorMessage(
           err,
@@ -448,17 +487,17 @@ export function CreateClassOrSessionModal({
         unavailable: false,
       };
     }
+    if (info.conflictCode === 'SCHEDULING_PAST_SESSION') {
+      return {
+        text: t('Đã qua giờ', 'Past slot'),
+        unavailable: true,
+      };
+    }
     if (info.disciplineConflict) {
       return {
         text: selectedDiscipline
           ? t(`Trùng lịch môn ${selectedDiscipline.name}`, `${selectedDiscipline.name} overlap`)
           : t('Trùng lịch cùng bộ môn', 'Discipline overlap'),
-        unavailable: true,
-      };
-    }
-    if (info.conflictCode === 'SCHEDULING_PAST_SESSION') {
-      return {
-        text: t('Đã qua giờ', 'Past slot'),
         unavailable: true,
       };
     }
@@ -546,7 +585,7 @@ export function CreateClassOrSessionModal({
                 value={disciplineId}
                 onChange={(e) => {
                   setDisciplineId(e.target.value);
-                  setAvailability(null);
+                  setAvailabilityState(null);
                   setAvailabilityError(null);
                   setError(null);
                 }}
@@ -657,6 +696,8 @@ export function CreateClassOrSessionModal({
                   value={startDate}
                   onChange={(e) => {
                     setStartDate(e.target.value);
+                    setAvailabilityState(null);
+                    setAvailabilityError(null);
                     setError(null);
                   }}
                 />
@@ -670,6 +711,8 @@ export function CreateClassOrSessionModal({
                   value={endDate}
                   onChange={(e) => {
                     setEndDate(e.target.value);
+                    setAvailabilityState(null);
+                    setAvailabilityError(null);
                     setError(null);
                   }}
                 />
@@ -725,6 +768,8 @@ export function CreateClassOrSessionModal({
                       disabled={busy}
                       onClick={() => {
                         setSelectedSlotCode(slot.code);
+                        setAvailabilityState(null);
+                        setAvailabilityError(null);
                         setError(null);
                       }}
                     >
@@ -853,10 +898,61 @@ export function CreateClassOrSessionModal({
                   </span>
                 </>
               )}
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                data-testid="wizard-step3-recheck-btn"
+                style={{ marginLeft: 'auto' }}
+                disabled={busy || checkingAvailability}
+                onClick={() => {
+                  setError(null);
+                  setNeedsStep3Recheck(true);
+                  setAvailabilityRetryTick((tick) => tick + 1);
+                }}
+              >
+                {checkingAvailability ? t('Đang kiểm tra...', 'Checking...') : t('Kiểm tra lại', 'Re-check')}
+              </button>
             </div>
+
+            {checkingAvailability && (
+              <div className="class-wizard__summary" role="status" data-testid="wizard-step3-checking">
+                {t('Đang cập nhật trạng thái phòng tập và HLV...', 'Refreshing room and coach availability...')}
+              </div>
+            )}
+
+            {!checkingAvailability && availabilityError && (
+              <div className="class-wizard__summary is-error" role="alert">
+                <div className="class-wizard__summary-row">
+                  <span>{availabilityError}</span>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={() => {
+                      setNeedsStep3Recheck(true);
+                      setAvailabilityRetryTick((tick) => tick + 1);
+                    }}
+                  >
+                    {t('Thử kiểm tra lại', 'Retry check')}
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="portal-form-group">
               <span className="portal-label">{t('Phòng tập', 'Room')}</span>
+              {!checkingAvailability && !availabilityError && resolvedRooms.filter((r) => r.available).length === 0 && (
+                <div className="portal-alert portal-alert--error" role="alert" data-testid="wizard-no-rooms-alert" style={{ marginBottom: 8 }}>
+                  {resolvedRooms.length === 0
+                    ? t(
+                        'Hiện không có phòng tập khả dụng nào trong trung tâm (tất cả phòng đang bảo trì hoặc đóng). Vui lòng mở lại phòng hoặc đổi lịch.',
+                        'No available rooms were returned (all rooms may be under maintenance or closed). Please reopen a room or adjust the schedule.',
+                      )
+                    : t(
+                        'Không có phòng tập nào còn trống cho khung giờ này. Vui lòng quay lại Bước 2 để chọn slot hoặc ngày khác.',
+                        'No rooms are free for this time slot. Go back to Step 2 to pick another slot or date range.',
+                      )}
+                </div>
+              )}
               <div
                 className="class-wizard__options"
                 role="radiogroup"
@@ -948,6 +1044,19 @@ export function CreateClassOrSessionModal({
 
             <div className="portal-form-group">
               <span className="portal-label">{t('Huấn luyện viên', 'Coach')}</span>
+              {!checkingAvailability && !availabilityError && resolvedCoaches.filter((c) => c.available).length === 0 && (
+                <div className="portal-alert portal-alert--error" role="alert" data-testid="wizard-no-coaches-alert" style={{ marginBottom: 8 }}>
+                  {resolvedCoaches.length === 0
+                    ? t(
+                        'Hiện không có huấn luyện viên nào đang hoạt động. Vui lòng kích hoạt tài khoản HLV trước khi mở lớp.',
+                        'No active coaches are available. Please activate a coach account before creating this course.',
+                      )
+                    : t(
+                        'Không có huấn luyện viên nào sẵn sàng cho khung giờ này. Vui lòng quay lại Bước 2 để đổi lịch.',
+                        'No coaches are available for this time slot. Go back to Step 2 to adjust the schedule.',
+                      )}
+                </div>
+              )}
               <div
                 className="class-wizard__options"
                 role="radiogroup"
@@ -1099,7 +1208,7 @@ export function CreateClassOrSessionModal({
               type="button"
               className="btn-primary"
               data-testid="wizard-next-btn"
-              disabled={busy || (step === 2 && checkingAvailability)}
+              disabled={busy || (step === 2 && (checkingAvailability || isAvailabilityStale)) || (step === 3 && checkingAvailability)}
               onClick={handleNext}
             >
               {t('Tiếp tục', 'Next')}
@@ -1124,7 +1233,6 @@ export function CreateClassOrSessionModal({
 
 interface EditClassModalProps {
   gymClass: ClassItem;
-  classes?: ClassItem[];
   disciplines: Discipline[];
   rooms: Room[];
   coaches: CoachUser[];
@@ -1154,10 +1262,56 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedRoom = useMemo(
-    () => rooms.find((r) => String(r.id) === roomId),
-    [rooms, roomId],
+  const currentRoomMissing = useMemo(
+    () => !rooms.some((r) => r.id === gymClass.roomId),
+    [rooms, gymClass.roomId],
   );
+  const currentCoachMissing = useMemo(
+    () => !coaches.some((c) => c.id === gymClass.coachId),
+    [coaches, gymClass.coachId],
+  );
+
+  const roomOptions = useMemo(() => {
+    const base = rooms.map((r) => ({ ...r, unavailable: false }));
+    if (!currentRoomMissing) return base;
+    return [
+      {
+        id: gymClass.roomId,
+        name: gymClass.roomName || t(`Phòng #${gymClass.roomId}`, `Room #${gymClass.roomId}`),
+        location: '',
+        capacity: Math.max(1, gymClass.capacity),
+        status: 'maintenance' as const,
+        unavailable: true,
+      },
+      ...base,
+    ];
+  }, [rooms, currentRoomMissing, gymClass.roomId, gymClass.roomName, gymClass.capacity, t]);
+
+  const coachOptions = useMemo(() => {
+    const base = coaches.map((c) => ({ ...c, unavailable: false }));
+    if (!currentCoachMissing) return base;
+    return [
+      {
+        id: gymClass.coachId,
+        fullName: gymClass.coachName || t(`HLV #${gymClass.coachId}`, `Coach #${gymClass.coachId}`),
+        email: '',
+        status: 'inactive',
+        unavailable: true,
+      },
+      ...base,
+    ];
+  }, [coaches, currentCoachMissing, gymClass.coachId, gymClass.coachName, t]);
+
+  const selectedRoom = useMemo(
+    () => roomOptions.find((r) => String(r.id) === roomId),
+    [roomOptions, roomId],
+  );
+  const selectedCoach = useMemo(
+    () => coachOptions.find((c) => String(c.id) === coachId),
+    [coachOptions, coachId],
+  );
+  const isUsingUnavailableRoom = Boolean(selectedRoom?.unavailable);
+  const isUsingUnavailableCoach = Boolean(selectedCoach?.unavailable);
 
   const capacityInlineError = useMemo(
     () => validateClassCapacity(capacity, selectedRoom, t),
@@ -1169,6 +1323,24 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
     setError(null);
     if (!name.trim()) {
       setError(t('Tên khóa học không được để trống.', 'Course name is required.'));
+      return;
+    }
+    if (status === 'active' && isUsingUnavailableRoom) {
+      setError(
+        t(
+          'Phòng tập hiện tại đang bảo trì hoặc đã đóng. Vui lòng chọn phòng khả dụng khác hoặc chuyển lớp sang Ngừng mở/Lưu trữ.',
+          'The current room is under maintenance or closed. Please select an available room or switch the class to Inactive/Archived.',
+        ),
+      );
+      return;
+    }
+    if (status === 'active' && isUsingUnavailableCoach) {
+      setError(
+        t(
+          'Huấn luyện viên hiện tại đã ngừng hoạt động. Vui lòng chọn HLV khác hoặc chuyển lớp sang Ngừng mở/Lưu trữ.',
+          'The current coach is inactive. Please select an active coach or switch the class to Inactive/Archived.',
+        ),
+      );
       return;
     }
     const capacityError = validateClassCapacity(capacity, selectedRoom, t);
@@ -1203,6 +1375,19 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
           {error}
         </div>
       )}
+      {(isUsingUnavailableRoom || isUsingUnavailableCoach) && (
+        <div className="portal-alert portal-alert--warning" role="status" data-testid="edit-unavailable-resource-warning" style={{ marginBottom: 12 }}>
+          {status === 'active'
+            ? t(
+                'Phòng tập hoặc HLV hiện tại không còn khả dụng. Vui lòng chọn phòng/HLV đang hoạt động trước khi giữ trạng thái Đang hoạt động, hoặc chuyển trạng thái sang Ngừng mở/Lưu trữ.',
+                'The current room or coach is no longer available. Select an active room/coach to keep this class Active, or switch status to Inactive/Archived.',
+              )
+            : t(
+                'Phòng tập hoặc HLV hiện tại không còn khả dụng. Bạn vẫn có thể lưu thay đổi ở trạng thái Ngừng mở hoặc Lưu trữ.',
+                'The current room or coach is no longer available. You can still save changes while status is Inactive or Archived.',
+              )}
+        </div>
+      )}
       <form onSubmit={handleSubmit} className="portal-form-stack" noValidate>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="edit-cls-name">{t('Tên khóa học', 'Course name')}</label>
@@ -1227,16 +1412,42 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
           </div>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="edit-cls-room">{t('Phòng tập', 'Room')}</label>
-            <Select id="edit-cls-room" value={roomId} onChange={(e) => setRoomId(e.target.value)}>
-              {rooms.map((r) => <option key={r.id} value={String(r.id)}>{`${r.name} (${r.capacity})`}</option>)}
+            <Select
+              id="edit-cls-room"
+              value={roomId}
+              onChange={(e) => {
+                setRoomId(e.target.value);
+                setError(null);
+              }}
+            >
+              {roomOptions.map((r) => (
+                <option key={r.id} value={String(r.id)}>
+                  {r.unavailable
+                    ? `${r.name} (${t('Đang bảo trì', 'Maintenance')})`
+                    : `${r.name} (${r.capacity})`}
+                </option>
+              ))}
             </Select>
           </div>
         </div>
         <div className="portal-form-grid-2">
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="edit-cls-coach">{t('Huấn luyện viên', 'Coach')}</label>
-            <Select id="edit-cls-coach" value={coachId} onChange={(e) => setCoachId(e.target.value)}>
-              {coaches.map((c) => <option key={c.id} value={String(c.id)}>{c.fullName}</option>)}
+            <Select
+              id="edit-cls-coach"
+              value={coachId}
+              onChange={(e) => {
+                setCoachId(e.target.value);
+                setError(null);
+              }}
+            >
+              {coachOptions.map((c) => (
+                <option key={c.id} value={String(c.id)}>
+                  {c.unavailable
+                    ? `${c.fullName} (${t('Ngừng hoạt động', 'Inactive')})`
+                    : c.fullName}
+                </option>
+              ))}
             </Select>
           </div>
           <div className="portal-form-group">
@@ -1281,7 +1492,14 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
           </div>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="edit-cls-status">{t('Trạng thái', 'Status')}</label>
-            <Select id="edit-cls-status" value={status} onChange={(e) => setStatus(normalizeEditableClassStatus(e.target.value))}>
+            <Select
+              id="edit-cls-status"
+              value={status}
+              onChange={(e) => {
+                setStatus(normalizeEditableClassStatus(e.target.value));
+                setError(null);
+              }}
+            >
               <option value="active">{t('Đang hoạt động', 'Active')}</option>
               <option value="inactive">{t('Ngừng mở', 'Inactive')}</option>
               <option value="archived">{t('Lưu trữ', 'Archived')}</option>
@@ -1322,6 +1540,10 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
+    if (!date) {
+      setError(t('Vui lòng chọn ngày học mới.', 'Please select a new date.'));
+      return;
+    }
     const selectedSlot = SCHEDULE_SLOTS.find((slot) => slot.code === selectedSlotCode) ?? SCHEDULE_SLOTS[0];
     setBusy(true);
     try {
@@ -1343,10 +1565,18 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
   return (
     <Modal title={t('Dời lịch buổi học', 'Reschedule session')} onClose={onClose} busy={busy}>
       {error && <div className="portal-alert portal-alert--error" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
-      <form onSubmit={handleSubmit} className="portal-form-stack">
+      <form onSubmit={handleSubmit} className="portal-form-stack" noValidate>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="resch-date">{t('Ngày học mới', 'New date')}</label>
-          <DatePicker id="resch-date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DatePicker
+            id="resch-date"
+            min={todayISO()}
+            value={date}
+            onChange={(e) => {
+              setDate(e.target.value);
+              setError(null);
+            }}
+          />
         </div>
         <div className="portal-form-group">
           <span className="portal-label">{t('Khung giờ mới (5 Slot cố định)', 'New time slot (5 fixed slots)')}</span>
@@ -1400,7 +1630,7 @@ export function CancelSessionModal({ session, onClose, onSuccess }: CancelSessio
   return (
     <Modal title={t('Hủy buổi học', 'Cancel session')} onClose={onClose} busy={busy}>
       {error && <div className="portal-alert portal-alert--error" role="alert" style={{ marginBottom: 12 }}>{error}</div>}
-      <form onSubmit={handleSubmit} className="portal-form-stack">
+      <form onSubmit={handleSubmit} className="portal-form-stack" noValidate>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="cancel-reason">{t('Lý do hủy buổi', 'Cancellation reason')}</label>
           <textarea

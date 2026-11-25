@@ -9,9 +9,9 @@
   min-height: 44px;
   padding: 5px 12px 5px 5px;
   border-radius: 10px;
-  border: 1px dashed var(--portal-border-strong);
-  background: var(--portal-raised);
-  color: var(--portal-muted);
+  border: 1px dashed var(--portal-border-strong, var(--color-border-medium, #ccc8c2));
+  background: var(--portal-raised, var(--color-bg-warm, #eeefec));
+  color: var(--portal-muted, var(--color-text-muted, #68645f));
   font: 500 13px/1.4 var(--font-sans);
   cursor: pointer;
   transition: border-color 160ms ease, box-shadow 160ms ease;
@@ -37,10 +37,10 @@
   min-height: 32px;
   padding: 6px 14px;
   border-radius: 8px;
-  border: 1px solid var(--portal-border-strong);
-  background: var(--portal-surface);
-  color: var(--portal-paper);
-  font: 600 12.5px/1.4 var(--font-sans);
+  border: 1px solid var(--portal-border-strong, var(--color-border-medium, #ccc8c2));
+  background: var(--portal-surface, var(--color-bg-card, #ffffff));
+  color: var(--portal-paper, var(--color-text-main, #202020));
+  font: 600 13px/1.4 var(--font-sans);
   white-space: nowrap;
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
 }
@@ -53,21 +53,21 @@
 }
 
 .file-picker__name.has-file {
-  color: var(--portal-paper);
+  color: var(--portal-paper, var(--color-text-main, #202020));
 }
 
 .file-picker:not(.is-disabled):hover {
-  border-color: var(--portal-salmon);
+  border-color: var(--portal-salmon, var(--sol-accent));
 }
 
 .file-picker:not(.is-disabled):hover .file-picker__button {
-  background: var(--portal-tint);
-  border-color: var(--portal-salmon);
-  color: var(--portal-salmon);
+  background: var(--portal-tint, rgb(var(--sol-accent-rgb) / .12));
+  border-color: var(--portal-salmon, var(--sol-accent));
+  color: var(--portal-salmon, var(--sol-accent));
 }
 
 .file-picker:has(.file-picker__input:focus-visible) {
-  border-color: var(--portal-salmon);
+  border-color: var(--portal-salmon, var(--sol-accent));
   box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .18);
 }
 

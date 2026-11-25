@@ -1,6 +1,8 @@
 import { memberMessage, memberError, memberText, memberRenderMessage } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
+import { sourceMessage } from '../../shared/i18n';
+import { FilePicker } from '../../shared/ui/FilePicker';
 import { Select } from '../../shared/ui/Select';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -107,7 +109,12 @@ export function MemberProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordBusy, setPasswordBusy] = useState(false);
   // Lỗi hiện ngay dưới từng ô của form đổi mật khẩu (không phải ở đầu trang).
-  const [passwordErrors, setPasswordErrors] = useState<{ current?: string; next?: string; confirm?: string; form?: string }>({});
+  const [passwordErrors, setPasswordErrors] = useState<{
+    current?: string | SourceMessage;
+    next?: string | SourceMessage;
+    confirm?: string | SourceMessage;
+    form?: string | SourceMessage;
+  }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Tải hồ sơ của người dùng đang đăng nhập.
@@ -191,18 +198,6 @@ export function MemberProfilePage() {
     setSaving(true);
     try {
       const updated = await updateProfile(profile);
-      if (isCoach && typeof profileApi.updateCoachProfile === 'function') {
-        await profileApi.updateCoachProfile({
-          specialization: profile.specialization ?? null,
-          bio: profile.bio ?? null,
-          certification: profile.certification ?? null,
-        });
-      }
-      if (isStaff && typeof profileApi.updateReceptionistProfile === 'function') {
-        await profileApi.updateReceptionistProfile({
-          shift: profile.shift ?? null,
-        });
-      }
       setProfile({
         ...updated,
         specialization: profile.specialization ?? updated.specialization,
@@ -214,6 +209,37 @@ export function MemberProfilePage() {
       const savedName = updated.fullName?.trim();
       if (session && savedName && session.name !== savedName) setCurrentUser({ ...session, name: savedName });
       window.dispatchEvent(new Event('profile-updated'));
+
+      if (isCoach && typeof profileApi.updateCoachProfile === 'function') {
+        try {
+          await profileApi.updateCoachProfile({
+            specialization: profile.specialization ?? null,
+            bio: profile.bio ?? null,
+            certification: profile.certification ?? null,
+          });
+        } catch (coachErr) {
+          const detail = memberError(coachErr, 'Không thể cập nhật thông tin chuyên môn.');
+          setError(sourceMessage(
+            `Đã lưu thông tin cơ bản, nhưng không thể lưu thông tin chuyên môn: ${typeof detail === 'string' ? detail : detail.vi}`,
+            `Basic profile saved, but failed to save coach details: ${typeof detail === 'string' ? detail : detail.en}`,
+          ));
+          return;
+        }
+      }
+      if (isStaff && typeof profileApi.updateReceptionistProfile === 'function') {
+        try {
+          await profileApi.updateReceptionistProfile({
+            shift: profile.shift ?? null,
+          });
+        } catch (staffErr) {
+          const detail = memberError(staffErr, 'Không thể cập nhật ca trực.');
+          setError(sourceMessage(
+            `Đã lưu thông tin cơ bản, nhưng không thể lưu ca trực: ${typeof detail === 'string' ? detail : detail.vi}`,
+            `Basic profile saved, but failed to save shift details: ${typeof detail === 'string' ? detail : detail.en}`,
+          ));
+          return;
+        }
+      }
       notify(memberText("Đã cập nhật hồ sơ cá nhân."), 'success', { translation: memberMessage("Đã cập nhật hồ sơ cá nhân.") });
     } catch (err) {
       setError(memberError(err, 'Không thể lưu hồ sơ.'));
@@ -226,10 +252,16 @@ export function MemberProfilePage() {
   const handleChangePassword = async () => {
     if (passwordBusy) return;
     const errors: typeof passwordErrors = {};
-    if (!currentPassword) errors.current = memberText('Vui lòng nhập mật khẩu hiện tại.', 'Enter your current password.');
-    if (!isValidPassword(newPassword)) errors.next = memberText(PASSWORD_RULE_ERROR);
-    else if (newPassword === currentPassword) errors.next = memberText('Mật khẩu mới phải khác mật khẩu hiện tại.', 'The new password must differ from the current one.');
-    if (confirmPassword !== newPassword) errors.confirm = memberText('Mật khẩu xác nhận không khớp.', 'The passwords do not match.');
+    if (!currentPassword) errors.current = sourceMessage('Vui lòng nhập mật khẩu hiện tại.', 'Enter your current password.');
+    if (!isValidPassword(newPassword)) {
+      errors.next = sourceMessage(
+        PASSWORD_RULE_ERROR,
+        'Password must be 8–50 characters, include at least 1 letter and 1 number, and contain no spaces.',
+      );
+    } else if (newPassword === currentPassword) {
+      errors.next = sourceMessage('Mật khẩu mới phải khác mật khẩu hiện tại.', 'The new password must differ from the current one.');
+    }
+    if (confirmPassword !== newPassword) errors.confirm = sourceMessage('Mật khẩu xác nhận không khớp.', 'The passwords do not match.');
     setPasswordErrors(errors);
     if (Object.keys(errors).length > 0) return;
 
@@ -244,8 +276,7 @@ export function MemberProfilePage() {
         translation: memberMessage('Đã đổi mật khẩu thành công.'),
       });
     } catch (err) {
-      const message = memberError(err, 'Không thể đổi mật khẩu.');
-      setPasswordErrors({ form: typeof message === 'string' ? message : memberText(message.vi, message.en) });
+      setPasswordErrors({ form: memberError(err, 'Không thể đổi mật khẩu.') });
     } finally {
       setPasswordBusy(false);
     }
@@ -344,25 +375,18 @@ export function MemberProfilePage() {
               />
             </div>
             <div style={{ flex: '1 1 220px', minWidth: 0 }}>
-              <div style={{ fontWeight: 700, fontSize: 14 }}>{memberText("Ảnh đại diện tài khoản")}</div>
-              <input
-                ref={fileInputRef}
-                id="avatar-file-input"
-                data-testid="avatar-file-input"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={(e) => void handleAvatarFileChange(e)}
-                style={{ display: 'none' }}
-              />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm"
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8 }}>{memberText("Ảnh đại diện tài khoản")}</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+                <FilePicker
+                  ref={fileInputRef}
+                  id="avatar-file-input"
+                  accept="image/jpeg,image/png,image/webp"
                   disabled={avatarBusy}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  {avatarBusy ? memberText("Đang xử lý…") : memberText("Tải ảnh đại diện lên")}
-                </button>
+                  buttonLabel={avatarBusy ? memberText("Đang xử lý…") : memberText("Tải ảnh đại diện lên")}
+                  ariaLabel={memberText("Tải ảnh đại diện lên")}
+                  fileNames={[]}
+                  onChange={(e) => void handleAvatarFileChange(e)}
+                />
                 {profile.avatarUrl && profile.avatarUrl !== '/images/default-avatar.png' && (
                   <button
                     type="button"
@@ -377,7 +401,8 @@ export function MemberProfilePage() {
           </div>
 
           {isMember && (() => {
-            const kycVerified = Boolean(profile.identityVerified) || profile.kycStatus === 'APPROVED';
+            const kycVerified = profile.kycStatus === 'APPROVED'
+              || (Boolean(profile.identityVerified) && profile.kycStatus !== 'PENDING' && profile.kycStatus !== 'REJECTED');
             const kycStatusKey = kycVerified
               ? 'APPROVED'
               : profile.kycStatus === 'PENDING'
@@ -743,7 +768,7 @@ export function MemberProfilePage() {
                     value={currentPassword}
                     onChange={(e) => { setCurrentPassword(e.target.value); setPasswordErrors((p) => ({ ...p, current: undefined, form: undefined })); }}
                   />
-                  {passwordErrors.current && <p id="currentPassword-error" className="portal-field-error">{passwordErrors.current}</p>}
+                  {passwordErrors.current && <p id="currentPassword-error" className="portal-field-error">{memberRenderMessage(passwordErrors.current)}</p>}
                 </div>
                 <div className="grid-2">
                   <div className="portal-form-group">
@@ -761,7 +786,7 @@ export function MemberProfilePage() {
                       onChange={(e) => { setNewPassword(e.target.value); setPasswordErrors((p) => ({ ...p, next: undefined, form: undefined })); }}
                     />
                     {passwordErrors.next
-                      ? <p id="newPassword-hint" className="portal-field-error">{passwordErrors.next}</p>
+                      ? <p id="newPassword-hint" className="portal-field-error">{memberRenderMessage(passwordErrors.next)}</p>
                       : <small id="newPassword-hint" className="muted">{memberText(PASSWORD_RULE_HINT)}</small>}
                   </div>
                   <div className="portal-form-group">
@@ -778,10 +803,10 @@ export function MemberProfilePage() {
                       value={confirmPassword}
                       onChange={(e) => { setConfirmPassword(e.target.value); setPasswordErrors((p) => ({ ...p, confirm: undefined, form: undefined })); }}
                     />
-                    {passwordErrors.confirm && <p id="confirmPassword-error" className="portal-field-error">{passwordErrors.confirm}</p>}
+                    {passwordErrors.confirm && <p id="confirmPassword-error" className="portal-field-error">{memberRenderMessage(passwordErrors.confirm)}</p>}
                   </div>
                 </div>
-                {passwordErrors.form && <p className="portal-field-error" role="alert">{passwordErrors.form}</p>}
+                {passwordErrors.form && <p className="portal-field-error" role="alert">{memberRenderMessage(passwordErrors.form)}</p>}
                 <button
                   type="button"
                   id="submit-password-change-btn"

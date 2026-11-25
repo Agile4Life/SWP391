@@ -1,4 +1,5 @@
 import { apiFetch } from '../../shared/api/client';
+import { getLanguage } from '../../shared/i18n/language';
 import { centerNowParts } from '../../shared/lib/centerTime';
 
 /** Doanh thu một ngày: số tiền và số giao dịch. */
@@ -124,13 +125,6 @@ export const reportsApi = {
   },
 
   /**
-   * Lấy danh sách các ảnh chụp snapshot đã lưu
-   */
-  getSnapshots: async (): Promise<ReportSnapshotDto[]> => {
-    return apiFetch<ReportSnapshotDto[]>('/reports/snapshots');
-  },
-
-  /**
    * Lấy danh sách yêu cầu hủy gói tập & hoàn tiền về Ví do Lễ tân trình duyệt
    */
   getCancellationRequests: async (): Promise<CancellationRequestDto[]> => {
@@ -139,17 +133,25 @@ export const reportsApi = {
 
   // Quản lý phê duyệt yêu cầu hủy gói (kèm ghi chú và số tiền hoàn).
   approveCancellationRequest: async (id: number, note?: string, refundAmount?: number): Promise<CancellationRequestDto> => {
+    const defaultNote =
+      getLanguage() === 'en'
+        ? 'Center manager approved membership cancellation and wallet refund'
+        : 'Quản lý phê duyệt hủy gói & hoàn tiền về Ví';
     return apiFetch<CancellationRequestDto>(`/memberships/cancellations/${id}/approve`, {
       method: 'POST',
-      body: JSON.stringify({ note: note || 'Quản lý phê duyệt hủy gói & hoàn tiền về Ví', refundAmount }),
+      body: JSON.stringify({ note: note?.trim() || defaultNote, refundAmount }),
     });
   },
 
   // Quản lý từ chối yêu cầu hủy gói (kèm ghi chú).
   rejectCancellationRequest: async (id: number, note?: string): Promise<CancellationRequestDto> => {
+    const defaultNote =
+      getLanguage() === 'en'
+        ? 'Center manager rejected membership cancellation request'
+        : 'Quản lý từ chối yêu cầu hủy gói';
     return apiFetch<CancellationRequestDto>(`/memberships/cancellations/${id}/reject`, {
       method: 'POST',
-      body: JSON.stringify({ note: note || 'Quản lý từ chối yêu cầu hủy gói' }),
+      body: JSON.stringify({ note: note?.trim() || defaultNote }),
     });
   },
 };

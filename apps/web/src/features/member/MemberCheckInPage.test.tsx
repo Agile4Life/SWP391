@@ -60,3 +60,65 @@ it('requests a date range in Asia/Ho_Chi_Minh when a longer history window is ch
     vi.useRealTimers();
   }
 });
+it('calls the check-out endpoint when toggling Check-in to Check-out while camera is already active (P1-FE-32)', async () => {
+  await render();
+  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Bật camera')!.click());
+  await act(async () => [...host.querySelectorAll('button')].find((item) => item.textContent === 'Check-out')!.click());
+  const code = `SOL:GATE:1:A1:1793256000000:${'b'.repeat(64)}`;
+  await act(async () => camera.decode!({ data: code }));
+  expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).includes('/self/checkout'))).toHaveLength(1);
+  expect(vi.mocked(fetch).mock.calls.filter((call) => String(call[0]).endsWith('/self'))).toHaveLength(0);
+});
+it('renders LoadingSkeleton and defers history load while active plan check is pending (P2-FE-58)', async () => {
+  let resolvePlan!: (res: Response) => void;
+  vi.stubGlobal('fetch', vi.fn((url: string) => {
+    if (String(url).includes('/subscriptions')) {
+      return new Promise<Response>((resolve) => { resolvePlan = resolve; });
+    }
+    return Promise.resolve(new Response(JSON.stringify({ success: true, data: [] })));
+  }));
+  await render();
+  expect(host.querySelector('button')?.textContent).not.toBe('Bật camera');
+  expect(vi.mocked(fetch).mock.calls.some((call) => String(call[0]).includes('/check-in/history'))).toBe(false);
+  await act(async () => resolvePlan(new Response(JSON.stringify({ success: true, data: { status: 'active', endDate: '2099-12-31' } }))));
+  expect([...host.querySelectorAll('button')].some((b) => b.textContent === 'Bật camera')).toBe(true);
+  expect(vi.mocked(fetch).mock.calls.some((call) => String(call[0]).includes('/check-in/history'))).toBe(true);
+});
+it('ignores stale history responses when switching filters rapidly and adapts Check-out copy (P2-FE-58)', async () => {
+  let resolve30!: (res: Response) => void;
+  vi.stubGlobal('fetch', vi.fn((url: string) => {
+    const s = String(url);
+    if (s.includes('/subscriptions')) {
+      return Promise.resolve(new Response(JSON.stringify({ success: true, data: { status: 'active', endDate: '2099-12-31' } })));
+    }
+    if (s.includes('fromDate=')) {
+      return new Promise<Response>((resolve) => { resolve30 = resolve; });
+    }
+    if (s.includes('/check-in/history')) {
+      return Promise.resolve(new Response(JSON.stringify({
+        success: true,
+        data: [{ id: 9, memberId: 10, memberName: 'An', checkInTime: '2026-10-29T08:00:00', gate: 'Cổng Hôm Nay', status: 'GRANTED', method: 'qr' }],
+      })));
+    }
+    return Promise.resolve(new Response(JSON.stringify({
+      success: true,
+      data: { id: 2, memberId: 10, memberName: 'An', checkInTime: '2026-10-29T14:00:00', gate: 'Sảnh chính', status: 'DENIED', denialReason: 'Chưa vào cổng', method: 'qr' },
+    })));
+  }));
+  await render();
+  await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent === '30 ngày')!.click());
+  await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent === 'Hôm nay')!.click());
+  await act(async () => resolve30(new Response(JSON.stringify({
+    success: true,
+    data: [{ id: 99, memberId: 10, memberName: 'An', checkInTime: '2026-10-01T08:00:00', gate: 'Cổng 30 Ngày Cũ', status: 'GRANTED', method: 'qr' }],
+  }))));
+  expect(host.textContent).toContain('Cổng Hôm Nay');
+  expect(host.textContent).not.toContain('Cổng 30 Ngày Cũ');
+
+  // Check-out mode copy
+  await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent === 'Check-out')!.click());
+  expect(host.textContent).toContain('Chờ xác nhận check-out thành công.');
+  await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent === 'Bật camera')!.click());
+  await act(async () => camera.decode!({ data: `SOL:GATE:1:A1:1793256000000:${'c'.repeat(64)}` }));
+  expect(host.textContent).toContain('Chưa thể check-out');
+});

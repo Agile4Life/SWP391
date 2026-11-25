@@ -6,7 +6,7 @@ import { aiApi, type SavedTrainingPlan } from './aiApi';
 
 const draft: SavedTrainingPlan = {
   id: 1, memberId: 10, memberName: 'Lê Hoàng Long', coachName: 'HLV Quân', goal: 'Tăng cơ',
-  startDate: '2026-11-04', endDate: '2026-12-02', status: 'draft', items: [{ id: 1, exerciseName: 'Squat' }],
+  startDate: '2026-11-04', endDate: '2026-12-02', status: 'draft', items: [{ id: 1, exerciseName: 'Squat', dayOfWeek: 1, sets: 3, reps: 10 }],
 };
 const active: SavedTrainingPlan = { ...draft, id: 2, memberName: 'Trần Thu Thảo', status: 'active', items: [] };
 const completed: SavedTrainingPlan = { ...draft, id: 3, memberName: 'Nguyễn Văn Minh', status: 'completed' };
@@ -135,4 +135,34 @@ it('tags the current plan and offers re-applying a history plan after confirmati
   await click(confirmButton);
   expect(reapply).toHaveBeenCalledWith(9);
   expect(list).toHaveBeenCalledTimes(2);
+});
+
+it('P1-FE-51 & P2-FE-65 & P3-FE-25: enforces required exercise validation on edit, renders completed as badge-info, handles null dates, and supports hideHeading', async () => {
+  const nullDatePlan: SavedTrainingPlan = {
+    ...draft,
+    id: 12,
+    startDate: null as unknown as string,
+    endDate: null as unknown as string,
+  };
+  const incompleteExercisePlan: SavedTrainingPlan = {
+    ...draft,
+    id: 13,
+    items: [{ id: 901, exerciseName: 'Plank', dayOfWeek: null, sets: null, reps: null, durationMinutes: null }],
+  };
+  vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([nullDatePlan, incompleteExercisePlan, completed]);
+  const update = vi.spyOn(aiApi, 'updateTrainingPlan').mockResolvedValue(incompleteExercisePlan);
+  await act(async () => root.render(<SavedTrainingPlans hideHeading />));
+
+  // hideHeading ẩn h2 "Giáo án đã lưu" bị lặp trên trang CoachSavedPlansPage
+  expect(host.querySelector('#saved-plans-heading')).toBeNull();
+  const [r1, r2, r3] = rows();
+  expect(r1.textContent).toContain('— – —');
+  expect(r3.querySelector('.badge-info')?.textContent).toBe('Đã hoàn thành');
+  expect(r3.querySelector('.badge-warning')).toBeNull();
+
+  // Lưu bài tập thiếu ngày tập & liều tập phải bị validateExercise(..., true) chặn
+  await click(buttonIn(r2, 'Sửa'));
+  await act(async () => host.ownerDocument.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(update).not.toHaveBeenCalled();
+  expect(host.ownerDocument.querySelector('[role="alert"]')?.textContent).toContain('Ngày tập');
 });
