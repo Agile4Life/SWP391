@@ -86,6 +86,11 @@
   margin-top: 0.25rem;
 }
 
+.coach-table .coach-student-type-pill {
+  display: inline-block;
+  white-space: nowrap;
+}
+
 .coach-badge-spec {
   background: rgba(255, 122, 89, 0.12);
   color: var(--portal-salmon);
