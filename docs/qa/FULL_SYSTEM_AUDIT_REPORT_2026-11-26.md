@@ -1363,3 +1363,30 @@ Chạy trực tiếp bản build `apps/web/dist` qua `vite preview --host 127.0.
 | **`E2E-2`** | Kiểm thử trình duyệt Chromium thực (`playwright-core`) — 48 lượt Public/Auth + 18 Redirects + 5 Role Portals + Wizard 4 bước | Build `dist` | `1 / 0 / 3 / 1` |
 | **`E2E-3`** | Chạy đầy đủ Vitest (1.173 test), ESLint, TSC, Vite Build, Maven (1.561 test) & Phân tích 38 Postgres skipped tests | 358 file test | `1 / 5 / 5 / 1` |
 | **TỔNG CỘNG** | **100% mã nguồn hoạt động + CSDL + Hợp đồng + Test thực thi** | **~1.150+ file** | **Thô: `20 / 134 / 158 / 60` (372) → Khử trùng: `16 / 125 / 143 / 56` (340)** |
+
+
+---
+
+## 10. Trạng Thái Khắc Phục Toàn Hệ Thống (Remediation Summary — 26/11/2026)
+
+Toàn bộ các đợt sửa lỗi (**Wave 0 → Wave 3**) đã được triển khai trên nhánh `fix/full-system-audit-remediation`, kiểm chứng xanh 100% qua Maven, Vitest, ESLint, TypeScript, Vite production build và kiểm thử trình duyệt Chromium thực (`playwright-core`):
+
+| Đợt | Commit | Quy mô thay đổi | Phạm vi đã khắc phục |
+|---|---|---|---|
+| **Baseline** | `c0af6a26` | 1 báo cáo kiểm toán | Tổng hợp 340 lỗi khử trùng từ 20 sub-agent (`16 P0 / 125 P1 / 143 P2 / 56 P3`). |
+| **Wave 0** | `b93488ea` | 82 file (`+4.560 / -427`) | **16/16 `P0-Critical`** (Wizard Bước 3→4, thanh toán ví khóa học, quầy Lễ tân thu học phí khóa học, chống nạp ví bằng ví, đồng bộ trạng thái lớp `active\|inactive\|archived`, `/coach/classes` bỏ `coachId` string, cô lập phiên Chat/Realtime, OAuth/OTP security & HikariCP deadlock, toán học bảo lưu/nâng cấp, khóa VNPay expiry & PT expiry, `@Transactional` `SessionCompletionScheduler`, thu hẹp `LegacyScheduleSlotResetRunner`, `AuditLogWriter` `afterCommit`, sửa 3 suite Postgres + thêm job `test-api-postgres` vào CI). |
+| **Wave 1** | `66245575` | 223 file (`+10.482 / -1.778`) | **Toàn bộ nhóm Backend `P1-High` (`P1-BE-01`..`57`) & `P2-Medium` (`P2-BE-01`..`60`)**, bao gồm `SmartLifecycle` + `/api/v1/health` readiness (`P1-BE-06`), `ResendOtpDeliveryAdapter` (`P2-BE-09`), bảo mật `SecurityConfig`/KYC/Avatar/OAuth/Trial/Wallet/VNPay/Shop flag isolation, 22 trigger PostgreSQL (thêm `trg_classes_check_session_conflict`, `SET search_path`, RLS `TO PUBLIC`), đồng bộ 3 file `messages*.properties` và 24 hợp đồng OpenAPI. |
+| **Wave 2** | `9cfb6306` | 256 file (`+14.163 / -4.996`) | **Toàn bộ nhóm Frontend `P1-High` (`P1-FE-01`..`65`), `P2-Medium` (`P2-FE-01`..`80`) & `P3-Low`** trên cả 9 phân hệ (Router/Auth/Landing/PWA, Shared API/i18n/Libs/LiquidGlass, Shared UI/PortalShell/Theme/Toast Top-Layer, Classes/Schedule/Manager + xóa `RoomDayTimetable` chết, Payments/Wallet/Member Core, Check-in/Calendar/Group Classes/PT 1:1 `"/ slot"`, Coach Portal/Attendance/Training Plan không còn BMI/bài mẫu cứng, Reception/Operations/Admin + `DocumentImageLightbox` + `useConfirm`, Chat/Support/Realtime contrast & Escape modal). |
+| **Wave 3** | `b85183cd` | 42 file (`+3.451 / -130`) | **Test coverage, độ ổn định & `P3` cuối**: thêm 5 bộ test HTTP/Security MockMvc (+28 test bao phủ 11 controller còn thiếu `P1-E2E-02`/`P2-E2E-01`), chuyển sạch `@MockBean` → `@MockitoBean`, xóa toàn bộ cảnh báo MapStruct & Hibernate Dialect (`P3-E2E-01`), hardening `P3-BE-04/05/11/12/13/16/18/22`, tách chunk `supabase-vendor` (`P3-E2E-02`), thêm +11 test Bộ môn/Phòng cho `ManagerCatalogsPage` (`P2-E2E-02`), đóng băng đồng hồ cho toàn bộ test nhạy nửa đêm BE & FE (`P2-E2E-03`), và tạo + chạy bộ kiểm thử Chromium thực `scripts/qa/e2e_audit_remediation_verify.mjs` (`P1-E2E-03`). |
+
+### Bằng Chứng Kiểm Định Cuối Cùng (Verified Clean)
+
+- **Backend Maven (`cd apps/api && ./mvnw clean test`):** **1.797 test run, 0 fail, 0 error**, 40 skipped (Postgres-conditional tests đã được kích hoạt trong CI `test-api-postgres`) — tăng **+236 test mới** so với mốc kiểm toán ban đầu (`1.561`). **0 cảnh báo MapStruct, 0 cảnh báo `@MockBean`, 0 cảnh báo Hibernate dialect.**
+- **Frontend Vitest (`cd apps/web && npm test -- --run`):** **157/157 file test, 1.409/1.409 test pass** — tăng **+236 test mới** so với mốc kiểm toán ban đầu (`1.173`).
+- **Frontend Lint, TypeScript & Production Build:**
+  - `npm run lint` (`eslint . --max-warnings=0`): **0 lỗi, 0 cảnh báo**.
+  - `tsc -p tsconfig.app.json --noEmit` & `tsc -p tsconfig.node.json --noEmit`: **0 lỗi**.
+  - `npm run build` (`tsc -b && vite build`): **thành công** (425 module, tách tường minh `dist/assets/supabase-vendor-*.js`).
+- **Real Chromium Playwright E2E (`node scripts/qa/e2e_audit_remediation_verify.mjs`):** **8/8 kịch bản PASS** trên `apps/web/dist` (S1 Public/Dark contrast/Retired sports redirect, S2 Login `?expired=1`/anti-reflection, S3 Wizard 4 bước `P0-01`, S4 Member redirects/5-slot PT `"/ slot"`/Wallet checkout, S5 Coach `/coach/classes` + `IN_PROGRESS` + Training Plan sạch, S6 Reception `"Khóa học"` + `useConfirm`, S7 Admin Audit Logs mobile scroll + xóa Shop dropdown, S8 Chat Widget Escape & session isolation) — **0 console error, 0 page error, 0 tràn ngang** ở cả `1440×900` và `390×844` (Light & Dark).
+- **Knowledge Graph:** Đã chạy `graphify update .` cập nhật đồng bộ `graphify-out/` (`19.057` node, `63.499` cạnh).
+- **Ghi chú vận hành bảo toàn tương thích ngược:** `P2-BE-03` (`APP_QR_SECRET` & `APP_TRIAL_CCCD_PEPPER`) đã được tách tài liệu khuyến nghị cấu hình độc lập trong `compose.env.example` mà giữ fallback tương thích với cấu hình 4 biến tối thiểu trên VPS hiện hữu; các test PostgreSQL sống chạy trên service container `postgres:16` trong job `test-api-postgres` của `.github/workflows/pipeline.yml` (máy macOS chạy audit không cài Docker Engine cục bộ).
