@@ -27,6 +27,7 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
         Integer getCapacity();
         Long getEnrolledCount();
         Long getPresentCount();
+        Long getSessionCount();
     }
 
     @Query("""
@@ -36,26 +37,45 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
                    d.name AS disciplineName,
                    r.name AS roomName,
                    c.capacity AS capacity,
-                   (SELECT COUNT(m) FROM Member m
-                    WHERE EXISTS (SELECT 1 FROM ClassEnrollment e
-                                  WHERE e.member = m AND e.gymClass.id = c.id
-                                    AND LOWER(e.status) IN ('booked', 'completed')
-                                    AND (e.enrolledAt IS NULL OR (e.enrolledAt >= :startTs AND e.enrolledAt < :endTs)))
-                       OR EXISTS (SELECT 1 FROM SessionBooking b
-                                  WHERE b.member = m AND b.session.gymClass.id = c.id
-                                    AND LOWER(b.status) IN ('booked', 'completed')
-                                    AND b.bookedAt >= :startTs AND b.bookedAt < :endTs)) AS enrolledCount,
-                   (SELECT COUNT(DISTINCT a.member.userId) FROM SessionAttendance a JOIN a.session s
+                   (SELECT COUNT(DISTINCT m.userId) FROM Member m
+                    JOIN m.user mu
+                    WHERE mu.deletedAt IS NULL
+                      AND (
+                          (EXISTS (SELECT 1 FROM ClassSession s0
+                                   WHERE s0.gymClass.id = c.id
+                                     AND LOWER(s0.status) <> 'cancelled'
+                                     AND s0.sessionDate >= :start AND s0.sessionDate <= :end)
+                           AND EXISTS (SELECT 1 FROM ClassEnrollment e
+                                       WHERE e.member = m AND e.gymClass.id = c.id
+                                         AND LOWER(e.status) IN ('booked', 'completed')
+                                         AND (e.enrolledAt IS NULL OR e.enrolledAt < :endTs)
+                                         AND (e.cancelledAt IS NULL OR e.cancelledAt >= :startTs)))
+                          OR EXISTS (SELECT 1 FROM SessionBooking b
+                                     WHERE b.member = m AND b.session.gymClass.id = c.id
+                                       AND LOWER(b.status) IN ('booked', 'completed')
+                                       AND LOWER(b.session.status) <> 'cancelled'
+                                       AND b.session.sessionDate >= :start AND b.session.sessionDate <= :end)
+                      )) AS enrolledCount,
+                   (SELECT COUNT(a.id) FROM SessionAttendance a
+                    JOIN a.session s
+                    JOIN a.member am
+                    JOIN am.user au
                     WHERE s.gymClass.id = c.id
+                      AND LOWER(s.status) <> 'cancelled'
+                      AND au.deletedAt IS NULL
                       AND LOWER(a.status) IN ('present', 'late')
-                      AND s.sessionDate >= :start AND s.sessionDate <= :end) AS presentCount
+                      AND s.sessionDate >= :start AND s.sessionDate <= :end) AS presentCount,
+                   (SELECT COUNT(s2.id) FROM ClassSession s2
+                    WHERE s2.gymClass.id = c.id
+                      AND LOWER(s2.status) <> 'cancelled'
+                      AND s2.sessionDate >= :start AND s2.sessionDate <= :end) AS sessionCount
             FROM GymClass c
             LEFT JOIN c.discipline d
             LEFT JOIN c.room r
             WHERE LOWER(c.status) <> 'archived'
             ORDER BY c.id
             """)
-    /** Mức sử dụng mọi lớp trong khoảng ngày: sức chứa, số hội viên đã đăng ký và số lượt có mặt. */
+    /** Mức sử dụng mọi lớp trong khoảng ngày: sức chứa, học viên đang ghi danh, lượt có mặt và số buổi không bị hủy. */
     List<ClassUtilizationRow> classUtilizationAll(@Param("start") LocalDate start,
                                                   @Param("end") LocalDate end,
                                                   @Param("startTs") LocalDateTime startTs,
@@ -68,19 +88,38 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
                    d.name AS disciplineName,
                    r.name AS roomName,
                    c.capacity AS capacity,
-                   (SELECT COUNT(m) FROM Member m
-                    WHERE EXISTS (SELECT 1 FROM ClassEnrollment e
-                                  WHERE e.member = m AND e.gymClass.id = c.id
-                                    AND LOWER(e.status) IN ('booked', 'completed')
-                                    AND (e.enrolledAt IS NULL OR (e.enrolledAt >= :startTs AND e.enrolledAt < :endTs)))
-                       OR EXISTS (SELECT 1 FROM SessionBooking b
-                                  WHERE b.member = m AND b.session.gymClass.id = c.id
-                                    AND LOWER(b.status) IN ('booked', 'completed')
-                                    AND b.bookedAt >= :startTs AND b.bookedAt < :endTs)) AS enrolledCount,
-                   (SELECT COUNT(DISTINCT a.member.userId) FROM SessionAttendance a JOIN a.session s
+                   (SELECT COUNT(DISTINCT m.userId) FROM Member m
+                    JOIN m.user mu
+                    WHERE mu.deletedAt IS NULL
+                      AND (
+                          (EXISTS (SELECT 1 FROM ClassSession s0
+                                   WHERE s0.gymClass.id = c.id
+                                     AND LOWER(s0.status) <> 'cancelled'
+                                     AND s0.sessionDate >= :start AND s0.sessionDate <= :end)
+                           AND EXISTS (SELECT 1 FROM ClassEnrollment e
+                                       WHERE e.member = m AND e.gymClass.id = c.id
+                                         AND LOWER(e.status) IN ('booked', 'completed')
+                                         AND (e.enrolledAt IS NULL OR e.enrolledAt < :endTs)
+                                         AND (e.cancelledAt IS NULL OR e.cancelledAt >= :startTs)))
+                          OR EXISTS (SELECT 1 FROM SessionBooking b
+                                     WHERE b.member = m AND b.session.gymClass.id = c.id
+                                       AND LOWER(b.status) IN ('booked', 'completed')
+                                       AND LOWER(b.session.status) <> 'cancelled'
+                                       AND b.session.sessionDate >= :start AND b.session.sessionDate <= :end)
+                      )) AS enrolledCount,
+                   (SELECT COUNT(a.id) FROM SessionAttendance a
+                    JOIN a.session s
+                    JOIN a.member am
+                    JOIN am.user au
                     WHERE s.gymClass.id = c.id
+                      AND LOWER(s.status) <> 'cancelled'
+                      AND au.deletedAt IS NULL
                       AND LOWER(a.status) IN ('present', 'late')
-                      AND s.sessionDate >= :start AND s.sessionDate <= :end) AS presentCount
+                      AND s.sessionDate >= :start AND s.sessionDate <= :end) AS presentCount,
+                   (SELECT COUNT(s2.id) FROM ClassSession s2
+                    WHERE s2.gymClass.id = c.id
+                      AND LOWER(s2.status) <> 'cancelled'
+                      AND s2.sessionDate >= :start AND s2.sessionDate <= :end) AS sessionCount
             FROM GymClass c
             LEFT JOIN c.discipline d
             LEFT JOIN c.room r

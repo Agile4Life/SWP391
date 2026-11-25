@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -84,6 +85,7 @@ public class AuthController {
      * sau khi Admin đổi vai trò).
      */
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<AuthSessionResponse> me(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("auth.me.success"), new AuthSessionResponse(principal.username(), principal.role(), authService.fullNameOf(principal.id())));
     }

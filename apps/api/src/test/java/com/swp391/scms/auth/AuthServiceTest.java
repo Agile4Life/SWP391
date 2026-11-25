@@ -614,4 +614,17 @@ class AuthServiceTest {
         assertNotNull(tokenResponse);
         assertEquals("mock_token", tokenResponse.token());
     }
+
+    /** Kiểm thử P2-BE-04: login chạy BCrypt giả khi tài khoản không tồn tại để chống dò tài khoản qua timing. */
+    @Test
+    void loginRunsDummyBcryptMatchWhenUserDoesNotExist() {
+        when(userRepository.findByUsernameIgnoreCaseAndDeletedAtIsNull("ghost_user")).thenReturn(Optional.empty());
+
+        UnauthorizedException ex = assertThrows(UnauthorizedException.class,
+                () -> service.login(new LoginRequest("ghost_user", "SomePass123")));
+
+        assertEquals("INVALID_CREDENTIALS", ex.getErrorCode());
+        verify(passwordEncoder).matches("SomePass123", AuthService.DUMMY_BCRYPT_HASH);
+        assertFalse(new BCryptPasswordEncoder().matches("SomePass123", AuthService.DUMMY_BCRYPT_HASH));
+    }
 }

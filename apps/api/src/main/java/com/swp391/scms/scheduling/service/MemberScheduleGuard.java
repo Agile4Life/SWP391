@@ -11,9 +11,15 @@ import org.springframework.stereotype.Component;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.context.support.DefaultMessageSourceResolvable;
 
+import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 /**
@@ -24,16 +30,26 @@ public class MemberScheduleGuard {
     private static final String CODE = "MEMBER_SCHEDULE_CONFLICT";
     private static final String KEY = "error.member_schedule.conflict";
     private static final String KIND_KEY_PREFIX = "error.member_schedule.kind.";
+    private static final ZoneId CENTER_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final ClassSessionRepository sessions;
     private final CoachBookingRepository coachBookings;
+    private final Clock clock;
 
-    /** Khởi tạo với các repository buổi học và booking PT. */
-    @Autowired
+    /** Khởi tạo với các repository buổi học và booking PT (dùng đồng hồ hệ thống giờ Việt Nam). */
     public MemberScheduleGuard(ClassSessionRepository sessions,
                                CoachBookingRepository coachBookings) {
+        this(sessions, coachBookings, Clock.system(CENTER_ZONE));
+    }
+
+    /** Khởi tạo chính được Spring dùng: nhận repository buổi học, booking PT và Clock. */
+    @Autowired
+    public MemberScheduleGuard(ClassSessionRepository sessions,
+                               CoachBookingRepository coachBookings,
+                               Clock clock) {
         this.sessions = sessions;
         this.coachBookings = coachBookings;
+        this.clock = clock != null ? clock : Clock.system(CENTER_ZONE);
     }
 
     /**
@@ -66,19 +82,84 @@ public class MemberScheduleGuard {
     }
 
     /**
-     * Khóa học định kỳ chiếm lịch hội viên ở mọi buổi chưa hủy của nó: kiểm tra từng buổi bằng ensureFree.
-     *
-     * Khóa học định kỳ giữ hội viên ở mọi buổi của nó.
+     * Khóa học định kỳ chiếm lịch hội viên ở mọi buổi đang {@code scheduled} từ hiện tại trở đi: tải lịch lớp
+     * nhóm và PT 1:1 của hội viên đúng 2 truy vấn theo khoảng {@code [firstDate, lastDate]} thay vì {@code 2N}.
      */
     public void ensureCourseFree(Long memberUserId, GymClass course) {
         if (memberUserId == null || course == null || course.getId() == null) {
             return;
         }
-        for (ClassSession s : sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(course.getId())) {
-            if (s == null || "cancelled".equalsIgnoreCase(s.getStatus())) {
+        List<ClassSession> rawCourseSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(course.getId());
+        if (rawCourseSessions == null || rawCourseSessions.isEmpty()) {
+            return;
+        }
+        LocalDateTime now = SessionEligibility.now(clock);
+        LocalDate today = now.toLocalDate();
+        LocalTime nowTime = now.toLocalTime();
+
+        List<ClassSession> upcoming = new ArrayList<>();
+        LocalDate firstDate = null;
+        LocalDate lastDate = null;
+        for (ClassSession s : rawCourseSessions) {
+            if (s == null || !"scheduled".equalsIgnoreCase(s.getStatus())
+                    || s.getSessionDate() == null || s.getStartTime() == null || s.getEndTime() == null) {
                 continue;
             }
-            ensureFree(memberUserId, s.getSessionDate(), s.getStartTime(), s.getEndTime(), course.getId());
+            if (s.getSessionDate().isBefore(today)
+                    || (s.getSessionDate().isEqual(today) && !s.getEndTime().isAfter(nowTime))) {
+                continue;
+            }
+            upcoming.add(s);
+            if (firstDate == null || s.getSessionDate().isBefore(firstDate)) {
+                firstDate = s.getSessionDate();
+            }
+            if (lastDate == null || s.getSessionDate().isAfter(lastDate)) {
+                lastDate = s.getSessionDate();
+            }
+        }
+        if (upcoming.isEmpty()) {
+            return;
+        }
+
+        Map<LocalDate, List<ClassSession>> memberSessionsByDate = new HashMap<>();
+        List<ClassSession> memberSessions = sessions.findActiveByMemberBetween(memberUserId, firstDate, lastDate);
+        if (memberSessions != null) {
+            for (ClassSession ms : memberSessions) {
+                if (ms == null || ms.getSessionDate() == null || ms.getStartTime() == null || ms.getEndTime() == null) {
+                    continue;
+                }
+                Long otherClassId = ms.getGymClass() != null ? ms.getGymClass().getId() : null;
+                if (Objects.equals(otherClassId, course.getId())) {
+                    continue;
+                }
+                memberSessionsByDate.computeIfAbsent(ms.getSessionDate(), k -> new ArrayList<>()).add(ms);
+            }
+        }
+
+        Map<LocalDate, List<CoachBooking>> memberPtByDate = new HashMap<>();
+        List<CoachBooking> memberPts = coachBookings.findFutureConfirmedByMember(memberUserId, firstDate);
+        if (memberPts != null) {
+            for (CoachBooking b : memberPts) {
+                if (b == null || b.getBookingDate() == null || b.getBookingDate().isAfter(lastDate)) {
+                    continue;
+                }
+                memberPtByDate.computeIfAbsent(b.getBookingDate(), k -> new ArrayList<>()).add(b);
+            }
+        }
+
+        for (ClassSession target : upcoming) {
+            LocalDate date = target.getSessionDate();
+            for (ClassSession other : memberSessionsByDate.getOrDefault(date, List.of())) {
+                if (overlaps(target.getStartTime(), target.getEndTime(), other.getStartTime(), other.getEndTime())) {
+                    throw conflict("class", "lớp học", date, other.getStartTime(), other.getEndTime(),
+                            other.getGymClass() != null ? other.getGymClass().getName() : "");
+                }
+            }
+            for (CoachBooking b : memberPtByDate.getOrDefault(date, List.of())) {
+                if (overlaps(target.getStartTime(), target.getEndTime(), b.getStartTime(), b.getEndTime())) {
+                    throw conflict("coach", "lịch hẹn HLV 1:1", date, b.getStartTime(), b.getEndTime(), "");
+                }
+            }
         }
     }
 

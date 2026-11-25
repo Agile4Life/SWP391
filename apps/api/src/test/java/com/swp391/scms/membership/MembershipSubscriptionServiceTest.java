@@ -1895,4 +1895,175 @@ class MembershipSubscriptionServiceTest {
         var calc = new com.swp391.scms.membership.service.SubscriptionValueCalculator(null);
         assertThat(calc.remainingValue(sub, today)).isEqualByComparingTo("5900000");
     }
+
+    /** Kiểm thử P1-BE-25: gói đang trong ngày bảo lưu APPROVED bị loại khỏi current() và generateDynamicQr(). */
+    @Test
+    void currentAndDynamicQrExcludeSubscriptionHeldOnToday() {
+        Member member = new Member(); member.setUserId(10L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription heldToday = period(120L, member, holdablePackage("GOLD", 90), null,
+                today.minusDays(5), today.plusDays(90));
+        heldToday.setStatus("active");
+        heldToday.setHoldStatus("APPROVED");
+        heldToday.setHoldStartDate(today);
+        heldToday.setHoldEndDate(today.plusDays(5));
+        heldToday.setQrCode("valid-qr");
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", today, today)).thenReturn(Optional.of(heldToday));
+
+        assertThat(service.current(principal)).isNull();
+        assertThatThrownBy(() -> service.generateDynamicQr(principal))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_NOT_ACTIVE");
+
+        // Trước ngày bắt đầu bảo lưu (holdStartDate = tomorrow) thì hội viên vẫn hoạt động và sinh được QR
+        heldToday.setHoldStartDate(today.plusDays(1));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(heldToday));
+        assertThat(service.current(principal)).isNotNull();
+        assertThat(service.generateDynamicQr(principal).qrCode()).isNotBlank();
+    }
+
+    /** Kiểm thử P2-BE-37: expireSubscription chuyển gói active quá hạn sang expired và dọn HOLD_PENDING để không khóa gia hạn. */
+    @Test
+    void expireSubscriptionMarksPastDueActiveExpiredAndClearsPendingHold() {
+        Member member = new Member(); member.setUserId(10L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription pastDue = period(121L, member, holdablePackage("GOLD", 90), null,
+                today.minusDays(95), today.minusDays(1));
+        pastDue.setStatus("active");
+        pastDue.setHoldStatus("PENDING");
+        pastDue.setHoldStartDate(today.minusDays(5));
+        pastDue.setHoldEndDate(today.minusDays(2));
+        pastDue.setHoldReason("Đi công tác");
+        var holdDocs = org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipHoldDocumentRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "holdDocuments", holdDocs);
+
+        when(subscriptions.findById(121L)).thenReturn(Optional.of(pastDue));
+        when(subscriptions.findByIdForUpdate(121L)).thenReturn(Optional.of(pastDue));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.expireSubscription(121L)).isTrue();
+        assertThat(pastDue.getStatus()).isEqualTo("expired");
+        assertThat(pastDue.getHoldStatus()).isEqualTo("REJECTED");
+        verify(holdDocs).deleteBySubscriptionId(121L);
+    }
+
+    /** Kiểm thử P2-BE-36 & P2-BE-38: cancelHoldRequest và withdrawHoldForMember khóa Member trước Subscription và chặn rút bảo lưu khi đã có kỳ gia hạn tương lai đã trả. */
+    @Test
+    void holdCancellationLocksMemberBeforeSubscriptionAndWithdrawBlocksPaidFutureRenewal() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate originalEnd = sub.getEndDate();
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.plusDays(3));
+        sub.setHoldEndDate(today.plusDays(9));
+        sub.setEndDate(originalEnd.plusDays(7));
+        sub.setHoldDaysCredited(true);
+
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(sub));
+
+        service.cancelHoldRequest(principal, 100L);
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(members, subscriptions);
+        order.verify(members).findByUserIdForUpdate(10L);
+        order.verify(subscriptions).findByIdForUpdate(100L);
+
+        // Thiết lập lại bảo lưu đã duyệt và thêm kỳ gia hạn tương lai đã thanh toán -> withdraw bị chặn
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.plusDays(3));
+        sub.setHoldEndDate(today.plusDays(9));
+        sub.setEndDate(originalEnd.plusDays(7));
+        sub.setHoldDaysCredited(true);
+        MembershipSubscription futureRenewal = period(101L, sub.getMember(), sub.getMembershipPackage(), sub,
+                sub.getEndDate().plusDays(1), sub.getEndDate().plusDays(90));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(sub, futureRenewal));
+
+        assertThatThrownBy(() -> service.withdrawHoldForMember(staffPrincipal, 100L))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_FUTURE_PAID_RENEWAL");
+    }
+
+    /** Kiểm thử P2-BE-38: không cho gia hạn khi gói đang hoạt động đã có bảo lưu APPROVED. */
+    @Test
+    void renewBlocksActiveSubscriptionWithApprovedHold() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldStartDate(today.plusDays(3));
+        sub.setHoldEndDate(today.plusDays(10));
+
+        assertThatThrownBy(() -> service.renew(principal, 100L))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+        verify(subscriptions, never()).saveAndFlush(any());
+    }
+
+    /** Kiểm thử P2-BE-40: chặn mua/gia hạn gói dùng thử hoặc gói 0đ và lọc khỏi danh sách ứng viên gia hạn của quầy. */
+    @Test
+    void createRenewAndRenewalCandidatesBlockTrialAndZeroPricePackages() {
+        com.swp391.scms.users.entity.User memberUser = new com.swp391.scms.users.entity.User();
+        memberUser.setId(10L);
+        Member member = new Member(); member.setUserId(10L); member.setUser(memberUser);
+        MembershipPackage trialPkg = new MembershipPackage();
+        trialPkg.setId(99L); trialPkg.setName("Gói Trải Nghiệm 3 Ngày");
+        trialPkg.setStatus("active"); trialPkg.setDurationDays(3); trialPkg.setPrice(BigDecimal.ZERO);
+
+        MembershipPackage freePkg = new MembershipPackage();
+        freePkg.setId(98L); freePkg.setName("Promo Free");
+        freePkg.setStatus("active"); freePkg.setDurationDays(30); freePkg.setPrice(BigDecimal.ZERO);
+
+        MembershipPackage paidPkg = new MembershipPackage();
+        paidPkg.setId(1L); paidPkg.setName("GOLD 1 THÁNG");
+        paidPkg.setStatus("active"); paidPkg.setDurationDays(30); paidPkg.setPrice(new BigDecimal("500000"));
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(packages.findById(99L)).thenReturn(Optional.of(trialPkg));
+        when(packages.findById(98L)).thenReturn(Optional.of(freePkg));
+
+        assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(99L)))
+                .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(98L)))
+                .isInstanceOf(BadRequestException.class);
+
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription freeSub = period(200L, member, freePkg, null, today.minusDays(5), today.plusDays(24));
+        MembershipSubscription paidSub = period(201L, member, paidPkg, null, today.minusDays(5), today.plusDays(24));
+        when(subscriptions.findById(200L)).thenReturn(Optional.of(freeSub));
+        assertThatThrownBy(() -> service.renew(principal, 200L))
+                .isInstanceOf(BadRequestException.class);
+
+        when(subscriptions.findByMemberUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of(freeSub, paidSub));
+        List<SubscriptionDto> candidates = service.renewalCandidatesForStaff(staffPrincipal, 10L);
+        assertThat(candidates).extracting(SubscriptionDto::id).containsExactly(201L);
+    }
+
+    /** Kiểm thử P1-BE-56: duyệt bảo lưu truyền lý do bảo lưu vào thông báo hủy lớp (không để sót placeholder {0}). */
+    @Test
+    void approveHoldPassesHoldReasonToCancelledEnrollmentMessageWithoutRawPlaceholder() {
+        var source = new org.springframework.context.support.ResourceBundleMessageSource();
+        source.setBasename("i18n/messages");
+        source.setDefaultEncoding("UTF-8");
+        var realMessages = new com.swp391.scms.common.i18n.MessageService(source);
+        var svcWithMessages = new MembershipSubscriptionService(
+                subscriptions, packages, members, clock, new DynamicQrService(), enrollmentService, null, null, realMessages);
+
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        sub.setHoldStatus("PENDING");
+        sub.setHoldReason("Đi công tác nước ngoài");
+        // Không có ngày cụ thể -> kích hoạt nhánh đóng băng ngay và gọi cancelFutureEnrollmentsForMember
+        sub.setHoldStartDate(null);
+        sub.setHoldEndDate(null);
+
+        svcWithMessages.approveHold(staffPrincipal, 100L);
+
+        var reasonCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(enrollmentService).cancelFutureEnrollmentsForMember(eq(10L), reasonCaptor.capture());
+        assertThat(reasonCaptor.getValue())
+                .contains("Đi công tác nước ngoài")
+                .doesNotContain("{0}");
+    }
 }

@@ -117,7 +117,7 @@ public class CoachReviewService {
         review.setComment(request.comment() != null ? request.comment().trim() : null);
         review.setIsAnonymous(Boolean.TRUE.equals(request.isAnonymous()));
         review.setStatus("approved");
-        review.setCreatedAt(LocalDateTime.now());
+        review.setCreatedAt(LocalDateTime.now(clock != null ? clock : Clock.system(com.swp391.scms.common.CenterTime.ZONE)));
 
         CoachReview saved = reviewRepository.save(review);
 

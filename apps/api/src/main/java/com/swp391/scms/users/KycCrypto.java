@@ -5,7 +5,10 @@ import java.security.GeneralSecurityException;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.HexFormat;
+import java.util.Locale;
 import javax.crypto.Cipher;
+import javax.crypto.Mac;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,19 +24,42 @@ import org.springframework.stereotype.Component;
 @Component
 public class KycCrypto {
     private static final String PREFIX = "enc:v1:";
+    private static final String HASH_DOMAIN_SALT = "scms:kyc:doc-hash:v1:";
     private static final int IV_BYTES = 12;
     private static final int TAG_BITS = 128;
 
     private final SecretKeySpec key;
+    private final SecretKeySpec hashKey;
     private final SecureRandom random = new SecureRandom();
 
-    /** Tạo khóa AES 256-bit từ SHA-256 của app.kyc.encryption-key (mặc định dùng JWT secret). */
+    /** Tạo khóa AES 256-bit và khóa HMAC-SHA256 tách biệt từ app.kyc.encryption-key (mặc định dùng JWT secret). */
     public KycCrypto(@Value("${app.kyc.encryption-key:${app.jwt.secret}}") String secret) {
         try {
-            byte[] digest = MessageDigest.getInstance("SHA-256").digest(secret.getBytes(StandardCharsets.UTF_8));
+            MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
+            byte[] digest = sha256.digest(secret.getBytes(StandardCharsets.UTF_8));
             this.key = new SecretKeySpec(digest, "AES");
+            byte[] hmacDigest = MessageDigest.getInstance("SHA-256")
+                    .digest((HASH_DOMAIN_SALT + secret).getBytes(StandardCharsets.UTF_8));
+            this.hashKey = new SecretKeySpec(hmacDigest, "HmacSHA256");
         } catch (GeneralSecurityException e) {
             throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    }
+
+    /**
+     * Tính mã băm HMAC-SHA256 xác định (64 ký tự hex) của số CCCD/Hộ chiếu đã chuẩn hóa (trim + uppercase) để
+     * phát hiện giấy tờ trùng giữa các tài khoản mà không lộ số gốc.
+     */
+    public String hash(String docNumber) {
+        if (docNumber == null || docNumber.isBlank()) return null;
+        String normalized = docNumber.trim().toUpperCase(Locale.ROOT);
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(hashKey);
+            byte[] digest = mac.doFinal((HASH_DOMAIN_SALT + normalized).getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(digest);
+        } catch (GeneralSecurityException e) {
+            throw new IllegalStateException("Could not hash the identity number", e);
         }
     }
 

@@ -131,8 +131,10 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
             select (count(s) > 0) from MembershipSubscription s
             where s.member.userId = :memberId and s.status = 'active'
               and s.startDate <= :date and s.endDate >= :date
+              and (coalesce(s.holdStatus, '') <> 'APPROVED' or s.holdStartDate is null or s.holdEndDate is null
+                   or s.holdStartDate > :date or s.holdEndDate < :date)
             """)
-    /** Hội viên có kỳ gói active hiệu lực vào ngày cho trước không. */
+    /** Hội viên có kỳ gói active hiệu lực vào ngày cho trước không (loại trừ ngày đang bảo lưu đã duyệt). */
     boolean hasActiveMembership(@Param("memberId") Long memberId, @Param("date") LocalDate date);
 
     @Query("""
@@ -141,11 +143,12 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
               and s.startDate <= :today and s.endDate >= :today
               and s.startDate <= :sessionDate and s.endDate >= :sessionDate
               and (coalesce(s.holdStatus, '') <> 'APPROVED' or s.holdStartDate is null or s.holdEndDate is null
-                   or s.holdStartDate > :sessionDate or s.holdEndDate < :sessionDate)
+                   or ((s.holdStartDate > :today or s.holdEndDate < :today)
+                       and (s.holdStartDate > :sessionDate or s.holdEndDate < :sessionDate)))
             """)
     /**
-     * Hội viên có kỳ gói active hiệu lực cả hôm nay lẫn ngày diễn ra buổi tập, và ngày đó không nằm trong
-     * khoảng bảo lưu đã duyệt.
+     * Hội viên có kỳ gói active hiệu lực cả hôm nay lẫn ngày diễn ra buổi tập, và cả hai ngày đó đều không nằm
+     * trong khoảng bảo lưu đã duyệt.
      */
     boolean hasActiveMembershipCoveringSession(@Param("memberId") Long memberId,
                                                @Param("today") LocalDate today,
@@ -209,6 +212,13 @@ public interface MembershipSubscriptionRepository extends JpaRepository<Membersh
             """)
     /** Id các kỳ frozen có bảo lưu đã duyệt mà ngày kết thúc bảo lưu đã qua (cần tiếp tục lại). */
     List<Long> findDatedHoldsDueForResume(@Param("today") LocalDate today);
+
+    /** Id các kỳ active đã qua ngày hết hạn (cần chuyển sang expired và đóng yêu cầu bảo lưu PENDING nếu còn). */
+    @Query("""
+            select s.id from MembershipSubscription s
+            where s.status = 'active' and s.endDate < :today
+            """)
+    List<Long> findActivePastDueIds(@Param("today") LocalDate today);
 
     @Query("""
             select s from MembershipSubscription s

@@ -73,6 +73,76 @@ class GlobalExceptionHandlerTriggerTest {
         org.junit.jupiter.api.Assertions.assertEquals("SCHEDULING_MEMBER_TIME_OVERLAP", response.getBody().getCode());
     }
 
+    /** Kiểm thử P1-BE-12: IllegalStateException rơi về HTTP 500 không lộ nội dung nội bộ; IllegalArgumentException trả 400 thông báo chung đã dịch. */
+    @Test
+    void illegalStateFallsTo500AndIllegalArgumentDoesNotLeakRawMessage() throws Exception {
+        mockMvcFor(new IllegalStateException("internal-vnpay-key-secret")).perform(get("/trigger-test").header("Accept-Language", "en"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("An internal system error occurred. Please contact administrator."));
+
+        mockMvcFor(new IllegalArgumentException("raw internal stack hint")).perform(get("/trigger-test").header("Accept-Language", "en"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Bad request"));
+    }
+
+    /** Kiểm thử P1-BE-12: ánh xạ uq_users_email / key (email)= sang EMAIL_EXISTS và uq_users_username / key (username)= sang USERNAME_EXISTS. */
+    @Test
+    void mapsNamedAndKeyFallbackUniqueConstraintsForEmailAndUsername() {
+        var handler = new GlobalExceptionHandler();
+        var emailByKey = handler.handleDataIntegrity(
+                new DataIntegrityViolationException("ERROR: duplicate key value violates unique constraint \"uk6dotkott2kjsp8vw4d0m25fb7\" Detail: Key (email)=(a@b.com) already exists."));
+        org.junit.jupiter.api.Assertions.assertEquals(409, emailByKey.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("EMAIL_EXISTS", emailByKey.getBody().getCode());
+
+        var usernameByConstraint = handler.handleDataIntegrity(
+                new DataIntegrityViolationException("ERROR: duplicate key value violates unique constraint \"uq_users_username\""));
+        org.junit.jupiter.api.Assertions.assertEquals(409, usernameByConstraint.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("USERNAME_EXISTS", usernameByConstraint.getBody().getCode());
+
+        var usernameByKey = handler.handleDataIntegrity(
+                new DataIntegrityViolationException("Detail: Key (username)=(alice) already exists."));
+        org.junit.jupiter.api.Assertions.assertEquals(409, usernameByKey.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("USERNAME_EXISTS", usernameByKey.getBody().getCode());
+    }
+
+    /** Kiểm thử P1-BE-12 & P2-BE-15: các handler 4xx mới (413, 400 multipart/sort, 415, 406, ResponseStatusException) và lọc tên method ở ConstraintViolation. */
+    @Test
+    void standard4xxHandlersAndConstraintViolationLeafPathWork() {
+        ResourceBundleMessageSource source = new ResourceBundleMessageSource();
+        source.setBasename("i18n/messages");
+        source.setDefaultEncoding("UTF-8");
+        source.setFallbackToSystemLocale(false);
+        var handler = new GlobalExceptionHandler(new MessageService(source));
+
+        org.junit.jupiter.api.Assertions.assertEquals(413,
+                handler.handleMaxUploadSize(new org.springframework.web.multipart.MaxUploadSizeExceededException(1024)).getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals(400,
+                handler.handleMultipart(new org.springframework.web.multipart.MultipartException("bad multipart")).getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals(415,
+                handler.handleMediaTypeNotSupported(new org.springframework.web.HttpMediaTypeNotSupportedException("text/plain")).getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals(406,
+                handler.handleMediaTypeNotAcceptable(new org.springframework.web.HttpMediaTypeNotAcceptableException("not acceptable")).getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals(404,
+                handler.handleResponseStatus(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "secret internal reason")).getStatusCode().value());
+
+        @SuppressWarnings("unchecked")
+        jakarta.validation.ConstraintViolation<Object> violation = org.mockito.Mockito.mock(jakarta.validation.ConstraintViolation.class);
+        jakarta.validation.Path path = org.mockito.Mockito.mock(jakarta.validation.Path.class);
+        org.mockito.Mockito.when(path.toString()).thenReturn("getAll.memberId");
+        org.mockito.Mockito.when(violation.getPropertyPath()).thenReturn(path);
+        org.mockito.Mockito.when(violation.getMessage()).thenReturn("{error.bad_request}");
+        var cvRes = handler.handleConstraintViolation(new jakarta.validation.ConstraintViolationException(java.util.Set.of(violation)));
+        org.junit.jupiter.api.Assertions.assertEquals(400, cvRes.getStatusCode().value());
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, String> details = (java.util.Map<String, String>) cvRes.getBody().getDetails();
+        org.junit.jupiter.api.Assertions.assertTrue(details.containsKey("memberId"));
+        org.junit.jupiter.api.Assertions.assertFalse(details.containsKey("getAll.memberId"));
+        org.junit.jupiter.api.Assertions.assertEquals("Yêu cầu không hợp lệ", details.get("memberId"));
+    }
+
     /** Kiểm thử: giữ nguyên phản hồi của trigger PostgreSQL. */
     @ParameterizedTest
     @MethodSource("triggerFailures")

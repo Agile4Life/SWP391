@@ -105,4 +105,15 @@ class AiChatControllerTest {
                 .andExpect(jsonPath("$.data[0].sender").value("member"))
                 .andExpect(jsonPath("$.data[1].sender").value("ai"));
     }
+
+    /** Kiểm thử: topic vượt quá 150 ký tự bị chặn 400 validation (P2-BE-54). */
+    @Test
+    void sendQuickMessage_RejectsTopicLongerThan150Chars() throws Exception {
+        AiChatMessageCreateDto oversizedTopic = new AiChatMessageCreateDto(null, "A".repeat(151), "Xin chào");
+
+        mockMvc.perform(post("/api/v1/ai/chat/message")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(oversizedTopic)))
+                .andExpect(status().isBadRequest());
+    }
 }

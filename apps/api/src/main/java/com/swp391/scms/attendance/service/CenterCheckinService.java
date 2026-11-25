@@ -142,7 +142,8 @@ public class CenterCheckinService {
         }
         Optional<MembershipSubscription> subscription = subscriptions
                 .findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
-                        principal.id(), STATUS_ACTIVE, today, today);
+                        principal.id(), STATUS_ACTIVE, today, today)
+                .filter(sub -> !sub.isHeldOn(today));
         if (subscription.isEmpty()) {
             Member member = members.findByUserIdForUpdate(principal.id()).orElse(null);
             return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_not_active");
@@ -248,8 +249,8 @@ public class CenterCheckinService {
             return saveDeniedRecord(member, now, gate, recorder, "error.attendance.member_inactive");
         }
 
-        // Trường hợp 3: Gói tập chưa active (vd: pending_payment, cancelled)
-        if (!STATUS_ACTIVE.equalsIgnoreCase(sub.getStatus())) {
+        // Trường hợp 3: Gói tập chưa active (vd: pending_payment, cancelled, frozen) hoặc đang trong khoảng bảo lưu đã duyệt hôm nay
+        if (!STATUS_ACTIVE.equalsIgnoreCase(sub.getStatus()) || sub.isHeldOn(today)) {
             return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_not_active");
         }
 
@@ -303,7 +304,7 @@ public class CenterCheckinService {
      * Cron Job chạy lúc 03:00 AM hàng ngày: Tự động đóng các lượt check-in GRANTED chưa checkout của ngày hôm trước
      * với trạng thái ghi chú SYSTEM_AUTO_CHECKOUT, giải phóng hội viên khỏi bẫy anti-passback ngày hôm sau.
      */
-    @Scheduled(cron = "${app.attendance.auto-checkout.cron:0 0 3 * * ?}")
+    @Scheduled(cron = "${app.attendance.auto-checkout.cron:0 0 3 * * ?}", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public int autoCheckoutStaleVisits() {
         LocalDateTime now = LocalDateTime.now(clock);

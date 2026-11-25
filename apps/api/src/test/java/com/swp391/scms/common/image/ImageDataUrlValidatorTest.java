@@ -43,5 +43,13 @@ class ImageDataUrlValidatorTest {
                 .isInstanceOf(BadRequestException.class);
         assertThatThrownBy(() -> ImageDataUrlValidator.validate(dataUrl("image/png", new byte[1_600_000]), 1_500_000))
                 .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> ImageDataUrlValidator.validate(dataUrl("image/png", png), 0))
+                .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> ImageDataUrlValidator.validate(dataUrl("image/png", png), -1))
+                .isInstanceOf(BadRequestException.class);
+        // Chuỗi Base64 vượt quá giới hạn ký tự bị chặn trước bước giải mã.
+        String oversizedBeforeDecode = "data:image/png;base64," + "A".repeat(20);
+        assertThatThrownBy(() -> ImageDataUrlValidator.validate(oversizedBeforeDecode, 10))
+                .isInstanceOf(BadRequestException.class);
     }
 }

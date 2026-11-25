@@ -23,9 +23,11 @@ import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /** Chuyển entity đơn hàng shop sang DTO chi tiết/tóm tắt, tính cờ thanh toán/hủy và số tiền đã hoàn. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Component
 public class OrderMapper {
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");

@@ -247,4 +247,17 @@ class HealthAssessmentTierTest {
 
         assertThat(service.addMetric(10L, metric("body_fat", "18", "%"), 30L, "CENTER_MANAGER").metricName()).isEqualTo("body_fat");
     }
+
+    /** Kiểm thử P3-BE-08: updateMetric cũng chặn đổi sang body_fat/muscle_mass cho hội viên không phải Platinum. */
+    @Test
+    void updateMetricEnforcesPlatinumTierForDeepAssessmentMetrics() {
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active("GOLD", 30)));
+        MemberProgressLog existing = row(20L, today.atTime(9, 0));
+        when(logs.findById(5L)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.updateMetric(10L, 5L, metric("body_fat", "18", "%"), 30L, "CENTER_MANAGER"))
+                .isInstanceOf(ForbiddenException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "HEALTH_DEEP_ASSESSMENT_PLATINUM");
+        verify(logs, never()).save(any());
+    }
 }

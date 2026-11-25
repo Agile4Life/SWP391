@@ -152,4 +152,22 @@ class SessionEvaluationServiceTest {
 
         assertEquals(0, evaluationService.getSessionEvaluations(7L, 202L, "COACH").size());
     }
+
+    /** Kiểm thử P3-BE-08: HLV lớp khác không được tạo đánh giá cho buổi học không phải lớp mình dạy. */
+    @Test
+    void createEvaluation_forAnotherCoachSession_throwsForbidden() {
+        when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
+        Coach otherCoach = new Coach();
+        otherCoach.setUserId(999L);
+        when(coachRepository.findById(999L)).thenReturn(Optional.of(otherCoach));
+        com.swp391.scms.scheduling.entity.GymClass gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        gymClass.setCoach(coach);
+        com.swp391.scms.scheduling.entity.ClassSession session = new com.swp391.scms.scheduling.entity.ClassSession();
+        session.setGymClass(gymClass);
+        when(classSessionRepository.findById(7L)).thenReturn(Optional.of(session));
+
+        SessionEvaluationCreateDto request = new SessionEvaluationCreateDto(
+                7L, 101L, 999L, new BigDecimal("85.0"), "Notes", "Feedback", null);
+        assertThrows(ForbiddenException.class, () -> evaluationService.createEvaluation(request, 999L, "COACH"));
+    }
 }

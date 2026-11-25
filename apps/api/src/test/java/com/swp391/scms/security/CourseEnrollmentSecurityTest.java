@@ -76,8 +76,17 @@ class CourseEnrollmentSecurityTest {
                 .andExpect(status().isCreated());
         mvc.perform(delete("/api/v1/classes/5/enroll").with(authentication(actor("MEMBER"))))
                 .andExpect(status().isOk());
+        mvc.perform(post("/api/v1/classes/classes/6/enroll").with(authentication(actor("MEMBER"))))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/api/v1/classes/classes/6/checkout").with(authentication(actor("MEMBER"))))
+                .andExpect(status().isCreated());
+        mvc.perform(delete("/api/v1/classes/classes/6/enroll").with(authentication(actor("MEMBER"))))
+                .andExpect(status().isOk());
         verify(service).enrollCourse(any(), eq(5L));
         verify(service).checkoutCourse(any(), eq(5L), eq("cash"));
         verify(service).cancelCourseEnrollment(any(), eq(5L));
+        verify(service).enrollCourse(any(), eq(6L));
+        verify(service).checkoutCourse(any(), eq(6L), eq("cash"));
+        verify(service).cancelCourseEnrollment(any(), eq(6L));
     }
 }

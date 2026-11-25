@@ -125,4 +125,53 @@ class PackageBenefitsTest {
         // Chu kỳ cuối cùng không bao giờ vượt quá ngày hết hạn của gói đăng ký.
         assertEquals(LocalDate.of(2027, 2, 5), PackageBenefits.cycleEnd(sub, LocalDate.of(2027, 2, 1)));
     }
+
+    /** Kiểm thử P1-BE-22: cycleAnchor dừng trước gói Trial để gói trả phí bắt đầu chu kỳ từ ngày kích hoạt. */
+    @Test
+    void cycleAnchorStopsBeforeTrialSubscription() {
+        var trial = new com.swp391.scms.membership.entity.MembershipSubscription();
+        trial.setId(1L);
+        trial.setMembershipPackage(pkg("Gói Trải Nghiệm 3 Ngày", "GOLD", 3));
+        trial.setStatus("expired");
+        trial.setStartDate(LocalDate.of(2026, 11, 1));
+        trial.setEndDate(LocalDate.of(2026, 11, 3));
+
+        var plat = new com.swp391.scms.membership.entity.MembershipSubscription();
+        plat.setId(2L);
+        plat.setMembershipPackage(pkg("PLATINUM 1 THÁNG", "PLATINUM", 30));
+        plat.setStatus("active");
+        plat.setStartDate(LocalDate.of(2026, 11, 3));
+        plat.setEndDate(LocalDate.of(2026, 12, 2));
+        plat.setPreviousSubscription(trial);
+        plat.setUpgradeCharge(new java.math.BigDecimal("1500000"));
+
+        assertEquals(LocalDate.of(2026, 11, 3), PackageBenefits.cycleAnchor(plat));
+        // Ngày 1/12 và 2/12 vẫn thuộc chu kỳ duy nhất (3/11–2/12), không reset sang chu kỳ 2.
+        assertEquals(LocalDate.of(2026, 11, 3), PackageBenefits.cycleStart(plat, LocalDate.of(2026, 12, 1)));
+        assertEquals(LocalDate.of(2026, 12, 2), PackageBenefits.cycleEnd(plat, LocalDate.of(2026, 12, 1)));
+    }
+
+    /** Kiểm thử P1-BE-22: totalPtSessions giới hạn tổng số lượt PT theo thời hạn đã mua của gói. */
+    @Test
+    void totalPtSessionsCapsLifetimeQuotaByPurchasedDuration() {
+        var plat30 = new com.swp391.scms.membership.entity.MembershipSubscription();
+        plat30.setMembershipPackage(pkg("PLATINUM", "PLATINUM", 30));
+        assertEquals(6, PackageBenefits.totalPtSessions(plat30));
+
+        var plat90 = new com.swp391.scms.membership.entity.MembershipSubscription();
+        plat90.setMembershipPackage(pkg("PLATINUM 3 THÁNG", "PLATINUM", 90));
+        assertEquals(18, PackageBenefits.totalPtSessions(plat90));
+
+        var gold30 = new com.swp391.scms.membership.entity.MembershipSubscription();
+        gold30.setMembershipPackage(pkg("GOLD", "GOLD", 30));
+        assertEquals(3, PackageBenefits.totalPtSessions(gold30));
+
+        var trial = new com.swp391.scms.membership.entity.MembershipSubscription();
+        trial.setMembershipPackage(pkg("Gói Trải Nghiệm 3 Ngày", "GOLD", 3));
+        assertEquals(1, PackageBenefits.totalPtSessions(trial));
+
+        var silver = new com.swp391.scms.membership.entity.MembershipSubscription();
+        silver.setMembershipPackage(pkg("SILVER", "SILVER", 30));
+        assertEquals(0, PackageBenefits.totalPtSessions(silver));
+    }
 }

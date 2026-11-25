@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -48,6 +49,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * Nghiệp vụ đơn hàng shop của hội viên: đặt đơn chống gửi trùng, xem/hủy đơn và hủy tự động đơn quá hạn thanh
  * toán.
  */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 public class ProductOrderService {
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");

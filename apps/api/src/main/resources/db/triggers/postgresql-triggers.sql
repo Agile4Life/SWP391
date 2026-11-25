@@ -4,9 +4,10 @@
 CREATE OR REPLACE FUNCTION scms_touch_updated_at()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 BEGIN
-    NEW.updated_at := CURRENT_TIMESTAMP;
+    NEW.updated_at := (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh');
     RETURN NEW;
 END;
 $$;
@@ -19,6 +20,7 @@ FOR EACH ROW EXECUTE FUNCTION scms_touch_updated_at();
 CREATE OR REPLACE FUNCTION scms_check_enrollment_capacity()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 DECLARE
     previous_class_id BIGINT;
@@ -28,6 +30,11 @@ DECLARE
 BEGIN
     IF TG_OP = 'UPDATE' THEN
         previous_class_id := OLD.class_id;
+    END IF;
+
+    -- Giữ nhất quán thứ tự khóa với session_bookings (khóa member-schedule trước classes FOR UPDATE) để triệt tiêu deadlock AB-BA.
+    IF NEW.status = 'booked' THEN
+        PERFORM pg_advisory_xact_lock(hashtextextended(current_schema() || ':member-schedule:' || NEW.member_id::TEXT, 0));
     END IF;
 
     PERFORM id
@@ -69,6 +76,7 @@ CREATE OR REPLACE FUNCTION scms_is_valid_schedule_slot(p_start TIME, p_end TIME)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE
+SET search_path FROM CURRENT
 AS $$
     SELECT COALESCE(
         (p_start = TIME '07:00:00' AND p_end = TIME '09:30:00')
@@ -83,6 +91,7 @@ $$;
 CREATE OR REPLACE FUNCTION scms_check_session_conflict()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 DECLARE
     session_coach_id BIGINT;
@@ -103,12 +112,13 @@ BEGIN
     FROM classes WHERE id = NEW.class_id FOR SHARE;
 
     FOR lock_key IN
-        SELECT DISTINCT hashtextextended(resource_key, 0)
+        SELECT DISTINCT hashtextextended(current_schema() || ':' || resource_key, 0)
         FROM unnest(ARRAY[
             'coach:' || session_coach_id::TEXT,
             'room:' || session_room_id::TEXT,
             'discipline:' || session_discipline_id::TEXT
         ]) AS resources(resource_key)
+        WHERE resource_key IS NOT NULL
         ORDER BY 1
     LOOP
         PERFORM pg_advisory_xact_lock(lock_key);
@@ -154,6 +164,102 @@ CREATE TRIGGER trg_sessions_check_conflict
 AFTER INSERT OR UPDATE OF class_id, session_date, start_time, end_time, status ON class_sessions
 FOR EACH ROW EXECUTE FUNCTION scms_check_session_conflict();
 
+-- Kiểm tra lại xung đột HLV, phòng tập và cùng bộ môn cho toàn bộ buổi học tương lai khi cập nhật lớp (coach/room/discipline/kích hoạt lại).
+CREATE OR REPLACE FUNCTION scms_check_class_sessions_conflict()
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path FROM CURRENT
+AS $$
+DECLARE
+    business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
+    lock_key BIGINT;
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM class_sessions s
+        WHERE s.class_id = NEW.id
+          AND s.status = 'scheduled'
+          AND s.session_date >= business_date
+    ) THEN
+        RETURN NEW;
+    END IF;
+
+    FOR lock_key IN
+        SELECT DISTINCT hashtextextended(current_schema() || ':' || resource_key, 0)
+        FROM unnest(ARRAY[
+            'coach:' || NEW.coach_id::TEXT,
+            'room:' || NEW.room_id::TEXT,
+            'discipline:' || NEW.discipline_id::TEXT
+        ]) AS resources(resource_key)
+        WHERE resource_key IS NOT NULL
+        ORDER BY 1
+    LOOP
+        PERFORM pg_advisory_xact_lock(lock_key);
+    END LOOP;
+
+    IF (OLD.coach_id IS DISTINCT FROM NEW.coach_id
+        OR OLD.room_id IS DISTINCT FROM NEW.room_id
+        OR (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'active'))
+       AND EXISTS (
+        SELECT 1
+        FROM class_sessions my_session
+        JOIN class_sessions existing_session
+          ON existing_session.session_date = my_session.session_date
+         AND existing_session.id <> my_session.id
+         AND existing_session.status <> 'cancelled'
+         AND my_session.start_time < existing_session.end_time
+         AND my_session.end_time > existing_session.start_time
+        JOIN classes existing_class
+          ON existing_class.id = existing_session.class_id
+        WHERE my_session.class_id = NEW.id
+          AND my_session.status = 'scheduled'
+          AND my_session.session_date >= business_date
+          AND (existing_class.coach_id = NEW.coach_id OR existing_class.room_id = NEW.room_id)
+    ) THEN
+        RAISE EXCEPTION 'Huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này.'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_conflict';
+    END IF;
+
+    IF COALESCE(NEW.status, 'active') = 'active'
+       AND (OLD.discipline_id IS DISTINCT FROM NEW.discipline_id
+            OR (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'active'))
+       AND EXISTS (
+        SELECT 1
+        FROM class_sessions my_session
+        JOIN class_sessions existing_session
+          ON existing_session.session_date = my_session.session_date
+         AND existing_session.id <> my_session.id
+         AND existing_session.status <> 'cancelled'
+         AND my_session.start_time < existing_session.end_time
+         AND my_session.end_time > existing_session.start_time
+        JOIN classes existing_class
+          ON existing_class.id = existing_session.class_id
+        WHERE my_session.class_id = NEW.id
+          AND my_session.status = 'scheduled'
+          AND my_session.session_date >= business_date
+          AND existing_class.status = 'active'
+          AND existing_class.discipline_id = NEW.discipline_id
+    ) THEN
+        RAISE EXCEPTION 'Bộ môn này đã có lớp học khác trùng khung giờ.'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_discipline_conflict';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_classes_check_session_conflict ON classes;
+CREATE TRIGGER trg_classes_check_session_conflict
+AFTER UPDATE OF coach_id, room_id, discipline_id, status ON classes
+FOR EACH ROW
+WHEN (
+    OLD.coach_id IS DISTINCT FROM NEW.coach_id
+    OR OLD.room_id IS DISTINCT FROM NEW.room_id
+    OR OLD.discipline_id IS DISTINCT FROM NEW.discipline_id
+    OR (OLD.status IS DISTINCT FROM NEW.status AND NEW.status = 'active')
+)
+EXECUTE FUNCTION scms_check_class_sessions_conflict();
+
 -- Gỡ bỏ các trigger và hàm đặt sân cũ trên CSDL đã tồn tại (tính năng đặt sân đã ngừng).
 DROP TRIGGER IF EXISTS trg_classes_check_court_room ON classes;
 DROP FUNCTION IF EXISTS scms_guard_class_court_room();
@@ -172,6 +278,7 @@ DROP FUNCTION IF EXISTS scms_guard_court_booking();
 CREATE OR REPLACE FUNCTION scms_require_active_membership_for_enrollment()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 DECLARE
     business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
@@ -203,6 +310,7 @@ FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_enrollment();
 CREATE OR REPLACE FUNCTION scms_check_session_booking_capacity()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 DECLARE
     target_class_id BIGINT;
@@ -242,6 +350,7 @@ FOR EACH ROW EXECUTE FUNCTION scms_check_session_booking_capacity();
 CREATE OR REPLACE FUNCTION scms_require_membership_for_session_booking()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 DECLARE
     business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
@@ -270,7 +379,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_session_bookings_check_membership ON session_bookings;
 CREATE TRIGGER trg_session_bookings_check_membership
-BEFORE INSERT OR UPDATE OF member_id, status ON session_bookings
+BEFORE INSERT OR UPDATE OF session_id, member_id, status ON session_bookings
 FOR EACH ROW EXECUTE FUNCTION scms_require_membership_for_session_booking();
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_session_booking_active ON session_bookings (session_id, member_id) WHERE status = 'booked';
@@ -278,10 +387,17 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_session_booking_active ON session_bookings 
 CREATE OR REPLACE FUNCTION scms_require_active_membership_for_checkin()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 DECLARE
     business_date date := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
 BEGIN
+    IF TG_OP = 'UPDATE'
+       AND OLD.member_id IS NOT DISTINCT FROM NEW.member_id
+       AND OLD.status IS NOT DISTINCT FROM NEW.status THEN
+        RETURN NEW;
+    END IF;
+
     IF (NEW.status IS NULL OR NEW.status = 'GRANTED') AND NOT EXISTS (
         SELECT 1
         FROM membership_subscriptions subscription
@@ -289,6 +405,12 @@ BEGIN
           AND subscription.status = 'active'
           AND subscription.start_date <= business_date
           AND subscription.end_date >= business_date
+          AND NOT (
+              UPPER(COALESCE(subscription.hold_status, '')) = 'APPROVED'
+              AND subscription.hold_start_date IS NOT NULL
+              AND subscription.hold_end_date IS NOT NULL
+              AND business_date BETWEEN subscription.hold_start_date AND subscription.hold_end_date
+          )
         FOR SHARE
     ) THEN
         RAISE EXCEPTION 'Học viên không có gói thành viên còn hiệu lực để check-in.'
@@ -301,7 +423,7 @@ $$;
 
 DROP TRIGGER IF EXISTS trg_checkins_check_membership ON center_checkins;
 CREATE TRIGGER trg_checkins_check_membership
-BEFORE INSERT ON center_checkins
+BEFORE INSERT OR UPDATE OF member_id, status ON center_checkins
 FOR EACH ROW EXECUTE FUNCTION scms_require_active_membership_for_checkin();
 
 -- Các unique index có điều kiện lọc (không thể biểu diễn độc lập nền tảng trong JPA)
@@ -310,7 +432,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_users_phone ON users (phone) WHERE phone IS
 CREATE UNIQUE INDEX IF NOT EXISTS uq_enrollment_active ON class_enrollments (class_id, member_id) WHERE status = 'booked';
 
 DO $$
+DECLARE
+    has_duplicate_active_plans BOOLEAN := FALSE;
 BEGIN
+    PERFORM set_config('lock_timeout', '10s', true);
+
     IF EXISTS (
         SELECT 1
         FROM information_schema.columns
@@ -339,6 +465,20 @@ BEGIN
         FROM information_schema.tables
         WHERE table_schema = current_schema()
           AND table_name = 'membership_subscriptions'
+    ) AND NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint c
+        JOIN pg_class t ON t.oid = c.conrelid
+        JOIN pg_namespace n ON n.oid = t.relnamespace
+        WHERE n.nspname = current_schema()
+          AND t.relname = 'membership_subscriptions'
+          AND c.conname = 'ck_subscriptions_status'
+          AND c.contype = 'c'
+          AND pg_get_constraintdef(c.oid) LIKE '%pending_payment%'
+          AND pg_get_constraintdef(c.oid) LIKE '%active%'
+          AND pg_get_constraintdef(c.oid) LIKE '%frozen%'
+          AND pg_get_constraintdef(c.oid) LIKE '%expired%'
+          AND pg_get_constraintdef(c.oid) LIKE '%cancelled%'
     ) THEN
         EXECUTE format('ALTER TABLE %I.membership_subscriptions DROP CONSTRAINT IF EXISTS ck_subscriptions_status', current_schema());
         EXECUTE format('ALTER TABLE %I.membership_subscriptions ADD CONSTRAINT ck_subscriptions_status CHECK (status IN (''pending_payment'',''active'',''frozen'',''expired'',''cancelled''))', current_schema());
@@ -351,11 +491,31 @@ BEGIN
         WHERE table_schema = current_schema()
           AND table_name = 'training_plans'
     ) THEN
-        EXECUTE format('ALTER TABLE %I.training_plans DROP CONSTRAINT IF EXISTS ck_plans_status', current_schema());
-        EXECUTE format('ALTER TABLE %I.training_plans ADD CONSTRAINT ck_plans_status CHECK (status IN (''draft'',''active'',''superseded'',''completed'',''cancelled''))', current_schema());
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint c
+            JOIN pg_class t ON t.oid = c.conrelid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            WHERE n.nspname = current_schema()
+              AND t.relname = 'training_plans'
+              AND c.conname = 'ck_plans_status'
+              AND c.contype = 'c'
+              AND pg_get_constraintdef(c.oid) LIKE '%draft%'
+              AND pg_get_constraintdef(c.oid) LIKE '%active%'
+              AND pg_get_constraintdef(c.oid) LIKE '%superseded%'
+              AND pg_get_constraintdef(c.oid) LIKE '%completed%'
+              AND pg_get_constraintdef(c.oid) LIKE '%cancelled%'
+        ) THEN
+            EXECUTE format('ALTER TABLE %I.training_plans DROP CONSTRAINT IF EXISTS ck_plans_status', current_schema());
+            EXECUTE format('ALTER TABLE %I.training_plans ADD CONSTRAINT ck_plans_status CHECK (status IN (''draft'',''active'',''superseded'',''completed'',''cancelled''))', current_schema());
+        END IF;
         -- Các giáo án được kích hoạt trước quy tắc này có thể để một HLV có nhiều giáo án active cho cùng hội viên: giữ lại bản mới nhất
         -- cho mỗi cặp hội viên–HLV và chuyển phần còn lại sang lịch sử. Giáo án từ các HLV khác của hội viên vẫn giữ trạng thái active.
-        EXECUTE format('UPDATE %1$I.training_plans p SET status = ''superseded'' WHERE p.status = ''active'' AND EXISTS (SELECT 1 FROM %1$I.training_plans newer WHERE newer.member_id = p.member_id AND newer.coach_id = p.coach_id AND newer.status = ''active'' AND (newer.created_at > p.created_at OR (newer.created_at = p.created_at AND newer.id > p.id)))', current_schema());
+        EXECUTE format('SELECT EXISTS (SELECT 1 FROM %1$I.training_plans p WHERE p.status = ''active'' AND EXISTS (SELECT 1 FROM %1$I.training_plans newer WHERE newer.member_id = p.member_id AND newer.coach_id = p.coach_id AND newer.status = ''active'' AND (newer.created_at > p.created_at OR (newer.created_at = p.created_at AND newer.id > p.id))))', current_schema())
+        INTO has_duplicate_active_plans;
+        IF has_duplicate_active_plans THEN
+            EXECUTE format('UPDATE %1$I.training_plans p SET status = ''superseded'' WHERE p.status = ''active'' AND EXISTS (SELECT 1 FROM %1$I.training_plans newer WHERE newer.member_id = p.member_id AND newer.coach_id = p.coach_id AND newer.status = ''active'' AND (newer.created_at > p.created_at OR (newer.created_at = p.created_at AND newer.id > p.id)))', current_schema());
+        END IF;
     END IF;
 
     IF EXISTS (
@@ -479,23 +639,64 @@ BEGIN
         WHERE table_schema = current_schema()
           AND table_name = 'vnpay_transactions'
     ) THEN
-        -- Chỉ đánh dấu hết hạn các giao dịch đã quá expires_at; khởi động lại không được làm lỗi thanh toán vẫn còn mở trên cổng.
-        EXECUTE format('UPDATE %I.vnpay_transactions SET status = ''failed'' WHERE status = ''pending'' AND gateway_transaction_no IS NULL AND expires_at < CURRENT_TIMESTAMP', current_schema());
+        -- Chỉ đánh dấu hết hạn các giao dịch đã quá expires_at (giờ Việt Nam); khởi động lại không được làm lỗi thanh toán vẫn còn mở trên cổng.
+        EXECUTE format('UPDATE %I.vnpay_transactions SET status = ''failed'' WHERE status = ''pending'' AND gateway_transaction_no IS NULL AND expires_at < (CURRENT_TIMESTAMP AT TIME ZONE ''Asia/Ho_Chi_Minh'')', current_schema());
     END IF;
 
-    -- Chuẩn hóa các giá trị thông báo cũ, sau đó áp dụng cùng danh sách ràng buộc như Notification.java.
+    -- Chuẩn hóa các giá trị thông báo cũ, sau đó áp dụng cùng danh sách ràng buộc như Notification.java (bỏ qua nếu constraint đã khớp).
     IF EXISTS (
         SELECT 1
         FROM information_schema.tables
         WHERE table_schema = current_schema()
           AND table_name = 'notifications'
     ) THEN
-        EXECUTE format('UPDATE %I.notifications SET type = CASE WHEN lower(type) IN (''order'',''wallet'') THEN ''payment'' WHEN lower(type) = ''booking'' THEN ''class_reminder'' ELSE ''system'' END WHERE type NOT IN (''schedule_change'',''package_expiry'',''class_reminder'',''system'',''support_reply'',''payment'')', current_schema());
-        EXECUTE format('UPDATE %I.notifications SET related_entity_type = CASE WHEN lower(related_entity_type) IN (''wallet'',''product_order'') THEN ''payment'' WHEN lower(related_entity_type) IN (''booking'',''session_booking'') THEN ''class_session'' ELSE NULL END WHERE related_entity_type IS NOT NULL AND related_entity_type NOT IN (''class_session'',''membership_subscription'',''payment'',''support_request'',''class_enrollment'',''training_plan'')', current_schema());
-        EXECUTE format('ALTER TABLE %I.notifications DROP CONSTRAINT IF EXISTS ck_notifications_type', current_schema());
-        EXECUTE format('ALTER TABLE %I.notifications ADD CONSTRAINT ck_notifications_type CHECK (type IN (''schedule_change'',''package_expiry'',''class_reminder'',''system'',''support_reply'',''payment''))', current_schema());
-        EXECUTE format('ALTER TABLE %I.notifications DROP CONSTRAINT IF EXISTS ck_notifications_entity_type', current_schema());
-        EXECUTE format('ALTER TABLE %I.notifications ADD CONSTRAINT ck_notifications_entity_type CHECK (related_entity_type IS NULL OR related_entity_type IN (''class_session'',''membership_subscription'',''payment'',''support_request'',''class_enrollment'',''training_plan''))', current_schema());
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint c
+            JOIN pg_class t ON t.oid = c.conrelid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            WHERE n.nspname = current_schema()
+              AND t.relname = 'notifications'
+              AND c.conname = 'ck_notifications_type'
+              AND c.contype = 'c'
+              AND pg_get_constraintdef(c.oid) LIKE '%schedule_change%'
+              AND pg_get_constraintdef(c.oid) LIKE '%package_expiry%'
+              AND pg_get_constraintdef(c.oid) LIKE '%class_reminder%'
+              AND pg_get_constraintdef(c.oid) LIKE '%system%'
+              AND pg_get_constraintdef(c.oid) LIKE '%support_reply%'
+              AND pg_get_constraintdef(c.oid) LIKE '%payment%'
+              AND pg_get_constraintdef(c.oid) NOT LIKE '%''order''%'
+              AND pg_get_constraintdef(c.oid) NOT LIKE '%''booking''%'
+        ) THEN
+            EXECUTE format('UPDATE %I.notifications SET type = CASE WHEN lower(type) IN (''order'',''wallet'') THEN ''payment'' WHEN lower(type) = ''booking'' THEN ''class_reminder'' ELSE ''system'' END WHERE type NOT IN (''schedule_change'',''package_expiry'',''class_reminder'',''system'',''support_reply'',''payment'')', current_schema());
+            EXECUTE format('ALTER TABLE %I.notifications DROP CONSTRAINT IF EXISTS ck_notifications_type', current_schema());
+            EXECUTE format('ALTER TABLE %I.notifications ADD CONSTRAINT ck_notifications_type CHECK (type IN (''schedule_change'',''package_expiry'',''class_reminder'',''system'',''support_reply'',''payment''))', current_schema());
+        END IF;
+
+        IF NOT EXISTS (
+            SELECT 1
+            FROM pg_constraint c
+            JOIN pg_class t ON t.oid = c.conrelid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            WHERE n.nspname = current_schema()
+              AND t.relname = 'notifications'
+              AND c.conname = 'ck_notifications_entity_type'
+              AND c.contype = 'c'
+              AND pg_get_constraintdef(c.oid) LIKE '%class_session%'
+              AND pg_get_constraintdef(c.oid) LIKE '%membership_subscription%'
+              AND pg_get_constraintdef(c.oid) LIKE '%payment%'
+              AND pg_get_constraintdef(c.oid) LIKE '%support_request%'
+              AND pg_get_constraintdef(c.oid) LIKE '%class_enrollment%'
+              AND pg_get_constraintdef(c.oid) LIKE '%training_plan%'
+              AND pg_get_constraintdef(c.oid) NOT LIKE '%''wallet''%'
+              AND pg_get_constraintdef(c.oid) NOT LIKE '%''product_order''%'
+              AND pg_get_constraintdef(c.oid) NOT LIKE '%''booking''%'
+              AND pg_get_constraintdef(c.oid) NOT LIKE '%''session_booking''%'
+        ) THEN
+            EXECUTE format('UPDATE %I.notifications SET related_entity_type = CASE WHEN lower(related_entity_type) IN (''wallet'',''product_order'') THEN ''payment'' WHEN lower(related_entity_type) IN (''booking'',''session_booking'') THEN ''class_session'' ELSE NULL END WHERE related_entity_type IS NOT NULL AND related_entity_type NOT IN (''class_session'',''membership_subscription'',''payment'',''support_request'',''class_enrollment'',''training_plan'')', current_schema());
+            EXECUTE format('ALTER TABLE %I.notifications DROP CONSTRAINT IF EXISTS ck_notifications_entity_type', current_schema());
+            EXECUTE format('ALTER TABLE %I.notifications ADD CONSTRAINT ck_notifications_entity_type CHECK (related_entity_type IS NULL OR related_entity_type IN (''class_session'',''membership_subscription'',''payment'',''support_request'',''class_enrollment'',''training_plan''))', current_schema());
+        END IF;
     END IF;
 END;
 $$;
@@ -565,13 +766,13 @@ BEGIN
         -- PostgreSQL gộp các permissive policy bằng toán tử OR: cần thêm ràng buộc restrictive cho các topic chat
         -- để một receive policy rộng có sẵn không thể làm lộ hộp thư của người dùng khác.
         DROP POLICY IF EXISTS scms_chat_receive_guard ON realtime.messages;
-        CREATE POLICY scms_chat_receive_guard ON realtime.messages AS RESTRICTIVE FOR SELECT TO authenticated
+        CREATE POLICY scms_chat_receive_guard ON realtime.messages AS RESTRICTIVE FOR SELECT TO PUBLIC
         USING (realtime.topic() NOT LIKE 'scms:chat:%' OR (
             extension = 'broadcast' AND (auth.jwt() ->> 'scms_chat_scope') = 'receive'
             AND realtime.topic() = 'scms:chat:' || (auth.jwt() ->> 'scms_chat_user_id')));
 
         DROP POLICY IF EXISTS scms_chat_send_guard ON realtime.messages;
-        CREATE POLICY scms_chat_send_guard ON realtime.messages AS RESTRICTIVE FOR INSERT TO authenticated
+        CREATE POLICY scms_chat_send_guard ON realtime.messages AS RESTRICTIVE FOR INSERT TO PUBLIC
         WITH CHECK (realtime.topic() NOT LIKE 'scms:chat:%');
     END IF;
 END;
@@ -629,8 +830,12 @@ $$;
 
 -- SCRUM-133: Lịch tập PT và lịch lớp nhóm phải dùng chung bộ bảo vệ ở tầng database.
 CREATE OR REPLACE FUNCTION scms_guard_pt_schedule()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger
+LANGUAGE plpgsql
+SET search_path FROM CURRENT
+AS $$
 DECLARE
+    business_date DATE := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
     target_coach BIGINT;
     schedule_conflict BOOLEAN := FALSE;
 BEGIN
@@ -638,6 +843,18 @@ BEGIN
     IF (TG_TABLE_NAME = 'coach_bookings' AND NEW.status <> 'confirmed')
        OR (TG_TABLE_NAME IN ('class_enrollments', 'session_bookings') AND NEW.status <> 'booked')
        OR (TG_TABLE_NAME = 'class_sessions' AND NEW.status <> 'scheduled') THEN
+        RETURN NEW;
+    END IF;
+    -- Bỏ qua cập nhật không đổi lịch hẹn PT (ví dụ điểm danh quá khứ hoặc xác nhận thu tiền) để không khóa toàn cục và không kiểm tra lại gói tập.
+    IF TG_TABLE_NAME = 'coach_bookings' AND TG_OP = 'UPDATE'
+       AND OLD.status = 'confirmed' AND NEW.status = 'confirmed'
+       AND OLD.member_id = NEW.member_id AND OLD.coach_id = NEW.coach_id
+       AND OLD.booking_date = NEW.booking_date
+       AND OLD.start_time = NEW.start_time AND OLD.end_time = NEW.end_time THEN
+        RETURN NEW;
+    END IF;
+    IF TG_TABLE_NAME = 'classes' AND TG_OP = 'UPDATE'
+       AND OLD.coach_id IS NOT DISTINCT FROM NEW.coach_id THEN
         RETURN NEW;
     END IF;
     -- ponytail: tuần tự hóa các thao tác ghi lịch trong phạm vi MVP này; chuyển sang khóa theo thứ tự từng bên tham gia nếu tranh chấp tăng cao.
@@ -652,12 +869,33 @@ BEGIN
             RAISE EXCEPTION 'trg_schedule_invalid_slot'
                 USING ERRCODE = '23514', CONSTRAINT = 'trg_schedule_invalid_slot';
         END IF;
+        -- Hỗ trợ gia hạn sớm nối tiếp: chỉ cần có gói active không bảo lưu phủ hôm nay VÀ có gói active không bảo lưu phủ ngày tập (có FOR SHARE chống race đóng băng/hủy).
         IF NOT EXISTS (
             SELECT 1 FROM membership_subscriptions m
-            WHERE m.member_id = NEW.member_id AND m.status = 'active'
-              AND m.start_date <= (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
-              AND m.end_date >= (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date
-              AND m.start_date <= NEW.booking_date AND m.end_date >= NEW.booking_date
+            WHERE m.member_id = NEW.member_id
+              AND m.status = 'active'
+              AND m.start_date <= business_date
+              AND m.end_date >= business_date
+              AND NOT (
+                  UPPER(COALESCE(m.hold_status, '')) = 'APPROVED'
+                  AND m.hold_start_date IS NOT NULL
+                  AND m.hold_end_date IS NOT NULL
+                  AND business_date BETWEEN m.hold_start_date AND m.hold_end_date
+              )
+            FOR SHARE
+        ) OR NOT EXISTS (
+            SELECT 1 FROM membership_subscriptions m
+            WHERE m.member_id = NEW.member_id
+              AND m.status = 'active'
+              AND m.start_date <= NEW.booking_date
+              AND m.end_date >= NEW.booking_date
+              AND NOT (
+                  UPPER(COALESCE(m.hold_status, '')) = 'APPROVED'
+                  AND m.hold_start_date IS NOT NULL
+                  AND m.hold_end_date IS NOT NULL
+                  AND NEW.booking_date BETWEEN m.hold_start_date AND m.hold_end_date
+              )
+            FOR SHARE
         ) THEN
             RAISE EXCEPTION 'trg_enrollments_check_membership'
                 USING ERRCODE = '23514', CONSTRAINT = 'trg_enrollments_check_membership';
@@ -712,7 +950,10 @@ BEGIN
     ELSIF TG_TABLE_NAME = 'classes' THEN
         SELECT EXISTS (
             SELECT 1 FROM class_sessions s JOIN coach_bookings b ON b.booking_date = s.session_date
-            WHERE s.class_id = NEW.id AND s.status = 'scheduled' AND b.status = 'confirmed'
+            WHERE s.class_id = NEW.id
+              AND s.status = 'scheduled'
+              AND s.session_date >= business_date
+              AND b.status = 'confirmed'
               AND b.coach_id = NEW.coach_id
               AND b.start_time < s.end_time AND b.end_time > s.start_time
         ) INTO schedule_conflict;
@@ -726,7 +967,8 @@ END;
 $$;
 
 DROP TRIGGER IF EXISTS trg_pt_schedule_booking ON coach_bookings;
-CREATE TRIGGER trg_pt_schedule_booking BEFORE INSERT OR UPDATE ON coach_bookings
+CREATE TRIGGER trg_pt_schedule_booking
+BEFORE INSERT OR UPDATE OF member_id, coach_id, booking_date, start_time, end_time, status ON coach_bookings
 FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
 DROP TRIGGER IF EXISTS trg_pt_schedule_enrollment ON class_enrollments;
 CREATE TRIGGER trg_pt_schedule_enrollment BEFORE INSERT OR UPDATE ON class_enrollments
@@ -738,8 +980,11 @@ DROP TRIGGER IF EXISTS trg_pt_schedule_session ON class_sessions;
 CREATE TRIGGER trg_pt_schedule_session BEFORE INSERT OR UPDATE ON class_sessions
 FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
 DROP TRIGGER IF EXISTS trg_pt_schedule_class ON classes;
-CREATE TRIGGER trg_pt_schedule_class BEFORE UPDATE OF coach_id ON classes
-FOR EACH ROW EXECUTE FUNCTION scms_guard_pt_schedule();
+CREATE TRIGGER trg_pt_schedule_class
+BEFORE UPDATE OF coach_id ON classes
+FOR EACH ROW
+WHEN (OLD.coach_id IS DISTINCT FROM NEW.coach_id)
+EXECUTE FUNCTION scms_guard_pt_schedule();
 
 -- Một hội viên không được học hai buổi lớp trùng giờ, dù giữ chỗ từng buổi (session_bookings) hay đăng ký cả lớp
 -- (class_enrollments). Chặn cả khi Quản lý thêm/đổi giờ một buổi mà hội viên đã đặt làm buổi đó chồng lên lớp khác.
@@ -748,6 +993,7 @@ CREATE OR REPLACE FUNCTION scms_member_session_overlaps(p_member BIGINT, p_sessi
 RETURNS boolean
 LANGUAGE sql
 STABLE
+SET search_path FROM CURRENT
 AS $$
     SELECT EXISTS (
         SELECT 1
@@ -772,6 +1018,7 @@ $$;
 CREATE OR REPLACE FUNCTION scms_guard_member_class_overlap()
 RETURNS trigger
 LANGUAGE plpgsql
+SET search_path FROM CURRENT
 AS $$
 DECLARE
     today DATE := (statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh')::date;
@@ -783,7 +1030,7 @@ BEGIN
            AND OLD.member_id = NEW.member_id THEN
             RETURN NEW;
         END IF;
-        PERFORM pg_advisory_xact_lock(hashtextextended('member-schedule:' || NEW.member_id::TEXT, 0));
+        PERFORM pg_advisory_xact_lock(hashtextextended(current_schema() || ':member-schedule:' || NEW.member_id::TEXT, 0));
         has_conflict := scms_member_session_overlaps(NEW.member_id, NEW.session_id, today);
     ELSIF TG_TABLE_NAME = 'class_enrollments' THEN
         IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
@@ -791,7 +1038,7 @@ BEGIN
            AND OLD.member_id = NEW.member_id THEN
             RETURN NEW;
         END IF;
-        PERFORM pg_advisory_xact_lock(hashtextextended('member-schedule:' || NEW.member_id::TEXT, 0));
+        PERFORM pg_advisory_xact_lock(hashtextextended(current_schema() || ':member-schedule:' || NEW.member_id::TEXT, 0));
         SELECT EXISTS (
             SELECT 1 FROM class_sessions s
             WHERE s.class_id = NEW.class_id AND s.status = 'scheduled' AND s.session_date >= today

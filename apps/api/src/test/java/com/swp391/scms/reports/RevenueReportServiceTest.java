@@ -162,38 +162,49 @@ class RevenueReportServiceTest {
         verifyNoInteractions(subscriptionRepository);
     }
 
-    /** Kiểm thử: tính đúng doanh thu theo ngày. */
+    /** Kiểm thử: tính đúng doanh thu theo ngày bằng truy vấn tổng hợp nửa mở [start, end+1) tại DB. */
     @Test
-    @DisplayName("Should calculate daily revenue correctly for date range")
+    @DisplayName("Should calculate daily revenue via DB aggregate with half-open upper bound")
     void shouldCalculateDailyRevenueCorrectly() {
         LocalDate start = LocalDate.of(2026, 10, 1);
-        LocalDate end = LocalDate.of(2026, 10, 2);
+        LocalDate end = LocalDate.of(2026, 10, 3);
 
-        Payment p1 = new Payment();
-        p1.setAmount(new BigDecimal("1000000.00"));
-        p1.setStatus("success");
-        p1.setPaidAt(LocalDateTime.of(2026, 10, 1, 9, 0));
+        var row1 = dailyRow(LocalDate.of(2026, 10, 1), new BigDecimal("1500000.00"), 2L);
+        var row2 = dailyRow(LocalDate.of(2026, 10, 3), new BigDecimal("2000000.00"), 1L);
 
-        Payment p2 = new Payment();
-        p2.setAmount(new BigDecimal("500000.00"));
-        p2.setStatus("success");
-        p2.setPaidAt(LocalDateTime.of(2026, 10, 1, 14, 30));
-
-        Payment p3 = new Payment();
-        p3.setAmount(new BigDecimal("2000000.00"));
-        p3.setStatus("success");
-        p3.setPaidAt(LocalDateTime.of(2026, 10, 2, 11, 0));
-
-        when(paymentRepository.findByStatusAndPaidAtBetween(eq("success"), any(), any()))
-                .thenReturn(List.of(p1, p2, p3));
+        when(transactionReportRepository.findDailyRevenue(start.atStartOfDay(), end.plusDays(1).atStartOfDay()))
+                .thenReturn(List.of(row1, row2));
 
         List<DailyRevenueDto> result = service.getDailyRevenue(start, end);
 
-        assertEquals(2, result.size());
+        assertEquals(3, result.size());
         assertEquals(new BigDecimal("1500000.00"), result.get(0).getRevenue());
         assertEquals(2, result.get(0).getTransactionCount());
-        assertEquals(new BigDecimal("2000000.00"), result.get(1).getRevenue());
-        assertEquals(1, result.get(1).getTransactionCount());
+        assertEquals(BigDecimal.ZERO, result.get(1).getRevenue());
+        assertEquals(0, result.get(1).getTransactionCount());
+        assertEquals(new BigDecimal("2000000.00"), result.get(2).getRevenue());
+        assertEquals(1, result.get(2).getTransactionCount());
+        verifyNoInteractions(paymentRepository);
+    }
+
+    /** Kiểm thử: fallback sang paymentRepository khi transactionReportRepository là null. */
+    @Test
+    void dailyRevenueFallsBackWhenTransactionReportRepositoryIsNull() {
+        RevenueReportService fallbackService = new RevenueReportService(
+                paymentRepository, subscriptionRepository, snapshotRepository, userRepository,
+                objectMapper, clock, null);
+        LocalDate start = LocalDate.of(2026, 10, 1);
+        LocalDate end = LocalDate.of(2026, 10, 1);
+        Payment p1 = new Payment();
+        p1.setAmount(new BigDecimal("1000000.00"));
+        p1.setStatus("success");
+        p1.setPaidAt(LocalDateTime.of(2026, 10, 1, 23, 59, 59, 500_000_000));
+        when(paymentRepository.findByStatusAndPaidAtBetween(eq("success"), eq(start.atStartOfDay()), any()))
+                .thenReturn(List.of(p1));
+
+        List<DailyRevenueDto> result = fallbackService.getDailyRevenue(start, end);
+        assertEquals(1, result.size());
+        assertEquals(new BigDecimal("1000000.00"), result.get(0).getRevenue());
     }
 
     /** Kiểm thử: ném lỗi khi ngày bắt đầu sau ngày kết thúc. */
@@ -206,119 +217,226 @@ class RevenueReportServiceTest {
         assertThrows(BadRequestException.class, () -> service.getDailyRevenue(start, end));
     }
 
-    /** Kiểm thử: tính đúng doanh thu theo gói. */
+    /** Kiểm thử P1-BE-39: chặn khoảng ngày vượt quá 366 ngày và cho phép đúng 366 ngày (năm nhuận). */
     @Test
-    @DisplayName("Should calculate revenue by package with correct percentages")
+    void rejectsDateRangeExceeding366DaysAndAllowsExactLeapYear() {
+        assertThrows(BadRequestException.class, () -> service.getDailyRevenue(
+                LocalDate.of(2024, 1, 1), LocalDate.of(2025, 1, 1)));
+        assertThrows(BadRequestException.class, () -> service.getRevenueByPackage(
+                LocalDate.of(2000, 1, 1), LocalDate.of(2099, 12, 31)));
+
+        when(transactionReportRepository.findDailyRevenue(
+                LocalDate.of(2024, 1, 1).atStartOfDay(), LocalDate.of(2025, 1, 1).atStartOfDay()))
+                .thenReturn(List.of());
+        assertEquals(366, service.getDailyRevenue(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31)).size());
+    }
+
+    /** Kiểm thử P1-BE-38 & P1-BE-39: doanh thu theo gói tổng hợp trực tiếp tại DB với cận trên nửa mở. */
+    @Test
+    @DisplayName("Should calculate revenue by package via DB aggregate without 2N+1 queries")
     void shouldCalculateRevenueByPackageCorrectly() {
         LocalDate start = LocalDate.of(2026, 10, 1);
         LocalDate end = LocalDate.of(2026, 10, 5);
 
-        MembershipPackage gold = new MembershipPackage();
-        gold.setName("Gold 6 Tháng");
-        try {
-            var idField = MembershipPackage.class.getDeclaredField("id");
-            idField.setAccessible(true);
-            idField.set(gold, 1L);
-        } catch (Exception ignored) {}
-
-        MembershipSubscription sub1 = new MembershipSubscription();
-        sub1.setMembershipPackage(gold);
-
-        Payment p1 = new Payment();
-        p1.setAmount(new BigDecimal("3000000.00"));
-        p1.setStatus("success");
-        p1.setPaidAt(LocalDateTime.of(2026, 10, 2, 10, 0));
-        p1.setSubscriptionId(10L);
-
-        when(paymentRepository.findByStatusAndPaidAtBetween(eq("success"), any(), any()))
-                .thenReturn(List.of(p1));
-        when(subscriptionRepository.findById(10L)).thenReturn(Optional.of(sub1));
+        when(transactionReportRepository.findRevenueByPackage(start.atStartOfDay(), end.plusDays(1).atStartOfDay()))
+                .thenReturn(List.of(
+                        packageRow(1L, "Gold 6 Tháng", new BigDecimal("3000000.00"), 3L),
+                        packageRow(2L, "Silver 1 Tháng", new BigDecimal("1000000.00"), 2L)
+                ));
 
         List<PackageRevenueDto> result = service.getRevenueByPackage(start, end);
 
-        assertEquals(1, result.size());
+        assertEquals(2, result.size());
         assertEquals("Gold 6 Tháng", result.get(0).getPackageName());
         assertEquals(new BigDecimal("3000000.00"), result.get(0).getRevenue());
-        assertEquals(100.0, result.get(0).getPercentage());
+        assertEquals(75.0, result.get(0).getPercentage());
+        assertEquals(25.0, result.get(1).getPercentage());
+        verifyNoInteractions(paymentRepository, subscriptionRepository);
     }
 
-    /** Kiểm thử: tính mức sử dụng lớp học an toàn. */
+    /** Kiểm thử P1-BE-40: tính tỷ lệ lấp đầy và tỷ lệ chuyên cần theo (session × member), không thổi phồng lên 100%. */
     @Test
-    @DisplayName("Should calculate class utilization and safely handle zero capacity or zero booked")
+    @DisplayName("Should calculate class utilization and attendance across sessions safely")
     void shouldCalculateClassUtilizationSafely() {
-        SessionAttendanceReportRepository.ClassUtilizationRow row1 = new SessionAttendanceReportRepository.ClassUtilizationRow() {
-            @Override public Long getClassId() { return 10L; }
-            @Override public String getClassName() { return "Morning Yoga"; }
-            @Override public Long getDisciplineId() { return 2L; }
-            @Override public String getDisciplineName() { return "Yoga"; }
-            @Override public String getRoomName() { return null; }
-            @Override public Integer getCapacity() { return 20; }
-            @Override public Long getEnrolledCount() { return 2L; }
-            @Override public Long getPresentCount() { return 1L; }
-        };
-        SessionAttendanceReportRepository.ClassUtilizationRow row2 = new SessionAttendanceReportRepository.ClassUtilizationRow() {
-            @Override public Long getClassId() { return 11L; }
-            @Override public String getClassName() { return "Open Workshop"; }
-            @Override public Long getDisciplineId() { return 2L; }
-            @Override public String getDisciplineName() { return "Yoga"; }
-            @Override public String getRoomName() { return null; }
-            @Override public Integer getCapacity() { return 0; }
-            @Override public Long getEnrolledCount() { return 0L; }
-            @Override public Long getPresentCount() { return 0L; }
-        };
+        SessionAttendanceReportRepository.ClassUtilizationRow row1 = utilizationRow(10L, "Morning Yoga", 2L, "Yoga", 20, 2L, 1L, 1L);
+        SessionAttendanceReportRepository.ClassUtilizationRow row2 = utilizationRow(11L, "Open Workshop", 2L, "Yoga", 0, 0L, 0L, 0L);
+        SessionAttendanceReportRepository.ClassUtilizationRow row3 = utilizationRow(12L, "Multi-Session Yoga", 2L, "Yoga", 10, 1L, 1L, 12L);
 
         LocalDate start = LocalDate.of(2026, 10, 1);
         LocalDate end = LocalDate.of(2026, 10, 5);
         when(sessionAttendanceReportRepository.classUtilizationByDiscipline(
                 start, end, start.atStartOfDay(), end.plusDays(1).atStartOfDay(), 2L))
-                .thenReturn(List.of(row1, row2));
+                .thenReturn(List.of(row1, row2, row3));
 
         List<ClassUtilizationDto> list = service.getClassUtilization(start, end, 2L);
 
-        assertEquals(2, list.size());
+        assertEquals(3, list.size());
         assertEquals(10.0, list.get(0).utilizationRate()); // 2 / 20 = 10%
-        assertEquals(50.0, list.get(0).attendanceRate());  // 1 / 2 = 50%
+        assertEquals(50.0, list.get(0).attendanceRate());  // 1 / (2 * 1) = 50%
         assertEquals(0.0, list.get(1).utilizationRate());  // zero capacity -> 0.0
         assertEquals(0.0, list.get(1).attendanceRate());   // zero booked -> 0.0
+        assertEquals(10.0, list.get(2).utilizationRate()); // 1 / 10 = 10%
+        assertEquals(8.3, list.get(2).attendanceRate());   // 1 / (1 * 12) = 8.3%, NOT 100%
         verifyNoInteractions(gymClassRepository, classEnrollmentRepository);
     }
 
-    /** Kiểm thử: tạo ảnh chụp khi JSON hợp lệ. */
+    /** Kiểm thử P2-BE-46: getClassUtilization kiểm tra start <= end SAU KHI áp giá trị mặc định. */
     @Test
-    @DisplayName("Should generate snapshot when json data is valid including class_utilization type")
+    void classUtilizationRejectsInvertedRangeAfterApplyingDefaults() {
+        assertThrows(BadRequestException.class, () -> service.getClassUtilization(
+                LocalDate.of(2100, 1, 1), null, null));
+        assertThrows(BadRequestException.class, () -> service.getClassUtilization(
+                null, LocalDate.of(1999, 12, 31), null));
+        verifyNoInteractions(sessionAttendanceReportRepository);
+    }
+
+    /** Kiểm thử P1-BE-37: tạo ảnh chụp luôn dùng currentUserId (bỏ qua generatedById giả mạo từ client). */
+    @Test
+    @DisplayName("Should generate snapshot using authenticated currentUserId and ignore spoofed generatedById")
     void shouldGenerateSnapshotWhenJsonIsValid() {
+        var authUser = new com.swp391.scms.users.entity.User();
+        authUser.setId(1L);
+        authUser.setFullName("Authenticated Manager");
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(authUser));
+
         ReportSnapshotCreateDto dto = new ReportSnapshotCreateDto(
                 "class_utilization",
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 5),
                 "{\"averageUtilization\": 75.0}",
-                null
+                999L
         );
 
-        when(snapshotRepository.save(any(ReportSnapshot.class))).thenAnswer(inv -> {
-            ReportSnapshot saved = inv.getArgument(0);
-            saved.setData(dto.getData());
-            return saved;
-        });
+        when(snapshotRepository.save(any(ReportSnapshot.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ReportSnapshotDto result = service.generateSnapshot(dto, 1L);
         assertNotNull(result);
         assertEquals("class_utilization", result.getReportType());
+        assertEquals(1L, result.getGeneratedById());
+        assertEquals("Authenticated Manager", result.getGeneratedByName());
+        verify(userRepository).findByIdAndDeletedAtIsNull(1L);
+        verify(userRepository, never()).findByIdAndDeletedAtIsNull(999L);
         verify(snapshotRepository).save(any(ReportSnapshot.class));
     }
 
-    /** Kiểm thử: từ chối ảnh chụp khi JSON không hợp lệ. */
+    /** Kiểm thử P1-BE-37: từ chối JSON không hợp lệ, JSON không phải object và payload vượt quá 256 KB. */
     @Test
-    @DisplayName("Should reject snapshot generation when json data is invalid syntax")
-    void shouldRejectSnapshotWhenJsonIsInvalid() {
-        ReportSnapshotCreateDto dto = new ReportSnapshotCreateDto(
-                "revenue",
-                LocalDate.of(2026, 10, 1),
-                LocalDate.of(2026, 10, 5),
-                "{invalid_json_format",
-                null
-        );
+    @DisplayName("Should reject snapshot generation when json is invalid, non-object, or oversized")
+    void shouldRejectSnapshotWhenJsonIsInvalid() throws Exception {
+        ReportSnapshotCreateDto badSyntax = new ReportSnapshotCreateDto(
+                "revenue", LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5), "{invalid_json_format", null);
+        ReportSnapshotCreateDto arrayJson = new ReportSnapshotCreateDto(
+                "revenue", LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5), "[1, 2, 3]", null);
+        ReportSnapshotCreateDto primitiveJson = new ReportSnapshotCreateDto(
+                "revenue", LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5), "\"hello\"", null);
+        String oversized = "{\"x\":\"" + "a".repeat(RevenueReportService.MAX_SNAPSHOT_DATA_LENGTH) + "\"}";
+        ReportSnapshotCreateDto tooBig = new ReportSnapshotCreateDto(
+                "revenue", LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 5), oversized, null);
 
-        assertThrows(BadRequestException.class, () -> service.generateSnapshot(dto, 1L));
+        assertThrows(BadRequestException.class, () -> service.generateSnapshot(badSyntax, 1L));
+        assertThrows(BadRequestException.class, () -> service.generateSnapshot(arrayJson, 1L));
+        assertThrows(BadRequestException.class, () -> service.generateSnapshot(primitiveJson, 1L));
+        assertThrows(BadRequestException.class, () -> service.generateSnapshot(tooBig, 1L));
+
+        var sizeAnnotation = ReportSnapshotCreateDto.class.getDeclaredField("data")
+                .getAnnotation(jakarta.validation.constraints.Size.class);
+        assertNotNull(sizeAnnotation);
+        assertEquals(262144, sizeAnnotation.max());
+    }
+
+    /** Kiểm thử P1-BE-39: getSnapshots giới hạn số bản ghi bằng PageRequest(0, 100). */
+    @Test
+    void getSnapshotsBoundsResultSetTo100() {
+        when(snapshotRepository.findAllByOrderByGeneratedAtDesc(PageRequest.of(0, 100))).thenReturn(List.of());
+        assertTrue(service.getSnapshots().isEmpty());
+        verify(snapshotRepository).findAllByOrderByGeneratedAtDesc(PageRequest.of(0, 100));
+    }
+
+    /** Kiểm thử: toàn bộ JPQL mới trong TransactionReportRepository và SessionAttendanceReportRepository biên dịch hợp lệ. */
+    @Test
+    void reportJpqlQueriesCompileAgainstHibernateEntityMappings() throws Exception {
+        var registry = new org.hibernate.boot.registry.StandardServiceRegistryBuilder()
+                .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
+                .applySetting("hibernate.boot.allow_jdbc_metadata_access", "false")
+                .build();
+        try {
+            var sources = new org.hibernate.boot.MetadataSources(registry);
+            var scanner = new org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider(false);
+            scanner.addIncludeFilter(new org.springframework.core.type.filter.AnnotationTypeFilter(jakarta.persistence.Entity.class));
+            for (var bean : scanner.findCandidateComponents("com.swp391.scms")) {
+                sources.addAnnotatedClass(Class.forName(bean.getBeanClassName()));
+            }
+            try (var factory = sources.buildMetadata().buildSessionFactory();
+                 var session = factory.openSession()) {
+                var recentMethod = TransactionReportRepository.class.getMethod(
+                        "findRecentTransactions", LocalDateTime.class, LocalDateTime.class, org.springframework.data.domain.Pageable.class);
+                session.createQuery(recentMethod.getAnnotation(org.springframework.data.jpa.repository.Query.class).value(), RecentTransactionDto.class)
+                        .setParameter("start", LocalDateTime.of(2026, 10, 1, 0, 0))
+                        .setParameter("endExclusive", LocalDateTime.of(2026, 10, 2, 0, 0));
+
+                var dailyMethod = TransactionReportRepository.class.getMethod(
+                        "findDailyRevenue", LocalDateTime.class, LocalDateTime.class);
+                session.createQuery(dailyMethod.getAnnotation(org.springframework.data.jpa.repository.Query.class).value(), jakarta.persistence.Tuple.class)
+                        .setParameter("start", LocalDateTime.of(2026, 10, 1, 0, 0))
+                        .setParameter("endExclusive", LocalDateTime.of(2026, 10, 2, 0, 0));
+
+                var pkgMethod = TransactionReportRepository.class.getMethod(
+                        "findRevenueByPackage", LocalDateTime.class, LocalDateTime.class);
+                session.createQuery(pkgMethod.getAnnotation(org.springframework.data.jpa.repository.Query.class).value(), jakarta.persistence.Tuple.class)
+                        .setParameter("start", LocalDateTime.of(2026, 10, 1, 0, 0))
+                        .setParameter("endExclusive", LocalDateTime.of(2026, 10, 2, 0, 0));
+
+                var utilAll = SessionAttendanceReportRepository.class.getMethod(
+                        "classUtilizationAll", LocalDate.class, LocalDate.class, LocalDateTime.class, LocalDateTime.class);
+                var utilByDisc = SessionAttendanceReportRepository.class.getMethod(
+                        "classUtilizationByDiscipline", LocalDate.class, LocalDate.class, LocalDateTime.class, LocalDateTime.class, Long.class);
+                session.createQuery(utilAll.getAnnotation(org.springframework.data.jpa.repository.Query.class).value(), jakarta.persistence.Tuple.class)
+                        .setParameter("start", LocalDate.of(2026, 10, 1))
+                        .setParameter("end", LocalDate.of(2026, 10, 5))
+                        .setParameter("startTs", LocalDateTime.of(2026, 10, 1, 0, 0))
+                        .setParameter("endTs", LocalDateTime.of(2026, 10, 6, 0, 0));
+                session.createQuery(utilByDisc.getAnnotation(org.springframework.data.jpa.repository.Query.class).value(), jakarta.persistence.Tuple.class)
+                        .setParameter("start", LocalDate.of(2026, 10, 1))
+                        .setParameter("end", LocalDate.of(2026, 10, 5))
+                        .setParameter("startTs", LocalDateTime.of(2026, 10, 1, 0, 0))
+                        .setParameter("endTs", LocalDateTime.of(2026, 10, 6, 0, 0))
+                        .setParameter("disciplineId", 1L);
+            }
+        } finally {
+            org.hibernate.boot.registry.StandardServiceRegistryBuilder.destroy(registry);
+        }
+    }
+
+    private static TransactionReportRepository.DailyRevenueRow dailyRow(LocalDate date, BigDecimal revenue, Long txCount) {
+        return new TransactionReportRepository.DailyRevenueRow() {
+            @Override public LocalDate getPaidDate() { return date; }
+            @Override public BigDecimal getRevenue() { return revenue; }
+            @Override public Long getTransactionCount() { return txCount; }
+        };
+    }
+
+    private static TransactionReportRepository.PackageRevenueRow packageRow(Long id, String name, BigDecimal revenue, Long count) {
+        return new TransactionReportRepository.PackageRevenueRow() {
+            @Override public Long getPackageId() { return id; }
+            @Override public String getPackageName() { return name; }
+            @Override public BigDecimal getRevenue() { return revenue; }
+            @Override public Long getSubscriptionCount() { return count; }
+        };
+    }
+
+    private static SessionAttendanceReportRepository.ClassUtilizationRow utilizationRow(
+            Long classId, String className, Long disciplineId, String disciplineName,
+            Integer capacity, Long enrolled, Long present, Long sessionCount) {
+        return new SessionAttendanceReportRepository.ClassUtilizationRow() {
+            @Override public Long getClassId() { return classId; }
+            @Override public String getClassName() { return className; }
+            @Override public Long getDisciplineId() { return disciplineId; }
+            @Override public String getDisciplineName() { return disciplineName; }
+            @Override public String getRoomName() { return null; }
+            @Override public Integer getCapacity() { return capacity; }
+            @Override public Long getEnrolledCount() { return enrolled; }
+            @Override public Long getPresentCount() { return present; }
+            @Override public Long getSessionCount() { return sessionCount; }
+        };
     }
 }

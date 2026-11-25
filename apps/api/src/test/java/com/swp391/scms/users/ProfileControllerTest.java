@@ -96,6 +96,7 @@ class ProfileControllerTest {
         messageService = new MessageService(messageSource);
 
         profileService = new ProfileService(userRepository, memberRepository, coachRepository, receptionistRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(profileService, "kycCrypto", new KycCrypto("test-only-secret"));
         profileController = new ProfileController(profileService, messageService);
 
         AcceptHeaderLocaleResolver localeResolver = new AcceptHeaderLocaleResolver();
@@ -161,7 +162,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.data.certification").value("CPT"));
     }
 
-    /** Kiểm thử: cập nhật hồ sơ của tôi thành công. */
+    /** Kiểm thử: cập nhật hồ sơ của tôi thành công (hỗ trợ họ tên dài tới 150 ký tự khớp DB). */
     @Test
     @DisplayName("PUT /api/v1/profile updates profile and returns 200")
     void updateMyProfileSuccess() throws Exception {
@@ -171,6 +172,14 @@ class ProfileControllerTest {
         mockMvc.perform(put("/api/v1/profile")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        var longNamePayload = objectMapper.valueToTree(sampleProfile());
+        ((com.fasterxml.jackson.databind.node.ObjectNode) longNamePayload).put("fullName", "A".repeat(120));
+        mockMvc.perform(put("/api/v1/profile")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(longNamePayload.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
@@ -206,18 +215,58 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.message").value("Fitness level must be beginner, intermediate or advanced"));
     }
 
-    /** Kiểm thử: kiểm tra ràng buộc khi tải ảnh đại diện. */
+    /** Tạo header WebP VP8L tối giản hợp lệ với kích thước width x height (dùng kiểm thử không giải nén pixel). */
+    private static byte[] minimalWebpVp8l(int width, int height) {
+        int bits = ((width - 1) & 0x3FFF) | (((height - 1) & 0x3FFF) << 14);
+        return new byte[]{
+                'R', 'I', 'F', 'F', 18, 0, 0, 0,
+                'W', 'E', 'B', 'P',
+                'V', 'P', '8', 'L', 6, 0, 0, 0,
+                0x2F,
+                (byte) (bits & 0xFF),
+                (byte) ((bits >>> 8) & 0xFF),
+                (byte) ((bits >>> 16) & 0xFF),
+                (byte) ((bits >>> 24) & 0xFF),
+                0
+        };
+    }
+
+    /** Tạo header PNG IHDR với kích thước tùy ý (dùng kiểm thử chống bom giải nén 30000x30000 mà không cấp phát pixel). */
+    private static byte[] minimalPngHeader(int width, int height) {
+        return new byte[]{
+                (byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A,
+                0, 0, 0, 13,
+                'I', 'H', 'D', 'R',
+                (byte) (width >>> 24), (byte) (width >>> 16), (byte) (width >>> 8), (byte) width,
+                (byte) (height >>> 24), (byte) (height >>> 16), (byte) (height >>> 8), (byte) height,
+                8, 2, 0, 0, 0,
+                0, 0, 0, 0,
+                0, 0, 0, 0,
+                'I', 'E', 'N', 'D',
+                (byte) 0xAE, 0x42, 0x60, (byte) 0x82
+        };
+    }
+
+    /** Kiểm thử P1-BE-10: kiểm tra ràng buộc thật (magic bytes, kích thước header, chống bom giải nén & chặn URL ngoài). */
     @Test
-    @DisplayName("POST /api/v1/profile/avatar accepts valid PNG base64 and rejects unsupported MIME or >2MB payload")
+    @DisplayName("POST /api/v1/profile/avatar validates magic bytes, header dimensions, size limit and internal path only")
     void validateAvatarUploadConstraints() throws Exception {
         when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(sampleUser()));
 
-        String validDataUrl = "data:image/webp;base64," + Base64.getEncoder().encodeToString(new byte[]{1, 2, 3, 4});
+        String validWebpDataUrl = "data:image/webp;base64," + Base64.getEncoder().encodeToString(minimalWebpVp8l(120, 120));
         mockMvc.perform(post("/api/v1/profile/avatar")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(validDataUrl))))
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(validWebpDataUrl))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.avatarUrl").value(validDataUrl));
+                .andExpect(jsonPath("$.data.avatarUrl").value(validWebpDataUrl));
+
+        // Giả mạo MIME image/webp với byte rác phải bị từ chối thay vì lọt qua.
+        String forgedWebp = "data:image/webp;base64," + Base64.getEncoder().encodeToString(new byte[]{1, 2, 3, 4});
+        mockMvc.perform(post("/api/v1/profile/avatar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(forgedWebp))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_AVATAR_DATA"));
 
         String invalidMime = "data:image/svg+xml;base64," + Base64.getEncoder().encodeToString("<svg/>".getBytes());
         mockMvc.perform(post("/api/v1/profile/avatar")
@@ -233,6 +282,28 @@ class ProfileControllerTest {
                         .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(oversizedDataUrl))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("AVATAR_TOO_LARGE"));
+
+        // Bom giải nén PNG 30000x30000 phải bị chặn ngay ở bước đọc header IHDR mà không gây OOM.
+        String bombPng = "data:image/png;base64," + Base64.getEncoder().encodeToString(minimalPngHeader(30000, 30000));
+        mockMvc.perform(post("/api/v1/profile/avatar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(bombPng))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("INVALID_AVATAR_DIMENSIONS"));
+
+        // URL ngoài và protocol-relative bị chặn; chỉ cho phép đường dẫn nội bộ /images/...
+        for (String external : java.util.List.of("https://evil.example/a.png", "http://169.254.169.254/latest", "//evil.example/a.png", "/images/../secret.png")) {
+            mockMvc.perform(post("/api/v1/profile/avatar")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest(external))))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.code").value("INVALID_AVATAR_URL"));
+        }
+        mockMvc.perform(post("/api/v1/profile/avatar")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new ProfileController.AvatarUploadRequest("/images/default-avatar.png"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.avatarUrl").value("/images/default-avatar.png"));
 
         java.awt.image.BufferedImage tinyImg = new java.awt.image.BufferedImage(10, 10, java.awt.image.BufferedImage.TYPE_INT_RGB);
         java.io.ByteArrayOutputStream tinyOut = new java.io.ByteArrayOutputStream();
@@ -422,7 +493,7 @@ class ProfileControllerTest {
         com.swp391.scms.users.entity.Member member = new com.swp391.scms.users.entity.Member();
         member.setUserId(101L);
         member.setUser(user);
-        when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(101L)).thenReturn(Optional.of(member));
 
         com.swp391.scms.users.dto.MemberKycRequest request = new com.swp391.scms.users.dto.MemberKycRequest(
                 "CCCD", "012345678901", "NGUYEN VAN A", "Việt Nam", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
@@ -448,7 +519,7 @@ class ProfileControllerTest {
         com.swp391.scms.users.entity.Member member = new com.swp391.scms.users.entity.Member();
         member.setUserId(101L);
         member.setUser(user);
-        when(memberRepository.findById(101L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(101L)).thenReturn(Optional.of(member));
 
         com.swp391.scms.users.dto.MemberKycRequest request = new com.swp391.scms.users.dto.MemberKycRequest(
                 "PASSPORT", "P12345678", "JOHN DOE", "Vietnam", "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=", null

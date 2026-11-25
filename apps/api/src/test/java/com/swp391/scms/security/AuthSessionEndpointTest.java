@@ -16,10 +16,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.head;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 
 /** GET /auth/me phải trả về vai trò hiện đang lưu trong cơ sở dữ liệu, tuyệt đối không chấp nhận người gọi ẩn danh. */
 @WebMvcTest(AuthController.class)
@@ -28,16 +32,27 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Bộ kiểm thử cho AuthSessionEndpoint (auth session endpoint). */
 class AuthSessionEndpointTest {
     @Autowired MockMvc mvc;
+    @Autowired FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration;
+    @Autowired FilterRegistrationBean<RateLimitingFilter> rateLimitFilterRegistration;
     @MockitoBean AuthService authService;
     @MockitoBean GoogleOAuthRedirectService googleRedirect;
     @MockitoBean JwtService jwt;
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
-    /** Kiểm thử: người gọi chưa đăng nhập bị từ chối. */
+    /** Kiểm thử: người gọi chưa đăng nhập bị từ chối ở cả GET và HEAD /auth/me, và đường dẫn /auth lạ không còn permitAll. */
     @Test
     void anonymousCallerIsRejected() throws Exception {
         mvc.perform(get("/api/v1/auth/me")).andExpect(status().isUnauthorized());
+        mvc.perform(head("/api/v1/auth/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/auth/unknown-private-endpoint")).andExpect(status().isUnauthorized());
+    }
+
+    /** Kiểm thử P2-BE-05: FilterRegistrationBean tắt tự đăng ký servlet cho JwtAuthenticationFilter và RateLimitingFilter. */
+    @Test
+    void servletAutoRegistrationIsDisabledForSecurityFilters() {
+        assertFalse(jwtFilterRegistration.isEnabled());
+        assertFalse(rateLimitFilterRegistration.isEnabled());
     }
 
     /** Kiểm thử: người đã đăng nhập nhận lại username và vai trò hiện tại. */

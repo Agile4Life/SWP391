@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -426,5 +427,11 @@ class AiChatServiceTest {
             assertTrue(prompt.contains("Khi từ chối"));
         }
         assertTrue(AiChatService.SYSTEM_PROMPT.contains("thông tin của hội viên khác"));
+        assertFalse(AiChatService.SYSTEM_PROMPT.contains("mỗi bộ môn một lớp đang hoạt động"));
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("Phòng Gym Tiêu chuẩn"));
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("Phòng Gym VIP"));
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("Zen Garden Studio"));
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("Ring Arena 01"));
+        assertTrue(AiChatService.STAFF_SYSTEM_PROMPT.contains("Phòng Gym VIP"));
     }
 }

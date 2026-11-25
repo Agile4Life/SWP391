@@ -89,6 +89,7 @@ public class ProfileController {
     /** POST /me/kyc: hội viên nộp CCCD/hộ chiếu kèm ảnh để chờ quầy duyệt. */
     @Operation(summary = "Xác minh danh tính CCCD/Hộ chiếu", description = "Cập nhật thông tin định danh (CCCD/Hộ chiếu) và đồng bộ họ tên tài khoản trước khi đăng ký gói tập đầu tiên")
     @PostMapping("/kyc")
+    @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<ProfileDto> submitMyKyc(@AuthenticationPrincipal AuthenticatedPrincipal principal,
                                                @Valid @RequestBody com.swp391.scms.users.dto.MemberKycRequest request) {
         return ApiResponse.ok(msg("users.profile.kyc.success"), profileService.submitMemberKyc(principal.id(), request));

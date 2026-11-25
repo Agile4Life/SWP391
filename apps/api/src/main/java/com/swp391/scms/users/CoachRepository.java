@@ -13,11 +13,12 @@ public interface CoachRepository extends JpaRepository<Coach, Long> {
     @Query("""
             select c from Coach c join fetch c.user u
             where c.employmentStatus = 'active' and u.status = 'active' and u.deletedAt is null
+              and upper(u.role.code) = 'COACH'
             order by u.fullName, c.userId
             """)
     /**
-     * HLV đang làm việc có tài khoản active và chưa bị xóa, kèm thông tin User, sắp theo họ tên; dùng cho danh
-     * sách HLV công khai.
+     * HLV đang làm việc có tài khoản active, đúng vai trò COACH và chưa bị xóa, kèm thông tin User, sắp theo họ tên;
+     * dùng cho danh sách HLV công khai.
      */
     List<Coach> findPublicCoaches();
 
@@ -26,7 +27,8 @@ public interface CoachRepository extends JpaRepository<Coach, Long> {
             WHERE LOWER(c.employmentStatus) = 'active'
               AND u.deletedAt IS NULL
               AND LOWER(u.status) = 'active'
+              AND UPPER(u.role.code) = 'COACH'
             """)
-    /** HLV đang làm việc (không phân biệt hoa thường) có tài khoản active, chưa xóa, kèm thông tin User. */
+    /** HLV đang làm việc (không phân biệt hoa thường) có tài khoản active, đúng vai trò COACH, chưa xóa, kèm thông tin User. */
     List<Coach> findActiveWithUser();
 }

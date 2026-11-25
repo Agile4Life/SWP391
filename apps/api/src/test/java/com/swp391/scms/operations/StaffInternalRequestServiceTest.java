@@ -86,7 +86,7 @@ class StaffInternalRequestServiceTest {
     @Test
     @DisplayName("Tạo đơn xin nghỉ phép thành công và gửi thông báo cho Manager")
     void createRequest_Success() {
-        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
         when(userRepository.findActiveManagers()).thenReturn(List.of(staffUser, managerUser));
 
         when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(invocation -> {
@@ -95,12 +95,13 @@ class StaffInternalRequestServiceTest {
             return saved;
         });
 
+        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
         StaffInternalRequestCreateDto dto = new StaffInternalRequestCreateDto(
                 "LEAVE",
                 "Xin nghỉ phép việc gia đình",
                 "Tôi có việc bận gia đình cần nghỉ 2 ngày",
-                LocalDate.now().plusDays(2),
-                LocalDate.now().plusDays(3),
+                today.plusDays(2),
+                today.plusDays(3),
                 null,
                 null
         );
@@ -128,7 +129,7 @@ class StaffInternalRequestServiceTest {
     @Test
     @DisplayName("Tạo đơn với loại không hợp lệ ném BadRequestException")
     void createRequest_InvalidType_ThrowsBadRequest() {
-        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
 
         StaffInternalRequestCreateDto dto = new StaffInternalRequestCreateDto(
                 "INVALID_TYPE",
@@ -201,7 +202,7 @@ class StaffInternalRequestServiceTest {
         req.setTitle("Xin nghỉ phép");
 
         when(requestRepository.findByIdForUpdate(200L)).thenReturn(Optional.of(req));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(managerUser));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
         when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(i -> i.getArgument(0));
 
         StaffInternalRequestReviewDto dto = new StaffInternalRequestReviewDto("APPROVED", "Đã bố trí nhân sự thay thế, đồng ý.");
@@ -257,9 +258,10 @@ class StaffInternalRequestServiceTest {
     /** Kiểm thử: tạo yêu cầu từ chối khoảng ngày bị đảo ngược. */
     @Test
     void createRequestRejectsReversedDateRange() {
-        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
+        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
         var dto = new StaffInternalRequestCreateDto("LEAVE", "Leave", "Reason",
-                java.time.LocalDate.of(2026, 11, 3), java.time.LocalDate.of(2026, 11, 2), null, null);
+                today.plusDays(5), today.plusDays(3), null, null);
         assertThrows(BadRequestException.class, () -> service.createRequest(10L, dto));
         verify(requestRepository, never()).save(any());
     }
@@ -267,33 +269,35 @@ class StaffInternalRequestServiceTest {
     /** Kiểm thử: đơn nghỉ trùng ngày đã duyệt được cảnh báo trước và chỉ gửi sau khi xác nhận. */
     @Test
     void aLeaveOnDaysAlreadyApprovedIsWarnedFirstAndSentOnlyAfterConfirmation() {
-        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
+        LocalDate start = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(5);
+        LocalDate end = start.plusDays(1);
         StaffInternalRequest approved = new StaffInternalRequest();
         approved.setUser(staffUser);
         approved.setRequestType("LEAVE");
         approved.setStatus("APPROVED");
-        approved.setStartDate(LocalDate.of(2026, 11, 20));
-        approved.setEndDate(LocalDate.of(2026, 11, 21));
-        when(requestRepository.findOverlappingLeaves(10L, LocalDate.of(2026, 11, 20), LocalDate.of(2026, 11, 21)))
+        approved.setStartDate(start);
+        approved.setEndDate(end);
+        when(requestRepository.findOverlappingLeaves(10L, start, end))
                 .thenReturn(java.util.List.of(approved));
 
         var again = new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Việc riêng",
-                LocalDate.of(2026, 11, 20), LocalDate.of(2026, 11, 21), null, null);
+                start, end, null, null);
         var error = assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.createRequest(10L, again));
         assertEquals("LEAVE_OVERLAP", error.getErrorCode());
         verify(requestRepository, never()).save(any());
 
         when(requestRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         var confirmed = new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Việc riêng",
-                LocalDate.of(2026, 11, 20), LocalDate.of(2026, 11, 21), null, null, true);
+                start, end, null, null, true);
         service.createRequest(10L, confirmed);
         verify(requestRepository).save(any());
     }
 
-    /** Kiểm thử: người thay thế phải là nhân viên đang hoạt động khác. */
+    /** Kiểm thử: người thay thế phải là nhân viên đang hoạt động khác cùng nhóm vai trò. */
     @Test
     void replacementMustBeAnotherActiveStaffMember() {
-        when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
         Role memberRole = new Role();
         memberRole.setCode("MEMBER");
         User member = new User();
@@ -301,23 +305,24 @@ class StaffInternalRequestServiceTest {
         member.setStatus("active");
         member.setRole(memberRole);
         when(userRepository.findByIdAndDeletedAtIsNull(50L)).thenReturn(Optional.of(member));
+        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
         var dto = new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Việc riêng",
-                LocalDate.now().plusDays(2), LocalDate.now().plusDays(3), null, 50L);
+                today.plusDays(2), today.plusDays(3), null, 50L);
 
         var error = assertThrows(BadRequestException.class, () -> service.createRequest(10L, dto));
         assertEquals("INVALID_REPLACEMENT", error.getErrorCode());
         verify(requestRepository, never()).save(any());
     }
 
-    /** Kiểm thử: duyệt đơn nghỉ báo cho quản lý biết những ca cần người thay. */
+    /** Kiểm thử P1-BE-41: duyệt đơn nghỉ báo quản lý kèm actionPath /manager/coach-assignments và trả số buổi xung đột. */
     @Test
     void approvingLeaveTellsManagerWhatNeedsCover() {
         var sessions = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
         var bookings = mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "classSessionRepository", sessions);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository", bookings);
-        LocalDate start = LocalDate.of(2026, 11, 10);
-        LocalDate end = LocalDate.of(2026, 11, 15);
+        LocalDate start = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(5);
+        LocalDate end = start.plusDays(5);
         StaffInternalRequest leave = new StaffInternalRequest();
         leave.setId(100L);
         leave.setUser(staffUser);
@@ -327,27 +332,197 @@ class StaffInternalRequestServiceTest {
         leave.setEndDate(end);
         leave.setStatus("PENDING");
         when(requestRepository.findByIdForUpdate(100L)).thenReturn(Optional.of(leave));
-        when(userRepository.findById(1L)).thenReturn(Optional.of(managerUser));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
         when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(call -> call.getArgument(0));
         when(sessions.countScheduledForCoachBetween(10L, start, end)).thenReturn(2L);
         when(bookings.countConfirmedForCoachBetween(10L, start, end)).thenReturn(1L);
 
-        service.reviewRequest(1L, 100L, new StaffInternalRequestReviewDto("APPROVED", null));
+        StaffInternalRequestDto dto = service.reviewRequest(1L, 100L, new StaffInternalRequestReviewDto("APPROVED", null));
 
+        assertEquals(2L, dto.affectedClassSessionCount());
+        assertEquals(1L, dto.affectedPtSessionCount());
         verify(notificationService).send(eq(1L), any(),
-                org.mockito.ArgumentMatchers.contains("2 buổi lớp và 1 buổi PT"), eq("system"), isNull(), eq(100L));
+                org.mockito.ArgumentMatchers.contains("2 buổi lớp và 1 buổi PT"), eq("system"), isNull(), eq(100L),
+                eq("/manager/coach-assignments"));
     }
 
-    /** Kiểm thử: giá trị lọc ALL được bỏ qua ở bộ lọc trạng thái và loại. */
+    /** Kiểm thử P1-BE-41: khi caller truyền confirmConflicts = false và có buổi xung đột thì chặn duyệt bằng 409. */
+    @Test
+    void reviewRequestBlocksCoachLeaveWhenConfirmConflictsIsFalse() {
+        var sessions = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
+        var bookings = mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "classSessionRepository", sessions);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository", bookings);
+        LocalDate start = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(5);
+        LocalDate end = start.plusDays(2);
+        StaffInternalRequest leave = new StaffInternalRequest();
+        leave.setId(101L);
+        leave.setUser(staffUser);
+        leave.setRequestType("LEAVE");
+        leave.setStartDate(start);
+        leave.setEndDate(end);
+        leave.setStatus("PENDING");
+        when(requestRepository.findByIdForUpdate(101L)).thenReturn(Optional.of(leave));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
+        when(sessions.countScheduledForCoachBetween(10L, start, end)).thenReturn(1L);
+        when(bookings.countConfirmedForCoachBetween(10L, start, end)).thenReturn(0L);
+
+        var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.reviewRequest(1L, 101L, new StaffInternalRequestReviewDto("APPROVED", null, false)));
+        assertEquals("COACH_LEAVE_HAS_CONFLICTS", ex.getErrorCode());
+        verify(requestRepository, never()).save(any());
+    }
+
+    /** Kiểm thử P1-BE-42: duyệt/từ chối đơn của nhân sự đã xóa mềm không gọi notification và không bị 404 rollback. */
+    @Test
+    void reviewRequestOfSoftDeletedStaffSucceedsWithoutRollback() {
+        staffUser.setDeletedAt(java.time.LocalDateTime.now());
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(205L);
+        req.setUser(staffUser);
+        req.setStatus("PENDING");
+        req.setRequestType("OTHER");
+        req.setTitle("Đơn của nhân viên cũ");
+
+        when(requestRepository.findByIdForUpdate(205L)).thenReturn(Optional.of(req));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
+        when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(i -> i.getArgument(0));
+
+        StaffInternalRequestDto reviewed = service.reviewRequest(1L, 205L, new StaffInternalRequestReviewDto("REJECTED", "Nhân sự đã nghỉ việc"));
+        assertEquals("REJECTED", reviewed.status());
+        verify(notificationService, never()).send(eq(10L), any(), any(), any(), any(), any());
+    }
+
+    /** Kiểm thử P1-BE-42: lỗi ResourceNotFoundException khi gửi thông báo kết quả không làm rollback duyệt đơn. */
+    @Test
+    void reviewRequestSwallowsResourceNotFoundFromNotificationService() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(206L);
+        req.setUser(staffUser);
+        req.setStatus("PENDING");
+        req.setRequestType("OTHER");
+        req.setTitle("Đơn hỗ trợ");
+
+        when(requestRepository.findByIdForUpdate(206L)).thenReturn(Optional.of(req));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
+        when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(i -> i.getArgument(0));
+        doThrow(new com.swp391.scms.common.exception.ResourceNotFoundException("resource.user", 10L))
+                .when(notificationService).send(eq(10L), any(), any(), any(), any(), eq(206L));
+
+        StaffInternalRequestDto reviewed = service.reviewRequest(1L, 206L, new StaffInternalRequestReviewDto("APPROVED", "OK"));
+        assertEquals("APPROVED", reviewed.status());
+    }
+
+    /** Kiểm thử P2-BE-43: chặn ngày quá khứ, khoảng nghỉ > 90 ngày, endDate mồ côi và kiểm tra @Size DTO. */
+    @Test
+    void createRequestRejectsPastDateExcessiveSpanOrphanEndDateAndOverlongText() throws Exception {
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
+        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L,
+                new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Lý do",
+                        today.minusDays(1), today, null, null)));
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L,
+                new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Lý do",
+                        today.plusDays(1), today.plusDays(95), null, null)));
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L,
+                new StaffInternalRequestCreateDto("OTHER", "Đơn", "Lý do",
+                        null, today.plusDays(1), null, null)));
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L,
+                new StaffInternalRequestCreateDto("OTHER", "a".repeat(201), "Lý do",
+                        null, null, null, null)));
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L,
+                new StaffInternalRequestCreateDto("OTHER", "Đơn", "Lý do",
+                        null, null, "s".repeat(101), null)));
+
+        assertEquals(200, StaffInternalRequestCreateDto.class.getDeclaredField("title")
+                .getAnnotation(jakarta.validation.constraints.Size.class).max());
+        assertEquals(100, StaffInternalRequestCreateDto.class.getDeclaredField("targetShift")
+                .getAnnotation(jakarta.validation.constraints.Size.class).max());
+        assertEquals(2000, StaffInternalRequestCreateDto.class.getDeclaredField("reason")
+                .getAnnotation(jakarta.validation.constraints.Size.class).max());
+        assertEquals(2000, StaffInternalRequestReviewDto.class.getDeclaredField("managerNotes")
+                .getAnnotation(jakarta.validation.constraints.Size.class).max());
+    }
+
+    /** Kiểm thử P2-BE-44: chặn tự duyệt đơn bằng 403 và chặn duyệt chồng đơn LEAVE đã APPROVED bằng 409. */
+    @Test
+    void reviewRequestRejectsSelfApprovalAndOverlappingApprovedLeave() {
+        LocalDate start = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(5);
+        LocalDate end = start.plusDays(2);
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(300L);
+        req.setUser(staffUser);
+        req.setStatus("PENDING");
+        req.setRequestType("LEAVE");
+        req.setStartDate(start);
+        req.setEndDate(end);
+
+        when(requestRepository.findByIdForUpdate(300L)).thenReturn(Optional.of(req));
+
+        assertThrows(ForbiddenException.class,
+                () -> service.reviewRequest(10L, 300L, new StaffInternalRequestReviewDto("APPROVED", "Tự duyệt")));
+
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
+        StaffInternalRequest existingApproved = new StaffInternalRequest();
+        existingApproved.setId(299L);
+        existingApproved.setStartDate(start);
+        existingApproved.setEndDate(end);
+        when(requestRepository.findApprovedOverlappingLeavesForUpdate(10L, 300L, start, end))
+                .thenReturn(List.of(existingApproved));
+
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.reviewRequest(1L, 300L, new StaffInternalRequestReviewDto("APPROVED", "OK")));
+        verify(requestRepository, never()).save(any());
+    }
+
+    /** Kiểm thử P2-BE-45: người thay thế phải cùng nhóm vai trò chức năng và không đang nghỉ phép đã duyệt. */
+    @Test
+    void createRequestEnforcesSameRoleGroupAndAvailabilityForReplacement() {
+        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        Role coachRole = new Role(); coachRole.setCode("COACH");
+        Role receptionRole = new Role(); receptionRole.setCode("RECEPTIONIST");
+
+        User coachA = new User(); coachA.setId(20L); coachA.setStatus("active"); coachA.setRole(coachRole);
+        User coachB = new User(); coachB.setId(21L); coachB.setStatus("active"); coachB.setRole(coachRole);
+        User receptionist = new User(); receptionist.setId(30L); receptionist.setStatus("active"); receptionist.setRole(receptionRole);
+
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(coachA));
+        when(userRepository.findByIdAndDeletedAtIsNull(30L)).thenReturn(Optional.of(receptionist));
+        when(userRepository.findByIdAndDeletedAtIsNull(21L)).thenReturn(Optional.of(coachB));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
+
+        // COACH không thể nhờ RECEPTIONIST thay
+        assertThrows(BadRequestException.class, () -> service.createRequest(20L,
+                new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Bận",
+                        today.plusDays(2), today.plusDays(3), null, 30L)));
+
+        // COACH nhờ COACH khác đang nghỉ phép đã duyệt -> bị từ chối
+        when(requestRepository.existsApprovedLeaveOverlapping(21L, today.plusDays(2), today.plusDays(3))).thenReturn(true);
+        assertThrows(BadRequestException.class, () -> service.createRequest(20L,
+                new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Bận",
+                        today.plusDays(2), today.plusDays(3), null, 21L)));
+
+        // STAFF nhờ RECEPTIONIST (cùng nhóm DESK_STAFF) không nghỉ -> hợp lệ
+        when(requestRepository.existsApprovedLeaveOverlapping(30L, today.plusDays(2), today.plusDays(3))).thenReturn(false);
+        when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(i -> i.getArgument(0));
+        StaffInternalRequestDto created = service.createRequest(10L,
+                new StaffInternalRequestCreateDto("SHIFT_EXCHANGE", "Đổi ca", "Việc riêng",
+                        today.plusDays(2), today.plusDays(3), "Sáng", 30L));
+        assertEquals(30L, created.replacementUserId());
+    }
+
+    /** Kiểm thử: giá trị lọc ALL được bỏ qua ở bộ lọc trạng thái và loại và giới hạn số lượng trả về. */
     @Test
     void ignoresAllPlaceholderInStatusAndTypeFilters() {
-        when(requestRepository.findByUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of());
-        when(requestRepository.findWithFilters(null, null)).thenReturn(List.of());
+        var limit = org.springframework.data.domain.PageRequest.of(0, 200);
+        when(requestRepository.findByUserIdOrderByCreatedAtDesc(10L, limit)).thenReturn(List.of());
+        when(requestRepository.findWithFilters(null, null, limit)).thenReturn(List.of());
 
         assertTrue(service.getMyRequests(10L, "ALL").isEmpty());
         assertTrue(service.getAllRequests("ALL", "all").isEmpty());
 
-        verify(requestRepository).findByUserIdOrderByCreatedAtDesc(10L);
-        verify(requestRepository).findWithFilters(null, null);
+        verify(requestRepository).findByUserIdOrderByCreatedAtDesc(10L, limit);
+        verify(requestRepository).findWithFilters(null, null, limit);
     }
 }

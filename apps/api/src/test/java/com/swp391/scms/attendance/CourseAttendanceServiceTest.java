@@ -180,4 +180,27 @@ class CourseAttendanceServiceTest {
         assertEquals(already, member.getCourseEnrollBlockedUntil());
         verify(members, never()).save(any());
     }
+
+    /** Kiểm thử P1-BE-23: sweep() có @Transactional và @Scheduled(zone = Asia/Ho_Chi_Minh) và chạy đánh vắng khi bật cờ. */
+    @Test
+    void sweepIsTransactionalWithVietnamTimezoneAndRunsWhenClassesEnabled() throws Exception {
+        var method = CourseAttendanceService.class.getMethod("sweep");
+        assertNotNull(method.getAnnotation(org.springframework.transaction.annotation.Transactional.class));
+        var scheduled = method.getAnnotation(org.springframework.scheduling.annotation.Scheduled.class);
+        assertNotNull(scheduled);
+        assertEquals("Asia/Ho_Chi_Minh", scheduled.zone());
+
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "classesEnabled", true);
+        ClassSession done = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(17, 0), LocalTime.of(18, 0));
+        when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of(done));
+        when(enrollments.findByGymClassIdAndStatus(5L, "booked"))
+                .thenReturn(List.of(enrollment(LocalDateTime.of(2026, 11, 1, 9, 0))));
+        when(attendance.existsBySessionIdAndMemberUserId(1L, 100L)).thenReturn(false);
+        when(sessions.countByGymClassIdAndStatusNot(5L, "cancelled")).thenReturn(9L);
+        when(attendance.countAbsences(100L, 5L)).thenReturn(1L);
+
+        service.sweep();
+
+        verify(attendance).save(any(SessionAttendance.class));
+    }
 }

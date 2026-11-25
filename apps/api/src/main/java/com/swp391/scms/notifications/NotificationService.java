@@ -5,6 +5,7 @@ import com.swp391.scms.notifications.dto.NotificationDto;
 import com.swp391.scms.notifications.entity.Notification;
 import com.swp391.scms.notifications.port.NotificationDispatcher;
 import com.swp391.scms.notifications.port.NotificationChannel;
+import com.swp391.scms.notifications.port.NotificationPayload;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
 import org.slf4j.Logger;
@@ -176,42 +177,59 @@ public class NotificationService {
         try {
             send(memberId, evaluationMessage("notifications.evaluation.title"),
                     evaluationMessage("notifications.evaluation.body"), "system", null, null,
-                    "/member/progress#coach-evaluations");
+                    "/member/progress");
         } catch (ResourceNotFoundException ex) {
             log.debug("Skipping evaluation notification for inactive or missing user {}", memberId);
         }
     }
 
     /**
-     * Gửi thông báo: lưu vào database (chuẩn hóa loại và loại bản ghi liên quan, kèm đường dẫn mở trang), rồi
-     * sau khi transaction commit thì phát ra kênh ngoài. Lỗi ở kênh ngoài chỉ ghi log và không làm hỏng thao
-     * tác chính.
+     * Gửi thông báo: lưu vào database (giới hạn tiêu đề 150 ký tự, chuẩn hóa loại và loại bản ghi liên quan,
+     * kèm đường dẫn mở trang theo vai trò), rồi sau khi transaction commit thì phát ra kênh ngoài. Lỗi ở kênh
+     * ngoài chỉ ghi log và không làm hỏng thao tác chính.
      */
     @Transactional(noRollbackFor = RuntimeException.class)
     public void send(Long userId, String title, String message, String type, String relatedEntityType, Long relatedEntityId, String actionPath) {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
-        
+
+        String clampedTitle = Notification.clampTitle(title);
+        String normalizedType = Notification.normalizeType(type);
+        String normalizedEntityType = Notification.normalizeEntityType(relatedEntityType);
+        String effectiveActionPath = resolveEffectiveActionPath(user, normalizedType, type, actionPath);
+
         Notification notification = new Notification(
                 user,
-                title,
+                clampedTitle,
                 message,
-                Notification.normalizeType(type),
-                Notification.normalizeEntityType(relatedEntityType),
+                normalizedType,
+                normalizedEntityType,
                 relatedEntityId
         );
-        notification.setActionPath(actionPath);
+        notification.setActionPath(effectiveActionPath);
         notificationRepository.save(notification);
         if (notificationDispatcher != null) {
-            // password_changed không nằm trong ALLOWED_TYPES nên bị chuẩn hóa thành "system": xét cả kiểu gốc.
-            boolean important = EMAIL_TYPES.contains(notification.getType()) || (type != null && EMAIL_TYPES.contains(type));
+            // password_changed không nằm trong ALLOWED_TYPES nên lưu DB là "system", nhưng kênh ngoài giữ
+            // "password_changed" để gửi email và chọn đúng CTA bảo mật; order/wallet đã chuẩn hóa về "payment".
+            String rawLower = type != null ? type.trim().toLowerCase(Locale.ROOT) : "";
+            String dispatchType = "password_changed".equals(rawLower) ? "password_changed" : notification.getType();
+            boolean important = EMAIL_TYPES.contains(dispatchType);
             Set<NotificationChannel> channels = important
                     ? Set.of(NotificationChannel.EMAIL, NotificationChannel.PUSH)
                     : Set.of(NotificationChannel.PUSH);
+            NotificationPayload payload = NotificationPayload.builder()
+                    .userId(userId)
+                    .title(notification.getTitle())
+                    .message(message)
+                    .type(dispatchType)
+                    .relatedEntityType(notification.getRelatedEntityType())
+                    .relatedEntityId(relatedEntityId)
+                    .actionPath(notification.getActionPath())
+                    .channels(channels)
+                    .build();
             Runnable dispatch = () -> {
                 try {
-                    notificationDispatcher.dispatch(userId, title, message, type,
-                            relatedEntityType, relatedEntityId, channels);
+                    notificationDispatcher.dispatch(payload);
                 } catch (RuntimeException e) {
                     log.warn("Could not submit external notification for user {}", userId, e);
                 }
@@ -224,6 +242,26 @@ public class NotificationService {
                 dispatch.run();
             }
         }
+    }
+
+    /** Xác định đường dẫn mở trang phù hợp với vai trò người nhận khi caller không truyền actionPath tường minh. */
+    private static String resolveEffectiveActionPath(User user, String normalizedType, String rawType, String actionPath) {
+        if (actionPath != null && !actionPath.isBlank()) {
+            return actionPath.trim();
+        }
+        String roleCode = user != null && user.getRole() != null ? user.getRole().getCode() : null;
+        if (roleCode == null || roleCode.isBlank()) {
+            return null;
+        }
+        String normalizedRole = roleCode.startsWith("ROLE_") ? roleCode.substring(5) : roleCode;
+        if ("schedule_change".equals(normalizedType) && "COACH".equalsIgnoreCase(normalizedRole)) {
+            return "/coach/classes";
+        }
+        if ("password_changed".equalsIgnoreCase(rawType != null ? rawType.trim() : "")
+                && !"MEMBER".equalsIgnoreCase(normalizedRole)) {
+            return "/portal";
+        }
+        return null;
     }
 
     /**

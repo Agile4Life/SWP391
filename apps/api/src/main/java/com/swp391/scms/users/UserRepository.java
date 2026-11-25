@@ -86,10 +86,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     /** Tìm các bản ghi có googleSub = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<User> findByGoogleSub(String googleSub);
 
-    /** Tài khoản nhân viên vận hành chưa xóa (quản lý, lễ tân...) kèm vai trò; dùng để gửi thông báo nội bộ. */
-    @Query("select u from User u join fetch u.role r where u.deletedAt is null and upper(r.code) in ('CENTER_MANAGER', 'MANAGER', 'RECEPTIONIST', 'STAFF', 'ROLE_CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_RECEPTIONIST', 'ROLE_STAFF') order by u.id asc")
+    /** Tài khoản nhân viên vận hành đang active và chưa xóa (quản lý, lễ tân...) kèm vai trò; dùng để gửi thông báo nội bộ. */
+    @Query("select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' and upper(r.code) in ('CENTER_MANAGER', 'MANAGER', 'RECEPTIONIST', 'STAFF', 'ROLE_CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_RECEPTIONIST', 'ROLE_STAFF') order by u.id asc")
     List<User> findActiveStaffUsers();
     /** Tài khoản quản lý đang active và chưa xóa; dùng để gửi thông báo cần quản lý xử lý. */
     @Query("select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' and upper(r.code) in ('MANAGER', 'CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_CENTER_MANAGER') order by u.id asc")
     List<User> findActiveManagers();
+    /** Tập userId các hội viên hiện có gói tập đang bảo lưu (frozen); dùng nạp hàng loạt thay cho N+1 trong getAllUsers. */
+    @Query("select distinct s.member.userId from MembershipSubscription s where s.status = 'frozen'")
+    List<Long> findMemberUserIdsWithFrozenSubscription();
 }

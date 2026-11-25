@@ -29,15 +29,18 @@ public class KycBackfill implements ApplicationRunner {
         this.crypto = crypto;
     }
 
-    /** Duyệt mọi hội viên, mã hóa số giấy tờ chưa được che rồi lưu dạng che; ghi log số bản ghi đã chuyển. */
+    /** Chỉ duyệt các hội viên còn lưu số giấy tờ dạng chữ rõ, mã hóa + băm rồi lưu dạng che; ghi log số bản ghi đã chuyển. */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
         int converted = 0;
-        for (Member member : members.findAll()) {
+        for (Member member : members.findUnmaskedCitizenIds()) {
             String value = member.getCitizenId();
             if (value == null || value.isBlank() || KycCrypto.isMasked(value)) continue;
             member.setCitizenIdEncrypted(crypto.encrypt(value));
+            if (member.getCitizenIdHash() == null || member.getCitizenIdHash().isBlank()) {
+                member.setCitizenIdHash(crypto.hash(value));
+            }
             member.setCitizenId(KycCrypto.mask(value));
             members.save(member);
             converted++;

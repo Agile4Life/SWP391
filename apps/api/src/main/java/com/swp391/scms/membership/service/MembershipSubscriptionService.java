@@ -158,6 +158,13 @@ public class MembershipSubscriptionService {
     public SubscriptionDto create(AuthenticatedPrincipal principal, SubscriptionRequests.Create request) {
         Member member = findMember(principal.id());
         MembershipPackage membershipPackage = findActivePackage(request.packageId());
+        if (isNonPurchasableTrialOrFree(membershipPackage)) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_PACKAGE_INACTIVE",
+                    "error.membership.package_inactive",
+                    null,
+                    "Trial or zero-price package cannot be purchased directly");
+        }
         members.findByUserIdForUpdate(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
         if (subscriptions.existsByMemberUserIdAndStatus(member.getUserId(), STATUS_FROZEN)) {
@@ -234,7 +241,9 @@ public class MembershipSubscriptionService {
             throw new ResourceNotFoundException("resource.member", memberId);
         }
         return subscriptions.findByMemberUserIdOrderByCreatedAtDesc(memberId).stream()
-                .filter(this::isPaidPeriod).map(this::toDto).toList();
+                .filter(this::isPaidPeriod)
+                .filter(sub -> !isTrialSubscription(sub) && !isNonPurchasableTrialOrFree(sub.getMembershipPackage()))
+                .map(this::toDto).toList();
     }
 
     /**
@@ -271,26 +280,39 @@ public class MembershipSubscriptionService {
      * trùng kỳ đã trả tiền nào.
      */
     private SubscriptionDto renewForOwner(MembershipSubscription requested, Long memberId, Long previousId) {
-        if (!isPaidPeriod(requested)) {
+        if (!isPaidPeriod(requested) || isTrialSubscription(requested)
+                || isNonPurchasableTrialOrFree(requested.getMembershipPackage())) {
             throw new BadRequestException("MEMBERSHIP_INVALID_RENEWAL_STATUS",
                     "membership.subscription.invalid_renewal_status", new Object[]{requested.getStatus()},
-                    "Only a paid subscription can be renewed");
+                    "Only a paid non-trial subscription can be renewed");
         }
         // Tuần tự hóa mọi yêu cầu gia hạn cho hội viên này, sau đó đọc lại chuỗi kỳ gói mới nhất.
         members.findByUserIdForUpdate(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
         if (entityManager != null) entityManager.refresh(requested);
-        if (HOLD_PENDING.equalsIgnoreCase(requested.getHoldStatus())) {
+        LocalDate today = LocalDate.now(clock);
+        if (isUnexpiredActive(requested, today) && HOLD_PENDING.equalsIgnoreCase(requested.getHoldStatus())) {
             throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING",
                     "error.membership.hold_already_pending", null,
                     "Subscription already has a pending hold request");
         }
+        if (isUnexpiredActive(requested, today) && HOLD_APPROVED.equalsIgnoreCase(requested.getHoldStatus())) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_APPROVED",
+                    "error.membership.hold_already_requested", null,
+                    "Subscription has an approved hold; withdraw it before renewing");
+        }
         List<MembershipSubscription> history = subscriptions.findByMemberUserId(memberId);
-        if (history.stream().anyMatch(item -> STATUS_ACTIVE.equalsIgnoreCase(item.getStatus())
+        if (history.stream().anyMatch(item -> isUnexpiredActive(item, today)
                 && HOLD_PENDING.equalsIgnoreCase(item.getHoldStatus()))) {
             throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING",
                     "error.membership.hold_already_pending", null,
                     "Subscription already has a pending hold request");
+        }
+        if (history.stream().anyMatch(item -> isUnexpiredActive(item, today)
+                && HOLD_APPROVED.equalsIgnoreCase(item.getHoldStatus()))) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_APPROVED",
+                    "error.membership.hold_already_requested", null,
+                    "Subscription has an approved hold; withdraw it before renewing");
         }
         List<MembershipSubscription> paidPeriods = history.stream().filter(this::isPaidPeriod).toList();
         for (MembershipSubscription item : paidPeriods) {
@@ -337,7 +359,13 @@ public class MembershipSubscriptionService {
             tail = successor;
         }
         MembershipPackage membershipPackage = findActivePackage(tail.getMembershipPackage().getId());
-        LocalDate today = LocalDate.now(clock);
+        if (isNonPurchasableTrialOrFree(membershipPackage)) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_PACKAGE_INACTIVE",
+                    "error.membership.package_inactive",
+                    null,
+                    "Trial or zero-price package cannot be renewed");
+        }
         LocalDate startDate = tail.getEndDate().isBefore(today) ? today : tail.getEndDate().plusDays(1);
         LocalDate endDate = startDate.plusDays(Math.max(1, membershipPackage.getDurationDays()) - 1L);
         for (MembershipSubscription item : history) {
@@ -463,6 +491,13 @@ public class MembershipSubscriptionService {
         if (hasPaidFutureRenewal(current.getMember().getUserId(), today)) throw futurePaidConflict();
 
         MembershipPackage targetPackage = findActivePackage(request.packageId());
+        if (isNonPurchasableTrialOrFree(targetPackage)) {
+            throw new BadRequestException(
+                    "MEMBERSHIP_PACKAGE_INACTIVE",
+                    "error.membership.package_inactive",
+                    null,
+                    "Cannot upgrade to a trial or zero-price package");
+        }
         MembershipPackage currentPackage = current.getMembershipPackage();
         BigDecimal targetPrice = targetPackage.getPrice() != null ? targetPackage.getPrice() : BigDecimal.ZERO;
         boolean trialUpgradeToPaid = isTrialSubscription(current) && targetPrice.signum() > 0;
@@ -893,6 +928,47 @@ public class MembershipSubscriptionService {
     }
 
     /**
+     * Các kỳ gói active đã qua ngày hết hạn (cần chuyển sang expired và đóng yêu cầu bảo lưu PENDING quá hạn).
+     */
+    @Transactional(readOnly = true)
+    public List<Long> findActiveSubscriptionsPastDue() {
+        return subscriptions.findActivePastDueIds(LocalDate.now(clock));
+    }
+
+    /**
+     * Chuyển một kỳ gói active đã quá hạn ({@code endDate < today}) sang {@code expired}, đồng thời đóng yêu
+     * cầu bảo lưu {@code PENDING} (nếu có) để không chặn vĩnh viễn thao tác gia hạn về sau. Trả về true nếu
+     * đã chuyển trạng thái.
+     */
+    @Transactional
+    public boolean expireSubscription(Long subscriptionId) {
+        MembershipSubscription lookup = subscriptions.findById(subscriptionId).orElse(null);
+        if (lookup == null || lookup.getMember() == null) return false;
+        members.findByUserIdForUpdate(lookup.getMember().getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", lookup.getMember().getUserId()));
+        MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId).orElse(null);
+        if (subscription == null) return false;
+        if (entityManager != null) entityManager.refresh(subscription);
+        LocalDate today = LocalDate.now(clock);
+        if (!STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
+                || subscription.getEndDate() == null
+                || !subscription.getEndDate().isBefore(today)) {
+            return false;
+        }
+        LocalDateTime now = LocalDateTime.now(clock);
+        subscription.setStatus(STATUS_EXPIRED);
+        if (HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus())) {
+            subscription.setHoldStatus(HOLD_REJECTED);
+            subscription.setHoldRejectionReason(msg("error.membership.hold_window_passed"));
+            subscription.setHoldResolvedAt(now);
+            if (holdDocuments != null) holdDocuments.deleteBySubscriptionId(subscriptionId);
+        }
+        subscription.setUpdatedAt(now);
+        subscriptions.saveAndFlush(subscription);
+        return true;
+    }
+
+    /**
      * Chuyển sang frozen một đợt bảo lưu đã duyệt vào ngày đầu tiên: khóa dòng hội viên và gói, kiểm tra lại điều kiện
      * rồi chuyển trạng thái; các lịch đặt trong khoảng bảo lưu đã được giải phóng từ lúc duyệt. Trả về true nếu đã chuyển.
      */
@@ -1063,8 +1139,14 @@ public class MembershipSubscriptionService {
      */
     @Transactional
     public SubscriptionDto cancelHoldRequest(AuthenticatedPrincipal principal, Long subscriptionId) {
+        MembershipSubscription lookup = subscriptions.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        ensureOwner(lookup, principal);
+        members.findByUserIdForUpdate(principal.id())
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
         MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        if (entityManager != null) entityManager.refresh(subscription);
         ensureOwner(subscription, principal);
         return withdrawHold(subscription);
     }
@@ -1079,9 +1161,17 @@ public class MembershipSubscriptionService {
         if (!"RECEPTIONIST".equals(role) && !"CENTER_MANAGER".equals(role) && !"MANAGER".equals(role)) {
             throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "Only the front desk can withdraw a hold for a member");
         }
+        MembershipSubscription lookup = subscriptions.findById(subscriptionId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
+        Long lookupMemberId = lookup.getMember() != null ? lookup.getMember().getUserId() : null;
+        if (lookupMemberId != null) {
+            members.findByUserIdForUpdate(lookupMemberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", lookupMemberId));
+        }
         MembershipSubscription subscription = subscriptions.findByIdForUpdate(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
-        Long memberId = subscription.getMember() != null ? subscription.getMember().getUserId() : null;
+        if (entityManager != null) entityManager.refresh(subscription);
+        Long memberId = subscription.getMember() != null ? subscription.getMember().getUserId() : lookupMemberId;
         String packageName = subscription.getMembershipPackage() != null ? subscription.getMembershipPackage().getName() : "";
         SubscriptionDto result = withdrawHold(subscription);
         if (notificationService != null && memberId != null) {
@@ -1108,6 +1198,10 @@ public class MembershipSubscriptionService {
                     "Subscription does not have a hold request that can still be withdrawn");
         }
         if (approvedNotStarted) {
+            Long memberId = subscription.getMember() != null ? subscription.getMember().getUserId() : null;
+            if (memberId != null && hasPaidFutureRenewal(memberId, today)) {
+                throw futurePaidConflict();
+            }
             // Đợt bảo lưu chưa từng bắt đầu nên gói tập được hoàn lại 1 lượt bảo lưu. Các lịch đặt đã hủy lúc duyệt vẫn giữ nguyên trạng thái đã hủy.
             subscription.setHoldUsed(false);
             if (courseAttendance != null) courseAttendance.releaseHoldExcuses(subscription.getMember().getUserId(), subscription.getHoldStartDate());
@@ -1155,6 +1249,7 @@ public class MembershipSubscriptionService {
         Long memberId = subscription.getMember().getUserId();
         members.findByUserIdForUpdate(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+        subscription = subscriptions.findByIdForUpdate(subscriptionId).orElse(subscription);
         if (entityManager != null) entityManager.refresh(subscription);
         if (!HOLD_PENDING.equalsIgnoreCase(subscription.getHoldStatus())
                 || !STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())) {
@@ -1207,7 +1302,12 @@ public class MembershipSubscriptionService {
 
         int cancelledCount = 0;
         if (saved.getMember() != null && saved.getMember().getUserId() != null) {
-            String cancelReason = msg("scheduling.enrollment.cancelled_by_hold");
+            String holdReasonText = (saved.getHoldReason() != null && !saved.getHoldReason().isBlank())
+                    ? saved.getHoldReason().trim()
+                    : (saved.getMembershipPackage() != null && saved.getMembershipPackage().getName() != null
+                            && !saved.getMembershipPackage().getName().isBlank()
+                            ? saved.getMembershipPackage().getName() : "-");
+            String cancelReason = msg("scheduling.enrollment.cancelled_by_hold", holdReasonText);
             // Xử lý khóa học trước: bảo lưu được duyệt trước ngày khai giảng từ 3 ngày trở lên sẽ hoàn lại lượt hoặc học phí,
             // duyệt muộn hơn (hoặc với khóa đang diễn ra) sẽ mất lượt/phí. Các buổi PT 1:1 bên dưới không đụng tới đăng ký khóa học.
             if (enrollmentService != null) {
@@ -1315,6 +1415,7 @@ public class MembershipSubscriptionService {
         LocalDate today = LocalDate.now(clock);
         return subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
                         principal.id(), STATUS_ACTIVE, today, today)
+                .filter(current -> !current.isHeldOn(today))
                 .map(current -> toDto(current, paidThroughDate(current,
                         subscriptions.findByMemberUserId(principal.id()))))
                 .orElse(null);
@@ -1535,6 +1636,20 @@ public class MembershipSubscriptionService {
                 s.getHoldEndDate(),
                 holdDocumentDtos(s),
                 s.getHoldRejectionReason());
+    }
+
+    /** Kỳ gói đang active và chưa qua ngày hết hạn (endDate == null hoặc endDate >= today). */
+    private static boolean isUnexpiredActive(MembershipSubscription subscription, LocalDate today) {
+        return subscription != null
+                && STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
+                && (subscription.getEndDate() == null || !subscription.getEndDate().isBefore(today));
+    }
+
+    /** Gói dùng thử hoặc giá <= 0 không được phép mua/gia hạn qua luồng thương mại thông thường. */
+    private static boolean isNonPurchasableTrialOrFree(MembershipPackage pkg) {
+        if (pkg == null) return true;
+        if (com.swp391.scms.facilities.PackageBenefits.isTrial(pkg)) return true;
+        return pkg.getPrice() != null && pkg.getPrice().signum() <= 0;
     }
 
     /** Đây có phải gói dùng thử không: tên gói chứa "TRẢI NGHIỆM"/"TRIAL", hoặc gói/kỳ chỉ dài tối đa 3 ngày. */

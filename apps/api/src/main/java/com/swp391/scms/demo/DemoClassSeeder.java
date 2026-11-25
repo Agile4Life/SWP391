@@ -91,9 +91,17 @@ public class DemoClassSeeder implements ApplicationRunner {
                 description);
     }
 
+    /** Tạo mô tả khóa sắp khai giảng (bắt đầu sau 7 ngày, kết thúc sau 49 ngày) để hội viên có thể đăng ký ngay. */
+    private static ClassSpec upcoming(String name, String discipline, String room, String level, int capacity,
+                                      int price, String days, ScheduleSlot slot, String description) {
+        return new ClassSpec(name, discipline, room, level, capacity, price, days, slot, 7, 49, "active",
+                description);
+    }
+
     /**
-     * Đúng 1 lớp đang hoạt động (`active`) cho mỗi bộ môn trong 3 bộ môn chuẩn (Gym, Yoga, Boxing) dùng 5 slot cố
-     * định (07:00–19:30) — tuân thủ quy tắc mỗi bộ môn tối đa 1 lớp duy nhất.
+     * Các lớp đang hoạt động ({@code active}) cho 3 bộ môn chuẩn (Gym, Yoga, Boxing) dùng 5 slot cố định
+     * (07:00–19:30): mỗi bộ môn gồm 1 khóa đang diễn ra và 1 khóa sắp khai giảng ({@code fromDay > 0}) không trùng
+     * ngày & slot cùng bộ môn, tuân thủ quy tắc đa lớp/bộ môn.
      */
     static final List<ClassSpec> CLASSES = List.of(
             ongoing("Full Body Strength 101", "Gym", GYM, "all", 20, 0, "MON,WED,FRI", ScheduleSlot.SLOT_1,
@@ -101,7 +109,15 @@ public class DemoClassSeeder implements ApplicationRunner {
             ongoing("Hatha Yoga Nền Tảng", "Yoga", ZEN, "all", 16, 0, "MON,WED,FRI", ScheduleSlot.SLOT_2,
                     "Các tư thế Hatha cơ bản, hít thở sâu, thăng bằng và giãn cơ."),
             ongoing("Boxing Cơ Bản", "Boxing", RING, "all", 14, 0, "TUE,THU,SAT", ScheduleSlot.SLOT_5,
-                    "Tư thế, đòn thẳng, móc, di chuyển chân và thể lực theo hiệp."));
+                    "Tư thế, đòn thẳng, móc, di chuyển chân và thể lực theo hiệp."),
+            upcoming("Hypertrophy & Conditioning Khóa Mới", "Gym", GYM, "intermediate", 20, 450000, "TUE,THU,SAT",
+                    ScheduleSlot.SLOT_1,
+                    "Khóa tăng cơ và sức bền khai giảng sắp tới, giáo án phân chia nhóm cơ khoa học."),
+            upcoming("Vinyasa Flow & Phục Hồi", "Yoga", ZEN, "all", 16, 400000, "TUE,THU,SAT", ScheduleSlot.SLOT_2,
+                    "Chuỗi Vinyasa liền mạch kết hợp giãn cơ phục hồi cho mọi trình độ."),
+            upcoming("Boxing Thể Lực & Phản Xạ", "Boxing", RING, "intermediate", 14, 500000, "MON,WED,FRI",
+                    ScheduleSlot.SLOT_5,
+                    "Nâng cao tốc độ ra đòn, né tránh, đánh bao cát và thể lực chuyên sâu."));
 
     /** Một khung giờ đã bận (giờ bắt đầu, giờ kết thúc). */
     private record Slot(LocalTime start, LocalTime end) {
@@ -156,26 +172,28 @@ public class DemoClassSeeder implements ApplicationRunner {
         Map<String, Discipline> disciplineByName = new HashMap<>();
         disciplines.findAll().forEach(d -> disciplineByName.put(d.getName(), d));
         Set<String> existingNames = new HashSet<>();
-        Set<Long> activeDisciplineIds = new HashSet<>();
-        classes.findAll().forEach(c -> {
-            existingNames.add(c.getName());
-            if ("active".equalsIgnoreCase(c.getStatus()) && c.getDiscipline() != null && c.getDiscipline().getId() != null) {
-                activeDisciplineIds.add(c.getDiscipline().getId());
-            }
-        });
+        classes.findAll().forEach(c -> existingNames.add(c.getName()));
 
-        // Các khung mà trigger database sẽ từ chối: mọi buổi chưa hủy theo HLV và theo phòng, và mọi lượt đặt
-        // PT đã xác nhận của HLV (trg_sessions_check_conflict trong scms_guard_pt_schedule), theo từng ngày.
+        // Các khung mà trigger database sẽ từ chối: mọi buổi chưa hủy theo HLV, theo phòng, theo bộ môn (lớp active),
+        // và mọi lượt đặt PT đã xác nhận của HLV (trg_sessions_check_conflict & trg_pt_schedule_booking), theo từng ngày.
         Map<String, List<Slot>> busy = new HashMap<>();
         coachBookings.findConfirmedBetween(today.minusDays(150), today.plusDays(150)).forEach(b ->
                 reserve(busy, "coach", b.getCoach().getUserId(), b.getBookingDate(), b.getStartTime(), b.getEndTime()));
         sessions.findNotCancelledBetween(today.minusDays(150), today.plusDays(150)).forEach(s -> {
             GymClass owner = s.getGymClass();
+            if (owner == null) {
+                return;
+            }
             if (owner.getCoach() != null) {
                 reserve(busy, "coach", owner.getCoach().getUserId(), s.getSessionDate(), s.getStartTime(), s.getEndTime());
             }
             if (owner.getRoom() != null) {
                 reserve(busy, "room", owner.getRoom().getId(), s.getSessionDate(), s.getStartTime(), s.getEndTime());
+            }
+            if ("active".equalsIgnoreCase(owner.getStatus())
+                    && owner.getDiscipline() != null && owner.getDiscipline().getId() != null) {
+                reserve(busy, "discipline", owner.getDiscipline().getId(),
+                        s.getSessionDate(), s.getStartTime(), s.getEndTime());
             }
         });
 
@@ -194,33 +212,25 @@ public class DemoClassSeeder implements ApplicationRunner {
                 skipped++;
                 continue;
             }
-            // Quy tắc mỗi bộ môn chỉ có tối đa 1 lớp đang hoạt động (`active`).
-            if ("active".equalsIgnoreCase(spec.status()) && discipline.getId() != null
-                    && activeDisciplineIds.contains(discipline.getId())) {
-                log.info("Demo class seed: skip '{}' (discipline '{}' already has an active class)",
-                        spec.name(), spec.discipline());
-                skipped++;
-                continue;
-            }
             List<LocalDate> dates = datesOf(spec, today);
             if (dates.isEmpty()) {
                 skipped++;
                 continue;
             }
-            Placement placement = place(spec, room, dates, candidateCoaches(activeCoaches, spec.discipline(), turn++),
-                    busy);
+            Placement placement = place(spec, discipline, room, dates,
+                    candidateCoaches(activeCoaches, spec.discipline(), turn++), busy);
             if (placement == null) {
-                log.warn("Demo class seed: skip '{}' (no free coach/room slot)", spec.name());
+                log.warn("Demo class seed: skip '{}' (no free coach/room/discipline slot)", spec.name());
                 skipped++;
                 continue;
             }
             save(spec, discipline, room, placement, dates, manager, now);
-            if ("active".equalsIgnoreCase(spec.status()) && discipline.getId() != null) {
-                activeDisciplineIds.add(discipline.getId());
-            }
             for (LocalDate date : dates) {
                 reserve(busy, "coach", placement.coach().getUserId(), date, placement.start(), placement.end());
                 reserve(busy, "room", room.getId(), date, placement.start(), placement.end());
+                if ("active".equalsIgnoreCase(spec.status()) && discipline.getId() != null) {
+                    reserve(busy, "discipline", discipline.getId(), date, placement.start(), placement.end());
+                }
             }
             created++;
         }
@@ -231,11 +241,12 @@ public class DemoClassSeeder implements ApplicationRunner {
     private record Placement(Coach coach, LocalTime start, LocalTime end) {}
 
     /**
-     * Tìm cặp (HLV, slot cố định) đầu tiên còn trống ở mọi ngày học: thử slot ưu tiên trước rồi lần lượt các
-     * slot còn lại trong 5 {@link ScheduleSlot}; không có thì trả null.
+     * Tìm cặp (HLV, slot cố định) đầu tiên còn trống ở mọi ngày học (không trùng HLV, phòng và bộ môn của lớp
+     * active): thử slot ưu tiên trước rồi lần lượt các slot còn lại trong 5 {@link ScheduleSlot}; không có thì trả
+     * null.
      */
-    private Placement place(ClassSpec spec, Room room, List<LocalDate> dates, List<Coach> candidates,
-                            Map<String, List<Slot>> busy) {
+    private Placement place(ClassSpec spec, Discipline discipline, Room room, List<LocalDate> dates,
+                            List<Coach> candidates, Map<String, List<Slot>> busy) {
         List<ScheduleSlot> orderedSlots = new ArrayList<>();
         orderedSlots.add(spec.slot());
         for (ScheduleSlot candidate : ScheduleSlot.values()) {
@@ -243,13 +254,16 @@ public class DemoClassSeeder implements ApplicationRunner {
                 orderedSlots.add(candidate);
             }
         }
+        boolean checkDiscipline = "active".equalsIgnoreCase(spec.status())
+                && discipline != null && discipline.getId() != null;
         for (Coach coach : candidates) {
             for (ScheduleSlot candidateSlot : orderedSlots) {
                 LocalTime start = candidateSlot.startTime();
                 LocalTime end = candidateSlot.endTime();
                 boolean free = dates.stream().noneMatch(d ->
                         isBusy(busy, "coach", coach.getUserId(), d, start, end)
-                                || isBusy(busy, "room", room.getId(), d, start, end));
+                                || isBusy(busy, "room", room.getId(), d, start, end)
+                                || (checkDiscipline && isBusy(busy, "discipline", discipline.getId(), d, start, end)));
                 if (free) {
                     return new Placement(coach, start, end);
                 }

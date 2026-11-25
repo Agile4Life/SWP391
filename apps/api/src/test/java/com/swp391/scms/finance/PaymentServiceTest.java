@@ -1136,4 +1136,222 @@ class PaymentServiceTest {
         assertEquals("PAYMENT_ALREADY_EXISTS", alreadyPaid.getErrorCode());
         verify(paymentRepository, times(1)).save(any());
     }
+
+    /** Kiểm thử P1-BE-29: hoàn tiền khóa Member trước và chặn hoàn tiền gói cũ đã có kỳ nâng cấp/kế tiếp đang hoạt động hoặc chờ thanh toán. */
+    @Test
+    void refundPaymentLocksMemberAndRejectsSupersededSubscription() {
+        Member member = new Member();
+        member.setUserId(2L);
+        Payment payment = new Payment();
+        payment.setId(50L);
+        payment.setMember(member);
+        payment.setStatus("success");
+        payment.setAmount(new BigDecimal("1000000"));
+        payment.setSubscriptionId(10L);
+
+        when(paymentRepository.findById(50L)).thenReturn(Optional.of(payment));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.existsByPreviousSubscriptionIdAndStatusIn(
+                eq(10L), any())).thenReturn(true);
+
+        ConflictException ex = assertThrows(ConflictException.class, () -> paymentService.refundPayment(
+                50L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Muốn hoàn tiền gói cũ", null)));
+        assertEquals("PAYMENT_SUBSCRIPTION_SUPERSEDED", ex.getErrorCode());
+        assertEquals("success", payment.getStatus());
+        verify(memberRepository).findByUserIdForUpdate(2L);
+        verify(paymentRepository, never()).save(any());
+    }
+
+    /** Kiểm thử P1-BE-31: updatePaymentStatus kiểm tra khóa VNPay ở cả payment và subscription. */
+    @Test
+    void updatePaymentStatusGuardsBothPaymentAndSubscription() {
+        var guard = mock(com.swp391.scms.finance.service.VnpayPaymentGuard.class);
+        PaymentService guardedService = new PaymentService(paymentRepository, memberRepository, userRepository,
+                membershipSubscriptionRepository, classEnrollmentRepository, paymentMapper, clock, guard);
+
+        Member member = new Member(); member.setUserId(2L);
+        MembershipSubscription sub = new MembershipSubscription(); sub.setId(77L); sub.setMember(member); sub.setStatus("pending_payment");
+        Payment payment = new Payment();
+        payment.setId(60L);
+        payment.setMember(member);
+        payment.setStatus("pending");
+        payment.setMethod("cash");
+        payment.setSubscriptionId(77L);
+        when(paymentRepository.findById(60L)).thenReturn(Optional.of(payment));
+        when(paymentRepository.findByIdForUpdate(60L)).thenReturn(Optional.of(payment));
+        when(membershipSubscriptionRepository.findById(77L)).thenReturn(Optional.of(sub));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(paymentMapper.toDto(payment)).thenReturn(new PaymentDto());
+
+        guardedService.updatePaymentStatus(60L, "failed");
+
+        verify(guard).payment(60L);
+        verify(guard).subscription(77L);
+    }
+
+    /** Kiểm thử P1-BE-32: chặn hoàn tiền WALLET_TOPUP, chặn hoàn một phần PT/đơn hàng, và cộng tiền lại Ví SÖL idempotent khi hoàn online_wallet. */
+    @Test
+    void refundPaymentRejectsTopupBlocksPartialCoachOrOrderRefundAndCreditsWalletForOnlinePayment() {
+        Member member = new Member();
+        member.setUserId(2L);
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+
+        // 1. WALLET_TOPUP bị chặn hoàn trực tiếp
+        Payment topup = new Payment();
+        topup.setId(61L); topup.setMember(member); topup.setStatus("success");
+        topup.setAmount(new BigDecimal("500000")); topup.setNote("WALLET_TOPUP");
+        when(paymentRepository.findById(61L)).thenReturn(Optional.of(topup));
+        BadRequestException topupEx = assertThrows(BadRequestException.class, () -> paymentService.refundPayment(
+                61L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Hoàn nạp ví", null)));
+        assertEquals("CANNOT_REFUND_WALLET_TOPUP", topupEx.getErrorCode());
+
+        // 2. Hoàn MỘT PHẦN cho PT booking và product order cũng bị chặn (không chỉ hoàn toàn phần)
+        Payment ptPayment = new Payment();
+        ptPayment.setId(62L); ptPayment.setMember(member); ptPayment.setStatus("success");
+        ptPayment.setAmount(new BigDecimal("200000")); ptPayment.setCoachBookingId(9L);
+        when(paymentRepository.findById(62L)).thenReturn(Optional.of(ptPayment));
+        BadRequestException ptEx = assertThrows(BadRequestException.class, () -> paymentService.refundPayment(
+                62L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Hoàn 1 phần PT", new BigDecimal("50000"))));
+        assertEquals("REFUND_VIA_CANCELLATION", ptEx.getErrorCode());
+
+        Payment orderPayment = new Payment();
+        orderPayment.setId(63L); orderPayment.setMember(member); orderPayment.setStatus("success");
+        orderPayment.setAmount(new BigDecimal("400000")); orderPayment.setProductOrderId(15L);
+        when(paymentRepository.findById(63L)).thenReturn(Optional.of(orderPayment));
+        BadRequestException orderEx = assertThrows(BadRequestException.class, () -> paymentService.refundPayment(
+                63L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Hoàn 1 phần đơn", new BigDecimal("100000"))));
+        assertEquals("REFUND_VIA_CANCELLATION", orderEx.getErrorCode());
+
+        // 3. Hoàn online_wallet cộng tiền lại vào Ví SÖL với mã idempotent gắn theo paymentId và tổng số tiền hoàn
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        paymentService.setWalletService(walletService);
+        Payment onlineSub = new Payment();
+        onlineSub.setId(64L); onlineSub.setMember(member); onlineSub.setStatus("success");
+        onlineSub.setMethod("online_wallet"); onlineSub.setAmount(new BigDecimal("1000000")); onlineSub.setSubscriptionId(12L);
+        when(paymentRepository.findById(64L)).thenReturn(Optional.of(onlineSub));
+        when(membershipSubscriptionRepository.existsByPreviousSubscriptionIdAndStatusIn(eq(12L), any())).thenReturn(false);
+
+        paymentService.refundPayment(64L, new com.swp391.scms.finance.dto.PaymentRefundRequest("Hoàn một phần", new BigDecimal("300000")));
+        verify(walletService).creditPaymentRefund(2L, new BigDecimal("300000"), "PAYMENT_REFUND_64_300000", "Hoàn một phần");
+    }
+
+    /** Kiểm thử P2-BE-39: suy ra receivedBy từ @AuthenticationPrincipal (bỏ qua receivedById giả mạo), khóa dòng payment và chặn xác nhận thủ công online_wallet. */
+    @Test
+    void staffOperationsDeriveReceivedByFromPrincipalLockRowAndBlockOnlineManualConfirmation() {
+        var staffPrincipal = new com.swp391.scms.security.AuthenticatedPrincipal(42L, "desk01", "RECEPTIONIST");
+        User deskUser = new User(); deskUser.setId(42L);
+        Member member = new Member(); member.setUserId(2L); member.setIdentityVerified(true);
+
+        when(userRepository.findByIdAndDeletedAtIsNull(42L)).thenReturn(Optional.of(deskUser));
+        when(memberRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+
+        // 1. createPayment bỏ qua receivedById client gửi lên (999L) và dùng principal.id() (42L)
+        PaymentCreateDto createDto = new PaymentCreateDto();
+        createDto.setMemberId(2L);
+        createDto.setAmount(new BigDecimal("100000"));
+        createDto.setMethod("cash");
+        createDto.setStatus("pending");
+        createDto.setReceivedById(999L);
+        Payment mapped = new Payment(); mapped.setAmount(new BigDecimal("100000")); mapped.setMethod("cash"); mapped.setStatus("pending");
+        when(paymentMapper.toEntity(createDto)).thenReturn(mapped);
+        when(paymentRepository.save(mapped)).thenReturn(mapped);
+        when(paymentMapper.toDto(mapped)).thenReturn(new PaymentDto());
+
+        paymentService.createPayment(staffPrincipal, createDto);
+        assertSame(deskUser, mapped.getReceivedBy());
+        verify(userRepository, never()).findByIdAndDeletedAtIsNull(999L);
+
+        // 2. processPayment cũng bỏ qua receivedById giả mạo (999L)
+        com.swp391.scms.scheduling.entity.GymClass gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        gymClass.setPrice(new BigDecimal("500000"));
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setId(30L); enrollment.setMember(member); enrollment.setGymClass(gymClass); enrollment.setStatus("booked");
+        when(classEnrollmentRepository.findById(30L)).thenReturn(Optional.of(enrollment));
+        when(paymentRepository.findAllByClassEnrollmentId(30L)).thenReturn(List.of());
+        when(paymentRepository.save(any(Payment.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentMapper.toDto(any(Payment.class))).thenReturn(new PaymentDto());
+
+        PaymentProcessDto processDto = new PaymentProcessDto(2L, null, 30L, new BigDecimal("500000"), "cash", 999L, "Thu tại quầy");
+        paymentService.processPayment(staffPrincipal, processDto);
+        verify(paymentRepository, atLeastOnce()).save(argThat(p -> p.getClassEnrollmentId() != null && deskUser.equals(p.getReceivedBy())));
+        verify(userRepository, never()).findByIdAndDeletedAtIsNull(999L);
+
+        // 3. updatePaymentStatusByStaff khóa dòng payment, chặn xác nhận thủ công online_wallet và gán receivedBy cho cash
+        Payment onlinePending = new Payment();
+        onlinePending.setId(71L); onlinePending.setStatus("pending"); onlinePending.setMethod("online_wallet");
+        when(paymentRepository.findById(71L)).thenReturn(Optional.of(onlinePending));
+        when(paymentRepository.findByIdForUpdate(71L)).thenReturn(Optional.of(onlinePending));
+
+        BadRequestException onlineEx = assertThrows(BadRequestException.class,
+                () -> paymentService.updatePaymentStatusByStaff(staffPrincipal, 71L, "success"));
+        assertEquals("PAYMENT_ONLINE_MANUAL_CONFIRM_FORBIDDEN", onlineEx.getErrorCode());
+        verify(paymentRepository).findByIdForUpdate(71L);
+
+        Payment cashPending = new Payment();
+        cashPending.setId(72L); cashPending.setStatus("pending"); cashPending.setMethod("cash");
+        when(paymentRepository.findById(72L)).thenReturn(Optional.of(cashPending));
+        when(paymentRepository.findByIdForUpdate(72L)).thenReturn(Optional.of(cashPending));
+
+        paymentService.updatePaymentStatusByStaff(staffPrincipal, 72L, "success");
+        assertEquals("success", cashPending.getStatus());
+        assertSame(deskUser, cashPending.getReceivedBy());
+    }
+
+    /** Kiểm thử P2-BE-41: từ chối kích hoạt nâng cấp cũ quá hạn (endDate < today) hoặc có creditApplied vượt quá giá trị đã trả của gói cũ. */
+    @Test
+    void activateSubscriptionRejectsStaleExpiredUpgradeAndExcessiveCredit() {
+        var calc = mock(com.swp391.scms.membership.service.SubscriptionValueCalculator.class);
+        paymentService.setValueCalculator(calc);
+
+        Member member = new Member(); member.setUserId(2L); member.setIdentityVerified(true);
+        MembershipPackage basic = new MembershipPackage(); basic.setId(1L); basic.setDurationDays(30); basic.setPrice(new BigDecimal("500000"));
+        MembershipPackage vip = new MembershipPackage(); vip.setId(2L); vip.setDurationDays(30); vip.setPrice(new BigDecimal("1000000"));
+
+        // 1. Nâng cấp prorated đã quá hạn (endDate trước ngày hiện tại 2026-10-01)
+        MembershipSubscription previous = new MembershipSubscription();
+        previous.setId(80L); previous.setMember(member); previous.setMembershipPackage(basic);
+        previous.setStatus("active"); previous.setStartDate(java.time.LocalDate.of(2026, 8, 1));
+        previous.setEndDate(java.time.LocalDate.of(2026, 8, 30));
+
+        MembershipSubscription staleUpgrade = new MembershipSubscription();
+        staleUpgrade.setId(81L); staleUpgrade.setMember(member); staleUpgrade.setMembershipPackage(vip);
+        staleUpgrade.setPreviousSubscription(previous); staleUpgrade.setStatus("pending_payment");
+        staleUpgrade.setStartDate(java.time.LocalDate.of(2026, 8, 15));
+        staleUpgrade.setEndDate(java.time.LocalDate.of(2026, 9, 13));
+        staleUpgrade.setCreditApplied(new BigDecimal("100000"));
+
+        Payment p1 = new Payment(); p1.setId(801L); p1.setMember(member); p1.setSubscriptionId(81L); p1.setStatus("pending");
+        when(paymentRepository.findById(801L)).thenReturn(Optional.of(p1));
+        when(paymentRepository.findByIdForUpdate(801L)).thenReturn(Optional.of(p1));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(81L)).thenReturn(Optional.of(staleUpgrade));
+        when(membershipSubscriptionRepository.findByMemberUserId(2L)).thenReturn(List.of(previous, staleUpgrade));
+
+        ConflictException expiredEx = assertThrows(ConflictException.class, () -> paymentService.updatePaymentStatus(801L, "success"));
+        assertEquals("PAYMENT_UPGRADE_EXPIRED", expiredEx.getErrorCode());
+        assertEquals("active", previous.getStatus());
+        assertEquals("pending_payment", staleUpgrade.getStatus());
+
+        // 2. creditApplied lớn hơn paidValue(previous) -> bị chặn trước khi thay đổi trạng thái gói cũ
+        previous.setEndDate(java.time.LocalDate.of(2026, 10, 20));
+        MembershipSubscription overCredit = new MembershipSubscription();
+        overCredit.setId(82L); overCredit.setMember(member); overCredit.setMembershipPackage(vip);
+        overCredit.setPreviousSubscription(previous); overCredit.setStatus("pending_payment");
+        overCredit.setStartDate(java.time.LocalDate.of(2026, 10, 1));
+        overCredit.setEndDate(java.time.LocalDate.of(2026, 10, 30));
+        overCredit.setCreditApplied(new BigDecimal("600000"));
+
+        Payment p2 = new Payment(); p2.setId(802L); p2.setMember(member); p2.setSubscriptionId(82L); p2.setStatus("pending");
+        when(paymentRepository.findById(802L)).thenReturn(Optional.of(p2));
+        when(paymentRepository.findByIdForUpdate(802L)).thenReturn(Optional.of(p2));
+        when(membershipSubscriptionRepository.findById(82L)).thenReturn(Optional.of(overCredit));
+        when(membershipSubscriptionRepository.findByMemberUserId(2L)).thenReturn(List.of(previous, overCredit));
+        when(calc.paidValue(previous)).thenReturn(new BigDecimal("500000"));
+
+        ConflictException creditEx = assertThrows(ConflictException.class, () -> paymentService.updatePaymentStatus(802L, "success"));
+        assertEquals("PAYMENT_UPGRADE_CREDIT_INVALID", creditEx.getErrorCode());
+        assertEquals("active", previous.getStatus());
+        assertEquals("pending_payment", overCredit.getStatus());
+    }
 }

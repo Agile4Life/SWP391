@@ -1350,6 +1350,297 @@ class CoachBookingServiceTest {
                 20L, null, date, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime(), "package_quota", "Tập riêng");
         assertThatThrownBy(() -> service.createBooking(principal, overlappingRequest))
                 .isInstanceOf(ConflictException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "MEMBER_SCHEDULE_CONFLICT");
+                .satisfies(e -> {
+                    ConflictException ce = (ConflictException) e;
+                    assertThat(ce.getErrorCode()).isEqualTo("MEMBER_SCHEDULE_CONFLICT");
+                    assertThat(ce.getMessageKey()).isEqualTo("error.coach_booking.member_class_conflict");
+                    assertThat(ce.getMessageArgs()).containsExactly("Boxing", "17:00", "19:30");
+                });
+    }
+
+    /** Kiểm thử P1-BE-22: nâng cấp Trial → Platinum 30 ngày không reset quota ở 2 ngày cuối và nâng cấp Gold → Platinum giữa chu kỳ bị giới hạn theo tổng hạn mức 30 ngày. */
+    @Test
+    @DisplayName("P1-BE-22: Chặn trục lợi nhân đôi lượt PT khi nâng cấp Trial → Platinum hoặc Gold → Platinum giữa chu kỳ")
+    void upgradeFromTrialOrMidCycleGoldCannotDoublePtQuota() {
+        // 1. Trial 3 ngày (1/11–3/11) → Platinum 30 ngày (3/11–2/12). Vào 1/12 (2 ngày cuối), vẫn nằm trong chu kỳ 1 (3/11–2/12).
+        Clock dec1Clock = Clock.fixed(
+                LocalDateTime.of(2026, 12, 1, 8, 0).atZone(com.swp391.scms.common.CenterTime.ZONE).toInstant(),
+                com.swp391.scms.common.CenterTime.ZONE);
+        CoachBookingService dec1Service = new CoachBookingService(
+                coachBookingRepository, coachRepository, memberRepository, classSessionRepository,
+                classEnrollmentRepository, subscriptionRepository, disciplineRepository, dec1Clock, null);
+
+        MembershipPackage trialPkg = new MembershipPackage();
+        trialPkg.setName("Gói Trải Nghiệm 3 Ngày");
+        trialPkg.setTier("GOLD");
+        trialPkg.setDurationDays(3);
+
+        MembershipPackage plat30Pkg = new MembershipPackage();
+        plat30Pkg.setName("PLATINUM 1 THÁNG");
+        plat30Pkg.setTier("PLATINUM");
+        plat30Pkg.setDurationDays(30);
+
+        MembershipSubscription trialSub = new MembershipSubscription();
+        trialSub.setId(701L);
+        trialSub.setMember(member);
+        trialSub.setMembershipPackage(trialPkg);
+        trialSub.setStatus("expired");
+        trialSub.setStartDate(LocalDate.of(2026, 11, 1));
+        trialSub.setEndDate(LocalDate.of(2026, 11, 3));
+
+        MembershipSubscription platFromTrial = new MembershipSubscription();
+        platFromTrial.setId(702L);
+        platFromTrial.setMember(member);
+        platFromTrial.setMembershipPackage(plat30Pkg);
+        platFromTrial.setPreviousSubscription(trialSub);
+        platFromTrial.setUpgradeCharge(new BigDecimal("1500000"));
+        platFromTrial.setStatus("active");
+        platFromTrial.setStartDate(LocalDate.of(2026, 11, 3));
+        platFromTrial.setEndDate(LocalDate.of(2026, 12, 2));
+        platFromTrial.setCreatedAt(LocalDateTime.of(2026, 11, 3, 9, 0));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(platFromTrial));
+        when(coachBookingRepository.countSubscriptionQuotaUsage(
+                eq(10L), eq(LocalDate.of(2026, 11, 3)), eq(LocalDate.of(2026, 12, 2)),
+                eq("package_quota"), eq(List.of(702L)), eq(platFromTrial.getCreatedAt())))
+                .thenReturn(6L);
+
+        var trialUpgradeStatus = dec1Service.getMemberQuotaStatus(10L);
+        assertThat(trialUpgradeStatus.remainingQuota()).isZero();
+        assertThat(trialUpgradeStatus.usedThisMonth()).isEqualTo(6);
+
+        // 2. Gold 30 ngày (1/11–30/11) nâng cấp ngày 15/11 lên Platinum 30 ngày (15/11–14/12):
+        // đã dùng 6 buổi trên platSub trong 15/11–30/11 -> sang 1/12 (chu kỳ lẻ 1/12–14/12) remaining phải bằng 0!
+        MembershipPackage gold30Pkg = new MembershipPackage();
+        gold30Pkg.setName("GOLD 1 THÁNG");
+        gold30Pkg.setTier("GOLD");
+        gold30Pkg.setDurationDays(30);
+
+        MembershipSubscription goldSub = new MembershipSubscription();
+        goldSub.setId(703L);
+        goldSub.setMember(member);
+        goldSub.setMembershipPackage(gold30Pkg);
+        goldSub.setStatus("expired");
+        goldSub.setStartDate(LocalDate.of(2026, 11, 1));
+        goldSub.setEndDate(LocalDate.of(2026, 11, 15));
+        goldSub.setCreatedAt(LocalDateTime.of(2026, 11, 1, 9, 0));
+
+        MembershipSubscription platFromGold = new MembershipSubscription();
+        platFromGold.setId(704L);
+        platFromGold.setMember(member);
+        platFromGold.setMembershipPackage(plat30Pkg);
+        platFromGold.setPreviousSubscription(goldSub);
+        platFromGold.setUpgradeCharge(new BigDecimal("1000000"));
+        platFromGold.setStatus("active");
+        platFromGold.setStartDate(LocalDate.of(2026, 11, 15));
+        platFromGold.setEndDate(LocalDate.of(2026, 12, 14));
+        platFromGold.setCreatedAt(LocalDateTime.of(2026, 11, 15, 9, 0));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(platFromGold));
+        // Chu kỳ 2 (1/12–14/12) chưa có buổi nào -> 0, nhưng tổng suốt thời hạn gói platFromGold (15/11–14/12) đã dùng đủ 6 buổi!
+        when(coachBookingRepository.countSubscriptionQuotaUsage(
+                eq(10L), eq(LocalDate.of(2026, 12, 1)), eq(LocalDate.of(2026, 12, 14)),
+                eq("package_quota"), eq(List.of(704L, 703L)), eq(goldSub.getCreatedAt())))
+                .thenReturn(0L);
+        when(coachBookingRepository.countSubscriptionQuotaUsage(
+                eq(10L), eq(LocalDate.of(2026, 11, 15)), eq(LocalDate.of(2026, 12, 14)),
+                eq("package_quota"), eq(List.of(704L)), eq(platFromGold.getCreatedAt())))
+                .thenReturn(6L);
+
+        var midCycleStatus = dec1Service.getMemberQuotaStatus(10L);
+        assertThat(midCycleStatus.monthlyQuota()).isEqualTo(6);
+        assertThat(midCycleStatus.remainingQuota()).isZero();
+        assertThat(midCycleStatus.usedThisMonth()).isEqualTo(6);
+
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+        when(classSessionRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+
+        var seventhAttempt = new CoachBookingCreateDto(
+                20L, null, LocalDate.of(2026, 12, 2),
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "package_quota", null);
+        assertThatThrownBy(() -> dec1Service.createBooking(principal, seventhAttempt))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_BOOKING_QUOTA_EXCEEDED");
+    }
+
+    /** Kiểm thử P1-BE-22: sắp xếp activeSubs ổn định chọn gói có hạn mức PT cao nhất thay vì phần tử đầu ngẫu nhiên. */
+    @Test
+    void activeSubscriptionsAreSortedDeterministicallyByHighestPtQuota() {
+        MembershipPackage silverPkg = new MembershipPackage();
+        silverPkg.setName("SILVER");
+        silverPkg.setTier("SILVER");
+        silverPkg.setDurationDays(30);
+        MembershipSubscription silverSub = new MembershipSubscription();
+        silverSub.setId(1L);
+        silverSub.setMembershipPackage(silverPkg);
+        silverSub.setStatus("active");
+        silverSub.setStartDate(LocalDate.of(2026, 10, 1));
+        silverSub.setEndDate(LocalDate.of(2026, 11, 30));
+
+        MembershipPackage platPkg = new MembershipPackage();
+        platPkg.setName("PLATINUM");
+        platPkg.setTier("PLATINUM");
+        platPkg.setDurationDays(30);
+        MembershipSubscription platSub = new MembershipSubscription();
+        platSub.setId(2L);
+        platSub.setMembershipPackage(platPkg);
+        platSub.setStatus("active");
+        platSub.setStartDate(LocalDate.of(2026, 10, 1));
+        platSub.setEndDate(LocalDate.of(2026, 11, 30));
+        platSub.setCreatedAt(LocalDateTime.of(2026, 10, 1, 8, 0));
+
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active"))
+                .thenReturn(List.of(silverSub, platSub));
+        when(coachBookingRepository.countSubscriptionQuotaUsage(eq(10L), any(), any(), eq("package_quota"), eq(List.of(2L)), any()))
+                .thenReturn(1L);
+
+        var status = service.getMemberQuotaStatus(10L);
+        assertThat(status.packageName()).isEqualTo("PLATINUM");
+        assertThat(status.monthlyQuota()).isEqualTo(6);
+        assertThat(status.remainingQuota()).isEqualTo(5);
+    }
+
+    /** Kiểm thử P2-BE-27: unmarkAttended chặn buổi chưa bắt đầu; markAttended/unmarkAttended dùng findByIdForUpdate và điền gateCheckinAt. */
+    @Test
+    void unmarkAttendedRejectsFutureSessionAndBothUseRowLockAndPopulateGateCheckin() {
+        var pt = mock(com.swp391.scms.coaching.service.PtAttendanceService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "ptAttendance", pt);
+        var desk = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
+
+        var future = ptSession(81, LocalDate.of(2026, 10, 31), LocalTime.of(17, 0), LocalTime.of(19, 30), null);
+        when(coachBookingRepository.findByIdForUpdate(81L)).thenReturn(Optional.of(future));
+        assertThatThrownBy(() -> service.unmarkAttended(desk, 81L))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_BOOKING_NOT_STARTED");
+
+        var started = ptSession(82, LocalDate.of(2026, 10, 31), LocalTime.of(7, 0), LocalTime.of(9, 30), null);
+        LocalDateTime checkinTime = LocalDateTime.of(2026, 10, 31, 6, 50);
+        when(coachBookingRepository.findByIdForUpdate(82L)).thenReturn(Optional.of(started));
+        when(pt.gateCheckinFor(started)).thenReturn(checkinTime);
+
+        CoachBookingDto marked = service.markAttended(desk, 82L);
+        assertThat(marked.gateCheckinAt()).isEqualTo(checkinTime);
+        CoachBookingDto unmarked = service.unmarkAttended(desk, 82L);
+        assertThat(unmarked.gateCheckinAt()).isEqualTo(checkinTime);
+        verify(coachBookingRepository, times(2)).findByIdForUpdate(82L);
+    }
+
+    /** Kiểm thử P2-BE-28: chặn HLV có tài khoản bị khóa/xóa mềm ở cả getAvailableSlots lẫn createBooking, và báo 404 khi disciplineId không tồn tại. */
+    @Test
+    void rejectsInactiveOrDeletedCoachUserAndMissingDiscipline() {
+        coach.getUser().setStatus("locked");
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        assertThatThrownBy(() -> service.getAvailableSlots(20L, LocalDate.of(2026, 11, 1), 10L))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_INACTIVE");
+
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        var req = new CoachBookingCreateDto(20L, 999L, LocalDate.of(2026, 11, 1),
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "cash", null);
+        assertThatThrownBy(() -> service.createBooking(principal, req))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_INACTIVE");
+
+        coach.getUser().setStatus("active");
+        coach.getUser().setDeletedAt(LocalDateTime.now(fixedClock));
+        assertThatThrownBy(() -> service.getAvailableSlots(20L, LocalDate.of(2026, 11, 1), 10L))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_INACTIVE");
+
+        coach.getUser().setDeletedAt(null);
+        MembershipSubscription active = new MembershipSubscription();
+        active.setStartDate(LocalDate.of(2026, 10, 1));
+        active.setEndDate(LocalDate.of(2026, 11, 30));
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active));
+        when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+        when(classSessionRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+        when(disciplineRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.createBooking(principal, req))
+                .isInstanceOf(com.swp391.scms.common.exception.ResourceNotFoundException.class);
+    }
+
+    /** Kiểm thử P2-BE-29: khi HLV hủy không có lý do thì không đổ lỗi cho hội viên, thông báo cho hội viên và bỏ qua tự thông báo HLV. */
+    @Test
+    void coachCancelNotifiesMemberWithoutSelfNotificationOrBlamingMember() {
+        var notifications = mock(com.swp391.scms.notifications.NotificationService.class);
+        var msgSource = new org.springframework.context.support.ResourceBundleMessageSource();
+        msgSource.setBasenames("i18n/messages");
+        msgSource.setDefaultEncoding("UTF-8");
+        var messageService = new com.swp391.scms.common.i18n.MessageService(msgSource);
+        CoachBookingService localizedService = new CoachBookingService(
+                coachBookingRepository, coachRepository, memberRepository, classSessionRepository,
+                classEnrollmentRepository, subscriptionRepository, disciplineRepository,
+                notifications, fixedClock, messageService, null);
+
+        CoachBooking booking = new CoachBooking();
+        booking.setId(165L);
+        booking.setMember(member);
+        booking.setCoach(coach);
+        booking.setStatus("confirmed");
+        booking.setPaymentMethod("package_quota");
+        booking.setBookingDate(LocalDate.of(2026, 11, 2));
+        booking.setStartTime(ScheduleSlot.SLOT_4.startTime());
+        booking.setEndTime(ScheduleSlot.SLOT_4.endTime());
+        when(coachBookingRepository.findByIdForUpdate(165L)).thenReturn(Optional.of(booking));
+
+        var coachPrincipal = new AuthenticatedPrincipal(20L, "hung", "COACH");
+        CoachBookingDto cancelled = localizedService.cancelBooking(coachPrincipal, 165L, null);
+
+        assertThat(cancelled.cancelReason()).doesNotContain("Hội viên").doesNotContain("Member");
+        verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), isNull(), eq(165L), eq("/member/classes?tab=pt"));
+        verify(notifications, never()).send(eq(20L), anyString(), anyString(), anyString(), any(), any(), any());
+    }
+
+    /** Kiểm thử P2-BE-32: hội viên gia hạn sớm được phép đặt lịch PT rơi vào kỳ gia hạn đã thanh toán tiếp theo. */
+    @Test
+    void earlyRenewedMemberCanBookPtInFuturePaidRenewalSubscription() {
+        MembershipPackage goldPkg = new MembershipPackage();
+        goldPkg.setName("GOLD");
+        goldPkg.setTier("GOLD");
+        goldPkg.setDurationDays(30);
+
+        MembershipSubscription currentSub = new MembershipSubscription();
+        currentSub.setId(801L);
+        currentSub.setMembershipPackage(goldPkg);
+        currentSub.setStatus("active");
+        currentSub.setStartDate(LocalDate.of(2026, 10, 15));
+        currentSub.setEndDate(LocalDate.of(2026, 11, 14));
+
+        MembershipSubscription renewalSub = new MembershipSubscription();
+        renewalSub.setId(802L);
+        renewalSub.setMembershipPackage(goldPkg);
+        renewalSub.setStatus("active");
+        renewalSub.setStartDate(LocalDate.of(2026, 11, 15));
+        renewalSub.setEndDate(LocalDate.of(2026, 12, 14));
+        renewalSub.setCreatedAt(LocalDateTime.of(2026, 10, 30, 10, 0));
+
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+        when(classSessionRepository.findActiveByMemberAndDate(eq(10L), any())).thenReturn(List.of());
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(currentSub, renewalSub));
+        when(coachBookingRepository.countSubscriptionQuotaUsage(eq(10L), any(), any(), eq("package_quota"), eq(List.of(802L)), any()))
+                .thenReturn(0L);
+        when(coachBookingRepository.save(any(CoachBooking.class))).thenAnswer(inv -> {
+            CoachBooking b = inv.getArgument(0);
+            b.setId(850L);
+            return b;
+        });
+
+        var req = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 11, 20),
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "package_quota", null);
+        CoachBookingDto booked = service.createBooking(principal, req);
+
+        assertThat(booked.id()).isEqualTo(850L);
+        assertThat(booked.paymentStatus()).isEqualTo("used_quota");
     }
 }

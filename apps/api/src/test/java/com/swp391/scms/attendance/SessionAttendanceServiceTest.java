@@ -222,13 +222,14 @@ class SessionAttendanceServiceTest {
         assertThrows(ConflictException.class, () -> service.recordBatchAttendance(100L, request, coachPrincipal));
     }
 
-    /** Kiểm thử: chỉ gửi thông báo đánh giá khi HLV chọn công bố. */
+    /** Kiểm thử: chỉ gửi thông báo đánh giá khi HLV chọn công bố và cờ evaluationsEnabled bật. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
     void evaluationNotificationsOnlyWhenCoachPublishes(boolean publish) {
         var evaluations = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.SessionEvaluationRepository.class);
         var notifications = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
         ReflectionTestUtils.setField(service, "evaluationRepository", evaluations);
+        ReflectionTestUtils.setField(service, "evaluationsEnabled", true);
         ReflectionTestUtils.setField(service, "notificationService", notifications);
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
         stubBookedEnrollment();
@@ -236,9 +237,10 @@ class SessionAttendanceServiceTest {
         when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
         when(attendanceRepository.saveAndFlush(any(SessionAttendance.class))).thenAnswer(inv -> inv.getArgument(0));
         var request = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", "Good form", 85)), publish);
-        service.recordBatchAttendance(100L, request, coachPrincipal);
+        List<MemberAttendanceItem> items = service.recordBatchAttendance(100L, request, coachPrincipal);
         verify(evaluations, times(publish ? 1 : 0)).save(any(com.swp391.scms.coaching.entity.SessionEvaluation.class));
         verify(notifications, times(publish ? 1 : 0)).notifyEvaluation(20L);
+        assertEquals(publish ? 85 : null, items.get(0).progressScore());
     }
 
     /** Kiểm thử: công bố đánh giá vẫn thành công khi tài khoản hội viên đã bị xóa mềm. */
@@ -247,6 +249,7 @@ class SessionAttendanceServiceTest {
         var evaluations = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.SessionEvaluationRepository.class);
         var notifications = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
         ReflectionTestUtils.setField(service, "evaluationRepository", evaluations);
+        ReflectionTestUtils.setField(service, "evaluationsEnabled", true);
         ReflectionTestUtils.setField(service, "notificationService", notifications);
         when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
         stubBookedEnrollment();
@@ -345,7 +348,7 @@ class SessionAttendanceServiceTest {
         lenient().when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
     }
 
-    /** Kiểm thử: không sửa điểm danh quá 7 ngày sau buổi, nhưng vẫn sửa được đánh giá. */
+    /** Kiểm thử: không sửa điểm danh (kể cả ghi chú/người ghi) quá 7 ngày sau buổi, nhưng vẫn sửa được đánh giá khi bật cờ. */
     @Test
     void attendanceCannotChangeMoreThanSevenDaysAfterTheSessionButEvaluationsStillCan() {
         // Buổi học diễn ra ngày 2026-10-25; đồng hồ hiện tại là 2026-11-02, tức 8 ngày sau đó.
@@ -355,6 +358,8 @@ class SessionAttendanceServiceTest {
         present.setSession(session);
         present.setMember(member);
         present.setStatus("present");
+        present.setNotes("Original locked note");
+        present.setRecordedBy(coach);
         when(attendanceRepository.findBySessionIdAndMemberUserId(100L, 20L)).thenReturn(Optional.of(present));
 
         var changeStatus = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "absent", null, null)), false);
@@ -362,9 +367,13 @@ class SessionAttendanceServiceTest {
                 () -> service.recordBatchAttendance(100L, changeStatus, coachPrincipal));
         assertEquals("ATTENDANCE_EDIT_WINDOW_CLOSED", ex.getErrorCode());
 
-        when(attendanceRepository.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
-        var sameStatus = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", "Tiến bộ", 90)), false);
-        assertEquals("present", service.recordBatchAttendance(100L, sameStatus, coachPrincipal).get(0).attendanceStatus());
+        var sameStatus = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", "Ghi chú sửa lén", 90)), false);
+        var responseItem = service.recordBatchAttendance(100L, sameStatus, coachPrincipal).get(0);
+        assertEquals("present", responseItem.attendanceStatus());
+        assertEquals("Original locked note", present.getNotes());
+        assertEquals("Original locked note", responseItem.notes());
+        assertNull(responseItem.progressScore());
+        verify(attendanceRepository, never()).saveAndFlush(any());
     }
 
     /** Kiểm thử: lịch sử liệt kê các buổi HLV đã ghi nhận cùng số liệu và khả năng còn sửa được. */
@@ -383,6 +392,7 @@ class SessionAttendanceServiceTest {
                 new Object[]{100L, "present", 3L}, new Object[]{100L, "absent", 1L}));
         var evaluations = mock(com.swp391.scms.coaching.repository.SessionEvaluationRepository.class);
         ReflectionTestUtils.setField(service, "evaluationRepository", evaluations);
+        ReflectionTestUtils.setField(service, "evaluationsEnabled", true);
         when(evaluations.summarizeForSessions(any())).thenReturn(List.<Object[]>of(
                 new Object[]{100L, 2L, 84.5, LocalDateTime.of(2026, 10, 25, 11, 0)}));
 
@@ -396,5 +406,76 @@ class SessionAttendanceServiceTest {
         assertEquals(2L, item.evaluatedCount());
         assertEquals(new java.math.BigDecimal("85"), item.averageScore());
         assertFalse(item.attendanceEditable());
+    }
+
+    /** Kiểm thử P1-BE-24: rosterFor bao gồm cả đăng ký completed và mọi học viên đã có bản ghi session_attendance. */
+    @Test
+    void getSessionAttendanceRoster_includesCompletedEnrollmentsAndRecordedAttendances() {
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        ClassEnrollment completedEnrollment = new ClassEnrollment();
+        completedEnrollment.setGymClass(gymClass);
+        completedEnrollment.setMember(member);
+        completedEnrollment.setStatus("completed");
+        when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(completedEnrollment));
+
+        Member historicalOnly = new Member();
+        historicalOnly.setUserId(22L);
+        SessionAttendance att1 = new SessionAttendance();
+        att1.setSession(session);
+        att1.setMember(member);
+        att1.setStatus("present");
+        att1.setRecordedBy(coach);
+        SessionAttendance att2 = new SessionAttendance();
+        att2.setSession(session);
+        att2.setMember(historicalOnly);
+        att2.setStatus("absent");
+        att2.setRecordedBy(coach);
+        when(attendanceRepository.findBySessionIdWithDetails(100L)).thenReturn(List.of(att1, att2));
+
+        SessionAttendanceResponse response = service.getSessionAttendanceRoster(100L, coachPrincipal);
+        assertEquals(2, response.totalBooked());
+        assertEquals(1, response.totalPresent());
+        assertEquals(1, response.totalAbsent());
+        assertEquals(List.of(20L, 22L), response.members().stream().map(MemberAttendanceItem::memberId).toList());
+    }
+
+    /** Kiểm thử P1-BE-27: khi app.coaching.evaluations.enabled=false (mặc định), bỏ qua hoàn toàn evaluationRepository và thông báo đánh giá. */
+    @Test
+    void evaluationsAreDisabledByDefaultAndNeverTouchEvaluationRepoOrNotify() {
+        var evaluations = mock(com.swp391.scms.coaching.repository.SessionEvaluationRepository.class);
+        var notifications = mock(com.swp391.scms.notifications.NotificationService.class);
+        ReflectionTestUtils.setField(service, "evaluationRepository", evaluations);
+        ReflectionTestUtils.setField(service, "notificationService", notifications);
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        stubBookedEnrollment();
+        when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
+        when(memberRepository.findById(20L)).thenReturn(Optional.of(member));
+        when(attendanceRepository.saveAndFlush(any(SessionAttendance.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        var request = new BatchAttendanceRequest(List.of(new AttendanceItem(20L, "present", "Good", 95)), true);
+        List<MemberAttendanceItem> items = service.recordBatchAttendance(100L, request, coachPrincipal);
+
+        assertEquals(1, items.size());
+        assertNull(items.get(0).progressScore());
+        verifyNoInteractions(evaluations, notifications);
+    }
+
+    /** Kiểm thử P2-BE-33: requireAssignedCoach fail-closed khi lớp không có HLV và recordBatchAttendance chặn trùng memberId. */
+    @Test
+    void failClosedWhenSessionCoachIsNullAndRejectDuplicateMemberIdsInBatch() {
+        gymClass.setCoach(null);
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        assertThrows(ForbiddenException.class, () -> service.getSessionAttendanceRoster(100L, coachPrincipal));
+
+        gymClass.setCoach(coach);
+        when(coachRepository.findById(10L)).thenReturn(Optional.of(coach));
+        var dupRequest = new BatchAttendanceRequest(List.of(
+                new AttendanceItem(20L, "present", null),
+                new AttendanceItem(20L, "absent", null)
+        ));
+        var ex = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.recordBatchAttendance(100L, dupRequest, coachPrincipal));
+        assertEquals("ATTENDANCE_DUPLICATE_MEMBER", ex.getErrorCode());
+        verify(attendanceRepository, never()).saveAndFlush(any());
     }
 }

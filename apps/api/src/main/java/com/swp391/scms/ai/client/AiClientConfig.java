@@ -1,5 +1,7 @@
 package com.swp391.scms.ai.client;
 
+import java.util.Map;
+import java.util.function.Supplier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,21 +24,35 @@ public class AiClientConfig {
     @Value("${scms.ai.model:}")
     private String model;
 
+    /** Nguồn đọc .env mặc định; có thể thay trong unit test để không phụ thuộc file .env trên máy. */
+    private Supplier<Map<String, String>> dotEnvSupplier = AiChatProvider::readDefaultDotEnv;
+
     /**
-     * Chọn AiClient: đọc cấu hình (thiếu thì đọc .env), có key thì tạo client tương ứng, không thì dùng bản
-     * mock.
+     * Chọn AiClient: đọc cấu hình (thiếu trường nào đọc trường đó từ .env độc lập với provider), có key thì
+     * tạo client tương ứng, không thì dùng bản mock.
      */
     @Bean
     public AiClient aiClient() {
         String effectiveProvider = provider;
         String effectiveApiKey = apiKey;
         String effectiveModel = model;
-        if ((effectiveApiKey == null || effectiveApiKey.isBlank())
-                && (effectiveProvider == null || effectiveProvider.isBlank() || "mock".equalsIgnoreCase(effectiveProvider))) {
-            var dotEnv = AiChatProvider.readDefaultDotEnv();
-            effectiveProvider = dotEnv.getOrDefault("SCMS_AI_PROVIDER", effectiveProvider);
-            effectiveApiKey = dotEnv.getOrDefault("SCMS_AI_API_KEY", effectiveApiKey);
-            effectiveModel = dotEnv.getOrDefault("SCMS_AI_MODEL", effectiveModel);
+        boolean needProvider = effectiveProvider == null || effectiveProvider.isBlank()
+                || "mock".equalsIgnoreCase(effectiveProvider.trim());
+        boolean needApiKey = effectiveApiKey == null || effectiveApiKey.isBlank();
+        boolean needModel = effectiveModel == null || effectiveModel.isBlank();
+        if (needProvider || needApiKey || needModel) {
+            Map<String, String> dotEnv = dotEnvSupplier != null ? dotEnvSupplier.get() : Map.of();
+            if (dotEnv != null) {
+                if (needProvider) {
+                    effectiveProvider = dotEnv.getOrDefault("SCMS_AI_PROVIDER", effectiveProvider);
+                }
+                if (needApiKey) {
+                    effectiveApiKey = dotEnv.getOrDefault("SCMS_AI_API_KEY", effectiveApiKey);
+                }
+                if (needModel) {
+                    effectiveModel = dotEnv.getOrDefault("SCMS_AI_MODEL", effectiveModel);
+                }
+            }
         }
         if ("openai".equalsIgnoreCase(effectiveProvider) && effectiveApiKey != null && !effectiveApiKey.isBlank()) {
             return new OpenAiRestClient(effectiveApiKey, effectiveModel);

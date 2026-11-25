@@ -1,8 +1,13 @@
 openapi: 3.0.3
 info:
   title: SCMS coaching review corrections (SCRUM-133 / SCRUM-134)
-  version: 1.0.0
-  description: Corrections from review of PR 79, inherited by PR 78. All responses use the existing ApiResponse envelope and Accept-Language localization.
+  version: 1.0.1
+  description: >
+    Corrections from review of PR 79, inherited by PR 78. All responses use the existing ApiResponse envelope
+    and Accept-Language localization.
+    NOTE (Superseded): One-hour slot rules (06:00–20:00) and the coach consecutive-slot rest limit were
+    superseded by the 5 fixed schedule slots (07:00–19:30, no coach rest restriction) in
+    openapi-group-classes-restored.yaml.
 servers:
   - url: /api/v1
 security:
@@ -10,8 +15,16 @@ security:
 paths:
   /coach-bookings:
     post:
-      summary: Member books a one-hour PT session
-      description: Requires an active, unexpired membership covering today and the booking date for every payment method. Slots start on the hour between 06:00 and 20:00 and must be at least two hours ahead. Rejects overlapping PT or booked group sessions. At most three consecutive one-hour PT slots per coach are allowed; the next slot must remain free (409 COACH_REST_REQUIRED), including bookings inserted out of order. Confirmed and completed PT sessions count toward this rule. Paid methods remain pending until the front desk confirms payment (POST /coach-bookings/{id}/confirm-payment); package quota uses used_quota. A member may hold at most two unpaid hourly sessions, past or upcoming (409 COACH_BOOKING_UNPAID_LIMIT). Concurrent bookings by one member are serialized so the monthly quota cannot be exceeded. Database triggers enforce concurrent schedule and membership checks.
+      summary: Member books a 1:1 PT session (see openapi-group-classes-restored.yaml for current 5-slot rules)
+      description: >
+        Requires an active, unexpired membership covering today and the booking date for every payment method.
+        Current scheduling uses the 5 fixed slots (07:00–19:30, see openapi-group-classes-restored.yaml) and must
+        be booked at least two hours ahead; the legacy consecutive-slot coach rest restriction has been removed.
+        Rejects overlapping PT or booked group sessions. Paid methods remain pending until the front desk
+        confirms payment (POST /coach-bookings/{id}/confirm-payment); package quota uses used_quota. A member
+        may hold at most two unpaid hourly sessions, past or upcoming (409 COACH_BOOKING_UNPAID_LIMIT).
+        Concurrent bookings by one member are serialized so the monthly quota cannot be exceeded. Database
+        triggers enforce concurrent schedule and membership checks.
       requestBody:
         required: true
         content:
@@ -23,22 +36,22 @@ paths:
                 coachId: {type: integer, format: int64}
                 disciplineId: {type: integer, format: int64, nullable: true}
                 bookingDate: {type: string, format: date}
-                startTime: {type: string, example: '14:00:00'}
-                endTime: {type: string, example: '15:00:00'}
+                startTime: {type: string, example: '14:15:00'}
+                endTime: {type: string, example: '16:45:00'}
                 paymentMethod: {type: string, enum: [package_quota, cash, bank_transfer, online_wallet], default: package_quota}
                 notes: {type: string, nullable: true}
       responses:
-        '201': {description: ApiResponse containing CoachBookingDto; paymentStatus is pending or used_quota}
-        '400': {description: Invalid slot, unavailable membership, exhausted quota or INVALID_PAYMENT_METHOD}
-        '403': {description: Role denied or trigger rejects inactive membership}
-        '409': {description: Schedule conflict, COACH_REST_REQUIRED, COACH_ON_LEAVE, COACH_BOOKING_UNPAID_LIMIT, or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing}
+        '201': {description: 'ApiResponse containing CoachBookingDto; paymentStatus is pending or used_quota'}
+        '400': {description: 'Invalid slot (INVALID_COACH_BOOKING_SLOT), unavailable/held membership, exhausted quota or INVALID_PAYMENT_METHOD'}
+        '403': {description: 'Role denied or trigger rejects inactive membership'}
+        '409': {description: 'Schedule conflict, COACH_ON_LEAVE, COACH_BOOKING_UNPAID_LIMIT, or SCHEDULE_UPDATE_IN_PROGRESS while a concurrent schedule write holds the guard; client may retry after refreshing'}
   /coach-bookings/unpaid:
     get:
       summary: Hourly PT sessions waiting for payment (RECEPTIONIST, CENTER_MANAGER)
       description: Confirmed or completed sessions whose paymentStatus is pending, oldest first.
       responses:
-        '200': {description: ApiResponse containing CoachBookingDto[]}
-        '403': {description: Role denied}
+        '200': {description: 'ApiResponse containing CoachBookingDto[]'}
+        '403': {description: 'Role denied'}
   /coach-bookings/{id}/confirm-payment:
     post:
       summary: Front desk records payment for an hourly PT session (RECEPTIONIST, CENTER_MANAGER)

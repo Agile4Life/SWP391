@@ -10,6 +10,7 @@ import jakarta.validation.constraints.Size;
  */
 public record AiChatMessageCreateDto(
         Long sessionId,
+        @Size(max = 150, message = "{validation.ai.chat.topic.size}")
         String topic,
         @NotBlank(message = "{validation.ai.chat.message.required}")
         @Size(max = 2000, message = "{validation.ai.chat.message.size}")

@@ -39,4 +39,8 @@ public interface GymClassRepository extends JpaRepository<GymClass, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select c from GymClass c where c.id = :id")
     Optional<GymClass> findByIdForUpdate(@Param("id") Long id);
+
+    /** Sức chứa lớn nhất trong các lớp ở trạng thái chỉ định của một phòng (null nếu không có lớp nào). */
+    @Query("select max(c.capacity) from GymClass c where c.room.id = :roomId and c.status = :status")
+    Integer findMaxCapacityByRoomIdAndStatus(@Param("roomId") Long roomId, @Param("status") String status);
 }

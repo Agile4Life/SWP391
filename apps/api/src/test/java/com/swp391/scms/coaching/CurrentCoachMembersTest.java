@@ -20,6 +20,7 @@ class CurrentCoachMembersTest {
  Member member(long id){User u=new User();u.setId(id);u.setFullName("Test member");Member m=new Member();m.setUserId(id);m.setUser(u);return m;}
  @Test void returnsAuthoritativeClassAndPtOnlyMembersWithoutRosterCalls(){when(repository.findCurrent(20L,null,LocalDate.of(2026,11,4))).thenReturn(List.of(member(10),member(11)));assertThat(service.list(20L,"COACH")).extracting(CurrentCoachMembers.MemberOption::id).containsExactly(10L,11L);}
  @Test void populatesLatestHeightWeightAndAutoCalculatedBmi(){
+  org.springframework.test.util.ReflectionTestUtils.setField(service,"healthMetricsEnabled",true);
   when(repository.findCurrent(20L,null,LocalDate.of(2026,11,4))).thenReturn(List.of(member(10)));
   MemberProgressLog h=new MemberProgressLog();h.setMetricName("height");h.setMetricValue(new BigDecimal("172"));
   MemberProgressLog w=new MemberProgressLog();w.setMetricName("weight");w.setMetricValue(new BigDecimal("68"));
@@ -29,6 +30,15 @@ class CurrentCoachMembersTest {
   assertThat(result.get(0).heightCm()).isEqualByComparingTo("172");
   assertThat(result.get(0).weightKg()).isEqualByComparingTo("68");
   assertThat(result.get(0).bmi()).isEqualByComparingTo("23.0");
+ }
+ @Test void skipsRetiredProgressLogsWhenHealthMetricsDisabled(){
+  when(repository.findCurrent(20L,null,LocalDate.of(2026,11,4))).thenReturn(List.of(member(10)));
+  var result=service.list(20L,"COACH");
+  assertThat(result).hasSize(1);
+  assertThat(result.get(0).heightCm()).isNull();
+  assertThat(result.get(0).weightKg()).isNull();
+  assertThat(result.get(0).bmi()).isNull();
+  verifyNoInteractions(progressLogs);
  }
  @Test void expiredOrUnassignedMemberIsDenied(){when(repository.findCurrent(20L,10L,LocalDate.of(2026,11,4))).thenReturn(List.of());assertThatThrownBy(()->service.requireCoachOf(20L,10L)).isInstanceOf(ForbiddenException.class);}
  @Test void currentMemberIsAllowed(){when(repository.findCurrent(20L,10L,LocalDate.of(2026,11,4))).thenReturn(List.of(member(10)));service.requireCoachOf(20L,10L);}
@@ -40,14 +50,15 @@ class CurrentCoachMembersTest {
   assertThat(query).doesNotContain("join CoachBooking", "join TrainingPlan");
  }
  @Test void marksSilverMemberWorkoutPlanInvisibleWhileGoldCanView() throws Exception {
-  var subscriptions = mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
-  org.springframework.test.util.ReflectionTestUtils.setField(service, "subscriptionRepository", subscriptions);
-  when(repository.findCurrent(20L, null, LocalDate.of(2026, 11, 4))).thenReturn(List.of(member(10), member(11)));
+  Member m10 = member(10);
+  Member m11 = member(11);
+  when(repository.findCurrent(20L, null, LocalDate.of(2026, 11, 4))).thenReturn(List.of(m10, m11));
   var silverPkg = new com.swp391.scms.facilities.entity.MembershipPackage();
   silverPkg.setName("Silver 1 tháng");
   silverPkg.setTier("SILVER");
   silverPkg.setDurationDays(30);
   var silverSub = new com.swp391.scms.membership.entity.MembershipSubscription();
+  silverSub.setMember(m10);
   silverSub.setMembershipPackage(silverPkg);
   silverSub.setStartDate(LocalDate.of(2026, 11, 1));
   silverSub.setEndDate(LocalDate.of(2026, 11, 30));
@@ -58,16 +69,18 @@ class CurrentCoachMembersTest {
   goldPkg.setTier("GOLD");
   goldPkg.setDurationDays(30);
   var goldSub = new com.swp391.scms.membership.entity.MembershipSubscription();
+  goldSub.setMember(m11);
   goldSub.setMembershipPackage(goldPkg);
   goldSub.setStartDate(LocalDate.of(2026, 11, 1));
   goldSub.setEndDate(LocalDate.of(2026, 11, 30));
   goldSub.setStatus("active");
 
-  when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(silverSub));
-  when(subscriptions.findByMemberUserIdAndStatus(11L, "active")).thenReturn(List.of(goldSub));
+  when(repository.findActiveSubscriptionsForMembers(List.of(10L, 11L), LocalDate.of(2026, 11, 4)))
+          .thenReturn(List.of(silverSub, goldSub));
 
   var tree = new com.fasterxml.jackson.databind.ObjectMapper().valueToTree(service.list(20L, "COACH"));
   assertThat(tree.get(0).path("canViewWorkoutPlan").asBoolean(true)).isFalse();
   assertThat(tree.get(1).path("canViewWorkoutPlan").asBoolean(false)).isTrue();
+  verify(repository, times(1)).findActiveSubscriptionsForMembers(List.of(10L, 11L), LocalDate.of(2026, 11, 4));
  }
 }

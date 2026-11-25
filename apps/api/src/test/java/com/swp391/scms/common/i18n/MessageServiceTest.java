@@ -104,4 +104,24 @@ class MessageServiceTest {
         assertEquals("Mã OTP đã được tạo thành công", messageService.getMessage("auth.otp.sent", Locale.forLanguageTag("vi")));
         assertEquals("OTP code has been generated successfully", messageService.getMessage("auth.otp.sent", Locale.ENGLISH));
     }
+
+    /** Kiểm thử P2-BE-14: ngoài luồng HTTP (LocaleContext null) mặc định tiếng Việt bất kể JVM locale, và code null không ném NPE. */
+    @Test
+    @DisplayName("Should default to Vietnamese when LocaleContext is null and guard null message codes")
+    void shouldDefaultToVietnameseOutsideHttpAndGuardNullCode() {
+        Locale previousDefault = Locale.getDefault();
+        org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        try {
+            Locale.setDefault(Locale.US);
+            assertEquals("Thành công", messageService.getMessage("common.success"));
+            assertEquals("Thành công", messageService.getMessage("common.success", (Locale) null));
+            assertEquals("Thành công", messageService.getMessageOrDefault("common.success", "fallback"));
+            assertNull(messageService.getMessage(null));
+            assertNull(messageService.getMessage(null, Locale.ENGLISH));
+            assertEquals("fallback", messageService.getMessageOrDefault(null, "fallback"));
+        } finally {
+            Locale.setDefault(previousDefault);
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+    }
 }

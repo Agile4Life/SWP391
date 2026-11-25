@@ -1,6 +1,7 @@
 package com.swp391.scms.operations.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 /**
@@ -12,14 +13,19 @@ public record StaffInternalRequestCreateDto(
         String requestType, // Giá trị hợp lệ: LEAVE, SHIFT_EXCHANGE, SCHEDULE_CHANGE, OTHER
 
         @NotBlank(message = "{error.operations.request.title_required}")
+        @Size(max = 200, message = "{error.invalid_parameter}")
         String title,
 
         @NotBlank(message = "{error.operations.request.reason_required}")
+        @Size(max = 2000, message = "{validation.support.message.size}")
         String reason,
 
         LocalDate startDate,
         LocalDate endDate,
+
+        @Size(max = 100, message = "{error.invalid_parameter}")
         String targetShift,
+
         Long replacementUserId,
         /** True khi người dùng đã thấy cảnh báo trùng ngày nghỉ và vẫn muốn gửi đơn nghỉ này. */
         Boolean confirmOverlap

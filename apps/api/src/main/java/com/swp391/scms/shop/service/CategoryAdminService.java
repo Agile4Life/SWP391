@@ -9,6 +9,7 @@ import com.swp391.scms.shop.dto.ProductAdminDtos.CategoryUpsertRequest;
 import com.swp391.scms.shop.entity.ProductCategory;
 import com.swp391.scms.shop.repository.ProductCategoryRepository;
 import com.swp391.scms.shop.repository.ProductRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 
 /** Nghiệp vụ quản lý danh mục sản phẩm cho quản lý. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 @Transactional(readOnly = true)
 public class CategoryAdminService {

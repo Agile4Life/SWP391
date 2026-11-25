@@ -2,6 +2,8 @@ package com.swp391.scms.finance.service;
 
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ServiceUnavailableException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Component;
 import javax.crypto.Mac;
@@ -24,9 +26,24 @@ import java.util.stream.Collectors;
 @EnableConfigurationProperties(VnpayProperties.class)
 public class VnpayGateway {
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+    private static final Set<String> LOCALHOST_HOSTS = Set.of("localhost", "127.0.0.1");
     private final VnpayProperties config;
-    /** Nhận cấu hình VNPay. */
-    public VnpayGateway(VnpayProperties config) { this.config = config; }
+    private final Set<String> allowedOrigins;
+    private final boolean allowLocalhostOrigins;
+
+    /** Nhận cấu hình VNPay (chỉ cho phép origin của {@code config.returnUrl()}). */
+    public VnpayGateway(VnpayProperties config) {
+        this(config, "");
+    }
+
+    /** Nhận cấu hình VNPay và danh sách origin frontend được phép quay về sau thanh toán. */
+    @Autowired
+    public VnpayGateway(VnpayProperties config,
+                        @Value("${app.cors.allowed-origins:}") String allowedOriginsCsv) {
+        this.config = config;
+        this.allowLocalhostOrigins = isLocalhostUrl(config != null ? config.returnUrl() : null);
+        this.allowedOrigins = parseAllowedOrigins(config, allowedOriginsCsv, this.allowLocalhostOrigins);
+    }
 
     /**
      * VNPay có bật và cấu hình hợp lệ không: có secret, mã TMN 8 ký tự, thời gian chờ 1-60 phút, link thanh
@@ -80,24 +97,77 @@ public class VnpayGateway {
     }
 
     /**
-     * Link quay về theo địa chỉ frontend gửi lên (chỉ nhận HTTPS hoặc http localhost); không hợp lệ thì dùng
-     * link cấu hình.
+     * Link quay về theo origin frontend gửi lên: chỉ chấp nhận khi {@code scheme + host + port} khớp chính xác
+     * một origin trong danh sách cấu hình cho phép (hoặc localhost/127.0.0.1 khi {@code config.returnUrl()} cũng
+     * là localhost); mọi origin lạ đều quay về {@code config.returnUrl()} để chống Open Redirect.
      */
-    private String resolveReturnUrl(String candidateOriginOrUrl) {
+    public String resolveReturnUrl(String candidateOriginOrUrl) {
         if (candidateOriginOrUrl != null && !candidateOriginOrUrl.isBlank()) {
-            try {
-                URI uri = URI.create(candidateOriginOrUrl.trim());
-                String scheme = uri.getScheme();
-                String host = uri.getHost();
-                if (host != null && ("https".equalsIgnoreCase(scheme)
-                        || ("http".equalsIgnoreCase(scheme) && Set.of("localhost", "127.0.0.1").contains(host)))) {
-                    String portPart = uri.getPort() > 0 ? (":" + uri.getPort()) : "";
-                    return scheme.toLowerCase(Locale.ROOT) + "://" + host + portPart + "/member/payments/vnpay/return";
-                }
-            } catch (RuntimeException ignored) {
+            String normalized = normalizeOrigin(candidateOriginOrUrl, allowLocalhostOrigins);
+            if (normalized != null && (allowedOrigins.contains(normalized)
+                    || (allowLocalhostOrigins && isLocalhostUrl(normalized)))) {
+                return normalized + "/member/payments/vnpay/return";
             }
         }
         return config.returnUrl();
+    }
+
+    private static Set<String> parseAllowedOrigins(VnpayProperties config, String csv, boolean allowLocalhost) {
+        Set<String> origins = new LinkedHashSet<>();
+        if (config != null && config.returnUrl() != null) {
+            String returnOrigin = normalizeOrigin(config.returnUrl(), allowLocalhost);
+            if (returnOrigin != null) {
+                origins.add(returnOrigin);
+            }
+        }
+        if (csv != null && !csv.isBlank()) {
+            for (String entry : csv.split(",")) {
+                String trimmed = entry.trim();
+                if (trimmed.isEmpty() || trimmed.contains("*")) continue;
+                String normalized = normalizeOrigin(trimmed, allowLocalhost);
+                if (normalized != null) {
+                    origins.add(normalized);
+                }
+            }
+        }
+        return Set.copyOf(origins);
+    }
+
+    private static boolean isLocalhostUrl(String url) {
+        if (url == null || url.isBlank()) return false;
+        try {
+            URI uri = URI.create(url.trim());
+            return uri.getHost() != null && LOCALHOST_HOSTS.contains(uri.getHost().toLowerCase(Locale.ROOT));
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static String normalizeOrigin(String raw, boolean allowLocalhost) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            URI uri = URI.create(raw.trim());
+            String scheme = uri.getScheme();
+            String host = uri.getHost();
+            if (scheme == null || host == null || uri.getUserInfo() != null) return null;
+            String normalizedScheme = scheme.toLowerCase(Locale.ROOT);
+            String normalizedHost = host.toLowerCase(Locale.ROOT);
+            boolean localhost = LOCALHOST_HOSTS.contains(normalizedHost);
+            if (localhost) {
+                if (!allowLocalhost || (!"http".equals(normalizedScheme) && !"https".equals(normalizedScheme))) {
+                    return null;
+                }
+            } else if (!"https".equals(normalizedScheme)) {
+                return null;
+            }
+            int port = uri.getPort();
+            boolean defaultPort = ("https".equals(normalizedScheme) && port == 443)
+                    || ("http".equals(normalizedScheme) && port == 80);
+            String portPart = (port > 0 && !defaultPort) ? (":" + port) : "";
+            return normalizedScheme + "://" + normalizedHost + portPart;
+        } catch (RuntimeException ignored) {
+            return null;
+        }
     }
 
     /** Kiểm tra chữ ký callback: đúng mã TMN, chữ ký đúng 128 ký tự hex và khớp (so sánh thời gian hằng). */

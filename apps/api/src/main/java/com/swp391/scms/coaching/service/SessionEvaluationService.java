@@ -89,6 +89,10 @@ public class SessionEvaluationService {
         Member member = memberRepository.findById(request.memberId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", request.memberId()));
 
+        if (coachMemberAccess != null) {
+            coachMemberAccess.requireAccess(currentUserId, currentRole, member.getUserId());
+        }
+
         Long targetCoachId = resolveCoachId(request.coachId(), currentUserId, currentRole);
         Coach coach = coachRepository.findById(targetCoachId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", targetCoachId));
@@ -97,6 +101,12 @@ public class SessionEvaluationService {
         if (request.sessionId() != null && classSessionRepository != null) {
             session = classSessionRepository.findById(request.sessionId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.session", request.sessionId()));
+            if ("COACH".equalsIgnoreCase(currentRole)) {
+                Coach sessionCoach = session.getGymClass() != null ? session.getGymClass().getCoach() : null;
+                if (sessionCoach == null || !sessionCoach.getUserId().equals(currentUserId)) {
+                    throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null, null);
+                }
+            }
         }
 
         LocalDateTime now = LocalDateTime.now(clock);

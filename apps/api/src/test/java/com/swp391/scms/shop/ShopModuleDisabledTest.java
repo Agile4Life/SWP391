@@ -3,9 +3,8 @@ package com.swp391.scms.shop;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.security.*;
 import com.swp391.scms.shop.controller.*;
-import com.swp391.scms.shop.service.ProductCatalogService;
-import com.swp391.scms.shop.service.ProductOrderExpiryScheduler;
-import com.swp391.scms.shop.service.QuoteService;
+import com.swp391.scms.shop.mapper.OrderMapper;
+import com.swp391.scms.shop.service.*;
 import com.swp391.scms.users.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,7 +56,20 @@ class ShopModuleDisabledTest {
                 ShopOrderController.class,
                 StaffProductOrderController.class,
                 ProductOrderExpiryScheduler.class,
-                ProductSeeder.class
+                ProductSeeder.class,
+                ProductOrderPayments.class,
+                GeoService.class,
+                OrderMapper.class,
+                AddressService.class,
+                CategoryAdminService.class,
+                OrderCodeGenerator.class,
+                ProductAdminService.class,
+                ProductCatalogService.class,
+                ProductOrderService.class,
+                ProductOrderStaffService.class,
+                QuoteService.class,
+                ShopPricing.class,
+                StockService.class
         );
         for (Class<?> beanClass : guardedBeans) {
             ConditionalOnProperty condition = beanClass.getAnnotation(ConditionalOnProperty.class);
@@ -66,6 +78,7 @@ class ShopModuleDisabledTest {
             assertThat(condition.havingValue()).isEqualTo("true");
             assertThat(condition.matchIfMissing()).isFalse();
         }
+        assertThat(new ShopProperties().isSeedSamples()).isFalse();
 
         mvc.perform(get("/api/v1/public/products").with(authentication(memberActor())))
                 .andExpect(status().isNotFound());

@@ -153,14 +153,24 @@ public class UserService {
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
     }
 
-    /** Danh sách người dùng chưa bị xóa; với hội viên có thêm cờ "đang bảo lưu gói" (frozen). */
+    /** Danh sách người dùng chưa bị xóa; với hội viên có thêm cờ "đang bảo lưu gói" (frozen) bằng 1 truy vấn batch. */
     @Transactional(readOnly = true)
     public List<UserDto> getAllUsers() {
-        return userRepository.findAllByDeletedAtIsNullOrderByIdAsc().stream()
+        List<User> users = userRepository.findAllByDeletedAtIsNullOrderByIdAsc();
+        java.util.Set<Long> frozenMemberIds = java.util.Set.of();
+        if (subscriptionRepository != null
+                && users.stream().anyMatch(u -> u.getRole() != null && "MEMBER".equalsIgnoreCase(u.getRole().getCode()))) {
+            List<Long> frozenIds = userRepository.findMemberUserIdsWithFrozenSubscription();
+            if (frozenIds != null && !frozenIds.isEmpty()) {
+                frozenMemberIds = new java.util.HashSet<>(frozenIds);
+            }
+        }
+        java.util.Set<Long> frozen = frozenMemberIds;
+        return users.stream()
                 .map(u -> {
                     UserDto dto = userMapper.toDto(u);
                     if (subscriptionRepository != null && u.getRole() != null && "MEMBER".equalsIgnoreCase(u.getRole().getCode())) {
-                        dto.setSubscriptionFrozen(subscriptionRepository.existsByMemberUserIdAndStatus(u.getId(), "frozen"));
+                        dto.setSubscriptionFrozen(frozen.contains(u.getId()));
                     }
                     return dto;
                 })
@@ -314,7 +324,11 @@ public class UserService {
         User user = findActiveUser(id);
 
         if (dto.getFullName() != null) {
-            user.setFullName(dto.getFullName().trim());
+            String trimmedName = dto.getFullName().trim();
+            if (trimmedName.isEmpty()) {
+                throw new BadRequestException("INVALID_FULL_NAME", "validation.users.full_name.not_blank", null, null);
+            }
+            user.setFullName(trimmedName);
         }
         if (dto.getPhone() != null) {
             String phone = normalizePhone(dto.getPhone());
@@ -328,15 +342,29 @@ public class UserService {
         }
         if (dto.getRoleId() != null) {
             Role newRole = findRole(dto.getRoleId());
-            if (!"ADMIN".equalsIgnoreCase(newRole.getCode())) {
+            String previousRoleCode = user.getRole() != null ? user.getRole().getCode() : null;
+            String newRoleCode = newRole.getCode();
+            if (!"ADMIN".equalsIgnoreCase(newRoleCode)) {
                 protectLastActiveAdmin(user);
             }
-            if (user.getRole() == null || !newRole.getCode().equalsIgnoreCase(user.getRole().getCode())) {
+            if (previousRoleCode == null || !newRoleCode.equalsIgnoreCase(previousRoleCode)) {
                 ensureNoOpenCommitments(user);
             }
             user.setRole(newRole);
+            if ("COACH".equalsIgnoreCase(previousRoleCode) && !"COACH".equalsIgnoreCase(newRoleCode) && user.getCoach() != null) {
+                user.getCoach().setEmploymentStatus("terminated");
+            }
+            if ("RECEPTIONIST".equalsIgnoreCase(previousRoleCode) && !"RECEPTIONIST".equalsIgnoreCase(newRoleCode) && user.getReceptionist() != null) {
+                user.getReceptionist().setEmploymentStatus("terminated");
+            }
+            if ("COACH".equalsIgnoreCase(newRoleCode) && user.getCoach() != null) {
+                user.getCoach().setEmploymentStatus("active");
+            }
+            if ("RECEPTIONIST".equalsIgnoreCase(newRoleCode) && user.getReceptionist() != null) {
+                user.getReceptionist().setEmploymentStatus("active");
+            }
             initializeStaffProfile(user);
-            if ("MEMBER".equalsIgnoreCase(newRole.getCode()) && user.getMember() == null) {
+            if ("MEMBER".equalsIgnoreCase(newRoleCode) && user.getMember() == null) {
                 Member member = new Member();
                 member.setUser(user);
                 member.setMembershipCode("MEM-" + user.getId());
@@ -418,10 +446,11 @@ public class UserService {
         Long id = user.getId();
         LocalDate today = LocalDate.now(clock);
         if ("MEMBER".equals(role)) {
-            if (subscriptionRepository != null && cancellationRequestRepository != null
-                    && cancellationRequestRepository.existsByMemberUserIdAndStatus(id, "APPROVED")) {
+            if (subscriptionRepository != null && cancellationRequestRepository != null) {
                 List<MembershipSubscription> remaining = subscriptionRepository.findByMemberUserId(id).stream()
                         .filter(s -> List.of("active", "frozen", "pending_payment").contains(s.getStatus()))
+                        .filter(s -> s.getId() != null
+                                && cancellationRequestRepository.existsBySubscriptionIdAndStatus(s.getId(), "APPROVED"))
                         .toList();
                 for (MembershipSubscription rem : remaining) {
                     rem.setStatus("cancelled");

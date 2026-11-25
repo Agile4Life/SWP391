@@ -78,7 +78,17 @@ public class TrainingPlanService {
                     "Start date cannot be after end date");
         }
 
-        Member member = memberRepository.findById(dto.getMemberId())
+        boolean activateImmediately = Boolean.TRUE.equals(dto.getActivate())
+                || "active".equalsIgnoreCase(dto.getStatus());
+        java.time.LocalDate today = java.time.LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        if (activateImmediately && dto.getEndDate().isBefore(today)) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "coaching.plan.invalid_date_range", null,
+                    "Cannot activate an expired training plan");
+        }
+
+        Member member = (activateImmediately
+                ? memberRepository.findByUserIdForUpdate(dto.getMemberId()).or(() -> memberRepository.findById(dto.getMemberId()))
+                : memberRepository.findById(dto.getMemberId()))
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.getMemberId()));
 
         Long targetCoachId = dto.getCoachId() != null ? dto.getCoachId() : currentUserId;
@@ -104,8 +114,6 @@ public class TrainingPlanService {
         plan.setGoal(resolvedGoal);
         plan.setStartDate(dto.getStartDate());
         plan.setEndDate(dto.getEndDate());
-        boolean activateImmediately = Boolean.TRUE.equals(dto.getActivate())
-                || "active".equalsIgnoreCase(dto.getStatus());
         plan.setStatus(activateImmediately ? "active" : "draft");
         plan.setAiGenerated(Boolean.TRUE.equals(dto.getAiGenerated()));
 
@@ -118,14 +126,18 @@ public class TrainingPlanService {
         if (dto.getAiRecommendationId() != null && aiRecommendationLogRepository != null) {
             AiRecommendationLog recoLog = aiRecommendationLogRepository.findById(dto.getAiRecommendationId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.ai_recommendation", dto.getAiRecommendationId()));
+            if (recoLog.getMember() == null || !member.getUserId().equals(recoLog.getMember().getUserId())) {
+                throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
+                        "AI recommendation does not belong to this member");
+            }
             plan.setAiGenerated(true);
             plan.setAiRecommendation(recoLog);
             recoLog.setApplied(true);
             aiRecommendationLogRepository.save(recoLog);
         }
 
+        if (activateImmediately) supersedeOtherActivePlans(plan);
         TrainingPlan savedPlan = trainingPlanRepository.save(plan);
-        if (activateImmediately) supersedeOtherActivePlans(savedPlan);
 
         List<TrainingPlanItem> savedItems = new ArrayList<>();
         if (dto.getItems() != null && !dto.getItems().isEmpty()) {
@@ -148,7 +160,7 @@ public class TrainingPlanService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
 
         verifyCoachOwnership(plan, currentUserId, currentUserRole);
-        if ("cancelled".equalsIgnoreCase(plan.getStatus()) || "completed".equalsIgnoreCase(plan.getStatus())) {
+        if (!"draft".equalsIgnoreCase(plan.getStatus()) && !"active".equalsIgnoreCase(plan.getStatus())) {
             throw new ConflictException("INVALID_PLAN_STATUS", "coaching.plan.cannot_modify_status",
                     new Object[]{plan.getStatus()}, "Cannot modify training plan in status " + plan.getStatus());
         }
@@ -178,10 +190,16 @@ public class TrainingPlanService {
             throw new ConflictException("INVALID_PLAN_STATUS", "coaching.plan.invalid_activate_status",
                     new Object[]{plan.getStatus()}, "Only draft training plans can be activated");
         }
+        java.time.LocalDate today = java.time.LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        if (plan.getEndDate() != null && plan.getEndDate().isBefore(today)) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "coaching.plan.invalid_date_range", null,
+                    "Cannot activate an expired training plan");
+        }
 
+        lockMember(plan.getMember() != null ? plan.getMember().getUserId() : null);
+        supersedeOtherActivePlans(plan);
         plan.setStatus("active");
         TrainingPlan saved = trainingPlanRepository.save(plan);
-        supersedeOtherActivePlans(saved);
         List<TrainingPlanItem> items = trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId);
         return toDto(saved, items);
     }
@@ -200,16 +218,24 @@ public class TrainingPlanService {
             throw new ConflictException("INVALID_PLAN_STATUS", "coaching.plan.invalid_reapply_status",
                     new Object[]{plan.getStatus()}, "Only plans in history can be re-applied");
         }
+        lockMember(plan.getMember() != null ? plan.getMember().getUserId() : null);
         java.time.LocalDate today = java.time.LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
         if (plan.getEndDate().isBefore(today)) {
             long days = java.time.temporal.ChronoUnit.DAYS.between(plan.getStartDate(), plan.getEndDate());
             plan.setStartDate(today);
             plan.setEndDate(today.plusDays(days));
         }
+        supersedeOtherActivePlans(plan);
         plan.setStatus("active");
         TrainingPlan saved = trainingPlanRepository.save(plan);
-        supersedeOtherActivePlans(saved);
         return toDto(saved, trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(planId));
+    }
+
+    /** Khóa dòng hội viên để tuần tự hóa thao tác kích hoạt/thay thế giáo án active, ngăn race tạo 2 bản active. */
+    private void lockMember(Long memberId) {
+        if (memberRepository != null && memberId != null) {
+            memberRepository.findByUserIdForUpdate(memberId);
+        }
     }
 
     /**
@@ -219,8 +245,9 @@ public class TrainingPlanService {
     private void supersedeOtherActivePlans(TrainingPlan current) {
         if (current.getMember() == null || current.getMember().getUserId() == null
                 || current.getCoach() == null || current.getCoach().getUserId() == null) return;
+        Long exceptId = current.getId() != null ? current.getId() : -1L;
         var others = trainingPlanRepository.findOtherActiveForMemberAndCoach(
-                current.getMember().getUserId(), current.getCoach().getUserId(), current.getId());
+                current.getMember().getUserId(), current.getCoach().getUserId(), exceptId);
         if (others == null) return;
         for (TrainingPlan other : others) {
             other.setStatus("superseded");
@@ -324,23 +351,34 @@ public class TrainingPlanService {
     }
 
     /**
-     * Chi tiết giáo án: HLV chỉ xem của học viên mình phụ trách; hội viên chỉ xem của mình và phải được xem
-     * theo hạng gói.
+     * Chi tiết giáo án: HLV chỉ xem giáo án của chính mình hoặc giáo án không phải nháp/hủy của học viên mình
+     * đang phụ trách (qua CurrentCoachMembers); hội viên chỉ xem giáo án active/completed của mình và phải đủ
+     * hạng gói.
      */
     @Transactional(readOnly = true)
     public TrainingPlanDto getPlanById(Long planId, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
 
-        if (isCoach(currentUserRole) && coachMemberAccess != null
-                && (plan.getCoach() == null || !plan.getCoach().getUserId().equals(currentUserId))) {
-            coachMemberAccess.requireCoachOf(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
-        }
-        if (!isManager(currentUserRole) && !isCoach(currentUserRole)) {
+        if (isCoach(currentUserRole)) {
+            boolean isOwnPlan = plan.getCoach() != null && currentUserId != null
+                    && currentUserId.equals(plan.getCoach().getUserId());
+            if (!isOwnPlan) {
+                requireCurrentAssignment(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
+                if ("draft".equalsIgnoreCase(plan.getStatus()) || "cancelled".equalsIgnoreCase(plan.getStatus())) {
+                    throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
+                            "You do not have permission to view another coach's draft or cancelled training plan");
+                }
+            }
+        } else if (!isManager(currentUserRole)) {
             Long ownerId = plan.getMember() != null ? plan.getMember().getUserId() : null;
             if (currentUserId == null || !currentUserId.equals(ownerId)) {
                 throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
                         "You do not have permission to view this training plan");
+            }
+            if (!"active".equalsIgnoreCase(plan.getStatus()) && !"completed".equalsIgnoreCase(plan.getStatus())) {
+                throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
+                        "Members can only view active or completed training plans");
             }
             if (!memberMaySeePlans(ownerId)) {
                 throw new ForbiddenException("COACHING_PLAN_TIER_REQUIRED", "coaching.plan.tier_required", null,
@@ -352,15 +390,23 @@ public class TrainingPlanService {
         return toDto(plan, items);
     }
 
-    /** Danh sách giáo án: theo hội viên (kiểm tra quyền HLV) hoặc của chính HLV/tất cả cho quản lý. */
+    /** Danh sách giáo án: theo hội viên (kiểm tra phân công hiện tại của HLV) hoặc của chính HLV/tất cả cho quản lý. */
     @Transactional(readOnly = true)
     public List<TrainingPlanDto> getPlans(Long memberId, Long currentUserId, String currentUserRole) {
         List<TrainingPlan> plans;
         if (memberId != null) {
-            if (coachMemberAccess != null) {
-                coachMemberAccess.requireAccess(currentUserId, currentUserRole, memberId);
+            if (isCoach(currentUserRole)) {
+                requireCurrentAssignment(currentUserId, memberId);
+                plans = trainingPlanRepository.findByMemberUserIdOrderByCreatedAtDesc(memberId).stream()
+                        .filter(p -> (p.getCoach() != null && currentUserId != null && currentUserId.equals(p.getCoach().getUserId()))
+                                || (!"draft".equalsIgnoreCase(p.getStatus()) && !"cancelled".equalsIgnoreCase(p.getStatus())))
+                        .toList();
+            } else if (isManager(currentUserRole)) {
+                plans = trainingPlanRepository.findByMemberUserIdOrderByCreatedAtDesc(memberId);
+            } else {
+                throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
+                        "You do not have permission to list training plans");
             }
-            plans = trainingPlanRepository.findByMemberUserIdOrderByCreatedAtDesc(memberId);
         } else if (isCoach(currentUserRole) && currentUserId != null) {
             plans = trainingPlanRepository.findByCoachUserIdOrderByCreatedAtDesc(currentUserId);
         } else {

@@ -148,5 +148,25 @@ class CourseVnpayHoldTest {
 
         assertEquals("failed", fee.getStatus());
         assertEquals("cancelled", enrollment.getStatus());
+        verify(enrollments).findByIdForUpdate(9L);
+    }
+
+    /** Kiểm thử P2-BE-20: lượt quét khóa enrollment bằng findByIdForUpdate và bỏ qua nếu payment vừa chuyển success đồng thời. */
+    @Test
+    void unpaidSweepLocksEnrollmentAndSkipsWhenPaymentSettledConcurrently() {
+        Payment settled = new Payment();
+        settled.setId(77L);
+        settled.setClassEnrollmentId(9L);
+        settled.setAmount(new BigDecimal("500000"));
+        settled.setMethod("online_wallet");
+        settled.setStatus("success");
+        when(payments.findByClassEnrollmentId(9L)).thenReturn(Optional.of(settled));
+
+        assertEquals(0, service.expireUnpaidCourseEnrollments());
+
+        verify(enrollments).findByIdForUpdate(9L);
+        assertEquals("booked", enrollment.getStatus());
+        assertEquals("success", settled.getStatus());
+        verify(payments, never()).save(any());
     }
 }

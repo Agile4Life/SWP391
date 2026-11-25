@@ -1,18 +1,23 @@
 package com.swp391.scms.wallet;
 
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.notifications.NotificationService;
+import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Nghiệp vụ Ví SÖL: tạo ví, nạp tiền (VNPay, tại quầy), trừ tiền khi thanh toán, và hoàn tiền vào ví (hủy gói,
@@ -28,6 +33,8 @@ public class WalletService {
     private final NotificationService notificationService;
     private final MessageService messageService;
     private CounterTopupService counterTopupService;
+    private MemberRepository memberRepository;
+    private Clock clock = Clock.system(CenterTime.ZONE);
 
     /** Constructor cho test, không có MessageService. */
     public WalletService(
@@ -64,29 +71,83 @@ public class WalletService {
         this.counterTopupService = counterTopupService;
     }
 
-    /** Lấy ví của người dùng, chưa có thì tạo mới với số dư 0. */
+    /** Tiêm MemberRepository để kiểm tra chỉ tài khoản Hội viên mới được nạp/tra cứu ví hội viên tại quầy. */
+    @Autowired(required = false)
+    public void setMemberRepository(MemberRepository memberRepository) {
+        this.memberRepository = memberRepository;
+    }
+
+    /** Tiêm Clock chuẩn (múi giờ trung tâm {@link CenterTime#ZONE}). */
+    @Autowired(required = false)
+    public void setClock(Clock clock) {
+        if (clock != null) {
+            this.clock = clock;
+        }
+    }
+
+    /** Thời điểm hiện tại theo giờ trung tâm Việt Nam ({@link CenterTime#ZONE}). */
+    private LocalDateTime now() {
+        return LocalDateTime.now(clock.withZone(CenterTime.ZONE));
+    }
+
+    /** Kiểm tra {@code memberId} phải là Hội viên đang tồn tại và chưa bị xóa mềm. */
+    private void requireActiveMember(Long memberId) {
+        if (memberId == null) {
+            throw new ResourceNotFoundException("resource.member", null);
+        }
+        if (memberRepository == null) {
+            return;
+        }
+        if (!memberRepository.existsById(memberId)) {
+            throw new ResourceNotFoundException("resource.member", memberId);
+        }
+        if (userRepository != null) {
+            userRepository.findByIdAndDeletedAtIsNull(memberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+        }
+    }
+
+    /** Lấy ví của người dùng, chưa có thì tạo mới nguyên tử với số dư 0. */
     @Transactional
     public Wallet getOrCreateWallet(Long userId) {
         return walletRepository.findByUser_Id(userId)
-                .orElseGet(() -> createWalletForUser(userId));
+                .orElseGet(() -> createWalletForUser(userId, false));
     }
 
-    /** Lấy ví và khóa dòng để ghi; chưa có thì tạo mới. */
+    /** Lấy ví và khóa dòng để ghi; chưa có thì tạo mới nguyên tử. */
     @Transactional
     public Wallet getOrCreateWalletForUpdate(Long userId) {
         return walletRepository.findByUserIdForUpdate(userId)
-                .orElseGet(() -> createWalletForUser(userId));
+                .orElseGet(() -> createWalletForUser(userId, true));
     }
 
-    /** Tạo ví số dư 0 cho người dùng chưa bị xóa; không thấy người dùng thì báo 404. */
-    private Wallet createWalletForUser(Long userId) {
+    /**
+     * Tạo ví số dư 0 cho người dùng chưa bị xóa (an toàn đồng thời qua {@code INSERT ... ON CONFLICT DO NOTHING}
+     * kèm dự phòng bắt trùng khóa cho môi trường test giả lập); không thấy người dùng thì báo 404.
+     */
+    private Wallet createWalletForUser(Long userId, boolean lockForUpdate) {
         User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
+        LocalDateTime now = now();
+        walletRepository.insertIfAbsent(userId, now);
+        Optional<Wallet> existing = lockForUpdate
+                ? walletRepository.findByUserIdForUpdate(userId)
+                : walletRepository.findByUser_Id(userId);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
         Wallet wallet = new Wallet();
         wallet.setUser(user);
         wallet.setBalance(BigDecimal.ZERO);
-        wallet.setUpdatedAt(LocalDateTime.now());
-        return walletRepository.saveAndFlush(wallet);
+        wallet.setUpdatedAt(now);
+        try {
+            return walletRepository.saveAndFlush(wallet);
+        } catch (DataIntegrityViolationException ex) {
+            return (lockForUpdate
+                    ? walletRepository.findByUserIdForUpdate(userId)
+                    : walletRepository.findByUser_Id(userId))
+                    .orElseThrow(() -> ex);
+        }
     }
 
     /** Ví của người dùng dạng DTO (tự tạo nếu chưa có). */
@@ -94,6 +155,13 @@ public class WalletService {
     public WalletDto getMyWallet(Long userId) {
         Wallet wallet = getOrCreateWallet(userId);
         return toDto(wallet);
+    }
+
+    /** Quầy xem ví của hội viên: bắt buộc đúng tài khoản Hội viên đang hoạt động (từ chối nhân sự/admin). */
+    @Transactional
+    public WalletDto getMemberWallet(Long memberId) {
+        requireActiveMember(memberId);
+        return getMyWallet(memberId);
     }
 
     /** Chuyển ví sang DTO kèm 50 giao dịch gần nhất. */
@@ -130,7 +198,7 @@ public class WalletService {
             return;
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = now();
         BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBalance.add(amount);
 
@@ -214,15 +282,16 @@ public class WalletService {
             );
         }
 
+        requireActiveMember(memberId);
         Wallet wallet = getOrCreateWalletForUpdate(memberId);
         boolean keyed = clientRequestId != null && !clientRequestId.isBlank();
         String refId = keyed
                 ? "POS-REQ-" + clientRequestId.trim()
-                : "POS-" + System.currentTimeMillis() + (staffUserId != null ? ("-S" + staffUserId) : "");
+                : "POS-" + clock.millis() + (staffUserId != null ? ("-S" + staffUserId) : "");
         if (keyed && walletTransactionRepository.existsByWallet_IdAndReferenceId(wallet.getId(), refId)) {
             return toDto(wallet);
         }
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = now();
         BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBalance.add(amount);
 
@@ -304,7 +373,7 @@ public class WalletService {
             );
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = now();
         BigDecimal newBalance = currentBalance.subtract(amount);
 
         WalletTransaction debit = new WalletTransaction();
@@ -363,7 +432,7 @@ public class WalletService {
             return;
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = now();
         BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
         BigDecimal balanceAfterTopup = currentBalance.add(amount);
 
@@ -479,6 +548,15 @@ public class WalletService {
         credit(userId, amount, reference + ":LATE_REFUND", "VNPAY_LATE_REFUND", description, "/member/invoices");
     }
 
+    /** Hoàn tiền giao dịch đã thanh toán bằng Ví SÖL trở lại ví (mỗi mã tham chiếu chỉ một lần). */
+    @Transactional
+    public void creditPaymentRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
+        String description = (reason != null && !reason.isBlank())
+                ? ("Hoàn tiền giao dịch về Ví: " + reason)
+                : "Hoàn tiền giao dịch về Ví";
+        credit(userId, amount, referenceId, "PAYMENT_REFUND", description, "/member/invoices");
+    }
+
     /**
      * Cộng tiền hoàn vào ví: bỏ qua nếu dữ liệu không hợp lệ hoặc mã tham chiếu đã được ghi; ghi giao dịch
      * REFUND_CREDIT (mô tả tối đa 500 ký tự), cập nhật số dư và gửi thông báo dẫn tới trang liên quan.
@@ -494,7 +572,7 @@ public class WalletService {
             return;
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = now();
         BigDecimal currentBalance = wallet.getBalance() != null ? wallet.getBalance() : BigDecimal.ZERO;
         BigDecimal newBalance = currentBalance.add(amount);
 

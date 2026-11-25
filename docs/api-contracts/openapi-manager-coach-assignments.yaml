@@ -93,7 +93,7 @@ paths:
         '401': { description: Authentication required }
         '403': { description: Manager role required }
         '404': { description: Referenced assignment, member or coach not found }
-        '409': { description: COACH_ALREADY_HAS_ACTIVE_PLAN, COACH_REST_REQUIRED, or a database schedule conflict }
+        '409': { description: 'COACH_ALREADY_HAS_ACTIVE_PLAN or a database schedule conflict' }
   /manager/coach-assignments/{planId}:
     delete:
       summary: End an active unexpired training-plan assignment by cancelling it

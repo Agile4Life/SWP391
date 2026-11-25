@@ -319,8 +319,13 @@ public class CatalogSeeder implements ApplicationRunner {
         for (var pkg : packages.list()) {
             if (!name.equalsIgnoreCase(pkg.name())) continue;
             if (isOldSeededDescription(pkg.description())) {
-                packages.update(pkg.id(), new PackageRequest(
-                        pkg.name(), desc, price, pkg.durationDays(), creditLimit, "active", tier));
+                try {
+                    packages.update(pkg.id(), new PackageRequest(
+                            pkg.name(), desc, price, pkg.durationDays(), creditLimit, "active", tier));
+                } catch (com.swp391.scms.common.exception.ConflictException sold) {
+                    packages.update(pkg.id(), new PackageRequest(
+                            pkg.name(), desc, price, pkg.durationDays(), pkg.classCreditLimit(), "active", pkg.tier()));
+                }
             } else if (pkg.description() != null && pkg.description().contains(LEGACY_3D_QR_LINE)) {
                 String cleaned = pkg.description().replace(LEGACY_3D_QR_LINE, CLEAN_QR_LINE);
                 packages.update(pkg.id(), new PackageRequest(
@@ -338,8 +343,8 @@ public class CatalogSeeder implements ApplicationRunner {
     }
 
     /**
-     * Cập nhật quyền lợi (mô tả, hạn mức, hạng) cho gói còn nguyên bản seed cũ; gói quản lý đã chỉnh thì giữ
-     * nguyên.
+     * Cập nhật quyền lợi (mô tả, hạn mức, hạng) cho gói còn nguyên bản seed cũ; gói quản lý đã chỉnh hoặc đã bán
+     * thì giữ nguyên quyền lợi đang áp dụng.
      */
     private void alignBenefits(String name, String desc, Integer creditLimit, String tier, Integer legacyCreditLimit) {
         String marker = desc.substring(0, desc.indexOf('\n'));
@@ -351,8 +356,12 @@ public class CatalogSeeder implements ApplicationRunner {
                     && java.util.Objects.equals(creditLimit, pkg.classCreditLimit())
                     && tier.equalsIgnoreCase(pkg.tier());
             if (untouched && !upToDate) {
-                packages.update(pkg.id(), new PackageRequest(pkg.name(), desc, pkg.price(), pkg.durationDays(),
-                        creditLimit, pkg.status(), tier));
+                try {
+                    packages.update(pkg.id(), new PackageRequest(pkg.name(), desc, pkg.price(), pkg.durationDays(),
+                            creditLimit, pkg.status(), tier));
+                } catch (com.swp391.scms.common.exception.ConflictException sold) {
+                    // Gói đã có hội viên mua: giữ nguyên hạng và hạn mức lượt để không ảnh hưởng quyền lợi hiện hữu.
+                }
             }
             return;
         }

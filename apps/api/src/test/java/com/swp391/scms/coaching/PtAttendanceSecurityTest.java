@@ -73,6 +73,31 @@ class PtAttendanceSecurityTest {
                 .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
+    /** Kiểm thử P2-BE-26: toàn bộ 12 endpoint có @PreAuthorize; /coach-schedule cho phép CENTER_MANAGER lọc theo coachId còn COACH chỉ xem của mình. */
+    @Test void allTwelveEndpointsDeclarePreAuthorizeAndCoachScheduleSupportsManagerCoachId() throws Exception {
+        long annotatedEndpoints = java.util.Arrays.stream(CoachBookingController.class.getDeclaredMethods())
+                .filter(m -> m.isAnnotationPresent(org.springframework.web.bind.annotation.GetMapping.class)
+                        || m.isAnnotationPresent(org.springframework.web.bind.annotation.PostMapping.class)
+                        || m.isAnnotationPresent(org.springframework.web.bind.annotation.DeleteMapping.class))
+                .peek(m -> org.junit.jupiter.api.Assertions.assertNotNull(
+                        m.getAnnotation(org.springframework.security.access.prepost.PreAuthorize.class),
+                        "Missing @PreAuthorize on " + m.getName()))
+                .count();
+        org.junit.jupiter.api.Assertions.assertEquals(12, annotatedEndpoints);
+
+        when(service.getCoachSchedule(anyLong())).thenReturn(List.of());
+        mvc.perform(get("/api/v1/coach-bookings/coach-schedule").param("coachId", "20")
+                        .with(authentication(actor("CENTER_MANAGER"))))
+                .andExpect(status().isOk());
+        verify(service).getCoachSchedule(20L);
+
+        mvc.perform(get("/api/v1/coach-bookings/coach-schedule").param("coachId", "99")
+                        .with(authentication(actor("COACH"))))
+                .andExpect(status().isOk());
+        verify(service).getCoachSchedule(2L);
+        verify(service, never()).getCoachSchedule(99L);
+    }
+
     /** Bộ kiểm thử cho TestConfiguration (test configuration). */
     @Configuration(proxyBeanMethods = false)
     @EnableWebMvc

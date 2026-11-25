@@ -17,7 +17,7 @@ public class ShopProperties {
     private int paymentWindowMinutes = 30;
     private int counterHoldHours = 48;
     private String pickupAddress = "120 Hai Bà Trưng, Phường Sài Gòn, TP. Hồ Chí Minh — quầy lễ tân";
-    private boolean seedSamples = true;
+    private boolean seedSamples = false;
 
     /** Lấy giá trị trường shippingFee. */
     public BigDecimal getShippingFee() { return shippingFee; }

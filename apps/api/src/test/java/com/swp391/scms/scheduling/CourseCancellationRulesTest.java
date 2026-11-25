@@ -118,4 +118,98 @@ class CourseCancellationRulesTest {
         assertEquals("cancelled", enrollment.getStatus());
         verify(notifications).send(eq(100L), any(), any(), eq("system"), eq("class_enrollment"), eq(9L));
     }
+
+    /** Kiểm thử P1-BE-15: DELETE /classes/enrollments/{id} hoàn học phí đã thanh toán vào ví và ghi nhận cancelledBy. */
+    @Test
+    void cancelByIdRefundsSuccessPaymentAndSetsCancelledByWhenBeforeCourseStart() {
+        var wallets = mock(com.swp391.scms.wallet.WalletService.class);
+        var userRepo = mock(com.swp391.scms.users.UserRepository.class);
+        service.setWallets(wallets);
+        service.setUserRepository(userRepo);
+
+        var actorUser = new com.swp391.scms.users.entity.User();
+        actorUser.setId(100L);
+        when(userRepo.findById(100L)).thenReturn(Optional.of(actorUser));
+
+        courseStarting(LocalDate.of(2026, 11, 20));
+        Payment paid = new Payment();
+        paid.setId(88L);
+        paid.setClassEnrollmentId(9L);
+        paid.setAmount(new java.math.BigDecimal("500000"));
+        paid.setStatus("success");
+        when(payments.findByClassEnrollmentId(9L)).thenReturn(Optional.of(paid));
+
+        service.cancel(member, 9L);
+
+        assertEquals("cancelled", enrollment.getStatus());
+        assertSame(actorUser, enrollment.getCancelledBy());
+        assertEquals("refunded", paid.getStatus());
+        assertEquals(0, new java.math.BigDecimal("500000").compareTo(paid.getRefundedAmount()));
+        verify(wallets).creditCourseRefund(eq(100L), eq(new java.math.BigDecimal("500000")),
+                eq("COURSE_REFUND_9"), any());
+    }
+
+    /** Kiểm thử P1-BE-15: lễ tân hủy sau khi khóa đã bắt đầu vẫn ghi cancelledBy nhưng không tự động hoàn học phí. */
+    @Test
+    void staffCancelAfterCourseStartSetsCancelledByWithoutRefundingPaidFee() {
+        var wallets = mock(com.swp391.scms.wallet.WalletService.class);
+        var userRepo = mock(com.swp391.scms.users.UserRepository.class);
+        service.setWallets(wallets);
+        service.setUserRepository(userRepo);
+
+        var staffUser = new com.swp391.scms.users.entity.User();
+        staffUser.setId(2L);
+        when(userRepo.findById(2L)).thenReturn(Optional.of(staffUser));
+
+        courseStarting(LocalDate.of(2026, 11, 2));
+        Payment paid = new Payment();
+        paid.setId(88L);
+        paid.setClassEnrollmentId(9L);
+        paid.setAmount(new java.math.BigDecimal("500000"));
+        paid.setStatus("success");
+        when(payments.findByClassEnrollmentId(9L)).thenReturn(Optional.of(paid));
+
+        service.cancel(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 9L);
+
+        assertEquals("cancelled", enrollment.getStatus());
+        assertSame(staffUser, enrollment.getCancelledBy());
+        assertEquals("success", paid.getStatus());
+        verifyNoInteractions(wallets);
+    }
+
+    /** Kiểm thử P1-BE-56 & P2-BE-20: cancelFutureEnrollmentsForMember không lưu {0} thô và đóng payment pending. */
+    @Test
+    void cancelFutureEnrollmentsResolvesHoldReasonWithoutLiteralPlaceholderAndFailsPendingPayment() {
+        var messageSource = new org.springframework.context.support.ResourceBundleMessageSource();
+        messageSource.setBasenames("i18n/messages");
+        messageSource.setDefaultEncoding("UTF-8");
+        var realMessages = new com.swp391.scms.common.i18n.MessageService(messageSource);
+
+        EnrollmentService localizedService = new EnrollmentService(
+                enrollments, null, gymClasses, null, members, notifications, realMessages, clock);
+        localizedService.setPaymentRepository(payments);
+
+        courseStarting(LocalDate.of(2026, 11, 20));
+        when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(enrollment.getMember()));
+        when(enrollments.findBookedClassIdsByMemberId(100L)).thenReturn(java.util.List.of(50L));
+        when(gymClasses.findByIdForUpdate(50L)).thenReturn(Optional.of(enrollment.getGymClass()));
+        when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked"))
+                .thenReturn(Optional.of(enrollment));
+
+        Payment pending = new Payment();
+        pending.setId(91L);
+        pending.setClassEnrollmentId(9L);
+        pending.setStatus("pending");
+        when(payments.findByClassEnrollmentId(9L)).thenReturn(Optional.of(pending));
+
+        int cancelled = localizedService.cancelFutureEnrollmentsForMember(100L, null);
+
+        assertEquals(1, cancelled);
+        assertEquals("cancelled", enrollment.getStatus());
+        assertNotNull(enrollment.getCancelReason());
+        assertFalse(enrollment.getCancelReason().contains("{0}"),
+                "Cancel reason must never contain literal {0}: " + enrollment.getCancelReason());
+        assertEquals("failed", pending.getStatus());
+        verify(payments).save(pending);
+    }
 }

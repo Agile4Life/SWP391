@@ -393,4 +393,49 @@ class MembershipCancellationServiceTest {
         CancellationDtos.Response result = service.request(owner, 100L, new CancellationDtos.Request("Moving"));
         assertThat(result.refundAmount()).isEqualByComparingTo("5900000");
     }
+
+    /** Kiểm thử P1-BE-29: hủy gói đã nâng cấp ghi nhận đủ tiền hoàn tràn ngược sang giao dịch kỳ trước. */
+    @Test
+    void decide_walksUpgradePredecessorChainToRecordCarryOverRefundOnOldPayments() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+
+        MembershipPackage silver = new MembershipPackage();
+        silver.setId(1L); silver.setName("SILVER");
+        MembershipPackage platinum = new MembershipPackage();
+        platinum.setId(2L); platinum.setName("PLATINUM");
+
+        MembershipSubscription oldSub = new MembershipSubscription();
+        oldSub.setId(90L); oldSub.setMember(member); oldSub.setMembershipPackage(silver);
+        oldSub.setStatus("expired");
+        oldSub.setStartDate(LocalDate.of(2026, 9, 1));
+        oldSub.setEndDate(LocalDate.of(2026, 10, 1));
+
+        active.setMembershipPackage(platinum);
+        active.setPreviousSubscription(oldSub);
+        active.setUpgradeCharge(new java.math.BigDecimal("2000000"));
+        active.setCreditApplied(new java.math.BigDecimal("900000"));
+
+        com.swp391.scms.finance.entity.Payment p2 = new com.swp391.scms.finance.entity.Payment();
+        p2.setId(2L); p2.setSubscriptionId(100L); p2.setAmount(new java.math.BigDecimal("2000000")); p2.setStatus("success");
+        com.swp391.scms.finance.entity.Payment p1 = new com.swp391.scms.finance.entity.Payment();
+        p1.setId(1L); p1.setSubscriptionId(90L); p1.setAmount(new java.math.BigDecimal("1500000")); p1.setStatus("success");
+
+        stubDecision();
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(oldSub, active));
+        when(payments.findAllBySubscriptionId(100L)).thenReturn(List.of(p2));
+        when(payments.findAllBySubscriptionId(90L)).thenReturn(List.of(p1));
+        User managerUser = new User(); managerUser.setId(20L);
+        when(users.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(managerUser));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.decide(manager, 7L, true, new CancellationDtos.Decision("Full upgrade cancel", new java.math.BigDecimal("2900000")));
+
+        assertThat(p2.getRefundedAmount()).isEqualByComparingTo("2000000");
+        assertThat(p2.getStatus()).isEqualTo("refunded");
+        assertThat(p1.getRefundedAmount()).isEqualByComparingTo("900000");
+        assertThat(p1.getStatus()).isEqualTo("success");
+        verify(walletService).creditRefund(10L, new java.math.BigDecimal("2900000"), "CANCEL_REQ_7", "Moving");
+    }
 }

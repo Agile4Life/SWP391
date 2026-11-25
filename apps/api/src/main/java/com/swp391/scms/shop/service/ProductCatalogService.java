@@ -12,6 +12,7 @@ import com.swp391.scms.shop.repository.ProductCategoryRepository;
 import com.swp391.scms.shop.repository.ProductImageRepository;
 import com.swp391.scms.shop.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Set;
 
 /** Nghiệp vụ trang shop công khai: danh mục, cấu hình, tìm/sắp xếp sản phẩm, chi tiết và ảnh. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 @Transactional(readOnly = true)
 public class ProductCatalogService {

@@ -36,11 +36,35 @@ class AiKnowledgeBaseTest {
         String tiers = base.sectionsFor("gói gold khác platinum thế nào");
 
         assertTrue(tiers.contains("- Platinum: PT 1:1 miễn phí 6 buổi"));
-        assertTrue(tiers.contains("PT 1:1 miễn phí 6 buổi"));
+        assertTrue(tiers.contains("lượt khóa học nhóm miễn phí 4 khóa mỗi 30 ngày"));
+        assertTrue(tiers.contains("lượt khóa học nhóm miễn phí 2 khóa mỗi 30 ngày"));
+        assertTrue(tiers.contains("lượt khóa học nhóm miễn phí 1 khóa mỗi 30 ngày"));
         assertTrue(tiers.contains("bảo lưu: tối đa 30 ngày (gói 1 tháng cũ: tối đa 7 ngày)"));
         assertTrue(tiers.contains("- Silver:") && tiers.contains("bảo lưu: tối đa 7 ngày (gói 1 tháng cũ: không bảo lưu được)"));
-        assertTrue(tiers.contains("giảm 20%"));
-        assertFalse(tiers.contains("khóa học nhóm miễn phí") || tiers.contains("khóa học có phí và sản phẩm"));
+        assertTrue(tiers.contains("giảm 20% cho buổi PT thêm và khóa học có phí"));
+        assertTrue(tiers.contains("giảm 10% cho buổi PT thêm và khóa học có phí"));
+        assertTrue(tiers.contains("được sử dụng Phòng Gym VIP"));
+        assertTrue(tiers.contains("không bao gồm quyền xem giáo án HLV soạn"));
+        assertFalse(tiers.contains("khóa học có phí và sản phẩm"));
+    }
+
+    /** Kiểm thử: tri thức mô tả nhiều lớp/bộ môn, 4 phòng hoạt động, mục Tin nhắn và quy định bảo lưu khóa học. */
+    @Test
+    void describesMultipleClassesPerDisciplineFourRoomsPortalMessagesAndCourseHoldRules() {
+        String all = base.sectionsFor("");
+
+        assertFalse(all.contains("mỗi bộ môn chỉ mở một lớp"));
+        assertFalse(all.contains("mỗi bộ môn mở một lớp"));
+        assertTrue(all.contains("nhiều lớp"));
+        assertTrue(all.contains("Phòng Gym Tiêu chuẩn"));
+        assertTrue(all.contains("Phòng Gym VIP"));
+        assertTrue(all.contains("Zen Garden Studio"));
+        assertTrue(all.contains("Ring Arena 01"));
+        assertTrue(all.contains("'Tin nhắn'"));
+
+        String holdInfo = base.sectionsFor("bảo lưu gói tập có hủy khóa học không?");
+        assertTrue(holdInfo.contains("khóa học nhóm"));
+        assertTrue(holdInfo.contains("ít nhất 3 ngày"));
     }
 
     /** Kiểm thử: tri thức Sol AI chỉ giới thiệu đúng 3 bộ môn Gym, Boxing và Yoga. */

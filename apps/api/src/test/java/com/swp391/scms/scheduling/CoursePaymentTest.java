@@ -100,8 +100,7 @@ class CoursePaymentTest {
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
 
         // Đã đăng ký 2 khóa học -> vượt hạn mức
-        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(eq(100L), eq("booked"), any(), any()))
-                .thenReturn(2L);
+        when(enrollments.countUsedFreeCreditsBetween(eq(100L), any(), any())).thenReturn(2L);
 
         GymClass gymClass = new GymClass();
         gymClass.setId(50L);
@@ -172,7 +171,7 @@ class CoursePaymentTest {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(sub));
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
-        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(eq(100L), eq("booked"), any(), any())).thenReturn(2L);
+        when(enrollments.countUsedFreeCreditsBetween(eq(100L), any(), any())).thenReturn(2L);
         GymClass gymClass = new GymClass();
         gymClass.setId(50L);
         gymClass.setName("Yoga Advanced");
@@ -292,8 +291,7 @@ class CoursePaymentTest {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(sub));
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
-        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(eq(100L), eq("booked"), any(), any()))
-                .thenReturn(2L);
+        when(enrollments.countUsedFreeCreditsBetween(eq(100L), any(), any())).thenReturn(2L);
 
         GymClass gymClass = new GymClass();
         gymClass.setId(50L);

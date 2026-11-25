@@ -44,10 +44,9 @@ components:
         id: { type: integer }
         amount: { type: number }
         status: { type: string, enum: [success, pending, failed, refunded] }
-        serviceType: { type: string, enum: [MEMBERSHIP, CLASS, PT, COURT, SHOP, OTHER] }
-        serviceName: { type: string, nullable: true, example: 'Sân Tennis 01 · 20/11/2026 · 14:00' }
+        serviceType: { type: string, enum: [MEMBERSHIP, CLASS, PT, SHOP, OTHER] }
+        serviceName: { type: string, nullable: true, example: 'Khóa Boxing Nền tảng · 20/11/2026' }
         coachBookingId: { type: integer, nullable: true }
-        courtBookingId: { type: integer, nullable: true }
         productOrderId: { type: integer, nullable: true }
     RequestHistory:
       type: object

@@ -11,6 +11,7 @@ import com.swp391.scms.shop.repository.MemberAddressRepository;
 import com.swp391.scms.shop.service.GeoService.ResolvedRegion;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ import java.util.regex.Pattern;
  * Quản lý sổ địa chỉ giao hàng của hội viên (tối đa 5 địa chỉ, luôn có một địa chỉ mặc định) và tạo snapshot
  * địa chỉ cho đơn hàng.
  */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 @Transactional(readOnly = true)
 public class AddressService {

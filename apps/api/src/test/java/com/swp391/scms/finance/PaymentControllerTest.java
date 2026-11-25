@@ -127,7 +127,9 @@ class PaymentControllerTest {
         dto.setId(1L);
         dto.setStatus("refunded");
 
-        when(paymentService.updatePaymentStatusByStaff(eq(1L), eq("refunded"))).thenReturn(dto);
+        when(paymentService.updatePaymentStatusByStaff(
+                org.mockito.ArgumentMatchers.nullable(com.swp391.scms.security.AuthenticatedPrincipal.class),
+                eq(1L), eq("refunded"))).thenReturn(dto);
 
         mockMvc.perform(patch("/api/v1/payments/1/status")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -161,7 +163,9 @@ class PaymentControllerTest {
         responseDto.setAmount(new BigDecimal("1500000.00"));
         responseDto.setStatus("success");
 
-        when(paymentService.processPayment(any(com.swp391.scms.finance.dto.PaymentProcessDto.class))).thenReturn(responseDto);
+        when(paymentService.processPayment(
+                org.mockito.ArgumentMatchers.nullable(com.swp391.scms.security.AuthenticatedPrincipal.class),
+                any(com.swp391.scms.finance.dto.PaymentProcessDto.class))).thenReturn(responseDto);
 
         mockMvc.perform(post("/api/v1/payments/process")
                         .contentType(MediaType.APPLICATION_JSON)

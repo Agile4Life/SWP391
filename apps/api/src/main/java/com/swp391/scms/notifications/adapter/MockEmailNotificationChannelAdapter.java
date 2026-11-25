@@ -116,10 +116,12 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
 
         String recipientEmail = payload.recipientEmail();
         String recipientName = null;
+        String recipientRole = null;
         if (payload.userId() != null) {
             User user = userRepository.findByIdAndDeletedAtIsNull(payload.userId()).orElse(null);
             if (user != null) {
                 recipientName = user.getFullName();
+                recipientRole = user.getRole() != null ? user.getRole().getCode() : null;
                 if (recipientEmail == null || recipientEmail.isBlank()) {
                     recipientEmail = user.getEmail();
                 }
@@ -136,11 +138,28 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
                 payload.userId(), payload.type(), payload.relatedEntityType(), payload.relatedEntityId());
 
         if (!apiKey.isBlank() && isDeliverableEmail(recipientEmail) && shouldSendRealEmail(payload)) {
-            String subject = payload.title() != null && !payload.title().isBlank()
-                    ? payload.title()
+            NotificationPayload effectivePayload = payload;
+            if ((payload.actionPath() == null || payload.actionPath().isBlank())
+                    && "schedule_change".equalsIgnoreCase(payload.type())
+                    && isCoachRole(recipientRole)) {
+                effectivePayload = NotificationPayload.builder()
+                        .userId(payload.userId())
+                        .recipientEmail(payload.recipientEmail())
+                        .title(payload.title())
+                        .message(payload.message())
+                        .type(payload.type())
+                        .relatedEntityType(payload.relatedEntityType())
+                        .relatedEntityId(payload.relatedEntityId())
+                        .actionPath("/coach/classes")
+                        .channels(payload.channels())
+                        .timestamp(payload.timestamp())
+                        .build();
+            }
+            String subject = effectivePayload.title() != null && !effectivePayload.title().isBlank()
+                    ? effectivePayload.title()
                     : "SÖL Fitness — Thông báo dành cho Hội viên";
-            String textBody = payload.message() != null ? payload.message() : "";
-            String htmlBody = SolEmailTemplateRenderer.renderNotificationHtml(payload, recipientName, webOrigin);
+            String textBody = effectivePayload.message() != null ? effectivePayload.message() : "";
+            String htmlBody = SolEmailTemplateRenderer.renderNotificationHtml(effectivePayload, recipientName, webOrigin);
             try {
                 restClient.post()
                         .uri("/emails")
@@ -168,6 +187,11 @@ public class MockEmailNotificationChannelAdapter implements NotificationChannelA
                 && email.contains("@")
                 && !email.endsWith("@solfitness.local")
                 && !email.endsWith(".invalid");
+    }
+
+    /** Kiểm tra mã vai trò có phải HLV (COACH / ROLE_COACH) không. */
+    private static boolean isCoachRole(String roleCode) {
+        return roleCode != null && ("COACH".equalsIgnoreCase(roleCode) || "ROLE_COACH".equalsIgnoreCase(roleCode));
     }
 
     /** Chỉ gửi khi có tiêu đề hoặc nội dung. */

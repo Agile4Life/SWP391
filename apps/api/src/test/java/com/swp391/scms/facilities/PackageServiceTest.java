@@ -58,22 +58,30 @@ class PackageServiceTest {
                 () -> service.create(new PackageRequest("SILVER", null, BigDecimal.TEN, 30, 1, "active", null)));
     }
 
-    /** Kiểm thử: gói đã bán không được đổi tên hay đổi thời hạn. */
+    /** Kiểm thử P2-BE-23: gói đã bán không được đổi tên, thời hạn, hạng (tier) hay hạn mức lượt học (classCreditLimit). */
     @Test
     void soldPackageCannotBeRenamedOrRetimed() {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setName("GOLD 6 THÁNG");
         pkg.setDurationDays(180);
         pkg.setPrice(BigDecimal.TEN);
+        pkg.setTier("GOLD");
+        pkg.setClassCreditLimit(8);
         var subscriptions = org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipSubscriptionRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "subscriptions", subscriptions);
         when(packages.findById(1L)).thenReturn(Optional.of(pkg));
         when(subscriptions.existsByMembershipPackageId(1L)).thenReturn(true);
 
         assertThrows(com.swp391.scms.common.exception.ConflictException.class,
-                () -> service.update(1L, new PackageRequest("GOLD 9 THÁNG", null, BigDecimal.TEN, 270, 8, null)));
-        // vẫn cho phép sửa giá hoặc quyền lợi nếu giữ nguyên tên và thời hạn
-        assertEquals("GOLD 6 THÁNG", service.update(1L, new PackageRequest("GOLD 6 THÁNG", null, BigDecimal.ONE, 180, 8, null)).name());
+                () -> service.update(1L, new PackageRequest("GOLD 9 THÁNG", null, BigDecimal.TEN, 270, 8, null, "GOLD")));
+        // Không cho hạ/đổi hạng gói đã bán
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.update(1L, new PackageRequest("GOLD 6 THÁNG", null, BigDecimal.TEN, 180, 8, null, "SILVER")));
+        // Không cho đổi hạn mức lượt khóa học của gói đã bán
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.update(1L, new PackageRequest("GOLD 6 THÁNG", null, BigDecimal.TEN, 180, 4, null, "GOLD")));
+        // Vẫn cho phép sửa giá hoặc mô tả nếu giữ nguyên tên, thời hạn, hạng và hạn mức lượt
+        assertEquals("GOLD 6 THÁNG", service.update(1L, new PackageRequest("GOLD 6 THÁNG", "Mô tả mới", BigDecimal.ONE, 180, 8, null, "GOLD")).name());
     }
 
     /** Kiểm thử: cập nhật trạng thái để vô hiệu hóa gói. */

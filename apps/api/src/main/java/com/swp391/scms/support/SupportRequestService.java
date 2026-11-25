@@ -1,6 +1,7 @@
 package com.swp391.scms.support;
 
 import com.swp391.scms.audit.Audited;
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
@@ -19,6 +20,8 @@ import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +43,7 @@ import java.util.Set;
 @Service
 public class SupportRequestService {
 
+    private static final Logger log = LoggerFactory.getLogger(SupportRequestService.class);
     static final long AUTO_CLOSE_HOURS = 72;
     private static final Set<String> VALID_STATUSES = Set.of("open", "in_progress", "resolved", "closed");
     private static final Set<String> STAFF_ROLES = Set.of("CENTER_MANAGER", "RECEPTIONIST");
@@ -110,7 +114,7 @@ public class SupportRequestService {
         this.supportRequestMessageRepository = supportRequestMessageRepository;
         this.notificationService = notificationService;
         this.messageService = messageService;
-        this.clock = clock != null ? clock : Clock.systemDefaultZone();
+        this.clock = (clock != null ? clock : Clock.system(CenterTime.ZONE)).withZone(CenterTime.ZONE);
     }
 
     /** Hội viên (chưa bị xóa) gửi phiếu mới; báo cho lễ tân (quản lý chỉ được báo khi phiếu được chuyển lên). */
@@ -120,12 +124,13 @@ public class SupportRequestService {
                 .filter(m -> m.getUser() == null || m.getUser().getDeletedAt() == null)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
 
-        SupportRequest request = new SupportRequest(member, dto.subject(), dto.description());
+        String trimmedSubject = dto.subject().trim();
+        SupportRequest request = new SupportRequest(member, trimmedSubject, dto.description());
         SupportRequest saved = supportRequestRepository.save(request);
         // Khiếu nại mới đến lễ tân trước; quản lý chỉ được thông báo khi phiếu được chuyển lên
         // (quản lý không được phép mở khiếu nại chưa được chuyển lên).
         notifyStaff(RECEPTIONIST, "notifications.support.new_request.title", "notifications.support.new_request.body",
-                saved.getId(), dto.subject());
+                saved.getId(), trimmedSubject);
         return supportRequestMapper.toDto(saved).forMember();
     }
 
@@ -173,7 +178,9 @@ public class SupportRequestService {
     }
 
     /** Job chạy mỗi giờ để tự đóng phiếu quá hạn; lỗi thì để lần chạy sau thử lại. */
-    @org.springframework.scheduling.annotation.Scheduled(cron = "${app.support.auto-close.cron:0 0 * * * ?}")
+    @org.springframework.scheduling.annotation.Scheduled(
+            cron = "${app.support.auto-close.cron:0 0 * * * ?}",
+            zone = "Asia/Ho_Chi_Minh")
     public void autoCloseResolved() {
         try {
             closeStaleResolved();
@@ -214,7 +221,8 @@ public class SupportRequestService {
      */
     @Transactional
     @Audited(action = "SUPPORT_STATUS_UPDATE", entity = "support_requests")
-    public SupportRequestDto updateStatus(Long id, UpdateSupportRequestStatusDto dto, String actorRole) {
+    public SupportRequestDto updateStatus(Long id, UpdateSupportRequestStatusDto dto, Long actorId, String actorRole) {
+        requireActor(actorId, actorRole);
         SupportRequest request = supportRequestRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.support_request", id));
         requireHandler(request, actorRole);
@@ -254,13 +262,13 @@ public class SupportRequestService {
         if (dto.assignedTo() != null) {
             User assignee = userRepository.findByIdAndDeletedAtIsNull(dto.assignedTo())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.user", dto.assignedTo()));
-            if (assignee.getStatus() != null && !"active".equalsIgnoreCase(assignee.getStatus())) {
+            if (!"active".equalsIgnoreCase(assignee.getStatus())) {
                 throw new BadRequestException("INVALID_ASSIGNEE", "support.assignee.invalid", null,
                         "Assignee must be an active staff account");
             }
             String requiredAssigneeRole = request.isEscalated() ? MANAGER : RECEPTIONIST;
-            if (assignee.getRole() != null && assignee.getRole().getCode() != null
-                    && !requiredAssigneeRole.equals(normalizeRole(assignee.getRole().getCode()))) {
+            String assigneeRoleCode = assignee.getRole() != null ? assignee.getRole().getCode() : null;
+            if (assigneeRoleCode == null || !requiredAssigneeRole.equals(normalizeRole(assigneeRoleCode))) {
                 throw new BadRequestException("INVALID_ASSIGNEE", "support.assignee.invalid", null,
                         "Assignee must hold the role that handles this request");
             }
@@ -279,7 +287,12 @@ public class SupportRequestService {
                 String body = messageService != null
                         ? messageService.getMessage("notifications.support.status_updated.body", request.getSubject(), request.getStatus())
                         : "notifications.support.status_updated.body";
-                notificationService.send(memberUserId, title, body, "support_reply", "support_request", saved != null ? saved.getId() : id);
+                try {
+                    notificationService.send(memberUserId, title, body, "support_reply", "support_request", saved != null ? saved.getId() : id);
+                } catch (RuntimeException ex) {
+                    log.warn("Could not notify member {} about support request {} status update: {}",
+                            memberUserId, id, ex.getClass().getSimpleName());
+                }
             }
         }
         return supportRequestMapper.toDto(saved != null ? saved : request);
@@ -330,7 +343,8 @@ public class SupportRequestService {
         }
 
         // Tiện ích 1 bước: khi nhân viên trả lời một phiếu đang mở, tự động chuyển sang in_progress
-        // và tự gán nếu chưa có người xử lý, để nhân viên không phải PATCH trạng thái riêng trước.
+        // và tự gán nếu chưa có người xử lý; khi hội viên phản hồi vào phiếu resolved, tự mở lại in_progress
+        // và xóa resolvedAt để job closeStaleResolved() không tự đóng phiếu đang trao đổi tiếp.
         if (staff) {
             boolean updatedTicket = false;
             if ("open".equalsIgnoreCase(request.getStatus())) {
@@ -344,6 +358,10 @@ public class SupportRequestService {
             if (updatedTicket) {
                 supportRequestRepository.save(request);
             }
+        } else if ("resolved".equalsIgnoreCase(request.getStatus())) {
+            request.setStatus("in_progress");
+            request.setResolvedAt(null);
+            supportRequestRepository.save(request);
         }
 
         SupportRequestMessage message = new SupportRequestMessage(request, sender, dto.message().trim());
@@ -352,7 +370,7 @@ public class SupportRequestService {
                 ? supportRequestMessageRepository.save(message)
                 : message;
 
-        // Tự động gửi thông báo trong ứng dụng cho phía đối diện.
+        // Tự động gửi thông báo trong ứng dụng cho phía đối diện (không để lỗi gửi thông báo rollback tin nhắn).
         if (notificationService != null) {
             String senderName = sender.getFullName() != null && !sender.getFullName().isBlank()
                     ? sender.getFullName()
@@ -366,17 +384,34 @@ public class SupportRequestService {
 
             Long targetRequestId = request.getId() != null ? request.getId() : requestId;
             if (staff) {
-                // Nếu nhân viên trả lời, thông báo cho hội viên (tài khoản đã xóa không có hộp thư để thông
-                // báo).
+                // Nếu nhân viên trả lời, thông báo cho hội viên (tài khoản đã xóa không có hộp thư để thông báo).
                 if (memberUserId != null && memberReachable(request)) {
-                    notificationService.send(memberUserId, title, body, "support_reply", "support_request", targetRequestId);
+                    try {
+                        notificationService.send(memberUserId, title, body, "support_reply", "support_request", targetRequestId);
+                    } catch (RuntimeException ex) {
+                        log.warn("Could not notify member {} for support request {} message: {}",
+                                memberUserId, targetRequestId, ex.getClass().getSimpleName());
+                    }
                 }
             } else {
-                // Nếu hội viên gửi tin nhắn, thông báo cho người xử lý được gán (nếu có).
-                if (request.getAssignedTo() != null && request.getAssignedTo().getId() != null) {
-                    notificationService.send(request.getAssignedTo().getId(), title, body, "support_reply", "support_request", targetRequestId);
+                // Nếu hội viên gửi tin nhắn, báo người phụ trách nếu còn active và chưa xóa mềm;
+                // ngược lại fallback sang danh sách nhân viên phụ trách cấp hiện tại.
+                User assignee = request.getAssignedTo();
+                boolean assigneeReachable = assignee != null
+                        && assignee.getId() != null
+                        && assignee.getDeletedAt() == null
+                        && "active".equalsIgnoreCase(assignee.getStatus());
+                if (assigneeReachable) {
+                    try {
+                        notificationService.send(assignee.getId(), title, body, "support_reply", "support_request", targetRequestId);
+                    } catch (RuntimeException ex) {
+                        log.warn("Could not notify assigned staff {} for support request {}: {}",
+                                assignee.getId(), targetRequestId, ex.getClass().getSimpleName());
+                        notifyStaff(request.isEscalated() ? MANAGER : RECEPTIONIST,
+                                "notifications.support.new_message.title", "notifications.support.new_message.body",
+                                targetRequestId, senderName, request.getSubject());
+                    }
                 } else {
-                    // Chưa gán: báo cho người đang xử lý, lễ tân trước và quản lý khi đã chuyển lên.
                     notifyStaff(request.isEscalated() ? MANAGER : RECEPTIONIST,
                             "notifications.support.new_message.title", "notifications.support.new_message.body",
                             targetRequestId, senderName, request.getSubject());
@@ -440,6 +475,9 @@ public class SupportRequestService {
      * là hội viên hoặc nhân viên hỗ trợ.
      */
     public User requireActor(Long actorId, String role) {
+        if (actorId == null || role == null) {
+            throw new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null);
+        }
         User actor = userRepository.findByIdAndDeletedAtIsNull(actorId)
                 .orElseThrow(() -> new ForbiddenException("FORBIDDEN", "support.message.forbidden", null, null));
         if (!"active".equalsIgnoreCase(actor.getStatus()) || actor.getRole() == null
@@ -548,10 +586,15 @@ public class SupportRequestService {
                 id, result.getSubject());
         if (notificationService != null && result.getMember() != null && result.getMember().getUserId() != null
                 && memberReachable(result)) {
-            notificationService.send(result.getMember().getUserId(),
-                    text("notifications.support.escalated_member.title"),
-                    text("notifications.support.escalated_member.body", result.getSubject()),
-                    "support_reply", "support_request", id);
+            try {
+                notificationService.send(result.getMember().getUserId(),
+                        text("notifications.support.escalated_member.title"),
+                        text("notifications.support.escalated_member.body", result.getSubject()),
+                        "support_reply", "support_request", id);
+            } catch (RuntimeException ex) {
+                log.warn("Could not notify member {} about support request {} escalation: {}",
+                        result.getMember().getUserId(), id, ex.getClass().getSimpleName());
+            }
         }
         return supportRequestMapper.toDto(result);
     }
@@ -583,8 +626,13 @@ public class SupportRequestService {
                     ? isManager(user.getRole() != null ? user.getRole().getCode() : null)
                     : isReceptionist(user.getRole() != null ? user.getRole().getCode() : null);
             if (user.getId() != null && user.getRole() != null && match) {
-                notificationService.send(user.getId(), text(titleKey), text(bodyKey, bodyArgs),
-                        "support_reply", "support_request", requestId);
+                try {
+                    notificationService.send(user.getId(), text(titleKey), text(bodyKey, bodyArgs),
+                            "support_reply", "support_request", requestId);
+                } catch (RuntimeException ex) {
+                    log.warn("Could not notify staff {} for support request {}: {}",
+                            user.getId(), requestId, ex.getClass().getSimpleName());
+                }
             }
         }
     }

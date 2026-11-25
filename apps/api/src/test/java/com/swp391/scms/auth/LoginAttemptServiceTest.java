@@ -127,4 +127,21 @@ class LoginAttemptServiceTest {
         service.loginSucceeded("USER@GMAIL.COM");
         assertEquals(5, service.getRemainingAttempts("user@gmail.com"));
     }
+
+    /** Kiểm thử P2-BE-01: map theo dõi bị giới hạn kích thước tối đa và tự dọn bản ghi hết hạn để chống OOM. */
+    @Test
+    @DisplayName("Tracked identifiers stay bounded and expired records are evicted")
+    void trackedIdentifiersStayBoundedAndExpiredRecordsEvicted() {
+        LoginAttemptService bounded = new LoginAttemptService(clock, 10);
+        for (int i = 0; i < 25; i++) {
+            bounded.recordFailure("random-user-" + i);
+            clock.advanceSeconds(1);
+        }
+        assertTrue(bounded.trackedCount() <= 10, "expected <= 10 entries, got " + bounded.trackedCount());
+
+        // Sau cửa sổ 10 phút không hoạt động, các bản ghi chưa khóa hết hạn và trả đủ 5 lượt thử.
+        clock.advanceSeconds(601);
+        assertEquals(5, bounded.getRemainingAttempts("random-user-24"));
+        assertFalse(bounded.isBlocked("random-user-24"));
+    }
 }

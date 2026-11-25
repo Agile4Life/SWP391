@@ -73,4 +73,48 @@ public interface ChatContactRepository extends Repository<User, Long> {
             + "or lower(u.email) like lower(concat('%', :query, '%')))")
     /** Danh bạ của lễ tân: mọi hội viên active, tìm theo tên hoặc email, có phân trang. */
     Page<User> searchMembers(@Param("query") String query, Pageable page);
+
+    /**
+     * Danh bạ của HLV: chỉ các hội viên active mà HLV hiện đang phụ trách (giáo án còn hạn, buổi PT 1:1 sắp tới,
+     * lớp học nhóm hoặc buổi học đã đặt), lọc theo tên, email hoặc mã hội viên và phân trang trực tiếp tại DB.
+     */
+    @Query(value = """
+            select u from User u join fetch u.role r
+            where u.deletedAt is null and u.status = 'active' and r.code = 'MEMBER'
+            and (lower(u.fullName) like lower(concat('%', :query, '%'))
+              or lower(u.email) like lower(concat('%', :query, '%'))
+              or exists (select m.userId from Member m where m.userId = u.id
+                and lower(m.membershipCode) like lower(concat('%', :query, '%'))))
+            and (
+              exists (select p.id from TrainingPlan p where p.member.userId = u.id and p.coach.userId = :coachId
+                and p.status in ('active', 'draft') and p.endDate >= :today)
+              or exists (select cb.id from CoachBooking cb where cb.member.userId = u.id and cb.coach.userId = :coachId
+                and cb.status = 'confirmed' and cb.bookingDate >= :today)
+              or exists (select e.id from ClassEnrollment e where e.member.userId = u.id and e.gymClass.coach.userId = :coachId
+                and e.status = 'booked' and e.gymClass.status = 'active' and exists (select s.id from ClassSession s where s.gymClass = e.gymClass
+                  and s.status = 'scheduled' and s.sessionDate >= :today))
+              or exists (select b.id from SessionBooking b where b.member.userId = u.id and b.session.gymClass.coach.userId = :coachId
+                and b.status = 'booked' and b.session.gymClass.status = 'active' and b.session.status = 'scheduled' and b.session.sessionDate >= :today))
+            order by u.fullName, u.id
+            """,
+            countQuery = """
+            select count(u) from User u join u.role r
+            where u.deletedAt is null and u.status = 'active' and r.code = 'MEMBER'
+            and (lower(u.fullName) like lower(concat('%', :query, '%'))
+              or lower(u.email) like lower(concat('%', :query, '%'))
+              or exists (select m.userId from Member m where m.userId = u.id
+                and lower(m.membershipCode) like lower(concat('%', :query, '%'))))
+            and (
+              exists (select p.id from TrainingPlan p where p.member.userId = u.id and p.coach.userId = :coachId
+                and p.status in ('active', 'draft') and p.endDate >= :today)
+              or exists (select cb.id from CoachBooking cb where cb.member.userId = u.id and cb.coach.userId = :coachId
+                and cb.status = 'confirmed' and cb.bookingDate >= :today)
+              or exists (select e.id from ClassEnrollment e where e.member.userId = u.id and e.gymClass.coach.userId = :coachId
+                and e.status = 'booked' and e.gymClass.status = 'active' and exists (select s.id from ClassSession s where s.gymClass = e.gymClass
+                  and s.status = 'scheduled' and s.sessionDate >= :today))
+              or exists (select b.id from SessionBooking b where b.member.userId = u.id and b.session.gymClass.coach.userId = :coachId
+                and b.status = 'booked' and b.session.gymClass.status = 'active' and b.session.status = 'scheduled' and b.session.sessionDate >= :today))
+            """)
+    Page<User> searchForCoach(@Param("coachId") Long coachId, @Param("today") java.time.LocalDate today,
+                              @Param("query") String query, Pageable page);
 }

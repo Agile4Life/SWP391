@@ -1,8 +1,10 @@
 package com.swp391.scms.finance.repository;
 
 import com.swp391.scms.finance.entity.Payment;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
@@ -28,6 +30,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Override
     @EntityGraph(attributePaths = {"invoice", "member", "member.user", "receivedBy"})
     Optional<Payment> findById(Long id);
+
+    /** Lấy khoản thu và khóa dòng để ghi (FOR UPDATE), tránh hai luồng cập nhật trạng thái đồng thời. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select p from Payment p where p.id = :id")
+    Optional<Payment> findByIdForUpdate(@Param("id") Long id);
 
     /** Tìm các bản ghi có status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"invoice"})

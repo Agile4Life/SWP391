@@ -1492,54 +1492,56 @@ paths:
   # Staff Profiles (SCRUM-66)
   # ==========================================
   /profile/coach:
-    get:
-      summary: Xem hồ sơ huấn luyện viên đang đăng nhập (COACH)
+    put:
+      summary: Cập nhật chuyên môn/tiểu sử/chứng chỉ huấn luyện viên đang đăng nhập (COACH)
       tags: [Profile]
-      responses:
-        '200': {description: Thành công}
-        '403': {description: Quyền truy cập bị từ chối}
-    patch:
-      summary: Cập nhật chuyên môn/tiểu sử huấn luyện viên đang đăng nhập (COACH)
-      tags: [Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                specialty: {type: string}
+                bio: {type: string}
+                certifications: {type: string}
       responses:
         '200': {description: Cập nhật thành công}
         '403': {description: Quyền truy cập bị từ chối}
 
   /profile/receptionist:
-    get:
-      summary: Xem hồ sơ lễ tân đang đăng nhập (RECEPTIONIST)
+    put:
+      summary: Lễ tân tự cập nhật ca làm việc (RECEPTIONIST)
       tags: [Profile]
-      responses:
-        '200': {description: Thành công}
-        '403': {description: Quyền truy cập bị từ chối}
-    patch:
-      summary: Cập nhật thông tin lễ tân đang đăng nhập (RECEPTIONIST)
-      tags: [Profile]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shift: {type: string}
       responses:
         '200': {description: Cập nhật thành công}
         '403': {description: Quyền truy cập bị từ chối}
 
   /users/{id}/receptionist:
-    get:
-      summary: Quản lý xem hồ sơ lễ tân theo ID (CENTER_MANAGER)
-      tags: [Users]
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: integer, format: int64}
-      responses:
-        '200': {description: Thành công}
-        '403': {description: Quyền truy cập bị từ chối}
-        '404': {description: Không tìm thấy lễ tân}
     put:
-      summary: Quản lý cập nhật ca trực/quầy phụ trách của lễ tân (CENTER_MANAGER)
+      summary: Quản trị viên cập nhật ca trực/hồ sơ lễ tân theo ID (ADMIN)
       tags: [Users]
       parameters:
         - name: id
           in: path
           required: true
           schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                shift: {type: string}
       responses:
         '200': {description: Cập nhật thành công}
         '403': {description: Quyền truy cập bị từ chối}

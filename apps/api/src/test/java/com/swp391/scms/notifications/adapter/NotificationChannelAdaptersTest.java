@@ -224,5 +224,37 @@ class NotificationChannelAdaptersTest {
 
         server.verify();
     }
+
+    /** Kiểm thử P1-BE-51: CTA email mặc định trỏ /portal, chuẩn hóa order/wallet về payment và tôn trọng actionPath hợp lệ. */
+    @Test
+    @DisplayName("P1-BE-51: SolEmailTemplateRenderer defaults to /portal, normalizes order/wallet, and honors safe actionPath")
+    void emailRenderer_ResolvesCtaSafelyForRolesAndTypes() {
+        NotificationPayload unknown = NotificationPayload.builder()
+                .userId(1L).title("Thông báo").message("Nội dung").type("system").build();
+        String defaultHtml = SolEmailTemplateRenderer.renderNotificationHtml(unknown, "An", "https://scms.bluesymphony.site");
+        assertThat(defaultHtml).contains("https://scms.bluesymphony.site/portal");
+        assertThat(defaultHtml).doesNotContain("https://scms.bluesymphony.site/member\"");
+
+        NotificationPayload order = NotificationPayload.builder()
+                .userId(1L).title("Thanh toán").message("Đã xác nhận").type("order").build();
+        String orderHtml = SolEmailTemplateRenderer.renderNotificationHtml(order, "An", "https://scms.bluesymphony.site");
+        assertThat(orderHtml).contains("Xem giao dịch");
+        assertThat(orderHtml).contains("https://scms.bluesymphony.site/member/invoices");
+
+        NotificationPayload coachSchedule = NotificationPayload.builder()
+                .userId(2L).title("Đổi lịch dạy").message("Lớp đổi giờ").type("schedule_change")
+                .actionPath("/coach/classes").build();
+        String coachHtml = SolEmailTemplateRenderer.renderNotificationHtml(coachSchedule, "HLV Minh", "https://scms.bluesymphony.site");
+        assertThat(coachHtml).contains("Xem lịch tập");
+        assertThat(coachHtml).contains("https://scms.bluesymphony.site/coach/classes");
+        assertThat(coachHtml).doesNotContain("/member/classes");
+
+        NotificationPayload unsafeAction = NotificationPayload.builder()
+                .userId(2L).title("Cảnh báo").message("Test").type("system")
+                .actionPath("https://evil.example/phish").build();
+        String safeHtml = SolEmailTemplateRenderer.renderNotificationHtml(unsafeAction, "An", "https://scms.bluesymphony.site");
+        assertThat(safeHtml).contains("https://scms.bluesymphony.site/portal");
+        assertThat(safeHtml).doesNotContain("evil.example");
+    }
 }
 

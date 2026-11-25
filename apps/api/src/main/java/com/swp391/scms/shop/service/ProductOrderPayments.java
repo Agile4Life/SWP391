@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Xử lý thanh toán online cho đơn shop: kiểm tra đơn còn thanh toán được và đánh dấu đã thanh toán khi cổng báo
  * về.
  */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 @Transactional
 public class ProductOrderPayments {
@@ -54,8 +56,9 @@ public class ProductOrderPayments {
 
     /**
      * Khóa và trả về đơn còn thanh toán online được (chờ thanh toán, không phải tại quầy, chưa quá hạn); ngược
-     * lại báo lỗi.
+     * lại báo lỗi. Không đánh dấu rollback khi ném {@link ConflictException} để luồng IPN có thể hoàn ví.
      */
+    @Transactional(noRollbackFor = ConflictException.class)
     public ProductOrder requirePayable(Long orderId) {
         if (orderId == null) {
             throw unavailable();
@@ -112,6 +115,16 @@ public class ProductOrderPayments {
         }
         // Thanh toán tại quầy do nhân viên thu ở quầy, nên thông báo "đơn mới" chỉ dành cho thanh toán online.
         if (notifications != null && users != null && !"counter".equalsIgnoreCase(order.getPaymentMethod())) {
+            String memberName = (order.getMember() != null && order.getMember().getUser() != null
+                    && order.getMember().getUser().getFullName() != null
+                    && !order.getMember().getUser().getFullName().isBlank())
+                    ? order.getMember().getUser().getFullName()
+                    : (order.getMember() != null && order.getMember().getUserId() != null
+                            ? "#" + order.getMember().getUserId() : "");
+            String orderCode = order.getCode() != null ? order.getCode() : ("#" + order.getId());
+            String totalAmount = order.getTotal() != null ? order.getTotal().toPlainString() : "0";
+            String fulfillment = (order.getFulfillment() != null && !order.getFulfillment().isBlank())
+                    ? order.getFulfillment() : "-";
             List<User> staffList = users.findActiveStaffUsers();
             if (staffList != null) {
                 for (User staff : staffList) {
@@ -119,8 +132,8 @@ public class ProductOrderPayments {
                             && (staff.getStatus() == null || "active".equalsIgnoreCase(staff.getStatus()))) {
                         notifications.send(
                                 staff.getId(),
-                                msg("notifications.shop.staff_new_order.title", order.getCode()),
-                                msg("notifications.shop.staff_new_order.body", order.getCode()),
+                                msg("notifications.shop.staff_new_order.title", orderCode),
+                                msg("notifications.shop.staff_new_order.body", memberName, orderCode, totalAmount, fulfillment),
                                 "order",
                                 "product_order",
                                 order.getId(),

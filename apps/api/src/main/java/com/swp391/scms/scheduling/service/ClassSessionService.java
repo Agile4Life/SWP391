@@ -94,6 +94,14 @@ public class ClassSessionService {
                     "This class session has already been cancelled"
             );
         }
+        if (!"scheduled".equalsIgnoreCase(session.getStatus())) {
+            throw new ConflictException(
+                    "SCHEDULING_SESSION_NOT_SCHEDULED",
+                    "error.scheduling.session_not_bookable",
+                    null,
+                    "Only a scheduled class session can be cancelled"
+            );
+        }
 
         validateCancellationPermission(session, principal);
 

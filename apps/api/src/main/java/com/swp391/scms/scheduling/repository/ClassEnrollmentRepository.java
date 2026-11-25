@@ -136,6 +136,27 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 
+    /**
+     * Đếm tổng số credit miễn phí đã dùng trong khoảng hạn mức: gồm các lượt đang {@code booked}, đã hoàn thành
+     * {@code completed}, và các lượt {@code cancelled} bị mất lượt ({@code creditForfeited = true}); loại trừ
+     * các lượt đã trả học phí hoặc đang chờ thanh toán.
+     */
+    @org.springframework.data.jpa.repository.Query("""
+            select count(e) from ClassEnrollment e
+            where e.member.userId = :memberId
+              and (e.status in ('booked', 'completed')
+                   or (e.status = 'cancelled' and e.creditForfeited = true))
+              and coalesce(e.gymClass.startDate, cast(e.enrolledAt as date)) between :startDate and :endDate
+              and not exists (
+                select 1 from Payment p
+                where p.classEnrollmentId = e.id and p.status in ('pending', 'success')
+              )
+            """)
+    long countUsedFreeCreditsBetween(
+            @org.springframework.data.repository.query.Param("memberId") Long memberId,
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+
     /** Ghi danh khóa học hoàn thành khi mọi buổi chưa hủy của lớp đã diễn ra trước {@code cutoff}. */
     @org.springframework.data.jpa.repository.Modifying
     @Query("""

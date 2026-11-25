@@ -1,8 +1,11 @@
 package com.swp391.scms.operations.service;
 
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.operations.dto.StaffInternalRequestCreateDto;
 import com.swp391.scms.operations.dto.StaffInternalRequestDto;
@@ -11,14 +14,21 @@ import com.swp391.scms.operations.entity.StaffInternalRequest;
 import com.swp391.scms.operations.repository.StaffInternalRequestRepository;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.swp391.scms.common.i18n.MessageService;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -28,16 +38,31 @@ import java.util.Set;
 @Service
 public class StaffInternalRequestService {
 
+    private static final Logger log = LoggerFactory.getLogger(StaffInternalRequestService.class);
+
     private static final Set<String> VALID_TYPES = Set.of(
             "LEAVE", "SHIFT_EXCHANGE", "SCHEDULE_CHANGE", "OTHER"
     );
+    private static final long MAX_LEAVE_SPAN_DAYS = 90L;
+    private static final int MAX_TITLE_LENGTH = 200;
+    private static final int MAX_TARGET_SHIFT_LENGTH = 100;
+    private static final int MAX_TEXT_LENGTH = 2000;
+    private static final int MAX_LIST_RESULTS = 200;
+    private static final String COACH_ASSIGNMENTS_PATH = "/manager/coach-assignments";
+
+    private record LeaveImpact(long classSessions, long ptSessions) {
+        static final LeaveImpact NONE = new LeaveImpact(0L, 0L);
+
+        boolean hasConflicts() {
+            return classSessions > 0 || ptSessions > 0;
+        }
+    }
 
     private final StaffInternalRequestRepository requestRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final MessageService messageService;
-
-    private static final Set<String> REPLACEMENT_ROLES = Set.of("COACH", "RECEPTIONIST");
+    private Clock clock = Clock.system(CenterTime.ZONE);
 
     @Autowired(required = false)
     private com.swp391.scms.scheduling.repository.ClassSessionRepository classSessionRepository;
@@ -62,7 +87,8 @@ public class StaffInternalRequestService {
     @Autowired
     public StaffInternalRequestService(StaffInternalRequestRepository requestRepository,
                                        UserRepository userRepository,
-                                       @Autowired(required = false) NotificationService notificationService, MessageService messageService) {
+                                       @Autowired(required = false) NotificationService notificationService,
+                                       @Autowired(required = false) MessageService messageService) {
         this.requestRepository = requestRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
@@ -70,18 +96,42 @@ public class StaffInternalRequestService {
     }
 
     /**
-     * Tạo đơn: loại đơn phải hợp lệ, ngày kết thúc không trước ngày bắt đầu, đơn nghỉ bắt buộc có ngày. Đơn
-     * nghỉ trùng ngày với đơn khác thì báo trước, chỉ gửi khi người dùng xác nhận. Người thay ca phải là nhân
-     * viên khác đang hoạt động có vai trò phù hợp. Lưu đơn ở trạng thái PENDING và báo cho mọi quản lý.
+     * Tạo đơn: loại đơn phải hợp lệ, không được gửi ngày quá khứ hay endDate mồ côi, khoảng nghỉ tối đa 90 ngày,
+     * đơn nghỉ bắt buộc có ngày bắt đầu và kết thúc. Đơn nghỉ trùng ngày với đơn khác thì báo trước, chỉ gửi khi
+     * người dùng xác nhận. Người thay ca phải là nhân viên khác đang hoạt động cùng nhóm vai trò chức năng và
+     * không đang nghỉ phép đã duyệt trong khoảng ngày đó. Lưu đơn ở trạng thái PENDING và báo cho mọi quản lý.
      */
     @Transactional
     public StaffInternalRequestDto createRequest(Long userId, StaffInternalRequestCreateDto requestDto) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
 
-        String type = requestDto.requestType().toUpperCase().trim();
+        String type = requestDto.requestType().trim().toUpperCase(Locale.ROOT);
         if (!VALID_TYPES.contains(type)) {
             throw new BadRequestException("INVALID_REQUEST_TYPE", "error.operations.request.invalid_type", null, "Loại đơn từ không hợp lệ.");
+        }
+
+        String title = requestDto.title().trim();
+        String reason = requestDto.reason().trim();
+        String targetShift = requestDto.targetShift() != null && !requestDto.targetShift().isBlank()
+                ? requestDto.targetShift().trim() : null;
+
+        if (title.length() > MAX_TITLE_LENGTH) {
+            throw new BadRequestException("TITLE_TOO_LONG", "error.invalid_parameter", null,
+                    "Title must not exceed " + MAX_TITLE_LENGTH + " characters.");
+        }
+        if (reason.length() > MAX_TEXT_LENGTH) {
+            throw new BadRequestException("REASON_TOO_LONG", "validation.support.message.size", null,
+                    "Reason must not exceed " + MAX_TEXT_LENGTH + " characters.");
+        }
+        if (targetShift != null && targetShift.length() > MAX_TARGET_SHIFT_LENGTH) {
+            throw new BadRequestException("TARGET_SHIFT_TOO_LONG", "error.invalid_parameter", null,
+                    "Target shift must not exceed " + MAX_TARGET_SHIFT_LENGTH + " characters.");
+        }
+
+        if (requestDto.startDate() == null && requestDto.endDate() != null) {
+            throw new BadRequestException("INVALID_DATE_RANGE", "error.operations.request.invalid_date_range", null,
+                    "Start date is required when end date is provided.");
         }
 
         if (requestDto.startDate() != null && requestDto.endDate() != null
@@ -89,8 +139,20 @@ public class StaffInternalRequestService {
             throw new BadRequestException("INVALID_DATE_RANGE", "error.operations.request.invalid_date_range", null, "End date must not precede start date.");
         }
 
+        LocalDate today = LocalDate.now(clock.withZone(CenterTime.ZONE));
+        if (requestDto.startDate() != null && requestDto.startDate().isBefore(today)) {
+            throw new BadRequestException("PAST_DATE_NOT_ALLOWED", "validation.scheduling.session_date.future_or_present", null,
+                    "Start date cannot be in the past.");
+        }
+
         if ("LEAVE".equals(type) && (requestDto.startDate() == null || requestDto.endDate() == null)) {
             throw new BadRequestException("LEAVE_DATES_REQUIRED", "error.operations.request.leave_dates_required", null, "A leave request needs its start and end dates.");
+        }
+
+        if (requestDto.startDate() != null && requestDto.endDate() != null
+                && ChronoUnit.DAYS.between(requestDto.startDate(), requestDto.endDate()) > MAX_LEAVE_SPAN_DAYS) {
+            throw new BadRequestException("LEAVE_SPAN_TOO_LONG", "error.operations.request.invalid_date_range", null,
+                    "Request date span cannot exceed " + MAX_LEAVE_SPAN_DAYS + " days.");
         }
 
         // Đơn nghỉ thứ hai vào những ngày đã xin thường là nhầm: cảnh báo trước, chỉ gửi khi người dùng xác
@@ -99,9 +161,9 @@ public class StaffInternalRequestService {
             List<StaffInternalRequest> overlaps = requestRepository.findOverlappingLeaves(userId, requestDto.startDate(), requestDto.endDate());
             if (!overlaps.isEmpty()) {
                 StaffInternalRequest first = overlaps.get(0);
-                var dmy = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                var dmy = DateTimeFormatter.ofPattern("dd/MM/yyyy");
                 LocalDate end = first.getEndDate() != null ? first.getEndDate() : first.getStartDate();
-                throw new com.swp391.scms.common.exception.ConflictException("LEAVE_OVERLAP",
+                throw new ConflictException("LEAVE_OVERLAP",
                         "APPROVED".equals(first.getStatus()) ? "error.operations.request.leave_overlap_approved"
                                 : "error.operations.request.leave_overlap_pending",
                         new Object[]{first.getStartDate().format(dmy), end.format(dmy)},
@@ -109,62 +171,76 @@ public class StaffInternalRequestService {
             }
         }
 
-        // Người thay thế phải là nhân viên đang hoạt động khác, có thể thực sự phủ ca.
+        // Người thay thế phải là nhân viên đang hoạt động khác, cùng nhóm vai trò chức năng và không đang nghỉ phép đã duyệt.
         User replacement = null;
         if (requestDto.replacementUserId() != null) {
+            String requesterGroup = functionalRoleGroup(user);
             replacement = userRepository.findByIdAndDeletedAtIsNull(requestDto.replacementUserId())
                     .filter(candidate -> !candidate.getId().equals(userId)
                             && "active".equalsIgnoreCase(candidate.getStatus())
-                            && candidate.getRole() != null
-                            && REPLACEMENT_ROLES.contains(candidate.getRole().getCode().toUpperCase(java.util.Locale.ROOT)))
-                    .orElseThrow(() -> new BadRequestException("INVALID_REPLACEMENT", "error.operations.request.invalid_replacement", null, "Choose another active staff member."));
+                            && requesterGroup != null
+                            && requesterGroup.equals(functionalRoleGroup(candidate)))
+                    .orElseThrow(() -> new BadRequestException("INVALID_REPLACEMENT", "error.operations.request.invalid_replacement", null, "Choose another active staff member in the same role group."));
+
+            if (requestDto.startDate() != null) {
+                LocalDate rangeEnd = requestDto.endDate() != null ? requestDto.endDate() : requestDto.startDate();
+                if (requestRepository.existsApprovedLeaveOverlapping(replacement.getId(), requestDto.startDate(), rangeEnd)) {
+                    throw new BadRequestException("INVALID_REPLACEMENT", "error.operations.request.invalid_replacement", null,
+                            "Replacement staff member is on approved leave during the requested dates.");
+                }
+            }
         }
 
         StaffInternalRequest req = new StaffInternalRequest();
         req.setUser(user);
         req.setRequestType(type);
-        req.setTitle(requestDto.title().trim());
-        req.setReason(requestDto.reason().trim());
+        req.setTitle(title);
+        req.setReason(reason);
         req.setStartDate(requestDto.startDate());
         req.setEndDate(requestDto.endDate());
-        req.setTargetShift(requestDto.targetShift() != null && !requestDto.targetShift().isBlank() ? requestDto.targetShift().trim() : null);
+        req.setTargetShift(targetShift);
         req.setReplacementUser(replacement);
         req.setStatus("PENDING");
-        req.setCreatedAt(LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE));
+        req.setCreatedAt(LocalDateTime.now(clock.withZone(CenterTime.ZONE)));
 
         StaffInternalRequest saved = requestRepository.save(req);
 
         // Thông báo cho quản lý về yêu cầu mới.
         if (notificationService != null) {
             List<User> managers = userRepository.findActiveManagers().stream()
-                    .filter(u -> u.getRole() != null && 
+                    .filter(u -> u.getRole() != null &&
                             ("MANAGER".equalsIgnoreCase(u.getRole().getCode()) || "CENTER_MANAGER".equalsIgnoreCase(u.getRole().getCode())))
                     .toList();
             for (User mgr : managers) {
                 String roleCode = user.getRole() != null ? user.getRole().getCode() : "STAFF";
-                notificationService.send(
-                        mgr.getId(),
-                        msg("notifications.operations.created.title"),
-                        msg("notifications.operations.created.body", user.getFullName(), roleCode, type, saved.getTitle()),
-                        "system",
-                        null,
-                        saved.getId(),
-                        "/manager/requests"
-                );
+                try {
+                    notificationService.send(
+                            mgr.getId(),
+                            msg("notifications.operations.created.title"),
+                            msg("notifications.operations.created.body", user.getFullName(), roleCode, type, saved.getTitle()),
+                            "system",
+                            null,
+                            saved.getId(),
+                            "/manager/requests"
+                    );
+                } catch (ResourceNotFoundException ex) {
+                    log.warn("Skipping manager notification for missing or deleted manager {}", mgr.getId());
+                }
             }
         }
 
         return mapToDto(saved);
     }
 
-    /** Các đơn của một nhân viên, lọc theo trạng thái (ALL hoặc trống là tất cả), mới nhất trước. */
+    /** Các đơn của một nhân viên, lọc theo trạng thái (ALL hoặc trống là tất cả), giới hạn tối đa 200 đơn mới nhất. */
     @Transactional(readOnly = true)
     public List<StaffInternalRequestDto> getMyRequests(Long userId, String status) {
+        var limit = PageRequest.of(0, MAX_LIST_RESULTS);
         List<StaffInternalRequest> list;
         if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status.trim())) {
-            list = requestRepository.findByUserIdAndStatusOrderByCreatedAtDesc(userId, status.toUpperCase().trim());
+            list = requestRepository.findByUserIdAndStatusOrderByCreatedAtDesc(userId, status.trim().toUpperCase(Locale.ROOT), limit);
         } else {
-            list = requestRepository.findByUserIdOrderByCreatedAtDesc(userId);
+            list = requestRepository.findByUserIdOrderByCreatedAtDesc(userId, limit);
         }
         return list.stream().map(this::mapToDto).toList();
     }
@@ -184,81 +260,148 @@ public class StaffInternalRequestService {
         }
 
         req.setStatus("CANCELLED");
-        req.setUpdatedAt(LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE));
+        req.setUpdatedAt(LocalDateTime.now(clock.withZone(CenterTime.ZONE)));
         StaffInternalRequest updated = requestRepository.save(req);
         return mapToDto(updated);
     }
 
-    /** Mọi đơn cho quản lý, lọc theo trạng thái và loại (ALL hoặc trống là bỏ qua). */
+    /** Mọi đơn cho quản lý, lọc theo trạng thái và loại (ALL hoặc trống là bỏ qua), tối đa 200 đơn mới nhất. */
     @Transactional(readOnly = true)
     public List<StaffInternalRequestDto> getAllRequests(String status, String requestType) {
-        String cleanStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status.trim())) ? status.toUpperCase().trim() : null;
-        String cleanType = (requestType != null && !requestType.isBlank() && !"ALL".equalsIgnoreCase(requestType.trim())) ? requestType.toUpperCase().trim() : null;
-        return requestRepository.findWithFilters(cleanStatus, cleanType).stream()
+        String cleanStatus = (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status.trim()))
+                ? status.trim().toUpperCase(Locale.ROOT) : null;
+        String cleanType = (requestType != null && !requestType.isBlank() && !"ALL".equalsIgnoreCase(requestType.trim()))
+                ? requestType.trim().toUpperCase(Locale.ROOT) : null;
+        return requestRepository.findWithFilters(cleanStatus, cleanType, PageRequest.of(0, MAX_LIST_RESULTS)).stream()
                 .map(this::mapToDto)
                 .toList();
     }
 
     /**
-     * Quản lý duyệt hoặc từ chối đơn đang chờ (từ chối phải có ghi chú); lưu người và thời điểm duyệt. Duyệt
-     * đơn nghỉ thì báo cho quản lý số lớp/buổi PT bị ảnh hưởng. Gửi thông báo kết quả cho người gửi.
+     * Quản lý duyệt hoặc từ chối đơn đang chờ (chặn tự duyệt, từ chối phải có ghi chú); lưu người và thời điểm
+     * duyệt. Duyệt đơn nghỉ thì kiểm tra chồng chéo đơn đã duyệt, báo cho quản lý số lớp/buổi PT bị ảnh hưởng kèm
+     * đường dẫn xử lý. Gửi thông báo kết quả cho người gửi nếu tài khoản chưa bị xóa mềm.
      */
     @Transactional
     public StaffInternalRequestDto reviewRequest(Long managerUserId, Long requestId, StaffInternalRequestReviewDto reviewDto) {
         StaffInternalRequest req = requestRepository.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.staff_internal_request", requestId));
 
+        if (req.getUser() != null && Objects.equals(req.getUser().getId(), managerUserId)) {
+            throw new ForbiddenException("SELF_REVIEW_FORBIDDEN", "error.forbidden", null,
+                    "Bạn không thể tự phê duyệt đơn từ của chính mình.");
+        }
+
         if (!"PENDING".equalsIgnoreCase(req.getStatus())) {
             throw new BadRequestException("ALREADY_REVIEWED", "error.operations.request.already_reviewed", null, "Đơn từ này đã được xử lý trước đó.");
         }
 
-        String newStatus = reviewDto.status().toUpperCase().trim();
+        String newStatus = reviewDto.status().trim().toUpperCase(Locale.ROOT);
         if (!"APPROVED".equals(newStatus) && !"REJECTED".equals(newStatus)) {
             throw new BadRequestException("INVALID_STATUS", "error.operations.request.invalid_status", null, "Trạng thái phê duyệt chỉ có thể là APPROVED hoặc REJECTED.");
         }
 
-        if ("REJECTED".equals(newStatus) && (reviewDto.managerNotes() == null || reviewDto.managerNotes().isBlank())) {
+        String trimmedNotes = reviewDto.managerNotes() != null ? reviewDto.managerNotes().trim() : null;
+        if (trimmedNotes != null && trimmedNotes.length() > MAX_TEXT_LENGTH) {
+            throw new BadRequestException("MANAGER_NOTES_TOO_LONG", "validation.support.message.size", null,
+                    "Manager notes must not exceed " + MAX_TEXT_LENGTH + " characters.");
+        }
+
+        if ("REJECTED".equals(newStatus) && (trimmedNotes == null || trimmedNotes.isBlank())) {
             throw new BadRequestException("REJECTION_REASON_REQUIRED", "error.operations.request.rejection_reason_required", null, "Vui lòng nhập lý do từ chối đơn.");
         }
 
-        User manager = userRepository.findById(managerUserId)
+        User manager = userRepository.findByIdAndDeletedAtIsNull(managerUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", managerUserId));
 
+        LeaveImpact impact = LeaveImpact.NONE;
+        if ("APPROVED".equals(newStatus) && "LEAVE".equals(req.getRequestType()) && req.getStartDate() != null) {
+            LocalDate leaveEnd = req.getEndDate() != null ? req.getEndDate() : req.getStartDate();
+            if (req.getUser() != null) {
+                List<StaffInternalRequest> existingApproved = requestRepository.findApprovedOverlappingLeavesForUpdate(
+                        req.getUser().getId(), req.getId(), req.getStartDate(), leaveEnd);
+                if (existingApproved != null && !existingApproved.isEmpty()) {
+                    StaffInternalRequest first = existingApproved.get(0);
+                    var dmy = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+                    LocalDate existingEnd = first.getEndDate() != null ? first.getEndDate() : first.getStartDate();
+                    throw new ConflictException("LEAVE_OVERLAP",
+                            "error.operations.request.leave_overlap_approved",
+                            new Object[]{first.getStartDate().format(dmy), existingEnd.format(dmy)},
+                            "Staff already has an approved leave overlapping these dates.");
+                }
+                impact = computeLeaveImpact(req);
+                if (Boolean.FALSE.equals(reviewDto.confirmConflicts()) && impact.hasConflicts()) {
+                    throw new ConflictException("COACH_LEAVE_HAS_CONFLICTS",
+                            "notifications.operations.leave_impact.body",
+                            new Object[]{req.getUser().getFullName(), req.getStartDate(), leaveEnd,
+                                    impact.classSessions(), impact.ptSessions()},
+                            "Coach has scheduled class or PT sessions during this leave period.");
+                }
+            }
+        }
+
         req.setStatus(newStatus);
-        req.setManagerNotes(reviewDto.managerNotes() != null ? reviewDto.managerNotes().trim() : null);
+        req.setManagerNotes(trimmedNotes);
         req.setReviewedBy(manager);
-        LocalDateTime reviewedNow = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
+        LocalDateTime reviewedNow = LocalDateTime.now(clock.withZone(CenterTime.ZONE));
         req.setReviewedAt(reviewedNow);
         req.setUpdatedAt(reviewedNow);
 
         StaffInternalRequest saved = requestRepository.save(req);
 
-        if ("APPROVED".equals(newStatus)) {
-            reportLeaveImpact(saved, manager);
+        if ("APPROVED".equals(newStatus) && impact.hasConflicts()) {
+            reportLeaveImpact(saved, manager, impact);
         }
 
-        // Gửi thông báo trong ứng dụng cho người gửi yêu cầu.
-        if (notificationService != null) {
+        // Gửi thông báo trong ứng dụng cho người gửi yêu cầu (bỏ qua an toàn nếu nhân sự đã bị xóa mềm).
+        if (notificationService != null && saved.getUser() != null && saved.getUser().getDeletedAt() == null) {
             String title = msg("APPROVED".equals(newStatus) ? "notifications.operations.approved.title" : "notifications.operations.rejected.title");
             String message = msg("notifications.operations.reviewed.body", saved.getTitle(),
-                    manager.getFullName(), msg("operations.status." + newStatus.toLowerCase(java.util.Locale.ROOT)),
+                    manager.getFullName(), msg("operations.status." + newStatus.toLowerCase(Locale.ROOT)),
                     saved.getManagerNotes() != null ? saved.getManagerNotes() : "");
 
-            notificationService.send(
-                    saved.getUser().getId(),
-                    title,
-                    message,
-                    "system",
-                    null,
-                    saved.getId()
-            );
+            try {
+                notificationService.send(
+                        saved.getUser().getId(),
+                        title,
+                        message,
+                        "system",
+                        null,
+                        saved.getId()
+                );
+            } catch (ResourceNotFoundException ex) {
+                log.warn("Skipping review notification for missing or deleted staff user {}", saved.getUser().getId());
+            }
         }
 
-        return mapToDto(saved);
+        return mapToDto(saved, impact.classSessions(), impact.ptSessions());
     }
 
-    /** Chuyển đơn sang DTO trả cho client. */
+    /** Nhóm vai trò chức năng hợp lệ cho người thay thế: COACH ↔ COACH, RECEPTIONIST/STAFF ↔ RECEPTIONIST/STAFF. */
+    private static String functionalRoleGroup(User user) {
+        if (user == null || user.getRole() == null || user.getRole().getCode() == null) {
+            return null;
+        }
+        String code = user.getRole().getCode().trim().toUpperCase(Locale.ROOT);
+        if (code.startsWith("ROLE_")) {
+            code = code.substring("ROLE_".length());
+        }
+        return switch (code) {
+            case "COACH" -> "COACH";
+            case "RECEPTIONIST", "STAFF" -> "DESK_STAFF";
+            default -> null;
+        };
+    }
+
+    /** Chuyển đơn sang DTO trả cho client (không có xung đột kèm theo). */
     private StaffInternalRequestDto mapToDto(StaffInternalRequest r) {
+        return mapToDto(r, 0L, 0L);
+    }
+
+    /** Chuyển đơn sang DTO trả cho client kèm số buổi lớp và PT bị ảnh hưởng (nếu có). */
+    private StaffInternalRequestDto mapToDto(StaffInternalRequest r,
+                                             long affectedClassSessionCount,
+                                             long affectedPtSessionCount) {
         return new StaffInternalRequestDto(
                 r.getId(),
                 r.getUser().getId(),
@@ -279,41 +422,52 @@ public class StaffInternalRequestService {
                 r.getReviewedBy() != null ? r.getReviewedBy().getFullName() : null,
                 r.getReviewedAt(),
                 r.getCreatedAt(),
-                r.getUpdatedAt()
+                r.getUpdatedAt(),
+                affectedClassSessionCount,
+                affectedPtSessionCount
         );
     }
+
     /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
-    /**
-     * Khi duyệt đơn nghỉ của HLV: đếm số buổi lớp và buổi PT đã lên lịch trong thời gian nghỉ, nếu có thì báo
-     * cho quản lý để sắp xếp người dạy thay. (Đơn nghỉ đã duyệt cũng chặn đặt PT mới trong thời gian đó.)
-     *
-     * Nghỉ phép HLV đã duyệt chặn các lượt đặt 1:1 mới (xem CoachBookingService); các lớp và buổi đã xếp
-     * trong kỳ nghỉ được báo cho quản lý duyệt để sắp xếp người thay.
-     */
-    private void reportLeaveImpact(StaffInternalRequest leave, User manager) {
-        if (!"LEAVE".equals(leave.getRequestType()) || leave.getStartDate() == null || notificationService == null) {
-            return;
+    /** Đếm số buổi lớp và buổi PT 1:1 bị ảnh hưởng trong thời gian nghỉ phép của nhân sự. */
+    private LeaveImpact computeLeaveImpact(StaffInternalRequest leave) {
+        if (!"LEAVE".equals(leave.getRequestType()) || leave.getStartDate() == null || leave.getUser() == null) {
+            return LeaveImpact.NONE;
         }
-        java.time.LocalDate end = leave.getEndDate() != null ? leave.getEndDate() : leave.getStartDate();
+        LocalDate end = leave.getEndDate() != null ? leave.getEndDate() : leave.getStartDate();
         Long staffId = leave.getUser().getId();
         long classSessions = classSessionRepository != null
-                ? classSessionRepository.countScheduledForCoachBetween(staffId, leave.getStartDate(), end) : 0;
+                ? classSessionRepository.countScheduledForCoachBetween(staffId, leave.getStartDate(), end) : 0L;
         long ptSessions = coachBookingRepository != null
-                ? coachBookingRepository.countConfirmedForCoachBetween(staffId, leave.getStartDate(), end) : 0;
-        if (classSessions == 0 && ptSessions == 0) {
+                ? coachBookingRepository.countConfirmedForCoachBetween(staffId, leave.getStartDate(), end) : 0L;
+        return new LeaveImpact(classSessions, ptSessions);
+    }
+
+    /**
+     * Khi duyệt đơn nghỉ của HLV: báo cho quản lý số buổi lớp và buổi PT bị ảnh hưởng kèm đường dẫn điều hướng
+     * tới màn phân công HLV ({@code /manager/coach-assignments}) để sắp xếp người dạy thay.
+     */
+    private void reportLeaveImpact(StaffInternalRequest leave, User manager, LeaveImpact impact) {
+        if (notificationService == null || !impact.hasConflicts() || leave.getStartDate() == null) {
             return;
         }
-        notificationService.send(
-                manager.getId(),
-                msg("notifications.operations.leave_impact.title"),
-                msg("notifications.operations.leave_impact.body", leave.getUser().getFullName(),
-                        leave.getStartDate(), end, classSessions, ptSessions),
-                "system",
-                null,
-                leave.getId());
+        LocalDate end = leave.getEndDate() != null ? leave.getEndDate() : leave.getStartDate();
+        try {
+            notificationService.send(
+                    manager.getId(),
+                    msg("notifications.operations.leave_impact.title"),
+                    msg("notifications.operations.leave_impact.body", leave.getUser().getFullName(),
+                            leave.getStartDate(), end, impact.classSessions(), impact.ptSessions()),
+                    "system",
+                    null,
+                    leave.getId(),
+                    COACH_ASSIGNMENTS_PATH);
+        } catch (ResourceNotFoundException ex) {
+            log.warn("Skipping leave impact notification for missing or deleted manager {}", manager.getId());
+        }
     }
 }

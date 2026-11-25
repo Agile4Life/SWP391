@@ -2,6 +2,7 @@ package com.swp391.scms.shop.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 /** Danh mục hành chính 2 cấp (sau 01/07/2025) nạp một lần từ resource đóng gói; không gọi dịch vụ ngoài lúc chạy. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 public class GeoService {
     /** Một đơn vị hành chính: mã và tên. */

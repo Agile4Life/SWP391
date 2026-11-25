@@ -144,7 +144,7 @@ public class WalletController {
         String msg = messageService != null
                 ? messageService.getMessage("wallet.get.success")
                 : "Lấy thông tin Ví thành công";
-        return ApiResponse.ok(msg, walletService.getMyWallet(memberId));
+        return ApiResponse.ok(msg, walletService.getMemberWallet(memberId));
     }
 
     /** POST /members/{memberId}/topup: quầy nạp tiền vào ví hội viên. */

@@ -44,6 +44,9 @@ public class AuthService {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9._-]{3,50}$");
+    // Chuỗi băm BCrypt hợp lệ cố định dùng khi không tìm thấy tài khoản để cân bằng thời gian phản hồi (chống dò tài khoản qua timing).
+    static final String DUMMY_BCRYPT_HASH =
+            "$2a$10$7EqJtq98hPqEX7fNZaFWoOHi6Z0o.N6r7J9Y1aZ0k8W6tM3W5Z5yG";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -174,7 +177,13 @@ public class AuthService {
                 ? userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(identifier)
                 : userRepository.findByUsernameIgnoreCaseAndDeletedAtIsNull(identifier))
                 .orElse(null);
-        boolean passwordMatches = user != null && passwordEncoder.matches(request.password(), user.getPasswordHash());
+        boolean passwordMatches;
+        if (user != null) {
+            passwordMatches = passwordEncoder.matches(request.password(), user.getPasswordHash());
+        } else {
+            passwordEncoder.matches(request.password(), DUMMY_BCRYPT_HASH);
+            passwordMatches = false;
+        }
 
         if (!passwordMatches) {
             int remaining = loginAttemptService.recordFailure(identifier);

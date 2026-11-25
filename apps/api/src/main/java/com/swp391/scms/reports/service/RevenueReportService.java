@@ -1,6 +1,7 @@
 package com.swp391.scms.reports.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
@@ -34,6 +35,7 @@ import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -44,6 +46,13 @@ import java.util.stream.Collectors;
 @Service
 @Transactional
 public class RevenueReportService {
+
+    /** Giới hạn tối đa số ngày cho một truy vấn báo cáo doanh thu để chống OOM DoS. */
+    public static final long MAX_RANGE_DAYS = 366L;
+    /** Giới hạn tối đa kích thước payload JSON cho mỗi ảnh chụp báo cáo (256 KiB). */
+    public static final int MAX_SNAPSHOT_DATA_LENGTH = 262_144;
+    /** Giới hạn tối đa số ảnh chụp báo cáo trả về mỗi lần gọi danh sách. */
+    private static final int MAX_SNAPSHOTS_LIST = 100;
 
     /** Khoảng ngày đã kiểm tra hợp lệ (ngày bắt đầu, ngày kết thúc). */
     private record DateRange(LocalDate start, LocalDate end) {}
@@ -96,13 +105,18 @@ public class RevenueReportService {
         this.sessionAttendanceReportRepository = sessionAttendanceReportRepository;
     }
 
-    /** Khoảng ngày mặc định 30 ngày gần nhất; ngày bắt đầu sau ngày kết thúc thì báo 400. */
+    /** Khoảng ngày mặc định 30 ngày gần nhất; ngày bắt đầu sau ngày kết thúc hoặc vượt 366 ngày thì báo 400. */
     private DateRange resolveValidatedDateRange(LocalDate startDate, LocalDate endDate) {
         LocalDate start = startDate != null ? startDate : LocalDate.now(clock).minusDays(30);
         LocalDate end = endDate != null ? endDate : LocalDate.now(clock);
         if (start.isAfter(end)) {
             throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
                     "Start date cannot be after end date");
+        }
+        long inclusiveDays = ChronoUnit.DAYS.between(start, end) + 1;
+        if (inclusiveDays > MAX_RANGE_DAYS) {
+            throw new BadRequestException("DATE_RANGE_TOO_LARGE", "reports.revenue.invalid_date_range", null,
+                    "Date range cannot exceed " + MAX_RANGE_DAYS + " days");
         }
         return new DateRange(start, end);
     }
@@ -132,33 +146,52 @@ public class RevenueReportService {
     }
 
     /**
-     * Doanh thu từng ngày trong khoảng: cộng số tiền thực thu (trừ phần đã hoàn) của các thanh toán thành công,
-     * bỏ qua nạp ví (doanh thu được ghi khi tiền trong ví được tiêu). Ngày không có giao dịch vẫn có dòng 0.
+     * Doanh thu từng ngày trong khoảng: tổng hợp trực tiếp tại DB trên khoảng nửa mở
+     * {@code [start 00:00, (end + 1) 00:00)} để không cắt cụt giây cuối ngày và không nạp ảnh biên lai vào heap.
+     * Bỏ qua nạp ví (doanh thu ghi khi chi tiêu). Ngày không có giao dịch vẫn có dòng 0.
      */
     @Transactional(readOnly = true)
     public List<DailyRevenueDto> getDailyRevenue(LocalDate startDate, LocalDate endDate) {
         DateRange range = resolveValidatedDateRange(startDate, endDate);
         LocalDate start = range.start();
         LocalDate end = range.end();
+        LocalDateTime startTs = start.atStartOfDay();
+        LocalDateTime endExclusive = end.plusDays(1).atStartOfDay();
 
-        List<Payment> payments = paymentRepository.findByStatusAndPaidAtBetween("success",
-                start.atStartOfDay(), end.atTime(23, 59, 59));
-
-        Map<LocalDate, List<Payment>> byDate = payments.stream()
-                .filter(p -> p.getPaidAt() != null)
-                // Nạp tiền vào ví chỉ chuyển tiền vào ví; doanh thu chỉ được ghi nhận khi tiền đó được chi tiêu.
-                .filter(p -> p.getNote() == null || !p.getNote().startsWith("WALLET_TOPUP"))
-                .collect(Collectors.groupingBy(p -> p.getPaidAt().toLocalDate()));
+        Map<LocalDate, DailyRevenueDto> byDate = new HashMap<>();
+        if (transactionReportRepository != null) {
+            List<TransactionReportRepository.DailyRevenueRow> rows =
+                    transactionReportRepository.findDailyRevenue(startTs, endExclusive);
+            if (rows != null) {
+                for (TransactionReportRepository.DailyRevenueRow row : rows) {
+                    if (row.getPaidDate() == null) {
+                        continue;
+                    }
+                    BigDecimal revenue = row.getRevenue() != null ? row.getRevenue() : BigDecimal.ZERO;
+                    int txCount = row.getTransactionCount() != null ? row.getTransactionCount().intValue() : 0;
+                    byDate.put(row.getPaidDate(), new DailyRevenueDto(row.getPaidDate(), revenue, txCount));
+                }
+            }
+        } else if (paymentRepository != null) {
+            List<Payment> payments = paymentRepository.findByStatusAndPaidAtBetween("success",
+                    startTs, endExclusive.minusNanos(1_000));
+            Map<LocalDate, List<Payment>> grouped = payments.stream()
+                    .filter(p -> p.getPaidAt() != null && !p.getPaidAt().isBefore(startTs) && p.getPaidAt().isBefore(endExclusive))
+                    .filter(p -> p.getNote() == null || !p.getNote().startsWith("WALLET_TOPUP"))
+                    .collect(Collectors.groupingBy(p -> p.getPaidAt().toLocalDate()));
+            grouped.forEach((date, list) -> {
+                BigDecimal sum = list.stream()
+                        .map(Payment::netAmount)
+                        .filter(Objects::nonNull)
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+                byDate.put(date, new DailyRevenueDto(date, sum, list.size()));
+            });
+        }
 
         List<DailyRevenueDto> result = new ArrayList<>();
         LocalDate cur = start;
         while (!cur.isAfter(end)) {
-            List<Payment> list = byDate.getOrDefault(cur, Collections.emptyList());
-            BigDecimal sum = list.stream()
-                    .map(Payment::netAmount)
-                    .filter(Objects::nonNull)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            result.add(new DailyRevenueDto(cur, sum, list.size()));
+            result.add(byDate.getOrDefault(cur, new DailyRevenueDto(cur, BigDecimal.ZERO, 0)));
             cur = cur.plusDays(1);
         }
 
@@ -166,15 +199,43 @@ public class RevenueReportService {
     }
 
     /**
-     * Doanh thu theo gói tập: gom các thanh toán thành công gắn với kỳ gói, tính tổng tiền, số lượt và tỷ trọng
-     * % (làm tròn 1 chữ số), sắp theo doanh thu giảm dần.
+     * Doanh thu theo gói tập: tổng hợp trực tiếp tại DB theo gói trong khoảng nửa mở
+     * {@code [start 00:00, (end + 1) 00:00)}, tránh truy vấn 2N+1 và nạp ảnh biên lai; tính tỷ trọng % (làm tròn
+     * 1 chữ số), sắp theo doanh thu giảm dần.
      */
     @Transactional(readOnly = true)
     public List<PackageRevenueDto> getRevenueByPackage(LocalDate startDate, LocalDate endDate) {
         DateRange range = resolveValidatedDateRange(startDate, endDate);
+        LocalDateTime startTs = range.start().atStartOfDay();
+        LocalDateTime endExclusive = range.end().plusDays(1).atStartOfDay();
 
-        List<Payment> payments = paymentRepository.findByStatusAndPaidAtBetween("success",
-                range.start().atStartOfDay(), range.end().atTime(23, 59, 59));
+        if (transactionReportRepository != null) {
+            List<TransactionReportRepository.PackageRevenueRow> rows =
+                    transactionReportRepository.findRevenueByPackage(startTs, endExclusive);
+            if (rows == null || rows.isEmpty()) {
+                return List.of();
+            }
+            BigDecimal totalRevenue = rows.stream()
+                    .map(r -> r.getRevenue() != null ? r.getRevenue() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            List<PackageRevenueDto> dtoList = new ArrayList<>(rows.size());
+            for (TransactionReportRepository.PackageRevenueRow row : rows) {
+                BigDecimal pkgRev = row.getRevenue() != null ? row.getRevenue() : BigDecimal.ZERO;
+                int count = row.getSubscriptionCount() != null ? row.getSubscriptionCount().intValue() : 0;
+                double pct = totalRevenue.compareTo(BigDecimal.ZERO) > 0
+                        ? pkgRev.multiply(BigDecimal.valueOf(100))
+                        .divide(totalRevenue, 1, RoundingMode.HALF_UP)
+                        .doubleValue()
+                        : 0.0;
+                dtoList.add(new PackageRevenueDto(row.getPackageId(), row.getPackageName(), pkgRev, count, pct));
+            }
+            dtoList.sort(Comparator.comparing(PackageRevenueDto::getRevenue).reversed());
+            return dtoList;
+        }
+
+        List<Payment> payments = paymentRepository != null
+                ? paymentRepository.findByStatusAndPaidAtBetween("success", startTs, endExclusive.minusNanos(1_000))
+                : List.of();
 
         Map<Long, BigDecimal> revenueMap = new HashMap<>();
         Map<Long, Integer> countMap = new HashMap<>();
@@ -182,7 +243,9 @@ public class RevenueReportService {
         BigDecimal totalRevenue = BigDecimal.ZERO;
 
         for (Payment payment : payments) {
-            if (payment.getSubscriptionId() != null && subscriptionRepository != null) {
+            if (payment.getPaidAt() != null && !payment.getPaidAt().isBefore(startTs) && payment.getPaidAt().isBefore(endExclusive)
+                    && (payment.getNote() == null || !payment.getNote().startsWith("WALLET_TOPUP"))
+                    && payment.getSubscriptionId() != null && subscriptionRepository != null) {
                 Optional<MembershipSubscription> subOpt = subscriptionRepository.findById(payment.getSubscriptionId());
                 if (subOpt.isPresent() && subOpt.get().getMembershipPackage() != null) {
                     MembershipPackage pkg = subOpt.get().getMembershipPackage();
@@ -218,15 +281,17 @@ public class RevenueReportService {
     }
 
     /**
-     * SCRUM-120: Tính tỷ lệ sử dụng lớp nhóm (đăng ký / sức chứa) và tỷ lệ điểm danh (có mặt / đã đặt), lọc theo
-     * khoảng ngày và disciplineId (tùy chọn), giới hạn tối đa 100%, xử lý an toàn khi chia cho 0 (capacity = 0
-     * hoặc booked = 0). Trả danh sách rỗng nếu không có repository (tính năng lớp nhóm đang tắt).
+     * SCRUM-120: Tính tỷ lệ sử dụng lớp nhóm (đăng ký / sức chứa) và tỷ lệ chuyên cần (lượt có mặt / tổng lượt
+     * kỳ vọng = học viên ghi danh × số buổi không bị hủy), lọc theo khoảng ngày và disciplineId (tùy chọn), giới
+     * hạn tối đa 100%, xử lý an toàn khi chia cho 0. Trả danh sách rỗng nếu không có repository.
      */
     @Transactional(readOnly = true)
     public List<ClassUtilizationDto> getClassUtilization(LocalDate startDate,
                                                          LocalDate endDate,
                                                          Long disciplineId) {
-        if (startDate != null && endDate != null && startDate.isAfter(endDate)) {
+        LocalDate start = startDate != null ? startDate : LocalDate.of(2000, 1, 1);
+        LocalDate end = endDate != null ? endDate : LocalDate.of(2099, 12, 31);
+        if (start.isAfter(end)) {
             throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
                     "Start date cannot be after end date");
         }
@@ -234,10 +299,8 @@ public class RevenueReportService {
             return List.of();
         }
 
-        LocalDate start = startDate != null ? startDate : LocalDate.of(2000, 1, 1);
-        LocalDate end = endDate != null ? endDate : LocalDate.of(2099, 12, 31);
         LocalDateTime startTs = startDate != null ? startDate.atStartOfDay() : LocalDateTime.of(2000, 1, 1, 0, 0, 0);
-        LocalDateTime endTs = endDate != null ? endDate.plusDays(1).atStartOfDay() : LocalDateTime.of(2099, 12, 31, 23, 59, 59);
+        LocalDateTime endTs = endDate != null ? endDate.plusDays(1).atStartOfDay() : LocalDateTime.of(2100, 1, 1, 0, 0, 0);
 
         List<SessionAttendanceReportRepository.ClassUtilizationRow> rows;
         if (disciplineId != null) {
@@ -252,9 +315,16 @@ public class RevenueReportService {
         List<ClassUtilizationDto> results = new ArrayList<>(rows.size());
         for (SessionAttendanceReportRepository.ClassUtilizationRow row : rows) {
             int capacity = row.getCapacity() != null ? row.getCapacity() : 0;
-            long rawEnrolled = row.getEnrolledCount() != null ? row.getEnrolledCount() : 0L;
-            long presentCount = row.getPresentCount() != null ? row.getPresentCount() : 0L;
-            long enrolledCount = Math.max(rawEnrolled, presentCount);
+            long enrolledCount = row.getEnrolledCount() != null ? Math.max(row.getEnrolledCount(), 0L) : 0L;
+            long presentCount = row.getPresentCount() != null ? Math.max(row.getPresentCount(), 0L) : 0L;
+            Long rawSessionCount = row.getSessionCount();
+            long expectedSlots;
+            if (rawSessionCount != null) {
+                long sessionCount = Math.max(rawSessionCount, 0L);
+                expectedSlots = (enrolledCount > 0 && sessionCount > 0) ? enrolledCount * sessionCount : 0L;
+            } else {
+                expectedSlots = enrolledCount;
+            }
 
             double utilizationRate = 0.0;
             if (capacity > 0) {
@@ -267,9 +337,9 @@ public class RevenueReportService {
             }
 
             double attendanceRate = 0.0;
-            if (enrolledCount > 0) {
-                attendanceRate = BigDecimal.valueOf(Math.min(presentCount, enrolledCount) * 100.0)
-                        .divide(BigDecimal.valueOf(enrolledCount), 1, RoundingMode.HALF_UP)
+            if (expectedSlots > 0) {
+                attendanceRate = BigDecimal.valueOf(Math.min(presentCount, expectedSlots) * 100.0)
+                        .divide(BigDecimal.valueOf(expectedSlots), 1, RoundingMode.HALF_UP)
                         .doubleValue();
                 if (attendanceRate > 100.0) {
                     attendanceRate = 100.0;
@@ -294,26 +364,35 @@ public class RevenueReportService {
     }
 
     /**
-     * Lưu ảnh chụp báo cáo: kiểm tra khoảng ngày và dữ liệu phải là JSON hợp lệ; người tạo mặc định là người
-     * đang đăng nhập; loại báo cáo mặc định "revenue".
+     * Lưu ảnh chụp báo cáo: kiểm tra khoảng ngày, kích thước tối đa 256 KB và dữ liệu phải là JSON object hợp lệ;
+     * luôn dùng người đang đăng nhập làm người tạo (bỏ qua generatedById từ client); loại báo cáo mặc định
+     * "revenue".
      */
     public ReportSnapshotDto generateSnapshot(ReportSnapshotCreateDto dto, Long currentUserId) {
         if (dto.getPeriodStart() != null && dto.getPeriodEnd() != null && dto.getPeriodStart().isAfter(dto.getPeriodEnd())) {
             throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
                     "Start date cannot be after end date");
         }
+        if (dto.getData() == null || dto.getData().isBlank() || dto.getData().length() > MAX_SNAPSHOT_DATA_LENGTH) {
+            throw new BadRequestException("INVALID_SNAPSHOT_DATA", "reports.snapshot.invalid_json", null,
+                    "Snapshot data must be a valid JSON object within " + MAX_SNAPSHOT_DATA_LENGTH + " characters");
+        }
         try {
-            objectMapper.readTree(dto.getData());
+            JsonNode root = objectMapper.readTree(dto.getData());
+            if (root == null || !root.isObject()) {
+                throw new BadRequestException("INVALID_SNAPSHOT_DATA", "reports.snapshot.invalid_json", null,
+                        "Snapshot data must be a JSON object");
+            }
+        } catch (BadRequestException e) {
+            throw e;
         } catch (JsonProcessingException | RuntimeException e) {
             throw new BadRequestException("INVALID_SNAPSHOT_DATA", "reports.snapshot.invalid_json", null,
                     "Snapshot data must be a valid JSON string");
         }
 
-        Long authorId = dto.getGeneratedById() != null ? dto.getGeneratedById() : currentUserId;
-        User author = null;
-        if (authorId != null) {
-            author = userRepository.findByIdAndDeletedAtIsNull(authorId).orElse(null);
-        }
+        User author = currentUserId != null
+                ? userRepository.findByIdAndDeletedAtIsNull(currentUserId).orElse(null)
+                : null;
 
         ReportSnapshot snapshot = new ReportSnapshot();
         snapshot.setReportType(dto.getReportType() != null ? dto.getReportType().toLowerCase(Locale.ROOT) : "revenue");
@@ -327,10 +406,10 @@ public class RevenueReportService {
         return toDto(saved);
     }
 
-    /** Mọi ảnh chụp báo cáo, mới nhất trước. */
+    /** Các ảnh chụp báo cáo gần nhất (tối đa 100 bản ghi), mới nhất trước. */
     @Transactional(readOnly = true)
     public List<ReportSnapshotDto> getSnapshots() {
-        return snapshotRepository.findAllByOrderByGeneratedAtDesc().stream()
+        return snapshotRepository.findAllByOrderByGeneratedAtDesc(PageRequest.of(0, MAX_SNAPSHOTS_LIST)).stream()
                 .map(this::toDto)
                 .toList();
     }

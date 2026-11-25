@@ -11,13 +11,13 @@ Nội dung Sol AI dùng để trả lời khách. Sửa file này không cần �
 
 ## Giới thiệu
 Từ khóa: *
-- SÖL Fitness là trung tâm thể thao gồm 3 bộ môn: Gym (bộ môn chính), Boxing và Yoga; cung cấp lớp học nhóm dạng khóa định kỳ (mỗi bộ môn mở một lớp đang hoạt động), PT 1:1 cùng huấn luyện viên và giáo án tập luyện cá nhân. Trung tâm không có cửa hàng sản phẩm, bảng xếp hạng hay đánh giá HLV.
-- Các mục trên Portal hội viên: 'Gói tập & Bảo lưu', 'Lịch học & đặt PT', 'Thẻ & Check-in', 'Giao dịch & Hóa đơn', 'Giáo án', 'Hồ sơ', 'Thông báo'.
+- SÖL Fitness là trung tâm thể thao gồm 3 bộ môn: Gym (bộ môn chính), Boxing và Yoga với 4 phòng hoạt động (Phòng Gym Tiêu chuẩn, Phòng Gym VIP, Zen Garden Studio, Ring Arena 01); cung cấp lớp học nhóm dạng khóa định kỳ (mỗi bộ môn có thể mở nhiều lớp đang hoạt động miễn không trùng ngày và cùng slot), PT 1:1 cùng huấn luyện viên và giáo án tập luyện cá nhân. Trung tâm không có cửa hàng sản phẩm, bảng xếp hạng hay đánh giá HLV.
+- Các mục trên Portal hội viên: 'Gói tập & Bảo lưu', 'Lịch học & đặt PT', 'Thẻ & Check-in', 'Giao dịch & Hóa đơn', 'Giáo án', 'Tin nhắn', 'Hồ sơ', 'Thông báo'.
 - Chỉ hội viên có gói tập đang hoạt động và chưa hết hạn mới đăng ký lớp học nhóm, đặt PT 1:1, dùng quyền lợi gói và check-in được.
 
 ## Lớp học nhóm đa bộ môn
-Từ khóa: lop hoc, lop nhom, khoa hoc, bo mon, gym, boxing, yoga, lich hoc, dang ky lop
-- Trung tâm có 3 bộ môn: Gym, Boxing và Yoga; mỗi bộ môn chỉ mở một lớp định kỳ đang hoạt động tại một thời điểm.
+Từ khóa: lop hoc, lop nhom, khoa hoc, bo mon, gym, boxing, yoga, lich hoc, dang ky lop, phong tap, phong
+- Trung tâm có 3 bộ môn: Gym, Boxing và Yoga cùng 4 phòng hoạt động: Phòng Gym Tiêu chuẩn, Phòng Gym VIP, Zen Garden Studio và Ring Arena 01; mỗi bộ môn có thể mở nhiều lớp học nhóm định kỳ đang hoạt động miễn không có hai lớp cùng bộ môn trùng ngày và cùng slot.
 - Toàn bộ lịch lớp học nhóm và PT 1:1 sử dụng chung 5 slot cố định mỗi ngày trong khung 07:00–19:30 (nghỉ 15 phút giữa hai slot kế tiếp): Slot 1 (07:00–09:30), Slot 2 (09:45–11:15), Slot 3 (11:30–14:00), Slot 4 (14:15–16:45) và Slot 5 (17:00–19:30).
 - Hội viên đăng ký cả khóa học tại mục 'Lịch học & đặt PT' > 'Đăng ký lớp học' bằng lượt miễn phí của gói tập hoặc thanh toán học phí khóa học (Ví SÖL, VNPay hoặc tiền mặt tại quầy lễ tân trước ngày khai giảng); không đặt lẻ từng buổi.
 - Hủy đăng ký khóa học chỉ thực hiện trước ngày khai giảng; hủy sau khi đã thanh toán được hoàn tiền về Ví SÖL hoặc trả lại suất gói.
@@ -48,8 +48,9 @@ Từ khóa: bao luu, tam dung, dong bang, hold, nghi tap, tam ngung
 - Gửi yêu cầu tại 'Gói tập & Bảo lưu' > 'Bảo lưu'; lễ tân xét duyệt.
 - Gửi trước ngày bắt đầu bảo lưu ít nhất {{hold.noticeHours}} giờ; mỗi lần tối thiểu {{hold.minDays}} ngày, tối đa theo hạng và thời hạn gói (xem mục Quyền lợi theo hạng gói).
 - Đính kèm được tối đa {{hold.maxDocuments}} giấy tờ, mỗi file không quá {{hold.maxDocumentMb}} MB.
-- Trong thời gian bảo lưu đã duyệt không đặt được PT 1:1.
+- Trong thời gian bảo lưu đã duyệt không đặt được PT 1:1 và không đăng ký mới lớp học nhóm.
 - Khi duyệt, các buổi PT 1:1 rơi vào thời gian bảo lưu bị hủy: được trả lượt hoặc hoàn tiền nếu duyệt trước buổi tập ít nhất {{hold.ptRefundDays}} ngày. Muộn hơn thì mất lượt hoặc mất tiền. Tiền hoàn vào Ví SÖL.
+- Các khóa học nhóm có buổi rơi vào thời gian bảo lưu cũng bị hủy: nếu bảo lưu được duyệt trước ngày khai giảng khóa học ít nhất {{hold.courseRefundDays}} ngày thì được khôi phục lượt miễn phí hoặc hoàn học phí đã thanh toán vào Ví SÖL; muộn hơn hoặc khi khóa học đã bắt đầu thì mất lượt hoặc không hoàn học phí.
 - Lễ tân từ chối thì luôn ghi lý do, hội viên xem được trong thông báo và trang Bảo lưu.
 - Hết thời gian bảo lưu, gói tự hoạt động lại và được cộng bù số ngày đã bảo lưu.
 

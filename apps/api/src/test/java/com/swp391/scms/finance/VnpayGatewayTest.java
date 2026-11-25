@@ -38,4 +38,43 @@ class VnpayGatewayTest {
         assertFalse(gateway.validSignature(fields));
         assertThrows(RuntimeException.class, () -> gateway.paymentUrl("ABC123", new BigDecimal("1.01"), LocalDateTime.now(), LocalDateTime.now().plusMinutes(15), "127.0.0.1"));
     }
+
+    /** Kiểm thử P1-BE-28: chỉ chấp nhận origin trong danh sách cho phép, chặn open redirect sang host tùy ý. */
+    @Test void resolveReturnUrlAllowsOnlyAllowlistedOriginsAndBlocksArbitraryHttpsRedirects() {
+        VnpayGateway configured = new VnpayGateway(config, "https://app.solfitness.vn,https://portal.solfitness.vn:8443");
+
+        assertEquals("https://example.test/member/payments/vnpay/return",
+                configured.resolveReturnUrl("https://example.test"));
+        assertEquals("https://app.solfitness.vn/member/payments/vnpay/return",
+                configured.resolveReturnUrl("https://app.solfitness.vn/member/packages"));
+        assertEquals("https://portal.solfitness.vn:8443/member/payments/vnpay/return",
+                configured.resolveReturnUrl("https://portal.solfitness.vn:8443"));
+
+        // Chặn mọi host ngoài allowlist, subdomain giả mạo, userInfo, sai cổng và localhost khi prod là HTTPS
+        for (String untrusted : new String[] {
+                "https://evil.test",
+                "https://example.test.evil.com",
+                "https://evil@example.test",
+                "https://example.test:8443",
+                "http://example.test",
+                "http://localhost:5173",
+                "javascript:alert(1)"
+        }) {
+            assertEquals(config.returnUrl(), configured.resolveReturnUrl(untrusted),
+                    "Untrusted candidate must fall back to configured returnUrl: " + untrusted);
+        }
+    }
+
+    /** Kiểm thử P1-BE-28: chỉ cho phép localhost/127.0.0.1 khi returnUrl cấu hình là localhost. */
+    @Test void resolveReturnUrlAllowsLocalhostOnlyWhenConfiguredReturnUrlIsLocalhost() {
+        VnpayProperties localConfig = new VnpayProperties(true, "TEST1234", "test-secret",
+                "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", "http://localhost:5173/member/payments/vnpay/return", 15);
+        VnpayGateway localGateway = new VnpayGateway(localConfig, "");
+
+        assertEquals("http://localhost:5173/member/payments/vnpay/return",
+                localGateway.resolveReturnUrl("http://localhost:5173"));
+        assertEquals("http://127.0.0.1:5174/member/payments/vnpay/return",
+                localGateway.resolveReturnUrl("http://127.0.0.1:5174"));
+        assertEquals(localConfig.returnUrl(), localGateway.resolveReturnUrl("https://evil.test"));
+    }
 }

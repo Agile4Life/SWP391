@@ -15,13 +15,18 @@ public record MemberKycRequest(
     @NotBlank(message = "{validation.users.full_name.not_blank}")
     @Size(max = 150, message = "{validation.users.full_name.size}")
     String fullName,
+    @Size(max = 100)
     String nationality,
     @NotBlank(message = "{validation.users.kyc.front_image.not_blank}")
+    @Size(max = 2800000)
     String frontImageUrl,
+    @Size(max = 2800000)
     String backImageUrl
 ) {
     /** Loại giấy tờ đã chuẩn hóa chữ hoa; bỏ trống thì mặc định CCCD. */
     public String resolvedDocumentType() {
-        return documentType != null && !documentType.isBlank() ? documentType.trim().toUpperCase() : "CCCD";
+        return documentType != null && !documentType.isBlank()
+                ? documentType.trim().toUpperCase(java.util.Locale.ROOT)
+                : "CCCD";
     }
 }

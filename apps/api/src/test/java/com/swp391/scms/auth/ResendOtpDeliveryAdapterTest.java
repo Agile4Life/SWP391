@@ -89,4 +89,14 @@ class ResendOtpDeliveryAdapterTest {
         );
         assertEquals("OTP_DELIVERY_DISABLED", ex.getErrorCode());
     }
+
+    /** Kiểm thử: chặn ký tự CR/LF hoặc ngoặc nhọn chống SMTP command/header injection. */
+    @Test
+    void smtpRejectsHeaderInjectionCharacters() {
+        assertThrows(ServiceUnavailableException.class,
+                () -> ResendOtpDeliveryAdapter.requireSafeSmtpAddress("victim@example.com\r\nRCPT TO:<evil@example.com>"));
+        assertThrows(ServiceUnavailableException.class,
+                () -> ResendOtpDeliveryAdapter.requireSafeSmtpAddress("bad<addr>@example.com"));
+        ResendOtpDeliveryAdapter.requireSafeSmtpAddress("safe@example.com");
+    }
 }

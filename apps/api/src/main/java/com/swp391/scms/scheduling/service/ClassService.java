@@ -79,6 +79,7 @@ public class ClassService {
     private static final String CLASS_INACTIVE = "inactive";
     private static final String ENROLLMENT_BOOKED = "booked";
     private static final String CLASS_DEACTIVATED_REASON = "Lớp học ngừng hoạt động";
+    private static final long MAX_RECURRING_SPAN_DAYS = 365L;
 
     private final GymClassRepository gymClasses;
     private final ClassSessionRepository sessions;
@@ -154,13 +155,7 @@ public class ClassService {
 
         Coach coach = coaches.findById(request.coachId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
-        if (!COACH_ACTIVE.equalsIgnoreCase(coach.getEmploymentStatus())) {
-            throw new BadRequestException(
-                    "SCHEDULING_COACH_INACTIVE",
-                    "error.scheduling.coach_inactive",
-                    null,
-                    "Coach is not active");
-        }
+        ensureCoachActive(coach);
 
         Room room = rooms.findById(request.roomId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.room", request.roomId()));
@@ -233,13 +228,7 @@ public class ClassService {
 
         Coach coach = coaches.findById(request.coachId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
-        if (!COACH_ACTIVE.equalsIgnoreCase(coach.getEmploymentStatus())) {
-            throw new BadRequestException(
-                    "SCHEDULING_COACH_INACTIVE",
-                    "error.scheduling.coach_inactive",
-                    null,
-                    "Coach is not active");
-        }
+        ensureCoachActive(coach);
 
         Room room = rooms.findById(request.roomId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.room", request.roomId()));
@@ -263,8 +252,10 @@ public class ClassService {
         if (request.startDate() == null || request.endDate() == null) {
             throw new BadRequestException("SCHEDULING_INVALID_DATES", "error.scheduling.invalid_dates", null, "Ngày bắt đầu và ngày kết thúc không được để trống");
         }
-        if (request.endDate().isBefore(request.startDate())) {
-            throw new BadRequestException("SCHEDULING_INVALID_DATE_RANGE", "error.scheduling.invalid_date_range", null, "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
+        if (request.endDate().isBefore(request.startDate())
+                || java.time.temporal.ChronoUnit.DAYS.between(request.startDate(), request.endDate()) > MAX_RECURRING_SPAN_DAYS) {
+            throw new BadRequestException("SCHEDULING_INVALID_DATE_RANGE", "error.scheduling.invalid_date_range", null,
+                    "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu và không vượt quá 365 ngày");
         }
         if (request.startTime() == null || request.endTime() == null || !request.endTime().isAfter(request.startTime())) {
             throw new BadRequestException(
@@ -274,16 +265,12 @@ public class ClassService {
                     "End time must be after start time");
         }
         ScheduleSlot.requireValid(request.startTime(), request.endTime());
-        SessionEligibility.ensureFuture(request.startDate(), request.startTime(), clock);
 
-        List<LocalDate> sessionDates = new ArrayList<>();
-        if (request.recurringDays() == null || request.recurringDays().isEmpty()) {
+        java.util.Set<java.time.DayOfWeek> selectedDays = parseRecurringDays(request.recurringDays());
+        if (selectedDays.isEmpty()) {
             throw new BadRequestException("SCHEDULING_NO_RECURRING_DAYS", "error.scheduling.no_recurring_days", null, "Vui lòng chọn ít nhất một ngày trong tuần");
         }
-        java.util.Set<java.time.DayOfWeek> selectedDays = request.recurringDays().stream()
-                .map(String::toUpperCase)
-                .map(java.time.DayOfWeek::valueOf)
-                .collect(java.util.stream.Collectors.toSet());
+        List<LocalDate> sessionDates = new ArrayList<>();
         for (LocalDate d = request.startDate(); !d.isAfter(request.endDate()); d = d.plusDays(1)) {
             if (selectedDays.contains(d.getDayOfWeek())) {
                 sessionDates.add(d);
@@ -293,17 +280,23 @@ public class ClassService {
             throw new BadRequestException("SCHEDULING_NO_SESSIONS_MATCHED", "error.scheduling.no_sessions_matched", null, "Không có buổi học nào phù hợp với các thứ trong tuần đã chọn");
         }
 
-        for (LocalDate sessionDate : sessionDates) {
-            ensureNoSessionConflict(
-                    discipline.getId(),
-                    coach.getUserId(),
-                    room.getId(),
-                    sessionDate,
-                    request.startTime(),
-                    request.endTime(),
-                    null,
-                    null);
+        if (request.startDate().isBefore(SessionEligibility.today(clock))) {
+            throw new BadRequestException("SCHEDULING_PAST_SESSION", "error.scheduling.past_session",
+                    null, "Session must start in the future");
         }
+        LocalDate firstDate = sessionDates.get(0);
+        LocalDate lastDate = sessionDates.get(sessionDates.size() - 1);
+        SessionEligibility.ensureFuture(firstDate, request.startTime(), clock);
+
+        ensureNoRecurringSessionConflicts(
+                discipline.getId(),
+                coach.getUserId(),
+                room.getId(),
+                sessionDates,
+                firstDate,
+                lastDate,
+                request.startTime(),
+                request.endTime());
 
         GymClass gymClass = new GymClass();
         gymClass.setName(request.name());
@@ -317,7 +310,9 @@ public class ClassService {
         gymClass.setPrice(request.price() != null ? request.price() : java.math.BigDecimal.ZERO);
         gymClass.setStartDate(request.startDate());
         gymClass.setEndDate(request.endDate());
-        gymClass.setRecurringDays(String.join(",", request.recurringDays()));
+        gymClass.setRecurringDays(selectedDays.stream()
+                .map(java.time.DayOfWeek::name)
+                .collect(java.util.stream.Collectors.joining(",")));
         gymClass.setStartTime(request.startTime());
         gymClass.setEndTime(request.endTime());
 
@@ -355,31 +350,30 @@ public class ClassService {
                 .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
 
         String targetStatus = (request.status() != null && !request.status().isBlank())
-                ? request.status()
-                : gymClass.getStatus();
+                ? request.status().trim().toLowerCase(java.util.Locale.ROOT)
+                : (gymClass.getStatus() != null ? gymClass.getStatus().trim().toLowerCase(java.util.Locale.ROOT) : CLASS_ACTIVE);
+        boolean closingOrInactive = CLASS_INACTIVE.equals(targetStatus) || "archived".equals(targetStatus);
         boolean activating = !CLASS_ACTIVE.equalsIgnoreCase(gymClass.getStatus())
-                && CLASS_ACTIVE.equalsIgnoreCase(targetStatus);
+                && CLASS_ACTIVE.equals(targetStatus);
 
         Coach coach = coaches.findById(request.coachId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
-        if (!COACH_ACTIVE.equalsIgnoreCase(coach.getEmploymentStatus())) {
-            throw new BadRequestException(
-                    "SCHEDULING_COACH_INACTIVE",
-                    "error.scheduling.coach_inactive",
-                    null,
-                    "Coach is not active");
+        if (!closingOrInactive) {
+            ensureCoachActive(coach);
         }
 
         Room room = rooms.findById(request.roomId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.room", request.roomId()));
-        if (!ROOM_AVAILABLE.equalsIgnoreCase(room.getStatus())) {
+        if (!closingOrInactive && !ROOM_AVAILABLE.equalsIgnoreCase(room.getStatus())) {
             throw new BadRequestException(
                     "SCHEDULING_ROOM_UNAVAILABLE",
                     "error.scheduling.room_unavailable",
                     null,
                     "Room is not available for scheduling");
         }
-        validateRoomCapacity(room, request.capacity());
+        if (!closingOrInactive) {
+            validateRoomCapacity(room, request.capacity());
+        }
 
         long bookedCount = enrollments.countByGymClassIdAndStatus(classId, ENROLLMENT_BOOKED) + busiestSession(classId);
         if (request.capacity() < bookedCount) {
@@ -397,7 +391,7 @@ public class ClassService {
                 || !Objects.equals(oldRoomId, room.getId())
                 || !Objects.equals(oldDisciplineId, discipline.getId());
 
-        if (scheduleResourceChanged || activating) {
+        if (!closingOrInactive && (scheduleResourceChanged || activating)) {
             Long effectiveDisciplineId = CLASS_ACTIVE.equalsIgnoreCase(targetStatus) ? discipline.getId() : null;
             List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId);
             if (classSessions != null) {
@@ -441,7 +435,7 @@ public class ClassService {
 
         GymClass savedClass = gymClasses.saveAndFlush(gymClass);
 
-        if (scheduleResourceChanged || activating) {
+        if (!closingOrInactive && (scheduleResourceChanged || activating)) {
             List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId);
             if (classSessions != null) {
                 for (ClassSession s : classSessions) {
@@ -454,6 +448,22 @@ public class ClassService {
         }
 
         return mapper.toDto(savedClass != null ? savedClass : gymClass);
+    }
+
+    /** Kiểm tra HLV đang làm việc và tài khoản người dùng tương ứng đang hoạt động, chưa bị xóa mềm. */
+    private void ensureCoachActive(Coach coach) {
+        User user = coach != null ? coach.getUser() : null;
+        boolean activeEmployment = coach != null && COACH_ACTIVE.equalsIgnoreCase(coach.getEmploymentStatus());
+        boolean activeUser = user != null
+                && user.getDeletedAt() == null
+                && COACH_ACTIVE.equalsIgnoreCase(user.getStatus());
+        if (!activeEmployment || !activeUser) {
+            throw new BadRequestException(
+                    "SCHEDULING_COACH_INACTIVE",
+                    "error.scheduling.coach_inactive",
+                    null,
+                    "Coach is not active");
+        }
     }
 
     /** Kiểm tra sĩ số lớp không vượt quá sức chứa của phòng (bỏ qua khi sức chứa phòng chưa cấu hình / <= 0). */
@@ -780,6 +790,13 @@ public class ClassService {
                     null,
                     "This session has been cancelled");
         }
+        if (!SESSION_SCHEDULED.equalsIgnoreCase(session.getStatus())) {
+            throw new BadRequestException(
+                    "SCHEDULING_SESSION_NOT_SCHEDULED",
+                    "error.scheduling.session_not_bookable",
+                    null,
+                    "Only a scheduled session can be rescheduled");
+        }
 
         if (gymClass.getStatus() != null && !CLASS_ACTIVE.equalsIgnoreCase(gymClass.getStatus())) {
             throw new BadRequestException(
@@ -842,7 +859,8 @@ public class ClassService {
         if (request.startDate() == null || request.endDate() == null) {
             return invalidSchedule("SCHEDULING_INVALID_DATES", "error.scheduling.invalid_dates");
         }
-        if (request.endDate().isBefore(request.startDate())) {
+        if (request.endDate().isBefore(request.startDate())
+                || java.time.temporal.ChronoUnit.DAYS.between(request.startDate(), request.endDate()) > MAX_RECURRING_SPAN_DAYS) {
             return invalidSchedule("SCHEDULING_INVALID_DATE_RANGE", "error.scheduling.invalid_date_range");
         }
 
@@ -907,8 +925,11 @@ public class ClassService {
         String selectedSlotConflictCode = null;
         String selectedSlotConflictReason = null;
 
+        LocalDate today = SessionEligibility.today(clock);
+        boolean startDateInPast = request.startDate().isBefore(today);
+
         for (ScheduleSlot slot : ScheduleSlot.values()) {
-            boolean past = !SessionEligibility.isFuture(request.startDate(), slot.startTime(), clock);
+            boolean past = startDateInPast || !SessionEligibility.isFuture(firstDate, slot.startTime(), clock);
             String disciplineConflictReason = findDisciplineConflictReason(
                     discipline, sessionDates, sessionsByDate, slot);
             boolean disciplineConflict = disciplineConflictReason != null;
@@ -1311,6 +1332,118 @@ public class ClassService {
     }
 
     /**
+     * Kiểm tra xung đột cho toàn bộ các ngày của khóa định kỳ bằng 1 lượt truy vấn theo khoảng
+     * {@code [firstDate, lastDate]} thay vì quét lại bảng cho từng ngày buổi học.
+     */
+    private void ensureNoRecurringSessionConflicts(Long disciplineId,
+                                                   Long coachId,
+                                                   Long roomId,
+                                                   List<LocalDate> sessionDates,
+                                                   LocalDate firstDate,
+                                                   LocalDate lastDate,
+                                                   LocalTime startTime,
+                                                   LocalTime endTime) {
+        if (sessionDates == null || sessionDates.isEmpty() || startTime == null || endTime == null) {
+            return;
+        }
+        java.util.Set<LocalDate> coachLeaveDates = new java.util.HashSet<>();
+        if (staffInternalRequestRepository != null && coachId != null) {
+            List<StaffInternalRequest> leaves = staffInternalRequestRepository.findOverlappingLeaves(coachId, firstDate, lastDate);
+            if (leaves != null) {
+                for (StaffInternalRequest leave : leaves) {
+                    if (leave == null || !"APPROVED".equalsIgnoreCase(leave.getStatus())
+                            || leave.getStartDate() == null) {
+                        continue;
+                    }
+                    if (leave.getRequestType() != null && !"LEAVE".equalsIgnoreCase(leave.getRequestType())) {
+                        continue;
+                    }
+                    LocalDate leaveStart = leave.getStartDate();
+                    LocalDate leaveEnd = leave.getEndDate() != null ? leave.getEndDate() : leaveStart;
+                    for (LocalDate d : sessionDates) {
+                        if (!d.isBefore(leaveStart) && !d.isAfter(leaveEnd)) {
+                            coachLeaveDates.add(d);
+                        }
+                    }
+                }
+            }
+        }
+
+        java.util.Map<LocalDate, List<CoachBooking>> ptByDate = new java.util.HashMap<>();
+        if (coachBookingRepository != null && coachId != null) {
+            List<CoachBooking> confirmedPts = coachBookingRepository.findConfirmedBetween(firstDate, lastDate);
+            if (confirmedPts != null) {
+                for (CoachBooking b : confirmedPts) {
+                    if (b == null || !"confirmed".equalsIgnoreCase(b.getStatus())
+                            || b.getCoach() == null || !Objects.equals(coachId, b.getCoach().getUserId())
+                            || b.getBookingDate() == null || b.getStartTime() == null || b.getEndTime() == null) {
+                        continue;
+                    }
+                    ptByDate.computeIfAbsent(b.getBookingDate(), k -> new ArrayList<>()).add(b);
+                }
+            }
+        }
+
+        java.util.Map<LocalDate, List<ClassSession>> existingByDate = new java.util.HashMap<>();
+        List<ClassSession> existingInRange = sessions.searchSessions(firstDate, lastDate, null, null);
+        if (existingInRange != null) {
+            for (ClassSession s : existingInRange) {
+                if (s != null && s.getSessionDate() != null) {
+                    existingByDate.computeIfAbsent(s.getSessionDate(), k -> new ArrayList<>()).add(s);
+                }
+            }
+        }
+
+        for (LocalDate sessionDate : sessionDates) {
+            if (coachLeaveDates.contains(sessionDate)) {
+                throw new ConflictException(
+                        "COACH_ON_LEAVE",
+                        "error.coach_booking.coach_on_leave",
+                        new Object[]{sessionDate},
+                        "The coach is on approved leave that day.");
+            }
+            checkPtBookingsConflict(coachId, sessionDate, startTime, endTime,
+                    ptByDate.getOrDefault(sessionDate, List.of()));
+            checkSessionsConflictOnDate(disciplineId, coachId, roomId, sessionDate, startTime, endTime,
+                    null, null, existingByDate.getOrDefault(sessionDate, List.of()));
+        }
+    }
+
+    /** Kiểm tra xung đột lịch PT 1:1 của HLV trên danh sách booking đã nạp của một ngày. */
+    private void checkPtBookingsConflict(Long coachId,
+                                         LocalDate sessionDate,
+                                         LocalTime startTime,
+                                         LocalTime endTime,
+                                         List<CoachBooking> activePtBookings) {
+        if (coachId == null || activePtBookings == null || activePtBookings.isEmpty()) {
+            return;
+        }
+        for (CoachBooking booking : activePtBookings) {
+            if (booking == null || !"confirmed".equalsIgnoreCase(booking.getStatus())
+                    || booking.getStartTime() == null || booking.getEndTime() == null) {
+                continue;
+            }
+            if (startTime.isBefore(booking.getEndTime()) && endTime.isAfter(booking.getStartTime())) {
+                String coachName = booking.getCoach() != null && booking.getCoach().getUser() != null
+                        && booking.getCoach().getUser().getFullName() != null
+                        ? booking.getCoach().getUser().getFullName()
+                        : ("#" + coachId);
+                int dayOfWeek = sessionDate.getDayOfWeek().getValue();
+                String conflictDate = sessionDate.format(CONFLICT_DATE_FORMAT);
+                String rangeStart = formatTime(booking.getStartTime());
+                String rangeEnd = formatTime(booking.getEndTime());
+                throw new ConflictException(
+                        "SCHEDULING_COACH_PT_CONFLICT",
+                        "error.scheduling.coach_pt_conflict",
+                        new Object[]{coachName, rangeStart, rangeEnd, conflictDate, dayOfWeek},
+                        "Schedule conflict: Coach " + coachName + " already has a 1:1 PT session ("
+                                + rangeStart + " - " + rangeEnd + " on " + sessionDate.getDayOfWeek()
+                                + " " + conflictDate + ")");
+            }
+        }
+    }
+
+    /**
      * Kiểm tra trước xung đột: HLV không nghỉ phép đã duyệt, không trùng lịch PT 1:1 và không có buổi scheduled
      * khác cùng ngày trùng giờ ở cùng phòng, cùng HLV hoặc cùng bộ môn (lớp đang hoạt động).
      */
@@ -1334,34 +1467,24 @@ public class ClassService {
                     "The coach is on approved leave that day.");
         }
         if (coachBookingRepository != null && coachId != null) {
-            List<CoachBooking> activePtBookings = coachBookingRepository.findActiveByCoachAndDate(coachId, sessionDate);
-            if (activePtBookings != null) {
-                for (CoachBooking booking : activePtBookings) {
-                    if (booking == null || !"confirmed".equalsIgnoreCase(booking.getStatus())
-                            || booking.getStartTime() == null || booking.getEndTime() == null) {
-                        continue;
-                    }
-                    if (startTime.isBefore(booking.getEndTime()) && endTime.isAfter(booking.getStartTime())) {
-                        String coachName = booking.getCoach() != null && booking.getCoach().getUser() != null
-                                && booking.getCoach().getUser().getFullName() != null
-                                ? booking.getCoach().getUser().getFullName()
-                                : ("#" + coachId);
-                        int dayOfWeek = sessionDate.getDayOfWeek().getValue();
-                        String conflictDate = sessionDate.format(CONFLICT_DATE_FORMAT);
-                        String rangeStart = formatTime(booking.getStartTime());
-                        String rangeEnd = formatTime(booking.getEndTime());
-                        throw new ConflictException(
-                                "SCHEDULING_COACH_PT_CONFLICT",
-                                "error.scheduling.coach_pt_conflict",
-                                new Object[]{coachName, rangeStart, rangeEnd, conflictDate, dayOfWeek},
-                                "Schedule conflict: Coach " + coachName + " already has a 1:1 PT session ("
-                                        + rangeStart + " - " + rangeEnd + " on " + sessionDate.getDayOfWeek()
-                                        + " " + conflictDate + ")");
-                    }
-                }
-            }
+            checkPtBookingsConflict(coachId, sessionDate, startTime, endTime,
+                    coachBookingRepository.findActiveByCoachAndDate(coachId, sessionDate));
         }
         List<ClassSession> existingOnDate = sessions.searchSessions(sessionDate, sessionDate, null, null);
+        checkSessionsConflictOnDate(disciplineId, coachId, roomId, sessionDate, startTime, endTime,
+                excludeSessionId, idempotentClassId, existingOnDate);
+    }
+
+    /** Đối chiếu trùng phòng, HLV và bộ môn trên danh sách buổi học đã nạp của một ngày. */
+    private void checkSessionsConflictOnDate(Long disciplineId,
+                                             Long coachId,
+                                             Long roomId,
+                                             LocalDate sessionDate,
+                                             LocalTime startTime,
+                                             LocalTime endTime,
+                                             Long excludeSessionId,
+                                             Long idempotentClassId,
+                                             List<ClassSession> existingOnDate) {
         if (existingOnDate == null || existingOnDate.isEmpty()) {
             return;
         }
@@ -1492,7 +1615,8 @@ public class ClassService {
             java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     /**
-     * Tra cứu lịch buổi học cho mọi role đã đăng nhập, lọc theo ngày, bộ môn, HLV; kèm số chỗ đã đặt.
+     * Tra cứu lịch buổi học cho mọi role đã đăng nhập, lọc theo ngày, bộ môn, HLV; đếm số chỗ đã đặt theo lô
+     * (2 truy vấn gộp thay vì 2N+1).
      *
      * SCRUM-72 BR-06: tra cứu lịch cho mọi vai trò đã xác thực với bộ lọc tùy chọn.
      */
@@ -1501,8 +1625,53 @@ public class ClassService {
                                                 LocalDate toDate,
                                                 Long disciplineId,
                                                 Long coachId) {
-        return sessions.searchSessions(fromDate, toDate, disciplineId, coachId).stream()
-                .map(session -> mapper.toDto(session, countBooked(session)))
+        List<ClassSession> found = sessions.searchSessions(fromDate, toDate, disciplineId, coachId);
+        if (found == null || found.isEmpty()) {
+            return List.of();
+        }
+        List<Long> classIds = found.stream()
+                .map(ClassSession::getGymClass)
+                .filter(Objects::nonNull)
+                .map(GymClass::getId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        java.util.Map<Long, Long> classBookedCounts = new java.util.HashMap<>();
+        if (!classIds.isEmpty()) {
+            var counts = enrollments.countByClassIdsAndStatus(classIds, ENROLLMENT_BOOKED);
+            if (counts != null) {
+                for (var count : counts) {
+                    if (count != null && count.classId() != null) {
+                        classBookedCounts.put(count.classId(), count.bookedCount());
+                    }
+                }
+            }
+        }
+        java.util.Map<Long, Long> sessionBookedCounts = new java.util.HashMap<>();
+        if (sessionBookings != null) {
+            List<Long> sessionIds = found.stream()
+                    .map(ClassSession::getId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+            if (!sessionIds.isEmpty()) {
+                var counts = sessionBookings.countBookedBySessionIds(sessionIds);
+                if (counts != null) {
+                    for (var count : counts) {
+                        if (count != null && count.sessionId() != null) {
+                            sessionBookedCounts.put(count.sessionId(), count.bookedCount());
+                        }
+                    }
+                }
+            }
+        }
+        return found.stream()
+                .map(session -> {
+                    Long classId = session.getGymClass() != null ? session.getGymClass().getId() : null;
+                    long booked = (classId != null ? classBookedCounts.getOrDefault(classId, 0L) : 0L)
+                            + (session.getId() != null ? sessionBookedCounts.getOrDefault(session.getId(), 0L) : 0L);
+                    return mapper.toDto(session, booked);
+                })
                 .toList();
     }
 

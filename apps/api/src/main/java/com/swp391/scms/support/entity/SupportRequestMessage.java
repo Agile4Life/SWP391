@@ -1,5 +1,6 @@
 package com.swp391.scms.support.entity;
 
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
@@ -33,7 +34,7 @@ public class SupportRequestMessage {
     private String message;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(CenterTime.ZONE);
 
     @Column(name = "client_message_id")
     private java.util.UUID clientMessageId;
@@ -50,7 +51,7 @@ public class SupportRequestMessage {
         this.supportRequest = supportRequest;
         this.sender = sender;
         this.message = message;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(CenterTime.ZONE);
     }
 
     /** Lấy giá trị trường id. */

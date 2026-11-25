@@ -5,6 +5,7 @@ import com.swp391.scms.attendance.repository.CenterCheckinRepository;
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.common.ScheduleSlot;
+import com.swp391.scms.facilities.PackageBenefits;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -17,6 +18,8 @@ import com.swp391.scms.health.MemberProgressLogRepository;
 import com.swp391.scms.health.entity.MemberProgressLog;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.scheduling.entity.ClassSession;
+import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.ReceptionistRepository;
@@ -82,7 +85,7 @@ public class DemoDataSeeder implements ApplicationRunner {
             new MemberSpec("dung", "Phạm Quốc Dũng", "male", 35, "intermediate", "Tăng sức bền", "Đau gối nhẹ",
                     "GOLD", "EXPIRED", 120),
             new MemberSpec("em", "Võ Ngọc Em", "female", 29, "beginner", "Cải thiện sức khỏe", null,
-                    "SILVER", "FROZEN", 90),
+                    "GOLD 3 THÁNG", "FROZEN", 90),
             new MemberSpec("phuc", "Đặng Hoàng Phúc", "male", 22, "beginner", "Tăng cân lành mạnh", null,
                     "GOLD", "PENDING", 1),
             new MemberSpec("giang", "Bùi Hương Giang", "female", 33, "intermediate", "Tăng thể lực, giảm stress", null,
@@ -122,6 +125,14 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final MemberProgressLogRepository progressLogs;
     private final PasswordEncoder passwordEncoder;
     private final String demoPassword;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ClassSessionRepository classSessions;
+
+    /** Gán repository buổi học lớp nhóm (tùy chọn, dùng kiểm tra xung đột PT ↔ lớp nhóm khi seed). */
+    public void setClassSessions(ClassSessionRepository classSessions) {
+        this.classSessions = classSessions;
+    }
 
     /** Nhận các repository, bộ mã hóa mật khẩu và mật khẩu chung của tài khoản demo (app.demo.password). */
     public DemoDataSeeder(UserRepository users, RoleRepository roles, MemberRepository members,
@@ -322,6 +333,7 @@ public class DemoDataSeeder implements ApplicationRunner {
             case "EXPIRED" -> subscribe(member, pkg, today.minusDays(52), today.minusDays(52).plusDays(days - 1L),
                     "expired", null, receptionist, "cash");
             case "FROZEN" -> {
+                // GOLD 3 THÁNG được bảo lưu tối đa 15 ngày theo PackageBenefits; bảo lưu 14 ngày (từ today-6 đến today+7).
                 MembershipSubscription sub = subscribe(member, pkg, today.minusDays(18),
                         today.minusDays(18).plusDays(days - 1L + 14), "frozen", null, receptionist, "cash");
                 sub.setHoldStatus("APPROVED");
@@ -329,8 +341,9 @@ public class DemoDataSeeder implements ApplicationRunner {
                 sub.setHoldRequestedAt(LocalDateTime.now(ZONE).minusDays(8));
                 sub.setHoldResolvedAt(LocalDateTime.now(ZONE).minusDays(7));
                 sub.setHoldResolvedBy(receptionist);
-                sub.setHoldStartDate(today.minusDays(7));
+                sub.setHoldStartDate(today.minusDays(6));
                 sub.setHoldEndDate(today.plusDays(7));
+                sub.setHoldDaysCredited(true);
                 sub.setHoldUsed(true);
                 yield subscriptions.save(sub);
             }
@@ -510,16 +523,31 @@ public class DemoDataSeeder implements ApplicationRunner {
             if (offset >= 0 && !subscriptions.hasActiveMembershipCoveringSession(member.getUserId(), today, date)) {
                 continue;
             }
+            if (offset >= 0 && hasClassSessionConflict(coach, member, date, slot)) {
+                log.warn("Demo PT seed: skip booking for member '{}' and coach '{}' on {} ({}) due to overlapping class session",
+                        row[0], row[1], date, slot.name());
+                continue;
+            }
+            MembershipSubscription activeSub = findActiveSubscription(member.getUserId(), today, date);
+            boolean usesPackageQuota = activeSub != null
+                    && PackageBenefits.ptSessionsPerCycle(activeSub.getMembershipPackage()) > 0;
             CoachBooking booking = new CoachBooking();
             booking.setMember(member);
             booking.setCoach(coach);
             booking.setDiscipline(disciplineByName.get(coachDiscipline((String) row[1])));
+            booking.setSubscription(activeSub);
             booking.setBookingDate(date);
             booking.setStartTime(slot.startTime());
             booking.setEndTime(slot.endTime());
             booking.setHourlyRate(new BigDecimal("200000.00"));
-            booking.setPaymentMethod("package_quota");
-            booking.setPaymentStatus("used_quota");
+            if (usesPackageQuota) {
+                booking.setPaymentMethod("package_quota");
+                booking.setPaymentStatus("used_quota");
+            } else {
+                // Hạng Silver không có lượt PT miễn phí theo PackageBenefits: ghi nhận buổi PT trả phí đã thanh toán.
+                booking.setPaymentMethod("cash");
+                booking.setPaymentStatus("paid");
+            }
             booking.setCreatedAt(date.minusDays(4).atTime(20, 0));
             if (offset < 0) {
                 booking.setStatus("completed");
@@ -531,6 +559,42 @@ public class DemoDataSeeder implements ApplicationRunner {
             }
             coachBookings.save(booking);
         }
+    }
+
+    /** Kiểm tra HLV hoặc hội viên đã có buổi lớp nhóm scheduled trùng slot vào ngày định seed PT chưa. */
+    private boolean hasClassSessionConflict(Coach coach, Member member, LocalDate date, ScheduleSlot slot) {
+        if (classSessions == null) {
+            return false;
+        }
+        List<ClassSession> coachSessions = classSessions.findActiveByCoachAndDate(coach.getUserId(), date);
+        if (coachSessions != null && coachSessions.stream().anyMatch(s -> overlaps(s, slot))) {
+            return true;
+        }
+        List<ClassSession> memberSessions = classSessions.findActiveByMemberAndDate(member.getUserId(), date);
+        return memberSessions != null && memberSessions.stream().anyMatch(s -> overlaps(s, slot));
+    }
+
+    private static boolean overlaps(ClassSession session, ScheduleSlot slot) {
+        return session != null && session.getStartTime() != null && session.getEndTime() != null
+                && slot.startTime().isBefore(session.getEndTime())
+                && slot.endTime().isAfter(session.getStartTime());
+    }
+
+    /** Tìm kỳ gói active phù hợp của hội viên (ưu tiên kỳ phủ ngày tập hoặc ngày hôm nay). */
+    private MembershipSubscription findActiveSubscription(Long memberId, LocalDate today, LocalDate date) {
+        List<MembershipSubscription> active = subscriptions.findByMemberUserIdAndStatus(memberId, "active");
+        if (active == null || active.isEmpty()) {
+            return null;
+        }
+        return active.stream()
+                .filter(s -> s != null && s.getStartDate() != null && s.getEndDate() != null
+                        && !s.getStartDate().isAfter(date) && !s.getEndDate().isBefore(date))
+                .findFirst()
+                .or(() -> active.stream()
+                        .filter(s -> s != null && s.getStartDate() != null && s.getEndDate() != null
+                                && !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today))
+                        .findFirst())
+                .orElse(active.get(0));
     }
 
     /** Bộ môn của HLV demo theo khóa. */

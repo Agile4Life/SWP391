@@ -52,7 +52,16 @@ class ChatServiceTest {
 
     @Test void memberOpensOneConversationAndReusesIt() {
         when(conversations.findByMemberIdAndStaffId(10L, 20L)).thenReturn(Optional.of(conversation));
-        assertThat(service.open(member, 20L).id()).isEqualTo(7L);
+        var latest = new ChatMessage(conversation, coach, UUID.randomUUID(), "Chào em, hẹn 7h sáng nhé", Instant.now());
+        latest.setId(55L);
+        when(messages.latestIn(List.of(7L))).thenReturn(List.of(latest));
+        when(messages.unreadIn(10L, List.of(7L))).thenReturn(List.<Object[]>of(new Object[]{7L, 2L}));
+
+        var dto = service.open(member, 20L);
+        assertThat(dto.id()).isEqualTo(7L);
+        assertThat(dto.lastMessage()).isEqualTo("Chào em, hẹn 7h sáng nhé");
+        assertThat(dto.lastMessageMine()).isFalse();
+        assertThat(dto.unreadCount()).isEqualTo(2L);
         verify(contacts).lockUser(10L);
         verify(conversations, never()).save(any());
     }
@@ -154,14 +163,32 @@ class ChatServiceTest {
 
     @Test void coachDirectoryListsOnlyTheirCurrentMembers() {
         var coachPrincipal = new AuthenticatedPrincipal(20L, "coach", "COACH");
-        var trainees = mock(com.swp391.scms.coaching.service.CurrentCoachMembers.class);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachMembers", trainees);
-        when(trainees.list(20L, "COACH")).thenReturn(List.of(
-                new com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption(10L, "MEM-10", "User 10", null, null, null),
-                new com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption(11L, "MEM-11", "Khác", null, null, null)));
-        var page = service.contacts(coachPrincipal, "user", 0);
+        when(contacts.searchForCoach(eq(20L), eq(java.time.LocalDate.of(2026, 11, 12)), eq("user"), any()))
+                .thenReturn(new PageImpl<>(List.of(memberUser), org.springframework.data.domain.PageRequest.of(0, 20), 25L));
+
+        var page = service.contacts(coachPrincipal, " user ", 0);
         assertThat(page.getContent()).extracting(c -> c.id()).containsExactly(10L);
+        assertThat(page.getTotalElements()).isEqualTo(25L);
+        verify(trainees, never()).list(any(), any());
         verify(contacts, never()).searchMembers(any(), any());
+    }
+
+    @Test void sendReChecksCoachAssignmentWhileHistoryRemainsReadOnly() {
+        var coachPrincipal = new AuthenticatedPrincipal(20L, "coach", "COACH");
+        doThrow(new ForbiddenException("COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null, null))
+                .when(trainees).requireCoachOf(20L, 10L);
+
+        assertThatThrownBy(() -> service.send(coachPrincipal, 7L, new SendChatMessage(UUID.randomUUID(), "Còn tập không?")))
+                .isInstanceOf(ForbiddenException.class);
+        var memberEx = org.junit.jupiter.api.Assertions.assertThrows(ForbiddenException.class,
+                () -> service.send(member, 7L, new SendChatMessage(UUID.randomUUID(), "Chào HLV")));
+        assertThat(memberEx.getErrorCode()).isEqualTo("CHAT_COACH_NOT_ENROLLED");
+        verify(messages, never()).save(any());
+
+        // Lịch sử cũ vẫn chỉ đọc bình thường
+        when(messages.older(eq(7L), isNull(), any())).thenReturn(List.of());
+        assertThat(service.history(coachPrincipal, 7L, null, null).items()).isEmpty();
+        assertThat(service.history(member, 7L, null, null).items()).isEmpty();
     }
 
     @Test void managerCannotOpenOrSearch() {

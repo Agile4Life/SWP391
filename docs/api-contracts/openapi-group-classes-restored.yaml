@@ -346,6 +346,100 @@ components:
           type: array
           description: Danh sách HLV kèm trạng thái khả dụng (kiểm tra lớp nhóm, PT 1:1 và nghỉ phép đã duyệt).
           items: { $ref: '#/components/schemas/CoachAvailabilityDto' }
+    CreateRecurringClassRequest:
+      type: object
+      required: [name, disciplineId, coachId, roomId, capacity, startDate, endDate, startTime, endTime]
+      properties:
+        name: { type: string, maxLength: 150, example: 'Boxing Nền tảng T2-T4-T6' }
+        disciplineId: { type: integer, format: int64, example: 2 }
+        coachId: { type: integer, format: int64, example: 5 }
+        roomId: { type: integer, format: int64, example: 4 }
+        capacity: { type: integer, minimum: 1, example: 16 }
+        level: { type: string, enum: [beginner, intermediate, advanced, all], default: all }
+        description: { type: string, nullable: true }
+        price: { type: number, minimum: 0, nullable: true, example: 1200000 }
+        startDate: { type: string, format: date, example: '2026-12-01' }
+        endDate: { type: string, format: date, example: '2026-12-31' }
+        recurringDays:
+          type: array
+          items:
+            type: string
+            enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+          example: [MONDAY, WEDNESDAY, FRIDAY]
+        startTime:
+          type: string
+          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          example: '07:00:00'
+        endTime:
+          type: string
+          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          example: '09:30:00'
+    UpdateClassRequest:
+      type: object
+      required: [name, disciplineId, coachId, roomId, capacity]
+      properties:
+        name: { type: string, maxLength: 150 }
+        disciplineId: { type: integer, format: int64 }
+        coachId: { type: integer, format: int64 }
+        roomId: { type: integer, format: int64 }
+        capacity: { type: integer, minimum: 1 }
+        level: { type: string, enum: [beginner, intermediate, advanced, all] }
+        description: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [active, inactive, archived]
+          description: Chuyển sang `inactive` hoặc `archived` sẽ đóng lớp và hủy các buổi/ghi danh tương lai còn mở.
+    SessionSlotPayload:
+      type: object
+      required: [sessionDate, startTime, endTime]
+      properties:
+        sessionDate: { type: string, format: date }
+        startTime:
+          type: string
+          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+        endTime:
+          type: string
+          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+    CourseCheckoutRequest:
+      type: object
+      properties:
+        method:
+          type: string
+          enum: [cash, bank_transfer, online_wallet, vnpay]
+          default: cash
+          description: Phương thức thanh toán học phí khóa học vượt hạn mức (mặc định `cash`).
+    ConfirmCoursePaymentRequest:
+      type: object
+      properties:
+        method:
+          type: string
+          enum: [cash, bank_transfer]
+          description: Phương thức thu tại quầy (`cash` hoặc `bank_transfer`); nếu bỏ trống sẽ lấy từ query `method` hoặc phương thức đã chọn trên khoản thu.
+    WalletTopupRequest:
+      type: object
+      required: [amount]
+      properties:
+        amount: { type: number, minimum: 10000, maximum: 100000000, example: 500000 }
+    StaffInternalRequestCreateDto:
+      type: object
+      required: [requestType, title, reason]
+      properties:
+        requestType: { type: string, enum: [LEAVE, SHIFT_EXCHANGE, SCHEDULE_CHANGE, OTHER] }
+        title: { type: string }
+        reason: { type: string }
+        startDate: { type: string, format: date, nullable: true }
+        endDate: { type: string, format: date, nullable: true }
+        targetShift: { type: string, nullable: true }
+        replacementUserId: { type: integer, format: int64, nullable: true }
+        confirmOverlap: { type: boolean, nullable: true }
+    StaffCancellationRequest:
+      type: object
+      required: [reason]
+      properties:
+        memberId: { type: integer, format: int64, nullable: true }
+        subscriptionId: { type: integer, format: int64, nullable: true }
+        reason: { type: string, maxLength: 500 }
+        refundAmount: { type: number, minimum: 0, nullable: true }
 security:
   - bearerAuth: []
 paths:
@@ -409,6 +503,11 @@ paths:
         `scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot`), sức chứa không vượt sức chứa phòng
         (`400 SCHEDULING_CAPACITY_EXCEEDS_ROOM`) và học phí không âm (`400 SCHEDULING_INVALID_PRICE`).
       tags: [Lớp học nhóm]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CreateRecurringClassRequest' }
       responses:
         '201': { description: Tạo khóa học định kỳ thành công }
         '400':
@@ -430,35 +529,42 @@ paths:
 
   /classes/{id}:
     put:
-      summary: Cập nhật khóa học nhóm định kỳ và tùy chọn tái sinh buổi học tương lai theo 5 Slot cố định (CENTER_MANAGER, MANAGER)
+      summary: Cập nhật thông tin, phòng, HLV, sức chứa hoặc trạng thái lớp học nhóm (CENTER_MANAGER, MANAGER)
       description: >
-        Kiểm tra các ràng buộc lịch 5 Slot cố định, sức chứa lớp không vượt quá sức chứa phòng
-        (`400 SCHEDULING_CAPACITY_EXCEEDS_ROOM`) và không nhỏ hơn số học viên đã ghi danh
-        (`400 SCHEDULING_CAPACITY_BELOW_BOOKED`), học phí không âm (`400 SCHEDULING_INVALID_PRICE`),
-        không trùng ngày & slot với lớp `active` khác cùng bộ môn (`409 SCHEDULING_DISCIPLINE_CONFLICT`),
-        cùng các ràng buộc trùng phòng, trùng lớp nhóm/PT 1:1/nghỉ phép của HLV và trùng lịch học viên.
+        Cập nhật thông tin lớp học hiện có (`name`, `disciplineId`, `coachId`, `roomId`, `capacity`, `level`,
+        `description`, `status` trong `active|inactive|archived`). API này không nhận `price`/khung giờ và không
+        tái sinh lịch buổi học mới. Khi đổi `coachId`, `roomId`, `disciplineId` hoặc kích hoạt lại lớp sang `active`,
+        hệ thống (cả `ClassService` lẫn trigger `trg_classes_check_session_conflict` / `trg_pt_schedule_class`)
+        kiểm tra lại toàn bộ buổi `scheduled` tương lai chống trùng phòng, trùng lớp nhóm/PT 1:1/nghỉ phép của HLV
+        và trùng cùng bộ môn (`409 SCHEDULING_DISCIPLINE_CONFLICT`). Khi chuyển sang `inactive` hoặc `archived`,
+        hệ thống đóng lớp và hủy các buổi/ghi danh còn hiệu lực.
       tags: [Lớp học nhóm]
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/UpdateClassRequest' }
       responses:
-        '200': { description: Cập nhật khóa học thành công }
+        '200': { description: Cập nhật lớp học thành công }
         '400':
           description: >
-            Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`),
-            sức chứa vượt sức chứa phòng (`SCHEDULING_CAPACITY_EXCEEDS_ROOM`),
+            Sức chứa vượt sức chứa phòng (`SCHEDULING_CAPACITY_EXCEEDS_ROOM`),
             sức chứa nhỏ hơn số học viên đã ghi danh (`SCHEDULING_CAPACITY_BELOW_BOOKED`),
-            học phí âm (`SCHEDULING_INVALID_PRICE`) hoặc dữ liệu không hợp lệ.
+            phòng không khả dụng (`SCHEDULING_ROOM_UNAVAILABLE`), HLV không hoạt động
+            (`SCHEDULING_COACH_INACTIVE`) hoặc dữ liệu/trạng thái không hợp lệ.
         '403': { description: Không có quyền thực hiện }
-        '404': { description: Không tìm thấy lớp học }
+        '404': { description: Không tìm thấy lớp học, bộ môn, phòng hoặc HLV }
         '409':
           description: >
             Trùng ngày & slot với lớp nhóm `active` khác cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
             trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
             trùng buổi PT 1:1 `confirmed` của HLV (`SCHEDULING_COACH_PT_CONFLICT`),
-            HLV nghỉ phép đã duyệt (`COACH_ON_LEAVE`), hoặc học viên bị trùng lịch (`SCHEDULING_MEMBER_TIME_OVERLAP`).
+            hoặc HLV nghỉ phép đã duyệt (`COACH_ON_LEAVE`).
     delete:
       summary: Xóa/ngừng hoạt động lớp học không còn ghi danh hoạt động (CENTER_MANAGER, MANAGER)
       tags: [Lớp học nhóm]
@@ -498,6 +604,11 @@ paths:
       tags: [Lớp học nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SessionSlotPayload' }
       responses:
         '201': { description: Tạo buổi học thành công }
         '400': { description: 'Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`) hoặc dữ liệu không hợp lệ' }
@@ -522,6 +633,11 @@ paths:
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
         - { name: sessionId, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SessionSlotPayload' }
       responses:
         '200': { description: Dời lịch buổi học thành công }
         '400': { description: 'Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`) hoặc dữ liệu không hợp lệ' }
@@ -590,10 +706,74 @@ paths:
       tags: [Ghi danh lớp nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CourseCheckoutRequest' }
       responses:
         '201': { description: Tạo/xác nhận checkout thành công và gửi thông báo (`class_enrollment`) }
+        '400': { description: Phương thức thanh toán không hợp lệ hoặc số dư Ví không đủ }
         '403': { description: Gói hội viên không hợp lệ hoặc bị chặn ghi danh }
         '409': { description: Lớp đã đầy, đã ghi danh hoặc hội viên bị trùng lịch }
+
+  /classes/enrollments/unpaid:
+    get:
+      summary: Liệt kê các khoản học phí khóa học nhóm chờ thanh toán tại quầy (RECEPTIONIST, CENTER_MANAGER)
+      tags: [Ghi danh lớp nhóm]
+      responses:
+        '200': { description: Danh sách `UnpaidCourseEnrollmentDto` chờ quầy xác nhận thu tiền }
+        '403': { description: Không có quyền thực hiện }
+
+  /classes/enrollments/{id}/confirm-payment:
+    post:
+      summary: Quầy lễ tân xác nhận đã thu học phí khóa học nhóm (RECEPTIONIST, CENTER_MANAGER)
+      tags: [Ghi danh lớp nhóm]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 }, description: ID bản ghi `class_enrollments` }
+        - { name: method, in: query, required: false, schema: { type: string, enum: [cash, bank_transfer] } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ConfirmCoursePaymentRequest' }
+      responses:
+        '200': { description: Xác nhận thanh toán học phí thành công (`PaymentDto`) và tự phát hành hóa đơn }
+        '400': { description: Phương thức thanh toán không hợp lệ }
+        '403': { description: Không có quyền thực hiện }
+        '404': { description: Không tìm thấy lượt ghi danh hoặc khoản thanh toán chờ thu }
+        '409': { description: 'Khoản học phí đã được thanh toán, đã hủy hoặc đang có phiên VNPay chưa đóng' }
+
+  /coach-bookings/coaches:
+    get:
+      summary: Danh sách HLV đang hoạt động để hội viên chọn đặt lịch PT 1:1
+      tags: [Đặt lịch PT 1:1]
+      responses:
+        '200': { description: Danh sách `CoachPublicDto` }
+
+  /coach-bookings/my:
+    get:
+      summary: Danh sách lịch tập PT 1:1 của hội viên đang đăng nhập (MEMBER)
+      tags: [Đặt lịch PT 1:1]
+      responses:
+        '200': { description: Danh sách `CoachBookingDto` của hội viên }
+        '403': { description: Không có quyền thực hiện }
+
+  /coach-bookings/quota-status:
+    get:
+      summary: Tra cứu trạng thái hạn mức lượt PT 1:1 miễn phí theo chu kỳ gói của hội viên (MEMBER)
+      tags: [Đặt lịch PT 1:1]
+      responses:
+        '200': { description: Thông tin `CoachQuotaStatusDto` }
+        '403': { description: Không có quyền thực hiện }
+
+  /coach-bookings/coach-schedule:
+    get:
+      summary: Danh sách lịch dạy PT 1:1 của HLV đang đăng nhập (COACH)
+      tags: [Đặt lịch PT 1:1]
+      responses:
+        '200': { description: Danh sách `CoachBookingDto` của HLV }
+        '403': { description: Không có quyền thực hiện }
 
   /coach-bookings/available-slots:
     get:
@@ -653,6 +833,129 @@ paths:
           description: >
             Khung giờ không khớp 5 Slot cố định (`INVALID_COACH_BOOKING_SLOT` ở service hoặc
             `SCHEDULING_INVALID_SLOT` từ trigger `trg_schedule_invalid_slot`), đặt sát giờ dưới 2 tiếng
-            hoặc dữ liệu không hợp lệ.
-        '403': { description: Gói hội viên không hợp lệ hoặc ngày tập nằm trong khoảng bảo lưu (`MEMBERSHIP_ON_HOLD`) }
-        '409': { description: HLV hoặc hội viên đã có lịch lớp nhóm / PT 1:1 khác trùng slot }
+            (`COACH_BOOKING_TOO_SOON`), gói tập không hoạt động/không phủ ngày tập (`MEMBERSHIP_INACTIVE_OR_EXPIRED`),
+            ngày tập nằm trong kỳ bảo lưu đã duyệt (`MEMBERSHIP_ON_HOLD`), hết hạn mức PT miễn phí,
+            phương thức thanh toán không hợp lệ (`INVALID_PAYMENT_METHOD`) hoặc HLV không hoạt động (`COACH_INACTIVE`).
+        '403': { description: 'Không đúng vai trò `MEMBER` hoặc trigger PostgreSQL từ chối gói tập không còn hiệu lực (`trg_enrollments_check_membership`)' }
+        '409': { description: 'HLV hoặc hội viên đã có lịch lớp nhóm / PT 1:1 khác trùng slot (`COACH_SCHEDULE_CONFLICT` / `MEMBER_SCHEDULE_CONFLICT`), HLV nghỉ phép (`COACH_ON_LEAVE`), vượt giới hạn buổi lẻ chưa thanh toán (`COACH_BOOKING_UNPAID_LIMIT`) hoặc tranh chấp khóa lịch (`SCHEDULE_UPDATE_IN_PROGRESS`)' }
+
+  /wallet/my:
+    get:
+      summary: Xem số dư Ví SÖL và 50 giao dịch ví gần nhất của người đang đăng nhập
+      tags: [Ví SÖL]
+      responses:
+        '200': { description: 'Thông tin `WalletDto` kèm lịch sử giao dịch' }
+        '401': { description: Chưa đăng nhập }
+
+  /wallet/topup/vnpay:
+    post:
+      summary: Tạo liên kết thanh toán VNPay Sandbox để nạp tiền vào Ví SÖL (MEMBER)
+      tags: [Ví SÖL]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WalletTopupRequest' }
+      responses:
+        '200': { description: 'Thông tin `VnpayDtos.Checkout` (`reference`, `paymentUrl`, `amount`, `expiresAt`)' }
+        '400': { description: 'Số tiền nạp ngoài khoảng `10.000đ – 100.000.000đ`' }
+        '403': { description: 'Chỉ dành cho `MEMBER`' }
+        '503': { description: Cổng VNPay chưa được cấu hình }
+
+  /operations/requests:
+    get:
+      summary: Quản lý xem danh sách toàn bộ đơn từ nội bộ nhân sự (MANAGER, CENTER_MANAGER)
+      tags: [Đơn từ nội bộ]
+      parameters:
+        - { name: status, in: query, required: false, schema: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELLED] } }
+        - { name: type, in: query, required: false, schema: { type: string, enum: [LEAVE, SHIFT_EXCHANGE, SCHEDULE_CHANGE, OTHER] } }
+      responses:
+        '200': { description: 'Danh sách `StaffInternalRequestDto`' }
+        '403': { description: Không có quyền thực hiện }
+    post:
+      summary: Nhân sự/HLV gửi đơn nội bộ mới (STAFF, COACH, RECEPTIONIST)
+      tags: [Đơn từ nội bộ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StaffInternalRequestCreateDto' }
+      responses:
+        '201': { description: 'Tạo đơn thành công (`StaffInternalRequestDto`)' }
+        '400': { description: 'Loại đơn, khoảng ngày hoặc người thay ca không hợp lệ' }
+        '403': { description: Không có quyền thực hiện }
+        '409': { description: 'Trùng ngày nghỉ phép (`LEAVE_OVERLAP`) khi chưa gửi `confirmOverlap=true`' }
+
+  /operations/requests/my:
+    get:
+      summary: Nhân sự/HLV xem danh sách đơn từ nội bộ của chính mình (STAFF, COACH, RECEPTIONIST)
+      tags: [Đơn từ nội bộ]
+      parameters:
+        - { name: status, in: query, required: false, schema: { type: string, enum: [PENDING, APPROVED, REJECTED, CANCELLED] } }
+      responses:
+        '200': { description: Danh sách `StaffInternalRequestDto` của người đăng nhập }
+        '403': { description: Không có quyền thực hiện }
+
+  /users/deleted:
+    get:
+      summary: Liệt kê các tài khoản người dùng đã bị xóa mềm (`deleted_at IS NOT NULL`) (ADMIN)
+      tags: [Quản trị người dùng]
+      responses:
+        '200': { description: Danh sách `UserDto` đã xóa mềm }
+        '403': { description: Chỉ dành cho `ADMIN` }
+
+  /users/{id}/restore:
+    patch:
+      summary: Khôi phục tài khoản người dùng đã bị xóa mềm (ADMIN)
+      tags: [Quản trị người dùng]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Khôi phục tài khoản thành công (`UserDto`) }
+        '403': { description: Chỉ dành cho `ADMIN` }
+        '404': { description: Không tìm thấy tài khoản }
+
+  /memberships/cancellations/staff-request:
+    post:
+      summary: Lễ tân hoặc Quản lý gửi yêu cầu hủy gói tập thay hội viên (RECEPTIONIST, CENTER_MANAGER)
+      tags: [Gói thành viên]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/StaffCancellationRequest' }
+      responses:
+        '200': { description: Tạo yêu cầu hủy gói thành công (`CancellationDtos.Response`) }
+        '400': { description: Thiếu lý do hoặc gói không đủ điều kiện hủy }
+        '403': { description: Không có quyền thực hiện }
+
+  /coaching/training-plans/{id}:
+    get:
+      summary: Xem chi tiết một giáo án tập luyện (COACH, CENTER_MANAGER, MEMBER)
+      description: >
+        Hội viên hạng Silver nhận `403 COACHING_PLAN_TIER_REQUIRED`. HLV chỉ được xem giáo án của mình hoặc
+        học viên hiện tại được phân công; hội viên chỉ được xem giáo án hợp lệ của chính mình.
+      tags: [Giáo án tập luyện]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Chi tiết `TrainingPlanDto` }
+        '403': { description: Không có quyền xem hoặc gói tập không đủ hạng (`COACHING_PLAN_TIER_REQUIRED`) }
+        '404': { description: Không tìm thấy giáo án }
+
+  /health:
+    get:
+      summary: Kiểm tra tình trạng hoạt động dịch vụ API (công khai, không yêu cầu JWT)
+      security: []
+      tags: [Hệ thống]
+      responses:
+        '200':
+          description: 'Trả về `{status: "UP", service: "scms-api", timestamp}`'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: UP }
+                  service: { type: string, example: scms-api }
+                  timestamp: { type: string, format: date-time }

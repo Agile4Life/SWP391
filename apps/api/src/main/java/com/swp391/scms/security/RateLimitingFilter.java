@@ -55,7 +55,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     /** Bộ đếm số request của một khóa (đường dẫn + IP) trong một phút; sang phút mới thì đếm lại từ 1. */
     private static class WindowCounter {
-        long windowStartMinute;
+        final long windowStartMinute;
         final AtomicInteger count = new AtomicInteger(0);
 
         WindowCounter(long minute) {
@@ -117,6 +117,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
      * cho sinh QR động; 0 nghĩa là không giới hạn.
      */
     private int getRateLimitForUri(String uri) {
+        if (uri == null) {
+            return 0;
+        }
         // Portal đọc phiên hiện tại mỗi lần tải; nó đã xác thực và không phải mục tiêu dò đoán.
         if (uri.equals(AUTH_ME_PATH)) {
             return 0;
@@ -124,10 +127,10 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         if (uri.startsWith(AUTH_PATH)) {
             return AUTH_LIMIT_PER_MINUTE;
         }
-        if (uri.endsWith(SCAN_PATH)) {
+        if (uri.equals(SCAN_PATH)) {
             return SCAN_LIMIT_PER_MINUTE;
         }
-        if (uri.endsWith(DYNAMIC_QR_PATH)) {
+        if (uri.equals(DYNAMIC_QR_PATH)) {
             return DYNAMIC_QR_LIMIT_PER_MINUTE;
         }
         return 0; // Không giới hạn tần suất
