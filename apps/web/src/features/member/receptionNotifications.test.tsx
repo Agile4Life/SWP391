@@ -38,6 +38,38 @@ it.each(['STAFF', 'RECEPTIONIST'])('maps real payment metadata to transaction hi
   expect(notificationDestination({ ...item, type: 'payment', relatedEntityType: 'payment' }, role)).toBe('/staff/reception-history');
 });
 
+it.each(['STAFF', 'RECEPTIONIST'])('opens completed payments and wallet topups in history for %s', async role => {
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role }));
+  for (const metadata of [
+    { type: 'payment', relatedEntityType: 'membership_subscription' },
+    { type: 'system', relatedEntityType: 'payment' },
+    { type: 'payment', relatedEntityType: 'payment' },
+  ]) {
+    api.list.mockResolvedValue({ content: [{ ...item, ...metadata, title: 'Transaction completed', actionPath: '/staff/reception' }], number: 0, totalPages: 1 });
+    await render();
+    await act(async () => host.querySelector<HTMLButtonElement>('.notification-item')!.click());
+    expect(host.querySelector('output')?.textContent).toBe('/staff/reception-history');
+    expect(api.read).toHaveBeenCalledWith(7);
+    await act(async () => root.unmount());
+    root = createRoot(host);
+  }
+});
+
+it.each(['Có yêu cầu thanh toán mới', 'New counter payment request', 'Request with a different title'])('keeps PR #172 pending-payment notifications at reception: %s', async title => {
+  api.list.mockResolvedValue({ content: [{ ...item, title, actionPath: '/staff/reception' }], number: 0, totalPages: 1 });
+  await render();
+  await act(async () => host.querySelector<HTMLButtonElement>('.notification-item')!.click());
+  expect(host.querySelector('output')?.textContent).toBe('/staff/reception');
+  expect(api.read).toHaveBeenCalledWith(7);
+  expect(closed).toHaveBeenCalledTimes(1);
+});
+
+it.each(['MEMBER', 'COACH', 'MANAGER', 'CENTER_MANAGER', 'ADMIN'])('keeps payment routing unchanged for %s', role => {
+  const payment = { ...item, type: 'payment', relatedEntityType: 'payment', actionPath: '/staff/reception' };
+  const destination = role === 'MEMBER' ? '/member/invoices' : role === 'COACH' ? '/coach/classes' : role === 'ADMIN' ? '/admin/users' : '/manager/reports';
+  expect(notificationDestination(payment, role)).toBe(destination);
+});
+
 it.each(['Your request was approved', 'Your request was rejected', 'Đơn từ của bạn đã được duyệt', 'Đơn từ của bạn bị từ chối'])('maps a real internal-request title only when metadata is absent: %s', title => {
   expect(notificationDestination({ ...item, title }, 'STAFF')).toBe('/staff/requests');
   expect(notificationDestination({ ...item, title, relatedEntityType: 'support_request' }, 'STAFF')).toBe('/messages?tab=support');
