@@ -172,6 +172,37 @@ class MembershipCancellationServiceTest {
         verifyNoInteractions(enrollments);
     }
 
+    /** Kiểm thử: duyệt từ chối khi hội viên còn kỳ gói đang bảo lưu (frozen) mà không thay đổi trạng thái. */
+    @Test
+    void approvalRejectsFrozenEntitlementWithoutMutation() {
+        stubDecision();
+        MembershipSubscription frozen = new MembershipSubscription(); frozen.setId(102L);
+        frozen.setStatus("frozen"); frozen.setStartDate(LocalDate.of(2026, 10, 1));
+        frozen.setEndDate(LocalDate.of(2026, 11, 15));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active, frozen));
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CANCELLATION_OTHER_ENTITLEMENT");
+        assertThat(active.getStatus()).isEqualTo("active");
+        assertThat(frozen.getStatus()).isEqualTo("frozen");
+        verifyNoInteractions(enrollments);
+    }
+
+    /** Kiểm thử: duyệt từ chối khi hội viên còn kỳ gói đang chờ thanh toán (pending_payment). */
+    @Test
+    void approvalRejectsPendingPaymentEntitlementWithoutMutation() {
+        stubDecision();
+        MembershipSubscription pendingSub = new MembershipSubscription(); pendingSub.setId(103L);
+        pendingSub.setStatus("pending_payment");
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active, pendingSub));
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CANCELLATION_PENDING_PAYMENT");
+        assertThat(active.getStatus()).isEqualTo("active");
+        assertThat(pendingSub.getStatus()).isEqualTo("pending_payment");
+        verifyNoInteractions(enrollments);
+    }
+
     @Test
     void approvalDoesNotCancelExpiredHistory() {
         stubDecision();
