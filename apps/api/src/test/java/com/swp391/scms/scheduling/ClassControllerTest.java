@@ -6,8 +6,13 @@ import com.swp391.scms.common.GlobalExceptionHandler;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.CoachAvailabilityDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.GymClassDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.RecurringAvailabilityDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.RoomAvailabilityDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.SlotAvailabilityDto;
 import com.swp391.scms.scheduling.service.ClassService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -168,5 +173,49 @@ class ClassControllerTest {
         mockMvc.perform(get("/api/v1/classes"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].id").value(1L));
+    }
+
+    /** Kiểm thử: POST /recurring/availability trả 200 OK kèm thông tin khả dụng của 5 slot, phòng và HLV. */
+    @Test
+    void checkRecurringAvailability_returnsOk() throws Exception {
+        RecurringAvailabilityRequest request = new RecurringAvailabilityRequest(
+                1L,
+                LocalDate.of(2026, 11, 30),
+                LocalDate.of(2026, 12, 13),
+                List.of("MONDAY", "WEDNESDAY"),
+                LocalTime.of(7, 0),
+                LocalTime.of(9, 30)
+        );
+        RecurringAvailabilityDto response = new RecurringAvailabilityDto(
+                true,
+                null,
+                null,
+                4,
+                LocalDate.of(2026, 11, 30),
+                LocalDate.of(2026, 12, 9),
+                true,
+                null,
+                null,
+                List.of(new SlotAvailabilityDto(
+                        1, "SLOT_1", LocalTime.of(7, 0), LocalTime.of(9, 30),
+                        true, false, null, null, 2, 3)),
+                List.of(new RoomAvailabilityDto(
+                        3L, "Zen Garden Studio", "Tầng 2", 16, "STANDARD", true, null, null)),
+                List.of(new CoachAvailabilityDto(
+                        2L, "Coach An", "an@sol.vn", true, null, null))
+        );
+        when(classService.checkRecurringAvailability(any())).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/classes/recurring/availability")
+                        .header("Accept-Language", "en")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Schedule availability checked successfully"))
+                .andExpect(jsonPath("$.data.validSchedule").value(true))
+                .andExpect(jsonPath("$.data.sessionCount").value(4))
+                .andExpect(jsonPath("$.data.slots[0].code").value("SLOT_1"))
+                .andExpect(jsonPath("$.data.rooms[0].name").value("Zen Garden Studio"))
+                .andExpect(jsonPath("$.data.coaches[0].fullName").value("Coach An"));
     }
 }

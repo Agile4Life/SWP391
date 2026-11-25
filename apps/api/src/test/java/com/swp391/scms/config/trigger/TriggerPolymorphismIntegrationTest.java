@@ -43,6 +43,7 @@ class TriggerPolymorphismIntegrationTest {
         assertFalse(sql.contains("trg_coach_bookings_rest_required"), "Coach 3-consecutive-slot rest trigger must be removed");
         assertTrue(sql.contains("scms_check_session_conflict"), "Must contain P3 conflict check function");
         assertTrue(sql.contains("trg_sessions_check_conflict"), "Must contain P3 conflict trigger");
+        assertTrue(sql.contains("trg_sessions_check_discipline_conflict"), "Must contain same-discipline no-overlap constraint");
         assertTrue(sql.contains("scms_guard_member_class_overlap"), "Must forbid one member in two overlapping classes");
         assertTrue(sql.contains("trg_member_overlap_session_booking"), "Must guard per-session bookings against member overlap");
         assertTrue(sql.contains("coach_id"), "Must check coach time overlap");

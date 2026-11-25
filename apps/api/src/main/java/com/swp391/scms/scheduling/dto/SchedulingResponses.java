@@ -115,4 +115,60 @@ public final class SchedulingResponses {
             this(id, fullName, email, phone, status, null);
         }
     }
+
+    /** Trạng thái khả dụng của một slot trong 5 slot cố định khi kiểm tra trước lịch khóa định kỳ. */
+    public record SlotAvailabilityDto(
+            int slotNumber,
+            String code,
+            LocalTime startTime,
+            LocalTime endTime,
+            boolean available,
+            boolean disciplineConflict,
+            String conflictCode,
+            String conflictReason,
+            int availableRoomCount,
+            int availableCoachCount
+    ) {
+    }
+
+    /** Trạng thái khả dụng của một phòng tập cho khung giờ đang chọn. */
+    public record RoomAvailabilityDto(
+            Long id,
+            String name,
+            String location,
+            int capacity,
+            String tier,
+            boolean available,
+            String conflictCode,
+            String conflictReason
+    ) {
+    }
+
+    /** Trạng thái khả dụng của một huấn luyện viên cho khung giờ đang chọn. */
+    public record CoachAvailabilityDto(
+            Long id,
+            String fullName,
+            String email,
+            boolean available,
+            String conflictCode,
+            String conflictReason
+    ) {
+    }
+
+    /** Kết quả kiểm tra trước lịch trống và xung đột cho khóa học định kỳ trên 5 slot, phòng và HLV. */
+    public record RecurringAvailabilityDto(
+            boolean validSchedule,
+            String scheduleErrorCode,
+            String scheduleErrorMessage,
+            int sessionCount,
+            LocalDate firstSessionDate,
+            LocalDate lastSessionDate,
+            boolean selectedSlotAvailable,
+            String selectedSlotConflictCode,
+            String selectedSlotConflictReason,
+            java.util.List<SlotAvailabilityDto> slots,
+            java.util.List<RoomAvailabilityDto> rooms,
+            java.util.List<CoachAvailabilityDto> coaches
+    ) {
+    }
 }

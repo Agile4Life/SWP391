@@ -78,6 +78,68 @@ export interface CreateRecurringClassPayload {
   endTime: string;
 }
 
+/** Payload kiểm tra khung giờ 5 Slot, phòng tập và HLV trống cho khóa học định kỳ. */
+export interface RecurringAvailabilityPayload {
+  disciplineId: number;
+  startDate: string;
+  endDate: string;
+  recurringDays: string[];
+  startTime: string;
+  endTime: string;
+}
+
+/** Trạng thái khả dụng của một trong 5 Slot cố định. */
+export interface SlotAvailabilityDto {
+  slotNumber: number;
+  code: string;
+  startTime: string;
+  endTime: string;
+  available: boolean;
+  disciplineConflict: boolean;
+  conflictCode?: string | null;
+  conflictReason?: string | null;
+  availableRoomCount: number;
+  availableCoachCount: number;
+}
+
+/** Trạng thái khả dụng của một phòng tập cho lịch định kỳ đang chọn. */
+export interface RoomAvailabilityDto {
+  id: number;
+  name: string;
+  location?: string | null;
+  capacity: number;
+  tier?: string | null;
+  available: boolean;
+  conflictCode?: string | null;
+  conflictReason?: string | null;
+}
+
+/** Trạng thái khả dụng của một huấn luyện viên cho lịch định kỳ đang chọn. */
+export interface CoachAvailabilityDto {
+  id: number;
+  fullName: string;
+  email: string;
+  available: boolean;
+  conflictCode?: string | null;
+  conflictReason?: string | null;
+}
+
+/** Kết quả kiểm tra khả dụng toàn diện cho trình tạo khóa học 4 bước. */
+export interface RecurringAvailabilityDto {
+  validSchedule: boolean;
+  scheduleErrorCode?: string | null;
+  scheduleErrorMessage?: string | null;
+  sessionCount: number;
+  firstSessionDate?: string | null;
+  lastSessionDate?: string | null;
+  selectedSlotAvailable: boolean;
+  selectedSlotConflictCode?: string | null;
+  selectedSlotConflictReason?: string | null;
+  slots: SlotAvailabilityDto[];
+  rooms: RoomAvailabilityDto[];
+  coaches: CoachAvailabilityDto[];
+}
+
 /** Payload cập nhật thông tin khóa học. */
 export interface UpdateClassPayload {
   name: string;
@@ -156,6 +218,13 @@ export const classesApi = {
     const list = await apiFetch<ClassSessionDto[]>(qs ? `/classes/sessions?${qs}` : '/classes/sessions');
     return classId ? list.filter((s) => s.classId === classId) : list;
   },
+
+  /** Kiểm tra khả dụng 5 Slot, phòng tập và HLV trước khi tạo khóa học định kỳ. */
+  checkRecurringAvailability: async (payload: RecurringAvailabilityPayload): Promise<RecurringAvailabilityDto> =>
+    apiFetch<RecurringAvailabilityDto>('/classes/recurring/availability', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
 
   /** Tạo khóa học định kỳ mới kèm các buổi học theo thứ trong tuần. */
   createRecurringClass: async (payload: CreateRecurringClassPayload): Promise<ClassItem> =>

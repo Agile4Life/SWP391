@@ -1,26 +1,34 @@
 openapi: 3.0.3
 info:
   title: SCMS API — Hợp đồng Lớp học nhóm định kỳ & Lịch PT 1:1 theo 5 Slot cố định
-  version: 1.1.0
+  version: 1.2.0
   description: >
     Hợp đồng API hiện hành cho lớp học nhóm định kỳ (`app.legacy.classes-enabled=true`) và đặt lịch PT 1:1
     theo hệ thống **5 Slot cố định (`07:00 – 19:30`)** (cập nhật 25/11/2026).
     Áp dụng cho 3 bộ môn đang hoạt động (`Gym`, `Boxing`, `Yoga`) và 4 phòng
-    (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`), bắt buộc mỗi bộ môn
-    chỉ có tối đa 1 lớp nhóm `active` duy nhất (`409 SCHEDULING_DISCIPLINE_CLASS_EXISTS`).
+    (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`).
+    Mỗi bộ môn được mở **nhiều lớp nhóm định kỳ đang hoạt động (`active`)** miễn là không có hai lớp cùng bộ môn
+    trùng ngày và cùng slot (`409 SCHEDULING_DISCIPLINE_CONFLICT`, kiểm tra đồng thời tại `ClassService` và
+    trigger PostgreSQL `trg_sessions_check_discipline_conflict` bên trong `scms_check_session_conflict`).
     Toàn bộ lớp nhóm định kỳ và PT 1:1 phải khớp đúng 1 trong 5 slot chuẩn (nghỉ 15 phút giữa hai slot kế tiếp):
     `Slot 1` (`07:00 – 09:30`), `Slot 2` (`09:45 – 11:15`), `Slot 3` (`11:30 – 14:00`),
     `Slot 4` (`14:15 – 16:45`), `Slot 5` (`17:00 – 19:30`).
     Khung giờ nằm ngoài 5 slot chuẩn trả `400 SCHEDULING_INVALID_SLOT` (lớp nhóm) hoặc
     `400 INVALID_COACH_BOOKING_SLOT` (PT 1:1), đồng thời được bảo vệ tại tầng PostgreSQL qua
     hàm `scms_is_valid_schedule_slot` và lỗi trigger `trg_schedule_invalid_slot` (`400 SCHEDULING_INVALID_SLOT`).
-    Quy tắc đặt buổi lẻ một lần vẫn bị tắt bởi `SingleSessionPolicy`.
-    Ràng buộc chống trùng lịch hai chiều PT 1:1 <-> Lớp nhóm được bảo vệ đồng thời tại
+    Sức chứa lớp học không được vượt quá sức chứa phòng (`400 SCHEDULING_CAPACITY_EXCEEDS_ROOM`) và
+    học phí khóa học không được âm (`400 SCHEDULING_INVALID_PRICE`).
+    Endpoint chỉ đọc `POST /api/v1/classes/recurring/availability` phục vụ wizard tạo khóa học 4 bước để
+    tiền kiểm tra số buổi dự kiến, 5 slot chuẩn, phòng tập và HLV theo thời gian thực.
+    Quy tắc đặt buổi lẻ một lần vẫn bị tắt bởi `SingleSessionPolicy` (và UI không còn nút `+ Thêm buổi` rời).
+    Ràng buộc chống trùng lịch hai chiều PT 1:1 <-> Lớp nhóm cùng lịch nghỉ phép đã duyệt của HLV được bảo vệ đồng thời tại
     `ClassService`, `CoachBookingService`, `CoachAssignmentService` và trigger `scms_guard_pt_schedule`.
     Đối với PT 1:1: giữ nguyên đơn giá `200.000đ / slot` (hoặc trừ 1 lượt gói PT) và yêu cầu đặt trước giờ bắt đầu
     slot tối thiểu 2 giờ; đã gỡ bỏ hoàn toàn giới hạn bắt buộc nghỉ liên tiếp của HLV
     (`requiresCoachRest`, lý do `coach_rest` và nhánh trigger `trg_coach_bookings_rest_required`).
-    Dữ liệu lịch cũ lệch ngoài 5 slot được dọn sạch và seed lại một lần (idempotent) qua `LegacyScheduleSlotResetRunner`.
+    Dữ liệu lịch cũ lệch ngoài 5 slot được dọn sạch và seed lại một lần (idempotent) qua `LegacyScheduleSlotResetRunner`;
+    `RetiredCatalogCleanupRunner` không còn vô hiệu hóa các lớp `active` cùng bộ môn khi khởi động lại
+    (vẫn dọn bộ môn/phòng/lớp mẫu đã ngừng và đồng bộ chuyên môn HLV mẫu).
 servers:
   - url: /api/v1
 components:
@@ -110,6 +118,234 @@ components:
             Dùng `package_quota` để trừ 1 lượt gói PT hoặc thanh toán theo đơn giá `200.000đ / slot`
             (áp dụng giảm giá theo hạng gói Gold/Platinum).
         notes: { type: string, nullable: true }
+    RecurringAvailabilityRequest:
+      type: object
+      description: >
+        Payload yêu cầu tiền kiểm tra khả dụng lịch học nhóm định kỳ cho wizard 4 bước
+        (`POST /api/v1/classes/recurring/availability`). Khi bỏ trống `startTime`/`endTime`,
+        API vẫn tính số buổi dự kiến và đánh giá khả dụng của toàn bộ 5 Slot cố định.
+      required: [disciplineId, startDate, endDate]
+      properties:
+        disciplineId:
+          type: integer
+          format: int64
+          example: 1
+        startDate:
+          type: string
+          format: date
+          example: '2026-12-01'
+        endDate:
+          type: string
+          format: date
+          example: '2026-12-31'
+        recurringDays:
+          type: array
+          description: Danh sách thứ lặp lại hằng tuần (`MONDAY`..`SUNDAY`).
+          items:
+            type: string
+            enum: [MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY]
+          example: [MONDAY, WEDNESDAY, FRIDAY]
+        startTime:
+          type: string
+          nullable: true
+          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          example: '07:00:00'
+          description: Giờ bắt đầu tùy chọn thuộc 1 trong 5 Slot cố định (`07:00 – 19:30`).
+        endTime:
+          type: string
+          nullable: true
+          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          example: '09:30:00'
+          description: Giờ kết thúc tùy chọn khớp với `startTime` trong 5 Slot cố định.
+    SlotAvailabilityDto:
+      type: object
+      description: >
+        Trạng thái khả dụng của một trong 5 Slot cố định (`Slot 1` – `Slot 5`) cho bộ môn và tập ngày định kỳ
+        đang chọn (kiểm tra trùng ngày & slot với các lớp đang hoạt động cùng bộ môn — `SCHEDULING_DISCIPLINE_CONFLICT`,
+        cùng số lượng phòng và HLV khả dụng tại slot đó).
+      required:
+        - slotNumber
+        - code
+        - startTime
+        - endTime
+        - available
+        - disciplineConflict
+        - availableRoomCount
+        - availableCoachCount
+      properties:
+        slotNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 1
+        code:
+          type: string
+          enum: [SLOT_1, SLOT_2, SLOT_3, SLOT_4, SLOT_5]
+          example: SLOT_1
+        startTime:
+          type: string
+          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          example: '07:00:00'
+        endTime:
+          type: string
+          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          example: '09:30:00'
+        available:
+          type: boolean
+          example: true
+        disciplineConflict:
+          type: boolean
+          example: false
+          description: Cho biết có xung đột trùng ngày & slot với một lớp đang hoạt động cùng bộ môn hay không.
+        conflictCode:
+          type: string
+          nullable: true
+          example: SCHEDULING_DISCIPLINE_CONFLICT
+          description: Mã xung đột (`SCHEDULING_DISCIPLINE_CONFLICT`, ...) khi `available=false`.
+        conflictReason:
+          type: string
+          nullable: true
+          description: Mô tả lý do xung đột đã bản địa hóa theo `Accept-Language`.
+        availableRoomCount:
+          type: integer
+          minimum: 0
+          example: 4
+          description: Số phòng còn trống trên toàn bộ tập ngày định kỳ tại slot này.
+        availableCoachCount:
+          type: integer
+          minimum: 0
+          example: 3
+          description: Số HLV còn trống trên toàn bộ tập ngày định kỳ tại slot này.
+    RoomAvailabilityDto:
+      type: object
+      description: >
+        Trạng thái khả dụng của một phòng tập cho tập ngày định kỳ và slot đang chọn, kèm sức chứa tối đa
+        của phòng để wizard kiểm tra ràng buộc `capacity <= room.capacity` (`400 SCHEDULING_CAPACITY_EXCEEDS_ROOM`).
+      required: [id, name, capacity, available]
+      properties:
+        id: { type: integer, format: int64, example: 1 }
+        name: { type: string, example: 'Phòng Gym Tiêu chuẩn' }
+        location:
+          type: string
+          nullable: true
+          example: 'Tầng 1 — Khu A'
+        capacity:
+          type: integer
+          minimum: 1
+          example: 25
+          description: Sức chứa tối đa của phòng (`capacity` lớp không được vượt quá giá trị này).
+        tier:
+          type: string
+          nullable: true
+          example: STANDARD
+        available:
+          type: boolean
+          example: true
+        conflictCode:
+          type: string
+          nullable: true
+          example: SCHEDULING_ROOM_CONFLICT
+          description: Mã xung đột (`SCHEDULING_ROOM_CONFLICT`, `SCHEDULING_ROOM_UNAVAILABLE`, ...) khi `available=false`.
+        conflictReason:
+          type: string
+          nullable: true
+          description: Mô tả lý do phòng không khả dụng đã bản địa hóa theo `Accept-Language`.
+    CoachAvailabilityDto:
+      type: object
+      description: >
+        Trạng thái khả dụng của một HLV cho tập ngày định kỳ và slot đang chọn, kiểm tra đồng thời
+        lớp nhóm khác (`SCHEDULING_COACH_CONFLICT`), buổi PT 1:1 `confirmed` (`SCHEDULING_COACH_PT_CONFLICT`)
+        và kỳ nghỉ phép đã duyệt (`COACH_ON_LEAVE`).
+      required: [id, fullName, available]
+      properties:
+        id: { type: integer, format: int64, example: 5 }
+        fullName: { type: string, example: 'Nguyễn Minh Quân' }
+        email: { type: string, nullable: true }
+        available:
+          type: boolean
+          example: true
+        conflictCode:
+          type: string
+          nullable: true
+          example: SCHEDULING_COACH_PT_CONFLICT
+          description: >
+            Mã xung đột (`SCHEDULING_COACH_CONFLICT`, `SCHEDULING_COACH_PT_CONFLICT`,
+            `COACH_ON_LEAVE`, `SCHEDULING_COACH_INACTIVE`, ...) khi `available=false`.
+        conflictReason:
+          type: string
+          nullable: true
+          description: Mô tả lý do HLV không khả dụng đã bản địa hóa theo `Accept-Language`.
+    RecurringAvailabilityDto:
+      type: object
+      description: >
+        Kết quả tiền kiểm tra chỉ đọc cho cấu hình lịch khóa học định kỳ: tính hợp lệ của lịch,
+        số buổi dự kiến, khả dụng của slot đang chọn, bảng khả dụng đầy đủ 5 Slot cố định,
+        phòng tập và HLV.
+      required:
+        - validSchedule
+        - sessionCount
+        - selectedSlotAvailable
+        - slots
+        - rooms
+        - coaches
+      properties:
+        validSchedule:
+          type: boolean
+          example: true
+          description: Cho biết khoảng ngày, các thứ lặp và slot (nếu có) có hợp lệ và sinh được ít nhất 1 buổi hay không.
+        scheduleErrorCode:
+          type: string
+          nullable: true
+          example: null
+          description: >
+            Mã lỗi lịch trình (`SCHEDULING_INVALID_DATES`, `SCHEDULING_INVALID_DATE_RANGE`,
+            `SCHEDULING_NO_RECURRING_DAYS`, `SCHEDULING_NO_SESSIONS_MATCHED`, `SCHEDULING_INVALID_SLOT`, ...)
+            khi `validSchedule=false`.
+        scheduleErrorMessage:
+          type: string
+          nullable: true
+          description: Thông điệp lỗi lịch trình đã bản địa hóa khi `validSchedule=false`.
+        sessionCount:
+          type: integer
+          minimum: 0
+          example: 13
+          description: Tổng số buổi học dự kiến được sinh theo khoảng ngày và các thứ đã chọn.
+        firstSessionDate:
+          type: string
+          format: date
+          nullable: true
+          example: '2026-12-02'
+        lastSessionDate:
+          type: string
+          format: date
+          nullable: true
+          example: '2026-12-30'
+        selectedSlotAvailable:
+          type: boolean
+          example: true
+          description: Cho biết cặp `(startTime, endTime)` đang chọn có khả dụng cho bộ môn trên toàn bộ buổi dự kiến hay không.
+        selectedSlotConflictCode:
+          type: string
+          nullable: true
+          example: null
+        selectedSlotConflictReason:
+          type: string
+          nullable: true
+          example: null
+        slots:
+          type: array
+          minItems: 5
+          maxItems: 5
+          description: Trạng thái khả dụng của toàn bộ 5 Slot cố định (`Slot 1` – `Slot 5`) đối với bộ môn.
+          items: { $ref: '#/components/schemas/SlotAvailabilityDto' }
+        rooms:
+          type: array
+          description: Danh sách phòng tập kèm sức chứa tối đa và trạng thái khả dụng theo slot đang chọn.
+          items: { $ref: '#/components/schemas/RoomAvailabilityDto' }
+        coaches:
+          type: array
+          description: Danh sách HLV kèm trạng thái khả dụng (kiểm tra lớp nhóm, PT 1:1 và nghỉ phép đã duyệt).
+          items: { $ref: '#/components/schemas/CoachAvailabilityDto' }
 security:
   - bearerAuth: []
 paths:
@@ -126,29 +362,81 @@ paths:
       responses:
         '400': { description: 'SCHEDULING_SINGLE_SESSION_DISABLED hoặc SCHEDULING_INVALID_SLOT nếu khung giờ ngoài 5 slot chuẩn' }
 
+  /classes/recurring/availability:
+    post:
+      summary: Tiền kiểm tra khả dụng lịch khóa học định kỳ theo 5 Slot, phòng tập và HLV (chỉ đọc — CENTER_MANAGER, MANAGER)
+      description: >
+        Endpoint chỉ đọc phục vụ wizard tạo khóa học nhóm 4 bước
+        (`1. Thông tin khóa học` -> `2. Lịch học & Slot` -> `3. Phòng & HLV` -> `4. Xác nhận`).
+        Trả về số buổi dự kiến (`sessionCount`, `firstSessionDate`, `lastSessionDate`),
+        khả dụng của cả 5 Slot cố định đối với bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
+        khả dụng từng phòng kèm trần sức chứa (`capacity`), và khả dụng từng HLV
+        (kiểm tra lớp nhóm khác, buổi PT 1:1 `confirmed` và lịch nghỉ phép đã duyệt).
+        Không tạo hay cập nhật bản ghi nào trong CSDL.
+      tags: [Lớp học nhóm]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecurringAvailabilityRequest' }
+      responses:
+        '200':
+          description: ApiResponse bọc `RecurringAvailabilityDto`
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  status: { type: integer, example: 200 }
+                  message: { type: string }
+                  data: { $ref: '#/components/schemas/RecurringAvailabilityDto' }
+        '400':
+          description: Dữ liệu đầu vào thiếu hoặc sai định dạng (ví dụ thiếu `disciplineId`, `startDate`, `endDate`)
+        '403':
+          description: Không có quyền thực hiện (chỉ `CENTER_MANAGER`, `MANAGER`)
+        '404':
+          description: Không tìm thấy bộ môn (`disciplineId`)
+
   /classes/recurring:
     post:
       summary: Tạo khóa học nhóm định kỳ kèm tự sinh danh sách buổi học theo 5 Slot cố định (CENTER_MANAGER, MANAGER)
       description: >
-        Yêu cầu `(startTime, endTime)` khớp chính xác 1 trong 5 Slot cố định (`07:00 – 19:30`).
-        Kiểm tra đồng thời ở `ClassService` và trigger PostgreSQL (`scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot`).
+        Cho phép mỗi bộ môn mở nhiều khóa học định kỳ đang hoạt động (`active`) miễn không có hai lớp cùng bộ môn
+        trùng ngày và cùng slot (`409 SCHEDULING_DISCIPLINE_CONFLICT`, kiểm tra đồng thời ở `ClassService` và
+        trigger PostgreSQL `trg_sessions_check_discipline_conflict` bên trong `scms_check_session_conflict`).
+        Yêu cầu `(startTime, endTime)` khớp chính xác 1 trong 5 Slot cố định (`07:00 – 19:30`;
+        `scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot`), sức chứa không vượt sức chứa phòng
+        (`400 SCHEDULING_CAPACITY_EXCEEDS_ROOM`) và học phí không âm (`400 SCHEDULING_INVALID_PRICE`).
       tags: [Lớp học nhóm]
       responses:
         '201': { description: Tạo khóa học định kỳ thành công }
         '400':
           description: >
-            Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`), lỗi dữ liệu đầu vào
-            hoặc HLV đang trong kỳ nghỉ phép đã duyệt.
+            Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`),
+            sức chứa lớp vượt sức chứa phòng (`SCHEDULING_CAPACITY_EXCEEDS_ROOM`),
+            học phí âm (`SCHEDULING_INVALID_PRICE`), khoảng ngày/thứ lặp không hợp lệ
+            (`SCHEDULING_INVALID_DATES`, `SCHEDULING_INVALID_DATE_RANGE`,
+            `SCHEDULING_NO_RECURRING_DAYS`, `SCHEDULING_NO_SESSIONS_MATCHED`),
+            phòng không khả dụng (`SCHEDULING_ROOM_UNAVAILABLE`) hoặc HLV không hoạt động (`SCHEDULING_COACH_INACTIVE`).
         '403': { description: Không có quyền thực hiện }
         '409':
           description: >
-            Bộ môn đã có 1 lớp nhóm `active` (`SCHEDULING_DISCIPLINE_CLASS_EXISTS`),
-            trùng phòng/HLV với buổi lớp nhóm khác (`SCHEDULING_ROOM_CONFLICT`, `SCHEDULING_COACH_CONFLICT`),
-            hoặc HLV đã có buổi PT 1:1 `confirmed` trùng slot (`SCHEDULING_COACH_PT_CONFLICT`).
+            Trùng ngày & slot với lớp nhóm đang hoạt động khác thuộc cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`,
+            qua `ClassService` và trigger `trg_sessions_check_discipline_conflict`),
+            trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lịch lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
+            HLV đã có buổi PT 1:1 `confirmed` trùng slot (`SCHEDULING_COACH_PT_CONFLICT`),
+            hoặc HLV đang trong kỳ nghỉ phép đã duyệt (`COACH_ON_LEAVE`).
 
   /classes/{id}:
     put:
       summary: Cập nhật khóa học nhóm định kỳ và tùy chọn tái sinh buổi học tương lai theo 5 Slot cố định (CENTER_MANAGER, MANAGER)
+      description: >
+        Kiểm tra các ràng buộc lịch 5 Slot cố định, sức chứa lớp không vượt quá sức chứa phòng
+        (`400 SCHEDULING_CAPACITY_EXCEEDS_ROOM`) và không nhỏ hơn số học viên đã ghi danh
+        (`400 SCHEDULING_CAPACITY_BELOW_BOOKED`), học phí không âm (`400 SCHEDULING_INVALID_PRICE`),
+        không trùng ngày & slot với lớp `active` khác cùng bộ môn (`409 SCHEDULING_DISCIPLINE_CONFLICT`),
+        cùng các ràng buộc trùng phòng, trùng lớp nhóm/PT 1:1/nghỉ phép của HLV và trùng lịch học viên.
       tags: [Lớp học nhóm]
       parameters:
         - name: id
@@ -157,13 +445,20 @@ paths:
           schema: { type: integer, format: int64 }
       responses:
         '200': { description: Cập nhật khóa học thành công }
-        '400': { description: 'Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`) hoặc dữ liệu không hợp lệ' }
+        '400':
+          description: >
+            Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`),
+            sức chứa vượt sức chứa phòng (`SCHEDULING_CAPACITY_EXCEEDS_ROOM`),
+            sức chứa nhỏ hơn số học viên đã ghi danh (`SCHEDULING_CAPACITY_BELOW_BOOKED`),
+            học phí âm (`SCHEDULING_INVALID_PRICE`) hoặc dữ liệu không hợp lệ.
         '403': { description: Không có quyền thực hiện }
         '404': { description: Không tìm thấy lớp học }
         '409':
           description: >
-            Bộ môn đã có lớp nhóm `active` khác (`SCHEDULING_DISCIPLINE_CLASS_EXISTS`),
-            trùng phòng/HLV với lớp khác hoặc trùng buổi PT 1:1 `confirmed` (`SCHEDULING_COACH_PT_CONFLICT`).
+            Trùng ngày & slot với lớp nhóm `active` khác cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
+            trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
+            trùng buổi PT 1:1 `confirmed` của HLV (`SCHEDULING_COACH_PT_CONFLICT`),
+            HLV nghỉ phép đã duyệt (`COACH_ON_LEAVE`), hoặc học viên bị trùng lịch (`SCHEDULING_MEMBER_TIME_OVERLAP`).
     delete:
       summary: Xóa/ngừng hoạt động lớp học không còn ghi danh hoạt động (CENTER_MANAGER, MANAGER)
       tags: [Lớp học nhóm]
@@ -199,7 +494,7 @@ paths:
 
   /classes/{id}/sessions:
     post:
-      summary: Thêm buổi học vào khóa hiện có theo 1 trong 5 Slot cố định (CENTER_MANAGER, MANAGER)
+      summary: Thêm buổi học vào khóa hiện có theo 1 trong 5 Slot cố định (CENTER_MANAGER, MANAGER — không có nút `+ Thêm buổi` rời trên UI)
       tags: [Lớp học nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
@@ -209,7 +504,9 @@ paths:
         '403': { description: Không có quyền thực hiện }
         '409':
           description: >
-            Trùng phòng/HLV, học viên bị trùng lịch (`SCHEDULING_MEMBER_TIME_OVERLAP`),
+            Trùng ngày & slot với lớp khác cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
+            trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lịch lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
+            HLV nghỉ phép đã duyệt (`COACH_ON_LEAVE`), học viên bị trùng lịch (`SCHEDULING_MEMBER_TIME_OVERLAP`),
             hoặc HLV có buổi PT 1:1 `confirmed` trùng slot (`SCHEDULING_COACH_PT_CONFLICT`).
 
   /classes/{id}/sessions/{sessionId}:
@@ -217,7 +514,8 @@ paths:
       summary: Dời lịch một buổi học nhóm sang ngày và 1 trong 5 Slot cố định (CENTER_MANAGER, MANAGER)
       description: >
         Kiểm tra khung giờ phải thuộc 5 Slot cố định (`400 SCHEDULING_INVALID_SLOT` / trigger `trg_schedule_invalid_slot`),
-        trùng phòng, trùng lịch lớp của HLV và trùng buổi PT 1:1 `confirmed` của HLV (`409 SCHEDULING_COACH_PT_CONFLICT`).
+        không trùng ngày & slot với lớp khác cùng bộ môn (`409 SCHEDULING_DISCIPLINE_CONFLICT` / trigger `trg_sessions_check_discipline_conflict`),
+        không trùng phòng, không trùng lịch lớp/PT 1:1 `confirmed`/nghỉ phép đã duyệt của HLV và không trùng lịch học viên.
         Sau khi commit, gửi thông báo `schedule_change` (`relatedEntityType=class_session`, không trùng lặp)
         tới các học viên đã đăng ký và HLV phụ trách.
       tags: [Lớp học nhóm]
@@ -230,7 +528,10 @@ paths:
         '403': { description: Không có quyền thực hiện }
         '409':
           description: >
-            Trùng phòng/HLV, học viên bị trùng lịch hoặc HLV trùng buổi PT 1:1 `confirmed` (`SCHEDULING_COACH_PT_CONFLICT`).
+            Trùng ngày & slot với lớp khác cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
+            trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lịch lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
+            HLV nghỉ phép đã duyệt (`COACH_ON_LEAVE`), học viên bị trùng lịch (`SCHEDULING_MEMBER_TIME_OVERLAP`),
+            hoặc HLV trùng buổi PT 1:1 `confirmed` (`SCHEDULING_COACH_PT_CONFLICT`).
 
   /classes/{id}/students:
     get:

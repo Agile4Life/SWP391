@@ -88,11 +88,15 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     @Query("""
             select s from ClassSession s
             join fetch s.gymClass c
+            left join fetch c.discipline
+            left join fetch c.room
+            left join fetch c.coach co
+            left join fetch co.user
             where s.status = 'scheduled'
               and s.sessionDate >= :startDate
               and s.sessionDate <= :endDate
             """)
-    /** Buổi đã xếp (scheduled) trong khoảng ngày kèm lớp. */
+    /** Buổi đã xếp (scheduled) trong khoảng ngày kèm lớp, bộ môn, phòng và HLV. */
     List<ClassSession> findScheduledSessionsBetweenDates(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate);

@@ -87,6 +87,8 @@ AS $$
 DECLARE
     session_coach_id BIGINT;
     session_room_id BIGINT;
+    session_discipline_id BIGINT;
+    session_class_status VARCHAR(20);
     lock_key BIGINT;
 BEGIN
     IF NEW.status <> 'scheduled' THEN
@@ -96,14 +98,16 @@ BEGIN
         RAISE EXCEPTION 'trg_schedule_invalid_slot'
             USING ERRCODE = '23514', CONSTRAINT = 'trg_schedule_invalid_slot';
     END IF;
-    SELECT coach_id, room_id INTO session_coach_id, session_room_id
+    SELECT coach_id, room_id, discipline_id, status
+    INTO session_coach_id, session_room_id, session_discipline_id, session_class_status
     FROM classes WHERE id = NEW.class_id FOR SHARE;
 
     FOR lock_key IN
         SELECT DISTINCT hashtextextended(resource_key, 0)
         FROM unnest(ARRAY[
             'coach:' || session_coach_id::TEXT,
-            'room:' || session_room_id::TEXT
+            'room:' || session_room_id::TEXT,
+            'discipline:' || session_discipline_id::TEXT
         ]) AS resources(resource_key)
         ORDER BY 1
     LOOP
@@ -123,6 +127,22 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này.'
             USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_conflict';
+    END IF;
+
+    IF NEW.status <> 'cancelled' AND COALESCE(session_class_status, 'active') = 'active' AND EXISTS (
+        SELECT 1
+        FROM class_sessions existing_session
+        JOIN classes existing_class ON existing_class.id = existing_session.class_id
+        WHERE existing_session.id <> NEW.id
+          AND existing_session.session_date = NEW.session_date
+          AND existing_session.status <> 'cancelled'
+          AND existing_class.status = 'active'
+          AND NEW.start_time < existing_session.end_time
+          AND NEW.end_time > existing_session.start_time
+          AND existing_class.discipline_id = session_discipline_id
+    ) THEN
+        RAISE EXCEPTION 'Bộ môn này đã có lớp học khác trùng khung giờ.'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_discipline_conflict';
     END IF;
 
     RETURN NEW;

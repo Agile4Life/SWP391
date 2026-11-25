@@ -16,7 +16,8 @@ paths:
         HLV yêu cầu trạng thái làm việc `active`, tài khoản `active` và `deleted_at IS NULL`;
         không lộ thông tin liên hệ, thông tin đăng nhập, dữ liệu sức khỏe hay chi tiết hợp đồng lao động.
         Các buổi lớp nhóm (`sessions`) phải bắt đầu trong tương lai từ hôm nay tới `today+6` theo đồng hồ hệ thống,
-        ở trạng thái `scheduled`, thuộc khóa học nhóm định kỳ đang `active` (tối đa 1 lớp `active`/bộ môn),
+        ở trạng thái `scheduled`, thuộc các khóa học nhóm định kỳ đang `active`
+        (hỗ trợ nhiều lớp `active`/bộ môn miễn không trùng ngày và slot — `409 SCHEDULING_DISCIPLINE_CONFLICT`),
         có phòng khả dụng, HLV đang hoạt động và khung giờ `(startTime, endTime)` thuộc đúng 1 trong 5 Slot cố định
         (`07:00 – 19:30`): `Slot 1` (`07:00–09:30`), `Slot 2` (`09:45–11:15`), `Slot 3` (`11:30–14:00`),
         `Slot 4` (`14:15–16:45`), `Slot 5` (`17:00–19:30`).
