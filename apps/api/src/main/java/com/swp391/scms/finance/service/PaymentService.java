@@ -14,7 +14,9 @@ import com.swp391.scms.finance.entity.Payment;
 import com.swp391.scms.finance.mapper.PaymentMapper;
 import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.entity.MembershipSubscription;
+import com.swp391.scms.membership.repository.MemberTrialRedemptionRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.membership.service.MembershipKycEligibility;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.users.UserRepository;
@@ -69,14 +71,14 @@ public class PaymentService {
     @Autowired(required = false)
     private InvoiceService invoiceService;
 
-    private final com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRedemptionRepository;
+    private final MemberTrialRedemptionRepository trialRedemptionRepository;
 
     private void requireNewPackageKyc(Member member) {
         // Đọc KYC mới nhất sau khi luồng thu tiền đã khóa hội viên.
         if (entityManager != null) entityManager.refresh(member);
         boolean approvedTrial = trialRedemptionRepository != null && trialRedemptionRepository.findByMemberUserId(member.getUserId())
                 .map(t -> "APPROVED".equalsIgnoreCase(t.getStatus())).orElse(false);
-        com.swp391.scms.membership.service.MembershipKycEligibility.requireVerified(member, approvedTrial);
+        MembershipKycEligibility.requireVerified(member, approvedTrial);
     }
 
     /** Kiểm tra trước khi thu tiền; từ chối KYC không đánh dấu rollback để IPN có thể hoàn vào ví. */
@@ -121,25 +123,26 @@ public class PaymentService {
         this(paymentRepository, memberRepository, userRepository, membershipSubscriptionRepository, classEnrollmentRepository, paymentMapper, clock, null);
     }
 
-    /** Constructor Spring dùng. */
+    /** Constructor cho test có thêm VnpayPaymentGuard. */
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
                           MembershipSubscriptionRepository membershipSubscriptionRepository,
                           ClassEnrollmentRepository classEnrollmentRepository,
-                          PaymentMapper paymentMapper, Clock clock, com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard) {
+                          PaymentMapper paymentMapper, Clock clock, VnpayPaymentGuard vnpayGuard) {
         this(paymentRepository, memberRepository, userRepository, membershipSubscriptionRepository,
                 classEnrollmentRepository, paymentMapper, clock, vnpayGuard, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
                           MembershipSubscriptionRepository membershipSubscriptionRepository,
                           ClassEnrollmentRepository classEnrollmentRepository,
-                          PaymentMapper paymentMapper, Clock clock, com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard,
-                          com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRedemptionRepository) {
+                          PaymentMapper paymentMapper, Clock clock, VnpayPaymentGuard vnpayGuard,
+                          MemberTrialRedemptionRepository trialRedemptionRepository) {
         this.trialRedemptionRepository = trialRedemptionRepository;
         this.vnpayGuard = vnpayGuard;
         this.paymentRepository = paymentRepository;

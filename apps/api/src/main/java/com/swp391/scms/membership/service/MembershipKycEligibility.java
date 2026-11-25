@@ -2,6 +2,7 @@ package com.swp391.scms.membership.service;
 
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.users.entity.Member;
+import java.util.Locale;
 
 /** Quy tắc KYC dùng chung khi mua mới; đơn cũ không chứng minh danh tính. */
 public final class MembershipKycEligibility {
@@ -12,7 +13,7 @@ public final class MembershipKycEligibility {
         if (approvedTrial || (Boolean.TRUE.equals(member.getIdentityVerified())
                 && !"PENDING".equals(member.getKycStatus()) && !"REJECTED".equals(member.getKycStatus()))) return;
         String suffix = "PENDING".equals(member.getKycStatus()) ? "pending" : "required";
-        throw new BadRequestException("MEMBERSHIP_KYC_" + suffix.toUpperCase(java.util.Locale.ROOT),
+        throw new BadRequestException("MEMBERSHIP_KYC_" + suffix.toUpperCase(Locale.ROOT),
                 "error.membership.kyc_" + suffix, null, null);
     }
 }
