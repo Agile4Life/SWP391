@@ -2,26 +2,21 @@ import { describe, expect, it } from 'vitest';
 import { DISCIPLINES, MAIN_DISCIPLINE, SECONDARY_DISCIPLINES, isStandardDiscipline, matchesDiscipline } from './disciplines';
 
 describe('disciplines', () => {
-  it('has Gym as the only main discipline followed by the four secondary ones', () => {
+  it('has Gym as the only main discipline followed by Boxing and Yoga', () => {
     expect(MAIN_DISCIPLINE.name).toBe('Gym');
     expect(DISCIPLINES.filter((discipline) => discipline.tier === 'main')).toHaveLength(1);
-    expect(SECONDARY_DISCIPLINES.map((discipline) => discipline.name)).toEqual(['Bơi lội', 'Boxing', 'Tennis', 'Cầu lông', 'Yoga']);
+    expect(SECONDARY_DISCIPLINES.map((discipline) => discipline.name)).toEqual(['Boxing', 'Yoga']);
   });
 
   it.each([
     ['Olympic Strength', 'Gym', true],
-    ['Thermal Aquatics', 'Bơi lội', true],
-    ['Bơi sải nâng cao', 'Bơi lội', true],
     ['Boxing & Kickfit', 'Boxing', true],
-    ['Cầu lông', 'Cầu lông', true],
-    ['Badminton', 'Cầu lông', true],
-    ['Tennis', 'Tennis', true],
+    ['Boxing', 'boxing', true],
     ['Mindful Yoga', 'Yoga', true],
-    ['Badminton', 'badminton', true],
-    ['Thermal Aquatics', 'swimming', true],
+    ['Hatha Yoga', 'yoga', true],
     ['Yoga cơ bản', 'Gym', false],
-    ['Tennis', 'Gym', false],
-    ['Bơi lội', 'Boxing', false],
+    ['Boxing', 'Gym', false],
+    ['Yoga', 'Boxing', false],
     ['', 'Gym', false],
     ['Gym', '', false],
     [null, 'Gym', false],

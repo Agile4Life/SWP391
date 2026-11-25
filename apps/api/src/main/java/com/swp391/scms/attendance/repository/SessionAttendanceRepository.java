@@ -76,6 +76,9 @@ public interface SessionAttendanceRepository extends JpaRepository<SessionAttend
     /** Số buổi đã được điểm danh của học viên trong một lớp. */
     long countRecorded(@Param("memberId") Long memberId, @Param("classId") Long classId);
 
+    /** Kiểm tra có tồn tại bản ghi điểm danh nào thuộc các buổi của lớp này không. */
+    boolean existsBySessionGymClassId(Long classId);
+
     @Query("""
             select count(a) from SessionAttendance a
             where a.member.userId = :memberId and a.session.gymClass.id = :classId and a.status = 'absent'

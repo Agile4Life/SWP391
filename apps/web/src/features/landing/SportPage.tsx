@@ -13,7 +13,7 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
   useSourceLanguage();
   const { sportId } = useParams<{ sportId?: string }>();
   const { pathname } = useLocation();
-  const key: SportPageId = forcedSport ?? sportIdFromPath(sportId ? `/sports/${sportId}` : pathname) ?? 'swimming';
+  const key: SportPageId = forcedSport ?? sportIdFromPath(sportId ? `/sports/${sportId}` : pathname) ?? 'boxing';
   const sport = SPORT_PAGES[key];
   const { catalog, error, retry } = usePublicCatalog();
   const user = getCurrentUser();

@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
         @Index(name = "ix_payments_paid_at", columnList = "paid_at")
 })
 /**
- * Bảng payments: một khoản thanh toán của hội viên cho đúng một đối tượng (kỳ gói, khóa học, buổi PT, sân, đơn
+ * Bảng payments: một khoản thanh toán của hội viên cho đúng một đối tượng (kỳ gói, khóa học, buổi PT, đơn
  * hàng) hoặc nạp ví; gồm số tiền, đã hoàn, phương thức, trạng thái, thời điểm trả, người nhận, ghi chú, ảnh
  * biên lai và hóa đơn.
  */
@@ -46,11 +46,6 @@ public class Payment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coach_booking_id", insertable = false, updatable = false)
     private com.swp391.scms.coaching.entity.CoachBooking coachBooking;
-    @Column(name = "court_booking_id")
-    private Long courtBookingId;
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "court_booking_id", insertable = false, updatable = false)
-    private com.swp391.scms.courts.entity.CourtBooking courtBooking;
     @Column(name = "product_order_id")
     private Long productOrderId;
     @ManyToOne(fetch = FetchType.LAZY)
@@ -61,10 +56,6 @@ public class Payment {
     public Long getCoachBookingId() { return coachBookingId; }
     /** Gán buổi PT được thanh toán. */
     public void setCoachBookingId(Long id) { coachBookingId = id; }
-    /** Lấy giá trị trường courtBookingId. */
-    public Long getCourtBookingId() { return courtBookingId; }
-    /** Gán lượt đặt sân được thanh toán. */
-    public void setCourtBookingId(Long id) { courtBookingId = id; }
     /** Lấy giá trị trường productOrderId. */
     public Long getProductOrderId() { return productOrderId; }
     /** Gán đơn hàng được thanh toán. */
@@ -79,8 +70,6 @@ public class Payment {
     public MembershipSubscription getSubscription() { return subscription; }
     /** Lấy giá trị trường coachBooking. */
     public com.swp391.scms.coaching.entity.CoachBooking getCoachBooking() { return coachBooking; }
-    /** Lấy giá trị trường courtBooking. */
-    public com.swp391.scms.courts.entity.CourtBooking getCourtBooking() { return courtBooking; }
     /** Lấy giá trị trường classEnrollment. */
     public ClassEnrollment getClassEnrollment() { return classEnrollment; }
     /** Gán giá trị mới cho trường productOrder. */

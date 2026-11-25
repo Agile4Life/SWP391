@@ -55,11 +55,10 @@ export interface Payment {
   createdAt: string;
   invoiceNumber: string | null;
   /** Mục đích khoản thanh toán (do máy chủ suy ra); không có trên các endpoint không mô tả thanh toán. */
-  serviceType?: 'MEMBERSHIP' | 'CLASS' | 'PT' | 'COURT' | 'SHOP' | 'WALLET_TOPUP' | 'OTHER' | null;
-  /** Khoản đã thanh toán theo dữ liệu lưu trữ: gói tập, lớp học, HLV + khung giờ, sân + khung giờ hoặc mã đơn hàng. */
+  serviceType?: 'MEMBERSHIP' | 'CLASS' | 'PT' | 'SHOP' | 'WALLET_TOPUP' | 'OTHER' | null;
+  /** Khoản đã thanh toán theo dữ liệu lưu trữ: gói tập, lớp học, HLV + khung giờ hoặc mã đơn hàng. */
   serviceName?: string | null;
   coachBookingId?: number | null;
-  courtBookingId?: number | null;
   productOrderId?: number | null;
   vnpayPending?: boolean;
 }

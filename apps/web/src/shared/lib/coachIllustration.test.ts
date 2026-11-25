@@ -20,7 +20,8 @@ describe('coach portraits', () => {
     expect(coachIllustration(null, 'HLV khác')).toBe('/images/fitness/coach-generic.jpg');
   });
   it('uses an explicit portrait ahead of the discipline fallback', () => {
-    expect(coachIllustration('Tennis', 'Nguyễn Minh Quân')).toBe('/images/fitness/coach-minh-quan.jpg');
-    expect(coachIllustration('Tennis', 'HLV An')).toBe('/images/fitness/coach-tennis.jpg');
+    expect(coachIllustration('Strength', 'Nguyễn Minh Quân')).toBe('/images/fitness/coach-minh-quan.jpg');
+    expect(coachIllustration('Strength', 'HLV An')).toBe('/images/fitness/coach-strength.webp');
+    expect(coachIllustration('Boxing', 'HLV An')).toBe('/images/fitness/coach-generic.jpg');
   });
 });

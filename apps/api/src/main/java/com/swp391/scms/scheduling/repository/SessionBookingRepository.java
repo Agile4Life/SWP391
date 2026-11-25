@@ -136,6 +136,9 @@ public interface SessionBookingRepository extends JpaRepository<SessionBooking, 
     @Query("select distinct b.member.userId from SessionBooking b where b.status = 'booked'")
     List<Long> findMemberIdsWithBooked();
 
+    /** Kiểm tra có tồn tại bất kỳ lượt đặt chỗ nào gắn với lớp học này không. */
+    boolean existsBySessionGymClassId(Long classId);
+
     /**
      * Kiểm tra có tồn tại bản ghi có sessionGymClassId = tham số và memberUserId = tham số và status = tham số
      * (Spring Data tự sinh truy vấn từ tên hàm).

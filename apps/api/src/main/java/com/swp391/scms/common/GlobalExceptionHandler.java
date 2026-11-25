@@ -226,41 +226,6 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
-            // Nhóm trigger đặt sân (tính năng cũ): mỗi trigger ứng với một mã lỗi và mã HTTP riêng.
-            String courtCode = null;
-            String courtKey = null;
-            HttpStatus courtStatus = HttpStatus.CONFLICT;
-            if (normalizedRootMsg.contains("trg_court_bookings_check_conflict") || normalizedRootMsg.contains("court_booking_slot_taken")) {
-                courtCode = "COURT_BOOKING_SLOT_TAKEN";
-                courtKey = "slot_taken";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_membership") || normalizedRootMsg.contains("court_booking_membership_invalid")) {
-                courtCode = "COURT_BOOKING_MEMBERSHIP_INVALID";
-                courtKey = "membership_invalid";
-                courtStatus = HttpStatus.FORBIDDEN;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_limit") || normalizedRootMsg.contains("court_booking_limit_reached")) {
-                courtCode = "COURT_BOOKING_LIMIT_REACHED";
-                courtKey = "limit_reached";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_court") || normalizedRootMsg.contains("court_booking_court_unavailable")) {
-                courtCode = "COURT_BOOKING_COURT_UNAVAILABLE";
-                courtKey = "court_unavailable";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_past") || normalizedRootMsg.contains("court_booking_past_slot")) {
-                courtCode = "COURT_BOOKING_PAST_SLOT";
-                courtKey = "past_slot";
-                courtStatus = HttpStatus.BAD_REQUEST;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_horizon") || normalizedRootMsg.contains("court_booking_too_far")) {
-                courtCode = "COURT_BOOKING_TOO_FAR";
-                courtKey = "too_far";
-                courtStatus = HttpStatus.BAD_REQUEST;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_slot") || normalizedRootMsg.contains("court_booking_invalid_slot")) {
-                courtCode = "COURT_BOOKING_INVALID_SLOT";
-                courtKey = "invalid_slot";
-                courtStatus = HttpStatus.BAD_REQUEST;
-            }
-            if (courtCode != null) {
-                String key = "error.courts." + courtKey;
-                return ResponseEntity.status(courtStatus).body(
-                        ApiResponse.error(courtStatus.value(), courtCode, resolveMessage(key, key)));
-            }
             // Trigger của buổi PT 1:1: HLV cần nghỉ giữa hai buổi, hoặc lịch đang được cập nhật đồng thời.
             if (normalizedRootMsg.contains("trg_coach_bookings_rest_required")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(

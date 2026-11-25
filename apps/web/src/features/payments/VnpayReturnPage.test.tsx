@@ -56,8 +56,8 @@ it('keeps pending uncertain and only announces a delayed success after a backend
  expect(toast.success).toHaveBeenCalledTimes(1);
 });
 
-it.each(['/member/packages', '/member/classes?tab=pt', '/member/orders/42', '/member/courts'])('keeps active payment destinations and redirects retired court/Shop results: %s', async destination => {
+it.each(['/member/packages', '/member/classes?tab=pt', '/member/orders/42'])('keeps active payment destinations and redirects retired Shop results: %s', async destination => {
   vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({ reference: 'ABC123', paymentId: 1, subscriptionId: null, amount: 500000, status: 'success', expiresAt: '2026-11-03T12:15:00', destination });
   await render('?vnp_TxnRef=ABC123');
-  expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe(destination === '/member/courts' || destination.startsWith('/member/orders/') ? '/member/invoices' : destination);
+  expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe(destination.startsWith('/member/orders/') ? '/member/invoices' : destination);
 });

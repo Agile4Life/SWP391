@@ -159,12 +159,13 @@ describe('portal navigation', () => {
     expect(router.state.location.pathname).toBe('/member/profile');
   });
 
-  it('renders distinct sidebar SVG icons for /member/explore and /member/packages', async () => {
+  it('renders distinct sidebar SVG icons for /member/classes and /member/packages and hides /member/explore', async () => {
     await renderPortal('MEMBER');
-    const exploreSvgPath = host.querySelector('aside.app-sidebar a[href="/member/explore"] svg path')?.getAttribute('d');
+    expect(host.querySelector('aside.app-sidebar a[href="/member/explore"]')).toBeNull();
+    const classesSvgPath = host.querySelector('aside.app-sidebar a[href="/member/classes"] svg path')?.getAttribute('d');
     const packagesSvgPath = host.querySelector('aside.app-sidebar a[href="/member/packages"] svg path')?.getAttribute('d');
-    expect(exploreSvgPath).toBeTruthy();
+    expect(classesSvgPath).toBeTruthy();
     expect(packagesSvgPath).toBeTruthy();
-    expect(exploreSvgPath).not.toBe(packagesSvgPath);
+    expect(classesSvgPath).not.toBe(packagesSvgPath);
   });
 });

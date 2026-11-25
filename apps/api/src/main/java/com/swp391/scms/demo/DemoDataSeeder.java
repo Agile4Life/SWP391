@@ -102,10 +102,10 @@ public class DemoDataSeeder implements ApplicationRunner {
                     "8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.", "Gym"),
             new CoachSpec("mai", "Lý Thanh Mai", "female", "Yoga", "RYT-500",
                     "Giáo viên Yoga 6 năm kinh nghiệm, tập trung hơi thở, thăng bằng và phục hồi.", "Yoga"),
-            new CoachSpec("long", "Phan Thành Long", "male", "Boxing & Tennis", "AIBA Level 2",
-                    "Cựu vận động viên Boxing & Tennis, chuyên kỹ thuật đấm, di chuyển chân và thể lực.", "Boxing"),
-            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Bơi lội & Cầu lông", "ASCA Level 2",
-                    "Huấn luyện viên Bơi lội & Cầu lông 7 năm kinh nghiệm: kỹ thuật, sức bền và phản xạ.", "Bơi lội"));
+            new CoachSpec("long", "Phan Thành Long", "male", "Boxing", "AIBA Level 2",
+                    "Cựu vận động viên Boxing, chuyên kỹ thuật đấm, di chuyển chân và thể lực.", "Boxing"),
+            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Yoga & Phục hồi", "RYT-200",
+                    "Huấn luyện viên Yoga & Phục hồi 7 năm kinh nghiệm: hơi thở, giãn cơ và phục hồi thể lực.", "Yoga"));
 
     private final UserRepository users;
     private final RoleRepository roles;
@@ -154,6 +154,7 @@ public class DemoDataSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (users.findByEmailIgnoreCase(MANAGER_EMAIL).isPresent()) {
+            syncRetiredDemoCoaches();
             log.info("Demo data already present; skipping seed.");
             return;
         }
@@ -180,6 +181,32 @@ public class DemoDataSeeder implements ApplicationRunner {
         createProgress(memberByKey, coachByKey, today);
         log.info("Demo data seeded: 1 manager, 1 receptionist, {} coaches, {} members. Password from app.demo.password.",
                 COACHES.size(), MEMBERS.size());
+    }
+
+    /** Đồng bộ chuyên môn các HLV demo cũ nếu CSDL còn chứa bộ môn đã ngừng (Tennis, Bơi lội, Cầu lông). */
+    private void syncRetiredDemoCoaches() {
+        for (CoachSpec spec : COACHES) {
+            if (!"long".equals(spec.key()) && !"thao".equals(spec.key())) {
+                continue;
+            }
+            users.findByEmailIgnoreCase(spec.key() + DOMAIN)
+                    .flatMap(u -> coaches.findById(u.getId()))
+                    .ifPresent(coach -> {
+                        String currentSpec = coach.getSpecialization();
+                        String currentBio = coach.getBio();
+                        if (com.swp391.scms.facilities.RetiredCatalogCleanupRunner.containsRetiredSport(currentSpec)
+                                || com.swp391.scms.facilities.RetiredCatalogCleanupRunner.containsRetiredSport(currentBio)) {
+                            coach.setSpecialization(spec.specialization());
+                            if ("ASCA Level 2".equalsIgnoreCase(coach.getCertification())) {
+                                coach.setCertification(spec.certification());
+                            }
+                            if (com.swp391.scms.facilities.RetiredCatalogCleanupRunner.containsRetiredSport(currentBio)) {
+                                coach.setBio(spec.bio());
+                            }
+                            coaches.save(coach);
+                        }
+                    });
+        }
     }
 
     // ---- tài khoản ------------------------------------------------------------------------------------------

@@ -31,7 +31,7 @@ const serviceShapes = [
 ];
 const clubMetrics = [
   { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, get label() { return sourceText('MỞ CỬA MỖI NGÀY'); } },
-  { get value() { return sourceText({ vi: '06 Bộ môn', en: '06 Disciplines' }); }, countTo: 6, format: (n: number) => `${String(n).padStart(2, '0')} ${sourceText({ vi: 'Bộ môn', en: 'Disciplines' })}`, get label() { return sourceText({ vi: 'TỔ HỢP ĐA BỘ MÔN', en: 'MULTI-SPORT COMPLEX' }); } },
+  { get value() { return sourceText({ vi: '03 Bộ môn', en: '03 Disciplines' }); }, countTo: 3, format: (n: number) => `${String(n).padStart(2, '0')} ${sourceText({ vi: 'Bộ môn', en: 'Disciplines' })}`, get label() { return sourceText({ vi: 'TỔ HỢP ĐA BỘ MÔN', en: 'MULTI-SPORT COMPLEX' }); } },
   { get value() { return sourceText({ vi: 'Lịch lớp & PT', en: 'Classes & PT' }); }, get label() { return sourceText('ĐẶT CHỖ TRỰC TUYẾN'); } },
   { get value() { return sourceText('QR Pass'); }, get label() { return sourceText({ vi: '01 THẺ ĐA PHÂN KHU', en: '01 MULTI-ZONE PASS' }); } },
 ];
@@ -120,8 +120,8 @@ const muscleGroups = [
     id: 'forearms',
     get name() { return sourceText({ vi: 'Cẳng Tay & Lực Nắm', en: 'Forearms & Grip' }); },
     get zone() { return sourceText('FOREARMS & GRIP'); },
-    get goal() { return sourceText('Tăng lực cầm tạ & ổn định cổ tay khi cầm vợt'); },
-    get tip() { return sourceText('Giữ cổ tay thẳng trục với cẳng tay trong mọi bài kéo và đánh bóng.'); },
+    get goal() { return sourceText({ vi: 'Tăng lực cầm tạ & ổn định cổ tay khi nâng và đấm', en: 'Build grip strength and wrist stability for lifting and striking' }); },
+    get tip() { return sourceText({ vi: 'Giữ cổ tay thẳng trục với cẳng tay trong mọi bài kéo và đấm bao cát.', en: 'Keep wrists aligned with forearms during pulling sets and bag work.' }); },
     exercises: [
       'Farmer’s Walk · 3 hiệp × 40m',
       'Reverse Curl & Dead Hang · 3 hiệp × 40 giây',
@@ -140,7 +140,7 @@ const muscleGroups = [
     id: 'legs',
     get name() { return sourceText({ vi: 'Cơ Đùi & Bắp Chân', en: 'Quads & Calves' }); },
     get zone() { return sourceText('QUADS & CALVES'); },
-    get goal() { return sourceText('Sức mạnh thân dưới & tốc độ bứt tốc trên sân'); },
+    get goal() { return sourceText({ vi: 'Sức mạnh thân dưới & lực bật ổn định', en: 'Lower-body strength and explosive power' }); },
     get tip() { return sourceText('Mở hướng đầu gối theo mũi chân và kiểm soát nhịp gập hông – gối.'); },
     exercises: [
       'Barbell / Goblet Squat · 4 hiệp × 8–10 lần',
@@ -160,7 +160,7 @@ const muscleGroups = [
 
 const coachAvatars = [
   { name: 'Derek', image: 'coach-strength.webp' },
-  { name: 'Anthony', image: 'coach-aquatics.jpg' },
+  { name: 'Trần Thị Mỹ Trâm', image: 'coach-my-tram.jpg' },
   { name: 'Huỳnh Đắc Tài', image: 'coach-personal.jpg' },
 ];
 
@@ -172,7 +172,7 @@ const dailyRhythmItems = [
     highlights: [
       { vi: 'Gym Strength', en: 'Gym Strength' },
       { vi: 'Yoga sáng', en: 'Morning Yoga' },
-      { vi: 'Cầu lông', en: 'Badminton' },
+      { vi: 'Boxing nền tảng', en: 'Foundational Boxing' },
     ],
   },
   {
@@ -190,9 +190,9 @@ const dailyRhythmItems = [
     get label() { return sourceText('Chiều · 17:00–19:30'); },
     get title() { return sourceText('Nhịp tập sôi động sau giờ làm'); },
     highlights: [
-      { vi: 'Lớp Bơi lội', en: 'Swimming Class' },
+      { vi: 'Lớp Gym Strength', en: 'Gym Strength Class' },
       { vi: 'Lớp Boxing', en: 'Boxing Class' },
-      { vi: 'Lớp Tennis', en: 'Tennis Class' },
+      { vi: 'Lớp Hatha Yoga', en: 'Hatha Yoga Class' },
     ],
   },
   {
@@ -201,7 +201,7 @@ const dailyRhythmItems = [
     get title() { return sourceText('Vận động nhẹ & Giãn cơ cuối ngày'); },
     highlights: [
       { vi: 'Tập cá nhân', en: 'Solo Training' },
-      { vi: 'Bơi thư giãn', en: 'Relaxed Swim' },
+      { vi: 'Yoga phục hồi', en: 'Restorative Yoga' },
       { vi: 'Giãn cơ', en: 'Stretching' },
     ],
   },
@@ -211,8 +211,7 @@ const spaces = [
   { get title() { return sourceText('Không gian cho những mục tiêu lớn.'); }, image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', get meta() { return sourceText({ vi: 'Khu máy tập Gym', en: 'Gym equipment floor' }); } },
   { get title() { return sourceText('Tập trung vào từng chuyển động.'); }, image: '/images/fitness/strength-session.jpg', label: 'Free weights', get meta() { return sourceText('Khu tạ rời & Power Rack'); } },
   { get title() { return sourceText('Tìm lại nhịp điệu của chính mình.'); }, image: '/images/yoga-aerial-silk-studio.jpg', label: 'Zen Garden Studio', get meta() { return sourceText({ vi: 'Yoga & Giãn cơ', en: 'Yoga & Mobility' }); } },
-  { get title() { return sourceText({ vi: 'Làn nước xanh mát bốn mùa.', en: 'All-season calm lap waters.' }); }, image: '/images/fitness/aquatics-pool.jpg', label: 'Oasis Lap Pool', get meta() { return sourceText({ vi: 'Hồ bơi bốn mùa', en: 'All-season pool' }); } },
-  { get title() { return sourceText({ vi: 'Sân đấu giàu năng lượng.', en: 'High-energy courts & ring.' }); }, image: '/images/fitness/tennis-court.jpg', label: 'Courts & Ring', get meta() { return sourceText({ vi: 'Tennis · Cầu lông · Boxing', en: 'Tennis · Badminton · Boxing' }); } },
+  { get title() { return sourceText({ vi: 'Nhịp tập bùng nổ trên võ đài.', en: 'High-energy boxing & conditioning.' }); }, image: '/images/hero-options/opt5-boxing.jpg', label: 'Ring Arena', get meta() { return sourceText({ vi: 'Boxing & Thể lực', en: 'Boxing & Conditioning' }); } },
 ];
 
 const journeySteps = [
@@ -225,9 +224,9 @@ const memberBenefits = [
     get tag() { return sourceText({ vi: 'Bộ môn', en: 'Disciplines' }); },
     idx: '01',
     get title() { return sourceText('Đặt lịch tập trên Portal'); },
-    get description() { return sourceText({ vi: 'Đăng ký khóa học nhóm 6 bộ môn và đặt PT 1:1 khi gói còn hiệu lực.', en: 'Join 6-sport group classes and book 1:1 PT with an active membership.' }); },
+    get description() { return sourceText({ vi: 'Đăng ký khóa học nhóm 3 bộ môn và đặt PT 1:1 khi gói còn hiệu lực.', en: 'Join 3-discipline group classes and book 1:1 PT with an active membership.' }); },
     perks: [
-      { vi: '6 bộ môn: Gym, Bơi lội, Boxing, Tennis, Cầu lông, Yoga', en: '6 sports: Gym, Swimming, Boxing, Tennis, Badminton, Yoga' },
+      { vi: '3 bộ môn: Gym, Boxing, Yoga', en: '3 disciplines: Gym, Boxing, Yoga' },
       { vi: 'Thấy ngay khung giờ còn chỗ', en: 'See open time slots at a glance' },
     ],
   },
@@ -265,7 +264,7 @@ const memberBenefits = [
 const faqs = [
   {
     get question() { return sourceText('Người mới bắt đầu có theo kịp không?'); },
-    get answer() { return sourceText({ vi: 'Có. Cả 6 bộ môn đều có lớp định kỳ hướng dẫn bài bản từ cơ bản.', en: 'Yes. All 6 disciplines offer structured classes welcoming beginners.' }); },
+    get answer() { return sourceText({ vi: 'Có. Cả 3 bộ môn đều có lớp định kỳ hướng dẫn bài bản từ cơ bản.', en: 'Yes. All 3 disciplines offer structured classes welcoming beginners.' }); },
   },
   {
     get question() { return sourceText({ vi: 'Gói hội viên đã bao gồm những bộ môn nào?', en: 'Which disciplines are included in memberships?' }); },
@@ -277,7 +276,7 @@ const faqs = [
   },
   {
     get question() { return sourceText({ vi: 'Làm sao để đăng ký lớp nhóm hoặc đặt lịch PT 1:1?', en: 'How do I join a group class or book 1:1 PT?' }); },
-    get answer() { return sourceText({ vi: 'Đăng nhập Portal, vào mục Lịch học & đặt PT để đăng ký lớp của 6 bộ môn hoặc đặt HLV 1:1 khi gói còn hiệu lực.', en: 'Sign in to the portal and open Classes & PT to enroll in any of our 6 disciplines or book a 1:1 coach.' }); },
+    get answer() { return sourceText({ vi: 'Đăng nhập Portal, vào mục Lịch học & đặt PT để đăng ký lớp của 3 bộ môn hoặc đặt HLV 1:1 khi gói còn hiệu lực.', en: 'Sign in to the portal and open Classes & PT to enroll in any of our 3 disciplines or book a 1:1 coach.' }); },
   },
 ];
 
@@ -617,7 +616,7 @@ export function FitnessLanding() {
         <LoadingImage key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" />
         <div className="fit-space-shade" />
         <div key={space} className="fit-space-content fit-blur-morph">
-          <span className="fit-kicker">{sourceText({ vi: '05 PHÂN KHU TẬP LUYỆN', en: '05 TRAINING ZONES' })}</span>
+          <span className="fit-kicker">{sourceText({ vi: '04 PHÂN KHU TẬP LUYỆN', en: '04 TRAINING ZONES' })}</span>
           <h2 id="space-title">{spaces[space].title}</h2>
           <p className="fit-space-meta">{spaces[space].meta}</p>
           <a className="fit-pill" href="#contact">{sourceText("Ghé thăm SÖL")}<RoundArrow diagonal /></a>
@@ -707,8 +706,8 @@ export function FitnessLanding() {
               <div className="fit-chat-bot">
                 <div className="fit-chat-tags">
                   <span>{sourceText({ vi: 'T2 · Gym Strength', en: 'Mon · Gym Strength' })}</span>
-                  <span>{sourceText({ vi: 'T4 · Bơi lội', en: 'Wed · Swimming' })}</span>
-                  <span>{sourceText({ vi: 'T6 · Tennis', en: 'Fri · Tennis' })}</span>
+                  <span>{sourceText({ vi: 'T4 · Boxing', en: 'Wed · Boxing' })}</span>
+                  <span>{sourceText({ vi: 'T6 · PT 1:1', en: 'Fri · 1:1 PT' })}</span>
                   <span>{sourceText({ vi: 'CN · Yoga', en: 'Sun · Yoga' })}</span>
                 </div>
               </div>

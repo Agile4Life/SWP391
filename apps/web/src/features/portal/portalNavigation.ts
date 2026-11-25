@@ -49,7 +49,6 @@ export const PORTAL_NAV: PortalNavItem[] = [
   ] },
   { to: '/member/invoices', label: 'Giao dịch & hóa đơn', icon: 'receipt', roles: ['MEMBER'] },
   { to: '/member/progress', label: 'Giáo án', icon: 'dumbbell', roles: ['MEMBER'] },
-  { to: '/member/explore', label: 'Tham quan 3D', icon: 'compass', roles: ['MEMBER'] },
   { to: '/member/notifications', label: 'Thông báo', icon: 'bell', roles: ['MEMBER', 'COACH', 'MANAGER', 'STAFF', 'ADMIN'] },
   { to: '/coach/pt-attendance', label: 'Điểm danh', icon: 'check', roles: ['COACH'], tabs: [
     { to: '/coach/pt-attendance', label: 'Điểm danh PT 1:1', en: '1:1 PT attendance' },
@@ -101,7 +100,6 @@ export function getTabLabel(tab: PortalNavTab, lang: Language = 'vi'): string {
 
 export const PORTAL_NAV_EN_LABELS: Record<string, string> = {
   '/member/dashboard': 'Dashboard',
-  '/member/explore': 'Explore 3D',
   '/member/packages': 'Memberships & hold',
   '/member/classes': 'Classes & 1:1 PT',
   '/member/card': 'Card & check-in',

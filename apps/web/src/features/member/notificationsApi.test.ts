@@ -94,13 +94,11 @@ it('uses safe action links and rejects external, path-traversal or cross-role de
   expect(safeNotificationPath('/staff/requests', 'COACH')).toBe('/staff/requests');
 });
 
-it('redirects retired shop and court notifications to transaction history', () => {
+it('redirects retired shop notifications to transaction history', () => {
   expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MEMBER')).toBe('/member/invoices');
   expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'STAFF')).toBe('/staff/reception');
   expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order' }, 'MANAGER')).toBe('/manager/reports');
-  expect(safeNotificationPath('/member/courts?sport=Tennis', 'MEMBER')).toBe('/member/invoices');
   expect(safeNotificationPath('/member/classes?tab=pt', 'MEMBER')).toBe('/member/classes?tab=pt');
-  expect(safeNotificationPath('/staff/courts', 'STAFF')).toBe('/staff/reception');
   for (const actionPath of ['/member/orders/42', '/member/products', '/member/checkout']) {
     expect(notificationDestination({ relatedEntityType: 'product_order', type: 'order', actionPath }, 'MEMBER')).toBe('/member/invoices');
   }

@@ -64,28 +64,6 @@ class ClassServiceTest {
     private ClassService service;
     private GymClass gymClass;
 
-    /** Kiểm thử: tạo buổi học kiểm tra cả lượt đặt sân dù không có lớp nào khác. */
-    @Test
-    void sessionCreationChecksCourtBookingsEvenWhenThereAreNoOtherClasses() {
-        var courts = org.mockito.Mockito.mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
-        service = new ClassService(gymClasses, sessions, enrollments, disciplines, coaches, rooms,
-                mapper, clock, courts);
-        Room room = new Room();
-        org.springframework.test.util.ReflectionTestUtils.setField(room, "id", 4L);
-        gymClass.setRoom(room);
-        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
-        var date = LocalDate.of(2026, 10, 17);
-        var start = LocalTime.of(10, 0);
-        var end = LocalTime.of(11, 0);
-        when(courts.existsRoomOverlap(4L, date, start, end)).thenReturn(true);
-
-        assertThatThrownBy(() -> service.createSession(1L, new CreateSessionRequest(date, start, end)))
-                .isInstanceOf(ConflictException.class)
-                .satisfies(error -> assertThat(((ConflictException) error).getErrorCode())
-                        .isEqualTo("COURT_BOOKING_SLOT_TAKEN"));
-        org.mockito.Mockito.verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any());
-    }
-
     /** Chuẩn bị trước mỗi test: tạo ClassService với repository giả lập. */
     @BeforeEach
     void setUp() {
@@ -305,10 +283,10 @@ class ClassServiceTest {
         session.setEndTime(LocalTime.of(9, 0));
         session.setStatus("scheduled");
 
-        GymClass swimming = new GymClass();
-        swimming.setName("Bơi tự do");
+        GymClass boxing = new GymClass();
+        boxing.setName("Boxing Cơ Bản");
         ClassSession other = new ClassSession();
-        other.setGymClass(swimming);
+        other.setGymClass(boxing);
         other.setStartTime(LocalTime.of(18, 0));
         other.setEndTime(LocalTime.of(20, 0));
 
@@ -321,7 +299,7 @@ class ClassServiceTest {
         assertThatThrownBy(() -> service.rescheduleSession(1L, 100L,
                 new RescheduleSessionRequest(date, LocalTime.of(19, 0), LocalTime.of(20, 0))))
                 .isInstanceOf(ConflictException.class)
-                .hasMessageContaining("Bơi tự do");
+                .hasMessageContaining("Boxing Cơ Bản");
         verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any(ClassSession.class));
     }
 

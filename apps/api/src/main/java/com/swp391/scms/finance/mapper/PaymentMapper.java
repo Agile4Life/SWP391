@@ -50,7 +50,6 @@ public interface PaymentMapper {
     @Mapping(target = "refundedAmount", ignore = true)
     @Mapping(target = "receiptImage", ignore = true)
     @Mapping(target = "coachBookingId", ignore = true)
-    @Mapping(target = "courtBookingId", ignore = true)
     @Mapping(target = "productOrderId", ignore = true)
     void updateEntityFromDto(PaymentDto dto, @MappingTarget Payment entity);
 }

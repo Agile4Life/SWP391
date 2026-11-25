@@ -29,7 +29,7 @@ class VnpayPaymentServiceTest {
             "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", "https://example.test/member/payments/vnpay/return", 15));
     final com.swp391.scms.notifications.NotificationService notifications = mock(com.swp391.scms.notifications.NotificationService.class);
     final Clock clock = Clock.fixed(Instant.parse("2026-11-03T05:00:00Z"), ZoneOffset.UTC);
-    final VnpayPaymentService service = new VnpayPaymentService(transactions, payments, members, subscriptions, settlement, invoices, gateway, clock, mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class), mock(com.swp391.scms.courts.repository.CourtBookingRepository.class),notifications,mock(com.swp391.scms.common.i18n.MessageService.class));
+    final VnpayPaymentService service = new VnpayPaymentService(transactions, payments, members, subscriptions, settlement, invoices, gateway, clock, mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class), notifications, mock(com.swp391.scms.common.i18n.MessageService.class));
     final AuthenticatedPrincipal owner = new AuthenticatedPrincipal(7L, "member", "MEMBER");
     Payment payment;
     VnpayTransaction transaction;
@@ -63,9 +63,9 @@ class VnpayPaymentServiceTest {
                 subscriptions, null, mock(com.swp391.scms.finance.mapper.PaymentMapper.class), clock);
         var svc = new VnpayPaymentService(transactions, payments, members, subscriptions, realSettlement, invoices, gateway, clock,
                 mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),
-                mock(com.swp391.scms.courts.repository.CourtBookingRepository.class), notifications, null);
+                notifications, null);
         var walletService = mock(com.swp391.scms.wallet.WalletService.class); svc.setWalletService(walletService);
-        var request = new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(bySubscription ? 11L : null, null, null, bySubscription ? null : 9L);
+        var request = new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(bySubscription ? 11L : null, null, bySubscription ? null : 9L);
         var error = assertThrows(com.swp391.scms.common.exception.BadRequestException.class, () -> {
             if (wallet) svc.payWithWallet(owner, request); else svc.checkout(owner, request, "127.0.0.1");
         });
@@ -87,7 +87,7 @@ class VnpayPaymentServiceTest {
                 subscriptions, null, mock(com.swp391.scms.finance.mapper.PaymentMapper.class), clock);
         var svc = new VnpayPaymentService(transactions, payments, members, subscriptions, realSettlement, invoices, gateway, clock,
                 mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),
-                mock(com.swp391.scms.courts.repository.CourtBookingRepository.class), notifications, null);
+                notifications, null);
         assertEquals("99", svc.ipn(callback("00", "00", "65000000")));
         assertEquals("pending", transaction.getStatus()); assertNull(transaction.getGatewayTransactionNo());
         var walletService = mock(com.swp391.scms.wallet.WalletService.class); svc.setWalletService(walletService);
@@ -118,7 +118,7 @@ class VnpayPaymentServiceTest {
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.of(transaction));
         var svc = new VnpayPaymentService(transactions, payments, members, subscriptions, realSettlement, invoices, gateway, clock,
                 mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),
-                mock(com.swp391.scms.courts.repository.CourtBookingRepository.class), notifications, null);
+                notifications, null);
         assertEquals("ABC123", svc.checkout(owner, 11L, "127.0.0.1").reference());
         verify(transactions, never()).save(any());
     }
@@ -128,10 +128,10 @@ class VnpayPaymentServiceTest {
                 subscriptions, null, mock(com.swp391.scms.finance.mapper.PaymentMapper.class), clock);
         var svc = new VnpayPaymentService(transactions, payments, members, subscriptions, realSettlement, invoices, gateway, clock,
                 mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),
-                mock(com.swp391.scms.courts.repository.CourtBookingRepository.class), notifications, null);
+                notifications, null);
         when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));
         when(transactions.findAllByPaymentId(9L)).thenReturn(List.of(transaction));
-        svc.cancelTarget(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null));
+        svc.cancelTarget(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null));
         assertEquals("failed", transaction.getStatus()); assertEquals("pending", payment.getStatus());
         verify(transactions).saveAndFlush(transaction); verifyNoInteractions(invoices);
     }
@@ -180,26 +180,9 @@ class VnpayPaymentServiceTest {
         booking.setId(81L);booking.setMember(payment.getMember());booking.setStatus("confirmed");booking.setPaymentStatus("pending");
         payment.setSubscriptionId(null);payment.setCoachBookingId(81L);
         when(repo.findByIdForUpdate(81L)).thenReturn(Optional.of(booking));when(repo.findById(81L)).thenReturn(Optional.of(booking));
-        var svc=new VnpayPaymentService(transactions,payments,members,subscriptions,settlement,invoices,gateway,clock,mock(jakarta.persistence.EntityManager.class),repo,mock(com.swp391.scms.courts.repository.CourtBookingRepository.class),mock(com.swp391.scms.notifications.NotificationService.class),mock(com.swp391.scms.common.i18n.MessageService.class));
+        var svc=new VnpayPaymentService(transactions,payments,members,subscriptions,settlement,invoices,gateway,clock,mock(jakarta.persistence.EntityManager.class),repo,mock(com.swp391.scms.notifications.NotificationService.class),mock(com.swp391.scms.common.i18n.MessageService.class));
         assertEquals("00",svc.ipn(callback("00","00","65000000")));
         assertEquals("paid",booking.getPaymentStatus());verify(invoices).autoIssueInvoiceForPayment(9L);
-    }
-    @Test void cancelledCourtCannotBeMarkedPaidEvenWithAValidSignature() {
-        var repo=mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
-        var booking=new com.swp391.scms.courts.entity.CourtBooking();booking.setId(82L);booking.setStatus("cancelled");booking.setPaymentStatus("pending");
-        payment.setSubscriptionId(null);payment.setCourtBookingId(82L);
-        when(repo.findByIdForUpdate(82L)).thenReturn(Optional.of(booking));when(repo.findById(82L)).thenReturn(Optional.of(booking));
-        var svc=new VnpayPaymentService(transactions,payments,members,subscriptions,settlement,invoices,gateway,clock,mock(jakarta.persistence.EntityManager.class),mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),repo,mock(com.swp391.scms.notifications.NotificationService.class),mock(com.swp391.scms.common.i18n.MessageService.class));
-        assertThrows(com.swp391.scms.common.exception.ConflictException.class,()->svc.ipn(callback("00","00","65000000")));
-        assertEquals("pending",transaction.getStatus());verifyNoInteractions(settlement,invoices);
-    }
-    @Test void confirmedCourtPaymentUpdatesBookingAndInvoice() {
-        var repo=mock(com.swp391.scms.courts.repository.CourtBookingRepository.class);
-        var booking=new com.swp391.scms.courts.entity.CourtBooking();booking.setId(82L);booking.setStatus("booked");booking.setPaymentStatus("pending");
-        payment.setSubscriptionId(null);payment.setCourtBookingId(82L);
-        when(repo.findByIdForUpdate(82L)).thenReturn(Optional.of(booking));when(repo.findById(82L)).thenReturn(Optional.of(booking));
-        var svc=new VnpayPaymentService(transactions,payments,members,subscriptions,settlement,invoices,gateway,clock,mock(jakarta.persistence.EntityManager.class),mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),repo,mock(com.swp391.scms.notifications.NotificationService.class),mock(com.swp391.scms.common.i18n.MessageService.class));
-        assertEquals("00",svc.ipn(callback("00","00","65000000")));assertEquals("paid",booking.getPaymentStatus());verify(settlement).updatePaymentStatus(9L,"success");
     }
     @Test void reusesPendingCheckoutWaitsOutIpnGraceThenStartsAFreshAttempt() {
         var sub=new MembershipSubscription();sub.setId(11L);sub.setMember(payment.getMember());sub.setStatus("pending_payment");
@@ -284,7 +267,7 @@ class VnpayPaymentServiceTest {
         when(payments.findAllByProductOrderId(9L)).thenReturn(List.of());
         when(payments.save(any())).thenAnswer(i -> { Payment p = i.getArgument(0); p.setId(44L); return p; });
         service.setOrderPayments(orderPayments);
-        service.checkout(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 9L), "127.0.0.1");
+        service.checkout(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, 9L), "127.0.0.1");
         verify(payments).save(argThat(p -> Long.valueOf(9L).equals(p.getProductOrderId())
                 && p.getAmount().compareTo(new BigDecimal("2580000")) == 0));
     }
@@ -296,7 +279,7 @@ class VnpayPaymentServiceTest {
         var orderPayments = new com.swp391.scms.shop.service.ProductOrderPayments(ordersRepo, null, null, null, null, clock);
         service.setOrderPayments(orderPayments);
         var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
-                () -> service.checkout(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 9L), "127.0.0.1"));
+                () -> service.checkout(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, 9L), "127.0.0.1"));
         assertEquals("VNPAY_TARGET_UNAVAILABLE", ex.getErrorCode());
     }
     @Test void ipnSuccessMarksOrderPaidAndIssuesInvoice() {
@@ -324,7 +307,7 @@ class VnpayPaymentServiceTest {
         when(payments.saveAndFlush(any())).thenAnswer(i -> { Payment p = i.getArgument(0); p.setId(55L); return p; });
         service.setOrderPayments(orderPayments);
         service.setWalletService(walletService);
-        service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 9L));
+        service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, 9L));
         verify(walletService).debitForPayment(eq(7L), eq(new BigDecimal("2580000")), eq("WALLET_PAY_55"), any(), eq("/member/orders/9"));
         verify(orderPayments).markPaid(9L, "online_wallet");
         verify(invoices).autoIssueInvoiceForPayment(55L);
@@ -351,12 +334,12 @@ class VnpayPaymentServiceTest {
         when(ordersRepo.findById(9L)).thenReturn(Optional.of(order));
         service.setOrders(ordersRepo); service.setOrderPayments(orderPayments);
         var other = new AuthenticatedPrincipal(8L, "other", "MEMBER");
-        var request = new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 9L);
+        var request = new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, 9L);
         var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.checkout(other, request, "127.0.0.1"));
         assertEquals("VNPAY_TARGET_UNAVAILABLE", ex.getErrorCode());
         when(ordersRepo.findById(10L)).thenReturn(Optional.empty());
         var missing = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
-                () -> service.checkout(other, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, null, 10L), "127.0.0.1"));
+                () -> service.checkout(other, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, 10L), "127.0.0.1"));
         assertEquals(ex.getErrorCode(), missing.getErrorCode());
         verify(orderPayments, never()).requirePayable(any());
         verify(members, never()).findByUserIdForUpdate(8L);
@@ -413,7 +396,7 @@ class VnpayPaymentServiceTest {
         // Giao dịch VNPay đang pending còn hiệu lực sẽ chặn thanh toán bằng ví trước khi trừ tiền ví
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.of(transaction));
         var conflict = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
-                () -> service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null)));
+                () -> service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null)));
         assertEquals("VNPAY_AWAITING_CONFIRMATION", conflict.getErrorCode());
         verifyNoInteractions(walletService);
 
@@ -421,7 +404,7 @@ class VnpayPaymentServiceTest {
         var abandoned = new VnpayTransaction("OLD", payment, payment.getAmount(),
                 LocalDateTime.of(2026, 11, 2, 12, 0), LocalDateTime.of(2026, 11, 2, 12, 15), "127.0.0.1");
         when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.of(abandoned));
-        service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null));
+        service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null));
         assertEquals("failed", abandoned.getStatus());
         verify(walletService).debitForPayment(eq(7L), eq(new BigDecimal("650000")), eq("WALLET_PAY_9"), any(), eq("/member/packages"));
         verify(settlement).updatePaymentStatus(9L, "success");
@@ -534,7 +517,7 @@ class VnpayPaymentServiceTest {
         when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));
         when(transactions.findAllByPaymentId(9L)).thenReturn(List.of(transaction));
 
-        service.cancelTarget(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null));
+        service.cancelTarget(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null));
         assertEquals("failed", transaction.getStatus());
         assertEquals("pending", payment.getStatus());
 

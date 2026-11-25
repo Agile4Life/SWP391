@@ -170,34 +170,6 @@ class GlobalExceptionHandlerTriggerTest {
                         .flatMap(message -> Stream.of("vi", "en").map(language -> Arguments.of(trigger, message, language))));
     }
 
-    /** Kiểm thử: ràng buộc của sân có phản hồi công khai đã được dịch. */
-    @ParameterizedTest
-    @MethodSource("courtFailures")
-    void courtConstraintsHaveLocalizedPublicResponses(String constraint, int httpStatus, String code,
-                                                     String language, String message) throws Exception {
-        mockMvcFor(translate(new SQLException(constraint, "23514")))
-                .perform(get("/trigger-test").header("Accept-Language", language))
-                .andExpect(status().is(httpStatus))
-                .andExpect(jsonPath("$.code").value(code))
-                .andExpect(jsonPath("$.message").value(message))
-                .andExpect(jsonPath("$.details").doesNotExist());
-    }
-
-    /** Hàm trợ giúp của test: cung cấp các lỗi của sân. */
-    private static Stream<Arguments> courtFailures() {
-        return Stream.of(
-                Arguments.of("trg_court_bookings_check_conflict", 409, "COURT_BOOKING_SLOT_TAKEN", "vi",
-                        "Khung giờ đã có lượt đặt sân hoặc lớp học trùng lịch"),
-                Arguments.of("trg_court_bookings_check_conflict", 409, "COURT_BOOKING_SLOT_TAKEN", "en",
-                        "This time overlaps an existing court booking or class"),
-                Arguments.of("trg_court_bookings_check_membership", 403, "COURT_BOOKING_MEMBERSHIP_INVALID", "vi",
-                        "Bạn chưa đăng ký gói tập hoặc gói tập không còn hiệu lực đến ngày đặt sân. Vui lòng đăng ký gói tập đang hoạt động để đặt sân"),
-                Arguments.of("trg_court_bookings_check_limit", 409, "COURT_BOOKING_LIMIT_REACHED", "en",
-                        "You can have at most four court bookings per day"),
-                Arguments.of("trg_court_bookings_check_slot", 400, "COURT_BOOKING_INVALID_SLOT", "en",
-                        "Choose a whole-hour 60-minute slot within the court opening hours"));
-    }
-
     /** Hàm trợ giúp của test: cung cấp các lỗi database không liên quan. */
     private static Stream<Arguments> unrelatedDatabaseFailures() {
         return Stream.of(

@@ -189,15 +189,6 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*", "/api/v1/classes/**").hasAnyRole("CENTER_MANAGER", "MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/sessions/**", "/api/v1/classes/sessions", "/api/v1/classes", "/api/v1/classes/**").authenticated()
 
-                    // Vai trò đặt sân được áp dụng ở đây và ở ranh giới controller.
-                    .requestMatchers(HttpMethod.GET, "/api/v1/courts", "/api/v1/courts/**").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings/my", "/api/v1/court-bookings/quota").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/court-bookings").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/court-bookings").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/confirm-payment").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.PATCH, "/api/v1/court-bookings/*/cancel").hasAnyRole("MEMBER", "RECEPTIONIST", "STAFF", "CENTER_MANAGER")
-                    .requestMatchers("/api/v1/court-bookings/**", "/api/v1/courts/**").denyAll()
-
                     // Đặt lịch HLV 1:1 & Bộ môn yêu thích (SCRUM-133)
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/coaches").authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/coach-bookings/available-slots").authenticated()

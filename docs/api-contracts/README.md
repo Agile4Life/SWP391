@@ -1,14 +1,15 @@
 # API contract workflow
 
-Group classes (recurring courses `/api/v1/classes/**`) and session attendance (`/api/v1/attendance/**`) were restored on 25/11/2026 (`app.legacy.classes-enabled=true`), keeping `SingleSessionPolicy` (per-session / one-off booking remains disabled) and bidirectional PT 1:1 ↔ group-class conflict guards; see [`openapi-group-classes-restored.yaml`](openapi-group-classes-restored.yaml) and `openapi-sprint3-operations.yaml`.
-Equipment-management, court-booking, and member favorite-discipline endpoints, plus coach reviews, session evaluations, monthly coach reviews, the coach leaderboard, health metrics, training completion/progress, the check-in streak and the Supplement Shop remain retired. Their historical schemas below remain for reference; the removed operations are no longer part of the active API.
-PT 1:1, recurring group classes, session attendance, training plans and center check-in are active.
+Active scope (updated 25/11/2026): **3 active disciplines** (`Gym` primary, `Boxing`, `Yoga`) across **4 rooms** (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`). Recurring group classes (`/api/v1/classes/**`, max 1 `active` class per discipline — `409 SCHEDULING_DISCIPLINE_CLASS_EXISTS`) and session attendance (`/api/v1/attendance/**`) are active (`app.legacy.classes-enabled=true`), keeping `SingleSessionPolicy` (per-session / one-off booking remains disabled) and bidirectional PT 1:1 ↔ group-class conflict guards; see [`openapi-group-classes-restored.yaml`](openapi-group-classes-restored.yaml) and `openapi-sprint3-operations.yaml`.
+**Completely removed:** court booking (`com.swp391.scms.courts.*`, `/api/v1/courts/**`, `/api/v1/court-bookings/**`, database triggers, UI/routes, and its OpenAPI contract) as well as disciplines outside `Gym`/`Boxing`/`Yoga` (along with their rooms, routes, demo classes, and AI knowledge).
+**Disabled via legacy flags (off by default):** equipment-management and member favorite-discipline endpoints, plus coach reviews, session evaluations, monthly coach reviews, the coach leaderboard (`app.coaching.*`), health metrics/training completion/progress/check-in streak (`app.health.metrics.enabled`), and the Supplement Shop (`app.shop.enabled`). Their historical schemas below remain for reference only; those operations are not part of the active API.
+PT 1:1, recurring group classes, group class attendance, memberships/holds, center QR check-in, VNPay/wallet/invoices, training plans, direct chat/support, SÖL AI, and operations are active.
 
 The API team publishes an OpenAPI YAML/JSON export here when an endpoint is ready for frontend integration. Every change must specify request, successful response and common error response.
 
 Frontend may use a local mock matching the contract, but must remove the mock before the Jira ticket is moved to Done.
 
-`openapi-public.yaml` defines the anonymous, read-only landing catalog. It shares package, coach and session data with the authenticated portal; fixture data in browser verification scripts is never used by the application.
+`openapi-public.yaml` defines the anonymous, read-only landing catalog (`GET /api/v1/public/catalog`) covering active packages, coaches, and upcoming 7-day recurring group-class sessions across the 3 active disciplines (`Gym`, `Boxing`, `Yoga`). It shares package, coach and session data with the authenticated portal; fixture data in browser verification scripts is never used by the application.
 
 [`openapi-pwa-checkin.yaml`](openapi-pwa-checkin.yaml) defines signed gate QR generation and authenticated Member self check-in for the Android/iOS portal PWA (SCRUM-75/83/87 extension).
 

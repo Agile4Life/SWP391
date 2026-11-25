@@ -14,15 +14,13 @@ export function coachPortrait(coachName?: string | null) {
 }
 
 /**
- * Ảnh minh họa HLV: ưu tiên chân dung riêng, nếu không thì chọn ảnh theo chuyên môn (tennis, bơi, vận động, sức
- * mạnh) hoặc ảnh chung.
+ * Ảnh minh họa HLV: ưu tiên chân dung riêng, nếu không thì chọn ảnh theo chuyên môn (vận động/yoga, sức mạnh) hoặc
+ * ảnh chung.
  */
 export function coachIllustration(specialization: string | null, coachName?: string | null) {
   const portrait = coachPortrait(coachName);
   if (portrait) return portrait;
   const value = specialization || '';
-  if (/tennis/i.test(value)) return '/images/fitness/coach-tennis.jpg';
-  if (/bơi|swim|aquatic/i.test(value)) return '/images/fitness/coach-aquatics.jpg';
   if (/movement|mobility|core|yoga|giãn|chuyển động/i.test(value)) return '/images/fitness/coach-movement.webp';
   if (/strength|barbell|tạ|sức mạnh/i.test(value)) return '/images/fitness/coach-strength.webp';
   return '/images/fitness/coach-generic.jpg';

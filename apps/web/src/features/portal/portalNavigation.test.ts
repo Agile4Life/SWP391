@@ -63,11 +63,24 @@ describe('portal sidebar grouping', () => {
   });
 });
 
-it('restores group-class navigation for Member, Coach and Manager while keeping Staff concise and courts/shop removed', () => {
+it('keeps group-class navigation for Member, Coach and Manager while keeping Staff concise and retired features hidden', () => {
   const member = forRole('MEMBER');
-  expect(member.flatMap(portalNavRoutes)).not.toContain('/member/courts');
-  expect(member.flatMap(portalNavRoutes)).not.toContain('/member/products');
-  expect(member.flatMap(portalNavRoutes)).not.toContain('/member/orders');
+  const memberRoutes = member.flatMap(portalNavRoutes);
+  expect(memberRoutes).not.toContain('/member/explore');
+  expect(memberRoutes).not.toContain('/member/products');
+  expect(memberRoutes).not.toContain('/member/orders');
+  expect(memberRoutes).toEqual([
+    '/member/dashboard',
+    '/member/packages',
+    '/member/hold',
+    '/member/classes',
+    '/member/card',
+    '/member/check-in',
+    '/member/invoices',
+    '/member/progress',
+    '/member/notifications',
+    '/member/profile',
+  ]);
   expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch học & đặt PT');
   expect(member.find(item => item.to === '/member/progress')?.icon).toBe('dumbbell');
 
@@ -84,7 +97,13 @@ it('restores group-class navigation for Member, Coach and Manager while keeping 
 
   const staff = forRole('STAFF').filter(item => item.to !== '/member/profile' && item.to !== '/member/notifications');
   expect(staff).toHaveLength(3);
-  expect(staff.flatMap(portalNavRoutes)).not.toContain('/staff/classes');
-  expect(staff.flatMap(portalNavRoutes)).not.toContain('/staff/courts');
-  expect(staff.flatMap(portalNavRoutes)).not.toContain('/staff/orders');
+  expect(staff.flatMap(portalNavRoutes)).toEqual([
+    '/staff/reception',
+    '/staff/check-in',
+    '/staff/check-out',
+    '/staff/reception-history',
+    '/staff/kyc',
+    '/staff/holds',
+    '/staff/requests',
+  ]);
 });

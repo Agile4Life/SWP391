@@ -42,31 +42,28 @@ const activate = async (index: number) => act(async () => {
 const advance = () => act(async () => vi.advanceTimersByTime(500));
 const shown = () => host.querySelector<HTMLElement>('.fit-sport-story-visual.is-active')?.dataset.sport;
 
-it('shows all 6 disciplines with class schedule CTAs and secondary detail links', async () => {
+it('shows all 3 disciplines with class schedule CTAs and secondary detail links', async () => {
   await render();
-  expect(host.querySelectorAll('.fit-sport-story-step')).toHaveLength(6);
+  expect(host.querySelectorAll('.fit-sport-story-step')).toHaveLength(3);
   expect([...host.querySelectorAll('.fit-sport-story-step h3')].map((h) => h.textContent))
-    .toEqual(['Gym', 'Bơi lội', 'Boxing', 'Tennis', 'Cầu lông', 'Yoga']);
-  expect(host.querySelectorAll('.fit-sport-story-inline img')).toHaveLength(6);
+    .toEqual(['Gym', 'Boxing', 'Yoga']);
+  expect(host.querySelectorAll('.fit-sport-story-inline img')).toHaveLength(3);
   const hrefs = [...host.querySelectorAll('a')].map((a) => a.getAttribute('href'));
   expect(hrefs).toContain('/member/classes?tab=classes&discipline=Gym');
-  expect(hrefs).toContain('/swimming');
   expect(hrefs).toContain('/boxing');
-  expect(hrefs).toContain('/tennis');
-  expect(hrefs).toContain('/badminton');
   expect(hrefs).toContain('/yoga');
 });
 
 it('switches visual cleanly on scroll, keyboard focus and reduced motion', async () => {
   await render();
-  await activate(5);
+  await activate(2);
   await advance();
   expect(shown()).toBe('yoga');
   expect(host.querySelector<HTMLElement>('.fit-sport-story-rail i')?.style.top).toBe('100%');
 
   preference.matches = true;
   await act(async () => preference.addEventListener.mock.calls[0][1]());
-  await activate(2);
+  await activate(1);
   expect(shown()).toBe('boxing');
   expect(host.querySelector('.is-leaving')).toBeNull();
 });

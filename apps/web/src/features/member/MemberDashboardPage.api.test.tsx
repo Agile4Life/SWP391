@@ -29,7 +29,7 @@ it('renders a member without a subscription using the real API client and an omi
     expect(host.textContent).toContain('Bạn chưa có lịch PT sắp tới.');
     expect(host.querySelector('a[href="/member/packages"]')).not.toBeNull();
     const paths = vi.mocked(fetch).mock.calls.map(([path]) => String(path));
-    expect(paths.some(path => path.includes('/classes/') || path.includes('/court-bookings'))).toBe(false);
+    expect(paths.some(path => path.includes('/classes/'))).toBe(false);
     expect(paths.some(path => path.includes('/coach-bookings/my'))).toBe(true);
     // Bản sửa lỗi truyền tải tương tự cũng phải áp dụng cho gói tập và thẻ hội viên.
     await expect(getCurrentMembership()).resolves.toBeNull();

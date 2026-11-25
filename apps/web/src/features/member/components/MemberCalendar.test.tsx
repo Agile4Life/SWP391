@@ -69,11 +69,10 @@ afterEach(async () => {
 const render = () => act(async () => root.render(<MemoryRouter><MemberCalendar /></MemoryRouter>));
 const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === text)!;
 
-it('displays both enrolled group classes and 1:1 PT sessions without court events', async () => {
+it('displays both enrolled group classes and 1:1 PT sessions', async () => {
   await render();
   expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
   expect(host.querySelectorAll('.mcal__event--class')).toHaveLength(1);
-  expect(host.querySelectorAll('.mcal__event--court')).toHaveLength(0);
   expect(host.textContent).toContain('Hùng');
   expect(host.textContent).toContain('Yoga Sáng');
 

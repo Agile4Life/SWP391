@@ -17,15 +17,6 @@ const content: Record<DisciplineId, { image: string; summary: string; programs: 
       { vi: 'Thể lực và sức bền', en: 'Conditioning & stamina' },
     ],
   },
-  swimming: {
-    image: '/images/fitness/aquatics-pool.jpg',
-    get summary() { return sourceText({ vi: 'Rèn sức bền và kỹ thuật bơi trong hồ bơi của trung tâm.', en: 'Train stroke technique and endurance in our all-season lap pool.' }); },
-    programs: [
-      { vi: 'Kỹ thuật bơi sải', en: 'Freestyle stroke' },
-      { vi: 'Sức bền dưới nước', en: 'Aquatic endurance' },
-      { vi: 'Thả lỏng và phục hồi', en: 'Recovery & cooldown' },
-    ],
-  },
   boxing: {
     image: '/images/hero-options/opt5-boxing.jpg',
     get summary() { return sourceText({ vi: 'Tập kỹ thuật đấm, phản xạ và thể lực qua từng hiệp.', en: 'Sharpen striking technique, reflexes, and round conditioning.' }); },
@@ -33,24 +24,6 @@ const content: Record<DisciplineId, { image: string; summary: string; programs: 
       { vi: 'Kỹ thuật đấm cơ bản', en: 'Foundational striking' },
       { vi: 'Bộ chân và phản xạ', en: 'Footwork & reflexes' },
       { vi: 'Thể lực theo hiệp', en: 'Round conditioning' },
-    ],
-  },
-  tennis: {
-    image: '/images/fitness/tennis-court.jpg',
-    get summary() { return sourceText({ vi: 'Luyện kỹ thuật đánh bóng và di chuyển trên sân.', en: 'Refine strokes, court movement, and doubles play.' }); },
-    programs: [
-      { vi: 'Kỹ thuật đánh bóng', en: 'Stroke fundamentals' },
-      { vi: 'Di chuyển và phản xạ', en: 'Court footwork' },
-      { vi: 'Đánh đôi', en: 'Doubles tactics' },
-    ],
-  },
-  badminton: {
-    image: '/images/fitness/badminton-court.webp',
-    get summary() { return sourceText({ vi: 'Rèn bộ chân, phản xạ và kỹ thuật đánh cầu.', en: 'Develop agility, quick reflexes, and crisp shuttle control.' }); },
-    programs: [
-      { vi: 'Kỹ thuật đánh cầu', en: 'Shuttle control' },
-      { vi: 'Bộ chân và phản xạ', en: 'Agility & reflexes' },
-      { vi: 'Thi đấu đôi', en: 'Doubles play' },
     ],
   },
   yoga: {
@@ -65,7 +38,7 @@ const content: Record<DisciplineId, { image: string; summary: string; programs: 
 };
 
 /**
- * Khu giới thiệu 6 bộ môn thể thao đa môn theo kiểu kể chuyện khi cuộn:
+ * Khu giới thiệu 3 bộ môn thể thao (Gym, Boxing, Yoga) theo kiểu kể chuyện khi cuộn:
  * bước nào ở giữa màn hình thì hiện ảnh tương ứng, hỗ trợ focus bàn phím và giảm chuyển động.
  */
 export function SportStack({ classPath, heading }: { classPath: string; heading?: ReactNode }) {
@@ -158,7 +131,7 @@ export function SportStack({ classPath, heading }: { classPath: string; heading?
 
   return <div className="fit-sport-story" ref={story} role="region" aria-label={sourceText({ vi: 'Khám phá các bộ môn', en: 'Explore disciplines' })}>
     {heading}
-    <p className="fit-sport-story-hint">{sourceText({ vi: 'Cuộn xem 6 bộ môn ', en: 'Scroll to explore 6 disciplines ' })}<span aria-hidden="true">↓</span></p>
+    <p className="fit-sport-story-hint">{sourceText({ vi: 'Cuộn xem 3 bộ môn ', en: 'Scroll to explore 3 disciplines ' })}<span aria-hidden="true">↓</span></p>
     <div className="fit-sport-story-layout">
       <div className="fit-sport-story-steps">
         <div className="fit-sport-story-rail" aria-hidden="true"><i style={{ top: '0%' }} /></div>

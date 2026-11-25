@@ -916,7 +916,7 @@ public class EnrollmentService {
                     }
                     var checkout = vnpayPaymentService.checkout(
                             principal,
-                            new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, savedPayment.getId()),
+                            new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, savedPayment.getId()),
                             ip,
                             origin
                     );

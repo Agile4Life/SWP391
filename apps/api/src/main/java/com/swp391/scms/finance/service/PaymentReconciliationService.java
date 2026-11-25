@@ -323,7 +323,6 @@ public class PaymentReconciliationService {
         if (p == null) return new String[]{null, null};
         if (p.getSubscriptionId() != null) return new String[]{"MEMBERSHIP", p.getSubscriptionId().toString()};
         if (p.getCoachBookingId() != null) return new String[]{"COACH_BOOKING", p.getCoachBookingId().toString()};
-        if (p.getCourtBookingId() != null) return new String[]{"COURT_BOOKING", p.getCourtBookingId().toString()};
         if (p.getProductOrderId() != null) return new String[]{"PRODUCT_ORDER", p.getProductOrderId().toString()};
         if (p.getClassEnrollmentId() != null) return new String[]{"COURSE", p.getClassEnrollmentId().toString()};
         return new String[]{"WALLET_TOPUP", null};

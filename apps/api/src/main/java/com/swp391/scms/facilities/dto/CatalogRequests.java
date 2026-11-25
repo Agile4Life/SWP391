@@ -17,7 +17,7 @@ public final class CatalogRequests {
             @Size(max = 100, message = "{validation.catalog.name.size}") String name,
             String description) {}
 
-    /** Dữ liệu phòng: tên, vị trí, sức chứa, trạng thái, bộ môn sân (tính năng cũ), giờ mở/đóng và hạng phòng. */
+    /** Dữ liệu phòng: tên, vị trí, sức chứa, trạng thái và hạng phòng. */
     public record RoomRequest(
             @NotBlank(message = "{validation.catalog.name.not_blank}")
             @Size(max = 100, message = "{validation.catalog.name.size}") String name,

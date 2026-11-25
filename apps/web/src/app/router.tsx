@@ -5,12 +5,9 @@ import { PortalRouteError, RouteLoading, RouteLoadError } from '../shared/ui/Rou
 import { LegacyAttendanceRedirect, LegacyClassesRedirect } from './LegacyRedirects';
 
 export const router = createBrowserRouter([
-  // Public đa bộ môn (6 bộ môn chuẩn từ 1384c4d3); giữ bỏ Shop công khai, giữ route gói/lớp/PT và quản lý.
+  // Public 3 bộ môn chuẩn (Gym trên trang chủ, Boxing & Yoga có trang riêng); giữ route gói, lớp nhóm, PT và quản lý.
   { path: '/', lazy: async () => ({ Component: (await import('../features/landing/LandingPage')).LandingPage }) },
-  { path: '/swimming', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
-  { path: '/tennis', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/boxing', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
-  { path: '/badminton', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/yoga', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/sports/:sportId', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/trainers', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
@@ -53,8 +50,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/member/explore',
-            // Trang /member/explore: tải lười ExplorePage.
-            lazy: async () => ({ Component: (await import('../features/explore3d/ExplorePage')).ExplorePage }),
+            element: <Navigate to="/member/dashboard" replace />,
           },
           {
             path: '/member/packages',
@@ -95,7 +91,7 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/member/MemberProgressPage')).MemberProgressPage }),
           },
           {
-            // Hỗ trợ & khiếu nại đã gộp vào Tin nhắn; giữ đường dẫn cũ cho email, thông báo và liên kết 3D.
+            // Hỗ trợ & khiếu nại đã gộp vào Tin nhắn; giữ đường dẫn cũ cho email và thông báo.
             path: '/member/support',
             element: <Navigate to="/messages?tab=support" replace />,
           },
@@ -182,7 +178,6 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
           },
           { path: '/staff/support', element: <Navigate to="/messages?tab=support" replace /> },
-          { path: '/staff/courts', element: <Navigate to="/staff/reception" replace /> },
         ],
       },
 

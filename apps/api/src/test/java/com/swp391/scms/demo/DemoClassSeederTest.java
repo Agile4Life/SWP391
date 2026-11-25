@@ -47,14 +47,12 @@ class DemoClassSeederTest {
     void setUp() {
         seeder = new DemoClassSeeder(classes, sessions, coaches, rooms, disciplines, users, coachBookings);
         lenient().when(coaches.findActiveWithUser()).thenReturn(List.of(
-                coach(1L, "Gym - Sức mạnh"), coach(2L, "Yoga"), coach(3L, "Boxing & Tennis"), coach(4L, "Bơi lội & Cầu lông")));
+                coach(1L, "Gym - Sức mạnh"), coach(2L, "Yoga"), coach(3L, "Boxing"), coach(4L, "Yoga & Phục hồi")));
         lenient().when(rooms.findAllByOrderByNameAsc()).thenReturn(List.of(
                 room(1L, "Phòng Gym Tiêu chuẩn", 50), room(2L, "Ring Arena 01", 14),
-                room(3L, "Zen Garden Studio", 18), room(4L, "Oasis Lap Pool", 20),
-                room(5L, "Sân Tennis 01", 8), room(6L, "Sân Cầu lông 01", 8)));
+                room(3L, "Zen Garden Studio", 18)));
         lenient().when(disciplines.findAll()).thenReturn(List.of(
-                discipline(1L, "Gym"), discipline(2L, "Yoga"), discipline(3L, "Boxing"),
-                discipline(4L, "Bơi lội"), discipline(5L, "Tennis"), discipline(6L, "Cầu lông")));
+                discipline(1L, "Gym"), discipline(2L, "Yoga"), discipline(3L, "Boxing")));
         lenient().when(classes.findAll()).thenReturn(List.of());
         lenient().when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of());
         lenient().when(coachBookings.findConfirmedBetween(any(), any())).thenReturn(List.of());
@@ -71,15 +69,15 @@ class DemoClassSeederTest {
         });
     }
 
-    /** Kiểm thử: tạo đúng 1 lớp active cho mỗi bộ môn trong 6 bộ môn mà không trùng lịch HLV hay phòng. */
+    /** Kiểm thử: tạo đúng 1 lớp active cho mỗi bộ môn trong 3 bộ môn mà không trùng lịch HLV hay phòng. */
     @Test
     void createsOneActiveClassPerDisciplineWithoutDoubleBookingACoachOrRoom() {
         seeder.run(null);
 
-        assertThat(savedClasses).hasSize(6);
+        assertThat(savedClasses).hasSize(3);
         assertThat(savedClasses)
                 .extracting(c -> c.getDiscipline().getName())
-                .containsExactlyInAnyOrder("Gym", "Bơi lội", "Boxing", "Tennis", "Cầu lông", "Yoga");
+                .containsExactlyInAnyOrder("Gym", "Boxing", "Yoga");
         assertThat(savedClasses).allSatisfy(c -> {
             assertThat(c.getStatus()).isEqualTo("active");
             assertThat(c.getStartDate()).isNotNull();
@@ -143,8 +141,8 @@ class DemoClassSeederTest {
 
         seeder.run(null);
 
-        assertThat(savedClasses).hasSize(5);
-        assertThat(savedClasses).extracting(c -> c.getDiscipline().getName()).doesNotContain("Gym");
+        assertThat(savedClasses).hasSize(2);
+        assertThat(savedClasses).extracting(c -> c.getDiscipline().getName()).containsExactlyInAnyOrder("Boxing", "Yoga");
         assertThat(savedSessions).extracting(ClassSession::getStatus).contains("completed", "scheduled");
     }
 

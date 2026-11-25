@@ -86,7 +86,7 @@ describe('SCRUM-86 packages', () => {
     api.packages.mockResolvedValue([{ ...higherPackage, description: 'Lớp nhóm và phòng tập.' }]);
     await render();
     expect(host.textContent).toContain('Lớp nhóm và phòng tập.');
-    expect(host.textContent).not.toMatch(/Hồ bơi|Sauna|khăn tập|1-kèm-1|Gói Đặc Quyền VIP/);
+    expect(host.textContent).not.toMatch(/Sauna|khăn tập|1-kèm-1|Gói Đặc Quyền VIP/);
   });
 
   beforeEach(() => {

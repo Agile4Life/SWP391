@@ -22,7 +22,7 @@ vi.mock('./classesApi', () => ({
   },
 }));
 
-describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent tabs)', () => {
+describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent tabs)', () => {
   let host: HTMLDivElement;
   let root: Root;
   const today = todayISO();
@@ -35,11 +35,8 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
 
     vi.mocked(classesApi.getDisciplines).mockResolvedValue([
       { id: 1, name: 'Gym', description: 'Gym' },
-      { id: 2, name: 'Bơi lội', description: 'Bơi lội' },
-      { id: 3, name: 'Boxing', description: 'Boxing' },
-      { id: 4, name: 'Tennis', description: 'Tennis' },
-      { id: 5, name: 'Cầu lông', description: 'Cầu lông' },
-      { id: 6, name: 'Yoga', description: 'Yoga' },
+      { id: 2, name: 'Boxing', description: 'Boxing' },
+      { id: 3, name: 'Yoga', description: 'Yoga' },
     ]);
     vi.mocked(classesApi.getAvailableRooms).mockResolvedValue([
       { id: 10, name: 'Phòng Gym Tiêu chuẩn', location: 'L1', capacity: 50, status: 'available' },
@@ -67,7 +64,7 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
       {
         id: 2,
         name: 'Boxing Cơ Bản',
-        disciplineId: 3,
+        disciplineId: 2,
         disciplineName: 'Boxing',
         coachId: 101,
         coachName: 'HLV Hùng',
@@ -79,7 +76,7 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
       {
         id: 3,
         name: 'Hatha Yoga Nền Tảng',
-        disciplineId: 6,
+        disciplineId: 3,
         disciplineName: 'Yoga',
         coachId: 100,
         coachName: 'HLV Lan',
@@ -112,7 +109,7 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
         id: 502,
         classId: 2,
         className: 'Boxing Cơ Bản',
-        disciplineId: 3,
+        disciplineId: 2,
         disciplineName: 'Boxing',
         coachId: 101,
         coachName: 'HLV Hùng',
@@ -129,7 +126,7 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
         id: 503,
         classId: 3,
         className: 'Hatha Yoga Nền Tảng',
-        disciplineId: 6,
+        disciplineId: 3,
         disciplineName: 'Yoga',
         coachId: 100,
         coachName: 'HLV Lan',
@@ -173,15 +170,15 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
     expect(tabs[1]).toBe('Lịch tổng cả tuần');
     expect(tabs[2]).toContain('Danh sách lớp');
 
-    // Tab 1 chỉ có đúng 6 chip bộ môn, không có chip "Tất cả bộ môn" hay dropdown lọc thừa
+    // Tab 1 chỉ có đúng 3 chip bộ môn, không có chip "Tất cả bộ môn" hay dropdown lọc thừa
     const chips = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="discipline-filter-chips"] button')];
-    expect(chips).toHaveLength(6);
+    expect(chips).toHaveLength(3);
     expect(chips.some((c) => c.textContent?.includes('Tất cả'))).toBe(false);
     expect(host.querySelector('#filter-class-select')).toBeNull();
     expect(host.querySelector('#filter-room-select')).toBeNull();
 
     // Bấm chip Yoga → chỉ hiện lịch của lớp Yoga duy nhất
-    const yogaChip = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-6"]')!;
+    const yogaChip = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!;
     await act(async () => yogaChip.click());
     expect(host.querySelector('[data-testid="discipline-active-class-bar"]')?.textContent).toContain('Hatha Yoga Nền Tảng');
     const yogaEvents = host.querySelectorAll<HTMLButtonElement>('.mcal__event');
@@ -199,7 +196,7 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
   it('opens full session detail modal with room, coach, capacity, enrolled students and action buttons when clicking a block', async () => {
     await renderPage();
 
-    const yogaChip = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-6"]')!;
+    const yogaChip = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!;
     await act(async () => yogaChip.click());
 
     const yogaBlock = host.querySelector<HTMLButtonElement>('.mcal__event')!;
@@ -241,6 +238,34 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
   });
 
   it('preselects an available discipline without an active class and surfaces coach PT 1:1 conflict error cleanly', async () => {
+    vi.mocked(classesApi.getClasses).mockResolvedValue([
+      {
+        id: 1,
+        name: 'Full Body Strength 101',
+        disciplineId: 1,
+        disciplineName: 'Gym',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 10,
+        roomName: 'Phòng Gym Tiêu chuẩn',
+        capacity: 20,
+        status: 'active',
+        price: 0,
+      },
+      {
+        id: 3,
+        name: 'Hatha Yoga Nền Tảng',
+        disciplineId: 3,
+        disciplineName: 'Yoga',
+        coachId: 100,
+        coachName: 'HLV Lan',
+        roomId: 30,
+        roomName: 'Zen Garden Studio',
+        capacity: 16,
+        status: 'active',
+        price: 150000,
+      },
+    ]);
     vi.mocked(classesApi.createRecurringClass).mockRejectedValue(
       new Error('Trùng lịch Huấn luyện viên: HLV "HLV Lan" đã có buổi PT 1:1 trong khung giờ 18:00 – 19:00'),
     );
@@ -249,7 +274,7 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
     const nameInput = document.querySelector<HTMLInputElement>('#cls-name')!;
     await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(nameInput, 'Bơi Cơ Bản');
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(nameInput, 'Boxing Nâng Cao');
       nameInput.dispatchEvent(new Event('input', { bubbles: true }));
     });
     const form = document.querySelector<HTMLFormElement>('dialog form')!;
@@ -258,7 +283,7 @@ describe('ManagerClassesPage (6 disciplines, 1 active class/sport, 3 independent
     });
     await act(async () => { await Promise.resolve(); });
 
-    // Tự chọn bộ môn trống đầu tiên (Bơi lội - id 2), không chọn Gym (id 1 đã có lớp active)
+    // Tự chọn bộ môn trống đầu tiên (Boxing - id 2), không chọn Gym (id 1 đã có lớp active)
     expect(classesApi.createRecurringClass).toHaveBeenCalledWith(
       expect.objectContaining({ disciplineId: 2 }),
     );
