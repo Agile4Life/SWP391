@@ -176,10 +176,15 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const activeNavItem = navItems.find((item) => isPortalNavActive(item, normalizedPathname));
   const activeTab = activeNavItem?.tabs?.find((tab) => normalizedPathname === tab.to || normalizedPathname.startsWith(`${tab.to}/`));
   const pageTitle = activeTab ? `${activeNavItem!.label} · ${getTabLabel(activeTab, lang)}` : activeNavItem?.label ?? t('SÖL Fitness', 'SÖL Fitness');
-  // Tìm theo tên mục gộp lẫn tên từng tab con (vd. gõ "Quét QR" vẫn ra "Thẻ & Check-in").
+  // Tìm theo tên mục gộp lẫn tên từng tab con (hỗ trợ khớp từng từ rời, vd. "lich pt" vẫn tìm ra "Lịch học & đặt PT").
   const results = navItems.filter((item) => {
-    const needle = searchable(query.trim());
-    return searchable(item.label).includes(needle) || (item.tabs ?? []).some(tab => searchable(getTabLabel(tab, lang)).includes(needle));
+    const tokens = searchable(query.trim()).split(/\s+/).filter(Boolean);
+    if (tokens.length === 0) return true;
+    const matchText = (candidate: string) => {
+      const hay = searchable(candidate);
+      return tokens.every((token) => hay.includes(token));
+    };
+    return matchText(item.label) || (item.tabs ?? []).some(tab => matchText(getTabLabel(tab, lang)));
   });
   // Mục mobile có thể là một tab con của mục gộp: vẫn phải đúng quyền và giữ đích đến riêng.
   const mobileItems = MOBILE_PRIMARY_NAV[user.role].flatMap(item => {

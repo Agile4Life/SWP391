@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import { centerNowParts } from '../../../shared/lib/centerTime';
 import { getMyCoachBookings, type CoachBookingDto } from '../coachBookingApi';
+import { getMyEnrollments, getSessionsBetween, type ClassSessionDto, type EnrollmentDto } from '../memberClassesApi';
 import {
   addDays, blockClass, fitHourRange, hhmm, hourLabel, layoutDayEvents, mondayOf, parseISODate, shortDate, toMinutes,
   weekDays, weekdayLabel, type TimetableEvent,
@@ -15,17 +16,17 @@ import './MemberCalendar.css';
 
 /** Kiểu xem lịch: tuần hoặc tháng. */
 type View = 'week' | 'month';
-/** Loại sự kiện trên lịch (hiện chỉ có buổi PT). */
-type Kind = 'pt';
+/** Loại sự kiện trên lịch: lớp học nhóm và buổi PT 1:1. */
+type Kind = 'class' | 'pt';
 
-/** Một sự kiện trên lịch của hội viên: buổi PT với nơi tập, HLV, cờ đã hủy và mã đặt lịch. */
+/** Một sự kiện trên lịch của hội viên: buổi lớp nhóm hoặc buổi PT kèm nơi tập, HLV, cờ đã hủy và mã đặt lịch. */
 export interface CalendarEvent extends TimetableEvent {
   kind: Kind;
   place: string;
   coach?: string;
   cancelled: boolean;
-  /** Mã lịch PT để mở trang quản lý đặt lịch. */
-  seat: { type: 'pt'; id: number };
+  /** Mã bản ghi để điều hướng tới màn quản lý tương ứng. */
+  seat: { type: 'enrollment' | 'pt'; id: number };
 }
 
 const HOUR_PX = 76;
@@ -137,20 +138,57 @@ function ptEvent(booking: CoachBookingDto): CalendarEvent {
   };
 }
 
+/** Chuyển một buổi lớp nhóm thành sự kiện lịch. */
+function classEvent(session: ClassSessionDto, enrollmentId: number): CalendarEvent {
+  const cancelled = session.status === 'cancelled';
+  return {
+    id: `class-${session.id}`,
+    kind: 'class',
+    date: session.sessionDate,
+    startTime: session.startTime,
+    endTime: session.endTime,
+    title: session.className,
+    place: session.roomName || '',
+    coach: session.coachName || undefined,
+    cancelled,
+    seat: { type: 'enrollment', id: enrollmentId },
+    tone: cancelled ? 'cancelled' : 'mine',
+    ariaLabel: `${session.className}, ${weekdayLabel(session.sessionDate)} ${shortDate(session.sessionDate)}, ${hhmm(session.startTime)}–${hhmm(session.endTime)}`,
+  };
+}
+
 /** Lấy lịch PT thật; lỗi được báo trên lịch để hội viên có thể thử lại. */
 async function loadPtBookings(): Promise<CoachBookingDto[]> {
   return (await getMyCoachBookings()).filter(item => item.status !== 'cancelled');
 }
 
+/** Lấy các buổi lớp nhóm mà hội viên đang ghi danh (`booked`) trong khoảng thời gian. */
+async function loadEnrolledClassEvents(from: string, to: string): Promise<CalendarEvent[]> {
+  const [enrollments, sessions] = await Promise.all([
+    getMyEnrollments(),
+    getSessionsBetween(from, to),
+  ]);
+  const bookedByClass = new Map<number, EnrollmentDto>();
+  for (const item of Array.isArray(enrollments) ? enrollments : []) {
+    if (String(item.status).toLowerCase() === 'booked') {
+      bookedByClass.set(item.classId, item);
+    }
+  }
+  if (bookedByClass.size === 0 || !Array.isArray(sessions)) return [];
+  return sessions
+    .filter((s) => bookedByClass.has(s.classId))
+    .map((s) => classEvent(s, bookedByClass.get(s.classId)!.id));
+}
+
 /**
- * Lịch của hội viên (tuần/tháng): các buổi PT 1:1, buổi sắp tới, chi tiết sự kiện trong hộp thoại, chuyển
- * tuần/tháng và chế độ một ngày trên màn hẹp.
+ * Lịch của hội viên (tuần/tháng): gộp buổi lớp học nhóm đã đăng ký và buổi PT 1:1, buổi sắp tới, chi tiết
+ * sự kiện trong hộp thoại, chuyển tuần/tháng và chế độ một ngày trên màn hẹp.
  */
 export function MemberCalendar() {
   const { lang } = useLanguage();
   const labels = lang === 'en'
-    ? { thisWeek: 'This week', pt: '1:1 session', empty: 'No bookings this week.' }
-    : { thisWeek: 'Tuần này', pt: 'Buổi PT 1:1', empty: 'Tuần này bạn chưa có lịch nào.' };
+    ? { thisWeek: 'This week', class: 'Group class', pt: '1:1 session', empty: 'No bookings this week.' }
+    : { thisWeek: 'Tuần này', class: 'Lớp học nhóm', pt: 'Buổi PT 1:1', empty: 'Tuần này bạn chưa có lịch nào.' };
   const english = lang === 'en';
   // Chọn chuỗi theo ngôn ngữ.
   const text = (vi: string, en: string) => english ? en : vi;
@@ -165,6 +203,7 @@ export function MemberCalendar() {
   const [view, setView] = useState<View>('week');
   const [anchor, setAnchor] = useState(now.date);
   const [pts, setPts] = useState<CoachBookingDto[]>([]);
+  const [classEvents, setClassEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | SourceMessage>('');
   const [retry, setRetry] = useState(0);
@@ -175,7 +214,7 @@ export function MemberCalendar() {
   const { from, to } = rangeOf(view, anchor);
   const today = now.date;
 
-  // Quay lại tab/cửa sổ (ví dụ vừa đặt PT ở trang khác): tải lại lặng lẽ để lịch mới tự hiện.
+  // Quay lại tab/cửa sổ (ví dụ vừa đặt PT hoặc đăng ký lớp ở trang khác): tải lại lặng lẽ để lịch mới tự hiện.
   const quietRef = useRef(false);
   useEffect(() => {
     // Làm mới ngầm khi tab đang hiển thị.
@@ -192,26 +231,37 @@ export function MemberCalendar() {
     };
   }, []);
 
-  // Tải lại lịch PT khi quay lại cửa sổ; bỏ request lớp nhóm và sân.
+  // Tải song song lịch PT 1:1 và lịch lớp học nhóm đã đăng ký (không gọi API đặt sân).
   useEffect(() => {
     let active = true;
     const quiet = quietRef.current;
     quietRef.current = false;
     if (!quiet) setLoading(true);
     setError('');
-    loadPtBookings()
-      .then(items => { if (active) setPts(items); })
-      .catch(cause => { if (active) { setPts([]); setError(memberError(cause, 'Không thể tải lịch của bạn.')); } })
+    Promise.allSettled([loadPtBookings(), loadEnrolledClassEvents(from, to)])
+      .then(([ptResult, classResult]) => {
+        if (!active) return;
+        const ptFailed = ptResult.status === 'rejected';
+        const classFailed = classResult.status === 'rejected';
+        setPts(ptResult.status === 'fulfilled' ? ptResult.value : []);
+        setClassEvents(classResult.status === 'fulfilled' ? classResult.value : []);
+        if (ptFailed && classFailed) {
+          setError(memberError(ptResult.reason, 'Không thể tải lịch của bạn.'));
+        } else if (ptFailed) {
+          setError(memberError(ptResult.reason, 'Không thể tải lịch PT 1:1 của bạn.'));
+        }
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [retry, today]);
+  }, [retry, today, from, to]);
 
-  // Các sự kiện PT dựng từ danh sách đặt lịch.
+  // Gộp sự kiện PT và lớp học nhóm.
   const ptEvents = useMemo(() => pts.map(ptEvent), [pts]);
+  const allEvents = useMemo(() => sortEvents([...ptEvents, ...classEvents]), [ptEvents, classEvents]);
   // Sự kiện nằm trong khoảng đang xem.
-  const events = useMemo(() => sortEvents(ptEvents.filter(item => item.date >= from && item.date <= to)), [ptEvents, from, to]);
+  const events = useMemo(() => allEvents.filter(item => item.date >= from && item.date <= to), [allEvents, from, to]);
   // Sự kiện sắp tới gần nhất chưa kết thúc.
-  const nextUp = useMemo(() => sortEvents(ptEvents).find(item => !isEnded(item, now)) ?? null, [ptEvents, now]);
+  const nextUp = useMemo(() => allEvents.find(item => !item.cancelled && !isEnded(item, now)) ?? null, [allEvents, now]);
 
   // Bảy ngày của tuần đang xem.
   const days = useMemo(() => weekDays(mondayOf(anchor)), [anchor]);
@@ -463,7 +513,11 @@ export function MemberCalendar() {
             {selected.cancelled && <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{text("Buổi học đã bị hủy", "Class session cancelled")}</strong></div>}
           </div>
           <div className="mcal__dialog-actions">
-            <Link to="/member/classes?tab=pt" className="btn-primary">{text("Quản lý lịch PT", "Manage 1:1 sessions")}</Link>
+            {selected.kind === 'class' ? (
+              <Link to="/member/classes?tab=classes" className="btn-primary">{text("Quản lý lớp học", "Manage group classes")}</Link>
+            ) : (
+              <Link to="/member/classes?tab=pt" className="btn-primary">{text("Quản lý lịch PT", "Manage 1:1 sessions")}</Link>
+            )}
           </div>
         </Modal>
       )}
