@@ -1,8 +1,8 @@
 /* Mục đích: Kiểu cho lịch tuần/tháng dùng chung cho mọi vai trò. */
 /* Lịch tuần/tháng dùng chung cho mọi role: một thẻ, điều hướng tròn, cột giờ bên trái, ngày hôm nay là vòng salmon. */
 .mcal {
-  --mcal-hour: 64px;
-  --mcal-gutter: 64px;
+  --mcal-hour: 104px;
+  --mcal-gutter: 112px;
   --mcal-class: var(--portal-salmon);
   display: grid; gap: 10px; min-width: 0; padding: 14px;
   border: 1px solid var(--portal-border); border-radius: 18px; background: var(--portal-surface);
@@ -89,7 +89,19 @@
 .mcal__dots .mcal__dot { width: 7px; height: 7px; }
 
 .mcal__gutter { position: sticky; left: 0; z-index: 5; display: grid; grid-template-rows: repeat(var(--mcal-rows), var(--mcal-hour)); background: var(--portal-surface); }
-.mcal__gutter span { padding: 8px 10px 0 0; text-align: right; font-size: 12px; font-weight: 700; color: var(--portal-muted); }
+.mcal__gutter > span { padding: 8px 10px 0 0; text-align: right; font-size: 12px; font-weight: 700; color: var(--portal-muted); }
+.mcal__slot-head {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  padding-right: 10px;
+  gap: 2px;
+  border-bottom: 1px solid var(--portal-border);
+}
+.mcal__slot-head:last-child { border-bottom: 0; }
+.mcal__slot-name { font-size: 13px; font-weight: 750; line-height: 1.25; color: var(--portal-paper); white-space: nowrap; }
+.mcal__slot-time { font-size: 12px; font-weight: 600; line-height: 1.25; color: var(--portal-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .mcal__col {
   position: relative; border-left: 1px solid var(--portal-border);
@@ -114,10 +126,10 @@
 /* Khối lịch */
 .mcal__event {
   position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden;
-  padding: 9px 11px; border: 0; border-radius: 12px; text-align: left; font: inherit; cursor: pointer;
+  padding: 9px 11px; border: 1px solid transparent; border-radius: 12px; text-align: left; font: inherit; cursor: pointer;
   background: var(--mcal-class); color: var(--portal-on-accent);
   box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--portal-ink) 85%, transparent);
-  transition: transform 120ms ease, filter 120ms ease;
+  transition: transform 120ms ease, filter 120ms ease, border-color 140ms ease, background-color 140ms ease;
 }
 .mcal__event:hover { filter: brightness(1.06); transform: translateY(-1px); }
 .mcal__event:focus-visible { outline: 2px solid var(--portal-paper); outline-offset: 2px; z-index: 5; }
@@ -126,6 +138,8 @@
 .mcal__event-time { font-size: 12px; font-weight: 800; letter-spacing: .01em; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mcal__event-title { font-size: 14px; font-weight: 800; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .mcal__event-place { font-size: 12.5px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event-coach { font-size: 12px; color: var(--portal-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event--mine .mcal__event-coach, .mcal__event--class .mcal__event-coach { color: color-mix(in srgb, currentColor 82%, transparent); }
 .mcal__event-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
 .mcal__event-top .mcal__event-time { flex: 1 1 auto; min-width: 0; }
 .mcal__event-badge { flex: none; max-width: 100%; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -144,7 +158,7 @@
 
 /* Khối thấp (buổi ngắn hoặc nhiều làn): gọn lại */
 .mcal__event.is-short { padding: 4px 9px; gap: 1px; }
-.mcal__event.is-short .mcal__event-place, .mcal__event.is-short .mcal__event-badge { display: none; }
+.mcal__event.is-short .mcal__event-place, .mcal__event.is-short .mcal__event-coach, .mcal__event.is-short .mcal__event-badge { display: none; }
 .mcal__event.is-short .mcal__event-title { -webkit-line-clamp: 1; line-clamp: 1; font-size: 13px; }
 
 /* Lưới tháng */
@@ -185,7 +199,8 @@
 .mcal :is(button, a):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
 
 @media (max-width: 767px) {
-  .mcal { padding: 14px; border-radius: 18px; --mcal-gutter: 52px; }
+  .mcal { padding: 14px; border-radius: 18px; --mcal-gutter: 96px; }
+  .mcal__slot-head { padding-right: 6px; }
   .mcal__range { margin-left: 0; width: 100%; order: 5; }
   .mcal__next-count { margin-left: 0; }
   .mcal__scroll { max-height: 70vh; }
@@ -203,12 +218,14 @@
   .mcal__event:hover { transform: none; }
 }
 
-/* Màu viền phân biệt bộ môn trên khối sự kiện (không ảnh hưởng trạng thái hủy/đã qua) */
+/* Viền mảnh đều 4 cạnh phân biệt bộ môn trên khối sự kiện (không viền trái dày, giữ góc bo mượt) */
 .mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past) {
-  border-left: 4px solid var(--event-accent);
+  border-color: color-mix(in srgb, var(--event-accent) 48%, var(--portal-border));
   background: color-mix(in srgb, var(--event-accent) 16%, var(--portal-surface));
+  box-shadow: none;
 }
 .mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past):hover {
+  border-color: color-mix(in srgb, var(--event-accent) 68%, var(--portal-border));
   background: color-mix(in srgb, var(--event-accent) 24%, var(--portal-surface));
 }
 
@@ -373,4 +390,52 @@
 .class-filter-bar > .class-filter-field {
   min-width: 180px;
   flex: 0 1 220px;
+}
+
+/* Bộ chọn 5 Slot cố định trong form Quản lý (tạo khóa học / dời lịch buổi) */
+.slot-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 8px;
+}
+.slot-picker-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 54px;
+  padding: 8px 10px;
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+.slot-picker-btn:hover {
+  border-color: var(--sol-accent);
+  background: color-mix(in srgb, var(--sol-accent) 10%, var(--portal-raised));
+}
+.slot-picker-btn.is-active {
+  border-color: var(--sol-accent);
+  background: var(--sol-accent);
+  color: var(--sol-on-accent);
+}
+.slot-picker-btn:focus-visible {
+  outline: 2px solid var(--sol-accent);
+  outline-offset: 2px;
+}
+.slot-picker-btn__name {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.slot-picker-btn__time {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  white-space: nowrap;
 }

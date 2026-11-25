@@ -36,7 +36,7 @@ describe('CoachAttendancePage (group class attendance)', () => {
         roomName: 'Studio A',
         sessionDate: today,
         startTime: '07:00:00',
-        endTime: '08:00:00',
+        endTime: '09:30:00',
         status: 'scheduled',
         capacity: 20,
         bookedCount: 1,

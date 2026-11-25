@@ -3,7 +3,8 @@ import { Modal } from '../../../shared/ui/Modal';
 import { useI18n } from '../../../shared/i18n';
 import { formatCenterDate } from '../../../shared/lib/centerTime';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
-import { disciplineAccentColor, hhmm } from '../../schedule/timetable';
+import { formatSlotLabel } from '../../schedule/slots';
+import { disciplineAccentColor } from '../../schedule/timetable';
 import { classesApi, type ClassEnrolledStudent, type ClassItem, type ClassSessionDto } from '../classesApi';
 
 interface ClassSessionDetailModalProps {
@@ -93,7 +94,7 @@ export function ClassSessionDetailModal({
         <div className="kv-row">
           <span>{t('Khung giờ', 'Time')}</span>
           <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
-            {`${hhmm(session.startTime)} – ${hhmm(session.endTime)}`}
+            {formatSlotLabel(session.startTime, session.endTime)}
           </strong>
         </div>
         <div className="kv-row">

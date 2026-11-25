@@ -9,6 +9,7 @@ import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
+import { formatSlotLabel } from '../../schedule/slots';
 
 /** Trạng thái của vùng catalog: khung chờ khi đang tải, thông báo lỗi kèm nút thử lại khi không tải được. */
 export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
@@ -110,7 +111,7 @@ export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
         return (
           <article key={session.id} className="fit-schedule-card" data-reveal="lift">
             <div className="fit-schedule-top">
-              <span className="fit-schedule-time">{sessionDate(session.sessionDate)} · {(session.startTime || '').slice(0, 5)} — {(session.endTime || '').slice(0, 5)}</span>
+              <span className="fit-schedule-time">{sessionDate(session.sessionDate)} · {formatSlotLabel(session.startTime, session.endTime)}</span>
               <span className="fit-schedule-spots">
                 {Math.max(0, session.capacity - session.bookedCount)}{sourceText({ vi: ' chỗ trống', en: ' spots left' })}
               </span>

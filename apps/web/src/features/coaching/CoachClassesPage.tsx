@@ -16,6 +16,7 @@ import {
   type CoachBookingDto,
 } from '../member/coachBookingApi';
 import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
+import { formatSlotLabel } from '../schedule/slots';
 import { parseISODate } from '../schedule/timetable';
 import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
 import './coach-classes.css';
@@ -301,7 +302,7 @@ export function CoachClassesPage() {
             {selectedClassSession.disciplineName && (
               <div className="kv-row"><span>{t("Bộ môn", "Discipline")}</span><strong>{selectedClassSession.disciplineName}</strong></div>
             )}
-            <div className="kv-row"><span>{t("Thời gian", "Time")}</span><strong>{formatCenterDate(selectedClassSession.sessionDate)} · {selectedClassSession.startTime.slice(0, 5)}–{selectedClassSession.endTime.slice(0, 5)}</strong></div>
+            <div className="kv-row"><span>{t("Thời gian", "Time")}</span><strong>{formatCenterDate(selectedClassSession.sessionDate)} · {formatSlotLabel(selectedClassSession.startTime, selectedClassSession.endTime)}</strong></div>
             {selectedClassSession.roomName && (
               <div className="kv-row"><span>{t("Phòng tập", "Room")}</span><strong>{selectedClassSession.roomName}</strong></div>
             )}
@@ -372,7 +373,7 @@ export function CoachClassesPage() {
         <Modal title={t("Buổi kèm riêng 1:1")} onClose={() => setSelectedPt(null)}>
           <div className="kv-list">
             <div className="kv-row"><span>{t("Học viên")}</span><strong>{selectedPt.memberName}</strong></div>
-            <div className="kv-row"><span>{t("Thời gian")}</span><strong>{formatCenterDate(selectedPt.bookingDate)} · {selectedPt.startTime.slice(0, 5)}–{selectedPt.endTime.slice(0, 5)}</strong></div>
+            <div className="kv-row"><span>{t("Thời gian")}</span><strong>{formatCenterDate(selectedPt.bookingDate)} · {formatSlotLabel(selectedPt.startTime, selectedPt.endTime)}</strong></div>
             <div className="kv-row"><span>{t("Bộ môn")}</span><strong>{selectedPt.disciplineName || t('Huấn luyện cá nhân')}</strong></div>
             <div className="kv-row"><span>{t("Hình thức")}</span><strong>{selectedPt.paymentMethod === 'package_quota' ? t('Quyền lợi gói tập') : t('Hội viên trả phí')}</strong></div>
             {selectedPt.notes && <div className="kv-row"><span>{t("Ghi chú của học viên")}</span><strong>{selectedPt.notes}</strong></div>}

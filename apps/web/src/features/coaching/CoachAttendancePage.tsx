@@ -5,7 +5,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
-import { formatCenterDate, formatCenterTime, formatTimeRange } from '../../shared/lib/centerTime';
+import { formatCenterDate, formatCenterTime } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
   attendanceApi,
@@ -14,6 +14,7 @@ import {
   type CoachSessionHistoryItem,
 } from './attendanceApi';
 import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
+import { formatSlotLabel } from '../schedule/slots';
 import { mondayOf, parseISODate, todayISO } from '../schedule/timetable';
 import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
 import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
@@ -482,7 +483,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                 {t("Ngày: ")}<strong>{activeSession ? formatCenterDate(activeSession.sessionDate) : '—'}</strong>
               </span>
               <span>
-                {t("Giờ: ")}<strong>{activeSession ? formatTimeRange(activeSession.startTime, activeSession.endTime) : '—'}</strong>
+                {t("Giờ: ")}<strong>{activeSession ? formatSlotLabel(activeSession.startTime, activeSession.endTime) : '—'}</strong>
               </span>
               <span>
                 {t("Đã đăng ký: ")}<strong>{students.length} {t(" học viên")}</strong>
@@ -660,7 +661,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                           <span>{t("Phòng: ")}{record.roomName}</span>
                           <span>•</span>
                           <span>
-                            {formatTimeRange(record.startTime, record.endTime)}
+                            {formatSlotLabel(record.startTime, record.endTime)}
                           </span>
                           <span>•</span>
                           <span>{t("Ngày: ")}{formatCenterDate(record.sessionDate)}</span>
@@ -720,7 +721,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
           <div className="modal-edit-container">
             <div className="modal-record-meta-bar">
               <span>{t("Phòng: ")}<strong>{editingAttendanceRecord.roomName}</strong></span>
-              <span>{t("Giờ: ")}<strong>{formatTimeRange(editingAttendanceRecord.startTime, editingAttendanceRecord.endTime)}</strong></span>
+              <span>{t("Giờ: ")}<strong>{formatSlotLabel(editingAttendanceRecord.startTime, editingAttendanceRecord.endTime)}</strong></span>
               <span>{t("Ngày: ")}<strong>{formatCenterDate(editingAttendanceRecord.sessionDate)}</strong></span>
             </div>
 

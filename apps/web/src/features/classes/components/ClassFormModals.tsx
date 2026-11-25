@@ -2,12 +2,16 @@ import { useState, type FormEvent } from 'react';
 import { Modal } from '../../../shared/ui/Modal';
 import { Select } from '../../../shared/ui/Select';
 import { DatePicker } from '../../../shared/ui/DatePicker';
-import { TimePicker } from '../../../shared/ui/TimePicker';
 import { useI18n } from '../../../shared/i18n';
 import { errorMessage } from '../../../shared/lib/errorMessage';
 import { addDays } from '../../../shared/lib/recurrence';
 import type { Discipline, Room } from '../../manager/catalogApi';
-import { hhmm, todayISO } from '../../schedule/timetable';
+import {
+  SCHEDULE_SLOTS,
+  findScheduleSlot,
+  type ScheduleSlotCode,
+} from '../../schedule/slots';
+import { todayISO } from '../../schedule/timetable';
 import {
   classesApi,
   type ClassItem,
@@ -32,9 +36,38 @@ function weekdayCodeForIso(isoDate: string): string {
   return JS_DAY_TO_CODE[new Date(y, m - 1, d, 12).getDay()] ?? 'MONDAY';
 }
 
-function normalizeTime(value: string): string {
-  if (!value) return '08:00:00';
-  return value.length === 5 ? `${value}:00` : value;
+function ScheduleSlotPicker({
+  value,
+  onChange,
+  disabled,
+  ariaLabel,
+}: {
+  value: ScheduleSlotCode;
+  onChange: (code: ScheduleSlotCode) => void;
+  disabled?: boolean;
+  ariaLabel: string;
+}) {
+  return (
+    <div className="slot-picker-grid" role="group" aria-label={ariaLabel}>
+      {SCHEDULE_SLOTS.map((slot) => {
+        const active = slot.code === value;
+        return (
+          <button
+            key={slot.code}
+            type="button"
+            data-testid={`slot-option-${slot.number}`}
+            className={`slot-picker-btn${active ? ' is-active' : ''}`}
+            aria-pressed={active}
+            disabled={disabled}
+            onClick={() => onChange(slot.code)}
+          >
+            <strong className="slot-picker-btn__name">{slot.label}</strong>
+            <span className="slot-picker-btn__time">{slot.rangeLabel}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export interface CreateSlotPrefill {
@@ -97,8 +130,11 @@ export function CreateClassOrSessionModal({
   const [startDate, setStartDate] = useState(defaultStart);
   const [endDate, setEndDate] = useState(defaultEnd);
   const [recurringDays, setRecurringDays] = useState<string[]>([defaultDay]);
-  const [startTime, setStartTime] = useState(hhmm(prefill?.startTime ?? '18:00'));
-  const [endTime, setEndTime] = useState(hhmm(prefill?.endTime ?? '19:00'));
+  const [selectedSlotCode, setSelectedSlotCode] = useState<ScheduleSlotCode>(() => {
+    const matched = findScheduleSlot(prefill?.startTime, prefill?.endTime)
+      ?? findScheduleSlot(prefill?.startTime);
+    return matched?.code ?? SCHEDULE_SLOTS[0].code;
+  });
   const [description, setDescription] = useState('');
 
   const toggleDay = (code: string) => {
@@ -108,10 +144,7 @@ export function CreateClassOrSessionModal({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (endTime <= startTime) {
-      setError(t('Giờ kết thúc phải sau giờ bắt đầu.', 'End time must be after start time.'));
-      return;
-    }
+    const selectedSlot = SCHEDULE_SLOTS.find((slot) => slot.code === selectedSlotCode) ?? SCHEDULE_SLOTS[0];
     if (!name.trim()) {
       setError(t('Vui lòng nhập tên khóa học.', 'Please enter a course name.'));
       return;
@@ -152,8 +185,8 @@ export function CreateClassOrSessionModal({
         startDate,
         endDate,
         recurringDays,
-        startTime: normalizeTime(startTime),
-        endTime: normalizeTime(endTime),
+        startTime: selectedSlot.startApi,
+        endTime: selectedSlot.endApi,
       });
       onSuccess(t('Đã tạo khóa học định kỳ thành công.', 'Recurring course created successfully.'));
     } catch (err) {
@@ -305,15 +338,14 @@ export function CreateClassOrSessionModal({
           </div>
         </div>
 
-        <div className="portal-form-grid-2">
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="cls-start-time">{t('Giờ bắt đầu', 'Start time')}</label>
-            <TimePicker id="cls-start-time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-          </div>
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="cls-end-time">{t('Giờ kết thúc', 'End time')}</label>
-            <TimePicker id="cls-end-time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-          </div>
+        <div className="portal-form-group">
+          <span className="portal-label">{t('Khung giờ (5 Slot cố định)', 'Time slot (5 fixed slots)')}</span>
+          <ScheduleSlotPicker
+            value={selectedSlotCode}
+            onChange={setSelectedSlotCode}
+            disabled={busy}
+            ariaLabel={t('Chọn khung giờ trong 5 Slot cố định', 'Select one of 5 fixed time slots')}
+          />
         </div>
 
         <div className="portal-form-group">
@@ -482,26 +514,26 @@ interface RescheduleSessionModalProps {
 export function RescheduleSessionModal({ session, onClose, onSuccess }: RescheduleSessionModalProps) {
   const { t } = useI18n();
   const [date, setDate] = useState(session.sessionDate);
-  const [startTime, setStartTime] = useState(hhmm(session.startTime));
-  const [endTime, setEndTime] = useState(hhmm(session.endTime));
+  const [selectedSlotCode, setSelectedSlotCode] = useState<ScheduleSlotCode>(() => {
+    const matched = findScheduleSlot(session.startTime, session.endTime)
+      ?? findScheduleSlot(session.startTime);
+    return matched?.code ?? SCHEDULE_SLOTS[0].code;
+  });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
-    if (endTime <= startTime) {
-      setError(t('Giờ kết thúc phải sau giờ bắt đầu.', 'End time must be after start time.'));
-      return;
-    }
+    const selectedSlot = SCHEDULE_SLOTS.find((slot) => slot.code === selectedSlotCode) ?? SCHEDULE_SLOTS[0];
     setBusy(true);
     try {
       await classesApi.rescheduleSession({
         classId: session.classId,
         sessionId: session.id,
         sessionDate: date,
-        startTime: normalizeTime(startTime),
-        endTime: normalizeTime(endTime),
+        startTime: selectedSlot.startApi,
+        endTime: selectedSlot.endApi,
       });
       onSuccess(t('Đã dời lịch buổi học và gửi thông báo tới học viên, HLV.', 'Session rescheduled and notifications sent.'));
     } catch (err) {
@@ -519,15 +551,14 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
           <label className="portal-label" htmlFor="resch-date">{t('Ngày học mới', 'New date')}</label>
           <DatePicker id="resch-date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
-        <div className="portal-form-grid-2">
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="resch-start">{t('Giờ bắt đầu', 'Start time')}</label>
-            <TimePicker id="resch-start" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
-          </div>
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="resch-end">{t('Giờ kết thúc', 'End time')}</label>
-            <TimePicker id="resch-end" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
-          </div>
+        <div className="portal-form-group">
+          <span className="portal-label">{t('Khung giờ mới (5 Slot cố định)', 'New time slot (5 fixed slots)')}</span>
+          <ScheduleSlotPicker
+            value={selectedSlotCode}
+            onChange={setSelectedSlotCode}
+            disabled={busy}
+            ariaLabel={t('Chọn khung giờ mới trong 5 Slot cố định', 'Select a new fixed time slot')}
+          />
         </div>
         <div className="mcal__dialog-actions">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>{t('Hủy', 'Cancel')}</button>

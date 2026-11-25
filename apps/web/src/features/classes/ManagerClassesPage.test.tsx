@@ -99,8 +99,8 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
         roomId: 10,
         roomName: 'Phòng Gym Tiêu chuẩn',
         sessionDate: today,
-        startTime: '18:00:00',
-        endTime: '19:00:00',
+        startTime: '17:00:00',
+        endTime: '19:30:00',
         status: 'scheduled',
         capacity: 20,
         bookedCount: 12,
@@ -116,8 +116,8 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
         roomId: 20,
         roomName: 'Ring Arena 01',
         sessionDate: today,
-        startTime: '18:00:00',
-        endTime: '19:00:00',
+        startTime: '17:00:00',
+        endTime: '19:30:00',
         status: 'scheduled',
         capacity: 14,
         bookedCount: 14,
@@ -133,8 +133,8 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
         roomId: 30,
         roomName: 'Zen Garden Studio',
         sessionDate: today,
-        startTime: '18:00:00',
-        endTime: '19:00:00',
+        startTime: '17:00:00',
+        endTime: '19:30:00',
         status: 'scheduled',
         capacity: 16,
         bookedCount: 8,
@@ -184,6 +184,7 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
     const yogaEvents = host.querySelectorAll<HTMLButtonElement>('.mcal__event');
     expect(yogaEvents).toHaveLength(1);
     expect(yogaEvents[0].textContent).toContain('Hatha Yoga Nền Tảng');
+    expect(yogaEvents[0].querySelector('.mcal__event-coach')?.textContent).toBe('HLV Lan');
 
     // Chuyển sang Tab 2 "Lịch tổng cả tuần" → độc lập, hiện đủ cả 3 bộ môn trùng giờ và gom thành "+2 lớp"
     const allWeekTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][1];
@@ -259,8 +260,8 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
         roomId: 10,
         roomName: 'Phòng Gym Tiêu chuẩn',
         sessionDate: today,
-        startTime: '18:00:00',
-        endTime: '19:00:00',
+        startTime: '17:00:00',
+        endTime: '19:30:00',
         status: 'scheduled',
         capacity: 20,
         bookedCount: 12,
@@ -276,8 +277,8 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
         roomId: 10,
         roomName: 'Phòng Gym Tiêu chuẩn',
         sessionDate: today,
-        startTime: '09:00:00',
-        endTime: '10:00:00',
+        startTime: '07:00:00',
+        endTime: '09:30:00',
         status: 'scheduled',
         capacity: 15,
         bookedCount: 0,
@@ -316,6 +317,7 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
     const detail = document.querySelector('[data-testid="session-detail-content"]')!;
     expect(detail).not.toBeNull();
     expect(detail.textContent).toContain('Yoga');
+    expect(detail.textContent).toContain('Slot 5 · 17:00 – 19:30');
     expect(detail.textContent).toContain('Zen Garden Studio');
     expect(detail.textContent).toContain('HLV Lan');
     expect(detail.textContent).toContain('8/16');
@@ -344,6 +346,7 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
     const detail = document.querySelector('[data-testid="session-detail-content"]')!;
     expect(detail).not.toBeNull();
     expect(detail.textContent).toContain('Yoga');
+    expect(detail.textContent).toContain('Slot 5 · 17:00 – 19:30');
     expect(detail.textContent).toContain('Zen Garden Studio');
   });
 
@@ -382,6 +385,11 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
     await renderPage();
 
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+    // Chọn Slot 2 (09:45 – 11:15) trong bộ chọn 5 Slot cố định
+    expect(document.querySelectorAll('[data-testid^="slot-option-"]')).toHaveLength(5);
+    const slot2Btn = document.querySelector<HTMLButtonElement>('[data-testid="slot-option-2"]')!;
+    await act(async () => slot2Btn.click());
+    expect(slot2Btn.getAttribute('aria-pressed')).toBe('true');
     const nameInput = document.querySelector<HTMLInputElement>('#cls-name')!;
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(nameInput, 'Boxing Nâng Cao');
@@ -393,11 +401,44 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
     });
     await act(async () => { await Promise.resolve(); });
 
-    // Tự chọn bộ môn trống đầu tiên (Boxing - id 2), không chọn Gym (id 1 đã có lớp active)
+    // Tự chọn bộ môn trống đầu tiên (Boxing - id 2) và gửi đúng khung giờ Slot 2 (09:45:00 – 11:15:00)
     expect(classesApi.createRecurringClass).toHaveBeenCalledWith(
-      expect.objectContaining({ disciplineId: 2 }),
+      expect.objectContaining({ disciplineId: 2, startTime: '09:45:00', endTime: '11:15:00' }),
     );
     const alert = document.querySelector('dialog [role="alert"]');
     expect(alert?.textContent).toContain('PT 1:1');
+  });
+
+  it('reschedules a session by selecting one of the 5 fixed slots', async () => {
+    vi.mocked(classesApi.rescheduleSession).mockResolvedValue({
+      id: 503,
+      classId: 3,
+      sessionDate: today,
+      startTime: '14:15:00',
+      endTime: '16:45:00',
+      status: 'scheduled',
+    });
+    await renderPage();
+
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event')!.click());
+    await act(async () => { await Promise.resolve(); });
+
+    const rescheduleBtn = [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Dời lịch')!;
+    await act(async () => rescheduleBtn.click());
+
+    expect(document.querySelectorAll('[data-testid^="slot-option-"]')).toHaveLength(5);
+    expect(document.querySelector<HTMLButtonElement>('[data-testid="slot-option-5"]')?.getAttribute('aria-pressed')).toBe('true');
+
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-4"]')!.click());
+    const form = document.querySelector<HTMLFormElement>('dialog form')!;
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await act(async () => { await Promise.resolve(); });
+
+    expect(classesApi.rescheduleSession).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: 503, startTime: '14:15:00', endTime: '16:45:00' }),
+    );
   });
 });

@@ -44,7 +44,7 @@ describe('MemberGroupClassesView', () => {
         endDate: '2099-02-28',
         recurringDays: 'MONDAY,WEDNESDAY',
         startTime: '07:00:00',
-        endTime: '08:00:00',
+        endTime: '09:30:00',
       },
       {
         id: 11,
@@ -63,8 +63,8 @@ describe('MemberGroupClassesView', () => {
         startDate: '2099-02-05',
         endDate: '2099-02-28',
         recurringDays: 'TUESDAY,THURSDAY',
-        startTime: '18:00:00',
-        endTime: '19:00:00',
+        startTime: '17:00:00',
+        endTime: '19:30:00',
       },
     ]);
     vi.mocked(memberClassesApi.getMyEnrollments).mockResolvedValue([]);
