@@ -1,0 +1,16 @@
+openapi: 3.0.3
+info: {title: Reception history windows, version: 1.0.0}
+servers: [{url: /api/v1}]
+paths:
+  /memberships/subscriptions/requests/history:
+    get:
+      description: Existing desk authorization and soft-delete filtering retained. Complete array, no pagination. Search memberName, membershipCode and subscriptionId client-side before rendering. Invoice numbers are not returned.
+      parameters: [{name: days, in: query, schema: {type: integer, default: 30}, description: '0 = all time; 1 = today from center midnight; other windows retain existing 1..180-day bounds'}]
+      responses:
+        '200': {description: Existing ApiResponse of RequestHistoryDto array}
+  /wallet/counter-topups:
+    get:
+      description: Complete array, no pagination. Search memberName, membershipCode and paymentId client-side. Preserve historical cash, bank_transfer and pos records and existing authorization.
+      parameters: [{name: days, in: query, schema: {type: integer, default: 30}, description: '0 = all time; 1 = today from center midnight; other windows retain existing bounds'}]
+      responses:
+        '200': {description: Existing ApiResponse of TopupHistoryDto array}

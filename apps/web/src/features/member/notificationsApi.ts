@@ -79,6 +79,10 @@ export function notificationDestination(notification: Pick<MemberNotification, '
   const explicit = safeNotificationPath(notification.actionPath, role);
   if (explicit) return explicit;
   if (role === 'STAFF' || role === 'RECEPTIONIST') {
+    // Thông báo yêu cầu mới thiếu actionPath vẫn đi tới màn xử lý hiện có.
+    if (['New identity verification request', 'Có hồ sơ KYC mới'].includes(notification.title ?? '')) return '/staff/kyc';
+    if (['New membership hold request', 'Có yêu cầu bảo lưu mới'].includes(notification.title ?? '')) return '/staff/holds';
+    if (['New trial request', 'Có yêu cầu trải nghiệm mới', 'New counter payment request', 'Có yêu cầu thanh toán mới'].includes(notification.title ?? '')) return '/staff/reception';
     // Ưu tiên metadata thật; lịch sử hiện có chỉ chứa yêu cầu gói đã xử lý và nạp ví.
     if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
     if (notification.relatedEntityType === 'payment' || notification.type === 'payment') return '/staff/reception-history';

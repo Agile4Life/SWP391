@@ -199,7 +199,9 @@ public class MembershipSubscriptionService {
         subscription.setCreatedAt(LocalDateTime.now(clock));
         subscription.setUpdatedAt(LocalDateTime.now(clock));
 
-        return toDto(subscriptions.saveAndFlush(subscription));
+        MembershipSubscription savedRequest = subscriptions.saveAndFlush(subscription);
+        if (notificationService != null) notificationService.notifyReceptionists("payment", savedRequest.getId());
+        return toDto(savedRequest);
     }
 
     /**
@@ -215,7 +217,9 @@ public class MembershipSubscriptionService {
         MembershipSubscription requested = subscriptions.findById(previousId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", previousId));
         ensureOwner(requested, principal);
-        return renewForOwner(requested, principal.id(), previousId);
+        SubscriptionDto result = renewForOwner(requested, principal.id(), previousId);
+        if (notificationService != null) notificationService.notifyReceptionists("payment", result.id());
+        return result;
     }
 
     /**
@@ -490,7 +494,9 @@ public class MembershipSubscriptionService {
         upgradeSub.setCreatedAt(LocalDateTime.now(clock));
         upgradeSub.setUpdatedAt(LocalDateTime.now(clock));
 
-        return toDto(subscriptions.saveAndFlush(upgradeSub));
+        MembershipSubscription savedUpgrade = subscriptions.saveAndFlush(upgradeSub);
+        if (notificationService != null) notificationService.notifyReceptionists("payment", savedUpgrade.getId());
+        return toDto(savedUpgrade);
     }
 
     /**
@@ -677,6 +683,7 @@ public class MembershipSubscriptionService {
 
         MembershipSubscription saved = subscriptions.saveAndFlush(subscription);
         storeHoldDocuments(saved, principal, documents);
+        if (notificationService != null) notificationService.notifyReceptionists("hold", saved.getId());
         return toDto(saved);
     }
 

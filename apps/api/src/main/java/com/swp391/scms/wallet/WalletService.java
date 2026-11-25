@@ -199,6 +199,10 @@ public class WalletService {
             String note,
             Long staffUserId,
             String clientRequestId) {
+        // Endpoint nạp tại quầy chỉ nhận tiền mặt; từ chối trước khi tạo ví/khoản thu.
+        if (paymentMethod != null && !"cash".equalsIgnoreCase(paymentMethod.trim())) {
+            throw new BadRequestException("COUNTER_TOPUP_CASH_ONLY", "error.wallet.counter_cash_only", null, null);
+        }
         if (memberId == null || amount == null
                 || amount.compareTo(new BigDecimal("10000")) < 0
                 || amount.compareTo(new BigDecimal("100000000")) > 0) {

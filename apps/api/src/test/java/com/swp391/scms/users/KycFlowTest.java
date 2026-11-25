@@ -59,6 +59,17 @@ class KycFlowTest {
     }
 
     /** Kiểm thử: số giấy tờ lưu dạng mã hóa và chỉ đọc được dạng che bớt. */
+    @Test void submissionNotifiesDeskOnlyAfterSavingPendingKyc() {
+        var notifications = mock(com.swp391.scms.notifications.NotificationService.class);
+        profiles = new ProfileService(users, members, mock(CoachRepository.class), mock(ReceptionistRepository.class), null, notifications, null);
+        ReflectionTestUtils.setField(profiles, "kycCrypto", crypto);
+        submit();
+        var order = inOrder(members, notifications);
+        order.verify(members).save(member);
+        order.verify(notifications).notifyReceptionists("kyc", 10L);
+        assertEquals("PENDING", member.getKycStatus());
+    }
+
     @Test
     void theNumberIsStoredEncryptedAndOnlyTheMaskedFormIsReadable() {
         submit();

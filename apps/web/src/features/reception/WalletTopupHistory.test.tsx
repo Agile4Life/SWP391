@@ -40,4 +40,19 @@ describe('WalletTopupHistory', () => {
     await act(async () => root.render(<WalletTopupHistory />));
     expect(host.textContent).toContain('Chưa có giao dịch nạp ví nào tại quầy');
   });
+  it('searches the full returned history without dropping non-cash records', async () => {
+    mocks.history.mockResolvedValue([
+      { paymentId: 1, memberId: 5, membershipCode: 'MB-OLD', memberName: 'Nguyễn An', amount: 10000, paymentMethod: 'pos', paidAt: '2025-01-01', receivedByName: 'Staff' },
+      { paymentId: 2, memberId: 6, membershipCode: 'MB-NEW', memberName: 'Bình', amount: 20000, paymentMethod: 'cash', paidAt: '2026-11-25', receivedByName: 'Staff' },
+    ]);
+    await act(async () => root.render(<WalletTopupHistory />));
+    const input = host.querySelector<HTMLInputElement>('input[type="search"]')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'nguyen');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(host.querySelectorAll('tbody tr')).toHaveLength(1);
+    expect(host.querySelector('tbody')?.textContent).toContain('MB-OLD');
+    expect(host.querySelector('tbody')?.textContent).toContain('Thẻ (POS)');
+  });
 });
