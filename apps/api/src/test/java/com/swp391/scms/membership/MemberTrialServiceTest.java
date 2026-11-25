@@ -288,6 +288,7 @@ class MemberTrialServiceTest {
         assertEquals("CCCD", status.documentType());
         assertEquals("Nguyen Van A", status.fullName());
         verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("member_trial_redemption"), eq(50L));
+        verify(notifications).notifyReceptionists("trial", 50L);
     }
 
     /** Kiểm thử: yêu cầu dùng thử bằng hộ chiếu nước ngoài thành công. */

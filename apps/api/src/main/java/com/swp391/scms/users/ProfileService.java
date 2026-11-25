@@ -418,6 +418,8 @@ public class ProfileService {
         // Đồng bộ họ tên tài khoản User theo CCCD / Hộ chiếu
         user.setFullName(fullName);
         userRepository.save(user);
+        // Chỉ báo sau khi hồ sơ mới đã lưu; không đưa số giấy tờ vào notification.
+        if (notificationService != null) notificationService.notifyReceptionists("kyc", userId);
 
         Coach coach = coachRepository.findById(userId).orElse(null);
         Receptionist receptionist = receptionistRepository.findById(userId).orElse(null);
