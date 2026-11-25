@@ -1,5 +1,6 @@
 package com.swp391.scms.scheduling;
 
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
@@ -99,8 +100,8 @@ class SchedulingServiceTest {
         ReflectionTestUtils.setField(session, "id", 9L);
         session.setGymClass(gymClass);
         session.setSessionDate(TODAY.plusDays(1));
-        session.setStartTime(LocalTime.of(13, 0));
-        session.setEndTime(LocalTime.of(14, 0));
+        session.setStartTime(ScheduleSlot.SLOT_4.startTime());
+        session.setEndTime(ScheduleSlot.SLOT_4.endTime());
         lenient().when(members.findById(MEMBER.id())).thenReturn(Optional.of(member));
         lenient().when(members.findByUserIdForUpdate(MEMBER.id())).thenReturn(Optional.of(member));
         lenient().when(sessions.findById(9L)).thenReturn(Optional.of(session));
@@ -126,9 +127,9 @@ class SchedulingServiceTest {
 
     /** Kiểm thử: không thể xếp lịch buổi bắt đầu trong quá khứ hoặc ngay lúc này. */
     @ParameterizedTest
-    @ValueSource(ints = {9, 12})
-    void cannotScheduleSessionStartingInThePastOrNow(int hour) {
-        var request = new CreateSessionRequest(TODAY, LocalTime.of(hour, 0), LocalTime.of(hour + 1, 0));
+    @org.junit.jupiter.params.provider.EnumSource(value = ScheduleSlot.class, names = {"SLOT_1", "SLOT_2", "SLOT_3"})
+    void cannotScheduleSessionStartingInThePastOrNow(ScheduleSlot slot) {
+        var request = new CreateSessionRequest(TODAY, slot.startTime(), slot.endTime());
 
         assertThrows(BadRequestException.class, () -> classService.createSession(5L, request));
         verify(sessions, never()).saveAndFlush(any());
@@ -164,7 +165,7 @@ class SchedulingServiceTest {
     /** Kiểm thử: buổi muộn hơn trong hôm nay vẫn xếp lịch được. */
     @Test
     void laterTodayRemainsSchedulable() {
-        var request = new CreateSessionRequest(TODAY, LocalTime.of(13, 0), LocalTime.of(14, 0));
+        var request = new CreateSessionRequest(TODAY, ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime());
 
         assertEquals(TODAY, classService.createSession(5L, request).sessionDate());
     }
@@ -227,8 +228,8 @@ class SchedulingServiceTest {
         ReflectionTestUtils.setField(otherSession, "id", 99L);
         otherSession.setGymClass(otherClass);
         otherSession.setSessionDate(TODAY.plusDays(1));
-        otherSession.setStartTime(LocalTime.of(13, 30));
-        otherSession.setEndTime(LocalTime.of(14, 30));
+        otherSession.setStartTime(ScheduleSlot.SLOT_4.startTime());
+        otherSession.setEndTime(ScheduleSlot.SLOT_4.endTime());
         otherSession.setStatus("scheduled");
 
         ClassEnrollment existingBooked = new ClassEnrollment();

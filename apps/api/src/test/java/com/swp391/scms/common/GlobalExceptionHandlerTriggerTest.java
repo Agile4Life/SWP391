@@ -41,14 +41,16 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String SCHEDULE_EN = "Schedule conflict: Coach or room is already booked during this time slot";
     private static final String MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch";
     private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
+    private static final String INVALID_SLOT_VI = "Khung giờ không hợp lệ. Vui lòng chọn một trong 5 slot cố định (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
+    private static final String INVALID_SLOT_EN = "Invalid time slot. Please choose one of the 5 fixed slots (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
 
-    /** Kiểm thử: trigger nghỉ của HLV trả 409 Conflict. */
+    /** Kiểm thử: trigger sai 5 slot cố định trả 400 Bad Request với mã SCHEDULING_INVALID_SLOT. */
     @Test
-    void coachRestTriggerReturnsConflict() {
+    void invalidScheduleSlotTriggerReturnsBadRequest() {
         var response = new GlobalExceptionHandler().handleDataIntegrity(
-                new DataIntegrityViolationException("ERROR: trg_coach_bookings_rest_required"));
-        org.junit.jupiter.api.Assertions.assertEquals(409, response.getStatusCode().value());
-        org.junit.jupiter.api.Assertions.assertEquals("COACH_REST_REQUIRED", response.getBody().getCode());
+                new DataIntegrityViolationException("ERROR: trg_schedule_invalid_slot"));
+        org.junit.jupiter.api.Assertions.assertEquals(400, response.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("SCHEDULING_INVALID_SLOT", response.getBody().getCode());
     }
 
     /** Kiểm thử: tranh chấp lịch trả 409 Conflict có thể thử lại. */
@@ -165,7 +167,10 @@ class GlobalExceptionHandlerTriggerTest {
                         "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),
                 new TriggerFailure("Học viên không có gói thành viên còn hiệu lực để check-in.",
                         "trg_checkins_check_membership", "23514", 403,
-                        "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN))
+                        "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),
+                new TriggerFailure("trg_schedule_invalid_slot",
+                        "trg_schedule_invalid_slot", "23514", 400,
+                        "SCHEDULING_INVALID_SLOT", INVALID_SLOT_VI, INVALID_SLOT_EN))
                 .flatMap(trigger -> Stream.of(trigger.message(), trigger.constraint())
                         .flatMap(message -> Stream.of("vi", "en").map(language -> Arguments.of(trigger, message, language))));
     }

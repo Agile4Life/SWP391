@@ -6,6 +6,7 @@ import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.coaching.repository.CoachReviewRepository;
 import com.swp391.scms.coaching.repository.SessionEvaluationRepository;
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
@@ -174,6 +175,7 @@ public class ClassService {
                         null,
                         "End time must be after start time");
             }
+            ScheduleSlot.requireValid(request.startTime(), request.endTime());
             SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
             ensureNoSessionConflict(
                     coach.getUserId(),
@@ -252,13 +254,14 @@ public class ClassService {
         if (request.endDate().isBefore(request.startDate())) {
             throw new BadRequestException("SCHEDULING_INVALID_DATE_RANGE", "error.scheduling.invalid_date_range", null, "Ngày kết thúc phải sau hoặc bằng ngày bắt đầu");
         }
-        if (!request.endTime().isAfter(request.startTime())) {
+        if (request.startTime() == null || request.endTime() == null || !request.endTime().isAfter(request.startTime())) {
             throw new BadRequestException(
                     "SCHEDULING_INVALID_TIME_RANGE",
                     "error.scheduling.invalid_time_range",
                     null,
                     "End time must be after start time");
         }
+        ScheduleSlot.requireValid(request.startTime(), request.endTime());
         SessionEligibility.ensureFuture(request.startDate(), request.startTime(), clock);
 
         List<LocalDate> sessionDates = new ArrayList<>();
@@ -683,13 +686,15 @@ public class ClassService {
                     "Class is currently inactive");
         }
 
-        if (!request.endTime().isAfter(request.startTime())) {
+        if (request.startTime() == null || request.endTime() == null || !request.endTime().isAfter(request.startTime())) {
             throw new BadRequestException(
                     "SCHEDULING_INVALID_TIME_RANGE",
                     "error.scheduling.invalid_time_range",
                     null,
                     "End time must be after start time");
         }
+
+        ScheduleSlot.requireValid(request.startTime(), request.endTime());
 
         SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
 
@@ -769,13 +774,15 @@ public class ClassService {
                     "Class is currently inactive");
         }
 
-        if (!request.endTime().isAfter(request.startTime())) {
+        if (request.startTime() == null || request.endTime() == null || !request.endTime().isAfter(request.startTime())) {
             throw new BadRequestException(
                     "SCHEDULING_INVALID_TIME_RANGE",
                     "error.scheduling.invalid_time_range",
                     null,
                     "End time must be after start time");
         }
+
+        ScheduleSlot.requireValid(request.startTime(), request.endTime());
 
         SessionEligibility.ensureFuture(request.sessionDate(), request.startTime(), clock);
 

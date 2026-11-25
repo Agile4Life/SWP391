@@ -324,9 +324,6 @@ public class CoachAssignmentService {
         boolean ptConflict = coachBookings.stream()
                 .anyMatch(b -> overlaps(booking, b.getStartTime(), b.getEndTime()));
         if (classConflict || ptConflict) throw invalid("COACH_SCHEDULE_CONFLICT", "coach_unavailable");
-        if (CoachBookingService.requiresCoachRest(coachBookings, booking.getStartTime())) {
-            throw new ConflictException("COACH_REST_REQUIRED", "error.coach_booking.rest_required", null, null);
-        }
     }
 
     /** Buổi PT có giao với khung giờ cho trước không. */

@@ -1,5 +1,6 @@
 package com.swp391.scms.scheduling;
 
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.facilities.entity.Discipline;
@@ -83,8 +84,8 @@ class ClassServiceTest {
 
         CreateSessionRequest request = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 15),
-                LocalTime.of(14, 0),
-                LocalTime.of(15, 0)
+                ScheduleSlot.SLOT_4.startTime(),
+                ScheduleSlot.SLOT_4.endTime()
         );
 
         assertThatThrownBy(() -> service.createSession(1L, request))
@@ -98,11 +99,11 @@ class ClassServiceTest {
     void createSession_rejectsPastStartTimeToday() {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
 
-        // Đồng hồ đang ở 10:00:00, buổi học diễn ra lúc 09:00:00 hôm nay
+        // Đồng hồ đang ở 10:00:00, Slot 2 bắt đầu lúc 09:45:00 hôm nay
         CreateSessionRequest request = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
-                LocalTime.of(9, 0),
-                LocalTime.of(10, 0)
+                ScheduleSlot.SLOT_2.startTime(),
+                ScheduleSlot.SLOT_2.endTime()
         );
 
         assertThatThrownBy(() -> service.createSession(1L, request))
@@ -120,48 +121,47 @@ class ClassServiceTest {
             return s;
         });
 
-        // Đồng hồ đang ở 10:00:00, buổi học diễn ra lúc 11:00:00 hôm nay
+        // Đồng hồ đang ở 10:00:00, Slot 3 bắt đầu lúc 11:30:00 hôm nay
         CreateSessionRequest request = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
-                LocalTime.of(11, 0),
-                LocalTime.of(12, 0)
+                ScheduleSlot.SLOT_3.startTime(),
+                ScheduleSlot.SLOT_3.endTime()
         );
 
         ClassSessionDto result = service.createSession(1L, request);
         assertThat(result).isNotNull();
-        assertThat(result.startTime()).isEqualTo(LocalTime.of(11, 0));
-        assertThat(result.endTime()).isEqualTo(LocalTime.of(12, 0));
+        assertThat(result.startTime()).isEqualTo(ScheduleSlot.SLOT_3.startTime());
+        assertThat(result.endTime()).isEqualTo(ScheduleSlot.SLOT_3.endTime());
     }
 
-    /** Kiểm thử: cho phép các buổi liền kề nhau. */
+    /** Kiểm thử: cho phép các slot cố định kế tiếp nhau trong cùng ngày. */
     @Test
-    @DisplayName("createSession allows two adjacent sessions (end time of first equals start time of second)")
+    @DisplayName("createSession allows two consecutive canonical slots on the same day")
     void createSession_allowsAdjacentSessions() {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
         when(sessions.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Buổi 1: 14:00 - 15:00
+        // Slot 3: 11:30 - 14:00
         CreateSessionRequest session1Req = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
-                LocalTime.of(14, 0),
-                LocalTime.of(15, 0)
+                ScheduleSlot.SLOT_3.startTime(),
+                ScheduleSlot.SLOT_3.endTime()
         );
         ClassSessionDto session1 = service.createSession(1L, session1Req);
-        assertThat(session1.startTime()).isEqualTo(LocalTime.of(14, 0));
-        assertThat(session1.endTime()).isEqualTo(LocalTime.of(15, 0));
+        assertThat(session1.startTime()).isEqualTo(ScheduleSlot.SLOT_3.startTime());
+        assertThat(session1.endTime()).isEqualTo(ScheduleSlot.SLOT_3.endTime());
 
-        // Buổi 2: 15:00 - 16:00 (liền kề ngay sau Buổi 1)
+        // Slot 4: 14:15 - 16:45 (slot cố định kế tiếp ngay sau Slot 3, cách 15 phút nghỉ)
         CreateSessionRequest session2Req = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
-                LocalTime.of(15, 0),
-                LocalTime.of(16, 0)
+                ScheduleSlot.SLOT_4.startTime(),
+                ScheduleSlot.SLOT_4.endTime()
         );
         ClassSessionDto session2 = service.createSession(1L, session2Req);
-        assertThat(session2.startTime()).isEqualTo(LocalTime.of(15, 0));
-        assertThat(session2.endTime()).isEqualTo(LocalTime.of(16, 0));
+        assertThat(session2.startTime()).isEqualTo(ScheduleSlot.SLOT_4.startTime());
+        assertThat(session2.endTime()).isEqualTo(ScheduleSlot.SLOT_4.endTime());
 
-        // Kiểm tra tính liền kề: session1.endTime bằng session2.startTime
-        assertThat(session1.endTime()).isEqualTo(session2.startTime());
+        assertThat(session2.startTime()).isAfter(session1.endTime());
     }
 
     /** Kiểm thử: từ chối khoảng giờ không hợp lệ. */
@@ -179,6 +179,29 @@ class ClassServiceTest {
         assertThatThrownBy(() -> service.createSession(1L, request))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("End time must be after start time");
+    }
+
+    /** Kiểm thử: từ chối tạo buổi học có khung giờ ngoài 5 slot cố định. */
+    @Test
+    @DisplayName("createSession rejects time ranges outside the 5 canonical slots")
+    void createSession_rejectsNonCanonicalSlot() {
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+
+        for (LocalTime[] invalid : new LocalTime[][]{
+                {LocalTime.of(8, 0), LocalTime.of(9, 0)},
+                {LocalTime.of(7, 0), LocalTime.of(9, 0)},
+                {LocalTime.of(19, 30), LocalTime.of(20, 30)}
+        }) {
+            CreateSessionRequest request = new CreateSessionRequest(
+                    LocalDate.of(2026, 10, 18),
+                    invalid[0],
+                    invalid[1]
+            );
+            assertThatThrownBy(() -> service.createSession(1L, request))
+                    .isInstanceOf(BadRequestException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_INVALID_SLOT")
+                    .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.invalid_slot");
+        }
     }
 
     /** Kiểm thử: cập nhật lớp học thành công các trường được sửa. */
@@ -248,8 +271,8 @@ class ClassServiceTest {
         ClassSession session = new ClassSession();
         session.setGymClass(gymClass);
         session.setSessionDate(LocalDate.of(2026, 10, 17));
-        session.setStartTime(LocalTime.of(8, 0));
-        session.setEndTime(LocalTime.of(9, 0));
+        session.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        session.setEndTime(ScheduleSlot.SLOT_1.endTime());
         session.setStatus("scheduled");
 
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
@@ -258,14 +281,44 @@ class ClassServiceTest {
 
         RescheduleSessionRequest req = new RescheduleSessionRequest(
                 LocalDate.of(2026, 10, 20),
-                LocalTime.of(18, 0),
-                LocalTime.of(19, 30)
+                ScheduleSlot.SLOT_5.startTime(),
+                ScheduleSlot.SLOT_5.endTime()
         );
 
         ClassSessionDto dto = service.rescheduleSession(1L, 100L, req);
         assertThat(dto.sessionDate()).isEqualTo(LocalDate.of(2026, 10, 20));
-        assertThat(dto.startTime()).isEqualTo(LocalTime.of(18, 0));
-        assertThat(dto.endTime()).isEqualTo(LocalTime.of(19, 30));
+        assertThat(dto.startTime()).isEqualTo(ScheduleSlot.SLOT_5.startTime());
+        assertThat(dto.endTime()).isEqualTo(ScheduleSlot.SLOT_5.endTime());
+    }
+
+    /** Kiểm thử: từ chối dời lịch sang khung giờ ngoài 5 slot cố định. */
+    @Test
+    @DisplayName("rescheduleSession rejects non-canonical time slot")
+    void rescheduleSession_rejectsNonCanonicalSlot() throws Exception {
+        var idField = GymClass.class.getDeclaredField("id");
+        idField.setAccessible(true);
+        idField.set(gymClass, 1L);
+
+        ClassSession session = new ClassSession();
+        session.setGymClass(gymClass);
+        session.setSessionDate(LocalDate.of(2026, 10, 17));
+        session.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        session.setEndTime(ScheduleSlot.SLOT_1.endTime());
+        session.setStatus("scheduled");
+
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(sessions.findById(100L)).thenReturn(Optional.of(session));
+
+        RescheduleSessionRequest req = new RescheduleSessionRequest(
+                LocalDate.of(2026, 10, 20),
+                LocalTime.of(18, 0),
+                LocalTime.of(19, 0)
+        );
+
+        assertThatThrownBy(() -> service.rescheduleSession(1L, 100L, req))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_INVALID_SLOT")
+                .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.invalid_slot");
     }
 
     /** Kiểm thử: từ chối dời lịch khi hội viên bị trùng lịch. */
@@ -279,25 +332,25 @@ class ClassServiceTest {
         ClassSession session = new ClassSession();
         session.setGymClass(gymClass);
         session.setSessionDate(LocalDate.of(2026, 10, 17));
-        session.setStartTime(LocalTime.of(8, 0));
-        session.setEndTime(LocalTime.of(9, 0));
+        session.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        session.setEndTime(ScheduleSlot.SLOT_1.endTime());
         session.setStatus("scheduled");
 
         GymClass boxing = new GymClass();
         boxing.setName("Boxing Cơ Bản");
         ClassSession other = new ClassSession();
         other.setGymClass(boxing);
-        other.setStartTime(LocalTime.of(18, 0));
-        other.setEndTime(LocalTime.of(20, 0));
+        other.setStartTime(ScheduleSlot.SLOT_5.startTime());
+        other.setEndTime(ScheduleSlot.SLOT_5.endTime());
 
         LocalDate date = LocalDate.of(2026, 10, 20);
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
         when(sessions.findById(100L)).thenReturn(Optional.of(session));
-        when(sessions.findMemberOverlaps(1L, 100L, date, LocalTime.of(19, 0), LocalTime.of(20, 0)))
+        when(sessions.findMemberOverlaps(1L, 100L, date, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime()))
                 .thenReturn(java.util.List.of(other));
 
         assertThatThrownBy(() -> service.rescheduleSession(1L, 100L,
-                new RescheduleSessionRequest(date, LocalTime.of(19, 0), LocalTime.of(20, 0))))
+                new RescheduleSessionRequest(date, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime())))
                 .isInstanceOf(ConflictException.class)
                 .hasMessageContaining("Boxing Cơ Bản");
         verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any(ClassSession.class));
@@ -343,8 +396,8 @@ class ClassServiceTest {
         ClassSession existingSession = new ClassSession();
         existingSession.setGymClass(otherClass);
         existingSession.setSessionDate(LocalDate.of(2026, 10, 18));
-        existingSession.setStartTime(LocalTime.of(8, 0));
-        existingSession.setEndTime(LocalTime.of(9, 30));
+        existingSession.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        existingSession.setEndTime(ScheduleSlot.SLOT_1.endTime());
         existingSession.setStatus("scheduled");
 
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
@@ -353,8 +406,8 @@ class ClassServiceTest {
 
         CreateSessionRequest overlappingReq = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 18),
-                LocalTime.of(9, 0),
-                LocalTime.of(10, 0)
+                ScheduleSlot.SLOT_1.startTime(),
+                ScheduleSlot.SLOT_1.endTime()
         );
 
         assertThatThrownBy(() -> service.createSession(1L, overlappingReq))
@@ -392,8 +445,8 @@ class ClassServiceTest {
         ClassSession existingSession = new ClassSession();
         existingSession.setGymClass(otherClass);
         existingSession.setSessionDate(LocalDate.of(2026, 10, 18));
-        existingSession.setStartTime(LocalTime.of(18, 0));
-        existingSession.setEndTime(LocalTime.of(19, 30));
+        existingSession.setStartTime(ScheduleSlot.SLOT_5.startTime());
+        existingSession.setEndTime(ScheduleSlot.SLOT_5.endTime());
         existingSession.setStatus("scheduled");
 
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
@@ -402,8 +455,8 @@ class ClassServiceTest {
 
         CreateSessionRequest overlappingReq = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 18),
-                LocalTime.of(18, 30),
-                LocalTime.of(20, 0)
+                ScheduleSlot.SLOT_5.startTime(),
+                ScheduleSlot.SLOT_5.endTime()
         );
 
         assertThatThrownBy(() -> service.createSession(1L, overlappingReq))
@@ -613,14 +666,15 @@ class ClassServiceTest {
         var pt = new com.swp391.scms.coaching.entity.CoachBooking();
         pt.setCoach(coach);
         pt.setBookingDate(futureDate);
-        pt.setStartTime(LocalTime.of(18, 0));
-        pt.setEndTime(LocalTime.of(19, 0));
+        pt.setStartTime(ScheduleSlot.SLOT_5.startTime());
+        pt.setEndTime(ScheduleSlot.SLOT_5.endTime());
         pt.setStatus("confirmed");
 
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
         when(ptRepo.findActiveByCoachAndDate(coach.getUserId(), futureDate)).thenReturn(java.util.List.of(pt));
 
-        assertThatThrownBy(() -> service.createSession(1L, new CreateSessionRequest(futureDate, LocalTime.of(18, 30), LocalTime.of(19, 30))))
+        assertThatThrownBy(() -> service.createSession(1L, new CreateSessionRequest(
+                futureDate, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime())))
                 .isInstanceOf(ConflictException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_COACH_PT_CONFLICT")
                 .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.coach_pt_conflict");
@@ -654,15 +708,15 @@ class ClassServiceTest {
         existing.setId(55L);
         existing.setGymClass(gymClass);
         existing.setSessionDate(oldDate);
-        existing.setStartTime(LocalTime.of(10, 0));
-        existing.setEndTime(LocalTime.of(11, 0));
+        existing.setStartTime(ScheduleSlot.SLOT_2.startTime());
+        existing.setEndTime(ScheduleSlot.SLOT_2.endTime());
         existing.setStatus("scheduled");
 
         var busyPt = new com.swp391.scms.coaching.entity.CoachBooking();
         busyPt.setCoach(coach);
         busyPt.setBookingDate(newDate);
-        busyPt.setStartTime(LocalTime.of(14, 0));
-        busyPt.setEndTime(LocalTime.of(15, 0));
+        busyPt.setStartTime(ScheduleSlot.SLOT_4.startTime());
+        busyPt.setEndTime(ScheduleSlot.SLOT_4.endTime());
         busyPt.setStatus("confirmed");
 
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
@@ -670,7 +724,8 @@ class ClassServiceTest {
         when(ptRepo.findActiveByCoachAndDate(coach.getUserId(), newDate)).thenReturn(java.util.List.of(busyPt));
 
         // 1. Dời đè lên buổi PT 1:1 → bị từ chối
-        assertThatThrownBy(() -> service.rescheduleSession(1L, 55L, new RescheduleSessionRequest(newDate, LocalTime.of(14, 0), LocalTime.of(15, 0))))
+        assertThatThrownBy(() -> service.rescheduleSession(1L, 55L,
+                new RescheduleSessionRequest(newDate, ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime())))
                 .isInstanceOf(ConflictException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_COACH_PT_CONFLICT");
 
@@ -685,12 +740,14 @@ class ClassServiceTest {
         duplicateBooking20.setStatus("booked");
 
         when(sessions.searchSessions(newDate, newDate, null, null)).thenReturn(java.util.List.of());
-        when(sessions.findMemberOverlaps(1L, 55L, newDate, LocalTime.of(16, 0), LocalTime.of(17, 0))).thenReturn(java.util.List.of());
+        when(sessions.findMemberOverlaps(1L, 55L, newDate, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime()))
+                .thenReturn(java.util.List.of());
         when(sessions.saveAndFlush(existing)).thenReturn(existing);
         when(enrollments.findByGymClassId(1L)).thenReturn(java.util.List.of(enrollment20));
         when(sessionBookings.findBySessionIdAndStatus(55L, "booked")).thenReturn(java.util.List.of(duplicateBooking20));
 
-        service.rescheduleSession(1L, 55L, new RescheduleSessionRequest(newDate, LocalTime.of(16, 0), LocalTime.of(17, 0)));
+        service.rescheduleSession(1L, 55L,
+                new RescheduleSessionRequest(newDate, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime()));
 
         verify(notificationService, org.mockito.Mockito.times(1)).send(
                 org.mockito.ArgumentMatchers.eq(20L),
@@ -734,8 +791,8 @@ class ClassServiceTest {
                 LocalDate.of(2026, 10, 20),
                 LocalDate.of(2026, 11, 20),
                 java.util.List.of("MONDAY"),
-                LocalTime.of(18, 0),
-                LocalTime.of(19, 0)
+                ScheduleSlot.SLOT_5.startTime(),
+                ScheduleSlot.SLOT_5.endTime()
         );
 
         assertThatThrownBy(() -> service.createRecurringClass(createReq))
@@ -771,5 +828,34 @@ class ClassServiceTest {
         );
         var updated = service.updateClass(9L, keepArchivedReq);
         assertThat(updated.name()).isEqualTo("Yoga Cũ (đã đóng)");
+    }
+
+    /** Kiểm thử: createClass từ chối buổi đầu ngoài 5 slot cố định. */
+    @Test
+    @DisplayName("createClass rejects initial session outside the 5 canonical slots")
+    void createClass_rejectsNonCanonicalSlot() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Coach activeCoach = new Coach();
+        activeCoach.setUserId(2L);
+        activeCoach.setEmploymentStatus("active");
+        Room studio = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(studio, "id", 3L);
+        studio.setStatus("available");
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(gymClasses.existsByDisciplineIdAndStatus(1L, "active")).thenReturn(false);
+        when(coaches.findById(2L)).thenReturn(Optional.of(activeCoach));
+        when(rooms.findById(3L)).thenReturn(Optional.of(studio));
+
+        var req = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest(
+                "Yoga Sáng", 1L, 2L, 3L, 15, "all", "desc",
+                LocalDate.of(2026, 10, 20), LocalTime.of(8, 0), LocalTime.of(9, 0));
+
+        assertThatThrownBy(() -> service.createClass(req))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_INVALID_SLOT")
+                .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.invalid_slot");
     }
 }
