@@ -6,6 +6,8 @@ import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -16,10 +18,13 @@ import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho WalletServiceNotification (wallet service notification). */
 @ExtendWith(MockitoExtension.class)
 class WalletServiceNotificationTest {
 
@@ -37,6 +42,7 @@ class WalletServiceNotificationTest {
 
     private WalletService walletService;
 
+    /** Chuẩn bị trước mỗi test: tạo WalletService với repository và thông báo giả lập. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -52,6 +58,7 @@ class WalletServiceNotificationTest {
         );
     }
 
+    /** Kiểm thử: nạp ví gửi thông báo kèm phương thức thanh toán VNPay. */
     @Test
     void creditTopupSendsNotificationIncludingVnpayPaymentMethod() {
         User user = new User();
@@ -84,8 +91,9 @@ class WalletServiceNotificationTest {
                 .contains("350000");
     }
 
+    /** Kiểm thử: lễ tân nạp ví gửi thông báo kèm phương thức thanh toán quầy. */
     @Test
-    void creditByReceptionistSendsNotificationIncludingCounterPaymentMethod() {
+    void creditByReceptionistSendsNotificationIncludingCashPaymentMethod() {
         User user = new User();
         user.setId(101L);
         Wallet wallet = new Wallet();
@@ -95,7 +103,7 @@ class WalletServiceNotificationTest {
 
         when(walletRepository.findByUserIdForUpdate(101L)).thenReturn(Optional.of(wallet));
 
-        walletService.creditByReceptionist(101L, new BigDecimal("500000"), "bank_transfer", "CK tại quầy", 12L);
+        walletService.creditByReceptionist(101L, new BigDecimal("500000"), "cash", "Tiền mặt tại quầy", 12L);
 
         ArgumentCaptor<String> titleCaptor = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
@@ -111,7 +119,18 @@ class WalletServiceNotificationTest {
 
         assertThat(bodyCaptor.getValue())
                 .contains("500000")
-                .contains("Chuyển khoản tại quầy Lễ tân")
+                .contains("Tiền mặt tại quầy Lễ tân")
                 .contains("600000");
+    }
+
+    /** Chỉ cash được thu mới tại quầy; từ chối trước khi ghi ví hoặc phát thông báo thành công. */
+    @ParameterizedTest
+    @ValueSource(strings = {"bank_transfer", "pos"})
+    void rejectedCounterMethodDoesNotWriteWalletOrNotify(String method) {
+        assertThatThrownBy(() -> walletService.creditByReceptionist(
+                101L, new BigDecimal("500000"), method, "", 12L))
+                .isInstanceOf(com.swp391.scms.common.exception.BadRequestException.class)
+                .extracting("errorCode").isEqualTo("COUNTER_TOPUP_CASH_ONLY");
+        verifyNoInteractions(walletRepository, walletTransactionRepository, userRepository, notificationService);
     }
 }

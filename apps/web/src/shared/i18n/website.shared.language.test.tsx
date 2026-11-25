@@ -4,7 +4,6 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { clearAuthSession, setCurrentUser } from '../api/client';
 import { clearMissingTranslations, getLanguage, getMissingTranslations, LANGUAGE_STORAGE_KEY, setLanguage, sourceMessage, translateSource, useI18n } from './language';
 import { DatePicker } from '../ui/DatePicker';
-import { TimePicker } from '../ui/TimePicker';
 import { RouteLoading } from '../ui/RouteState';
 import { useConfirm } from '../ui/ConfirmDialog';
 import { ChatComposer } from '../../features/chat/ChatComposer';
@@ -21,8 +20,10 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); setLanguage('vi'); });
 
+// Component phụ chỉ phục vụ kiểm thử.
 function MemoProbe() {
   const { t } = useI18n();
+  // Nhãn dịch được ghi nhớ theo ngôn ngữ.
   const label = useMemo(() => t('Trang chủ', 'Home'), [t]);
   return <p>{label}</p>;
 }
@@ -48,9 +49,9 @@ it('makes missing source translations observable and leaves explicitly tagged co
   expect(getMissingTranslations()).toEqual(['Một nhãn QA bị thiếu']); expect(warn).toHaveBeenCalledTimes(1);
   clearMissingTranslations(); translateSource('Đóng', 'Close', 'en'); expect(getMissingTranslations()).toEqual([]);
 });
-it('switches shared calendar, time picker, loading and send controls while open', async () => {
+it('switches shared calendar, loading and send controls while open', async () => {
   await act(async () => root.render(<>
-    <DatePicker value="" onChange={() => {}} /><TimePicker value="" onChange={() => {}} />
+    <DatePicker value="" onChange={() => {}} />
     <RouteLoading /><ChatComposer id="qa-message" label="QA" value="" onChange={() => {}} onSubmit={() => {}} />
   </>));
   await act(async () => host.querySelector<HTMLButtonElement>('.luxury-datepicker-trigger')!.click());
@@ -59,10 +60,10 @@ it('switches shared calendar, time picker, loading and send controls while open'
   expect(host.textContent).toContain('Mon'); expect(host.textContent).toContain('Loading page');
   expect(host.querySelector('.direct-chat__send-btn')?.textContent).toBe('Send');
   expect(host.querySelector('textarea')?.placeholder).toBe('Message...');
-  expect(host.querySelector('.luxury-timepicker-value')?.textContent).toBe('Select time...');
   await act(async () => setLanguage('vi'));
   expect(host.querySelector('.direct-chat__send-btn')?.textContent).toBe('Gửi');
 });
+// Component phụ chỉ phục vụ kiểm thử.
 function ConfirmProbe() {
   const [confirm, dialog] = useConfirm();
   return <><button onClick={() => void confirm({ title: sourceMessage('Xác nhận thao tác', 'Confirm action'), message: sourceMessage('Tiếp tục?', 'Continue?'), confirmLabel: sourceMessage('Tiếp tục', 'Continue') })}>open</button>{dialog}</>;

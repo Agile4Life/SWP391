@@ -11,8 +11,10 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Bộ kiểm thử cho service DynamicQrService (dynamic qr service). */
 class DynamicQrServiceTest {
 
+    /** Kiểm thử: bean Spring dùng secret ký và thời hạn đã cấu hình. */
     @Test
     void springBeanUsesConfiguredSigningSecretAndLifetime() {
         try (var context = new AnnotationConfigApplicationContext()) {
@@ -34,11 +36,13 @@ class DynamicQrServiceTest {
     private static final String SECRET = "test-secret-key-for-hmac-sha256-scms-project";
     private static final long TTL_SECONDS = 60;
 
+    /** Chuẩn bị trước mỗi test: tạo DynamicQrService với secret và đồng hồ cố định. */
     @BeforeEach
     void setUp() {
         qrService = new DynamicQrService(SECRET, TTL_SECONDS);
     }
 
+    /** Kiểm thử: Sinh và xác thực Dynamic QR hợp lệ thành công */
     @Test
     @DisplayName("Sinh và xác thực Dynamic QR hợp lệ thành công")
     void validDynamicQr_verifiesSuccessfully() {
@@ -56,6 +60,7 @@ class DynamicQrServiceTest {
         assertEquals(5L, result.subscriptionId());
     }
 
+    /** Kiểm thử: Dynamic QR bị sửa đổi chữ ký hoặc dữ liệu -> Bị từ chối (invalid, không phải expired) */
     @Test
     @DisplayName("Dynamic QR bị sửa đổi chữ ký hoặc dữ liệu -> Bị từ chối (invalid, không phải expired)")
     void tamperedDynamicQr_rejected() {
@@ -68,6 +73,7 @@ class DynamicQrServiceTest {
         assertFalse(result.expired());
     }
 
+    /** Kiểm thử: Dynamic QR quá thời hạn sống (TTL > 60s) -> Bị từ chối với cờ expired = true */
     @Test
     @DisplayName("Dynamic QR quá thời hạn sống (TTL > 60s) -> Bị từ chối với cờ expired = true")
     void expiredDynamicQr_flaggedAsExpired() {
@@ -79,6 +85,7 @@ class DynamicQrServiceTest {
         assertTrue(result.expired());
     }
 
+    /** Kiểm thử: Mã QR tĩnh không bắt đầu bằng DYN -> isDynamic = false */
     @Test
     @DisplayName("Mã QR tĩnh không bắt đầu bằng DYN -> isDynamic = false")
     void staticQr_recognizedAsNotDynamic() {

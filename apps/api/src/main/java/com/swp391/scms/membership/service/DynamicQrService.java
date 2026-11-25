@@ -24,10 +24,15 @@ public class DynamicQrService {
     private final byte[] secretKeyBytes;
     private final long ttlMillis;
 
+    /** Constructor cho test: khóa ký ngẫu nhiên và thời gian sống mặc định 60 giây. */
     public DynamicQrService() {
         this(UUID.randomUUID().toString() + UUID.randomUUID(), DEFAULT_TTL_SECONDS);
     }
 
+    /**
+     * Constructor Spring dùng: khóa ký từ app.qr.secret (mặc định JWT secret) và thời gian sống
+     * app.qr.ttl-seconds; khóa trống hoặc thời gian không dương thì báo lỗi.
+     */
     @Autowired
     public DynamicQrService(
             @Value("${app.qr.secret:${app.jwt.secret}}") String secret,
@@ -39,10 +44,15 @@ public class DynamicQrService {
         this.ttlMillis = ttlSeconds * 1000L;
     }
 
+    /** Thời gian sống của mã QR động (giây). */
     public long getTtlSeconds() {
         return ttlMillis / 1000L;
     }
 
+    /**
+     * Kết quả kiểm tra mã QR: hợp lệ hay không, đã hết hạn chưa, có phải mã động không, và
+     * userId/subscriptionId đọc được.
+     */
     public record VerificationResult(
             boolean valid,
             boolean expired,
@@ -50,14 +60,17 @@ public class DynamicQrService {
             Long userId,
             Long subscriptionId
     ) {
+        /** Kết quả cho mã không phải QR động. */
         public static VerificationResult notDynamic() {
             return new VerificationResult(false, false, false, null, null);
         }
 
+        /** Kết quả mã QR động không hợp lệ (có hoặc không do hết hạn). */
         public static VerificationResult invalid(boolean expired) {
             return new VerificationResult(false, expired, true, null, null);
         }
 
+        /** Kết quả mã QR động hợp lệ kèm người dùng và kỳ gói. */
         public static VerificationResult success(Long userId, Long subscriptionId) {
             return new VerificationResult(true, false, true, userId, subscriptionId);
         }
@@ -72,6 +85,7 @@ public class DynamicQrService {
         return "DYN:" + data + ":" + signature;
     }
 
+    /** Mã có phải QR động không (bắt đầu bằng "DYN:"). */
     public boolean isDynamic(String qrCode) {
         return qrCode != null && qrCode.startsWith("DYN:");
     }
@@ -115,6 +129,7 @@ public class DynamicQrService {
         }
     }
 
+    /** Tính chữ ký HMAC-SHA256 của dữ liệu và trả dạng hex. */
     private String computeHmac(String data) {
         try {
             Mac mac = Mac.getInstance(HMAC_ALGORITHM);

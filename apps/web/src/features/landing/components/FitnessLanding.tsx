@@ -1,23 +1,21 @@
-import { sourceText, useSourceLanguage, sourceFormat } from "../../shop/shopI18n";
+import { sourceText, useSourceLanguage, sourceFormat } from "../../../shared/i18n/sourceText";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
-import { DISCIPLINES } from '../../../shared/lib/disciplines';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
 import { usePublicCatalog } from '../publicCatalog';
 import { CatalogPackages, CatalogStatus, CatalogTrainers } from './CatalogSections';
-import { ProductShelf } from './ProductShelf';
 import { RoundArrow } from './PublicLayout';
 import { SplitHeading } from './SplitHeading';
 import { SportStack } from './SportStack';
 
 const tickerItems = [
-  ...DISCIPLINES.map(discipline => discipline.name.toUpperCase()),
+  'GYM',
   'STRENGTH FLOOR',
   'MOVEMENT STUDIO',
   'FREE WEIGHTS',
   'BARBELL CLUB',
-  'GROUP TRAINING',
+  'PERSONAL TRAINING',
 ];
 
 
@@ -33,9 +31,9 @@ const serviceShapes = [
 ];
 const clubMetrics = [
   { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, get label() { return sourceText('MỞ CỬA MỖI NGÀY'); } },
-  { get value() { return sourceText('05 Zones'); }, countTo: 5, format: (n: number) => sourceFormat('{0} Phân khu', String(n).padStart(2, '0')), get label() { return sourceText('TỔ HỢP ĐA BỘ MÔN'); } },
-  { get value() { return sourceText('Lịch lớp'); }, get label() { return sourceText('ĐẶT CHỖ TRỰC TUYẾN'); } },
-  { get value() { return sourceText('QR Pass'); }, get label() { return sourceText('01 THẺ ĐA PHÂN KHU'); } },
+  { value: 'Gym', get label() { return sourceText({ vi: 'PHÒNG GYM TIÊU CHUẨN', en: 'STANDARD GYM FLOOR' }); } },
+  { get value() { return sourceText({ vi: 'Lịch PT', en: 'PT schedule' }); }, get label() { return sourceText('ĐẶT CHỖ TRỰC TUYẾN'); } },
+  { get value() { return sourceText('QR Pass'); }, get label() { return sourceText({ vi: 'CHECK-IN PHÒNG GYM', en: 'GYM CHECK-IN' }); } },
 ];
 const MUSCLE_CLOSE_DELAY_MS = 600;
 
@@ -171,7 +169,7 @@ const dailyRhythmItems = [
     id: 'morning' as const,
     get label() { return sourceText('Sáng · 06:00–09:00'); },
     get title() { return sourceText('Khởi động thể lực sáng sớm'); },
-    highlights: ['Morning Strength', 'Bơi sáng', 'Tennis'],
+    highlights: ['Morning Strength', 'Cardio', 'Tập tạ'],
   },
   {
     id: 'midday' as const,
@@ -183,13 +181,13 @@ const dailyRhythmItems = [
     id: 'evening' as const,
     get label() { return sourceText('Chiều · 17:00–19:30'); },
     get title() { return sourceText('Nhịp tập sôi động sau giờ làm'); },
-    highlights: ['Barbell Club', 'Lớp Bơi', 'Đánh đôi Tennis'],
+    highlights: ['Barbell Club', 'Tập tạ', 'Cardio'],
   },
   {
     id: 'night' as const,
     get label() { return sourceText('Tối · 19:30–22:00'); },
     get title() { return sourceText('Vận động nhẹ & Giãn cơ cuối ngày'); },
-    highlights: ['Tập cá nhân', 'Bơi thư giãn', 'Giãn cơ'],
+    highlights: ['Tập cá nhân', 'Cardio nhẹ', 'Giãn cơ'],
   },
 ] as const;
 
@@ -197,13 +195,11 @@ const spaces = [
   { get title() { return sourceText('Không gian cho những mục tiêu lớn.'); }, image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', get meta() { return sourceText('Khu máy tập'); } },
   { get title() { return sourceText('Tập trung vào từng chuyển động.'); }, image: '/images/fitness/strength-session.jpg', label: 'Free weights', get meta() { return sourceText('Khu tạ rời & Power Rack'); } },
   { get title() { return sourceText('Tìm lại nhịp điệu của chính mình.'); }, image: '/images/about-movement-studio.jpg', label: 'Movement studio', get meta() { return sourceText('Core & Giãn cơ'); } },
-  { get title() { return sourceText('Làn nước xanh mát bốn mùa.'); }, image: '/images/fitness/aquatics-pool.jpg', label: 'Aquatics pool', get meta() { return sourceText('Hồ bơi bốn mùa'); } },
-  { get title() { return sourceText('Sân đấu giàu năng lượng.'); }, image: '/images/fitness/tennis-court.jpg', label: 'Tennis courts', get meta() { return sourceText('Sân Tennis CLB'); } },
 ];
 
 const journeySteps = [
   { step: '01', get title() { return sourceText('Tạo tài khoản & chọn gói tập'); }, get description() { return sourceText('Đăng ký trực tuyến nhanh gọn.'); } },
-  { step: '02', get title() { return sourceText('Cập nhật chỉ số & mục tiêu'); }, get description() { return sourceText('Nhận gợi ý lộ trình theo BMI.'); } },
+  { step: '02', get title() { return sourceText({ vi: 'Hoàn thiện hồ sơ hội viên', en: 'Complete your member profile' }); }, get description() { return sourceText({ vi: 'Cập nhật thông tin và mục tiêu tập luyện.', en: 'Update your details and fitness goals.' }); } },
   { step: '03', get title() { return sourceText('Đặt lịch & quét QR check-in'); }, get description() { return sourceText('Giữ chỗ & vào cửa bằng thẻ QR.'); } },
 ];
 const memberBenefits = [
@@ -211,37 +207,37 @@ const memberBenefits = [
     get tag() { return sourceText({ vi: 'Bộ môn', en: 'Disciplines' }); },
     idx: '01',
     get title() { return sourceText('Đặt lịch tập trên Portal'); },
-    get description() { return sourceText('Xem lịch lớp theo bộ môn và đặt chỗ khi gói còn hiệu lực.'); },
+    get description() { return sourceText({ vi: 'Xem khung giờ trống và đặt lịch PT khi gói còn hiệu lực.', en: 'View available slots and book PT with an active membership.' }); },
     perks: [
-      'Gym · Bơi lội · Boxing · Tennis · Cầu lông · Yoga',
+      'Gym',
       { vi: 'Thấy ngay khung giờ còn chỗ', en: 'See open time slots at a glance' },
     ],
   },
   {
-    get tag() { return sourceText('Lớp'); },
+    get tag() { return sourceText({ vi: 'PT 1:1', en: '1:1 PT' }); },
     idx: '02',
-    get title() { return sourceText('Lớp nhóm theo gói tập'); },
-    get description() { return sourceText('Xem huấn luyện viên, giờ học và chỗ trống. Số lượt đặt tùy gói tập.'); },
+    get title() { return sourceText({ vi: 'Huấn luyện cá nhân 1:1', en: 'Personal training' }); },
+    get description() { return sourceText({ vi: 'Chọn huấn luyện viên, xem slot trống và phương thức thanh toán.', en: 'Choose a coach, available slot and payment method.' }); },
     perks: [
-      { vi: 'Lịch lớp sáng, chiều, tối mỗi ngày', en: 'Morning, afternoon and evening classes daily' },
+      { vi: 'Xem khung giờ PT còn trống', en: 'View available PT slots' },
       { vi: 'Điểm danh bằng mã QR', en: 'Check in with your QR code' },
     ],
   },
   {
     get tag() { return sourceText({ vi: 'HLV', en: 'Coach' }); },
     idx: '03',
-    get title() { return sourceText('HLV theo dõi từng buổi tập'); },
-    get description() { return sourceText('HLV ghi lại mức tạ, số lần tập và tiến độ sau mỗi buổi.'); },
+    get title() { return sourceText({ vi: 'Xem giáo án của huấn luyện viên', en: 'View your coach’s training plan' }); },
+    get description() { return sourceText({ vi: 'Xem bài tập, số hiệp và thời gian nghỉ trong giáo án đang áp dụng.', en: 'View exercises, sets and rest times in your active training plan.' }); },
     perks: [
       'HLV có chứng chỉ đúng từng bộ môn',
-      { vi: 'Xem kết quả từng buổi trên Portal', en: 'See each session’s results in the portal' },
+      { vi: 'Bài tập được nhóm theo ngày', en: 'Exercises grouped by day' },
     ],
   },
   {
     get tag() { return sourceText('Kế hoạch'); },
     idx: '04',
     get title() { return sourceText('Kế hoạch tuần cho riêng bạn'); },
-    get description() { return sourceText('Gợi ý lịch tuần theo BMI và mục tiêu, có trợ lý hỏi đáp.'); },
+    get description() { return sourceText({ vi: 'Xem lịch giáo án HLV soạn theo mục tiêu tập luyện.', en: 'View the plan your coach prepares for your fitness goals.' }); },
     perks: [
       { vi: 'Mục tiêu: giảm mỡ, tăng cơ, sức bền', en: 'Goals: fat loss, muscle gain, endurance' },
       { vi: 'Tạm dừng gói ngay trên Portal', en: 'Freeze your plan from the portal' },
@@ -251,10 +247,10 @@ const memberBenefits = [
 const faqs = [
   {
     get question() { return sourceText('Người mới bắt đầu có theo kịp không?'); },
-    get answer() { return sourceText('Có. Mỗi bộ môn đều có lớp nhập môn hướng dẫn từ cơ bản.'); },
+    get answer() { return sourceText({ vi: 'Có. Huấn luyện viên hướng dẫn kỹ thuật tập Gym từ cơ bản.', en: 'Yes. Coaches teach Gym technique from the basics.' }); },
   },
   {
-    get question() { return sourceText('Gói hội viên đã bao gồm những bộ môn nào?'); },
+    get question() { return sourceText({ vi: 'Gói hội viên có những quyền lợi nào?', en: 'What benefits does a membership include?' }); },
     get answer() { return sourceText('Tùy gói. Quyền lợi từng gói hiển thị tại bảng giá.'); },
   },
   {
@@ -262,11 +258,15 @@ const faqs = [
     get answer() { return sourceText('Có. Bạn gửi yêu cầu bảo lưu (Freeze) trực tiếp trên Portal hội viên.'); },
   },
   {
-    get question() { return sourceText('Làm sao để đặt lớp học hoặc đặt sân?'); },
-    get answer() { return sourceText('Đăng nhập Portal để xem lịch và đặt chỗ khi gói còn hiệu lực.'); },
+    get question() { return sourceText({ vi: 'Làm sao để đặt lịch PT 1:1?', en: 'How do I book a 1:1 PT session?' }); },
+    get answer() { return sourceText({ vi: 'Đăng nhập Portal, chọn HLV, khung giờ trống và thanh toán khi gói còn hiệu lực.', en: 'Sign in to the portal, choose a coach and an available slot, then pay with an active membership.' }); },
   },
 ];
 
+/**
+ * Chỉ số đếm tăng dần tới giá trị cuối khi cuộn tới (hiển thị luôn giá trị cuối nếu người dùng giảm chuyển
+ * động).
+ */
 function CountUpMetric({ value, countTo, format }: { value: string; countTo: number; format: (n: number) => string }) {
   useSourceLanguage();
   const ref = useRef<HTMLElement>(null);
@@ -287,6 +287,7 @@ function CountUpMetric({ value, countTo, format }: { value: string; countTo: num
           cancelAnimationFrame(rafId);
           const start = performance.now();
           const duration = 1200;
+          // Mỗi khung hình tính giá trị đếm theo đường cong ease-out trong 1,2 giây.
           const step = (now: number) => {
             const elapsed = Math.min(1, (now - start) / duration);
             const eased = 1 - ((1 - elapsed) ** 3);
@@ -308,6 +309,7 @@ function CountUpMetric({ value, countTo, format }: { value: string; countTo: num
   return <strong ref={ref}>{display}</strong>;
 }
 
+/** Biểu tượng SVG minh họa cho từng loại dịch vụ (tạ, huấn luyện, vận động). */
 function ServiceIcon({ type }: { type: string }) {
   useSourceLanguage();
   return <svg className="fit-service-icon" viewBox="0 0 64 64" fill="none" stroke="#805e50" strokeWidth="1.65" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -324,6 +326,7 @@ function ServiceIcon({ type }: { type: string }) {
   </svg>;
 }
 
+/** Hiệu ứng nghiêng nhẹ theo vị trí con trỏ trên thẻ (đặt biến CSS --fit-px, --fit-py). */
 const handleCardPointerMove = (event: PointerEvent<HTMLElement>) => {
   const rect = event.currentTarget.getBoundingClientRect();
   const px = (((event.clientX - rect.left) / Math.max(1, rect.width)) - 0.5) * -10;
@@ -332,11 +335,13 @@ const handleCardPointerMove = (event: PointerEvent<HTMLElement>) => {
   event.currentTarget.style.setProperty('--fit-py', `${py.toFixed(2)}px`);
 };
 
+/** Đưa thẻ về vị trí gốc khi con trỏ rời đi. */
 const handleCardPointerLeave = (event: PointerEvent<HTMLElement>) => {
   event.currentTarget.style.setProperty('--fit-px', '0px');
   event.currentTarget.style.setProperty('--fit-py', '0px');
 };
 
+/** Đọc chiều cao/cân nặng từ chuỗi hoặc số (chấp nhận dấu phẩy thập phân); không hợp lệ thì trả NaN. */
 // eslint-disable-next-line react-refresh/only-export-components
 export function parseBmiMetric(raw: string | number | null | undefined): number {
   if (typeof raw === 'number') return Number.isFinite(raw) ? raw : Number.NaN;
@@ -347,6 +352,10 @@ export function parseBmiMetric(raw: string | number | null | undefined): number 
   return Number.isFinite(value) ? value : Number.NaN;
 }
 
+/**
+ * Tính BMI = cân nặng / chiều cao² làm tròn một chữ số; chiều cao ngoài 100–240 cm hoặc cân nặng ngoài 30–250
+ * kg thì trả null.
+ */
 // eslint-disable-next-line react-refresh/only-export-components
 export function calculateBmi(
   heightInput: string | number | null | undefined,
@@ -370,12 +379,16 @@ export function calculateBmi(
   return Number(rawBmi.toFixed(1));
 }
 
+/**
+ * Trang giới thiệu chính của SÖL Fitness: hero, manifesto, dịch vụ, mô hình cơ thể, gói tập, HLV, lợi ích và
+ * câu hỏi thường gặp.
+ */
 export function FitnessLanding() {
   const manifestoWords = sourceText('Mạnh mẽ trong phòng tạ. Linh hoạt qua từng chuyển động. Bền bỉ sau mỗi hiệp tập.').split(' ');
   useSourceLanguage();
   const user = getCurrentUser();
   const { catalog, error: catalogError, retry: retryCatalog } = usePublicCatalog();
-  const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
+  const ptPath = user ? user.role === 'MEMBER' ? '/member/classes?tab=pt' : homePath(user.role) : '/login';
   const joinPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/register';
   const planPath = user ? user.role === 'MEMBER' ? '/member/progress' : homePath(user.role) : '/register';
   const accountLabel = !user ? 'Tạo tài khoản' : user.role === 'MEMBER' ? 'Chọn gói tập' : 'Vào portal';
@@ -399,6 +412,7 @@ export function FitnessLanding() {
     setActiveMuscleId(id);
   };
 
+  // Bỏ chọn nhóm cơ ngay lập tức và hủy hẹn giờ đóng.
   const clearMuscleImmediately = () => {
     if (closeTimerRef.current !== null) {
       window.clearTimeout(closeTimerRef.current);
@@ -585,7 +599,7 @@ export function FitnessLanding() {
         <LoadingImage key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" />
         <div className="fit-space-shade" />
         <div key={space} className="fit-space-content fit-blur-morph">
-          <span className="fit-kicker">{sourceText("05 PHÂN KHU TẬP LUYỆN")}</span>
+          <span className="fit-kicker">{sourceText({ vi: 'PHÒNG GYM TIÊU CHUẨN', en: 'STANDARD GYM FLOOR' })}</span>
           <h2 id="space-title">{spaces[space].title}</h2>
           <p className="fit-space-meta">{spaces[space].meta}</p>
           <a className="fit-pill" href="#contact">{sourceText("Ghé thăm SÖL")}<RoundArrow diagonal /></a>
@@ -622,8 +636,8 @@ export function FitnessLanding() {
       </div>
     </section>
     <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
-      <SportStack classPath={classPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
-        <SplitHeading id="multisport-title" lines={[sourceText('Các bộ môn')]} />
+      <SportStack ptPath={ptPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
+        <SplitHeading id="multisport-title" lines={[sourceText('Gym')]} />
       </div>} />
     </section>
     <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
@@ -675,8 +689,8 @@ export function FitnessLanding() {
               <div className="fit-chat-bot">
                 <div className="fit-chat-tags">
                   <span>{sourceText("T2 · Strength")}</span>
-                  <span>{sourceText("T4 · Bơi lội")}</span>
-                  <span>{sourceText("T6 · Tennis")}</span>
+                  <span>{sourceText("T4 · Cardio")}</span>
+                  <span>{sourceText({ vi: 'T6 · Tập tạ', en: 'Fri · Weight training' })}</span>
                   <span>{sourceText("CN · Mobility")}</span>
                 </div>
               </div>
@@ -738,7 +752,6 @@ export function FitnessLanding() {
       <div className="fit-section-heading fit-centered" data-reveal="soft"><SplitHeading id="pricing-title" lines={['Membership Pricing']} /></div>
       {catalog ? <CatalogPackages catalog={catalog} joinPath={joinPath} /> : <CatalogStatus loading={!catalogError} retry={retryCatalog} kind="packages" />}
     </section>
-    <ProductShelf />
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
         <SplitHeading id="faq-title" lines={['Frequently Asked', 'Questions']} />
@@ -798,7 +811,7 @@ export function FitnessLanding() {
           </article>)}
           <article className="fit-benefit-card fit-benefit-end" data-reveal="lift">
             <h3>{sourceText("Chưa có gói vẫn trải nghiệm được")}</h3>
-            <p>{sourceText("Tạo tài khoản miễn phí để xem lịch lớp và chọn gói. Gói được kích hoạt tại quầy lễ tân.")}</p>
+            <p>{sourceText({ vi: 'Tạo tài khoản miễn phí để đặt PT và chọn gói. Gói được kích hoạt tại quầy lễ tân.', en: 'Create a free account to book PT and choose a membership. Memberships are activated at reception.' })}</p>
             <Link to={joinPath} className="fit-benefit-end-btn">
               {sourceText(accountLabel)}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

@@ -75,6 +75,7 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() {
     await act(async () => {
       root.render(<ManagerInternalRequestsPage />);
@@ -149,7 +150,7 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
       b.textContent?.includes('Xác nhận Từ chối')
     );
 
-    // Empty reason triggers error
+    // Lý do trống sẽ kích hoạt báo lỗi
     await act(async () => {
       confirmRejectBtn?.click();
     });

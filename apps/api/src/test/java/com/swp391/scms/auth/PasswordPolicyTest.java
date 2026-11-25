@@ -6,15 +6,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho chính sách PasswordPolicy (password policy). */
 class PasswordPolicyTest {
     private static final Pattern POLICY = Pattern.compile(PasswordPolicy.REGEX);
 
+    /** Kiểm thử: chấp nhận mật khẩu 8-50 ký tự có chữ và số. */
     @Test
     void acceptsEightToFiftyCharactersWithALetterAndADigit() {
         assertTrue(POLICY.matcher("Demo@12345").matches());
         assertTrue(POLICY.matcher("abcdefg1").matches());
     }
 
+    /** Kiểm thử: từ chối mật khẩu quá ngắn, chỉ chữ, chỉ số, có khoảng trắng hoặc quá dài. */
     @Test
     void rejectsShortAllLettersAllDigitsSpacesAndTooLong() {
         assertFalse(POLICY.matcher("abc123").matches());

@@ -19,7 +19,9 @@ import { parseISODate } from '../schedule/timetable';
 import { ptBookingEvents } from './coachTimetable';
 import './coach-classes.css';
 import { formatCenterDate } from '../../shared/lib/centerTime';
+import { matchPtSearch } from './ptSearch';
 
+/** Thứ Hai (00:00) của tuần chứa ngày cho trước; Chủ nhật được tính vào tuần trước. */
 function getWeekMonday(date: Date): Date {
   const d = new Date(date);
   const day = d.getDay();
@@ -29,6 +31,7 @@ function getWeekMonday(date: Date): Date {
   return d;
 }
 
+/** Định dạng Date thành chuỗi YYYY-MM-DD theo giờ địa phương. */
 function formatYmd(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -36,33 +39,11 @@ function formatYmd(d: Date): string {
   return `${year}-${month}-${day}`;
 }
 
-function matchPtSearch(b: CoachBookingDto, query: string): boolean {
-  if (!query) return true;
-  const q = query.trim().toLowerCase();
-  const qNorm = q.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
 
-  // 1. Tên học viên
-  const name = (b.memberName ?? '').toLowerCase();
-  const nameNorm = name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
-  if (name.includes(q) || nameNorm.includes(qNorm)) return true;
-
-  // 2. Mã thẻ / mã học viên
-  const code = (b.membershipCode ?? '').toLowerCase();
-  const idStr = String(b.memberId ?? '');
-  if (code.includes(q) || idStr === q || `mem-${idStr}`.includes(q) || `#${idStr}`.includes(q)) return true;
-
-  // 3. Số điện thoại
-  const phone = (b.memberPhone ?? b.phone ?? '').toLowerCase().replace(/\s+/g, '');
-  const qPhone = q.replace(/\s+/g, '');
-  if (phone && phone.includes(qPhone)) return true;
-
-  // 4. Email
-  const email = (b.memberEmail ?? b.email ?? '').toLowerCase();
-  if (email && email.includes(q)) return true;
-
-  return false;
-}
-
+/**
+ * Trang lịch dạy của HLV: thời khóa biểu tuần các buổi kèm 1:1 (có tìm kiếm, xem chi tiết, hủy buổi kèm lý do)
+ * và danh sách học viên mình phụ trách.
+ */
 export function CoachClassesPage() {
   const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
@@ -93,6 +74,7 @@ export function CoachClassesPage() {
   // Tải danh sách toàn bộ học viên phụ trách
   useEffect(() => {
     let mounted = true;
+    // Tải toàn bộ học viên HLV đang phụ trách (bỏ qua kết quả nếu component đã bị gỡ).
     const fetchAllStudents = async () => {
       setAllStudentsLoading(true);
       setAllStudentsError(null);
@@ -111,6 +93,7 @@ export function CoachClassesPage() {
     };
   }, [currentUser?.id]);
 
+  // Học viên sau khi lọc theo từ khóa tìm kiếm.
   const filteredAllStudents = useMemo(() => {
     return allStudents.filter((st) => {
       const q = allStudentsSearch.trim().toLowerCase();
@@ -126,15 +109,17 @@ export function CoachClassesPage() {
     });
   }, [allStudents, allStudentsSearch, allStudentsLevelFilter]);
 
+  // Các buổi kèm 1:1 khớp từ khóa tìm kiếm.
   const filteredPtBookings = useMemo(() => {
     return coach1on1Bookings.filter((b) => matchPtSearch(b, scheduleSearch));
   }, [coach1on1Bookings, scheduleSearch]);
 
+  // Tải lịch kèm 1:1 của HLV; lỗi thì báo để thử lại.
   const loadWeeklySessions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const ptBookings = await getCoachSchedule().catch(() => []);
+      const ptBookings = await getCoachSchedule();
       setCoach1on1Bookings(ptBookings);
     } catch {
       setError('Không thể tải lịch dạy PT 1-1 của tuần này. Vui lòng thử lại.');
@@ -147,12 +132,14 @@ export function CoachClassesPage() {
     void loadWeeklySessions();
   }, [loadWeeklySessions]);
 
+  // Bấm một khối pt-<id> trên lịch thì mở chi tiết buổi kèm tương ứng.
   const handleEventClick = (eventId: string) => {
     if (eventId.startsWith('pt-')) {
       setSelectedPt(coach1on1Bookings.find((booking) => `pt-${booking.id}` === eventId) ?? null);
     }
   };
 
+  // Xác nhận hủy buổi kèm 1:1: bắt buộc nhập lý do, gửi yêu cầu xóa rồi tải lại lịch.
   const handleConfirmCancelPt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!cancellingPt || cancelBusy) return;

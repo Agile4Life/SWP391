@@ -9,6 +9,7 @@ import { getCoachSchedule } from '../member/coachBookingApi';
 
 vi.mock('../member/coachBookingApi', () => ({ getCoachSchedule: vi.fn().mockResolvedValue([]) }));
 
+// Thứ Hai của tuần chứa ngày d.
 function getWeekMonday(d: Date): Date {
   const date = new Date(d);
   const day = date.getDay();
@@ -18,6 +19,7 @@ function getWeekMonday(d: Date): Date {
   return date;
 }
 
+// Định dạng Date thành YYYY-MM-DD.
 function formatYmd(d: Date): string {
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -176,7 +178,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     expect(host.textContent).toContain('Mục tiêu thể lực');
     expect(host.textContent).toContain('Lưu ý sức khỏe & chấn thương');
 
-    // Ensure emojis are not present in the students tab
+    // Đảm bảo không có emoji xuất hiện trong tab học viên
     expect(host.textContent).not.toContain('📧');
     expect(host.textContent).not.toContain('📞');
     expect(host.textContent).not.toContain('⚠️');

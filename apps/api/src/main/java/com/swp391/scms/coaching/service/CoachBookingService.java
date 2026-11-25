@@ -35,11 +35,19 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Nghiệp vụ đặt buổi PT 1:1 với HLV: khung giờ trống, lượt PT miễn phí theo hạng gói, đặt lịch (kiểm tra trùng
+ * lịch, nghỉ phép, giờ nghỉ của HLV, gói còn hiệu lực), buổi trả tiền theo giờ thu ở quầy, hủy lịch kèm hoàn
+ * tiền, điểm danh và tự giải phóng buổi chưa trả tiền.
+ */
 @Service
 public class CoachBookingService {
     private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
-    private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 hours
+    private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 giờ
+    private static final int UNPAID_HOLD_MINUTES = 5;
+    private static final int UNPAID_RELEASE_LEAD_MINUTES = 60;
+    private static final int UNPAID_MIN_HOLD_MINUTES = 5;
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
             java.util.Set.of("package_quota", "cash", "bank_transfer");
     private static final int MAX_UNPAID_UPCOMING = 2;
@@ -66,6 +74,10 @@ public class CoachBookingService {
     @Autowired(required = false)
     private com.swp391.scms.operations.repository.StaffInternalRequestRepository staffRequestRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
+    private boolean legacyClassesEnabled = true;
+
+    /** HLV có đơn nghỉ phép đã duyệt vào ngày cho trước không. */
     private boolean onLeave(Long coachId, LocalDate date) {
         return staffRequestRepository != null && staffRequestRepository.existsApprovedLeaveOn(coachId, date);
     }
@@ -82,6 +94,7 @@ public class CoachBookingService {
     private final Clock clock;
     private final MessageService messageService;
 
+    /** Constructor cho test với các phụ thuộc tối thiểu. */
     public CoachBookingService(
             CoachBookingRepository coachBookingRepository,
             CoachRepository coachRepository,
@@ -96,6 +109,7 @@ public class CoachBookingService {
                 classEnrollmentRepository, subscriptionRepository, disciplineRepository, null, clock, messageService);
     }
 
+    /** Constructor cho test có thêm dịch vụ phụ. */
     public CoachBookingService(
             CoachBookingRepository coachBookingRepository,
             CoachRepository coachRepository,
@@ -110,6 +124,7 @@ public class CoachBookingService {
         this(coachBookingRepository, coachRepository, memberRepository, classSessionRepository, classEnrollmentRepository, subscriptionRepository, disciplineRepository, notificationService, clock, messageService, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public CoachBookingService(
             CoachBookingRepository coachBookingRepository,
@@ -136,6 +151,7 @@ public class CoachBookingService {
         this.messageService = messageService;
     }
 
+    /** Danh sách HLV công khai (đang làm việc, tài khoản active) để hội viên chọn. */
     @Transactional(readOnly = true)
     public List<CoachPublicDto> getPublicCoaches() {
         return coachRepository.findPublicCoaches().stream()
@@ -153,15 +169,21 @@ public class CoachBookingService {
                 .toList();
     }
 
+    /**
+     * Các khung 1 giờ từ 06:00 tới 21:00 trong ngày của HLV, đánh dấu còn trống hay không và lý do: HLV nghỉ
+     * phép, quá gần giờ (cần đặt trước 2 giờ), HLV bận, HLV cần nghỉ (tối đa 3 buổi liên tiếp), hoặc hội viên
+     * bận.
+     */
     @Transactional(readOnly = true)
     public List<CoachAvailableSlotDto> getAvailableSlots(Long coachId, LocalDate date, Long currentMemberId) {
         Coach coach = coachRepository.findById(coachId)
                 .orElseThrow(() -> new ResourceNotFoundException("Coach", coachId));
 
-        List<ClassSession> coachClasses = classSessionRepository.findActiveByCoachAndDate(coachId, date);
+        List<ClassSession> coachClasses = legacyClassesEnabled ? classSessionRepository.findActiveByCoachAndDate(coachId, date) : List.of();
         List<CoachBooking> coachBookings = coachBookingRepository.findActiveByCoachAndDate(coachId, date);
 
-        List<ClassSession> memberClasses = currentMemberId != null ? classSessionRepository.findActiveByMemberAndDate(currentMemberId, date) : List.of();
+        List<ClassSession> memberClasses = legacyClassesEnabled && currentMemberId != null
+                ? classSessionRepository.findActiveByMemberAndDate(currentMemberId, date) : List.of();
         List<CoachBooking> memberBookings = currentMemberId != null ? coachBookingRepository.findActiveByMemberAndDate(currentMemberId, date) : List.of();
 
         LocalDateTime now = LocalDateTime.now(clock);
@@ -209,8 +231,11 @@ public class CoachBookingService {
         return slots;
     }
 
-    /** Check both sides so booking out of order cannot create four consecutive PT slots. */
-    private static boolean requiresCoachRest(List<CoachBooking> bookings, LocalTime start) {
+    /**
+     * HLV có bị quá 3 buổi PT liên tiếp nếu nhận thêm khung giờ này không (kiểm tra cả hai phía để đặt không theo
+     * thứ tự cũng không thể tạo thành bốn buổi PT liên tiếp).
+     */
+    static boolean requiresCoachRest(List<CoachBooking> bookings, LocalTime start) {
         java.util.Set<Integer> hours = new java.util.HashSet<>();
         for (CoachBooking booking : bookings) {
             if (booking.getEndTime().equals(booking.getStartTime().plusHours(1))) {
@@ -223,7 +248,9 @@ public class CoachBookingService {
         return consecutive > 3;
     }
 
-    /** Free 1:1 sessions per 30-day cycle, from the package tier (spec 2026-11-09). */
+    /**
+     * Số buổi PT 1:1 miễn phí mỗi chu kỳ 30 ngày theo hạng gói (spec 2026-11-09; gói trải nghiệm 1 buổi).
+     */
     private int ptQuotaOf(MembershipSubscription sub, boolean trial) {
         if (trial) return 1;
         return PackageBenefits.ptSessionsPerCycle(sub.getMembershipPackage());
@@ -232,24 +259,21 @@ public class CoachBookingService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private MemberDiscountService memberDiscounts;
 
+    /** Kỳ gói có phải gói trải nghiệm không (theo gói hoặc kỳ dài tối đa 3 ngày). */
     private boolean isTrialSubscription(MembershipSubscription sub) {
         if (sub == null) return false;
-        if (sub.getMembershipPackage() != null) {
-            String name = sub.getMembershipPackage().getName();
-            if (name != null && (name.contains("Trải Nghiệm") || name.toUpperCase().contains("TRIAL"))) {
-                return true;
-            }
-            if (sub.getMembershipPackage().getDurationDays() > 0 && sub.getMembershipPackage().getDurationDays() <= 3) {
-                return true;
-            }
+        if (PackageBenefits.isTrial(sub.getMembershipPackage())) {
+            return true;
         }
-        if (sub.getStartDate() != null && sub.getEndDate() != null) {
+        if (sub.getUpgradeCharge() == null && !"expired".equalsIgnoreCase(sub.getStatus())
+                && sub.getStartDate() != null && sub.getEndDate() != null) {
             long days = java.time.temporal.ChronoUnit.DAYS.between(sub.getStartDate(), sub.getEndDate());
             return days >= 0 && days <= 3;
         }
         return false;
     }
 
+    /** Tình trạng lượt PT miễn phí của hội viên trong chu kỳ hiện tại: tên gói, số lượt, đã dùng và còn lại. */
     @Transactional(readOnly = true)
     public CoachQuotaStatusDto getMemberQuotaStatus(Long memberUserId) {
         List<MembershipSubscription> activeSubs = subscriptionRepository.findByMemberUserIdAndStatus(memberUserId, "active").stream()
@@ -270,15 +294,57 @@ public class CoachBookingService {
         LocalDate now = LocalDate.now(clock);
         LocalDate startMonth = PackageBenefits.cycleStart(sub, now);
         LocalDate endMonth = PackageBenefits.cycleEnd(sub, now);
-        long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(memberUserId, startMonth, endMonth, "package_quota");
+        long usedQuota = countQuotaUsageForSubscription(memberUserId, sub, startMonth, endMonth);
 
         int remaining = Math.max(0, monthlyQuota - (int) usedQuota);
         return new CoachQuotaStatusDto(pkgName, monthlyQuota, (int) usedQuota, remaining);
     }
 
+    /**
+     * Đếm số lượt PT miễn phí đã dùng của {@code sub} (và bất kỳ gói trước không phải trải nghiệm trong chuỗi nâng
+     * cấp giữa chu kỳ), để buổi PT trải nghiệm miễn phí không bao giờ trừ vào hạn mức của gói Gold/Platinum mới mua.
+     */
+    private long countQuotaUsageForSubscription(Long memberUserId, MembershipSubscription sub,
+                                                LocalDate startMonth, LocalDate endMonth) {
+        List<Long> subIds = new ArrayList<>();
+        java.util.Set<Long> seen = new java.util.HashSet<>();
+        MembershipSubscription current = sub;
+        MembershipSubscription earliest = sub;
+        while (current != null && !isTrialSubscription(current)) {
+            if (current.getId() != null) {
+                if (!seen.add(current.getId())) break;
+                subIds.add(current.getId());
+            }
+            earliest = current;
+            if (current.getUpgradeCharge() != null && current.getPreviousSubscription() != null
+                    && !isTrialSubscription(current.getPreviousSubscription())) {
+                current = current.getPreviousSubscription();
+            } else {
+                break;
+            }
+        }
+        if (isTrialSubscription(sub) && sub.getId() != null) {
+            subIds.add(sub.getId());
+        }
+        if (subIds.isEmpty()) {
+            return coachBookingRepository.countMonthlyQuotaUsage(memberUserId, startMonth, endMonth, "package_quota");
+        }
+        LocalDateTime subCreatedAt = earliest.getCreatedAt() != null
+                ? earliest.getCreatedAt()
+                : (earliest.getStartDate() != null ? earliest.getStartDate().atStartOfDay() : LocalDateTime.of(2000, 1, 1, 0, 0));
+        return coachBookingRepository.countSubscriptionQuotaUsage(
+                memberUserId, startMonth, endMonth, "package_quota", subIds, subCreatedAt);
+    }
+
+    /**
+     * Đặt buổi PT: khóa dòng hội viên để đếm lượt chính xác; HLV phải đang làm và không nghỉ phép; đúng 1 giờ,
+     * đặt trước ít nhất 2 giờ; không trùng lịch HLV/hội viên, không vượt 3 buổi liên tiếp của HLV, không rơi
+     * vào ngày bảo lưu; hội viên phải có gói hiệu lực. Dùng lượt gói thì phải còn lượt; trả theo giờ thì tối đa
+     * 2 buổi chưa trả, giá được giảm theo hạng gói và tạo khoản thu chờ. Gửi thông báo cho HLV và hội viên.
+     */
     @Transactional
     public CoachBookingDto createBooking(AuthenticatedPrincipal principal, CoachBookingCreateDto request) {
-        // Row lock serializes concurrent bookings of one member so the quota count below stays exact.
+        // Khóa dòng tuần tự hóa các yêu cầu đặt lịch đồng thời của một hội viên để phép đếm hạn mức bên dưới luôn chính xác.
         Member member = memberRepository.findByUserIdForUpdate(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("Member", principal.id()));
 
@@ -312,7 +378,7 @@ public class CoachBookingService {
                     "Choose a one-hour slot from 06:00 to 21:00.");
         }
 
-        // Rule 1: Advance booking requirement (at least 2 hours)
+        // Quy tắc 1: Yêu cầu đặt trước tối thiểu 2 giờ
         LocalDateTime bookingStart = LocalDateTime.of(request.bookingDate(), request.startTime());
         LocalDateTime now = LocalDateTime.now(clock);
         if (bookingStart.isBefore(now.plusMinutes(ADVANCE_MINUTES_REQUIRED))) {
@@ -324,8 +390,9 @@ public class CoachBookingService {
             );
         }
 
-        // Rule 2: Coach conflict check
-        List<ClassSession> coachSessions = classSessionRepository.findActiveByCoachAndDate(coach.getUserId(), request.bookingDate());
+        // Quy tắc 2: Kiểm tra trùng lịch của HLV
+        List<ClassSession> coachSessions = legacyClassesEnabled
+                ? classSessionRepository.findActiveByCoachAndDate(coach.getUserId(), request.bookingDate()) : List.of();
         for (ClassSession cs : coachSessions) {
             if (request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime())) {
                 throw new ConflictException(
@@ -353,7 +420,7 @@ public class CoachBookingService {
             throw new ConflictException("COACH_REST_REQUIRED", "error.coach_booking.rest_required", null, null);
         }
 
-        // Rule 3: Member conflict check
+        // Quy tắc 3: Kiểm tra trùng lịch của hội viên
         List<CoachBooking> memberBookings = coachBookingRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate());
         for (CoachBooking mb : memberBookings) {
             if (request.startTime().isBefore(mb.getEndTime()) && request.endTime().isAfter(mb.getStartTime())) {
@@ -366,7 +433,7 @@ public class CoachBookingService {
             }
         }
 
-        if (classSessionRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate()).stream()
+        if (legacyClassesEnabled && classSessionRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate()).stream()
                 .anyMatch(cs -> request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime()))) {
             throw new ConflictException("MEMBER_SCHEDULE_CONFLICT", "error.coach_booking.member_busy", null,
                     "Bạn đã có lịch học lớp trong khung giờ này.");
@@ -393,8 +460,9 @@ public class CoachBookingService {
                     "Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.");
         }
 
-        // Rule 4: Payment / PT Quota verification
+        // Quy tắc 4: Kiểm tra thanh toán / hạn mức PT
         String paymentStatus = "used_quota";
+        MembershipSubscription usedSubscription = null;
 
         if ("package_quota".equalsIgnoreCase(paymentMethod)) {
             List<MembershipSubscription> activeSubs = validSubscriptions;
@@ -403,6 +471,7 @@ public class CoachBookingService {
             }
 
             MembershipSubscription sub = activeSubs.get(0);
+            usedSubscription = sub;
             boolean isTrial = isTrialSubscription(sub);
             int monthlyQuota = ptQuotaOf(sub, isTrial);
 
@@ -417,7 +486,7 @@ public class CoachBookingService {
 
             LocalDate startMonth = PackageBenefits.cycleStart(sub, request.bookingDate());
             LocalDate endMonth = PackageBenefits.cycleEnd(sub, request.bookingDate());
-            long usedQuota = coachBookingRepository.countMonthlyQuotaUsage(member.getUserId(), startMonth, endMonth, "package_quota");
+            long usedQuota = countQuotaUsageForSubscription(member.getUserId(), sub, startMonth, endMonth);
 
             if (usedQuota >= monthlyQuota) {
                 if (isTrial) {
@@ -436,7 +505,7 @@ public class CoachBookingService {
                 );
             }
         } else {
-            // Hourly sessions are settled at the desk; cap unpaid ones so they cannot become free, unlimited booking.
+            // Buổi trả theo giờ được thanh toán tại quầy; giới hạn số buổi chưa trả để tránh đặt miễn phí không giới hạn.
             if (coachBookingRepository.countUnpaid(member.getUserId()) >= MAX_UNPAID_UPCOMING) {
                 throw new ConflictException("COACH_BOOKING_UNPAID_LIMIT", "error.coach_booking.unpaid_limit",
                         new Object[]{MAX_UNPAID_UPCOMING}, "Please settle your unpaid 1:1 sessions first.");
@@ -453,10 +522,11 @@ public class CoachBookingService {
         booking.setMember(member);
         booking.setCoach(coach);
         booking.setDiscipline(discipline);
+        booking.setSubscription(usedSubscription);
         booking.setBookingDate(request.bookingDate());
         booking.setStartTime(request.startTime());
         booking.setEndTime(request.endTime());
-        // Extra 1:1 sessions are discounted for Gold (10%) and Platinum (20%); the discounted rate is what gets charged.
+        // Buổi 1:1 mua thêm được giảm giá cho hạng Gold (10%) và Platinum (20%); mức giá sau giảm là số tiền thực thu.
         int ptDiscount = "package_quota".equalsIgnoreCase(paymentMethod) || memberDiscounts == null
                 ? 0 : memberDiscounts.percentFor(member.getUserId());
         booking.setHourlyRate(MemberDiscountService.apply(DEFAULT_HOURLY_RATE, ptDiscount));
@@ -483,7 +553,7 @@ public class CoachBookingService {
             }
         }
 
-        // Notify the coach about the new 1:1 private booking
+        // Thông báo cho HLV về lịch đặt riêng 1:1 mới
         if (coach.getUser() != null && notificationService != null) {
             String memberName = member.getUser() != null ? member.getUser().getFullName() : "Hội viên";
             String title = msg("notifications.coaching.booking.coach.title");
@@ -492,7 +562,7 @@ public class CoachBookingService {
             notificationService.send(coach.getUserId(), title, message, "system", null, saved.getId(), "/coach/classes");
         }
 
-        // Notify the member about successful booking (or pending payment for hourly session)
+        // Thông báo cho hội viên về việc đặt lịch thành công (hoặc chờ thanh toán đối với buổi trả theo giờ)
         if (member.getUser() != null && notificationService != null) {
             String coachName = coach.getUser() != null ? coach.getUser().getFullName() : "Huấn luyện viên";
             String startStr = saved.getStartTime().toString().substring(0, 5);
@@ -522,6 +592,7 @@ public class CoachBookingService {
         return mapToDto(saved);
     }
 
+    /** Các buổi PT của hội viên. */
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getMemberBookings(Long memberId) {
         return coachBookingRepository.findByMemberId(memberId).stream()
@@ -529,12 +600,13 @@ public class CoachBookingService {
                 .toList();
     }
 
-    /** Longest range the attendance screen may read at once. */
+    /** Khoảng ngày tối đa mà màn điểm danh được phép đọc trong một lần truy vấn. */
     public static final int MAX_ATTENDANCE_DAYS = 62;
 
     /**
-     * 1:1 sessions with their arrival for the attendance screen. A coach sees their own sessions; the desk and
-     * managers see everyone's. {@code outcome} is ATTENDED, MISSED (finished without an arrival), UPCOMING or ALL.
+     * Danh sách buổi PT 1:1 kèm trạng thái đến tập cho màn điểm danh trong khoảng ngày (tối đa 62 ngày): HLV chỉ
+     * xem buổi của mình, lễ tân và quản lý xem tất cả. {@code outcome} gồm ATTENDED (đã đến), MISSED (kết thúc mà
+     * không có ghi nhận đến), UPCOMING (sắp tới) hoặc ALL (tất cả), kèm giờ quét cổng để gợi ý.
      */
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getAttendance(AuthenticatedPrincipal principal, LocalDate from, LocalDate to, String outcome) {
@@ -561,9 +633,9 @@ public class CoachBookingService {
     }
 
     /**
-     * A coach (for their own sessions), the desk or a manager records that the member did attend; a gate scan is only
-     * shown as a hint and never records it. The session must have started. Marking an already marked session changes
-     * nothing.
+     * HLV (đối với buổi của mình), lễ tân hoặc quản lý ghi nhận hội viên đã đến buổi PT; quét cổng chỉ hiển thị như
+     * gợi ý và không bao giờ tự ghi nhận. Buổi phải đã bắt đầu và chưa hủy; đánh dấu lại buổi đã ghi nhận không làm
+     * thay đổi gì.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_MARK", entity = "coach_bookings")
@@ -596,9 +668,9 @@ public class CoachBookingService {
     }
 
     /**
-     * Staff remove an arrival that was marked by mistake. The session is flagged (attendanceLocked) so the list shows
-     * the mark was taken off on purpose; marking it by hand clears the flag. Same people and same limits as
-     * {@link #markAttended}, except the session may be any past one.
+     * Nhân viên gỡ bỏ ghi nhận đến buổi đã đánh dấu nhầm. Buổi được gắn cờ (attendanceLocked) để danh sách thể hiện
+     * rõ việc gỡ dấu là chủ đích; đánh dấu lại thủ công sẽ xóa cờ này. Đối tượng được phép và giới hạn tương tự
+     * {@link #markAttended}, ngoại trừ có thể áp dụng cho bất kỳ buổi nào trong quá khứ.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_UNMARK", entity = "coach_bookings")
@@ -625,6 +697,10 @@ public class CoachBookingService {
         return mapToDto(booking);
     }
 
+    /**
+     * Kết quả điểm danh của buổi: ATTENDED (đã đến), MISSED (đã kết thúc mà không đến), UPCOMING (chưa bắt đầu)
+     * hoặc IN_PROGRESS (đang diễn ra).
+     */
     private static String attendanceOutcome(CoachBooking booking, LocalDateTime now) {
         if (booking.getAttendedAt() != null) return "ATTENDED";
         LocalDateTime end = LocalDateTime.of(booking.getBookingDate(), booking.getEndTime());
@@ -633,6 +709,7 @@ public class CoachBookingService {
         return start.isAfter(now) ? "UPCOMING" : "IN_PROGRESS";
     }
 
+    /** Lịch dạy PT của HLV. */
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getCoachSchedule(Long coachUserId) {
         return coachBookingRepository.findByCoachId(coachUserId).stream()
@@ -640,6 +717,11 @@ public class CoachBookingService {
                 .toList();
     }
 
+    /**
+     * Hủy buổi PT (hội viên của buổi, HLV của buổi hoặc quản lý): chặn khi có lượt VNPay chờ; buổi đã bắt
+     * đầu/hoàn thành không hủy được. Hội viên tự hủy muộn (dưới 2 giờ) buổi dùng lượt gói thì mất lượt. Khoản
+     * thu chờ chuyển failed, khoản đã trả được hoàn vào ví; báo cho HLV.
+     */
     @Transactional
     public CoachBookingDto cancelBooking(AuthenticatedPrincipal principal, Long bookingId, String reason) {
         CoachBooking booking = coachBookingRepository.findByIdForUpdate(bookingId)
@@ -653,12 +735,23 @@ public class CoachBookingService {
         if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
             throw new BadRequestException("ALREADY_CANCELLED", "error.coach_booking.already_cancelled", null, "Lịch này đã được hủy trước đó.");
         }
-        // A session that was held (or has started) is part of attendance, quota and revenue history.
+        LocalDateTime now = LocalDateTime.now(clock);
+        // Buổi đã diễn ra (hoặc đã bắt đầu) thuộc về lịch sử điểm danh, hạn mức và doanh thu.
         if ("completed".equalsIgnoreCase(booking.getStatus()) || booking.getBookingDate() == null
                 || booking.getStartTime() == null
-                || !LocalDateTime.of(booking.getBookingDate(), booking.getStartTime()).isAfter(LocalDateTime.now(clock))) {
+                || !LocalDateTime.of(booking.getBookingDate(), booking.getStartTime()).isAfter(now)) {
             throw new BadRequestException("COACH_BOOKING_CANCEL_TOO_LATE", "error.coach_booking.cancel_too_late", null,
                     "A 1:1 session that has started can no longer be cancelled.");
+        }
+
+        LocalDateTime sessionStart = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+        boolean cancelledByStaff = "CENTER_MANAGER".equalsIgnoreCase(principal.role())
+                || ("COACH".equalsIgnoreCase(principal.role()) && booking.getCoach().getUserId().equals(principal.id()));
+        boolean inTimeForQuotaRefund = !sessionStart.isBefore(now.plusMinutes(ADVANCE_MINUTES_REQUIRED));
+        if (!cancelledByStaff
+                && "package_quota".equalsIgnoreCase(booking.getPaymentMethod())
+                && !inTimeForQuotaRefund) {
+            booking.setQuotaForfeited(true);
         }
 
         BigDecimal refundedTotal = BigDecimal.ZERO;
@@ -689,7 +782,7 @@ public class CoachBookingService {
         booking.setCancelledAt(LocalDateTime.now(clock));
         booking.setCancelReason(reason != null ? reason : "Hội viên yêu cầu hủy");
 
-        // Notify the coach about cancellation
+        // Thông báo cho HLV về việc hủy lịch
         if (booking.getCoach() != null && booking.getCoach().getUser() != null && notificationService != null) {
             String memberName = booking.getMember().getUser() != null ? booking.getMember().getUser().getFullName() : "Hội viên";
             String title = msg("notifications.coaching.booking.cancelled.title");
@@ -701,7 +794,56 @@ public class CoachBookingService {
         return mapToDto(booking);
     }
 
-    /** Hourly 1:1 sessions waiting for the desk to collect payment, oldest first. */
+    /**
+     * Giải phóng các khung giờ PT 1:1 bị giữ bởi booking chưa thanh toán quá {@link #UNPAID_HOLD_MINUTES} phút, hoặc
+     * vẫn chưa thanh toán trong vòng {@link #UNPAID_RELEASE_LEAD_MINUTES} phút trước giờ bắt đầu (sau khi đã giữ ít
+     * nhất {@link #UNPAID_MIN_HOLD_MINUTES} phút). Các booking đang có giao dịch VNPay hoạt động sẽ được bỏ qua cho
+     * tới khi cổng thanh toán hoàn tất hoặc hết hạn. Khoản thu chờ chuyển failed, báo cho hội viên và trả số buổi đã
+     * giải phóng.
+     */
+    @Transactional
+    public int expireUnpaidBookings() {
+        LocalDateTime now = LocalDateTime.now(clock);
+        LocalDateTime createdCutoff = now.minusMinutes(UNPAID_HOLD_MINUTES);
+        LocalDateTime minHoldCutoff = now.minusMinutes(UNPAID_MIN_HOLD_MINUTES);
+        LocalDateTime releaseDueAt = now.plusMinutes(UNPAID_RELEASE_LEAD_MINUTES);
+        List<CoachBooking> stale = coachBookingRepository.findUnpaidStale(
+                createdCutoff, minHoldCutoff, releaseDueAt.toLocalDate(), releaseDueAt.toLocalTime());
+        int cancelled = 0;
+        for (CoachBooking booking : stale) {
+            try {
+                if (vnpayGuard != null) vnpayGuard.coach(booking.getId());
+            } catch (RuntimeException awaitingGateway) {
+                continue;
+            }
+            if (paymentRepository != null) {
+                for (var payment : paymentRepository.findAllByCoachBookingId(booking.getId())) {
+                    if ("pending".equalsIgnoreCase(payment.getStatus())) {
+                        payment.setStatus("failed");
+                    }
+                }
+            }
+            booking.setStatus("cancelled");
+            booking.setCancelledAt(now);
+            booking.setCancelReason(msg("coaching.auto_cancel.unpaid"));
+            coachBookingRepository.save(booking);
+            cancelled++;
+            if (notificationService != null && booking.getMember() != null && booking.getMember().getUserId() != null
+                    && booking.getStartTime() != null && booking.getEndTime() != null) {
+                String title = msg("notifications.coaching.booking.auto_cancelled.title");
+                String body = msg("notifications.coaching.booking.auto_cancelled.body",
+                        booking.getBookingDate(),
+                        booking.getStartTime().toString().substring(0, 5),
+                        booking.getEndTime().toString().substring(0, 5));
+                notificationService.send(booking.getMember().getUserId(), title, body, "system", null, booking.getId(), "/member/classes?tab=pt");
+            }
+        }
+        return cancelled;
+    }
+
+    /**
+     * Các buổi PT 1:1 trả theo giờ đang chờ quầy lễ tân thu tiền, cũ nhất trước.
+     */
     @Transactional(readOnly = true)
     public List<CoachBookingDto> getUnpaidBookings(AuthenticatedPrincipal principal) {
         requireDesk(principal);
@@ -709,8 +851,9 @@ public class CoachBookingService {
     }
 
     /**
-     * The desk records that an hourly 1:1 session was paid: the booking becomes paid and a successful payment
-     * is written so the money appears in revenue reports.
+     * Quầy lễ tân ghi nhận buổi PT 1:1 theo giờ đã được thanh toán: chặn khi có lượt VNPay đang chờ; đánh dấu booking
+     * đã trả và ghi khoản thu thành công (tái sử dụng khoản đang chờ nếu có) để tiền hiển thị trong báo cáo doanh thu,
+     * đồng thời tự động xuất hóa đơn.
      */
     @Transactional
     public CoachBookingDto confirmHourlyPayment(AuthenticatedPrincipal principal, Long bookingId, String method) {
@@ -788,6 +931,7 @@ public class CoachBookingService {
         return mapToDto(booking);
     }
 
+    /** Chỉ lễ tân hoặc quản lý trung tâm được thao tác quầy. */
     private static void requireDesk(AuthenticatedPrincipal principal) {
         if (principal == null || principal.role() == null
                 || !DESK_ROLES.contains(principal.role().toUpperCase(java.util.Locale.ROOT))) {
@@ -795,10 +939,15 @@ public class CoachBookingService {
         }
     }
 
+    /** Chuyển buổi PT sang DTO (không kèm giờ quét cổng). */
     private CoachBookingDto mapToDto(CoachBooking b) {
         return mapToDto(b, null);
     }
 
+    /**
+     * Chuyển buổi PT sang DTO kèm thông tin HLV, bộ môn, thanh toán, điểm danh, giờ quét cổng và liên hệ hội
+     * viên.
+     */
     private CoachBookingDto mapToDto(CoachBooking b, LocalDateTime gateCheckinAt) {
         return new CoachBookingDto(
                 b.getId(),
@@ -829,6 +978,7 @@ public class CoachBookingService {
                 b.getMember() != null && b.getMember().getUser() != null ? b.getMember().getUser().getEmail() : null
         );
     }
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }

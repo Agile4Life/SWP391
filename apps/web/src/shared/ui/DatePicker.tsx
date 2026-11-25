@@ -3,10 +3,12 @@ import { useI18n } from '../i18n/language';
 import { centerNowParts } from '../lib/centerTime';
 import './datepicker.css';
 
+/** Props của ô chọn ngày: giá trị YYYY-MM-DD, giới hạn min/max, trạng thái và các thuộc tính trợ năng. */
 export interface DatePickerProps {
   id?: string;
   name?: string;
   value: string; // YYYY-MM-DD
+  // Gọi lại theo dạng sự kiện giả { target: { value } } để dùng thay thẻ input gốc.
   onChange: (e: { target: { value: string } }) => void;
   min?: string; // YYYY-MM-DD
   max?: string; // YYYY-MM-DD
@@ -25,8 +27,13 @@ const WEEKDAYS_EN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const POPOVER_WIDTH = 296;
 const POPOVER_HEIGHT = 412;
 
+// Thêm số 0 đứng trước cho số nhỏ hơn 10.
 const pad2 = (n: number) => (n < 10 ? `0${n}` : `${n}`);
 
+/**
+ * Ô chọn ngày với lịch popup tự vẽ (tuần bắt đầu từ thứ Hai, theo giờ trung tâm): chọn ngày, chọn năm, nút Hôm
+ * nay và Xóa, tôn trọng min/max và phím Esc.
+ */
 export function DatePicker({
   id,
   name,
@@ -50,7 +57,7 @@ export function DatePicker({
   const popoverRef = useRef<HTMLDivElement>(null);
   const triggerPlaceholder = placeholder ?? t('Chọn ngày...', 'Select date...');
 
-  // Parse initial year & month from value or today
+  // Phân tích năm và tháng ban đầu từ giá trị hiện tại nếu hợp lệ, không thì lấy hôm nay.
   const initialDate = useMemo(() => {
     const source = value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : centerNowParts().date;
     const [y, m, d] = source.split('-').map(Number);
@@ -63,7 +70,7 @@ export function DatePicker({
   const [yearMode, setYearMode] = useState(false);
   const [yearPageStart, setYearPageStart] = useState(initialDate.year - 4);
 
-  // Sync view when value changes from outside
+  // Đồng bộ tháng/năm đang xem khi giá trị thay đổi từ bên ngoài
   useEffect(() => {
     if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
       const [y, m] = value.split('-').map(Number);
@@ -72,14 +79,16 @@ export function DatePicker({
     }
   }, [value]);
 
-  // Click outside to close
+  // Bấm ra ngoài để đóng lịch
   useEffect(() => {
     if (!isOpen) return;
+    // Bấm ra ngoài lịch thì đóng.
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
+    // Nhấn Esc thì chỉ đóng lịch (không đóng hộp thoại chứa nó).
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
@@ -104,6 +113,7 @@ export function DatePicker({
       setPosition(null);
       return;
     }
+    // Tính lại vị trí và hướng mở popup cho vừa viewport.
     const reposition = () => {
       const trigger = containerRef.current?.querySelector<HTMLElement>('.luxury-datepicker-trigger');
       if (!trigger) return;
@@ -131,14 +141,15 @@ export function DatePicker({
     };
   }, [isOpen, yearMode, viewMonth, viewYear]);
 
-  // Format display text (DD/MM/YYYY)
+  // Định dạng nhãn hiển thị DD/MM/YYYY của giá trị hiện tại.
   const displayLabel = useMemo(() => {
     if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
     const [y, m, d] = value.split('-');
     return `${d}/${m}/${y}`;
   }, [value]);
 
-  // Navigation handlers
+  // Các hàm điều hướng tháng/năm
+  // Lùi một tháng (hoặc một trang năm khi đang chọn năm).
   const handlePrevMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (yearMode) {
@@ -153,6 +164,7 @@ export function DatePicker({
     }
   };
 
+  // Tiến một tháng (hoặc một trang năm khi đang chọn năm).
   const handleNextMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (yearMode) {
@@ -167,7 +179,7 @@ export function DatePicker({
     }
   };
 
-  // Build calendar grid days
+  // Xây dựng lưới ô ngày của tháng đang xem, kèm cờ tháng hiện tại, bị vô hiệu, được chọn và hôm nay.
   const calendarDays = useMemo(() => {
     const days: Array<{
       dateStr: string;
@@ -180,15 +192,15 @@ export function DatePicker({
 
     const todayStr = centerNowParts().date;
 
-    // First day of current month (0: Sunday, 1: Monday, ... 6: Saturday)
+    // Thứ của ngày đầu tháng hiện tại (0: Chủ Nhật, 1: Thứ Hai, ... 6: Thứ Bảy)
     const firstDayIndex = new Date(viewYear, viewMonth, 1).getDay();
-    // Adjust to Monday-first (Monday = 0, Sunday = 6)
+    // Chuyển sang tuần bắt đầu từ Thứ Hai (Thứ Hai = 0, Chủ Nhật = 6)
     const shift = (firstDayIndex + 6) % 7;
 
     const daysInCurrentMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
     const daysInPrevMonth = new Date(viewYear, viewMonth, 0).getDate();
 
-    // Previous month overflow days
+    // Các ngày tràn từ tháng trước
     for (let i = shift - 1; i >= 0; i--) {
       const dayNum = daysInPrevMonth - i;
       const prevMonth = viewMonth === 0 ? 11 : viewMonth - 1;
@@ -205,7 +217,7 @@ export function DatePicker({
       });
     }
 
-    // Current month days
+    // Các ngày trong tháng hiện tại
     for (let d = 1; d <= daysInCurrentMonth; d++) {
       const dateStr = `${viewYear}-${pad2(viewMonth + 1)}-${pad2(d)}`;
       const isDisabled = (min && dateStr < min) || (max && dateStr > max);
@@ -219,7 +231,7 @@ export function DatePicker({
       });
     }
 
-    // Next month fill days (up to multiple of 7, usually 35 or 42)
+    // Các ngày điền thêm của tháng sau (làm tròn theo bội số của 7, thường là 35 hoặc 42)
     const totalSlots = days.length <= 35 ? 35 : 42;
     const remaining = totalSlots - days.length;
     for (let d = 1; d <= remaining; d++) {
@@ -240,18 +252,21 @@ export function DatePicker({
     return days;
   }, [viewYear, viewMonth, value, min, max]);
 
+  // Chọn một ngày (bỏ qua ngày bị vô hiệu), báo giá trị mới và đóng lịch.
   const handleSelectDate = (dateStr: string, isDisabled: boolean) => {
     if (isDisabled || disabled) return;
     onChange({ target: { value: dateStr } });
     setIsOpen(false);
   };
 
+  // Xóa giá trị đã chọn và đóng lịch.
   const handleClear = (e: React.MouseEvent) => {
     e.stopPropagation();
     onChange({ target: { value: '' } });
     setIsOpen(false);
   };
 
+  // Về tháng hôm nay và chọn hôm nay nếu nằm trong khoảng min/max.
   const handleToday = (e: React.MouseEvent) => {
     e.stopPropagation();
     const todayStr = centerNowParts().date;
@@ -299,7 +314,7 @@ export function DatePicker({
         </span>
       </button>
 
-      {/* Hidden input for form validation if required */}
+      {/* Ô nhập ẩn phục vụ kiểm tra hợp lệ của form khi trường là bắt buộc */}
       {required && (
         <input
           tabIndex={-1}

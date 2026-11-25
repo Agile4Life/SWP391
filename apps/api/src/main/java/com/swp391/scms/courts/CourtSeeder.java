@@ -8,21 +8,24 @@ import java.time.LocalTime;
 import java.util.List;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Seeds bookable courts (Tennis, Cầu lông, Bơi lội) so members can book a court straight away (idempotent).
- * A court is a room that has a court discipline and whole-hour opening hours; existing rooms are never touched.
+ * Sân là phòng có bộ môn sân và giờ mở theo giờ tròn; các phòng hiện có không bao giờ bị đụng tới.
  */
 @Component
+@ConditionalOnProperty(name = "app.legacy.courts-enabled", havingValue = "true")
 @Order(100)
 public class CourtSeeder implements ApplicationRunner {
 
     private static final LocalTime OPEN = LocalTime.of(6, 0);
     private static final LocalTime CLOSE = LocalTime.of(22, 0);
 
+    /** Mô tả một sân mẫu cần tạo: tên, vị trí, sức chứa, bộ môn và mô tả bộ môn. */
     private record CourtSpec(String name, String location, int capacity, String discipline, String description) {}
 
     private static final List<CourtSpec> COURTS = List.of(
@@ -38,11 +41,16 @@ public class CourtSeeder implements ApplicationRunner {
     private final RoomRepository rooms;
     private final DisciplineRepository disciplines;
 
+    /** Khởi tạo seeder với repository phòng và bộ môn. */
     public CourtSeeder(RoomRepository rooms, DisciplineRepository disciplines) {
         this.rooms = rooms;
         this.disciplines = disciplines;
     }
 
+    /**
+     * Chạy khi ứng dụng khởi động: tạo các sân mẫu còn thiếu (theo tên), mở cửa 06:00–22:00; phòng đã có không
+     * bị sửa.
+     */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
@@ -64,6 +72,7 @@ public class CourtSeeder implements ApplicationRunner {
         }
     }
 
+    /** Tìm bộ môn theo tên của sân mẫu; chưa có thì tạo mới. */
     private Discipline discipline(CourtSpec spec) {
         return disciplines.findAllByOrderByNameAsc().stream()
                 .filter(d -> spec.discipline().equalsIgnoreCase(d.getName()))

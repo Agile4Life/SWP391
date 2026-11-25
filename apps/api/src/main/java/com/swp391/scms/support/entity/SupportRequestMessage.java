@@ -7,7 +7,11 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.Length;
 
-/** Entity mapping table support_request_messages (schema is generated code-first by Hibernate). */
+/**
+ * Bảng support_request_messages: một tin nhắn trong phiếu (người gửi, nội dung, thời điểm, mã tin phía client).
+ *
+ * Entity ánh xạ bảng support_request_messages (schema được Hibernate sinh theo hướng code-first).
+ */
 @Entity
 @Table(name = "support_request_messages", uniqueConstraints = @UniqueConstraint(name = "uq_support_message_client", columnNames = {"support_request_id", "sender_user_id", "client_message_id"}))
 public class SupportRequestMessage {
@@ -33,11 +37,15 @@ public class SupportRequestMessage {
 
     @Column(name = "client_message_id")
     private java.util.UUID clientMessageId;
+    /** Lấy giá trị trường clientMessageId. */
     public java.util.UUID getClientMessageId() { return clientMessageId; }
+    /** Gán giá trị mới cho trường clientMessageId. */
     public void setClientMessageId(java.util.UUID clientMessageId) { this.clientMessageId = clientMessageId; }
 
+    /** Constructor rỗng cho JPA. */
     public SupportRequestMessage() {}
 
+    /** Tạo tin nhắn mới của người gửi trong phiếu. */
     public SupportRequestMessage(SupportRequest supportRequest, User sender, String message) {
         this.supportRequest = supportRequest;
         this.sender = sender;
@@ -45,14 +53,24 @@ public class SupportRequestMessage {
         this.createdAt = LocalDateTime.now();
     }
 
+    /** Lấy giá trị trường id. */
     public Long getId() { return id; }
+    /** Gán giá trị mới cho trường id. */
     public void setId(Long id) { this.id = id; }
+    /** Lấy giá trị trường supportRequest. */
     public SupportRequest getSupportRequest() { return supportRequest; }
+    /** Gán giá trị mới cho trường supportRequest. */
     public void setSupportRequest(SupportRequest supportRequest) { this.supportRequest = supportRequest; }
+    /** Lấy giá trị trường sender. */
     public User getSender() { return sender; }
+    /** Gán giá trị mới cho trường sender. */
     public void setSender(User sender) { this.sender = sender; }
+    /** Lấy giá trị trường message. */
     public String getMessage() { return message; }
+    /** Gán giá trị mới cho trường message. */
     public void setMessage(String message) { this.message = message; }
+    /** Lấy giá trị trường createdAt. */
     public LocalDateTime getCreatedAt() { return createdAt; }
+    /** Gán giá trị mới cho trường createdAt. */
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

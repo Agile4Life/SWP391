@@ -18,11 +18,14 @@ describe('WeeklyTimetable', () => {
     host = document.createElement('div'); document.body.append(host); root = createRoot(host);
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+  // Dựng component vào DOM giả để kiểm thử.
   const render = (props: Partial<React.ComponentProps<typeof WeeklyTimetable>> = {}) => act(async () => root.render(
     <WeeklyTimetable label="Tuần" weekStart="2099-01-05" events={[event]} legend={legend}
       onWeekChange={() => {}} onEventClick={() => {}} {...props} />,
   ));
+  // Nhãn các giờ ở cột bên trái của lịch.
   const gutterHours = () => [...host.querySelectorAll('.mcal__gutter span')].map((node) => node.textContent);
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === text)!;
 
   it('shows a time column fitted to the week and can switch to the whole day', async () => {

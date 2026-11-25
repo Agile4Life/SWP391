@@ -36,6 +36,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ReceptionTrialController (reception trial controller). */
 @ExtendWith(MockitoExtension.class)
 class ReceptionTrialControllerTest {
 
@@ -47,11 +48,13 @@ class ReceptionTrialControllerTest {
     private ReceptionTrialController controller;
 
     private final HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+        /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
         @Override
         public boolean supportsParameter(MethodParameter parameter) {
             return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
         }
 
+        /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                       NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
@@ -61,6 +64,7 @@ class ReceptionTrialControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller dùng thử của lễ tân. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -75,6 +79,7 @@ class ReceptionTrialControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: GET /api/v1/reception/trials: Trả về danh sách đơn đăng ký trải nghiệm */
     @Test
     @DisplayName("GET /api/v1/reception/trials: Trả về danh sách đơn đăng ký trải nghiệm")
     void listTrials_returnsOk() throws Exception {
@@ -92,6 +97,7 @@ class ReceptionTrialControllerTest {
                 .andExpect(jsonPath("$.data[0].status").value("PENDING_APPROVAL"));
     }
 
+    /** Kiểm thử: POST /api/v1/reception/trials/{id}/approve: Phê duyệt thành công */
     @Test
     @DisplayName("POST /api/v1/reception/trials/{id}/approve: Phê duyệt thành công")
     void approveTrial_returnsOk() throws Exception {
@@ -109,6 +115,7 @@ class ReceptionTrialControllerTest {
                 .andExpect(jsonPath("$.data.subscriptionId").value(300L));
     }
 
+    /** Kiểm thử: POST /api/v1/reception/trials/{id}/reject: Từ chối thành công */
     @Test
     @DisplayName("POST /api/v1/reception/trials/{id}/reject: Từ chối thành công")
     void rejectTrial_returnsOk() throws Exception {

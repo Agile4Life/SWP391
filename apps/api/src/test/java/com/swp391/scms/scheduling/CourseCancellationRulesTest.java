@@ -24,7 +24,11 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** A member cannot cancel a course that has started; before the start the unpaid fee is voided. */
+/**
+ * Bộ kiểm thử cho CourseCancellationRules (quy tắc hủy khóa học).
+ *
+ * Hội viên không thể hủy khóa học đã bắt đầu; nếu hủy trước khi bắt đầu thì khoản phí chưa thanh toán sẽ bị vô hiệu hóa.
+ */
 class CourseCancellationRulesTest {
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
     private final GymClassRepository gymClasses = mock(GymClassRepository.class);
@@ -36,6 +40,7 @@ class CourseCancellationRulesTest {
     private EnrollmentService service;
     private ClassEnrollment enrollment;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ ghi danh khóa học với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new EnrollmentService(enrollments, null, gymClasses, null, members, notifications, null, clock);
@@ -52,6 +57,7 @@ class CourseCancellationRulesTest {
         when(enrollments.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
+    /** Hàm trợ giúp của test: tạo khóa học bắt đầu vào một thời điểm cho trước. */
     private void courseStarting(LocalDate start) {
         GymClass gymClass = new GymClass();
         gymClass.setId(50L);
@@ -59,6 +65,7 @@ class CourseCancellationRulesTest {
         enrollment.setGymClass(gymClass);
     }
 
+    /** Kiểm thử: hội viên không được hủy khóa đã bắt đầu, nên lượt miễn phí không được hoàn lại. */
     @Test
     void aMemberCannotCancelACourseThatHasStartedSoTheCreditIsNotGivenBack() {
         courseStarting(LocalDate.of(2026, 11, 2));
@@ -67,11 +74,12 @@ class CourseCancellationRulesTest {
 
         assertEquals("SCHEDULING_CANNOT_CANCEL_STARTED_COURSE", ex.getErrorCode());
         assertEquals("booked", enrollment.getStatus());
-        // The course starting today is also started.
+        // Khóa học bắt đầu ngay hôm nay cũng được tính là đã bắt đầu.
         courseStarting(LocalDate.of(2026, 11, 9));
         assertThrows(BadRequestException.class, () -> service.cancel(member, 9L));
     }
 
+    /** Kiểm thử: lễ tân vẫn được hủy thay hội viên sau khi khóa đã bắt đầu. */
     @Test
     void theDeskMayStillCancelOnBehalfOfAMemberAfterTheStart() {
         courseStarting(LocalDate.of(2026, 11, 2));
@@ -81,6 +89,7 @@ class CourseCancellationRulesTest {
         assertEquals("cancelled", enrollment.getStatus());
     }
 
+    /** Kiểm thử: hủy trước khi khóa bắt đầu thì nhả chỗ và hủy khoản phí chưa thanh toán. */
     @Test
     void cancellingBeforeTheStartReleasesTheSeatAndVoidsTheUnpaidFee() {
         courseStarting(LocalDate.of(2026, 11, 20));

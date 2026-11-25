@@ -18,8 +18,13 @@ import { getProfile, submitMemberKyc, Profile } from './profileApi';
 import { fileToUploadDataUrl } from '../../shared/lib/imageUpload';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './member-checkout.css';
+import { trialApi } from './trialApi';
 import { localizableError } from '../../shared/lib/errorMessage';
 
+/**
+ * Trang thanh toán gói tập: chọn gói, xác minh danh tính (KYC) nếu cần rồi thanh toán bằng VNPay hoặc Ví SÖL
+ * (VnpayPayButton); thanh toán tiền mặt thì làm tại quầy lễ tân.
+ */
 export function MemberCheckoutPage() {
   useLanguage();
   const { t } = useI18n();
@@ -37,10 +42,12 @@ export function MemberCheckoutPage() {
   const [selectedPackage, setSelectedPackage] = useState<MembershipPackage | null>(null);
   // Số tiền thật phải thanh toán: yêu cầu nâng cấp hoặc gia hạn đã được backend báo giá
   const [quotedAmount, setQuotedAmount] = useState<number | null>(null);
+  const [isLinkedRequest, setIsLinkedRequest] = useState(false);
 
-  // Identity / KYC state for first-time package purchase
+  // Trạng thái định danh / KYC cho lần mua gói tập đầu tiên
+  const [approvedTrial, setApprovedTrial] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [hasPriorSubscriptions, setHasPriorSubscriptions] = useState(false);
+
   const [kycDocType, setKycDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
   const [kycNumber, setKycNumber] = useState('');
   const [kycFullName, setKycFullName] = useState('');
@@ -52,6 +59,7 @@ export function MemberCheckoutPage() {
   const [kycSuccess, setKycSuccess] = useState('');
   const [refreshingKyc, setRefreshingKyc] = useState(false);
 
+  // Tải lại hồ sơ để cập nhật trạng thái xác minh danh tính.
   async function refreshKycStatus() {
     setRefreshingKyc(true);
     try {
@@ -61,7 +69,7 @@ export function MemberCheckoutPage() {
         setKycSuccess(t('Đã xác minh thành công! Bạn có thể tiến hành thanh toán.', 'Verification approved! You can now proceed to payment.') as string);
         window.dispatchEvent(new Event('profile-updated'));
       }
-    } catch { /* ignore */ }
+    } catch { /* bỏ qua */ }
     finally { setRefreshingKyc(false); }
   }
 
@@ -69,22 +77,26 @@ export function MemberCheckoutPage() {
     let active = true;
     let request = 0;
     preparedSubscriptionId.current = existingSubscriptionId;
+    // Tải gói, lịch sử và hồ sơ để chuẩn bị thanh toán; chỉ lần gọi mới nhất được dùng.
     async function initCheckout() {
       const version = ++request;
       setLoading(true);
       setError(null);
       try {
-        const [packages, history, userProfile] = await Promise.all([
+        const [packages, history, userProfile, trialStatus] = await Promise.all([
           getMembershipPackages(),
           getMembershipHistory(),
           getProfile().catch(() => null),
+          trialApi.getStatus().catch(() => null),
         ]);
         if (!active || version !== request) return;
 
         setProfile(userProfile);
-        setHasPriorSubscriptions(
-          history.some((item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen'),
-        );
+        setApprovedTrial(trialStatus?.status === 'APPROVED');
+        // Chỉ kỳ gia hạn/nâng cấp liên kết thật mới giữ chính sách thanh toán cũ.
+        const target = history.find(item => item.id === preparedSubscriptionId.current) ?? history.find(item => item.packageId === parsedPackageId && item.status === 'pending_payment');
+        setIsLinkedRequest(Boolean(target?.previousSubscriptionId));
+
         if (userProfile?.fullName) {
           setKycFullName(userProfile.fullName);
         }
@@ -120,6 +132,7 @@ export function MemberCheckoutPage() {
     }
 
     void initCheckout();
+    // Quay lại trang từ bộ nhớ đệm thì khởi tạo lại.
     const restore = (event: PageTransitionEvent) => { if (event.persisted) void initCheckout(); };
     window.addEventListener('pageshow', restore);
     return () => {
@@ -129,8 +142,12 @@ export function MemberCheckoutPage() {
   }, [parsedPackageId, existingSubscriptionId]);
 
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
-  const isKycVerified = Boolean(profile?.identityVerified || hasPriorSubscriptions);
+  const isKycVerified = Boolean((profile?.identityVerified && profile.kycStatus !== 'PENDING' && profile.kycStatus !== 'REJECTED'));
 
+  // Trial đã duyệt có thể còn KYC PENDING/REJECTED cũ; giữ nguyên trạng thái hiển thị.
+  const canPurchase = isLinkedRequest || approvedTrial || isKycVerified;
+
+  // Chọn ảnh giấy tờ mặt trước hoặc sau (tối đa 2MB).
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>, target: 'front' | 'back') {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -138,7 +155,7 @@ export function MemberCheckoutPage() {
       setKycError(memberMessage("Dung lượng ảnh tối đa 2MB."));
       return;
     }
-    // Re-encoded as a JPEG of at most 1600 px: keeps the request small and avoids formats the server rejects.
+    // Mã hóa lại thành JPEG tối đa 1600 px: giữ kích thước yêu cầu nhỏ và tránh các định dạng máy chủ từ chối.
     void fileToUploadDataUrl(file).then((dataUrl) => {
       if (target === 'front') setKycFrontImage(dataUrl);
       else setKycBackImage(dataUrl);
@@ -148,6 +165,7 @@ export function MemberCheckoutPage() {
     });
   }
 
+  // Gửi hồ sơ xác minh danh tính sau khi kiểm tra số giấy tờ và ảnh.
   async function handleKycSubmit(e: React.FormEvent) {
     e.preventDefault();
     setKycError('');
@@ -207,6 +225,7 @@ export function MemberCheckoutPage() {
     }
   }
 
+  // Chuẩn bị khoản cần thanh toán: dùng lại đăng ký chờ thanh toán đã tạo cho đúng gói, nếu không thì tạo mới.
   async function preparePaymentTarget() {
     if (!selectedPackage) throw Object.assign(new Error('Không tìm thấy gói tập.'), { translation: memberMessage("Không tìm thấy gói tập.") });
     const history = await getMembershipHistory();
@@ -429,14 +448,14 @@ export function MemberCheckoutPage() {
             </div>
           )}
 
-          <section data-i18n-managed className="portal-card stack" aria-label={t("Phương thức thanh toán trực tuyến", "Online payment methods")} style={{ opacity: !isKycVerified ? 0.6 : 1, pointerEvents: !isKycVerified ? 'none' : 'auto' }}>
+          <section data-i18n-managed className="portal-card stack" aria-label={t("Phương thức thanh toán trực tuyến", "Online payment methods")} style={{ opacity: !canPurchase ? 0.6 : 1, pointerEvents: !canPurchase ? 'none' : 'auto' }}>
             <h2 className="portal-card-title">{t("Thanh toán qua VNPay hoặc Ví điện tử SÖL", "Pay via VNPay or SÖL Wallet")}</h2>
-            {!isKycVerified && (
+            {!canPurchase && (
               <p className="hold-notice hold-notice--warn">
                 {t("Hoàn tất xác minh danh tính ở trên để thanh toán.", "Complete identity verification above to pay.")}</p>
             )}
             <VnpayPayButton
-              disabled={!isKycVerified}
+              disabled={!canPurchase}
               prepare={preparePaymentTarget}
               onPaid={() => navigate('/member/packages', { replace: true })}
             />
@@ -458,11 +477,6 @@ export function MemberCheckoutPage() {
               <div className="order-package-term">
                 <span>{t("Thời hạn: ", "Duration:")}{selectedPackage.durationDays} {t("ngày tập", "training days")}</span>
               </div>
-              {selectedPackage.classCreditLimit !== null && (
-                <div className="order-package-term" style={{ marginTop: 4 }}>
-                  <span>{t("Lớp học: Tối đa ", "Classes: up to")}{selectedPackage.classCreditLimit} {t("buổi", "sessions")}</span>
-                </div>
-              )}
             </div>
 
             <div className="order-breakdown">

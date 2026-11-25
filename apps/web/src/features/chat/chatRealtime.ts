@@ -2,9 +2,14 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { apiFetch } from '../../shared/api/client';
 import type { ChatRealtimeSession } from './chatApi';
 
+/** Trạng thái kết nối realtime: đang kết nối, đã kết nối, đang kết nối lại hoặc tắt. */
 export type ChatConnection = 'connecting' | 'connected' | 'reconnecting' | 'disabled';
 
-/** Broadcast only invalidates data. Never render or trust its payload. */
+/**
+ * Đăng ký nhận thông báo realtime qua Supabase: tự gia hạn token trước khi hết hạn, kết nối lại theo cấp số nhân,
+ * chuyển sang hỏi định kỳ mỗi 4 giây khi realtime tắt; trả về hàm hủy.
+ * Thông báo broadcast chỉ dùng để làm mất hiệu lực dữ liệu; không bao giờ hiển thị hay tin tưởng payload của nó.
+ */
 export function subscribeChat(changed: () => void, status: (state: ChatConnection) => void,
   sessionPath = '/chat/realtime-session'): () => void {
   let disposed = false, disabled = false, connecting = false, failures = 0;
@@ -15,6 +20,7 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
   let retryTimer: ReturnType<typeof setTimeout> | undefined;
   let pollTimer: ReturnType<typeof setInterval> | undefined;
 
+  // Đóng client và các kênh hiện có.
   function closeClient() {
     const previous = client;
     client = null; hasChannel = false; chatToken = null;
@@ -23,12 +29,14 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
       previous.realtime.disconnect();
     }
   }
+  // Hỏi định kỳ 4 giây (khi tab hiện) thay cho realtime.
   function startFallbackPolling() {
     if (disposed || pollTimer) return;
     pollTimer = setInterval(() => {
       if (!disposed && document.visibilityState !== 'hidden') changed();
     }, 4000);
   }
+  // Lên lịch kết nối lại với độ trễ tăng dần (tối đa 30 giây).
   function retry() {
     if (disposed || disabled || retryTimer) return;
     status('reconnecting');
@@ -36,6 +44,7 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
       retryTimer = undefined; closeClient(); void connect();
     }, Math.min(30_000, 3000 * 2 ** Math.min(failures++, 4)));
   }
+  // Lấy phiên realtime từ backend, kiểm tra hợp lệ và đăng ký kênh; sau đó hẹn gia hạn trước khi token hết hạn 1 phút.
   async function connect() {
     if (disposed || disabled || connecting) return;
     connecting = true;
@@ -57,8 +66,8 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
       chatToken = session.token;
       if (!client) client = createClient(session.url, session.publishableKey, {
         auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-        // supabase-js installs a callback even without a Supabase Auth session.
-        // Keep our scoped JWT as its source of truth on connect and heartbeat.
+        // supabase-js vẫn gắn callback ngay cả khi không có phiên Supabase Auth.
+        // Giữ JWT giới hạn quyền của chat làm nguồn sự thật khi kết nối và gửi heartbeat.
         accessToken: async () => chatToken,
       });
       const current = client;
@@ -82,6 +91,7 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
     } catch { if (!disposed) retry(); }
     finally { connecting = false; }
   }
+  // Quay lại tab/mạng/focus thì làm mới dữ liệu và kết nối lại nếu cần.
   function resume() {
     if (disposed || document.visibilityState === 'hidden') return;
     changed();

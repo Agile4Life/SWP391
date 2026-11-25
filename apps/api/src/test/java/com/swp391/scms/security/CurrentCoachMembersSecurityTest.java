@@ -17,6 +17,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+/** Bộ kiểm thử cho CurrentCoachMembersSecurity (current coach members security). */
 @WebMvcTest(CurrentCoachMembersController.class)
 @Import({SecurityConfig.class,JwtAuthenticationFilter.class,JsonAuthenticationEntryPoint.class,JsonAccessDeniedHandler.class})
 class CurrentCoachMembersSecurityTest {
@@ -25,6 +26,7 @@ class CurrentCoachMembersSecurityTest {
  @MockitoBean JwtService jwt;
  @MockitoBean UserRepository users;
  @MockitoBean MessageService messages;
+ /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
  private static UsernamePasswordAuthenticationToken actor(String role){return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(20L,"test-coach",role),null,List.of(new SimpleGrantedAuthority("ROLE_"+role)));}
 
 

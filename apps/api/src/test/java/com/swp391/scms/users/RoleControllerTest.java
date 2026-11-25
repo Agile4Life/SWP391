@@ -20,6 +20,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller RoleController (role controller). */
 @ExtendWith(MockitoExtension.class)
 class RoleControllerTest {
 
@@ -31,6 +32,7 @@ class RoleControllerTest {
     @InjectMocks
     private RoleController roleController;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller vai trò. */
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(roleController)
@@ -38,6 +40,7 @@ class RoleControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (make role). */
     private RoleDto makeRole(Long id, String code, String name) {
         RoleDto r = new RoleDto();
         r.setId(id);
@@ -46,6 +49,7 @@ class RoleControllerTest {
         return r;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (make perm). */
     private PermissionDto makePerm(Long id, String code, String name, String module) {
         PermissionDto p = new PermissionDto();
         p.setId(id);
@@ -55,6 +59,7 @@ class RoleControllerTest {
         return p;
     }
 
+    /** Kiểm thử: lấy tất cả vai trò thành công. */
     @Test
     @DisplayName("GET /api/v1/roles returns all core roles")
     void getAllRolesSuccess() throws Exception {
@@ -69,6 +74,7 @@ class RoleControllerTest {
                 .andExpect(jsonPath("$.data[0].code").value("CENTER_MANAGER"));
     }
 
+    /** Kiểm thử: lấy tất cả quyền thành công. */
     @Test
     @DisplayName("GET /api/v1/roles/permissions returns all system permissions")
     void getAllPermissionsSuccess() throws Exception {
@@ -83,6 +89,7 @@ class RoleControllerTest {
                 .andExpect(jsonPath("$.data[0].code").value("USER_MANAGE"));
     }
 
+    /** Kiểm thử: lấy quyền theo vai trò thành công. */
     @Test
     @DisplayName("GET /api/v1/roles/{id}/permissions returns permissions of role")
     void getPermissionsByRoleIdSuccess() throws Exception {
@@ -95,6 +102,7 @@ class RoleControllerTest {
                 .andExpect(jsonPath("$.data[0].id").value(11));
     }
 
+    /** Kiểm thử: cấp quyền thành công. */
     @Test
     @DisplayName("PUT /api/v1/roles/{id}/permissions/{permId} grants permission to role")
     void grantPermissionSuccess() throws Exception {
@@ -106,6 +114,7 @@ class RoleControllerTest {
                 .andExpect(jsonPath("$.data.code").value("USER_MANAGE"));
     }
 
+    /** Kiểm thử: thu hồi quyền thành công. */
     @Test
     @DisplayName("DELETE /api/v1/roles/{id}/permissions/{permId} revokes permission from role")
     void revokePermissionSuccess() throws Exception {

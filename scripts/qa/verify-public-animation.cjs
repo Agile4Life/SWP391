@@ -1,4 +1,5 @@
-// Requires the local Vite server and Playwright through NODE_PATH.
+// Mục đích: kiểm tra hiệu ứng xuất hiện của component ở trang công khai (cuộn dọc native, tôn trọng reduced-motion).
+// Yêu cầu máy chủ Vite cục bộ đang chạy và Playwright được cung cấp qua NODE_PATH.
 const assert = require('node:assert/strict');
 const path = require('node:path');
 const { chromium } = require('playwright-core');
@@ -61,7 +62,7 @@ const output = process.env.PUBLIC_UI_OUTPUT ? path.resolve(process.env.PUBLIC_UI
     await page.getByRole('heading', { name: 'Tập trung vào từng chuyển động.' }).waitFor();
     console.log('PASS navigation, trainer carousel and gallery work with animation enabled');
 
-    // These sections may be introduced independently of the shared animation system.
+    // Các phần này có thể được thêm độc lập với hệ thống hoạt ảnh dùng chung.
     if (await page.locator('.fit-schedule').count()) {
       for (const selector of ['.fit-metric-card', '.fit-schedule-card', '.fit-step-item', '.fit-bmi-card', '.fit-faq-item']) {
         await page.locator(selector).first().scrollIntoViewIfNeeded();

@@ -40,6 +40,7 @@ const _restTarget = new THREE.Vector3();
 const _currPosition = new THREE.Vector3();
 const _currTarget = new THREE.Vector3();
 
+/** Phần tử có đang nhận chữ gõ không (input, textarea, select hoặc contenteditable). */
 function isTypingElement(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   const tag = target.tagName;
@@ -47,6 +48,10 @@ function isTypingElement(target: EventTarget | null): boolean {
   return target.isContentEditable;
 }
 
+/**
+ * Bộ điều khiển camera của cảnh: thực hiện lệnh bay từ store (toàn cảnh, nút, viền, góc nhìn, thu phóng, dịch),
+ * phím tắt, chuyển giữa chế độ quỹ đạo và đi bộ, giới hạn vị trí và lưu góc nhìn.
+ */
 export function CameraRig() {
   const controlsRef = useRef<CameraControlsImpl | null>(null);
   const initializedRef = useRef(false);
@@ -59,7 +64,7 @@ export function CameraRig() {
   const invalidate = useThree(state => state.invalidate);
   const canvasWidth = useThree(state => state.size.width);
   const canvasHeight = useThree(state => state.size.height);
-  // Quantised so a drag-resize does not re-fly the camera on every pixel.
+  // Làm tròn tỉ lệ khung hình để kéo thay đổi kích thước cửa sổ không làm camera bay lại trên từng pixel.
   const aspect = Math.round((canvasWidth / Math.max(1, canvasHeight)) * 10) / 10;
   const aspectRef = useRef(aspect);
   useEffect(() => {
@@ -69,6 +74,7 @@ export function CameraRig() {
   const levelMode = useExploreStore(state => state.levelMode);
   const walkMode = useExploreStore(state => state.walkMode);
 
+  // Thu phóng vào/ra theo tỉ lệ khoảng cách (có hoạt ảnh trừ khi giảm chuyển động).
   const zoomByDirection = useCallback(
     (direction: 'in' | 'out') => {
       if (useExploreStore.getState().walkMode) return;
@@ -118,6 +124,7 @@ export function CameraRig() {
     [invalidate],
   );
 
+  // Bay camera tới một góc nhìn (bay hai chặng khi đổi giữa các tầng, hoặc tức thì khi cần).
   const applyViewpoint = useCallback(
     async (
       controls: CameraControlsImpl,
@@ -180,7 +187,7 @@ export function CameraRig() {
     [invalidate],
   );
 
-  // Restore isometric viewpoint when exiting walkMode
+  // Khôi phục góc nhìn isometric khi thoát walkMode
   useEffect(() => {
     const wasWalking = prevWalkModeRef.current;
     prevWalkModeRef.current = walkMode;
@@ -196,7 +203,7 @@ export function CameraRig() {
 
     if (!wasWalking) return;
 
-    // Cleanly sync controls to current camera position before transitioning back to isometric
+    // Đồng bộ controls về vị trí camera hiện tại trước khi chuyển lại góc nhìn isometric
     const ctrlCam = (controls as unknown as { camera?: THREE.Camera }).camera;
     if (ctrlCam) {
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(ctrlCam.quaternion);
@@ -221,7 +228,7 @@ export function CameraRig() {
     void applyViewpoint(controls, vp, lastLevelRef.current, lastLevelRef.current);
   }, [applyViewpoint, walkMode]);
 
-  // The overview distance follows the canvas aspect, so re-frame it when the window is resized.
+  // Khoảng cách toàn cảnh phụ thuộc tỉ lệ canvas, nên căn khung lại khi cửa sổ đổi kích thước.
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || !initializedRef.current || useExploreStore.getState().walkMode) return;
@@ -230,7 +237,7 @@ export function CameraRig() {
     void applyViewpoint(controls, getOverviewViewpoint(aspect), 'ALL', 'ALL', true);
   }, [applyViewpoint, aspect]);
 
-  // Configure boundary and initial camera pose on mount
+  // Cấu hình vùng biên và tư thế camera ban đầu khi mount
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || initializedRef.current) return;
@@ -265,7 +272,7 @@ export function CameraRig() {
     invalidate();
   }, [invalidate]);
 
-  // Execute store camera commands
+  // Thực thi các lệnh camera từ store
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || !cameraCommand) return;
@@ -335,7 +342,7 @@ export function CameraRig() {
     }
   }, [applyViewpoint, cameraCommand, invalidate, levelMode, walkMode, zoomByDirection]);
 
-  // Re-frame camera when levelMode toggles between stacked and exploded
+  // Căn khung lại camera khi levelMode chuyển đổi giữa stacked và exploded
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || walkMode) return;
@@ -362,8 +369,9 @@ export function CameraRig() {
     }
   }, [applyViewpoint, levelMode, walkMode]);
 
-  // Keyboard shortcuts and custom zoom events
+  // Phím tắt bàn phím và các sự kiện thu phóng tùy chỉnh
   useEffect(() => {
+    // Phím tắt điều khiển camera (khi không đang gõ chữ).
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
       if (isTypingElement(event.target)) return;
@@ -390,7 +398,7 @@ export function CameraRig() {
         return;
       }
 
-      // In walk mode, WalkController owns WASD / Arrow movement
+      // Ở chế độ đi bộ, WalkController phụ trách di chuyển bằng phím WASD / mũi tên
       if (state.walkMode) return;
 
       if (event.key === '0') {
@@ -429,6 +437,7 @@ export function CameraRig() {
       };
   }, []);
 
+  // Người dùng bắt đầu điều khiển bằng tay thì tạm dừng tour.
   const handleControlStart = useCallback(() => {
     const state = useExploreStore.getState();
     if (state.tourActive && !state.tourPaused) {
@@ -437,10 +446,12 @@ export function CameraRig() {
     invalidate();
   }, [invalidate]);
 
+  // Yêu cầu vẽ lại khung hình.
   const handleInvalidate = useCallback(() => {
     invalidate();
   }, [invalidate]);
 
+  // Khi camera thay đổi: làm sạch tư thế (giữ trong biên, không xuyên đất).
   const handleChange = useCallback(() => {
     const controls = controlsRef.current;
     if (
@@ -497,6 +508,7 @@ export function CameraRig() {
     invalidate();
   }, [invalidate]);
 
+  // Khi camera nghỉ: chốt vị trí cuối trong giới hạn và lưu góc nhìn của phiên.
   const handleRest = useCallback(() => {
     const controls = controlsRef.current;
     if (!controls) return;
@@ -572,8 +584,8 @@ export function CameraRig() {
     <CameraControls
       ref={controlsRef}
       makeDefault
-      // The camera is locked: it only moves when a level, node or viewpoint is chosen (programmatic
-      // flights still run while disabled). In walkMode, WalkController directly owns the camera.
+      // Camera bị khóa: chỉ di chuyển khi chọn tầng, nút hoặc góc nhìn (các chuyến bay lập trình
+      // vẫn chạy ngay cả khi disabled). Trong walkMode, WalkController trực tiếp điều khiển camera.
       enabled={!walkMode && false}
       dollySpeed={1.15}
       truckSpeed={1.8}

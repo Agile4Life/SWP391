@@ -13,9 +13,9 @@ void main() {
 `;
 
 /**
- * Procedural sky adapted from the Saltline sky: directional horizon, Mie
- * aureole, a domain-warped cloud deck that is self-shadowed toward the sun and
- * always leaves a ragged gap so the sun burns through.
+ * Bầu trời thủ tục chuyển thể từ bầu trời Saltline: đường chân trời có hướng, quầng tán xạ Mie,
+ * tầng mây biến dạng không gian tự đổ bóng về phía mặt trời và luôn để lại khoảng hở nham nhở
+ * để mặt trời xuyên sáng qua.
  */
 const SKY_FRAG = /* glsl */ `
 precision highp float;
@@ -99,11 +99,18 @@ void main() {
 }
 `;
 
+/**
+ * Tạo vật liệu shader của bầu trời theo theme: bản cho cảnh phản chiếu môi trường hoặc bầu trời hiển thị, kèm
+ * hàm cập nhật thời gian.
+ */
 function useSkyMaterial(theme: ExploreTheme, env: boolean) {
+  // Dựng vật liệu và các uniform màu một lần cho mỗi theme.
   const bundle = useMemo(() => {
     const { sky } = getAtmosphere(theme);
+    // Tạo uniform vector màu từ ba số.
     const v = (c: [number, number, number]) => ({ value: new THREE.Vector3(...c) });
     const timeUniform = { value: 0 };
+    // Cập nhật thời gian cho shader.
     const setTime = (t: number): void => {
       timeUniform.value = t;
     };
@@ -138,15 +145,20 @@ function useSkyMaterial(theme: ExploreTheme, env: boolean) {
 }
 
 const SKY_GEOMETRY = new THREE.SphereGeometry(1, 48, 24);
+/** Hàm raycast rỗng để bầu trời không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
-/** Sky rendered only inside the environment cube-camera bake (image-based sky light). */
+/**
+ * Bầu trời chỉ được vẽ trong quá trình bake cube-camera môi trường (ánh sáng bầu trời dựa trên ảnh).
+ */
 export function SkyProbe({ theme }: { theme: ExploreTheme }) {
   const { material } = useSkyMaterial(theme, true);
   return <mesh geometry={SKY_GEOMETRY} material={material} scale={80} frustumCulled={false} />;
 }
 
-/** Visible sky backdrop; follows the camera so it always sits at the far distance. */
+/**
+ * Nền bầu trời hiển thị được; luôn bám theo camera để nằm ở khoảng cách xa.
+ */
 export function SkyDome({ theme }: { theme: ExploreTheme }) {
   const { material, setTime } = useSkyMaterial(theme, false);
   const ref = useRef<THREE.Mesh>(null);

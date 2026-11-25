@@ -8,6 +8,7 @@ import type { MemberSubscription } from './membershipApi';
 import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 
+// Gộp nội dung các thông báo thành một chuỗi.
 const noticeText = () => getNotices().map((notice) => notice.message).join(' ');
 
 const trialApiMock = vi.hoisted(() => ({
@@ -48,23 +49,28 @@ vi.mock('./membershipApi', () => ({
   createPaymentRequest: api.createPayment,
 }));
 
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const membershipPackage = {
   id: 5, name: 'Essential', description: null, price: 500000,
   durationDays: 90, classCreditLimit: null, status: 'active',
 };
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const higherPackage = {
   id: 6, name: 'VIP Sanctuary', description: null, price: 1500000,
   durationDays: 90, classCreditLimit: null, status: 'active',
 };
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const lowerPackage = {
   id: 4, name: 'Starter', description: null, price: 250000,
   durationDays: 90, classCreditLimit: 4, status: 'active',
 };
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const pending = {
   id: 12, memberId: 34, packageId: 5, packageName: 'Essential',
   previousSubscriptionId: null, startDate: '2026-10-16', endDate: '2026-11-16',
   status: 'pending_payment', qrCode: null, createdAt: '2026-10-16T10:00:00',
 };
+// Dữ liệu mẫu dùng trong các ca kiểm thử.
 const payment = {
   id: 90, memberId: 34, memberName: null, subscriptionId: 12,
   classEnrollmentId: null, amount: 500000, method: 'bank_transfer',
@@ -115,16 +121,20 @@ describe('SCRUM-86 packages', () => {
     vi.restoreAllMocks();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function render() {
     await act(async () => root.render(<MemoryRouter><MemberPackagesPage /></MemoryRouter>));
   }
 
+  // Tìm nút theo nhãn.
   function button(label: string) {
     return [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
   }
 
-  // Purchase buttons now ask for confirmation before the request is created.
+  // Các nút mua gói nay yêu cầu xác nhận trước khi tạo yêu cầu.
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const confirmRequest = () => [...host.querySelectorAll('button')].find((item) => item.textContent?.trim() === 'Gửi yêu cầu')?.click();
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const closeDialog = () => (host.querySelector('dialog button[aria-label="Đóng hộp thoại"]') as HTMLButtonElement | null)?.click();
 
   const active = { ...pending, id: 1, status: 'active', endDate: '2099-11-17' };
@@ -342,6 +352,7 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).toHaveBeenCalledExactlyOnceWith(1);
   });
   it('allows an active subscription to upgrade to a higher package and blocks lower packages', async () => {
+    // Dữ liệu mẫu: yêu cầu nâng cấp đang chờ thanh toán.
     const upgradePending = {
       ...pending,
       id: 18,
@@ -358,7 +369,7 @@ describe('SCRUM-86 packages', () => {
 
     await render();
 
-    // The card previews the charge: the new price minus the unused value the backend computed from what was paid.
+    // Thẻ xem trước số tiền phải trả: giá gói mới trừ giá trị chưa dùng do backend tính từ số tiền đã thanh toán.
     const quote = host.querySelector('[data-testid="upgrade-quote"]');
     expect(quote?.textContent).toContain(`Nâng cấp: thanh toán ${formatPrice(higherPackage.price - 266000)}`);
     expect(quote?.textContent).toContain(`đã trừ ${formatPrice(266000)} giá trị còn lại`);
@@ -377,7 +388,7 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).not.toHaveBeenCalled();
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Nâng cấp gói tập');
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('VIP Sanctuary');
-    // The amount the backend quoted is shown, not the catalog price.
+    // Hiển thị đúng số tiền backend báo giá, không phải giá niêm yết.
     expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Số tiền cần thanh toán để nâng cấp');
     expect(host.querySelector('[role="dialog"]')?.textContent).toMatch(/1\.234\.000/);
   });
@@ -846,6 +857,7 @@ describe('SCRUM-86 packages', () => {
 
 
   it('excludes trial packages from the purchasable catalog grid', async () => {
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const trialPkg = {
       id: 999,
       name: 'Gói Trải Nghiệm 3 Ngày',
@@ -860,7 +872,7 @@ describe('SCRUM-86 packages', () => {
 
     const grid = host.querySelector('.grid-3');
     expect(grid).not.toBeNull();
-    // Grid must contain regular packages but must NOT render trial package as a purchasable card
+    // Lưới phải chứa các gói thông thường nhưng KHÔNG được hiển thị gói trải nghiệm như một thẻ mua được
     expect(grid?.textContent).toContain('Essential');
     expect(grid?.textContent).toContain('VIP Sanctuary');
     expect(grid?.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày');
@@ -873,7 +885,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([{ ...pending, id: 88, status: 'expired' }]);
     await render();
 
-    // Banner should NOT be visible because user has membership history
+    // Banner KHÔNG được hiển thị vì người dùng đã có lịch sử gói tập
     expect(host.textContent).not.toContain('Gói Trải Nghiệm 3 Ngày miễn phí');
     expect(button('Nhận 3 ngày tập miễn phí')).toBeUndefined();
   });
@@ -985,6 +997,7 @@ describe('SCRUM-86 packages', () => {
   it('includes prorated deduction breakdown in upgrade confirmation dialog', async () => {
     const futureEnd = new Date(Date.now() + 45 * 86400000).toLocaleDateString('en-CA');
     const pastStart = new Date(Date.now() - 45 * 86400000).toLocaleDateString('en-CA');
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const currentSub = {
       ...pending,
       id: 21,
@@ -1005,6 +1018,16 @@ describe('SCRUM-86 packages', () => {
     expect(dialogText).toContain('giá gói mới');
     expect(dialogText).toContain('đã trừ');
     expect(dialogText).toContain(formatPrice(higherPackage.price));
+  });
+
+  it.each(['PENDING', 'REJECTED'])('permits first purchase after legacy approved trial with KYC %s', async kycStatus => {
+    api.current.mockResolvedValue(null); api.history.mockResolvedValue([]);
+    profileApiMock.getProfile.mockResolvedValue({ userId: 10, fullName: 'Lan', identityVerified: true, kycStatus });
+    trialApiMock.getStatus.mockResolvedValue({ eligible: false, alreadyClaimed: true, status: 'APPROVED' });
+    await render();
+    await act(async () => setLanguage('en'));
+    await act(async () => button('First registration')?.click());
+    expect(host.querySelector('dialog')).not.toBeNull();
   });
 
 });

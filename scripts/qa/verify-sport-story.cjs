@@ -1,4 +1,4 @@
-// Local Vite server; Playwright supplied through NODE_PATH. No production API writes.
+// Mục đích: kiểm tra câu chuyện cuộn các bộ môn ở trang công khai trên máy chủ Vite cục bộ; Playwright được cung cấp qua NODE_PATH, không ghi dữ liệu API production.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -55,7 +55,7 @@ const { chromium } = require('playwright-core');
         assert.ok(Math.abs(after - top) < 2, 'Image stays pinned while text scrolls');
         assert.equal(await page.locator('.fit-sport-story-inline').first().isVisible(), false);
         for (const index of [1, 2, 3, 2, 0]) await center(index);
-        // Observe the actual two-phase animation, rather than just its final class.
+        // Theo dõi trực tiếp hoạt ảnh hai pha thực tế thay vì chỉ kiểm tra class cuối cùng.
         const target = await page.locator('.fit-sport-story-step').nth(1).evaluate(el => scrollY + el.getBoundingClientRect().top + el.offsetHeight / 2 - innerHeight / 2);
         await page.evaluate(y => {
           window.sportTransitions = [];
@@ -103,7 +103,7 @@ const { chromium } = require('playwright-core');
     await page.mouse.wheel(0, 160);
     await page.waitForFunction(y => scrollY > y, beforeWheel);
     assert.deepEqual(errors, []);
-    // A missing observer must still leave every image and every link available.
+    // Khi trình duyệt không có IntersectionObserver, mọi hình ảnh và liên kết vẫn phải hiển thị đầy đủ.
     await page.addInitScript(() => { window.IntersectionObserver = undefined; });
     await page.reload();
     await page.locator('.fit-sport-story-step').first().waitFor();

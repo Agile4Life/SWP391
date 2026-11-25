@@ -52,6 +52,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
 
   const draftKey = selectedId == null ? NEW_DRAFT : String(selectedId);
   const draft = drafts[draftKey] ?? '';
+  // Gán nội dung nháp của phiếu hiện tại (mỗi phiếu có nháp riêng) và xóa lỗi gửi.
   const setDraft = (value: string) => { setDrafts(previous => ({ ...previous, [draftKey]: value })); setSendError(null); };
   const ticket = selectedId == null ? null : detail ?? tickets.find(item => item.id === selectedId) ?? null;
 
@@ -60,6 +61,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     return () => { alive.current = false; selection.current = null; };
   }, []);
 
+  // Chọn một phiếu (hoặc null để tạo mới): hủy các lần tải cũ và đặt lại trạng thái.
   const selectTicket = useCallback((next: SupportTicket | null) => {
     messagesRequest.current++;
     selection.current = next?.id ?? null;
@@ -67,8 +69,10 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     setDetail(next); setSelectedId(next?.id ?? null); setShowTickets(false);
   }, []);
 
+  // Tải một trang phiếu của hội viên (nối thêm hoặc thay danh sách), chỉ kết quả của lần gọi mới nhất được dùng.
   const loadTickets = useCallback(async (targetPage: number, append = false) => {
     const request = ++listRequest.current;
+    // Lần gọi này còn hiệu lực không (component còn sống và chưa có lần gọi mới hơn).
     const current = () => alive.current && request === listRequest.current;
     if (!append && firstLoad.current) setTicketsLoading(true);
     try {
@@ -86,8 +90,10 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   }, [selectTicket]);
   useEffect(() => { void loadTickets(0); }, [loadTickets]);
 
+  // Tải tin nhắn của một phiếu (silent thì không hiện trạng thái tải).
   const loadMessages = useCallback(async (id: number, silent = false) => {
     const request = ++messagesRequest.current;
+    // Lần gọi này còn hiệu lực không (đúng phiếu đang chọn và chưa có lần gọi mới hơn).
     const current = () => alive.current && selection.current === id && request === messagesRequest.current;
     if (!silent) { setMessagesLoading(true); setMessagesError(null); setAccessDenied(false); }
     try {
@@ -109,7 +115,9 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     const id = selectedId;
     let disposed = false, running = false, dirty = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    // Kết nối còn dùng được không (chưa hủy và vẫn đang chọn đúng phiếu).
     const live = () => !disposed && alive.current && selection.current === id;
+    // Làm mới tin nhắn và thông tin phiếu; nếu đang chạy thì đánh dấu để chạy lại một lần nữa.
     async function refresh() {
       timer = undefined;
       if (!live() || document.visibilityState === 'hidden') return;
@@ -120,6 +128,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
       running = false;
       if (dirty && live()) { dirty = false; schedule(); }
     }
+    // Hẹn làm mới sau 80ms để gộp nhiều thông báo realtime liên tiếp.
     function schedule() {
       if (!live() || timer) return;
       timer = setTimeout(() => { void refresh(); }, 80);
@@ -128,6 +137,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     return () => { disposed = true; clearTimeout(timer); unsubscribe(); };
   }, [selectedId, loadMessages]);
 
+  // Gửi tin nhắn (tạo phiếu mới khi chưa chọn phiếu, tối đa SUPPORT_MESSAGE_MAX ký tự), không gửi khi phiếu đã đóng hoặc bị từ chối truy cập.
   async function send() {
     const text = draft.trim();
     if (!text || text.length > SUPPORT_MESSAGE_MAX || sendingRef.current) return;
@@ -159,6 +169,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     }
   }
 
+  // Hội viên đóng phiếu hỗ trợ của mình.
   async function closeTicket() {
     if (!ticket || closing) return;
     setClosing(true);
@@ -175,6 +186,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     }
   }
 
+  // Các bong bóng chat dựng từ phiếu và tin nhắn (hội viên là "tôi").
   const bubbles = useMemo(() => supportBubbles(ticket, messages, true), [ticket, messages]);
   const closed = ticket?.status === 'closed';
   const newMode = selectedId == null;

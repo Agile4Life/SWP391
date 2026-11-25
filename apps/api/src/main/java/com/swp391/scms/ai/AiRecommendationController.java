@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/** API gợi ý giáo án bằng AI (/api/v1/ai) cho HLV và quản lý trung tâm. */
 @Tag(name = "AI Workout Recommendation", description = "Động cơ AI phân tích thể trạng và gợi ý giáo án bài tập cá nhân hóa (SCRUM-117)")
 @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER')")
 @RestController
@@ -29,20 +30,24 @@ public class AiRecommendationController {
     private final AiRecommendationService recommendationService;
     private final MessageService messageService;
 
+    /** Constructor cho test, không có MessageService. */
     public AiRecommendationController(AiRecommendationService recommendationService) {
         this(recommendationService, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public AiRecommendationController(AiRecommendationService recommendationService, MessageService messageService) {
         this.recommendationService = recommendationService;
         this.messageService = messageService;
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** POST /generate-workout-plan: AI đề xuất giáo án cho hội viên dựa trên hồ sơ và yêu cầu thêm. */
     @Operation(summary = "AI gợi ý giáo án bài tập cá nhân hóa", description = "Phân tích chiều cao, cân nặng, BMI, mục tiêu và tiền sử chấn thương của hội viên để sinh giáo án JSON và lưu vết ai_recommendation_logs")
     @PostMapping({"/generate-workout-plan", "/recommend", "/recommendations"})
     public ResponseEntity<ApiResponse<AiWorkoutPlanResponse>> generateWorkoutPlan(
@@ -54,6 +59,10 @@ public class AiRecommendationController {
         return ResponseEntity.ok(ApiResponse.ok(msg("ai.recommend.generated"), result));
     }
 
+    /**
+     * POST /recommendations/{id}/apply: áp dụng gợi ý thành giáo án thật (có thể chỉnh trước khi lưu, có thể
+     * kích hoạt ngay).
+     */
     @Operation(summary = "Áp dụng gợi ý AI vào giáo án huấn luyện", description = "Tự động tạo giáo án trong training_plans với is_ai_generated = true và cập nhật is_applied = true")
     @PostMapping("/recommendations/{id}/apply")
     public ResponseEntity<ApiResponse<TrainingPlanDto>> applyRecommendation(
@@ -67,6 +76,7 @@ public class AiRecommendationController {
                 .body(ApiResponse.created(msg("ai.recommend.applied"), applied));
     }
 
+    /** GET /recommendations/member/{memberId}: các gợi ý AI đã tạo cho một hội viên. */
     @Operation(summary = "Lịch sử gợi ý giáo án AI của hội viên")
     @GetMapping("/recommendations/member/{memberId}")
     public ResponseEntity<ApiResponse<List<AiWorkoutPlanResponse>>> getMemberRecommendations(

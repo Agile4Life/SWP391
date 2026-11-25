@@ -28,6 +28,10 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Gửi email OTP: ưu tiên qua dịch vụ Resend (HTTP API), lỗi thì thử SMTP STARTTLS nếu có cấu hình. Chỉ hỗ trợ
+ * email, không gửi SMS. Nội dung email dùng mẫu HTML thương hiệu SÖL.
+ */
 @Component
 @Primary
 public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
@@ -43,12 +47,14 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
     private final String smtpPassword;
     private final String smtpFrom;
 
+    /** Constructor rút gọn: chỉ có API key và địa chỉ người gửi. */
     public ResendOtpDeliveryAdapter(
             @Value("${app.resend.api-key:}") String apiKey,
             @Value("${app.resend.from-address:${app.auth.otp.from-address:SÖL Fitness <no-reply@scms.bluesymphony.site>}}") String fromAddress) {
         this(apiKey, fromAddress, "https://api.resend.com", null);
     }
 
+    /** Constructor cho test: chỉ định địa chỉ API Resend. */
     public ResendOtpDeliveryAdapter(
             String apiKey,
             String fromAddress,
@@ -57,6 +63,7 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         this(apiKey, fromAddress, messageService, defaultRestClient(baseUrl), "https://scms.bluesymphony.site", "", 587, "", "", "");
     }
 
+    /** Constructor Spring dùng: đọc cấu hình Resend và SMTP từ môi trường. */
     @Autowired
     public ResendOtpDeliveryAdapter(
             @Value("${app.resend.api-key:}") String apiKey,
@@ -72,6 +79,7 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
                 smtpHost, smtpPort, smtpUsername, smtpPassword, smtpFrom);
     }
 
+    /** Constructor cho test: truyền RestClient giả. */
     public ResendOtpDeliveryAdapter(
             String apiKey,
             String fromAddress,
@@ -80,6 +88,7 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         this(apiKey, fromAddress, messageService, restClient, "https://scms.bluesymphony.site", "", 587, "", "", "");
     }
 
+    /** Constructor cho test: truyền RestClient giả và địa chỉ website. */
     public ResendOtpDeliveryAdapter(
             String apiKey,
             String fromAddress,
@@ -89,6 +98,10 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         this(apiKey, fromAddress, messageService, restClient, webOrigin, "", 587, "", "", "");
     }
 
+    /**
+     * Constructor đầy đủ: làm sạch cấu hình (bỏ dấu ngoặc thừa), đặt giá trị mặc định cho người gửi và cổng
+     * SMTP 587.
+     */
     public ResendOtpDeliveryAdapter(
             String apiKey,
             String fromAddress,
@@ -114,6 +127,7 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         this.smtpFrom = !cleanSmtpFrom.isBlank() ? cleanSmtpFrom : this.smtpUsername;
     }
 
+    /** Bỏ dấu ngoặc kép/đơn bao quanh giá trị cấu hình (hay gặp khi copy từ file .env). */
     private static String stripQuotes(String value) {
         if (value == null) {
             return "";
@@ -127,6 +141,7 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         return trimmed;
     }
 
+    /** Tạo RestClient gọi Resend với thời gian chờ kết nối 5 giây và đọc 10 giây. */
     private static RestClient defaultRestClient(String baseUrl) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5_000);
@@ -137,10 +152,15 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
                 .build();
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /**
+     * Gửi OTP: đích phải là email; cần ít nhất một kênh (Resend hoặc SMTP). Tạo tiêu đề/nội dung theo ngôn ngữ,
+     * gửi qua Resend; Resend lỗi thì chuyển sang SMTP, không có SMTP thì báo 503.
+     */
     @Override
     public void send(String destination, String code) {
         if (destination == null || !destination.contains("@")) {
@@ -179,6 +199,10 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         sendViaStartTlsSmtp(destination.trim(), subject, htmlBody);
     }
 
+    /**
+     * Gửi email qua SMTP thủ công: kết nối, EHLO, nâng cấp TLS (STARTTLS, có kiểm tra tên máy chủ), đăng nhập
+     * AUTH LOGIN, rồi gửi thư HTML với tiêu đề và nội dung mã hóa UTF-8 base64.
+     */
     private void sendViaStartTlsSmtp(String recipient, String subject, String htmlBody) {
         try (Socket plainSocket = new Socket()) {
             plainSocket.connect(new InetSocketAddress(smtpHost, smtpPort), 5_000);
@@ -241,12 +265,14 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         }
     }
 
+    /** Ghi một lệnh SMTP (kết thúc bằng CRLF) và đẩy đi ngay. */
     private static void sendSmtpLine(BufferedWriter writer, String command) throws IOException {
         writer.write(command);
         writer.write("\r\n");
         writer.flush();
     }
 
+    /** Đọc phản hồi SMTP (có thể nhiều dòng) và kiểm tra mã trả về đúng mã mong đợi; sai thì ném lỗi. */
     private static void expectSmtpCode(BufferedReader reader, int expectedCode) throws IOException {
         String line;
         int lastCode = -1;

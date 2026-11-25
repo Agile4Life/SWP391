@@ -12,10 +12,16 @@ import { toast } from '../../shared/ui/toast';
 import { getVnpayStatus, verifyVnpayReturn, type VnpayStatus } from './vnpayApi';
 import { clearActiveVnpay } from './vnpaySession';
 
-const destinations = new Set(['/member/packages', '/member/courts', '/member/classes', '/member/classes?tab=pt', '/member/invoices']);
+// Thanh toán sân/Shop cũ trở về hóa đơn; giữ nguyên đích gói tập và PT.
+const destinations = new Set(['/member/packages', '/member/classes', '/member/classes?tab=pt', '/member/invoices']);
+/** Chỉ cho phép đích quay về nằm trong danh sách cho phép. */
 function isAllowedDestination(destination: string | null | undefined): destination is string {
-  return Boolean(destination && (destinations.has(destination) || /^\/member\/orders\/\d+$/.test(destination)));
+  return Boolean(destination && destinations.has(destination));
 }
+/**
+ * Trang VNPay chuyển về: xác minh chữ ký (nếu có) hoặc hỏi trạng thái giao dịch, tự kiểm tra lại tối đa 12 lần
+ * mỗi 2,5 giây khi còn pending và báo kết quả.
+ */
 export function VnpayReturnPage() {
   useLanguage();
   const { t } = useI18n();
@@ -31,6 +37,7 @@ export function VnpayReturnPage() {
     setData(null); setError(''); setLoading(true);
     if (!valid) { setLoading(false); return; }
     if (typeof clearActiveVnpay === 'function') clearActiveVnpay(reference);
+    // Tải trạng thái giao dịch, báo toast một lần khi có kết quả và hẹn kiểm tra tiếp nếu còn pending.
     async function load() {
       try {
         const hasSignedCallback = params.has('vnp_SecureHash') && params.has('vnp_ResponseCode');

@@ -12,6 +12,7 @@ vi.mock('./aiChatApi', () => ({
 
 let host: HTMLDivElement, root: Root;
 const session = { id: 4, memberId: 1, topic: 'Tập luyện', startedAt: '2026-11-05T01:00:00Z', endedAt: null };
+// Tạo tin nhắn giả của phiên chat AI.
 const msg = (id: number, sender: 'member' | 'ai', message: string) => ({ id, sessionId: 4, sender, message, createdAt: '2026-11-05T01:00:00Z' });
 
 beforeEach(() => {
@@ -23,12 +24,15 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.clearAllMocks(); vi.unstubAllGlobals(); });
 
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<AiChatThread onBack={() => {}} />));
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 const type = (text: string) => act(async () => {
   const input = host.querySelector('textarea')!;
   Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, text);
   input.dispatchEvent(new Event('input', { bubbles: true }));
 });
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const sendButton = () => host.querySelector<HTMLButtonElement>('button[type="submit"]')!;
 
 it('shows SÖL AI like a chat peer and renders the latest session as plain text', async () => {

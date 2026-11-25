@@ -44,6 +44,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service CoachAssignmentService (coach assignment service). */
 @ExtendWith(MockitoExtension.class)
 class CoachAssignmentServiceTest {
     @Mock CoachRepository coaches;
@@ -64,6 +65,7 @@ class CoachAssignmentServiceTest {
     Coach from, to;
     Member member;
 
+    /** Chuẩn bị trước mỗi test: tạo CoachAssignmentService với repository giả lập. */
     @BeforeEach
     void setup() {
         service = new CoachAssignmentService(coaches, members, plans, bookings, enrollments, sessionBookings,
@@ -75,17 +77,23 @@ class CoachAssignmentServiceTest {
     }
 
     @AfterEach void clearSecurity() { SecurityContextHolder.clearContext(); }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */
     private User user(Long id, String name) { User u = new User(); u.setId(id); u.setFullName(name); u.setStatus("active"); return u; }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (coach). */
     private Coach coach(Long id, String name) { Coach c = new Coach(); c.setUserId(id); c.setUser(user(id, name)); c.setEmploymentStatus("active"); return c; }
+    /** Hàm trợ giúp của test: tạo kế hoạch tập mẫu. */
     private TrainingPlan plan(Long id, String status) {
         TrainingPlan p = new TrainingPlan(); p.setId(id); p.setMember(member); p.setCoach(from); p.setStatus(status);
         p.setStartDate(today.minusDays(3)); p.setEndDate(today.plusDays(30)); p.setGoal("Gain strength"); return p;
     }
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private CoachBooking booking(Long id) {
         CoachBooking b = new CoachBooking(); b.setId(id); b.setMember(member); b.setCoach(from); b.setStatus("confirmed");
         b.setBookingDate(today.plusDays(1)); b.setStartTime(LocalTime.of(10, 0)); b.setEndTime(LocalTime.of(11, 0)); return b;
     }
+    /** Hàm trợ giúp của test: thực hiện chuyển HLV. */
     private CoachAssignmentReassignDto transfer(String type, Long id) { return new CoachAssignmentReassignDto(100L, 10L, 20L, id, type, "Schedule adjustment"); }
+    /** Hàm trợ giúp của test: thiết lập tài khoản hội viên và HLV hợp lệ. */
     private void validAccounts() {
         when(coaches.findById(10L)).thenReturn(Optional.of(from)); when(coaches.findById(20L)).thenReturn(Optional.of(to));
         when(members.findById(100L)).thenReturn(Optional.of(member)); when(subscriptions.hasActiveMembership(100L, today)).thenReturn(true);
@@ -108,6 +116,33 @@ class CoachAssignmentServiceTest {
         verify(messages).getMessage("manager.coach_assignments.notice.transferred.member", to.getUser().getFullName(), 501L, "Schedule adjustment");
     }
 
+    @Test void rejectsTransferWhenTargetAlreadyHasAnActivePlan() {
+        validAccounts(); TrainingPlan selected = plan(501L, "active");
+        when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
+        when(plans.findOtherActiveForMemberAndCoach(100L, 20L, 501L)).thenReturn(List.of(plan(800L, "active")));
+        assertThatThrownBy(() -> service.reassignStudent(transfer("TRAINING_PLAN", 501L)))
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_ALREADY_HAS_ACTIVE_PLAN");
+        assertThat(selected.getCoach()).isSameAs(from); verify(plans, never()).save(any());
+        verifyNoInteractions(audit, notifications);
+    }
+
+    @Test void rejectsTransferCreatingFourConsecutivePtSessions() {
+        validAccounts(); CoachBooking selected = booking(601L);
+        selected.setStartTime(LocalTime.of(12, 0)); selected.setEndTime(LocalTime.of(13, 0));
+        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
+        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
+        List<CoachBooking> occupied = new ArrayList<>();
+        for (int hour = 9; hour < 12; hour++) {
+            CoachBooking b = booking((long) hour); b.setStartTime(LocalTime.of(hour, 0)); b.setEndTime(LocalTime.of(hour + 1, 0)); occupied.add(b);
+        }
+        when(bookings.findActiveByCoachAndDate(20L, today.plusDays(1))).thenReturn(occupied);
+        assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L)))
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_REST_REQUIRED");
+        assertThat(selected.getCoach()).isSameAs(from); verify(bookings, never()).save(any());
+        verifyNoInteractions(audit, notifications);
+    }
+
+    /** Kiểm thử: từ chối chuyển HLV không có lý do, trước khi ghi hay thông báo. */
     @ParameterizedTest @ValueSource(strings = {"", "   "})
     void rejectsTransferWithoutReasonBeforeWritingOrNotifying(String blank) {
         assertThatThrownBy(() -> service.reassignStudent(new CoachAssignmentReassignDto(100L, 10L, 20L, 501L, "TRAINING_PLAN", blank)))
@@ -200,6 +235,7 @@ class CoachAssignmentServiceTest {
         assertThat(selected.getCoach()).isSameAs(from); assertThat(selected.getMember()).isSameAs(member);
     }
 
+    /** Kiểm thử: kết thúc phân công đã hoàn thành giữ nguyên trạng thái lịch sử. */
     @ParameterizedTest @ValueSource(strings = {"completed", "cancelled", "draft"})
     void endingCompletedAssignmentPreservesItsHistoricalStatus(String status) {
         TrainingPlan selected = plan(501L, status); when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
@@ -257,5 +293,55 @@ class CoachAssignmentServiceTest {
         var overview = service.getOverview(null, null, "CLASS");
         @SuppressWarnings("unchecked") var rows = (List<CoachAssignmentOverviewDto>) overview.get("coaches");
         assertThat(rows.getFirst().students()).hasSize(1); assertThat(rows.getFirst().classStudentsCount()).isEqualTo(1);
+    }
+
+    @Test void overviewSortsCoachesByNameStudentsSpecializationAndStatus() {
+        Coach coachC = coach(30L, "HLV Cường");
+        coachC.setSpecialization("Boxing");
+        coachC.setEmploymentStatus("on_leave");
+
+        from.getUser().setFullName("HLV Bảo");
+        from.setSpecialization("Yoga");
+        from.setEmploymentStatus("active");
+
+        to.getUser().setFullName("HLV An");
+        to.setSpecialization("Gym");
+        to.setEmploymentStatus("active");
+
+        when(coaches.findActiveWithUser()).thenReturn(List.of(from, coachC, to));
+        // coach 10L (HLV Bảo): 2 distinct students; coach 20L (HLV An): 1 distinct student; coach 30L (HLV Cường): 0
+        Member m2 = new Member();
+        User u2 = new User(); u2.setId(101L); u2.setFullName("Member Hai"); u2.setStatus("active");
+        m2.setUserId(101L); m2.setUser(u2); m2.setMembershipCode("SCMS-101");
+        TrainingPlan p1 = plan(501L, "active");
+        TrainingPlan p2 = plan(502L, "active"); p2.setMember(m2);
+        when(plans.findCurrentAssignments(10L, today)).thenReturn(List.of(p1, p2));
+        when(plans.findCurrentAssignments(20L, today)).thenReturn(List.of(plan(503L, "active")));
+        when(plans.findCurrentAssignments(30L, today)).thenReturn(List.of());
+
+        @SuppressWarnings("unchecked") var byNameAsc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "name", "asc").get("coaches");
+        assertThat(byNameAsc).extracting(CoachAssignmentOverviewDto::coachId).containsExactly(20L, 10L, 30L);
+
+        @SuppressWarnings("unchecked") var byNameDesc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "name", "desc").get("coaches");
+        assertThat(byNameDesc).extracting(CoachAssignmentOverviewDto::coachId).containsExactly(30L, 10L, 20L);
+
+        @SuppressWarnings("unchecked") var byStudentsDesc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "totalStudentsCount", "desc").get("coaches");
+        assertThat(byStudentsDesc).extracting(CoachAssignmentOverviewDto::coachId).containsExactly(10L, 20L, 30L);
+
+        @SuppressWarnings("unchecked") var bySpecAsc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "specialization", "asc").get("coaches");
+        assertThat(bySpecAsc).extracting(CoachAssignmentOverviewDto::specialization).containsExactly("Boxing", "Gym", "Yoga");
+
+        @SuppressWarnings("unchecked") var byStatusDesc = (List<CoachAssignmentOverviewDto>) service.getOverview(null, null, null, "employmentStatus", "desc").get("coaches");
+        assertThat(byStatusDesc).extracting(CoachAssignmentOverviewDto::employmentStatus).containsExactly("on_leave", "active", "active");
+    }
+
+    @Test void overviewRejectsInvalidSortFieldOrDirection() {
+        when(coaches.findActiveWithUser()).thenReturn(List.of(from));
+        assertThatThrownBy(() -> service.getOverview(null, null, null, "unknownField", "asc"))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INVALID_SORT_FIELD");
+        assertThatThrownBy(() -> service.getOverview(null, null, null, "name", "up"))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "INVALID_SORT_DIRECTION");
     }
 }

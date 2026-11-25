@@ -2,6 +2,7 @@ import { test, expect, settled, isoDay, pickDate } from '../fixtures';
 import { authFile } from '../helpers/accounts';
 import { pngDataUrl } from '../helpers/api';
 
+// Tạo file PNG giả làm giấy y tế để tải lên.
 const png = () => ({ name: 'giay-y-te.png', mimeType: 'image/png', buffer: Buffer.from(pngDataUrl().split(',')[1], 'base64') });
 
 test.describe('Bảo lưu gói tập', () => {

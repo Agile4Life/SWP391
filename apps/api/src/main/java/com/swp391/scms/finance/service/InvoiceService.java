@@ -21,7 +21,8 @@ import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 /**
- * Service managing invoices, invoice items, and PostgreSQL stored generated columns.
+ * Nghiệp vụ hóa đơn điện tử: quản lý hóa đơn, các dòng hàng và các cột tính toán lưu trữ của PostgreSQL;
+ * xuất thủ công hoặc tự động cho khoản thanh toán thành công, tra cứu theo id/số hóa đơn/khoản thu.
  */
 @Service
 @Transactional
@@ -38,6 +39,7 @@ public class InvoiceService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.shop.repository.ProductOrderRepository productOrders;
 
+    /** Nhận repository hóa đơn/thanh toán, mapper và MessageService. */
     public InvoiceService(InvoiceRepository invoiceRepository,
                           PaymentRepository paymentRepository,
                           InvoiceMapper invoiceMapper, Clock clock) {
@@ -48,8 +50,8 @@ public class InvoiceService {
     }
 
     /**
-     * Issues a new electronic invoice.
-     * The configured database computes total_amount and item amount through generated columns.
+     * Xuất hóa đơn điện tử thủ công: khoản thu không được thất bại hoặc đã hoàn, mỗi khoản thu chỉ một hóa đơn;
+     * số hóa đơn tự sinh nếu trống. Cơ sở dữ liệu cấu hình tự tính total_amount và thành tiền từng dòng qua cột sinh tự động.
      */
     public InvoiceDto createInvoice(InvoiceCreateDto dto) {
         Payment payment = paymentRepository.findById(dto.getPaymentId())
@@ -88,6 +90,7 @@ public class InvoiceService {
         return invoiceMapper.toDto(saved);
     }
 
+    /** Hóa đơn theo id; không thấy thì 404. */
     @Transactional(readOnly = true)
     public InvoiceDto getInvoiceById(Long id) {
         Invoice invoice = invoiceRepository.findById(id)
@@ -95,6 +98,7 @@ public class InvoiceService {
         return invoiceMapper.toDto(invoice);
     }
 
+    /** Hóa đơn theo số hóa đơn; không thấy thì 404. */
     @Transactional(readOnly = true)
     public InvoiceDto getInvoiceByNumber(String invoiceNumber) {
         Invoice invoice = invoiceRepository.findByInvoiceNumber(invoiceNumber)
@@ -102,6 +106,7 @@ public class InvoiceService {
         return invoiceMapper.toDto(invoice);
     }
 
+    /** Hóa đơn của một khoản thu; không thấy thì 404. */
     @Transactional(readOnly = true)
     public InvoiceDto getInvoiceByPaymentId(Long paymentId) {
         Invoice invoice = invoiceRepository.findByPaymentId(paymentId)
@@ -109,21 +114,26 @@ public class InvoiceService {
         return invoiceMapper.toDto(invoice);
     }
 
+    /**
+     * Hóa đơn cho hội viên: khoản thu phải thuộc chính hội viên và đã thành công; luôn dùng tổng tiền đã lưu
+     * trong database.
+     */
     @Transactional(readOnly = true)
     public InvoiceDto getMemberInvoiceByPaymentId(Long paymentId, Long userId) {
         Invoice invoice = invoiceRepository.findByPaymentIdAndPaymentMemberUserIdAndPaymentStatus(paymentId, userId, "success")
                 .orElseThrow(() -> new ResourceNotFoundException("resource.invoice_for_payment", paymentId));
         InvoiceDto dto = invoiceMapper.toDto(invoice);
-        // The member view must never substitute an in-memory calculation for the stored column.
+        // Giao diện hội viên không bao giờ được thay thế cột lưu trữ trong database bằng giá trị tính tạm trong bộ nhớ.
         dto.setTotalAmount(invoice.getPersistedTotalAmount());
-        dto.setPdfUrl(null); // Do not expose internal or third-party storage locations.
+        dto.setPdfUrl(null); // Không tiết lộ đường dẫn lưu trữ nội bộ hoặc của bên thứ ba.
         return dto;
     }
 
     /**
-     * Automatically generates and issues an electronic invoice for a successful payment.
+     * Tự động tạo và xuất hóa đơn điện tử cho khoản thu thành công (đã có thì trả hóa đơn cũ): dòng hàng theo đơn hàng
+     * (kèm phí giao hàng), nạp ví hoặc mô tả mặc định.
+     * Nơi gọi coi việc tự xuất là best-effort: nếu bị từ chối thì không được đánh dấu transaction thanh toán chính là rollback-only.
      */
-    // Callers treat auto-issue as best effort: a rejected issue must not mark the payment's transaction rollback-only.
     @Transactional(noRollbackFor = com.swp391.scms.common.exception.AppException.class)
     public InvoiceDto autoIssueInvoiceForPayment(Long paymentId) {
         Payment payment = paymentRepository.findById(paymentId)
@@ -179,6 +189,7 @@ public class InvoiceService {
                 });
     }
 
+    /** Mô tả dòng hàng nạp ví (đã dịch). */
     private String resolveWalletTopupItemDescription() {
         String fallback = "Nạp tiền vào ví SÖL";
         if (messageService == null) {
@@ -190,6 +201,7 @@ public class InvoiceService {
                 : resolved;
     }
 
+    /** Mô tả dòng phí giao hàng (đã dịch). */
     private String resolveShippingItemDescription() {
         String fallback = "Phí giao hàng";
         if (messageService == null) {
@@ -201,6 +213,7 @@ public class InvoiceService {
                 : resolved;
     }
 
+    /** Mô tả dòng hàng mặc định kèm mã khoản thu (đã dịch). */
     private String resolveDefaultItemDescription(Long paymentId) {
         String fallback = "Dịch vụ thể thao / Gói tập - Thanh toán #" + paymentId;
         if (messageService == null) {
@@ -212,6 +225,7 @@ public class InvoiceService {
                 : resolved;
     }
 
+    /** Sinh số hóa đơn duy nhất. */
     private String generateInvoiceNumber() {
         String dateStr = LocalDateTime.now(clock).format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         String suffix = UUID.randomUUID().toString().substring(0, 6).toUpperCase();

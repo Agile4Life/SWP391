@@ -29,17 +29,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+/** Bộ kiểm thử cho service CourseAttendanceService (course attendance service). */
 class CourseAttendanceServiceTest {
     private final SessionAttendanceRepository attendance = mock(SessionAttendanceRepository.class);
     private final ClassSessionRepository sessions = mock(ClassSessionRepository.class);
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
     private final MemberRepository members = mock(MemberRepository.class);
-    // 2026-11-09 20:00 Asia/Ho_Chi_Minh
+    // 2026-11-09 20:00 (múi giờ Asia/Ho_Chi_Minh)
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T13:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private CourseAttendanceService service;
     private GymClass course;
     private Member member;
 
+    /** Chuẩn bị trước mỗi test: tạo service điểm danh khóa học với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new CourseAttendanceService(attendance, sessions, enrollments, members, clock);
@@ -51,6 +53,7 @@ class CourseAttendanceServiceTest {
         member.setUserId(100L);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (session). */
     private ClassSession session(long id, LocalDate date, LocalTime start, LocalTime end) {
         ClassSession s = new ClassSession();
         s.setId(id);
@@ -61,6 +64,7 @@ class CourseAttendanceServiceTest {
         return s;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (enrollment). */
     private ClassEnrollment enrollment(LocalDateTime enrolledAt) {
         ClassEnrollment e = new ClassEnrollment();
         e.setGymClass(course);
@@ -69,6 +73,15 @@ class CourseAttendanceServiceTest {
         return e;
     }
 
+    /** Kiểm thử: lượt quét tự động không làm gì khi lớp nhóm đã ngừng hoạt động. */
+    @Test
+    void sweepDoesNothingWhileGroupClassesAreOutOfScope() {
+        service.sweep();
+
+        verifyNoInteractions(sessions);
+    }
+
+    /** Kiểm thử: buổi đã kết thúc mà chưa được ghi nhận sẽ thành vắng mặt. */
     @Test
     void anUnrecordedFinishedSessionBecomesAnAbsence() {
         ClassSession done = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(17, 0), LocalTime.of(18, 0));
@@ -87,6 +100,7 @@ class CourseAttendanceServiceTest {
         assertNull(member.getCourseEnrollBlockedUntil());
     }
 
+    /** Kiểm thử: hội viên có mặt tại trung tâm trong giờ học được để lại cho HLV, không tự đánh dấu. */
     @Test
     void aMemberWhoWasInTheCenterDuringTheSessionIsLeftForTheCoachNotAutoMarked() {
         com.swp391.scms.attendance.repository.CenterCheckinRepository checkins =
@@ -96,7 +110,7 @@ class CourseAttendanceServiceTest {
         when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of(done));
         when(enrollments.findByGymClassIdAndStatus(5L, "booked")).thenReturn(List.of(enrollment(LocalDateTime.of(2026, 11, 1, 9, 0))));
         when(attendance.existsBySessionIdAndMemberUserId(1L, 100L)).thenReturn(false);
-        // The member walked in at 15:30, more than 30 minutes before the 17:00 start, and never left.
+        // Hội viên vào lúc 15:30, sớm hơn giờ bắt đầu 17:00 quá 30 phút, và chưa rời khỏi trung tâm.
         when(checkins.findCoveringVisitStart(100L, LocalDateTime.of(2026, 11, 9, 14, 0),
                 LocalDateTime.of(2026, 11, 9, 17, 0), LocalDateTime.of(2026, 11, 9, 18, 0)))
                 .thenReturn(LocalDateTime.of(2026, 11, 9, 15, 30));
@@ -105,6 +119,7 @@ class CourseAttendanceServiceTest {
         verify(attendance, never()).save(any());
     }
 
+    /** Kiểm thử: bỏ qua buổi chưa kết thúc, đã ghi nhận hoặc diễn ra trước khi ghi danh. */
     @Test
     void sessionsThatHaveNotEndedRecordedOrBeforeTheEnrollmentAreSkipped() {
         ClassSession running = session(1, LocalDate.of(2026, 11, 9), LocalTime.of(19, 0), LocalTime.of(21, 0));
@@ -118,6 +133,7 @@ class CourseAttendanceServiceTest {
         verify(attendance, never()).save(any());
     }
 
+    /** Kiểm thử: quay lại học sớm sẽ nhả phần tạm hoãn và miễn vắng từ ngày đó. */
     @Test
     void resumingEarlyReleasesTheHoldExcusesFromThatDayOn() {
         SessionAttendance excused = new SessionAttendance();
@@ -128,6 +144,7 @@ class CourseAttendanceServiceTest {
         verify(attendance).deleteAll(List.of(excused));
     }
 
+    /** Kiểm thử: vắng hơn một nửa khóa thì bị chặn đăng ký khóa mới trong 30 ngày. */
     @Test
     void missingMoreThanHalfBlocksNewCoursesForThirtyDays() {
         when(sessions.countByGymClassIdAndStatusNot(5L, "cancelled")).thenReturn(9L);
@@ -140,6 +157,7 @@ class CourseAttendanceServiceTest {
         verify(members).save(member);
     }
 
+    /** Kiểm thử: vắng đúng một nửa thì chưa đủ để bị chặn. */
     @Test
     void exactlyHalfIsNotEnoughToBlock() {
         when(sessions.countByGymClassIdAndStatusNot(5L, "cancelled")).thenReturn(8L);
@@ -149,6 +167,7 @@ class CourseAttendanceServiceTest {
         verify(members, never()).findById(anyLong());
     }
 
+    /** Kiểm thử: lệnh chặn đang có hiệu lực không bị gia hạn thêm lần nữa. */
     @Test
     void anExistingBlockIsNotExtendedAgain() {
         LocalDateTime already = LocalDateTime.of(2026, 12, 1, 8, 0);

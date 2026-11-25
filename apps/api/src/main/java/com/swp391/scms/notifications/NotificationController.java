@@ -15,6 +15,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+/** API thông báo trong ứng dụng (/api/v1/notifications) cho người đang đăng nhập. */
 @Tag(name = "Notifications", description = "Quản lý hộp thư thông báo in-app của người dùng")
 @PreAuthorize("isAuthenticated()")
 @RestController
@@ -24,20 +25,24 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final MessageService messageService;
 
+    /** Constructor cho test, không có MessageService. */
     public NotificationController(NotificationService notificationService) {
         this(notificationService, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public NotificationController(NotificationService notificationService, MessageService messageService) {
         this.notificationService = notificationService;
         this.messageService = messageService;
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** GET: danh sách thông báo của người dùng, mới nhất trước, có phân trang. */
     @Operation(summary = "Lấy danh sách thông báo", description = "Lấy danh sách thông báo của người dùng đang đăng nhập, có phân trang")
     @GetMapping
     public ApiResponse<Page<NotificationDto>> getNotifications(
@@ -47,6 +52,7 @@ public class NotificationController {
         return ApiResponse.ok(msg("notifications.list.success"), notifications);
     }
 
+    /** GET /unread-count: số thông báo chưa đọc (hiển thị trên chuông). */
     @Operation(summary = "Đếm số thông báo chưa đọc", description = "Trả về số lượng thông báo chưa đọc của người dùng")
     @GetMapping("/unread-count")
     public ApiResponse<UnreadCountDto> getUnreadCount(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -54,6 +60,7 @@ public class NotificationController {
         return ApiResponse.ok(msg("notifications.count.success"), new UnreadCountDto(count));
     }
 
+    /** PATCH /{id}/read: đánh dấu một thông báo là đã đọc. */
     @Operation(summary = "Đánh dấu đã đọc một thông báo", description = "Cập nhật trạng thái isRead = true cho một thông báo cụ thể")
     @PatchMapping("/{id}/read")
     public ApiResponse<Void> markAsRead(
@@ -63,6 +70,7 @@ public class NotificationController {
         return ApiResponse.ok(msg("notifications.mark_read.success"), null);
     }
 
+    /** PATCH /read-all: đánh dấu tất cả là đã đọc. */
     @Operation(summary = "Đánh dấu tất cả là đã đọc", description = "Cập nhật trạng thái isRead = true cho toàn bộ thông báo chưa đọc của người dùng")
     @PatchMapping("/read-all")
     public ApiResponse<Void> markAllAsRead(@AuthenticationPrincipal AuthenticatedPrincipal principal) {

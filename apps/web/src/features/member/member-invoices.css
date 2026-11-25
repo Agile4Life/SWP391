@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho danh sách hóa đơn của hội viên. */
 .member-invoices__card { overflow: hidden; }
 .portal-v2 .member-invoices__table { min-width: 520px; }
 .member-invoices__table td:first-child { font-weight: 700; }

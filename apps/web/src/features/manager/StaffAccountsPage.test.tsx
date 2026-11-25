@@ -34,6 +34,7 @@ it('offers only Coach and Receptionist and creates an account using the provisio
   await act(async () => host.querySelector<HTMLButtonElement>('#staff-role')!.click());
   expect([...host.querySelectorAll('[role="option"]')].map(option => option.textContent?.trim())).toEqual(['Huấn luyện viên', 'Lễ tân']);
   await act(async () => host.querySelector<HTMLButtonElement>('#staff-role')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
+  // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
   const setInput = async (id: string, value: string) => {
     const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
     await act(async () => {
@@ -66,6 +67,7 @@ it('locks and unlocks a staff account from the list after confirmation and repor
   vi.mocked(listStaffAccounts).mockResolvedValue([coach]);
   vi.mocked(setStaffAccountLocked).mockResolvedValueOnce({ ...coach, status: 'locked' });
   await act(async () => root.render(<StaffAccountsPage />));
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const rowButton = () => host.querySelector<HTMLButtonElement>('tbody button')!;
   expect(rowButton().textContent).toBe('Khóa');
   await act(async () => rowButton().click());
@@ -89,6 +91,7 @@ it('rejects duplicate email and phone number before calling createStaffAccount',
     { id: 8, fullName: 'Coach A', email: 'coach.a@gmail.com', phone: '0901234567', roleCode: 'COACH', status: 'active' },
   ]);
   await act(async () => root.render(<StaffAccountsPage />));
+  // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
   const setInput = async (id: string, value: string) => {
     const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
     await act(async () => {
@@ -110,7 +113,7 @@ it('rejects duplicate email and phone number before calling createStaffAccount',
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('Số điện thoại đã tồn tại');
 });
 
-it('sorts staff accounts by name, role, and status', async () => {
+it('sorts staff accounts by name and status without a coach-first option', async () => {
   const staffList = [
     { id: 1, fullName: 'Bùi Văn B', email: 'b@sol.vn', roleCode: 'RECEPTIONIST' as const, status: 'locked' as const },
     { id: 2, fullName: 'An Thị A', email: 'a@sol.vn', roleCode: 'COACH' as const, status: 'active' as const },
@@ -119,6 +122,7 @@ it('sorts staff accounts by name, role, and status', async () => {
   vi.mocked(listStaffAccounts).mockResolvedValue(staffList);
   await act(async () => root.render(<StaffAccountsPage />));
 
+  // Tên các tài khoản đang hiển thị trong bảng.
   const getRenderedNames = () =>
     [...host.querySelectorAll('tbody tr')].map(tr => tr.querySelector('td')?.textContent?.trim());
 
@@ -127,6 +131,7 @@ it('sorts staff accounts by name, role, and status', async () => {
 
   const sortSelect = host.querySelector('select[aria-label="Sắp xếp danh sách nhân sự"]') as HTMLSelectElement;
   expect(sortSelect).toBeTruthy();
+  expect([...sortSelect.options].map(option => option.value)).not.toContain('role');
 
   // Sort name_desc -> Cù Trọng C, Bùi Văn B, An Thị A
   await act(async () => {
@@ -134,13 +139,6 @@ it('sorts staff accounts by name, role, and status', async () => {
     sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
   });
   expect(getRenderedNames()).toEqual(['Cù Trọng C', 'Bùi Văn B', 'An Thị A']);
-
-  // Sort role (Coach first, then Receptionist) -> An Thị A (Coach), Cù Trọng C (Coach), Bùi Văn B (Receptionist)
-  await act(async () => {
-    sortSelect.value = 'role';
-    sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  expect(getRenderedNames()).toEqual(['An Thị A', 'Cù Trọng C', 'Bùi Văn B']);
 
   // Sort status (Active first, then Locked) -> An Thị A (Active), Cù Trọng C (Active), Bùi Văn B (Locked)
   await act(async () => {

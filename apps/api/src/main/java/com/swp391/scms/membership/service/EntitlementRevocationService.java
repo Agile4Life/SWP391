@@ -16,16 +16,16 @@ import java.time.LocalTime;
 import java.util.function.Predicate;
 
 /**
- * Releases what a member booked once their membership no longer covers it (hold, cancellation, refund).
- * Classes, 1:1 coach sessions and courts all require an active membership on the day they take place,
- * so each upcoming booking is kept only while some active period still covers its date.
+ * Giải phóng các lịch đặt của hội viên khi gói hội viên không còn bao phủ (bảo lưu, hủy gói, hoàn tiền).
+ * Lớp học, buổi tập 1:1 với HLV và sân đều yêu cầu gói hội viên còn hiệu lực vào ngày diễn ra, nên mỗi lịch
+ * sắp tới chỉ được giữ lại khi vẫn có kỳ gói active bao phủ ngày đó.
  */
 @Service
 public class EntitlementRevocationService {
 
-    /** A 1:1 session is returned (quota slot or money) only if the hold is approved this many days before it. */
+    /** Buổi tập 1:1 chỉ được hoàn lại (lượt gói hoặc tiền) nếu yêu cầu bảo lưu được duyệt trước buổi tập ít nhất số ngày này. */
     public static final int PT_HOLD_REFUND_DAYS = 3;
-    /** A court is returned (quota slot or money) only if the hold is approved this many hours before it. */
+    /** Lượt đặt sân chỉ được hoàn lại (lượt gói hoặc tiền) nếu yêu cầu bảo lưu được duyệt trước giờ chơi ít nhất số giờ này. */
     public static final int COURT_HOLD_REFUND_HOURS = 2;
 
     private final MembershipSubscriptionRepository subscriptions;
@@ -52,6 +52,7 @@ public class EntitlementRevocationService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
 
+    /** Nhận repository gói, dịch vụ đăng ký lớp, repository buổi PT và đặt sân, cùng Clock. */
     public EntitlementRevocationService(MembershipSubscriptionRepository subscriptions,
                                         EnrollmentService enrollmentService,
                                         CoachBookingRepository coachBookings,
@@ -64,7 +65,10 @@ public class EntitlementRevocationService {
         this.clock = clock;
     }
 
-    /** Cancels upcoming bookings whose date no active period covers; returns how many were cancelled. */
+    /**
+     * Hủy các lịch sắp tới (đăng ký lớp, buổi PT, sân) có ngày diễn ra không còn được kỳ gói active (hoặc bảo lưu
+     * có ngày đã duyệt) bao phủ; bỏ qua lịch đã bắt đầu. Thông báo cho hội viên và HLV. Trả về số lịch đã hủy.
+     */
     @Transactional
     public int revokeUncoveredBookings(Long memberId, String reason) {
         if (memberId == null) return 0;
@@ -109,9 +113,9 @@ public class EntitlementRevocationService {
     }
 
     /**
-     * A frozen membership with an approved, dated hold still covers its own period: the days of the hold itself
-     * and the days after it, up to the end date pushed back by the held days.
-     * Without this the nightly sweep would cancel everything booked after the hold, as the member is "not active" yet.
+     * Gói đang bảo lưu (frozen) có đợt bảo lưu theo ngày đã duyệt vẫn bao phủ thời hạn của chính nó: gồm các ngày
+     * bảo lưu và các ngày sau đó cho đến ngày hết hạn đã được lùi thêm số ngày bảo lưu.
+     * Nếu không có kiểm tra này, job quét hằng đêm sẽ hủy toàn bộ lịch đặt sau đợt bảo lưu vì hội viên chưa ở trạng thái "active".
      */
     private boolean coveredByDatedHold(Long memberId, LocalDate date) {
         return subscriptions.findByMemberUserIdAndStatus(memberId, "frozen").stream()
@@ -125,8 +129,10 @@ public class EntitlementRevocationService {
     }
 
     /**
-     * Cancels upcoming 1:1 sessions and courts that fall inside {@code from..to} (an approved hold). Package slots and
-     * paid fees go back to the member only inside the notice windows; course enrollments are handled by {@code EnrollmentService#releaseCoursesForHold}.
+     * Hủy các buổi PT 1:1 và lượt đặt sân sắp tới rơi vào khoảng {@code from..to} (đợt bảo lưu đã duyệt). Lượt gói
+     * và phí đã trả chỉ được hoàn lại cho hội viên khi nằm trong thời hạn báo trước (PT trước ít nhất 3 ngày, sân
+     * trước ít nhất 2 giờ); đăng ký khóa học được xử lý riêng bởi {@code EnrollmentService#releaseCoursesForHold}.
+     * Thông báo kết quả cho hội viên và HLV.
      */
     @Transactional
     public int releaseBookingsBetween(Long memberId, LocalDate from, LocalDate to, String reason) {
@@ -145,8 +151,8 @@ public class EntitlementRevocationService {
             booking.setCancelledAt(now);
             booking.setCancelReason(cancelReason);
             cancelled++;
-            // 1:1 sessions are given back only when the hold is approved at least PT_HOLD_REFUND_DAYS days ahead;
-            // after that the package slot (or the money paid) counts as used.
+            // Buổi tập 1:1 chỉ được hoàn lại khi yêu cầu bảo lưu được duyệt trước ít nhất PT_HOLD_REFUND_DAYS ngày;
+            // sau mốc đó lượt gói (hoặc số tiền đã trả) được tính là đã sử dụng.
             boolean inTime = !booking.getBookingDate().isBefore(today.plusDays(PT_HOLD_REFUND_DAYS));
             boolean quota = "package_quota".equalsIgnoreCase(booking.getPaymentMethod());
             java.math.BigDecimal[] money = settleCoachPayments(booking, inTime, cancelReason);
@@ -174,7 +180,7 @@ public class EntitlementRevocationService {
             booking.setCancelledAt(now);
             booking.setCancelReason(cancelReason);
             cancelled++;
-            // A court is given back only when the hold is approved at least COURT_HOLD_REFUND_HOURS before it starts.
+            // Lượt đặt sân chỉ được hoàn lại khi yêu cầu bảo lưu được duyệt trước giờ bắt đầu ít nhất COURT_HOLD_REFUND_HOURS giờ.
             boolean inTime = !booking.getBookingDate().atTime(booking.getStartTime())
                     .isBefore(now.plusHours(COURT_HOLD_REFUND_HOURS));
             boolean quota = "package_quota".equalsIgnoreCase(booking.getPaymentMethod());
@@ -192,8 +198,9 @@ public class EntitlementRevocationService {
     }
 
     /**
-     * Closes the payments of a 1:1 session cancelled by a hold. Returns {paid, refunded}: what the member had paid,
-     * and what went back to the wallet (nothing when {@code inTime} is false).
+     * Đóng các khoản thanh toán của một buổi tập 1:1 bị hủy do bảo lưu: khoản pending chuyển failed; khoản đã thu
+     * được hoàn vào ví nếu kịp hạn. Trả về {đã trả, đã hoàn}: số tiền hội viên đã trả và số tiền hoàn về ví
+     * (bằng 0 khi {@code inTime} là false).
      */
     private java.math.BigDecimal[] settleCoachPayments(CoachBooking booking, boolean inTime, String reason) {
         java.math.BigDecimal paid = java.math.BigDecimal.ZERO;
@@ -221,7 +228,10 @@ public class EntitlementRevocationService {
         return new java.math.BigDecimal[]{paid, refunded};
     }
 
-    /** Same as {@link #settleCoachPayments} for a court booking, including legacy bookings paid without a payment row. */
+    /**
+     * Tương tự {@link #settleCoachPayments} nhưng áp dụng cho lượt đặt sân, bao gồm cả các lịch đặt cũ đã thanh toán
+     * mà không có bản ghi payment.
+     */
     private java.math.BigDecimal[] settleCourtPayments(CourtBooking booking, boolean inTime, String reason) {
         java.math.BigDecimal paid = java.math.BigDecimal.ZERO;
         java.math.BigDecimal refunded = java.math.BigDecimal.ZERO;
@@ -254,7 +264,10 @@ public class EntitlementRevocationService {
         return new java.math.BigDecimal[]{paid, refunded};
     }
 
-    /** Members holding a class booking, an upcoming 1:1 session or an upcoming court; the daily sweep checks each. */
+    /**
+     * Danh sách hội viên đang có lịch đặt lớp học, buổi tập 1:1 sắp tới hoặc lịch đặt sân sắp tới;
+     * job quét hằng ngày sẽ kiểm tra từng người.
+     */
     @Transactional(readOnly = true)
     public java.util.Set<Long> membersWithUpcomingBookings() {
         LocalDate today = LocalDate.now(clock);
@@ -267,23 +280,28 @@ public class EntitlementRevocationService {
         return ids;
     }
 
+    /** Gửi thông báo "lịch đặt đã được giải phóng" kèm ngày giờ. */
     private void notifyReleased(Long memberId, String bodyKey, Long bookingId, LocalDate date, LocalTime start) {
         notify(memberId, "notifications.membership.booking_released.title", msg(bodyKey, date, hhmm(start)), bookingId);
     }
 
+    /** Gửi thông báo trong ứng dụng cho người dùng (bỏ qua nếu không có dịch vụ thông báo). */
     private void notify(Long userId, String titleKey, String body, Long bookingId) {
         if (notificationService == null || userId == null) return;
         notificationService.send(userId, msg(titleKey), body, "system", null, bookingId);
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** Định dạng giờ HH:mm. */
     private static String hhmm(LocalTime time) {
         return time == null ? "" : time.toString().substring(0, 5);
     }
 
+    /** Lịch đã bắt đầu chưa (ngày đã qua, hoặc hôm nay và giờ bắt đầu không sau hiện tại). */
     private static boolean started(LocalDate date, LocalTime start, LocalDate today, LocalTime nowTime) {
         return date.isBefore(today) || (date.isEqual(today) && start != null && !start.isAfter(nowTime));
     }

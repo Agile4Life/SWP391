@@ -17,6 +17,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Xử lý thanh toán online cho đơn shop: kiểm tra đơn còn thanh toán được và đánh dấu đã thanh toán khi cổng báo
+ * về.
+ */
 @Service
 @Transactional
 public class ProductOrderPayments {
@@ -29,6 +33,10 @@ public class ProductOrderPayments {
     private final MessageService messages;
     private final Clock clock;
 
+    /**
+     * Khởi tạo với repository đơn, dịch vụ hoàn tiền, thông báo, người dùng, MessageService (đều tùy chọn) và
+     * Clock.
+     */
     @Autowired
     public ProductOrderPayments(ProductOrderRepository orders,
                                 @Autowired(required = false) ProductOrderRefunds refunds,
@@ -44,6 +52,10 @@ public class ProductOrderPayments {
         this.clock = clock != null ? clock : Clock.system(VN_ZONE);
     }
 
+    /**
+     * Khóa và trả về đơn còn thanh toán online được (chờ thanh toán, không phải tại quầy, chưa quá hạn); ngược
+     * lại báo lỗi.
+     */
     public ProductOrder requirePayable(Long orderId) {
         if (orderId == null) {
             throw unavailable();
@@ -57,6 +69,10 @@ public class ProductOrderPayments {
         return order;
     }
 
+    /**
+     * Đánh dấu đơn đã thanh toán: đơn đã hủy thì hoàn tiền vào ví và báo hội viên; đơn chờ thanh toán thì
+     * chuyển paid, báo hội viên và báo nhân viên có đơn mới.
+     */
     public void markPaid(Long orderId, String method) {
         ProductOrder order = orders.findByIdForUpdate(orderId).orElseThrow(ProductOrderPayments::unavailable);
         if (OrderStatus.cancelled.name().equals(order.getStatus())) {
@@ -94,7 +110,7 @@ public class ProductOrderPayments {
                     "/member/orders/" + order.getId()
             );
         }
-        // Counter payments are taken by staff at the desk, so the "new order" broadcast is only for online payments.
+        // Thanh toán tại quầy do nhân viên thu ở quầy, nên thông báo "đơn mới" chỉ dành cho thanh toán online.
         if (notifications != null && users != null && !"counter".equalsIgnoreCase(order.getPaymentMethod())) {
             List<User> staffList = users.findActiveStaffUsers();
             if (staffList != null) {
@@ -116,10 +132,12 @@ public class ProductOrderPayments {
         }
     }
 
+    /** Thời điểm hiện tại theo giờ Việt Nam. */
     private LocalDateTime now() {
         return LocalDateTime.ofInstant(clock.instant(), VN_ZONE);
     }
 
+    /** Dịch message key kèm tham số; không có MessageService thì trả lại key. */
     private String msg(String key, Object... args) {
         if (messages != null) {
             String resolved = messages.getMessage(key, args);
@@ -130,6 +148,7 @@ public class ProductOrderPayments {
         return key;
     }
 
+    /** Tạo lỗi khi đơn không còn thanh toán được. */
     private static ConflictException unavailable() {
         return new ConflictException("VNPAY_TARGET_UNAVAILABLE", "finance.vnpay.target_unavailable", null, null);
     }

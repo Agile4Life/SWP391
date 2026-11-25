@@ -4,6 +4,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { apiFetch, apiFetchPdf, ApiError } from '../api/client';
 import { setLanguage, useI18n } from './language';
 let reason: Error;
+// Component phụ chỉ phục vụ kiểm thử.
 function ErrorProbe() { const { t } = useI18n(); return <p>{t(reason)}</p>; }
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); localStorage.clear(); setLanguage('vi'); });
 it('requests JSON and PDF using the same language and updates local network errors without translating API messages', async () => {

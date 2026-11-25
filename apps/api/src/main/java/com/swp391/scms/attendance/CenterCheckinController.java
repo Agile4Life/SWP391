@@ -2,7 +2,6 @@ package com.swp391.scms.attendance;
 
 import com.swp391.scms.attendance.dto.CheckinRequests;
 import com.swp391.scms.attendance.dto.CheckinResponses.CheckinDto;
-import com.swp391.scms.attendance.dto.CheckinResponses.StreakDto;
 import com.swp391.scms.attendance.service.CenterCheckinService;
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
@@ -20,7 +19,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * Controller for center access QR check-in, checkout and daily history (SCRUM-75).
+ * API check-in/check-out tại cổng trung tâm (/api/v1/check-in): quầy hiển thị QR cổng và quét QR của hội viên;
+ * hội viên tự quét QR cổng để vào/ra; xem lịch sử ra vào.
+ *
+ * Controller cho check-in QR vào trung tâm, check-out và lịch sử theo ngày (SCRUM-75).
  */
 @Tag(name = "Center Check-in", description = "QR check-in, checkout and daily history (SCRUM-75)")
 @RestController
@@ -30,20 +32,24 @@ public class CenterCheckinController {
     private final CenterCheckinService service;
     private final MessageService messageService;
 
+    /** Constructor cho test, không có MessageService. */
     public CenterCheckinController(CenterCheckinService service) {
         this(service, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public CenterCheckinController(CenterCheckinService service, MessageService messageService) {
         this.service = service;
         this.messageService = messageService;
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** GET /gate-qr?gateId=: quầy lấy mã QR cổng có chữ ký, sống 60 giây, để hội viên quét vào. */
     @GetMapping("/gate-qr")
     @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')")
     public ResponseEntity<ApiResponse<com.swp391.scms.attendance.dto.CheckinResponses.GateQrDto>> gateQr(
@@ -52,6 +58,7 @@ public class CenterCheckinController {
                 .body(ApiResponse.ok(msg("attendance.gate_qr.success"), service.gateQr(principal, gate)));
     }
 
+    /** POST /self: hội viên quét QR cổng để check-in (mọi lượt, dù được vào hay bị từ chối, đều được ghi lại). */
     @PostMapping("/self")
     @PreAuthorize("hasRole('MEMBER')")
     public ResponseEntity<ApiResponse<CheckinDto>> selfScan(
@@ -62,6 +69,7 @@ public class CenterCheckinController {
                 .body(ApiResponse.created(msg("GRANTED".equals(dto.status()) ? "attendance.checkin.granted" : "attendance.checkin.denied"), dto));
     }
 
+    /** POST /scan: quầy quét mã QR động trên thẻ hội viên để cho vào. */
     @Operation(summary = "Scan a membership QR code at center gate (Staff only)")
     @PostMapping("/scan")
     @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')")
@@ -76,6 +84,7 @@ public class CenterCheckinController {
                 .body(ApiResponse.created(msg(msgKey), dto));
     }
 
+    /** POST /{id}/checkout: quầy ghi nhận giờ ra cho một lượt vào. */
     @Operation(summary = "Check out of the center (Staff only)")
     @PostMapping("/{id}/checkout")
     @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'ADMIN')")
@@ -85,6 +94,7 @@ public class CenterCheckinController {
         return ApiResponse.ok(msg("attendance.checkout.success"), service.checkout(principal, id));
     }
 
+    /** GET /history?from=&to=: lịch sử ra vào (nhân viên xem tất cả, hội viên chỉ của mình), mặc định hôm nay. */
     @Operation(summary = "Get today's center check-in history")
     @GetMapping("/history")
     @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER', 'MEMBER', 'ADMIN')")
@@ -98,6 +108,7 @@ public class CenterCheckinController {
         return ApiResponse.ok(msg("attendance.history.success"), rows);
     }
 
+    /** POST /self/checkout: hội viên quét QR cổng để check-out. */
     @Operation(summary = "Member checks out by scanning the gate QR")
     @PostMapping("/self/checkout")
     @PreAuthorize("hasRole('MEMBER')")
@@ -106,13 +117,5 @@ public class CenterCheckinController {
             @Valid @RequestBody CheckinRequests.SelfScan request) {
         return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
                 .body(ApiResponse.ok(msg("attendance.self_checkout.success"), service.selfCheckout(principal, request)));
-    }
-
-    @Operation(summary = "Get the current member's workout streak")
-    @GetMapping("/streak")
-    @PreAuthorize("hasRole('MEMBER')")
-    public ResponseEntity<ApiResponse<StreakDto>> streak(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
-        return ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
-                .body(ApiResponse.ok(msg("attendance.streak.success"), service.streak(principal)));
     }
 }

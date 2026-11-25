@@ -20,13 +20,16 @@ beforeEach(() => {
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); vi.useRealTimers(); });
+// Component phụ chỉ phục vụ kiểm thử.
 function CurrentLocation() {
   const { pathname, search } = useLocation();
   return <output data-testid="auth-location">{pathname}{search}</output>;
 }
+// Dựng component vào DOM giả để kiểm thử.
 async function render(path = '/register') {
   await act(async () => root.render(<MemoryRouter initialEntries={[path]}><RegisterPage /><CurrentLocation /></MemoryRouter>));
 }
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function fill(id: string, value: string) {
   const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
   await act(async () => {
@@ -34,10 +37,12 @@ async function fill(id: string, value: string) {
     input.dispatchEvent(new Event('input', { bubbles: true }));
   });
 }
+// Điền một biểu mẫu đăng ký hợp lệ (số điện thoại tùy chọn).
 async function validForm(phone = '') {
   await fill('reg-fullName', ' Nguyễn Văn Mua '); await fill('reg-username', ' buyer '); await fill('reg-email', 'buyer@example.test');
   await fill('reg-phone', phone); await fill('reg-password', 'Buyer123!');
 }
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function submit() { await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))); }
 
 it('returns to login immediately after OTP confirmation and keeps the selected package', async () => {

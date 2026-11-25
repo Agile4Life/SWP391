@@ -30,7 +30,11 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-/** Spec 2026-11-09 sections 1.3 and 1.5: a course must fit the membership; an upgrade keeps the credits already spent. */
+/**
+ * Bộ kiểm thử cho CourseMembershipRules (quy tắc khóa học theo gói hội viên).
+ *
+ * Đặc tả 2026-11-09 mục 1.3 và 1.5: khóa học phải nằm trong thời hạn gói hội viên; khi nâng cấp gói vẫn giữ nguyên số lượt đã sử dụng.
+ */
 class CourseMembershipRulesTest {
     private final ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
     private final GymClassRepository gymClasses = mock(GymClassRepository.class);
@@ -40,6 +44,7 @@ class CourseMembershipRulesTest {
     private final AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "m@test.com", "MEMBER");
     private EnrollmentService service;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ khóa học với dữ liệu membership giả lập. */
     @BeforeEach
     void setUp() {
         service = new EnrollmentService(enrollments, null, gymClasses, subscriptions, members, null, null, clock);
@@ -55,6 +60,7 @@ class CourseMembershipRulesTest {
                 .thenReturn(true);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sub). */
     private MembershipSubscription sub(long id, String tier, int credits, LocalDate start, LocalDate end) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setId(id);
@@ -71,6 +77,7 @@ class CourseMembershipRulesTest {
         return s;
     }
 
+    /** Hàm trợ giúp của test: tạo khóa học theo ngày bắt đầu/kết thúc. */
     private GymClass course(LocalDate start, LocalDate end) {
         GymClass c = new GymClass();
         c.setId(50L);
@@ -84,6 +91,7 @@ class CourseMembershipRulesTest {
         return c;
     }
 
+    /** Kiểm thử: khóa kết thúc sau khi membership hết hạn bị từ chối cho đến khi hội viên gia hạn. */
     @Test
     void courseEndingAfterTheMembershipIsRejectedUntilTheMemberRenews() {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
@@ -94,6 +102,7 @@ class CourseMembershipRulesTest {
         assertEquals("SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP", ex.getErrorCode());
     }
 
+    /** Kiểm thử: gia hạn có trả phí nối tiếp không gián đoạn thì kéo dài thời gian được bao phủ. */
     @Test
     void aPaidRenewalThatFollowsWithoutAGapExtendsTheCoverage() {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
@@ -109,6 +118,7 @@ class CourseMembershipRulesTest {
         assertDoesNotThrow(() -> service.enrollCourse(principal, 50L));
     }
 
+    /** Kiểm thử: khoảng trống giữa các kỳ không làm kéo dài thời gian được bao phủ. */
     @Test
     void aGapBetweenPeriodsDoesNotExtendTheCoverage() {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
@@ -119,9 +129,10 @@ class CourseMembershipRulesTest {
         assertThrows(ForbiddenException.class, () -> service.enrollCourse(principal, 50L));
     }
 
+    /** Kiểm thử: nâng cấp gói vẫn giữ các lượt đã dùng ở gói trước. */
     @Test
     void upgradingKeepsTheCreditsAlreadySpentOnThePreviousPlan() {
-        // Silver 1 credit, used 1 on Nov 2, upgraded to Gold (2 credits) on Nov 9: only one credit is left.
+        // Gói Silver có 1 lượt, đã dùng 1 vào ngày 02/11, nâng cấp lên Gold (2 lượt) vào ngày 09/11: chỉ còn 1 lượt.
         MembershipSubscription silver = sub(1, "SILVER", 1, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 8));
         MembershipSubscription gold = sub(2, "GOLD", 2, LocalDate.of(2026, 11, 9), LocalDate.of(2026, 12, 8));
         gold.setPreviousSubscription(silver);
@@ -137,6 +148,7 @@ class CourseMembershipRulesTest {
         assertEquals(1, quota.remainingCredits());
     }
 
+    /** Kiểm thử: danh sách khóa của tôi hiển thị số buổi còn lại sau khi trừ buổi đã dự, vắng và được miễn. */
     @Test
     void theMyCoursesListShowsHowManySessionsAreLeftAfterAttendedMissedAndExcusedOnes() {
         com.swp391.scms.scheduling.repository.ClassSessionRepository sessionRepo =
@@ -153,7 +165,7 @@ class CourseMembershipRulesTest {
         enrollment.setMember(owner);
         enrollment.setStatus("booked");
         when(enrollments.findByMemberUserId(100L)).thenReturn(List.of(enrollment));
-        // 9 sessions; the member attended 3, missed 1 and 1 was excused: 5 are left.
+        // 9 buổi học; hội viên đã dự 3, vắng 1 và được miễn 1: đã ghi nhận 5 buổi (còn lại 4 buổi).
         when(sessionRepo.countByGymClassIdAndStatusNot(50L, "cancelled")).thenReturn(9L);
         when(attendanceRepo.countAttended(100L, 50L)).thenReturn(3L);
         when(attendanceRepo.countRecorded(100L, 50L)).thenReturn(5L);
@@ -165,6 +177,7 @@ class CourseMembershipRulesTest {
         assertEquals(Integer.valueOf(4), item.remainingSessions());
     }
 
+    /** Kiểm thử: gia hạn bắt đầu hạn mức mới. */
     @Test
     void aRenewalStartsAFreshAllowance() {
         MembershipSubscription first = sub(1, "GOLD", 2, LocalDate.of(2026, 10, 1), LocalDate.of(2026, 10, 30));
@@ -177,6 +190,7 @@ class CourseMembershipRulesTest {
         assertEquals(2, service.getMemberCourseQuota(principal).remainingCredits());
     }
 
+    /** Kiểm thử: hội viên bị chặn vì vắng gần hết khóa không đăng ký được đến khi hết lệnh chặn. */
     @Test
     void aMemberBlockedForMissingMostOfACourseCannotEnrollUntilTheBlockEnds() {
         Member blocked = new Member();
@@ -189,6 +203,7 @@ class CourseMembershipRulesTest {
         assertThrows(ForbiddenException.class, () -> service.checkoutCourse(principal, 50L, "cash"));
     }
 
+    /** Kiểm thử: hạn mức báo lệnh chặn để hội viên biết vì sao không đăng ký được. */
     @Test
     void theQuotaReportsTheBlockSoTheMemberSeesWhyEnrollingIsOff() {
         Member blocked = new Member();

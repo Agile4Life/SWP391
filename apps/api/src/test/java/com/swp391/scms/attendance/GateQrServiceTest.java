@@ -5,6 +5,7 @@ import com.swp391.scms.common.exception.BadRequestException;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
+/** Bộ kiểm thử cho service GateQrService (gate qr service). */
 class GateQrServiceTest {
     private final GateQrService service = new GateQrService("test-gate-signing-secret");
     private final long now = 1793256000000L;

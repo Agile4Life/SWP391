@@ -14,6 +14,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho PublicCatalogSecurity (public catalog security). */
 @WebMvcTest(PublicCatalogController.class)
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class, JsonAccessDeniedHandler.class})
 class PublicCatalogSecurityTest {
@@ -23,6 +24,10 @@ class PublicCatalogSecurityTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /**
+     * Kiểm thử: người chưa đăng nhập đọc được danh mục công khai (không cache) nhưng không ghi hay đọc dữ liệu
+     * riêng được.
+     */
     @Test
     void anonymousCanReadCatalogWithNoCacheButCannotWriteOrReadPrivateData() throws Exception {
         when(service.getCatalog()).thenReturn(new PublicCatalogService.CatalogDto(List.of(), List.of(), List.of()));

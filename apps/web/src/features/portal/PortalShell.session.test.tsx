@@ -6,6 +6,7 @@ import { AUTH_STORAGE_KEY, TOKEN_STORAGE_KEY } from '../../shared/api/client';
 import { RoleGuard } from '../../shared/ui/RoleGuard';
 import { PortalShell } from './PortalShell';
 
+// Tạo chuỗi JSON phiên đăng nhập giả.
 const session = (identifier: string, role: string) => JSON.stringify({ id: identifier, name: identifier, identifier, role });
 
 /** Mô phỏng tab khác đổi localStorage: trình duyệt chỉ phát `storage` cho tab còn lại. */
@@ -14,6 +15,7 @@ function changeSessionFromAnotherTab(identifier: string, role: string) {
   window.dispatchEvent(new StorageEvent('storage', { key: AUTH_STORAGE_KEY }));
 }
 
+// Component phụ chỉ phục vụ kiểm thử.
 function PageWithDraft() {
   const [draft] = useState(() => Math.random());
   return <h1 data-draft={draft}>Trang có state</h1>;

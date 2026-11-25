@@ -36,7 +36,11 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** Runs the actual Hibernate schema and PostgreSQL invariants for Supplement Shop on a dedicated test schema. */
+/**
+ * Bộ kiểm thử tích hợp PostgreSQL cho đơn hàng sản phẩm.
+ *
+ * Chạy schema Hibernate thật và kiểm chứng các bất biến PostgreSQL của cửa hàng thực phẩm bổ sung trên một schema kiểm thử riêng biệt.
+ */
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ProductOrderPostgreSqlTest {
@@ -45,6 +49,7 @@ class ProductOrderPostgreSqlTest {
     private SingleConnectionDataSource source;
     private JdbcTemplate jdbc;
 
+    /** Chuẩn bị trước mỗi test: tạo schema Hibernate biệt lập trên database test. */
     @BeforeAll
     void createIsolatedHibernateSchema() throws Exception {
         connection = connect();
@@ -57,6 +62,7 @@ class ProductOrderPostgreSqlTest {
         synchronizeEntities(source, schema, "create");
     }
 
+    /** Dọn dẹp sau test: chỉ xóa schema do test sinh ra. */
     @AfterAll
     void removeOnlyGeneratedSchema() throws Exception {
         if (connection == null) return;
@@ -66,6 +72,7 @@ class ProductOrderPostgreSqlTest {
         }
     }
 
+    /** Kiểm thử: tồn kho âm vi phạm ràng buộc CHECK. */
     @Test
     void negativeStockViolatesCheckConstraint() {
         long catId = jdbc.queryForObject("""
@@ -88,6 +95,7 @@ class ProductOrderPostgreSqlTest {
         assertEquals("ck_product_variants_stock_nonneg", sql.getServerErrorMessage().getConstraint());
     }
 
+    /** Kiểm thử: nhiều lượt mua đồng thời đơn vị cuối cùng chỉ có đúng một người thắng. */
     @Test
     void concurrentPurchasesOfLastUnitHaveExactlyOneWinner() throws Exception {
         long catId = jdbc.queryForObject("""
@@ -139,6 +147,7 @@ class ProductOrderPostgreSqlTest {
         }
     }
 
+    /** Kiểm thử: nâng cấp bảng payments cũ thêm cột product_order_id nullable và bật RLS cho product_goals. */
     @Test
     void upgradingLegacyPaymentsTableAddsNullableProductOrderIdColumnAndEnablesRlsOnProductGoals() throws Exception {
         jdbc.execute("alter table payments drop column if exists product_order_id");
@@ -164,6 +173,7 @@ class ProductOrderPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: trừ tồn kho bằng SQL trong một giao dịch. */
     private String decrementStock(CountDownLatch ready, AtomicInteger pid, long varId) throws Exception {
         try (var worker = workerConnection()) {
             worker.setAutoCommit(false);
@@ -185,12 +195,14 @@ class ProductOrderPostgreSqlTest {
         }
     }
 
+    /** Hàm trợ giúp của test: mở kết nối riêng cho luồng worker. */
     private Connection workerConnection() throws SQLException {
         Connection worker = connect();
         worker.setSchema(schema);
         return worker;
     }
 
+    /** Hàm trợ giúp của test: kết nối tới database test. */
     private static Connection connect() throws SQLException {
         String url = credential("SCMS_POSTGRES_TEST_URL");
         String sslMode = System.getenv().getOrDefault("DB_SSL_MODE", "require");
@@ -211,6 +223,7 @@ class ProductOrderPostgreSqlTest {
         return DriverManager.getConnection(url, properties);
     }
 
+    /** Hàm trợ giúp của test: tạo thông tin đăng nhập kết nối test. */
     private static String credential(String name) {
         String value = System.getenv(name);
         if (value == null || value.isBlank()) {
@@ -219,10 +232,12 @@ class ProductOrderPostgreSqlTest {
         return value;
     }
 
+    /** Hàm trợ giúp của test: đồng bộ entity vào schema bằng Hibernate. */
     private static void synchronizeEntities(SingleConnectionDataSource source, String schema, String action) throws Exception {
         buildSessionFactory(source, schema, action).close();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (build session factory). */
     private static EntityManagerFactory buildSessionFactory(SingleConnectionDataSource source, String schema, String action) throws Exception {
         var registry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.connection.datasource", source)

@@ -32,6 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ClassController (class controller). */
 @ExtendWith(MockitoExtension.class)
 class ClassControllerTest {
 
@@ -44,6 +45,7 @@ class ClassControllerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller lớp học. */
     @BeforeEach
     void setUp() {
         ResourceBundleMessageSource messageSource = new ResourceBundleMessageSource();
@@ -57,6 +59,7 @@ class ClassControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: tạo lớp lẻ đã ngừng, được thay bằng khóa học định kỳ. */
     @Test
     void createClass_isRetiredInFavourOfRecurringCourses() throws Exception {
         CreateClassRequest request = new CreateClassRequest(
@@ -70,6 +73,7 @@ class ClassControllerTest {
         org.mockito.Mockito.verify(classService, org.mockito.Mockito.never()).createClass(any());
     }
 
+    /** Kiểm thử: từ chối cấp độ không hỗ trợ trước khi lưu dữ liệu. */
     @Test
     void createClass_rejectsUnsupportedLevelBeforePersistence() throws Exception {
         CreateClassRequest request = new CreateClassRequest("Yoga", 1L, 2L, 3L, 20, "expert", null);
@@ -84,6 +88,7 @@ class ClassControllerTest {
         verifyNoInteractions(classService);
     }
 
+    /** Kiểm thử: tạo buổi học trả 201 Created. */
     @Test
     void createSession_returnsCreated() throws Exception {
         CreateSessionRequest request = new CreateSessionRequest(
@@ -104,6 +109,7 @@ class ClassControllerTest {
                 .andExpect(jsonPath("$.data.status").value("scheduled"));
     }
 
+    /** Kiểm thử: liệt kê buổi học trả 200 OK. */
     @Test
     void listSessions_returnsOk() throws Exception {
         ClassSessionDto dto = new ClassSessionDto(
@@ -119,18 +125,21 @@ class ClassControllerTest {
                 .andExpect(jsonPath("$.data[0].id").value(10L));
     }
 
+    /** Kiểm thử: HLV chỉ thấy buổi của mình dù yêu cầu xem HLV khác. */
     @Test
     void listSessions_coachOnlySeesOwnSessionsEvenWhenAskingForAnotherCoach() throws Exception {
         com.swp391.scms.security.AuthenticatedPrincipal coach =
                 new com.swp391.scms.security.AuthenticatedPrincipal(7L, "coach@test.com", "COACH");
         MockMvc coachMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
                         return parameter.hasParameterAnnotation(
                                 org.springframework.security.core.annotation.AuthenticationPrincipal.class);
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(org.springframework.core.MethodParameter parameter,
                                                   org.springframework.web.method.support.ModelAndViewContainer mavContainer,
@@ -148,6 +157,7 @@ class ClassControllerTest {
         org.mockito.Mockito.verify(classService).searchSessions(null, null, null, 7L);
     }
 
+    /** Kiểm thử: liệt kê lớp học trả 200 OK. */
     @Test
     void listClasses_returnsOk() throws Exception {
         GymClassDto dto = new GymClassDto(

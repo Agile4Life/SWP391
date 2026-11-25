@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+/** Bộ kiểm thử cho bộ khởi tạo dữ liệu DemoClassSeeder (demo class seeder). */
 @ExtendWith(MockitoExtension.class)
 class DemoClassSeederTest {
 
@@ -41,6 +42,7 @@ class DemoClassSeederTest {
     private final List<ClassSession> savedSessions = new ArrayList<>();
     private DemoClassSeeder seeder;
 
+    /** Chuẩn bị trước mỗi test: tạo seeder lớp học mẫu với repository giả lập. */
     @BeforeEach
     void setUp() {
         seeder = new DemoClassSeeder(classes, sessions, coaches, rooms, disciplines, users, coachBookings);
@@ -67,6 +69,7 @@ class DemoClassSeederTest {
         });
     }
 
+    /** Kiểm thử: tạo nhiều lớp mà không đặt trùng lịch HLV hay phòng. */
     @Test
     void createsManyClassesWithoutDoubleBookingACoachOrRoom() {
         seeder.run(null);
@@ -95,7 +98,10 @@ class DemoClassSeederTest {
         }
     }
 
-    /** The schedule trigger also rejects a class session that overlaps a confirmed PT booking of its coach. */
+    /**
+     * Kiểm thử: không xếp buổi học đè lên lịch PT đã xác nhận của HLV.
+     * Trigger lịch học cũng từ chối buổi lớp trùng khung giờ với lịch PT đã xác nhận của cùng HLV.
+     */
     @Test
     void doesNotPlaceAScheduledSessionOverAConfirmedPtBookingOfTheCoach() {
         java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
@@ -120,6 +126,7 @@ class DemoClassSeederTest {
         });
     }
 
+    /** Kiểm thử: khóa đã kết thúc được lưu trữ, khóa đang diễn ra vẫn active. */
     @Test
     void marksFinishedCoursesArchivedAndKeepsOngoingOnesActive() {
         seeder.run(null);
@@ -128,6 +135,7 @@ class DemoClassSeederTest {
         assertThat(savedSessions).extracting(ClassSession::getStatus).contains("completed", "scheduled");
     }
 
+    /** Kiểm thử: không tạo trùng những lớp đã tồn tại. */
     @Test
     void doesNotDuplicateClassesThatAlreadyExist() {
         List<GymClass> existing = DemoClassSeeder.CLASSES.stream().map(spec -> {
@@ -143,6 +151,7 @@ class DemoClassSeederTest {
         verify(sessions, never()).save(any());
     }
 
+    /** Kiểm thử: bỏ qua khi không có HLV khả dụng. */
     @Test
     void skipsWhenNoCoachIsAvailable() {
         lenient().when(coaches.findActiveWithUser()).thenReturn(List.of());
@@ -152,6 +161,7 @@ class DemoClassSeederTest {
         verify(classes, never()).save(any());
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (coach). */
     private static Coach coach(Long id, String specialization) {
         Coach coach = new Coach();
         coach.setUserId(id);
@@ -159,6 +169,7 @@ class DemoClassSeederTest {
         return coach;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (room). */
     private static Room room(Long id, String name, int capacity) {
         Room room = new Room();
         room.setId(id);
@@ -168,6 +179,7 @@ class DemoClassSeederTest {
         return room;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (discipline). */
     private static Discipline discipline(Long id, String name) {
         Discipline discipline = new Discipline();
         ReflectionTestUtils.setField(discipline, "id", id);

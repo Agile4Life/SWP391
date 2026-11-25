@@ -6,10 +6,10 @@ import { catalogApi, type Discipline, type MembershipPackage, type Room } from '
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
-import { isCourtDiscipline } from '../courts/courtsApi';
 
-import { TimePicker } from '../../shared/ui/TimePicker';
+/** Ba tab danh mục: bộ môn, phòng tập và gói tập. */
 type Tab = 'disciplines' | 'rooms' | 'packages';
+/** Dữ liệu biểu mẫu dạng cặp khóa–chuỗi. */
 type Form = Record<string, string>;
 
 const ROOM_STATUS_LABEL = { available: 'Đang hoạt động', maintenance: 'Bảo trì', closed: 'Đã đóng' } as const;
@@ -28,6 +28,7 @@ const QUICK_DURATION_PRESETS = [
 
 const vnd = formatPrice;
 
+/** Xác định hạng gói: dùng tier khai báo nếu hợp lệ, không thì suy ra từ tên gói. */
 function resolvePackageTier(pkg: { name?: string; tier?: string | null }): 'SILVER' | 'GOLD' | 'PLATINUM' {
   const explicit = pkg.tier?.trim().toUpperCase();
   if (explicit === 'SILVER' || explicit === 'GOLD' || explicit === 'PLATINUM') {
@@ -39,6 +40,7 @@ function resolvePackageTier(pkg: { name?: string; tier?: string | null }): 'SILV
   return 'SILVER';
 }
 
+/** Màn quản lý danh mục của quản lý: thêm/sửa/xóa bộ môn, phòng tập và gói tập, đổi nhanh giá và trạng thái gói. */
 export function ManagerCatalogsPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -53,6 +55,7 @@ export function ManagerCatalogsPage() {
   const [editing, setEditing] = useState<{ id: number | null; form: Form } | null>(null);
   const [quickPricePkg, setQuickPricePkg] = useState<{ pkg: MembershipPackage; price: string } | null>(null);
 
+  // Tải bộ môn, phòng và gói cùng lúc.
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -72,6 +75,7 @@ export function ManagerCatalogsPage() {
     void load();
   }, [load]);
 
+  // Chạy một thao tác ghi: bật trạng thái đang gửi, báo thành công rồi tải lại; lỗi thì hiện thông báo.
   const run = async (action: () => Promise<unknown>, successMsg: StaffMessage = 'Thao tác thành công!') => {
     setError('');
     setIsSubmitting(true);
@@ -90,6 +94,7 @@ export function ManagerCatalogsPage() {
     }
   };
 
+  // Biểu mẫu trống mặc định theo tab đang chọn.
   const emptyForm = (): Form =>
     tab === 'disciplines'
       ? { name: '', description: '' }
@@ -97,6 +102,7 @@ export function ManagerCatalogsPage() {
         ? { name: '', location: '', capacity: '10', status: 'available', disciplineId: '', openTime: '06:00', closeTime: '22:00', tier: 'STANDARD' }
         : { name: '', description: '', price: '199000', durationDays: '90', classCreditLimit: '', status: 'active', tier: 'SILVER' };
 
+  // Gửi biểu mẫu thêm/sửa theo tab hiện tại sau khi kiểm tra dữ liệu.
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing || isSubmitting) return;
@@ -115,7 +121,7 @@ export function ManagerCatalogsPage() {
         return;
       }
       const outOfRange = parsedDuration !== 3 && (parsedDuration < 90 || parsedDuration > 365);
-      // Existing packages keep their saved term unless it changes; the server enforces the rule for edits.
+      // Các gói hiện có giữ nguyên thời hạn đã lưu trừ khi được thay đổi; máy chủ sẽ kiểm tra quy tắc khi chỉnh sửa.
       if (!Number.isFinite(parsedDuration) || (isNew && outOfRange)) {
         setFormError('Thời hạn gói tập phải từ 3 đến 12 tháng (90–365 ngày); chỉ gói trải nghiệm 3 ngày được ngắn hơn.');
         return;
@@ -150,6 +156,7 @@ export function ManagerCatalogsPage() {
     }, isNew ? 'Đã thêm mới danh mục thành công!' : 'Đã cập nhật danh mục thành công!');
   };
 
+  // Gửi giá mới của gói trong hộp đổi nhanh giá.
   const submitQuickPrice = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickPricePkg || isSubmitting) return;
@@ -174,12 +181,14 @@ export function ManagerCatalogsPage() {
     );
   };
 
+  // Mở hộp thêm/sửa với dữ liệu cho trước.
   const openEditor = (value: { id: number | null; form: Form }) => {
     setFormError('');
     setError('');
     setEditing(value);
   };
 
+  // Xóa một mục sau khi xác nhận; mục đã được dùng sẽ bị backend từ chối.
   const remove = async (what: string, name: string, action: () => Promise<unknown>) => {
     const confirmed = await confirm({
       title: staffMessage(`Xóa ${what}?`, `Delete ${staffTranslation(what)}?`),
@@ -190,11 +199,13 @@ export function ManagerCatalogsPage() {
     if (confirmed) void run(action, staffMessage(`Đã xóa ${what} "${name}".`, `Deleted ${staffTranslation(what)} "${name}".`));
   };
 
+  // Đổi một trường của biểu mẫu và xóa lỗi cũ.
   const set = (key: string, value: string) => {
     setFormError('');
     if (editing) setEditing({ ...editing, form: { ...editing.form, [key]: value } });
   };
 
+  // Tăng/giảm giá trong biểu mẫu (không âm).
   const adjustFormPrice = (delta: number) => {
     if (!editing) return;
     const current = Number(editing.form.price) || 0;
@@ -202,6 +213,7 @@ export function ManagerCatalogsPage() {
     set('price', String(next));
   };
 
+  // Tiêu đề hộp thoại theo tab và thêm/sửa.
   const modalTitle = () => {
     if (!editing) return '';
     const isNew = editing.id == null;
@@ -210,23 +222,7 @@ export function ManagerCatalogsPage() {
     return isNew ? 'Tạo gói tập mới' : 'Chỉnh sửa gói tập & giá bán';
   };
 
-  // SCRUM / Scope Reduction: Chỉ hiển thị bộ môn Gym và Phòng Gym Tiêu chuẩn
-  const visibleDisciplines = disciplines.filter(
-    (d) => (d.name || '').toLowerCase().includes('gym') || (d.name || '').toLowerCase().includes('thể hình')
-  );
-  const visibleRooms = rooms.filter((r) => {
-    const name = (r.name || '').toLowerCase();
-    const disc = (r.disciplineName || '').toLowerCase();
-    return (
-      name.includes('gym tiêu chuẩn') ||
-      name.includes('standard gym') ||
-      name.includes('tiêu chuẩn') ||
-      (name.includes('gym') && r.tier !== 'PLATINUM') ||
-      disc.includes('gym')
-    );
-  });
-
-  const rowCount = tab === 'disciplines' ? visibleDisciplines.length : tab === 'rooms' ? visibleRooms.length : packages.length;
+  const rowCount = tab === 'disciplines' ? disciplines.length : tab === 'rooms' ? rooms.length : packages.length;
 
   return (
     <div data-i18n-managed className="portal-container">
@@ -248,8 +244,8 @@ export function ManagerCatalogsPage() {
       <div className="portal-tabs">
         {(
           [
-            ['disciplines', t(`Bộ môn (${visibleDisciplines.length})`, `Disciplines (${visibleDisciplines.length})`)],
-            ['rooms', t(`Phòng tập (${visibleRooms.length})`, `Rooms (${visibleRooms.length})`)],
+            ['disciplines', t(`Bộ môn (${disciplines.length})`, `Disciplines (${disciplines.length})`)],
+            ['rooms', t(`Phòng tập (${rooms.length})`, `Rooms (${rooms.length})`)],
             ['packages', t(`Gói tập (${packages.length})`, `Memberships (${packages.length})`)],
           ] as const
         ).map(([key, label]) => (
@@ -275,7 +271,7 @@ export function ManagerCatalogsPage() {
         </div>
       )}
 
-      {/* Quick Price Edit Modal */}
+      {/* Hộp thoại sửa giá nhanh */}
       {quickPricePkg && (
         <Modal
           title={t(`Sửa giá nhanh: ${quickPricePkg.pkg.name}`, `Quick price edit: ${quickPricePkg.pkg.name}`)}
@@ -344,7 +340,7 @@ export function ManagerCatalogsPage() {
         </Modal>
       )}
 
-      {/* Accessible Dialog Modal for Adding/Editing */}
+      {/* Hộp thoại thêm/chỉnh sửa hỗ trợ truy cập */}
       {editing && (
         <Modal title={t(modalTitle())} busy={isSubmitting} onClose={() => !isSubmitting && setEditing(null)}>
           <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
@@ -366,21 +362,6 @@ export function ManagerCatalogsPage() {
 
             {tab === 'rooms' && (
               <>
-                <div data-i18n-managed className="portal-form-group">
-                  <label className="portal-label" htmlFor="cat-discipline">{t("Đặt sân / làn theo bộ môn")}</label>
-                  <Select id="cat-discipline" className="portal-select" value={editing.form.disciplineId ?? ''} onChange={event => {
-                    const value = event.target.value;
-                    setFormError('');
-                    setEditing({ ...editing, form: { ...editing.form, disciplineId: value, openTime: editing.form.openTime || '06:00', closeTime: editing.form.closeTime || '22:00' } });
-                  }}>
-                    <option value="">{t("Không mở đặt sân")}</option>
-                    {disciplines.filter(discipline => isCourtDiscipline(discipline.name)).map(discipline => <option key={discipline.id} value={discipline.id}>{discipline.name}</option>)}
-                  </Select>
-                </div>
-                {editing.form.disciplineId && <div className="grid-2">
-                  <label className="portal-form-group" htmlFor="cat-open"><span className="portal-label">{t("Giờ mở cửa")}</span><TimePicker id="cat-open" wholeHour required value={editing.form.openTime ?? ''} onChange={event => set('openTime', event.target.value)} /></label>
-                  <label className="portal-form-group" htmlFor="cat-close"><span className="portal-label">{t("Giờ đóng cửa")}</span><TimePicker id="cat-close" wholeHour required value={editing.form.closeTime ?? ''} onChange={event => set('closeTime', event.target.value)} /></label>
-                </div>}
                 <div data-i18n-managed className="portal-form-group">
                   <label className="portal-label" htmlFor="cat-tier">{t("Phân hạng phòng")}</label>
                   <Select id="cat-tier" className="portal-select" value={editing.form.tier || 'STANDARD'} onChange={(e) => set('tier', e.target.value)}>
@@ -424,9 +405,9 @@ export function ManagerCatalogsPage() {
                   value={editing.form.tier || resolvePackageTier({ name: editing.form.name })}
                   onChange={(e) => set('tier', e.target.value)}
                 >
-                  <option value="SILVER">{t("Silver · Cơ bản (1 lượt sân miễn phí/tháng)", "Silver · Basic (1 free court booking/month)")}</option>
-                  <option value="GOLD">{t("Gold · Trung cấp (2 lượt sân miễn phí/tháng)", "Gold · Standard (2 free court bookings/month)")}</option>
-                  <option value="PLATINUM">{t("Platinum · VIP Cao cấp (Phòng VIP + 3 lượt sân miễn phí/tháng)", "Platinum · VIP (VIP room + 3 free court bookings/month)")}</option>
+                  <option value="SILVER">{t("Silver · Cơ bản", "Silver · Basic")}</option>
+                  <option value="GOLD">{t("Gold · Trung cấp", "Gold · Standard")}</option>
+                  <option value="PLATINUM">{t("Platinum · VIP Cao cấp", "Platinum · VIP")}</option>
                 </Select>
               </div>
             )}
@@ -625,7 +606,7 @@ export function ManagerCatalogsPage() {
                     </tr>
                   </thead>
                   <tbody data-i18n-managed>
-                    {visibleDisciplines.map((d) => (
+                    {disciplines.map((d) => (
                       <tr data-i18n-managed key={d.id}>
                         <td><strong>{d.name}</strong></td>
                         <td style={{ color: 'var(--portal-muted)' }}>{d.description || <span className="muted">{t("Không có mô tả")}</span>}</td>
@@ -663,7 +644,7 @@ export function ManagerCatalogsPage() {
                     </tr>
                   </thead>
                   <tbody data-i18n-managed>
-                    {visibleRooms.map((r) => (
+                    {rooms.map((r) => (
                       <tr data-i18n-managed key={r.id}>
                         <td><strong>{r.name}</strong>{r.disciplineName && <div className="muted">{r.disciplineName}{r.openTime && r.closeTime ? ` · ${r.openTime.slice(0, 5)}–${r.closeTime.slice(0, 5)}` : ''}</div>}</td>
                         <td>

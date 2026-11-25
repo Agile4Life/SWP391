@@ -25,6 +25,7 @@ it('renders empty message when plan has no exercises', async () => {
 });
 
 it('renders all plan exercises grouped by day without daily progress scoring', async () => {
+  // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const dummyPlan = {
     id: 10,
     memberId: 5,

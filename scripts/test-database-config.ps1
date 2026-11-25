@@ -1,3 +1,4 @@
+# Mục đích: kiểm thử cấu hình database của các script, bảo đảm chỉ cho phép Supabase PostgreSQL qua TLS.
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'database-config.ps1')
 

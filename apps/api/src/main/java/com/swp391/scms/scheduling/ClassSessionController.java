@@ -10,36 +10,43 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * SCRUM-113: Class Session Controller.
- * Provides endpoints to manage class sessions lifecycle such as cancellation and notification workflows.
+ * API hủy buổi học (đã ngừng; chỉ bật khi app.legacy.classes-enabled=true).
+ *
+ * SCRUM-113: Controller buổi học. Cung cấp endpoint quản lý vòng đời buổi học như hủy và luồng thông báo.
  */
 @Tag(name = "Class Sessions", description = "Class session lifecycle and cancellation management (SCRUM-113)")
 @RestController
+@ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 @RequestMapping("/api/v1/classes/sessions")
 public class ClassSessionController {
 
     private final ClassSessionService sessionService;
     private final MessageService messageService;
 
+    /** Constructor cho test: không có MessageService. */
     public ClassSessionController(ClassSessionService sessionService) {
         this(sessionService, null);
     }
 
+    /** Constructor chính: nhận ClassSessionService và MessageService. */
     @Autowired
     public ClassSessionController(ClassSessionService sessionService, MessageService messageService) {
         this.sessionService = sessionService;
         this.messageService = messageService;
     }
 
+    /** Dịch message key kèm tham số; không có MessageService thì trả lại key. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** POST /{id}/cancel: hủy buổi học kèm lý do và thông báo cho học viên đã đặt. */
     @Operation(summary = "Cancel a class session with reason and notify enrolled members")
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasAnyRole('COACH', 'CENTER_MANAGER', 'STAFF', 'RECEPTIONIST')")

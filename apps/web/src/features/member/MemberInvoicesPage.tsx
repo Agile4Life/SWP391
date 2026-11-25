@@ -39,6 +39,7 @@ function ServiceCell({ payment }: { payment: Payment }) {
 }
 
 
+/** Class màu huy hiệu theo trạng thái thanh toán. */
 function paymentStatusBadgeClass(status: string): string {
   switch (status.toLowerCase()) {
     case 'success':
@@ -52,6 +53,7 @@ function paymentStatusBadgeClass(status: string): string {
   }
 }
 
+/** Trang hóa đơn và thanh toán của hội viên: khoản chờ thanh toán, lịch sử thanh toán và tải hóa đơn PDF. */
 export function MemberInvoicesPage() {
   useLanguage();
   const [pending, setPending] = useState<Payment[]>([]);
@@ -80,6 +82,7 @@ export function MemberInvoicesPage() {
   }, [reload]);
 
   useEffect(() => {
+    // Tải lại khi một phiên VNPay bỏ dở được hủy.
     const onReleased = () => setReload((n) => n + 1);
     window.addEventListener('vnpay-attempt-released', onReleased);
     return () => window.removeEventListener('vnpay-attempt-released', onReleased);
@@ -100,6 +103,7 @@ export function MemberInvoicesPage() {
     return () => { active = false; };
   }, [selected]);
 
+  // Tải hóa đơn PDF của một khoản thanh toán.
   async function downloadInvoice(paymentId: number) {
     setDownloading(true);
     setDownloadError(false);

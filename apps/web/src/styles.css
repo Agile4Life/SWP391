@@ -1,3 +1,4 @@
+/* Mục đích: Điểm vào CSS toàn cục: import token, nút phát sáng, reset và các kiểu nền tảng của ứng dụng. */
 @import './shared/ui/button-glow.css';
 
 :root {
@@ -160,7 +161,7 @@ body::-webkit-scrollbar,
 }
 
 /* ==========================================================================
-   QUIET LUXURY ANIMATION KEYFRAMES & UTILITIES
+   KEYFRAMES ANIMATION & LỚP TIỆN ÍCH CHUYỂN ĐỘNG
    ========================================================================== */
 
 @keyframes fade-up {
@@ -210,7 +211,7 @@ body::-webkit-scrollbar,
   to   { transform: scale(1.06); }
 }
 
-/* Utilities */
+/* Lớp tiện ích animation */
 .anim-fade-up {
   animation: fade-up var(--dur-slow) var(--ease-luxury) both;
 }
@@ -233,7 +234,7 @@ body::-webkit-scrollbar,
   font-variant-numeric: tabular-nums;
 }
 
-/* Scroll reveal: ẩn cho tới khi có .is-visible */
+/* Hiện dần khi cuộn: ẩn cho tới khi có .is-visible */
 .reveal {
   opacity: 0;
   transform: translateY(20px);
@@ -247,7 +248,7 @@ body::-webkit-scrollbar,
   transform: none;
 }
 
-/* App Shell & Navigation Transitions */
+/* Khung ứng dụng và hiệu ứng chuyển hướng điều hướng */
 .route-fade {
   animation: route-fade-up var(--dur-base) var(--ease-luxury);
 }
@@ -286,7 +287,7 @@ body::-webkit-scrollbar,
   transition-delay: 0s;
 }
 
-/* Charts, Progress Bars & Table Staggering */
+/* Biểu đồ, thanh tiến độ và hiệu ứng xuất hiện lần lượt theo hàng bảng */
 .chart-bar {
   height: var(--value);
   transform-origin: bottom;
@@ -314,14 +315,14 @@ body::-webkit-scrollbar,
 }
 
 /* ==========================================================================
-   FITNESS PULSE MOTION — click impact, page transitions
+   CHUYỂN ĐỘNG FITNESS PULSE — phản hồi nhấp chuột, chuyển trang
    ========================================================================== */
 
 @keyframes stroke-draw {
   to { stroke-dashoffset: 0; }
 }
 
-/* --- Click impact: vòng sóng vàng cát tại điểm click + nhấn nút --- */
+/* --- Phản hồi nhấp chuột: vòng sóng vàng cát tại điểm nhấp + nhấn nút --- */
 .click-ripple {
   position: fixed;
   z-index: 99998;
@@ -339,7 +340,7 @@ body::-webkit-scrollbar,
   to   { transform: scale(4.5); opacity: 0; }
 }
 
-button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):not(.luxury-timepicker-trigger):not(.membership-periods__toggle):not(.fit-faq-trigger):not(.portal-search-trigger):not(.portal-tab):not(.ltp-item-btn):not(.ldp-day-cell):active,
+button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):not(.membership-periods__toggle):not(.fit-faq-trigger):not(.portal-search-trigger):not(.portal-tab):not(.ldp-day-cell):active,
 .btn-primary:active,
 .btn-secondary:active,
 .btn-danger:active,
@@ -347,7 +348,7 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   transform: scale(.97);
 }
 
-/* --- Page transitions (View Transitions API) --- */
+/* --- Hiệu ứng chuyển trang (View Transitions API) --- */
 ::view-transition-old(root) {
   animation: vt-out 340ms var(--ease-smooth) both;
 }
@@ -364,7 +365,7 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   from { opacity: 0; transform: translateY(22px); }
 }
 
-/* --- Status feedback: check / cross tự vẽ, pop, gate pulse, toast --- */
+/* --- Phản hồi trạng thái: dấu tick / dấu chéo tự vẽ, bật nảy, nhịp cổng, toast --- */
 .status-mark {
   flex-shrink: 0;
 }
@@ -642,8 +643,7 @@ small { font-size: max(12px, 0.875em); }
   .portal-select,
   .portal-textarea,
   .ui-select__trigger,
-  .luxury-datepicker-trigger,
-  .luxury-timepicker-trigger {
+  .luxury-datepicker-trigger {
     font-size: 16px;
   }
 }

@@ -10,6 +10,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/** Client gọi API kiểu OpenAI (OpenAI hoặc Groq) để soạn giáo án. */
 public class OpenAiRestClient implements AiClient {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -20,18 +21,22 @@ public class OpenAiRestClient implements AiClient {
     private final String providerName;
     private final RestClient restClient;
 
+    /** Tạo client gọi OpenAI. */
     public OpenAiRestClient(String apiKey, String model) {
         this(apiKey, model, defaultRestClient("https://api.openai.com/v1", apiKey), "openai");
     }
 
+    /** Tạo client với địa chỉ API và tên nhà cung cấp tùy chọn (dùng cho Groq). */
     public OpenAiRestClient(String apiKey, String model, String baseUrl, String providerName) {
         this(apiKey, model, defaultRestClient(baseUrl, apiKey), providerName);
     }
 
+    /** Constructor cho test với RestClient giả. */
     public OpenAiRestClient(String apiKey, String model, RestClient restClient) {
         this(apiKey, model, restClient, "openai");
     }
 
+    /** Constructor đầy đủ; model mặc định gpt-4o-mini. */
     public OpenAiRestClient(String apiKey, String model, RestClient restClient, String providerName) {
         this.apiKey = apiKey;
         this.model = (model != null && !model.isBlank()) ? model : "gpt-4o-mini";
@@ -39,6 +44,7 @@ public class OpenAiRestClient implements AiClient {
         this.restClient = restClient != null ? restClient : defaultRestClient("https://api.openai.com/v1", apiKey);
     }
 
+    /** RestClient với thời gian chờ kết nối 10 giây, đọc 30 giây. */
     private static RestClient defaultRestClient(String baseUrl, String apiKey) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(10_000);
@@ -50,26 +56,34 @@ public class OpenAiRestClient implements AiClient {
                 .build();
     }
 
+    /** Lấy giá trị trường providerName. */
     @Override
     public String getProviderName() {
         return providerName;
     }
 
+    /** Lấy giá trị trường modelName. */
     @Override
     public String getModelName() {
         return model;
     }
 
+    /** Sinh câu trả lời văn bản. */
     @Override
     public String generate(String systemPrompt, String userMessage) {
         return call(systemPrompt, userMessage, false);
     }
 
+    /** Sinh câu trả lời dạng JSON. */
     @Override
     public String generateJson(String systemPrompt, String userMessage) {
         return call(systemPrompt, userMessage, true);
     }
 
+    /**
+     * Gọi API chat completions: không có key thì dùng bản mock; bật JSON mode khi cần; bỏ khung code; lỗi thì
+     * trả dữ liệu dự phòng.
+     */
     private String call(String systemPrompt, String userMessage, boolean json) {
         if (apiKey == null || apiKey.isBlank()) {
             return new MockAiClient(model).generate(systemPrompt, userMessage);
@@ -84,7 +98,8 @@ public class OpenAiRestClient implements AiClient {
             body.put("messages", messages);
             body.put("stream", false);
             if (json) {
-                // OpenAI and Groq both accept JSON mode; it needs the word "JSON" in the prompt, which the plan prompt has.
+                // OpenAI và Groq đều nhận chế độ JSON; nó cần từ "JSON" trong prompt, mà prompt kế hoạch có
+                // sẵn.
                 body.put("response_format", Map.of("type", "json_object"));
                 body.put("max_completion_tokens", MAX_JSON_OUTPUT_TOKENS);
             }
@@ -101,11 +116,12 @@ public class OpenAiRestClient implements AiClient {
                 return cleaned;
             }
         } catch (Exception ignored) {
-            // Fall through to deterministic fallback payload when upstream is unreachable
+            // Rơi về payload dự phòng có tính xác định khi upstream không truy cập được.
         }
         return fallbackPayload(userMessage);
     }
 
+    /** Bỏ khung code Markdown (dấu ```) bao quanh câu trả lời. */
     static String stripCodeFence(String text) {
         if (text == null) return "";
         String trimmed = text.trim();
@@ -121,6 +137,7 @@ public class OpenAiRestClient implements AiClient {
         return trimmed.trim();
     }
 
+    /** Dữ liệu dự phòng dạng JSON khi không gọi được nhà cung cấp. */
     private String fallbackPayload(String userMessage) {
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("status", "success");

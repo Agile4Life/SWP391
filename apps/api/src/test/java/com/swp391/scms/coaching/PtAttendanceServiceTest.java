@@ -14,11 +14,15 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 
-/** The gate check-in that covered a 1:1 session is only reported; it never records the arrival. */
+/**
+ * Bộ kiểm thử cho service PtAttendanceService.
+ * Lượt check-in tại cổng phủ khung giờ buổi tập 1:1 chỉ được báo lại làm gợi ý, không bao giờ tự ghi nhận điểm danh đến buổi.
+ */
 class PtAttendanceServiceTest {
     private final CenterCheckinRepository checkins = mock(CenterCheckinRepository.class);
     private final PtAttendanceService service = new PtAttendanceService(checkins);
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private CoachBooking booking() {
         Member member = new Member();
         member.setUserId(100L);
@@ -30,6 +34,7 @@ class PtAttendanceServiceTest {
         return b;
     }
 
+    /** Kiểm thử: ghi nhận lượt vào bắt đầu tới ba giờ trước và phủ buổi PT. */
     @Test
     void reportsAVisitThatBeganUpToThreeHoursBeforeAndCoveredTheSession() {
         CoachBooking b = booking();
@@ -41,6 +46,7 @@ class PtAttendanceServiceTest {
         assertNull(b.getAttendedAt());
     }
 
+    /** Kiểm thử: không ghi nhận gì khi không có lượt vào phủ hoặc lượt đặt chưa hoàn tất. */
     @Test
     void reportsNothingWithoutACoveringVisitOrForAnIncompleteBooking() {
         assertNull(service.gateCheckinFor(booking()));

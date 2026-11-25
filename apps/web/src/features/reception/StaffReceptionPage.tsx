@@ -1,7 +1,7 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { sourceMessage } from '../../shared/i18n';
+import { renewalOptionError } from './renewalOptions';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
-import { CoachHealthMetrics } from '../coaching/CoachHealthMetrics';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getCurrentUser } from '../../shared/api/client';
 import { generateRequestId } from '../../shared/lib/requestId';
@@ -15,7 +15,6 @@ import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
 import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
 import {
-  maskCitizenId,
   receptionApi,
   type HoldRequestItem,
   type UnpaidCoachBooking,
@@ -29,6 +28,10 @@ import {
 } from './receptionApi';
 import { Link } from 'react-router-dom';
 
+/**
+ * Màn làm việc của lễ tân: tra cứu hội viên, thu tiền gói tập/gia hạn/nâng cấp, nạp ví tại quầy, tạo yêu cầu
+ * hủy gói, và các hàng đợi cần xử lý (gói chờ thanh toán, bảo lưu, PT chưa thu tiền, đơn trải nghiệm).
+ */
 export function StaffReceptionPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -51,6 +54,7 @@ export function StaffReceptionPage() {
   // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký / gia hạn / nâng cấp)
   const [pendingList, setPendingList] = useState<PendingSubscriptionItem[]>([]);
   const [loadingPending, setLoadingPending] = useState(true);
+  const [pendingError, setPendingError] = useState<StaffMessage>('');
   const [selectedPending, setSelectedPending] = useState<PendingSubscriptionItem | null>(null);
   const [cancellingPendingId, setCancellingPendingId] = useState<number | null>(null);
   const [packages, setPackages] = useState<MembershipPackage[]>([]);
@@ -63,6 +67,7 @@ export function StaffReceptionPage() {
   // Danh sách yêu cầu bảo lưu gói tập đang chờ xử lý
   const [holdList, setHoldList] = useState<HoldRequestItem[]>([]);
   const [loadingHolds, setLoadingHolds] = useState(true);
+  const [holdsError, setHoldsError] = useState<StaffMessage>('');
 
   // Buổi PT 1:1 trả phí chờ thu tiền
   const [unpaidPt, setUnpaidPt] = useState<UnpaidCoachBooking[]>([]);
@@ -75,6 +80,30 @@ export function StaffReceptionPage() {
   const [paymentNotes, setPaymentNotes] = useState('Thanh toán gói tập tại quầy Lễ tân');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const paymentInFlight = useRef(false);
+  const selectedMemberRef = useRef<number | null>(null);
+  useEffect(() => { selectedMemberRef.current = selectedMember?.userId ?? null; }, [selectedMember?.userId]);
+  // Đọc lại API trước khi thu tiền; không áp dữ liệu cho hội viên đã đổi.
+  const refreshSelectedMember = useCallback(async () => {
+    const member = selectedMember;
+    if (!member) return null;
+    const results = await receptionApi.lookupMembers(member.membershipCode || member.email);
+    const fresh = results.find((item) => item.userId === member.userId);
+    if (selectedMemberRef.current !== member.userId) return null;
+    if (!fresh) throw new Error('Không tải được thông tin hội viên. Vui lòng tra cứu lại.');
+    setSelectedMember(fresh);
+    return fresh;
+  }, [selectedMember]);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
+      void refreshSelectedMember().catch((err: unknown) => setPaymentError(errorMessage(err, 'Không tải được thông tin hội viên.')));
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, [refreshSelectedMember]);
+
+
   const checkoutRef = useRef<HTMLDivElement>(null);
 
   // Modal Yêu cầu hủy gói tập & hoàn tiền (Lễ tân trình Quản lý)
@@ -95,9 +124,10 @@ export function StaffReceptionPage() {
 
   // Ví SÖL của hội viên đang chọn & Modal nạp tiền tại quầy
   const [memberWalletBalance, setMemberWalletBalance] = useState<number | null>(null);
+  const [walletError, setWalletError] = useState(false);
+  const [walletRetry, setWalletRetry] = useState(0);
   const [isTopupModalOpen, setIsTopupModalOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState('200000');
-  const [topupMethod, setTopupMethod] = useState<'cash' | 'bank_transfer' | 'pos'>('cash');
   const [topupNote, setTopupNote] = useState('');
   const [topupModalError, setTopupModalError] = useState<StaffMessage | null>(null);
   const [isSubmittingTopup, setIsSubmittingTopup] = useState(false);
@@ -106,6 +136,7 @@ export function StaffReceptionPage() {
   // Danh sách đơn đăng ký Gói Trải Nghiệm 3 Ngày chờ Lễ tân duyệt
   const [trialList, setTrialList] = useState<ReceptionTrialItem[]>([]);
   const [loadingTrials, setLoadingTrials] = useState(true);
+  const [trialsError, setTrialsError] = useState<StaffMessage>('');
   const [processingTrialId, setProcessingTrialId] = useState<number | null>(null);
   const [inspectingTrial, setInspectingTrial] = useState<ReceptionTrialItem | null>(null);
   const [rejectingTrial, setRejectingTrial] = useState<ReceptionTrialItem | null>(null);
@@ -125,25 +156,31 @@ export function StaffReceptionPage() {
   }, [hasAccess, selectedMemberId, selectedPendingId]);
 
   useEffect(() => {
+    // null là chưa có số dư xác thực; lỗi tải không được biến thành số dư 0 của hội viên.
     setMemberWalletBalance(null);
+    setWalletError(false);
     if (!hasAccess || selectedMemberId == null) return;
     let active = true;
     receptionApi.getMemberWallet(selectedMemberId)
-      .then((wallet) => { if (active) setMemberWalletBalance(Number(wallet?.balance ?? 0)); })
-      .catch(() => { if (active) setMemberWalletBalance(0); });
+      .then((wallet) => {
+        if (wallet?.balance == null || !Number.isFinite(Number(wallet.balance))) throw new Error('Invalid wallet balance');
+        if (active) setMemberWalletBalance(Number(wallet.balance));
+      })
+      .catch(() => { if (active) setWalletError(true); });
     return () => { active = false; };
-  }, [hasAccess, selectedMemberId]);
+  }, [hasAccess, selectedMemberId, walletRetry]);
 
+  // Mở hộp nạp ví tại quầy với giá trị mặc định 200.000 đ, tiền mặt.
   const handleOpenTopupModal = () => {
     if (!selectedMember) return;
     setTopupAmount('200000');
-    setTopupMethod('cash');
     setTopupNote('');
     setTopupModalError(null);
     topupAttemptRef.current = null;
     setIsTopupModalOpen(true);
   };
 
+  // Nạp ví tại quầy: kiểm tra số tiền 10.000–100.000.000 đ, dùng một mã yêu cầu cho mỗi bộ (hội viên, số tiền, phương thức) để gửi lại không bị cộng hai lần.
   const handleSubmitCounterTopup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMember || isSubmittingTopup) return;
@@ -152,8 +189,8 @@ export function StaffReceptionPage() {
       setTopupModalError(staffMessage('Số tiền nạp Ví phải từ 10.000 đ đến 100.000.000 đ.', 'Top-up amount must be between 10,000 VND and 100,000,000 VND.'));
       return;
     }
-    // Keep one request id per member/amount/method so a retry after a lost response is not credited twice.
-    const attemptKey = `${selectedMember.userId}|${parsed}|${topupMethod}`;
+    // Giữ một mã yêu cầu duy nhất cho mỗi bộ hội viên/số tiền/phương thức để lần thử lại sau khi mất phản hồi không bị cộng tiền hai lần.
+    const attemptKey = `${selectedMember.userId}|${parsed}|cash`;
     if (!topupAttemptRef.current || topupAttemptRef.current.key !== attemptKey) {
       topupAttemptRef.current = { key: attemptKey, id: generateRequestId() };
     }
@@ -162,13 +199,14 @@ export function StaffReceptionPage() {
     try {
       const updated = await receptionApi.topupMemberWallet(selectedMember.userId, {
         amount: parsed,
-        paymentMethod: topupMethod,
+        paymentMethod: 'cash',
         note: topupNote.trim() || undefined,
         clientRequestId: topupAttemptRef.current.id,
       });
       topupAttemptRef.current = null;
       const newBalance = Number(updated?.balance ?? 0);
       setMemberWalletBalance(newBalance);
+      setWalletError(false);
       setIsTopupModalOpen(false);
       notify(
         staffMessage(
@@ -176,7 +214,8 @@ export function StaffReceptionPage() {
           `Credited +${formatPrice(parsed)} to ${selectedMember.fullName}'s SÖL Wallet. New balance: ${formatPrice(newBalance)}.`
         ),
         'success',
-        { record: true }
+        // Thông báo nạp ví mở lịch sử hiện có, không mở lại form nạp tiền.
+        { record: true, destination: '/staff/reception-history' }
       );
     } catch (err: unknown) {
       setTopupModalError(errorMessage(err, 'Không thể nạp tiền vào Ví hội viên. Vui lòng thử lại.'));
@@ -185,33 +224,39 @@ export function StaffReceptionPage() {
     }
   };
 
+  // Tải các yêu cầu gói tập chờ thanh toán (silent thì không hiện trạng thái tải).
   const loadPendingSubscriptions = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) setLoadingPending(true);
     try {
       const items = await receptionApi.getPendingSubscriptions();
       setPendingList(items);
+      setPendingError('');
       setSelectedPending((prev) => items.find((item) => item.id === prev?.id) ?? null);
     } catch {
-      if (!silent) setPendingList([]);
+      // Giữ dữ liệu lần tải thành công trước; API lỗi không có nghĩa là hàng chờ đã hết việc.
+      setPendingError(staffMessage('Không thể tải gói tập chờ thanh toán. Vui lòng thử lại.', 'Unable to load pending memberships. Please try again.'));
     } finally {
       if (!silent) setLoadingPending(false);
     }
   }, [hasAccess]);
 
+  // Tải các yêu cầu bảo lưu chờ xử lý.
   const loadPendingHolds = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) setLoadingHolds(true);
     try {
       const items = await receptionApi.getPendingHoldRequests();
       setHoldList(items);
+      setHoldsError('');
     } catch {
-      if (!silent) setHoldList([]);
+      setHoldsError(staffMessage('Không thể tải yêu cầu bảo lưu. Vui lòng thử lại.', 'Unable to load hold requests. Please try again.'));
     } finally {
       if (!silent) setLoadingHolds(false);
     }
   }, [hasAccess]);
 
+  // Tải các buổi PT 1:1 chưa thu tiền.
   const loadUnpaidPt = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) {
@@ -230,14 +275,16 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
+  // Tải các yêu cầu dùng thử chờ duyệt.
   const loadPendingTrials = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) setLoadingTrials(true);
     try {
       const items = await receptionApi.getPendingTrials();
       setTrialList(items);
+      setTrialsError('');
     } catch {
-      if (!silent) setTrialList([]);
+      setTrialsError(staffMessage('Không thể tải yêu cầu dùng thử. Vui lòng thử lại.', 'Unable to load trial requests. Please try again.'));
     } finally {
       if (!silent) setLoadingTrials(false);
     }
@@ -245,6 +292,9 @@ export function StaffReceptionPage() {
 
   const todoCount = pendingList.length + unpaidPt.length + trialList.length + holdList.length;
   const loadingTodo = loadingPending || loadingHolds || loadingPt || loadingTrials;
+  const todoErrors = { plan: pendingError, pt: ptError, trial: trialsError, hold: holdsError };
+  const hasTodoError = Object.values(todoErrors).some(Boolean);
+  // Tải lại cả bốn hàng đợi.
   const reloadTodo = useCallback(() => Promise.all([
     loadPendingSubscriptions(), loadPendingHolds(), loadUnpaidPt(), loadPendingTrials(),
   ]), [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
@@ -255,6 +305,7 @@ export function StaffReceptionPage() {
     void loadUnpaidPt();
     void loadPendingTrials();
     if (!hasAccess) return;
+    // Đồng bộ ngầm bốn hàng đợi khi tab hiện, trừ lúc đang xử lý thanh toán.
     const syncQueues = () => {
       if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
       void loadPendingSubscriptions(true);
@@ -294,13 +345,14 @@ export function StaffReceptionPage() {
     return () => { active = false; };
   }, [hasAccess, selectedMemberId, selectedPendingId, offersRetry]);
 
+  // Kỳ gói đang hoạt động của hội viên được chọn.
   const activeCandidate = useMemo(
     () => renewalCandidates.find((c) => c.status?.toLowerCase() === 'active') ?? null,
     [renewalCandidates]
   );
 
-  // Mirrors the counter checkout rule (MEMBERSHIP_ALREADY_ACTIVE): a member with a paid period still running can only
-  // renew, so "buy new" is not offered instead of failing after the cashier presses collect.
+  // Khớp quy tắc thu tiền tại quầy (MEMBERSHIP_ALREADY_ACTIVE): hội viên còn kỳ đã trả tiền đang chạy thì chỉ được
+  // gia hạn, nên không hiện lựa chọn "mua mới" thay vì để thất bại sau khi thu ngân bấm thu tiền.
   const hasRunningPaidPeriod = useMemo(() => {
     const today = centerNowParts().date;
     return renewalCandidates.some((c) => {
@@ -309,6 +361,7 @@ export function StaffReceptionPage() {
     });
   }, [renewalCandidates]);
 
+  // Mở hộp yêu cầu hủy gói, đề xuất số hoàn theo phần chưa dùng do backend tính.
   const handleOpenCancelModal = () => {
     if (!selectedMember) return;
     setCancelReason('');
@@ -320,6 +373,7 @@ export function StaffReceptionPage() {
     setIsCancelModalOpen(true);
   };
 
+  // Gửi yêu cầu hủy gói kèm lý do bắt buộc và số tiền hoàn.
   const handleSubmitCancellationRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMember || isSubmittingCancel) return;
@@ -355,6 +409,7 @@ export function StaffReceptionPage() {
     }
   };
 
+  // Chọn một yêu cầu chờ thanh toán để thu tiền, đồng thời chọn hội viên tương ứng.
   const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
     setSelectedPending(item);
     setSelectedMember({
@@ -372,6 +427,7 @@ export function StaffReceptionPage() {
     checkoutRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   };
 
+  // Hủy một yêu cầu gói tập chờ thanh toán sau khi xác nhận.
   const handleCancelPendingItem = async (item: PendingSubscriptionItem) => {
     if (cancellingPendingId !== null || isSubmittingPayment) return;
     const ok = await confirm({
@@ -399,6 +455,7 @@ export function StaffReceptionPage() {
   };
 
 
+  // Xác nhận đã thu tiền buổi PT 1:1 theo phương thức đã chọn.
   const handleConfirmPt = async (item: UnpaidCoachBooking, method: string) => {
     if (processingPtId !== null) return;
     setProcessingPtId(item.id);
@@ -416,6 +473,7 @@ export function StaffReceptionPage() {
   };
 
 
+  // Duyệt đơn dùng thử.
   const handleApproveTrial = async (item: ReceptionTrialItem) => {
     if (processingTrialId !== null) return;
     setProcessingTrialId(item.id);
@@ -436,12 +494,14 @@ export function StaffReceptionPage() {
     }
   };
 
+  // Mở hộp từ chối đơn dùng thử.
   const handleOpenRejectTrial = (item: ReceptionTrialItem) => {
     setRejectingTrial(item);
     setTrialRejectReason('');
     setTrialRejectError(null);
   };
 
+  // Gửi lý do từ chối đơn dùng thử (bắt buộc).
   const handleSubmitRejectTrial = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rejectingTrial || isSubmittingTrialReject) return;
@@ -490,6 +550,8 @@ export function StaffReceptionPage() {
   const selectedCandidate = offerKind === 'renew' ? renewalCandidates.find((item) => item.id === Number(offerId)) : undefined;
   const selectedPackage = packages.find((item) => item.id === (selectedCandidate?.packageId ?? Number(offerId)));
   const currentPrice = selectedPending ? selectedPending.packagePrice : selectedPackage?.price ?? 0;
+  const renewalError = !selectedPending && selectedCandidate
+    ? renewalOptionError(selectedCandidate, renewalCandidates, packages, centerNowParts().date) : null;
 
   // Xử lý tra cứu hội viên
   const handleSearch = async (e: React.FormEvent) => {
@@ -501,9 +563,11 @@ export function StaffReceptionPage() {
     if (invalid) return;
 
     setIsSearching(true);
-    setHasSearched(true);
+    // Chỉ đánh dấu đã tìm khi API thành công, tránh hiển thị "không tìm thấy" trong lúc lỗi hoặc đang tải.
+    setHasSearched(false);
     try {
       const results = await receptionApi.lookupMembers(q);
+      setHasSearched(true);
       setSearchResults(results);
       if (results.length > 0) {
         const member = results[0];
@@ -527,7 +591,16 @@ export function StaffReceptionPage() {
   // BR-03 & BR-04: Xác nhận thanh toán cho yêu cầu gói tập đang chờ của hội viên
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSearching) return;
+    if (isSearching || loadingPending || loadingOffers || (!selectedPending && offersError)) return;
+    // Chặn cả gửi form trực tiếp: kỳ không hợp lệ không được tạo renewal hoặc thu tiền.
+    const blockedRenewal = !selectedPending && selectedCandidate
+      ? renewalOptionError(selectedCandidate, renewalCandidates, packages, centerNowParts().date) : null;
+    if (blockedRenewal) { setPaymentError(blockedRenewal); return; }
+    if (!selectedPending && offerKind === 'renew' && !selectedCandidate) {
+      setPaymentError(staffMessage('Kỳ gia hạn không còn trong danh sách. Vui lòng chọn lại.',
+        'This renewal period is no longer listed. Please select it again.'));
+      return;
+    }
 
     const invalid = !selectedMember || (!selectedPending && !selectedPackage) ? 'Vui lòng chọn hội viên và gói tập cần thanh toán.'
       : !paymentMethod ? 'Vui lòng chọn hình thức thanh toán (Tiền mặt).' : null;
@@ -539,11 +612,23 @@ export function StaffReceptionPage() {
 
     paymentInFlight.current = true;
     setIsSubmittingPayment(true);
+    let creatingRenewal = false;
     try {
+      const fresh = await refreshSelectedMember();
+      if (!fresh) return;
+      // Mua mới cần KYC; gia hạn/nâng cấp vẫn kiểm tra theo kỳ liên kết ở backend.
+      if (!selectedCandidate && !selectedPending?.previousSubscriptionId && !fresh.approvedTrial && (!fresh.identityVerified || fresh.kycStatus === 'PENDING' || fresh.kycStatus === 'REJECTED')) {
+        setPaymentError(staffMessage('Hội viên chưa xác thực KYC. Vui lòng yêu cầu hội viên hoàn tất xác thực trước khi đăng ký gói tập.',
+          'The member has not completed identity verification. Ask them to complete verification before registering a membership.'));
+        return;
+      }
       let pending = selectedPending;
       if (!pending && selectedCandidate && selectedPackage) {
+        creatingRenewal = true;
         const created = await receptionApi.createRenewal(selectedMember.userId, selectedCandidate.id);
+        creatingRenewal = false;
         pending = {
+          previousSubscriptionId: created.previousSubscriptionId,
           id: created.id, memberId: created.memberId, membershipCode: selectedMember.membershipCode,
           memberName: selectedMember.fullName, memberEmail: selectedMember.email, memberPhone: selectedMember.phone,
           packageId: created.packageId, packageName: created.packageName, durationDays: selectedPackage.durationDays,
@@ -567,17 +652,31 @@ export function StaffReceptionPage() {
       setCompletedMemberName(selectedMember.fullName);
       setCompletedMembershipCode(selectedMember.membershipCode);
       setCompletedPayment(result);
-      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true });
+      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true, destination: '/staff/reception-history' });
       setSelectedMember(null);
       setSelectedPending(null);
       await loadPendingSubscriptions();
     } catch (err: unknown) {
-      setPaymentError(errorMessage(err, 'Giao dịch thanh toán thất bại.')); await loadPendingSubscriptions();
+      // Backend có dữ liệu mới nhất; lỗi gia hạn dừng tại đây, không chuyển sang mua mới hay thu tiền khác.
+      const renewalConflict = creatingRenewal && err instanceof Error && 'code' in err && err.code === 'MEMBERSHIP_RENEWAL_CONFLICT';
+      setPaymentError(renewalConflict
+        ? staffMessage('Không thể gia hạn kỳ đã chọn. Vui lòng tải lại danh sách hoặc nhờ quản lý kiểm tra.',
+          'This period cannot be renewed. Reload the list or ask a manager to review it.')
+        : errorMessage(err, 'Giao dịch thanh toán thất bại.'));
+      await loadPendingSubscriptions();
     } finally {
       paymentInFlight.current = false;
       setIsSubmittingPayment(false);
     }
   };
+
+  // Dùng chung trạng thái số dư ở thông tin hội viên và modal; thử lại chỉ đọc API, không nạp tiền.
+  const walletBalanceContent = walletError ? (
+    <span role="alert" className="form-error">
+      {t('Không thể tải số dư ví. Vui lòng thử lại.', 'Unable to load wallet balance. Please try again.')}{' '}
+      <RefreshButton label={t('Tải lại số dư ví', 'Reload wallet balance')} onClick={() => setWalletRetry((value) => value + 1)} />
+    </span>
+  ) : memberWalletBalance != null ? formatPrice(memberWalletBalance) : t('Đang tải…', 'Loading…');
 
   return (
     <div data-i18n-managed className="portal-container">
@@ -650,7 +749,7 @@ export function StaffReceptionPage() {
               <RefreshButton label={t("Làm mới danh sách")} onClick={() => void reloadTodo()} disabled={loadingTodo} />
             </div>
 
-            {todoCount > 0 && (
+            {(todoCount > 0 || hasTodoError) && (
               <div className="filter-chips" style={{ marginBottom: 12 }} role="group" aria-label={t('Lọc danh sách cần xử lý', 'Filter pending queue')}>
                 {[
                   { key: 'all' as const, label: t('Tất cả', 'All'), count: todoCount },
@@ -659,7 +758,7 @@ export function StaffReceptionPage() {
                   { key: 'trial' as const, label: t('Trải nghiệm', 'Trials'), count: trialList.length },
                   { key: 'hold' as const, label: t('Bảo lưu', 'Holds'), count: holdList.length },
                 ]
-                  .filter((tab) => tab.key === 'all' || tab.count > 0)
+                  .filter((tab) => tab.key === 'all' || tab.count > 0 || !!todoErrors[tab.key])
                   .map((tab) => (
                     <button
                       key={tab.key}
@@ -675,6 +774,18 @@ export function StaffReceptionPage() {
             )}
 
             <div className="reception-todo">
+              {/* Mỗi hàng chờ có lỗi và nút thử lại riêng; không che dữ liệu của các nhóm đã tải thành công. */}
+              {[
+                { key: 'plan', error: pendingError, loading: loadingPending, retry: loadPendingSubscriptions, label: t('Tải lại gói tập chờ thanh toán', 'Reload pending memberships') },
+                { key: 'trial', error: trialsError, loading: loadingTrials, retry: loadPendingTrials, label: t('Tải lại yêu cầu dùng thử', 'Reload trial requests') },
+                { key: 'hold', error: holdsError, loading: loadingHolds, retry: loadPendingHolds, label: t('Tải lại yêu cầu bảo lưu', 'Reload hold requests') },
+              ].map((queue) => queue.error && (todoFilter === 'all' || todoFilter === queue.key) && (
+                <div key={queue.key} role="alert" className="form-error">
+                  {t(queue.error)}{' '}
+                  <button type="button" className="btn-secondary btn-sm" aria-label={queue.label}
+                    disabled={queue.loading} onClick={() => void queue.retry()}>{t('Thử lại', 'Retry')}</button>
+                </div>
+              ))}
               {(todoFilter === 'all' || todoFilter === 'plan') && (loadingPending ? (
                   <div data-i18n-managed style={{ display: 'grid', gap: '10px', marginTop: '12px' }} role="status" aria-busy="true">
                     <span className="sr-only">{t("Đang tải danh sách yêu cầu chờ thanh toán...")}</span>
@@ -1058,14 +1169,14 @@ export function StaffReceptionPage() {
                   </>
                 ))}
 
-              {!loadingTodo && !ptError && todoCount === 0 && (
+              {!loadingTodo && !hasTodoError && todoCount === 0 && (
                 <div data-i18n-managed className="reception-todo__empty">{t("Không có việc nào cần xử lý.")}</div>
               )}
               {!loadingTodo && todoCount > 0 && todoFilter !== 'all' && (
-                (todoFilter === 'plan' && pendingList.length === 0)
+                (todoFilter === 'plan' && pendingList.length === 0 && !pendingError)
                 || (todoFilter === 'pt' && unpaidPt.length === 0 && !ptError)
-                || (todoFilter === 'trial' && trialList.length === 0)
-                || (todoFilter === 'hold' && holdList.length === 0)
+                || (todoFilter === 'trial' && trialList.length === 0 && !trialsError)
+                || (todoFilter === 'hold' && holdList.length === 0 && !holdsError)
               ) && (
                 <div data-i18n-managed className="reception-todo__empty">
                   {t('Không có mục nào trong nhóm đã chọn.', 'No items in the selected category.')}{' '}
@@ -1116,11 +1227,14 @@ export function StaffReceptionPage() {
                   <span>{selectedMember.email}</span>
                 </div>
 
+                <div className="kv-row" data-testid="pos-kyc-status"><span>{t('Trạng thái KYC', 'Identity verification')}</span><span>
+                  {selectedMember.kycStatus === 'PENDING' ? t('Chờ duyệt', 'Pending review') : selectedMember.kycStatus === 'REJECTED' ? t('Bị từ chối', 'Rejected') : selectedMember.identityVerified ? t('Đã xác thực', 'Verified') : t('Chưa xác thực', 'Not verified')}
+                </span></div>
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
-                  <span>{t('Số CCCD', 'Identity card number')}</span>
+                  <span>{selectedMember.documentType === 'PASSPORT' ? t('Số hộ chiếu', 'Passport number') : t('Số CCCD', 'Identity card number')}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)' }}>
-                    {selectedMember.citizenId ? maskCitizenId(selectedMember.citizenId) : t('Chưa cập nhật')}
+                    {selectedMember.citizenId || (selectedMember.identityVerified ? t('Đã xác thực, không có số hiển thị', 'Verified; number unavailable') : t('Chưa cập nhật'))}
                   </span>
                 </div>
 
@@ -1150,7 +1264,7 @@ export function StaffReceptionPage() {
                   <span>{t('Số dư Ví SÖL', 'SÖL Wallet balance')}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                     <strong data-testid="member-wallet-balance" style={{ color: 'var(--portal-salmon, #fb923c)', fontSize: '0.96rem' }}>
-                      {memberWalletBalance != null ? formatPrice(memberWalletBalance) : t('Đang tải…', 'Loading…')}
+                      {walletBalanceContent}
                     </strong>
                     <button
                       type="button"
@@ -1224,16 +1338,17 @@ export function StaffReceptionPage() {
                   disabled readOnly />
               ) : loadingOffers ? <LoadingSkeleton label={t("Đang tải gói tập và lựa chọn gia hạn…")} count={1} /> : (
                 <Select id="pos-package" className="portal-select" value={selectedOffer}
-                  onChange={(event) => setSelectedOffer(event.target.value)}
+                  onChange={(event) => { setSelectedOffer(event.target.value); setPaymentError(null); }}
                   disabled={!selectedMember || loadingPending || loadingOffers || !!offersError || isSubmittingPayment}>
                   <option value="">{t("Chọn gói tập")}</option>
                   {renewalCandidates
                     .filter((candidate) => packages.some((pkg) => pkg.id === candidate.packageId))
-                    .map((candidate) => (
-                      <option data-i18n-managed key={`renew:${candidate.id}`} value={`renew:${candidate.id}`}>
-                        {t("Gia hạn: ")}{candidate.packageName} {t(" — kỳ đến ")}{formatCenterDate(candidate.endDate)}
-                      </option>
-                    ))}
+                    .map((candidate) => {
+                      const reason = renewalOptionError(candidate, renewalCandidates, packages, centerNowParts().date);
+                      return <option data-i18n-managed key={`renew:${candidate.id}`} value={`renew:${candidate.id}`} disabled={!!reason}>
+                        {t("Gia hạn: ")}{candidate.packageName} {t(" — kỳ đến ")}{formatCenterDate(candidate.endDate)}{reason ? ` — ${t(reason)}` : ''}
+                      </option>;
+                    })}
                   {!hasRunningPaidPeriod && packages.map((pkg) => (
                     <option data-i18n-managed key={`buy:${pkg.id}`} value={`buy:${pkg.id}`}>
                       {t("Mua mới: ")}{pkg.name} — {formatPrice(pkg.price)}
@@ -1243,7 +1358,7 @@ export function StaffReceptionPage() {
               )}
               {!selectedPending && !loadingOffers && selectedMember && hasRunningPaidPeriod && (
                 <p data-testid="reception-renew-only-hint" style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--portal-muted)' }}>
-                  {t('Hội viên còn gói đang hiệu lực nên chỉ gia hạn được; không thể mua thêm gói mới song song.', 'This member still has a running membership, so it can only be renewed; a second new package cannot be bought alongside it.')}
+                  {t('Gói hiện tại còn hạn. Vui lòng chọn kỳ gia hạn hợp lệ.', 'The current membership is still valid. Please choose an eligible renewal period.')}
                 </p>
               )}
               {offersError && <p role="alert">{t(offersError)} <button type="button" className="btn-secondary" onClick={() => setOffersRetry((n) => n + 1)}>{t("Thử lại")}</button></p>}
@@ -1304,12 +1419,12 @@ export function StaffReceptionPage() {
               />
             </div>
 
-            {paymentError && <p className="form-error" role="alert">{t(paymentError)}</p>}
+            {(paymentError || renewalError) && <p className="form-error" role="alert">{t(paymentError || renewalError)}</p>}
             <button
               type="submit"
               className="btn-primary"
               style={{ width: '100%', justifyContent: 'center', marginTop: '10px' }}
-              disabled={isSearching || isSubmittingPayment || !selectedMember || loadingPending || loadingOffers || (!selectedPending && !selectedPackage)}
+              disabled={isSearching || isSubmittingPayment || !selectedMember || loadingPending || loadingOffers || !!renewalError || (!selectedPending && (!!offersError || !selectedPackage))}
             >
               {isSubmittingPayment ? (
                 <>
@@ -1324,8 +1439,6 @@ export function StaffReceptionPage() {
         </div>
       </div>
 
-      {selectedMember && currentUser?.role === 'STAFF' && <CoachHealthMetrics memberId={selectedMember.userId} memberName={selectedMember.fullName} intakeOnly />}
-
       {isTopupModalOpen && selectedMember && (
         <Modal
           title={t('Nạp tiền vào Ví SÖL tại quầy Lễ tân', 'Top up SÖL Wallet at Reception')}
@@ -1339,7 +1452,7 @@ export function StaffReceptionPage() {
               <br />
               {t('Số dư hiện tại: ', 'Current balance: ')}
               <strong style={{ color: 'var(--portal-salmon, #fb923c)' }}>
-                {formatPrice(memberWalletBalance ?? 0)}
+                {walletBalanceContent}
               </strong>
             </div>
 
@@ -1375,22 +1488,8 @@ export function StaffReceptionPage() {
               />
             </div>
 
-            <div className="portal-form-group" style={{ margin: 0 }}>
-              <label className="portal-label" htmlFor="counter-topup-method">
-                {t('Hình thức thu tại quầy *', 'Counter payment method *')}
-              </label>
-              <Select
-                id="counter-topup-method"
-                className="portal-select"
-                value={topupMethod}
-                onChange={(e) => setTopupMethod(e.target.value as 'cash' | 'bank_transfer' | 'pos')}
-                disabled={isSubmittingTopup}
-              >
-                <option value="cash">{t('Tiền mặt tại quầy', 'Cash at the counter')}</option>
-                <option value="bank_transfer">{t('Chuyển khoản ngân hàng', 'Bank transfer')}</option>
-                <option value="pos">{t('Thẻ / Máy POS tại quầy', 'Card / POS terminal')}</option>
-              </Select>
-            </div>
+            {/* Tại quầy chỉ thu tiền mặt; giữ mã request chống cộng ví trùng khi thử lại. */}
+            <p data-testid="counter-topup-cash">{t('Hình thức thu: Tiền mặt tại quầy', 'Payment method: Cash at the counter')}</p>
 
             <div className="portal-form-group" style={{ margin: 0 }}>
               <label className="portal-label" htmlFor="counter-topup-note">

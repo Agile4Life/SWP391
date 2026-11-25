@@ -16,17 +16,20 @@ import {
 import { popoverPlacement, type PopoverPlacement } from './popoverPlacement';
 import './select.css';
 
+/** Một lựa chọn đã đọc ra từ các thẻ <option>: giá trị, nhãn và có bị vô hiệu không. */
 interface Opt {
   value: string;
   label: string;
   disabled: boolean;
 }
 
+/** Props của ô chọn tùy biến: thuộc tính giống <select> gốc, nhận các thẻ <option> làm children. */
 interface SelectProps {
   id?: string;
   className?: string;
   style?: CSSProperties;
   value: string;
+  // Gọi lại theo dạng sự kiện giả { target: { value } } để dùng thay <select> gốc.
   onChange: (e: { target: { value: string } }) => void;
   disabled?: boolean;
   required?: boolean;
@@ -42,6 +45,7 @@ interface SelectProps {
 const EXIT_MS = 160;
 const MENU_MAX = 280;
 
+/** Gom nội dung React (chuỗi, mảng, phần tử) thành chuỗi chữ thuần. */
 function toText(node: ReactNode): string {
   if (node == null || typeof node === 'boolean') return '';
   if (typeof node === 'string' || typeof node === 'number') return String(node);
@@ -50,6 +54,7 @@ function toText(node: ReactNode): string {
   return '';
 }
 
+/** Đọc các thẻ <option> (kể cả trong Fragment) từ children thành danh sách lựa chọn. */
 function collect(children: ReactNode, out: Opt[] = []): Opt[] {
   Children.forEach(children, (child) => {
     if (!isValidElement(child)) return;
@@ -96,6 +101,7 @@ export function Select({
   const [placement, setPlacement] = useState<PopoverPlacement>({ v: 'down', h: 'left' });
   const [maxH, setMaxH] = useState(MENU_MAX);
 
+  // Mở menu và đặt mục đang chọn (hoặc mục đầu tiên chưa bị vô hiệu) làm mục đang trỏ.
   const openMenu = useCallback(() => {
     if (disabled) return;
     setMounted(true);
@@ -103,6 +109,7 @@ export function Select({
     setActive(selectedIndex >= 0 ? selectedIndex : options.findIndex((o) => !o.disabled));
   }, [disabled, selectedIndex, options]);
 
+  // Đóng menu, tùy chọn trả focus về nút kích hoạt.
   const closeMenu = useCallback((refocus = true) => {
     setOpen(false);
     if (refocus) triggerRef.current?.focus();
@@ -134,6 +141,7 @@ export function Select({
   // Đóng khi bấm ra ngoài
   useEffect(() => {
     if (!open) return;
+    // Bấm ra ngoài thì đóng menu.
     const onDown = (e: PointerEvent) => {
       if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
     };
@@ -153,12 +161,14 @@ export function Select({
     else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
   }, [open, active]);
 
+  // Chọn một mục (bỏ qua mục bị vô hiệu), báo giá trị mới nếu khác giá trị cũ rồi đóng menu.
   const pick = (opt: Opt) => {
     if (opt.disabled) return;
     if (opt.value !== value) onChange({ target: { value: opt.value } });
     closeMenu();
   };
 
+  // Di chuyển mục đang trỏ lên/xuống theo vòng, bỏ qua mục bị vô hiệu.
   const move = (dir: 1 | -1, from = active) => {
     if (!options.some((o) => !o.disabled)) return;
     let i = from;
@@ -168,6 +178,7 @@ export function Select({
     setActive(i);
   };
 
+  // Điều khiển bằng bàn phím: mũi tên, Home/End, Enter/Space, Esc và Tab.
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
     switch (e.key) {
       case 'ArrowDown':

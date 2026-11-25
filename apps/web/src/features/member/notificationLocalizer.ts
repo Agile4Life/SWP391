@@ -1,3 +1,4 @@
+/** Dịch tiêu đề thông báo từ tiếng Anh của backend sang tiếng Việt (không có trong bảng thì giữ nguyên). */
 export function localizeTitle(title?: string | null): string {
   if (!title) return '';
   const trimmed = title.trim();
@@ -36,6 +37,7 @@ export function localizeTitle(title?: string | null): string {
   return map[trimmed] ?? title;
 }
 
+/** Dịch nội dung thông báo sang tiếng Việt theo mẫu đã biết (không khớp thì giữ nguyên). */
 export function localizeMessage(message?: string | null): string {
   if (!message) return '';
 

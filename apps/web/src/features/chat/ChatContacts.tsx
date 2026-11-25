@@ -6,7 +6,10 @@ import { ChatAvatar } from './ChatAvatar';
 import { chatError, type ChatError } from './chatMessages';
 import { useI18n } from '../../shared/i18n';
 
-/** `forMember`: a member looks for a receptionist/coach; otherwise staff look for a member to write to. */
+/**
+ * Danh sách tìm người để bắt đầu trò chuyện với tìm kiếm và phân trang:
+ * khi `forMember` là true, hội viên tìm lễ tân/HLV của mình; ngược lại nhân sự tìm hội viên để nhắn tin.
+ */
 export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose: (contact: ChatContact) => void; pending: number | null; forMember?: boolean }) {
   const { t } = useI18n();
   const [query, setQuery] = useState('');
@@ -19,6 +22,7 @@ export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose
   const [noCoach, setNoCoach] = useState(false);
   const inRouter = useInRouterContext();
   const sequence = useRef({ value: 0 });
+  // Tìm liên hệ theo từ khóa và trang; chỉ kết quả của lần gọi mới nhất được dùng.
   const search = useCallback(async (term: string, nextPage: number) => {
     const request = ++sequence.current.value;
     setLoading(true); setError(null); setSubmitted(term);
@@ -27,12 +31,13 @@ export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose
       if (request !== sequence.current.value) return;
       const items = Array.isArray(data?.content) ? data.content : [];
       setContacts(items); setPage(nextPage); setTotal(typeof data?.totalPages === 'number' ? data.totalPages : 0);
-      // Coaches are listed first, so none on the first unfiltered page means the member has no coach to write to yet.
+      // HLV được liệt kê trước, nên trang đầu chưa lọc mà không có HLV nào nghĩa là hội viên chưa có HLV để nhắn tin.
       if (term === '' && nextPage === 0) setNoCoach(!items.some(contact => contact.role === 'COACH'));
     } catch (e) { if (request === sequence.current.value) setError(chatError(e, 'Không thể tải danh bạ.', 'Unable to load contacts.')); }
     finally { if (request === sequence.current.value) setLoading(false); }
   }, []);
   useEffect(() => { const requests = sequence.current; void search('', 0); return () => { requests.value++; }; }, [search]);
+  // Gửi biểu mẫu tìm kiếm và về trang đầu.
   function submit(event: FormEvent) { event.preventDefault(); void search(query.trim(), 0); }
   return <section data-i18n-managed className="direct-chat__contacts" aria-label={forMember ? t("Chọn người để trò chuyện", "Choose a chat recipient") : t("Chọn hội viên để nhắn tin", "Choose a member to message")}>
     <form onSubmit={submit} className="direct-chat__search">
@@ -42,11 +47,11 @@ export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose
     </form>
     {forMember && noCoach && !loading && !error && <div className="direct-chat__notice" role="status" data-testid="chat-no-coach">
       <strong>{t("Chưa có huấn luyện viên để nhắn tin", "No coach to message yet")}</strong>
-      <span>{t("Bạn chỉ nhắn tin được với huấn luyện viên của lớp bạn đã đăng ký. Đăng ký lớp để trò chuyện với huấn luyện viên đó.", "You can only message coaches of classes you have joined. Join a class to chat with its coach.")}</span>
-      {inRouter ? <Link className="direct-chat__link" to="/member/classes">{t("Xem lớp học", "Browse classes")}</Link> : <a className="direct-chat__link" href="/member/classes">{t("Xem lớp học", "Browse classes")}</a>}
+      <span>{t("Danh bạ hiển thị người bạn được phép nhắn tin. Hãy chọn lễ tân nếu cần hỗ trợ.", "The directory lists people you can message. Choose a receptionist if you need support.")}</span>
+      {inRouter ? <Link className="direct-chat__link" to="/member/classes?tab=pt">{t("Đặt lịch HLV 1:1", "Book a 1:1 coach")}</Link> : <a className="direct-chat__link" href="/member/classes?tab=pt">{t("Đặt lịch HLV 1:1", "Book a 1:1 coach")}</a>}
     </div>}
     {loading ? <LoadingSkeleton label={t("Đang tải danh bạ…", "Loading contacts…")} count={3} /> : error ? <div role="alert"><p>{t(error)}</p><button className="direct-chat__link" type="button" onClick={() => void search(submitted, page)}>{t("Thử lại", "Retry")}</button></div>
-      : contacts.length === 0 ? <p className="direct-chat__muted">{forMember ? t("Không tìm thấy lễ tân hoặc huấn luyện viên của lớp bạn đã đăng ký.", "No matching receptionist or coach from your classes found.") : t("Không tìm thấy hội viên phù hợp.", "No matching members found.")}</p>
+      : contacts.length === 0 ? <p className="direct-chat__muted">{forMember ? t("Không tìm thấy lễ tân hoặc huấn luyện viên phù hợp.", "No matching receptionist or coach found.") : t("Không tìm thấy hội viên phù hợp.", "No matching members found.")}</p>
         : <ul className="direct-chat__list">{contacts.map(contact => <li key={contact.id}><button type="button" data-contact-id={contact.id} className="direct-chat__person" disabled={pending !== null} onClick={() => onChoose(contact)}>
           <ChatAvatar contact={contact} />
           <span className="direct-chat__person-info"><strong>{contact.name}</strong><small className="direct-chat__role">{pending === contact.id ? t('Đang mở hội thoại…', 'Opening conversation…') : chatRoleLabel(contact.role, t)}</small></span>

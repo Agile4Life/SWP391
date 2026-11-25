@@ -24,12 +24,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Recurring-course enroll / checkout / cancel live under /api/v1/classes, where a catch-all matcher reserves writes
- * for the manager. These tests run the real filter chain to prove the member-only matchers are reached first.
+ * Các endpoint enroll / checkout / cancel khóa học định kỳ nằm dưới /api/v1/classes, nơi có matcher tổng quát
+ * dành quyền ghi cho quản lý. Các kiểm thử này chạy chuỗi filter bảo mật thật để chứng minh matcher riêng cho hội viên được khớp trước.
  */
-@WebMvcTest(EnrollmentController.class)
+@WebMvcTest(controllers = EnrollmentController.class, properties = "app.legacy.classes-enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
+/** Bộ kiểm thử cho CourseEnrollmentSecurity (course enrollment security). */
 class CourseEnrollmentSecurityTest {
     @Autowired MockMvc mvc;
     @MockitoBean EnrollmentService service;
@@ -37,11 +38,13 @@ class CourseEnrollmentSecurityTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(10L, "review-user", role),
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
+    /** Kiểm thử: người chưa đăng nhập không đăng ký, thanh toán hay hủy khóa học được. */
     @Test
     void anonymousCannotEnrollCheckoutOrCancel() throws Exception {
         mvc.perform(post("/api/v1/classes/5/enroll")).andExpect(status().isUnauthorized());
@@ -50,6 +53,7 @@ class CourseEnrollmentSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: các vai trò nhân viên không thể thao tác thay vai hội viên. */
     @Test
     void staffRolesCannotActAsTheMember() throws Exception {
         for (String role : List.of("RECEPTIONIST", "COACH", "CENTER_MANAGER", "MANAGER")) {
@@ -63,6 +67,7 @@ class CourseEnrollmentSecurityTest {
         verifyNoInteractions(service);
     }
 
+    /** Kiểm thử: hội viên truy cập được đăng ký, thanh toán và hủy khóa học. */
     @Test
     void memberReachesEnrollCheckoutAndCancel() throws Exception {
         mvc.perform(post("/api/v1/classes/5/enroll").with(authentication(actor("MEMBER"))))

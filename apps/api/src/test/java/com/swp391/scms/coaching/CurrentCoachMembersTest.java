@@ -11,10 +11,12 @@ import java.time.*;
 import java.util.*;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
+/** Bộ kiểm thử cho CurrentCoachMembers (current coach members). */
 class CurrentCoachMembersTest {
  CurrentCoachMemberRepository repository=mock(CurrentCoachMemberRepository.class);
  MemberProgressLogRepository progressLogs=mock(MemberProgressLogRepository.class);
  CurrentCoachMembers service=new CurrentCoachMembers(repository,Clock.fixed(Instant.parse("2026-11-03T17:05:00Z"),ZoneOffset.UTC),progressLogs);
+ /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (member). */
  Member member(long id){User u=new User();u.setId(id);u.setFullName("Test member");Member m=new Member();m.setUserId(id);m.setUser(u);return m;}
  @Test void returnsAuthoritativeClassAndPtOnlyMembersWithoutRosterCalls(){when(repository.findCurrent(20L,null,LocalDate.of(2026,11,4))).thenReturn(List.of(member(10),member(11)));assertThat(service.list(20L,"COACH")).extracting(CurrentCoachMembers.MemberOption::id).containsExactly(10L,11L);}
  @Test void populatesLatestHeightWeightAndAutoCalculatedBmi(){

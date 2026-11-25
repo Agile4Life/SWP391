@@ -5,8 +5,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Spring configuration registering the active {@link AiClient}.
- * Automatically falls back to {@link MockAiClient} when no API key is set or mock is chosen.
+ * Đăng ký AiClient đang dùng theo cấu hình (OpenAI, Groq, Gemini); không có API key thì tự dùng MockAiClient.
+ *
+ * Cấu hình Spring đăng ký {@link AiClient} đang dùng. Tự động quay về {@link MockAiClient} khi không có API
+ * key hoặc chọn mock.
  */
 @Configuration
 public class AiClientConfig {
@@ -20,6 +22,10 @@ public class AiClientConfig {
     @Value("${scms.ai.model:}")
     private String model;
 
+    /**
+     * Chọn AiClient: đọc cấu hình (thiếu thì đọc .env), có key thì tạo client tương ứng, không thì dùng bản
+     * mock.
+     */
     @Bean
     public AiClient aiClient() {
         String effectiveProvider = provider;

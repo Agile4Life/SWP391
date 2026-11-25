@@ -11,9 +11,9 @@
 ![Render](https://img.shields.io/badge/Backend-Render-46E3B7?logo=render&logoColor=black)
 ![Docker Compose](https://img.shields.io/badge/VPS-Docker_Compose-2496ED?logo=docker&logoColor=white)
 
-**Nền tảng vận hành trung tâm thể thao & chăm sóc sức khỏe — SWP391 Monorepo**
+**Nền tảng vận hành trung tâm Gym — SWP391 Monorepo**
 
-*Gói hội viên · Khóa học định kỳ · PT 1:1 & đặt sân · Check-in QR động · Bảo lưu có giấy tờ · Cửa hàng · Báo cáo doanh thu*
+*Gói hội viên · PT 1:1 & giáo án · Check-in QR động · Bảo lưu có giấy tờ · Ví & hóa đơn · Báo cáo doanh thu*
 
 <br />
 
@@ -29,15 +29,15 @@
 
 ## ✨ Giới thiệu
 
-**SCMS** là hệ thống vận hành cho trung tâm thể hình & wellness, gồm ba phần:
+**SCMS** là hệ thống vận hành cho trung tâm Gym, gồm ba phần. Từ 22/11/2026 phạm vi chỉ còn Gym: lớp học nhóm, đặt sân, cửa hàng, thiết bị, đánh giá HLV, chỉ số cơ thể, tiến độ và streak đã ngừng ([BUSINESS_FLOWS.md](docs/BUSINESS_FLOWS.md)).
 
 - **Web portal nhiều vai trò** — React + Vite + TypeScript (`apps/web`), song ngữ Việt/Anh, hai giao diện sáng/tối.
 - **REST API** — Spring Boot 3, Java 21 (`apps/api`), kiến trúc ba lớp theo package-by-feature, JWT, i18n qua `Accept-Language`.
-- **Cơ sở dữ liệu PostgreSQL** — Hibernate Code-First (`ddl-auto: update`) cùng trigger PostgreSQL bảo vệ ràng buộc nghiệp vụ (sức chứa lớp, trùng lịch).
+- **Cơ sở dữ liệu PostgreSQL** — Hibernate Code-First (`ddl-auto: update`) cùng trigger PostgreSQL bảo vệ ràng buộc nghiệp vụ (trùng lịch PT/HLV, gói còn hạn).
 
 | Bạn cần | Xem ở |
 | :--- | :--- |
-| Nghiệp vụ tổng thể | [PROJECT_MASTER_GUIDE.md](docs/PROJECT_MASTER_GUIDE.md) |
+| Nghiệp vụ đang chạy | [BUSINESS_FLOWS.md](docs/BUSINESS_FLOWS.md) (thiết kế gốc: [PROJECT_MASTER_GUIDE.md](docs/PROJECT_MASTER_GUIDE.md)) |
 | Quy tắc gói tập, khóa học, bảo lưu, điểm danh | [Business rules](docs/specs/2026-11-10-membership-and-attendance-business-rules.md) |
 | Hợp đồng API (OpenAPI) | [docs/api-contracts](docs/api-contracts) |
 | Quy chuẩn thiết kế giao diện | [DESIGN.md](DESIGN.md) |
@@ -49,10 +49,10 @@
 
 | Vai trò | Việc chính |
 | :--- | :--- |
-| 🧑‍🤝‍🧑 **Hội viên** | Mua, gia hạn, nâng cấp gói · đăng ký khóa học · đặt PT 1:1 và sân · thẻ hội viên với QR đổi mỗi 60 giây · xin bảo lưu kèm giấy tờ y tế · lịch tuần/tháng · chỉ số sức khỏe · mua sản phẩm · khám phá cơ sở 3D · nhắn tin với HLV và trợ lý AI |
-| 🛎️ **Lễ tân** | Quầy POS và xác nhận thanh toán · duyệt hồ sơ định danh (KYC) và bảo lưu · mã QR cổng check-in · đánh dấu có mặt buổi PT · xử lý đơn hàng và hỗ trợ |
-| 🏋️ **Huấn luyện viên** | Thời khóa biểu, điểm danh lớp · đánh giá thể trạng lần đầu · giáo án · theo dõi học viên phụ trách |
-| 📊 **Quản lý trung tâm** | Tạo khóa học lặp theo tuần/tháng · danh mục gói, phòng, bộ môn, sản phẩm · báo cáo doanh thu · duyệt hủy gói & hoàn tiền · nhật ký kiểm toán |
+| 🧑‍🤝‍🧑 **Hội viên** | Mua, gia hạn, nâng cấp gói · đặt, hủy, thanh toán PT 1:1 · xem giáo án · thẻ hội viên với QR đổi mỗi 60 giây · xin bảo lưu kèm giấy tờ y tế · khám phá cơ sở 3D · nhắn tin với HLV và trợ lý AI |
+| 🛎️ **Lễ tân** | Quầy POS, thu tiền gói và buổi PT · duyệt hồ sơ định danh (KYC) và bảo lưu · mã QR cổng check-in · hỗ trợ và đơn từ nội bộ |
+| 🏋️ **Huấn luyện viên** | Lịch PT 1:1 theo tuần · điểm danh PT · giáo án (có AI gợi ý) · theo dõi học viên phụ trách |
+| 📊 **Quản lý trung tâm** | Danh mục gói, Phòng Gym Tiêu chuẩn, bộ môn Gym · phân công và sắp xếp HLV · báo cáo doanh thu · duyệt hủy gói & hoàn tiền · tài khoản nhân sự |
 | 🔐 **Quản trị hệ thống** | Tài khoản và phân quyền |
 
 ### Gói hội viên
@@ -60,23 +60,19 @@
 | | Silver | Gold | Platinum | Trial 3 ngày |
 | :--- | :---: | :---: | :---: | :---: |
 | Giá 1 tháng / 3 tháng | 199k / 549k | 299k / 799k | 599k / 1.599k | 0đ |
-| Khóa học miễn phí (1 tháng / 3 tháng) | 1 / 3 | 2 / 6 | 4 / 12 | 0 |
 | PT 1:1 mỗi 30 ngày | 0 | 3 | 6 | 1 |
-| Đặt sân mỗi 30 ngày | 1 | 2 | 3 | 0 |
-| Giảm giá PT thêm, học phí, shop | – | 10% | 20% | – |
-| Phòng VIP | – | – | ✔ | – |
-| Đánh giá thể trạng | lần đầu | + 1 lần mỗi chu kỳ | + Body Fat, Muscle Mass | như Gold |
+| Giảm giá PT thêm | – | 10% | 20% | – |
 | Bảo lưu (chỉ gói 3 tháng, Platinum 1 tháng) | 7 ngày | 15 ngày | 30 ngày (1 tháng: 7) | – |
 
 <details>
 <summary><b>Quy tắc cần nhớ</b></summary>
 
 - **Chu kỳ quyền lợi** là 30 ngày tính từ ngày bắt đầu gói; nâng cấp tiếp tục chu kỳ cũ, ngày bảo lưu không tính vào chu kỳ. Lượt không cộng dồn.
-- **Khóa học** chỉ có dạng định kỳ (lặp theo tuần hoặc tháng), phải kết thúc trước ngày hết hạn gói, vắng không hoàn tiền hay dạy bù. Vắng quá 50% số buổi thì bị khóa đăng ký khóa mới 30 ngày.
-- **Điểm danh:** quét cổng đúng khung giờ tự ghi có mặt buổi khóa và buổi PT; vào sớm rồi ở lại vẫn được tính; lượt vào quên checkout tự đóng sau 8 giờ.
-- **Bảo lưu:** tối thiểu 3 ngày, nộp trước 24 giờ kèm giấy tờ y tế, mỗi gói một lần; lịch trong kỳ bảo lưu được giải phóng.
+- **PT 1:1** đặt trước ít nhất 2 giờ, tối đa 2 buổi chưa trả; hủy trước giờ tập thì trả lượt hoặc hoàn tiền vào Ví.
+- **Điểm danh PT:** HLV đánh dấu tay; quét cổng không tự ghi có mặt, màn HLV chỉ hiện tag "Đã check-in". Lượt vào quên checkout tự đóng sau 8 giờ.
+- **Bảo lưu:** tối thiểu 3 ngày, nộp trước 24 giờ (giấy tờ không bắt buộc), mỗi gói một lần; buổi PT trong kỳ bảo lưu bị hủy, duyệt sớm ≥ 3 ngày thì được trả lượt/hoàn tiền.
 - **Định danh:** hồ sơ CCCD/hộ chiếu cần lễ tân duyệt trước khi mua gói đầu tiên; số giấy tờ lưu dạng mã hóa.
-- **Chỉ Member có gói `active` và chưa hết hạn** mới được đặt chỗ và check-in.
+- **Chỉ Member có gói `active` và chưa hết hạn** mới được đặt PT và check-in.
 
 </details>
 
@@ -93,28 +89,21 @@ Mọi màn hình đều có hai chế độ: **Light — charcoal & salmon**, **
 | <img src="docs/readme/login-light.png" alt="Đăng nhập giao diện sáng" width="100%" /> | <img src="docs/readme/login-dark.png" alt="Đăng nhập giao diện tối" width="100%" /> |
 | Đăng nhập bằng email/mật khẩu hoặc Google, chuyển ngôn ngữ ở footer | Cùng bố cục, nút chính đổi sang tông bạc |
 
-<details>
-<summary><b>🛒 Cửa hàng thực phẩm bổ sung (<code>/products</code>)</b></summary>
-<br />
-<p align="center"><img src="docs/readme/shop-dark.png" alt="Cửa hàng sản phẩm" width="80%" /></p>
-<p align="center"><sub>Lọc theo nhu cầu (tăng cơ, phục hồi, năng lượng…), sắp xếp, nhãn "Sắp hết/Mới", giá theo lần dùng và giỏ hàng.</sub></p>
-</details>
-
 ### 2. Hội viên (`/member/*`)
 
 <p align="center">
   <img src="docs/readme/member-dashboard-light.png" alt="Tổng quan hội viên" width="100%" />
   <br />
-  <sub><b>Tổng quan</b> — bốn cột: gói đang dùng và số ngày còn lại · lớp đã đăng ký · thẻ & thanh toán · hồ sơ sức khỏe</sub>
+  <sub><b>Tổng quan</b> — bốn cột: gói đang dùng và số ngày còn lại · lịch PT đã đặt · thẻ & thanh toán · hồ sơ hội viên (ảnh chụp trước 22/11/2026)</sub>
 </p>
 
-| 💳 Gói tập (`/member/packages`) | 📅 Lịch học & đặt chỗ (`/member/classes`) |
+| 💳 Gói tập (`/member/packages`) | 📅 Lịch PT 1:1 (`/member/classes`) |
 | :---: | :---: |
-| <img src="docs/readme/member-packages-light.png" alt="Gói tập" width="100%" /> | <img src="docs/readme/member-schedule-light.png" alt="Lịch học" width="100%" /> |
-| Gói hiện tại, so sánh Silver/Gold/Platinum, tab bảo lưu | Lịch tuần/tháng, hạn mức khóa miễn phí, đặt lớp và PT 1:1 |
-| 🪪 **Thẻ hội viên & QR** (`/member/card`) | 🎾 **Đặt sân** (`/member/courts`) |
-| <img src="docs/readme/member-card-dark.png" alt="Thẻ hội viên QR" width="100%" /> | <img src="docs/readme/member-courts-light.png" alt="Đặt sân" width="100%" /> |
-| QR động đổi mỗi 60 giây, tải thẻ về máy | Bơi lội, tennis, cầu lông; quy định theo hạng gói |
+| <img src="docs/readme/member-packages-light.png" alt="Gói tập" width="100%" /> | <img src="docs/readme/member-schedule-light.png" alt="Lịch PT" width="100%" /> |
+| Gói hiện tại, so sánh Silver/Gold/Platinum, tab bảo lưu | Lịch của tôi và tab đặt HLV 1:1 (ảnh chụp trước khi bỏ lớp nhóm) |
+| 🪪 **Thẻ hội viên & QR** (`/member/card`) | |
+| <img src="docs/readme/member-card-dark.png" alt="Thẻ hội viên QR" width="100%" /> | |
+| QR động đổi mỗi 60 giây, tải thẻ về máy | |
 | 🧭 **Khám phá cơ sở 3D** (`/member/explore`) | 💬 **Tin nhắn & trợ lý AI** |
 | <img src="docs/readme/member-explore-3d-light.png" alt="Bản đồ 3D" width="100%" /> | <img src="docs/readme/member-chat-light.png" alt="Tin nhắn" width="100%" /> |
 | Mô hình tòa nhà theo tầng, cắt tường, tham quan có hướng dẫn | Chat với huấn luyện viên và SÖL AI ngay trong portal |
@@ -132,7 +121,7 @@ Mọi màn hình đều có hai chế độ: **Light — charcoal & salmon**, **
 <p align="center">
   <img src="docs/readme/coach-schedule-light.png" alt="Lịch dạy huấn luyện viên" width="100%" />
   <br />
-  <sub><b>Lịch dạy & học viên</b> (`/coach/classes`) — thời khóa biểu lớp và PT 1:1, học viên phụ trách, đánh giá và bảng xếp hạng tháng</sub>
+  <sub><b>Lịch PT & học viên</b> (`/coach/classes`) — thời khóa biểu PT 1:1 theo tuần và học viên phụ trách (ảnh chụp trước khi bỏ lớp nhóm và đánh giá)</sub>
 </p>
 
 ### 5. Quản lý trung tâm (`/manager/*`)
@@ -192,7 +181,7 @@ Sơ đồ dữ liệu theo miền (Users, Classes, Bookings, Memberships, Paymen
 > [!IMPORTANT]
 > **Bất biến kiến trúc dữ liệu**
 > - **Code-First:** bảng, cột, khóa định nghĩa bằng JPA Entity (`ddl-auto: update`). File SQL trong `db/` chỉ là tài liệu lịch sử, không dùng để triển khai.
-> - **Trigger bắt buộc:** sức chứa lớp và chống trùng lịch nạp tự động qua `PostgreSqlTriggerProvider`; lỗi trigger được map thành lỗi HTTP dễ hiểu.
+> - **Trigger bắt buộc:** chống trùng lịch, kiểm tra gói (và sức chứa lớp cho dữ liệu cũ) nạp tự động qua `PostgreSqlTriggerProvider`; lỗi trigger được map thành lỗi HTTP dễ hiểu.
 > - **Chính sách database:** `DatabasePolicyTest`, `DatabaseProfilesTest` và `scripts/test-database-config.ps1` chỉ cho phép profile `supabase` (PostgreSQL).
 > - **Đa ngôn ngữ:** `vi` (mặc định) và `en`; mọi thông báo mới phải có cả `messages_vi` và `messages_en`.
 > - **Phân quyền ở backend:** ẩn menu ở frontend không phải là authorization.
@@ -292,6 +281,7 @@ Hai lệnh này giống các job `test-web` và `test-api` trong Pipeline.
 | [🧾 Business rules](docs/specs/2026-11-10-membership-and-attendance-business-rules.md) | Gói tập, khóa học, điểm danh, bảo lưu và QR cổng |
 | [🎁 Quyền lợi gói](docs/specs/2026-11-09-membership-benefits-design.md) | Thiết kế và trạng thái triển khai quyền lợi theo hạng |
 | [🎨 DESIGN.md](DESIGN.md) | Quy chuẩn thiết kế giao diện đang có hiệu lực |
+| [🧹 DATA_CLEANUP.md](docs/DATA_CLEANUP.md) | Dọn dữ liệu cũ của lớp nhóm, sân, cửa hàng, thiết bị, đánh giá HLV sau khi thu gọn phạm vi |
 | [🏛️ backend-architecture.md](docs/rules/backend-architecture.md) | Kiến trúc 3 lớp, SOLID, IoC, JPA |
 | [☁️ SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md) | JDBC TLS, RLS và schema test biệt lập |
 | [🔄 CICD_SETUP.md](docs/CICD_SETUP.md) | Thiết lập Pipeline: Render, Vercel |

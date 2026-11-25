@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { usePortalMotion } from './usePortalMotion';
 
+// Kiểu mục quan sát giao cắt rút gọn dùng trong test.
 type Entry = Pick<IntersectionObserverEntry, 'target' | 'isIntersecting' | 'boundingClientRect'>;
 
 let host: HTMLDivElement;
@@ -11,6 +12,7 @@ let reducedMotion: boolean;
 let preferenceListeners: Array<() => void>;
 let observers: FakeObserver[];
 
+// Lớp giả lập dùng trong kiểm thử.
 class FakeObserver {
   observed = new Set<Element>();
   constructor(private readonly callback: (entries: Entry[]) => void) { observers.push(this); }
@@ -32,6 +34,7 @@ beforeEach(() => {
   vi.stubGlobal('IntersectionObserver', FakeObserver);
   vi.stubGlobal('matchMedia', () => ({
     get matches() { return reducedMotion; },
+    // Lưu listener của media query giảm chuyển động.
     addEventListener: (_: string, listener: () => void) => { preferenceListeners.push(listener); },
     removeEventListener() {},
   }));
@@ -45,6 +48,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
+// Component phụ chỉ phục vụ kiểm thử.
 function Screen() {
   const ref = useRef<HTMLElement>(null);
   const [extra, setExtra] = useState(false);
@@ -59,7 +63,9 @@ function Screen() {
     <button id="add" onClick={() => setExtra(true)}>add</button>
   </main>;
 }
+// Lấy phần tử trong host theo id.
 const el = (id: string) => host.querySelector<HTMLElement>(`#${id}`)!;
+// Bộ quan sát (observer) được tạo gần nhất.
 const current = () => observers[observers.length - 1];
 
 it('registers only top-level components outside dialogs and opted-out regions', async () => {
@@ -107,6 +113,7 @@ it('leaves content untouched under reduced motion, including when the setting ch
 
 it('numbers the small parts inside a component, through layout groups, and picks up parts added later', async () => {
   await act(async () => root.render(<Screen />));
+  // Giá trị biến CSS thứ tự phần con của một phần tử.
   const order = (id: string) => el(id).style.getPropertyValue('--portal-part');
   expect([order('row-title'), order('meta-1'), order('meta-2')]).toEqual(['0', '1', '2']);
   expect(el('row-table').dataset.revealPart).toBeUndefined();

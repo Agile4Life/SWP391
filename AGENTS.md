@@ -42,3 +42,5 @@ Quy tắc chi tiết về kiến trúc backend, ba lớp, SOLID, IoC, JPA và Su
 ## Phạm vi MVP
 
 Không tự thêm mobile native, payment gateway thật, AI provider thật, PDF/export hoặc đổi database nếu ticket không nêu rõ.
+
+**Phạm vi chỉ còn Gym (22–23/11/2026, PR #144–#156):** lớp học nhóm, đặt sân, cửa hàng, quản lý thiết bị, đánh giá HLV/đánh giá buổi tập, chỉ số cơ thể, tiến độ/lịch sử tập và streak đã ngừng. Backend tắt chúng bằng `@ConditionalOnProperty` (`app.legacy.*`, `app.shop.enabled`, `app.coaching.*`, `app.health.metrics.enabled`, mặc định off); frontend đã gỡ màn và chuyển hướng URL cũ (xem `DESIGN.md`, `docs/BUSINESS_FLOWS.md`). Không dựng lại các tính năng này nếu ticket không yêu cầu; giữ entity, bảng và trigger của chúng; dữ liệu cũ dọn bằng script DML trong `docs/DATA_CLEANUP.md`, không lọc cứng theo tên trong code.

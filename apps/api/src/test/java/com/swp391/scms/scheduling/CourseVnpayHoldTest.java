@@ -32,10 +32,14 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/** A course fee VNPay may still settle keeps its seat: neither a cancellation nor the unpaid-fee sweep releases it. */
+/**
+ * Bộ kiểm thử cho CourseVnpayHold (giữ chỗ khóa học khi chờ VNPay).
+ *
+ * Khoản học phí mà VNPay vẫn có thể tất toán sẽ giữ nguyên chỗ học: cả thao tác hủy lẫn lượt quét học phí chưa thanh toán đều không giải phóng chỗ này.
+ */
 class CourseVnpayHoldTest {
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    // 15:00 in the center's time zone.
+    // 15:00 theo múi giờ của trung tâm.
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T08:00:00Z"), ZONE);
     private final LocalDateTime now = LocalDateTime.of(2026, 11, 9, 15, 0);
 
@@ -51,6 +55,7 @@ class CourseVnpayHoldTest {
     private ClassEnrollment enrollment;
     private Payment fee;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ khóa học và thanh toán VNPay giả lập. */
     @BeforeEach
     void setUp() {
         service = new EnrollmentService(enrollments, null, gymClasses, null, members, notifications, null, clock);
@@ -85,6 +90,7 @@ class CourseVnpayHoldTest {
         when(payments.findPendingCourseFeesCreatedBefore(any())).thenReturn(List.of(fee));
     }
 
+    /** Hàm trợ giúp của test: tạo lượt thanh toán VNPay hết hạn vào một thời điểm. */
     private VnpayTransaction attemptExpiringAt(LocalDateTime expiresAt) {
         VnpayTransaction attempt = new VnpayTransaction("REF1", fee, fee.getAmount(), expiresAt.minusMinutes(15), expiresAt, "127.0.0.1");
         when(transactions.findAllByPaymentId(77L)).thenReturn(List.of(attempt));
@@ -93,6 +99,7 @@ class CourseVnpayHoldTest {
         return attempt;
     }
 
+    /** Kiểm thử: hội viên không được hủy khi VNPay vẫn có thể xác nhận phí. */
     @Test
     void aMemberCannotCancelWhileVnpayMayStillConfirmTheFee() {
         attemptExpiringAt(now.plusMinutes(5));
@@ -104,9 +111,13 @@ class CourseVnpayHoldTest {
         assertEquals("pending", fee.getStatus());
     }
 
+    /**
+     * Kiểm thử: lượt quét giải phóng chỗ chưa thanh toán vẫn giữ chỗ khi phí còn trong thời gian ân hạn của
+     * cổng VNPay.
+     */
     @Test
     void theUnpaidSweepKeepsASeatWhoseFeeIsInsideTheGatewayGracePeriod() {
-        // Past the 15-minute hold and the gateway expiry, but still inside the IPN grace period.
+        // Đã quá thời gian giữ chỗ 15 phút và quá hạn cổng thanh toán, nhưng vẫn nằm trong thời gian ân hạn IPN.
         attemptExpiringAt(now.minusMinutes(5));
 
         assertEquals(0, service.expireUnpaidCourseEnrollments());
@@ -115,6 +126,7 @@ class CourseVnpayHoldTest {
         assertEquals("pending", fee.getStatus());
     }
 
+    /** Kiểm thử: lượt quét chưa thanh toán nhả chỗ khi lần thanh toán không còn khả năng hoàn tất. */
     @Test
     void theUnpaidSweepReleasesTheSeatOnceTheAttemptCanNoLongerSettle() {
         fee.setCreatedAt(now.minusMinutes(40));
@@ -127,6 +139,7 @@ class CourseVnpayHoldTest {
         assertEquals("cancelled", enrollment.getStatus());
     }
 
+    /** Kiểm thử: khoản phí không có lần thử VNPay nào vẫn được nhả chỗ sau thời gian giữ. */
     @Test
     void aFeeWithoutAnyVnpayAttemptIsStillReleasedAfterTheHold() {
         when(transactions.findAllByPaymentId(anyLong())).thenReturn(List.of());

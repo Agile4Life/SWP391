@@ -26,7 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * SCRUM-113: Class session lifecycle and cancellation notifications.
+ * Nghiệp vụ vòng đời buổi học: hủy buổi, hủy các lượt đặt chỗ liên quan và thông báo cho học viên.
+ *
+ * SCRUM-113: Vòng đời buổi học và thông báo hủy buổi.
  */
 @Service
 public class ClassSessionService {
@@ -42,6 +44,10 @@ public class ClassSessionService {
     private final ApplicationEventPublisher eventPublisher;
     private final MessageService messageService;
 
+    /**
+     * Constructor chính được Spring dùng: nhận repository buổi học/ghi danh, NotificationService,
+     * ApplicationEventPublisher và MessageService.
+     */
     @org.springframework.beans.factory.annotation.Autowired
     public ClassSessionService(ClassSessionRepository sessionRepository,
                                ClassEnrollmentRepository enrollmentRepository,
@@ -55,6 +61,7 @@ public class ClassSessionService {
         this.messageService = messageService;
     }
 
+    /** Constructor cho test: không có MessageService. */
     public ClassSessionService(ClassSessionRepository sessionRepository,
                                ClassEnrollmentRepository enrollmentRepository,
                                NotificationService notificationService,
@@ -62,13 +69,17 @@ public class ClassSessionService {
         this(sessionRepository, enrollmentRepository, notificationService, eventPublisher, null);
     }
 
+    /** Dịch message key kèm tham số; không có MessageService thì trả lại key. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
     /**
-     * Cancel one session and notify enrolled members. Enrollments belong to the class,
-     * so they remain valid for the other sessions.
+     * Hủy một buổi học: báo lỗi nếu đã hủy, kiểm tra quyền, lưu lý do, gửi thông báo cho học viên đã ghi danh,
+     * hủy các lượt đặt chỗ buổi này và phát sự kiện; ghi danh khóa vẫn giữ cho các buổi khác.
+     *
+     * Hủy một buổi và thông báo các hội viên đã ghi danh. Ghi danh thuộc về lớp nên vẫn còn hiệu lực cho các
+     * buổi khác.
      */
     @Transactional
     public ClassSessionDto cancelSession(Long sessionId, CancelSessionRequest request, AuthenticatedPrincipal principal) {
@@ -105,7 +116,7 @@ public class ClassSessionService {
                 Long memberId = member.getUserId();
                 affectedMemberUserIds.add(memberId);
 
-                // Send in-app notification of type schedule_change
+                // Gửi thông báo trong ứng dụng loại schedule_change.
                 notificationService.send(
                         memberId,
                         msg("notifications.session.cancelled.title"),
@@ -138,7 +149,7 @@ public class ClassSessionService {
                 }
             }
         }
-        // Emit SessionCancelledEvent for decoupled listeners
+        // Phát SessionCancelledEvent cho các listener tách rời.
         SessionCancelledEvent event = new SessionCancelledEvent(
                 sessionId,
                 classId,
@@ -155,6 +166,10 @@ public class ClassSessionService {
         return toDto(savedSession);
     }
 
+    /**
+     * Kiểm tra quyền hủy buổi: quản lý, nhân viên, lễ tân luôn được; HLV chỉ được hủy buổi của lớp mình dạy;
+     * role khác bị từ chối.
+     */
     private void validateCancellationPermission(ClassSession session, AuthenticatedPrincipal principal) {
         if (principal == null) {
             throw new ForbiddenException("SCHEDULING_FORBIDDEN", "error.forbidden", null, "Unauthenticated");
@@ -184,6 +199,7 @@ public class ClassSessionService {
         throw new ForbiddenException("SCHEDULING_FORBIDDEN", "error.forbidden", null, "Insufficient permissions to cancel session");
     }
 
+    /** Chuyển buổi học sang DTO; số chỗ đã đặt = số ghi danh booked của lớp + số lượt đặt chỗ booked của buổi. */
     public ClassSessionDto toDto(ClassSession session) {
         GymClass gymClass = session.getGymClass();
         Coach coach = gymClass != null ? gymClass.getCoach() : null;

@@ -1,17 +1,13 @@
 package com.swp391.scms.demo;
 
 import com.swp391.scms.attendance.entity.CenterCheckin;
-import com.swp391.scms.attendance.entity.SessionAttendance;
 import com.swp391.scms.attendance.repository.CenterCheckinRepository;
-import com.swp391.scms.attendance.repository.SessionAttendanceRepository;
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.MembershipPackage;
-import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.facilities.repository.MembershipPackageRepository;
-import com.swp391.scms.facilities.repository.RoomRepository;
 import com.swp391.scms.finance.entity.Invoice;
 import com.swp391.scms.finance.entity.InvoiceItem;
 import com.swp391.scms.finance.entity.Payment;
@@ -20,12 +16,6 @@ import com.swp391.scms.health.MemberProgressLogRepository;
 import com.swp391.scms.health.entity.MemberProgressLog;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
-import com.swp391.scms.scheduling.entity.ClassSession;
-import com.swp391.scms.scheduling.entity.GymClass;
-import com.swp391.scms.scheduling.entity.ClassEnrollment;
-import com.swp391.scms.scheduling.repository.ClassSessionRepository;
-import com.swp391.scms.scheduling.repository.GymClassRepository;
-import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.users.CoachRepository;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.ReceptionistRepository;
@@ -36,16 +26,13 @@ import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.Receptionist;
 import com.swp391.scms.users.entity.User;
 import java.math.BigDecimal;
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,12 +46,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Optional demo dataset (accounts, subscriptions, payments, classes, attendance, PT bookings, progress logs) with
- * past and current records, so a panel can be shown a lived-in system. Off by default
- * ({@code app.demo.seed-enabled}); idempotent: skipped once the demo manager account exists.
- * Dates are relative to the day the seeder runs, so seed on a fresh database shortly before the demo.
- * Past rows use terminal statuses (completed / DENIED) because the database triggers only accept new "booked" or
- * GRANTED rows for members whose subscription is active today.
+ * Bộ dữ liệu demo tùy chọn (tài khoản quản lý, lễ tân, HLV, hội viên với nhiều tình huống gói tập, thanh toán,
+ * hóa đơn, check-in, buổi PT và số đo cơ thể) gồm bản ghi quá khứ và hiện tại, để hội đồng thấy một hệ thống
+ * đã được vận hành. Mặc định tắt ({@code app.demo.seed-enabled}); mang tính idempotent: tự bỏ qua khi tài khoản
+ * quản lý demo đã tồn tại. Ngày tháng tính tương đối theo ngày chạy seeder, nên hãy seed trên database mới ngay
+ * trước buổi demo. Các dòng quá khứ dùng trạng thái cuối (completed / DENIED) vì trigger database chỉ nhận dòng
+ * "booked" hoặc GRANTED mới cho hội viên có subscription còn hiệu lực hôm nay.
  */
 @Component
 @Order(200)
@@ -76,7 +63,11 @@ public class DemoDataSeeder implements ApplicationRunner {
     static final String DOMAIN = "@demo.sol.vn";
     static final String MANAGER_EMAIL = "manager" + DOMAIN;
 
-    /** One member profile and the subscription story that goes with it. */
+    /**
+     * Hồ sơ một hội viên demo và tình huống gói tập của họ.
+     *
+     * Một hồ sơ hội viên cùng câu chuyện subscription đi kèm.
+     */
     private record MemberSpec(String key, String name, String gender, int age, String level, String goal,
                               String health, String pkg, String scenario, int joinedDaysAgo) {}
 
@@ -89,53 +80,32 @@ public class DemoDataSeeder implements ApplicationRunner {
                     "SILVER", "ACTIVE_NEW", 5),
             new MemberSpec("dung", "Phạm Quốc Dũng", "male", 35, "intermediate", "Tăng sức bền", "Đau gối nhẹ",
                     "GOLD", "EXPIRED", 120),
-            new MemberSpec("em", "Võ Ngọc Em", "female", 29, "beginner", "Yoga, thư giãn", null,
+            new MemberSpec("em", "Võ Ngọc Em", "female", 29, "beginner", "Cải thiện sức khỏe", null,
                     "SILVER", "FROZEN", 90),
             new MemberSpec("phuc", "Đặng Hoàng Phúc", "male", 22, "beginner", "Tăng cân lành mạnh", null,
                     "GOLD", "PENDING", 1),
-            new MemberSpec("giang", "Bùi Hương Giang", "female", 33, "intermediate", "Boxing, giảm stress", null,
+            new MemberSpec("giang", "Bùi Hương Giang", "female", 33, "intermediate", "Tăng thể lực, giảm stress", null,
                     "GOLD", "RENEWED", 110),
             new MemberSpec("hieu", "Ngô Trung Hiếu", "male", 40, "advanced", "Duy trì thể lực", null,
                     "PLATINUM", "EXPIRING", 27),
-            new MemberSpec("khoa", "Đỗ Anh Khoa", "male", 26, "beginner", "Bơi lội", null,
+            new MemberSpec("khoa", "Đỗ Anh Khoa", "male", 26, "beginner", "Cải thiện sức bền", null,
                     "SILVER", "CANCELLED", 60),
             new MemberSpec("lan", "Hồ Mỹ Lan", "female", 27, "beginner", "Chưa chọn gói", null,
                     null, "NO_PLAN", 2));
 
+    /** Hồ sơ một HLV demo. */
     private record CoachSpec(String key, String name, String gender, String specialization, String certification,
                              String bio, String discipline) {}
 
     private static final List<CoachSpec> COACHES = List.of(
             new CoachSpec("hung", "Trịnh Quang Hùng", "male", "Gym - Sức mạnh", "NSCA-CPT",
                     "8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.", "Gym"),
-            new CoachSpec("mai", "Lý Thanh Mai", "female", "Yoga", "RYT-500",
-                    "Giáo viên Yoga 6 năm kinh nghiệm, tập trung hơi thở, thăng bằng và phục hồi.", "Yoga"),
-            new CoachSpec("long", "Phan Thành Long", "male", "Boxing", "AIBA Level 2",
-                    "Cựu vận động viên Boxing, chuyên kỹ thuật đấm và thể lực theo hiệp.", "Boxing"),
-            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Bơi lội", "ASCA Level 2",
-                    "Huấn luyện viên bơi 7 năm kinh nghiệm: kỹ thuật bơi và sức bền dưới nước.", "Bơi lội"));
-
-    /** {@code fromDay}/{@code toDay}: window of sessions relative to the seed day; the class dates follow its sessions. */
-    private record ClassSpec(String name, String coachKey, String room, String discipline, String level, int capacity,
-                             Set<DayOfWeek> days, LocalTime start, LocalTime end, int price, int fromDay, int toDay) {
-        ClassSpec(String name, String coachKey, String room, String discipline, String level, int capacity,
-                  Set<DayOfWeek> days, LocalTime start, LocalTime end, int price) {
-            this(name, coachKey, room, discipline, level, capacity, days, start, end, price, -28, 14);
-        }
-    }
-
-    private static final List<ClassSpec> CLASSES = List.of(
-            new ClassSpec("Strength Foundation", "hung", "Phòng Gym Tiêu chuẩn", "Gym", "all", 12,
-                    Set.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY), LocalTime.of(18, 0), LocalTime.of(19, 15), 0),
-            new ClassSpec("Morning Flow Yoga", "mai", "Zen Garden Studio", "Yoga", "beginner", 10,
-                    Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY), LocalTime.of(18, 0), LocalTime.of(19, 0), 0),
-            new ClassSpec("Boxing Cardio Rounds", "long", "Phòng Gym VIP", "Boxing", "intermediate", 8,
-                    Set.of(DayOfWeek.SATURDAY), LocalTime.of(9, 0), LocalTime.of(10, 15), 0),
-            new ClassSpec("Aqua Technique", "thao", "Oasis Lap Pool", "Bơi lội", "all", 8,
-                    Set.of(DayOfWeek.FRIDAY), LocalTime.of(17, 0), LocalTime.of(18, 0), 0),
-            // Not started yet, so members can try enrolling in a whole course.
-            new ClassSpec("Yoga Cơ Bản (khóa mới)", "mai", "Zen Garden Studio", "Yoga", "beginner", 12,
-                    Set.of(DayOfWeek.TUESDAY, DayOfWeek.THURSDAY), LocalTime.of(7, 0), LocalTime.of(8, 0), 0, 7, 34));
+            new CoachSpec("mai", "Lý Thanh Mai", "female", "Gym - Phục hồi", "CPT",
+                    "Huấn luyện viên Gym tập trung sức khỏe và phục hồi.", "Gym"),
+            new CoachSpec("long", "Phan Thành Long", "male", "Gym - Thể lực", "CPT",
+                    "Huấn luyện viên Gym tập trung sức mạnh và thể lực.", "Gym"),
+            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Gym - Sức bền", "CPT",
+                    "Huấn luyện viên Gym tập trung kỹ thuật và sức bền.", "Gym"));
 
     private final UserRepository users;
     private final RoleRepository roles;
@@ -146,23 +116,17 @@ public class DemoDataSeeder implements ApplicationRunner {
     private final MembershipSubscriptionRepository subscriptions;
     private final PaymentRepository payments;
     private final DisciplineRepository disciplines;
-    private final RoomRepository rooms;
-    private final GymClassRepository classes;
-    private final ClassSessionRepository sessions;
-    private final ClassEnrollmentRepository enrollments;
-    private final SessionAttendanceRepository attendance;
     private final CenterCheckinRepository checkins;
     private final CoachBookingRepository coachBookings;
     private final MemberProgressLogRepository progressLogs;
     private final PasswordEncoder passwordEncoder;
     private final String demoPassword;
 
+    /** Nhận các repository, bộ mã hóa mật khẩu và mật khẩu chung của tài khoản demo (app.demo.password). */
     public DemoDataSeeder(UserRepository users, RoleRepository roles, MemberRepository members,
                           CoachRepository coaches, ReceptionistRepository receptionists,
                           MembershipPackageRepository packages, MembershipSubscriptionRepository subscriptions,
-                          PaymentRepository payments, DisciplineRepository disciplines, RoomRepository rooms,
-                          GymClassRepository classes, ClassSessionRepository sessions,
-                          ClassEnrollmentRepository enrollments, SessionAttendanceRepository attendance,
+                          PaymentRepository payments, DisciplineRepository disciplines,
                           CenterCheckinRepository checkins, CoachBookingRepository coachBookings,
                           MemberProgressLogRepository progressLogs, PasswordEncoder passwordEncoder,
                           @Value("${app.demo.password:Demo@12345}") String demoPassword) {
@@ -175,11 +139,6 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.subscriptions = subscriptions;
         this.payments = payments;
         this.disciplines = disciplines;
-        this.rooms = rooms;
-        this.classes = classes;
-        this.sessions = sessions;
-        this.enrollments = enrollments;
-        this.attendance = attendance;
         this.checkins = checkins;
         this.coachBookings = coachBookings;
         this.progressLogs = progressLogs;
@@ -187,6 +146,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         this.demoPassword = demoPassword;
     }
 
+    /**
+     * Tạo toàn bộ dữ liệu demo theo thứ tự: nhân viên, HLV, hội viên kèm gói tập, check-in, buổi PT, số đo; bỏ
+     * qua nếu đã có dữ liệu demo.
+     */
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
@@ -197,7 +160,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         LocalDate today = LocalDate.now(ZONE);
         String hash = passwordEncoder.encode(demoPassword);
 
-        User manager = createStaff("CENTER_MANAGER", "manager", "Nguyễn Hoàng Quản Lý", "male", hash, today);
+        createStaff("CENTER_MANAGER", "manager", "Nguyễn Hoàng Quản Lý", "male", hash, today);
         User reception = createStaff("RECEPTIONIST", "letan", "Trần Bảo Ngọc", "female", hash, today);
 
         Map<String, Coach> coachByKey = new HashMap<>();
@@ -206,19 +169,12 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
 
         Map<String, Member> memberByKey = new HashMap<>();
-        Map<String, MembershipSubscription> currentSub = new HashMap<>();
         for (MemberSpec spec : MEMBERS) {
             Member member = createMember(spec, hash, today);
             memberByKey.put(spec.key(), member);
-            MembershipSubscription sub = createSubscriptions(spec, member, reception, today);
-            if (sub != null) {
-                currentSub.put(spec.key(), sub);
-            }
+            createSubscriptions(spec, member, reception, today);
         }
 
-        List<String> activeKeys = List.of("an", "binh", "chi", "hieu", "giang");
-        Map<String, List<ClassSession>> sessionsByClass = createClasses(manager, coachByKey, today);
-        enroll(sessionsByClass, memberByKey, activeKeys, coachByKey, today);
         createCheckins(memberByKey, reception, today);
         createPtBookings(memberByKey, coachByKey, today);
         createProgress(memberByKey, coachByKey, today);
@@ -226,8 +182,12 @@ public class DemoDataSeeder implements ApplicationRunner {
                 COACHES.size(), MEMBERS.size());
     }
 
-    // ---- accounts -------------------------------------------------------------------------------------------
+    // ---- tài khoản ------------------------------------------------------------------------------------------
 
+    /**
+     * Tạo tài khoản demo với email <key>@demo.sol.vn, SĐT sinh từ khóa, ngày sinh theo tuổi, ngày tạo lùi về
+     * quá khứ và đã đăng nhập hôm qua.
+     */
     private User newUser(String role, String key, String name, String gender, String hash, LocalDate today, int age,
                          int createdDaysAgo) {
         User user = new User();
@@ -247,6 +207,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         return users.save(user);
     }
 
+    /** Tạo tài khoản nhân viên; lễ tân có thêm hồ sơ ca sáng. */
     private User createStaff(String role, String key, String name, String gender, String hash, LocalDate today) {
         User user = newUser(role, key, name, gender, hash, today, 34, 400);
         if ("RECEPTIONIST".equals(role)) {
@@ -260,6 +221,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         return user;
     }
 
+    /** Tạo tài khoản HLV kèm hồ sơ chuyên môn, chứng chỉ và giới thiệu. */
     private Coach createCoach(CoachSpec spec, String hash, LocalDate today) {
         User user = newUser("COACH", spec.key(), spec.name(), spec.gender(), hash, today, 32, 400);
         Coach coach = new Coach();
@@ -272,6 +234,10 @@ public class DemoDataSeeder implements ApplicationRunner {
         return coaches.save(coach);
     }
 
+    /**
+     * Tạo hội viên kèm hồ sơ (mã DEMO-<id>, mục tiêu, trình độ, sức khỏe, liên hệ khẩn cấp); hội viên chưa có
+     * gói hoặc chờ thanh toán thì KYC đang chờ duyệt, còn lại đã duyệt.
+     */
     private Member createMember(MemberSpec spec, String hash, LocalDate today) {
         User user = newUser("MEMBER", spec.key(), spec.name(), spec.gender(), hash, today, spec.age(),
                 spec.joinedDaysAgo());
@@ -296,8 +262,12 @@ public class DemoDataSeeder implements ApplicationRunner {
         return members.save(member);
     }
 
-    // ---- subscriptions & payments ---------------------------------------------------------------------------
+    // ---- gói hội viên & thanh toán --------------------------------------------------------------------------
 
+    /**
+     * Tạo các kỳ gói theo tình huống của hội viên (đang tập lâu, mới đăng ký, hết hạn, đang bảo lưu, chờ thanh
+     * toán, đã gia hạn, sắp hết hạn, đã hủy).
+     */
     private MembershipSubscription createSubscriptions(MemberSpec spec, Member member, User receptionist,
                                                        LocalDate today) {
         if (spec.pkg() == null) {
@@ -306,7 +276,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         MembershipPackage pkg = findPackage(spec.pkg());
         int days = pkg.getDurationDays();
         return switch (spec.scenario()) {
-            // 3 months bought 40 days ago -> a Gold month before it (history), a long active run now.
+            // Gói 3 tháng mua 40 ngày trước -> có một tháng Gold trước đó (lịch sử), hiện đang chạy kỳ dài hạn.
             case "ACTIVE_LONG" -> {
                 MembershipPackage first = findPackage("GOLD");
                 MembershipSubscription old = subscribe(member, first, today.minusDays(120), today.minusDays(91),
@@ -338,7 +308,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                         "pending_payment", null, receptionist);
                 yield subscriptions.save(sub);
             }
-            // Expired Silver month then renewed into Gold: shows the renewal chain.
+            // Tháng Silver đã hết hạn rồi gia hạn lên Gold: minh họa chuỗi gia hạn.
             case "RENEWED" -> {
                 MembershipPackage first = findPackage("SILVER");
                 MembershipSubscription old = subscribe(member, first, today.minusDays(50), today.minusDays(21),
@@ -357,6 +327,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         };
     }
 
+    /** Tạo đối tượng kỳ gói (chưa lưu) với giá chốt bằng giá gói và mã QR ngẫu nhiên. */
     private MembershipSubscription newSubscription(Member member, MembershipPackage pkg, LocalDate start,
                                                    LocalDate end, String status, MembershipSubscription previous,
                                                    User createdBy) {
@@ -375,7 +346,11 @@ public class DemoDataSeeder implements ApplicationRunner {
         return sub;
     }
 
-    /** Saves a paid subscription together with its payment and invoice. */
+    /**
+     * Lưu kỳ gói đã trả tiền kèm khoản thanh toán thành công và hóa đơn.
+     *
+     * Lưu subscription đã thanh toán cùng khoản thanh toán và hóa đơn của nó.
+     */
     private MembershipSubscription subscribe(Member member, MembershipPackage pkg, LocalDate start, LocalDate end,
                                              String status, MembershipSubscription previous, User receptionist,
                                              String method) {
@@ -404,139 +379,21 @@ public class DemoDataSeeder implements ApplicationRunner {
         return sub;
     }
 
+    /** Tìm gói theo tên; thiếu gói (chưa chạy CatalogSeeder) thì báo lỗi. */
     private MembershipPackage findPackage(String name) {
         return packages.findAllByOrderByPriceAsc().stream()
                 .filter(p -> name.equalsIgnoreCase(p.getName())).findFirst()
                 .orElseThrow(() -> new IllegalStateException("Demo seed needs package '" + name + "' (CatalogSeeder)"));
     }
 
-    // ---- classes, sessions, course enrollments, attendance ------------------------------------------------------------
+    // ---- check-in trung tâm ----------------------------------------------------------------------------------
 
-    private Map<String, List<ClassSession>> createClasses(User manager, Map<String, Coach> coachByKey,
-                                                          LocalDate today) {
-        Map<String, List<ClassSession>> result = new HashMap<>();
-        Map<String, Room> roomByName = new HashMap<>();
-        rooms.findAllByOrderByNameAsc().forEach(r -> roomByName.put(r.getName(), r));
-        Map<String, Discipline> disciplineByName = new HashMap<>();
-        disciplines.findAll().forEach(d -> disciplineByName.put(d.getName(), d));
-
-        for (ClassSpec spec : CLASSES) {
-            Room room = roomByName.get(spec.room());
-            Discipline discipline = disciplineByName.get(spec.discipline());
-            if (room == null || discipline == null) {
-                log.warn("Demo seed: skip class '{}' (missing room or discipline)", spec.name());
-                continue;
-            }
-            GymClass gymClass = new GymClass();
-            gymClass.setName(spec.name());
-            gymClass.setDiscipline(discipline);
-            gymClass.setCoach(coachByKey.get(spec.coachKey()));
-            gymClass.setRoom(room);
-            gymClass.setCapacity(spec.capacity());
-            gymClass.setLevel(spec.level());
-            gymClass.setDescription("Lớp " + spec.name() + " do huấn luyện viên " + spec.coachKey() + " phụ trách.");
-            gymClass.setStatus("active");
-            gymClass.setPrice(BigDecimal.valueOf(spec.price()));
-            List<LocalDate> dates = new ArrayList<>();
-            for (LocalDate d = today.plusDays(spec.fromDay()); !d.isAfter(today.plusDays(spec.toDay())); d = d.plusDays(1)) {
-                if (spec.days().contains(d.getDayOfWeek())) {
-                    dates.add(d);
-                }
-            }
-            if (dates.isEmpty()) {
-                continue;
-            }
-            // The course runs exactly from its first to its last session: enrolment checks membership against these.
-            gymClass.setStartDate(dates.get(0));
-            gymClass.setEndDate(dates.get(dates.size() - 1));
-            gymClass.setRecurringDays(String.join(",", spec.days().stream().map(DayOfWeek::name).toList()));
-            gymClass.setStartTime(spec.start());
-            gymClass.setEndTime(spec.end());
-            gymClass.setCreatedBy(manager);
-            gymClass = classes.save(gymClass);
-
-            List<ClassSession> created = new ArrayList<>();
-            for (LocalDate d : dates) {
-                ClassSession session = new ClassSession();
-                session.setGymClass(gymClass);
-                session.setSessionDate(d);
-                session.setStartTime(spec.start());
-                session.setEndTime(spec.end());
-                session.setStatus(d.isBefore(today) ? "completed" : "scheduled");
-                created.add(sessions.save(session));
-            }
-            result.put(spec.name(), created);
-        }
-        return result;
-    }
-
-    private void enroll(Map<String, List<ClassSession>> sessionsByClass, Map<String, Member> memberByKey,
-                        List<String> activeKeys, Map<String, Coach> coachByKey, LocalDate today) {
-        // member key -> classes they follow
-        Map<String, List<String>> plan = Map.of(
-                "an", List.of("Strength Foundation", "Boxing Cardio Rounds"),
-                "binh", List.of("Morning Flow Yoga", "Aqua Technique"),
-                "chi", List.of("Morning Flow Yoga"),
-                "hieu", List.of("Strength Foundation"),
-                "giang", List.of("Boxing Cardio Rounds", "Morning Flow Yoga"));
-        Map<String, String> coachOfClass = new HashMap<>();
-        CLASSES.forEach(c -> coachOfClass.put(c.name(), c.coachKey()));
-
-        for (String key : activeKeys) {
-            Member member = memberByKey.get(key);
-            for (String className : plan.getOrDefault(key, List.of())) {
-                List<ClassSession> courseSessions = sessionsByClass.getOrDefault(className, List.of());
-                if (courseSessions.isEmpty()) {
-                    continue;
-                }
-                // Classes are recurring courses: a member enrols in the whole course, never in a single session.
-                GymClass course = courseSessions.get(0).getGymClass();
-                boolean hasUpcoming = courseSessions.stream().anyMatch(s -> !s.getSessionDate().isBefore(today));
-                LocalDate firstDay = courseSessions.get(0).getSessionDate();
-                LocalDate enrolledOn = firstDay.minusDays(3).isBefore(member.getJoinDate())
-                        ? member.getJoinDate() : firstDay.minusDays(3);
-                ClassEnrollment enrollment = new ClassEnrollment();
-                enrollment.setGymClass(course);
-                enrollment.setMember(member);
-                enrollment.setStatus(hasUpcoming ? "booked" : "completed");
-                enrollment.setEnrolledAt(enrolledOn.atTime(10, 0));
-                enrollments.save(enrollment);
-
-                int index = 0;
-                for (ClassSession session : courseSessions) {
-                    // A newer member (joined recently) has no earlier history.
-                    if (session.getSessionDate().isBefore(member.getJoinDate())) {
-                        continue;
-                    }
-                    if (session.getSessionDate().isBefore(today)) {
-                        markAttendance(session, member, coachByKey.get(coachOfClass.get(className)), index++);
-                    }
-                }
-            }
-        }
-    }
-
-    /** Mostly present, with the occasional late or absent so the attendance report has variety. */
-    private void markAttendance(ClassSession session, Member member, Coach coach, int index) {
-        String status = index % 7 == 5 ? "absent" : index % 5 == 3 ? "late" : "present";
-        SessionAttendance record = new SessionAttendance();
-        record.setSession(session);
-        record.setMember(member);
-        record.setStatus(status);
-        record.setRecordedBy(coach);
-        if (!"absent".equals(status)) {
-            LocalDateTime start = session.getSessionDate().atTime(session.getStartTime());
-            record.setCheckedInAt("late".equals(status) ? start.plusMinutes(12) : start.minusMinutes(5));
-        } else {
-            record.setNotes("Vắng không báo trước");
-        }
-        attendance.save(record);
-    }
-
-    // ---- center check-ins -----------------------------------------------------------------------------------
-
+    /**
+     * Tạo lịch sử check-in cho các hội viên đang có gói (cách ngày đều đặn), và vài lượt bị từ chối của hội
+     * viên hết hạn để minh họa luồng từ chối.
+     */
     private void createCheckins(Map<String, Member> memberByKey, User receptionist, LocalDate today) {
-        // key -> visits over the last N days (every 'step' days) for members whose plan is currently valid
+        // key -> số lượt vào trong N ngày gần nhất (cách mỗi 'step' ngày) cho hội viên có gói đang hiệu lực.
         Map<String, int[]> visits = Map.of("an", new int[]{35, 1}, "binh", new int[]{12, 2},
                 "chi", new int[]{5, 2}, "hieu", new int[]{26, 2}, "giang", new int[]{29, 2});
         visits.forEach((key, cfg) -> {
@@ -558,7 +415,7 @@ public class DemoDataSeeder implements ApplicationRunner {
                 checkins.save(checkin);
             }
         });
-        // Expired member turned away at the gate: shows the denial flow.
+        // Hội viên hết hạn bị từ chối ở cổng: minh họa luồng từ chối.
         Member expired = memberByKey.get("dung");
         for (int back : new int[]{15, 9, 3}) {
             CenterCheckin denied = new CenterCheckin();
@@ -572,12 +429,13 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
     }
 
-    // ---- PT bookings ----------------------------------------------------------------------------------------
+    // ---- buổi đặt PT -----------------------------------------------------------------------------------------
 
+    /** Tạo buổi PT 1:1 quá khứ (đã hoàn thành) và sắp tới (đã xác nhận), dùng lượt PT của gói. */
     private void createPtBookings(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {
         Map<String, Discipline> disciplineByName = new HashMap<>();
         disciplines.findAll().forEach(d -> disciplineByName.put(d.getName(), d));
-        // member, coach, days offset (negative = past), hour
+        // hội viên, HLV, độ lệch ngày (âm = quá khứ), giờ.
         Object[][] rows = {
                 {"an", "hung", -30, 7}, {"an", "hung", -23, 7}, {"an", "hung", -16, 7}, {"an", "hung", -9, 7},
                 {"an", "hung", -2, 7}, {"an", "hung", 3, 7}, {"an", "hung", 10, 7},
@@ -616,14 +474,17 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
     }
 
+    /** Bộ môn của HLV demo theo khóa. */
     private String coachDiscipline(String coachKey) {
         return COACHES.stream().filter(c -> c.key().equals(coachKey)).findFirst().orElseThrow().discipline();
     }
 
-    // ---- progress -------------------------------------------------------------------------------------------
+    // ---- tiến độ ---------------------------------------------------------------------------------------------
 
+    /** Tạo số đo cân nặng, mỡ, BMI hằng tháng trong 4 tháng (và chiều cao lần đầu) để có biểu đồ tiến độ. */
     private void createProgress(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {
-        // key -> {start weight, monthly delta, start body fat, monthly fat delta, height cm, coach}
+        // key -> {cân nặng ban đầu, thay đổi mỗi tháng, mỡ cơ thể ban đầu, thay đổi mỡ mỗi tháng, chiều cao cm,
+        // HLV}.
         Object[][] rows = {
                 {"an", 82.0, -1.2, 22.0, -0.9, 176, "hung"},
                 {"binh", 70.0, -1.5, 31.0, -1.1, 162, "mai"},
@@ -647,6 +508,7 @@ public class DemoDataSeeder implements ApplicationRunner {
         }
     }
 
+    /** Lưu một số đo (làm tròn 1 chữ số thập phân). */
     private void addMetric(Member member, User recordedBy, LocalDateTime at, String metric, double value, String unit) {
         MemberProgressLog entry = new MemberProgressLog();
         entry.setMember(member);

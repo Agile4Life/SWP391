@@ -1,6 +1,6 @@
 # Thanh toán VNPay Sandbox
 
-Phạm vi theo yêu cầu 03/11/2026: mua/gia hạn/nâng cấp gói tập, buổi PT trả theo giờ, lượt đặt sân vượt quyền lợi và các phiếu thu đang chờ (bao gồm lớp học nếu đã có phiếu thu). Phần miễn phí theo gói không tạo giao dịch. Chỉ hỗ trợ Sandbox; mã kiểm tra cấu hình từ chối host production dù đổi cấu hình.
+Phạm vi hiện tại (sau đợt thu gọn chỉ còn Gym, 22/11/2026): mua/gia hạn/nâng cấp gói tập, buổi PT trả theo giờ, nạp Ví và các phiếu thu gói đang chờ. Thanh toán đặt sân, học phí khóa học và đơn hàng cửa hàng đã ngừng cùng tính năng; liên kết và giao dịch cũ vẫn giữ trong DB. Phần miễn phí theo gói không tạo giao dịch. Chỉ hỗ trợ Sandbox; mã kiểm tra cấu hình từ chối host production dù đổi cấu hình.
 
 ## Cấu hình backend
 

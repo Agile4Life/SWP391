@@ -14,8 +14,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
+/** Bộ kiểm thử cho SessionBookingRepositoryBounds (session booking repository bounds). */
 class SessionBookingRepositoryBoundsTest {
 
+    /** Kiểm thử: findForMember thay mốc ngày null bằng mốc mở để PostgreSQL suy được kiểu tham số */
     @Test
     @DisplayName("findForMember thay mốc ngày null bằng mốc mở để PostgreSQL suy được kiểu tham số")
     void findForMember_nullBoundsBecomeSentinelDates() {

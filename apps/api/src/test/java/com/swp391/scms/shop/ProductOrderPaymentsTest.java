@@ -29,6 +29,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho ProductOrderPayments (product order payments). */
 class ProductOrderPaymentsTest {
     final ProductOrderRepository orders = mock(ProductOrderRepository.class);
     final ProductOrderRefunds refunds = mock(ProductOrderRefunds.class);
@@ -40,6 +41,7 @@ class ProductOrderPaymentsTest {
     ProductOrderPayments service;
     Member member;
 
+    /** Chuẩn bị trước mỗi test: tạo ProductOrderPayments với repository giả lập. */
     @BeforeEach
     void setUp() {
         member = new Member();
@@ -47,6 +49,7 @@ class ProductOrderPaymentsTest {
         service = new ProductOrderPayments(orders, refunds, notifications, users, messages, clock);
     }
 
+    /** Kiểm thử: requirePayable từ chối đơn thanh toán tại quầy và đơn không ở trạng thái pending. */
     @Test
     void requirePayableRejectsCounterAndNonPendingOrders() {
         ProductOrder counterOrder = new ProductOrder();
@@ -73,6 +76,7 @@ class ProductOrderPaymentsTest {
                 .hasFieldOrPropertyWithValue("errorCode", "VNPAY_TARGET_UNAVAILABLE");
     }
 
+    /** Kiểm thử: markPaid chuyển đơn pending sang đã thanh toán và thông báo hội viên cùng nhân viên. */
     @Test
     void markPaidTransitionsPendingOrderAndNotifiesMemberAndStaff() {
         ProductOrder order = new ProductOrder();
@@ -97,6 +101,7 @@ class ProductOrderPaymentsTest {
         verify(notifications).send(eq(20L), any(), any(), eq("order"), eq("product_order"), eq(9L), eq("/staff/orders"));
     }
 
+    /** Kiểm thử: thanh toán đến muộn sau khi hủy thì hoàn vào ví thay vì mở lại đơn. */
     @Test
     void latePaymentAfterCancellationRefundsWalletInsteadOfReopeningOrder() {
         ProductOrder cancelled = new ProductOrder();
@@ -116,6 +121,7 @@ class ProductOrderPaymentsTest {
         verify(notifications).send(eq(1L), any(), any(), eq("order"), eq("product_order"), eq(9L), eq("/member/orders/9"));
     }
 
+    /** Kiểm thử: thanh toán tại quầy chỉ thông báo hội viên chứ không thông báo mọi nhân viên. */
     @Test
     void counterPaymentNotifiesMemberButNotEveryStaffMember() {
         ProductOrder order = new ProductOrder();

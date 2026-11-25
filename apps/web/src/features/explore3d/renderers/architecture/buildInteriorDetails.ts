@@ -2,11 +2,13 @@ import * as THREE from 'three';
 
 import type { LevelCode } from '../../scene/schema';
 
+/** Một phần hình học kèm màu (hex) để gộp thành một hình duy nhất. */
 interface ColoredPart {
   readonly geometry: THREE.BufferGeometry;
   readonly color: string;
 }
 
+/** Thêm một khối hộp có kích thước, vị trí, xoay và màu vào danh sách phần. */
 function pushBox(
   parts: ColoredPart[],
   w: number,
@@ -36,6 +38,7 @@ function pushBox(
   parts.push({ geometry: geom, color });
 }
 
+/** Thêm một khối trụ (bán kính trên/dưới, chiều cao, vị trí, màu) vào danh sách phần. */
 function pushCylinder(
   parts: ColoredPart[],
   rTop: number,
@@ -66,6 +69,7 @@ function pushCylinder(
   parts.push({ geometry: geom, color });
 }
 
+/** Gộp các phần tô màu thành một BufferGeometry duy nhất (danh sách rỗng thì trả hình rỗng). */
 function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   if (parts.length === 0) {
     const empty = new THREE.BufferGeometry();
@@ -145,92 +149,102 @@ function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry 
   return merged;
 }
 
-function buildB1Details(parts: ColoredPart[]): void {
+/**
+ * Thêm đồ nội thất và chi tiết kiến trúc không tương tác của tầng B1 (phòng thay đồ, hồ bơi...), có thể giới
+ * hạn theo khu vực.
+ */
+function buildB1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
   const darkSteel = '#1f2531';
   const chrome = '#cbd5e1';
 
-  // Pool is at centerX=-6.0, centerZ=-5.5, width=25 (x=-18.5..+6.5), depth=12 (z=-11.5..+0.5)
-  // 1. 6 Luxury Poolside Sun Loungers along the South Pool Deck (z = 2.35, x = -17.0..+2.0)
-  const loungerXs = [-17.0, -13.2, -9.4, -5.6, -1.8, 2.0];
-  for (let i = 0; i < loungerXs.length; i += 1) {
-    const lx = loungerXs[i]!;
-    pushBox(parts, 0.78, 0.16, 1.85, lx, 0.22, 2.3, warmWood);
-    pushBox(parts, 0.72, 0.09, 1.28, lx, 0.34, 2.0, '#f8fafc');
-    pushBox(parts, 0.72, 0.09, 0.58, lx, 0.52, 2.88, '#f8fafc', 0.48, 0, 0);
-    pushBox(parts, 0.52, 0.08, 0.22, lx, 0.64, 3.05, salmon, 0.48, 0, 0);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-b1-pool')) {
+    // Hồ bơi nằm tại centerX=-6.0, centerZ=-5.5, rộng=25 (x=-18.5..+6.5), sâu=12 (z=-11.5..+0.5)
+    // 1. 6 ghế nằm phơi nắng cao cấp ven hồ dọc sàn phía Nam (z = 2.35, x = -17.0..+2.0)
+    const loungerXs = [-17.0, -13.2, -9.4, -5.6, -1.8, 2.0];
+    for (let i = 0; i < loungerXs.length; i += 1) {
+      const lx = loungerXs[i]!;
+      pushBox(parts, 0.78, 0.16, 1.85, lx, 0.22, 2.3, warmWood);
+      pushBox(parts, 0.72, 0.09, 1.28, lx, 0.34, 2.0, '#f8fafc');
+      pushBox(parts, 0.72, 0.09, 0.58, lx, 0.52, 2.88, '#f8fafc', 0.48, 0, 0);
+      pushBox(parts, 0.52, 0.08, 0.22, lx, 0.64, 3.05, salmon, 0.48, 0, 0);
 
-    if (i % 2 === 0 && i + 1 < loungerXs.length) {
-      const mx = (lx + loungerXs[i + 1]!) * 0.5;
-      pushCylinder(parts, 0.28, 0.28, 0.42, mx, 0.21, 2.5, warmWood, 8);
-      pushCylinder(parts, 0.04, 0.05, 2.35, mx, 1.18, 2.5, chrome, 8);
-      pushCylinder(parts, 0.12, 1.35, 0.38, mx, 2.38, 2.5, i === 2 ? salmon : '#fff8f3', 8);
+      if (i % 2 === 0 && i + 1 < loungerXs.length) {
+        const mx = (lx + loungerXs[i + 1]!) * 0.5;
+        pushCylinder(parts, 0.28, 0.28, 0.42, mx, 0.21, 2.5, warmWood, 8);
+        pushCylinder(parts, 0.04, 0.05, 2.35, mx, 1.18, 2.5, chrome, 8);
+        pushCylinder(parts, 0.12, 1.35, 0.38, mx, 2.38, 2.5, i === 2 ? salmon : '#fff8f3', 8);
+      }
+    }
+
+    // 2. Ghế cứu hộ khung hở trên cao ở sàn hồ phía Tây (x = -19.6, z = -5.5)
+    for (const [lx, lz] of [
+      [-19.92, -5.82],
+      [-19.28, -5.82],
+      [-19.92, -5.18],
+      [-19.28, -5.18],
+    ] as const) {
+      pushCylinder(parts, 0.032, 0.038, 1.48, lx, 0.74, lz, chrome, 8);
+    }
+    for (const ry of [0.38, 0.76, 1.14]) {
+      pushBox(parts, 0.04, 0.035, 0.66, -19.28, ry, -5.5, chrome);
+      pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.82, chrome);
+      pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.18, chrome);
+    }
+    pushBox(parts, 0.68, 0.08, 0.66, -19.6, 1.48, -5.5, '#f8fafc');
+    pushBox(parts, 0.58, 0.05, 0.56, -19.58, 1.53, -5.5, salmon);
+    pushBox(parts, 0.08, 0.52, 0.64, -19.92, 1.78, -5.5, '#f8fafc');
+    pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.82, chrome);
+    pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.18, chrome);
+    pushCylinder(parts, 0.075, 0.075, 0.66, -19.6, 1.24, -5.06, '#ef4444', 8, 0.25, 0, 0);
+
+    // 3. 4 thang hồ bơi inox dọc thành hồ phía Bắc (z = -11.45) & phía Nam (z = 0.45)
+    for (const [lx, lz] of [
+      [-15.0, -11.45],
+      [1.5, -11.45],
+      [-15.0, 0.45],
+      [1.5, 0.45],
+    ] as const) {
+      pushCylinder(parts, 0.03, 0.03, 0.95, lx - 0.24, 0.45, lz, chrome, 6);
+      pushCylinder(parts, 0.03, 0.03, 0.95, lx + 0.24, 0.45, lz, chrome, 6);
+      pushBox(parts, 0.52, 0.04, 0.18, lx, 0.88, lz, chrome);
+    }
+
+    // 4. Quầy khăn tắm, vòi tắm tráng & đồng hồ nhiệt độ nước điện tử dọc tường hồ phía Bắc (z = -14.8)
+    pushBox(parts, 2.8, 1.02, 0.68, -14.0, 0.51, -14.6, warmWood);
+    pushBox(parts, 2.86, 0.06, 0.74, -14.0, 1.05, -14.6, darkSteel);
+    for (let t = 0; t < 4; t += 1) {
+      const tx = -14.95 + t * 0.63;
+      pushCylinder(parts, 0.11, 0.11, 0.46, tx, 1.18, -14.6, t % 2 === 0 ? '#f8fafc' : salmon, 8, Math.PI / 2, 0, 0);
+    }
+    pushBox(parts, 3.4, 0.98, 0.12, -6.0, 2.25, -15.65, darkSteel);
+    pushBox(parts, 3.48, 0.06, 0.15, -6.0, 2.76, -15.64, salmon);
+    pushBox(parts, 3.16, 0.78, 0.13, -6.0, 2.25, -15.62, '#0f172a');
+    pushBox(parts, 1.15, 0.12, 0.14, -6.85, 2.42, -15.6, salmon);
+    pushBox(parts, 1.35, 0.12, 0.14, -5.25, 2.42, -15.6, '#38bdf8');
+    pushBox(parts, 2.75, 0.08, 0.14, -6.0, 2.08, -15.6, '#cbd5e1');
+    for (const sx of [-1.2, 1.2]) {
+      pushCylinder(parts, 0.04, 0.05, 2.2, sx, 1.1, -14.8, chrome, 8);
+      pushCylinder(parts, 0.16, 0.16, 0.05, sx, 2.18, -14.55, chrome, 8);
+      pushBox(parts, 0.85, 0.05, 0.85, sx, 0.03, -14.5, warmWood);
     }
   }
 
-  // 2. Elevated Open-Frame Lifeguard Chair at West Pool Deck (x = -19.6, z = -5.5)
-  for (const [lx, lz] of [
-    [-19.92, -5.82],
-    [-19.28, -5.82],
-    [-19.92, -5.18],
-    [-19.28, -5.18],
-  ] as const) {
-    pushCylinder(parts, 0.032, 0.038, 1.48, lx, 0.74, lz, chrome, 8);
-  }
-  for (const ry of [0.38, 0.76, 1.14]) {
-    pushBox(parts, 0.04, 0.035, 0.66, -19.28, ry, -5.5, chrome);
-    pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.82, chrome);
-    pushBox(parts, 0.66, 0.035, 0.04, -19.6, ry, -5.18, chrome);
-  }
-  pushBox(parts, 0.68, 0.08, 0.66, -19.6, 1.48, -5.5, '#f8fafc');
-  pushBox(parts, 0.58, 0.05, 0.56, -19.58, 1.53, -5.5, salmon);
-  pushBox(parts, 0.08, 0.52, 0.64, -19.92, 1.78, -5.5, '#f8fafc');
-  pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.82, chrome);
-  pushBox(parts, 0.58, 0.04, 0.05, -19.6, 1.72, -5.18, chrome);
-  pushCylinder(parts, 0.075, 0.075, 0.66, -19.6, 1.24, -5.06, '#ef4444', 8, 0.25, 0, 0);
-
-  // 3. 4 Stainless Steel Pool Ladders along North (z = -11.45) & South (z = 0.45) pool walls
-  for (const [lx, lz] of [
-    [-15.0, -11.45],
-    [1.5, -11.45],
-    [-15.0, 0.45],
-    [1.5, 0.45],
-  ] as const) {
-    pushCylinder(parts, 0.03, 0.03, 0.95, lx - 0.24, 0.45, lz, chrome, 6);
-    pushCylinder(parts, 0.03, 0.03, 0.95, lx + 0.24, 0.45, lz, chrome, 6);
-    pushBox(parts, 0.52, 0.04, 0.18, lx, 0.88, lz, chrome);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-b1-thermal')) {
+    // 5. Khu nhiệt trị liệu (x = 8..20, z = -14..4): bồn ngâm lạnh & 3 ghế đá sưởi ấm
+    pushCylinder(parts, 1.15, 1.08, 0.82, 18.2, 0.41, -8.5, warmWood, 12);
+    pushCylinder(parts, 0.98, 0.98, 0.85, 18.2, 0.43, -8.5, '#38bdf8', 12);
+    for (const tz of [-8.5, -4.5, 2.2]) {
+      pushBox(parts, 1.65, 0.42, 0.76, 10.2, 0.21, tz, '#475569');
+      pushBox(parts, 1.55, 0.08, 0.7, 10.2, 0.45, tz, '#d6cfc4');
+      pushBox(parts, 0.24, 0.08, 0.52, 9.6, 0.53, tz, salmon);
+    }
   }
 
-  // 4. North Pool Wall Towel Cabana Counter, Rinse Showers & Digital Water Temp Clock (z = -14.8)
-  pushBox(parts, 2.8, 1.02, 0.68, -14.0, 0.51, -14.6, warmWood);
-  pushBox(parts, 2.86, 0.06, 0.74, -14.0, 1.05, -14.6, darkSteel);
-  for (let t = 0; t < 4; t += 1) {
-    const tx = -14.95 + t * 0.63;
-    pushCylinder(parts, 0.11, 0.11, 0.46, tx, 1.18, -14.6, t % 2 === 0 ? '#f8fafc' : salmon, 8, Math.PI / 2, 0, 0);
-  }
-  pushBox(parts, 3.4, 0.98, 0.12, -6.0, 2.25, -15.65, darkSteel);
-  pushBox(parts, 3.48, 0.06, 0.15, -6.0, 2.76, -15.64, salmon);
-  pushBox(parts, 3.16, 0.78, 0.13, -6.0, 2.25, -15.62, '#0f172a');
-  pushBox(parts, 1.15, 0.12, 0.14, -6.85, 2.42, -15.6, salmon);
-  pushBox(parts, 1.35, 0.12, 0.14, -5.25, 2.42, -15.6, '#38bdf8');
-  pushBox(parts, 2.75, 0.08, 0.14, -6.0, 2.08, -15.6, '#cbd5e1');
-  for (const sx of [-1.2, 1.2]) {
-    pushCylinder(parts, 0.04, 0.05, 2.2, sx, 1.1, -14.8, chrome, 8);
-    pushCylinder(parts, 0.16, 0.16, 0.05, sx, 2.18, -14.55, chrome, 8);
-    pushBox(parts, 0.85, 0.05, 0.85, sx, 0.03, -14.5, warmWood);
-  }
-
-  // 5. Thermal Zone (x = 8..20, z = -14..4): Cold Plunge Ice Bath & 3 Heated Stone Loungers
-  pushCylinder(parts, 1.15, 1.08, 0.82, 18.2, 0.41, -8.5, warmWood, 12);
-  pushCylinder(parts, 0.98, 0.98, 0.85, 18.2, 0.43, -8.5, '#38bdf8', 12);
-  for (const tz of [-8.5, -4.5, 2.2]) {
-    pushBox(parts, 1.65, 0.42, 0.76, 10.2, 0.21, tz, '#475569');
-    pushBox(parts, 1.55, 0.08, 0.7, 10.2, 0.45, tz, '#d6cfc4');
-    pushBox(parts, 0.24, 0.08, 0.52, 9.6, 0.53, tz, salmon);
-  }
-
-  // 6. Locker Room (x = -20..8, z = 4..14): 4 Bench Seats, Vanity Mirror Sinks & 4 Rain Shower Stalls
+  // 6. Phòng thay đồ (x = -20..8, z = 4..14): 4 băng ghế, bàn rửa mặt có gương & 4 buồng tắm sen mưa
   for (let i = 0; i < 4; i += 1) {
     const bx = -15 + i * 6;
     pushBox(parts, 2.6, 0.44, 0.48, bx, 0.22, 11.2, warmWood);
@@ -250,14 +264,15 @@ function buildB1Details(parts: ColoredPart[]): void {
   }
 }
 
-function buildL1Details(parts: ColoredPart[]): void {
+/** Thêm chi tiết kiến trúc của tầng L1 (lễ tân, gym tiêu chuẩn, sân...). */
+function buildL1Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
   const darkSteel = '#1b202b';
   const midSteel = '#333c4d';
   const chrome = '#cbd5e1';
 
-  // 1. Lobby (x = -6..10, z = 6..15): Reception Brand Backdrop Wall behind desk (x = 2.0, z = 7.4)
+  // 1. Sảnh lễ tân (x = -6..10, z = 6..15): vách nền thương hiệu phía sau quầy lễ tân (x = 2.0, z = 7.4)
   pushBox(parts, 6.4, 2.85, 0.18, 2.0, 1.52, 7.4, darkSteel);
   pushBox(parts, 6.6, 0.12, 0.24, 2.0, 2.98, 7.4, salmon);
   for (let sx = -0.9; sx <= 4.9; sx += 0.35) {
@@ -266,7 +281,7 @@ function buildL1Details(parts: ColoredPart[]): void {
   }
   pushBox(parts, 2.6, 0.96, 0.22, 2.0, 1.82, 7.45, salmon);
   pushBox(parts, 2.44, 0.8, 0.24, 2.0, 1.82, 7.47, '#14171f');
-  // Sculpted SÖL architectural emblem bars on reception feature wall (proud of z = 7.59 plaque face)
+  // Các thanh biểu trưng kiến trúc SÖL nổi trên vách điểm nhấn lễ tân (nhô trước mặt bảng z = 7.59)
   pushBox(parts, 0.42, 0.09, 0.26, 1.32, 1.96, 7.5, salmon);
   pushBox(parts, 0.42, 0.09, 0.26, 1.32, 1.81, 7.5, '#f8fafc');
   pushBox(parts, 0.42, 0.09, 0.26, 1.32, 1.66, 7.5, salmon);
@@ -277,7 +292,7 @@ function buildL1Details(parts: ColoredPart[]): void {
   pushBox(parts, 0.1, 0.39, 0.26, 2.54, 1.81, 7.5, '#f8fafc');
   pushBox(parts, 0.34, 0.09, 0.26, 2.66, 1.66, 7.5, '#f8fafc');
 
-  // Lobby Waiting Lounge Sofas & Marble Coffee Tables (x = 7.6, z = 12.8 and x = -3.4, z = 13.6)
+  // Sofa chờ sảnh & bàn trà đá cẩm thạch (x = 7.6, z = 12.8 và x = -3.4, z = 13.6)
   for (const [lx, lz] of [
     [7.6, 12.8],
     [-3.4, 13.6],
@@ -290,7 +305,7 @@ function buildL1Details(parts: ColoredPart[]): void {
     pushBox(parts, 1.1, 0.34, 0.6, lx, 0.17, lz - 0.35, '#e2e8f0');
   }
 
-  // 2. QR Turnstile Gate Portal Arch & Open Brushed-Steel Guide Rails (x = 0, z = 4.0; zero opaque fake glass!)
+  // 2. Cổng vòm kiểm soát QR & lan can dẫn lối bằng thép xước hở (x = 0, z = 4.0; không dùng kính giả đục)
   pushBox(parts, 7.6, 0.22, 0.45, 0.0, 2.85, 4.0, darkSteel);
   pushBox(parts, 7.8, 0.08, 0.52, 0.0, 2.98, 4.0, salmon);
   for (const gx of [-4.4, 4.4]) {
@@ -301,40 +316,8 @@ function buildL1Details(parts: ColoredPart[]): void {
     pushBox(parts, 1.48, 0.028, 0.04, gx, 0.34, 4.0, chrome);
   }
 
-  // 3. Supplement Shop (x = 10..20, z = 6..15): Activewear Apparel Rack, RTD Fridge & POS Island
-  pushBox(parts, 0.65, 1.65, 2.8, 20.6, 0.82, 9.6, midSteel);
-  const shirtColors = [salmon, '#f8fafc', '#1e293b', '#38bdf8', '#10b981', '#f59e0b'];
-  for (let s = 0; s < 6; s += 1) {
-    pushBox(parts, 0.48, 0.85, 0.28, 20.6, 1.05, 8.5 + s * 0.42, shirtColors[s]!);
-  }
-  // Open-Front Chilled RTD Beverage Merchandiser (x = 20.6, z = 13.4)
-  pushBox(parts, 0.78, 2.15, 1.85, 20.6, 1.08, 13.4, darkSteel);
-  pushBox(parts, 0.66, 1.76, 1.66, 20.64, 1.12, 13.4, '#0f172a');
-  for (let shelf = 0; shelf < 4; shelf += 1) {
-    const sy = 0.52 + shelf * 0.38;
-    pushBox(parts, 0.7, 0.04, 1.62, 20.58, sy, 13.4, chrome);
-    for (let b = 0; b < 5; b += 1) {
-      pushCylinder(
-        parts,
-        0.045,
-        0.045,
-        0.22,
-        20.46,
-        sy + 0.13,
-        12.8 + b * 0.3,
-        shirtColors[(shelf + b) % shirtColors.length]!,
-        7,
-      );
-    }
-  }
-  // Shop Retail POS & Nutrition Bar Island (x = 11.8, z = 12.6)
-  pushBox(parts, 1.8, 0.94, 0.82, 11.8, 0.47, 12.6, warmWood);
-  pushBox(parts, 1.88, 0.06, 0.88, 11.8, 0.97, 12.6, darkSteel);
-  pushBox(parts, 0.42, 0.28, 0.06, 11.45, 1.14, 12.6, darkSteel, -0.25, 0, 0);
-  pushBox(parts, 0.38, 0.22, 0.07, 11.45, 1.14, 12.61, salmon, -0.25, 0, 0);
-
-  // 4. Standard Gym Arena (x = -20..4, z = -14..2):
-  // Architectural timber-slat acoustic feature panels anchored on solid West piers (leaving z = -14..0.5 panoramic window 100% clear)
+  // 4. Khu tập gym tiêu chuẩn (x = -20..4, z = -14..2):
+  // Tấm ốp lam gỗ tiêu âm kiến trúc neo trên trụ đặc phía Tây (giữ trống 100% cửa sổ toàn cảnh z = -14..0.5)
   for (const [mz, mw] of [
     [-15.0, 1.4],
     [1.25, 1.15],
@@ -346,13 +329,13 @@ function buildL1Details(parts: ColoredPart[]): void {
     pushBox(parts, 0.1, 0.07, mw + 0.06, -21.8, 2.68, mz, salmon);
   }
 
-  // 5 Oak & Rubber Olympic Lifting Platforms under Smith Machines & Squat Racks (z = -4.8)
+  // 5 bục cử tạ Olympic gỗ sồi & cao su bên dưới máy Smith & giá squat (z = -4.8)
   for (const px of [-17.5, -13.0, -8.5, -4.5, -1.0]) {
     pushBox(parts, 2.5, 0.04, 2.1, px, 0.02, -4.8, '#171b24');
     pushBox(parts, 1.05, 0.045, 2.1, px, 0.024, -4.8, warmWood);
   }
 
-  // 4 Olympic Weight Plate Storage Trees between racks (z = -4.8)
+  // 4 trụ treo đĩa tạ Olympic xen giữa các giá tập (z = -4.8)
   for (const tx of [-15.2, -10.8, -6.5, -2.8]) {
     pushCylinder(parts, 0.06, 0.08, 1.25, tx, 0.62, -4.8, darkSteel, 8);
     pushBox(parts, 0.62, 0.06, 0.62, tx, 0.04, -4.8, midSteel);
@@ -360,84 +343,91 @@ function buildL1Details(parts: ColoredPart[]): void {
     pushCylinder(parts, 0.16, 0.16, 0.14, tx, 0.85, -4.8, '#38bdf8', 8);
   }
 
-  // Dual-Stack Cable Crossover Functional Tower & Kettlebell Rack at East Gym (x = 2.4, z = -8.5 & -4.8)
+  // Giàn kéo cáp đôi đa năng & giá tạ ấm ở khu Đông phòng gym (x = 2.4, z = -8.5 & -4.8)
   pushBox(parts, 0.45, 2.35, 0.55, 2.4, 1.18, -10.0, darkSteel);
   pushBox(parts, 0.45, 2.35, 0.55, 2.4, 1.18, -7.0, darkSteel);
   pushBox(parts, 0.35, 0.18, 3.3, 2.4, 2.3, -8.5, salmon);
   pushBox(parts, 0.65, 1.05, 1.8, 2.5, 0.52, -4.8, midSteel);
 
-  // 21m Functional Green Sprint Turf Track along South edge of Gym (x = -18.5..+2.5, z = 0.85)
+  // Đường chạy cỏ xanh chức năng dài 21 m dọc mép Nam phòng gym (x = -18.5..+2.5, z = 0.85)
   pushBox(parts, 21.0, 0.025, 1.45, -8.0, 0.015, 0.85, '#15803d');
   for (let tx = -17.5; tx <= 1.5; tx += 2.0) {
     pushBox(parts, 0.08, 0.03, 1.15, tx, 0.02, 0.85, '#f8fafc');
   }
-  // Weighted Prowler Push Sled on turf track (x = -16.8, z = 0.85)
+  // Xe đẩy tạ Prowler trên đường cỏ chạy nước rút (x = -16.8, z = 0.85)
   pushBox(parts, 1.1, 0.08, 0.82, -16.8, 0.06, 0.85, darkSteel);
   pushCylinder(parts, 0.035, 0.035, 0.92, -16.3, 0.52, 0.55, salmon, 6);
   pushCylinder(parts, 0.035, 0.035, 0.92, -16.3, 0.52, 1.15, salmon, 6);
   pushCylinder(parts, 0.2, 0.2, 0.16, -16.8, 0.22, 0.85, chrome, 8);
 
-  // 5. Boxing Zone (x = 4..20, z = -14..-4): Digital Round Scoreboard, Glove Rack & Plyo Boxes
-  pushBox(parts, 2.8, 1.05, 0.14, 10.5, 2.45, -15.65, darkSteel);
-  pushBox(parts, 2.6, 0.85, 0.16, 10.5, 2.45, -15.62, '#ef4444');
-  pushBox(parts, 2.4, 1.65, 0.42, 16.5, 0.85, -15.4, midSteel);
-  for (let g = 0; g < 4; g += 1) {
-    pushBox(
-      parts,
-      0.28,
-      0.28,
-      0.28,
-      15.7 + g * 0.52,
-      1.25,
-      -15.3,
-      g % 2 === 0 ? '#ef4444' : '#f59e0b',
-    );
-    pushBox(parts, 0.28, 0.28, 0.28, 15.7 + g * 0.52, 0.75, -15.3, '#38bdf8');
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-l1-boxing')) {
+    // 5. Khu Boxing (x = 4..20, z = -14..-4): bảng điểm hiệp đấu điện tử, giá găng tay & hộp nhảy plyo
+    pushBox(parts, 2.8, 1.05, 0.14, 10.5, 2.45, -15.65, darkSteel);
+    pushBox(parts, 2.6, 0.85, 0.16, 10.5, 2.45, -15.62, '#ef4444');
+    pushBox(parts, 2.4, 1.65, 0.42, 16.5, 0.85, -15.4, midSteel);
+    for (let g = 0; g < 4; g += 1) {
+      pushBox(
+        parts,
+        0.28,
+        0.28,
+        0.28,
+        15.7 + g * 0.52,
+        1.25,
+        -15.3,
+        g % 2 === 0 ? '#ef4444' : '#f59e0b',
+      );
+      pushBox(parts, 0.28, 0.28, 0.28, 15.7 + g * 0.52, 0.75, -15.3, '#38bdf8');
+    }
+    // 3 hộp nhảy plyometric tại (x = 5.8..7.8, z = -4.8)
+    pushBox(parts, 0.62, 0.48, 0.62, 5.8, 0.24, -4.8, warmWood);
+    pushBox(parts, 0.62, 0.62, 0.62, 6.7, 0.31, -4.8, salmon);
+    pushBox(parts, 0.62, 0.76, 0.62, 7.6, 0.38, -4.8, darkSteel);
   }
-  // 3 Plyometric Jump Boxes at (x = 5.8..7.8, z = -4.8)
-  pushBox(parts, 0.62, 0.48, 0.62, 5.8, 0.24, -4.8, warmWood);
-  pushBox(parts, 0.62, 0.62, 0.62, 6.7, 0.31, -4.8, salmon);
-  pushBox(parts, 0.62, 0.76, 0.62, 7.6, 0.38, -4.8, darkSteel);
 
-  // 6. Badminton Hall (x = -20..-6, z = 2..15): 4 Courts at (-16.5, 5.5), (-9.8, 5.5), (-16.5, 11.6), (-9.8, 11.6)
-  // 3D Nets, Top White Tapes & Net Posts for all 4 Badminton Courts
-  for (const cx of [-16.5, -9.8]) {
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-l1-badminton')) {
+    // 6. Nhà thi đấu cầu lông (x = -20..-6, z = 2..15): 4 sân tại (-16.5, 5.5), (-9.8, 5.5), (-16.5, 11.6), (-9.8, 11.6)
+    // Lưới 3D, viền băng trắng trên cùng & cột lưới cho cả 4 sân cầu lông
+    for (const cx of [-16.5, -9.8]) {
+      for (const cz of [5.5, 11.6]) {
+        pushCylinder(parts, 0.03, 0.03, 1.55, cx - 2.65, 0.78, cz, darkSteel, 8);
+        pushCylinder(parts, 0.03, 0.03, 1.55, cx + 2.65, 0.78, cz, darkSteel, 8);
+        pushBox(parts, 5.3, 0.72, 0.025, cx, 1.14, cz, '#334155');
+        pushBox(parts, 5.34, 0.05, 0.035, cx, 1.52, cz, '#f8fafc');
+      }
+    }
+    // Ghế trọng tài khung thép ống hở & băng ghế vận động viên nan gỗ dọc trục giữa (x = -13.15)
     for (const cz of [5.5, 11.6]) {
-      pushCylinder(parts, 0.03, 0.03, 1.55, cx - 2.65, 0.78, cz, darkSteel, 8);
-      pushCylinder(parts, 0.03, 0.03, 1.55, cx + 2.65, 0.78, cz, darkSteel, 8);
-      pushBox(parts, 5.3, 0.72, 0.025, cx, 1.14, cz, '#334155');
-      pushBox(parts, 5.34, 0.05, 0.035, cx, 1.52, cz, '#f8fafc');
+      const uz = cz - 0.8;
+      for (const [dx, dz] of [
+        [-0.22, -0.22],
+        [0.22, -0.22],
+        [-0.22, 0.22],
+        [0.22, 0.22],
+      ] as const) {
+        pushCylinder(parts, 0.024, 0.028, 1.52, -13.15 + dx, 0.76, uz + dz, darkSteel, 6);
+      }
+      for (const ry of [0.42, 0.82, 1.2]) {
+        pushBox(parts, 0.46, 0.03, 0.035, -13.15, ry, uz + 0.22, chrome);
+        pushBox(parts, 0.035, 0.03, 0.46, -13.15 - 0.22, ry, uz, darkSteel);
+        pushBox(parts, 0.035, 0.03, 0.46, -13.15 + 0.22, ry, uz, darkSteel);
+      }
+      pushBox(parts, 0.5, 0.06, 0.48, -13.15, 1.54, uz, darkSteel);
+      pushBox(parts, 0.44, 0.04, 0.42, -13.15, 1.58, uz, salmon);
+      pushBox(parts, 0.48, 0.36, 0.05, -13.15, 1.76, uz - 0.22, darkSteel);
+      // Băng ghế gỗ sồi ấm chân hở
+      const bz = cz + 1.05;
+      pushBox(parts, 0.46, 0.06, 1.65, -13.15, 0.42, bz, warmWood);
+      pushBox(parts, 0.38, 0.04, 0.06, -13.15, 0.21, bz - 0.68, darkSteel);
+      pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz - 0.68, darkSteel);
+      pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz - 0.68, darkSteel);
+      pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz + 0.68, darkSteel);
+      pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz + 0.68, darkSteel);
     }
   }
-  // Open-Frame Tubular Steel Umpire Chairs & Slatted Player Benches along center spine (x = -13.15)
-  for (const cz of [5.5, 11.6]) {
-    const uz = cz - 0.8;
-    for (const [dx, dz] of [
-      [-0.22, -0.22],
-      [0.22, -0.22],
-      [-0.22, 0.22],
-      [0.22, 0.22],
-    ] as const) {
-      pushCylinder(parts, 0.024, 0.028, 1.52, -13.15 + dx, 0.76, uz + dz, darkSteel, 6);
-    }
-    for (const ry of [0.42, 0.82, 1.2]) {
-      pushBox(parts, 0.46, 0.03, 0.035, -13.15, ry, uz + 0.22, chrome);
-      pushBox(parts, 0.035, 0.03, 0.46, -13.15 - 0.22, ry, uz, darkSteel);
-      pushBox(parts, 0.035, 0.03, 0.46, -13.15 + 0.22, ry, uz, darkSteel);
-    }
-    pushBox(parts, 0.5, 0.06, 0.48, -13.15, 1.54, uz, darkSteel);
-    pushBox(parts, 0.44, 0.04, 0.42, -13.15, 1.58, uz, salmon);
-    pushBox(parts, 0.48, 0.36, 0.05, -13.15, 1.76, uz - 0.22, darkSteel);
-    // Open-leg warm oak bench
-    const bz = cz + 1.05;
-    pushBox(parts, 0.46, 0.06, 1.65, -13.15, 0.42, bz, warmWood);
-    pushBox(parts, 0.38, 0.04, 0.06, -13.15, 0.21, bz - 0.68, darkSteel);
-    pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz - 0.68, darkSteel);
-    pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz - 0.68, darkSteel);
-    pushBox(parts, 0.06, 0.4, 0.06, -13.15 - 0.16, 0.21, bz + 0.68, darkSteel);
-    pushBox(parts, 0.06, 0.4, 0.06, -13.15 + 0.16, 0.21, bz + 0.68, darkSteel);
-  }
-  // 7. Exterior Facade Structural Columns on L1 (0..5.76m local height, up to the L2 slab)
+
+  // 7. Cột kết cấu mặt tiền ngoài trời trên L1 (chiều cao cục bộ 0..5.76 m, chạm sàn L2)
   for (const cx of [-21.8, -11.0, 0.0, 11.0, 21.8]) {
     pushBox(parts, 0.45, 5.76, 0.45, cx, 2.88, -16.15, darkSteel);
   }
@@ -449,9 +439,10 @@ function buildL1Details(parts: ColoredPart[]): void {
     pushBox(parts, 0.48, 5.76, 0.48, cx, 2.88, 16.15, darkSteel);
   }
 
-  // Ceiling coffers for L1 belong on the underside of L2 so Solo/Cutaway views never float panels.
+  // Các ô trần lõm của L1 nằm ở mặt dưới sàn L2 để chế độ xem Solo/Cutaway không làm các tấm bị lơ lửng.
 }
 
+/** Thêm các ô trần lõm (coffer) theo lưới trong khoảng x cho trước. */
 function appendCeilingCoffers(
   parts: ColoredPart[],
   opts: {
@@ -480,64 +471,53 @@ function appendCeilingCoffers(
   }
 }
 
-function buildL2Details(parts: ColoredPart[]): void {
+/** Thêm chi tiết kiến trúc của tầng L2 (studio PT, khu VIP...). */
+function buildL2Details(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
   const darkSteel = '#1b202b';
   const gold = '#f59e0b';
   const chrome = '#cbd5e1';
 
-  // 1. VIP Gym (x = -20..6, z = -14..6): Smoked-Gold Timber-Slat Feature Panels on solid South piers (keeping West panoramic windows clear)
-  for (const mx of [-15.5, -2.5]) {
-    pushBox(parts, 3.8, 2.35, 0.06, mx, 1.42, 5.88, darkSteel);
-    for (let sx = mx - 1.65; sx <= mx + 1.66; sx += 0.33) {
-      pushBox(parts, 0.14, 2.2, 0.09, sx, 1.41, 5.85, warmWood);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-l2-vip-gym')) {
+    // 1. Phòng Gym VIP (x = -20..6, z = -14..6): tấm ốp lam gỗ điểm nhấn ánh vàng khói trên các trụ đặc phía Nam (giữ thông thoáng cửa sổ toàn cảnh phía Tây)
+    for (const mx of [-15.5, -2.5]) {
+      pushBox(parts, 3.8, 2.35, 0.06, mx, 1.42, 5.88, darkSteel);
+      for (let sx = mx - 1.65; sx <= mx + 1.66; sx += 0.33) {
+        pushBox(parts, 0.14, 2.2, 0.09, sx, 1.41, 5.85, warmWood);
+      }
+      pushBox(parts, 3.9, 0.08, 0.1, mx, 2.62, 5.85, gold);
     }
-    pushBox(parts, 3.9, 0.08, 0.1, mx, 2.62, 5.85, gold);
-  }
-  for (const px of [-16.0, -10.0]) {
-    pushBox(parts, 2.8, 0.06, 2.2, px, 0.03, 1.5, darkSteel);
-    pushBox(parts, 1.15, 0.065, 2.2, px, 0.033, 1.5, warmWood);
-    pushCylinder(parts, 0.025, 0.025, 2.2, px, 0.26, 1.5, chrome, 8, 0, 0, Math.PI / 2);
-    for (const side of [-0.82, -0.74, 0.74, 0.82]) {
-      pushCylinder(
-        parts,
-        0.22,
-        0.22,
-        0.06,
-        px + side,
-        0.26,
-        1.5,
-        Math.abs(side) > 0.78 ? gold : darkSteel,
-        10,
-        0,
-        0,
-        Math.PI / 2,
-      );
+    for (const px of [-16.0, -10.0]) {
+      pushBox(parts, 2.8, 0.06, 2.2, px, 0.03, 1.5, darkSteel);
+      pushBox(parts, 1.15, 0.065, 2.2, px, 0.033, 1.5, warmWood);
+      pushCylinder(parts, 0.025, 0.025, 2.2, px, 0.26, 1.5, chrome, 8, 0, 0, Math.PI / 2);
+      for (const side of [-0.82, -0.74, 0.74, 0.82]) {
+        pushCylinder(
+          parts,
+          0.22,
+          0.22,
+          0.06,
+          px + side,
+          0.26,
+          1.5,
+          Math.abs(side) > 0.78 ? gold : darkSteel,
+          10,
+          0,
+          0,
+          Math.PI / 2,
+        );
+      }
     }
-  }
-  // VIP Stretching & Mobility Mat Sanctuary with Foam Rollers at (x = -4.5..+0.5, z = 1.5)
-  for (const mx of [-4.5, -2.5, -0.5]) {
-    pushBox(parts, 1.1, 0.04, 2.1, mx, 0.02, 1.5, '#334155');
-    pushCylinder(parts, 0.09, 0.09, 0.75, mx, 0.12, 0.7, salmon, 8, 0, 0, Math.PI / 2);
+    // Khu thảm giãn cơ & linh hoạt VIP kèm ống lăn foam tại (x = -4.5..+0.5, z = 1.5)
+    for (const mx of [-4.5, -2.5, -0.5]) {
+      pushBox(parts, 1.1, 0.04, 2.1, mx, 0.02, 1.5, '#334155');
+      pushCylinder(parts, 0.09, 0.09, 0.75, mx, 0.12, 0.7, salmon, 8, 0, 0, Math.PI / 2);
+    }
   }
 
-  // 2. InBody 770 Suite (x = 6..20, z = -14..-2): 65" Diagnostic Screen & Framed Posture Calibration Grid
-  pushBox(parts, 2.8, 1.45, 0.1, 13.5, 1.85, -15.65, darkSteel);
-  pushBox(parts, 2.62, 1.27, 0.12, 13.5, 1.85, -15.62, '#0f172a');
-  pushBox(parts, 0.95, 0.12, 0.14, 12.85, 2.18, -15.6, salmon);
-  pushBox(parts, 1.15, 0.55, 0.14, 14.05, 1.78, -15.6, '#1e293b');
-  pushBox(parts, 0.95, 0.08, 0.15, 14.05, 1.92, -15.59, '#38bdf8');
-  pushBox(parts, 0.75, 0.08, 0.15, 13.95, 1.74, -15.59, salmon);
-  // Framed architectural posture calibration grid
-  pushBox(parts, 1.72, 2.28, 0.06, 9.5, 1.26, -15.66, darkSteel);
-  pushBox(parts, 1.56, 2.12, 0.07, 9.5, 1.26, -15.64, '#1e2532');
-  pushBox(parts, 0.025, 2.04, 0.08, 9.5, 1.26, -15.62, salmon);
-  for (const gy of [0.65, 1.05, 1.45, 1.85]) {
-    pushBox(parts, 1.46, 0.02, 0.08, 9.5, gy, -15.62, '#64748b');
-  }
-
-  // 3. 1:1 PT Studio (x = 6..20, z = -2..14): 12.5m Emerald Sprint Turf Track, Prowler Sled & Open-Frame TRX Rig
+  // 3. Studio PT 1:1 (x = 6..20, z = -2..14): đường chạy cỏ xanh ngọc 12.5 m, xe đẩy tạ Prowler & khung TRX hở
   pushBox(parts, 2.1, 0.025, 12.5, 18.4, 0.015, 6.0, '#059669');
   for (let tz = 0.5; tz <= 11.5; tz += 2.2) {
     pushBox(parts, 1.65, 0.03, 0.08, 18.4, 0.02, tz, '#f8fafc');
@@ -551,30 +531,33 @@ function buildL2Details(parts: ColoredPart[]): void {
     pushCylinder(parts, 0.016, 0.016, 0.92, 21.48, 1.92, sz, '#eab308', 6);
   }
 
-  // 4. Platinum Lounge (x = -20..6, z = 6..14): Sofas are at x = -15.5, -9.0, -2.5, z = 10.2; Juice Bar at [2.0, 10.2]
-  for (const lx of [-15.5, -9.0, -2.5]) {
-    pushBox(parts, 3.2, 0.02, 2.8, lx, 0.015, 10.8, '#272224');
-    pushBox(parts, 1.35, 0.36, 0.78, lx, 0.18, 12.0, '#f8fafc');
-    pushBox(parts, 1.25, 0.04, 0.68, lx, 0.37, 12.0, gold);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-l2-lounge')) {
+    // 4. Phòng chờ Platinum (x = -20..6, z = 6..14): sofa tại x = -15.5, -9.0, -2.5, z = 10.2; quầy nước ép tại [2.0, 10.2]
+    for (const lx of [-15.5, -9.0, -2.5]) {
+      pushBox(parts, 3.2, 0.02, 2.8, lx, 0.015, 10.8, '#272224');
+      pushBox(parts, 1.35, 0.36, 0.78, lx, 0.18, 12.0, '#f8fafc');
+      pushBox(parts, 1.25, 0.04, 0.68, lx, 0.37, 12.0, gold);
+    }
+    // 4 ghế quầy bar cao phía trước quầy nước ép Platinum (x = 0.5..3.5, z = 8.9)
+    for (let s = 0; s < 4; s += 1) {
+      const sx = 0.5 + s * 1.0;
+      pushCylinder(parts, 0.22, 0.26, 0.06, sx, 0.03, 8.9, gold, 8);
+      pushCylinder(parts, 0.04, 0.04, 0.72, sx, 0.38, 8.9, gold, 8);
+      pushCylinder(parts, 0.22, 0.22, 0.1, sx, 0.76, 8.9, salmon, 10);
+    }
+    // Kệ trưng bày chai/protein phát sáng sau quầy & máy pha espresso Ý hai đầu chiết xuất tại (x = 2.0, z = 10.2)
+    pushBox(parts, 4.2, 2.35, 0.52, 2.0, 1.18, 12.3, darkSteel);
+    pushBox(parts, 3.9, 0.1, 0.56, 2.0, 1.65, 12.3, gold);
+    pushBox(parts, 3.9, 0.1, 0.56, 2.0, 2.15, 12.3, salmon);
+    pushBox(parts, 0.78, 0.34, 0.42, 2.0, 1.28, 10.2, darkSteel);
+    pushBox(parts, 0.8, 0.04, 0.44, 2.0, 1.46, 10.2, chrome);
+    pushBox(parts, 0.74, 0.03, 0.06, 2.0, 1.49, 10.02, salmon);
+    pushCylinder(parts, 0.055, 0.055, 0.1, 1.82, 1.24, 9.96, chrome, 8);
+    pushCylinder(parts, 0.055, 0.055, 0.1, 2.18, 1.24, 9.96, chrome, 8);
   }
-  // 4 High Bar Stools in front of the Platinum Juice Bar (x = 0.5..3.5, z = 8.9)
-  for (let s = 0; s < 4; s += 1) {
-    const sx = 0.5 + s * 1.0;
-    pushCylinder(parts, 0.22, 0.26, 0.06, sx, 0.03, 8.9, gold, 8);
-    pushCylinder(parts, 0.04, 0.04, 0.72, sx, 0.38, 8.9, gold, 8);
-    pushCylinder(parts, 0.22, 0.22, 0.1, sx, 0.76, 8.9, salmon, 10);
-  }
-  // Back-Bar Illuminated Bottle/Protein Display & Sculpted Dual-Group Italian Espresso Machine at (x = 2.0, z = 10.2)
-  pushBox(parts, 4.2, 2.35, 0.52, 2.0, 1.18, 12.3, darkSteel);
-  pushBox(parts, 3.9, 0.1, 0.56, 2.0, 1.65, 12.3, gold);
-  pushBox(parts, 3.9, 0.1, 0.56, 2.0, 2.15, 12.3, salmon);
-  pushBox(parts, 0.78, 0.34, 0.42, 2.0, 1.28, 10.2, darkSteel);
-  pushBox(parts, 0.8, 0.04, 0.44, 2.0, 1.46, 10.2, chrome);
-  pushBox(parts, 0.74, 0.03, 0.06, 2.0, 1.49, 10.02, salmon);
-  pushCylinder(parts, 0.055, 0.055, 0.1, 1.82, 1.24, 9.96, chrome, 8);
-  pushCylinder(parts, 0.055, 0.055, 0.1, 2.18, 1.24, 9.96, chrome, 8);
 
-  // 5. Exterior Facade Structural Columns & Brise-Soleil Sun Fins on L2 (0..5.48m local height, flush under RF slab)
+  // 5. Cột kết cấu mặt tiền ngoài trời & lam chắn nắng brise-soleil trên L2 (chiều cao cục bộ 0..5.48 m, sát dưới sàn RF)
   for (const cx of [-21.8, -11.0, 0.0, 11.0, 21.8]) {
     pushBox(parts, 0.45, 5.48, 0.45, cx, 2.74, -16.15, darkSteel);
   }
@@ -594,7 +577,7 @@ function buildL2Details(parts: ColoredPart[]): void {
     pushBox(parts, 0.32, 4.2, 0.08, -22.18, 2.25, fz, warmWood);
   }
 
-  // 6. Architectural Recessed Ceiling Coffers & LED Light Troffers for L1 mounted under L2 slab (-0.28m)
+  // 6. Ô trần lõm kiến trúc & hộp đèn LED cho L1 gắn dưới mặt sàn L2 (-0.28 m)
   appendCeilingCoffers(parts, {
     xMin: -16.0,
     xMax: 16.0,
@@ -611,43 +594,47 @@ function buildL2Details(parts: ColoredPart[]): void {
   });
 }
 
-function buildRFDetails(parts: ColoredPart[]): void {
+/** Thêm chi tiết kiến trúc của tầng thượng RF (sân hiên, khu nghỉ...). */
+function buildRFDetails(parts: ColoredPart[], zoneIds?: ReadonlySet<string>): void {
   const salmon = '#f07654';
   const warmWood = '#9c6644';
   const darkSteel = '#1f2531';
   const gold = '#f59e0b';
 
-  // 1. Zen Yoga Studio (x = -16..10, z = -12..8): Instructor Stage & Sacred Brass Gong at (x = -3.5, z = -10.5)
-  pushBox(parts, 5.6, 0.22, 2.0, -3.5, 0.11, -10.5, warmWood);
-  pushBox(parts, 5.7, 0.05, 2.1, -3.5, 0.23, -10.5, salmon);
-  pushCylinder(parts, 0.05, 0.05, 1.65, -5.3, 1.05, -10.8, warmWood, 8);
-  pushCylinder(parts, 0.05, 0.05, 1.65, -3.9, 1.05, -10.8, warmWood, 8);
-  pushBox(parts, 1.65, 0.08, 0.08, -4.6, 1.85, -10.8, warmWood);
-  pushCylinder(parts, 0.52, 0.52, 0.06, -4.6, 1.15, -10.8, gold, 14, Math.PI / 2, 0, 0);
-  pushBox(parts, 1.8, 0.03, 0.72, -2.5, 0.25, -10.3, salmon);
-  pushCylinder(parts, 0.14, 0.1, 0.12, -1.3, 0.28, -10.5, gold, 8);
+  // Chỉ dựng nội thất khi khu tương ứng còn trong scene.
+  if (!zoneIds || zoneIds.has('zone-rf-zen')) {
+    // 1. Studio Yoga Zen (x = -16..10, z = -12..8): bục huấn luyện viên & chiêng đồng nghi lễ tại (x = -3.5, z = -10.5)
+    pushBox(parts, 5.6, 0.22, 2.0, -3.5, 0.11, -10.5, warmWood);
+    pushBox(parts, 5.7, 0.05, 2.1, -3.5, 0.23, -10.5, salmon);
+    pushCylinder(parts, 0.05, 0.05, 1.65, -5.3, 1.05, -10.8, warmWood, 8);
+    pushCylinder(parts, 0.05, 0.05, 1.65, -3.9, 1.05, -10.8, warmWood, 8);
+    pushBox(parts, 1.65, 0.08, 0.08, -4.6, 1.85, -10.8, warmWood);
+    pushCylinder(parts, 0.52, 0.52, 0.06, -4.6, 1.15, -10.8, gold, 14, Math.PI / 2, 0, 0);
+    pushBox(parts, 1.8, 0.03, 0.72, -2.5, 0.25, -10.3, salmon);
+    pushCylinder(parts, 0.14, 0.1, 0.12, -1.3, 0.28, -10.5, gold, 8);
 
-  // 2. Bamboo & White River-Stone Indoor Zen Garden along West Yoga Wall (x = -15.1, z = -9..+6)
-  pushBox(parts, 0.95, 0.24, 15.2, -15.1, 0.12, -1.5, '#475569');
-  pushBox(parts, 0.78, 0.26, 14.8, -15.1, 0.14, -1.5, '#e2e8f0');
-  for (let bz = -8.2; bz <= 5.2; bz += 1.6) {
-    pushCylinder(parts, 0.05, 0.06, 2.45, -15.1, 1.35, bz, '#4d7c0f', 7);
-    pushCylinder(parts, 0.28, 0.35, 0.65, -15.1, 2.25, bz, '#65a30d', 7);
+    // 2. Vườn Zen trong nhà với tre & sỏi sông trắng dọc tường Yoga phía Tây (x = -15.1, z = -9..+6)
+    pushBox(parts, 0.95, 0.24, 15.2, -15.1, 0.12, -1.5, '#475569');
+    pushBox(parts, 0.78, 0.26, 14.8, -15.1, 0.14, -1.5, '#e2e8f0');
+    for (let bz = -8.2; bz <= 5.2; bz += 1.6) {
+      pushCylinder(parts, 0.05, 0.06, 2.45, -15.1, 1.35, bz, '#4d7c0f', 7);
+      pushCylinder(parts, 0.28, 0.35, 0.65, -15.1, 2.25, bz, '#65a30d', 7);
+    }
+
+    // 3. Bàn trà đạo matcha & thảo mộc thấp tại góc Đông Nam phòng Yoga (x = 7.2, z = 5.4)
+    pushBox(parts, 2.6, 0.03, 1.8, 7.2, 0.02, 5.4, '#d6cfc4');
+    pushBox(parts, 1.55, 0.32, 0.82, 7.2, 0.16, 5.4, warmWood);
+    for (const [cx, cz] of [
+      [6.1, 5.4],
+      [8.3, 5.4],
+      [7.2, 4.6],
+      [7.2, 6.2],
+    ] as const) {
+      pushCylinder(parts, 0.26, 0.26, 0.1, cx, 0.05, cz, salmon, 10);
+    }
   }
 
-  // 3. Matcha & Herbal Tea Ceremony Low Table at South-East Yoga Corner (x = 7.2, z = 5.4)
-  pushBox(parts, 2.6, 0.03, 1.8, 7.2, 0.02, 5.4, '#d6cfc4');
-  pushBox(parts, 1.55, 0.32, 0.82, 7.2, 0.16, 5.4, warmWood);
-  for (const [cx, cz] of [
-    [6.1, 5.4],
-    [8.3, 5.4],
-    [7.2, 4.6],
-    [7.2, 6.2],
-  ] as const) {
-    pushCylinder(parts, 0.26, 0.26, 0.1, cx, 0.05, cz, salmon, 10);
-  }
-
-  // 4. Rooftop Terrace (x = 10..20, z = -14..14): Open-Air Cedar Pergola Canopy (x = 11.2..19.2, z = -6.0..+6.0)
+  // 4. Sân thượng ngoài trời (x = 10..20, z = -14..14): giàn pergola gỗ tuyết tùng thoáng trời (x = 11.2..19.2, z = -6.0..+6.0)
   for (const px of [11.4, 19.0]) {
     for (const pz of [-5.8, 0.0, 5.8]) {
       pushBox(parts, 0.22, 2.95, 0.22, px, 1.48, pz, darkSteel);
@@ -658,22 +645,22 @@ function buildRFDetails(parts: ColoredPart[]): void {
     pushBox(parts, 8.2, 0.14, 0.12, 15.2, 3.08, rz, warmWood);
   }
 
-  // 5. Tranquil Rooftop Koi Reflection Pond with Stepping Stones (x = 15.0, z = -5.2)
+  // 5. Hồ cá Koi cảnh quan yên tĩnh trên mái kèm đá bước dạo (x = 15.0, z = -5.2)
   pushBox(parts, 4.2, 0.28, 3.0, 15.0, 0.14, -5.2, '#334155');
   pushBox(parts, 3.8, 0.26, 2.6, 15.0, 0.16, -5.2, '#0ea5e9');
   for (const sx of [13.9, 15.0, 16.1]) {
     pushBox(parts, 0.65, 0.3, 0.65, sx, 0.16, -5.2, '#cbd5e1');
   }
 
-  // 6. Outdoor Fire-Bowl Conversation Pit at South-East Sky Deck (x = 15.0, z = 4.6)
+  // 6. Hố trò chuyện bếp lửa ngoài trời tại sàn trời Đông Nam (x = 15.0, z = 4.6)
   pushCylinder(parts, 0.68, 0.45, 0.42, 15.0, 0.21, 4.6, darkSteel, 12);
   pushCylinder(parts, 0.48, 0.32, 0.28, 15.0, 0.46, 4.6, salmon, 10);
   pushCylinder(parts, 0.24, 0.35, 0.32, 15.0, 0.62, 4.6, gold, 8);
 
-  // 7. Panoramic Glass Balustrade Stone Curb, Brushed Steel Handrail & Stanchions + Fascia Spandrel Crown Signs
+  // 7. Gờ đá lan can kính toàn cảnh, tay vịn & trụ thép xước + biển hiệu vương miện viền mái
   const brushedRail = '#cbd5e1';
   const stoneCurb = '#2c323e';
-  // North & South balustrade stone curb + top steel handrail (stanchions proud of 0.08m glass to prevent z-fighting)
+  // Gờ đá & tay vịn thép trên cùng cho lan can Bắc & Nam (trụ nhô hơn kính 0.08 m để tránh z-fighting)
   for (const bz of [-16.0, 16.0]) {
     pushBox(parts, 44.22, 0.16, 0.2, 0, 0.08, bz, stoneCurb);
     pushBox(parts, 44.22, 0.055, 0.13, 0, 1.165, bz, brushedRail);
@@ -682,7 +669,7 @@ function buildRFDetails(parts: ColoredPart[]): void {
       pushBox(parts, isCorner ? 0.13 : 0.075, 1.14, 0.13, bx, 0.57, bz, darkSteel);
     }
   }
-  // West & East balustrade stone curb + top steel handrail (skip corners ±16.0 already anchored above)
+  // Gờ đá & tay vịn thép trên cùng cho lan can Tây & Đông (bỏ qua các góc ±16.0 đã neo ở trên)
   for (const bx of [-22.0, 22.0]) {
     pushBox(parts, 0.2, 0.16, 31.8, bx, 0.08, 0, stoneCurb);
     pushBox(parts, 0.13, 0.055, 31.9, bx, 1.165, 0, brushedRail);
@@ -690,7 +677,7 @@ function buildRFDetails(parts: ColoredPart[]): void {
       pushBox(parts, 0.13, 1.14, 0.075, bx, 0.57, bz, darkSteel);
     }
   }
-  // Cantilevered Fascia Spandrel Crown Sky-Signs (mounted at RF slab edge y = -0.70..+0.24 so 100% of rooftop street sightlines stay clear)
+  // Biển hiệu bầu trời gắn dầm viền mái console (lắp ở mép sàn RF y = -0.70..+0.24 để giữ thông thoáng 100% tầm nhìn phố từ sân thượng)
   pushBox(parts, 16.4, 0.96, 0.28, 1.5, -0.22, 16.32, darkSteel);
   pushBox(parts, 16.6, 0.08, 0.34, 1.5, 0.28, 16.33, salmon);
   pushBox(parts, 16.6, 0.08, 0.34, 1.5, -0.72, 16.33, salmon);
@@ -698,20 +685,20 @@ function buildRFDetails(parts: ColoredPart[]): void {
   pushBox(parts, 0.34, 0.08, 15.6, 22.33, 0.28, -0.5, salmon);
   pushBox(parts, 0.34, 0.08, 15.6, 22.33, -0.72, -0.5, salmon);
 
-  // 8. Modern Architectural Glass & Steel Stairwell Headhouse Canopy (x = 10.5, z = 11.5)
-  // Corner steel structural posts rising from roof to canopy (transparent glass walls are rendered via wall-rf-stair-*)
+  // 8. Mái che tum thang bộ bằng kính & thép kiến trúc hiện đại (x = 10.5, z = 11.5)
+  // Các cột kết cấu thép ở bốn góc vươn từ mái lên tán che (tường kính trong suốt được render qua wall-rf-stair-*)
   for (const px of [8.65, 12.35]) {
     for (const pz of [9.35, 13.6]) {
       pushBox(parts, 0.12, 2.65, 0.12, px, 1.32, pz, darkSteel);
     }
   }
-  // Cantilevered modern canopy roof with salmon edge fascia & perimeter steel transoms
+  // Mái che console hiện đại với diềm mái màu salmon & thanh ngang thép chu vi
   pushBox(parts, 4.2, 0.12, 4.75, 10.5, 2.68, 11.48, darkSteel);
   pushBox(parts, 4.3, 0.06, 4.85, 10.5, 2.74, 11.48, salmon);
-  // Recessed warm LED ceiling downlight under canopy
+  // Đèn trần LED ánh sáng ấm âm dưới mái che
   pushBox(parts, 2.2, 0.03, 2.6, 10.5, 2.61, 11.48, '#fef08a');
 
-  // 9. Architectural Recessed Ceiling Coffers & Warm LED Panels for L2 mounted under RF slab (-0.28m)
+  // 9. Ô trần lõm kiến trúc & tấm LED ánh sáng ấm cho L2 gắn dưới mặt sàn RF (-0.28 m)
   appendCeilingCoffers(parts, {
     xMin: -14.0,
     xMax: 14.0,
@@ -728,14 +715,15 @@ function buildRFDetails(parts: ColoredPart[]): void {
   });
 }
 
+/** Thêm chi tiết kiến trúc ngoài trời (sân, lối đi, cột đèn...). */
 function buildOUTDetails(parts: ColoredPart[]): void {
   const salmon = '#f07654';
   const darkSteel = '#1b202b';
   const midSteel = '#333c4d';
   const warmWood = '#9c6644';
 
-  // Tennis Court 01 is at [29.5, 0] and Court 02 is at [39.8, 0] inside [24..45, -15..15]
-  // 0. 3D Tennis Nets, White Top Tapes, Center Straps & Net Posts for Courts 01 & 02
+  // Sân Tennis 01 tại [29.5, 0] và Sân 02 tại [39.8, 0] trong phạm vi [24..45, -15..15]
+  // 0. Lưới tennis 3D, viền băng trắng trên cùng, dây neo giữa & cột lưới cho Sân 01 & 02
   for (const cx of [29.5, 39.8]) {
     pushCylinder(parts, 0.045, 0.045, 1.07, cx - 4.65, 0.54, 0, darkSteel, 8);
     pushCylinder(parts, 0.045, 0.045, 1.07, cx + 4.65, 0.54, 0, darkSteel, 8);
@@ -744,7 +732,7 @@ function buildOUTDetails(parts: ColoredPart[]): void {
     pushBox(parts, 0.06, 0.96, 0.045, cx, 0.54, 0, '#f8fafc');
   }
 
-  // 1. 4 Tall Stadium Floodlight Towers around the Outdoor Tennis Arena
+  // 1. 4 cột đèn pha sân vận động cao quanh khu sân tennis ngoài trời
   const towers: ReadonlyArray<readonly [number, number, number, number]> = [
     [24.2, -14.8, 0.45, 9.0],
     [44.8, -14.8, -0.45, 9.0],
@@ -759,7 +747,7 @@ function buildOUTDetails(parts: ColoredPart[]): void {
     pushBox(parts, 0.4, 0.11, 2.2, tx, h + 0.34, tz, salmon);
   }
 
-  // 2. 2 Three-Tier Spectator Bleacher Grandstands along East Sideline (x = 44.8, z = -6.2 and z = 6.2)
+  // 2. 2 khán đài khán giả 3 bậc dọc biên Đông (x = 44.8, z = -6.2 và z = 6.2)
   for (const bz of [-6.2, 6.2]) {
     pushBox(parts, 1.35, 0.14, 7.2, 44.8, 0.08, bz, darkSteel);
     pushBox(parts, 0.42, 0.42, 7.0, 44.35, 0.21, bz, '#cbd5e1');
@@ -767,7 +755,7 @@ function buildOUTDetails(parts: ColoredPart[]): void {
     pushBox(parts, 0.42, 1.14, 7.0, 45.2, 0.57, bz, '#cbd5e1');
   }
 
-  // 3. Center Spine between Court 01 & Court 02 (x = 34.65): 2 Open-Frame Umpire Chairs, 4 Covered Team Benches & 2 Ball Carts
+  // 3. Trục giữa giữa Sân 01 & Sân 02 (x = 34.65): 2 ghế trọng tài khung hở, 4 băng ghế đội có mái che & 2 xe đẩy bóng
   for (const uz of [-1.2, 1.2]) {
     for (const [dx, dz] of [
       [-0.24, -0.24],
@@ -795,7 +783,7 @@ function buildOUTDetails(parts: ColoredPart[]): void {
     pushBox(parts, 1.09, 0.05, 2.24, 34.65, 2.02, pz, salmon);
     pushBox(parts, 0.09, 1.92, 0.09, 34.65, 0.96, pz - 0.9, darkSteel);
     pushBox(parts, 0.09, 1.92, 0.09, 34.65, 0.96, pz + 0.9, darkSteel);
-    // Insulated dark-steel & salmon pro court hydration cooler on stand
+    // Thùng nước giữ nhiệt chuyên dụng màu thép tối & salmon đặt trên chân đế
     pushCylinder(parts, 0.15, 0.16, 0.24, 34.65, 0.12, pz + 1.25, darkSteel, 8);
     pushCylinder(parts, 0.16, 0.16, 0.42, 34.65, 0.45, pz + 1.25, '#334155', 10);
     pushCylinder(parts, 0.17, 0.17, 0.06, 34.65, 0.68, pz + 1.25, salmon, 10);
@@ -805,7 +793,7 @@ function buildOUTDetails(parts: ColoredPart[]): void {
     pushBox(parts, 0.42, 0.26, 0.42, 34.65, 0.72, cz, '#bef264');
   }
 
-  // 4. Electronic Stadium Match Scoreboard at North Arena End (x = 34.65, z = -14.8)
+  // 4. Bảng tỉ số trận đấu điện tử sân vận động tại đầu Bắc khu sân (x = 34.65, z = -14.8)
   pushBox(parts, 4.8, 1.65, 0.24, 34.65, 3.15, -14.8, darkSteel);
   pushBox(parts, 4.5, 1.35, 0.26, 34.65, 3.15, -14.78, '#10b981');
   pushBox(parts, 4.95, 0.14, 0.32, 34.65, 4.02, -14.8, salmon);
@@ -814,11 +802,10 @@ function buildOUTDetails(parts: ColoredPart[]): void {
 }
 
 /**
- * Builds all non-interactive architectural furnishings, mirrors, platforms, scoreboards,
- * poolside loungers, pergolas, and floodlight towers for a given level as a single
- * vertex-colored BufferGeometry (1 draw call per level).
+ * Dựng toàn bộ đồ nội thất kiến trúc không tương tác (gương, bục, bảng điểm, ghế hồ bơi, giàn pergola
+ * và cột đèn pha) của một tầng thành một BufferGeometry tô màu theo đỉnh duy nhất (1 draw call mỗi tầng).
  */
-export function buildLevelInteriorDetailsGeometry(levelCode: LevelCode): THREE.BufferGeometry {
+export function buildLevelInteriorDetailsGeometry(levelCode: LevelCode, zoneIds?: ReadonlySet<string>): THREE.BufferGeometry {
   const parts: ColoredPart[] = [];
   const trimColor = '#ce9180';
   if (levelCode === 'OUT') {
@@ -834,16 +821,16 @@ export function buildLevelInteriorDetailsGeometry(levelCode: LevelCode): THREE.B
   }
   switch (levelCode) {
     case 'B1':
-      buildB1Details(parts);
+      buildB1Details(parts, zoneIds);
       break;
     case 'L1':
-      buildL1Details(parts);
+      buildL1Details(parts, zoneIds);
       break;
     case 'L2':
-      buildL2Details(parts);
+      buildL2Details(parts, zoneIds);
       break;
     case 'RF':
-      buildRFDetails(parts);
+      buildRFDetails(parts, zoneIds);
       break;
     case 'OUT':
       buildOUTDetails(parts);

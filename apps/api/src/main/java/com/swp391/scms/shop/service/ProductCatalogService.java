@@ -29,6 +29,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 
+/** Nghiệp vụ trang shop công khai: danh mục, cấu hình, tìm/sắp xếp sản phẩm, chi tiết và ảnh. */
 @Service
 @Transactional(readOnly = true)
 public class ProductCatalogService {
@@ -43,6 +44,7 @@ public class ProductCatalogService {
     private final ShopProperties props;
     private final Clock clock;
 
+    /** Constructor dùng múi giờ Việt Nam mặc định. */
     public ProductCatalogService(
             ProductRepository products,
             ProductCategoryRepository categories,
@@ -52,6 +54,7 @@ public class ProductCatalogService {
         this(products, categories, images, props, Clock.system(CENTER_ZONE));
     }
 
+    /** Constructor đầy đủ nhận Clock (null thì giờ Việt Nam). */
     @Autowired
     public ProductCatalogService(
             ProductRepository products,
@@ -67,16 +70,19 @@ public class ProductCatalogService {
         this.clock = clock == null ? Clock.system(CENTER_ZONE) : clock;
     }
 
+    /** Thời điểm hiện tại theo giờ Việt Nam. */
     private LocalDateTime now() {
         return LocalDateTime.ofInstant(clock.instant(), CENTER_ZONE);
     }
 
+    /** Danh mục đang hoạt động theo thứ tự hiển thị. */
     public List<CategoryDto> categories() {
         return categories.findAllByActiveTrueOrderBySortOrderAscIdAsc().stream()
                 .map(c -> new CategoryDto(c.getId(), c.getName(), c.getSlug()))
                 .toList();
     }
 
+    /** Cấu hình shop gửi cho client. */
     public ShopConfigDto config() {
         return new ShopConfigDto(
                 props.getShippingFee(),
@@ -87,6 +93,10 @@ public class ProductCatalogService {
         );
     }
 
+    /**
+     * Tìm sản phẩm công khai: kiểm tra kiểu sắp xếp, giới hạn trang ≤ 48; sắp mới nhất làm ở DB, sắp theo
+     * giá/giá mỗi khẩu phần làm trong bộ nhớ (tối đa 500 sản phẩm).
+     */
     public Page<ProductSummaryDto> list(
             String q,
             ProductGoal goal,
@@ -115,7 +125,8 @@ public class ProductCatalogService {
             return found.map(p -> ProductMapper.toSummary(p, current));
         }
 
-        // Price and price-per-serving are derived from active variants; sort filtered active products in memory (capped at 500).
+        // Giá và giá mỗi khẩu phần được suy ra từ các biến thể đang hoạt động; sắp xếp các sản phẩm active đã
+        // lọc trong bộ nhớ (giới hạn 500).
         Page<Product> allMatching = products.searchPublic(
                 normQ, goal, normCat, inStock, PageRequest.of(0, MAX_IN_MEMORY_SORT_PRODUCTS, Sort.unsorted()));
         List<ProductSummaryDto> summaries = new ArrayList<>(
@@ -138,6 +149,7 @@ public class ProductCatalogService {
         return new PageImpl<>(summaries.subList(fromIndex, toIndex), PageRequest.of(safePage, safeSize), summaries.size());
     }
 
+    /** Chi tiết sản phẩm đang bán theo slug (danh mục phải đang hoạt động) kèm tối đa 4 sản phẩm liên quan. */
     public ProductDetailDto detail(String slug) {
         if (slug == null || slug.isBlank()) {
             throw notFound();
@@ -158,6 +170,7 @@ public class ProductCatalogService {
         return ProductMapper.toDetail(product, related);
     }
 
+    /** Lấy ảnh sản phẩm theo id; sản phẩm không tồn tại hoặc ngừng bán thì báo không tìm thấy. */
     public ProductImage image(Long imageId) {
         if (imageId == null) {
             throw notFound();
@@ -170,6 +183,7 @@ public class ProductCatalogService {
         return img;
     }
 
+    /** Tạo lỗi 404 khi không tìm thấy sản phẩm. */
     private static AppException notFound() {
         return new AppException(HttpStatus.NOT_FOUND, "PRODUCT_NOT_FOUND", "error.shop.product_not_found", null, "Product not found");
     }

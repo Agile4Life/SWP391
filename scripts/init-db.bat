@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
+REM Mục đích: lối tắt cho Windows để gọi init-db.ps1 (khởi tạo/kiểm tra database).
 title SCMS - Khoi tao Database
 echo ==========================================================
 echo          SCMS - CAU HINH SUPABASE POSTGRESQL

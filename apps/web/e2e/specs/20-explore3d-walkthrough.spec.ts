@@ -17,6 +17,7 @@ const GPU_LAUNCH_ARGS =
         '--ignore-gpu-blocklist',
       ];
 
+// Hình chữ nhật trên màn hình (toạ độ và kích thước).
 interface BoxRect {
   x: number;
   y: number;
@@ -24,6 +25,7 @@ interface BoxRect {
   height: number;
 }
 
+// Hai hình chữ nhật có chồng lên nhau không (cộng thêm khoảng đệm pad).
 function rectsOverlap(a: BoxRect, b: BoxRect, pad = 2): boolean {
   return !(
     a.x + a.width - pad <= b.x ||
@@ -33,6 +35,7 @@ function rectsOverlap(a: BoxRect, b: BoxRect, pad = 2): boolean {
   );
 }
 
+// Chụp ảnh màn hình sau khi chờ cảnh ổn định.
 async function captureShot(page: Page, filename: string, settleMs = 1100) {
   await page.waitForTimeout(settleMs);
   if (!CAPTURE_DIR) return;
@@ -43,6 +46,7 @@ async function captureShot(page: Page, filename: string, settleMs = 1100) {
   });
 }
 
+// Đảm bảo giao diện đang ở theme sáng hoặc tối mong muốn.
 async function ensureTheme(page: Page, desired: 'dark' | 'light') {
   const current = await page.locator('html').getAttribute('data-theme');
   const isLight = current === 'light';
@@ -57,6 +61,7 @@ async function ensureTheme(page: Page, desired: 'dark' | 'light') {
   }
 }
 
+// Gắn bộ bắt lỗi shader trên console và trả về danh sách lỗi.
 async function attachShaderErrorGuard(page: Page): Promise<string[]> {
   const shaderIssues: string[] = [];
   page.on('console', msg => {
@@ -68,6 +73,7 @@ async function attachShaderErrorGuard(page: Page): Promise<string[]> {
   return shaderIssues;
 }
 
+// Dịch chuyển người đi bộ tới toạ độ (x, z) rồi chờ.
 async function walkTeleport(page: Page, x: number, z: number, waitMs = 300) {
   await page.evaluate(
     ([tx, tz]) => {
@@ -82,6 +88,7 @@ async function walkTeleport(page: Page, x: number, z: number, waitMs = 300) {
   await page.waitForTimeout(waitMs);
 }
 
+// Giữ một phím trong khoảng thời gian cho trước (có thể kèm Shift).
 async function holdKey(page: Page, key: string, durationMs: number, withShift = false) {
   if (withShift) await page.keyboard.down('Shift');
   await page.keyboard.down(key);

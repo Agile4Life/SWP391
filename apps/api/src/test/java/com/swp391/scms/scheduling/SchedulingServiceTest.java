@@ -60,6 +60,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho service SchedulingService (scheduling service). */
 @ExtendWith(MockitoExtension.class)
 class SchedulingServiceTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 10, 17);
@@ -82,9 +83,10 @@ class SchedulingServiceTest {
     private GymClass gymClass;
     private ClassSession session;
 
+    /** Chuẩn bị trước mỗi test: tạo SchedulingService với repository giả lập và đồng hồ cố định. */
     @BeforeEach
     void setUp() {
-        // Noon at the center, independently of the UTC Clock zone.
+        // 12:00 trưa theo giờ trung tâm, độc lập với múi giờ UTC của Clock.
         lenient().when(clock.instant()).thenReturn(Instant.parse("2026-10-17T05:00:00Z"));
         lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
         Member member = new Member();
@@ -111,6 +113,7 @@ class SchedulingServiceTest {
         lenient().when(sessions.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
     }
 
+    /** Kiểm thử: ghi danh từ chối buổi đã bắt đầu trong hôm nay. */
     @ParameterizedTest
     @ValueSource(ints = {9, 12})
     void enrollmentRejectsSessionsThatAlreadyStartedToday(int hour) {
@@ -121,6 +124,7 @@ class SchedulingServiceTest {
         verify(enrollments, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: không thể xếp lịch buổi bắt đầu trong quá khứ hoặc ngay lúc này. */
     @ParameterizedTest
     @ValueSource(ints = {9, 12})
     void cannotScheduleSessionStartingInThePastOrNow(int hour) {
@@ -130,6 +134,7 @@ class SchedulingServiceTest {
         verify(sessions, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: lớp đã đầy thì từ chối đặt chỗ. */
     @Test
     void fullClassRejectsBooking() {
         when(enrollments.countByGymClassIdAndStatus(5L, "booked")).thenReturn(1L);
@@ -139,6 +144,7 @@ class SchedulingServiceTest {
         verify(enrollments, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: hội viên không có membership đang hoạt động không đặt được chỗ. */
     @Test
     void memberWithoutActiveMembershipCannotBook() {
         when(subscriptions.hasActiveMembership(MEMBER.id(), TODAY)).thenReturn(false);
@@ -147,6 +153,7 @@ class SchedulingServiceTest {
         verify(enrollments, never()).saveAndFlush(any());
     }
 
+    /** Kiểm thử: buổi muộn hơn trong hôm nay vẫn đặt chỗ được. */
     @Test
     void laterTodayRemainsBookable() {
         session.setSessionDate(TODAY);
@@ -154,6 +161,7 @@ class SchedulingServiceTest {
         assertEquals("booked", enrollmentService.enroll(MEMBER, 9L).status());
     }
 
+    /** Kiểm thử: buổi muộn hơn trong hôm nay vẫn xếp lịch được. */
     @Test
     void laterTodayRemainsSchedulable() {
         var request = new CreateSessionRequest(TODAY, LocalTime.of(13, 0), LocalTime.of(14, 0));
@@ -161,6 +169,7 @@ class SchedulingServiceTest {
         assertEquals(TODAY, classService.createSession(5L, request).sessionDate());
     }
 
+    /** Kiểm thử: chờ khóa xong không thể nhận hội viên vào khi buổi đã bắt đầu. */
     @Test
     void lockWaitCannotAdmitMemberAfterSessionHasStarted() {
         session.setSessionDate(TODAY);
@@ -172,6 +181,7 @@ class SchedulingServiceTest {
         assertThrows(BadRequestException.class, () -> enrollmentService.enroll(MEMBER, 9L));
     }
 
+    /** Kiểm thử: danh sách ghi danh của tôi chỉ trả các lượt đặt của hội viên đang đăng nhập. */
     @Test
     void myEnrollmentsReturnsOnlyAuthenticatedMembersBookings() throws Exception {
         Member owner = new Member();
@@ -182,11 +192,13 @@ class SchedulingServiceTest {
         ReflectionTestUtils.setField(ownBooking, "id", 21L);
         lenient().when(enrollments.findByMemberUserId(MEMBER.id())).thenReturn(List.of(ownBooking));
         var principalResolver = new HandlerMethodArgumentResolver() {
+            /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
             @Override
             public boolean supportsParameter(MethodParameter parameter) {
                 return parameter.getParameterType() == AuthenticatedPrincipal.class;
             }
 
+            /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
             @Override
             public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer container,
                                           NativeWebRequest request, WebDataBinderFactory factory) {
@@ -204,6 +216,7 @@ class SchedulingServiceTest {
         verify(enrollments).findByMemberUserId(MEMBER.id());
     }
 
+    /** Kiểm thử: ghi danh bị từ chối khi hội viên đã đặt một buổi trùng giờ. */
     @Test
     void enrollRejectsWhenMemberAlreadyBookedOverlappingSession() {
         GymClass otherClass = new GymClass();

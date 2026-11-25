@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller AuthController (auth controller). */
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
@@ -38,6 +39,7 @@ class AuthControllerTest {
 
     private AuthController authController;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho AuthController. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -50,6 +52,7 @@ class AuthControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: đăng nhập thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/login returns 200 with JWT token and role")
     void loginSuccess() throws Exception {
@@ -65,6 +68,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.role").value("CENTER_MANAGER"));
     }
 
+    /** Kiểm thử: đăng nhập sai dữ liệu thì validation báo lỗi. */
     @Test
     @DisplayName("POST /api/v1/auth/login returns 400 when username or password blank")
     void loginValidationFailure() throws Exception {
@@ -76,6 +80,7 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Kiểm thử: đăng ký thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/register returns 201 on valid input")
     void registerSuccess() throws Exception {
@@ -90,6 +95,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.username").value("newmember"));
     }
 
+    /** Kiểm thử: gửi OTP thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/send-otp returns 200 with destination")
     void sendOtpSuccess() throws Exception {
@@ -104,6 +110,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.destination").value("user@example.com"));
     }
 
+    /** Kiểm thử: xác thực OTP thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/verify-otp delegates to service and returns 200")
     void verifyOtpSuccess() throws Exception {
@@ -118,6 +125,7 @@ class AuthControllerTest {
         verify(authService).verifyOtp(any());
     }
 
+    /** Kiểm thử: gửi OTP đăng nhập Google thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/google/send-otp returns 200 with email and localized message key")
     void sendGoogleOtpSuccess() throws Exception {
@@ -134,6 +142,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.debugOtp").doesNotExist());
     }
 
+    /** Kiểm thử: gửi OTP Google với email không hợp lệ bị từ chối. */
     @Test
     @DisplayName("POST /api/v1/auth/google/send-otp returns 400 when email is invalid")
     void sendGoogleOtpInvalidEmail() throws Exception {
@@ -145,6 +154,7 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Kiểm thử: xác thực OTP Google thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/google/verify-otp returns 200 with JWT token and role")
     void verifyGoogleOtpSuccess() throws Exception {
@@ -161,6 +171,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.role").value("MEMBER"));
     }
 
+    /** Kiểm thử: callback OAuth Google thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/google/oauth-callback verifies Google OAuth and sends OTP to email")
     void googleOAuthCallbackSuccess() throws Exception {
@@ -181,6 +192,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.debugOtp").doesNotExist());
     }
 
+    /** Kiểm thử: bước authorize OAuth Google chuyển hướng sang Google. */
     @Test
     @DisplayName("GET /api/v1/auth/google/authorize redirects to Google OAuth 2.0 consent screen")
     void googleOAuthAuthorizeRedirectsToGoogle() throws Exception {
@@ -189,6 +201,7 @@ class AuthControllerTest {
                 .andExpect(header().string("Location", containsString("http://localhost:8080/api/v1/auth/google/authorize/start")));
     }
 
+    /** Kiểm thử: callback redirect của Google chuyển tới màn OTP đăng nhập. */
     @Test
     @DisplayName("GET /api/v1/auth/google/callback exchanges code, sends OTP and redirects back to /login?google_oauth=callback")
     void googleOAuthRedirectCallbackRedirectsToLoginOtpScreen() throws Exception {
@@ -204,6 +217,7 @@ class AuthControllerTest {
                 .andExpect(header().string("Location", containsString("http://localhost:5173/login?google_oauth=callback")))
                 .andExpect(header().string("Location", containsString("email=member@gmail.com")));
     }
+    /** Kiểm thử: callback không có state của trình duyệt thì không đổi mã code. */
     @Test
     void callbackWithoutBrowserStateDoesNotExchangeCode() throws Exception {
         mockMvc.perform(get("/api/v1/auth/google/callback").param("code", "injected-code"))
@@ -212,12 +226,14 @@ class AuthControllerTest {
         org.mockito.Mockito.verifyNoInteractions(authService);
     }
 
+    /** Kiểm thử: authorize từ chối redirect chưa được cấu hình. */
     @Test
     void authorizeRejectsUnconfiguredRedirect() throws Exception {
         mockMvc.perform(get("/api/v1/auth/google/authorize").param("code_challenge", CHALLENGE).param("redirect_uri", "https://attacker.example/callback"))
                 .andExpect(status().isBadRequest());
     }
 
+    /** Kiểm thử: endpoint popup không thể bỏ qua state của trình duyệt bằng authorization code. */
     @Test
     void popupEndpointCannotBypassBrowserStateWithAuthorizationCode() throws Exception {
         mockMvc.perform(post("/api/v1/auth/google/oauth-callback").contentType(MediaType.APPLICATION_JSON)
@@ -226,6 +242,7 @@ class AuthControllerTest {
         org.mockito.Mockito.verifyNoInteractions(authService);
     }
 
+    /** Kiểm thử: hội viên Google đang hoạt động nhận xác thực mà không có trường OTP. */
     @Test
     void activeGoogleMemberReceivesAuthenticationWithoutOtpFields() throws Exception {
         when(authService.authenticateGoogle(any())).thenReturn(new GoogleOAuthResult("member@gmail.com", null,
@@ -239,6 +256,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.debugOtp").doesNotExist());
     }
 
+    /** Kiểm thử: handoff không hợp lệ không thể cấp JWT. */
     @Test
     void invalidHandoffCannotIssueJwt() throws Exception {
         mockMvc.perform(post("/api/v1/auth/google/handoff").contentType(MediaType.APPLICATION_JSON)
@@ -247,6 +265,7 @@ class AuthControllerTest {
         org.mockito.Mockito.verifyNoInteractions(authService);
     }
 
+    /** Kiểm thử: gửi OTP đặt lại mật khẩu thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/password/send-otp sends reset OTP to email")
     void sendPasswordResetOtpSuccess() throws Exception {
@@ -262,6 +281,7 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.expiresInMinutes").value(5));
     }
 
+    /** Kiểm thử: đặt lại mật khẩu thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/password/reset resets password using OTP")
     void resetPasswordSuccess() throws Exception {

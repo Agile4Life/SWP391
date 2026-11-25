@@ -1,3 +1,4 @@
+/** Props của dấu trạng thái: loại thành công/lỗi và kích thước. */
 interface StatusMarkProps {
   type?: 'success' | 'error';
   size?: number;

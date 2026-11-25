@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu bổ sung cho hỗ trợ và khiếu nại, dùng lại khung hội thoại của tin nhắn. */
 /* Hỗ trợ & Khiếu nại dùng khung hội thoại của Tin nhắn; chỉ bổ sung phần riêng của phiếu (loại yêu cầu, trạng thái, danh sách phiếu).
    Màu đi theo biến kính của widget (sáng/tối) và rơi về bảng màu portal của trang /messages. */
 .support-chat { --support-ink: var(--chat-glass-ink, #f5f5f5); --support-muted: var(--chat-glass-muted, #a8a8a8); --support-line: var(--chat-glass-line, rgba(255, 255, 255, 0.14)); min-height: 0; }

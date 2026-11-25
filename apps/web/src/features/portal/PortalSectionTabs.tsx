@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import type { Language } from '../../shared/i18n';
 import { getTabLabel, type PortalNavTab } from './portalNavigation';
 
+/** Props của thanh tab nhóm: nhãn trợ năng, các tab, đường dẫn hiện tại và ngôn ngữ. */
 interface PortalSectionTabsProps {
   label: string;
   tabs: PortalNavTab[];
@@ -17,8 +18,7 @@ export function PortalSectionTabs({ label, tabs, pathname, lang }: PortalSection
   const activeInGroup = tabs.some(
     tab =>
       pathname === tab.to ||
-      pathname.startsWith(`${tab.to}/`) ||
-      (tab.to === '/member/products' && pathname === '/member/checkout'),
+      pathname.startsWith(`${tab.to}/`),
   );
   if (!activeInGroup) return null;
   return (

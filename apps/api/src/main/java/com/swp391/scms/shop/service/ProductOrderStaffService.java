@@ -36,6 +36,10 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Nghiệp vụ xử lý đơn shop của nhân viên: tìm/đếm đơn, chuyển trạng thái xử lý–giao–nhận–hoàn tất, thu tiền tại
+ * quầy và hủy đơn.
+ */
 @Service
 @Transactional
 public class ProductOrderStaffService {
@@ -55,6 +59,7 @@ public class ProductOrderStaffService {
     private final Clock clock;
     private VnpayPaymentGuard guard;
 
+    /** Constructor rút gọn không có VnpayPaymentGuard (dùng trong test). */
     public ProductOrderStaffService(ProductOrderRepository orders,
                                     ProductOrderService orderService,
                                     ProductOrderPayments orderPayments,
@@ -68,6 +73,10 @@ public class ProductOrderStaffService {
         this(orders, orderService, orderPayments, payments, invoices, users, mapper, notifications, messages, clock, null);
     }
 
+    /**
+     * Constructor chính: nhận repository đơn, các service đơn/thanh toán/hóa đơn, người dùng, mapper, thông
+     * báo, MessageService, Clock và VnpayPaymentGuard (tùy chọn).
+     */
     @Autowired
     public ProductOrderStaffService(ProductOrderRepository orders,
                                     ProductOrderService orderService,
@@ -93,10 +102,15 @@ public class ProductOrderStaffService {
         this.guard = guard;
     }
 
+    /** Gán giá trị mới cho trường guard. */
     public void setGuard(VnpayPaymentGuard guard) {
         this.guard = guard;
     }
 
+    /**
+     * Tìm đơn cho nhân viên: chuẩn hóa trạng thái (counter_pending/pending_payment lọc đơn chờ thu tại quầy) và
+     * từ khóa, tối đa 50 mỗi trang.
+     */
     @Transactional(readOnly = true)
     public Page<OrderDto> list(String status, String q, int page, int size) {
         int safePage = Math.max(0, page);
@@ -117,6 +131,7 @@ public class ProductOrderStaffService {
                 .map(o -> mapper.toDto(o, true));
     }
 
+    /** Đếm đơn theo từng trạng thái cần xử lý và số đơn chờ thu tại quầy. */
     @Transactional(readOnly = true)
     public OrderCountsDto counts() {
         return new OrderCountsDto(
@@ -128,6 +143,7 @@ public class ProductOrderStaffService {
         );
     }
 
+    /** Chi tiết một đơn kèm thông tin hội viên. */
     @Transactional(readOnly = true)
     public OrderDto get(Long id) {
         ProductOrder order = orders.findById(id)
@@ -136,6 +152,7 @@ public class ProductOrderStaffService {
         return mapper.toDto(order, true);
     }
 
+    /** Chuyển đơn đã thanh toán sang đang xử lý. */
     @Audited(action = "START_PROCESSING", entity = "product_orders")
     public OrderDto startProcessing(AuthenticatedPrincipal principal, Long id) {
         requireStaff(principal);
@@ -151,6 +168,10 @@ public class ProductOrderStaffService {
         return mapper.toDto(order, true);
     }
 
+    /**
+     * Giao đơn giao tận nơi đang xử lý: kiểm tra mã vận đơn (3–60 ký tự) và đơn vị vận chuyển (tối đa 60),
+     * chuyển sang đang giao và báo hội viên.
+     */
     @Audited(action = "SHIP_ORDER", entity = "product_orders")
     public OrderDto ship(AuthenticatedPrincipal principal, Long id, ShipRequest request) {
         requireStaff(principal);
@@ -183,6 +204,7 @@ public class ProductOrderStaffService {
         return mapper.toDto(order, true);
     }
 
+    /** Đơn nhận tại quầy đang xử lý chuyển sang sẵn sàng nhận và báo hội viên. */
     @Audited(action = "READY_FOR_PICKUP", entity = "product_orders")
     public OrderDto readyForPickup(AuthenticatedPrincipal principal, Long id) {
         requireStaff(principal);
@@ -205,6 +227,7 @@ public class ProductOrderStaffService {
         return mapper.toDto(order, true);
     }
 
+    /** Hoàn tất đơn: giao tận nơi phải đang giao; nhận tại quầy phải sẵn sàng nhận hoặc đã thu tiền tại quầy. */
     @Audited(action = "COMPLETE_ORDER", entity = "product_orders")
     public OrderDto complete(AuthenticatedPrincipal principal, Long id) {
         requireStaff(principal);
@@ -231,6 +254,10 @@ public class ProductOrderStaffService {
         return mapper.toDto(order, true);
     }
 
+    /**
+     * Thu tiền tại quầy (tiền mặt, POS, chuyển khoản) cho đơn đang chờ thanh toán tại quầy: ghi payment thành
+     * công, tự xuất hóa đơn và chuyển đơn sang đã thanh toán.
+     */
     @Audited(action = "COUNTER_PAYMENT", entity = "product_orders")
     public OrderDto counterPayment(AuthenticatedPrincipal principal, Long id, CounterPaymentRequest request) {
         requireStaff(principal);
@@ -276,6 +303,10 @@ public class ProductOrderStaffService {
         return mapper.toDto(order, true);
     }
 
+    /**
+     * Nhân viên hủy đơn chưa kết thúc kèm lý do 5–255 ký tự; chặn khi VNPay còn có thể xác nhận; có thể hoàn
+     * kho.
+     */
     @Audited(action = "CANCEL_ORDER", entity = "product_orders")
     public OrderDto cancel(AuthenticatedPrincipal principal, Long id, StaffCancelRequest request) {
         requireStaff(principal);
@@ -304,6 +335,7 @@ public class ProductOrderStaffService {
         return mapper.toDto(order, true);
     }
 
+    /** Gửi thông báo cho hội viên kèm link tới trang chi tiết đơn. */
     private void notifyMember(ProductOrder order, String title, String body) {
         if (notifications != null && order.getMember() != null) {
             notifications.send(
@@ -318,6 +350,7 @@ public class ProductOrderStaffService {
         }
     }
 
+    /** Lấy người dùng theo id (ưu tiên chưa bị xóa), không có thì null. */
     private User resolveUser(Long userId) {
         if (userId == null || users == null) {
             return null;
@@ -327,6 +360,7 @@ public class ProductOrderStaffService {
                 .orElse(null);
     }
 
+    /** Chỉ lễ tân, nhân viên, quản lý mới được xử lý đơn. */
     private static void requireStaff(AuthenticatedPrincipal principal) {
         if (principal == null || principal.role() == null
                 || !STAFF_ROLES.contains(principal.role().toUpperCase(Locale.ROOT))) {
@@ -334,18 +368,22 @@ public class ProductOrderStaffService {
         }
     }
 
+    /** Tạo lỗi không tìm thấy đơn hàng. */
     private static ResourceNotFoundException notFound() {
         return new ResourceNotFoundException("ORDER_NOT_FOUND", "error.shop.order_not_found", null, "Order not found");
     }
 
+    /** Tạo lỗi chuyển trạng thái đơn không hợp lệ. */
     private static ConflictException invalidTransition() {
         return new ConflictException("ORDER_INVALID_TRANSITION", "error.shop.order_invalid_transition", null, "Invalid order status transition");
     }
 
+    /** Thời điểm hiện tại theo giờ Việt Nam. */
     private LocalDateTime now() {
         return LocalDateTime.ofInstant(clock.instant(), VN_ZONE);
     }
 
+    /** Dịch message key kèm tham số; không có MessageService thì trả lại key. */
     private String msg(String key, Object... args) {
         if (messages != null) {
             String resolved = messages.getMessage(key, args);

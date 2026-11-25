@@ -8,7 +8,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.any;
 
+/** Bộ kiểm thử cho bộ khởi tạo dữ liệu IdentitySeeder (identity seeder). */
 class IdentitySeederTest {
+    /** Kiểm thử: seed năm vai trò và chỉ admin bootstrap, không nâng quản lý hiện có. */
     @Test
     void seedsFiveRolesAndOnlyBootstrapAdminWithoutPromotingExistingManagers() {
         RoleRepository roles = mock(RoleRepository.class);

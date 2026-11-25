@@ -27,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service StaffInternalRequestService (staff internal request service). */
 @ExtendWith(MockitoExtension.class)
 class StaffInternalRequestServiceTest {
 
@@ -44,6 +45,7 @@ class StaffInternalRequestServiceTest {
     private User staffUser;
     private User managerUser;
 
+    /** Chuẩn bị trước mỗi test: tạo StaffInternalRequestService với repository giả lập. */
     @BeforeEach
     void setUp() {
         var messages = new org.springframework.context.support.ResourceBundleMessageSource();
@@ -74,11 +76,13 @@ class StaffInternalRequestServiceTest {
         managerUser.setRole(managerRole);
     }
 
+    /** Dọn dẹp sau mỗi test: đặt lại locale mặc định. */
     @org.junit.jupiter.api.AfterEach
     void resetLocale() {
         org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
     }
 
+    /** Kiểm thử: Tạo đơn xin nghỉ phép thành công và gửi thông báo cho Manager */
     @Test
     @DisplayName("Tạo đơn xin nghỉ phép thành công và gửi thông báo cho Manager")
     void createRequest_Success() {
@@ -120,6 +124,7 @@ class StaffInternalRequestServiceTest {
         );
     }
 
+    /** Kiểm thử: Tạo đơn với loại không hợp lệ ném BadRequestException */
     @Test
     @DisplayName("Tạo đơn với loại không hợp lệ ném BadRequestException")
     void createRequest_InvalidType_ThrowsBadRequest() {
@@ -136,6 +141,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Hủy đơn thành công khi đơn còn đang PENDING */
     @Test
     @DisplayName("Hủy đơn thành công khi đơn còn đang PENDING")
     void cancelRequest_Success() {
@@ -154,6 +160,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository).save(req);
     }
 
+    /** Kiểm thử: Người dùng khác hủy đơn của đồng nghiệp bị ForbiddenException */
     @Test
     @DisplayName("Người dùng khác hủy đơn của đồng nghiệp bị ForbiddenException")
     void cancelRequest_Forbidden_WhenNotOwner() {
@@ -168,6 +175,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Hủy đơn đã được duyệt hoặc từ chối ném BadRequestException */
     @Test
     @DisplayName("Hủy đơn đã được duyệt hoặc từ chối ném BadRequestException")
     void cancelRequest_BadRequest_WhenNotPending() {
@@ -181,6 +189,7 @@ class StaffInternalRequestServiceTest {
         assertThrows(BadRequestException.class, () -> service.cancelRequest(10L, 50L));
     }
 
+    /** Kiểm thử: Quản lý duyệt đơn (APPROVED) thành công và gửi thông báo cho nhân viên */
     @Test
     @DisplayName("Quản lý duyệt đơn (APPROVED) thành công và gửi thông báo cho nhân viên")
     void reviewRequest_Approve_Success() {
@@ -213,6 +222,7 @@ class StaffInternalRequestServiceTest {
         );
     }
 
+    /** Kiểm thử: Quản lý từ chối đơn (REJECTED) bắt buộc phải có lý do */
     @Test
     @DisplayName("Quản lý từ chối đơn (REJECTED) bắt buộc phải có lý do")
     void reviewRequest_Reject_MissingReason_ThrowsBadRequest() {
@@ -229,6 +239,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: Duyệt đơn đã xử lý trước đó ném BadRequestException */
     @Test
     @DisplayName("Duyệt đơn đã xử lý trước đó ném BadRequestException")
     void reviewRequest_AlreadyReviewed_ThrowsBadRequest() {
@@ -243,6 +254,7 @@ class StaffInternalRequestServiceTest {
 
         assertThrows(BadRequestException.class, () -> service.reviewRequest(1L, 200L, dto));
     }
+    /** Kiểm thử: tạo yêu cầu từ chối khoảng ngày bị đảo ngược. */
     @Test
     void createRequestRejectsReversedDateRange() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
@@ -252,6 +264,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: đơn nghỉ trùng ngày đã duyệt được cảnh báo trước và chỉ gửi sau khi xác nhận. */
     @Test
     void aLeaveOnDaysAlreadyApprovedIsWarnedFirstAndSentOnlyAfterConfirmation() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
@@ -277,6 +290,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository).save(any());
     }
 
+    /** Kiểm thử: người thay thế phải là nhân viên đang hoạt động khác. */
     @Test
     void replacementMustBeAnotherActiveStaffMember() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(staffUser));
@@ -295,6 +309,7 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
+    /** Kiểm thử: duyệt đơn nghỉ báo cho quản lý biết những ca cần người thay. */
     @Test
     void approvingLeaveTellsManagerWhatNeedsCover() {
         var sessions = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
@@ -323,6 +338,7 @@ class StaffInternalRequestServiceTest {
                 org.mockito.ArgumentMatchers.contains("2 buổi lớp và 1 buổi PT"), eq("system"), isNull(), eq(100L));
     }
 
+    /** Kiểm thử: giá trị lọc ALL được bỏ qua ở bộ lọc trạng thái và loại. */
     @Test
     void ignoresAllPlaceholderInStatusAndTypeFilters() {
         when(requestRepository.findByUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of());

@@ -14,6 +14,7 @@ import { usePortalMotion } from './usePortalMotion';
 import './portal-motion.css';
 import { PortalSectionTabs } from './PortalSectionTabs';
 import { getMobileNavLabel, getNavLabel, getRoleLabel, getTabLabel, isPortalNavActive, MOBILE_PRIMARY_NAV, PORTAL_NAV } from './portalNavigation';
+import { useReceptionAlerts } from '../reception/useReceptionAlerts';
 import { getUnreadCount } from '../member/notificationsApi';
 import { subscribeMembershipChanges } from '../member/membershipRealtime';
 import { getProfile } from '../member/profileApi';
@@ -25,8 +26,9 @@ import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { navigateToVnpay } from '../payments/vnpayApi';
 import { releaseAbandonedVnpay, rememberActiveVnpay } from '../payments/vnpaySession';
 
-// Only members see the AI assistant; its WebGL shaders stay out of every other role's first load.
+// Chỉ hội viên mới thấy trợ lý AI; các WebGL shader của nó không được tải ở lần tải đầu của mọi vai trò khác.
 
+/** Một giao dịch trong dữ liệu ví trả về từ API (mọi trường đều tùy chọn). */
 interface WalletTransactionItem {
   id?: number;
   type?: string;
@@ -37,12 +39,14 @@ interface WalletTransactionItem {
   createdAt?: string | null;
 }
 
+/** Dữ liệu tóm tắt ví từ API: số dư, lần cập nhật và danh sách giao dịch. */
 interface WalletSummaryResponse {
   balance?: number;
   updatedAt?: string | null;
   transactions?: WalletTransactionItem[];
 }
 
+/** Nhãn hiển thị của loại giao dịch ví theo ngôn ngữ (nạp VNPay, nạp tại quầy, hoàn tiền, thanh toán dịch vụ). */
 function walletTypeLabel(type?: string, lang: 'vi' | 'en' = 'vi') {
   if (type === 'TOPUP_VNPAY') return lang === 'en' ? 'VNPay top-up' : 'Nạp từ VNPay';
   if (type === 'TOPUP_COUNTER') return lang === 'en' ? 'Counter top-up' : 'Nạp tại quầy Lễ tân';
@@ -51,12 +55,14 @@ function walletTypeLabel(type?: string, lang: 'vi' | 'en' = 'vi') {
   return type || (lang === 'en' ? 'Wallet transaction' : 'Giao dịch ví');
 }
 
+/** True nếu là giao dịch cộng tiền: loại nạp/hoàn là cộng, loại thanh toán là trừ, còn lại xét theo dấu số tiền. */
 function isCreditTransaction(type?: string, amount?: number) {
   if (type === 'PAYMENT_DEBIT') return false;
   if (type === 'TOPUP_VNPAY' || type === 'TOPUP_COUNTER' || type === 'REFUND_CREDIT') return true;
   return (amount ?? 0) >= 0;
 }
 
+/** Chuẩn hóa chuỗi để tìm kiếm: bỏ dấu tiếng Việt, đổi đ thành d và chuyển chữ thường. */
 function searchable(value: string) {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
 }
@@ -67,10 +73,12 @@ function searchable(value: string) {
  */
 export function PortalShell() {
   const user = useCurrentUser();
+  useReceptionAlerts(user?.role ?? '', user?.id ?? '');
   if (!user) return <Navigate to="/login" replace />;
   return <PortalShellContent key={sessionIdentityKey(user)} user={user} />;
 }
 
+/** Nội dung vỏ portal: thanh bên, thanh trên, tìm kiếm, thông báo, ví và menu tài khoản cho một người dùng. */
 function PortalShellContent({ user }: { user: UserSession }) {
   const { lang, t } = useI18n();
   const location = useLocation();
@@ -105,6 +113,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const [topupBusy, setTopupBusy] = useState(false);
   const [topupError, setTopupError] = useState<string | Error | { vi: string; en: string } | null>(null);
 
+  // Nạp ví qua VNPay: kiểm tra số tiền 10.000–100.000.000 đ, tạo giao dịch rồi chuyển sang cổng VNPay; lỗi thì hiện thông báo.
   const handleWalletTopup = async () => {
     if (topupBusy) return;
     const numeric = Number(topupAmount);
@@ -133,10 +142,12 @@ function PortalShellContent({ user }: { user: UserSession }) {
   };
 
   const notificationTrigger = useRef<HTMLElement | null>(null);
+  // Đóng hộp thoại thông báo và trả focus về nút đã mở nó.
   const closeNotifications = useCallback(() => {
     setDialog(null);
     notificationTrigger.current?.focus();
   }, []);
+  // Mở hoặc đóng hộp thoại thông báo (bấm lần nữa thì đóng).
   const openNotifications = (event: MouseEvent<HTMLButtonElement>) => {
     notificationTrigger.current = event.currentTarget;
     setDialog(current => current === 'notifications' ? null : 'notifications');
@@ -155,13 +166,10 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const hasServerNotifications = true;
   const canReceiveNotifications = true;
   const profileLabel = isMember
-    ? t('Hồ sơ & Sức khỏe', 'Profile & Health')
+    ? t('Hồ sơ hội viên', 'Member profile')
     : t('Hồ sơ cá nhân', 'My Profile');
   const navItems = PORTAL_NAV.filter((item) => item.roles.includes(user.role)).map((item) => {
     if (item.to === '/member/profile') return { ...item, label: profileLabel };
-    if (item.to === '/staff/classes' && user.role === 'STAFF') {
-      return { ...item, label: t('Xem lịch học trung tâm', 'Center Class Schedule') };
-    }
     return { ...item, label: getNavLabel(item.to, item.label, lang) };
   });
   const activeNavItem = navItems.find((item) => isPortalNavActive(item, location.pathname));
@@ -179,6 +187,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
   });
   const secondaryScreen = !mobileItems.some(item => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`));
 
+  // Tải ảnh đại diện và email từ hồ sơ; lỗi (vd. môi trường test/offline) thì bỏ qua.
   const refreshProfileSummary = useCallback(() => {
     void getProfile()
       .then((profile) => {
@@ -188,10 +197,11 @@ function PortalShellContent({ user }: { user: UserSession }) {
         }
       })
       .catch(() => {
-        // Ignore in offline/test contexts where /profile is not mocked
+        // Bỏ qua trong ngữ cảnh ngoại tuyến/kiểm thử khi /profile chưa được giả lập
       });
   }, []);
 
+  // Tải số dư và lịch sử giao dịch ví.
   const refreshWallet = useCallback(() => {
     setWalletLoading(true);
     void apiFetch<WalletSummaryResponse>('/wallet/my')
@@ -203,7 +213,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
         }
       })
       .catch(() => {
-        // Graceful fallback to 0 đ
+        // Giữ giá trị dự phòng an toàn là 0 đ
       })
       .finally(() => {
         setWalletLoading(false);
@@ -215,6 +225,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
     if (localStorage.getItem(TOKEN_STORAGE_KEY)) {
       void releaseAbandonedVnpay();
     }
+    // Quay lại trang từ bộ nhớ đệm (nút Back) thì mở lại nút nạp và hủy phiên VNPay bỏ dở.
     const handleRestore = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       setTopupBusy(false);
@@ -240,17 +251,16 @@ function PortalShellContent({ user }: { user: UserSession }) {
     if (localStorage.getItem(TOKEN_STORAGE_KEY)) {
       refreshWallet();
     }
+    // Mở hộp thoại ví từ menu tài khoản.
     const handleOpenWalletModal = () => {
       setAvatarMenuOpen(false);
       refreshWallet();
       setDialog('wallet');
     };
     window.addEventListener('wallet-updated', refreshWallet);
-    window.addEventListener('member-notifications-changed', refreshWallet);
     window.addEventListener('open-wallet-modal', handleOpenWalletModal);
     return () => {
       window.removeEventListener('wallet-updated', refreshWallet);
-      window.removeEventListener('member-notifications-changed', refreshWallet);
       window.removeEventListener('open-wallet-modal', handleOpenWalletModal);
     };
   }, [refreshWallet]);
@@ -259,11 +269,13 @@ function PortalShellContent({ user }: { user: UserSession }) {
     if (!avatarMenuOpen) return;
     refreshProfileSummary();
     refreshWallet();
+    // Bấm ra ngoài menu tài khoản thì đóng.
     const onPointerDown = (event: Event) => {
       if (avatarMenuRef.current && event.target instanceof Node && !avatarMenuRef.current.contains(event.target)) {
         setAvatarMenuOpen(false);
       }
     };
+    // Nhấn Esc thì đóng menu tài khoản và trả focus về nút tài khoản.
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
         setAvatarMenuOpen(false);
@@ -283,6 +295,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
   useEffect(() => {
     if (!hasServerNotifications) return;
     let active = true;
+    // Làm mới số thông báo chưa đọc (bỏ qua khi tab đang ẩn).
     const refresh = () => {
       if (document.visibilityState === 'hidden') return;
       void getUnreadCount().then((count) => {
@@ -315,12 +328,14 @@ function PortalShellContent({ user }: { user: UserSession }) {
   useEffect(() => {
     // Role có thể bị Admin đổi sau khi đăng nhập: đối chiếu với server khi vào portal và khi quay lại tab.
     let lastSync = 0;
+    // Đồng bộ phiên với server, tối đa một lần mỗi 5 giây.
     const sync = () => {
       const now = Date.now();
       if (now - lastSync < 5000) return;
       lastSync = now;
       void syncSessionWithServer();
     };
+    // Tab hiện lại thì đồng bộ phiên.
     const onVisible = () => { if (document.visibilityState === 'visible') sync(); };
     sync();
     window.addEventListener('focus', sync);
@@ -353,11 +368,13 @@ function PortalShellContent({ user }: { user: UserSession }) {
     }
   }, [canReceiveNotifications, location.state, location.pathname, navigate]);
 
+  // Mở hộp thoại tìm kiếm hoặc menu điều hướng và xóa từ khóa cũ.
   const openNavigation = (mode: 'search' | 'menu') => {
     setQuery('');
     setDialog(mode);
   };
 
+  // Vẽ ảnh đại diện, ảnh mặc định khi chưa có hoặc ảnh lỗi.
   const renderAvatarContent = () => (
     <img
       src={avatarUrl || '/images/default-avatar.png'}
@@ -471,11 +488,6 @@ function PortalShellContent({ user }: { user: UserSession }) {
                       </div>
                     </div>
                   </div>
-
-                  {isMember && <Link to="/member/streak" role="menuitem" data-testid="avatar-menu-streak"
-                    className="portal-avatar-dropdown__link" onClick={() => setAvatarMenuOpen(false)}>
-                    {t('Streak tập luyện', 'Workout streak')}
-                  </Link>}
 
                   {isMember && <button
                     type="button"

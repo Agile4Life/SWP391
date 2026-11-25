@@ -1,4 +1,4 @@
-// Local browser verification. API requests use fixtures and never change real data.
+// Mục đích: kiểm tra chế độ sáng/tối của giao diện trên trình duyệt cục bộ; các request API đều dùng dữ liệu giả và không thay đổi dữ liệu thật.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');

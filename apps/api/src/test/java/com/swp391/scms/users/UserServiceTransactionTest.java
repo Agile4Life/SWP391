@@ -27,11 +27,13 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho UserServiceTransaction (user service transaction). */
 class UserServiceTransactionTest {
     private final UserRepository users = mock(UserRepository.class);
     private final ReceptionistRepository receptionists = mock(ReceptionistRepository.class);
     private final AuditLogRepository audit = mock(AuditLogRepository.class);
 
+    /** Hàm trợ giúp của test: lấy UserService đã được proxy transaction. */
     private UserService proxiedService() {
         var target = new UserService(users, mock(RoleRepository.class), mock(PasswordEncoder.class),
                 mock(UserMapper.class), receptionists);
@@ -47,6 +49,7 @@ class UserServiceTransactionTest {
         return proxy.getProxy();
     }
 
+    /** Kiểm thử: tác vụ dọn dẹp theo lịch đọc và ghi audit trong cùng một transaction. */
     @Test
     void scheduledCleanupReadsAndAuditsWithinOneTransaction() {
         when(users.findAllByDeletedAtIsNullOrderByIdAsc()).thenAnswer(invocation -> {
@@ -63,6 +66,7 @@ class UserServiceTransactionTest {
         verify(audit).save(argThat(entry -> "USER_CLEANUP_INACTIVE".equals(entry.getAction())));
     }
 
+    /** Kiểm thử: ca lễ tân đọc và ghi trong cùng một transaction. */
     @Test
     void receptionistShiftReadsAndWritesWithinOneTransaction() {
         var user = new User();

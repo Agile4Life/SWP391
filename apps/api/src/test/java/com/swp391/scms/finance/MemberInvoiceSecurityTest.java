@@ -20,16 +20,20 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho MemberInvoiceSecurity (member invoice security). */
 class MemberInvoiceSecurityTest {
+    /** Bộ kiểm thử cho MethodSecurityOnly (method security only). */
     @Configuration
     @EnableMethodSecurity
     static class MethodSecurityOnly {}
 
+    /** Dọn dẹp sau mỗi test: xóa SecurityContext. */
     @AfterEach
     void clearSecurity() {
         SecurityContextHolder.clearContext();
     }
 
+    /** Kiểm thử: tải hóa đơn từ chối nhân viên và chấp nhận principal hội viên. */
     @Test
     void downloadRejectsStaffButAcceptsMemberPrincipal() {
         MemberInvoicePdfService pdf = mock(MemberInvoicePdfService.class);
@@ -59,6 +63,7 @@ class MemberInvoiceSecurityTest {
         }
     }
 
+    /** Kiểm thử: các constructor độc lập an toàn với null. */
     @Test
     void standaloneConstructorsAreNullSafe() {
         InvoiceService invoices = mock(InvoiceService.class);
@@ -75,6 +80,7 @@ class MemberInvoiceSecurityTest {
         }
     }
 
+    /** Kiểm thử: Spring tiêm MessageService qua constructor có chú thích. */
     @Test
     void springInjectsMessageServiceThroughAnnotatedConstructor() {
         InvoiceService invoices = mock(InvoiceService.class);
@@ -93,6 +99,7 @@ class MemberInvoiceSecurityTest {
         }
     }
 
+    /** Hàm trợ giúp của test: đăng nhập giả lập với vai trò và id cho trước. */
     private void authenticate(Long id, String role) {
         var auth = new UsernamePasswordAuthenticationToken(
                 new AuthenticatedPrincipal(id, "test", role), null,

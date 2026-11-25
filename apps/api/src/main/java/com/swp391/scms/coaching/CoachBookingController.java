@@ -16,7 +16,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * SCRUM-133: REST Controller for 1-on-1 coach booking (PT hourly booking).
+ * API đặt lịch PT 1:1 theo giờ (SCRUM-133): danh sách HLV, slot trống, hạn mức, đặt/hủy lịch, điểm danh và thu tiền
+ * buổi lẻ.
  */
 @RestController
 @RequestMapping("/api/v1/coach-bookings")
@@ -25,11 +26,13 @@ public class CoachBookingController {
     private final CoachBookingService coachBookingService;
     private final MessageService messageService;
 
+    /** Khởi tạo controller với CoachBookingService và MessageService. */
     public CoachBookingController(CoachBookingService coachBookingService, MessageService messageService) {
         this.coachBookingService = coachBookingService;
         this.messageService = messageService;
     }
 
+    /** GET /coaches: danh sách HLV công khai để hội viên chọn. */
     @GetMapping("/coaches")
     public ResponseEntity<ApiResponse<List<CoachPublicDto>>> getCoaches() {
         List<CoachPublicDto> coaches = coachBookingService.getPublicCoaches();
@@ -39,6 +42,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, coaches));
     }
 
+    /** GET /available-slots: các khung giờ còn trống của HLV trong một ngày. */
     @GetMapping("/available-slots")
     public ResponseEntity<ApiResponse<List<CoachAvailableSlotDto>>> getAvailableSlots(
             @RequestParam("coachId") Long coachId,
@@ -52,6 +56,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, slots));
     }
 
+    /** GET /quota-status: số buổi PT còn lại trong hạn mức gói của hội viên đang đăng nhập. */
     @GetMapping("/quota-status")
     public ResponseEntity<ApiResponse<CoachQuotaStatusDto>> getQuotaStatus(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -62,6 +67,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, status));
     }
 
+    /** POST: hội viên tạo booking PT 1:1 mới. */
     @PostMapping
     public ResponseEntity<ApiResponse<CoachBookingDto>> createBooking(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -73,6 +79,7 @@ public class CoachBookingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(msg, booking));
     }
 
+    /** GET /my: danh sách booking PT của hội viên đang đăng nhập. */
     @GetMapping("/my")
     public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getMyBookings(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -83,6 +90,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, bookings));
     }
 
+    /** GET /coach-schedule: lịch dạy 1:1 của HLV đang đăng nhập. */
     @GetMapping("/coach-schedule")
     public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getCoachSchedule(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -93,6 +101,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, schedule));
     }
 
+    /** GET /attendance: danh sách buổi 1:1 cần điểm danh, lọc theo khoảng ngày và kết quả (có mặt/vắng). */
     @GetMapping("/attendance")
     public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getAttendance(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -106,6 +115,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, rows));
     }
 
+    /** POST /{id}/mark-attended: HLV hoặc lễ tân ghi nhận hội viên có mặt ở buổi 1:1. */
     @PostMapping("/{id}/mark-attended")
     public ResponseEntity<ApiResponse<CoachBookingDto>> markAttended(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -117,6 +127,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, marked));
     }
 
+    /** POST /{id}/unmark-attended: bỏ ghi nhận có mặt đã đánh dấu nhầm. */
     @PostMapping("/{id}/unmark-attended")
     public ResponseEntity<ApiResponse<CoachBookingDto>> unmarkAttended(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -128,6 +139,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, result));
     }
 
+    /** GET /unpaid: danh sách buổi 1:1 trả theo giờ chưa thanh toán. */
     @GetMapping("/unpaid")
     public ResponseEntity<ApiResponse<List<CoachBookingDto>>> getUnpaidBookings(
             @AuthenticationPrincipal AuthenticatedPrincipal principal) {
@@ -138,6 +150,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, bookings));
     }
 
+    /** POST /{id}/confirm-payment: lễ tân xác nhận đã thu tiền buổi 1:1 theo phương thức truyền vào. */
     @PostMapping("/{id}/confirm-payment")
     public ResponseEntity<ApiResponse<CoachBookingDto>> confirmPayment(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
@@ -150,6 +163,7 @@ public class CoachBookingController {
         return ResponseEntity.ok(ApiResponse.ok(msg, paid));
     }
 
+    /** DELETE /{id}: hủy booking 1:1 kèm lý do (tùy chọn). */
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<CoachBookingDto>> cancelBooking(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,

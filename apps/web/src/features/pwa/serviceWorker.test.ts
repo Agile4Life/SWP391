@@ -3,11 +3,13 @@ import { runInNewContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import { createWorkerSource } from './serviceWorker';
 
+// Dựng worker từ mã nguồn mẫu với mạng lỗi hoặc tốt.
 function worker(networkFails = false, assets = ['/assets/app-hash.js'], precache = assets) {
   const listeners: Record<string, (event: Record<string, unknown>) => void> = {};
   const shell = new Response('<html>shell</html>');
   const cachedAsset = new Response('asset');
   const entries = new Map([['/index.html', shell], ['/assets/app-hash.js', cachedAsset]]);
+  // Cache giả của service worker.
   const cache = {
     addAll: vi.fn().mockResolvedValue(undefined),
     match: vi.fn(async (key: string) => entries.get(key)?.clone()),
@@ -17,6 +19,7 @@ function worker(networkFails = false, assets = ['/assets/app-hash.js'], precache
   const fetch = networkFails ? vi.fn().mockRejectedValue(new Error('offline')) : vi.fn().mockResolvedValue(new Response('network'));
   const self = { location: { origin: 'https://sol.test' }, clients: { claim: vi.fn() }, skipWaiting: vi.fn(), addEventListener: vi.fn((name, handler) => { listeners[name] = handler; }) };
   runInNewContext(createWorkerSource('test', assets, precache), { self, caches: storage, fetch, URL, Response });
+  // Tạo yêu cầu giả (đường dẫn, mode, phương thức, có xác thực).
   function request(path: string, mode = 'cors', method = 'GET', authorized = false) {
     const respondWith = vi.fn();
     listeners.fetch({ request: { url: `https://sol.test${path}`, mode, method, headers: { has: () => authorized } }, respondWith, waitUntil: vi.fn() });

@@ -1,5 +1,9 @@
 import type { ChatContact } from './chatApi';
 
+/**
+ * Ảnh đại diện trong khung chat: ảnh người dùng nếu có, SÖL AI dùng biểu tượng riêng, còn lại dùng chữ cái và
+ * màu theo id.
+ */
 export function ChatAvatar({ contact, className }: { contact: Pick<ChatContact, 'id' | 'name' | 'avatarUrl'> & { role?: string }; className?: string }) {
   const ai = contact.role === 'AI';
   const seed = Math.abs(contact.id || 0) % 4;

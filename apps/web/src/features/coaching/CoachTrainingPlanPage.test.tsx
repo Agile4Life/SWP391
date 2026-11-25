@@ -6,9 +6,7 @@ import { CoachTrainingPlanPage } from './CoachTrainingPlanPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { setLanguage } from '../../shared/i18n/language';
 import { aiApi, type MemberOption } from './aiApi';
-import * as profileApi from '../member/profileApi';
 
-vi.mock('../member/profileApi', () => ({ listHealthMetrics: vi.fn().mockResolvedValue([]), addHealthMetrics: vi.fn() }));
 
 const MEMBERS: MemberOption[] = [
   { id: 1, memberCode: 'MB-2026-001', fullName: 'Lê Hoàng Long', fitnessGoal: 'Tăng cơ nạc', healthNotes: 'Tránh Deadlift tạ nặng', fitnessLevel: 'intermediate' },
@@ -19,6 +17,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   let host: HTMLDivElement;
   let root: Root;
 
+  // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const mockAiResponse = {
     id: 999,
     memberId: 1,
@@ -109,6 +108,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderComponent() {
     await act(async () => {
       root.render(
@@ -119,9 +119,11 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     });
   }
 
+  // Mở một bước của trình soạn giáo án.
   async function openStep(step: 1 | 2 | 3) {
     await act(async () => { host.querySelectorAll<HTMLButtonElement>('.plan-step__button')[step - 1].click(); });
   }
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const saveButton = () => Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Lưu & Kích hoạt giáo án')) as HTMLButtonElement | undefined;
 
   it('denies access when user role is not COACH or MANAGER', async () => {
@@ -161,13 +163,13 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     expect(host.textContent).toContain('Soạn giáo án');
     expect(host.textContent).toContain('Gợi ý giáo án bằng AI');
-    // One group of information per step: step 1 holds only the plan info
+    // Mỗi bước một nhóm thông tin: bước 1 chỉ chứa thông tin kế hoạch
     expect(host.textContent).toContain('Thông tin kế hoạch huấn luyện');
     expect(saveButton()).toBeUndefined();
     expect(host.querySelector('#exercise-name-input')).toBeNull();
 
     await openStep(2);
-    // Verify all 7 day tabs render
+    // Kiểm tra hiển thị đủ 7 tab ngày trong tuần
     expect(host.textContent).toContain('Thứ 2');
     expect(host.textContent).toContain('Thứ 3');
     expect(host.textContent).toContain('Thứ 4');
@@ -182,9 +184,11 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
   it('moves through the three steps with Tiếp tục and Quay lại', async () => {
     await renderComponent();
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const click = async (label: string) => act(async () => {
       (Array.from(host.querySelectorAll('button')).find((b) => b.textContent === label) as HTMLButtonElement).click();
     });
+    // Tên bước đang được chọn.
     const active = () => host.querySelector('.plan-step__button.is-active')?.textContent;
     expect(active()).toContain('Học viên & kế hoạch');
     expect(host.textContent).not.toContain('Chỉ số sức khỏe ·');
@@ -200,6 +204,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
   it('keeps health precautions highlighted when switching language without changing member data', async () => {
     await renderComponent();
+    // Ghi chú sức khỏe đang hiển thị.
     const healthNote = () => Array.from(host.querySelectorAll('strong'))
       .find(element => element.textContent === MEMBERS[0].healthNotes);
     expect(healthNote()?.parentElement?.style.color).toBe('var(--portal-danger, #fca5a5)');
@@ -217,7 +222,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await renderComponent();
     await openStep(2);
 
-    // Fill exercise form
+    // Điền biểu mẫu bài tập
     const nameInput = host.querySelector('#exercise-name-input') as HTMLInputElement;
     expect(nameInput).toBeDefined();
 
@@ -241,6 +246,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
       { id: 7, memberId: 1, coachId: 3, goal: 'Giảm mỡ bụng', startDate: '2026-11-12', endDate: '2026-12-10', status: 'active' },
     ]);
     await renderComponent();
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const button = (label: string) => Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label));
     await act(async () => { button('Gợi ý giáo án bằng AI')?.click(); });
     await act(async () => { button('Phân tích & Sinh giáo án bằng AI')?.click(); });
@@ -250,7 +256,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.ownerDocument.body.textContent).toContain('Giảm mỡ bụng');
     expect(aiApi.listTrainingPlans).toHaveBeenCalledWith(1);
 
-    // Keeping the current plan leaves the AI result open and the editor untouched.
+    // Giữ giáo án hiện tại sẽ để nguyên kết quả AI đang mở và không thay đổi trình soạn thảo.
     await act(async () => { button('Giữ giáo án hiện tại')?.click(); });
     expect(host.ownerDocument.body.textContent).not.toContain('Ghi đè giáo án đã soạn trước đó?');
     expect(host.ownerDocument.body.textContent).toContain('Trợ lý AI: gợi ý giáo án huấn luyện cá nhân hóa');
@@ -266,6 +272,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
       { id: 8, memberId: 1, coachId: 99, goal: 'Yoga phục hồi', startDate: '2026-11-12', endDate: '2026-12-10', status: 'active' },
     ]);
     await renderComponent();
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const button = (label: string) => Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label));
     await act(async () => { button('Gợi ý giáo án bằng AI')?.click(); });
     await act(async () => { button('Phân tích & Sinh giáo án bằng AI')?.click(); });
@@ -279,7 +286,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   it('opens AI Assistant modal, generates recommendation, and applies it to the plan', async () => {
     await renderComponent();
 
-    // 1. Click AI Sparkle Button
+    // 1. Bấm nút gợi ý bằng AI
     const aiBtn = Array.from(host.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Gợi ý giáo án bằng AI')
     );
@@ -289,11 +296,11 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
       aiBtn?.click();
     });
 
-    // Check modal opened
+    // Kiểm tra hộp thoại đã mở
     expect(host.textContent).toContain('Trợ lý AI: gợi ý giáo án huấn luyện cá nhân hóa');
     expect(host.textContent).toContain('Phân tích & Sinh giáo án bằng AI');
 
-    // 2. Click Generate AI Plan
+    // 2. Bấm sinh giáo án bằng AI
     const generateBtn = Array.from(host.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Phân tích & Sinh giáo án bằng AI')
     );
@@ -302,12 +309,12 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
       generateBtn?.click();
     });
 
-    // Verify AI analysis result appears
+    // Kiểm tra kết quả phân tích AI đã hiển thị
     expect(host.textContent).toContain('Assisted Pull-up & Face Pull');
     expect(host.textContent).toContain('Goblet Box Squat');
     expect(host.textContent).not.toContain('Gemini 3 Flash');
 
-    // 3. Click "Áp dụng vào giáo án"
+    // 3. Bấm "Áp dụng vào giáo án"
     const applyBtn = Array.from(host.querySelectorAll('button')).find((b) =>
       b.textContent?.includes('Áp dụng vào giáo án')
     );
@@ -317,7 +324,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
       applyBtn?.click();
     });
 
-    // 4. Verify AI exercises are populated directly into the Coach's workspace
+    // 4. Kiểm tra các bài tập AI đã được điền thẳng vào không gian làm việc của HLV
     await openStep(2);
     expect(host.textContent).toContain('Assisted Pull-up & Face Pull');
   });
@@ -362,10 +369,11 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'mgr', name: 'Manager', identifier: 'mgr', role: 'MANAGER' }));
     await renderComponent();
 
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const saveBtn = () => saveButton() as HTMLButtonElement;
     expect(host.querySelector('#plan-coach-select')).not.toBeNull();
 
-    // Without a coach the manager cannot leave step 1
+    // Chưa chọn HLV thì quản lý không thể rời khỏi bước 1
     await openStep(3);
     expect(saveButton()).toBeUndefined();
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('chọn huấn luyện viên');
@@ -413,25 +421,6 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(card.textContent).toContain('Hiệp: 5');expect(card.textContent).toContain('8 reps');expect(card.textContent).toContain('90s');
   });
 
-  it('loads the stored height, weight and BMI into the AI assistant modal', async () => {
-    vi.mocked(profileApi.listHealthMetrics).mockResolvedValue([
-      { id: 1, metricName: 'height', metricValue: 172, unit: 'cm', recordedAt: '2026-11-08T08:00:00' },
-      { id: 2, metricName: 'weight', metricValue: 68, unit: 'kg', recordedAt: '2026-11-08T08:00:00' },
-    ]);
-
-    await renderComponent();
-    expect(host.querySelector('#coach-metric-weight')).toBeNull();
-
-    const aiBtn = Array.from(host.querySelectorAll('button')).find((b) =>
-      b.textContent?.includes('Gợi ý giáo án bằng AI')
-    );
-    await act(async () => {
-      aiBtn?.click();
-    });
-
-    expect(host.textContent).toContain('172 cm / 68 kg');
-    expect(host.textContent).toContain('23');
-  });
 
   it('allows editing the training plan goal in Step 1 (including after AI apply), sends edited goal to server, and never writes dead localStorage', async () => {
     await renderComponent();
@@ -440,7 +429,8 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(goalInput).not.toBeNull();
     expect(goalInput.value).toBe('Tăng cơ nạc');
 
-    // Apply AI suggestion -> updates goal input AND auto-advances to Step 2 on first scheduled day
+    // Áp dụng gợi ý AI -> cập nhật ô mục tiêu VÀ tự động chuyển sang Bước 2 tại ngày có lịch tập đầu tiên
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const clickBtn = async (label: string) => act(async () => {
       Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label))?.click();
     });
@@ -448,10 +438,10 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await clickBtn('Phân tích & Sinh giáo án bằng AI');
     await clickBtn('Áp dụng vào giáo án');
 
-    // Auto-advanced to Step 2 immediately
+    // Tự động chuyển ngay sang Bước 2
     expect(host.querySelector('.plan-step__button.is-active')?.textContent).toContain('Bài tập theo ngày');
 
-    // Go back to Step 1 to refine the AI-suggested goal
+    // Quay lại Bước 1 để tinh chỉnh mục tiêu do AI gợi ý
     await openStep(1);
     const updatedGoalInput = host.querySelector('#plan-goal-input') as HTMLInputElement;
     expect(updatedGoalInput.value).toBe('Tăng cơ nạc và phục hồi cơ lưng');
@@ -489,7 +479,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     await renderComponent();
 
-    // Manager selects coach 32 first
+    // Quản lý chọn HLV 32 trước
     await act(async () => { (host.querySelector('#plan-coach-select') as HTMLElement).click(); });
     const coachOpt = Array.from(host.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('HLV Elena Cruz')) as HTMLElement;
     await act(async () => { coachOpt.click(); });
@@ -497,12 +487,13 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     const startInput = host.querySelector('input[name="plan-start-date"]') as HTMLInputElement;
     const initialStart = startInput.value;
 
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const clickBtn = async (label: string) => act(async () => {
       Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label))?.click();
     });
     await clickBtn('Gợi ý giáo án bằng AI');
 
-    // Change AI cycle duration to 6 weeks in the modal
+    // Đổi chu kỳ AI sang 6 tuần trong hộp thoại
     const weeksInput = host.ownerDocument.querySelector('#ai-duration-weeks-input') as HTMLInputElement;
     expect(weeksInput).not.toBeNull();
     await act(async () => {
@@ -516,18 +507,18 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     );
     expect(host.ownerDocument.body.textContent).toContain('Assisted Pull-up & Face Pull');
 
-    // Switch member in AI modal to Member 2 -> Member 1's AI result must not leak under Member 2
+    // Chuyển học viên trong hộp thoại AI sang Hội viên 2 -> kết quả AI của Hội viên 1 không được rò sang Hội viên 2
     await act(async () => { (host.ownerDocument.querySelector('#ai-member-select') as HTMLElement).click(); });
     const member2Opt = Array.from(host.ownerDocument.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('Trần Thị Thu Thảo')) as HTMLElement;
     await act(async () => { member2Opt.click(); });
     expect(host.ownerDocument.body.textContent).not.toContain('Assisted Pull-up & Face Pull');
 
-    // Restore latest server recommendation for Member 2
+    // Khôi phục gợi ý mới nhất từ server cho Hội viên 2
     await clickBtn('Khôi phục gợi ý gần nhất');
     expect(restoreSpy).toHaveBeenCalledWith(2);
     expect(host.ownerDocument.body.textContent).toContain('Săn chắc cơ mông 8 tuần');
 
-    // Switch back to Member 1 -> Member 1's generated AI result is still preserved and updates endDate to +42 days on apply
+    // Chuyển lại về Hội viên 1 -> kết quả AI đã tạo của Hội viên 1 vẫn được giữ nguyên và cập nhật endDate thành +42 ngày khi áp dụng
     await act(async () => { (host.ownerDocument.querySelector('#ai-member-select') as HTMLElement).click(); });
     const member1Opt = Array.from(host.ownerDocument.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('Lê Hoàng Long')) as HTMLElement;
     await act(async () => { member1Opt.click(); });
@@ -562,6 +553,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await renderComponent();
     expect(host.textContent).toContain('gói Silver');
 
+    // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const clickBtn = async (label: string) => act(async () => {
       Array.from(host.ownerDocument.querySelectorAll('button')).find((b) => b.textContent?.includes(label))?.click();
     });
@@ -571,13 +563,13 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.ownerDocument.body.textContent).not.toContain('undefined');
 
     await clickBtn('Áp dụng vào giáo án');
-    // Auto-switched to Step 2 on Thứ 4 (day 3)
+    // Tự động chuyển sang Bước 2 tại Thứ 4 (ngày 3)
     expect(host.querySelector('.plan-day-tab.is-active')?.textContent).toContain('Thứ 4');
     const card = [...host.querySelectorAll('.exercise-item-card')].find((c) => c.textContent?.includes('Plank giữ core'))!;
     expect(card.textContent).not.toContain('reps');
     expect(card.textContent).toContain('5p');
 
-    // Editing duration of the timed exercise without sets/reps succeeds without forcing fake sets/reps
+    // Chỉnh sửa thời lượng của bài tập tính theo thời gian (không có sets/reps) thành công mà không ép điền sets/reps giả
     await act(async () => {
       host.querySelector<HTMLButtonElement>('button[aria-label="Sửa bài tập Plank giữ core"]')!.click();
     });
@@ -592,6 +584,41 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     });
     const updatedCard = [...host.querySelectorAll('.exercise-item-card')].find((c) => c.textContent?.includes('Plank giữ core'))!;
     expect(updatedCard.textContent).toContain('8p');
+  });
+
+  it('filters beneficiary members by code or accent-free name, auto-selects the first match, and handles no matches', async () => {
+    await renderComponent();
+    const searchInput = host.querySelector('#plan-member-search') as HTMLInputElement;
+    expect(searchInput).not.toBeNull();
+
+    const setSearch = async (value: string) => {
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(searchInput, value);
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        searchInput.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    };
+
+    // Tìm theo mã thẻ "014" -> tự chuyển sang Trần Thị Thu Thảo (id=2) và cập nhật mục tiêu theo hồ sơ.
+    await setSearch('014');
+    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Trần Thị Thu Thảo');
+    expect(host.textContent).toContain('1 học viên');
+    expect((host.querySelector('#plan-goal-input') as HTMLInputElement).value).toBe('Săn chắc cơ mông');
+
+    // Tìm theo tên không dấu "hoang long" -> quay lại Lê Hoàng Long (id=1).
+    await setSearch('hoang long');
+    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Lê Hoàng Long');
+
+    // Không có học viên khớp -> hiển thị trạng thái không tìm thấy mà không làm hỏng giao diện.
+    await setSearch('khong-ton-tai');
+    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Không tìm thấy học viên phù hợp');
+    expect(host.textContent).toContain('0 học viên');
+
+    // Tìm lại "014" và lưu giáo án -> gửi đúng memberId = 2.
+    await setSearch('014');
+    await openStep(3);
+    await act(async () => { saveButton()?.click(); });
+    expect(aiApi.saveTrainingPlan).toHaveBeenCalledWith(expect.objectContaining({ memberId: 2 }), true);
   });
 
 });

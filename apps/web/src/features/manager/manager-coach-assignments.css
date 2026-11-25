@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho màn hình quản lý phân công HLV của quản lý. */
 
 
 .coach-assignments-toolbar {
@@ -83,6 +84,11 @@
   font-size: 0.85rem;
   color: var(--portal-muted);
   margin-top: 0.25rem;
+}
+
+.coach-table .coach-student-type-pill {
+  display: inline-block;
+  white-space: nowrap;
 }
 
 .coach-badge-spec {

@@ -9,7 +9,7 @@ describe('Cinematic post-processing presets', () => {
     const high = getPostFxConfig('high', 'dark');
     const medium = getPostFxConfig('medium', 'dark');
     const low = getPostFxConfig('low', 'dark');
-    // MSAA is off on every tier: it dominated frame time; FXAA + sharpen handle edges.
+    // MSAA tắt ở mọi mức chất lượng vì chiếm phần lớn thời gian khung hình; khử răng cưa và cạnh được xử lý bằng FXAA + làm nét.
     expect([high.msaa, medium.msaa, low.msaa]).toEqual([0, 0, 0]);
     expect(high.ao.taps).toBeGreaterThan(medium.ao.taps);
     expect(high.pixelBudget).toBeGreaterThan(medium.pixelBudget);
@@ -51,7 +51,7 @@ describe('Cinematic post-processing presets', () => {
 describe('Soft shadow chunk patch', () => {
   it('replaces the 5-tap PCF block with a wider, edge-faded Vogel loop', () => {
     const chunks = { shadowmap_pars_fragment: THREE.ShaderChunk.shadowmap_pars_fragment };
-    // The canvas module may already have patched the live chunk; test on a pristine-looking copy.
+    // Module canvas có thể đã vá chunk đang chạy; kiểm thử trên một bản sao giữ nguyên trạng thái ban đầu.
     if (!chunks.shadowmap_pars_fragment.includes('vogelDiskSample( 0, 5, phi )')) {
       expect(chunks.shadowmap_pars_fragment).toContain(`vogelDiskSample( i, ${SOFT_SHADOW_TAPS}, phi )`);
       return;

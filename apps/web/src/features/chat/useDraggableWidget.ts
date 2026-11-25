@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
 
+/** Vị trí của widget trong viewport (tọa độ x, y). */
 export interface WidgetPosition { x: number; y: number }
 
 const STORAGE_KEY = 'sol-chat-widget-position';
@@ -9,6 +10,7 @@ const DRAG_THRESHOLD = 6;
 const PANEL_HANDLE = '.chat-widget__header, .direct-chat__thread-header, .direct-chat__inbox-heading';
 const INTERACTIVE = 'button, a, input, textarea, select, [role="button"], [contenteditable="true"]';
 
+/** Đọc vị trí đã lưu từ localStorage; dữ liệu sai hoặc không có thì null. */
 function readStored(): WidgetPosition | null {
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
@@ -20,16 +22,22 @@ function readStored(): WidgetPosition | null {
   }
 }
 
+/** Lưu vị trí widget vào localStorage (bỏ qua lỗi storage). */
 function store(pos: WidgetPosition) {
   try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(pos)); } catch { /* bỏ qua khi bị chặn storage */ }
 }
 
+/** Giữ vị trí trong viewport, cách mép tối thiểu EDGE. */
 function clampToViewport(pos: WidgetPosition, width: number, height: number): WidgetPosition {
   const maxX = Math.max(EDGE, window.innerWidth - width - EDGE);
   const maxY = Math.max(EDGE, window.innerHeight - height - EDGE);
   return { x: Math.min(Math.max(pos.x, EDGE), maxX), y: Math.min(Math.max(pos.y, EDGE), maxY) };
 }
 
+/**
+ * Trạng thái một thao tác kéo: con trỏ, điểm bắt đầu, vị trí gốc, kích thước, đã di chuyển chưa và phần tử
+ * đích.
+ */
 interface DragState {
   pointerId: number;
   startX: number;
@@ -57,6 +65,7 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
   const frozenAnchor = useRef<{ right: boolean; bottom: boolean } | null>(null);
   const { open, expanded, onMove } = deps;
 
+  // Đặt vị trí panel theo hướng còn trống quanh nút chat và giữ trong viewport.
   const placePanel = useCallback(() => {
     const host = widget.current;
     const box = panel.current;
@@ -70,6 +79,7 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
     };
     const left = anchor.right ? rect.right - width : rect.left;
     const top = anchor.bottom ? rect.bottom - height : rect.top;
+    // Vị trí panel sau khi giới hạn trong viewport.
     const next = {
       left: Math.round(Math.min(Math.max(left, EDGE), Math.max(EDGE, window.innerWidth - width - EDGE))),
       top: Math.round(Math.min(Math.max(top, EDGE), Math.max(EDGE, window.innerHeight - height - EDGE))),
@@ -82,6 +92,7 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
   // Panel đổi kích thước (mở rộng có transition) hoặc cửa sổ đổi cỡ: đặt lại cho vừa màn hình.
   useEffect(() => {
     const box = panel.current;
+    // Cửa sổ đổi cỡ thì giữ nút trong viewport và đặt lại panel.
     const onResize = () => {
       const host = widget.current;
       if (host) setPos(prev => (prev ? clampToViewport(prev, host.offsetWidth, host.offsetHeight) : prev));
@@ -95,6 +106,7 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
 
   useEffect(() => { onMove?.(); }, [pos, panelPos, onMove]);
 
+  // Bắt đầu một thao tác kéo (chỉ chuột trái / con trỏ chính).
   const begin = useCallback((event: ReactPointerEvent<Element>) => {
     if (event.button !== 0 || !event.isPrimary) return;
     const host = widget.current;
@@ -113,6 +125,7 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
   }, []);
 
   useEffect(() => {
+    // Khi di chuyển: vượt ngưỡng kéo thì chốt hướng mở panel, bắt con trỏ và dời widget.
     const onPointerMove = (event: PointerEvent) => {
       const state = drag.current;
       if (!state || event.pointerId !== state.pointerId) return;
@@ -135,6 +148,7 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
       event.preventDefault();
       setPos(clampToViewport({ x: state.origin.x + dx, y: state.origin.y + dy }, state.width, state.height));
     };
+    // Khi thả: chặn đúng một click sau khi kéo, lưu vị trí.
     const finish = (event: PointerEvent) => {
       const state = drag.current;
       if (!state || event.pointerId !== state.pointerId) return;
@@ -157,6 +171,7 @@ export function useDraggableWidget(deps: { open: boolean; expanded: boolean; onM
     };
   }, []);
 
+  // Kéo panel qua thanh tiêu đề (không bắt đầu từ nút, link hay ô nhập).
   const onPanelPointerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const target = event.target as Element;
     if (!target.closest(PANEL_HANDLE) || target.closest(INTERACTIVE)) return;

@@ -31,11 +31,13 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** Exercises the merged SCRUM-71..75 matchers with the real security filter chain. */
-@WebMvcTest({ClassController.class, EnrollmentController.class,
-        CenterCheckinController.class, MembershipSubscriptionController.class})
+/** Kiểm thử các matcher đã gộp của SCRUM-71..75 với chuỗi filter bảo mật thật. */
+@WebMvcTest(controllers = {ClassController.class, EnrollmentController.class,
+        CenterCheckinController.class, MembershipSubscriptionController.class},
+        properties = "app.legacy.classes-enabled=true")
 @Import({SecurityConfig.class, JwtAuthenticationFilter.class, JsonAuthenticationEntryPoint.class,
         JsonAccessDeniedHandler.class})
+/** Bộ kiểm thử cho OperationsSecurityRegression (operations security regression). */
 class OperationsSecurityRegressionTest {
     @Autowired MockMvc mvc;
     @MockitoBean ClassService classes;
@@ -46,11 +48,13 @@ class OperationsSecurityRegressionTest {
     @MockitoBean UserRepository users;
     @MockitoBean MessageService messages;
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {
         return new UsernamePasswordAuthenticationToken(new AuthenticatedPrincipal(10L, "review-user", role),
                 null, List.of(new SimpleGrantedAuthority("ROLE_" + role)));
     }
 
+    /** Kiểm thử: người chưa đăng nhập không đọc được lịch học hay lịch sử check-in. */
     @Test
     void anonymousCannotReadSchedulesOrCheckinHistory() throws Exception {
         mvc.perform(get("/api/v1/classes/sessions")).andExpect(status().isUnauthorized());
@@ -58,6 +62,7 @@ class OperationsSecurityRegressionTest {
         verifyNoInteractions(classes, checkins);
     }
 
+    /** Kiểm thử: hội viên không được quét, check-out hay tạo lớp. */
     @Test
     void memberCannotScanCheckoutOrCreateClasses() throws Exception {
         mvc.perform(post("/api/v1/check-in/scan").with(authentication(actor("MEMBER")))
@@ -71,6 +76,7 @@ class OperationsSecurityRegressionTest {
         verifyNoInteractions(checkins, classes);
     }
 
+    /** Kiểm thử: nhân viên và HLV không dùng được các chức năng dành riêng cho hội viên (đặt chỗ, subscription). */
     @Test
     void staffAndCoachCannotUseMemberOnlyBookingsOrSubscriptions() throws Exception {
         for (String role : List.of("RECEPTIONIST", "COACH", "CENTER_MANAGER")) {
@@ -87,6 +93,7 @@ class OperationsSecurityRegressionTest {
         verifyNoInteractions(enrollments, subscriptions);
     }
 
+    /** Kiểm thử: lễ tân và quản lý vào được endpoint POS và gia hạn, hội viên thì không. */
     @Test
     void receptionAndManagerReachPosRenewalEndpointsButMemberCannot() throws Exception {
         for (String path : List.of("/api/v1/memberships/subscriptions", "/api/v1/subscriptions")) {
@@ -103,11 +110,12 @@ class OperationsSecurityRegressionTest {
         }
     }
 
+    /** Kiểm thử: các matcher đã gộp vẫn cho hội viên đặt chỗ và lễ tân quét QR. */
     @Test
     void mergedMatchersAllowMemberBookingAndReceptionistScanning() throws Exception {
         when(checkins.scan(any(), any())).thenReturn(new CheckinDto(1L, 10L, "Member",
                 LocalDateTime.of(2026, 10, 17, 10, 0), null, "qr", null, "GRANTED"));
-        // Per-session enrollment is retired: a member still passes authorization and gets a 400 from the policy.
+        // Ghi danh từng buổi đã ngừng hoạt động: hội viên vẫn qua bước phân quyền và nhận lỗi 400 từ chính sách nghiệp vụ.
         mvc.perform(post("/api/v1/classes/sessions/1/enroll").with(authentication(actor("MEMBER"))))
                 .andExpect(status().isBadRequest());
         mvc.perform(get("/api/v1/classes/enrollments/my").with(authentication(actor("MEMBER"))))

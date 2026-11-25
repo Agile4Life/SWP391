@@ -1,23 +1,17 @@
 package com.swp391.scms.ai.service;
 
 import com.swp391.scms.attendance.service.CenterCheckinService;
-import com.swp391.scms.attendance.service.CourseAttendanceService;
-import com.swp391.scms.courts.service.CourtPricing;
 import com.swp391.scms.facilities.PackageBenefits;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.membership.service.DynamicQrService;
+import com.swp391.scms.membership.service.EntitlementRevocationService;
 import com.swp391.scms.membership.service.MemberTrialService;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
-import com.swp391.scms.scheduling.service.EnrollmentService;
-import com.swp391.scms.shop.ShopProperties;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,9 +21,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Centre rules Sol AI answers from, read once from {@code ai/sol-knowledge.md}. Numbers in the file are
- * {@code {{placeholders}}} filled from the code and configuration that enforce them, so the answer cannot
- * drift from what the system actually does. Only the sections a question is about go into the prompt.
+ * Bộ quy định của trung tâm mà Sol AI dựa vào để trả lời, đọc một lần từ {@code ai/sol-knowledge.md}. Các con số
+ * trong file dùng {@code {{placeholders}}} được điền từ code và cấu hình thực thi tương ứng, nhờ đó câu trả lời
+ * không thể lệch khỏi những gì hệ thống thực sự áp dụng. Chỉ các mục liên quan tới câu hỏi mới được đưa vào prompt.
  */
 @Component
 public class AiKnowledgeBase {
@@ -38,30 +32,32 @@ public class AiKnowledgeBase {
     private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{([a-zA-Z0-9.]+)}}");
     private static final String KEYWORDS_PREFIX = "Từ khóa:";
 
-    /** One "## " section; {@code always} sections are sent with every question. */
+    /**
+     * Một mục "## " trong file: tiêu đề, từ khóa, có luôn gửi kèm không và nội dung.
+     *
+     * Một mục "## "; các mục {@code always} được gửi kèm mọi câu hỏi.
+     */
     record Section(String title, List<String> keywords, boolean always, String body) {}
 
     private final List<Section> sections;
 
-    /** Defaults for unit tests and for running without the Spring context. */
+    /** Đọc file, bỏ ghi chú biên tập, điền giá trị, tách thành các mục và thêm mục quyền lợi theo hạng gói. */
     public AiKnowledgeBase() {
-        this(new ShopProperties(), 15, 120);
-    }
-
-    @Autowired
-    public AiKnowledgeBase(@Autowired(required = false) ShopProperties shop,
-                           @Value("${app.vnpay.timeout-minutes:15}") int vnpayTimeoutMinutes,
-                           @Value("${app.courts.cash-release-lead-minutes:120}") int courtCashReleaseLeadMinutes) {
-        Map<String, String> values = values(shop != null ? shop : new ShopProperties(),
-                vnpayTimeoutMinutes, courtCashReleaseLeadMinutes);
-        // Editor notes are dropped first: they explain the {{placeholder}} syntax and must not be filled.
+        Map<String, String> values = values();
+        // Ghi chú cho người soạn bị bỏ trước: chúng giải thích cú pháp {{placeholder}} và không được điền.
         String text = read().replaceAll("(?s)<!--.*?-->", "");
         List<Section> parsed = new ArrayList<>(parse(fill(text, values)));
         parsed.add(tierBenefits());
         this.sections = List.copyOf(parsed);
     }
 
-    /** The sections for this question: those whose keywords it mentions plus the always-on ones, or all when none match. */
+    /**
+     * Các mục cho câu hỏi: mục luôn gửi kèm cộng các mục có từ khóa xuất hiện trong câu hỏi; không mục nào khớp
+     * thì gửi tất cả.
+     *
+     * Các mục cho câu hỏi này: những mục có từ khóa mà câu hỏi nhắc tới cộng các mục luôn bật, hoặc tất cả
+     * khi không mục nào khớp.
+     */
     public String sectionsFor(String query) {
         String normalized = AiRagContextService.normalize(query);
         List<Section> matched = sections.stream()
@@ -77,41 +73,26 @@ public class AiKnowledgeBase {
         return sb.toString();
     }
 
+    /** Danh sách các mục (dùng cho test). */
     List<Section> sections() {
         return sections;
     }
 
-    private static Map<String, String> values(ShopProperties shop, int vnpayTimeoutMinutes, int courtCashReleaseLeadMinutes) {
+    /** Giá trị điền vào các chỗ giữ: số ngày dùng thử, thời gian sống QR, giờ tự check-out, quy định bảo lưu... */
+    private static Map<String, String> values() {
         Map<String, String> v = new HashMap<>();
         v.put("trial.days", String.valueOf(MemberTrialService.TRIAL_DAYS));
         v.put("checkin.qrTtlSeconds", String.valueOf(DynamicQrService.DEFAULT_TTL_SECONDS));
         v.put("checkin.autoCheckoutHours", String.valueOf(CenterCheckinService.ANTI_PASSBACK_TIMEOUT_HOURS));
-        v.put("course.onlineHoldMinutes", String.valueOf(EnrollmentService.ONLINE_HOLD_MINUTES));
-        v.put("course.blockDays", String.valueOf(CourseAttendanceService.BLOCK_DAYS));
-        v.put("court.standardPrice", money(CourtPricing.STANDARD_PRICE));
-        v.put("court.eveningPrice", money(CourtPricing.EVENING_PRICE));
-        v.put("court.eveningFrom", CourtPricing.EVENING_FROM.toString());
-        v.put("court.vnpayTimeoutMinutes", String.valueOf(vnpayTimeoutMinutes));
-        v.put("court.cashReleaseLeadMinutes", String.valueOf(courtCashReleaseLeadMinutes));
         v.put("hold.noticeHours", String.valueOf(MembershipSubscriptionService.HOLD_NOTICE_HOURS));
         v.put("hold.minDays", String.valueOf(MembershipSubscriptionService.MIN_HOLD_DAYS));
-        v.put("hold.courseRefundDays", String.valueOf(EnrollmentService.HOLD_REFUND_NOTICE_DAYS));
-        v.put("hold.ptRefundDays", String.valueOf(com.swp391.scms.membership.service.EntitlementRevocationService.PT_HOLD_REFUND_DAYS));
-        v.put("hold.courtRefundHours", String.valueOf(com.swp391.scms.membership.service.EntitlementRevocationService.COURT_HOLD_REFUND_HOURS));
+        v.put("hold.ptRefundDays", String.valueOf(EntitlementRevocationService.PT_HOLD_REFUND_DAYS));
         v.put("hold.maxDocuments", String.valueOf(MembershipSubscriptionService.MAX_HOLD_DOCUMENTS));
         v.put("hold.maxDocumentMb", String.valueOf(MembershipSubscriptionService.MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)));
-        v.put("shop.paymentWindowMinutes", String.valueOf(shop.paymentWindowMinutes()));
-        v.put("shop.counterHoldHours", String.valueOf(shop.counterHoldHours()));
-        v.put("shop.shippingFee", money(shop.shippingFee()));
-        v.put("shop.freeShippingThreshold", money(shop.freeShippingThreshold()));
-        v.put("shop.pickupAddress", shop.getPickupAddress());
         return v;
     }
 
-    private static String money(BigDecimal amount) {
-        return amount == null ? "?" : String.format(java.util.Locale.ROOT, "%,d", amount.longValue()).replace(',', '.');
-    }
-
+    /** Đọc nội dung file kiến thức trong resources; thiếu file thì dừng khởi động. */
     private static String read() {
         try (InputStream in = new ClassPathResource(RESOURCE).getInputStream()) {
             return new String(in.readAllBytes(), StandardCharsets.UTF_8);
@@ -120,7 +101,12 @@ public class AiKnowledgeBase {
         }
     }
 
-    /** Fails at startup on an unknown placeholder, so a typo never reaches a member as "{{...}}". */
+    /**
+     * Điền các chỗ giữ {{tên}}; gặp tên lạ thì dừng khởi động để lỗi gõ không bao giờ tới tay hội viên.
+     *
+     * Lỗi ngay lúc khởi động khi gặp placeholder lạ, để lỗi gõ không bao giờ đến hội viên dưới dạng
+     * "{{...}}".
+     */
     static String fill(String text, Map<String, String> values) {
         Matcher m = PLACEHOLDER.matcher(text);
         StringBuilder sb = new StringBuilder();
@@ -135,12 +121,13 @@ public class AiKnowledgeBase {
         return sb.toString();
     }
 
+    /** Tách văn bản thành các mục theo tiêu đề "## ", đọc dòng "Từ khóa:" (dấu * nghĩa là luôn gửi kèm). */
     static List<Section> parse(String text) {
         List<Section> result = new ArrayList<>();
         for (String chunk : text.split("(?m)^## ")) {
             int newline = chunk.indexOf('\n');
             if (newline < 0 || chunk.startsWith("#")) {
-                continue; // the file title, before the first section
+                continue; // tiêu đề file, trước mục đầu tiên
             }
             String title = chunk.substring(0, newline).trim();
             List<String> keywords = new ArrayList<>();
@@ -165,40 +152,36 @@ public class AiKnowledgeBase {
         return result;
     }
 
-    /** Built from {@link PackageBenefits} so the AI quotes exactly what booking, holds and discounts enforce. */
+    /**
+     * Mục quyền lợi theo hạng gói (Silver/Gold/Platinum và gói trải nghiệm) dựng từ PackageBenefits, để AI nói
+     * đúng điều mà hệ thống áp dụng.
+     *
+     * Được dựng từ {@link PackageBenefits} để AI trích dẫn đúng những gì việc đặt chỗ, tạm hoãn và giảm giá
+     * thực thi.
+     */
     private static Section tierBenefits() {
         StringBuilder sb = new StringBuilder();
         for (String tier : List.of("SILVER", "GOLD", "PLATINUM")) {
             MembershipPackage month = pkg(tier, 30);
             MembershipPackage longTerm = pkg(tier, 90);
             sb.append("- ").append(tier.charAt(0)).append(tier.substring(1).toLowerCase(java.util.Locale.ROOT)).append(": ")
-                    .append("khóa học nhóm miễn phí ").append(PackageBenefits.courseCredits(tier, 30))
-                    .append(" khóa cho mỗi 30 ngày thời hạn gói (gói 3 tháng ").append(PackageBenefits.courseCredits(tier, 90))
-                    .append(" khóa, dùng trong cả thời hạn gói); ")
                     .append("PT 1:1 miễn phí ").append(PackageBenefits.ptSessionsPerCycle(month)).append(" buổi mỗi 30 ngày; ")
-                    .append("đặt sân miễn phí ").append(PackageBenefits.courtBookingsPerCycle(month)).append(" lượt mỗi 30 ngày, ")
-                    .append("đặt trước tối đa ").append(PackageBenefits.courtAdvanceDays(month)).append(" ngày, ")
-                    .append("tối đa ").append(PackageBenefits.courtMaxUpcoming(month)).append(" lượt sân sắp tới và ")
-                    .append(PackageBenefits.courtMaxUnpaidHolds(month)).append(" lượt chưa thanh toán; ")
                     .append("bảo lưu: ").append(holdText(PackageBenefits.holdMaxDays(longTerm)))
                     .append(" (gói 1 tháng cũ: ").append(holdText(PackageBenefits.holdMaxDays(month))).append("); ")
-                    .append("giảm ").append(PackageBenefits.discountPercent(month)).append("% cho buổi PT thêm, khóa học có phí và sản phẩm");
-            if (PackageBenefits.hasVipRoomAccess(month)) {
-                sb.append("; vào phòng VIP và đo chỉ số chuyên sâu (Body Fat, Muscle Mass)");
-            }
+                    .append("giảm ").append(PackageBenefits.discountPercent(month)).append("% cho buổi PT thêm");
             sb.append(".\n");
         }
         MembershipPackage trial = pkg(null, PackageBenefits.TRIAL_MAX_DAYS);
         trial.setName("Trải nghiệm");
         sb.append("- Gói trải nghiệm: dịch vụ như hạng Gold, PT 1:1 miễn phí ").append(PackageBenefits.ptSessionsPerCycle(trial))
-                .append(" buổi, không có lượt sân miễn phí, đặt sân trước tối đa ").append(PackageBenefits.courtAdvanceDays(trial))
-                .append(" ngày, không bảo lưu được.");
+                .append(" buổi, không bảo lưu được.");
         return new Section("Quyền lợi theo hạng gói",
                 List.of("quyen loi", "hang", "silver", "gold", "platinum", "vip", "giam gia", "uu dai", "pt", "khac nhau",
-                        "so sanh", "nen chon", "goi nao", "bao luu", "san"),
+                        "so sanh", "nen chon", "goi nao", "bao luu"),
                 false, sb.toString());
     }
 
+    /** Tạo gói tạm theo hạng và số ngày để hỏi PackageBenefits. */
     private static MembershipPackage pkg(String tier, int days) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setName(tier != null ? tier : "");
@@ -207,6 +190,7 @@ public class AiKnowledgeBase {
         return pkg;
     }
 
+    /** Diễn đạt số ngày bảo lưu tối đa ("tối đa N ngày" hoặc "không bảo lưu được"). */
     private static String holdText(int days) {
         return days > 0 ? "tối đa " + days + " ngày" : "không bảo lưu được";
     }

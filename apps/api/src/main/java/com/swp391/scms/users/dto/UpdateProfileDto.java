@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
+/**
+ * Dữ liệu cập nhật hồ sơ: họ tên, email, SĐT, ngày sinh, giới tính, ảnh, địa chỉ, thông tin sức khỏe và liên hệ
+ * khẩn cấp của hội viên, cùng chuyên môn/giới thiệu/chứng chỉ của HLV.
+ */
 public record UpdateProfileDto(
     @NotBlank(message = "{validation.users.full_name.not_blank}")
     @Size(max = 100, message = "{validation.users.full_name.size}")

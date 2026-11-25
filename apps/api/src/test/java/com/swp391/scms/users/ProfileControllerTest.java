@@ -39,6 +39,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ProfileController (profile controller). */
 @ExtendWith(MockitoExtension.class)
 class ProfileControllerTest {
 
@@ -62,11 +63,13 @@ class ProfileControllerTest {
     private MessageService messageService;
 
     private final HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+        /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
         @Override
         public boolean supportsParameter(MethodParameter parameter) {
             return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
         }
 
+        /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
         @Override
         public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                       NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
@@ -81,6 +84,7 @@ class ProfileControllerTest {
         }
     };
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc và phụ thuộc cho controller hồ sơ. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
@@ -104,6 +108,7 @@ class ProfileControllerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample profile). */
     private ProfileDto sampleProfile() {
         return new ProfileDto(
                 101L,
@@ -123,6 +128,7 @@ class ProfileControllerTest {
         );
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample user). */
     private User sampleUser() {
         User user = new User();
         user.setId(101L);
@@ -134,6 +140,7 @@ class ProfileControllerTest {
         return user;
     }
 
+    /** Kiểm thử: lấy hồ sơ của tôi thành công. */
     @Test
     @DisplayName("GET /api/v1/profile returns current authenticated user profile including Coach & Receptionist details")
     void getMyProfileSuccess() throws Exception {
@@ -154,6 +161,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.data.certification").value("CPT"));
     }
 
+    /** Kiểm thử: cập nhật hồ sơ của tôi thành công. */
     @Test
     @DisplayName("PUT /api/v1/profile updates profile and returns 200")
     void updateMyProfileSuccess() throws Exception {
@@ -167,6 +175,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    /** Kiểm thử: từ chối giới tính không hợp lệ thay vì âm thầm xóa. */
     @Test
     void rejectsInvalidGenderInsteadOfSilentlyClearingIt() throws Exception {
         User user = sampleUser();
@@ -181,6 +190,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.message").value("Invalid gender. Allowed values: male, female, other"));
     }
 
+    /** Kiểm thử: từ chối mức thể lực không hợp lệ thay vì báo lưu thành công. */
     @Test
     void rejectsInvalidFitnessLevelInsteadOfReportingSuccessfulSave() throws Exception {
         var member = new com.swp391.scms.users.entity.Member();
@@ -196,6 +206,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.message").value("Fitness level must be beginner, intermediate or advanced"));
     }
 
+    /** Kiểm thử: kiểm tra ràng buộc khi tải ảnh đại diện. */
     @Test
     @DisplayName("POST /api/v1/profile/avatar accepts valid PNG base64 and rejects unsupported MIME or >2MB payload")
     void validateAvatarUploadConstraints() throws Exception {
@@ -246,6 +257,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.data.avatarUrl").value(validPngDataUrl));
     }
 
+    /** Kiểm thử: cập nhật hồ sơ giữ nguyên ảnh đại diện tùy chỉnh khi gửi null. */
     @Test
     @DisplayName("PUT /api/v1/profile preserves existing custom avatar when request avatarUrl is null")
     void updateMyProfilePreservesExistingCustomAvatarWhenNull() throws Exception {
@@ -260,6 +272,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.data.avatarUrl").value("https://cdn.example.com/custom-avatar.png"));
     }
 
+    /** Kiểm thử: cập nhật hồ sơ HLV của tài khoản đã xóa bị từ chối. */
     @Test
     @DisplayName("PUT /api/v1/profile/coach returns 404 when user is deleted")
     void updateCoachProfileDeletedUser() throws Exception {
@@ -280,6 +293,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.message").value("User not found with identifier: 101"));
     }
 
+    /** Kiểm thử: cập nhật hồ sơ HLV sai vai trò trả thông báo tiếng Anh. */
     @Test
     @DisplayName("PUT /api/v1/profile/coach returns 403 when wrong role (Test with English Accept-Language)")
     void updateCoachProfileWrongRoleEnglish() throws Exception {
@@ -299,6 +313,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.message").value("Only Coach can update professional profile"));
     }
 
+    /** Kiểm thử: cập nhật hồ sơ HLV tạo mới khi chưa có. */
     @Test
     @DisplayName("PUT /api/v1/profile/coach creates new coach profile when missing")
     void updateCoachProfileCreateNew() throws Exception {
@@ -321,6 +336,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    /** Kiểm thử: cập nhật hồ sơ HLV đã có. */
     @Test
     @DisplayName("PUT /api/v1/profile/coach updates existing coach profile")
     void updateCoachProfileUpdateExisting() throws Exception {
@@ -346,6 +362,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.success").value(true));
     }
 
+    /** Kiểm thử: cập nhật hồ sơ lễ tân thành công. */
     @Test
     @DisplayName("PUT /api/v1/profile/receptionist updates existing receptionist profile")
     void updateReceptionistProfileSuccess() throws Exception {
@@ -368,6 +385,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.message").value("Cập nhật hồ sơ Lễ tân thành công"));
     }
 
+    /** Kiểm thử: cập nhật hồ sơ lễ tân sai vai trò bị từ chối. */
     @Test
     @DisplayName("PUT /api/v1/profile/receptionist returns 403 when wrong role")
     void updateReceptionistProfileWrongRole() throws Exception {
@@ -381,6 +399,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.code").value("FORBIDDEN"));
     }
 
+    /** Kiểm thử: ca làm việc của lễ tân quá dài bị từ chối. */
     @Test
     @DisplayName("PUT /api/v1/profile/receptionist returns 400 when shift exceeds max length")
     void updateReceptionistProfileShiftTooLong() throws Exception {
@@ -394,6 +413,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
     }
 
+    /** Kiểm thử: gửi KYC bằng CCCD thành công. */
     @Test
     @DisplayName("POST /api/v1/profile/kyc successfully verifies CCCD and synchronizes full name")
     void submitKycCccdSuccess() throws Exception {
@@ -414,11 +434,12 @@ class ProfileControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.fullName").value("NGUYEN VAN A"))
-                // A self-declared document waits for the desk: it does not verify the member.
+                // Giấy tờ hội viên tự khai báo phải chờ lễ tân duyệt: chưa xác minh ngay cho hội viên.
                 .andExpect(jsonPath("$.data.identityVerified").value(false))
                 .andExpect(jsonPath("$.data.kycStatus").value("PENDING"));
     }
 
+    /** Kiểm thử: gửi KYC bằng hộ chiếu bị từ chối với thông báo tiếng Việt. */
     @Test
     @DisplayName("POST /api/v1/profile/kyc rejects Vietnamese citizen using passport")
     void submitKycPassportVietnameseRejected() throws Exception {
@@ -440,6 +461,7 @@ class ProfileControllerTest {
                 .andExpect(jsonPath("$.code").value("TRIAL_PASSPORT_FOREIGN_ONLY"));
     }
 
+    /** Kiểm thử: đổi mật khẩu thành công. */
     @Test
     @DisplayName("POST /api/v1/profile/password updates password and sends notification")
     void changePasswordSuccess() throws Exception {

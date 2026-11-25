@@ -10,11 +10,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/** Truy vấn báo cáo trên dữ liệu điểm danh lớp nhóm (tính năng cũ). */
 @Repository
 public interface SessionAttendanceReportRepository extends JpaRepository<SessionAttendance, Long> {
 
+    /** Tìm các bản ghi có sessionGymClassId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<SessionAttendance> findBySessionGymClassId(Long classId);
 
+    /** Một dòng kết quả mức sử dụng lớp do câu truy vấn trả về (Spring Data tự ánh xạ theo tên getter). */
     interface ClassUtilizationRow {
         Long getClassId();
         String getClassName();
@@ -52,6 +55,7 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
             WHERE LOWER(c.status) <> 'archived'
             ORDER BY c.id
             """)
+    /** Mức sử dụng mọi lớp trong khoảng ngày: sức chứa, số hội viên đã đăng ký và số lượt có mặt. */
     List<ClassUtilizationRow> classUtilizationAll(@Param("start") LocalDate start,
                                                   @Param("end") LocalDate end,
                                                   @Param("startTs") LocalDateTime startTs,
@@ -84,6 +88,7 @@ public interface SessionAttendanceReportRepository extends JpaRepository<Session
               AND d.id = :disciplineId
             ORDER BY c.id
             """)
+    /** Mức sử dụng các lớp của một bộ môn trong khoảng ngày. */
     List<ClassUtilizationRow> classUtilizationByDiscipline(@Param("start") LocalDate start,
                                                            @Param("end") LocalDate end,
                                                            @Param("startTs") LocalDateTime startTs,

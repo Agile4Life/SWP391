@@ -1,4 +1,4 @@
-// Source-owned UI labels only. Never apply this catalog to user or API content.
+// Chỉ chứa nhãn giao diện thuộc mã nguồn. Không áp dụng danh mục này cho nội dung người dùng hoặc dữ liệu API.
 export const englishLabels: Readonly<Record<string, string>> = {
   "Không thể bỏ ghi nhận có mặt. Vui lòng thử lại.": "Unable to remove the attendance mark. Please try again.",
   "Không thể ghi nhận có mặt. Vui lòng thử lại.": "Unable to mark attendance. Please try again.",
@@ -112,7 +112,6 @@ export const englishLabels: Readonly<Record<string, string>> = {
   "Hiệu lực từ": "Valid from",
   "đến": "to",
   "Xem thẻ QR Check-in": "View check-in QR card",
-  "Đặt lịch lớp học": "Book a class",
   "Quản lý gói": "Manage membership",
   "Đang chờ duyệt bảo lưu": "Pause approval pending",
   "Bảo lưu gói tập": "Pause membership",
@@ -120,7 +119,6 @@ export const englishLabels: Readonly<Record<string, string>> = {
   "ĐANG BẢO LƯU": "PAUSED",
   "Thời hạn gói:": "Membership period:",
   "Lý do bảo lưu: \"": "Pause reason: \"",
-  "Gói tập đang được bảo lưu. Khóa học, lịch PT và đặt sân trong giai đoạn bảo lưu đã bị hủy.": "Your membership is on hold. Courses, PT sessions and courts within the hold period have been cancelled.",
   "Mở lại để dùng tiếp số ngày còn lại, không cần thanh toán lại.": "Resume to use your remaining days; no new payment needed.",
   "Đang mở lại…": "Resuming…",
   "Mở lại gói tập miễn phí": "Resume membership for free",
@@ -145,7 +143,6 @@ export const englishLabels: Readonly<Record<string, string>> = {
   "Gói 1 tháng": "1-month plans",
   "Đồng hành dài hạn": "Long-term plans",
   "Danh mục gói tập": "Membership catalog",
-  "Không giới hạn lượt đặt lớp": "Unlimited class bookings",
   "Chờ đồng bộ trạng thái mới nhất.": "Waiting for the latest status.",
   "Yêu cầu bảo lưu đang chờ xử lý. Gói hiện tại vẫn có hiệu lực.": "Your pause request is pending. Your current membership remains valid.",
   "Đang kiểm tra gói và thanh toán.": "Checking membership and payments.",

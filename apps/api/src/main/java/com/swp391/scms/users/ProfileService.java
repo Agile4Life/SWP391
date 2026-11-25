@@ -20,6 +20,10 @@ import javax.imageio.ImageIO;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Nghiệp vụ hồ sơ cá nhân: đổi mật khẩu, xem/sửa hồ sơ, kiểm tra ảnh đại diện, hồ sơ HLV/lễ tân và nộp giấy tờ
+ * tùy thân (KYC) của hội viên.
+ */
 @Service
 public class ProfileService {
 
@@ -44,11 +48,13 @@ public class ProfileService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.security.JwtService jwtService;
 
+    /** Constructor cho test với các repository bắt buộc. */
     public ProfileService(UserRepository userRepository, MemberRepository memberRepository,
                           CoachRepository coachRepository, ReceptionistRepository receptionistRepository) {
         this(userRepository, memberRepository, coachRepository, receptionistRepository, null, null, null);
     }
 
+    /** Constructor Spring dùng; bộ mã hóa mật khẩu, thông báo và MessageService là tùy chọn. */
     @org.springframework.beans.factory.annotation.Autowired
     public ProfileService(UserRepository userRepository, MemberRepository memberRepository,
                           CoachRepository coachRepository, ReceptionistRepository receptionistRepository,
@@ -64,10 +70,15 @@ public class ProfileService {
         this.messageService = messageService;
     }
 
+    /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /**
+     * Đổi mật khẩu: mật khẩu hiện tại phải đúng và mật khẩu mới phải khác; lưu bản băm mới (tự vô hiệu mọi
+     * token cũ), gửi thông báo, rồi cấp JWT mới để phiên hiện tại vẫn dùng được.
+     */
     @Transactional
     @Audited(action = "PASSWORD_CHANGE", entity = "users")
     public com.swp391.scms.auth.dto.AuthTokenResponse changePassword(Long userId, String currentPassword, String newPassword) {
@@ -92,7 +103,7 @@ public class ProfileService {
                     user.getId()
             );
         }
-        // The change revokes every older token; this session keeps working with a fresh one.
+        // Thay đổi này thu hồi mọi token cũ; phiên hiện tại tiếp tục hoạt động với token mới.
         if (jwtService == null) return null;
         String username = user.getUsername() == null ? user.getEmail() : user.getUsername();
         String role = user.getRole() != null ? user.getRole().getCode() : null;
@@ -100,6 +111,7 @@ public class ProfileService {
                 username, role, user.getFullName());
     }
 
+    /** Đọc hồ sơ: thông tin User cùng phần Member/Coach/Receptionist nếu có. */
     @Transactional(readOnly = true)
     public ProfileDto getProfile(Long userId) {
         User user = findActiveUser(userId);
@@ -109,6 +121,12 @@ public class ProfileService {
         return toDto(user, member, coach, receptionist);
     }
 
+    /**
+     * Cập nhật hồ sơ: họ tên, SĐT (chuẩn hóa, không trùng người khác), ngày sinh, giới tính
+     * (male/female/other), ảnh, địa chỉ. Với hội viên: ghi chú sức khỏe, mục tiêu, trình độ
+     * (beginner/intermediate/advanced), liên hệ khẩn cấp. Với HLV: chuyên môn/giới thiệu/chứng chỉ. Với lễ tân:
+     * ca làm.
+     */
     @Transactional
     @Audited(action = "PROFILE_UPDATE", entity = "users")
     public ProfileDto updateProfile(Long userId, ProfileDto request) {
@@ -179,6 +197,7 @@ public class ProfileService {
         return toDto(user, member, coach, receptionist);
     }
 
+    /** Đổi ảnh đại diện (rỗng thì về ảnh mặc định) và trả hồ sơ mới. */
     @Transactional
     @Audited(action = "PROFILE_AVATAR_UPDATE", entity = "users")
     public ProfileDto updateAvatar(Long userId, String avatarUrl) {
@@ -191,6 +210,10 @@ public class ProfileService {
         return toDto(user, member, coach, receptionist);
     }
 
+    /**
+     * Kiểm tra ảnh đại diện: data URL chỉ chấp nhận JPEG/PNG/WEBP, base64 hợp lệ, tối đa 2MB, kích thước từ
+     * 100x100 đến 4096x4096 px; hoặc là đường dẫn http(s)/tương đối.
+     */
     public void validateAvatarUrl(String avatarUrl) {
         if (avatarUrl == null || avatarUrl.isBlank()) {
             return;
@@ -241,7 +264,7 @@ public class ProfileService {
             } catch (BadRequestException ex) {
                 throw ex;
             } catch (Exception ignored) {
-                // Synthetic test payloads that are not full raster images are still allowed
+                // Các payload test giả lập không phải ảnh raster đầy đủ vẫn được phép.
             }
         } else if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("/")) {
             throw new BadRequestException(
@@ -253,6 +276,7 @@ public class ProfileService {
         }
     }
 
+    /** HLV cập nhật hồ sơ chuyên môn; người gọi phải có vai trò COACH. Chưa có hồ sơ HLV thì tạo mới. */
     @Transactional
     @Audited(action = "COACH_PROFILE_UPDATE", entity = "coaches")
     public void updateCoachProfile(Long currentUserId, String currentUserRole, CoachProfileUpdateDto request) {
@@ -273,6 +297,7 @@ public class ProfileService {
         coachRepository.save(coach);
     }
 
+    /** Lễ tân cập nhật ca làm việc; người gọi phải có vai trò RECEPTIONIST. Chưa có hồ sơ thì tạo mới. */
     @Transactional
     @Audited(action = "RECEPTIONIST_PROFILE_UPDATE", entity = "receptionists")
     public void updateReceptionistProfile(Long currentUserId, String currentUserRole, ReceptionistProfileUpdateDto request) {
@@ -291,11 +316,13 @@ public class ProfileService {
         receptionistRepository.save(receptionist);
     }
 
+    /** Lấy người dùng chưa bị xóa; không thấy thì báo 404. */
     private User findActiveUser(Long userId) {
         return userRepository.findByIdAndDeletedAtIsNull(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
     }
 
+    /** Kiểm tra ảnh giấy tờ (đúng loại ảnh thật, tối đa 2MB). */
     private static void validateDocumentImage(String dataUrl) {
         com.swp391.scms.common.image.ImageDataUrlValidator.validate(dataUrl.trim(), MAX_AVATAR_BYTES,
                 "KYC_IMAGE_INVALID", "error.kyc.image_invalid");
@@ -304,6 +331,12 @@ public class ProfileService {
     private static final java.util.regex.Pattern CCCD_PATTERN = java.util.regex.Pattern.compile("^(\\d{9}|\\d{12})$");
     private static final java.util.regex.Pattern PASSPORT_PATTERN = java.util.regex.Pattern.compile("^[A-Z0-9]{6,15}$", java.util.regex.Pattern.CASE_INSENSITIVE);
 
+    /**
+     * Nộp giấy tờ tùy thân: họ tên bắt buộc. Hộ chiếu chỉ dành cho người nước ngoài (6-15 ký tự chữ số); CCCD
+     * phải 9 hoặc 12 số và có ảnh mặt sau. Ảnh phải là ảnh tải lên (không nhận link ngoài). Số giấy tờ được mã
+     * hóa, cột đọc được chỉ giữ dạng che. Trạng thái chuyển về PENDING chờ quầy duyệt, họ tên tài khoản được
+     * đồng bộ theo giấy tờ.
+     */
     @Transactional
     @Audited(action = "MEMBER_KYC_SUBMIT", entity = "members")
     public ProfileDto submitMemberKyc(Long userId, com.swp391.scms.users.dto.MemberKycRequest request) {
@@ -353,14 +386,15 @@ public class ProfileService {
                     "Vui lòng tải lên ảnh mặt trước của giấy tờ.");
         }
 
-        // Only an uploaded image is kept: an outside link would make staff browsers load a URL a stranger chose.
+        // Chỉ giữ ảnh đã tải lên: liên kết bên ngoài sẽ khiến trình duyệt của nhân viên tải một URL do người lạ
+        // chọn.
         validateDocumentImage(request.frontImageUrl());
         if (request.backImageUrl() != null && !request.backImageUrl().isBlank()) {
             validateDocumentImage(request.backImageUrl());
         }
 
         member.setDocumentType(docType);
-        // The number is stored encrypted; the readable column keeps only the masked form.
+        // Số được lưu mã hóa; cột đọc được chỉ giữ dạng che.
         if (kycCrypto != null) {
             member.setCitizenIdEncrypted(kycCrypto.encrypt(citizenId));
             member.setCitizenId(KycCrypto.mask(citizenId));
@@ -371,7 +405,7 @@ public class ProfileService {
         if (request.backImageUrl() != null && !request.backImageUrl().isBlank()) {
             member.setBackImageUrl(request.backImageUrl().trim());
         }
-        // Self-declared documents are not trusted: the desk reviews the photos before the member can buy a package.
+        // Giấy tờ tự khai không được tin: quầy duyệt ảnh trước khi hội viên mua gói.
         member.setIdentityVerified(false);
         member.setIdentityVerifiedAt(null);
         member.setKycStatus("PENDING");
@@ -384,18 +418,25 @@ public class ProfileService {
         // Đồng bộ họ tên tài khoản User theo CCCD / Hộ chiếu
         user.setFullName(fullName);
         userRepository.save(user);
+        // Chỉ báo sau khi hồ sơ mới đã lưu; không đưa số giấy tờ vào notification.
+        if (notificationService != null) notificationService.notifyReceptionists("kyc", userId);
 
         Coach coach = coachRepository.findById(userId).orElse(null);
         Receptionist receptionist = receptionistRepository.findById(userId).orElse(null);
         return toDto(user, member, coach, receptionist);
     }
 
+    /** Quốc tịch có phải Việt Nam không (nhận các cách viết "Việt Nam", "Viet Nam", "Vietnam", "VN", "VNM"). */
     private boolean isVietnamese(String nationality) {
         String lower = nationality.toLowerCase(java.util.Locale.ROOT);
         return lower.contains("việt nam") || lower.contains("viet nam") || lower.contains("vietnam")
                 || "vn".equals(lower) || "vnm".equals(lower);
     }
 
+    /**
+     * Ghép thông tin User và hồ sơ theo vai trò thành ProfileDto trả cho client (ảnh trống thì dùng ảnh mặc
+     * định).
+     */
     private ProfileDto toDto(User user, Member member, Coach coach, Receptionist receptionist) {
         return new ProfileDto(
                 user.getId(),

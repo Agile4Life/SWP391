@@ -20,11 +20,13 @@ import { useCutawayWallIds } from './Cutaway';
 
 const Y_SETTLE_EPSILON = 0.005;
 const LERP_DAMPING = 10;
+/** Raycast rỗng để phần trang trí không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
-// Shared unit box (1x1x1 centered at origin) to minimize WebGL BufferGeometry allocations
+// Hộp đơn vị dùng chung (1x1x1 đặt tâm tại gốc tọa độ) để giảm thiểu cấp phát BufferGeometry WebGL
 const SHARED_UNIT_BOX = new THREE.BoxGeometry(1, 1, 1);
 
+/** Tính tâm và kích thước hộp bao của một hình học để đặt hộp đơn vị dùng chung vừa khít. */
 function getGeometryBoundsTransform(geom: THREE.BufferGeometry): {
   center: [number, number, number];
   size: [number, number, number];
@@ -45,12 +47,14 @@ function getGeometryBoundsTransform(geom: THREE.BufferGeometry): {
   };
 }
 
+/** Độ cao đích của một tầng (cộng độ nhấc khi ở chế độ tách tầng). */
 export function computeLevelTargetY(level: LevelNode, levelMode: LevelMode): number {
   return levelMode === 'exploded'
     ? level.elevation + level.explodedOffset
     : level.elevation;
 }
 
+/** Thế giới bên ngoài có hiển thị không (ẩn khi chỉ xem tầng hầm B1). */
 export function isExteriorWorldVisible(
   levelMode: LevelMode,
   focusLevel: LevelCode | 'ALL',
@@ -58,6 +62,10 @@ export function isExteriorWorldVisible(
   return levelMode !== 'solo' || focusLevel !== 'B1';
 }
 
+/**
+ * Tầng có hiển thị trong chế độ hiện tại không (chế độ một tầng thì chỉ hiện tầng đang xem và các tầng liên
+ * quan).
+ */
 export function isLevelVisibleInMode(
   level: LevelNode,
   levelMode: LevelMode,
@@ -69,7 +77,7 @@ export function isLevelVisibleInMode(
   if (level.code === focusLevel) {
     return true;
   }
-  // Keep ground-level outdoor tennis courts visible when looking out from L2 or RF
+  // Giữ sân tennis ngoài trời ở mặt đất hiển thị khi nhìn ra từ L2 hoặc RF
   if ((focusLevel === 'L2' || focusLevel === 'RF') && level.code === 'OUT') {
     return true;
   }
@@ -80,13 +88,14 @@ export function isLevelVisibleInMode(
   if (!focusedNode) {
     return true;
   }
-  // When focused on ground floor L1 in solo mode, keep ground-level OUT & sub-slab B1 visible while hiding upper floors
+  // Khi tập trung vào tầng trệt L1 ở chế độ solo, giữ tầng ngoài trời OUT và tầng hầm B1 hiển thị đồng thời ẩn các tầng trên
   if (level.order > focusedNode.order && level.code !== 'OUT') {
     return false;
   }
   return true;
 }
 
+/** Tầng có bị làm mờ trong chế độ hiện tại không (khi xem một tầng). */
 export function isLevelDimmedInMode(
   level: LevelNode,
   levelMode: LevelMode,
@@ -98,6 +107,7 @@ export function isLevelDimmedInMode(
   return level.code !== focusLevel;
 }
 
+/** Props của nhóm một tầng: tầng, hình học đã dựng, vật liệu, chế độ tầng/tường, tầng đang xem và các callback. */
 interface LevelGroupProps {
   level: LevelNode;
   built: LevelBuiltGeometry;
@@ -112,6 +122,7 @@ interface LevelGroupProps {
   children?: ReactNode;
 }
 
+/** Dựng một tầng (sàn, tường, khu vực) với hiệu ứng nhấc/mờ theo chế độ và tương tác chọn/rê khu vực. */
 function LevelGroup({
   level,
   built,
@@ -162,12 +173,14 @@ function LevelGroup({
       ? Math.min(1, CUTAWAY_WALL_HEIGHT / Math.max(0.5, level.height))
       : 1;
 
+  // Bấm một khu vực: chọn nó và yêu cầu vẽ lại.
   const handleZoneClick = (zoneId: string) => (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     useExploreStore.getState().selectNode(zoneId);
     invalidate();
   };
 
+  // Rê vào một khu vực: đặt khu vực đang rê.
   const handleZonePointerOver = (zoneId: string) => (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (useExploreStore.getState().hoveredId !== zoneId) {
@@ -176,6 +189,7 @@ function LevelGroup({
     }
   };
 
+  // Rê ra khỏi khu vực: bỏ khu vực đang rê.
   const handleZonePointerOut = (zoneId: string) => (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (useExploreStore.getState().hoveredId === zoneId) {
@@ -198,7 +212,7 @@ function LevelGroup({
       position={[0, level.elevation, 0]}
       visible={visible}
     >
-      {/* 1. Structural Slab Base (renders built.slabGeometry preserving stairwell cutouts) */}
+      {/* 1. Đế sàn kết cấu (vẽ built.slabGeometry giữ nguyên các lỗ thông tầng cầu thang) */}
       <mesh
         geometry={built.slabGeometry}
         material={materials.slabBase}
@@ -206,7 +220,7 @@ function LevelGroup({
         raycast={NOOP_RAYCAST}
       />
 
-      {/* 2. Dimmed Perimeter Trim Override (normal salmon perimeter trim is merged into interiorDetailsGeometry) */}
+      {/* 2. Viền chu vi thay thế khi làm mờ (viền chu vi màu salmon bình thường được gộp trong interiorDetailsGeometry) */}
       {dimmed && (
         <mesh
           geometry={built.slabEdgeGeometry}
@@ -215,7 +229,7 @@ function LevelGroup({
         />
       )}
 
-      {/* 3. Zone Floors & Borders */}
+      {/* 3. Sàn và đường viền của các khu vực */}
       {built.zoneFloorGeometries.map(zf => {
         const isHighlighted = selectedId === zf.zoneId || hoveredId === zf.zoneId;
         return (
@@ -239,7 +253,7 @@ function LevelGroup({
         );
       })}
 
-      {/* 4. Exterior Walls (scaled down to cutaway height when facing camera) */}
+      {/* 4. Tường ngoài (thu thấp xuống chiều cao cắt tường khi quay mặt về camera) */}
       {built.exteriorWallsByNormal.map(extWall => {
         const isCut =
           !walkMode &&
@@ -303,7 +317,7 @@ function LevelGroup({
         );
       })}
 
-      {/* 5. Merged Interior Opaque Walls */}
+      {/* 5. Tường nội thất đặc đã gộp */}
       {hasInteriorOpaque && (
         <mesh
           geometry={built.interiorOpaqueGeometry}
@@ -314,7 +328,7 @@ function LevelGroup({
         />
       )}
 
-      {/* 6. Merged Glass Walls & Opening Panes */}
+      {/* 6. Tường kính và ô kính cửa đã gộp */}
       {hasGlassWalls && (
         <mesh
           geometry={built.glassWallGeometry}
@@ -324,7 +338,7 @@ function LevelGroup({
         />
       )}
 
-      {/* 7. Merged Architectural & Zone Interior Furnishings, Mirrors, Racks & Floodlights */}
+      {/* 7. Nội thất kiến trúc và khu vực, gương, giá đỡ và đèn pha đã gộp */}
       {hasInteriorDetails && (
         <mesh
           geometry={built.interiorDetailsGeometry}
@@ -339,10 +353,15 @@ function LevelGroup({
   );
 }
 
+/** Props của chồng tầng: hàm vẽ nội dung con cho từng tầng. */
 export interface LevelStackProps {
   renderLevelChildren?: (level: LevelNode) => ReactNode;
 }
 
+/**
+ * Chồng các tầng của tòa nhà: dựng hình học từng tầng, nhấc/tách/làm mờ theo chế độ tầng và tường, cắt tường và
+ * vẽ nội dung con của tầng.
+ */
 export function LevelStack({ renderLevelChildren }: LevelStackProps) {
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
@@ -354,8 +373,10 @@ export function LevelStack({ renderLevelChildren }: LevelStackProps) {
   const materials = useExploreMaterials();
   const cutawayWallIds = useCutawayWallIds();
 
+  // Danh sách các tầng của cảnh.
   const levels = useMemo(() => getLevels(SOL_CENTER_SCENE), []);
 
+  // Hình học đã dựng của từng tầng, dựng một lần.
   const builtByLevelId = useMemo(() => {
     const map = new Map<string, LevelBuiltGeometry>();
     for (const lvl of levels) {

@@ -5,6 +5,7 @@ import com.swp391.scms.scheduling.repository.ClassSessionRepository;
 import com.swp391.scms.scheduling.repository.SessionBookingRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,12 +16,14 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * Settles held class sessions, their per-session bookings and finished course enrollments as {@code completed}.
+ * Job nền hằng ngày chốt các buổi lớp đã diễn ra, lượt đặt theo buổi và ghi danh khóa học đã kết thúc sang
+ * trạng thái {@code completed}.
  *
- * <p>Rows stay open for {@link #GRACE_DAYS} days after the session so the auto-absent sweep (7-day lookback) and late
- * attendance corrections still see them as booked.
+ * <p>Các bản ghi được giữ mở thêm {@link #GRACE_DAYS} ngày sau buổi học để lượt quét tự động đánh vắng (nhìn lại
+ * 7 ngày) và việc chỉnh sửa điểm danh trễ vẫn thấy chúng ở trạng thái booked.
  */
 @Service
+@ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 public class SessionCompletionScheduler {
     public static final int GRACE_DAYS = 7;
     private static final Logger log = LoggerFactory.getLogger(SessionCompletionScheduler.class);
@@ -31,6 +34,7 @@ public class SessionCompletionScheduler {
     private final ClassEnrollmentRepository enrollments;
     private final Clock clock;
 
+    /** Khởi tạo với các repository buổi học, đặt chỗ, ghi danh và Clock. */
     public SessionCompletionScheduler(ClassSessionRepository sessions, SessionBookingRepository bookings,
                                       ClassEnrollmentRepository enrollments, Clock clock) {
         this.sessions = sessions;
@@ -39,6 +43,10 @@ public class SessionCompletionScheduler {
         this.clock = clock;
     }
 
+    /**
+     * Chạy theo cron app.scheduling.completion.cron (mặc định 00:30): gọi completeHeld và ghi log; lỗi chỉ ghi
+     * cảnh báo.
+     */
     @Scheduled(cron = "${app.scheduling.completion.cron:0 30 0 * * ?}")
     public void sweep() {
         try {
@@ -49,12 +57,17 @@ public class SessionCompletionScheduler {
         }
     }
 
-    /** Returns {sessions, bookings, enrollments} moved to completed. */
+    /**
+     * Tính mốc cutoff = hôm nay − GRACE_DAYS; hoàn tất đặt chỗ và ghi danh trước rồi mới tới buổi học; trả về
+     * {số buổi, số đặt chỗ, số ghi danh}.
+     *
+     * Trả về {sessions, bookings, enrollments} đã chuyển sang completed.
+     */
     @Transactional
     public int[] completeHeld() {
         LocalDateTime now = clock.instant().atZone(CENTER_ZONE).toLocalDateTime();
         LocalDate cutoff = now.toLocalDate().minusDays(GRACE_DAYS);
-        // Bookings and enrollments first: their queries read session dates, not session status.
+        // Lượt đặt và ghi danh trước: truy vấn của chúng đọc ngày của buổi, không đọc trạng thái buổi.
         int booked = bookings.completeHeldBefore(cutoff);
         int enrolled = enrollments.completeFinishedBefore(cutoff);
         int held = sessions.completeHeldBefore(cutoff, now);

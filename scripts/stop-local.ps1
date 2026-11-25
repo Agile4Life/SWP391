@@ -1,5 +1,6 @@
+# Mục đích: dừng các tiến trình local đang chiếm cổng 8080 (API) và 5173 (web).
 # =====================================================================
-# SCMS - Script dung cac tien trinh dang chay local (Port 8080 & 5173)
+# SCMS - Script dừng các tiến trình đang chạy local (Port 8080 & 5173)
 # =====================================================================
 [CmdletBinding()]
 param(

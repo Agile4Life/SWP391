@@ -1,7 +1,10 @@
 import { useLayoutEffect, useRef, useState, type ImgHTMLAttributes } from 'react';
 import './loading-image.css';
 
-/** Keep the image's native size and priority; remove the placeholder as soon as it settles. */
+/**
+ * Ảnh có lớp chờ tải: giữ nguyên kích thước gốc và độ ưu tiên của ảnh, đánh dấu aria-busy và bỏ lớp chờ ngay khi
+ * ảnh tải xong hoặc lỗi (ảnh đã có sẵn trong cache thì xong ngay).
+ */
 export function LoadingImage({ src, className = '', onLoad, onError, ...props }: ImgHTMLAttributes<HTMLImageElement>) {
   const image = useRef<HTMLImageElement>(null);
   const [settledSrc, setSettledSrc] = useState<string>();

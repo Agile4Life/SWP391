@@ -2,15 +2,19 @@ import { useStaffI18n } from '../operations/staffI18n';
 import { useMemo } from 'react';
 import type { SavedTrainingPlan, SavedTrainingPlanItem } from './aiApi';
 
+/** Kết quả tập luyện của giáo án theo ngày: từng bài và đã hoàn thành hay chưa. */
 export interface PlanResults { planId: number; exerciseDate: string; items: { itemId: number; exerciseName: string; completed: boolean }[] }
 
+/** Props của bảng giáo án: id và dữ liệu giáo án. */
 export interface TrainingPlanResultsProps {
   planId?: number;
   plan?: SavedTrainingPlan | null;
 }
 
+/** Định dạng ngày YYYY-MM-DD thành dd/MM/yyyy (rỗng nếu không có). */
 const formatDate = (iso?: string | null) => (iso ? iso.split('-').reverse().join('/') : '');
 
+/** Nhãn thứ trong tuần theo ngôn ngữ; ngày 0 hoặc ngoài 1–7 là "linh hoạt". */
 function getDayLabel(day: number, t: (vi: string, en?: string) => string): string {
   switch (day) {
     case 1: return t('Thứ 2', 'Monday');
@@ -24,9 +28,11 @@ function getDayLabel(day: number, t: (vi: string, en?: string) => string): strin
   }
 }
 
+/** Hiển thị giáo án nhóm theo thứ trong tuần. */
 export function TrainingPlanResults({ plan }: TrainingPlanResultsProps) {
   const { t } = useStaffI18n();
 
+  // Gom các bài tập theo thứ (bài không có thứ hợp lệ vào nhóm 0).
   const groupedDays = useMemo(() => {
     if (!plan?.items || plan.items.length === 0) return [];
     const groups = new Map<number, SavedTrainingPlanItem[]>();
@@ -86,11 +92,11 @@ export function TrainingPlanResults({ plan }: TrainingPlanResultsProps) {
             <span style={{
               fontWeight: 600,
               color: 'var(--portal-salmon)',
-              background: 'rgba(232, 110, 80, 0.1)',
+              background: 'var(--portal-tint)',
               padding: '3px 10px',
               borderRadius: 6
             }}>
-              {itemsCount} {t("bài tập", "exercises")}
+              {itemsCount} {t("bài tập", itemsCount === 1 ? "exercise" : "exercises")}
             </span>
           </div>
         </div>

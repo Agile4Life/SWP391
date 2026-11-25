@@ -37,6 +37,7 @@ describe('client.ts (API client & Auth session)', () => {
   it('manages user session in localStorage properly', () => {
     expect(getCurrentUser()).toBeNull();
 
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const mockUser = {
       id: 'manager1',
       name: 'Manager',
@@ -72,6 +73,7 @@ describe('client.ts (API client & Auth session)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, message: 'OK', data: fakeResponseData }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -116,6 +118,7 @@ describe('client.ts (API client & Auth session)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,
       status: 400,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: false, message: 'Dữ liệu không hợp lệ' }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -127,6 +130,7 @@ describe('client.ts (API client & Auth session)', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, status: 200, message: 'OK', ...payload }),
     }));
     await expect(apiFetch('/memberships/subscriptions/my')).resolves.toBeNull();
@@ -151,6 +155,7 @@ describe('client.ts (API client & Auth session)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({
         success: true,
         data: {
@@ -173,7 +178,7 @@ describe('client.ts (API client & Auth session)', () => {
   it('homePath routes correctly for each role', () => {
     expect(homePath('MANAGER')).toBe('/manager/reports');
     expect(homePath('STAFF')).toBe('/staff/reception');
-    expect(homePath('COACH')).toBe('/staff/attendance');
+    expect(homePath('COACH')).toBe('/coach/pt-attendance');
     expect(homePath('MEMBER')).toBe('/member/dashboard');
   });
 

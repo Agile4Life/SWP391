@@ -25,21 +25,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ManagerProductController (manager product controller). */
 class ManagerProductControllerTest {
     ProductAdminService service;
     MockMvc mvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller sản phẩm của quản lý. */
     @BeforeEach
     void setup() {
         service = mock(ProductAdminService.class);
         mvc = MockMvcBuilders.standaloneSetup(new ManagerProductController(service))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(MethodParameter parameter) {
                         return parameter.getParameterType() == AuthenticatedPrincipal.class;
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(MethodParameter p, ModelAndViewContainer c, NativeWebRequest r, WebDataBinderFactory f) {
                         return new AuthenticatedPrincipal(99L, "manager", "CENTER_MANAGER");
@@ -48,6 +52,7 @@ class ManagerProductControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: liệt kê, xóa và trả tổng quan sản phẩm. */
     @Test
     void listsDeletesAndReturnsSummary() throws Exception {
         when(service.list(null, null, null, 0, 20)).thenReturn(new PageImpl<>(List.of(), org.springframework.data.domain.PageRequest.of(0, 20), 0));

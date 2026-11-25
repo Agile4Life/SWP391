@@ -1,5 +1,9 @@
 import { centerNowParts } from '../../shared/lib/centerTime';
 
+/**
+ * Trạng thái thẻ: expired (hết hạn), inactive (không hoạt động/ngày sai), warning (còn dưới 7 ngày) hoặc
+ * active, tính theo giờ trung tâm.
+ */
 export function cardStatus(status: string, endDate: string, today = new Date()) {
   if (status === 'expired') return 'expired';
   if (status !== 'active' || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) return 'inactive';

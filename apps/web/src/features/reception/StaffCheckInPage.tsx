@@ -12,19 +12,24 @@ import { GateQrPanel } from './GateQrPanel';
 import { QrCameraScanner } from '../checkin/QrCameraScanner';
 import { Link } from 'react-router-dom';
 
-/** The center runs a single gate, so the desk never picks one. */
+/** Trung tâm chỉ vận hành một cổng duy nhất nên quầy lễ tân không cần chọn cổng. */
 const GATE = 'Turnstile A1 - Sảnh Chính';
 const GATE_ID = 'A1';
 
+/** Định dạng giờ:phút:giây theo múi giờ trung tâm. */
 const formatTime = (iso?: string | null): string => formatCenterTimeSeconds(iso, iso ?? '—');
 
+/** Lượt check-in được chấp nhận (GRANTED hoặc SUCCESS). */
 const isCheckinGranted = (status?: string | null): boolean => {
   if (!status) return false;
   const normalized = status.trim().toUpperCase();
   return normalized === 'GRANTED' || normalized === 'SUCCESS';
 };
 
-/** `in`: the desk scans a member's card and shows the gate QR members scan to enter. `out`: gate QR for leaving plus the visits still inside. */
+/**
+ * Màn check-in/out của lễ tân: chế độ `in` thì quét thẻ hội viên và hiện QR cổng cho hội viên tự quét vào;
+ * chế độ `out` thì hiện QR cổng để ra và danh sách lượt còn ở trong trung tâm.
+ */
 export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) {
   const { t } = useStaffI18n();
   const checkingOut = mode === 'out';
@@ -49,6 +54,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [historyError, setHistoryError] = useState<StaffMessage | null>(null);
 
+  // Tải lịch sử check-in hôm nay.
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true);
     setHistoryError(null);
@@ -89,6 +95,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
     );
   }
 
+  // Quét mã thẻ hội viên: mã rỗng thì báo lỗi, mã QR cổng (SOL:GATE:) không dùng ở quầy, còn lại gửi lên backend.
   const executeScan = async (codeToScan: string) => {
     const trimmed = codeToScan.trim();
     if (!trimmed) {
@@ -96,7 +103,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
       return;
     }
     if (isScanning) return;
-    // The gate QR is what members scan themselves; staff scan the member's own card.
+    // Mã QR cổng là để hội viên tự quét; nhân viên chỉ quét mã trên thẻ của hội viên.
     if (trimmed.startsWith('SOL:GATE:')) {
       setScanError('Đây là mã QR cổng. Hãy quét mã trên thẻ hội viên.');
       return;
@@ -132,11 +139,13 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
     }
   };
 
+  // Gửi biểu mẫu quét mã.
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     void executeScan(scanCode);
   };
 
+  // Check-out một lượt và cập nhật dòng tương ứng trong danh sách.
   const handleCheckout = async (checkinId: number) => {
     if (checkoutBusy.current) return;
     checkoutBusy.current = true;
@@ -170,7 +179,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
       />
 
       <div className="checkin-layout">
-        {/* Left card: member-card scanner + gate QR to check in, or just the gate QR to check out */}
+        {/* Thẻ bên trái: trình quét thẻ hội viên + QR cổng để check-in, hoặc chỉ QR cổng để check-out */}
         <div className="portal-card">
           {!checkingOut && <div className="portal-card-header">
             <h2 className="portal-card-title">{t("Quét mã hội viên")}</h2>
@@ -224,7 +233,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
 
           <GateQrPanel purpose={checkingOut ? 'out' : 'in'} gateId={GATE_ID} />
 
-          {/* Visual Door Gate Feedback */}
+          {/* Phản hồi trực quan trạng thái mở/khóa cổng */}
           {currentResult && (
             <div data-i18n-managed
               key={currentResult.id}
@@ -277,7 +286,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
           )}
         </div>
 
-        {/* Keep open visits separate from the latest ten audit entries. */}
+        {/* Tách riêng các lượt đang ở trong trung tâm khỏi 10 bản ghi đối soát gần nhất. */}
         <div className="portal-card">
           <div className="portal-card-header">
             <h2 className="portal-card-title">{checkingOut ? t("Theo dõi ra về hôm nay") : t("Lượt check-in gần đây")}</h2>

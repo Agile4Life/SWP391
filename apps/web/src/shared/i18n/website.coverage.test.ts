@@ -3,15 +3,16 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { englishLabels } from './translations';
 import { memberLabels } from '../../features/member/memberLabels';
 import { staffSourceCatalog } from '../../features/operations/staffSourceCatalog';
-import { englishShopPublicLabels } from '../../features/shop/shopTranslations';
+import { englishPublicLabels } from './publicLabels';
 import { clearMissingTranslations, getMissingTranslations, setLanguage, translateSource } from './language';
 import routerSource from '../../app/router.tsx?raw';
 
-// Inspect source-owned text only. This does not substitute for logged-in browser/E2E verification.
+// Chỉ kiểm tra văn bản thuộc mã nguồn. Không thay thế cho việc kiểm thử trình duyệt/E2E khi đã đăng nhập.
 const files = import.meta.glob<string>(['../../features/**/*.{ts,tsx}', '../../shared/**/*.{ts,tsx}', '!../../**/*.test.{ts,tsx}'], { query: '?raw', import: 'default', eager: true });
 const ast = new Map(Object.entries(files).map(([name, content]) => [name, ts.createSourceFile(name, content, ts.ScriptTarget.Latest, true, name.endsWith('tsx') ? ts.ScriptKind.TSX : ts.ScriptKind.TS)]));
 const router = ts.createSourceFile('router.tsx', routerSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const routes: { route: string; entry: string }[] = [];
+// Duyệt đệ quy cây cú pháp TypeScript.
 function walk(node: ts.Node, visit: (node: ts.Node) => void) { visit(node); node.forEachChild(child => walk(child, visit)); }
 walk(router, node => {
   if (!ts.isObjectLiteralExpression(node)) return;
@@ -21,6 +22,7 @@ walk(router, node => {
   const routePath = path.initializer.text;
   walk(lazy, child => { if (ts.isCallExpression(child) && child.expression.kind === ts.SyntaxKind.ImportKeyword && ts.isStringLiteral(child.arguments[0])) routes.push({ route: routePath, entry: child.arguments[0].text.replace('../features/', '../../features/') + '.tsx' }); });
 });
+// Phân giải đường dẫn file của một import.
 function resolve(file: string, dependency: string) {
   const parts = (file.substring(0, file.lastIndexOf('/') + 1) + dependency).split('/');
   const normalized: string[] = [];
@@ -28,6 +30,7 @@ function resolve(file: string, dependency: string) {
   const base = normalized.join('/');
   return [base, base + '.tsx', base + '.ts', base + '/index.ts'].find(candidate => ast.has(candidate));
 }
+// Tập các file có thể tới được từ file khởi đầu.
 function reachable(entry: string, seen = new Set<string>()): Set<string> {
   if (seen.has(entry)) return seen;
   seen.add(entry); const source = ast.get(entry); if (!source) return seen;
@@ -39,15 +42,17 @@ function reachable(entry: string, seen = new Set<string>()): Set<string> {
   return seen;
 }
 const translationCalls = new Set(['t', 'memberText', 'memberMessage', 'sourceText', 'sourcePair', 'sourceFormat', 'sourceMessage', 'staffMessage']);
+// Đọc bảng nhãn dịch của một file.
 function catalog(file: string) {
   const domain = /\/(member|courts|checkin|schedule|wallet|payments)\//.test(file) ? memberLabels
     : /\/(coaching|classes|reception|manager|admin|operations|support)\//.test(file) ? staffSourceCatalog
-    : /\/(landing|auth|shop|pwa)\//.test(file) ? englishShopPublicLabels : {};
+    : /\/(landing|auth|pwa)\//.test(file) ? englishPublicLabels : {};
   return { ...englishLabels, ...domain };
 }
 afterEach(() => { localStorage.clear(); setLanguage('vi'); clearMissingTranslations(); });
 describe('active route source translation coverage', () => {
-  it('discovers every lazy route instead of maintaining a hand-picked screen list', () => { expect(routes.length).toBeGreaterThanOrEqual(50); });
+  // Ngưỡng tối thiểu chỉ chứng minh cơ chế tự phát hiện route hoạt động; việc thu gọn phạm vi (Gym, PT 1:1) đã giảm số route xuống khoảng 40.
+  it('discovers every lazy route instead of maintaining a hand-picked screen list', () => { expect(routes.length).toBeGreaterThanOrEqual(35); });
   for (const { route, entry } of routes) it(route + ' has paired source labels and no raw Vietnamese JSX', () => {
     const errors: string[] = []; let labels = 0;
     for (const file of reachable(entry)) {

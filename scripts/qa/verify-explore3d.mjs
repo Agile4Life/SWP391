@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// Mục đích: kiểm tra cảnh 3D explore3d (khởi động, render, tương tác) bằng trình duyệt tự động.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
@@ -168,6 +169,7 @@ const SESSIONS_FIXTURE = [
   },
 ];
 
+// Gắn dữ liệu giả (fixture) cho các request API mà cảnh explore3d gọi.
 async function attachExploreFixtures(context, origin) {
   await context.route('**/*', async route => {
     const url = new URL(route.request().url());
@@ -269,6 +271,7 @@ async function attachExploreFixtures(context, origin) {
   });
 }
 
+// Khởi động server preview của web trên cổng cho trước và chờ sẵn sàng.
 async function startPreviewServer(port = 4179) {
   const proc = spawn('npx', ['vite', 'preview', '--port', String(port), '--strictPort', '--host', '127.0.0.1'], {
     cwd: path.join(repoRoot, 'apps/web'),
@@ -291,11 +294,13 @@ async function startPreviewServer(port = 4179) {
   return { proc, baseUrl };
 }
 
+// Chờ cảnh 3D tải xong và sẵn sàng tương tác.
 async function waitFor3DReady(page) {
   await page.locator('.explore3d-page').waitFor({ state: 'visible', timeout: 15000 });
   await page.waitForTimeout(750);
 }
 
+// Khẳng định bố cục vừa một màn hình và các phần tử không đè lên nhau.
 async function assertSingleScreenAndNoCollisions(page, label) {
   const layoutCheck = await page.evaluate(() => {
     const docEl = document.documentElement;
@@ -437,14 +442,14 @@ async function assertSingleScreenAndNoCollisions(page, label) {
       }
     });
 
-    // 1. Overview 3D Dark (1440x900)
+    // 1. Toàn cảnh 3D chế độ tối (1440x900)
     await page.goto(`${server.baseUrl}/member/explore`);
     await waitFor3DReady(page);
     await assertSingleScreenAndNoCollisions(page, '01-overview-dark-1440');
     await page.screenshot({ path: path.join(outDir, '01-overview-dark-1440.png') });
     console.log('Captured 01-overview-dark-1440.png');
 
-    // 2. Overview 3D Light (1440x900)
+    // 2. Toàn cảnh 3D chế độ sáng (1440x900)
     const themeToggle = page.locator('.theme-toggle');
     if (await themeToggle.count()) {
       await themeToggle.click();
@@ -466,7 +471,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     }
     await page.waitForTimeout(400);
 
-    // 3. Exploded 5 levels (1440x900)
+    // 3. Tách 5 tầng chế độ exploded (1440x900)
     const explodedBtn = page.locator('[data-testid="explore3d-levelmode-exploded"]');
     if (await explodedBtn.count()) {
       await explodedBtn.click();
@@ -476,7 +481,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.screenshot({ path: path.join(outDir, '03-exploded-levels-1440.png') });
     console.log('Captured 03-exploded-levels-1440.png');
 
-    // 4. Level 1 Standard Gym Cutaway + DetailPanel (1440x900) via deep-link URL
+    // 4. Tầng 1 Phòng Gym Tiêu chuẩn chế độ cắt tường (cutaway) + DetailPanel (1440x900) qua deep-link URL
     await page.goto(`${server.baseUrl}/member/explore?level=L1&focus=zone-l1-gym`);
     await waitFor3DReady(page);
     await page.waitForTimeout(700);
@@ -484,19 +489,19 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.screenshot({ path: path.join(outDir, '04-level1-gym-cutaway-1440.png') });
     console.log('Captured 04-level1-gym-cutaway-1440.png');
 
-    // Verify first-person Walk Mode multi-angle navigation, floor up/down (B1..RF..OUT), Light Mode HUD unity & zero collision
+    // Kiểm tra chế độ đi bộ góc nhìn thứ nhất (Walk Mode): điều hướng đa góc nhìn, lên/xuống tầng (B1..RF..OUT), đồng bộ HUD chế độ sáng và không va chạm
     await page.locator('[data-testid="explore3d-btn-walk"]').click();
     await page.locator('[data-testid="explore3d-walk-hud"]').waitFor({ state: 'visible', timeout: 5000 });
     await page.locator('[data-testid="walk-turn-right"]').click();
     await page.locator('[data-testid="walk-look-up"]').click();
     await page.locator('[data-testid="walk-step-forward"]').click();
-    // Traverse all floors B1 -> L1 -> L2 -> RF -> OUT in Walk Mode
+    // Duyệt qua tất cả các tầng B1 -> L1 -> L2 -> RF -> OUT trong Walk Mode
     for (const code of ['B1', 'L1', 'L2', 'RF', 'OUT']) {
       await page.locator(`[data-testid="walk-floor-${code}"]`).click();
       await page.waitForTimeout(220);
       await assertSingleScreenAndNoCollisions(page, `04-walk-floor-${code}`);
     }
-    // Step down and up via HUD arrows
+    // Chuyển tầng xuống và lên bằng mũi tên trên HUD
     await page.locator('[data-testid="walk-floor-L1"]').click();
     await page.locator('[data-testid="walk-floor-down"]').click();
     await page.waitForTimeout(200);
@@ -514,7 +519,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.keyboard.press('Escape');
     await page.waitForTimeout(350);
 
-    // Verify item-targeted Walk Mode (Sofa Thư giãn Platinum 01 on L2) & B1 Locker isolation
+    // Kiểm tra chế độ đi bộ nhắm tới vật thể cụ thể (Sofa Thư giãn Platinum 01 ở tầng L2) và chế độ tách riêng khu tủ đồ B1
     await page.goto(`${server.baseUrl}/member/explore?focus=item-l2-sofa-1`);
     await waitFor3DReady(page);
     await page.locator('[data-testid="explore3d-btn-walk"]').click();
@@ -529,7 +534,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.waitForTimeout(550);
     await assertSingleScreenAndNoCollisions(page, '04e-b1-locker-solo-1440');
 
-    // 5. Level 2 VIP Gym / InBody 770 + Platinum Upgrade CTA (1440x900)
+    // 5. Tầng 2 Phòng Gym VIP / InBody 770 + CTA nâng cấp Platinum (1440x900)
     await page.locator('[data-testid="explore3d-level-L2"]').click();
     await page.locator('[data-testid="directory-zone-zone-l2-vip-gym"]').click();
     await page.waitForTimeout(800);
@@ -537,7 +542,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.screenshot({ path: path.join(outDir, '05-level2-vip-inbody-1440.png') });
     console.log('Captured 05-level2-vip-inbody-1440.png');
 
-    // 6. B1 Oasis Lap Pool + Swim Lane Booking CTA (1440x900)
+    // 6. Tầng hầm B1 Hồ bơi Oasis + CTA đặt làn bơi (1440x900)
     await page.locator('[data-testid="explore3d-level-B1"]').click();
     await page.locator('[data-testid="directory-zone-zone-b1-pool"]').click();
     await page.waitForTimeout(800);
@@ -545,7 +550,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.screenshot({ path: path.join(outDir, '06-b1-pool-lanes-1440.png') });
     console.log('Captured 06-b1-pool-lanes-1440.png');
 
-    // 7. Rooftop Zen Garden Yoga Studio (1440x900)
+    // 7. Tầng thượng Zen Garden Yoga Studio (1440x900)
     await page.locator('[data-testid="explore3d-level-RF"]').click();
     await page.locator('[data-testid="directory-zone-zone-rf-zen"]').click();
     await page.waitForTimeout(800);
@@ -553,7 +558,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.screenshot({ path: path.join(outDir, '07-rooftop-zen-yoga-1440.png') });
     console.log('Captured 07-rooftop-zen-yoga-1440.png');
 
-    // 8. Outdoor Tennis Courts 01 & 02 (1440x900)
+    // 8. Sân Tennis ngoài trời 01 & 02 (1440x900)
     await page.locator('[data-testid="explore3d-level-OUT"]').click();
     await page.locator('[data-testid="directory-zone-zone-out-tennis"]').click();
     await page.waitForTimeout(800);
@@ -561,7 +566,7 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.screenshot({ path: path.join(outDir, '08-outdoor-tennis-1440.png') });
     console.log('Captured 08-outdoor-tennis-1440.png');
 
-    // 9. Mobile Bottom Sheet (390x844)
+    // 9. Giao diện Mobile với Bottom Sheet (390x844)
     await page.setViewportSize({ width: 390, height: 844 });
     await page.locator('[data-testid="explore3d-level-L1"]').click();
     await page.locator('[data-testid="directory-zone-zone-l1-gym"]').click();
@@ -570,14 +575,14 @@ async function assertSingleScreenAndNoCollisions(page, label) {
     await page.screenshot({ path: path.join(outDir, '09-mobile-bottomsheet-390.png') });
     console.log('Captured 09-mobile-bottomsheet-390.png');
 
-    // 10. 2D SVG FloorPlan Fallback (1440x900)
+    // 10. Chế độ dự phòng Sơ đồ 2D SVG (FloorPlan2D) (1440x900)
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.locator('[data-testid="explore3d-btn-viewmode"]').click();
     await page.waitForTimeout(500);
     await page.screenshot({ path: path.join(outDir, '10-fallback-2d-1440.png') });
     console.log('Captured 10-fallback-2d-1440.png');
 
-    // 11. Automated Performance Benchmark (?bench=1&perf=1)
+    // 11. Đo hiệu năng tự động (?bench=1&perf=1)
     await page.goto(`${server.baseUrl}/member/explore?bench=1&perf=1`);
     await page.waitForFunction(
       () => window.__EXPLORE3D_BENCH__ && window.__EXPLORE3D_BENCH__.status === 'complete',

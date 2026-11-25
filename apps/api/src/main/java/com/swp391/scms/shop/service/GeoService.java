@@ -16,12 +16,15 @@ import java.util.Optional;
 /** Danh mục hành chính 2 cấp (sau 01/07/2025) nạp một lần từ resource đóng gói; không gọi dịch vụ ngoài lúc chạy. */
 @Service
 public class GeoService {
+    /** Một đơn vị hành chính: mã và tên. */
     public record Region(String code, String name) {}
+    /** Kết quả tra cứu tỉnh + phường hợp lệ: mã và tên của cả hai. */
     public record ResolvedRegion(String provinceCode, String provinceName, String wardCode, String wardName) {}
 
     private final List<Region> provinces;
     private final Map<String, List<Region>> wardsByProvince;
 
+    /** Nạp danh sách tỉnh/phường từ file geo/vn-admin-units.json khi khởi tạo. */
     public GeoService(ObjectMapper mapper) {
         try (var in = new ClassPathResource("geo/vn-admin-units.json").getInputStream()) {
             JsonNode root = mapper.readTree(in);
@@ -43,14 +46,17 @@ public class GeoService {
         }
     }
 
+    /** Danh sách tỉnh/thành. */
     public List<Region> provinces() {
         return provinces;
     }
 
+    /** Danh sách phường/xã của một tỉnh (mã không tồn tại thì rỗng). */
     public List<Region> wards(String provinceCode) {
         return wardsByProvince.getOrDefault(provinceCode, List.of());
     }
 
+    /** Kiểm tra cặp mã tỉnh–phường hợp lệ và trả về tên tương ứng; không hợp lệ thì rỗng. */
     public Optional<ResolvedRegion> resolve(String provinceCode, String wardCode) {
         return provinces.stream()
                 .filter(p -> p.code().equals(provinceCode))

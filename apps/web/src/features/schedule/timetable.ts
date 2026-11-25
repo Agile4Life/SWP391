@@ -9,8 +9,10 @@ export const TIMETABLE_HOURS: number[] = Array.from(
 const RANGE_START_MIN = TIMETABLE_START_HOUR * 60;
 const RANGE_END_MIN = TIMETABLE_END_HOUR * 60;
 
+/** Tông màu của khối buổi học: còn chỗ, của tôi, đầy, đã qua, đã hủy hoặc trung tính. */
 export type TimetableTone = 'open' | 'mine' | 'full' | 'past' | 'cancelled' | 'neutral';
 
+/** Một buổi học trên lịch: id, ngày, giờ, tiêu đề, phòng, thông tin phụ, tông màu và nhãn trợ năng. */
 export interface TimetableEvent {
   id: string;
   /** YYYY-MM-DD theo lịch địa phương. */
@@ -28,6 +30,7 @@ export interface TimetableEvent {
   ariaLabel: string;
 }
 
+/** Buổi học đã được xếp vị trí: làn song song, số làn của cụm và vị trí/chiều cao theo phần trăm. */
 export interface PositionedEvent<T extends TimetableEvent = TimetableEvent> {
   event: T;
   lane: number;
@@ -36,6 +39,7 @@ export interface PositionedEvent<T extends TimetableEvent = TimetableEvent> {
   heightPct: number;
 }
 
+// Thêm số 0 đứng trước cho số nhỏ hơn 10.
 const pad = (value: number) => String(value).padStart(2, '0');
 
 /** YYYY-MM-DD -> Date lúc 12:00 địa phương (tránh lệch ngày do múi giờ khi cộng/trừ ngày). */
@@ -44,10 +48,12 @@ export function parseISODate(iso: string): Date {
   return new Date(year, month - 1, day, 12, 0, 0, 0);
 }
 
+/** Chuyển Date thành chuỗi YYYY-MM-DD theo lịch địa phương. */
 export function toISODate(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** Cộng/trừ số ngày vào một ngày YYYY-MM-DD. */
 export function addDays(iso: string, days: number): string {
   const date = parseISODate(iso);
   date.setDate(date.getDate() + days);
@@ -60,39 +66,50 @@ export function mondayOf(iso: string): string {
   return addDays(iso, -((date.getDay() + 6) % 7));
 }
 
+/** Bảy ngày của tuần bắt đầu từ thứ Hai. */
 export function weekDays(weekStart: string): string[] {
   return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
 }
 
+/** Ngày hôm nay dạng YYYY-MM-DD. */
 export function todayISO(now: Date = new Date()): string {
   return toISODate(now);
 }
 
+/** Đổi chuỗi giờ HH:mm thành số phút trong ngày. */
 export function toMinutes(time: string): number {
   const [hours, minutes] = time.split(':').map(Number);
   return hours * 60 + (minutes || 0);
 }
 
+/** Cắt chuỗi giờ về dạng HH:mm. */
 export function hhmm(time: string): string {
   return time.slice(0, 5);
 }
 
+/** Nhãn giờ tròn dạng HH:00. */
 export function hourLabel(hour: number): string {
   return `${pad(hour)}:00`;
 }
 
 const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
 
+/** Tên thứ trong tuần (Chủ nhật, Thứ 2...) của một ngày. */
 export function weekdayLabel(iso: string): string {
   return WEEKDAY_LABELS[parseISODate(iso).getDay()];
 }
 
-/** dd/MM */
+/**
+ * Định dạng ngày dd/MM.
+ *
+ * dd/MM
+ */
 export function shortDate(iso: string): string {
   const [, month, day] = iso.split('-');
   return `${day}/${month}`;
 }
 
+/** Nhãn khoảng tuần dạng "dd/MM – dd/MM/yyyy". */
 export function weekRangeLabel(weekStart: string): string {
   const end = addDays(weekStart, 6);
   return `${shortDate(weekStart)} – ${shortDate(end)}/${end.slice(0, 4)}`;
@@ -134,6 +151,7 @@ export function layoutDayEvents<T extends TimetableEvent>(
   let clusterEnd = -1;
   let laneEnds: number[] = [];
 
+  // Chốt cụm buổi chồng giờ: gán số làn và vị trí cho từng buổi trong cụm.
   const flush = () => {
     const lanes = laneEnds.length;
     for (const item of cluster) {

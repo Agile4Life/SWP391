@@ -1,5 +1,6 @@
 @echo off
 chcp 65001 >nul
+REM Mục đích: lối tắt cho Windows để gọi run-local.ps1 (chạy API và web local).
 title SCMS - Local Runner Launcher
 echo =================================================================
 echo         SPORTS CENTER MANAGEMENT SYSTEM (SCMS) - LOCAL RUNNER

@@ -32,6 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho service InvoiceService (invoice service). */
 @ExtendWith(MockitoExtension.class)
 class InvoiceServiceTest {
 
@@ -47,12 +48,14 @@ class InvoiceServiceTest {
     private Clock clock;
     private InvoiceService invoiceService;
 
+    /** Chuẩn bị trước mỗi test: tạo InvoiceService với repository giả lập. */
     @BeforeEach
     void setUp() {
         clock = Clock.fixed(Instant.parse("2026-10-01T10:00:00Z"), ZoneOffset.UTC);
         invoiceService = new InvoiceService(invoiceRepository, paymentRepository, invoiceMapper, clock);
     }
 
+    /** Kiểm thử: hóa đơn của hội viên dùng truy vấn theo chủ sở hữu và chỉ tổng tiền đã lưu. */
     @Test
     void memberInvoiceUsesOwnedQueryAndPersistedTotalOnly() {
         Invoice invoice = new Invoice();
@@ -72,6 +75,7 @@ class InvoiceServiceTest {
         verify(invoiceRepository, never()).findByPaymentId(5L);
     }
 
+    /** Kiểm thử: hóa đơn của hội viên không lộ hóa đơn của người khác. */
     @Test
     void memberInvoiceDoesNotExposeOtherMembersInvoice() {
         when(invoiceRepository.findByPaymentIdAndPaymentMemberUserIdAndPaymentStatus(5L, 8L, "success")).thenReturn(Optional.empty());
@@ -80,6 +84,7 @@ class InvoiceServiceTest {
         verifyNoInteractions(invoiceMapper);
     }
 
+    /** Kiểm thử: tạo hóa đơn với số hóa đơn tự sinh. */
     @Test
     @DisplayName("Should create invoice with auto-generated invoice number when blank")
     void shouldCreateInvoiceWithGeneratedNumber() {
@@ -113,6 +118,7 @@ class InvoiceServiceTest {
         verify(invoiceRepository).save(invoice);
     }
 
+    /** Kiểm thử: tạo hóa đơn với số hóa đơn cho trước. */
     @Test
     @DisplayName("Should create invoice with provided custom invoice number")
     void shouldCreateInvoiceWithProvidedNumber() {
@@ -141,6 +147,7 @@ class InvoiceServiceTest {
         assertEquals("INV-CUSTOM-001", invoice.getInvoiceNumber());
     }
 
+    /** Kiểm thử: gắn các dòng vào hóa đơn đã tạo. */
     @Test
     @DisplayName("Should add invoice items when present in DTO")
     void shouldAttachItemsToCreatedInvoice() {
@@ -174,6 +181,7 @@ class InvoiceServiceTest {
         assertEquals(invoice, item.getInvoice());
     }
 
+    /** Kiểm thử: ném lỗi khi không tìm thấy thanh toán của hóa đơn. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when payment ID does not exist")
     void shouldThrowWhenPaymentNotFoundForInvoice() {
@@ -186,6 +194,7 @@ class InvoiceServiceTest {
         verify(invoiceRepository, never()).save(any());
     }
 
+    /** Kiểm thử: ném lỗi khi thanh toán đã có hóa đơn. */
     @Test
     @DisplayName("Should throw ConflictException when payment already has an invoice")
     void shouldThrowWhenPaymentAlreadyHasInvoice() {
@@ -203,6 +212,7 @@ class InvoiceServiceTest {
         verify(invoiceRepository, never()).save(any());
     }
 
+    /** Kiểm thử: ném lỗi khi số hóa đơn đã tồn tại. */
     @Test
     @DisplayName("Should throw ConflictException when provided invoice number already exists")
     void shouldThrowWhenInvoiceNumberAlreadyExists() {
@@ -222,6 +232,7 @@ class InvoiceServiceTest {
         verify(invoiceRepository, never()).save(any());
     }
 
+    /** Kiểm thử: ném lỗi khi tạo hóa đơn cho thanh toán thất bại hoặc đã hoàn. */
     @Test
     @DisplayName("Should throw BadRequestException when trying to issue invoice for failed or refunded payment")
     void shouldThrowWhenCreatingInvoiceForFailedOrRefundedPayment() {
@@ -240,6 +251,7 @@ class InvoiceServiceTest {
         assertThrows(BadRequestException.class, () -> invoiceService.createInvoice(dto));
     }
 
+    /** Kiểm thử: lấy hóa đơn theo id. */
     @Test
     @DisplayName("Should return InvoiceDto when queried by ID")
     void shouldGetInvoiceById() {
@@ -255,6 +267,7 @@ class InvoiceServiceTest {
         assertEquals(1L, result.getId());
     }
 
+    /** Kiểm thử: ném lỗi khi không tìm thấy id hóa đơn. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when invoice ID not found")
     void shouldThrowWhenInvoiceIdNotFound() {
@@ -262,6 +275,7 @@ class InvoiceServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> invoiceService.getInvoiceById(999L));
     }
 
+    /** Kiểm thử: lấy hóa đơn theo số hóa đơn. */
     @Test
     @DisplayName("Should return InvoiceDto when queried by invoice number")
     void shouldGetInvoiceByNumber() {
@@ -277,6 +291,7 @@ class InvoiceServiceTest {
         assertEquals("INV-001", result.getInvoiceNumber());
     }
 
+    /** Kiểm thử: ném lỗi khi không tìm thấy số hóa đơn. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when invoice number not found")
     void shouldThrowWhenInvoiceNumberNotFound() {
@@ -284,6 +299,7 @@ class InvoiceServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> invoiceService.getInvoiceByNumber("INV-UNKNOWN"));
     }
 
+    /** Kiểm thử: lấy hóa đơn theo mã thanh toán. */
     @Test
     @DisplayName("Should return InvoiceDto when queried by payment ID")
     void shouldGetInvoiceByPaymentId() {
@@ -297,6 +313,7 @@ class InvoiceServiceTest {
         assertNotNull(result);
     }
 
+    /** Kiểm thử: ném lỗi khi thanh toán chưa có hóa đơn. */
     @Test
     @DisplayName("Should throw ResourceNotFoundException when payment ID has no invoice")
     void shouldThrowWhenPaymentHasNoInvoice() {
@@ -304,6 +321,7 @@ class InvoiceServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> invoiceService.getInvoiceByPaymentId(999L));
     }
 
+    /** Kiểm thử: tự động phát hành hóa đơn cho thanh toán thành công. */
     @Test
     @DisplayName("Should automatically issue invoice for successful payment")
     void shouldAutoIssueInvoiceForSuccessfulPayment() {
@@ -322,6 +340,7 @@ class InvoiceServiceTest {
         verify(invoiceRepository).save(any(Invoice.class));
     }
 
+    /** Kiểm thử: từ chối tự phát hành cho thanh toán đang chờ. */
     @Test
     @DisplayName("Should throw BadRequestException when auto-issuing invoice for non-success payment")
     void shouldRejectAutoIssueForPendingPayment() {

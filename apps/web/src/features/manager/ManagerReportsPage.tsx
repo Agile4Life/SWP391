@@ -10,16 +10,19 @@ import { centerNowParts, formatCenterDate, formatCenterTimeSeconds } from '../..
 import { reportsApi, type CancellationRequestDto, type ReportSummary } from './reportsApi';
 import { Link } from 'react-router-dom';
 
+/** Định dạng số tiền VND (làm tròn). */
 const vnd = (n: number) => formatPrice(Math.round(n));
 const paymentMethods: Record<string, string> = {
   cash: 'Tiền mặt', pos: 'POS', bank_transfer: 'Chuyển khoản', online_wallet: 'Ví điện tử',
 };
 
+/** Cộng/trừ số ngày vào ngày YYYY-MM-DD (tính theo UTC). */
 const addCenterDays = (isoDate: string, deltaDays: number) => {
   const [y, m, d] = isoDate.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d + deltaDays)).toISOString().slice(0, 10);
 };
 
+/** Tách thời điểm thanh toán thành ngày và giờ theo múi giờ trung tâm. */
 const formatTransactionTime = (paidAt: string) => {
   if (!paidAt) return { date: '', time: '' };
   const date = formatCenterDate(paidAt, paidAt);
@@ -27,7 +30,11 @@ const formatTransactionTime = (paidAt: string) => {
   return { date, time };
 };
 
-// CSV quoting alone does not stop spreadsheet formula evaluation.
+// Riêng việc bọc ngoặc kép CSV không ngăn bảng tính thực thi công thức.
+/**
+ * Chuẩn hóa một ô CSV: thêm dấu nháy nếu bắt đầu bằng ký tự công thức (=, +, @, -) để chống chèn công thức, rồi
+ * bọc trong ngoặc kép.
+ */
 const csvText = (raw: string) => {
   // eslint-disable-next-line no-control-regex -- include leading control characters in the formula guard
   const unsafe = /^[\u0000-\u0020]*[=+@-]|^[\t\r\n]/.test(raw);
@@ -35,6 +42,10 @@ const csvText = (raw: string) => {
   return `"${value.replace(/"/g, '""')}"`;
 };
 
+/**
+ * Màn báo cáo của quản lý: doanh thu theo ngày/gói, giao dịch gần đây (tìm kiếm, xuất CSV), tỷ lệ gia hạn và
+ * duyệt hoặc từ chối yêu cầu hủy gói.
+ */
 export function ManagerReportsPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -48,7 +59,8 @@ export function ManagerReportsPage() {
 
   // Bộ lọc khoảng ngày mặc định: 30 ngày gần nhất
   const todayStr = useMemo(() => centerNowParts().date, []);
-  const thirtyDaysAgoStr = useMemo(() => addCenterDays(todayStr, -30), [todayStr]);
+  // Khoảng mặc định gồm hôm nay và 29 ngày trước đó.
+  const thirtyDaysAgoStr = useMemo(() => addCenterDays(todayStr, -29), [todayStr]);
 
   const [startDate, setStartDate] = useState(thirtyDaysAgoStr);
   const [endDate, setEndDate] = useState(todayStr);
@@ -65,12 +77,14 @@ export function ManagerReportsPage() {
 
   const [cancellationRequests, setCancellationRequests] = useState<CancellationRequestDto[]>([]);
   const [loadingCancellations, setLoadingCancellations] = useState(false);
+  const [cancellationError, setCancellationError] = useState(false);
   const [decidingCancelId, setDecidingCancelId] = useState<number | null>(null);
 
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
   const [txSearchTerm, setTxSearchTerm] = useState('');
 
   const recentTransactions = summary?.recentTransactions;
+  // Giao dịch sau khi lọc theo từ khóa.
   const filteredTransactions = useMemo(() => {
     if (!recentTransactions) return [];
     const term = txSearchTerm.trim().toLowerCase();
@@ -86,7 +100,9 @@ export function ManagerReportsPage() {
   }, [recentTransactions, txSearchTerm]);
 
   const isInvalidRange = Boolean(startDate && endDate && startDate > endDate);
+  const includesToday = appliedRange.startDate <= todayStr && todayStr <= appliedRange.endDate;
 
+  // Đổi ngày bắt đầu; nếu vượt ngày kết thúc thì kéo ngày kết thúc theo.
   const handleStartDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     setStartDate(val);
@@ -95,6 +111,7 @@ export function ManagerReportsPage() {
     }
   };
 
+  // Đổi ngày kết thúc; không cho nhỏ hơn ngày bắt đầu.
   const handleEndDateChange = (e: { target: { value: string } }) => {
     const val = e.target.value;
     if (startDate && val && val < startDate) {
@@ -104,19 +121,23 @@ export function ManagerReportsPage() {
     setEndDate(val);
   };
 
+  // Tải các yêu cầu hủy gói chờ quản lý.
   const loadCancellations = useCallback(async () => {
     if (!hasAccess || typeof reportsApi.getCancellationRequests !== 'function') return;
     setLoadingCancellations(true);
+    setCancellationError(false);
     try {
       const items = await reportsApi.getCancellationRequests();
       setCancellationRequests(items ?? []);
     } catch {
       setCancellationRequests([]);
+      setCancellationError(true);
     } finally {
       setLoadingCancellations(false);
     }
   }, [hasAccess]);
 
+  // Tải báo cáo cho khoảng ngày; bỏ qua nếu khoảng sai hoặc đã có lần gọi mới hơn.
   const fetchReports = useCallback(async (start: string, end: string) => {
     if (start > end) return;
     const requestId = ++latestRequest.current;
@@ -142,6 +163,7 @@ export function ManagerReportsPage() {
     void loadCancellations();
   }, [hasAccess, fetchReports, loadCancellations, thirtyDaysAgoStr, todayStr]);
 
+  // Phê duyệt hủy gói và hoàn tiền về ví sau khi xác nhận.
   const handleApproveCancellation = async (item: CancellationRequestDto) => {
     if (decidingCancelId !== null || typeof reportsApi.approveCancellationRequest !== 'function') return;
     const confirmed = await confirm({
@@ -169,6 +191,7 @@ export function ManagerReportsPage() {
     }
   };
 
+  // Từ chối yêu cầu hủy gói sau khi xác nhận.
   const handleRejectCancellation = async (item: CancellationRequestDto) => {
     if (decidingCancelId !== null || typeof reportsApi.rejectCancellationRequest !== 'function') return;
     const confirmed = await confirm({
@@ -194,15 +217,17 @@ export function ManagerReportsPage() {
     }
   };
 
+  // Áp dụng bộ lọc khoảng ngày nếu hợp lệ.
   const handleApplyFilter = (e: React.FormEvent) => {
     e.preventDefault();
     if (isInvalidRange) return;
     void fetchReports(startDate, endDate);
   };
 
+  // Chọn nhanh khoảng ngày tính lùi từ hôm nay.
   const handleQuickRange = (days: number) => {
     const end = todayStr;
-    const start = addCenterDays(todayStr, -days);
+    const start = addCenterDays(todayStr, 1 - days);
     setStartDate(start);
     setEndDate(end);
     void fetchReports(start, end);
@@ -222,7 +247,7 @@ export function ManagerReportsPage() {
         periodEnd: appliedRange.endDate,
         data: JSON.stringify({
           periodRevenue: summary.periodRevenue,
-          todayRevenue: summary.todayRevenue,
+          todayRevenue: includesToday ? summary.todayRevenue : null,
           packagesSoldCount: summary.packagesSoldCount,
           renewalRate: summary.renewalRate,
           dailyRevenueCount: summary.dailyRevenue.length,
@@ -242,7 +267,7 @@ export function ManagerReportsPage() {
       csv += t('1. TỔNG QUAN CHỈ SỐ KPI\n', "1. KPI OVERVIEW\n");
       csv += t(`Doanh Thu Kỳ Lọc,${summary.periodRevenue} VNĐ\n`, `Period Revenue,${summary.periodRevenue} VND
 `);
-      csv += t(`Doanh Thu Hôm Nay,${summary.todayRevenue} VNĐ\n`, `Today's Revenue,${summary.todayRevenue} VND
+      csv += t(`Doanh Thu Hôm Nay,${includesToday ? `${summary.todayRevenue} VNĐ` : '—'}\n`, `Today's Revenue,${includesToday ? `${summary.todayRevenue} VND` : '—'}
 `);
       csv += t(`Số Gói Đã Bán,${summary.packagesSoldCount} gói\n`, `Memberships Sold,${summary.packagesSoldCount} memberships
 `);
@@ -299,7 +324,7 @@ export function ManagerReportsPage() {
     }
   };
 
-  // 403 Forbidden Guard
+  // Chặn truy cập 403 Forbidden
   if (!hasAccess) {
     return (
       <div data-i18n-managed className="portal-container" data-testid="reports-forbidden-guard">
@@ -325,6 +350,7 @@ export function ManagerReportsPage() {
   const maxDailyRevenue = Math.max(...dailyData.map((d) => d.revenue), 1);
   // Mũi tên chỉ nhảy giữa các ngày có doanh thu để không phải bấm qua hàng loạt ngày trống.
   const revenueDays = dailyData.filter((d) => d.revenue > 0);
+  // Di chuyển chọn ngày trên biểu đồ sang ngày trước/sau bằng phím.
   const stepDay = (dir: -1 | 1) => {
     if (revenueDays.length === 0) return;
     const idx = revenueDays.findIndex((d) => d.date === hoveredBar?.date);
@@ -419,108 +445,7 @@ export function ManagerReportsPage() {
         </form>
       </div>
 
-      {/* Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (từ Lễ tân) */}
-      <div className="portal-card" style={{ marginBottom: '24px' }}>
-        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-          <div>
-            <h2 className="portal-card-title">
-              {t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{cancellationRequests.filter((r) => r.status === 'PENDING').length})
-            </h2>
-          </div>
-          <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
-        </div>
-
-        {loadingCancellations ? (
-          <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
-        ) : cancellationRequests.length === 0 ? (
-          <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
-            {t("Hiện không có yêu cầu hủy gói tập & hoàn tiền nào cần duyệt.")}</div>
-        ) : (
-          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
-            {cancellationRequests.map((req) => {
-              const isBusy = decidingCancelId === req.id;
-              const isPending = req.status === 'PENDING';
-              return (
-                <div data-i18n-managed
-                  key={req.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                    flexWrap: 'wrap',
-                    gap: '14px',
-                    padding: '16px 18px',
-                    borderRadius: '10px',
-                    border: isPending ? '1px solid var(--portal-salmon)' : '1px solid var(--portal-border)',
-                    backgroundColor: isPending ? 'var(--portal-raised)' : 'var(--portal-surface)',
-                  }}
-                >
-                  <div style={{ flex: 1, minWidth: 260 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
-                        {t("Yêu cầu #")}{req.id}
-                      </span>
-                      <strong>{req.memberName || t(`Hội viên #${req.memberId}`, `Member #${req.memberId}`)}</strong>
-                      <span
-                        className={`badge ${
-                          req.status === 'PENDING'
-                            ? 'badge-warning'
-                            : req.status === 'APPROVED'
-                              ? 'badge-success'
-                              : 'badge-neutral'
-                        }`}
-                      >
-                        {req.status === 'PENDING' ? t('CHỜ DUYỆT') : req.status === 'APPROVED' ? t('ĐÃ HOÀN VỀ VÍ') : t('ĐÃ TỪ CHỐI')}
-                      </span>
-                    </div>
-                    <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
-                      {t("Gói tập: ")}<strong>{req.packageName}</strong> {t(" • Số tiền hoàn về Ví:")}{' '}
-                      <strong style={{ color: 'var(--portal-success, #86efac)' }}>{vnd(Number(req.refundAmount ?? 0))}</strong>
-                      {req.requestedByName && <span> {t(" • Trình bởi: ")}{req.requestedByName}</span>}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: '8px',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        backgroundColor: 'var(--portal-surface)',
-                        border: '1px solid var(--portal-border)',
-                        fontSize: '0.88rem',
-                        color: 'var(--portal-paper)',
-                      }}
-                    >
-                      <strong>{t("Lý do hủy gói:")}</strong> {req.reason}
-                    </div>
-                  </div>
-
-                  {isPending && (
-                    <div data-i18n-managed style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
-                        disabled={decidingCancelId !== null}
-                        onClick={() => void handleRejectCancellation(req)}
-                      >
-                        {isBusy ? t('Đang xử lý...') : t('Từ chối')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-primary btn-sm"
-                        disabled={decidingCancelId !== null}
-                        onClick={() => void handleApproveCancellation(req)}
-                      >
-                        {isBusy ? t('Đang xử lý...') : t('Phê duyệt & Hoàn tiền về Ví')}
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
-
-      {/* Error state */}
+      {/* Trạng thái lỗi */}
       {error && !loading && (
         <div data-i18n-managed className="portal-card" style={{ marginBottom: '24px' }}>
           <div className="portal-state" style={{ padding: '40px 20px', textAlign: 'center' }}>
@@ -533,7 +458,7 @@ export function ManagerReportsPage() {
         </div>
       )}
 
-      {/* Loading Skeleton */}
+      {/* Khung xương đang tải */}
       {loading && (
         <div data-i18n-managed role="status" aria-busy="true">
           <span className="sr-only">{t("Đang tải số liệu...")}</span>
@@ -564,7 +489,8 @@ export function ManagerReportsPage() {
         <div data-i18n-managed className="metrics-grid" style={{ marginBottom: '24px' }}>
           <div className="metric-card">
             <div className="metric-label">{t("Doanh thu hôm nay")}</div>
-            <div className="metric-value">{vnd(summary.todayRevenue)}</div>
+            <div className="metric-value">{includesToday ? vnd(summary.todayRevenue) : '—'}</div>
+            {!includesToday && <div className="row-card__meta">{t('Không nằm trong kỳ lọc', 'Outside the selected period')}</div>}
           </div>
 
           <div className="metric-card">
@@ -713,6 +639,109 @@ export function ManagerReportsPage() {
           </div>
         </div>
       )}
+
+      {/* Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (từ Lễ tân) */}
+      <div className="portal-card" style={{ marginBottom: '24px' }}>
+        <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <div>
+            <h2 className="portal-card-title">
+              {t("Duyệt yêu cầu hủy gói tập & Hoàn tiền về Ví (")}{loadingCancellations || cancellationError ? '—' : cancellationRequests.filter((r) => r.status === 'PENDING').length})
+            </h2>
+          </div>
+          <RefreshButton label={t("Làm mới yêu cầu hủy")} onClick={() => void loadCancellations()} disabled={loadingCancellations} />
+        </div>
+
+        {loadingCancellations ? (
+          <p data-i18n-managed className="row-card__meta" role="status" style={{ marginTop: 12 }}>{t("Đang tải danh sách yêu cầu hủy gói…")}</p>
+        ) : cancellationError ? (
+          <p data-i18n-managed role="alert" className="row-card__meta" style={{ marginTop: 12 }}>{t("Không thể tải danh sách yêu cầu hủy gói. Vui lòng làm mới để thử lại.")}</p>
+        ) : cancellationRequests.length === 0 ? (
+          <div data-i18n-managed style={{ padding: '16px 0 4px', color: 'var(--portal-muted)', fontSize: '0.9rem' }}>
+            {t("Hiện không có yêu cầu hủy gói tập & hoàn tiền nào cần duyệt.")}</div>
+        ) : (
+          <div data-i18n-managed style={{ display: 'grid', gap: '12px', marginTop: '14px' }}>
+            {cancellationRequests.map((req) => {
+              const isBusy = decidingCancelId === req.id;
+              const isPending = req.status === 'PENDING';
+              return (
+                <div data-i18n-managed
+                  key={req.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    flexWrap: 'wrap',
+                    gap: '14px',
+                    padding: '16px 18px',
+                    borderRadius: '10px',
+                    border: isPending ? '1px solid var(--portal-salmon)' : '1px solid var(--portal-border)',
+                    backgroundColor: isPending ? 'var(--portal-raised)' : 'var(--portal-surface)',
+                  }}
+                >
+                  <div style={{ flex: 1, minWidth: 260 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                      <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
+                        {t("Yêu cầu #")}{req.id}
+                      </span>
+                      <strong>{req.memberName || t(`Hội viên #${req.memberId}`, `Member #${req.memberId}`)}</strong>
+                      <span
+                        className={`badge ${
+                          req.status === 'PENDING'
+                            ? 'badge-warning'
+                            : req.status === 'APPROVED'
+                              ? 'badge-success'
+                              : 'badge-neutral'
+                        }`}
+                      >
+                        {req.status === 'PENDING' ? t('CHỜ DUYỆT') : req.status === 'APPROVED' ? t('ĐÃ HOÀN VỀ VÍ') : t('ĐÃ TỪ CHỐI')}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
+                      {t("Gói tập: ")}<strong>{req.packageName}</strong> {t(" • Số tiền hoàn về Ví:")}{' '}
+                      <strong style={{ color: 'var(--portal-success, #86efac)' }}>{vnd(Number(req.refundAmount ?? 0))}</strong>
+                      {req.requestedByName && <span> {t(" • Trình bởi: ")}{req.requestedByName}</span>}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: '8px',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--portal-surface)',
+                        border: '1px solid var(--portal-border)',
+                        fontSize: '0.88rem',
+                        color: 'var(--portal-paper)',
+                      }}
+                    >
+                      <strong>{t("Lý do hủy gói:")}</strong> {req.reason}
+                    </div>
+                  </div>
+
+                  {isPending && (
+                    <div data-i18n-managed style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        disabled={decidingCancelId !== null}
+                        onClick={() => void handleRejectCancellation(req)}
+                      >
+                        {isBusy ? t('Đang xử lý...') : t('Từ chối')}
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary btn-sm"
+                        disabled={decidingCancelId !== null}
+                        onClick={() => void handleApproveCancellation(req)}
+                      >
+                        {isBusy ? t('Đang xử lý...') : t('Phê duyệt & Hoàn tiền về Ví')}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Bảng danh sách giao dịch gần nhất */}
       {!loading && !error && summary && (

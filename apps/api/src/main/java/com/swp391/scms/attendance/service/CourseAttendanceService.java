@@ -22,17 +22,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Absence rules for recurring courses (spec 2026-11-09, section 1.4).
+ * Quy tắc vắng mặt cho các khóa học định kỳ (spec 2026-11-09, mục 1.4, tính năng cũ).
  * <ul>
- *   <li>A booked member with no attendance row for a finished session is marked {@code absent}.</li>
- *   <li>Missing more than half of a course's sessions blocks joining a new course for {@link #BLOCK_DAYS} days.</li>
- *   <li>Late arrivals count as present; excused sessions (an approved hold) are not absences.</li>
+ *   <li>Hội viên đã đăng ký nhưng không có dòng điểm danh cho buổi học đã kết thúc sẽ bị đánh dấu {@code absent}.</li>
+ *   <li>Vắng quá một nửa số buổi của một khóa học sẽ bị chặn tham gia khóa học mới trong {@link #BLOCK_DAYS} ngày.</li>
+ *   <li>Đến muộn được tính là có mặt; buổi học được miễn phép (bảo lưu đã duyệt) không tính là vắng mặt.</li>
  * </ul>
  */
 @Service
 public class CourseAttendanceService {
     public static final int BLOCK_DAYS = 30;
-    /** How far back a sweep looks for finished sessions nobody recorded. */
+    /** Số ngày lùi lại mà lượt quét tìm các buổi đã kết thúc nhưng chưa ai ghi nhận. */
     private static final int LOOKBACK_DAYS = 7;
     private static final Logger log = LoggerFactory.getLogger(CourseAttendanceService.class);
 
@@ -49,9 +49,14 @@ public class CourseAttendanceService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.attendance.repository.CenterCheckinRepository checkins;
 
-    /** A visit that began up to this long before a session still covers it (the member came early and stayed). */
+    /** Lớp nhóm nằm ngoài phạm vi; lượt quét tắt cùng chúng để các dòng cũ không bị quét. */
+    @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
+    private boolean classesEnabled;
+
+    /** Lượt vào bắt đầu sớm hơn buổi học tối đa khoảng này vẫn phủ buổi (hội viên đến sớm và ở lại). */
     private static final int STAY_BEFORE_HOURS = 3;
 
+    /** Nhận repository điểm danh, buổi học, đăng ký và hội viên, cùng Clock. */
     public CourseAttendanceService(SessionAttendanceRepository attendance, ClassSessionRepository sessions,
                                    ClassEnrollmentRepository enrollments, MemberRepository members, Clock clock) {
         this.attendance = attendance;
@@ -61,8 +66,13 @@ public class CourseAttendanceService {
         this.clock = clock;
     }
 
+    /**
+     * Job mỗi 30 phút đánh vắng các buổi đã qua; chỉ chạy khi bật lớp nhóm (app.legacy.classes-enabled). Lỗi
+     * chỉ ghi log.
+     */
     @Scheduled(cron = "${app.attendance.auto-absent.cron:0 */30 * * * ?}")
     public void sweep() {
+        if (!classesEnabled) return;
         try {
             int marked = markMissedSessions();
             if (marked > 0) log.info("[CourseAttendance] marked {} missed session(s) as absent", marked);
@@ -71,7 +81,14 @@ public class CourseAttendanceService {
         }
     }
 
-    /** Marks every unrecorded, finished course session as absent and applies the 50% rule. Returns rows created. */
+    /**
+     * Với các buổi trong 7 ngày qua đã kết thúc: mọi học viên đăng ký chưa có điểm danh (và không có lượt quét
+     * cổng bao phủ buổi) bị ghi vắng tự động; sau đó xét quy tắc vắng quá nửa cho từng học viên. Trả số bản ghi
+     * đã tạo.
+     *
+     * Đánh dấu vắng cho mọi buổi khóa học đã kết thúc mà chưa ghi nhận và áp dụng quy tắc 50%. Trả về số dòng
+     * được tạo.
+     */
     @Transactional
     public int markMissedSessions() {
         LocalDateTime now = LocalDateTime.now(clock.withZone(CenterTime.ZONE));
@@ -85,7 +102,7 @@ public class CourseAttendanceService {
                 Member member = enrollment.getMember();
                 if (member == null || joinedAfter(enrollment, session)
                         || attendance.existsBySessionIdAndMemberUserId(session.getId(), member.getUserId())) continue;
-                // Only the coach records attendance; a member who was in the center then is left for the coach to mark.
+                // Chỉ HLV ghi điểm danh; hội viên đang ở trung tâm lúc đó được để lại cho HLV đánh dấu.
                 if (gateCheckinFor(member.getUserId(), session) != null) continue;
                 SessionAttendance row = new SessionAttendance();
                 row.setSession(session);
@@ -106,8 +123,11 @@ public class CourseAttendanceService {
     }
 
     /**
-     * The member resumed before the hold ended: sessions that were excused for the hold from {@code from} on are
-     * ordinary sessions again, so they count as attended or missed like any other.
+     * Hội viên quay lại sớm sau bảo lưu: xóa các bản ghi "có phép do bảo lưu" từ ngày đó, để các buổi này được
+     * tính như bình thường.
+     *
+     * Hội viên tiếp tục trước khi tạm hoãn kết thúc: các buổi được miễn do tạm hoãn từ {@code from} trở đi
+     * trở lại thành buổi bình thường, nên được tính đã dự hoặc vắng như mọi buổi khác.
      */
     @Transactional
     public int releaseHoldExcuses(Long memberId, LocalDate from) {
@@ -118,8 +138,9 @@ public class CourseAttendanceService {
     }
 
     /**
-     * Start of a granted gate check-in that was inside the center while the session ran (it began at most
-     * {@value #STAY_BEFORE_HOURS} hours before the start), or null. Shown to the coach; it never records attendance.
+     * Thời điểm bắt đầu của lượt check-in cổng hợp lệ đã ở trong trung tâm trong lúc buổi học diễn ra (bắt
+     * đầu tối đa {@value #STAY_BEFORE_HOURS} giờ trước khi buổi học bắt đầu), hoặc null. Chỉ hiển thị để HLV
+     * tham khảo; không bao giờ tự động ghi nhận điểm danh.
      */
     public LocalDateTime gateCheckinFor(Long memberId, ClassSession session) {
         if (checkins == null || session.getSessionDate() == null) return null;
@@ -128,7 +149,12 @@ public class CourseAttendanceService {
         return checkins.findCoveringVisitStart(memberId, start.minusHours(STAY_BEFORE_HOURS), start, end);
     }
 
-    /** True when the member missed more than half of the course and was blocked now. */
+    /**
+     * Nếu học viên vắng quá nửa số buổi của khóa thì chặn đăng ký khóa mới 30 ngày và gửi thông báo; trả true
+     * nếu đang bị chặn.
+     *
+     * True khi hội viên vắng hơn một nửa khóa học và vừa bị chặn.
+     */
     @Transactional
     public boolean evaluate(Long memberId, Long classId) {
         long total = sessions.countByGymClassIdAndStatusNot(classId, "cancelled");
@@ -153,11 +179,13 @@ public class CourseAttendanceService {
         return true;
     }
 
+    /** Buổi học đã kết thúc chưa. */
     private static boolean hasEnded(ClassSession session, LocalDateTime now) {
         return session.getSessionDate() != null && session.getEndTime() != null
                 && !LocalDateTime.of(session.getSessionDate(), session.getEndTime()).isAfter(now);
     }
 
+    /** Học viên có đăng ký sau ngày diễn ra buổi không (khi đó buổi đó không tính). */
     private static boolean joinedAfter(ClassEnrollment enrollment, ClassSession session) {
         return enrollment.getEnrolledAt() != null && session.getSessionDate() != null
                 && enrollment.getEnrolledAt().toLocalDate().isAfter(session.getSessionDate());

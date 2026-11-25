@@ -17,6 +17,7 @@ const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const MIN_AVATAR_DIMENSION = 100;
 const MAX_AVATAR_DIMENSION = 4096;
 
+/** Đọc file thành data URL (báo lỗi nếu không đọc được). */
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -29,6 +30,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
   });
 }
 
+/** Kiểm tra kích thước ảnh trong khoảng cho phép và thu nhỏ nếu lớn hơn cạnh tối đa; trả về data URL đã xử lý. */
 function validateAndProcessImage(dataUrl: string, mimeType: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -65,7 +67,7 @@ function validateAndProcessImage(dataUrl: string, mimeType: string): Promise<str
           }
         }
       } catch {
-        // Fallback to original dataUrl if canvas is unsupported in test environment
+        // Dùng lại dataUrl gốc nếu canvas không được hỗ trợ trong môi trường kiểm thử
       }
       resolve(dataUrl);
     };
@@ -74,6 +76,10 @@ function validateAndProcessImage(dataUrl: string, mimeType: string): Promise<str
   });
 }
 
+/**
+ * Trang hồ sơ cá nhân dùng chung cho hội viên, HLV và lễ tân: sửa thông tin, đổi ảnh đại diện, đổi mật khẩu, hồ
+ * sơ HLV/lễ tân và xác minh danh tính của hội viên.
+ */
 export function MemberProfilePage() {
   useLanguage();
   const currentUser = getCurrentUser();
@@ -104,6 +110,7 @@ export function MemberProfilePage() {
   const [passwordErrors, setPasswordErrors] = useState<{ current?: string; next?: string; confirm?: string; form?: string }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Tải hồ sơ của người dùng đang đăng nhập.
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -121,8 +128,10 @@ export function MemberProfilePage() {
     void load();
   }, [load]);
 
+  // Cập nhật một phần hồ sơ đang chỉnh trong state.
   const patch = (changes: Partial<Profile>) => profile && setProfile({ ...profile, ...changes });
 
+  // Chọn ảnh đại diện: kiểm tra loại, dung lượng và kích thước rồi tải lên.
   const handleAvatarFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
@@ -153,6 +162,7 @@ export function MemberProfilePage() {
     }
   };
 
+  // Xóa ảnh đại diện.
   const handleRemoveAvatar = async () => {
     if (!profile || avatarBusy) return;
     setError('');
@@ -169,6 +179,7 @@ export function MemberProfilePage() {
     }
   };
 
+  // Lưu hồ sơ sau khi kiểm tra số điện thoại và các trường bắt buộc.
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!profile || saving) return;
@@ -211,6 +222,7 @@ export function MemberProfilePage() {
     }
   };
 
+  // Đổi mật khẩu sau khi kiểm tra mật khẩu hiện tại, quy tắc mật khẩu mới, khác mật khẩu cũ và khớp xác nhận.
   const handleChangePassword = async () => {
     if (passwordBusy) return;
     const errors: typeof passwordErrors = {};
@@ -560,7 +572,7 @@ export function MemberProfilePage() {
                       type="text"
                       className="portal-input"
                       maxLength={150}
-                      placeholder={memberText("Vd: Yoga, Strength & Conditioning, Pilates...", "E.g. Yoga, Strength & Conditioning, Pilates...")}
+                      placeholder={memberText("Vd: Gym - Sức mạnh, Tăng cơ, Giảm mỡ...", "E.g. Gym - Strength, Muscle gain, Fat loss...")}
                       value={profile.specialization ?? ''}
                       onChange={(e) => patch({ specialization: e.target.value })}
                     />

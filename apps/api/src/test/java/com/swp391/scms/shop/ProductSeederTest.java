@@ -14,10 +14,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+/** Bộ kiểm thử cho bộ khởi tạo dữ liệu ProductSeeder (product seeder). */
 class ProductSeederTest {
     final ProductCategoryRepository categories = mock(ProductCategoryRepository.class);
     final ProductRepository products = mock(ProductRepository.class);
 
+    /** Kiểm thử: không làm gì khi cờ seed bị tắt. */
     @Test
     void doesNothingWhenFlagIsDisabled() {
         ShopProperties props = new ShopProperties();
@@ -28,6 +30,7 @@ class ProductSeederTest {
         verify(products, never()).save(any());
     }
 
+    /** Kiểm thử: không làm gì khi đã có sản phẩm. */
     @Test
     void doesNothingWhenProductsAlreadyExist() {
         ShopProperties props = new ShopProperties();
@@ -39,6 +42,7 @@ class ProductSeederTest {
         verify(products, never()).save(any());
     }
 
+    /** Kiểm thử: bật cờ và database trống thì tạo sáu sản phẩm mẫu. */
     @Test
     void seedsSixSampleProductsWhenEnabledAndDatabaseIsEmpty() {
         ShopProperties props = new ShopProperties();

@@ -31,6 +31,10 @@ const STATUS_LABELS: Record<string, { label: string; bg: string; color: string }
   CANCELLED: { label: 'Đã hủy', bg: 'color-mix(in srgb, var(--portal-muted) 15%, transparent)', color: 'var(--portal-muted)' },
 };
 
+/**
+ * Màn nhân viên xem và gửi đơn từ của mình (nghỉ phép, đổi ca, đổi lịch...): lọc theo trạng thái, tạo đơn, hủy
+ * đơn đang chờ.
+ */
 export function StaffInternalRequestsPage() {
   const { t } = useStaffI18n();
   const [confirm, confirmDialog] = useConfirm();
@@ -38,10 +42,10 @@ export function StaffInternalRequestsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<StaffMessage>('');
 
-  // Filter
+  // Bộ lọc
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
 
-  // Create Modal
+  // Hộp thoại tạo đơn mới
   const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
   const [createType, setCreateType] = useState<RequestType>('LEAVE');
   const [createTitle, setCreateTitle] = useState<string>('');
@@ -52,9 +56,10 @@ export function StaffInternalRequestsPage() {
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [formError, setFormError] = useState<StaffMessage>('');
 
-  // Cancel target
+  // Đơn đang thao tác hủy
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
+<<<<<<< HEAD
   const tomorrowDate = useMemo(() => {
     const today = centerNowParts().date;
     const [y, m, d] = today.split('-').map(Number);
@@ -62,6 +67,9 @@ export function StaffInternalRequestsPage() {
     return tomorrow.toISOString().slice(0, 10);
   }, []);
 
+=======
+  // Tải đơn từ của chính người dùng.
+>>>>>>> 7e066775aa6d0a2c467f5936f599f972042d3721
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
@@ -79,11 +87,13 @@ export function StaffInternalRequestsPage() {
     void loadData();
   }, [loadData]);
 
+  // Đơn sau khi lọc theo trạng thái.
   const filteredRequests = useMemo(() => {
     if (statusFilter === 'ALL') return requests;
     return requests.filter((r) => r.status === statusFilter);
   }, [requests, statusFilter]);
 
+  // Kiểm tra và gửi đơn mới; nghỉ phép trùng ngày thì hỏi xác nhận rồi mới gửi lại với confirmOverlap.
   async function handleCreateSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!createTitle.trim()) {
@@ -105,6 +115,7 @@ export function StaffInternalRequestsPage() {
 
     setSubmitting(true);
     setFormError('');
+    // Dữ liệu đơn gửi lên backend.
     const payload = {
       requestType: createType,
       title: createTitle.trim(),
@@ -140,6 +151,7 @@ export function StaffInternalRequestsPage() {
     }
   }
 
+  // Đặt lại biểu mẫu tạo đơn.
   function resetForm() {
     setCreateType('LEAVE');
     setCreateTitle('');
@@ -150,6 +162,7 @@ export function StaffInternalRequestsPage() {
     setFormError('');
   }
 
+  // Hủy một đơn sau khi xác nhận, rồi tải lại danh sách.
   async function handleCancelRequest(id: number) {
     if (!(await confirm({ title: staffMessage('Hủy đơn từ?', staffTranslation('Hủy đơn từ?')), message: staffMessage('Đơn sẽ không còn được gửi tới quản lý để duyệt.', staffTranslation('Đơn sẽ không còn được gửi tới quản lý để duyệt.')), confirmLabel: staffMessage('Hủy đơn', staffTranslation('Hủy đơn')), cancelLabel: staffMessage('Giữ đơn', staffTranslation('Giữ đơn')), danger: true }))) return;
     setCancellingId(id);
@@ -235,7 +248,7 @@ export function StaffInternalRequestsPage() {
                   gap: 14,
                 }}
               >
-                {/* Header row of card */}
+                {/* Hàng tiêu đề của thẻ */}
                 <div
                   style={{
                     display: 'flex',
@@ -278,7 +291,7 @@ export function StaffInternalRequestsPage() {
                   </span>
                 </div>
 
-                {/* Title & Reason */}
+                {/* Tiêu đề & lý do */}
                 <div>
                   <h3 style={{ margin: '0 0 6px 0', fontSize: 17, fontWeight: 800, color: 'var(--portal-paper)' }}>
                     {req.title}
@@ -288,7 +301,7 @@ export function StaffInternalRequestsPage() {
                   </p>
                 </div>
 
-                {/* Scope details (dates, target shift) */}
+                {/* Chi tiết phạm vi (ngày, ca mong muốn) */}
                 {(req.startDate || req.targetShift) && (
                   <div
                     style={{
@@ -321,7 +334,7 @@ export function StaffInternalRequestsPage() {
                   </div>
                 )}
 
-                {/* Manager review result */}
+                {/* Kết quả duyệt của quản lý */}
                 {req.reviewedAt && (
                   <div data-i18n-managed
                     style={{
@@ -348,7 +361,7 @@ export function StaffInternalRequestsPage() {
                   </div>
                 )}
 
-                {/* Footer Action (Cancel button if pending) */}
+                {/* Thao tác chân thẻ (nút Hủy khi đơn đang chờ duyệt) */}
                 {isPending && (
                   <div data-i18n-managed style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>
                     <button

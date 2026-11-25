@@ -7,9 +7,16 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
+/** Truy cập dữ liệu địa chỉ giao hàng của hội viên (bảng member_addresses). */
 @Repository
 public interface MemberAddressRepository extends JpaRepository<MemberAddress, Long> {
+    /**
+     * Tìm các bản ghi có member_UserId = tham số, sắp xếp theo isDefault giảm dần, createdAt giảm dần, id giảm
+     * dần (Spring Data tự sinh truy vấn từ tên hàm).
+     */
     List<MemberAddress> findAllByMember_UserIdOrderByIsDefaultDescCreatedAtDescIdDesc(Long memberId);
+    /** Tìm các bản ghi có id = tham số và member_UserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<MemberAddress> findByIdAndMember_UserId(Long id, Long memberId);
+    /** Đếm số bản ghi có member_UserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     long countByMember_UserId(Long memberId);
 }

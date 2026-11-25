@@ -24,6 +24,7 @@ import {
 
 export type { ResolvedItemBindingState, ResolvedItemsMap, GroupedItemEntry };
 
+/** Props của các đồ vật: cảnh và bảng dữ liệu thật đã gắn. */
 export interface ItemInstancesProps {
   scene?: SceneDoc;
   resolvedItems?: ResolvedItemsMap;
@@ -38,6 +39,7 @@ const DEDICATED_SURFACE_KINDS = new Set<ItemKind>([
   'swim-lane',
 ]);
 
+/** Một đồ vật trong lô có hiển thị không (theo chế độ tầng, chế độ đi bộ, tầng đang xem và dữ liệu thật). */
 function isBatchItemVisible(
   entry: GroupedItemEntry,
   kind: ItemKind,
@@ -71,7 +73,7 @@ function isBatchItemVisible(
   ) {
     return false;
   }
-  // In solo floor inspection, keep the arriving stair flight visible inside the stairwell cutout
+  // Khi xem cô lập từng tầng (solo), giữ nhịp cầu thang đi tới hiển thị bên trong lỗ thông tầng cầu thang
   if (levelMode === 'solo' && kind === 'stair-core' && (!resolved || resolved.visible !== false)) {
     if (focusLevel === 'L1' && entry.item.id === 'item-b1-stairs') return true;
     if (focusLevel === 'L2' && entry.item.id === 'item-l1-stairs') return true;
@@ -79,6 +81,7 @@ function isBatchItemVisible(
   return isItemInstanceVisible(entry, levelMode, focusLevel, resolved);
 }
 
+/** Props của một lô instanced theo loại đồ vật: loại, các mục, mức chi tiết, vật liệu, bóng và các callback. */
 interface KindInstancedBatchProps {
   kind: ItemKind;
   entries: GroupedItemEntry[];
@@ -93,10 +96,16 @@ interface KindInstancedBatchProps {
   hoveredId: string | null;
   resolvedItems?: ResolvedItemsMap;
   geometryRevision: number;
+  // Gọi khi chọn một đồ vật (fit = vừa khung khi bấm đúp).
   onSelect: (id: string, fit?: boolean) => void;
+  // Gọi khi rê vào hoặc ra khỏi đồ vật.
   onHover: (id: string | null) => void;
 }
 
+/**
+ * Một lô InstancedMesh cho mọi đồ vật cùng loại: đặt ma trận/màu từng instance theo trạng thái và tương tác
+ * chọn/rê.
+ */
 function KindInstancedBatch({
   kind,
   entries,
@@ -117,13 +126,14 @@ function KindInstancedBatch({
   const meshRef = useRef<THREE.InstancedMesh | null>(null);
   const invalidate = useThree(s => s.invalidate);
 
-  // geometryRevision changes when a GLB model replaces the procedural geometry.
+  // Hình học của loại đồ vật; geometryRevision thay đổi khi mô hình GLB thay thế hình học thủ tục.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const geometry = useMemo(() => getItemGeometry(kind, detail), [kind, detail, geometryRevision]);
 
-  // Photo-scanned GLB models bring their own PBR materials (one per geometry group).
+  // Mô hình GLB quét ảnh mang sẵn các vật liệu PBR riêng (một vật liệu cho mỗi nhóm hình học).
   const ownMaterials = geometry.userData.itemMaterials as THREE.Material[] | undefined;
 
+  // Có ít nhất một đồ vật trong lô đang hiển thị không.
   const hasVisibleItems = useMemo(() => {
     for (let i = 0; i < entries.length; i++) {
       const entry = entries[i];
@@ -182,6 +192,7 @@ function KindInstancedBatch({
     invalidate,
   ]);
 
+  // Bấm: chọn đồ vật theo instanceId (bỏ qua nếu đang ẩn).
   const handleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (e.instanceId === undefined) return;
@@ -192,6 +203,7 @@ function KindInstancedBatch({
     onSelect(entry.item.id, false);
   };
 
+  // Bấm đúp: chọn đồ vật và bay vừa khung.
   const handleDoubleClick = (e: ThreeEvent<MouseEvent>) => {
     e.stopPropagation();
     if (e.instanceId === undefined) return;
@@ -202,6 +214,7 @@ function KindInstancedBatch({
     onSelect(entry.item.id, true);
   };
 
+  // Rê chuột: đặt đồ vật đang rê theo instanceId.
   const handlePointerMove = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     if (e.instanceId === undefined) return;
@@ -212,6 +225,7 @@ function KindInstancedBatch({
     onHover(entry.item.id);
   };
 
+  // Rê ra: bỏ đồ vật đang rê.
   const handlePointerOut = (e: ThreeEvent<PointerEvent>) => {
     e.stopPropagation();
     onHover(null);
@@ -239,6 +253,7 @@ function KindInstancedBatch({
   );
 }
 
+/** Mọi đồ vật trong cảnh dựng theo loại bằng InstancedMesh, kèm bộ tải mô hình GLB và dữ liệu thật. */
 export function ItemInstances({
   scene = SOL_CENTER_SCENE,
   resolvedItems,
@@ -254,6 +269,7 @@ export function ItemInstances({
 
   const effectiveLevelMode: LevelMode = walkMode ? 'stacked' : levelMode;
 
+  // Nhóm đồ vật theo loại.
   const grouped = useMemo(() => groupItemsByKind(scene), [scene]);
   const geometryRevision = useSyncExternalStore(
     subscribeItemGeometries,
@@ -261,8 +277,8 @@ export function ItemInstances({
     getItemGeometryRevision,
   );
 
-  // One instanced material for every item; each part's roughness/metalness comes
-  // from the `surf` vertex attribute (chrome, powder coat, rubber, vinyl, glass).
+  // Một vật liệu instanced dùng chung cho mọi đồ vật; độ nhám/kim loại của từng phần
+  // lấy từ thuộc tính đỉnh `surf` (crôm, sơn tĩnh điện, cao su, vinyl, kính).
   const sharedMaterial = useMemo(
     () =>
       applySurfaceDetail(
@@ -288,6 +304,7 @@ export function ItemInstances({
   const detail: ItemDetailLevel = 'high';
   const receiveShadow = tier !== 'low';
 
+  // Chọn đồ vật (fit = bay vừa khung).
   const handleSelect = (id: string, fit = false) => {
     selectNode(id, fit ? { fit: true } : undefined);
   };

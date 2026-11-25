@@ -11,11 +11,12 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 import java.util.List;
 
 /**
- * MapStruct mapper for Payment entity and DTOs.
+ * Mapper (MapStruct tự sinh code) giữa entity Payment và các DTO tương ứng.
  */
 @Mapper(componentModel = "spring", nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public interface PaymentMapper {
 
+    /** Chuyển khoản thanh toán sang DTO. */
     @Mapping(source = "member.userId", target = "memberId")
     @Mapping(source = "member.user.fullName", target = "memberName")
     @Mapping(source = "receivedBy.id", target = "receivedById")
@@ -28,8 +29,10 @@ public interface PaymentMapper {
     @Mapping(target = "vnpayPending", ignore = true)
     PaymentDto toDto(Payment entity);
 
+    /** Chuyển danh sách khoản thanh toán sang DTO. */
     List<PaymentDto> toDtoList(List<Payment> entities);
 
+    /** Tạo entity khoản thanh toán từ dữ liệu tạo mới. */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "member", ignore = true)
     @Mapping(target = "receivedBy", ignore = true)
@@ -38,6 +41,7 @@ public interface PaymentMapper {
     @Mapping(target = "refundedAmount", ignore = true)
     Payment toEntity(PaymentCreateDto dto);
 
+    /** Cập nhật entity từ DTO (chỉ các trường cho phép). */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "member", ignore = true)
     @Mapping(target = "receivedBy", ignore = true)

@@ -31,6 +31,7 @@ describe('portal navigation', () => {
     vi.unstubAllGlobals();
   });
 
+  // Dựng component vào DOM giả để kiểm thử.
   async function renderPortal(role: UserSession['role'] = 'MEMBER') {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
       id: '1', name: 'Nguyễn An', identifier: 'an', role,
@@ -38,9 +39,8 @@ describe('portal navigation', () => {
     const router = createMemoryRouter([
       { element: <AppLayout />, children: [
         { path: '/member/dashboard', element: <h1>Tổng quan</h1> },
-        { path: '/member/classes', element: <h1>Lịch học</h1> },
+        { path: '/member/classes', element: <h1>Lịch PT 1:1</h1> },
         { path: '/member/profile', element: <h1>Hồ sơ cá nhân</h1> },
-        { path: '/member/streak', element: <h1>Streak tập luyện</h1> },
       ] },
       { path: '/login', element: <h1>Đăng nhập</h1> },
     ], { initialEntries: ['/member/dashboard'] });
@@ -57,7 +57,7 @@ describe('portal navigation', () => {
     expect(input).not.toBeNull();
     await act(async () => {
       const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      setter.call(input, 'lich hoc');
+      setter.call(input, 'lich pt');
       input.dispatchEvent(new Event('input', { bubbles: true }));
     });
     const links = host.querySelectorAll<HTMLAnchorElement>('dialog a');
@@ -105,16 +105,8 @@ describe('portal navigation', () => {
       const menu = host.querySelector('[role="menu"]')!;
       expect(menu.querySelector('[data-testid="avatar-menu-profile"]')?.getAttribute('href')).toBe('/member/profile');
       expect(Boolean(menu.querySelector('[data-testid="avatar-menu-wallet"]'))).toBe(role === 'MEMBER');
-      const streakLink = menu.querySelector<HTMLAnchorElement>('[data-testid="avatar-menu-streak"]');
-      expect(Boolean(streakLink)).toBe(role === 'MEMBER');
+      expect(menu.querySelector('[data-testid="avatar-menu-streak"]')).toBeNull();
       expect(menu.querySelector('.member-streak')).toBeNull();
-      if (streakLink) {
-        expect(streakLink.getAttribute('href')).toBe('/member/streak');
-        await act(async () => streakLink.click());
-        expect(router.state.location.pathname).toBe('/member/streak');
-        expect(host.querySelector('[role="menu"]')).toBeNull();
-        await act(async () => avatar.click());
-      }
       await act(async () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
       expect(host.querySelector('[role="menu"]')).toBeNull();
       expect(document.activeElement).toBe(avatar);
@@ -151,14 +143,14 @@ describe('portal navigation', () => {
     expect(menu?.textContent).toContain('Ví của tôi');
     expect(menu?.textContent).toContain('250.000');
 
-    // Open wallet modal from dropdown
+    // Mở hộp thoại ví từ menu thả xuống
     const walletItem = host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-wallet"]')!;
     await act(async () => walletItem.click());
     expect(host.querySelector('[role="menu"]')).toBeNull();
     expect(host.querySelector('dialog')?.textContent).toContain('Ví điện tử SÖL');
     expect(host.querySelector('dialog')?.textContent).toContain('Hoàn tiền gói Silver');
 
-    // Close wallet modal via header dialog close button and navigate to profile via dropdown
+    // Đóng hộp thoại ví bằng nút đóng ở tiêu đề và chuyển tới trang hồ sơ qua menu thả xuống
     const closeBtn = host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!;
     await act(async () => closeBtn.click());
     await act(async () => avatarBtn!.click());

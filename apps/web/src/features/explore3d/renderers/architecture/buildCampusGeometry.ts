@@ -2,6 +2,7 @@ import * as THREE from 'three';
 
 import type { ExploreTheme } from '../materials';
 
+/** Giới hạn khuôn viên theo mặt phẳng XZ (min/max X, Z). */
 export interface CampusBounds {
   readonly minX: number;
   readonly maxX: number;
@@ -16,6 +17,7 @@ export const CAMPUS_BOUNDS: CampusBounds = {
   maxZ: 30,
 };
 
+/** Một phần hình học kèm màu, độ nhám và độ kim loại để gộp. */
 interface ColoredPart {
   readonly geometry: THREE.BufferGeometry;
   readonly color: string;
@@ -23,6 +25,7 @@ interface ColoredPart {
   readonly metalness?: number;
 }
 
+/** Một tấm lá cây (card): toạ độ đỉnh, màu và các thuộc tính để gộp thành tán cây. */
 export interface FoliageCard {
   readonly positions: readonly [
     number, number, number,
@@ -51,6 +54,7 @@ export interface FoliageCard {
   readonly windWeights: readonly [number, number, number, number];
 }
 
+/** Gộp các tấm lá thành một BufferGeometry (không có tấm nào thì trả hình dự phòng). */
 export function mergeFoliageCards(cards: readonly FoliageCard[]): THREE.BufferGeometry {
   if (cards.length === 0) {
     const fallback = new THREE.BufferGeometry();
@@ -105,6 +109,7 @@ export function mergeFoliageCards(cards: readonly FoliageCard[]): THREE.BufferGe
   return geom;
 }
 
+/** Các hình học của cảnh khuôn viên đã gộp theo loại vật liệu: đặc, kính, nước, xe, tán lá... */
 export interface CampusSceneGeometries {
   readonly opaque: THREE.BufferGeometry;
   readonly glass: THREE.BufferGeometry;
@@ -113,6 +118,7 @@ export interface CampusSceneGeometries {
   readonly foliage: THREE.BufferGeometry;
 }
 
+/** Thêm một khối hộp (kích thước, vị trí, xoay, màu...) vào danh sách phần. */
 function pushBox(
   parts: ColoredPart[],
   w: number,
@@ -144,6 +150,7 @@ function pushBox(
   parts.push({ geometry: geom, color, roughness, metalness });
 }
 
+/** Thêm một khối trụ (bán kính trên/dưới, chiều cao, vị trí, màu...) vào danh sách phần. */
 function pushCylinder(
   parts: ColoredPart[],
   rTop: number,
@@ -176,6 +183,7 @@ function pushCylinder(
   parts.push({ geometry: geom, color, roughness, metalness });
 }
 
+/** Gộp các phần tô màu thành một BufferGeometry duy nhất (rỗng thì trả hộp nhỏ dự phòng). */
 function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry {
   if (parts.length === 0) {
     const fallback = new THREE.BoxGeometry(0.01, 0.01, 0.01);
@@ -270,7 +278,7 @@ function mergeColoredParts(parts: readonly ColoredPart[]): THREE.BufferGeometry 
   return merged;
 }
 
-/** Realistic paint finishes instead of toy-bright primaries. */
+/** Các tông sơn ô tô thực tế thay cho các màu cơ bản chói kiểu đồ chơi. */
 const CAR_PAINT: Readonly<Record<string, string>> = {
   '#f8fafc': '#e6e6e3',
   '#e2e8f0': '#c4c7ca',
@@ -284,14 +292,13 @@ const CAR_PAINT: Readonly<Record<string, string>> = {
   '#64748b': '#383c42',
 };
 
-/**
- * Adds a car at (cx, y=0, cz), rotated by `ry` (ry=0 faces +Z, ry=PI/2 faces +X).
- * The body is a bevelled extrusion of a real side profile (bumpers, bonnet,
- * raked screens, roof) rather than stacked boxes, with separate glazing, wheels
- * with rims, lamps and mirrors.
- */
 const METALLIC_CAR_PAINTS = new Set(['#c4c7ca', '#8b8e92', '#6b7178']);
 
+/**
+ * Dựng một chiếc ô tô 3D đặt tại `(cx, y=0, cz)`, xoay một góc `ry` (`ry=0` hướng +Z, `ry=PI/2` hướng +X).
+ * Thân xe được ép vát cạnh từ biên dạng hông thật (cản trước/sau, nắp ca-pô, kính chắn gió nghiêng, mui xe)
+ * thay vì chồng các khối hộp, có kính riêng, bánh xe kèm vành, đèn và gương chiếu hậu.
+ */
 function addCar3D(
   parts: ColoredPart[],
   cx: number,
@@ -309,18 +316,19 @@ function addCar3D(
   const belt = y0 + (variant === 'suv' ? 0.72 : variant === 'coupe' ? 0.6 : 0.66);
   const roof = belt + (variant === 'suv' ? 0.56 : variant === 'coupe' ? 0.4 : 0.48);
   const h = L / 2;
-  // greenhouse: front screen base, roof start, roof end, rear screen base (car z)
+  // khoang kính: chân kính trước, đầu mui, cuối mui, chân kính sau (theo trục z của xe)
   const fBase = variant === 'coupe' ? 0.55 : 0.75;
   const fTop = fBase - (variant === 'suv' ? 0.5 : 0.75);
   const rTop = variant === 'suv' ? -h + 0.55 : variant === 'coupe' ? -0.75 : -0.95;
   const rBase = variant === 'suv' ? -h + 0.22 : variant === 'coupe' ? -h + 0.55 : -h + 0.75;
 
+  // Đặt một phần của xe: xoay theo hướng xe, dời tới vị trí và thêm vào danh sách.
   const place = (geometry: THREE.BufferGeometry, color: string, roughness = 0.78, metalness = 0) => {
     geometry.rotateY(ry);
     geometry.translate(cx, 0, cz);
     parts.push({ geometry, color, roughness, metalness });
   };
-  /** Extrude a side profile (points in car z / y) across the car width. */
+  /** Ép biên dạng cạnh bên của xe (các điểm theo z/y của xe) dọc theo bề rộng xe để tạo thân xe. */
   const extrude = (pts: ReadonlyArray<readonly [number, number]>, width: number, bevel: number) => {
     const shape = new THREE.Shape();
     pts.forEach(([z, y], i) => (i === 0 ? shape.moveTo(z, y) : shape.lineTo(z, y)));
@@ -338,7 +346,7 @@ function addCar3D(
     return geom;
   };
 
-  // body shell
+  // vỏ thân xe
   place(
     extrude(
       [
@@ -362,7 +370,7 @@ function addCar3D(
     paintRoughness,
     paintMetalness,
   );
-  // side glazing (slightly proud of the doors) and screens (between the pillars)
+  // kính hông (hơi nhô ra so với cửa) và kính chắn gió trước/sau (giữa các trụ)
   const glass = '#0c131a';
   place(
     extrude(
@@ -410,16 +418,16 @@ function addCar3D(
     g.translate(x, y, z);
     place(g, color, roughness, metalness);
   };
-  // contact shadow plate, bumpers' dark lower trim, grille
+  // tấm bóng đổ gầm xe, viền tối dưới cản trước/sau, lưới tản nhiệt
   boxAt(W * 0.9, 0.05, L * 0.9, 0, y0 - 0.06, 0, '#07090c', 0.92, 0);
   boxAt(W * 0.7, 0.12, 0.05, 0, y0 + 0.22, h - 0.015, '#14181e', 0.82, 0);
-  // lamps & side mirrors
+  // đèn xe và gương chiếu hậu hai bên
   for (const side of [-1, 1]) {
     boxAt(0.36, 0.1, 0.06, side * (W / 2 - 0.3), belt - 0.2, h - 0.03, '#f1efe4', 0.12, 0);
     boxAt(0.4, 0.09, 0.05, side * (W / 2 - 0.3), belt - 0.16, -h + 0.02, '#6d1212', 0.14, 0);
     boxAt(0.1, 0.07, 0.16, side * (W / 2 + 0.05), belt + 0.06, fBase - 0.12, paint, paintRoughness, paintMetalness);
   }
-  // wheels: matte rubber tyre + brushed alloy rim
+  // bánh xe: lốp cao su lì + mâm hợp kim xước
   const r = variant === 'suv' ? 0.37 : 0.33;
   for (const side of [-1, 1]) {
     for (const wz of [L * 0.31, -L * 0.3]) {
@@ -435,6 +443,7 @@ function addCar3D(
   }
 }
 
+/** Dựng một chiếc xe máy 3D (bánh, khung, yên, tay lái) đặt tại (mx, mz) và hướng ry. */
 function addMotorbike3D(
   parts: ColoredPart[],
   mx: number,
@@ -444,9 +453,12 @@ function addMotorbike3D(
 ): void {
   const cos = Math.cos(ry);
   const sin = Math.sin(ry);
+  // Đổi toạ độ cục bộ x của xe máy sang toạ độ thế giới.
   const tx = (lx: number, lz: number) => mx + lx * cos + lz * sin;
+  // Đổi toạ độ cục bộ z của xe máy sang toạ độ thế giới.
   const tz = (lx: number, lz: number) => mz - lx * sin + lz * cos;
 
+  // Dựng một bánh xe máy (lốp và vành) tại vị trí lz.
   const wheel = (lz: number) => {
     const tyre = new THREE.CylinderGeometry(0.21, 0.21, 0.11, 12);
     tyre.rotateZ(Math.PI / 2);
@@ -463,15 +475,15 @@ function addMotorbike3D(
 
   wheel(-0.52);
   wheel(0.54);
-  // Step-through floorboard, contoured rear cowl & tapered tail
+  // Sàn để chân thấp, yếm thân sau bo dáng và đuôi xe vuốt thon
   pushBox(parts, 0.34, 0.07, 0.56, tx(0, 0.02), 0.23, tz(0, 0.02), '#1b1f26', 0, ry, 0, 0.88, 0);
   pushBox(parts, 0.4, 0.32, 0.82, tx(0, -0.28), 0.44, tz(0, -0.28), bodyColor, 0, ry, 0, 0.22, 0);
   pushBox(parts, 0.3, 0.2, 0.3, tx(0, -0.66), 0.48, tz(0, -0.66), bodyColor, -0.12, ry, 0, 0.22, 0);
   pushBox(parts, 0.35, 0.11, 0.68, tx(0, -0.26), 0.64, tz(0, -0.26), '#191c22', 0, ry, 0, 0.86, 0);
-  // Raked front leg shield & fender
+  // Yếm chắn gió trước nghiêng và chắn bùn
   pushBox(parts, 0.36, 0.62, 0.18, tx(0, 0.38), 0.56, tz(0, 0.38), bodyColor, -0.22, ry, 0, 0.22, 0);
   pushBox(parts, 0.16, 0.1, 0.28, tx(0, 0.54), 0.4, tz(0, 0.54), bodyColor, 0.18, ry, 0, 0.22, 0);
-  // Steering head cowl, handlebars, rear grab rail & lamps
+  // Ốp đầu cổ lái, ghi-đông, tay nắm sau và đèn xe
   pushBox(parts, 0.26, 0.14, 0.2, tx(0, 0.36), 0.92, tz(0, 0.36), bodyColor, 0, ry, 0, 0.22, 0);
   pushBox(parts, 0.62, 0.045, 0.05, tx(0, 0.32), 0.94, tz(0, 0.32), '#cfd5dd', 0, ry, 0, 0.2, 0.92);
   pushBox(parts, 0.28, 0.04, 0.16, tx(0, -0.68), 0.66, tz(0, -0.68), '#c4cad2', 0, ry, 0, 0.22, 0.9);
@@ -479,6 +491,7 @@ function addMotorbike3D(
   pushBox(parts, 0.14, 0.07, 0.06, tx(0, -0.78), 0.57, tz(0, -0.78), '#7a1919', 0, ry, 0, 0.18, 0);
 }
 
+/** Bộ sinh số giả ngẫu nhiên có hạt giống (cùng seed cho cùng dãy số). */
 function seededRandom(seed: number): () => number {
   let t = (seed | 0) + 0x6d2b79f5;
   return () => {
@@ -488,6 +501,7 @@ function seededRandom(seed: number): () => number {
   };
 }
 
+/** Thêm một tấm lá cây vào danh sách tại vị trí và hướng cho trước. */
 function addFoliageCard(
   target: FoliageCard[],
   cx: number,
@@ -572,9 +586,8 @@ function addFoliageCard(
 }
 
 /**
- * Organic branched broadleaf tree: bevelled granite planter + dark mulched soil,
- * multi-fork tapered leaning bark trunk & limbs, and an airy canopy of crossed & layered
- * alpha-tested fronds that cast dappled wind-swaying leaf shadows.
+ * Dựng cây lá rộng phân nhánh tự nhiên: chậu đá granite vát cạnh với đất phủ tối màu, thân và cành thon nghiêng
+ * nhiều nhánh, cùng tán lá thưa gồm các tấm lá chéo nhau nhiều lớp (alpha-tested) đổ bóng lá đốm lung linh theo gió.
  */
 function addCampusTree(
   parts: ColoredPart[],
@@ -729,7 +742,7 @@ function addCampusTree(
   }
 }
 
-/** [x, z, armDirX, armDirZ] of every street lamp; lamp height is STREET_LAMP_HEIGHT. */
+/** `[x, z, armDirX, armDirZ]` của từng cột đèn đường; chiều cao đèn là `STREET_LAMP_HEIGHT`. */
 export const STREET_LAMPS: ReadonlyArray<readonly [number, number, number, number]> = [
   [-32, 23.9, 0, 1],
   [-22, 23.9, 0, 1],
@@ -746,6 +759,7 @@ export const STREET_LAMPS: ReadonlyArray<readonly [number, number, number, numbe
 export const STREET_LAMP_HEIGHT = 5.2;
 export const STREET_LAMP_ARM = 1.15 * 0.88;
 
+/** Dựng một cột đèn đường (thân, tay đèn, đầu đèn) tại vị trí và hướng tay đèn cho trước. */
 function addStreetLamp(
   parts: ColoredPart[],
   x: number,
@@ -767,12 +781,14 @@ function addStreetLamp(
   pushBox(parts, 0.36, 0.08, 0.36, lx, height - 0.12, lz, '#f5e4b8', 0, 0, 0, 0.2, 0);
 }
 
+/** Dựng một trụ đèn bollard thấp (thân trụ và đầu đèn phát sáng). */
 function addBollardLight(parts: ColoredPart[], x: number, z: number): void {
   pushCylinder(parts, 0.09, 0.1, 0.72, x, 0.36, z, '#2b313d', 8, 0, 0, 0, 0.36, 0.88);
   pushCylinder(parts, 0.095, 0.095, 0.16, x, 0.8, z, '#f2c4ad', 8, 0, 0, 0, 0.18, 0);
   pushCylinder(parts, 0.1, 0.1, 0.06, x, 0.91, z, '#1f242d', 8, 0, 0, 0, 0.34, 0.88);
 }
 
+/** Vị trí neo của một cột cờ trong khuôn viên: id, toạ độ và kích thước lá cờ. */
 export interface FlagpoleAnchor {
   readonly id: string;
   readonly x: number;
@@ -783,7 +799,7 @@ export interface FlagpoleAnchor {
   readonly variant: 'salmon' | 'charcoal';
 }
 
-/** Exact pole attachment anchors for wind-animated SÖL flags in `CityLife.tsx`. */
+/** Tọa độ neo chính xác trên cột cờ cho các lá cờ SÖL bay theo gió trong `CityLife.tsx`. */
 export const CAMPUS_FLAGPOLE_ANCHORS: readonly FlagpoleAnchor[] = [
   { id: 'campus-flag-0', x: 13.8, y: 6.18, z: 17.2, width: 1.45, height: 0.74, variant: 'charcoal' },
   { id: 'campus-flag-1', x: 13.8, y: 6.18, z: 19.0, width: 1.45, height: 0.74, variant: 'salmon' },
@@ -791,11 +807,11 @@ export const CAMPUS_FLAGPOLE_ANCHORS: readonly FlagpoleAnchor[] = [
 ];
 
 /**
- * Builds the entire exterior SÖL Campus 3D world as a single merged vertex-colored BufferGeometry.
- * Positioned so that from the default overview camera ([46, 36, 48] -> [4, 2, 0]),
- * the Main Entrance Gate, Guard Booth, Boom Barriers, Zebra Crosswalk, Monument Sign,
- * Solar Car & EV Parking Court, Covered Motorbike & Bicycle Pavilion, and Reflection Fountain
- * are all 100% visible in the central foreground without being covered by the left LevelSwitcher HUD.
+ * Dựng toàn bộ không gian khuôn viên SÖL bên ngoài thành các danh sách phần theo từng loại vật liệu.
+ * Bố trí sao cho từ góc camera toàn cảnh mặc định (`[46, 36, 48] -> [4, 2, 0]`),
+ * Cổng chính, Chốt bảo vệ, Thanh chắn tự động, Vạch qua đường, Biển cột trụ,
+ * Bãi đỗ ô tô & trạm sạc EV có mái năng lượng mặt trời, Nhà để xe máy & xe đạp và Đài phun nước phản chiếu
+ * đều hiển thị trọn vẹn ở tiền cảnh trung tâm mà không bị che bởi thanh LevelSwitcher HUD bên trái.
  */
 function buildCampusParts(theme: ExploreTheme): {
   parts: ColoredPart[];
@@ -826,45 +842,45 @@ function buildCampusParts(theme: ExploreTheme): {
   const canalTint = isLight ? '#1c4e63' : '#0f2836';
 
   // =========================================================================
-  // 1. FRONT BOULEVARD ROAD, CURBS, LANE MARKINGS & ZEBRA CROSSWALK
+  // 1. ĐẠI LỘ PHÍA TRƯỚC, BÓ VỈA, VẠCH KẺ LÀN VÀ VẠCH QUA ĐƯỜNG
   // =========================================================================
   pushBox(parts, 92, 0.05, 5.6, 6, 0.01, 26.6, roadColor, 0, 0, 0, 0.82, 0);
   pushBox(parts, 92, 0.12, 0.28, 6, 0.06, 23.75, curbStone, 0, 0, 0, 0.86, 0);
   pushBox(parts, 92, 0.12, 0.28, 6, 0.06, 29.45, curbStone, 0, 0, 0, 0.86, 0);
 
-  // Dashed center lane dividers along the boulevard (gap at Main Gate x = 2..14)
+  // Vạch đứt chia tim đường dọc đại lộ (chừa khoảng trống tại Cổng chính x = 2..14)
   for (let x = -36; x <= 48; x += 4.2) {
     if (x >= 1.5 && x <= 14.5) continue;
     pushBox(parts, 2.1, 0.06, 0.14, x, 0.04, 26.6, lineAmber, 0, 0, 0, 0.78, 0);
   }
 
-  // Main Entrance Driveway & Porte-Cochère Drop-Off Loop (x = 1.5..14.0, z = 16.0..24.0)
+  // Đường xe vào cổng chính & vòng trả khách dưới mái sảnh (x = 1.5..14.0, z = 16.0..24.0)
   pushBox(parts, 12.6, 0.055, 8.2, 7.8, 0.02, 20.1, parkingAsphalt, 0, 0, 0, 0.82, 0);
-  // Central landscaped island separating Entry (East x=10.6) & Exit (West x=5.0) lanes
+  // Đảo cảnh quan trung tâm tách làn Vào (phía Đông x=10.6) & làn Ra (phía Tây x=5.0)
   pushBox(parts, 1.35, 0.16, 4.6, 7.8, 0.08, 22.1, curbStone, 0, 0, 0, 0.86, 0);
   pushBox(parts, 0.95, 0.22, 4.1, 7.8, 0.11, 22.1, isLight ? '#2e4e34' : '#192b1d', 0, 0, 0, 0.94, 0);
 
-  // VIP Pedestrian Promenade connecting Porte-Cochère to L1 Main Lobby doors (x = -1.5..6.5, z = 15.8..20.2)
+  // Lối đi bộ VIP nối mái sảnh đón xe tới cửa Sảnh chính L1 (x = -1.5..6.5, z = 15.8..20.2)
   pushBox(parts, 8.4, 0.07, 4.4, 2.5, 0.035, 17.8, walkwayStone, 0, 0, 0, 0.86, 0);
   pushBox(parts, 0.22, 0.08, 4.4, -1.55, 0.042, 17.8, salmon, 0, 0, 0, 0.56, 0);
   pushBox(parts, 0.22, 0.08, 4.4, 6.55, 0.042, 17.8, salmon, 0, 0, 0, 0.56, 0);
 
-  // Pedestrian Zebra Crosswalk across the Main Gate throat (x = 3.2..12.4, z = 24.45)
+  // Vạch kẻ qua đường cho người đi bộ ngang miệng Cổng chính (x = 3.2..12.4, z = 24.45)
   for (let x = 3.4; x <= 12.2; x += 0.88) {
     pushBox(parts, 0.48, 0.065, 1.85, x, 0.04, 24.45, lineWhite, 0, 0, 0, 0.78, 0);
   }
 
-  // Directional lane arrows on Entry (+X lane at x=10.5) and Exit (-X lane at x=5.1)
+  // Mũi tên chỉ hướng làn Vào (làn +X tại x=10.5) và làn Ra (làn -X tại x=5.1)
   pushBox(parts, 0.32, 0.065, 1.4, 10.5, 0.04, 22.2, lineWhite, 0, 0, 0, 0.78, 0);
   pushBox(parts, 0.32, 0.065, 1.4, 5.1, 0.04, 22.2, lineWhite, 0, 0, 0, 0.78, 0);
 
   // =========================================================================
-  // 2. MAIN ENTRANCE GATE ("CỔNG CHÀO SÖL"), GUARD BOOTH & BOOM BARRIERS
-  //    Centered at x = 7.8, z = 23.2 — 100% clear of the left LevelSwitcher HUD!
+  // 2. CỔNG CHÍNH ("CỔNG CHÀO SÖL"), CHỐT BẢO VỆ & THANH CHẮN TỰ ĐỘNG
+  //    Đặt tâm tại x = 7.8, z = 23.2 — hoàn toàn không bị che bởi thanh LevelSwitcher HUD bên trái!
   // =========================================================================
   const gateX = 7.8;
   const gateZ = 23.2;
-  // West (x = 1.9) & East (x = 13.7) monumental stone/charcoal gate piers
+  // Trụ cổng chính phía Tây (x = 1.9) và phía Đông (x = 13.7) bằng đá/thép than chì
   pushBox(parts, 1.35, 4.8, 1.15, gateX - 5.9, 2.4, gateZ, darkSteel, 0, 0, 0, 0.4, 0.85);
   pushBox(parts, 1.35, 4.8, 1.15, gateX + 5.9, 2.4, gateZ, darkSteel, 0, 0, 0, 0.4, 0.85);
   pushBox(parts, 0.18, 4.2, 1.22, gateX - 5.9, 2.3, gateZ, salmon, 0, 0, 0, 0.46, 0);
@@ -872,12 +888,12 @@ function buildCampusParts(theme: ExploreTheme): {
   pushBox(parts, 1.65, 0.42, 1.45, gateX - 5.9, 0.21, gateZ, curbStone, 0, 0, 0, 0.86, 0);
   pushBox(parts, 1.65, 0.42, 1.45, gateX + 5.9, 0.21, gateZ, curbStone, 0, 0, 0, 0.86, 0);
 
-  // Overhead Gate Archway Span (spanning x = 1.0 .. 14.6 at y = 4.35 .. 5.25)
+  // Dầm vòm cổng bắc ngang phía trên (trải dài x = 1.0 .. 14.6 tại y = 4.35 .. 5.25)
   pushBox(parts, 13.8, 0.92, 1.35, gateX, 4.72, gateZ, darkSteel, 0, 0, 0, 0.4, 0.86);
   pushBox(parts, 12.2, 0.08, 1.1, gateX, 4.24, gateZ, warmWood, 0, 0, 0, 0.64, 0);
   pushBox(parts, 14.1, 0.16, 1.5, gateX, 5.24, gateZ, salmon, 0, 0, 0, 0.46, 0);
 
-  // Security Guard Booth on the central island (x = 7.8, z = 22.0): steel mullions, recessed interior, translucent glass
+  // Chốt bảo vệ trên đảo trung tâm (x = 7.8, z = 22.0): khung đố thép, nội thất lõm và kính trong mờ
   pushBox(parts, 1.18, 1.05, 1.75, gateX, 0.58, 22.0, midSteel, 0, 0, 0, 0.42, 0.85);
   pushBox(parts, 0.86, 1.15, 1.15, gateX, 1.68, 22.0, '#141922', 0, 0, 0, 0.85, 0);
   for (const cx of [-0.52, 0.52]) {
@@ -889,7 +905,7 @@ function buildCampusParts(theme: ExploreTheme): {
   pushBox(parts, 1.48, 0.18, 2.05, gateX, 2.48, 22.0, darkSteel, 0, 0, 0, 0.38, 0.86);
   pushBox(parts, 1.52, 0.07, 2.1, gateX, 2.58, 22.0, salmon, 0, 0, 0, 0.46, 0);
 
-  // Automated Boom Barrier #1 (West Exit Lane at x = 3.05, z = 22.1 — closed horizontal bar)
+  // Thanh chắn tự động #1 (Làn Ra phía Tây tại x = 3.05, z = 22.1 — thanh chắn đóng ngang)
   pushBox(parts, 0.38, 1.08, 0.38, gateX - 4.75, 0.56, 22.1, salmon, 0, 0, 0, 0.44, 0);
   pushBox(parts, 0.42, 0.14, 0.42, gateX - 4.75, 1.12, 22.1, darkSteel, 0, 0, 0, 0.38, 0.86);
   for (let seg = 0; seg < 6; seg += 1) {
@@ -910,19 +926,19 @@ function buildCampusParts(theme: ExploreTheme): {
     );
   }
 
-  // Automated Boom Barrier #2 (East Entry Lane at x = 12.55, z = 22.1 — raised 38° welcoming car!)
+  // Thanh chắn tự động #2 (Làn Vào phía Đông tại x = 12.55, z = 22.1 — nâng góc 38° đón xe vào)
   pushBox(parts, 0.38, 1.08, 0.38, gateX + 4.75, 0.56, 22.1, salmon, 0, 0, 0, 0.44, 0);
   pushBox(parts, 0.42, 0.14, 0.42, gateX + 4.75, 1.12, 22.1, darkSteel, 0, 0, 0, 0.38, 0.86);
   pushBox(parts, 3.1, 0.09, 0.09, gateX + 3.45, 1.88, 22.1, '#e8e8e3', 0, 0, -0.62, 0.42, 0);
-  // RFID Card Reader Pedestal
+  // Trụ đầu đọc thẻ RFID
   pushBox(parts, 0.22, 1.15, 0.22, gateX + 1.05, 0.58, 23.1, darkSteel, 0, 0, 0, 0.38, 0.86);
   pushBox(parts, 0.24, 0.22, 0.08, gateX + 1.05, 1.06, 23.15, '#2b8a6b', 0, 0, 0, 0.25, 0);
 
-  // Arriving white sports coupe entering through the East Gate lane (x = 10.45, z = 21.1)
+  // Xe coupe thể thao màu trắng đang tiến vào qua làn Cổng Đông (x = 10.45, z = 21.1)
   addCar3D(vehicles, gateX + 2.65, 21.1, Math.PI, '#f8fafc', 'coupe');
 
   // =========================================================================
-  // 3. ROADSIDE MONUMENT TOTEM PYLON SIGN (x = 14.8, z = 23.8)
+  // 3. BIỂN TRỤ TOTEM VEN ĐƯỜNG (x = 14.8, z = 23.8)
   // =========================================================================
   pushBox(parts, 3.1, 0.36, 1.1, 14.8, 0.18, 23.8, curbStone, 0, 0, 0, 0.86, 0);
   pushBox(parts, 2.75, 3.6, 0.52, 14.8, 1.98, 23.8, darkSteel, 0, 0, 0, 0.4, 0.86);
@@ -931,7 +947,7 @@ function buildCampusParts(theme: ExploreTheme): {
   pushBox(parts, 0.16, 3.6, 0.58, 16.2, 1.98, 23.8, salmon, 0, 0, 0, 0.46, 0);
 
   // =========================================================================
-  // 4. L1 PORTE-COCHÈRE MAIN LOBBY CANOPY (x = -1.5 .. +11.5, z = 15.8 .. 19.4)
+  // 4. MÁI SẢNH ĐÓN XE PORTE-COCHÈRE SẢNH CHÍNH L1 (x = -1.5 .. +11.5, z = 15.8 .. 19.4)
   // =========================================================================
   pushBox(parts, 13.2, 0.38, 3.7, 5.0, 3.88, 17.65, darkSteel, 0, 0, 0, 0.38, 0.86);
   pushBox(parts, 12.4, 0.08, 3.3, 5.0, 3.66, 17.65, warmWood, 0, 0, 0, 0.64, 0);
@@ -941,7 +957,7 @@ function buildCampusParts(theme: ExploreTheme): {
     pushBox(parts, 0.32, 3.8, 0.32, colX, 1.85, 18.1, midSteel, -0.14, 0, 0, 0.36, 0.86);
     pushBox(parts, 0.65, 0.28, 1.35, colX, 0.14, 18.55, curbStone, 0, 0, 0, 0.86, 0);
   }
-  // Storefront Vestibule Portal: dark recessed interior, stone threshold, anodized mullions & translucent glazing
+  // Cổng sảnh kính mặt tiền: khoang nội thất tối lõm sâu, bậc đá, hệ đố nhôm anode và kính trong mờ
   pushBox(parts, 5.6, 0.08, 0.9, 2.5, 0.04, 16.25, walkwayStone, 0, 0, 0, 0.85, 0);
   pushBox(parts, 4.9, 2.95, 0.22, 2.5, 1.52, 15.95, '#151920', 0, 0, 0, 0.82, 0);
   for (const mullX of [-0.24, 1.12, 2.5, 3.88, 5.24]) {
@@ -952,8 +968,8 @@ function buildCampusParts(theme: ExploreTheme): {
   pushBox(parts, 5.8, 0.18, 0.88, 2.5, 3.25, 16.25, salmon, 0, 0, 0, 0.46, 0);
 
   // =========================================================================
-  // 5. EXECUTIVE CAR PARKING LOT ("BÃI ĐỖ XE Ô TÔ") + SOLAR CARPORTS + EV CHARGERS
-  //    5A. Primary Front-East Car & EV Parking Court (x = 16.2 .. 30.8, z = 16.8 .. 23.2)
+  // 5. BÃI ĐỖ XE Ô TÔ CAO CẤP + MÁI CHE NĂNG LƯỢNG MẶT TRỜI + TRẠM SẠC EV
+  //    5A. Khu đỗ ô tô & sạc EV chính phía Đông-Nam (x = 16.2 .. 30.8, z = 16.8 .. 23.2)
   // =========================================================================
   pushBox(parts, 14.8, 0.055, 6.4, 23.5, 0.022, 20.0, parkingAsphalt, 0, 0, 0, 0.82, 0);
   pushBox(parts, 14.8, 0.12, 0.24, 23.5, 0.06, 16.75, curbStone, 0, 0, 0, 0.86, 0);
@@ -971,7 +987,7 @@ function buildCampusParts(theme: ExploreTheme): {
     }
   }
 
-  // Architectural Setback Solar Carport Canopy (z = 16.7 .. 19.0)
+  // Mái che bãi đỗ xe năng lượng mặt trời giật cấp kiến trúc (z = 16.7 .. 19.0)
   pushBox(parts, 14.4, 0.18, 2.35, 23.6, 3.15, 17.85, darkSteel, 0.08, 0, 0, 0.38, 0.86);
   for (let i = 0; i < 5; i += 1) {
     pushBox(parts, 2.65, 0.06, 2.1, 18.0 + i * 2.8, 3.26, 17.85, '#182b44', 0.08, 0, 0, 0.16, 0.86);
@@ -981,7 +997,7 @@ function buildCampusParts(theme: ExploreTheme): {
     pushBox(parts, 0.26, 3.1, 0.26, colX, 1.55, 16.95, midSteel, 0, 0, 0, 0.36, 0.86);
   }
 
-  // 4 EV Fast-Charging Supercharger Pedestals along z = 16.9
+  // 4 trụ sạc nhanh EV Supercharger dọc theo z = 16.9
   for (const evX of [18.0, 20.8, 23.6, 26.4]) {
     pushBox(parts, 0.46, 1.48, 0.32, evX, 0.74, 16.88, '#e8e8e3', 0, 0, 0, 0.32, 0);
     pushBox(parts, 0.34, 0.55, 0.36, evX, 0.95, 16.88, '#141820', 0, 0, 0, 0.25, 0);
@@ -989,14 +1005,14 @@ function buildCampusParts(theme: ExploreTheme): {
     pushBox(parts, 0.48, 0.1, 0.36, evX, 1.45, 16.88, salmon, 0, 0, 0, 0.46, 0);
   }
 
-  // 4 Detailed 3D Cars in Front-East Car & EV Parking Court (1 stall left open to show EV badge & lines!)
+  // 4 ô tô 3D chi tiết ở bãi đỗ & sạc EV phía Đông-Nam (để trống 1 ô nhằm lộ biểu tượng EV và vạch kẻ!)
   addCar3D(vehicles, 18.0, 20.1, Math.PI, '#f8fafc', 'suv');
   addCar3D(vehicles, 20.8, 20.1, Math.PI, '#f07654', 'coupe');
   addCar3D(vehicles, 26.4, 20.1, Math.PI, '#38bdf8', 'sedan');
   addCar3D(vehicles, 29.2, 20.1, Math.PI, '#10b981', 'suv');
 
   // =========================================================================
-  //    5B. Front-West & West Wing Car Parking Court (x = -23.5 .. -5.2, z = 16.8 .. 23.2 & x = -36..-25)
+  //    5B. Khu đỗ ô tô phía Tây-Nam & cánh Tây (x = -23.5 .. -5.2, z = 16.8 .. 23.2 & x = -36..-25)
   // =========================================================================
   pushBox(parts, 18.2, 0.05, 6.4, -14.4, 0.02, 20.0, parkingAsphalt, 0, 0, 0, 0.82, 0);
   pushBox(parts, 18.2, 0.12, 0.24, -14.4, 0.06, 16.75, curbStone, 0, 0, 0, 0.86, 0);
@@ -1014,7 +1030,7 @@ function buildCampusParts(theme: ExploreTheme): {
   addCar3D(vehicles, -15.6, 20.1, Math.PI, '#f59e0b', 'coupe');
   addCar3D(vehicles, -10.0, 20.1, Math.PI, '#94a3b8', 'suv');
 
-  // West Wing Perpendicular Car Parking (x = -36.5 .. -24.8, z = -12.0 .. +15.0)
+  // Bãi đỗ ô tô vuông góc cánh Tây (x = -36.5 .. -24.8, z = -12.0 .. +15.0)
   pushBox(parts, 11.8, 0.05, 28.0, -30.6, 0.018, 2.0, parkingAsphalt, 0, 0, 0, 0.82, 0);
   pushBox(parts, 5.2, 0.18, 21.0, -33.6, 3.15, 1.5, darkSteel, 0, 0, -0.08, 0.38, 0.86);
   for (let i = 0; i < 7; i += 1) {
@@ -1027,8 +1043,8 @@ function buildCampusParts(theme: ExploreTheme): {
   addCar3D(vehicles, -33.4, 7.5, Math.PI / 2, '#f59e0b', 'suv');
 
   // =========================================================================
-  // 6. COVERED MOTORBIKE & BICYCLE PARKING PAVILION ("NHÀ ĐỂ XE MÁY & XE ĐẠP")
-  //    Located at South-East Plaza (x = 31.4 .. 43.4, z = 17.0 .. 23.0) — 100% visible!
+  // 6. NHÀ ĐỂ XE MÁY & XE ĐẠP CÓ MÁI CHE
+  //    Đặt tại quảng trường Đông-Nam (x = 31.4 .. 43.4, z = 17.0 .. 23.0) — hiển thị trọn vẹn!
   // =========================================================================
   const motoCenterX = 37.4;
   pushBox(parts, 12.2, 0.055, 5.8, motoCenterX, 0.024, 20.1, parkingAsphalt, 0, 0, 0, 0.82, 0);
@@ -1040,7 +1056,7 @@ function buildCampusParts(theme: ExploreTheme): {
     pushBox(parts, 0.07, 0.06, 2.1, bx, 0.038, 21.45, lineWhite, 0, 0, 0, 0.78, 0);
   }
 
-  // Translucent Smoked Polycarbonate & Steel Shelter Canopy over North Motorbike Row
+  // Mái che thép & tấm polycarbonate khói trong mờ phía trên hàng xe máy phía Bắc
   pushBox(parts, 11.4, 0.12, 2.35, motoCenterX, 2.8, 18.3, darkSteel, 0.06, 0, 0, 0.36, 0.86);
   pushBox(glassParts, 11.0, 0.05, 2.1, motoCenterX, 2.89, 18.3, isLight ? '#7ea3ba' : '#35536a', 0.06, 0, 0, 0.08, 0.7);
   pushBox(parts, 11.5, 0.1, 0.14, motoCenterX, 2.74, 19.5, salmon, 0, 0, 0, 0.46, 0);
@@ -1072,39 +1088,39 @@ function buildCampusParts(theme: ExploreTheme): {
     );
   }
 
-  // Dedicated Bicycle Parking Rack on the East side of the shelter (x = 40.2 .. 42.4, z = 21.45)
+  // Giá để xe đạp riêng ở phía Đông nhà xe (x = 40.2 .. 42.4, z = 21.45)
   pushBox(parts, 2.4, 0.08, 0.9, 41.3, 0.05, 21.45, midSteel, 0, 0, 0, 0.38, 0.86);
   const bikeFrames = ['#2b323d', '#9ea5ae', '#3d5245', '#8f4f3f', '#22334a'];
   for (let b = 0; b < 5; b += 1) {
     const bx = 40.4 + b * 0.45;
-    // Galvanised wheel loop rack
+    // Khung vòng kẹp bánh mạ kẽm
     pushBox(parts, 0.04, 0.5, 0.5, bx, 0.28, 21.45, '#b8bec6', 0, 0, 0, 0.24, 0.9);
-    // Cylindrical front & rear rubber tyres
+    // Lốp cao su hình trụ phía trước và phía sau
     for (const wz of [21.1, 21.8]) {
       pushCylinder(parts, 0.26, 0.26, 0.04, bx + 0.1, 0.26, wz, '#161920', 12, 0, 0, Math.PI / 2, 0.88, 0);
       pushCylinder(parts, 0.18, 0.18, 0.045, bx + 0.1, 0.26, wz, '#b4bac2', 10, 0, 0, Math.PI / 2, 0.22, 0.9);
     }
-    // Tubular top bar, seat stay & handlebars
+    // Thanh gióng ngang dạng ống, gióng yên và tay lái
     pushBox(parts, 0.045, 0.045, 0.62, bx + 0.1, 0.56, 21.45, bikeFrames[b]!, -0.1, 0, 0, 0.28, 0.85);
     pushBox(parts, 0.04, 0.44, 0.04, bx + 0.1, 0.42, 21.25, bikeFrames[b]!, 0.25, 0, 0, 0.28, 0.85);
     pushBox(parts, 0.34, 0.035, 0.035, bx + 0.1, 0.66, 21.74, '#cfd5dd', 0, 0, 0, 0.2, 0.92);
   }
 
   // =========================================================================
-  // 7. REFLECTION WATER FOUNTAIN, PLAZA BENCHES & SÖL FLAGPOLES
+  // 7. ĐÀI PHUN NƯỚC PHẢN CHIẾU, GHẾ QUẢNG TRƯỜNG & CỘT CỜ SÖL
   // =========================================================================
-  // Tiered Architectural Water Fountain at Central Forecourt (x = 0.2, z = 20.8)
+  // Đài phun nước kiến trúc nhiều tầng tại tiền sảnh trung tâm (x = 0.2, z = 20.8)
   pushBox(parts, 3.2, 0.38, 3.2, 0.2, 0.19, 20.8, curbStone, 0, 0, 0, 0.84, 0);
   pushBox(parts, 2.82, 0.14, 2.82, 0.2, 0.33, 20.8, '#111d24', 0, 0, 0, 0.16, 0);
   pushBox(parts, 1.56, 0.58, 1.56, 0.2, 0.55, 20.8, darkSteel, 0, 0, 0, 0.52, 0);
   pushBox(parts, 1.28, 0.12, 1.28, 0.2, 0.82, 20.8, '#111d24', 0, 0, 0, 0.16, 0);
   pushCylinder(parts, 0.24, 0.34, 1.28, 0.2, 1.2, 20.8, '#b86e58', 12, 0, 0, 0, 0.32, 0.78);
   pushCylinder(parts, 0.42, 0.16, 0.14, 0.2, 1.82, 20.8, darkSteel, 12, 0, 0, 0, 0.34, 0.86);
-  // Real translucent animated water basins + spout cascade (zero bright cyan plastic blocks!)
+  // Các bể nước trong mờ chuyển động thật + dòng thác tràn từ vòi (không dùng khối nhựa xanh lơ chói!)
   pushBox(waterParts, 2.78, 0.02, 2.78, 0.2, 0.405, 20.8, canalTint, 0, 0, 0, 0.05, 0.08);
   pushBox(waterParts, 1.24, 0.02, 1.24, 0.2, 0.895, 20.8, canalTint, 0, 0, 0, 0.05, 0.08);
   pushCylinder(waterParts, 0.27, 0.31, 0.62, 0.2, 1.5, 20.8, '#2c6a82', 12, 0, 0, 0, 0.06, 0.08);
-  // Crisp bronze coping rim, water overflow weir & brass spray nozzle jets
+  // Viền đồng tối sắc nét, đập tràn nước và các vòi phun bằng đồng thau
   pushBox(parts, 3.34, 0.06, 3.34, 0.2, 0.39, 20.8, '#9d6852', 0, 0, 0, 0.32, 0.84);
   pushBox(parts, 1.68, 0.05, 1.68, 0.2, 0.85, 20.8, '#9d6852', 0, 0, 0, 0.32, 0.84);
   for (let n = 0; n < 8; n += 1) {
@@ -1114,7 +1130,7 @@ function buildCampusParts(theme: ExploreTheme): {
     pushCylinder(parts, 0.03, 0.045, 0.09, nx, 0.44, nz, '#d4a055', 8, 0, 0, 0, 0.22, 0.92);
   }
 
-  // 4 Timber-and-Stone Plaza Benches flanking the promenade
+  // 4 ghế gỗ - đá quảng trường đặt hai bên lối dạo
   for (const [bx, bz] of [
     [-2.4, 17.8],
     [12.4, 17.8],
@@ -1125,7 +1141,7 @@ function buildCampusParts(theme: ExploreTheme): {
     pushBox(parts, 1.72, 0.08, 0.62, bx, 0.46, bz, warmWood, 0, 0, 0, 0.64, 0);
   }
 
-  // 3 Tall SÖL Flagpoles (x = 13.8, z = 17.2..20.8); cloth pennants animate dynamically in CityLife.tsx
+  // 3 cột cờ SÖL cao (x = 13.8, z = 17.2..20.8); cờ vải bay động được xử lý trong CityLife.tsx
   for (const anchor of CAMPUS_FLAGPOLE_ANCHORS) {
     pushCylinder(parts, 0.16, 0.22, 0.32, anchor.x, 0.16, anchor.z, curbStone, 8, 0, 0, 0, 0.86, 0);
     pushCylinder(parts, 0.05, 0.08, 6.8, anchor.x, 3.4, anchor.z, '#d0d6de', 8, 0, 0, 0, 0.2, 0.92);
@@ -1133,7 +1149,7 @@ function buildCampusParts(theme: ExploreTheme): {
   }
 
   // =========================================================================
-  // 8. GROUND-LEVEL SIGNBOARD FRAMES (Parking & Tennis Arena)
+  // 8. KHUNG BIỂN HIỆU TẦNG TRỆT (Bãi đỗ xe & Khu sân Tennis)
   // =========================================================================
   pushBox(parts, 5.5, 1.0, 0.22, 23.6, 3.62, 19.02, darkSteel, 0, 0, 0, 0.38, 0.86);
   pushBox(parts, 5.65, 0.1, 0.28, 23.6, 4.15, 19.02, salmon, 0, 0, 0, 0.46, 0);
@@ -1145,10 +1161,10 @@ function buildCampusParts(theme: ExploreTheme): {
   pushBox(parts, 5.25, 0.1, 0.28, motoCenterX, 3.88, 19.45, salmon, 0, 0, 0, 0.46, 0);
 
   // =========================================================================
-  // 9. PERIMETER ARCHITECTURAL FENCE, HEDGES, STREETLAMPS, BOLLARDS & TREES
+  // 9. HÀNG RÀO KIẾN TRÚC BAO QUANH, HÀNG CÂY BỤI, ĐÈN ĐƯỜNG, ĐÈN TRỤ & CÂY XANH
   // =========================================================================
   for (let x = -36; x <= 48; x += 4.0) {
-    if (x >= 1.2 && x <= 14.4) continue; // opening for Main Gate at x = 7.8
+    if (x >= 1.2 && x <= 14.4) continue; // chừa lối mở cho Cổng chính tại x = 7.8
     pushBox(parts, 0.42, 1.45, 0.42, x, 0.72, 23.5, curbStone, 0, 0, 0, 0.86, 0);
     pushBox(parts, 0.48, 0.1, 0.48, x, 1.48, 23.5, salmon, 0, 0, 0, 0.46, 0);
     if (x + 4.0 <= 48 && !(x < 1.2 && x + 4.0 >= 1.2)) {
@@ -1205,12 +1221,12 @@ function buildCampusParts(theme: ExploreTheme): {
     addCampusTree(parts, foliageParts, tx, tz, scale, planter, isLight);
   }
 
-  // Linear brushed stainless-steel slot drainage channels along plaza interfaces
+  // Rãnh thoát nước khe thẳng bằng inox xước dọc các đường tiếp giáp quảng trường
   const drainGrate = '#8e96a0';
   pushBox(parts, 12.0, 0.05, 0.16, 2.0, 0.02, 16.05, drainGrate, 0, 0, 0, 0.28, 0.9);
   pushBox(parts, 88.0, 0.05, 0.14, 6.0, 0.02, 23.65, drainGrate, 0, 0, 0, 0.28, 0.9);
 
-  // Subtle dark architectural plinth contact reveal along building ground interface
+  // Khe chân tường tối kiến trúc dọc đường tiếp giáp giữa công trình và mặt nền
   const plinthDark = '#14171d';
   pushBox(parts, 44.5, 0.08, 0.08, 0.0, 0.04, 16.04, plinthDark, 0, 0, 0, 0.88, 0.15);
   pushBox(parts, 44.5, 0.08, 0.08, 0.0, 0.04, -16.04, plinthDark, 0, 0, 0, 0.88, 0.15);
@@ -1220,10 +1236,12 @@ function buildCampusParts(theme: ExploreTheme): {
   return { parts, glassParts, waterParts, vehicles, foliageParts };
 }
 
+/** Giải phóng hình học của các phần không còn dùng. */
 function disposeParts(parts: readonly ColoredPart[]): void {
   for (const part of parts) part.geometry.dispose();
 }
 
+/** Dựng và gộp toàn bộ cảnh khuôn viên thành các hình học theo vật liệu (đặc, kính, nước, xe, tán lá). */
 export function buildCampusSceneGeometries(theme: ExploreTheme): CampusSceneGeometries {
   const { parts, glassParts, waterParts, vehicles, foliageParts } = buildCampusParts(theme);
   return {
@@ -1235,6 +1253,7 @@ export function buildCampusSceneGeometries(theme: ExploreTheme): CampusSceneGeom
   };
 }
 
+/** Dựng hình học đặc của khuôn viên (giải phóng các phần kính, nước, xe không dùng). */
 export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
   const { parts, glassParts, waterParts, vehicles } = buildCampusParts(theme);
   disposeParts(glassParts);
@@ -1243,7 +1262,7 @@ export function buildCampusGeometry(theme: ExploreTheme): THREE.BufferGeometry {
   return mergeColoredParts(parts);
 }
 
-/** Parked cars as their own geometry so they can use a clear-coated car-paint material. */
+/** Dựng riêng hình học xe đậu để có thể dùng vật liệu sơn xe phủ bóng clear-coat. */
 export function buildCampusVehiclesGeometry(theme: ExploreTheme): THREE.BufferGeometry {
   const { parts, glassParts, waterParts, vehicles } = buildCampusParts(theme);
   disposeParts(parts);
@@ -1252,19 +1271,20 @@ export function buildCampusVehiclesGeometry(theme: ExploreTheme): THREE.BufferGe
   return mergeColoredParts(vehicles);
 }
 
+/** Mô tả một mặt biển hiệu: tâm, kích thước, góc xoay và dải texture. */
 interface SignQuadSpec {
   readonly center: readonly [number, number, number];
   readonly width: number;
   readonly height: number;
   readonly rotY: number;
-  readonly bandIndex: number; // 0..7 from top to bottom of the 8-band atlas
+  readonly bandIndex: number; // 0..7 từ trên xuống dưới của atlas 8 dải
   readonly isRooftop?: boolean;
 }
 
 const SIGN_SPECS: readonly SignQuadSpec[] = [
-  // Band 0: Rooftop South Fascia Sky-Sign (facing +Z South on RF outer spandrel fascia, clear of rooftop sightlines)
+  // Dải 0: Biển trên cao mặt Nam tầng mái (hướng +Z Nam trên diềm ngoài RF, không chắn tầm nhìn sân thượng)
   { center: [1.5, 11.04, 16.48], width: 15.8, height: 0.86, rotY: 0, bandIndex: 0, isRooftop: true },
-  // Band 1: Rooftop East Fascia Sky-Sign (facing +X East on RF outer spandrel fascia, clear of rooftop sightlines)
+  // Dải 1: Biển trên cao mặt Đông tầng mái (hướng +X Đông trên diềm ngoài RF, không chắn tầm nhìn sân thượng)
   {
     center: [22.48, 11.04, -0.5],
     width: 14.8,
@@ -1273,26 +1293,26 @@ const SIGN_SPECS: readonly SignQuadSpec[] = [
     bandIndex: 1,
     isRooftop: true,
   },
-  // Band 2: Main Entrance Gate Archway Sign at x = 7.8, z = 23.2 (front +Z and rear -Z)
+  // Dải 2: Biển vòm Cổng chính tại x = 7.8, z = 23.2 (mặt trước +Z và mặt sau -Z)
   { center: [7.8, 4.72, 23.91], width: 12.6, height: 0.78, rotY: 0, bandIndex: 2 },
   { center: [7.8, 4.72, 22.49], width: 12.6, height: 0.78, rotY: Math.PI, bandIndex: 2 },
-  // Band 3: L1 Porte-Cochère Main Lobby Canopy Sign (facing +Z South at x = 5.0, z = 19.58)
+  // Dải 3: Biển mái sảnh đón xe Porte-Cochère Sảnh chính L1 (hướng +Z Nam tại x = 5.0, z = 19.58)
   { center: [5.0, 3.88, 19.58], width: 11.2, height: 0.56, rotY: 0, bandIndex: 3 },
-  // Band 4: Roadside Monument Totem Sign at x = 14.8, z = 23.8 (front +Z and rear -Z)
+  // Dải 4: Biển trụ Totem ven đường tại x = 14.8, z = 23.8 (mặt trước +Z và mặt sau -Z)
   { center: [14.8, 2.15, 24.08], width: 2.55, height: 2.8, rotY: 0, bandIndex: 4 },
   { center: [14.8, 2.15, 23.52], width: 2.55, height: 2.8, rotY: Math.PI, bandIndex: 4 },
-  // Band 5: Executive Car Parking & EV Supercharger Signs (Front-East x=23.6 & Front-West x=-14.2)
+  // Dải 5: Biển Bãi đỗ ô tô cao cấp & Trạm sạc EV (Đông-Nam x=23.6 & Tây-Nam x=-14.2)
   { center: [23.6, 3.62, 19.16], width: 5.3, height: 0.86, rotY: 0, bandIndex: 5 },
   { center: [-14.2, 3.62, 19.16], width: 5.3, height: 0.86, rotY: 0, bandIndex: 5 },
-  // Band 6: Covered Motorbike & Bicycle Parking Sign at x = 37.4, z = 19.59 (facing +Z South)
+  // Dải 6: Biển Nhà để xe máy & xe đạp có mái che tại x = 37.4, z = 19.59 (hướng +Z Nam)
   { center: [37.4, 3.38, 19.59], width: 4.9, height: 0.82, rotY: 0, bandIndex: 6 },
-  // Band 7: Outdoor Tennis Arena North Scoreboard Sign at x = 34.65, y = 3.15, z = -14.62 (facing +Z South)
+  // Dải 7: Biển bảng điểm phía Bắc Khu sân Tennis ngoài trời tại x = 34.65, y = 3.15, z = -14.62 (hướng +Z Nam)
   { center: [34.65, 3.15, -14.62], width: 4.5, height: 1.32, rotY: 0, bandIndex: 7 },
 ];
 
 /**
- * Builds a single UV-mapped BufferGeometry containing all 3D signage faces across the campus,
- * mapped to the 8 horizontal bands of `createCampusSignageTexture`.
+ * Dựng một BufferGeometry có ánh xạ UV chứa toàn bộ các mặt biển hiệu 3D trong khuôn viên,
+ * ánh xạ tới 8 dải ngang của `createCampusSignageTexture`; có thể ẩn các biển trên tầng mái.
  */
 export function buildCampusSignageGeometry(
   rooftopOffsetY = 0,
@@ -1371,8 +1391,8 @@ export function buildCampusSignageGeometry(
 }
 
 /**
- * Generates a single 1024x2048 CanvasTexture atlas with 8 crisp illuminated architectural signage bands.
- * Safe in headless/unit-test environments where 2D canvas context may return null.
+ * Tạo atlas CanvasTexture 1024×2048 gồm 8 dải biển hiệu kiến trúc phát sáng sắc nét;
+ * an toàn trong môi trường headless / unit test nơi context 2D canvas có thể trả về null.
  */
 export function createCampusSignageTexture(): THREE.CanvasTexture | null {
   if (typeof document === 'undefined') return null;
@@ -1391,13 +1411,13 @@ export function createCampusSignageTexture(): THREE.CanvasTexture | null {
     {
       badge: 'SÖL',
       title: 'SÖL FITNESS & WELLNESS',
-      subtitle: 'FLAGSHIP SPORTS · AQUATICS · RECOVERY · ROOFTOP ZEN',
+      subtitle: 'STANDARD GYM · PERSONAL TRAINING · MEMBER SERVICES',
       accent: '#f07654',
     },
     {
       badge: 'SÖL',
       title: 'SÖL CENTER · FLAGSHIP CLUB',
-      subtitle: '5 LEVELS · OLYMPIC POOL · TENNIS ARENA · VIP LOUNGE',
+      subtitle: 'STANDARD GYM · PERSONAL TRAINING · QR CHECK-IN',
       accent: '#f07654',
     },
     {
@@ -1415,7 +1435,7 @@ export function createCampusSignageTexture(): THREE.CanvasTexture | null {
     {
       badge: 'SÖL MAP',
       title: 'SÖL DIRECTORY',
-      subtitle: 'RF ZEN · L2 VIP · L1 GYM · B1 AQUA · OUT TENNIS',
+      subtitle: 'RF TERRACE · L2 PT · L1 GYM · B1 LOCKERS',
       accent: '#38bdf8',
     },
     {
@@ -1432,8 +1452,8 @@ export function createCampusSignageTexture(): THREE.CanvasTexture | null {
     },
     {
       badge: 'SÖL OPEN',
-      title: 'SÖL TENNIS ARENA · 6–4 · 7–5',
-      subtitle: 'COURTS 01–02 · ITF PRO HARD COURT · LED FLOODLIGHTS',
+      title: 'SÖL FITNESS · GYM & PERSONAL TRAINING',
+      subtitle: 'STANDARD GYM · PERSONAL TRAINING · QR CHECK-IN',
       accent: '#10b981',
     },
   ];

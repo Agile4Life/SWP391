@@ -1,4 +1,4 @@
-import { useSourceLanguage, sourceText, sourceFormat, sourceError, sourceToast as toast, sourceFormatPair } from '../shop/shopI18n';
+import { useSourceLanguage, sourceText, sourceFormat, sourceError, sourceToast as toast, sourceFormatPair } from '../../shared/i18n/sourceText';
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { register, sendOtp as requestOtp, verifyOtp } from './authApi';
@@ -10,6 +10,10 @@ import { readPendingRegistration, savePendingRegistration, type PendingRegistrat
 
 const RESEND_COOLDOWN = 30;
 
+/**
+ * Trang đăng ký hai bước: nhập thông tin tài khoản rồi xác thực OTP gửi qua email (bước đang dở được nhớ trong
+ * sessionStorage).
+ */
 export function RegisterPage() {
   useSourceLanguage();
   const navigate = useNavigate();
@@ -28,7 +32,7 @@ export function RegisterPage() {
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(() => Math.max(0, Math.ceil(((pendingAccount?.resendAt ?? 0) - Date.now()) / 1000)));
 
-  // Timer countdown for resending OTP
+  // Bộ đếm ngược thời gian gửi lại mã OTP
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = window.setInterval(() => {
@@ -37,6 +41,7 @@ export function RegisterPage() {
     return () => clearInterval(timer);
   }, [countdown]);
 
+  // Gửi mã OTP tới email của tài khoản đang chờ xác thực và đặt đếm ngược gửi lại.
   const sendOtp = async (account: PendingRegistration = pendingAccount!) => {
     const res = await requestOtp(account.email);
     setDebugOtp(res.debugOtp || '');
@@ -47,6 +52,7 @@ export function RegisterPage() {
     toast(sourceFormatPair("Mã OTP đã được gửi tới {0}", account.email));
   };
 
+  // Cập nhật một trường và kiểm tra ngay khi trường đã có nội dung hoặc đang có lỗi.
   const updateField = (field: keyof RegistrationFields, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
     if (field === 'phone') {
@@ -60,6 +66,7 @@ export function RegisterPage() {
     }
   };
 
+  // Kiểm tra trường khi rời ô nhập (số điện thoại trống thì không báo lỗi).
   const handleFieldBlur = (field: keyof RegistrationFields) => {
     const value = form[field];
     if (field === 'phone' && !value.trim()) {
@@ -72,6 +79,7 @@ export function RegisterPage() {
     }
   };
 
+  // Gửi đăng ký: kiểm tra toàn bộ biểu mẫu, tạo tài khoản rồi gửi OTP.
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (requestBusy.current) return;
@@ -103,6 +111,7 @@ export function RegisterPage() {
     }
   };
 
+  // Gửi lại mã OTP khi hết thời gian chờ.
   const handleResendOtp = async () => {
     if (countdown > 0 || requestBusy.current || !pendingAccount || success) return;
     requestBusy.current = true;
@@ -118,6 +127,7 @@ export function RegisterPage() {
     }
   };
 
+  // Xác thực mã OTP, thành công thì xóa dữ liệu chờ và chuyển về trang đăng nhập.
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     if (requestBusy.current || !pendingAccount || success) return;

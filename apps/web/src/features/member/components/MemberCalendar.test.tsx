@@ -1,227 +1,58 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { MemberCalendar } from './MemberCalendar';
 import { setLanguage } from '../../../shared/i18n/language';
-import { clearNotices } from '../../../shared/lib/portalNotices';
-
-const mocks = vi.hoisted(() => ({
-  now: '2099-01-06T23:00:00Z', sessions: vi.fn(), enrollments: vi.fn(), cancelEnrollment: vi.fn(), courts: vi.fn(), pt: vi.fn(),
-}));
-vi.mock('../memberClassesApi', () => ({
-  getSessionsBetween: mocks.sessions,
-  getMyEnrollments: mocks.enrollments,
-  cancelEnrollment: mocks.cancelEnrollment,
-}));
+const mocks = vi.hoisted(() => ({ pt: vi.fn(), classes: vi.fn() }));
 vi.mock('../coachBookingApi', () => ({ getMyCoachBookings: mocks.pt }));
-vi.mock('../../courts/courtsApi', () => ({ courtsApi: { my: mocks.courts } }));
-vi.mock('../../../shared/lib/centerTime', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../shared/lib/centerTime')>();
-  return { ...actual, centerNowParts: () => actual.centerNowParts(new Date(mocks.now)) };
+vi.mock('../../../shared/api/client', async original => ({ ...await original<typeof import('../../../shared/api/client')>(), apiFetch: mocks.classes }));
+vi.mock('../../../shared/lib/centerTime', async original => ({
+  ...await original<typeof import('../../../shared/lib/centerTime')>(),
+  // Cố định thời điểm hiện tại theo giờ trung tâm.
+  centerNowParts: () => ({ date: '2099-01-07', time: '06:00' }),
+}));
+const booking = { id: 31, coachName: 'Hùng', bookingDate: '2099-01-08', startTime: '07:00:00', endTime: '08:00:00', status: 'confirmed' };
+let host: HTMLDivElement; let root: Root;
+beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); setLanguage('vi');
+  Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
+  Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute('open'); } });
+  vi.clearAllMocks(); mocks.pt.mockResolvedValue([booking, { ...booking, id: 32, status: 'cancelled' }]);
+  host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
-
-const session = {
-  id: 8, classId: 3, className: 'Yoga Flow', sessionDate: '2099-01-08', startTime: '09:00:00', endTime: '10:30:00',
-  roomName: 'Studio', coachName: 'An', status: 'scheduled',
-};
-const enrollment = {
-  id: 55, classId: 3, className: 'Yoga Flow', memberId: 1, sessionId: 8, sessionDate: '2099-01-08',
-  startTime: '09:00:00', endTime: '10:30:00', status: 'booked', enrolledAt: '', cancelledAt: null, cancelReason: null,
-};
-const court = {
-  id: 91, roomId: 2, roomName: 'Sân Tennis 1', disciplineName: 'Tennis', memberId: 1, memberName: 'A',
-  date: '2099-01-06', startTime: '14:00:00', endTime: '15:00:00', status: 'booked', createdAt: '',
-  cancelledAt: null, cancelReason: null, canCancel: true, price: 0, paymentMethod: null, paymentStatus: null,
-};
-
-describe('MemberCalendar', () => {
-  let host: HTMLDivElement;
-  let root: Root;
-  beforeEach(() => {
-    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
-    Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute('open'); } });
-    clearNotices();
-    Object.values(mocks).forEach((mock) => { if (vi.isMockFunction(mock)) mock.mockReset(); });
-    mocks.now = '2099-01-06T23:00:00Z';
-    setLanguage('vi');
-    mocks.sessions.mockResolvedValue([session]);
-    mocks.enrollments.mockResolvedValue([enrollment]);
-    mocks.pt.mockResolvedValue([]);
-    mocks.courts.mockResolvedValue({ content: [court], number: 0, totalPages: 1, totalElements: 1 });
-    mocks.cancelEnrollment.mockResolvedValue({});
-    host = document.createElement('div'); document.body.append(host); root = createRoot(host);
-  });
-  afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
-  const render = (onBookingChange = vi.fn()) =>
-    act(async () => root.render(<MemoryRouter><MemberCalendar onBookingChange={onBookingChange} /></MemoryRouter>));
-  const button = (text: string) => [...document.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === text)!;
-
-  it('shows only my classes and court bookings for the week, without discipline filters', async () => {
-    await render();
-    expect(mocks.sessions).toHaveBeenCalledWith('2099-01-05', '2099-01-11');
-    expect(host.querySelector('.mcal__range')!.textContent).toBe('05/01 - 11/01/2099');
-    expect(host.querySelector('.mcal__event--class')!.textContent).toContain('Yoga Flow');
-    expect(host.querySelector('.mcal__event--court')!.textContent).toContain('Sân Tennis 1');
-    expect(host.querySelector('.mcal__event--court')!.classList).toContain('is-past');
-    expect(host.querySelector('[aria-label="Lọc theo bộ môn"]')).toBeNull();
-    expect(host.querySelector('.mcal__dayhead.is-today')!.textContent).toContain('07');
-  });
-
-  it('shows every session of an enrolled course, not only the next one, and the 1:1 sessions', async () => {
-    const courseSession = (id: number, date: string) => ({
-      id, classId: 3, className: 'Yoga Khóa', sessionDate: date, startTime: '18:00:00', endTime: '19:00:00',
-      roomName: 'Studio', coachName: 'An', status: 'scheduled',
-    });
-    mocks.enrollments.mockResolvedValue([]);
-    mocks.sessions.mockResolvedValue([courseSession(1, '2099-01-05'), courseSession(2, '2099-01-07'), courseSession(3, '2099-01-09')]);
-    // The enrollment's own session id is only the next one (2); the course still has 1 and 3 this week.
-    mocks.enrollments.mockResolvedValue([{ id: 7, classId: 3, className: 'Yoga Khóa', memberId: 1, sessionId: 2, sessionDate: '2099-01-07', startTime: '18:00:00', endTime: '19:00:00', status: 'booked', enrolledAt: '', cancelledAt: null, cancelReason: null }]);
-    mocks.pt.mockResolvedValue([
-      { id: 31, coachName: 'Hùng', bookingDate: '2099-01-08', startTime: '07:00:00', endTime: '08:00:00', status: 'confirmed' },
-      { id: 32, coachName: 'Hùng', bookingDate: '2099-01-09', startTime: '07:00:00', endTime: '08:00:00', status: 'cancelled' },
-    ]);
-
-    await render();
-
-    expect(host.querySelectorAll('.mcal__event--class')).toHaveLength(3);
-    const pt = host.querySelectorAll('.mcal__event--pt');
-    expect(pt).toHaveLength(1);
-    expect(pt[0].textContent).toContain('Tập 1:1 cùng Hùng');
-  });
-
-  it('keeps the calendar when the 1:1 sessions fail to load', async () => {
-    mocks.pt.mockRejectedValue(new Error('offline'));
-    await render();
-    expect(host.querySelector('.mcal__event--class')!.textContent).toContain('Yoga Flow');
-    expect(host.querySelector('.mcal__event--pt')).toBeNull();
-  });
-
-  it.each([
-    ['2026-11-01T16:59:59Z', '2026-10-26', '2026-11-01'],
-    ['2026-11-01T17:00:00Z', '2026-11-02', '2026-11-08'],
-    ['2026-12-31T17:00:00Z', '2026-12-28', '2027-01-03'],
-    ['2027-01-03T17:00:00Z', '2027-01-04', '2027-01-10'],
-  ])('resets month navigation to the real center-time week at %s', async (instant, from, to) => {
-    mocks.now = instant;
-    await render();
-    await act(async () => button('Tháng').click());
-    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Tháng sau"]')!.click());
-    await act(async () => button('Tuần này').click());
-    expect(host.querySelector('.mcal__month')).toBeNull();
-    expect(host.querySelectorAll('.mcal__dayhead')).toHaveLength(7);
-    expect(mocks.sessions).toHaveBeenLastCalledWith(from, to);
-  });
-  it('labels both event types in the legend, tooltip and event details; blocks only show name and room', async () => {
-    await render();
-    expect(host.querySelector('.mcal__event .mcal__type')).toBeNull();
-    expect(host.querySelector('.mcal__event--class')!.getAttribute('title')!.startsWith('Buổi học')).toBe(true);
-    expect(host.querySelector('.mcal__event--court')!.getAttribute('title')!.startsWith('Đặt sân / phòng')).toBe(true);
-    await act(async () => button('Tháng').click());
-    expect(host.querySelector('.mcal__chip .mcal__type')).toBeNull();
-    expect(host.querySelector('.mcal__chip--court')!.getAttribute('title')).toContain('Đặt sân / phòng');
-    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__chip--court')!.click());
-    expect(document.querySelector('dialog')!.textContent).toContain('Đặt sân / phòng');
-    expect(document.querySelector('dialog a')!.getAttribute('href')).toBe('/member/courts');
-  });
-  it('keeps week empty state and removes only monthly message', async () => {
-    mocks.enrollments.mockResolvedValue([]);
-    mocks.courts.mockResolvedValue({ content: [], totalPages: 1 });
-    await render();
-    expect(host.querySelector('.mcal__empty')!.textContent).toBe('Tuần này bạn chưa có lịch nào.');
-    await act(async () => button('Tháng').click());
-    expect(host.querySelector('.mcal__empty')).toBeNull();
-    expect(host.querySelectorAll('.mcal__cell')).toHaveLength(42);
-  });
-  it('updates new labels when language changes', async () => {
-    await render();
-    await act(async () => setLanguage('en'));
-    expect(button('This week')).toBeDefined();
-    expect(button('Month')).toBeDefined();
-    expect(host.querySelector('.mcal__dayhead')!.textContent).toContain('Monday');
-    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--class')!.click());
-    expect(document.querySelector('dialog')!.textContent).toContain('Cancel booking');
-    expect(document.querySelector('dialog')!.textContent).toContain('Coach');
-    await act(async () => document.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
-    expect(host.querySelector('.mcal__event--class')!.getAttribute('title')!.startsWith('Class session')).toBe(true);
-    expect(host.querySelector('.mcal__event--court')!.getAttribute('title')!.startsWith('Court / room')).toBe(true);
-  });
-  it('keeps court load failures separate from a successfully empty week', async () => {
-    mocks.enrollments.mockResolvedValue([]);
-    mocks.courts.mockRejectedValue(new Error('offline'));
-    await render();
-    expect(host.querySelector('.mcal__note')!.textContent).toContain('Chưa tải được lịch đặt sân.');
-    expect(host.querySelector('.mcal__empty')).toBeNull();
-  });
-  it('filters the whole Monday–Sunday range and ignores public sessions without my seat', async () => {
-    mocks.now = '2026-12-31T17:00:00Z';
-    mocks.sessions.mockResolvedValue(['2026-12-27', '2026-12-28', '2027-01-03', '2027-01-04'].map((date, i) => ({ ...session, id: 100 + i, sessionDate: date, className: date })));
-    mocks.sessions.mockResolvedValue([...(await mocks.sessions()), { id: 99, classId: 90, className: 'Unbooked public class', sessionDate: '2027-01-02', startTime: '09:00', endTime: '10:00' }]);
-    mocks.courts.mockResolvedValue({ content: [], totalPages: 1 });
-    await render();
-    expect([...host.querySelectorAll('.mcal__event-title')].map(node => node.textContent)).toEqual(['2026-12-28', '2027-01-03']);
-    expect(host.textContent).not.toContain('Unbooked public class');
-  });
-  it('keeps enrollment cancellation routed to its own API', async () => {
-    mocks.enrollments.mockResolvedValue([]);
-    mocks.enrollments.mockResolvedValue([{ id: 42, classId: 3, className: 'Yoga Flow', sessionId: 8, sessionDate: '2099-01-08', startTime: '09:00', endTime: '10:00', status: 'enrolled' }]);
-    mocks.cancelEnrollment.mockResolvedValue({});
-    await render();
-    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--class')!.click());
-    await act(async () => button('Hủy đặt chỗ').click());
-    await act(async () => button('Xác nhận hủy').click());
-    expect(mocks.cancelEnrollment).toHaveBeenCalledWith(42);
-  });
-  it('keeps type labels visible in the mobile day view', async () => {
-    vi.stubGlobal('matchMedia', () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
-    await render();
-    expect(host.querySelectorAll('.mcal__daychip')).toHaveLength(7);
-    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label^="Thứ 3 06/01"]')!.click());
-    expect(host.querySelector('.mcal__event--court')!.getAttribute('title')).toContain('Đặt sân / phòng');
-  });
-  it('shows the next upcoming item with a countdown', async () => {
-    await render();
-    const next = host.querySelector('.mcal__next')!;
-    expect(next.textContent).toContain('Yoga Flow');
-    expect(next.textContent).toContain('còn 1 ngày 3 giờ');
-  });
-
-  it('switches to month view and back to the week of a clicked day', async () => {
-    await render();
-    await act(async () => button('Tháng').click());
-    expect(host.querySelector('.mcal__range')!.textContent).toBe('Tháng 1/2099');
-    expect(host.querySelectorAll('.mcal__cell')).toHaveLength(42);
-    expect(host.querySelector('.mcal__chip--class')!.textContent).toContain('Yoga Flow');
-    await act(async () => host.querySelector<HTMLButtonElement>('[aria-label^="Xem tuần có Thứ 5 15/01"]')!.click());
-    expect(host.querySelector('.mcal__range')!.textContent).toBe('12/01 - 18/01/2099');
-  });
-
-  it('cancels an enrolled course only after confirmation', async () => {
-    const onBookingChange = vi.fn();
-    await render(onBookingChange);
-    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--class')!.click());
-    await act(async () => button('Hủy đặt chỗ').click());
-    expect(mocks.cancelEnrollment).not.toHaveBeenCalled();
-    await act(async () => button('Xác nhận hủy').click());
-    expect(mocks.cancelEnrollment).toHaveBeenCalledWith(55);
-    expect(onBookingChange).toHaveBeenCalled();
-  });
-
-  it('reloads on its own when the member comes back to the window', async () => {
-    await render();
-    expect(host.querySelectorAll('.mcal__event--court')).toHaveLength(1);
-    mocks.courts.mockResolvedValue({ content: [court, { ...court, id: 93, date: '2099-01-09', roomName: 'Sân Cầu lông 2' }], number: 0, totalPages: 1, totalElements: 2 });
-    await act(async () => { window.dispatchEvent(new Event('focus')); });
-    expect(host.querySelectorAll('.mcal__event--court')).toHaveLength(2);
-    expect(host.textContent).toContain('Sân Cầu lông 2');
-  });
-
-  it('shows an error with retry when loading fails', async () => {
-    mocks.sessions.mockRejectedValueOnce(new Error('Mất kết nối'));
-    await render();
-    expect(host.querySelector('[role="alert"]')!.textContent).toContain('Mất kết nối');
-    await act(async () => button('Thử lại').click());
-    expect(host.querySelector('.mcal__event--class')).not.toBeNull();
-  });
+afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.unstubAllGlobals(); });
+// Dựng component vào DOM giả để kiểm thử.
+const render = () => act(async () => root.render(<MemoryRouter><MemberCalendar /></MemoryRouter>));
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
+const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === text)!;
+it('shows PT only and never calls group class or court APIs', async () => {
+  await render();
+  expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
+  expect(host.textContent).toContain('Hùng');
+  expect(host.querySelectorAll('.mcal__event--class, .mcal__event--court')).toHaveLength(0);
+  expect(mocks.classes).not.toHaveBeenCalled();
+  await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--pt')!.click());
+  expect(document.querySelector('a[href="/member/classes?tab=pt"]')).not.toBeNull();
+});
+it('reports PT request failure and retries instead of displaying an empty schedule', async () => {
+  mocks.pt.mockRejectedValueOnce(new Error('offline'));
+  await render(); expect(host.querySelector('[role="alert"]')).not.toBeNull();
+  await act(async () => button('Thử lại').click());
+  expect(mocks.pt).toHaveBeenCalledTimes(2); expect(host.querySelector('[role="alert"]')).toBeNull();
+  expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
+});
+it('keeps week/month navigation and returns to the current week', async () => {
+  await render();
+  await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Tuần sau"]')!.click());
+  expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(0);
+  await act(async () => button('Tuần này').click());
+  expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
+  await act(async () => button('Tháng').click());
+  expect(host.querySelectorAll('.mcal__chip--pt')).toHaveLength(1);
+});
+it('shows an empty PT calendar without requesting other services', async () => {
+  mocks.pt.mockResolvedValue([]); await render();
+  expect(host.textContent).toContain('Tuần này bạn chưa có lịch nào.');
+  expect(mocks.classes).not.toHaveBeenCalled();
 });

@@ -100,6 +100,7 @@ describe('UserManagerPage', () => {
     vi.clearAllMocks();
   });
 
+  // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (container: HTMLElement, label: string) =>
     [...container.querySelectorAll('button')].find((item) => item.textContent?.trim() === label);
 
@@ -120,25 +121,25 @@ describe('UserManagerPage', () => {
       root.render(<UserManagerPage />);
     });
 
-    // Find delete buttons in table
+    // Tìm các nút xóa trong bảng
     const deleteButtons = [...host.querySelectorAll('button')].filter(
       (b) => b.textContent?.trim() === 'Xóa'
     );
     expect(deleteButtons.length).toBe(3);
 
-    // First button is for CENTER_MANAGER, should be disabled
+    // Nút đầu tiên thuộc về CENTER_MANAGER nên phải bị vô hiệu hóa
     expect((deleteButtons[0] as HTMLButtonElement).disabled).toBe(true);
 
-    // Click delete on Inactive Coach (3rd delete button)
+    // Nhấn xóa trên Inactive Coach (nút xóa thứ 3)
     await act(async () => {
       deleteButtons[2].click();
     });
 
-    // Confirm dialog should be open
+    // Hộp thoại xác nhận phải được mở
     expect(host.textContent).toContain('Xác nhận xóa tài khoản');
     expect(host.textContent).toContain('Inactive Coach');
 
-    // Click confirm delete
+    // Nhấn xác nhận xóa
     const confirmBtn = button(host, 'Xác nhận xóa');
     expect(confirmBtn).toBeTruthy();
 
@@ -185,6 +186,7 @@ describe('UserManagerPage', () => {
       addBtn?.click();
     });
 
+    // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
     const setInput = async (id: string, value: string) => {
       const input = document.querySelector<HTMLInputElement>(`#${id}`)!;
       await act(async () => {

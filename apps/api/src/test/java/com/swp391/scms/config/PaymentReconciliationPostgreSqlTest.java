@@ -22,7 +22,10 @@ import java.util.UUID;
 import static com.swp391.scms.config.SupabaseTestDatabase.credential;
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Runs the reconciliation JPQL on real PostgreSQL in a disposable schema created by Hibernate. */
+/**
+ * Bộ kiểm thử đối soát thanh toán trên PostgreSQL.
+ * Chạy các truy vấn JPQL đối soát trên PostgreSQL thật trong schema tạm dùng một lần do Hibernate tạo.
+ */
 @SpringBootTest
 @ActiveProfiles("supabase")
 @EnabledIfEnvironmentVariable(named = "SCMS_POSTGRES_TEST_URL", matches = "jdbc:postgresql:.+")
@@ -33,7 +36,7 @@ class PaymentReconciliationPostgreSqlTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired PaymentReconciliationService service;
     @Autowired VnpayIpnEventRecorder recorder;
-    /** Catalog data is not needed here; its seeder is kept out so this test depends only on payment tables. */
+    /** Không cần dữ liệu danh mục ở đây; loại bỏ seeder để bài test chỉ phụ thuộc vào các bảng thanh toán. */
     @org.springframework.boot.test.mock.mockito.MockBean com.swp391.scms.facilities.CatalogSeeder catalogSeeder;
 
     @DynamicPropertySource static void database(DynamicPropertyRegistry p) throws Exception {
@@ -64,7 +67,7 @@ class PaymentReconciliationPostgreSqlTest {
                 user, "RC" + user);
         long paid = payment(user, "success", now);
         long unpaid = payment(user, "pending", now);
-        long orphan = payment(user, "success", now); // online, paid, no attempt and no wallet debit
+        long orphan = payment(user, "success", now); // thanh toán trực tuyến, đã trả tiền, không có lượt thử và không trừ ví
         attempt("RECONSTALE1", paid, "failed", now.minusHours(2), now.minusHours(2).plusMinutes(15));
         attempt("RECONOK1", paid, "success", now.minusHours(1), now.minusMinutes(45));
         attempt("RECONBAD1", unpaid, "success", now.minusMinutes(30), now.minusMinutes(15));
@@ -107,12 +110,14 @@ class PaymentReconciliationPostgreSqlTest {
         assertThat(service.summary(LocalDate.now(ZONE).minusDays(91), LocalDate.now(ZONE)).staleAttempts()).isEqualTo(1);
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (payment). */
     private long payment(long user, String status, LocalDateTime now) {
         return jdbc.queryForObject("insert into payments(member_id,amount,method,status,paid_at,created_at) "
                 + "values (?,150000,'online_wallet',?,?,?) returning id", Long.class,
                 user, status, "success".equals(status) ? now : null, now.minusHours(4));
     }
 
+    /** Hàm trợ giúp của test: tạo một lần thanh toán để đối soát. */
     private void attempt(String ref, long payment, String status, LocalDateTime created, LocalDateTime expires) {
         jdbc.update("insert into vnpay_transactions(reference,payment_id,amount,created_at,expires_at,ip_address,status) "
                 + "values (?,?,150000,?,?,'127.0.0.1',?)", ref, payment, created, expires, status);

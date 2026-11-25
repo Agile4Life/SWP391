@@ -12,13 +12,18 @@ import {
 import './admin-audit-logs.css';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 
+/** Hai tab của trang: nhật ký thao tác (audit) và mức lấp đầy lớp học. */
 type ActiveTab = 'audit' | 'occupancy';
 
+/**
+ * Trang quản trị: xem nhật ký thao tác hệ thống (lọc theo người, đối tượng, hành động, khoảng ngày, xem khác
+ * biệt giá trị cũ/mới) và thống kê mức lấp đầy, tỷ lệ đi học của các lớp.
+ */
 export function AdminAuditLogsPage() {
   const { t } = useStaffI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>('audit');
 
-  // Audit Logs state
+  // Trạng thái danh sách nhật ký thao tác
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [loadingLogs, setLoadingLogs] = useState<boolean>(true);
   const [logsError, setLogsError] = useState<StaffMessage>('');
@@ -27,23 +32,24 @@ export function AdminAuditLogsPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [currentPage, setCurrentPage] = useState<number>(0);
 
-  // Audit Filter state
+  // Trạng thái bộ lọc nhật ký
   const [selectedAction, setSelectedAction] = useState<string>('ALL');
   const [selectedEntityType, setSelectedEntityType] = useState<string>('ALL');
   const [actorSearch, setActorSearch] = useState<string>('');
 
-  // Diff Modal state
+  // Trạng thái hộp thoại xem khác biệt (diff)
   const [diffLog, setDiffLog] = useState<AuditLogItem | null>(null);
 
-  // Occupancy Report state
+  // Trạng thái báo cáo mức lấp đầy lớp học
   const [occupancyList, setOccupancyList] = useState<ClassOccupancyItem[]>([]);
   const [loadingOccupancy, setLoadingOccupancy] = useState<boolean>(true);
   const [occupancyError, setOccupancyError] = useState<StaffMessage>('');
   const [occupancyReload, setOccupancyReload] = useState<number>(0);
 
-  // Fetch Audit Logs
+  // Tải danh sách nhật ký thao tác
   useEffect(() => {
     let mounted = true;
+    // Tải nhật ký thao tác theo bộ lọc và trang hiện tại.
     const fetchAudit = async () => {
       setLoadingLogs(true);
       setLogsError('');
@@ -76,9 +82,10 @@ export function AdminAuditLogsPage() {
     };
   }, [selectedAction, selectedEntityType, currentPage, logsReload]);
 
-  // Fetch Occupancy
+  // Tải báo cáo mức lấp đầy lớp học
   useEffect(() => {
     let mounted = true;
+    // Tải thống kê mức lấp đầy của các lớp.
     const fetchOccupancy = async () => {
       setLoadingOccupancy(true);
       setOccupancyError('');
@@ -105,7 +112,7 @@ export function AdminAuditLogsPage() {
     };
   }, [activeTab, occupancyReload]);
 
-  // Filter logs by actor search locally
+  // Lọc nhật ký tại client theo tên/email người thực hiện.
   const filteredLogs = useMemo(() => {
     if (!actorSearch.trim()) return logs;
     const q = actorSearch.toLowerCase().trim();
@@ -116,7 +123,7 @@ export function AdminAuditLogsPage() {
     );
   }, [logs, actorSearch]);
 
-  // Overall Occupancy Metrics
+  // Chỉ số tổng hợp mức lấp đầy: tỷ lệ lấp đầy trung bình, lớp cao nhất, tổng sức chứa và tổng ghi danh.
   const occupancyMetrics = useMemo(() => {
     if (occupancyList.length === 0) {
       return { avgUtilization: 0, highestClass: '—', totalCapacity: 0, totalEnrolled: 0 };
@@ -134,6 +141,7 @@ export function AdminAuditLogsPage() {
     };
   }, [occupancyList]);
 
+  // Định dạng giá trị JSON (chuỗi JSON được parse lại) thành văn bản thụt lề dễ đọc.
   const formatJsonPretty = (val: unknown) => {
     if (val === null || val === undefined) {
       return 'null';
@@ -148,6 +156,7 @@ export function AdminAuditLogsPage() {
     return JSON.stringify(val, null, 2);
   };
 
+  // Chuyển mã dạng camelCase/snake_case thành câu dễ đọc, viết hoa chữ đầu.
   const humanizeCode = (raw?: string | null) => {
     if (!raw) return '';
     const cleaned = raw
@@ -160,6 +169,7 @@ export function AdminAuditLogsPage() {
     return cleaned ? cleaned.charAt(0).toUpperCase() + cleaned.slice(1) : '';
   };
 
+  // Đọc giá trị (đối tượng hoặc chuỗi JSON) thành object thuần; không phải object thì trả null.
   const parseRecordObject = (val: unknown): Record<string, unknown> | null => {
     if (val === null || val === undefined) return null;
     if (typeof val === 'string') {
@@ -179,6 +189,7 @@ export function AdminAuditLogsPage() {
     return null;
   };
 
+  // Hiển thị IP; địa chỉ loopback IPv6 được đổi thành 127.0.0.1.
   const formatIpAddress = (ip?: string | null) => {
     if (!ip) return '';
     const trimmed = ip.trim();
@@ -186,6 +197,7 @@ export function AdminAuditLogsPage() {
     return trimmed;
   };
 
+  // Chọn class màu của huy hiệu theo loại hành động (tạo, sửa, xóa, hủy...).
   const getActionBadgeClass = (act: string) => {
     const a = (act ?? '').trim().toUpperCase();
     if (
@@ -262,6 +274,7 @@ export function AdminAuditLogsPage() {
     return '';
   };
 
+  // Nhãn tiếng Việt/Anh của loại hành động.
   const getActionLabel = (act: string) => {
     const a = (act ?? '').trim().toUpperCase();
     switch (a) {
@@ -330,6 +343,7 @@ export function AdminAuditLogsPage() {
     }
   };
 
+  // Nhãn tiếng Việt/Anh của loại đối tượng (tài khoản, hội viên...).
   const getEntityLabel = (type: string) => {
     const normalized = (type ?? '').trim().toLowerCase();
     switch (normalized) {
@@ -368,6 +382,7 @@ export function AdminAuditLogsPage() {
     }
   };
 
+  // Nhãn tiếng Việt/Anh của tên trường trong bảng khác biệt.
   const getDiffFieldLabel = (key: string) => {
     switch (key) {
       case 'id': return 'ID';
@@ -409,6 +424,7 @@ export function AdminAuditLogsPage() {
     }
   };
 
+  // Định dạng giá trị của một trường khác biệt (rỗng là "—", boolean là Có/Không, object là JSON).
   const formatDiffFieldValue = (val: unknown) => {
     if (val === null || val === undefined || val === '') return '—';
     if (typeof val === 'boolean') return val ? t('Có', 'Yes') : t('Không', 'No');
@@ -422,7 +438,7 @@ export function AdminAuditLogsPage() {
         title={t("Nhật ký & lấp đầy lớp")}
       />
 
-      {/* Navigation Tabs */}
+      {/* Các tab điều hướng */}
       <div className="portal-tabs audit-view-tabs" role="tablist">
         <button
           type="button"
@@ -444,7 +460,7 @@ export function AdminAuditLogsPage() {
 
       {activeTab === 'audit' ? (
         <section data-i18n-managed aria-label={t("Bảng tra cứu nhật ký kiểm toán", "Audit log lookup")}>
-          {/* Filters Bar */}
+          {/* Thanh bộ lọc */}
           <div className="portal-card audit-filter-bar">
             <div className="audit-filter-group" style={{ flex: 1.2, minWidth: '220px' }}>
               <span className="portal-label filter-label">{t("Tìm kiếm Người thực hiện")}</span>
@@ -526,7 +542,7 @@ export function AdminAuditLogsPage() {
             </div>
           </div>
 
-          {/* Audit Table */}
+          {/* Bảng nhật ký thao tác */}
           <div className="portal-card portal-card--flush audit-table-card">
             {loadingLogs ? (
               <LoadingSkeleton label={t("Đang tải nhật ký kiểm toán…")} variant="table" count={8} />
@@ -596,7 +612,7 @@ export function AdminAuditLogsPage() {
               </table>
             )}
 
-            {/* Pagination Controls */}
+            {/* Điều khiển phân trang */}
             <div className="audit-pagination-bar">
               <span>
                 {t("Hiển thị trang ")}<strong>{currentPage + 1}</strong> / <strong>{totalPages}</strong> ({totalElements}{t(" bản ghi)")}</span>
@@ -622,7 +638,7 @@ export function AdminAuditLogsPage() {
           </div>
         </section>
       ) : (
-        /* Tab 2: Occupancy Chart Section */
+        /* Tab 2: Khu vực biểu đồ mức lấp đầy lớp học */
         <section data-i18n-managed aria-label={t("Biểu đồ tỷ lệ lấp đầy phòng học theo bộ môn")}>
           {occupancyError && !loadingOccupancy && (
             <div data-i18n-managed className="portal-alert" role="alert">

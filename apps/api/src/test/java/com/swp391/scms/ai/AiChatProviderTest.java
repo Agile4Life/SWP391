@@ -11,6 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
 
+/** Bộ kiểm thử cho provider AiChatProvider (ai chat provider). */
 class AiChatProviderTest {
     @Test void openAiUsesRealRequestContractAndExtractsText() {
         RestClient.Builder builder = RestClient.builder();

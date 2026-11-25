@@ -1,8 +1,10 @@
 import { useI18n } from '../i18n';
 import { PortalIcon } from '../../features/portal/PortalIcon';
 
+/** Props của nút làm mới: nhãn, sự kiện bấm, vô hiệu và kiểu hiển thị. */
 interface RefreshButtonProps {
   label?: string;
+  // Sự kiện bấm nút làm mới.
   onClick: () => void;
   disabled?: boolean;
   className?: string;

@@ -7,6 +7,7 @@ describe('checkinApi.ts (Lobby QR Check-in & Checkout API Client)', () => {
   });
 
   it('scan posts qrCode and gate to /api/v1/check-in/scan', async () => {
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const mockCheckin = {
       id: 10,
       memberId: 2,
@@ -22,6 +23,7 @@ describe('checkinApi.ts (Lobby QR Check-in & Checkout API Client)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 201,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: mockCheckin }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -41,6 +43,7 @@ describe('checkinApi.ts (Lobby QR Check-in & Checkout API Client)', () => {
   });
 
   it('checkout posts to /api/v1/check-in/{id}/checkout', async () => {
+    // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const mockCheckedOut = {
       id: 10,
       memberId: 2,
@@ -55,6 +58,7 @@ describe('checkinApi.ts (Lobby QR Check-in & Checkout API Client)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: mockCheckedOut }),
     });
     vi.stubGlobal('fetch', mockFetch);
@@ -80,6 +84,7 @@ describe('checkinApi.ts (Lobby QR Check-in & Checkout API Client)', () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
+      // Giả lập phần thân JSON của phản hồi API.
       json: async () => ({ success: true, data: items }),
     });
     vi.stubGlobal('fetch', mockFetch);

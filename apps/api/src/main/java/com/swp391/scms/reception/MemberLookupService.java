@@ -1,14 +1,21 @@
 package com.swp391.scms.reception;
 
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.membership.repository.MemberTrialRedemptionRepository;
+import com.swp391.scms.users.KycCrypto;
 import com.swp391.scms.users.MemberRepository;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Quick member lookup for the receptionist by membership code, name, email or phone. */
+/**
+ * Tra cứu nhanh hội viên cho lễ tân theo mã hội viên, họ tên, email hoặc SĐT.
+ *
+ * Tra cứu nhanh hội viên cho lễ tân theo mã membership, tên, email hoặc số điện thoại.
+ */
 @Service
 public class MemberLookupService {
 
@@ -16,11 +23,23 @@ public class MemberLookupService {
     private static final int MIN_QUERY_LENGTH = 2;
 
     private final MemberRepository repository;
+    private final MemberTrialRedemptionRepository trials;
 
+    /** Nhận repository hội viên. */
     public MemberLookupService(MemberRepository repository) {
-        this.repository = repository;
+        this(repository, null);
     }
 
+    @Autowired
+    public MemberLookupService(MemberRepository repository, MemberTrialRedemptionRepository trials) {
+        this.repository = repository;
+        this.trials = trials;
+    }
+
+    /**
+     * Từ khóa phải có ít nhất 2 ký tự (sau khi bỏ khoảng trắng); tìm không phân biệt hoa thường, trả tối đa 20
+     * hội viên chưa bị xóa.
+     */
     @Transactional(readOnly = true)
     public List<MemberLookupDto> search(String query) {
         String keyword = query == null ? "" : query.trim().toLowerCase(Locale.ROOT);
@@ -30,7 +49,12 @@ public class MemberLookupService {
         }
         return repository.search("%" + keyword + "%", PageRequest.of(0, MAX_RESULTS)).stream()
                 .map(m -> new MemberLookupDto(m.getUserId(), m.getMembershipCode(), m.getUser().getFullName(),
-                        m.getUser().getEmail(), m.getUser().getPhone(), m.getUser().getStatus()))
+                        m.getUser().getEmail(), m.getUser().getPhone(), m.getUser().getStatus(),
+                        m.getIdentityVerified(), m.getKycStatus(), m.getDocumentType(),
+                        KycCrypto.mask(m.getCitizenId()),
+                        // Trial đã duyệt có thể còn KYC PENDING/REJECTED cũ; giữ nguyên trạng thái hiển thị.
+                        trials != null && trials.findByMemberUserId(m.getUserId())
+                                .map(trial -> "APPROVED".equalsIgnoreCase(trial.getStatus())).orElse(false)))
                 .toList();
     }
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
-import { LEVEL_ORDER, type LevelCode } from '../scene/schema';
+import { type LevelCode } from '../scene/schema';
 import {
   buildLiveActorDefinitions,
   createActorPartGeometry,
@@ -10,12 +10,12 @@ import {
 } from '../renderers/actors/liveActorsConfig';
 
 describe('Live 3D Activity Actors & Dynamic Objects', () => {
-  it('builds actor definitions across all 5 levels (B1, L1, L2, RF, OUT) with contiguous instance indices', () => {
+  it('builds actor definitions for Gym and support areas with contiguous instance indices', () => {
     const defs = buildLiveActorDefinitions(SOL_CENTER_SCENE);
-    expect(defs.length).toBeGreaterThanOrEqual(45);
+    expect(defs.length).toBeGreaterThanOrEqual(20);
 
     const levelsPresent = new Set<LevelCode>(defs.map(d => d.level));
-    for (const lvl of LEVEL_ORDER) {
+    for (const lvl of ['L1', 'L2'] as const) {
       expect(levelsPresent.has(lvl)).toBe(true);
     }
 
@@ -26,26 +26,15 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
       'barbell-squat',
       'bench-press',
       'dumbbell-curl',
-      'boxing-spar',
-      'heavy-bag-boxer',
-      'heavy-bag-sway',
-      'badminton-player',
-      'badminton-shuttlecock',
-      'swim-freestyle',
-      'yoga-flow',
-      'tennis-player',
-      'tennis-ball',
-      'inbody-scan',
       'pt-coach-tablet',
       'receptionist-greet',
       'walking-patrol',
-      'fountain-plume',
     ];
     for (const act of expectedActivities) {
       expect(activities.has(act)).toBe(true);
     }
 
-    // Verify contiguous non-overlapping instance ranges
+    // Kiểm tra các khoảng chỉ số instance liên tiếp, không chồng lấn
     let expectedCursor = 0;
     for (const def of defs) {
       expect(def.instanceStartIndex).toBe(expectedCursor);
@@ -102,7 +91,7 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
       expect(p.scale[2]).toBeGreaterThan(0);
     }
 
-    // Verify dynamic movement across key activities (shuttlecock, tennis ball, swimmer, barbell squat, runner)
+    // Kiểm tra chuyển động ở các hoạt động chính (cầu lông, bóng tennis, bơi lội, gánh tạ đòn, chạy bộ) giữa hai thời điểm.
     const checkActorMoved = (actorId: string) => {
       const a0 = partsT0.filter(p => p.actorId === actorId);
       const a1 = partsT1.filter(p => p.actorId === actorId);
@@ -128,11 +117,6 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
 
     checkActorMoved('actor-l1-runner-1');
     checkActorMoved('actor-l1-squat-lifter-1');
-    checkActorMoved('prop-l1-shuttlecock-1');
-    checkActorMoved('prop-out-tennis-ball-1');
-    checkActorMoved('actor-b1-swimmer-1');
-    checkActorMoved('actor-rf-yoga-Instructor'.toLowerCase());
-    checkActorMoved('actor-out-pedestrian-1');
   });
 
   it('respects exploded level Y offsets and solo level visibility filtering', () => {
@@ -149,16 +133,12 @@ describe('Live 3D Activity Actors & Dynamic Objects', () => {
       focusLevel: 'ALL',
     });
 
-    // B1 has explodedOffset = -6.0, RF has explodedOffset = +12.0, L2 has explodedOffset = +6.0
-    const b1Idx = stacked.findIndex(p => p.level === 'B1');
+    // B1 có explodedOffset = -6.0, RF có explodedOffset = +12.0, L2 có explodedOffset = +6.0
     const l2Idx = stacked.findIndex(p => p.level === 'L2');
-    const rfIdx = stacked.findIndex(p => p.level === 'RF');
 
-    expect(exploded[b1Idx]!.position[1] - stacked[b1Idx]!.position[1]).toBeCloseTo(-6.0, 3);
     expect(exploded[l2Idx]!.position[1] - stacked[l2Idx]!.position[1]).toBeCloseTo(6.0, 3);
-    expect(exploded[rfIdx]!.position[1] - stacked[rfIdx]!.position[1]).toBeCloseTo(12.0, 3);
 
-    // Solo mode on L1 hides all non-L1 actors by scaling them to [0, 0, 0]
+    // Chế độ solo trên tầng L1 ẩn toàn bộ nhân vật không thuộc L1 bằng cách thu nhỏ tỉ lệ về [0, 0, 0]
     const soloL1 = evaluateActorPartsAtTime(defs, 1.25, {
       scene: SOL_CENTER_SCENE,
       levelMode: 'solo',

@@ -4,6 +4,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
+/** Yêu cầu đổi trạng thái khoản thanh toán. */
 @Schema(description = "Yêu cầu cập nhật trạng thái thanh toán")
 public record PaymentStatusUpdateRequest(
         @NotBlank(message = "{validation.payment.status.not_blank}")

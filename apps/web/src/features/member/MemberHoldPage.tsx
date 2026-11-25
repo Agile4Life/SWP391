@@ -22,22 +22,27 @@ import {
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
+/** Định dạng Date thành chuỗi YYYY-MM-DD. */
 function isoDate(date: Date): string {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
 }
 
+/** Cộng/trừ số ngày vào ngày YYYY-MM-DD. */
 function addDays(iso: string, days: number): string {
   const date = new Date(`${iso}T00:00:00`);
   date.setDate(date.getDate() + days);
   return isoDate(date);
 }
 
+/** Số ngày tính cả hai đầu của khoảng [start, end]. */
 function inclusiveDays(start: string, end: string): number {
   return Math.round((new Date(`${end}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000) + 1;
 }
 
-/** The subscription a hold applies to: the one running today, else one that is already frozen. */
+/**
+ * Chọn gói áp dụng bảo lưu: gói đang hoạt động hôm nay, nếu không thì gói đang bảo lưu.
+ */
 function pickSubscription(history: MemberSubscription[]): MemberSubscription | null {
   const today = isoDate(new Date());
   return history.find((item) => item.status === 'active' && item.startDate <= today && item.endDate >= today)
@@ -45,6 +50,10 @@ function pickSubscription(history: MemberSubscription[]): MemberSubscription | n
     ?? null;
 }
 
+/**
+ * Trang bảo lưu của hội viên: xem chính sách, gửi yêu cầu bảo lưu kèm tài liệu y tế, xem tình trạng, rút yêu
+ * cầu và mở tài liệu đã nộp.
+ */
 export function MemberHoldPage() {
   const { t } = useI18n();
   const [loading, setLoading] = useState(true);
@@ -59,6 +68,7 @@ export function MemberHoldPage() {
   const [formError, setFormError] = useState<string | Error | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Tải gói hiện tại, chính sách và yêu cầu bảo lưu hiện có.
   const load = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -86,14 +96,16 @@ export function MemberHoldPage() {
 
   useEffect(() => { void load(); }, [load]);
 
+  // Ngày bắt đầu sớm nhất được chọn (hôm nay + 2 ngày).
   const earliestStart = useMemo(() => addDays(isoDate(new Date()), 2), []);
   const status = detail?.holdStatus ?? null;
-  // A pending request, or an approved hold that has not started yet, can still be withdrawn.
+  // Yêu cầu đang chờ duyệt, hoặc bảo lưu đã duyệt nhưng chưa bắt đầu, vẫn có thể rút lại.
   const canWithdraw = status === 'PENDING'
     || (status === 'APPROVED' && subscription?.status === 'active' && !!detail?.holdStartDate && detail.holdStartDate > isoDate(new Date()));
   const canRequest = !!subscription && !!policy?.allowed && !policy.alreadyUsed
     && subscription.status === 'active' && status !== 'PENDING' && status !== 'APPROVED';
 
+  // Chọn tệp đính kèm, kiểm tra số lượng và dung lượng theo chính sách.
   function onPickFiles(list: FileList | null) {
     setFormError(null);
     if (!list) return;
@@ -113,6 +125,7 @@ export function MemberHoldPage() {
     setFiles(picked);
   }
 
+  // Gửi yêu cầu bảo lưu sau khi kiểm tra lý do, khoảng ngày, thời hạn báo trước và độ dài bảo lưu.
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!subscription || !policy || busy) return;
@@ -142,6 +155,7 @@ export function MemberHoldPage() {
     }
   }
 
+  // Rút yêu cầu bảo lưu đang chờ hoặc đã duyệt nhưng chưa bắt đầu.
   async function onWithdraw() {
     if (!subscription || busy) return;
     setBusy(true);
@@ -156,6 +170,7 @@ export function MemberHoldPage() {
     }
   }
 
+  // Mở tài liệu đã nộp trong tab mới qua object URL (thu hồi sau 60 giây).
   async function openDocument(documentId: number) {
     if (!subscription) return;
     try {
@@ -197,8 +212,7 @@ export function MemberHoldPage() {
                 <li>{t(`Tối đa ${policy.maxDays} ngày, tối thiểu ${policy.minDays} ngày.`, `Between ${policy.minDays} and ${policy.maxDays} days.`)}</li>
                 <li>{t('Mỗi gói chỉ được bảo lưu một lần.', 'Each package can be put on hold only once.')}</li>
                 <li>{t(`Nộp đơn trước ngày bắt đầu ít nhất ${policy.noticeHours} giờ (có thể đính kèm giấy tờ nếu có).`, `File at least ${policy.noticeHours} hours before it starts (supporting documents optional).`)}</li>
-                <li>{t('Khi được duyệt, các buổi PT và đặt sân trong giai đoạn bảo lưu sẽ tự hủy (buổi PT dùng lượt của gói được trả lại lượt); ngày bảo lưu được cộng vào hạn gói.', 'When approved, PT sessions and courts booked during the hold are cancelled (PT sessions booked with package sessions get them back); the held days are added to your expiry.')}</li>
-                <li>{t('Khóa học còn buổi trong giai đoạn bảo lưu sẽ bị hủy: duyệt trước ngày khóa bắt đầu ít nhất 3 ngày thì được trả lại lượt hoặc hoàn học phí vào Ví; muộn hơn hoặc khóa đã bắt đầu thì mất lượt/học phí.', 'Courses with a session during the hold are cancelled: approved at least 3 days before the course starts, the course credit or fee is returned to your Wallet; later, or once the course has started, it is lost.')}</li>
+                <li>{t('Khi được duyệt, các buổi PT trong giai đoạn bảo lưu sẽ tự hủy (buổi PT dùng lượt của gói được trả lại lượt); ngày bảo lưu được cộng vào hạn gói.', 'When approved, PT sessions booked during the hold are cancelled (PT sessions booked with package sessions get them back); the held days are added to your expiry.')}</li>
               </ul>
             ) : (
               <p className="hold-notice hold-notice--info" role="status">{t('Gói này không được bảo lưu. Gói trải nghiệm và gói 1 tháng cũ hạng Silver/Gold không có quyền bảo lưu.', 'This package cannot be put on hold. The trial and the old 1-month Silver/Gold packages have no hold allowance.')}</p>
@@ -226,7 +240,7 @@ export function MemberHoldPage() {
                   <button type="button" className="btn-secondary" disabled={busy} onClick={() => void onWithdraw()}>
                     {status === 'PENDING' ? t('Rút đơn', 'Withdraw request') : t('Hủy bảo lưu chưa bắt đầu', 'Cancel the hold before it starts')}
                   </button>
-                  {status === 'APPROVED' && <small className="meta-label" style={{ display: 'block' }}>{t('Các khóa học, lịch PT và đặt sân đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'Courses, PT sessions and courts cancelled at approval are not restored; the package gets its hold back.')}</small>}
+                  {status === 'APPROVED' && <small className="meta-label" style={{ display: 'block' }}>{t('Các buổi PT đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'PT sessions cancelled at approval are not restored; the package gets its hold back.')}</small>}
                 </div>
               )}
               {status === 'REJECTED' && <p className="hold-notice hold-notice--warn" role="status">{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}{detail.holdRejectionReason ? <> {t('Lý do từ Lễ tân', 'Reception\'s reason')}: <strong>{detail.holdRejectionReason}</strong></> : null}</p>}

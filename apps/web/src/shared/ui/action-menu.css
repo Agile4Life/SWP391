@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho menu hành động (nút ba chấm và danh sách thao tác). */
 .action-menu { position: relative; display: inline-block; }
 .action-menu[open] { z-index: 60; }
 .action-menu__trigger { list-style: none; display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px; padding: 0 8px; border: 1px solid var(--portal-border, var(--color-border-subtle)); border-radius: 10px; background: transparent; color: var(--portal-muted, var(--color-text-muted)); font-size: 18px; line-height: 1; cursor: pointer; }

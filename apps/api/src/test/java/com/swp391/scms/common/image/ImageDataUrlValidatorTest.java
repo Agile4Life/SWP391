@@ -8,7 +8,9 @@ import java.util.Base64;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Bộ kiểm thử cho ImageDataUrlValidator (image data url validator). */
 class ImageDataUrlValidatorTest {
+    /** Hàm trợ giúp của test: tạo data URL từ loại ảnh và dữ liệu. */
     static String dataUrl(String type, byte[] bytes) {
         return "data:" + type + ";base64," + Base64.getEncoder().encodeToString(bytes);
     }
@@ -17,6 +19,7 @@ class ImageDataUrlValidatorTest {
     final byte[] jpeg = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 0x10, 'J', 'F', 'I', 'F', 0};
     final byte[] webp = {'R', 'I', 'F', 'F', 0x24, 0, 0, 0, 'W', 'E', 'B', 'P', 'V', 'P', '8', ' '};
 
+    /** Kiểm thử: chấp nhận PNG, JPEG và WebP thật. */
     @Test
     void acceptsRealPngJpegAndWebp() {
         var img = ImageDataUrlValidator.validate(dataUrl("image/png", png), 1_500_000);
@@ -30,6 +33,7 @@ class ImageDataUrlValidatorTest {
         assertThat(webpImg.contentType()).isEqualTo("image/webp");
     }
 
+    /** Kiểm thử: từ chối SVG, sai loại và ảnh quá lớn. */
     @Test
     void rejectsSvgMismatchAndOversize() {
         assertThatThrownBy(() -> ImageDataUrlValidator.validate(dataUrl("image/svg+xml", "<svg/>".getBytes()), 1_500_000))

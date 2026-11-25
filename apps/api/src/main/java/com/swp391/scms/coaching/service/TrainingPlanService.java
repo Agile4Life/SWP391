@@ -27,6 +27,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Nghiệp vụ giáo án: HLV/quản lý tạo, sửa, kích hoạt, áp dụng lại, xóa giáo án; hội viên xem giáo án đang áp
+ * dụng (trừ hạng Silver). Mỗi cặp hội viên - HLV chỉ có một giáo án đang áp dụng, giáo án bị thay thế vào lịch
+ * sử.
+ */
 @Service
 @Transactional
 public class TrainingPlanService {
@@ -38,6 +43,7 @@ public class TrainingPlanService {
     private final GymClassRepository gymClassRepository;
     private final AiRecommendationLogRepository aiRecommendationLogRepository;
 
+    /** Constructor cho test với các repository bắt buộc. */
     public TrainingPlanService(TrainingPlanRepository trainingPlanRepository,
                                TrainingPlanItemRepository trainingPlanItemRepository,
                                MemberRepository memberRepository,
@@ -45,6 +51,7 @@ public class TrainingPlanService {
         this(trainingPlanRepository, trainingPlanItemRepository, memberRepository, coachRepository, null, null);
     }
 
+    /** Constructor Spring dùng. */
     @Autowired
     public TrainingPlanService(TrainingPlanRepository trainingPlanRepository,
                                TrainingPlanItemRepository trainingPlanItemRepository,
@@ -60,6 +67,11 @@ public class TrainingPlanService {
         this.aiRecommendationLogRepository = aiRecommendationLogRepository;
     }
 
+    /**
+     * Tạo giáo án: ngày hợp lệ; HLV chỉ tạo cho chính mình và cho hội viên có buổi PT với mình cùng gói
+     * Gold/Platinum; gắn lớp/gợi ý AI nếu có; có thể kích hoạt ngay (giáo án cũ của cùng HLV vào lịch sử); lưu
+     * các bài tập sau khi kiểm tra.
+     */
     public TrainingPlanDto createPlan(TrainingPlanCreateDto dto, Long currentUserId, String currentUserRole) {
         if (dto.getStartDate() == null || dto.getEndDate() == null || dto.getStartDate().isAfter(dto.getEndDate())) {
             throw new BadRequestException("INVALID_DATE_RANGE", "coaching.plan.invalid_date_range", null,
@@ -130,6 +142,7 @@ public class TrainingPlanService {
         return toDto(savedPlan, savedItems);
     }
 
+    /** Thêm một bài tập vào giáo án chưa hủy/hoàn thành (chỉ HLV sở hữu hoặc quản lý). */
     public TrainingPlanDto addItem(Long planId, TrainingPlanItemCreateDto itemDto, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
@@ -151,6 +164,10 @@ public class TrainingPlanService {
         return toDto(plan, updatedItems);
     }
 
+    /**
+     * Kích hoạt giáo án nháp (hoặc đang áp dụng); giáo án đang áp dụng khác của cùng HLV cho hội viên vào lịch
+     * sử.
+     */
     public TrainingPlanDto activatePlan(Long planId, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
@@ -170,9 +187,10 @@ public class TrainingPlanService {
     }
 
     /**
-     * Brings a plan from the member's history back as the active one. The plan the same coach has active for the
-     * member right now moves to history, so each member–coach pair has exactly one current plan. A plan whose period already ended gets a fresh
-     * window of the same length starting today, otherwise it would be "active" yet outside its dates.
+     * Đưa một giáo án từ lịch sử của hội viên trở lại làm giáo án đang áp dụng. Giáo án mà cùng HLV đang áp dụng cho
+     * hội viên sẽ chuyển vào lịch sử, đảm bảo mỗi cặp hội viên–HLV có đúng một giáo án hiện hành. Giáo án có khoảng
+     * thời gian đã kết thúc sẽ được cấp khung thời gian mới cùng độ dài bắt đầu từ hôm nay để tránh ở trạng thái
+     * "active" nhưng nằm ngoài ngày hiệu lực.
      */
     public TrainingPlanDto reapplyPlan(Long planId, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
@@ -195,8 +213,8 @@ public class TrainingPlanService {
     }
 
     /**
-     * Each member–coach pair has one active plan; the plan it replaces stays as history instead of being deleted.
-     * Plans from the member's other coaches are left alone.
+     * Mỗi cặp hội viên–HLV chỉ có một giáo án đang áp dụng; các giáo án bị thay thế được chuyển sang lịch sử
+     * (superseded) thay vì xóa. Giáo án của các HLV khác của hội viên được giữ nguyên.
      */
     private void supersedeOtherActivePlans(TrainingPlan current) {
         if (current.getMember() == null || current.getMember().getUserId() == null
@@ -210,6 +228,10 @@ public class TrainingPlanService {
         }
     }
 
+    /**
+     * Sửa giáo án nháp/đang áp dụng: ngày hợp lệ, cập nhật mục tiêu và bài tập (mỗi bài một lần, phải thuộc
+     * giáo án).
+     */
     public TrainingPlanDto updatePlan(Long planId, com.swp391.scms.coaching.dto.TrainingPlanUpdateDto dto,
                                       Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
@@ -251,7 +273,10 @@ public class TrainingPlanService {
         return toDto(saved, items);
     }
 
-    /** Activated plans are withdrawn without deleting exercises or member completion history. */
+    /**
+     * Xóa giáo án: bản nháp thì xóa hẳn; giáo án đã kích hoạt hoặc trong lịch sử được thu hồi (chuyển cancelled)
+     * mà không xóa bài tập hay lịch sử hoàn thành của hội viên.
+     */
     public void deletePlan(Long planId, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
@@ -271,9 +296,9 @@ public class TrainingPlanService {
     private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
 
     /**
-     * Silver members do not see the plans their coach writes (spec 2026-11-09): the coach may still create them and
-     * they appear as soon as the member moves to Gold or Platinum. A member with no active package keeps the old
-     * behaviour, and the trial follows Gold.
+     * Hội viên có được xem giáo án HLV soạn hay không (spec 2026-11-09): hội viên hạng Silver không thấy giáo án
+     * (HLV vẫn có thể tạo và giáo án sẽ hiện ngay khi hội viên lên Gold hoặc Platinum). Hội viên không có gói hiệu lực
+     * giữ nguyên hành vi cũ, còn gói trải nghiệm áp dụng theo hạng Gold.
      */
     boolean memberMaySeePlans(Long memberId) {
         if (subscriptionRepository == null || memberId == null) return true;
@@ -286,6 +311,7 @@ public class TrainingPlanService {
                 .anyMatch(s -> com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(s.getMembershipPackage()));
     }
 
+    /** Các giáo án đang áp dụng của hội viên (rỗng nếu hội viên không được xem). */
     @Transactional(readOnly = true)
     public List<TrainingPlanDto> getMyActivePlans(Long memberId) {
         if (!memberMaySeePlans(memberId)) {
@@ -297,6 +323,10 @@ public class TrainingPlanService {
                 .toList();
     }
 
+    /**
+     * Chi tiết giáo án: HLV chỉ xem của học viên mình phụ trách; hội viên chỉ xem của mình và phải được xem
+     * theo hạng gói.
+     */
     @Transactional(readOnly = true)
     public TrainingPlanDto getPlanById(Long planId, Long currentUserId, String currentUserRole) {
         TrainingPlan plan = trainingPlanRepository.findById(planId)
@@ -322,6 +352,7 @@ public class TrainingPlanService {
         return toDto(plan, items);
     }
 
+    /** Danh sách giáo án: theo hội viên (kiểm tra quyền HLV) hoặc của chính HLV/tất cả cho quản lý. */
     @Transactional(readOnly = true)
     public List<TrainingPlanDto> getPlans(Long memberId, Long currentUserId, String currentUserRole) {
         List<TrainingPlan> plans;
@@ -340,6 +371,7 @@ public class TrainingPlanService {
                 .toList();
     }
 
+    /** Quản lý được sửa mọi giáo án; HLV chỉ sửa giáo án của mình (giáo án chưa giao thuộc quản lý). */
     private void verifyCoachOwnership(TrainingPlan plan, Long currentUserId, String currentUserRole) {
         if (isManager(currentUserRole)) {
             return;
@@ -351,13 +383,17 @@ public class TrainingPlanService {
         if (isCoach(currentUserRole)) {
             requireCurrentAssignment(currentUserId, plan.getMember() != null ? plan.getMember().getUserId() : null);
         }
-        // An unassigned plan belongs to management; only its own coach may change an assigned one.
+        // Giáo án chưa gán HLV thuộc quyền quản lý; giáo án đã gán thì chỉ HLV phụ trách giáo án đó được chỉnh sửa.
         if (currentUserId == null || planCoachId == null || !currentUserId.equals(planCoachId)) {
             throw new ForbiddenException("FORBIDDEN", "coaching.plan.not_owner", null,
                     "You can only modify your own training plans");
         }
     }
 
+    /**
+     * Kiểm tra bài tập: tên bắt buộc (tối đa 150 ký tự), hiệp/lần/phút từ 1 trở lên, nghỉ không âm, thứ trong
+     * tuần 1-7.
+     */
     private void validateItem(TrainingPlanItemCreateDto itemDto) {
         if (itemDto.getExerciseName() == null || itemDto.getExerciseName().isBlank()) {
             throw new BadRequestException("EXERCISE_NAME_REQUIRED", "validation.coaching.exercise_name.not_blank",
@@ -380,6 +416,7 @@ public class TrainingPlanService {
         }
     }
 
+    /** Tạo entity bài tập thuộc giáo án với thứ tự cho trước. */
     private TrainingPlanItem buildItem(TrainingPlan plan, TrainingPlanItemCreateDto dto, int orderIndex) {
         TrainingPlanItem item = new TrainingPlanItem();
         item.setTrainingPlan(plan);
@@ -394,6 +431,7 @@ public class TrainingPlanService {
         return item;
     }
 
+    /** Chuyển giáo án sang DTO kèm hội viên, HLV, lớp, gợi ý AI và các bài tập. */
     private TrainingPlanDto toDto(TrainingPlan plan, List<TrainingPlanItem> items) {
         TrainingPlanDto dto = new TrainingPlanDto();
         dto.setId(plan.getId());
@@ -446,7 +484,9 @@ public class TrainingPlanService {
     @Autowired(required = false)
     private com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
 
-    /** A coach writes a personal plan only for a member with a registered 1:1 PT session with them and a Gold/Platinum package. */
+    /**
+     * HLV chỉ được soạn giáo án cá nhân cho hội viên đã đăng ký buổi PT 1:1 với mình và đang có gói Gold/Platinum.
+     */
     private void requirePersonalPlanEligibility(Long coachId, Long memberId) {
         if (coachBookingRepository != null && !coachBookingRepository.existsForCoachAndMember(coachId, memberId)) {
             throw new ForbiddenException("PT_SESSION_REQUIRED", "coaching.plan.pt_required", null,
@@ -463,15 +503,18 @@ public class TrainingPlanService {
         }
     }
 
+    /** HLV phải đang phụ trách hội viên. */
     private void requireCurrentAssignment(Long coachId, Long memberId) {
         if(currentCoachMembers == null) throw new ForbiddenException("COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null, "Current assignment cannot be verified.");
         currentCoachMembers.requireCoachOf(coachId, memberId);
     }
 
+    /** Vai trò quản lý trung tâm. */
     private boolean isManager(String role) {
         return "CENTER_MANAGER".equalsIgnoreCase(role) || "Manager".equalsIgnoreCase(role);
     }
 
+    /** Vai trò HLV. */
     private boolean isCoach(String role) {
         return "COACH".equalsIgnoreCase(role) || "Coach".equalsIgnoreCase(role);
     }

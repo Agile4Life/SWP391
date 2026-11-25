@@ -12,13 +12,15 @@ import {
 
 export const CUTAWAY_DOT_THRESHOLD = 0.22;
 
+/** Mô tả một tường ngoài cho cắt tường: id, pháp tuyến và tâm. */
 export type CutawayWallDescriptor = Pick<
   ExteriorWallBuiltRecord,
   'wallId' | 'normal' | 'center'
 >;
 
 /**
- * Computes `dot(wallNormalXZ, normalize(cameraPosXZ - wallCenterXZ))`.
+ * Tính tích vô hướng giữa pháp tuyến tường và hướng từ tâm tường tới camera trên mặt phẳng XZ:
+ * `dot(wallNormalXZ, normalize(cameraPosXZ - wallCenterXZ))`.
  */
 export function computeWallCameraDot(
   wallNormalXZ: readonly [number, number],
@@ -37,7 +39,7 @@ export function computeWallCameraDot(
 }
 
 /**
- * Returns true when an exterior wall faces the camera (`dot > 0.22`).
+ * Trả về true khi tường ngoài quay mặt về phía camera (`dot > 0.22`).
  */
 export function isWallFacingCamera(
   wallNormalXZ: readonly [number, number],
@@ -49,8 +51,7 @@ export function isWallFacingCamera(
 }
 
 /**
- * Computes the set of exterior wall IDs that should be rendered in cutaway (low height)
- * given the current `wallMode` and camera XZ position.
+ * Tính tập id các tường ngoài cần hiển thị dạng cắt thấp (cutaway) theo `wallMode` và vị trí camera trên mặt phẳng XZ.
  */
 export function computeCutawayWallIds(
   walls: ReadonlyArray<CutawayWallDescriptor>,
@@ -76,20 +77,24 @@ export function computeCutawayWallIds(
   return result;
 }
 
+/** Chuyển tập id tường thành chuỗi ổn định (đã sắp xếp) để so sánh thay đổi. */
 export function serializeWallIdSet(ids: Set<string>): string {
   if (ids.size === 0) return '';
   return Array.from(ids).sort().join('|');
 }
 
+/** Trạng thái cắt tường: chuỗi nhận dạng, tập id tường bị cắt và hàm cập nhật. */
 interface CutawayStoreState {
   signature: string;
   cutawayWallIds: Set<string>;
+  /** Store zustand giữ tập tường đang bị cắt. */
   setCutawayWalls: (nextIds: Set<string>, nextSignature: string) => void;
 }
 
 export const useCutawayStore = create<CutawayStoreState>(set => ({
   signature: '',
   cutawayWallIds: new Set<string>(),
+  /** Cập nhật tập tường bị cắt cùng chuỗi nhận dạng. */
   setCutawayWalls: (nextIds, nextSignature) =>
     set({
       cutawayWallIds: nextIds,
@@ -97,6 +102,7 @@ export const useCutawayStore = create<CutawayStoreState>(set => ({
     }),
 }));
 
+/** Gom mô tả của mọi tường ngoài trong cảnh. */
 export function collectSceneExteriorWallDescriptors(): CutawayWallDescriptor[] {
   const descriptors: CutawayWallDescriptor[] = [];
   const levels = getLevels(SOL_CENTER_SCENE);
@@ -117,6 +123,7 @@ export function collectSceneExteriorWallDescriptors(): CutawayWallDescriptor[] {
   return descriptors;
 }
 
+/** Hook trả về tập id tường đang bị cắt (đồng bộ từ store). */
 export function useCutawayWallIds(): Set<string> {
   const cutawayWallIds = useCutawayStore(s => s.cutawayWallIds);
   const [localIds, setLocalIds] = useState<Set<string>>(cutawayWallIds);
@@ -128,14 +135,14 @@ export function useCutawayWallIds(): Set<string> {
   return localIds;
 }
 
+/** Props của bộ điều khiển cắt tường: danh sách tường (mặc định là mọi tường ngoài). */
 export interface CutawayProps {
   walls?: ReadonlyArray<CutawayWallDescriptor>;
 }
 
 /**
- * R3F controller component that evaluates which exterior walls face the camera
- * and updates cutaway state when `wallMode` or camera direction changes,
- * calling `invalidate()` only when the cutaway wall set changes.
+ * Thành phần điều khiển R3F đánh giá các tường ngoài quay mặt về camera và cập nhật trạng thái cutaway
+ * khi `wallMode` hoặc hướng camera thay đổi, chỉ gọi `invalidate()` khi tập tường cắt thay đổi.
  */
 export function Cutaway({ walls }: CutawayProps) {
   const wallMode = useExploreStore(s => s.wallMode);
@@ -152,12 +159,13 @@ export function Cutaway({ walls }: CutawayProps) {
     levelMode: '',
   });
 
+  // Mô tả các tường dùng để tính (mặc định là mọi tường ngoài trong cảnh).
   const descriptors = useMemo(
     () => (walls && walls.length > 0 ? walls : collectSceneExteriorWallDescriptors()),
     [walls],
   );
 
-  // Sync immediately when wallMode, walkMode, or levelMode changes
+  // Đồng bộ ngay khi wallMode, walkMode hoặc levelMode thay đổi
   useEffect(() => {
     const effectiveWallMode: WallMode =
       walkMode && wallMode === 'cutaway' ? 'up' : wallMode;

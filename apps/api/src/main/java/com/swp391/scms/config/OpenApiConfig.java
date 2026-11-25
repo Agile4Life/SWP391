@@ -16,14 +16,21 @@ import org.springframework.context.annotation.Configuration;
 import java.util.List;
 
 /**
- * OpenAPI 3 / Swagger documentation configuration for SCMS API.
- * Configures JWT Bearer authentication scheme, server endpoints, and module tags.
+ * Cấu hình tài liệu Swagger/OpenAPI: thông tin API, nhóm chức năng (tag) và cách nhập JWT Bearer để thử API
+ * ngay trên Swagger UI.
+ *
+ * Cấu hình tài liệu OpenAPI 3 / Swagger cho SCMS API. Cấu hình sơ đồ xác thực JWT Bearer, các endpoint server
+ * và tag theo module.
  */
 @Configuration
 public class OpenApiConfig {
 
     private static final String SECURITY_SCHEME_NAME = "BearerAuth";
 
+    /**
+     * Mô tả tổng quan API: tiêu đề, phiên bản, liên hệ, máy chủ (dùng đường dẫn tương đối nên chạy được ở mọi
+     * môi trường), các tag và cơ chế xác thực Bearer JWT.
+     */
     @Bean
     public OpenAPI scmsOpenAPI() {
         return new OpenAPI()
@@ -37,7 +44,7 @@ public class OpenApiConfig {
                         .license(new License()
                                 .name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0.html")))
-                // Relative URL: "Try it out" calls whichever origin serves Swagger (localhost, VPS, Render).
+                // URL tương đối: "Try it out" gọi tới origin đang phục vụ Swagger (localhost, VPS, Render).
                 .servers(List.of(new Server().url("/").description("Máy chủ hiện tại (Current Server)")))
                 .tags(List.of(
                         new Tag().name("Authentication").description("Đăng ký tài khoản, đăng nhập JWT, gửi và xác thực mã OTP"),
@@ -57,6 +64,7 @@ public class OpenApiConfig {
                                 .description("Nhập chuỗi JWT Token vào ô bên dưới (Ví dụ: Bearer <token>)")));
     }
 
+    /** Gom mọi endpoint dưới /api/v1/** vào một nhóm tài liệu "scms-public-api". */
     @Bean
     public GroupedOpenApi publicApi() {
         return GroupedOpenApi.builder()

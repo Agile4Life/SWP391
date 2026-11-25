@@ -1,4 +1,4 @@
-/* Admin payment reconciliation: reuses the audit page layout; colours come from portal tokens only. */
+/* Mục đích: Kiểu cho trang đối soát thanh toán của admin (tái dùng bố cục trang audit; màu chỉ lấy từ token của portal). */
 .recon-intro {
   margin: -8px 0 16px;
   color: var(--portal-muted);
@@ -40,7 +40,7 @@
   cursor: pointer;
 }
 
-/* Warnings (not errors): same shape as .portal-alert, amber status token instead of the error palette. */
+/* Cảnh báo (không phải lỗi): cùng hình dáng với .portal-alert, dùng token trạng thái màu hổ phách thay cho bảng màu lỗi. */
 .recon-warning {
   display: flex;
   align-items: center;
@@ -134,7 +134,7 @@
   min-width: 180px;
 }
 
-/* Six counters read best as two even rows; phones keep the shared two-column metric grid. */
+/* Sáu bộ đếm dễ đọc nhất khi xếp thành hai hàng đều nhau; điện thoại giữ lưới chỉ số hai cột dùng chung. */
 @media (min-width: 768px) {
   .recon-page .metrics-grid.recon-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));

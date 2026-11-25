@@ -10,6 +10,7 @@ import java.time.*;
 import java.util.*;
 import static org.mockito.Mockito.*;
 import static org.assertj.core.api.Assertions.*;
+/** Bộ kiểm thử cho service TrainingPlanProgressService (training plan progress service). */
 class TrainingPlanProgressServiceTest {
  TrainingPlanRepository plans=mock(TrainingPlanRepository.class);
  TrainingPlanItemRepository items=mock(TrainingPlanItemRepository.class);

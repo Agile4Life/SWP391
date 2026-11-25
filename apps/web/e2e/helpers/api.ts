@@ -1,8 +1,10 @@
 import { deflateSync } from 'node:zlib';
 import { API, ACCOUNTS, type RoleKey } from './accounts';
 
+// Phiên đăng nhập: token, tên đăng nhập và vai trò.
 export interface Session { token: string; username: string; role: string }
 
+// Đăng nhập qua API và trả về phiên.
 export async function apiLogin(username: string, password: string): Promise<Session> {
   // /auth/* bị giới hạn 60 request/phút: gặp 429 thì chờ sang cửa sổ phút kế tiếp rồi thử lại.
   for (let attempt = 0; ; attempt++) {
@@ -15,6 +17,7 @@ export async function apiLogin(username: string, password: string): Promise<Sess
 }
 
 const sessions = new Map<RoleKey, Session>();
+// Lấy (và cache) phiên của một tài khoản kiểm thử.
 export async function sessionFor(key: RoleKey): Promise<Session> {
   const cached = sessions.get(key);
   if (cached) return cached;
@@ -24,6 +27,7 @@ export async function sessionFor(key: RoleKey): Promise<Session> {
   return s;
 }
 
+// Gọi API bằng phiên của một tài khoản và trả về mã trạng thái và dữ liệu.
 export async function api<T = unknown>(key: RoleKey, method: string, path: string, body?: unknown): Promise<{ status: number; data: T; body: any }> {
   const { token } = await sessionFor(key);
   const res = await fetch(`${API}${path}`, { method, headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -33,6 +37,7 @@ export async function api<T = unknown>(key: RoleKey, method: string, path: strin
   return { status: res.status, data: parsed?.data as T, body: parsed };
 }
 
+// Tạo chuỗi duy nhất theo thời gian và số ngẫu nhiên.
 export const unique = (prefix = 'e2e') => `${prefix}${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 /** Tạo hội viên mới đã kích hoạt qua API (register -> send-otp debug -> verify-otp). Trả về thông tin đăng nhập. */
@@ -57,11 +62,13 @@ export async function apiWith<T = any>(token: string, method: string, path: stri
   return { status: res.status, data: parsed?.data as T, body: parsed };
 }
 
+// Tính CRC-32 của một buffer (dùng khi dựng PNG).
 function crc32(buf: Buffer): number {
   let c = ~0;
   for (const byte of buf) { c ^= byte; for (let k = 0; k < 8; k++) c = (c >>> 1) ^ (0xedb88320 & -(c & 1)); }
   return ~c >>> 0;
 }
+// Dựng một chunk PNG (loại, dữ liệu, CRC).
 function chunk(type: string, data: Buffer): Buffer {
   const len = Buffer.alloc(4); len.writeUInt32BE(data.length);
   const body = Buffer.concat([Buffer.from(type), data]);
@@ -78,6 +85,7 @@ export function pngDataUrl(width = 128, height = 128): string {
 }
 export const TINY_PNG = pngDataUrl();
 
+// Hội viên mới tạo cho kiểm thử: tên đăng nhập, email, mật khẩu, token và id.
 export interface FreshMember { username: string; email: string; password: string; token: string; id: number }
 
 /** Hội viên mới đã kích hoạt + đã nộp KYC (đang chờ lễ tân duyệt). Mỗi lần chạy là tài khoản riêng nên spec lặp lại được. */
@@ -92,26 +100,8 @@ export async function createMemberWithKycPending(prefix = 'e2ek'): Promise<Fresh
   return { ...m, token: session.token, id: Number((profile.data as any)?.userId ?? 0) };
 }
 
+// Duyệt hồ sơ xác minh danh tính (KYC) của một hội viên.
 export async function approveKyc(memberId: number) {
   return api('staff', 'POST', `/members/kyc/${memberId}/approve`);
 }
 
-/** Tạo khóa học định kỳ tương lai (1 buổi/tuần, 1 tuần) bằng tài khoản quản lý. Thử lại khi trùng lịch HLV/phòng. */
-export async function createCourse(opts: { startInDays: number; capacity?: number; price?: number; name?: string }) {
-  const classes = await api<any[]>('manager', 'GET', '/classes');
-  const base = (classes.data as any[]).find((c) => c.disciplineName === 'Gym') ?? (classes.data as any[])[0];
-  for (let attempt = 0; attempt < 8; attempt++) {
-    const start = new Date(Date.now() + (opts.startInDays + attempt) * 86_400_000);
-    const iso = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(start);
-    const day = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'][new Date(`${iso}T00:00:00+07:00`).getDay()];
-    const hour = 6 + Math.floor(Math.random() * 14);
-    const res = await api('manager', 'POST', '/classes/recurring', {
-      name: opts.name ?? `E2E ${unique('c')}`, disciplineId: base.disciplineId, coachId: base.coachId, roomId: base.roomId,
-      capacity: opts.capacity ?? 10, level: 'all', description: 'Khóa học tạo bởi e2e', price: opts.price ?? 500000,
-      startDate: iso, endDate: iso, recurringDays: [day], startTime: `${String(hour).padStart(2, '0')}:00:00`, endTime: `${String(hour + 1).padStart(2, '0')}:00:00`,
-    });
-    if (res.status < 300) return { id: Number((res.data as any).id ?? (res.data as any).classId), startDate: iso, raw: res.data as any };
-    if (res.status !== 409) throw new Error(`create course ${res.status} ${JSON.stringify(res.body)}`);
-  }
-  throw new Error('không tạo được khóa học (trùng lịch liên tục)');
-}

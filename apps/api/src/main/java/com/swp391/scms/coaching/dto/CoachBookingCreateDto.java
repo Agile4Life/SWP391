@@ -4,6 +4,10 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+/**
+ * Dữ liệu hội viên gửi khi đặt PT 1:1: HLV, bộ môn (tùy chọn), ngày, giờ bắt đầu/kết thúc và các thông tin kèm
+ * theo.
+ */
 public record CoachBookingCreateDto(
         @NotNull(message = "{error.coach_booking.coach_required}")
         Long coachId,
@@ -19,7 +23,7 @@ public record CoachBookingCreateDto(
         @NotNull(message = "{error.coach_booking.end_time_required}")
         LocalTime endTime,
 
-        String paymentMethod, // "package_quota", "cash", "bank_transfer", "online_wallet"
+        String paymentMethod, // Phương thức thanh toán: "package_quota", "cash", "bank_transfer", "online_wallet"
 
         String notes
 ) {}

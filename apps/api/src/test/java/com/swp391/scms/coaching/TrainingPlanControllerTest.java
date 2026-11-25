@@ -34,6 +34,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+/** Bộ kiểm thử cho controller TrainingPlanController (training plan controller). */
 @ExtendWith(MockitoExtension.class)
 class TrainingPlanControllerTest {
 
@@ -48,16 +49,19 @@ class TrainingPlanControllerTest {
 
     private AuthenticatedPrincipal currentPrincipal = new AuthenticatedPrincipal(20L, "coach1", "COACH");
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller kế hoạch tập. */
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
         HandlerMethodArgumentResolver principalResolver = new HandlerMethodArgumentResolver() {
+            /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
             @Override
             public boolean supportsParameter(MethodParameter parameter) {
                 return parameter.getParameterType().isAssignableFrom(AuthenticatedPrincipal.class);
             }
 
+            /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
             @Override
             public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                           NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
@@ -70,6 +74,7 @@ class TrainingPlanControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: tạo kế hoạch tập. */
     @Test
     @DisplayName("POST /api/v1/coaching/training-plans should return 201 Created in draft status")
     void shouldCreateTrainingPlan() throws Exception {
@@ -101,6 +106,7 @@ class TrainingPlanControllerTest {
                 .andExpect(jsonPath("$.data.items[0].exerciseName").value("Burpees"));
     }
 
+    /** Kiểm thử: kích hoạt kế hoạch tập. */
     @Test
     @DisplayName("PUT /api/v1/coaching/training-plans/{id}/activate should return 200 OK with active status")
     void shouldActivateTrainingPlan() throws Exception {
@@ -116,6 +122,7 @@ class TrainingPlanControllerTest {
                 .andExpect(jsonPath("$.data.status").value("active"));
     }
 
+    /** Kiểm thử: lấy các kế hoạch đang hoạt động của tôi. */
     @Test
     @DisplayName("GET /api/v1/coaching/training-plans/my should return member active training plans")
     void shouldGetMyActivePlans() throws Exception {

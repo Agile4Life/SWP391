@@ -14,7 +14,9 @@ import java.util.List;
 import static org.mockito.Mockito.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/** Bộ kiểm thử cho DatabaseTriggerInitializer (database trigger initializer). */
 class DatabaseTriggerInitializerTest {
+    /** Kiểm thử: từ chối database không được hỗ trợ thay vì khởi động mà thiếu trigger bắt buộc. */
     @Test
     void refusesUnsupportedDatabasesRatherThanStartingWithoutMandatoryTriggers() throws Exception {
         DataSource source = mock(DataSource.class);
@@ -32,6 +34,7 @@ class DatabaseTriggerInitializerTest {
         verify(connection).close();
     }
 
+    /** Kiểm thử: nhả kết nối đọc metadata trước khi cài trigger để một pool kết nối vẫn đủ dùng. */
     @Test
     void releasesMetadataConnectionBeforeInstallingTriggersSoOneConnectionPoolWorks() throws Exception {
         DataSource source = mock(DataSource.class);

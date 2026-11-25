@@ -25,6 +25,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho CourseQuotaEnrollment (course quota enrollment). */
 class CourseQuotaEnrollmentTest {
 
     private ClassEnrollmentRepository enrollments = mock(ClassEnrollmentRepository.class);
@@ -35,11 +36,13 @@ class CourseQuotaEnrollmentTest {
 
     private EnrollmentService enrollmentService;
 
+    /** Chuẩn bị trước mỗi test: tạo dịch vụ khóa học với hạn mức giả lập. */
     @BeforeEach
     void setUp() {
         enrollmentService = new EnrollmentService(enrollments, null, gymClasses, subscriptions, members, null, null, clock);
     }
 
+    /** Kiểm thử: tính hạn mức của hạng Silver. */
     @Test
     void testSilverQuotaCalculation() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -72,6 +75,7 @@ class CourseQuotaEnrollmentTest {
         assertFalse(quota.unlimited());
     }
 
+    /** Kiểm thử: đăng ký thất bại khi vượt hạn mức. */
     @Test
     void testEnrollFailsWhenQuotaExceeded() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -92,7 +96,7 @@ class CourseQuotaEnrollmentTest {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(sub));
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
-        // Already used 2 credits
+        // Đã sử dụng 2 lượt
         when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(100L, "booked", sub.getStartDate(), sub.getEndDate())).thenReturn(2L);
 
         GymClass gymClass = new GymClass();

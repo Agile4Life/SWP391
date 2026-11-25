@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { PortalIcon, type PortalIconName } from '../../features/portal/PortalIcon';
 
+/** Props của trạng thái rỗng: biểu tượng, tiêu đề, mô tả, hành động, kiểu thẻ/phẳng và role trợ năng. */
 interface EmptyStateProps {
   icon?: PortalIconName;
   title: string;

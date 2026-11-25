@@ -8,6 +8,7 @@ import com.swp391.scms.facilities.repository.DisciplineRepository;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberRepository;
 import com.swp391.scms.users.entity.Member;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +17,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * SCRUM-133: REST Controller for member's favorite disciplines.
+ * API bộ môn yêu thích của hội viên (SCRUM-133; tính năng đã ngừng, chỉ bật khi
+ * {@code app.legacy.favorite-disciplines-enabled=true}).
  */
 @RestController
+@ConditionalOnProperty(name = "app.legacy.favorite-disciplines-enabled", havingValue = "true")
 @RequestMapping("/api/v1/members/me/favorite-disciplines")
 public class MemberFavoriteDisciplineController {
 
@@ -26,6 +29,7 @@ public class MemberFavoriteDisciplineController {
     private final DisciplineRepository disciplineRepository;
     private final MessageService messageService;
 
+    /** Nhận repository hội viên, bộ môn và MessageService. */
     public MemberFavoriteDisciplineController(
             MemberRepository memberRepository,
             DisciplineRepository disciplineRepository,
@@ -35,6 +39,7 @@ public class MemberFavoriteDisciplineController {
         this.messageService = messageService;
     }
 
+    /** GET: danh sách id bộ môn yêu thích của hội viên. */
     @GetMapping
     @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<Long>>> getFavoriteDisciplines(
@@ -52,6 +57,7 @@ public class MemberFavoriteDisciplineController {
         return ResponseEntity.ok(ApiResponse.ok(msg, favoriteIds));
     }
 
+    /** POST /{disciplineId}/toggle: thêm hoặc bỏ một bộ môn khỏi danh sách yêu thích. */
     @PostMapping("/{disciplineId}/toggle")
     @Transactional
     public ResponseEntity<ApiResponse<List<Long>>> toggleFavoriteDiscipline(

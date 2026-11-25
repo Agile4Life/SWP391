@@ -29,6 +29,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+/** Bộ kiểm thử cho controller FacilitiesController (facilities controller). */
 @ExtendWith(MockitoExtension.class)
 class FacilitiesControllerTest {
 
@@ -37,6 +38,7 @@ class FacilitiesControllerTest {
     @Mock PackageService packages;
     private MockMvc mockMvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller cơ sở vật chất. */
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(
@@ -45,16 +47,18 @@ class FacilitiesControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: liệt kê bộ môn trả dữ liệu được bọc. */
     @Test
     void listDisciplinesReturnsWrappedData() throws Exception {
-        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
 
         mockMvc.perform(get("/api/v1/disciplines"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data[0].name").value("Yoga"));
+                .andExpect(jsonPath("$.data[0].name").value("Gym"));
     }
 
+    /** Kiểm thử: tạo bộ môn tên trống trả 400. */
     @Test
     void createDisciplineWithBlankNameReturns400() throws Exception {
         mockMvc.perform(post("/api/v1/disciplines").contentType(MediaType.APPLICATION_JSON).content("{\"name\":\"\"}"))
@@ -62,6 +66,7 @@ class FacilitiesControllerTest {
         verify(disciplines, never()).create(any());
     }
 
+    /** Kiểm thử: tạo phòng trả 201. */
     @Test
     void createRoomReturns201() throws Exception {
         when(rooms.create(any())).thenReturn(new RoomDto(1L, "Studio", "L1", 10, "available"));
@@ -72,6 +77,7 @@ class FacilitiesControllerTest {
                 .andExpect(jsonPath("$.data.capacity").value(10));
     }
 
+    /** Kiểm thử: tạo phòng sức chứa 0 trả 400. */
     @Test
     void createRoomWithZeroCapacityReturns400() throws Exception {
         mockMvc.perform(post("/api/v1/rooms").contentType(MediaType.APPLICATION_JSON)
@@ -79,6 +85,7 @@ class FacilitiesControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Kiểm thử: đổi trạng thái gói với giá trị lạ bị từ chối. */
     @Test
     void patchPackageStatusRejectsUnknownValue() throws Exception {
         mockMvc.perform(patch("/api/v1/packages/1/status").contentType(MediaType.APPLICATION_JSON)
@@ -86,6 +93,7 @@ class FacilitiesControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /** Kiểm thử: đổi trạng thái gói được ủy quyền cho service. */
     @Test
     void patchPackageStatusDelegatesToService() throws Exception {
         when(packages.updateStatus(eq(1L), eq("inactive")))
@@ -96,6 +104,7 @@ class FacilitiesControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("inactive"));
     }
+    /** Kiểm thử: lễ tân không được sửa gói. */
     @Test
     @org.junit.jupiter.api.DisplayName("PUT /api/v1/packages/{id} returns 403 when not allowed")
     void receptionistCannotEditPackage() throws Exception {

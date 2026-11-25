@@ -37,10 +37,15 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * Tính số liệu báo cáo cho quản lý: doanh thu theo ngày và theo gói, giao dịch gần đây, tỷ lệ gia hạn, mức sử
+ * dụng lớp và lưu ảnh chụp báo cáo. Mọi ngày giờ tính theo giờ trung tâm.
+ */
 @Service
 @Transactional
 public class RevenueReportService {
 
+    /** Khoảng ngày đã kiểm tra hợp lệ (ngày bắt đầu, ngày kết thúc). */
     private record DateRange(LocalDate start, LocalDate end) {}
 
     private final PaymentRepository paymentRepository;
@@ -54,6 +59,7 @@ public class RevenueReportService {
     private final ClassEnrollmentRepository classEnrollmentRepository;
     private final SessionAttendanceReportRepository sessionAttendanceReportRepository;
 
+    /** Constructor cho test, không có các repository của lớp nhóm. */
     public RevenueReportService(PaymentRepository paymentRepository,
                                 MembershipSubscriptionRepository subscriptionRepository,
                                 ReportSnapshotRepository snapshotRepository,
@@ -65,6 +71,7 @@ public class RevenueReportService {
                 objectMapper, clock, transactionReportRepository, null, null, null);
     }
 
+    /** Constructor Spring dùng; repository lớp nhóm là tùy chọn (tính năng đã tắt). */
     @Autowired
     public RevenueReportService(PaymentRepository paymentRepository,
                                 MembershipSubscriptionRepository subscriptionRepository,
@@ -89,6 +96,7 @@ public class RevenueReportService {
         this.sessionAttendanceReportRepository = sessionAttendanceReportRepository;
     }
 
+    /** Khoảng ngày mặc định 30 ngày gần nhất; ngày bắt đầu sau ngày kết thúc thì báo 400. */
     private DateRange resolveValidatedDateRange(LocalDate startDate, LocalDate endDate) {
         LocalDate start = startDate != null ? startDate : LocalDate.now(clock).minusDays(30);
         LocalDate end = endDate != null ? endDate : LocalDate.now(clock);
@@ -99,6 +107,10 @@ public class RevenueReportService {
         return new DateRange(start, end);
     }
 
+    /**
+     * Tỷ lệ gia hạn: trong các kỳ đã trả tiền kết thúc trong khoảng (tính tới hôm qua), bao nhiêu % có kỳ tiếp
+     * theo cũng đã trả tiền. Đọc với mức cô lập REPEATABLE_READ để hai số đếm nhất quán.
+     */
     @Transactional(readOnly = true, isolation = org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public RenewalRateDto getRenewalRate(LocalDate startDate, LocalDate endDate) {
         DateRange range = resolveValidatedDateRange(startDate, endDate);
@@ -111,6 +123,7 @@ public class RevenueReportService {
         return new RenewalRateDto(expired, renewed, expired == 0 ? null : 100.0 * renewed / expired);
     }
 
+    /** 10 giao dịch thành công gần nhất trong khoảng ngày. */
     @Transactional(readOnly = true)
     public List<RecentTransactionDto> getRecentTransactions(LocalDate startDate, LocalDate endDate) {
         DateRange range = resolveValidatedDateRange(startDate, endDate);
@@ -118,6 +131,10 @@ public class RevenueReportService {
                 range.start().atStartOfDay(), range.end().plusDays(1).atStartOfDay(), PageRequest.of(0, 10));
     }
 
+    /**
+     * Doanh thu từng ngày trong khoảng: cộng số tiền thực thu (trừ phần đã hoàn) của các thanh toán thành công,
+     * bỏ qua nạp ví (doanh thu được ghi khi tiền trong ví được tiêu). Ngày không có giao dịch vẫn có dòng 0.
+     */
     @Transactional(readOnly = true)
     public List<DailyRevenueDto> getDailyRevenue(LocalDate startDate, LocalDate endDate) {
         DateRange range = resolveValidatedDateRange(startDate, endDate);
@@ -129,7 +146,7 @@ public class RevenueReportService {
 
         Map<LocalDate, List<Payment>> byDate = payments.stream()
                 .filter(p -> p.getPaidAt() != null)
-                // A wallet top-up only moves money into the wallet; the revenue is booked when it is spent.
+                // Nạp tiền vào ví chỉ chuyển tiền vào ví; doanh thu chỉ được ghi nhận khi tiền đó được chi tiêu.
                 .filter(p -> p.getNote() == null || !p.getNote().startsWith("WALLET_TOPUP"))
                 .collect(Collectors.groupingBy(p -> p.getPaidAt().toLocalDate()));
 
@@ -148,6 +165,10 @@ public class RevenueReportService {
         return result;
     }
 
+    /**
+     * Doanh thu theo gói tập: gom các thanh toán thành công gắn với kỳ gói, tính tổng tiền, số lượt và tỷ trọng
+     * % (làm tròn 1 chữ số), sắp theo doanh thu giảm dần.
+     */
     @Transactional(readOnly = true)
     public List<PackageRevenueDto> getRevenueByPackage(LocalDate startDate, LocalDate endDate) {
         DateRange range = resolveValidatedDateRange(startDate, endDate);
@@ -197,8 +218,9 @@ public class RevenueReportService {
     }
 
     /**
-     * SCRUM-120: Calculates class utilization (enrolled / capacity) and attendance rate (present / booked)
-     * filtered by optional date range and disciplineId. Safely handles division by zero when capacity = 0 or booked = 0.
+     * SCRUM-120: Tính tỷ lệ sử dụng lớp nhóm (đăng ký / sức chứa) và tỷ lệ điểm danh (có mặt / đã đặt), lọc theo
+     * khoảng ngày và disciplineId (tùy chọn), giới hạn tối đa 100%, xử lý an toàn khi chia cho 0 (capacity = 0
+     * hoặc booked = 0). Trả danh sách rỗng nếu không có repository (tính năng lớp nhóm đang tắt).
      */
     @Transactional(readOnly = true)
     public List<ClassUtilizationDto> getClassUtilization(LocalDate startDate,
@@ -271,6 +293,10 @@ public class RevenueReportService {
         return results;
     }
 
+    /**
+     * Lưu ảnh chụp báo cáo: kiểm tra khoảng ngày và dữ liệu phải là JSON hợp lệ; người tạo mặc định là người
+     * đang đăng nhập; loại báo cáo mặc định "revenue".
+     */
     public ReportSnapshotDto generateSnapshot(ReportSnapshotCreateDto dto, Long currentUserId) {
         if (dto.getPeriodStart() != null && dto.getPeriodEnd() != null && dto.getPeriodStart().isAfter(dto.getPeriodEnd())) {
             throw new BadRequestException("INVALID_DATE_RANGE", "reports.revenue.invalid_date_range", null,
@@ -301,6 +327,7 @@ public class RevenueReportService {
         return toDto(saved);
     }
 
+    /** Mọi ảnh chụp báo cáo, mới nhất trước. */
     @Transactional(readOnly = true)
     public List<ReportSnapshotDto> getSnapshots() {
         return snapshotRepository.findAllByOrderByGeneratedAtDesc().stream()
@@ -308,6 +335,7 @@ public class RevenueReportService {
                 .toList();
     }
 
+    /** Một ảnh chụp báo cáo theo id; không thấy thì báo 404. */
     @Transactional(readOnly = true)
     public ReportSnapshotDto getSnapshotById(Long id) {
         ReportSnapshot snapshot = snapshotRepository.findById(id)
@@ -315,6 +343,7 @@ public class RevenueReportService {
         return toDto(snapshot);
     }
 
+    /** Chuyển ảnh chụp sang DTO kèm người tạo. */
     private ReportSnapshotDto toDto(ReportSnapshot snapshot) {
         ReportSnapshotDto dto = new ReportSnapshotDto();
         dto.setId(snapshot.getId());

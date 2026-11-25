@@ -72,7 +72,7 @@ describe('EXP-05 Procedural Item Geometries, Instancing, Courts & Pool', () => {
         expect(tris).toBeGreaterThan(0);
         expect(tris).toBeLessThanOrEqual(ITEM_HIGH_DETAIL_TRIANGLE_BUDGET);
 
-        // Verify centered on X and Z around (0, 0) with base resting at y = 0
+        // Kiểm tra căn giữa theo X và Z quanh (0, 0) với đáy đặt trên y = 0
         geom.computeBoundingBox();
         const bbox = geom.boundingBox!;
         expect(bbox).not.toBeNull();
@@ -88,7 +88,7 @@ describe('EXP-05 Procedural Item Geometries, Instancing, Courts & Pool', () => {
         expect(bbox.max.z - bbox.min.z).toBeCloseTo(targetD, 2);
       }
 
-      // Low detail proxy should use fewer or equal triangles than high detail
+      // Mô hình đơn giản hóa mức chi tiết thấp phải dùng số tam giác ít hơn hoặc bằng mức chi tiết cao
       expect(getGeometryTriangleCount(lowGeom)).toBeLessThanOrEqual(
         getGeometryTriangleCount(highGeom),
       );
@@ -117,9 +117,9 @@ describe('EXP-05 Procedural Item Geometries, Instancing, Courts & Pool', () => {
     for (const entries of groups.values()) {
       totalItems += entries.length;
     }
-    expect(totalItems).toBeGreaterThanOrEqual(90);
+    expect(totalItems).toBe(56);
 
-    // Verify status color tinting
+    // Kiểm tra tô màu sắc thái theo trạng thái
     expect(resolveItemInstanceColor('active', false, false)).toBe(ITEM_STATUS_COLORS.default);
     expect(resolveItemInstanceColor('maintenance', false, false)).toBe(
       ITEM_STATUS_COLORS.maintenance,
@@ -131,10 +131,10 @@ describe('EXP-05 Procedural Item Geometries, Instancing, Courts & Pool', () => {
     );
     expect(resolveItemInstanceColor('active', false, true)).toBe(ITEM_STATUS_COLORS.highlight);
 
-    // Verify solo mode visibility and 0-scale matrix when hidden
+    // Kiểm tra hiển thị ở chế độ solo và ma trận tỉ lệ 0 khi bị ẩn
     const treadmillEntries = groups.get('treadmill')!;
     expect(treadmillEntries.length).toBeGreaterThan(0);
-    const sample = treadmillEntries[0]; // L1 treadmill
+    const sample = treadmillEntries[0]; // Máy chạy bộ tầng L1
 
     expect(isItemInstanceVisible(sample, 'stacked', 'ALL', undefined)).toBe(true);
     expect(isItemInstanceVisible(sample, 'solo', 'L1', undefined)).toBe(true);
@@ -177,9 +177,9 @@ describe('Item chamfer bevel', () => {
       const faceNormal = b.clone().sub(a).cross(c.clone().sub(a)).normalize();
       const n = new THREE.Vector3().fromBufferAttribute(norm, i);
       expect(n.length()).toBeCloseTo(1, 5);
-      // Winding must agree with the stored normal so faces are not culled.
+      // Chiều quấn đỉnh phải khớp với pháp tuyến lưu trữ để các mặt không bị loại bỏ (cull).
       expect(faceNormal.dot(n)).toBeGreaterThan(0.99);
-      // Normal points away from the centre of the box.
+      // Pháp tuyến hướng ra ngoài tâm hình hộp.
       const centroid = a.clone().add(b).add(c).divideScalar(3);
       expect(centroid.dot(n)).toBeGreaterThan(0);
     }
@@ -207,7 +207,7 @@ describe('Item chamfer bevel', () => {
       const db = Math.abs(col.getZ(i) - fakeGlass.b);
       if (dr < 0.01 && dg < 0.01 && db < 0.01) fakeGlassVerts++;
 
-      // Upward-facing walkable tread/landing surface (`ny > 0.95`, inside `3.20 m` walkway, excluding outer `|x| >= 1.64` rail posts/brackets)
+      // Bề mặt bậc thang/chiếu nghỉ đi lại được hướng lên trên (`ny > 0.95`, trong lối đi rộng `3,20 m`, loại trừ trụ/giá đỡ lan can ngoài `|x| >= 1.64`)
       if (norm.getY(i) > 0.95 && Math.abs(pos.getX(i)) < 1.62 && pos.getY(i) < 4.1) {
         highestWalkableTreadY = Math.max(highestWalkableTreadY, pos.getY(i));
       }
@@ -217,7 +217,7 @@ describe('Item chamfer bevel', () => {
     const baseH = DEFAULT_ITEM_DIMENSIONS['stair-core'][1];
     const treadRatio = highestWalkableTreadY / baseH;
 
-    // B1->L1 (4.5m), L1->L2 (5.76m), L2->RF (5.5m): scaled top landing tread must meet upper floor within 4 cm!
+    // B1->L1 (4,5 m), L1->L2 (5,76 m), L2->RF (5,5 m): bậc chiếu nghỉ trên cùng sau khi phóng tỉ lệ phải khớp sàn tầng trên trong phạm vi 4 cm!
     const b1Stair = SOL_CENTER_SCENE.nodes['item-b1-stairs'];
     const l1Stair = SOL_CENTER_SCENE.nodes['item-l1-stairs'];
     const l2Stair = SOL_CENTER_SCENE.nodes['item-l2-stairs'];
@@ -235,7 +235,7 @@ describe('Item chamfer bevel', () => {
     expect(Math.abs(l1Stair.dimensions[1] * treadRatio - 5.76)).toBeLessThan(0.04);
     expect(Math.abs(l2Stair.dimensions[1] * treadRatio - 5.5)).toBeLessThan(0.04);
 
-    // Rooftop arrival stair must sit in the stairwell shaft below RF canopy (never poking 3.8m above RF slab)
+    // Cầu thang lên tầng mái phải nằm gọn trong giếng thang dưới mái che RF (không bao giờ nhô cao 3,8 m trên sàn RF)
     const rfTopLocalY = rfStair.position[1] + rfStair.dimensions[1];
     expect(rfTopLocalY).toBeLessThan(2.4);
     expect(Math.abs((rfStair.position[1] + rfStair.dimensions[1] * treadRatio) - 0)).toBeLessThan(0.04);
@@ -245,14 +245,14 @@ describe('Item chamfer bevel', () => {
     const highStair = getItemGeometry('stair-core', 'high');
     const pos = highStair.getAttribute('position');
 
-    // Flight 1 climbs from (z = +1.54, y = 0.23) to (z = +0.42, y = 1.69)
-    // Flight 2 climbs from (z = -0.42, y = 2.13) to (z = -1.54, y = 3.59)
+    // Vế thang 1 đi lên từ (z = +1.54, y = 0.23) đến (z = +0.42, y = 1.69)
+    // Vế thang 2 đi lên từ (z = -0.42, y = 2.13) đến (z = -1.54, y = 3.59)
     let protrudingBeamVerts = 0;
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i);
       const y = pos.getY(i);
       const z = pos.getZ(i);
-      // Inside the 3.08 m stair walkway (excluding outer `|x| >= 1.60` handrail stanchions & tension rods)
+      // Bên trong lối đi cầu thang rộng 3,08 m (loại trừ trụ tay vịn và thanh giằng ngoài `|x| >= 1.60`)
       if (Math.abs(x) < 1.56) {
         if (z >= 0.48 && z <= 1.48) {
           const u = (1.54 - z) / (1.54 - 0.42);
@@ -271,7 +271,7 @@ describe('Item chamfer bevel', () => {
     }
     expect(protrudingBeamVerts).toBe(0);
 
-    // Elevator core uses vertex-colored instanced opaque geometry: must not use bright saturated sky-blue fake glass panels
+    // Lõi thang máy dùng hình học đục instanced tô màu đỉnh: không được dùng các tấm kính giả màu xanh da trời rực
     const highElev = getItemGeometry('elevator-core', 'high');
     const eCol = highElev.getAttribute('color');
     const ePos = highElev.getAttribute('position');

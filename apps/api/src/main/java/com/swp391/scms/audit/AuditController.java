@@ -18,8 +18,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller for viewing system Audit Logs (SCRUM-109).
- * Strictly restricted to ADMIN.
+ * API xem nhật ký kiểm toán (/api/v1/admin/audit-logs), chỉ dành cho Admin.
+ *
+ * Controller xem nhật ký audit hệ thống (SCRUM-109). Chỉ dành cho ADMIN.
  */
 @RestController
 @RequestMapping("/api/v1/admin/audit-logs")
@@ -30,16 +31,22 @@ public class AuditController {
     private final AuditService auditService;
     private final MessageService messageService;
 
+    /** Constructor Spring dùng. */
     @Autowired
     public AuditController(AuditService auditService, @Autowired(required = false) MessageService messageService) {
         this.auditService = auditService;
         this.messageService = messageService;
     }
 
+    /** Constructor cho test, không có MessageService. */
     public AuditController(AuditService auditService) {
         this(auditService, null);
     }
 
+    /**
+     * GET: danh sách audit log có phân trang, lọc theo người thực hiện, loại bản ghi, hành động và khoảng thời
+     * gian.
+     */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Get audit logs with filters", description = "Restricted to ADMIN. Supports filtering by userId, entityType, action, from, to.")

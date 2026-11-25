@@ -1,5 +1,5 @@
-// NODE_PATH supplies playwright-core; CHROME_PATH optionally selects Chromium.
-// All API traffic is intercepted. PUBLIC_UI_URL can select a production preview.
+// Mục đích: kiểm tra tính nhất quán UX giữa các màn hình; toàn bộ lưu lượng API đều bị chặn và giả lập.
+// Biến NODE_PATH cung cấp playwright-core; CHROME_PATH chọn tùy chọn Chromium; PUBLIC_UI_URL có thể trỏ tới bản production preview.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');
@@ -77,6 +77,7 @@ const routes = [
     if (mode === 'empty') data = Array.isArray(data) ? [] : null;
     return route.fulfill({ status: mode === 'error' ? 503 : 200, contentType: 'application/json', body: JSON.stringify(mode === 'error' ? { message: 'Không thể tải dữ liệu kiểm chứng.' } : { data }) });
   });
+  // Điều hướng tới một đường dẫn và chờ trang sẵn sàng.
   async function visit(path) {
     await page.addInitScript(role => {
       localStorage.setItem('fitcenter_auth_session', JSON.stringify({ id: '1', identifier: 'review', name: 'Nguyễn An', role }));
@@ -84,11 +85,14 @@ const routes = [
     }, role);
     await page.goto(`${base}${path}`); await page.locator('.portal-v2').waitFor(); await page.waitForLoadState('networkidle');
   }
+  // Chạy một bước kiểm tra có nhãn và báo kết quả.
   async function check(label, action) {
     try { await action(); console.log(`PASS ${label}`); }
     catch (error) { failures.push(`${label}: ${error.message}`); console.error(`FAIL ${label}: ${error.message}`); }
   }
+  // Chụp ảnh toàn trang lưu vào thư mục đầu ra.
   async function screenshot(name) { await page.screenshot({ path: `${output}/${name}.png`, fullPage: true }); }
+  // Kiểm tra tính nhất quán UX của trang hiện tại.
   async function audit(label) {
     await check(label, async () => {
       const result = await page.evaluate(() => {

@@ -25,6 +25,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+/** Chuyển entity đơn hàng shop sang DTO chi tiết/tóm tắt, tính cờ thanh toán/hủy và số tiền đã hoàn. */
 @Component
 public class OrderMapper {
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
@@ -34,10 +35,15 @@ public class OrderMapper {
     private final PaymentRepository payments;
     private final ProductImageRepository images;
 
+    /** Constructor rút gọn không có repository thanh toán và ảnh. */
     public OrderMapper(ShopProperties props, Clock clock) {
         this(props, clock, null, null);
     }
 
+    /**
+     * Constructor chính: nhận cấu hình shop, Clock (null thì giờ Việt Nam), repository thanh toán và ảnh (tùy
+     * chọn).
+     */
     @Autowired
     public OrderMapper(ShopProperties props,
                        Clock clock,
@@ -49,6 +55,10 @@ public class OrderMapper {
         this.images = images;
     }
 
+    /**
+     * Chuyển đơn sang OrderDto: các dòng, thông tin giao hàng (nếu giao tận nơi), địa chỉ nhận tại quầy, các
+     * mốc thời gian, cờ được thanh toán/hủy và thông tin hội viên (nếu includeMember).
+     */
     public OrderDto toDto(ProductOrder order, boolean includeMember) {
         List<OrderItemDto> items = order.getItems().stream()
                 .map(this::toItemDto)
@@ -114,6 +124,7 @@ public class OrderMapper {
         );
     }
 
+    /** Chuyển đơn sang OrderSummaryDto: tổng số lượng, tên sản phẩm đầu tiên và có thanh toán được không. */
     public OrderSummaryDto toSummaryDto(ProductOrder order) {
         int itemCount = order.getItems().stream().mapToInt(ProductOrderItem::getQuantity).sum();
         String firstItemName = order.getItems().isEmpty() ? null : order.getItems().getFirst().getProductName();
@@ -131,6 +142,7 @@ public class OrderMapper {
         );
     }
 
+    /** Chuyển một dòng đơn sang OrderItemDto kèm slug và ảnh đại diện sản phẩm. */
     private OrderItemDto toItemDto(ProductOrderItem item) {
         ProductVariant v = item.getVariant();
         Product p = v != null ? v.getProduct() : null;
@@ -149,6 +161,7 @@ public class OrderMapper {
         );
     }
 
+    /** Lấy URL ảnh đại diện sản phẩm: ảnh có thứ tự nhỏ nhất (đọc từ repository nếu entity chưa tải ảnh). */
     private String resolveImageUrl(Product p) {
         if (p == null) {
             return null;
@@ -168,6 +181,7 @@ public class OrderMapper {
         return null;
     }
 
+    /** Đơn còn thanh toán online được: đang chờ thanh toán, phương thức online và chưa quá hạn. */
     private boolean computeCanPay(ProductOrder order) {
         return OrderStatus.pending_payment.name().equals(order.getStatus())
                 && "online".equals(order.getPaymentMethod())
@@ -175,6 +189,10 @@ public class OrderMapper {
                 && order.getPaymentDueAt().isAfter(now());
     }
 
+    /**
+     * Đơn có hủy được không: nhân viên hủy được mọi đơn chưa kết thúc; hội viên chỉ hủy đơn chờ thanh toán hoặc
+     * đã thanh toán.
+     */
     private boolean computeCanCancel(ProductOrder order, boolean isStaff) {
         String st = order.getStatus();
         if (st == null) return false;
@@ -188,6 +206,7 @@ public class OrderMapper {
         return OrderStatus.pending_payment.name().equals(st) || OrderStatus.paid.name().equals(st);
     }
 
+    /** Số tiền đã hoàn của đơn lấy từ giao dịch thanh toán (nếu có), không có thì 0. */
     private BigDecimal resolveRefundedAmount(ProductOrder order) {
         if (payments != null && order.getId() != null) {
             List<Payment> list = payments.findAllByProductOrderId(order.getId());
@@ -205,6 +224,7 @@ public class OrderMapper {
         return null;
     }
 
+    /** Thời điểm hiện tại theo giờ Việt Nam. */
     private LocalDateTime now() {
         return LocalDateTime.ofInstant(clock.instant(), VN_ZONE);
     }

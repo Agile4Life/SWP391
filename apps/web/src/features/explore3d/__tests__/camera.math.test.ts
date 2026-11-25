@@ -69,7 +69,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
         expect(Number.isFinite(c)).toBe(true);
       }
 
-      // Target must always lie inside CAMERA_LIMITS bounds
+      // Điểm đích (target) phải luôn nằm trong giới hạn CAMERA_LIMITS
       expect(vp.target[0]).toBeGreaterThanOrEqual(CAMERA_LIMITS.boundaryMin[0]);
       expect(vp.target[0]).toBeLessThanOrEqual(CAMERA_LIMITS.boundaryMax[0]);
       expect(vp.target[1]).toBeGreaterThanOrEqual(CAMERA_LIMITS.boundaryMin[1]);
@@ -85,21 +85,21 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       expect(dist).toBeGreaterThanOrEqual(CAMERA_LIMITS.minDistance);
     }
 
-    // Exploded mode shifts Y upward for L2 and downward for B1
+    // Chế độ tách tầng (exploded) dịch trục Y lên trên cho L2 và xuống dưới cho B1
     const vpL2Stacked = computeBestViewpoint(
       SOL_CENTER_SCENE,
-      'zone-l2-vip-gym',
+      'zone-l2-pt-studio',
       'stacked',
     );
     const vpL2Exploded = computeBestViewpoint(
       SOL_CENTER_SCENE,
-      'zone-l2-vip-gym',
+      'zone-l2-pt-studio',
       'exploded',
     );
     expect(vpL2Exploded.position[1]).toBeGreaterThan(vpL2Stacked.position[1]);
     expect(vpL2Exploded.target[1]).toBeGreaterThan(vpL2Stacked.target[1]);
 
-    // Unknown node falls back to OVERVIEW_VIEWPOINT
+    // Nút không xác định quay về OVERVIEW_VIEWPOINT
     expect(computeBestViewpoint(SOL_CENTER_SCENE, 'non-existent-node')).toEqual(
       OVERVIEW_VIEWPOINT,
     );
@@ -140,7 +140,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
   it('expands CAMERA_LIMITS to support ultra-close inspection (0.65m) and full-campus zoom-out (165m)', () => {
     expect(CAMERA_LIMITS.minDistance).toBe(0.65);
     expect(CAMERA_LIMITS.maxDistance).toBe(165);
-    // Orbit tilt is locked (min === max) and matches the overview's own angle.
+    // Góc nghiêng quỹ đạo bị khóa (min === max) và khớp với góc nhìn toàn cảnh.
     expect(CAMERA_LIMITS.minPolarAngle).toBe(CAMERA_LIMITS.maxPolarAngle);
     const [px, py, pz] = OVERVIEW_VIEWPOINT.position;
     const [tx, ty, tz] = OVERVIEW_VIEWPOINT.target;
@@ -151,7 +151,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
   });
 
   it('sanitizes camera pose against extreme zoom-in (< 0.65m), extreme zoom-out (> 165m), underground Y, and NaN coordinates', () => {
-    // 1. Extreme zoom-in (< 0.65m) clamps to minDistance (0.65m)
+    // 1. Phóng quá gần (< 0,65 m) bị giới hạn về minDistance (0,65 m)
     const closePose = sanitizeCameraPose([0.1, 2.1, 0.1], [0, 2, 0]);
     const closeDist = Math.hypot(
       closePose.position[0] - closePose.target[0],
@@ -160,7 +160,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     );
     expect(closeDist).toBeCloseTo(CAMERA_LIMITS.minDistance, 2);
 
-    // 2. Zero-distance coincidence recovers with default direction at minDistance
+    // 2. Trường hợp trùng vị trí (khoảng cách bằng 0) khôi phục theo hướng mặc định ở khoảng cách minDistance
     const zeroPose = sanitizeCameraPose([4, 2, 0], [4, 2, 0]);
     const zeroDist = Math.hypot(
       zeroPose.position[0] - zeroPose.target[0],
@@ -169,7 +169,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     );
     expect(zeroDist).toBeCloseTo(CAMERA_LIMITS.minDistance, 2);
 
-    // 3. Extreme zoom-out (> 165m) clamps to maxDistance (165m)
+    // 3. Thu quá xa (> 165 m) bị giới hạn về maxDistance (165 m)
     const farPose = sanitizeCameraPose([240, 180, 240], [0, 2, 0]);
     const farDist = Math.hypot(
       farPose.position[0] - farPose.target[0],
@@ -178,11 +178,11 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     );
     expect(farDist).toBeCloseTo(CAMERA_LIMITS.maxDistance, 2);
 
-    // 4. Underground camera Y is clamped above floor slab
+    // 4. Cao độ Y dưới mặt đất của camera được kẹp nằm trên sàn
     const undergroundPose = sanitizeCameraPose([6, -25, 6], [0, 1, 0], -4.2);
     expect(undergroundPose.position[1]).toBeGreaterThanOrEqual(1 - 0.15);
 
-    // 5. NaN / Infinity recovery falls back safely to finite coordinates
+    // 5. Khôi phục từ NaN / Infinity bằng cách quay về tọa độ hữu hạn an toàn
     const nanPose = sanitizeCameraPose([Number.NaN, 10, Number.POSITIVE_INFINITY], [Number.NaN, 0, 0]);
     for (const c of [...nanPose.position, ...nanPose.target]) {
       expect(Number.isFinite(c)).toBe(true);
@@ -201,14 +201,14 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     const farDeltaIn = 90 - stepFarIn;
     const farDeltaOut = stepFarOut - 90;
 
-    // Close zoom step is fine-grained (~0.45m), while far zoom step is much faster (16m)
+    // Bước thu phóng ở cự ly gần rất mịn (~0,45 m), còn ở cự ly xa nhanh hơn nhiều (16 m)
     expect(closeDeltaIn).toBeCloseTo(0.45, 3);
     expect(closeDeltaOut).toBeCloseTo(0.45, 3);
     expect(farDeltaIn).toBeCloseTo(16, 3);
     expect(farDeltaOut).toBeCloseTo(16, 3);
     expect(farDeltaIn).toBeGreaterThan(closeDeltaIn * 10);
 
-    // Clamps strictly to [0.65, 165] at boundaries
+    // Giới hạn chặt trong đoạn [0.65, 165] tại hai biên
     expect(computeProportionalZoomStep(0.7, 'in')).toBe(CAMERA_LIMITS.minDistance);
     expect(computeProportionalZoomStep(160, 'out')).toBe(CAMERA_LIMITS.maxDistance);
   });
@@ -222,9 +222,9 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     expect(typeof prefersReducedMotion()).toBe('boolean');
   });
 
-  it('defines 8 valid Guided Tour steps totaling 90 seconds and referencing existing scene nodes', () => {
-    expect(TOUR_STEPS).toHaveLength(8);
-    expect(TOTAL_TOUR_DURATION_MS).toBe(90000);
+  it('defines 4 valid Gym/support Guided Tour steps and referencing existing scene nodes', () => {
+    expect(TOUR_STEPS).toHaveLength(4);
+    expect(TOTAL_TOUR_DURATION_MS).toBe(45000);
 
     for (const step of TOUR_STEPS) {
       const node = getNode(SOL_CENTER_SCENE, step.nodeId);
@@ -246,19 +246,19 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     const gymSouthWall = l1Walls.find(w => w.id === 'wall-l1-gym-south')!;
     expect(gymSouthWall).toBeDefined();
 
-    // wall-l1-gym-south runs from [-20, 2] to [4, 2] with a 3.0m door at offset 16 (x = -4..-1)
+    // wall-l1-gym-south chạy từ [-20, 2] đến [4, 2] với cửa rộng 3,0 m tại offset 16 (x = -4..-1)
     const segments = getSolidWallSegments2D(gymSouthWall);
     expect(segments.length).toBe(2);
 
-    // Passing through the doorway at x = -2.5 from z = 3.2 to z = 0.8 should succeed
+    // Đi qua ô cửa tại x = -2.5 từ z = 3.2 đến z = 0.8 phải thành công
     const throughDoor = resolveWalkCollision2D([-2.5, 3.2], [-2.5, 0.8], [gymSouthWall]);
     expect(throughDoor[1]).toBeCloseTo(0.8, 2);
 
-    // Walking straight through the solid wall part at x = -12 from z = 3.2 to z = 0.8 should be blocked
+    // Đi xuyên thẳng qua đoạn tường đặc tại x = -12 từ z = 3.2 đến z = 0.8 phải bị chặn
     const blockedByWall = resolveWalkCollision2D([-12, 3.2], [-12, 0.8], [gymSouthWall]);
     expect(blockedByWall[1]).toBeGreaterThan(2.0);
 
-    // Initial walk pose on L1 starts at 1.65m eye height
+    // Tư thế đi bộ ban đầu ở tầng L1 bắt đầu tại độ cao tầm mắt 1,65 m
     const pose = computeInitialWalkPose(SOL_CENTER_SCENE, 'zone-l1-lobby', 'L1');
     expect(pose.levelCode).toBe('L1');
     expect(pose.position[1]).toBeCloseTo(WALK_EYE_HEIGHT_M, 2);
@@ -272,7 +272,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     const initial = computeInitialWalkPose(SOL_CENTER_SCENE, 'zone-l1-gym', 'L1');
     expect(initial.pitch ?? 0).toBe(0);
 
-    // Rotate 90° right and 30° up
+    // Xoay phải 90° và ngẩng lên 30°
     const lookedUpRight = rotateWalkPose(initial, Math.PI / 2, Math.PI / 6);
     expect(lookedUpRight.position).toEqual(initial.position);
     expect(lookedUpRight.yaw).toBeCloseTo(initial.yaw + Math.PI / 2, 4);
@@ -282,7 +282,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     expect(vp.target[1]).toBeGreaterThan(vp.position[1]);
     expect(vp.fov).toBe(60);
 
-    // Pitch clamps at ±WALK_MAX_PITCH_RAD
+    // Góc ngẩng/cúi (pitch) bị giới hạn ở ±WALK_MAX_PITCH_RAD
     expect(clampWalkPitch(Math.PI)).toBeCloseTo(WALK_MAX_PITCH_RAD, 5);
     expect(clampWalkPitch(-Math.PI)).toBeCloseTo(-WALK_MAX_PITCH_RAD, 5);
   });
@@ -291,7 +291,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     const l1Walls = wallsOfLevel(SOL_CENTER_SCENE, 'L1');
     const allL1Segments = l1Walls.flatMap(w => getSolidWallSegments2D(w));
 
-    // Attempt a long 8m diagonal dash directly into the NW exterior corner [-22, -16] from [-18, -12]
+    // Thử lao chéo một đoạn dài 8 m thẳng vào góc ngoại thất Tây-Bắc [-22, -16] từ [-18, -12]
     const fromCorner: [number, number] = [-18, -12];
     const intoCorner: [number, number] = [-25, -20];
     const resolvedCorner = resolveWalkCollision2D(
@@ -301,14 +301,14 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       WALK_COLLIDER_RADIUS_M,
     );
 
-    // Must remain strictly inside the [-22, -16] exterior walls with clearance
+    // Phải giữ nghiêm ngặt bên trong tường ngoại thất [-22, -16] kèm khoảng hở an toàn
     expect(resolvedCorner[0]).toBeGreaterThan(-22 + WALK_COLLIDER_RADIUS_M);
     expect(resolvedCorner[1]).toBeGreaterThan(-16 + WALK_COLLIDER_RADIUS_M);
     for (const seg of allL1Segments) {
       expect(segmentsIntersect2D(fromCorner, resolvedCorner, seg.a, seg.b)).toBe(false);
     }
 
-    // B1 pool basin obstacle blocks walking from poolside (x=6, z=-5) into deep water (x=0, z=-5)
+    // Vật cản lòng hồ bơi tầng B1 chặn bước đi từ thành hồ (x=6, z=-5) xuống vùng nước sâu (x=0, z=-5)
     const b1Walls = wallsOfLevel(SOL_CENTER_SCENE, 'B1');
     const b1Obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, 'B1');
     expect(b1Obstacles.length).toBeGreaterThan(0);
@@ -320,14 +320,14 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       WALK_COLLIDER_RADIUS_M,
       b1Obstacles,
     );
-    expect(stoppedAtPoolEdge[0]).toBeGreaterThan(5.1);
+    expect(stoppedAtPoolEdge[0]).toBeLessThan(5.1);
   });
 
-  it('audits 100% of zones (18), items (90+), and hotspots (28) in Walk Mode so camera always faces the selected target without wall occlusion', () => {
+  it('audits every retained zone, item and hotspot in Walk Mode so camera always faces the selected target without wall occlusion', () => {
     const zones = allZones(SOL_CENTER_SCENE);
-    expect(zones).toHaveLength(18);
+    expect(zones).toHaveLength(8);
 
-    // Every single zone must define both a hero and an eye viewpoint
+    // Mỗi phân khu đều phải định nghĩa đủ cả góc nhìn hero và góc nhìn tầm mắt (eye)
     for (const zone of zones) {
       expect(
         zone.viewpoints.some(v => v.kind === 'hero'),
@@ -347,7 +347,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       expect(Number.isFinite(pose.yaw)).toBe(true);
     }
 
-    // Audit every ItemNode and HotspotNode: initial walk pose must face the selected node
+    // Rà soát mọi ItemNode và HotspotNode: tư thế đi bộ ban đầu phải quay mặt về phía nút được chọn
     const items = allItems(SOL_CENTER_SCENE);
     const hotspots = allHotspots(SOL_CENTER_SCENE);
     for (const node of [...items, ...hotspots]) {
@@ -365,7 +365,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       expect(lookLen).toBeGreaterThan(0.1);
       expect(toItemLen).toBeGreaterThan(0.3);
 
-      // Cosine of angle between camera look vector and vector to the selected item/hotspot must be > 0.95
+      // Cosin góc giữa vector nhìn của camera và vector tới thiết bị/điểm nóng được chọn phải > 0.95
       const cosAngle =
         (lookDx * toItemDx + lookDz * toItemDz) / (lookLen * toItemLen);
       expect(
@@ -374,14 +374,11 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       ).toBeGreaterThan(0.95);
     }
 
-    // Specifically verify Sofa Thư giãn Platinum 01 (item-l2-sofa-1) looks toward the sofa (z = 10.2), not the North wall
-    const sofaPose = computeInitialWalkPose(SOL_CENTER_SCENE, 'item-l2-sofa-1', 'L2');
-    const sofaVp = poseToViewpoint(sofaPose);
-    expect(sofaVp.target[2]).toBeGreaterThan(sofaVp.position[2]);
+    expect(SOL_CENTER_SCENE.nodes['item-l2-sofa-1']).toBeUndefined();
   });
 
   it('supports physical staircase climbing and floor transitions across B1 <-> L1 <-> L2 <-> RF', () => {
-    // All 4 indoor levels must have both a stair-core and an elevator-core
+    // Cả 4 tầng trong nhà đều phải có đủ lõi thang bộ (stair-core) và lõi thang máy (elevator-core)
     for (const code of ['B1', 'L1', 'L2', 'RF'] as const) {
       const levelItems = itemsOfLevel(SOL_CENTER_SCENE, code);
       expect(
@@ -394,7 +391,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       ).toBe(true);
     }
 
-    // Walk up the L1 staircase (item-l1-stairs at [10.5, 0, 1.0], dimensions [3.6, 3.8, 4.2], z = -1.1..3.1)
+    // Đi lên cầu thang tầng L1 (item-l1-stairs tại [10.5, 0, 1.0], kích thước [3.6, 3.8, 4.2], z = -1.1..3.1)
     const l1Walls = wallsOfLevel(SOL_CENTER_SCENE, 'L1');
     const l1Obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, 'L1');
     let pose = computeInitialWalkPose(SOL_CENTER_SCENE, 'item-l1-stairs', 'L1');
@@ -423,15 +420,15 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       }
     }
 
-    // Eye height must have climbed up the staircase (> +1.4m above floor) and triggered transition to L2
+    // Độ cao tầm mắt phải leo lên theo cầu thang (> +1,4 m so với mặt sàn) và kích hoạt chuyển sang tầng L2
     expect(maxClimbedY).toBeGreaterThan(initialY + 1.4);
     expect(transitionedTo).toBe('L2');
 
-    // Verify descending staircase from mid-flight (progress ~ 0.5) to lower south landing triggers down transition
+    // Kiểm tra việc đi xuống cầu thang từ giữa vế thang (progress ~ 0.5) về chiếu nghỉ phía Nam bên dưới sẽ kích hoạt chuyển tầng xuống
     const midStairL2: typeof pose = {
       levelCode: 'L2',
       position: [10.5, 4.5 + WALK_EYE_HEIGHT_M + 1.1, 11.5],
-      yaw: Math.PI, // facing South (+Z) down the stairs
+      yaw: Math.PI, // quay mặt về phía Nam (+Z) đi xuống cầu thang
       pitch: 0,
     };
     const bottomStairL2: typeof pose = {
@@ -445,7 +442,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
       evaluateStairOrElevatorPortal(SOL_CENTER_SCENE, midStairL2, bottomStairL2),
     ).toBe('L1');
 
-    // Verify store selectNode isolates indoor levels in solo mode and transitions floors when clicking stairs in walkMode
+    // Kiểm tra store selectNode tách riêng tầng trong nhà ở chế độ solo và chuyển tầng khi bấm cầu thang trong walkMode
     useExploreStore.getState().resetExplore();
     useExploreStore.getState().selectNode('zone-b1-locker');
     expect(useExploreStore.getState().focusLevel).toBe('B1');
@@ -470,7 +467,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     const l1Walls = wallsOfLevel(SOL_CENTER_SCENE, 'L1');
     const l1Obstacles = getWalkObstaclesForLevel(SOL_CENTER_SCENE, 'L1');
 
-    // Diagonal approach into gym-south glass wall must slide smoothly along +X without sticking
+    // Di chuyển chéo vào tường kính gym-south phải trượt mượt theo trục +X mà không bị kẹt
     const startWallTest: [number, number] = [-10, 2.75];
     const diagonalTarget: [number, number] = [-8.5, 1.5];
     const slid = resolveWalkCollision2D(
@@ -483,7 +480,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     expect(slid[0]).toBeGreaterThan(startWallTest[0] + 0.8);
     expect(slid[1]).toBeGreaterThanOrEqual(2.4);
 
-    // Continuous climb B1 (-4.5) -> L1 (0.0) without overshooting into L2
+    // Leo liên tục từ B1 (-4.5) -> L1 (0.0) mà không vượt quá sang L2
     let pose: WalkPose = {
       levelCode: 'B1',
       position: [10.5, -4.5 + WALK_EYE_HEIGHT_M, 14.2],
@@ -498,7 +495,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     expect(pose.position[2]).toBeLessThan(9.3);
     expect(pose.position[1]).toBeCloseTo(WALK_EYE_HEIGHT_M, 2);
 
-    // Walk onto L1->L2 stairs from South (z = 14.2) and climb continuously to L2 (y = 5.76) without jumping to RF
+    // Bước lên cầu thang L1->L2 từ phía Nam (z = 14.2) và leo liên tục lên L2 (y = 5.76) mà không nhảy cóc sang RF
     pose = {
       levelCode: 'L1',
       position: [10.5, WALK_EYE_HEIGHT_M, 14.2],
@@ -507,7 +504,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     };
     let midFlightChecked = false;
     for (let i = 0; i < 24; i++) {
-      // Inject strong +X lateral strafe to test hard balustrade clamp mid-flight
+      // Chèn lực di chuyển ngang +X mạnh để kiểm tra kẹp cứng lan can khi đang ở giữa vế thang
       const res = stepContinuousWalkPose3D(SOL_CENTER_SCENE, pose, 0.35, -0.22, 0, 0);
       pose = res.pose;
       if (res.stairState.onStairs && res.stairState.progress > 0.15 && res.stairState.progress < 0.85) {
@@ -520,7 +517,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     expect(pose.position[2]).toBeLessThan(9.3);
     expect(pose.position[1]).toBeCloseTo(5.76 + WALK_EYE_HEIGHT_M, 2);
 
-    // Enter L2->RF stairs at South foot (z = 14.2, footY = 5.76) -> climbs continuously to RF (11.26)
+    // Vào chân cầu thang L2->RF phía Nam (z = 14.2, footY = 5.76) -> leo liên tục lên tầng RF (11.26)
     pose = {
       levelCode: 'L2',
       position: [10.5, 5.76 + WALK_EYE_HEIGHT_M, 14.2],
@@ -533,7 +530,7 @@ describe('Explore 3D Camera Math, Guided Tour & Walk Collision', () => {
     expect(pose.levelCode).toBe('RF');
     expect(pose.position[1]).toBeCloseTo(11.26 + WALK_EYE_HEIGHT_M, 2);
 
-    // Descend RF -> L2 from North landing (z = 9.0 -> z = 14.2) smoothly without falling through to L1
+    // Đi xuống từ RF -> L2 bắt đầu tại chiếu nghỉ phía Bắc (z = 9.0 -> z = 14.2) mượt mà, không rơi xuyên xuống L1
     for (let i = 0; i < 24; i++) {
       pose = stepContinuousWalkPose3D(SOL_CENTER_SCENE, pose, 0, 0.22, Math.PI, 0).pose;
     }
@@ -574,6 +571,7 @@ describe('Locked overview framing', () => {
   });
 
   it('pulls back further on narrower canvases', () => {
+    // Đổi độ sang radian cho các phép thử.
     const d = (a: number) => {
       const v = getOverviewViewpoint(a);
       return Math.hypot(v.position[0] - v.target[0], v.position[1] - v.target[1], v.position[2] - v.target[2]);

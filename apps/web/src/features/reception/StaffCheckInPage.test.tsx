@@ -38,10 +38,12 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
+// Dựng component vào DOM giả để kiểm thử.
 async function renderPage(mode: 'in' | 'out' = 'in') {
   await act(async () => root.render(<StaffCheckInPage mode={mode} />));
 }
 
+// Các nút check-out đang hiển thị.
 function checkoutButtons() {
   return [...host.querySelectorAll('button')].filter((button) => button.textContent?.includes('Ra về'));
 }

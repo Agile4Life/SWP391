@@ -9,7 +9,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Request DTO for creating a session evaluation (SCRUM-119).
+ * DTO yêu cầu tạo đánh giá buổi tập (SCRUM-119): buổi lớp (tùy chọn), hội viên, HLV (tùy chọn), điểm tiến bộ 1–100 và
+ * các nhận xét.
  */
 public record SessionEvaluationCreateDto(
         Long sessionId,

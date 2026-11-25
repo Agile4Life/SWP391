@@ -18,11 +18,13 @@ import { useExploreStore, type LevelMode } from '../state/exploreStore';
 
 export const MAX_ACTIVE_HOTSPOTS = 0;
 
+/** Props của điểm nóng: cảnh và có hiện nhãn không. */
 export interface HotspotsProps {
   scene?: SceneDoc;
   showLabels?: boolean;
 }
 
+/** Vị trí thế giới của điểm nóng (cộng độ nhấc của tầng khi ở chế độ tách tầng). */
 export function computeHotspotWorldPosition(
   scene: SceneDoc,
   hotspot: HotspotNode,
@@ -33,6 +35,7 @@ export function computeHotspotWorldPosition(
   return [hotspot.position[0], hotspot.position[1] + extraY, hotspot.position[2]];
 }
 
+/** Chọn các điểm nóng cần hiển thị theo tầng đang xem, đối tượng chọn/rê và có hiện nhãn hay không. */
 export function getVisibleHotspots(
   scene: SceneDoc,
   focusLevel: LevelCode | 'ALL',
@@ -71,6 +74,7 @@ export function getVisibleHotspots(
   return prioritized.slice(0, 1);
 }
 
+/** Điểm nóng chiếu từ toạ độ 3D lên màn hình: cập nhật vị trí phần tử HTML theo camera mỗi khung hình. */
 function ProjectedHotspot({
   position,
   children,
@@ -85,9 +89,12 @@ function ProjectedHotspot({
   const tourActive = useExploreStore(s => s.tourActive);
   const elRef = useRef<HTMLDivElement | null>(null);
   const rootRef = useRef<Root | null>(null);
+  // Vector tạm dùng lại để tránh cấp phát mỗi khung hình (chiếu).
   const projVec = useMemo(() => new THREE.Vector3(), []);
+  // Vector tạm dùng lại để tránh cấp phát mỗi khung hình (thế giới).
   const worldVec = useMemo(() => new THREE.Vector3(), []);
 
+  // Cập nhật vị trí trên màn hình; ẩn điểm nóng ở xa hơn 16 m khi đi bộ.
   const updateTransform = useCallback(() => {
     const el = elRef.current;
     if (!el) return;
@@ -168,6 +175,7 @@ function ProjectedHotspot({
   return null;
 }
 
+/** Lớp các điểm nóng trong cảnh: hiển thị nhãn có thể bấm, tô sáng khi rê và chọn. */
 export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: HotspotsProps) {
   const { t } = useI18n();
   const r3fStore = useContext(r3fContext);
@@ -177,6 +185,7 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
   const selectedId = useExploreStore(s => s.selectedId);
   const hoveredId = useExploreStore(s => s.hoveredId);
 
+  // Danh sách điểm nóng đang hiển thị.
   const visibleHotspots = useMemo(
     () => getVisibleHotspots(scene, focusLevel, selectedId, hoveredId, showLabels),
     [scene, focusLevel, selectedId, hoveredId, showLabels],
@@ -186,6 +195,7 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
     return null;
   }
 
+  // Bấm điểm nóng: đổi tầng nếu là hành động focus-level, còn lại thì chọn nút đó.
   const handleHotspotClick = (hotspot: HotspotNode) => {
     const state = useExploreStore.getState();
     if (hotspot.action.type === 'focus-level') {
@@ -196,6 +206,7 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
     r3fStore?.getState().invalidate();
   };
 
+  // Rê vào điểm nóng thì đặt hoveredId.
   const handlePointerEnter = (hotspotId: string) => {
     const state = useExploreStore.getState();
     if (state.hoveredId !== hotspotId) {
@@ -204,6 +215,7 @@ export function Hotspots({ scene = SOL_CENTER_SCENE, showLabels = false }: Hotsp
     }
   };
 
+  // Rê ra khỏi điểm nóng thì bỏ hoveredId.
   const handlePointerLeave = (hotspotId: string) => {
     const state = useExploreStore.getState();
     if (state.hoveredId === hotspotId) {

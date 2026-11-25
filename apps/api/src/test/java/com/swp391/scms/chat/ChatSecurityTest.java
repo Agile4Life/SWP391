@@ -19,6 +19,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho ChatSecurity (chat security). */
 @SpringJUnitConfig(ChatSecurityTest.Config.class)
 class ChatSecurityTest {
     @Configuration @EnableMethodSecurity static class Config {
@@ -29,21 +30,25 @@ class ChatSecurityTest {
     @Autowired ChatService service;
     @AfterEach void clear() { SecurityContextHolder.clearContext(); reset(service); }
     @Test void anonymousCannotRead() { assertThrows(AuthenticationCredentialsNotFoundException.class, () -> controller.list(null, 0)); }
+    /** Kiểm thử: quản lý và các vai trò khác không được đọc hộp thư chat. */
     @ParameterizedTest @ValueSource(strings = {"CENTER_MANAGER", "GUEST"})
     void managerAndOtherRolesCannotRead(String role) {
         var p = login(role);
         assertThrows(AccessDeniedException.class, () -> controller.list(p, 0)); verifyNoInteractions(service);
     }
+    /** Kiểm thử: vai trò được hỗ trợ đọc được hộp thư của chính mình. */
     @ParameterizedTest @ValueSource(strings = {"MEMBER", "RECEPTIONIST", "COACH"})
     void supportedRoleCanReadOwnInbox(String role) {
         var p = login(role); controller.list(p, 0); verify(service).list(p, 0);
     }
+    /** Kiểm thử: hội viên, lễ tân và HLV được bắt đầu cuộc chat. */
     @ParameterizedTest @ValueSource(strings = {"MEMBER", "RECEPTIONIST", "COACH"})
     void memberReceptionistAndCoachCanStartAChat(String role) {
         var p = login(role);
         controller.contacts(p, "", 0); verify(service).contacts(p, "", 0);
         controller.open(p, new OpenChatConversation(10L)); verify(service).open(p, 10L);
     }
+    /** Kiểm thử: quản lý và các vai trò khác không được bắt đầu cuộc chat. */
     @ParameterizedTest @ValueSource(strings = {"CENTER_MANAGER", "GUEST"})
     void managerAndOtherRolesCannotStartAChat(String role) {
         var p = login(role);
@@ -51,6 +56,7 @@ class ChatSecurityTest {
         assertThrows(AccessDeniedException.class, () -> controller.contacts(p, "", 0));
         verifyNoInteractions(service);
     }
+    /** Hàm trợ giúp của test: đăng nhập và lấy token cho một tài khoản mẫu. */
     private AuthenticatedPrincipal login(String role) {
         var p = new AuthenticatedPrincipal(10L, "unit", role);
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(p, null,

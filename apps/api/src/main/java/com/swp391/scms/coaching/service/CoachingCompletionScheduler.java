@@ -14,8 +14,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 
 /**
- * Settles held 1:1 sessions and ended training plans as {@code completed}. 1:1 sessions stay confirmed for
- * {@link #PT_GRACE_DAYS} days so the PT arrival sweep (3-day lookback) still sees them.
+ * Job nền hằng ngày chuyển các buổi PT 1:1 đã diễn ra và giáo án đã kết thúc sang trạng thái {@code completed}.
+ * Buổi 1:1 giữ trạng thái confirmed trong {@link #PT_GRACE_DAYS} ngày để tác vụ quét điểm danh PT (tra cứu 3 ngày)
+ * vẫn nhìn thấy chúng.
  */
 @Service
 public class CoachingCompletionScheduler {
@@ -27,23 +28,27 @@ public class CoachingCompletionScheduler {
     private final TrainingPlanRepository plans;
     private final Clock clock;
 
+    /** Khởi tạo với repository booking PT, repository giáo án và Clock (để test cố định thời gian). */
     public CoachingCompletionScheduler(CoachBookingRepository coachBookings, TrainingPlanRepository plans, Clock clock) {
         this.coachBookings = coachBookings;
         this.plans = plans;
         this.clock = clock;
     }
 
-    @Scheduled(cron = "${app.coaching.completion.cron:0 35 0 * * ?}")
+    /**
+     * Chạy theo giờ trung tâm, cập nhật cả hai loại trong một giao dịch; lỗi được scheduler ghi nhận và rollback.
+     */
+    @Scheduled(cron = "${app.coaching.completion.cron:0 35 0 * * ?}", zone = "Asia/Ho_Chi_Minh")
+    @Transactional
     public void sweep() {
-        try {
-            int[] done = completeHeld();
-            log.info("[CoachingCompletion] completed {} 1:1 session(s), {} plan(s)", done[0], done[1]);
-        } catch (RuntimeException ex) {
-            log.warn("[CoachingCompletion] sweep failed", ex);
-        }
+        int[] done = completeHeld();
+        log.info("[CoachingCompletion] completed {} 1:1 session(s), {} plan(s)", done[0], done[1]);
     }
 
-    /** Returns {1:1 sessions, plans} moved to completed. */
+    /**
+     * Tính "hôm nay" theo giờ Việt Nam; chuyển buổi 1:1 cũ hơn PT_GRACE_DAYS ngày và giáo án đã kết thúc sang
+     * completed; trả về mảng {số buổi 1:1, số giáo án} đã chuyển.
+     */
     @Transactional
     public int[] completeHeld() {
         LocalDateTime now = clock.instant().atZone(CENTER_ZONE).toLocalDateTime();

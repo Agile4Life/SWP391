@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho màn hình check-in của nhân viên. */
 .checkin-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

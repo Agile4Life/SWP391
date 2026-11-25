@@ -28,7 +28,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/** SCRUM-80: PostgreSQL trigger failures must retain localized HTTP responses. */
+/**
+ * Bộ kiểm thử cho GlobalExceptionHandlerTrigger.
+ * SCRUM-80: Lỗi từ trigger PostgreSQL phải giữ nguyên phản hồi HTTP đã bản địa hóa theo ngôn ngữ yêu cầu.
+ */
 class GlobalExceptionHandlerTriggerTest {
 
     private static final String DB_CAPACITY_VI = "Lớp học đã đầy chỗ (vượt quá capacity cho phép).";
@@ -39,6 +42,7 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch";
     private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
 
+    /** Kiểm thử: trigger nghỉ của HLV trả 409 Conflict. */
     @Test
     void coachRestTriggerReturnsConflict() {
         var response = new GlobalExceptionHandler().handleDataIntegrity(
@@ -47,6 +51,7 @@ class GlobalExceptionHandlerTriggerTest {
         org.junit.jupiter.api.Assertions.assertEquals("COACH_REST_REQUIRED", response.getBody().getCode());
     }
 
+    /** Kiểm thử: tranh chấp lịch trả 409 Conflict có thể thử lại. */
     @Test
     void scheduleContentionReturnsRetryableConflict() {
         var response = new GlobalExceptionHandler().handleDataIntegrity(
@@ -55,6 +60,7 @@ class GlobalExceptionHandlerTriggerTest {
         org.junit.jupiter.api.Assertions.assertEquals("SCHEDULE_UPDATE_IN_PROGRESS", response.getBody().getCode());
     }
 
+    /** Kiểm thử: hội viên trùng lịch trả 409 Conflict. */
     @Test
     void memberScheduleOverlapReturnsConflict() {
         var response = new GlobalExceptionHandler().handleDataIntegrity(
@@ -63,6 +69,7 @@ class GlobalExceptionHandlerTriggerTest {
         org.junit.jupiter.api.Assertions.assertEquals("SCHEDULING_MEMBER_TIME_OVERLAP", response.getBody().getCode());
     }
 
+    /** Kiểm thử: giữ nguyên phản hồi của trigger PostgreSQL. */
     @ParameterizedTest
     @MethodSource("triggerFailures")
     void preservesPostgresTriggerResponses(TriggerFailure trigger, String databaseMessage, String language) throws Exception {
@@ -73,6 +80,7 @@ class GlobalExceptionHandlerTriggerTest {
         assertTriggerResponse(translated, trigger, language);
     }
 
+    /** Kiểm thử: lỗi database không liên quan vẫn là lỗi server đã dịch. */
     @ParameterizedTest
     @MethodSource("unrelatedDatabaseFailures")
     void keepsUnrelatedDatabaseFailuresAsLocalizedServerErrors(SQLException sqlError, String language) throws Exception {
@@ -87,6 +95,7 @@ class GlobalExceptionHandlerTriggerTest {
                         : "An internal system error occurred. Please contact administrator."));
     }
 
+    /** Kiểm thử: phản hồi trigger mặc định bằng tiếng Việt. */
     @Test
     void defaultsTriggerResponseToVietnamese() throws Exception {
         mockMvcFor(translate(new SQLException(DB_CAPACITY_VI, "23514"))).perform(get("/trigger-test"))
@@ -95,6 +104,7 @@ class GlobalExceptionHandlerTriggerTest {
                 .andExpect(jsonPath("$.message").value(CAPACITY_VI));
     }
 
+    /** Kiểm thử: các vi phạm CHECK khác vẫn là lỗi toàn vẹn dữ liệu chung. */
     @ParameterizedTest
     @MethodSource("unrelatedIntegrityFailures")
     void keepsOtherCheckViolationsAsGenericIntegrityErrors(String databaseMessage, String language) throws Exception {
@@ -108,6 +118,7 @@ class GlobalExceptionHandlerTriggerTest {
                         : "Database integrity constraint violation."));
     }
 
+    /** Hàm trợ giúp của test: khẳng định phản hồi của trigger. */
     private void assertTriggerResponse(DataAccessException failure, TriggerFailure trigger, String language) throws Exception {
         mockMvcFor(failure).perform(get("/trigger-test").header("Accept-Language", language))
                 .andExpect(status().is(trigger.status()))
@@ -118,6 +129,7 @@ class GlobalExceptionHandlerTriggerTest {
                 .andExpect(jsonPath("$.message").value(language.equals("vi") ? trigger.vietnamese() : trigger.english()));
     }
 
+    /** Hàm trợ giúp của test: dịch một lỗi database thành phản hồi HTTP. */
     private static DataAccessException translate(SQLException sqlError) {
         PostgreSQLDialect dialect = new PostgreSQLDialect();
         StandardSQLExceptionConverter converter = new StandardSQLExceptionConverter(
@@ -128,6 +140,7 @@ class GlobalExceptionHandlerTriggerTest {
         return translated;
     }
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (mock mvc for). */
     private MockMvc mockMvcFor(RuntimeException failure) {
         ResourceBundleMessageSource source = new ResourceBundleMessageSource();
         source.setBasename("i18n/messages");
@@ -139,6 +152,7 @@ class GlobalExceptionHandlerTriggerTest {
                 .build();
     }
 
+    /** Hàm trợ giúp của test: cung cấp các lỗi trigger để test tham số hóa. */
     private static Stream<Arguments> triggerFailures() {
         return Stream.of(
                 new TriggerFailure(DB_CAPACITY_VI, "trg_enrollments_check_capacity", "23514", 409,
@@ -156,6 +170,7 @@ class GlobalExceptionHandlerTriggerTest {
                         .flatMap(message -> Stream.of("vi", "en").map(language -> Arguments.of(trigger, message, language))));
     }
 
+    /** Kiểm thử: ràng buộc của sân có phản hồi công khai đã được dịch. */
     @ParameterizedTest
     @MethodSource("courtFailures")
     void courtConstraintsHaveLocalizedPublicResponses(String constraint, int httpStatus, String code,
@@ -168,6 +183,7 @@ class GlobalExceptionHandlerTriggerTest {
                 .andExpect(jsonPath("$.details").doesNotExist());
     }
 
+    /** Hàm trợ giúp của test: cung cấp các lỗi của sân. */
     private static Stream<Arguments> courtFailures() {
         return Stream.of(
                 Arguments.of("trg_court_bookings_check_conflict", 409, "COURT_BOOKING_SLOT_TAKEN", "vi",
@@ -182,6 +198,7 @@ class GlobalExceptionHandlerTriggerTest {
                         "Choose a whole-hour 60-minute slot within the court opening hours"));
     }
 
+    /** Hàm trợ giúp của test: cung cấp các lỗi database không liên quan. */
     private static Stream<Arguments> unrelatedDatabaseFailures() {
         return Stream.of(
                 new SQLException("syntax error at or near 'trg_enrollments_check_capacity'.", "42601"),
@@ -191,14 +208,17 @@ class GlobalExceptionHandlerTriggerTest {
                 .flatMap(error -> Stream.of("vi", "en").map(language -> Arguments.of(error, language)));
     }
 
+    /** Hàm trợ giúp của test: cung cấp các lỗi toàn vẹn không liên quan. */
     private static Stream<Arguments> unrelatedIntegrityFailures() {
         return Stream.of("ERROR: invalid gói value.", "ERROR: invalid khung giờ value.")
                 .flatMap(message -> Stream.of("vi", "en").map(language -> Arguments.of(message, language)));
     }
 
+    /** Bản ghi mô tả một lỗi trigger dùng cho test tham số hóa. */
     private record TriggerFailure(String message, String constraint, String sqlState,
                                   int status, String code, String vietnamese, String english) { }
 
+    /** Bộ kiểm thử cho controller FailingController (failing controller). */
     @RestController
     static class FailingController {
         private final RuntimeException failure;
@@ -207,6 +227,7 @@ class GlobalExceptionHandlerTriggerTest {
             this.failure = failure;
         }
 
+        /** Hàm trợ giúp của test: tạo ngoại lệ lỗi trigger. */
         @GetMapping("/trigger-test")
         void fail() {
             throw failure;

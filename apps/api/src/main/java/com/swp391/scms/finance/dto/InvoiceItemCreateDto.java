@@ -8,7 +8,9 @@ import jakarta.validation.constraints.NotNull;
 import java.math.BigDecimal;
 
 /**
- * Data Transfer Object for creating an Invoice line item.
+ * Một dòng hàng khi tạo hóa đơn: mô tả, số lượng và đơn giá.
+ *
+ * DTO dùng để tạo một dòng hàng của hóa đơn.
  */
 @Schema(description = "Yêu cầu tạo chi tiết dòng hóa đơn")
 public class InvoiceItemCreateDto {
@@ -27,34 +29,42 @@ public class InvoiceItemCreateDto {
     @Schema(description = "Đơn giá (VNĐ)", example = "3000000.00")
     private BigDecimal unitPrice;
 
+    /** Constructor rỗng cho Jackson. */
     public InvoiceItemCreateDto() {}
 
+    /** Tạo dòng hàng với mô tả, số lượng và đơn giá. */
     public InvoiceItemCreateDto(String description, Integer quantity, BigDecimal unitPrice) {
         this.description = description;
         this.quantity = quantity;
         this.unitPrice = unitPrice;
     }
 
+    /** Lấy giá trị trường description. */
     public String getDescription() {
         return description;
     }
 
+    /** Gán giá trị mới cho trường description. */
     public void setDescription(String description) {
         this.description = description;
     }
 
+    /** Lấy giá trị trường quantity. */
     public Integer getQuantity() {
         return quantity;
     }
 
+    /** Gán giá trị mới cho trường quantity. */
     public void setQuantity(Integer quantity) {
         this.quantity = quantity;
     }
 
+    /** Lấy giá trị trường unitPrice. */
     public BigDecimal getUnitPrice() {
         return unitPrice;
     }
 
+    /** Gán giá trị mới cho trường unitPrice. */
     public void setUnitPrice(BigDecimal unitPrice) {
         this.unitPrice = unitPrice;
     }

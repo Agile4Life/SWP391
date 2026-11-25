@@ -24,6 +24,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/** Bộ kiểm thử cho service UserService (user service). */
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
 
@@ -37,6 +38,7 @@ class UserServiceTest {
     private Clock clock = Clock.systemUTC();
     private UserService service;
 
+    /** Kiểm thử: admin hoạt động cuối cùng không thể bị khóa, xóa hoặc hạ quyền. */
     @Test
     void lastActiveAdminCannotBeLockedDeletedOrDemoted() {
         var role = new com.swp391.scms.users.entity.Role();
@@ -59,6 +61,7 @@ class UserServiceTest {
         org.mockito.Mockito.verify(userRepository, never()).save(any());
     }
 
+    /** Kiểm thử: khóa được admin khi vẫn còn admin hoạt động khác. */
     @Test
     void adminCanBeLockedWhenAnotherActiveAdminRemains() {
         var role = new com.swp391.scms.users.entity.Role();
@@ -73,6 +76,7 @@ class UserServiceTest {
         assertEquals("locked", admin.getStatus());
     }
 
+    /** Kiểm thử: cấp tài khoản nhân viên từ chối mọi vai trò khác. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.NullAndEmptySource
     @org.junit.jupiter.params.provider.ValueSource(strings = {"ADMIN", "CENTER_MANAGER", "MANAGER", "MEMBER"})
@@ -82,6 +86,7 @@ class UserServiceTest {
         org.mockito.Mockito.verifyNoInteractions(userRepository, roleRepository);
     }
 
+    /** Kiểm thử: cấp tài khoản nhân viên chỉ phân giải vai trò được phép và lưu hồ sơ của nó. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
     void staffProvisioningResolvesOnlyAllowedRoleAndSavesItsProfile(String code) {
@@ -103,6 +108,7 @@ class UserServiceTest {
         assertNotNull("COACH".equals(code) ? saved.getValue().getCoach() : saved.getValue().getReceptionist());
     }
 
+    /** Kiểm thử: cấp tài khoản tạo hồ sơ nhân viên. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
     void provisioningCreatesStaffProfile(String code) {
@@ -137,11 +143,13 @@ class UserServiceTest {
         }
     }
 
+    /** Chuẩn bị trước mỗi test: tạo UserService với repository giả lập. */
     @BeforeEach
     void setUp() {
         service = new UserService(userRepository, roleRepository, passwordEncoder, userMapper, receptionistRepository, subscriptionRepository, clock);
     }
 
+    /** Kiểm thử: tạo người dùng từ chối email trùng. */
     @Test
     void createUserRejectsDuplicateEmail() {
         UserCreateDto dto = new UserCreateDto();
@@ -152,6 +160,7 @@ class UserServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    /** Kiểm thử: tạo người dùng từ chối số điện thoại trùng. */
     @Test
     void createUserRejectsDuplicatePhone() {
         UserCreateDto dto = new UserCreateDto();
@@ -163,6 +172,7 @@ class UserServiceTest {
         assertThrows(ConflictException.class, () -> service.createUser(dto));
     }
 
+    /** Kiểm thử: cấp tài khoản nhân viên từ chối email và số điện thoại (đã chuẩn hóa) trùng trước khi lưu. */
     @Test
     void createStaffAccountRejectsDuplicateEmailAndNormalizedPhoneBeforeSaving() {
         var role = new com.swp391.scms.users.entity.Role();
@@ -188,6 +198,7 @@ class UserServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    /** Kiểm thử: không khóa được HLV còn lớp sắp tới. */
     @Test
     void lockingACoachWithUpcomingClassesIsRefused() {
         var role = new com.swp391.scms.users.entity.Role(); role.setCode("COACH");
@@ -201,6 +212,7 @@ class UserServiceTest {
         assertEquals("active", coach.getStatus());
     }
 
+    /** Kiểm thử: khóa hội viên sẽ nhả các chỗ buổi học sắp tới của họ. */
     @Test
     void lockingAMemberFreesTheirUpcomingSessionSeats() {
         var role = new com.swp391.scms.users.entity.Role(); role.setCode("MEMBER");
@@ -215,6 +227,7 @@ class UserServiceTest {
         assertEquals("locked", member.getStatus());
     }
 
+    /** Kiểm thử: đổi trạng thái thành khóa sẽ khóa tài khoản. */
     @Test
     void setStatusLocksAccount() {
         User user = new User();
@@ -226,11 +239,13 @@ class UserServiceTest {
         assertEquals("locked", user.getStatus());
     }
 
+    /** Kiểm thử: đổi trạng thái từ chối giá trị không biết. */
     @Test
     void setStatusRejectsUnknownStatus() {
         assertThrows(BadRequestException.class, () -> service.setStatus(1L, "banned"));
     }
 
+    /** Kiểm thử: xóa người dùng là xóa mềm. */
     @Test
     void deleteUserIsSoftDelete() {
         User user = new User();
@@ -242,6 +257,7 @@ class UserServiceTest {
         verify(userRepository, never()).delete(any());
     }
 
+    /** Kiểm thử: lấy người dùng theo id ẩn tài khoản đã xóa. */
     @Test
     void getUserByIdHidesDeletedUsers() {
         when(userRepository.findByIdAndDeletedAtIsNull(9L)).thenReturn(Optional.empty());
@@ -249,6 +265,7 @@ class UserServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> service.getUserById(9L));
     }
 
+    /** Kiểm thử: tìm người dùng đang hoạt động ném lỗi khi không có. */
     @Test
     void findActiveUserThrowsWhenMissing() {
         when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
@@ -256,6 +273,7 @@ class UserServiceTest {
         assertThrows(ResourceNotFoundException.class, () -> service.setStatus(99L, "locked"));
     }
 
+    /** Kiểm thử: cập nhật ca lễ tân cập nhật cho đúng lễ tân. */
     @Test
     void updateReceptionistShiftUpdatesShiftForReceptionist() {
         User user = new User();
@@ -271,6 +289,7 @@ class UserServiceTest {
         verify(receptionistRepository).save(any());
     }
 
+    /** Kiểm thử: cập nhật ca lễ tân từ chối vai trò khác. */
     @Test
     void updateReceptionistShiftRejectsNonReceptionistRole() {
         User user = new User();
@@ -284,9 +303,10 @@ class UserServiceTest {
                 service.updateReceptionistShift(5L, new com.swp391.scms.users.dto.ReceptionistProfileUpdateDto("Morning")));
     }
 
+    /** Kiểm thử: dọn dẹp xóa người dùng không hoạt động trừ subscription đang đóng băng. */
     @Test
     void cleanupInactiveUsersDeletesInactiveUsersExceptFrozenSubscriptions() {
-        // User 1: Inactive > 6 months, not frozen -> SHOULD BE DELETED
+        // Người dùng 1: Không hoạt động > 6 tháng, không đóng băng -> PHẢI BỊ XÓA
         User user1 = new User();
         user1.setId(10L);
         com.swp391.scms.users.entity.Role roleMember = new com.swp391.scms.users.entity.Role();
@@ -294,13 +314,13 @@ class UserServiceTest {
         user1.setRole(roleMember);
         user1.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(7));
 
-        // User 2: Inactive > 6 months, but has FROZEN subscription -> MUST BE PRESERVED
+        // Người dùng 2: Không hoạt động > 6 tháng, nhưng có gói đang ĐÓNG BĂNG -> PHẢI GIỮ LẠI
         User user2 = new User();
         user2.setId(20L);
         user2.setRole(roleMember);
         user2.setLastLoginAt(java.time.LocalDateTime.now().minusMonths(8));
 
-        // User 3: CENTER_MANAGER inactive > 6 months -> MUST BE PRESERVED
+        // Người dùng 3: CENTER_MANAGER không hoạt động > 6 tháng -> PHẢI GIỮ LẠI
         User user3 = new User();
         user3.setId(30L);
         com.swp391.scms.users.entity.Role roleAdmin = new com.swp391.scms.users.entity.Role();
@@ -323,6 +343,7 @@ class UserServiceTest {
         verify(userRepository, never()).save(user3);
     }
 
+    /** Kiểm thử: dọn dẹp giữ nhân viên và hội viên vẫn quét vào hoặc thanh toán dù không đăng nhập. */
     @Test
     void cleanupKeepsStaffAndMembersWhoScanInOrPayWithoutSigningIn() {
         var memberRole = new com.swp391.scms.users.entity.Role();
@@ -356,6 +377,7 @@ class UserServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    /** Kiểm thử: chặn xóa hội viên còn membership hoặc HLV còn lớp. */
     @Test
     void deletingMemberWithMembershipOrCoachWithClassesIsBlocked() {
         var memberRole = new com.swp391.scms.users.entity.Role();
@@ -386,6 +408,7 @@ class UserServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    /** Kiểm thử: quản lý đổi trạng thái từ chối đối tượng không phải nhân viên. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"ADMIN", "CENTER_MANAGER", "MEMBER"})
     void managerStatusChangeRejectsNonStaffTargets(String code) {
@@ -400,6 +423,7 @@ class UserServiceTest {
         verify(userRepository, never()).save(any());
     }
 
+    /** Kiểm thử: quản lý khóa và mở khóa được nhân viên. */
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"COACH", "RECEPTIONIST"})
     void managerCanLockAndUnlockStaff(String code) {

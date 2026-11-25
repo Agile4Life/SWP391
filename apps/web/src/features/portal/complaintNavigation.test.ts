@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { PORTAL_NAV } from './portalNavigation';
 
 describe('complaint navigation', () => {
+  // Các liên kết điều hướng mà một vai trò nhìn thấy.
   const linksFor = (role: Parameters<typeof PORTAL_NAV[number]['roles']['includes']>[0]) =>
     PORTAL_NAV.filter(item => item.roles.includes(role)).map(item => item.to);
 

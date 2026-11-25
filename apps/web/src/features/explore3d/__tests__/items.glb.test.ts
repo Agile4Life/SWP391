@@ -14,6 +14,7 @@ import {
   unregisterItemGeometryOverride,
 } from '../renderers/items/itemGeometries';
 
+// Tạo mô hình GLB giả.
 function makeModel(): THREE.Group {
   const root = new THREE.Group();
   const red = new THREE.Mesh(
@@ -31,6 +32,7 @@ function makeModel(): THREE.Group {
   return root;
 }
 
+// Tính hộp bao của một hình học.
 function bounds(geometry: THREE.BufferGeometry): THREE.Box3 {
   geometry.computeBoundingBox();
   return geometry.boundingBox!.clone();
@@ -50,7 +52,7 @@ describe('buildItemGeometryFromObject', () => {
     expect((box.min.x + box.max.x) / 2).toBeCloseTo(0, 5);
     expect((box.min.z + box.max.z) / 2).toBeCloseTo(0, 5);
     expect(Math.max(size.x, size.y, size.z)).toBeCloseTo(1, 4);
-    // Source model is 2 : 2 : 1 (red box on its side plus the sphere on top); proportions are kept.
+    // Mô hình nguồn có tỉ lệ 2 : 2 : 1 (hộp đỏ nằm ngang cộng thêm khối cầu phía trên); tỉ lệ kích thước được bảo toàn.
     expect(size.x / size.z).toBeCloseTo(2, 1);
   });
 

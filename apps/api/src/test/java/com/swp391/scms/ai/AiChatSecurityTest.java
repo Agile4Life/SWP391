@@ -18,8 +18,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho AiChatSecurity (ai chat security). */
 @SpringJUnitConfig(AiChatSecurityTest.Config.class)
 class AiChatSecurityTest {
+    /** Bộ kiểm thử cho cấu hình Config (config). */
     @Configuration
     @EnableMethodSecurity
     static class Config {
@@ -60,7 +62,7 @@ class AiChatSecurityTest {
         verify(service).getMySessions(30L, "RECEPTIONIST");
     }
 
-    /** Coaches use the AI only for workout plan suggestions, not the chat. */
+    /** Huấn luyện viên chỉ dùng AI để gợi ý kế hoạch tập luyện, không dùng tính năng chat. */
     @Test void rejectsCoach() {
         var coach = new AuthenticatedPrincipal(20L, "coach", "COACH");
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(coach, null,

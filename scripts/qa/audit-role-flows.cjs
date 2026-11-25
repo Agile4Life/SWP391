@@ -1,4 +1,4 @@
-// Browser audit with intercepted API fixtures. No database or Google account is contacted.
+// Mục đích: kiểm tra luồng giao diện theo từng vai trò bằng trình duyệt với API giả lập, không kết nối cơ sở dữ liệu hay tài khoản Google.
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright-core');
@@ -10,6 +10,7 @@ const unknown = new Set();
 const profile = { userId: 1, fullName: 'Audit user', email: 'audit@example.test', phone: '0901234567', gender: 'other', dob: null, avatarUrl: null, address: null, membershipCode: 'MEM-1', healthNotes: null, fitnessGoal: null, fitnessLevel: 'beginner', emergencyContactName: null, emergencyContactPhone: null };
 const roleDtos = ['CENTER_MANAGER', 'COACH', 'RECEPTIONIST', 'MEMBER', 'ADMIN'].map((code, i) => ({ id: i + 1, code }));
 
+// Chặn và giả lập các API theo trạng thái (vai trò) của kịch bản.
 async function fixtures(page, state) {
   await page.route('**/api/v1/**', async route => {
     const req = route.request();
@@ -31,7 +32,7 @@ async function fixtures(page, state) {
     else if (endpoint === '/members/lookup') data = [{ userId: 1, fullName: 'Audit member', email: 'member@example.test', membershipCode: 'MEM-1', status: 'active' }];
     else if (endpoint === '/check-in/gate-qr') data = { qrCode: 'SOL:GATE:1:A1:fixture', gateId: 'A1', gate: 'Audit gate', expiresInSeconds: 60, generatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 60000).toISOString() };
     else if (endpoint.includes('/renewal-candidates') && ['CENTER_MANAGER', 'RECEPTIONIST'].includes(role)) {
-      // Reproduces the actual SecurityConfig generic subscription matcher. Confirm separately with MockMvc.
+      // Tái hiện đúng matcher tổng quát cho subscription trong SecurityConfig; cần xác nhận riêng bằng MockMvc.
       status = 403;
       data = null;
     } else if (endpoint === '/coaching/training-plans' && req.method() === 'POST' && role === 'CENTER_MANAGER' && !req.postDataJSON().coach_id) {
@@ -42,6 +43,7 @@ async function fixtures(page, state) {
   await page.route('https://**', route => route.abort());
 }
 
+// Chờ trang ổn định (tải xong, hết hiệu ứng) trước khi kiểm tra.
 async function waitPage(page) {
   await page.locator('.portal-v2').waitFor({ timeout: 6000 });
   await page.waitForTimeout(350);
@@ -112,7 +114,7 @@ async function waitPage(page) {
       result.transitions.push({ role, action: 'logout', tokenCleared: await page.evaluate(() => localStorage.getItem('fitcenter_token') === null), sessionCleared: await page.evaluate(() => localStorage.getItem('fitcenter_auth_session') === null) });
     }
 
-    // A second tab changes the same browser's account while the first tab has mounted Member UI.
+    // Tab thứ hai đổi tài khoản trên cùng trình duyệt trong khi tab đầu tiên đang hiển thị giao diện hội viên.
     await page.goto(base + '/login');
     await page.evaluate(() => {
       localStorage.setItem('fitcenter_token', 'audit-MEMBER');
@@ -131,7 +133,7 @@ async function waitPage(page) {
     result.targeted.push({ name: 'cross-tab-account-change', firstTabPath: new URL(page.url()).pathname, firstTabHeading: await page.locator('h1').first().textContent(), firstTabMenu: await page.locator('.app-sidebar a[href]').evaluateAll(items => items.map(item => item.getAttribute('href'))), storedRole: await page.evaluate(() => JSON.parse(localStorage.getItem('fitcenter_auth_session')).role) });
     await page.screenshot({ path: path.join(output, 'cross-tab-stale-member.png') });
 
-    // A response from the old account arrives after a different account is already signed in.
+    // Phản hồi từ tài khoản cũ trả về sau khi một tài khoản khác đã đăng nhập.
     await page.evaluate(() => {
       localStorage.setItem('fitcenter_token', 'audit-MEMBER');
       localStorage.setItem('fitcenter_auth_session', JSON.stringify({ id: '1', name: 'Old member', identifier: 'member', role: 'MEMBER' }));

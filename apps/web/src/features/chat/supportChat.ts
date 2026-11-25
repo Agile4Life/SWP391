@@ -13,6 +13,7 @@ export const SUPPORT_CATEGORIES = [
   { value: 'Lịch học', vi: 'Lịch học', en: 'Class schedule' },
   { value: 'Khác', vi: 'Khác', en: 'Other' },
 ] as const;
+/** Mã phân loại phiếu hỗ trợ (Gói tập, Thiết bị, Lịch học, Khác). */
 export type SupportCategory = typeof SUPPORT_CATEGORIES[number]['value'];
 
 export const SUPPORT_SUBJECT_MAX = 150;
@@ -27,11 +28,13 @@ export const SUPPORT_STATUS_LABEL: Record<SupportTicket['status'], [string, stri
 
 const PREFIX = /^\[(Gói tập|Thiết bị|Lịch học|Khác)\] /;
 
+/** Phân loại phiếu từ tiền tố [Loại] ở đầu tiêu đề (không có thì là "Khác"). */
 export function categoryOf(subject: string): SupportCategory {
   const match = PREFIX.exec(subject);
   return (match?.[1] as SupportCategory | undefined) ?? 'Khác';
 }
 
+/** Tiêu đề hiển thị: bỏ tiền tố phân loại. */
 export function displaySubject(subject: string): string {
   return subject.replace(PREFIX, '');
 }
@@ -45,18 +48,22 @@ export function buildSubject(category: SupportCategory, text: string): string {
   return prefix + title;
 }
 
+/** Bỏ tin nhắn trùng id. */
 export function uniqueMessages(messages: SupportMessage[]): SupportMessage[] {
   return [...new Map(messages.map(message => [message.id, message])).values()];
 }
 
+/** Lỗi hiển thị của phiếu hỗ trợ: giữ ApiError, nếu không dùng câu dự phòng song ngữ. */
 export function supportError(cause: unknown): ChatError {
   return cause instanceof ApiError ? cause : sourceMessage('Không thể hoàn tất yêu cầu. Vui lòng thử lại.', 'Unable to complete the request. Please try again.');
 }
 
+/** Lỗi 403 hoặc 404 nghĩa là không còn quyền truy cập phiếu. */
 export function isAccessDenied(cause: unknown): boolean {
   return cause instanceof ApiError && (cause.status === 403 || cause.status === 404);
 }
 
+/** Một bong bóng chat: id, của mình hay không, người gửi, nội dung và thời điểm. */
 export interface SupportBubble { id: string; mine: boolean; sender: string | null; text: string; at: string }
 
 /** Nội dung phiếu ban đầu hiển thị như tin nhắn đầu tiên của hội viên, sau đó là các tin trao đổi. */

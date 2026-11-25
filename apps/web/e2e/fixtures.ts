@@ -46,6 +46,7 @@ export async function settled(page: Page) {
   await page.waitForTimeout(250);
 }
 
+// Vùng nội dung chính (main) đầu tiên của trang portal.
 export const portalMain = (page: Page) => page.locator('main').first();
 
 /** Ô nhập tìm theo nhãn hoặc placeholder (app dùng cả hai kiểu). */

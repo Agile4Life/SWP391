@@ -23,9 +23,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho NotificationChannelAdapters (notification channel adapters). */
 @ExtendWith(MockitoExtension.class)
 class NotificationChannelAdaptersTest {
 
+    /** Kiểm thử: kênh mô phỏng không ghi địa chỉ hay nội dung thông báo vào log. */
     @Test
     void simulatedChannelsDoNotLogAddressesOrNotificationContents() {
         Logger emailLogger = (Logger) LoggerFactory.getLogger(MockEmailNotificationChannelAdapter.class);
@@ -69,6 +71,7 @@ class NotificationChannelAdaptersTest {
     @Mock
     private UserRepository userRepository;
 
+    /** Kiểm thử: adapter trong ứng dụng thành công. */
     @Test
     @DisplayName("InAppAdapter: saves notification for active user")
     void inAppAdapter_Success() {
@@ -93,6 +96,7 @@ class NotificationChannelAdaptersTest {
         verify(notificationRepository).save(any(Notification.class));
     }
 
+    /** Kiểm thử: adapter trong ứng dụng bỏ qua khi không có người dùng. */
     @Test
     @DisplayName("InAppAdapter: skips when user not found or deleted")
     void inAppAdapter_UserNotFound_Skips() {
@@ -112,6 +116,7 @@ class NotificationChannelAdaptersTest {
         verify(notificationRepository, never()).save(any());
     }
 
+    /** Kiểm thử: adapter email giả lập thành công. */
     @Test
     @DisplayName("MockEmailAdapter: logs email simulation with user email lookup")
     void mockEmailAdapter_Success() {
@@ -135,6 +140,7 @@ class NotificationChannelAdaptersTest {
         verify(userRepository).findByIdAndDeletedAtIsNull(101L);
     }
 
+    /** Kiểm thử: adapter push giả lập thành công. */
     @Test
     @DisplayName("MockPushAdapter: logs push simulation")
     void mockPushAdapter_Success() {
@@ -150,9 +156,10 @@ class NotificationChannelAdaptersTest {
                 .build();
 
         adapter.send(payload);
-        // Logging executed safely without throwing
+        // Ghi log thực thi an toàn, không ném ngoại lệ
     }
 
+    /** Kiểm thử: adapter webhook giả lập thành công. */
     @Test
     @DisplayName("MockWebhookAdapter: logs webhook simulation")
     void mockWebhookAdapter_Success() {
@@ -168,9 +175,10 @@ class NotificationChannelAdaptersTest {
                 .build();
 
         adapter.send(payload);
-        // Webhook executed safely without throwing
+        // Webhook thực thi an toàn, không ném ngoại lệ
     }
 
+    /** Kiểm thử: adapter email gửi thông báo nạp ví qua Resend thành công. */
     @Test
     @DisplayName("EmailAdapter: dispatches wallet credit notification via Resend HTTP API when apiKey is configured")
     void emailAdapter_ResendWalletCredit_Success() {

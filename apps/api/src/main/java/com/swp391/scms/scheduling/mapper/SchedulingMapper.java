@@ -11,9 +11,14 @@ import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Component;
 
+/** Chuyển entity lớp học/buổi học sang DTO trả về client. */
 @Component
 public class SchedulingMapper {
 
+    /**
+     * Chuyển GymClass sang GymClassDto: thông tin lớp, bộ môn, HLV, phòng, sức chứa, giá và lịch định kỳ
+     * (trường liên kết null thì để null).
+     */
     public GymClassDto toDto(GymClass gymClass) {
         return new GymClassDto(
                 gymClass.getId(),
@@ -38,15 +43,23 @@ public class SchedulingMapper {
         );
     }
 
-    /** True when a class is missing the schedule fields the course screens rely on (classes made before them). */
+    /**
+     * True khi lớp thiếu dữ liệu lịch (ngày lặp, ngày bắt đầu/kết thúc) mà màn khóa học cần — thường là lớp tạo
+     * trước khi có các trường này.
+     *
+     * True khi lớp thiếu các trường lịch mà màn khóa học cần (các lớp tạo trước khi có chúng).
+     */
     public static boolean lacksSchedule(GymClass gymClass) {
         return gymClass.getRecurringDays() == null || gymClass.getRecurringDays().isBlank()
                 || gymClass.getStartDate() == null || gymClass.getEndDate() == null;
     }
 
     /**
-     * Like {@link #toDto(GymClass)}, but fills a missing schedule (weekdays, first and last day, times) from the class's
-     * real sessions, so screens show the days it actually meets instead of guessing a default.
+     * Như toDto(GymClass) nhưng nếu lớp thiếu lịch thì suy ra thứ trong tuần, ngày đầu/cuối và giờ học từ các
+     * buổi thực tế (ưu tiên buổi chưa hủy).
+     *
+     * Giống {@link #toDto(GymClass)}, nhưng điền lịch còn thiếu (thứ, ngày đầu và cuối, giờ) từ các buổi thật
+     * của lớp, để màn hình hiện đúng các ngày lớp thực sự học thay vì đoán mặc định.
      */
     public GymClassDto toDto(GymClass gymClass, List<ClassSession> classSessions) {
         GymClassDto dto = toDto(gymClass);
@@ -70,6 +83,10 @@ public class SchedulingMapper {
                 dto.endTime() != null ? dto.endTime() : sample.getEndTime());
     }
 
+    /**
+     * Chuyển ClassSession sang ClassSessionDto kèm thông tin lớp, bộ môn, HLV, phòng, sức chứa và số chỗ đã
+     * đặt.
+     */
     public ClassSessionDto toDto(ClassSession session, long bookedCount) {
         GymClass gymClass = session.getGymClass();
         return new ClassSessionDto(

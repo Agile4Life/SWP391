@@ -17,18 +17,22 @@ import { CitySky } from './CitySky';
 import { CityTraffic } from './CityTraffic';
 import { isExteriorWorldVisible } from './LevelStack';
 
+/** Raycast rỗng để thành phố nền không bắt sự kiện chuột. */
 const NOOP_RAYCAST = () => null;
 
-/** Surrounding skyline, road grid, metro viaduct, plus wind-animated campus flags. */
+/**
+ * Thành phố nền: đường chân trời, lưới đường, cầu cạn metro, kính, cây và cờ khuôn viên động theo gió.
+ */
 export function CityMetropolis() {
   const theme = useDocumentTheme();
   const tier = useExploreStore(s => s.tier);
   const levelMode = useExploreStore(s => s.levelMode);
   const focusLevel = useExploreStore(s => s.focusLevel);
+  // Hình học thành phố theo theme và mức chất lượng.
   const city = useMemo(() => buildCityMetropolis(theme, tier), [theme, tier]);
   const visible = isExteriorWorldVisible(levelMode, focusLevel);
 
-  // Scanned-concrete / asphalt grain & surface roughness from per-vertex `surf`.
+  // Vật liệu đặc (bê tông quét/nhựa đường) lấy hạt bề mặt và độ nhám từ thuộc tính `surf` trên từng đỉnh.
   const opaqueMat = useMemo(
     () =>
       applySurfaceDetail(
@@ -37,18 +41,19 @@ export function CityMetropolis() {
       ),
     [],
   );
+  // Vật liệu kim loại.
   const metalMat = useMemo(
     () =>
       applySurfaceDetail(
         new THREE.MeshStandardMaterial({ name: 'sol-city-metal', vertexColors: true, roughness: 0.38, metalness: 0.65, envMapIntensity: 1.5 }),
-        // Relief at 80 cycles/m is sub-pixel from the locked camera distance, so skip it.
+        // Độ nổi 80 chu kỳ/m nhỏ hơn kích thước pixel ở khoảng cách camera khóa, nên bỏ qua.
         { ...SURFACE_DETAIL_PRESETS.metal, bump: 0, albedo: 0, roughness: 0 },
       ),
     [],
   );
   useEffect(() => () => opaqueMat.dispose(), [opaqueMat]);
   useEffect(() => () => metalMat.dispose(), [metalMat]);
-  // Translucent so the penthouse stays visible from above through its roof.
+  // Vật liệu kính mái bán trong suốt để vẫn nhìn thấy tầng penthouse bên dưới khi quan sát từ trên cao.
   const roofGlassMat = useMemo(
     () =>
       applyArchitecturalGlassShader(
@@ -73,6 +78,7 @@ export function CityMetropolis() {
     );
   }, [roofGlassMat, theme]);
   useEffect(() => () => roofGlassMat.dispose(), [roofGlassMat]);
+  // Vật liệu kính của các tòa nhà.
   const glassMat = useMemo(
     () =>
       applyCityGlazingShader(
@@ -87,6 +93,7 @@ export function CityMetropolis() {
       ),
     [theme],
   );
+  // Vật liệu tán lá cây của thành phố.
   const cityFoliageBundle = useMemo(
     () => createFoliageMaterialBundle('sol-city-foliage', theme === 'light'),
     [theme],
@@ -99,6 +106,7 @@ export function CityMetropolis() {
     },
     [cityFoliageBundle],
   );
+  // Vật liệu phát sáng, không tone map.
   const emissiveMat = useMemo(
     () => new THREE.MeshBasicMaterial({ name: 'sol-city-emissive', vertexColors: true, toneMapped: false }),
     [],
@@ -127,8 +135,10 @@ export function CityMetropolis() {
   );
 }
 
+/** Các lá cờ trên cột cờ khuôn viên, uốn lượn theo gió. */
 function Flags({ isLight }: { isLight: boolean }) {
   const invalidate = useThree(s => s.invalidate);
+  // Tạo mặt phẳng và vật liệu cho từng lá cờ theo vị trí cột.
   const flags = useMemo(
     () =>
       CAMPUS_FLAGPOLE_ANCHORS.map(a => {
@@ -185,6 +195,7 @@ function Flags({ isLight }: { isLight: boolean }) {
   );
 }
 
+/** Props của mũ mái phòng gym: theme và các vật liệu dùng chung. */
 interface GymCrownProps {
   theme: ExploreTheme;
   glassMat: THREE.Material;
@@ -193,9 +204,12 @@ interface GymCrownProps {
   metalMat: THREE.Material;
 }
 
-/** Roof crown sits on the stacked roof slab, so it hides when levels are exploded or isolated. */
+/**
+ * Mũ mái phòng gym trên tấm mái xếp chồng; ẩn khi các tầng bị tách hoặc cô lập.
+ */
 function GymCrown({ theme, glassMat, emissiveMat, opaqueMat, metalMat }: GymCrownProps) {
   const levelMode = useExploreStore(s => s.levelMode);
+  // Hình học mũ mái theo theme.
   const crown = useMemo(() => buildGymCrown(theme), [theme]);
   return (
     <group name="sol-gym-crown" visible={levelMode === 'stacked'}>

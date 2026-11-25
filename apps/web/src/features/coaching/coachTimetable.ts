@@ -1,6 +1,7 @@
 import { staffText } from '../operations/staffI18n';
 import { hhmm, shortDate, toMinutes, todayISO, type TimetableEvent } from '../schedule/timetable';
 
+/** Dạng dữ liệu buổi học mà bảng lịch của HLV cần. */
 interface SessionLike {
   id: number;
   className: string;
@@ -13,6 +14,7 @@ interface SessionLike {
   capacity: number;
 }
 
+/** Dạng dữ liệu buổi kèm 1:1 mà bảng lịch của HLV cần. */
 interface PtBookingLike {
   id: number;
   memberName: string;
@@ -22,6 +24,7 @@ interface PtBookingLike {
   status: string;
 }
 
+/** Buổi học đã kết thúc chưa so với thời điểm now. */
 export function hasEnded(session: Pick<SessionLike, 'sessionDate' | 'endTime'>, now: Date): boolean {
   const today = todayISO(now);
   return session.sessionDate < today

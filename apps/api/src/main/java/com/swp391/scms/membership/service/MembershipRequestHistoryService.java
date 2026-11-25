@@ -7,6 +7,7 @@ import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -17,12 +18,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * History of the membership requests (register, renew, upgrade) the desk has processed: the ones paid and activated,
- * and the ones withdrawn before payment. The pending queue only lists open requests, so without this the desk could
- * not look back at what it approved.
+ * Lịch sử các yêu cầu gói tập (đăng ký, gia hạn, nâng cấp) mà quầy đã xử lý: các yêu cầu đã thanh toán và kích hoạt,
+ * cùng các yêu cầu đã rút trước khi thanh toán. Hàng chờ xử lý chỉ liệt kê các yêu cầu đang mở, nên không có màn này
+ * quầy sẽ không thể tra cứu lại những gì đã duyệt.
  */
 @Service
 public class MembershipRequestHistoryService {
+    public static final int ALL_TIME_DAYS = 0;
+    public static final int TODAY_DAYS = 1;
     public static final int DEFAULT_DAYS = 30;
     public static final int MAX_DAYS = 180;
     private static final List<String> SETTLED = List.of("success", "refunded");
@@ -31,6 +34,7 @@ public class MembershipRequestHistoryService {
     private final MembershipSubscriptionRepository subscriptions;
     private final Clock clock;
 
+    /** Nhận repository thanh toán, repository gói và Clock. */
     public MembershipRequestHistoryService(PaymentRepository payments, MembershipSubscriptionRepository subscriptions,
                                            Clock clock) {
         this.payments = payments;
@@ -38,21 +42,34 @@ public class MembershipRequestHistoryService {
         this.clock = clock;
     }
 
+    /**
+     * Gom các kỳ có thanh toán thành công trong khoảng ngày (APPROVED) và các kỳ bị hủy mà chưa từng thanh toán
+     * (CANCELLED), mới nhất trước. Kỳ đã thanh toán rồi mới hủy thuộc luồng hủy/hoàn tiền nên bỏ qua.
+     */
     @Transactional(readOnly = true)
     public List<RequestHistoryDto> history(Integer days) {
-        int window = days == null ? DEFAULT_DAYS : Math.max(1, Math.min(MAX_DAYS, days));
-        LocalDateTime since = LocalDateTime.now(clock).minusDays(window);
+        boolean allTime = days != null && days == ALL_TIME_DAYS;
+        boolean todayOnly = days != null && days == TODAY_DAYS;
+        int window = days == null ? DEFAULT_DAYS : Math.max(TODAY_DAYS, Math.min(MAX_DAYS, days));
+        // ALL_TIME_DAYS (0) là toàn bộ lịch sử; TODAY_DAYS (1) bắt đầu lúc 00:00 theo Clock giờ trung tâm.
+        LocalDateTime since = todayOnly ? LocalDate.now(clock).atStartOfDay() : LocalDateTime.now(clock).minusDays(window);
         List<RequestHistoryDto> rows = new ArrayList<>();
         Set<Long> settled = new HashSet<>();
-        for (Payment payment : payments.findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(SETTLED, since)) {
+        List<Payment> settledPayments = allTime
+                ? payments.findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(SETTLED)
+                : payments.findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(SETTLED, since);
+        for (Payment payment : settledPayments) {
             MembershipSubscription sub = payment.getSubscription();
             if (sub == null || !visible(sub) || !settled.add(sub.getId())) continue;
             rows.add(row(sub, "APPROVED", payment.getAmount(), payment.getMethod(), payment.getPaidAt(),
                     payment.getReceivedBy() == null ? null : payment.getReceivedBy().getFullName()));
         }
-        for (MembershipSubscription sub : subscriptions.findByStatusAndUpdatedAtGreaterThanEqualOrderByUpdatedAtDesc("cancelled", since)) {
+        List<MembershipSubscription> cancelledSubs = allTime
+                ? subscriptions.findByStatusOrderByUpdatedAtDesc("cancelled")
+                : subscriptions.findByStatusAndUpdatedAtGreaterThanEqualOrderByUpdatedAtDesc("cancelled", since);
+        for (MembershipSubscription sub : cancelledSubs) {
             if (settled.contains(sub.getId()) || !visible(sub)) continue;
-            // A paid period cancelled later belongs to the cancellation/refund flow, not to this request history.
+            // Kỳ đã thanh toán rồi bị hủy về sau thuộc luồng hủy/hoàn tiền, không thuộc lịch sử yêu cầu này.
             boolean wasPaid = payments.findAllBySubscriptionId(sub.getId()).stream()
                     .anyMatch(p -> SETTLED.contains(p.getStatus()));
             if (wasPaid) continue;
@@ -62,10 +79,12 @@ public class MembershipRequestHistoryService {
         return rows;
     }
 
+    /** Bỏ hội viên đã bị xóa. */
     private static boolean visible(MembershipSubscription sub) {
         return sub.getMember() != null && sub.getMember().getUser() != null && sub.getMember().getUser().getDeletedAt() == null;
     }
 
+    /** Loại yêu cầu: không có kỳ trước là REGISTER; khác gói hoặc có phí nâng cấp là UPGRADE; còn lại là RENEW. */
     static String typeOf(MembershipSubscription sub) {
         MembershipSubscription previous = sub.getPreviousSubscription();
         if (previous == null) return "REGISTER";
@@ -74,6 +93,7 @@ public class MembershipRequestHistoryService {
         return otherPackage || sub.getUpgradeCharge() != null ? "UPGRADE" : "RENEW";
     }
 
+    /** Tạo một dòng lịch sử từ kỳ gói và kết quả. */
     private static RequestHistoryDto row(MembershipSubscription sub, String outcome, BigDecimal amount,
                                          String method, LocalDateTime at, String by) {
         var member = sub.getMember();

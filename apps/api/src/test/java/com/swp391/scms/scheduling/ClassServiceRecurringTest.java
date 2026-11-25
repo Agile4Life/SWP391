@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho ClassServiceRecurring (class service recurring). */
 class ClassServiceRecurringTest {
 
     private GymClassRepository gymClasses = mock(GymClassRepository.class);
@@ -44,11 +45,13 @@ class ClassServiceRecurringTest {
 
     private ClassService classService;
 
+    /** Chuẩn bị trước mỗi test: tạo ClassService với repository giả lập. */
     @BeforeEach
     void setUp() {
         classService = new ClassService(gymClasses, sessions, enrollments, disciplines, coaches, rooms, mapper, clock);
     }
 
+    /** Kiểm thử: tạo lớp định kỳ thành công và sinh các buổi theo lịch. */
     @Test
     void testCreateRecurringClassSuccess() {
         Discipline discipline = mock(Discipline.class);
@@ -72,7 +75,7 @@ class ClassServiceRecurringTest {
             return c;
         });
 
-        // Advance schedule: 3 weeks later (2026-11-30 to 2026-12-11), Mon & Wed = 4 sessions
+        // Lịch mở trước: sau 3 tuần (2026-11-30 đến 2026-12-11), Thứ 2 & Thứ 4 = 4 buổi học
         CreateRecurringClassRequest req = new CreateRecurringClassRequest(
                 "Yoga Advance", 1L, 2L, 3L, 20, "beginner", "Description",
                 new BigDecimal("500000"),
@@ -88,6 +91,7 @@ class ClassServiceRecurringTest {
         verify(sessions, atLeast(4)).saveAndFlush(any(ClassSession.class));
     }
 
+    /** Hàm trợ giúp của test: giả lập danh mục (phòng, bộ môn, HLV) cho việc tạo lớp. */
     private void stubCatalog() {
         Discipline discipline = mock(Discipline.class);
         when(discipline.getId()).thenReturn(1L);
@@ -108,12 +112,14 @@ class ClassServiceRecurringTest {
         });
     }
 
+    /** Hàm trợ giúp của test: lấy các ngày buổi học đã được lưu. */
     private List<LocalDate> savedDates() {
         var captor = org.mockito.ArgumentCaptor.forClass(ClassSession.class);
         verify(sessions, atLeastOnce()).saveAndFlush(captor.capture());
         return captor.getAllValues().stream().map(ClassSession::getSessionDate).sorted().toList();
     }
 
+    /** Kiểm thử: khóa học hằng tuần diễn ra vào các thứ đã chọn mỗi tuần. */
     @Test
     void aWeeklyCourseMeetsOnTheChosenWeekdaysEveryWeek() {
         stubCatalog();
@@ -127,6 +133,7 @@ class ClassServiceRecurringTest {
                 LocalDate.of(2026, 12, 9)), savedDates());
     }
 
+    /** Kiểm thử: khóa học hằng tuần vẫn bắt buộc chọn thứ trong tuần. */
     @Test
     void aWeeklyCourseStillNeedsWeekdays() {
         stubCatalog();

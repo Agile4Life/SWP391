@@ -16,11 +16,13 @@ import java.time.ZoneId;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
+/** Bộ kiểm thử cho service MemberDiscountService (member discount service). */
 class MemberDiscountServiceTest {
     private final MembershipSubscriptionRepository subscriptions = mock(MembershipSubscriptionRepository.class);
     private final Clock clock = Clock.fixed(Instant.parse("2026-11-09T08:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh"));
     private final MemberDiscountService service = new MemberDiscountService(subscriptions, clock);
 
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sub). */
     private MembershipSubscription sub(String name, String tier, int days, LocalDate start, LocalDate end) {
         MembershipPackage pkg = new MembershipPackage();
         pkg.setName(name);
@@ -34,6 +36,7 @@ class MemberDiscountServiceTest {
         return s;
     }
 
+    /** Kiểm thử: Gold giảm 10%, Platinum 20%, Silver và gói thử không giảm. */
     @Test
     void goldGetsTenPercentPlatinumTwentyAndSilverAndTrialNothing() {
         LocalDate today = LocalDate.of(2026, 11, 9);
@@ -49,6 +52,7 @@ class MemberDiscountServiceTest {
         assertThat(service.percentFor(null)).isZero();
     }
 
+    /** Kiểm thử: kỳ hết hạn hoặc ở tương lai không được tính. */
     @Test
     void anExpiredOrFuturePeriodDoesNotCount() {
         LocalDate today = LocalDate.of(2026, 11, 9);
@@ -59,6 +63,7 @@ class MemberDiscountServiceTest {
         assertThat(service.percentFor(1L)).isZero();
     }
 
+    /** Kiểm thử: số tiền làm tròn đến đồng và không bao giờ âm. */
     @Test
     void amountsAreRoundedToWholeDongAndNeverGoNegative() {
         assertThat(MemberDiscountService.apply(new BigDecimal("200000"), 10)).isEqualByComparingTo("180000");

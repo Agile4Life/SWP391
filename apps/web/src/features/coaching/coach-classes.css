@@ -1,9 +1,10 @@
+/* Mục đích: Kiểu cho các màn hình lớp học và lịch dạy của HLV. */
 .coach-page {
   padding-bottom: 60px;
 }
 
 /* ==========================================================================
-   WEEK NAVIGATION BAR
+   THANH ĐIỀU HƯỚNG TUẦN
    ========================================================================== */
 .coach-week-bar {
   display: flex;
@@ -70,7 +71,7 @@
 }
 
 /* ==========================================================================
-   DAY SELECTOR STRIP
+   THANH CHỌN NGÀY TRONG TUẦN
    ========================================================================== */
 .coach-day-strip {
   display: grid;
@@ -153,7 +154,7 @@
 }
 
 /* ==========================================================================
-   METRICS GRID
+   LƯỚI CHỈ SỐ TỔNG QUAN
    ========================================================================== */
 .coach-metrics-grid {
   display: grid;
@@ -202,7 +203,7 @@
 }
 
 /* ==========================================================================
-   SESSIONS SECTION & CARDS
+   KHU VỰC BUỔI DẠY & THẺ BUỔI DẠY
    ========================================================================== */
 .coach-session-section,
 .coach-sessions-section {
@@ -369,7 +370,7 @@
 }
 
 /* ==========================================================================
-   BUTTON: VIEW STUDENTS (THEME-ALIGNED BUTTON)
+   NÚT: XEM HỌC VIÊN (ĐỒNG BỘ THEME)
    ========================================================================== */
 .coach-card-actions,
 .coach-session-actions {
@@ -412,7 +413,7 @@
 }
 
 /* ==========================================================================
-   MODAL: ENROLLED STUDENTS LIST & HEALTH NOTES (Rộng rãi & dễ đọc)
+   HỘP THOẠI: DANH SÁCH HỌC VIÊN ĐÃ GHI DANH & LƯU Ý SỨC KHỎE (Rộng rãi & dễ đọc)
    ========================================================================== */
 dialog.portal-dialog.coach-students-modal-dialog {
   width: min(980px, calc(100vw - 40px));
@@ -903,7 +904,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 }
 
 /* ==========================================================================
-   EMPTY / LOADING STATES
+   TRẠNG THÁI RỖNG / ĐANG TẢI
    ========================================================================== */
 .coach-loading-box,
 .coach-error-box,
@@ -939,7 +940,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 }
 
 /* ==========================================================================
-   RESPONSIVE DESIGN
+   GIAO DIỆN ĐÁP ỨNG (RESPONSIVE)
    ========================================================================== */
 @media (max-width: 1100px) {
   .coach-metrics-grid {
@@ -972,7 +973,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 }
 
 /* ==========================================================================
-   STUDENTS SECTION IN TAB
+   KHU VỰC HỌC VIÊN TRONG TAB
    ========================================================================== */
 .coach-students-section {
   display: flex;

@@ -26,21 +26,25 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/** Bộ kiểm thử cho controller ShopAddressController (shop address controller). */
 class ShopAddressControllerTest {
     AddressService service;
     MockMvc mvc;
 
+    /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller địa chỉ shop. */
     @BeforeEach
     void setup() {
         service = mock(AddressService.class);
         mvc = MockMvcBuilders.standaloneSetup(new ShopAddressController(service))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     @Override
                     public boolean supportsParameter(MethodParameter parameter) {
                         return parameter.getParameterType() == AuthenticatedPrincipal.class;
                     }
 
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     @Override
                     public Object resolveArgument(MethodParameter p, ModelAndViewContainer c, NativeWebRequest r, WebDataBinderFactory f) {
                         return new AuthenticatedPrincipal(1L, "member", "MEMBER");
@@ -49,6 +53,7 @@ class ShopAddressControllerTest {
                 .build();
     }
 
+    /** Kiểm thử: liệt kê, tạo và validate địa chỉ. */
     @Test
     void listsCreatesAndValidatesAddresses() throws Exception {
         AddressDto dto = new AddressDto(10L, "Nguyễn An", "0901234567", "79", "TP.HCM", "26740", "Phường Sài Gòn", "12 Lê Lợi", null, true);

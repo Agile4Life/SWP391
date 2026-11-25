@@ -1,5 +1,5 @@
-// QA only: intercept every API request; never read/write a shared database.
-// NODE_PATH supplies playwright-core; CHROME_PATH selects installed Chromium.
+// Mục đích: kiểm tra màn lịch của hội viên (chỉ dành cho QA) — chặn mọi request API, không bao giờ đọc/ghi cơ sở dữ liệu dùng chung.
+// Biến NODE_PATH cung cấp playwright-core; CHROME_PATH chọn bản Chromium đã cài đặt.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const { chromium } = require('playwright-core');

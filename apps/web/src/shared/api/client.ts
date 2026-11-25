@@ -1,5 +1,6 @@
 import { clearNotices } from '../lib/portalNotices';
 import { getLanguage, sourceMessage, type SourceMessage } from '../i18n';
+/** Thông tin phiên đăng nhập lưu ở trình duyệt: id, tên hiển thị, tên đăng nhập và vai trò trên portal. */
 export interface UserSession {
   id: string;
   name: string;
@@ -7,6 +8,7 @@ export interface UserSession {
   role: 'MEMBER' | 'STAFF' | 'COACH' | 'MANAGER' | 'ADMIN';
 }
 
+/** Kết quả đăng nhập: JWT và thông tin phiên. */
 export interface LoginResponse {
   token: string;
   user: UserSession;
@@ -18,6 +20,7 @@ export const TOKEN_STORAGE_KEY = 'fitcenter_token';
 
 const sessionListeners = new Set<() => void>();
 
+/** Báo cho mọi listener trong tab hiện tại rằng phiên đăng nhập vừa thay đổi. */
 function notifySessionChange(): void {
   sessionListeners.forEach((listener) => listener());
 }
@@ -25,6 +28,7 @@ function notifySessionChange(): void {
 /** Theo dõi thay đổi session ở tab hiện tại và (qua sự kiện `storage`) ở các tab khác. */
 export function subscribeAuthSession(listener: () => void): () => void {
   sessionListeners.add(listener);
+  // Tab khác đổi/xóa phiên (hoặc xóa toàn bộ storage) thì báo listener.
   const onStorage = (event: StorageEvent) => {
     if (event.key === null || event.key === AUTH_STORAGE_KEY || event.key === TOKEN_STORAGE_KEY) listener();
   };
@@ -44,6 +48,7 @@ export function readRawAuthSession(): string | null {
   }
 }
 
+/** Đọc chuỗi JSON phiên và chuẩn hóa mã vai trò backend sang vai trò portal; chuỗi lỗi hoặc rỗng trả null. */
 export function parseAuthSession(raw: string | null): UserSession | null {
   try {
     if (!raw) return null;
@@ -87,11 +92,16 @@ function handleUnauthorized(token: string): boolean {
 
 const SESSION_REPLACED_MESSAGE = 'Phiên đăng nhập đã thay đổi. Vui lòng tải lại trang.';
 
+/** Đường dẫn trang đăng nhập khi phiên hết hạn; đang ở trang chọn gói thì kèm returnTo để quay lại. */
 function expiredLoginPath(): string {
   const target = window.location.pathname === '/member/packages' ? window.location.pathname + window.location.search : null;
   return '/login?expired=1' + (target ? `&returnTo=${encodeURIComponent(target)}` : '');
 }
 
+/**
+ * Lỗi khi gọi API: giữ mã HTTP, mã lỗi backend và bản dịch hai ngôn ngữ (thông báo hiển thị theo ngôn ngữ hiện
+ * tại).
+ */
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -104,7 +114,7 @@ export class ApiError extends Error {
   }
 }
 
-// Map backend role codes to the UI session roles
+// Ánh xạ mã vai trò từ backend sang vai trò phiên trên giao diện
 const SESSION_ROLE: Record<string, UserSession['role']> = {
   ADMIN: 'ADMIN',
   MEMBER: 'MEMBER',
@@ -113,8 +123,8 @@ const SESSION_ROLE: Record<string, UserSession['role']> = {
   CENTER_MANAGER: 'MANAGER',
 };
 
-// Calls the real API with the stored JWT; unwraps ApiResponse.data and throws ApiError on failure
-/** Default wait before giving up on a request; uploads get longer. A caller passing its own `signal` controls it. */
+// Gọi API thật kèm JWT đã lưu; mở gói ApiResponse.data và ném ApiError khi thất bại
+/** Thời gian chờ mặc định trước khi hủy request; tải file lên có thời gian chờ dài hơn. Người gọi tự truyền `signal` sẽ toàn quyền kiểm soát. */
 export const API_TIMEOUT_MS = 30_000;
 export const API_UPLOAD_TIMEOUT_MS = 120_000;
 const TIMEOUT_MESSAGE = sourceMessage(
@@ -122,6 +132,10 @@ const TIMEOUT_MESSAGE = sourceMessage(
   'The server took too long to respond. Check your connection and try again. If you were paying, check your transaction history before retrying.',
 );
 
+/**
+ * Gọi API backend kèm JWT: tự hủy sau API_TIMEOUT_MS (tải file thì lâu hơn) trừ khi người gọi tự truyền signal;
+ * quá giờ thì ném ApiError TIMEOUT.
+ */
 export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   const isUpload = typeof FormData !== 'undefined' && init.body instanceof FormData;
@@ -140,6 +154,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   }
 }
 
+/**
+ * Gửi request thật tới /api/v1: gắn ngôn ngữ và JWT, xử lý lỗi mạng, 401 (phiên bị thay/hết hạn), 413 (file quá
+ * lớn), lỗi HTTP khác, rồi trả về phần data của ApiResponse.
+ */
 async function sendApiRequest<T>(path: string, init: RequestInit, token: string | null, timeoutSignal?: AbortSignal): Promise<T> {
   let res: Response;
   try {
@@ -147,7 +165,7 @@ async function sendApiRequest<T>(path: string, init: RequestInit, token: string 
       ...init,
       ...(timeoutSignal ? { signal: timeoutSignal } : {}),
       headers: {
-        // A FormData body needs the browser's multipart boundary, so no JSON content type then.
+        // Body dạng FormData cần trình duyệt tự gắn multipart boundary nên không đặt Content-Type là JSON.
         ...(typeof FormData !== 'undefined' && init.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
         'Accept-Language': getLanguage(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -163,19 +181,21 @@ async function sendApiRequest<T>(path: string, init: RequestInit, token: string 
     if (handleUnauthorized(token)) throw new ApiError(SESSION_REPLACED_MESSAGE, 401, 'SESSION_REPLACED', sourceMessage(SESSION_REPLACED_MESSAGE, 'Your login session has changed. Please reload the page.'));
   }
   if (res.status === 413 && !body?.message) {
-    // The proxy rejects an oversized body before the API sees it, so there is no JSON message to show.
+    // Proxy từ chối payload quá lớn trước khi request tới API nên không có thông báo JSON để hiển thị.
     const tooLarge = 'Dữ liệu gửi lên quá lớn. Hãy chọn ảnh nhỏ hơn rồi thử lại.';
     throw new ApiError(tooLarge, 413, 'PAYLOAD_TOO_LARGE', sourceMessage(tooLarge, 'The upload is too large. Choose a smaller photo and try again.'));
   }
   if (!res.ok) throw new ApiError(body?.message ?? `Yêu cầu thất bại (HTTP ${res.status})`, res.status, body?.code, body?.message ? undefined : sourceMessage(`Yêu cầu thất bại (HTTP ${res.status})`, `Request failed (HTTP ${res.status})`));
-  // ApiResponse omits null data (Jackson NON_NULL); never pass its HTTP status to feature DTOs.
+  // ApiResponse lược bỏ trường data khi null (Jackson NON_NULL); không truyền HTTP status của wrapper vào DTO tính năng.
   if (body && typeof body === 'object' && ('data' in body || body.success === true)) {
     return (body.data ?? null) as T;
   }
   return body as T;
 }
 
-/** Authenticated binary response for endpoints that do not use the JSON ApiResponse envelope. */
+/**
+ * Tải nội dung nhị phân PDF có xác thực JWT cho các endpoint không dùng vỏ JSON ApiResponse; lỗi thì ném ApiError.
+ */
 export async function apiFetchPdf(path: string): Promise<Blob> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   let res: Response;
@@ -199,7 +219,9 @@ export async function apiFetchPdf(path: string): Promise<Blob> {
   return res.blob();
 }
 
-/** Authenticated binary download (for example a medical document); the caller turns the blob into an object URL. */
+/**
+ * Tải nội dung nhị phân có xác thực JWT (ví dụ tài liệu y tế); người gọi tự chuyển blob thành object URL.
+ */
 export async function apiFetchBlob(path: string): Promise<Blob> {
   const token = localStorage.getItem(TOKEN_STORAGE_KEY);
   let res: Response;
@@ -220,6 +242,7 @@ export async function apiFetchBlob(path: string): Promise<Blob> {
   return res.blob();
 }
 
+/** Đăng nhập bằng tên đăng nhập/mật khẩu, lưu JWT và phiên rồi trả về thông tin người dùng. */
 export async function loginApi(identifier: string, password: string): Promise<LoginResponse> {
   const data = await apiFetch<{ token: string; username: string; role: string; fullName?: string | null }>('/auth/login', {
     method: 'POST',
@@ -280,7 +303,7 @@ export const homePath = (role: UserSession['role']): string => {
     case 'STAFF':
       return '/staff/reception';
     case 'COACH':
-      return '/staff/attendance';
+      return '/coach/pt-attendance';
     case 'MEMBER':
     default:
       return '/member/dashboard';

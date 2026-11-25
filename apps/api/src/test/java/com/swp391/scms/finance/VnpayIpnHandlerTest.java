@@ -6,6 +6,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+/** Bộ kiểm thử cho bộ xử lý VnpayIpnHandler (vnpay ipn handler). */
 class VnpayIpnHandlerTest {
     @Test void duplicateQueryParametersNeverReachSettlement() {
         var service=mock(VnpayPaymentService.class);var handler=new VnpayIpnHandler(service,null);

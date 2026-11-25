@@ -1,8 +1,9 @@
+/* Mục đích: Kiểu cho màn hình khám phá 3D (canvas, HUD, bảng thông tin, điều khiển). */
 /* ==========================================================================
-   SÖL 3D Virtual Center — Charcoal–Salmon UI & HUD (explore3d.css)
+   Trung tâm ảo 3D SÖL — Giao diện & HUD màu than–salmon (explore3d.css)
    ========================================================================== */
 
-/* Lock viewport to a single fixed screen when /member/explore is mounted */
+/* Khóa viewport trong một màn hình cố định khi /member/explore được mount */
 html:has(.explore3d-page),
 body:has(.explore3d-page),
 .portal-backdrop:has(.explore3d-page),
@@ -93,7 +94,7 @@ html[data-theme='light'] .explore3d-page {
   background: linear-gradient(180deg, #f5f5f3 0%, #eeefec 100%);
 }
 
-/* Hide scrollbars globally inside explore3d per DESIGN.md */
+/* Ẩn thanh cuộn toàn cục bên trong explore3d theo DESIGN.md */
 .explore3d-page,
 .explore3d-page * {
   scrollbar-width: none;
@@ -118,7 +119,7 @@ html[data-theme='light'] .explore3d-page {
 }
 
 /* --------------------------------------------------------------------------
-   Top-Left Breadcrumb & Search HUD
+   HUD Breadcrumb & Tìm kiếm góc trên bên trái
    -------------------------------------------------------------------------- */
 
 .explore3d-breadcrumb-bar {
@@ -263,7 +264,7 @@ html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
 }
 
 /* --------------------------------------------------------------------------
-   Left Level Switcher HUD
+   HUD chuyển tầng bên trái
    -------------------------------------------------------------------------- */
 
 .explore3d-level-switcher {
@@ -331,7 +332,7 @@ html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
 }
 
 /* --------------------------------------------------------------------------
-   Bottom-Center Toolbar, Walk HUD & Guided Tour HUD
+   Thanh công cụ giữa dưới, HUD đi bộ & HUD tham quan có hướng dẫn
    -------------------------------------------------------------------------- */
 
 .explore3d-toolbar {
@@ -468,7 +469,7 @@ html[data-theme='light'] .explore3d-page .explore3d-sim-badge {
 }
 
 /* --------------------------------------------------------------------------
-   Right Detail Panel (356px desktop drawer / mobile bottom sheet)
+   Bảng chi tiết bên phải (ngăn kéo 356px trên desktop / bảng trượt đáy trên mobile)
    -------------------------------------------------------------------------- */
 
 .explore3d-detail-panel {
@@ -965,7 +966,7 @@ html[data-theme='light'] .explore3d-page .explore3d-directory-level-btn {
 }
 
 /* --------------------------------------------------------------------------
-   2D Architectural SVG Fallback (FloorPlan2D)
+   Sơ đồ kiến trúc SVG 2D dự phòng (FloorPlan2D)
    -------------------------------------------------------------------------- */
 
 .explore3d-floorplan-2d {
@@ -1077,7 +1078,7 @@ html[data-theme='light'] .explore3d-page .explore3d-floorplan-canvas-wrap {
 }
 
 /* --------------------------------------------------------------------------
-   Search Modal / Combobox
+   Hộp tìm kiếm / Combobox
    -------------------------------------------------------------------------- */
 
 .explore3d-search-backdrop {
@@ -1193,7 +1194,7 @@ html[data-theme='light'] .explore3d-page .explore3d-floorplan-canvas-wrap {
 }
 
 /* --------------------------------------------------------------------------
-   Keyboard Focus & Reduced Motion
+   Focus bàn phím & Giảm chuyển động
    -------------------------------------------------------------------------- */
 
 .explore3d-page button:focus-visible,

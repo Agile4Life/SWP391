@@ -1,43 +1,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../../../shared/api/client';
-import { centerDate, courtsApi, dateAfter } from '../../courts/courtsApi';
-import { memberCheckinApi } from '../../member/memberCheckinApi';
+import { centerNowParts } from '../../../shared/lib/centerTime';
 import { getCurrentMembership } from '../../member/membershipApi';
 import { SOL_CENTER_SCENE } from '../scene/solCenter.scene';
-import { zoneOf } from '../scene/selectors';
 import {
   EMPTY_LIVE_SNAPSHOT,
   inferMembershipTier,
   normalizeKey,
   resolveBindings,
   type LiveCenterSnapshot,
-  type LiveClassSessionRecord,
   type LiveCoachRecord,
-  type LiveCourtSlot,
-  type LiveCourtSummary,
   type LiveEquipmentRecord,
   type LiveMembershipSummary,
-  type LiveProductRecord,
   type LiveRoomRecord,
-  type LiveStreakSummary,
   type ResolvedSceneBindings,
 } from './bindings';
 
 const CACHE_TTL_MS = 60_000;
 
+/** Một mục cache: ảnh chụp dữ liệu và thời điểm lưu. */
 interface CacheEntry {
   snapshot: LiveCenterSnapshot;
   timestamp: number;
 }
 
 let cachedCenterSnapshot: CacheEntry | null = null;
-const cachedCourtDisciplineTimestamp = new Map<string, number>();
 
+/** Xóa cache ảnh chụp dữ liệu trung tâm. */
 export function clearLiveCenterCache(): void {
   cachedCenterSnapshot = null;
-  cachedCourtDisciplineTimestamp.clear();
 }
 
+/** Dữ liệu phòng thô từ API. */
 interface RawRoom {
   id: number | string;
   name: string;
@@ -50,6 +44,7 @@ interface RawRoom {
   disciplineName?: string | null;
 }
 
+/** Dữ liệu thiết bị thô từ API. */
 interface RawEquipment {
   id: number | string;
   name: string;
@@ -61,17 +56,7 @@ interface RawEquipment {
   status?: string;
 }
 
-interface RawCourt {
-  id: number | string;
-  name: string;
-  location?: string | null;
-  capacity?: number;
-  status?: string;
-  disciplineName?: string | null;
-  openTime?: string | null;
-  closeTime?: string | null;
-}
-
+/** Dữ liệu HLV công khai thô từ API. */
 interface RawPublicCoach {
   id: number | string;
   name?: string;
@@ -81,6 +66,7 @@ interface RawPublicCoach {
   avatarUrl?: string | null;
 }
 
+/** Dữ liệu gói công khai thô từ API. */
 interface RawPublicPackage {
   id: number | string;
   name: string;
@@ -88,27 +74,13 @@ interface RawPublicPackage {
   status?: string;
 }
 
+/** Danh mục công khai thô từ API. */
 interface RawPublicCatalog {
   packages?: RawPublicPackage[];
   coaches?: RawPublicCoach[];
-  sessions?: RawClassSession[];
 }
 
-interface RawProductItem {
-  id: number | string;
-  name: string;
-  slug: string;
-  price?: number;
-  minPrice?: number;
-  servingsPerContainer?: number | null;
-  stockQuantity?: number | null;
-  inStock?: boolean;
-}
-
-interface RawProductPage {
-  content?: RawProductItem[];
-}
-
+/** Dữ liệu gói đăng ký thô từ API. */
 interface RawSubscription {
   id?: number | string;
   packageName?: string;
@@ -118,27 +90,7 @@ interface RawSubscription {
   remainingDays?: number | null;
 }
 
-interface RawStreak {
-  currentStreak?: number;
-  longestStreak?: number;
-  activeToday?: boolean;
-  activeDates?: string[];
-}
-
-interface RawClassSession {
-  id: number | string;
-  className: string;
-  disciplineName?: string | null;
-  roomName?: string | null;
-  coachName?: string | null;
-  sessionDate: string;
-  startTime: string;
-  endTime: string;
-  capacity?: number | null;
-  bookedCount?: number | null;
-  status?: string | null;
-}
-
+/** Số ngày còn lại tới ngày hết hạn (không âm); ngày sai thì null. */
 function computeRemainingDays(endDate: string | null | undefined, todayStr: string): number | null {
   if (!endDate) return null;
   const endMs = Date.parse(`${endDate.slice(0, 10)}T00:00:00Z`);
@@ -147,6 +99,7 @@ function computeRemainingDays(endDate: string | null | undefined, todayStr: stri
   return Math.max(0, Math.round((endMs - todayMs) / 86_400_000));
 }
 
+/** Lấy gói hiện tại; lỗi thì thử endpoint dự phòng /memberships/current. */
 async function fetchMembershipWithFallback(): Promise<RawSubscription | null> {
   try {
     return await getCurrentMembership();
@@ -155,15 +108,21 @@ async function fetchMembershipWithFallback(): Promise<RawSubscription | null> {
   }
 }
 
+/** Kết quả của hook: ảnh chụp dữ liệu, dữ liệu đã gắn vào cảnh, đang tải, lỗi và hàm làm mới. */
 export interface UseLiveCenterDataResult {
   snapshot: LiveCenterSnapshot;
   bindings: ResolvedSceneBindings;
   loading: boolean;
   error: string | null;
+  // Tải lại ngay, bỏ qua cache.
   refresh: () => Promise<void>;
 }
 
-export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenterDataResult {
+/**
+ * Hook tải dữ liệu thật của trung tâm (phòng, thiết bị, danh mục, gói) có cache trong thời gian CACHE_TTL_MS và
+ * gắn vào cảnh 3D.
+ */
+export function useLiveCenterData(): UseLiveCenterDataResult {
   const [snapshot, setSnapshot] = useState<LiveCenterSnapshot>(() =>
     cachedCenterSnapshot && Date.now() - cachedCenterSnapshot.timestamp < CACHE_TTL_MS
       ? cachedCenterSnapshot.snapshot
@@ -182,6 +141,7 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     };
   }, []);
 
+  // Tải ảnh chụp dữ liệu (dùng cache còn hạn trừ khi force); chỉ dùng dữ liệu Gym và các luồng còn giữ.
   const loadSnapshot = useCallback(async (force = false) => {
     const now = Date.now();
     if (!force && cachedCenterSnapshot && now - cachedCenterSnapshot.timestamp < CACHE_TTL_MS) {
@@ -198,31 +158,19 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
       setError(null);
     }
 
-    const todayStr = centerDate();
-    const toDateStr = dateAfter(todayStr, 6);
+    const todayStr = centerNowParts().date;
 
+    // Chỉ tải dữ liệu Gym và các flow còn giữ; không gọi lịch lớp nhóm hay sân.
     const [
       roomsRes,
       equipmentRes,
-      courtsRes,
       catalogRes,
-      productsRes,
       membershipRes,
-      streakRes,
-      sessionsRes,
     ] = await Promise.allSettled([
       apiFetch<RawRoom[]>('/rooms'),
       apiFetch<RawEquipment[]>('/equipment'),
-      courtsApi.courts(),
       apiFetch<RawPublicCatalog>('/public/catalog', { headers: { Authorization: '' } }),
-      apiFetch<RawProductPage | RawProductItem[]>('/public/products?size=6', {
-        headers: { Authorization: '' },
-      }),
       fetchMembershipWithFallback(),
-      memberCheckinApi.streak(),
-      apiFetch<RawClassSession[]>(
-        `/classes/sessions?fromDate=${encodeURIComponent(todayStr)}&toDate=${encodeURIComponent(toDateStr)}`,
-      ),
     ]);
 
     const rooms: LiveRoomRecord[] =
@@ -240,11 +188,6 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
           }))
         : [];
 
-    const roomsByName = new Map<string, LiveRoomRecord>();
-    for (const r of rooms) {
-      roomsByName.set(normalizeKey(r.name), r);
-    }
-
     const equipment: LiveEquipmentRecord[] =
       equipmentRes.status === 'fulfilled' && Array.isArray(equipmentRes.value)
         ? equipmentRes.value
@@ -261,25 +204,6 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
             }))
         : [];
 
-    const courts: LiveCourtSummary[] =
-      courtsRes.status === 'fulfilled' && Array.isArray(courtsRes.value)
-        ? courtsRes.value.map((c: RawCourt) => {
-            const matchedRoom = roomsByName.get(normalizeKey(c.name));
-            const fallbackCap =
-              normalizeKey(c.disciplineName) === normalizeKey('Bơi lội') ? 6 : 4;
-            return {
-              id: String(c.id),
-              name: c.name,
-              location: c.location ?? matchedRoom?.location ?? null,
-              capacity: Number(c.capacity ?? matchedRoom?.capacity ?? fallbackCap),
-              status: c.status ?? matchedRoom?.status ?? 'available',
-              disciplineName: c.disciplineName ?? matchedRoom?.disciplineName ?? null,
-              openTime: c.openTime ?? matchedRoom?.openTime ?? null,
-              closeTime: c.closeTime ?? matchedRoom?.closeTime ?? null,
-            };
-          })
-        : [];
-
     const catalog = catalogRes.status === 'fulfilled' ? catalogRes.value : null;
 
     const coaches: LiveCoachRecord[] = Array.isArray(catalog?.coaches)
@@ -290,29 +214,6 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
           avatarUrl: c.avatarUrl ?? null,
         }))
       : [];
-
-    const rawProductsValue = productsRes.status === 'fulfilled' ? productsRes.value : null;
-    const rawProductItems: RawProductItem[] = Array.isArray(rawProductsValue)
-      ? rawProductsValue
-      : Array.isArray(rawProductsValue?.content)
-        ? rawProductsValue.content
-        : [];
-
-    const products: LiveProductRecord[] = rawProductItems.map(p => ({
-      id: String(p.id),
-      name: p.name,
-      slug: p.slug,
-      price: Number(p.price ?? p.minPrice ?? 0),
-      servingsPerContainer: p.servingsPerContainer ?? null,
-      stockQuantity:
-        p.stockQuantity !== undefined
-          ? p.stockQuantity
-          : typeof p.inStock === 'boolean'
-            ? p.inStock
-              ? 1
-              : 0
-            : null,
-    }));
 
     let membership: LiveMembershipSummary = null;
     if (membershipRes.status === 'fulfilled' && membershipRes.value?.packageName) {
@@ -337,47 +238,9 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
       };
     }
 
-    let streak: LiveStreakSummary = null;
-    if (streakRes.status === 'fulfilled' && streakRes.value) {
-      const st: RawStreak = streakRes.value;
-      const activeToday =
-        typeof st.activeToday === 'boolean'
-          ? st.activeToday
-          : Array.isArray(st.activeDates)
-            ? st.activeDates.includes(todayStr)
-            : false;
-      streak = {
-        currentStreak: Number(st.currentStreak ?? 0),
-        longestStreak: Number(st.longestStreak ?? 0),
-        activeToday,
-      };
-    }
-
-    const rawSessionList: RawClassSession[] =
-      sessionsRes.status === 'fulfilled' && Array.isArray(sessionsRes.value)
-        ? sessionsRes.value
-        : Array.isArray(catalog?.sessions)
-          ? catalog.sessions
-          : [];
-
-    const classSessions: LiveClassSessionRecord[] = rawSessionList.map(s => ({
-      id: String(s.id),
-      className: s.className,
-      disciplineName: s.disciplineName ?? null,
-      roomName: s.roomName ?? null,
-      coachName: s.coachName ?? null,
-      sessionDate: s.sessionDate,
-      startTime: s.startTime,
-      endTime: s.endTime,
-      capacity: s.capacity ?? null,
-      bookedCount: s.bookedCount ?? null,
-      status: s.status ?? null,
-    }));
-
     const allCoreFailed =
       roomsRes.status === 'rejected' &&
-      equipmentRes.status === 'rejected' &&
-      courtsRes.status === 'rejected';
+      equipmentRes.status === 'rejected';
 
     const snapshotError = allCoreFailed
       ? (roomsRes.reason instanceof Error
@@ -388,14 +251,16 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     const nextSnapshot: LiveCenterSnapshot = {
       rooms,
       equipment,
-      courts,
-      courtSlotsByCourtId: cachedCenterSnapshot?.snapshot.courtSlotsByCourtId ?? {},
-      classSessions,
-      sessions: classSessions,
+      courts: [],
+      courtSlotsByCourtId: {},
+      classSessions: [],
+      sessions: [],
       membership,
-      streak,
+      // Streak đã bỏ khỏi Member; không phát sinh request check-in phụ.
+      streak: null,
       coaches,
-      products,
+      // Không tải catalog sản phẩm khi Shop không còn trong scene.
+      products: [],
       fetchedAt: Date.now(),
       error: snapshotError,
     };
@@ -416,86 +281,12 @@ export function useLiveCenterData(selectedZoneId?: string | null): UseLiveCenter
     void loadSnapshot(false);
   }, [loadSnapshot]);
 
-  // Lazily load court slot availability when a court zone (Badminton, Pool, Tennis) is selected
-  useEffect(() => {
-    if (!selectedZoneId) return;
-    const zone = zoneOf(SOL_CENTER_SCENE, selectedZoneId);
-    const courtDiscipline = zone?.liveBinding?.courtDiscipline;
-    if (!courtDiscipline) return;
-
-    const lastFetched = cachedCourtDisciplineTimestamp.get(courtDiscipline);
-    if (lastFetched && Date.now() - lastFetched < CACHE_TTL_MS) {
-      return;
-    }
-
-    const matchingCourts = snapshot.courts.filter(
-      c => normalizeKey(c.disciplineName) === normalizeKey(courtDiscipline),
-    );
-    if (matchingCourts.length === 0) return;
-
-    let cancelled = false;
-    cachedCourtDisciplineTimestamp.set(courtDiscipline, Date.now());
-    const todayStr = centerDate();
-
-    void (async () => {
-      const results = await Promise.allSettled(
-        matchingCourts.map(async court => {
-          const numericId = Number(court.id);
-          if (Number.isNaN(numericId)) return { courtId: court.id, slots: [] as LiveCourtSlot[] };
-          const slots = await courtsApi.availability(numericId, todayStr);
-          return {
-            courtId: court.id,
-            slots: Array.isArray(slots)
-              ? slots.map(s => ({
-                  startTime: s.startTime,
-                  endTime: s.endTime,
-                  status: s.status,
-                }))
-              : [],
-          };
-        }),
-      );
-
-      if (cancelled || !mountedRef.current) return;
-
-      const newSlotsByCourtId: Record<string, LiveCourtSlot[]> = {};
-      for (const r of results) {
-        if (r.status === 'fulfilled' && r.value.slots.length > 0) {
-          newSlotsByCourtId[r.value.courtId] = r.value.slots;
-        }
-      }
-
-      if (Object.keys(newSlotsByCourtId).length === 0) return;
-
-      setSnapshot(prev => {
-        const mergedSlots = {
-          ...(prev.courtSlotsByCourtId ?? {}),
-          ...newSlotsByCourtId,
-        };
-        const updated: LiveCenterSnapshot = {
-          ...prev,
-          courtSlotsByCourtId: mergedSlots,
-        };
-        if (cachedCenterSnapshot) {
-          cachedCenterSnapshot = {
-            snapshot: updated,
-            timestamp: cachedCenterSnapshot.timestamp,
-          };
-        }
-        return updated;
-      });
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedZoneId, snapshot.courts]);
-
+  // Tải lại ngay, bỏ qua cache.
   const refresh = useCallback(async () => {
-    cachedCourtDisciplineTimestamp.clear();
     await loadSnapshot(true);
   }, [loadSnapshot]);
 
+  // Gắn dữ liệu thật vào cảnh mỗi khi ảnh chụp đổi.
   const bindings = useMemo(() => resolveBindings(SOL_CENTER_SCENE, snapshot), [snapshot]);
 
   return {

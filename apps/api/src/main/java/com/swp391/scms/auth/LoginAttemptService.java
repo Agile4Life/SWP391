@@ -18,6 +18,7 @@ public class LoginAttemptService {
     public static final int MAX_FAILED_ATTEMPTS = 5;
     public static final long LOCKOUT_DURATION_SECONDS = 60L; // 1 phút
 
+    /** Bản ghi số lần sai của một định danh: số lần sai, khóa đến lúc nào và lần thử gần nhất. */
     private static class AttemptRecord {
         int failedAttempts;
         Instant lockedUntil;
@@ -33,10 +34,12 @@ public class LoginAttemptService {
     private final Map<String, AttemptRecord> attempts = new ConcurrentHashMap<>();
     private final Clock clock;
 
+    /** Constructor mặc định dùng đồng hồ UTC. */
     public LoginAttemptService() {
         this(Clock.systemUTC());
     }
 
+    /** Constructor nhận Clock để test điều khiển thời gian. */
     public LoginAttemptService(Clock clock) {
         this.clock = clock;
     }
@@ -156,10 +159,12 @@ public class LoginAttemptService {
         }
     }
 
+    /** Xóa toàn bộ bộ đếm (dùng cho test). */
     public void clearAll() {
         attempts.clear();
     }
 
+    /** Chuẩn hóa định danh: bỏ khoảng trắng hai đầu và chuyển chữ thường. */
     private String normalize(String target) {
         return target.trim().toLowerCase(Locale.ROOT);
     }

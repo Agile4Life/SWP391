@@ -3,6 +3,7 @@ import { apiLogin, apiWith, createActiveMember } from './api';
 
 export const WEB_ORIGIN = 'http://localhost:4173';
 
+// Tạo storage state của trình duyệt chứa token và phiên đăng nhập.
 export function storageStateFor(username: string, token: string, role: 'MEMBER' | 'STAFF' | 'COACH' | 'MANAGER' | 'ADMIN' = 'MEMBER') {
   return {
     cookies: [],
@@ -31,6 +32,7 @@ export async function newMember(options: { topup?: number; prefix?: string } = {
   return { ...m, token: session.token, id };
 }
 
+// Tạo browser context đã đăng nhập sẵn cho một người dùng.
 export async function contextFor(browser: Browser, m: { username: string; token: string }, role: 'MEMBER' | 'STAFF' | 'COACH' | 'MANAGER' | 'ADMIN' = 'MEMBER') {
   return browser.newContext({ storageState: storageStateFor(m.username, m.token, role) });
 }

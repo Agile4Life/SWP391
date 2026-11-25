@@ -1,24 +1,28 @@
 import type { ItemKind } from '../../scene/schema';
 
+/**
+ * Một mô hình GLB cho đồ vật: đường dẫn, tác giả, nguồn, giấy phép, góc xoay quanh Y và bảng đổi màu theo tên
+ * vật liệu.
+ */
 export interface ItemGlbEntry {
-  /** Served from apps/web/public, for example `/models/explore3d/treadmill.glb`. */
+  /** Phục vụ từ apps/web/public, ví dụ `/models/explore3d/treadmill.glb`. */
   url: string;
-  /** Who made it and where it came from, for the license table in docs/3D_ASSETS.md. */
+  /** Tác giả và nguồn gốc mô hình, dùng cho bảng giấy phép trong docs/3D_ASSETS.md. */
   author: string;
   source: string;
   license: 'CC0' | 'CC-BY-4.0' | 'MIT' | 'project-owned';
-  /** Radians around Y so the model faces the same way as the procedural item. */
+  /** Góc xoay (rad) quanh trục Y để mô hình hướng cùng chiều với vật thể dựng thủ tục. */
   rotationY?: number;
-  /** Recolor by material name (hex) so the model matches the SOL charcoal-salmon palette. */
+  /** Đổi màu theo tên vật liệu (hex) để mô hình khớp bảng màu charcoal–salmon của SÖL. */
   materialColors?: Readonly<Record<string, string>>;
-  /** Keep the model's own PBR textures (photo-scanned props) instead of flat vertex colours. */
+  /** Giữ nguyên texture PBR của mô hình (vật thể quét ảnh) thay vì màu đỉnh phẳng. */
   textured?: boolean;
 }
 
 /**
- * Item kinds that use a .glb model instead of the procedural geometry.
- * Kinds that are missing here, or whose file fails to load or exceeds the
- * triangle budget, keep the procedural model. See docs/3D_ASSETS.md.
+ * Các loại vật thể sử dụng mô hình .glb thay vì hình học dựng thủ tục.
+ * Những loại không có ở đây, hoặc tải tệp thất bại hay vượt quá ngân sách tam giác,
+ * sẽ giữ lại mô hình dựng thủ tục. Xem docs/3D_ASSETS.md.
  */
 export const ITEM_GLB_MANIFEST: Partial<Record<ItemKind, ItemGlbEntry>> = {
   'lounge-sofa': {

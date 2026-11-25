@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+/** Props của đầu trang: tiêu đề, từ nhấn mạnh tùy chọn và cụm nút thao tác. */
 interface PageHeaderProps {
   title: string;
   /** Từ in nghiêng kiểu editorial đặt sau tiêu đề, giống "Sanctuary" ở landing. */

@@ -11,6 +11,7 @@ vi.mock('../member/supportRealtime', () => ({ subscribeSupport: vi.fn(() => () =
 vi.mock('../member/memberSupportApi', () => ({ getMySupportTickets: vi.fn(), getSupportTicket: vi.fn(), createSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn() }));
 
 const ticket = { id: 7, memberId: 10, subject: '[Thiết bị] Máy chạy', description: 'Máy chạy không bật\nĐã thử cắm lại', status: 'open', createdAt: '2026-10-25T08:00:00', assignedToName: null } as supportApi.SupportTicket;
+// Tạo tin nhắn giả của nhân viên.
 const staffMessage = (id: number, text: string): supportApi.SupportMessage => ({ id, senderId: 2, senderName: 'Lễ tân Hà', senderRole: 'RECEPTIONIST', message: text, createdAt: '2026-10-25T08:05:00' });
 let host: HTMLDivElement, root: Root;
 
@@ -26,14 +27,21 @@ beforeEach(() => {
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.resetAllMocks(); vi.unstubAllGlobals(); });
 
+// Dựng component vào DOM giả để kiểm thử.
 const render = () => act(async () => root.render(<MemberSupportChat onBack={() => {}} />));
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 const input = () => host.querySelector<HTMLTextAreaElement>('textarea#support-message')!;
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const sendButton = () => host.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function type(value: string) {
   await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input(), value); input().dispatchEvent(new Event('input', { bubbles: true })); });
 }
+// Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.
 async function send() { await act(async () => { sendButton().click(); }); }
+// Các bong bóng chat đang hiển thị.
 const bubbles = () => [...host.querySelectorAll('.direct-chat__bubble')];
+// Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const button = (label: string) => host.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!;
 
 it('opens as a chat with category chips and no ticket form when the member has no ticket yet', async () => {

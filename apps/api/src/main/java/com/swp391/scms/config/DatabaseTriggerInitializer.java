@@ -17,8 +17,11 @@ import java.sql.SQLException;
 import java.util.List;
 
 /**
- * Initializes invariant business database triggers after Hibernate Code-First
- * schema generation has completed, selecting the PostgreSQL provider.
+ * Chạy ngay khi ứng dụng khởi động xong (sau khi Hibernate tạo/cập nhật bảng): cài các trigger nghiệp vụ bắt
+ * buộc (kiểm tra sức chứa, trùng lịch...) vào database. Chỉ hỗ trợ PostgreSQL.
+ *
+ * Khởi tạo các trigger nghiệp vụ bất biến của database sau khi Hibernate sinh xong schema code-first, chọn
+ * provider PostgreSQL.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
@@ -30,6 +33,7 @@ public class DatabaseTriggerInitializer implements ApplicationRunner {
     private final JdbcTemplate jdbcTemplate;
     private final List<DatabaseTriggerProvider> triggerProviders;
 
+    /** Nhận DataSource để đọc loại database, JdbcTemplate để chạy SQL và danh sách các provider cài trigger. */
     public DatabaseTriggerInitializer(DataSource dataSource,
                                       JdbcTemplate jdbcTemplate,
                                       List<DatabaseTriggerProvider> triggerProviders) {
@@ -38,6 +42,10 @@ public class DatabaseTriggerInitializer implements ApplicationRunner {
         this.triggerProviders = triggerProviders;
     }
 
+    /**
+     * Đọc tên sản phẩm database từ metadata, chọn provider hỗ trợ (PostgreSQL) và cài trigger. Không có
+     * provider phù hợp thì dừng khởi động, vì thiếu trigger là vi phạm bất biến nghiệp vụ.
+     */
     @Override
     public void run(ApplicationArguments args) {
         String dbProduct;

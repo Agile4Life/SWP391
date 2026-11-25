@@ -56,39 +56,6 @@ test.describe('Quản lý: danh mục vận hành', () => {
   });
 });
 
-test.describe('Quản lý: thiết bị', () => {
-  test('thêm thiết bị; mã trùng bị từ chối; lọc theo trạng thái; xóa', async ({ page }) => {
-    const code = `EQ-E2E-${Date.now().toString(36).toUpperCase()}`;
-    await page.goto('/manager/equipment');
-    await settled(page);
-    await page.getByRole('button', { name: 'Thêm thiết bị máy mới' }).click();
-    await page.locator('#eq-name').fill('Máy kiểm thử e2e');
-    await page.locator('#eq-code').fill(code);
-    await page.locator('#eq-qty').fill('2');
-    await page.getByRole('button', { name: 'Lưu thiết bị' }).click();
-    await expect(page.locator('main')).toContainText(code);
-    await page.getByRole('button', { name: 'Thêm thiết bị máy mới' }).click();
-    await page.locator('#eq-name').fill('Máy trùng mã');
-    await page.locator('#eq-code').fill(code);
-    await page.getByRole('button', { name: 'Lưu thiết bị' }).click();
-    await expect(page.getByRole('alert').or(page.getByText(/đã tồn tại|trùng/i)).first()).toBeVisible();
-    await page.keyboard.press('Escape');
-    const row = page.locator('tr, li, article').filter({ hasText: code }).first();
-    await row.getByRole('button', { name: 'Xóa' }).click();
-    await page.getByRole('dialog').getByRole('button', { name: /Xóa|Xác nhận/ }).last().click();
-    await expect(page.locator('main')).not.toContainText(code);
-  });
-
-  test('số lượng âm hoặc để trống tên không lưu được', async ({ page }) => {
-    await page.goto('/manager/equipment');
-    await settled(page);
-    await page.getByRole('button', { name: 'Thêm thiết bị máy mới' }).click();
-    await page.locator('#eq-qty').fill('-1');
-    await page.getByRole('button', { name: 'Lưu thiết bị' }).click();
-    await expect(page.locator('#eq-name')).toBeVisible();
-  });
-});
-
 test.describe('Quản lý: tài khoản nhân sự', () => {
   test('tạo lễ tân mới đăng nhập được; email trùng và mật khẩu yếu bị từ chối; khóa tài khoản', async ({ page }) => {
     const id = unique('nv').toLowerCase();
@@ -141,8 +108,8 @@ test.describe('Quản lý: báo cáo', () => {
     }
   });
 
-  test('đánh giá HLV và theo dõi HLV & học viên mở được', async ({ page }) => {
-    for (const path of ['/manager/coach-reviews', '/manager/coach-assignments', '/manager/products', '/manager/requests']) {
+  test('phân công HLV và đơn nội bộ mở được', async ({ page }) => {
+    for (const path of ['/manager/coach-assignments', '/manager/requests']) {
       await page.goto(path);
       await settled(page);
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible();

@@ -36,6 +36,15 @@ paths:
         - name: type
           in: query
           schema: { type: string, enum: [ALL, TRAINING_PLAN, PT_1_1, CLASS], default: ALL }
+        - name: sortBy
+          in: query
+          description: |
+            Coach sort field (case-insensitive). Omitted together with sortDir keeps the server order.
+            Ties fall back to coach name, then coachId.
+          schema: { type: string, enum: [name, totalStudentsCount, ptStudentsCount, planStudentsCount, classStudentsCount, specialization, employmentStatus] }
+        - name: sortDir
+          in: query
+          schema: { type: string, enum: [asc, desc], default: asc }
       responses:
         '200':
           description: Current assignments; an empty coaches or students list is valid
@@ -47,7 +56,7 @@ paths:
                   - type: object
                     properties:
                       data: { $ref: '#/components/schemas/Overview' }
-        '400': { description: Invalid assignment type, content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
+        '400': { description: Invalid assignment type, sort field (INVALID_SORT_FIELD) or sort direction (INVALID_SORT_DIRECTION), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
         '401': { description: Authentication required }
         '403': { description: Manager role required }
   /manager/coach-assignments/reassign:
@@ -60,7 +69,9 @@ paths:
         an active non-deleted account. The member must have an active non-deleted account and
         a currently active membership. Plans must be active and unexpired. PT must be confirmed
         and strictly in the future, membership must cover its date, and the receiving coach
-        must have no approved leave or overlapping scheduled class/confirmed PT session.
+        must have no approved leave or overlapping scheduled class/confirmed PT session,
+        and cannot exceed three consecutive one-hour PT sessions. A direct plan transfer is
+        rejected if the receiving coach already has an active plan for the member.
         Existing database schedule triggers remain enabled. A missing or stale relationship
         fails without success notifications. Audit logs preserve actor, assignment type,
         reference ID, member ID, old/new coach IDs and the required reason. No plan items,
@@ -69,7 +80,7 @@ paths:
         receiving coach, who edits them from then on; the previous coach loses edit rights. If the
         receiving coach already has an active plan for the member, the inherited active plan moves
         to history. Only after a valid transfer are
-        the member and both coaches notified. The member's in-app notification and email
+        the member and both coaches notified. The member's in-app notification
         include the manager's reason. PT notices open the PT booking tab.
       requestBody:
         required: true
@@ -82,7 +93,7 @@ paths:
         '401': { description: Authentication required }
         '403': { description: Manager role required }
         '404': { description: Referenced assignment, member or coach not found }
-        '409': { description: Database schedule conflict detected while committing }
+        '409': { description: COACH_ALREADY_HAS_ACTIVE_PLAN, COACH_REST_REQUIRED, or a database schedule conflict }
   /manager/coach-assignments/{planId}:
     delete:
       summary: End an active unexpired training-plan assignment by cancelling it

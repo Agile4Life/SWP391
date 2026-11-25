@@ -31,6 +31,7 @@ public class SubscriptionValueCalculator {
     @Nullable
     private final PaymentRepository payments;
 
+    /** Nhận repository thanh toán (có thể null trong test). */
     public SubscriptionValueCalculator(@Nullable PaymentRepository payments) {
         this.payments = payments;
     }
@@ -44,6 +45,10 @@ public class SubscriptionValueCalculator {
         return paidValue(subscription, 0);
     }
 
+    /**
+     * Tính giá trị đã trả của kỳ có giới hạn độ sâu khi truy ngược chuỗi nâng cấp cũ (tránh lặp vô hạn với dữ
+     * liệu lỗi).
+     */
     private BigDecimal paidValue(MembershipSubscription subscription, int depth) {
         BigDecimal credit = subscription.getCreditApplied() != null
                 ? subscription.getCreditApplied() : legacyUpgradeCredit(subscription, depth);
@@ -103,6 +108,7 @@ public class SubscriptionValueCalculator {
         return prorate(paidValue(subscription), remainingDays(subscription, today), total);
     }
 
+    /** Tổng số ngày của kỳ gói (tính cả ngày đầu và ngày cuối); dữ liệu ngày thiếu hoặc sai thì trả 0. */
     public static long totalDays(MembershipSubscription subscription) {
         if (subscription.getStartDate() == null || subscription.getEndDate() == null
                 || subscription.getEndDate().isBefore(subscription.getStartDate())) {
@@ -134,6 +140,7 @@ public class SubscriptionValueCalculator {
         return orZero(targetPrice).subtract(orZero(credit));
     }
 
+    /** Trả 0 nếu giá trị null. */
     private static BigDecimal orZero(BigDecimal value) {
         return value != null ? value : BigDecimal.ZERO;
     }

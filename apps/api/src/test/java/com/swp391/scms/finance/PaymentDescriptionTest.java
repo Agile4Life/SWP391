@@ -14,9 +14,15 @@ import java.time.LocalTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
-/** A member's payment list says what each payment is for (reported: pending payments only showed an id and amount). */
+/**
+ * Bộ kiểm thử cho PaymentDescription (mô tả khoản thanh toán).
+ *
+ * Danh sách thanh toán của hội viên nêu rõ mục đích từng khoản thanh toán
+ * (lỗi đã báo cáo: các khoản đang chờ trước đây chỉ hiển thị id và số tiền).
+ */
 class PaymentDescriptionTest {
 
+    /** Hàm trợ giúp của test: tạo mô tả cho khoản thanh toán. */
     private static PaymentDto describe(Payment payment) throws Exception {
         Method method = com.swp391.scms.finance.service.PaymentService.class
                 .getDeclaredMethod("describe", Payment.class, PaymentDto.class);
@@ -24,6 +30,7 @@ class PaymentDescriptionTest {
         return (PaymentDto) method.invoke(null, payment, new PaymentDto());
     }
 
+    /** Kiểm thử: thanh toán đặt sân nêu tên sân và khung giờ. */
     @Test
     void courtPaymentNamesTheCourtAndSlot() throws Exception {
         Room room = new Room();
@@ -42,6 +49,7 @@ class PaymentDescriptionTest {
         assertThat(dto.getServiceName()).isEqualTo("Sân Tennis 01 · 20/11/2026 · 14:00");
     }
 
+    /** Kiểm thử: thanh toán membership nêu tên gói. */
     @Test
     void membershipPaymentNamesThePackage() throws Exception {
         MembershipPackage pkg = new MembershipPackage();
@@ -58,6 +66,7 @@ class PaymentDescriptionTest {
         assertThat(dto.getServiceName()).isEqualTo("GOLD");
     }
 
+    /** Kiểm thử: nạp ví được gắn nhãn là nạp ví. */
     @Test
     void walletTopupPaymentIsLabelledAsAWalletTopup() throws Exception {
         Payment payment = new Payment();
@@ -68,6 +77,7 @@ class PaymentDescriptionTest {
         assertThat(dto.getServiceType()).isEqualTo("WALLET_TOPUP");
     }
 
+    /** Kiểm thử: thanh toán không gắn với gì là loại khác. */
     @Test
     void unlinkedPaymentIsOther() throws Exception {
         PaymentDto dto = describe(new Payment());

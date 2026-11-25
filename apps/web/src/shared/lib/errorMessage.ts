@@ -7,7 +7,10 @@ export function errorMessage(error: unknown, fallback: string): string {
   return fallback;
 }
 
-/** Keep API/business error content verbatim; only source-owned fallbacks are translatable. */
+/**
+ * Giữ nguyên thông báo lỗi nghiệp vụ từ API; chỉ dùng chuỗi dự phòng (thuộc mã nguồn, dịch được) khi lỗi không có
+ * nội dung riêng.
+ */
 export function localizableError(error: unknown, fallback: string): string | Error {
   return error instanceof Error && error.name === 'Error' && error.message ? error : fallback;
 }

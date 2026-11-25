@@ -1,6 +1,4 @@
-/* ==========================================================================
-   UI SELECT (custom dropdown) — synchronized with Charcoal–Salmon theme
-   ========================================================================== */
+/* Mục đích: Kiểu cho ô chọn (select) tùy chỉnh: nút, danh sách tùy chọn, trạng thái focus — đồng bộ với giao diện than–salmon. */
 
 .ui-select {
   position: relative;
@@ -81,7 +79,7 @@
   cursor: not-allowed;
 }
 
-/* Hidden native select for form validation & test compatibility */
+/* Thẻ select gốc bị ẩn để phục vụ kiểm tra hợp lệ của form và tương thích kiểm thử */
 .ui-select__native {
   position: absolute;
   inset: auto 0 0 0;

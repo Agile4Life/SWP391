@@ -15,10 +15,14 @@ import {
   type HoldStatus,
 } from '../member/holdApi';
 
+/** Bộ lọc trạng thái yêu cầu bảo lưu (hoặc tất cả). */
 type Filter = HoldStatus | 'ALL';
 const FILTERS: Filter[] = ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'ALL'];
 
-/** Receptionist and manager screen: review hold requests with their medical paperwork and keep the history. */
+/**
+ * Màn lễ tân/quản lý xử lý yêu cầu bảo lưu: xem hồ sơ y tế đính kèm, duyệt hoặc từ chối (kèm lý do), rút yêu
+ * cầu hộ hội viên và lưu giữ lịch sử.
+ */
 export function HoldManagementPage() {
   const { t } = useI18n();
   const [filter, setFilter] = useState<Filter>('PENDING');
@@ -29,6 +33,7 @@ export function HoldManagementPage() {
   const [rejectingId, setRejectingId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState('');
 
+  // Tải danh sách yêu cầu theo bộ lọc.
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -52,6 +57,7 @@ export function HoldManagementPage() {
     ALL: t('Tất cả', 'All'),
   };
 
+  // Duyệt hoặc từ chối một yêu cầu; một thời điểm chỉ xử lý một yêu cầu.
   async function decide(item: HoldDetail, approve: boolean, reason?: string) {
     if (busyId !== null) return;
     setBusyId(item.id);
@@ -70,6 +76,7 @@ export function HoldManagementPage() {
     }
   }
 
+  // Rút yêu cầu bảo lưu thay hội viên.
   async function withdraw(item: HoldDetail) {
     if (busyId !== null) return;
     setBusyId(item.id);
@@ -86,6 +93,7 @@ export function HoldManagementPage() {
     }
   }
 
+  // Mở tài liệu đính kèm trong tab mới qua object URL (thu hồi sau 60 giây).
   async function openDocument(item: HoldDetail, documentId: number) {
     try {
       const blob = await fetchHoldDocument(item.id, documentId);
@@ -176,7 +184,7 @@ export function HoldManagementPage() {
                 </div>
               )}
               {item.holdStatus === 'PENDING' && (
-                <small className="meta-label">{t('Duyệt sẽ hủy PT, sân và khóa học trong giai đoạn bảo lưu. Khóa bắt đầu trong dưới 3 ngày hoặc đã bắt đầu sẽ mất lượt/học phí.', 'Approving cancels PT sessions, courts and courses within the hold. Courses starting in under 3 days, or already running, lose their credit or fee.')}</small>
+                <small className="meta-label">{t('Duyệt sẽ hủy các buổi PT trong giai đoạn bảo lưu.', 'Approving cancels PT sessions within the hold.')}</small>
               )}
             </li>
           ))}

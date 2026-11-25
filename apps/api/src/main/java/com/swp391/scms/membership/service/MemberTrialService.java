@@ -33,6 +33,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 
+/**
+ * Gói trải nghiệm 3 ngày miễn phí cho hội viên mới: hội viên gửi yêu cầu kèm giấy tờ, lễ tân duyệt thì tạo kỳ
+ * gói dùng thử. Mỗi giấy tờ (theo mã băm) và mỗi tài khoản chỉ được nhận một lần.
+ */
 @Service
 public class MemberTrialService {
 
@@ -47,7 +51,9 @@ public class MemberTrialService {
     private final MessageService messageService;
     private final Clock clock;
     private final CccdHasher cccdHasher;
+    private final com.swp391.scms.users.KycCrypto kycCrypto;
 
+    /** Constructor Spring dùng; thông báo, dịch, Clock và bộ mã hóa KYC là tùy chọn. */
     @Autowired
     public MemberTrialService(
             MemberTrialRedemptionRepository trialRedemptions,
@@ -57,7 +63,8 @@ public class MemberTrialService {
             @Autowired(required = false) NotificationService notifications,
             @Autowired(required = false) MessageService messageService,
             @Autowired(required = false) Clock clock,
-            CccdHasher cccdHasher
+            CccdHasher cccdHasher,
+            @Autowired(required = false) com.swp391.scms.users.KycCrypto kycCrypto
     ) {
         this.trialRedemptions = trialRedemptions;
         this.members = members;
@@ -67,12 +74,18 @@ public class MemberTrialService {
         this.messageService = messageService;
         this.clock = clock != null ? clock : Clock.systemDefaultZone();
         this.cccdHasher = cccdHasher;
+        this.kycCrypto = kycCrypto;
     }
 
+    /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
     private String msg(String key, Object... args) {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /**
+     * Trạng thái gói trải nghiệm của hội viên: đã có yêu cầu thì trả theo yêu cầu đó; chưa có thì cho biết có
+     * đủ điều kiện không (chỉ khi chưa từng có gói tập nào).
+     */
     @Transactional(readOnly = true)
     public TrialStatusDto getTrialStatus(Long memberId) {
         var existing = trialRedemptions.findByMemberUserId(memberId);
@@ -100,6 +113,10 @@ public class MemberTrialService {
         );
     }
 
+    /**
+     * Kiểm tra số giấy tờ: bắt buộc nhập; hộ chiếu chỉ cho người nước ngoài và gồm 6-15 ký tự chữ số; CCCD phải
+     * 9 hoặc 12 chữ số.
+     */
     public void validateDocument(String docType, String docNumber, String nationality) {
         if (docNumber == null || docNumber.isBlank()) {
             throw new BadRequestException("TRIAL_DOCUMENT_REQUIRED", "validation.trial.document_number.required", null,
@@ -124,19 +141,37 @@ public class MemberTrialService {
         }
     }
 
-    /** Document photos are uploaded images only (JPEG/PNG/WebP, at most 2 MB), never outside links. */
+    /**
+     * Ảnh giấy tờ chỉ nhận ảnh tải lên (JPEG/PNG/WebP, tối đa 2 MB), không bao giờ nhận liên kết ngoài; để trống thì bỏ qua.
+     */
     private static void validateDocumentImage(String dataUrl) {
         if (dataUrl == null || dataUrl.isBlank()) return;
         com.swp391.scms.common.image.ImageDataUrlValidator.validate(dataUrl, MAX_DOCUMENT_IMAGE_BYTES,
                 "KYC_IMAGE_INVALID", "error.kyc.image_invalid");
     }
 
+    /** Số giấy tờ KYC đã lưu: bản mã hóa nếu có, nếu không thì bản rõ cũ (chưa backfill); bản đã che thì bỏ qua. */
+    private String storedDocumentNumber(Member member) {
+        if (member.getCitizenIdEncrypted() != null && kycCrypto != null) {
+            return kycCrypto.decrypt(member.getCitizenIdEncrypted());
+        }
+        String plain = member.getCitizenId();
+        return plain != null && !com.swp391.scms.users.KycCrypto.isMasked(plain) ? plain : null;
+    }
+
+    /** Quốc tịch có phải Việt Nam không (VN, VNM, VIETNAM, VIỆT NAM, VIET NAM). */
     private boolean isVietnamese(String nationality) {
         if (nationality == null) return false;
         String s = nationality.trim().toUpperCase(Locale.ROOT);
         return s.equals("VN") || s.equals("VNM") || s.equals("VIETNAM") || s.equals("VIỆT NAM") || s.equals("VIET NAM");
     }
 
+    /**
+     * Gửi yêu cầu gói trải nghiệm: chỉ hội viên chưa từng có gói. Không nhập số giấy tờ thì dùng lại KYC đã nộp
+     * (đang chờ hoặc đã duyệt). Kiểm tra họ tên, giấy tờ, ảnh; số giấy tờ không được tài khoản khác dùng (so
+     * bằng mã băm). Yêu cầu bị từ chối trước đó được cập nhật để duyệt lại; đang chờ hoặc đã duyệt thì báo
+     * trùng. Lưu mã băm, 4 số cuối và bản mã hóa số giấy tờ, rồi gửi thông báo đã nhận yêu cầu.
+     */
     @Transactional
     public TrialStatusDto requestTrial(AuthenticatedPrincipal principal, TrialClaimRequest request) {
         if (principal == null || principal.id() == null) {
@@ -145,23 +180,65 @@ public class MemberTrialService {
         Long memberId = principal.id();
         String docType = request.resolvedDocumentType();
         String docNumber = request.resolvedDocumentNumber();
-        String fullName = request.fullName().trim();
+        String fullName = request.fullName() != null ? request.fullName().trim() : "";
         String nationality = request.nationality() != null ? request.nationality().trim() : null;
         String frontImageUrl = request.frontImageUrl() != null ? request.frontImageUrl().trim() : null;
         String backImageUrl = request.backImageUrl() != null ? request.backImageUrl().trim() : null;
-
-        // 1. Kiểm tra định dạng giấy tờ & quốc tịch
-        validateDocument(docType, docNumber, nationality);
-        validateDocumentImage(frontImageUrl);
-        validateDocumentImage(backImageUrl);
-
-        String docHash = cccdHasher.hash(docNumber);
 
         // 2. Chỉ hội viên chưa từng có gói tập nào mới được gửi yêu cầu trải nghiệm
         if (subscriptions.existsByMemberUserId(memberId)) {
             throw new ConflictException("TRIAL_NOT_NEW_MEMBER", "trial.not_new_member", null,
                     msg("trial.not_new_member"));
         }
+
+        Member member = null;
+        if (docNumber.isBlank()) {
+            member = members.findById(memberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+            // Nếu hội viên đã nộp KYC trước đó (PENDING hoặc APPROVED) và chưa nhập lại số giấy tờ, tái sử dụng KYC đã lưu
+            // Cùng điều kiện với giao diện (MemberPackagesPage.hasReusableKyc): có trạng thái hợp lệ và có số giấy tờ đã lưu.
+            boolean hasReusableKyc = Boolean.TRUE.equals(member.getIdentityVerified())
+                    || "APPROVED".equalsIgnoreCase(member.getKycStatus())
+                    || "PENDING".equalsIgnoreCase(member.getKycStatus());
+            if (hasReusableKyc) {
+                String decryptedDoc = storedDocumentNumber(member);
+                if (decryptedDoc != null && !decryptedDoc.isBlank()) {
+                    docNumber = decryptedDoc.trim();
+                    if (member.getDocumentType() != null && !member.getDocumentType().isBlank()) {
+                        docType = member.getDocumentType().trim().toUpperCase(Locale.ROOT);
+                    }
+                    if (nationality == null || nationality.isBlank()) {
+                        nationality = member.getNationality();
+                    }
+                    if (fullName.isBlank() && member.getUser() != null && member.getUser().getFullName() != null) {
+                        fullName = member.getUser().getFullName().trim();
+                    }
+                    if (frontImageUrl == null || frontImageUrl.isBlank()) {
+                        frontImageUrl = member.getFrontImageUrl();
+                    }
+                    if (backImageUrl == null || backImageUrl.isBlank()) {
+                        backImageUrl = member.getBackImageUrl();
+                    }
+                }
+            }
+        }
+
+        if (fullName.isBlank()) {
+            throw new BadRequestException("TRIAL_FULL_NAME_REQUIRED", "validation.trial.full_name.required", null,
+                    msg("validation.trial.full_name.required"));
+        }
+
+        // 1. Kiểm tra định dạng giấy tờ & quốc tịch
+        validateDocument(docType, docNumber, nationality);
+        validateDocumentImage(frontImageUrl);
+        validateDocumentImage(backImageUrl);
+
+        if (member == null) {
+            member = members.findById(memberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+        }
+
+        String docHash = cccdHasher.hash(docNumber);
 
         // 3. Kiểm tra số giấy tờ này đã được tài khoản khác sử dụng chưa
         if (trialRedemptions.existsByCccdHashAndMemberUserIdNot(docHash, memberId)) {
@@ -202,8 +279,6 @@ public class MemberTrialService {
                 throw new ConflictException("TRIAL_DOCUMENT_ALREADY_USED", "trial.already_claimed.document", null,
                         msg("trial.already_claimed.document"));
             }
-            Member member = members.findById(memberId)
-                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
             redemption = new MemberTrialRedemption();
             redemption.setMember(member);
             redemption.setDocumentType(docType);
@@ -248,9 +323,11 @@ public class MemberTrialService {
             );
         }
 
+        if (notifications != null) notifications.notifyReceptionists("trial", saved.getId());
         return toStatusDto(saved);
     }
 
+    /** Lễ tân duyệt yêu cầu gói trải nghiệm và trả thông tin yêu cầu sau khi duyệt. */
     @Transactional
     public ReceptionTrialDto approveTrial(AuthenticatedPrincipal reviewer, Long trialId) {
         MembershipSubscription savedSub = approveTrialInternal(reviewer, trialId);
@@ -259,6 +336,11 @@ public class MemberTrialService {
         return toReceptionDto(updated);
     }
 
+    /**
+     * Duyệt: yêu cầu không được đã duyệt hoặc đang bị từ chối. Đồng bộ họ tên và giấy tờ sang hồ sơ hội viên
+     * (đánh dấu đã xác minh), tìm gói trải nghiệm (không có thì dùng gói Gold), tạo kỳ gói active 3 ngày từ hôm
+     * nay với mã QR mới, xóa bản mã hóa số giấy tờ, lưu người duyệt và gửi thông báo.
+     */
     private MembershipSubscription approveTrialInternal(AuthenticatedPrincipal reviewer, Long trialId) {
         MemberTrialRedemption redemption = trialRedemptions.findById(trialId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.trial", trialId));
@@ -267,7 +349,7 @@ public class MemberTrialService {
             throw new ConflictException("TRIAL_ALREADY_APPROVED", "trial.already_approved", null,
                     "Đơn đăng ký gói trải nghiệm này đã được phê duyệt trước đó.");
         }
-        // A rejected request no longer reserves its document; the member must resubmit before it can be approved.
+        // Yêu cầu đã bị từ chối không còn giữ chỗ giấy tờ; hội viên phải nộp lại trước khi có thể được duyệt.
         if (MemberTrialRedemption.STATUS_REJECTED.equalsIgnoreCase(redemption.getStatus())) {
             throw new ConflictException("TRIAL_REJECTED_RESUBMIT", "trial.rejected.resubmit_required", null,
                     "Rejected request: the member must resubmit it first.");
@@ -287,6 +369,9 @@ public class MemberTrialService {
         member.setNationality(redemption.getNationality());
         member.setFrontImageUrl(redemption.getFrontImageUrl());
         member.setBackImageUrl(redemption.getBackImageUrl());
+        // Trial đã đối chiếu giấy tờ: đồng bộ trạng thái để Member và POS không còn hiển thị chờ duyệt.
+        member.setKycStatus("APPROVED");
+        member.setKycRejectReason(null);
         member.setIdentityVerified(true);
         member.setIdentityVerifiedAt(LocalDateTime.now(clock));
 
@@ -333,6 +418,11 @@ public class MemberTrialService {
         return savedSub;
     }
 
+    /**
+     * Từ chối yêu cầu (không áp dụng cho yêu cầu đã duyệt): lưu lý do (mặc định "thông tin giấy tờ không
+     * khớp"), xóa bản mã hóa và thay mã băm bằng giá trị giả để giấy tờ không bị giữ chỗ (phòng trường hợp ai
+     * đó dùng giấy tờ người khác), rồi gửi thông báo kèm lý do.
+     */
     @Transactional
     public ReceptionTrialDto rejectTrial(AuthenticatedPrincipal reviewer, Long trialId, String reason) {
         MemberTrialRedemption redemption = trialRedemptions.findById(trialId)
@@ -346,8 +436,8 @@ public class MemberTrialService {
         String rejectionReason = (reason != null && !reason.isBlank()) ? reason.trim() : "Thông tin giấy tờ không khớp";
         redemption.setStatus(MemberTrialRedemption.STATUS_REJECTED);
         redemption.setDocumentNumberEnc(null);
-        // A rejected document must not stay reserved: someone may have sent another person's ID. The owner can still
-        // resubmit, which writes the real hash again.
+        // Giấy tờ bị từ chối không được giữ chỗ: có thể ai đó đã gửi giấy tờ của người khác. Chủ sở hữu vẫn có thể
+        // nộp lại, khi đó hệ thống sẽ ghi lại mã băm thật.
         redemption.setCccdHash("rejected-" + redemption.getId());
         redemption.setRejectionReason(rejectionReason);
         redemption.setReviewedBy(reviewer != null ? reviewer.id() : null);
@@ -369,6 +459,10 @@ public class MemberTrialService {
         return toReceptionDto(saved);
     }
 
+    /**
+     * Danh sách yêu cầu gói trải nghiệm cho quầy (mới nhất trước), lọc theo trạng thái và tìm theo họ tên, 4 số
+     * cuối giấy tờ, mã hội viên, email hoặc SĐT.
+     */
     @Transactional(readOnly = true)
     public List<ReceptionTrialDto> listTrials(String status, String search) {
         List<MemberTrialRedemption> list;
@@ -396,7 +490,8 @@ public class MemberTrialService {
     }
 
     /**
-     * Backward-compatible claim method for direct activation.
+     * Phương thức nhận gói trải nghiệm tương thích ngược để kích hoạt trực tiếp (không qua duyệt): kiểm tra
+     * chưa nhận, giấy tờ chưa dùng, hội viên chưa có gói, rồi tạo kỳ gói 3 ngày và bản ghi nhận gói.
      */
     @Transactional
     public SubscriptionDto claimGoldTrial(AuthenticatedPrincipal principal, TrialClaimRequest request) {
@@ -480,6 +575,10 @@ public class MemberTrialService {
         return toSubscriptionDto(savedSub);
     }
 
+    /**
+     * Chuyển yêu cầu sang TrialStatusDto cho hội viên (số giấy tờ chỉ hiện dạng che); dữ liệu cũ thiếu trạng
+     * thái thì suy ra từ việc đã có kỳ gói hay chưa.
+     */
     private TrialStatusDto toStatusDto(MemberTrialRedemption r) {
         String effectiveStatus = r.getStatus() != null
                 ? r.getStatus()
@@ -506,6 +605,7 @@ public class MemberTrialService {
         );
     }
 
+    /** Chuyển yêu cầu sang ReceptionTrialDto cho màn hình quầy, kèm thông tin hội viên và người duyệt. */
     private ReceptionTrialDto toReceptionDto(MemberTrialRedemption r) {
         Member m = r.getMember();
         User u = m != null ? m.getUser() : null;
@@ -542,6 +642,7 @@ public class MemberTrialService {
         );
     }
 
+    /** Chuyển kỳ gói trải nghiệm sang SubscriptionDto. */
     private SubscriptionDto toSubscriptionDto(MembershipSubscription s) {
         return new SubscriptionDto(
                 s.getId(),

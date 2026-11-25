@@ -3,7 +3,9 @@ import { useStaffI18n } from '../operations/staffI18n';
 import { SavedTrainingPlans } from './SavedTrainingPlans';
 import './coach-training-plan.css';
 
-/** Saved plans tab: plans the coach already activated, separate from the step-by-step builder. */
+/**
+ * Tab giáo án đã lưu: các giáo án HLV đã kích hoạt, tách khỏi trình soạn giáo án từng bước.
+ */
 export function CoachSavedPlansPage() {
   const { t } = useStaffI18n();
   return (

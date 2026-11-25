@@ -38,11 +38,13 @@ import { trialApi, type TrialStatus } from './trialApi';
 import { getProfile, type Profile } from './profileApi';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 
+/** Trạng thái tải dữ liệu: đang tải, lỗi hoặc thành công kèm dữ liệu. */
 type LoadState<T> =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'success'; data: T };
 
+/** Kết quả sau khi tạo yêu cầu gói: đăng ký, gói và hành động (đăng ký mới, gia hạn hoặc nâng cấp). */
 interface RequestResult {
   subscription: MemberSubscription;
   membershipPackage: MembershipPackage;
@@ -50,24 +52,28 @@ interface RequestResult {
 }
 
 // Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
-/** Sellable plans run 3-12 months: 3 months is "short", 6 months and up is "long". */
+/** Các gói mở bán có kỳ hạn 3–12 tháng: 3 tháng thuộc nhóm "short", từ 6 tháng trở lên thuộc nhóm "long". */
 const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.';
 
-// The backend VNPay guard decides whether a pending online attempt can still settle.
-// Cash receipts under review, settled payments and unknown states must remain blocked here.
+// Bộ kiểm tra VNPay phía backend quyết định liệu một lượt thanh toán trực tuyến đang chờ còn có thể hoàn tất hay không.
+// Biên lai tiền mặt đang chờ duyệt, thanh toán đã hoàn tất và các trạng thái không xác định phải tiếp tục bị chặn ở đây.
+/** Khoản thanh toán có chặn việc hủy gói không (khoản thất bại hoặc ví đang chờ thì không chặn). */
 function blocksMemberCancellation(payment: Payment): boolean {
   return payment.status !== 'failed' && !(payment.status === 'pending' && payment.method === 'online_wallet');
 }
 
+/** Định dạng ngày (cắt phần giờ) theo múi giờ trung tâm. */
 function formatDate(value: string): string {
   return formatCenterDate(value.slice(0, 10));
 }
 
+/** Khóa ngày hôm nay dạng YYYY-MM-DD theo giờ máy. */
 function todayKey(): string {
   const today = new Date();
   return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 }
 
+/** Gói đích có cao hơn gói hiện tại không (giá cao hơn, hoặc cùng giá nhưng thời hạn dài hơn). */
 function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: MembershipPackage): boolean {
   if (!currentPkg || currentPkg.id === targetPkg.id) return false;
   if (targetPkg.price > currentPkg.price) return true;
@@ -75,6 +81,7 @@ function isHigherPackage(currentPkg: MembershipPackage | null, targetPkg: Member
   return false;
 }
 
+/** Lỗi có phải do cần xác minh danh tính (KYC) không (theo mã lỗi hoặc nội dung). */
 function isKycRequiredError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
   const code = (error as { code?: string }).code;
@@ -82,6 +89,10 @@ function isKycRequiredError(error: unknown): boolean {
   return /kyc|cccd|căn cước|hộ chiếu|identity|error\.membership\.kyc_required/i.test(error.message);
 }
 
+/**
+ * Trang gói tập của hội viên: xem danh mục, đăng ký, gia hạn, nâng cấp, bảo lưu/mở lại, hủy yêu cầu chờ thanh
+ * toán, nhận gói trải nghiệm và theo dõi thanh toán; tự đồng bộ khi quay lại tab.
+ */
 export function MemberPackagesPage() {
   useLanguage();
   const { lang, t } = useI18n();
@@ -101,6 +112,7 @@ export function MemberPackagesPage() {
 
   const [submittingPackageId, setSubmittingPackageId] =
     useState<number | null>(null);
+  const [expandedBenefitIds, setExpandedBenefitIds] = useState<Record<number, boolean>>({});
   const requestBusy = useRef(false);
   const createdSubscriptions = useRef<MemberSubscription[]>([]);
   const syncVersion = useRef(0);
@@ -121,7 +133,7 @@ export function MemberPackagesPage() {
   const [requestResult, setRequestResult] =
     useState<RequestResult | null>(null);
 
-  // Bảo lưu gói tập modal state
+  // Trạng thái hộp thoại gói trải nghiệm / KYC
   const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
   const [kycProfile, setKycProfile] = useState<Profile | null>(null);
   const [isTrialModalOpen, setIsTrialModalOpen] = useState(false);
@@ -134,21 +146,23 @@ export function MemberPackagesPage() {
   const [trialError, setTrialError] = useState<string | Error | { vi: string; en: string } | SourceMessage>('');
   const [isClaimingTrial, setIsClaimingTrial] = useState(false);
 
+  // Tải trạng thái gói trải nghiệm (lỗi nền thì bỏ qua).
   const loadTrialStatus = useCallback(async () => {
     try {
       const res = await trialApi.getStatus();
       setTrialStatus(res);
     } catch {
-      // Ignore background check failure
+      // Bỏ qua lỗi kiểm tra chạy nền
     }
   }, []);
 
+  // Tải hồ sơ để biết hội viên đã xác minh danh tính chưa (lỗi nền thì bỏ qua).
   const loadKycProfile = useCallback(async () => {
     try {
       const res = await getProfile();
       if (res && typeof res === 'object') setKycProfile(res);
     } catch {
-      // Ignore background profile check failure
+      // Bỏ qua lỗi kiểm tra hồ sơ chạy nền
     }
   }, []);
 
@@ -157,12 +171,13 @@ export function MemberPackagesPage() {
     void loadKycProfile();
   }, [loadTrialStatus, loadKycProfile]);
 
+  // Chọn ảnh giấy tờ cho gói trải nghiệm (tối đa 5MB), thu nhỏ trong trình duyệt để không vượt giới hạn body.
   const handleTrialImageUpload = (file: File, target: 'front' | 'back') => {
     if (file.size > 5 * 1024 * 1024) {
       setTrialError(memberMessage("Dung lượng ảnh tối đa là 5MB."));
       return;
     }
-    // Scaled down in the browser: two full-size phone photos as base64 pass the proxy's body limit (HTTP 413).
+    // Thu nhỏ ngay trên trình duyệt: hai ảnh điện thoại kích thước gốc dạng base64 sẽ vượt giới hạn body của proxy (HTTP 413).
     void fileToUploadDataUrl(file).then((dataUrl) => {
       if (target === 'front') setTrialFrontImage(dataUrl);
       else setTrialBackImage(dataUrl);
@@ -172,8 +187,32 @@ export function MemberPackagesPage() {
     });
   };
 
+  const hasReusableKyc = Boolean(
+    kycProfile &&
+    (kycProfile.identityVerified || kycProfile.kycStatus === 'APPROVED' || kycProfile.kycStatus === 'PENDING') &&
+    kycProfile.citizenId
+  );
+
+  // Gửi yêu cầu gói trải nghiệm: dùng lại hồ sơ KYC có sẵn hoặc gửi giấy tờ mới.
   const handleClaimTrial = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (hasReusableKyc) {
+      setIsClaimingTrial(true);
+      setTrialError('');
+      try {
+        await trialApi.claim({
+          fullName: (kycProfile?.fullName || '').trim(),
+        });
+        notify(t("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), record: true });
+        setIsTrialModalOpen(false);
+        await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
+      } catch (err) {
+        setTrialError(localizableError(err, 'Không thể gửi đơn đăng ký gói trải nghiệm. Vui lòng kiểm tra lại thông tin.'));
+      } finally {
+        setIsClaimingTrial(false);
+      }
+      return;
+    }
     const docClean = trialDocumentNumber.trim();
     if (trialDocType === 'CCCD') {
       if (!/^(\d{9}|\d{12})$/.test(docClean)) {
@@ -241,6 +280,7 @@ export function MemberPackagesPage() {
   const [releasingVnpay, setReleasingVnpay] = useState(false);
   const [pendingToCancel, setPendingToCancel] = useState<MemberSubscription | null>(null);
 
+  // Tải danh mục gói (chỉ lần gọi mới nhất được dùng).
   const loadPackages = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.packages;
@@ -251,6 +291,7 @@ export function MemberPackagesPage() {
     } catch { if (version === readVersions.current.packages) setPackagesState({ status: 'error' }); }
   }, []);
 
+  // Tải gói hiện tại.
   const loadCurrent = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.current;
@@ -261,6 +302,7 @@ export function MemberPackagesPage() {
     } catch { if (version === readVersions.current.current) setCurrentState({ status: 'error' }); }
   }, []);
 
+  // Tải lịch sử các kỳ gói.
   const loadHistory = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.history;
@@ -276,6 +318,7 @@ export function MemberPackagesPage() {
     catch { if (version === readVersions.current.history) setHistoryState({ status: 'error' }); }
   }, []);
 
+  // Tải lịch sử thanh toán.
   const loadPayments = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.payments;
@@ -291,6 +334,7 @@ export function MemberPackagesPage() {
     }
   }, []);
 
+  // Tải các yêu cầu hủy gói.
   const loadCancellations = useCallback(async () => {
     syncVersion.current += 1;
     const version = ++readVersions.current.cancellations;
@@ -340,14 +384,15 @@ export function MemberPackagesPage() {
     ? paymentsState.data.filter((payment) => payment.subscriptionId === pending.id) : [];
   const pendingPackage = pending ? packages.find((item) => item.id === pending.packageId) : null;
 
+  // Số lần gia hạn đang chiếm chỗ của một kỳ (chỉ pending_payment hoặc active chặn gia hạn, khớp MembershipSubscriptionService.renew()).
   function renewalCount(subscriptionId: number): number {
-    // Match MembershipSubscriptionService.renew(): only pending_payment/active block renewal.
     return historyState.status === 'success'
       ? historyState.data.filter((item) => item.previousSubscriptionId === subscriptionId
         && (item.status === 'active' || item.status === 'pending_payment')).length
       : 0;
   }
 
+  // Phát hiện xung đột trong lịch sử kỳ đã trả tiền (kỳ chồng ngày hoặc dữ liệu sai); xung đột thì không cho thao tác.
   function paidHistoryConflict(): boolean {
     if (historyState.status !== 'success') return true;
     const paid = historyState.data.filter((item) => item.status === 'active' || item.status === 'expired');
@@ -366,6 +411,7 @@ export function MemberPackagesPage() {
     return false;
   }
 
+  // Tìm kỳ cuối của chuỗi gia hạn cho một kỳ; có xung đột hoặc đang bảo lưu thì báo conflict.
   function renewalPath(subscriptionId: number): { tail: MemberSubscription | null; conflict: boolean } {
     if (historyState.status !== 'success' || paidHistoryConflict()
       || historyState.data.some((item) => item.status === 'frozen')) return { tail: null, conflict: true };
@@ -410,11 +456,12 @@ export function MemberPackagesPage() {
     }
   }, [historyState]);
 
-  // Supabase Broadcast invalidates data; the authenticated API remains authoritative.
-  // A foreground read or mutation invalidates an older background snapshot.
+  // Supabase Broadcast chỉ dùng để đánh dấu dữ liệu cần tải lại; API đã xác thực vẫn là nguồn chuẩn duy nhất.
+  // Lượt đọc hoặc thao tác ghi ở tiền cảnh sẽ vô hiệu hóa bản chụp chạy nền cũ hơn.
   useEffect(() => {
     let disposed = false;
     let inFlight = false;
+    // Đồng bộ lại toàn bộ dữ liệu gói (bỏ qua khi tab ẩn hoặc đang bận, xếp hàng chạy lại sau); phát hiện thanh toán vừa thành công để báo.
     async function refresh() {
       if (disposed) return;
       if (inFlight || document.visibilityState === 'hidden' || requestBusy.current
@@ -469,7 +516,9 @@ export function MemberPackagesPage() {
       }
     }
 
+    // Làm mới theo sự kiện focus/online.
     const onRefresh = () => void refresh();
+    // Quay lại trang từ bộ nhớ đệm thì đồng bộ lại.
     const onRestore = (event: PageTransitionEvent) => {
       if (!event.persisted) return;
       syncVersion.current += 1;
@@ -516,6 +565,7 @@ export function MemberPackagesPage() {
     focusedSelection.current = selectedId;
   }, [isStatusSyncing, packagesState.status, selectedId]);
 
+  // Đăng ký, gia hạn hoặc nâng cấp gói: kiểm tra xung đột và yêu cầu KYC lần đầu, tính báo giá nâng cấp, xác nhận với hội viên rồi tạo yêu cầu thanh toán.
   async function handleMembershipAction(
     membershipPackage: MembershipPackage,
     renewFrom: MemberSubscription | null,
@@ -541,23 +591,15 @@ export function MemberPackagesPage() {
       return;
     }
 
-    const hasPriorConfirmed = historyState.data.some(
-      (item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen',
-    );
-    const requiresFirstTimeKyc = Boolean(
-      !upgradeFrom &&
-      !renewFrom &&
-      kycProfile &&
-      kycProfile.identityVerified === false &&
-      !current &&
-      !hasPriorConfirmed,
-    );
+
+    // Mua mới yêu cầu KYC; lịch sử đơn không chứng minh danh tính.
+    const requiresFirstTimeKyc = Boolean(trialStatus?.status !== 'APPROVED' && !upgradeFrom && !renewFrom && kycProfile && (!kycProfile.identityVerified || kycProfile.kycStatus === 'PENDING' || kycProfile.kycStatus === 'REJECTED'));
     if (requiresFirstTimeKyc) {
       navigate(`/member/packages/checkout?packageId=${membershipPackage.id}`);
       return;
     }
 
-    // One click used to create the request straight away; let the member check plan and amount first.
+    // Trước đây bấm một lần là tạo yêu cầu ngay; giờ cho hội viên kiểm tra gói và số tiền trước.
     const quote = upgradeFrom ? upgradeQuote(upgradeFrom, membershipPackage.price, todayKey()) : null;
     const amount = quote?.amount ?? membershipPackage.price;
     const actionLabel = upgradeFrom
@@ -623,6 +665,7 @@ export function MemberPackagesPage() {
     }
   }
 
+  // Mở lại gói đang bảo lưu.
   async function handleResume() {
     if (!frozenSubscription || requestBusy.current) return;
     requestBusy.current = true;
@@ -646,6 +689,7 @@ export function MemberPackagesPage() {
   }
 
 
+  // Hủy yêu cầu gói đang chờ thanh toán.
   async function handleCancelPending(subscriptionId: number) {
     if (returnSyncing || syncError || isStatusSyncing || isCancellingPending || requestBusy.current) return;
     requestBusy.current = true;
@@ -681,22 +725,15 @@ export function MemberPackagesPage() {
   }
 
 
+  // API chưa có bộ môn/phòng của gói: chỉ lọc trạng thái và thời hạn hiện có.
+  // Không đoán gói Gym từ SILVER/GOLD; chờ An/Khoa xác nhận catalog trước khi lọc thêm.
   const purchasablePackages = packages.filter((item) => item.status === 'active' && !isTrialPackage(item) && item.durationDays >= MIN_TERM_DAYS);
   const hasRegisteredAnyPackage = Boolean(
     current ||
     (historyState.status === 'success' && historyState.data.length > 0) ||
     trialStatus?.alreadyClaimed
   );
-  const hasPriorConfirmedSubscription = historyState.status === 'success' && historyState.data.some(
-    (item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen',
-  );
-  const showFirstTimeKycNotice = Boolean(
-    kycProfile &&
-    kycProfile.identityVerified === false &&
-    !current &&
-    !pending &&
-    !hasPriorConfirmedSubscription,
-  );
+  const showFirstTimeKycNotice = Boolean(kycProfile && !kycProfile.identityVerified && !current && !pending);
 
   return (
     <div data-i18n-managed className="portal-container member-packages" >
@@ -723,7 +760,7 @@ export function MemberPackagesPage() {
       />
       {returnSyncing && <p role="status">{t("Đang đồng bộ thông tin gói tập…", 'Synchronizing membership information…')}</p>}
 
-      {/* Unified Skeleton for Status Area (replaces piecemeal text lines) */}
+      {/* Khung xương đồng nhất cho khu vực trạng thái (thay thế các dòng chữ rời rạc) */}
       {isStatusSyncing && !current && !pending && (
         <div className="package-status-skeleton" role="status" aria-busy="true">
           <span className="sr-only">{t("Đang đồng bộ thông tin gói tập…", "Synchronizing membership details…")}</span>
@@ -930,8 +967,8 @@ export function MemberPackagesPage() {
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <Link to="/member/card" className="btn-primary btn-sm">
                 {t(" Xem thẻ QR Check-in ", "View check-in QR card")}</Link>
-              <Link to="/member/classes" className="btn-secondary btn-sm">
-                {t(" Đặt lịch lớp học ", "Book a class")}</Link>
+              <Link to="/member/classes?tab=pt" className="btn-secondary btn-sm">
+                {t(" Đặt lịch HLV 1:1 ", "Book a 1:1 coach")}</Link>
               {!isTrial && (
                 <details className="package-manage">
                   <summary className="btn-secondary btn-sm">{t("Quản lý gói", "Manage membership")}</summary>
@@ -970,7 +1007,7 @@ export function MemberPackagesPage() {
             </p>
           )}
           <p className="row-card__meta" style={{ marginTop: 6 }}>
-            {t(" Gói tập đang được bảo lưu. Khóa học, lịch PT và đặt sân trong giai đoạn bảo lưu đã bị hủy. ", "Your membership is on hold. Courses, PT sessions and courts within the hold period have been cancelled.")}</p>
+            {t(" Gói tập đang được bảo lưu. Các buổi PT 1:1 trong giai đoạn bảo lưu đã bị hủy. ", "Your membership is on hold. 1:1 PT sessions within the hold period have been cancelled.")}</p>
           <p className="row-card__meta">{t("Mở lại để dùng tiếp số ngày còn lại, không cần thanh toán lại.", "Resume to use your remaining days; no new payment needed.")}</p>
           <button type="button" className="btn-primary" disabled={isResuming || isStatusSyncing || pendingItems.length > 0}
             onClick={() => void handleResume()}>
@@ -1134,13 +1171,8 @@ export function MemberPackagesPage() {
               return durationTab === 'long' ? pkg.durationDays >= LONG_TERM_DAYS : pkg.durationDays < LONG_TERM_DAYS;
             }).map((membershipPackage) => {
             const details = getPackageDetails(membershipPackage, lang);
-            // Chỉ điều có giá trị so sánh: lượt đặt lớp + quyền lợi do catalog mô tả (thời hạn đã nằm cạnh giá)
-            const highlights = [
-              membershipPackage.classCreditLimit != null
-                ? t(`${membershipPackage.classCreditLimit} lượt đặt lớp mỗi kỳ`, `${membershipPackage.classCreditLimit} class bookings per period`)
-                : t("Không giới hạn lượt đặt lớp", "Unlimited class bookings"),
-              ...details.perks,
-            ];
+            // Lớp nhóm đã bỏ: chỉ so sánh quyền lợi do catalog mô tả (thời hạn đã nằm cạnh giá)
+            const highlights = [...details.perks];
             // Chỉ gập khi còn từ 2 ý trở lên; thừa đúng 1 ý thì hiện luôn
             const visibleCount = highlights.length <= 3 ? highlights.length : 2;
             const isCurrent =
@@ -1269,25 +1301,57 @@ export function MemberPackagesPage() {
                     {details.summary}
                   </p>
 
-                  <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
-                    {highlights.slice(0, visibleCount).map((benefit, index) => (
-                      <li key={index} className="package-benefit-item">
-                        <span>{benefit}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {highlights.length > visibleCount && (
-                    <details className="package-benefit-more">
-                      <summary>{t("Xem thêm ", "View more")}{highlights.length - visibleCount} {t("quyền lợi", "benefits")}</summary>
-                      <ul className="package-benefit-list">
-                        {highlights.slice(visibleCount).map((benefit, index) => (
-                          <li key={index} className="package-benefit-item">
-                            <span>{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  )}
+                  {(() => {
+                    const isExpanded = Boolean(expandedBenefitIds[membershipPackage.id]);
+                    const shownHighlights = isExpanded ? highlights : highlights.slice(0, visibleCount);
+                    const hasMore = highlights.length > visibleCount;
+                    return (
+                      <div className="package-benefit-stack">
+                        <div className="package-benefit-stack__layer">
+                          <ul className="package-benefit-list" aria-label={t(`Quyền lợi gói ${membershipPackage.name}`, `${membershipPackage.name} benefits`)}>
+                            {shownHighlights.map((benefit, index) => (
+                              <li key={index} className="package-benefit-item">
+                                <span>{benefit}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          {hasMore && (
+                            <div className="package-benefit-more">
+                              <button
+                                type="button"
+                                className="package-benefit-more__toggle"
+                                aria-expanded={isExpanded}
+                                onClick={() =>
+                                  setExpandedBenefitIds((prev) => ({
+                                    ...prev,
+                                    [membershipPackage.id]: !isExpanded,
+                                  }))
+                                }
+                              >
+                                {isExpanded
+                                  ? t("Thu gọn", "Show less")
+                                  : `${t("Xem thêm ", "View more ")}${highlights.length - visibleCount} ${t("quyền lợi", "benefits")}`}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        {hasMore && !isExpanded && (
+                          <div className="package-benefit-stack__layer package-benefit-stack__sizer" aria-hidden="true">
+                            <ul className="package-benefit-list">
+                              {highlights.map((benefit, index) => (
+                                <li key={index} className="package-benefit-item">
+                                  <span>{benefit}</span>
+                                </li>
+                              ))}
+                            </ul>
+                            <div className="package-benefit-more">
+                              <span className="package-benefit-more__toggle">{t("Thu gọn", "Show less")}</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                 </div>
 
@@ -1416,6 +1480,18 @@ export function MemberPackagesPage() {
             {t("Mỗi hội viên nhận Gói Trải Nghiệm 1 lần. Gồm 1 buổi PT 1:1, không bảo lưu.", "One trial per member. Includes one 1:1 PT session; cannot be paused.")}</p>
 
           <form onSubmit={(e) => void handleClaimTrial(e)} style={{ marginTop: 16 }}>
+            {hasReusableKyc ? (
+              <div className="portal-card" style={{ padding: 14, background: 'var(--portal-surface-2, rgba(255,255,255,0.04))', marginBottom: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>
+                  {t("Sử dụng thông tin định danh đã nộp", "Using your submitted identity details")}
+                </div>
+                <p className="row-card__meta" style={{ margin: '6px 0 0', lineHeight: 1.5 }}>
+                  {t("Họ và tên:", "Full name:")} <strong>{kycProfile?.fullName}</strong><br />
+                  {kycProfile?.documentType === 'PASSPORT' ? t("Hộ chiếu:", "Passport:") : t("CCCD:", "Identity card:")} <strong>{kycProfile?.citizenId}</strong>
+                </p>
+              </div>
+            ) : (
+              <>
             {/* Chọn loại giấy tờ */}
             <div className="portal-form-group">
               <label className="portal-label">{t("Loại giấy tờ tùy thân *", "Identity document type *")}</label>
@@ -1596,6 +1672,8 @@ export function MemberPackagesPage() {
                 )}
               </div>
             </div>
+              </>
+            )}
 
             {trialError && (
               <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', marginTop: 12, fontSize: '0.88rem' }}>
@@ -1614,7 +1692,7 @@ export function MemberPackagesPage() {
               <button
                 type="submit"
                 className="btn-primary"
-                disabled={isClaimingTrial || !trialDocumentNumber.trim() || !trialFullName.trim()}
+                disabled={isClaimingTrial || (!hasReusableKyc && (!trialDocumentNumber.trim() || !trialFullName.trim()))}
               >
                 {isClaimingTrial ? t("Đang gửi đơn…", "Submitting application…") : t("Xác minh & Kích hoạt", "Verify & Activate")}
               </button>

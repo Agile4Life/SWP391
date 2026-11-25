@@ -20,10 +20,15 @@ public class CccdHasher {
 
     private final byte[] pepper;
 
+    /** Nhận pepper bí mật (app.trial.cccd-pepper, mặc định JWT secret) dùng để băm và dẫn xuất khóa mã hóa. */
     public CccdHasher(@Value("${app.trial.cccd-pepper:${app.jwt.secret}}") String pepper) {
         this.pepper = pepper.getBytes(StandardCharsets.UTF_8);
     }
 
+    /**
+     * Băm số giấy tờ bằng HMAC-SHA256 với pepper, trả chuỗi hex; cùng số luôn cho cùng mã băm nên kiểm tra
+     * trùng được mà không lưu số thật.
+     */
     public String hash(String cccd) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
@@ -67,14 +72,17 @@ public class CccdHasher {
         }
     }
 
+    /** Dẫn xuất khóa AES 256-bit từ SHA-256 của pepper. */
     private javax.crypto.spec.SecretKeySpec aesKey() throws java.security.GeneralSecurityException {
         return new javax.crypto.spec.SecretKeySpec(MessageDigest.getInstance("SHA-256").digest(pepper), "AES");
     }
 
+    /** 4 ký tự cuối của số giấy tờ (dùng để hiển thị). */
     public String last4(String cccd) {
         return cccd.length() <= 4 ? cccd : cccd.substring(cccd.length() - 4);
     }
 
+    /** Dạng che "********" + 4 số cuối. */
     public String mask(String last4) {
         return last4 == null ? null : "********" + last4;
     }

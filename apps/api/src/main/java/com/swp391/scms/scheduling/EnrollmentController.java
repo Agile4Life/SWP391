@@ -10,6 +10,7 @@ import com.swp391.scms.scheduling.service.EnrollmentService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,30 +19,37 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * SCRUM-73: class booking and cancellation endpoints.
+ * API ghi danh lớp/khóa học của hội viên (đã ngừng; chỉ bật khi app.legacy.classes-enabled=true).
+ *
+ * SCRUM-73: endpoint đặt chỗ và hủy lớp học.
  */
 @Tag(name = "Class Enrollments", description = "Member class booking and cancellation (SCRUM-73)")
 @RestController
+@ConditionalOnProperty(name = "app.legacy.classes-enabled", havingValue = "true")
 @RequestMapping("/api/v1/classes")
 public class EnrollmentController {
 
     private final EnrollmentService service;
     private final MessageService messageService;
 
+    /** Constructor cho test: không có MessageService. */
     public EnrollmentController(EnrollmentService service) {
         this(service, null);
     }
 
+    /** Constructor chính: nhận EnrollmentService và MessageService. */
     @org.springframework.beans.factory.annotation.Autowired
     public EnrollmentController(EnrollmentService service, MessageService messageService) {
         this.service = service;
         this.messageService = messageService;
     }
 
+    /** Dịch message key; không có MessageService thì trả lại key. */
     private String msg(String key) {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** POST /sessions/{id}/enroll: ghi danh từng buổi — đã ngừng, luôn ném lỗi SingleSessionPolicy. */
     @Operation(summary = "Retired: enroll in a recurring course instead", deprecated = true)
     @PostMapping("/sessions/{id}/enroll")
     @PreAuthorize("hasRole('MEMBER')")
@@ -51,6 +59,7 @@ public class EnrollmentController {
         throw SingleSessionPolicy.rejection();
     }
 
+    /** DELETE /enrollments/{id}: hủy một lượt ghi danh (chủ sở hữu hoặc nhân viên). */
     @Operation(summary = "Cancel a class enrollment (owner or staff)")
     @DeleteMapping("/enrollments/{id}")
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
@@ -60,6 +69,7 @@ public class EnrollmentController {
         return ApiResponse.ok(msg("scheduling.enrollment.cancelled"), service.cancel(principal, id));
     }
 
+    /** GET /enrollments/my: các lượt ghi danh của hội viên đang đăng nhập, lọc theo trạng thái (tùy chọn). */
     @Operation(summary = "List the authenticated member's class enrollments")
     @GetMapping("/enrollments/my")
     @PreAuthorize("hasRole('MEMBER')")
@@ -69,10 +79,12 @@ public class EnrollmentController {
         return ApiResponse.ok(msg("scheduling.enrollment.list"), service.myEnrollments(principal, status));
     }
 
+    /** Overload không lọc trạng thái, dùng trong test. */
     public ApiResponse<List<EnrollmentDto>> myEnrollments(AuthenticatedPrincipal principal) {
         return myEnrollments(principal, null);
     }
 
+    /** GET /my-quota: hạn mức khóa học (credit) còn lại của hội viên. */
     @Operation(summary = "Get the authenticated member's course quota")
     @GetMapping({"/my-quota", "/classes/my-quota"})
     @PreAuthorize("hasRole('MEMBER')")
@@ -80,6 +92,7 @@ public class EnrollmentController {
         return ApiResponse.ok(msg("scheduling.quota.info"), service.getMemberCourseQuota(principal));
     }
 
+    /** POST /{id}/enroll: ghi danh hội viên vào cả khóa học định kỳ. */
     @Operation(summary = "Enroll the authenticated member in a recurring course")
     @PostMapping({"/{id}/enroll", "/classes/{id}/enroll"})
     @PreAuthorize("hasRole('MEMBER')")
@@ -90,6 +103,7 @@ public class EnrollmentController {
                 .body(ApiResponse.created(msg("scheduling.enrollment.created"), service.enrollCourse(principal, id)));
     }
 
+    /** POST /{id}/checkout: thanh toán khóa học — miễn phí nếu còn hạn mức, trả tiền nếu vượt. */
     @Operation(summary = "Checkout a recurring course (free via quota or paid if extra)")
     @PostMapping({"/{id}/checkout", "/classes/{id}/checkout"})
     @PreAuthorize("hasRole('MEMBER')")
@@ -102,6 +116,7 @@ public class EnrollmentController {
                 .body(ApiResponse.created(msg("scheduling.enrollment.checkout_created"), service.checkoutCourse(principal, id, method)));
     }
 
+    /** DELETE /{id}/enroll: hủy ghi danh khóa học trước khi khóa bắt đầu. */
     @Operation(summary = "Cancel a course enrollment before course starts")
     @DeleteMapping({"/{id}/enroll", "/classes/{id}/enroll"})
     @PreAuthorize("hasRole('MEMBER')")
@@ -111,6 +126,7 @@ public class EnrollmentController {
         return ApiResponse.ok(msg("scheduling.enrollment.cancelled"), service.cancelCourseEnrollment(principal, id));
     }
 
+    /** GET /my-enrollments: các khóa học hội viên đã ghi danh. */
     @Operation(summary = "List the authenticated member's enrolled courses")
     @GetMapping({"/my-enrollments", "/classes/my-enrollments"})
     @PreAuthorize("hasRole('MEMBER')")

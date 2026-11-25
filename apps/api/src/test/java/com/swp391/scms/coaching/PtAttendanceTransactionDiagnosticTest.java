@@ -30,8 +30,12 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Entity contract and rollback safety. Real PostgreSQL coverage lives in PtAttendanceIsolatedPostgreSqlTest. */
+/**
+ * Bộ kiểm thử chẩn đoán giao dịch cho PtAttendanceTransactionDiagnostic.
+ * Kiểm tra hợp đồng entity và an toàn rollback; kiểm thử trên PostgreSQL thật nằm ở PtAttendanceIsolatedPostgreSqlTest.
+ */
 class PtAttendanceTransactionDiagnosticTest {
+    /** Kiểm thử: entity hỗ trợ audit PT và lỗi audit thật vẫn rollback. */
     @Test
     void entitySupportsPtAuditAndGenuineAuditFailureStillRollsBack() throws Exception {
         String constraint = AuditLog.class.getAnnotation(Check.class).constraints();
@@ -55,7 +59,7 @@ class PtAttendanceTransactionDiagnosticTest {
         when(audit.save(any())).thenAnswer(invocation -> {
             AuditLog entry = invocation.getArgument(0);
             assertEquals(annotation.entity(), entry.getEntityType());
-            // Model PostgreSQL 23514 plus JPA marking the shared transaction rollback-only.
+            // Mô phỏng lỗi PostgreSQL 23514 cùng việc JPA đánh dấu giao dịch dùng chung là rollback-only.
             manager.transaction.rollbackOnly = true;
             throw new DataIntegrityViolationException("ck_audit_entity_type",
                     new java.sql.SQLException("violates check constraint ck_audit_entity_type", "23514"));
@@ -68,9 +72,11 @@ class PtAttendanceTransactionDiagnosticTest {
         CoachBookingService service = proxy.getProxy();
         var mvc = MockMvcBuilders.standaloneSetup(new CoachBookingController(service, null))
                 .setCustomArgumentResolvers(new org.springframework.web.method.support.HandlerMethodArgumentResolver() {
+                    /** Bộ phân giải tham số giả của test: cho biết có hỗ trợ tham số này không. */
                     public boolean supportsParameter(org.springframework.core.MethodParameter parameter) {
                         return parameter.getParameterType() == AuthenticatedPrincipal.class;
                     }
+                    /** Bộ phân giải tham số giả của test: cấp principal đã đăng nhập cho tham số controller. */
                     public Object resolveArgument(org.springframework.core.MethodParameter parameter,
                             org.springframework.web.method.support.ModelAndViewContainer container,
                             org.springframework.web.context.request.NativeWebRequest request,
@@ -87,6 +93,7 @@ class PtAttendanceTransactionDiagnosticTest {
         verify(audit).save(any());
     }
 
+    /** Transaction manager giả: giả lập giao dịch audit bị lỗi. */
     private static final class FailedAuditTransactionManager extends AbstractPlatformTransactionManager {
         final AuditTransaction transaction = new AuditTransaction();
         boolean committed;
@@ -96,6 +103,7 @@ class PtAttendanceTransactionDiagnosticTest {
         @Override protected void doCommit(DefaultTransactionStatus status) { committed = true; }
         @Override protected void doRollback(DefaultTransactionStatus status) { rolledBack = true; }
     }
+    /** Giao dịch giả hỗ trợ savepoint dùng cho test audit. */
     private static final class AuditTransaction implements SmartTransactionObject {
         boolean rollbackOnly;
         @Override public boolean isRollbackOnly() { return rollbackOnly; }

@@ -4,11 +4,12 @@ import * as THREE from 'three';
 import { SURFACE_DETAIL_PRESETS, applySurfaceDetail } from '../renderers/surfaceDetail';
 import { useExploreStore } from '../state/exploreStore';
 
+/** Một làn xe: toạ độ cố định, trục (đông–tây hoặc bắc–nam), hướng đi và số xe. */
 interface Lane {
-  /** Fixed coordinate across the lane (z for EW lanes, x for NS lanes). */
+  /** Tọa độ cố định theo phương ngang làn đường (z cho làn Đông–Tây EW, x cho làn Bắc–Nam NS). */
   readonly fixed: number;
   readonly axis: 'EW' | 'NS';
-  /** +1 / -1 travel direction along the lane axis. */
+  /** Hướng di chuyển +1 / -1 dọc theo trục làn đường. */
   readonly dir: 1 | -1;
   readonly speed: number;
   readonly cars: number;
@@ -27,6 +28,7 @@ const LANES: readonly Lane[] = [
 ];
 const BODY_COLORS = ['#e8e6e1', '#262b34', '#4b5563', '#8d95a0', '#1d2d44', '#6e2c26', '#36493d', '#c5bfb4'];
 
+/** Một bộ phận của xe: hình học, màu, độ nhám và độ kim loại. */
 interface CarPart {
   readonly geom: THREE.BufferGeometry;
   readonly r: number;
@@ -36,15 +38,17 @@ interface CarPart {
   readonly metalness: number;
 }
 
+/** Dựng hình học một chiếc xe từ nhiều bộ phận gộp lại. */
 function buildCarGeometry(): THREE.BufferGeometry {
   const parts: CarPart[] = [];
+  // Thêm một bộ phận vào xe (chuyển về dạng không chỉ mục để ghi màu).
   const push = (geom: THREE.BufferGeometry, r: number, g: number, b: number, roughness: number, metalness: number) => {
     const nonIdx = geom.index ? geom.toNonIndexed() : geom;
     if (nonIdx !== geom) geom.dispose();
     parts.push({ geom: nonIdx, r, g, b, roughness, metalness });
   };
 
-  // Lower body shell facing +X (bevelled sedan silhouette)
+  // Vỏ thân dưới hướng về +X (dáng sedan vát cạnh)
   const bodyShape = new THREE.Shape();
   bodyShape.moveTo(-2.02, 0.25);
   bodyShape.lineTo(2.02, 0.25);
@@ -66,7 +70,7 @@ function buildCarGeometry(): THREE.BufferGeometry {
   bodyGeom.translate(0, 0, -0.82);
   push(bodyGeom, 1, 1, 1, 0.26, 0.42);
 
-  // Raked tinted greenhouse cabin
+  // Khoang kính cabin nghiêng màu tối
   const cabinShape = new THREE.Shape();
   cabinShape.moveTo(-1.28, 0.78);
   cabinShape.lineTo(0.86, 0.78);
@@ -84,12 +88,12 @@ function buildCarGeometry(): THREE.BufferGeometry {
   cabinGeom.translate(0, 0, -0.68);
   push(cabinGeom, 0.11, 0.13, 0.16, 0.10, 0.65);
 
-  // Body-colored roof cap
+  // Nóc xe cùng màu thân
   const roofGeom = new THREE.BoxGeometry(1.12, 0.04, 1.34);
   roofGeom.translate(-0.26, 1.355, 0);
   push(roofGeom, 0.98, 0.98, 0.98, 0.26, 0.42);
 
-  // Matte lower trim, front grille & rear diffuser
+  // Ốp gầm nhám, lưới tản nhiệt trước và bộ khuếch tán sau
   const grilleGeom = new THREE.BoxGeometry(0.14, 0.22, 1.44);
   grilleGeom.translate(2.05, 0.40, 0);
   push(grilleGeom, 0.08, 0.08, 0.09, 0.78, 0.12);
@@ -102,7 +106,7 @@ function buildCarGeometry(): THREE.BufferGeometry {
   rockerGeom.translate(0, 0.24, 0);
   push(rockerGeom, 0.08, 0.08, 0.09, 0.80, 0.10);
 
-  // 4 cylindrical rubber tyres & alloy hubs
+  // 4 lốp cao su hình trụ và mâm hợp kim
   for (const wx of [-1.32, 1.32]) {
     for (const wz of [-0.82, 0.82]) {
       const tyre = new THREE.CylinderGeometry(0.34, 0.34, 0.24, 14).rotateX(Math.PI / 2);
@@ -145,8 +149,10 @@ function buildCarGeometry(): THREE.BufferGeometry {
   return out;
 }
 
+/** Dựng hình học đèn xe (đèn trước đỏ/trắng) bằng các hộp nhỏ. */
 function buildLightsGeometry(): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
+  // Thêm một đèn tại vị trí (x, z) với màu cho trước.
   const add = (x: number, z: number, r: number, g: number, b: number) => {
     const geo = new THREE.BoxGeometry(0.08, 0.16, 0.34).toNonIndexed();
     geo.translate(x, 0.62, z);
@@ -172,12 +178,15 @@ function buildLightsGeometry(): THREE.BufferGeometry {
   return out;
 }
 
-/** Instanced cars looping along the boulevard and the two avenues. */
+/**
+ * Các xe instanced chạy vòng trên đại lộ và hai đường nhánh.
+ */
 export function CityTraffic() {
   const tier = useExploreStore(s => s.tier);
   const ref = useRef<THREE.InstancedMesh>(null);
   const lightsRef = useRef<THREE.InstancedMesh>(null);
   const scale = tier === 'low' ? 0.5 : 1;
+  // Danh sách xe: mỗi làn có số xe tùy mức chất lượng và độ lệch ban đầu rải đều.
   const cars = useMemo(() => {
     const out: { lane: Lane; offset: number }[] = [];
     for (const lane of LANES) {
@@ -186,7 +195,9 @@ export function CityTraffic() {
     }
     return out;
   }, [scale]);
+  // Hình học xe.
   const geometry = useMemo(() => buildCarGeometry(), []);
+  // Vật liệu xe (màu theo đỉnh, chi tiết bề mặt xe).
   const material = useMemo(
     () =>
       applySurfaceDetail(
@@ -195,7 +206,9 @@ export function CityTraffic() {
       ),
     [],
   );
+  // Hình học đèn xe.
   const lightsGeo = useMemo(() => buildLightsGeometry(), []);
+  // Vật liệu đèn phát sáng.
   const lightsMat = useMemo(() => new THREE.MeshBasicMaterial({ vertexColors: true, toneMapped: false }), []);
   useEffect(() => () => { lightsGeo.dispose(); lightsMat.dispose(); }, [lightsGeo, lightsMat]);
   useEffect(() => () => geometry.dispose(), [geometry]);
@@ -209,10 +222,15 @@ export function CityTraffic() {
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   }, [cars]);
 
+  // Ma trận dùng lại mỗi khung hình.
   const m = useMemo(() => new THREE.Matrix4(), []);
+  // Quaternion dùng lại mỗi khung hình.
   const q = useMemo(() => new THREE.Quaternion(), []);
+  // Vector vị trí dùng lại mỗi khung hình.
   const p = useMemo(() => new THREE.Vector3(), []);
+  // Vector tỉ lệ đơn vị dùng lại mỗi khung hình.
   const one = useMemo(() => new THREE.Vector3(1, 1, 1), []);
+  // Vector hướng lên trên (trục y).
   const up = useMemo(() => new THREE.Vector3(0, 1, 0), []);
   useFrame(({ clock }) => {
     const mesh = ref.current;

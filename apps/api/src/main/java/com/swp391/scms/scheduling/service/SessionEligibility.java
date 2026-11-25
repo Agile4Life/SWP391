@@ -11,20 +11,28 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
+/**
+ * Các hàm kiểm tra dùng chung khi đặt chỗ/ghi danh: thời gian theo giờ Việt Nam, buổi còn mở, gói tập còn hiệu
+ * lực.
+ */
 final class SessionEligibility {
     private static final ZoneId CENTER_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
+    /** Constructor private: lớp tiện ích chỉ có hàm static. */
     private SessionEligibility() {
     }
 
+    /** Thời điểm hiện tại theo giờ Việt Nam từ Clock. */
     static LocalDateTime now(Clock clock) {
         return clock.instant().atZone(CENTER_ZONE).toLocalDateTime();
     }
 
+    /** Ngày hôm nay theo giờ Việt Nam từ Clock. */
     static LocalDate today(Clock clock) {
         return clock.instant().atZone(CENTER_ZONE).toLocalDate();
     }
 
+    /** Buổi phải đang scheduled (không bị hủy) và chưa bắt đầu; ngược lại ném BadRequestException. */
     static void ensureBookable(ClassSession session, Clock clock) {
         if ("cancelled".equalsIgnoreCase(session.getStatus())) {
             throw new BadRequestException("SCHEDULING_SESSION_CANCELLED", "error.scheduling.session_cancelled",
@@ -37,6 +45,7 @@ final class SessionEligibility {
         ensureFuture(session.getSessionDate(), session.getStartTime(), clock);
     }
 
+    /** Ném lỗi nếu thời điểm bắt đầu (ngày + giờ) không nằm trong tương lai. */
     static void ensureFuture(LocalDate date, LocalTime start, Clock clock) {
         if (!LocalDateTime.of(date, start).atZone(CENTER_ZONE).toInstant().isAfter(clock.instant())) {
             throw new BadRequestException("SCHEDULING_PAST_SESSION", "error.scheduling.past_session",
@@ -44,6 +53,10 @@ final class SessionEligibility {
         }
     }
 
+    /**
+     * Kiểm tra gói tập: phải đang active hôm nay, không bảo lưu vào ngày buổi học và một chu kỳ active phải phủ
+     * cả hôm nay lẫn ngày buổi học.
+     */
     static void ensureMembershipCoversSession(MembershipSubscriptionRepository subscriptions,
                                              Long memberId, LocalDate sessionDate, Clock clock) {
         LocalDate today = clock.instant().atZone(CENTER_ZONE).toLocalDate();
@@ -55,7 +68,7 @@ final class SessionEligibility {
             throw new ForbiddenException("SCHEDULING_MEMBERSHIP_ON_HOLD", "error.scheduling.membership_on_hold",
                     new Object[]{sessionDate}, "Gói tập đang bảo lưu vào ngày " + sessionDate);
         }
-        // One currently active period must cover both dates; do not combine future renewals.
+        // Một kỳ đang hoạt động phải bao phủ cả hai ngày; không gộp các kỳ gia hạn tương lai.
         if (!subscriptions.hasActiveMembershipCoveringSession(memberId, today, sessionDate)) {
             throw new ForbiddenException("SCHEDULING_MEMBERSHIP_NOT_COVERING_SESSION",
                     "error.scheduling.membership_session_not_covered", new Object[]{sessionDate}, "Gói tập hiện tại không bao phủ ngày học " + sessionDate + ". Vui lòng chọn buổi học nằm trong thời hạn gói tập hoặc gia hạn thêm.");
@@ -63,8 +76,11 @@ final class SessionEligibility {
     }
 
     /**
-     * A course must finish inside the membership: the active period covering its start plus any paid renewal that
-     * follows it without a gap. Otherwise the member has to renew first (spec 2026-11-09, section 1.3).
+     * Khóa học phải kết thúc trong thời hạn gói: chu kỳ phủ ngày bắt đầu cộng các lần gia hạn liền mạch; nếu
+     * không thì phải gia hạn trước.
+     *
+     * Khóa học phải kết thúc trong thời hạn membership: kỳ đang hoạt động bao phủ ngày bắt đầu cộng mọi kỳ
+     * gia hạn đã trả nối tiếp liền mạch. Nếu không, hội viên phải gia hạn trước (spec 2026-11-09, mục 1.3).
      */
     static void ensureMembershipCoversCourse(MembershipSubscriptionRepository subscriptions,
                                             Long memberId, LocalDate startDate, LocalDate endDate) {
@@ -80,7 +96,11 @@ final class SessionEligibility {
         }
     }
 
-    /** Last day of the unbroken run of paid periods that covers {@code from}; null when nothing covers it. */
+    /**
+     * Ngày cuối của chuỗi chu kỳ gói đã trả tiền liền mạch phủ ngày from; null nếu không chu kỳ nào phủ.
+     *
+     * Ngày cuối của chuỗi liên tục các kỳ đã trả bao phủ {@code from}; null khi không có gì bao phủ.
+     */
     static LocalDate coverageEnd(MembershipSubscriptionRepository subscriptions, Long memberId, LocalDate from) {
         var paid = subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
                 .filter(s -> s.getStartDate() != null && s.getEndDate() != null)

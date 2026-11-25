@@ -5,6 +5,10 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Request đăng ký hội viên: tên đăng nhập, mật khẩu (theo PasswordPolicy), email, SĐT Việt Nam (không bắt
+ * buộc), vai trò (bị bỏ qua, luôn là MEMBER) và họ tên. Thông báo lỗi validate là mã i18n.
+ */
 public record RegisterRequest(
     @NotBlank(message = "{validation.auth.username.not_blank}") @Size(min = 3, message = "{validation.auth.username.size}") String username,
     @NotBlank(message = "{validation.auth.password.not_blank}") @jakarta.validation.constraints.Pattern(regexp = com.swp391.scms.auth.PasswordPolicy.REGEX, message = "{validation.auth.password.policy}") String password,
@@ -15,10 +19,12 @@ public record RegisterRequest(
     String role,
     @Size(max = 150, message = "{validation.users.full_name.size}") String fullName
 ) {
+    /** Constructor rút gọn không có họ tên (dùng trong test). */
     public RegisterRequest(String username, String password, String email, String phone, String role) {
         this(username, password, email, phone, role, null);
     }
 
+    /** Constructor rút gọn không có SĐT và họ tên (dùng trong test). */
     public RegisterRequest(String username, String password, String email, String role) {
         this(username, password, email, null, role, null);
     }

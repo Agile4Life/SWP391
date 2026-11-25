@@ -12,8 +12,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Encrypts identity numbers (CCCD or passport) at rest with AES-256-GCM. The readable number never sits in the
- * database; the member sees only the masked form, and reviewers decrypt it through the review endpoint.
+ * Mã hóa số CCCD/hộ chiếu khi lưu bằng AES-256-GCM. Database không bao giờ chứa số đọc được; hội viên chỉ thấy
+ * dạng che, người duyệt giải mã qua màn duyệt KYC.
+ *
+ * Mã hóa số định danh (CCCD hoặc hộ chiếu) khi lưu bằng AES-256-GCM. Số đọc được không bao giờ nằm trong
+ * database; hội viên chỉ thấy dạng che, còn người duyệt giải mã nó qua endpoint duyệt.
  */
 @Component
 public class KycCrypto {
@@ -24,6 +27,7 @@ public class KycCrypto {
     private final SecretKeySpec key;
     private final SecureRandom random = new SecureRandom();
 
+    /** Tạo khóa AES 256-bit từ SHA-256 của app.kyc.encryption-key (mặc định dùng JWT secret). */
     public KycCrypto(@Value("${app.kyc.encryption-key:${app.jwt.secret}}") String secret) {
         try {
             byte[] digest = MessageDigest.getInstance("SHA-256").digest(secret.getBytes(StandardCharsets.UTF_8));
@@ -33,6 +37,10 @@ public class KycCrypto {
         }
     }
 
+    /**
+     * Mã hóa chuỗi: sinh IV ngẫu nhiên 12 byte, mã hóa AES-GCM, ghép IV + dữ liệu rồi base64, thêm tiền tố
+     * "enc:v1:" để nhận biết phiên bản.
+     */
     public String encrypt(String plain) {
         if (plain == null) return null;
         try {
@@ -50,7 +58,12 @@ public class KycCrypto {
         }
     }
 
-    /** The readable number, or null when the value is missing or was not produced by {@link #encrypt}. */
+    /**
+     * Giải mã chuỗi do encrypt() tạo ra; trả null nếu thiếu, sai định dạng hoặc không giải mã được (khóa sai,
+     * dữ liệu bị sửa).
+     *
+     * Số đọc được, hoặc null khi giá trị thiếu hoặc không do {@link #encrypt} tạo ra.
+     */
     public String decrypt(String stored) {
         if (stored == null || !stored.startsWith(PREFIX)) return null;
         try {
@@ -63,13 +76,17 @@ public class KycCrypto {
         }
     }
 
-    /** "********1234": what the member and the profile screens see. */
+    /**
+     * Che số giấy tờ, chỉ giữ 4 ký tự cuối dạng "********1234" — đây là định dạng hiển thị cho hội viên và trên
+     * các màn hình hồ sơ.
+     */
     public static String mask(String plain) {
         if (plain == null || plain.isBlank()) return null;
         String last4 = plain.length() <= 4 ? plain : plain.substring(plain.length() - 4);
         return "********" + last4;
     }
 
+    /** Giá trị đã ở dạng che chưa (bắt đầu bằng 8 dấu sao). */
     public static boolean isMasked(String value) {
         return value != null && value.startsWith("********");
     }

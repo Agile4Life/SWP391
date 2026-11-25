@@ -1,6 +1,7 @@
 import type { ItemNode, SceneDoc, ZoneNode } from '../scene/schema';
 import { allItems, allZones, itemsOfZone } from '../scene/selectors';
 
+/** Bản ghi phòng từ API: tên, vị trí, sức chứa, trạng thái, hạng, giờ mở/đóng và bộ môn. */
 export interface LiveRoomRecord {
   id: string;
   name: string;
@@ -13,6 +14,7 @@ export interface LiveRoomRecord {
   disciplineName?: string | null;
 }
 
+/** Bản ghi thiết bị từ API: mã, loại, phòng, số lượng và trạng thái. */
 export interface LiveEquipmentRecord {
   id: string;
   name: string;
@@ -24,12 +26,14 @@ export interface LiveEquipmentRecord {
   status: string;
 }
 
+/** Một khung giờ của sân: giờ bắt đầu/kết thúc và trạng thái. */
 export interface LiveCourtSlot {
   startTime: string;
   endTime: string;
   status: string;
 }
 
+/** Tóm tắt một sân: thông tin, giờ mở/đóng, số khung trống hôm nay và khung trống kế tiếp. */
 export interface LiveCourtSummary {
   id: string;
   name: string;
@@ -43,6 +47,7 @@ export interface LiveCourtSummary {
   nextFreeSlot?: string | null;
 }
 
+/** Bản ghi buổi học từ API: lớp, bộ môn, phòng, HLV, thời gian, sức chứa và số chỗ đã đặt. */
 export interface LiveClassSessionRecord {
   id: string;
   className: string;
@@ -57,6 +62,7 @@ export interface LiveClassSessionRecord {
   status?: string | null;
 }
 
+/** Tóm tắt gói của hội viên: tên gói, hạng, trạng thái, ngày hết hạn và số ngày còn lại (null nếu chưa có gói). */
 export type LiveMembershipSummary = {
   packageName: string;
   tier: 'SILVER' | 'GOLD' | 'PLATINUM' | string;
@@ -65,12 +71,14 @@ export type LiveMembershipSummary = {
   remainingDays?: number | null;
 } | null;
 
+/** Tóm tắt chuỗi tập (streak): chuỗi hiện tại, dài nhất và đã tập hôm nay chưa (null nếu không có). */
 export type LiveStreakSummary = {
   currentStreak: number;
   longestStreak: number;
   activeToday?: boolean;
 } | null;
 
+/** Bản ghi HLV từ API: họ tên, chuyên môn và ảnh. */
 export interface LiveCoachRecord {
   id: string;
   fullName: string;
@@ -78,6 +86,7 @@ export interface LiveCoachRecord {
   avatarUrl?: string | null;
 }
 
+/** Bản ghi sản phẩm từ API: tên, slug, giá, số khẩu phần và tồn kho. */
 export interface LiveProductRecord {
   id: string;
   name: string;
@@ -87,6 +96,10 @@ export interface LiveProductRecord {
   stockQuantity?: number | null;
 }
 
+/**
+ * Ảnh chụp dữ liệu thật của trung tâm: phòng, thiết bị, sân, buổi học, gói, streak, HLV, sản phẩm, thời điểm
+ * tải và lỗi.
+ */
 export interface LiveCenterSnapshot {
   rooms: LiveRoomRecord[];
   equipment: LiveEquipmentRecord[];
@@ -102,12 +115,16 @@ export interface LiveCenterSnapshot {
   error?: string | null;
 }
 
+/** Trạng thái phòng đã chuẩn hóa: sẵn sàng, bảo trì, đóng hoặc không rõ. */
 export type NormalizedRoomStatus = 'available' | 'maintenance' | 'closed' | 'unknown';
+/** Trạng thái thiết bị đã chuẩn hóa: hoạt động, bảo trì, hỏng hoặc đã loại. */
 export type NormalizedEquipmentStatus = 'active' | 'maintenance' | 'broken' | 'retired';
+/** Trạng thái của đồ vật: trạng thái thiết bị hoặc phòng đã chuẩn hóa. */
 export type NormalizedItemStatus =
   | NormalizedEquipmentStatus
   | NormalizedRoomStatus;
 
+/** Tóm tắt một nhóm thiết bị trong khu vực: số lượng, trạng thái, số ô hiển thị trong cảnh và số bị dôi ra. */
 export interface ZoneEquipmentGroupSummary {
   code: string;
   name: string;
@@ -119,6 +136,7 @@ export interface ZoneEquipmentGroupSummary {
   overflowLabel: string | null;
 }
 
+/** Tóm tắt thiết bị của khu vực: tổng số và số theo từng trạng thái, kèm các nhóm. */
 export interface ZoneEquipmentSummary {
   totalUnits: number;
   activeUnits: number;
@@ -128,12 +146,17 @@ export interface ZoneEquipmentSummary {
   groups: ZoneEquipmentGroupSummary[];
 }
 
+/** Tóm tắt các sân của khu vực: tổng số, số sân sẵn sàng và danh sách sân. */
 export interface ZoneCourtsSummary {
   totalCourts: number;
   availableCourts: number;
   courts: LiveCourtSummary[];
 }
 
+/**
+ * Dữ liệu thật đã gắn vào một khu vực: phòng, trạng thái, sức chứa, giờ mở, hạng yêu cầu, bị khóa hạng hay
+ * không, thiết bị, sân...
+ */
 export interface ResolvedZoneBinding {
   zoneId: string;
   hasLiveData: boolean;
@@ -150,13 +173,17 @@ export interface ResolvedZoneBinding {
   upcomingSessions: LiveClassSessionRecord[];
 }
 
+/**
+ * Dữ liệu thật đã gắn vào một đồ vật: có dữ liệu thật không, hiển thị không, trạng thái, tên, mã thiết bị, ô và
+ * huy hiệu dôi ra.
+ */
 export interface ResolvedItemBinding {
   itemId: string;
   hasLiveData: boolean;
   visible: boolean;
   status: NormalizedItemStatus;
   liveName: string | null;
-  // Equipment binding properties
+  // Thuộc tính liên kết thiết bị
   equipmentCode: string | null;
   instanceSlot: number | null;
   quantity: number | null;
@@ -164,7 +191,7 @@ export interface ResolvedItemBinding {
   sceneSlots: number;
   overflowCount: number;
   overflowBadge: string | null;
-  // Court binding properties
+  // Thuộc tính liên kết sân
   courtName: string | null;
   courtStatus: NormalizedRoomStatus;
   availableSlotsToday: number | null;
@@ -172,6 +199,10 @@ export interface ResolvedItemBinding {
   capacity: number | null;
 }
 
+/**
+ * Kết quả gắn dữ liệu thật vào cảnh: theo khu vực, theo đồ vật, gói, streak, HLV, sản phẩm, buổi sắp tới, thời
+ * điểm và lỗi.
+ */
 export interface ResolvedSceneBindings {
   hasLiveData: boolean;
   zones: Record<string, ResolvedZoneBinding>;
@@ -200,11 +231,13 @@ export const EMPTY_LIVE_SNAPSHOT: LiveCenterSnapshot = {
   error: null,
 };
 
+/** Chuẩn hóa chuỗi so khớp: NFC, bỏ khoảng trắng hai đầu, chữ thường. */
 export function normalizeKey(value: string | null | undefined): string {
   if (!value) return '';
   return value.normalize('NFC').trim().toLowerCase();
 }
 
+/** Chuẩn hóa trạng thái phòng (available/active/open, maintenance, closed/inactive, còn lại không rõ). */
 export function normalizeRoomStatus(status: string | null | undefined): NormalizedRoomStatus {
   const s = normalizeKey(status);
   if (s === 'available' || s === 'active' || s === 'open') return 'available';
@@ -213,6 +246,10 @@ export function normalizeRoomStatus(status: string | null | undefined): Normaliz
   return 'unknown';
 }
 
+/**
+ * Chuẩn hóa trạng thái thiết bị (maintenance, broken/damaged/out_of_order, retired/inactive/decommissioned, còn
+ * lại hoạt động).
+ */
 export function normalizeEquipmentStatus(
   status: string | null | undefined,
 ): NormalizedEquipmentStatus {
@@ -223,6 +260,7 @@ export function normalizeEquipmentStatus(
   return 'active';
 }
 
+/** Suy hạng gói (SILVER, GOLD, PLATINUM) từ tên hạng hoặc tên gói; không nhận ra thì null. */
 export function inferMembershipTier(
   tierOrPackageName: string | null | undefined,
 ): 'SILVER' | 'GOLD' | 'PLATINUM' | null {
@@ -243,6 +281,7 @@ const TIER_RANK: Record<'SILVER' | 'GOLD' | 'PLATINUM', number> = {
   PLATINUM: 3,
 };
 
+/** Gói của hội viên còn hiệu lực không (không phải đã hủy, hết hạn hay không hoạt động). */
 function isMembershipActive(membership: LiveMembershipSummary | undefined): boolean {
   if (!membership) return false;
   const status = normalizeKey(membership.status);
@@ -250,6 +289,7 @@ function isMembershipActive(membership: LiveMembershipSummary | undefined): bool
   return status !== 'cancelled' && status !== 'expired' && status !== 'inactive';
 }
 
+/** Cắt chuỗi giờ về dạng HH:mm. */
 function formatShortTime(value: string | null | undefined): string | null {
   if (!value) return null;
   const trimmed = value.trim();
@@ -257,6 +297,7 @@ function formatShortTime(value: string | null | undefined): string | null {
   return trimmed.slice(0, 5);
 }
 
+/** Nhãn giờ mở cửa dạng "HH:mm – HH:mm" (thiếu một đầu thì null). */
 function formatOpenHours(
   openTime: string | null | undefined,
   closeTime: string | null | undefined,
@@ -267,6 +308,7 @@ function formatOpenHours(
   return `${open} – ${close}`;
 }
 
+/** Bổ sung cho sân số khung trống hôm nay và khung trống kế tiếp từ danh sách khung giờ. */
 function enrichCourtWithSlots(
   court: LiveCourtSummary,
   slotsByCourtId: Record<string, LiveCourtSlot[]> | undefined,
@@ -293,9 +335,9 @@ function enrichCourtWithSlots(
 }
 
 /**
- * Pure function that resolves live center API records against the static 3D SceneDoc.
- * Never fabricates occupancy percentages or headcounts; marks `hasLiveData: false` when
- * the snapshot is empty or errored.
+ * Hàm thuần gắn các bản ghi API trực tiếp của trung tâm vào SceneDoc 3D tĩnh: đánh chỉ mục phòng/thiết bị/sân
+ * theo tên hoặc mã, rồi tính dữ liệu cho từng khu vực và đồ vật. Không bao giờ bịa tỷ lệ lấp đầy hay số lượng
+ * người; đánh dấu `hasLiveData: false` khi ảnh chụp rỗng hoặc bị lỗi.
  */
 export function resolveBindings(
   doc: SceneDoc,
@@ -313,21 +355,21 @@ export function resolveBindings(
   const coaches = hasError ? [] : (snapshot.coaches ?? []);
   const products = hasError ? [] : (snapshot.products ?? []);
 
-  // Index rooms by normalized name
+  // Đánh chỉ mục phòng theo tên đã chuẩn hóa
   const roomsByName = new Map<string, LiveRoomRecord>();
   for (const r of rawRooms) {
     const key = normalizeKey(r.name);
     if (key) roomsByName.set(key, r);
   }
 
-  // Index equipment by normalized code
+  // Đánh chỉ mục thiết bị theo mã đã chuẩn hóa
   const equipmentByCode = new Map<string, LiveEquipmentRecord>();
   for (const eq of rawEquipment) {
     const key = normalizeKey(eq.code);
     if (key) equipmentByCode.set(key, eq);
   }
 
-  // Enrich and index courts by normalized name
+  // Bổ sung khung giờ và đánh chỉ mục sân theo tên đã chuẩn hóa
   const enrichedCourts: LiveCourtSummary[] = rawCourts.map(c =>
     enrichCourtWithSlots(c, snapshot.courtSlotsByCourtId),
   );
@@ -337,7 +379,7 @@ export function resolveBindings(
     if (key) courtsByName.set(key, c);
   }
 
-  // Count how many scene item slots exist per equipmentCode across the entire SceneDoc
+  // Đếm số lượng ô đồ vật trong cảnh ứng với mỗi equipmentCode trên toàn bộ SceneDoc
   const sceneItems = allItems(doc);
   const totalSceneSlotsByCode = new Map<string, number>();
   for (const item of sceneItems) {
@@ -347,12 +389,12 @@ export function resolveBindings(
     }
   }
 
-  // Determine member tier for tier-lock computation
+  // Xác định hạng hội viên để tính trạng thái khóa theo hạng
   const activeMemberTier = isMembershipActive(membership)
     ? inferMembershipTier(membership?.tier || membership?.packageName)
     : null;
 
-  // Sort active upcoming sessions chronologically
+  // Sắp xếp các buổi học sắp diễn ra theo thứ tự thời gian
   const validSessions = rawSessions
     .filter(s => normalizeKey(s.status) !== 'cancelled')
     .slice()
@@ -362,7 +404,7 @@ export function resolveBindings(
       return a.startTime.localeCompare(b.startTime);
     });
 
-  // Resolve items
+  // Gắn dữ liệu cho từng đồ vật
   const resolvedItems: Record<string, ResolvedItemBinding> = {};
   for (const item of sceneItems) {
     resolvedItems[item.id] = resolveItemBinding(
@@ -374,7 +416,7 @@ export function resolveBindings(
     );
   }
 
-  // Resolve zones
+  // Gắn dữ liệu cho từng khu vực
   const resolvedZones: Record<string, ResolvedZoneBinding> = {};
   for (const zone of allZones(doc)) {
     resolvedZones[zone.id] = resolveZoneBinding(
@@ -387,9 +429,7 @@ export function resolveBindings(
       validSessions,
       activeMemberTier,
       coaches,
-      products,
       membership,
-      streak,
     );
   }
 
@@ -418,6 +458,10 @@ export function resolveBindings(
   };
 }
 
+/**
+ * Gắn dữ liệu thật cho một đồ vật: theo thiết bị (mã, ô, số lượng, trạng thái), theo sân hoặc theo phòng; không
+ * tìm thấy thì không có dữ liệu thật.
+ */
 function resolveItemBinding(
   item: ItemNode,
   equipmentByCode: Map<string, LiveEquipmentRecord>,
@@ -557,6 +601,10 @@ function resolveItemBinding(
   };
 }
 
+/**
+ * Gắn dữ liệu thật cho một khu vực: phòng khớp tên, hạng yêu cầu và khóa theo hạng hội viên, tóm tắt thiết bị
+ * và sân.
+ */
 function resolveZoneBinding(
   doc: SceneDoc,
   zone: ZoneNode,
@@ -567,17 +615,15 @@ function resolveZoneBinding(
   validSessions: LiveClassSessionRecord[],
   activeMemberTier: 'SILVER' | 'GOLD' | 'PLATINUM' | null,
   coaches: LiveCoachRecord[],
-  products: LiveProductRecord[],
   membership: LiveMembershipSummary,
-  streak: LiveStreakSummary,
 ): ResolvedZoneBinding {
   const zoneItems = itemsOfZone(doc, zone.id);
 
-  // 1. Room resolution
+  // 1. Khớp phòng tương ứng
   const boundRoomKey = normalizeKey(zone.liveBinding?.roomName);
   const matchedRoom = boundRoomKey ? (roomsByName.get(boundRoomKey) ?? null) : null;
 
-  // 2. Tier resolution & locking
+  // 2. Xác định hạng gói yêu cầu và khóa theo hạng
   const roomTier = inferMembershipTier(matchedRoom?.tier);
   const tierRequired: 'SILVER' | 'GOLD' | 'PLATINUM' | null =
     zone.liveBinding?.tierRequired ??
@@ -588,7 +634,7 @@ function resolveZoneBinding(
     tierLocked = TIER_RANK[activeMemberTier] < TIER_RANK[tierRequired];
   }
 
-  // 3. Equipment summary for all equipment bound to items in this zone
+  // 3. Tóm tắt thiết bị cho toàn bộ thiết bị được gắn vào đồ vật trong khu vực này
   const slotCountByCodeInZone = new Map<string, { rawCode: string; slots: number }>();
   for (const item of zoneItems) {
     if (item.liveEquipmentBinding) {
@@ -645,7 +691,7 @@ function resolveZoneBinding(
     groups,
   };
 
-  // 4. Courts summary for court zones
+  // 4. Tóm tắt danh sách sân cho các khu vực sân thể thao
   const matchedCourts: LiveCourtSummary[] = [];
   const seenCourtKeys = new Set<string>();
 
@@ -696,7 +742,7 @@ function resolveZoneBinding(
     courts: matchedCourts,
   };
 
-  // 5. Upcoming class sessions (up to 3 matching roomName or discipline)
+  // 5. Các buổi học sắp tới (tối đa 3 buổi khớp theo roomName hoặc bộ môn)
   const disciplineKey = normalizeKey(zone.liveBinding?.discipline);
   const upcomingSessions = validSessions
     .filter(s => {
@@ -706,7 +752,7 @@ function resolveZoneBinding(
     })
     .slice(0, 3);
 
-  // 6. Room status, capacity, location & open hours
+  // 6. Trạng thái phòng, sức chứa, vị trí & giờ mở cửa
   let roomStatus: NormalizedRoomStatus = 'unknown';
   if (matchedRoom) {
     roomStatus = normalizeRoomStatus(matchedRoom.status);
@@ -722,10 +768,9 @@ function resolveZoneBinding(
     formatOpenHours(matchedCourts[0]?.openTime, matchedCourts[0]?.closeTime);
 
   const hasZoneSpecificContext =
-    (zone.id === 'zone-l1-shop' && products.length > 0) ||
     (zone.id === 'zone-l2-pt-studio' && coaches.length > 0) ||
     ((zone.id === 'zone-l1-lobby' || zone.id === 'zone-l1-gate') &&
-      (membership !== null || streak !== null));
+      membership !== null);
 
   const hasLiveData =
     matchedRoom !== null ||

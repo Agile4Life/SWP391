@@ -26,69 +26,82 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 /**
- * Integration test proving that Spring Security's @EnableMethodSecurity is active
- * and @PreAuthorize annotations genuinely enforce RBAC policies on controllers.
+ * Kiểm thử tích hợp chứng minh @EnableMethodSecurity của Spring Security đang hoạt động
+ * và các annotation @PreAuthorize thực sự thực thi chính sách RBAC trên các controller.
  */
 @ExtendWith(SpringExtension.class)
 @ContextConfiguration(classes = {
         MethodSecurityPolicyTest.MethodSecurityConfig.class
 })
+/** Bộ kiểm thử cho chính sách MethodSecurityPolicy (method security policy). */
 class MethodSecurityPolicyTest {
 
+    /** Bộ kiểm thử cho cấu hình MethodSecurityConfig (method security config). */
     @Configuration
     @EnableMethodSecurity
     static class MethodSecurityConfig {
+        /** Hàm trợ giúp của test: tạo UserService giả cho test method security. */
         @Bean
         public UserService userService() {
             return mock(UserService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo PackageService giả. */
         @Bean
         public PackageService packageService() {
             return mock(PackageService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo SupportRequestService giả. */
         @Bean
         public SupportRequestService supportRequestService() {
             return mock(SupportRequestService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo MessageService giả. */
         @Bean
         public MessageService messageService() {
             return mock(MessageService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo UserController giả. */
         @Bean
         public UserController userController(UserService userService) {
             return new UserController(userService);
         }
 
+        /** Hàm trợ giúp của test: tạo PackageController giả. */
         @Bean
         public PackageController packageController(PackageService packageService, MessageService messageService) {
             return new PackageController(packageService, messageService);
         }
 
+        /** Hàm trợ giúp của test: tạo SupportRequestController giả. */
         @Bean
         public SupportRequestController supportRequestController(SupportRequestService service, MessageService messageService) {
             return new SupportRequestController(service, messageService);
         }
 
+        /** Hàm trợ giúp của test: tạo PaymentService giả. */
         @Bean
         public com.swp391.scms.finance.service.PaymentService paymentService() {
             return mock(com.swp391.scms.finance.service.PaymentService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo PaymentController giả. */
         @Bean
         public com.swp391.scms.finance.PaymentController paymentController(
                 com.swp391.scms.finance.service.PaymentService paymentService, MessageService messageService) {
             return new com.swp391.scms.finance.PaymentController(paymentService, messageService);
         }
 
+        /** Hàm trợ giúp của test: tạo ClassService giả. */
         @Bean
         public com.swp391.scms.scheduling.service.ClassService classService() {
             return mock(com.swp391.scms.scheduling.service.ClassService.class);
         }
 
+        /** Hàm trợ giúp của test: tạo ClassController giả. */
         @Bean
         public com.swp391.scms.scheduling.ClassController classController(
                 com.swp391.scms.scheduling.service.ClassService classService, MessageService messageService) {
@@ -111,6 +124,7 @@ class MethodSecurityPolicyTest {
     @Autowired
     private com.swp391.scms.scheduling.ClassController classController;
 
+    /** Kiểm thử: AC SCRUM-69: Receptionist không thể xóa người dùng -> Spring Security ném AccessDeniedException */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist không thể xóa người dùng -> Spring Security ném AccessDeniedException")
@@ -118,6 +132,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> userController.deleteUser(4L));
     }
 
+    /** Kiểm thử: Manager chỉ tạo nhân sự, không xóa người dùng */
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
     @DisplayName("Manager chỉ tạo nhân sự, không xóa người dùng")
@@ -125,12 +140,17 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> userController.deleteUser(4L));
     }
 
+    /** Kiểm thử: admin xóa được người dùng. */
     @Test
     @WithMockUser(roles = "ADMIN")
     void adminCanDeleteUser() {
         assertDoesNotThrow(() -> userController.deleteUser(4L));
     }
 
+    /**
+     * Kiểm thử: AC SCRUM-69: Receptionist không thể sửa bảng giá gói tập -> Spring Security ném
+     * AccessDeniedException
+     */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist không thể sửa bảng giá gói tập -> Spring Security ném AccessDeniedException")
@@ -139,6 +159,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> packageController.update(1L, request));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Center Manager có quyền sửa gói tập -> Không bị chặn */
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
     @DisplayName("AC SCRUM-69: Center Manager có quyền sửa gói tập -> Không bị chặn")
@@ -147,6 +168,10 @@ class MethodSecurityPolicyTest {
         assertDoesNotThrow(() -> packageController.update(1L, request));
     }
 
+    /**
+     * Kiểm thử: AC SCRUM-69: Member không thể xem toàn bộ yêu cầu hỗ trợ -> Spring Security ném
+     * AccessDeniedException
+     */
     @Test
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể xem toàn bộ yêu cầu hỗ trợ -> Spring Security ném AccessDeniedException")
@@ -154,6 +179,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> supportRequestController.getAllRequests(supportActor(), null, null));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Receptionist có quyền xem và xử lý yêu cầu hỗ trợ -> Không bị chặn */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist có quyền xem và xử lý yêu cầu hỗ trợ -> Không bị chặn")
@@ -161,6 +187,10 @@ class MethodSecurityPolicyTest {
         assertDoesNotThrow(() -> supportRequestController.getAllRequests(supportActor(), null, null));
     }
 
+    /**
+     * Kiểm thử: AC SCRUM-69: Member không thể cập nhật trạng thái yêu cầu hỗ trợ -> Spring Security ném
+     * AccessDeniedException
+     */
     @Test
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể cập nhật trạng thái yêu cầu hỗ trợ -> Spring Security ném AccessDeniedException")
@@ -169,6 +199,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> supportRequestController.updateStatus(supportActor(), 1L, updateDto));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Center Manager có quyền cập nhật trạng thái yêu cầu hỗ trợ -> Không bị chặn */
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
     @DisplayName("AC SCRUM-69: Center Manager có quyền cập nhật trạng thái yêu cầu hỗ trợ -> Không bị chặn")
@@ -177,6 +208,7 @@ class MethodSecurityPolicyTest {
         assertDoesNotThrow(() -> supportRequestController.updateStatus(supportActor(), 1L, updateDto));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Member không thể truy cập endpoint quản lý lớp của Manager */
     @Test
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể truy cập endpoint quản lý lớp của Manager")
@@ -186,6 +218,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> classController.createClass(req));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Member không thể truy cập endpoint xử lý thanh toán của Receptionist */
     @Test
     @WithMockUser(roles = "MEMBER")
     @DisplayName("AC SCRUM-69: Member không thể truy cập endpoint xử lý thanh toán của Receptionist")
@@ -194,6 +227,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> paymentController.processPayment(req));
     }
 
+    /** Kiểm thử: AC SCRUM-69: Receptionist không thể hoàn tiền (chỉ Center Manager) */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("AC SCRUM-69: Receptionist không thể hoàn tiền (chỉ Center Manager)")
@@ -202,10 +236,12 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> paymentController.refundPayment(1L, req));
     }
 
+    /** Hàm trợ giúp của test: tạo người thực hiện (actor) cho yêu cầu hỗ trợ. */
     private static com.swp391.scms.security.AuthenticatedPrincipal supportActor() {
         return new com.swp391.scms.security.AuthenticatedPrincipal(1L, "actor", "RECEPTIONIST");
     }
 
+    /** Kiểm thử: Huấn luyện viên không còn xem hay xử lý khiếu nại -> AccessDeniedException */
     @Test
     @WithMockUser(roles = "COACH")
     @DisplayName("Huấn luyện viên không còn xem hay xử lý khiếu nại -> AccessDeniedException")
@@ -218,6 +254,7 @@ class MethodSecurityPolicyTest {
                 new com.swp391.scms.support.dto.CreateSupportMessageDto("Xin chào", null)));
     }
 
+    /** Kiểm thử: Chỉ lễ tân được chuyển khiếu nại lên quản lý; quản lý không tự chuyển -> AccessDeniedException */
     @Test
     @WithMockUser(roles = "CENTER_MANAGER")
     @DisplayName("Chỉ lễ tân được chuyển khiếu nại lên quản lý; quản lý không tự chuyển -> AccessDeniedException")
@@ -226,6 +263,7 @@ class MethodSecurityPolicyTest {
         assertThrows(AccessDeniedException.class, () -> supportRequestController.escalate(supportActor(), 1L, dto));
     }
 
+    /** Kiểm thử: Lễ tân được chuyển khiếu nại lên quản lý -> Không bị chặn */
     @Test
     @WithMockUser(roles = "RECEPTIONIST")
     @DisplayName("Lễ tân được chuyển khiếu nại lên quản lý -> Không bị chặn")

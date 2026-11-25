@@ -4,7 +4,11 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.validation.constraints.AssertTrue;
 
 /**
- * Google credentials. HTTP popup requests accept tokens only; the state-validated redirect service uses code/redirectUri internally.
+ * Thông tin Google gửi lên: ID Token hoặc Access Token (luồng popup), hoặc code + redirectUri (chỉ dùng nội bộ
+ * trong luồng chuyển hướng đã kiểm tra state).
+ *
+ * Thông tin xác thực Google. Request popup HTTP chỉ nhận token; service redirect có kiểm tra state dùng
+ * code/redirectUri bên trong.
  */
 public record GoogleOAuthCallbackRequest(
         String idToken,
@@ -12,6 +16,10 @@ public record GoogleOAuthCallbackRequest(
         String code,
         String redirectUri
 ) {
+    /**
+     * Ràng buộc validate cho luồng popup: request chỉ được chứa ID Token hoặc Access Token, không được gửi
+     * code/redirectUri (hai trường này chỉ dùng nội bộ trong luồng chuyển hướng đã kiểm tra state).
+     */
     @JsonIgnore
     @AssertTrue(message = "{auth.google.invalid_token}")
     public boolean isPopupCredential() {
@@ -19,6 +27,7 @@ public record GoogleOAuthCallbackRequest(
                 && ((idToken != null && !idToken.isBlank()) || (accessToken != null && !accessToken.isBlank()));
     }
 
+    /** Constructor chỉ có ID Token. */
     public GoogleOAuthCallbackRequest(String idToken) {
         this(idToken, null, null, null);
     }

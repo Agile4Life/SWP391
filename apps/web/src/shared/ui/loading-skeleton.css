@@ -1,3 +1,4 @@
+/* Mục đích: Kiểu cho khung xương (skeleton) hiển thị khi đang tải. */
 .loading-skeleton {
   --loading-fill: var(--portal-raised, #eeefec);
   --loading-surface: var(--portal-surface, #fff);
