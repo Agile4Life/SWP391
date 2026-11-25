@@ -465,6 +465,22 @@ it('does not turn a missing renewal id into a new purchase when its number match
   expect(api.createRenewal).not.toHaveBeenCalled(); expect(api.processPayment).not.toHaveBeenCalled();
 });
 
+it('keeps replaced renewals disabled and explains them in the visible dropdown', async () => {
+  api.getRenewalCandidates.mockResolvedValue([
+    { id: 1, memberId: 10, packageId: 2, packageName: 'Trial', startDate: '2026-10-01', endDate: '2026-10-03', status: 'expired', createdAt: '2026-10-01' },
+    { id: 2, memberId: 10, packageId: 3, packageName: 'GOLD 3 THÁNG', previousSubscriptionId: 1, startDate: '2026-10-02', endDate: '2026-12-31', status: 'active', createdAt: '2026-10-02' },
+  ]);
+  api.getActivePackages.mockResolvedValue([pkg, { ...pkg, id: 3, name: 'GOLD 3 THÁNG' }]);
+  await selectMember();
+  const trigger = host.querySelector<HTMLButtonElement>('#pos-package')!;
+  await act(async () => trigger.click());
+  const disabled = host.querySelector<HTMLElement>('.ui-select__option.is-disabled');
+  expect(disabled?.getAttribute('aria-disabled')).toBe('true');
+  expect(disabled?.textContent).toContain('GOLD 3 THÁNG');
+  await act(async () => disabled?.click());
+  expect(api.processPayment).not.toHaveBeenCalled();
+  expect(api.createRenewal).not.toHaveBeenCalled();
+});
 it.each([null, 'PENDING', 'REJECTED'])('blocks new purchase when KYC is %s after refreshing member', async (kycStatus) => {
   api.lookupMembers.mockResolvedValue([{ ...member, identityVerified: false, kycStatus }]);
   await selectMember(); await chooseAndPay('buy:2');
