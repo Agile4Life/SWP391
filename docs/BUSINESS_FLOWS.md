@@ -1,7 +1,7 @@
 # Nghiệp vụ SÖL Fitness — các luồng chính đang chạy trên web
 
-> Cập nhật: 25/11/2026 (khôi phục thể thao đa môn 6 bộ môn từ `1384c4d3`, quy tắc mỗi bộ môn tối đa 1 lớp `active`, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò).
-> **Phạm vi hiện tại:** Trung tâm đa môn 6 bộ môn (`Gym`, `Bơi lội`, `Boxing`, `Tennis`, `Cầu lông`, `Yoga`), gói tập, **lớp học nhóm dạng khóa định kỳ & điểm danh lớp nhóm** (`app.legacy.classes-enabled=true`, mỗi bộ môn tối đa 1 lớp đang hoạt động), PT 1:1, giáo án, check-in, ví/hóa đơn, chat, hỗ trợ, Landing 6 môn + trang bộ môn. Đặt sân tự do theo giờ, cửa hàng, thiết bị, đánh giá/xếp hạng HLV/buổi tập, chỉ số cơ thể, tiến độ/lịch sử tập và streak vẫn **đã ngừng** (mục 9, 10 chỉ còn ghi chú).
+> Cập nhật: 25/11/2026 (phạm vi 3 bộ môn `Gym`/`Boxing`/`Yoga` với 4 phòng, quy tắc mỗi bộ môn tối đa 1 lớp `active`, gỡ bỏ hoàn toàn tính năng đặt sân & các bộ môn ngoài phạm vi, ẩn 3D khỏi sidebar hội viên, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò).
+> **Phạm vi hiện tại:** Trung tâm **3 bộ môn đang hoạt động** (`Gym` chính, `Boxing`, `Yoga`) với **4 phòng** (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`), gói tập/bảo lưu, **lớp học nhóm dạng khóa định kỳ & điểm danh lớp nhóm** (`app.legacy.classes-enabled=true`, mỗi bộ môn tối đa 1 lớp đang hoạt động), PT 1:1 (có chống trùng lịch hai chiều với lớp nhóm), giáo án, check-in QR, VNPay, ví/hóa đơn, chat, SÖL AI, hỗ trợ và vận hành, Landing 3 bộ môn + trang bộ môn (`/boxing`, `/yoga`, `/sports/:sportId`). **Đã gỡ bỏ hoàn toàn** tính năng đặt sân (module, API, trigger, hợp đồng OpenAPI, UI/route) và các bộ môn ngoài 3 bộ môn trên; **ẩn 3D** khỏi sidebar hội viên (`/member/explore` → `/member/dashboard`, mã `features/explore3d/**` ngủ đông). Cửa hàng (`app.shop.enabled`), quản lý thiết bị, đánh giá/xếp hạng HLV/buổi tập (`app.coaching.*`), chỉ số cơ thể, tiến độ/lịch sử tập và streak (`app.health.metrics.enabled`) vẫn **tắt qua cờ legacy** (mục 9, 10 chỉ còn ghi chú).
 > Dọn dữ liệu cũ của các tính năng đã ngừng: [`DATA_CLEANUP.md`](DATA_CLEANUP.md).
 > `docs/PROJECT_MASTER_GUIDE.md` là thiết kế gốc. Tài liệu này mô tả **những gì hệ thống đang làm thật**: màn hình, API, quy tắc và state machine. Phần nào khác thiết kế gốc được ghi ở mục 12.
 > Múi giờ nghiệp vụ là `Asia/Ho_Chi_Minh` cho mọi mốc "hôm nay", "trước giờ học" và job định kỳ.
@@ -15,7 +15,7 @@
 6. [Flow 5 — HLV: PT 1:1, giáo án, AI](#6-flow-5--hlv-pt-11-giáo-án-ai)
 7. [Flow 6 — Trợ lý AI, thông báo, chat, hỗ trợ](#7-flow-6--trợ-lý-ai-thông-báo-chat-hỗ-trợ)
 8. [Luồng mở rộng — Check-in trung tâm](#8-luồng-mở-rộng--check-in-trung-tâm)
-9. [Đặt sân (đã ngừng)](#9-đặt-sân-đã-ngừng)
+9. [Đặt sân (đã gỡ bỏ hoàn toàn)](#9-đặt-sân-đã-gỡ-bỏ-hoàn-toàn)
 10. [Cửa hàng thực phẩm bổ sung (đã ngừng)](#10-cửa-hàng-thực-phẩm-bổ-sung-đã-ngừng)
 11. [Job định kỳ và ràng buộc database](#11-job-định-kỳ-và-ràng-buộc-database)
 12. [Khác biệt so với thiết kế gốc](#12-khác-biệt-so-với-thiết-kế-gốc)
@@ -26,14 +26,14 @@
 
 | Vai trò | Mã role | Khu vực web chính |
 |---|---|---|
-| Khách vãng lai | — | `/`, `/swimming`, `/boxing`, `/tennis`, `/badminton`, `/yoga`, `/sports/:sportId`, `/trainers`, `/trainers/:id`, `/login`, `/register` |
+| Khách vãng lai | — | `/`, `/boxing`, `/yoga`, `/sports/:sportId` (`boxing`/`yoga`), `/trainers`, `/trainers/:id`, `/login`, `/register` |
 | Hội viên | `MEMBER` | `/member/*`, `/messages` |
 | Huấn luyện viên | `COACH` | `/coach/pt-attendance` (trang chủ), `/coach/attendance` (+ `/:sessionId`), `/coach/classes` (lớp nhóm + PT 1:1), `/coach/training-plans`, `/coach/saved-plans`, `/staff/requests` |
 | Lễ tân | `RECEPTIONIST` (`STAFF`) | `/staff/reception`, `/staff/check-in`, `/staff/check-out`, `/staff/reception-history`, `/staff/kyc`, `/staff/holds`, `/staff/requests` |
 | Quản lý trung tâm | `CENTER_MANAGER` (`MANAGER`) | `/manager/reports`, `/manager/classes`, `/manager/catalogs`, `/manager/coach-assignments`, `/manager/staff-accounts`, `/manager/requests`, `/messages` (chỉ Hỗ trợ & Khiếu nại, SÖL AI) |
 | Quản trị hệ thống | `ADMIN` | `/admin/users`, `/admin/audit-logs`, `/admin/payments`, `/member/notifications` |
 
-- URL của màn đã bỏ (`/staff/orders`, `/staff/courts`, `/staff/pt-attendance`, `/manager/products`, `/manager/equipment`, `/manager/coach-reviews`, `/coach/health-metrics`, trang bộ môn và trang sản phẩm công khai) chuyển hướng về màn còn giữ; `/staff/classes` chuyển hướng theo vai trò (`MANAGER` → `/manager/classes`, `STAFF` → `/staff/reception`); `/staff/attendance*` chuyển hướng sang `/coach/attendance*`. Xem `DESIGN.md`.
+- URL của màn đã bỏ/ẩn (`/member/explore` → `/member/dashboard`; `/staff/orders`, `/staff/pt-attendance`, `/manager/products`, `/manager/equipment`, `/manager/coach-reviews`, `/coach/health-metrics`, trang sản phẩm công khai và route của các bộ môn đã gỡ) chuyển hướng về màn còn giữ; `/staff/classes` chuyển hướng theo vai trò (`MANAGER` → `/manager/classes`, `STAFF` → `/staff/reception`); `/staff/attendance*` chuyển hướng sang `/coach/attendance*`. Sidebar hội viên không còn lối vào 3D. Xem `DESIGN.md`.
 - Frontend chặn route bằng `RoleGuard`. Backend vẫn tự kiểm tra role qua `SecurityConfig` và `@PreAuthorize`. Ẩn menu không phải là phân quyền.
 - JWT chỉ được chấp nhận khi user còn `active` và `deleted_at IS NULL`. Khóa tài khoản thì token cũ mất hiệu lực ngay ở request kế tiếp.
 - Mọi thông báo và lỗi của API đi qua i18n (`Accept-Language`, mặc định `vi`).
@@ -66,7 +66,7 @@
 | Giảm giá buổi PT thêm | — | 10% | 20% | — |
 | Bảo lưu tối đa (gói ≥ 60 ngày / gói 1 tháng cũ) | 7 / 0 | 15 / 0 | 30 / 7 ngày | 0 |
 
-> `PackageBenefits` và dữ liệu gói vẫn còn các giá trị của tính năng đã ngừng (`classCreditLimit` cho khóa học nhóm, lượt/hạn mức đặt sân, phòng VIP). Chúng không còn được dùng ở luồng nào và không hiển thị cho hội viên; giữ hay bỏ đang chờ quyết định nghiệp vụ.
+> Quyền lợi khóa học nhóm (`classCreditLimit` và giảm giá học phí khóa học theo hạng gói) đang được áp dụng qua `GET /api/v1/classes/my-quota` (xem mục 3). Các trường quyền lợi của tính năng đã tắt cờ (như giảm giá cửa hàng) không hiển thị và không dùng trong luồng hiện hành.
 
 - **Mua mới:** tạo `membership_subscriptions` ở `pending_payment`. Thanh toán thành công (VNPay, Ví, hoặc lễ tân xác nhận tiền mặt/POS) thì gói chuyển sang `active`, phát hành hóa đơn, cấp thẻ QR.
 - **Gia hạn:** tạo kỳ mới liên kết `previous_subscription_id`. Kỳ cũ còn hạn thì kỳ mới bắt đầu ngay sau ngày hết hạn cũ, không mất ngày.
@@ -91,7 +91,7 @@
 - Khi duyệt (hoàn/mất được quyết định ngay lúc duyệt):
   - **PT 1:1** có ngày nằm trong khoảng bảo lưu bị hủy. Duyệt trước ngày tập **≥ 3 ngày**: lượt gói được trả lại, tiền đã trả (phần chưa hoàn) vào Ví và payment chuyển `refunded`. Muộn hơn: mất lượt (đánh dấu `quota_forfeited`, vẫn tính vào hạn mức chu kỳ) hoặc mất tiền. Payment còn `pending` chuyển `failed`.
   - Hội viên nhận thông báo riêng cho từng lịch (trả lượt / hoàn tiền / không tính phí / mất). Lịch ngoài khoảng bảo lưu giữ nguyên; lịch đã hủy không tự khôi phục kể cả khi rút bảo lưu chưa bắt đầu.
-  - Code vẫn giữ nhánh hủy/hoàn cho đặt sân và khóa học, chỉ để xử lý dữ liệu cũ nếu còn.
+  - Đối với khóa học nhóm định kỳ đã ghi danh, hệ thống xử lý hủy/hoàn theo quy tắc khóa học tương ứng (nhánh đặt sân đã gỡ bỏ hoàn toàn cùng module đặt sân).
 - Tới ngày bắt đầu, gói chuyển `frozen`. Hết hạn bảo lưu (hoặc chạm trần **90 ngày**), gói tự `active` lại và được cộng bù số ngày đã giữ. Ngày bảo lưu không bị tính vào chu kỳ quyền lợi.
 
 ### 2.5 Hủy gói và hoàn tiền
@@ -104,14 +104,14 @@
 
 ---
 
-## 3. Flow 2 — Lớp học nhóm định kỳ (6 bộ môn, tối đa 1 lớp/môn)
+## 3. Flow 2 — Lớp học nhóm định kỳ (3 bộ môn, tối đa 1 lớp/môn)
 
-Từ 25/11/2026 trung tâm **khôi phục 6 bộ môn chuẩn (`Gym`, `Bơi lội`, `Boxing`, `Tennis`, `Cầu lông`, `Yoga`) và lớp học nhóm dạng khóa định kỳ** (`app.legacy.classes-enabled=true`), giữ nguyên `SingleSessionPolicy` (chặn đặt buổi lẻ một lần) và áp quy tắc **mỗi bộ môn tối đa 1 lớp `active` duy nhất**:
+Từ 25/11/2026 trung tâm vận hành **3 bộ môn đang hoạt động** (`Gym` chính, `Boxing`, `Yoga`) với **4 phòng** (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`) và **lớp học nhóm dạng khóa định kỳ** (`app.legacy.classes-enabled=true`), giữ nguyên `SingleSessionPolicy` (chặn đặt buổi lẻ một lần) và áp quy tắc **mỗi bộ môn tối đa 1 lớp `active` duy nhất**:
 
 - **Quản lý (`/manager/classes`, chỉ `CENTER_MANAGER` / `MANAGER`):**
   - Tạo, sửa khóa học định kỳ (`POST /api/v1/classes/recurring`, `PUT /api/v1/classes/{id}`), thêm buổi (`POST /api/v1/classes/{id}/sessions`), đổi lịch buổi (`PUT /api/v1/classes/{id}/sessions/{sessionId}`), hủy buổi kèm lý do (`POST /api/v1/classes/sessions/{id}/cancel`).
   - Nếu bộ môn đã có 1 lớp `active`, `ClassService` trả `409 SCHEDULING_DISCIPLINE_CLASS_EXISTS` (muốn mở lớp mới cần lưu trữ/hủy lớp cũ trước).
-  - Giao diện gồm đúng **3 tab độc lập không lặp control**: `Lịch theo bộ môn` (6 chip bộ môn → lịch tuần lớp duy nhất của môn đó), `Lịch tổng cả tuần` (gộp 6 môn, gom ≥ 3 lớp trùng giờ vào nút `+N lớp`), và `Danh sách lớp` (bảng quản lý). Bấm bất kỳ ô buổi nhỏ nào mở `ClassSessionDetailModal`.
+  - Giao diện gồm đúng **3 tab độc lập không lặp control**: `Lịch theo bộ môn` (3 chip bộ môn `Gym`, `Boxing`, `Yoga` → lịch tuần lớp duy nhất của môn đó), `Lịch tổng cả tuần` (gộp cả 3 bộ môn, gom ≥ 3 lớp trùng giờ vào nút `+N lớp`), và `Danh sách lớp` (bảng quản lý). Bấm bất kỳ ô buổi nhỏ nào mở `ClassSessionDetailModal`.
 - **Ràng buộc chống trùng lịch hai chiều PT 1:1 ↔ Lớp nhóm:**
   - Khi Hội viên đặt PT 1:1 hoặc Quản lý điều chuyển HLV PT (`CoachBookingService`, `CoachAssignmentService`, trigger `scms_guard_pt_schedule`), hệ thống chặn nếu HLV đã có buổi lớp nhóm trùng giờ.
   - Ngược lại, khi Quản lý tạo khóa học, thêm buổi, cập nhật lịch khóa hoặc đổi lịch buổi (`ClassService.ensureNoSessionConflict`), hệ thống kiểm tra `CoachBookingRepository` và trả `409 SCHEDULING_COACH_PT_CONFLICT` nếu HLV đã có buổi PT 1:1 `confirmed` trùng giờ.
@@ -120,7 +120,7 @@ Từ 25/11/2026 trung tâm **khôi phục 6 bộ môn chuẩn (`Gym`, `Bơi lộ
   - Gói tập vẫn hiển thị và áp dụng quyền lợi số khóa học / giảm giá học phí khóa học từ `GET /api/v1/classes/my-quota`.
 - **HLV (`/coach/classes`, `/coach/attendance`, `/coach/attendance/:sessionId`):**
   - Xem thời khóa biểu gộp lớp nhóm + PT 1:1; điểm danh Có mặt/Vắng mặt và xem lịch sử 31 ngày qua `/api/v1/attendance/sessions/**` (không khôi phục tab đánh giá buổi tập vì `app.coaching.evaluations.enabled=false`).
-- **Thông báo & lịch công khai:** ghi danh/checkout/hủy ghi danh (`class_enrollment`), đổi lịch buổi học (`schedule_change` gửi cả học viên đã đặt và HLV phụ trách), hủy buổi học (gửi học viên không trùng lặp và gửi HLV phụ trách nếu Quản lý hủy). `GET /api/v1/public/catalog` trả các buổi lớp nhóm sắp tới trong 7 ngày tới cho trang bộ môn và trang HLV công khai.
+- **Thông báo & lịch công khai:** ghi danh/checkout/hủy ghi danh (`class_enrollment`), đổi lịch buổi học (`schedule_change` gửi cả học viên đã đặt và HLV phụ trách), hủy buổi học (gửi học viên không trùng lặp và gửi HLV phụ trách nếu Quản lý hủy). `GET /api/v1/public/catalog` trả các buổi lớp nhóm sắp tới trong 7 ngày tới cho Landing, trang bộ môn (`/boxing`, `/yoga`, `/sports/:sportId`) và trang HLV công khai.
 
 ---
 
@@ -139,7 +139,7 @@ Từ 25/11/2026 trung tâm **khôi phục 6 bộ môn chuẩn (`Gym`, `Bơi lộ
 **Màn hình:** ví trong `/member/dashboard`; lễ tân nạp ở `/staff/reception`. **API:** `/api/v1/wallet`.
 
 - Nạp qua VNPay hoặc tại quầy, mỗi lần 10.000 đ – 100.000.000 đ.
-- Mọi khoản hoàn (hủy gói, PT 1:1) đều vào Ví. Mỗi khoản có mã tham chiếu riêng (`CANCEL_REQ_`, `COACH_REFUND_`; `COURSE_REFUND_`, `COURT_REFUND_`, `ORDER_REFUND_` chỉ còn ở dữ liệu cũ) nên không hoàn trùng.
+- Mọi khoản hoàn (hủy gói, hủy khóa học nhóm, PT 1:1) đều vào Ví. Mỗi khoản có mã tham chiếu riêng (`CANCEL_REQ_`, `COURSE_REFUND_`, `COACH_REFUND_`; `ORDER_REFUND_` và mã hoàn cũ khác chỉ còn ở dữ liệu lịch sử) nên không hoàn trùng.
 
 ### 4.3 Hoàn tiền thủ công
 **Màn hình:** `/manager/reports` / chi tiết giao dịch. **API:** `POST /api/v1/payments/{id}/refund` (chỉ Quản lý).
@@ -151,7 +151,7 @@ Từ 25/11/2026 trung tâm **khôi phục 6 bộ môn chuẩn (`Gym`, `Bơi lộ
 
 ### 4.4 Hóa đơn và báo cáo
 - Payment thành công tự phát hành hóa đơn. Hội viên xem và tải ở `/member/invoices`.
-- `/manager/reports`: doanh thu theo ngày, theo gói, giao dịch gần đây, tỷ lệ gia hạn, bản chụp báo cáo (`report_snapshots`). Báo cáo tỷ lệ lấp đầy lớp (`/admin/audit-logs`) chỉ còn số liệu của lớp cũ.
+- `/manager/reports`: doanh thu theo ngày, theo gói, giao dịch gần đây, tỷ lệ gia hạn, bản chụp báo cáo (`report_snapshots`). Báo cáo tỷ lệ lấp đầy lớp (`/admin/audit-logs`) tổng hợp dữ liệu các lớp học nhóm.
 - `/admin/payments`: đối soát VNPay, tối đa 92 ngày mỗi lần xem.
 
 ---
@@ -162,14 +162,14 @@ Từ 25/11/2026 trung tâm **khôi phục 6 bộ môn chuẩn (`Gym`, `Bơi lộ
 |---|---|---|
 | Người dùng: khóa/mở, đổi vai trò, xóa mềm | `/manager/users`, `/admin/users` | Quản lý, Admin |
 | Tài khoản nhân viên (HLV, lễ tân) | `/manager/staff-accounts` | Quản lý |
-| Danh mục: bộ môn, phòng, gói tập | `/manager/catalogs` | Quản lý. API trả toàn bộ bộ môn và phòng trong DB, không lọc cứng theo tên; frontend cũng không lọc. Dữ liệu ngoài Gym còn sót được dọn theo [`DATA_CLEANUP.md`](DATA_CLEANUP.md) |
+| Danh mục: bộ môn, phòng, gói tập | `/manager/catalogs` | Quản lý. Vận hành 3 bộ môn (`Gym`, `Boxing`, `Yoga`) và 4 phòng (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`). API trả toàn bộ bộ môn và phòng trong DB, không lọc cứng theo tên; frontend cũng không lọc. Dữ liệu cũ ngoài phạm vi được dọn theo [`DATA_CLEANUP.md`](DATA_CLEANUP.md) |
 | Xem và điều chuyển HLV phụ trách (không phân công mới), sắp xếp theo tên/số học viên/trạng thái (`sortBy`, `sortDir`) | `/manager/coach-assignments` | Quản lý |
 | Yêu cầu nội bộ: nghỉ phép, đổi ca, đổi lịch, khác | `/staff/requests` (gửi), `/manager/requests` (duyệt) | Nhân viên, Quản lý |
 | Nhật ký kiểm toán | `/admin/audit-logs` | Admin |
 
 - Không khóa được Admin/Quản lý hoạt động cuối cùng.
 - Hội viên còn gói hoặc lịch sắp tới, HLV còn lớp hoặc PT sắp tới thì không đổi vai trò/xóa được cho tới khi xử lý xong.
-- **Khóa tài khoản:** HLV còn lớp hoặc PT sắp tới thì không khóa được (phải bàn giao trước, như khi xóa). Khóa hội viên thì khóa học, sân, PT đã trả vẫn giữ (booking theo buổi cũ, nếu còn, bị hủy).
+- **Khóa tài khoản:** HLV còn lớp hoặc PT sắp tới thì không khóa được (phải bàn giao trước, như khi xóa). Khóa hội viên thì khóa học và PT đã trả vẫn giữ (booking theo buổi cũ, nếu còn, bị hủy).
 - Đơn nghỉ phép đã duyệt chặn xếp lớp cho HLV vào ngày đó.
 - Các thao tác thay đổi dữ liệu quan trọng được ghi `audit_logs` qua `@Audited`.
 
@@ -209,7 +209,7 @@ Từ 25/11/2026 trung tâm **khôi phục 6 bộ môn chuẩn (`Gym`, `Bơi lộ
 
 ### 7.1 Trợ lý AI
 **Màn hình:** tab AI trong `/messages`. **API:** `/api/v1/ai/chat`.
-- Hội viên và nhân viên đều có phiên chat riêng. AI trả lời dựa trên kiến thức trung tâm (`ai/sol-knowledge.md`, chỉ mô tả Gym, PT 1:1, gói, bảo lưu, ví, check-in) và dữ liệu của chính người hỏi (lịch PT, giáo án). Có giới hạn tần suất. Lịch sử lưu ở `ai_chat_sessions` / `ai_chat_messages`.
+- Hội viên và nhân viên đều có phiên chat riêng. AI trả lời dựa trên kiến thức trung tâm (`ai/sol-knowledge.md`, mô tả 3 bộ môn `Gym`, `Boxing`, `Yoga`, 4 phòng tập, lớp học nhóm định kỳ, PT 1:1, gói tập, bảo lưu, ví, check-in) và dữ liệu của chính người hỏi (lịch lớp/PT, giáo án). Có giới hạn tần suất. Lịch sử lưu ở `ai_chat_sessions` / `ai_chat_messages`.
 
 ### 7.2 Thông báo
 **Màn hình:** `/member/notifications`. **API:** `/api/v1/notifications`.
@@ -255,8 +255,8 @@ Từ 25/11/2026 trung tâm **khôi phục 6 bộ môn chuẩn (`Gym`, `Bơi lộ
 
 ---
 
-## 9. Đặt sân (đã ngừng)
-Từ 22/11/2026 (PR #152) không còn đặt sân theo giờ. `CourtBookingController`, `CourtSeeder` và `CourtBookingExpiryScheduler` chỉ nạp khi bật `app.legacy.courts-enabled=true` (mặc định tắt). Bảng `court_bookings` và trigger `trg_court_bookings_*` còn giữ dữ liệu cũ. `/member/courts`, `/staff/courts` đã gỡ; thông báo hoặc kết quả VNPay cũ của lượt sân dẫn về `/member/invoices`.
+## 9. Đặt sân (đã gỡ bỏ hoàn toàn)
+Tính năng đặt sân tự do theo giờ đã được **gỡ bỏ hoàn toàn** khỏi codebase (25/11/2026): xóa trọn module `com.swp391.scms.courts.*`, toàn bộ endpoint `/api/v1/courts/**` và `/api/v1/court-bookings/**`, trigger đặt sân, hợp đồng OpenAPI đặt sân cùng toàn bộ UI, route và nhãn đặt sân ở frontend.
 
 ---
 
@@ -280,10 +280,10 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | `SupportRequestService` | Hằng giờ | Đóng phiếu `resolved` quá 72 giờ |
 | `NotificationScheduler` | 8:00 và 30 phút | Nhắc gia hạn gói và nhắc buổi lớp sắp bắt đầu |
 | `VnpayExpiryScheduler` | 1–5 phút | Đóng giao dịch VNPay quá hạn |
-| `CourseEnrollmentExpiryScheduler` | 1–5 phút | Hủy giữ chỗ học phí khóa học chưa thanh toán quá hạn (đặt sân và đơn hàng vẫn tắt: `CourtBookingExpiryScheduler`, `ProductOrderExpiryScheduler`) |
+| `CourseEnrollmentExpiryScheduler` | 1–5 phút | Hủy giữ chỗ học phí khóa học chưa thanh toán quá hạn (đơn hàng cửa hàng vẫn tắt: `ProductOrderExpiryScheduler`; scheduler đặt sân đã gỡ bỏ hoàn toàn) |
 
 ### 11.2 Ràng buộc trong database
-Định nghĩa trong `apps/api/src/main/resources/db/triggers/postgresql-triggers.sql`, cài sau Hibernate. Lỗi được dịch ra HTTP 409/403 kèm i18n ở `GlobalExceptionHandler`. Trigger của lớp và sân vẫn được cài (bắt buộc theo `AGENTS.md`) để giữ dữ liệu cũ toàn vẹn dù tính năng đã ngừng.
+Định nghĩa trong `apps/api/src/main/resources/db/triggers/postgresql-triggers.sql`, cài sau Hibernate. Lỗi được dịch ra HTTP 409/403 kèm i18n ở `GlobalExceptionHandler`. Các trigger lớp học nhóm và PT 1:1 đang hoạt động bắt buộc (theo `AGENTS.md`); trigger đặt sân đã được gỡ bỏ hoàn toàn cùng module đặt sân.
 
 | Ràng buộc | Chặn |
 |---|---|
@@ -294,7 +294,6 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | `trg_checkins_check_membership` | Check-in `GRANTED` khi gói không hợp lệ |
 | `trg_member_schedule_conflict` | Hội viên học hai buổi lớp trùng giờ |
 | `trg_pt_schedule_*` | PT trùng lớp/PT khác, HLV quá 3 giờ PT liền. Thao tác hủy/hoàn thành không lấy khóa lịch chung |
-| `trg_court_bookings_*` | Sân trùng giờ, sai giờ mở cửa, quá khứ, vượt quyền gói |
 | `uq_session_booking_active`, `uq_enrollment_active` | Một hội viên giữ hai chỗ `booked` cùng buổi/lớp |
 
 ---
@@ -306,9 +305,9 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | Gói tự chuyển `expired` khi hết hạn | Hết hạn xác định theo `end_date`; `expired` chỉ dùng cho kỳ bị thay khi nâng cấp. Có thêm `frozen` (bảo lưu) |
 | Giáo án: `draft/active/completed/cancelled` | Có thêm `superseded` (giáo án cũ khi áp dụng giáo án mới) |
 | Hủy lớp "trước giờ học quy định" | Hủy được tới giờ bắt đầu |
-| Lớp học nhóm, đặt chỗ, điểm danh lớp | Đã khôi phục khóa học định kỳ & điểm danh lớp nhóm từ 25/11/2026 (`SingleSessionPolicy` vẫn tắt đặt buổi lẻ) |
+| Lớp học nhóm, đặt chỗ, điểm danh lớp | Đang vận hành khóa học định kỳ & điểm danh lớp nhóm cho 3 bộ môn (`Gym`, `Boxing`, `Yoga`; tối đa 1 lớp `active`/môn) từ 25/11/2026 (`SingleSessionPolicy` vẫn tắt đặt buổi lẻ) |
 | Đánh giá và xếp hạng HLV, theo dõi tiến độ/chỉ số cơ thể, thiết bị | Đã ngừng từ 22–23/11/2026 |
 | Hỗ trợ: nhân viên không mở lại phiếu đã giải quyết | Nhân viên được `resolved → in_progress` khi hội viên còn vấn đề |
 | Xuất Excel/PDF báo cáo | Chỉ có hóa đơn PDF của hội viên; báo cáo xem trên web và lưu snapshot JSON |
 | Push/SMS | Thông báo trong ứng dụng và email; chưa có SMS |
-| Không có | PT 1:1, Ví, dùng thử có duyệt giấy tờ, bảo lưu gói, chat trực tiếp, chuyển cấp khiếu nại (quản lý xử lý trong `/messages`). Đặt sân và cửa hàng từng được thêm rồi đã ngừng |
+| Không có | PT 1:1, Ví, dùng thử có duyệt giấy tờ, bảo lưu gói, chat trực tiếp, chuyển cấp khiếu nại (quản lý xử lý trong `/messages`). Tính năng đặt sân đã gỡ bỏ hoàn toàn; cửa hàng hiện tắt qua cờ legacy |

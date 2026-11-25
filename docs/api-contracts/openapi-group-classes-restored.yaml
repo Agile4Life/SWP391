@@ -3,7 +3,10 @@ info:
   title: SCMS API - Restored Group Classes (Recurring Courses) Contract
   version: 1.0.0
   description: >
-    Active API contract for restored recurring group classes (`app.legacy.classes-enabled=true`, 25/11/2026).
+    Active API contract for recurring group classes (`app.legacy.classes-enabled=true`, updated 25/11/2026).
+    Covers the 3 active disciplines (`Gym`, `Boxing`, `Yoga`) and 4 active rooms
+    (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`), enforcing
+    at most 1 active recurring group class per discipline (`409 SCHEDULING_DISCIPLINE_CLASS_EXISTS`).
     Single-session / one-off class creation and per-session booking remain disabled by `SingleSessionPolicy`.
     Bidirectional PT 1:1 <-> Group Class coach scheduling conflict protection is enforced across
     `ClassService`, `CoachBookingService`, `CoachAssignmentService`, and PostgreSQL trigger `scms_guard_pt_schedule`.
@@ -69,7 +72,8 @@ paths:
         '404': { description: Class not found }
         '409':
           description: >
-            Room/coach class overlap or confirmed PT 1:1 overlap (`SCHEDULING_COACH_PT_CONFLICT`).
+            Discipline already has another active class (`SCHEDULING_DISCIPLINE_CLASS_EXISTS`),
+            room/coach class overlap, or confirmed PT 1:1 overlap (`SCHEDULING_COACH_PT_CONFLICT`).
     delete:
       summary: Delete a class/course without active enrollments (CENTER_MANAGER, MANAGER)
       tags: [Classes]
