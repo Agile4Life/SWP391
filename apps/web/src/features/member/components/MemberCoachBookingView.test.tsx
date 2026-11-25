@@ -294,11 +294,16 @@ describe('MemberCoachBookingView coach list & booking order', () => {
         await new Promise((r) => setTimeout(r, 60));
       });
 
-      const textAsc = host.textContent ?? '';
-      expect(textAsc.indexOf('25/11/2026')).toBeLessThan(textAsc.indexOf('26/11/2026'));
-
-      const dateInput = host.querySelector<HTMLInputElement>('input[type="date"]');
+      const dateInput = host.querySelector<HTMLInputElement>('input[aria-label="Tìm lịch theo ngày"]');
       expect(dateInput).not.toBeNull();
+      const historySection = dateInput?.closest('section');
+      expect(historySection).not.toBeNull();
+      // Chỉ kiểm tra ngày trong lịch sử; vùng chọn lịch mới cũng có thể hiển thị cùng ngày.
+      const historyDates = () => Array.from(
+        historySection?.querySelectorAll('.row-card__meta > strong:first-child') ?? [],
+        date => date.textContent,
+      );
+      expect(historyDates()).toEqual(['25/11/2026', '26/11/2026']);
 
       await act(async () => {
         const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
@@ -307,10 +312,9 @@ describe('MemberCoachBookingView coach list & booking order', () => {
         dateInput?.dispatchEvent(new Event('change', { bubbles: true }));
       });
 
-      expect(host.textContent).toContain('26/11/2026');
-      expect(host.textContent).not.toContain('25/11/2026');
+      expect(historyDates()).toEqual(['26/11/2026']);
 
-      const allDaysBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      const allDaysBtn = [...(historySection?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) =>
         b.textContent?.includes('Tất cả ngày')
       );
       expect(allDaysBtn).toBeDefined();
@@ -319,8 +323,7 @@ describe('MemberCoachBookingView coach list & booking order', () => {
         allDaysBtn?.click();
       });
 
-      expect(host.textContent).toContain('25/11/2026');
-      expect(host.textContent).toContain('26/11/2026');
+      expect(historyDates()).toEqual(['25/11/2026', '26/11/2026']);
     });
   });
 });
