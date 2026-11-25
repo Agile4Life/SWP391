@@ -1,0 +1,110 @@
+openapi: 3.0.3
+info:
+  title: Receptionist support inbox read cursors
+  version: 1.0.0
+  description: Extends openapi-sprint2.yaml. Existing manager and member visibility and ticket workflow remain unchanged.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /support/requests:
+    get:
+      summary: List support tickets
+      description: >-
+        Receptionist inbox includes per-user unreadCount, lastMessage and lastMessageAt.
+        Missing receipt counts the initial member description as one unread message.
+        Subsequent unread messages are only those authored by the ticket's member after the user's cursor.
+        Applies status and unread filters in the database before pagination; orders globally by latest message
+        createdAt (fallback ticket createdAt) descending, then ticket ID descending. GET never marks read.
+        Center Manager keeps existing escalated-ticket visibility and listing behavior; unreadOnly is ignored.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [open, in_progress, resolved, closed]
+        - in: query
+          name: unreadOnly
+          schema:
+            type: boolean
+            default: false
+          description: Receptionist only; only tickets with unread incoming content.
+        - in: query
+          name: page
+          schema: {type: integer, minimum: 0, default: 0}
+        - in: query
+          name: size
+          schema: {type: integer, minimum: 1, default: 20}
+      responses:
+        '200':
+          description: Standard ApiResponse containing a Spring Page of SupportInboxTicket
+        '400':
+          description: Invalid status
+        '403':
+          description: Role forbidden or inactive/deleted/mismatched Receptionist actor
+  /support/requests/{id}/read:
+    post:
+      summary: Advance the authenticated Receptionist's read cursor
+      description: >-
+        Only active, nondeleted Receptionists may call this endpoint. Persists a cursor independently per user
+        and ticket. Zero acknowledges only the initial description; a positive cursor must be a message ID
+        belonging to this ticket (including a staff-authored message). Serialized using the ticket write lock;
+        a stale cursor cannot regress a newer cursor. Messages arriving after the supplied cursor remain unread.
+        Does not alter status, assignment, escalation, or send messages.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: {type: integer, format: int64}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lastMessageId]
+              properties:
+                lastMessageId: {type: integer, format: int64, minimum: 0}
+      responses:
+        '200':
+          description: Standard ApiResponse containing the remaining unread count, which may be positive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [unreadCount]
+                    properties:
+                      unreadCount: {type: integer, format: int64, minimum: 0}
+        '400':
+          description: Missing/negative cursor or message ID from another ticket
+        '403':
+          description: Not a Receptionist, or inactive/deleted/mismatched actor
+        '404':
+          description: Ticket does not exist
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}
+  schemas:
+    SupportInboxTicket:
+      allOf:
+        - $ref: './openapi-sprint2.yaml#/components/schemas/SupportRequestDto'
+        - type: object
+          properties:
+            lastMessage:
+              type: string
+              nullable: true
+              description: Latest message body, or initial description when no messages exist.
+            lastMessageAt:
+              type: string
+              format: date-time
+              nullable: true
+            unreadCount:
+              type: integer
+              format: int64
+              minimum: 0
+              nullable: true
+              description: Present for Receptionist inbox only; never includes staff outgoing messages.

@@ -8,7 +8,7 @@ import { subscribeSupport } from '../member/supportRealtime';
 import { StaffSupportChat } from './StaffSupportChat';
 
 vi.mock('../member/supportRealtime', () => ({ subscribeSupport: vi.fn(() => () => {}) }));
-vi.mock('../member/memberSupportApi', () => ({ getSupportInbox: vi.fn(), getSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn(), updateSupportStatus: vi.fn(), escalateSupportTicket: vi.fn() }));
+vi.mock('../member/memberSupportApi', () => ({ getSupportInbox: vi.fn(), getSupportTicket: vi.fn(), getSupportMessages: vi.fn(), markSupportRead: vi.fn(), sendSupportMessage: vi.fn(), updateSupportStatus: vi.fn(), escalateSupportTicket: vi.fn() }));
 
 const ticket = { id: 7, memberId: 10, memberName: 'Nguyễn An', subject: '[Thiết bị] Máy chạy', description: 'Máy không bật', status: 'open', createdAt: '2026-10-25T08:00:00', assignedToName: null } as supportApi.SupportTicket;
 // Tạo tin nhắn giả của hội viên.
@@ -27,6 +27,7 @@ beforeEach(() => {
   vi.mocked(supportApi.getSupportInbox).mockResolvedValue({ content: [ticket], totalPages: 1 });
   vi.mocked(supportApi.getSupportTicket).mockResolvedValue(ticket);
   vi.mocked(supportApi.getSupportMessages).mockResolvedValue([memberMessage(20, 'Em cần giúp')]);
+  vi.mocked(supportApi.markSupportRead).mockResolvedValue({ unreadCount: 0 });
   vi.mocked(subscribeSupport).mockImplementation(() => () => {});
 });
 afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.resetAllMocks(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
@@ -53,9 +54,9 @@ async function type(value: string) {
 it('lists tickets as an inbox and filters them by status chips', async () => {
   await render();
   await vi.waitFor(() => expect(host.querySelector('[data-support-ticket="7"]')?.textContent).toContain('Nguyễn An'));
-  expect(supportApi.getSupportInbox).toHaveBeenLastCalledWith(0, '');
+  expect(supportApi.getSupportInbox).toHaveBeenLastCalledWith(0, '', false);
   await act(async () => byText('Đang xử lý').click());
-  expect(supportApi.getSupportInbox).toHaveBeenLastCalledWith(0, 'in_progress');
+  expect(supportApi.getSupportInbox).toHaveBeenLastCalledWith(0, 'in_progress', false);
 });
 
 it('opens a ticket as a chat with the member on the left and the receptionist reply on the right', async () => {
