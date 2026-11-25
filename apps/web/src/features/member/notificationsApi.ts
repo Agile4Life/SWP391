@@ -68,12 +68,9 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
   if (role === 'MEMBER' && /^\/member\/streak(?:[?/#]|$)/.test(path)) return '/member/dashboard';
   if (role === 'MEMBER' && /^\/member\/progress(?:[?/#]|$)/.test(path)) return '/member/progress';
   const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
-<<<<<<< HEAD
   return path.startsWith(prefix) ||
     path.startsWith('/member/profile') ||
-    path === '/profile' ||
-    (role === 'COACH' && ['/staff/attendance', '/staff/requests', '/staff/coach-classes', '/staff/classes'].some(p => path === p || path.startsWith(`${p}?`))) ||
-    (['MANAGER', 'CENTER_MANAGER'].includes(role) && ['/staff/classes', '/staff/courts', '/staff/orders', '/staff/requests'].some(p => path === p || path.startsWith(`${p}?`))) ||
+    (role === 'COACH' && (path === '/staff/requests' || path.startsWith('/staff/requests?'))) ||
     path === '/messages' ||
     path === '/messages?tab=support' ? path : null;
 }
@@ -82,16 +79,14 @@ export type NotificationTarget = Partial<Pick<MemberNotification, 'relatedEntity
 
 export function notificationDestination(notification: NotificationTarget, role = 'MEMBER'): string {
   const explicit = safeNotificationPath(notification.actionPath, role);
-  if (explicit) {
-    if (role === 'COACH') {
-      if (explicit === '/staff/attendance' || explicit.startsWith('/staff/attendance?')) {
-        return explicit.replace('/staff/attendance', '/coach/pt-attendance');
-      }
-      if (explicit === '/staff/coach-classes' || explicit === '/staff/classes' || explicit.startsWith('/staff/classes?')) {
-        return '/coach/classes';
-      }
+  if (explicit) return explicit;
+  if (role === 'COACH') {
+    if (notification.actionPath === '/staff/attendance' || notification.actionPath?.startsWith('/staff/attendance?')) {
+      return '/coach/pt-attendance';
     }
-    return explicit;
+    if (notification.actionPath === '/staff/coach-classes' || notification.actionPath === '/staff/classes') {
+      return '/coach/classes';
+    }
   }
 
   const rawEntity = (notification.relatedEntityType ?? '').toLowerCase().trim();
@@ -99,6 +94,30 @@ export function notificationDestination(notification: NotificationTarget, role =
   const rawTitle = (notification.title ?? '').toLowerCase().trim();
   const rawMessage = (notification.message ?? '').toLowerCase().trim();
   const text = `${rawTitle} ${rawMessage}`;
+
+  if (role === 'STAFF' || role === 'RECEPTIONIST') {
+    // Thông báo yêu cầu mới thiếu actionPath vẫn đi tới màn xử lý hiện có.
+    if (['New identity verification request', 'Có hồ sơ KYC mới'].includes(notification.title ?? '')) return '/staff/kyc';
+    if (['New membership hold request', 'Có yêu cầu bảo lưu mới'].includes(notification.title ?? '')) return '/staff/holds';
+    if (['New trial request', 'Có yêu cầu trải nghiệm mới', 'New counter payment request', 'Có yêu cầu thanh toán mới'].includes(notification.title ?? '')) return '/staff/reception';
+    // Ưu tiên metadata thật; lịch sử hiện có chỉ chứa yêu cầu gói đã xử lý và nạp ví.
+    if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
+    if (notification.relatedEntityType === 'payment' || notification.type === 'payment') return '/staff/reception-history';
+    // Đơn nội bộ hiện gửi system/null, không có actionPath: chỉ nhận đúng tiêu đề VI/EN của backend.
+    if (notification.type === 'system' && !notification.relatedEntityType && [
+      'Your request was approved', 'Your request was rejected',
+      'Đơn từ của bạn đã được duyệt', 'Đơn từ của bạn bị từ chối',
+    ].includes(notification.title ?? '')) return '/staff/requests';
+    if (
+      ['staff_internal_request', 'internal_request', 'staff_request', 'leave_request'].includes(rawEntity) ||
+      rawType === 'staff_request' ||
+      /đơn từ|nội bộ|nghỉ phép|đổi ca|đề xuất|internal request|leave request|shift change|leave_impact|phê duyệt|từ chối|chờ duyệt|approved|rejected/.test(text)
+    ) {
+      return '/staff/requests';
+    }
+    // Thiếu thông tin thì về quầy; không suy luận bản ghi hoặc chức năng từ nội dung tự do.
+    return '/staff/reception';
+  }
 
   if (role === 'COACH') {
     // 1. Hỗ trợ / Khiếu nại / Tin nhắn
@@ -173,52 +192,19 @@ export function notificationDestination(notification: NotificationTarget, role =
     return '/coach/classes';
   }
 
-  if (['STAFF', 'RECEPTIONIST', 'MANAGER', 'CENTER_MANAGER'].includes(role)) {
-    const manager = ['MANAGER', 'CENTER_MANAGER'].includes(role);
-    if (rawEntity === 'product_order' || rawType === 'order') return manager ? '/manager/products?tab=orders' : '/staff/orders';
+  if (['MANAGER', 'CENTER_MANAGER'].includes(role)) {
     if (rawEntity === 'support_request' || rawType === 'support_reply') return '/messages?tab=support';
     if (
       ['staff_internal_request', 'internal_request', 'staff_request'].includes(rawEntity) ||
       /đơn từ|nội bộ|nghỉ phép|đổi ca|đề xuất|internal request|leave request/.test(text)
     ) {
-      return manager ? '/manager/requests' : '/staff/requests';
+      return '/manager/requests';
     }
-    if (['class_session', 'class_enrollment'].includes(rawEntity) || ['schedule_change', 'class_reminder'].includes(rawType)) return '/staff/classes';
-    return manager ? '/manager/reports' : '/staff/reception';
-=======
-  return path.startsWith(prefix) || path.startsWith('/member/profile') || (role === 'COACH' && (path === '/staff/requests' || path.startsWith('/staff/requests?'))) || path === '/messages' || path === '/messages?tab=support' ? path : null;
-}
-
-/**
- * Chọn trang đích khi bấm thông báo: ưu tiên đường dẫn hợp lệ trong thông báo, rồi theo vai trò và loại đối
- * tượng liên quan.
- */
-export function notificationDestination(notification: Pick<MemberNotification, 'relatedEntityType' | 'type' | 'actionPath'> & { title?: string }, role = 'MEMBER'): string {
-  const explicit = safeNotificationPath(notification.actionPath, role);
-  if (explicit) return explicit;
-  if (role === 'STAFF' || role === 'RECEPTIONIST') {
-    // Thông báo yêu cầu mới thiếu actionPath vẫn đi tới màn xử lý hiện có.
-    if (['New identity verification request', 'Có hồ sơ KYC mới'].includes(notification.title ?? '')) return '/staff/kyc';
-    if (['New membership hold request', 'Có yêu cầu bảo lưu mới'].includes(notification.title ?? '')) return '/staff/holds';
-    if (['New trial request', 'Có yêu cầu trải nghiệm mới', 'New counter payment request', 'Có yêu cầu thanh toán mới'].includes(notification.title ?? '')) return '/staff/reception';
-    // Ưu tiên metadata thật; lịch sử hiện có chỉ chứa yêu cầu gói đã xử lý và nạp ví.
-    if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
-    if (notification.relatedEntityType === 'payment' || notification.type === 'payment') return '/staff/reception-history';
-    // Đơn nội bộ hiện gửi system/null, không có actionPath: chỉ nhận đúng tiêu đề VI/EN của backend.
-    if (notification.type === 'system' && !notification.relatedEntityType && [
-      'Your request was approved', 'Your request was rejected',
-      'Đơn từ của bạn đã được duyệt', 'Đơn từ của bạn bị từ chối',
-    ].includes(notification.title ?? '')) return '/staff/requests';
-    // Thiếu thông tin thì về quầy; không suy luận bản ghi hoặc chức năng từ nội dung tự do.
-    return '/staff/reception';
-  }
-  if (role === 'COACH') return notification.relatedEntityType === 'training_plan' ? '/coach/training-plans' : '/coach/classes';
-  if (['MANAGER', 'CENTER_MANAGER'].includes(role)) {
-    if (notification.relatedEntityType === 'support_request' || notification.type === 'support_reply') return '/messages?tab=support';
     return '/manager/reports';
->>>>>>> 7e066775aa6d0a2c467f5936f599f972042d3721
   }
+
   if (role === 'ADMIN') return '/admin/users';
+
   switch (rawEntity) {
     case 'class_session':
     case 'class_enrollment': return '/member/dashboard';
@@ -228,20 +214,12 @@ export function notificationDestination(notification: Pick<MemberNotification, '
     case 'support_request': return '/messages?tab=support';
     case 'training_plan': return '/member/progress';
     default:
-<<<<<<< HEAD
-      if (rawType === 'class_reminder' || rawType === 'schedule_change') return '/member/classes';
+      if (rawType === 'class_reminder' || rawType === 'schedule_change') return '/member/dashboard';
       if (rawType === 'package_expiry') return '/member/packages';
       if (rawType === 'payment') return '/member/invoices';
-      if (rawType === 'order') return '/member/orders';
+      if (rawType === 'order') return '/member/invoices';
       if (rawType === 'support_reply') return '/messages?tab=support';
       if (/đánh giá|nhận xét|evaluation|tiến độ|progress/.test(text)) return '/member/progress#coach-evaluations';
-=======
-      if (notification.type === 'class_reminder' || notification.type === 'schedule_change') return '/member/dashboard';
-      if (notification.type === 'package_expiry') return '/member/packages';
-      if (notification.type === 'payment') return '/member/invoices';
-      if (notification.type === 'order') return '/member/invoices';
-      if (notification.type === 'support_reply') return '/messages?tab=support';
->>>>>>> 7e066775aa6d0a2c467f5936f599f972042d3721
       return '/member/dashboard';
   }
 }

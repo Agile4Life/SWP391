@@ -2,11 +2,7 @@ import { useStaffI18n, type StaffMessage, staffError, staffMessage, staffNotify 
 import { calculateAutoBmi } from './coachHealthUtils';
 import { TrainingExerciseFields } from './TrainingExerciseFields';
 import { validateExercise, type ExerciseValues } from './trainingExercise';
-<<<<<<< HEAD
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-=======
-import React, { useEffect, useMemo, useState } from 'react';
->>>>>>> 7e066775aa6d0a2c467f5936f599f972042d3721
 import { getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';

@@ -59,7 +59,6 @@ export function StaffInternalRequestsPage() {
   // Đơn đang thao tác hủy
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
-<<<<<<< HEAD
   const tomorrowDate = useMemo(() => {
     const today = centerNowParts().date;
     const [y, m, d] = today.split('-').map(Number);
@@ -67,9 +66,7 @@ export function StaffInternalRequestsPage() {
     return tomorrow.toISOString().slice(0, 10);
   }, []);
 
-=======
   // Tải đơn từ của chính người dùng.
->>>>>>> 7e066775aa6d0a2c467f5936f599f972042d3721
   const loadData = useCallback(async () => {
     setLoading(true);
     setError('');
