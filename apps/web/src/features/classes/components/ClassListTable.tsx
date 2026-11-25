@@ -35,6 +35,7 @@ export function ClassListTable({
 }: ClassListTableProps) {
   const { t } = useI18n();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'active' | 'all'>('active');
 
   const sessionCounts = useMemo(() => {
     const map = new Map<number, number>();
@@ -48,13 +49,14 @@ export function ClassListTable({
 
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
-    if (!needle) return classes;
-    return classes.filter((cls) =>
-      [cls.name, cls.disciplineName, cls.roomName, cls.coachName]
+    return classes.filter((cls) => {
+      if (statusFilter === 'active' && String(cls.status).toLowerCase() !== 'active') return false;
+      if (!needle) return true;
+      return [cls.name, cls.disciplineName, cls.roomName, cls.coachName]
         .filter(Boolean)
-        .some((v) => String(v).toLowerCase().includes(needle)),
-    );
-  }, [classes, search]);
+        .some((v) => String(v).toLowerCase().includes(needle));
+    });
+  }, [classes, search, statusFilter]);
 
   const formatDays = (raw?: string) => {
     if (!raw) return '—';
@@ -71,15 +73,33 @@ export function ClassListTable({
     <div className="portal-card">
       <div className="class-filter-bar">
         <div className="class-filter-field" style={{ flex: '1 1 280px' }}>
-          <label className="portal-label" htmlFor="cls-list-search">{t('Tìm kiếm khóa học', 'Search courses')}</label>
+          <label className="portal-label" htmlFor="cls-list-search">{t('Tìm kiếm lớp học', 'Search classes')}</label>
           <input
             id="cls-list-search"
             className="portal-input"
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t('Tên lớp, bộ môn, phòng tập hoặc HLV…', 'Course, discipline, room, or coach…')}
+            placeholder={t('Tên lớp, bộ môn, phòng tập hoặc HLV…', 'Class, discipline, room, or coach…')}
           />
+        </div>
+        <div className="filter-chips" role="group" aria-label={t('Lọc trạng thái lớp', 'Filter class status')}>
+          <button
+            type="button"
+            className={`filter-chip${statusFilter === 'active' ? ' is-active' : ''}`}
+            aria-pressed={statusFilter === 'active'}
+            onClick={() => setStatusFilter('active')}
+          >
+            {t('Đang hoạt động', 'Active')}
+          </button>
+          <button
+            type="button"
+            className={`filter-chip${statusFilter === 'all' ? ' is-active' : ''}`}
+            aria-pressed={statusFilter === 'all'}
+            onClick={() => setStatusFilter('all')}
+          >
+            {t('Tất cả (gồm lưu trữ/hủy)', 'All (incl. archived)')}
+          </button>
         </div>
       </div>
 
