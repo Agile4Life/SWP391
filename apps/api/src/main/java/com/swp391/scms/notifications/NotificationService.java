@@ -17,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -65,22 +67,63 @@ public class NotificationService {
         this.notificationDispatcher = notificationDispatcher;
     }
 
-    /** Gửi đúng lễ tân đang hoạt động; nội dung chỉ mô tả loại việc, không chứa giấy tờ hoặc ảnh. */
-    @Transactional
+    /** Loại yêu cầu hội viên gửi tới quầy lễ tân kèm đường dẫn màn hình xử lý tương ứng. */
+    public enum ReceptionRequestKind {
+        KYC("kyc", "/staff/kyc"),
+        HOLD("hold", "/staff/holds"),
+        TRIAL("trial", "/staff/reception"),
+        PAYMENT("payment", "/staff/reception");
+
+        private final String code;
+        private final String actionPath;
+
+        ReceptionRequestKind(String code, String actionPath) {
+            this.code = code;
+            this.actionPath = actionPath;
+        }
+
+        public String code() { return code; }
+        public String actionPath() { return actionPath; }
+
+        public static ReceptionRequestKind fromCode(String raw) {
+            if (raw == null) throw new IllegalArgumentException("Unsupported reception request");
+            String normalized = raw.trim().toLowerCase(Locale.ROOT);
+            for (ReceptionRequestKind value : values()) {
+                if (value.code.equals(normalized)) return value;
+            }
+            throw new IllegalArgumentException("Unsupported reception request: " + raw);
+        }
+    }
+
+    /** Gửi đúng lễ tân đang hoạt động; lỗi gửi từng lễ tân chỉ ghi cảnh báo để không rollback giao dịch chính. */
+    @Transactional(noRollbackFor = RuntimeException.class)
     public void notifyReceptionists(String kind, Long requestId) {
-        String path = switch (kind) {
-            case "kyc" -> "/staff/kyc";
-            case "hold" -> "/staff/holds";
-            case "trial", "payment" -> "/staff/reception";
-            default -> throw new IllegalArgumentException("Unsupported reception request");
-        };
-        String titleKey = "notifications.reception." + kind + ".title";
-        String bodyKey = "notifications.reception." + kind + ".body";
+        notifyReceptionists(ReceptionRequestKind.fromCode(kind), requestId);
+    }
+
+    /** Gửi thông báo cho các lễ tân đang hoạt động theo loại yêu cầu chuẩn hóa; không chứa giấy tờ hoặc ảnh. */
+    @Transactional(noRollbackFor = RuntimeException.class)
+    public void notifyReceptionists(ReceptionRequestKind kind, Long requestId) {
+        if (kind == null) throw new IllegalArgumentException("Unsupported reception request");
+        String titleKey = "notifications.reception." + kind.code() + ".title";
+        String bodyKey = "notifications.reception." + kind.code() + ".body";
         String title = messageService != null ? messageService.getMessage(titleKey) : titleKey;
         String body = messageService != null ? messageService.getMessage(bodyKey) : bodyKey;
-        for (User user : userRepository.findAllByDeletedAtIsNullAndRole_CodeInOrderByIdAsc(java.util.List.of("RECEPTIONIST", "ROLE_RECEPTIONIST"))) {
+        List<User> receptionists;
+        try {
+            receptionists = userRepository.findAllByDeletedAtIsNullAndRole_CodeInOrderByIdAsc(
+                    List.of("RECEPTIONIST", "ROLE_RECEPTIONIST"));
+        } catch (RuntimeException ex) {
+            log.warn("Could not load active receptionists for {} request {}", kind.code(), requestId, ex);
+            return;
+        }
+        for (User user : receptionists) {
             if (user.getDeletedAt() == null && "active".equalsIgnoreCase(user.getStatus())) {
-                send(user.getId(), title, body, "system", null, requestId, path);
+                try {
+                    send(user.getId(), title, body, "system", null, requestId, kind.actionPath());
+                } catch (RuntimeException ex) {
+                    log.warn("Could not notify receptionist {} for {} request {}", user.getId(), kind.code(), requestId, ex);
+                }
             }
         }
     }
