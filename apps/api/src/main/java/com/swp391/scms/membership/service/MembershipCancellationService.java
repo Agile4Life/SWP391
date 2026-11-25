@@ -224,7 +224,7 @@ public class MembershipCancellationService {
 
     /**
      * Quản lý duyệt/từ chối yêu cầu hủy (khóa hội viên và yêu cầu; yêu cầu phải đang chờ). Duyệt: gói phải còn
-     * hiệu lực, là quyền lợi duy nhất còn lại, chuyển gói này và mọi gói active/frozen/chờ thanh toán sang
+     * hiệu lực, là quyền lợi duy nhất còn lại, chuyển kỳ gói được yêu cầu sang
      * cancelled, hủy lịch không còn được bao phủ, ghi nhận hoàn tiền trên các khoản thanh toán và cộng vào Ví,
      * rồi thông báo hội viên và lễ tân đã gửi yêu cầu. Từ chối: thông báo kèm ghi chú. Cuối cùng lưu người
      * quyết định, thời điểm và ghi chú.
@@ -260,14 +260,6 @@ public class MembershipCancellationService {
             subscription.setStatus("cancelled");
             subscription.setUpdatedAt(LocalDateTime.now(clock));
             subscriptions.saveAndFlush(subscription);
-            List<MembershipSubscription> memberSubs = subscriptions.findByMemberUserId(memberId);
-            for (MembershipSubscription sub : memberSubs) {
-                if (List.of("active", "frozen", "pending_payment").contains(sub.getStatus())) {
-                    sub.setStatus("cancelled");
-                    sub.setUpdatedAt(LocalDateTime.now(clock));
-                    subscriptions.save(sub);
-                }
-            }
             String cancelReason = messages != null
                     ? messages.getMessage("scheduling.enrollment.cancelled_by_membership")
                     : "Gói tập đã được quản lý duyệt hủy.";
@@ -401,20 +393,13 @@ public class MembershipCancellationService {
                     "error.membership.cancellation_paid_enrollment", null, null);
         }
         Long cancellingId = cancelling != null ? cancelling.getId() : null;
-        LocalDate cancellingEnd = cancelling != null ? cancelling.getEndDate() : null;
         List<MembershipSubscription> history = subscriptions.findByMemberUserId(memberId);
         for (MembershipSubscription other : history) {
             if (cancellingId != null && other.getId().equals(cancellingId)) continue;
             String status = other.getStatus();
             if (("active".equalsIgnoreCase(status) || "frozen".equalsIgnoreCase(status))
                     && other.getEndDate() != null && !other.getEndDate().isBefore(today)) {
-                boolean isFutureRenewal = (other.getPreviousSubscription() != null
-                        && cancellingId != null && cancellingId.equals(other.getPreviousSubscription().getId()))
-                        || (cancellingEnd != null && other.getStartDate() != null
-                        && other.getStartDate().isAfter(cancellingEnd));
-                if (isFutureRenewal) {
-                    throw new ConflictException("CANCELLATION_OTHER_ENTITLEMENT", "error.membership.cancellation_paid_future", null, null);
-                }
+                throw new ConflictException("CANCELLATION_OTHER_ENTITLEMENT", "error.membership.cancellation_paid_future", null, null);
             }
             if ("pending_payment".equalsIgnoreCase(status)) {
                 throw new ConflictException("CANCELLATION_PENDING_PAYMENT", "error.membership.cancellation_pending_payment", null, null);
