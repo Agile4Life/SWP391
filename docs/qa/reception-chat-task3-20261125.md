@@ -53,7 +53,8 @@ Hợp đồng đầy đủ: [openapi-support-inbox-read.yaml](../api-contracts/o
 
 - **Có bổ sung schema JPA:** bảng mới `support_request_reads`, ID identity; FK phiếu (cascade khi xóa phiếu), FK user, `last_message_id >= 0`, unique `(support_request_id, user_id)`.
 - Không thêm/sửa DDL migration, không đổi bảng dữ liệu nghiệp vụ cũ, không backfill trạng thái giả. Bảng mới rỗng khiến tất cả phiếu cũ chưa có receipt hiện chưa đọc cho từng lễ tân; cần leader chấp nhận hành vi ban đầu này.
-- Hibernate `ddl-auto:update` sẽ tạo bảng khi phiên bản API mới được khởi động. **Chưa áp dụng trên Supabase chung/production.** Cần review và kiểm thử trong schema dev/test biệt lập trước khi chạy API mới với credentials chung.
+- Cấu hình hiện tại mặc định `ddl-auto:update`; đây là hành vi cần audit, **không phải phương án triển khai production**. Bảng phải được provision bằng một thay đổi schema có kiểm soát đã duyệt trước khi triển khai ứng dụng. Production cần chế độ validate do Backend/ops phê duyệt; chỉ đổi `.env` chưa đủ vì `compose.yml` đang ghim `update`. Không sửa cấu hình production trong task này.
+- Khi bảng chưa tồn tại: `update` có thể tạo bảng nếu JDBC role đủ quyền, nhưng chưa được kiểm chứng bằng DB thật; `validate` sẽ không khởi động được; `none` cũng không đủ vì RLS initializer yêu cầu bảng đã tồn tại. **Chưa áp dụng trên Supabase chung/production.** Xem [đề xuất schema và gate triển khai](../api-contracts/support-inbox-schema-review.md).
 - RLS initializer hiện có tự lấy bảng từ JPA metamodel nên bao gồm entity mới; không thêm Data API policy mở bảng đọc.
 - `SupportInboxPostgreSqlTest` đã viết theo harness Supabase test và schema UUID riêng. Trong phiên này bị skip do không có `SCMS_POSTGRES_TEST_URL`; chưa xác nhận kết quả truy vấn, khóa đồng thời hoặc nâng cấp schema bằng DB thật.
 
