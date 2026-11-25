@@ -247,7 +247,7 @@ export function MemberGroupClassesView({ initialDiscipline, onBookingChange }: M
   };
 
   if (loading && classes.length === 0) {
-    return <LoadingSkeleton rows={5} />;
+    return <LoadingSkeleton label={t('Đang tải danh sách lớp học...', 'Loading group classes...')} count={5} />;
   }
 
   if (error && classes.length === 0) {

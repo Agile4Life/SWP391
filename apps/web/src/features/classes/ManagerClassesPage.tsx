@@ -284,10 +284,6 @@ export function ManagerClassesPage() {
     <div data-i18n-managed className="portal-container manager-classes-page">
       <PageHeader
         title={t('Lớp học & xếp lịch', 'Classes & schedule')}
-        subtitle={t(
-          'Chọn từng bộ môn để xem full lịch tuần của môn đó, hoặc chuyển sang Lịch tổng cả tuần / Tổng quan theo phòng.',
-          'Select a discipline to view its full weekly schedule, or switch to Full week overview / Room overview.',
-        )}
         actions={
           <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <RefreshButton onClick={() => void loadAll()} disabled={loading} />
@@ -447,7 +443,7 @@ export function ManagerClassesPage() {
       </div>
 
       {loading && sessions.length === 0 ? (
-        <LoadingSkeleton rows={6} />
+        <LoadingSkeleton label={t('Đang tải lịch lớp học...', 'Loading class schedule...')} count={6} />
       ) : error && sessions.length === 0 ? (
         <div className="portal-state" role="alert">
           <p>{error}</p>

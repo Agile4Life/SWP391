@@ -31,7 +31,6 @@ describe('CoachAttendancePage (group class attendance)', () => {
     vi.mocked(attendanceApi.getCoachSessions).mockResolvedValue([
       {
         id: 88,
-        classId: 3,
         className: 'Yoga Sáng',
         disciplineName: 'Yoga',
         roomName: 'Studio A',

@@ -70,28 +70,10 @@ export function ClassSessionDetailModal({
       ? 'badge-neutral'
       : 'badge-success';
 
-  const footer = (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'flex-end' }}>
-      {parentClass && onEditClass && (
-        <button type="button" className="btn-secondary" onClick={() => onEditClass(parentClass)}>
-          {t('Sửa khóa học', 'Edit course')}
-        </button>
-      )}
-      {isScheduled && (
-        <button type="button" className="btn-secondary" onClick={() => onReschedule(session)}>
-          {t('Dời lịch', 'Reschedule')}
-        </button>
-      )}
-      {isScheduled && (
-        <button type="button" className="btn-danger" onClick={() => onCancelSession(session)}>
-          {t('Hủy buổi', 'Cancel session')}
-        </button>
-      )}
-    </div>
-  );
+  const hasActions = Boolean((parentClass && onEditClass) || isScheduled);
 
   return (
-    <Modal title={title} onClose={onClose} footer={footer}>
+    <Modal title={title} onClose={onClose}>
       <div className="kv-list" data-testid="session-detail-content">
         <div className="kv-row">
           <span>{t('Bộ môn', 'Discipline')}</span>
@@ -167,6 +149,26 @@ export function ClassSessionDetailModal({
           </div>
         )}
       </div>
+
+      {hasActions && (
+        <div className="mcal__dialog-actions" style={{ marginTop: 18 }}>
+          {parentClass && onEditClass && (
+            <button type="button" className="btn-secondary" onClick={() => onEditClass(parentClass)}>
+              {t('Sửa khóa học', 'Edit course')}
+            </button>
+          )}
+          {isScheduled && (
+            <button type="button" className="btn-secondary" onClick={() => onReschedule(session)}>
+              {t('Dời lịch', 'Reschedule')}
+            </button>
+          )}
+          {isScheduled && (
+            <button type="button" className="btn-danger" onClick={() => onCancelSession(session)}>
+              {t('Hủy buổi', 'Cancel session')}
+            </button>
+          )}
+        </div>
+      )}
     </Modal>
   );
 }

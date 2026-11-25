@@ -296,11 +296,11 @@ export function CreateClassOrSessionModal({
             <div className="portal-form-grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="cls-start-date">{t('Ngày khai giảng', 'Start date')}</label>
-                <DatePicker id="cls-start-date" value={startDate} onChange={setStartDate} />
+                <DatePicker id="cls-start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="cls-end-date">{t('Ngày kết thúc', 'End date')}</label>
-                <DatePicker id="cls-end-date" value={endDate} onChange={setEndDate} />
+                <DatePicker id="cls-end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             </div>
 
@@ -338,7 +338,7 @@ export function CreateClassOrSessionModal({
             </div>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="sess-date">{t('Ngày học', 'Session date')}</label>
-              <DatePicker id="sess-date" value={sessionDate} onChange={setSessionDate} />
+              <DatePicker id="sess-date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
             </div>
           </>
         )}
@@ -346,11 +346,11 @@ export function CreateClassOrSessionModal({
         <div className="portal-form-grid-2">
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="cls-start-time">{t('Giờ bắt đầu', 'Start time')}</label>
-            <TimePicker id="cls-start-time" value={startTime} onChange={setStartTime} />
+            <TimePicker id="cls-start-time" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
           </div>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="cls-end-time">{t('Giờ kết thúc', 'End time')}</label>
-            <TimePicker id="cls-end-time" value={endTime} onChange={setEndTime} />
+            <TimePicker id="cls-end-time" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
           </div>
         </div>
 
@@ -541,16 +541,16 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
       <form onSubmit={handleSubmit} className="portal-form-stack">
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="resch-date">{t('Ngày học mới', 'New date')}</label>
-          <DatePicker id="resch-date" value={date} onChange={setDate} />
+          <DatePicker id="resch-date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <div className="portal-form-grid-2">
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="resch-start">{t('Giờ bắt đầu', 'Start time')}</label>
-            <TimePicker id="resch-start" value={startTime} onChange={setStartTime} />
+            <TimePicker id="resch-start" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
           </div>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="resch-end">{t('Giờ kết thúc', 'End time')}</label>
-            <TimePicker id="resch-end" value={endTime} onChange={setEndTime} />
+            <TimePicker id="resch-end" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
           </div>
         </div>
         <div className="mcal__dialog-actions">

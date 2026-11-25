@@ -195,6 +195,10 @@ describe('ManagerClassesPage', () => {
     expect(detail.textContent).toContain('HLV Lan');
     expect(detail.textContent).toContain('12/20');
     expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).toContain('Nguyễn Minh Anh');
+    const dialogButtons = [...document.querySelectorAll<HTMLButtonElement>('dialog button')].map((b) => b.textContent);
+    expect(dialogButtons).toContain('Sửa khóa học');
+    expect(dialogButtons).toContain('Dời lịch');
+    expect(dialogButtons).toContain('Hủy buổi');
   });
 
   it('supports Room Overview where all 3 concurrent disciplines sit in separate room columns with zero overlap', async () => {

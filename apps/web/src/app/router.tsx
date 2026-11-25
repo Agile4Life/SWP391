@@ -1,20 +1,8 @@
-import { createBrowserRouter, Navigate, useParams } from 'react-router-dom';
-import { getCurrentUser } from '../shared/api/client';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RoleGuard } from '../shared/ui/RoleGuard';
 import { PortalHome } from '../shared/ui/PortalHome';
 import { PortalRouteError, RouteLoading, RouteLoadError } from '../shared/ui/RouteState';
-
-/** Chuyển hướng liên kết cũ `/staff/attendance/:sessionId` sang `/coach/attendance/:sessionId`. */
-function LegacyAttendanceRedirect() {
-  const { sessionId } = useParams<{ sessionId: string }>();
-  return <Navigate to={sessionId ? `/coach/attendance/${sessionId}` : '/coach/attendance'} replace />;
-}
-
-/** Chuyển hướng liên kết cũ `/staff/classes` về `/manager/classes` cho Quản lý và `/staff/reception` cho Lễ tân. */
-function LegacyClassesRedirect() {
-  const role = getCurrentUser()?.role;
-  return <Navigate to={role === 'MANAGER' ? '/manager/classes' : '/staff/reception'} replace />;
-}
+import { LegacyAttendanceRedirect, LegacyClassesRedirect } from './LegacyRedirects';
 
 export const router = createBrowserRouter([
   // Public chỉ giới thiệu Gym; bỏ route Shop Member/Public, giữ route gói/PT và quản lý độc lập.
