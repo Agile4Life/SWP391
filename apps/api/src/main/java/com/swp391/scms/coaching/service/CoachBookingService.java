@@ -659,6 +659,11 @@ public class CoachBookingService {
             throw new BadRequestException("COACH_BOOKING_NOT_STARTED", "error.coach_booking.attendance_not_started", null,
                     "Attendance can be marked once the session has started.");
         }
+        LocalDate today = now.toLocalDate();
+        if (coach && !booking.getBookingDate().isEqual(today)) {
+            throw new BadRequestException("COACH_BOOKING_ATTENDANCE_EXPIRED", "error.coach_booking.attendance_same_day_only", null,
+                    "Coaches can only mark attendance on the day of the session.");
+        }
         if (booking.getAttendedAt() == null) {
             booking.setAttendedAt(now);
             booking.setAttendanceLocked(false);
@@ -688,6 +693,12 @@ public class CoachBookingService {
         if ("cancelled".equalsIgnoreCase(booking.getStatus())) {
             throw new ConflictException("COACH_BOOKING_CANCELLED", "error.coach_booking.already_cancelled", null,
                     "A cancelled session has no attendance.");
+        }
+        LocalDateTime now = LocalDateTime.now(clock.withZone(com.swp391.scms.common.CenterTime.ZONE));
+        LocalDate today = now.toLocalDate();
+        if (coach && !booking.getBookingDate().isEqual(today)) {
+            throw new BadRequestException("COACH_BOOKING_ATTENDANCE_EXPIRED", "error.coach_booking.attendance_same_day_only", null,
+                    "Coaches can only change attendance on the day of the session.");
         }
         if (booking.getAttendedAt() != null || !booking.isAttendanceLocked()) {
             booking.setAttendedAt(null);
