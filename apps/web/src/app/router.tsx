@@ -5,8 +5,14 @@ import { PortalRouteError, RouteLoading, RouteLoadError } from '../shared/ui/Rou
 import { LegacyAttendanceRedirect, LegacyClassesRedirect } from './LegacyRedirects';
 
 export const router = createBrowserRouter([
-  // Public chỉ giới thiệu Gym; bỏ route Shop Member/Public, giữ route gói/PT và quản lý độc lập.
+  // Public đa bộ môn (6 bộ môn chuẩn từ 1384c4d3); giữ bỏ Shop công khai, giữ route gói/lớp/PT và quản lý.
   { path: '/', lazy: async () => ({ Component: (await import('../features/landing/LandingPage')).LandingPage }) },
+  { path: '/swimming', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/tennis', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/boxing', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/badminton', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/yoga', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/sports/:sportId', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/trainers', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
   { path: '/trainers/:trainerId', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
   { path: '/login', lazy: async () => ({ Component: (await import('../features/auth/LoginPage')).LoginPage }) },

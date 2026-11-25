@@ -8,11 +8,12 @@ import { LanguageSetting, useI18n } from '../../../shared/i18n';
 import { useComponentReveal } from '../hooks/useComponentReveal';
 import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
 import { ChatWidget } from '../../chat/ChatWidget';
+import { SPORT_PAGES, sportIdFromPath } from '../sportPages';
 import '../fitness-public.css';
 
 const links: { to: string; hash?: string; label: string; labelEn: string }[] = [
   { to: '/#about', hash: 'about', get label() { return sourceText('Về SÖL'); }, labelEn: 'About SÖL' },
-  { to: '/#multisport', hash: 'multisport', label: 'Gym', labelEn: 'Gym' },
+  { to: '/#multisport', hash: 'multisport', label: 'Bộ môn', labelEn: 'Disciplines' },
   { to: '/#trainers', hash: 'trainers', get label() { return sourceText('Huấn luyện viên'); }, labelEn: 'Coaches' },
   { to: '/#packages', hash: 'packages', label: 'Gói tập', labelEn: 'Memberships' },
 ];
@@ -49,19 +50,24 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
   useComponentReveal(root, pathname);
   // Mục điều hướng có đang được chọn theo đường dẫn và neo hay không.
   const isNavActive = (to: string, target?: string) => {
+    const sportTarget = sportIdFromPath(pathname);
+    if (target === 'multisport' && sportTarget) return true;
     if (target === 'trainers') return pathname.startsWith('/trainers') || (pathname === '/' && hash === '#trainers');
     if (target) return pathname === '/' && hash === `#${target}`;
     return pathname === to;
   };
 
   useEffect(() => {
+    const activeSport = sportIdFromPath(pathname);
     const pageTitle = pathname === '/login'
       ? (lang === 'en' ? 'Sign In' : 'Đăng nhập')
       : pathname === '/register'
         ? (lang === 'en' ? 'Member Registration' : 'Đăng ký hội viên')
-        : pathname.startsWith('/trainers')
-          ? (lang === 'en' ? 'Coaches' : 'Huấn luyện viên')
-          : 'Build your body. Find your balance.';
+        : activeSport
+          ? SPORT_PAGES[activeSport].title
+          : pathname.startsWith('/trainers')
+            ? (lang === 'en' ? 'Coaches' : 'Huấn luyện viên')
+            : 'Build your body. Find your balance.';
     document.title = `${pageTitle} · SÖL Fitness`;
     if (hash) {
       const targetId = hash.slice(1);

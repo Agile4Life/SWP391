@@ -9,6 +9,7 @@ let root: Root;
 let intersect: IntersectionObserverCallback;
 let preference: { matches: boolean; addEventListener: ReturnType<typeof vi.fn>; removeEventListener: ReturnType<typeof vi.fn> };
 const disconnect = vi.fn();
+
 beforeEach(() => {
   vi.useFakeTimers();
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
@@ -20,42 +21,52 @@ beforeEach(() => {
     disconnect = disconnect;
   });
   vi.stubGlobal('ResizeObserver', class { observe() {} disconnect() {} });
-  host = document.createElement('div'); document.body.append(host);
+  host = document.createElement('div');
+  document.body.append(host);
   root = createRoot(host);
 });
+
 afterEach(async () => {
   await act(async () => root.unmount());
-  host.remove(); vi.unstubAllGlobals(); vi.useRealTimers(); vi.clearAllMocks();
+  host.remove();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+  vi.clearAllMocks();
 });
-// Dựng component vào DOM giả để kiểm thử.
-const render = () => act(async () => root.render(<MemoryRouter><SportStack ptPath="/member/classes?tab=pt" /></MemoryRouter>));
-// Kích hoạt một bước của phần giới thiệu.
+
+const render = () => act(async () => root.render(<MemoryRouter><SportStack classPath="/member/classes" /></MemoryRouter>));
 const activate = async (index: number) => act(async () => {
   const target = host.querySelectorAll('.fit-sport-story-step')[index];
   intersect([{ target, isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
 });
-// Tiến đồng hồ giả thêm 500 ms.
 const advance = () => act(async () => vi.advanceTimersByTime(500));
-// Môn đang được hiển thị (active).
 const shown = () => host.querySelector<HTMLElement>('.fit-sport-story-visual.is-active')?.dataset.sport;
 
-it('shows only Gym with its PT booking CTA and mobile illustration', async () => {
+it('shows all 6 disciplines with class schedule CTAs and secondary detail links', async () => {
   await render();
-  expect(host.querySelectorAll('.fit-sport-story-step')).toHaveLength(1);
-  expect(host.querySelector('.fit-sport-story-step h3')?.textContent).toBe('Gym');
-  expect(host.querySelectorAll('.fit-sport-story-inline img')).toHaveLength(1);
-  expect([...host.querySelectorAll('a')].map(a => a.getAttribute('href'))).toEqual(['/member/classes?tab=pt']);
-  expect(host.textContent).not.toMatch(/Bơi lội|Boxing|Tennis|Cầu lông|Yoga/);
+  expect(host.querySelectorAll('.fit-sport-story-step')).toHaveLength(6);
+  expect([...host.querySelectorAll('.fit-sport-story-step h3')].map((h) => h.textContent))
+    .toEqual(['Gym', 'Bơi lội', 'Boxing', 'Tennis', 'Cầu lông', 'Yoga']);
+  expect(host.querySelectorAll('.fit-sport-story-inline img')).toHaveLength(6);
+  const hrefs = [...host.querySelectorAll('a')].map((a) => a.getAttribute('href'));
+  expect(hrefs).toContain('/member/classes?tab=classes&discipline=Gym');
+  expect(hrefs).toContain('/swimming');
+  expect(hrefs).toContain('/boxing');
+  expect(hrefs).toContain('/tennis');
+  expect(hrefs).toContain('/badminton');
+  expect(hrefs).toContain('/yoga');
 });
 
-it('keeps Gym stable for scrolling, keyboard focus and reduced motion', async () => {
+it('switches visual cleanly on scroll, keyboard focus and reduced motion', async () => {
   await render();
-  await activate(0);
-  await act(async () => host.querySelector('a')!.focus());
+  await activate(5);
+  await advance();
+  expect(shown()).toBe('yoga');
+  expect(host.querySelector<HTMLElement>('.fit-sport-story-rail i')?.style.top).toBe('100%');
+
   preference.matches = true;
   await act(async () => preference.addEventListener.mock.calls[0][1]());
-  await advance();
-  expect(shown()).toBe('gym');
-  expect(host.querySelector<HTMLElement>('.fit-sport-story-rail i')?.style.top).toBe('0%');
+  await activate(2);
+  expect(shown()).toBe('boxing');
   expect(host.querySelector('.is-leaving')).toBeNull();
 });
