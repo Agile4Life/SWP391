@@ -19,7 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -40,6 +43,12 @@ class StaffInternalRequestServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    private static final Clock FIXED_CLOCK = Clock.fixed(
+            Instant.parse("2026-11-26T03:00:00Z"),
+            com.swp391.scms.common.CenterTime.ZONE);
+    private static final LocalDate FIXED_TODAY = LocalDate.now(FIXED_CLOCK);
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.now(FIXED_CLOCK);
+
     private StaffInternalRequestService service;
 
     private User staffUser;
@@ -54,6 +63,7 @@ class StaffInternalRequestServiceTest {
         org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.forLanguageTag("vi"));
         service = new StaffInternalRequestService(requestRepository, userRepository, notificationService,
                 new com.swp391.scms.common.i18n.MessageService(messages));
+        service.setClock(FIXED_CLOCK);
 
         Role staffRole = new Role();
         staffRole.setCode("STAFF");
@@ -95,7 +105,7 @@ class StaffInternalRequestServiceTest {
             return saved;
         });
 
-        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        LocalDate today = FIXED_TODAY;
         StaffInternalRequestCreateDto dto = new StaffInternalRequestCreateDto(
                 "LEAVE",
                 "Xin nghỉ phép việc gia đình",
@@ -117,7 +127,8 @@ class StaffInternalRequestServiceTest {
         verify(notificationService).send(
                 eq(1L),
                 contains("cần duyệt"),
-                anyString(),
+                argThat(body -> body.contains("Nhân viên") && body.contains("Xin nghỉ phép")
+                        && !body.contains("STAFF") && !body.contains("LEAVE")),
                 eq("system"),
                 isNull(),
                 eq(100L),
@@ -259,7 +270,7 @@ class StaffInternalRequestServiceTest {
     @Test
     void createRequestRejectsReversedDateRange() {
         when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
-        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        LocalDate today = FIXED_TODAY;
         var dto = new StaffInternalRequestCreateDto("LEAVE", "Leave", "Reason",
                 today.plusDays(5), today.plusDays(3), null, null);
         assertThrows(BadRequestException.class, () -> service.createRequest(10L, dto));
@@ -270,7 +281,7 @@ class StaffInternalRequestServiceTest {
     @Test
     void aLeaveOnDaysAlreadyApprovedIsWarnedFirstAndSentOnlyAfterConfirmation() {
         when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
-        LocalDate start = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(5);
+        LocalDate start = FIXED_TODAY.plusDays(5);
         LocalDate end = start.plusDays(1);
         StaffInternalRequest approved = new StaffInternalRequest();
         approved.setUser(staffUser);
@@ -305,7 +316,7 @@ class StaffInternalRequestServiceTest {
         member.setStatus("active");
         member.setRole(memberRole);
         when(userRepository.findByIdAndDeletedAtIsNull(50L)).thenReturn(Optional.of(member));
-        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        LocalDate today = FIXED_TODAY;
         var dto = new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Việc riêng",
                 today.plusDays(2), today.plusDays(3), null, 50L);
 
@@ -314,15 +325,15 @@ class StaffInternalRequestServiceTest {
         verify(requestRepository, never()).save(any());
     }
 
-    /** Kiểm thử P1-BE-41: duyệt đơn nghỉ báo quản lý kèm actionPath /manager/coach-assignments và trả số buổi xung đột. */
+    /** Kiểm thử P1-BE-41 & P3-BE-16: duyệt đơn nghỉ báo quản lý kèm actionPath /manager/coach-assignments, định dạng ngày dd/MM/yyyy và trả số buổi xung đột. */
     @Test
     void approvingLeaveTellsManagerWhatNeedsCover() {
         var sessions = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
         var bookings = mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "classSessionRepository", sessions);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository", bookings);
-        LocalDate start = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(5);
-        LocalDate end = start.plusDays(5);
+        LocalDate start = FIXED_TODAY.plusDays(5); // 01/12/2026
+        LocalDate end = start.plusDays(5);         // 06/12/2026
         StaffInternalRequest leave = new StaffInternalRequest();
         leave.setId(100L);
         leave.setUser(staffUser);
@@ -342,19 +353,22 @@ class StaffInternalRequestServiceTest {
         assertEquals(2L, dto.affectedClassSessionCount());
         assertEquals(1L, dto.affectedPtSessionCount());
         verify(notificationService).send(eq(1L), any(),
-                org.mockito.ArgumentMatchers.contains("2 buổi lớp và 1 buổi PT"), eq("system"), isNull(), eq(100L),
+                argThat(body -> body.contains("2 buổi lớp và 1 buổi PT")
+                        && body.contains("01/12/2026") && body.contains("06/12/2026")
+                        && !body.contains("2026-12-01")),
+                eq("system"), isNull(), eq(100L),
                 eq("/manager/coach-assignments"));
     }
 
-    /** Kiểm thử P1-BE-41: khi caller truyền confirmConflicts = false và có buổi xung đột thì chặn duyệt bằng 409. */
+    /** Kiểm thử P1-BE-41 & P3-BE-16: khi caller truyền confirmConflicts = false và có buổi xung đột thì chặn duyệt bằng 409 với ngày dd/MM/yyyy. */
     @Test
     void reviewRequestBlocksCoachLeaveWhenConfirmConflictsIsFalse() {
         var sessions = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
         var bookings = mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "classSessionRepository", sessions);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository", bookings);
-        LocalDate start = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(5);
-        LocalDate end = start.plusDays(2);
+        LocalDate start = FIXED_TODAY.plusDays(5); // 01/12/2026
+        LocalDate end = start.plusDays(2);         // 03/12/2026
         StaffInternalRequest leave = new StaffInternalRequest();
         leave.setId(101L);
         leave.setUser(staffUser);
@@ -370,13 +384,15 @@ class StaffInternalRequestServiceTest {
         var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
                 () -> service.reviewRequest(1L, 101L, new StaffInternalRequestReviewDto("APPROVED", null, false)));
         assertEquals("COACH_LEAVE_HAS_CONFLICTS", ex.getErrorCode());
+        assertEquals("01/12/2026", ex.getMessageArgs()[1]);
+        assertEquals("03/12/2026", ex.getMessageArgs()[2]);
         verify(requestRepository, never()).save(any());
     }
 
     /** Kiểm thử P1-BE-42: duyệt/từ chối đơn của nhân sự đã xóa mềm không gọi notification và không bị 404 rollback. */
     @Test
     void reviewRequestOfSoftDeletedStaffSucceedsWithoutRollback() {
-        staffUser.setDeletedAt(java.time.LocalDateTime.now());
+        staffUser.setDeletedAt(FIXED_NOW);
         StaffInternalRequest req = new StaffInternalRequest();
         req.setId(205L);
         req.setUser(staffUser);
@@ -417,7 +433,7 @@ class StaffInternalRequestServiceTest {
     @Test
     void createRequestRejectsPastDateExcessiveSpanOrphanEndDateAndOverlongText() throws Exception {
         when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
-        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        LocalDate today = FIXED_TODAY;
 
         assertThrows(BadRequestException.class, () -> service.createRequest(10L,
                 new StaffInternalRequestCreateDto("LEAVE", "Nghỉ", "Lý do",
@@ -448,7 +464,7 @@ class StaffInternalRequestServiceTest {
     /** Kiểm thử P2-BE-44: chặn tự duyệt đơn bằng 403 và chặn duyệt chồng đơn LEAVE đã APPROVED bằng 409. */
     @Test
     void reviewRequestRejectsSelfApprovalAndOverlappingApprovedLeave() {
-        LocalDate start = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(5);
+        LocalDate start = FIXED_TODAY.plusDays(5);
         LocalDate end = start.plusDays(2);
         StaffInternalRequest req = new StaffInternalRequest();
         req.setId(300L);
@@ -479,7 +495,7 @@ class StaffInternalRequestServiceTest {
     /** Kiểm thử P2-BE-45: người thay thế phải cùng nhóm vai trò chức năng và không đang nghỉ phép đã duyệt. */
     @Test
     void createRequestEnforcesSameRoleGroupAndAvailabilityForReplacement() {
-        LocalDate today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        LocalDate today = FIXED_TODAY;
         Role coachRole = new Role(); coachRole.setCode("COACH");
         Role receptionRole = new Role(); receptionRole.setCode("RECEPTIONIST");
 
@@ -524,5 +540,39 @@ class StaffInternalRequestServiceTest {
 
         verify(requestRepository).findByUserIdOrderByCreatedAtDesc(10L, limit);
         verify(requestRepository).findWithFilters(null, null, limit);
+    }
+
+    /** Kiểm thử P3-BE-16: thông báo tạo đơn dùng nhãn vai trò và loại đơn đã dịch (VI/EN), không ghép mã enum thô. */
+    @Test
+    void createRequestLocalizesRoleAndTypeInNotificationsForBothVietnameseAndEnglish() {
+        Role coachRole = new Role();
+        coachRole.setCode("COACH");
+        User coach = new User();
+        coach.setId(20L);
+        coach.setFullName("HLV Minh");
+        coach.setRole(coachRole);
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(coach));
+        when(userRepository.findActiveManagers()).thenReturn(List.of(managerUser));
+        when(requestRepository.save(any(StaffInternalRequest.class))).thenAnswer(inv -> {
+            StaffInternalRequest s = inv.getArgument(0);
+            s.setId(401L);
+            return s;
+        });
+
+        var dto = new StaffInternalRequestCreateDto(
+                "SHIFT_EXCHANGE", "Đổi ca sáng", "Bận công việc", FIXED_TODAY.plusDays(1), FIXED_TODAY.plusDays(1), "Sáng", null);
+        service.createRequest(20L, dto);
+        verify(notificationService).send(eq(1L), any(),
+                argThat(body -> body.contains("Huấn luyện viên") && body.contains("Đổi ca trực")
+                        && !body.contains("COACH") && !body.contains("SHIFT_EXCHANGE")),
+                eq("system"), isNull(), eq(401L), eq("/manager/requests"));
+
+        reset(notificationService);
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.ENGLISH);
+        service.createRequest(20L, dto);
+        verify(notificationService).send(eq(1L), any(),
+                argThat(body -> body.contains("Coach") && body.contains("Shift exchange")
+                        && !body.contains("COACH") && !body.contains("SHIFT_EXCHANGE")),
+                eq("system"), isNull(), eq(401L), eq("/manager/requests"));
     }
 }

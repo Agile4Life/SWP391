@@ -2,6 +2,7 @@ package com.swp391.scms.users.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 /** Bảng roles: vai trò (mã, tên) và tập quyền gán qua bảng nối role_permissions. */
@@ -31,7 +32,7 @@ public class Role {
         joinColumns = @JoinColumn(name = "role_id"),
         inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
-    private Set<Permission> permissions;
+    private Set<Permission> permissions = new HashSet<>();
 
     /** Lấy giá trị trường id. */
     public Long getId() { return id; }

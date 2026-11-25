@@ -21,8 +21,6 @@ import com.swp391.scms.reports.entity.ReportSnapshot;
 import com.swp391.scms.reports.repository.ReportSnapshotRepository;
 import com.swp391.scms.reports.repository.SessionAttendanceReportRepository;
 import com.swp391.scms.reports.repository.TransactionReportRepository;
-import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
-import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.users.UserRepository;
 import com.swp391.scms.users.entity.User;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,11 +62,9 @@ public class RevenueReportService {
     private final ObjectMapper objectMapper;
     private final Clock clock;
     private final TransactionReportRepository transactionReportRepository;
-    private final GymClassRepository gymClassRepository;
-    private final ClassEnrollmentRepository classEnrollmentRepository;
     private final SessionAttendanceReportRepository sessionAttendanceReportRepository;
 
-    /** Constructor cho test, không có các repository của lớp nhóm. */
+    /** Constructor cho test, không có repository thống kê chuyên cần lớp nhóm. */
     public RevenueReportService(PaymentRepository paymentRepository,
                                 MembershipSubscriptionRepository subscriptionRepository,
                                 ReportSnapshotRepository snapshotRepository,
@@ -77,10 +73,10 @@ public class RevenueReportService {
                                 Clock clock,
                                 TransactionReportRepository transactionReportRepository) {
         this(paymentRepository, subscriptionRepository, snapshotRepository, userRepository,
-                objectMapper, clock, transactionReportRepository, null, null, null);
+                objectMapper, clock, transactionReportRepository, null);
     }
 
-    /** Constructor Spring dùng; repository lớp nhóm là tùy chọn (tính năng đã tắt). */
+    /** Constructor Spring dùng; repository chuyên cần lớp nhóm là tùy chọn. */
     @Autowired
     public RevenueReportService(PaymentRepository paymentRepository,
                                 MembershipSubscriptionRepository subscriptionRepository,
@@ -89,8 +85,6 @@ public class RevenueReportService {
                                 ObjectMapper objectMapper,
                                 Clock clock,
                                 TransactionReportRepository transactionReportRepository,
-                                @Autowired(required = false) GymClassRepository gymClassRepository,
-                                @Autowired(required = false) ClassEnrollmentRepository classEnrollmentRepository,
                                 @Autowired(required = false) SessionAttendanceReportRepository sessionAttendanceReportRepository) {
         this.paymentRepository = paymentRepository;
         this.subscriptionRepository = subscriptionRepository;
@@ -100,8 +94,6 @@ public class RevenueReportService {
         this.clock = (clock != null ? clock : Clock.system(com.swp391.scms.common.CenterTime.ZONE))
                 .withZone(com.swp391.scms.common.CenterTime.ZONE);
         this.transactionReportRepository = transactionReportRepository;
-        this.gymClassRepository = gymClassRepository;
-        this.classEnrollmentRepository = classEnrollmentRepository;
         this.sessionAttendanceReportRepository = sessionAttendanceReportRepository;
     }
 
@@ -134,7 +126,8 @@ public class RevenueReportService {
 
         long expired = subscriptionRepository.countExpiredPaidPeriods(range.start(), lastExpired);
         long renewed = expired == 0 ? 0 : subscriptionRepository.countRenewedExpiredPaidPeriods(range.start(), lastExpired);
-        return new RenewalRateDto(expired, renewed, expired == 0 ? null : 100.0 * renewed / expired);
+        Double rate = expired == 0 ? null : Math.round((100.0 * renewed / expired) * 10.0) / 10.0;
+        return new RenewalRateDto(expired, renewed, rate);
     }
 
     /** 10 giao dịch thành công gần nhất trong khoảng ngày. */

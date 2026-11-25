@@ -14,8 +14,11 @@ class CenterTimeTest {
         var clock = new WebConfig("http://localhost:5173").clock();
 
         assertEquals(CenterTime.ZONE, clock.getZone());
-        var utcHour = java.time.ZonedDateTime.now(java.time.ZoneOffset.UTC).getHour();
-        assertEquals((utcHour + 7) % 24, LocalDateTime.now(clock).getHour());
+        var sample = clock.instant();
+        var utcHour = sample.atOffset(java.time.ZoneOffset.UTC).getHour();
+        var centerHour = LocalDateTime.ofInstant(sample, clock.getZone()).getHour();
+        assertEquals((utcHour + 7) % 24, centerHour);
+        assertEquals(java.time.ZoneOffset.ofHours(7), clock.getZone().getRules().getOffset(sample));
     }
 
     /** Kiểm thử: múi giờ mặc định theo trung tâm. */

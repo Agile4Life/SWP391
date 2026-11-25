@@ -3,6 +3,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLanguage } from '../../shared/i18n';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { MemberHoldPage } from './MemberHoldPage';
 
 const mocks = vi.hoisted(() => ({ history: vi.fn(), policy: vi.fn(), detail: vi.fn(), submit: vi.fn(), withdraw: vi.fn() }));
@@ -12,10 +13,13 @@ vi.mock('./holdApi', async (original) => ({
   getHoldPolicy: mocks.policy, getHoldDetail: mocks.detail, submitHoldRequest: mocks.submit, withdrawHoldRequest: mocks.withdraw,
 }));
 
-// Ngày YYYY-MM-DD lệch days ngày so với hôm nay.
+// Đóng băng thời gian tại Thứ Tư 25/11/2026 10:00 +07:00 để tránh lệch ngày quanh nửa đêm.
+const FIXED_NOW = new Date('2026-11-25T03:00:00Z');
+
+// Ngày YYYY-MM-DD lệch days ngày so với mốc cố định theo múi giờ trung tâm.
 function isoOffset(days: number) {
-  const date = new Date(); date.setDate(date.getDate() + days);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const [year, month, day] = centerNowParts(FIXED_NOW).date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 const subscription = { id: 7, packageName: 'GOLD 3 THÁNG', status: 'active', startDate: isoOffset(-5), endDate: isoOffset(84), holdStatus: null };
 const policy = { allowed: true, alreadyUsed: false, minDays: 3, maxDays: 15, noticeHours: 24, maxDocuments: 5, maxDocumentBytes: 5242880 };
@@ -24,12 +28,14 @@ describe('MemberHoldPage', () => {
   let host: HTMLDivElement;
   let root: Root;
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(FIXED_NOW);
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div'); document.body.append(host);
     root = createRoot(host);
     Object.values(mocks).forEach((mock) => mock.mockReset());
   });
-  afterEach(async () => { await act(async () => root.unmount()); setLanguage('vi'); host.remove(); vi.unstubAllGlobals(); });
+  afterEach(async () => { await act(async () => root.unmount()); setLanguage('vi'); host.remove(); vi.useRealTimers(); vi.unstubAllGlobals(); });
   // Dựng component vào DOM giả để kiểm thử.
   async function render() { await act(async () => root.render(<MemoryRouter><MemberHoldPage /></MemoryRouter>)); }
   // Hàm trợ giúp nhập liệu hoặc thao tác trên biểu mẫu trong DOM giả.

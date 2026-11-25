@@ -144,8 +144,15 @@ public class MembershipCancellationService {
         if (body.subscriptionId() != null) {
             MembershipSubscription found = subscriptions.findById(body.subscriptionId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", body.subscriptionId()));
-            member = lockMember(found.getMember().getUserId());
+            Long ownerId = found.getMember() != null ? found.getMember().getUserId() : null;
+            if (ownerId == null || (body.memberId() != null && !ownerId.equals(body.memberId()))) {
+                throw new BadRequestException("MEMBERSHIP_NOT_OWNER", "error.membership.not_owner", null, null);
+            }
+            member = lockMember(ownerId);
             subscription = lockSubscription(body.subscriptionId());
+            if (subscription.getMember() == null || !ownerId.equals(subscription.getMember().getUserId())) {
+                throw new BadRequestException("MEMBERSHIP_NOT_OWNER", "error.membership.not_owner", null, null);
+            }
         } else if (body.memberId() != null) {
             member = lockMember(body.memberId());
             MembershipSubscription activeSub = subscriptions.findByMemberUserIdOrderByCreatedAtDesc(body.memberId())
@@ -266,7 +273,20 @@ public class MembershipCancellationService {
             // Đăng ký lớp tham chiếu tới hội viên và lớp học chứ không tham chiếu kỳ gói. Việc hủy trên toàn hội viên
             // bên dưới chỉ an toàn khi đây là quyền lợi duy nhất còn lại.
             ensureSoleEntitlement(memberId, subscription);
+
+            BigDecimal refundAmount = (body != null && body.refundAmount() != null)
+                    ? body.refundAmount()
+                    : request.getRefundAmount();
+            if (refundAmount == null) {
+                refundAmount = defaultRefund(subscription);
+            }
+            ensureRefundWithinPaid(subscription, refundAmount);
+
             subscription.setStatus("cancelled");
+            subscription.setHoldStatus(null);
+            subscription.setHoldStartDate(null);
+            subscription.setHoldEndDate(null);
+            subscription.setHoldDaysCredited(false);
             subscription.setUpdatedAt(LocalDateTime.now(clock));
             subscriptions.saveAndFlush(subscription);
             String cancelReason = messages != null
@@ -278,13 +298,6 @@ public class MembershipCancellationService {
                 enrollments.cancelFutureEnrollmentsForMember(memberId, cancelReason);
             }
 
-            BigDecimal refundAmount = (body != null && body.refundAmount() != null)
-                    ? body.refundAmount()
-                    : request.getRefundAmount();
-            if (refundAmount == null) {
-                refundAmount = defaultRefund(subscription);
-            }
-            ensureRefundWithinPaid(subscription, refundAmount);
             request.setRefundAmount(refundAmount);
             if (walletService != null && refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
                 // Khoản thanh toán cũng phải thể hiện phần hoàn tiền, nếu không doanh thu sẽ bị tính thừa và /payments/{id}/refund có thể hoàn tiền lần nữa.

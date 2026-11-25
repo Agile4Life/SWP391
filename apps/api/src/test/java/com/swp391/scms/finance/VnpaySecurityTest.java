@@ -8,7 +8,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -23,11 +23,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import({SecurityConfig.class,JwtAuthenticationFilter.class,JsonAuthenticationEntryPoint.class,JsonAccessDeniedHandler.class})
 class VnpaySecurityTest {
     @Autowired MockMvc mvc;
-    @MockBean VnpayPaymentService payments;
-    @MockBean VnpayIpnHandler handler;
-    @MockBean JwtService jwt;
-    @MockBean UserRepository users;
-    @MockBean MessageService messages;
+    @MockitoBean VnpayPaymentService payments;
+    @MockitoBean VnpayIpnHandler handler;
+    @MockitoBean JwtService jwt;
+    @MockitoBean UserRepository users;
+    @MockitoBean MessageService messages;
     @Test void onlyIpnIsAnonymous() throws Exception {
         when(handler.handle(any())).thenReturn(Map.of("RspCode","97","Message","Invalid Checksum"));
         mvc.perform(get("/api/v1/payments/vnpay/ipn")).andExpect(status().isOk()).andExpect(jsonPath("$.RspCode").value("97"));

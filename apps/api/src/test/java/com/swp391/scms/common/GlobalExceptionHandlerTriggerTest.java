@@ -43,6 +43,8 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String DISCIPLINE_CONFLICT_EN = "Discipline schedule conflict: This discipline already has another active class during this time slot.";
     private static final String MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch";
     private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
+    private static final String CHECKIN_MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký hoặc gia hạn gói tập để tiếp tục.";
+    private static final String CHECKIN_MEMBERSHIP_EN = "You do not have an active membership subscription or your subscription has expired. Please register or renew a membership package to continue.";
     private static final String INVALID_SLOT_VI = "Khung giờ không hợp lệ. Vui lòng chọn một trong 5 slot cố định (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
     private static final String INVALID_SLOT_EN = "Invalid time slot. Please choose one of the 5 fixed slots (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
 
@@ -242,7 +244,7 @@ class GlobalExceptionHandlerTriggerTest {
                         "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),
                 new TriggerFailure("Học viên không có gói thành viên còn hiệu lực để check-in.",
                         "trg_checkins_check_membership", "23514", 403,
-                        "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),
+                        "MEMBERSHIP_INACTIVE_OR_EXPIRED", CHECKIN_MEMBERSHIP_VI, CHECKIN_MEMBERSHIP_EN),
                 new TriggerFailure("trg_schedule_invalid_slot",
                         "trg_schedule_invalid_slot", "23514", 400,
                         "SCHEDULING_INVALID_SLOT", INVALID_SLOT_VI, INVALID_SLOT_EN))

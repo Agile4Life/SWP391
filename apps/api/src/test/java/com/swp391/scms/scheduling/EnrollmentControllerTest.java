@@ -94,8 +94,8 @@ class EnrollmentControllerTest {
     /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (sample dto). */
     private EnrollmentDto sampleDto() {
         return new EnrollmentDto(1L, 5L, "Yoga Flow", 12L, 9L,
-                LocalDate.now().plusDays(1), LocalTime.of(18, 0), LocalTime.of(19, 0),
-                "booked", LocalDateTime.now(), null, null);
+                LocalDate.of(2026, 11, 27), LocalTime.of(18, 0), LocalTime.of(19, 0),
+                "booked", LocalDateTime.of(2026, 11, 26, 10, 0), null, null);
     }
 
     /** Kiểm thử: ghi danh theo từng buổi đã ngừng hoạt động. */

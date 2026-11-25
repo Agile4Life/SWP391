@@ -11,5 +11,6 @@ public interface UserMapper {
 
     /** Chuyển người dùng sang UserDto. */
     @Mapping(target = "roleCode", source = "role.code")
+    @Mapping(target = "subscriptionFrozen", ignore = true)
     UserDto toDto(User user);
 }

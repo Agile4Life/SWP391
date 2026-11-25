@@ -20,11 +20,6 @@ import com.swp391.scms.reports.repository.ReportSnapshotRepository;
 import com.swp391.scms.reports.repository.SessionAttendanceReportRepository;
 import com.swp391.scms.reports.repository.TransactionReportRepository;
 import com.swp391.scms.reports.service.RevenueReportService;
-import com.swp391.scms.scheduling.entity.ClassEnrollment;
-import com.swp391.scms.scheduling.entity.ClassSession;
-import com.swp391.scms.scheduling.entity.GymClass;
-import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
-import com.swp391.scms.scheduling.repository.GymClassRepository;
 import com.swp391.scms.users.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -65,12 +60,6 @@ class RevenueReportServiceTest {
     private TransactionReportRepository transactionReportRepository;
 
     @Mock
-    private GymClassRepository gymClassRepository;
-
-    @Mock
-    private ClassEnrollmentRepository classEnrollmentRepository;
-
-    @Mock
     private SessionAttendanceReportRepository sessionAttendanceReportRepository;
 
     private ObjectMapper objectMapper;
@@ -85,8 +74,7 @@ class RevenueReportServiceTest {
         service = new RevenueReportService(
                 paymentRepository, subscriptionRepository,
                 snapshotRepository, userRepository, objectMapper, clock,
-                transactionReportRepository, gymClassRepository,
-                classEnrollmentRepository, sessionAttendanceReportRepository);
+                transactionReportRepository, sessionAttendanceReportRepository);
     }
 
     /** Kiểm thử: trả giao dịch thật với ngày kết thúc tính cả ngày đó và giới hạn 10 giao dịch. */
@@ -131,6 +119,19 @@ class RevenueReportServiceTest {
         assertEquals(4L, result.expiredCount());
         assertEquals(3L, result.renewedCount());
         assertEquals(75.0, result.renewalRate());
+    }
+
+    /** Kiểm thử P3-BE-18: tỷ lệ gia hạn được làm tròn đúng 1 chữ số thập phân (tránh số thực lẻ dài IEEE-754). */
+    @Test
+    void renewalRateRoundsToOneDecimalPlace() {
+        LocalDate start = LocalDate.of(2026, 10, 1);
+        LocalDate lastExpired = LocalDate.of(2026, 10, 4);
+        when(subscriptionRepository.countExpiredPaidPeriods(start, lastExpired)).thenReturn(3L);
+        when(subscriptionRepository.countRenewedExpiredPaidPeriods(start, lastExpired)).thenReturn(1L);
+        assertEquals(33.3, service.getRenewalRate(start, lastExpired).renewalRate());
+
+        when(subscriptionRepository.countRenewedExpiredPaidPeriods(start, lastExpired)).thenReturn(2L);
+        assertEquals(66.7, service.getRenewalRate(start, lastExpired).renewalRate());
     }
 
     /** Kiểm thử: tỷ lệ gia hạn không khả dụng khi nhóm rỗng. */
@@ -277,7 +278,6 @@ class RevenueReportServiceTest {
         assertEquals(0.0, list.get(1).attendanceRate());   // zero booked -> 0.0
         assertEquals(10.0, list.get(2).utilizationRate()); // 1 / 10 = 10%
         assertEquals(8.3, list.get(2).attendanceRate());   // 1 / (1 * 12) = 8.3%, NOT 100%
-        verifyNoInteractions(gymClassRepository, classEnrollmentRepository);
     }
 
     /** Kiểm thử P2-BE-46: getClassUtilization kiểm tra start <= end SAU KHI áp giá trị mặc định. */
@@ -356,7 +356,8 @@ class RevenueReportServiceTest {
     @Test
     void reportJpqlQueriesCompileAgainstHibernateEntityMappings() throws Exception {
         var registry = new org.hibernate.boot.registry.StandardServiceRegistryBuilder()
-                .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
+                .applySetting("jakarta.persistence.database-product-name", "PostgreSQL")
+                .applySetting("jakarta.persistence.database-major-version", "16")
                 .applySetting("hibernate.boot.allow_jdbc_metadata_access", "false")
                 .build();
         try {

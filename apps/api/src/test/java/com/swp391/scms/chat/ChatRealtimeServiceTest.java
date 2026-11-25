@@ -21,7 +21,9 @@ class ChatRealtimeServiceTest {
     final String url = "https://test.supabase.co";
 
     @Test void tokenIsSignedScopedShortLivedAndContainsNoPersonalData() {
+        Instant before = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         var result = new ChatRealtimeService(chat, url, "sb_publishable_unit", secret).open(p);
+        Instant after = Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
         var token = Jwts.parser().verifyWith(Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8)))
                 .build().parseSignedClaims(result.token());
         var claims = token.getPayload();
@@ -30,7 +32,9 @@ class ChatRealtimeServiceTest {
         assertThat(claims.get("scms_chat_user_id")).isEqualTo("42");
         assertThat(claims.get("scms_chat_scope")).isEqualTo("receive");
         assertThat(UUID.fromString(claims.getSubject())).isNotNull();
-        assertThat(claims.getExpiration().toInstant()).isBetween(Instant.now().plusSeconds(290), Instant.now().plusSeconds(301));
+        Instant issuedAt = claims.getIssuedAt().toInstant();
+        assertThat(issuedAt).isBetween(before, after);
+        assertThat(claims.getExpiration().toInstant()).isEqualTo(issuedAt.plusSeconds(300));
         assertThat(claims.getExpiration().getTime() - claims.getIssuedAt().getTime()).isEqualTo(300_000);
         assertThat(claims).doesNotContainKeys("username", "email", "user_metadata");
         assertThat(result.topic()).isEqualTo("scms:chat:42");

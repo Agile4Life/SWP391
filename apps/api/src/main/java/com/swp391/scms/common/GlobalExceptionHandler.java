@@ -289,9 +289,15 @@ public class GlobalExceptionHandler {
                                 resolveMessage("error.scheduling.session_conflict", "invariant.schedule_conflict"))
                 );
             }
-            if (normalizedRootMsg.contains("trg_enrollments_check_membership") || normalizedRootMsg.contains("trg_checkins_check_membership")
-                    || normalizedRootMsg.contains("học viên không có gói thành viên còn hiệu lực để đăng ký lớp.")
+            if (normalizedRootMsg.contains("trg_checkins_check_membership")
                     || normalizedRootMsg.contains("học viên không có gói thành viên còn hiệu lực để check-in.")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                        ApiResponse.error(HttpStatus.FORBIDDEN.value(), "MEMBERSHIP_INACTIVE_OR_EXPIRED",
+                                resolveMessage("invariant.membership_inactive_or_expired", "invariant.membership_inactive_or_expired"))
+                );
+            }
+            if (normalizedRootMsg.contains("trg_enrollments_check_membership")
+                    || normalizedRootMsg.contains("học viên không có gói thành viên còn hiệu lực để đăng ký lớp.")) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                         ApiResponse.error(HttpStatus.FORBIDDEN.value(), "MEMBERSHIP_INACTIVE_OR_EXPIRED",
                                 resolveMessage("error.scheduling.membership_expired_or_inactive", "invariant.membership_inactive_or_expired"))

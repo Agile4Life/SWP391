@@ -7,6 +7,16 @@ import { MemberPackagesPage } from './MemberPackagesPage';
 import type { MemberSubscription } from './membershipApi';
 import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
+import { centerNowParts } from '../../shared/lib/centerTime';
+
+// Đóng băng thời gian tại Thứ Tư 25/11/2026 10:00 +07:00 để các ngày tương đối không bị lệch quanh nửa đêm.
+const FIXED_NOW = new Date('2026-11-25T03:00:00Z');
+
+// Ngày YYYY-MM-DD lệch days ngày so với mốc cố định theo múi giờ trung tâm.
+function isoOffsetFromFixed(days: number) {
+  const [year, month, day] = centerNowParts(FIXED_NOW).date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+}
 
 // Gộp nội dung các thông báo thành một chuỗi.
 const noticeText = () => getNotices().map((notice) => notice.message).join(' ');
@@ -90,7 +100,9 @@ describe('SCRUM-86 packages', () => {
   });
 
   beforeEach(() => {
-  setLanguage('vi');
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(FIXED_NOW);
+    setLanguage('vi');
     clearNotices();
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) { this.setAttribute('open', ''); });
@@ -117,6 +129,7 @@ describe('SCRUM-86 packages', () => {
     await act(async () => root.unmount());
     setLanguage('vi');
     host.remove();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
@@ -246,6 +259,7 @@ describe('SCRUM-86 packages', () => {
 
   it('refreshes immediately on Supabase events and unsubscribes on unmount without polling', async () => {
     vi.useFakeTimers();
+    vi.setSystemTime(FIXED_NOW);
     try {
       api.history.mockResolvedValue([pending]);
       await render();
@@ -995,8 +1009,8 @@ describe('SCRUM-86 packages', () => {
   });
 
   it('includes prorated deduction breakdown in upgrade confirmation dialog', async () => {
-    const futureEnd = new Date(Date.now() + 45 * 86400000).toLocaleDateString('en-CA');
-    const pastStart = new Date(Date.now() - 45 * 86400000).toLocaleDateString('en-CA');
+    const futureEnd = isoOffsetFromFixed(45);
+    const pastStart = isoOffsetFromFixed(-45);
     // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const currentSub = {
       ...pending,
@@ -1061,8 +1075,8 @@ describe('SCRUM-86 packages', () => {
   });
 
   it('P2-FE-50: keeps proper English spacing on current validity and upgrade quote', async () => {
-    const futureEnd = new Date(Date.now() + 45 * 86400000).toLocaleDateString('en-CA');
-    const pastStart = new Date(Date.now() - 45 * 86400000).toLocaleDateString('en-CA');
+    const futureEnd = isoOffsetFromFixed(45);
+    const pastStart = isoOffsetFromFixed(-45);
     const currentSub = {
       ...pending,
       id: 21,

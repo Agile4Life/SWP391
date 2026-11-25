@@ -37,7 +37,7 @@ class PaymentReconciliationPostgreSqlTest {
     @Autowired PaymentReconciliationService service;
     @Autowired VnpayIpnEventRecorder recorder;
     /** Không cần dữ liệu danh mục ở đây; loại bỏ seeder để bài test chỉ phụ thuộc vào các bảng thanh toán. */
-    @org.springframework.boot.test.mock.mockito.MockBean com.swp391.scms.facilities.CatalogSeeder catalogSeeder;
+    @org.springframework.test.context.bean.override.mockito.MockitoBean com.swp391.scms.facilities.CatalogSeeder catalogSeeder;
 
     @DynamicPropertySource static void database(DynamicPropertyRegistry p) throws Exception {
         try (var c = SupabaseTestDatabase.connect(); var s = c.createStatement()) { s.execute("create schema \"" + SCHEMA + "\""); }

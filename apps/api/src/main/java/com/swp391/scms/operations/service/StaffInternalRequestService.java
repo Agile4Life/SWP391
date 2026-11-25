@@ -6,6 +6,7 @@ import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.config.I18nConfig;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.operations.dto.StaffInternalRequestCreateDto;
 import com.swp391.scms.operations.dto.StaffInternalRequestDto;
@@ -17,6 +18,7 @@ import com.swp391.scms.users.entity.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,6 +51,7 @@ public class StaffInternalRequestService {
     private static final int MAX_TEXT_LENGTH = 2000;
     private static final int MAX_LIST_RESULTS = 200;
     private static final String COACH_ASSIGNMENTS_PATH = "/manager/coach-assignments";
+    private static final DateTimeFormatter DMY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private record LeaveImpact(long classSessions, long ptSessions) {
         static final LeaveImpact NONE = new LeaveImpact(0L, 0L);
@@ -93,6 +96,14 @@ public class StaffInternalRequestService {
         this.userRepository = userRepository;
         this.notificationService = notificationService;
         this.messageService = messageService;
+    }
+
+    /** Tiêm Clock chuẩn (múi giờ trung tâm {@link CenterTime#ZONE}); hữu ích cho kiểm thử cố định thời gian. */
+    @Autowired(required = false)
+    public void setClock(Clock clock) {
+        if (clock != null) {
+            this.clock = clock;
+        }
     }
 
     /**
@@ -161,12 +172,11 @@ public class StaffInternalRequestService {
             List<StaffInternalRequest> overlaps = requestRepository.findOverlappingLeaves(userId, requestDto.startDate(), requestDto.endDate());
             if (!overlaps.isEmpty()) {
                 StaffInternalRequest first = overlaps.get(0);
-                var dmy = DateTimeFormatter.ofPattern("dd/MM/yyyy");
                 LocalDate end = first.getEndDate() != null ? first.getEndDate() : first.getStartDate();
                 throw new ConflictException("LEAVE_OVERLAP",
                         "APPROVED".equals(first.getStatus()) ? "error.operations.request.leave_overlap_approved"
                                 : "error.operations.request.leave_overlap_pending",
-                        new Object[]{first.getStartDate().format(dmy), end.format(dmy)},
+                        new Object[]{first.getStartDate().format(DMY), end.format(DMY)},
                         "You already have a leave request on these days.");
             }
         }
@@ -211,13 +221,14 @@ public class StaffInternalRequestService {
                     .filter(u -> u.getRole() != null &&
                             ("MANAGER".equalsIgnoreCase(u.getRole().getCode()) || "CENTER_MANAGER".equalsIgnoreCase(u.getRole().getCode())))
                     .toList();
+            String roleLabel = localizedRoleLabel(user);
+            String typeLabel = localizedRequestTypeLabel(type);
             for (User mgr : managers) {
-                String roleCode = user.getRole() != null ? user.getRole().getCode() : "STAFF";
                 try {
                     notificationService.send(
                             mgr.getId(),
                             msg("notifications.operations.created.title"),
-                            msg("notifications.operations.created.body", user.getFullName(), roleCode, type, saved.getTitle()),
+                            msg("notifications.operations.created.body", user.getFullName(), roleLabel, typeLabel, saved.getTitle()),
                             "system",
                             null,
                             saved.getId(),
@@ -322,18 +333,17 @@ public class StaffInternalRequestService {
                         req.getUser().getId(), req.getId(), req.getStartDate(), leaveEnd);
                 if (existingApproved != null && !existingApproved.isEmpty()) {
                     StaffInternalRequest first = existingApproved.get(0);
-                    var dmy = DateTimeFormatter.ofPattern("dd/MM/yyyy");
                     LocalDate existingEnd = first.getEndDate() != null ? first.getEndDate() : first.getStartDate();
                     throw new ConflictException("LEAVE_OVERLAP",
                             "error.operations.request.leave_overlap_approved",
-                            new Object[]{first.getStartDate().format(dmy), existingEnd.format(dmy)},
+                            new Object[]{first.getStartDate().format(DMY), existingEnd.format(DMY)},
                             "Staff already has an approved leave overlapping these dates.");
                 }
                 impact = computeLeaveImpact(req);
                 if (Boolean.FALSE.equals(reviewDto.confirmConflicts()) && impact.hasConflicts()) {
                     throw new ConflictException("COACH_LEAVE_HAS_CONFLICTS",
                             "notifications.operations.leave_impact.body",
-                            new Object[]{req.getUser().getFullName(), req.getStartDate(), leaveEnd,
+                            new Object[]{req.getUser().getFullName(), req.getStartDate().format(DMY), leaveEnd.format(DMY),
                                     impact.classSessions(), impact.ptSessions()},
                             "Coach has scheduled class or PT sessions during this leave period.");
                 }
@@ -433,6 +443,44 @@ public class StaffInternalRequestService {
         return messageService != null ? messageService.getMessage(key, args) : key;
     }
 
+    /** Kiểm tra locale hiện tại có phải tiếng Anh không (mặc định tiếng Việt ngoài luồng HTTP). */
+    private static boolean isEnglishLocale() {
+        Locale locale = LocaleContextHolder.getLocaleContext() != null
+                ? LocaleContextHolder.getLocale()
+                : I18nConfig.LOCALE_VI;
+        return locale != null && "en".equalsIgnoreCase(locale.getLanguage());
+    }
+
+    /** Chuyển mã vai trò sang nhãn hiển thị đã bản địa hóa, tránh ghép mã enum thô vào thông báo. */
+    private static String localizedRoleLabel(User user) {
+        String raw = (user != null && user.getRole() != null && user.getRole().getCode() != null)
+                ? user.getRole().getCode().trim().toUpperCase(Locale.ROOT)
+                : "STAFF";
+        if (raw.startsWith("ROLE_")) {
+            raw = raw.substring("ROLE_".length());
+        }
+        boolean en = isEnglishLocale();
+        return switch (raw) {
+            case "COACH" -> en ? "Coach" : "Huấn luyện viên";
+            case "RECEPTIONIST" -> en ? "Receptionist" : "Lễ tân";
+            case "CENTER_MANAGER", "MANAGER" -> en ? "Center Manager" : "Quản lý trung tâm";
+            case "ADMIN" -> en ? "Administrator" : "Quản trị viên";
+            default -> en ? "Staff" : "Nhân viên";
+        };
+    }
+
+    /** Chuyển mã loại đơn nội bộ sang nhãn hiển thị đã bản địa hóa, tránh ghép mã enum thô vào thông báo. */
+    private static String localizedRequestTypeLabel(String type) {
+        String normalized = type == null ? "" : type.trim().toUpperCase(Locale.ROOT);
+        boolean en = isEnglishLocale();
+        return switch (normalized) {
+            case "LEAVE" -> en ? "Leave" : "Xin nghỉ phép";
+            case "SHIFT_EXCHANGE" -> en ? "Shift exchange" : "Đổi ca trực";
+            case "SCHEDULE_CHANGE" -> en ? "Schedule change" : "Đổi lịch dạy";
+            default -> en ? "Other" : "Khác";
+        };
+    }
+
     /** Đếm số buổi lớp và buổi PT 1:1 bị ảnh hưởng trong thời gian nghỉ phép của nhân sự. */
     private LeaveImpact computeLeaveImpact(StaffInternalRequest leave) {
         if (!"LEAVE".equals(leave.getRequestType()) || leave.getStartDate() == null || leave.getUser() == null) {
@@ -461,7 +509,7 @@ public class StaffInternalRequestService {
                     manager.getId(),
                     msg("notifications.operations.leave_impact.title"),
                     msg("notifications.operations.leave_impact.body", leave.getUser().getFullName(),
-                            leave.getStartDate(), end, impact.classSessions(), impact.ptSessions()),
+                            leave.getStartDate().format(DMY), end.format(DMY), impact.classSessions(), impact.ptSessions()),
                     "system",
                     null,
                     leave.getId(),

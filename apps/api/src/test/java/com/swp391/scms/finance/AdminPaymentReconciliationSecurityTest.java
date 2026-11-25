@@ -12,7 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -36,10 +36,10 @@ class AdminPaymentReconciliationSecurityTest {
     private static final List<String> PATHS = List.of("/summary", "/attempts", "/late-refunds", "/ipn-events", "/payments/1/timeline");
 
     @Autowired MockMvc mvc;
-    @MockBean PaymentReconciliationService service;
-    @MockBean JwtService jwt;
-    @MockBean UserRepository users;
-    @MockBean MessageService messages;
+    @MockitoBean PaymentReconciliationService service;
+    @MockitoBean JwtService jwt;
+    @MockitoBean UserRepository users;
+    @MockitoBean MessageService messages;
 
     /** Kiểm thử: người chưa đăng nhập bị từ chối. */
     @Test

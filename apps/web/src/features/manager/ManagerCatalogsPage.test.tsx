@@ -88,6 +88,41 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     vi.unstubAllGlobals();
   });
 
+  const setFieldValue = async (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+    const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(el, value);
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  };
+
+  const selectOption = async (triggerId: string, optionLabel: string) => {
+    const trigger = host.querySelector<HTMLButtonElement>(`button#${triggerId}`)!;
+    expect(trigger).not.toBeNull();
+    await act(async () => trigger.click());
+    const option = [...host.querySelectorAll<HTMLLIElement>('[role="option"]')].find((item) =>
+      item.textContent?.includes(optionLabel),
+    )!;
+    expect(option).toBeDefined();
+    await act(async () => option.click());
+  };
+
+  const switchTab = async (tabLabel: string) => {
+    const btn = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((b) =>
+      b.textContent?.includes(tabLabel),
+    )!;
+    expect(btn).toBeDefined();
+    await act(async () => btn.click());
+  };
+
+  const submitDialogForm = async () => {
+    const form = host.querySelector<HTMLFormElement>('dialog form') ?? host.querySelector<HTMLFormElement>('form')!;
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+  };
+
   it('displays all disciplines including newly created or legacy ones and allows full package price CRUD', async () => {
     await act(async () => {
       root.render(<ManagerCatalogsPage />);
@@ -257,5 +292,394 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     });
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Catalog offline');
     expect(host.querySelector('table')).toBeNull();
+  });
+
+  // ── Disciplines (Bộ môn) tab coverage (P2-E2E-02) ─────────────────────────────────────
+
+  it('Disciplines tab: renders descriptions, missing-description fallback, and empty state CTA', async () => {
+    vi.mocked(catalogApi.disciplines).mockResolvedValueOnce([
+      { id: 1, name: 'Gym', description: 'Sức mạnh tổng hợp' },
+      { id: 2, name: 'Boxing', description: null },
+    ]);
+
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+
+    const rows = [...host.querySelectorAll('tbody tr')];
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain('Gym');
+    expect(rows[0].textContent).toContain('Sức mạnh tổng hợp');
+    expect(rows[1].textContent).toContain('Boxing');
+    expect(rows[1].textContent).toContain('Không có mô tả');
+
+    // Empty state renders message & working "Thêm mới" CTA
+    vi.mocked(catalogApi.disciplines).mockResolvedValueOnce([]);
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+
+    expect(host.querySelector('table')).toBeNull();
+    expect(host.textContent).toContain('Chưa có bộ môn nào');
+    const emptyAddBtn = host.querySelector<HTMLButtonElement>('.portal-state .btn-primary')!;
+    expect(emptyAddBtn).not.toBeNull();
+    await act(async () => emptyAddBtn.click());
+    expect(host.querySelector('dialog')?.textContent).toContain('Thêm bộ môn');
+  });
+
+  it('Disciplines tab: creates a discipline with trimmed name and description and reloads catalog', async () => {
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+
+    const addBtn = host.querySelector<HTMLButtonElement>('.portal-header .btn-primary')!;
+    await act(async () => addBtn.click());
+
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.textContent).toContain('Thêm bộ môn');
+    expect(dialog.querySelector('#cat-tier')).toBeNull();
+    expect(dialog.querySelector('#cat-capacity')).toBeNull();
+    expect(dialog.querySelector('#cat-status')).toBeNull();
+
+    await setFieldValue(dialog.querySelector<HTMLInputElement>('#cat-name')!, '  Yoga Bay  ');
+    await setFieldValue(dialog.querySelector<HTMLTextAreaElement>('#cat-desc')!, '  Tăng dẻo dai và cân bằng  ');
+    await submitDialogForm();
+
+    expect(catalogApi.saveDiscipline).toHaveBeenCalledWith(null, {
+      name: 'Yoga Bay',
+      description: 'Tăng dẻo dai và cân bằng',
+    });
+    expect(host.querySelector('dialog')).toBeNull();
+    expect(catalogApi.disciplines).toHaveBeenCalledTimes(2);
+  });
+
+  it('Disciplines tab: edits an existing discipline with pre-filled values', async () => {
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+
+    const editBtn = [...host.querySelectorAll<HTMLButtonElement>('tbody tr:first-child button')].find(
+      (b) => b.textContent?.trim() === 'Chỉnh sửa',
+    )!;
+    await act(async () => editBtn.click());
+
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.textContent).toContain('Chỉnh sửa bộ môn');
+    const nameInput = dialog.querySelector<HTMLInputElement>('#cat-name')!;
+    const descInput = dialog.querySelector<HTMLTextAreaElement>('#cat-desc')!;
+    expect(nameInput.value).toBe('Gym');
+    expect(descInput.value).toBe('Sức mạnh');
+
+    await setFieldValue(nameInput, 'Gym Hiệu Năng');
+    await setFieldValue(descInput, 'Huấn luyện sức mạnh và thể lực');
+    await submitDialogForm();
+
+    expect(catalogApi.saveDiscipline).toHaveBeenCalledWith(1, {
+      name: 'Gym Hiệu Năng',
+      description: 'Huấn luyện sức mạnh và thể lực',
+    });
+    expect(catalogApi.disciplines).toHaveBeenCalledTimes(2);
+  });
+
+  it('Disciplines tab: deletes a discipline only after confirmation and survives in-use backend rejection', async () => {
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+
+    const getFirstDeleteBtn = () =>
+      [...host.querySelectorAll<HTMLButtonElement>('tbody tr:first-child button')].find(
+        (b) => b.textContent?.trim() === 'Xóa',
+      )!;
+
+    // Cancel confirmation -> deleteDiscipline not called
+    await act(async () => getFirstDeleteBtn().click());
+    expect(host.querySelector('dialog')?.textContent).toContain('Xóa bộ môn?');
+    const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+      (b) => b.textContent?.trim() === 'Hủy',
+    )!;
+    await act(async () => cancelBtn.click());
+    expect(catalogApi.deleteDiscipline).not.toHaveBeenCalled();
+
+    // Confirm deletion -> calls deleteDiscipline(1) and reloads
+    await act(async () => getFirstDeleteBtn().click());
+    const confirmDeleteBtn = host.querySelector<HTMLButtonElement>('dialog .btn-danger')!;
+    await act(async () => confirmDeleteBtn.click());
+    expect(catalogApi.deleteDiscipline).toHaveBeenCalledWith(1);
+    expect(catalogApi.disciplines).toHaveBeenCalledTimes(2);
+
+    // Backend rejects deletion when discipline is already in use -> table remains visible & usable
+    vi.mocked(catalogApi.deleteDiscipline).mockRejectedValueOnce(
+      new Error('Bộ môn đang được sử dụng bởi lớp học hoạt động'),
+    );
+    await act(async () => getFirstDeleteBtn().click());
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .btn-danger')!.click());
+
+    expect(host.querySelector('table')).not.toBeNull();
+    expect(getFirstDeleteBtn().disabled).toBe(false);
+  });
+
+  it('Disciplines tab: validates blank/overlong names, clears error on input, and isolates save errors inside modal', async () => {
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+
+    await act(async () => host.querySelector<HTMLButtonElement>('.portal-header .btn-primary')!.click());
+    const nameInput = host.querySelector<HTMLInputElement>('#cat-name')!;
+
+    // Blank / whitespace-only name rejected
+    await setFieldValue(nameInput, '   ');
+    await submitDialogForm();
+    expect(catalogApi.saveDiscipline).not.toHaveBeenCalled();
+    expect(host.querySelectorAll('[role="alert"]')).toHaveLength(1);
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Vui lòng nhập tên hiển thị.');
+
+    // Typing clears validation alert
+    await setFieldValue(nameInput, 'Boxing');
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+
+    // Name > 100 chars rejected
+    await setFieldValue(nameInput, 'A'.repeat(101));
+    await submitDialogForm();
+    expect(catalogApi.saveDiscipline).not.toHaveBeenCalled();
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Tên hiển thị tối đa 100 ký tự.');
+
+    // Backend duplicate error stays inside modal only
+    vi.mocked(catalogApi.saveDiscipline).mockRejectedValueOnce(new Error('Tên bộ môn đã tồn tại'));
+    await setFieldValue(nameInput, 'Gym');
+    await submitDialogForm();
+    expect(host.querySelectorAll('[role="alert"]')).toHaveLength(1);
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Tên bộ môn đã tồn tại');
+  });
+
+  // ── Rooms (Phòng tập) tab coverage (P2-E2E-02) ────────────────────────────────────────
+
+  it('Rooms tab: respects explicit r.tier over name heuristics, displays all statuses/fallbacks, and renders empty state', async () => {
+    vi.mocked(catalogApi.rooms).mockResolvedValueOnce([
+      {
+        id: 1,
+        name: 'Phòng VIP Tiêu chuẩn',
+        location: 'Tầng 1',
+        capacity: 50,
+        status: 'available',
+        tier: 'STANDARD',
+      },
+      {
+        id: 2,
+        name: 'Studio Riêng',
+        location: null,
+        capacity: 12,
+        status: 'maintenance',
+        tier: 'PLATINUM',
+      },
+      {
+        id: 3,
+        name: 'Khu Gym VIP Tầng 3',
+        location: 'Tầng 3',
+        capacity: 20,
+        status: 'closed',
+        tier: null,
+      },
+    ]);
+
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+    await switchTab('Phòng tập');
+
+    const rows = [...host.querySelectorAll('tbody tr')];
+    expect(rows).toHaveLength(3);
+
+    // Explicit tier STANDARD stays Standard even though name contains "VIP"
+    expect(rows[0].textContent).toContain('Phòng VIP Tiêu chuẩn');
+    expect(rows[0].textContent).toContain('Tiêu chuẩn');
+    expect(rows[0].textContent).not.toContain('Cao cấp (Platinum)');
+    expect(rows[0].textContent).toContain('50 người');
+    expect(rows[0].querySelector('.badge-success')?.textContent).toContain('Đang hoạt động');
+
+    // Explicit tier PLATINUM renders Platinum badge even without "VIP" in name, plus null location fallback & maintenance status
+    expect(rows[1].textContent).toContain('Studio Riêng');
+    expect(rows[1].querySelector('.badge-info')?.textContent).toContain('Cao cấp (Platinum)');
+    expect(rows[1].textContent).toContain('—');
+    expect(rows[1].textContent).toContain('12 người');
+    expect(rows[1].querySelector('.badge-warning')?.textContent).toContain('Bảo trì');
+
+    // Missing tier falls back to VIP heuristic and renders closed status
+    expect(rows[2].querySelector('.badge-info')?.textContent).toContain('Cao cấp (Platinum)');
+    expect(rows[2].querySelector('.badge-warning')?.textContent).toContain('Đã đóng');
+
+    // Empty rooms list renders empty state
+    vi.mocked(catalogApi.rooms).mockResolvedValueOnce([]);
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+    await switchTab('Phòng tập');
+    expect(host.querySelector('table')).toBeNull();
+    expect(host.textContent).toContain('Chưa có cơ sở phòng tập nào');
+  });
+
+  it('Rooms tab: creates a new PLATINUM room with trimmed fields and reloads catalog', async () => {
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+    await switchTab('Phòng tập');
+
+    await act(async () => host.querySelector<HTMLButtonElement>('.portal-header .btn-primary')!.click());
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.textContent).toContain('Thêm phòng tập');
+    expect(dialog.querySelector('#cat-desc')).toBeNull();
+    expect(dialog.querySelector<HTMLInputElement>('#cat-location')!.maxLength).toBe(150);
+
+    await setFieldValue(dialog.querySelector<HTMLInputElement>('#cat-name')!, '  Ring Arena 02  ');
+    await selectOption('cat-tier', 'VIP (Chỉ dành cho Platinum)');
+    await setFieldValue(dialog.querySelector<HTMLInputElement>('#cat-location')!, '  Tầng 2, Khu Đông  ');
+    await setFieldValue(dialog.querySelector<HTMLInputElement>('#cat-capacity')!, '24');
+    await submitDialogForm();
+
+    expect(catalogApi.saveRoom).toHaveBeenCalledWith(null, {
+      name: 'Ring Arena 02',
+      location: 'Tầng 2, Khu Đông',
+      capacity: 24,
+      status: 'available',
+      tier: 'PLATINUM',
+    });
+    expect(host.querySelector('dialog')).toBeNull();
+    expect(catalogApi.rooms).toHaveBeenCalledTimes(2);
+  });
+
+  it('Rooms tab: edits a room, respects initial r.tier, and updates status to maintenance', async () => {
+    vi.mocked(catalogApi.rooms).mockResolvedValueOnce([
+      {
+        id: 5,
+        name: 'Phòng VIP Tiêu chuẩn',
+        location: 'Tầng 1',
+        capacity: 50,
+        status: 'available',
+        tier: 'STANDARD',
+      },
+    ]);
+
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+    await switchTab('Phòng tập');
+
+    const editBtn = [...host.querySelectorAll<HTMLButtonElement>('tbody tr:first-child button')].find(
+      (b) => b.textContent?.trim() === 'Chỉnh sửa',
+    )!;
+    await act(async () => editBtn.click());
+
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.textContent).toContain('Chỉnh sửa phòng tập');
+    // Respects explicit r.tier = STANDARD instead of inferring VIP from room name
+    expect(dialog.querySelector('#cat-tier')?.textContent).toContain('Tiêu chuẩn (Mọi hội viên)');
+
+    await setFieldValue(dialog.querySelector<HTMLInputElement>('#cat-capacity')!, '35');
+    await selectOption('cat-status', 'Bảo trì');
+    await selectOption('cat-tier', 'VIP (Chỉ dành cho Platinum)');
+    await submitDialogForm();
+
+    expect(catalogApi.saveRoom).toHaveBeenCalledWith(5, {
+      name: 'Phòng VIP Tiêu chuẩn',
+      location: 'Tầng 1',
+      capacity: 35,
+      status: 'maintenance',
+      tier: 'PLATINUM',
+    });
+    expect(catalogApi.rooms).toHaveBeenCalledTimes(2);
+  });
+
+  it('Rooms tab: deletes a room only after confirmation and keeps table visible if backend rejects deletion', async () => {
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+    await switchTab('Phòng tập');
+
+    const getDeleteBtn = () =>
+      [...host.querySelectorAll<HTMLButtonElement>('tbody tr:first-child button')].find(
+        (b) => b.textContent?.trim() === 'Xóa',
+      )!;
+
+    // Cancel confirmation -> deleteRoom not called
+    await act(async () => getDeleteBtn().click());
+    expect(host.querySelector('dialog')?.textContent).toContain('Xóa phòng tập?');
+    const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+      (b) => b.textContent?.trim() === 'Hủy',
+    )!;
+    await act(async () => cancelBtn.click());
+    expect(catalogApi.deleteRoom).not.toHaveBeenCalled();
+
+    // Confirm deletion -> calls deleteRoom(1) and reloads
+    await act(async () => getDeleteBtn().click());
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .btn-danger')!.click());
+    expect(catalogApi.deleteRoom).toHaveBeenCalledWith(1);
+    expect(catalogApi.rooms).toHaveBeenCalledTimes(2);
+
+    // Backend rejects deletion -> table stays visible and action button re-enabled
+    vi.mocked(catalogApi.deleteRoom).mockRejectedValueOnce(new Error('Phòng đang có lịch lớp nhóm'));
+    await act(async () => getDeleteBtn().click());
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .btn-danger')!.click());
+    expect(host.querySelector('table')).not.toBeNull();
+    expect(getDeleteBtn().disabled).toBe(false);
+  });
+
+  it('Rooms tab: validates overlong name, overlong location, and invalid capacity bounds', async () => {
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+    await switchTab('Phòng tập');
+    await act(async () => host.querySelector<HTMLButtonElement>('.portal-header .btn-primary')!.click());
+
+    const nameInput = host.querySelector<HTMLInputElement>('#cat-name')!;
+    const locInput = host.querySelector<HTMLInputElement>('#cat-location')!;
+    const capInput = host.querySelector<HTMLInputElement>('#cat-capacity')!;
+
+    // Name > 100 chars
+    await setFieldValue(nameInput, 'P'.repeat(101));
+    await submitDialogForm();
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Tên hiển thị tối đa 100 ký tự.');
+
+    // Location > 150 chars
+    await setFieldValue(nameInput, 'Zen Studio');
+    await setFieldValue(locInput, 'L'.repeat(151));
+    await submitDialogForm();
+    expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain('Vị trí / tầng tối đa 150 ký tự.');
+
+    // Capacity out of range (0, 201, non-integer 12.5)
+    await setFieldValue(locInput, 'Tầng 2');
+    for (const invalidCap of ['0', '201', '12.5']) {
+      await setFieldValue(capInput, invalidCap);
+      await submitDialogForm();
+      expect(host.querySelector('dialog [role="alert"]')?.textContent).toContain(
+        'Sức chứa phòng phải là số nguyên từ 1 đến 200 người.',
+      );
+    }
+    expect(catalogApi.saveRoom).not.toHaveBeenCalled();
+  });
+
+  it('Rooms tab: hides empty table on load error and recovers Rooms table on Retry', async () => {
+    vi.mocked(catalogApi.rooms).mockRejectedValueOnce(new Error('Rooms service unavailable'));
+
+    await act(async () => {
+      root.render(<ManagerCatalogsPage />);
+    });
+    await switchTab('Phòng tập');
+
+    const alert = host.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Rooms service unavailable');
+    expect(host.querySelector('table')).toBeNull();
+    expect(host.querySelector('.portal-state')).toBeNull();
+
+    const retryBtn = [...alert!.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === 'Thử lại',
+    )!;
+    await act(async () => retryBtn.click());
+
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(host.querySelector('table')).not.toBeNull();
+    expect(host.querySelector('tbody')?.textContent).toContain('Phòng Gym Tiêu chuẩn');
   });
 });

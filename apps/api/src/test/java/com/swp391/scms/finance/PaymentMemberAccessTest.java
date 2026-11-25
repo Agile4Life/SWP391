@@ -21,7 +21,7 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -48,18 +48,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Bộ kiểm thử cho PaymentMemberAccess (payment member access). */
 class PaymentMemberAccessTest {
     @Autowired MockMvc mvc;
-    @MockBean com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
-    @MockBean PaymentRepository payments;
-    @MockBean MemberRepository members;
-    @MockBean UserRepository users;
-    @MockBean MembershipSubscriptionRepository subscriptions;
-    @MockBean ClassEnrollmentRepository enrollments;
+    @MockitoBean com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
+    @MockitoBean PaymentRepository payments;
+    @MockitoBean MemberRepository members;
+    @MockitoBean UserRepository users;
+    @MockitoBean MembershipSubscriptionRepository subscriptions;
+    @MockitoBean ClassEnrollmentRepository enrollments;
     // PaymentService dùng repository trial thật trong context; slice test phải khai báo mock tương ứng.
-    @MockBean com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trials;
-    @MockBean PaymentMapper mapper;
-    @MockBean JwtService jwt;
-    @MockBean MessageService messages;
-    @MockBean Clock clock;
+    @MockitoBean com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trials;
+    @MockitoBean PaymentMapper mapper;
+    @MockitoBean JwtService jwt;
+    @MockitoBean MessageService messages;
+    @MockitoBean Clock clock;
 
     /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {

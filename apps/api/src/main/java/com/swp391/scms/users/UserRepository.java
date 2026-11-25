@@ -78,10 +78,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByPhoneAndDeletedAtIsNull(String phone);
     /**
-     * Tìm tài khoản có SĐT (sau khi bỏ khoảng trắng, dấu gạch, dấu chấm) nằm trong danh sách cho trước; dùng để
-     * phát hiện SĐT trùng dù lưu khác định dạng.
+     * Tìm tài khoản có SĐT (sau khi bỏ khoảng trắng, dấu gạch, dấu chấm, dấu ngoặc) nằm trong danh sách cho trước;
+     * dùng để phát hiện SĐT trùng dù lưu khác định dạng.
      */
-    @Query("select u from User u where u.phone is not null and replace(replace(replace(u.phone, ' ', ''), '-', ''), '.', '') in :phones")
+    @Query("select u from User u where u.phone is not null and replace(replace(replace(replace(replace(u.phone, ' ', ''), '-', ''), '.', ''), '(', ''), ')', '') in :phones")
     List<User> findAllByCompactPhoneIn(@Param("phones") java.util.Collection<String> phones);
     /** Tìm các bản ghi có googleSub = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<User> findByGoogleSub(String googleSub);

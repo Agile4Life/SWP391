@@ -50,14 +50,15 @@ public class InvoiceService {
     }
 
     /**
-     * Xuất hóa đơn điện tử thủ công: khoản thu không được thất bại hoặc đã hoàn, mỗi khoản thu chỉ một hóa đơn;
-     * số hóa đơn tự sinh nếu trống. Cơ sở dữ liệu cấu hình tự tính total_amount và thành tiền từng dòng qua cột sinh tự động.
+     * Xuất hóa đơn điện tử thủ công: chỉ cho phép khoản thu đã thành công ({@code success}), mỗi khoản thu chỉ một
+     * hóa đơn và tổng trước thuế + thuế phải khớp số tiền thanh toán khi có; số hóa đơn tự sinh nếu trống. Cơ sở dữ
+     * liệu cấu hình tự tính total_amount và thành tiền từng dòng qua cột sinh tự động.
      */
     public InvoiceDto createInvoice(InvoiceCreateDto dto) {
         Payment payment = paymentRepository.findById(dto.getPaymentId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", dto.getPaymentId()));
 
-        if ("failed".equalsIgnoreCase(payment.getStatus()) || "refunded".equalsIgnoreCase(payment.getStatus())) {
+        if (!"success".equalsIgnoreCase(payment.getStatus())) {
             throw new BadRequestException("INVALID_PAYMENT_STATE", "finance.invoice.invalid_payment_state",
                     new Object[]{payment.getStatus()}, null);
         }
@@ -72,6 +73,16 @@ public class InvoiceService {
         } else if (invoiceRepository.existsByInvoiceNumber(invoiceNumber)) {
             throw new ConflictException("DUPLICATE_INVOICE_NUMBER", "finance.invoice.duplicate_number",
                     new Object[]{invoiceNumber}, null);
+        }
+
+        if (payment.getAmount() != null && dto.getSubtotalAmount() != null) {
+            java.math.BigDecimal tax = dto.getTaxAmount() != null ? dto.getTaxAmount() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal expectedTotal = dto.getSubtotalAmount().add(tax);
+            if (expectedTotal.compareTo(payment.getAmount()) != 0) {
+                throw new BadRequestException("INVOICE_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
+                        new Object[]{expectedTotal.toPlainString(), payment.getAmount().toPlainString()},
+                        "Invoice subtotal + tax must match payment amount");
+            }
         }
 
         Invoice invoice = invoiceMapper.toEntity(dto);

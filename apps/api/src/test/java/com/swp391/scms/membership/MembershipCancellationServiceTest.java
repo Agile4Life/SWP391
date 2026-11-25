@@ -438,4 +438,37 @@ class MembershipCancellationServiceTest {
         assertThat(p1.getStatus()).isEqualTo("success");
         verify(walletService).creditRefund(10L, new java.math.BigDecimal("2900000"), "CANCEL_REQ_7", "Moving");
     }
+
+    /** Kiểm thử P3-BE-13: duyệt hủy gói xóa sạch trạng thái/ngày bảo lưu và staffRequest chặn lệch memberId. */
+    @Test
+    void approvalClearsHoldFieldsAndStaffRequestRejectsMismatchedMemberId() {
+        active.setHoldStatus("REJECTED");
+        active.setHoldStartDate(LocalDate.of(2026, 10, 5));
+        active.setHoldEndDate(LocalDate.of(2026, 10, 10));
+        active.setHoldDaysCredited(true);
+
+        stubDecision();
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active));
+        when(messages.getMessage("scheduling.enrollment.cancelled_by_membership")).thenReturn("Membership cancelled");
+        User managerUser = new User(); managerUser.setId(20L);
+        when(users.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(managerUser));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.decide(manager, 7L, true, new CancellationDtos.Decision("Cleared"));
+
+        assertThat(active.getStatus()).isEqualTo("cancelled");
+        assertThat(active.getHoldStatus()).isNull();
+        assertThat(active.getHoldStartDate()).isNull();
+        assertThat(active.getHoldEndDate()).isNull();
+        assertThat(active.getHoldDaysCredited()).isFalse();
+
+        // staffRequest từ chối khi subscriptionId không thuộc memberId được truyền lên
+        var receptionist = new AuthenticatedPrincipal(30L, "desk", "RECEPTIONIST");
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(active));
+        assertThatThrownBy(() -> service.staffRequest(receptionist,
+                new CancellationDtos.StaffRequest(99L, 100L, "Mismatch", null)))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_NOT_OWNER");
+    }
 }

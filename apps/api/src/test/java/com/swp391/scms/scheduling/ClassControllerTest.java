@@ -50,6 +50,7 @@ class ClassControllerTest {
     private ClassController controller;
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    private static final LocalDate FIXED_DATE = LocalDate.of(2026, 11, 26);
 
     /** Chuẩn bị trước mỗi test: dựng MockMvc cho controller lớp học. */
     @BeforeEach
@@ -97,12 +98,13 @@ class ClassControllerTest {
     /** Kiểm thử: tạo buổi học trả 201 Created. */
     @Test
     void createSession_returnsCreated() throws Exception {
+        LocalDate sessionDate = FIXED_DATE.plusDays(1);
         CreateSessionRequest request = new CreateSessionRequest(
-                LocalDate.now().plusDays(1), LocalTime.of(8, 0), LocalTime.of(9, 30)
+                sessionDate, LocalTime.of(8, 0), LocalTime.of(9, 30)
         );
         ClassSessionDto dto = new ClassSessionDto(
                 10L, 1L, "Yoga Cơ Bản", 1L, "Yoga", 2L, "Coach Name", 3L, "Phòng 101",
-                LocalDate.now().plusDays(1), LocalTime.of(8, 0), LocalTime.of(9, 30),
+                sessionDate, LocalTime.of(8, 0), LocalTime.of(9, 30),
                 "scheduled", null, 20, 0L
         );
         when(classService.createSession(eq(1L), any())).thenReturn(dto);
@@ -120,13 +122,13 @@ class ClassControllerTest {
     void listSessions_returnsOk() throws Exception {
         ClassSessionDto dto = new ClassSessionDto(
                 10L, 1L, "Yoga Cơ Bản", 1L, "Yoga", 2L, "Coach Name", 3L, "Phòng 101",
-                LocalDate.now().plusDays(1), LocalTime.of(8, 0), LocalTime.of(9, 30),
+                FIXED_DATE.plusDays(1), LocalTime.of(8, 0), LocalTime.of(9, 30),
                 "scheduled", null, 20, 0L
         );
         when(classService.searchSessions(any(), any(), any(), any())).thenReturn(List.of(dto));
 
         mockMvc.perform(get("/api/v1/classes/sessions")
-                        .param("fromDate", LocalDate.now().toString()))
+                        .param("fromDate", FIXED_DATE.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data[0].id").value(10L));
     }

@@ -34,6 +34,9 @@ public class KycCrypto {
 
     /** Tạo khóa AES 256-bit và khóa HMAC-SHA256 tách biệt từ app.kyc.encryption-key (mặc định dùng JWT secret). */
     public KycCrypto(@Value("${app.kyc.encryption-key:${app.jwt.secret}}") String secret) {
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalArgumentException("KYC encryption secret must not be blank");
+        }
         try {
             MessageDigest sha256 = MessageDigest.getInstance("SHA-256");
             byte[] digest = sha256.digest(secret.getBytes(StandardCharsets.UTF_8));

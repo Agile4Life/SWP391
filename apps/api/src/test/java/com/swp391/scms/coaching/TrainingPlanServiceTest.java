@@ -464,6 +464,7 @@ class TrainingPlanServiceTest {
     @DisplayName("Activating a plan moves the same coach's other active plan for the member into history")
     void activatingAPlanSupersedesTheMembersOtherActivePlan() {
         var draft = ownedPlan("draft");
+        draft.setEndDate(LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(30));
         var previous = ownedPlan("active");
         ReflectionTestUtils.setField(previous, "id", 99L);
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(draft));
@@ -483,8 +484,10 @@ class TrainingPlanServiceTest {
         var history = ownedPlan("superseded");
         var current = ownedPlan("active");
         ReflectionTestUtils.setField(current, "id", 101L);
-        history.setStartDate(LocalDate.now().minusDays(10));
-        history.setEndDate(LocalDate.now().plusDays(18));
+        LocalDate baseDate = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        LocalDate expectedEnd = baseDate.plusDays(18);
+        history.setStartDate(baseDate.minusDays(10));
+        history.setEndDate(expectedEnd);
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(history));
         when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
         when(trainingPlanRepository.findOtherActiveForMemberAndCoach(10L, 20L, 100L)).thenReturn(List.of(current));
@@ -493,7 +496,7 @@ class TrainingPlanServiceTest {
 
         assertEquals("active", result.getStatus());
         assertEquals("superseded", current.getStatus());
-        assertEquals(LocalDate.now().plusDays(18), result.getEndDate(), "A plan still in its period keeps its dates");
+        assertEquals(expectedEnd, result.getEndDate(), "A plan still in its period keeps its dates");
     }
 
     /** Kiểm thử: áp dụng lại kế hoạch đã hết hạn dời ngày về hôm nay. */
@@ -506,11 +509,13 @@ class TrainingPlanServiceTest {
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(history));
         when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        LocalDate before = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
         var result = service.reapplyPlan(100L, 20L, "COACH");
+        LocalDate after = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
 
-        var today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
-        assertEquals(today, result.getStartDate());
-        assertEquals(today.plusDays(28), result.getEndDate());
+        assertFalse(result.getStartDate().isBefore(before));
+        assertFalse(result.getStartDate().isAfter(after));
+        assertEquals(result.getStartDate().plusDays(28), result.getEndDate());
     }
 
     /** Kiểm thử: từ chối áp dụng lại kế hoạch ngoài lịch sử. */
@@ -528,6 +533,7 @@ class TrainingPlanServiceTest {
     @DisplayName("Activating a plan leaves the active plans of the member's other coaches alone")
     void activatingAPlanOnlyLooksAtTheSameCoachsPlans() {
         var draft = ownedPlan("draft");
+        draft.setEndDate(LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(30));
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(draft));
         when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
         when(trainingPlanRepository.findOtherActiveForMemberAndCoach(10L, 20L, 100L)).thenReturn(List.of());

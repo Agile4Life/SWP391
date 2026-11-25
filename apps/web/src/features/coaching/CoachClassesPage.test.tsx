@@ -53,7 +53,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
   ];
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    vi.useFakeTimers({ shouldAdvanceTime: true });
     vi.setSystemTime(FIXED_MONDAY_MORNING);
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
@@ -94,6 +94,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
       })
     );
 
+    vi.mocked(getCoachSchedule).mockReset().mockResolvedValue([]);
     vi.spyOn(coachingApi, 'getAllAssignedStudents').mockResolvedValue(mockStudents);
     vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValue([]);
   });
@@ -483,5 +484,40 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     expect(alert).not.toBeNull();
     expect(alert?.textContent).toContain('PT 1:1');
     expect(host.textContent).toContain('Boxing Nâng Cao');
+  });
+
+  it('P2-E2E-03: marks Sunday 17:00–19:30 session as past deterministically after Sunday 19:30 UTC+7', async () => {
+    // 20:00 giờ Việt Nam Chủ Nhật (2026-11-29): buổi Slot 5 (17:00–19:30) cùng ngày đã qua -> .mcal__event--past
+    vi.setSystemTime(new Date('2026-11-29T13:00:00Z'));
+    const sundayDate = addIsoDays(currentMondayStr, 6);
+    vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([
+      {
+        id: 91,
+        classId: 5,
+        className: 'Yoga Chủ Nhật',
+        disciplineName: 'Yoga',
+        coachId: 1,
+        coachName: 'Marcus Vance',
+        roomName: 'Zen Garden Studio',
+        sessionDate: sundayDate,
+        startTime: '17:00:00',
+        endTime: '19:30:00',
+        status: 'scheduled',
+        capacity: 16,
+        bookedCount: 8,
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>,
+      );
+    });
+
+    expect(host.querySelectorAll('.mcal__event--past')).toHaveLength(1);
+    expect(host.querySelectorAll('.mcal__event--open')).toHaveLength(0);
+    expect(host.querySelector('.mcal__event--past')?.textContent).toContain('Yoga Chủ Nhật');
   });
 });
