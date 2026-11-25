@@ -116,6 +116,32 @@ class CoachAssignmentServiceTest {
         verify(messages).getMessage("manager.coach_assignments.notice.transferred.member", to.getUser().getFullName(), 501L, "Schedule adjustment");
     }
 
+    @Test void rejectsTransferWhenTargetAlreadyHasAnActivePlan() {
+        validAccounts(); TrainingPlan selected = plan(501L, "active");
+        when(plans.findByIdForUpdate(501L)).thenReturn(Optional.of(selected));
+        when(plans.findOtherActiveForMemberAndCoach(100L, 20L, 501L)).thenReturn(List.of(plan(800L, "active")));
+        assertThatThrownBy(() -> service.reassignStudent(transfer("TRAINING_PLAN", 501L)))
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_ALREADY_HAS_ACTIVE_PLAN");
+        assertThat(selected.getCoach()).isSameAs(from); verify(plans, never()).save(any());
+        verifyNoInteractions(audit, notifications);
+    }
+
+    @Test void rejectsTransferCreatingFourConsecutivePtSessions() {
+        validAccounts(); CoachBooking selected = booking(601L);
+        selected.setStartTime(LocalTime.of(12, 0)); selected.setEndTime(LocalTime.of(13, 0));
+        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
+        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
+        List<CoachBooking> occupied = new ArrayList<>();
+        for (int hour = 9; hour < 12; hour++) {
+            CoachBooking b = booking((long) hour); b.setStartTime(LocalTime.of(hour, 0)); b.setEndTime(LocalTime.of(hour + 1, 0)); occupied.add(b);
+        }
+        when(bookings.findActiveByCoachAndDate(20L, today.plusDays(1))).thenReturn(occupied);
+        assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L)))
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_REST_REQUIRED");
+        assertThat(selected.getCoach()).isSameAs(from); verify(bookings, never()).save(any());
+        verifyNoInteractions(audit, notifications);
+    }
+
     /** Kiểm thử: từ chối chuyển HLV không có lý do, trước khi ghi hay thông báo. */
     @ParameterizedTest @ValueSource(strings = {"", "   "})
     void rejectsTransferWithoutReasonBeforeWritingOrNotifying(String blank) {
