@@ -11,7 +11,8 @@ import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { matchesDiscipline } from '../../../shared/lib/disciplines';
 import { notify } from '../../../shared/lib/portalNotices';
 import { navigateToVnpay } from '../../payments/vnpayApi';
-import { disciplineAccentColor, hhmm } from '../../schedule/timetable';
+import { formatSlotLabel } from '../../schedule/slots';
+import { disciplineAccentColor } from '../../schedule/timetable';
 import {
   cancelCourse,
   checkoutCourse,
@@ -396,7 +397,7 @@ export function MemberGroupClassesView({ initialDiscipline, onBookingChange }: M
                     <span>{t('Lịch học', 'Schedule')}</span>
                     <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
                       {formatDays(cls.recurringDays)}
-                      {cls.startTime && cls.endTime ? ` · ${hhmm(cls.startTime)}–${hhmm(cls.endTime)}` : ''}
+                      {cls.startTime && cls.endTime ? ` · ${formatSlotLabel(cls.startTime, cls.endTime)}` : ''}
                     </strong>
                   </div>
                   {cls.startDate && cls.endDate && (

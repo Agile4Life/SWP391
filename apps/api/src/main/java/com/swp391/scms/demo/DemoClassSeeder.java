@@ -1,6 +1,7 @@
 package com.swp391.scms.demo;
 
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -54,20 +55,16 @@ public class DemoClassSeeder implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(DemoClassSeeder.class);
     private static final ZoneId ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
-    private static final LocalTime OPENING = LocalTime.of(6, 0);
-    private static final LocalTime CLOSING = LocalTime.of(22, 0);
-    /** Các số phút lần lượt được thử khi giờ bắt đầu ưa thích đã bị HLV hoặc phòng chiếm. */
-    private static final int[] SHIFTS = {0, 60, 120, 180, 240, -60, -120};
 
     /**
-     * Mô tả một khóa học mẫu: tên, bộ môn, phòng, trình độ, sức chứa, học phí, các thứ trong tuần, giờ bắt đầu,
-     * thời lượng, khoảng ngày (tính từ hôm nay, âm là quá khứ), trạng thái và mô tả.
+     * Mô tả một khóa học mẫu: tên, bộ môn, phòng, trình độ, sức chứa, học phí, các thứ trong tuần, slot cố định,
+     * khoảng ngày (tính từ hôm nay, âm là quá khứ), trạng thái và mô tả.
      *
      * Một khóa học. {@code fromDay}/{@code toDay} giới hạn các buổi so với ngày seed (âm = quá khứ); ngày của
      * lớp theo buổi đầu và buổi cuối.
      */
     record ClassSpec(String name, String discipline, String room, String level, int capacity, int price, String days,
-                     String start, int minutes, int fromDay, int toDay, String status, String description) {
+                     ScheduleSlot slot, int fromDay, int toDay, String status, String description) {
 
         /** Đổi chuỗi các thứ (ví dụ "MON,WED") thành tập ngày trong tuần. */
         Set<DayOfWeek> dayOfWeeks() {
@@ -89,22 +86,22 @@ public class DemoClassSeeder implements ApplicationRunner {
 
     /** Tạo mô tả khóa đang diễn ra (bắt đầu 14 ngày trước, kết thúc sau 42 ngày). */
     private static ClassSpec ongoing(String name, String discipline, String room, String level, int capacity,
-                                     int price, String days, String start, int minutes, String description) {
-        return new ClassSpec(name, discipline, room, level, capacity, price, days, start, minutes, -14, 42, "active",
+                                     int price, String days, ScheduleSlot slot, String description) {
+        return new ClassSpec(name, discipline, room, level, capacity, price, days, slot, -14, 42, "active",
                 description);
     }
 
     /**
-     * Đúng 1 lớp đang hoạt động (`active`) cho mỗi bộ môn trong 3 bộ môn chuẩn (Gym, Boxing, Yoga)
-     * — tuân thủ quy tắc mỗi bộ môn tối đa 1 lớp duy nhất.
+     * Đúng 1 lớp đang hoạt động (`active`) cho mỗi bộ môn trong 3 bộ môn chuẩn (Gym, Yoga, Boxing) dùng 5 slot cố
+     * định (07:00–19:30) — tuân thủ quy tắc mỗi bộ môn tối đa 1 lớp duy nhất.
      */
     static final List<ClassSpec> CLASSES = List.of(
-            ongoing("Full Body Strength 101", "Gym", GYM, "all", 20, 0, "MON,WED,FRI", "06:30", 60,
+            ongoing("Full Body Strength 101", "Gym", GYM, "all", 20, 0, "MON,WED,FRI", ScheduleSlot.SLOT_1,
                     "Nền tảng tập tạ toàn thân cho mọi trình độ: tư thế, hơi thở và giáo án tuần."),
-            ongoing("Boxing Cơ Bản", "Boxing", RING, "all", 14, 0, "TUE,THU,SAT", "19:00", 60,
-                    "Tư thế, đòn thẳng, móc, di chuyển chân và thể lực theo hiệp."),
-            ongoing("Hatha Yoga Nền Tảng", "Yoga", ZEN, "all", 16, 0, "MON,WED,FRI", "07:30", 60,
-                    "Các tư thế Hatha cơ bản, hít thở sâu, thăng bằng và giãn cơ."));
+            ongoing("Hatha Yoga Nền Tảng", "Yoga", ZEN, "all", 16, 0, "MON,WED,FRI", ScheduleSlot.SLOT_2,
+                    "Các tư thế Hatha cơ bản, hít thở sâu, thăng bằng và giãn cơ."),
+            ongoing("Boxing Cơ Bản", "Boxing", RING, "all", 14, 0, "TUE,THU,SAT", ScheduleSlot.SLOT_5,
+                    "Tư thế, đòn thẳng, móc, di chuyển chân và thể lực theo hiệp."));
 
     /** Một khung giờ đã bận (giờ bắt đầu, giờ kết thúc). */
     private record Slot(LocalTime start, LocalTime end) {
@@ -234,21 +231,22 @@ public class DemoClassSeeder implements ApplicationRunner {
     private record Placement(Coach coach, LocalTime start, LocalTime end) {}
 
     /**
-     * Tìm cặp (HLV, giờ bắt đầu) đầu tiên còn trống ở mọi ngày học: thử giờ ưu tiên rồi lệch dần theo SHIFTS,
-     * trong giờ mở cửa 06:00-22:00; không có thì trả null.
-     *
-     * (HLV, giờ bắt đầu) đầu tiên rảnh ở mọi ngày học; null khi không có cái nào phù hợp.
+     * Tìm cặp (HLV, slot cố định) đầu tiên còn trống ở mọi ngày học: thử slot ưu tiên trước rồi lần lượt các
+     * slot còn lại trong 5 {@link ScheduleSlot}; không có thì trả null.
      */
     private Placement place(ClassSpec spec, Room room, List<LocalDate> dates, List<Coach> candidates,
                             Map<String, List<Slot>> busy) {
-        LocalTime preferred = LocalTime.parse(spec.start());
+        List<ScheduleSlot> orderedSlots = new ArrayList<>();
+        orderedSlots.add(spec.slot());
+        for (ScheduleSlot candidate : ScheduleSlot.values()) {
+            if (candidate != spec.slot()) {
+                orderedSlots.add(candidate);
+            }
+        }
         for (Coach coach : candidates) {
-            for (int shift : SHIFTS) {
-                LocalTime start = preferred.plusMinutes(shift);
-                LocalTime end = start.plusMinutes(spec.minutes());
-                if (start.isBefore(OPENING) || end.isAfter(CLOSING) || !end.isAfter(start)) {
-                    continue;
-                }
+            for (ScheduleSlot candidateSlot : orderedSlots) {
+                LocalTime start = candidateSlot.startTime();
+                LocalTime end = candidateSlot.endTime();
                 boolean free = dates.stream().noneMatch(d ->
                         isBusy(busy, "coach", coach.getUserId(), d, start, end)
                                 || isBusy(busy, "room", room.getId(), d, start, end));

@@ -2,7 +2,8 @@ import { useMemo, useState } from 'react';
 import { useI18n } from '../../../shared/i18n';
 import { formatCenterDate } from '../../../shared/lib/centerTime';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
-import { disciplineAccentColor, hhmm } from '../../schedule/timetable';
+import { formatSlotLabel } from '../../schedule/slots';
+import { disciplineAccentColor } from '../../schedule/timetable';
 import type { ClassItem, ClassSessionDto } from '../classesApi';
 
 interface ClassListTableProps {
@@ -144,7 +145,7 @@ export function ClassListTable({
                       <div>{formatDays(cls.recurringDays)}</div>
                       {cls.startTime && cls.endTime && (
                         <div style={{ fontSize: 12, color: 'var(--portal-muted)' }}>
-                          {`${hhmm(cls.startTime)}–${hhmm(cls.endTime)}`}
+                          {formatSlotLabel(cls.startTime, cls.endTime)}
                         </div>
                       )}
                       {cls.startDate && cls.endDate && (

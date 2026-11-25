@@ -1,7 +1,7 @@
 # Nghiệp vụ SÖL Fitness — các luồng chính đang chạy trên web
 
-> Cập nhật: 25/11/2026 (phạm vi 3 bộ môn `Gym`/`Boxing`/`Yoga` với 4 phòng, quy tắc mỗi bộ môn tối đa 1 lớp `active`, gỡ bỏ hoàn toàn tính năng đặt sân & các bộ môn ngoài phạm vi, ẩn 3D khỏi sidebar hội viên, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò).
-> **Phạm vi hiện tại:** Trung tâm **3 bộ môn đang hoạt động** (`Gym` chính, `Boxing`, `Yoga`) với **4 phòng** (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`), gói tập/bảo lưu, **lớp học nhóm dạng khóa định kỳ & điểm danh lớp nhóm** (`app.legacy.classes-enabled=true`, mỗi bộ môn tối đa 1 lớp đang hoạt động), PT 1:1 (có chống trùng lịch hai chiều với lớp nhóm), giáo án, check-in QR, VNPay, ví/hóa đơn, chat, SÖL AI, hỗ trợ và vận hành, Landing 3 bộ môn + trang bộ môn (`/boxing`, `/yoga`, `/sports/:sportId`). **Đã gỡ bỏ hoàn toàn** tính năng đặt sân (module, API, trigger, hợp đồng OpenAPI, UI/route) và các bộ môn ngoài 3 bộ môn trên; **ẩn 3D** khỏi sidebar hội viên (`/member/explore` → `/member/dashboard`, mã `features/explore3d/**` ngủ đông). Cửa hàng (`app.shop.enabled`), quản lý thiết bị, đánh giá/xếp hạng HLV/buổi tập (`app.coaching.*`), chỉ số cơ thể, tiến độ/lịch sử tập và streak (`app.health.metrics.enabled`) vẫn **tắt qua cờ legacy** (mục 9, 10 chỉ còn ghi chú).
+> Cập nhật: 25/11/2026 (phạm vi 3 bộ môn `Gym`/`Boxing`/`Yoga` với 4 phòng, quy tắc mỗi bộ môn tối đa 1 lớp `active`, **hệ thống lịch 5 Slot cố định `07:00 – 19:30`** cho cả lớp nhóm và PT 1:1, gỡ bỏ giới hạn bắt buộc nghỉ liên tiếp của HLV, dọn dữ liệu lệch slot qua `LegacyScheduleSlotResetRunner`, gỡ bỏ hoàn toàn tính năng đặt sân & các bộ môn ngoài phạm vi, ẩn 3D khỏi sidebar hội viên, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò).
+> **Phạm vi hiện tại:** Trung tâm **3 bộ môn đang hoạt động** (`Gym` chính, `Boxing`, `Yoga`) với **4 phòng** (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`), gói tập/bảo lưu, **lớp học nhóm dạng khóa định kỳ & điểm danh lớp nhóm** (`app.legacy.classes-enabled=true`, mỗi bộ môn tối đa 1 lớp đang hoạt động) và **PT 1:1** vận hành đồng nhất theo **5 Slot cố định (`07:00 – 19:30`)** (chống trùng lịch hai chiều lớp nhóm ↔ PT 1:1; PT 1:1 giữ `200.000đ / slot` hoặc 1 lượt gói PT, đặt trước tối thiểu 2 giờ, không còn giới hạn bắt buộc nghỉ liên tiếp của HLV), giáo án, check-in QR, VNPay, ví/hóa đơn, chat, SÖL AI, hỗ trợ và vận hành, Landing 3 bộ môn + trang bộ môn (`/boxing`, `/yoga`, `/sports/:sportId`). **Đã gỡ bỏ hoàn toàn** tính năng đặt sân (module, API, trigger, hợp đồng OpenAPI, UI/route) và các bộ môn ngoài 3 bộ môn trên; **ẩn 3D** khỏi sidebar hội viên (`/member/explore` → `/member/dashboard`, mã `features/explore3d/**` ngủ đông). Cửa hàng (`app.shop.enabled`), quản lý thiết bị, đánh giá/xếp hạng HLV/buổi tập (`app.coaching.*`), chỉ số cơ thể, tiến độ/lịch sử tập và streak (`app.health.metrics.enabled`) vẫn **tắt qua cờ legacy** (mục 9, 10 chỉ còn ghi chú).
 > Dọn dữ liệu cũ của các tính năng đã ngừng: [`DATA_CLEANUP.md`](DATA_CLEANUP.md).
 > `docs/PROJECT_MASTER_GUIDE.md` là thiết kế gốc. Tài liệu này mô tả **những gì hệ thống đang làm thật**: màn hình, API, quy tắc và state machine. Phần nào khác thiết kế gốc được ghi ở mục 12.
 > Múi giờ nghiệp vụ là `Asia/Ho_Chi_Minh` cho mọi mốc "hôm nay", "trước giờ học" và job định kỳ.
@@ -104,23 +104,35 @@
 
 ---
 
-## 3. Flow 2 — Lớp học nhóm định kỳ (3 bộ môn, tối đa 1 lớp/môn)
+## 3. Flow 2 — Lớp học nhóm định kỳ (3 bộ môn, tối đa 1 lớp/môn, 5 Slot cố định)
 
-Từ 25/11/2026 trung tâm vận hành **3 bộ môn đang hoạt động** (`Gym` chính, `Boxing`, `Yoga`) với **4 phòng** (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`) và **lớp học nhóm dạng khóa định kỳ** (`app.legacy.classes-enabled=true`), giữ nguyên `SingleSessionPolicy` (chặn đặt buổi lẻ một lần) và áp quy tắc **mỗi bộ môn tối đa 1 lớp `active` duy nhất**:
+Từ 25/11/2026 trung tâm vận hành **3 bộ môn đang hoạt động** (`Gym` chính, `Boxing`, `Yoga`) với **4 phòng** (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`) và **lớp học nhóm dạng khóa định kỳ** (`app.legacy.classes-enabled=true`), giữ nguyên `SingleSessionPolicy` (chặn đặt buổi lẻ một lần), áp quy tắc **mỗi bộ môn tối đa 1 lớp `active` duy nhất**, và chuẩn hóa toàn bộ lịch lớp nhóm lẫn PT 1:1 theo **5 Slot cố định (`07:00 – 19:30`, nghỉ 15 phút giữa hai slot kế tiếp)**:
 
+| Mã Slot | Nhãn hiển thị | Giờ bắt đầu | Giờ kết thúc | Thời lượng |
+|---|---|---|---|---|
+| `SLOT_1` | `Slot 1` | `07:00` | `09:30` | 2 giờ 30 phút |
+| `SLOT_2` | `Slot 2` | `09:45` | `11:15` | 1 giờ 30 phút |
+| `SLOT_3` | `Slot 3` | `11:30` | `14:00` | 2 giờ 30 phút |
+| `SLOT_4` | `Slot 4` | `14:15` | `16:45` | 2 giờ 30 phút |
+| `SLOT_5` | `Slot 5` | `17:00` | `19:30` | 2 giờ 30 phút |
+
+- **Ràng buộc 5 Slot chuẩn ở Backend & DB:** mọi thao tác tạo khóa học, thêm buổi, cập nhật lịch khóa hay đổi lịch buổi (`ClassService`) bắt buộc truyền `(startTime, endTime)` khớp chính xác 1 trong 5 `ScheduleSlot`; khung giờ ngoài 5 slot trả `400 SCHEDULING_INVALID_SLOT` và bị trigger PostgreSQL `scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot` chặn lại ở tầng CSDL. Dữ liệu lịch cũ lệch slot được `LegacyScheduleSlotResetRunner` (chạy 1 lần, idempotent khi khởi động trước seeder) dọn sạch và để `DemoClassSeeder` / `DemoDataSeeder` tạo lại dữ liệu mới chuẩn 5 slot.
 - **Quản lý (`/manager/classes`, chỉ `CENTER_MANAGER` / `MANAGER`):**
   - Tạo, sửa khóa học định kỳ (`POST /api/v1/classes/recurring`, `PUT /api/v1/classes/{id}`), thêm buổi (`POST /api/v1/classes/{id}/sessions`), đổi lịch buổi (`PUT /api/v1/classes/{id}/sessions/{sessionId}`), hủy buổi kèm lý do (`POST /api/v1/classes/sessions/{id}/cancel`).
   - Nếu bộ môn đã có 1 lớp `active`, `ClassService` trả `409 SCHEDULING_DISCIPLINE_CLASS_EXISTS` (muốn mở lớp mới cần lưu trữ/hủy lớp cũ trước).
-  - Giao diện gồm đúng **3 tab độc lập không lặp control**: `Lịch theo bộ môn` (3 chip bộ môn `Gym`, `Boxing`, `Yoga` → lịch tuần lớp duy nhất của môn đó), `Lịch tổng cả tuần` (gộp cả 3 bộ môn, gom ≥ 3 lớp trùng giờ vào nút `+N lớp`), và `Danh sách lớp` (bảng quản lý). Bấm bất kỳ ô buổi nhỏ nào mở `ClassSessionDetailModal`.
+  - Giao diện gồm đúng **3 tab độc lập không lặp control**: `Lịch theo bộ môn` (3 chip bộ môn `Gym`, `Boxing`, `Yoga` → lịch tuần 5 hàng `Slot 1`–`Slot 5` của lớp duy nhất môn đó), `Lịch tổng cả tuần` (gộp cả 3 bộ môn trên lưới 5 hàng Slot, gom ≥ 3 lớp trùng slot vào nút `+N lớp`), và `Danh sách lớp` (bảng quản lý). Bấm bất kỳ ô buổi nhỏ nào mở `ClassSessionDetailModal`. Form tạo khóa học/thêm buổi/dời lịch dùng **bộ chọn 5 Slot cố định** thay cho `TimePicker` tự do; bấm ô trống ở hàng `Slot N` trên lịch tự điền sẵn `Slot N`.
+- **Chuẩn hiển thị lịch tuần toàn portal (`WeeklyTimetable` & `MemberCalendar`):**
+  - Cột trục trái hiển thị đúng **5 hàng cố định `Slot 1`–`Slot 5`** kèm khung giờ cụ thể ngay bên dưới (`07:00 – 09:30`, v.v.), bỏ hẳn dải giờ liên tục và công tắc `08:00–20:00 / Cả ngày`.
+  - Thẻ sự kiện dùng **viền mảnh bo tròn đều 4 cạnh** (bỏ hoàn toàn viền dày bên trái `border-left: 4px`) và **hiển thị rõ tên HLV ngay phía dưới** (ở lịch HLV hiển thị học viên hoặc phòng tùy loại buổi).
 - **Ràng buộc chống trùng lịch hai chiều PT 1:1 ↔ Lớp nhóm:**
-  - Khi Hội viên đặt PT 1:1 hoặc Quản lý điều chuyển HLV PT (`CoachBookingService`, `CoachAssignmentService`, trigger `scms_guard_pt_schedule`), hệ thống chặn nếu HLV đã có buổi lớp nhóm trùng giờ.
-  - Ngược lại, khi Quản lý tạo khóa học, thêm buổi, cập nhật lịch khóa hoặc đổi lịch buổi (`ClassService.ensureNoSessionConflict`), hệ thống kiểm tra `CoachBookingRepository` và trả `409 SCHEDULING_COACH_PT_CONFLICT` nếu HLV đã có buổi PT 1:1 `confirmed` trùng giờ.
+  - Khi Hội viên đặt PT 1:1 hoặc Quản lý điều chuyển HLV PT (`CoachBookingService`, `CoachAssignmentService`, trigger `scms_guard_pt_schedule`), hệ thống chặn nếu HLV đã có buổi lớp nhóm trùng slot.
+  - Ngược lại, khi Quản lý tạo khóa học, thêm buổi, cập nhật lịch khóa hoặc đổi lịch buổi (`ClassService.ensureNoSessionConflict`), hệ thống kiểm tra `CoachBookingRepository` và trả `409 SCHEDULING_COACH_PT_CONFLICT` nếu HLV đã có buổi PT 1:1 `confirmed` trùng slot.
 - **Hội viên (`/member/classes`):**
-  - 3 tab: `Lịch của tôi` (gộp buổi lớp đã ghi danh + PT 1:1), `Đăng ký lớp học` (ghi danh theo suất gói `POST /api/v1/classes/{id}/enroll` hoặc thanh toán học phí khóa học `POST /api/v1/classes/{id}/checkout` qua Ví/VNPay/Tiền mặt tại quầy, hủy ghi danh trước ngày khai giảng), và `Đặt lịch HLV 1:1`.
+  - 3 tab: `Lịch của tôi` (`MemberCalendar` 5 hàng Slot gộp buổi lớp đã ghi danh + PT 1:1), `Đăng ký lớp học` (ghi danh theo suất gói `POST /api/v1/classes/{id}/enroll` hoặc thanh toán học phí khóa học `POST /api/v1/classes/{id}/checkout` qua Ví/VNPay/Tiền mặt tại quầy, hủy ghi danh trước ngày khai giảng), và `Đặt lịch HLV 1:1` (bộ chọn 5 thẻ Slot cố định).
   - Gói tập vẫn hiển thị và áp dụng quyền lợi số khóa học / giảm giá học phí khóa học từ `GET /api/v1/classes/my-quota`.
 - **HLV (`/coach/classes`, `/coach/attendance`, `/coach/attendance/:sessionId`):**
-  - Xem thời khóa biểu gộp lớp nhóm + PT 1:1; điểm danh Có mặt/Vắng mặt và xem lịch sử 31 ngày qua `/api/v1/attendance/sessions/**` (không khôi phục tab đánh giá buổi tập vì `app.coaching.evaluations.enabled=false`).
-- **Thông báo & lịch công khai:** ghi danh/checkout/hủy ghi danh (`class_enrollment`), đổi lịch buổi học (`schedule_change` gửi cả học viên đã đặt và HLV phụ trách), hủy buổi học (gửi học viên không trùng lặp và gửi HLV phụ trách nếu Quản lý hủy). `GET /api/v1/public/catalog` trả các buổi lớp nhóm sắp tới trong 7 ngày tới cho Landing, trang bộ môn (`/boxing`, `/yoga`, `/sports/:sportId`) và trang HLV công khai.
+  - Xem thời khóa biểu 5 hàng Slot gộp lớp nhóm + PT 1:1; điểm danh Có mặt/Vắng mặt và xem lịch sử 31 ngày qua `/api/v1/attendance/sessions/**` (không khôi phục tab đánh giá buổi tập vì `app.coaching.evaluations.enabled=false`).
+- **Thông báo & lịch công khai:** ghi danh/checkout/hủy ghi danh (`class_enrollment`), đổi lịch buổi học (`schedule_change` gửi cả học viên đã đặt và HLV phụ trách), hủy buổi học (gửi học viên không trùng lặp và gửi HLV phụ trách nếu Quản lý hủy). `GET /api/v1/public/catalog` trả các buổi lớp nhóm sắp tới trong 7 ngày tới theo 5 Slot cố định cho Landing, trang bộ môn (`/boxing`, `/yoga`, `/sports/:sportId`) và trang HLV công khai.
 
 ---
 
@@ -178,11 +190,12 @@ Từ 25/11/2026 trung tâm vận hành **3 bộ môn đang hoạt động** (`Gy
 ## 6. Flow 5 — HLV: PT 1:1, giáo án, AI
 
 ### 6.1 Đặt PT 1:1
-**Màn hình:** `/member/classes` (lịch của tôi, `?tab=pt` để đặt/hủy/thanh toán), `/member/dashboard`; HLV ở `/coach/classes` (lịch tuần) và `/coach/pt-attendance`; lễ tân thu tiền buổi chưa trả ở `/staff/reception`. **API:** `/api/v1/coach-bookings`.
+**Màn hình:** `/member/classes` (lịch của tôi 5 hàng Slot, `?tab=pt` để đặt/hủy/thanh toán trên 5 thẻ Slot cố định), `/member/dashboard`; HLV ở `/coach/classes` (lịch tuần 5 hàng Slot) và `/coach/pt-attendance`; lễ tân thu tiền buổi chưa trả ở `/staff/reception`. **API:** `/api/v1/coach-bookings`.
 
-- Đặt trước ít nhất **2 giờ**. Cần gói `active` bao phủ cả hôm nay và ngày tập; ngày tập nằm trong khoảng bảo lưu đã duyệt thì bị chặn (`MEMBERSHIP_ON_HOLD`).
-- Mỗi chu kỳ có số buổi miễn phí theo hạng gói; buổi thêm trả theo giờ (giảm theo hạng gói). Tối đa **2 buổi chưa trả** sắp tới.
-- Không trùng giờ với lịch khác của HLV hoặc hội viên. HLV không có quá **3 giờ PT liên tiếp** trong cửa sổ 4 giờ (phải nghỉ).
+- **5 Slot cố định (`07:00 – 19:30`):** PT 1:1 dùng chung 5 slot chuẩn với lớp học nhóm (`Slot 1` `07:00 – 09:30`, `Slot 2` `09:45 – 11:15`, `Slot 3` `11:30 – 14:00`, `Slot 4` `14:15 – 16:45`, `Slot 5` `17:00 – 19:30`). `GET /api/v1/coach-bookings/available-slots` trả đúng 5 phần tử kèm `slotNumber` (`1..5`), trạng thái trống và lý do bận (`coach_on_leave`, `too_soon`, `coach_busy`, `member_busy`). Gửi khung giờ ngoài 5 slot trả `400 INVALID_COACH_BOOKING_SLOT` (đồng thời được trigger `scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot` bảo vệ ở DB).
+- **Đặt trước & điều kiện gói:** đặt trước giờ bắt đầu slot tối thiểu **2 giờ**. Cần gói `active` bao phủ cả hôm nay và ngày tập; ngày tập nằm trong khoảng bảo lưu đã duyệt thì bị chặn (`MEMBERSHIP_ON_HOLD`).
+- **Đơn giá & hạn mức:** mỗi chu kỳ có số slot miễn phí theo hạng gói; slot đặt thêm tính giá **`200.000đ / slot`** (giảm theo hạng gói Gold 10%, Platinum 20%). Tối đa **2 buổi chưa trả** sắp tới.
+- **Chống trùng lịch & gỡ bỏ giới hạn nghỉ liên tiếp:** không trùng slot với lớp học nhóm hoặc PT 1:1 khác của HLV hay hội viên (bảo vệ hai chiều PT 1:1 ↔ lớp nhóm). **Đã gỡ bỏ hoàn toàn giới hạn bắt buộc HLV nghỉ liên tiếp giữa các slot PT** (`requiresCoachRest` / `coach_rest` / `trg_coach_bookings_rest_required`) do mỗi ngày chỉ có 5 slot cố định và giữa mọi slot đều có 15 phút nghỉ.
 - Hủy trước giờ bắt đầu: lượt miễn phí được trả lại, tiền đã trả vào Ví.
 - Ghi nhận đến: HLV đánh dấu tay từ giờ bắt đầu (API vẫn cho lễ tân/quản lý); **quét cổng không tự ghi nhận**. Màn `/coach/pt-attendance` hiện tag "Đã check-in HH:mm" khi hội viên có lượt vào cổng phủ buổi (vào trong 3 giờ trước giờ tập, còn trong trung tâm lúc bắt đầu). Gỡ đánh dấu có mặt của người có tag phải xác nhận lại.
 
@@ -209,7 +222,7 @@ Từ 25/11/2026 trung tâm vận hành **3 bộ môn đang hoạt động** (`Gy
 
 ### 7.1 Trợ lý AI
 **Màn hình:** tab AI trong `/messages`. **API:** `/api/v1/ai/chat`.
-- Hội viên và nhân viên đều có phiên chat riêng. AI trả lời dựa trên kiến thức trung tâm (`ai/sol-knowledge.md`, mô tả 3 bộ môn `Gym`, `Boxing`, `Yoga`, 4 phòng tập, lớp học nhóm định kỳ, PT 1:1, gói tập, bảo lưu, ví, check-in) và dữ liệu của chính người hỏi (lịch lớp/PT, giáo án). Có giới hạn tần suất. Lịch sử lưu ở `ai_chat_sessions` / `ai_chat_messages`.
+- Hội viên và nhân viên đều có phiên chat riêng. AI trả lời dựa trên kiến thức trung tâm (`ai/sol-knowledge.md`, mô tả 3 bộ môn `Gym`, `Boxing`, `Yoga`, 4 phòng tập, khung lịch 5 Slot cố định `07:00 – 19:30`, lớp học nhóm định kỳ, PT 1:1, gói tập, bảo lưu, ví, check-in) và dữ liệu của chính người hỏi (lịch lớp/PT, giáo án). Có giới hạn tần suất. Lịch sử lưu ở `ai_chat_sessions` / `ai_chat_messages`.
 
 ### 7.2 Thông báo
 **Màn hình:** `/member/notifications`. **API:** `/api/v1/notifications`.
@@ -281,19 +294,21 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | `NotificationScheduler` | 8:00 và 30 phút | Nhắc gia hạn gói và nhắc buổi lớp sắp bắt đầu |
 | `VnpayExpiryScheduler` | 1–5 phút | Đóng giao dịch VNPay quá hạn |
 | `CourseEnrollmentExpiryScheduler` | 1–5 phút | Hủy giữ chỗ học phí khóa học chưa thanh toán quá hạn (đơn hàng cửa hàng vẫn tắt: `ProductOrderExpiryScheduler`; scheduler đặt sân đã gỡ bỏ hoàn toàn) |
+| `LegacyScheduleSlotResetRunner` | Khi khởi động (`@Order(195)`, idempotent) | Kiểm tra dữ liệu lịch lệch ngoài 5 slot chuẩn (`classes`, `class_sessions`, `coach_bookings`); nếu phát hiện dữ liệu cũ thì tháo khóa ngoại an toàn, xóa sạch dữ liệu lịch cũ một lần rồi để `DemoClassSeeder`/`DemoDataSeeder` tạo lại dữ liệu mới chuẩn 5 slot (no-op ở các lần khởi động sau) |
 
 ### 11.2 Ràng buộc trong database
-Định nghĩa trong `apps/api/src/main/resources/db/triggers/postgresql-triggers.sql`, cài sau Hibernate. Lỗi được dịch ra HTTP 409/403 kèm i18n ở `GlobalExceptionHandler`. Các trigger lớp học nhóm và PT 1:1 đang hoạt động bắt buộc (theo `AGENTS.md`); trigger đặt sân đã được gỡ bỏ hoàn toàn cùng module đặt sân.
+Định nghĩa trong `apps/api/src/main/resources/db/triggers/postgresql-triggers.sql`, cài sau Hibernate. Lỗi được dịch ra HTTP `400`/`403`/`409` kèm i18n ở `GlobalExceptionHandler`. Các trigger lớp học nhóm, PT 1:1 và kiểm tra 5 slot cố định đang hoạt động bắt buộc (theo `AGENTS.md`); trigger đặt sân và nhánh bắt buộc HLV nghỉ liên tiếp (`trg_coach_bookings_rest_required`) đã được gỡ bỏ hoàn toàn.
 
 | Ràng buộc | Chặn |
 |---|---|
+| `scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot` | Bắt buộc `(start_time, end_time)` của cả `class_sessions` (`status <> 'cancelled'`) và `coach_bookings` (`status = 'confirmed'`) khớp đúng 1 trong 5 slot cố định (`07:00–09:30`, `09:45–11:15`, `11:30–14:00`, `14:15–16:45`, `17:00–19:30`), map ra HTTP `400 SCHEDULING_INVALID_SLOT` |
 | `trg_enrollments_check_capacity` | Đăng ký cả lớp vượt sức chứa (tính cả buổi đông nhất của booking theo buổi) |
 | `trg_session_bookings_check_capacity` | Booking theo buổi + đăng ký cả lớp vượt sức chứa |
-| `trg_sessions_check_conflict` | HLV hoặc phòng trùng giờ (chỉ xét buổi `scheduled`) |
+| `trg_sessions_check_conflict` | HLV hoặc phòng trùng giờ (chỉ xét buổi `scheduled`) và khung giờ lệch ngoài 5 slot chuẩn (`scms_is_valid_schedule_slot`) |
 | `trg_enrollments_check_membership` | Đăng ký/đặt buổi/PT khi không có gói hợp lệ. Đặt buổi cần một kỳ phủ cả hôm nay và ngày học |
 | `trg_checkins_check_membership` | Check-in `GRANTED` khi gói không hợp lệ |
 | `trg_member_schedule_conflict` | Hội viên học hai buổi lớp trùng giờ |
-| `trg_pt_schedule_*` | PT trùng lớp/PT khác, HLV quá 3 giờ PT liền. Thao tác hủy/hoàn thành không lấy khóa lịch chung |
+| `scms_guard_pt_schedule` (`trg_pt_schedule_*`) | PT 1:1 trùng lớp nhóm/PT khác của HLV hoặc hội viên và khung giờ lệch ngoài 5 slot chuẩn (`scms_is_valid_schedule_slot`). Đã gỡ bỏ hoàn toàn nhánh bắt buộc HLV nghỉ liên tiếp (`trg_coach_bookings_rest_required`). Thao tác hủy/hoàn thành không lấy khóa lịch chung |
 | `uq_session_booking_active`, `uq_enrollment_active` | Một hội viên giữ hai chỗ `booked` cùng buổi/lớp |
 
 ---
@@ -305,7 +320,7 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | Gói tự chuyển `expired` khi hết hạn | Hết hạn xác định theo `end_date`; `expired` chỉ dùng cho kỳ bị thay khi nâng cấp. Có thêm `frozen` (bảo lưu) |
 | Giáo án: `draft/active/completed/cancelled` | Có thêm `superseded` (giáo án cũ khi áp dụng giáo án mới) |
 | Hủy lớp "trước giờ học quy định" | Hủy được tới giờ bắt đầu |
-| Lớp học nhóm, đặt chỗ, điểm danh lớp | Đang vận hành khóa học định kỳ & điểm danh lớp nhóm cho 3 bộ môn (`Gym`, `Boxing`, `Yoga`; tối đa 1 lớp `active`/môn) từ 25/11/2026 (`SingleSessionPolicy` vẫn tắt đặt buổi lẻ) |
+| Lớp học nhóm, đặt chỗ, điểm danh lớp | Đang vận hành khóa học định kỳ & điểm danh lớp nhóm cho 3 bộ môn (`Gym`, `Boxing`, `Yoga`; tối đa 1 lớp `active`/môn) cùng PT 1:1 theo **5 Slot cố định (`07:00 – 19:30`)** từ 25/11/2026 (`SingleSessionPolicy` vẫn tắt đặt buổi lẻ) |
 | Đánh giá và xếp hạng HLV, theo dõi tiến độ/chỉ số cơ thể, thiết bị | Đã ngừng từ 22–23/11/2026 |
 | Hỗ trợ: nhân viên không mở lại phiếu đã giải quyết | Nhân viên được `resolved → in_progress` khi hội viên còn vấn đề |
 | Xuất Excel/PDF báo cáo | Chỉ có hóa đơn PDF của hội viên; báo cáo xem trên web và lưu snapshot JSON |

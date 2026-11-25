@@ -3,6 +3,7 @@ package com.swp391.scms.coaching.service;
 import com.swp391.scms.coaching.dto.*;
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
@@ -36,9 +37,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Nghiệp vụ đặt buổi PT 1:1 với HLV: khung giờ trống, lượt PT miễn phí theo hạng gói, đặt lịch (kiểm tra trùng
- * lịch, nghỉ phép, giờ nghỉ của HLV, gói còn hiệu lực), buổi trả tiền theo giờ thu ở quầy, hủy lịch kèm hoàn
- * tiền, điểm danh và tự giải phóng buổi chưa trả tiền.
+ * Nghiệp vụ đặt buổi PT 1:1 với HLV theo 5 slot cố định (07:00–19:30): khung giờ trống, lượt PT miễn phí theo
+ * hạng gói, đặt lịch (kiểm tra trùng lịch, nghỉ phép, gói còn hiệu lực), buổi trả tiền theo slot thu ở quầy,
+ * hủy lịch kèm hoàn tiền, điểm danh và tự giải phóng buổi chưa trả tiền.
  */
 @Service
 public class CoachBookingService {
@@ -170,9 +171,8 @@ public class CoachBookingService {
     }
 
     /**
-     * Các khung 1 giờ từ 06:00 tới 21:00 trong ngày của HLV, đánh dấu còn trống hay không và lý do: HLV nghỉ
-     * phép, quá gần giờ (cần đặt trước 2 giờ), HLV bận, HLV cần nghỉ (tối đa 3 buổi liên tiếp), hoặc hội viên
-     * bận.
+     * 5 khung giờ cố định (Slot 1–Slot 5, 07:00–19:30) trong ngày của HLV, đánh dấu còn trống hay không và lý do:
+     * HLV nghỉ phép, quá gần giờ (cần đặt trước 2 giờ), HLV bận, hoặc hội viên bận.
      */
     @Transactional(readOnly = true)
     public List<CoachAvailableSlotDto> getAvailableSlots(Long coachId, LocalDate date, Long currentMemberId) {
@@ -190,9 +190,9 @@ public class CoachBookingService {
         List<CoachAvailableSlotDto> slots = new ArrayList<>();
         boolean coachOnLeave = onLeave(coachId, date);
 
-        for (int hour = 6; hour <= 20; hour++) {
-            LocalTime start = LocalTime.of(hour, 0);
-            LocalTime end = LocalTime.of(hour + 1, 0);
+        for (ScheduleSlot slot : ScheduleSlot.values()) {
+            LocalTime start = slot.startTime();
+            LocalTime end = slot.endTime();
 
             LocalDateTime slotStartDateTime = LocalDateTime.of(date, start);
 
@@ -208,8 +208,7 @@ public class CoachBookingService {
                     || memberBookings.stream().anyMatch(mb ->
                     start.isBefore(mb.getEndTime()) && end.isAfter(mb.getStartTime()));
 
-            boolean coachRest = requiresCoachRest(coachBookings, start);
-            boolean available = !coachOnLeave && !isTooSoon && !coachBusy && !memberBusy && !coachRest;
+            boolean available = !coachOnLeave && !isTooSoon && !coachBusy && !memberBusy;
             String reason = null;
             if (!available) {
                 if (coachOnLeave) {
@@ -218,34 +217,15 @@ public class CoachBookingService {
                     reason = "too_soon";
                 } else if (coachBusy) {
                     reason = "coach_busy";
-                } else if (coachRest) {
-                    reason = "coach_rest";
                 } else {
                     reason = "member_busy";
                 }
             }
 
-            slots.add(new CoachAvailableSlotDto(start, end, available, reason));
+            slots.add(new CoachAvailableSlotDto(slot.slotNumber(), start, end, available, reason));
         }
 
         return slots;
-    }
-
-    /**
-     * HLV có bị quá 3 buổi PT liên tiếp nếu nhận thêm khung giờ này không (kiểm tra cả hai phía để đặt không theo
-     * thứ tự cũng không thể tạo thành bốn buổi PT liên tiếp).
-     */
-    static boolean requiresCoachRest(List<CoachBooking> bookings, LocalTime start) {
-        java.util.Set<Integer> hours = new java.util.HashSet<>();
-        for (CoachBooking booking : bookings) {
-            if (booking.getEndTime().equals(booking.getStartTime().plusHours(1))) {
-                hours.add(booking.getStartTime().getHour());
-            }
-        }
-        int consecutive = 1;
-        for (int hour = start.getHour() - 1; hour >= 6 && hours.contains(hour); hour--) consecutive++;
-        for (int hour = start.getHour() + 1; hour <= 20 && hours.contains(hour); hour++) consecutive++;
-        return consecutive > 3;
     }
 
     /**
@@ -337,10 +317,10 @@ public class CoachBookingService {
     }
 
     /**
-     * Đặt buổi PT: khóa dòng hội viên để đếm lượt chính xác; HLV phải đang làm và không nghỉ phép; đúng 1 giờ,
-     * đặt trước ít nhất 2 giờ; không trùng lịch HLV/hội viên, không vượt 3 buổi liên tiếp của HLV, không rơi
-     * vào ngày bảo lưu; hội viên phải có gói hiệu lực. Dùng lượt gói thì phải còn lượt; trả theo giờ thì tối đa
-     * 2 buổi chưa trả, giá được giảm theo hạng gói và tạo khoản thu chờ. Gửi thông báo cho HLV và hội viên.
+     * Đặt buổi PT: khóa dòng hội viên để đếm lượt chính xác; HLV phải đang làm và không nghỉ phép; thuộc 1 trong
+     * 5 slot cố định (07:00–19:30), đặt trước ít nhất 2 giờ; không trùng lịch HLV/hội viên, không rơi vào ngày
+     * bảo lưu; hội viên phải có gói hiệu lực. Dùng lượt gói thì phải còn lượt; trả theo slot thì tối đa 2 buổi
+     * chưa trả, giá được giảm theo hạng gói và tạo khoản thu chờ. Gửi thông báo cho HLV và hội viên.
      */
     @Transactional
     public CoachBookingDto createBooking(AuthenticatedPrincipal principal, CoachBookingCreateDto request) {
@@ -366,17 +346,16 @@ public class CoachBookingService {
                     "Unsupported payment method.");
         }
 
-        if (request.endTime().isBefore(request.startTime()) || request.endTime().equals(request.startTime())) {
+        if (request.startTime() == null || request.endTime() == null
+                || request.endTime().isBefore(request.startTime()) || request.endTime().equals(request.startTime())) {
             throw new BadRequestException("INVALID_TIME_RANGE", "error.scheduling.invalid_time_range", null, "Giờ kết thúc phải sau giờ bắt đầu.");
         }
 
-        if (!request.endTime().equals(request.startTime().plusHours(1))
-                || request.startTime().getMinute() != 0 || request.startTime().getSecond() != 0
-                || request.endTime().getSecond() != 0
-                || request.startTime().isBefore(LocalTime.of(6, 0)) || request.endTime().isAfter(LocalTime.of(21, 0))) {
-            throw new BadRequestException("INVALID_COACH_BOOKING_SLOT", "error.coach_booking.invalid_slot", null,
-                    "Choose a one-hour slot from 06:00 to 21:00.");
-        }
+        ScheduleSlot.requireValid(
+                request.startTime(),
+                request.endTime(),
+                "INVALID_COACH_BOOKING_SLOT",
+                "error.coach_booking.invalid_slot");
 
         // Quy tắc 1: Yêu cầu đặt trước tối thiểu 2 giờ
         LocalDateTime bookingStart = LocalDateTime.of(request.bookingDate(), request.startTime());
@@ -414,10 +393,6 @@ public class CoachBookingService {
                         "Huấn luyện viên đã có lịch hẹn 1:1 khác trong khung giờ này."
                 );
             }
-        }
-
-        if (requiresCoachRest(coachBookings, request.startTime())) {
-            throw new ConflictException("COACH_REST_REQUIRED", "error.coach_booking.rest_required", null, null);
         }
 
         // Quy tắc 3: Kiểm tra trùng lịch của hội viên

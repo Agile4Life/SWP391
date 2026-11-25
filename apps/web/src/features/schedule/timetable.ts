@@ -1,3 +1,5 @@
+import { SCHEDULE_SLOT_COUNT, formatSlotLabel, resolveSlotIndex } from './slots';
+
 /** Khung giờ hiển thị của thời khóa biểu tuần: 06:00 – 22:00. */
 export const TIMETABLE_START_HOUR = 6;
 export const TIMETABLE_END_HOUR = 22;
@@ -151,7 +153,7 @@ export function groupVisibleLanes<T extends TimetableEvent>(
       heightPct: Math.max(bottomPct - topPct, 6.25),
       hiddenEvents: hiddenSorted,
       allEvents: allSorted,
-      rangeLabel: `${hhmm(minStart)} – ${hhmm(maxEnd)}`,
+      rangeLabel: formatSlotLabel(minStart, maxEnd),
     });
   }
 
@@ -309,6 +311,43 @@ export function layoutDayEvents<T extends TimetableEvent>(
     clusterEnd = Math.max(clusterEnd, item.end);
   }
   if (cluster.length > 0) flush();
+  return result;
+}
+
+/**
+ * Xếp các buổi học trong cùng một ngày vào đúng hàng Slot cố định (Slot 1 – Slot 5).
+ * Các buổi trùng cùng một Slot đứng song song theo làn để `groupVisibleLanes` gom "+N lớp" khi có >= 3 lớp.
+ */
+export function layoutDaySlotEvents<T extends TimetableEvent>(events: T[]): PositionedEvent<T>[] {
+  const bySlot = new Map<number, T[]>();
+  for (const event of events) {
+    const slotIndex = resolveSlotIndex(event.startTime, event.endTime);
+    if (slotIndex < 0) continue;
+    const list = bySlot.get(slotIndex) ?? [];
+    list.push(event);
+    bySlot.set(slotIndex, list);
+  }
+
+  const rowHeightPct = 100 / SCHEDULE_SLOT_COUNT;
+  const result: PositionedEvent<T>[] = [];
+  for (let slotIndex = 0; slotIndex < SCHEDULE_SLOT_COUNT; slotIndex += 1) {
+    const slotEvents = bySlot.get(slotIndex);
+    if (!slotEvents || slotEvents.length === 0) continue;
+    const sorted = [...slotEvents].sort(
+      (a, b) => toMinutes(a.startTime) - toMinutes(b.startTime) || a.id.localeCompare(b.id),
+    );
+    const lanes = sorted.length;
+    const topPct = slotIndex * rowHeightPct;
+    for (let lane = 0; lane < lanes; lane += 1) {
+      result.push({
+        event: sorted[lane],
+        lane,
+        lanes,
+        topPct,
+        heightPct: rowHeightPct,
+      });
+    }
+  }
   return result;
 }
 

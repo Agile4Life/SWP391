@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, disciplineAccentColor, fitHourRange, groupVisibleLanes, layoutDayEvents, mondayOf, overlapsHour, weekDays, type TimetableEvent } from './timetable';
+import { addDays, disciplineAccentColor, fitHourRange, groupVisibleLanes, layoutDayEvents, layoutDaySlotEvents, mondayOf, overlapsHour, weekDays, type TimetableEvent } from './timetable';
 
 // Tạo một sự kiện lịch mẫu từ id và giờ bắt đầu/kết thúc.
 const ev = (id: string, startTime: string, endTime: string): TimetableEvent => ({
@@ -114,5 +114,25 @@ describe('timetable helpers', () => {
     expect(disciplineAccentColor(1)).toBe(disciplineAccentColor(1));
     expect(disciplineAccentColor('Yoga')).toBe(disciplineAccentColor('Yoga'));
     expect(disciplineAccentColor(null)).toBeTruthy();
+  });
+
+  it('lays out events into 5 fixed slot rows and groups 3+ concurrent slot classes with Slot label', () => {
+    const positioned = layoutDaySlotEvents([
+      ev('gym', '07:00:00', '09:30:00'),
+      ev('yoga', '07:00:00', '09:30:00'),
+      ev('boxing', '07:00:00', '09:30:00'),
+      ev('pt', '17:00:00', '19:30:00'),
+      ev('late', '20:00:00', '21:00:00'),
+    ]);
+    expect(positioned).toHaveLength(4);
+    const pt = positioned.find((p) => p.event.id === 'pt')!;
+    expect(pt.topPct).toBe(80);
+    expect(pt.heightPct).toBe(20);
+    expect(pt.lanes).toBe(1);
+
+    const grouped = groupVisibleLanes(positioned, 2);
+    expect(grouped.overflows).toHaveLength(1);
+    expect(grouped.overflows[0].hiddenEvents).toHaveLength(2);
+    expect(grouped.overflows[0].rangeLabel).toBe('Slot 1 · 07:00 – 09:30');
   });
 });

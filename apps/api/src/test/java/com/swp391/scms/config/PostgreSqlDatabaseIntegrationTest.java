@@ -218,42 +218,43 @@ class PostgreSqlDatabaseIntegrationTest {
                 """, member, coach, start, end);
     }
 
-    /** Kiểm thử: trigger PT yêu cầu thời gian nghỉ kể cả khi đặt không theo thứ tự thời gian. */
+    /** Kiểm thử: trigger cho phép HLV nhận cả 5 slot PT cố định liên tiếp trong ngày và từ chối khung ngoài 5 slot. */
     @Test
-    void ptTriggerRequiresRestEvenForOutOfOrderBookings() {
-        for (int missing : new int[]{10, 11, 12, 13}) {
-            long coach = coach();
-            for (int hour = 10; hour <= 13; hour++) {
-                if (hour != missing) ptBooking(activeMember(), coach, hour + ":00", (hour + 1) + ":00");
-            }
-            var failure = assertThrows(DataIntegrityViolationException.class,
-                    () -> ptBooking(activeMember(), coach, missing + ":00", (missing + 1) + ":00"));
-            assertTrue(failure.getMostSpecificCause().getMessage().contains("trg_coach_bookings_rest_required"));
-        }
+    void ptTriggerAllowsAllFiveCanonicalSlotsAndRejectsInvalidSlots() {
         long coach = coach();
-        ptBooking(activeMember(), coach, "10:00", "11:00");
-        ptBooking(activeMember(), coach, "11:00", "12:00");
-        ptBooking(activeMember(), coach, "12:00", "13:00");
-        ptBooking(activeMember(), coach, "14:00", "15:00");
+        ptBooking(activeMember(), coach, "07:00", "09:30");
+        ptBooking(activeMember(), coach, "09:45", "11:15");
+        ptBooking(activeMember(), coach, "11:30", "14:00");
+        ptBooking(activeMember(), coach, "14:15", "16:45");
+        ptBooking(activeMember(), coach, "17:00", "19:30");
+
+        var invalidPt = assertThrows(DataIntegrityViolationException.class,
+                () -> ptBooking(activeMember(), coach(), "08:00", "09:00"));
+        assertTrue(invalidPt.getMostSpecificCause().getMessage().contains("trg_schedule_invalid_slot"));
+
+        long group = gymClass(10, coach(), room());
+        var invalidSession = assertThrows(DataIntegrityViolationException.class,
+                () -> session(group, "08:00", "09:00", "scheduled"));
+        assertTrue(invalidSession.getMostSpecificCause().getMessage().contains("trg_schedule_invalid_slot"));
     }
 
     /** Kiểm thử: trigger PT từ chối trùng lịch hai chiều và yêu cầu membership. */
     @Test
     void ptTriggerRejectsConflictsInBothBookingDirectionsAndRequiresMembership() {
         long coach = coach(), member = activeMember();
-        ptBooking(member, coach, "14:00", "15:00");
-        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(activeMember(), coach, "14:30", "15:30"));
-        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member, coach(), "14:30", "15:30"));
-        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member(), coach(), "16:00", "17:00"));
+        ptBooking(member, coach, "14:15", "16:45");
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(activeMember(), coach, "14:15", "16:45"));
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member, coach(), "14:15", "16:45"));
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member(), coach(), "17:00", "19:30"));
         long group = gymClass(10, coach(), room());
-        session(group, "14:00", "15:00", "scheduled");
+        session(group, "14:15", "16:45", "scheduled");
         assertThrows(DataIntegrityViolationException.class, () -> enroll(group, member, "booked"));
         long other = activeMember();
         enroll(group, other, "booked");
-        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(other, coach(), "14:30", "15:30"));
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(other, coach(), "14:15", "16:45"));
         long coachedGroup = gymClass(10, coach, room());
-        assertThrows(DataIntegrityViolationException.class, () -> session(coachedGroup, "14:30", "15:30", "scheduled"));
-        ptBooking(member, coach, "15:00", "16:00");
+        assertThrows(DataIntegrityViolationException.class, () -> session(coachedGroup, "14:15", "16:45", "scheduled"));
+        ptBooking(member, coach, "17:00", "19:30");
     }
 
     /** Kiểm thử: các lượt đặt PT đồng thời không thể đặt trùng một HLV. */
@@ -273,7 +274,7 @@ class PostgreSqlDatabaseIntegrationTest {
     private boolean ptAfterLatch(CountDownLatch start, long member, long coach) throws Exception {
         start.await();
         try {
-            ptBooking(member, coach, "18:00", "19:00");
+            ptBooking(member, coach, "17:00", "19:30");
             return true;
         } catch (DataIntegrityViolationException expected) {
             String reason = expected.getMostSpecificCause().getMessage();
@@ -356,20 +357,20 @@ class PostgreSqlDatabaseIntegrationTest {
         assertTrue(duplicate.getMostSpecificCause().getMessage().contains("uq_enrollment_active"));
     }
 
-    /** Kiểm thử: trigger buổi học từ chối trùng HLV/phòng nhưng cho phép buổi liền kề hoặc đã hủy. */
+    /** Kiểm thử: trigger buổi học từ chối trùng HLV/phòng nhưng cho phép slot kế tiếp hoặc buổi đã hủy. */
     @Test
     void sessionTriggerRejectsCoachAndRoomOverlapButAllowsAdjacentOrCancelledSessions() {
         long coach = coach(), room = room();
         long original = gymClass(10, coach, room);
-        session(original, "09:00", "10:00", "scheduled");
+        session(original, "07:00", "09:30", "scheduled");
         long sameCoach = gymClass(10, coach, room());
         long sameRoom = gymClass(10, coach(), room);
         for (long conflicting : new long[]{sameCoach, sameRoom}) {
-            var error = assertThrows(DataIntegrityViolationException.class, () -> session(conflicting, "09:30", "10:30", "scheduled"));
+            var error = assertThrows(DataIntegrityViolationException.class, () -> session(conflicting, "07:00", "09:30", "scheduled"));
             assertTrue(error.getMostSpecificCause().getMessage().contains("Huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này."));
         }
-        session(sameCoach, "10:00", "11:00", "scheduled");
-        session(sameRoom, "09:30", "10:30", "cancelled");
+        session(sameCoach, "09:45", "11:15", "scheduled");
+        session(sameRoom, "07:00", "09:30", "cancelled");
     }
 
     /** Kiểm thử: trigger membership từ chối subscription thiếu, hết hạn, không hoạt động hoặc ở tương lai. */

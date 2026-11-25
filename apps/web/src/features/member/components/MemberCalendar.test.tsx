@@ -21,7 +21,7 @@ vi.mock('../../../shared/lib/centerTime', async (original) => ({
   centerNowParts: () => ({ date: '2099-01-07', time: '06:00' }),
 }));
 
-const booking = { id: 31, coachName: 'Hùng', bookingDate: '2099-01-08', startTime: '07:00:00', endTime: '08:00:00', status: 'confirmed' };
+const booking = { id: 31, coachName: 'Hùng', bookingDate: '2099-01-08', startTime: '07:00:00', endTime: '09:30:00', status: 'confirmed' };
 const enrollment = { id: 90, classId: 5, className: 'Yoga Sáng', memberId: 1, sessionId: null, sessionDate: null, startTime: null, endTime: null, status: 'booked', enrolledAt: '2099-01-01', cancelledAt: null, cancelReason: null };
 const classSession = {
   id: 501,
@@ -30,12 +30,12 @@ const classSession = {
   disciplineId: 1,
   disciplineName: 'Yoga',
   coachId: 10,
-  coachName: 'Lan',
+  coachName: 'HLV Lan',
   roomId: 2,
-  roomName: 'Studio A',
+  roomName: 'Zen Garden Studio',
   sessionDate: '2099-01-08',
-  startTime: '18:00:00',
-  endTime: '19:00:00',
+  startTime: '17:00:00',
+  endTime: '19:30:00',
   status: 'scheduled',
   cancelReason: null,
   capacity: 20,
@@ -69,19 +69,38 @@ afterEach(async () => {
 const render = () => act(async () => root.render(<MemoryRouter><MemberCalendar /></MemoryRouter>));
 const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent === text)!;
 
-it('displays both enrolled group classes and 1:1 PT sessions', async () => {
+it('displays 5 fixed slot rows, enrolled group classes with coach name underneath, and 1:1 PT sessions', async () => {
   await render();
-  expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
-  expect(host.querySelectorAll('.mcal__event--class')).toHaveLength(1);
-  expect(host.textContent).toContain('Hùng');
-  expect(host.textContent).toContain('Yoga Sáng');
+  const slotHeads = [...host.querySelectorAll('.mcal__slot-head')];
+  expect(slotHeads).toHaveLength(5);
+  expect(slotHeads.map((node) => [
+    node.querySelector('.mcal__slot-name')?.textContent,
+    node.querySelector('.mcal__slot-time')?.textContent,
+  ])).toEqual([
+    ['Slot 1', '07:00 – 09:30'],
+    ['Slot 2', '09:45 – 11:15'],
+    ['Slot 3', '11:30 – 14:00'],
+    ['Slot 4', '14:15 – 16:45'],
+    ['Slot 5', '17:00 – 19:30'],
+  ]);
 
-  await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--class')!.click());
+  expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
+  const classCard = host.querySelector<HTMLButtonElement>('.mcal__event--class')!;
+  expect(classCard).not.toBeNull();
+  expect(classCard.textContent).toContain('Yoga Sáng');
+  expect(classCard.querySelector('.mcal__event-coach')?.textContent).toBe('HLV Lan');
+
+  // Next up banner displays canonical Slot label
+  expect(host.querySelector('.mcal__next')?.textContent).toContain('Slot 1 · 07:00 – 09:30');
+
+  await act(async () => classCard.click());
+  expect(host.querySelector('dialog')?.textContent).toContain('Slot 5 · 17:00 – 19:30');
   expect(host.querySelector('a[href="/member/classes?tab=classes"]')).not.toBeNull();
   const closeBtn = host.querySelector<HTMLButtonElement>('dialog button[aria-label]')!;
   await act(async () => closeBtn.click());
 
   await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--pt')!.click());
+  expect(host.querySelector('dialog')?.textContent).toContain('Slot 1 · 07:00 – 09:30');
   expect(host.querySelector('a[href="/member/classes?tab=pt"]')).not.toBeNull();
 });
 
@@ -95,7 +114,7 @@ it('reports PT request failure and retries cleanly', async () => {
   expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
 });
 
-it('keeps week/month navigation and returns to the current week', async () => {
+it('keeps week/month navigation, renders slot chips in month view, and returns to the current week', async () => {
   await render();
   await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Tuần sau"]')!.click());
   expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(0);
@@ -104,6 +123,8 @@ it('keeps week/month navigation and returns to the current week', async () => {
   await act(async () => button('Tháng').click());
   expect(host.querySelectorAll('.mcal__chip--pt')).toHaveLength(1);
   expect(host.querySelectorAll('.mcal__chip--class')).toHaveLength(1);
+  expect(host.querySelector('.mcal__chip--pt')?.textContent).toContain('Slot 1');
+  expect(host.querySelector('.mcal__chip--class')?.textContent).toContain('Slot 5');
 });
 
 it('shows empty state when neither PT nor enrolled classes exist', async () => {

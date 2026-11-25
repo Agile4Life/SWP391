@@ -9,9 +9,9 @@ import { errorMessage } from '../../shared/lib/errorMessage';
 import { notify } from '../../shared/lib/portalNotices';
 import type { Discipline, Room } from '../manager/catalogApi';
 import { WeeklyTimetable, type TimetableLegendItem } from '../schedule/WeeklyTimetable';
+import { formatSlotLabel } from '../schedule/slots';
 import {
   disciplineAccentColor,
-  hhmm,
   mondayOf,
   todayISO,
   weekDays,
@@ -186,7 +186,7 @@ export function ManagerClassesPage() {
                 : 'open';
         const title = s.className || t(`Lớp #${s.classId}`, `Class #${s.classId}`);
         const badge = capacity > 0 ? `${booked}/${capacity}` : `${booked}`;
-        const range = `${hhmm(s.startTime)}–${hhmm(s.endTime)}`;
+        const range = formatSlotLabel(s.startTime, s.endTime);
         return {
           id: String(s.id),
           date: s.sessionDate,

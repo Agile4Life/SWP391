@@ -6,6 +6,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -82,8 +83,11 @@ class DemoClassSeederTest {
             assertThat(c.getStatus()).isEqualTo("active");
             assertThat(c.getStartDate()).isNotNull();
             assertThat(c.getEndTime()).isAfter(c.getStartTime());
+            assertThat(ScheduleSlot.isValid(c.getStartTime(), c.getEndTime())).isTrue();
             assertThat(c.getCapacity()).isLessThanOrEqualTo(c.getRoom().getCapacity());
         });
+        assertThat(savedSessions).isNotEmpty().allSatisfy(s ->
+                assertThat(ScheduleSlot.isValid(s.getStartTime(), s.getEndTime())).isTrue());
         for (ClassSession a : savedSessions) {
             for (ClassSession b : savedSessions) {
                 if (a == b || !a.getSessionDate().equals(b.getSessionDate())) {
@@ -103,7 +107,7 @@ class DemoClassSeederTest {
     }
 
     /**
-     * Kiểm thử: không xếp buổi học đè lên lịch PT đã xác nhận của HLV.
+     * Kiểm thử: không xếp buổi học đè lên lịch PT đã xác nhận của HLV và vẫn chọn đúng 1 trong 5 slot cố định.
      * Trigger lịch học cũng từ chối buổi lớp trùng khung giờ với lịch PT đã xác nhận của cùng HLV.
      */
     @Test
@@ -115,8 +119,8 @@ class DemoClassSeederTest {
                 var booking = new com.swp391.scms.coaching.entity.CoachBooking();
                 booking.setCoach(coach(coachId, "any"));
                 booking.setBookingDate(today.plusDays(day));
-                booking.setStartTime(java.time.LocalTime.of(18, 0));
-                booking.setEndTime(java.time.LocalTime.of(19, 0));
+                booking.setStartTime(ScheduleSlot.SLOT_5.startTime());
+                booking.setEndTime(ScheduleSlot.SLOT_5.endTime());
                 bookings.add(booking);
             }
         }
@@ -124,9 +128,11 @@ class DemoClassSeederTest {
 
         seeder.run(null);
 
-        assertThat(savedSessions).isNotEmpty().noneSatisfy(s -> {
-            assertThat(s.getStartTime()).isBefore(java.time.LocalTime.of(19, 0));
-            assertThat(s.getEndTime()).isAfter(java.time.LocalTime.of(18, 0));
+        assertThat(savedSessions).isNotEmpty().allSatisfy(s ->
+                assertThat(ScheduleSlot.isValid(s.getStartTime(), s.getEndTime())).isTrue());
+        assertThat(savedSessions).noneSatisfy(s -> {
+            assertThat(s.getStartTime()).isBefore(ScheduleSlot.SLOT_5.endTime());
+            assertThat(s.getEndTime()).isAfter(ScheduleSlot.SLOT_5.startTime());
         });
     }
 

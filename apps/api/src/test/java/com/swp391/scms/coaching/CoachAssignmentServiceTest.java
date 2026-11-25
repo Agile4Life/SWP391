@@ -9,6 +9,7 @@ import com.swp391.scms.coaching.entity.TrainingPlan;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.coaching.repository.TrainingPlanRepository;
 import com.swp391.scms.coaching.service.CoachAssignmentService;
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
@@ -89,7 +90,10 @@ class CoachAssignmentServiceTest {
     /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (booking). */
     private CoachBooking booking(Long id) {
         CoachBooking b = new CoachBooking(); b.setId(id); b.setMember(member); b.setCoach(from); b.setStatus("confirmed");
-        b.setBookingDate(today.plusDays(1)); b.setStartTime(LocalTime.of(10, 0)); b.setEndTime(LocalTime.of(11, 0)); return b;
+        b.setBookingDate(today.plusDays(1));
+        b.setStartTime(ScheduleSlot.SLOT_2.startTime());
+        b.setEndTime(ScheduleSlot.SLOT_2.endTime());
+        return b;
     }
     /** Hàm trợ giúp của test: thực hiện chuyển HLV. */
     private CoachAssignmentReassignDto transfer(String type, Long id) { return new CoachAssignmentReassignDto(100L, 10L, 20L, id, type, "Schedule adjustment"); }
@@ -126,20 +130,24 @@ class CoachAssignmentServiceTest {
         verifyNoInteractions(audit, notifications);
     }
 
-    @Test void rejectsTransferCreatingFourConsecutivePtSessions() {
+    @Test void allowsTransferCreatingFourConsecutivePtSessions() {
         validAccounts(); CoachBooking selected = booking(601L);
-        selected.setStartTime(LocalTime.of(12, 0)); selected.setEndTime(LocalTime.of(13, 0));
+        selected.setStartTime(ScheduleSlot.SLOT_4.startTime());
+        selected.setEndTime(ScheduleSlot.SLOT_4.endTime());
         when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
         when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
         List<CoachBooking> occupied = new ArrayList<>();
-        for (int hour = 9; hour < 12; hour++) {
-            CoachBooking b = booking((long) hour); b.setStartTime(LocalTime.of(hour, 0)); b.setEndTime(LocalTime.of(hour + 1, 0)); occupied.add(b);
+        for (ScheduleSlot slot : List.of(ScheduleSlot.SLOT_1, ScheduleSlot.SLOT_2, ScheduleSlot.SLOT_3)) {
+            CoachBooking b = booking((long) slot.slotNumber());
+            b.setStartTime(slot.startTime());
+            b.setEndTime(slot.endTime());
+            occupied.add(b);
         }
         when(bookings.findActiveByCoachAndDate(20L, today.plusDays(1))).thenReturn(occupied);
-        assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L)))
-                .hasFieldOrPropertyWithValue("errorCode", "COACH_REST_REQUIRED");
-        assertThat(selected.getCoach()).isSameAs(from); verify(bookings, never()).save(any());
-        verifyNoInteractions(audit, notifications);
+        service.reassignStudent(transfer("PT_1_1", 601L));
+        assertThat(selected.getCoach()).isSameAs(to);
+        verify(bookings).save(selected);
+        verify(audit).save(any());
     }
 
     /** Kiểm thử: từ chối chuyển HLV không có lý do, trước khi ghi hay thông báo. */
@@ -206,7 +214,8 @@ class CoachAssignmentServiceTest {
     }
 
     @Test void doesNotTransferEarlierTodayPt() {
-        validAccounts(); CoachBooking selected = booking(601L); selected.setBookingDate(today); selected.setStartTime(LocalTime.of(9, 0));
+        validAccounts(); CoachBooking selected = booking(601L); selected.setBookingDate(today);
+        selected.setStartTime(ScheduleSlot.SLOT_1.startTime()); selected.setEndTime(ScheduleSlot.SLOT_1.endTime());
         when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
         assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "ASSIGNMENT_NOT_CURRENT");
         assertThat(selected.getCoach()).isSameAs(from); verifyNoInteractions(notifications, audit);
@@ -223,7 +232,8 @@ class CoachAssignmentServiceTest {
     @Test void rejectsTargetCoachClassConflict() {
         validAccounts(); CoachBooking selected = booking(601L); when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
         when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
-        ClassSession busy = new ClassSession(); busy.setStartTime(LocalTime.of(10, 30)); busy.setEndTime(LocalTime.of(11, 30));
+        ClassSession busy = new ClassSession();
+        busy.setStartTime(ScheduleSlot.SLOT_2.startTime()); busy.setEndTime(ScheduleSlot.SLOT_2.endTime());
         when(sessions.findActiveByCoachAndDate(20L, today.plusDays(1))).thenReturn(List.of(busy));
         assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "COACH_SCHEDULE_CONFLICT");
         assertThat(selected.getCoach()).isSameAs(from); verifyNoInteractions(notifications, audit);

@@ -226,11 +226,11 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
-            // Trigger của buổi PT 1:1: HLV cần nghỉ giữa hai buổi, hoặc lịch đang được cập nhật đồng thời.
-            if (normalizedRootMsg.contains("trg_coach_bookings_rest_required")) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                        ApiResponse.error(HttpStatus.CONFLICT.value(), "COACH_REST_REQUIRED",
-                                resolveMessage("error.coach_booking.rest_required", "error.coach_booking.rest_required")));
+            // Trigger kiểm tra 5 slot cố định (07:00–19:30) cho cả lớp học nhóm và PT 1:1.
+            if (normalizedRootMsg.contains("trg_schedule_invalid_slot")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ApiResponse.error(HttpStatus.BAD_REQUEST.value(), "SCHEDULING_INVALID_SLOT",
+                                resolveMessage("error.scheduling.invalid_slot", "error.scheduling.invalid_slot")));
             }
             if (normalizedRootMsg.contains("trg_pt_schedule_busy")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(

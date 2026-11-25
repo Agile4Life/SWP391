@@ -64,6 +64,22 @@ CREATE TRIGGER trg_enrollments_check_capacity
 AFTER INSERT OR UPDATE OF class_id, status ON class_enrollments
 FOR EACH ROW EXECUTE FUNCTION scms_check_enrollment_capacity();
 
+-- 5 khung giờ cố định (07:00 – 19:30) dùng chung cho lớp học nhóm và buổi PT 1:1.
+CREATE OR REPLACE FUNCTION scms_is_valid_schedule_slot(p_start TIME, p_end TIME)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT COALESCE(
+        (p_start = TIME '07:00:00' AND p_end = TIME '09:30:00')
+        OR (p_start = TIME '09:45:00' AND p_end = TIME '11:15:00')
+        OR (p_start = TIME '11:30:00' AND p_end = TIME '14:00:00')
+        OR (p_start = TIME '14:15:00' AND p_end = TIME '16:45:00')
+        OR (p_start = TIME '17:00:00' AND p_end = TIME '19:30:00'),
+        FALSE
+    );
+$$;
+
 CREATE OR REPLACE FUNCTION scms_check_session_conflict()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -75,6 +91,10 @@ DECLARE
 BEGIN
     IF NEW.status <> 'scheduled' THEN
         RETURN NEW;
+    END IF;
+    IF NOT scms_is_valid_schedule_slot(NEW.start_time, NEW.end_time) THEN
+        RAISE EXCEPTION 'trg_schedule_invalid_slot'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_schedule_invalid_slot';
     END IF;
     SELECT coach_id, room_id INTO session_coach_id, session_room_id
     FROM classes WHERE id = NEW.class_id FOR SHARE;
@@ -608,6 +628,10 @@ BEGIN
     END IF;
     IF TG_TABLE_NAME = 'coach_bookings' THEN
         IF NEW.status <> 'confirmed' THEN RETURN NEW; END IF;
+        IF NOT scms_is_valid_schedule_slot(NEW.start_time, NEW.end_time) THEN
+            RAISE EXCEPTION 'trg_schedule_invalid_slot'
+                USING ERRCODE = '23514', CONSTRAINT = 'trg_schedule_invalid_slot';
+        END IF;
         IF NOT EXISTS (
             SELECT 1 FROM membership_subscriptions m
             WHERE m.member_id = NEW.member_id AND m.status = 'active'
@@ -635,21 +659,6 @@ BEGIN
                   SELECT 1 FROM session_bookings sb WHERE sb.session_id = s.id
                     AND sb.member_id = NEW.member_id AND sb.status = 'booked'))
         ) INTO schedule_conflict;
-        -- Từ chối mọi chuỗi 4 giờ PT liên tiếp chứa buổi đang xét, kể cả khi chèn không theo thứ tự thời gian.
-        -- Advisory lock lịch ở trên cũng tuần tự hóa các lượt đặt đồng thời và việc đổi HLV.
-        IF EXISTS (
-            SELECT 1 FROM generate_series(0, 3) AS offsets(hours_before)
-            WHERE (SELECT count(DISTINCT b.start_time) FROM coach_bookings b
-                WHERE b.coach_id = NEW.coach_id AND b.booking_date = NEW.booking_date
-                  AND b.status IN ('confirmed', 'completed') AND b.id <> COALESCE(NEW.id, -1)
-                  AND b.end_time = b.start_time + interval '1 hour'
-                  AND b.booking_date + b.start_time >= NEW.booking_date + NEW.start_time - offsets.hours_before * interval '1 hour'
-                  AND b.booking_date + b.end_time <= NEW.booking_date + NEW.start_time + (4 - offsets.hours_before) * interval '1 hour'
-            ) >= 3
-        ) THEN
-            RAISE EXCEPTION 'trg_coach_bookings_rest_required'
-                USING ERRCODE = '23514', CONSTRAINT = 'trg_coach_bookings_rest_required';
-        END IF;
     ELSIF TG_TABLE_NAME = 'class_enrollments' THEN
         IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
         SELECT EXISTS (
