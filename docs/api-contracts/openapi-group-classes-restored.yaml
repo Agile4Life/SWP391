@@ -50,8 +50,9 @@ paths:
         '403': { description: Forbidden }
         '409':
           description: >
-            Room or coach conflict with another class session (`SCHEDULING_ROOM_CONFLICT`, `SCHEDULING_COACH_CONFLICT`)
-            or with an overlapping confirmed PT 1:1 booking (`SCHEDULING_COACH_PT_CONFLICT`).
+            Discipline already has an active class (`SCHEDULING_DISCIPLINE_CLASS_EXISTS`),
+            room or coach conflict with another class session (`SCHEDULING_ROOM_CONFLICT`, `SCHEDULING_COACH_CONFLICT`),
+            or overlap with a confirmed PT 1:1 booking (`SCHEDULING_COACH_PT_CONFLICT`).
 
   /classes/{id}:
     put:

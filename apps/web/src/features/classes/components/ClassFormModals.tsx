@@ -70,6 +70,8 @@ export function CreateClassOrSessionModal({
 }: CreateClassOrSessionModalProps) {
   const { t } = useI18n();
   const activeClasses = classes.filter((c) => String(c.status).toLowerCase() === 'active');
+  const activeDisciplineIds = new Set(activeClasses.map((c) => c.disciplineId));
+  const availableDisciplines = disciplines.filter((d) => !activeDisciplineIds.has(d.id));
   const [mode, setMode] = useState<'course' | 'session'>(prefill?.classId ? 'session' : modeInitial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -78,11 +80,14 @@ export function CreateClassOrSessionModal({
   const defaultEnd = addDays(defaultStart, 28);
   const defaultDay = weekdayCodeForIso(defaultStart);
 
-  // State khóa học định kỳ
+  // State khóa học định kỳ — tự chọn sẵn bộ môn chưa có lớp đang hoạt động (quy tắc 1 lớp/môn).
   const [name, setName] = useState('');
-  const [disciplineId, setDisciplineId] = useState(
-    prefill?.disciplineId ? String(prefill.disciplineId) : (disciplines[0]?.id ? String(disciplines[0].id) : ''),
-  );
+  const [disciplineId, setDisciplineId] = useState(() => {
+    if (prefill?.disciplineId && !activeDisciplineIds.has(prefill.disciplineId)) {
+      return String(prefill.disciplineId);
+    }
+    return availableDisciplines[0]?.id ? String(availableDisciplines[0].id) : '';
+  });
   const [roomId, setRoomId] = useState(
     prefill?.roomId ? String(prefill.roomId) : (rooms[0]?.id ? String(rooms[0].id) : ''),
   );
@@ -128,6 +133,16 @@ export function CreateClassOrSessionModal({
         }
         if (!disciplineId || !roomId || !coachId) {
           setError(t('Vui lòng chọn đầy đủ bộ môn, phòng tập và HLV.', 'Please select discipline, room, and coach.'));
+          setBusy(false);
+          return;
+        }
+        if (activeDisciplineIds.has(Number(disciplineId))) {
+          setError(
+            t(
+              'Bộ môn này đã có một lớp đang hoạt động. Mỗi bộ môn chỉ được mở một lớp duy nhất.',
+              'This discipline already has an active class. Each discipline allows only one active class.',
+            ),
+          );
           setBusy(false);
           return;
         }
@@ -213,6 +228,14 @@ export function CreateClassOrSessionModal({
       <form onSubmit={handleSubmit} className="portal-form-stack">
         {mode === 'course' ? (
           <>
+            {availableDisciplines.length === 0 && (
+              <div className="portal-alert portal-alert--error" role="status" data-testid="all-disciplines-taken-notice">
+                {t(
+                  'Cả tất cả bộ môn hiện đều đã có 1 lớp đang hoạt động. Hãy lưu trữ/hủy lớp cũ ở Danh sách lớp trước khi tạo mới, hoặc chuyển sang "Thêm buổi vào khóa có sẵn".',
+                  'Every discipline already has an active class. Archive or cancel an existing class first, or switch to "Add session to existing course".',
+                )}
+              </div>
+            )}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="cls-name">{t('Tên khóa học', 'Course name')}</label>
               <input
@@ -227,9 +250,19 @@ export function CreateClassOrSessionModal({
 
             <div className="portal-form-grid-2">
               <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-discipline">{t('Bộ môn', 'Discipline')}</label>
+                <label className="portal-label" htmlFor="cls-discipline">{t('Bộ môn (mỗi môn tối đa 1 lớp)', 'Discipline (max 1 active class)')}</label>
                 <Select id="cls-discipline" value={disciplineId} onChange={(e) => setDisciplineId(e.target.value)}>
-                  {disciplines.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
+                  {availableDisciplines.length === 0 && (
+                    <option value="">{t('Không còn bộ môn trống', 'No available discipline')}</option>
+                  )}
+                  {disciplines.map((d) => {
+                    const taken = activeDisciplineIds.has(d.id);
+                    return (
+                      <option key={d.id} value={String(d.id)} disabled={taken}>
+                        {taken ? `${d.name} (${t('Đã có lớp đang mở', 'Already active')})` : d.name}
+                      </option>
+                    );
+                  })}
                 </Select>
               </div>
               <div className="portal-form-group">
@@ -371,7 +404,7 @@ export function CreateClassOrSessionModal({
           <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
             {t('Hủy', 'Cancel')}
           </button>
-          <button type="submit" className="btn-primary" disabled={busy}>
+          <button type="submit" className="btn-primary" disabled={busy || (mode === 'course' && availableDisciplines.length === 0)}>
             {busy ? t('Đang lưu...', 'Saving...') : mode === 'course' ? t('Tạo khóa học', 'Create course') : t('Thêm buổi học', 'Add session')}
           </button>
         </div>
@@ -382,6 +415,7 @@ export function CreateClassOrSessionModal({
 
 interface EditClassModalProps {
   gymClass: ClassItem;
+  classes: ClassItem[];
   disciplines: Discipline[];
   rooms: Room[];
   coaches: CoachUser[];
@@ -389,8 +423,8 @@ interface EditClassModalProps {
   onSuccess: (message: string) => void;
 }
 
-/** Hộp thoại chỉnh sửa khóa học (tự kiểm tra xung đột phòng/HLV/PT khi đổi phòng hoặc HLV). */
-export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose, onSuccess }: EditClassModalProps) {
+/** Hộp thoại chỉnh sửa khóa học (tự kiểm tra xung đột phòng/HLV/PT và quy tắc 1 lớp active/bộ môn). */
+export function EditClassModal({ gymClass, classes, disciplines, rooms, coaches, onClose, onSuccess }: EditClassModalProps) {
   const { t } = useI18n();
   const [name, setName] = useState(gymClass.name);
   const [disciplineId, setDisciplineId] = useState(String(gymClass.disciplineId));
@@ -403,11 +437,26 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const otherActiveDisciplineIds = new Set(
+    classes
+      .filter((c) => c.id !== gymClass.id && String(c.status).toLowerCase() === 'active')
+      .map((c) => c.disciplineId),
+  );
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     setError(null);
     if (!name.trim()) {
       setError(t('Tên khóa học không được để trống.', 'Course name is required.'));
+      return;
+    }
+    if (status === 'active' && otherActiveDisciplineIds.has(Number(disciplineId))) {
+      setError(
+        t(
+          'Bộ môn này đã có một lớp đang hoạt động khác. Mỗi bộ môn chỉ được mở một lớp duy nhất.',
+          'Another active class already exists for this discipline. Each discipline allows only one active class.',
+        ),
+      );
       return;
     }
     setBusy(true);

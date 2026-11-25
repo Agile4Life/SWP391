@@ -161,6 +161,7 @@ public class ClassService {
     public GymClassDto createClass(CreateClassRequest request) {
         Discipline discipline = disciplines.findById(request.disciplineId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
+        ensureUniqueActiveClassForDiscipline(discipline, null);
 
         Coach coach = coaches.findById(request.coachId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
@@ -240,6 +241,7 @@ public class ClassService {
     public GymClassDto createRecurringClass(CreateRecurringClassRequest request) {
         Discipline discipline = disciplines.findById(request.disciplineId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
+        ensureUniqueActiveClassForDiscipline(discipline, null);
 
         Coach coach = coaches.findById(request.coachId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
@@ -353,6 +355,13 @@ public class ClassService {
         Discipline discipline = disciplines.findById(request.disciplineId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
 
+        String targetStatus = (request.status() != null && !request.status().isBlank())
+                ? request.status()
+                : gymClass.getStatus();
+        if (CLASS_ACTIVE.equalsIgnoreCase(targetStatus)) {
+            ensureUniqueActiveClassForDiscipline(discipline, classId);
+        }
+
         Coach coach = coaches.findById(request.coachId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
         if (!COACH_ACTIVE.equalsIgnoreCase(coach.getEmploymentStatus())) {
@@ -438,6 +447,27 @@ public class ClassService {
         }
 
         return mapper.toDto(savedClass != null ? savedClass : gymClass);
+    }
+
+    /**
+     * Mỗi bộ môn chỉ được mở tối đa một lớp đang hoạt động (`active`) tại cùng một thời điểm.
+     * Muốn mở lớp mới cho bộ môn đó, quản lý cần lưu trữ (`archived`) hoặc hủy (`cancelled`) lớp cũ trước.
+     */
+    private void ensureUniqueActiveClassForDiscipline(Discipline discipline, Long excludeClassId) {
+        if (discipline == null || discipline.getId() == null) {
+            return;
+        }
+        boolean exists = excludeClassId == null
+                ? gymClasses.existsByDisciplineIdAndStatus(discipline.getId(), CLASS_ACTIVE)
+                : gymClasses.existsByDisciplineIdAndStatusAndIdNot(discipline.getId(), CLASS_ACTIVE, excludeClassId);
+        if (exists) {
+            String name = discipline.getName() != null ? discipline.getName() : "";
+            throw new ConflictException(
+                    "SCHEDULING_DISCIPLINE_CLASS_EXISTS",
+                    "error.scheduling.discipline_class_exists",
+                    new Object[]{name},
+                    "Discipline \"" + name + "\" already has an active class");
+        }
     }
 
     /**

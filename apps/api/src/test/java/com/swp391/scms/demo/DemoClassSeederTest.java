@@ -47,12 +47,14 @@ class DemoClassSeederTest {
     void setUp() {
         seeder = new DemoClassSeeder(classes, sessions, coaches, rooms, disciplines, users, coachBookings);
         lenient().when(coaches.findActiveWithUser()).thenReturn(List.of(
-                coach(1L, "Gym - Sức mạnh"), coach(2L, "Yoga"), coach(3L, "Boxing"), coach(4L, "Bơi lội")));
+                coach(1L, "Gym - Sức mạnh"), coach(2L, "Yoga"), coach(3L, "Boxing & Tennis"), coach(4L, "Bơi lội & Cầu lông")));
         lenient().when(rooms.findAllByOrderByNameAsc()).thenReturn(List.of(
-                room(1L, "Phòng Gym Tiêu chuẩn", 50), room(2L, "Phòng Gym VIP", 25),
-                room(3L, "Zen Garden Studio", 18), room(4L, "Oasis Lap Pool", 20)));
+                room(1L, "Phòng Gym Tiêu chuẩn", 50), room(2L, "Ring Arena 01", 14),
+                room(3L, "Zen Garden Studio", 18), room(4L, "Oasis Lap Pool", 20),
+                room(5L, "Sân Tennis 01", 8), room(6L, "Sân Cầu lông 01", 8)));
         lenient().when(disciplines.findAll()).thenReturn(List.of(
-                discipline(1L, "Gym"), discipline(2L, "Yoga"), discipline(3L, "Boxing"), discipline(4L, "Bơi lội")));
+                discipline(1L, "Gym"), discipline(2L, "Yoga"), discipline(3L, "Boxing"),
+                discipline(4L, "Bơi lội"), discipline(5L, "Tennis"), discipline(6L, "Cầu lông")));
         lenient().when(classes.findAll()).thenReturn(List.of());
         lenient().when(sessions.findNotCancelledBetween(any(), any())).thenReturn(List.of());
         lenient().when(coachBookings.findConfirmedBetween(any(), any())).thenReturn(List.of());
@@ -69,13 +71,17 @@ class DemoClassSeederTest {
         });
     }
 
-    /** Kiểm thử: tạo nhiều lớp mà không đặt trùng lịch HLV hay phòng. */
+    /** Kiểm thử: tạo đúng 1 lớp active cho mỗi bộ môn trong 6 bộ môn mà không trùng lịch HLV hay phòng. */
     @Test
-    void createsManyClassesWithoutDoubleBookingACoachOrRoom() {
+    void createsOneActiveClassPerDisciplineWithoutDoubleBookingACoachOrRoom() {
         seeder.run(null);
 
-        assertThat(savedClasses.size()).isGreaterThanOrEqualTo(20);
+        assertThat(savedClasses).hasSize(6);
+        assertThat(savedClasses)
+                .extracting(c -> c.getDiscipline().getName())
+                .containsExactlyInAnyOrder("Gym", "Bơi lội", "Boxing", "Tennis", "Cầu lông", "Yoga");
         assertThat(savedClasses).allSatisfy(c -> {
+            assertThat(c.getStatus()).isEqualTo("active");
             assertThat(c.getStartDate()).isNotNull();
             assertThat(c.getEndTime()).isAfter(c.getStartTime());
             assertThat(c.getCapacity()).isLessThanOrEqualTo(c.getRoom().getCapacity());
@@ -126,12 +132,19 @@ class DemoClassSeederTest {
         });
     }
 
-    /** Kiểm thử: khóa đã kết thúc được lưu trữ, khóa đang diễn ra vẫn active. */
+    /** Kiểm thử: bỏ qua bộ môn đã có sẵn lớp active khác (tôn trọng quy tắc 1 lớp duy nhất mỗi bộ môn). */
     @Test
-    void marksFinishedCoursesArchivedAndKeepsOngoingOnesActive() {
+    void skipsDisciplinesThatAlreadyHaveAnActiveClass() {
+        GymClass existingGym = new GymClass();
+        existingGym.setName("Existing Gym Course");
+        existingGym.setStatus("active");
+        existingGym.setDiscipline(discipline(1L, "Gym"));
+        lenient().when(classes.findAll()).thenReturn(List.of(existingGym));
+
         seeder.run(null);
 
-        assertThat(savedClasses).extracting(GymClass::getStatus).contains("active", "archived");
+        assertThat(savedClasses).hasSize(5);
+        assertThat(savedClasses).extracting(c -> c.getDiscipline().getName()).doesNotContain("Gym");
         assertThat(savedSessions).extracting(ClassSession::getStatus).contains("completed", "scheduled");
     }
 

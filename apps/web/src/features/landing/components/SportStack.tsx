@@ -1,25 +1,76 @@
-import { sourceText, useSourceLanguage, sourceFormat } from "../../../shared/i18n/sourceText";
+import { sourceText, useSourceLanguage, sourceFormat } from '../../../shared/i18n/sourceText';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { RoundArrow } from './PublicLayout';
-import { MAIN_DISCIPLINE } from '../../../shared/lib/disciplines';
+import { DISCIPLINES, type DisciplineId } from '../../../shared/lib/disciplines';
+import { localizeSeededCatalogText } from '../publicCatalog';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import './sport-stack.css';
 
-// Chỉ giới thiệu Gym; giữ danh mục dùng chung của các role khác.
-const content = {
-  image: '/images/fitness/gym-floor.jpg',
-  get summary() { return sourceText('Xây dựng sức mạnh và thể lực với các bài tập tạ.'); },
-  programs: ['Kỹ thuật tập tạ', 'Sức mạnh toàn thân', 'Thể lực và sức bền'],
+const content: Record<DisciplineId, { image: string; summary: string; programs: { vi: string; en: string }[] }> = {
+  gym: {
+    image: '/images/fitness/gym-floor.jpg',
+    get summary() { return sourceText({ vi: 'Xây dựng sức mạnh và thể lực với các bài tập tạ.', en: 'Build strength and conditioning on our full weights floor.' }); },
+    programs: [
+      { vi: 'Kỹ thuật tập tạ', en: 'Strength technique' },
+      { vi: 'Sức mạnh toàn thân', en: 'Full-body strength' },
+      { vi: 'Thể lực và sức bền', en: 'Conditioning & stamina' },
+    ],
+  },
+  swimming: {
+    image: '/images/fitness/aquatics-pool.jpg',
+    get summary() { return sourceText({ vi: 'Rèn sức bền và kỹ thuật bơi trong hồ bơi của trung tâm.', en: 'Train stroke technique and endurance in our all-season lap pool.' }); },
+    programs: [
+      { vi: 'Kỹ thuật bơi sải', en: 'Freestyle stroke' },
+      { vi: 'Sức bền dưới nước', en: 'Aquatic endurance' },
+      { vi: 'Thả lỏng và phục hồi', en: 'Recovery & cooldown' },
+    ],
+  },
+  boxing: {
+    image: '/images/hero-options/opt5-boxing.jpg',
+    get summary() { return sourceText({ vi: 'Tập kỹ thuật đấm, phản xạ và thể lực qua từng hiệp.', en: 'Sharpen striking technique, reflexes, and round conditioning.' }); },
+    programs: [
+      { vi: 'Kỹ thuật đấm cơ bản', en: 'Foundational striking' },
+      { vi: 'Bộ chân và phản xạ', en: 'Footwork & reflexes' },
+      { vi: 'Thể lực theo hiệp', en: 'Round conditioning' },
+    ],
+  },
+  tennis: {
+    image: '/images/fitness/tennis-court.jpg',
+    get summary() { return sourceText({ vi: 'Luyện kỹ thuật đánh bóng và di chuyển trên sân.', en: 'Refine strokes, court movement, and doubles play.' }); },
+    programs: [
+      { vi: 'Kỹ thuật đánh bóng', en: 'Stroke fundamentals' },
+      { vi: 'Di chuyển và phản xạ', en: 'Court footwork' },
+      { vi: 'Đánh đôi', en: 'Doubles tactics' },
+    ],
+  },
+  badminton: {
+    image: '/images/fitness/badminton-court.webp',
+    get summary() { return sourceText({ vi: 'Rèn bộ chân, phản xạ và kỹ thuật đánh cầu.', en: 'Develop agility, quick reflexes, and crisp shuttle control.' }); },
+    programs: [
+      { vi: 'Kỹ thuật đánh cầu', en: 'Shuttle control' },
+      { vi: 'Bộ chân và phản xạ', en: 'Agility & reflexes' },
+      { vi: 'Thi đấu đôi', en: 'Doubles play' },
+    ],
+  },
+  yoga: {
+    image: '/images/yoga-aerial-silk-studio.jpg',
+    get summary() { return sourceText({ vi: 'Kết hợp hơi thở, tư thế và chuyển động linh hoạt.', en: 'Combine mindful breathwork, alignment, and fluid mobility.' }); },
+    programs: [
+      { vi: 'Hơi thở và tư thế', en: 'Breath & posture' },
+      { vi: 'Thăng bằng và linh hoạt', en: 'Balance & mobility' },
+      { vi: 'Giãn cơ và thư giãn', en: 'Deep stretch & relaxation' },
+    ],
+  },
 };
-// Giữ tên import cũ ổn định; khu vực này nay dùng kiểu kể chuyện theo cuộn thay vì chồng thẻ.
+
 /**
- * Khu giới thiệu không gian Gym theo kiểu kể chuyện khi cuộn: bước nào ở giữa màn hình thì hiện ảnh tương ứng,
- * hỗ trợ focus bàn phím và giảm chuyển động.
+ * Khu giới thiệu 6 bộ môn thể thao đa môn theo kiểu kể chuyện khi cuộn:
+ * bước nào ở giữa màn hình thì hiện ảnh tương ứng, hỗ trợ focus bàn phím và giảm chuyển động.
  */
-export function SportStack({ ptPath, heading }: { ptPath: string; heading?: ReactNode }) {
+export function SportStack({ classPath, heading }: { classPath: string; heading?: ReactNode }) {
   useSourceLanguage();
-  const sports = [{ ...MAIN_DISCIPLINE, ...content }];
+  const sports = DISCIPLINES.map((sport) => ({ ...sport, ...content[sport.id] }));
   const story = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -33,7 +84,7 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
     let active = 0;
     let displayed = 0;
     let timer = 0;
-    // Hiện ảnh của bước được chọn và bỏ trạng thái rời.
+
     const show = (index: number) => {
       window.clearTimeout(timer);
       timer = 0;
@@ -43,46 +94,42 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
       });
       displayed = index;
     };
-    // Chọn bước đang xem; ảnh cũ chạy hiệu ứng rời trước khi ảnh mới vào, cuộn nhanh thì luôn chọn bước mới nhất.
+
     const select = (index: number) => {
       active = index;
       steps.forEach((step, i) => step.classList.toggle('is-active', i === index));
       dots.forEach((dot, i) => dot.classList.toggle('is-active', i === index));
-      marker.style.top = `${sports.length > 1 ? index / (sports.length - 1) * 100 : 0}%`;
+      marker.style.top = `${sports.length > 1 ? (index / (sports.length - 1)) * 100 : 0}%`;
       if (preference.matches || index === displayed) {
         show(index);
         return;
       }
-      // Khớp hiệu ứng rời trước khi vào của thiết kế tham chiếu; cuộn nhanh luôn chọn bước mới nhất.
       visuals[displayed].classList.add('is-leaving');
       if (!timer) timer = window.setTimeout(() => show(active), 500);
     };
+
     let observer: IntersectionObserver | null = null;
-    // Focus bàn phím vào một bước thì chọn bước đó.
     const focus = (event: FocusEvent) => {
-      const index = steps.findIndex(step => step.contains(event.target as Node));
+      const index = steps.findIndex((step) => step.contains(event.target as Node));
       if (index >= 0) select(index);
     };
-    // Đo lại chiều cao header và dải quan sát ở giữa màn hình (10%).
     const measure = () => {
       const top = header ? Math.ceil(header.getBoundingClientRect().height) + 12 : 90;
       section.style.setProperty('--sport-story-top', `${top}px`);
       observer?.disconnect();
       if (typeof IntersectionObserver !== 'undefined') {
-        // rootMargin theo phần trăm chiều dọc được tính theo chiều rộng; dùng pixel để có đúng dải 10% ở giữa màn hình.
-        const inset = Math.round(window.innerHeight * .45);
-        observer = new IntersectionObserver(entries => {
-          entries.forEach(entry => {
+        const inset = Math.round(window.innerHeight * 0.45);
+        observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
             if (entry.isIntersecting) select(steps.indexOf(entry.target as HTMLElement));
           });
         }, { rootMargin: `-${inset}px 0px -${inset}px 0px`, threshold: 0 });
-        steps.forEach(step => observer!.observe(step));
+        steps.forEach((step) => observer!.observe(step));
         section.classList.add('is-enhanced');
       }
     };
     const resize = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
     if (header) resize?.observe(header);
-    // Người dùng đổi tùy chọn giảm chuyển động thì hiện lại bước hiện tại ngay.
     const motion = () => show(active);
     section.addEventListener('focusin', focus);
     preference.addEventListener('change', motion);
@@ -99,15 +146,19 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
     };
   }, [sports.length]);
 
-  // Ảnh minh họa kèm chú thích của một môn.
   const illustration = (sport: typeof sports[number]) => <>
-    <LoadingImage src={sport.image} alt={sourceFormat("Ảnh minh họa không gian {0}", sport.name.toLowerCase())} loading="lazy" decoding="async" />
-    <figcaption>{sourceText("Ảnh minh họa · ")}{sourceText(sport.name)}</figcaption>
+    <LoadingImage src={sport.image} alt={sourceFormat('Ảnh minh họa không gian {0}', localizeSeededCatalogText(sport.name).toLowerCase())} loading="lazy" decoding="async" />
+    <figcaption>{sourceText({ vi: 'Ảnh minh họa · ', en: 'Illustration · ' })}{localizeSeededCatalogText(sport.name)}</figcaption>
   </>;
 
-  return <div className="fit-sport-story" ref={story} role="region" aria-label={sourceText({ vi: 'Khám phá Gym', en: 'Explore Gym' })}>
+  const linkForSport = (sportName: string) =>
+    classPath === '/member/classes'
+      ? `/member/classes?tab=classes&discipline=${encodeURIComponent(sportName)}`
+      : classPath;
+
+  return <div className="fit-sport-story" ref={story} role="region" aria-label={sourceText({ vi: 'Khám phá các bộ môn', en: 'Explore disciplines' })}>
     {heading}
-    <p className="fit-sport-story-hint">{sourceText({ vi: 'Khám phá không gian Gym ', en: 'Explore the Gym floor ' })}<span aria-hidden="true">↓</span></p>
+    <p className="fit-sport-story-hint">{sourceText({ vi: 'Cuộn xem 6 bộ môn ', en: 'Scroll to explore 6 disciplines ' })}<span aria-hidden="true">↓</span></p>
     <div className="fit-sport-story-layout">
       <div className="fit-sport-story-steps">
         <div className="fit-sport-story-rail" aria-hidden="true"><i style={{ top: '0%' }} /></div>
@@ -115,12 +166,26 @@ export function SportStack({ ptPath, heading }: { ptPath: string; heading?: Reac
           className={`fit-sport-story-step${index === 0 ? ' is-active' : ''}`}
           data-sport={sport.id} aria-labelledby={`sport-story-${sport.id}`}>
           <span className="fit-sport-story-number" aria-hidden="true">0{index + 1}</span>
-          <span className="fit-sport-story-tier">{sourceText('Bộ môn chính')}</span>
-          <h3 id={`sport-story-${sport.id}`}>{sourceText(sport.name)}</h3>
+          <span className="fit-sport-story-tier">
+            {sport.tier === 'main'
+              ? sourceText({ vi: 'Bộ môn chính', en: 'Core discipline' })
+              : sourceText({ vi: 'Bộ môn phụ', en: 'Specialty discipline' })}
+          </span>
+          <h3 id={`sport-story-${sport.id}`}>{localizeSeededCatalogText(sport.name)}</h3>
           <p className="fit-sport-story-summary">{sport.summary}</p>
-          <ul className="fit-sport-story-programs">{sport.programs.map(program => <li key={sourceText(program)}>{sourceText(program)}</li>)}</ul>
+          <ul className="fit-sport-story-programs">
+            {sport.programs.map((program) => <li key={program.vi}>{sourceText(program)}</li>)}
+          </ul>
           <div className="fit-sport-story-footer">
-            <Link className="fit-pill" to={ptPath}>{sourceText({ vi: 'Đặt lịch HLV 1:1', en: 'Book a 1:1 coach' })}<RoundArrow diagonal /></Link>
+            <Link className="fit-pill" to={linkForSport(sport.name)}>
+              {sourceText({ vi: 'Xem lịch học', en: 'View schedule' })}
+              <RoundArrow diagonal />
+            </Link>
+            {sport.tier === 'secondary' && (
+              <Link className="fit-text-link" to={`/${sport.id}`}>
+                {sourceText({ vi: 'Giới thiệu ', en: 'Explore ' })}{localizeSeededCatalogText(sport.name)}
+              </Link>
+            )}
           </div>
           <figure className="fit-sport-story-inline" data-reveal="image">{illustration(sport)}</figure>
         </article>)}

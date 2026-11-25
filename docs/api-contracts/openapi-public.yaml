@@ -52,7 +52,7 @@ paths:
                             avatarUrl: { type: string, nullable: true }
                       sessions:
                         type: array
-                        description: Retained for compatibility; always empty because group classes are disabled.
+                        description: Upcoming scheduled group class sessions for the next 7 days when `app.legacy.classes-enabled=true`.
                         items:
                           type: object
                           properties:

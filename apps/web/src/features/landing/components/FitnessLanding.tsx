@@ -1,5 +1,6 @@
 import { sourceText, useSourceLanguage, sourceFormat } from "../../../shared/i18n/sourceText";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
+import { DISCIPLINES } from '../../../shared/lib/disciplines';
 import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { getCurrentUser, homePath } from '../../../shared/api/client';
@@ -10,11 +11,10 @@ import { SplitHeading } from './SplitHeading';
 import { SportStack } from './SportStack';
 
 const tickerItems = [
-  'GYM',
+  ...DISCIPLINES.map((discipline) => discipline.name.toUpperCase()),
   'STRENGTH FLOOR',
   'MOVEMENT STUDIO',
-  'FREE WEIGHTS',
-  'BARBELL CLUB',
+  'GROUP TRAINING',
   'PERSONAL TRAINING',
 ];
 
@@ -31,9 +31,9 @@ const serviceShapes = [
 ];
 const clubMetrics = [
   { value: '06:00 — 22:00', countTo: 22, format: (n: number) => `06:00 — ${String(n).padStart(2, '0')}:00`, get label() { return sourceText('MỞ CỬA MỖI NGÀY'); } },
-  { value: 'Gym', get label() { return sourceText({ vi: 'PHÒNG GYM TIÊU CHUẨN', en: 'STANDARD GYM FLOOR' }); } },
-  { get value() { return sourceText({ vi: 'Lịch PT', en: 'PT schedule' }); }, get label() { return sourceText('ĐẶT CHỖ TRỰC TUYẾN'); } },
-  { get value() { return sourceText('QR Pass'); }, get label() { return sourceText({ vi: 'CHECK-IN PHÒNG GYM', en: 'GYM CHECK-IN' }); } },
+  { get value() { return sourceText({ vi: '06 Bộ môn', en: '06 Disciplines' }); }, countTo: 6, format: (n: number) => `${String(n).padStart(2, '0')} ${sourceText({ vi: 'Bộ môn', en: 'Disciplines' })}`, get label() { return sourceText({ vi: 'TỔ HỢP ĐA BỘ MÔN', en: 'MULTI-SPORT COMPLEX' }); } },
+  { get value() { return sourceText({ vi: 'Lịch lớp & PT', en: 'Classes & PT' }); }, get label() { return sourceText('ĐẶT CHỖ TRỰC TUYẾN'); } },
+  { get value() { return sourceText('QR Pass'); }, get label() { return sourceText({ vi: '01 THẺ ĐA PHÂN KHU', en: '01 MULTI-ZONE PASS' }); } },
 ];
 const MUSCLE_CLOSE_DELAY_MS = 600;
 
@@ -169,32 +169,50 @@ const dailyRhythmItems = [
     id: 'morning' as const,
     get label() { return sourceText('Sáng · 06:00–09:00'); },
     get title() { return sourceText('Khởi động thể lực sáng sớm'); },
-    highlights: ['Morning Strength', 'Cardio', 'Tập tạ'],
+    highlights: [
+      { vi: 'Gym Strength', en: 'Gym Strength' },
+      { vi: 'Yoga sáng', en: 'Morning Yoga' },
+      { vi: 'Cầu lông', en: 'Badminton' },
+    ],
   },
   {
     id: 'midday' as const,
     get label() { return sourceText('Trưa · 11:30–14:00'); },
     get title() { return sourceText('Tập gọn 45 phút giờ nghỉ trưa'); },
-    highlights: ['Kèm 1:1', 'Core & Mobility', 'Thả lỏng'],
+    highlights: [
+      { vi: 'Kèm PT 1:1', en: '1:1 PT Coaching' },
+      { vi: 'Core & Mobility', en: 'Core & Mobility' },
+      { vi: 'Thả lỏng', en: 'Recovery' },
+    ],
   },
   {
     id: 'evening' as const,
     get label() { return sourceText('Chiều · 17:00–19:30'); },
     get title() { return sourceText('Nhịp tập sôi động sau giờ làm'); },
-    highlights: ['Barbell Club', 'Tập tạ', 'Cardio'],
+    highlights: [
+      { vi: 'Lớp Bơi lội', en: 'Swimming Class' },
+      { vi: 'Lớp Boxing', en: 'Boxing Class' },
+      { vi: 'Lớp Tennis', en: 'Tennis Class' },
+    ],
   },
   {
     id: 'night' as const,
     get label() { return sourceText('Tối · 19:30–22:00'); },
     get title() { return sourceText('Vận động nhẹ & Giãn cơ cuối ngày'); },
-    highlights: ['Tập cá nhân', 'Cardio nhẹ', 'Giãn cơ'],
+    highlights: [
+      { vi: 'Tập cá nhân', en: 'Solo Training' },
+      { vi: 'Bơi thư giãn', en: 'Relaxed Swim' },
+      { vi: 'Giãn cơ', en: 'Stretching' },
+    ],
   },
 ] as const;
 
 const spaces = [
-  { get title() { return sourceText('Không gian cho những mục tiêu lớn.'); }, image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', get meta() { return sourceText('Khu máy tập'); } },
+  { get title() { return sourceText('Không gian cho những mục tiêu lớn.'); }, image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', get meta() { return sourceText({ vi: 'Khu máy tập Gym', en: 'Gym equipment floor' }); } },
   { get title() { return sourceText('Tập trung vào từng chuyển động.'); }, image: '/images/fitness/strength-session.jpg', label: 'Free weights', get meta() { return sourceText('Khu tạ rời & Power Rack'); } },
-  { get title() { return sourceText('Tìm lại nhịp điệu của chính mình.'); }, image: '/images/about-movement-studio.jpg', label: 'Movement studio', get meta() { return sourceText('Core & Giãn cơ'); } },
+  { get title() { return sourceText('Tìm lại nhịp điệu của chính mình.'); }, image: '/images/yoga-aerial-silk-studio.jpg', label: 'Zen Garden Studio', get meta() { return sourceText({ vi: 'Yoga & Giãn cơ', en: 'Yoga & Mobility' }); } },
+  { get title() { return sourceText({ vi: 'Làn nước xanh mát bốn mùa.', en: 'All-season calm lap waters.' }); }, image: '/images/fitness/aquatics-pool.jpg', label: 'Oasis Lap Pool', get meta() { return sourceText({ vi: 'Hồ bơi bốn mùa', en: 'All-season pool' }); } },
+  { get title() { return sourceText({ vi: 'Sân đấu giàu năng lượng.', en: 'High-energy courts & ring.' }); }, image: '/images/fitness/tennis-court.jpg', label: 'Courts & Ring', get meta() { return sourceText({ vi: 'Tennis · Cầu lông · Boxing', en: 'Tennis · Badminton · Boxing' }); } },
 ];
 
 const journeySteps = [
@@ -207,9 +225,9 @@ const memberBenefits = [
     get tag() { return sourceText({ vi: 'Bộ môn', en: 'Disciplines' }); },
     idx: '01',
     get title() { return sourceText('Đặt lịch tập trên Portal'); },
-    get description() { return sourceText({ vi: 'Xem khung giờ trống và đặt lịch PT khi gói còn hiệu lực.', en: 'View available slots and book PT with an active membership.' }); },
+    get description() { return sourceText({ vi: 'Đăng ký khóa học nhóm 6 bộ môn và đặt PT 1:1 khi gói còn hiệu lực.', en: 'Join 6-sport group classes and book 1:1 PT with an active membership.' }); },
     perks: [
-      'Gym',
+      { vi: '6 bộ môn: Gym, Bơi lội, Boxing, Tennis, Cầu lông, Yoga', en: '6 sports: Gym, Swimming, Boxing, Tennis, Badminton, Yoga' },
       { vi: 'Thấy ngay khung giờ còn chỗ', en: 'See open time slots at a glance' },
     ],
   },
@@ -247,10 +265,10 @@ const memberBenefits = [
 const faqs = [
   {
     get question() { return sourceText('Người mới bắt đầu có theo kịp không?'); },
-    get answer() { return sourceText({ vi: 'Có. Huấn luyện viên hướng dẫn kỹ thuật tập Gym từ cơ bản.', en: 'Yes. Coaches teach Gym technique from the basics.' }); },
+    get answer() { return sourceText({ vi: 'Có. Cả 6 bộ môn đều có lớp định kỳ hướng dẫn bài bản từ cơ bản.', en: 'Yes. All 6 disciplines offer structured classes welcoming beginners.' }); },
   },
   {
-    get question() { return sourceText({ vi: 'Gói hội viên có những quyền lợi nào?', en: 'What benefits does a membership include?' }); },
+    get question() { return sourceText({ vi: 'Gói hội viên đã bao gồm những bộ môn nào?', en: 'Which disciplines are included in memberships?' }); },
     get answer() { return sourceText('Tùy gói. Quyền lợi từng gói hiển thị tại bảng giá.'); },
   },
   {
@@ -258,8 +276,8 @@ const faqs = [
     get answer() { return sourceText('Có. Bạn gửi yêu cầu bảo lưu (Freeze) trực tiếp trên Portal hội viên.'); },
   },
   {
-    get question() { return sourceText({ vi: 'Làm sao để đặt lịch PT 1:1?', en: 'How do I book a 1:1 PT session?' }); },
-    get answer() { return sourceText({ vi: 'Đăng nhập Portal, chọn HLV, khung giờ trống và thanh toán khi gói còn hiệu lực.', en: 'Sign in to the portal, choose a coach and an available slot, then pay with an active membership.' }); },
+    get question() { return sourceText({ vi: 'Làm sao để đăng ký lớp nhóm hoặc đặt lịch PT 1:1?', en: 'How do I join a group class or book 1:1 PT?' }); },
+    get answer() { return sourceText({ vi: 'Đăng nhập Portal, vào mục Lịch học & đặt PT để đăng ký lớp của 6 bộ môn hoặc đặt HLV 1:1 khi gói còn hiệu lực.', en: 'Sign in to the portal and open Classes & PT to enroll in any of our 6 disciplines or book a 1:1 coach.' }); },
   },
 ];
 
@@ -388,7 +406,7 @@ export function FitnessLanding() {
   useSourceLanguage();
   const user = getCurrentUser();
   const { catalog, error: catalogError, retry: retryCatalog } = usePublicCatalog();
-  const ptPath = user ? user.role === 'MEMBER' ? '/member/classes?tab=pt' : homePath(user.role) : '/login';
+  const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
   const joinPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/register';
   const planPath = user ? user.role === 'MEMBER' ? '/member/progress' : homePath(user.role) : '/register';
   const accountLabel = !user ? 'Tạo tài khoản' : user.role === 'MEMBER' ? 'Chọn gói tập' : 'Vào portal';
@@ -599,7 +617,7 @@ export function FitnessLanding() {
         <LoadingImage key={spaces[space].image} src={spaces[space].image} alt={spaces[space].title} loading="lazy" />
         <div className="fit-space-shade" />
         <div key={space} className="fit-space-content fit-blur-morph">
-          <span className="fit-kicker">{sourceText({ vi: 'PHÒNG GYM TIÊU CHUẨN', en: 'STANDARD GYM FLOOR' })}</span>
+          <span className="fit-kicker">{sourceText({ vi: '05 PHÂN KHU TẬP LUYỆN', en: '05 TRAINING ZONES' })}</span>
           <h2 id="space-title">{spaces[space].title}</h2>
           <p className="fit-space-meta">{spaces[space].meta}</p>
           <a className="fit-pill" href="#contact">{sourceText("Ghé thăm SÖL")}<RoundArrow diagonal /></a>
@@ -629,15 +647,15 @@ export function FitnessLanding() {
           <div className="fit-rhythm-copy">
             <h4>{activeRhythm.title}</h4>
             <ul>
-              {activeRhythm.highlights.map((pt) => <li key={sourceText(pt)}><span aria-hidden="true">✓</span>{sourceText(pt)}</li>)}
+              {activeRhythm.highlights.map((pt) => <li key={pt.vi}><span aria-hidden="true">✓</span>{sourceText(pt)}</li>)}
             </ul>
           </div>
         </div>
       </div>
     </section>
     <section className="fit-section fit-multisport" id="multisport" aria-labelledby="multisport-title">
-      <SportStack ptPath={ptPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
-        <SplitHeading id="multisport-title" lines={[sourceText('Gym')]} />
+      <SportStack classPath={classPath} heading={<div className="fit-section-heading fit-centered" data-reveal="soft">
+        <SplitHeading id="multisport-title" lines={[sourceText({ vi: 'Các bộ môn', en: 'Disciplines' })]} />
       </div>} />
     </section>
     <section className="fit-section fit-trainers" id="trainers" aria-labelledby="trainers-title">
@@ -688,10 +706,10 @@ export function FitnessLanding() {
               <div className="fit-chat-user">{sourceText("Mục tiêu săn chắc · 4 buổi/tuần sau 17:30")}</div>
               <div className="fit-chat-bot">
                 <div className="fit-chat-tags">
-                  <span>{sourceText("T2 · Strength")}</span>
-                  <span>{sourceText("T4 · Cardio")}</span>
-                  <span>{sourceText({ vi: 'T6 · Tập tạ', en: 'Fri · Weight training' })}</span>
-                  <span>{sourceText("CN · Mobility")}</span>
+                  <span>{sourceText({ vi: 'T2 · Gym Strength', en: 'Mon · Gym Strength' })}</span>
+                  <span>{sourceText({ vi: 'T4 · Bơi lội', en: 'Wed · Swimming' })}</span>
+                  <span>{sourceText({ vi: 'T6 · Tennis', en: 'Fri · Tennis' })}</span>
+                  <span>{sourceText({ vi: 'CN · Yoga', en: 'Sun · Yoga' })}</span>
                 </div>
               </div>
             </div>

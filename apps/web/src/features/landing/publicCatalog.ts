@@ -49,7 +49,6 @@ export function usePublicCatalog() {
         if (active && request === sequence) {
           setCatalog({
             packages: Array.isArray(data?.packages) ? data.packages : [],
-            // Trung tâm chỉ còn Gym nên mọi HLV công khai đều là HLV Gym (kể cả HLV chưa ghi chuyên môn).
             coaches: Array.isArray(data?.coaches) ? data.coaches : [],
             sessions: Array.isArray(data?.sessions) ? data.sessions : [],
           });
@@ -88,17 +87,30 @@ const SEEDED_CATALOG_TEXT_EN: Readonly<Record<string, string>> = {
   'Gym - Sức mạnh': 'Gym - Strength',
   'Bơi lội': 'Swimming',
   'Cầu lông': 'Badminton',
+  'Boxing & Tennis': 'Boxing & Tennis',
+  'Bơi lội & Cầu lông': 'Swimming & Badminton',
   'Phòng Gym Tiêu chuẩn': 'Standard Gym Floor',
   'Phòng Gym VIP': 'VIP Platinum Gym',
+  'Sân Tennis 01': 'Tennis Court 01',
+  'Sân Cầu lông 01': 'Badminton Court 01',
   'Yoga Cơ Bản (khóa mới)': 'Beginner Yoga (New Course)',
+  'Hatha Yoga Nền Tảng': 'Foundational Hatha Yoga',
+  'Boxing Cơ Bản': 'Foundational Boxing',
+  'Bơi Cơ Bản Người Lớn': 'Adult Beginner Swimming',
+  'Tennis Kỹ Thuật Cơ Bản': 'Foundational Tennis Technique',
+  'Cầu Lông Bộ Chân & Đánh Đôi': 'Badminton Footwork & Doubles',
   '8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.':
     '8 years of strength coaching, muscle building, and fat loss for members of all levels.',
   'Giáo viên Yoga 6 năm kinh nghiệm, tập trung hơi thở, thăng bằng và phục hồi.':
     'Yoga instructor with 6 years of experience focusing on breathwork, balance, and recovery.',
   'Cựu vận động viên Boxing, chuyên kỹ thuật đấm và thể lực theo hiệp.':
     'Former competitive boxer specializing in striking technique and round-based conditioning.',
+  'Cựu vận động viên Boxing & Tennis, chuyên kỹ thuật đấm, di chuyển chân và thể lực.':
+    'Former Boxing & Tennis athlete specializing in striking, footwork, and conditioning.',
   'Huấn luyện viên bơi 7 năm kinh nghiệm: kỹ thuật bơi và sức bền dưới nước.':
     'Swimming coach with 7 years of experience in stroke technique and aquatic endurance.',
+  'Huấn luyện viên Bơi lội & Cầu lông 7 năm kinh nghiệm: kỹ thuật, sức bền và phản xạ.':
+    'Swimming & Badminton coach with 7 years of experience in technique, endurance, and reflexes.',
 };
 
 /**
