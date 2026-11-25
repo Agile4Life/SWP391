@@ -1,7 +1,7 @@
 # Nghiệp vụ SÖL Fitness — các luồng chính đang chạy trên web
 
-> Cập nhật: 25/11/2026 (khôi phục lớp học nhóm dạng khóa định kỳ & chuẩn hóa sidebar 5 vai trò).
-> **Phạm vi hiện tại:** Gym tiêu chuẩn, gói tập, **lớp học nhóm dạng khóa định kỳ & điểm danh lớp nhóm** (`app.legacy.classes-enabled=true`), PT 1:1, giáo án, check-in, ví/hóa đơn, chat, hỗ trợ. Đặt sân, cửa hàng, thiết bị, đánh giá HLV/buổi tập, chỉ số cơ thể, tiến độ/lịch sử tập và streak vẫn **đã ngừng** (mục 9, 10 chỉ còn ghi chú).
+> Cập nhật: 25/11/2026 (khôi phục thể thao đa môn 6 bộ môn từ `1384c4d3`, quy tắc mỗi bộ môn tối đa 1 lớp `active`, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò).
+> **Phạm vi hiện tại:** Trung tâm đa môn 6 bộ môn (`Gym`, `Bơi lội`, `Boxing`, `Tennis`, `Cầu lông`, `Yoga`), gói tập, **lớp học nhóm dạng khóa định kỳ & điểm danh lớp nhóm** (`app.legacy.classes-enabled=true`, mỗi bộ môn tối đa 1 lớp đang hoạt động), PT 1:1, giáo án, check-in, ví/hóa đơn, chat, hỗ trợ, Landing 6 môn + trang bộ môn. Đặt sân tự do theo giờ, cửa hàng, thiết bị, đánh giá/xếp hạng HLV/buổi tập, chỉ số cơ thể, tiến độ/lịch sử tập và streak vẫn **đã ngừng** (mục 9, 10 chỉ còn ghi chú).
 > Dọn dữ liệu cũ của các tính năng đã ngừng: [`DATA_CLEANUP.md`](DATA_CLEANUP.md).
 > `docs/PROJECT_MASTER_GUIDE.md` là thiết kế gốc. Tài liệu này mô tả **những gì hệ thống đang làm thật**: màn hình, API, quy tắc và state machine. Phần nào khác thiết kế gốc được ghi ở mục 12.
 > Múi giờ nghiệp vụ là `Asia/Ho_Chi_Minh` cho mọi mốc "hôm nay", "trước giờ học" và job định kỳ.
@@ -26,7 +26,7 @@
 
 | Vai trò | Mã role | Khu vực web chính |
 |---|---|---|
-| Khách vãng lai | — | `/`, `/trainers`, `/trainers/:id`, `/login`, `/register` |
+| Khách vãng lai | — | `/`, `/swimming`, `/boxing`, `/tennis`, `/badminton`, `/yoga`, `/sports/:sportId`, `/trainers`, `/trainers/:id`, `/login`, `/register` |
 | Hội viên | `MEMBER` | `/member/*`, `/messages` |
 | Huấn luyện viên | `COACH` | `/coach/pt-attendance` (trang chủ), `/coach/attendance` (+ `/:sessionId`), `/coach/classes` (lớp nhóm + PT 1:1), `/coach/training-plans`, `/coach/saved-plans`, `/staff/requests` |
 | Lễ tân | `RECEPTIONIST` (`STAFF`) | `/staff/reception`, `/staff/check-in`, `/staff/check-out`, `/staff/reception-history`, `/staff/kyc`, `/staff/holds`, `/staff/requests` |
@@ -104,13 +104,14 @@
 
 ---
 
-## 3. Flow 2 — Lớp học nhóm định kỳ
+## 3. Flow 2 — Lớp học nhóm định kỳ (6 bộ môn, tối đa 1 lớp/môn)
 
-Từ 25/11/2026 trung tâm **khôi phục lớp học nhóm dạng khóa định kỳ** (`app.legacy.classes-enabled=true`), giữ nguyên `SingleSessionPolicy` (chặn đặt buổi lẻ một lần, chỉ mở/đăng ký theo khóa định kỳ):
+Từ 25/11/2026 trung tâm **khôi phục 6 bộ môn chuẩn (`Gym`, `Bơi lội`, `Boxing`, `Tennis`, `Cầu lông`, `Yoga`) và lớp học nhóm dạng khóa định kỳ** (`app.legacy.classes-enabled=true`), giữ nguyên `SingleSessionPolicy` (chặn đặt buổi lẻ một lần) và áp quy tắc **mỗi bộ môn tối đa 1 lớp `active` duy nhất**:
 
 - **Quản lý (`/manager/classes`, chỉ `CENTER_MANAGER` / `MANAGER`):**
   - Tạo, sửa khóa học định kỳ (`POST /api/v1/classes/recurring`, `PUT /api/v1/classes/{id}`), thêm buổi (`POST /api/v1/classes/{id}/sessions`), đổi lịch buổi (`PUT /api/v1/classes/{id}/sessions/{sessionId}`), hủy buổi kèm lý do (`POST /api/v1/classes/sessions/{id}/cancel`).
-  - Lịch Quản lý chống chồng lấn đa bộ môn với bộ lọc 1 chạm theo bộ môn, 4 chế độ xem (`Lịch theo môn / lớp`, `Lịch tổng cả tuần` gom ≥ 3 lớp trùng giờ vào nút `+N lớp`, `Tổng quan theo phòng` lưới Phòng × Giờ 06:00–22:00, `Danh sách khóa học`), và hộp thoại chi tiết buổi khi bấm bất kỳ ô lịch nhỏ nào.
+  - Nếu bộ môn đã có 1 lớp `active`, `ClassService` trả `409 SCHEDULING_DISCIPLINE_CLASS_EXISTS` (muốn mở lớp mới cần lưu trữ/hủy lớp cũ trước).
+  - Giao diện gồm đúng **3 tab độc lập không lặp control**: `Lịch theo bộ môn` (6 chip bộ môn → lịch tuần lớp duy nhất của môn đó), `Lịch tổng cả tuần` (gộp 6 môn, gom ≥ 3 lớp trùng giờ vào nút `+N lớp`), và `Danh sách lớp` (bảng quản lý). Bấm bất kỳ ô buổi nhỏ nào mở `ClassSessionDetailModal`.
 - **Ràng buộc chống trùng lịch hai chiều PT 1:1 ↔ Lớp nhóm:**
   - Khi Hội viên đặt PT 1:1 hoặc Quản lý điều chuyển HLV PT (`CoachBookingService`, `CoachAssignmentService`, trigger `scms_guard_pt_schedule`), hệ thống chặn nếu HLV đã có buổi lớp nhóm trùng giờ.
   - Ngược lại, khi Quản lý tạo khóa học, thêm buổi, cập nhật lịch khóa hoặc đổi lịch buổi (`ClassService.ensureNoSessionConflict`), hệ thống kiểm tra `CoachBookingRepository` và trả `409 SCHEDULING_COACH_PT_CONFLICT` nếu HLV đã có buổi PT 1:1 `confirmed` trùng giờ.
@@ -119,7 +120,7 @@ Từ 25/11/2026 trung tâm **khôi phục lớp học nhóm dạng khóa định
   - Gói tập vẫn hiển thị và áp dụng quyền lợi số khóa học / giảm giá học phí khóa học từ `GET /api/v1/classes/my-quota`.
 - **HLV (`/coach/classes`, `/coach/attendance`, `/coach/attendance/:sessionId`):**
   - Xem thời khóa biểu gộp lớp nhóm + PT 1:1; điểm danh Có mặt/Vắng mặt và xem lịch sử 31 ngày qua `/api/v1/attendance/sessions/**` (không khôi phục tab đánh giá buổi tập vì `app.coaching.evaluations.enabled=false`).
-- **Thông báo sự kiện lớp nhóm:** ghi danh/checkout/hủy ghi danh (`class_enrollment`), đổi lịch buổi học (`schedule_change` gửi cả học viên đã đặt và HLV phụ trách), hủy buổi học (gửi học viên không trùng lặp và gửi HLV phụ trách nếu Quản lý hủy). `GET /api/v1/public/catalog` vẫn giữ `sessions: []` trên landing công khai.
+- **Thông báo & lịch công khai:** ghi danh/checkout/hủy ghi danh (`class_enrollment`), đổi lịch buổi học (`schedule_change` gửi cả học viên đã đặt và HLV phụ trách), hủy buổi học (gửi học viên không trùng lặp và gửi HLV phụ trách nếu Quản lý hủy). `GET /api/v1/public/catalog` trả các buổi lớp nhóm sắp tới trong 7 ngày tới cho trang bộ môn và trang HLV công khai.
 
 ---
 
