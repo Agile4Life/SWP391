@@ -1,15 +1,26 @@
 openapi: 3.0.3
 info:
-  title: SCMS API - Restored Group Classes (Recurring Courses) Contract
-  version: 1.0.0
+  title: SCMS API — Hợp đồng Lớp học nhóm định kỳ & Lịch PT 1:1 theo 5 Slot cố định
+  version: 1.1.0
   description: >
-    Active API contract for recurring group classes (`app.legacy.classes-enabled=true`, updated 25/11/2026).
-    Covers the 3 active disciplines (`Gym`, `Boxing`, `Yoga`) and 4 active rooms
-    (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`), enforcing
-    at most 1 active recurring group class per discipline (`409 SCHEDULING_DISCIPLINE_CLASS_EXISTS`).
-    Single-session / one-off class creation and per-session booking remain disabled by `SingleSessionPolicy`.
-    Bidirectional PT 1:1 <-> Group Class coach scheduling conflict protection is enforced across
-    `ClassService`, `CoachBookingService`, `CoachAssignmentService`, and PostgreSQL trigger `scms_guard_pt_schedule`.
+    Hợp đồng API hiện hành cho lớp học nhóm định kỳ (`app.legacy.classes-enabled=true`) và đặt lịch PT 1:1
+    theo hệ thống **5 Slot cố định (`07:00 – 19:30`)** (cập nhật 25/11/2026).
+    Áp dụng cho 3 bộ môn đang hoạt động (`Gym`, `Boxing`, `Yoga`) và 4 phòng
+    (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`), bắt buộc mỗi bộ môn
+    chỉ có tối đa 1 lớp nhóm `active` duy nhất (`409 SCHEDULING_DISCIPLINE_CLASS_EXISTS`).
+    Toàn bộ lớp nhóm định kỳ và PT 1:1 phải khớp đúng 1 trong 5 slot chuẩn (nghỉ 15 phút giữa hai slot kế tiếp):
+    `Slot 1` (`07:00 – 09:30`), `Slot 2` (`09:45 – 11:15`), `Slot 3` (`11:30 – 14:00`),
+    `Slot 4` (`14:15 – 16:45`), `Slot 5` (`17:00 – 19:30`).
+    Khung giờ nằm ngoài 5 slot chuẩn trả `400 SCHEDULING_INVALID_SLOT` (lớp nhóm) hoặc
+    `400 INVALID_COACH_BOOKING_SLOT` (PT 1:1), đồng thời được bảo vệ tại tầng PostgreSQL qua
+    hàm `scms_is_valid_schedule_slot` và lỗi trigger `trg_schedule_invalid_slot` (`400 SCHEDULING_INVALID_SLOT`).
+    Quy tắc đặt buổi lẻ một lần vẫn bị tắt bởi `SingleSessionPolicy`.
+    Ràng buộc chống trùng lịch hai chiều PT 1:1 <-> Lớp nhóm được bảo vệ đồng thời tại
+    `ClassService`, `CoachBookingService`, `CoachAssignmentService` và trigger `scms_guard_pt_schedule`.
+    Đối với PT 1:1: giữ nguyên đơn giá `200.000đ / slot` (hoặc trừ 1 lượt gói PT) và yêu cầu đặt trước giờ bắt đầu
+    slot tối thiểu 2 giờ; đã gỡ bỏ hoàn toàn giới hạn bắt buộc nghỉ liên tiếp của HLV
+    (`requiresCoachRest`, lý do `coach_rest` và nhánh trigger `trg_coach_bookings_rest_required`).
+    Dữ liệu lịch cũ lệch ngoài 5 slot được dọn sạch và seed lại một lần (idempotent) qua `LegacyScheduleSlotResetRunner`.
 servers:
   - url: /api/v1
 components:
@@ -27,176 +38,320 @@ components:
         code: { type: string }
         message: { type: string }
         timestamp: { type: string, format: date-time }
+    ScheduleSlotRange:
+      type: object
+      description: >
+        Cặp thời gian bắt buộc khớp chính xác 1 trong 5 Slot cố định (`07:00 – 19:30`):
+        Slot 1 (`07:00:00` – `09:30:00`), Slot 2 (`09:45:00` – `11:15:00`),
+        Slot 3 (`11:30:00` – `14:00:00`), Slot 4 (`14:15:00` – `16:45:00`),
+        Slot 5 (`17:00:00` – `19:30:00`).
+      required: [startTime, endTime]
+      properties:
+        startTime:
+          type: string
+          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          example: '07:00:00'
+        endTime:
+          type: string
+          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          example: '09:30:00'
+    CoachAvailableSlotDto:
+      type: object
+      description: >
+        Một trong 5 Slot cố định PT 1:1 của HLV trong ngày. Không còn lý do `coach_rest`
+        do đã gỡ bỏ giới hạn bắt buộc nghỉ liên tiếp của HLV.
+      required: [slotNumber, startTime, endTime, available]
+      properties:
+        slotNumber:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 1
+          description: Số thứ tự slot chuẩn từ 1 đến 5 (`Slot 1` – `Slot 5`).
+        startTime:
+          type: string
+          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          example: '07:00:00'
+        endTime:
+          type: string
+          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          example: '09:30:00'
+        available:
+          type: boolean
+          example: true
+        reason:
+          type: string
+          nullable: true
+          enum: [coach_on_leave, too_soon, coach_busy, member_busy]
+          description: >
+            Lý do slot không thể đặt (`null` khi `available=true`):
+            `coach_on_leave` (HLV nghỉ phép), `too_soon` (chưa đủ 2 giờ trước giờ bắt đầu slot),
+            `coach_busy` (HLV bận dạy lớp nhóm hoặc PT 1:1 khác), `member_busy` (hội viên trùng lịch).
+    CoachBookingCreateDto:
+      type: object
+      required: [coachId, bookingDate, startTime, endTime]
+      properties:
+        coachId: { type: integer, format: int64 }
+        disciplineId: { type: integer, format: int64, nullable: true }
+        bookingDate: { type: string, format: date }
+        startTime:
+          type: string
+          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          example: '11:30:00'
+        endTime:
+          type: string
+          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          example: '14:00:00'
+        paymentMethod:
+          type: string
+          nullable: true
+          enum: [package_quota, cash, bank_transfer, online_wallet]
+          description: >
+            Dùng `package_quota` để trừ 1 lượt gói PT hoặc thanh toán theo đơn giá `200.000đ / slot`
+            (áp dụng giảm giá theo hạng gói Gold/Platinum).
+        notes: { type: string, nullable: true }
 security:
   - bearerAuth: []
 paths:
   /classes:
     get:
-      summary: List all classes / recurring courses
-      tags: [Classes]
+      summary: Liệt kê toàn bộ lớp / khóa học nhóm định kỳ
+      tags: [Lớp học nhóm]
       responses:
-        '200': { description: List of GymClassDto }
+        '200': { description: Danh sách `GymClassDto` }
     post:
       deprecated: true
-      summary: Disabled one-off class creation (SingleSessionPolicy)
-      tags: [Classes]
+      summary: Tạo lớp buổi lẻ một lần (đã tắt bởi SingleSessionPolicy)
+      tags: [Lớp học nhóm]
       responses:
-        '400': { description: SCHEDULING_SINGLE_SESSION_DISABLED }
+        '400': { description: 'SCHEDULING_SINGLE_SESSION_DISABLED hoặc SCHEDULING_INVALID_SLOT nếu khung giờ ngoài 5 slot chuẩn' }
 
   /classes/recurring:
     post:
-      summary: Create a recurring group-class course with generated sessions (CENTER_MANAGER, MANAGER)
-      tags: [Classes]
+      summary: Tạo khóa học nhóm định kỳ kèm tự sinh danh sách buổi học theo 5 Slot cố định (CENTER_MANAGER, MANAGER)
+      description: >
+        Yêu cầu `(startTime, endTime)` khớp chính xác 1 trong 5 Slot cố định (`07:00 – 19:30`).
+        Kiểm tra đồng thời ở `ClassService` và trigger PostgreSQL (`scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot`).
+      tags: [Lớp học nhóm]
       responses:
-        '201': { description: Recurring course created }
-        '400': { description: Validation error or coach on approved leave }
-        '403': { description: Forbidden }
+        '201': { description: Tạo khóa học định kỳ thành công }
+        '400':
+          description: >
+            Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`), lỗi dữ liệu đầu vào
+            hoặc HLV đang trong kỳ nghỉ phép đã duyệt.
+        '403': { description: Không có quyền thực hiện }
         '409':
           description: >
-            Discipline already has an active class (`SCHEDULING_DISCIPLINE_CLASS_EXISTS`),
-            room or coach conflict with another class session (`SCHEDULING_ROOM_CONFLICT`, `SCHEDULING_COACH_CONFLICT`),
-            or overlap with a confirmed PT 1:1 booking (`SCHEDULING_COACH_PT_CONFLICT`).
+            Bộ môn đã có 1 lớp nhóm `active` (`SCHEDULING_DISCIPLINE_CLASS_EXISTS`),
+            trùng phòng/HLV với buổi lớp nhóm khác (`SCHEDULING_ROOM_CONFLICT`, `SCHEDULING_COACH_CONFLICT`),
+            hoặc HLV đã có buổi PT 1:1 `confirmed` trùng slot (`SCHEDULING_COACH_PT_CONFLICT`).
 
   /classes/{id}:
     put:
-      summary: Update a recurring course and optionally regenerate future sessions (CENTER_MANAGER, MANAGER)
-      tags: [Classes]
+      summary: Cập nhật khóa học nhóm định kỳ và tùy chọn tái sinh buổi học tương lai theo 5 Slot cố định (CENTER_MANAGER, MANAGER)
+      tags: [Lớp học nhóm]
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: integer, format: int64 }
       responses:
-        '200': { description: Course updated }
-        '403': { description: Forbidden }
-        '404': { description: Class not found }
+        '200': { description: Cập nhật khóa học thành công }
+        '400': { description: 'Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`) hoặc dữ liệu không hợp lệ' }
+        '403': { description: Không có quyền thực hiện }
+        '404': { description: Không tìm thấy lớp học }
         '409':
           description: >
-            Discipline already has another active class (`SCHEDULING_DISCIPLINE_CLASS_EXISTS`),
-            room/coach class overlap, or confirmed PT 1:1 overlap (`SCHEDULING_COACH_PT_CONFLICT`).
+            Bộ môn đã có lớp nhóm `active` khác (`SCHEDULING_DISCIPLINE_CLASS_EXISTS`),
+            trùng phòng/HLV với lớp khác hoặc trùng buổi PT 1:1 `confirmed` (`SCHEDULING_COACH_PT_CONFLICT`).
     delete:
-      summary: Delete a class/course without active enrollments (CENTER_MANAGER, MANAGER)
-      tags: [Classes]
+      summary: Xóa/ngừng hoạt động lớp học không còn ghi danh hoạt động (CENTER_MANAGER, MANAGER)
+      tags: [Lớp học nhóm]
       parameters:
         - name: id
           in: path
           required: true
           schema: { type: integer, format: int64 }
       responses:
-        '200': { description: Class deleted }
-        '403': { description: Forbidden }
-        '409': { description: Class still has active enrollments }
+        '200': { description: Xóa hoặc ngừng hoạt động lớp học thành công }
+        '403': { description: Không có quyền thực hiện }
+        '409': { description: Lớp học vẫn còn học viên đang ghi danh }
 
   /classes/coaches:
     get:
-      summary: List active coaches available for class assignment
-      tags: [Classes]
+      summary: Liệt kê HLV đang hoạt động có thể phân công dạy lớp
+      tags: [Lớp học nhóm]
       responses:
-        '200': { description: Active coach list }
+        '200': { description: Danh sách HLV đang hoạt động }
 
   /classes/sessions:
     get:
-      summary: Query class sessions by date range, discipline, or coach
-      description: COACH callers always receive only their own assigned sessions regardless of `coachId`.
-      tags: [Classes]
+      summary: Tra cứu danh sách buổi học nhóm theo khoảng ngày, bộ môn hoặc HLV
+      description: Người gọi có vai trò `COACH` luôn chỉ nhận các buổi do chính mình phụ trách bất kể tham số `coachId`.
+      tags: [Lớp học nhóm]
       parameters:
         - { name: fromDate, in: query, schema: { type: string, format: date } }
         - { name: toDate, in: query, schema: { type: string, format: date } }
         - { name: disciplineId, in: query, schema: { type: integer, format: int64 } }
         - { name: coachId, in: query, schema: { type: integer, format: int64 } }
       responses:
-        '200': { description: List of ClassSessionDto }
+        '200': { description: Danh sách `ClassSessionDto` theo 5 Slot cố định }
 
   /classes/{id}/sessions:
     post:
-      summary: Add an individual session to an existing class (CENTER_MANAGER, MANAGER)
-      tags: [Classes]
+      summary: Thêm buổi học vào khóa hiện có theo 1 trong 5 Slot cố định (CENTER_MANAGER, MANAGER)
+      tags: [Lớp học nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
-        '201': { description: Session created }
-        '403': { description: Forbidden }
+        '201': { description: Tạo buổi học thành công }
+        '400': { description: 'Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`) hoặc dữ liệu không hợp lệ' }
+        '403': { description: Không có quyền thực hiện }
         '409':
           description: >
-            Room/coach conflict, member time overlap (`SCHEDULING_MEMBER_TIME_OVERLAP`),
-            or coach confirmed PT 1:1 overlap (`SCHEDULING_COACH_PT_CONFLICT`).
+            Trùng phòng/HLV, học viên bị trùng lịch (`SCHEDULING_MEMBER_TIME_OVERLAP`),
+            hoặc HLV có buổi PT 1:1 `confirmed` trùng slot (`SCHEDULING_COACH_PT_CONFLICT`).
 
   /classes/{id}/sessions/{sessionId}:
     put:
-      summary: Reschedule a scheduled class session (CENTER_MANAGER, MANAGER)
+      summary: Dời lịch một buổi học nhóm sang ngày và 1 trong 5 Slot cố định (CENTER_MANAGER, MANAGER)
       description: >
-        Validates room, coach class, and coach confirmed PT 1:1 conflicts (`409 SCHEDULING_COACH_PT_CONFLICT`).
-        On commit, sends deduplicated `schedule_change` notifications (`relatedEntityType=class_session`)
-        to booked members and the assigned coach.
-      tags: [Classes]
+        Kiểm tra khung giờ phải thuộc 5 Slot cố định (`400 SCHEDULING_INVALID_SLOT` / trigger `trg_schedule_invalid_slot`),
+        trùng phòng, trùng lịch lớp của HLV và trùng buổi PT 1:1 `confirmed` của HLV (`409 SCHEDULING_COACH_PT_CONFLICT`).
+        Sau khi commit, gửi thông báo `schedule_change` (`relatedEntityType=class_session`, không trùng lặp)
+        tới các học viên đã đăng ký và HLV phụ trách.
+      tags: [Lớp học nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
         - { name: sessionId, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
-        '200': { description: Session rescheduled }
-        '403': { description: Forbidden }
+        '200': { description: Dời lịch buổi học thành công }
+        '400': { description: 'Khung giờ không thuộc 5 Slot cố định (`SCHEDULING_INVALID_SLOT`) hoặc dữ liệu không hợp lệ' }
+        '403': { description: Không có quyền thực hiện }
         '409':
           description: >
-            Room/coach conflict, member time overlap, or confirmed PT 1:1 overlap (`SCHEDULING_COACH_PT_CONFLICT`).
+            Trùng phòng/HLV, học viên bị trùng lịch hoặc HLV trùng buổi PT 1:1 `confirmed` (`SCHEDULING_COACH_PT_CONFLICT`).
 
   /classes/{id}/students:
     get:
-      summary: List enrolled students of a course (COACH, CENTER_MANAGER, STAFF, RECEPTIONIST)
-      tags: [Classes]
+      summary: Liệt kê học viên đã ghi danh khóa học (COACH, CENTER_MANAGER, STAFF, RECEPTIONIST)
+      tags: [Lớp học nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
-        '200': { description: Enrolled student roster }
+        '200': { description: Danh sách học viên của khóa học }
 
   /classes/sessions/{sessionId}/students:
     get:
-      summary: List enrolled/booked students for a specific session (COACH, CENTER_MANAGER, STAFF, RECEPTIONIST)
-      tags: [Classes]
+      summary: Liệt kê học viên đăng ký/ghi danh của một buổi học cụ thể (COACH, CENTER_MANAGER, STAFF, RECEPTIONIST)
+      tags: [Lớp học nhóm]
       parameters:
         - { name: sessionId, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
-        '200': { description: Session student roster }
+        '200': { description: Danh sách học viên của buổi học }
 
   /classes/my-quota:
     get:
-      summary: Current member's recurring-course quota, tier discount, and attendance block status (MEMBER)
-      tags: [Enrollments]
+      summary: Tra cứu hạn mức khóa học nhóm, mức giảm giá theo hạng gói và trạng thái chặn điểm danh của hội viên (MEMBER)
+      tags: [Ghi danh lớp nhóm]
       responses:
-        '200': { description: CourseQuotaDto }
+        '200': { description: 'Thông tin `CourseQuotaDto`' }
 
   /classes/my-enrollments:
     get:
-      summary: Current member's course enrollments with session counts (MEMBER)
-      tags: [Enrollments]
+      summary: Danh sách khóa học nhóm hội viên hiện tại đã ghi danh kèm số buổi (MEMBER)
+      tags: [Ghi danh lớp nhóm]
       responses:
-        '200': { description: List of CourseEnrollmentDto }
+        '200': { description: 'Danh sách `CourseEnrollmentDto`' }
 
   /classes/{id}/enroll:
     post:
-      summary: Enroll current member in a recurring course using a free package quota credit (MEMBER)
-      tags: [Enrollments]
+      summary: Ghi danh khóa học nhóm bằng suất miễn phí trong gói tập (MEMBER)
+      tags: [Ghi danh lớp nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
-        '201': { description: Enrolled and notified (`class_enrollment`) }
-        '403': { description: SCHEDULING_COURSE_QUOTA_EXCEEDED / SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP / SCHEDULING_COURSE_ENROLL_BLOCKED }
-        '409': { description: Class full, already enrolled, or member schedule conflict }
+        '201': { description: Ghi danh thành công và gửi thông báo (`class_enrollment`) }
+        '403': { description: 'SCHEDULING_COURSE_QUOTA_EXCEEDED / SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP / SCHEDULING_COURSE_ENROLL_BLOCKED' }
+        '409': { description: Lớp đã đầy, hội viên đã ghi danh hoặc bị trùng lịch }
     delete:
-      summary: Cancel current member's course enrollment before course start (MEMBER)
-      tags: [Enrollments]
+      summary: Hủy ghi danh khóa học nhóm trước ngày khai giảng (MEMBER)
+      tags: [Ghi danh lớp nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
-        '200': { description: Enrollment cancelled, refund/credit applied, member notified (`class_enrollment`) }
-        '400': { description: SCHEDULING_CANNOT_CANCEL_STARTED_COURSE }
+        '200': { description: Hủy ghi danh thành công, hoàn lượt/tiền vào Ví và gửi thông báo (`class_enrollment`) }
+        '400': { description: 'SCHEDULING_CANNOT_CANCEL_STARTED_COURSE' }
 
   /classes/{id}/checkout:
     post:
-      summary: Checkout/pay for a recurring course beyond free quota via Wallet, VNPay, or Counter Cash (MEMBER)
-      tags: [Enrollments]
+      summary: Thanh toán học phí khóa học nhóm vượt hạn mức gói qua Ví SÖL, VNPay hoặc Tiền mặt tại quầy (MEMBER)
+      tags: [Ghi danh lớp nhóm]
       parameters:
         - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
       responses:
-        '201': { description: Checkout created/confirmed and member notified (`class_enrollment`) }
-        '403': { description: Membership invalid or enrollment blocked }
-        '409': { description: Class full, already enrolled, or member schedule conflict }
+        '201': { description: Tạo/xác nhận checkout thành công và gửi thông báo (`class_enrollment`) }
+        '403': { description: Gói hội viên không hợp lệ hoặc bị chặn ghi danh }
+        '409': { description: Lớp đã đầy, đã ghi danh hoặc hội viên bị trùng lịch }
+
+  /coach-bookings/available-slots:
+    get:
+      summary: Lấy danh sách đúng 5 Slot cố định PT 1:1 của một HLV trong ngày
+      description: >
+        Trả về đúng 5 phần tử ứng với `Slot 1` (`07:00 – 09:30`), `Slot 2` (`09:45 – 11:15`),
+        `Slot 3` (`11:30 – 14:00`), `Slot 4` (`14:15 – 16:45`), `Slot 5` (`17:00 – 19:30`), kèm `slotNumber: 1..5`.
+        Kiểm tra HLV nghỉ phép (`coach_on_leave`), sát giờ chưa đủ 2 tiếng trước giờ bắt đầu slot (`too_soon`),
+        HLV bận dạy lớp nhóm hoặc PT 1:1 khác (`coach_busy`) và hội viên bận lớp nhóm hoặc PT 1:1 khác (`member_busy`).
+        Không còn trạng thái `coach_rest` vì giới hạn bắt buộc nghỉ liên tiếp của HLV đã được gỡ bỏ hoàn toàn.
+      tags: [Đặt lịch PT 1:1]
+      parameters:
+        - name: coachId
+          in: query
+          required: true
+          schema: { type: integer, format: int64 }
+        - name: date
+          in: query
+          required: true
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: ApiResponse chứa danh sách đúng 5 `CoachAvailableSlotDto` (`slotNumber` 1..5)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  status: { type: integer, example: 200 }
+                  message: { type: string }
+                  data:
+                    type: array
+                    minItems: 5
+                    maxItems: 5
+                    items: { $ref: '#/components/schemas/CoachAvailableSlotDto' }
+
+  /coach-bookings:
+    post:
+      summary: Tạo lượt đặt PT 1:1 theo 1 trong 5 Slot cố định (MEMBER)
+      description: >
+        Bắt buộc `(startTime, endTime)` khớp đúng 1 trong 5 Slot cố định (`07:00 – 19:30`) và đặt trước
+        giờ bắt đầu slot tối thiểu 2 giờ (`ADVANCE_MINUTES_REQUIRED = 120`).
+        Giữ nguyên đơn giá `200.000đ / slot` (áp dụng giảm theo hạng gói Gold/Platinum) hoặc trừ 1 lượt gói PT miễn phí.
+        Đã gỡ bỏ hoàn toàn giới hạn bắt buộc nghỉ liên tiếp của HLV (`requiresCoachRest` / `trg_coach_bookings_rest_required`).
+        Bảo vệ hai chiều chống trùng lịch lớp nhóm <-> PT 1:1 và kiểm tra 5 slot ở cả service lẫn trigger PostgreSQL
+        (`scms_guard_pt_schedule` + `scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot`).
+      tags: [Đặt lịch PT 1:1]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CoachBookingCreateDto' }
+      responses:
+        '201': { description: Đặt lịch PT 1:1 thành công }
+        '400':
+          description: >
+            Khung giờ không khớp 5 Slot cố định (`INVALID_COACH_BOOKING_SLOT` ở service hoặc
+            `SCHEDULING_INVALID_SLOT` từ trigger `trg_schedule_invalid_slot`), đặt sát giờ dưới 2 tiếng
+            hoặc dữ liệu không hợp lệ.
+        '403': { description: Gói hội viên không hợp lệ hoặc ngày tập nằm trong khoảng bảo lưu (`MEMBERSHIP_ON_HOLD`) }
+        '409': { description: HLV hoặc hội viên đã có lịch lớp nhóm / PT 1:1 khác trùng slot }
