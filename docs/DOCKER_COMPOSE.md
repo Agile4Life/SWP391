@@ -69,7 +69,7 @@ Database nằm ngoài Compose nên lệnh này không xóa dữ liệu Supabase.
 
 ## Ghi chú VPS: dùng PostgreSQL cục bộ (1Panel) thay cho Supabase
 
-Chỉ áp dụng cho VPS tự chạy `docker compose`; push lên GitHub vẫn dùng cấu hình Supabase qua CI/CD (Render, Vercel) và không đọc `.env` của VPS.
+Chỉ áp dụng cho VPS tự chạy `docker compose`; file `.env` trên VPS không commit lên Git. CI/CD hiện chỉ build image lên GHCR và deploy sang VPS (đã gỡ luồng deploy Render/Vercel khỏi `.github/workflows/pipeline.yml`).
 
 - Code không đổi: profile vẫn là `supabase` (chỉ là tên profile, driver là PostgreSQL chuẩn). Chỉ `.env` quyết định database.
 - `.env` trên VPS trỏ `SPRING_DATASOURCE_URL=jdbc:postgresql://1Panel-postgresql-SFES:5432/agile4life`, `SPRING_DATASOURCE_USERNAME=agile4life`, `DB_SSL_MODE=require`. `.env.db.supabase` giữ cấu hình Supabase để chuyển lại bằng cách chép các dòng `SPRING_DATASOURCE_*` và `DB_SSL_MODE` sang `.env`. Cả hai file đều bị `.gitignore`.
@@ -78,7 +78,7 @@ Chỉ áp dụng cho VPS tự chạy `docker compose`; push lên GitHub vẫn d�
 
 ## Tự động deploy lên VPS (CD qua SSH)
 
-Job `deploy-vps` trong `.github/workflows/pipeline.yml` (**Pipeline**, gộp CI, CD Render/Vercel và CD VPS trên một màn hình; chạy sau khi test và build image api/web xanh) chạy trên `main` (hoặc bấm **Run workflow** trong tab Actions): SSH vào VPS, `git merge --ff-only` đúng commit đã qua CI, rồi `docker compose up -d --build --wait` và gọi thử `/api/v1/health` qua Nginx. Bản mới không khỏe thì tự `git reset --hard` về commit trước và dựng lại; job vẫn báo đỏ. Có thay đổi chưa commit ở file đã theo dõi trên VPS thì dừng, không ghi đè. Không dùng `docker compose down` nên mạng `scms_default` và kết nối tới container PostgreSQL 1Panel được giữ nguyên.
+Job `deploy-vps` trong `.github/workflows/pipeline.yml` (**CI/CD VPS**, gộp CI kiểm tra, build/push image GHCR và CD VPS trên một màn hình; chạy sau khi test và build image api/web xanh) chạy trên `main` (hoặc bấm **Run workflow** trong tab Actions): SSH vào VPS, `git merge --ff-only` đúng commit đã qua CI, pull image `api`/`web` từ GHCR, rồi `docker compose up -d --no-build --remove-orphans --wait` và gọi thử `/api/v1/health` qua Nginx. Bản mới không khỏe thì tự `git reset --hard` về commit trước và dựng lại image cũ; job vẫn báo đỏ. Có thay đổi chưa commit ở file đã theo dõi trên VPS thì dừng, không ghi đè. Không dùng `docker compose down` nên mạng `scms_default` và kết nối tới container PostgreSQL 1Panel được giữ nguyên.
 
 Cài đặt một lần:
 
