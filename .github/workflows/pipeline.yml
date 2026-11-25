@@ -2,14 +2,14 @@
 #
 #   push vào main ─► test-web (frontend) ─┐
 #                    test-api (backend)  ─┼─► config ─► Render (backend) ─► Vercel (frontend)
-#                    images (api + web)  ─┘
-#                                          └─ test-web, test-api, images ─► VPS (SSH, rollback tự động)
+#                    images (api + web,  ─┘
+#                            push GHCR)   └─ test-web, test-api, images ─► VPS (SSH pull GHCR, rollback tự động)
 #
 # - Đường 1 (Render + Vercel): backend lên Render, health check, lỗi thì rollback; backend xanh mới deploy frontend lên Vercel.
 #   Chưa có secret Render/Vercel thì bước tương ứng tự bỏ qua (không báo lỗi).
-# - Đường 2 (VPS Docker Compose): cần test xanh VÀ build image xanh; SSH vào VPS, `git merge --ff-only`,
-#   `docker compose up -d --build --wait`, health check, lỗi thì quay về commit cũ. Thiếu secret VPS_* thì tự bỏ qua.
-# - PR và nhánh develop: chỉ chạy test + build image, KHÔNG deploy. Chỉ main (push hoặc chạy tay) mới deploy.
+# - Đường 2 (VPS Docker Compose): cần test xanh VÀ build+push image GHCR xanh; SSH vào VPS, `git merge --ff-only`,
+#   `docker compose pull` + `docker compose up -d --no-build --wait`, health check, lỗi thì rollback image/commit cũ. Thiếu secret VPS_* thì tự bỏ qua.
+# - PR và nhánh develop: chỉ chạy test + build kiểm tra image, KHÔNG push GHCR và KHÔNG deploy. Chỉ main (push hoặc chạy tay) mới push và deploy.
 # - Bấm "Run workflow" để chạy lại commit mới nhất của main hoặc một commit chỉ định (ô "ref").
 # - Tên các job test/build giữ nguyên như trước (Frontend test, lint and build / Backend compile and test /
 #   Build and check <api|web> image) để Ruleset đang yêu cầu các check này vẫn khớp.
@@ -96,11 +96,14 @@ jobs:
       - name: Compile and run backend tests
         run: ./mvnw --batch-mode --no-transfer-progress test
 
-  # ---------- Build image Docker (cho VPS) ----------
+  # ---------- Build và push image Docker lên GHCR (cho VPS) ----------
   images:
     name: Build and check ${{ matrix.service }} image
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -119,6 +122,17 @@ jobs:
           printf 'SPRING_DATASOURCE_URL=jdbc:postgresql://example.invalid:5432/postgres\nSPRING_DATASOURCE_USERNAME=test\nSPRING_DATASOURCE_PASSWORD=test-only\nAPP_JWT_SECRET=test-only\n' > "$compose_dir/.env"
           docker compose --project-directory "$compose_dir" \
             -f "$GITHUB_WORKSPACE/compose.yml" config --quiet
+      - name: Warn if VITE_GOOGLE_CLIENT_ID variable is empty on main
+        if: >-
+          matrix.service == 'web' &&
+          ((github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'))
+        env:
+          VITE_GOOGLE_CLIENT_ID: ${{ vars.VITE_GOOGLE_CLIENT_ID }}
+        run: |
+          if [ -z "$VITE_GOOGLE_CLIENT_ID" ]; then
+            echo "::warning::Repository Variable VITE_GOOGLE_CLIENT_ID đang trống; image web sẽ build không kèm Google Client ID."
+          fi
       - uses: docker/setup-buildx-action@v3
       - uses: docker/build-push-action@v7
         with:
@@ -128,6 +142,11 @@ jobs:
           push: false
           load: true
           tags: scms-${{ matrix.service }}:ci
+          cache-from: type=gha,scope=scms-${{ matrix.service }}
+          cache-to: ${{ github.event_name != 'pull_request' && format('type=gha,mode=max,scope=scms-{0}', matrix.service) || '' }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.COMMIT }}
           build-args: |
             VITE_API_BASE_URL=/api/v1
             VITE_GOOGLE_CLIENT_ID=${{ vars.VITE_GOOGLE_CLIENT_ID }}
@@ -150,6 +169,28 @@ jobs:
           done
           docker logs scms-web-check
           exit 1
+      # Chỉ push lên GHCR sau khi smoke check đã qua và đang chạy trên main.
+      - name: Push ${{ matrix.service }} image to GHCR
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SERVICE: ${{ matrix.service }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          set -euo pipefail
+          resolved_sha=$(git rev-parse HEAD)
+          repo_lc=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/${repo_lc}/${SERVICE}"
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          trap 'docker logout ghcr.io >/dev/null 2>&1 || true' EXIT
+          docker tag "scms-${SERVICE}:ci" "${image}:sha-${resolved_sha}"
+          docker push "${image}:sha-${resolved_sha}"
+          if [ -z "$INPUT_REF" ]; then
+            docker tag "scms-${SERVICE}:ci" "${image}:latest"
+            docker push "${image}:latest"
+          fi
 
   # ---------- Render/Vercel, bước 0: quyết định deploy phần nào ----------
   config:
@@ -365,19 +406,22 @@ jobs:
           vercel rollback --timeout 5m
           echo "Frontend đã rollback về bản production trước vì bản mới (commit \`${COMMIT:0:7}\`) không phản hồi." >> "$GITHUB_STEP_SUMMARY"
 
-  # ---------- VPS (Docker Compose): deploy qua SSH, rollback tự động ----------
+  # ---------- VPS (Docker Compose): pull image từ GHCR qua SSH, rollback tự động ----------
   deploy-vps:
     name: Deploy to VPS over SSH
     needs: [images, test-web, test-api]
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
+    permissions:
+      contents: read
+      packages: read
     # Chỉ một lần deploy lên VPS tại một thời điểm; lần mới đợi lần đang chạy xong.
     concurrency:
       group: vps-deployment
       cancel-in-progress: false
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 20
     env:
       VPS_HOST: ${{ secrets.VPS_HOST }}
       VPS_USER: ${{ secrets.VPS_USER }}
@@ -413,19 +457,35 @@ jobs:
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
 
-      - name: Deploy on VPS (with rollback)
+      - name: Deploy on VPS (pull GHCR images, with rollback)
         if: steps.cfg.outputs.ready == 'true'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         shell: bash
         run: |
           set -euo pipefail
-          # Script chạy trên VPS qua stdin; tham số: $1 = commit, $2 = thư mục app.
+          repo_lc=$(printf '%s' "$GITHUB_REPOSITORY" | tr '[:upper:]' '[:lower:]')
+          image_prefix="ghcr.io/${repo_lc}"
+          ssh_opts=(-i ~/.ssh/deploy_key -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20)
+
+          # Đăng nhập GHCR trên VPS bằng GITHUB_TOKEN ngắn hạn qua stdin (không lộ trong ps/log)
+          # và luôn đăng xuất khi kết thúc bước này.
+          cleanup_ghcr() {
+            ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" 'docker logout ghcr.io >/dev/null 2>&1 || true' || true
+          }
+          trap cleanup_ghcr EXIT
+          printf '%s' "$GHCR_TOKEN" | ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" \
+            docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+          # Script chạy trên VPS qua stdin; tham số: $1 = commit, $2 = thư mục app, $3 = prefix image GHCR.
           # tee giữ lại toàn bộ log trong deploy.log để bước tóm tắt bên dưới dùng khi lỗi.
-          ssh -i ~/.ssh/deploy_key -p "$VPS_PORT" \
-            -o BatchMode=yes -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 -o ServerAliveCountMax=20 \
-            "$VPS_USER@$VPS_HOST" bash -s -- "$COMMIT" "$VPS_APP_DIR" 2>&1 <<'REMOTE' | tee "$RUNNER_TEMP/deploy.log"
+          ssh "${ssh_opts[@]}" "$VPS_USER@$VPS_HOST" \
+            bash -s -- "$COMMIT" "$VPS_APP_DIR" "$image_prefix" 2>&1 <<'REMOTE' | tee "$RUNNER_TEMP/deploy.log"
           set -euo pipefail
           commit=$1
           dir=$2
+          image_prefix=$3
           # Lệnh nào lỗi bất ngờ thì báo rõ dòng và lệnh đó (thông báo gốc của lệnh nằm ngay phía trên).
           trap 'echo "::error::Lệnh bị lỗi (dòng $LINENO): $BASH_COMMAND"' ERR
 
@@ -448,40 +508,73 @@ jobs:
           fi
 
           prev=$(git rev-parse HEAD)
-          echo "Commit đang chạy: ${prev:0:7}; commit cần deploy: ${commit:0:7}"
-          git fetch --prune origin
-          # Chỉ tiến lên (fast-forward). Nếu commit cũ hơn HEAD thì không làm gì, tránh deploy lùi khi hai lần chạy chồng nhau.
-          git merge --ff-only "$commit"
+          api_cid=$(docker compose ps -aq api 2>/dev/null | head -n 1 || true)
+          web_cid=$(docker compose ps -aq web 2>/dev/null | head -n 1 || true)
+          prev_api_img=""
+          prev_web_img=""
+          [ -n "$api_cid" ] && prev_api_img=$(docker inspect --format '{{.Config.Image}}' "$api_cid" 2>/dev/null || true)
+          [ -n "$web_cid" ] && prev_web_img=$(docker inspect --format '{{.Config.Image}}' "$web_cid" 2>/dev/null || true)
 
-          # Build image, thay container và đợi healthcheck của api + web (tối đa 5 phút),
-          # rồi gọi thử API qua Nginx để chắc proxy /api/v1 hoạt động.
+          git fetch --prune origin
+          target_sha=$(git rev-parse "${commit}^{commit}")
+          echo "Commit đang chạy: ${prev:0:7}; commit cần deploy: ${target_sha:0:7}"
+          # Chỉ tiến lên (fast-forward). Nếu VPS đã ở commit mới hơn thì bỏ qua, tránh deploy lùi khi hai lần chạy chồng nhau.
+          if [ "$target_sha" != "$prev" ] && git merge-base --is-ancestor "$target_sha" "$prev"; then
+            echo "VPS đang ở commit mới hơn (${prev:0:7}), bỏ qua để tránh deploy lùi."
+            exit 0
+          fi
+          git merge --ff-only "$target_sha"
+
+          # Pull image đã build sẵn từ GHCR, thay container (--no-build: không bao giờ build trên VPS)
+          # và đợi healthcheck của api + web (tối đa 5 phút), rồi gọi thử API qua Nginx.
           # Không dùng `docker compose down`: nó xóa mạng và làm mất kết nối tới container PostgreSQL 1Panel.
-          deploy() {
+          deploy_images() {
+            local api_img=$1
+            local web_img=$2
+            local should_pull=${3:-true}
+            export API_IMAGE="$api_img"
+            export WEB_IMAGE="$web_img"
             docker compose config --quiet &&
-            docker compose up -d --build --remove-orphans --wait --wait-timeout 300 &&
+            { [ "$should_pull" != "true" ] || docker compose pull api web; } &&
+            docker compose up -d --no-build --remove-orphans --wait --wait-timeout 300 &&
             docker compose exec -T web wget -q -O /dev/null http://127.0.0.1/api/v1/health
           }
 
-          if deploy; then
+          new_api_img="${image_prefix}/api:sha-${target_sha}"
+          new_web_img="${image_prefix}/web:sha-${target_sha}"
+          echo "Pull và deploy image từ GHCR: $new_api_img và $new_web_img"
+
+          if deploy_images "$new_api_img" "$new_web_img" true; then
+            # Cập nhật tag local dự phòng (không tốn thêm ổ đĩa) nếu sau này chạy tay `docker compose up -d`.
+            docker tag "$new_api_img" scms-api:local || true
+            docker tag "$new_web_img" scms-web:local || true
             docker compose ps
-            # Dọn image cũ không còn dùng cho đỡ đầy ổ đĩa.
-            docker image prune -f >/dev/null || true
+            # Dọn image cũ không còn dùng (giữ lại image trong 7 ngày gần nhất để rollback nhanh).
+            docker image prune -af --filter "until=168h" >/dev/null || true
             echo "Deploy thành công commit $(git rev-parse --short HEAD)"
             exit 0
           fi
 
-          echo "::error::Bản mới không khỏe (build lỗi hoặc container không qua healthcheck). Trạng thái và log gần nhất:"
+          echo "::error::Bản mới không khỏe (pull lỗi hoặc container không qua healthcheck). Trạng thái và log gần nhất:"
           docker compose ps -a || true
           docker compose logs --tail=80 api web || true
 
           now=$(git rev-parse HEAD)
-          if [ "$prev" != "$now" ]; then
+          if [ "$prev" != "$now" ] || { [ -n "$prev_api_img" ] && [ "$prev_api_img" != "$new_api_img" ]; }; then
             echo "::warning::Rollback VPS về commit ${prev:0:7}"
-            git reset --hard "$prev"
-            if deploy; then
-              echo "Đã rollback về ${prev:0:7} và dịch vụ khỏe lại"
+            [ "$prev" = "$now" ] || git reset --hard "$prev"
+            if [ -n "$prev_api_img" ] && [ -n "$prev_web_img" ]; then
+              need_pull=false
+              if ! docker image inspect "$prev_api_img" >/dev/null 2>&1 || ! docker image inspect "$prev_web_img" >/dev/null 2>&1; then
+                need_pull=true
+              fi
+              if deploy_images "$prev_api_img" "$prev_web_img" "$need_pull"; then
+                echo "Đã rollback về ${prev:0:7} (${prev_api_img}, ${prev_web_img}) và dịch vụ khỏe lại"
+              else
+                echo "::error::Rollback xong nhưng dịch vụ vẫn không khỏe, cần vào VPS kiểm tra"
+              fi
             else
-              echo "::error::Rollback xong nhưng dịch vụ vẫn không khỏe, cần vào VPS kiểm tra"
+              echo "::error::Không xác định được image cũ trước deploy để rollback tự động, cần vào VPS kiểm tra"
             fi
           fi
           exit 1
