@@ -249,7 +249,7 @@ public class CoachLeaderboardService {
             String title = msg("notifications.coaching.monthly.title", saved.getMonth(), saved.getYear());
             String message = msg("notifications.coaching.monthly.body",
                     saved.getMonth(), saved.getYear(), saved.getRankPosition(), saved.getBadge(), saved.getBonusAmount());
-            notificationService.send(saved.getCoach().getUserId(), title, message, "system", null, saved.getId());
+            notificationService.send(saved.getCoach().getUserId(), title, message, "system", "coach_monthly_review", saved.getId(), "/member/profile");
         }
 
         return mapToDto(saved);

@@ -35,6 +35,21 @@ describe('SCRUM-127 notification API', () => {
 it('routes training plans and coach notifications to the correct workspace', () => {
   expect(notificationDestination({ relatedEntityType: 'training_plan', type: 'system' })).toBe('/member/progress');
   expect(notificationDestination({ relatedEntityType: 'class_session', type: 'schedule_change' }, 'COACH')).toBe('/coach/classes');
+  expect(notificationDestination({ relatedEntityType: 'training_plan', type: 'system' }, 'COACH')).toBe('/coach/training-plans');
+  expect(notificationDestination({ relatedEntityType: 'training_plan', title: 'Giáo án đã lưu', type: 'system' }, 'COACH')).toBe('/coach/saved-plans');
+  expect(notificationDestination({ relatedEntityType: 'health_metric', type: 'system' }, 'COACH')).toBe('/coach/health-metrics');
+  expect(notificationDestination({ relatedEntityType: 'session_attendance', type: 'system' }, 'COACH')).toBe('/coach/pt-attendance');
+  expect(notificationDestination({ relatedEntityType: 'session_evaluation', type: 'system' }, 'COACH')).toBe('/coach/pt-attendance');
+  expect(notificationDestination({ relatedEntityType: null, title: 'Đánh giá tiến độ mới', type: 'system' }, 'COACH')).toBe('/coach/pt-attendance');
+  expect(notificationDestination({ relatedEntityType: 'staff_internal_request', type: 'system' }, 'COACH')).toBe('/staff/requests');
+  expect(notificationDestination({ relatedEntityType: null, title: 'Đơn từ nội bộ đã được phê duyệt', type: 'system' }, 'COACH')).toBe('/staff/requests');
+  expect(notificationDestination({ relatedEntityType: null, title: 'Your request was rejected', type: 'system' }, 'COACH')).toBe('/staff/requests');
+  expect(notificationDestination({ relatedEntityType: 'support_request', type: 'support_reply' }, 'COACH')).toBe('/messages?tab=support');
+  expect(notificationDestination({ relatedEntityType: 'coach_review', type: 'system' }, 'COACH')).toBe('/member/profile');
+  expect(notificationDestination({ relatedEntityType: null, title: 'Đánh giá mới từ học viên', type: 'system' }, 'COACH')).toBe('/member/profile');
+  expect(notificationDestination({ relatedEntityType: null, title: 'Bảng vinh danh & đánh giá tháng', type: 'system' }, 'COACH')).toBe('/member/profile');
+  expect(notificationDestination({ actionPath: '/staff/attendance' }, 'COACH')).toBe('/coach/pt-attendance');
+  expect(notificationDestination({ actionPath: '/staff/coach-classes' }, 'COACH')).toBe('/coach/classes');
 });
 
 it('uses safe action links and rejects external or other-role destinations', () => {
