@@ -43,11 +43,9 @@ export interface CreateSlotPrefill {
   endTime?: string;
   roomId?: number;
   disciplineId?: number;
-  classId?: number;
 }
 
 interface CreateClassOrSessionModalProps {
-  modeInitial?: 'course' | 'session';
   prefill?: CreateSlotPrefill;
   classes: ClassItem[];
   disciplines: Discipline[];
@@ -57,9 +55,8 @@ interface CreateClassOrSessionModalProps {
   onSuccess: (message: string) => void;
 }
 
-/** Hộp thoại tạo khóa học định kỳ mới hoặc thêm buổi lẻ vào khóa có sẵn (dùng Select/DatePicker/TimePicker chuẩn). */
+/** Hộp thoại tạo khóa học định kỳ mới (tuân thủ quy tắc mỗi bộ môn chỉ có tối đa 1 lớp đang hoạt động). */
 export function CreateClassOrSessionModal({
-  modeInitial = 'course',
   prefill,
   classes,
   disciplines,
@@ -72,7 +69,6 @@ export function CreateClassOrSessionModal({
   const activeClasses = classes.filter((c) => String(c.status).toLowerCase() === 'active');
   const activeDisciplineIds = new Set(activeClasses.map((c) => c.disciplineId));
   const availableDisciplines = disciplines.filter((d) => !activeDisciplineIds.has(d.id));
-  const [mode, setMode] = useState<'course' | 'session'>(prefill?.classId ? 'session' : modeInitial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,12 +101,6 @@ export function CreateClassOrSessionModal({
   const [endTime, setEndTime] = useState(hhmm(prefill?.endTime ?? '19:00'));
   const [description, setDescription] = useState('');
 
-  // State thêm buổi cho khóa có sẵn
-  const [targetClassId, setTargetClassId] = useState(
-    prefill?.classId ? String(prefill.classId) : (activeClasses[0]?.id ? String(activeClasses[0].id) : ''),
-  );
-  const [sessionDate, setSessionDate] = useState(prefill?.date ?? addDays(todayISO(), 1));
-
   const toggleDay = (code: string) => {
     setRecurringDays((prev) => (prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code]));
   };
@@ -122,70 +112,50 @@ export function CreateClassOrSessionModal({
       setError(t('Giờ kết thúc phải sau giờ bắt đầu.', 'End time must be after start time.'));
       return;
     }
+    if (!name.trim()) {
+      setError(t('Vui lòng nhập tên khóa học.', 'Please enter a course name.'));
+      return;
+    }
+    if (!disciplineId || !roomId || !coachId) {
+      setError(t('Vui lòng chọn đầy đủ bộ môn, phòng tập và HLV.', 'Please select discipline, room, and coach.'));
+      return;
+    }
+    if (activeDisciplineIds.has(Number(disciplineId))) {
+      setError(
+        t(
+          'Bộ môn này đã có một lớp đang hoạt động. Mỗi bộ môn chỉ được mở một lớp duy nhất.',
+          'This discipline already has an active class. Each discipline allows only one active class.',
+        ),
+      );
+      return;
+    }
+    if (recurringDays.length === 0) {
+      setError(t('Vui lòng chọn ít nhất một thứ trong tuần.', 'Please select at least one weekday.'));
+      return;
+    }
+    if (endDate < startDate) {
+      setError(t('Ngày kết thúc phải sau hoặc bằng ngày khai giảng.', 'End date must be on or after start date.'));
+      return;
+    }
 
     setBusy(true);
     try {
-      if (mode === 'course') {
-        if (!name.trim()) {
-          setError(t('Vui lòng nhập tên khóa học.', 'Please enter a course name.'));
-          setBusy(false);
-          return;
-        }
-        if (!disciplineId || !roomId || !coachId) {
-          setError(t('Vui lòng chọn đầy đủ bộ môn, phòng tập và HLV.', 'Please select discipline, room, and coach.'));
-          setBusy(false);
-          return;
-        }
-        if (activeDisciplineIds.has(Number(disciplineId))) {
-          setError(
-            t(
-              'Bộ môn này đã có một lớp đang hoạt động. Mỗi bộ môn chỉ được mở một lớp duy nhất.',
-              'This discipline already has an active class. Each discipline allows only one active class.',
-            ),
-          );
-          setBusy(false);
-          return;
-        }
-        if (recurringDays.length === 0) {
-          setError(t('Vui lòng chọn ít nhất một thứ trong tuần.', 'Please select at least one weekday.'));
-          setBusy(false);
-          return;
-        }
-        if (endDate < startDate) {
-          setError(t('Ngày kết thúc phải sau hoặc bằng ngày khai giảng.', 'End date must be on or after start date.'));
-          setBusy(false);
-          return;
-        }
-        await classesApi.createRecurringClass({
-          name: name.trim(),
-          disciplineId: Number(disciplineId),
-          roomId: Number(roomId),
-          coachId: Number(coachId),
-          capacity: Math.max(1, Number(capacity) || 1),
-          level,
-          description: description.trim() || undefined,
-          price: Math.max(0, Number(price) || 0),
-          startDate,
-          endDate,
-          recurringDays,
-          startTime: normalizeTime(startTime),
-          endTime: normalizeTime(endTime),
-        });
-        onSuccess(t('Đã tạo khóa học định kỳ thành công.', 'Recurring course created successfully.'));
-      } else {
-        if (!targetClassId) {
-          setError(t('Vui lòng chọn khóa học.', 'Please select a course.'));
-          setBusy(false);
-          return;
-        }
-        await classesApi.createSession({
-          classId: Number(targetClassId),
-          sessionDate,
-          startTime: normalizeTime(startTime),
-          endTime: normalizeTime(endTime),
-        });
-        onSuccess(t('Đã thêm buổi học mới thành công.', 'Class session added successfully.'));
-      }
+      await classesApi.createRecurringClass({
+        name: name.trim(),
+        disciplineId: Number(disciplineId),
+        roomId: Number(roomId),
+        coachId: Number(coachId),
+        capacity: Math.max(1, Number(capacity) || 1),
+        level,
+        description: description.trim() || undefined,
+        price: Math.max(0, Number(price) || 0),
+        startDate,
+        endDate,
+        recurringDays,
+        startTime: normalizeTime(startTime),
+        endTime: normalizeTime(endTime),
+      });
+      onSuccess(t('Đã tạo khóa học định kỳ thành công.', 'Recurring course created successfully.'));
     } catch (err) {
       setError(errorMessage(err, t('Không thể lưu lịch học. Vui lòng kiểm tra xung đột lịch.', 'Could not save schedule. Please check for conflicts.')));
     } finally {
@@ -195,30 +165,10 @@ export function CreateClassOrSessionModal({
 
   return (
     <Modal
-      title={mode === 'course' ? t('Tạo khóa học định kỳ', 'Create recurring course') : t('Thêm buổi học cho khóa', 'Add session to course')}
+      title={t('Tạo khóa học định kỳ', 'Create recurring course')}
       onClose={onClose}
       busy={busy}
     >
-      <div className="filter-chips" role="group" aria-label={t('Kiểu tạo lịch', 'Creation mode')} style={{ marginBottom: 14 }}>
-        <button
-          type="button"
-          className={`filter-chip${mode === 'course' ? ' is-active' : ''}`}
-          aria-pressed={mode === 'course'}
-          onClick={() => { setMode('course'); setError(null); }}
-        >
-          {t('Tạo khóa học mới', 'New recurring course')}
-        </button>
-        <button
-          type="button"
-          className={`filter-chip${mode === 'session' ? ' is-active' : ''}`}
-          aria-pressed={mode === 'session'}
-          disabled={activeClasses.length === 0}
-          onClick={() => { setMode('session'); setError(null); }}
-        >
-          {t('Thêm buổi vào khóa có sẵn', 'Add session to existing course')}
-        </button>
-      </div>
-
       {error && (
         <div className="portal-alert portal-alert--error" role="alert" style={{ marginBottom: 12 }}>
           {error}
@@ -226,155 +176,134 @@ export function CreateClassOrSessionModal({
       )}
 
       <form onSubmit={handleSubmit} className="portal-form-stack">
-        {mode === 'course' ? (
-          <>
-            {availableDisciplines.length === 0 && (
-              <div className="portal-alert portal-alert--error" role="status" data-testid="all-disciplines-taken-notice">
-                {t(
-                  'Cả tất cả bộ môn hiện đều đã có 1 lớp đang hoạt động. Hãy lưu trữ/hủy lớp cũ ở Danh sách lớp trước khi tạo mới, hoặc chuyển sang "Thêm buổi vào khóa có sẵn".',
-                  'Every discipline already has an active class. Archive or cancel an existing class first, or switch to "Add session to existing course".',
-                )}
-              </div>
+        {availableDisciplines.length === 0 && (
+          <div className="portal-alert portal-alert--error" role="status" data-testid="all-disciplines-taken-notice">
+            {t(
+              'Tất cả bộ môn hiện đều đã có 1 lớp đang hoạt động. Hãy ngừng mở hoặc xóa lớp cũ ở Danh sách lớp trước khi tạo mới.',
+              'Every discipline already has an active class. Deactivate or delete an existing class in Classes list before creating a new one.',
             )}
-            <div className="portal-form-group">
-              <label className="portal-label" htmlFor="cls-name">{t('Tên khóa học', 'Course name')}</label>
-              <input
-                id="cls-name"
-                className="portal-input"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={t('Ví dụ: Yoga Phục hồi sáng', 'e.g. Morning Restorative Yoga')}
-                required
-              />
-            </div>
-
-            <div className="portal-form-grid-2">
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-discipline">{t('Bộ môn (mỗi môn tối đa 1 lớp)', 'Discipline (max 1 active class)')}</label>
-                <Select id="cls-discipline" value={disciplineId} onChange={(e) => setDisciplineId(e.target.value)}>
-                  {availableDisciplines.length === 0 && (
-                    <option value="">{t('Không còn bộ môn trống', 'No available discipline')}</option>
-                  )}
-                  {disciplines.map((d) => {
-                    const taken = activeDisciplineIds.has(d.id);
-                    return (
-                      <option key={d.id} value={String(d.id)} disabled={taken}>
-                        {taken ? `${d.name} (${t('Đã có lớp đang mở', 'Already active')})` : d.name}
-                      </option>
-                    );
-                  })}
-                </Select>
-              </div>
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-room">{t('Phòng tập', 'Room')}</label>
-                <Select
-                  id="cls-room"
-                  value={roomId}
-                  onChange={(e) => {
-                    setRoomId(e.target.value);
-                    const picked = rooms.find((r) => String(r.id) === e.target.value);
-                    if (picked) setCapacity(String(picked.capacity));
-                  }}
-                >
-                  {rooms.map((r) => <option key={r.id} value={String(r.id)}>{`${r.name} (${r.capacity})`}</option>)}
-                </Select>
-              </div>
-            </div>
-
-            <div className="portal-form-grid-2">
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-coach">{t('Huấn luyện viên', 'Coach')}</label>
-                <Select id="cls-coach" value={coachId} onChange={(e) => setCoachId(e.target.value)}>
-                  {coaches.map((c) => <option key={c.id} value={String(c.id)}>{c.fullName}</option>)}
-                </Select>
-              </div>
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-capacity">{t('Sĩ số tối đa', 'Max capacity')}</label>
-                <input
-                  id="cls-capacity"
-                  className="portal-input"
-                  type="number"
-                  min={1}
-                  max={200}
-                  value={capacity}
-                  onChange={(e) => setCapacity(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="portal-form-grid-2">
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-level">{t('Trình độ', 'Level')}</label>
-                <Select id="cls-level" value={level} onChange={(e) => setLevel(e.target.value)}>
-                  <option value="all">{t('Mọi trình độ', 'All levels')}</option>
-                  <option value="beginner">{t('Cơ bản', 'Beginner')}</option>
-                  <option value="intermediate">{t('Trung cấp', 'Intermediate')}</option>
-                  <option value="advanced">{t('Nâng cao', 'Advanced')}</option>
-                </Select>
-              </div>
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-price">{t('Học phí ngoài gói (VND)', 'Extra fee (VND)')}</label>
-                <input
-                  id="cls-price"
-                  className="portal-input"
-                  type="number"
-                  min={0}
-                  step={10000}
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="portal-form-grid-2">
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-start-date">{t('Ngày khai giảng', 'Start date')}</label>
-                <DatePicker id="cls-start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-              </div>
-              <div className="portal-form-group">
-                <label className="portal-label" htmlFor="cls-end-date">{t('Ngày kết thúc', 'End date')}</label>
-                <DatePicker id="cls-end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-              </div>
-            </div>
-
-            <div className="portal-form-group">
-              <span className="portal-label">{t('Các thứ học trong tuần', 'Weekly schedule days')}</span>
-              <div className="filter-chips" role="group" aria-label={t('Chọn các thứ trong tuần', 'Select weekdays')}>
-                {WEEKDAYS.map((day) => {
-                  const selected = recurringDays.includes(day.code);
-                  return (
-                    <button
-                      key={day.code}
-                      type="button"
-                      className={`filter-chip${selected ? ' is-active' : ''}`}
-                      aria-pressed={selected}
-                      onClick={() => toggleDay(day.code)}
-                    >
-                      {t(day.vi, day.en)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="portal-form-group">
-              <label className="portal-label" htmlFor="sess-class">{t('Khóa học', 'Course')}</label>
-              <Select id="sess-class" value={targetClassId} onChange={(e) => setTargetClassId(e.target.value)}>
-                {activeClasses.map((c) => (
-                  <option key={c.id} value={String(c.id)}>
-                    {`${c.name} · ${c.roomName ?? ''} · ${c.coachName ?? ''}`}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="portal-form-group">
-              <label className="portal-label" htmlFor="sess-date">{t('Ngày học', 'Session date')}</label>
-              <DatePicker id="sess-date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
-            </div>
-          </>
+          </div>
         )}
+        <div className="portal-form-group">
+          <label className="portal-label" htmlFor="cls-name">{t('Tên khóa học', 'Course name')}</label>
+          <input
+            id="cls-name"
+            className="portal-input"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder={t('Ví dụ: Yoga Phục hồi sáng', 'e.g. Morning Restorative Yoga')}
+            required
+          />
+        </div>
+
+        <div className="portal-form-grid-2">
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="cls-discipline">{t('Bộ môn (mỗi môn tối đa 1 lớp)', 'Discipline (max 1 active class)')}</label>
+            <Select id="cls-discipline" value={disciplineId} onChange={(e) => setDisciplineId(e.target.value)}>
+              {availableDisciplines.length === 0 && (
+                <option value="">{t('Không còn bộ môn trống', 'No available discipline')}</option>
+              )}
+              {disciplines.map((d) => {
+                const taken = activeDisciplineIds.has(d.id);
+                return (
+                  <option key={d.id} value={String(d.id)} disabled={taken}>
+                    {taken ? `${d.name} (${t('Đã có lớp đang mở', 'Already active')})` : d.name}
+                  </option>
+                );
+              })}
+            </Select>
+          </div>
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="cls-room">{t('Phòng tập', 'Room')}</label>
+            <Select
+              id="cls-room"
+              value={roomId}
+              onChange={(e) => {
+                setRoomId(e.target.value);
+                const picked = rooms.find((r) => String(r.id) === e.target.value);
+                if (picked) setCapacity(String(picked.capacity));
+              }}
+            >
+              {rooms.map((r) => <option key={r.id} value={String(r.id)}>{`${r.name} (${r.capacity})`}</option>)}
+            </Select>
+          </div>
+        </div>
+
+        <div className="portal-form-grid-2">
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="cls-coach">{t('Huấn luyện viên', 'Coach')}</label>
+            <Select id="cls-coach" value={coachId} onChange={(e) => setCoachId(e.target.value)}>
+              {coaches.map((c) => <option key={c.id} value={String(c.id)}>{c.fullName}</option>)}
+            </Select>
+          </div>
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="cls-capacity">{t('Sĩ số tối đa', 'Max capacity')}</label>
+            <input
+              id="cls-capacity"
+              className="portal-input"
+              type="number"
+              min={1}
+              max={200}
+              value={capacity}
+              onChange={(e) => setCapacity(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="portal-form-grid-2">
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="cls-level">{t('Trình độ', 'Level')}</label>
+            <Select id="cls-level" value={level} onChange={(e) => setLevel(e.target.value)}>
+              <option value="all">{t('Mọi trình độ', 'All levels')}</option>
+              <option value="beginner">{t('Cơ bản', 'Beginner')}</option>
+              <option value="intermediate">{t('Trung cấp', 'Intermediate')}</option>
+              <option value="advanced">{t('Nâng cao', 'Advanced')}</option>
+            </Select>
+          </div>
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="cls-price">{t('Học phí ngoài gói (VND)', 'Extra fee (VND)')}</label>
+            <input
+              id="cls-price"
+              className="portal-input"
+              type="number"
+              min={0}
+              step={10000}
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          </div>
+        </div>
+
+        <div className="portal-form-grid-2">
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="cls-start-date">{t('Ngày khai giảng', 'Start date')}</label>
+            <DatePicker id="cls-start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div className="portal-form-group">
+            <label className="portal-label" htmlFor="cls-end-date">{t('Ngày kết thúc', 'End date')}</label>
+            <DatePicker id="cls-end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="portal-form-group">
+          <span className="portal-label">{t('Các thứ học trong tuần', 'Weekly schedule days')}</span>
+          <div className="filter-chips" role="group" aria-label={t('Chọn các thứ trong tuần', 'Select weekdays')}>
+            {WEEKDAYS.map((day) => {
+              const selected = recurringDays.includes(day.code);
+              return (
+                <button
+                  key={day.code}
+                  type="button"
+                  className={`filter-chip${selected ? ' is-active' : ''}`}
+                  aria-pressed={selected}
+                  onClick={() => toggleDay(day.code)}
+                >
+                  {t(day.vi, day.en)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="portal-form-grid-2">
           <div className="portal-form-group">
@@ -387,25 +316,23 @@ export function CreateClassOrSessionModal({
           </div>
         </div>
 
-        {mode === 'course' && (
-          <div className="portal-form-group">
-            <label className="portal-label" htmlFor="cls-desc">{t('Mô tả (tùy chọn)', 'Description (optional)')}</label>
-            <textarea
-              id="cls-desc"
-              className="portal-textarea"
-              rows={2}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
-        )}
+        <div className="portal-form-group">
+          <label className="portal-label" htmlFor="cls-desc">{t('Mô tả (tùy chọn)', 'Description (optional)')}</label>
+          <textarea
+            id="cls-desc"
+            className="portal-textarea"
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
 
         <div className="mcal__dialog-actions">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
             {t('Hủy', 'Cancel')}
           </button>
-          <button type="submit" className="btn-primary" disabled={busy || (mode === 'course' && availableDisciplines.length === 0)}>
-            {busy ? t('Đang lưu...', 'Saving...') : mode === 'course' ? t('Tạo khóa học', 'Create course') : t('Thêm buổi học', 'Add session')}
+          <button type="submit" className="btn-primary" disabled={busy || availableDisciplines.length === 0}>
+            {busy ? t('Đang lưu...', 'Saving...') : t('Tạo khóa học', 'Create course')}
           </button>
         </div>
       </form>

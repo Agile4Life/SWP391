@@ -193,6 +193,116 @@ describe('ManagerClassesPage (3 disciplines, 1 active class/sport, 3 independent
     expect(overflowBtn!.textContent).toContain('+2 lớp');
   });
 
+  it('hides all ad-hoc "+ Thêm buổi" buttons and disables "+ Tạo lớp học" when all 3 disciplines already have an active class', async () => {
+    vi.mocked(classesApi.getClasses).mockResolvedValue([
+      {
+        id: 1,
+        name: 'Full Body Strength 101',
+        disciplineId: 1,
+        disciplineName: 'Gym',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 10,
+        roomName: 'Phòng Gym Tiêu chuẩn',
+        capacity: 20,
+        status: 'active',
+        price: 0,
+      },
+      {
+        id: 99,
+        name: 'Kettlebell Conditioning (Old)',
+        disciplineId: 1,
+        disciplineName: 'Gym',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 10,
+        roomName: 'Phòng Gym Tiêu chuẩn',
+        capacity: 15,
+        status: 'inactive',
+        price: 0,
+      },
+      {
+        id: 2,
+        name: 'Boxing Cơ Bản',
+        disciplineId: 2,
+        disciplineName: 'Boxing',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 20,
+        roomName: 'Ring Arena 01',
+        capacity: 14,
+        status: 'active',
+      },
+      {
+        id: 3,
+        name: 'Hatha Yoga Nền Tảng',
+        disciplineId: 3,
+        disciplineName: 'Yoga',
+        coachId: 100,
+        coachName: 'HLV Lan',
+        roomId: 30,
+        roomName: 'Zen Garden Studio',
+        capacity: 16,
+        status: 'active',
+        price: 150000,
+      },
+    ]);
+    vi.mocked(classesApi.getSessions).mockResolvedValue([
+      {
+        id: 501,
+        classId: 1,
+        className: 'Full Body Strength 101',
+        disciplineId: 1,
+        disciplineName: 'Gym',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 10,
+        roomName: 'Phòng Gym Tiêu chuẩn',
+        sessionDate: today,
+        startTime: '18:00:00',
+        endTime: '19:00:00',
+        status: 'scheduled',
+        capacity: 20,
+        bookedCount: 12,
+      },
+      {
+        id: 599,
+        classId: 99,
+        className: 'Kettlebell Conditioning (Old)',
+        disciplineId: 1,
+        disciplineName: 'Gym',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 10,
+        roomName: 'Phòng Gym Tiêu chuẩn',
+        sessionDate: today,
+        startTime: '09:00:00',
+        endTime: '10:00:00',
+        status: 'scheduled',
+        capacity: 15,
+        bookedCount: 0,
+      },
+    ]);
+
+    await renderPage();
+
+    // Không bao giờ hiển thị nút "+ Thêm buổi" hay "+ Thêm buổi học"
+    const headerBtn = host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!;
+    expect(headerBtn.textContent?.trim()).toBe('+ Tạo lớp học');
+    expect(headerBtn.disabled).toBe(true);
+    expect(host.querySelector('[data-testid="discipline-active-class-bar"]')?.textContent).not.toContain('Thêm buổi');
+    expect(host.querySelector('[data-testid="discipline-active-class-bar"]')?.textContent).toContain('Sửa lớp');
+
+    // Buổi của lớp inactive (classId 99) không bị cộng vào chip Gym (chỉ đếm 1 buổi của lớp active)
+    expect(host.querySelector('[data-testid="discipline-chip-1"]')?.textContent).toContain('Gym (1)');
+
+    // Tab 3 Danh sách lớp cũng không còn nút "Thêm buổi"
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    await act(async () => listTab.click());
+    const tableButtons = [...host.querySelectorAll<HTMLButtonElement>('table button')].map((b) => b.textContent?.trim());
+    expect(tableButtons.some((label) => label?.includes('Thêm buổi'))).toBe(false);
+  });
+
   it('opens full session detail modal with room, coach, capacity, enrolled students and action buttons when clicking a block', async () => {
     await renderPage();
 
