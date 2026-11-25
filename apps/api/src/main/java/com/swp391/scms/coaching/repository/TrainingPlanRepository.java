@@ -66,6 +66,9 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
     @org.springframework.data.jpa.repository.Query("select (count(p) > 0) from TrainingPlan p where p.coach.userId = :coachId and p.member.userId = :memberId")
     boolean existsForCoachAndMember(@org.springframework.data.repository.query.Param("coachId") Long coachId, @org.springframework.data.repository.query.Param("memberId") Long memberId);
 
+    /** Kiểm tra có tồn tại giáo án nào gắn với lớp học này không (dùng trước khi xóa lớp). */
+    boolean existsByGymClassId(Long classId);
+
     /**
      * Chuyển các giáo án active có chu kỳ kết thúc trước {@code today} sang completed và cập nhật updatedAt
      * (máy trạng thái 7); trả về số dòng cập nhật.

@@ -4,8 +4,8 @@ import jakarta.persistence.*;
 import java.time.LocalTime;
 
 /**
- * Entity ánh xạ bảng rooms (Module B: Danh mục cơ sở vật chất): phòng tập gồm tên, vị trí, sức chứa, trạng thái,
- * hạng STANDARD/VIP; phòng gắn bộ môn và giờ mở/đóng là sân (tính năng cũ).
+ * Entity ánh xạ bảng rooms (Module B: Danh mục cơ sở vật chất): phòng tập gồm tên, vị trí, sức chứa, trạng thái
+ * và hạng STANDARD/PLATINUM.
  */
 @Entity
 @org.hibernate.annotations.Check(name = "ck_rooms_status", constraints = "status IN ('available','maintenance','closed')")

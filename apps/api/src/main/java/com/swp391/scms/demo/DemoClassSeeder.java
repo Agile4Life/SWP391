@@ -86,9 +86,6 @@ public class DemoClassSeeder implements ApplicationRunner {
     private static final String GYM = "Phòng Gym Tiêu chuẩn";
     private static final String RING = "Ring Arena 01";
     private static final String ZEN = "Zen Garden Studio";
-    private static final String POOL = "Oasis Lap Pool";
-    private static final String TENNIS_COURT = "Sân Tennis 01";
-    private static final String BADMINTON_COURT = "Sân Cầu lông 01";
 
     /** Tạo mô tả khóa đang diễn ra (bắt đầu 14 ngày trước, kết thúc sau 42 ngày). */
     private static ClassSpec ongoing(String name, String discipline, String room, String level, int capacity,
@@ -98,20 +95,14 @@ public class DemoClassSeeder implements ApplicationRunner {
     }
 
     /**
-     * Đúng 1 lớp đang hoạt động (`active`) cho mỗi bộ môn trong 6 bộ môn chuẩn (Gym, Bơi lội, Boxing, Tennis,
-     * Cầu lông, Yoga) — tuân thủ quy tắc mỗi bộ môn tối đa 1 lớp duy nhất.
+     * Đúng 1 lớp đang hoạt động (`active`) cho mỗi bộ môn trong 3 bộ môn chuẩn (Gym, Boxing, Yoga)
+     * — tuân thủ quy tắc mỗi bộ môn tối đa 1 lớp duy nhất.
      */
     static final List<ClassSpec> CLASSES = List.of(
             ongoing("Full Body Strength 101", "Gym", GYM, "all", 20, 0, "MON,WED,FRI", "06:30", 60,
                     "Nền tảng tập tạ toàn thân cho mọi trình độ: tư thế, hơi thở và giáo án tuần."),
-            ongoing("Bơi Cơ Bản Người Lớn", "Bơi lội", POOL, "all", 12, 0, "MON,WED,FRI", "18:00", 60,
-                    "Làm quen với nước, kỹ thuật thở, bơi ếch và bơi sải cơ bản."),
             ongoing("Boxing Cơ Bản", "Boxing", RING, "all", 14, 0, "TUE,THU,SAT", "19:00", 60,
                     "Tư thế, đòn thẳng, móc, di chuyển chân và thể lực theo hiệp."),
-            ongoing("Tennis Kỹ Thuật Cơ Bản", "Tennis", TENNIS_COURT, "all", 8, 250000, "TUE,THU,SAT", "17:00", 60,
-                    "Cầm vợt, forehand, backhand, giao bóng và bộ chân đánh đôi."),
-            ongoing("Cầu Lông Bộ Chân & Đánh Đôi", "Cầu lông", BADMINTON_COURT, "all", 8, 0, "WED,FRI,SUN", "08:00", 60,
-                    "Bộ chân di chuyển nhanh, phản xạ và chiến thuật đánh đôi."),
             ongoing("Hatha Yoga Nền Tảng", "Yoga", ZEN, "all", 16, 0, "MON,WED,FRI", "07:30", 60,
                     "Các tư thế Hatha cơ bản, hít thở sâu, thăng bằng và giãn cơ."));
 

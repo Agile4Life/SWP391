@@ -62,8 +62,6 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     /** Tìm các bản ghi có coachBookingId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<Payment> findAllByCoachBookingId(Long coachBookingId);
-    /** Tìm các bản ghi có courtBookingId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
-    List<Payment> findAllByCourtBookingId(Long courtBookingId);
     /** Tìm các bản ghi có productOrderId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     List<Payment> findAllByProductOrderId(Long productOrderId);
 

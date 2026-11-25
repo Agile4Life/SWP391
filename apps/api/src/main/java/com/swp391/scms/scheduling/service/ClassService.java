@@ -10,7 +10,6 @@ import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
-import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -109,23 +108,9 @@ public class ClassService {
     private final RoomRepository rooms;
     private final SchedulingMapper mapper;
     private final Clock clock;
-    private final CourtBookingRepository courtBookings;
-
-    /** Constructor rút gọn không có CourtBookingRepository (dùng trong test). */
-    public ClassService(GymClassRepository gymClasses,
-                        ClassSessionRepository sessions,
-                        ClassEnrollmentRepository enrollments,
-                        DisciplineRepository disciplines,
-                        CoachRepository coaches,
-                        RoomRepository rooms,
-                        SchedulingMapper mapper,
-                        Clock clock) {
-        this(gymClasses, sessions, enrollments, disciplines, coaches, rooms, mapper, clock, null);
-    }
 
     /**
-     * Constructor chính: nhận các repository lớp, buổi, ghi danh, bộ môn, HLV, phòng, mapper, Clock và
-     * repository đặt sân.
+     * Constructor chính: nhận các repository lớp, buổi, ghi danh, bộ môn, HLV, phòng, mapper và Clock.
      */
     @Autowired
     public ClassService(GymClassRepository gymClasses,
@@ -135,8 +120,7 @@ public class ClassService {
                         CoachRepository coaches,
                         RoomRepository rooms,
                         SchedulingMapper mapper,
-                        Clock clock,
-                        CourtBookingRepository courtBookings) {
+                        Clock clock) {
         this.gymClasses = gymClasses;
         this.sessions = sessions;
         this.enrollments = enrollments;
@@ -145,7 +129,6 @@ public class ClassService {
         this.rooms = rooms;
         this.mapper = mapper;
         this.clock = clock;
-        this.courtBookings = courtBookings;
     }
 
     /**
@@ -870,7 +853,7 @@ public class ClassService {
     }
 
     /**
-     * Kiểm tra trước xung đột: HLV không nghỉ phép đã duyệt, phòng không bị đặt sân, và không có buổi scheduled
+     * Kiểm tra trước xung đột: HLV không nghỉ phép đã duyệt, không trùng lịch PT 1:1 và không có buổi scheduled
      * khác cùng ngày trùng giờ ở cùng phòng hoặc cùng HLV.
      *
      * SCRUM-132: Kiểm tra trước rằng không có buổi đã xếp cùng ngày chồng giờ với cùng phòng hoặc cùng HLV,
@@ -921,10 +904,6 @@ public class ClassService {
                     }
                 }
             }
-        }
-        if (courtBookings != null && roomId != null
-                && courtBookings.existsRoomOverlap(roomId, sessionDate, startTime, endTime)) {
-            throw new ConflictException("COURT_BOOKING_SLOT_TAKEN", "error.courts.slot_taken", null, null);
         }
         List<ClassSession> existingOnDate = sessions.searchSessions(sessionDate, sessionDate, null, null);
         if (existingOnDate == null || existingOnDate.isEmpty()) {

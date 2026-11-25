@@ -80,11 +80,14 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final Integer PLATINUM_CREDIT_LIMIT = 4;
 
     // --- 3 THÁNG (90 NGÀY) & 6 THÁNG (180 NGÀY) ---
+    private static final String LEGACY_3D_QR_LINE = "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.";
+    private static final String CLEAN_QR_LINE = "- Check-in ra/vào bằng thẻ QR động.";
+
     public static final String SILVER_3M_NAME = "SILVER 3 THÁNG";
     public static final String SILVER_3M_DESC = "BASIC – Đồng hành 3 tháng\n"
             + "Quyền lợi:\n"
             + "- Tập luyện Gym không giới hạn trong giờ hoạt động suốt 90 ngày.\n"
-            + "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.\n"
+            + "- Check-in ra/vào bằng thẻ QR động.\n"
             + "- Sử dụng đầy đủ khu vực tạ tự do, máy cardio và máy tập tiêu chuẩn.\n"
             + "- Sử dụng phòng thay đồ, tủ khóa chung và miễn phí nước uống.\n"
             + "- Hỗ trợ bảo lưu tối đa 07 ngày (khi có lý do hợp lệ).\n"
@@ -97,7 +100,7 @@ public class CatalogSeeder implements ApplicationRunner {
     public static final String SILVER_6M_DESC = "BASIC – Đồng hành 6 tháng (Tiết kiệm ~10%)\n"
             + "Quyền lợi:\n"
             + "- Tập luyện Gym không giới hạn trong giờ hoạt động suốt 180 ngày.\n"
-            + "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.\n"
+            + "- Check-in ra/vào bằng thẻ QR động.\n"
             + "- Sử dụng đầy đủ khu vực tạ tự do, máy cardio và máy tập tiêu chuẩn.\n"
             + "- Sử dụng phòng thay đồ, tủ khóa chung và miễn phí nước uống.\n"
             + "- Hỗ trợ bảo lưu tối đa 07 ngày (khi có lý do hợp lệ).\n"
@@ -182,22 +185,16 @@ public class CatalogSeeder implements ApplicationRunner {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
-        // Bộ môn chuẩn (khôi phục từ 1384c4d3): Gym là bộ môn chính; Bơi lội, Boxing, Tennis, Cầu lông, Yoga là bộ môn phụ.
+        // Bộ môn chuẩn của trung tâm: Gym là bộ môn chính; Boxing và Yoga là hai bộ môn nhóm song song.
         upsertDiscipline("Gym", "Sức mạnh, thể lực và kỹ thuật tập tạ", "Olympic Strength");
-        upsertDiscipline("Bơi lội", "Kỹ thuật bơi, sức bền dưới nước và phục hồi", "Thermal Aquatics");
         upsertDiscipline("Boxing", "Kỹ thuật đấm, phản xạ và thể lực theo hiệp", "Boxing & Kickfit");
-        upsertDiscipline("Tennis", "Kỹ thuật đánh bóng, di chuyển và đánh đôi");
-        upsertDiscipline("Cầu lông", "Bộ chân, phản xạ và kỹ thuật đánh cầu");
         upsertDiscipline("Yoga", "Hơi thở, thăng bằng và giãn cơ", "Mindful Yoga");
 
-        // Upsert idempotent các phòng/khu tập của 6 bộ môn để cả DB mới lẫn DB đang chạy đều có đủ phòng xếp lớp.
+        // Upsert idempotent 4 phòng/khu tập của 3 bộ môn để cả DB mới lẫn DB đang chạy đều có đủ phòng xếp lớp.
         upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
         upsertRoom("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", "PLATINUM");
         upsertRoom("Zen Garden Studio", "Penthouse", 18, "available", "STANDARD");
         upsertRoom("Ring Arena 01", "Level 1 - East Wing", 14, "available", "STANDARD");
-        upsertRoom("Oasis Lap Pool", "Sub-level Oasis", 20, "available", "STANDARD");
-        upsertRoom("Sân Tennis 01", "Khu thể thao ngoài trời - Sân A", 8, "available", "STANDARD");
-        upsertRoom("Sân Cầu lông 01", "Nhà thi đấu - Tầng 1", 8, "available", "STANDARD");
 
         // Tạo hoặc cập nhật gói trải nghiệm 3 ngày
         upsertPackageWithTier(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_PRICE, TRIAL_PACKAGE_DURATION, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, "GOLD TRIAL", "Gói Tập Thử 3 Ngày", "Gói Thử Gold");
@@ -313,7 +310,8 @@ public class CatalogSeeder implements ApplicationRunner {
             "VIP – Gym Cao cấp + PT 1:1 chuyên sâu (6 tháng · Tiết kiệm ~10%)");
 
     /**
-     * Chuyển một lần gói 3/6 tháng còn mô tả seed cũ sang mô tả, giá, hạn mức mới và mở bán lại.
+     * Chuyển một lần gói 3/6 tháng còn mô tả seed cũ sang mô tả, giá, hạn mức mới và mở bán lại; đồng thời gỡ
+     * cụm mô tả không gian 3D cũ trên các bản seed chưa bị chỉnh sửa (giữ nguyên giá/trạng thái của quản lý).
      * Sau khi chuyển, mô tả không còn khớp bản cũ nên các lần khởi động sau không đụng tới:
      * Manager toàn quyền đổi giá, mô tả và bật/tắt gói.
      */
@@ -323,6 +321,10 @@ public class CatalogSeeder implements ApplicationRunner {
             if (isOldSeededDescription(pkg.description())) {
                 packages.update(pkg.id(), new PackageRequest(
                         pkg.name(), desc, price, pkg.durationDays(), creditLimit, "active", tier));
+            } else if (pkg.description() != null && pkg.description().contains(LEGACY_3D_QR_LINE)) {
+                String cleaned = pkg.description().replace(LEGACY_3D_QR_LINE, CLEAN_QR_LINE);
+                packages.update(pkg.id(), new PackageRequest(
+                        pkg.name(), cleaned, pkg.price(), pkg.durationDays(), pkg.classCreditLimit(), pkg.status(), pkg.tier()));
             }
             return;
         }

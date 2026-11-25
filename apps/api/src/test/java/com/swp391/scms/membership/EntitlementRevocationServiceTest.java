@@ -2,8 +2,6 @@ package com.swp391.scms.membership;
 
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
-import com.swp391.scms.courts.entity.CourtBooking;
-import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.membership.service.EntitlementRevocationService;
 import com.swp391.scms.scheduling.service.EnrollmentService;
@@ -33,31 +31,25 @@ class EntitlementRevocationServiceTest {
     @Mock private MembershipSubscriptionRepository subscriptions;
     @Mock private EnrollmentService enrollmentService;
     @Mock private CoachBookingRepository coachBookings;
-    @Mock private CourtBookingRepository courtBookings;
 
     /** Kiểm thử: chỉ nhả các đặt chỗ ở những ngày không còn membership nào bao phủ. */
     @Test
     void releasesOnlyBookingsOnDatesNoActiveMembershipCovers() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
-        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, courtBookings, clock);
+        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, clock);
         LocalDate today = LocalDate.of(2026, 10, 11);
         LocalDate covered = LocalDate.of(2026, 10, 20);
         LocalDate gap = LocalDate.of(2026, 11, 5);
         CoachBooking keep = pt(covered);
         CoachBooking release = pt(gap);
-        CourtBooking court = new CourtBooking();
-        court.setBookingDate(gap);
-        court.setStartTime(LocalTime.of(14, 0));
         when(subscriptions.hasActiveMembership(10L, covered)).thenReturn(true);
         when(subscriptions.hasActiveMembership(10L, gap)).thenReturn(false);
         when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any(), any())).thenReturn(1);
         when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(keep, release));
-        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of(court));
 
-        assertEquals(3, service.revokeUncoveredBookings(10L, "Hết hạn"));
+        assertEquals(2, service.revokeUncoveredBookings(10L, "Hết hạn"));
         assertEquals("confirmed", keep.getStatus());
         assertEquals("cancelled", release.getStatus());
-        assertEquals("cancelled", court.getStatus());
     }
 
     /**
@@ -67,7 +59,7 @@ class EntitlementRevocationServiceTest {
     @Test
     void aFrozenMembershipWithADatedHoldStillCoversTheDaysAfterTheHoldSoTheNightlySweepKeepsThoseBookings() {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
-        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, courtBookings, clock);
+        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, clock);
         LocalDate today = LocalDate.of(2026, 10, 11);
         // Đóng băng 12-18 tháng 10 (tạm hoãn 7 ngày); kỳ hạn 01/10 - 30/11 thành 01/10 - 07/12 khi mở lại.
         var frozen = new com.swp391.scms.membership.entity.MembershipSubscription();
@@ -91,7 +83,6 @@ class EntitlementRevocationServiceTest {
             return 0;
         });
         when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(afterHold, lastExtendedDay, pastTheEnd));
-        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of());
 
         assertEquals(1, service.revokeUncoveredBookings(10L, "Sweep"));
 
@@ -104,7 +95,7 @@ class EntitlementRevocationServiceTest {
     private EntitlementRevocationService holdService(com.swp391.scms.finance.repository.PaymentRepository payments,
                                                      com.swp391.scms.wallet.WalletService wallets) {
         Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
-        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, courtBookings, clock);
+        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, clock);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "payments", payments);
         org.springframework.test.util.ReflectionTestUtils.setField(service, "walletService", wallets);
         return service;
@@ -118,20 +109,6 @@ class EntitlementRevocationServiceTest {
         return payment;
     }
 
-    /** Hàm trợ giúp của test: tạo đặt sân mẫu. */
-    private static CourtBooking court(LocalDate date, LocalTime start, String method, String paymentStatus) {
-        CourtBooking court = new CourtBooking();
-        court.setBookingDate(date);
-        court.setStartTime(start);
-        court.setPaymentMethod(method);
-        court.setPaymentStatus(paymentStatus);
-        court.setStatus("booked");
-        var user = new com.swp391.scms.users.entity.User();
-        user.setId(10L);
-        court.setMember(user);
-        return court;
-    }
-
     /** Kiểm thử: tạm hoãn chỉ hoàn lượt PT khi được duyệt trước 3 ngày. */
     @Test
     void holdReturnsAPtQuotaSlotOnlyWhenApprovedThreeDaysAhead() {
@@ -142,7 +119,6 @@ class EntitlementRevocationServiceTest {
         inTime.setPaymentMethod("package_quota");
         late.setPaymentMethod("package_quota");
         when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(inTime, late));
-        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of());
 
         assertEquals(2, service.releaseBookingsBetween(10L, today, today.plusDays(30), "hold"));
 
@@ -174,7 +150,6 @@ class EntitlementRevocationServiceTest {
         when(payments.findAllByCoachBookingId(1L)).thenReturn(List.of(paidInTime));
         when(payments.findAllByCoachBookingId(2L)).thenReturn(List.of(paidLate));
         when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(inTime, late));
-        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of());
 
         service.releaseBookingsBetween(10L, today, today.plusDays(30), "hold");
 
@@ -182,49 +157,6 @@ class EntitlementRevocationServiceTest {
         assertEquals("success", paidLate.getStatus());
         org.mockito.Mockito.verify(wallets).creditCoachBookingRefund(eq(10L), eq(new java.math.BigDecimal("200000")), eq("COACH_REFUND_1"), any());
         org.mockito.Mockito.verifyNoMoreInteractions(wallets);
-    }
-
-    /** Kiểm thử: tạm hoãn chỉ hoàn tiền sân đã trả khi được duyệt trước 2 giờ. */
-    @Test
-    void holdRefundsAPaidCourtOnlyWhenApprovedTwoHoursAhead() {
-        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
-        var wallets = org.mockito.Mockito.mock(com.swp391.scms.wallet.WalletService.class);
-        var service = holdService(payments, wallets);
-        LocalDate today = LocalDate.of(2026, 10, 11);
-        // Đồng hồ ở 10:00 UTC; 12:00 là đúng 2 giờ nữa, 11:00 là 1 giờ nữa.
-        CourtBooking inTime = court(today, LocalTime.of(12, 0), "vnpay", "paid");
-        CourtBooking late = court(today, LocalTime.of(11, 0), "vnpay", "paid");
-        inTime.setId(1L);
-        late.setId(2L);
-        var paidInTime = successPayment("100000");
-        var paidLate = successPayment("100000");
-        when(payments.findAllByCourtBookingId(1L)).thenReturn(List.of(paidInTime));
-        when(payments.findAllByCourtBookingId(2L)).thenReturn(List.of(paidLate));
-        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of());
-        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of(inTime, late));
-
-        service.releaseBookingsBetween(10L, today, today.plusDays(30), "hold");
-
-        assertEquals("refunded", paidInTime.getStatus());
-        assertEquals("success", paidLate.getStatus());
-        org.mockito.Mockito.verify(wallets).creditCourtRefund(eq(10L), eq(new java.math.BigDecimal("100000")), eq("COURT_REFUND_1"), any());
-        org.mockito.Mockito.verifyNoMoreInteractions(wallets);
-    }
-
-    /** Kiểm thử: tạm hoãn trong vòng 2 giờ thì mất lượt đặt sân. */
-    @Test
-    void holdForfeitsACourtQuotaSlotWithinTwoHours() {
-        var service = holdService(null, null);
-        LocalDate today = LocalDate.of(2026, 10, 11);
-        CourtBooking inTime = court(today, LocalTime.of(12, 0), "package_quota", "covered");
-        CourtBooking late = court(today, LocalTime.of(11, 59), "package_quota", "covered");
-        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of());
-        when(courtBookings.findUpcomingBookedByMember(10L, today)).thenReturn(List.of(inTime, late));
-
-        service.releaseBookingsBetween(10L, today, today.plusDays(30), "hold");
-
-        assertFalse(inTime.isQuotaForfeited());
-        assertTrue(late.isQuotaForfeited());
     }
 
     /** Hàm trợ giúp của test: tạo lượt đặt PT mẫu. */

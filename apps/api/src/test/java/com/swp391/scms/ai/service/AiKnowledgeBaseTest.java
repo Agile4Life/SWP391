@@ -40,7 +40,21 @@ class AiKnowledgeBaseTest {
         assertTrue(tiers.contains("bảo lưu: tối đa 30 ngày (gói 1 tháng cũ: tối đa 7 ngày)"));
         assertTrue(tiers.contains("- Silver:") && tiers.contains("bảo lưu: tối đa 7 ngày (gói 1 tháng cũ: không bảo lưu được)"));
         assertTrue(tiers.contains("giảm 20%"));
-        assertFalse(tiers.contains("khóa học nhóm miễn phí") || tiers.contains("đặt sân miễn phí") || tiers.contains("khóa học có phí và sản phẩm"));
+        assertFalse(tiers.contains("khóa học nhóm miễn phí") || tiers.contains("khóa học có phí và sản phẩm"));
+    }
+
+    /** Kiểm thử: tri thức Sol AI chỉ giới thiệu đúng 3 bộ môn Gym, Boxing và Yoga. */
+    @Test
+    void describesThreeActiveDisciplinesWithoutRetiredSports() {
+        String all = base.sectionsFor("");
+
+        assertTrue(all.contains("Gym"));
+        assertTrue(all.contains("Boxing"));
+        assertTrue(all.contains("Yoga"));
+        assertFalse(all.contains("Bơi lội"));
+        assertFalse(all.contains("Tennis"));
+        assertFalse(all.contains("Cầu lông"));
+        assertFalse(all.contains("đặt sân"));
     }
 
     /** Kiểm thử: chỉ gửi các mục liên quan đến câu hỏi cộng phần giới thiệu. */
@@ -65,6 +79,6 @@ class AiKnowledgeBaseTest {
     /** Kiểm thử: placeholder lạ làm lỗi thay vì lọt tới hội viên. */
     @Test
     void unknownPlaceholderFailsInsteadOfReachingTheMember() {
-        assertThrows(IllegalStateException.class, () -> AiKnowledgeBase.fill("Giá {{court.typo}}", Map.of()));
+        assertThrows(IllegalStateException.class, () -> AiKnowledgeBase.fill("Giá {{hold.typo}}", Map.of()));
     }
 }

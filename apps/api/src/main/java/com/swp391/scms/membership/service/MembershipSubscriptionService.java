@@ -1177,20 +1177,20 @@ public class MembershipSubscriptionService {
         if (saved.getMember() != null && saved.getMember().getUserId() != null) {
             String cancelReason = msg("scheduling.enrollment.cancelled_by_hold");
             // Xử lý khóa học trước: bảo lưu được duyệt trước ngày khai giảng từ 3 ngày trở lên sẽ hoàn lại lượt hoặc học phí,
-            // duyệt muộn hơn (hoặc với khóa đang diễn ra) sẽ mất lượt/phí. Các buổi PT 1:1 và đặt sân bên dưới không đụng tới đăng ký khóa học.
+            // duyệt muộn hơn (hoặc với khóa đang diễn ra) sẽ mất lượt/phí. Các buổi PT 1:1 bên dưới không đụng tới đăng ký khóa học.
             if (enrollmentService != null) {
                 var courses = enrollmentService.releaseCoursesForHold(
                         saved.getMember().getUserId(), cancelReason, holdStart, holdEnd);
                 if (courses != null) cancelledCount += courses.cancelled();
             }
             if (holdStart != null && holdEnd != null) {
-                // Chỉ giải phóng các buổi PT 1:1 và lượt đặt sân rơi vào khoảng thời gian bảo lưu.
+                // Chỉ giải phóng các buổi PT 1:1 rơi vào khoảng thời gian bảo lưu.
                 if (entitlementRevocation != null) {
                     cancelledCount += entitlementRevocation.releaseBookingsBetween(
                             saved.getMember().getUserId(), holdStart, holdEnd, cancelReason);
                 }
             } else if (entitlementRevocation != null) {
-                // Kỳ đang frozen không bao phủ ngày nào, nên lớp học, buổi PT 1:1 và đặt sân đều bị giải phóng.
+                // Kỳ đang frozen không bao phủ ngày nào, nên lớp học và buổi PT 1:1 đều bị giải phóng.
                 cancelledCount += entitlementRevocation.revokeUncoveredBookings(saved.getMember().getUserId(), cancelReason);
             } else if (enrollmentService != null) {
                 cancelledCount += enrollmentService.cancelFutureEnrollmentsForMember(

@@ -1015,13 +1015,12 @@ class PaymentServiceTest {
         assertFalse(result.get(1).isVnpayPending());
     }
 
-    /** Kiểm thử: nhân viên không tất toán được thanh toán sân, HLV, đơn hàng hay nạp ví theo trạng thái. */
+    /** Kiểm thử: nhân viên không tất toán được thanh toán HLV, đơn hàng hay nạp ví theo trạng thái. */
     @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {"court", "coach", "order", "topup"})
-    void staffCannotSettleCourtCoachOrderOrTopupPaymentsByStatus(String kind) {
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"coach", "order", "topup"})
+    void staffCannotSettleCoachOrderOrTopupPaymentsByStatus(String kind) {
         Payment payment = new Payment(); payment.setId(91L); payment.setStatus("pending");
         switch (kind) {
-            case "court" -> payment.setCourtBookingId(1L);
             case "coach" -> payment.setCoachBookingId(1L);
             case "order" -> payment.setProductOrderId(1L);
             default -> payment.setNote("WALLET_TOPUP:COUNTER");

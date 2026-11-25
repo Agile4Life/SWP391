@@ -53,8 +53,6 @@ public class VnpayPaymentGuard {
     public void subscription(Long id) { payments.findAllBySubscriptionId(id).forEach(p -> payment(p.getId())); }
     /** Kiểm tra mọi khoản thu của một buổi PT. */
     public void coach(Long id) { payments.findAllByCoachBookingId(id).forEach(p -> payment(p.getId())); }
-    /** Kiểm tra mọi khoản thu của một lượt đặt sân. */
-    public void court(Long id) { payments.findAllByCourtBookingId(id).forEach(p -> payment(p.getId())); }
     /** Kiểm tra mọi khoản thu của một đơn hàng. */
     public void productOrder(Long id) { payments.findAllByProductOrderId(id).forEach(p -> payment(p.getId())); }
     /** Kiểm tra khoản thu của một đăng ký khóa học. */

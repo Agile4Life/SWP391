@@ -2,8 +2,6 @@ package com.swp391.scms.membership.service;
 
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
-import com.swp391.scms.courts.entity.CourtBooking;
-import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.scheduling.service.EnrollmentService;
 import org.springframework.stereotype.Service;
@@ -17,7 +15,7 @@ import java.util.function.Predicate;
 
 /**
  * Giải phóng các lịch đặt của hội viên khi gói hội viên không còn bao phủ (bảo lưu, hủy gói, hoàn tiền).
- * Lớp học, buổi tập 1:1 với HLV và sân đều yêu cầu gói hội viên còn hiệu lực vào ngày diễn ra, nên mỗi lịch
+ * Lớp học và buổi tập 1:1 với HLV đều yêu cầu gói hội viên còn hiệu lực vào ngày diễn ra, nên mỗi lịch
  * sắp tới chỉ được giữ lại khi vẫn có kỳ gói active bao phủ ngày đó.
  */
 @Service
@@ -25,13 +23,10 @@ public class EntitlementRevocationService {
 
     /** Buổi tập 1:1 chỉ được hoàn lại (lượt gói hoặc tiền) nếu yêu cầu bảo lưu được duyệt trước buổi tập ít nhất số ngày này. */
     public static final int PT_HOLD_REFUND_DAYS = 3;
-    /** Lượt đặt sân chỉ được hoàn lại (lượt gói hoặc tiền) nếu yêu cầu bảo lưu được duyệt trước giờ chơi ít nhất số giờ này. */
-    public static final int COURT_HOLD_REFUND_HOURS = 2;
 
     private final MembershipSubscriptionRepository subscriptions;
     private final EnrollmentService enrollmentService;
     private final CoachBookingRepository coachBookings;
-    private final CourtBookingRepository courtBookings;
     private final Clock clock;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -52,21 +47,19 @@ public class EntitlementRevocationService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.scheduling.repository.SessionBookingRepository sessionBookings;
 
-    /** Nhận repository gói, dịch vụ đăng ký lớp, repository buổi PT và đặt sân, cùng Clock. */
+    /** Nhận repository gói, dịch vụ đăng ký lớp, repository buổi PT và Clock. */
     public EntitlementRevocationService(MembershipSubscriptionRepository subscriptions,
                                         EnrollmentService enrollmentService,
                                         CoachBookingRepository coachBookings,
-                                        CourtBookingRepository courtBookings,
                                         Clock clock) {
         this.subscriptions = subscriptions;
         this.enrollmentService = enrollmentService;
         this.coachBookings = coachBookings;
-        this.courtBookings = courtBookings;
         this.clock = clock;
     }
 
     /**
-     * Hủy các lịch sắp tới (đăng ký lớp, buổi PT, sân) có ngày diễn ra không còn được kỳ gói active (hoặc bảo lưu
+     * Hủy các lịch sắp tới (đăng ký lớp, buổi PT) có ngày diễn ra không còn được kỳ gói active (hoặc bảo lưu
      * có ngày đã duyệt) bao phủ; bỏ qua lịch đã bắt đầu. Thông báo cho hội viên và HLV. Trả về số lịch đã hủy.
      */
     @Transactional
@@ -99,16 +92,6 @@ public class EntitlementRevocationService {
                         booking.getId());
             }
         }
-        for (CourtBooking booking : courtBookings.findUpcomingBookedByMember(memberId, today)) {
-            if (started(booking.getBookingDate(), booking.getStartTime(), today, nowTime)
-                    || covered.test(booking.getBookingDate())) continue;
-            booking.setStatus("cancelled");
-            booking.setCancelledAt(now);
-            booking.setCancelReason(cancelReason);
-            cancelled++;
-            notifyReleased(memberId, "notifications.membership.court_released.body", booking.getId(),
-                    booking.getBookingDate(), booking.getStartTime());
-        }
         return cancelled;
     }
 
@@ -129,10 +112,10 @@ public class EntitlementRevocationService {
     }
 
     /**
-     * Hủy các buổi PT 1:1 và lượt đặt sân sắp tới rơi vào khoảng {@code from..to} (đợt bảo lưu đã duyệt). Lượt gói
-     * và phí đã trả chỉ được hoàn lại cho hội viên khi nằm trong thời hạn báo trước (PT trước ít nhất 3 ngày, sân
-     * trước ít nhất 2 giờ); đăng ký khóa học được xử lý riêng bởi {@code EnrollmentService#releaseCoursesForHold}.
-     * Thông báo kết quả cho hội viên và HLV.
+     * Hủy các buổi PT 1:1 sắp tới rơi vào khoảng {@code from..to} (đợt bảo lưu đã duyệt). Lượt gói và phí đã trả
+     * chỉ được hoàn lại cho hội viên khi nằm trong thời hạn báo trước (PT trước ít nhất 3 ngày); đăng ký khóa
+     * học được xử lý riêng bởi {@code EnrollmentService#releaseCoursesForHold}. Thông báo kết quả cho hội viên
+     * và HLV.
      */
     @Transactional
     public int releaseBookingsBetween(Long memberId, LocalDate from, LocalDate to, String reason) {
@@ -173,27 +156,6 @@ public class EntitlementRevocationService {
                         booking.getId());
             }
         }
-        for (CourtBooking booking : courtBookings.findUpcomingBookedByMember(memberId, today)) {
-            if (started(booking.getBookingDate(), booking.getStartTime(), today, nowTime)
-                    || outside.test(booking.getBookingDate())) continue;
-            booking.setStatus("cancelled");
-            booking.setCancelledAt(now);
-            booking.setCancelReason(cancelReason);
-            cancelled++;
-            // Lượt đặt sân chỉ được hoàn lại khi yêu cầu bảo lưu được duyệt trước giờ bắt đầu ít nhất COURT_HOLD_REFUND_HOURS giờ.
-            boolean inTime = !booking.getBookingDate().atTime(booking.getStartTime())
-                    .isBefore(now.plusHours(COURT_HOLD_REFUND_HOURS));
-            boolean quota = "package_quota".equalsIgnoreCase(booking.getPaymentMethod());
-            java.math.BigDecimal[] money = settleCourtPayments(booking, inTime, cancelReason);
-            if (quota && !inTime) booking.setQuotaForfeited(true);
-            String courtKey = money[0].signum() == 0 && !quota ? "notifications.membership.court_hold_released.free"
-                    : inTime ? (quota ? "notifications.membership.court_hold_released.quota"
-                                      : "notifications.membership.court_hold_released.refunded")
-                    : "notifications.membership.court_hold_released.forfeited";
-            notify(memberId, "notifications.membership.booking_released.title",
-                    msg(courtKey, booking.getBookingDate(), hhmm(booking.getStartTime()), money[1].toBigInteger(),
-                            COURT_HOLD_REFUND_HOURS), booking.getId());
-        }
         return cancelled;
     }
 
@@ -229,43 +191,7 @@ public class EntitlementRevocationService {
     }
 
     /**
-     * Tương tự {@link #settleCoachPayments} nhưng áp dụng cho lượt đặt sân, bao gồm cả các lịch đặt cũ đã thanh toán
-     * mà không có bản ghi payment.
-     */
-    private java.math.BigDecimal[] settleCourtPayments(CourtBooking booking, boolean inTime, String reason) {
-        java.math.BigDecimal paid = java.math.BigDecimal.ZERO;
-        java.math.BigDecimal refunded = java.math.BigDecimal.ZERO;
-        boolean hasRows = false;
-        if (payments != null) {
-            for (var payment : payments.findAllByCourtBookingId(booking.getId())) {
-                hasRows = true;
-                if ("pending".equals(payment.getStatus())) {
-                    payment.setStatus("failed");
-                } else if ("success".equals(payment.getStatus()) && payment.netAmount() != null
-                        && payment.netAmount().signum() > 0) {
-                    java.math.BigDecimal net = payment.netAmount();
-                    paid = paid.add(net);
-                    if (inTime) {
-                        payment.setRefundedAmount(payment.getAmount());
-                        payment.setStatus("refunded");
-                    }
-                }
-            }
-        }
-        if (!hasRows && "paid".equals(booking.getPaymentStatus()) && booking.getPrice() != null) {
-            paid = booking.getPrice();
-        }
-        if (inTime) refunded = paid;
-        if (paid.signum() > 0 && inTime) booking.setPaymentStatus("refunded");
-        if (refunded.signum() > 0 && walletService != null && booking.getMember() != null) {
-            walletService.creditCourtRefund(booking.getMember().getId(), refunded,
-                    "COURT_REFUND_" + booking.getId(), reason);
-        }
-        return new java.math.BigDecimal[]{paid, refunded};
-    }
-
-    /**
-     * Danh sách hội viên đang có lịch đặt lớp học, buổi tập 1:1 sắp tới hoặc lịch đặt sân sắp tới;
+     * Danh sách hội viên đang có lịch đặt lớp học hoặc buổi tập 1:1 sắp tới;
      * job quét hằng ngày sẽ kiểm tra từng người.
      */
     @Transactional(readOnly = true)
@@ -275,7 +201,6 @@ public class EntitlementRevocationService {
         if (classEnrollments != null) ids.addAll(classEnrollments.findMemberIdsWithBookedEnrollments());
         if (sessionBookings != null) ids.addAll(sessionBookings.findMemberIdsWithBooked());
         ids.addAll(coachBookings.findMemberIdsWithUpcomingSessions(today));
-        ids.addAll(courtBookings.findMemberIdsWithUpcomingBookings(today));
         ids.remove(null);
         return ids;
     }

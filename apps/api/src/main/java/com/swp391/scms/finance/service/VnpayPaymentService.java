@@ -6,7 +6,6 @@ import com.swp391.scms.finance.entity.*;
 import com.swp391.scms.finance.repository.*;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
-import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -19,7 +18,7 @@ import java.time.*;
 import java.util.*;
 
 /**
- * Nghiệp vụ VNPay: tạo lượt thanh toán (gói, PT, sân, khoản thu, đơn hàng, nạp ví), trả bằng ví, xem/hủy lượt,
+ * Nghiệp vụ VNPay: tạo lượt thanh toán (gói, PT, khoản thu, đơn hàng, nạp ví), trả bằng ví, xem/hủy lượt,
  * và xử lý IPN (ghi nhận thanh toán, cộng ví khi nạp, hoàn vào ví nếu cổng báo trừ tiền cho khoản đã thanh
  * toán/đóng theo cách khác).
  */
@@ -36,7 +35,6 @@ public class VnpayPaymentService {
     private final Clock clock;
     private final EntityManager entities;
     private final CoachBookingRepository coaches;
-    private final CourtBookingRepository courts;
     private final NotificationService notifications;
     private final MessageService messages;
 
@@ -52,11 +50,11 @@ public class VnpayPaymentService {
     /** Constructor Spring dùng. */
     public VnpayPaymentService(VnpayTransactionRepository transactions, PaymentRepository payments, MemberRepository members,
             MembershipSubscriptionRepository subscriptions, PaymentService settlement, InvoiceService invoices,
-            VnpayGateway gateway, Clock clock, EntityManager entities, CoachBookingRepository coaches, CourtBookingRepository courts,
+            VnpayGateway gateway, Clock clock, EntityManager entities, CoachBookingRepository coaches,
             NotificationService notifications, MessageService messages) {
         this.transactions=transactions; this.payments=payments; this.members=members; this.subscriptions=subscriptions;
         this.settlement=settlement; this.invoices=invoices; this.gateway=gateway; this.clock=clock; this.entities=entities;
-        this.coaches=coaches; this.courts=courts; this.notifications=notifications; this.messages=messages;
+        this.coaches=coaches; this.notifications=notifications; this.messages=messages;
     }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -140,7 +138,6 @@ public class VnpayPaymentService {
         if (p.getNote() != null && p.getNote().startsWith("WALLET_TOPUP")) return true;
         return p.getSubscriptionId() == null
                 && p.getCoachBookingId() == null
-                && p.getCourtBookingId() == null
                 && p.getProductOrderId() == null
                 && p.getClassEnrollmentId() == null;
     }
@@ -186,7 +183,7 @@ public class VnpayPaymentService {
     // Hàm tương thích ngược và điểm vào thanh toán gói hội viên.
     /** Thanh toán gói qua VNPay (cách gọi cũ theo kỳ gói). */
     public Checkout checkout(AuthenticatedPrincipal principal, Long subscriptionId, String ip) {
-        return checkout(principal, new CheckoutRequest(subscriptionId,null,null,null),ip);
+        return checkout(principal, new CheckoutRequest(subscriptionId, null, null), ip);
     }
     /** Thanh toán qua VNPay với link quay về mặc định. */
     public Checkout checkout(AuthenticatedPrincipal principal, CheckoutRequest request, String ip) {
@@ -222,11 +219,11 @@ public class VnpayPaymentService {
     }
 
     /**
-     * Tìm khoản thu cho đúng một đối tượng (kỳ gói chờ thanh toán, buổi PT/sân chưa trả, khoản thu, đơn hàng
+     * Tìm khoản thu cho đúng một đối tượng (kỳ gói chờ thanh toán, buổi PT chưa trả, khoản thu, đơn hàng
      * của mình); kiểm tra quyền sở hữu trước khi khóa dòng để không dò được đơn của người khác.
      */
     private Payment resolveTargetPayment(AuthenticatedPrincipal principal, CheckoutRequest request, boolean requireKyc) {
-        Long[] targets={request.subscriptionId(),request.coachBookingId(),request.courtBookingId(),request.paymentId(),request.productOrderId()};
+        Long[] targets={request.subscriptionId(),request.coachBookingId(),request.paymentId(),request.productOrderId()};
         if (Arrays.stream(targets).filter(Objects::nonNull).count()!=1 || Arrays.stream(targets).filter(Objects::nonNull).anyMatch(id->id<1))
             throw new BadRequestException("VNPAY_TARGET_REQUIRED","finance.vnpay.target_required",null,null);
         Payment payment;
@@ -257,7 +254,7 @@ public class VnpayPaymentService {
             if (!Set.of("confirmed","completed").contains(booking.getStatus()) || !"pending".equals(booking.getPaymentStatus())) throw unavailable();
             payment=findOrCreate(payments.findAllByCoachBookingId(booking.getId()),principal.id(),booking.getHourlyRate());
             payment.setCoachBookingId(booking.getId());
-        } else if(request.productOrderId()!=null) {
+        } else {
             if (orderPayments == null) throw unavailable();
             // Xác minh quyền sở hữu trước khi khóa dòng để hội viên không thể khóa hay dò đơn hàng của người khác.
             if (orders != null) {
@@ -270,13 +267,6 @@ public class VnpayPaymentService {
             requireOwner(principal, order.getMember().getUserId());
             payment = findOrCreate(payments.findAllByProductOrderId(order.getId()), principal.id(), order.getTotal());
             payment.setProductOrderId(order.getId());
-        } else {
-            var booking=courts.findById(request.courtBookingId()).orElseThrow(this::unavailable);
-            requireOwner(principal,booking.getMember().getId()); lockMember(principal.id());
-            courts.findByIdForUpdate(booking.getId()).orElseThrow(this::unavailable); entities.refresh(booking);
-            if (!"booked".equals(booking.getStatus()) || !"pending".equals(booking.getPaymentStatus())) throw unavailable();
-            payment=findOrCreate(payments.findAllByCourtBookingId(booking.getId()),principal.id(),booking.getPrice());
-            payment.setCourtBookingId(booking.getId());
         }
         return payment;
     }
@@ -514,7 +504,6 @@ public class VnpayPaymentService {
      */
     private static String targetPath(Payment p) {
         if (p.getProductOrderId() != null) return "/member/orders/" + p.getProductOrderId();
-        if (p.getCourtBookingId() != null) return "/member/courts";
         if (p.getCoachBookingId() != null) return "/member/classes?tab=pt";
         if (p.getClassEnrollmentId() != null) return "/member/classes";
         if (p.getSubscriptionId() != null) return "/member/packages";
@@ -528,7 +517,6 @@ public class VnpayPaymentService {
         if (p.getProductOrderId() != null) return orderWalletDescription(p);
         if (p.getSubscriptionId() != null) return "Thanh toán gói tập hội viên (#" + ref + ")";
         if (p.getCoachBookingId() != null) return "Thanh toán lịch PT 1:1 (#" + ref + ")";
-        if (p.getCourtBookingId() != null) return "Thanh toán đặt sân (#" + ref + ")";
         if (p.getClassEnrollmentId() != null) return "Thanh toán học phí khóa học (#" + ref + ")";
         return "Thanh toán dịch vụ (#" + ref + ")";
     }
@@ -548,27 +536,22 @@ public class VnpayPaymentService {
         }
         return "Thanh toán đơn hàng " + code;
     }
-    /** Khóa dòng đối tượng (buổi PT, sân, đơn hàng) trước khi ghi nhận thanh toán. */
+    /** Khóa dòng đối tượng (buổi PT, đơn hàng) trước khi ghi nhận thanh toán. */
     private void lockTargets(Payment p) {
         if(p.getCoachBookingId()!=null) coaches.findByIdForUpdate(p.getCoachBookingId()).orElseThrow(this::unavailable);
-        if(p.getCourtBookingId()!=null) courts.findByIdForUpdate(p.getCourtBookingId()).orElseThrow(this::unavailable);
         if(p.getProductOrderId()!=null && orders!=null) orders.findByIdForUpdate(p.getProductOrderId()).orElseThrow(this::unavailable);
     }
-    /** Kiểm tra buổi PT/sân vẫn còn hợp lệ để ghi nhận thanh toán. */
+    /** Kiểm tra buổi PT/đơn hàng vẫn còn hợp lệ để ghi nhận thanh toán. */
     private void validateBooking(Payment p) {
         if(p.getCoachBookingId()!=null) {
             var b=coaches.findById(p.getCoachBookingId()).orElseThrow(this::unavailable);entities.refresh(b);
             if(!Set.of("confirmed","completed").contains(b.getStatus()) || !"pending".equals(b.getPaymentStatus())) throw unavailable();
         }
-        if(p.getCourtBookingId()!=null) {
-            var b=courts.findById(p.getCourtBookingId()).orElseThrow(this::unavailable);entities.refresh(b);
-            if(!"booked".equals(b.getStatus()) || !"pending".equals(b.getPaymentStatus())) throw unavailable();
-        }
         if(p.getProductOrderId()!=null && orderPayments!=null) {
             orderPayments.requirePayable(p.getProductOrderId());
         }
     }
-    /** Đánh dấu buổi PT/sân/đơn hàng đã thanh toán và gửi thông báo cho hội viên. */
+    /** Đánh dấu buổi PT/đơn hàng đã thanh toán và gửi thông báo cho hội viên. */
     private void markBookingPaid(Payment p) {
         if(p.getCoachBookingId()!=null) {
             var b=coaches.findById(p.getCoachBookingId()).orElseThrow(this::unavailable);
@@ -597,7 +580,6 @@ public class VnpayPaymentService {
                 }
             }
         }
-        if(p.getCourtBookingId()!=null) { var b=courts.findById(p.getCourtBookingId()).orElseThrow(this::unavailable);b.setPaymentStatus("paid");b.setPaymentMethod("online_wallet"); }
         if(p.getProductOrderId()!=null && orderPayments!=null) { orderPayments.markPaid(p.getProductOrderId(), "online_wallet"); }
     }
 }

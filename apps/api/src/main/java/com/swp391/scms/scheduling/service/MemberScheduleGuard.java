@@ -3,7 +3,6 @@ package com.swp391.scms.scheduling.service;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
-import com.swp391.scms.courts.repository.CourtBookingRepository;
 import com.swp391.scms.scheduling.entity.ClassSession;
 import com.swp391.scms.scheduling.entity.GymClass;
 import com.swp391.scms.scheduling.repository.ClassSessionRepository;
@@ -18,12 +17,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Nơi duy nhất kiểm tra hội viên có rảnh trong một khung giờ trên mọi loại lịch: lớp học, đặt chỗ buổi, đặt sân
- * và PT 1:1.
- *
- * Một nơi duy nhất quyết định hội viên có rảnh trong một khung giờ trên mọi loại đặt chỗ: ghi danh lớp và đặt
- * chỗ theo buổi, đặt sân và đặt HLV 1:1. Trước đây mỗi luồng chỉ kiểm tra loại của mình nên hội viên có thể
- * giữ lớp Yoga, sân Tennis và HLV Gym trong cùng một giờ.
+ * Nơi duy nhất kiểm tra hội viên có rảnh trong một khung giờ trên mọi loại lịch: lớp học nhóm và PT 1:1.
  */
 @Component
 public class MemberScheduleGuard {
@@ -32,24 +26,19 @@ public class MemberScheduleGuard {
     private static final String KIND_KEY_PREFIX = "error.member_schedule.kind.";
 
     private final ClassSessionRepository sessions;
-    private final CourtBookingRepository courts;
     private final CoachBookingRepository coachBookings;
 
-    /** Khởi tạo với các repository buổi học, đặt sân và booking PT. */
+    /** Khởi tạo với các repository buổi học và booking PT. */
     @Autowired
     public MemberScheduleGuard(ClassSessionRepository sessions,
-                               CourtBookingRepository courts,
                                CoachBookingRepository coachBookings) {
         this.sessions = sessions;
-        this.courts = courts;
         this.coachBookings = coachBookings;
     }
 
     /**
-     * Ném ConflictException nếu hội viên đã có lớp, sân hoặc buổi PT trùng khung [start, end) trong ngày (bỏ
+     * Ném ConflictException nếu hội viên đã có lớp học hoặc buổi PT trùng khung [start, end) trong ngày (bỏ
      * qua lớp excludeClassId); thiếu tham số thì bỏ qua.
-     *
-     * Ném lỗi khi hội viên đã có việc khác trong [start, end) vào {@code date}.
      */
     public void ensureFree(Long memberUserId, LocalDate date, LocalTime start, LocalTime end, Long excludeClassId) {
         if (memberUserId == null || date == null || start == null || end == null) {
@@ -67,9 +56,6 @@ public class MemberScheduleGuard {
                 throw conflict("class", "lớp học", date, s.getStartTime(), s.getEndTime(),
                         s.getGymClass() != null ? s.getGymClass().getName() : "");
             }
-        }
-        if (courts.existsMemberOverlap(memberUserId, date, start, end)) {
-            throw conflict("court", "đặt sân", date, start, end, "");
         }
         List<CoachBooking> coach = coachBookings.findActiveByMemberAndDate(memberUserId, date);
         for (CoachBooking b : coach) {

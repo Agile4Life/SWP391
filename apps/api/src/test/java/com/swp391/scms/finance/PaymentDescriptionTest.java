@@ -2,12 +2,13 @@ package com.swp391.scms.finance;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.swp391.scms.courts.entity.CourtBooking;
+import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.facilities.entity.MembershipPackage;
-import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.finance.dto.PaymentDto;
 import com.swp391.scms.finance.entity.Payment;
 import com.swp391.scms.membership.entity.MembershipSubscription;
+import com.swp391.scms.users.entity.Coach;
+import com.swp391.scms.users.entity.User;
 import java.lang.reflect.Method;
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -30,23 +31,25 @@ class PaymentDescriptionTest {
         return (PaymentDto) method.invoke(null, payment, new PaymentDto());
     }
 
-    /** Kiểm thử: thanh toán đặt sân nêu tên sân và khung giờ. */
+    /** Kiểm thử: thanh toán buổi PT 1:1 nêu tên HLV và khung giờ. */
     @Test
-    void courtPaymentNamesTheCourtAndSlot() throws Exception {
-        Room room = new Room();
-        room.setName("Sân Tennis 01");
-        CourtBooking booking = new CourtBooking();
-        booking.setRoom(room);
+    void coachBookingPaymentNamesTheCoachAndSlot() throws Exception {
+        User coachUser = new User();
+        coachUser.setFullName("Phan Thành Long");
+        Coach coach = new Coach();
+        coach.setUser(coachUser);
+        CoachBooking booking = new CoachBooking();
+        booking.setCoach(coach);
         booking.setBookingDate(LocalDate.of(2026, 11, 20));
         booking.setStartTime(LocalTime.of(14, 0));
         Payment payment = new Payment();
-        payment.setCourtBookingId(37L);
-        ReflectionTestUtils.setField(payment, "courtBooking", booking);
+        payment.setCoachBookingId(37L);
+        ReflectionTestUtils.setField(payment, "coachBooking", booking);
 
         PaymentDto dto = describe(payment);
 
-        assertThat(dto.getServiceType()).isEqualTo("COURT");
-        assertThat(dto.getServiceName()).isEqualTo("Sân Tennis 01 · 20/11/2026 · 14:00");
+        assertThat(dto.getServiceType()).isEqualTo("PT");
+        assertThat(dto.getServiceName()).isEqualTo("Phan Thành Long · 20/11/2026 · 14:00");
     }
 
     /** Kiểm thử: thanh toán membership nêu tên gói. */

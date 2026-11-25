@@ -11,7 +11,7 @@ import java.util.Locale;
  * được suy ra từ hạng gói (dự phòng theo tên) và thời hạn, không bao giờ kiểm tra tên rải rác.
  */
 public final class PackageBenefits {
-    /** Độ dài một chu kỳ quyền lợi: buổi PT, lượt đặt sân và các ưu đãi "theo tháng" làm mới mỗi 30 ngày kể từ ngày bắt đầu. */
+    /** Độ dài một chu kỳ quyền lợi: buổi PT và các ưu đãi "theo tháng" làm mới mỗi 30 ngày kể từ ngày bắt đầu. */
     public static final int CYCLE_DAYS = 30;
     /** Các gói ngắn tới mức này là gói trải nghiệm 3 ngày. */
     public static final int TRIAL_MAX_DAYS = 3;
@@ -66,58 +66,6 @@ public final class PackageBenefits {
             case "PLATINUM" -> 6;
             case "GOLD" -> 3;
             default -> 0;
-        };
-    }
-
-    /**
-     * Số lượt đặt sân miễn phí mỗi chu kỳ (tính năng cũ): Platinum 3, Gold 2, Silver 1, trải nghiệm 0.
-     */
-    public static int courtBookingsPerCycle(MembershipPackage pkg) {
-        String tier = paidTier(pkg);
-        if (tier == null) return 0;
-        return switch (tier) {
-            case "PLATINUM" -> 3;
-            case "GOLD" -> 2;
-            default -> 1;
-        };
-    }
-
-    /**
-     * Số ngày tối đa hội viên được đặt sân trước (tính năng cũ): trải nghiệm 3, Silver 7, Gold 14, Platinum 30.
-     */
-    public static int courtAdvanceDays(MembershipPackage pkg) {
-        if (pkg == null || isTrial(pkg)) return 3;
-        return switch (tierOf(pkg)) {
-            case "PLATINUM" -> 30;
-            case "GOLD" -> 14;
-            default -> 7;
-        };
-    }
-
-    /**
-     * Số lượt đặt sân sắp tới tối đa hội viên được giữ cùng lúc, bất kể đã trả tiền hay chưa (tính năng cũ): trải
-     * nghiệm 1, Silver 3, Gold 5, Platinum 8 (gồm lượt miễn phí theo gói, lượt giữ chưa trả và một lượt trả phí dự
-     * phòng).
-     */
-    public static int courtMaxUpcoming(MembershipPackage pkg) {
-        if (pkg == null || isTrial(pkg)) return 1;
-        return switch (tierOf(pkg)) {
-            case "PLATINUM" -> 8;
-            case "GOLD" -> 5;
-            default -> 3;
-        };
-    }
-
-    /**
-     * Số khung sân hội viên được giữ cùng lúc khi chưa thanh toán (tại quầy hoặc VNPay, tính năng cũ): trải nghiệm 1,
-     * Silver 1, Gold 2, Platinum 3 — nhằm chặn một tài khoản giữ quá nhiều khung mà không thanh toán.
-     */
-    public static int courtMaxUnpaidHolds(MembershipPackage pkg) {
-        if (pkg == null || isTrial(pkg)) return 1;
-        return switch (tierOf(pkg)) {
-            case "PLATINUM" -> 3;
-            case "GOLD" -> 2;
-            default -> 1;
         };
     }
 
@@ -181,7 +129,7 @@ public final class PackageBenefits {
 
     /**
      * Ngày gốc dùng để đếm các chu kỳ quyền lợi: ngày bắt đầu của kỳ gói, hoặc với gói nâng cấp thì là ngày bắt đầu
-     * của gói bị thay thế — để việc nâng cấp giữa chu kỳ không bao giờ cấp thêm hạn mức PT, đặt sân hay khóa học mới.
+     * của gói bị thay thế — để việc nâng cấp giữa chu kỳ không bao giờ cấp thêm hạn mức PT hay khóa học mới.
      */
     public static LocalDate cycleAnchor(com.swp391.scms.membership.entity.MembershipSubscription subscription) {
         var current = subscription;

@@ -37,15 +37,6 @@ class PackageBenefitsTest {
         assertEquals(1, PackageBenefits.ptSessionsPerCycle(pkg("Gói Trải Nghiệm 3 Ngày", "GOLD", 3)));
     }
 
-    /** Kiểm thử: lượt đặt sân theo hạng và gói thử không có. */
-    @Test
-    void courtBookingsFollowTheTierAndTheTrialGetsNone() {
-        assertEquals(1, PackageBenefits.courtBookingsPerCycle(pkg("SILVER", null, 30)));
-        assertEquals(2, PackageBenefits.courtBookingsPerCycle(pkg("GOLD", "GOLD", 30)));
-        assertEquals(3, PackageBenefits.courtBookingsPerCycle(pkg("PLATINUM", null, 30)));
-        assertEquals(0, PackageBenefits.courtBookingsPerCycle(pkg("Gói Trải Nghiệm 3 Ngày", "GOLD", 3)));
-    }
-
     /** Kiểm thử: số ngày tạm hoãn khớp bảng chính sách. */
     @Test
     void holdAllowanceMatchesThePolicyTable() {
