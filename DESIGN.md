@@ -1,7 +1,5 @@
 # Quy chuẩn thiết kế chính — SÖL
 
-KYC lễ tân (25/11/2026, Task 2 — chỉ UI tại `/staff/kyc`): card có tên/mã hội viên, badge Chờ duyệt và thời gian gửi; thông tin giấy tờ dạng label–value bên trái, hai ảnh bên phải trên desktop và xếp dọc trên mobile. Ảnh dùng khung đồng đều, `object-fit: contain`, nhãn nằm ngoài ảnh; giữ liên kết xem ảnh hiện có. Nút Từ chối outline, Duyệt primary; dùng token Light salmon/Dark bạc hiện hành. Giữ nguyên API, số giấy tờ, xác nhận duyệt, form lý do từ chối, disabled và refresh/polling.
-
 Khôi phục lớp học nhóm định kỳ, lịch Quản lý chống đè đa bộ môn & chuẩn hóa sidebar 5 vai trò (25/11/2026 — **ghi đè** phần lớp nhóm/điểm danh lớp và `TimePicker` của mục 22–23/11/2026 bên dưới; các tính năng khác đã bỏ vẫn giữ nguyên trạng thái tắt):
 - **Lớp học nhóm định kỳ đã khôi phục**:
   - **Quản lý (`/manager/classes`, chỉ trên sidebar `MANAGER`)**: thanh lọc nhanh 1 chạm theo bộ môn (ví dụ bấm `Yoga` hiển thị trọn lịch tuần của Yoga kèm bộ lọc khóa học/phòng/HLV) và 4 chế độ xem: `Lịch theo môn / lớp`, `Lịch tổng cả tuần` (dùng `WeeklyTimetable` với `maxVisibleLanes={2}` gom từ lớp thứ 3 trở đi trong cùng khung giờ vào nút `+N lớp` mở hộp thoại danh sách), `Tổng quan theo phòng` (`RoomDayTimetable`: lưới Phòng × Giờ 06:00–22:00 hoàn toàn không chồng lấn), và `Danh sách khóa học`. Bấm bất kỳ ô buổi nhỏ nào mở `ClassSessionDetailModal` (chi tiết buổi, phòng, HLV, sức chứa, danh sách học viên trực tiếp, đổi lịch/hủy buổi/sửa khóa học). Form tạo/sửa/đổi lịch bắt buộc dùng `Select`, `DatePicker`, `TimePicker`.
@@ -400,6 +398,8 @@ Toàn cảnh 3D SÖL Campus & Nội thất 5 tầng (`/member/explore`, 07/11/20
 
 Quyết định Receptionist (25/11/2026): Dropdown gia hạn tại quầy: lựa chọn không hợp lệ vẫn disabled; giải thích dùng màu chữ phụ rõ, opacity 1 và xuống dòng trong menu, không đổi rule gia hạn.
 Quyết định Receptionist (25/11/2026): KYC tại POS: hiện trạng thái từ API, chỉ hiện số giấy tờ đã che; mua mới dùng cùng điều kiện KYC với Member. Không thêm quyền sửa giấy tờ.
+
+KYC lễ tân (25/11/2026, Task 2 — chỉ UI tại `/staff/kyc`): card có tên/mã hội viên, badge Chờ duyệt và thời gian gửi; thông tin giấy tờ dạng label–value bên trái, hai ảnh bên phải trên desktop và xếp dọc trên mobile. Ảnh dùng khung đồng đều, `object-fit: contain`, nhãn nằm ngoài ảnh; giữ liên kết xem ảnh hiện có. Nút Từ chối outline, Duyệt primary; dùng token Light salmon/Dark bạc hiện hành. Giữ nguyên API, số giấy tờ, xác nhận duyệt, form lý do từ chối, disabled và refresh/polling.
 
 Quyết định Receptionist (25/11/2026): Nạp Ví SÖL tại quầy chỉ nhận tiền mặt; hiển thị phương thức cố định, giữ giao dịch lịch sử khác phương thức.
 
