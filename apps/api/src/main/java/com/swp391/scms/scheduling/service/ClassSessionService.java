@@ -137,17 +137,29 @@ public class ClassSessionService {
                 if (member != null && member.getUserId() != null) {
                     if (!affectedMemberUserIds.contains(member.getUserId())) {
                         affectedMemberUserIds.add(member.getUserId());
+                        notificationService.send(
+                                member.getUserId(),
+                                msg("notifications.session.cancelled.title"),
+                                msg("notifications.session.cancelled.body", className, sessionDateStr, request.reason()),
+                                "schedule_change",
+                                "class_session",
+                                sessionId
+                        );
                     }
-                    notificationService.send(
-                            member.getUserId(),
-                            msg("notifications.session.cancelled.title"),
-                            msg("notifications.session.cancelled.body", className, sessionDateStr, request.reason()),
-                            "schedule_change",
-                            "class_session",
-                            sessionId
-                    );
                 }
             }
+        }
+        Coach sessionCoach = session.getGymClass() != null ? session.getGymClass().getCoach() : null;
+        if (sessionCoach != null && sessionCoach.getUserId() != null
+                && (principal == null || !sessionCoach.getUserId().equals(principal.id()))) {
+            notificationService.send(
+                    sessionCoach.getUserId(),
+                    msg("notifications.session.cancelled.title"),
+                    msg("notifications.session.cancelled.coach_body", className, sessionDateStr, request.reason()),
+                    "schedule_change",
+                    "class_session",
+                    sessionId
+            );
         }
         // Phát SessionCancelledEvent cho các listener tách rời.
         SessionCancelledEvent event = new SessionCancelledEvent(

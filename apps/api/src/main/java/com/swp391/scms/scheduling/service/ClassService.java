@@ -2,6 +2,8 @@ package com.swp391.scms.scheduling.service;
 
 import com.swp391.scms.attendance.repository.SessionAttendanceRepository;
 import com.swp391.scms.audit.Audited;
+import com.swp391.scms.coaching.entity.CoachBooking;
+import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.coaching.repository.CoachReviewRepository;
 import com.swp391.scms.coaching.repository.SessionEvaluationRepository;
 import com.swp391.scms.common.exception.BadRequestException;
@@ -88,6 +90,8 @@ public class ClassService {
     private PaymentRepository payments;
     @Autowired(required = false)
     private StaffInternalRequestRepository staffInternalRequestRepository;
+    @Autowired(required = false)
+    private CoachBookingRepository coachBookingRepository;
     @Autowired(required = false)
     private NotificationService notificationService;
     @Autowired(required = false)
@@ -774,13 +778,65 @@ public class ClassService {
                 null);
         ensureNoMemberOverlap(classId, sessionId, request.sessionDate(), request.startTime(), request.endTime());
 
+        LocalDate oldDate = session.getSessionDate();
+        LocalTime oldStart = session.getStartTime();
+        LocalTime oldEnd = session.getEndTime();
+
         session.setSessionDate(request.sessionDate());
         session.setStartTime(request.startTime());
         session.setEndTime(request.endTime());
         session.setUpdatedAt(LocalDateTime.now(clock));
 
         ClassSession saved = sessions.saveAndFlush(session);
-        return mapper.toDto(saved != null ? saved : session, countBooked(saved != null ? saved : session));
+        ClassSession effective = saved != null ? saved : session;
+        notifySessionRescheduled(gymClass, effective, oldDate, oldStart, oldEnd);
+        return mapper.toDto(effective, countBooked(effective));
+    }
+
+    /** Thông báo tới các học viên đã ghi danh và HLV phụ trách khi buổi học được dời lịch. */
+    private void notifySessionRescheduled(GymClass gymClass,
+                                          ClassSession session,
+                                          LocalDate oldDate,
+                                          LocalTime oldStart,
+                                          LocalTime oldEnd) {
+        if (notificationService == null || gymClass == null || session == null) {
+            return;
+        }
+        String className = gymClass.getName() != null ? gymClass.getName() : "";
+        String oldDateStr = oldDate != null ? oldDate.format(CONFLICT_DATE_FORMAT) : "";
+        String oldRange = formatTime(oldStart) + " – " + formatTime(oldEnd);
+        String newDateStr = session.getSessionDate() != null ? session.getSessionDate().format(CONFLICT_DATE_FORMAT) : "";
+        String newRange = formatTime(session.getStartTime()) + " – " + formatTime(session.getEndTime());
+        String title = msg("notifications.session.rescheduled.title");
+
+        java.util.Set<Long> memberRecipients = new java.util.LinkedHashSet<>();
+        List<ClassEnrollment> classEnrollments = enrollments.findByGymClassId(gymClass.getId());
+        if (classEnrollments != null) {
+            for (ClassEnrollment enrollment : classEnrollments) {
+                if (enrollment != null && ENROLLMENT_BOOKED.equalsIgnoreCase(enrollment.getStatus())
+                        && enrollment.getMember() != null && enrollment.getMember().getUserId() != null) {
+                    memberRecipients.add(enrollment.getMember().getUserId());
+                }
+            }
+        }
+        if (sessionBookings != null && session.getId() != null) {
+            List<SessionBooking> perSession = sessionBookings.findBySessionIdAndStatus(session.getId(), ENROLLMENT_BOOKED);
+            if (perSession != null) {
+                for (SessionBooking booking : perSession) {
+                    if (booking != null && booking.getMember() != null && booking.getMember().getUserId() != null) {
+                        memberRecipients.add(booking.getMember().getUserId());
+                    }
+                }
+            }
+        }
+        String memberBody = msg("notifications.session.rescheduled.body", className, oldDateStr, oldRange, newDateStr, newRange);
+        for (Long memberId : memberRecipients) {
+            notificationService.send(memberId, title, memberBody, "schedule_change", "class_session", session.getId());
+        }
+        if (gymClass.getCoach() != null && gymClass.getCoach().getUserId() != null) {
+            String coachBody = msg("notifications.session.rescheduled.coach_body", className, oldDateStr, oldRange, newDateStr, newRange);
+            notificationService.send(gymClass.getCoach().getUserId(), title, coachBody, "schedule_change", "class_session", session.getId());
+        }
     }
 
     /**
@@ -807,6 +863,34 @@ public class ClassService {
                     "error.coach_booking.coach_on_leave",
                     new Object[]{sessionDate},
                     "The coach is on approved leave that day.");
+        }
+        if (coachBookingRepository != null && coachId != null) {
+            List<CoachBooking> activePtBookings = coachBookingRepository.findActiveByCoachAndDate(coachId, sessionDate);
+            if (activePtBookings != null) {
+                for (CoachBooking booking : activePtBookings) {
+                    if (booking == null || !"confirmed".equalsIgnoreCase(booking.getStatus())
+                            || booking.getStartTime() == null || booking.getEndTime() == null) {
+                        continue;
+                    }
+                    if (startTime.isBefore(booking.getEndTime()) && endTime.isAfter(booking.getStartTime())) {
+                        String coachName = booking.getCoach() != null && booking.getCoach().getUser() != null
+                                && booking.getCoach().getUser().getFullName() != null
+                                ? booking.getCoach().getUser().getFullName()
+                                : ("#" + coachId);
+                        int dayOfWeek = sessionDate.getDayOfWeek().getValue();
+                        String conflictDate = sessionDate.format(CONFLICT_DATE_FORMAT);
+                        String rangeStart = formatTime(booking.getStartTime());
+                        String rangeEnd = formatTime(booking.getEndTime());
+                        throw new ConflictException(
+                                "SCHEDULING_COACH_PT_CONFLICT",
+                                "error.scheduling.coach_pt_conflict",
+                                new Object[]{coachName, rangeStart, rangeEnd, conflictDate, dayOfWeek},
+                                "Schedule conflict: Coach " + coachName + " already has a 1:1 PT session ("
+                                        + rangeStart + " - " + rangeEnd + " on " + sessionDate.getDayOfWeek()
+                                        + " " + conflictDate + ")");
+                    }
+                }
+            }
         }
         if (courtBookings != null && roomId != null
                 && courtBookings.existsRoomOverlap(roomId, sessionDate, startTime, endTime)) {

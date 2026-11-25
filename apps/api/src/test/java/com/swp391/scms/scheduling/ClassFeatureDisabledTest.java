@@ -27,4 +27,22 @@ class ClassFeatureDisabledTest {
                         "com.swp391.scms.attendance.SessionAttendanceController",
                         "com.swp391.scms.demo.DemoClassSeeder");
     }
+
+    /** Kiểm thử: khi bật app.legacy.classes-enabled=true thì các controller lớp nhóm và điểm danh được đăng ký đầy đủ. */
+    @Test
+    void classEndpointsAreRegisteredWhenFeatureEnabled() {
+        var scanner = new ClassPathScanningCandidateComponentProvider(true);
+        var environment = new StandardEnvironment();
+        environment.getPropertySources().addFirst(new MapPropertySource("classes-enabled-test",
+                java.util.Map.of("app.legacy.classes-enabled", "true")));
+        scanner.setEnvironment(environment);
+        assertThat(scanner.findCandidateComponents("com.swp391.scms").stream()
+                .map(bean -> bean.getBeanClassName()))
+                .contains(
+                        "com.swp391.scms.scheduling.ClassController",
+                        "com.swp391.scms.scheduling.ClassSessionController",
+                        "com.swp391.scms.scheduling.EnrollmentController",
+                        "com.swp391.scms.scheduling.SessionBookingController",
+                        "com.swp391.scms.attendance.SessionAttendanceController");
+    }
 }

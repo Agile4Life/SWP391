@@ -930,6 +930,17 @@ public class EnrollmentService {
             }
         }
 
+        if (notifications != null) {
+            notifications.send(
+                    member.getUserId(),
+                    msg("notifications.booking.class_enrolled.title"),
+                    msg("notifications.booking.course_checkout.body", gymClass.getName()),
+                    "system",
+                    "class_enrollment",
+                    savedEnrollment.getId()
+            );
+        }
+
         return new CourseCheckoutDto(
                 savedEnrollment.getId(),
                 paymentId,
@@ -989,6 +1000,16 @@ public class EnrollmentService {
         }
 
         ClassEnrollment saved = enrollments.save(enrollment);
+        if (notifications != null) {
+            notifications.send(
+                    member.getUserId(),
+                    msg("notifications.booking.cancelled.title"),
+                    msg("notifications.booking.cancelled.body"),
+                    "system",
+                    "class_enrollment",
+                    saved.getId()
+            );
+        }
         return toDto(saved, resolveSessionForClass(gymClass));
     }
 

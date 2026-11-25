@@ -190,6 +190,7 @@ class CoachAssignmentServiceTest {
         assertThat(selected.getCoach()).isSameAs(to); assertThat(untouched.getCoach()).isSameAs(from);
         verify(bookings).save(selected); verify(bookings, never()).findByMemberId(anyLong());
         verify(audit).save(any());
+        verify(notifications).send(eq(100L), any(), any(), eq("system"), isNull(), eq(601L), eq("/member/classes?tab=pt"));
     }
 
     @Test void ptTransferHandsPlansToNewCoachAndKeepsOneActive() {

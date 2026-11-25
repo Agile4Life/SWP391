@@ -1133,4 +1133,74 @@ class CoachBookingServiceTest {
         service.getAttendance(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), null, null, "ALL");
         verify(coachBookingRepository).findForAttendance(LocalDate.of(2026, 10, 19), LocalDate.of(2026, 11, 1));
     }
+
+    /** Kiểm thử: khi lớp nhóm bật và HLV đang có lịch dạy lớp thì khóa slot PT 1:1 và chặn đặt trùng giờ. */
+    @Test
+    void groupClassBlocksCoachPtSlotAndRejectsOverlappingBooking() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "legacyClassesEnabled", true);
+        LocalDate date = LocalDate.of(2026, 11, 1);
+
+        com.swp391.scms.scheduling.entity.GymClass yoga = new com.swp391.scms.scheduling.entity.GymClass();
+        yoga.setName("Yoga Sáng");
+        com.swp391.scms.scheduling.entity.ClassSession teaching = new com.swp391.scms.scheduling.entity.ClassSession();
+        teaching.setGymClass(yoga);
+        teaching.setSessionDate(date);
+        teaching.setStartTime(LocalTime.of(14, 0));
+        teaching.setEndTime(LocalTime.of(15, 0));
+        teaching.setStatus("scheduled");
+
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(classSessionRepository.findActiveByCoachAndDate(20L, date)).thenReturn(List.of(teaching));
+        when(coachBookingRepository.findActiveByCoachAndDate(20L, date)).thenReturn(List.of());
+        when(classSessionRepository.findActiveByMemberAndDate(10L, date)).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(10L, date)).thenReturn(List.of());
+
+        List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, date, 10L);
+        CoachAvailableSlotDto slot14 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(14, 0))).findFirst().orElseThrow();
+        CoachAvailableSlotDto slot15 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(15, 0))).findFirst().orElseThrow();
+        assertThat(slot14.available()).isFalse();
+        assertThat(slot14.reason()).isEqualTo("coach_busy");
+        assertThat(slot15.available()).isTrue();
+
+        CoachBookingCreateDto overlappingRequest = new CoachBookingCreateDto(
+                20L, null, date, LocalTime.of(14, 0), LocalTime.of(15, 0), "package_quota", "Tập riêng");
+        assertThatThrownBy(() -> service.createBooking(principal, overlappingRequest))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_SCHEDULE_CONFLICT");
+    }
+
+    /** Kiểm thử: khi hội viên đang có lớp nhóm trùng giờ thì slot PT báo member_busy và chặn đặt. */
+    @Test
+    void groupClassBlocksMemberPtSlotWhenMemberHasOverlappingClass() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "legacyClassesEnabled", true);
+        LocalDate date = LocalDate.of(2026, 11, 1);
+
+        com.swp391.scms.scheduling.entity.GymClass boxing = new com.swp391.scms.scheduling.entity.GymClass();
+        boxing.setName("Boxing");
+        com.swp391.scms.scheduling.entity.ClassSession attending = new com.swp391.scms.scheduling.entity.ClassSession();
+        attending.setGymClass(boxing);
+        attending.setSessionDate(date);
+        attending.setStartTime(LocalTime.of(16, 0));
+        attending.setEndTime(LocalTime.of(17, 0));
+        attending.setStatus("scheduled");
+
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(classSessionRepository.findActiveByCoachAndDate(20L, date)).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(20L, date)).thenReturn(List.of());
+        when(classSessionRepository.findActiveByMemberAndDate(10L, date)).thenReturn(List.of(attending));
+        when(coachBookingRepository.findActiveByMemberAndDate(10L, date)).thenReturn(List.of());
+
+        List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, date, 10L);
+        CoachAvailableSlotDto slot16 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(16, 0))).findFirst().orElseThrow();
+        assertThat(slot16.available()).isFalse();
+        assertThat(slot16.reason()).isEqualTo("member_busy");
+
+        CoachBookingCreateDto overlappingRequest = new CoachBookingCreateDto(
+                20L, null, date, LocalTime.of(16, 0), LocalTime.of(17, 0), "package_quota", "Tập riêng");
+        assertThatThrownBy(() -> service.createBooking(principal, overlappingRequest))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBER_SCHEDULE_CONFLICT");
+    }
 }
