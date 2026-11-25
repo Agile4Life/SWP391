@@ -16,6 +16,9 @@ import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -51,6 +54,8 @@ class PaymentMemberAccessTest {
     @MockBean UserRepository users;
     @MockBean MembershipSubscriptionRepository subscriptions;
     @MockBean ClassEnrollmentRepository enrollments;
+    // PaymentService dùng repository trial thật trong context; slice test phải khai báo mock tương ứng.
+    @MockBean com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trials;
     @MockBean PaymentMapper mapper;
     @MockBean JwtService jwt;
     @MockBean MessageService messages;
@@ -86,6 +91,9 @@ class PaymentMemberAccessTest {
     void memberCreatesOwnPendingPaymentWithoutActivatingSubscription() throws Exception {
         Member member = new Member();
         member.setUserId(2L);
+        // Các ca thu tiền hợp lệ dùng hội viên đã KYC; ca từ chối sẽ ghi đè trạng thái này.
+        member.setIdentityVerified(true);
+        member.setKycStatus("APPROVED");
         MembershipPackage membershipPackage = new MembershipPackage();
         membershipPackage.setPrice(new BigDecimal("500000"));
         MembershipSubscription subscription = new MembershipSubscription();
@@ -116,6 +124,9 @@ class PaymentMemberAccessTest {
     private MembershipSubscription pendingSubscription() {
         Member member = new Member();
         member.setUserId(2L);
+        // Các ca thu tiền hợp lệ dùng hội viên đã KYC; ca từ chối sẽ ghi đè trạng thái này.
+        member.setIdentityVerified(true);
+        member.setKycStatus("APPROVED");
         MembershipPackage membershipPackage = new MembershipPackage();
         membershipPackage.setPrice(new BigDecimal("500000"));
         MembershipSubscription subscription = new MembershipSubscription();
@@ -172,6 +183,53 @@ class PaymentMemberAccessTest {
                                 """))
                 .andExpect(status().isCreated());
         org.junit.jupiter.api.Assertions.assertEquals("pending", saved.getStatus());
+    }
+
+    /** Không tạo khoản thu khi chưa KYC hoặc chỉ có cờ verified nhưng hồ sơ đang chờ/bị từ chối. */
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"PENDING", "REJECTED"})
+    void memberWithoutApprovedKycCannotCreateNewPackagePayment(String kycStatus) throws Exception {
+        MembershipSubscription subscription = pendingSubscription();
+        subscription.getMember().setIdentityVerified(kycStatus != null);
+        subscription.getMember().setKycStatus(kycStatus);
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"online_wallet"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PENDING".equals(kycStatus)
+                        ? "MEMBERSHIP_KYC_PENDING" : "MEMBERSHIP_KYC_REQUIRED"));
+        verify(payments, never()).save(any());
+        verify(subscriptions, never()).save(any());
+        verify(mapper, never()).toEntity(any());
+    }
+
+    /** Trial đã duyệt giữ ngoại lệ hiện có, nhưng tạo payment không được kích hoạt gói ngay. */
+    @Test
+    void approvedTrialCanCreatePendingPaymentWithHistoricalPendingKyc() throws Exception {
+        MembershipSubscription subscription = pendingSubscription();
+        subscription.getMember().setIdentityVerified(false);
+        subscription.getMember().setKycStatus("PENDING");
+        var trial = new com.swp391.scms.membership.entity.MemberTrialRedemption();
+        trial.setStatus("APPROVED");
+        when(trials.findByMemberUserId(2L)).thenReturn(Optional.of(trial));
+        Payment saved = new Payment();
+        when(mapper.toEntity(any())).thenReturn(saved);
+        when(payments.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mapper.toDto(any())).thenReturn(new PaymentDto());
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"subscriptionId":10,"amount":500000,"method":"online_wallet"}
+                                """))
+                .andExpect(status().isCreated());
+        org.junit.jupiter.api.Assertions.assertEquals("pending", saved.getStatus());
+        org.junit.jupiter.api.Assertions.assertNull(saved.getPaidAt());
+        org.junit.jupiter.api.Assertions.assertEquals("pending_payment", subscription.getStatus());
+        org.junit.jupiter.api.Assertions.assertEquals("PENDING", subscription.getMember().getKycStatus());
+        verify(subscriptions, never()).save(any());
     }
 
     /** Kiểm thử: hội viên không tạo được thanh toán cho người khác. */

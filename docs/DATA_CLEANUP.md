@@ -42,6 +42,12 @@ UNION ALL SELECT 'rooms', count(*) FROM rooms;
 -- Danh mục hiện có, để chọn bộ môn/phòng giữ lại ở bước 3
 SELECT id, name FROM disciplines ORDER BY name;
 SELECT id, name, tier, status, discipline_id FROM rooms ORDER BY name;
+
+-- Chuyên môn và giới thiệu HLV hiện có (kiểm tra các dòng còn nhắc bộ môn ngoài Gym)
+SELECT u.email, c.specialization, c.bio
+FROM coaches c
+JOIN users u ON u.id = c.user_id
+ORDER BY u.email;
 ```
 
 ## 2. Xử lý tiền còn treo **trước** khi xóa (bắt buộc)
@@ -160,6 +166,21 @@ DELETE FROM disciplines WHERE id NOT IN (SELECT id FROM keep_disciplines);
 -- 3.8 Thông báo trỏ tới dữ liệu vừa xóa (link cũ đã được frontend chuyển hướng, xóa cho gọn)
 DELETE FROM notifications
 WHERE related_entity_type IN ('class_session', 'class_enrollment', 'session_booking', 'court_booking', 'product_order', 'coach_review');
+
+-- 3.9 Tùy chọn: chuẩn hóa chuyên môn / giới thiệu HLV demo cũ còn nhắc bộ môn ngoài Gym
+--     (chỉ chạy sau khi đối chiếu kết quả truy vấn bước 1 để không ghi đè dữ liệu Manager đã chỉnh)
+UPDATE coaches c
+SET specialization = v.specialization,
+    bio = COALESCE(v.bio, c.bio)
+FROM (VALUES
+  ('hung@demo.sol.vn', 'Gym - Sức mạnh', '8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.'),
+  ('mai@demo.sol.vn',  'Gym - Phục hồi', 'Huấn luyện viên Gym tập trung sức khỏe và phục hồi.'),
+  ('long@demo.sol.vn', 'Gym - Thể lực',  'Huấn luyện viên Gym tập trung sức mạnh và thể lực.'),
+  ('thao@demo.sol.vn', 'Gym - Sức bền',  'Huấn luyện viên Gym tập trung kỹ thuật và sức bền.'),
+  ('coach@scms.local', 'Gym & Strength', NULL)
+) AS v(email, specialization, bio)
+JOIN users u ON lower(u.email) = v.email
+WHERE c.user_id = u.id;
 
 -- Kiểm tra trước khi chốt
 SELECT 'disciplines' AS bang, count(*) FROM disciplines

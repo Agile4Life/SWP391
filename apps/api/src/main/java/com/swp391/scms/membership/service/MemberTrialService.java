@@ -368,6 +368,9 @@ public class MemberTrialService {
         member.setNationality(redemption.getNationality());
         member.setFrontImageUrl(redemption.getFrontImageUrl());
         member.setBackImageUrl(redemption.getBackImageUrl());
+        // Trial đã đối chiếu giấy tờ: đồng bộ trạng thái để Member và POS không còn hiển thị chờ duyệt.
+        member.setKycStatus("APPROVED");
+        member.setKycRejectReason(null);
         member.setIdentityVerified(true);
         member.setIdentityVerifiedAt(LocalDateTime.now(clock));
 

@@ -1196,7 +1196,8 @@ paths:
 
   /memberships/cancellations/{id}/approve:
     post:
-      summary: Manager duyệt hủy gói active; không hoàn tiền
+      summary: Manager duyệt hủy kỳ gói active và hoàn tiền về ví
+      description: Chỉ kỳ gói trong yêu cầu bị hủy; các kỳ khác giữ nguyên. Yêu cầu bị từ chối nếu còn kỳ gói khác có hiệu lực hoặc trong tương lai, hoặc có kỳ chờ thanh toán.
       tags: [Memberships]
       parameters:
         - name: id
@@ -1211,6 +1212,7 @@ paths:
               type: object
               properties:
                 note: {type: string, maxLength: 500}
+                refundAmount: {type: number, minimum: 0, description: Số tiền hoàn; không vượt quá giá trị đã thanh toán của kỳ gói}
       responses:
         '200': {description: Đã duyệt; gói ngừng cấp quyền và booking tương lai bị chấm dứt}
         '403': {description: Chỉ Center Manager có quyền duyệt}

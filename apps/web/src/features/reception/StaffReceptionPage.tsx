@@ -15,7 +15,6 @@ import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './staff-reception.css';
 import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
 import {
-  maskCitizenId,
   receptionApi,
   type HoldRequestItem,
   type UnpaidCoachBooking,
@@ -81,6 +80,30 @@ export function StaffReceptionPage() {
   const [paymentNotes, setPaymentNotes] = useState('Thanh toán gói tập tại quầy Lễ tân');
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
   const paymentInFlight = useRef(false);
+  const selectedMemberRef = useRef<number | null>(null);
+  useEffect(() => { selectedMemberRef.current = selectedMember?.userId ?? null; }, [selectedMember?.userId]);
+  // Đọc lại API trước khi thu tiền; không áp dữ liệu cho hội viên đã đổi.
+  const refreshSelectedMember = useCallback(async () => {
+    const member = selectedMember;
+    if (!member) return null;
+    const results = await receptionApi.lookupMembers(member.membershipCode || member.email);
+    const fresh = results.find((item) => item.userId === member.userId);
+    if (selectedMemberRef.current !== member.userId) return null;
+    if (!fresh) throw new Error('Không tải được thông tin hội viên. Vui lòng tra cứu lại.');
+    setSelectedMember(fresh);
+    return fresh;
+  }, [selectedMember]);
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
+      void refreshSelectedMember().catch((err: unknown) => setPaymentError(errorMessage(err, 'Không tải được thông tin hội viên.')));
+    };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, [refreshSelectedMember]);
+
+
   const checkoutRef = useRef<HTMLDivElement>(null);
 
   // Modal Yêu cầu hủy gói tập & hoàn tiền (Lễ tân trình Quản lý)
@@ -593,12 +616,21 @@ export function StaffReceptionPage() {
     setIsSubmittingPayment(true);
     let creatingRenewal = false;
     try {
+      const fresh = await refreshSelectedMember();
+      if (!fresh) return;
+      // Mua mới cần KYC; gia hạn/nâng cấp vẫn kiểm tra theo kỳ liên kết ở backend.
+      if (!selectedCandidate && !selectedPending?.previousSubscriptionId && !fresh.approvedTrial && (!fresh.identityVerified || fresh.kycStatus === 'PENDING' || fresh.kycStatus === 'REJECTED')) {
+        setPaymentError(staffMessage('Hội viên chưa xác thực KYC. Vui lòng yêu cầu hội viên hoàn tất xác thực trước khi đăng ký gói tập.',
+          'The member has not completed identity verification. Ask them to complete verification before registering a membership.'));
+        return;
+      }
       let pending = selectedPending;
       if (!pending && selectedCandidate && selectedPackage) {
         creatingRenewal = true;
         const created = await receptionApi.createRenewal(selectedMember.userId, selectedCandidate.id);
         creatingRenewal = false;
         pending = {
+          previousSubscriptionId: created.previousSubscriptionId,
           id: created.id, memberId: created.memberId, membershipCode: selectedMember.membershipCode,
           memberName: selectedMember.fullName, memberEmail: selectedMember.email, memberPhone: selectedMember.phone,
           packageId: created.packageId, packageName: created.packageName, durationDays: selectedPackage.durationDays,
@@ -1197,11 +1229,14 @@ export function StaffReceptionPage() {
                   <span>{selectedMember.email}</span>
                 </div>
 
+                <div className="kv-row" data-testid="pos-kyc-status"><span>{t('Trạng thái KYC', 'Identity verification')}</span><span>
+                  {selectedMember.kycStatus === 'PENDING' ? t('Chờ duyệt', 'Pending review') : selectedMember.kycStatus === 'REJECTED' ? t('Bị từ chối', 'Rejected') : selectedMember.identityVerified ? t('Đã xác thực', 'Verified') : t('Chưa xác thực', 'Not verified')}
+                </span></div>
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
-                  <span>{t('Số CCCD', 'Identity card number')}</span>
+                  <span>{selectedMember.documentType === 'PASSPORT' ? t('Số hộ chiếu', 'Passport number') : t('Số CCCD', 'Identity card number')}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)' }}>
-                    {selectedMember.citizenId ? maskCitizenId(selectedMember.citizenId) : t('Chưa cập nhật')}
+                    {selectedMember.citizenId || (selectedMember.identityVerified ? t('Đã xác thực, không có số hiển thị', 'Verified; number unavailable') : t('Chưa cập nhật'))}
                   </span>
                 </div>
 

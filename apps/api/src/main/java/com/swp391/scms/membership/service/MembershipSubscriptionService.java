@@ -182,22 +182,10 @@ public class MembershipSubscriptionService {
         }
 
         // Kiểm tra KYC bắt buộc trước khi đăng ký gói tập đầu tiên
-        if (trialRedemptionRepository != null) {
-            boolean hasPriorSubscriptions = subscriptions.existsByMemberUserId(member.getUserId());
-            boolean hasApprovedTrial = trialRedemptionRepository.findByMemberUserId(member.getUserId())
-                    .map(t -> com.swp391.scms.membership.entity.MemberTrialRedemption.STATUS_APPROVED.equalsIgnoreCase(t.getStatus()))
-                    .orElse(false);
-            boolean isIdentityVerified = Boolean.TRUE.equals(member.getIdentityVerified()) || hasApprovedTrial;
-
-            if (!hasPriorSubscriptions && !isIdentityVerified && "PENDING".equals(member.getKycStatus())) {
-                throw new BadRequestException("MEMBERSHIP_KYC_PENDING", "error.membership.kyc_pending", null,
-                        msg("error.membership.kyc_pending"));
-            }
-            if (!hasPriorSubscriptions && !isIdentityVerified) {
-                throw new BadRequestException("MEMBERSHIP_KYC_REQUIRED", "error.membership.kyc_required", null,
-                        msg("error.membership.kyc_required"));
-            }
-        }
+        // Mua mới cần KYC; đơn cũ không chứng minh danh tính, gia hạn/nâng cấp giữ quy tắc riêng.
+        boolean approvedTrial = trialRedemptionRepository != null && trialRedemptionRepository.findByMemberUserId(member.getUserId())
+                .map(t -> "APPROVED".equalsIgnoreCase(t.getStatus())).orElse(false);
+        MembershipKycEligibility.requireVerified(member, approvedTrial);
 
         MembershipSubscription subscription = new MembershipSubscription();
         subscription.setMember(member);
@@ -1466,7 +1454,8 @@ public class MembershipSubscriptionService {
                 s.getStartDate(),
                 s.getEndDate(),
                 s.getStatus(),
-                s.getCreatedAt());
+                s.getCreatedAt(),
+                s.getPreviousSubscription() != null ? s.getPreviousSubscription().getId() : null);
     }
 
     /** Danh sách thông tin giấy tờ bảo lưu (không kèm nội dung file) của một kỳ gói. */

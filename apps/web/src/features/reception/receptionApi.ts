@@ -13,6 +13,10 @@ export interface MemberLookupResult {
   email: string;
   phone: string | null;
   citizenId?: string | null;
+  identityVerified?: boolean;
+  kycStatus?: string | null;
+  approvedTrial?: boolean;
+  documentType?: string | null;
   status: string;
   currentPackage?: string;
   endDate?: string;
@@ -80,6 +84,7 @@ export interface CounterTopupHistoryItem {
 
 /** Một yêu cầu gói tập chờ thanh toán: hội viên, gói, thời hạn, giá, thời gian và trạng thái. */
 export interface PendingSubscriptionItem {
+  previousSubscriptionId?: number | null;
   id: number;
   memberId: number;
   membershipCode: string | null;
