@@ -468,11 +468,6 @@ export function MemberCheckoutPage() {
               <div className="order-package-term">
                 <span>{t("Thời hạn: ", "Duration:")}{selectedPackage.durationDays} {t("ngày tập", "training days")}</span>
               </div>
-              {selectedPackage.classCreditLimit !== null && (
-                <div className="order-package-term" style={{ marginTop: 4 }}>
-                  <span>{t("Lớp học: Tối đa ", "Classes: up to")}{selectedPackage.classCreditLimit} {t("buổi", "sessions")}</span>
-                </div>
-              )}
             </div>
 
             <div className="order-breakdown">
