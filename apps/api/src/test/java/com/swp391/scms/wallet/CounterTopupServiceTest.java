@@ -31,6 +31,14 @@ class CounterTopupServiceTest {
     private final CounterTopupService service = new CounterTopupService(payments, members, users, invoices, clock);
 
     /** Kiểm thử: phương thức không biết được ghi nhận là tiền mặt. */
+    @Test void allTimeIncludesHistoricalNonCashMethods() {
+        User user = new User(); user.setFullName("Member"); Member member = new Member(); member.setUser(user);
+        Payment payment = new Payment(); payment.setId(1L); payment.setMember(member); payment.setMethod("pos");
+        when(payments.findByNoteAndStatusOrderByPaidAtDesc(any(), any())).thenReturn(java.util.List.of(payment));
+        assertThat(service.history(0)).hasSize(1);
+        assertThat(service.history(0).get(0).paymentMethod()).isEqualTo("pos");
+    }
+
     @Test
     void unknownMethodsAreRecordedAsCash() {
         assertThat(CounterTopupService.normalizeMethod(null)).isEqualTo("cash");

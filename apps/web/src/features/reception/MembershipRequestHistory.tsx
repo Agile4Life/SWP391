@@ -7,6 +7,7 @@ import { Select } from '../../shared/ui/Select';
 import { formatCenterDateTime } from '../../shared/lib/centerTime';
 import { receptionApi, type RequestHistoryItem } from './receptionApi';
 import './request-history.css';
+import { historyMatches, sortHistory } from './historySearch';
 
 const TYPE_LABELS: Record<RequestHistoryItem['type'], StaffMessage> = {
   REGISTER: staffMessage('Đăng ký', 'Register'),
@@ -38,6 +39,9 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<StaffMessage>('');
   const [days, setDays] = useState(30);
+  const [query, setQuery] = useState('');
+  const [order, setOrder] = useState('newest');
+  const [outcome, setOutcome] = useState('ALL');
   const [filter, setFilter] = useState<Filter>('ALL');
   const [reload, setReload] = useState(0);
 
@@ -52,13 +56,22 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
     return () => { active = false; };
   }, [days, reload, refreshKey]);
 
-  const visible = filter === 'ALL' ? items : items.filter((item) => item.type === filter);
+  const visible = sortHistory(items.filter(item => (filter === 'ALL' || item.type === filter) && (outcome === 'ALL' || item.outcome === outcome) && historyMatches(query, [item.memberName, item.membershipCode, item.subscriptionId])), item => item.processedAt, order);
+
 
   return (
     <section className="portal-card" aria-label={t('Lịch sử xử lý yêu cầu gói tập')} data-testid="request-history">
       <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
         <h2 className="portal-card-title">{t('Lịch sử xử lý yêu cầu gói tập')}</h2>
         <div className="request-history__filters">
+          <input type="search" className="portal-input" aria-label={t('Tìm lịch sử gói tập', 'Search membership history')} placeholder={t('Tên, mã hội viên, mã giao dịch', 'Name, member code, transaction ID')} value={query} onChange={e => setQuery(e.target.value)} />
+          <Select aria-label={t('Sắp xếp', 'Sort order')} value={order} onChange={e => setOrder(e.target.value)}>
+            <option value="newest">{t('Mới nhất trước', 'Newest first')}</option><option value="oldest">{t('Cũ nhất trước', 'Oldest first')}</option>
+          </Select>
+          <Select aria-label={t('Kết quả xử lý', 'Outcome')} value={outcome} onChange={e => setOutcome(e.target.value)}>
+            <option value="ALL">{t('Tất cả', 'All')}</option>
+            <option value="APPROVED">{t('Đã thu tiền', 'Paid')}</option><option value="CANCELLED">{t('Đã hủy', 'Cancelled')}</option>
+          </Select>
           <Select aria-label={t('Loại yêu cầu')} value={filter} onChange={(e) => setFilter(e.target.value as Filter)}>
             <option value="ALL">{t('Tất cả loại')}</option>
             <option value="REGISTER">{t(TYPE_LABELS.REGISTER)}</option>
@@ -66,6 +79,7 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
             <option value="UPGRADE">{t(TYPE_LABELS.UPGRADE)}</option>
           </Select>
           <Select aria-label={t('Khoảng thời gian')} value={String(days)} onChange={(e) => setDays(Number(e.target.value))}>
+            <option value="1">{t('Hôm nay', 'Today')}</option><option value="0">{t('Tất cả thời gian', 'All time')}</option>
             <option value="7">{t('7 ngày qua')}</option>
             <option value="30">{t('30 ngày qua')}</option>
             <option value="90">{t('90 ngày qua')}</option>
@@ -97,7 +111,7 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
               {visible.map((item) => (
                 <tr key={`${item.subscriptionId}-${item.outcome}`}>
                   <td>{item.processedAt ? formatCenterDateTime(item.processedAt) : '—'}</td>
-                  <td>{item.memberName}{item.membershipCode ? <span className="muted"> · {item.membershipCode}</span> : null}</td>
+                  <td>#{item.subscriptionId} · {item.memberName}{item.membershipCode ? <span className="muted"> · {item.membershipCode}</span> : null}</td>
                   <td>{t(TYPE_LABELS[item.type])}</td>
                   <td>{item.previousPackageName && item.type === 'UPGRADE' ? `${item.previousPackageName} → ${item.packageName ?? ''}` : item.packageName ?? '—'}</td>
                   <td>{vnd(item.amount)}{item.paymentMethod ? <span className="muted"> · {t(METHOD_LABELS[item.paymentMethod] ?? item.paymentMethod)}</span> : null}</td>

@@ -7,6 +7,7 @@ import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -23,6 +24,8 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 public class MembershipRequestHistoryService {
+    public static final int ALL_TIME_DAYS = 0;
+    public static final int TODAY_DAYS = 1;
     public static final int DEFAULT_DAYS = 30;
     public static final int MAX_DAYS = 180;
     private static final List<String> SETTLED = List.of("success", "refunded");
@@ -45,17 +48,26 @@ public class MembershipRequestHistoryService {
      */
     @Transactional(readOnly = true)
     public List<RequestHistoryDto> history(Integer days) {
-        int window = days == null ? DEFAULT_DAYS : Math.max(1, Math.min(MAX_DAYS, days));
-        LocalDateTime since = LocalDateTime.now(clock).minusDays(window);
+        boolean allTime = days != null && days == ALL_TIME_DAYS;
+        boolean todayOnly = days != null && days == TODAY_DAYS;
+        int window = days == null ? DEFAULT_DAYS : Math.max(TODAY_DAYS, Math.min(MAX_DAYS, days));
+        // ALL_TIME_DAYS (0) là toàn bộ lịch sử; TODAY_DAYS (1) bắt đầu lúc 00:00 theo Clock giờ trung tâm.
+        LocalDateTime since = todayOnly ? LocalDate.now(clock).atStartOfDay() : LocalDateTime.now(clock).minusDays(window);
         List<RequestHistoryDto> rows = new ArrayList<>();
         Set<Long> settled = new HashSet<>();
-        for (Payment payment : payments.findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(SETTLED, since)) {
+        List<Payment> settledPayments = allTime
+                ? payments.findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(SETTLED)
+                : payments.findBySubscriptionIdIsNotNullAndStatusInAndPaidAtGreaterThanEqualOrderByPaidAtDesc(SETTLED, since);
+        for (Payment payment : settledPayments) {
             MembershipSubscription sub = payment.getSubscription();
             if (sub == null || !visible(sub) || !settled.add(sub.getId())) continue;
             rows.add(row(sub, "APPROVED", payment.getAmount(), payment.getMethod(), payment.getPaidAt(),
                     payment.getReceivedBy() == null ? null : payment.getReceivedBy().getFullName()));
         }
-        for (MembershipSubscription sub : subscriptions.findByStatusAndUpdatedAtGreaterThanEqualOrderByUpdatedAtDesc("cancelled", since)) {
+        List<MembershipSubscription> cancelledSubs = allTime
+                ? subscriptions.findByStatusOrderByUpdatedAtDesc("cancelled")
+                : subscriptions.findByStatusAndUpdatedAtGreaterThanEqualOrderByUpdatedAtDesc("cancelled", since);
+        for (MembershipSubscription sub : cancelledSubs) {
             if (settled.contains(sub.getId()) || !visible(sub)) continue;
             // Kỳ đã thanh toán rồi bị hủy về sau thuộc luồng hủy/hoàn tiền, không thuộc lịch sử yêu cầu này.
             boolean wasPaid = payments.findAllBySubscriptionId(sub.getId()).stream()
