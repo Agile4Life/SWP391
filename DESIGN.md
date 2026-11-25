@@ -383,3 +383,4 @@ Toàn cảnh 3D SÖL Campus & Nội thất 5 tầng (`/member/explore`, 07/11/20
 
 
 Quyết định Receptionist (25/11/2026): Receptionist nhận toast cho yêu cầu mới sau mốc đăng nhập; chuông dùng notification server và trạng thái đọc riêng việc xử lý. Giữ route nghiệp vụ hiện có.
+Quyết định Receptionist (25/11/2026): KYC tại POS: hiện trạng thái từ API, chỉ hiện số giấy tờ đã che; mua mới dùng cùng điều kiện KYC với Member. Không thêm quyền sửa giấy tờ.

@@ -158,6 +158,66 @@ class MembershipCancellationServiceTest {
         verifyNoInteractions(enrollments);
     }
 
+    @Test
+    void approvalRejectsOverlappingEntitlementWithoutMutation() {
+        stubDecision();
+        MembershipSubscription other = new MembershipSubscription(); other.setId(101L);
+        other.setStatus("active"); other.setStartDate(LocalDate.of(2026, 10, 1));
+        other.setEndDate(LocalDate.of(2026, 11, 1));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active, other));
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class);
+        assertThat(active.getStatus()).isEqualTo("active");
+        assertThat(other.getStatus()).isEqualTo("active");
+        verifyNoInteractions(enrollments);
+    }
+
+    /** Kiểm thử: duyệt từ chối khi hội viên còn kỳ gói đang bảo lưu (frozen) mà không thay đổi trạng thái. */
+    @Test
+    void approvalRejectsFrozenEntitlementWithoutMutation() {
+        stubDecision();
+        MembershipSubscription frozen = new MembershipSubscription(); frozen.setId(102L);
+        frozen.setStatus("frozen"); frozen.setStartDate(LocalDate.of(2026, 10, 1));
+        frozen.setEndDate(LocalDate.of(2026, 11, 15));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active, frozen));
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CANCELLATION_OTHER_ENTITLEMENT");
+        assertThat(active.getStatus()).isEqualTo("active");
+        assertThat(frozen.getStatus()).isEqualTo("frozen");
+        verifyNoInteractions(enrollments);
+    }
+
+    /** Kiểm thử: duyệt từ chối khi hội viên còn kỳ gói đang chờ thanh toán (pending_payment). */
+    @Test
+    void approvalRejectsPendingPaymentEntitlementWithoutMutation() {
+        stubDecision();
+        MembershipSubscription pendingSub = new MembershipSubscription(); pendingSub.setId(103L);
+        pendingSub.setStatus("pending_payment");
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active, pendingSub));
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "CANCELLATION_PENDING_PAYMENT");
+        assertThat(active.getStatus()).isEqualTo("active");
+        assertThat(pendingSub.getStatus()).isEqualTo("pending_payment");
+        verifyNoInteractions(enrollments);
+    }
+
+    @Test
+    void approvalDoesNotCancelExpiredHistory() {
+        stubDecision();
+        MembershipSubscription expired = new MembershipSubscription(); expired.setId(101L);
+        expired.setStatus("active"); expired.setEndDate(LocalDate.of(2026, 9, 30));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active, expired));
+        when(messages.getMessage("scheduling.enrollment.cancelled_by_membership")).thenReturn("Membership cancelled");
+        User managerUser = new User(); managerUser.setId(20L);
+        when(users.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(managerUser));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        service.decide(manager, 7L, true, new CancellationDtos.Decision("No refund"));
+        assertThat(active.getStatus()).isEqualTo("cancelled");
+        assertThat(expired.getStatus()).isEqualTo("active");
+    }
+
     /** Kiểm thử: từ chối giữ membership và cho phép yêu cầu mới. */
     @Test
     void rejectionPreservesMembershipAndAllowsNewRequest() {

@@ -39,7 +39,7 @@ function validateStaffPhone(raw?: string, accounts: StaffAccount[] = []): string
 export function StaffAccountsPage() {
   const { t } = useStaffI18n();
   const [accounts, setAccounts] = useState<StaffAccount[]>([]);
-  const [sortOption, setSortOption] = useState<'name_asc' | 'name_desc' | 'role' | 'status'>('name_asc');
+  const [sortOption, setSortOption] = useState<'name_asc' | 'name_desc' | 'status'>('name_asc');
   const [form, setForm] = useState(initialForm);
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string }>({});
   const [loading, setLoading] = useState(true);
@@ -54,13 +54,6 @@ export function StaffAccountsPage() {
       switch (sortOption) {
         case 'name_desc':
           return b.fullName.localeCompare(a.fullName, 'vi');
-        case 'role': {
-          const roleOrder: Record<string, number> = { COACH: 1, RECEPTIONIST: 2 };
-          const orderA = roleOrder[a.roleCode] ?? 99;
-          const orderB = roleOrder[b.roleCode] ?? 99;
-          if (orderA !== orderB) return orderA - orderB;
-          return a.fullName.localeCompare(b.fullName, 'vi');
-        }
         case 'status': {
           const statusOrder: Record<string, number> = { active: 1, inactive: 2, locked: 3 };
           const orderA = statusOrder[a.status] ?? 99;
@@ -240,13 +233,12 @@ export function StaffAccountsPage() {
             id="staff-sort-select"
             className="portal-select"
             value={sortOption}
-            onChange={e => setSortOption(e.target.value as 'name_asc' | 'name_desc' | 'role' | 'status')}
+            onChange={e => setSortOption(e.target.value as 'name_asc' | 'name_desc' | 'status')}
             aria-label={t("Sắp xếp danh sách nhân sự", "Sort staff list")}
             data-testid="staff-sort-select"
           >
             <option value="name_asc">{t("Tên (A–Z)", "Name (A–Z)")}</option>
             <option value="name_desc">{t("Tên (Z–A)", "Name (Z–A)")}</option>
-            <option value="role">{t("Vai trò (HLV trước)", "Role (Coach first)")}</option>
             <option value="status">{t("Trạng thái (Hoạt động trước)", "Status (Active first)")}</option>
           </Select>
         </div>

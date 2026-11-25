@@ -14,7 +14,9 @@ import com.swp391.scms.finance.entity.Payment;
 import com.swp391.scms.finance.mapper.PaymentMapper;
 import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.membership.entity.MembershipSubscription;
+import com.swp391.scms.membership.repository.MemberTrialRedemptionRepository;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.membership.service.MembershipKycEligibility;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
 import com.swp391.scms.scheduling.repository.ClassEnrollmentRepository;
 import com.swp391.scms.users.UserRepository;
@@ -69,6 +71,22 @@ public class PaymentService {
     @Autowired(required = false)
     private InvoiceService invoiceService;
 
+    private final MemberTrialRedemptionRepository trialRedemptionRepository;
+
+    private void requireNewPackageKyc(Member member) {
+        // Đọc KYC mới nhất sau khi luồng thu tiền đã khóa hội viên.
+        if (entityManager != null) entityManager.refresh(member);
+        boolean approvedTrial = trialRedemptionRepository != null && trialRedemptionRepository.findByMemberUserId(member.getUserId())
+                .map(t -> "APPROVED".equalsIgnoreCase(t.getStatus())).orElse(false);
+        MembershipKycEligibility.requireVerified(member, approvedTrial);
+    }
+
+    /** Kiểm tra trước khi thu tiền; từ chối KYC không đánh dấu rollback để IPN có thể hoàn vào ví. */
+    @Transactional(readOnly = true, noRollbackFor = BadRequestException.class)
+    public void requireSubscriptionPaymentKyc(MembershipSubscription subscription) {
+        if (subscription.getPreviousSubscription() == null) requireNewPackageKyc(subscription.getMember());
+    }
+
     @Autowired(required = false)
     @org.springframework.context.annotation.Lazy
     private com.swp391.scms.scheduling.service.EnrollmentService enrollmentService;
@@ -105,6 +123,17 @@ public class PaymentService {
         this(paymentRepository, memberRepository, userRepository, membershipSubscriptionRepository, classEnrollmentRepository, paymentMapper, clock, null);
     }
 
+    /** Constructor cho test có thêm VnpayPaymentGuard. */
+    public PaymentService(PaymentRepository paymentRepository,
+                          MemberRepository memberRepository,
+                          UserRepository userRepository,
+                          MembershipSubscriptionRepository membershipSubscriptionRepository,
+                          ClassEnrollmentRepository classEnrollmentRepository,
+                          PaymentMapper paymentMapper, Clock clock, VnpayPaymentGuard vnpayGuard) {
+        this(paymentRepository, memberRepository, userRepository, membershipSubscriptionRepository,
+                classEnrollmentRepository, paymentMapper, clock, vnpayGuard, null);
+    }
+
     /** Constructor Spring dùng. */
     @Autowired
     public PaymentService(PaymentRepository paymentRepository,
@@ -112,7 +141,9 @@ public class PaymentService {
                           UserRepository userRepository,
                           MembershipSubscriptionRepository membershipSubscriptionRepository,
                           ClassEnrollmentRepository classEnrollmentRepository,
-                          PaymentMapper paymentMapper, Clock clock, com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard) {
+                          PaymentMapper paymentMapper, Clock clock, VnpayPaymentGuard vnpayGuard,
+                          MemberTrialRedemptionRepository trialRedemptionRepository) {
+        this.trialRedemptionRepository = trialRedemptionRepository;
         this.vnpayGuard = vnpayGuard;
         this.paymentRepository = paymentRepository;
         this.memberRepository = memberRepository;
@@ -213,6 +244,8 @@ public class PaymentService {
                 throw new ConflictException("RENEWAL_PAYMENT_EXISTS",
                         "error.membership.renewal_payment_exists", null, "Payment already exists");
             }
+            // Không tạo khoản thu cho đơn mua mới cũ nếu KYC chưa đủ điều kiện.
+            if (target.getPreviousSubscription() == null) requireNewPackageKyc(member);
             BigDecimal expectedPrice = target.payableAmount();
             if (expectedPrice == null || dto.getAmount().compareTo(expectedPrice) != 0) {
                 throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
@@ -412,6 +445,12 @@ public class PaymentService {
                             "finance.payment.subscription_not_pending", null, null);
                 }
             }
+            // Xác nhận khoản thu cũ cũng phải kiểm tra trước khi đổi trạng thái hoặc phát hành QR/hóa đơn.
+            if ("success".equals(normalizedStatus) && payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
+                MembershipSubscription target = membershipSubscriptionRepository.findById(payment.getSubscriptionId())
+                        .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", payment.getSubscriptionId()));
+                requireSubscriptionPaymentKyc(target);
+            }
             payment.setStatus(normalizedStatus);
             markPaidIfSuccess(payment, normalizedStatus);
             if ("pending".equals(currentStatus) && "failed".equals(normalizedStatus)) {
@@ -478,6 +517,8 @@ public class PaymentService {
                 throw new BadRequestException("MEMBERSHIP_PACKAGE_INACTIVE", "membership.package.inactive",
                         new Object[]{pkg.getId()}, "Membership package is inactive");
             }
+        // Kiểm tra KYC trước khi ghi giao dịch; gia hạn/nâng cấp giữ quy tắc hiện có.
+            requireNewPackageKyc(member);
             List<MembershipSubscription> history = membershipSubscriptionRepository.findByMemberUserId(member.getUserId());
             if (history == null) history = List.of();
             if (history.stream().anyMatch(sub -> "frozen".equalsIgnoreCase(sub.getStatus()))) {
@@ -560,6 +601,8 @@ public class PaymentService {
             if (subscription.getMembershipPackage() != null) {
                 validateCheckoutAmount(dto.getAmount(), subscription.payableAmount(), pendingToSettle);
             }
+        // Kiểm tra KYC trước khi ghi giao dịch; gia hạn/nâng cấp giữ quy tắc hiện có.
+            if (subscription.getPreviousSubscription() == null) requireNewPackageKyc(member);
             activateSubscription(subscription);
         }
 
