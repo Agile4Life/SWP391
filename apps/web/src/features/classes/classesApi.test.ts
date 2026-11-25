@@ -145,6 +145,55 @@ describe('classesApi.ts (Classes & Scheduling API Client)', () => {
     expect(coaches[0].status).toBe('active');
   });
 
+  it('checkRecurringAvailability posts schedule probe to /api/v1/classes/recurring/availability', async () => {
+    const payload = {
+      disciplineId: 1,
+      startDate: '2026-12-01',
+      endDate: '2026-12-29',
+      recurringDays: ['MONDAY', 'WEDNESDAY'],
+      startTime: '09:45:00',
+      endTime: '11:15:00',
+    };
+    const mockAvailability = {
+      validSchedule: true,
+      sessionCount: 9,
+      firstSessionDate: '2026-12-02',
+      lastSessionDate: '2026-12-28',
+      selectedSlotAvailable: true,
+      slots: [
+        {
+          slotNumber: 2,
+          code: 'SLOT_2',
+          startTime: '09:45:00',
+          endTime: '11:15:00',
+          available: true,
+          disciplineConflict: false,
+          availableRoomCount: 2,
+          availableCoachCount: 2,
+        },
+      ],
+      rooms: [{ id: 10, name: 'Phòng Gym Tiêu chuẩn', capacity: 50, available: true }],
+      coaches: [{ id: 100, fullName: 'HLV Lan', email: 'lan@sol.vn', available: true }],
+    };
+
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: mockAvailability }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const result = await classesApi.checkRecurringAvailability(payload);
+    expect(result).toEqual(mockAvailability);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/classes/recurring/availability',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    );
+  });
+
   it('BR-04: throws ApiError with session conflict code when P3 conflict happens', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: false,

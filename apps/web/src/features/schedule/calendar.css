@@ -439,3 +439,338 @@
   opacity: 0.85;
   white-space: nowrap;
 }
+.slot-picker-btn__status {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  opacity: 0.9;
+}
+.slot-picker-btn.is-unavailable {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--portal-danger) 50%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-danger) 7%, var(--portal-raised));
+  color: var(--portal-muted);
+}
+.slot-picker-btn.is-unavailable:hover {
+  border-color: var(--portal-danger);
+  background: color-mix(in srgb, var(--portal-danger) 12%, var(--portal-raised));
+}
+.slot-picker-btn.is-unavailable.is-active {
+  border-style: solid;
+  border-color: var(--portal-danger);
+  background: color-mix(in srgb, var(--portal-danger) 16%, var(--portal-raised));
+  color: var(--portal-paper);
+}
+.slot-picker-btn.is-unavailable .slot-picker-btn__status {
+  color: var(--portal-danger);
+}
+
+/* Hộp thoại form & trình tạo khóa học 4 bước */
+.portal-dialog.class-wizard-modal {
+  width: min(680px, calc(100vw - 32px));
+  max-width: min(680px, calc(100vw - 32px));
+}
+.portal-form-stack {
+  display: grid;
+  gap: 14px;
+}
+.portal-form-stack .portal-form-group {
+  margin-bottom: 0;
+}
+.portal-form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  align-items: start;
+}
+
+.class-wizard__stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.class-wizard__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: not-allowed;
+  opacity: 0.7;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+.class-wizard__step-num {
+  flex: 0 0 24px;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--portal-border-strong);
+  background: var(--portal-surface);
+  color: var(--portal-muted);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.class-wizard__step-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.class-wizard__step.is-active {
+  border-color: var(--sol-accent);
+  background: var(--portal-tint);
+  color: var(--portal-paper);
+  opacity: 1;
+  cursor: default;
+}
+.class-wizard__step.is-active .class-wizard__step-num {
+  border-color: var(--sol-accent);
+  background: var(--sol-accent);
+  color: var(--sol-on-accent);
+}
+.class-wizard__step.is-done {
+  border-color: color-mix(in srgb, var(--portal-success) 45%, var(--portal-border));
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  opacity: 1;
+  cursor: pointer;
+}
+.class-wizard__step.is-done:hover:not(:disabled) {
+  border-color: var(--sol-accent);
+  background: var(--portal-tint);
+}
+.class-wizard__step.is-done .class-wizard__step-num {
+  border-color: color-mix(in srgb, var(--portal-success) 55%, transparent);
+  background: color-mix(in srgb, var(--portal-success) 18%, var(--portal-surface));
+  color: var(--portal-success);
+}
+.class-wizard__step:focus-visible {
+  outline: 2px solid var(--sol-accent);
+  outline-offset: 2px;
+}
+
+.class-wizard__summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font-size: 13px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+.class-wizard__summary.is-ok {
+  border-color: color-mix(in srgb, var(--portal-success) 50%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-success) 10%, var(--portal-raised));
+}
+.class-wizard__summary.is-error {
+  border-color: color-mix(in srgb, var(--portal-danger) 55%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-danger) 10%, var(--portal-raised));
+  color: var(--portal-danger);
+}
+.class-wizard__summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.class-wizard__summary-sub {
+  font-size: 12px;
+  color: var(--portal-muted);
+}
+
+.class-wizard__banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 10px 14px;
+  border: 1px solid rgb(var(--sol-accent-rgb) / 0.35);
+  border-radius: 12px;
+  background: var(--portal-tint);
+  color: var(--portal-paper);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.class-wizard__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+.class-wizard__option {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.class-wizard__option:hover:not(:disabled) {
+  border-color: var(--sol-accent);
+  background: color-mix(in srgb, var(--sol-accent) 10%, var(--portal-raised));
+}
+.class-wizard__option:focus-visible {
+  outline: 2px solid var(--sol-accent);
+  outline-offset: 2px;
+}
+.class-wizard__option.is-selected {
+  border-color: var(--sol-accent);
+  background: var(--portal-tint);
+  box-shadow: inset 0 0 0 1px var(--sol-accent);
+}
+.class-wizard__option.is-unavailable {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--portal-danger) 42%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-danger) 5%, var(--portal-surface));
+  color: var(--portal-muted);
+  opacity: 0.78;
+  cursor: not-allowed;
+}
+.class-wizard__option-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+}
+.class-wizard__option-title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--portal-paper);
+}
+.class-wizard__option-meta {
+  font-size: 12px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+.class-wizard__option-reason {
+  font-size: 12px;
+  color: var(--portal-danger);
+  line-height: 1.35;
+}
+
+.class-wizard__hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.class-wizard__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--portal-border);
+}
+
+/* Thanh tóm tắt nhiều khóa học đang hoạt động của một bộ môn (Tab 1 Quản lý) */
+.discipline-active-bar {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--portal-border);
+}
+.discipline-active-bar__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.discipline-active-bar__title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.discipline-active-bar__count {
+  font-size: 13px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+.discipline-class-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.discipline-class-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex: 1 1 280px;
+  padding: 9px 12px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-raised);
+}
+.discipline-class-item__info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.discipline-class-item__info strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--portal-paper);
+}
+.discipline-class-item__meta {
+  font-size: 12px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .portal-form-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .class-wizard__stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-picker-btn,
+  .class-wizard__step,
+  .class-wizard__option {
+    transition: none;
+  }
+}
