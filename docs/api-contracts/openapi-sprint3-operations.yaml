@@ -229,4 +229,127 @@ components:
 security:
   - bearerAuth: []
 
-paths: {}
+paths:
+  /attendance/sessions/{id}:
+    get:
+      summary: Get enrolled roster and attendance status for a class session (SCRUM-111)
+      tags: [Attendance]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Session roster and attendance status retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/SessionAttendanceResponse'
+
+  /attendance/sessions/{id}/batch:
+    post:
+      summary: Batch record attendance for session members (SCRUM-111)
+      tags: [Attendance]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchAttendanceRequest'
+      responses:
+        '200':
+          description: Batch attendance successfully recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MemberAttendanceItem'
+        '400':
+          description: >-
+            ATTENDANCE_EDIT_WINDOW_CLOSED when a status would change more than 7 days after the session;
+            also not started / not enrolled.
+        '409':
+          description: Duplicate attendance record constraint violation
+
+  /attendance/sessions/history:
+    get:
+      summary: Past class sessions with attendance recorded (coach sees own classes)
+      description: Range defaults to the last 31 days; at most 31 days.
+      tags: [Attendance]
+      parameters:
+        - name: from
+          in: query
+          required: false
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          required: false
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: History, newest session first
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CoachSessionHistoryItem'
+        '400':
+          description: ATTENDANCE_INVALID_RANGE
+
+  /classes/sessions/{id}/cancel:
+    post:
+      summary: Cancel one class session with reason and notify enrolled members and coach (SCRUM-113)
+      description: >-
+        Cancels one scheduled class session. Enrolled members receive a deduplicated schedule_change notification;
+        when cancelled by Manager/Staff, the assigned coach also receives a schedule_change notification.
+      tags: [Classes & Sessions]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancelSessionRequest'
+      responses:
+        '200':
+          description: Class session cancelled; class enrollments remain active for other sessions
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ClassSessionDto'
+        '409':
+          description: Session is already cancelled

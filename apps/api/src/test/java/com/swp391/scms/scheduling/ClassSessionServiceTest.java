@@ -130,9 +130,11 @@ class ClassSessionServiceTest {
         assertEquals("booked", enrollment.getStatus());
         verify(enrollmentRepository, never()).save(any(ClassEnrollment.class));
 
-        // Kiểm tra đã gửi thông báo
+        // Kiểm tra đã gửi thông báo cho học viên, không tự gửi lại cho chính HLV đang hủy
         verify(notificationService, times(1)).send(
                 eq(20L), any(), any(), eq("schedule_change"), eq("class_session"), eq(100L));
+        verify(notificationService, never()).send(
+                eq(10L), any(), any(), any(), any(), any());
 
         // Kiểm tra đã phát sự kiện
         ArgumentCaptor<SessionCancelledEvent> captor = ArgumentCaptor.forClass(SessionCancelledEvent.class);
@@ -200,5 +202,24 @@ class ClassSessionServiceTest {
         ArgumentCaptor<SessionCancelledEvent> captor = ArgumentCaptor.forClass(SessionCancelledEvent.class);
         verify(eventPublisher).publishEvent(captor.capture());
         assertEquals(List.of(20L, 30L), captor.getValue().affectedMemberUserIds());
+        verify(notificationService, times(1)).send(
+                eq(20L), any(), any(), eq("schedule_change"), eq("class_session"), eq(100L));
+        verify(notificationService, times(1)).send(
+                eq(30L), any(), any(), eq("schedule_change"), eq("class_session"), eq(100L));
+    }
+
+    /** Kiểm thử: khi Quản lý hủy buổi học thì cả học viên và HLV phụ trách đều nhận thông báo. */
+    @Test
+    void cancelSession_byManager_notifiesBothBookedMembersAndAssignedCoach() {
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+        when(sessionRepository.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
+        when(enrollmentRepository.findByGymClassId(5L)).thenReturn(List.of(enrollment));
+
+        sessionService.cancelSession(100L, new CancelSessionRequest("Bảo trì phòng"), managerPrincipal);
+
+        verify(notificationService, times(1)).send(
+                eq(20L), any(), any(), eq("schedule_change"), eq("class_session"), eq(100L));
+        verify(notificationService, times(1)).send(
+                eq(10L), any(), any(), eq("schedule_change"), eq("class_session"), eq(100L));
     }
 }

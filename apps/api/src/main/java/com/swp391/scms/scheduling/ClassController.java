@@ -110,7 +110,7 @@ public class ClassController {
     /** POST /{id}/sessions: quản lý xếp thêm một buổi cho lớp. */
     @Operation(summary = "Schedule a session for a class (CENTER_MANAGER only)")
     @PostMapping("/{id}/sessions")
-    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ResponseEntity<ApiResponse<ClassSessionDto>> createSession(@PathVariable Long id,
                                                                      @Valid @RequestBody CreateSessionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -120,7 +120,7 @@ public class ClassController {
     /** PUT /{id}/sessions/{sessionId}: quản lý dời lịch một buổi học. */
     @Operation(summary = "Reschedule an existing class session (CENTER_MANAGER only)")
     @PutMapping("/{id}/sessions/{sessionId}")
-    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ApiResponse<ClassSessionDto> rescheduleSession(@PathVariable Long id,
                                                           @PathVariable Long sessionId,
                                                           @Valid @RequestBody RescheduleSessionRequest request) {

@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RoleGuard } from '../shared/ui/RoleGuard';
 import { PortalHome } from '../shared/ui/PortalHome';
 import { PortalRouteError, RouteLoading, RouteLoadError } from '../shared/ui/RouteState';
+import { LegacyAttendanceRedirect, LegacyClassesRedirect } from './LegacyRedirects';
 
 export const router = createBrowserRouter([
   // Public chỉ giới thiệu Gym; bỏ route Shop Member/Public, giữ route gói/PT và quản lý độc lập.
@@ -189,12 +190,22 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
           },
           {
+            path: '/coach/attendance',
+            // Trang /coach/attendance: tải lười CoachAttendancePage (điểm danh lớp nhóm).
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+          },
+          {
+            path: '/coach/attendance/:sessionId',
+            // Trang /coach/attendance/:sessionId: tải lười CoachAttendancePage cho buổi cụ thể.
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+          },
+          {
             path: '/staff/attendance',
-            element: <Navigate to="/coach/pt-attendance" replace />,
+            element: <Navigate to="/coach/attendance" replace />,
           },
           {
             path: '/staff/attendance/:sessionId',
-            element: <Navigate to="/coach/pt-attendance" replace />,
+            element: <LegacyAttendanceRedirect />,
           },
           {
             path: '/coach/classes',
@@ -244,7 +255,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/classes',
-            element: <Navigate to="/staff/reception" replace />,
+            element: <LegacyClassesRedirect />,
           },
           {
             path: '/staff/orders',
@@ -268,6 +279,11 @@ export const router = createBrowserRouter([
           <RoleGuard allowedRoles={['MANAGER', 'CENTER_MANAGER']} />
         ),
         children: [
+          {
+            path: '/manager/classes',
+            // Trang /manager/classes: tải lười ManagerClassesPage (quản lý lớp học & xếp lịch).
+            lazy: async () => ({ Component: (await import('../features/classes/ManagerClassesPage')).ManagerClassesPage }),
+          },
           {
             path: '/manager/catalogs',
             // Trang /manager/catalogs: tải lười ManagerCatalogsPage.

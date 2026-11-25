@@ -615,4 +615,114 @@ class ClassServiceTest {
         verify(gymClasses).save(gymClass);
         verify(gymClasses, org.mockito.Mockito.never()).delete(any());
     }
+
+    /** Kiểm thử: không cho xếp buổi lớp mới nếu HLV đã có buổi PT 1:1 confirmed trùng giờ. */
+    @Test
+    @DisplayName("createSession rejects when coach already has a confirmed 1:1 PT booking in the slot")
+    void createSession_rejectsWhenCoachHasConfirmedPtBooking() {
+        var ptRepo = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository", ptRepo);
+
+        Coach coach = new Coach();
+        coach.setUserId(10L);
+        var coachUser = new com.swp391.scms.users.entity.User();
+        coachUser.setFullName("Coach An");
+        coach.setUser(coachUser);
+        gymClass.setId(1L);
+        gymClass.setCoach(coach);
+        gymClass.setStatus("active");
+        LocalDate futureDate = LocalDate.now(clock).plusDays(2);
+        var pt = new com.swp391.scms.coaching.entity.CoachBooking();
+        pt.setCoach(coach);
+        pt.setBookingDate(futureDate);
+        pt.setStartTime(LocalTime.of(18, 0));
+        pt.setEndTime(LocalTime.of(19, 0));
+        pt.setStatus("confirmed");
+
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(ptRepo.findActiveByCoachAndDate(coach.getUserId(), futureDate)).thenReturn(java.util.List.of(pt));
+
+        assertThatThrownBy(() -> service.createSession(1L, new CreateSessionRequest(futureDate, LocalTime.of(18, 30), LocalTime.of(19, 30))))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_COACH_PT_CONFLICT")
+                .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.coach_pt_conflict");
+        verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
+    /** Kiểm thử: dời buổi học kiểm tra trùng PT 1:1 của HLV và thông báo học viên lẫn HLV khi thành công. */
+    @Test
+    @DisplayName("rescheduleSession rejects coach PT conflict and notifies booked members and coach on success")
+    void rescheduleSession_checksCoachPtConflictAndNotifiesMembersAndCoach() {
+        var ptRepo = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+        var notificationService = org.mockito.Mockito.mock(com.swp391.scms.notifications.NotificationService.class);
+        var sessionBookings = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository", ptRepo);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "notificationService", notificationService);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "sessionBookings", sessionBookings);
+
+        Coach coach = new Coach();
+        coach.setUserId(10L);
+        var coachUser = new com.swp391.scms.users.entity.User();
+        coachUser.setFullName("Coach An");
+        coach.setUser(coachUser);
+        gymClass.setId(1L);
+        gymClass.setName("Yoga Flow");
+        gymClass.setCoach(coach);
+        gymClass.setStatus("active");
+
+        LocalDate oldDate = LocalDate.now(clock).plusDays(2);
+        LocalDate newDate = LocalDate.now(clock).plusDays(3);
+        ClassSession existing = new ClassSession();
+        existing.setId(55L);
+        existing.setGymClass(gymClass);
+        existing.setSessionDate(oldDate);
+        existing.setStartTime(LocalTime.of(10, 0));
+        existing.setEndTime(LocalTime.of(11, 0));
+        existing.setStatus("scheduled");
+
+        var busyPt = new com.swp391.scms.coaching.entity.CoachBooking();
+        busyPt.setCoach(coach);
+        busyPt.setBookingDate(newDate);
+        busyPt.setStartTime(LocalTime.of(14, 0));
+        busyPt.setEndTime(LocalTime.of(15, 0));
+        busyPt.setStatus("confirmed");
+
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(sessions.findById(55L)).thenReturn(Optional.of(existing));
+        when(ptRepo.findActiveByCoachAndDate(coach.getUserId(), newDate)).thenReturn(java.util.List.of(busyPt));
+
+        // 1. Dời đè lên buổi PT 1:1 → bị từ chối
+        assertThatThrownBy(() -> service.rescheduleSession(1L, 55L, new RescheduleSessionRequest(newDate, LocalTime.of(14, 0), LocalTime.of(15, 0))))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_COACH_PT_CONFLICT");
+
+        // 2. Dời sang khung giờ trống → thành công và gửi thông báo không trùng cho học viên + HLV
+        var member20 = new com.swp391.scms.users.entity.Member();
+        member20.setUserId(20L);
+        var enrollment20 = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        enrollment20.setMember(member20);
+        enrollment20.setStatus("booked");
+        var duplicateBooking20 = new com.swp391.scms.scheduling.entity.SessionBooking();
+        duplicateBooking20.setMember(member20);
+        duplicateBooking20.setStatus("booked");
+
+        when(sessions.searchSessions(newDate, newDate, null, null)).thenReturn(java.util.List.of());
+        when(sessions.findMemberOverlaps(1L, 55L, newDate, LocalTime.of(16, 0), LocalTime.of(17, 0))).thenReturn(java.util.List.of());
+        when(sessions.saveAndFlush(existing)).thenReturn(existing);
+        when(enrollments.findByGymClassId(1L)).thenReturn(java.util.List.of(enrollment20));
+        when(sessionBookings.findBySessionIdAndStatus(55L, "booked")).thenReturn(java.util.List.of(duplicateBooking20));
+
+        service.rescheduleSession(1L, 55L, new RescheduleSessionRequest(newDate, LocalTime.of(16, 0), LocalTime.of(17, 0)));
+
+        verify(notificationService, org.mockito.Mockito.times(1)).send(
+                org.mockito.ArgumentMatchers.eq(20L),
+                any(), any(), org.mockito.ArgumentMatchers.eq("schedule_change"),
+                org.mockito.ArgumentMatchers.eq("class_session"),
+                org.mockito.ArgumentMatchers.eq(55L));
+        verify(notificationService, org.mockito.Mockito.times(1)).send(
+                org.mockito.ArgumentMatchers.eq(coach.getUserId()),
+                any(), any(), org.mockito.ArgumentMatchers.eq("schedule_change"),
+                org.mockito.ArgumentMatchers.eq("class_session"),
+                org.mockito.ArgumentMatchers.eq(55L));
+    }
 }

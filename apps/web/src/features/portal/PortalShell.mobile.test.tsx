@@ -86,8 +86,9 @@ describe('mobile portal navigation', () => {
   it.each([
     ['MEMBER', '/member/dashboard', ['/member/dashboard', '/member/classes', '/member/check-in']],
     ['STAFF', '/staff/reception', ['/staff/reception', '/staff/check-in', '/staff/requests']],
-    ['COACH', '/coach/classes', ['/coach/classes', '/coach/pt-attendance', '/coach/training-plans']],
-    ['MANAGER', '/manager/reports', ['/manager/reports', '/manager/catalogs', '/manager/coach-assignments']],
+    ['COACH', '/coach/pt-attendance', ['/coach/pt-attendance', '/coach/classes', '/coach/training-plans']],
+    ['MANAGER', '/manager/reports', ['/manager/reports', '/manager/classes', '/manager/coach-assignments']],
+    ['ADMIN', '/admin/users', ['/admin/users', '/admin/audit-logs', '/admin/payments']],
   ] as const)('shows only the three primary actions for %s and marks the current screen', async (role, path, expected) => {
     await renderPortal(role, path);
     const nav = host.querySelector('nav[aria-label="Điều hướng nhanh"]');
@@ -118,7 +119,7 @@ describe('mobile portal navigation', () => {
     expect(tabs?.textContent).toContain('Thẻ hội viên');
     await act(async () => tabs!.querySelector<HTMLAnchorElement>('a[href="/member/check-in"]')!.click());
     expect(router.state.location.pathname).toBe('/member/check-in');
-    expect(host.querySelector('.portal-rail-link.active')?.getAttribute('aria-label')).toBe('Thẻ & Check-in');
+    expect(host.querySelector('.portal-rail-link.active')?.getAttribute('aria-label')).toBe('Thẻ & check-in');
   });
 
   it('finds a merged screen by the name of one of its tabs', async () => {

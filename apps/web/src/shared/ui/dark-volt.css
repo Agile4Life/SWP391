@@ -75,4 +75,4 @@
 :root:not([data-theme='light']) .portal-v2 .app-sidebar:has(:focus-visible)::after { opacity: 1; }
 
 /* Ô nhập và bộ chọn: viền màu nhấn kèm vòng sáng 3px độ mờ thấp khi đang focus hoặc mở. */
-:root:not([data-theme='light']) :is(.ui-select__trigger.is-open, .luxury-datepicker-trigger.is-open) { border-color: var(--sol-accent); box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .2); }
+:root:not([data-theme='light']) :is(.ui-select__trigger.is-open, .luxury-datepicker-trigger.is-open, .luxury-timepicker-trigger.is-open) { border-color: var(--sol-accent); box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .2); }

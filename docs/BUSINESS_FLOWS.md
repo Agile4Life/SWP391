@@ -1,7 +1,7 @@
 # Nghiệp vụ SÖL Fitness — các luồng chính đang chạy trên web
 
-> Cập nhật: 23/11/2026, theo code nhánh `main` sau đợt thu gọn phạm vi chỉ còn Gym (PR #144–#156).
-> **Phạm vi hiện tại:** Gym tiêu chuẩn, gói tập, PT 1:1, giáo án, check-in, ví/hóa đơn, chat, hỗ trợ. Lớp nhóm, đặt sân, cửa hàng, thiết bị, đánh giá HLV, chỉ số cơ thể, tiến độ/lịch sử tập và streak **đã ngừng** (mục 3, 9, 10 chỉ còn ghi chú).
+> Cập nhật: 25/11/2026 (khôi phục lớp học nhóm dạng khóa định kỳ & chuẩn hóa sidebar 5 vai trò).
+> **Phạm vi hiện tại:** Gym tiêu chuẩn, gói tập, **lớp học nhóm dạng khóa định kỳ & điểm danh lớp nhóm** (`app.legacy.classes-enabled=true`), PT 1:1, giáo án, check-in, ví/hóa đơn, chat, hỗ trợ. Đặt sân, cửa hàng, thiết bị, đánh giá HLV/buổi tập, chỉ số cơ thể, tiến độ/lịch sử tập và streak vẫn **đã ngừng** (mục 9, 10 chỉ còn ghi chú).
 > Dọn dữ liệu cũ của các tính năng đã ngừng: [`DATA_CLEANUP.md`](DATA_CLEANUP.md).
 > `docs/PROJECT_MASTER_GUIDE.md` là thiết kế gốc. Tài liệu này mô tả **những gì hệ thống đang làm thật**: màn hình, API, quy tắc và state machine. Phần nào khác thiết kế gốc được ghi ở mục 12.
 > Múi giờ nghiệp vụ là `Asia/Ho_Chi_Minh` cho mọi mốc "hôm nay", "trước giờ học" và job định kỳ.
@@ -9,7 +9,7 @@
 ## Mục lục
 1. [Vai trò và phân quyền](#1-vai-trò-và-phân-quyền)
 2. [Flow 1 — Tài khoản, gói tập, dùng thử, bảo lưu, hủy gói](#2-flow-1--tài-khoản-gói-tập-dùng-thử-bảo-lưu-hủy-gói)
-3. [Flow 2 — Lớp học nhóm (đã ngừng)](#3-flow-2--lớp-học-nhóm-đã-ngừng)
+3. [Flow 2 — Lớp học nhóm định kỳ](#3-flow-2--lớp-học-nhóm-định-kỳ)
 4. [Flow 3 — Thanh toán, Ví, hóa đơn, hoàn tiền, báo cáo](#4-flow-3--thanh-toán-ví-hóa-đơn-hoàn-tiền-báo-cáo)
 5. [Flow 4 — Quản trị và cấu hình](#5-flow-4--quản-trị-và-cấu-hình)
 6. [Flow 5 — HLV: PT 1:1, giáo án, AI](#6-flow-5--hlv-pt-11-giáo-án-ai)
@@ -28,12 +28,12 @@
 |---|---|---|
 | Khách vãng lai | — | `/`, `/trainers`, `/trainers/:id`, `/login`, `/register` |
 | Hội viên | `MEMBER` | `/member/*`, `/messages` |
-| Huấn luyện viên | `COACH` | `/coach/classes` (lịch PT), `/coach/pt-attendance` (trang chủ), `/coach/training-plans`, `/coach/saved-plans`, `/staff/requests` |
+| Huấn luyện viên | `COACH` | `/coach/pt-attendance` (trang chủ), `/coach/attendance` (+ `/:sessionId`), `/coach/classes` (lớp nhóm + PT 1:1), `/coach/training-plans`, `/coach/saved-plans`, `/staff/requests` |
 | Lễ tân | `RECEPTIONIST` (`STAFF`) | `/staff/reception`, `/staff/check-in`, `/staff/check-out`, `/staff/reception-history`, `/staff/kyc`, `/staff/holds`, `/staff/requests` |
-| Quản lý trung tâm | `CENTER_MANAGER` (`MANAGER`) | `/manager/reports`, `/manager/catalogs`, `/manager/coach-assignments`, `/manager/staff-accounts`, `/manager/requests`, `/messages` (chỉ Hỗ trợ & Khiếu nại, SÖL AI) |
-| Quản trị hệ thống | `ADMIN` | `/admin/users`, `/admin/audit-logs`, `/admin/payments` |
+| Quản lý trung tâm | `CENTER_MANAGER` (`MANAGER`) | `/manager/reports`, `/manager/classes`, `/manager/catalogs`, `/manager/coach-assignments`, `/manager/staff-accounts`, `/manager/requests`, `/messages` (chỉ Hỗ trợ & Khiếu nại, SÖL AI) |
+| Quản trị hệ thống | `ADMIN` | `/admin/users`, `/admin/audit-logs`, `/admin/payments`, `/member/notifications` |
 
-- URL của màn đã bỏ (`/staff/classes`, `/staff/orders`, `/staff/courts`, `/staff/pt-attendance`, `/staff/attendance`, `/manager/products`, `/manager/equipment`, `/manager/coach-reviews`, `/coach/health-metrics`, trang bộ môn và trang sản phẩm công khai) chuyển hướng về màn còn giữ; xem `DESIGN.md`.
+- URL của màn đã bỏ (`/staff/orders`, `/staff/courts`, `/staff/pt-attendance`, `/manager/products`, `/manager/equipment`, `/manager/coach-reviews`, `/coach/health-metrics`, trang bộ môn và trang sản phẩm công khai) chuyển hướng về màn còn giữ; `/staff/classes` chuyển hướng theo vai trò (`MANAGER` → `/manager/classes`, `STAFF` → `/staff/reception`); `/staff/attendance*` chuyển hướng sang `/coach/attendance*`. Xem `DESIGN.md`.
 - Frontend chặn route bằng `RoleGuard`. Backend vẫn tự kiểm tra role qua `SecurityConfig` và `@PreAuthorize`. Ẩn menu không phải là phân quyền.
 - JWT chỉ được chấp nhận khi user còn `active` và `deleted_at IS NULL`. Khóa tài khoản thì token cũ mất hiệu lực ngay ở request kế tiếp.
 - Mọi thông báo và lỗi của API đi qua i18n (`Accept-Language`, mặc định `vi`).
@@ -104,14 +104,22 @@
 
 ---
 
-## 3. Flow 2 — Lớp học nhóm (đã ngừng)
+## 3. Flow 2 — Lớp học nhóm định kỳ
 
-Từ 22/11/2026 (PR #152) trung tâm **không còn lớp học nhóm**: không tạo/xếp lớp, không đăng ký khóa học, không đặt buổi, không điểm danh lớp.
+Từ 25/11/2026 trung tâm **khôi phục lớp học nhóm dạng khóa định kỳ** (`app.legacy.classes-enabled=true`), giữ nguyên `SingleSessionPolicy` (chặn đặt buổi lẻ một lần, chỉ mở/đăng ký theo khóa định kỳ):
 
-- `ClassController`, `ClassSessionController`, `EnrollmentController`, `SessionBookingController`, `SessionAttendanceController` chỉ được nạp khi bật `app.legacy.classes-enabled=true` (mặc định tắt), nên mọi `/api/v1/classes/**` và `/api/v1/attendance/**` trả 404.
-- `SessionCompletionScheduler`, `CourseEnrollmentExpiryScheduler` và `DemoClassSeeder` cũng tắt theo cờ đó. `GET /api/v1/public/catalog` luôn trả `sessions: []`.
-- Bảng `classes`, `class_sessions`, `class_enrollments`, `session_bookings`, `session_attendance` và các trigger sức chứa/trùng lịch (mục 11.2) vẫn còn để giữ dữ liệu cũ toàn vẹn.
-- Màn `/staff/classes`, `/staff/attendance` đã gỡ; `/member/classes` nay là lịch PT 1:1 (mục 6.1).
+- **Quản lý (`/manager/classes`, chỉ `CENTER_MANAGER` / `MANAGER`):**
+  - Tạo, sửa khóa học định kỳ (`POST /api/v1/classes/recurring`, `PUT /api/v1/classes/{id}`), thêm buổi (`POST /api/v1/classes/{id}/sessions`), đổi lịch buổi (`PUT /api/v1/classes/{id}/sessions/{sessionId}`), hủy buổi kèm lý do (`POST /api/v1/classes/sessions/{id}/cancel`).
+  - Lịch Quản lý chống chồng lấn đa bộ môn với bộ lọc 1 chạm theo bộ môn, 4 chế độ xem (`Lịch theo môn / lớp`, `Lịch tổng cả tuần` gom ≥ 3 lớp trùng giờ vào nút `+N lớp`, `Tổng quan theo phòng` lưới Phòng × Giờ 06:00–22:00, `Danh sách khóa học`), và hộp thoại chi tiết buổi khi bấm bất kỳ ô lịch nhỏ nào.
+- **Ràng buộc chống trùng lịch hai chiều PT 1:1 ↔ Lớp nhóm:**
+  - Khi Hội viên đặt PT 1:1 hoặc Quản lý điều chuyển HLV PT (`CoachBookingService`, `CoachAssignmentService`, trigger `scms_guard_pt_schedule`), hệ thống chặn nếu HLV đã có buổi lớp nhóm trùng giờ.
+  - Ngược lại, khi Quản lý tạo khóa học, thêm buổi, cập nhật lịch khóa hoặc đổi lịch buổi (`ClassService.ensureNoSessionConflict`), hệ thống kiểm tra `CoachBookingRepository` và trả `409 SCHEDULING_COACH_PT_CONFLICT` nếu HLV đã có buổi PT 1:1 `confirmed` trùng giờ.
+- **Hội viên (`/member/classes`):**
+  - 3 tab: `Lịch của tôi` (gộp buổi lớp đã ghi danh + PT 1:1), `Đăng ký lớp học` (ghi danh theo suất gói `POST /api/v1/classes/{id}/enroll` hoặc thanh toán học phí khóa học `POST /api/v1/classes/{id}/checkout` qua Ví/VNPay/Tiền mặt tại quầy, hủy ghi danh trước ngày khai giảng), và `Đặt lịch HLV 1:1`.
+  - Gói tập vẫn hiển thị và áp dụng quyền lợi số khóa học / giảm giá học phí khóa học từ `GET /api/v1/classes/my-quota`.
+- **HLV (`/coach/classes`, `/coach/attendance`, `/coach/attendance/:sessionId`):**
+  - Xem thời khóa biểu gộp lớp nhóm + PT 1:1; điểm danh Có mặt/Vắng mặt và xem lịch sử 31 ngày qua `/api/v1/attendance/sessions/**` (không khôi phục tab đánh giá buổi tập vì `app.coaching.evaluations.enabled=false`).
+- **Thông báo sự kiện lớp nhóm:** ghi danh/checkout/hủy ghi danh (`class_enrollment`), đổi lịch buổi học (`schedule_change` gửi cả học viên đã đặt và HLV phụ trách), hủy buổi học (gửi học viên không trùng lặp và gửi HLV phụ trách nếu Quản lý hủy). `GET /api/v1/public/catalog` vẫn giữ `sessions: []` trên landing công khai.
 
 ---
 
@@ -206,9 +214,10 @@ Từ 22/11/2026 (PR #152) trung tâm **không còn lớp học nhóm**: không t
 **Màn hình:** `/member/notifications`. **API:** `/api/v1/notifications`.
 | Loại | Khi nào |
 |---|---|
-| `schedule_change` | Lịch PT bị hủy hoặc đổi HLV (lớp cũ, nếu còn) |
+| `schedule_change` | Lịch lớp bị đổi giờ/hủy, hoặc lịch PT bị hủy/đổi HLV |
+| `booking` | Đăng ký/giữ chỗ hoặc hủy ghi danh khóa học nhóm |
 | `package_expiry` | Gói còn ≤ 7 ngày (8:00 hằng ngày) |
-| `class_reminder` | Buổi lớp sắp bắt đầu; không còn phát sinh vì lớp nhóm đã ngừng |
+| `class_reminder` | Buổi lớp sắp bắt đầu (nhắc tự động 30 phút/lần) |
 | `payment` | Thanh toán, hoàn tiền, Ví |
 | `support_reply` | Có phản hồi phiếu hỗ trợ |
 | `system` | Còn lại |
@@ -263,14 +272,14 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | Job | Lịch | Việc làm |
 |---|---|---|
 | `MembershipLifecycleScheduler` | 00:15 hằng ngày | Bắt đầu/kết thúc bảo lưu, hủy lịch không còn gói bao phủ |
-| `SessionCompletionScheduler` | 00:30 hằng ngày | Tắt (chỉ chạy khi bật `app.legacy.classes-enabled`) |
+| `SessionCompletionScheduler` | 00:30 hằng ngày | Đóng các buổi lớp nhóm đã kết thúc (đang bật cùng `app.legacy.classes-enabled=true`) |
 | `CoachingCompletionScheduler` | 00:35 hằng ngày | PT 1:1 đã qua 3 ngày, giáo án hết hạn → `completed` |
-| `CourseAttendanceService` | 30 phút | Đánh vắng buổi lớp đã kết thúc; không còn việc vì lớp nhóm đã ngừng |
+| `CourseAttendanceService` | 30 phút | Tự đánh vắng buổi lớp nhóm đã kết thúc nếu chưa điểm danh |
 | `CenterCheckinService` | 03:00 hằng ngày | Đóng lượt check-in treo |
 | `SupportRequestService` | Hằng giờ | Đóng phiếu `resolved` quá 72 giờ |
-| `NotificationScheduler` | 8:00 và 30 phút | Nhắc gia hạn gói (nhắc giờ lớp không còn phát sinh) |
+| `NotificationScheduler` | 8:00 và 30 phút | Nhắc gia hạn gói và nhắc buổi lớp sắp bắt đầu |
 | `VnpayExpiryScheduler` | 1–5 phút | Đóng giao dịch VNPay quá hạn |
-| Hết hạn học phí, đặt sân, đơn hàng | — | Tắt cùng tính năng (`CourseEnrollmentExpiryScheduler`, `CourtBookingExpiryScheduler`, `ProductOrderExpiryScheduler`) |
+| `CourseEnrollmentExpiryScheduler` | 1–5 phút | Hủy giữ chỗ học phí khóa học chưa thanh toán quá hạn (đặt sân và đơn hàng vẫn tắt: `CourtBookingExpiryScheduler`, `ProductOrderExpiryScheduler`) |
 
 ### 11.2 Ràng buộc trong database
 Định nghĩa trong `apps/api/src/main/resources/db/triggers/postgresql-triggers.sql`, cài sau Hibernate. Lỗi được dịch ra HTTP 409/403 kèm i18n ở `GlobalExceptionHandler`. Trigger của lớp và sân vẫn được cài (bắt buộc theo `AGENTS.md`) để giữ dữ liệu cũ toàn vẹn dù tính năng đã ngừng.
@@ -296,7 +305,7 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | Gói tự chuyển `expired` khi hết hạn | Hết hạn xác định theo `end_date`; `expired` chỉ dùng cho kỳ bị thay khi nâng cấp. Có thêm `frozen` (bảo lưu) |
 | Giáo án: `draft/active/completed/cancelled` | Có thêm `superseded` (giáo án cũ khi áp dụng giáo án mới) |
 | Hủy lớp "trước giờ học quy định" | Hủy được tới giờ bắt đầu |
-| Lớp học nhóm, đặt chỗ, điểm danh lớp | Đã ngừng từ 22/11/2026 (phạm vi chỉ còn Gym) |
+| Lớp học nhóm, đặt chỗ, điểm danh lớp | Đã khôi phục khóa học định kỳ & điểm danh lớp nhóm từ 25/11/2026 (`SingleSessionPolicy` vẫn tắt đặt buổi lẻ) |
 | Đánh giá và xếp hạng HLV, theo dõi tiến độ/chỉ số cơ thể, thiết bị | Đã ngừng từ 22–23/11/2026 |
 | Hỗ trợ: nhân viên không mở lại phiếu đã giải quyết | Nhân viên được `resolved → in_progress` khi hội viên còn vấn đề |
 | Xuất Excel/PDF báo cáo | Chỉ có hóa đơn PDF của hội viên; báo cáo xem trên web và lưu snapshot JSON |

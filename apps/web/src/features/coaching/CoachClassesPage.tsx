@@ -8,6 +8,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import {
   coachingApi,
+  type CoachSession,
   type EnrolledStudent,
 } from './coachingApi';
 import {
@@ -16,7 +17,7 @@ import {
 } from '../member/coachBookingApi';
 import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
 import { parseISODate } from '../schedule/timetable';
-import { ptBookingEvents } from './coachTimetable';
+import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
 import './coach-classes.css';
 import { formatCenterDate } from '../../shared/lib/centerTime';
 import { matchPtSearch } from './ptSearch';
@@ -54,7 +55,9 @@ export function CoachClassesPage() {
 
   const [currentMonday, setCurrentMonday] = useState<Date>(() => getWeekMonday(new Date()));
   const [selectedPt, setSelectedPt] = useState<CoachBookingDto | null>(null);
+  const [selectedClassSession, setSelectedClassSession] = useState<CoachSession | null>(null);
   const [coach1on1Bookings, setCoach1on1Bookings] = useState<CoachBookingDto[]>([]);
+  const [classSessions, setClassSessions] = useState<CoachSession[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<StaffMessage | null>(null);
 
@@ -65,8 +68,9 @@ export function CoachClassesPage() {
   const [allStudentsSearch, setAllStudentsSearch] = useState<string>('');
   const [allStudentsLevelFilter, setAllStudentsLevelFilter] = useState<string>('all');
 
-  // Cancel 1:1 booking
+  // Cancel 1:1 booking or group class session
   const [cancellingPt, setCancellingPt] = useState<CoachBookingDto | null>(null);
+  const [cancellingSession, setCancellingSession] = useState<CoachSession | null>(null);
   const [cancelPtReason, setCancelPtReason] = useState<string>('');
   const [cancelPtError, setCancelPtError] = useState<StaffMessage | null>(null);
   const [cancelBusy, setCancelBusy] = useState<boolean>(false);
@@ -114,28 +118,78 @@ export function CoachClassesPage() {
     return coach1on1Bookings.filter((b) => matchPtSearch(b, scheduleSearch));
   }, [coach1on1Bookings, scheduleSearch]);
 
-  // Tải lịch kèm 1:1 của HLV; lỗi thì báo để thử lại.
+  // Các buổi lớp nhóm khớp từ khóa tìm kiếm (tên lớp, phòng, bộ môn).
+  const filteredClassSessions = useMemo(() => {
+    const q = scheduleSearch.trim().toLowerCase();
+    if (!q) return classSessions;
+    return classSessions.filter((s) =>
+      [s.className, s.roomName, s.disciplineName].filter(Boolean).some((v) => String(v).toLowerCase().includes(q)),
+    );
+  }, [classSessions, scheduleSearch]);
+
+  // Tải song song lịch PT 1:1 và lịch dạy lớp nhóm của HLV.
   const loadWeeklySessions = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const ptBookings = await getCoachSchedule();
-      setCoach1on1Bookings(ptBookings);
-    } catch {
-      setError('Không thể tải lịch dạy PT 1-1 của tuần này. Vui lòng thử lại.');
+      const [ptResult, classResult] = await Promise.allSettled([
+        getCoachSchedule(),
+        typeof coachingApi.getCoachSchedule === 'function'
+          ? coachingApi.getCoachSchedule(currentUser?.id)
+          : Promise.resolve([] as CoachSession[]),
+      ]);
+      const ptList = ptResult.status === 'fulfilled' ? ptResult.value : [];
+      const classList = classResult.status === 'fulfilled' && Array.isArray(classResult.value) ? classResult.value : [];
+      setCoach1on1Bookings(ptList);
+      setClassSessions(classList);
+      if (ptResult.status === 'rejected' && classResult.status === 'rejected') {
+        setError('Không thể tải lịch dạy của tuần này. Vui lòng thử lại.');
+      } else if (ptResult.status === 'rejected' && classList.length === 0) {
+        setError('Không thể tải lịch dạy của tuần này. Vui lòng thử lại.');
+      }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [currentUser?.id]);
 
   useEffect(() => {
     void loadWeeklySessions();
   }, [loadWeeklySessions]);
 
-  // Bấm một khối pt-<id> trên lịch thì mở chi tiết buổi kèm tương ứng.
+  // Bấm một khối trên lịch: pt-<id> mở buổi PT 1:1, ngược lại mở chi tiết buổi lớp nhóm.
   const handleEventClick = (eventId: string) => {
     if (eventId.startsWith('pt-')) {
       setSelectedPt(coach1on1Bookings.find((booking) => `pt-${booking.id}` === eventId) ?? null);
+      return;
+    }
+    setSelectedClassSession(classSessions.find((session) => String(session.id) === eventId) ?? null);
+  };
+
+  // Xác nhận hủy buổi lớp nhóm do HLV phụ trách.
+  const handleConfirmCancelSession = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!cancellingSession || cancelBusy) return;
+    const reason = cancelPtReason.trim();
+    if (!reason) {
+      setCancelPtError('Vui lòng nhập lý do hủy buổi học.');
+      return;
+    }
+    setCancelPtError(null);
+    setCancelBusy(true);
+    try {
+      await apiFetch(`/classes/sessions/${cancellingSession.id}/cancel`, {
+        method: 'POST',
+        body: JSON.stringify({ reason }),
+      });
+      notify('Đã hủy buổi học và gửi thông báo tới học viên.', 'success');
+      setCancellingSession(null);
+      setCancelPtReason('');
+      setSelectedClassSession(null);
+      await loadWeeklySessions();
+    } catch (err: unknown) {
+      setCancelPtError(errorMessage(err, 'Không thể hủy buổi học này.'));
+    } finally {
+      setCancelBusy(false);
     }
   };
 
@@ -169,10 +223,10 @@ export function CoachClassesPage() {
   return (
     <div data-i18n-managed className="portal-container coach-page">
       <PageHeader
-        title={t("Lịch dạy PT 1-1 & học viên", "1:1 PT Schedule & Trainees")}
+        title={t("Lịch dạy & học viên", "Teaching schedule & trainees")}
       />
 
-      {/* Phân hệ Tab: Thời khóa biểu PT 1-1 vs Học viên phụ trách */}
+      {/* Phân hệ Tab: Thời khóa biểu vs Học viên phụ trách */}
       <div className="portal-tabs coach-nav-tabs" role="tablist" aria-label={t("Phân hệ chức năng HLV", "Coach feature tabs")}>
         <button
           type="button"
@@ -181,7 +235,7 @@ export function CoachClassesPage() {
           className={`portal-tab coach-tab-btn ${activeTab === 'schedule' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('schedule')}
         >
-          {t("Thời khóa biểu PT 1-1", "1:1 PT Timetable")}</button>
+          {t("Thời khóa biểu", "Timetable")}</button>
         <button
           type="button"
           role="tab"
@@ -189,11 +243,11 @@ export function CoachClassesPage() {
           className={`portal-tab coach-tab-btn ${activeTab === 'students' ? 'active is-active' : ''}`}
           onClick={() => setActiveTab('students')}
         >
-          {t("Học viên phụ trách", "Assigned Trainees")}</button>
+          {t("Học viên phụ trách", "Assigned trainees")}</button>
       </div>
 
       {/* ====================================================================
-          TAB 1: THỜI KHÓA BIỂU DẠY KÈM PT 1-1
+          TAB 1: THỜI KHÓA BIỂU LỚP NHÓM & PT 1:1
           ==================================================================== */}
       {activeTab === 'schedule' && (
         <div className="coach-schedule-section">
@@ -203,22 +257,22 @@ export function CoachClassesPage() {
                 type="search"
                 className="portal-input"
                 style={{ width: '100%' }}
-                placeholder={t("Tìm theo tên học viên, mã thẻ, SĐT hoặc email…", "Search by student name, card code, phone or email…")}
-                aria-label={t("Tìm kiếm buổi tập PT 1-1", "Search 1:1 PT sessions")}
+                placeholder={t("Tìm theo tên học viên, lớp, phòng, mã thẻ, SĐT hoặc email…", "Search by student, class, room, card code, phone or email…")}
+                aria-label={t("Tìm kiếm lịch dạy", "Search teaching schedule")}
                 value={scheduleSearch}
                 onChange={(e) => setScheduleSearch(e.target.value)}
               />
             </div>
             {scheduleSearch.trim() && (
               <span className="coach-students-count" style={{ fontSize: '0.88rem', color: 'var(--sol-text-muted)' }}>
-                {t("Kết quả tìm kiếm: ", "Search results: ")}<strong>{filteredPtBookings.length} {t("buổi tập", "sessions")}</strong>
+                {t("Kết quả tìm kiếm: ", "Search results: ")}<strong>{filteredPtBookings.length + filteredClassSessions.length} {t("buổi tập", "sessions")}</strong>
               </span>
             )}
           </div>
           <WeeklyTimetable
-            label={t("Thời khóa biểu dạy kèm PT 1-1 của tôi", "My 1:1 PT Timetable")}
+            label={t("Thời khóa biểu giảng dạy của tôi", "My teaching timetable")}
             weekStart={formatYmd(currentMonday)}
-            events={ptBookingEvents(filteredPtBookings)}
+            events={[...coachSessionEvents(filteredClassSessions, 'schedule'), ...ptBookingEvents(filteredPtBookings)]}
             loading={loading}
             error={t(error)}
             onRetry={() => void loadWeeklySessions()}
@@ -226,17 +280,92 @@ export function CoachClassesPage() {
             onEventClick={handleEventClick}
             emptyLabel={
               scheduleSearch.trim()
-                ? t("Không tìm thấy buổi kèm PT 1-1 nào của học viên phù hợp trong tuần này.", "No matching 1:1 PT sessions found for this student in this week.")
-                : t("Tuần này bạn chưa có buổi kèm PT 1-1 nào.", "You have no 1:1 sessions scheduled this week.")
+                ? t("Không tìm thấy buổi dạy nào phù hợp trong tuần này.", "No matching sessions found this week.")
+                : t("Tuần này bạn chưa có buổi dạy nào.", "You have no sessions scheduled this week.")
             }
-            legendNote={t("Bấm vào buổi kèm để xem chi tiết học viên hoặc hủy lịch", "Click a session to view trainee details or cancel")}
+            legendNote={t("Bấm vào từng buổi dạy để xem chi tiết, điểm danh hoặc hủy lịch", "Click a session to view details, take attendance, or cancel")}
             legend={[
-              { tone: 'mine', label: t('Kèm riêng 1:1') },
-              { tone: 'past', label: t('Đã qua') },
-              { tone: 'cancelled', label: t('Đã hủy') },
+              { tone: 'open', label: t('Lớp nhóm còn chỗ', 'Open group class') },
+              { tone: 'full', label: t('Lớp nhóm đã đầy', 'Full group class') },
+              { tone: 'mine', label: t('Kèm riêng 1:1', '1:1 coaching') },
+              { tone: 'past', label: t('Đã qua', 'Past') },
+              { tone: 'cancelled', label: t('Đã hủy', 'Cancelled') },
             ]}
           />
         </div>
+      )}
+
+      {selectedClassSession && (
+        <Modal title={selectedClassSession.className} onClose={() => setSelectedClassSession(null)}>
+          <div className="kv-list">
+            {selectedClassSession.disciplineName && (
+              <div className="kv-row"><span>{t("Bộ môn", "Discipline")}</span><strong>{selectedClassSession.disciplineName}</strong></div>
+            )}
+            <div className="kv-row"><span>{t("Thời gian", "Time")}</span><strong>{formatCenterDate(selectedClassSession.sessionDate)} · {selectedClassSession.startTime.slice(0, 5)}–{selectedClassSession.endTime.slice(0, 5)}</strong></div>
+            {selectedClassSession.roomName && (
+              <div className="kv-row"><span>{t("Phòng tập", "Room")}</span><strong>{selectedClassSession.roomName}</strong></div>
+            )}
+            <div className="kv-row"><span>{t("Sĩ số", "Attendance")}</span><strong>{`${selectedClassSession.bookedCount}/${selectedClassSession.capacity}`}</strong></div>
+            {selectedClassSession.cancelReason && (
+              <div className="kv-row"><span>{t("Lý do hủy", "Cancellation reason")}</span><strong>{selectedClassSession.cancelReason}</strong></div>
+            )}
+          </div>
+          <div className="mcal__dialog-actions">
+            {selectedClassSession.status === 'scheduled' && (
+              <button
+                type="button"
+                className="btn-danger"
+                onClick={() => {
+                  setCancelPtError(null);
+                  setCancelPtReason('');
+                  setCancellingSession(selectedClassSession);
+                }}
+              >
+                {t("Hủy buổi học", "Cancel session")}
+              </button>
+            )}
+            <Link to={`/coach/attendance/${selectedClassSession.id}`} className="btn-primary">
+              {t("Điểm danh buổi này", "Take attendance")}
+            </Link>
+          </div>
+        </Modal>
+      )}
+
+      {cancellingSession && (
+        <Modal
+          title={t(`Hủy buổi học: ${cancellingSession.className}`, `Cancel session: ${cancellingSession.className}`)}
+          onClose={() => { if (!cancelBusy) setCancellingSession(null); }}
+          busy={cancelBusy}
+        >
+          <form onSubmit={handleConfirmCancelSession} style={{ display: 'grid', gap: 12 }}>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="cancel-class-session-reason">
+                {t("Lý do hủy buổi học *", "Cancellation reason *")}
+              </label>
+              <textarea
+                id="cancel-class-session-reason"
+                rows={3}
+                required
+                className="portal-textarea"
+                placeholder={t("Nhập lý do hủy buổi học để thông báo tới học viên...", "Enter a cancellation reason to notify enrolled members...")}
+                value={cancelPtReason}
+                onChange={(e) => setCancelPtReason(e.target.value)}
+                disabled={cancelBusy}
+              />
+            </div>
+            {cancelPtError && (
+              <div className="portal-alert portal-alert--error" role="alert">{t(cancelPtError)}</div>
+            )}
+            <div className="mcal__dialog-actions">
+              <button type="button" className="btn-secondary" onClick={() => setCancellingSession(null)} disabled={cancelBusy}>
+                {t("Quay lại", "Back")}
+              </button>
+              <button type="submit" className="btn-danger" disabled={cancelBusy}>
+                {cancelBusy ? t("Đang hủy...", "Cancelling...") : t("Xác nhận hủy buổi", "Confirm cancel")}
+              </button>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {selectedPt && (

@@ -1,12 +1,14 @@
 import { memberText } from '../member/memberI18n';
 import { useI18n } from '../../shared/i18n';
 import { useLanguage } from '../../shared/i18n/language';
+import { Modal } from '../../shared/ui/Modal';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import {
   TIMETABLE_HOURS,
   addDays,
   blockClass,
   fitHourRange,
+  groupVisibleLanes,
   hhmm,
   hourLabel,
   isWithinRange,
@@ -19,6 +21,7 @@ import {
   weekRangeLabel,
   weekdayLabel,
   weekDays,
+  type OverflowCluster,
   type TimetableEvent,
   type TimetableTone,
 } from './timetable';
@@ -66,6 +69,8 @@ interface WeeklyTimetableProps {
   legendNote?: string;
   /** Vùng bộ lọc thêm, đặt cạnh điều hướng tuần. */
   toolbar?: ReactNode;
+  /** Giới hạn số làn hiển thị song song tối đa trong 1 cột ngày; vượt quá sẽ gom thành nút "+N lớp". */
+  maxVisibleLanes?: number;
   label: string;
 }
 
@@ -117,10 +122,12 @@ function slotKey(date: string, hour: number) {
  */
 export function WeeklyTimetable({
   weekStart, events, loading = false, error = null, onRetry, onWeekChange, onEventClick, selectedId, disabled = false,
-  emptyLabel = 'Tuần này chưa có buổi học nào', onSlotClick, slotActionLabel = 'tạo lịch', legend, legendNote, toolbar, label,
+  emptyLabel = 'Tuần này chưa có buổi học nào', onSlotClick, slotActionLabel = 'tạo lịch', legend, legendNote, toolbar,
+  maxVisibleLanes, label,
 }: WeeklyTimetableProps) {
   useLanguage();
   const { t } = useI18n();
+  const [overflowCluster, setOverflowCluster] = useState<OverflowCluster | null>(null);
   const now = useNow();
   const today = todayISO(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -339,6 +346,7 @@ export function WeeklyTimetable({
             const dayEvents = eventsByDay.get(day) ?? [];
             const busyEvents = dayEvents.filter((event) => event.tone !== 'cancelled');
             const positioned = layoutDayEvents(dayEvents, firstHour, endHour);
+            const grouped = maxVisibleLanes ? groupVisibleLanes(positioned, maxVisibleLanes) : { visible: positioned, overflows: [] };
             const showNow = day === today && nowMinutes >= firstHour * 60 && nowMinutes < endHour * 60;
             const weekend = days.indexOf(day) >= 5;
             return (
@@ -387,19 +395,24 @@ export function WeeklyTimetable({
                   />
                 )}
 
-                {positioned.map(({ event, lane, lanes, topPct, heightPct }) => {
+                {grouped.visible.map(({ event, lane, lanes, topPct, heightPct }) => {
                   const range = `${hhmm(event.startTime)} - ${hhmm(event.endTime)}`;
+                  const eventStyle: CSSProperties & { '--event-accent'?: string } = {
+                    top: `calc(${topPct}% + 3px)`,
+                    height: `calc(${heightPct}% - 6px)`,
+                    left: `calc(${(lane / lanes) * 100}% + 5px)`,
+                    width: `calc(${100 / lanes}% - 10px)`,
+                  };
+                  if (event.accentColor) {
+                    eventStyle['--event-accent'] = event.accentColor;
+                  }
                   return (
                     <button
                       key={event.id}
                       type="button"
+                      data-accent={event.accentColor ? 'true' : undefined}
                       className={`mcal__event mcal__event--${event.tone}${event.id === selectedId ? ' is-selected' : ''}${blockClass((heightPct / 100) * rowsPx)}`}
-                      style={{
-                        top: `calc(${topPct}% + 3px)`,
-                        height: `calc(${heightPct}% - 6px)`,
-                        left: `calc(${(lane / lanes) * 100}% + 5px)`,
-                        width: `calc(${100 / lanes}% - 10px)`,
-                      }}
+                      style={eventStyle}
                       aria-label={event.ariaLabel}
                       disabled={disabled}
                       aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
@@ -412,6 +425,30 @@ export function WeeklyTimetable({
                     </button>
                   );
                 })}
+
+                {grouped.overflows.map((cluster) => (
+                  <button
+                    key={cluster.id}
+                    type="button"
+                    className="mcal__overflow-btn"
+                    data-testid="timetable-overflow-btn"
+                    style={{
+                      top: `calc(${cluster.topPct}% + 3px)`,
+                      height: `calc(${cluster.heightPct}% - 6px)`,
+                      left: `calc(${(cluster.lane / cluster.lanes) * 100}% + 5px)`,
+                      width: `calc(${100 / cluster.lanes}% - 10px)`,
+                    }}
+                    disabled={disabled}
+                    aria-label={t(
+                      `Xem thêm ${cluster.hiddenEvents.length} lớp (${cluster.allEvents.length} lớp trong khung ${cluster.rangeLabel})`,
+                      `View ${cluster.hiddenEvents.length} more classes (${cluster.allEvents.length} classes in ${cluster.rangeLabel})`,
+                    )}
+                    onClick={() => setOverflowCluster(cluster)}
+                  >
+                    <strong>{cluster.hiddenEvents.length === 1 ? t('+1 lớp', '+1 class') : `+${cluster.hiddenEvents.length} ${t('lớp', 'classes')}`}</strong>
+                    <span>{cluster.rangeLabel}</span>
+                  </button>
+                ))}
               </div>
             );
           })}
@@ -432,6 +469,51 @@ export function WeeklyTimetable({
       {outsideRange > 0 && (
         <p className="mcal__note" role="status">
           {outsideRange} {memberText(" buổi học nằm ngoài khung 06:00–22:00 nên không hiện trên bảng.")}</p>
+      )}
+
+      {overflowCluster && (
+        <Modal
+          title={t(
+            `${memberText(weekdayLabel(overflowCluster.date))} ${shortDate(overflowCluster.date)} · ${overflowCluster.rangeLabel} (${overflowCluster.allEvents.length} lớp)`,
+            `${memberText(weekdayLabel(overflowCluster.date))} ${shortDate(overflowCluster.date)} · ${overflowCluster.rangeLabel} (${overflowCluster.allEvents.length} classes)`,
+          )}
+          onClose={() => setOverflowCluster(null)}
+        >
+          <p className="mcal__note" style={{ marginBottom: 12 }}>
+            {t('Chọn một buổi học bên dưới để xem chi tiết đầy đủ, dời lịch hoặc hủy buổi.', 'Select a session below to view full details, reschedule, or cancel.')}
+          </p>
+          <div className="mcal__overflow-list" data-testid="timetable-overflow-list">
+            {overflowCluster.allEvents.map((ev) => (
+              <button
+                key={ev.id}
+                type="button"
+                className={`mcal__overflow-row mcal__overflow-row--${ev.tone}`}
+                onClick={() => {
+                  setOverflowCluster(null);
+                  onEventClick(ev.id);
+                }}
+              >
+                <span
+                  className="mcal__overflow-swatch"
+                  style={ev.accentColor ? { background: ev.accentColor } : undefined}
+                  aria-hidden="true"
+                />
+                <span className="mcal__overflow-main">
+                  <strong>{ev.title}</strong>
+                  <small>
+                    {[
+                      `${hhmm(ev.startTime)}–${hhmm(ev.endTime)}`,
+                      ev.disciplineName,
+                      ev.meta,
+                      ev.detail,
+                    ].filter(Boolean).join(' · ')}
+                  </small>
+                </span>
+                {ev.badge && <span className="mcal__overflow-badge">{ev.badge}</span>}
+              </button>
+            ))}
+          </div>
+        </Modal>
       )}
     </section>
   );

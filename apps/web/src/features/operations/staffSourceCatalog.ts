@@ -241,7 +241,7 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "hoặc": "or",
   "Quản Lý (MANAGER)": "Manager (MANAGER)",
   "Huấn luyện &amp; Bài tập": "Training &amp; Exercises",
-  "Soạn giáo án": "Training plans",
+  "Soạn giáo án": "Plan builder",
   "Đang tải học viên và thông tin giáo án…": "Loading members and training plan details…",
   "Chưa có học viên để soạn giáo án.": "No members available for training plans.",
   "Học viên lấy từ các lớp đã có hội viên ghi danh.": "Members come from classes that have enrolments.",

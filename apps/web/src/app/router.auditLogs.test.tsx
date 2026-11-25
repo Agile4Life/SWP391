@@ -21,7 +21,7 @@ describe('Admin audit and occupancy routes', () => {
   it('shows the bilingual entry only to Admin and keeps Manager reports', () => {
     const entry = PORTAL_NAV.find(item => item.to === '/admin/audit-logs');
     expect(entry?.roles).toEqual(['ADMIN']);
-    expect(entry?.label).toBe('Nhật ký & Lấp đầy');
+    expect(entry?.label).toBe('Nhật ký & lấp đầy');
     expect(getNavLabel('/admin/audit-logs', '', 'en')).toBe('Audit & occupancy');
     const managerRoutes = PORTAL_NAV.filter(item => item.roles.includes('MANAGER')).flatMap(portalNavRoutes);
     expect(managerRoutes).toContain('/manager/reports');

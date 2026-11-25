@@ -1,0 +1,197 @@
+openapi: 3.0.3
+info:
+  title: SCMS API - Restored Group Classes (Recurring Courses) Contract
+  version: 1.0.0
+  description: >
+    Active API contract for restored recurring group classes (`app.legacy.classes-enabled=true`, 25/11/2026).
+    Single-session / one-off class creation and per-session booking remain disabled by `SingleSessionPolicy`.
+    Bidirectional PT 1:1 <-> Group Class coach scheduling conflict protection is enforced across
+    `ClassService`, `CoachBookingService`, `CoachAssignmentService`, and PostgreSQL trigger `scms_guard_pt_schedule`.
+servers:
+  - url: /api/v1
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        status: { type: integer }
+        code: { type: string }
+        message: { type: string }
+        timestamp: { type: string, format: date-time }
+security:
+  - bearerAuth: []
+paths:
+  /classes:
+    get:
+      summary: List all classes / recurring courses
+      tags: [Classes]
+      responses:
+        '200': { description: List of GymClassDto }
+    post:
+      deprecated: true
+      summary: Disabled one-off class creation (SingleSessionPolicy)
+      tags: [Classes]
+      responses:
+        '400': { description: SCHEDULING_SINGLE_SESSION_DISABLED }
+
+  /classes/recurring:
+    post:
+      summary: Create a recurring group-class course with generated sessions (CENTER_MANAGER, MANAGER)
+      tags: [Classes]
+      responses:
+        '201': { description: Recurring course created }
+        '400': { description: Validation error or coach on approved leave }
+        '403': { description: Forbidden }
+        '409':
+          description: >
+            Room or coach conflict with another class session (`SCHEDULING_ROOM_CONFLICT`, `SCHEDULING_COACH_CONFLICT`)
+            or with an overlapping confirmed PT 1:1 booking (`SCHEDULING_COACH_PT_CONFLICT`).
+
+  /classes/{id}:
+    put:
+      summary: Update a recurring course and optionally regenerate future sessions (CENTER_MANAGER, MANAGER)
+      tags: [Classes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200': { description: Course updated }
+        '403': { description: Forbidden }
+        '404': { description: Class not found }
+        '409':
+          description: >
+            Room/coach class overlap or confirmed PT 1:1 overlap (`SCHEDULING_COACH_PT_CONFLICT`).
+    delete:
+      summary: Delete a class/course without active enrollments (CENTER_MANAGER, MANAGER)
+      tags: [Classes]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200': { description: Class deleted }
+        '403': { description: Forbidden }
+        '409': { description: Class still has active enrollments }
+
+  /classes/coaches:
+    get:
+      summary: List active coaches available for class assignment
+      tags: [Classes]
+      responses:
+        '200': { description: Active coach list }
+
+  /classes/sessions:
+    get:
+      summary: Query class sessions by date range, discipline, or coach
+      description: COACH callers always receive only their own assigned sessions regardless of `coachId`.
+      tags: [Classes]
+      parameters:
+        - { name: fromDate, in: query, schema: { type: string, format: date } }
+        - { name: toDate, in: query, schema: { type: string, format: date } }
+        - { name: disciplineId, in: query, schema: { type: integer, format: int64 } }
+        - { name: coachId, in: query, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: List of ClassSessionDto }
+
+  /classes/{id}/sessions:
+    post:
+      summary: Add an individual session to an existing class (CENTER_MANAGER, MANAGER)
+      tags: [Classes]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '201': { description: Session created }
+        '403': { description: Forbidden }
+        '409':
+          description: >
+            Room/coach conflict, member time overlap (`SCHEDULING_MEMBER_TIME_OVERLAP`),
+            or coach confirmed PT 1:1 overlap (`SCHEDULING_COACH_PT_CONFLICT`).
+
+  /classes/{id}/sessions/{sessionId}:
+    put:
+      summary: Reschedule a scheduled class session (CENTER_MANAGER, MANAGER)
+      description: >
+        Validates room, coach class, and coach confirmed PT 1:1 conflicts (`409 SCHEDULING_COACH_PT_CONFLICT`).
+        On commit, sends deduplicated `schedule_change` notifications (`relatedEntityType=class_session`)
+        to booked members and the assigned coach.
+      tags: [Classes]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+        - { name: sessionId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Session rescheduled }
+        '403': { description: Forbidden }
+        '409':
+          description: >
+            Room/coach conflict, member time overlap, or confirmed PT 1:1 overlap (`SCHEDULING_COACH_PT_CONFLICT`).
+
+  /classes/{id}/students:
+    get:
+      summary: List enrolled students of a course (COACH, CENTER_MANAGER, STAFF, RECEPTIONIST)
+      tags: [Classes]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Enrolled student roster }
+
+  /classes/sessions/{sessionId}/students:
+    get:
+      summary: List enrolled/booked students for a specific session (COACH, CENTER_MANAGER, STAFF, RECEPTIONIST)
+      tags: [Classes]
+      parameters:
+        - { name: sessionId, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Session student roster }
+
+  /classes/my-quota:
+    get:
+      summary: Current member's recurring-course quota, tier discount, and attendance block status (MEMBER)
+      tags: [Enrollments]
+      responses:
+        '200': { description: CourseQuotaDto }
+
+  /classes/my-enrollments:
+    get:
+      summary: Current member's course enrollments with session counts (MEMBER)
+      tags: [Enrollments]
+      responses:
+        '200': { description: List of CourseEnrollmentDto }
+
+  /classes/{id}/enroll:
+    post:
+      summary: Enroll current member in a recurring course using a free package quota credit (MEMBER)
+      tags: [Enrollments]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '201': { description: Enrolled and notified (`class_enrollment`) }
+        '403': { description: SCHEDULING_COURSE_QUOTA_EXCEEDED / SCHEDULING_COURSE_EXCEEDS_MEMBERSHIP / SCHEDULING_COURSE_ENROLL_BLOCKED }
+        '409': { description: Class full, already enrolled, or member schedule conflict }
+    delete:
+      summary: Cancel current member's course enrollment before course start (MEMBER)
+      tags: [Enrollments]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Enrollment cancelled, refund/credit applied, member notified (`class_enrollment`) }
+        '400': { description: SCHEDULING_CANNOT_CANCEL_STARTED_COURSE }
+
+  /classes/{id}/checkout:
+    post:
+      summary: Checkout/pay for a recurring course beyond free quota via Wallet, VNPay, or Counter Cash (MEMBER)
+      tags: [Enrollments]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '201': { description: Checkout created/confirmed and member notified (`class_enrollment`) }
+        '403': { description: Membership invalid or enrollment blocked }
+        '409': { description: Class full, already enrolled, or member schedule conflict }

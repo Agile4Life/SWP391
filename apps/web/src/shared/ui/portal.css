@@ -1143,7 +1143,7 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
   overflow: hidden;
 }
 
-:is(.portal-card--flush, .portal-table-wrapper):has(.ui-select__menu, .luxury-datepicker-popover, .action-menu[open]) {
+:is(.portal-card--flush, .portal-table-wrapper):has(.ui-select__menu, .luxury-datepicker-popover, .luxury-timepicker-popover, .action-menu[open]) {
   overflow: visible;
 }
 

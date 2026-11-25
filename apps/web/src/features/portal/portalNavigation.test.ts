@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { isPortalNavActive, MOBILE_PRIMARY_NAV, PORTAL_NAV, portalNavRoutes } from './portalNavigation';
+import {
+  getMobileNavLabel,
+  getNavLabel,
+  isPortalNavActive,
+  MOBILE_PRIMARY_NAV,
+  MOBILE_PRIMARY_NAV_EN_LABELS,
+  PORTAL_NAV,
+  PORTAL_NAV_EN_LABELS,
+  portalNavRoutes,
+} from './portalNavigation';
 
 const ROLES = ['MEMBER', 'STAFF', 'COACH', 'MANAGER', 'ADMIN'] as const;
 const forRole = (role: (typeof ROLES)[number]) => PORTAL_NAV.filter(item => item.roles.includes(role));
@@ -27,29 +36,55 @@ describe('portal sidebar grouping', () => {
     expect(isPortalNavActive(packages, '/member/hold')).toBe(true);
     expect(isPortalNavActive(packages, '/member/packages/checkout')).toBe(true);
     expect(isPortalNavActive(packages, '/member/card')).toBe(false);
+    const attendance = PORTAL_NAV.find(item => item.to === '/coach/pt-attendance')!;
+    expect(isPortalNavActive(attendance, '/coach/attendance')).toBe(true);
+    expect(isPortalNavActive(attendance, '/coach/attendance/42')).toBe(true);
   });
 
-  it.each(ROLES)('%s: every mobile shortcut resolves to an allowed sidebar entry', role => {
+  it.each(ROLES)('%s: every mobile shortcut resolves to an allowed sidebar entry and has 3 shortcuts', role => {
     const allowed = forRole(role).flatMap(portalNavRoutes);
-    for (const item of MOBILE_PRIMARY_NAV[role]) expect(allowed).toContain(item.to);
+    expect(MOBILE_PRIMARY_NAV[role]).toHaveLength(3);
+    for (const item of MOBILE_PRIMARY_NAV[role]) {
+      expect(allowed).toContain(item.to);
+      expect(MOBILE_PRIMARY_NAV_EN_LABELS[item.to]).toBeTruthy();
+      expect(getMobileNavLabel(item.to, item.label, 'en')).toBe(MOBILE_PRIMARY_NAV_EN_LABELS[item.to]);
+    }
+  });
+
+  it('provides English labels for every PORTAL_NAV item and includes ADMIN in notifications', () => {
+    for (const item of PORTAL_NAV) {
+      expect(PORTAL_NAV_EN_LABELS[item.to]).toBeTruthy();
+      expect(getNavLabel(item.to, item.label, 'en')).toBe(PORTAL_NAV_EN_LABELS[item.to]);
+    }
+    const notif = PORTAL_NAV.find(item => item.to === '/member/notifications')!;
+    expect(notif.roles).toContain('ADMIN');
+    const profile = PORTAL_NAV.find(item => item.to === '/member/profile')!;
+    expect(profile.label).toBe('Hồ sơ cá nhân');
   });
 });
 
-it('removes court navigation for every role and keeps PT', () => {
-  const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER'));
+it('restores group-class navigation for Member, Coach and Manager while keeping Staff concise and courts/shop removed', () => {
+  const member = forRole('MEMBER');
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/courts');
-  expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch PT 1:1');
   expect(member.flatMap(portalNavRoutes)).not.toContain('/member/products');
-  // Màn hình quản lý sân của nhân sự cũng đã bị cắt bỏ (thu gọn phạm vi quản lý/lễ tân).
-  expect(PORTAL_NAV.flatMap(portalNavRoutes)).not.toContain('/staff/courts');
-});
+  expect(member.flatMap(portalNavRoutes)).not.toContain('/member/orders');
+  expect(member.find(item => item.to === '/member/classes')?.label).toBe('Lịch học & đặt PT');
+  expect(member.find(item => item.to === '/member/progress')?.icon).toBe('dumbbell');
 
-it('removes Shop navigation for members, staff and managers', () => {
-  const member = PORTAL_NAV.filter(item => item.roles.includes('MEMBER')).flatMap(portalNavRoutes);
-  expect(member).not.toContain('/member/orders');
-  expect(member).toContain('/member/packages');
-  expect(member).toContain('/member/invoices');
-  // Màn đơn hàng của nhân sự và sản phẩm của quản lý đã bị cắt bỏ khi thu gọn phạm vi nhân sự/quản lý.
-  expect(PORTAL_NAV.filter(item => item.roles.includes('STAFF')).flatMap(portalNavRoutes)).not.toContain('/staff/orders');
-  expect(PORTAL_NAV.filter(item => item.roles.includes('MANAGER')).flatMap(portalNavRoutes)).not.toContain('/manager/products');
+  const coach = forRole('COACH').filter(item => item.to !== '/member/profile' && item.to !== '/member/notifications');
+  expect(coach[0].to).toBe('/coach/pt-attendance');
+  expect(coach[0].label).toBe('Điểm danh');
+  expect(coach.flatMap(portalNavRoutes)).toContain('/coach/attendance');
+  expect(coach.find(item => item.to === '/coach/classes')?.label).toBe('Lịch dạy & học viên');
+
+  const manager = forRole('MANAGER').filter(item => item.to !== '/member/profile' && item.to !== '/member/notifications');
+  expect(manager.flatMap(portalNavRoutes)).toContain('/manager/classes');
+  expect(manager.find(item => item.to === '/manager/classes')?.label).toBe('Lớp học & xếp lịch');
+  expect(manager.flatMap(portalNavRoutes)).not.toContain('/manager/products');
+
+  const staff = forRole('STAFF').filter(item => item.to !== '/member/profile' && item.to !== '/member/notifications');
+  expect(staff).toHaveLength(3);
+  expect(staff.flatMap(portalNavRoutes)).not.toContain('/staff/classes');
+  expect(staff.flatMap(portalNavRoutes)).not.toContain('/staff/courts');
+  expect(staff.flatMap(portalNavRoutes)).not.toContain('/staff/orders');
 });

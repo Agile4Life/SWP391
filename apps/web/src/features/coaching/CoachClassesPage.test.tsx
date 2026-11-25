@@ -107,6 +107,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     );
 
     vi.spyOn(coachingApi, 'getAllAssignedStudents').mockResolvedValue(mockStudents);
+    vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValue([]);
   });
 
   afterEach(async () => {
@@ -128,8 +129,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
       );
     });
 
-    expect(host.textContent).toContain('Lịch dạy PT 1-1 & học viên');
-    expect(host.textContent).toContain('Thời khóa biểu PT 1-1');
+    expect(host.textContent).toContain('Lịch dạy & học viên');
+    expect(host.textContent).toContain('Thời khóa biểu');
     expect(host.textContent).toContain('Học viên phụ trách');
     expect(host.querySelector('[aria-label="Tuần trước"]')).not.toBeNull();
     expect(host.querySelector('[aria-label="Tuần sau"]')).not.toBeNull();
@@ -271,5 +272,45 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     const filteredEvents = host.querySelectorAll('.mcal__event--mine');
     expect(filteredEvents).toHaveLength(1);
     expect(filteredEvents[0].textContent).toContain('Phạm Quốc Bảo');
+  });
+
+  it('shows group class sessions alongside PT bookings and links to group class attendance', async () => {
+    const sunday = new Date(getWeekMonday(new Date()));
+    sunday.setDate(sunday.getDate() + 6);
+    const futureSessionDate = formatYmd(sunday);
+    vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([
+      {
+        id: 77,
+        classId: 5,
+        className: 'Yoga Sáng',
+        disciplineName: 'Yoga',
+        coachId: 1,
+        roomName: 'Studio A',
+        sessionDate: futureSessionDate,
+        startTime: '20:00:00',
+        endTime: '21:00:00',
+        status: 'scheduled',
+        capacity: 20,
+        bookedCount: 11,
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>
+      );
+    });
+
+    const classBlock = host.querySelector<HTMLButtonElement>('.mcal__event--open')!;
+    expect(classBlock).not.toBeNull();
+    expect(classBlock.textContent).toContain('Yoga Sáng');
+    await act(async () => classBlock.click());
+
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.textContent).toContain('Studio A');
+    expect(dialog.textContent).toContain('11/20');
+    expect(dialog.querySelector('a[href="/coach/attendance/77"]')).not.toBeNull();
   });
 });
