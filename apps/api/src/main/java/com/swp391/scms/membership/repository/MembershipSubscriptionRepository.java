@@ -15,7 +15,7 @@ import java.util.Optional;
 /** Truy cập bảng membership_subscriptions (các kỳ gói tập của hội viên). */
 @Repository
 public interface MembershipSubscriptionRepository extends JpaRepository<MembershipSubscription, Long> {
-    java.util.List<MembershipSubscription> findByStatusOrderByUpdatedAtDesc(String status);
+    List<MembershipSubscription> findByStatusOrderByUpdatedAtDesc(String status);
 
     /** Kiểm tra có tồn tại bản ghi có membershipPackageId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByMembershipPackageId(Long packageId);

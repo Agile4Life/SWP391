@@ -39,8 +39,7 @@ export function WalletTopupHistory({ refreshKey = 0 }: { refreshKey?: number }) 
       .then((data) => { if (active) setItems(data); })
       .catch((err) => { if (active) setError(staffError(err, 'Không tải được lịch sử nạp ví tại quầy.')); })
       .finally(() => { if (active) setLoading(false); });
-
-  return () => { active = false; };
+    return () => { active = false; };
   }, [days, reload, refreshKey]);
 
   const visible = sortHistory(items.filter(item => historyMatches(query, [item.memberName, item.membershipCode, item.paymentId]) && (outcome === 'ALL' || item.paymentMethod === outcome)), item => item.paidAt, order);

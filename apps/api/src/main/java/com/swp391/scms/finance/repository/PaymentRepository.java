@@ -13,8 +13,10 @@ import java.util.Optional;
 /** Truy cập bảng payments (khoản thanh toán). */
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
-    java.util.List<Payment> findByNoteAndStatusOrderByPaidAtDesc(String note, String status);
-    java.util.List<Payment> findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(java.util.List<String> statuses);
+    @EntityGraph(attributePaths = {"member", "member.user", "receivedBy"})
+    List<Payment> findByNoteAndStatusOrderByPaidAtDesc(String note, String status);
+
+    List<Payment> findBySubscriptionIdIsNotNullAndStatusInOrderByPaidAtDesc(List<String> statuses);
 
 
     /** Tìm các bản ghi có memberUserId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
