@@ -11,9 +11,15 @@ Nội dung Sol AI dùng để trả lời khách. Sửa file này không cần �
 
 ## Giới thiệu
 Từ khóa: *
-- SÖL Fitness là trung tâm Gym: khu Gym tiêu chuẩn, PT 1:1 cùng huấn luyện viên và giáo án tập luyện cá nhân. Trung tâm không có lớp học nhóm, đặt sân theo giờ hay cửa hàng sản phẩm.
-- Các mục trên Portal hội viên: 'Gói tập & Bảo lưu', 'Thẻ & Check-in', 'Giao dịch & Hóa đơn', 'Giáo án', 'Hồ sơ', 'Thông báo'.
-- Chỉ hội viên có gói tập đang hoạt động và chưa hết hạn mới đặt PT 1:1, dùng quyền lợi gói và check-in được.
+- SÖL Fitness là trung tâm thể thao đa môn gồm 6 bộ môn: Gym (bộ môn chính), Bơi lội, Boxing, Tennis, Cầu lông và Yoga; cung cấp lớp học nhóm dạng khóa định kỳ (mỗi bộ môn mở một lớp đang hoạt động), PT 1:1 cùng huấn luyện viên và giáo án tập luyện cá nhân. Trung tâm không có đặt sân tự do theo giờ, cửa hàng sản phẩm, bảng xếp hạng hay đánh giá HLV.
+- Các mục trên Portal hội viên: 'Gói tập & Bảo lưu', 'Lịch học & đặt PT', 'Thẻ & Check-in', 'Giao dịch & Hóa đơn', 'Giáo án', 'Hồ sơ', 'Thông báo'.
+- Chỉ hội viên có gói tập đang hoạt động và chưa hết hạn mới đăng ký lớp học nhóm, đặt PT 1:1, dùng quyền lợi gói và check-in được.
+
+## Lớp học nhóm đa bộ môn
+Từ khóa: lop hoc, lop nhom, khoa hoc, bo mon, gym, boi loi, boxing, tennis, cau long, yoga, lich hoc, dang ky lop
+- Trung tâm có 6 bộ môn: Gym, Bơi lội, Boxing, Tennis, Cầu lông và Yoga; mỗi bộ môn chỉ mở một lớp định kỳ đang hoạt động tại một thời điểm.
+- Hội viên đăng ký cả khóa học tại mục 'Lịch học & đặt PT' > 'Đăng ký lớp học' bằng lượt miễn phí của gói tập hoặc thanh toán học phí khóa học (Ví SÖL, VNPay hoặc tiền mặt tại quầy lễ tân trước ngày khai giảng); không đặt lẻ từng buổi.
+- Hủy đăng ký khóa học chỉ thực hiện trước ngày khai giảng; hủy sau khi đã thanh toán được hoàn tiền về Ví SÖL hoặc trả lại suất gói.
 
 ## Mua, gia hạn và nâng cấp gói
 Từ khóa: mua goi, gia han, nang cap, goi tap, het han, dang ky goi, bang gia

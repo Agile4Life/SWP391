@@ -182,11 +182,22 @@ public class CatalogSeeder implements ApplicationRunner {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
-        // Chỉ tạo dữ liệu mẫu cho Gym; dữ liệu lịch sử được giữ nguyên.
+        // Bộ môn chuẩn (khôi phục từ 1384c4d3): Gym là bộ môn chính; Bơi lội, Boxing, Tennis, Cầu lông, Yoga là bộ môn phụ.
         upsertDiscipline("Gym", "Sức mạnh, thể lực và kỹ thuật tập tạ", "Olympic Strength");
-        if (rooms.list().isEmpty()) {
-            rooms.create(new RoomRequest("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", null, null, null, "STANDARD"));
-        }
+        upsertDiscipline("Bơi lội", "Kỹ thuật bơi, sức bền dưới nước và phục hồi", "Thermal Aquatics");
+        upsertDiscipline("Boxing", "Kỹ thuật đấm, phản xạ và thể lực theo hiệp", "Boxing & Kickfit");
+        upsertDiscipline("Tennis", "Kỹ thuật đánh bóng, di chuyển và đánh đôi");
+        upsertDiscipline("Cầu lông", "Bộ chân, phản xạ và kỹ thuật đánh cầu");
+        upsertDiscipline("Yoga", "Hơi thở, thăng bằng và giãn cơ", "Mindful Yoga");
+
+        // Upsert idempotent các phòng/khu tập của 6 bộ môn để cả DB mới lẫn DB đang chạy đều có đủ phòng xếp lớp.
+        upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
+        upsertRoom("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", "PLATINUM");
+        upsertRoom("Zen Garden Studio", "Penthouse", 18, "available", "STANDARD");
+        upsertRoom("Ring Arena 01", "Level 1 - East Wing", 14, "available", "STANDARD");
+        upsertRoom("Oasis Lap Pool", "Sub-level Oasis", 20, "available", "STANDARD");
+        upsertRoom("Sân Tennis 01", "Khu thể thao ngoài trời - Sân A", 8, "available", "STANDARD");
+        upsertRoom("Sân Cầu lông 01", "Nhà thi đấu - Tầng 1", 8, "available", "STANDARD");
 
         // Tạo hoặc cập nhật gói trải nghiệm 3 ngày
         upsertPackageWithTier(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_PRICE, TRIAL_PACKAGE_DURATION, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, "GOLD TRIAL", "Gói Tập Thử 3 Ngày", "Gói Thử Gold");

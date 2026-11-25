@@ -725,4 +725,73 @@ class ClassServiceTest {
                 org.mockito.ArgumentMatchers.eq("class_session"),
                 org.mockito.ArgumentMatchers.eq(55L));
     }
+
+    /** Kiểm thử: quy tắc mỗi bộ môn chỉ có tối đa 1 lớp đang hoạt động (active) trên cả create & update. */
+    @Test
+    @DisplayName("createRecurringClass and updateClass reject a second active class for the same discipline")
+    void enforcesSingleActiveClassPerDiscipline() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Coach activeCoach = new Coach();
+        activeCoach.setUserId(2L);
+        activeCoach.setEmploymentStatus("active");
+        Room studio = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(studio, "id", 3L);
+        studio.setStatus("available");
+        studio.setName("Zen Garden Studio");
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(gymClasses.existsByDisciplineIdAndStatus(1L, "active")).thenReturn(true);
+
+        var createReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                "Yoga Buổi Tối",
+                1L,
+                2L,
+                3L,
+                15,
+                "all",
+                "desc",
+                java.math.BigDecimal.ZERO,
+                LocalDate.of(2026, 10, 20),
+                LocalDate.of(2026, 11, 20),
+                java.util.List.of("MONDAY"),
+                LocalTime.of(18, 0),
+                LocalTime.of(19, 0)
+        );
+
+        assertThatThrownBy(() -> service.createRecurringClass(createReq))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CLASS_EXISTS");
+
+        // updateClass: kích hoạt lại hoặc chuyển sang bộ môn đã có lớp active khác → bị từ chối
+        GymClass archivedClass = new GymClass();
+        archivedClass.setId(9L);
+        archivedClass.setStatus("archived");
+        archivedClass.setDiscipline(yoga);
+        archivedClass.setCoach(activeCoach);
+        archivedClass.setRoom(studio);
+
+        when(gymClasses.findById(9L)).thenReturn(Optional.of(archivedClass));
+        when(gymClasses.existsByDisciplineIdAndStatusAndIdNot(1L, "active", 9L)).thenReturn(true);
+
+        var reactivateReq = new UpdateClassRequest(
+                "Yoga Cũ", 1L, 2L, 3L, 15, "all", "desc", "active"
+        );
+        assertThatThrownBy(() -> service.updateClass(9L, reactivateReq))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CLASS_EXISTS");
+
+        // updateClass: cập nhật sang archived thì luôn cho phép dù bộ môn đã có lớp active khác
+        when(coaches.findById(2L)).thenReturn(Optional.of(activeCoach));
+        when(rooms.findById(3L)).thenReturn(Optional.of(studio));
+        when(enrollments.countByGymClassIdAndStatus(9L, "booked")).thenReturn(0L);
+        when(gymClasses.saveAndFlush(archivedClass)).thenReturn(archivedClass);
+
+        var keepArchivedReq = new UpdateClassRequest(
+                "Yoga Cũ (đã đóng)", 1L, 2L, 3L, 15, "all", "desc", "archived"
+        );
+        var updated = service.updateClass(9L, keepArchivedReq);
+        assertThat(updated.name()).isEqualTo("Yoga Cũ (đã đóng)");
+    }
 }

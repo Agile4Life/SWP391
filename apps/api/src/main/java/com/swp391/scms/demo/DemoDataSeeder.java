@@ -100,12 +100,12 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final List<CoachSpec> COACHES = List.of(
             new CoachSpec("hung", "Trịnh Quang Hùng", "male", "Gym - Sức mạnh", "NSCA-CPT",
                     "8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.", "Gym"),
-            new CoachSpec("mai", "Lý Thanh Mai", "female", "Gym - Phục hồi", "CPT",
-                    "Huấn luyện viên Gym tập trung sức khỏe và phục hồi.", "Gym"),
-            new CoachSpec("long", "Phan Thành Long", "male", "Gym - Thể lực", "CPT",
-                    "Huấn luyện viên Gym tập trung sức mạnh và thể lực.", "Gym"),
-            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Gym - Sức bền", "CPT",
-                    "Huấn luyện viên Gym tập trung kỹ thuật và sức bền.", "Gym"));
+            new CoachSpec("mai", "Lý Thanh Mai", "female", "Yoga", "RYT-500",
+                    "Giáo viên Yoga 6 năm kinh nghiệm, tập trung hơi thở, thăng bằng và phục hồi.", "Yoga"),
+            new CoachSpec("long", "Phan Thành Long", "male", "Boxing & Tennis", "AIBA Level 2",
+                    "Cựu vận động viên Boxing & Tennis, chuyên kỹ thuật đấm, di chuyển chân và thể lực.", "Boxing"),
+            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Bơi lội & Cầu lông", "ASCA Level 2",
+                    "Huấn luyện viên Bơi lội & Cầu lông 7 năm kinh nghiệm: kỹ thuật, sức bền và phản xạ.", "Bơi lội"));
 
     private final UserRepository users;
     private final RoleRepository roles;

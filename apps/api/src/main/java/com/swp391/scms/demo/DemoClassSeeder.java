@@ -84,90 +84,36 @@ public class DemoClassSeeder implements ApplicationRunner {
     }
 
     private static final String GYM = "Phòng Gym Tiêu chuẩn";
-    private static final String VIP = "Phòng Gym VIP";
+    private static final String RING = "Ring Arena 01";
     private static final String ZEN = "Zen Garden Studio";
     private static final String POOL = "Oasis Lap Pool";
+    private static final String TENNIS_COURT = "Sân Tennis 01";
+    private static final String BADMINTON_COURT = "Sân Cầu lông 01";
 
-    /** Tạo mô tả khóa đang diễn ra (bắt đầu 21 ngày trước, kết thúc sau 35 ngày). */
+    /** Tạo mô tả khóa đang diễn ra (bắt đầu 14 ngày trước, kết thúc sau 42 ngày). */
     private static ClassSpec ongoing(String name, String discipline, String room, String level, int capacity,
                                      int price, String days, String start, int minutes, String description) {
-        return new ClassSpec(name, discipline, room, level, capacity, price, days, start, minutes, -21, 35, "active",
+        return new ClassSpec(name, discipline, room, level, capacity, price, days, start, minutes, -14, 42, "active",
                 description);
     }
 
-    /** Tạo mô tả khóa sắp mở, bắt đầu sau startsIn ngày và kéo dài 6 tuần. */
-    private static ClassSpec upcoming(String name, String discipline, String room, String level, int capacity,
-                                      int price, String days, String start, int minutes, int startsIn,
-                                      String description) {
-        return new ClassSpec(name, discipline, room, level, capacity, price, days, start, minutes, startsIn,
-                startsIn + 42, "active", description);
-    }
-
-    /** Tạo mô tả khóa đã kết thúc endedDaysAgo ngày trước, đã lưu trữ. */
-    private static ClassSpec finished(String name, String discipline, String room, String level, int capacity,
-                                      int price, String days, String start, int minutes, int endedDaysAgo,
-                                      String description) {
-        return new ClassSpec(name, discipline, room, level, capacity, price, days, start, minutes, -endedDaysAgo - 42,
-                -endedDaysAgo, "archived", description);
-    }
-
+    /**
+     * Đúng 1 lớp đang hoạt động (`active`) cho mỗi bộ môn trong 6 bộ môn chuẩn (Gym, Bơi lội, Boxing, Tennis,
+     * Cầu lông, Yoga) — tuân thủ quy tắc mỗi bộ môn tối đa 1 lớp duy nhất.
+     */
     static final List<ClassSpec> CLASSES = List.of(
-            // Gym
-            ongoing("Full Body Strength 101", "Gym", GYM, "beginner", 20, 0, "MON,WED,FRI", "06:30", 60,
-                    "Nền tảng tập tạ toàn thân cho người mới: tư thế, hơi thở và giáo án tuần."),
-            ongoing("HIIT Fat Burn", "Gym", GYM, "all", 24, 0, "MON,WED,FRI", "18:30", 60,
-                    "Giãn cách cường độ cao, đốt mỡ nhanh, phù hợp mọi trình độ."),
-            ongoing("Hypertrophy Upper/Lower", "Gym", GYM, "intermediate", 16, 350000, "TUE,THU,SAT", "17:30", 75,
-                    "Chia buổi thân trên/thân dưới để tăng cơ, có chấm điểm kỹ thuật theo tuần."),
-            ongoing("Powerlifting Technique", "Gym", VIP, "advanced", 10, 600000, "TUE,THU", "19:30", 90,
-                    "Squat, bench, deadlift chuẩn kỹ thuật với huấn luyện viên kèm sát."),
-            ongoing("Core & Mobility", "Gym", GYM, "all", 20, 0, "SAT", "08:00", 60,
-                    "Core, linh hoạt khớp và phục hồi cuối tuần."),
-            upcoming("Morning Circuit Training", "Gym", GYM, "all", 25, 0, "TUE,THU", "06:00", 60, 5,
-                    "Tập vòng tuần hoàn buổi sáng giúp khởi động ngày mới."),
-            upcoming("Glute & Lower Body", "Gym", GYM, "beginner", 18, 450000, "MON,WED", "20:00", 60, 9,
-                    "Tập chuyên sâu thân dưới và mông, tăng dần mức tạ."),
-            upcoming("Kettlebell Conditioning", "Gym", GYM, "intermediate", 15, 0, "SUN", "09:00", 75, 12,
-                    "Chuông tạ kết hợp thể lực, cải thiện sức mạnh toàn thân."),
-            finished("Summer Shred 6 Tuần", "Gym", GYM, "all", 22, 300000, "MON,WED,FRI", "19:30", 60, 10,
-                    "Khóa giảm mỡ 6 tuần đã hoàn thành, kết quả được lưu lại để tham khảo."),
-            // Yoga
-            ongoing("Hatha Yoga Nền Tảng", "Yoga", ZEN, "beginner", 15, 0, "MON,WED,FRI", "06:30", 60,
-                    "Các tư thế Hatha cơ bản, thở sâu và giãn cơ nhẹ nhàng."),
-            ongoing("Vinyasa Flow", "Yoga", ZEN, "intermediate", 14, 250000, "TUE,THU", "18:30", 75,
-                    "Chuỗi chuyển động liên tục theo nhịp thở, tăng sức bền và thăng bằng."),
-            ongoing("Yoga Trị Liệu Lưng Cổ", "Yoga", ZEN, "all", 12, 0, "WED,FRI", "12:00", 60,
-                    "Bài tập giãn cơ vùng lưng - cổ - vai cho người ngồi văn phòng."),
-            ongoing("Yin Yoga Thư Giãn", "Yoga", ZEN, "all", 16, 0, "SUN", "17:00", 75,
-                    "Giữ tư thế lâu để giải tỏa căng thẳng, ngủ ngon hơn."),
-            upcoming("Power Yoga", "Yoga", ZEN, "advanced", 12, 300000, "SAT", "07:00", 90, 6,
-                    "Yoga cường độ cao kết hợp sức mạnh và thăng bằng."),
-            upcoming("Meditation & Breathwork", "Yoga", ZEN, "all", 18, 0, "SUN", "07:00", 60, 13,
-                    "Thiền và kiểm soát hơi thở để giảm stress."),
-            finished("Yoga Chào Hè", "Yoga", ZEN, "beginner", 15, 0, "MON,WED", "07:30", 60, 20,
-                    "Khóa Yoga khởi động mùa hè đã kết thúc."),
-            // Boxing
-            ongoing("Boxing Cơ Bản", "Boxing", VIP, "beginner", 14, 0, "TUE,THU", "19:00", 75,
-                    "Tư thế, đòn thẳng, móc và di chuyển chân cơ bản."),
-            ongoing("Kickfit Cardio", "Boxing", VIP, "all", 20, 0, "MON,WED", "19:00", 60,
-                    "Boxing aerobic cường độ vừa, đốt năng lượng và thư giãn."),
-            ongoing("Boxing Sparring Kỹ Thuật", "Boxing", VIP, "advanced", 10, 500000, "FRI", "19:30", 90,
-                    "Tập đối kháng có kiểm soát với bảo hộ đầy đủ."),
-            upcoming("Boxing Bootcamp Sáng", "Boxing", VIP, "intermediate", 16, 0, "SAT,SUN", "07:30", 75, 8,
-                    "Bootcamp cuối tuần: bao cát, mitt và thể lực theo hiệp."),
-            finished("Boxing Bootcamp 4 Tuần", "Boxing", VIP, "intermediate", 14, 400000, "MON,WED", "20:15", 60, 14,
-                    "Khóa bootcamp 4 tuần đã hoàn thành."),
-            // Bơi lội
-            ongoing("Bơi Cơ Bản Người Lớn", "Bơi lội", POOL, "beginner", 10, 0, "MON,WED", "06:00", 60,
-                    "Làm quen với nước, thở và kỹ thuật bơi ếch/sải cơ bản."),
-            ongoing("Bơi Sải Kỹ Thuật", "Bơi lội", POOL, "intermediate", 8, 350000, "TUE,THU", "18:00", 60,
-                    "Chỉnh sửa động tác sải, nhịp thở và đạp chân."),
-            ongoing("Aqua Fitness", "Bơi lội", POOL, "all", 16, 0, "SAT", "07:30", 60,
-                    "Bài tập sức bền dưới nước, ít chấn thương khớp."),
-            upcoming("Bơi Sức Bền Nâng Cao", "Bơi lội", POOL, "advanced", 8, 450000, "FRI", "06:00", 75, 10,
-                    "Giáo án cự ly dài, nâng ngưỡng sức bền."),
-            finished("Bơi Trẻ Hóa Sau Làm Việc", "Bơi lội", POOL, "all", 12, 0, "TUE,THU", "19:30", 60, 25,
-                    "Khóa bơi thư giãn buổi tối đã hoàn thành."));
+            ongoing("Full Body Strength 101", "Gym", GYM, "all", 20, 0, "MON,WED,FRI", "06:30", 60,
+                    "Nền tảng tập tạ toàn thân cho mọi trình độ: tư thế, hơi thở và giáo án tuần."),
+            ongoing("Bơi Cơ Bản Người Lớn", "Bơi lội", POOL, "all", 12, 0, "MON,WED,FRI", "18:00", 60,
+                    "Làm quen với nước, kỹ thuật thở, bơi ếch và bơi sải cơ bản."),
+            ongoing("Boxing Cơ Bản", "Boxing", RING, "all", 14, 0, "TUE,THU,SAT", "19:00", 60,
+                    "Tư thế, đòn thẳng, móc, di chuyển chân và thể lực theo hiệp."),
+            ongoing("Tennis Kỹ Thuật Cơ Bản", "Tennis", TENNIS_COURT, "all", 8, 250000, "TUE,THU,SAT", "17:00", 60,
+                    "Cầm vợt, forehand, backhand, giao bóng và bộ chân đánh đôi."),
+            ongoing("Cầu Lông Bộ Chân & Đánh Đôi", "Cầu lông", BADMINTON_COURT, "all", 8, 0, "WED,FRI,SUN", "08:00", 60,
+                    "Bộ chân di chuyển nhanh, phản xạ và chiến thuật đánh đôi."),
+            ongoing("Hatha Yoga Nền Tảng", "Yoga", ZEN, "all", 16, 0, "MON,WED,FRI", "07:30", 60,
+                    "Các tư thế Hatha cơ bản, hít thở sâu, thăng bằng và giãn cơ."));
 
     /** Một khung giờ đã bận (giờ bắt đầu, giờ kết thúc). */
     private record Slot(LocalTime start, LocalTime end) {
@@ -222,7 +168,13 @@ public class DemoClassSeeder implements ApplicationRunner {
         Map<String, Discipline> disciplineByName = new HashMap<>();
         disciplines.findAll().forEach(d -> disciplineByName.put(d.getName(), d));
         Set<String> existingNames = new HashSet<>();
-        classes.findAll().forEach(c -> existingNames.add(c.getName()));
+        Set<Long> activeDisciplineIds = new HashSet<>();
+        classes.findAll().forEach(c -> {
+            existingNames.add(c.getName());
+            if ("active".equalsIgnoreCase(c.getStatus()) && c.getDiscipline() != null && c.getDiscipline().getId() != null) {
+                activeDisciplineIds.add(c.getDiscipline().getId());
+            }
+        });
 
         // Các khung mà trigger database sẽ từ chối: mọi buổi chưa hủy theo HLV và theo phòng, và mọi lượt đặt
         // PT đã xác nhận của HLV (trg_sessions_check_conflict trong scms_guard_pt_schedule), theo từng ngày.
@@ -254,6 +206,14 @@ public class DemoClassSeeder implements ApplicationRunner {
                 skipped++;
                 continue;
             }
+            // Quy tắc mỗi bộ môn chỉ có tối đa 1 lớp đang hoạt động (`active`).
+            if ("active".equalsIgnoreCase(spec.status()) && discipline.getId() != null
+                    && activeDisciplineIds.contains(discipline.getId())) {
+                log.info("Demo class seed: skip '{}' (discipline '{}' already has an active class)",
+                        spec.name(), spec.discipline());
+                skipped++;
+                continue;
+            }
             List<LocalDate> dates = datesOf(spec, today);
             if (dates.isEmpty()) {
                 skipped++;
@@ -267,6 +227,9 @@ public class DemoClassSeeder implements ApplicationRunner {
                 continue;
             }
             save(spec, discipline, room, placement, dates, manager, now);
+            if ("active".equalsIgnoreCase(spec.status()) && discipline.getId() != null) {
+                activeDisciplineIds.add(discipline.getId());
+            }
             for (LocalDate date : dates) {
                 reserve(busy, "coach", placement.coach().getUserId(), date, placement.start(), placement.end());
                 reserve(busy, "room", room.getId(), date, placement.start(), placement.end());
