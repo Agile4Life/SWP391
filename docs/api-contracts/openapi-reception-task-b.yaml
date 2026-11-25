@@ -1,0 +1,20 @@
+openapi: 3.0.3
+info: {title: Counter wallet topup cash policy, version: 1.0.0}
+servers: [{url: /api/v1}]
+paths:
+  /wallet/members/{memberId}/topup:
+    post:
+      description: Existing receptionist counter topup authorization and amount validation apply. Cash only; omitted method defaults to cash. Historical records and member online payment methods are unchanged.
+      parameters: [{name: memberId, in: path, required: true, schema: {type: integer, format: int64}}]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paymentMethod: {type: string, enum: [cash], default: cash}
+                amount: {type: number, minimum: 10000, maximum: 100000000}
+                clientRequestId: {type: string, description: Reuse unchanged when retrying the same topup}
+      responses:
+        '200': {description: Existing wallet response}
+        '400': {description: COUNTER_TOPUP_CASH_ONLY for a non-cash method}

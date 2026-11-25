@@ -128,7 +128,6 @@ export function StaffReceptionPage() {
   const [walletRetry, setWalletRetry] = useState(0);
   const [isTopupModalOpen, setIsTopupModalOpen] = useState(false);
   const [topupAmount, setTopupAmount] = useState('200000');
-  const [topupMethod, setTopupMethod] = useState<'cash' | 'bank_transfer' | 'pos'>('cash');
   const [topupNote, setTopupNote] = useState('');
   const [topupModalError, setTopupModalError] = useState<StaffMessage | null>(null);
   const [isSubmittingTopup, setIsSubmittingTopup] = useState(false);
@@ -175,7 +174,6 @@ export function StaffReceptionPage() {
   const handleOpenTopupModal = () => {
     if (!selectedMember) return;
     setTopupAmount('200000');
-    setTopupMethod('cash');
     setTopupNote('');
     setTopupModalError(null);
     topupAttemptRef.current = null;
@@ -192,7 +190,7 @@ export function StaffReceptionPage() {
       return;
     }
     // Giữ một mã yêu cầu duy nhất cho mỗi bộ hội viên/số tiền/phương thức để lần thử lại sau khi mất phản hồi không bị cộng tiền hai lần.
-    const attemptKey = `${selectedMember.userId}|${parsed}|${topupMethod}`;
+    const attemptKey = `${selectedMember.userId}|${parsed}|cash`;
     if (!topupAttemptRef.current || topupAttemptRef.current.key !== attemptKey) {
       topupAttemptRef.current = { key: attemptKey, id: generateRequestId() };
     }
@@ -201,7 +199,7 @@ export function StaffReceptionPage() {
     try {
       const updated = await receptionApi.topupMemberWallet(selectedMember.userId, {
         amount: parsed,
-        paymentMethod: topupMethod,
+        paymentMethod: 'cash',
         note: topupNote.trim() || undefined,
         clientRequestId: topupAttemptRef.current.id,
       });
@@ -1490,22 +1488,8 @@ export function StaffReceptionPage() {
               />
             </div>
 
-            <div className="portal-form-group" style={{ margin: 0 }}>
-              <label className="portal-label" htmlFor="counter-topup-method">
-                {t('Hình thức thu tại quầy *', 'Counter payment method *')}
-              </label>
-              <Select
-                id="counter-topup-method"
-                className="portal-select"
-                value={topupMethod}
-                onChange={(e) => setTopupMethod(e.target.value as 'cash' | 'bank_transfer' | 'pos')}
-                disabled={isSubmittingTopup}
-              >
-                <option value="cash">{t('Tiền mặt tại quầy', 'Cash at the counter')}</option>
-                <option value="bank_transfer">{t('Chuyển khoản ngân hàng', 'Bank transfer')}</option>
-                <option value="pos">{t('Thẻ / Máy POS tại quầy', 'Card / POS terminal')}</option>
-              </Select>
-            </div>
+            {/* Tại quầy chỉ thu tiền mặt; giữ mã request chống cộng ví trùng khi thử lại. */}
+            <p data-testid="counter-topup-cash">{t('Hình thức thu: Tiền mặt tại quầy', 'Payment method: Cash at the counter')}</p>
 
             <div className="portal-form-group" style={{ margin: 0 }}>
               <label className="portal-label" htmlFor="counter-topup-note">
