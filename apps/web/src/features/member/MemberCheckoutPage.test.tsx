@@ -6,6 +6,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { MemberCheckoutPage } from './MemberCheckoutPage';
 import * as membershipApi from './membershipApi';
 import * as profileApi from './profileApi';
+import { trialApi } from './trialApi';
+vi.mock('./trialApi', () => ({ trialApi: { getStatus: vi.fn() } }));
 import * as walletApi from '../wallet/walletApi';
 
 vi.mock('./membershipApi', () => ({
@@ -64,6 +66,7 @@ describe('MemberCheckoutPage Component', () => {
 
   beforeEach(() => {
   setLanguage('vi');
+    vi.mocked(trialApi.getStatus).mockResolvedValue({ eligible: true, alreadyClaimed: false });
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.append(host);
@@ -393,5 +396,17 @@ describe('MemberCheckoutPage Component', () => {
     vi.mocked(profileApi.getProfile).mockResolvedValue({ userId: 10, fullName: 'Member', email: 'm@example.test', identityVerified: false, kycStatus: 'PENDING' } as profileApi.Profile);
     await act(async () => root.render(<MemoryRouter initialEntries={['/member/packages/checkout?packageId=2&subscriptionId=55']}><MemberCheckoutPage /></MemoryRouter>));
     expect(host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')?.disabled).toBe(false);
+    expect(host.querySelector('[data-testid="kyc-pending"]')).not.toBeNull();
+    expect(host.querySelector('.kyc-verified')).toBeNull();
   });
+  it.each(['PENDING', 'REJECTED'])('permits legacy approved trial with KYC %s and no subscription history', async kycStatus => {
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([]);
+    vi.mocked(profileApi.getProfile).mockResolvedValue({ userId: 10, identityVerified: true, kycStatus } as profileApi.Profile);
+    vi.mocked(trialApi.getStatus).mockResolvedValue({ eligible: false, alreadyClaimed: true, status: 'APPROVED' });
+    await renderCheckout();
+    expect(host.querySelector(kycStatus === 'PENDING' ? '[data-testid="kyc-pending"]' : '[data-testid="kyc-rejected"]')).not.toBeNull();
+    expect(host.querySelector('.kyc-verified')).toBeNull();
+    expect(host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')?.disabled).toBe(false);
+  });
+
 });

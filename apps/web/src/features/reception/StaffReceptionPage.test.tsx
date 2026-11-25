@@ -486,3 +486,9 @@ it.each([null, 5])('validates KYC only for new pending requests, previous=%s', a
   await act(async () => host.querySelector('#pos-package')!.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
   expect(api.processPayment).toHaveBeenCalledTimes(previousSubscriptionId ? 1 : 0);
 });
+
+it.each(['PENDING', 'REJECTED'])('permits legacy approved trial with actual KYC %s', async kycStatus => {
+  api.lookupMembers.mockResolvedValue([{ ...member, identityVerified: true, kycStatus, approvedTrial: true }]);
+  await selectMember(); await chooseAndPay('buy:2');
+  expect(api.processPayment).toHaveBeenCalledTimes(1);
+});

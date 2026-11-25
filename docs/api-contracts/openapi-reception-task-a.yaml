@@ -20,6 +20,7 @@ paths:
                       type: object
                       properties:
                         identityVerified: {type: boolean}
+                        approvedTrial: {type: boolean, description: Server-confirmed approved trial; permits purchase without rewriting the actual KYC status or relying on subscription history.}
                         kycStatus: {type: string, nullable: true, enum: [PENDING, APPROVED, REJECTED]}
                         documentType: {type: string, nullable: true, enum: [CCCD, PASSPORT]}
                         citizenId: {type: string, nullable: true, description: 'Masked number showing at most the last four characters'}
@@ -46,5 +47,23 @@ paths:
       responses:
         '200': {description: Existing payment response}
         '400': {description: MEMBERSHIP_KYC_REQUIRED or MEMBERSHIP_KYC_PENDING}
+
+  /wallet/pay:
+    post:
+      description: Existing Member wallet payment; new-purchase subscription targets (subscriptionId or paymentId) use the shared identity/trial rule before saving payment or debiting the wallet. Linked renewals/upgrades retain existing policy.
+      responses:
+        '200': {description: Existing wallet response}
+        '400': {description: MEMBERSHIP_KYC_REQUIRED or MEMBERSHIP_KYC_PENDING}
+  /payments/vnpay/checkout:
+    post:
+      description: Existing Member sandbox checkout; validate new-purchase identity/trial eligibility before payment saves or gateway URL creation. Cancellation remains available regardless of KYC eligibility, with existing ownership and status checks.
+      responses:
+        '200': {description: Existing checkout response}
+        '400': {description: MEMBERSHIP_KYC_REQUIRED or MEMBERSHIP_KYC_PENDING}
+  /payments/vnpay/ipn:
+    get:
+      description: Existing signed callback. If identity eligibility changed after checkout, credit the received amount to the member wallet through the existing reference-keyed refund flow exactly once; leave the purchase payment/subscription pending. Do not activate an ineligible purchase. If wallet credit is unavailable, keep the attempt unchanged and return the existing retry code 99.
+      responses:
+        '200': {description: Existing gateway acknowledgement; 00 processed, 02 already processed, 99 retry}
 
 # GET /memberships/subscriptions/pending additionally returns previousSubscriptionId (nullable): null = new purchase, linked = renewal/upgrade. The POS uses this field before payment; backend remains authoritative.

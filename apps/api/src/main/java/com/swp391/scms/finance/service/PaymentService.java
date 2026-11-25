@@ -69,13 +69,20 @@ public class PaymentService {
     @Autowired(required = false)
     private InvoiceService invoiceService;
 
-    @Autowired(required = false)
-    private com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRedemptionRepository;
+    private final com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRedemptionRepository;
 
     private void requireNewPackageKyc(Member member) {
+        // Đọc KYC mới nhất sau khi luồng thu tiền đã khóa hội viên.
+        if (entityManager != null) entityManager.refresh(member);
         boolean approvedTrial = trialRedemptionRepository != null && trialRedemptionRepository.findByMemberUserId(member.getUserId())
                 .map(t -> "APPROVED".equalsIgnoreCase(t.getStatus())).orElse(false);
         com.swp391.scms.membership.service.MembershipKycEligibility.requireVerified(member, approvedTrial);
+    }
+
+    /** Kiểm tra trước khi thu tiền; từ chối KYC không đánh dấu rollback để IPN có thể hoàn vào ví. */
+    @Transactional(readOnly = true, noRollbackFor = BadRequestException.class)
+    public void requireSubscriptionPaymentKyc(MembershipSubscription subscription) {
+        if (subscription.getPreviousSubscription() == null) requireNewPackageKyc(subscription.getMember());
     }
 
     @Autowired(required = false)
@@ -115,13 +122,25 @@ public class PaymentService {
     }
 
     /** Constructor Spring dùng. */
-    @Autowired
     public PaymentService(PaymentRepository paymentRepository,
                           MemberRepository memberRepository,
                           UserRepository userRepository,
                           MembershipSubscriptionRepository membershipSubscriptionRepository,
                           ClassEnrollmentRepository classEnrollmentRepository,
                           PaymentMapper paymentMapper, Clock clock, com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard) {
+        this(paymentRepository, memberRepository, userRepository, membershipSubscriptionRepository,
+                classEnrollmentRepository, paymentMapper, clock, vnpayGuard, null);
+    }
+
+    @Autowired
+    public PaymentService(PaymentRepository paymentRepository,
+                          MemberRepository memberRepository,
+                          UserRepository userRepository,
+                          MembershipSubscriptionRepository membershipSubscriptionRepository,
+                          ClassEnrollmentRepository classEnrollmentRepository,
+                          PaymentMapper paymentMapper, Clock clock, com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard,
+                          com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trialRedemptionRepository) {
+        this.trialRedemptionRepository = trialRedemptionRepository;
         this.vnpayGuard = vnpayGuard;
         this.paymentRepository = paymentRepository;
         this.memberRepository = memberRepository;
@@ -427,7 +446,7 @@ public class PaymentService {
             if ("success".equals(normalizedStatus) && payment.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
                 MembershipSubscription target = membershipSubscriptionRepository.findById(payment.getSubscriptionId())
                         .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", payment.getSubscriptionId()));
-                if (target.getPreviousSubscription() == null) requireNewPackageKyc(target.getMember());
+                requireSubscriptionPaymentKyc(target);
             }
             payment.setStatus(normalizedStatus);
             markPaidIfSuccess(payment, normalizedStatus);

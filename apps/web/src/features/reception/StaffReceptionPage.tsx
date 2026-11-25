@@ -619,7 +619,7 @@ export function StaffReceptionPage() {
       const fresh = await refreshSelectedMember();
       if (!fresh) return;
       // Mua mới cần KYC; gia hạn/nâng cấp vẫn kiểm tra theo kỳ liên kết ở backend.
-      if (!selectedCandidate && !selectedPending?.previousSubscriptionId && (!fresh.identityVerified || fresh.kycStatus === 'PENDING' || fresh.kycStatus === 'REJECTED')) {
+      if (!selectedCandidate && !selectedPending?.previousSubscriptionId && !fresh.approvedTrial && (!fresh.identityVerified || fresh.kycStatus === 'PENDING' || fresh.kycStatus === 'REJECTED')) {
         setPaymentError(staffMessage('Hội viên chưa xác thực KYC. Vui lòng yêu cầu hội viên hoàn tất xác thực trước khi đăng ký gói tập.',
           'The member has not completed identity verification. Ask them to complete verification before registering a membership.'));
         return;

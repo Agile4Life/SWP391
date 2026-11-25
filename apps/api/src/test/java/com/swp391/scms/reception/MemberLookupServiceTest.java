@@ -41,6 +41,7 @@ import com.swp391.scms.users.MemberRepository;
 class MemberLookupServiceTest {
 
     @Mock MemberRepository repository;
+    @Mock com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trials;
     @InjectMocks MemberLookupService service;
 
     /** Kiểm thử: từ chối từ khóa quá ngắn. */
@@ -72,4 +73,29 @@ class MemberLookupServiceTest {
         assertEquals("********8901", result.get(0).citizenId());
         assertEquals(true, result.get(0).identityVerified());
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"PENDING", "REJECTED"})
+    void exposesApprovedTrialWithoutChangingActualKyc(String status) {
+        User user = new User(); user.setFullName("Member");
+        Member member = new Member(); member.setUser(user); member.setIdentityVerified(true); member.setKycStatus(status);
+        var trial = new com.swp391.scms.membership.entity.MemberTrialRedemption(); trial.setStatus("APPROVED");
+        when(repository.search(any(), any())).thenReturn(List.of(member));
+        when(trials.findByMemberUserId(member.getUserId())).thenReturn(java.util.Optional.of(trial));
+        var result = service.search("member").get(0);
+        assertEquals(true, result.approvedTrial());
+        assertEquals(status, result.kycStatus());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"PENDING_APPROVAL", "REJECTED"})
+    void doesNotTreatUnapprovedTrialAsPurchaseException(String status) {
+        User user = new User(); Member member = new Member(); member.setUser(user); member.setKycStatus("PENDING");
+        var trial = new com.swp391.scms.membership.entity.MemberTrialRedemption(); trial.setStatus(status);
+        when(repository.search(any(), any())).thenReturn(List.of(member));
+        when(trials.findByMemberUserId(member.getUserId())).thenReturn(java.util.Optional.of(trial));
+        var result = service.search("member").get(0);
+        assertEquals(false, result.approvedTrial());
+        assertEquals("PENDING", result.kycStatus());
+    }
+
 }

@@ -18,6 +18,7 @@ import { getProfile, submitMemberKyc, Profile } from './profileApi';
 import { fileToUploadDataUrl } from '../../shared/lib/imageUpload';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './member-checkout.css';
+import { trialApi } from './trialApi';
 import { localizableError } from '../../shared/lib/errorMessage';
 
 /**
@@ -44,6 +45,7 @@ export function MemberCheckoutPage() {
   const [isLinkedRequest, setIsLinkedRequest] = useState(false);
 
   // Trạng thái định danh / KYC cho lần mua gói tập đầu tiên
+  const [approvedTrial, setApprovedTrial] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
 
   const [kycDocType, setKycDocType] = useState<'CCCD' | 'PASSPORT'>('CCCD');
@@ -81,14 +83,16 @@ export function MemberCheckoutPage() {
       setLoading(true);
       setError(null);
       try {
-        const [packages, history, userProfile] = await Promise.all([
+        const [packages, history, userProfile, trialStatus] = await Promise.all([
           getMembershipPackages(),
           getMembershipHistory(),
           getProfile().catch(() => null),
+          trialApi.getStatus().catch(() => null),
         ]);
         if (!active || version !== request) return;
 
         setProfile(userProfile);
+        setApprovedTrial(trialStatus?.status === 'APPROVED');
         // Chỉ kỳ gia hạn/nâng cấp liên kết thật mới giữ chính sách thanh toán cũ.
         const target = history.find(item => item.id === preparedSubscriptionId.current) ?? history.find(item => item.packageId === parsedPackageId && item.status === 'pending_payment');
         setIsLinkedRequest(Boolean(target?.previousSubscriptionId));
@@ -138,7 +142,10 @@ export function MemberCheckoutPage() {
   }, [parsedPackageId, existingSubscriptionId]);
 
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
-  const isKycVerified = Boolean(isLinkedRequest || (profile?.identityVerified && profile.kycStatus !== 'PENDING' && profile.kycStatus !== 'REJECTED'));
+  const isKycVerified = Boolean((profile?.identityVerified && profile.kycStatus !== 'PENDING' && profile.kycStatus !== 'REJECTED'));
+
+  // Trial đã duyệt có thể còn KYC PENDING/REJECTED cũ; giữ nguyên trạng thái hiển thị.
+  const canPurchase = isLinkedRequest || approvedTrial || isKycVerified;
 
   // Chọn ảnh giấy tờ mặt trước hoặc sau (tối đa 2MB).
   function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>, target: 'front' | 'back') {
@@ -441,14 +448,14 @@ export function MemberCheckoutPage() {
             </div>
           )}
 
-          <section data-i18n-managed className="portal-card stack" aria-label={t("Phương thức thanh toán trực tuyến", "Online payment methods")} style={{ opacity: !isKycVerified ? 0.6 : 1, pointerEvents: !isKycVerified ? 'none' : 'auto' }}>
+          <section data-i18n-managed className="portal-card stack" aria-label={t("Phương thức thanh toán trực tuyến", "Online payment methods")} style={{ opacity: !canPurchase ? 0.6 : 1, pointerEvents: !canPurchase ? 'none' : 'auto' }}>
             <h2 className="portal-card-title">{t("Thanh toán qua VNPay hoặc Ví điện tử SÖL", "Pay via VNPay or SÖL Wallet")}</h2>
-            {!isKycVerified && (
+            {!canPurchase && (
               <p className="hold-notice hold-notice--warn">
                 {t("Hoàn tất xác minh danh tính ở trên để thanh toán.", "Complete identity verification above to pay.")}</p>
             )}
             <VnpayPayButton
-              disabled={!isKycVerified}
+              disabled={!canPurchase}
               prepare={preparePaymentTarget}
               onPaid={() => navigate('/member/packages', { replace: true })}
             />

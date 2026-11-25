@@ -20,10 +20,17 @@ public class MemberLookupService {
     private static final int MIN_QUERY_LENGTH = 2;
 
     private final MemberRepository repository;
+    private final com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trials;
 
     /** Nhận repository hội viên. */
     public MemberLookupService(MemberRepository repository) {
+        this(repository, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public MemberLookupService(MemberRepository repository, com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trials) {
         this.repository = repository;
+        this.trials = trials;
     }
 
     /**
@@ -41,7 +48,10 @@ public class MemberLookupService {
                 .map(m -> new MemberLookupDto(m.getUserId(), m.getMembershipCode(), m.getUser().getFullName(),
                         m.getUser().getEmail(), m.getUser().getPhone(), m.getUser().getStatus(),
                         m.getIdentityVerified(), m.getKycStatus(), m.getDocumentType(),
-                        com.swp391.scms.users.KycCrypto.mask(m.getCitizenId())))
+                        com.swp391.scms.users.KycCrypto.mask(m.getCitizenId()),
+                        // Trial đã duyệt có thể còn KYC PENDING/REJECTED cũ; giữ nguyên trạng thái hiển thị.
+                        trials != null && trials.findByMemberUserId(m.getUserId())
+                                .map(trial -> "APPROVED".equalsIgnoreCase(trial.getStatus())).orElse(false)))
                 .toList();
     }
 }

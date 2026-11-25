@@ -593,7 +593,7 @@ export function MemberPackagesPage() {
 
 
     // Mua mới yêu cầu KYC; lịch sử đơn không chứng minh danh tính.
-    const requiresFirstTimeKyc = Boolean(!upgradeFrom && !renewFrom && kycProfile && (!kycProfile.identityVerified || kycProfile.kycStatus === 'PENDING' || kycProfile.kycStatus === 'REJECTED'));
+    const requiresFirstTimeKyc = Boolean(trialStatus?.status !== 'APPROVED' && !upgradeFrom && !renewFrom && kycProfile && (!kycProfile.identityVerified || kycProfile.kycStatus === 'PENDING' || kycProfile.kycStatus === 'REJECTED'));
     if (requiresFirstTimeKyc) {
       navigate(`/member/packages/checkout?packageId=${membershipPackage.id}`);
       return;
