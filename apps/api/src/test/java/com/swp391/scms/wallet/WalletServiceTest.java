@@ -8,6 +8,9 @@ import com.swp391.scms.users.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -63,15 +66,28 @@ class WalletServiceTest {
         lenient().when(walletTransactionRepository.findTop50ByWallet_IdOrderByCreatedAtDescIdDesc(100L)).thenReturn(List.of());
     }
 
-    /** Kiểm thử: nạp ví idempotent theo mã tham chiếu. */
-    @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {"pos", "bank_transfer", "online_wallet", "unknown"})
+    /** Kiểm thử: nạp ví tại quầy từ chối mọi phương thức khác tiền mặt (kể cả chuỗi rỗng) trước khi ghi. */
+    @ParameterizedTest
+    @ValueSource(strings = {"pos", "bank_transfer", "online_wallet", "unknown", "", "   "})
     void counterTopupRejectsNonCashBeforeWriting(String method) {
-        org.junit.jupiter.api.Assertions.assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
-                () -> walletService.creditByReceptionist(7L, new BigDecimal("10000"), method, null, 99L));
+        assertThatThrownBy(() -> walletService.creditByReceptionist(7L, new BigDecimal("10000"), method, null, 99L))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COUNTER_TOPUP_CASH_ONLY");
         verify(walletRepository, never()).saveAndFlush(any());
         verify(walletTransactionRepository, never()).save(any());
     }
+
+    /** Kiểm thử: bỏ trống paymentMethod (null) khi nạp ví tại quầy mặc định là tiền mặt theo OpenAPI. */
+    @Test
+    void counterTopupDefaultsOmittedMethodToCash() {
+        walletService.creditByReceptionist(7L, new BigDecimal("50000"), null, "Thu tiền mặt", 99L, "REQ-NULL-CASH");
+        assertThat(wallet.getBalance()).isEqualByComparingTo("550000");
+        ArgumentCaptor<WalletTransaction> txCaptor = ArgumentCaptor.forClass(WalletTransaction.class);
+        verify(walletTransactionRepository).save(txCaptor.capture());
+        assertThat(txCaptor.getValue().getDescription()).contains("Tiền mặt tại quầy Lễ tân");
+    }
+
+    /** Kiểm thử: nạp ví idempotent theo mã tham chiếu. */
 
     @Test
     void creditTopup_isIdempotentOnReference() {
