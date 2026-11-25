@@ -445,7 +445,7 @@ export function WeeklyTimetable({
                     )}
                     onClick={() => setOverflowCluster(cluster)}
                   >
-                    <strong>{`+${cluster.hiddenEvents.length} ${t('lớp', cluster.hiddenEvents.length === 1 ? 'class' : 'classes')}`}</strong>
+                    <strong>{cluster.hiddenEvents.length === 1 ? t('+1 lớp', '+1 class') : `+${cluster.hiddenEvents.length} ${t('lớp', 'classes')}`}</strong>
                     <span>{cluster.rangeLabel}</span>
                   </button>
                 ))}

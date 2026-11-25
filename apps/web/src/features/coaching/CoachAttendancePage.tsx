@@ -5,7 +5,7 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
-import { formatCenterDate, formatCenterDateTime, formatCenterTime, formatTimeRange } from '../../shared/lib/centerTime';
+import { formatCenterDate, formatCenterTime, formatTimeRange } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
   attendanceApi,
@@ -43,20 +43,6 @@ const toAttendanceHistory = (item: CoachSessionHistoryItem): AttendanceHistoryRe
   students: [],
 });
 
-const toEvaluationHistory = (item: CoachSessionHistoryItem): EvaluationHistoryRecord => ({
-  id: `eval-${item.sessionId}`,
-  sessionId: item.sessionId,
-  className: item.className,
-  roomName: item.roomName ?? '',
-  sessionDate: item.sessionDate,
-  startTime: item.startTime,
-  endTime: item.endTime,
-  savedAt: formatCenterDateTime(item.lastEvaluatedAt),
-  averageScore: item.averageScore ?? 0,
-  totalStudents: item.evaluatedCount,
-  students: [],
-});
-
 /** Names of members marked absent although a gate check-in covered the session. */
 const checkedInButAbsent = (list: AttendanceStudent[]) =>
   list.filter((s) => s.status === 'absent' && s.gateCheckinAt).map((s) => s.fullName);
@@ -88,26 +74,11 @@ export interface AttendanceHistoryRecord {
   students: AttendanceStudent[];
 }
 
-export interface EvaluationHistoryRecord {
-  id: string;
-  sessionId: number;
-  className: string;
-  roomName: string;
-  sessionDate: string;
-  startTime: string;
-  endTime: string;
-  savedAt: string;
-  averageScore: number;
-  totalStudents: number;
-  students: AttendanceStudent[];
-}
-
-
-type AttendanceTab = 'timetable' | 'attendance' | 'evaluation' | 'attendance-history' | 'eval-history';
+type AttendanceTab = 'timetable' | 'attendance' | 'attendance-history';
 
 /**
- * Quản lý buổi học (`/staff/attendance`): thời khóa biểu và hai bảng lịch sử.
- * Bấm một buổi trên thời khóa biểu mở trang riêng `/staff/attendance/:sessionId` chỉ để điểm danh / đánh giá buổi đó.
+ * Quản lý buổi học (`/coach/attendance`): thời khóa biểu và lịch sử điểm danh.
+ * Bấm một buổi trên thời khóa biểu mở trang riêng `/coach/attendance/:sessionId` để điểm danh buổi đó.
  */
 export function CoachAttendancePage() {
   const { sessionId } = useParams();
@@ -127,13 +98,9 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const [students, setStudents] = useState<AttendanceStudent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
-  const [savingEvaluation, setSavingEvaluation] = useState<boolean>(false);
 
   // Modal sửa điểm danh giữa màn hình (ở lại tab Lịch sử)
   const [editingAttendanceRecord, setEditingAttendanceRecord] = useState<AttendanceHistoryRecord | null>(null);
-
-  // Modal sửa đánh giá giữa màn hình (ở lại tab Lịch sử)
-  const [editingEvalRecord, setEditingEvalRecord] = useState<EvaluationHistoryRecord | null>(null);
 
   const [sessionsError, setSessionsError] = useState<StaffMessage | null>(null);
   const [sessionsAttempt, setSessionsAttempt] = useState(0);
@@ -143,15 +110,13 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const [confirm, confirmDialog] = useConfirm();
   const showCenterNotification = useCallback((msg: string = 'Cập nhật thành công') => notify(msg, 'success'), []);
 
-  // Lịch sử điểm danh & đánh giá: đọc từ server, không lưu trên trình duyệt.
+  // Lịch sử điểm danh: đọc từ server, không lưu trên trình duyệt.
   const [history, setHistory] = useState<AttendanceHistoryRecord[]>([]);
-  const [evalHistory, setEvalHistory] = useState<EvaluationHistoryRecord[]>([]);
   const [historyError, setHistoryError] = useState(false);
   const loadHistory = useCallback(async () => {
     try {
       const items = await attendanceApi.getHistory();
       setHistory(items.filter((i) => i.presentCount + i.lateCount + i.absentCount + i.excusedCount > 0).map(toAttendanceHistory));
-      setEvalHistory(items.filter((i) => i.evaluatedCount > 0).map(toEvaluationHistory));
       setHistoryError(false);
     } catch {
       setHistoryError(true);
@@ -265,20 +230,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     );
   };
 
-  // Cập nhật thang điểm tiến bộ (tab Đánh giá)
-  const handleUpdateScore = (studentId: number, score: number) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === studentId ? { ...s, progressScore: score } : s))
-    );
-  };
-
-  // Cập nhật nhận xét kỹ thuật (tab Đánh giá)
-  const handleUpdateNotes = (studentId: number, notes: string) => {
-    setStudents((prev) =>
-      prev.map((s) => (s.id === studentId ? { ...s, notes } : s))
-    );
-  };
-
   // Điểm danh nhanh: Đặt tất cả thành Có mặt
   const handleMarkAllPresent = () => {
     setStudents((prev) => prev.map((s) => ({ ...s, status: 'present' })));
@@ -286,7 +237,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
   // Lưu hoặc Cập nhật điểm danh (Tab Điểm danh)
   const handleSaveAttendance = async () => {
-    if (!selectedSessionId || !activeSession || !rosterReady || saving || savingEvaluation) {
+    if (!selectedSessionId || !activeSession || !rosterReady || saving) {
       notify('Vui lòng chọn buổi học cần lưu điểm danh.', 'error');
       return;
     }
@@ -313,33 +264,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     } catch (err) { notify(errorMessage(err, 'Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.'), 'error');
     } finally {
       setSaving(false);
-    }
-  };
-
-  // Lưu Đánh giá học viên (Tab Đánh giá riêng)
-  const handleSaveEvaluations = async () => {
-    if (!selectedSessionId || !activeSession || !rosterReady || saving || savingEvaluation) {
-      notify('Vui lòng chọn buổi học cần lưu đánh giá.', 'error');
-      return;
-    }
-
-    setSavingEvaluation(true);
-    try {
-      const payload = students.map((s) => ({
-        memberId: s.memberId,
-        status: s.status,
-        progressScore: s.progressScore,
-        notes: s.notes.trim(),
-      }));
-
-      await attendanceApi.saveBatchAttendance(selectedSessionId, payload, true);
-
-      void loadHistory();
-
-      showCenterNotification('Đã gửi đánh giá tiến độ và thông báo đến học viên.');
-    } catch (err) { notify(errorMessage(err, 'Có lỗi xảy ra khi lưu đánh giá. Vui lòng thử lại.'), 'error');
-    } finally {
-      setSavingEvaluation(false);
     }
   };
 
@@ -405,69 +329,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       }
 
       setEditingAttendanceRecord(null);
-      showCenterNotification('Cập nhật thành công');
-    } catch (err) { notify(errorMessage(err, 'Không thể lưu cập nhật. Vui lòng thử lại.'), 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Mở modal sửa đánh giá trực tiếp giữa màn hình (Không chuyển tab)
-  const handleOpenEditEvalModal = async (record: EvaluationHistoryRecord) => {
-    try {
-      const list = await attendanceApi.getSessionStudents(record.sessionId);
-      setEditingEvalRecord({ ...record, students: normalizeRoster(list) });
-    } catch (err) {
-      notify(errorMessage(err, 'Không thể tải danh sách học viên. Hãy thử lại.'), 'error');
-    }
-  };
-
-  // Cập nhật điểm trong Modal sửa đánh giá
-  const handleUpdateModalEvalScore = (studentId: number, score: number) => {
-    if (!editingEvalRecord) return;
-    setEditingEvalRecord({
-      ...editingEvalRecord,
-      students: editingEvalRecord.students.map((s) =>
-        s.id === studentId ? { ...s, progressScore: score } : s
-      ),
-    });
-  };
-
-  // Cập nhật nhận xét trong Modal sửa đánh giá
-  const handleUpdateModalEvalNotes = (studentId: number, notes: string) => {
-    if (!editingEvalRecord) return;
-    setEditingEvalRecord({
-      ...editingEvalRecord,
-      students: editingEvalRecord.students.map((s) =>
-        s.id === studentId ? { ...s, notes } : s
-      ),
-    });
-  };
-
-  // Lưu cập nhật từ Modal sửa đánh giá
-  const handleSaveModalEval = async () => {
-    if (!editingEvalRecord) return;
-    setSaving(true);
-    try {
-      const latest = await attendanceApi.getSessionStudents(editingEvalRecord.sessionId);
-      const latestByMember = new Map(latest.map(student => [student.memberId, student]));
-      const updatedStudents = editingEvalRecord.students.map(student => {
-        const current = latestByMember.get(student.memberId);
-        return { ...student, status: current?.status ?? student.status };
-      });
-      await attendanceApi.saveBatchAttendance(editingEvalRecord.sessionId, updatedStudents.map(student => ({
-        memberId: student.memberId,
-        status: student.status,
-        progressScore: student.progressScore,
-        notes: student.notes.trim(),
-      })), true);
-
-      void loadHistory();
-      if (selectedSessionId === editingEvalRecord.sessionId) {
-        setStudents(updatedStudents);
-      }
-
-      setEditingEvalRecord(null);
       showCenterNotification('Cập nhật thành công');
     } catch (err) { notify(errorMessage(err, 'Không thể lưu cập nhật. Vui lòng thử lại.'), 'error');
     } finally {
@@ -571,9 +432,9 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                   className="portal-select"
                   value={classFilter}
                   onChange={(e) => setClassFilter(e.target.value)}
-                  aria-label={t("Lọc theo lớp")}
+                  aria-label={t("Lọc theo lớp", "Filter by class")}
                 >
-                  <option value="ALL">{t("Tất cả lớp")}</option>
+                  <option value="ALL">{t("Tất cả lớp", "All classes")}</option>
                   {ptBookings.length > 0 && <option value="PT_1ON1">{t("Buổi PT 1:1", "1:1 PT session")}</option>}
                   {[...new Set(sessions.map((s) => s.className))].sort((a, b) => a.localeCompare(b)).map((name) => (
                     <option data-i18n-managed key={name} value={name}>{name}</option>
@@ -676,7 +537,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                 type="button"
                 className="btn-secondary btn-sm btn-quick-present"
                 onClick={handleMarkAllPresent}
-                disabled={!rosterReady || saving || savingEvaluation || students.length === 0}
+                disabled={!rosterReady || saving || students.length === 0}
               >
                 {t("Điểm danh nhanh tất cả Có mặt")}</button>
             </div>
@@ -755,7 +616,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
               type="button"
               className="btn-primary btn-batch-save"
               onClick={handleSaveAttendance}
-              disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
+              disabled={saving || !rosterReady || students.length === 0}
             >
               {saving
                 ? t('Đang lưu...')
@@ -768,100 +629,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       )}
 
       {/* =========================================================================
-          TAB 2: ĐÁNH GIÁ HỌC VIÊN TÁCH RIÊNG (Chuyên biệt cho Chấm điểm & Nhận xét)
-          ========================================================================= */}
-      {activeTab === 'evaluation' && (
-        <div data-i18n-managed className="attendance-evaluation-section">
-          <div className="evaluation-section-header">
-            <div>
-              <h3 className="section-title">{t("Đánh giá tiến bộ kỹ thuật học viên")}</h3>
-            </div>
-          </div>
-
-          {loading ? (
-            <LoadingSkeleton label={t("Đang tải danh sách học viên…")} variant="cards" count={3} />
-          ) : students.length === 0 ? (
-            <div data-i18n-managed className="attendance-empty-state">
-              <p>{t("Chưa có học viên nào trong buổi học này để đánh giá.")}</p>
-            </div>
-          ) : (
-            <div data-i18n-managed className="evaluation-cards-list">
-              {students.map((student) => {
-                return (
-                  <div data-i18n-managed key={student.id} className="evaluation-card">
-                    <div className="evaluation-card-header">
-                      <div className="student-identity-group">
-                        <div className="student-avatar-circle">
-                          {student.fullName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="student-meta-text">
-                          <h4 className="student-full-name">{student.fullName}</h4>
-                          <span className="student-code-badge">{student.membershipCode}</span>
-                        </div>
-                      </div>
-
-                      <div className="evaluation-status-tag">
-                        <span className={`status-pill ${student.status === 'present' ? 'is-present' : 'is-absent'}`}>
-                          {student.status === 'present' ? t('Có mặt') : t('Vắng mặt')}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="evaluation-card-body">
-                      {/* Thang điểm tiến bộ */}
-                      <div className="eval-form-row">
-                        <div className="eval-slider-header">
-                          <span className="eval-label">{t("Thang điểm tiến bộ:")}</span>
-                          <span className="score-badge">{student.progressScore || 80}/100</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="1"
-                          max="100"
-                          className="eval-score-slider"
-                          value={student.progressScore || 80}
-                          onChange={(e) => handleUpdateScore(student.id, Number(e.target.value))}
-                          aria-label={t(`Điểm tiến bộ của ${student.fullName}`, `Progress score for ${student.fullName}`)}
-                        />
-                      </div>
-
-                      {/* Ô nhận xét kỹ thuật */}
-                      <div className="eval-form-row">
-                        <label className="eval-label" htmlFor={`notes-${student.id}`}>
-                          {t("Nhận xét kỹ thuật, động tác và lưu ý sức khỏe:")}</label>
-                        <textarea
-                          id={`notes-${student.id}`}
-                          className="eval-comment-textarea"
-                          rows={2}
-                          placeholder={t("Ví dụ: giữ thẳng lưng khi kéo cáp")}
-                          value={student.notes}
-                          onChange={(e) => handleUpdateNotes(student.id, e.target.value)}
-                          aria-label={t(`Nhận xét kỹ thuật của ${student.fullName}`, `Technical feedback for ${student.fullName}`)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Bottom Save Evaluations Action */}
-          <div className="attendance-bottom-actions">
-            <button
-              type="button"
-              className="btn-primary btn-batch-save"
-              onClick={handleSaveEvaluations}
-              disabled={saving || savingEvaluation || !rosterReady || students.length === 0}
-            >
-              {savingEvaluation ? t('Đang lưu đánh giá...') : t('Lưu tất cả đánh giá')}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* =========================================================================
-          TAB 3: LỊCH SỬ ĐIỂM DANH (Sửa trực tiếp bằng khung giữa màn hình, không nhảy tab)
+          TAB 2: LỊCH SỬ ĐIỂM DANH (Sửa trực tiếp bằng khung giữa màn hình, không nhảy tab)
           ========================================================================= */}
       {activeTab === 'attendance-history' && (
         <div data-i18n-managed className="attendance-history-section">
@@ -931,69 +699,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                         >
                           {t("Sửa điểm danh")}</button>
                       )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* =========================================================================
-          TAB 4: LỊCH SỬ ĐÁNH GIÁ (Mới bổ sung theo yêu cầu)
-          ========================================================================= */}
-      {activeTab === 'eval-history' && (
-        <div data-i18n-managed className="attendance-history-section">
-          <div className="history-header-bar">
-            <div>
-              <h3 className="section-title">{t("Lịch sử đánh giá tiến bộ học viên")}</h3>
-            </div>
-          </div>
-
-          {evalHistory.length === 0 ? (
-            <div data-i18n-managed className="attendance-empty-state">
-              <p>{historyError ? t("Không tải được lịch sử đánh giá.", "Could not load the evaluation history.") : t("Chưa có đánh giá nào trong 31 ngày qua.", "No evaluations in the last 31 days.")}</p>
-            </div>
-          ) : (
-            <div data-i18n-managed className="history-cards-grid">
-              {evalHistory.map((record) => {
-                return (
-                  <div data-i18n-managed key={record.id} className="history-record-card">
-                    <div className="history-card-header">
-                      <div>
-                        <h4 className="history-class-name">{record.className}</h4>
-                        <div className="history-meta-sub">
-                          <span>{t("Phòng: ")}{record.roomName}</span>
-                          <span>•</span>
-                          <span>
-                            {formatTimeRange(record.startTime, record.endTime)}
-                          </span>
-                          <span>•</span>
-                          <span>{t("Ngày: ")}{formatCenterDate(record.sessionDate)}</span>
-                        </div>
-                      </div>
-                      <span className="history-saved-badge">{t("Đã đánh giá: ")}{record.savedAt}</span>
-                    </div>
-
-                    <div className="history-stat-row">
-                      <div className="stat-pill is-rate">
-                        <span className="stat-label">{t("Điểm trung bình lớp:")}</span>
-                        <span className="stat-num">{record.averageScore}/100</span>
-                      </div>
-                      <div className="stat-pill is-total">
-                        <span className="stat-label">{t("Đã đánh giá:")}</span>
-                        <span className="stat-num">{record.totalStudents} {t(" học viên")}</span>
-                      </div>
-                    </div>
-
-                    <div className="history-actions-row">
-                      <button
-                        type="button"
-                        className="btn-history-edit"
-                        onClick={() => void handleOpenEditEvalModal(record)}
-                      >
-                        {t("Sửa đánh giá")}</button>
                     </div>
                   </div>
                 );
@@ -1081,94 +786,6 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                 className="btn-primary"
                 disabled={saving}
                 onClick={handleSaveModalAttendance}
-              >
-                {saving ? t('Đang lưu...') : t("Lưu cập nhật")}</button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* =========================================================================
-          MODAL SỬA ĐÁNH GIÁ NGAY GIỮA MÀN HÌNH (Không chuyển tab)
-          ========================================================================= */}
-      {editingEvalRecord && (
-        <Modal
-          title={t(`Sửa đánh giá tiến bộ: ${editingEvalRecord.className}`, `Edit progress evaluation: ${editingEvalRecord.className}`)}
-          busy={saving}
-          onClose={() => setEditingEvalRecord(null)}
-        >
-          <div className="modal-edit-container">
-            <div className="modal-record-meta-bar">
-              <span>{t("Phòng: ")}<strong>{editingEvalRecord.roomName}</strong></span>
-              <span>{t("Giờ: ")}<strong>{formatTimeRange(editingEvalRecord.startTime, editingEvalRecord.endTime)}</strong></span>
-              <span>{t("Ngày: ")}<strong>{formatCenterDate(editingEvalRecord.sessionDate)}</strong></span>
-            </div>
-
-            <div className="modal-students-edit-list">
-              {editingEvalRecord.students.map((student) => {
-                return (
-                  <div data-i18n-managed key={student.id} className="modal-eval-student-item">
-                    <div className="evaluation-card-header">
-                      <div className="student-identity-group">
-                        <div className="student-avatar-circle">
-                          {student.fullName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="student-meta-text">
-                          <h4 className="student-full-name">{student.fullName}</h4>
-                          <span className="student-code-badge">{student.membershipCode}</span>
-                        </div>
-                      </div>
-                      <span className={`status-pill ${student.status === 'present' ? 'is-present' : 'is-absent'}`}>
-                        {student.status === 'present' ? t('Có mặt') : t('Vắng mặt')}
-                      </span>
-                    </div>
-
-                    <div className="eval-form-row" style={{ marginTop: '10px' }}>
-                      <div className="eval-slider-header">
-                        <span className="eval-label">{t("Thang điểm tiến bộ:")}</span>
-                        <span className="score-badge">{student.progressScore || 80}/100</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="1"
-                        max="100"
-                        className="eval-score-slider"
-                        value={student.progressScore || 80}
-                        onChange={(e) => handleUpdateModalEvalScore(student.id, Number(e.target.value))}
-                        aria-label={t(`Điểm tiến bộ của ${student.fullName}`, `Progress score for ${student.fullName}`)}
-                      />
-                    </div>
-
-                    <div className="eval-form-row">
-                      <label className="eval-label" htmlFor={`modal-notes-${student.id}`}>
-                        {t("Nhận xét kỹ thuật:")}</label>
-                      <textarea
-                        id={`modal-notes-${student.id}`}
-                        className="eval-comment-textarea"
-                        rows={2}
-                        value={student.notes}
-                        onChange={(e) => handleUpdateModalEvalNotes(student.id, e.target.value)}
-                        aria-label={t(`Nhận xét kỹ thuật của ${student.fullName}`, `Technical feedback for ${student.fullName}`)}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="modal-footer-actions">
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={saving}
-                onClick={() => setEditingEvalRecord(null)}
-              >
-                {t("Hủy bỏ")}</button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={saving}
-                onClick={handleSaveModalEval}
               >
                 {saving ? t('Đang lưu...') : t("Lưu cập nhật")}</button>
             </div>
