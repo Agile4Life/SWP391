@@ -9,6 +9,7 @@ import com.swp391.scms.coaching.entity.TrainingPlan;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.coaching.repository.TrainingPlanRepository;
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
@@ -259,6 +260,9 @@ public class CoachAssignmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", dto.referenceId()));
             requireRelationship(plan.getMember(), plan.getCoach(), dto);
             requireActivePlan(plan);
+            if (!trainingPlanRepository.findOtherActiveForMemberAndCoach(member.getUserId(), to.getUserId(), plan.getId()).isEmpty()) {
+                throw new ConflictException("COACH_ALREADY_HAS_ACTIVE_PLAN", "manager.coach_assignments.active_plan_exists", null, null);
+            }
             plan.setCoach(to);
             trainingPlanRepository.save(plan);
             entityType = "training_plan"; coachPath = "/coach/training-plans";
@@ -316,9 +320,13 @@ public class CoachAssignmentService {
         if (staffRequestRepository.existsApprovedLeaveOn(coachId, booking.getBookingDate())) throw invalid("COACH_ON_LEAVE", "coach_unavailable");
         boolean classConflict = classSessionRepository.findActiveByCoachAndDate(coachId, booking.getBookingDate()).stream()
                 .anyMatch(s -> overlaps(booking, s.getStartTime(), s.getEndTime()));
-        boolean ptConflict = coachBookingRepository.findActiveByCoachAndDate(coachId, booking.getBookingDate()).stream()
+        List<CoachBooking> coachBookings = coachBookingRepository.findActiveByCoachAndDate(coachId, booking.getBookingDate());
+        boolean ptConflict = coachBookings.stream()
                 .anyMatch(b -> overlaps(booking, b.getStartTime(), b.getEndTime()));
         if (classConflict || ptConflict) throw invalid("COACH_SCHEDULE_CONFLICT", "coach_unavailable");
+        if (CoachBookingService.requiresCoachRest(coachBookings, booking.getStartTime())) {
+            throw new ConflictException("COACH_REST_REQUIRED", "error.coach_booking.rest_required", null, null);
+        }
     }
 
     /** Buổi PT có giao với khung giờ cho trước không. */

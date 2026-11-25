@@ -36,17 +36,13 @@ public class CoachingCompletionScheduler {
     }
 
     /**
-     * Chạy theo cron app.coaching.completion.cron (mặc định 00:35 mỗi ngày): gọi completeHeld và ghi log kết
-     * quả; lỗi chỉ ghi cảnh báo.
+     * Chạy theo giờ trung tâm, cập nhật cả hai loại trong một giao dịch; lỗi được scheduler ghi nhận và rollback.
      */
-    @Scheduled(cron = "${app.coaching.completion.cron:0 35 0 * * ?}")
+    @Scheduled(cron = "${app.coaching.completion.cron:0 35 0 * * ?}", zone = "Asia/Ho_Chi_Minh")
+    @Transactional
     public void sweep() {
-        try {
-            int[] done = completeHeld();
-            log.info("[CoachingCompletion] completed {} 1:1 session(s), {} plan(s)", done[0], done[1]);
-        } catch (RuntimeException ex) {
-            log.warn("[CoachingCompletion] sweep failed", ex);
-        }
+        int[] done = completeHeld();
+        log.info("[CoachingCompletion] completed {} 1:1 session(s), {} plan(s)", done[0], done[1]);
     }
 
     /**

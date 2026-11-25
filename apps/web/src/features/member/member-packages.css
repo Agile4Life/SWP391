@@ -101,7 +101,10 @@
   .member-packages .portal-dialog { animation: none; }
 }
 
-.member-packages .grid-3 { align-items: start; }
+.member-packages .grid-3 { align-items: stretch; }
+.member-packages .package-benefit-stack { display: grid; }
+.member-packages .package-benefit-stack__layer { grid-area: 1 / 1; min-width: 0; }
+.member-packages .package-benefit-stack__sizer { visibility: hidden; pointer-events: none; user-select: none; }
 .member-packages .package-price-term { font-size: .9rem; font-weight: 500; color: var(--portal-muted); white-space: nowrap; }
 .member-packages .package-benefit-more { margin-top: 8px; }
 .member-packages .package-benefit-more__toggle { background: none; border: 0; padding: 0; cursor: pointer; color: var(--portal-salmon); font-size: 13px; font-weight: 600; min-height: 32px; display: inline-flex; align-items: center; }

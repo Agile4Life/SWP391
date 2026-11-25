@@ -99,7 +99,7 @@
 
 1. Hội viên hoặc lễ tân gửi yêu cầu kèm lý do. Hệ thống gợi ý số hoàn bằng phần chưa dùng của **số tiền đã trả** cho kỳ đó.
 2. Chỉ Quản lý duyệt. Quản lý được sửa số hoàn nhưng **không vượt số đã trả** cho kỳ (tiền mặt + phần quy đổi từ gói trước).
-3. Duyệt thì: gói và các kỳ chờ/bảo lưu liên quan chuyển `cancelled`, các lịch không còn được gói bao phủ bị hủy, tiền hoàn vào **Ví**, và **payment của kỳ được ghi `refundedAmount`** (hoàn đủ thì `refunded`). Nhờ vậy doanh thu giảm đúng và không thể hoàn lần nữa qua màn hoàn tiền thủ công.
+3. Duyệt thì: chỉ kỳ gói được yêu cầu chuyển `cancelled`, các lịch không còn được gói bao phủ bị hủy, tiền hoàn vào **Ví**, và **payment của kỳ được ghi `refundedAmount`** (hoàn đủ thì `refunded`). Các kỳ khác được giữ nguyên. Nhờ vậy doanh thu giảm đúng và không thể hoàn lần nữa qua màn hoàn tiền thủ công.
 4. Chỉ hủy được khi đây là quyền lợi duy nhất còn hiệu lực của hội viên.
 
 ---
