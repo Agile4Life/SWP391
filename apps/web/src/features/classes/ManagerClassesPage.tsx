@@ -57,7 +57,7 @@ export function ManagerClassesPage() {
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<number | null>(null);
 
   const [detailSession, setDetailSession] = useState<ClassSessionDto | null>(null);
-  const [createModal, setCreateModal] = useState<{ mode: 'course' | 'session'; prefill?: CreateSlotPrefill } | null>(null);
+  const [createModal, setCreateModal] = useState<CreateSlotPrefill | null>(null);
   const [editingClass, setEditingClass] = useState<ClassItem | null>(null);
   const [reschedulingSession, setReschedulingSession] = useState<ClassSessionDto | null>(null);
   const [cancellingSession, setCancellingSession] = useState<ClassSessionDto | null>(null);
@@ -124,19 +124,29 @@ export function ManagerClassesPage() {
     });
   }, [sessions, classById]);
 
+  /** Chỉ hiển thị buổi thuộc các lớp đang hoạt động (`active`) trên thời khóa biểu tuần. */
+  const activeScheduleSessions = useMemo(
+    () =>
+      enrichedSessions.filter((s) => {
+        const parent = classById.get(s.classId);
+        return !parent || String(parent.status).toLowerCase() === 'active';
+      }),
+    [enrichedSessions, classById],
+  );
+
   const activeWeekDays = useMemo(() => new Set(weekDays(weekStart)), [weekStart]);
 
-  /** Số buổi không bị hủy trong tuần hiện tại theo từng bộ môn (hiển thị trên chip Tab 1). */
+  /** Số buổi không bị hủy trong tuần hiện tại của lớp đang hoạt động theo từng bộ môn (hiển thị trên chip Tab 1). */
   const weeklyCountsByDiscipline = useMemo(() => {
     const map = new Map<number, number>();
-    for (const s of enrichedSessions) {
+    for (const s of activeScheduleSessions) {
       if (s.status === 'cancelled' || !activeWeekDays.has(s.sessionDate)) continue;
       if (s.disciplineId !== undefined) {
         map.set(s.disciplineId, (map.get(s.disciplineId) ?? 0) + 1);
       }
     }
     return map;
-  }, [enrichedSessions, activeWeekDays]);
+  }, [activeScheduleSessions, activeWeekDays]);
 
   /** Bộ môn đang chọn trong Tab 1 (luôn là 1 bộ môn cụ thể; mặc định bộ môn đầu tiên có buổi hoặc đầu danh sách). */
   const activeDisciplineId = useMemo(() => {
@@ -196,27 +206,31 @@ export function ManagerClassesPage() {
     [today, t],
   );
 
-  /** Sự kiện riêng cho Tab 1 (chỉ 1 bộ môn đang chọn). */
+  /** Sự kiện riêng cho Tab 1 (chỉ 1 bộ môn đang chọn, chỉ tính lớp đang hoạt động). */
   const disciplineEvents = useMemo(() => {
     if (activeDisciplineId === null) return [];
-    return toTimetableEvents(enrichedSessions.filter((s) => s.disciplineId === activeDisciplineId));
-  }, [enrichedSessions, activeDisciplineId, toTimetableEvents]);
+    return toTimetableEvents(activeScheduleSessions.filter((s) => s.disciplineId === activeDisciplineId));
+  }, [activeScheduleSessions, activeDisciplineId, toTimetableEvents]);
 
-  /** Sự kiện độc lập cho Tab 2 (luôn hiển thị toàn bộ 3 bộ môn, không bị Tab 1 lọc ảnh hưởng). */
+  /** Sự kiện độc lập cho Tab 2 (luôn hiển thị toàn bộ 3 bộ môn đang hoạt động, không bị Tab 1 lọc ảnh hưởng). */
   const allWeekEvents = useMemo(
-    () => toTimetableEvents(enrichedSessions),
-    [enrichedSessions, toTimetableEvents],
+    () => toTimetableEvents(activeScheduleSessions),
+    [activeScheduleSessions, toTimetableEvents],
   );
 
-  const legend = useMemo<TimetableLegendItem[]>(
+  const baseLegend = useMemo<TimetableLegendItem[]>(
     () => [
       { tone: 'open', label: t('Còn chỗ', 'Open') },
       { tone: 'full', label: t('Đã đầy', 'Full') },
       { tone: 'past', label: t('Đã qua', 'Past') },
       { tone: 'cancelled', label: t('Đã hủy', 'Cancelled') },
-      { tone: 'free', label: t('Ô trống: bấm để xếp lịch', 'Free slot: click to schedule') },
     ],
     [t],
+  );
+
+  const schedulableLegend = useMemo<TimetableLegendItem[]>(
+    () => [...baseLegend, { tone: 'free', label: t('Ô trống: bấm để tạo lớp', 'Free slot: click to create class') }],
+    [baseLegend, t],
   );
 
   const hasAvailableDiscipline = useMemo(
@@ -270,23 +284,25 @@ export function ManagerClassesPage() {
               type="button"
               className="btn-primary"
               data-testid="create-class-btn"
+              disabled={!hasAvailableDiscipline}
+              title={
+                hasAvailableDiscipline
+                  ? undefined
+                  : t(
+                      'Tất cả bộ môn hiện đều đã có 1 lớp đang hoạt động. Hãy ngừng mở hoặc xóa lớp cũ ở Danh sách lớp trước khi tạo mới.',
+                      'Every discipline already has 1 active class. Deactivate or delete an existing class in Classes list before creating a new one.',
+                    )
+              }
               onClick={() =>
                 setCreateModal({
-                  mode: hasAvailableDiscipline ? 'course' : 'session',
-                  prefill: hasAvailableDiscipline
-                    ? {
-                        disciplineId:
-                          activeDisciplineId !== null && !activeClassByDiscipline.has(activeDisciplineId)
-                            ? activeDisciplineId
-                            : undefined,
-                      }
-                    : {
-                        classId: activeDisciplineClass?.id ?? activeClasses[0]?.id,
-                      },
+                  disciplineId:
+                    activeDisciplineId !== null && !activeClassByDiscipline.has(activeDisciplineId)
+                      ? activeDisciplineId
+                      : undefined,
                 })
               }
             >
-              {hasAvailableDiscipline ? t('+ Tạo lớp học', '+ Create class') : t('+ Thêm buổi học', '+ Add session')}
+              {t('+ Tạo lớp học', '+ Create class')}
             </button>
           </div>
         }
@@ -395,22 +411,6 @@ export function ManagerClassesPage() {
                       <button
                         type="button"
                         className="btn-secondary btn-sm"
-                        onClick={() =>
-                          setCreateModal({
-                            mode: 'session',
-                            prefill: {
-                              classId: activeDisciplineClass.id,
-                              startTime: activeDisciplineClass.startTime,
-                              endTime: activeDisciplineClass.endTime,
-                            },
-                          })
-                        }
-                      >
-                        {t('+ Thêm buổi', '+ Add session')}
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-secondary btn-sm"
                         onClick={() => setEditingClass(activeDisciplineClass)}
                       >
                         {t('Sửa lớp', 'Edit class')}
@@ -428,12 +428,7 @@ export function ManagerClassesPage() {
                     <button
                       type="button"
                       className="btn-primary btn-sm"
-                      onClick={() =>
-                        setCreateModal({
-                          mode: 'course',
-                          prefill: { disciplineId: activeDiscipline.id },
-                        })
-                      }
+                      onClick={() => setCreateModal({ disciplineId: activeDiscipline.id })}
                     >
                       {t(`+ Tạo lớp ${activeDiscipline.name}`, `+ Create ${activeDiscipline.name} class`)}
                     </button>
@@ -457,18 +452,13 @@ export function ManagerClassesPage() {
             onWeekChange={setWeekStart}
             onEventClick={handleOpenEventDetail}
             selectedId={detailSession ? String(detailSession.id) : undefined}
-            onSlotClick={(slot) =>
-              setCreateModal({
-                mode: activeDisciplineClass ? 'session' : 'course',
-                prefill: {
-                  ...slot,
-                  disciplineId: activeDisciplineId ?? undefined,
-                  classId: activeDisciplineClass?.id,
-                },
-              })
+            onSlotClick={
+              !activeDisciplineClass && activeDisciplineId !== null
+                ? (slot) => setCreateModal({ ...slot, disciplineId: activeDisciplineId })
+                : undefined
             }
             maxVisibleLanes={2}
-            legend={legend}
+            legend={activeDisciplineClass ? baseLegend : schedulableLegend}
             legendNote={t('Bấm vào từng buổi học để xem chi tiết lớp, phòng, HLV và danh sách học viên.', 'Click any session to inspect class, room, coach, and enrolled members.')}
             emptyLabel={
               activeDiscipline
@@ -503,17 +493,9 @@ export function ManagerClassesPage() {
             onWeekChange={setWeekStart}
             onEventClick={handleOpenEventDetail}
             selectedId={detailSession ? String(detailSession.id) : undefined}
-            onSlotClick={(slot) =>
-              setCreateModal({
-                mode: hasAvailableDiscipline ? 'course' : 'session',
-                prefill: {
-                  ...slot,
-                  classId: hasAvailableDiscipline ? undefined : activeClasses[0]?.id,
-                },
-              })
-            }
+            onSlotClick={hasAvailableDiscipline ? (slot) => setCreateModal({ ...slot }) : undefined}
             maxVisibleLanes={2}
-            legend={legend}
+            legend={hasAvailableDiscipline ? schedulableLegend : baseLegend}
             legendNote={t(
               'Khi khung giờ có từ 3 bộ môn học cùng lúc, lịch tự gom thành nút "+N lớp" để không đè nhau — bấm vào để xem đủ và chọn buổi.',
               'Slots with 3+ concurrent disciplines group into "+N classes" to prevent overlap — click to inspect every session.',
@@ -529,12 +511,6 @@ export function ManagerClassesPage() {
             setSelectedDisciplineId(cls.disciplineId);
             setView('by_discipline');
           }}
-          onAddSession={(cls) =>
-            setCreateModal({
-              mode: 'session',
-              prefill: { classId: cls.id, startTime: cls.startTime, endTime: cls.endTime },
-            })
-          }
           onEditClass={(cls) => setEditingClass(cls)}
           onDeleteClass={(cls) => void handleDeleteClass(cls)}
         />
@@ -563,8 +539,7 @@ export function ManagerClassesPage() {
 
       {createModal && (
         <CreateClassOrSessionModal
-          modeInitial={createModal.mode}
-          prefill={createModal.prefill}
+          prefill={createModal}
           classes={classes}
           disciplines={disciplines}
           rooms={rooms}

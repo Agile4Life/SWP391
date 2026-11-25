@@ -9,7 +9,6 @@ interface ClassListTableProps {
   classes: ClassItem[];
   sessions: ClassSessionDto[];
   onViewClassSchedule: (cls: ClassItem) => void;
-  onAddSession: (cls: ClassItem) => void;
   onEditClass: (cls: ClassItem) => void;
   onDeleteClass: (cls: ClassItem) => void;
 }
@@ -24,12 +23,11 @@ const DAY_LABELS: Record<string, [string, string]> = {
   SUNDAY: ['CN', 'Sun'],
 };
 
-/** Bảng danh sách khóa học nhóm kèm tìm kiếm và nút xem lịch / thêm buổi / sửa / xóa. */
+/** Bảng danh sách khóa học nhóm kèm tìm kiếm và nút xem lịch / sửa / xóa. */
 export function ClassListTable({
   classes,
   sessions,
   onViewClassSchedule,
-  onAddSession,
   onEditClass,
   onDeleteClass,
 }: ClassListTableProps) {
@@ -171,11 +169,6 @@ export function ClassListTable({
                         <button type="button" className="btn-secondary btn-sm" onClick={() => onViewClassSchedule(cls)}>
                           {t('Xem lịch', 'Schedule')}
                         </button>
-                        {isActive && (
-                          <button type="button" className="btn-secondary btn-sm" onClick={() => onAddSession(cls)}>
-                            {t('Thêm buổi', 'Add session')}
-                          </button>
-                        )}
                         <button type="button" className="btn-secondary btn-sm" onClick={() => onEditClass(cls)}>
                           {t('Sửa', 'Edit')}
                         </button>
