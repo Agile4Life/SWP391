@@ -2,3 +2,7 @@
 /* Bộ lọc của lịch sử xử lý: các ô chọn rộng cố định, nằm cùng một hàng với nút làm mới */
 .request-history__filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .request-history__filters .ui-select { width: 168px; }
+
+/* Bộ lọc xuống hàng trên màn nhỏ, không đẩy bảng ra ngoài viewport. */
+.request-history__filters .portal-input { width: min(100%, 260px); min-width: 0; }
+@media (max-width: 640px) { .request-history__filters { width: 100%; } .request-history__filters .portal-input { width: 100%; } .request-history__filters .ui-select { flex: 1 1 140px; min-width: 0; } }

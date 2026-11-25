@@ -17,6 +17,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.math.BigDecimal;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -29,6 +30,8 @@ import java.util.Locale;
 public class CounterTopupService {
     public static final String NOTE_PREFIX = "WALLET_TOPUP";
     public static final String COUNTER_NOTE = NOTE_PREFIX + ":COUNTER";
+    public static final int ALL_TIME_DAYS = 0;
+    public static final int TODAY_DAYS = 1;
     public static final int DEFAULT_DAYS = 30;
     public static final int MAX_DAYS = 180;
     private static final List<String> COUNTER_METHODS = List.of("cash", "pos", "bank_transfer");
@@ -143,9 +146,15 @@ public class CounterTopupService {
      */
     @Transactional(readOnly = true)
     public List<TopupHistoryDto> history(Integer days) {
-        int window = days == null ? DEFAULT_DAYS : Math.max(1, Math.min(MAX_DAYS, days));
-        LocalDateTime since = LocalDateTime.now(clock).minusDays(window);
-        return payments.findByNoteAndStatusAndPaidAtGreaterThanEqualOrderByPaidAtDesc(COUNTER_NOTE, "success", since)
+        boolean allTime = days != null && days == ALL_TIME_DAYS;
+        boolean todayOnly = days != null && days == TODAY_DAYS;
+        int window = days == null ? DEFAULT_DAYS : Math.max(TODAY_DAYS, Math.min(MAX_DAYS, days));
+        // ALL_TIME_DAYS (0) không cắt lịch sử; giữ mọi phương thức thu cũ để đối soát.
+        LocalDateTime since = todayOnly ? LocalDate.now(clock).atStartOfDay() : LocalDateTime.now(clock).minusDays(window);
+        List<Payment> topups = allTime
+                ? payments.findByNoteAndStatusOrderByPaidAtDesc(COUNTER_NOTE, "success")
+                : payments.findByNoteAndStatusAndPaidAtGreaterThanEqualOrderByPaidAtDesc(COUNTER_NOTE, "success", since);
+        return topups
                 .stream()
                 .filter(p -> p.getMember() != null && p.getMember().getUser() != null
                         && p.getMember().getUser().getDeletedAt() == null)
