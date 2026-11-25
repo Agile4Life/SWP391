@@ -41,6 +41,8 @@ class VnpayPaymentServiceTest {
         transaction = new VnpayTransaction("ABC123", payment, payment.getAmount(), LocalDateTime.of(2026,11,3,12,0), LocalDateTime.of(2026,11,3,12,15), "127.0.0.1");
         when(transactions.findById("ABC123")).thenReturn(Optional.of(transaction));
         when(members.findByUserIdForUpdate(7L)).thenReturn(Optional.of(member));
+        var subscription = new MembershipSubscription(); subscription.setId(11L); subscription.setMember(member); subscription.setStatus("pending_payment");
+        when(subscriptions.findById(11L)).thenReturn(Optional.of(subscription));
     }
     /** Hàm trợ giúp của test: tạo dữ liệu callback VNPay mẫu. */
     Map<String,String> callback(String response, String status, String amount) {
@@ -48,6 +50,92 @@ class VnpayPaymentServiceTest {
                 "vnp_ResponseCode", response, "vnp_TransactionStatus", status, "vnp_TransactionNo","12345", "vnp_PayDate","20261103120100"));
         data.put("vnp_SecureHash",gateway.sign(data)); return data;
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"true,true", "true,false", "false,true", "false,false"})
+    void unverifiedPurchaseCannotStartGatewayOrDebitWallet(boolean bySubscription, boolean wallet) {
+        var sub = new MembershipSubscription(); sub.setId(11L); sub.setMember(payment.getMember()); sub.setStatus("pending_payment");
+        when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
+        when(payments.findById(9L)).thenReturn(Optional.of(payment));
+        when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));
+        when(payments.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(payments.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
+        var realSettlement = new PaymentService(payments, members, mock(com.swp391.scms.users.UserRepository.class),
+                subscriptions, null, mock(com.swp391.scms.finance.mapper.PaymentMapper.class), clock);
+        var svc = new VnpayPaymentService(transactions, payments, members, subscriptions, realSettlement, invoices, gateway, clock,
+                mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),
+                mock(com.swp391.scms.courts.repository.CourtBookingRepository.class), notifications, null);
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class); svc.setWalletService(walletService);
+        var request = new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(bySubscription ? 11L : null, null, null, bySubscription ? null : 9L);
+        var error = assertThrows(com.swp391.scms.common.exception.BadRequestException.class, () -> {
+            if (wallet) svc.payWithWallet(owner, request); else svc.checkout(owner, request, "127.0.0.1");
+        });
+        assertEquals("MEMBERSHIP_KYC_REQUIRED", error.getErrorCode());
+        verify(payments, never()).save(any()); verify(payments, never()).saveAndFlush(any());
+        verify(transactions, never()).save(any()); verifyNoInteractions(walletService, invoices);
+        assertEquals("pending", payment.getStatus());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullSource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"PENDING", "REJECTED"})
+    void lostKycAfterCheckoutCreditsChargedAmountOnceWithoutActivatingPackage(String kycStatus) {
+        payment.getMember().setKycStatus(kycStatus);
+        when(payments.findById(9L)).thenReturn(Optional.of(payment));
+        var sub = new MembershipSubscription(); sub.setId(11L); sub.setMember(payment.getMember()); sub.setStatus("pending_payment");
+        when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
+        var realSettlement = new PaymentService(payments, members, mock(com.swp391.scms.users.UserRepository.class),
+                subscriptions, null, mock(com.swp391.scms.finance.mapper.PaymentMapper.class), clock);
+        var svc = new VnpayPaymentService(transactions, payments, members, subscriptions, realSettlement, invoices, gateway, clock,
+                mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),
+                mock(com.swp391.scms.courts.repository.CourtBookingRepository.class), notifications, null);
+        assertEquals("99", svc.ipn(callback("00", "00", "65000000")));
+        assertEquals("pending", transaction.getStatus()); assertNull(transaction.getGatewayTransactionNo());
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class); svc.setWalletService(walletService);
+        assertEquals("00", svc.ipn(callback("00", "00", "65000000")));
+        assertEquals("02", svc.ipn(callback("00", "00", "65000000")));
+        verify(walletService).creditLateGatewayPayment(7L, payment.getAmount(), "ABC123");
+        verify(walletService, never()).recordVnpayTopupAndDebit(any(), any(), any(), any());
+        verifyNoInteractions(invoices);
+        assertEquals("pending", payment.getStatus()); assertEquals("pending_payment", sub.getStatus()); assertNull(sub.getQrCode());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"verified", "trial", "linked"})
+    void eligiblePackageCheckoutStillReusesPendingGatewayAttempt(String eligibility) {
+        var sub = new MembershipSubscription(); sub.setId(11L); sub.setMember(payment.getMember()); sub.setStatus("pending_payment");
+        if ("verified".equals(eligibility)) payment.getMember().setIdentityVerified(true);
+        if ("linked".equals(eligibility)) sub.setPreviousSubscription(new MembershipSubscription());
+        var realSettlement = new PaymentService(payments, members, mock(com.swp391.scms.users.UserRepository.class),
+                subscriptions, null, mock(com.swp391.scms.finance.mapper.PaymentMapper.class), clock);
+        var trials = mock(com.swp391.scms.membership.repository.MemberTrialRedemptionRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(realSettlement, "trialRedemptionRepository", trials);
+        if ("trial".equals(eligibility)) {
+            var trial = new com.swp391.scms.membership.entity.MemberTrialRedemption(); trial.setStatus("APPROVED");
+            when(trials.findByMemberUserId(7L)).thenReturn(Optional.of(trial));
+        }
+        when(subscriptions.findById(11L)).thenReturn(Optional.of(sub));
+        when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment)); when(payments.save(payment)).thenReturn(payment);
+        when(transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(9L, "pending")).thenReturn(Optional.of(transaction));
+        var svc = new VnpayPaymentService(transactions, payments, members, subscriptions, realSettlement, invoices, gateway, clock,
+                mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),
+                mock(com.swp391.scms.courts.repository.CourtBookingRepository.class), notifications, null);
+        assertEquals("ABC123", svc.checkout(owner, 11L, "127.0.0.1").reference());
+        verify(transactions, never()).save(any());
+    }
+
+    @Test void unverifiedMemberCanCancelPendingPackageGatewayAttempt() {
+        var realSettlement = new PaymentService(payments, members, mock(com.swp391.scms.users.UserRepository.class),
+                subscriptions, null, mock(com.swp391.scms.finance.mapper.PaymentMapper.class), clock);
+        var svc = new VnpayPaymentService(transactions, payments, members, subscriptions, realSettlement, invoices, gateway, clock,
+                mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class),
+                mock(com.swp391.scms.courts.repository.CourtBookingRepository.class), notifications, null);
+        when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(payment));
+        when(transactions.findAllByPaymentId(9L)).thenReturn(List.of(transaction));
+        svc.cancelTarget(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(11L, null, null, null));
+        assertEquals("failed", transaction.getStatus()); assertEquals("pending", payment.getStatus());
+        verify(transactions).saveAndFlush(transaction); verifyNoInteractions(invoices);
+    }
+
     @Test void verifiedSuccessSettlesOnceAndIssuesInvoice() {
         var fields = callback("00","00","65000000");
         assertEquals("00",service.ipn(fields));

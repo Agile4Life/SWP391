@@ -154,7 +154,7 @@ public class VnpayPaymentService {
         if (walletService == null) {
             throw new ConflictException("WALLET_UNAVAILABLE", "error.wallet.unavailable", null, "Tính năng Ví điện tử hiện không khả dụng.");
         }
-        Payment payment = resolveTargetPayment(principal, request);
+        Payment payment = resolveTargetPayment(principal, request, true);
         if (!"pending".equals(payment.getStatus())) throw unavailable();
         if (payment.getId() != null) {
             var existing = transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(), "pending");
@@ -199,7 +199,7 @@ public class VnpayPaymentService {
      */
     public Checkout checkout(AuthenticatedPrincipal principal, CheckoutRequest request, String ip, String origin) {
         requireMember(principal); gateway.requireEnabled();
-        Payment payment = resolveTargetPayment(principal, request);
+        Payment payment = resolveTargetPayment(principal, request, true);
         if (!"pending".equals(payment.getStatus())) throw unavailable();
         payment=payments.save(payment);
         var existing=transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(),"pending");
@@ -225,7 +225,7 @@ public class VnpayPaymentService {
      * Tìm khoản thu cho đúng một đối tượng (kỳ gói chờ thanh toán, buổi PT/sân chưa trả, khoản thu, đơn hàng
      * của mình); kiểm tra quyền sở hữu trước khi khóa dòng để không dò được đơn của người khác.
      */
-    private Payment resolveTargetPayment(AuthenticatedPrincipal principal, CheckoutRequest request) {
+    private Payment resolveTargetPayment(AuthenticatedPrincipal principal, CheckoutRequest request, boolean requireKyc) {
         Long[] targets={request.subscriptionId(),request.coachBookingId(),request.courtBookingId(),request.paymentId(),request.productOrderId()};
         if (Arrays.stream(targets).filter(Objects::nonNull).count()!=1 || Arrays.stream(targets).filter(Objects::nonNull).anyMatch(id->id<1))
             throw new BadRequestException("VNPAY_TARGET_REQUIRED","finance.vnpay.target_required",null,null);
@@ -236,12 +236,18 @@ public class VnpayPaymentService {
             if (payment.getSubscriptionId()!=null) {
                 var sub=subscriptions.findById(payment.getSubscriptionId()).orElseThrow(this::unavailable);
                 entities.refresh(sub); if (!"pending_payment".equals(sub.getStatus())) throw unavailable();
+                if (requireKyc) {
+                    settlement.requireSubscriptionPaymentKyc(sub);
+                }
             }
             validateBooking(payment);
         } else if(request.subscriptionId()!=null) {
             var sub=subscriptions.findById(request.subscriptionId()).orElseThrow(()->new ResourceNotFoundException("resource.subscription",request.subscriptionId()));
             requireOwner(principal,sub.getMember().getUserId()); lockMember(principal.id()); entities.refresh(sub);
             if (!"pending_payment".equals(sub.getStatus())) throw unavailable();
+            if (requireKyc) {
+                settlement.requireSubscriptionPaymentKyc(sub);
+            }
             payment=findOrCreate(payments.findAllBySubscriptionId(sub.getId()),principal.id(),sub.payableAmount());
             payment.setSubscriptionId(sub.getId());
         } else if(request.coachBookingId()!=null) {
@@ -337,7 +343,7 @@ public class VnpayPaymentService {
      */
     public void cancelTarget(AuthenticatedPrincipal principal, CheckoutRequest request) {
         requireMember(principal);
-        Payment payment = resolveTargetPayment(principal, request);
+        Payment payment = resolveTargetPayment(principal, request, false);
         if (payment.getId() == null) return;
         var attempts = transactions.findAllByPaymentId(payment.getId());
         boolean closedAny = false;
@@ -401,6 +407,21 @@ public class VnpayPaymentService {
         if("00".equals(response) && "00".equals(status)) {
             String gatewayId=fields.get("vnp_TransactionNo");
             if(gatewayId==null || !gatewayId.matches("[0-9]{1,15}") || gatewayId.matches("0+")) return "97";
+            if (p.getSubscriptionId() != null) {
+                var sub = subscriptions.findById(p.getSubscriptionId()).orElseThrow(this::unavailable);
+                entities.refresh(sub);
+                try {
+                    settlement.requireSubscriptionPaymentKyc(sub);
+                } catch (BadRequestException ex) {
+                    if (!Set.of("MEMBERSHIP_KYC_REQUIRED", "MEMBERSHIP_KYC_PENDING").contains(ex.getErrorCode())) throw ex;
+                    // KYC thay đổi sau checkout: giữ khoản thu chờ, hoàn số tiền cổng đã trừ vào ví đúng một lần.
+                    if (walletService == null) return "99";
+                    t.setGatewayTransactionNo(gatewayId); t.setStatus("success");
+                    transactions.saveAndFlush(t);
+                    walletService.creditLateGatewayPayment(p.getMember().getUserId(), t.getAmount(), reference);
+                    return "00";
+                }
+            }
             validateBooking(p);
             t.setGatewayTransactionNo(gatewayId);t.setStatus("success");
             transactions.saveAndFlush(t); // bộ chặn nhìn thấy giao dịch đã kết thúc trong cùng phép quyết toán nguyên tử

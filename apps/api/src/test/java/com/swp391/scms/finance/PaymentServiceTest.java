@@ -73,6 +73,38 @@ class PaymentServiceTest {
     }
 
     /** Kiểm thử: tạo thanh toán thành công. */
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullSource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"PENDING", "REJECTED"})
+    void posCannotCreatePaidPackageWithoutKyc(String status) {
+        Member member = new Member(); member.setUserId(2L); member.setKycStatus(status);
+        MembershipPackage pkg = new MembershipPackage(); pkg.setId(5L); pkg.setStatus("active"); pkg.setPrice(BigDecimal.TEN);
+        var packages = mock(com.swp391.scms.facilities.repository.MembershipPackageRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(paymentService, "membershipPackageRepository", packages);
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(packages.findById(5L)).thenReturn(Optional.of(pkg));
+        PaymentProcessDto dto = new PaymentProcessDto(); dto.setMemberId(2L); dto.setPackageId(5L); dto.setAmount(BigDecimal.TEN); dto.setMethod("cash");
+        assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
+        verify(membershipSubscriptionRepository, never()).save(any());
+        verify(paymentRepository, never()).save(any());
+        verifyNoInteractions(paymentMapper);
+    }
+
+    @Test void oldPendingPurchaseCannotCreateOrConfirmPaymentWithoutKyc() {
+        Member member = new Member(); member.setUserId(2L); member.setKycStatus("REJECTED");
+        MembershipSubscription sub = new MembershipSubscription(); sub.setId(10L); sub.setMember(member); sub.setStatus("pending_payment");
+        when(memberRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(sub));
+        PaymentCreateDto create = new PaymentCreateDto(); create.setMemberId(2L); create.setSubscriptionId(10L); create.setAmount(BigDecimal.TEN);
+        assertThrows(BadRequestException.class, () -> paymentService.createPayment(create));
+        Payment payment = new Payment(); payment.setId(20L); payment.setMember(member); payment.setSubscriptionId(10L); payment.setStatus("pending");
+        when(paymentRepository.findById(20L)).thenReturn(Optional.of(payment));
+        assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatus(20L, "success"));
+        assertEquals("pending", payment.getStatus()); assertEquals("pending_payment", sub.getStatus()); assertNull(sub.getQrCode());
+        verify(paymentRepository, never()).save(any()); verify(membershipSubscriptionRepository, never()).save(any());
+    }
+
     @Test
     @DisplayName("Should create payment successfully when member and cashier are valid")
     void shouldCreatePaymentSuccessfully() {
@@ -239,7 +271,7 @@ class PaymentServiceTest {
     @Test
     @DisplayName("Should process payment and activate subscription with QR code generation")
     void shouldProcessPaymentAndActivateSubscription() {
-        Member member = new Member();
+        Member member = new Member(); member.setIdentityVerified(true);
         member.setUserId(2L);
 
         MembershipPackage pkg = new MembershipPackage();
@@ -285,7 +317,7 @@ class PaymentServiceTest {
     /** Kiểm thử: POS tất toán thanh toán pending có sẵn mà không tạo bản trùng. */
     @Test
     void posSettlesExistingPendingPaymentWithoutCreatingDuplicate() {
-        Member member = new Member(); member.setUserId(2L);
+        Member member = new Member(); member.setIdentityVerified(true); member.setUserId(2L);
         MembershipPackage pkg = new MembershipPackage(); pkg.setPrice(new BigDecimal("500000"));
         MembershipSubscription sub = new MembershipSubscription(); sub.setId(10L);
         sub.setMember(member); sub.setMembershipPackage(pkg); sub.setStatus("pending_payment");
@@ -493,7 +525,7 @@ class PaymentServiceTest {
     /** Kiểm thử: POS với packageId từ chối kỳ gia hạn đang chờ và không đổi gói của nó. */
     @Test
     void posPackageIdRejectsPendingRenewalWithoutChangingItsPackage() {
-        Member member = new Member(); member.setUserId(2L);
+        Member member = new Member(); member.setIdentityVerified(true); member.setUserId(2L);
         MembershipPackage pack = new MembershipPackage(); pack.setId(5L);
         pack.setPrice(new BigDecimal("1500000.00"));
         MembershipSubscription previous = new MembershipSubscription(); previous.setId(9L);
@@ -516,7 +548,7 @@ class PaymentServiceTest {
     /** Kiểm thử: POS với packageId không đổi được lượt mua đang chờ hay tạo thanh toán trùng. */
     @Test
     void posPackageIdCannotChangePendingPurchaseOrDuplicateItsPayment() {
-        Member member = new Member(); member.setUserId(2L);
+        Member member = new Member(); member.setIdentityVerified(true); member.setUserId(2L);
         MembershipPackage pack = new MembershipPackage(); pack.setId(5L); pack.setPrice(new BigDecimal("1500000.00"));
         MembershipPackage other = new MembershipPackage(); other.setId(6L);
         MembershipSubscription pending = new MembershipSubscription();
@@ -561,7 +593,7 @@ class PaymentServiceTest {
     /** Kiểm thử: POS lần mua đầu vẫn tạo subscription đã thanh toán. */
     @Test
     void posFirstPurchaseStillCreatesPaidSubscription() {
-        Member member = new Member(); member.setUserId(2L);
+        Member member = new Member(); member.setIdentityVerified(true); member.setUserId(2L);
         MembershipPackage pack = new MembershipPackage(); pack.setId(5L);
         pack.setPrice(new BigDecimal("1500000.00")); pack.setDurationDays(30);
         PaymentProcessDto dto = new PaymentProcessDto(2L, null, null, pack.getPrice(), "pos", null, null);
@@ -628,7 +660,7 @@ class PaymentServiceTest {
     /** Kiểm thử: POS với packageId từ chối kỳ tương lai đã thanh toán. */
     @Test
     void posPackageIdRejectsAlreadyPaidFuturePeriod() {
-        Member member = new Member(); member.setUserId(2L);
+        Member member = new Member(); member.setIdentityVerified(true); member.setUserId(2L);
         MembershipPackage pack = new MembershipPackage(); pack.setId(5L);
         pack.setPrice(new BigDecimal("1500000.00"));
         MembershipSubscription future = new MembershipSubscription();
@@ -769,7 +801,7 @@ class PaymentServiceTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(booleans = {true, false})
     void posSettlesOriginalPendingAmountAfterCatalogPriceReduction(boolean explicitSubscription) {
-        Member member = new Member(); member.setUserId(2L);
+        Member member = new Member(); member.setIdentityVerified(true); member.setUserId(2L);
         MembershipPackage pack = new MembershipPackage(); pack.setId(5L);
         pack.setPrice(new BigDecimal("299000")); pack.setDurationDays(30);
         MembershipSubscription subscription = new MembershipSubscription();

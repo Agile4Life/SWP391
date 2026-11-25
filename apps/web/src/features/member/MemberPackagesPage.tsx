@@ -591,17 +591,9 @@ export function MemberPackagesPage() {
       return;
     }
 
-    const hasPriorConfirmed = historyState.data.some(
-      (item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen',
-    );
-    const requiresFirstTimeKyc = Boolean(
-      !upgradeFrom &&
-      !renewFrom &&
-      kycProfile &&
-      kycProfile.identityVerified === false &&
-      !current &&
-      !hasPriorConfirmed,
-    );
+
+    // Mua mới yêu cầu KYC; lịch sử đơn không chứng minh danh tính.
+    const requiresFirstTimeKyc = Boolean(trialStatus?.status !== 'APPROVED' && !upgradeFrom && !renewFrom && kycProfile && (!kycProfile.identityVerified || kycProfile.kycStatus === 'PENDING' || kycProfile.kycStatus === 'REJECTED'));
     if (requiresFirstTimeKyc) {
       navigate(`/member/packages/checkout?packageId=${membershipPackage.id}`);
       return;
@@ -741,16 +733,7 @@ export function MemberPackagesPage() {
     (historyState.status === 'success' && historyState.data.length > 0) ||
     trialStatus?.alreadyClaimed
   );
-  const hasPriorConfirmedSubscription = historyState.status === 'success' && historyState.data.some(
-    (item) => item.status === 'active' || item.status === 'expired' || item.status === 'frozen',
-  );
-  const showFirstTimeKycNotice = Boolean(
-    kycProfile &&
-    kycProfile.identityVerified === false &&
-    !current &&
-    !pending &&
-    !hasPriorConfirmedSubscription,
-  );
+  const showFirstTimeKycNotice = Boolean(kycProfile && !kycProfile.identityVerified && !current && !pending);
 
   return (
     <div data-i18n-managed className="portal-container member-packages" >
