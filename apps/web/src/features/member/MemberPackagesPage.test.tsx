@@ -1020,4 +1020,14 @@ describe('SCRUM-86 packages', () => {
     expect(dialogText).toContain(formatPrice(higherPackage.price));
   });
 
+  it.each(['PENDING', 'REJECTED'])('permits first purchase after legacy approved trial with KYC %s', async kycStatus => {
+    api.current.mockResolvedValue(null); api.history.mockResolvedValue([]);
+    profileApiMock.getProfile.mockResolvedValue({ userId: 10, fullName: 'Lan', identityVerified: true, kycStatus });
+    trialApiMock.getStatus.mockResolvedValue({ eligible: false, alreadyClaimed: true, status: 'APPROVED' });
+    await render();
+    await act(async () => setLanguage('en'));
+    await act(async () => button('First registration')?.click());
+    expect(host.querySelector('dialog')).not.toBeNull();
+  });
+
 });

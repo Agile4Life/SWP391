@@ -1,0 +1,69 @@
+openapi: 3.0.3
+info: {title: Receptionist KYC, version: 1.0.0}
+servers: [{url: /api/v1}]
+paths:
+  /members/lookup:
+    get:
+      description: Receptionist or center manager only. Existing lookup fields plus safe identity summary. Never returns full identity number, ciphertext or document images.
+      parameters: [{name: q, in: query, required: true, schema: {type: string, minLength: 2}}]
+      responses:
+        '200':
+          description: ApiResponse data array; additional fields below.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        identityVerified: {type: boolean}
+                        approvedTrial: {type: boolean, description: Server-confirmed approved trial; permits purchase without rewriting the actual KYC status or relying on subscription history.}
+                        kycStatus: {type: string, nullable: true, enum: [PENDING, APPROVED, REJECTED]}
+                        documentType: {type: string, nullable: true, enum: [CCCD, PASSPORT]}
+                        citizenId: {type: string, nullable: true, description: 'Masked number showing at most the last four characters'}
+  /memberships/subscriptions/pending:
+    get:
+      description: Existing pending queue with previousSubscriptionId to distinguish a new purchase from a linked renewal or upgrade before POS validation.
+      responses:
+        '200':
+          description: Existing pending response plus nullable relation ID.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        previousSubscriptionId: {type: integer, format: int64, nullable: true}
+  /payments/process:
+    post:
+      description: New purchases require verified identity or an approved trial before subscription, payment, invoice or QR writes. Cancelled or pending history is not identity evidence. Same rule applies to new subscription requests and creating/confirming linked new-purchase payments. Renewals and upgrades retain existing policy.
+      responses:
+        '200': {description: Existing payment response}
+        '400': {description: MEMBERSHIP_KYC_REQUIRED or MEMBERSHIP_KYC_PENDING}
+
+  /wallet/pay:
+    post:
+      description: Existing Member wallet payment; new-purchase subscription targets (subscriptionId or paymentId) use the shared identity/trial rule before saving payment or debiting the wallet. Linked renewals/upgrades retain existing policy.
+      responses:
+        '200': {description: Existing wallet response}
+        '400': {description: MEMBERSHIP_KYC_REQUIRED or MEMBERSHIP_KYC_PENDING}
+  /payments/vnpay/checkout:
+    post:
+      description: Existing Member sandbox checkout; validate new-purchase identity/trial eligibility before payment saves or gateway URL creation. Cancellation remains available regardless of KYC eligibility, with existing ownership and status checks.
+      responses:
+        '200': {description: Existing checkout response}
+        '400': {description: MEMBERSHIP_KYC_REQUIRED or MEMBERSHIP_KYC_PENDING}
+  /payments/vnpay/ipn:
+    get:
+      description: Existing signed callback. If identity eligibility changed after checkout, credit the received amount to the member wallet through the existing reference-keyed refund flow exactly once; leave the purchase payment/subscription pending. Do not activate an ineligible purchase. If wallet credit is unavailable, keep the attempt unchanged and return the existing retry code 99.
+      responses:
+        '200': {description: Existing gateway acknowledgement; 00 processed, 02 already processed, 99 retry}
+
+# GET /memberships/subscriptions/pending additionally returns previousSubscriptionId (nullable): null = new purchase, linked = renewal/upgrade. The POS uses this field before payment; backend remains authoritative.

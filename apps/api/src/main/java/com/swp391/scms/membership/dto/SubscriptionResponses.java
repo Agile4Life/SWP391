@@ -101,7 +101,8 @@ public final class SubscriptionResponses {
             LocalDate startDate,
             LocalDate endDate,
             String status,
-            LocalDateTime createdAt
+            LocalDateTime createdAt,
+            Long previousSubscriptionId
     ) {}
 
     /**

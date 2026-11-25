@@ -1,9 +1,12 @@
 package com.swp391.scms.reception;
 
 import com.swp391.scms.common.exception.BadRequestException;
+import com.swp391.scms.membership.repository.MemberTrialRedemptionRepository;
+import com.swp391.scms.users.KycCrypto;
 import com.swp391.scms.users.MemberRepository;
 import java.util.List;
 import java.util.Locale;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,10 +23,17 @@ public class MemberLookupService {
     private static final int MIN_QUERY_LENGTH = 2;
 
     private final MemberRepository repository;
+    private final MemberTrialRedemptionRepository trials;
 
     /** Nhận repository hội viên. */
     public MemberLookupService(MemberRepository repository) {
+        this(repository, null);
+    }
+
+    @Autowired
+    public MemberLookupService(MemberRepository repository, MemberTrialRedemptionRepository trials) {
         this.repository = repository;
+        this.trials = trials;
     }
 
     /**
@@ -39,7 +49,12 @@ public class MemberLookupService {
         }
         return repository.search("%" + keyword + "%", PageRequest.of(0, MAX_RESULTS)).stream()
                 .map(m -> new MemberLookupDto(m.getUserId(), m.getMembershipCode(), m.getUser().getFullName(),
-                        m.getUser().getEmail(), m.getUser().getPhone(), m.getUser().getStatus()))
+                        m.getUser().getEmail(), m.getUser().getPhone(), m.getUser().getStatus(),
+                        m.getIdentityVerified(), m.getKycStatus(), m.getDocumentType(),
+                        KycCrypto.mask(m.getCitizenId()),
+                        // Trial đã duyệt có thể còn KYC PENDING/REJECTED cũ; giữ nguyên trạng thái hiển thị.
+                        trials != null && trials.findByMemberUserId(m.getUserId())
+                                .map(trial -> "APPROVED".equalsIgnoreCase(trial.getStatus())).orElse(false)))
                 .toList();
     }
 }
