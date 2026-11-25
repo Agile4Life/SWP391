@@ -3,7 +3,8 @@ import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { purchaseAuthPath } from '../../../shared/lib/purchaseIntent';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { getCurrentUser, homePath } from '../../../shared/api/client';
+import { homePath } from '../../../shared/api/client';
+import { sessionIdentityKey, useCurrentUser } from '../../../shared/api/useCurrentUser';
 import { LanguageSetting, useI18n } from '../../../shared/i18n';
 import { useComponentReveal } from '../hooks/useComponentReveal';
 import { ThemeToggle } from '../../../shared/ui/ThemeToggle';
@@ -45,7 +46,7 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
   const { lang, t } = useI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const { pathname, hash, search } = useLocation();
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const root = useRef<HTMLDivElement>(null);
   useComponentReveal(root, pathname);
   // Mục điều hướng có đang được chọn theo đường dẫn và neo hay không.
@@ -163,7 +164,7 @@ export function PublicLayout({ children, minimal = false }: { children: ReactNod
         </footer>
       )}
     </div>
-    {!minimal && <ChatWidget />}
+    {!minimal && <ChatWidget key={sessionIdentityKey(user)} />}
   </div>;
 }
 

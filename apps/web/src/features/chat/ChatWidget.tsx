@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCurrentUser } from '../../shared/api/client';
+import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
 import { announceFloatingPanel, useCloseWhenOtherPanelOpens } from '../../shared/lib/floatingPanels';
 import type { ChatRealtimeFeed } from './ChatPage';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
@@ -24,11 +24,14 @@ const connectionLabel: Record<ChatConnection, [string, string]> = {
  * realtime; vai trò không hợp lệ thì không hiển thị.
  */
 export function ChatWidget() {
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const allowed = !user || ['MEMBER', 'STAFF', 'COACH', 'MANAGER'].includes(user.role);
   if (!allowed) return null;
-  if (user?.role === 'MANAGER') return <ManagerChatWidget />;
-  return user ? <SignedInChatWidget /> : <ChatShell unread={0} feed={null} onOpen={() => {}} />;
+  const identity = sessionIdentityKey(user);
+  if (user?.role === 'MANAGER') return <ManagerChatWidget key={identity} />;
+  return user
+    ? <SignedInChatWidget key={identity} />
+    : <ChatShell key={identity} unread={0} feed={null} onOpen={() => {}} />;
 }
 
 /** Quản lý không có chat riêng: không mở kết nối/badge chat, hộp thư khiếu nại tự giữ realtime của nó. */

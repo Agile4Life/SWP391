@@ -43,10 +43,11 @@ import java.util.List;
  */
 @Service
 public class CoachBookingService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CoachBookingService.class);
     private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
     private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 giờ
-    private static final int UNPAID_HOLD_MINUTES = 5;
+    private static final int UNPAID_HOLD_MINUTES = 15;
     private static final int UNPAID_RELEASE_LEAD_MINUTES = 60;
     private static final int UNPAID_MIN_HOLD_MINUTES = 5;
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
@@ -74,6 +75,17 @@ public class CoachBookingService {
 
     @Autowired(required = false)
     private com.swp391.scms.operations.repository.StaffInternalRequestRepository staffRequestRepository;
+
+    @Autowired(required = false)
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    @Autowired(required = false)
+    private jakarta.persistence.EntityManager entityManager;
+
+    /** Gán TransactionManager (dùng cho test cô lập transaction theo từng lịch đặt). */
+    public void setTransactionManager(org.springframework.transaction.PlatformTransactionManager transactionManager) {
+        this.transactionManager = transactionManager;
+    }
 
     @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
     private boolean legacyClassesEnabled = true;
@@ -783,11 +795,10 @@ public class CoachBookingService {
     /**
      * Giải phóng các khung giờ PT 1:1 bị giữ bởi booking chưa thanh toán quá {@link #UNPAID_HOLD_MINUTES} phút, hoặc
      * vẫn chưa thanh toán trong vòng {@link #UNPAID_RELEASE_LEAD_MINUTES} phút trước giờ bắt đầu (sau khi đã giữ ít
-     * nhất {@link #UNPAID_MIN_HOLD_MINUTES} phút). Các booking đang có giao dịch VNPay hoạt động sẽ được bỏ qua cho
-     * tới khi cổng thanh toán hoàn tất hoặc hết hạn. Khoản thu chờ chuyển failed, báo cho hội viên và trả số buổi đã
-     * giải phóng.
+     * nhất {@link #UNPAID_MIN_HOLD_MINUTES} phút). Mỗi booking được xử lý trong một transaction độc lập có khóa dòng
+     * {@code FOR UPDATE} để đọc lại trạng thái thanh toán mới nhất và không bao giờ ghi đè buổi vừa được thanh toán
+     * hoặc kéo rollback các booking khác khi xảy ra lỗi.
      */
-    @Transactional
     public int expireUnpaidBookings() {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime createdCutoff = now.minusMinutes(UNPAID_HOLD_MINUTES);
@@ -796,35 +807,77 @@ public class CoachBookingService {
         List<CoachBooking> stale = coachBookingRepository.findUnpaidStale(
                 createdCutoff, minHoldCutoff, releaseDueAt.toLocalDate(), releaseDueAt.toLocalTime());
         int cancelled = 0;
-        for (CoachBooking booking : stale) {
-            try {
-                if (vnpayGuard != null) vnpayGuard.coach(booking.getId());
-            } catch (RuntimeException awaitingGateway) {
+        for (CoachBooking candidate : stale) {
+            if (candidate == null || candidate.getId() == null) {
                 continue;
             }
-            if (paymentRepository != null) {
-                for (var payment : paymentRepository.findAllByCoachBookingId(booking.getId())) {
-                    if ("pending".equalsIgnoreCase(payment.getStatus())) {
-                        payment.setStatus("failed");
-                    }
+            try {
+                Boolean expired;
+                if (transactionManager != null) {
+                    var template = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+                    template.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                    expired = template.execute(status -> expireSingleUnpaidBooking(candidate.getId(), now));
+                } else {
+                    expired = expireSingleUnpaidBooking(candidate.getId(), now);
                 }
-            }
-            booking.setStatus("cancelled");
-            booking.setCancelledAt(now);
-            booking.setCancelReason(msg("coaching.auto_cancel.unpaid"));
-            coachBookingRepository.save(booking);
-            cancelled++;
-            if (notificationService != null && booking.getMember() != null && booking.getMember().getUserId() != null
-                    && booking.getStartTime() != null && booking.getEndTime() != null) {
-                String title = msg("notifications.coaching.booking.auto_cancelled.title");
-                String body = msg("notifications.coaching.booking.auto_cancelled.body",
-                        booking.getBookingDate(),
-                        booking.getStartTime().toString().substring(0, 5),
-                        booking.getEndTime().toString().substring(0, 5));
-                notificationService.send(booking.getMember().getUserId(), title, body, "system", null, booking.getId(), "/member/classes?tab=pt");
+                if (Boolean.TRUE.equals(expired)) {
+                    cancelled++;
+                }
+            } catch (RuntimeException ex) {
+                log.warn("Could not expire unpaid 1:1 PT booking {}: {}", candidate.getId(), ex.getMessage());
             }
         }
         return cancelled;
+    }
+
+    /** Khóa một booking PT 1:1 cụ thể, kiểm tra lại trạng thái thanh toán và cổng VNPay dưới khóa rồi hủy nếu vẫn quá hạn. */
+    private boolean expireSingleUnpaidBooking(Long bookingId, LocalDateTime now) {
+        CoachBooking locked = coachBookingRepository.findByIdForUpdate(bookingId).orElse(null);
+        if (locked == null) {
+            return false;
+        }
+        if (entityManager != null) {
+            entityManager.refresh(locked);
+        }
+        if (!"confirmed".equalsIgnoreCase(locked.getStatus())
+                || !"pending".equalsIgnoreCase(locked.getPaymentStatus())
+                || "package_quota".equalsIgnoreCase(locked.getPaymentMethod())) {
+            return false;
+        }
+        try {
+            if (vnpayGuard != null) vnpayGuard.coach(locked.getId());
+        } catch (ConflictException awaitingGateway) {
+            return false;
+        }
+        if (paymentRepository != null) {
+            List<com.swp391.scms.finance.entity.Payment> bookingPayments =
+                    paymentRepository.findAllByCoachBookingId(locked.getId());
+            if (bookingPayments != null) {
+                if (bookingPayments.stream().anyMatch(p -> "success".equalsIgnoreCase(p.getStatus()))) {
+                    return false;
+                }
+                for (var payment : bookingPayments) {
+                    if ("pending".equalsIgnoreCase(payment.getStatus())) {
+                        payment.setStatus("failed");
+                        paymentRepository.save(payment);
+                    }
+                }
+            }
+        }
+        locked.setStatus("cancelled");
+        locked.setCancelledAt(now);
+        locked.setCancelReason(msg("coaching.auto_cancel.unpaid"));
+        coachBookingRepository.save(locked);
+        if (notificationService != null && locked.getMember() != null && locked.getMember().getUserId() != null
+                && locked.getStartTime() != null && locked.getEndTime() != null) {
+            String title = msg("notifications.coaching.booking.auto_cancelled.title");
+            String body = msg("notifications.coaching.booking.auto_cancelled.body",
+                    locked.getBookingDate(),
+                    locked.getStartTime().toString().substring(0, 5),
+                    locked.getEndTime().toString().substring(0, 5));
+            notificationService.send(locked.getMember().getUserId(), title, body, "system", null, locked.getId(), "/member/classes?tab=pt");
+        }
+        return true;
     }
 
     /**

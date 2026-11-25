@@ -11,6 +11,7 @@ import { formatPrice } from '../../../shared/lib/membershipPresentation';
 import { matchesDiscipline } from '../../../shared/lib/disciplines';
 import { notify } from '../../../shared/lib/portalNotices';
 import { navigateToVnpay } from '../../payments/vnpayApi';
+import { payWithWallet } from '../../wallet/walletApi';
 import { formatSlotLabel } from '../../schedule/slots';
 import { disciplineAccentColor } from '../../schedule/timetable';
 import {
@@ -66,6 +67,7 @@ export function MemberGroupClassesView({ initialDiscipline, onBookingChange }: M
   const [checkoutTarget, setCheckoutTarget] = useState<GymClassDto | null>(null);
   const [payMethod, setPayMethod] = useState<'online_wallet' | 'vnpay' | 'cash'>('online_wallet');
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [pendingVnpayNotice, setPendingVnpayNotice] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -195,16 +197,61 @@ export function MemberGroupClassesView({ initialDiscipline, onBookingChange }: M
     if (!checkoutTarget) return;
     setBusyId(checkoutTarget.id);
     setCheckoutError(null);
+    setPendingVnpayNotice(null);
     try {
       const res = await checkoutCourse(checkoutTarget.id, payMethod);
-      if (payMethod === 'vnpay' && res.paymentUrl) {
-        navigateToVnpay(res.paymentUrl);
+      if (payMethod === 'vnpay') {
+        if (res.paymentUrl) {
+          navigateToVnpay(res.paymentUrl);
+          return;
+        }
+        const warningMessage = t(
+          `Chỗ học khóa "${checkoutTarget.name}" đã được giữ tạm chờ thanh toán nhưng chưa mở được cổng VNPay. Vui lòng vào mục Hóa đơn để hoàn tất thanh toán VNPay.`,
+          `Your seat for "${checkoutTarget.name}" is reserved pending payment, but the VNPay gateway could not be opened. Please go to Invoices to complete VNPay payment.`,
+        );
+        notify(warningMessage, 'error', { record: true, destination: '/member/invoices' });
+        setPendingVnpayNotice(warningMessage);
+        setCheckoutTarget(null);
+        await loadData();
+        onBookingChange?.();
         return;
       }
+
+      if (payMethod === 'online_wallet') {
+        const paymentStatus = String(res.paymentStatus ?? '').toLowerCase();
+        if (paymentStatus === 'pending' && res.paymentId) {
+          try {
+            await payWithWallet({ paymentId: res.paymentId });
+          } catch (walletErr) {
+            void loadData();
+            throw walletErr;
+          }
+        } else if (paymentStatus !== 'success') {
+          throw new Error(
+            t(
+              'Thanh toán bằng Ví SÖL chưa hoàn tất. Vui lòng kiểm tra mục Hóa đơn để hoàn tất thanh toán.',
+              'SÖL Wallet payment did not complete. Please check Invoices to finish payment.',
+            ),
+          );
+        }
+        window.dispatchEvent(new Event('wallet-updated'));
+        window.dispatchEvent(new Event('member-notifications-changed'));
+        notify(
+          t(`Đăng ký khóa "${checkoutTarget.name}" thành công!`, `Registered for "${checkoutTarget.name}" successfully!`),
+          'success',
+          { record: true },
+        );
+        setCheckoutTarget(null);
+        await loadData();
+        onBookingChange?.();
+        return;
+      }
+
       notify(
-        payMethod === 'cash'
-          ? t(`Đã giữ chỗ khóa "${checkoutTarget.name}". Vui lòng thanh toán tại quầy lễ tân trước ngày khai giảng.`, `Spot reserved for "${checkoutTarget.name}". Please pay at reception before start date.`)
-          : t(`Đăng ký khóa "${checkoutTarget.name}" thành công!`, `Registered for "${checkoutTarget.name}" successfully!`),
+        t(
+          `Đã giữ chỗ khóa "${checkoutTarget.name}". Vui lòng thanh toán tại quầy lễ tân trước ngày khai giảng.`,
+          `Spot reserved for "${checkoutTarget.name}". Please pay at reception before start date.`,
+        ),
         'success',
         { record: true },
       );
@@ -269,6 +316,20 @@ export function MemberGroupClassesView({ initialDiscipline, onBookingChange }: M
 
   return (
     <div data-i18n-managed data-testid="member-group-classes">
+      {pendingVnpayNotice && (
+        <div
+          className="portal-alert portal-alert--error"
+          role="alert"
+          data-testid="vnpay-missing-url-alert"
+          style={{ marginBottom: 16, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}
+        >
+          <span>{pendingVnpayNotice}</span>
+          <Link to="/member/invoices" className="btn-secondary btn-sm">
+            {t('Đến mục Hóa đơn', 'Go to Invoices')}
+          </Link>
+        </div>
+      )}
+
       {/* Banner hạn mức khóa học */}
       {quota && (
         <div className="portal-card" style={{ marginBottom: 16 }}>

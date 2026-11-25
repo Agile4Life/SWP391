@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), cancelPendingSubscription: vi.fn(), getPendingHoldRequests: vi.fn(),
   getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(), getPendingReceipt: vi.fn(),
   getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
+  getUnpaidCourseEnrollments: vi.fn(), confirmCourseEnrollmentPayment: vi.fn(),
   getPendingTrials: vi.fn(), approveTrial: vi.fn(), rejectTrial: vi.fn(),
   getMemberWallet: vi.fn(), topupMemberWallet: vi.fn(), getRequestHistory: vi.fn(),
 }));
@@ -34,6 +35,7 @@ beforeEach(() => {
     generatedAt: '2026-10-29T00:00:00Z', expiresAt: '2026-10-29T00:01:00Z', expiresInSeconds: 60 });
   api.lookupMembers.mockResolvedValue([member]);
   api.getPendingSubscriptions.mockResolvedValue([]);
+  api.getUnpaidCourseEnrollments.mockResolvedValue([]);
   api.getPendingHoldRequests.mockResolvedValue([]);
   api.getUnpaidCoachBookings.mockResolvedValue([]);
   api.getActivePackages.mockResolvedValue([pkg]);
@@ -130,6 +132,7 @@ it('displays a genuine zero balance returned by the wallet API', async () => {
 
 it.each([
   ['getPendingSubscriptions', 'gói tập chờ thanh toán', 'Tải lại gói tập chờ thanh toán', 'plan'],
+  ['getUnpaidCourseEnrollments', 'khóa học chờ thu học phí', 'Tải lại khóa học chờ thu học phí', 'course'],
   ['getPendingHoldRequests', 'yêu cầu bảo lưu', 'Tải lại yêu cầu bảo lưu', 'hold'],
   ['getPendingTrials', 'yêu cầu dùng thử', 'Tải lại yêu cầu dùng thử', 'trial'],
 ] as const)('shows %s errors instead of empty queues and clears the error after retry', async (method, label, retryLabel, filter) => {
@@ -138,7 +141,7 @@ it.each([
   const card = host.querySelector('.reception-top__queue')!;
   expect(card.textContent).toContain(`Không thể tải ${label}. Vui lòng thử lại.`);
   expect(card.textContent).not.toContain('Không có việc nào cần xử lý');
-  const tabs = { plan: 'Gói tập', hold: 'Bảo lưu', trial: 'Trải nghiệm' };
+  const tabs = { plan: 'Gói tập', course: 'Khóa học', hold: 'Bảo lưu', trial: 'Trải nghiệm' };
   const tab = [...card.querySelectorAll<HTMLButtonElement>('.filter-chip')].find(b => b.textContent?.startsWith(tabs[filter]))!;
   await act(async () => tab.click());
   expect(card.textContent).not.toContain('Không có mục nào trong nhóm đã chọn');
@@ -515,4 +518,70 @@ it('offers only cash for counter wallet topup', async () => {
   await act(async () => open.click());
   expect(host.querySelector('#counter-topup-method')).toBeNull();
   expect(host.querySelector('[data-testid="counter-topup-cash"]')?.textContent).toContain('Tiền mặt tại quầy');
+});
+
+it('P0-03: renders unpaid course enrollments, requires confirmation, settles tuition payment, and opens invoice', async () => {
+  const courseItem = {
+    enrollmentId: 601,
+    paymentId: 901,
+    classId: 12,
+    className: 'Yoga Phục Hồi Sáng',
+    disciplineName: 'Yoga',
+    startDate: '2026-12-01',
+    endDate: '2026-12-29',
+    memberId: 10,
+    memberName: 'An',
+    memberPhone: '0901234567',
+    membershipCode: 'MB-10',
+    amount: 200000,
+    method: 'cash',
+    createdAt: '2026-11-25T10:00:00',
+  };
+  api.getUnpaidCourseEnrollments.mockResolvedValueOnce([courseItem]).mockResolvedValue([]);
+  api.confirmCourseEnrollmentPayment.mockResolvedValue({
+    id: 901,
+    memberId: 10,
+    memberName: 'An',
+    amount: 200000,
+    method: 'bank_transfer',
+    status: 'success',
+    paidAt: '2026-11-25T11:00:00',
+    invoiceNumber: 'INV-20261125-0901',
+  });
+
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.querySelector('.reception-top__queue h2')!.textContent).toBe('Cần xử lý (1)');
+  expect(host.querySelector('.reception-todo__tag--course')!.textContent).toBe('Khóa học');
+  const row = host.querySelector('[data-testid="unpaid-course-601"]')!;
+  expect(row.textContent).toContain('Yoga Phục Hồi Sáng');
+  expect(row.textContent).toContain('Yoga');
+  expect(row.textContent).toContain('01/12/2026');
+  expect(row.textContent).toContain('29/12/2026');
+  expect(row.textContent).toContain('200.000');
+
+  // Clicking payment button opens confirmation dialog without settling immediately
+  const transferBtn = host.querySelector<HTMLButtonElement>('[data-testid="confirm-course-transfer-601"]')!;
+  await act(async () => transferBtn.click());
+  expect(api.confirmCourseEnrollmentPayment).not.toHaveBeenCalled();
+
+  const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+    (b) => b.textContent === 'Xác nhận đã thu',
+  )!;
+  expect(confirmBtn).toBeDefined();
+  await act(async () => confirmBtn.click());
+
+  expect(api.confirmCourseEnrollmentPayment).toHaveBeenCalledWith(601, 'bank_transfer');
+  expect(host.querySelector('[data-testid="unpaid-course-601"]')).toBeNull();
+  expect(host.textContent).toContain('Hóa đơn thực');
+  expect(getNotices()[0]?.message).toContain('INV-20261125-0901');
+});
+
+it('P0-03: clears course queue error automatically when silent background sync succeeds', async () => {
+  api.getUnpaidCourseEnrollments.mockRejectedValueOnce(new Error('Offline')).mockResolvedValue([]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  const card = host.querySelector('.reception-top__queue')!;
+  expect(card.textContent).toContain('Không thể tải khóa học chờ thu học phí. Vui lòng thử lại.');
+
+  await act(async () => window.dispatchEvent(new Event('online')));
+  expect(card.textContent).not.toContain('Không thể tải khóa học chờ thu học phí');
 });

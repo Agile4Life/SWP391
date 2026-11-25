@@ -95,6 +95,20 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.data.username").value("newmember"));
     }
 
+    /** Kiểm thử P1-BE-01: đăng ký từ chối username chứa @, khoảng trắng hoặc vượt quá 50 ký tự. */
+    @Test
+    @DisplayName("POST /api/v1/auth/register returns 400 when username contains @, whitespace or exceeds 50 chars")
+    void registerRejectsInvalidUsernameFormat() throws Exception {
+        for (String badUsername : java.util.List.of("victim@gmail.com", "bad user", "a".repeat(51), "ab")) {
+            RegisterRequest req = new RegisterRequest(badUsername, "Password@123", "attacker@test.com", "MEMBER");
+            mockMvc.perform(post("/api/v1/auth/register")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(req)))
+                    .andExpect(status().isBadRequest());
+        }
+        org.mockito.Mockito.verifyNoInteractions(authService);
+    }
+
     /** Kiểm thử: gửi OTP thành công. */
     @Test
     @DisplayName("POST /api/v1/auth/send-otp returns 200 with destination")

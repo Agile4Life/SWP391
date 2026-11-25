@@ -45,6 +45,7 @@ class PostgreSqlDatabaseIntegrationTest {
     @Autowired MockMvc mvc;
     @Autowired ObjectMapper json;
     @Autowired DataSource dataSource;
+    @Autowired org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     /** Hàm trợ giúp của test: lấy kết nối database test. */
     @DynamicPropertySource
@@ -62,8 +63,8 @@ class PostgreSqlDatabaseIntegrationTest {
         properties.add("spring.jpa.properties.hibernate.default_schema", () -> SCHEMA);
         properties.add("spring.jpa.hibernate.ddl-auto", () -> "update");
         properties.add("app.jwt.secret", () -> "c2Ntc19sb2NhbF9qd3Rfc2VjcmV0X2tleV9mb3Jfc3dwMzkxX3Byb2plY3RfMjAyNg==");
-        properties.add("app.bootstrap.manager.email", () -> ADMIN_EMAIL);
-        properties.add("app.bootstrap.manager.password", () -> ADMIN_PASSWORD);
+        properties.add("app.bootstrap.admin.email", () -> ADMIN_EMAIL);
+        properties.add("app.bootstrap.admin.password", () -> ADMIN_PASSWORD);
         properties.add("app.auth.otp.delivery", () -> "disabled");
     }
 
@@ -187,12 +188,33 @@ class PostgreSqlDatabaseIntegrationTest {
                 Long.class, "Room " + UUID.randomUUID());
     }
 
-    /** Hàm trợ giúp của test: tạo lớp học mẫu. */
+    /** Hàm trợ giúp của test: tạo bộ môn riêng biệt để các test không xung đột nhau. */
+    private long discipline() {
+        return jdbc.queryForObject(
+                "insert into disciplines (name, description, created_at) values (?, 'Integration test discipline', now()) returning id",
+                Long.class, "Discipline " + UUID.randomUUID());
+    }
+
+    /** Hàm trợ giúp của test: lấy id bộ môn chuẩn đã được seed theo tên. */
+    private long discipline(String name) {
+        return jdbc.queryForObject("select id from disciplines where lower(name) = lower(?) order by id limit 1",
+                Long.class, name);
+    }
+
+    /** Hàm trợ giúp của test: tạo lớp học mẫu thuộc bộ môn mặc định. */
     private long gymClass(int capacity, long coach, long room) {
         return jdbc.queryForObject("""
                 insert into classes (name, discipline_id, coach_id, room_id, capacity, level, status, created_at, updated_at)
                 values (?, (select min(id) from disciplines), ?, ?, ?, 'all', 'active', now(), now()) returning id
                 """, Long.class, "Class " + UUID.randomUUID(), coach, room, capacity);
+    }
+
+    /** Hàm trợ giúp của test: tạo lớp học mẫu thuộc một bộ môn chỉ định. */
+    private long gymClass(int capacity, long coach, long room, long disciplineId) {
+        return jdbc.queryForObject("""
+                insert into classes (name, discipline_id, coach_id, room_id, capacity, level, status, created_at, updated_at)
+                values (?, ?, ?, ?, ?, 'all', 'active', now(), now()) returning id
+                """, Long.class, "Class " + UUID.randomUUID(), disciplineId, coach, room, capacity);
     }
 
     /** Hàm trợ giúp của test: ghi danh hội viên vào buổi học. */
@@ -201,12 +223,17 @@ class PostgreSqlDatabaseIntegrationTest {
                 gymClass, member, status);
     }
 
-    /** Hàm trợ giúp của test: tạo buổi học mẫu. */
+    /** Hàm trợ giúp của test: tạo buổi học mẫu vào ngày hiện tại. */
     private void session(long gymClass, String start, String end, String status) {
+        session(gymClass, 0, start, end, status);
+    }
+
+    /** Hàm trợ giúp của test: tạo buổi học mẫu lệch số ngày so với ngày hiện tại. */
+    private void session(long gymClass, int dayOffset, String start, String end, String status) {
         jdbc.update("""
                 insert into class_sessions (class_id, session_date, start_time, end_time, status, created_at, updated_at)
-                values (?, current_date, cast(? as time), cast(? as time), ?, now(), now())
-                """, gymClass, start, end, status);
+                values (?, current_date + ?, cast(? as time), cast(? as time), ?, now(), now())
+                """, gymClass, dayOffset, start, end, status);
     }
 
     /** Hàm trợ giúp của test: tạo lượt đặt PT mẫu. */
@@ -246,14 +273,17 @@ class PostgreSqlDatabaseIntegrationTest {
         assertThrows(DataIntegrityViolationException.class, () -> ptBooking(activeMember(), coach, "14:15", "16:45"));
         assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member, coach(), "14:15", "16:45"));
         assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member(), coach(), "17:00", "19:30"));
-        long group = gymClass(10, coach(), room());
+        long group = gymClass(10, coach(), room(), discipline("Gym"));
         session(group, "14:15", "16:45", "scheduled");
         assertThrows(DataIntegrityViolationException.class, () -> enroll(group, member, "booked"));
         long other = activeMember();
         enroll(group, other, "booked");
         assertThrows(DataIntegrityViolationException.class, () -> ptBooking(other, coach(), "14:15", "16:45"));
-        long coachedGroup = gymClass(10, coach, room());
-        assertThrows(DataIntegrityViolationException.class, () -> session(coachedGroup, "14:15", "16:45", "scheduled"));
+        // Dùng bộ môn khác (Boxing vs Gym) để trigger xung đột bộ môn không che khuất trigger PT↔Group của HLV.
+        long coachedGroup = gymClass(10, coach, room(), discipline("Boxing"));
+        var coachedConflict = assertThrows(DataIntegrityViolationException.class,
+                () -> session(coachedGroup, "14:15", "16:45", "scheduled"));
+        assertConstraintViolation(coachedConflict, "23514", "trg_sessions_check_conflict");
         ptBooking(member, coach, "17:00", "19:30");
     }
 
@@ -288,11 +318,31 @@ class PostgreSqlDatabaseIntegrationTest {
     void hibernateBootstrapsAllReferenceTablesAndMandatoryTriggers() {
         assertTrue(jdbc.queryForObject("select count(*) from information_schema.tables where table_schema = ?",
                 Integer.class, SCHEMA) >= 33);
-        assertEquals(5, jdbc.queryForObject("""
-                select count(*) from pg_trigger t join pg_class c on c.oid = t.tgrelid
+        var installedTriggers = jdbc.queryForList("""
+                select t.tgname from pg_trigger t join pg_class c on c.oid = t.tgrelid
                 join pg_namespace n on n.oid = c.relnamespace
                 where n.nspname = ? and not t.tgisinternal
-                """, Integer.class, SCHEMA));
+                """, String.class, SCHEMA);
+        assertTrue(installedTriggers.size() >= 21, "Expected all 21 triggers from postgresql-triggers.sql, found: " + installedTriggers);
+        var mandatoryTriggers = java.util.Set.of(
+                "trg_users_updated_at",
+                "trg_sessions_check_conflict",
+                "trg_enrollments_check_capacity",
+                "trg_enrollments_check_membership",
+                "trg_session_bookings_check_capacity",
+                "trg_session_bookings_check_membership",
+                "trg_checkins_check_membership",
+                "trg_pt_schedule_booking",
+                "trg_pt_schedule_enrollment",
+                "trg_pt_schedule_session_booking",
+                "trg_pt_schedule_session",
+                "trg_pt_schedule_class",
+                "trg_member_overlap_enrollment",
+                "trg_member_overlap_session",
+                "trg_member_overlap_session_booking"
+        );
+        assertTrue(installedTriggers.containsAll(mandatoryTriggers),
+                "Missing mandatory triggers from " + installedTriggers);
     }
 
     /** Kiểm thử: trigger sức chứa từ chối vượt chỗ và rollback. */
@@ -346,6 +396,15 @@ class PostgreSqlDatabaseIntegrationTest {
         assertTrue(cause.getMessage().contains(expectedMessage), cause.getMessage());
     }
 
+    /** Hàm trợ giúp của test: khẳng định lỗi SQL mang đúng SQLState và tên constraint/trigger từ PostgreSQL. */
+    private static void assertConstraintViolation(DataIntegrityViolationException error,
+            String expectedSqlState, String expectedConstraint) {
+        var psql = assertInstanceOf(org.postgresql.util.PSQLException.class, error.getMostSpecificCause());
+        assertEquals(expectedSqlState, psql.getSQLState(), psql.getMessage());
+        assertNotNull(psql.getServerErrorMessage(), psql.getMessage());
+        assertEquals(expectedConstraint, psql.getServerErrorMessage().getConstraint(), psql.getMessage());
+    }
+
     /** Kiểm thử: partial index cho phép lịch sử nhưng từ chối ghi danh active trùng. */
     @Test
     void partialIndexAllowsHistoryButRejectsDuplicateActiveEnrollment() {
@@ -373,6 +432,55 @@ class PostgreSqlDatabaseIntegrationTest {
         session(sameRoom, "07:00", "09:30", "cancelled");
     }
 
+    /**
+     * Kiểm thử: cho phép nhiều lớp active cùng bộ môn ở các slot khác nhau nhưng từ chối hai lớp active
+     * cùng bộ môn trùng ngày và slot dù khác HLV và khác phòng.
+     */
+    @Test
+    void disciplineConflictTriggerAllowsMultipleActiveClassesNonOverlappingAndRejectsSameDateSlotOverlap() {
+        long sharedDiscipline = discipline();
+        long firstClass = gymClass(10, coach(), room(), sharedDiscipline);
+        long secondClass = gymClass(10, coach(), room(), sharedDiscipline);
+        long otherDisciplineClass = gymClass(10, coach(), room(), discipline());
+
+        session(firstClass, "07:00", "09:30", "scheduled");
+        session(secondClass, "09:45", "11:15", "scheduled");
+
+        var conflict = assertThrows(DataIntegrityViolationException.class,
+                () -> session(secondClass, "07:00", "09:30", "scheduled"));
+        assertConstraintViolation(conflict, "23P01", "trg_sessions_check_discipline_conflict");
+        assertTrue(conflict.getMostSpecificCause().getMessage()
+                .contains("Bộ môn này đã có lớp học khác trùng khung giờ."));
+
+        // Lớp thuộc bộ môn khác vẫn mở song song được trong cùng ngày và cùng slot với phòng/HLV riêng.
+        session(otherDisciplineClass, "07:00", "09:30", "scheduled");
+    }
+
+    /** Kiểm thử: trigger chồng lịch hội viên từ chối ghi danh hai lớp nhóm khác bộ môn trùng ngày và slot. */
+    @Test
+    void memberClassOverlapTriggerRejectsConflictingEnrollments() {
+        long member = activeMember();
+        long firstClass = gymClass(10, coach(), room(), discipline());
+        long secondClass = gymClass(10, coach(), room(), discipline());
+        long adjacentClass = gymClass(10, coach(), room(), discipline());
+
+        // Dùng ngày current_date + 2 để luôn >= today theo Asia/Ho_Chi_Minh ở mọi múi giờ server PostgreSQL.
+        session(firstClass, 2, "11:30", "14:00", "scheduled");
+        session(secondClass, 2, "11:30", "14:00", "scheduled");
+        session(adjacentClass, 2, "14:15", "16:45", "scheduled");
+
+        enroll(firstClass, member, "booked");
+        enroll(adjacentClass, member, "booked");
+
+        var overlap = assertThrows(DataIntegrityViolationException.class,
+                () -> enroll(secondClass, member, "booked"));
+        assertConstraintViolation(overlap, "23P01", "trg_member_schedule_conflict");
+        assertTrue(overlap.getMostSpecificCause().getMessage().contains("trg_member_schedule_conflict"));
+        assertEquals(0, jdbc.queryForObject(
+                "select count(*) from class_enrollments where class_id = ? and member_id = ? and status = 'booked'",
+                Integer.class, secondClass, member));
+    }
+
     /** Kiểm thử: trigger membership từ chối subscription thiếu, hết hạn, không hoạt động hoặc ở tương lai. */
     @Test
     void membershipTriggersRejectMissingExpiredInactiveAndFutureSubscriptions() {
@@ -381,7 +489,7 @@ class PostgreSqlDatabaseIntegrationTest {
             long member = member();
             if (!state.equals("missing")) {
                 subscription(member, state.equals("future") ? "active" : state,
-                        state.equals("future") ? 1 : -30, state.equals("expired") ? -1 : 30);
+                        state.equals("future") ? 2 : -30, state.equals("expired") ? -2 : 30);
             }
             var booking = assertThrows(DataIntegrityViolationException.class, () -> enroll(gymClass, member, "booked"));
             assertTriggerViolation(booking, "Học viên không có gói thành viên còn hiệu lực để đăng ký lớp.");
@@ -470,29 +578,46 @@ class PostgreSqlDatabaseIntegrationTest {
         }
     }
 
-    /** Kiểm thử: các endpoint HTTP hiện có dùng persistence PostgreSQL thật và JWT. */
+    /** Kiểm thử: các endpoint HTTP hiện có dùng persistence PostgreSQL thật và JWT đúng phân quyền. */
     @Test
     void existingHttpEndpointsUseRealPostgresPersistenceAndJwt() throws Exception {
         mvc.perform(get("/api/v1/health")).andExpect(status().isOk());
         mvc.perform(get("/api/v1/payments/member/1")).andExpect(status().isUnauthorized());
-        String login = mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"username\":\"admin\",\"password\":\"" + ADMIN_PASSWORD + "\"}"))
+        String adminLogin = mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + ADMIN_EMAIL + "\",\"password\":\"" + ADMIN_PASSWORD + "\"}"))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
-        String token = json.readTree(login).path("data").path("token").asText();
-        assertFalse(token.isBlank());
+        String adminToken = json.readTree(adminLogin).path("data").path("token").asText();
+        assertFalse(adminToken.isBlank());
         long member = activeMember();
-        for (String route : new String[]{"/api/v1/disciplines", "/api/v1/rooms", "/api/v1/packages", "/api/v1/payments/member/" + member}) {
-            mvc.perform(get(route).header("Authorization", "Bearer " + token)).andExpect(status().isOk());
+        for (String route : new String[]{"/api/v1/users", "/api/v1/roles", "/api/v1/admin/audit-logs",
+                "/api/v1/disciplines", "/api/v1/rooms", "/api/v1/packages"}) {
+            mvc.perform(get(route).header("Authorization", "Bearer " + adminToken)).andExpect(status().isOk());
         }
-        String payment = mvc.perform(post("/api/v1/payments").header("Authorization", "Bearer " + token)
+        // Admin không có quyền nghiệp vụ thu ngân/thanh toán; chỉ CENTER_MANAGER hoặc RECEPTIONIST được phép.
+        mvc.perform(get("/api/v1/payments/member/" + member).header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isForbidden());
+
+        String managerEmail = "scrum91-manager-" + UUID.randomUUID() + "@example.invalid";
+        jdbc.update("""
+                insert into users (role_id, full_name, email, password_hash, status, created_at, updated_at)
+                values ((select id from roles where code = 'CENTER_MANAGER'), 'Center Manager Test', ?, ?, 'active', now(), now())
+                """, managerEmail, passwordEncoder.encode(ADMIN_PASSWORD));
+        String managerLogin = mvc.perform(post("/api/v1/auth/login").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + managerEmail + "\",\"password\":\"" + ADMIN_PASSWORD + "\"}"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String managerToken = json.readTree(managerLogin).path("data").path("token").asText();
+        assertFalse(managerToken.isBlank());
+        mvc.perform(get("/api/v1/payments/member/" + member).header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk());
+        String payment = mvc.perform(post("/api/v1/payments").header("Authorization", "Bearer " + managerToken)
                         .contentType(MediaType.APPLICATION_JSON).content("{\"memberId\":" + member
                                 + ",\"amount\":91000,\"method\":\"cash\",\"status\":\"success\"}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         long paymentId = json.readTree(payment).path("data").path("id").asLong();
         assertTrue(paymentId > 0);
-        mvc.perform(post("/api/v1/invoices/auto-issue/" + paymentId).header("Authorization", "Bearer " + token))
+        mvc.perform(post("/api/v1/invoices/auto-issue/" + paymentId).header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isCreated()).andExpect(jsonPath("$.data.totalAmount").value(91000));
-        mvc.perform(get("/api/v1/invoices/by-payment/" + paymentId).header("Authorization", "Bearer " + token))
+        mvc.perform(get("/api/v1/invoices/by-payment/" + paymentId).header("Authorization", "Bearer " + managerToken))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].amount").value(91000));
     }
 }

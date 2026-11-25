@@ -48,6 +48,22 @@ describe('MemberInvoicesPage', () => {
     expect(host.textContent).toContain('Thanh toán VNPay');
   });
 
+  it('P0-04: hides SÖL Wallet pay button for pending WALLET_TOPUP payments while keeping it for other services', async () => {
+    mocks.payments.mockResolvedValue([
+      { ...paid, id: 21, status: 'pending', serviceType: 'WALLET_TOPUP', amount: 500000 },
+      { ...paid, id: 22, status: 'pending', serviceType: 'CLASS', serviceName: 'Yoga Sáng', amount: 200000 },
+    ]);
+    await render();
+
+    const topupRow = host.querySelector('[data-testid="pending-payment-21"]')!;
+    expect(topupRow.textContent).toContain('Thanh toán VNPay');
+    expect(topupRow.querySelector('[data-testid="pay-with-wallet-btn"]')).toBeNull();
+
+    const classRow = host.querySelector('[data-testid="pending-payment-22"]')!;
+    expect(classRow.textContent).toContain('Thanh toán VNPay');
+    expect(classRow.querySelector('[data-testid="pay-with-wallet-btn"]')).not.toBeNull();
+  });
+
   it('shows an invoice skeleton until the detail request settles without a display delay', async () => {
     mocks.payments.mockResolvedValue([paid]);
     let finish!: (value: unknown) => void;

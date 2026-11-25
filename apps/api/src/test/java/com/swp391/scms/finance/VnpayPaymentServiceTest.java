@@ -546,4 +546,40 @@ class VnpayPaymentServiceTest {
         assertEquals("success", topupTx.getStatus());
         verify(walletService, times(1)).creditLateGatewayPayment(7L, new BigDecimal("200000"), "TOPUP1");
     }
+
+    @Test void payWithWalletRejectsWalletTopupPaymentWithoutDebitingWallet() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+
+        Payment topupPayment = new Payment();
+        topupPayment.setId(88L);
+        topupPayment.setMember(payment.getMember());
+        topupPayment.setAmount(new BigDecimal("200000"));
+        topupPayment.setMethod("online_wallet");
+        topupPayment.setNote("WALLET_TOPUP");
+        topupPayment.setStatus("pending");
+        when(payments.findById(88L)).thenReturn(Optional.of(topupPayment));
+
+        var ex = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, 88L)));
+        assertEquals("VNPAY_WALLET_TOPUP_NOT_PAYABLE_BY_WALLET", ex.getErrorCode());
+
+        // Khoản thu không gắn đối tượng nào (kể cả không có note WALLET_TOPUP) cũng không được trừ ví.
+        Payment untargeted = new Payment();
+        untargeted.setId(89L);
+        untargeted.setMember(payment.getMember());
+        untargeted.setAmount(new BigDecimal("100000"));
+        untargeted.setMethod("online_wallet");
+        untargeted.setStatus("pending");
+        when(payments.findById(89L)).thenReturn(Optional.of(untargeted));
+
+        var ex2 = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, 89L)));
+        assertEquals("VNPAY_WALLET_TOPUP_NOT_PAYABLE_BY_WALLET", ex2.getErrorCode());
+
+        verifyNoInteractions(walletService, settlement, invoices);
+        verify(payments, never()).saveAndFlush(any());
+        assertEquals("pending", topupPayment.getStatus());
+        assertEquals("pending", untargeted.getStatus());
+    }
 }

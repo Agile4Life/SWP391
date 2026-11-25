@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useInRouterContext, useLocation } from 'react-router-dom';
-import { getCurrentUser } from '../../shared/api/client';
+import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
 import { chatError, type ChatError } from './chatMessages';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { formatCenterDate } from '../../shared/lib/centerTime';
@@ -49,7 +49,7 @@ export interface ChatRealtimeFeed { connection: ChatConnection; tick: number; re
  */
 export function ChatPage({ embedded = false, visible = true, realtime, onPeersChange }: { embedded?: boolean; visible?: boolean; realtime?: ChatRealtimeFeed; onPeersChange?: (peers: ChatContact[]) => void }) {
   const { t } = useI18n();
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   if (!user || !['MEMBER', 'STAFF', 'COACH', 'MANAGER'].includes(user.role))
     return <div data-i18n-managed className="portal-container"><h1 className="portal-title">{t("Tin nhắn", "Messages")}</h1><p role="alert">{t("Bạn không có quyền truy cập chat riêng.", "You do not have access to private chat.")}</p></div>;
   // Hội viên, lễ tân và quản lý có mục Hỗ trợ & Khiếu nại; huấn luyện viên không nhận khiếu nại.
@@ -58,7 +58,7 @@ export function ChatPage({ embedded = false, visible = true, realtime, onPeersCh
   const support = user.role === 'MEMBER' ? 'member' : user.role === 'STAFF' ? 'staff' : manager ? 'manager' : null;
   // SÖL AI: hội viên hỏi về bản thân, lễ tân/quản lý tra nhanh quy định; huấn luyện viên chỉ dùng AI để gợi ý giáo án.
   const ai = support === 'member' ? 'member' : support ? 'staff' : null;
-  return <ChatWorkspace member={user.role === 'MEMBER'} direct={!manager} support={support} ai={ai} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
+  return <ChatWorkspace key={sessionIdentityKey(user)} member={user.role === 'MEMBER'} direct={!manager} support={support} ai={ai} embedded={embedded} visible={visible} realtime={realtime} onPeersChange={onPeersChange} />;
 }
 
 /**

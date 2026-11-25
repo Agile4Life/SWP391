@@ -138,7 +138,7 @@ public final class SchedulingRequests {
 
             String description,
 
-            @Pattern(regexp = "active|cancelled|archived", message = "{validation.scheduling.class_status.pattern}")
+            @Pattern(regexp = "active|inactive|archived", message = "{validation.scheduling.class_status.pattern}")
             String status
     ) {
     }
@@ -179,6 +179,12 @@ public final class SchedulingRequests {
 
     /** Yêu cầu thanh toán khóa học: phương thức thanh toán. */
     public record CourseCheckoutRequest(
+            String method
+    ) {
+    }
+
+    /** Yêu cầu quầy lễ tân xác nhận thu học phí khóa học (cash hoặc bank_transfer). */
+    public record ConfirmCoursePaymentRequest(
             String method
     ) {
     }

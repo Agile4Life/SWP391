@@ -97,7 +97,7 @@ export function ClassListTable({
             aria-pressed={statusFilter === 'all'}
             onClick={() => setStatusFilter('all')}
           >
-            {t('Tất cả (gồm lưu trữ/hủy)', 'All (incl. archived)')}
+            {t('Tất cả (gồm ngừng mở/lưu trữ)', 'All (incl. inactive/archived)')}
           </button>
         </div>
       </div>
@@ -122,7 +122,9 @@ export function ClassListTable({
             </thead>
             <tbody>
               {filtered.map((cls) => {
-                const isActive = String(cls.status).toLowerCase() === 'active';
+                const normalizedStatus = String(cls.status).toLowerCase();
+                const isActive = normalizedStatus === 'active';
+                const isArchived = normalizedStatus === 'archived';
                 const accent = disciplineAccentColor(cls.disciplineId ?? cls.disciplineName);
                 const count = sessionCounts.get(cls.id) ?? cls.activeSessions ?? 0;
                 return (
@@ -162,7 +164,11 @@ export function ClassListTable({
                     </td>
                     <td>
                       <span className={`badge ${isActive ? 'badge-success' : 'badge-neutral'}`}>
-                        {isActive ? t('Đang mở', 'Active') : t('Ngừng mở', 'Inactive')}
+                        {isActive
+                          ? t('Đang mở', 'Active')
+                          : isArchived
+                            ? t('Lưu trữ', 'Archived')
+                            : t('Ngừng mở', 'Inactive')}
                       </span>
                     </td>
                     <td>

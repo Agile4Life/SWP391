@@ -4,6 +4,7 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
@@ -13,10 +14,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Chạy một lần duy nhất (idempotent) khi khởi động trước {@code DemoDataSeeder} (@Order 200) và
- * {@code DemoClassSeeder} (@Order 210) để dọn sạch dữ liệu lịch cũ không khớp 5 slot cố định (07:00–19:30).
+ * {@code DemoClassSeeder} (@Order 210) để dọn sạch dữ liệu lịch đang hoạt động/sắp diễn ra không khớp 5 slot cố
+ * định (07:00–19:30).
  *
- * <p>Nếu mọi bản ghi trong {@code classes}, {@code class_sessions} và {@code coach_bookings} đều đã thuộc 5 slot
- * chuẩn (hoặc các bảng đều trống), runner kết thúc ngay (no-op) để không bao giờ ảnh hưởng tới dữ liệu mới.
+ * <p>Chỉ kiểm tra lớp {@code active} có đầy đủ giờ học, buổi lớp {@code scheduled} từ hôm nay trở đi và buổi PT
+ * {@code confirmed} từ hôm nay trở đi; không bao giờ xóa dữ liệu chỉ vì {@code classes.start_time/end_time} là
+ * {@code NULL} hoặc vì bản ghi lịch sử/đã đóng. Có thể tắt hoàn toàn bằng
+ * {@code app.scheduling.legacy-slot-reset-enabled=false}.
  */
 @Component
 @Order(195)
@@ -28,19 +32,35 @@ public class LegacyScheduleSlotResetRunner implements ApplicationRunner {
             "SELECT EXISTS (SELECT 1 FROM information_schema.tables "
                     + "WHERE table_schema = current_schema() AND table_name = ?)";
 
-    private static final String NON_CANONICAL_SLOT_CONDITION =
-            "start_time IS NULL OR end_time IS NULL OR NOT ("
-                    + "(start_time = TIME '07:00:00' AND end_time = TIME '09:30:00') "
+    private static final String CANONICAL_FIVE_SLOTS_EXPR =
+            "(start_time = TIME '07:00:00' AND end_time = TIME '09:30:00') "
                     + "OR (start_time = TIME '09:45:00' AND end_time = TIME '11:15:00') "
                     + "OR (start_time = TIME '11:30:00' AND end_time = TIME '14:00:00') "
                     + "OR (start_time = TIME '14:15:00' AND end_time = TIME '16:45:00') "
-                    + "OR (start_time = TIME '17:00:00' AND end_time = TIME '19:30:00')"
-                    + ")";
+                    + "OR (start_time = TIME '17:00:00' AND end_time = TIME '19:30:00')";
 
-    private static final List<String> SCHEDULE_SOURCE_TABLES = List.of(
-            "classes",
-            "class_sessions",
-            "coach_bookings"
+    private static final String CENTER_TODAY_SQL =
+            "(CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date";
+
+    private static final String CLASSES_LEGACY_CONDITION =
+            "status = 'active' AND start_time IS NOT NULL AND end_time IS NOT NULL AND NOT ("
+                    + CANONICAL_FIVE_SLOTS_EXPR + ")";
+
+    private static final String CLASS_SESSIONS_LEGACY_CONDITION =
+            "status = 'scheduled' AND session_date >= " + CENTER_TODAY_SQL
+                    + " AND NOT (" + CANONICAL_FIVE_SLOTS_EXPR + ")";
+
+    private static final String COACH_BOOKINGS_LEGACY_CONDITION =
+            "status = 'confirmed' AND booking_date >= " + CENTER_TODAY_SQL
+                    + " AND NOT (" + CANONICAL_FIVE_SLOTS_EXPR + ")";
+
+    private record TableCheck(String tableName, String condition) {
+    }
+
+    private static final List<TableCheck> SCHEDULE_SOURCE_CHECKS = List.of(
+            new TableCheck("classes", CLASSES_LEGACY_CONDITION),
+            new TableCheck("class_sessions", CLASS_SESSIONS_LEGACY_CONDITION),
+            new TableCheck("coach_bookings", COACH_BOOKINGS_LEGACY_CONDITION)
     );
 
     private static final List<String> TABLES_TO_DELETE_IN_ORDER = List.of(
@@ -55,16 +75,29 @@ public class LegacyScheduleSlotResetRunner implements ApplicationRunner {
     );
 
     private final JdbcTemplate jdbcTemplate;
+    private final boolean enabled;
 
-    /** Nhận JdbcTemplate tùy chọn (có thể null trong unit test không có datasource). */
+    /** Constructor cho test: mặc định bật kiểm tra reset lịch lệch slot. */
+    public LegacyScheduleSlotResetRunner(JdbcTemplate jdbcTemplate) {
+        this(jdbcTemplate, true);
+    }
+
+    /** Nhận JdbcTemplate tùy chọn và cờ bật/tắt (có thể tắt trong production qua cấu hình). */
     @Autowired
-    public LegacyScheduleSlotResetRunner(@Autowired(required = false) JdbcTemplate jdbcTemplate) {
+    public LegacyScheduleSlotResetRunner(
+            @Autowired(required = false) JdbcTemplate jdbcTemplate,
+            @Value("${app.scheduling.legacy-slot-reset-enabled:true}") boolean enabled) {
         this.jdbcTemplate = jdbcTemplate;
+        this.enabled = enabled;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        if (!enabled) {
+            log.debug("Legacy schedule slot reset skipped: disabled by configuration.");
+            return;
+        }
         if (jdbcTemplate == null) {
             log.debug("Legacy schedule slot reset skipped: JdbcTemplate unavailable.");
             return;
@@ -101,11 +134,11 @@ public class LegacyScheduleSlotResetRunner implements ApplicationRunner {
     }
 
     private boolean hasAnyLegacyScheduleRows() {
-        for (String table : SCHEDULE_SOURCE_TABLES) {
-            if (!tableExists(table)) {
+        for (TableCheck check : SCHEDULE_SOURCE_CHECKS) {
+            if (!tableExists(check.tableName())) {
                 continue;
             }
-            String sql = "SELECT EXISTS (SELECT 1 FROM " + table + " WHERE " + NON_CANONICAL_SLOT_CONDITION + ")";
+            String sql = "SELECT EXISTS (SELECT 1 FROM " + check.tableName() + " WHERE " + check.condition() + ")";
             Boolean hasLegacy = jdbcTemplate.queryForObject(sql, Boolean.class);
             if (Boolean.TRUE.equals(hasLegacy)) {
                 return true;

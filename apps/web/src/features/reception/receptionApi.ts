@@ -5,6 +5,24 @@ export type { MembershipPackage };
 /** Buổi PT 1:1 chưa thu tiền (dùng chung kiểu booking). */
 export type UnpaidCoachBooking = CoachBookingDto;
 
+/** Ghi danh khóa học nhóm chờ thu học phí tại quầy lễ tân (tiền mặt hoặc chuyển khoản). */
+export interface UnpaidCourseEnrollmentItem {
+  enrollmentId: number;
+  paymentId: number;
+  classId: number;
+  className: string;
+  disciplineName: string;
+  startDate: string | null;
+  endDate: string | null;
+  memberId: number;
+  memberName: string;
+  memberPhone?: string | null;
+  membershipCode?: string | null;
+  amount: number;
+  method: string;
+  createdAt: string;
+}
+
 /** Kết quả tra cứu hội viên: mã thẻ, họ tên, liên hệ, trạng thái và gói hiện tại. */
 export interface MemberLookupResult {
   userId: number;
@@ -314,6 +332,20 @@ export const receptionApi = {
   /** Ghi nhận đã thu tiền buổi PT 1:1; backend tạo payment để tính vào doanh thu. */
   confirmCoachBookingPayment: (bookingId: number, method: string): Promise<UnpaidCoachBooking> =>
     apiFetch(`/coach-bookings/${bookingId}/confirm-payment?method=${encodeURIComponent(method)}`, { method: 'POST' }),
+
+  /** Danh sách ghi danh khóa học nhóm chờ thu học phí tại quầy lễ tân. */
+  getUnpaidCourseEnrollments: (): Promise<UnpaidCourseEnrollmentItem[]> =>
+    apiFetch<UnpaidCourseEnrollmentItem[]>('/classes/enrollments/unpaid'),
+
+  /** Ghi nhận đã thu học phí khóa học nhóm (tiền mặt hoặc chuyển khoản) và trả về hóa đơn đã thanh toán. */
+  confirmCourseEnrollmentPayment: (
+    enrollmentId: number,
+    method: 'cash' | 'bank_transfer',
+  ): Promise<PaymentResponseDto> =>
+    apiFetch<PaymentResponseDto>(`/classes/enrollments/${enrollmentId}/confirm-payment`, {
+      method: 'POST',
+      body: JSON.stringify({ method }),
+    }),
 
   /** Ảnh hóa đơn tiền mặt hội viên đã gửi cho yêu cầu gói tập đang chờ (null nếu chưa có). */
   getPendingReceipt: async (memberId: number, subscriptionId: number): Promise<string | null> => {

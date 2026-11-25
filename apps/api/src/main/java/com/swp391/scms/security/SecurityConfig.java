@@ -170,6 +170,8 @@ public class SecurityConfig {
 
                     // Xếp lịch & Ghi danh (SCRUM-72, 73, 131)
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/unpaid").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/enrollments/*/confirm-payment").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/enroll").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/enrollments/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     // Ghi danh / thanh toán / hủy khóa học định kỳ là thao tác của hội viên; chúng phải đứng

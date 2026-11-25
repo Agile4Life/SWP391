@@ -1,4 +1,4 @@
-import { useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch, getCurrentUser } from '../../shared/api/client';
@@ -128,7 +128,7 @@ export function CoachClassesPage() {
     );
   }, [classSessions, scheduleSearch]);
 
-  // Tải song song lịch PT 1:1 và lịch dạy lớp nhóm của HLV.
+  // Tải song song lịch PT 1:1 và lịch dạy lớp nhóm của HLV (backend tự lọc theo JWT principal của COACH).
   const loadWeeklySessions = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -136,7 +136,7 @@ export function CoachClassesPage() {
       const [ptResult, classResult] = await Promise.allSettled([
         getCoachSchedule(),
         typeof coachingApi.getCoachSchedule === 'function'
-          ? coachingApi.getCoachSchedule(currentUser?.id)
+          ? coachingApi.getCoachSchedule()
           : Promise.resolve([] as CoachSession[]),
       ]);
       const ptList = ptResult.status === 'fulfilled' ? ptResult.value : [];
@@ -145,13 +145,25 @@ export function CoachClassesPage() {
       setClassSessions(classList);
       if (ptResult.status === 'rejected' && classResult.status === 'rejected') {
         setError('Không thể tải lịch dạy của tuần này. Vui lòng thử lại.');
-      } else if (ptResult.status === 'rejected' && classList.length === 0) {
-        setError('Không thể tải lịch dạy của tuần này. Vui lòng thử lại.');
+      } else if (ptResult.status === 'rejected') {
+        setError(
+          staffMessage(
+            'Không thể tải lịch kèm PT 1:1. Các buổi lớp nhóm đã tải vẫn hiển thị bên dưới.',
+            'Unable to load 1:1 PT sessions. Loaded group class sessions are still shown below.',
+          ),
+        );
+      } else if (classResult.status === 'rejected') {
+        setError(
+          staffMessage(
+            'Không thể tải lịch dạy lớp nhóm. Các buổi PT 1:1 đã tải vẫn hiển thị bên dưới.',
+            'Unable to load group class sessions. Loaded 1:1 PT sessions are still shown below.',
+          ),
+        );
       }
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.id]);
+  }, []);
 
   useEffect(() => {
     void loadWeeklySessions();

@@ -1,5 +1,6 @@
 package com.swp391.scms.scheduling.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -89,6 +90,27 @@ public final class EnrollmentResponses {
             String paymentUrl,
             /** Thời điểm chỗ giữ cho khoản phí chưa trả được nhả; null với ghi danh miễn phí. */
             java.time.LocalDateTime expiresAt
+    ) {
+    }
+
+    /**
+     * Khoản học phí khóa học trả tại quầy (tiền mặt/chuyển khoản) đang chờ lễ tân xác nhận thu tiền.
+     */
+    public record UnpaidCourseEnrollmentDto(
+            Long enrollmentId,
+            Long paymentId,
+            Long classId,
+            String className,
+            String disciplineName,
+            LocalDate startDate,
+            LocalDate endDate,
+            Long memberId,
+            String memberName,
+            String memberPhone,
+            String membershipCode,
+            BigDecimal amount,
+            String method,
+            LocalDateTime createdAt
     ) {
     }
 }

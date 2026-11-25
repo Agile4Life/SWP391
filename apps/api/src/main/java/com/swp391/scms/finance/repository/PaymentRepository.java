@@ -3,6 +3,7 @@ package com.swp391.scms.finance.repository;
 import com.swp391.scms.finance.entity.Payment;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.stereotype.Repository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -90,6 +91,27 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     /** Tìm các bản ghi có classEnrollmentId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     @EntityGraph(attributePaths = {"invoice"})
     Optional<Payment> findByClassEnrollmentId(Long classEnrollmentId);
+
+    /** Tìm mọi khoản thanh toán gắn với một lượt ghi danh khóa học. */
+    @EntityGraph(attributePaths = {"invoice"})
+    List<Payment> findAllByClassEnrollmentId(Long classEnrollmentId);
+
+    /**
+     * Đóng nguyên tử khoản nạp ví đang chờ khi không còn lượt VNPay chờ hoặc thành công nào.
+     */
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update Payment p
+            set p.status = 'failed'
+            where p.id = :paymentId
+              and p.status = 'pending'
+              and p.note like 'WALLET_TOPUP%'
+              and not exists (
+                  select t.reference from VnpayTransaction t
+                  where t.payment.id = :paymentId and t.status in ('pending', 'success')
+              )
+            """)
+    int failOrphanPendingWalletTopup(@Param("paymentId") Long paymentId);
 
     /**
      * Các khoản học phí khóa học đang chờ được tạo trước mốc thời gian (để tự hủy khi quá hạn).

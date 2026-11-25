@@ -293,4 +293,46 @@ class PaymentMemberAccessTest {
                 .andExpect(status().isForbidden());
         verifyNoInteractions(payments);
     }
+
+    @Test
+    void memberCannotSubmitDualTargetOrArbitraryAmountClassEnrollmentPayment() throws Exception {
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"subscriptionId":10,"classEnrollmentId":20,"amount":500000,"method":"online_wallet"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PAYMENT_MULTIPLE_TARGETS"));
+
+        Member member = new Member(); member.setUserId(2L);
+        var gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        gymClass.setId(50L); gymClass.setPrice(new BigDecimal("600000"));
+        var enrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        enrollment.setId(20L); enrollment.setMember(member); enrollment.setGymClass(gymClass); enrollment.setStatus("booked");
+        when(enrollments.findById(20L)).thenReturn(Optional.of(enrollment));
+
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"classEnrollmentId":20,"amount":1,"method":"online_wallet"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PAYMENT_AMOUNT_MISMATCH"));
+
+        Payment existing = new Payment();
+        existing.setId(55L); existing.setMember(member); existing.setClassEnrollmentId(20L);
+        existing.setStatus("pending"); existing.setAmount(new BigDecimal("600000"));
+        when(members.findById(2L)).thenReturn(Optional.of(member));
+        when(members.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(payments.findAllByClassEnrollmentId(20L)).thenReturn(List.of(existing));
+
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"classEnrollmentId":20,"amount":600000,"method":"online_wallet"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PAYMENT_ALREADY_EXISTS"));
+        verify(payments, never()).save(any());
+    }
 }

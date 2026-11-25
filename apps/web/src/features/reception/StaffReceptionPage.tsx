@@ -18,6 +18,7 @@ import {
   receptionApi,
   type HoldRequestItem,
   type UnpaidCoachBooking,
+  type UnpaidCourseEnrollmentItem,
   type MemberLookupResult,
   type MembershipPackage,
   type PaymentMethod,
@@ -74,6 +75,12 @@ export function StaffReceptionPage() {
   const [loadingPt, setLoadingPt] = useState(true);
   const [ptError, setPtError] = useState<StaffMessage>('');
   const [processingPtId, setProcessingPtId] = useState<number | null>(null);
+
+  // Khóa học nhóm trả phí chờ thu học phí tại quầy
+  const [unpaidCourses, setUnpaidCourses] = useState<UnpaidCourseEnrollmentItem[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
+  const [courseError, setCourseError] = useState<StaffMessage>('');
+  const [processingCourseId, setProcessingCourseId] = useState<number | null>(null);
 
   // Form thanh toán
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('cash');
@@ -143,7 +150,7 @@ export function StaffReceptionPage() {
   const [trialRejectReason, setTrialRejectReason] = useState('');
   const [isSubmittingTrialReject, setIsSubmittingTrialReject] = useState(false);
   const [trialRejectError, setTrialRejectError] = useState<StaffMessage | null>(null);
-  const [todoFilter, setTodoFilter] = useState<'all' | 'plan' | 'pt' | 'trial' | 'hold'>('all');
+  const [todoFilter, setTodoFilter] = useState<'all' | 'plan' | 'course' | 'pt' | 'trial' | 'hold'>('all');
 
   useEffect(() => {
     setReceiptImage(null);
@@ -275,6 +282,26 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
+  // Tải các ghi danh khóa học nhóm chờ thu học phí tại quầy.
+  const loadUnpaidCourses = useCallback(async (silent = false) => {
+    if (!hasAccess) return;
+    if (!silent) setLoadingCourses(true);
+    try {
+      const items = await receptionApi.getUnpaidCourseEnrollments();
+      setUnpaidCourses(Array.isArray(items) ? items : []);
+      setCourseError('');
+    } catch {
+      setCourseError(
+        staffMessage(
+          'Không thể tải khóa học chờ thu học phí. Vui lòng thử lại.',
+          'Unable to load unpaid course enrollments. Please try again.',
+        ),
+      );
+    } finally {
+      if (!silent) setLoadingCourses(false);
+    }
+  }, [hasAccess]);
+
   // Tải các yêu cầu dùng thử chờ duyệt.
   const loadPendingTrials = useCallback(async (silent = false) => {
     if (!hasAccess) return;
@@ -290,25 +317,27 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
-  const todoCount = pendingList.length + unpaidPt.length + trialList.length + holdList.length;
-  const loadingTodo = loadingPending || loadingHolds || loadingPt || loadingTrials;
-  const todoErrors = { plan: pendingError, pt: ptError, trial: trialsError, hold: holdsError };
+  const todoCount = pendingList.length + unpaidCourses.length + unpaidPt.length + trialList.length + holdList.length;
+  const loadingTodo = loadingPending || loadingCourses || loadingHolds || loadingPt || loadingTrials;
+  const todoErrors = { plan: pendingError, course: courseError, pt: ptError, trial: trialsError, hold: holdsError };
   const hasTodoError = Object.values(todoErrors).some(Boolean);
-  // Tải lại cả bốn hàng đợi.
+  // Tải lại cả năm hàng đợi.
   const reloadTodo = useCallback(() => Promise.all([
-    loadPendingSubscriptions(), loadPendingHolds(), loadUnpaidPt(), loadPendingTrials(),
-  ]), [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
+    loadPendingSubscriptions(), loadUnpaidCourses(), loadPendingHolds(), loadUnpaidPt(), loadPendingTrials(),
+  ]), [loadPendingSubscriptions, loadUnpaidCourses, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
 
   useEffect(() => {
     void loadPendingSubscriptions();
+    void loadUnpaidCourses();
     void loadPendingHolds();
     void loadUnpaidPt();
     void loadPendingTrials();
     if (!hasAccess) return;
-    // Đồng bộ ngầm bốn hàng đợi khi tab hiện, trừ lúc đang xử lý thanh toán.
+    // Đồng bộ ngầm năm hàng đợi khi tab hiện, trừ lúc đang xử lý thanh toán.
     const syncQueues = () => {
       if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
       void loadPendingSubscriptions(true);
+      void loadUnpaidCourses(true);
       void loadPendingHolds(true);
       void loadUnpaidPt(true);
       void loadPendingTrials(true);
@@ -323,7 +352,7 @@ export function StaffReceptionPage() {
       window.removeEventListener('online', syncQueues);
       document.removeEventListener('visibilitychange', syncQueues);
     };
-  }, [hasAccess, loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
+  }, [hasAccess, loadPendingSubscriptions, loadUnpaidCourses, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
 
   useEffect(() => {
     let active = true;
@@ -454,6 +483,56 @@ export function StaffReceptionPage() {
     }
   };
 
+
+  // Xác nhận đã thu học phí khóa học nhóm sau khi lễ tân xác nhận hộp thoại.
+  const handleConfirmCoursePayment = async (
+    item: UnpaidCourseEnrollmentItem,
+    method: 'cash' | 'bank_transfer',
+  ) => {
+    if (processingCourseId !== null) return;
+    const methodVi = method === 'cash' ? 'tiền mặt' : 'chuyển khoản';
+    const methodEn = method === 'cash' ? 'cash' : 'bank transfer';
+    const ok = await confirm({
+      title: sourceMessage('Xác nhận thu học phí khóa học?', 'Confirm course tuition payment?'),
+      message: sourceMessage(
+        `Xác nhận đã thu ${formatPrice(item.amount)} (${methodVi}) cho khóa "${item.className}" của hội viên ${item.memberName}?`,
+        `Confirm collecting ${formatPrice(item.amount)} (${methodEn}) for course "${item.className}" from ${item.memberName}?`,
+      ),
+      confirmLabel: sourceMessage('Xác nhận đã thu', 'Confirm payment'),
+      cancelLabel: sourceMessage('Để sau', 'Later'),
+    });
+    if (!ok) return;
+    setProcessingCourseId(item.enrollmentId);
+    try {
+      const settled = await receptionApi.confirmCourseEnrollmentPayment(item.enrollmentId, method);
+      setCompletedPackageName(
+        item.disciplineName ? `${item.className} (${item.disciplineName})` : item.className,
+      );
+      setCompletedMemberName(item.memberName);
+      setCompletedMembershipCode(item.membershipCode ?? null);
+      setCompletedPayment(settled);
+      notify(
+        settled.invoiceNumber
+          ? staffMessage(
+              `Đã thu ${formatPrice(item.amount)} học phí khóa "${item.className}" của ${item.memberName}. Hóa đơn: ${settled.invoiceNumber}`,
+              `Collected ${formatPrice(item.amount)} tuition for "${item.className}" from ${item.memberName}. Invoice: ${settled.invoiceNumber}`,
+            )
+          : staffMessage(
+              `Đã thu ${formatPrice(item.amount)} học phí khóa "${item.className}" của ${item.memberName}.`,
+              `Collected ${formatPrice(item.amount)} tuition for "${item.className}" from ${item.memberName}.`,
+            ),
+        'success',
+        { record: true, destination: '/staff/reception-history' },
+      );
+      await loadUnpaidCourses();
+    } catch (err: unknown) {
+      const msg = errorMessage(err, 'Xác nhận thu học phí khóa học thất bại.');
+      await loadUnpaidCourses();
+      notify(msg, 'error');
+    } finally {
+      setProcessingCourseId(null);
+    }
+  };
 
   // Xác nhận đã thu tiền buổi PT 1:1 theo phương thức đã chọn.
   const handleConfirmPt = async (item: UnpaidCoachBooking, method: string) => {
@@ -754,6 +833,7 @@ export function StaffReceptionPage() {
                 {[
                   { key: 'all' as const, label: t('Tất cả', 'All'), count: todoCount },
                   { key: 'plan' as const, label: t('Gói tập', 'Packages'), count: pendingList.length },
+                  { key: 'course' as const, label: t('Khóa học', 'Courses'), count: unpaidCourses.length },
                   { key: 'pt' as const, label: t('Buổi PT', 'PT sessions'), count: unpaidPt.length },
                   { key: 'trial' as const, label: t('Trải nghiệm', 'Trials'), count: trialList.length },
                   { key: 'hold' as const, label: t('Bảo lưu', 'Holds'), count: holdList.length },
@@ -777,6 +857,7 @@ export function StaffReceptionPage() {
               {/* Mỗi hàng chờ có lỗi và nút thử lại riêng; không che dữ liệu của các nhóm đã tải thành công. */}
               {[
                 { key: 'plan', error: pendingError, loading: loadingPending, retry: loadPendingSubscriptions, label: t('Tải lại gói tập chờ thanh toán', 'Reload pending memberships') },
+                { key: 'course', error: courseError, loading: loadingCourses, retry: loadUnpaidCourses, label: t('Tải lại khóa học chờ thu học phí', 'Reload unpaid course enrollments') },
                 { key: 'trial', error: trialsError, loading: loadingTrials, retry: loadPendingTrials, label: t('Tải lại yêu cầu dùng thử', 'Reload trial requests') },
                 { key: 'hold', error: holdsError, loading: loadingHolds, retry: loadPendingHolds, label: t('Tải lại yêu cầu bảo lưu', 'Reload hold requests') },
               ].map((queue) => queue.error && (todoFilter === 'all' || todoFilter === queue.key) && (
@@ -896,6 +977,76 @@ export function StaffReceptionPage() {
                               }}
                             >
                               {cancellingPendingId === item.id ? t('Đang hủy...') : t('Hủy yêu cầu')}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                ))}
+
+              {(todoFilter === 'all' || todoFilter === 'course') && (loadingCourses ? (
+                  <LoadingSkeleton label={t('Đang tải khóa học chờ thu học phí…', 'Loading unpaid course enrollments…')} count={2} />
+                ) : (
+                  <>
+                    {unpaidCourses.map((item) => {
+                      const isBusy = processingCourseId === item.enrollmentId;
+                      return (
+                        <div
+                          data-i18n-managed
+                          key={item.enrollmentId}
+                          data-testid={`unpaid-course-${item.enrollmentId}`}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '14px',
+                            padding: '16px 18px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--portal-border-strong)',
+                            backgroundColor: 'var(--portal-raised)',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 240 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="reception-todo__tag reception-todo__tag--course">{t('Khóa học', 'Courses')}</span>
+                              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
+                                {t('Khóa học #', 'Course #')}{item.enrollmentId}
+                              </span>
+                              <strong>{item.memberName}</strong>
+                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
+                                ({item.membershipCode || `MB-${item.memberId}`}{item.memberPhone ? ` • ${item.memberPhone}` : ''})
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
+                              <strong>{item.className}</strong>
+                              {item.disciplineName ? ` • ${item.disciplineName}` : ''}
+                              {item.startDate && item.endDate
+                                ? ` • ${formatCenterDate(item.startDate)} → ${formatCenterDate(item.endDate)}`
+                                : ''}
+                              {' • '}
+                              <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(item.amount)}</strong>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="btn-primary btn-sm"
+                              data-testid={`confirm-course-cash-${item.enrollmentId}`}
+                              disabled={processingCourseId !== null}
+                              onClick={() => void handleConfirmCoursePayment(item, 'cash')}
+                            >
+                              {isBusy ? t('Đang xử lý...') : t('Đã thu tiền mặt')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              data-testid={`confirm-course-transfer-${item.enrollmentId}`}
+                              disabled={processingCourseId !== null}
+                              onClick={() => void handleConfirmCoursePayment(item, 'bank_transfer')}
+                            >
+                              {isBusy ? t('Đang xử lý...') : t('Đã nhận chuyển khoản')}
                             </button>
                           </div>
                         </div>
@@ -1174,6 +1325,7 @@ export function StaffReceptionPage() {
               )}
               {!loadingTodo && todoCount > 0 && todoFilter !== 'all' && (
                 (todoFilter === 'plan' && pendingList.length === 0 && !pendingError)
+                || (todoFilter === 'course' && unpaidCourses.length === 0 && !courseError)
                 || (todoFilter === 'pt' && unpaidPt.length === 0 && !ptError)
                 || (todoFilter === 'trial' && trialList.length === 0 && !trialsError)
                 || (todoFilter === 'hold' && holdList.length === 0 && !holdsError)

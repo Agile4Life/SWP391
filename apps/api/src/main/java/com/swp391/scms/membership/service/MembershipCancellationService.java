@@ -102,6 +102,9 @@ public class MembershipCancellationService {
         if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
             throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
         }
+        if ("APPROVED".equalsIgnoreCase(subscription.getHoldStatus())) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_APPROVED", "error.membership.hold_already_requested", null, null);
+        }
         String reason = body == null || body.reason() == null ? "" : body.reason().trim();
         if (reason.isEmpty()) {
             throw new BadRequestException("CANCELLATION_REASON_REQUIRED", "validation.membership.cancellation_reason.not_blank", null, null);
@@ -160,6 +163,9 @@ public class MembershipCancellationService {
         }
         if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
             throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
+        }
+        if ("APPROVED".equalsIgnoreCase(subscription.getHoldStatus())) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_APPROVED", "error.membership.hold_already_requested", null, null);
         }
         if (requests.existsBySubscriptionIdAndStatus(subscription.getId(), "PENDING")) {
             throw new ConflictException("CANCELLATION_PENDING_EXISTS", "error.membership.cancellation_pending_exists", null, null);
@@ -253,6 +259,9 @@ public class MembershipCancellationService {
             }
             if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
                 throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
+            }
+            if ("APPROVED".equalsIgnoreCase(subscription.getHoldStatus())) {
+                throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_APPROVED", "error.membership.hold_already_requested", null, null);
             }
             // Đăng ký lớp tham chiếu tới hội viên và lớp học chứ không tham chiếu kỳ gói. Việc hủy trên toàn hội viên
             // bên dưới chỉ an toàn khi đây là quyền lợi duy nhất còn lại.

@@ -6,25 +6,25 @@ import { ChatPage } from './ChatPage';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 import * as api from './chatApi';
 import { subscribeChat } from './chatRealtime';
-import { getCurrentUser } from '../../shared/api/client';
+import { clearAuthSession, setCurrentUser } from '../../shared/api/client';
 vi.mock('./chatApi', async importOriginal => ({ ...await importOriginal<typeof api>(), getConversations: vi.fn(), getContacts: vi.fn(), openConversation: vi.fn(), getHistory: vi.fn(), sendMessage: vi.fn(), markConversationRead: vi.fn() }));
 vi.mock('../member/memberSupportApi', () => ({ getMySupportTickets: vi.fn(async () => ({ content: [], totalPages: 0 })), getSupportInbox: vi.fn(async () => ({ content: [], totalPages: 0 })), getSupportTicket: vi.fn(), getSupportMessages: vi.fn(async () => []), sendSupportMessage: vi.fn(), createSupportTicket: vi.fn(), updateSupportStatus: vi.fn(), escalateSupportTicket: vi.fn() }));
 vi.mock('../member/supportRealtime', () => ({ subscribeSupport: vi.fn(() => () => {}) }));
 vi.mock('./chatRealtime', () => ({ subscribeChat: vi.fn(() => vi.fn()) }));
-vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn(), apiFetch: vi.fn() }));
+vi.mock('../../shared/api/client', async importOriginal => ({ ...(await importOriginal<typeof import('../../shared/api/client')>()), apiFetch: vi.fn() }));
 let host: HTMLDivElement, root: Root;
 const conversation: api.ChatConversation = { id: 7, peer: { id: 20, name: 'Coach Linh', role: 'COACH', available: true }, createdAt: '2026-10-29T01:00:00Z', lastActivityAt: '2026-10-29T01:00:00Z' };
 beforeEach(() => {
   setLanguage('vi');
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  vi.mocked(getCurrentUser).mockReturnValue({ id: 'member', identifier: 'member', name: 'Member', role: 'MEMBER' });
+  setCurrentUser({ id: 'member', identifier: 'member', name: 'Member', role: 'MEMBER' });
   vi.mocked(api.getConversations).mockResolvedValue({ content: [conversation], totalPages: 1, number: 0 });
   vi.mocked(api.getHistory).mockResolvedValue({ items: [], hasMore: false });
   vi.mocked(api.markConversationRead).mockResolvedValue({ count: 0 });
   vi.mocked(api.getContacts).mockResolvedValue({ content: [conversation.peer], totalPages: 1, number: 0 });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.resetAllMocks(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); clearAuthSession(); host.remove(); setLanguage('vi'); vi.resetAllMocks(); vi.unstubAllGlobals(); });
 // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
 const button = (text: string) => [...host.querySelectorAll('button')].find(b => b.textContent?.includes(text))!;
 // Dựng component vào DOM giả để kiểm thử.
@@ -75,7 +75,7 @@ it('member starts a conversation from the contact directory', async () => {
 it('coach and receptionist can start a chat with a member from the directory', async () => {
   const memberContact: api.ChatContact = { id: 10, name: 'Hội viên An', role: 'MEMBER', available: true };
   for (const role of ['COACH', 'RECEPTIONIST'] as const) {
-    vi.mocked(getCurrentUser).mockReturnValue({ id: role, identifier: role, name: role, role: role === 'COACH' ? 'COACH' : 'STAFF' });
+    setCurrentUser({ id: role, identifier: role, name: role, role: role === 'COACH' ? 'COACH' : 'STAFF' });
     vi.mocked(api.getContacts).mockResolvedValue({ content: [memberContact], totalPages: 1, number: 0 });
     vi.mocked(api.openConversation).mockResolvedValue({ ...conversation, id: 9, peer: memberContact });
     await render();
@@ -94,7 +94,7 @@ it('coach and receptionist can start a chat with a member from the directory', a
 });
 
 it('a coach can still reply to an existing conversation', async () => {
-  vi.mocked(getCurrentUser).mockReturnValue({ id: 'coach', identifier: 'coach', name: 'Coach', role: 'COACH' });
+  setCurrentUser({ id: 'coach', identifier: 'coach', name: 'Coach', role: 'COACH' });
   await render();
   await act(async () => button('Coach Linh').click());
   expect(host.querySelector('textarea')).not.toBeNull();
@@ -110,7 +110,7 @@ it('renders chat as plain text and keeps unavailable peers read-only', async () 
 });
 
 it('manager gets the escalated support inbox without fetching private chat', async () => {
-  vi.mocked(getCurrentUser).mockReturnValue({ id: 'manager', identifier: 'manager', name: 'Manager', role: 'MANAGER' });
+  setCurrentUser({ id: 'manager', identifier: 'manager', name: 'Manager', role: 'MANAGER' });
   await render();
   await vi.waitFor(() => expect(host.querySelector('#chat-support-title')?.textContent).toBe('Khiếu nại chuyển lên'));
   expect(host.querySelector('.direct-chat__compose-fab')).toBeNull();
@@ -224,12 +224,12 @@ it('pins Support & Tickets above SÖL AI so member complaints to the front desk 
 });
 
 it('gives receptionists the ticket inbox and coaches no support entry', async () => {
-  vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', identifier: 'staff', name: 'Lễ tân', role: 'STAFF' });
+  setCurrentUser({ id: 'staff', identifier: 'staff', name: 'Lễ tân', role: 'STAFF' });
   await render();
   await act(async () => (host.querySelector('.direct-chat__person--support') as HTMLButtonElement).click());
   await vi.waitFor(() => expect(host.querySelector('[role="radiogroup"][aria-label="Lọc theo trạng thái"]')).not.toBeNull());
   await act(async () => root.unmount()); root = createRoot(host);
-  vi.mocked(getCurrentUser).mockReturnValue({ id: 'coach', identifier: 'coach', name: 'HLV', role: 'COACH' });
+  setCurrentUser({ id: 'coach', identifier: 'coach', name: 'HLV', role: 'COACH' });
   await render();
   expect(host.querySelector('.direct-chat__person--support')).toBeNull();
 });
@@ -238,11 +238,11 @@ it('offers SÖL AI to members and receptionists but not to coaches, who use AI o
   await render();
   expect(host.querySelector('.direct-chat__person--ai')?.textContent).toContain('Hỏi về gói tập');
   await act(async () => root.unmount()); root = createRoot(host);
-  vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', identifier: 'staff', name: 'Lễ tân', role: 'STAFF' });
+  setCurrentUser({ id: 'staff', identifier: 'staff', name: 'Lễ tân', role: 'STAFF' });
   await render();
   expect(host.querySelector('.direct-chat__person--ai')?.textContent).toContain('Tra nhanh bảng giá');
   await act(async () => root.unmount()); root = createRoot(host);
-  vi.mocked(getCurrentUser).mockReturnValue({ id: 'coach', identifier: 'coach', name: 'HLV', role: 'COACH' });
+  setCurrentUser({ id: 'coach', identifier: 'coach', name: 'HLV', role: 'COACH' });
   await render();
   expect(host.querySelector('.direct-chat__person--ai')).toBeNull();
   expect(host.textContent).toContain('Coach Linh');
@@ -257,4 +257,42 @@ it('opens Support & Tickets when a notification links to ?tab=support while Mess
   expect(host.querySelector('.direct-chat__support')).toBeNull();
   await act(async () => go('/messages?tab=support'));
   await vi.waitFor(() => expect(host.querySelector('.direct-chat__support')).not.toBeNull());
+});
+
+it('P0-07: remounts ChatWorkspace on account switch and closes Realtime on logout without leaking User A state', async () => {
+  const unsubscribeA = vi.fn();
+  const unsubscribeB = vi.fn();
+  vi.mocked(subscribeChat).mockReturnValueOnce(unsubscribeA).mockReturnValueOnce(unsubscribeB);
+  vi.mocked(api.getHistory).mockResolvedValueOnce({
+    items: [{ id: 1, conversationId: 7, clientMessageId: 'a-1', senderId: 20, mine: false, message: 'Nội dung riêng User A', createdAt: '2026-11-02T10:00:00Z' }],
+    hasMore: false,
+  });
+
+  await render();
+  await act(async () => button('Coach Linh').click());
+  const input = host.querySelector('textarea')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(input, 'Nháp bí mật');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  expect(host.textContent).toContain('Nội dung riêng User A');
+
+  // Switch to User B -> User A workspace unmounts & Realtime unsubscribes
+  vi.mocked(api.getConversations).mockResolvedValue({
+    content: [{ id: 88, peer: { id: 44, name: 'HLV Toàn', role: 'COACH', available: true }, createdAt: '2026-10-29T01:00:00Z', lastActivityAt: '2026-10-29T01:00:00Z' }],
+    totalPages: 1,
+    number: 0,
+  });
+  await act(async () => {
+    setCurrentUser({ id: 'member-2', identifier: 'member-2', name: 'Member 2', role: 'MEMBER' });
+  });
+  expect(unsubscribeA).toHaveBeenCalledTimes(1);
+  expect(host.textContent).toContain('HLV Toàn');
+  expect(host.textContent).not.toContain('Nội dung riêng User A');
+  expect(host.querySelector('textarea')).toBeNull();
+
+  // Logout -> User B Realtime unsubscribes and access-denied notice renders
+  await act(async () => { clearAuthSession(); });
+  expect(unsubscribeB).toHaveBeenCalledTimes(1);
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Bạn không có quyền truy cập chat riêng');
 });

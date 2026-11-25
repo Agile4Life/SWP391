@@ -50,7 +50,12 @@ export const coachingApi = {
     toDate?: string
   ): Promise<CoachSession[]> => {
     const params = new URLSearchParams();
-    if (coachId) params.set('coachId', String(coachId));
+    if (coachId !== undefined && coachId !== null && coachId !== '') {
+      const numericCoachId = typeof coachId === 'number' ? coachId : Number(String(coachId).trim());
+      if (Number.isInteger(numericCoachId) && numericCoachId > 0) {
+        params.set('coachId', String(numericCoachId));
+      }
+    }
     if (fromDate) params.set('fromDate', fromDate);
     if (toDate) params.set('toDate', toDate);
 

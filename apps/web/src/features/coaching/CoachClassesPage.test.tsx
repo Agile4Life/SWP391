@@ -315,4 +315,85 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     expect(dialog.textContent).toContain('11/20');
     expect(dialog.querySelector('a[href="/coach/attendance/77"]')).not.toBeNull();
   });
+
+  it('P0-06: calls coachingApi.getCoachSchedule without passing username string id and surfaces partial group class failures with retry', async () => {
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        id: 'coach_marcus',
+        identifier: 'coach_marcus',
+        name: 'Marcus Vance',
+        role: 'COACH',
+      }),
+    );
+    vi.mocked(getCoachSchedule).mockResolvedValue([
+      {
+        id: 19,
+        memberName: 'Nguyễn Minh Anh',
+        bookingDate: currentMondayStr,
+        startTime: '07:00:00',
+        endTime: '09:30:00',
+        status: 'confirmed',
+        paymentMethod: 'package_quota',
+        disciplineName: 'Gym',
+      },
+    ] as never);
+    const scheduleSpy = vi.spyOn(coachingApi, 'getCoachSchedule')
+      .mockRejectedValueOnce(new Error('Group classes down'))
+      .mockResolvedValueOnce([]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>,
+      );
+    });
+
+    // Must not pass currentUser.id ("coach_marcus") to backend Long coachId param
+    expect(scheduleSpy).toHaveBeenCalledWith();
+    // Surfaces alert with Retry button while still showing PT bookings that loaded
+    const alert = host.querySelector('[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert?.textContent).toContain('lớp nhóm');
+    expect(host.querySelectorAll('.mcal__event--mine')).toHaveLength(1);
+
+    // Retry reloads and clears alert
+    const retryBtn = [...alert!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Thử lại')!;
+    await act(async () => retryBtn.click());
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('P0-06: surfaces partial PT 1:1 failure with retry while still rendering loaded group class sessions', async () => {
+    vi.mocked(getCoachSchedule).mockRejectedValueOnce(new Error('PT schedule down'));
+    vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([
+      {
+        id: 88,
+        classId: 5,
+        className: 'Boxing Nâng Cao',
+        disciplineName: 'Boxing',
+        coachId: 1,
+        roomName: 'Ring Arena 01',
+        sessionDate: currentMondayStr,
+        startTime: '17:00:00',
+        endTime: '19:30:00',
+        status: 'scheduled',
+        capacity: 14,
+        bookedCount: 6,
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>,
+      );
+    });
+
+    const alert = host.querySelector('[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert?.textContent).toContain('PT 1:1');
+    expect(host.textContent).toContain('Boxing Nâng Cao');
+  });
 });

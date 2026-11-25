@@ -208,6 +208,8 @@ public class MembershipSubscription {
     public void setHoldEndDate(LocalDate holdEndDate) { this.holdEndDate = holdEndDate; }
     /** Ngày bảo lưu đã được cộng vào hạn gói lúc duyệt chưa (null coi là chưa). */
     public boolean isHoldDaysCredited() { return Boolean.TRUE.equals(holdDaysCredited); }
+    /** Lấy trạng thái thô của cờ holdDaysCredited (phân biệt null dữ liệu cũ với false tường minh). */
+    public Boolean getHoldDaysCredited() { return holdDaysCredited; }
     /** Gán giá trị mới cho trường holdDaysCredited. */
     public void setHoldDaysCredited(Boolean holdDaysCredited) { this.holdDaysCredited = holdDaysCredited; }
     /**

@@ -34,7 +34,7 @@ export interface ClassItem {
   capacity: number;
   level?: string;
   description?: string | null;
-  status: 'ACTIVE' | 'ARCHIVED' | 'INACTIVE' | 'active' | 'archived' | 'inactive' | 'cancelled';
+  status: 'active' | 'inactive' | 'archived';
   schedule?: string;
   activeSessions?: number;
   price?: number;
@@ -149,7 +149,7 @@ export interface UpdateClassPayload {
   capacity: number;
   level?: string;
   description?: string;
-  status?: string;
+  status?: 'active' | 'inactive' | 'archived';
 }
 
 /** Thông tin một HLV đang hoạt động. */

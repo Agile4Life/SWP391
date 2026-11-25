@@ -78,4 +78,63 @@ class VnpayPaymentGuardTest {
         assertEquals("failed", topup.getStatus());
         verify(payments).save(topup);
     }
+
+    @Test void expireStaleUsesAtomicUpdateAndNeverOverwritesAlreadySettledAttempt() throws Exception {
+        var transactions = mock(VnpayTransactionRepository.class);
+        var payments = mock(PaymentRepository.class);
+        LocalDateTime expectedCutoff = LocalDateTime.of(2026, 11, 3, 11, 45);
+        when(transactions.failStalePendingAttempts(88L, expectedCutoff)).thenReturn(1);
+        when(payments.failOrphanPendingWalletTopup(88L)).thenReturn(1);
+
+        var guard = new VnpayPaymentGuard(transactions, payments, clock);
+        guard.expireStale(88L);
+
+        verify(transactions).failStalePendingAttempts(88L, expectedCutoff);
+        verify(transactions, never()).findAllByPaymentId(88L);
+        verify(transactions, never()).save(any());
+        verify(payments).failOrphanPendingWalletTopup(88L);
+        verify(payments, never()).save(any());
+
+        // Giao dịch đã có mã giao dịch cổng (IPN vừa xác nhận) tuyệt đối không bị đánh dấu stale hay ghi đè failed.
+        var transactions2 = mock(VnpayTransactionRepository.class);
+        var settled = attempt("SETTLED", LocalDateTime.of(2026, 11, 3, 11, 0));
+        settled.setGatewayTransactionNo("999888");
+        settled.setStatus("success");
+        var pendingWithGatewayNo = attempt("INFLIGHT", LocalDateTime.of(2026, 11, 3, 11, 0));
+        pendingWithGatewayNo.setGatewayTransactionNo("999889");
+        when(transactions2.findAllByPaymentId(99L)).thenReturn(List.of(settled, pendingWithGatewayNo));
+
+        var guard2 = new VnpayPaymentGuard(transactions2, mock(PaymentRepository.class), clock);
+        guard2.expireStale(99L);
+
+        assertEquals("success", settled.getStatus());
+        assertEquals("pending", pendingWithGatewayNo.getStatus());
+        verify(transactions2, never()).save(any());
+
+        // Entity VnpayTransaction phải có @Version để bảo vệ khóa lạc quan.
+        var versionField = VnpayTransaction.class.getDeclaredField("version");
+        assertNotNull(versionField.getAnnotation(jakarta.persistence.Version.class));
+    }
+
+    @Test void schedulerIsolatesFailuresPerPaymentInIndependentTransactions() {
+        var transactions = mock(VnpayTransactionRepository.class);
+        var guard = mock(VnpayPaymentGuard.class);
+        var txManager = mock(org.springframework.transaction.PlatformTransactionManager.class);
+        when(txManager.getTransaction(any())).thenAnswer(inv -> new org.springframework.transaction.support.SimpleTransactionStatus());
+        when(guard.now()).thenReturn(LocalDateTime.of(2026, 11, 3, 12, 0));
+        when(transactions.findPaymentIdsWithPendingExpiredBefore(LocalDateTime.of(2026, 11, 3, 11, 45)))
+                .thenReturn(List.of(9L, 10L));
+        doThrow(new RuntimeException("Optimistic lock conflict with IPN")).when(guard).expireStale(9L);
+        doNothing().when(guard).expireStale(10L);
+
+        var scheduler = new VnpayExpiryScheduler(transactions, guard, txManager);
+        assertEquals(1, scheduler.closeAbandonedAttempts());
+
+        verify(guard).expireStale(9L);
+        verify(guard).expireStale(10L);
+        verify(txManager, times(2)).getTransaction(argThat(def ->
+                def.getPropagationBehavior() == org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW));
+        verify(txManager, times(1)).rollback(any());
+        verify(txManager, times(1)).commit(any());
+    }
 }

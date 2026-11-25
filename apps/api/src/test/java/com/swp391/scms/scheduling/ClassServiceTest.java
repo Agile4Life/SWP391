@@ -1367,4 +1367,62 @@ class ClassServiceTest {
                 .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_INVALID_SLOT")
                 .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.invalid_slot");
     }
+
+    /** Kiểm thử P0-05: chuyển lớp active sang inactive hoặc archived sẽ chạy closeClass và lưu đúng trạng thái hợp lệ. */
+    @Test
+    @DisplayName("P0-05: updateClass closes class when transitioning active to inactive or archived")
+    void updateClass_closesClassWhenTransitioningToInactiveOrArchived() {
+        var enrollmentService = org.mockito.Mockito.mock(com.swp391.scms.scheduling.service.EnrollmentService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "enrollmentService", enrollmentService);
+
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        Coach coach = new Coach();
+        coach.setUserId(10L);
+        coach.setEmploymentStatus("active");
+        Room room = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(room, "id", 3L);
+        room.setStatus("available");
+        room.setCapacity(20);
+
+        gymClass.setId(1L);
+        gymClass.setDiscipline(yoga);
+        gymClass.setCoach(coach);
+        gymClass.setRoom(room);
+        gymClass.setStatus("active");
+
+        ClassSession futureSession = new ClassSession();
+        futureSession.setId(201L);
+        futureSession.setGymClass(gymClass);
+        futureSession.setSessionDate(LocalDate.of(2026, 10, 20));
+        futureSession.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        futureSession.setEndTime(ScheduleSlot.SLOT_1.endTime());
+        futureSession.setStatus("scheduled");
+
+        var member = new com.swp391.scms.users.entity.Member();
+        member.setUserId(42L);
+        var enrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        enrollment.setId(301L);
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus("booked");
+
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(10L)).thenReturn(Optional.of(coach));
+        when(rooms.findById(3L)).thenReturn(Optional.of(room));
+        when(enrollments.countByGymClassIdAndStatus(1L, "booked")).thenReturn(1L);
+        when(enrollments.findByGymClassId(1L)).thenReturn(java.util.List.of(enrollment));
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(1L))
+                .thenReturn(java.util.List.of(futureSession));
+        when(gymClasses.saveAndFlush(any(GymClass.class))).thenAnswer(i -> i.getArgument(0));
+
+        GymClassDto updated = service.updateClass(1L,
+                new UpdateClassRequest("Yoga Flow", 1L, 10L, 3L, 20, "all", null, "inactive"));
+
+        assertThat(updated.status()).isEqualTo("inactive");
+        assertThat(futureSession.getStatus()).isEqualTo("cancelled");
+        assertThat(enrollment.getStatus()).isEqualTo("cancelled");
+        verify(enrollmentService).settleFeeOnClassClosure(enrollment, "Lớp học ngừng hoạt động");
+    }
 }

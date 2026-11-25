@@ -9,7 +9,6 @@ import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.LockModeType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -18,16 +17,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
  * Ghi nhật ký kiểm toán (audit log) tự động cho mọi hàm service gắn @Audited: chụp dữ liệu trước và sau khi
- * chạy rồi lưu vào audit_logs. Chạy bên trong transaction nghiệp vụ nên log chỉ được lưu khi thao tác thành
- * công.
- *
- * Ghi lại các trường được chọn trước và sau một lần gọi service {@link Audited} thành công. Transaction
- * advice bao quanh aspect này, nên log tham gia vào transaction nghiệp vụ.
+ * chạy (không khóa ghi) rồi lưu vào audit_logs. Khi có {@link AuditLogWriter}, bản ghi audit được lưu sau khi
+ * giao dịch nghiệp vụ commit trong một giao dịch độc lập ({@code REQUIRES_NEW}), tránh làm hỏng giao dịch
+ * chính hoặc giữ khóa trước khi kiểm tra phân quyền.
  */
 @Aspect
 @Component
@@ -39,18 +38,28 @@ public class AuditAspect {
     private final AuditLogRepository repository;
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
+    private final AuditLogWriter auditLogWriter;
 
     /** Constructor cho test, không chụp dữ liệu từ database. */
     public AuditAspect(AuditLogRepository repository, ObjectMapper objectMapper) {
-        this(repository, objectMapper, null);
+        this(repository, objectMapper, null, null);
     }
 
-    /** Constructor Spring dùng: có EntityManager để chụp dữ liệu trước/sau. */
-    @Autowired
+    /** Constructor cho test có EntityManager để chụp dữ liệu trước/sau. */
     public AuditAspect(AuditLogRepository repository, ObjectMapper objectMapper, EntityManager entityManager) {
+        this(repository, objectMapper, entityManager, null);
+    }
+
+    /** Constructor Spring dùng: có EntityManager để chụp dữ liệu không khóa và AuditLogWriter tách giao dịch. */
+    @Autowired
+    public AuditAspect(AuditLogRepository repository,
+                       ObjectMapper objectMapper,
+                       @Autowired(required = false) EntityManager entityManager,
+                       @Autowired(required = false) AuditLogWriter auditLogWriter) {
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.entityManager = entityManager;
+        this.auditLogWriter = auditLogWriter;
     }
 
     /**
@@ -96,16 +105,42 @@ public class AuditAspect {
             entry.setOldValue(oldValue == null ? null : oldValue.toString());
             entry.setNewValue(newValue == null ? null : newValue.toString());
             entry.setIpAddress(currentIp());
-            repository.save(entry);
+            persist(entry, audited.action());
         } catch (RuntimeException e) {
             log.warn("Could not write audit log for action {}", audited.action(), e);
         }
     }
 
     /**
+     * Lưu bản ghi audit: khi có AuditLogWriter và đang ở trong giao dịch, đăng ký ghi sau commit trong giao
+     * dịch REQUIRES_NEW để vừa không ghi log cho thao tác bị rollback vừa không làm hỏng giao dịch nghiệp vụ.
+     */
+    private void persist(AuditLog entry, String action) {
+        if (auditLogWriter != null) {
+            if (TransactionSynchronizationManager.isSynchronizationActive()
+                    && TransactionSynchronizationManager.isActualTransactionActive()) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override
+                    public void afterCommit() {
+                        try {
+                            auditLogWriter.save(entry);
+                        } catch (RuntimeException e) {
+                            log.warn("Could not write audit log for action {}", action, e);
+                        }
+                    }
+                });
+                return;
+            }
+            auditLogWriter.save(entry);
+            return;
+        }
+        repository.save(entry);
+    }
+
+    /**
      * Chụp các trường quan trọng của bản ghi theo loại (người dùng, HLV, lễ tân, yêu cầu hỗ trợ, gói tập, thanh
-     * toán, lớp, buổi lớp, điểm danh, quyền của vai trò). Đọc kèm khóa ghi để dữ liệu không đổi giữa lúc chụp
-     * và lúc lưu. Loại không hỗ trợ thì trả null.
+     * toán, lớp, buổi lớp, điểm danh, quyền của vai trò) bằng thao tác đọc không khóa để không bao giờ lấy
+     * khóa ghi trước khi kiểm tra phân quyền hoặc gây tràn lock timeout. Loại không hỗ trợ thì trả null.
      */
     private JsonNode snapshot(String entity, Long id, Object[] args) {
         if (entityManager == null || id == null) return null;
@@ -113,7 +148,7 @@ public class AuditAspect {
             var node = objectMapper.createObjectNode();
             switch (entity) {
                 case "users" -> {
-                    var user = entityManager.find(com.swp391.scms.users.entity.User.class, id, LockModeType.PESSIMISTIC_WRITE);
+                    var user = entityManager.find(com.swp391.scms.users.entity.User.class, id);
                     if (user == null) return null;
                     node.put("id", id).put("fullName", user.getFullName()).put("email", user.getEmail())
                             .put("phone", user.getPhone()).put("status", user.getStatus())
@@ -123,32 +158,32 @@ public class AuditAspect {
                     if (user.getDeletedAt() != null) node.put("deletedAt", user.getDeletedAt().toString());
                 }
                 case "coaches" -> {
-                    var coach = entityManager.find(com.swp391.scms.users.entity.Coach.class, id, LockModeType.PESSIMISTIC_WRITE);
+                    var coach = entityManager.find(com.swp391.scms.users.entity.Coach.class, id);
                     if (coach == null) return null;
                     node.put("id", id).put("specialization", coach.getSpecialization())
                             .put("bio", coach.getBio()).put("certification", coach.getCertification());
                 }
                 case "receptionists" -> {
-                    var receptionist = entityManager.find(com.swp391.scms.users.entity.Receptionist.class, id, LockModeType.PESSIMISTIC_WRITE);
+                    var receptionist = entityManager.find(com.swp391.scms.users.entity.Receptionist.class, id);
                     if (receptionist == null) return null;
                     node.put("id", id).put("shift", receptionist.getShift());
                 }
                 case "support_requests" -> {
-                    var request = entityManager.find(com.swp391.scms.support.entity.SupportRequest.class, id, LockModeType.PESSIMISTIC_WRITE);
+                    var request = entityManager.find(com.swp391.scms.support.entity.SupportRequest.class, id);
                     if (request == null) return null;
                     node.put("id", id).put("status", request.getStatus());
                     if (request.getAssignedTo() != null) node.put("assignedTo", request.getAssignedTo().getId());
                     if (request.getEscalatedAt() != null) node.put("escalatedAt", request.getEscalatedAt().toString());
                 }
                 case "membership_packages" -> {
-                    var pkg = entityManager.find(com.swp391.scms.facilities.entity.MembershipPackage.class, id, LockModeType.PESSIMISTIC_WRITE);
+                    var pkg = entityManager.find(com.swp391.scms.facilities.entity.MembershipPackage.class, id);
                     if (pkg == null) return null;
                     node.put("id", id).put("name", pkg.getName()).put("description", pkg.getDescription())
                             .put("price", pkg.getPrice()).put("durationDays", pkg.getDurationDays())
                             .put("classCreditLimit", pkg.getClassCreditLimit()).put("status", pkg.getStatus());
                 }
                 case "payments" -> {
-                    var payment = entityManager.find(com.swp391.scms.finance.entity.Payment.class, id, LockModeType.PESSIMISTIC_WRITE);
+                    var payment = entityManager.find(com.swp391.scms.finance.entity.Payment.class, id);
                     if (payment == null) return null;
                     node.put("id", id).put("amount", payment.getAmount()).put("method", payment.getMethod())
                             .put("status", payment.getStatus()).put("note", payment.getNote());
@@ -183,7 +218,7 @@ public class AuditAspect {
                 }
                 case "role_permissions" -> {
                     if (args.length < 2 || !(args[1] instanceof Long permissionId)) return null;
-                    var role = entityManager.find(com.swp391.scms.users.entity.Role.class, id, LockModeType.PESSIMISTIC_WRITE);
+                    var role = entityManager.find(com.swp391.scms.users.entity.Role.class, id);
                     if (role == null) return null;
                     boolean granted = role.getPermissions() != null && role.getPermissions().stream()
                             .anyMatch(permission -> permissionId.equals(permission.getId()));

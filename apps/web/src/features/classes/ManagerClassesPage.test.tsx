@@ -857,4 +857,141 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
       expect.objectContaining({ sessionId: 503, startTime: '14:15:00', endTime: '16:45:00' }),
     );
   });
+
+  it('P0-01: keeps Step 4 review open after clicking Step 3 Next with distinct non-submit button nodes until explicit Step 4 click', async () => {
+    vi.mocked(classesApi.createRecurringClass).mockResolvedValue({
+      id: 301,
+      name: 'Boxing Afternoon',
+      disciplineId: 1,
+      coachId: 101,
+      roomId: 20,
+      capacity: 12,
+      status: 'active',
+    });
+
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+
+    // Step 1 -> Step 2
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, 'Boxing Afternoon'));
+    // Submitting the form on Step 1 must not create the course
+    await act(async () => {
+      document.querySelector<HTMLFormElement>('dialog form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(classesApi.createRecurringClass).not.toHaveBeenCalled();
+
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+
+    // Step 2: choose available Slot 2 -> Step 3
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-2"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+
+    // Step 3 -> Step 4: capture Step 3 Next DOM element before click
+    const step3NextBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!;
+    expect(step3NextBtn).not.toBeNull();
+    await act(async () => step3NextBtn.click());
+    await act(async () => { await Promise.resolve(); });
+
+    // Must remain on Step 4 Review without auto-submitting
+    expect(document.querySelector('[data-testid="wizard-step-4"]')).not.toBeNull();
+    expect(classesApi.createRecurringClass).not.toHaveBeenCalled();
+
+    // Step 4 confirm button must be a freshly mounted distinct DOM node with type="button"
+    const step4SubmitBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-submit-btn"]')!;
+    expect(step4SubmitBtn).not.toBeNull();
+    expect(step4SubmitBtn).not.toBe(step3NextBtn);
+    expect(step4SubmitBtn.type).toBe('button');
+
+    // Explicit click on Step 4 submits the course
+    await act(async () => step4SubmitBtn.click());
+    await act(async () => { await Promise.resolve(); });
+    expect(classesApi.createRecurringClass).toHaveBeenCalledTimes(1);
+  });
+
+  it('P0-05: aligns EditClassModal and ClassListTable statuses to active, inactive, and archived without cancelled', async () => {
+    vi.mocked(classesApi.getClasses).mockResolvedValue([
+      {
+        id: 1,
+        name: 'Full Body Strength 101',
+        disciplineId: 1,
+        disciplineName: 'Gym',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 10,
+        roomName: 'Phòng Gym Tiêu chuẩn',
+        capacity: 20,
+        status: 'active',
+      },
+      {
+        id: 2,
+        name: 'Boxing Ngừng Mở',
+        disciplineId: 2,
+        disciplineName: 'Boxing',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 20,
+        roomName: 'Ring Arena 01',
+        capacity: 14,
+        status: 'inactive',
+      },
+      {
+        id: 3,
+        name: 'Yoga Lưu Trữ',
+        disciplineId: 3,
+        disciplineName: 'Yoga',
+        coachId: 100,
+        coachName: 'HLV Lan',
+        roomId: 30,
+        roomName: 'Phòng Gym VIP',
+        capacity: 16,
+        status: 'archived',
+      },
+    ]);
+    vi.mocked(classesApi.updateClass).mockResolvedValue({
+      id: 1,
+      name: 'Full Body Strength 101',
+      disciplineId: 1,
+      coachId: 101,
+      roomId: 10,
+      capacity: 20,
+      status: 'inactive',
+    });
+
+    await renderPage();
+
+    // Tab 3 ClassListTable distinguishes active, inactive, archived cleanly
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    await act(async () => listTab.click());
+    const allChip = [...host.querySelectorAll<HTMLButtonElement>('.filter-chip')].find((b) =>
+      b.textContent?.includes('ngừng mở/lưu trữ'),
+    )!;
+    expect(allChip).toBeDefined();
+    await act(async () => allChip.click());
+
+    const rows = [...host.querySelectorAll('tbody tr')];
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain('Đang mở');
+    expect(rows[1].textContent).toContain('Ngừng mở');
+    expect(rows[2].textContent).toContain('Lưu trữ');
+
+    // Open EditClassModal and verify status select options are active | inactive | archived
+    const editBtn = [...rows[0].querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Sửa')!;
+    await act(async () => editBtn.click());
+    const statusSelect = document.querySelector('#edit-cls-status')!.parentElement!.querySelector('select') as HTMLSelectElement;
+    const optionValues = [...statusSelect.options].map((opt) => opt.value);
+    expect(optionValues).toEqual(['active', 'inactive', 'archived']);
+    expect(optionValues).not.toContain('cancelled');
+
+    await act(async () => {
+      statusSelect.value = 'inactive';
+      statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      document.querySelector<HTMLFormElement>('dialog form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await act(async () => { await Promise.resolve(); });
+    expect(classesApi.updateClass).toHaveBeenCalledWith(1, expect.objectContaining({ status: 'inactive' }));
+  });
 });

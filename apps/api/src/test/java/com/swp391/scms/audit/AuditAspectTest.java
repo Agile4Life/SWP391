@@ -35,11 +35,13 @@ class AuditAspectTest {
         user.setPasswordHash("secret");
         user.setAvatarUrl("data:image/png;base64,c2Vuc2l0aXZlLWltYWdl");
         when(point.getArgs()).thenReturn(new Object[]{42L});
-        when(entityManager.find(com.swp391.scms.users.entity.User.class, 42L, jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)).thenReturn(user);
+        when(entityManager.find(com.swp391.scms.users.entity.User.class, 42L)).thenReturn(user);
         when(point.proceed()).thenAnswer(invocation -> { user.setFullName("After"); return null; });
 
         new AuditAspect(repository, new ObjectMapper(), entityManager)
                 .around(point, audited("USER_UPDATE", "users"));
+
+        verify(entityManager, org.mockito.Mockito.never()).find(any(), any(), any(jakarta.persistence.LockModeType.class));
 
         ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
         verify(repository).save(captor.capture());
@@ -136,5 +138,92 @@ class AuditAspectTest {
         AuditAspect aspect = new AuditAspect(repository, new ObjectMapper());
 
         aspect.record(joinPoint, audited("USER_DELETE", "users"), null);
+    }
+
+    /** Kiểm thử P0-15: snapshot không bao giờ lấy khóa PESSIMISTIC_WRITE cho mọi entity được hỗ trợ. */
+    @Test
+    void snapshotsNeverAcquirePessimisticWriteLockForAnyEntity() throws Throwable {
+        var entityManager = mock(jakarta.persistence.EntityManager.class);
+        var point = mock(org.aspectj.lang.ProceedingJoinPoint.class);
+        when(point.proceed()).thenReturn(Map.of("id", 1L));
+
+        AuditAspect aspect = new AuditAspect(repository, new ObjectMapper(), entityManager);
+
+        for (String entity : java.util.List.of(
+                "users", "coaches", "receptionists", "support_requests",
+                "membership_packages", "payments", "classes", "class_sessions")) {
+            when(point.getArgs()).thenReturn(new Object[]{1L});
+            aspect.around(point, audited("TEST_" + entity, entity));
+        }
+        when(point.getArgs()).thenReturn(new Object[]{1L, 2L});
+        aspect.around(point, audited("TEST_ROLE_PERM", "role_permissions"));
+
+        verify(entityManager, org.mockito.Mockito.never()).find(any(), any(), any(jakarta.persistence.LockModeType.class));
+    }
+
+    /** Kiểm thử P0-15: AuditLogWriter.save chạy trong giao dịch REQUIRES_NEW và AuditAspect chỉ ghi sau commit. */
+    @Test
+    void defersAuditPersistenceToAfterCommitViaAuditLogWriterAndSwallowsPostCommitFailure() throws Throwable {
+        var txAnnotation = AuditLogWriter.class.getMethod("save", AuditLog.class)
+                .getAnnotation(org.springframework.transaction.annotation.Transactional.class);
+        org.junit.jupiter.api.Assertions.assertNotNull(txAnnotation);
+        assertEquals(org.springframework.transaction.annotation.Propagation.REQUIRES_NEW, txAnnotation.propagation());
+
+        AuditLogWriter writer = mock(AuditLogWriter.class);
+        org.mockito.Mockito.doThrow(new IllegalStateException("audit constraint failed"))
+                .when(writer).save(any(AuditLog.class));
+
+        var txManager = new org.springframework.transaction.support.AbstractPlatformTransactionManager() {
+            @Override protected Object doGetTransaction() { return new Object(); }
+            @Override protected void doBegin(Object transaction, org.springframework.transaction.TransactionDefinition definition) { }
+            @Override protected void doCommit(org.springframework.transaction.support.DefaultTransactionStatus status) { }
+            @Override protected void doRollback(org.springframework.transaction.support.DefaultTransactionStatus status) { }
+        };
+
+        SampleAuditedTarget target = new SampleAuditedTarget();
+        var proxyFactory = new org.springframework.aop.aspectj.annotation.AspectJProxyFactory(target);
+        proxyFactory.addAspect(new AuditAspect(repository, new ObjectMapper(), null, writer));
+        proxyFactory.addAdvice(0, new org.springframework.transaction.interceptor.TransactionInterceptor(
+                txManager, new org.springframework.transaction.annotation.AnnotationTransactionAttributeSource()));
+        SampleAuditedTarget proxied = proxyFactory.getProxy();
+
+        // 1. Thành công: ghi sau commit qua AuditLogWriter (không ghi trực tiếp vào repository trong TX chính);
+        // lỗi của AuditLogWriter sau commit không làm gãy kết quả đã commit.
+        String result = proxied.succeed(99L);
+        assertEquals("ok-99", result);
+        verify(writer).save(any(AuditLog.class));
+        verify(repository, org.mockito.Mockito.never()).save(any());
+
+        // 2. Rollback: không ghi bản ghi audit nào cho thao tác thất bại.
+        org.mockito.Mockito.reset(writer);
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class, () -> proxied.fail(99L));
+        verify(writer, org.mockito.Mockito.never()).save(any());
+    }
+
+    /** Kiểm thử P0-15: ngoài giao dịch, AuditAspect gọi AuditLogWriter trực tiếp và không ném lỗi ra ngoài. */
+    @Test
+    void writesViaAuditLogWriterDirectlyWhenOutsideTransaction() {
+        AuditLogWriter writer = mock(AuditLogWriter.class);
+        when(joinPoint.getArgs()).thenReturn(new Object[]{15L});
+        AuditAspect aspect = new AuditAspect(repository, new ObjectMapper(), null, writer);
+
+        aspect.record(joinPoint, audited("USER_UPDATE", "users"), Map.of("id", 15));
+
+        verify(writer).save(any(AuditLog.class));
+        verify(repository, org.mockito.Mockito.never()).save(any());
+    }
+
+    static class SampleAuditedTarget {
+        @org.springframework.transaction.annotation.Transactional
+        @Audited(action = "USER_UPDATE", entity = "users")
+        public String succeed(Long id) {
+            return "ok-" + id;
+        }
+
+        @org.springframework.transaction.annotation.Transactional
+        @Audited(action = "USER_UPDATE", entity = "users")
+        public String fail(Long id) {
+            throw new IllegalStateException("business failure");
+        }
     }
 }

@@ -133,7 +133,11 @@ export function MemberInvoicesPage() {
             <ServiceCell payment={payment} />
             <span className="muted">{memberText("Giao dịch #")}{payment.id} · {formatPrice(payment.amount)} · {memberRenderMessage(STATUS_LABELS.pending)}</span>
           </span>
-          <VnpayPayButton target={{ paymentId: payment.id }} onPaid={() => setReload((n) => n + 1)} />
+          <VnpayPayButton
+            target={{ paymentId: payment.id }}
+            allowWallet={String(payment.serviceType ?? '').toUpperCase() !== 'WALLET_TOPUP'}
+            onPaid={() => setReload((n) => n + 1)}
+          />
         </div>)}
       </section>}
       <section data-i18n-managed className="portal-card portal-card--flush member-invoices__card" aria-label={memberText("Lịch sử giao dịch")}>

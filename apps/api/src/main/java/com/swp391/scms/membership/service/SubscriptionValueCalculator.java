@@ -98,6 +98,18 @@ public class SubscriptionValueCalculator {
         long remaining = upgrade.getStartDate().isAfter(originalEnd) ? 0
                 : upgrade.getStartDate().isBefore(previous.getStartDate()) ? total
                 : ChronoUnit.DAYS.between(upgrade.getStartDate(), originalEnd) + 1;
+        if (hasCreditedHoldSpan(previous)) {
+            long holdTotal = overlappingDays(previous.getStartDate(), originalEnd,
+                    previous.getHoldStartDate(), previous.getHoldEndDate());
+            total = Math.max(0, total - holdTotal);
+            if (remaining > 0 && !upgrade.getStartDate().isBefore(previous.getStartDate())) {
+                long holdRemaining = overlappingDays(upgrade.getStartDate(), originalEnd,
+                        previous.getHoldStartDate(), previous.getHoldEndDate());
+                remaining = Math.max(0, Math.min(total, remaining - holdRemaining));
+            } else if (upgrade.getStartDate().isBefore(previous.getStartDate())) {
+                remaining = total;
+            }
+        }
         return prorate(paidValue(previous, depth + 1), remaining, total);
     }
 
@@ -108,22 +120,69 @@ public class SubscriptionValueCalculator {
         return prorate(paidValue(subscription), remainingDays(subscription, today), total);
     }
 
-    /** Tổng số ngày của kỳ gói (tính cả ngày đầu và ngày cuối); dữ liệu ngày thiếu hoặc sai thì trả 0. */
+    /**
+     * Tổng số ngày dịch vụ thực tế của kỳ gói (tính cả ngày đầu và ngày cuối, loại trừ các ngày bảo lưu đã được
+     * cộng bù vào {@code endDate}); dữ liệu ngày thiếu hoặc sai thì trả 0.
+     */
     public static long totalDays(MembershipSubscription subscription) {
-        if (subscription.getStartDate() == null || subscription.getEndDate() == null
+        if (subscription == null || subscription.getStartDate() == null || subscription.getEndDate() == null
                 || subscription.getEndDate().isBefore(subscription.getStartDate())) {
             return 0;
         }
-        return ChronoUnit.DAYS.between(subscription.getStartDate(), subscription.getEndDate()) + 1;
+        long rawTotal = ChronoUnit.DAYS.between(subscription.getStartDate(), subscription.getEndDate()) + 1;
+        if (hasCreditedHoldSpan(subscription)) {
+            long holdSpan = overlappingDays(
+                    subscription.getStartDate(), subscription.getEndDate(),
+                    subscription.getHoldStartDate(), subscription.getHoldEndDate());
+            return Math.max(0, rawTotal - holdSpan);
+        }
+        return rawTotal;
     }
 
-    /** Số ngày từ hôm nay tới hết kỳ, gồm cả hôm nay; kỳ chưa bắt đầu còn nguyên, kỳ đã hết còn 0. */
+    /**
+     * Số ngày dịch vụ thực tế từ hôm nay tới hết kỳ (gồm cả hôm nay, loại trừ phần ngày bảo lưu chưa diễn ra đã
+     * cộng bù vào {@code endDate}); kỳ chưa bắt đầu còn nguyên, kỳ đã hết còn 0.
+     */
     public static long remainingDays(MembershipSubscription subscription, LocalDate today) {
         long total = totalDays(subscription);
         if (total <= 0) return 0;
         if (today.isBefore(subscription.getStartDate())) return total;
         if (today.isAfter(subscription.getEndDate())) return 0;
-        return ChronoUnit.DAYS.between(today, subscription.getEndDate()) + 1;
+        long rawRemaining = ChronoUnit.DAYS.between(today, subscription.getEndDate()) + 1;
+        if (hasCreditedHoldSpan(subscription)) {
+            long remainingHold = overlappingDays(
+                    today, subscription.getEndDate(),
+                    subscription.getHoldStartDate(), subscription.getHoldEndDate());
+            return Math.max(0, Math.min(total, rawRemaining - remainingHold));
+        }
+        return rawRemaining;
+    }
+
+    /**
+     * Trả về true khi {@code endDate} của kỳ gói đang bao gồm khoảng ngày bảo lưu {@code [holdStartDate..holdEndDate]}
+     * (bảo lưu đã cộng bù ngày lúc duyệt/tự mở lại, hoặc bảo lưu đã kết thúc trước khi cờ được giữ lại).
+     */
+    private static boolean hasCreditedHoldSpan(MembershipSubscription subscription) {
+        if (subscription == null || subscription.getStartDate() == null || subscription.getEndDate() == null
+                || subscription.getHoldStartDate() == null || subscription.getHoldEndDate() == null
+                || subscription.getHoldEndDate().isBefore(subscription.getHoldStartDate())) {
+            return false;
+        }
+        if (subscription.isHoldDaysCredited()) {
+            return true;
+        }
+        return subscription.isHoldUsed()
+                && subscription.getHoldStatus() == null
+                && subscription.getHoldDaysCredited() == null;
+    }
+
+    /** Số ngày giao nhau (tính cả hai đầu) giữa hai đoạn ngày {@code [aStart..aEnd]} và {@code [bStart..bEnd]}. */
+    private static long overlappingDays(LocalDate aStart, LocalDate aEnd, LocalDate bStart, LocalDate bEnd) {
+        if (aStart == null || aEnd == null || bStart == null || bEnd == null) return 0;
+        LocalDate start = aStart.isAfter(bStart) ? aStart : bStart;
+        LocalDate end = aEnd.isBefore(bEnd) ? aEnd : bEnd;
+        if (end.isBefore(start)) return 0;
+        return ChronoUnit.DAYS.between(start, end) + 1;
     }
 
     /** {@code value × remaining / total}, làm tròn xuống tới nghìn đồng. */

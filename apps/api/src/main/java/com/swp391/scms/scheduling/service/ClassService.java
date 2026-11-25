@@ -425,15 +425,17 @@ public class ClassService {
         gymClass.setLevel(request.level() != null ? request.level() : "all");
         gymClass.setDescription(request.description());
         if (request.status() != null && !request.status().isBlank()) {
-            boolean closing = !"cancelled".equalsIgnoreCase(gymClass.getStatus()) && !"archived".equalsIgnoreCase(gymClass.getStatus())
-                    && ("cancelled".equalsIgnoreCase(request.status()) || "archived".equalsIgnoreCase(request.status()));
+            String normalizedStatus = request.status().trim().toLowerCase(java.util.Locale.ROOT);
+            boolean closing = !CLASS_INACTIVE.equalsIgnoreCase(gymClass.getStatus())
+                    && !"archived".equalsIgnoreCase(gymClass.getStatus())
+                    && (CLASS_INACTIVE.equals(normalizedStatus) || "archived".equals(normalizedStatus));
             if (closing) {
                 // Cùng dây chuyền xử lý như khi xóa lớp, để việc dừng một lớp không bao giờ để sót lượt đặt còn
                 // hiệu lực.
                 closeClass(gymClass, enrollments.findByGymClassId(classId),
                         sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId), LocalDateTime.now(clock));
             }
-            gymClass.setStatus(request.status());
+            gymClass.setStatus(normalizedStatus);
         }
         gymClass.setUpdatedAt(LocalDateTime.now(clock));
 

@@ -1,9 +1,9 @@
 # PIPELINE: CI và CD cho VPS trong MỘT workflow, một màn hình, một đồ thị job.
 #
-#   push vào main ─► test-web (frontend) ─┐
-#                    test-api (backend)  ─┼─► VPS (SSH pull GHCR, rollback tự động)
-#                    images (api + web,  ─┘
-#                            push GHCR)
+#   push vào main ─► test-web (frontend)          ─┐
+#                    test-api (backend unit)      ─┼─► VPS (SSH pull GHCR, rollback tự động)
+#                    test-api-postgres (PG 16 IT) ─┤
+#                    images (api + web, push GHCR)─┘
 #
 # - VPS (Docker Compose): cần test xanh VÀ build+push image GHCR xanh; SSH vào VPS, `git merge --ff-only`,
 #   `docker compose pull` + `docker compose up -d --no-build --wait`, health check, lỗi thì rollback image/commit cũ. Thiếu secret VPS_* thì tự bỏ qua.
@@ -91,6 +91,129 @@ jobs:
       # Dùng Maven Wrapper đã được version control để build nhất quán.
       - name: Compile and run backend tests
         run: ./mvnw --batch-mode --no-transfer-progress test
+
+  # Job 2b: Kiểm thử tích hợp trên PostgreSQL 16 thật (TLS + cluster biệt lập điểm danh PT)
+  test-api-postgres:
+    name: Backend PostgreSQL integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: apps/api                       # <-- thư mục backend
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: apps/api/pom.xml         # <-- thư mục backend
+      - name: Start ephemeral PostgreSQL 16 test databases (TLS + isolated PT cluster)
+        shell: bash
+        working-directory: .
+        run: |
+          set -euo pipefail
+          cert_dir="$RUNNER_TEMP/pg-ssl"
+          mkdir -p "$cert_dir"
+          openssl req -new -x509 -days 1 -nodes \
+            -out "$cert_dir/server.crt" \
+            -keyout "$cert_dir/server.key" \
+            -subj "/CN=localhost"
+          chmod 644 "$cert_dir/server.crt" "$cert_dir/server.key"
+
+          # Container 1: PostgreSQL 16 bật TLS (DB_SSL_MODE=require) cho toàn bộ suite @ActiveProfiles("supabase").
+          docker run -d --name scms-pg-tls \
+            -p 127.0.0.1:55431:5432 \
+            -v "$cert_dir:/certs:ro" \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=scms_ci_test_password \
+            -e POSTGRES_DB=postgres \
+            -e TZ=Asia/Ho_Chi_Minh \
+            --entrypoint sh \
+            postgres:16 -c '
+              set -eu
+              mkdir -p /var/lib/postgresql/ssl
+              cp /certs/server.crt /certs/server.key /var/lib/postgresql/ssl/
+              chown -R postgres:postgres /var/lib/postgresql/ssl
+              chmod 600 /var/lib/postgresql/ssl/server.key
+              chmod 644 /var/lib/postgresql/ssl/server.crt
+              exec docker-entrypoint.sh postgres \
+                -c ssl=on \
+                -c ssl_cert_file=/var/lib/postgresql/ssl/server.crt \
+                -c ssl_key_file=/var/lib/postgresql/ssl/server.key \
+                -c timezone=Asia/Ho_Chi_Minh \
+                -c max_connections=100
+            '
+
+          # Container 2: Cluster loopback biệt lập (127.0.0.1:55432, nhãn scms_pt_isolated) cho PtAttendanceIsolatedPostgreSqlTest.
+          docker run -d --name scms-pg-pt-isolated \
+            --network host \
+            -e POSTGRES_USER=pt_test \
+            -e POSTGRES_DB=postgres \
+            -e POSTGRES_HOST_AUTH_METHOD=trust \
+            -e TZ=Asia/Ho_Chi_Minh \
+            postgres:16 \
+            -c port=55432 \
+            -c listen_addresses=127.0.0.1 \
+            -c cluster_name=scms_pt_isolated \
+            -c timezone=Asia/Ho_Chi_Minh
+
+          for i in $(seq 1 30); do
+            if docker exec -e PGPASSWORD=scms_ci_test_password scms-pg-tls \
+              psql "host=127.0.0.1 port=5432 user=postgres dbname=postgres sslmode=require" -tAc "select 1" 2>/dev/null | grep -qx '1'; then
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "::error::PostgreSQL TLS test container failed to become ready"
+              docker logs scms-pg-tls || true
+              exit 1
+            fi
+            sleep 1
+          done
+          # Tạo role không bỏ qua RLS để kiểm thử RLS với role anon thực thi đầy đủ.
+          docker exec scms-pg-tls psql -U postgres -d postgres -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE anon NOLOGIN NOBYPASSRLS;"
+
+          for i in $(seq 1 30); do
+            if docker exec scms-pg-pt-isolated \
+              psql -h 127.0.0.1 -p 55432 -U pt_test -d postgres -tAc "select current_setting('cluster_name') || ':' || host(inet_server_addr())" 2>/dev/null | grep -qx 'scms_pt_isolated:127.0.0.1'; then
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "::error::Isolated PT PostgreSQL container failed to become ready"
+              docker logs scms-pg-pt-isolated || true
+              exit 1
+            fi
+            sleep 1
+          done
+      - name: Run PostgreSQL integration tests
+        env:
+          SCMS_POSTGRES_TEST_URL: jdbc:postgresql://127.0.0.1:55431/postgres
+          SCMS_POSTGRES_TEST_USERNAME: postgres
+          SCMS_POSTGRES_TEST_PASSWORD: scms_ci_test_password
+          DB_SSL_MODE: require
+          TZ: Asia/Ho_Chi_Minh
+        run: >-
+          ./mvnw --batch-mode --no-transfer-progress test
+          -Dtest="*PostgreSql*"
+          -DfailIfNoTests=true
+          -Dscms.pt.isolated.port=55432
+      - name: Show PostgreSQL container logs on failure
+        if: failure()
+        shell: bash
+        working-directory: .
+        run: |
+          docker logs --tail=60 scms-pg-tls || true
+          docker logs --tail=60 scms-pg-pt-isolated || true
+      - name: Cleanup PostgreSQL test containers
+        if: always()
+        shell: bash
+        working-directory: .
+        run: |
+          docker rm -f scms-pg-tls scms-pg-pt-isolated >/dev/null 2>&1 || true
+          rm -rf "$RUNNER_TEMP/pg-ssl" || true
 
   # ---------- Build và push image Docker lên GHCR (cho VPS) ----------
   images:
@@ -191,7 +314,7 @@ jobs:
   # ---------- VPS (Docker Compose): pull image từ GHCR qua SSH, rollback tự động ----------
   deploy-vps:
     name: Deploy to VPS over SSH
-    needs: [images, test-web, test-api]
+    needs: [images, test-web, test-api, test-api-postgres]
     if: >-
       (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')

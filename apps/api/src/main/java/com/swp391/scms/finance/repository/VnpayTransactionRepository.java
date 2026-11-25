@@ -7,6 +7,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -39,6 +40,21 @@ public interface VnpayTransactionRepository extends JpaRepository<VnpayTransacti
             """)
     /** Id các khoản thu có lượt VNPay đang chờ đã hết hạn trước mốc (để đóng lượt bị bỏ dở). */
     List<Long> findPaymentIdsWithPendingExpiredBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    /**
+     * Đóng nguyên tử các lượt VNPay đang chờ, chưa có mã giao dịch cổng và đã quá hạn trước {@code cutoff}.
+     * Điều kiện trong DB ngăn job hết hạn ghi đè một lượt vừa được IPN xác nhận thành công song song.
+     */
+    @Modifying(flushAutomatically = true)
+    @Query("""
+            update VnpayTransaction t
+            set t.status = 'failed', t.version = coalesce(t.version, 0) + 1
+            where t.payment.id = :paymentId
+              and t.status = 'pending'
+              and t.gatewayTransactionNo is null
+              and t.expiresAt < :cutoff
+            """)
+    int failStalePendingAttempts(@Param("paymentId") Long paymentId, @Param("cutoff") LocalDateTime cutoff);
 
     // --- Đối soát dành cho quản trị viên (chỉ đọc) ---
 

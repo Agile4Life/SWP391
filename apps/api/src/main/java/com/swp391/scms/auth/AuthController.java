@@ -148,8 +148,8 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.password.reset_success"), Map.of("email", request.email().trim()));
     }
 
-    /** POST /google/send-otp: tạo tài khoản theo Gmail nếu chưa có và gửi mã OTP xác nhận về Gmail đó. */
-    @Operation(summary = "Gửi mã OTP đăng nhập Google", description = "Tạo tài khoản nếu chưa có và gửi mã OTP xác nhận về Gmail")
+    /** POST /google/send-otp: gửi lại mã OTP xác nhận cho tài khoản đang chờ kích hoạt đã xác minh Google OAuth. */
+    @Operation(summary = "Gửi lại mã OTP đăng nhập Google", description = "Gửi lại mã OTP kích hoạt cho tài khoản đã xác minh Google OAuth và đang chờ kích hoạt")
     @PostMapping("/google/send-otp")
     public ApiResponse<Map<String, Object>> sendGoogleOtp(@Valid @RequestBody GoogleOtpRequest request) {
         String email = request.email() == null ? "" : request.email().trim();

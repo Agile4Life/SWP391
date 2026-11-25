@@ -127,7 +127,7 @@ class PtAttendanceIsolatedPostgreSqlTest {
         jdbc.execute("alter table audit_logs drop constraint ck_audit_entity_type, add constraint ck_audit_entity_type check ((" + legacy + ") OR entity_type = 'legacy_external')");
         jdbc.update("insert into audit_logs(action,entity_type,entity_id,old_value,new_value,created_at) values ('HISTORY','legacy_external',99,'{\"before\":1}','{\"after\":2}',now())");
         jdbc.update("insert into membership_subscriptions(member_id,package_id,start_date,end_date,status,created_at,updated_at) values (?,(select id from membership_packages limit 1),current_date-30,current_date+30,'active',now(),now())", memberId);
-        bookingId = jdbc.queryForObject("insert into coach_bookings(member_id,coach_id,booking_date,start_time,end_time,hourly_rate,payment_method,payment_status,status,created_at,attended_at,attendance_locked) values (?,?,current_date-1,'09:00','10:00',100,'package_quota','used_quota','confirmed',now(),now()-interval '1 day',false) returning id", Long.class, memberId, coachId);
+        bookingId = jdbc.queryForObject("insert into coach_bookings(member_id,coach_id,booking_date,start_time,end_time,hourly_rate,payment_method,payment_status,status,created_at,attended_at,attendance_locked) values (?,?,current_date-1,'09:45','11:15',100,'package_quota','used_quota','confirmed',now(),now()-interval '1 day',false) returning id", Long.class, memberId, coachId);
     }
 
     @AfterEach void clearActor() { SecurityContextHolder.clearContext(); }
@@ -154,12 +154,18 @@ class PtAttendanceIsolatedPostgreSqlTest {
     @Test void ordinaryStartupDoesNotMigrateTheAuditCheck() {
         var oldHistory = history();
         String definition = jdbc.queryForObject("select pg_get_constraintdef(oid) from pg_constraint where conrelid='audit_logs'::regclass and conname='ck_audit_entity_type'", String.class);
-        new PostgreSqlTriggerProvider().applyTriggers(jdbc);
+        // Khi tắt tường minh cờ nâng cấp (opt-out), provider giữ nguyên CHECK cũ và vẫn từ chối coach_bookings.
+        new PostgreSqlTriggerProvider(false).applyTriggers(jdbc);
         assertEquals(definition, jdbc.queryForObject("select pg_get_constraintdef(oid) from pg_constraint where conrelid='audit_logs'::regclass and conname='ck_audit_entity_type'", String.class));
         assertEquals(oldHistory, history());
         var rejected = assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
-                () -> jdbc.update("insert into audit_logs(action,entity_type,created_at) values ('DEFAULT-OFF','coach_bookings',now())"));
+                () -> jdbc.update("insert into audit_logs(action,entity_type,created_at) values ('OPT-OUT','coach_bookings',now())"));
         assertEquals("23514", assertInstanceOf(java.sql.SQLException.class, rejected.getMostSpecificCause()).getSQLState());
+        // Constructor mặc định bật nâng cấp tự động (khớp AuditMigrationDeploymentGateTest) và mở rộng CHECK an toàn.
+        new PostgreSqlTriggerProvider().applyTriggers(jdbc);
+        assertEquals(oldHistory, history());
+        jdbc.update("insert into audit_logs(action,entity_type,created_at) values ('DEFAULT-ON','coach_bookings',now())");
+        assertEquals(1, jdbc.queryForObject("select count(*) from audit_logs where action='DEFAULT-ON' and entity_type='coach_bookings'", Integer.class));
     }
 
     @Test void legacyConstraintReallyReturns500AndRollsBackThenMigrationCommitsUnmark() throws Exception {
@@ -238,9 +244,13 @@ class PtAttendanceIsolatedPostgreSqlTest {
         jdbc.execute("alter table audit_logs add constraint ck_audit_entity_type check (entity_type in ('users','legacy_external')) not valid");
         var oldHistory = history();
         String oldDefinition = jdbc.queryForObject("select pg_get_constraintdef(oid) from pg_constraint where conrelid='audit_logs'::regclass and conname='ck_audit_entity_type'", String.class);
-        assertThrows(org.springframework.dao.DataAccessException.class, this::migrate);
+        // Lỗi nâng cấp CHECK không chặn khởi động ứng dụng; thay đổi CHECK phải được rollback và giữ nguyên lịch sử.
+        assertDoesNotThrow(this::migrate);
         assertEquals(oldHistory, history());
         assertEquals(oldDefinition, jdbc.queryForObject("select pg_get_constraintdef(oid) from pg_constraint where conrelid='audit_logs'::regclass and conname='ck_audit_entity_type'", String.class));
+        var rejected = assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
+                () -> jdbc.update("insert into audit_logs(action,entity_type,created_at) values ('STILL-REJECTED','coach_bookings',now())"));
+        assertEquals("23514", assertInstanceOf(java.sql.SQLException.class, rejected.getMostSpecificCause()).getSQLState());
     }
 
     @Test void historicalConfirmedBookingStillChecksMembershipAndCompletedHistoryCanBeCorrected() {

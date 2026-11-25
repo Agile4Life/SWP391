@@ -1479,4 +1479,10 @@ export const staffSourceCatalog: Readonly<Record<string, string>> = {
   "Không tải được lịch sử nạp ví tại quầy.": "Unable to load the desk's wallet top-up history.",
   "Làm mới lịch sử nạp ví": "Refresh top-up history",
   "Thu bởi": "Received by",
+  "Khóa học": "Courses",
+  "Khóa học #": "Course #",
+  "Đang tải khóa học chờ thu học phí…": "Loading unpaid course enrollments…",
+  "Không thể tải khóa học chờ thu học phí. Vui lòng thử lại.": "Unable to load unpaid course enrollments. Please try again.",
+  "Tải lại khóa học chờ thu học phí": "Reload unpaid course enrollments",
+  "Xác nhận thu học phí khóa học thất bại.": "Unable to confirm course tuition payment.",
 };

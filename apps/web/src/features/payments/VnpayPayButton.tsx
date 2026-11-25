@@ -4,6 +4,7 @@ import { sourceMessage, useI18n } from '../../shared/i18n';
 import { useEffect, useRef, useState } from 'react';
 import { localizableError } from '../../shared/lib/errorMessage';
 import { notify } from '../../shared/lib/portalNotices';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { payWithWallet } from '../wallet/walletApi';
 import { createVnpayCheckout, navigateToVnpay, type VnpayTarget } from './vnpayApi';
 import { cancelVnpayTarget, releaseAbandonedVnpay, rememberActiveVnpay } from './vnpaySession';
@@ -23,15 +24,18 @@ export function VnpayPayButton({
   target,
   prepare,
   disabled = false,
+  allowWallet = true,
   onPaid,
 }: {
   target?: VnpayTarget;
   prepare?: () => Promise<VnpayTarget>;
   disabled?: boolean;
+  allowWallet?: boolean;
   onPaid?: () => void;
 }) {
   useLanguage();
   const { t } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [busy, setBusy] = useState(false);
   const [walletBusy, setWalletBusy] = useState(false);
   const [unlockBusy, setUnlockBusy] = useState(false);
@@ -84,9 +88,19 @@ export function VnpayPayButton({
     }
   }
 
-  // Thanh toán bằng số dư Ví SÖL, thành công thì cập nhật ví/thông báo và gọi onPaid.
+  // Thanh toán bằng số dư Ví SÖL sau khi xác nhận, thành công thì cập nhật ví/thông báo và gọi onPaid.
   async function handlePayWithWallet() {
-    if (sending.current || disabled) return;
+    if (!allowWallet || sending.current || disabled) return;
+    const confirmed = await confirm({
+      title: sourceMessage('Xác nhận thanh toán bằng Ví SÖL?', 'Confirm SÖL Wallet payment?'),
+      message: sourceMessage(
+        'Số tiền thanh toán sẽ được trừ trực tiếp từ số dư Ví SÖL của bạn.',
+        'The payment amount will be deducted directly from your SÖL Wallet balance.',
+      ),
+      confirmLabel: sourceMessage('Xác nhận thanh toán', 'Confirm payment'),
+      cancelLabel: sourceMessage('Hủy', 'Cancel'),
+    });
+    if (!confirmed || sending.current || disabled) return;
     sending.current = true;
     setWalletBusy(true);
     setError('');
@@ -135,15 +149,17 @@ export function VnpayPayButton({
         <button type="button" className="btn-primary" disabled={busy || walletBusy || unlockBusy || disabled} onClick={() => void pay()}>
           {busy ? t("Đang chuyển tới VNPay…", "Redirecting to VNPay…") : t("Thanh toán VNPay", "Pay with VNPay")}
         </button>
-        <button
-          type="button"
-          className="btn-secondary"
-          data-testid="pay-with-wallet-btn"
-          disabled={busy || walletBusy || unlockBusy || disabled}
-          onClick={() => void handlePayWithWallet()}
-        >
-          {walletBusy ? t("Đang trừ Ví…", "Charging wallet…") : t("Thanh toán bằng Ví SÖL", "Pay with SÖL Wallet")}
-        </button>
+        {allowWallet && (
+          <button
+            type="button"
+            className="btn-secondary"
+            data-testid="pay-with-wallet-btn"
+            disabled={busy || walletBusy || unlockBusy || disabled}
+            onClick={() => void handlePayWithWallet()}
+          >
+            {walletBusy ? t("Đang trừ Ví…", "Charging wallet…") : t("Thanh toán bằng Ví SÖL", "Pay with SÖL Wallet")}
+          </button>
+        )}
       </div>
       {error && (
         <p className="form-error" role="alert">
@@ -162,6 +178,7 @@ export function VnpayPayButton({
           </button>
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }

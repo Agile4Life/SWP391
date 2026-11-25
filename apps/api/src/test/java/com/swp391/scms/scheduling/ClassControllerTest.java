@@ -34,6 +34,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -217,5 +218,33 @@ class ClassControllerTest {
                 .andExpect(jsonPath("$.data.slots[0].code").value("SLOT_1"))
                 .andExpect(jsonPath("$.data.rooms[0].name").value("Zen Garden Studio"))
                 .andExpect(jsonPath("$.data.coaches[0].fullName").value("Coach An"));
+    }
+
+    /** Kiểm thử P0-05: PUT /classes/{id} từ chối status=cancelled và chấp nhận status=inactive. */
+    @Test
+    void updateClass_rejectsCancelledAndAcceptsInactiveStatus() throws Exception {
+        var invalidReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.UpdateClassRequest(
+                "Yoga Flow", 1L, 2L, 3L, 15, "all", null, "cancelled");
+
+        mockMvc.perform(put("/api/v1/classes/1")
+                        .header("Accept-Language", "en")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidReq)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details.status").value("Class status must be active, inactive or archived"));
+        verifyNoInteractions(classService);
+
+        var validReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.UpdateClassRequest(
+                "Yoga Flow", 1L, 2L, 3L, 15, "all", null, "inactive");
+        GymClassDto updated = new GymClassDto(
+                1L, "Yoga Flow", 1L, "Yoga", 2L, "Coach", 3L, "Room", 15, "all", null, "inactive");
+        when(classService.updateClass(eq(1L), any())).thenReturn(updated);
+
+        mockMvc.perform(put("/api/v1/classes/1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.status").value("inactive"));
     }
 }

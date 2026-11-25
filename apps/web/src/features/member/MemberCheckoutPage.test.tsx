@@ -145,6 +145,24 @@ describe('MemberCheckoutPage Component', () => {
     });
   }
 
+  async function clickWalletAndConfirm() {
+    const walletBtn = host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement;
+    expect(walletBtn).not.toBeNull();
+    await act(async () => {
+      walletBtn.click();
+    });
+    const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+      (b) => b.textContent === 'Xác nhận thanh toán' || b.textContent === 'Confirm payment',
+    );
+    expect(confirmBtn).toBeDefined();
+    await act(async () => {
+      confirmBtn!.click();
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+  }
+
   it('renders order summary and package details correctly', async () => {
     await renderCheckout('/member/packages/checkout?packageId=1');
 
@@ -169,14 +187,7 @@ describe('MemberCheckoutPage Component', () => {
     vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([]);
     await renderCheckout('/member/packages/checkout?packageId=1');
 
-    const walletBtn = host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement;
-    expect(walletBtn).not.toBeNull();
-    await act(async () => {
-      walletBtn.click();
-    });
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 20));
-    });
+    await clickWalletAndConfirm();
 
     expect(membershipApi.createMembershipSubscription).toHaveBeenCalledExactlyOnceWith(1);
     expect(walletApi.payWithWallet).toHaveBeenCalledExactlyOnceWith({ subscriptionId: 101 });
@@ -187,13 +198,7 @@ describe('MemberCheckoutPage Component', () => {
 
     expect(host.querySelector('.order-breakdown-row.total')?.textContent).toContain('1.150.000');
 
-    const walletBtn = host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement;
-    await act(async () => {
-      walletBtn.click();
-    });
-    await act(async () => {
-      await new Promise((r) => setTimeout(r, 20));
-    });
+    await clickWalletAndConfirm();
 
     expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
     expect(walletApi.payWithWallet).toHaveBeenCalledExactlyOnceWith({ subscriptionId: 55 });
@@ -277,7 +282,7 @@ describe('MemberCheckoutPage Component', () => {
   it('does not submit wallet settlement when a delayed callback already activated the prepared request', async () => {
     await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
     vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, status: 'active' }]);
-    await act(async () => (host.querySelector('[data-testid="pay-with-wallet-btn"]') as HTMLButtonElement).click());
+    await clickWalletAndConfirm();
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('không còn hợp lệ');
     expect(walletApi.payWithWallet).not.toHaveBeenCalled();
     expect(membershipApi.createMembershipSubscription).not.toHaveBeenCalled();
@@ -286,7 +291,7 @@ describe('MemberCheckoutPage Component', () => {
     await renderCheckout('/member/packages/checkout?packageId=2&subscriptionId=55');
     vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([{ ...pendingUpgrade, status: 'active' }]);
     await act(async () => setLanguage('en'));
-    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')!.click());
+    await clickWalletAndConfirm();
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('This plan request is no longer valid');
     await act(async () => setLanguage('vi'));
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Yêu cầu gói không còn hợp lệ');

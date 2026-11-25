@@ -100,6 +100,14 @@ public class PaymentService {
     @Autowired(required = false)
     private com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository;
 
+    @Autowired(required = false)
+    private com.swp391.scms.membership.service.MemberDiscountService memberDiscounts;
+
+    /** Gán giá trị mới cho trường memberDiscounts (dùng cho test). */
+    public void setMemberDiscounts(com.swp391.scms.membership.service.MemberDiscountService memberDiscounts) {
+        this.memberDiscounts = memberDiscounts;
+    }
+
     /** Gán giá trị mới cho trường vnpayTransactionRepository. */
     public void setVnpayTransactionRepository(com.swp391.scms.finance.repository.VnpayTransactionRepository vnpayTransactionRepository) {
         this.vnpayTransactionRepository = vnpayTransactionRepository;
@@ -183,12 +191,15 @@ public class PaymentService {
     }
 
     /**
-     * Kiểm tra đối tượng hội viên tự thanh toán: phải là kỳ gói chờ thanh toán của mình với đúng số tiền, hoặc
-     * khóa học của mình còn trả được.
+     * Kiểm tra đối tượng hội viên tự thanh toán: phải chọn đúng một đối tượng (kỳ gói chờ thanh toán hoặc lượt
+     * đăng ký khóa học của mình còn trả được) với đúng số tiền theo giá phía server.
      */
     private void validateMemberPaymentTarget(Long memberId, PaymentCreateDto dto) {
         if (dto.getSubscriptionId() == null && dto.getClassEnrollmentId() == null) {
             throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null, null);
+        }
+        if (dto.getSubscriptionId() != null && dto.getClassEnrollmentId() != null) {
+            throw new BadRequestException("PAYMENT_MULTIPLE_TARGETS", "finance.vnpay.target_required", null, null);
         }
         if (dto.getSubscriptionId() != null) {
             MembershipSubscription subscription = membershipSubscriptionRepository.findById(dto.getSubscriptionId())
@@ -200,7 +211,7 @@ public class PaymentService {
                 throw new BadRequestException("PAYMENT_SUBSCRIPTION_NOT_PENDING", "finance.payment.subscription_not_pending", null, null);
             }
             BigDecimal expectedPrice = subscription.payableAmount();
-            if (dto.getAmount().compareTo(expectedPrice) != 0) {
+            if (expectedPrice == null || dto.getAmount() == null || dto.getAmount().compareTo(expectedPrice) != 0) {
                 throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
                         new Object[]{dto.getAmount(), expectedPrice}, null);
             }
@@ -212,29 +223,36 @@ public class PaymentService {
                 throw new ForbiddenException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null, null);
             }
             requirePayableEnrollment(enrollment);
+            validateEnrollmentAmount(enrollment, memberId, dto.getAmount());
         }
     }
 
     /**
-     * Tạo khoản thu: ảnh biên lai đúng định dạng; với kỳ gói thì khóa hội viên, kỳ phải đang chờ thanh toán,
-     * chưa có khoản thu nào và số tiền đúng giá đã chốt; khoản cho kỳ gói luôn bắt đầu ở trạng thái pending.
+     * Tạo khoản thu: ảnh biên lai đúng định dạng; chỉ gắn tối đa một đối tượng thanh toán; với kỳ gói hoặc khóa
+     * học thì khóa hội viên, kiểm tra đối tượng còn hiệu lực, chưa có khoản thu trùng lặp và số tiền khớp giá
+     * phía server; khoản cho kỳ gói luôn bắt đầu ở trạng thái pending.
      */
     public PaymentDto createPayment(PaymentCreateDto dto) {
+        if (dto.getSubscriptionId() != null && dto.getClassEnrollmentId() != null) {
+            throw new BadRequestException("PAYMENT_MULTIPLE_TARGETS", "finance.vnpay.target_required", null,
+                    "Select exactly one payment target");
+        }
         if (dto.getReceiptImage() != null && !RECEIPT_DATA_URL.matcher(dto.getReceiptImage()).matches()) {
             throw new BadRequestException("PAYMENT_RECEIPT_INVALID", "finance.payment.receipt_invalid", null, null);
         }
         Member member = memberRepository.findById(dto.getMemberId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.getMemberId()));
+        Long memberId = member.getUserId() != null ? member.getUserId() : dto.getMemberId();
 
         if (dto.getSubscriptionId() != null && membershipSubscriptionRepository != null) {
             MembershipSubscription target = membershipSubscriptionRepository.findById(dto.getSubscriptionId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", dto.getSubscriptionId()));
-            if (target.getMember() == null || !member.getUserId().equals(target.getMember().getUserId())) {
+            if (target.getMember() == null || !memberId.equals(target.getMember().getUserId())) {
                 throw new BadRequestException("PAYMENT_MEMBER_MISMATCH",
                         "finance.payment.member_mismatch", null, null);
             }
-            memberRepository.findByUserIdForUpdate(member.getUserId())
-                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", member.getUserId()));
+            memberRepository.findByUserIdForUpdate(memberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
             if (entityManager != null) entityManager.refresh(target);
             if (!"pending_payment".equals(target.getStatus())) {
                 throw new BadRequestException("PAYMENT_SUBSCRIPTION_NOT_PENDING",
@@ -247,14 +265,37 @@ public class PaymentService {
             // Không tạo khoản thu cho đơn mua mới cũ nếu KYC chưa đủ điều kiện.
             if (target.getPreviousSubscription() == null) requireNewPackageKyc(member);
             BigDecimal expectedPrice = target.payableAmount();
-            if (expectedPrice == null || dto.getAmount().compareTo(expectedPrice) != 0) {
+            if (expectedPrice == null || dto.getAmount() == null || dto.getAmount().compareTo(expectedPrice) != 0) {
                 throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
                         new Object[]{dto.getAmount(), expectedPrice}, "Payment amount mismatch");
             }
         }
 
-        if (vnpayGuard != null && dto.getClassEnrollmentId() != null) {
-            paymentRepository.findByClassEnrollmentId(dto.getClassEnrollmentId()).ifPresent(p -> vnpayGuard.payment(p.getId()));
+        if (dto.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
+            ClassEnrollment enrollment = classEnrollmentRepository.findById(dto.getClassEnrollmentId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", dto.getClassEnrollmentId()));
+            if (enrollment.getMember() == null || !memberId.equals(enrollment.getMember().getUserId())) {
+                throw new BadRequestException("PAYMENT_MEMBER_MISMATCH",
+                        "finance.payment.member_mismatch", null, null);
+            }
+            memberRepository.findByUserIdForUpdate(memberId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+            if (entityManager != null) entityManager.refresh(enrollment);
+            requirePayableEnrollment(enrollment);
+            List<Payment> existingForEnrollment = paymentRepository.findAllByClassEnrollmentId(dto.getClassEnrollmentId());
+            if (existingForEnrollment != null && !existingForEnrollment.isEmpty()) {
+                if (vnpayGuard != null) {
+                    existingForEnrollment.forEach(p -> vnpayGuard.payment(p.getId()));
+                }
+                throw new ConflictException("PAYMENT_ALREADY_EXISTS",
+                        "finance.payment.already_exists", null, "Payment already exists for this class enrollment");
+            }
+            validateEnrollmentAmount(enrollment, memberId, dto.getAmount());
+        } else if (vnpayGuard != null && dto.getClassEnrollmentId() != null) {
+            List<Payment> existingForEnrollment = paymentRepository.findAllByClassEnrollmentId(dto.getClassEnrollmentId());
+            if (existingForEnrollment != null) {
+                existingForEnrollment.forEach(p -> vnpayGuard.payment(p.getId()));
+            }
         }
         User receiver = null;
         if (dto.getReceivedById() != null) {
@@ -263,6 +304,7 @@ public class PaymentService {
         }
 
         Payment payment = paymentMapper.toEntity(dto);
+        ensureAtMostOneTarget(payment);
         payment.setMember(member);
         payment.setReceivedBy(receiver);
 
@@ -471,6 +513,10 @@ public class PaymentService {
             throw new BadRequestException("PAYMENT_TARGET_REQUIRED", "finance.payment.target_required", null,
                     "Target subscription or enrollment is required");
         }
+        if ((dto.getSubscriptionId() != null || dto.getPackageId() != null) && dto.getClassEnrollmentId() != null) {
+            throw new BadRequestException("PAYMENT_MULTIPLE_TARGETS", "finance.vnpay.target_required", null,
+                    "Select exactly one payment target");
+        }
 
         Member member = memberRepository.findByUserIdForUpdate(dto.getMemberId())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", dto.getMemberId()));
@@ -489,9 +535,6 @@ public class PaymentService {
             }
         }
 
-        if (vnpayGuard != null && dto.getClassEnrollmentId() != null) {
-            paymentRepository.findByClassEnrollmentId(dto.getClassEnrollmentId()).ifPresent(p -> vnpayGuard.payment(p.getId()));
-        }
         User receiver = null;
         if (dto.getReceivedById() != null) {
             receiver = userRepository.findByIdAndDeletedAtIsNull(dto.getReceivedById())
@@ -601,16 +644,37 @@ public class PaymentService {
         if (dto.getClassEnrollmentId() != null && classEnrollmentRepository != null) {
             ClassEnrollment enrollment = classEnrollmentRepository.findById(dto.getClassEnrollmentId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", dto.getClassEnrollmentId()));
+            if (entityManager != null) entityManager.refresh(enrollment);
 
-            if (!enrollment.getMember().getUserId().equals(member.getUserId())) {
+            if (enrollment.getMember() == null || !member.getUserId().equals(enrollment.getMember().getUserId())) {
                 throw new BadRequestException("PAYMENT_MEMBER_MISMATCH", "finance.payment.member_mismatch", null,
                         "Enrollment does not belong to member");
             }
 
             requirePayableEnrollment(enrollment);
+            List<Payment> existingForEnrollment = paymentRepository.findAllByClassEnrollmentId(dto.getClassEnrollmentId());
+            if (existingForEnrollment != null && !existingForEnrollment.isEmpty()) {
+                if (vnpayGuard != null) {
+                    existingForEnrollment.forEach(p -> vnpayGuard.payment(p.getId()));
+                }
+                List<Payment> unsettled = existingForEnrollment.stream()
+                        .filter(p -> "pending".equalsIgnoreCase(p.getStatus()) || "success".equalsIgnoreCase(p.getStatus()))
+                        .toList();
+                if (unsettled.size() == 1 && "pending".equalsIgnoreCase(unsettled.get(0).getStatus())
+                        && unsettled.get(0).getMember() != null
+                        && member.getUserId().equals(unsettled.get(0).getMember().getUserId())) {
+                    pendingToSettle = unsettled.get(0);
+                    validateCheckoutAmount(dto.getAmount(), pendingToSettle.getAmount(), pendingToSettle);
+                } else {
+                    throw new ConflictException("PAYMENT_ALREADY_EXISTS", "finance.payment.already_exists", null, null);
+                }
+            } else {
+                validateEnrollmentAmount(enrollment, member.getUserId(), dto.getAmount());
+            }
         }
 
         if (pendingToSettle != null) {
+            ensureAtMostOneTarget(pendingToSettle);
             pendingToSettle.setStatus("success");
             pendingToSettle.setPaidAt(LocalDateTime.now(clock));
             pendingToSettle.setReceivedBy(receiver);
@@ -627,6 +691,7 @@ public class PaymentService {
         payment.setMember(member);
         payment.setSubscriptionId(resolvedSubscriptionId);
         payment.setClassEnrollmentId(dto.getClassEnrollmentId());
+        ensureAtMostOneTarget(payment);
         payment.setAmount(dto.getAmount());
         payment.setMethod(dto.getMethod() != null ? dto.getMethod().toLowerCase(Locale.ROOT) : "cash");
         payment.setStatus("success");
@@ -999,6 +1064,41 @@ public class PaymentService {
         return (resolved == null || resolved.isBlank() || "finance.payment.refund_note".equals(resolved))
                 ? fallback
                 : resolved;
+    }
+
+    /** Đảm bảo khoản thu chỉ gắn tối đa một đối tượng trong (gói, khóa học, PT 1:1, đơn hàng). */
+    private static void ensureAtMostOneTarget(Payment payment) {
+        if (payment == null) return;
+        int targets = 0;
+        if (payment.getSubscriptionId() != null) targets++;
+        if (payment.getClassEnrollmentId() != null) targets++;
+        if (payment.getCoachBookingId() != null) targets++;
+        if (payment.getProductOrderId() != null) targets++;
+        if (targets > 1) {
+            throw new BadRequestException("PAYMENT_MULTIPLE_TARGETS", "finance.vnpay.target_required", null,
+                    "Select exactly one payment target");
+        }
+    }
+
+    /** Kiểm tra số tiền thanh toán khóa học khớp học phí sau giảm giá theo hạng hội viên phía server. */
+    private void validateEnrollmentAmount(ClassEnrollment enrollment, Long memberId, BigDecimal amount) {
+        BigDecimal expectedFee = expectedEnrollmentAmount(enrollment, memberId);
+        if (expectedFee == null || expectedFee.compareTo(BigDecimal.ZERO) <= 0
+                || amount == null || amount.compareTo(expectedFee) != 0) {
+            throw new BadRequestException("PAYMENT_AMOUNT_MISMATCH", "finance.payment.amount_mismatch",
+                    new Object[]{amount, expectedFee}, "Payment amount mismatch");
+        }
+    }
+
+    /** Tính học phí khóa học sau giảm giá theo hạng hội viên (giống công thức trong EnrollmentService). */
+    private BigDecimal expectedEnrollmentAmount(ClassEnrollment enrollment, Long memberId) {
+        if (enrollment == null || enrollment.getGymClass() == null) {
+            return null;
+        }
+        BigDecimal listPrice = enrollment.getGymClass().getPrice() != null
+                ? enrollment.getGymClass().getPrice() : BigDecimal.ZERO;
+        int discountPercent = memberDiscounts != null ? memberDiscounts.percentFor(memberId) : 0;
+        return com.swp391.scms.membership.service.MemberDiscountService.apply(listPrice, discountPercent);
     }
 
     /** Gán thời điểm trả khi trạng thái là success và chưa có. */

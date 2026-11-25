@@ -442,6 +442,13 @@ public class MembershipSubscriptionService {
                     null,
                     "Subscription already has a pending hold request");
         }
+        if (HOLD_APPROVED.equalsIgnoreCase(current.getHoldStatus())) {
+            throw new ConflictException(
+                    "MEMBERSHIP_HOLD_ALREADY_APPROVED",
+                    "error.membership.hold_already_requested",
+                    null,
+                    "Subscription has an approved hold; withdraw it before upgrading");
+        }
 
         if (subscriptions.existsByMemberUserIdAndStatus(current.getMember().getUserId(), STATUS_PENDING_PAYMENT)
                 || subscriptions.existsByPreviousSubscriptionIdAndStatusIn(currentId,
@@ -826,17 +833,32 @@ public class MembershipSubscriptionService {
         // Các đợt bảo lưu được duyệt từ khi áp dụng cộng ngày lúc duyệt sẽ trừ lại số ngày chưa dùng; các đợt bảo lưu cũ
         // chưa được cộng ngày lúc duyệt thì nay vẫn được cộng bù số ngày đã bảo lưu.
         if (subscription.isHoldDaysCredited() && subscription.getHoldEndDate() != null) {
-            if (today.isBefore(subscription.getHoldEndDate())) {
-                long unusedDays = java.time.temporal.ChronoUnit.DAYS.between(today, subscription.getHoldEndDate());
+            if (!today.isAfter(subscription.getHoldEndDate())) {
+                long unusedDays = java.time.temporal.ChronoUnit.DAYS.between(today, subscription.getHoldEndDate()) + 1;
                 subscription.setEndDate(subscription.getEndDate().minusDays(unusedDays));
+                if (!today.isAfter(heldOn)) {
+                    // Quay lại đúng ngày đầu bảo lưu: chưa dùng ngày bảo lưu nào, không còn ngày bù trong endDate.
+                    subscription.setHoldDaysCredited(Boolean.FALSE);
+                } else {
+                    subscription.setHoldEndDate(today.minusDays(1));
+                    subscription.setHoldDaysCredited(Boolean.TRUE);
+                }
             }
         } else {
             long heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(heldOn, today), MAX_HOLD_DAYS);
             subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
+            if (heldDays > 0) {
+                if (subscription.getHoldStartDate() == null) {
+                    subscription.setHoldStartDate(heldOn);
+                }
+                subscription.setHoldEndDate(heldOn.plusDays(heldDays - 1));
+                subscription.setHoldDaysCredited(Boolean.TRUE);
+            } else {
+                subscription.setHoldDaysCredited(Boolean.FALSE);
+            }
         }
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setHoldStatus(null);
-        subscription.setHoldDaysCredited(null);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
         MembershipSubscription resumed = subscriptions.saveAndFlush(subscription);
         // Quay lại tập sớm: phần thời gian còn lại của đợt bảo lưu không còn miễn điểm danh cho các buổi khóa học.
@@ -926,6 +948,10 @@ public class MembershipSubscriptionService {
             if (!subscription.isHoldDaysCredited()) {
                 subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
             }
+            if (subscription.getHoldStartDate() == null) {
+                subscription.setHoldStartDate(from);
+            }
+            subscription.setHoldDaysCredited(Boolean.TRUE);
         } else {
             if (!STATUS_FROZEN.equalsIgnoreCase(subscription.getStatus())
                     || !HOLD_APPROVED.equalsIgnoreCase(subscription.getHoldStatus())
@@ -933,13 +959,19 @@ public class MembershipSubscriptionService {
                     || subscription.getHoldResolvedAt().isAfter(now.minusDays(MAX_HOLD_DAYS))) {
                 return false;
             }
-            heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(
-                    subscription.getHoldResolvedAt().toLocalDate(), now.toLocalDate()), MAX_HOLD_DAYS);
+            LocalDate from = subscription.getHoldResolvedAt().toLocalDate();
+            heldDays = Math.min(java.time.temporal.ChronoUnit.DAYS.between(from, now.toLocalDate()), MAX_HOLD_DAYS);
             subscription.setEndDate(subscription.getEndDate().plusDays(heldDays));
+            if (heldDays > 0) {
+                subscription.setHoldStartDate(from);
+                subscription.setHoldEndDate(from.plusDays(heldDays - 1));
+                subscription.setHoldDaysCredited(Boolean.TRUE);
+            } else {
+                subscription.setHoldDaysCredited(Boolean.FALSE);
+            }
         }
         subscription.setStatus(STATUS_ACTIVE);
         subscription.setHoldStatus(null);
-        subscription.setHoldDaysCredited(null);
         subscription.setUpdatedAt(now);
         subscriptions.saveAndFlush(subscription);
         if (notificationService != null) {

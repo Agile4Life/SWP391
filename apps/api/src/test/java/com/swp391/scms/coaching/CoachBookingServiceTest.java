@@ -750,13 +750,20 @@ class CoachBookingServiceTest {
         pendingPayment.setStatus("pending");
 
         when(coachBookingRepository.findUnpaidStale(any(), any(), any(), any())).thenReturn(List.of(stale, activeVnpay));
+        when(coachBookingRepository.findByIdForUpdate(170L)).thenReturn(Optional.of(stale));
+        when(coachBookingRepository.findByIdForUpdate(171L)).thenReturn(Optional.of(activeVnpay));
         when(payments.findAllByCoachBookingId(170L)).thenReturn(List.of(pendingPayment));
         org.mockito.Mockito.doNothing().when(guard).coach(170L);
         org.mockito.Mockito.doThrow(new ConflictException("VNPAY_PENDING", "error", null, "pending")).when(guard).coach(171L);
 
         int cancelled = target.expireUnpaidBookings();
 
-        verify(coachBookingRepository).findUnpaidStale(any(), any(), any(), any());
+        verify(coachBookingRepository).findUnpaidStale(
+                eq(LocalDateTime.now(fixedClock).minusMinutes(15)),
+                eq(LocalDateTime.now(fixedClock).minusMinutes(5)),
+                any(), any());
+        verify(coachBookingRepository).findByIdForUpdate(170L);
+        verify(coachBookingRepository).findByIdForUpdate(171L);
         verify(guard).coach(170L);
         verify(payments).findAllByCoachBookingId(170L);
         assertThat(cancelled).isEqualTo(1);
@@ -765,6 +772,97 @@ class CoachBookingServiceTest {
         assertThat(pendingPayment.getStatus()).isEqualTo("failed");
         assertThat(activeVnpay.getStatus()).isEqualTo("confirmed");
         verify(coachBookingRepository).save(stale);
+    }
+
+    /** Kiểm thử P0-12: expireUnpaidBookings đọc lại dưới khóa FOR UPDATE và bỏ qua booking vừa thanh toán song song. */
+    @Test
+    @DisplayName("Bỏ qua lịch PT 1:1 vừa được thanh toán song song trước khi job hết hạn lấy được khóa dòng")
+    void expireUnpaidBookingsSkipsBookingPaidConcurrentlyUnderRowLock() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var guard = org.mockito.Mockito.mock(com.swp391.scms.finance.service.VnpayPaymentGuard.class);
+        CoachBookingService target = new CoachBookingService(
+                coachBookingRepository, coachRepository, memberRepository, classSessionRepository,
+                classEnrollmentRepository, subscriptionRepository, disciplineRepository,
+                null, fixedClock, null, guard);
+        org.springframework.test.util.ReflectionTestUtils.setField(target, "paymentRepository", payments);
+
+        // Bản ghi snapshot đọc trước khi có khóa vẫn đang pending
+        CoachBooking staleSnapshot = new CoachBooking();
+        staleSnapshot.setId(180L);
+        staleSnapshot.setStatus("confirmed");
+        staleSnapshot.setPaymentMethod("cash");
+        staleSnapshot.setPaymentStatus("pending");
+
+        // Khi lấy được FOR UPDATE, VNPay/Ví/Quầy đã kịp chốt thanh toán sang paid!
+        CoachBooking lockedPaid = new CoachBooking();
+        lockedPaid.setId(180L);
+        lockedPaid.setMember(member);
+        lockedPaid.setCoach(coach);
+        lockedPaid.setStatus("confirmed");
+        lockedPaid.setPaymentMethod("online_wallet");
+        lockedPaid.setPaymentStatus("paid");
+
+        // Booking thứ 2 còn pending trên row nhưng khoản thu đã thành công (phòng vệ nhiều lớp)
+        CoachBooking paidPaymentBooking = new CoachBooking();
+        paidPaymentBooking.setId(181L);
+        paidPaymentBooking.setMember(member);
+        paidPaymentBooking.setCoach(coach);
+        paidPaymentBooking.setStatus("confirmed");
+        paidPaymentBooking.setPaymentMethod("cash");
+        paidPaymentBooking.setPaymentStatus("pending");
+        var settledPayment = new com.swp391.scms.finance.entity.Payment();
+        settledPayment.setStatus("success");
+
+        when(coachBookingRepository.findUnpaidStale(any(), any(), any(), any()))
+                .thenReturn(List.of(staleSnapshot, paidPaymentBooking));
+        when(coachBookingRepository.findByIdForUpdate(180L)).thenReturn(Optional.of(lockedPaid));
+        when(coachBookingRepository.findByIdForUpdate(181L)).thenReturn(Optional.of(paidPaymentBooking));
+        when(payments.findAllByCoachBookingId(181L)).thenReturn(List.of(settledPayment));
+
+        int cancelled = target.expireUnpaidBookings();
+
+        assertThat(cancelled).isZero();
+        assertThat(lockedPaid.getStatus()).isEqualTo("confirmed");
+        assertThat(lockedPaid.getPaymentStatus()).isEqualTo("paid");
+        assertThat(paidPaymentBooking.getStatus()).isEqualTo("confirmed");
+        verify(coachBookingRepository, never()).save(any());
+        verify(payments, never()).save(any());
+    }
+
+    /** Kiểm thử P0-12: lỗi ở một booking không rollback các booking hết hạn khác nhờ tách transaction độc lập. */
+    @Test
+    @DisplayName("Cô lập lỗi theo từng booking trong transaction REQUIRES_NEW khi tự động hủy PT quá hạn")
+    void expireUnpaidBookingsIsolatesFailurePerBookingInIndependentTransactions() {
+        var txManager = mock(org.springframework.transaction.PlatformTransactionManager.class);
+        when(txManager.getTransaction(any())).thenAnswer(inv -> new org.springframework.transaction.support.SimpleTransactionStatus());
+        service.setTransactionManager(txManager);
+
+        CoachBooking failing = new CoachBooking();
+        failing.setId(190L);
+        CoachBooking healthy = new CoachBooking();
+        healthy.setId(191L);
+        healthy.setMember(member);
+        healthy.setCoach(coach);
+        healthy.setStatus("confirmed");
+        healthy.setPaymentMethod("cash");
+        healthy.setPaymentStatus("pending");
+        healthy.setBookingDate(LocalDate.now(fixedClock).plusDays(1));
+        healthy.setStartTime(ScheduleSlot.SLOT_4.startTime());
+        healthy.setEndTime(ScheduleSlot.SLOT_4.endTime());
+
+        when(coachBookingRepository.findUnpaidStale(any(), any(), any(), any())).thenReturn(List.of(failing, healthy));
+        when(coachBookingRepository.findByIdForUpdate(190L)).thenThrow(new RuntimeException("Lock timeout"));
+        when(coachBookingRepository.findByIdForUpdate(191L)).thenReturn(Optional.of(healthy));
+
+        int cancelled = service.expireUnpaidBookings();
+
+        assertThat(cancelled).isEqualTo(1);
+        assertThat(healthy.getStatus()).isEqualTo("cancelled");
+        verify(coachBookingRepository).save(healthy);
+        verify(txManager, times(2)).getTransaction(argThat(def ->
+                def.getPropagationBehavior() == org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW));
+        verify(txManager, times(1)).rollback(any());
+        verify(txManager, times(1)).commit(any());
     }
 
     /**

@@ -1790,4 +1790,109 @@ class MembershipSubscriptionServiceTest {
         assertThat(upgraded.creditApplied()).isEqualByComparingTo("0");
         assertThat(upgraded.upgradeCharge()).isEqualByComparingTo("199000");
     }
+
+    /** Kiểm thử P0-10: nâng cấp bị từ chối khi gói đang có đợt bảo lưu đã duyệt (chưa bắt đầu). */
+    @Test
+    void upgrade_rejectsWhenHoldIsApproved() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage basic = new MembershipPackage();
+        basic.setId(1L); basic.setStatus("active"); basic.setDurationDays(60); basic.setPrice(new BigDecimal("6000000"));
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription current = period(100L, member, basic, null, today.minusDays(28), today.plusDays(61));
+        current.setHoldStatus("APPROVED");
+        current.setHoldUsed(true);
+        current.setHoldDaysCredited(true);
+        current.setHoldStartDate(today.plusDays(1));
+        current.setHoldEndDate(today.plusDays(30));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(current));
+
+        assertThatThrownBy(() -> service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+        verify(subscriptions, never()).saveAndFlush(any());
+    }
+
+    /** Kiểm thử P0-10 & P2-BE-34: mở lại sớm gói bảo lưu đã cộng bù trừ đúng số ngày chưa dùng (inclusive) và bảo toàn proration. */
+    @Test
+    void resume_creditedHoldSubtractsInclusiveUnusedDaysAndKeepsExactProration() {
+        LocalDate today = LocalDate.now(clock); // 2026-10-11
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = holdablePackage("PLATINUM", 60);
+        pack.setPrice(new BigDecimal("6000000"));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // 1. Mở lại giữa đợt bảo lưu 10 ngày (today-4 .. today+5 -> đã bảo lưu 4 ngày, chưa dùng 6 ngày inclusive).
+        MembershipSubscription mid = period(71L, member, pack, null, today.minusDays(14), today.plusDays(55)); // 60 + 10 = 70 ngày
+        mid.setStatus("frozen");
+        mid.setHoldStatus("APPROVED");
+        mid.setHoldUsed(true);
+        mid.setHoldDaysCredited(true);
+        mid.setHoldStartDate(today.minusDays(4));
+        mid.setHoldEndDate(today.plusDays(5));
+        when(subscriptions.findByIdForUpdate(71L)).thenReturn(Optional.of(mid));
+
+        SubscriptionDto midResumed = service.resume(principal, 71L);
+        assertThat(midResumed.endDate()).isEqualTo(today.plusDays(49)); // trừ 6 ngày chưa dùng -> gốc + 4 ngày đã bảo lưu
+        assertThat(mid.getHoldEndDate()).isEqualTo(today.minusDays(1));
+        assertThat(mid.isHoldDaysCredited()).isTrue();
+        assertThat(com.swp391.scms.membership.service.SubscriptionValueCalculator.totalDays(mid)).isEqualTo(60);
+        assertThat(com.swp391.scms.membership.service.SubscriptionValueCalculator.remainingDays(mid, today)).isEqualTo(50);
+
+        // 2. Mở lại đúng ngày cuối của bảo lưu (today == holdEndDate): trừ đúng 1 ngày hôm nay.
+        MembershipSubscription lastDay = period(72L, member, pack, null, today.minusDays(19), today.plusDays(50));
+        lastDay.setStatus("frozen");
+        lastDay.setHoldStatus("APPROVED");
+        lastDay.setHoldUsed(true);
+        lastDay.setHoldDaysCredited(true);
+        lastDay.setHoldStartDate(today.minusDays(9));
+        lastDay.setHoldEndDate(today);
+        when(subscriptions.findByIdForUpdate(72L)).thenReturn(Optional.of(lastDay));
+
+        SubscriptionDto lastResumed = service.resume(principal, 72L);
+        assertThat(lastResumed.endDate()).isEqualTo(today.plusDays(49)); // trừ 1 ngày -> gốc + 9 ngày thực nghỉ
+        assertThat(lastDay.getHoldEndDate()).isEqualTo(today.minusDays(1));
+        assertThat(lastDay.isHoldDaysCredited()).isTrue();
+        assertThat(com.swp391.scms.membership.service.SubscriptionValueCalculator.totalDays(lastDay)).isEqualTo(60);
+
+        // 3. Mở lại ngay ngày đầu của bảo lưu (today == holdStartDate): trừ đủ 10 ngày về hạn gốc, holdDaysCredited = false.
+        MembershipSubscription firstDay = period(73L, member, pack, null, today.minusDays(10), today.plusDays(59));
+        firstDay.setStatus("frozen");
+        firstDay.setHoldStatus("APPROVED");
+        firstDay.setHoldUsed(true);
+        firstDay.setHoldDaysCredited(true);
+        firstDay.setHoldStartDate(today);
+        firstDay.setHoldEndDate(today.plusDays(9));
+        when(subscriptions.findByIdForUpdate(73L)).thenReturn(Optional.of(firstDay));
+
+        SubscriptionDto firstResumed = service.resume(principal, 73L);
+        assertThat(firstResumed.endDate()).isEqualTo(today.plusDays(49)); // hạn gốc 60 ngày
+        assertThat(firstDay.isHoldDaysCredited()).isFalse();
+        assertThat(com.swp391.scms.membership.service.SubscriptionValueCalculator.totalDays(firstDay)).isEqualTo(60);
+    }
+
+    /** Kiểm thử P0-10: autoResumeHold giữ cờ holdDaysCredited=true để proration sau bảo lưu chính xác tuyệt đối. */
+    @Test
+    void autoResumeHold_preservesHoldDaysCreditedForPostHoldProration() {
+        LocalDate today = LocalDate.now(clock); // Day 32
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = holdablePackage("PLATINUM", 60);
+        pack.setPrice(new BigDecimal("6000000"));
+        MembershipSubscription sub = period(100L, member, pack, null, today.minusDays(31), today.plusDays(58)); // 90 ngày (60 + 30)
+        sub.setStatus("frozen");
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.minusDays(30)); // Day 2
+        sub.setHoldEndDate(today.minusDays(1));    // Day 31
+        sub.setHoldDaysCredited(true);
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.autoResumeHold(100L)).isTrue();
+        assertThat(sub.getStatus()).isEqualTo("active");
+        assertThat(sub.getHoldStatus()).isNull();
+        assertThat(sub.isHoldDaysCredited()).isTrue();
+        var calc = new com.swp391.scms.membership.service.SubscriptionValueCalculator(null);
+        assertThat(calc.remainingValue(sub, today)).isEqualByComparingTo("5900000");
+    }
 }

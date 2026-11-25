@@ -11,6 +11,8 @@ import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.scheduling.dto.EnrollmentResponses.EnrollmentDto;
 import com.swp391.scms.scheduling.dto.EnrollmentResponses.QuotaDto;
 import com.swp391.scms.scheduling.dto.EnrollmentResponses.CourseCheckoutDto;
+import com.swp391.scms.scheduling.dto.EnrollmentResponses.UnpaidCourseEnrollmentDto;
+import com.swp391.scms.finance.dto.PaymentDto;
 import com.swp391.scms.finance.entity.Payment;
 import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.scheduling.entity.ClassEnrollment;
@@ -32,6 +34,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.stream.Stream;
 import java.util.Objects;
 
@@ -82,6 +86,30 @@ public class EnrollmentService {
     @Autowired(required = false)
     @org.springframework.context.annotation.Lazy
     private com.swp391.scms.wallet.WalletService wallets;
+
+    /** Gán giá trị mới cho trường wallets. */
+    public void setWallets(com.swp391.scms.wallet.WalletService wallets) {
+        this.wallets = wallets;
+    }
+
+    @Autowired(required = false)
+    private com.swp391.scms.users.UserRepository userRepository;
+
+    /** Gán giá trị mới cho trường userRepository. */
+    public void setUserRepository(com.swp391.scms.users.UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    @Autowired(required = false)
+    @org.springframework.context.annotation.Lazy
+    private com.swp391.scms.finance.service.PaymentService paymentService;
+
+    /** Gán giá trị mới cho trường paymentService. */
+    public void setPaymentService(com.swp391.scms.finance.service.PaymentService paymentService) {
+        this.paymentService = paymentService;
+    }
+
+    private static final Set<String> COUNTER_PAYMENT_METHODS = Set.of("cash", "bank_transfer");
 
     /** Phí khóa học trả online (ví/VNPay) giữ chỗ trong khoảng này; phí tiền mặt giữ đến khi khóa bắt đầu. */
     public static final long ONLINE_HOLD_MINUTES = 15;
@@ -883,16 +911,18 @@ public class EnrollmentService {
         enrollment.setMember(member);
         enrollment.setStatus(BOOKED);
         enrollment.setEnrolledAt(LocalDateTime.now(clock));
-        ClassEnrollment savedEnrollment = enrollments.save(enrollment);
+        ClassEnrollment savedEnrollment = enrollments.saveAndFlush(enrollment);
         LocalDateTime holdUntil = "cash".equals(normalizedMethod) && gymClass.getStartDate() != null
                 ? gymClass.getStartDate().atStartOfDay()
                 : LocalDateTime.now(clock).plusMinutes(ONLINE_HOLD_MINUTES);
 
         Long paymentId = null;
-        String paymentStatus = "pending";
+        boolean isFree = price.compareTo(BigDecimal.ZERO) == 0;
+        String paymentStatus = isFree ? "success" : "pending";
         String paymentUrl = null;
+        LocalDateTime expiresAt = null;
 
-        if (paymentRepository != null && price.compareTo(BigDecimal.ZERO) > 0) {
+        if (paymentRepository != null && !isFree) {
             Payment payment = new Payment();
             payment.setMember(member);
             payment.setClassEnrollmentId(savedEnrollment.getId());
@@ -902,9 +932,34 @@ public class EnrollmentService {
             payment.setNote("Học phí khóa học: " + gymClass.getName()
                     + (discountPercent > 0 ? " (giảm " + discountPercent + "%, giá gốc " + listPrice.toPlainString() + ")" : ""));
             Payment savedPayment = paymentRepository.save(payment);
+            paymentRepository.flush();
             paymentId = savedPayment.getId();
+            expiresAt = holdUntil;
 
-            if ("vnpay".equals(normalizedMethod) && vnpayPaymentService != null && vnpayPaymentService.enabled()) {
+            if ("online_wallet".equals(normalizedMethod)) {
+                if (vnpayPaymentService != null) {
+                    vnpayPaymentService.payWithWallet(
+                            principal,
+                            new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, savedPayment.getId())
+                    );
+                } else if (wallets != null) {
+                    wallets.debitForPayment(
+                            member.getUserId(),
+                            price,
+                            "WALLET_PAY_" + savedPayment.getId(),
+                            "Thanh toán học phí khóa học (#" + savedPayment.getId() + ")",
+                            "/member/classes"
+                    );
+                    savedPayment.setStatus("success");
+                    savedPayment.setPaidAt(LocalDateTime.now(clock));
+                    paymentRepository.save(savedPayment);
+                } else {
+                    throw new ConflictException("WALLET_UNAVAILABLE", "error.wallet.unavailable", null,
+                            "Tính năng Ví điện tử hiện không khả dụng.");
+                }
+                paymentStatus = "success";
+                expiresAt = null;
+            } else if ("vnpay".equals(normalizedMethod) && vnpayPaymentService != null && vnpayPaymentService.enabled()) {
                 try {
                     String ip = "127.0.0.1";
                     String origin = null;
@@ -950,7 +1005,7 @@ public class EnrollmentService {
                 normalizedMethod,
                 paymentStatus,
                 paymentUrl,
-                paymentId != null ? holdUntil : null
+                expiresAt
         );
     }
 
@@ -1070,6 +1125,160 @@ public class EnrollmentService {
         return list.stream()
                 .map(e -> toDto(e, resolveSessionForClass(e.getGymClass())))
                 .toList();
+    }
+
+    /**
+     * Danh sách các lượt ghi danh khóa học đang giữ chỗ ({@code booked}) có khoản học phí chờ thanh toán tại
+     * quầy ({@code cash} hoặc {@code bank_transfer}), loại bỏ tài khoản đã xóa mềm, mới nhất trước.
+     */
+    @Transactional(readOnly = true)
+    public List<UnpaidCourseEnrollmentDto> listUnpaidCourseEnrollments() {
+        List<ClassEnrollmentRepository.UnpaidCourseEnrollmentRow> rows = enrollments.findUnpaidCourseEnrollments();
+        if (rows == null || rows.isEmpty()) {
+            return List.of();
+        }
+        return rows.stream()
+                .map(row -> new UnpaidCourseEnrollmentDto(
+                        row.getEnrollmentId(),
+                        row.getPaymentId(),
+                        row.getClassId(),
+                        row.getClassName(),
+                        row.getDisciplineName(),
+                        row.getStartDate(),
+                        row.getEndDate(),
+                        row.getMemberId(),
+                        row.getMemberName(),
+                        row.getMemberPhone(),
+                        row.getMembershipCode(),
+                        row.getAmount(),
+                        row.getMethod(),
+                        row.getCreatedAt()
+                ))
+                .toList();
+    }
+
+    /**
+     * Quầy lễ tân hoặc quản lý xác nhận đã thu học phí khóa học (tiền mặt hoặc chuyển khoản): khóa lượt ghi
+     * danh, kiểm tra trạng thái booked + khoản phí pending + không bị chặn bởi VNPay, cập nhật phương thức và
+     * thu ngân, tất toán khoản thanh toán kèm xuất hóa đơn và gửi thông báo cho hội viên.
+     */
+    @Transactional
+    public PaymentDto confirmCourseEnrollmentPayment(AuthenticatedPrincipal staff, Long enrollmentId, String method) {
+        if (staff == null || staff.role() == null
+                || (!ROLE_RECEPTIONIST.equalsIgnoreCase(staff.role())
+                    && !ROLE_CENTER_MANAGER.equalsIgnoreCase(staff.role()))) {
+            throw new ForbiddenException("FORBIDDEN", "error.forbidden", null,
+                    "Only front desk or center manager can confirm course payment");
+        }
+
+        ClassEnrollment enrollment = enrollments.findByIdForUpdate(enrollmentId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.class_enrollment", enrollmentId));
+        if (!BOOKED.equalsIgnoreCase(enrollment.getStatus())) {
+            throw new ConflictException(
+                    "SCHEDULING_COURSE_PAYMENT_NOT_PENDING",
+                    "error.scheduling.course_payment_not_pending",
+                    null,
+                    "This course enrollment has no pending tuition payment to collect");
+        }
+        if (paymentRepository == null) {
+            throw new ConflictException(
+                    "SCHEDULING_COURSE_PAYMENT_NOT_PENDING",
+                    "error.scheduling.course_payment_not_pending",
+                    null,
+                    "This course enrollment has no pending tuition payment to collect");
+        }
+
+        Payment payment = paymentRepository.findByClassEnrollmentId(enrollmentId)
+                .orElseThrow(() -> new ConflictException(
+                        "SCHEDULING_COURSE_PAYMENT_NOT_PENDING",
+                        "error.scheduling.course_payment_not_pending",
+                        null,
+                        "This course enrollment has no pending tuition payment to collect"));
+        if (!"pending".equalsIgnoreCase(payment.getStatus())) {
+            throw new ConflictException(
+                    "SCHEDULING_COURSE_PAYMENT_NOT_PENDING",
+                    "error.scheduling.course_payment_not_pending",
+                    null,
+                    "This course enrollment has no pending tuition payment to collect");
+        }
+
+        if (vnpayGuard != null) {
+            vnpayGuard.enrollment(enrollmentId);
+        }
+
+        if (method != null && !method.isBlank()) {
+            String normalized = method.trim().toLowerCase(Locale.ROOT);
+            if (!COUNTER_PAYMENT_METHODS.contains(normalized)) {
+                throw new BadRequestException(
+                        "INVALID_PAYMENT_METHOD",
+                        "error.scheduling.invalid_payment_method",
+                        null,
+                        "Unsupported counter payment method");
+            }
+            payment.setMethod(normalized);
+        } else if (payment.getMethod() == null || !COUNTER_PAYMENT_METHODS.contains(payment.getMethod().toLowerCase(Locale.ROOT))) {
+            payment.setMethod("cash");
+        }
+
+        if (userRepository != null && staff.id() != null) {
+            userRepository.findByIdAndDeletedAtIsNull(staff.id()).ifPresent(payment::setReceivedBy);
+        }
+        paymentRepository.save(payment);
+        paymentRepository.flush();
+
+        PaymentDto dto;
+        if (paymentService != null) {
+            dto = paymentService.updatePaymentStatusByStaff(payment.getId(), "success");
+        } else {
+            payment.setStatus("success");
+            payment.setPaidAt(LocalDateTime.now(clock));
+            Payment settled = paymentRepository.save(payment);
+            dto = toFallbackPaymentDto(settled != null ? settled : payment, enrollment.getGymClass());
+        }
+
+        if (notifications != null && enrollment.getMember() != null && enrollment.getMember().getUserId() != null) {
+            GymClass gymClass = enrollment.getGymClass();
+            String className = gymClass != null && gymClass.getName() != null ? gymClass.getName() : "";
+            BigDecimal paidAmount = payment.getAmount() != null ? payment.getAmount() : BigDecimal.ZERO;
+            notifications.send(
+                    enrollment.getMember().getUserId(),
+                    msg("notifications.scheduling.course_payment_confirmed.title"),
+                    msg("notifications.scheduling.course_payment_confirmed.body",
+                            className, paidAmount.stripTrailingZeros().toPlainString()),
+                    "payment",
+                    "payment",
+                    payment.getId(),
+                    "/member/classes"
+            );
+        }
+
+        return dto;
+    }
+
+    /** Chuyển khoản thanh toán sang DTO tối thiểu khi chạy unit test không có PaymentService. */
+    private static PaymentDto toFallbackPaymentDto(Payment payment, GymClass gymClass) {
+        PaymentDto dto = new PaymentDto();
+        dto.setId(payment.getId());
+        if (payment.getMember() != null) {
+            dto.setMemberId(payment.getMember().getUserId());
+            if (payment.getMember().getUser() != null) {
+                dto.setMemberName(payment.getMember().getUser().getFullName());
+            }
+        }
+        dto.setClassEnrollmentId(payment.getClassEnrollmentId());
+        dto.setAmount(payment.getAmount());
+        dto.setMethod(payment.getMethod());
+        dto.setStatus(payment.getStatus());
+        dto.setPaidAt(payment.getPaidAt());
+        if (payment.getReceivedBy() != null) {
+            dto.setReceivedById(payment.getReceivedBy().getId());
+            dto.setReceivedByName(payment.getReceivedBy().getFullName());
+        }
+        dto.setNote(payment.getNote());
+        dto.setCreatedAt(payment.getCreatedAt());
+        dto.setServiceType("CLASS");
+        dto.setServiceName(gymClass != null ? gymClass.getName() : null);
+        return dto;
     }
 
     /** Chọn buổi đại diện của lớp: buổi chưa hủy gần nhất từ hôm nay, nếu không có thì buổi đầu tiên. */

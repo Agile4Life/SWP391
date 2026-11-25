@@ -44,4 +44,15 @@ describe('coachingApi', () => {
     await expect(coachingApi.getAllAssignedStudents(42)).rejects.toThrow('Unavailable');
   });
 
+  it('P0-06: omits coachId query param when omitted or when a non-numeric username string is passed', async () => {
+    const fetchMock = vi.fn().mockImplementation(async () => new Response(JSON.stringify({ success: true, data: [] })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await coachingApi.getCoachSchedule();
+    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/classes/sessions', expect.anything());
+
+    await coachingApi.getCoachSchedule('coach_marcus');
+    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/classes/sessions', expect.anything());
+  });
+
 });

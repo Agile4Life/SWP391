@@ -152,6 +152,10 @@ public class VnpayPaymentService {
             throw new ConflictException("WALLET_UNAVAILABLE", "error.wallet.unavailable", null, "Tính năng Ví điện tử hiện không khả dụng.");
         }
         Payment payment = resolveTargetPayment(principal, request, true);
+        if (isWalletTopup(payment)) {
+            throw new BadRequestException("VNPAY_WALLET_TOPUP_NOT_PAYABLE_BY_WALLET",
+                    "error.coach_booking.invalid_payment_method", null, null);
+        }
         if (!"pending".equals(payment.getStatus())) throw unavailable();
         if (payment.getId() != null) {
             var existing = transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(), "pending");

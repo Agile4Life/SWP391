@@ -340,4 +340,57 @@ class MembershipCancellationServiceTest {
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(walletService);
     }
+
+    /** Kiểm thử P0-10: chặn yêu cầu/duyệt hủy khi gói đang có đợt bảo lưu đã duyệt (chưa bắt đầu). */
+    @Test
+    void requestStaffRequestAndApproveRejectWhenHoldIsApproved() {
+        active.setHoldStatus("APPROVED");
+        active.setHoldDaysCredited(true);
+        active.setHoldStartDate(LocalDate.of(2026, 10, 25));
+        active.setHoldEndDate(LocalDate.of(2026, 11, 5));
+        active.setEndDate(LocalDate.of(2026, 11, 13));
+
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
+        assertThatThrownBy(() -> service.request(owner, 100L, new CancellationDtos.Request("Moving")))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+
+        var receptionist = new AuthenticatedPrincipal(30L, "desk", "RECEPTIONIST");
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(active));
+        assertThatThrownBy(() -> service.staffRequest(receptionist, new CancellationDtos.StaffRequest(10L, 100L, "Moving", null)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+
+        stubDecision();
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+        assertThat(active.getStatus()).isEqualTo("active");
+        verifyNoInteractions(enrollments);
+    }
+
+    /** Kiểm thử P0-10: hủy gói sau khi bảo lưu đã kết thúc tính tiền hoàn chính xác theo 60 ngày thực tế. */
+    @Test
+    void requestAfterCompletedHoldComputesExactPostHoldRefund() {
+        // Clock cố định ở 2026-10-22 (Day 32 tính từ 2026-09-21).
+        LocalDate start = LocalDate.of(2026, 9, 21); // Day 1
+        active.setStartDate(start);
+        active.setEndDate(start.plusDays(89));       // Day 90 (60 gốc + 30 ngày bảo lưu)
+        active.setHoldStartDate(start.plusDays(1));  // Day 2
+        active.setHoldEndDate(start.plusDays(30));   // Day 31 (2026-10-21)
+        active.setHoldStatus(null);
+        active.setHoldUsed(true);
+        active.setHoldDaysCredited(true);
+
+        com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
+        paid.setSubscriptionId(100L);
+        paid.setAmount(new java.math.BigDecimal("6000000"));
+        paid.setStatus("success");
+        when(payments.findAllBySubscriptionId(100L)).thenReturn(List.of(paid));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CancellationDtos.Response result = service.request(owner, 100L, new CancellationDtos.Request("Moving"));
+        assertThat(result.refundAmount()).isEqualByComparingTo("5900000");
+    }
 }

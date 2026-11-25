@@ -369,6 +369,7 @@ export function CreateClassOrSessionModal({
   };
 
   const handleCreate = async () => {
+    if (busy) return;
     setError(null);
     const step1Error = validateWizardStep1({ name, disciplineId, price }, t);
     if (step1Error) {
@@ -419,7 +420,6 @@ export function CreateClassOrSessionModal({
   const handleFormSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (step < 4) {
-      handleNext();
       return;
     }
     void handleCreate();
@@ -1095,6 +1095,7 @@ export function CreateClassOrSessionModal({
 
           {step < 4 ? (
             <button
+              key="wizard-next"
               type="button"
               className="btn-primary"
               data-testid="wizard-next-btn"
@@ -1105,10 +1106,12 @@ export function CreateClassOrSessionModal({
             </button>
           ) : (
             <button
-              type="submit"
+              key="wizard-submit"
+              type="button"
               className="btn-primary"
               data-testid="wizard-submit-btn"
               disabled={busy}
+              onClick={() => void handleCreate()}
             >
               {busy ? t('Đang lưu...', 'Saving...') : t('Tạo khóa học', 'Create course')}
             </button>
@@ -1129,6 +1132,14 @@ interface EditClassModalProps {
   onSuccess: (message: string) => void;
 }
 
+type EditableClassStatus = 'active' | 'inactive' | 'archived';
+
+function normalizeEditableClassStatus(raw: string): EditableClassStatus {
+  const normalized = String(raw).toLowerCase();
+  if (normalized === 'inactive' || normalized === 'archived') return normalized;
+  return 'active';
+}
+
 /** Hộp thoại chỉnh sửa khóa học (kiểm tra xung đột phòng/HLV/PT/cùng bộ môn và sức chứa phòng). */
 export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose, onSuccess }: EditClassModalProps) {
   const { t } = useI18n();
@@ -1138,7 +1149,7 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
   const [coachId, setCoachId] = useState(String(gymClass.coachId));
   const [capacity, setCapacity] = useState(String(gymClass.capacity));
   const [level, setLevel] = useState(gymClass.level ?? 'all');
-  const [status, setStatus] = useState(String(gymClass.status).toLowerCase());
+  const [status, setStatus] = useState<EditableClassStatus>(() => normalizeEditableClassStatus(gymClass.status));
   const [description, setDescription] = useState(gymClass.description ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1270,10 +1281,10 @@ export function EditClassModal({ gymClass, disciplines, rooms, coaches, onClose,
           </div>
           <div className="portal-form-group">
             <label className="portal-label" htmlFor="edit-cls-status">{t('Trạng thái', 'Status')}</label>
-            <Select id="edit-cls-status" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <Select id="edit-cls-status" value={status} onChange={(e) => setStatus(normalizeEditableClassStatus(e.target.value))}>
               <option value="active">{t('Đang hoạt động', 'Active')}</option>
+              <option value="inactive">{t('Ngừng mở', 'Inactive')}</option>
               <option value="archived">{t('Lưu trữ', 'Archived')}</option>
-              <option value="cancelled">{t('Đã hủy', 'Cancelled')}</option>
             </Select>
           </div>
         </div>

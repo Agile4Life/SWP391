@@ -6,6 +6,7 @@ import com.swp391.scms.finance.repository.PaymentRepository;
 import com.swp391.scms.finance.repository.VnpayTransactionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -67,38 +68,50 @@ public class VnpayPaymentGuard {
     }
 
     /**
-     * Đóng các lượt VNPay của khoản thu mà cổng không còn có thể quyết toán; nếu không còn lượt nào chờ/thành công
-     * thì khoản nạp ví đang chờ cũng chuyển sang failed.
+     * Đóng nguyên tử các lượt VNPay của khoản thu mà cổng không còn có thể quyết toán; nếu không còn lượt nào
+     * chờ/thành công thì khoản nạp ví đang chờ cũng chuyển sang failed.
      */
+    @Transactional
     public void expireStale(Long paymentId) {
         LocalDateTime now = now();
-        var attempts = transactions.findAllByPaymentId(paymentId);
-        if (attempts == null) return;
-        boolean closedAny = false;
-        for (VnpayTransaction attempt : attempts) {
-            if (isStale(attempt, now)) {
-                attempt.setStatus("failed");
-                transactions.save(attempt);
-                closedAny = true;
+        LocalDateTime cutoff = now.minus(SETTLEMENT_GRACE);
+        int updated = transactions.failStalePendingAttempts(paymentId, cutoff);
+        boolean closedAny = updated > 0;
+        if (!closedAny) {
+            var attempts = transactions.findAllByPaymentId(paymentId);
+            if (attempts != null) {
+                for (VnpayTransaction attempt : attempts) {
+                    if (isStale(attempt, now)) {
+                        attempt.setStatus("failed");
+                        transactions.save(attempt);
+                        closedAny = true;
+                    }
+                }
             }
         }
         if (closedAny && payments != null
                 && !transactions.existsByPaymentIdAndStatus(paymentId, "pending")
                 && !transactions.existsByPaymentIdAndStatus(paymentId, "success")) {
-            payments.findById(paymentId).ifPresent(p -> {
-                if ("pending".equals(p.getStatus()) && p.getNote() != null && p.getNote().startsWith("WALLET_TOPUP")) {
-                    p.setStatus("failed");
-                    payments.save(p);
-                }
-            });
+            int closedTopup = payments.failOrphanPendingWalletTopup(paymentId);
+            if (closedTopup == 0) {
+                payments.findById(paymentId).ifPresent(p -> {
+                    if ("pending".equals(p.getStatus()) && p.getNote() != null && p.getNote().startsWith("WALLET_TOPUP")) {
+                        p.setStatus("failed");
+                        payments.save(p);
+                    }
+                });
+            }
         }
     }
 
     /**
-     * Trả về true khi lượt đang ở trạng thái pending và đã quá hạn cổng cộng thêm thời gian chờ IPN.
+     * Trả về true khi lượt đang ở trạng thái pending, chưa có mã giao dịch cổng và đã quá hạn cổng cộng thêm thời
+     * gian chờ IPN.
      */
     public boolean isStale(VnpayTransaction attempt, LocalDateTime now) {
-        return attempt != null && "pending".equals(attempt.getStatus()) && attempt.getExpiresAt() != null
+        return attempt != null && "pending".equals(attempt.getStatus())
+                && attempt.getGatewayTransactionNo() == null
+                && attempt.getExpiresAt() != null
                 && attempt.getExpiresAt().plus(SETTLEMENT_GRACE).isBefore(now);
     }
 

@@ -349,13 +349,10 @@ class PaymentServiceTest {
         Payment pending = new Payment(); pending.setId(90L); pending.setMember(member);
         pending.setSubscriptionId(10L); pending.setStatus("pending"); pending.setAmount(pkg.getPrice());
         ClassEnrollment enrollment = new ClassEnrollment(); enrollment.setMember(member); enrollment.setStatus("cancelled");
-        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
-        when(membershipSubscriptionRepository.findById(10L)).thenReturn(Optional.of(sub));
-        when(paymentRepository.findAllBySubscriptionId(10L)).thenReturn(List.of(pending));
-        lenient().when(classEnrollmentRepository.findById(20L)).thenReturn(Optional.of(enrollment));
         PaymentProcessDto dto = new PaymentProcessDto(2L, 10L, 20L, pkg.getPrice(), "pos", null, null);
 
-        assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> paymentService.processPayment(dto));
+        assertEquals("PAYMENT_MULTIPLE_TARGETS", ex.getErrorCode());
         assertEquals("pending_payment", sub.getStatus());
         assertEquals("pending", pending.getStatus());
         assertEquals("cancelled", enrollment.getStatus());
@@ -1028,5 +1025,115 @@ class PaymentServiceTest {
         when(paymentRepository.findById(91L)).thenReturn(Optional.of(payment));
         assertThrows(BadRequestException.class, () -> paymentService.updatePaymentStatusByStaff(91L, "success"));
         assertEquals("pending", payment.getStatus());
+    }
+
+    @Test
+    void createPaymentAndProcessPaymentRejectDualTargets() {
+        PaymentCreateDto dualCreate = new PaymentCreateDto();
+        dualCreate.setMemberId(2L);
+        dualCreate.setSubscriptionId(10L);
+        dualCreate.setClassEnrollmentId(20L);
+        dualCreate.setAmount(new BigDecimal("500000"));
+        dualCreate.setMethod("online_wallet");
+
+        BadRequestException staffCreateEx = assertThrows(BadRequestException.class,
+                () -> paymentService.createPayment(dualCreate));
+        assertEquals("PAYMENT_MULTIPLE_TARGETS", staffCreateEx.getErrorCode());
+
+        var memberPrincipal = new com.swp391.scms.security.AuthenticatedPrincipal(2L, "m", "MEMBER");
+        BadRequestException memberCreateEx = assertThrows(BadRequestException.class,
+                () -> paymentService.createPayment(memberPrincipal, dualCreate));
+        assertEquals("PAYMENT_MULTIPLE_TARGETS", memberCreateEx.getErrorCode());
+
+        PaymentProcessDto dualPkgEnroll = new PaymentProcessDto(2L, null, 20L, new BigDecimal("500000"), "cash", null, null);
+        dualPkgEnroll.setPackageId(5L);
+        BadRequestException processEx = assertThrows(BadRequestException.class,
+                () -> paymentService.processPayment(dualPkgEnroll));
+        assertEquals("PAYMENT_MULTIPLE_TARGETS", processEx.getErrorCode());
+        verify(paymentRepository, never()).save(any());
+    }
+
+    @Test
+    void createPaymentForClassEnrollmentValidatesDiscountedFeeAndBlocksDuplicates() {
+        Member member = new Member(); member.setUserId(2L);
+        com.swp391.scms.scheduling.entity.GymClass gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        gymClass.setId(50L); gymClass.setPrice(new BigDecimal("1000000"));
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setId(20L); enrollment.setMember(member); enrollment.setGymClass(gymClass); enrollment.setStatus("booked");
+
+        var discounts = mock(com.swp391.scms.membership.service.MemberDiscountService.class);
+        when(discounts.percentFor(2L)).thenReturn(10); // Gold 10% -> học phí thực thu 900.000
+        paymentService.setMemberDiscounts(discounts);
+
+        when(memberRepository.findById(2L)).thenReturn(Optional.of(member));
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(classEnrollmentRepository.findById(20L)).thenReturn(Optional.of(enrollment));
+        when(paymentRepository.findAllByClassEnrollmentId(20L)).thenReturn(List.of());
+
+        // Số tiền tùy ý (1đ) bị từ chối với 400 PAYMENT_AMOUNT_MISMATCH
+        PaymentCreateDto arbitrary = new PaymentCreateDto();
+        arbitrary.setMemberId(2L); arbitrary.setClassEnrollmentId(20L);
+        arbitrary.setAmount(new BigDecimal("1")); arbitrary.setMethod("online_wallet");
+        BadRequestException wrongAmount = assertThrows(BadRequestException.class,
+                () -> paymentService.createPayment(arbitrary));
+        assertEquals("PAYMENT_AMOUNT_MISMATCH", wrongAmount.getErrorCode());
+        verify(paymentRepository, never()).save(any());
+
+        // Đúng học phí sau giảm (900.000) khi chưa có khoản thu nào -> tạo thành công
+        PaymentCreateDto exact = new PaymentCreateDto();
+        exact.setMemberId(2L); exact.setClassEnrollmentId(20L);
+        exact.setAmount(new BigDecimal("900000")); exact.setMethod("online_wallet");
+        Payment entity = new Payment(); entity.setClassEnrollmentId(20L); entity.setAmount(new BigDecimal("900000"));
+        when(paymentMapper.toEntity(exact)).thenReturn(entity);
+        when(paymentRepository.save(entity)).thenReturn(entity);
+        when(paymentMapper.toDto(entity)).thenReturn(new PaymentDto());
+        assertNotNull(paymentService.createPayment(exact));
+        verify(paymentRepository, times(1)).save(entity);
+
+        // Nếu khóa học đã có khoản thanh toán pending -> từ chối tạo bản thứ 2 (409)
+        Payment existingPending = new Payment();
+        existingPending.setId(77L); existingPending.setMember(member);
+        existingPending.setClassEnrollmentId(20L); existingPending.setStatus("pending");
+        existingPending.setAmount(new BigDecimal("900000"));
+        when(paymentRepository.findAllByClassEnrollmentId(20L)).thenReturn(List.of(existingPending));
+        ConflictException duplicate = assertThrows(ConflictException.class,
+                () -> paymentService.createPayment(exact));
+        assertEquals("PAYMENT_ALREADY_EXISTS", duplicate.getErrorCode());
+        verify(paymentRepository, times(1)).save(any());
+    }
+
+    @Test
+    void processPaymentForClassEnrollmentSettlesPendingAndRejectsDuplicateOrWrongAmount() {
+        Member member = new Member(); member.setUserId(2L);
+        com.swp391.scms.scheduling.entity.GymClass gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        gymClass.setId(50L); gymClass.setPrice(new BigDecimal("800000"));
+        ClassEnrollment enrollment = new ClassEnrollment();
+        enrollment.setId(20L); enrollment.setMember(member); enrollment.setGymClass(gymClass); enrollment.setStatus("booked");
+
+        Payment pending = new Payment();
+        pending.setId(88L); pending.setMember(member); pending.setClassEnrollmentId(20L);
+        pending.setStatus("pending"); pending.setAmount(new BigDecimal("800000"));
+
+        when(memberRepository.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(classEnrollmentRepository.findById(20L)).thenReturn(Optional.of(enrollment));
+        when(paymentRepository.findAllByClassEnrollmentId(20L)).thenReturn(List.of(pending));
+
+        // Sai số tiền bị từ chối
+        PaymentProcessDto wrong = new PaymentProcessDto(2L, null, 20L, new BigDecimal("100"), "cash", null, null);
+        BadRequestException badAmt = assertThrows(BadRequestException.class, () -> paymentService.processPayment(wrong));
+        assertEquals("PAYMENT_AMOUNT_MISMATCH", badAmt.getErrorCode());
+
+        // Đúng số tiền -> tất toán khoản pending hiện có mà không tạo bản ghi thứ 2
+        when(paymentRepository.save(pending)).thenReturn(pending);
+        when(paymentMapper.toDto(pending)).thenReturn(new PaymentDto());
+        PaymentProcessDto exact = new PaymentProcessDto(2L, null, 20L, new BigDecimal("800000"), "cash", null, "Thu học phí");
+        paymentService.processPayment(exact);
+        assertEquals("success", pending.getStatus());
+        verify(paymentRepository, times(1)).save(pending);
+
+        // Đã thanh toán thành công -> gọi lại bị từ chối 409 PAYMENT_ALREADY_EXISTS
+        ConflictException alreadyPaid = assertThrows(ConflictException.class, () -> paymentService.processPayment(exact));
+        assertEquals("PAYMENT_ALREADY_EXISTS", alreadyPaid.getErrorCode());
+        verify(paymentRepository, times(1)).save(any());
     }
 }

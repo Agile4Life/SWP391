@@ -44,17 +44,14 @@ public class SessionCompletionScheduler {
     }
 
     /**
-     * Chạy theo cron app.scheduling.completion.cron (mặc định 00:30): gọi completeHeld và ghi log; lỗi chỉ ghi
-     * cảnh báo.
+     * Chạy theo cron app.scheduling.completion.cron (mặc định 00:30 theo giờ trung tâm) trong một giao dịch duy
+     * nhất để các câu lệnh {@code @Modifying} chạy nguyên tử; lỗi được rollback và scheduler ghi nhận.
      */
-    @Scheduled(cron = "${app.scheduling.completion.cron:0 30 0 * * ?}")
+    @Scheduled(cron = "${app.scheduling.completion.cron:0 30 0 * * ?}", zone = "Asia/Ho_Chi_Minh")
+    @Transactional
     public void sweep() {
-        try {
-            int[] done = completeHeld();
-            log.info("[SessionCompletion] completed {} session(s), {} booking(s), {} enrollment(s)", done[0], done[1], done[2]);
-        } catch (RuntimeException ex) {
-            log.warn("[SessionCompletion] sweep failed", ex);
-        }
+        int[] done = completeHeld();
+        log.info("[SessionCompletion] completed {} session(s), {} booking(s), {} enrollment(s)", done[0], done[1], done[2]);
     }
 
     /**

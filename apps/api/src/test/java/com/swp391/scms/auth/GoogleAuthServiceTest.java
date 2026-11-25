@@ -283,7 +283,7 @@ class GoogleAuthServiceTest {
             u.setId(105L);
             return u;
         });
-        when(otpService.generateOtp("oauthmember@gmail.com")).thenReturn("482910");
+        when(otpService.generateOtp("oauthmember@gmail.com", OtpPurpose.GOOGLE_ACTIVATION)).thenReturn("482910");
 
         GoogleOAuthResult challenge = authService.authenticateGoogle(
                 new GoogleOAuthCallbackRequest(null, null, "oauth-code-123", "http://localhost:8080/api/v1/auth/google/callback")
@@ -306,7 +306,7 @@ class GoogleAuthServiceTest {
         when(googleTokenVerifierPort.verify("renamed-token")).thenReturn(
                 new GoogleUserInfo("stable-sub", "renamed@example.com", true, "Member", null, "example.com"));
         when(userRepository.findByGoogleSub("stable-sub")).thenReturn(Optional.of(member));
-        when(otpService.generateOtp("original@example.com")).thenReturn("123456");
+        when(otpService.generateOtp("original@example.com", OtpPurpose.GOOGLE_ACTIVATION)).thenReturn("123456");
         var challenge = authService.authenticateGoogle(new GoogleOAuthCallbackRequest("renamed-token"));
         assertEquals("original@example.com", challenge.email());
         verify(otpDeliveryPort).send("original@example.com", "123456");
@@ -341,6 +341,7 @@ class GoogleAuthServiceTest {
         var member = new User();
         member.setId(80L);
         member.setUsername("existing-member");
+        member.setPasswordHash("existing-bcrypt-hash");
         member.setEmail("existing@gmail.com");
         member.setRole(createRole("MEMBER"));
         member.setStatus("active");
@@ -351,6 +352,8 @@ class GoogleAuthServiceTest {
         var result = authService.authenticateGoogle(new GoogleOAuthCallbackRequest("link-token"));
         assertEquals("existing-jwt", result.authentication().token());
         assertEquals("new-google-sub", member.getGoogleSub());
+        assertEquals("existing-member", member.getUsername());
+        assertEquals("existing-bcrypt-hash", member.getPasswordHash());
         verifyNoInteractions(otpService, otpDeliveryPort);
     }
 
@@ -430,6 +433,91 @@ class GoogleAuthServiceTest {
         when(jwtService.generateToken(82L, "staff@gmail.com", role)).thenReturn("staff-jwt");
         assertEquals(role, authService.loginWithGoogle(new GoogleLoginRequest("staff-token")).role());
         verifyNoInteractions(roleRepository);
+    }
+
+    /**
+     * Kiểm thử P0-08: khi liên kết Google OAuth với bản ghi đăng ký chưa xác thực (inactive, chưa có google_sub),
+     * toàn bộ thông tin do kẻ tấn công đặt trước (mật khẩu, username, SĐT, họ tên) phải bị thay mới và vô hiệu.
+     */
+    @Test
+    @DisplayName("P0-08: authenticateGoogle xoay vòng mật khẩu/username/SĐT/họ tên trên tài khoản inactive chưa xác thực")
+    void authenticateGoogleReclaimsUnverifiedStubAndRotatesAttackerCredentials() {
+        User attackerStub = new User();
+        attackerStub.setId(501L);
+        attackerStub.setEmail("victim@gmail.com");
+        attackerStub.setUsername("victim");
+        attackerStub.setFullName("Attacker Fake Name");
+        attackerStub.setPhone("0912345678");
+        attackerStub.setPasswordHash("attacker-bcrypt-hash");
+        attackerStub.setStatus("inactive");
+        attackerStub.setGoogleSub(null);
+        attackerStub.setRole(createRole("MEMBER"));
+
+        when(googleTokenVerifierPort.verify("victim-token")).thenReturn(
+                new GoogleUserInfo("victim-google-sub", "victim@gmail.com", true, "Real Victim", "https://avatar.com/victim.png"));
+        when(userRepository.findByGoogleSub("victim-google-sub")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("victim@gmail.com")).thenReturn(Optional.of(attackerStub));
+        when(userRepository.findByUsernameIgnoreCase("victim1")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(any())).thenReturn("rotated-random-hash");
+        when(otpService.generateOtp("victim@gmail.com", OtpPurpose.GOOGLE_ACTIVATION)).thenReturn("778899");
+
+        GoogleOAuthResult result = authService.authenticateGoogle(new GoogleOAuthCallbackRequest("victim-token"));
+
+        assertEquals("victim@gmail.com", result.email());
+        assertEquals("778899", result.otpCode());
+        assertEquals("victim-google-sub", attackerStub.getGoogleSub());
+        assertEquals("rotated-random-hash", attackerStub.getPasswordHash());
+        assertNotEquals("attacker-bcrypt-hash", attackerStub.getPasswordHash());
+        assertEquals("victim1", attackerStub.getUsername());
+        assertNotEquals("victim", attackerStub.getUsername());
+        assertEquals("Real Victim", attackerStub.getFullName());
+        assertEquals("https://avatar.com/victim.png", attackerStub.getAvatarUrl());
+        assertNull(attackerStub.getPhone());
+        assertEquals("inactive", attackerStub.getStatus());
+        verify(userRepository).save(attackerStub);
+        verify(otpService).invalidate("0912345678");
+        verify(otpDeliveryPort).send("victim@gmail.com", "778899");
+        verifyNoInteractions(jwtService);
+    }
+
+    /**
+     * Kiểm thử P0-08: đăng nhập trực tiếp bằng Google ID Token gặp bản ghi đăng ký chưa xác thực (inactive, chưa
+     * có google_sub) sẽ xoay vòng mật khẩu/username, xóa SĐT chưa xác thực, kích hoạt tài khoản và cấp JWT.
+     */
+    @Test
+    @DisplayName("P0-08: loginWithGoogle vô hiệu hóa thông tin kẻ tấn công đặt trước và kích hoạt tài khoản cho chủ Gmail")
+    void loginWithGoogleReclaimsUnverifiedStubRotatesCredentialsAndActivates() {
+        User attackerStub = new User();
+        attackerStub.setId(502L);
+        attackerStub.setEmail("victim2@gmail.com");
+        attackerStub.setUsername("attacker_chosen");
+        attackerStub.setFullName("Attacker");
+        attackerStub.setPhone("0987654321");
+        attackerStub.setPasswordHash("attacker-hash");
+        attackerStub.setStatus("inactive");
+        attackerStub.setGoogleSub(null);
+        attackerStub.setRole(createRole("MEMBER"));
+
+        when(googleTokenVerifierPort.verify("victim2-token")).thenReturn(
+                new GoogleUserInfo("victim2-sub", "victim2@gmail.com", true, "Victim Two", null));
+        when(userRepository.findByGoogleSub("victim2-sub")).thenReturn(Optional.empty());
+        when(userRepository.findByEmailIgnoreCase("victim2@gmail.com")).thenReturn(Optional.of(attackerStub));
+        when(userRepository.findByUsernameIgnoreCase("victim2")).thenReturn(Optional.empty());
+        when(passwordEncoder.encode(any())).thenReturn("rotated-hash-2");
+        when(jwtService.generateToken(502L, "victim2", "MEMBER")).thenReturn("victim2-jwt");
+
+        AuthTokenResponse token = authService.loginWithGoogle(new GoogleLoginRequest("victim2-token"));
+
+        assertEquals("victim2-jwt", token.token());
+        assertEquals("victim2", token.username());
+        assertEquals("active", attackerStub.getStatus());
+        assertEquals("victim2-sub", attackerStub.getGoogleSub());
+        assertEquals("rotated-hash-2", attackerStub.getPasswordHash());
+        assertEquals("victim2", attackerStub.getUsername());
+        assertEquals("Victim Two", attackerStub.getFullName());
+        assertNull(attackerStub.getPhone());
+        verify(userRepository).save(attackerStub);
+        verify(otpService).invalidate("0987654321");
     }
 
 }
