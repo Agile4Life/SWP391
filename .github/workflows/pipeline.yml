@@ -297,7 +297,9 @@ jobs:
           [ -n "$api_cid" ] && prev_api_img=$(docker inspect --format '{{.Config.Image}}' "$api_cid" 2>/dev/null || true)
           [ -n "$web_cid" ] && prev_web_img=$(docker inspect --format '{{.Config.Image}}' "$web_cid" 2>/dev/null || true)
 
-          git fetch --prune origin
+          # Chỉ fetch nhánh main (và commit chỉ định nếu chạy tay), không kéo ref các nhánh feature/chore khác.
+          git fetch origin +refs/heads/main:refs/remotes/origin/main
+          git cat-file -e "${commit}^{commit}" 2>/dev/null || git fetch --no-tags origin "$commit"
           target_sha=$(git rev-parse "${commit}^{commit}")
           echo "Commit đang chạy: ${prev:0:7}; commit cần deploy: ${target_sha:0:7}"
           # Chỉ tiến lên (fast-forward). Nếu VPS đã ở commit mới hơn thì bỏ qua, tránh deploy lùi khi hai lần chạy chồng nhau.
