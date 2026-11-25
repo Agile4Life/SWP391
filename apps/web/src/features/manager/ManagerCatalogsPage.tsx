@@ -99,7 +99,7 @@ export function ManagerCatalogsPage() {
     tab === 'disciplines'
       ? { name: '', description: '' }
       : tab === 'rooms'
-        ? { name: '', location: '', capacity: '10', status: 'available', disciplineId: '', openTime: '06:00', closeTime: '22:00', tier: 'STANDARD' }
+        ? { name: '', location: '', capacity: '10', status: 'available', tier: 'STANDARD' }
         : { name: '', description: '', price: '199000', durationDays: '90', classCreditLimit: '', status: 'active', tier: 'SILVER' };
 
   // Gửi biểu mẫu thêm/sửa theo tab hiện tại sau khi kiểm tra dữ liệu.
@@ -109,10 +109,6 @@ export function ManagerCatalogsPage() {
     const { id, form: f } = editing;
     const isNew = id == null;
     setFormError('');
-    if (tab === 'rooms' && f.disciplineId && (!/^\d{2}:00$/.test(f.openTime) || !/^\d{2}:00$/.test(f.closeTime) || f.openTime >= f.closeTime)) {
-      setFormError('Giờ mở và đóng cửa phải là giờ chẵn; giờ đóng phải sau giờ mở.');
-      return;
-    }
     if (tab === 'packages') {
       const parsedPrice = Number(f.price);
       const parsedDuration = Number(f.durationDays);
@@ -138,9 +134,6 @@ export function ManagerCatalogsPage() {
           location: f.location.trim(),
           capacity: Number(f.capacity),
           status: f.status as Room['status'],
-          disciplineId: f.disciplineId ? Number(f.disciplineId) : null,
-          openTime: f.disciplineId ? f.openTime : null,
-          closeTime: f.disciplineId ? f.closeTime : null,
           tier: (f.tier as Room['tier']) || 'STANDARD',
         });
       }
@@ -354,7 +347,7 @@ export function ManagerCatalogsPage() {
                 type="text"
                 required
                 autoFocus
-                placeholder={tab === 'packages' ? t('Vd: SILVER, GOLD 3 THÁNG, PLATINUM VIP...') : t('Vd: Gym, Bơi lội, Tennis...')}
+                placeholder={tab === 'packages' ? t('Vd: SILVER, GOLD 3 THÁNG, PLATINUM VIP...') : t('Vd: Gym, Boxing, Yoga...', 'Example: Gym, Boxing, Yoga...')}
                 value={editing.form.name ?? ''}
                 onChange={(e) => set('name', e.target.value)}
               />
@@ -646,7 +639,7 @@ export function ManagerCatalogsPage() {
                   <tbody data-i18n-managed>
                     {rooms.map((r) => (
                       <tr data-i18n-managed key={r.id}>
-                        <td><strong>{r.name}</strong>{r.disciplineName && <div className="muted">{r.disciplineName}{r.openTime && r.closeTime ? ` · ${r.openTime.slice(0, 5)}–${r.closeTime.slice(0, 5)}` : ''}</div>}</td>
+                        <td><strong>{r.name}</strong></td>
                         <td>
                           {r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip') ? (
                             <span data-i18n-managed className="badge badge-info">{t("Cao cấp (Platinum)", "Platinum · VIP")}</span>
@@ -668,7 +661,7 @@ export function ManagerCatalogsPage() {
                             onClick={() =>
                               openEditor({
                                 id: r.id,
-                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, disciplineId: r.disciplineId == null ? '' : String(r.disciplineId), openTime: r.openTime?.slice(0, 5) ?? '', closeTime: r.closeTime?.slice(0, 5) ?? '', tier: r.tier || (r.name.toLowerCase().includes('vip') ? 'PLATINUM' : 'STANDARD') },
+                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, tier: r.tier || (r.name.toLowerCase().includes('vip') ? 'PLATINUM' : 'STANDARD') },
                               })
                             }
                           >

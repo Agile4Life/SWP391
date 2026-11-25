@@ -43,7 +43,7 @@ it.each(['Your request was approved', 'Your request was rejected', 'Đơn từ c
   expect(notificationDestination({ ...item, title, relatedEntityType: 'support_request' }, 'STAFF')).toBe('/messages?tab=support');
 });
 
-it.each(['/staff/orders/42', '/staff/classes', '/staff/courts', '/staff/pt-attendance', '/staff/attendance/7'])('retired Staff links never open the removed page: %s', actionPath => {
+it.each(['/staff/orders/42', '/staff/classes', '/staff/pt-attendance', '/staff/attendance/7'])('retired Staff links never open the removed page: %s', actionPath => {
   expect(notificationDestination({ ...item, actionPath }, 'STAFF')).toBe('/staff/reception');
 });
 

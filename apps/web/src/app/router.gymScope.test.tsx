@@ -1,17 +1,33 @@
 import { expect, it } from 'vitest';
 import { router } from './router';
 
-it('retains public 6-sport pages and restored group classes while keeping shop, courts and streak retired', () => {
-  const publicPaths = router.routes.map(route => route.path);
-  expect(publicPaths).toContain('/');
-  expect(publicPaths).toContain('/trainers/:trainerId');
-  for (const path of ['/products', '/products/:slug', '/checkout']) expect(publicPaths).not.toContain(path);
-  for (const path of ['/swimming', '/tennis', '/boxing', '/badminton', '/yoga', '/sports/:sportId']) {
-    expect(publicPaths).toContain(path);
+it('retains public 3-discipline pages and group classes while keeping shop, courts, streak and 3D explore retired', () => {
+  const publicPaths = router.routes.map(route => route.path).filter((path): path is string => typeof path === 'string');
+  expect(publicPaths).toEqual([
+    '/',
+    '/boxing',
+    '/yoga',
+    '/sports/:sportId',
+    '/trainers',
+    '/trainers/:trainerId',
+    '/login',
+    '/register',
+    '*',
+  ]);
+
+  const portalRoutes = router.routes.flatMap(route => route.children ?? []).flatMap(group => group.children ?? []);
+  const portalPaths = portalRoutes.map(route => route.path);
+  for (const path of ['/member/streak', '/member/products', '/member/products/:slug', '/member/checkout', '/member/orders', '/member/orders/:orderId']) {
+    expect(portalPaths).not.toContain(path);
   }
-  const portalPaths = router.routes.flatMap(route => route.children ?? []).flatMap(group => group.children ?? []).map(route => route.path);
-  for (const path of ['/member/streak', '/member/courts', '/member/products', '/member/products/:slug', '/member/checkout', '/member/orders', '/member/orders/:orderId']) expect(portalPaths).not.toContain(path);
-  for (const path of ['/member/packages', '/member/packages/checkout', '/member/classes', '/member/progress', '/manager/classes', '/coach/attendance', '/staff/classes', '/staff/courts', '/staff/orders', '/manager/products', '/manager/products/new', '/manager/products/:productId']) {
+  expect(portalPaths.some(path => path?.includes('court'))).toBe(false);
+
+  const exploreRoute = portalRoutes.find(route => route.path === '/member/explore');
+  expect(exploreRoute).toBeDefined();
+  expect(exploreRoute?.lazy).toBeUndefined();
+  expect(exploreRoute?.element).toBeTruthy();
+
+  for (const path of ['/member/packages', '/member/packages/checkout', '/member/classes', '/member/progress', '/manager/classes', '/coach/attendance', '/staff/classes', '/staff/orders', '/manager/products', '/manager/products/new', '/manager/products/:productId']) {
     expect(portalPaths).toContain(path);
   }
 });

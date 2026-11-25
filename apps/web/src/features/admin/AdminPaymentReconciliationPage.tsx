@@ -606,13 +606,12 @@ function methodLabel(t: Translate, method: string | null): string {
   }
 }
 
-/** Nhãn đối tượng thanh toán (gói tập, buổi PT, đặt sân, đơn hàng, khóa học, nạp ví) kèm id. */
+/** Nhãn đối tượng thanh toán (gói tập, buổi PT, đơn hàng, khóa học, nạp ví) kèm id. */
 function targetLabel(t: Translate, type: string | null, id: number | null): string {
   const suffix = id != null ? ` #${id}` : '';
   switch (type) {
     case 'MEMBERSHIP': return t('Gói tập', 'Membership') + suffix;
     case 'COACH_BOOKING': return t('Buổi PT 1:1', '1:1 coach session') + suffix;
-    case 'COURT_BOOKING': return t('Đặt sân', 'Court booking') + suffix;
     case 'PRODUCT_ORDER': return t('Đơn hàng', 'Shop order') + suffix;
     case 'COURSE': return t('Khóa học', 'Course') + suffix;
     case 'WALLET_TOPUP': return t('Nạp Ví', 'Wallet top-up');

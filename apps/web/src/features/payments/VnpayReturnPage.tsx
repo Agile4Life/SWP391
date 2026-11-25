@@ -12,7 +12,7 @@ import { toast } from '../../shared/ui/toast';
 import { getVnpayStatus, verifyVnpayReturn, type VnpayStatus } from './vnpayApi';
 import { clearActiveVnpay } from './vnpaySession';
 
-// Thanh toán sân/Shop cũ trở về hóa đơn; giữ nguyên đích gói tập và PT.
+// Thanh toán Shop cũ trở về hóa đơn; giữ nguyên đích gói tập, lớp học và PT.
 const destinations = new Set(['/member/packages', '/member/classes', '/member/classes?tab=pt', '/member/invoices']);
 /** Chỉ cho phép đích quay về nằm trong danh sách cho phép. */
 function isAllowedDestination(destination: string | null | undefined): destination is string {

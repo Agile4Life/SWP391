@@ -7,17 +7,13 @@ export interface Discipline {
   description: string | null;
 }
 
-/** Phòng tập: vị trí, sức chứa, trạng thái, bộ môn, giờ mở/đóng và hạng. */
+/** Phòng tập: vị trí, sức chứa, trạng thái và hạng. */
 export interface Room {
   id: number;
   name: string;
   location: string | null;
   capacity: number;
   status: 'available' | 'maintenance' | 'closed';
-  disciplineId?: number | null;
-  disciplineName?: string | null;
-  openTime?: string | null;
-  closeTime?: string | null;
   tier?: 'STANDARD' | 'PLATINUM' | string | null;
 }
 
@@ -52,7 +48,7 @@ export const catalogApi = {
   // Danh sách phòng.
   rooms: () => apiFetch<Room[]>('/rooms'),
   // Tạo hoặc cập nhật phòng.
-  saveRoom: (id: number | null, b: Omit<Body<Room>, 'disciplineName'>) =>
+  saveRoom: (id: number | null, b: Body<Room>) =>
     apiFetch<Room>(id ? `/rooms/${id}` : '/rooms', json(id ? 'PUT' : 'POST', b)),
   // Xóa phòng.
   deleteRoom: (id: number) => apiFetch<void>(`/rooms/${id}`, { method: 'DELETE' }),

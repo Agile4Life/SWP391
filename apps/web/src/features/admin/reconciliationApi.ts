@@ -4,8 +4,8 @@ import type { PageResult } from './auditApi';
 
 /** Trạng thái lượt thanh toán VNPay: chờ, thành công hoặc thất bại. */
 export type AttemptStatus = 'pending' | 'success' | 'failed';
-/** Loại đối tượng được thanh toán: gói tập, buổi PT, đặt sân, đơn hàng, khóa học hoặc nạp ví. */
-export type TargetType = 'MEMBERSHIP' | 'COACH_BOOKING' | 'COURT_BOOKING' | 'PRODUCT_ORDER' | 'COURSE' | 'WALLET_TOPUP';
+/** Loại đối tượng được thanh toán: gói tập, buổi PT, đơn hàng, khóa học hoặc nạp ví. */
+export type TargetType = 'MEMBERSHIP' | 'COACH_BOOKING' | 'PRODUCT_ORDER' | 'COURSE' | 'WALLET_TOPUP';
 
 /** Tham chiếu tới hội viên: id, họ tên, email và số điện thoại. */
 export interface MemberRef {

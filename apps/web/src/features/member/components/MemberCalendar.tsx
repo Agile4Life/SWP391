@@ -231,7 +231,7 @@ export function MemberCalendar() {
     };
   }, []);
 
-  // Tải song song lịch PT 1:1 và lịch lớp học nhóm đã đăng ký (không gọi API đặt sân).
+  // Tải song song lịch PT 1:1 và lịch lớp học nhóm đã đăng ký.
   useEffect(() => {
     let active = true;
     const quiet = quietRef.current;

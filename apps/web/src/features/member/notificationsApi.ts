@@ -56,12 +56,10 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
     if (path === '/messages' || path === '/messages?tab=support') return path;
     const pathname = path.split(/[?#]/)[0];
     if (pathname === '/staff/support') return '/messages?tab=support';
-    if (/^\/staff\/(?:orders|classes|courts|pt-attendance|attendance)(?:\/|$)/.test(pathname)) return '/staff/reception';
+    if (/^\/staff\/(?:orders|classes|pt-attendance|attendance)(?:\/|$)/.test(pathname)) return '/staff/reception';
     return ['/staff/reception', '/staff/check-in', '/staff/check-out', '/staff/reception-history',
       '/staff/kyc', '/staff/holds', '/staff/requests'].includes(pathname) ? pathname : null;
   }
-  // Thông báo sân cũ không mở route đã bỏ; lịch sử thanh toán vẫn ở hóa đơn.
-  if (role === 'MEMBER' && /^\/member\/courts(?:[?/#]|$)/.test(path)) return '/member/invoices';
   // Thông báo đơn hàng cũ dẫn về lịch sử giao dịch, không mở màn Shop đã bỏ.
   if (role === 'MEMBER' && /^\/member\/(?:orders|products|checkout)(?:[?/#]|$)/.test(path)) return '/member/invoices';
   // Thông báo Streak cũ về Dashboard; bỏ anchor cũ để mở trang Giáo án hiện tại.

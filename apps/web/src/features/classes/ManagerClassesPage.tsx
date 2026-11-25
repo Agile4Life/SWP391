@@ -34,8 +34,8 @@ type ViewTab = 'by_discipline' | 'week_all' | 'list';
 /**
  * Trang Quản lý lớp học & xếp lịch cho Quản lý (`/manager/classes`).
  * Gồm đúng 3 tab độc lập, không lặp điều khiển, không lọc chéo nhau:
- * 1. `Lịch theo bộ môn`: chọn 1 trong 6 bộ môn để xem trọn lịch tuần của lớp duy nhất thuộc môn đó.
- * 2. `Lịch tổng cả tuần`: xem gộp cả 6 bộ môn trong tuần, gom nhóm "+N lớp" khi trùng giờ để không đè chữ.
+ * 1. `Lịch theo bộ môn`: chọn 1 trong 3 bộ môn để xem trọn lịch tuần của lớp duy nhất thuộc môn đó.
+ * 2. `Lịch tổng cả tuần`: xem gộp cả 3 bộ môn trong tuần, gom nhóm "+N lớp" khi trùng giờ để không đè chữ.
  * 3. `Danh sách lớp`: quản lý đầy đủ các lớp theo quy tắc mỗi bộ môn tối đa 1 lớp đang hoạt động.
  */
 export function ManagerClassesPage() {
@@ -202,7 +202,7 @@ export function ManagerClassesPage() {
     return toTimetableEvents(enrichedSessions.filter((s) => s.disciplineId === activeDisciplineId));
   }, [enrichedSessions, activeDisciplineId, toTimetableEvents]);
 
-  /** Sự kiện độc lập cho Tab 2 (luôn hiển thị toàn bộ 6 bộ môn, không bị Tab 1 lọc ảnh hưởng). */
+  /** Sự kiện độc lập cho Tab 2 (luôn hiển thị toàn bộ 3 bộ môn, không bị Tab 1 lọc ảnh hưởng). */
   const allWeekEvents = useMemo(
     () => toTimetableEvents(enrichedSessions),
     [enrichedSessions, toTimetableEvents],
@@ -335,7 +335,7 @@ export function ManagerClassesPage() {
         </div>
       ) : view === 'by_discipline' ? (
         <>
-          {/* Chỉ chọn 1 trong 6 bộ môn — không có chip "Tất cả" trùng với tab Lịch tổng, không có dropdown dư thừa */}
+          {/* Chỉ chọn 1 trong 3 bộ môn — không có chip "Tất cả" trùng với tab Lịch tổng, không có dropdown dư thừa */}
           <div className="portal-card" style={{ marginBottom: 16 }}>
             <div
               className="class-discipline-chips"
