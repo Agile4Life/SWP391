@@ -49,7 +49,6 @@ export function usePublicCatalog() {
         if (active && request === sequence) {
           setCatalog({
             packages: Array.isArray(data?.packages) ? data.packages : [],
-            // Trung tâm chỉ còn Gym nên mọi HLV công khai đều là HLV Gym (kể cả HLV chưa ghi chuyên môn).
             coaches: Array.isArray(data?.coaches) ? data.coaches : [],
             sessions: Array.isArray(data?.sessions) ? data.sessions : [],
           });

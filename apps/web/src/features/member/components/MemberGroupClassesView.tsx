@@ -8,6 +8,7 @@ import { useLanguage } from '../../../shared/i18n/language';
 import { ApiError } from '../../../shared/api/client';
 import { centerNowParts, formatCenterDate } from '../../../shared/lib/centerTime';
 import { formatPrice } from '../../../shared/lib/membershipPresentation';
+import { matchesDiscipline } from '../../../shared/lib/disciplines';
 import { notify } from '../../../shared/lib/portalNotices';
 import { navigateToVnpay } from '../../payments/vnpayApi';
 import { disciplineAccentColor, hhmm } from '../../schedule/timetable';
@@ -56,6 +57,9 @@ export function MemberGroupClassesView({ initialDiscipline, onBookingChange }: M
   const [error, setError] = useState<string | null>(null);
 
   const [disciplineFilter, setDisciplineFilter] = useState<string>(initialDiscipline || 'ALL');
+  useEffect(() => {
+    setDisciplineFilter(initialDiscipline || 'ALL');
+  }, [initialDiscipline]);
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<number | null>(null);
   const [checkoutTarget, setCheckoutTarget] = useState<GymClassDto | null>(null);
@@ -116,7 +120,8 @@ export function MemberGroupClassesView({ initialDiscipline, onBookingChange }: M
       const matchDisc =
         disciplineFilter === 'ALL'
         || String(cls.disciplineId) === disciplineFilter
-        || cls.disciplineName.toLowerCase() === normDisc;
+        || cls.disciplineName.toLowerCase() === normDisc
+        || matchesDiscipline(cls.disciplineName, disciplineFilter);
       const matchSearch =
         !needle
         || [cls.name, cls.disciplineName, cls.coachName, cls.roomName]
@@ -314,7 +319,10 @@ export function MemberGroupClassesView({ initialDiscipline, onBookingChange }: M
             {t(`Tất cả bộ môn (${classes.length})`, `All disciplines (${classes.length})`)}
           </button>
           {disciplines.map((d) => {
-            const selected = disciplineFilter === String(d.id) || disciplineFilter.toLowerCase() === d.name.toLowerCase();
+            const selected =
+              disciplineFilter === String(d.id)
+              || disciplineFilter.toLowerCase() === d.name.toLowerCase()
+              || (disciplineFilter !== 'ALL' && matchesDiscipline(d.name, disciplineFilter));
             return (
               <button
                 key={d.id}
