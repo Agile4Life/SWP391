@@ -329,7 +329,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.textContent).toContain('Assisted Pull-up & Face Pull');
   });
 
-  it('saves and activates plan when clicking "Lưu & Kích hoạt giáo án"', async () => {
+  it('saves and activates plan when clicking "Lưu & Kích hoạt giáo án" and re-enables save after edits', async () => {
     await renderComponent();
     await openStep(3);
 
@@ -340,10 +340,29 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
       saveBtn?.click();
     });
 
-    expect(aiApi.saveTrainingPlan).toHaveBeenCalled();
+    expect(aiApi.saveTrainingPlan).toHaveBeenCalledTimes(1);
     expect(host.querySelector('.center-toast-card')).toBeNull();
     expect(document.querySelector('.sol-toast--success')?.textContent).toContain('Đã lưu và kích hoạt giáo án');
     expect(host.querySelector('.plan-saved-badge')).not.toBeNull();
+    // Ngay sau khi lưu xong, nút lưu bị khóa để tránh bấm trùng và có link tới danh sách giáo án đã lưu.
+    const savedBtn = Array.from(host.querySelectorAll<HTMLButtonElement>('button')).find((b) =>
+      b.textContent?.includes('Đã lưu & Kích hoạt thành công')
+    );
+    expect(savedBtn?.disabled).toBe(true);
+    expect(host.querySelector('a[href="/coach/saved-plans"]')).not.toBeNull();
+
+    // Khi HLV quay lại sửa mục tiêu, nút Lưu mở khóa trở lại để lưu phiên bản mới.
+    await openStep(1);
+    const goalInput = host.querySelector<HTMLInputElement>('input[type="text"]');
+    expect(goalInput).not.toBeNull();
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(goalInput, 'Tăng sức bền mới');
+      goalInput?.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await openStep(3);
+    const saveAgainBtn = saveButton();
+    expect(saveAgainBtn).toBeDefined();
+    expect(saveAgainBtn?.disabled).toBe(false);
   });
 
   it('shows an empty state and blocks saving when the live roster has no members (no sample students)', async () => {

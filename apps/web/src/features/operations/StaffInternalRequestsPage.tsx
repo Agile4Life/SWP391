@@ -13,7 +13,7 @@ import {
   type StaffInternalRequestDto,
   type RequestType,
 } from './staffRequestApi';
-import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { ApiError } from '../../shared/api/client';
 
 import { DatePicker } from '../../shared/ui/DatePicker';
@@ -58,6 +58,13 @@ export function StaffInternalRequestsPage() {
 
   // Đơn đang thao tác hủy
   const [cancellingId, setCancellingId] = useState<number | null>(null);
+
+  const tomorrowDate = useMemo(() => {
+    const today = centerNowParts().date;
+    const [y, m, d] = today.split('-').map(Number);
+    const tomorrow = new Date(Date.UTC(y, m - 1, d + 1));
+    return tomorrow.toISOString().slice(0, 10);
+  }, []);
 
   // Tải đơn từ của chính người dùng.
   const loadData = useCallback(async () => {
@@ -419,6 +426,7 @@ export function StaffInternalRequestsPage() {
                 <DatePicker
                   id="internal-request-start"
                   value={createStartDate}
+                  min={tomorrowDate}
                   onChange={(e) => setCreateStartDate(e.target.value)}
                 />
               </div>
@@ -430,7 +438,7 @@ export function StaffInternalRequestsPage() {
                 <DatePicker
                   id="internal-request-end"
                   value={createEndDate}
-                  min={createStartDate || undefined}
+                  min={createStartDate && createStartDate >= tomorrowDate ? createStartDate : tomorrowDate}
                   onChange={(e) => setCreateEndDate(e.target.value)}
                 />
               </div>

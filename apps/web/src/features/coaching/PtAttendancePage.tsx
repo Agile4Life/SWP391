@@ -124,6 +124,10 @@ export function PtAttendancePage() {
   // Ghi nhận hoặc bỏ ghi nhận có mặt; bỏ ghi nhận khi hội viên đã quét cổng thì hỏi xác nhận trước.
   async function markAttended(row: CoachBookingDto, attended: boolean) {
     if (busy.current || loading) return;
+    if (isCoach && row.bookingDate !== today) {
+      setError(t('Buổi tập đã qua ngày. Huấn luyện viên chỉ được điểm danh và sửa trong ngày diễn ra buổi tập.', 'The session date has passed. Coaches can only mark and edit attendance on the day of the session.'));
+      return;
+    }
     // Hội viên đã quét mã vào cổng quanh thời điểm buổi tập này: cần xác nhận lại trước khi bỏ ghi nhận.
     if (!attended && row.gateCheckinAt && !(await confirm({
       title: { vi: 'Bỏ ghi nhận có mặt?', en: 'Remove the attended mark?' },
@@ -226,14 +230,26 @@ export function PtAttendancePage() {
                 <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <span className={`badge ${badge[outcome]}`}>{filterLabel[outcome]}</span>
                   {outcome === 'ATTENDED' && (
-                    <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void markAttended(row, false)}>
-                      {t('Bỏ đánh dấu có mặt', 'Remove attended mark')}
-                    </button>
+                    !isCoach || row.bookingDate === today ? (
+                      <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void markAttended(row, false)}>
+                        {t('Bỏ đánh dấu có mặt', 'Remove attended mark')}
+                      </button>
+                    ) : (
+                      <span className="muted" style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
+                        {t('Đã khóa (chỉ sửa trong ngày)', 'Locked (same-day only)')}
+                      </span>
+                    )
                   )}
                   {outcome !== 'ATTENDED' && hasStarted(row, now) && (
-                    <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void markAttended(row, true)}>
-                      {t('Đánh dấu có mặt', 'Mark as attended')}
-                    </button>
+                    !isCoach || row.bookingDate === today ? (
+                      <button type="button" className="btn-secondary btn-sm" disabled={busyId !== null} onClick={() => void markAttended(row, true)}>
+                        {t('Đánh dấu có mặt', 'Mark as attended')}
+                      </button>
+                    ) : (
+                      <span className="muted" style={{ fontSize: '0.8rem', fontStyle: 'italic' }}>
+                        {t('Đã khóa (chỉ sửa trong ngày)', 'Locked (same-day only)')}
+                      </span>
+                    )
                   )}
                 </span>
               </li>

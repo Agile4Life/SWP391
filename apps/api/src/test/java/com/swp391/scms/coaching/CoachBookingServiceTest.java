@@ -1053,7 +1053,7 @@ class CoachBookingServiceTest {
     /** Kiểm thử: bỏ đánh dấu gỡ lượt đến và khóa buổi khỏi lượt quét và tác vụ quét. */
     @Test
     void unmarkingRemovesTheArrivalAndLocksTheSessionAgainstTheScanAndTheSweep() {
-        var attended = ptSession(11, LocalDate.of(2026, 10, 30), LocalTime.of(9, 0), LocalTime.of(10, 0), LocalDateTime.of(2026, 10, 30, 8, 55));
+        var attended = ptSession(11, LocalDate.of(2026, 10, 31), LocalTime.of(7, 0), LocalTime.of(8, 0), LocalDateTime.of(2026, 10, 31, 7, 55));
         when(coachBookingRepository.findById(11L)).thenReturn(Optional.of(attended));
         var otherCoach = new AuthenticatedPrincipal(99L, "other", "COACH");
         assertThatThrownBy(() -> service.unmarkAttended(otherCoach, 11L))
@@ -1074,6 +1074,30 @@ class CoachBookingServiceTest {
         service.markAttended(new AuthenticatedPrincipal(20L, "hung", "COACH"), 11L);
         assertThat(attended.getAttendedAt()).isNotNull();
         assertThat(attended.isAttendanceLocked()).isFalse();
+    }
+
+    /** Kiểm thử: HLV chỉ được điểm danh và sửa điểm danh trong ngày diễn ra buổi tập; quá ngày sẽ bị từ chối. */
+    @Test
+    void coachCannotMarkOrUnmarkAttendanceForPastDays() {
+        var pastSession = ptSession(13, LocalDate.of(2026, 10, 30), LocalTime.of(7, 0), LocalTime.of(8, 0), null);
+        when(coachBookingRepository.findById(13L)).thenReturn(Optional.of(pastSession));
+        var coachPrincipal = new AuthenticatedPrincipal(20L, "hung", "COACH");
+        var deskPrincipal = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
+
+        assertThatThrownBy(() -> service.markAttended(coachPrincipal, 13L))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_BOOKING_ATTENDANCE_EXPIRED");
+
+        assertThatThrownBy(() -> service.unmarkAttended(coachPrincipal, 13L))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_BOOKING_ATTENDANCE_EXPIRED");
+
+        // Lễ tân vẫn có thể ghi nhận và gỡ ghi nhận buổi ngày hôm trước
+        var deskDto = service.markAttended(deskPrincipal, 13L);
+        assertThat(deskDto.attendedAt()).isNotNull();
+        var deskUnmarked = service.unmarkAttended(deskPrincipal, 13L);
+        assertThat(deskUnmarked.attendedAt()).isNull();
+        assertThat(deskUnmarked.attendanceLocked()).isTrue();
     }
 
     /** Kiểm thử: buổi đã hủy không bỏ đánh dấu được. */
