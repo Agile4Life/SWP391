@@ -761,10 +761,297 @@ class ClassServiceTest {
                 org.mockito.ArgumentMatchers.eq(55L));
     }
 
-    /** Kiểm thử: quy tắc mỗi bộ môn chỉ có tối đa 1 lớp đang hoạt động (active) trên cả create & update. */
+    /** Kiểm thử: cho phép nhiều lớp active trong cùng một bộ môn nếu không trùng slot/ngày học. */
     @Test
-    @DisplayName("createRecurringClass and updateClass reject a second active class for the same discipline")
-    void enforcesSingleActiveClassPerDiscipline() {
+    @DisplayName("createRecurringClass allows multiple active classes in the same discipline on non-overlapping slots or weekdays")
+    void allowsMultipleActiveClassesInSameDisciplineOnNonOverlappingSchedules() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Coach coach1 = new Coach();
+        coach1.setUserId(2L);
+        coach1.setEmploymentStatus("active");
+        Coach coach2 = new Coach();
+        coach2.setUserId(20L);
+        coach2.setEmploymentStatus("active");
+        Room studio1 = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(studio1, "id", 3L);
+        studio1.setStatus("available");
+        studio1.setName("Zen Garden Studio");
+        studio1.setCapacity(20);
+        Room studio2 = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(studio2, "id", 4L);
+        studio2.setStatus("available");
+        studio2.setName("Studio 2");
+        studio2.setCapacity(20);
+
+        GymClass existingYoga = new GymClass();
+        existingYoga.setId(50L);
+        existingYoga.setName("Hatha Yoga Sáng");
+        existingYoga.setDiscipline(yoga);
+        existingYoga.setCoach(coach1);
+        existingYoga.setRoom(studio1);
+        existingYoga.setStatus("active");
+
+        LocalDate monday = LocalDate.of(2026, 10, 19); // Thứ 2
+        ClassSession morningSession = new ClassSession();
+        morningSession.setId(501L);
+        morningSession.setGymClass(existingYoga);
+        morningSession.setSessionDate(monday);
+        morningSession.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        morningSession.setEndTime(ScheduleSlot.SLOT_1.endTime());
+        morningSession.setStatus("scheduled");
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(20L)).thenReturn(Optional.of(coach2));
+        when(rooms.findById(4L)).thenReturn(Optional.of(studio2));
+        when(sessions.searchSessions(monday, monday, null, null)).thenReturn(java.util.List.of(morningSession));
+        when(gymClasses.save(any(GymClass.class))).thenAnswer(inv -> {
+            GymClass c = inv.getArgument(0);
+            c.setId(51L);
+            return c;
+        });
+        when(sessions.saveAndFlush(any(ClassSession.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        // Lớp Yoga thứ 2 cùng ngày Thứ 2 nhưng khác slot (Slot 5 thay vì Slot 1) → hợp lệ
+        var eveningReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                "Yoga Buổi Tối",
+                1L,
+                20L,
+                4L,
+                15,
+                "all",
+                "desc",
+                java.math.BigDecimal.ZERO,
+                monday,
+                monday,
+                java.util.List.of("MONDAY"),
+                ScheduleSlot.SLOT_5.startTime(),
+                ScheduleSlot.SLOT_5.endTime()
+        );
+
+        GymClassDto created = service.createRecurringClass(eveningReq);
+        assertThat(created.id()).isEqualTo(51L);
+        assertThat(created.name()).isEqualTo("Yoga Buổi Tối");
+
+        // Lớp Yoga thứ 3 cùng Slot 1 nhưng khác thứ (Thứ 3 = 2026-10-20) → hợp lệ
+        LocalDate tuesday = LocalDate.of(2026, 10, 20);
+        when(sessions.searchSessions(tuesday, tuesday, null, null)).thenReturn(java.util.List.of());
+        var tuesdayReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                "Yoga Sáng Thứ 3",
+                1L,
+                20L,
+                4L,
+                15,
+                "all",
+                "desc",
+                java.math.BigDecimal.ZERO,
+                tuesday,
+                tuesday,
+                java.util.List.of("TUESDAY"),
+                ScheduleSlot.SLOT_1.startTime(),
+                ScheduleSlot.SLOT_1.endTime()
+        );
+        GymClassDto createdTuesday = service.createRecurringClass(tuesdayReq);
+        assertThat(createdTuesday.name()).isEqualTo("Yoga Sáng Thứ 3");
+    }
+
+    /** Kiểm thử: từ chối trùng khung giờ cùng bộ môn trên createRecurringClass, createClass, updateClass và rescheduleSession. */
+    @Test
+    @DisplayName("rejects same-discipline overlapping slot on createRecurringClass, createClass, updateClass and rescheduleSession")
+    void rejectsSameDisciplineOverlapAcrossSchedulingOperations() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Discipline boxing = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(boxing, "id", 2L);
+        boxing.setName("Boxing");
+
+        Coach coach1 = new Coach();
+        coach1.setUserId(10L);
+        coach1.setEmploymentStatus("active");
+        Coach coach2 = new Coach();
+        coach2.setUserId(20L);
+        coach2.setEmploymentStatus("active");
+
+        Room room1 = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(room1, "id", 30L);
+        room1.setName("Zen Garden Studio");
+        room1.setStatus("available");
+        room1.setCapacity(20);
+        Room room2 = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(room2, "id", 40L);
+        room2.setName("Studio 2");
+        room2.setStatus("available");
+        room2.setCapacity(20);
+
+        GymClass existingYoga = new GymClass();
+        existingYoga.setId(50L);
+        existingYoga.setName("Hatha Yoga Nền Tảng");
+        existingYoga.setDiscipline(yoga);
+        existingYoga.setCoach(coach1);
+        existingYoga.setRoom(room1);
+        existingYoga.setStatus("active");
+
+        LocalDate monday = LocalDate.of(2026, 10, 19);
+        ClassSession existingSession = new ClassSession();
+        existingSession.setId(501L);
+        existingSession.setGymClass(existingYoga);
+        existingSession.setSessionDate(monday);
+        existingSession.setStartTime(ScheduleSlot.SLOT_2.startTime());
+        existingSession.setEndTime(ScheduleSlot.SLOT_2.endTime());
+        existingSession.setStatus("scheduled");
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(20L)).thenReturn(Optional.of(coach2));
+        when(rooms.findById(40L)).thenReturn(Optional.of(room2));
+        when(sessions.searchSessions(monday, monday, null, null)).thenReturn(java.util.List.of(existingSession));
+
+        // 1. createRecurringClass: khác phòng & khác HLV nhưng cùng bộ môn Yoga + cùng Slot 2 ngày Thứ 2 → 409 SCHEDULING_DISCIPLINE_CONFLICT
+        var recurringReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                "Yoga Flow Nâng Cao", 1L, 20L, 40L, 15, "all", "desc",
+                java.math.BigDecimal.ZERO, monday, monday, java.util.List.of("MONDAY"),
+                ScheduleSlot.SLOT_2.startTime(), ScheduleSlot.SLOT_2.endTime());
+        assertThatThrownBy(() -> service.createRecurringClass(recurringReq))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CONFLICT")
+                .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.discipline_conflict");
+
+        // 2. createClass: cùng bộ môn Yoga + cùng Slot 2 ngày Thứ 2 → 409 SCHEDULING_DISCIPLINE_CONFLICT
+        var singleReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest(
+                "Yoga Lẻ", 1L, 20L, 40L, 15, "all", "desc",
+                monday, ScheduleSlot.SLOT_2.startTime(), ScheduleSlot.SLOT_2.endTime());
+        assertThatThrownBy(() -> service.createClass(singleReq))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CONFLICT");
+
+        // 3. updateClass: đổi bộ môn từ Boxing sang Yoga khi có buổi trùng giờ → 409 SCHEDULING_DISCIPLINE_CONFLICT
+        GymClass boxingClass = new GymClass();
+        boxingClass.setId(60L);
+        boxingClass.setName("Boxing Sáng");
+        boxingClass.setDiscipline(boxing);
+        boxingClass.setCoach(coach2);
+        boxingClass.setRoom(room2);
+        boxingClass.setStatus("active");
+
+        ClassSession boxingSession = new ClassSession();
+        boxingSession.setId(601L);
+        boxingSession.setGymClass(boxingClass);
+        boxingSession.setSessionDate(monday);
+        boxingSession.setStartTime(ScheduleSlot.SLOT_2.startTime());
+        boxingSession.setEndTime(ScheduleSlot.SLOT_2.endTime());
+        boxingSession.setStatus("scheduled");
+
+        when(gymClasses.findById(60L)).thenReturn(Optional.of(boxingClass));
+        when(enrollments.countByGymClassIdAndStatus(60L, "booked")).thenReturn(0L);
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(60L)).thenReturn(java.util.List.of(boxingSession));
+
+        var changeDisciplineReq = new UpdateClassRequest(
+                "Đổi sang Yoga", 1L, 20L, 40L, 15, "all", "desc", "active");
+        assertThatThrownBy(() -> service.updateClass(60L, changeDisciplineReq))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CONFLICT");
+
+        // 4. updateClass: kích hoạt lại lớp archived sang active khi trùng giờ với lớp active cùng bộ môn → 409 SCHEDULING_DISCIPLINE_CONFLICT
+        GymClass archivedYoga = new GymClass();
+        archivedYoga.setId(61L);
+        archivedYoga.setName("Yoga Cũ");
+        archivedYoga.setDiscipline(yoga);
+        archivedYoga.setCoach(coach2);
+        archivedYoga.setRoom(room2);
+        archivedYoga.setStatus("archived");
+
+        ClassSession archivedSession = new ClassSession();
+        archivedSession.setId(611L);
+        archivedSession.setGymClass(archivedYoga);
+        archivedSession.setSessionDate(monday);
+        archivedSession.setStartTime(ScheduleSlot.SLOT_2.startTime());
+        archivedSession.setEndTime(ScheduleSlot.SLOT_2.endTime());
+        archivedSession.setStatus("scheduled");
+
+        when(gymClasses.findById(61L)).thenReturn(Optional.of(archivedYoga));
+        when(enrollments.countByGymClassIdAndStatus(61L, "booked")).thenReturn(0L);
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(61L)).thenReturn(java.util.List.of(archivedSession));
+
+        var reactivateReq = new UpdateClassRequest(
+                "Yoga Cũ", 1L, 20L, 40L, 15, "all", "desc", "active");
+        assertThatThrownBy(() -> service.updateClass(61L, reactivateReq))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CONFLICT");
+
+        // 5. rescheduleSession: dời buổi của lớp Yoga khác sang đúng Slot 2 ngày Thứ 2 → 409 SCHEDULING_DISCIPLINE_CONFLICT
+        GymClass secondYoga = new GymClass();
+        secondYoga.setId(62L);
+        secondYoga.setName("Yoga Chiều");
+        secondYoga.setDiscipline(yoga);
+        secondYoga.setCoach(coach2);
+        secondYoga.setRoom(room2);
+        secondYoga.setStatus("active");
+
+        ClassSession secondSession = new ClassSession();
+        secondSession.setId(621L);
+        secondSession.setGymClass(secondYoga);
+        secondSession.setSessionDate(monday);
+        secondSession.setStartTime(ScheduleSlot.SLOT_5.startTime());
+        secondSession.setEndTime(ScheduleSlot.SLOT_5.endTime());
+        secondSession.setStatus("scheduled");
+
+        when(gymClasses.findById(62L)).thenReturn(Optional.of(secondYoga));
+        when(sessions.findById(621L)).thenReturn(Optional.of(secondSession));
+
+        assertThatThrownBy(() -> service.rescheduleSession(62L, 621L,
+                new RescheduleSessionRequest(monday, ScheduleSlot.SLOT_2.startTime(), ScheduleSlot.SLOT_2.endTime())))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CONFLICT");
+    }
+
+    /** Kiểm thử: từ chối sĩ số vượt sức chứa phòng trên createClass, createRecurringClass và updateClass. */
+    @Test
+    @DisplayName("rejects requested capacity exceeding room capacity with 400 SCHEDULING_CAPACITY_EXCEEDS_ROOM")
+    void rejectsCapacityExceedingRoomCapacity() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Coach activeCoach = new Coach();
+        activeCoach.setUserId(2L);
+        activeCoach.setEmploymentStatus("active");
+        Room smallRoom = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(smallRoom, "id", 3L);
+        smallRoom.setName("Zen Garden Studio");
+        smallRoom.setStatus("available");
+        smallRoom.setCapacity(16);
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(2L)).thenReturn(Optional.of(activeCoach));
+        when(rooms.findById(3L)).thenReturn(Optional.of(smallRoom));
+
+        var recurringReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                "Yoga Đông", 1L, 2L, 3L, 20, "all", "desc",
+                java.math.BigDecimal.ZERO, LocalDate.of(2026, 10, 19), LocalDate.of(2026, 10, 26),
+                java.util.List.of("MONDAY"), ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
+        assertThatThrownBy(() -> service.createRecurringClass(recurringReq))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_CAPACITY_EXCEEDS_ROOM")
+                .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.capacity_exceeds_room");
+
+        var singleReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest(
+                "Yoga Đông", 1L, 2L, 3L, 17, "all", "desc");
+        assertThatThrownBy(() -> service.createClass(singleReq))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_CAPACITY_EXCEEDS_ROOM");
+
+        gymClass.setId(1L);
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        var updateReq = new UpdateClassRequest("Yoga Đông", 1L, 2L, 3L, 18, "all", "desc", "active");
+        assertThatThrownBy(() -> service.updateClass(1L, updateReq))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_CAPACITY_EXCEEDS_ROOM");
+    }
+
+    /** Kiểm thử: từ chối học phí âm khi tạo khóa định kỳ. */
+    @Test
+    @DisplayName("createRecurringClass rejects negative course price with 400 SCHEDULING_INVALID_PRICE")
+    void createRecurringClass_rejectsNegativePrice() {
         Discipline yoga = new Discipline();
         org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
         yoga.setName("Yoga");
@@ -774,60 +1061,283 @@ class ClassServiceTest {
         Room studio = new Room();
         org.springframework.test.util.ReflectionTestUtils.setField(studio, "id", 3L);
         studio.setStatus("available");
-        studio.setName("Zen Garden Studio");
+        studio.setCapacity(20);
 
         when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
-        when(gymClasses.existsByDisciplineIdAndStatus(1L, "active")).thenReturn(true);
-
-        var createReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
-                "Yoga Buổi Tối",
-                1L,
-                2L,
-                3L,
-                15,
-                "all",
-                "desc",
-                java.math.BigDecimal.ZERO,
-                LocalDate.of(2026, 10, 20),
-                LocalDate.of(2026, 11, 20),
-                java.util.List.of("MONDAY"),
-                ScheduleSlot.SLOT_5.startTime(),
-                ScheduleSlot.SLOT_5.endTime()
-        );
-
-        assertThatThrownBy(() -> service.createRecurringClass(createReq))
-                .isInstanceOf(ConflictException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CLASS_EXISTS");
-
-        // updateClass: kích hoạt lại hoặc chuyển sang bộ môn đã có lớp active khác → bị từ chối
-        GymClass archivedClass = new GymClass();
-        archivedClass.setId(9L);
-        archivedClass.setStatus("archived");
-        archivedClass.setDiscipline(yoga);
-        archivedClass.setCoach(activeCoach);
-        archivedClass.setRoom(studio);
-
-        when(gymClasses.findById(9L)).thenReturn(Optional.of(archivedClass));
-        when(gymClasses.existsByDisciplineIdAndStatusAndIdNot(1L, "active", 9L)).thenReturn(true);
-
-        var reactivateReq = new UpdateClassRequest(
-                "Yoga Cũ", 1L, 2L, 3L, 15, "all", "desc", "active"
-        );
-        assertThatThrownBy(() -> service.updateClass(9L, reactivateReq))
-                .isInstanceOf(ConflictException.class)
-                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_DISCIPLINE_CLASS_EXISTS");
-
-        // updateClass: cập nhật sang archived thì luôn cho phép dù bộ môn đã có lớp active khác
         when(coaches.findById(2L)).thenReturn(Optional.of(activeCoach));
         when(rooms.findById(3L)).thenReturn(Optional.of(studio));
-        when(enrollments.countByGymClassIdAndStatus(9L, "booked")).thenReturn(0L);
-        when(gymClasses.saveAndFlush(archivedClass)).thenReturn(archivedClass);
 
-        var keepArchivedReq = new UpdateClassRequest(
-                "Yoga Cũ (đã đóng)", 1L, 2L, 3L, 15, "all", "desc", "archived"
+        var negativePriceReq = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                "Yoga Giá Âm", 1L, 2L, 3L, 15, "all", "desc",
+                new java.math.BigDecimal("-1000"),
+                LocalDate.of(2026, 10, 19), LocalDate.of(2026, 10, 26),
+                java.util.List.of("MONDAY"), ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
+
+        assertThatThrownBy(() -> service.createRecurringClass(negativePriceReq))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_INVALID_PRICE")
+                .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.invalid_price");
+    }
+
+    /** Kiểm thử: kiểm tra trước lịch trống trên 5 slot, phát hiện xung đột bộ môn, phòng, lớp HLV, PT 1:1 và nghỉ phép HLV. */
+    @Test
+    @DisplayName("checkRecurringAvailability previews 5 slots, discipline conflict, room conflicts, coach class/PT/leave conflicts")
+    void checkRecurringAvailability_evaluatesFiveSlotsDisciplineRoomAndCoachConflicts() {
+        var leaveRepo = org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class);
+        var ptRepo = org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "staffInternalRequestRepository", leaveRepo);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository", ptRepo);
+
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Discipline boxing = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(boxing, "id", 2L);
+        boxing.setName("Boxing");
+
+        Room studioA = new Room();
+        studioA.setId(10L);
+        studioA.setName("Zen Garden Studio");
+        studioA.setLocation("Tầng 2");
+        studioA.setCapacity(16);
+        studioA.setTier("STANDARD");
+        studioA.setStatus("available");
+
+        Room studioB = new Room();
+        studioB.setId(11L);
+        studioB.setName("Phòng Gym VIP");
+        studioB.setLocation("Tầng 3");
+        studioB.setCapacity(24);
+        studioB.setTier("PLATINUM");
+        studioB.setStatus("available");
+
+        Room closedRoom = new Room();
+        closedRoom.setId(12L);
+        closedRoom.setName("Phòng Bảo Trì");
+        closedRoom.setStatus("maintenance");
+
+        var userClassBusy = new com.swp391.scms.users.entity.User();
+        userClassBusy.setFullName("HLV Lớp Nhóm");
+        userClassBusy.setEmail("classbusy@sol.vn");
+        Coach coachClassBusy = new Coach();
+        coachClassBusy.setUserId(101L);
+        coachClassBusy.setEmploymentStatus("active");
+        coachClassBusy.setUser(userClassBusy);
+
+        var userPtBusy = new com.swp391.scms.users.entity.User();
+        userPtBusy.setFullName("HLV Bận PT");
+        userPtBusy.setEmail("ptbusy@sol.vn");
+        Coach coachPtBusy = new Coach();
+        coachPtBusy.setUserId(102L);
+        coachPtBusy.setEmploymentStatus("active");
+        coachPtBusy.setUser(userPtBusy);
+
+        var userOnLeave = new com.swp391.scms.users.entity.User();
+        userOnLeave.setFullName("HLV Nghỉ Phép");
+        userOnLeave.setEmail("leave@sol.vn");
+        Coach coachOnLeave = new Coach();
+        coachOnLeave.setUserId(103L);
+        coachOnLeave.setEmploymentStatus("active");
+        coachOnLeave.setUser(userOnLeave);
+
+        var userFree = new com.swp391.scms.users.entity.User();
+        userFree.setFullName("HLV Rảnh");
+        userFree.setEmail("free@sol.vn");
+        Coach coachFree = new Coach();
+        coachFree.setUserId(104L);
+        coachFree.setEmploymentStatus("active");
+        coachFree.setUser(userFree);
+
+        // Khoảng ngày: 2026-10-19 (Thứ 2) -> 2026-10-25 (Chủ nhật), lặp MONDAY & WEDNESDAY => 2 buổi (19/10 & 21/10)
+        LocalDate mon = LocalDate.of(2026, 10, 19);
+        LocalDate wed = LocalDate.of(2026, 10, 21);
+
+        // Slot 1 ngày Thứ 2: có lớp Yoga đang active dùng studioA & coachClassBusy -> gây xung đột bộ môn Yoga ở Slot 1
+        GymClass yogaMorning = new GymClass();
+        yogaMorning.setId(500L);
+        yogaMorning.setName("Hatha Yoga Nền Tảng");
+        yogaMorning.setDiscipline(yoga);
+        yogaMorning.setRoom(studioA);
+        yogaMorning.setCoach(coachClassBusy);
+        yogaMorning.setStatus("active");
+        ClassSession yogaMorningSession = new ClassSession();
+        yogaMorningSession.setId(5001L);
+        yogaMorningSession.setGymClass(yogaMorning);
+        yogaMorningSession.setSessionDate(mon);
+        yogaMorningSession.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        yogaMorningSession.setEndTime(ScheduleSlot.SLOT_1.endTime());
+        yogaMorningSession.setStatus("scheduled");
+
+        // Slot 2 ngày Thứ 2: lớp Boxing dùng studioA & coachClassBusy (KHÔNG trùng bộ môn Yoga, chỉ chiếm 1 phòng & 1 HLV)
+        GymClass boxingClass = new GymClass();
+        boxingClass.setId(501L);
+        boxingClass.setName("Boxing Cơ Bản");
+        boxingClass.setDiscipline(boxing);
+        boxingClass.setRoom(studioA);
+        boxingClass.setCoach(coachClassBusy);
+        boxingClass.setStatus("active");
+        ClassSession boxingSlot2Session = new ClassSession();
+        boxingSlot2Session.setId(5002L);
+        boxingSlot2Session.setGymClass(boxingClass);
+        boxingSlot2Session.setSessionDate(mon);
+        boxingSlot2Session.setStartTime(ScheduleSlot.SLOT_2.startTime());
+        boxingSlot2Session.setEndTime(ScheduleSlot.SLOT_2.endTime());
+        boxingSlot2Session.setStatus("scheduled");
+
+        // Slot 2 ngày Thứ 4: coachPtBusy có buổi PT 1:1 confirmed
+        var ptSlot2 = new com.swp391.scms.coaching.entity.CoachBooking();
+        ptSlot2.setCoach(coachPtBusy);
+        ptSlot2.setBookingDate(wed);
+        ptSlot2.setStartTime(ScheduleSlot.SLOT_2.startTime());
+        ptSlot2.setEndTime(ScheduleSlot.SLOT_2.endTime());
+        ptSlot2.setStatus("confirmed");
+
+        // coachOnLeave có đơn nghỉ phép APPROVED ngày Thứ 4
+        var approvedLeave = new com.swp391.scms.operations.entity.StaffInternalRequest();
+        approvedLeave.setRequestType("LEAVE");
+        approvedLeave.setStatus("APPROVED");
+        approvedLeave.setStartDate(wed);
+        approvedLeave.setEndDate(wed);
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(rooms.findAll()).thenReturn(java.util.List.of(studioA, studioB, closedRoom));
+        when(coaches.findActiveWithUser()).thenReturn(java.util.List.of(coachClassBusy, coachPtBusy, coachOnLeave, coachFree));
+        when(sessions.findScheduledSessionsBetweenDates(mon, wed))
+                .thenReturn(java.util.List.of(yogaMorningSession, boxingSlot2Session));
+        when(ptRepo.findConfirmedBetween(mon, wed)).thenReturn(java.util.List.of(ptSlot2));
+        when(leaveRepo.findOverlappingLeaves(101L, mon, wed)).thenReturn(java.util.List.of());
+        when(leaveRepo.findOverlappingLeaves(102L, mon, wed)).thenReturn(java.util.List.of());
+        when(leaveRepo.findOverlappingLeaves(103L, mon, wed)).thenReturn(java.util.List.of(approvedLeave));
+        when(leaveRepo.findOverlappingLeaves(104L, mon, wed)).thenReturn(java.util.List.of());
+
+        var req = new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                1L,
+                mon,
+                LocalDate.of(2026, 10, 25),
+                java.util.List.of("MONDAY", "WEDNESDAY"),
+                ScheduleSlot.SLOT_2.startTime(),
+                ScheduleSlot.SLOT_2.endTime()
         );
-        var updated = service.updateClass(9L, keepArchivedReq);
-        assertThat(updated.name()).isEqualTo("Yoga Cũ (đã đóng)");
+
+        var result = service.checkRecurringAvailability(req);
+
+        assertThat(result.validSchedule()).isTrue();
+        assertThat(result.sessionCount()).isEqualTo(2);
+        assertThat(result.firstSessionDate()).isEqualTo(mon);
+        assertThat(result.lastSessionDate()).isEqualTo(wed);
+        assertThat(result.slots()).hasSize(5);
+        assertThat(result.slots().stream().map(s -> s.code()).toList())
+                .containsExactly("SLOT_1", "SLOT_2", "SLOT_3", "SLOT_4", "SLOT_5");
+
+        // Slot 1: xung đột cùng bộ môn Yoga
+        var slot1 = result.slots().get(0);
+        assertThat(slot1.available()).isFalse();
+        assertThat(slot1.disciplineConflict()).isTrue();
+        assertThat(slot1.conflictCode()).isEqualTo("SCHEDULING_DISCIPLINE_CONFLICT");
+
+        // Slot 2 (selected): khả dụng, còn 1/2 phòng trống và 1/4 HLV trống
+        var slot2 = result.slots().get(1);
+        assertThat(slot2.available()).isTrue();
+        assertThat(slot2.disciplineConflict()).isFalse();
+        assertThat(slot2.availableRoomCount()).isEqualTo(1);
+        assertThat(slot2.availableCoachCount()).isEqualTo(1);
+        assertThat(result.selectedSlotAvailable()).isTrue();
+
+        // Phòng ở Slot 2: bỏ phòng maintenance, studioA trùng phòng, studioB trống
+        assertThat(result.rooms()).hasSize(2);
+        assertThat(result.rooms().get(0).id()).isEqualTo(10L);
+        assertThat(result.rooms().get(0).available()).isFalse();
+        assertThat(result.rooms().get(0).conflictCode()).isEqualTo("SCHEDULING_ROOM_CONFLICT");
+        assertThat(result.rooms().get(1).id()).isEqualTo(11L);
+        assertThat(result.rooms().get(1).available()).isTrue();
+
+        // HLV ở Slot 2: 101 trùng lớp nhóm, 102 trùng PT 1:1, 103 nghỉ phép đã duyệt, 104 trống
+        assertThat(result.coaches()).hasSize(4);
+        assertThat(result.coaches().get(0).available()).isFalse();
+        assertThat(result.coaches().get(0).conflictCode()).isEqualTo("SCHEDULING_COACH_CONFLICT");
+        assertThat(result.coaches().get(1).available()).isFalse();
+        assertThat(result.coaches().get(1).conflictCode()).isEqualTo("SCHEDULING_COACH_PT_CONFLICT");
+        assertThat(result.coaches().get(2).available()).isFalse();
+        assertThat(result.coaches().get(2).conflictCode()).isEqualTo("COACH_ON_LEAVE");
+        assertThat(result.coaches().get(3).available()).isTrue();
+        assertThat(result.coaches().get(3).conflictCode()).isNull();
+    }
+
+    /** Kiểm thử: checkRecurringAvailability đánh dấu slot quá khứ và trả về validSchedule=false khi cấu hình sai. */
+    @Test
+    @DisplayName("checkRecurringAvailability marks past slots and handles invalid date range, missing days, zero matches and invalid slots")
+    void checkRecurringAvailability_marksPastSlotsAndValidatesInvalidSchedules() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+
+        Room studio = new Room();
+        studio.setId(10L);
+        studio.setName("Zen Garden Studio");
+        studio.setCapacity(16);
+        studio.setStatus("available");
+
+        var coachUser = new com.swp391.scms.users.entity.User();
+        coachUser.setFullName("HLV Mai");
+        coachUser.setEmail("mai@sol.vn");
+        Coach coach = new Coach();
+        coach.setUserId(101L);
+        coach.setEmploymentStatus("active");
+        coach.setUser(coachUser);
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+
+        // 1. Ngày kết thúc trước ngày bắt đầu
+        var badRange = service.checkRecurringAvailability(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                        1L, LocalDate.of(2026, 10, 25), LocalDate.of(2026, 10, 20),
+                        java.util.List.of("MONDAY"), null, null));
+        assertThat(badRange.validSchedule()).isFalse();
+        assertThat(badRange.scheduleErrorCode()).isEqualTo("SCHEDULING_INVALID_DATE_RANGE");
+        assertThat(badRange.sessionCount()).isZero();
+
+        // 2. Không chọn thứ trong tuần
+        var noDays = service.checkRecurringAvailability(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                        1L, LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 25),
+                        java.util.List.of(), null, null));
+        assertThat(noDays.validSchedule()).isFalse();
+        assertThat(noDays.scheduleErrorCode()).isEqualTo("SCHEDULING_NO_RECURRING_DAYS");
+
+        // 3. Không có ngày nào khớp trong khoảng
+        var noMatches = service.checkRecurringAvailability(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                        1L, LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 21), // Thứ 3 & Thứ 4
+                        java.util.List.of("SUNDAY"), null, null));
+        assertThat(noMatches.validSchedule()).isFalse();
+        assertThat(noMatches.scheduleErrorCode()).isEqualTo("SCHEDULING_NO_SESSIONS_MATCHED");
+
+        // 4. Khung giờ ngoài 5 slot cố định
+        var badSlot = service.checkRecurringAvailability(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                        1L, LocalDate.of(2026, 10, 19), LocalDate.of(2026, 10, 25),
+                        java.util.List.of("MONDAY"), LocalTime.of(8, 0), LocalTime.of(9, 0)));
+        assertThat(badSlot.validSchedule()).isFalse();
+        assertThat(badSlot.scheduleErrorCode()).isEqualTo("SCHEDULING_INVALID_SLOT");
+
+        // 5. Hôm nay (10:00 giờ VN ngày 2026-10-16, Thứ 6): Slot 1 (07:00) & Slot 2 (09:45) là quá khứ; Slot 3..5 khả dụng; null start/end mặc định SLOT_1
+        when(rooms.findAll()).thenReturn(java.util.List.of(studio));
+        when(coaches.findActiveWithUser()).thenReturn(java.util.List.of(coach));
+        when(sessions.findScheduledSessionsBetweenDates(LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 16)))
+                .thenReturn(java.util.List.of());
+
+        var todayRes = service.checkRecurringAvailability(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                        1L, LocalDate.of(2026, 10, 16), LocalDate.of(2026, 10, 16),
+                        java.util.List.of("FRIDAY"), null, null));
+        assertThat(todayRes.validSchedule()).isTrue();
+        assertThat(todayRes.selectedSlotAvailable()).isFalse();
+        assertThat(todayRes.selectedSlotConflictCode()).isEqualTo("SCHEDULING_PAST_SESSION");
+        assertThat(todayRes.slots().get(0).conflictCode()).isEqualTo("SCHEDULING_PAST_SESSION");
+        assertThat(todayRes.slots().get(1).conflictCode()).isEqualTo("SCHEDULING_PAST_SESSION");
+        assertThat(todayRes.slots().get(2).available()).isTrue();
+        assertThat(todayRes.slots().get(3).available()).isTrue();
+        assertThat(todayRes.slots().get(4).available()).isTrue();
     }
 
     /** Kiểm thử: createClass từ chối buổi đầu ngoài 5 slot cố định. */
@@ -845,7 +1355,6 @@ class ClassServiceTest {
         studio.setStatus("available");
 
         when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
-        when(gymClasses.existsByDisciplineIdAndStatus(1L, "active")).thenReturn(false);
         when(coaches.findById(2L)).thenReturn(Optional.of(activeCoach));
         when(rooms.findById(3L)).thenReturn(Optional.of(studio));
 

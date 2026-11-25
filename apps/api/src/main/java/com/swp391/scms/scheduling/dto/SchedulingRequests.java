@@ -182,4 +182,23 @@ public final class SchedulingRequests {
             String method
     ) {
     }
+
+    /** Yêu cầu kiểm tra trước lịch trống của khóa định kỳ theo 5 slot cố định, phòng và HLV. */
+    public record RecurringAvailabilityRequest(
+            @NotNull(message = "{validation.scheduling.discipline.not_null}")
+            Long disciplineId,
+
+            @NotNull(message = "{validation.scheduling.start_date.not_null}")
+            java.time.LocalDate startDate,
+
+            @NotNull(message = "{validation.scheduling.end_date.not_null}")
+            java.time.LocalDate endDate,
+
+            java.util.List<String> recurringDays,
+
+            java.time.LocalTime startTime,
+
+            java.time.LocalTime endTime
+    ) {
+    }
 }

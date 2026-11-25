@@ -39,6 +39,8 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String CAPACITY_EN = "Class is full";
     private static final String SCHEDULE_VI = "Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này";
     private static final String SCHEDULE_EN = "Schedule conflict: Coach or room is already booked during this time slot";
+    private static final String DISCIPLINE_CONFLICT_VI = "Trùng lịch bộ môn: Bộ môn này đã có lớp học khác hoạt động trong cùng khung giờ.";
+    private static final String DISCIPLINE_CONFLICT_EN = "Discipline schedule conflict: This discipline already has another active class during this time slot.";
     private static final String MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch";
     private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
     private static final String INVALID_SLOT_VI = "Khung giờ không hợp lệ. Vui lòng chọn một trong 5 slot cố định (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
@@ -162,6 +164,9 @@ class GlobalExceptionHandlerTriggerTest {
                 new TriggerFailure("Huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này.",
                         "trg_sessions_check_conflict", "23P01", 409,
                         "SCHEDULE_CONFLICT", SCHEDULE_VI, SCHEDULE_EN),
+                new TriggerFailure("Bộ môn này đã có lớp học khác trùng khung giờ.",
+                        "trg_sessions_check_discipline_conflict", "23P01", 409,
+                        "SCHEDULING_DISCIPLINE_CONFLICT", DISCIPLINE_CONFLICT_VI, DISCIPLINE_CONFLICT_EN),
                 new TriggerFailure("Học viên không có gói thành viên còn hiệu lực để đăng ký lớp.",
                         "trg_enrollments_check_membership", "23514", 403,
                         "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),

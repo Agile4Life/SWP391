@@ -203,64 +203,27 @@ class RetiredCatalogCleanupRunnerTest {
         verify(coaches).save(thaoCoach);
     }
 
-    /** Kiểm thử: mỗi bộ môn chỉ giữ đúng 1 lớp active — ưu tiên lớp có học viên, sau đó tên lớp chuẩn; xóa lớp demo trùng và lưu trữ lớp có lịch sử. */
+    /** Kiểm thử: giữ nguyên nhiều lớp đang hoạt động (active) trong cùng một bộ môn (không xóa hay vô hiệu hóa trùng bộ môn). */
     @Test
-    void deduplicatesMultipleActiveClassesWithinSameDiscipline() {
+    void preservesMultipleActiveClassesWithinSameDiscipline() {
         Discipline gym = discipline(1L, "Gym");
-        GymClass kettlebellUnused = gymClass(10L, "Kettlebell Conditioning", gym, "active");
-        GymClass fullBodyCanonical = gymClass(11L, "Full Body Strength 101", gym, "active");
-        GymClass hiitWithHistory = gymClass(12L, "HIIT Burn", gym, "active");
+        GymClass morningStrength = gymClass(10L, "Full Body Strength 101", gym, "active");
+        GymClass eveningKettlebell = gymClass(11L, "Kettlebell Conditioning", gym, "active");
+        GymClass hiitBurn = gymClass(12L, "HIIT Burn", gym, "active");
 
-        ClassEnrollment cancelledOnly = new ClassEnrollment();
-        cancelledOnly.setStatus("cancelled");
-
-        when(classes.findAll()).thenReturn(List.of(kettlebellUnused, fullBodyCanonical, hiitWithHistory));
-        lenient().when(enrollments.findByGymClassId(10L)).thenReturn(List.of());
-        lenient().when(enrollments.findByGymClassId(11L)).thenReturn(List.of());
-        lenient().when(enrollments.findByGymClassId(12L)).thenReturn(List.of(cancelledOnly));
-        lenient().when(sessionBookings.existsBySessionGymClassId(10L)).thenReturn(false);
-        lenient().when(sessionBookings.existsBySessionGymClassId(11L)).thenReturn(false);
-        lenient().when(sessionBookings.existsBySessionGymClassId(12L)).thenReturn(false);
+        when(classes.findAll()).thenReturn(List.of(morningStrength, eveningKettlebell, hiitBurn));
         lenient().when(rooms.findAll()).thenReturn(List.of());
         lenient().when(disciplines.findAll()).thenReturn(List.of(gym));
         lenient().when(coaches.findAll()).thenReturn(List.of());
 
         runner().run(null);
 
-        // Giữ Full Body Strength 101 (tên chuẩn); xóa Kettlebell chưa ai dùng; chuyển HIIT có lịch sử sang inactive.
-        assertThat(fullBodyCanonical.getStatus()).isEqualTo("active");
-        verify(classes, never()).delete(fullBodyCanonical);
-        verify(sessions).deleteByGymClassId(10L);
-        verify(classes).delete(kettlebellUnused);
-        assertThat(hiitWithHistory.getStatus()).isEqualTo("inactive");
-        verify(classes).save(hiitWithHistory);
-        verify(classes, never()).delete(hiitWithHistory);
-    }
-
-    /** Kiểm thử: khi bộ môn có lớp đang có học viên ghi danh, ưu tiên giữ lớp có học viên thay vì tên lớp chuẩn. */
-    @Test
-    void deduplicationPrefersClassWithBookedEnrollmentsOverCanonicalName() {
-        Discipline gym = discipline(1L, "Gym");
-        GymClass kettlebellEnrolled = gymClass(10L, "Kettlebell Conditioning", gym, "active");
-        GymClass fullBodyEmpty = gymClass(11L, "Full Body Strength 101", gym, "active");
-
-        ClassEnrollment booked = new ClassEnrollment();
-        booked.setStatus("booked");
-
-        when(classes.findAll()).thenReturn(List.of(kettlebellEnrolled, fullBodyEmpty));
-        lenient().when(enrollments.findByGymClassId(10L)).thenReturn(List.of(booked));
-        lenient().when(enrollments.findByGymClassId(11L)).thenReturn(List.of());
-        lenient().when(sessionBookings.existsBySessionGymClassId(11L)).thenReturn(false);
-        lenient().when(rooms.findAll()).thenReturn(List.of());
-        lenient().when(disciplines.findAll()).thenReturn(List.of(gym));
-        lenient().when(coaches.findAll()).thenReturn(List.of());
-
-        runner().run(null);
-
-        assertThat(kettlebellEnrolled.getStatus()).isEqualTo("active");
-        verify(classes, never()).delete(kettlebellEnrolled);
-        verify(sessions).deleteByGymClassId(11L);
-        verify(classes).delete(fullBodyEmpty);
+        assertThat(morningStrength.getStatus()).isEqualTo("active");
+        assertThat(eveningKettlebell.getStatus()).isEqualTo("active");
+        assertThat(hiitBurn.getStatus()).isEqualTo("active");
+        verify(classes, never()).delete(any());
+        verify(classes, never()).save(any());
+        verify(sessions, never()).deleteByGymClassId(any());
     }
 
     /** Kiểm thử: an toàn khi mọi repository tùy chọn đều null (môi trường unit test tối giản). */

@@ -69,12 +69,6 @@ public class RetiredCatalogCleanupRunner implements ApplicationRunner {
             "cầu lông bộ chân & đánh đôi"
     );
 
-    static final Set<String> CANONICAL_ACTIVE_CLASSES = Set.of(
-            "full body strength 101",
-            "boxing cơ bản",
-            "hatha yoga nền tảng"
-    );
-
     private static final String LONG_EMAIL = "long@demo.sol.vn";
     private static final String LONG_NAME = "Phan Thành Long";
     private static final String LONG_BIO = "Cựu vận động viên Boxing, chuyên kỹ thuật đấm, di chuyển chân và thể lực.";
@@ -168,81 +162,9 @@ public class RetiredCatalogCleanupRunner implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         cleanupRetiredClasses();
-        deduplicateActiveClassesPerDiscipline();
         cleanupRetiredRooms();
         cleanupRetiredDisciplines();
         syncDemoCoachSpecializations();
-    }
-
-    /**
-     * Đảm bảo quy tắc mỗi bộ môn chỉ có tối đa 1 lớp đang hoạt động (`active`) trên CSDL đã tồn tại: nếu một
-     * bộ môn có nhiều lớp `active` từ dữ liệu cũ, giữ lại 1 lớp ưu tiên (nhiều học viên đang ghi danh nhất, sau
-     * đó ưu tiên tên lớp chuẩn mới, rồi theo id nhỏ nhất); các lớp `active` dư thừa sẽ bị xóa nếu chưa có dữ
-     * liệu liên kết hoặc chuyển sang `inactive` nếu đã có lịch sử.
-     */
-    private void deduplicateActiveClassesPerDiscipline() {
-        if (classes == null) {
-            return;
-        }
-        java.util.Map<Long, java.util.List<GymClass>> activeByDiscipline = new java.util.LinkedHashMap<>();
-        for (GymClass gymClass : safeList(classes.findAll())) {
-            if (gymClass == null || !"active".equalsIgnoreCase(gymClass.getStatus())
-                    || gymClass.getDiscipline() == null || gymClass.getDiscipline().getId() == null) {
-                continue;
-            }
-            activeByDiscipline
-                    .computeIfAbsent(gymClass.getDiscipline().getId(), k -> new java.util.ArrayList<>())
-                    .add(gymClass);
-        }
-        int deleted = 0;
-        int deactivated = 0;
-        for (var entry : activeByDiscipline.entrySet()) {
-            java.util.List<GymClass> group = entry.getValue();
-            if (group.size() <= 1) {
-                continue;
-            }
-            java.util.Map<Long, Long> bookedCounts = new java.util.HashMap<>();
-            for (GymClass c : group) {
-                bookedCounts.put(c.getId(), countBookedEnrollments(c.getId()));
-            }
-            group.sort(java.util.Comparator
-                    .comparingLong((GymClass c) -> bookedCounts.getOrDefault(c.getId(), 0L)).reversed()
-                    .thenComparing((GymClass c) -> c.getName() != null
-                            && CANONICAL_ACTIVE_CLASSES.contains(normalize(c.getName())),
-                            java.util.Comparator.reverseOrder())
-                    .thenComparing(GymClass::getId, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())));
-
-            // Giữ phần tử đầu tiên là lớp active duy nhất; dọn các lớp active dư thừa còn lại.
-            for (int i = 1; i < group.size(); i++) {
-                GymClass duplicate = group.get(i);
-                Long classId = duplicate.getId();
-                if (hasClassDependents(classId)) {
-                    duplicate.setStatus("inactive");
-                    classes.save(duplicate);
-                    deactivated++;
-                } else {
-                    if (sessions != null && classId != null) {
-                        sessions.deleteByGymClassId(classId);
-                    }
-                    classes.delete(duplicate);
-                    classes.flush();
-                    deleted++;
-                }
-            }
-        }
-        if (deleted > 0 || deactivated > 0) {
-            log.info("Retired catalog cleanup: deduplicated active classes ({} deleted, {} set inactive).",
-                    deleted, deactivated);
-        }
-    }
-
-    private long countBookedEnrollments(Long classId) {
-        if (enrollments == null || classId == null) {
-            return 0L;
-        }
-        return safeList(enrollments.findByGymClassId(classId)).stream()
-                .filter(e -> e != null && "booked".equalsIgnoreCase(e.getStatus()))
-                .count();
     }
 
     /** Xóa lớp cũ nếu chưa có dữ liệu liên kết; nếu đã có dữ liệu lịch sử thì chuyển trạng thái sang inactive. */

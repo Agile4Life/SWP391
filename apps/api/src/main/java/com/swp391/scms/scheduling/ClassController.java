@@ -5,12 +5,14 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.RescheduleSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.UpdateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.CoachOptionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.EnrolledStudentDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.GymClassDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.RecurringAvailabilityDto;
 import com.swp391.scms.scheduling.service.ClassService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -73,6 +75,15 @@ public class ClassController {
     public ResponseEntity<ApiResponse<GymClassDto>> createRecurringClass(@Valid @RequestBody CreateRecurringClassRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("scheduling.class.created"), service.createRecurringClass(request)));
+    }
+
+    /** POST /recurring/availability: kiểm tra trước lịch trống trên 5 slot cố định, phòng tập và HLV. */
+    @Operation(summary = "Preview schedule availability & conflicts across 5 fixed slots, rooms, and coaches (CENTER_MANAGER only)")
+    @PostMapping("/recurring/availability")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
+    public ApiResponse<RecurringAvailabilityDto> checkRecurringAvailability(
+            @Valid @RequestBody RecurringAvailabilityRequest request) {
+        return ApiResponse.ok(msg("scheduling.availability.checked"), service.checkRecurringAvailability(request));
     }
 
     /** PUT /{id}: quản lý cập nhật thông tin lớp/khóa học. */
