@@ -206,3 +206,176 @@
   .mcal__event, .mcal__slot-plus { transition: none; }
   .mcal__event:hover { transform: none; }
 }
+
+/* Màu viền phân biệt bộ môn trên khối sự kiện (không ảnh hưởng trạng thái hủy/đã qua) */
+.mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past) {
+  border-left: 4px solid var(--event-accent);
+  background: color-mix(in srgb, var(--event-accent) 16%, var(--portal-surface));
+}
+.mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past):hover {
+  background: color-mix(in srgb, var(--event-accent) 24%, var(--portal-surface));
+}
+
+/* Nút gom cụm "+N lớp" khi khung giờ có >= 3 lớp song song trên Lịch tổng cả tuần */
+.mcal__overflow-btn {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border: 1.5px dashed var(--sol-accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--sol-accent) 14%, var(--portal-surface));
+  color: var(--portal-paper);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.mcal__overflow-btn strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--sol-accent-text);
+  white-space: nowrap;
+}
+.mcal__overflow-btn span {
+  font-size: 12px;
+  color: var(--portal-muted);
+  white-space: nowrap;
+}
+.mcal__overflow-btn:hover {
+  background: color-mix(in srgb, var(--sol-accent) 24%, var(--portal-surface));
+}
+
+/* Danh sách buổi trong hộp thoại "+N lớp" */
+.mcal__overflow-list {
+  display: grid;
+  gap: 8px;
+}
+.mcal__overflow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.mcal__overflow-row:hover {
+  border-color: var(--sol-accent);
+  background: color-mix(in srgb, var(--sol-accent) 10%, var(--portal-raised));
+}
+.mcal__overflow-swatch {
+  flex: 0 0 10px;
+  width: 10px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--sol-accent);
+}
+.mcal__overflow-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.mcal__overflow-main strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--portal-paper);
+}
+.mcal__overflow-main small {
+  font-size: 12px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mcal__overflow-badge {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border-strong);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--portal-paper);
+}
+
+/* Lịch ngày theo Phòng (Tổng quan theo phòng — Phòng × Giờ) */
+.rcal__daystrip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.rcal__grid {
+  display: grid;
+  grid-template-columns: var(--mcal-gutter, 62px) repeat(var(--rcal-rooms, 3), minmax(190px, 1fr));
+  grid-template-rows: auto calc(var(--mcal-rows, 16) * var(--mcal-hour, 64px));
+  min-width: calc(var(--mcal-gutter, 62px) + var(--rcal-rooms, 3) * 190px);
+}
+.rcal__roomhead {
+  gap: 3px;
+  padding: 10px 10px;
+}
+.rcal__roomname {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--portal-paper);
+  text-align: center;
+}
+.rcal__roommeta {
+  font-size: 12px;
+  color: var(--portal-muted);
+}
+.rcal__event {
+  align-items: flex-start;
+  gap: 2px;
+}
+.rcal__event-sub {
+  font-size: 12px;
+  color: var(--portal-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.mcal__event.is-short .rcal__event-sub {
+  display: none;
+}
+
+/* Bộ lọc bộ môn dạng chip có chấm màu */
+.class-discipline-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.class-discipline-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.class-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.class-filter-bar > .class-filter-field {
+  min-width: 180px;
+  flex: 0 1 220px;
+}
+

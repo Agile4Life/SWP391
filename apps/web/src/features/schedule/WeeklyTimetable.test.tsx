@@ -163,4 +163,32 @@ describe('WeeklyTimetable', () => {
     });
     expect(host.querySelector('[data-testid="timetable-scroll-cue"]')).toBeNull();
   });
+
+  it('groups >= 3 concurrent classes into "+N lớp" button when maxVisibleLanes=2 and opens full clickable list', async () => {
+    const onEventClick = vi.fn();
+    const concurrent: TimetableEvent[] = [
+      { ...event, id: '1', title: 'Yoga', disciplineName: 'Yoga', meta: 'Studio A', startTime: '18:00:00', endTime: '19:00:00' },
+      { ...event, id: '2', title: 'Boxing', disciplineName: 'Boxing', meta: 'Ring 1', startTime: '18:00:00', endTime: '19:00:00' },
+      { ...event, id: '3', title: 'Pilates', disciplineName: 'Pilates', meta: 'Studio B', startTime: '18:00:00', endTime: '19:00:00' },
+      { ...event, id: '4', title: 'Zumba', disciplineName: 'Zumba', meta: 'Studio C', startTime: '18:00:00', endTime: '19:00:00' },
+    ];
+    await render({ events: concurrent, maxVisibleLanes: 2, onEventClick });
+
+    expect(host.querySelectorAll('.mcal__event')).toHaveLength(1);
+    const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]')!;
+    expect(overflowBtn).not.toBeNull();
+    expect(overflowBtn.textContent).toContain('+3 lớp');
+
+    await act(async () => overflowBtn.click());
+    const rows = document.querySelectorAll<HTMLButtonElement>('[data-testid="timetable-overflow-list"] button');
+    expect(rows).toHaveLength(4);
+    expect(document.body.textContent).toContain('Boxing');
+    expect(document.body.textContent).toContain('Pilates');
+    expect(document.body.textContent).toContain('Zumba');
+
+    const pilatesRow = [...rows].find((r) => r.textContent?.includes('Pilates'))!;
+    await act(async () => pilatesRow.click());
+    expect(onEventClick).toHaveBeenCalledWith('3');
+    expect(document.querySelector('[data-testid="timetable-overflow-list"]')).toBeNull();
+  });
 });

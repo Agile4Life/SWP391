@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, fitHourRange, layoutDayEvents, mondayOf, overlapsHour, weekDays, type TimetableEvent } from './timetable';
+import { addDays, disciplineAccentColor, fitHourRange, groupVisibleLanes, layoutDayEvents, mondayOf, overlapsHour, weekDays, type TimetableEvent } from './timetable';
 
 // Tạo một sự kiện lịch mẫu từ id và giờ bắt đầu/kết thúc.
 const ev = (id: string, startTime: string, endTime: string): TimetableEvent => ({
@@ -61,5 +61,58 @@ describe('timetable helpers', () => {
     const [placed] = layoutDayEvents([ev('a', '10:00', '11:00')], 8, 12);
     expect(placed.topPct).toBe(50);
     expect(placed.heightPct).toBe(25);
+  });
+
+  it('keeps up to maxVisible overlapping lanes directly visible without overflow', () => {
+    const two = layoutDayEvents([ev('yoga', '18:00', '19:00'), ev('boxing', '18:00', '19:00')]);
+    const grouped = groupVisibleLanes(two, 2);
+    expect(grouped.visible).toHaveLength(2);
+    expect(grouped.overflows).toHaveLength(0);
+    expect(grouped.visible.every((item) => item.lanes === 2)).toBe(true);
+  });
+
+  it('collapses 5 concurrent multi-discipline classes into 1 visible card + "+4" overflow without losing any event', () => {
+    const five = layoutDayEvents([
+      ev('yoga', '18:00', '19:00'),
+      ev('boxing', '18:00', '19:00'),
+      ev('pilates', '18:00', '19:00'),
+      ev('zumba', '18:00', '19:00'),
+      ev('hiit', '18:00', '19:00'),
+    ]);
+    const grouped = groupVisibleLanes(five, 2);
+    expect(grouped.visible).toHaveLength(1);
+    expect(grouped.visible[0].lane).toBe(0);
+    expect(grouped.visible[0].lanes).toBe(2);
+    expect(grouped.overflows).toHaveLength(1);
+    expect(grouped.overflows[0].lane).toBe(1);
+    expect(grouped.overflows[0].lanes).toBe(2);
+    expect(grouped.overflows[0].hiddenEvents).toHaveLength(4);
+    expect(grouped.overflows[0].allEvents).toHaveLength(5);
+    expect(grouped.overflows[0].rangeLabel).toBe('18:00 – 19:00');
+    expect(grouped.visible.length + grouped.overflows[0].hiddenEvents.length).toBe(5);
+  });
+
+  it('handles staggered partial overlaps and separate morning/evening clusters independently', () => {
+    const events = layoutDayEvents([
+      ev('m1', '07:00', '08:00'),
+      ev('e1', '18:00', '19:00'),
+      ev('e2', '18:30', '19:30'),
+      ev('e3', '18:30', '19:30'),
+      ev('e4', '19:00', '20:00'),
+    ]);
+    const grouped = groupVisibleLanes(events, 2);
+    const totalHidden = grouped.overflows.reduce((sum, item) => sum + item.hiddenEvents.length, 0);
+    expect(grouped.visible.length + totalHidden).toBe(5);
+    // Buổi sáng đứng 1 mình vẫn rộng 100% (lanes = 1).
+    const morning = grouped.visible.find((item) => item.event.id === 'm1')!;
+    expect(morning.lanes).toBe(1);
+    expect(grouped.overflows).toHaveLength(1);
+    expect(grouped.overflows[0].rangeLabel).toBe('18:00 – 20:00');
+  });
+
+  it('assigns stable discipline accent colors', () => {
+    expect(disciplineAccentColor(1)).toBe(disciplineAccentColor(1));
+    expect(disciplineAccentColor('Yoga')).toBe(disciplineAccentColor('Yoga'));
+    expect(disciplineAccentColor(null)).toBeTruthy();
   });
 });

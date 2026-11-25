@@ -167,13 +167,14 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const canReceiveNotifications = true;
   const profileLabel = isMember
     ? t('Hồ sơ hội viên', 'Member profile')
-    : t('Hồ sơ cá nhân', 'My Profile');
+    : t('Hồ sơ cá nhân', 'My profile');
   const navItems = PORTAL_NAV.filter((item) => item.roles.includes(user.role)).map((item) => {
     if (item.to === '/member/profile') return { ...item, label: profileLabel };
     return { ...item, label: getNavLabel(item.to, item.label, lang) };
   });
-  const activeNavItem = navItems.find((item) => isPortalNavActive(item, location.pathname));
-  const activeTab = activeNavItem?.tabs?.find((tab) => tab.to === location.pathname);
+  const normalizedPathname = location.pathname === '/profile' ? '/member/profile' : location.pathname;
+  const activeNavItem = navItems.find((item) => isPortalNavActive(item, normalizedPathname));
+  const activeTab = activeNavItem?.tabs?.find((tab) => normalizedPathname === tab.to || normalizedPathname.startsWith(`${tab.to}/`));
   const pageTitle = activeTab ? `${activeNavItem!.label} · ${getTabLabel(activeTab, lang)}` : activeNavItem?.label ?? t('SÖL Fitness', 'SÖL Fitness');
   // Tìm theo tên mục gộp lẫn tên từng tab con (vd. gõ "Quét QR" vẫn ra "Thẻ & Check-in").
   const results = navItems.filter((item) => {
@@ -733,7 +734,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
       )}
       {(dialog === 'menu' || dialog === 'search') && <Modal title={dialog === 'menu' ? t('Điều hướng', 'Navigation') : t('Tìm màn hình', 'Find Screen')} onClose={() => setDialog(null)} returnFocusRef={dialog === 'menu' ? moreRef : undefined}>
         <label className="portal-label" htmlFor="portal-screen-search">{t('Tên màn hình', 'Screen name')}</label>
-        <input id="portal-screen-search" className="portal-input" type="search" placeholder={t('Ví dụ: lịch học, gói tập…', 'e.g. classes, memberships…')} value={query} onChange={(event) => setQuery(event.target.value)} />
+        <input id="portal-screen-search" className="portal-input" type="search" placeholder={t('Ví dụ: lớp học, gói tập, điểm danh…', 'e.g. classes, memberships, attendance…')} value={query} onChange={(event) => setQuery(event.target.value)} />
         <nav className="portal-screen-results" aria-label={t('Các màn hình của bạn', 'Your screens')}>
           {results.map((item) => item.to === '/member/notifications' ? <button key={item.to} type="button" onClick={() => {
             notificationTrigger.current = document.querySelector<HTMLButtonElement>('.member-notification-bell');

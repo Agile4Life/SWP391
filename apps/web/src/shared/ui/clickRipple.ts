@@ -1,5 +1,5 @@
 const TARGETS = 'a, button, [role="button"], .btn-primary, .btn-secondary, .btn-danger';
-const IGNORE_CONTAINERS = '.ui-select, .luxury-datepicker-wrap';
+const IGNORE_CONTAINERS = '.ui-select, .luxury-datepicker-wrap, .luxury-timepicker-wrap';
 
 /** Gắn một lần: vòng sóng tại điểm click trên nút hành động (bỏ qua dropdown/datepicker). */
 export function installClickRipple(): void {

@@ -340,7 +340,7 @@ body::-webkit-scrollbar,
   to   { transform: scale(4.5); opacity: 0; }
 }
 
-button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):not(.membership-periods__toggle):not(.fit-faq-trigger):not(.portal-search-trigger):not(.portal-tab):not(.ldp-day-cell):active,
+button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):not(.luxury-timepicker-trigger):not(.membership-periods__toggle):not(.fit-faq-trigger):not(.portal-search-trigger):not(.portal-tab):not(.ltp-item-btn):not(.ldp-day-cell):active,
 .btn-primary:active,
 .btn-secondary:active,
 .btn-danger:active,
@@ -643,7 +643,8 @@ small { font-size: max(12px, 0.875em); }
   .portal-select,
   .portal-textarea,
   .ui-select__trigger,
-  .luxury-datepicker-trigger {
+  .luxury-datepicker-trigger,
+  .luxury-timepicker-trigger {
     font-size: 16px;
   }
 }

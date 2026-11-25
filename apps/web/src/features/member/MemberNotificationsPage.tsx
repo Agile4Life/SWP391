@@ -33,7 +33,7 @@ function errorMessage(error: unknown): string | Error {
 export function MemberNotificationsPage() {
   useLanguage();
   const role = getCurrentUser()?.role;
-  const redirectPath = role === 'COACH' ? '/coach/classes' : role === 'MANAGER' ? '/manager/reports' : role === 'STAFF' ? '/staff/reception' : role === 'ADMIN' ? '/admin/users' : '/member/dashboard';
+  const redirectPath = role === 'COACH' ? '/coach/pt-attendance' : role === 'MANAGER' ? '/manager/reports' : role === 'STAFF' ? '/staff/reception' : role === 'ADMIN' ? '/admin/users' : '/member/dashboard';
   return <Navigate to={redirectPath} replace state={{ openNotifications: true }} />;
 }
 
