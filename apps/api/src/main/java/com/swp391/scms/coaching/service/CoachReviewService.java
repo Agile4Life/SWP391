@@ -127,7 +127,7 @@ public class CoachReviewService {
                     : (member.getUser() != null ? member.getUser().getFullName() : msg("coaching.review.member"));
             String title = msg("notifications.coaching.review.title");
             String msg = msg("notifications.coaching.review.body", authorName, saved.getRating());
-            notificationService.send(coach.getUserId(), title, msg, "system", "coach_review", saved.getId(), "/member/profile");
+            notificationService.send(coach.getUserId(), title, msg, "system", null, saved.getId());
         }
 
         return mapToDto(saved, true);

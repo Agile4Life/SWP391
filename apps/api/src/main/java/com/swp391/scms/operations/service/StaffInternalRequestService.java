@@ -249,9 +249,8 @@ public class StaffInternalRequestService {
                     title,
                     message,
                     "system",
-                    "staff_internal_request",
-                    saved.getId(),
-                    "/staff/requests"
+                    null,
+                    saved.getId()
             );
         }
 
