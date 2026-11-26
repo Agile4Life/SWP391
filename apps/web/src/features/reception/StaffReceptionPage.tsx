@@ -1011,7 +1011,7 @@ export function StaffReceptionPage() {
                     {pendingList.map((item) => {
                       const isSelected = selectedPending?.id === item.id;
                       return (
-                        <div data-i18n-managed
+                        <div className={`reception-request reception-request--selectable${isSelected ? ' is-selected' : ''}`} data-i18n-managed
                           key={item.id}
                           role="button"
                           tabIndex={0}
@@ -1022,55 +1022,50 @@ export function StaffReceptionPage() {
                               handleSelectPendingItem(item);
                             }
                           }}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: '12px',
-                            padding: '14px 18px',
-                            borderRadius: '10px',
-                            border: isSelected ? '2px solid var(--portal-salmon)' : '1px solid var(--portal-border-strong)',
-                            backgroundColor: isSelected ? 'var(--portal-raised)' : 'var(--portal-surface)',
-                            cursor: 'pointer',
-                            transition: 'border-color 0.15s ease, background-color 0.15s ease',
-                          }}
                         >
-                          <div style={{ flex: '1 1 280px', minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <span className="reception-todo__tag reception-todo__tag--plan">{t("Gói tập")}</span>
-                              <span
-                                style={{
-                                  fontVariantNumeric: 'tabular-nums',
-                                  fontWeight: 700,
-                                  color: 'var(--portal-salmon)',
-                                  fontSize: '0.92rem',
-                                }}
-                              >
-                                {t("Yêu cầu #")}{item.id}
-                              </span>
+                          <header className="reception-request__header">
+                            <div className="reception-request__heading">
+                              <span className="reception-todo__tag reception-todo__tag--plan">{t('Gói tập', 'Packages')}</span>
+                              <span className="reception-request__id">{t("Yêu cầu #")}{item.id}</span>
+                              <span className="badge badge-neutral">{t("CHỜ THANH TOÁN")}</span>
+                            </div>
+                            <div className="reception-request__member">
                               <strong>{item.memberName}</strong>
-                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
-                                ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
-                              </span>
+                              <span>{item.membershipCode || `MB-${item.memberId}`}</span>
                             </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '4px' }}>
-                              {t("Gói hội viên đã chọn: ")}<strong>{item.packageName}</strong> ({item.durationDays} {t(" ngày • ")}{formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
+                          </header>
+                          <dl className="reception-request__details">
+                            <div>
+                              <dt>{t('Gói hội viên đã chọn', 'Selected membership package')}</dt>
+                              <dd><strong>{item.packageName}</strong></dd>
                             </div>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
-                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)', whiteSpace: 'nowrap' }}>
-                                {formatPrice(item.packagePrice)}
+                            <div>
+                              <dt>{t('Số tiền', 'Amount')}</dt>
+                              <dd><strong>{formatPrice(item.packagePrice)}</strong></dd>
+                            </div>
+                            <div>
+                              <dt>{t('Thời hạn', 'Duration')}</dt>
+                              <dd>{item.durationDays} {t("ngày", "days")}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('Thời gian', 'Period')}</dt>
+                              <dd>{formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)}</dd>
+                            </div>
+                            <div className="reception-request__contact">
+                              <div>
+                                <dt>{t('Email', 'Email')}</dt>
+                                <dd>{item.memberEmail}</dd>
                               </div>
-                              <span className="badge badge-neutral" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                                {t("CHỜ THANH TOÁN")}</span>
+                              <div>
+                                <dt>{t('SĐT', 'Phone')}</dt>
+                                <dd>{item.memberPhone || "—"}</dd>
+                                </div>
                             </div>
+                          </dl>
+                          <div className="reception-request__actions">
                             <button
                               type="button"
                               className={isSelected ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
-                              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleSelectPendingItem(item);
@@ -1081,7 +1076,6 @@ export function StaffReceptionPage() {
                             <button
                               type="button"
                               className="btn-danger btn-sm"
-                              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                               disabled={cancellingPendingId !== null || isSubmittingPayment}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -1104,44 +1098,46 @@ export function StaffReceptionPage() {
                     {unpaidCourses.map((item) => {
                       const isBusy = processingCourseId === item.enrollmentId;
                       return (
-                        <div
+                        <div className="reception-request"
                           data-i18n-managed
                           key={item.enrollmentId}
                           data-testid={`unpaid-course-${item.enrollmentId}`}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: '14px',
-                            padding: '16px 18px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--portal-border-strong)',
-                            backgroundColor: 'var(--portal-raised)',
-                          }}
                         >
-                          <div style={{ flex: 1, minWidth: 240 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <header className="reception-request__header">
+                            <div className="reception-request__heading">
                               <span className="reception-todo__tag reception-todo__tag--course">{t('Khóa học', 'Courses')}</span>
-                              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
-                                {t('Khóa học #', 'Course #')}{item.enrollmentId}
-                              </span>
+                              <span className="reception-request__id">{t("Khóa học #", "Course #")}{item.enrollmentId}</span>
+                            </div>
+                            <div className="reception-request__member">
                               <strong>{item.memberName}</strong>
-                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
-                                ({item.membershipCode || `MB-${item.memberId}`}{item.memberPhone ? ` • ${item.memberPhone}` : ''})
-                              </span>
+                              <span>{item.membershipCode || `MB-${item.memberId}`}</span>
                             </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
-                              <strong>{item.className}</strong>
-                              {item.disciplineName ? ` • ${item.disciplineName}` : ''}
-                              {item.startDate && item.endDate
-                                ? ` • ${formatCenterDate(item.startDate)} → ${formatCenterDate(item.endDate)}`
-                                : ''}
-                              {' • '}
-                              <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(item.amount)}</strong>
+                          </header>
+                          <dl className="reception-request__details">
+                            <div>
+                              <dt>{t('Khóa học', 'Course')}</dt>
+                              <dd><strong>{item.className}</strong></dd>
                             </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            {item.disciplineName && (<div>
+                              <dt>{t('Bộ môn', 'Discipline')}</dt>
+                              <dd>{item.disciplineName}</dd>
+                            </div>)}
+                            <div>
+                              <dt>{t('Số tiền', 'Amount')}</dt>
+                              <dd><strong>{formatPrice(item.amount)}</strong></dd>
+                            </div>
+                            {item.startDate && item.endDate && (<div>
+                              <dt>{t('Thời gian', 'Period')}</dt>
+                              <dd>{formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)}</dd>
+                            </div>)}
+                            {item.memberPhone && (<div className="reception-request__contact">
+                              <div>
+                                <dt>{t('SĐT', 'Phone')}</dt>
+                                <dd>{item.memberPhone}</dd>
+                                </div>
+                            </div>)}
+                          </dl>
+                          <div className="reception-request__actions">
                             <button
                               type="button"
                               className="btn-primary btn-sm"
@@ -1179,35 +1175,38 @@ export function StaffReceptionPage() {
                     {unpaidPt.map((item) => {
                       const isBusy = processingPtId === item.id;
                       return (
-                        <div data-i18n-managed
+                        <div className="reception-request" data-i18n-managed
                           key={item.id}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            flexWrap: 'wrap',
-                            gap: '14px',
-                            padding: '16px 18px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--portal-border-strong)',
-                            backgroundColor: 'var(--portal-raised)',
-                          }}
                         >
-                          <div style={{ flex: 1, minWidth: 240 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <span className="reception-todo__tag reception-todo__tag--pt">{t("Buổi PT")}</span>
-                              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
-                                PT #{item.id}
-                              </span>
+                          <header className="reception-request__header">
+                            <div className="reception-request__heading">
+                              <span className="reception-todo__tag reception-todo__tag--pt">{t('Buổi PT', 'PT sessions')}</span>
+                              <span className="reception-request__id">PT #{item.id}</span>
+                              {item.status === "completed" && <span className="badge badge-warning">{t("ĐÃ TẬP")}</span>}
+                            </div>
+                            <div className="reception-request__member">
                               <strong>{item.memberName}</strong>
-                              {item.status === 'completed' && <span className="badge badge-warning">{t("ĐÃ TẬP")}</span>}
                             </div>
-                            <div style={{ fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)', marginTop: '6px' }}>
-                              {t('HLV', 'Coach')} {item.coachName} • {formatCenterDate(item.bookingDate)} · {formatSlotLabel(item.startTime, item.endTime)} •{' '}
-                              <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(item.hourlyRate)}</strong>
+                          </header>
+                          <dl className="reception-request__details">
+                            <div>
+                              <dt>{t('Huấn luyện viên', 'Coach')}</dt>
+                              <dd>{t("HLV", "Coach")} {item.coachName}</dd>
                             </div>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <div>
+                              <dt>{t('Ngày tập', 'Session date')}</dt>
+                              <dd>{formatCenterDate(item.bookingDate)}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('Khung giờ', 'Time slot')}</dt>
+                              <dd>{formatSlotLabel(item.startTime, item.endTime)}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('Số tiền', 'Amount')}</dt>
+                              <dd><strong>{formatPrice(item.hourlyRate)}</strong></dd>
+                            </div>
+                          </dl>
+                          <div className="reception-request__actions">
                             <button
                               type="button"
                               className="btn-primary btn-sm"
@@ -1252,77 +1251,52 @@ export function StaffReceptionPage() {
                     {trialList.map((item) => {
                       const isBusy = processingTrialId === item.id;
                       return (
-                        <div data-i18n-managed
+                        <div className="reception-request" data-i18n-managed
                           key={item.id}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            flexWrap: 'wrap',
-                            gap: '14px',
-                            padding: '16px 18px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--portal-border-strong)',
-                            backgroundColor: 'var(--portal-raised)',
-                          }}
                         >
-                          <div style={{ flex: 1, minWidth: 260 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <span className="reception-todo__tag reception-todo__tag--trial">{t("Trải nghiệm")}</span>
-                              <span
-                                style={{
-                                  fontVariantNumeric: 'tabular-nums',
-                                  fontWeight: 700,
-                                  color: 'var(--portal-salmon)',
-                                  fontSize: '0.92rem',
-                                }}
-                              >
-                                {t("Đơn thử #")}{item.id}
-                              </span>
+                          <header className="reception-request__header">
+                            <div className="reception-request__heading">
+                              <span className="reception-todo__tag reception-todo__tag--trial">{t('Trải nghiệm', 'Trials')}</span>
+                              <span className="reception-request__id">{t("Đơn thử #")}{item.id}</span>
+                            </div>
+                            <div className="reception-request__member">
                               <strong>{item.memberName}</strong>
-                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
-                                ({item.membershipCode || t('Hội viên mới')})
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: '0.78rem',
-                                  fontWeight: 700,
-                                  padding: '2px 8px',
-                                  borderRadius: '99px',
-                                  background: item.documentType === 'PASSPORT'
-                                    ? 'color-mix(in srgb, var(--portal-info) 15%, transparent)'
-                                    : 'var(--portal-tint)',
-                                  color: item.documentType === 'PASSPORT' ? 'var(--portal-info)' : 'var(--sol-accent-text)',
-                                }}
-                              >
-                                {item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Foreign'})`) : t('CCCD', 'Identity card')}
-                              </span>
+                              <span>{item.membershipCode || t('Hội viên mới')}</span>
                             </div>
-
-                            <div style={{ marginTop: '8px', fontSize: '0.88rem', color: 'var(--portal-muted)', display: 'grid', gap: '4px' }}>
+                          </header>
+                          <dl className="reception-request__details">
+                            <div>
+                              <dt>{t('Loại giấy tờ', 'Document type')}</dt>
+                              <dd>{item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Foreign'})`) : t('CCCD', 'Identity card')}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('Tên trên giấy tờ', 'Name on document')}</dt>
+                              <dd><strong>{item.documentFullName}</strong>{item.memberName !== item.documentFullName && (<span className="reception-request__name-sync">{t('(Đồng bộ họ tên: "')}{item.memberName}&quot; → &quot;{item.documentFullName}&quot;)</span>)}</dd>
+                            </div>
+                            <div>
+                              <dt>{t('Số giấy tờ', 'Document number')}</dt>
+                              <dd>{item.documentNumber ?? item.documentNumberMasked}</dd>
+                            </div>
+                            {item.nationality && (<div>
+                              <dt>{t('Quốc tịch', 'Nationality')}</dt>
+                              <dd>{item.nationality}</dd>
+                            </div>)}
+                            <div>
+                              <dt>{t('Thời gian nộp', 'Submitted at')}</dt>
+                              <dd>{formatCenterDate(item.requestedAt)}</dd>
+                            </div>
+                            <div className="reception-request__contact">
                               <div>
-                                <strong>{t("Tên trên giấy tờ:")}</strong>{' '}
-                                <span style={{ color: 'var(--portal-paper)', fontWeight: 600 }}>{item.documentFullName}</span>
-                                {item.memberName !== item.documentFullName && (
-                                  <span data-i18n-managed style={{ fontSize: '0.78rem', color: 'var(--portal-salmon)', marginLeft: '6px' }}>
-                                    {t("(Đồng bộ họ tên: \"")}{item.memberName}&quot; → &quot;{item.documentFullName}&quot;)
-                                  </span>
-                                )}
+                                <dt>{t('Email', 'Email')}</dt>
+                                <dd>{item.memberEmail}</dd>
                               </div>
-                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                <strong>{t("Số giấy tờ:")}</strong> {item.documentNumber ?? item.documentNumberMasked}
-                                {item.nationality && t(` • Quốc tịch: ${item.nationality}`, ` • Nationality: ${item.nationality}`)}
-                              </div>
-                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                <strong>{t("Email/SĐT:")}</strong> {item.memberEmail} {item.memberPhone ? `• ${item.memberPhone}` : ''}
-                              </div>
-                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                <strong>{t("Thời gian nộp:")}</strong> {formatCenterDate(item.requestedAt)}
-                              </div>
+                              <div>
+                                <dt>{t('SĐT', 'Phone')}</dt>
+                                <dd>{item.memberPhone || "—"}</dd>
+                                </div>
                             </div>
-                          </div>
-
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                          </dl>
+                          <div className="reception-request__actions">
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
@@ -1371,58 +1345,44 @@ export function StaffReceptionPage() {
                   <>
                     {holdList.map((item) => {
                       return (
-                        <div data-i18n-managed
+                        <div className="reception-request" data-i18n-managed
                           key={item.id}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'flex-start',
-                            flexWrap: 'wrap',
-                            gap: '14px',
-                            padding: '16px 18px',
-                            borderRadius: '10px',
-                            border: '1px solid var(--portal-border-strong)',
-                            backgroundColor: 'var(--portal-raised)',
-                          }}
                         >
-                          <div style={{ flex: 1, minWidth: 260 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <span className="reception-todo__tag reception-todo__tag--hold">{t("Bảo lưu")}</span>
-                              <span
-                                style={{
-                                  fontVariantNumeric: 'tabular-nums',
-                                  fontWeight: 700,
-                                  color: 'var(--portal-salmon)',
-                                  fontSize: '0.92rem',
-                                }}
-                              >
-                                {t("Bảo lưu #")}{item.id}
-                              </span>
-                              <strong>{item.memberName}</strong>
-                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
-                                ({item.membershipCode || `MB-${item.memberId}`} • {item.memberPhone || item.memberEmail})
-                              </span>
+                          <header className="reception-request__header">
+                            <div className="reception-request__heading">
+                              <span className="reception-todo__tag reception-todo__tag--hold">{t('Bảo lưu', 'Holds')}</span>
+                              <span className="reception-request__id">{t("Bảo lưu #")}{item.id}</span>
                               <span className="badge badge-warning">{t("CHỜ DUYỆT BẢO LƯU")}</span>
                             </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
-                              {t("Gói tập đang hoạt động: ")}<strong>{item.packageName}</strong> ({formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)})
+                            <div className="reception-request__member">
+                              <strong>{item.memberName}</strong>
+                              <span>{item.membershipCode || `MB-${item.memberId}`}</span>
                             </div>
-                            <div
-                              style={{
-                                marginTop: '8px',
-                                padding: '8px 12px',
-                                borderRadius: '8px',
-                                backgroundColor: 'var(--portal-surface)',
-                                border: '1px solid var(--portal-border)',
-                                fontSize: '0.88rem',
-                                color: 'var(--portal-paper)',
-                              }}
-                            >
-                              <strong>{t("Lý do hội viên nhập:")}</strong> {item.holdReason}
+                          </header>
+                          <dl className="reception-request__details">
+                            <div>
+                              <dt>{t('Gói tập đang hoạt động', 'Active membership package')}</dt>
+                              <dd><strong>{item.packageName}</strong></dd>
                             </div>
-                          </div>
-
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <div>
+                              <dt>{t('Thời gian', 'Period')}</dt>
+                              <dd>{formatCenterDate(item.startDate)} → {formatCenterDate(item.endDate)}</dd>
+                            </div>
+                            <div className="reception-request__wide"><dt>{t('Lý do hội viên nhập', 'Member reason')}</dt>
+                              <dd>{item.holdReason}</dd>
+                            </div>
+                            <div className="reception-request__contact">
+                              <div>
+                                <dt>{t('Email', 'Email')}</dt>
+                                <dd>{item.memberEmail}</dd>
+                              </div>
+                              <div>
+                                <dt>{t('SĐT', 'Phone')}</dt>
+                                <dd>{item.memberPhone || "—"}</dd>
+                                </div>
+                            </div>
+                          </dl>
+                          <div className="reception-request__actions">
                             <Link to="/staff/holds" className="btn-primary btn-sm">
                               {t('Xem giấy tờ & xử lý', 'Review documents & decide')}
                             </Link>
@@ -1898,41 +1858,31 @@ export function StaffReceptionPage() {
       {/* Modal xem chi tiết & ảnh giấy tờ CCCD / Hộ chiếu */}
       {inspectingTrial && (
         <Modal
-          title={t(`Chi tiết đơn trải nghiệm #${inspectingTrial.id} - ${inspectingTrial.memberName}`, `Trial application details #${inspectingTrial.id} - ${inspectingTrial.memberName}`)}
+          title={t(`Chi tiết đơn trải nghiệm #${inspectingTrial.id}`, `Trial application details #${inspectingTrial.id}`)}
           onClose={() => setInspectingTrial(null)}
           busy={processingTrialId === inspectingTrial.id}
+          className="reception-trial-detail"
         >
-          <div style={{ display: 'grid', gap: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.9rem' }}>
+          <div className="reception-trial-detail__content">
+            <p className="reception-trial-detail__member"><strong>{inspectingTrial.memberName}</strong><span>{inspectingTrial.membershipCode || t('Chưa cấp thẻ', 'No card issued')}</span></p>
+            <dl className="reception-request__details">
               <div>
-                <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Hội viên")}</span>
-                <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || t('Chưa cấp thẻ', 'No card issued')})
+                <dt>{t('Hội viên', 'Member')}</dt>
+                <dd>{inspectingTrial.memberName}</dd>
               </div>
               <div>
-                <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Loại giấy tờ")}</span>
-                <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Foreign'})`) : t('Căn cước công dân (CCCD)', 'Identity card')}</strong>
+                <dt>{t('Loại giấy tờ', 'Document type')}</dt>
+                <dd>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Foreign'})`) : t('Căn cước công dân (CCCD)', 'Identity card')}</dd>
               </div>
               <div>
-                <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>
-                <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{inspectingTrial.documentNumber ?? inspectingTrial.documentNumberMasked}</strong>
+                <dt>{t('Số giấy tờ', 'Document number')}</dt>
+                <dd>{inspectingTrial.documentNumber ?? inspectingTrial.documentNumberMasked}</dd>
               </div>
               <div>
-                <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Họ và tên trên giấy tờ")}</span>
-                <strong style={{ color: 'var(--portal-salmon)' }}>{inspectingTrial.documentFullName}</strong>
+                <dt>{t('Họ và tên trên giấy tờ', 'Full name on document')}</dt>
+                <dd><strong>{inspectingTrial.documentFullName}</strong></dd>
               </div>
-            </div>
-
-            <div
-              style={{
-                padding: '10px 14px',
-                borderRadius: '8px',
-                background: 'color-mix(in srgb, var(--portal-salmon) 10%, transparent)',
-                border: '1px solid var(--portal-border)',
-                fontSize: '0.85rem',
-                color: 'var(--portal-paper)',
-              }}
-            >
-              <strong>{t("Lưu ý nghiệp vụ:")}</strong> {t(" Khi Lễ tân bấm ")}<strong>{t("Duyệt & Kích hoạt")}</strong>{t(", hệ thống sẽ tự động đồng bộ họ tên tài khoản thành ")}<strong>&quot;{inspectingTrial.documentFullName}&quot;</strong> {t(" và kích hoạt gói 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.")}</div>
+            </dl>
 
             {/* Ảnh mặt trước & mặt sau: lưới responsive & phóng to bằng Lightbox */}
             <div className="document-photo-grid" style={{ marginTop: '4px' }}>
@@ -1995,7 +1945,7 @@ export function StaffReceptionPage() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--portal-border-strong)', paddingTop: '14px' }}>
+            <div className="reception-request__actions">
               <button
                 type="button"
                 className="btn-danger"
