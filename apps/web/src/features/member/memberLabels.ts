@@ -100,6 +100,7 @@ export const memberLabels: Readonly<Record<string, string>> = {
   "Đã kín lịch": "Fully booked",
   "HLV nghỉ phép": "Coach on leave",
   "Cần đặt trước 2 tiếng": "Book 2 hours in advance",
+  "Đã qua thời gian": "Time has passed",
   "HLV đã có lịch": "Coach unavailable",
   "Bạn đã có lịch trùng": "You have a scheduling conflict",
   "Chọn ngày và khung giờ": "Choose date and time",
