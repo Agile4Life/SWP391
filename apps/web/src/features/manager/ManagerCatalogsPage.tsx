@@ -705,6 +705,7 @@ export function ManagerCatalogsPage() {
                           <button
                             type="button"
                             className="btn-danger btn-sm"
+                            style={{ marginLeft: 8 }}
                             disabled={isSubmitting}
                             onClick={() => void remove('bộ môn', d.name, () => catalogApi.deleteDiscipline(d.id))}
                           >
@@ -865,6 +866,7 @@ export function ManagerCatalogsPage() {
                             <button
                               type="button"
                               className="btn-danger btn-sm"
+                              style={{ marginLeft: 8 }}
                               disabled={isSubmitting}
                               onClick={() => void remove('gói tập', p.name, () => catalogApi.deletePackage(p.id))}
                             >
