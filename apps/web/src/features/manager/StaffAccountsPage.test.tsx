@@ -113,7 +113,7 @@ it('rejects duplicate email and phone number before calling createStaffAccount',
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('Số điện thoại đã tồn tại');
 });
 
-it('sorts staff accounts by name and status without a coach-first option', async () => {
+it('sorts staff accounts by name only', async () => {
   const staffList = [
     { id: 1, fullName: 'Bùi Văn B', email: 'b@sol.vn', roleCode: 'RECEPTIONIST' as const, status: 'locked' as const },
     { id: 2, fullName: 'An Thị A', email: 'a@sol.vn', roleCode: 'COACH' as const, status: 'active' as const },
@@ -131,7 +131,7 @@ it('sorts staff accounts by name and status without a coach-first option', async
 
   const sortSelect = host.querySelector('select[aria-label="Sắp xếp danh sách nhân sự"]') as HTMLSelectElement;
   expect(sortSelect).toBeTruthy();
-  expect([...sortSelect.options].map(option => option.value)).not.toContain('role');
+  expect([...sortSelect.options].map(option => option.value)).toEqual(['name_asc', 'name_desc']);
 
   // Sort name_desc -> Cù Trọng C, Bùi Văn B, An Thị A
   await act(async () => {
@@ -140,10 +140,4 @@ it('sorts staff accounts by name and status without a coach-first option', async
   });
   expect(getRenderedNames()).toEqual(['Cù Trọng C', 'Bùi Văn B', 'An Thị A']);
 
-  // Sort status (Active first, then Locked) -> An Thị A (Active), Cù Trọng C (Active), Bùi Văn B (Locked)
-  await act(async () => {
-    sortSelect.value = 'status';
-    sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  expect(getRenderedNames()).toEqual(['An Thị A', 'Cù Trọng C', 'Bùi Văn B']);
 });
