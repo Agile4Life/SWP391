@@ -265,6 +265,7 @@ public class CoachAssignmentService {
         requireMembership(member.getUserId());
         String entityType;
         String coachPath;
+        List<Long> movedSessionIds = List.of();
         if ("TRAINING_PLAN".equals(dto.assignmentType())) {
             TrainingPlan plan = trainingPlanRepository.findByIdForUpdate(dto.referenceId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", dto.referenceId()));
@@ -281,10 +282,9 @@ public class CoachAssignmentService {
                     .orElseThrow(() -> new ResourceNotFoundException("resource.coach_booking", dto.referenceId()));
             requireRelationship(booking.getMember(), booking.getCoach(), dto);
             List<CoachBooking> sessions = new ArrayList<>(List.of(booking));
-            for (CoachBooking other : coachBookingRepository.findCurrentAssignments(from.getUserId(), today(), LocalTime.now(clock))) {
-                if (Objects.equals(other.getMember().getUserId(), member.getUserId()) && !Objects.equals(other.getId(), booking.getId())) {
-                    sessions.add(coachBookingRepository.findByIdForUpdate(other.getId()).orElse(other));
-                }
+            for (CoachBooking other : coachBookingRepository.findUpcomingForMemberAndCoachForUpdate(from.getUserId(), member.getUserId(),
+                    today(), LocalTime.now(clock))) {
+                if (!Objects.equals(other.getId(), booking.getId())) sessions.add(other);
             }
             // Kiểm tra hết mọi buổi trước khi đổi để không chuyển dở dang.
             for (CoachBooking session : sessions) {
@@ -303,8 +303,9 @@ public class CoachAssignmentService {
             }
             inheritPlans(member.getUserId(), from, to);
             entityType = null; coachPath = "/coach/classes";
+            movedSessionIds = sessions.stream().map(CoachBooking::getId).toList();
         }
-        recordTransfer(dto, reason);
+        recordTransfer(dto, reason, movedSessionIds);
         notificationService.send(to.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.coach", member.getUser().getFullName(), dto.referenceId()),
                 "system", entityType, dto.referenceId(), coachPath);
         notificationService.send(from.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.from", member.getUser().getFullName(), to.getUser().getFullName(), dto.referenceId()),
@@ -352,11 +353,12 @@ public class CoachAssignmentService {
         return booking.getStartTime().isBefore(end) && booking.getEndTime().isAfter(start);
     }
 
-    /** Ghi audit lần chuyển (cả HLV cũ và mới, loại và id phân công, lý do) kèm người thực hiện. */
-    private void recordTransfer(CoachAssignmentReassignDto dto, String reason) {
-        // Luồng audit HLV hiện có lưu cả hai phía của đúng quan hệ giáo án / PT.
+    /** Ghi audit lần chuyển (cả HLV cũ và mới, loại và id phân công, id các buổi PT, lý do) kèm người thực hiện. */
+    private void recordTransfer(CoachAssignmentReassignDto dto, String reason, List<Long> sessionIds) {
+        // Luồng audit HLV hiện có lưu cả hai phía của đúng quan hệ giáo án / PT, kèm mọi buổi PT đã chuyển.
         var oldValue = objectMapper.createObjectNode().put("assignmentType", dto.assignmentType()).put("referenceId", dto.referenceId())
                 .put("memberId", dto.memberId()).put("coachId", dto.fromCoachId());
+        if (!sessionIds.isEmpty()) sessionIds.forEach(oldValue.putArray("sessionIds")::add);
         var newValue = oldValue.deepCopy().put("coachId", dto.toCoachId()).put("reason", reason);
         AuditLog entry = new AuditLog();
         var auth = SecurityContextHolder.getContext().getAuthentication();

@@ -176,6 +176,17 @@ public interface CoachBookingRepository extends JpaRepository<CoachBooking, Long
      */
     List<CoachBooking> findUnpaid();
 
+    /** Buổi PT confirmed sắp tới của một hội viên với một HLV, khóa dòng để điều chuyển cả nhóm một lần. */
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select b from CoachBooking b
+            where b.coach.userId = :coachId and b.member.userId = :memberId and b.status = 'confirmed'
+              and (b.bookingDate > :today or (b.bookingDate = :today and b.startTime > :now))
+            order by b.bookingDate, b.startTime
+            """)
+    List<CoachBooking> findUpcomingForMemberAndCoachForUpdate(@Param("coachId") Long coachId, @Param("memberId") Long memberId,
+            @Param("today") LocalDate today, @Param("now") LocalTime now);
+
     /** Lấy booking theo id và khóa dòng (PESSIMISTIC_WRITE) để tránh hai request cùng sửa một booking. */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select cb from CoachBooking cb where cb.id = :id")

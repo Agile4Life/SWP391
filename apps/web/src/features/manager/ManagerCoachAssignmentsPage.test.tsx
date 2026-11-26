@@ -282,7 +282,8 @@ describe('ManagerCoachAssignmentsPage', () => {
     const row = host.querySelector('.coach-student-row')!;
     const buttons = [...row.querySelectorAll('button')].map(b => b.textContent);
     expect(buttons.filter(text => text === 'Chi tiết')).toHaveLength(1);
-    expect(buttons.filter(text => text === 'Điều chuyển HLV')).toHaveLength(2);
+    expect(buttons.filter(text => text === 'Chuyển giáo án')).toHaveLength(1);
+    expect(buttons.filter(text => text === 'Chuyển toàn bộ PT')).toHaveLength(1);
     expect(row.textContent).toContain('09:00 10/11/2026 · 2 buổi sắp tới');
     await act(async () => { [...row.querySelectorAll('button')].find(b => b.textContent === 'Chi tiết')!.click(); });
     expect(host.querySelectorAll('dialog .coach-student-type-pill')).toHaveLength(2);
@@ -293,7 +294,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     const row = [...host.querySelectorAll('.coach-student-row')].find(r => r.textContent?.includes('Phạm Minh Tuấn'));
     expect(row).toBeDefined();
     expect(row!.textContent).toContain('Lớp học nhóm');
-    expect(row!.textContent).not.toContain('Điều chuyển HLV');
+    expect(row!.textContent).not.toContain('Chuyển');
   });
 
   it('formats assignment deadlines and PT times', async () => {
@@ -310,7 +311,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({ ...mockData, coaches: [mockData.coaches[0]] });
     await act(async () => { filter.value = '10'; filter.dispatchEvent(new Event('change', { bubbles: true })); });
     await act(async () => { await new Promise(r => setTimeout(r, 260)); });
-    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent === 'Điều chuyển HLV')?.click(); });
+    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent === 'Chuyển toàn bộ PT')?.click(); });
     const target = host.querySelector('#reassign-target-coach')!.closest('.ui-select')!.querySelector('select.ui-select__native') as HTMLSelectElement;
     expect([...target.options].map(o => o.value)).toContain('11');
     await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
@@ -439,7 +440,7 @@ describe('ManagerCoachAssignmentsPage', () => {
 
       // Clearing target coach select resets to empty string (not 0) and disables submit
       await act(async () => {
-        [...host.querySelectorAll('button')].find((b) => b.textContent === 'Điều chuyển')?.click();
+        [...host.querySelectorAll('button')].find((b) => b.textContent === 'Chuyển toàn bộ PT')?.click();
       });
       const target = host.querySelector('#reassign-target-coach')!.closest('.ui-select')!.querySelector('select.ui-select__native') as HTMLSelectElement;
       await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
