@@ -126,6 +126,11 @@
 }
 
 /* Kiểu hộp thoại trợ lý AI */
+dialog.portal-dialog:has(.ai-modal-container) {
+  width: min(620px, calc(100vw - 32px));
+  max-width: 620px;
+}
+
 .ai-modal-container {
   max-width: 760px;
   width: 100%;

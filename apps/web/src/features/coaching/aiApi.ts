@@ -63,6 +63,7 @@ export interface MemberOption {
   id: number;
   memberCode: string;
   fullName: string;
+  phone?: string | null;
   fitnessGoal?: string;
   healthNotes?: string;
   fitnessLevel?: string;

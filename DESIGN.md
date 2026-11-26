@@ -15,6 +15,7 @@ Quyết định Manager (26/11/2026): Chip bộ môn ở `Lịch theo bộ môn`
 Quyết định Manager (26/11/2026): Tab `Lịch tổng cả tuần` có nút chuyển `Tuần / Tháng` (`mcal__switch`, đặt ở thanh công cụ của lịch). Chế độ Tháng (`MonthOverview`) là lưới 6×7 ngày: mỗi ô liệt kê bộ môn có lịch trong ngày kèm `N buổi` (không tính buổi hủy; buổi hủy chỉ hiện trong danh sách khi bấm ô, gạch tên kèm nhãn `Đã hủy`), ngày ngoài tháng làm mờ; bấm ô mở danh sách buổi của ngày (bấm buổi → chi tiết, nút `Xem tuần này` → về lịch tuần chứa ngày đó). Chip bật/tắt bộ môn áp dụng cho cả hai chế độ.
 Quyết định Manager (26/11/2026): Trang Lớp học của Quản lý xếp tab `Lịch tổng cả tuần` đứng đầu và mở mặc định, sau đó `Lịch theo bộ môn`, `Danh sách lớp`.
 Quyết định Manager: tab `Phòng tập` cho phép thêm, sửa và xóa phòng chưa được sử dụng; không hiển thị hoặc chỉnh hạng phòng tại đây. Bảng gói tập căn cột ổn định và cuộn ngang khi cần.
+Các nút thao tác của gói tập căn thẳng theo từng vị trí giữa các dòng; nút mở/ngừng bán giữ kích thước tự nhiên trong một vị trí chung, cột đủ rộng và bảng cuộn ngang khi cần, kể cả khi thu phóng.
 
 Phạm vi 3 bộ môn (`Gym`, `Boxing`, `Yoga`), **đa lớp `active`/bộ môn không trùng ngày & slot**, **wizard tạo khóa học 4 bước kèm tiền kiểm tra khả dụng**, **hệ thống lịch 5 Slot cố định (`07:00 – 20:30`)**, thẻ sự kiện viền mảnh có tên HLV, gỡ hoàn toàn đặt sân, ẩn 3D, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò (25/11/2026 — **ghi đè** mục Gym-only 22–23/11/2026 và các mục cũ bên dưới về đặt sân, bộ môn ngoài phạm vi, 3D, quy tắc 1 lớp duy nhất/môn cũ, lưới giờ liên tục cũ, công tắc `08:00–20:00 / Cả ngày`, viền dày trái `border-left: 4px`, `TimePicker` tự do trong xếp lịch, 15 nút giờ PT Sáng/Chiều/Tối và giới hạn bắt buộc HLV nghỉ giữa các slot liền kề; các tính năng tắt qua cờ legacy vẫn giữ nguyên trạng thái tắt):
 - **Hệ thống lịch tuần 5 Slot cố định (`07:00 – 20:30`), thẻ sự kiện & bộ chọn Slot**:
@@ -434,3 +435,7 @@ Quyết định Receptionist (25/11/2026): Hai bảng lịch sử tại quầy c
 Quyết định Receptionist (25/11/2026): Receptionist nhận toast cho yêu cầu mới sau mốc đăng nhập; chuông dùng notification server và trạng thái đọc riêng việc xử lý. Giữ route nghiệp vụ hiện có.
 
 Quyết định Receptionist — Task 3 (25/11/2026): `/messages?tab=support` giữ cột hội thoại bên trái và hộp thư/chi tiết phiếu bên phải. Phiếu chưa đọc có tên hội viên và tin cuối in đậm, badge số tin đến chưa đọc, thời gian tin cuối; sắp theo tin cuối trên server trước phân trang. Bộ lọc Tất cả/Chưa đọc kết hợp độc lập với trạng thái xử lý. Header chi tiết có nút mũi tên trái “Quay lại hộp thư” hiện trên desktop/mobile, chỉ đóng chi tiết, giữ bộ lọc, nháp và vị trí cuộn danh sách. Trạng thái đọc lưu theo từng lễ tân, tách khỏi trạng thái xử lý phiếu; chỉ xác nhận đến tin đã tải thành công. Dùng token Light salmon/Dark bạc, không thay luồng gửi/trả lời/chuyển Manager hoặc giao diện AI.
+
+# Biểu đồ doanh thu theo ngày
+
+- Biểu đồ giữ từng ngày trong kỳ lọc; cuộn bánh xe chuột trên biểu đồ để di chuyển ngang, tiếp tục cuộn trang khi biểu đồ tới đầu hoặc cuối.

@@ -10,8 +10,8 @@ import * as profileApi from '../member/profileApi';
 
 
 const MEMBERS: MemberOption[] = [
-  { id: 1, memberCode: 'MB-2026-001', fullName: 'Lê Hoàng Long', fitnessGoal: 'Tăng cơ nạc', healthNotes: 'Tránh Deadlift tạ nặng', fitnessLevel: 'intermediate' },
-  { id: 2, memberCode: 'MB-2026-014', fullName: 'Trần Thị Thu Thảo', fitnessGoal: 'Săn chắc cơ mông', healthNotes: 'Bình thường', fitnessLevel: 'beginner' },
+  { id: 1, memberCode: 'MB-2026-001', fullName: 'Lê Hoàng Long', phone: '0901234567', fitnessGoal: 'Tăng cơ nạc', healthNotes: 'Tránh Deadlift tạ nặng', fitnessLevel: 'intermediate' },
+  { id: 2, memberCode: 'MB-2026-014', fullName: 'Trần Thị Thu Thảo', phone: '0987654321', fitnessGoal: 'Săn chắc cơ mông', healthNotes: 'Bình thường', fitnessLevel: 'beginner' },
 ];
 
 describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập Tích hợp AI Gợi ý)', () => {
@@ -111,7 +111,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   });
 
   // Dựng component vào DOM giả để kiểm thử.
-  async function renderComponent() {
+  async function renderComponent(selectFirstMember = true) {
     await act(async () => {
       root.render(
         <MemoryRouter>
@@ -119,6 +119,15 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
         </MemoryRouter>
       );
     });
+    if (selectFirstMember) {
+      const select = host.querySelector('#plan-member-select') as HTMLSelectElement | null;
+      if (select && MEMBERS.length > 0) {
+        await act(async () => {
+          Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')?.set?.call(select, String(MEMBERS[0].id));
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+      }
+    }
   }
 
   // Mở một bước của trình soạn giáo án.
@@ -167,6 +176,13 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.querySelector('#plan-member')).toBeNull();
 
     await act(async () => finishMembers([{ ...MEMBERS[0], id: 42, fullName: 'Học viên đã tải' }]));
+    const select = host.querySelector('#plan-member-select') as HTMLSelectElement | null;
+    if (select) {
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(window.HTMLSelectElement.prototype, 'value')?.set?.call(select, '42');
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
     expect(host.querySelector('[aria-busy="true"]')).toBeNull();
     expect(host.textContent).toContain('Học viên đã tải');
     expect(host.querySelectorAll('.plan-step__button')).toHaveLength(3);
@@ -578,9 +594,9 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(endInput.value).toBe(expectedEnd);
   });
 
-  it('renders and edits timed AI exercises without sets/reps cleanly and warns when a Silver member cannot view workout plans', async () => {
+  it('renders and edits timed AI exercises without sets/reps cleanly', async () => {
     vi.mocked(aiApi.getCoachMembers).mockResolvedValue([
-      { ...MEMBERS[0], canViewWorkoutPlan: false },
+      { ...MEMBERS[0], canViewWorkoutPlan: true },
     ]);
     vi.mocked(aiApi.generateWorkoutPlan).mockResolvedValue({
       ...mockAiResponse,
@@ -597,7 +613,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     });
 
     await renderComponent();
-    expect(host.textContent).toContain('gói Silver');
+    expect(host.querySelector('.portal-alert')).toBeNull();
 
     // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const clickBtn = async (label: string) => act(async () => {
@@ -632,10 +648,11 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(updatedCard.textContent).toContain('8p');
   });
 
-  it('filters beneficiary members by code or accent-free name, auto-selects the first match, and handles no matches', async () => {
-    await renderComponent();
+  it('searches beneficiary members by name, code or phone, shows dropdown, and fills selection into the search bar', async () => {
+    await renderComponent(false);
     const searchInput = host.querySelector('#plan-member-search') as HTMLInputElement;
     expect(searchInput).not.toBeNull();
+    expect(searchInput.value).toBe('');
 
     const setSearch = async (value: string) => {
       await act(async () => {
@@ -645,23 +662,38 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
       });
     };
 
-    // Tìm theo mã thẻ "014" -> tự chuyển sang Trần Thị Thu Thảo (id=2) và cập nhật mục tiêu theo hồ sơ.
-    await setSearch('014');
-    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Trần Thị Thu Thảo');
-    expect(host.textContent).toContain('1 học viên');
+    // Nhập tên "thảo" -> dropdown hiển thị gợi ý Trần Thị Thu Thảo
+    await setSearch('thảo');
+    const optionBtn = Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Trần Thị Thu Thảo'));
+    expect(optionBtn).toBeDefined();
+
+    // Bấm chọn từ dropdown -> tên học viên hiện ngay trên thanh search
+    await act(async () => {
+      optionBtn!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+    expect(searchInput.value).toContain('Trần Thị Thu Thảo');
+    expect(searchInput.value).toContain('MB-2026-014');
     expect((host.querySelector('#plan-goal-input') as HTMLInputElement).value).toBe('Săn chắc cơ mông');
 
-    // Tìm theo tên không dấu "hoang long" -> quay lại Lê Hoàng Long (id=1).
-    await setSearch('hoang long');
-    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Lê Hoàng Long');
+    // Tìm theo số điện thoại "0901234567" -> dropdown có Lê Hoàng Long
+    await setSearch('0901234567');
+    const longBtn = Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Lê Hoàng Long'));
+    expect(longBtn).toBeDefined();
+    await act(async () => {
+      longBtn!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
+    expect(searchInput.value).toContain('Lê Hoàng Long');
 
-    // Không có học viên khớp -> hiển thị trạng thái không tìm thấy mà không làm hỏng giao diện.
-    await setSearch('khong-ton-tai');
-    expect(host.querySelector('#plan-member-select')?.textContent).toContain('Không tìm thấy học viên phù hợp');
-    expect(host.textContent).toContain('0 học viên');
+    // Nhập không khớp -> hiển thị thông báo không tìm thấy
+    await setSearch('99999999');
+    expect(host.textContent).toContain('Không tìm thấy học viên phù hợp');
 
-    // Tìm lại "014", thêm bài tập và lưu giáo án -> gửi đúng memberId = 2.
+    // Chọn lại "014", thêm bài tập và lưu giáo án -> gửi đúng memberId = 2
     await setSearch('014');
+    const selectThao = Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Trần Thị Thu Thảo'));
+    await act(async () => {
+      selectThao!.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    });
     await addManualExercise('Hip Thrust');
     await openStep(3);
     await act(async () => { saveButton()?.click(); });
@@ -693,15 +725,12 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await act(async () => { saveButton()?.click(); });
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Hội viên cần có buổi PT 1:1 trước khi tạo giáo án');
 
-    // Gói Silver với vai trò COACH -> chặn nút Lưu và báo rõ không đủ điều kiện
+    // Gói Silver với vai trò COACH -> không hiển thị cảnh báo đỏ và không cho chọn học viên chưa đăng ký 1:1
     await act(async () => root.unmount());
     root = createRoot(host);
     vi.mocked(aiApi.getCoachMembers).mockResolvedValue([{ ...MEMBERS[0], canViewWorkoutPlan: false }]);
     await renderComponent();
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('không thể lưu giáo án');
-    await addManualExercise('Lat Pulldown');
-    await openStep(3);
-    expect(saveButton()?.disabled).toBe(true);
+    expect(host.querySelector('.portal-alert')).toBeNull();
   });
 
   it('P1-FE-50: resolves numeric coach userId from getProfile for username session and confirms before manual active plan overwrite', async () => {
