@@ -1886,17 +1886,7 @@ export function MemberCoachBookingView({
                     <div>{memberText("Số tiền đã thanh toán: ", "Amount paid: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                   </>
                 ) : (
-                  <>
-                    <div>
-                      {lang === 'en' ? (
-                        <>Choose <strong>Pay with VNPay</strong> or <strong>Pay with SÖL Wallet</strong> below to complete online payment.</>
-                      ) : (
-                        <>Chọn <strong>Thanh toán VNPay</strong> hoặc <strong>Thanh toán bằng Ví SÖL</strong> bên dưới để hoàn tất thanh toán trực tuyến.</>
-                      )}
-                    </div>
-                    <div>{memberText("Số tiền cần thanh toán: ", "Amount due: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
-                    <div style={{ color: 'var(--portal-muted)' }}>{memberText("Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy trước giờ tập để được hỗ trợ thu tiền.")}</div>
-                  </>
+                  <div>{memberText("Số tiền cần thanh toán: ", "Amount due: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                 )}
               </div>
             </div>
