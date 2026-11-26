@@ -898,6 +898,8 @@ export function CreateClassOrSessionModal({
                       aria-pressed={active}
                       disabled={busy}
                       onClick={() => {
+                        // Re-clicking the active slot must not wipe results: the check effect won't re-run.
+                        if (active) return;
                         setSelectedSlotCode(slot.code);
                         setAvailabilityState(null);
                         setAvailabilityError(null);
