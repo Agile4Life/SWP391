@@ -840,22 +840,34 @@ DECLARE
     schedule_conflict BOOLEAN := FALSE;
 BEGIN
     -- Các dòng rời khỏi trạng thái đang hoạt động (hủy, hoàn thành) không thể gây trùng lịch: bỏ qua hoàn toàn bước khóa.
-    IF (TG_TABLE_NAME = 'coach_bookings' AND NEW.status <> 'confirmed')
-       OR (TG_TABLE_NAME IN ('class_enrollments', 'session_bookings') AND NEW.status <> 'booked')
-       OR (TG_TABLE_NAME = 'class_sessions' AND NEW.status <> 'scheduled') THEN
-        RETURN NEW;
-    END IF;
-    -- Bỏ qua cập nhật không đổi lịch hẹn PT (ví dụ điểm danh quá khứ hoặc xác nhận thu tiền) để không khóa toàn cục và không kiểm tra lại gói tập.
-    IF TG_TABLE_NAME = 'coach_bookings' AND TG_OP = 'UPDATE'
-       AND OLD.status = 'confirmed' AND NEW.status = 'confirmed'
-       AND OLD.member_id = NEW.member_id AND OLD.coach_id = NEW.coach_id
-       AND OLD.booking_date = NEW.booking_date
-       AND OLD.start_time = NEW.start_time AND OLD.end_time = NEW.end_time THEN
-        RETURN NEW;
-    END IF;
-    IF TG_TABLE_NAME = 'classes' AND TG_OP = 'UPDATE'
-       AND OLD.coach_id IS NOT DISTINCT FROM NEW.coach_id THEN
-        RETURN NEW;
+    -- Dùng nhánh IF lồng theo TG_TABLE_NAME vì PL/pgSQL không short-circuit phân giải tên cột trên biến record OLD/NEW.
+    IF TG_TABLE_NAME = 'coach_bookings' THEN
+        IF NEW.status <> 'confirmed' THEN
+            RETURN NEW;
+        END IF;
+        -- Bỏ qua cập nhật không đổi lịch hẹn PT (ví dụ điểm danh quá khứ hoặc xác nhận thu tiền) để không khóa toàn cục và không kiểm tra lại gói tập.
+        IF TG_OP = 'UPDATE' THEN
+            IF OLD.status = 'confirmed'
+               AND OLD.member_id = NEW.member_id AND OLD.coach_id = NEW.coach_id
+               AND OLD.booking_date = NEW.booking_date
+               AND OLD.start_time = NEW.start_time AND OLD.end_time = NEW.end_time THEN
+                RETURN NEW;
+            END IF;
+        END IF;
+    ELSIF TG_TABLE_NAME IN ('class_enrollments', 'session_bookings') THEN
+        IF NEW.status <> 'booked' THEN
+            RETURN NEW;
+        END IF;
+    ELSIF TG_TABLE_NAME = 'class_sessions' THEN
+        IF NEW.status <> 'scheduled' THEN
+            RETURN NEW;
+        END IF;
+    ELSIF TG_TABLE_NAME = 'classes' THEN
+        IF TG_OP = 'UPDATE' THEN
+            IF OLD.coach_id IS NOT DISTINCT FROM NEW.coach_id THEN
+                RETURN NEW;
+            END IF;
+        END IF;
     END IF;
     -- ponytail: tuần tự hóa các thao tác ghi lịch trong phạm vi MVP này; chuyển sang khóa theo thứ tự từng bên tham gia nếu tranh chấp tăng cao.
     -- Không bao giờ chờ khóa khi bên gọi có thể đang giữ sẵn khóa dòng trên bảng classes.

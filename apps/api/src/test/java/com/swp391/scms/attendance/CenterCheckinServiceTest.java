@@ -101,7 +101,7 @@ class CenterCheckinServiceTest {
     private void registerQr(String label, MembershipSubscription sub) {
         long id = nextSubscriptionId++;
         sub.setId(id);
-        when(subscriptions.findById(id)).thenReturn(Optional.of(sub));
+        when(subscriptions.findByIdForUpdate(id)).thenReturn(Optional.of(sub));
         codes.put(label, qrService.generate(sub.getMember().getUserId(), id, clock.millis()));
     }
 
@@ -406,9 +406,9 @@ class CenterCheckinServiceTest {
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("GRANTED", captor.getValue().getStatus());
         assertNull(captor.getValue().getDenialReason());
-        InOrder locksBeforeInsert = inOrder(subscriptions, members, checkins);
-        locksBeforeInsert.verify(subscriptions).findById(org.mockito.ArgumentMatchers.anyLong());
+        InOrder locksBeforeInsert = inOrder(members, subscriptions, checkins);
         locksBeforeInsert.verify(members).findByUserIdForUpdate(10L);
+        locksBeforeInsert.verify(subscriptions).findByIdForUpdate(org.mockito.ArgumentMatchers.anyLong());
         locksBeforeInsert.verify(checkins).existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED");
         locksBeforeInsert.verify(checkins).saveAndFlush(any());
     }
@@ -640,7 +640,7 @@ class CenterCheckinServiceTest {
         long currentMillis = now.atZone(clock.getZone()).toInstant().toEpochMilli();
         String dynamicQr = qrService.generate(10L, 5L, currentMillis);
 
-        when(subscriptions.findById(5L)).thenReturn(Optional.of(sub));
+        when(subscriptions.findByIdForUpdate(5L)).thenReturn(Optional.of(sub));
         when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 

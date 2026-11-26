@@ -207,7 +207,9 @@ public class CenterCheckinService {
                 String reasonKey = qrResult.expired() ? "error.attendance.qr_expired" : "error.attendance.qr_invalid";
                 return saveDeniedRecord(null, now, request.gate(), recorder, reasonKey);
             }
-            subOpt = subscriptions.findById(qrResult.subscriptionId());
+            // Khóa Member trước rồi khóa Subscription (đúng thứ tự Member -> Subscription, chống deadlock và đợi hủy/bảo lưu hoàn tất).
+            members.findByUserIdForUpdate(qrResult.userId());
+            subOpt = subscriptions.findByIdForUpdate(qrResult.subscriptionId());
             if (subOpt.isPresent() && (subOpt.get().getMember() == null || !subOpt.get().getMember().getUserId().equals(qrResult.userId()))) {
                 return saveDeniedRecord(null, now, request.gate(), recorder, "error.attendance.qr_invalid");
             }
