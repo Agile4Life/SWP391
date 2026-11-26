@@ -179,7 +179,7 @@ const dailyRhythmItems = [
   },
   {
     id: 'midday' as const,
-    get label() { return sourceText('Trưa · 11:30–14:00'); },
+    get label() { return sourceText('Trưa · 12:30–15:00'); },
     get title() { return sourceText('Tập gọn 45 phút giờ nghỉ trưa'); },
     highlights: [
       { vi: 'Kèm PT 1:1', en: '1:1 PT Coaching' },
@@ -189,7 +189,7 @@ const dailyRhythmItems = [
   },
   {
     id: 'evening' as const,
-    get label() { return sourceText('Chiều · 17:00–19:30'); },
+    get label() { return sourceText('Chiều · 18:00–20:30'); },
     get title() { return sourceText('Nhịp tập sôi động sau giờ làm'); },
     highlights: [
       { vi: 'Lớp Gym Strength', en: 'Gym Strength Class' },
@@ -199,7 +199,7 @@ const dailyRhythmItems = [
   },
   {
     id: 'night' as const,
-    get label() { return sourceText('Tối · 19:30–22:00'); },
+    get label() { return sourceText('Tối · 20:30–22:00'); },
     get title() { return sourceText('Vận động nhẹ & Giãn cơ cuối ngày'); },
     highlights: [
       { vi: 'Tập cá nhân', en: 'Solo Training' },
@@ -799,7 +799,7 @@ export function FitnessLanding() {
               <span className="fit-preview-live"><i />{sourceText("Minh họa")}</span>
             </div>
             <div className="fit-preview-chat" aria-hidden="true">
-              <div className="fit-chat-user">{sourceText({ vi: 'Mục tiêu săn chắc · 4 buổi/tuần khung 17:00–19:30 (Slot 5)', en: 'Toning goal · 4 sessions/week at 17:00–19:30 (Slot 5)' })}</div>
+              <div className="fit-chat-user">{sourceText({ vi: 'Mục tiêu săn chắc · 4 buổi/tuần khung 18:00–20:30 (Slot 5)', en: 'Toning goal · 4 sessions/week at 18:00–20:30 (Slot 5)' })}</div>
               <div className="fit-chat-bot">
                 <div className="fit-chat-tags">
                   <span>{sourceText({ vi: 'T2 · Gym Strength', en: 'Mon · Gym Strength' })}</span>

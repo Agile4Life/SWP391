@@ -348,11 +348,11 @@ class OperationsConcurrencyPostgreSqlTest {
                 """, Long.class, "Concurrency-" + UUID.randomUUID(), coach, capacity);
     }
 
-    /** Hàm trợ giúp của test: tạo buổi học dùng cho đặt chỗ theo đúng 5 slot chuẩn (Slot 2: 09:45–11:15). */
+    /** Hàm trợ giúp của test: tạo buổi học dùng cho đặt chỗ theo đúng 5 slot chuẩn (Slot 2: 09:45–12:15). */
     private long bookingSession(long gymClass) {
         return jdbc.queryForObject("""
                 insert into class_sessions (class_id, session_date, start_time, end_time, status, created_at, updated_at)
-                values (?, ?, '09:45', '11:15', 'scheduled', now(), now()) returning id
+                values (?, ?, '09:45', '12:15', 'scheduled', now(), now()) returning id
                 """, Long.class, gymClass, LocalDate.now(clock).plusDays(BOOKING_DAY.getAndIncrement()));
     }
 

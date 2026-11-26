@@ -246,7 +246,7 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
-            // Trigger kiểm tra 5 slot cố định (07:00–19:30) cho cả lớp học nhóm và PT 1:1.
+            // Trigger kiểm tra 5 slot cố định (07:00–20:30) cho cả lớp học nhóm và PT 1:1.
             if (normalizedRootMsg.contains("trg_schedule_invalid_slot")) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
                         ApiResponse.error(HttpStatus.BAD_REQUEST.value(), "SCHEDULING_INVALID_SLOT",

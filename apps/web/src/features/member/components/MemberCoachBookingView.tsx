@@ -792,10 +792,12 @@ export function MemberCoachBookingView({
                       <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {c.fullName}
                       </h4>
-                      {isSelected && (
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--portal-salmon)' }}>
-                          {memberText("Đang chọn")}</span>
-                      )}
+                      {/* Luôn giữ chỗ cho nhãn để thẻ không đổi kích thước khi chọn HLV khác. */}
+                      <span
+                        aria-hidden={!isSelected}
+                        style={{ flexShrink: 0, whiteSpace: 'nowrap', fontSize: 12, fontWeight: 700, color: 'var(--portal-salmon)', visibility: isSelected ? 'visible' : 'hidden' }}
+                      >
+                        {memberText("Đang chọn")}</span>
                     </div>
                     <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-salmon)', fontWeight: 600 }}>
                       {c.specialization || memberText("Huấn luyện cá nhân")}
@@ -875,7 +877,10 @@ export function MemberCoachBookingView({
           if (slot.reason === 'coach_on_leave') {
             badgeText = memberText("HLV nghỉ phép");
           } else if (slot.reason === 'too_soon') {
-            badgeText = memberText("Cần đặt trước 2 tiếng");
+            // Backend gộp "đã qua" và "trong 2 tiếng tới" vào too_soon; tách theo giờ bắt đầu slot.
+            const now = centerNowParts();
+            const started = `${selectedDate}T${startFmt}` <= `${now.date}T${now.time}`;
+            badgeText = started ? memberText("Đã qua thời gian") : memberText("Cần đặt trước 2 tiếng");
           } else if (slot.reason === 'coach_busy') {
             badgeText = memberText("HLV đã có lịch");
           } else if (slot.reason === 'member_busy') {

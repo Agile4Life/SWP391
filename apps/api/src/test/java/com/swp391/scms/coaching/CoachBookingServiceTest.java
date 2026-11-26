@@ -122,7 +122,7 @@ class CoachBookingServiceTest {
             return b;
         });
 
-        // Đặt lịch Slot 4 (14:15–16:45, cách 08:00 hơn 2 tiếng)
+        // Đặt lịch Slot 4 (15:15–17:45, cách 08:00 hơn 2 tiếng)
         CoachBookingCreateDto request = new CoachBookingCreateDto(
                 20L,
                 null,
@@ -386,7 +386,7 @@ class CoachBookingServiceTest {
         assertThat(slot2.available()).isFalse();
         assertThat(slot2.reason()).isEqualTo("too_soon");
 
-        // Slot 3 (11:30–14:00, cách hơn 2 tiếng) phải còn trống
+        // Slot 3 (12:30–15:00, cách hơn 2 tiếng) phải còn trống
         CoachAvailableSlotDto slot3 = slots.get(2);
         assertThat(slot3.startTime()).isEqualTo(ScheduleSlot.SLOT_3.startTime());
         assertThat(slot3.endTime()).isEqualTo(ScheduleSlot.SLOT_3.endTime());
@@ -877,7 +877,7 @@ class CoachBookingServiceTest {
         when(coachBookingRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
 
         List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, LocalDate.of(2026, 11, 26), 10L);
-        CoachAvailableSlotDto slot17 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(17, 0))).findFirst().orElseThrow();
+        CoachAvailableSlotDto slot17 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(18, 0))).findFirst().orElseThrow();
 
         assertThat(slot17.available()).isTrue();
         verify(classSessionRepository, never()).findActiveByCoachAndDate(any(), any());
@@ -1354,7 +1354,7 @@ class CoachBookingServiceTest {
                     ConflictException ce = (ConflictException) e;
                     assertThat(ce.getErrorCode()).isEqualTo("MEMBER_SCHEDULE_CONFLICT");
                     assertThat(ce.getMessageKey()).isEqualTo("error.coach_booking.member_class_conflict");
-                    assertThat(ce.getMessageArgs()).containsExactly("Boxing", "17:00", "19:30");
+                    assertThat(ce.getMessageArgs()).containsExactly("Boxing", "18:00", "20:30");
                 });
     }
 
