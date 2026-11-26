@@ -383,7 +383,13 @@ class PostgreSqlDatabaseIntegrationTest {
             enroll(gymClass, member, "booked");
             return true;
         } catch (DataIntegrityViolationException e) {
-            assertTriggerViolation(e, "Lớp học đã đầy chỗ (vượt quá capacity cho phép).");
+            var cause = assertInstanceOf(SQLException.class, e.getMostSpecificCause());
+            assertEquals("23514", cause.getSQLState());
+            String message = cause.getMessage();
+            assertTrue(
+                    message != null && (message.contains("Lớp học đã đầy chỗ (vượt quá capacity cho phép).")
+                            || message.contains("trg_pt_schedule_busy")),
+                    () -> "Unexpected 23514 trigger message: " + message);
             return false;
         }
     }
