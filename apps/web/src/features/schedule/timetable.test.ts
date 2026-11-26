@@ -34,7 +34,7 @@ describe('timetable helpers', () => {
   });
 
   it('keeps up to maxVisible overlapping slot lanes directly visible without overflow', () => {
-    const two = layoutDaySlotEvents([ev('yoga', '17:00', '19:30'), ev('boxing', '17:00', '19:30')]);
+    const two = layoutDaySlotEvents([ev('yoga', '18:00', '20:30'), ev('boxing', '18:00', '20:30')]);
     const grouped = groupVisibleLanes(two, 2);
     expect(grouped.visible).toHaveLength(2);
     expect(grouped.overflows).toHaveLength(0);
@@ -43,11 +43,11 @@ describe('timetable helpers', () => {
 
   it('collapses 5 concurrent slot classes into 1 visible card + "+4" overflow with 20% minimum height', () => {
     const five = layoutDaySlotEvents([
-      ev('yoga', '17:00', '19:30'),
-      ev('boxing', '17:00', '19:30'),
-      ev('gym1', '17:00', '19:30'),
-      ev('gym2', '17:00', '19:30'),
-      ev('gym3', '17:00', '19:30'),
+      ev('yoga', '18:00', '20:30'),
+      ev('boxing', '18:00', '20:30'),
+      ev('gym1', '18:00', '20:30'),
+      ev('gym2', '18:00', '20:30'),
+      ev('gym3', '18:00', '20:30'),
     ]);
     const grouped = groupVisibleLanes(five, 2);
     expect(grouped.visible).toHaveLength(1);
@@ -59,16 +59,16 @@ describe('timetable helpers', () => {
     expect(grouped.overflows[0].heightPct).toBe(20);
     expect(grouped.overflows[0].hiddenEvents).toHaveLength(4);
     expect(grouped.overflows[0].allEvents).toHaveLength(5);
-    expect(grouped.overflows[0].rangeLabel).toBe('Slot 5 · 17:00 – 19:30');
+    expect(grouped.overflows[0].rangeLabel).toBe('Slot 5 · 18:00 – 20:30');
     expect(grouped.visible.length + grouped.overflows[0].hiddenEvents.length).toBe(5);
   });
 
   it('handles separate morning and evening slot clusters independently', () => {
     const events = layoutDaySlotEvents([
       ev('m1', '07:00', '09:30'),
-      ev('e1', '17:00', '19:30'),
-      ev('e2', '17:00', '19:30'),
-      ev('e3', '17:00', '19:30'),
+      ev('e1', '18:00', '20:30'),
+      ev('e2', '18:00', '20:30'),
+      ev('e3', '18:00', '20:30'),
     ]);
     const grouped = groupVisibleLanes(events, 2);
     const totalHidden = grouped.overflows.reduce((sum, item) => sum + item.hiddenEvents.length, 0);
@@ -76,7 +76,7 @@ describe('timetable helpers', () => {
     const morning = grouped.visible.find((item) => item.event.id === 'm1')!;
     expect(morning.lanes).toBe(1);
     expect(grouped.overflows).toHaveLength(1);
-    expect(grouped.overflows[0].rangeLabel).toBe('Slot 5 · 17:00 – 19:30');
+    expect(grouped.overflows[0].rangeLabel).toBe('Slot 5 · 18:00 – 20:30');
   });
 
   it('assigns stable discipline accent colors', () => {
@@ -90,8 +90,8 @@ describe('timetable helpers', () => {
       ev('gym', '07:00:00', '09:30:00'),
       ev('yoga', '07:00:00', '09:30:00'),
       ev('boxing', '07:00:00', '09:30:00'),
-      ev('pt', '17:00:00', '19:30:00'),
-      ev('late', '20:00:00', '21:00:00'),
+      ev('pt', '18:00:00', '20:30:00'),
+      ev('late', '21:00:00', '22:00:00'),
     ]);
     expect(positioned).toHaveLength(4);
     const pt = positioned.find((p) => p.event.id === 'pt')!;

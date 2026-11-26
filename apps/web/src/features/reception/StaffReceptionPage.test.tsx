@@ -311,8 +311,8 @@ it('keeps the created renewal pending when payment fails', async () => {
 
 it('lets the desk record payment for an unpaid hourly 1:1 session after confirmation', async () => {
   const booking = { id: 90, memberId: 10, memberName: 'An', coachId: 20, coachName: 'Hùng', coachSpecialization: 'Gym',
-    coachAvatarUrl: null, disciplineId: null, disciplineName: null, bookingDate: '2026-11-02', startTime: '14:15:00',
-    endTime: '16:45:00', hourlyRate: 200000, paymentMethod: 'cash', paymentStatus: 'pending', status: 'confirmed',
+    coachAvatarUrl: null, disciplineId: null, disciplineName: null, bookingDate: '2026-11-02', startTime: '15:15:00',
+    endTime: '17:45:00', hourlyRate: 200000, paymentMethod: 'cash', paymentStatus: 'pending', status: 'confirmed',
     notes: null, createdAt: '2026-10-30T10:00:00', cancelledAt: null, cancelReason: null };
   api.getUnpaidCoachBookings.mockResolvedValueOnce([booking]).mockResolvedValue([]);
   api.confirmCoachBookingPayment.mockResolvedValue({ ...booking, paymentStatus: 'paid' });
@@ -321,7 +321,7 @@ it('lets the desk record payment for an unpaid hourly 1:1 session after confirma
   expect(host.querySelector('.reception-top__queue h2')!.textContent).toBe('Cần xử lý (1)');
   expect(host.textContent).toContain('HLV Hùng');
   expect(host.textContent).toContain('02/11/2026');
-  expect(host.textContent).toContain('Slot 4 · 14:15 – 16:45');
+  expect(host.textContent).toContain('Slot 4 · 15:15 – 17:45');
   const payBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Đã thu tiền mặt')!;
   await act(async () => payBtn.click());
   expect(api.confirmCoachBookingPayment).not.toHaveBeenCalled();

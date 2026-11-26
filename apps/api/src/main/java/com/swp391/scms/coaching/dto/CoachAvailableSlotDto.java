@@ -4,7 +4,7 @@ import com.swp391.scms.common.ScheduleSlot;
 import java.time.LocalTime;
 
 /**
- * Một khung giờ PT cố định (Slot 1–Slot 5, 07:00–19:30) của HLV: số slot, giờ bắt đầu/kết thúc, còn trống hay không
+ * Một khung giờ PT cố định (Slot 1–Slot 5, 07:00–20:30) của HLV: số slot, giờ bắt đầu/kết thúc, còn trống hay không
  * và lý do nếu không (HLV nghỉ phép, quá sát giờ, HLV bận, hội viên bận).
  */
 public record CoachAvailableSlotDto(

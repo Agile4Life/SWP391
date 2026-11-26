@@ -81,16 +81,16 @@ class AiKnowledgeBaseTest {
         assertFalse(all.contains("đặt sân"));
     }
 
-    /** Kiểm thử: tri thức Sol AI mô tả chính xác 5 slot cố định (07:00–19:30) và không còn nhắc giờ nghỉ 3 slot. */
+    /** Kiểm thử: tri thức Sol AI mô tả chính xác 5 slot cố định (07:00–20:30) và không còn nhắc giờ nghỉ 3 slot. */
     @Test
     void describesFiveFixedScheduleSlotsWithoutLegacyHoursOrRestRule() {
         String slotInfo = base.sectionsFor("Lịch tập PT có những khung giờ slot nào?");
 
         assertTrue(slotInfo.contains("07:00–09:30"));
-        assertTrue(slotInfo.contains("09:45–11:15"));
-        assertTrue(slotInfo.contains("11:30–14:00"));
-        assertTrue(slotInfo.contains("14:15–16:45"));
-        assertTrue(slotInfo.contains("17:00–19:30"));
+        assertTrue(slotInfo.contains("09:45–12:15"));
+        assertTrue(slotInfo.contains("12:30–15:00"));
+        assertTrue(slotInfo.contains("15:15–17:45"));
+        assertTrue(slotInfo.contains("18:00–20:30"));
         assertFalse(slotInfo.contains("06:00"));
         assertFalse(slotInfo.contains("21:00"));
         assertFalse(slotInfo.contains("3 slot tập 1:1 liên tiếp"));

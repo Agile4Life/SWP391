@@ -139,7 +139,7 @@ function slotKey(date: string, slotNumber: number) {
 }
 
 /**
- * Lịch tuần dạng lưới 5 Slot cố định (07:00 – 19:30) × 7 ngày:
+ * Lịch tuần dạng lưới 5 Slot cố định (07:00 – 20:30) × 7 ngày:
  * xếp các buổi trùng Slot thành làn song song, hỗ trợ gom cụm "+N lớp", đánh dấu Slot đã qua,
  * hiển thị vạch giờ hiện tại, điều khiển bằng phím mũi tên và chế độ một ngày trên màn hẹp.
  */
@@ -466,10 +466,10 @@ export function WeeklyTimetable({
       {outsideRange > 0 && (
         <p className="mcal__note" role="status">
           {t(
-            `${outsideRange} buổi học nằm ngoài khung 5 slot (07:00–19:30) nên không hiện trên bảng.`,
+            `${outsideRange} buổi học nằm ngoài khung 5 slot (07:00–20:30) nên không hiện trên bảng.`,
             outsideRange === 1
-              ? '1 session outside the 5-slot schedule (07:00–19:30) is not shown.'
-              : `${outsideRange} sessions outside the 5-slot schedule (07:00–19:30) are not shown.`,
+              ? '1 session outside the 5-slot schedule (07:00–20:30) is not shown.'
+              : `${outsideRange} sessions outside the 5-slot schedule (07:00–20:30) are not shown.`,
           )}
         </p>
       )}

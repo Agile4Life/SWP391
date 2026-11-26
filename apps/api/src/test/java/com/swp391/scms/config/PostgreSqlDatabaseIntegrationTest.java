@@ -250,10 +250,10 @@ class PostgreSqlDatabaseIntegrationTest {
     void ptTriggerAllowsAllFiveCanonicalSlotsAndRejectsInvalidSlots() {
         long coach = coach();
         ptBooking(activeMember(), coach, "07:00", "09:30");
-        ptBooking(activeMember(), coach, "09:45", "11:15");
-        ptBooking(activeMember(), coach, "11:30", "14:00");
-        ptBooking(activeMember(), coach, "14:15", "16:45");
-        ptBooking(activeMember(), coach, "17:00", "19:30");
+        ptBooking(activeMember(), coach, "09:45", "12:15");
+        ptBooking(activeMember(), coach, "12:30", "15:00");
+        ptBooking(activeMember(), coach, "15:15", "17:45");
+        ptBooking(activeMember(), coach, "18:00", "20:30");
 
         var invalidPt = assertThrows(DataIntegrityViolationException.class,
                 () -> ptBooking(activeMember(), coach(), "08:00", "09:00"));
@@ -269,22 +269,22 @@ class PostgreSqlDatabaseIntegrationTest {
     @Test
     void ptTriggerRejectsConflictsInBothBookingDirectionsAndRequiresMembership() {
         long coach = coach(), member = activeMember();
-        ptBooking(member, coach, "14:15", "16:45");
-        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(activeMember(), coach, "14:15", "16:45"));
-        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member, coach(), "14:15", "16:45"));
-        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member(), coach(), "17:00", "19:30"));
+        ptBooking(member, coach, "15:15", "17:45");
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(activeMember(), coach, "15:15", "17:45"));
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member, coach(), "15:15", "17:45"));
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(member(), coach(), "18:00", "20:30"));
         long group = gymClass(10, coach(), room(), discipline("Gym"));
-        session(group, "14:15", "16:45", "scheduled");
+        session(group, "15:15", "17:45", "scheduled");
         assertThrows(DataIntegrityViolationException.class, () -> enroll(group, member, "booked"));
         long other = activeMember();
         enroll(group, other, "booked");
-        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(other, coach(), "14:15", "16:45"));
+        assertThrows(DataIntegrityViolationException.class, () -> ptBooking(other, coach(), "15:15", "17:45"));
         // Dùng bộ môn khác (Boxing vs Gym) để trigger xung đột bộ môn không che khuất trigger PT↔Group của HLV.
         long coachedGroup = gymClass(10, coach, room(), discipline("Boxing"));
         var coachedConflict = assertThrows(DataIntegrityViolationException.class,
-                () -> session(coachedGroup, "14:15", "16:45", "scheduled"));
+                () -> session(coachedGroup, "15:15", "17:45", "scheduled"));
         assertConstraintViolation(coachedConflict, "23514", "trg_sessions_check_conflict");
-        ptBooking(member, coach, "17:00", "19:30");
+        ptBooking(member, coach, "18:00", "20:30");
     }
 
     /** Kiểm thử: các lượt đặt PT đồng thời không thể đặt trùng một HLV. */
@@ -304,7 +304,7 @@ class PostgreSqlDatabaseIntegrationTest {
     private boolean ptAfterLatch(CountDownLatch start, long member, long coach) throws Exception {
         start.await();
         try {
-            ptBooking(member, coach, "17:00", "19:30");
+            ptBooking(member, coach, "18:00", "20:30");
             return true;
         } catch (DataIntegrityViolationException expected) {
             String reason = expected.getMostSpecificCause().getMessage();
@@ -434,7 +434,7 @@ class PostgreSqlDatabaseIntegrationTest {
             var error = assertThrows(DataIntegrityViolationException.class, () -> session(conflicting, "07:00", "09:30", "scheduled"));
             assertTrue(error.getMostSpecificCause().getMessage().contains("Huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này."));
         }
-        session(sameCoach, "09:45", "11:15", "scheduled");
+        session(sameCoach, "09:45", "12:15", "scheduled");
         session(sameRoom, "07:00", "09:30", "cancelled");
     }
 
@@ -450,7 +450,7 @@ class PostgreSqlDatabaseIntegrationTest {
         long otherDisciplineClass = gymClass(10, coach(), room(), discipline());
 
         session(firstClass, "07:00", "09:30", "scheduled");
-        session(secondClass, "09:45", "11:15", "scheduled");
+        session(secondClass, "09:45", "12:15", "scheduled");
 
         var conflict = assertThrows(DataIntegrityViolationException.class,
                 () -> session(secondClass, "07:00", "09:30", "scheduled"));
@@ -471,9 +471,9 @@ class PostgreSqlDatabaseIntegrationTest {
         long adjacentClass = gymClass(10, coach(), room(), discipline());
 
         // Dùng ngày current_date + 2 để luôn >= today theo Asia/Ho_Chi_Minh ở mọi múi giờ server PostgreSQL.
-        session(firstClass, 2, "11:30", "14:00", "scheduled");
-        session(secondClass, 2, "11:30", "14:00", "scheduled");
-        session(adjacentClass, 2, "14:15", "16:45", "scheduled");
+        session(firstClass, 2, "12:30", "15:00", "scheduled");
+        session(secondClass, 2, "12:30", "15:00", "scheduled");
+        session(adjacentClass, 2, "15:15", "17:45", "scheduled");
 
         enroll(firstClass, member, "booked");
         enroll(adjacentClass, member, "booked");
