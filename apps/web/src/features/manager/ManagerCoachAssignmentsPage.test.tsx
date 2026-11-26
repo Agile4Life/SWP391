@@ -223,6 +223,57 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(host.textContent).not.toContain('Nguyễn Văn Member');
   });
 
+  it('resolves conflicts between coach searches and the coach filter while preserving member searches', async () => {
+    await renderComponent();
+    const search = host.querySelector('input[type="search"]') as HTMLInputElement;
+    const coach = host.querySelector('select[aria-label="Lọc theo Huấn luyện viên"]') as HTMLSelectElement;
+    const selectCoach = async (value: string) => {
+      await act(async () => { coach.value = value; coach.dispatchEvent(new Event('change', { bubbles: true })); });
+    };
+    const typeSearch = async (value: string) => {
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set?.call(search, value);
+        search.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    };
+
+    await selectCoach('11');
+    await typeSearch('Trần Văn A');
+    expect(coach.value).toBe('');
+    expect(search.value).toBe('Trần Văn A');
+
+    await selectCoach('11');
+    expect(coach.value).toBe('11');
+    expect(search.value).toBe('');
+
+    await typeSearch('Lê Thị Hoa');
+    expect(coach.value).toBe('11');
+    await selectCoach('10');
+    expect(search.value).toBe('Lê Thị Hoa');
+    expect(coach.value).toBe('10');
+  });
+
+  it('shows only matching coaches in cards and table when the API includes empty unrelated coaches', async () => {
+    vi.mocked(coachAssignmentsApi.getOverview).mockImplementation(async (params) => ({
+      ...mockData,
+      coaches: params?.search ? mockData.coaches.map(coach => ({
+        ...coach,
+        students: coach.coachId === 10 ? coach.students : [],
+      })) : mockData.coaches,
+    }));
+    await renderComponent();
+    const input = host.querySelector('input[type="search"]') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set?.call(input, 'Trần Văn A');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => { await new Promise(r => setTimeout(r, 260)); });
+    expect([...host.querySelectorAll('.coach-card-header h3')].map(el => el.textContent)).toEqual(['HLV Trần Văn A']);
+    await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent?.includes('Bảng danh sách'))?.click(); });
+    expect([...host.querySelectorAll('.coach-table tbody tr')].map(row => row.querySelectorAll('td')[1].textContent))
+      .toEqual(['HLV Trần Văn A', 'HLV Trần Văn A']);
+  });
+
   it('switches between cards and table view mode', async () => {
     await renderComponent();
 
@@ -333,6 +384,7 @@ describe('ManagerCoachAssignmentsPage', () => {
 
     const sortSelect = host.querySelector('select[aria-label="Sắp xếp danh sách HLV"]') as HTMLSelectElement;
     expect(sortSelect).toBeTruthy();
+    expect(sortSelect.querySelector('option[value="pt_desc"]')).toBeNull();
 
     expect(coachAssignmentsApi.getOverview).toHaveBeenCalledWith(
       expect.objectContaining({ sortBy: 'name', sortDir: 'asc' })
@@ -350,17 +402,6 @@ describe('ManagerCoachAssignmentsPage', () => {
       expect.objectContaining({ sortBy: 'totalStudentsCount', sortDir: 'desc' })
     );
 
-    await act(async () => {
-      sortSelect.value = 'pt_desc';
-      sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-    await act(async () => {
-      await new Promise(r => setTimeout(r, 260));
-    });
-
-    expect(coachAssignmentsApi.getOverview).toHaveBeenCalledWith(
-      expect.objectContaining({ sortBy: 'ptStudentsCount', sortDir: 'desc' })
-    );
   });
 
   it('sorts coaches by Vietnamese names and distinct visible members in both views', async () => {
@@ -392,18 +433,16 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(names()).toEqual(['HLV Bình', 'HLV An', 'HLV Ánh']);
     await choose('students_asc');
     expect(names()).toEqual(['HLV An', 'HLV Ánh', 'HLV Bình']);
-    await choose('pt_desc');
-    expect(names()).toEqual(['HLV Ánh', 'HLV Bình', 'HLV An']);
     await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent?.includes('Bảng danh sách'))!.click(); });
     expect([...host.querySelectorAll('.coach-table tbody tr')].map(row => row.querySelectorAll('td')[1].textContent)).toEqual([
-      'HLV Ánh', 'HLV Ánh', 'HLV Ánh', 'HLV Bình', 'HLV Bình', 'HLV An',
+      'HLV An', 'HLV Ánh', 'HLV Ánh', 'HLV Ánh', 'HLV Bình', 'HLV Bình',
     ]);
     await act(async () => { [...host.querySelectorAll('button')].find(button => button.textContent === 'Theo HLV')!.click(); });
     const typeFilter = host.querySelector('select[aria-label="Lọc theo hình thức"]') as HTMLSelectElement;
     await act(async () => { typeFilter.value = 'PT_1_1'; typeFilter.dispatchEvent(new Event('change', { bubbles: true })); });
     await act(async () => { await new Promise(r => setTimeout(r, 260)); });
-    expect(names()).toEqual(['HLV Ánh', 'HLV Bình', 'HLV An']);
-    expect(counts()).toEqual([['1', '1', '0', '0'], ['1', '1', '0', '0'], ['0', '0', '0', '0']]);
+    expect(names()).toEqual(['HLV An', 'HLV Ánh', 'HLV Bình']);
+    expect(counts()).toEqual([['0', '0', '0', '0'], ['1', '1', '0', '0'], ['1', '1', '0', '0']]);
   });
 
   it('P1-FE-20, P2-FE-41, P2-FE-42 & P2-FE-76: displays detail on CLASS & PT rows, renders Group classes KPI/pill, handles blank target coach, localizes type pills, and uses theme CSS tokens', async () => {

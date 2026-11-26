@@ -93,7 +93,6 @@ export function ManagerCoachAssignmentsPage() {
       case 'name_desc': return ['name', 'desc'];
       case 'students_desc': return ['totalStudentsCount', 'desc'];
       case 'students_asc': return ['totalStudentsCount', 'asc'];
-      case 'pt_desc': return ['ptStudentsCount', 'desc'];
       case 'name_asc':
       default:
         return ['name', 'asc'];
@@ -127,7 +126,10 @@ export function ManagerCoachAssignmentsPage() {
         sortDir,
       });
       if (generation === loadGeneration.current) {
-        const coaches = res.coaches.map((coach) => {
+        const query = search.trim().toLocaleLowerCase('vi');
+        const coachMatches = (coach: CoachAssignmentOverview) => coach.coachName.toLocaleLowerCase('vi').includes(query);
+        const hasCoachMatch = Boolean(query) && res.coaches.some(coachMatches);
+        const coaches = res.coaches.filter((coach) => !query || (hasCoachMatch ? coachMatches(coach) : coach.students.length > 0)).map((coach) => {
           const students = coach.students;
           const count = (type?: CoachAssignmentStudent['assignmentType']) => new Set(students.filter((student) => !type || student.assignmentType === type).map((student) => student.memberId)).size;
           return {
@@ -141,8 +143,7 @@ export function ManagerCoachAssignmentsPage() {
         });
         coaches.sort((a, b) => {
           const nameOrder = a.coachName.localeCompare(b.coachName, 'vi');
-          const countOrder = sortOption === 'pt_desc' ? b.ptStudentsCount - a.ptStudentsCount
-            : sortOption === 'students_desc' ? b.totalStudentsCount - a.totalStudentsCount
+          const countOrder = sortOption === 'students_desc' ? b.totalStudentsCount - a.totalStudentsCount
             : sortOption === 'students_asc' ? a.totalStudentsCount - b.totalStudentsCount : 0;
           return countOrder || (sortOption === 'name_desc' ? -nameOrder : nameOrder) || a.coachId - b.coachId;
         });
@@ -179,6 +180,13 @@ export function ManagerCoachAssignmentsPage() {
   const allCoachesList = useMemo(() => {
     return data?.availableCoaches || [];
   }, [data]);
+
+  const isConflictingCoachSearch = (value: string, selectedId: string) => {
+    const query = value.trim().toLocaleLowerCase('vi');
+    if (!query || !selectedId) return false;
+    const matches = allCoachesList.filter(coach => coach.coachName.toLocaleLowerCase('vi').includes(query));
+    return matches.length > 0 && !matches.some(coach => String(coach.coachId) === selectedId);
+  };
 
   // Điều chuyển: bắt buộc chọn HLV mới và nhập lý do, lớp học chỉ xem, không điều chuyển.
   const handleReassignSubmit = async (e: React.FormEvent) => {
@@ -307,14 +315,22 @@ export function ManagerCoachAssignmentsPage() {
             className="portal-input coach-search-input"
             placeholder={t("Tìm theo tên HLV, học viên, mã thẻ, SĐT...")}
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (isConflictingCoachSearch(value, coachFilter)) setCoachFilter('');
+              setSearch(value);
+            }}
             aria-label={t("Tìm kiếm")}
           />
 
           <Select
             className="coach-filter-select"
             value={coachFilter}
-            onChange={(e) => setCoachFilter(e.target.value)}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (isConflictingCoachSearch(search, value)) setSearch('');
+              setCoachFilter(value);
+            }}
             aria-label={t("Lọc theo Huấn luyện viên")}
           >
             <option value="">{t("Tất cả Huấn luyện viên")}</option>
@@ -348,7 +364,6 @@ export function ManagerCoachAssignmentsPage() {
             <option value="name_desc">{t("Tên HLV (Z–A)", "Coach name (Z–A)")}</option>
             <option value="students_desc">{t("Số học viên khác nhau (Nhiều nhất)", "Distinct members (Highest)")}</option>
             <option value="students_asc">{t("Số học viên khác nhau (Ít nhất)", "Distinct members (Lowest)")}</option>
-            <option value="pt_desc">{t("Số học viên PT khác nhau (Nhiều nhất)", "Distinct PT members (Highest)")}</option>
           </Select>
         </div>
 

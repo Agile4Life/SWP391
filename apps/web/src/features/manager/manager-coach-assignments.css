@@ -14,12 +14,12 @@
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
-  flex: 1;
+  flex: 1 1 100%;
 }
 
 .coach-search-input {
-  min-width: 240px;
-  flex: 1;
+  min-width: 0;
+  flex: 1 1 100%;
 }
 
 .coach-assignments-filters .ui-select {

@@ -230,6 +230,23 @@ class CoachAssignmentServiceTest {
         verify(bookings, never()).save(any()); verifyNoInteractions(notifications, audit);
     }
 
+    @Test void overviewSearchPrioritizesMatchingCoachAndKeepsMemberSearch() {
+        when(coaches.findActiveWithUser()).thenReturn(List.of(from, to));
+        when(plans.findCurrentAssignments(anyLong(), eq(today))).thenAnswer(inv ->
+                inv.getArgument(0).equals(10L) ? List.of(plan(501L, "active")) : List.of());
+
+        @SuppressWarnings("unchecked") var coachMatches = (List<CoachAssignmentOverviewDto>) service.getOverview(null, " beta ", null).get("coaches");
+        assertThat(coachMatches).extracting(CoachAssignmentOverviewDto::coachName).containsExactly("Coach Beta");
+        assertThat(coachMatches.getFirst().students()).isEmpty();
+
+        @SuppressWarnings("unchecked") var memberMatches = (List<CoachAssignmentOverviewDto>) service.getOverview(null, "Member One", null).get("coaches");
+        assertThat(memberMatches).extracting(CoachAssignmentOverviewDto::coachName).containsExactly("Coach Alpha");
+        assertThat(memberMatches.getFirst().students()).hasSize(1);
+
+        @SuppressWarnings("unchecked") var none = (List<CoachAssignmentOverviewDto>) service.getOverview(null, "no match", null).get("coaches");
+        assertThat(none).isEmpty();
+    }
+
     @Test void overviewShowsOneRowPerMemberForUpcomingPtSessions() {
         when(coaches.findActiveWithUser()).thenReturn(List.of(from));
         when(subscriptions.hasActiveMembership(100L, today)).thenReturn(true);

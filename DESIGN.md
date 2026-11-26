@@ -16,6 +16,8 @@ Quyết định Manager (26/11/2026): Tab `Lịch tổng cả tuần` có nút c
 Quyết định Manager (26/11/2026): Trang Lớp học của Quản lý xếp tab `Lịch tổng cả tuần` đứng đầu và mở mặc định, sau đó `Lịch theo bộ môn`, `Danh sách lớp`.
 Quyết định Manager: tab `Phòng tập` cho phép thêm, sửa và xóa phòng chưa được sử dụng; không hiển thị hoặc chỉnh hạng phòng tại đây. Bảng gói tập căn cột ổn định và cuộn ngang khi cần.
 Các nút thao tác của gói tập căn thẳng theo từng vị trí giữa các dòng; nút mở/ngừng bán giữ kích thước tự nhiên trong một vị trí chung, cột đủ rộng và bảng cuộn ngang khi cần, kể cả khi thu phóng.
+Trang HLV & học viên phụ trách ưu tiên ô tìm kiếm trên một hàng riêng; giữ sắp xếp theo tên hoặc tổng học viên, không có tùy chọn sắp xếp theo số học viên PT.
+Trang HLV & học viên phụ trách tự bỏ lựa chọn HLV khi nhập tên HLV khác, hoặc xóa tên HLV đang tìm khi chọn HLV khác; tìm học viên vẫn kết hợp được với bộ lọc HLV.
 
 Phạm vi 3 bộ môn (`Gym`, `Boxing`, `Yoga`), **đa lớp `active`/bộ môn không trùng ngày & slot**, **wizard tạo khóa học 4 bước kèm tiền kiểm tra khả dụng**, **hệ thống lịch 5 Slot cố định (`07:00 – 20:30`)**, thẻ sự kiện viền mảnh có tên HLV, gỡ hoàn toàn đặt sân, ẩn 3D, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò (25/11/2026 — **ghi đè** mục Gym-only 22–23/11/2026 và các mục cũ bên dưới về đặt sân, bộ môn ngoài phạm vi, 3D, quy tắc 1 lớp duy nhất/môn cũ, lưới giờ liên tục cũ, công tắc `08:00–20:00 / Cả ngày`, viền dày trái `border-left: 4px`, `TimePicker` tự do trong xếp lịch, 15 nút giờ PT Sáng/Chiều/Tối và giới hạn bắt buộc HLV nghỉ giữa các slot liền kề; các tính năng tắt qua cờ legacy vẫn giữ nguyên trạng thái tắt):
 - **Hệ thống lịch tuần 5 Slot cố định (`07:00 – 20:30`), thẻ sự kiện & bộ chọn Slot**:
