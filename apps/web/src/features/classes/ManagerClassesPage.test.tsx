@@ -50,7 +50,7 @@ function buildAvailabilityResponse(
       slotNumber: 2,
       code: 'SLOT_2',
       startTime: '09:45:00',
-      endTime: '11:15:00',
+      endTime: '12:15:00',
       available: true,
       disciplineConflict: false,
       conflictCode: null,
@@ -61,8 +61,8 @@ function buildAvailabilityResponse(
     {
       slotNumber: 3,
       code: 'SLOT_3',
-      startTime: '11:30:00',
-      endTime: '14:00:00',
+      startTime: '12:30:00',
+      endTime: '15:00:00',
       available: true,
       disciplineConflict: false,
       conflictCode: null,
@@ -73,8 +73,8 @@ function buildAvailabilityResponse(
     {
       slotNumber: 4,
       code: 'SLOT_4',
-      startTime: '14:15:00',
-      endTime: '16:45:00',
+      startTime: '15:15:00',
+      endTime: '17:45:00',
       available: false,
       disciplineConflict: false,
       conflictCode: 'SCHEDULING_NO_COACH',
@@ -85,8 +85,8 @@ function buildAvailabilityResponse(
     {
       slotNumber: 5,
       code: 'SLOT_5',
-      startTime: '17:00:00',
-      endTime: '19:30:00',
+      startTime: '18:00:00',
+      endTime: '20:30:00',
       available: true,
       disciplineConflict: false,
       conflictCode: null,
@@ -208,8 +208,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         capacity: 20,
         status: 'active',
         price: 0,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
       },
       {
         id: 2,
@@ -222,8 +222,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         roomName: 'Ring Arena 01',
         capacity: 14,
         status: 'active',
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
       },
       {
         id: 3,
@@ -237,8 +237,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         capacity: 16,
         status: 'active',
         price: 150000,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
       },
     ]);
     vi.mocked(classesApi.getSessions).mockResolvedValue([
@@ -253,8 +253,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         roomId: 10,
         roomName: 'Phòng Gym Tiêu chuẩn',
         sessionDate: today,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'scheduled',
         capacity: 20,
         bookedCount: 12,
@@ -270,8 +270,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         roomId: 20,
         roomName: 'Ring Arena 01',
         sessionDate: today,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'scheduled',
         capacity: 14,
         bookedCount: 14,
@@ -287,8 +287,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         roomId: 30,
         roomName: 'Zen Garden Studio',
         sessionDate: today,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'scheduled',
         capacity: 16,
         bookedCount: 8,
@@ -331,7 +331,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     }]);
     vi.mocked(classesApi.getSessions).mockResolvedValue([...existingSessions, {
       ...existingSessions[1], id: 504, classId: 4, className: 'Boxing nâng cao',
-      startTime: '09:45:00', endTime: '11:15:00',
+      startTime: '09:45:00', endTime: '12:15:00',
     }]);
     await renderPage('Lịch theo bộ môn');
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-2"]')!.click());
@@ -420,8 +420,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         capacity: 18,
         status: 'active',
         price: 200000,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
       },
       {
         id: 99,
@@ -491,8 +491,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         roomId: 30,
         roomName: 'Phòng Gym VIP',
         sessionDate: today,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'scheduled',
         capacity: 18,
         bookedCount: 6,
@@ -509,7 +509,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         roomName: 'Phòng Gym Tiêu chuẩn',
         sessionDate: today,
         startTime: '09:45:00',
-        endTime: '11:15:00',
+        endTime: '12:15:00',
         status: 'scheduled',
         capacity: 15,
         bookedCount: 0,
@@ -637,7 +637,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await act(async () => { await Promise.resolve(); });
     expect(slot2Btn.getAttribute('aria-pressed')).toBe('true');
     expect(classesApi.checkRecurringAvailability).toHaveBeenLastCalledWith(
-      expect.objectContaining({ disciplineId: 1, startTime: '09:45:00', endTime: '11:15:00' }),
+      expect.objectContaining({ disciplineId: 1, startTime: '09:45:00', endTime: '12:15:00' }),
     );
     expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Sẽ tạo 5 buổi học');
 
@@ -645,7 +645,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
 
     // Step 3: unavailable room & coach are disabled with exact conflict reasons
     expect(document.querySelector('[data-testid="wizard-step-3"]')).not.toBeNull();
-    expect(document.querySelector('[data-testid="wizard-step3-banner"]')?.textContent).toContain('Slot 2 (09:45 – 11:15)');
+    expect(document.querySelector('[data-testid="wizard-step3-banner"]')?.textContent).toContain('Slot 2 (09:45 – 12:15)');
 
     const busyRoomBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-room-10"]')!;
     expect(busyRoomBtn.disabled).toBe(true);
@@ -682,7 +682,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     const step4 = document.querySelector('[data-testid="wizard-step-4"]')!;
     expect(step4).not.toBeNull();
     expect(step4.textContent).toContain('Gym Power Morning');
-    expect(step4.textContent).toContain('Slot 2 · 09:45 – 11:15');
+    expect(step4.textContent).toContain('Slot 2 · 09:45 – 12:15');
     expect(step4.textContent).toContain('5 buổi');
     expect(step4.textContent).toContain('Phòng Gym VIP · 18/20 chỗ');
     expect(step4.textContent).toContain('HLV Hùng');
@@ -723,7 +723,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         capacity: 18,
         price: 250000,
         startTime: '09:45:00',
-        endTime: '11:15:00',
+        endTime: '12:15:00',
       }),
     );
     expect(document.querySelector('[data-testid="wizard-step-4"]')).toBeNull();
@@ -846,7 +846,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     const detail = document.querySelector('[data-testid="session-detail-content"]')!;
     expect(detail).not.toBeNull();
     expect(detail.textContent).toContain('Yoga');
-    expect(detail.textContent).toContain('Slot 5 · 17:00 – 19:30');
+    expect(detail.textContent).toContain('Slot 5 · 18:00 – 20:30');
     expect(detail.textContent).toContain('Zen Garden Studio');
     expect(detail.textContent).toContain('HLV Lan');
     expect(detail.textContent).toContain('8/16');
@@ -875,7 +875,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     const detail = document.querySelector('[data-testid="session-detail-content"]')!;
     expect(detail).not.toBeNull();
     expect(detail.textContent).toContain('Yoga');
-    expect(detail.textContent).toContain('Slot 5 · 17:00 – 19:30');
+    expect(detail.textContent).toContain('Slot 5 · 18:00 – 20:30');
     expect(detail.textContent).toContain('Zen Garden Studio');
   });
 
@@ -884,8 +884,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
       id: 503,
       classId: 3,
       sessionDate: today,
-      startTime: '14:15:00',
-      endTime: '16:45:00',
+      startTime: '15:15:00',
+      endTime: '17:45:00',
       status: 'scheduled',
     });
     await renderPage('Lịch theo bộ môn');
@@ -908,7 +908,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await act(async () => { await Promise.resolve(); });
 
     expect(classesApi.rescheduleSession).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: 503, startTime: '14:15:00', endTime: '16:45:00' }),
+      expect.objectContaining({ sessionId: 503, startTime: '15:15:00', endTime: '17:45:00' }),
     );
   });
 
@@ -1128,7 +1128,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
           endDate: '2026-12-29',
           recurringDays: ['MONDAY', 'FRIDAY'],
           startTime: '09:45:00',
-          endTime: '11:15:00',
+          endTime: '12:15:00',
         }),
       );
       await Promise.resolve();
@@ -1161,7 +1161,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
         endDate: '2026-12-29',
         recurringDays: ['MONDAY'],
         startTime: '09:45:00',
-        endTime: '11:15:00',
+        endTime: '12:15:00',
       },
       { validSchedule: true, selectedSlotAvailable: true, rooms: [], coaches: [] },
     );

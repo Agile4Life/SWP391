@@ -289,7 +289,7 @@ describe('MemberCoachBookingView coach list & booking order', () => {
           coachId: 1,
           coachName: 'Lê Trọng Nam',
           bookingDate: '2026-11-25',
-          startTime: '14:00:00',
+          startTime: '15:00:00',
           endTime: '15:00:00',
           hourlyRate: 200000,
           paymentMethod: 'cash',
@@ -362,13 +362,13 @@ describe('weekly PT booking after Monday has passed', () => {
       mocks.getAvailableSlots.mockImplementation(async (_id, date) => date === '2026-11-06'
         ? [
             { slotNumber: 1, startTime: '07:00:00', endTime: '09:30:00', available: false, reason: 'too_soon' },
-            { slotNumber: 2, startTime: '09:45:00', endTime: '11:15:00', available: false, reason: 'coach_busy' },
-            { slotNumber: 3, startTime: '11:30:00', endTime: '14:00:00', available: false, reason: 'member_busy' },
-            { slotNumber: 4, startTime: '14:15:00', endTime: '16:45:00', available: true, reason: null },
-            { slotNumber: 5, startTime: '17:00:00', endTime: '19:30:00', available: false, reason: 'coach_on_leave' },
+            { slotNumber: 2, startTime: '09:45:00', endTime: '12:15:00', available: false, reason: 'coach_busy' },
+            { slotNumber: 3, startTime: '12:30:00', endTime: '15:00:00', available: false, reason: 'member_busy' },
+            { slotNumber: 4, startTime: '15:15:00', endTime: '17:45:00', available: true, reason: null },
+            { slotNumber: 5, startTime: '18:00:00', endTime: '20:30:00', available: false, reason: 'coach_on_leave' },
           ]
         : []);
-      mocks.createCoachBooking.mockResolvedValue({ id: 10, coachId: 1, bookingDate: '2026-11-06', startTime: '14:15:00', endTime: '16:45:00', status: 'CONFIRMED' });
+      mocks.createCoachBooking.mockResolvedValue({ id: 10, coachId: 1, bookingDate: '2026-11-06', startTime: '15:15:00', endTime: '17:45:00', status: 'CONFIRMED' });
       try {
         await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
         const weekly = host.querySelector<HTMLButtonElement>('button[aria-label="Cả tuần (Hàng tuần)"]');
@@ -382,7 +382,7 @@ describe('weekly PT booking after Monday has passed', () => {
         expect(host.textContent).toContain('Slot 1');
         expect(host.textContent).toContain('07:00 – 09:30');
         expect(host.textContent).toContain('Slot 4');
-        expect(host.textContent).toContain('14:15 – 16:45');
+        expect(host.textContent).toContain('15:15 – 17:45');
         expect(host.textContent).toContain('Cần đặt trước 2 tiếng');
         expect(host.textContent).toContain('HLV đã có lịch');
         expect(host.textContent).toContain('Bạn đã có lịch trùng');
@@ -392,12 +392,12 @@ describe('weekly PT booking after Monday has passed', () => {
         const slot = host.querySelector<HTMLButtonElement>('[data-testid="pt-slot-4"]');
         expect(slot).not.toBeNull();
         await act(async () => slot!.click());
-        expect(host.textContent).toContain('Slot 4 · 14:15 – 16:45');
+        expect(host.textContent).toContain('Slot 4 · 15:15 – 17:45');
         const confirm = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xác nhận & Đặt lịch'));
         expect(confirm).toBeDefined();
         await act(async () => confirm!.click());
         expect(mocks.createCoachBooking).toHaveBeenCalledWith(expect.objectContaining({
-          coachId: 1, bookingDate: '2026-11-06', startTime: '14:15:00', endTime: '16:45:00',
+          coachId: 1, bookingDate: '2026-11-06', startTime: '15:15:00', endTime: '17:45:00',
         }));
     } finally {
       await act(async () => root.unmount());
@@ -486,7 +486,7 @@ describe('weekly PT booking after Monday has passed', () => {
         coachId: 1,
         coachName: 'HLV Huỳnh Đắc Tài',
         bookingDate: '2099-11-10',
-        startTime: '14:00:00',
+        startTime: '15:00:00',
         endTime: '15:00:00',
         status: 'confirmed',
         paymentMethod: 'cash',
@@ -543,7 +543,7 @@ describe('MemberCoachBookingView audit remediation (P1-FE-40, P1-FE-41, P2-FE-55
       { id: 1, fullName: 'HLV Huỳnh Đắc Tài', specialization: '', defaultHourlyRate: 200000 },
     ]);
     mocks.getAvailableSlots.mockResolvedValue([
-      { slotNumber: 4, startTime: '14:15:00', endTime: '16:45:00', available: true, reason: null },
+      { slotNumber: 4, startTime: '15:15:00', endTime: '17:45:00', available: true, reason: null },
     ]);
     mocks.getMyCoachBookings.mockResolvedValue([]);
     mocks.getMemberQuotaStatus.mockResolvedValue({
@@ -585,8 +585,8 @@ describe('MemberCoachBookingView audit remediation (P1-FE-40, P1-FE-41, P2-FE-55
         coachId: 1,
         coachName: 'HLV An',
         bookingDate: '2026-11-26',
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'confirmed',
         paymentMethod: 'package_quota',
         paymentStatus: 'used_quota',
@@ -599,7 +599,7 @@ describe('MemberCoachBookingView audit remediation (P1-FE-40, P1-FE-41, P2-FE-55
     await act(async () => root.render(<MemoryRouter><MemberCoachBookingView onBookingSuccess={onBookingSuccess} /></MemoryRouter>));
 
     expect(host.textContent).toContain('Đang diễn ra');
-    // Only the future 17:00 session has a Cancel button (using btn-danger btn-sm)
+    // Only the future 18:00 session has a Cancel button (using btn-danger btn-sm)
     const cancelBtns = [...host.querySelectorAll<HTMLButtonElement>('button')].filter((b) => b.textContent === 'Hủy lịch hẹn');
     expect(cancelBtns).toHaveLength(1);
     expect(cancelBtns[0].className).toContain('btn-danger');

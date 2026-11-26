@@ -134,7 +134,7 @@ class ClassServiceTest {
             return s;
         });
 
-        // Đồng hồ đang ở 10:00:00, Slot 3 bắt đầu lúc 11:30:00 hôm nay
+        // Đồng hồ đang ở 10:00:00, Slot 3 bắt đầu lúc 12:30:00 hôm nay
         CreateSessionRequest request = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 ScheduleSlot.SLOT_3.startTime(),
@@ -154,7 +154,7 @@ class ClassServiceTest {
         when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
         when(sessions.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
 
-        // Slot 3: 11:30 - 14:00
+        // Slot 3: 12:30 - 15:00
         CreateSessionRequest session1Req = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 ScheduleSlot.SLOT_3.startTime(),
@@ -164,7 +164,7 @@ class ClassServiceTest {
         assertThat(session1.startTime()).isEqualTo(ScheduleSlot.SLOT_3.startTime());
         assertThat(session1.endTime()).isEqualTo(ScheduleSlot.SLOT_3.endTime());
 
-        // Slot 4: 14:15 - 16:45 (slot cố định kế tiếp ngay sau Slot 3, cách 15 phút nghỉ)
+        // Slot 4: 15:15 - 17:45 (slot cố định kế tiếp ngay sau Slot 3, cách 15 phút nghỉ)
         CreateSessionRequest session2Req = new CreateSessionRequest(
                 LocalDate.of(2026, 10, 16),
                 ScheduleSlot.SLOT_4.startTime(),

@@ -6,18 +6,18 @@ import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 /**
- * Nguồn chuẩn duy nhất cho 5 khung giờ cố định (07:00 – 19:30) dùng chung cho lớp học nhóm định kỳ và buổi PT 1:1.
+ * Nguồn chuẩn duy nhất cho 5 khung giờ cố định (07:00 – 20:30, mỗi slot 2h30) dùng chung cho lớp học nhóm định kỳ và buổi PT 1:1.
  */
 public enum ScheduleSlot {
     SLOT_1(1, LocalTime.of(7, 0), LocalTime.of(9, 30)),
-    SLOT_2(2, LocalTime.of(9, 45), LocalTime.of(11, 15)),
-    SLOT_3(3, LocalTime.of(11, 30), LocalTime.of(14, 0)),
-    SLOT_4(4, LocalTime.of(14, 15), LocalTime.of(16, 45)),
-    SLOT_5(5, LocalTime.of(17, 0), LocalTime.of(19, 30));
+    SLOT_2(2, LocalTime.of(9, 45), LocalTime.of(12, 15)),
+    SLOT_3(3, LocalTime.of(12, 30), LocalTime.of(15, 0)),
+    SLOT_4(4, LocalTime.of(15, 15), LocalTime.of(17, 45)),
+    SLOT_5(5, LocalTime.of(18, 0), LocalTime.of(20, 30));
 
     private static final DateTimeFormatter HH_MM = DateTimeFormatter.ofPattern("HH:mm");
     public static final String INVALID_SLOT_FALLBACK_MESSAGE =
-            "Choose one of the 5 fixed slots (07:00–09:30, 09:45–11:15, 11:30–14:00, 14:15–16:45, 17:00–19:30).";
+            "Choose one of the 5 fixed slots (07:00–09:30, 09:45–12:15, 12:30–15:00, 15:15–17:45, 18:00–20:30).";
 
     private final int slotNumber;
     private final LocalTime startTime;

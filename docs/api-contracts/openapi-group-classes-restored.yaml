@@ -4,15 +4,15 @@ info:
   version: 1.2.0
   description: >
     Hợp đồng API hiện hành cho lớp học nhóm định kỳ (`app.legacy.classes-enabled=true`) và đặt lịch PT 1:1
-    theo hệ thống **5 Slot cố định (`07:00 – 19:30`)** (cập nhật 25/11/2026).
+    theo hệ thống **5 Slot cố định (`07:00 – 20:30`)** (cập nhật 25/11/2026).
     Áp dụng cho 3 bộ môn đang hoạt động (`Gym`, `Boxing`, `Yoga`) và 4 phòng
     (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`).
     Mỗi bộ môn được mở **nhiều lớp nhóm định kỳ đang hoạt động (`active`)** miễn là không có hai lớp cùng bộ môn
     trùng ngày và cùng slot (`409 SCHEDULING_DISCIPLINE_CONFLICT`, kiểm tra đồng thời tại `ClassService` và
     trigger PostgreSQL `trg_sessions_check_discipline_conflict` bên trong `scms_check_session_conflict`).
     Toàn bộ lớp nhóm định kỳ và PT 1:1 phải khớp đúng 1 trong 5 slot chuẩn (nghỉ 15 phút giữa hai slot kế tiếp):
-    `Slot 1` (`07:00 – 09:30`), `Slot 2` (`09:45 – 11:15`), `Slot 3` (`11:30 – 14:00`),
-    `Slot 4` (`14:15 – 16:45`), `Slot 5` (`17:00 – 19:30`).
+    `Slot 1` (`07:00 – 09:30`), `Slot 2` (`09:45 – 12:15`), `Slot 3` (`12:30 – 15:00`),
+    `Slot 4` (`15:15 – 17:45`), `Slot 5` (`18:00 – 20:30`).
     Khung giờ nằm ngoài 5 slot chuẩn trả `400 SCHEDULING_INVALID_SLOT` (lớp nhóm) hoặc
     `400 INVALID_COACH_BOOKING_SLOT` (PT 1:1), đồng thời được bảo vệ tại tầng PostgreSQL qua
     hàm `scms_is_valid_schedule_slot` và lỗi trigger `trg_schedule_invalid_slot` (`400 SCHEDULING_INVALID_SLOT`).
@@ -49,19 +49,19 @@ components:
     ScheduleSlotRange:
       type: object
       description: >
-        Cặp thời gian bắt buộc khớp chính xác 1 trong 5 Slot cố định (`07:00 – 19:30`):
-        Slot 1 (`07:00:00` – `09:30:00`), Slot 2 (`09:45:00` – `11:15:00`),
-        Slot 3 (`11:30:00` – `14:00:00`), Slot 4 (`14:15:00` – `16:45:00`),
-        Slot 5 (`17:00:00` – `19:30:00`).
+        Cặp thời gian bắt buộc khớp chính xác 1 trong 5 Slot cố định (`07:00 – 20:30`):
+        Slot 1 (`07:00:00` – `09:30:00`), Slot 2 (`09:45:00` – `12:15:00`),
+        Slot 3 (`12:30:00` – `15:00:00`), Slot 4 (`15:15:00` – `17:45:00`),
+        Slot 5 (`18:00:00` – `20:30:00`).
       required: [startTime, endTime]
       properties:
         startTime:
           type: string
-          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          enum: ['07:00:00', '09:45:00', '12:30:00', '15:15:00', '18:00:00']
           example: '07:00:00'
         endTime:
           type: string
-          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
           example: '09:30:00'
     CoachAvailableSlotDto:
       type: object
@@ -78,11 +78,11 @@ components:
           description: Số thứ tự slot chuẩn từ 1 đến 5 (`Slot 1` – `Slot 5`).
         startTime:
           type: string
-          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          enum: ['07:00:00', '09:45:00', '12:30:00', '15:15:00', '18:00:00']
           example: '07:00:00'
         endTime:
           type: string
-          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
           example: '09:30:00'
         available:
           type: boolean
@@ -104,11 +104,11 @@ components:
         bookingDate: { type: string, format: date }
         startTime:
           type: string
-          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
-          example: '11:30:00'
+          enum: ['07:00:00', '09:45:00', '12:30:00', '15:15:00', '18:00:00']
+          example: '12:30:00'
         endTime:
           type: string
-          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
           example: '14:00:00'
         paymentMethod:
           type: string
@@ -148,13 +148,13 @@ components:
         startTime:
           type: string
           nullable: true
-          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          enum: ['07:00:00', '09:45:00', '12:30:00', '15:15:00', '18:00:00']
           example: '07:00:00'
-          description: Giờ bắt đầu tùy chọn thuộc 1 trong 5 Slot cố định (`07:00 – 19:30`).
+          description: Giờ bắt đầu tùy chọn thuộc 1 trong 5 Slot cố định (`07:00 – 20:30`).
         endTime:
           type: string
           nullable: true
-          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
           example: '09:30:00'
           description: Giờ kết thúc tùy chọn khớp với `startTime` trong 5 Slot cố định.
     SlotAvailabilityDto:
@@ -184,11 +184,11 @@ components:
           example: SLOT_1
         startTime:
           type: string
-          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          enum: ['07:00:00', '09:45:00', '12:30:00', '15:15:00', '18:00:00']
           example: '07:00:00'
         endTime:
           type: string
-          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
           example: '09:30:00'
         available:
           type: boolean
@@ -368,11 +368,11 @@ components:
           example: [MONDAY, WEDNESDAY, FRIDAY]
         startTime:
           type: string
-          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          enum: ['07:00:00', '09:45:00', '12:30:00', '15:15:00', '18:00:00']
           example: '07:00:00'
         endTime:
           type: string
-          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
           example: '09:30:00'
     UpdateClassRequest:
       type: object
@@ -396,10 +396,10 @@ components:
         sessionDate: { type: string, format: date }
         startTime:
           type: string
-          enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+          enum: ['07:00:00', '09:45:00', '12:30:00', '15:15:00', '18:00:00']
         endTime:
           type: string
-          enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+          enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
     CourseCheckoutRequest:
       type: object
       properties:
@@ -499,7 +499,7 @@ paths:
         Cho phép mỗi bộ môn mở nhiều khóa học định kỳ đang hoạt động (`active`) miễn không có hai lớp cùng bộ môn
         trùng ngày và cùng slot (`409 SCHEDULING_DISCIPLINE_CONFLICT`, kiểm tra đồng thời ở `ClassService` và
         trigger PostgreSQL `trg_sessions_check_discipline_conflict` bên trong `scms_check_session_conflict`).
-        Yêu cầu `(startTime, endTime)` khớp chính xác 1 trong 5 Slot cố định (`07:00 – 19:30`;
+        Yêu cầu `(startTime, endTime)` khớp chính xác 1 trong 5 Slot cố định (`07:00 – 20:30`;
         `scms_is_valid_schedule_slot` / `trg_schedule_invalid_slot`), sức chứa không vượt sức chứa phòng
         (`400 SCHEDULING_CAPACITY_EXCEEDS_ROOM`) và học phí không âm (`400 SCHEDULING_INVALID_PRICE`).
       tags: [Lớp học nhóm]
@@ -779,8 +779,8 @@ paths:
     get:
       summary: Lấy danh sách đúng 5 Slot cố định PT 1:1 của một HLV trong ngày
       description: >
-        Trả về đúng 5 phần tử ứng với `Slot 1` (`07:00 – 09:30`), `Slot 2` (`09:45 – 11:15`),
-        `Slot 3` (`11:30 – 14:00`), `Slot 4` (`14:15 – 16:45`), `Slot 5` (`17:00 – 19:30`), kèm `slotNumber: 1..5`.
+        Trả về đúng 5 phần tử ứng với `Slot 1` (`07:00 – 09:30`), `Slot 2` (`09:45 – 12:15`),
+        `Slot 3` (`12:30 – 15:00`), `Slot 4` (`15:15 – 17:45`), `Slot 5` (`18:00 – 20:30`), kèm `slotNumber: 1..5`.
         Kiểm tra HLV nghỉ phép (`coach_on_leave`), sát giờ chưa đủ 2 tiếng trước giờ bắt đầu slot (`too_soon`),
         HLV bận dạy lớp nhóm hoặc PT 1:1 khác (`coach_busy`) và hội viên bận lớp nhóm hoặc PT 1:1 khác (`member_busy`).
         Không còn trạng thái `coach_rest` vì giới hạn bắt buộc nghỉ liên tiếp của HLV đã được gỡ bỏ hoàn toàn.
@@ -815,7 +815,7 @@ paths:
     post:
       summary: Tạo lượt đặt PT 1:1 theo 1 trong 5 Slot cố định (MEMBER)
       description: >
-        Bắt buộc `(startTime, endTime)` khớp đúng 1 trong 5 Slot cố định (`07:00 – 19:30`) và đặt trước
+        Bắt buộc `(startTime, endTime)` khớp đúng 1 trong 5 Slot cố định (`07:00 – 20:30`) và đặt trước
         giờ bắt đầu slot tối thiểu 2 giờ (`ADVANCE_MINUTES_REQUIRED = 120`).
         Giữ nguyên đơn giá `200.000đ / slot` (áp dụng giảm theo hạng gói Gold/Platinum) hoặc trừ 1 lượt gói PT miễn phí.
         Đã gỡ bỏ hoàn toàn giới hạn bắt buộc nghỉ liên tiếp của HLV (`requiresCoachRest` / `trg_coach_bookings_rest_required`).

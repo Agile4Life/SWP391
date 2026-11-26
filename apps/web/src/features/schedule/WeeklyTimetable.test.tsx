@@ -31,7 +31,7 @@ describe('WeeklyTimetable', () => {
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === text)!;
 
-  it('always renders 5 fixed slots (07:00 – 19:30) on the left axis without a day-range switch', async () => {
+  it('always renders 5 fixed slots (07:00 – 20:30) on the left axis without a day-range switch', async () => {
     await render();
     expect(host.querySelectorAll('.mcal__col')).toHaveLength(7);
     const slotHeads = [...host.querySelectorAll('.mcal__slot-head')];
@@ -41,17 +41,17 @@ describe('WeeklyTimetable', () => {
       node.querySelector('.mcal__slot-time')?.textContent,
     ])).toEqual([
       ['Slot 1', '07:00 – 09:30'],
-      ['Slot 2', '09:45 – 11:15'],
-      ['Slot 3', '11:30 – 14:00'],
-      ['Slot 4', '14:15 – 16:45'],
-      ['Slot 5', '17:00 – 19:30'],
+      ['Slot 2', '09:45 – 12:15'],
+      ['Slot 3', '12:30 – 15:00'],
+      ['Slot 4', '15:15 – 17:45'],
+      ['Slot 5', '18:00 – 20:30'],
     ]);
     expect(host.querySelector('[aria-label="Khung giờ"]')).toBeNull();
     expect(host.textContent).toContain('05/01 – 11/01/2099');
   });
 
   it('positions events into their exact slot row (0%, 20%, 40%, 60%, 80%)', async () => {
-    await render({ events: [{ ...event, startTime: '17:00:00', endTime: '19:30:00' }] });
+    await render({ events: [{ ...event, startTime: '18:00:00', endTime: '20:30:00' }] });
     // Slot 5 là hàng thứ 5 (index 4 / 5 = 80%).
     expect(host.querySelector<HTMLElement>('.mcal__event')!.style.top).toBe('calc(80% + 3px)');
     expect(host.querySelector<HTMLElement>('.mcal__event')!.style.height).toBe('calc(20% - 6px)');
@@ -86,7 +86,7 @@ describe('WeeklyTimetable', () => {
     expect(host.querySelectorAll('.mcal__slot.is-busy')).toHaveLength(1);
     const free = host.querySelector<HTMLButtonElement>('[data-slot="2099-01-06|2"]')!;
     await act(async () => free.click());
-    expect(onSlotClick).toHaveBeenCalledWith({ date: '2099-01-06', startTime: '09:45', endTime: '11:15' });
+    expect(onSlotClick).toHaveBeenCalledWith({ date: '2099-01-06', startTime: '09:45', endTime: '12:15' });
   });
 
   it('ignores clicks on past slots', async () => {
@@ -153,7 +153,7 @@ describe('WeeklyTimetable', () => {
   });
 
   it('shows a bottom scroll cue while later slots remain below the fold and hides it at the bottom', async () => {
-    await render({ events: [event, { ...event, id: '9', startTime: '17:00:00', endTime: '19:30:00' }] });
+    await render({ events: [event, { ...event, id: '9', startTime: '18:00:00', endTime: '20:30:00' }] });
     const scrollBox = host.querySelector<HTMLDivElement>('.mcal__scroll')!;
     Object.defineProperty(scrollBox, 'clientHeight', { value: 400, configurable: true });
     Object.defineProperty(scrollBox, 'scrollHeight', { value: 600, configurable: true });
@@ -174,9 +174,9 @@ describe('WeeklyTimetable', () => {
   it('groups >= 3 concurrent classes in the same slot into "+N lớp" with Slot label and opens full clickable list', async () => {
     const onEventClick = vi.fn();
     const concurrent: TimetableEvent[] = [
-      { ...event, id: '1', title: 'Yoga', disciplineName: 'Yoga', meta: 'Zen Garden Studio', startTime: '17:00:00', endTime: '19:30:00' },
-      { ...event, id: '2', title: 'Boxing', disciplineName: 'Boxing', meta: 'Ring Arena 01', startTime: '17:00:00', endTime: '19:30:00' },
-      { ...event, id: '3', title: 'Gym Strength', disciplineName: 'Gym', meta: 'Phòng Gym Tiêu chuẩn', startTime: '17:00:00', endTime: '19:30:00' },
+      { ...event, id: '1', title: 'Yoga', disciplineName: 'Yoga', meta: 'Zen Garden Studio', startTime: '18:00:00', endTime: '20:30:00' },
+      { ...event, id: '2', title: 'Boxing', disciplineName: 'Boxing', meta: 'Ring Arena 01', startTime: '18:00:00', endTime: '20:30:00' },
+      { ...event, id: '3', title: 'Gym Strength', disciplineName: 'Gym', meta: 'Phòng Gym Tiêu chuẩn', startTime: '18:00:00', endTime: '20:30:00' },
     ];
     await render({ events: concurrent, maxVisibleLanes: 2, onEventClick });
 
@@ -184,7 +184,7 @@ describe('WeeklyTimetable', () => {
     const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]')!;
     expect(overflowBtn).not.toBeNull();
     expect(overflowBtn.textContent).toContain('+2 lớp');
-    expect(overflowBtn.textContent).toContain('Slot 5 · 17:00 – 19:30');
+    expect(overflowBtn.textContent).toContain('Slot 5 · 18:00 – 20:30');
 
     await act(async () => overflowBtn.click());
     const rows = document.querySelectorAll<HTMLButtonElement>('[data-testid="timetable-overflow-list"] button');
@@ -219,13 +219,13 @@ describe('WeeklyTimetable', () => {
   it('uses singular English grammar for 1 outside-range session and role-neutral overflow subtitle', async () => {
     setLanguage('en');
     const events: TimetableEvent[] = [
-      { ...event, id: '1', title: 'Yoga', startTime: '17:00:00', endTime: '19:30:00' },
-      { ...event, id: '2', title: 'Boxing', startTime: '17:00:00', endTime: '19:30:00' },
-      { ...event, id: '3', title: 'Gym', startTime: '17:00:00', endTime: '19:30:00' },
+      { ...event, id: '1', title: 'Yoga', startTime: '18:00:00', endTime: '20:30:00' },
+      { ...event, id: '2', title: 'Boxing', startTime: '18:00:00', endTime: '20:30:00' },
+      { ...event, id: '3', title: 'Gym', startTime: '18:00:00', endTime: '20:30:00' },
       { ...event, id: '4', title: 'Late Session', startTime: '20:30:00', endTime: '21:30:00' },
     ];
     await render({ events, maxVisibleLanes: 2 });
-    expect(host.textContent).toContain('1 session outside the 5-slot schedule (07:00–19:30) is not shown.');
+    expect(host.textContent).toContain('1 session outside the 5-slot schedule (07:00–20:30) is not shown.');
     expect(host.textContent).not.toContain('1 sessions');
 
     const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]')!;

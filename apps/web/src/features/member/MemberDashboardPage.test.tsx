@@ -175,7 +175,7 @@ describe('SCRUM-85 dashboard', () => {
   it('P2-FE-52: displays Slot N labels for both group class sessions and PT 1:1 bookings and removes hourly PT copy', async () => {
     api.bookings.mockResolvedValue([{
       id: 21, coachName: 'HLV Minh',
-      bookingDate: '2099-10-18', startTime: '17:00:00', endTime: '19:30:00',
+      bookingDate: '2099-10-18', startTime: '18:00:00', endTime: '20:30:00',
       status: 'confirmed', createdAt: '2026-10-16T10:00:00',
       cancelledAt: null, cancelReason: null,
     }]);
@@ -194,7 +194,7 @@ describe('SCRUM-85 dashboard', () => {
     expect(host.textContent).toContain('Boxing Nền Tảng');
     expect(host.textContent).toContain('Slot 1 (07:00–09:30)');
     expect(host.textContent).toContain('HLV Minh');
-    expect(host.textContent).toContain('Slot 5 (17:00–19:30)');
+    expect(host.textContent).toContain('Slot 5 (18:00–20:30)');
     expect(host.textContent).not.toContain('PT kèm riêng theo giờ');
     expect(host.textContent).toContain('5 Slot cố định');
   });

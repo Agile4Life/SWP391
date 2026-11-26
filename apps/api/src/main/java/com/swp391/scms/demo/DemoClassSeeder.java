@@ -100,7 +100,7 @@ public class DemoClassSeeder implements ApplicationRunner {
 
     /**
      * Các lớp đang hoạt động ({@code active}) cho 3 bộ môn chuẩn (Gym, Yoga, Boxing) dùng 5 slot cố định
-     * (07:00–19:30): mỗi bộ môn gồm 1 khóa đang diễn ra và 1 khóa sắp khai giảng ({@code fromDay > 0}) không trùng
+     * (07:00–20:30): mỗi bộ môn gồm 1 khóa đang diễn ra và 1 khóa sắp khai giảng ({@code fromDay > 0}) không trùng
      * ngày & slot cùng bộ môn, tuân thủ quy tắc đa lớp/bộ môn.
      */
     static final List<ClassSpec> CLASSES = List.of(

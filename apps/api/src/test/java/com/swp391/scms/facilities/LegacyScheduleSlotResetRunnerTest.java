@@ -7,10 +7,14 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
@@ -22,6 +26,8 @@ import static org.mockito.Mockito.when;
 
 /** Bộ kiểm thử đơn vị cho {@link LegacyScheduleSlotResetRunner}. */
 @ExtendWith(MockitoExtension.class)
+// Bước dời giờ gọi update(String, Object...) ngoài các stub update(String) của từng test.
+@MockitoSettings(strictness = Strictness.LENIENT)
 class LegacyScheduleSlotResetRunnerTest {
 
     @Mock
@@ -145,5 +151,41 @@ class LegacyScheduleSlotResetRunnerTest {
                 .contains("booking_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date");
 
         verify(jdbcTemplate, never()).update(anyString());
+    }
+
+    @Test
+    void shiftsPreviousSlotRowsFromSlotFiveDownBeforeCheckingLegacyRows() {
+        when(jdbcTemplate.queryForObject(contains("information_schema.tables"), eq(Boolean.class), anyString()))
+                .thenReturn(Boolean.TRUE);
+        when(jdbcTemplate.queryForObject(contains("SELECT EXISTS (SELECT 1 FROM "), eq(Boolean.class)))
+                .thenReturn(Boolean.FALSE);
+
+        new LegacyScheduleSlotResetRunner(jdbcTemplate).run(null);
+
+        InOrder order = inOrder(jdbcTemplate);
+        order.verify(jdbcTemplate).execute("SAVEPOINT previous_slot_shift");
+        for (String[] shift : LegacyScheduleSlotResetRunner.PREVIOUS_SLOT_SHIFTS) {
+            for (String table : List.of("classes", "class_sessions", "coach_bookings")) {
+                order.verify(jdbcTemplate).update(
+                        contains("UPDATE " + table + " SET start_time"),
+                        eq(shift[2]), eq(shift[3]), eq(shift[0]), eq(shift[1]));
+            }
+        }
+        order.verify(jdbcTemplate).execute("RELEASE SAVEPOINT previous_slot_shift");
+        assertThat(LegacyScheduleSlotResetRunner.PREVIOUS_SLOT_SHIFTS.get(0)[0]).isEqualTo("17:00");
+    }
+
+    @Test
+    void rollsBackShiftAndSkipsWipeWhenTriggerRejectsShiftedRow() {
+        when(jdbcTemplate.queryForObject(contains("information_schema.tables"), eq(Boolean.class), anyString()))
+                .thenReturn(Boolean.TRUE);
+        when(jdbcTemplate.update(contains("UPDATE coach_bookings SET start_time"), any(), any(), any(), any()))
+                .thenThrow(new DataIntegrityViolationException("trg_enrollments_check_membership"));
+
+        new LegacyScheduleSlotResetRunner(jdbcTemplate).run(null);
+
+        verify(jdbcTemplate).execute("ROLLBACK TO SAVEPOINT previous_slot_shift");
+        verify(jdbcTemplate, never()).update(contains("DELETE FROM"));
+        verify(jdbcTemplate, never()).queryForObject(contains("SELECT EXISTS (SELECT 1 FROM "), eq(Boolean.class));
     }
 }

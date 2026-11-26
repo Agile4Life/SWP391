@@ -26,19 +26,19 @@ class ScheduleSlotTest {
 
         assertThat(ScheduleSlot.SLOT_2.slotNumber()).isEqualTo(2);
         assertThat(ScheduleSlot.SLOT_2.label()).isEqualTo("Slot 2");
-        assertThat(ScheduleSlot.SLOT_2.timeRange()).isEqualTo("09:45 – 11:15");
+        assertThat(ScheduleSlot.SLOT_2.timeRange()).isEqualTo("09:45 – 12:15");
 
         assertThat(ScheduleSlot.SLOT_3.slotNumber()).isEqualTo(3);
         assertThat(ScheduleSlot.SLOT_3.label()).isEqualTo("Slot 3");
-        assertThat(ScheduleSlot.SLOT_3.timeRange()).isEqualTo("11:30 – 14:00");
+        assertThat(ScheduleSlot.SLOT_3.timeRange()).isEqualTo("12:30 – 15:00");
 
         assertThat(ScheduleSlot.SLOT_4.slotNumber()).isEqualTo(4);
         assertThat(ScheduleSlot.SLOT_4.label()).isEqualTo("Slot 4");
-        assertThat(ScheduleSlot.SLOT_4.timeRange()).isEqualTo("14:15 – 16:45");
+        assertThat(ScheduleSlot.SLOT_4.timeRange()).isEqualTo("15:15 – 17:45");
 
         assertThat(ScheduleSlot.SLOT_5.slotNumber()).isEqualTo(5);
         assertThat(ScheduleSlot.SLOT_5.label()).isEqualTo("Slot 5");
-        assertThat(ScheduleSlot.SLOT_5.timeRange()).isEqualTo("17:00 – 19:30");
+        assertThat(ScheduleSlot.SLOT_5.timeRange()).isEqualTo("18:00 – 20:30");
     }
 
     @Test

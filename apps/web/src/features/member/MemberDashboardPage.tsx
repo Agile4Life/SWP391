@@ -419,7 +419,7 @@ export function MemberDashboardPage() {
                 </div>
               )}
           </section>
-          <Link className="member-board-note" to="/member/classes?tab=pt"><span>{memberText("Đặt lịch HLV 1:1")}<small>{memberText("5 Slot cố định (07:00 – 19:30) · Đặt trước 2 tiếng", "5 fixed slots (07:00 – 19:30) · Book 2 hours ahead")}</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/classes?tab=pt"><span>{memberText("Đặt lịch HLV 1:1")}<small>{memberText("5 Slot cố định (07:00 – 20:30) · Đặt trước 2 tiếng", "5 fixed slots (07:00 – 20:30) · Book 2 hours ahead")}</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section data-i18n-managed className="member-board-column member-board-column--blue" aria-labelledby="board-card">

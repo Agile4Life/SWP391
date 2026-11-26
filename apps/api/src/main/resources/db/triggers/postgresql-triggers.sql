@@ -71,7 +71,7 @@ CREATE TRIGGER trg_enrollments_check_capacity
 AFTER INSERT OR UPDATE OF class_id, status ON class_enrollments
 FOR EACH ROW EXECUTE FUNCTION scms_check_enrollment_capacity();
 
--- 5 khung giờ cố định (07:00 – 19:30) dùng chung cho lớp học nhóm và buổi PT 1:1.
+-- 5 khung giờ cố định (07:00 – 20:30, mỗi slot 2h30) dùng chung cho lớp học nhóm và buổi PT 1:1.
 CREATE OR REPLACE FUNCTION scms_is_valid_schedule_slot(p_start TIME, p_end TIME)
 RETURNS boolean
 LANGUAGE sql
@@ -80,10 +80,10 @@ SET search_path FROM CURRENT
 AS $$
     SELECT COALESCE(
         (p_start = TIME '07:00:00' AND p_end = TIME '09:30:00')
-        OR (p_start = TIME '09:45:00' AND p_end = TIME '11:15:00')
-        OR (p_start = TIME '11:30:00' AND p_end = TIME '14:00:00')
-        OR (p_start = TIME '14:15:00' AND p_end = TIME '16:45:00')
-        OR (p_start = TIME '17:00:00' AND p_end = TIME '19:30:00'),
+        OR (p_start = TIME '09:45:00' AND p_end = TIME '12:15:00')
+        OR (p_start = TIME '12:30:00' AND p_end = TIME '15:00:00')
+        OR (p_start = TIME '15:15:00' AND p_end = TIME '17:45:00')
+        OR (p_start = TIME '18:00:00' AND p_end = TIME '20:30:00'),
         FALSE
     );
 $$;

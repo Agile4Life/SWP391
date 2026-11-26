@@ -6,7 +6,7 @@ info:
     Corrections from review of PR 79, inherited by PR 78. All responses use the existing ApiResponse envelope
     and Accept-Language localization.
     NOTE (Superseded): One-hour slot rules (06:00–20:00) and the coach consecutive-slot rest limit were
-    superseded by the 5 fixed schedule slots (07:00–19:30, no coach rest restriction) in
+    superseded by the 5 fixed schedule slots (07:00–20:30, no coach rest restriction) in
     openapi-group-classes-restored.yaml.
 servers:
   - url: /api/v1
@@ -18,7 +18,7 @@ paths:
       summary: Member books a 1:1 PT session (see openapi-group-classes-restored.yaml for current 5-slot rules)
       description: >
         Requires an active, unexpired membership covering today and the booking date for every payment method.
-        Current scheduling uses the 5 fixed slots (07:00–19:30, see openapi-group-classes-restored.yaml) and must
+        Current scheduling uses the 5 fixed slots (07:00–20:30, see openapi-group-classes-restored.yaml) and must
         be booked at least two hours ahead; the legacy consecutive-slot coach rest restriction has been removed.
         Rejects overlapping PT or booked group sessions. Paid methods remain pending until the front desk
         confirms payment (POST /coach-bookings/{id}/confirm-payment); package quota uses used_quota. A member
@@ -36,8 +36,8 @@ paths:
                 coachId: {type: integer, format: int64}
                 disciplineId: {type: integer, format: int64, nullable: true}
                 bookingDate: {type: string, format: date}
-                startTime: {type: string, example: '14:15:00'}
-                endTime: {type: string, example: '16:45:00'}
+                startTime: {type: string, example: '15:15:00'}
+                endTime: {type: string, example: '17:45:00'}
                 paymentMethod: {type: string, enum: [package_quota, cash, bank_transfer, online_wallet], default: package_quota}
                 notes: {type: string, nullable: true}
       responses:
