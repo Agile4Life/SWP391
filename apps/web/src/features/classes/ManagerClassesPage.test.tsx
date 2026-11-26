@@ -323,6 +323,44 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     }
   };
 
+  it('opens the selected course schedule instead of a previously selected course', async () => {
+    const existingClasses = await classesApi.getClasses();
+    const existingSessions = await classesApi.getSessions();
+    vi.mocked(classesApi.getClasses).mockResolvedValue([...existingClasses, {
+      ...existingClasses[1], id: 4, name: 'Boxing nâng cao',
+    }]);
+    vi.mocked(classesApi.getSessions).mockResolvedValue([...existingSessions, {
+      ...existingSessions[1], id: 504, classId: 4, className: 'Boxing nâng cao',
+      startTime: '09:45:00', endTime: '11:15:00',
+    }]);
+    await renderPage('Lịch theo bộ môn');
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-2"]')!.click());
+    const filter = host.querySelector<HTMLSelectElement>('select[aria-label="Lọc lịch theo khóa học"]')!;
+    await act(async () => { filter.value = '4'; filter.dispatchEvent(new Event('change', { bubbles: true })); });
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    await act(async () => listTab.click());
+    const row = [...host.querySelectorAll('tbody tr')].find((item) => item.textContent?.includes('Boxing Cơ Bản'))!;
+    const viewButton = [...row.querySelectorAll('button')].find((button) => button.textContent === 'Xem lịch')!;
+    await act(async () => viewButton.click());
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="Lọc lịch theo khóa học"]')?.value).toBe('2');
+    const events = [...host.querySelectorAll<HTMLButtonElement>('.mcal__event')];
+    expect(events.some((event) => event.textContent?.includes('Boxing Cơ Bản'))).toBe(true);
+    expect(events.some((event) => event.textContent?.includes('Boxing nâng cao'))).toBe(false);
+  });
+
+  it('clears the course filter when switching disciplines and returning', async () => {
+    await renderPage('Lịch theo bộ môn');
+    const boxing = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-2"]')!;
+    const gym = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-1"]')!;
+    await act(async () => boxing.click());
+    const filter = host.querySelector<HTMLSelectElement>('select[aria-label="Lọc lịch theo khóa học"]')!;
+    await act(async () => { filter.value = '2'; filter.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(filter.value).toBe('2');
+    await act(async () => gym.click());
+    await act(async () => boxing.click());
+    expect(host.querySelector<HTMLSelectElement>('select[aria-label="Lọc lịch theo khóa học"]')?.value).toBe('');
+  });
+
   it('renders 3 independent tabs without duplicate "All disciplines" chip or redundant filter dropdowns', async () => {
     await renderPage('Lịch theo bộ môn');
 

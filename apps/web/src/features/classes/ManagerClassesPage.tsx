@@ -362,7 +362,10 @@ export function ManagerClassesPage() {
                     data-testid={`discipline-chip-${disc.id}`}
                     className={`filter-chip${selected ? ' is-active' : ''}`}
                     aria-pressed={selected}
-                    onClick={() => setSelectedDisciplineId(disc.id)}
+                    onClick={() => {
+                      if (disc.id !== activeDisciplineId) setSelectedClassId('');
+                      setSelectedDisciplineId(disc.id);
+                    }}
                   >
                     <span className="class-discipline-dot" style={{ background: color }} aria-hidden="true" />
                     {`${disc.name} (${count})`}
@@ -502,6 +505,7 @@ export function ManagerClassesPage() {
             sessions={enrichedSessions}
             onViewClassSchedule={(cls) => {
               setSelectedDisciplineId(cls.disciplineId);
+              setSelectedClassId(String(cls.id));
               if (cls.startDate) {
                 setWeekStart(mondayOf(cls.startDate));
               } else {
