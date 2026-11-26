@@ -399,10 +399,46 @@ it('asks confirmation before cancelling a pending membership request at the desk
   await act(async () => cancelBtn.click());
   expect(api.cancelPendingSubscription).not.toHaveBeenCalled();
 
-  const dialogConfirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Hủy yêu cầu')!;
+  const dialogConfirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận hủy')!;
   expect(dialogConfirmBtn).toBeDefined();
+  const reason = host.querySelector<HTMLTextAreaElement>('dialog textarea')!;
+  expect(reason.required).toBe(true);
+  for (const value of ['', '   ', 'x'.repeat(501)]) {
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(reason, value);
+      reason.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => reason.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(api.cancelPendingSubscription).not.toHaveBeenCalled();
+  }
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(reason, '  Sai gói tập  ');
+    reason.dispatchEvent(new Event('input', { bubbles: true }));
+  });
   await act(async () => dialogConfirmBtn.click());
-  expect(api.cancelPendingSubscription).toHaveBeenCalledWith(77);
+  expect(api.cancelPendingSubscription).toHaveBeenCalledWith(77, 'Sai gói tập');
+});
+
+it('keeps the exact request and cancellation reason when the API fails', async () => {
+  const item = { id: 77, memberId: 10, membershipCode: 'MB-10', memberName: 'An', memberEmail: 'an@example.test', memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30, packagePrice: 200, startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01' };
+  api.getPendingSubscriptions.mockResolvedValue([item, { ...item, id: 78 }]);
+  api.cancelPendingSubscription.mockRejectedValue(new Error('Cancel unavailable'));
+  await act(async () => root.render(<StaffReceptionPage />));
+  const cancel = [...host.querySelectorAll<HTMLButtonElement>('button')].filter(b => b.textContent === 'Hủy yêu cầu')[1];
+  await act(async () => cancel.click());
+  const reason = host.querySelector<HTMLTextAreaElement>('dialog textarea')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(reason, 'Nhầm gói');
+    reason.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => reason.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.cancelPendingSubscription).toHaveBeenCalledWith(78, 'Nhầm gói');
+  expect(host.querySelector('dialog')?.textContent).toContain('Cancel unavailable');
+  expect(reason.value).toBe('Nhầm gói');
+  expect(host.textContent).toContain('Yêu cầu #77');
+  expect(host.textContent).toContain('Yêu cầu #78');
+  expect(getNotices().some(notice => notice.type === 'success')).toBe(false);
+  expect(api.processPayment).not.toHaveBeenCalled();
 });
 
 const runningGold = { id: 50, memberId: 10, packageId: 2, packageName: 'GOLD 9 THÁNG', previousSubscriptionId: null,

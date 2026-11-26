@@ -2,6 +2,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { maskCitizenId, receptionApi } from './receptionApi';
 
 describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
+  it('posts the trimmed cancellation reason to the exact pending request', async () => {
+    const fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: {} }) });
+    vi.stubGlobal('fetch', fetch);
+    await receptionApi.cancelPendingSubscription(50, '  Wrong package  ');
+    expect(fetch).toHaveBeenCalledWith('/api/v1/memberships/subscriptions/50/cancel', expect.objectContaining({
+      method: 'POST', body: JSON.stringify({ reason: 'Wrong package' }),
+    }));
+  });
   beforeEach(() => {
     vi.restoreAllMocks();
   });

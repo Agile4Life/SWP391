@@ -115,8 +115,9 @@ public class MembershipSubscriptionController {
     @PreAuthorize("hasAnyRole('MEMBER', 'CENTER_MANAGER', 'RECEPTIONIST')")
     public ApiResponse<SubscriptionDto> cancelPending(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
-            @PathVariable Long id) {
-        return ApiResponse.ok(msg("membership.subscription.cancelled"), service.cancelPending(principal, id));
+            @PathVariable Long id,
+            @Valid @RequestBody(required = false) SubscriptionRequests.CancelPendingRequest request) {
+        return ApiResponse.ok(msg("membership.subscription.cancelled"), service.cancelPending(principal, id, request == null ? null : request.reason()));
     }
 
     /** POST /{id}/resume: hội viên quay lại tập sớm khi đang bảo lưu. */

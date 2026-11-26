@@ -44,6 +44,13 @@ public class MembershipSubscription {
     @Column(name = "status", nullable = false, length = 20)
     private String status = "pending_payment";
 
+    /** Chỉ dùng khi hủy yêu cầu chưa thanh toán; null cho dữ liệu cũ, không liên quan hoàn tiền. */
+    @Column(name = "pending_cancellation_reason", length = 500)
+    private String pendingCancellationReason;
+
+    public String getPendingCancellationReason() { return pendingCancellationReason; }
+    public void setPendingCancellationReason(String reason) { this.pendingCancellationReason = reason; }
+
     @Column(name = "qr_code", length = 255, unique = true)
     private String qrCode;
 
