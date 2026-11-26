@@ -391,38 +391,6 @@ export function ManagerClassesPage() {
                         {t('+ Tạo khóa mới', '+ New course')}
                       </button>
                     </div>
-                    <div className="discipline-class-pills">
-                      {activeDisciplineClasses.map((cls) => {
-                        const slotText = cls.startTime && cls.endTime
-                          ? formatSlotLabel(cls.startTime, cls.endTime)
-                          : null;
-                        return (
-                          <div key={cls.id} className="discipline-class-item">
-                            <div className="discipline-class-item__info">
-                              <strong>{cls.name}</strong>
-                              <span className="discipline-class-item__meta">
-                                {[
-                                  cls.roomName,
-                                  cls.coachName,
-                                  slotText,
-                                  t(`${cls.capacity} chỗ`, `${cls.capacity} seats`),
-                                ]
-                                  .filter(Boolean)
-                                  .join(' · ')}
-                              </span>
-                            </div>
-                            <button
-                              type="button"
-                              className="btn-secondary btn-sm"
-                              data-testid={`edit-discipline-class-${cls.id}`}
-                              onClick={() => setEditingClass(cls)}
-                            >
-                              {t('Sửa lớp', 'Edit class')}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
                   </>
                 ) : (
                   <div className="discipline-active-bar__head">
