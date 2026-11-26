@@ -248,4 +248,26 @@ describe('WeeklyTimetable', () => {
     const todaySlot1 = host.querySelector<HTMLButtonElement>('[data-slot="2026-11-26|1"]')!;
     expect(todaySlot1.getAttribute('aria-disabled')).toBeNull();
   });
+
+  it('summary cells hide cancelled sessions until the cell list is opened', async () => {
+    const gym = { ...event, id: 'g', title: 'Gym A', disciplineName: 'Gym', tone: 'open' as const };
+    const yogaCancelled = { ...event, id: 'y', title: 'Yoga B', disciplineName: 'Yoga', tone: 'cancelled' as const };
+    const onlyCancelled = { ...yogaCancelled, id: 'c', startTime: '09:45:00', endTime: '12:15:00' };
+    await render({ summary: true, events: [gym, yogaCancelled, onlyCancelled] });
+
+    const cells = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="timetable-summary-cell"]')];
+    expect(cells).toHaveLength(2);
+    expect(cells[0].textContent).toContain('Gym');
+    expect(cells[0].textContent).not.toContain('Yoga');
+    expect(cells[0].textContent).not.toMatch(/hủy/i);
+    // Ô chỉ toàn buổi hủy vẫn bấm được, chỉ hiện nhãn mờ "Đã hủy".
+    expect(cells[1].textContent).toBe('Đã hủy');
+
+    await act(async () => cells[0].click());
+    const rows = [...document.querySelectorAll<HTMLButtonElement>('[data-testid="timetable-overflow-list"] button')];
+    expect(rows).toHaveLength(2);
+    const cancelledRow = rows.find((r) => r.textContent?.includes('Yoga B'))!;
+    expect(cancelledRow.classList.contains('mcal__overflow-row--cancelled')).toBe(true);
+    expect(cancelledRow.textContent).toContain('Đã hủy');
+  });
 });

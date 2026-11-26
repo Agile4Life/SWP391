@@ -895,6 +895,35 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(dialogButtons).toContain('Hủy buổi');
   });
 
+  it('switches the overview to a month calendar, lists a day and jumps back to its week', async () => {
+    await renderPage();
+    const switchBtns = () => [...document.querySelectorAll<HTMLButtonElement>('[data-testid="overview-mode-switch"] button')];
+    await act(async () => switchBtns().find((b) => b.textContent === 'Tháng')!.click());
+    expect(host.querySelector('[data-testid="month-overview-grid"]')).not.toBeNull();
+    expect(host.querySelector('.mcal__range')?.textContent).toBe(`Tháng ${Number(today.slice(5, 7))}/${today.slice(0, 4)}`);
+
+    const todayCell = host.querySelector<HTMLButtonElement>(`[data-testid="month-day-${today}"]`)!;
+    expect(todayCell.disabled).toBe(false);
+    expect(todayCell.textContent).toContain('Gym');
+    expect(todayCell.textContent).toContain('Yoga');
+    expect(todayCell.textContent).toContain('1 buổi');
+
+    // Tắt Yoga ở chip bật/tắt -> lịch tháng cũng bỏ Yoga.
+    const yogaToggle = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="overview-discipline-toggles"] button')]
+      .find((b) => b.textContent?.includes('Yoga'))!;
+    await act(async () => yogaToggle.click());
+    expect(host.querySelector(`[data-testid="month-day-${today}"]`)?.textContent).not.toContain('Yoga');
+    await act(async () => yogaToggle.click());
+
+    await act(async () => host.querySelector<HTMLButtonElement>(`[data-testid="month-day-${today}"]`)!.click());
+    const rows = [...document.querySelectorAll<HTMLButtonElement>('[data-testid="month-day-list"] button')];
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+    const weekBtn = [...document.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xem tuần này')!;
+    await act(async () => weekBtn.click());
+    expect(host.querySelector('[data-testid="month-overview-grid"]')).toBeNull();
+    expect(host.querySelectorAll('[data-testid="timetable-summary-cell"]').length).toBeGreaterThan(0);
+  });
+
   it('opens detail modal from the slot summary cell list on Full Week tab', async () => {
     await renderPage();
 
@@ -1153,7 +1182,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Sẽ tạo 5 buổi học');
 
     // Toggle another weekday -> stale availability cleared immediately while pending
-    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="weekday-chip-FRIDAY"]')!.click());
+    // Chọn một thứ chưa chọn và không phải thứ khai giảng (thứ khai giảng bị khóa; ngày mặc định = hôm nay + 14).
+    const freeChip = document.querySelector<HTMLButtonElement>('[data-testid^="weekday-chip-"]:not(.is-locked)[aria-pressed="false"]')!;
+    await act(async () => freeChip.click());
     const nextBtnPending = document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!;
     expect(nextBtnPending.disabled).toBe(true);
     expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Đang kiểm tra');

@@ -744,3 +744,16 @@
 .mcal__summary-name { flex: 1 1 auto; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mcal__summary-row strong { flex: none; font-weight: 800; }
 .mcal__summary-note { color: var(--portal-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Lịch tháng tổng quát của Quản lý: cả ô ngày là một nút mở danh sách buổi */
+.mcal__month-day { display: grid; align-content: start; gap: 3px; width: 100%; height: 100%; min-width: 0; padding: 0; border: 0; border-radius: 8px; background: transparent; color: inherit; font: inherit; font-size: 12px; text-align: left; font-variant-numeric: tabular-nums; cursor: pointer; }
+.mcal__month-day:disabled { cursor: default; }
+.mcal__month-day:not(:disabled):hover { background: var(--portal-tint); }
+.mcal__month-day:focus-visible { outline: 2px solid var(--sol-accent); outline-offset: 2px; }
+.mcal__month-day .mcal__summary-row small { flex: none; color: var(--portal-muted); font-size: 11px; }
+
+/* Buổi đã hủy trong danh sách buổi (bấm ô lịch tổng/tháng): gạch tên, làm mờ */
+.mcal__overflow-row--cancelled { opacity: .7; }
+.mcal__overflow-row--cancelled .mcal__overflow-main strong { text-decoration: line-through; color: var(--portal-muted); }
+/* !important: màu bộ môn được gán bằng style inline. */
+.mcal__overflow-row--cancelled .mcal__overflow-swatch { background: var(--portal-border-strong) !important; }
