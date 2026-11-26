@@ -663,8 +663,8 @@ export function ManagerCatalogsPage() {
       ) : (
         <div data-i18n-managed className="portal-card portal-card--flush">
           <div className="portal-table-wrapper">
-            <table className="portal-table manager-catalog-table" style={tab === 'packages' ? { tableLayout: 'fixed', minWidth: 1400 } : undefined}>
-              {tab === 'packages' && <colgroup><col style={{ width: '25%' }} /><col style={{ width: '10%' }} /><col style={{ width: '10%' }} /><col style={{ width: '9%' }} /><col style={{ width: '9%' }} /><col style={{ width: '10%' }} /><col style={{ width: '27%' }} /></colgroup>}
+            <table className="portal-table manager-catalog-table" style={tab === 'packages' ? { tableLayout: 'fixed', minWidth: 1200 } : undefined}>
+              {tab === 'packages' && <colgroup><col style={{ width: 'calc(34% - 132.6px)' }} /><col style={{ width: 'calc(14% - 54.6px)' }} /><col style={{ width: 'calc(14% - 54.6px)' }} /><col style={{ width: 'calc(12% - 46.8px)' }} /><col style={{ width: 'calc(12% - 46.8px)' }} /><col style={{ width: 'calc(14% - 54.6px)' }} /><col style={{ width: '390px' }} /></colgroup>}
               {tab === 'disciplines' && (
                 <>
                   <thead data-i18n-managed>
@@ -790,6 +790,7 @@ export function ManagerCatalogsPage() {
                             </span>
                           </td>
                           <td className="actions" style={{ whiteSpace: 'nowrap' }}>
+                            <div className="manager-package-actions">
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
@@ -845,11 +846,11 @@ export function ManagerCatalogsPage() {
                             <button
                               type="button"
                               className="btn-danger btn-sm"
-                              style={{ marginLeft: 8 }}
                               disabled={isSubmitting}
                               onClick={() => void remove('gói tập', p.name, () => catalogApi.deletePackage(p.id))}
                             >
                               {t("Xóa")}</button>
+                            </div>
                           </td>
                         </tr>
                       );

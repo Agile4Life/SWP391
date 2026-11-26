@@ -11,3 +11,19 @@
 .portal-table.manager-catalog-table td.actions {
   vertical-align: middle;
 }
+
+.manager-package-actions {
+  display: grid;
+  grid-template-columns: max-content max-content 6.25rem max-content;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.manager-package-actions > button {
+  justify-self: center;
+}
+
+.portal-table td.actions .manager-package-actions > .btn-secondary + .btn-secondary {
+  margin-left: 0;
+}
