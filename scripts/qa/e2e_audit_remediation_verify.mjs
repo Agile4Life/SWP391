@@ -142,10 +142,10 @@ const FUTURE_END = addIsoDays(TODAY, 35);
 
 const FIVE_SLOTS = [
   { slotNumber: 1, code: 'SLOT_1', startTime: '07:00', endTime: '09:30' },
-  { slotNumber: 2, code: 'SLOT_2', startTime: '09:45', endTime: '11:15' },
-  { slotNumber: 3, code: 'SLOT_3', startTime: '11:30', endTime: '14:00' },
-  { slotNumber: 4, code: 'SLOT_4', startTime: '14:15', endTime: '16:45' },
-  { slotNumber: 5, code: 'SLOT_5', startTime: '17:00', endTime: '19:30' },
+  { slotNumber: 2, code: 'SLOT_2', startTime: '09:45', endTime: '12:15' },
+  { slotNumber: 3, code: 'SLOT_3', startTime: '12:30', endTime: '15:00' },
+  { slotNumber: 4, code: 'SLOT_4', startTime: '15:15', endTime: '17:45' },
+  { slotNumber: 5, code: 'SLOT_5', startTime: '18:00', endTime: '20:30' },
 ];
 
 const DISCIPLINES_FIXTURE = [
@@ -245,8 +245,8 @@ const PUBLIC_CATALOG_FIXTURE = {
       roomId: 13,
       roomName: 'Ring Arena 01',
       sessionDate: addIsoDays(TODAY, 1),
-      startTime: '17:00:00',
-      endTime: '19:30:00',
+      startTime: '18:00:00',
+      endTime: '20:30:00',
       status: 'scheduled',
       cancelReason: null,
       capacity: 14,
@@ -264,7 +264,7 @@ const PUBLIC_CATALOG_FIXTURE = {
       roomName: 'Zen Garden Studio',
       sessionDate: addIsoDays(TODAY, 2),
       startTime: '09:45:00',
-      endTime: '11:15:00',
+      endTime: '12:15:00',
       status: 'scheduled',
       cancelReason: null,
       capacity: 18,
@@ -593,8 +593,8 @@ function defaultApiFixture(req, state) {
         startDate: FUTURE_START,
         endDate: FUTURE_END,
         recurringDays: 'TUESDAY,THURSDAY',
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
       },
       ...state.stateful.createdClasses,
     ]);
@@ -1005,7 +1005,7 @@ async function main() {
           // 5-slot widget presence
           const slotWidgetText = await page.locator('.fit-preview-slots').innerText();
           assert.ok(slotWidgetText.includes('07:00') && slotWidgetText.includes('09:30'), 'Slot 1 (07:00-09:30) missing in 5-slot widget');
-          assert.ok(slotWidgetText.includes('17:00') && slotWidgetText.includes('19:30'), 'Slot 5 (17:00-19:30) missing in 5-slot widget');
+          assert.ok(slotWidgetText.includes('18:00') && slotWidgetText.includes('20:30'), 'Slot 5 (18:00-20:30) missing in 5-slot widget');
           // Old misleading copy is gone
           assert.ok(!bodyText.includes('đặt PT và chọn gói'), 'Misleading legacy copy "đặt PT và chọn gói" still present!');
 

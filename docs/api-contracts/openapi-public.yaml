@@ -19,8 +19,8 @@ paths:
         ở trạng thái `scheduled`, thuộc các khóa học nhóm định kỳ đang `active`
         (hỗ trợ nhiều lớp `active`/bộ môn miễn không trùng ngày và slot — `409 SCHEDULING_DISCIPLINE_CONFLICT`),
         có phòng khả dụng, HLV đang hoạt động và khung giờ `(startTime, endTime)` thuộc đúng 1 trong 5 Slot cố định
-        (`07:00 – 19:30`): `Slot 1` (`07:00–09:30`), `Slot 2` (`09:45–11:15`), `Slot 3` (`11:30–14:00`),
-        `Slot 4` (`14:15–16:45`), `Slot 5` (`17:00–19:30`).
+        (`07:00 – 20:30`): `Slot 1` (`07:00–09:30`), `Slot 2` (`09:45–12:15`), `Slot 3` (`12:30–15:00`),
+        `Slot 4` (`15:15–17:45`), `Slot 5` (`18:00–20:30`).
         Số chỗ đã đặt (`bookedCount`) tính gồm ghi danh khóa học đang hoạt động cộng lượt đặt buổi cũ (nếu còn).
         Endpoint chỉ đọc, không công khai thao tác ghi; mọi dữ liệu được truy vấn trực tiếp ở mỗi request với
         header `Cache-Control: no-store`.
@@ -61,7 +61,7 @@ paths:
                         type: array
                         description: >
                           Các buổi lớp học nhóm định kỳ sắp diễn ra trong 7 ngày tới của 3 bộ môn đang hoạt động
-                          (`Gym`, `Boxing`, `Yoga`) theo 5 Slot cố định (`07:00 – 19:30`) khi `app.legacy.classes-enabled=true`.
+                          (`Gym`, `Boxing`, `Yoga`) theo 5 Slot cố định (`07:00 – 20:30`) khi `app.legacy.classes-enabled=true`.
                         items:
                           type: object
                           properties:
@@ -77,14 +77,14 @@ paths:
                             sessionDate: { type: string, format: date }
                             startTime:
                               type: string
-                              enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+                              enum: ['07:00:00', '09:45:00', '12:30:00', '15:15:00', '18:00:00']
                               example: '07:00:00'
                               description: Giờ bắt đầu theo 1 trong 5 Slot cố định (`07:00`, `09:45`, `11:30`, `14:15`, `17:00`).
                             endTime:
                               type: string
-                              enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+                              enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
                               example: '09:30:00'
-                              description: Giờ kết thúc tương ứng theo cặp với `startTime` trong 5 Slot cố định (`09:30`, `11:15`, `14:00`, `16:45`, `19:30`).
+                              description: Giờ kết thúc tương ứng theo cặp với `startTime` trong 5 Slot cố định (`09:30`, `12:15`, `15:00`, `17:45`, `20:30`).
                             status: { type: string, enum: [scheduled] }
                             cancelReason: { type: string, nullable: true }
                             capacity: { type: integer }

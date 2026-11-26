@@ -71,6 +71,8 @@ interface WeeklyTimetableProps {
   toolbar?: ReactNode;
   /** Giới hạn số làn hiển thị song song tối đa trong 1 cột ngày; vượt quá sẽ gom thành nút "+N lớp". */
   maxVisibleLanes?: number;
+  /** Lịch tổng: mỗi ô Slot chỉ đếm số lớp theo bộ môn, bấm ô để mở danh sách buổi thay vì vẽ từng khối. */
+  summary?: boolean;
   label: string;
 }
 
@@ -139,14 +141,14 @@ function slotKey(date: string, slotNumber: number) {
 }
 
 /**
- * Lịch tuần dạng lưới 5 Slot cố định (07:00 – 19:30) × 7 ngày:
+ * Lịch tuần dạng lưới 5 Slot cố định (07:00 – 20:30) × 7 ngày:
  * xếp các buổi trùng Slot thành làn song song, hỗ trợ gom cụm "+N lớp", đánh dấu Slot đã qua,
  * hiển thị vạch giờ hiện tại, điều khiển bằng phím mũi tên và chế độ một ngày trên màn hẹp.
  */
 export function WeeklyTimetable({
   weekStart, events, loading = false, error = null, onRetry, onWeekChange, onEventClick, selectedId, disabled = false,
   emptyLabel, onSlotClick, slotActionLabel, legend, legendNote, toolbar,
-  maxVisibleLanes, label,
+  maxVisibleLanes, summary = false, label,
 }: WeeklyTimetableProps) {
   useLanguage();
   const { t } = useI18n();
@@ -389,7 +391,62 @@ export function WeeklyTimetable({
                     );
                   })}
 
-                  {grouped.visible.map(({ event, lane, lanes, topPct, heightPct }) => {
+                  {summary && SCHEDULE_SLOTS.map((slot, slotIndex) => {
+                    const slotEvents = dayEvents
+                      .filter((event) => resolveSlotIndex(event.startTime, event.endTime) === slotIndex)
+                      .sort((a, b) => (a.disciplineName ?? '').localeCompare(b.disciplineName ?? '') || a.title.localeCompare(b.title));
+                    if (slotEvents.length === 0) return null;
+                    const active = slotEvents.filter((event) => event.tone !== 'cancelled');
+                    const groups = new Map<string, { name: string; color?: string; count: number }>();
+                    for (const event of active) {
+                      const name = event.disciplineName || event.title;
+                      const group = groups.get(name) ?? { name, color: event.accentColor, count: 0 };
+                      group.count += 1;
+                      groups.set(name, group);
+                    }
+                    const fullCount = active.filter((event) => event.tone === 'full').length;
+                    const cancelledCount = slotEvents.length - active.length;
+                    const allPast = slotEvents.every((event) => event.tone === 'past' || event.tone === 'cancelled');
+                    const rangeLabel = `${slot.label} · ${slot.rangeLabel}`;
+                    const summaryText = [...groups.values()].map((g) => `${g.name} ${g.count}`).join(', ');
+                    return (
+                      <button
+                        key={slot.code}
+                        type="button"
+                        className={`mcal__summary${allPast ? ' is-past' : ''}`}
+                        data-testid="timetable-summary-cell"
+                        style={{ top: `calc(${slotIndex * SLOT_ROW_PX}px + 3px)`, height: SLOT_ROW_PX - 6 }}
+                        disabled={disabled}
+                        aria-label={t(
+                          `${dayName(day)} ${shortDate(day)}, ${rangeLabel}: ${slotEvents.length} lớp (${summaryText}). Xem danh sách`,
+                          `${dayName(day)} ${shortDate(day)}, ${rangeLabel}: ${slotEvents.length} ${slotEvents.length === 1 ? 'class' : 'classes'} (${summaryText}). View list`,
+                        )}
+                        onClick={() => setOverflowCluster({
+                          id: `${day}-${slot.code}`, date: day, lane: 0, lanes: 1, topPct: 0, heightPct: 0,
+                          hiddenEvents: slotEvents, allEvents: slotEvents, rangeLabel,
+                        })}
+                      >
+                        {[...groups.values()].map((group) => (
+                          <span key={group.name} className="mcal__summary-row">
+                            <i className="mcal__summary-dot" style={group.color ? { background: group.color } : undefined} aria-hidden="true" />
+                            <span className="mcal__summary-name">{group.name}</span>
+                            {/* Quy tắc không trùng ngày & slot cùng bộ môn khiến số đếm thường là 1, chỉ hiện khi > 1. */}
+                            {group.count > 1 && <strong>{group.count}</strong>}
+                          </span>
+                        ))}
+                        {(fullCount > 0 || cancelledCount > 0) && (
+                          <span className="mcal__summary-note">
+                            {[
+                              fullCount > 0 ? t(`${fullCount} đầy`, `${fullCount} full`) : '',
+                              cancelledCount > 0 ? t(`${cancelledCount} hủy`, `${cancelledCount} cancelled`) : '',
+                            ].filter(Boolean).join(' · ')}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {!summary && grouped.visible.map(({ event, lane, lanes, topPct, heightPct }) => {
                     const slotText = formatSlotLabel(event.startTime, event.endTime);
                     const eventStyle: CSSProperties & { '--event-accent'?: string } = {
                       top: `calc(${topPct}% + 3px)`,
@@ -423,7 +480,7 @@ export function WeeklyTimetable({
                     );
                   })}
 
-                  {grouped.overflows.map((cluster) => (
+                  {!summary && grouped.overflows.map((cluster) => (
                     <button
                       key={cluster.id}
                       type="button"
@@ -466,10 +523,10 @@ export function WeeklyTimetable({
       {outsideRange > 0 && (
         <p className="mcal__note" role="status">
           {t(
-            `${outsideRange} buổi học nằm ngoài khung 5 slot (07:00–19:30) nên không hiện trên bảng.`,
+            `${outsideRange} buổi học nằm ngoài khung 5 slot (07:00–20:30) nên không hiện trên bảng.`,
             outsideRange === 1
-              ? '1 session outside the 5-slot schedule (07:00–19:30) is not shown.'
-              : `${outsideRange} sessions outside the 5-slot schedule (07:00–19:30) are not shown.`,
+              ? '1 session outside the 5-slot schedule (07:00–20:30) is not shown.'
+              : `${outsideRange} sessions outside the 5-slot schedule (07:00–20:30) are not shown.`,
           )}
         </p>
       )}

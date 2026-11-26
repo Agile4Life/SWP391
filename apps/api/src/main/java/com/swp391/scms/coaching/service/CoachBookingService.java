@@ -37,7 +37,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Nghiệp vụ đặt buổi PT 1:1 với HLV theo 5 slot cố định (07:00–19:30): khung giờ trống, lượt PT miễn phí theo
+ * Nghiệp vụ đặt buổi PT 1:1 với HLV theo 5 slot cố định (07:00–20:30): khung giờ trống, lượt PT miễn phí theo
  * hạng gói, đặt lịch (kiểm tra trùng lịch, nghỉ phép, gói còn hiệu lực), buổi trả tiền theo slot thu ở quầy,
  * hủy lịch kèm hoàn tiền, điểm danh và tự giải phóng buổi chưa trả tiền.
  */
@@ -183,7 +183,7 @@ public class CoachBookingService {
     }
 
     /**
-     * 5 khung giờ cố định (Slot 1–Slot 5, 07:00–19:30) trong ngày của HLV, đánh dấu còn trống hay không và lý do:
+     * 5 khung giờ cố định (Slot 1–Slot 5, 07:00–20:30) trong ngày của HLV, đánh dấu còn trống hay không và lý do:
      * HLV nghỉ phép, quá gần giờ (cần đặt trước 2 giờ), HLV bận, hoặc hội viên bận.
      */
     @Transactional(readOnly = true)
@@ -380,7 +380,7 @@ public class CoachBookingService {
 
     /**
      * Đặt buổi PT: khóa dòng hội viên để đếm lượt chính xác; HLV phải đang làm và không nghỉ phép; thuộc 1 trong
-     * 5 slot cố định (07:00–19:30), đặt trước ít nhất 2 giờ; không trùng lịch HLV/hội viên, không rơi vào ngày
+     * 5 slot cố định (07:00–20:30), đặt trước ít nhất 2 giờ; không trùng lịch HLV/hội viên, không rơi vào ngày
      * bảo lưu; hội viên phải có gói hiệu lực. Dùng lượt gói thì phải còn lượt; trả theo slot thì tối đa 2 buổi
      * chưa trả, giá được giảm theo hạng gói và tạo khoản thu chờ. Gửi thông báo cho HLV và hội viên.
      */

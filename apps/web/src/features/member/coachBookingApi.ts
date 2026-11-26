@@ -14,7 +14,7 @@ export interface CoachPublicDto {
 }
 
 /**
- * Một khung giờ PT trong 5 Slot cố định (07:00 – 19:30): số Slot, giờ bắt đầu/kết thúc, còn trống không và lý do nếu bận.
+ * Một khung giờ PT trong 5 Slot cố định (07:00 – 20:30): số Slot, giờ bắt đầu/kết thúc, còn trống không và lý do nếu bận.
  */
 export interface CoachAvailableSlotDto {
   slotNumber?: number; // 1..5

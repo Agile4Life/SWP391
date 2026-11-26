@@ -127,7 +127,7 @@ class SchedulingServiceTest {
 
     /** Kiểm thử: không thể xếp lịch buổi bắt đầu trong quá khứ hoặc ngay lúc này. */
     @ParameterizedTest
-    @org.junit.jupiter.params.provider.EnumSource(value = ScheduleSlot.class, names = {"SLOT_1", "SLOT_2", "SLOT_3"})
+    @org.junit.jupiter.params.provider.EnumSource(value = ScheduleSlot.class, names = {"SLOT_1", "SLOT_2"})
     void cannotScheduleSessionStartingInThePastOrNow(ScheduleSlot slot) {
         var request = new CreateSessionRequest(TODAY, slot.startTime(), slot.endTime());
 

@@ -717,3 +717,21 @@
     transition: none;
   }
 }
+
+/* Ô tóm tắt của Lịch tổng: đếm số lớp theo bộ môn trong từng Slot, bấm để mở danh sách buổi */
+.mcal__summary {
+  position: absolute; z-index: 2; left: 5px; right: 5px;
+  display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  padding: 6px 8px; border: 1px solid var(--portal-border); border-radius: 10px;
+  background: var(--portal-raised); color: var(--portal-paper);
+  font: inherit; font-size: 12px; text-align: left; font-variant-numeric: tabular-nums;
+  cursor: pointer; overflow: hidden; transition: border-color 140ms ease, background-color 140ms ease;
+}
+.mcal__summary:hover { border-color: var(--sol-accent); background: color-mix(in srgb, var(--sol-accent) 10%, var(--portal-raised)); }
+.mcal__summary:focus-visible { outline: 2px solid var(--sol-accent); outline-offset: 2px; }
+.mcal__summary.is-past { opacity: .55; }
+.mcal__summary-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.mcal__summary-dot { flex: none; width: 8px; height: 8px; border-radius: 999px; background: var(--sol-accent); }
+.mcal__summary-name { flex: 1 1 auto; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__summary-row strong { flex: none; font-weight: 800; }
+.mcal__summary-note { color: var(--portal-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

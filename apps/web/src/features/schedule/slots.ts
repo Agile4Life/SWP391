@@ -1,5 +1,5 @@
 /**
- * Nguồn chuẩn duy nhất cho hệ thống 5 Slot lịch cố định (07:00 – 19:30) toàn Portal.
+ * Nguồn chuẩn duy nhất cho hệ thống 5 Slot lịch cố định (07:00 – 20:30) toàn Portal.
  * Dùng chung cho Lớp học nhóm (Manager, Coach, Member) và đặt lịch PT 1:1.
  */
 export type ScheduleSlotCode = 'SLOT_1' | 'SLOT_2' | 'SLOT_3' | 'SLOT_4' | 'SLOT_5';
@@ -35,48 +35,48 @@ export const SCHEDULE_SLOTS: readonly ScheduleSlot[] = [
     code: 'SLOT_2',
     label: 'Slot 2',
     startTime: '09:45',
-    endTime: '11:15',
+    endTime: '12:15',
     startApi: '09:45:00',
-    endApi: '11:15:00',
-    rangeLabel: '09:45 – 11:15',
+    endApi: '12:15:00',
+    rangeLabel: '09:45 – 12:15',
     startMinutes: 9 * 60 + 45,
-    endMinutes: 11 * 60 + 15,
+    endMinutes: 12 * 60 + 15,
   },
   {
     number: 3,
     code: 'SLOT_3',
     label: 'Slot 3',
-    startTime: '11:30',
-    endTime: '14:00',
-    startApi: '11:30:00',
-    endApi: '14:00:00',
-    rangeLabel: '11:30 – 14:00',
-    startMinutes: 11 * 60 + 30,
-    endMinutes: 14 * 60,
+    startTime: '12:30',
+    endTime: '15:00',
+    startApi: '12:30:00',
+    endApi: '15:00:00',
+    rangeLabel: '12:30 – 15:00',
+    startMinutes: 12 * 60 + 30,
+    endMinutes: 15 * 60,
   },
   {
     number: 4,
     code: 'SLOT_4',
     label: 'Slot 4',
-    startTime: '14:15',
-    endTime: '16:45',
-    startApi: '14:15:00',
-    endApi: '16:45:00',
-    rangeLabel: '14:15 – 16:45',
-    startMinutes: 14 * 60 + 15,
-    endMinutes: 16 * 60 + 45,
+    startTime: '15:15',
+    endTime: '17:45',
+    startApi: '15:15:00',
+    endApi: '17:45:00',
+    rangeLabel: '15:15 – 17:45',
+    startMinutes: 15 * 60 + 15,
+    endMinutes: 17 * 60 + 45,
   },
   {
     number: 5,
     code: 'SLOT_5',
     label: 'Slot 5',
-    startTime: '17:00',
-    endTime: '19:30',
-    startApi: '17:00:00',
-    endApi: '19:30:00',
-    rangeLabel: '17:00 – 19:30',
-    startMinutes: 17 * 60,
-    endMinutes: 19 * 60 + 30,
+    startTime: '18:00',
+    endTime: '20:30',
+    startApi: '18:00:00',
+    endApi: '20:30:00',
+    rangeLabel: '18:00 – 20:30',
+    startMinutes: 18 * 60,
+    endMinutes: 20 * 60 + 30,
   },
 ] as const;
 
@@ -138,9 +138,9 @@ export function findScheduleSlot(
 
 /**
  * Quy đổi khoảng giờ về chỉ số hàng `0..4` của lưới 5 Slot:
- * 1. Ưu tiên khớp chính xác Slot (`07:00–09:30` → `0`, ..., `17:00–19:30` → `4`).
- * 2. Nếu là giờ tùy chỉnh nằm trong `07:00–19:30`, chọn Slot giao nhau nhiều nhất (`start < slot.end && end > slot.start`).
- * 3. Trả về `-1` nếu nằm ngoài `07:00–19:30` hoặc không giao với Slot nào.
+ * 1. Ưu tiên khớp chính xác Slot (`07:00–09:30` → `0`, ..., `18:00–20:30` → `4`).
+ * 2. Nếu là giờ tùy chỉnh nằm trong `07:00–20:30`, chọn Slot giao nhau nhiều nhất (`start < slot.end && end > slot.start`).
+ * 3. Trả về `-1` nếu nằm ngoài `07:00–20:30` hoặc không giao với Slot nào.
  */
 export function resolveSlotIndex(startTime?: string | null, endTime?: string | null): number {
   const exact = endTime ? findExactScheduleSlot(startTime, endTime) : findScheduleSlot(startTime);
@@ -168,7 +168,7 @@ export function resolveSlotIndex(startTime?: string | null, endTime?: string | n
   return bestIndex;
 }
 
-/** Sự kiện có khớp/giao vào 1 trong 5 Slot (`07:00–19:30`) hay không. */
+/** Sự kiện có khớp/giao vào 1 trong 5 Slot (`07:00–20:30`) hay không. */
 export function isWithinScheduleSlots(startTime?: string | null, endTime?: string | null): boolean {
   return resolveSlotIndex(startTime, endTime) !== -1;
 }

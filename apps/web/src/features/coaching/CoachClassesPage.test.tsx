@@ -181,8 +181,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
         id: 9,
         memberName: 'Phạm Quốc Bảo',
         bookingDate: currentMondayStr,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'confirmed',
         paymentMethod: 'package_quota',
         disciplineName: 'Gym',
@@ -192,8 +192,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
         id: 10,
         memberName: 'Đã hủy',
         bookingDate: currentMondayStr,
-        startTime: '14:15:00',
-        endTime: '16:45:00',
+        startTime: '15:15:00',
+        endTime: '17:45:00',
         status: 'cancelled',
       },
     ] as never);
@@ -212,7 +212,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
 
     await act(async () => events[0].click());
     const dialog = host.querySelector('dialog')!;
-    expect(dialog.textContent).toContain('Slot 5 · 17:00 – 19:30');
+    expect(dialog.textContent).toContain('Slot 5 · 18:00 – 20:30');
     expect(dialog.textContent).toContain('Đau vai trái');
     expect(dialog.textContent).toContain('Quyền lợi gói tập');
   });
@@ -236,7 +236,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
         membershipCode: 'MB-002',
         bookingDate: currentMondayStr,
         startTime: '09:45:00',
-        endTime: '11:15:00',
+        endTime: '12:15:00',
         status: 'confirmed',
       },
     ] as never);
@@ -277,8 +277,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
         coachName: 'Marcus Vance',
         roomName: 'Studio A',
         sessionDate: futureSessionDate,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'scheduled',
         capacity: 20,
         bookedCount: 11,
@@ -302,7 +302,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     await act(async () => classBlock.click());
 
     const dialog = host.querySelector('dialog')!;
-    expect(dialog.textContent).toContain('Slot 5 · 17:00 – 19:30');
+    expect(dialog.textContent).toContain('Slot 5 · 18:00 – 20:30');
     expect(dialog.textContent).toContain('Studio A');
     expect(dialog.textContent).toContain('11/20');
     expect(dialog.querySelector('a[href="/coach/attendance/77"]')).not.toBeNull();
@@ -331,8 +331,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
         coachId: 1,
         roomName: 'Ring Arena 01',
         sessionDate: addIsoDays(currentMondayStr, 2),
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'cancelled',
         cancelReason: 'Bảo trì sàn đấu',
         capacity: 14,
@@ -464,8 +464,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
         coachId: 1,
         roomName: 'Ring Arena 01',
         sessionDate: currentMondayStr,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'scheduled',
         capacity: 14,
         bookedCount: 6,
@@ -486,9 +486,9 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     expect(host.textContent).toContain('Boxing Nâng Cao');
   });
 
-  it('P2-E2E-03: marks Sunday 17:00–19:30 session as past deterministically after Sunday 19:30 UTC+7', async () => {
-    // 20:00 giờ Việt Nam Chủ Nhật (2026-11-29): buổi Slot 5 (17:00–19:30) cùng ngày đã qua -> .mcal__event--past
-    vi.setSystemTime(new Date('2026-11-29T13:00:00Z'));
+  it('P2-E2E-03: marks Sunday 18:00–20:30 session as past deterministically after Sunday 20:30 UTC+7', async () => {
+    // 20:45 giờ Việt Nam Chủ Nhật (2026-11-29): buổi Slot 5 (18:00–20:30) cùng ngày đã qua -> .mcal__event--past
+    vi.setSystemTime(new Date('2026-11-29T13:45:00Z'));
     const sundayDate = addIsoDays(currentMondayStr, 6);
     vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([
       {
@@ -500,8 +500,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
         coachName: 'Marcus Vance',
         roomName: 'Zen Garden Studio',
         sessionDate: sundayDate,
-        startTime: '17:00:00',
-        endTime: '19:30:00',
+        startTime: '18:00:00',
+        endTime: '20:30:00',
         status: 'scheduled',
         capacity: 16,
         bookedCount: 8,

@@ -45,8 +45,8 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
     private static final String CHECKIN_MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký hoặc gia hạn gói tập để tiếp tục.";
     private static final String CHECKIN_MEMBERSHIP_EN = "You do not have an active membership subscription or your subscription has expired. Please register or renew a membership package to continue.";
-    private static final String INVALID_SLOT_VI = "Khung giờ không hợp lệ. Vui lòng chọn một trong 5 slot cố định (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
-    private static final String INVALID_SLOT_EN = "Invalid time slot. Please choose one of the 5 fixed slots (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
+    private static final String INVALID_SLOT_VI = "Khung giờ không hợp lệ. Vui lòng chọn một trong 5 slot cố định (Slot 1: 07:00–09:30, Slot 2: 09:45–12:15, Slot 3: 12:30–15:00, Slot 4: 15:15–17:45, Slot 5: 18:00–20:30).";
+    private static final String INVALID_SLOT_EN = "Invalid time slot. Please choose one of the 5 fixed slots (Slot 1: 07:00–09:30, Slot 2: 09:45–12:15, Slot 3: 12:30–15:00, Slot 4: 15:15–17:45, Slot 5: 18:00–20:30).";
 
     /** Kiểm thử: trigger sai 5 slot cố định trả 400 Bad Request với mã SCHEDULING_INVALID_SLOT. */
     @Test

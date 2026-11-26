@@ -34,8 +34,8 @@ const classSession = {
   roomId: 2,
   roomName: 'Zen Garden Studio',
   sessionDate: '2099-01-08',
-  startTime: '17:00:00',
-  endTime: '19:30:00',
+  startTime: '18:00:00',
+  endTime: '20:30:00',
   status: 'scheduled',
   cancelReason: null,
   capacity: 20,
@@ -78,10 +78,10 @@ it('displays 5 fixed slot rows, enrolled group classes with coach name underneat
     node.querySelector('.mcal__slot-time')?.textContent,
   ])).toEqual([
     ['Slot 1', '07:00 – 09:30'],
-    ['Slot 2', '09:45 – 11:15'],
-    ['Slot 3', '11:30 – 14:00'],
-    ['Slot 4', '14:15 – 16:45'],
-    ['Slot 5', '17:00 – 19:30'],
+    ['Slot 2', '09:45 – 12:15'],
+    ['Slot 3', '12:30 – 15:00'],
+    ['Slot 4', '15:15 – 17:45'],
+    ['Slot 5', '18:00 – 20:30'],
   ]);
 
   expect(host.querySelectorAll('.mcal__event--pt')).toHaveLength(1);
@@ -94,7 +94,7 @@ it('displays 5 fixed slot rows, enrolled group classes with coach name underneat
   expect(host.querySelector('.mcal__next')?.textContent).toContain('Slot 1 · 07:00 – 09:30');
 
   await act(async () => classCard.click());
-  expect(host.querySelector('dialog')?.textContent).toContain('Slot 5 · 17:00 – 19:30');
+  expect(host.querySelector('dialog')?.textContent).toContain('Slot 5 · 18:00 – 20:30');
   expect(host.querySelector('.mcal__dialog-actions button')?.textContent).toBe('Đóng');
   const closeBtn = host.querySelector<HTMLButtonElement>('dialog button[aria-label]')!;
   await act(async () => closeBtn.click());
