@@ -1,3 +1,5 @@
+import { SCHEDULE_SLOT_COUNT, formatSlotLabel, resolveSlotIndex } from './slots';
+
 /** Khung giờ hiển thị của thời khóa biểu tuần: 06:00 – 22:00. */
 export const TIMETABLE_START_HOUR = 6;
 export const TIMETABLE_END_HOUR = 22;
@@ -26,8 +28,136 @@ export interface TimetableEvent {
   /** Thông tin phụ (sĩ số, trạng thái, HLV…): không hiện trên khối, chỉ có trong chú giải khi rê chuột và khi bấm xem chi tiết. */
   badge?: string;
   detail?: string;
+  /** Màu nhấn phân biệt bộ môn (áp dụng ở viền trái / chấm màu, tuân thủ độ tương phản Dark & Light). */
+  accentColor?: string;
+  /** Tên bộ môn hiển thị trong danh sách gom cụm hoặc lịch theo phòng. */
+  disciplineName?: string;
+  /** Mã phòng dùng để gom cột trong chế độ Tổng quan theo phòng. */
+  roomId?: number;
   tone: TimetableTone;
   ariaLabel: string;
+}
+
+/** Bảng màu dịu phân biệt tối đa 8 bộ môn trên lịch (đọc rõ trên cả Dark và Light, không trùng màu lỗi/Volt). */
+export const DISCIPLINE_PALETTE = [
+  '#60a5fa', // sky blue
+  '#34d399', // emerald
+  '#a78bfa', // violet
+  '#f59e0b', // amber
+  '#22d3ee', // cyan
+  '#f472b6', // rose
+  '#818cf8', // indigo
+  '#2dd4bf', // teal
+] as const;
+
+/** Gán màu phân biệt ổn định theo mã hoặc tên bộ môn. */
+export function disciplineAccentColor(key?: number | string | null): string {
+  if (key === null || key === undefined || key === '') return DISCIPLINE_PALETTE[0];
+  if (typeof key === 'number' && Number.isFinite(key)) {
+    return DISCIPLINE_PALETTE[Math.abs(Math.trunc(key)) % DISCIPLINE_PALETTE.length];
+  }
+  let hash = 0;
+  const text = String(key);
+  for (let index = 0; index < text.length; index += 1) {
+    hash = (hash * 31 + text.charCodeAt(index)) | 0;
+  }
+  return DISCIPLINE_PALETTE[Math.abs(hash) % DISCIPLINE_PALETTE.length];
+}
+
+/** Cụm buổi học bị ẩn bớt khi cùng một khung giờ có quá nhiều lớp chạy song song (hiển thị dạng "+N lớp"). */
+export interface OverflowCluster<T extends TimetableEvent = TimetableEvent> {
+  id: string;
+  date: string;
+  lane: number;
+  lanes: number;
+  topPct: number;
+  heightPct: number;
+  hiddenEvents: T[];
+  allEvents: T[];
+  rangeLabel: string;
+}
+
+/** Kết quả sau khi giới hạn số làn hiển thị tối đa trong 1 cột ngày: các khối hiển thị trực tiếp và các nút gom "+N lớp". */
+export interface GroupedDayLayout<T extends TimetableEvent = TimetableEvent> {
+  visible: PositionedEvent<T>[];
+  overflows: OverflowCluster<T>[];
+}
+
+/**
+ * Gom các cụm chồng giờ có quá nhiều làn (> maxVisible) thành tối đa (maxVisible - 1) làn hiển thị trực tiếp
+ * cộng 1 làn nút gom "+N lớp". Bảo toàn 100% số sự kiện (visible + sum(hiddenEvents) === positioned.length)
+ * và đảm bảo mỗi thẻ luôn có bề rộng ít nhất 100% / maxVisible để không bị bóp méo hay đè chữ.
+ */
+export function groupVisibleLanes<T extends TimetableEvent>(
+  positioned: PositionedEvent<T>[],
+  maxVisible = 2,
+): GroupedDayLayout<T> {
+  if (maxVisible < 2 || positioned.length === 0) {
+    return { visible: positioned, overflows: [] };
+  }
+
+  // Phân nhóm các khối chồng nhau theo trục dọc (dựa trên topPct và topPct + heightPct).
+  const ordered = [...positioned].sort((a, b) => a.topPct - b.topPct || a.lane - b.lane || a.event.id.localeCompare(b.event.id));
+  const clusters: PositionedEvent<T>[][] = [];
+  let current: PositionedEvent<T>[] = [];
+  let currentEnd = -1;
+
+  for (const item of ordered) {
+    const bottom = item.topPct + item.heightPct;
+    if (current.length > 0 && item.topPct >= currentEnd - 1e-4) {
+      clusters.push(current);
+      current = [];
+      currentEnd = -1;
+    }
+    current.push(item);
+    currentEnd = Math.max(currentEnd, bottom);
+  }
+  if (current.length > 0) clusters.push(current);
+
+  const visible: PositionedEvent<T>[] = [];
+  const overflows: OverflowCluster<T>[] = [];
+  const directLaneLimit = maxVisible - 1;
+
+  for (const cluster of clusters) {
+    const clusterLanes = Math.max(...cluster.map((item) => item.lanes));
+    if (clusterLanes <= maxVisible) {
+      visible.push(...cluster);
+      continue;
+    }
+
+    const shown = cluster.filter((item) => item.lane < directLaneLimit);
+    const hidden = cluster.filter((item) => item.lane >= directLaneLimit);
+    for (const item of shown) {
+      visible.push({ ...item, lanes: maxVisible });
+    }
+    if (hidden.length === 0) continue;
+
+    const topPct = Math.min(...hidden.map((item) => item.topPct));
+    const bottomPct = Math.max(...hidden.map((item) => item.topPct + item.heightPct));
+    const allSorted = [...cluster]
+      .sort((a, b) => toMinutes(a.event.startTime) - toMinutes(b.event.startTime) || a.event.title.localeCompare(b.event.title))
+      .map((item) => item.event);
+    const hiddenSorted = [...hidden]
+      .sort((a, b) => toMinutes(a.event.startTime) - toMinutes(b.event.startTime) || a.event.title.localeCompare(b.event.title))
+      .map((item) => item.event);
+
+    const minStart = allSorted.reduce((best, ev) => (toMinutes(ev.startTime) < toMinutes(best) ? ev.startTime : best), allSorted[0].startTime);
+    const maxEnd = allSorted.reduce((best, ev) => (toMinutes(ev.endTime) > toMinutes(best) ? ev.endTime : best), allSorted[0].endTime);
+
+    overflows.push({
+      id: `overflow-${cluster[0].event.date}-${hiddenSorted[0].id}`,
+      date: cluster[0].event.date,
+      lane: directLaneLimit,
+      lanes: maxVisible,
+      topPct,
+      heightPct: Math.max(bottomPct - topPct, 6.25),
+      hiddenEvents: hiddenSorted,
+      allEvents: allSorted,
+      rangeLabel: formatSlotLabel(minStart, maxEnd),
+    });
+  }
+
+  return { visible, overflows };
 }
 
 /** Buổi học đã được xếp vị trí: làn song song, số làn của cụm và vị trí/chiều cao theo phần trăm. */
@@ -181,6 +311,43 @@ export function layoutDayEvents<T extends TimetableEvent>(
     clusterEnd = Math.max(clusterEnd, item.end);
   }
   if (cluster.length > 0) flush();
+  return result;
+}
+
+/**
+ * Xếp các buổi học trong cùng một ngày vào đúng hàng Slot cố định (Slot 1 – Slot 5).
+ * Các buổi trùng cùng một Slot đứng song song theo làn để `groupVisibleLanes` gom "+N lớp" khi có >= 3 lớp.
+ */
+export function layoutDaySlotEvents<T extends TimetableEvent>(events: T[]): PositionedEvent<T>[] {
+  const bySlot = new Map<number, T[]>();
+  for (const event of events) {
+    const slotIndex = resolveSlotIndex(event.startTime, event.endTime);
+    if (slotIndex < 0) continue;
+    const list = bySlot.get(slotIndex) ?? [];
+    list.push(event);
+    bySlot.set(slotIndex, list);
+  }
+
+  const rowHeightPct = 100 / SCHEDULE_SLOT_COUNT;
+  const result: PositionedEvent<T>[] = [];
+  for (let slotIndex = 0; slotIndex < SCHEDULE_SLOT_COUNT; slotIndex += 1) {
+    const slotEvents = bySlot.get(slotIndex);
+    if (!slotEvents || slotEvents.length === 0) continue;
+    const sorted = [...slotEvents].sort(
+      (a, b) => toMinutes(a.startTime) - toMinutes(b.startTime) || a.id.localeCompare(b.id),
+    );
+    const lanes = sorted.length;
+    const topPct = slotIndex * rowHeightPct;
+    for (let lane = 0; lane < lanes; lane += 1) {
+      result.push({
+        event: sorted[lane],
+        lane,
+        lanes,
+        topPct,
+        heightPct: rowHeightPct,
+      });
+    }
+  }
   return result;
 }
 

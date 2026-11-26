@@ -439,19 +439,6 @@ public class WalletService {
     }
 
     /**
-     * Hoàn tiền hủy sân đã trả tiền vào ví (mỗi mã tham chiếu chỉ một lần).
-     *
-     * Cộng hoàn tiền đặt sân đã trả và bị hủy vào ví hội viên; idempotent theo {@code referenceId}.
-     */
-    @Transactional
-    public void creditCourtRefund(Long userId, BigDecimal amount, String referenceId, String reason) {
-        String description = (reason != null && !reason.isBlank())
-                ? ("Hoàn tiền hủy sân tập: " + reason)
-                : "Hoàn tiền hủy sân tập về Ví";
-        credit(userId, amount, referenceId, "COURT_REFUND", description, "/member/courts");
-    }
-
-    /**
      * Hoàn học phí khóa học bị hủy vào ví (mỗi mã tham chiếu chỉ một lần).
      *
      * Cộng hoàn tiền ghi danh khóa học đã trả và bị hủy vào ví hội viên; idempotent theo {@code referenceId}.

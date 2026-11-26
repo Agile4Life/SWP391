@@ -2,10 +2,14 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RoleGuard } from '../shared/ui/RoleGuard';
 import { PortalHome } from '../shared/ui/PortalHome';
 import { PortalRouteError, RouteLoading, RouteLoadError } from '../shared/ui/RouteState';
+import { LegacyAttendanceRedirect, LegacyClassesRedirect } from './LegacyRedirects';
 
 export const router = createBrowserRouter([
-  // Public chỉ giới thiệu Gym; bỏ route Shop Member/Public, giữ route gói/PT và quản lý độc lập.
+  // Public 3 bộ môn chuẩn (Gym trên trang chủ, Boxing & Yoga có trang riêng); giữ route gói, lớp nhóm, PT và quản lý.
   { path: '/', lazy: async () => ({ Component: (await import('../features/landing/LandingPage')).LandingPage }) },
+  { path: '/boxing', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/yoga', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
+  { path: '/sports/:sportId', lazy: async () => ({ Component: (await import('../features/landing/SportPage')).SportPage }) },
   { path: '/trainers', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
   { path: '/trainers/:trainerId', lazy: async () => ({ Component: (await import('../features/landing/TrainerStoryPage')).TrainerStoryPage }) },
   { path: '/login', lazy: async () => ({ Component: (await import('../features/auth/LoginPage')).LoginPage }) },
@@ -46,8 +50,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/member/explore',
-            // Trang /member/explore: tải lười ExplorePage.
-            lazy: async () => ({ Component: (await import('../features/explore3d/ExplorePage')).ExplorePage }),
+            element: <Navigate to="/member/dashboard" replace />,
           },
           {
             path: '/member/packages',
@@ -88,7 +91,7 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/member/MemberProgressPage')).MemberProgressPage }),
           },
           {
-            // Hỗ trợ & khiếu nại đã gộp vào Tin nhắn; giữ đường dẫn cũ cho email, thông báo và liên kết 3D.
+            // Hỗ trợ & khiếu nại đã gộp vào Tin nhắn; giữ đường dẫn cũ cho email và thông báo.
             path: '/member/support',
             element: <Navigate to="/messages?tab=support" replace />,
           },
@@ -175,7 +178,6 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/reception/HoldManagementPage')).HoldManagementPage }),
           },
           { path: '/staff/support', element: <Navigate to="/messages?tab=support" replace /> },
-          { path: '/staff/courts', element: <Navigate to="/staff/reception" replace /> },
         ],
       },
 
@@ -189,12 +191,22 @@ export const router = createBrowserRouter([
             lazy: async () => ({ Component: (await import('../features/coaching/PtAttendancePage')).PtAttendancePage }),
           },
           {
+            path: '/coach/attendance',
+            // Trang /coach/attendance: tải lười CoachAttendancePage (điểm danh lớp nhóm).
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+          },
+          {
+            path: '/coach/attendance/:sessionId',
+            // Trang /coach/attendance/:sessionId: tải lười CoachAttendancePage cho buổi cụ thể.
+            lazy: async () => ({ Component: (await import('../features/coaching/CoachAttendancePage')).CoachAttendancePage }),
+          },
+          {
             path: '/staff/attendance',
-            element: <Navigate to="/coach/pt-attendance" replace />,
+            element: <Navigate to="/coach/attendance" replace />,
           },
           {
             path: '/staff/attendance/:sessionId',
-            element: <Navigate to="/coach/pt-attendance" replace />,
+            element: <LegacyAttendanceRedirect />,
           },
           {
             path: '/coach/classes',
@@ -244,7 +256,7 @@ export const router = createBrowserRouter([
           },
           {
             path: '/staff/classes',
-            element: <Navigate to="/staff/reception" replace />,
+            element: <LegacyClassesRedirect />,
           },
           {
             path: '/staff/orders',
@@ -268,6 +280,11 @@ export const router = createBrowserRouter([
           <RoleGuard allowedRoles={['MANAGER', 'CENTER_MANAGER']} />
         ),
         children: [
+          {
+            path: '/manager/classes',
+            // Trang /manager/classes: tải lười ManagerClassesPage (quản lý lớp học & xếp lịch).
+            lazy: async () => ({ Component: (await import('../features/classes/ManagerClassesPage')).ManagerClassesPage }),
+          },
           {
             path: '/manager/catalogs',
             // Trang /manager/catalogs: tải lười ManagerCatalogsPage.

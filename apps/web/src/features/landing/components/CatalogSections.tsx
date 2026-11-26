@@ -2,12 +2,14 @@ import { useSourceLanguage, sourceText, sourceFormat } from "../../../shared/i18
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PublicCatalog } from '../publicCatalog';
-import { localizeSeededCatalogText } from '../publicCatalog';
+import { localizeSeededCatalogText, sessionDate } from '../publicCatalog';
+import { DISCIPLINES, isStandardDiscipline, matchesDiscipline, type DisciplineId } from '../../../shared/lib/disciplines';
 import { formatPrice, getPackageDetails, isTrialPackage, localizeSeededPackageName, LONG_TERM_DAYS, MIN_TERM_DAYS } from '../../../shared/lib/membershipPresentation';
 import { RoundArrow } from './PublicLayout';
 import { coachIllustration, coachPortrait } from '../../../shared/lib/coachIllustration';
 import { LoadingSkeleton } from '../../../shared/ui/LoadingSkeleton';
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
+import { formatSlotLabel } from '../../schedule/slots';
 
 /** Trạng thái của vùng catalog: khung chờ khi đang tải, thông báo lỗi kèm nút thử lại khi không tải được. */
 export function CatalogStatus({ loading, retry, kind = 'schedule' }: {
@@ -62,6 +64,71 @@ export function CatalogPackages({ catalog, joinPath }: { catalog: PublicCatalog;
             <RoundArrow diagonal />
           </Link>
         </article>;
+      })}
+    </div>
+  </>;
+}
+
+/** Lịch lớp nhóm công khai trong 7 ngày tới, hỗ trợ lọc theo bộ môn hoặc theo HLV. */
+export function CatalogSchedule({ catalog, joinPath, coachId, sport }: {
+  catalog: PublicCatalog; joinPath: string; coachId?: number; sport?: DisciplineId;
+}) {
+  useSourceLanguage();
+  const [discipline, setDiscipline] = useState('all');
+  const sportName = DISCIPLINES.find((item) => item.id === sport)?.name;
+  const matchesSport = (value: string | null | undefined) => (sportName ? matchesDiscipline(value, sportName) : isStandardDiscipline(value));
+  const sessions = catalog.sessions.filter((session) => (!session.status || session.status === 'scheduled')
+    && matchesSport(session.disciplineName)
+    && (!coachId || session.coachId === coachId));
+  const disciplines = [...new Set(sessions.map((session) => session.disciplineName))];
+  const activeDiscipline = disciplines.includes(discipline) ? discipline : 'all';
+  const visible = sessions.filter((session) => activeDiscipline === 'all' || session.disciplineName === activeDiscipline);
+
+  return <>
+    <p className="fit-catalog-caption">
+      {sourceText({ vi: 'Lịch trong 7 ngày tới · đăng ký qua portal khi gói tập còn hiệu lực.', en: 'Upcoming 7-day schedule · register in the portal with an active membership.' })}
+    </p>
+    {disciplines.length > 1 && (
+      <div className="fit-pricing-switch fit-schedule-switch" aria-label={sourceText({ vi: 'Lọc bộ môn trong lịch lớp', en: 'Filter disciplines in schedule' })}>
+        {['all', ...disciplines].map((value) => (
+          <button type="button" key={value} aria-pressed={activeDiscipline === value} onClick={() => setDiscipline(value)}>
+            {value === 'all' ? sourceText({ vi: 'Tất cả bộ môn', en: 'All disciplines' }) : localizeSeededCatalogText(value)}
+          </button>
+        ))}
+      </div>
+    )}
+    {visible.length === 0 && (
+      <p className="fit-catalog-state" role="status">
+        {sourceText({ vi: 'Chưa có lịch lớp phù hợp trong 7 ngày tới.', en: 'No matching class sessions in the next 7 days.' })}
+      </p>
+    )}
+    <div className="fit-schedule-grid" key={activeDiscipline}>
+      {visible.map((session) => {
+        const canonicalDiscipline = DISCIPLINES.find((d) => matchesDiscipline(session.disciplineName, d.name))?.name;
+        const sessionJoinPath = joinPath === '/member/classes' && canonicalDiscipline
+          ? `/member/classes?tab=classes&discipline=${encodeURIComponent(canonicalDiscipline)}`
+          : joinPath;
+        return (
+          <article key={session.id} className="fit-schedule-card" data-reveal="lift">
+            <div className="fit-schedule-top">
+              <span className="fit-schedule-time">{sessionDate(session.sessionDate)} · {formatSlotLabel(session.startTime, session.endTime)}</span>
+              <span className="fit-schedule-spots">
+                {Math.max(0, session.capacity - session.bookedCount)}{sourceText({ vi: ' chỗ trống', en: ' spots left' })}
+              </span>
+            </div>
+            <h3>{localizeSeededCatalogText(session.className)}</h3>
+            <p className="fit-schedule-meta">{localizeSeededCatalogText(session.disciplineName)} · {localizeSeededCatalogText(session.roomName)}</p>
+            <Link to={`/trainers/${session.coachId}`} className="fit-text-link">
+              {sourceText({ vi: 'HLV: ', en: 'Coach: ' })}{session.coachName}
+            </Link>
+            <Link to={sessionJoinPath} className="fit-text-link">
+              {session.bookedCount >= session.capacity
+                ? sourceText({ vi: 'Đã đầy chỗ', en: 'Full' })
+                : sourceText({ vi: 'Đăng ký lớp', en: 'Join class' })}
+              <RoundArrow diagonal />
+            </Link>
+          </article>
+        );
       })}
     </div>
   </>;

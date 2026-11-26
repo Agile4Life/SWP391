@@ -18,7 +18,6 @@ export const englishLabels: Readonly<Record<string, string>> = {
   "Hồ sơ cá nhân": "My profile",
   "Hồ sơ": "Profile",
   "Lịch tập": "Schedule",
-  "Sân tập": "Courts",
   "Huấn luyện": "Training",
   "Chỉ số cơ thể": "Body metrics",
   "Trợ lý AI": "AI assistant",

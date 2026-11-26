@@ -8,6 +8,7 @@ import { subscribeMembershipChanges } from '../membershipRealtime';
 import { Modal } from '../../../shared/ui/Modal';
 import { centerNowParts, formatCenterDate, parseCenterTime } from '../../../shared/lib/centerTime';
 import { addDays, parseISODate } from '../../schedule/timetable';
+import { findScheduleSlot, findSlotByNumber, formatSlotLabel } from '../../schedule/slots';
 import {
   getCoaches,
   getAvailableSlots,
@@ -205,8 +206,8 @@ export function MemberCoachBookingView({
         setPaymentModalBooking((prev) => (prev?.id === b.id ? null : prev));
         memberNotify(
           memberMessage(
-            `Thanh toán buổi tập PT 1:1 ngày ${formatCenterDate(b.bookingDate)} (${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}) với HLV ${formatCoachName(b.coachName)} thành công!`,
-            `Payment confirmed for 1:1 PT session on ${formatCenterDate(b.bookingDate)} (${b.startTime.slice(0, 5)} - ${b.endTime.slice(0, 5)}) with coach ${formatCoachName(b.coachName)}!`,
+            `Thanh toán buổi tập PT 1:1 ngày ${formatCenterDate(b.bookingDate)} (${formatSlotLabel(b.startTime, b.endTime)}) với HLV ${formatCoachName(b.coachName)} thành công!`,
+            `Payment confirmed for 1:1 PT session on ${formatCenterDate(b.bookingDate)} (${formatSlotLabel(b.startTime, b.endTime)}) with coach ${formatCoachName(b.coachName)}!`,
           ),
           'success',
           { record: true },
@@ -357,16 +358,21 @@ export function MemberCoachBookingView({
         setPaymentModalBooking(created);
         memberNotify(
           memberMessage(
-            `Đã ghi nhận lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${formatCenterDate(created.bookingDate)} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) — Chờ thanh toán ${formatPrice(created.hourlyRate)}.`,
-            `1:1 session with coach ${formatCoachName(created.coachName)} on ${formatCenterDate(created.bookingDate)} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) recorded — Awaiting payment of ${formatPrice(created.hourlyRate)}.`,
+            `Đã ghi nhận lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${formatCenterDate(created.bookingDate)} (${formatSlotLabel(created.startTime, created.endTime)}) — Chờ thanh toán ${formatPrice(created.hourlyRate)}.`,
+            `1:1 session with coach ${formatCoachName(created.coachName)} on ${formatCenterDate(created.bookingDate)} (${formatSlotLabel(created.startTime, created.endTime)}) recorded — Awaiting payment of ${formatPrice(created.hourlyRate)}.`,
           ),
           'info',
           { record: true },
         );
       } else {
         memberNotify(
-          memberMessage(`Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${formatCenterDate(created.bookingDate)} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) thành công (đã trừ 1 lượt quyền lợi gói)!`, `1:1 session booked with coach ${formatCoachName(created.coachName)} on ${formatCenterDate(created.bookingDate)} (${created.startTime.slice(0, 5)} - ${created.endTime.slice(0, 5)}) using 1 membership session!`)
-          , 'success', { record: true });
+          memberMessage(
+            `Đặt lịch tập 1:1 với HLV ${formatCoachName(created.coachName)} ngày ${formatCenterDate(created.bookingDate)} (${formatSlotLabel(created.startTime, created.endTime)}) thành công (đã trừ 1 lượt quyền lợi gói)!`,
+            `1:1 session booked with coach ${formatCoachName(created.coachName)} on ${formatCenterDate(created.bookingDate)} (${formatSlotLabel(created.startTime, created.endTime)}) using 1 membership session!`,
+          ),
+          'success',
+          { record: true },
+        );
       }
     } catch (err: unknown) {
       setErrorCode(err instanceof ApiError ? err.code : undefined);
@@ -632,26 +638,15 @@ export function MemberCoachBookingView({
         )}
       </section>
 
-      {/* Chọn ngày và khung giờ */}
+      {/* Chọn ngày và khung giờ (5 Slot cố định) */}
       {(() => {
-        const morningSlots = slots.filter((s) => {
-          const h = parseInt(s.startTime.split(':')[0], 10);
-          return h < 12;
-        });
-        const afternoonSlots = slots.filter((s) => {
-          const h = parseInt(s.startTime.split(':')[0], 10);
-          return h >= 12 && h < 18;
-        });
-        const eveningSlots = slots.filter((s) => {
-          const h = parseInt(s.startTime.split(':')[0], 10);
-          return h >= 18;
-        });
-
-        // Vẽ một ô khung giờ (đang chọn, trống hoặc bận kèm lý do).
-        const renderSlotPill = (slot: CoachAvailableSlotDto) => {
+        // Vẽ một thẻ Slot cố định (đang chọn, còn trống hoặc bận kèm lý do).
+        const renderSlotCard = (slot: CoachAvailableSlotDto) => {
+          const canonicalSlot = findSlotByNumber(slot.slotNumber) ?? findScheduleSlot(slot.startTime, slot.endTime);
           const startFmt = slot.startTime.slice(0, 5);
           const endFmt = slot.endTime.slice(0, 5);
-          const slotRange = `${startFmt} – ${endFmt}`;
+          const slotRange = canonicalSlot?.rangeLabel ?? `${startFmt} – ${endFmt}`;
+          const slotSummary = formatSlotLabel(slot.startTime, slot.endTime, slot.slotNumber);
           const isSelected = selectedSlot?.startTime === slot.startTime;
 
           if (slot.available) {
@@ -660,23 +655,24 @@ export function MemberCoachBookingView({
                 key={slot.startTime}
                 type="button"
                 className="member-slot-btn"
+                data-testid={canonicalSlot ? `pt-slot-${canonicalSlot.number}` : undefined}
                 onClick={() => {
                   setSelectedSlot(slot);
                   handleOpenBookingModal(slot);
                 }}
                 style={{
-                  minWidth: 110,
-                  padding: '9px 16px',
-                  borderRadius: 12,
-                  fontSize: 14,
-                  fontWeight: isSelected ? 750 : 600,
+                  minHeight: 78,
+                  padding: '12px 14px',
+                  borderRadius: 14,
                   fontFamily: 'inherit',
                   cursor: 'pointer',
                   transition: 'transform 160ms ease, border-color 160ms ease, background-color 160ms ease',
-                  display: 'inline-flex',
+                  display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  border: isSelected ? '1px solid transparent' : '1px solid var(--portal-border)',
+                  gap: 4,
+                  border: isSelected ? '1px solid transparent' : '1px solid var(--portal-border-strong)',
                   background: isSelected
                     ? 'var(--portal-salmon)'
                     : 'var(--portal-surface)',
@@ -685,9 +681,19 @@ export function MemberCoachBookingView({
                     ? '0 4px 12px color-mix(in srgb, var(--portal-salmon) 32%, transparent)'
                     : '0 1px 3px color-mix(in srgb, var(--portal-paper) 4%, transparent)',
                 }}
-                title={memberText(`Còn trống: ${slotRange} (Nhấn để đặt lịch)`, `Available: ${slotRange} (Click to book)`)}
+                title={memberText(`Còn trống: ${slotSummary} (Nhấn để đặt lịch)`, `Available: ${slotSummary} (Click to book)`)}
               >
-                {slotRange}
+                {canonicalSlot && (
+                  <strong style={{ fontSize: 14, fontWeight: 800, lineHeight: 1.2 }}>
+                    {canonicalSlot.label}
+                  </strong>
+                )}
+                <span style={{ fontSize: 13, fontWeight: 600, fontVariantNumeric: 'tabular-nums', opacity: isSelected ? 0.92 : 0.85 }}>
+                  {slotRange}
+                </span>
+                <small style={{ fontSize: 12, fontWeight: 700, color: isSelected ? 'var(--portal-on-accent)' : 'var(--portal-salmon)' }}>
+                  {memberText("Còn trống", "Available")}
+                </small>
               </button>
             );
           }
@@ -697,8 +703,6 @@ export function MemberCoachBookingView({
             badgeText = memberText("HLV nghỉ phép");
           } else if (slot.reason === 'too_soon') {
             badgeText = memberText("Cần đặt trước 2 tiếng");
-          } else if (slot.reason === 'coach_rest') {
-            badgeText = memberText("HLV nghỉ sau 3 slot liên tiếp");
           } else if (slot.reason === 'coach_busy') {
             badgeText = memberText("HLV đã có lịch");
           } else if (slot.reason === 'member_busy') {
@@ -708,24 +712,37 @@ export function MemberCoachBookingView({
           return (
             <div
               key={slot.startTime}
+              data-testid={canonicalSlot ? `pt-slot-${canonicalSlot.number}` : undefined}
+              aria-disabled="true"
               style={{
-                minWidth: 110,
-                padding: '9px 16px',
-                borderRadius: 12,
-                fontSize: 14,
-                fontWeight: 500,
-                display: 'inline-flex',
+                minHeight: 78,
+                padding: '12px 14px',
+                borderRadius: 14,
+                display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
+                gap: 4,
                 border: '1px solid var(--portal-border)',
                 background: 'var(--portal-raised)',
                 color: 'var(--portal-muted)',
-                opacity: 0.5,
+                opacity: 0.65,
                 cursor: 'not-allowed',
+                textAlign: 'center',
               }}
-              title={`${slotRange} (${badgeText})`}
+              title={`${slotSummary} (${badgeText})`}
             >
-              {slotRange}
+              {canonicalSlot && (
+                <strong style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}>
+                  {canonicalSlot.label}
+                </strong>
+              )}
+              <span style={{ fontSize: 13, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+                {slotRange}
+              </span>
+              <small style={{ fontSize: 12, lineHeight: 1.2 }}>
+                {badgeText}
+              </small>
             </div>
           );
         };
@@ -858,9 +875,10 @@ export function MemberCoachBookingView({
             </div>
 
             <p className="row-card__meta" style={{ margin: 0 }}>
-              {memberText("Khung giờ cho ngày ")}{slotDate.split('-').reverse().join('/')} {memberText(" · HLV nghỉ 1 slot sau 3 slot 1:1 liên tiếp.")}</p>
+              {memberText("Khung giờ cho ngày ")}{slotDate.split('-').reverse().join('/')}
+            </p>
 
-            {/* Các khung giờ được nhóm theo buổi trong ngày */}
+            {/* Lưới 5 Slot cố định trong ngày */}
             {loadingSlots ? (
               <div style={{ padding: '24px 0', textAlign: 'center' }}>
                 <p className="row-card__meta" style={{ margin: 0 }}>
@@ -873,35 +891,16 @@ export function MemberCoachBookingView({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                {morningSlots.length > 0 && (
-                  <div>
-                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper)' }}>
-                      {memberText("Buổi sáng")}</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                      {morningSlots.map(renderSlotPill)}
-                    </div>
-                  </div>
-                )}
-
-                {afternoonSlots.length > 0 && (
-                  <div>
-                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper)' }}>
-                      {memberText("Buổi chiều")}</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                      {afternoonSlots.map(renderSlotPill)}
-                    </div>
-                  </div>
-                )}
-
-                {eveningSlots.length > 0 && (
-                  <div>
-                    <h4 style={{ margin: '0 0 12px', fontSize: 16, fontWeight: 750, color: 'var(--portal-paper)' }}>
-                      {memberText("Buổi tối")}</h4>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                      {eveningSlots.map(renderSlotPill)}
-                    </div>
-                  </div>
-                )}
+                <div
+                  data-testid="pt-slots-grid"
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(156px, 1fr))',
+                    gap: 10,
+                  }}
+                >
+                  {slots.map(renderSlotCard)}
+                </div>
 
                 {/* Tóm tắt và nút hành động cho khung giờ đã chọn */}
                 {selectedSlot && (
@@ -932,11 +931,11 @@ export function MemberCoachBookingView({
                       />
                       <div>
                         <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>{memberText("Khung giờ đã chọn: ")}</span>
-                        <strong style={{ fontSize: 15, color: 'var(--portal-paper)' }}>
-                          {selectedSlot.startTime.slice(0, 5)} – {selectedSlot.endTime.slice(0, 5)}
+                        <strong style={{ fontSize: 15, color: 'var(--portal-paper)', fontVariantNumeric: 'tabular-nums' }}>
+                          {formatSlotLabel(selectedSlot.startTime, selectedSlot.endTime, selectedSlot.slotNumber)}
                         </strong>
                         <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                          {` (${formatCenterDate(slotDate)} • HLV ${selectedCoach?.fullName})`}
+                          {` (${formatCenterDate(slotDate)} • ${memberText("HLV", "Coach")} ${selectedCoach?.fullName})`}
                         </span>
                       </div>
                     </div>
@@ -1112,8 +1111,8 @@ export function MemberCoachBookingView({
                             {memberText("Đã thanh toán", "Paid")}</span>
                         )}
                       </div>
-                      <p className="row-card__meta" style={{ margin: '3px 0 0' }}>
-                        {memberText("Ngày ")}<strong>{formatCenterDate(b.bookingDate)}</strong> • <strong>{b.startTime.slice(0, 5)} – {b.endTime.slice(0, 5)}</strong> • {b.paymentMethod === 'package_quota' ? memberText("Quyền lợi gói tập") : memberText(`Trả phí: ${formatPrice(b.hourlyRate)}`, `Paid session: ${formatPrice(b.hourlyRate)}`)}
+                      <p className="row-card__meta" style={{ margin: '3px 0 0', fontVariantNumeric: 'tabular-nums' }}>
+                        {memberText("Ngày ")}<strong>{formatCenterDate(b.bookingDate)}</strong> • <strong>{formatSlotLabel(b.startTime, b.endTime)}</strong> • {b.paymentMethod === 'package_quota' ? memberText("Quyền lợi gói tập") : memberText(`Trả phí: ${formatPrice(b.hourlyRate)}`, `Paid session: ${formatPrice(b.hourlyRate)}`)}
                       </p>
                       {b.notes && (
                         <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--portal-muted)', fontStyle: 'italic' }}>
@@ -1281,8 +1280,8 @@ export function MemberCoachBookingView({
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)' }}>
                     {formatCenterDate(slotDate)}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>
-                    {modalSlot.startTime.slice(0, 5)} – {modalSlot.endTime.slice(0, 5)}
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)', fontVariantNumeric: 'tabular-nums' }}>
+                    {formatSlotLabel(modalSlot.startTime, modalSlot.endTime, modalSlot.slotNumber)}
                   </div>
                 </div>
               </div>
@@ -1626,7 +1625,7 @@ export function MemberCoachBookingView({
                   : memberText("Lịch tập 1:1 đã được ghi nhận thành công!")}</h4>
               <p style={{ margin: 0, fontSize: 13 }}>
                 {memberText("HLV: ", "Coach: ")}<strong>{formatCoachName(paymentModalBooking.coachName)}</strong>{memberText(" • Thời gian:")}{' '}
-                <strong>{formatCenterDate(paymentModalBooking.bookingDate)} ({paymentModalBooking.startTime.slice(0, 5)} - {paymentModalBooking.endTime.slice(0, 5)})</strong>
+                <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCenterDate(paymentModalBooking.bookingDate)} ({formatSlotLabel(paymentModalBooking.startTime, paymentModalBooking.endTime)})</strong>
               </p>
             </div>
 
@@ -1682,7 +1681,7 @@ export function MemberCoachBookingView({
           <div style={{ display: 'grid', gap: 14 }}>
             <p>
               {memberText("Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV ")}<strong>{formatCoachName(cancelTarget.coachName)}</strong>{memberText(" vào")}{' '}
-              <strong>{cancelTarget.startTime.slice(0, 5)} – {cancelTarget.endTime.slice(0, 5)}{memberText(" ngày ")}{formatCenterDate(cancelTarget.bookingDate)}</strong>?
+              <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatSlotLabel(cancelTarget.startTime, cancelTarget.endTime)}{memberText(" ngày ")}{formatCenterDate(cancelTarget.bookingDate)}</strong>?
             </p>
             {cancelTarget.paymentMethod === 'package_quota' && (() => {
               const sessionStart = parseCenterTime(`${cancelTarget.bookingDate}T${cancelTarget.startTime.slice(0, 5)}:00`);

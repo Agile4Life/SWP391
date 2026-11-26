@@ -1,26 +1,33 @@
 openapi: 3.0.3
 info:
-  title: SCMS public catalog (SCRUM-60, SCRUM-66, SCRUM-72, SCRUM-86, SCRUM-88)
-  version: 1.0.0
+  title: SCMS API — Danh mục công khai & Lịch 7 ngày theo 5 Slot cố định (SCRUM-60, SCRUM-66, SCRUM-72, SCRUM-86, SCRUM-88)
+  version: 1.1.0
 servers:
   - url: /api/v1
 paths:
   /public/catalog:
     get:
-      summary: Live packages, coaches and upcoming seven-day schedule
+      summary: Danh sách gói tập, HLV và lịch lớp nhóm 7 ngày tới theo 5 Slot cố định
       description: >-
-        Uses the same ORM entities as the portal. Packages are active and ordered by price.
-        Coaches require active employment, an active user and no deleted_at. Excludes contact
-        information, credentials, health data and employment details. Sessions must start in
-        the future within today through today+6 using the application clock, be scheduled,
-        have an active class, an available room and an active, non-deleted coach.
-        Booked counts include legacy booked class enrollments plus booked per-session reservations.
-        No writes are public. Session eligibility, times and booked counts are queried on every request.
-        HTTP Cache-Control remains no-store.
+        Sử dụng chung JPA Entity với portal cho 3 bộ môn đang hoạt động (`Gym`, `Boxing`, `Yoga`)
+        và 4 phòng (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`),
+        phục vụ Landing công khai, trang từng bộ môn (`/boxing`, `/yoga`, `/sports/:sportId`)
+        và hồ sơ HLV công khai. Gói tập chỉ gồm các gói đang `active` sắp xếp theo giá tăng dần.
+        HLV yêu cầu trạng thái làm việc `active`, tài khoản `active` và `deleted_at IS NULL`;
+        không lộ thông tin liên hệ, thông tin đăng nhập, dữ liệu sức khỏe hay chi tiết hợp đồng lao động.
+        Các buổi lớp nhóm (`sessions`) phải bắt đầu trong tương lai từ hôm nay tới `today+6` theo đồng hồ hệ thống,
+        ở trạng thái `scheduled`, thuộc các khóa học nhóm định kỳ đang `active`
+        (hỗ trợ nhiều lớp `active`/bộ môn miễn không trùng ngày và slot — `409 SCHEDULING_DISCIPLINE_CONFLICT`),
+        có phòng khả dụng, HLV đang hoạt động và khung giờ `(startTime, endTime)` thuộc đúng 1 trong 5 Slot cố định
+        (`07:00 – 19:30`): `Slot 1` (`07:00–09:30`), `Slot 2` (`09:45–11:15`), `Slot 3` (`11:30–14:00`),
+        `Slot 4` (`14:15–16:45`), `Slot 5` (`17:00–19:30`).
+        Số chỗ đã đặt (`bookedCount`) tính gồm ghi danh khóa học đang hoạt động cộng lượt đặt buổi cũ (nếu còn).
+        Endpoint chỉ đọc, không công khai thao tác ghi; mọi dữ liệu được truy vấn trực tiếp ở mỗi request với
+        header `Cache-Control: no-store`.
       security: []
       responses:
         '200':
-          description: ApiResponse envelope; localized message via Accept-Language (default vi).
+          description: Bọc phản hồi `ApiResponse`; thông điệp đa ngôn ngữ theo `Accept-Language` (mặc định `vi`).
           headers:
             Cache-Control:
               schema: { type: string, example: no-store }
@@ -52,7 +59,9 @@ paths:
                             avatarUrl: { type: string, nullable: true }
                       sessions:
                         type: array
-                        description: Retained for compatibility; always empty because group classes are disabled.
+                        description: >
+                          Các buổi lớp học nhóm định kỳ sắp diễn ra trong 7 ngày tới của 3 bộ môn đang hoạt động
+                          (`Gym`, `Boxing`, `Yoga`) theo 5 Slot cố định (`07:00 – 19:30`) khi `app.legacy.classes-enabled=true`.
                         items:
                           type: object
                           properties:
@@ -66,8 +75,16 @@ paths:
                             roomId: { type: integer, format: int64 }
                             roomName: { type: string }
                             sessionDate: { type: string, format: date }
-                            startTime: { type: string, example: '09:00:00' }
-                            endTime: { type: string, example: '10:00:00' }
+                            startTime:
+                              type: string
+                              enum: ['07:00:00', '09:45:00', '11:30:00', '14:15:00', '17:00:00']
+                              example: '07:00:00'
+                              description: Giờ bắt đầu theo 1 trong 5 Slot cố định (`07:00`, `09:45`, `11:30`, `14:15`, `17:00`).
+                            endTime:
+                              type: string
+                              enum: ['09:30:00', '11:15:00', '14:00:00', '16:45:00', '19:30:00']
+                              example: '09:30:00'
+                              description: Giờ kết thúc tương ứng theo cặp với `startTime` trong 5 Slot cố định (`09:30`, `11:15`, `14:00`, `16:45`, `19:30`).
                             status: { type: string, enum: [scheduled] }
                             cancelReason: { type: string, nullable: true }
                             capacity: { type: integer }

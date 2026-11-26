@@ -340,26 +340,46 @@ describe('weekly PT booking after Monday has passed', () => {
     mocks.getCoaches.mockResolvedValue([{ id: 1, fullName: 'HLV A', specialization: 'Gym' }]);
     mocks.getMyCoachBookings.mockResolvedValue([]);
     mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'GOLD', remainingQuota: 3 });
-    mocks.getAvailableSlots.mockImplementation(async (_id, date) => date === '2026-11-06'
-      ? [{ startTime: '14:00:00', endTime: '15:00:00', available: true, reason: null }] : []);
-    mocks.createCoachBooking.mockResolvedValue({ id: 10, coachId: 1, bookingDate: '2026-11-06', startTime: '14:00:00', endTime: '15:00:00', status: 'CONFIRMED' });
-    try {
-      await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
-      const weekly = host.querySelector<HTMLButtonElement>('button[aria-label="Cả tuần (Hàng tuần)"]');
-      expect(weekly).toBeNull();
-      expect(host.textContent).not.toContain('Cả tuần');
-      expect(host.textContent).not.toContain('Hàng tuần');
-      expect(host.textContent).not.toContain('Cả tháng');
-      expect(host.textContent).not.toContain('Hàng tháng');
-      const slot = [...host.querySelectorAll('button')].find(b => b.title.includes('14:00') && b.title.includes('Còn trống'));
-      expect(slot).toBeDefined();
-      await act(async () => slot!.click());
-      const confirm = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xác nhận & Đặt lịch'));
-      expect(confirm).toBeDefined();
-      await act(async () => confirm!.click());
-      expect(mocks.createCoachBooking).toHaveBeenCalledWith(expect.objectContaining({
-        coachId: 1, bookingDate: '2026-11-06', startTime: '14:00:00', endTime: '15:00:00',
-      }));
+      mocks.getAvailableSlots.mockImplementation(async (_id, date) => date === '2026-11-06'
+        ? [
+            { slotNumber: 1, startTime: '07:00:00', endTime: '09:30:00', available: false, reason: 'too_soon' },
+            { slotNumber: 2, startTime: '09:45:00', endTime: '11:15:00', available: false, reason: 'coach_busy' },
+            { slotNumber: 3, startTime: '11:30:00', endTime: '14:00:00', available: false, reason: 'member_busy' },
+            { slotNumber: 4, startTime: '14:15:00', endTime: '16:45:00', available: true, reason: null },
+            { slotNumber: 5, startTime: '17:00:00', endTime: '19:30:00', available: false, reason: 'coach_on_leave' },
+          ]
+        : []);
+      mocks.createCoachBooking.mockResolvedValue({ id: 10, coachId: 1, bookingDate: '2026-11-06', startTime: '14:15:00', endTime: '16:45:00', status: 'CONFIRMED' });
+      try {
+        await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+        const weekly = host.querySelector<HTMLButtonElement>('button[aria-label="Cả tuần (Hàng tuần)"]');
+        expect(weekly).toBeNull();
+        expect(host.textContent).not.toContain('Cả tuần');
+        expect(host.textContent).not.toContain('Hàng tuần');
+        expect(host.textContent).not.toContain('Cả tháng');
+        expect(host.textContent).not.toContain('Hàng tháng');
+        // 5 fixed slots rendered without coach_rest notice or old morning/afternoon/evening headings
+        expect(host.querySelectorAll('[data-testid^="pt-slot-"]')).toHaveLength(5);
+        expect(host.textContent).toContain('Slot 1');
+        expect(host.textContent).toContain('07:00 – 09:30');
+        expect(host.textContent).toContain('Slot 4');
+        expect(host.textContent).toContain('14:15 – 16:45');
+        expect(host.textContent).toContain('Cần đặt trước 2 tiếng');
+        expect(host.textContent).toContain('HLV đã có lịch');
+        expect(host.textContent).toContain('Bạn đã có lịch trùng');
+        expect(host.textContent).toContain('HLV nghỉ phép');
+        expect(host.textContent).not.toContain('HLV nghỉ 1 slot sau 3 slot');
+        expect(host.textContent).not.toContain('Buổi sáng');
+        const slot = host.querySelector<HTMLButtonElement>('[data-testid="pt-slot-4"]');
+        expect(slot).not.toBeNull();
+        await act(async () => slot!.click());
+        expect(host.textContent).toContain('Slot 4 · 14:15 – 16:45');
+        const confirm = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Xác nhận & Đặt lịch'));
+        expect(confirm).toBeDefined();
+        await act(async () => confirm!.click());
+        expect(mocks.createCoachBooking).toHaveBeenCalledWith(expect.objectContaining({
+          coachId: 1, bookingDate: '2026-11-06', startTime: '14:15:00', endTime: '16:45:00',
+        }));
     } finally {
       await act(async () => root.unmount());
       host.remove();

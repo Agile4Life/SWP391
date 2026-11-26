@@ -6,8 +6,16 @@ import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import { centerNowParts } from '../../../shared/lib/centerTime';
 import { getMyCoachBookings, type CoachBookingDto } from '../coachBookingApi';
+import { getMyEnrollments, getSessionsBetween, type ClassSessionDto, type EnrollmentDto } from '../memberClassesApi';
 import {
-  addDays, blockClass, fitHourRange, hhmm, hourLabel, layoutDayEvents, mondayOf, parseISODate, shortDate, toMinutes,
+  SCHEDULE_SLOTS,
+  findScheduleSlot,
+  formatSlotLabel,
+  formatSlotShort,
+  nowSlotPercent,
+} from '../../schedule/slots';
+import {
+  addDays, blockClass, layoutDaySlotEvents, mondayOf, parseISODate, shortDate, toMinutes,
   weekDays, weekdayLabel, type TimetableEvent,
 } from '../../schedule/timetable';
 import '../../schedule/calendar.css';
@@ -15,20 +23,20 @@ import './MemberCalendar.css';
 
 /** Kiểu xem lịch: tuần hoặc tháng. */
 type View = 'week' | 'month';
-/** Loại sự kiện trên lịch (hiện chỉ có buổi PT). */
-type Kind = 'pt';
+/** Loại sự kiện trên lịch: lớp học nhóm và buổi PT 1:1. */
+type Kind = 'class' | 'pt';
 
-/** Một sự kiện trên lịch của hội viên: buổi PT với nơi tập, HLV, cờ đã hủy và mã đặt lịch. */
+/** Một sự kiện trên lịch của hội viên: buổi lớp nhóm hoặc buổi PT kèm nơi tập, HLV, cờ đã hủy và mã đặt lịch. */
 export interface CalendarEvent extends TimetableEvent {
   kind: Kind;
   place: string;
   coach?: string;
   cancelled: boolean;
-  /** Mã lịch PT để mở trang quản lý đặt lịch. */
-  seat: { type: 'pt'; id: number };
+  /** Mã bản ghi để điều hướng tới màn quản lý tương ứng. */
+  seat: { type: 'enrollment' | 'pt'; id: number };
 }
 
-const HOUR_PX = 76;
+const SLOT_ROW_PX = 104;
 const MINUTE_MS = 60_000;
 const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
 
@@ -133,7 +141,26 @@ function ptEvent(booking: CoachBookingDto): CalendarEvent {
   return {
     id: `pt-${booking.id}`, kind: 'pt', date: booking.bookingDate, startTime: booking.startTime, endTime: booking.endTime,
     title, place: '', coach: booking.coachName, cancelled: false, seat: { type: 'pt', id: booking.id }, tone: 'neutral',
-    ariaLabel: `${title}, ${weekdayLabel(booking.bookingDate)} ${shortDate(booking.bookingDate)}, ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`,
+    ariaLabel: `${title}, ${weekdayLabel(booking.bookingDate)} ${shortDate(booking.bookingDate)}, ${formatSlotShort(booking.startTime, booking.endTime)}`,
+  };
+}
+
+/** Chuyển một buổi lớp nhóm thành sự kiện lịch. */
+function classEvent(session: ClassSessionDto, enrollmentId: number): CalendarEvent {
+  const cancelled = session.status === 'cancelled';
+  return {
+    id: `class-${session.id}`,
+    kind: 'class',
+    date: session.sessionDate,
+    startTime: session.startTime,
+    endTime: session.endTime,
+    title: session.className,
+    place: session.roomName || '',
+    coach: session.coachName || undefined,
+    cancelled,
+    seat: { type: 'enrollment', id: enrollmentId },
+    tone: cancelled ? 'cancelled' : 'mine',
+    ariaLabel: `${session.className}, ${weekdayLabel(session.sessionDate)} ${shortDate(session.sessionDate)}, ${formatSlotShort(session.startTime, session.endTime)}`,
   };
 }
 
@@ -142,15 +169,33 @@ async function loadPtBookings(): Promise<CoachBookingDto[]> {
   return (await getMyCoachBookings()).filter(item => item.status !== 'cancelled');
 }
 
+/** Lấy các buổi lớp nhóm mà hội viên đang ghi danh (`booked`) trong khoảng thời gian. */
+async function loadEnrolledClassEvents(from: string, to: string): Promise<CalendarEvent[]> {
+  const [enrollments, sessions] = await Promise.all([
+    getMyEnrollments(),
+    getSessionsBetween(from, to),
+  ]);
+  const bookedByClass = new Map<number, EnrollmentDto>();
+  for (const item of Array.isArray(enrollments) ? enrollments : []) {
+    if (String(item.status).toLowerCase() === 'booked') {
+      bookedByClass.set(item.classId, item);
+    }
+  }
+  if (bookedByClass.size === 0 || !Array.isArray(sessions)) return [];
+  return sessions
+    .filter((s) => bookedByClass.has(s.classId))
+    .map((s) => classEvent(s, bookedByClass.get(s.classId)!.id));
+}
+
 /**
- * Lịch của hội viên (tuần/tháng): các buổi PT 1:1, buổi sắp tới, chi tiết sự kiện trong hộp thoại, chuyển
- * tuần/tháng và chế độ một ngày trên màn hẹp.
+ * Lịch của hội viên (tuần 5 Slot cố định / tháng): gộp buổi lớp học nhóm đã đăng ký và buổi PT 1:1,
+ * buổi sắp tới, chi tiết sự kiện trong hộp thoại, chuyển tuần/tháng và chế độ một ngày trên màn hẹp.
  */
 export function MemberCalendar() {
   const { lang } = useLanguage();
   const labels = lang === 'en'
-    ? { thisWeek: 'This week', pt: '1:1 session', empty: 'No bookings this week.' }
-    : { thisWeek: 'Tuần này', pt: 'Buổi PT 1:1', empty: 'Tuần này bạn chưa có lịch nào.' };
+    ? { thisWeek: 'This week', class: 'Group class', pt: '1:1 session', empty: 'No bookings this week.' }
+    : { thisWeek: 'Tuần này', class: 'Lớp học nhóm', pt: 'Buổi PT 1:1', empty: 'Tuần này bạn chưa có lịch nào.' };
   const english = lang === 'en';
   // Chọn chuỗi theo ngôn ngữ.
   const text = (vi: string, en: string) => english ? en : vi;
@@ -158,24 +203,33 @@ export function MemberCalendar() {
   const dayLabel = (day: string) => english ? new Intl.DateTimeFormat('en-GB', { weekday: 'long' }).format(parseISODate(day)) : weekdayLabel(day);
   // Tiêu đề của sự kiện.
   const title = (event: CalendarEvent) => event.title;
-  // Nhãn trợ năng của sự kiện: loại, tiêu đề, thứ và ngày.
-  const eventLabel = (event: CalendarEvent) => [labels[event.kind], title(event), dayLabel(event.date), shortDate(event.date), hhmm(event.startTime) + '–' + hhmm(event.endTime), event.place, event.cancelled ? text('đã hủy', 'cancelled') : ''].filter(Boolean).join(', ');
+  // Nhãn trợ năng của sự kiện: loại, tiêu đề, thứ, ngày và Slot.
+  const eventLabel = (event: CalendarEvent) => [
+    labels[event.kind],
+    title(event),
+    dayLabel(event.date),
+    shortDate(event.date),
+    formatSlotShort(event.startTime, event.endTime),
+    event.place,
+    event.coach,
+    event.cancelled ? text('đã hủy', 'cancelled') : '',
+  ].filter(Boolean).join(', ');
   const weekdayHead = english ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : WEEKDAY_HEAD;
   const now = useCenterNow();
   const [view, setView] = useState<View>('week');
   const [anchor, setAnchor] = useState(now.date);
   const [pts, setPts] = useState<CoachBookingDto[]>([]);
+  const [classEvents, setClassEvents] = useState<CalendarEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | SourceMessage>('');
   const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
 
   const { from, to } = rangeOf(view, anchor);
   const today = now.date;
 
-  // Quay lại tab/cửa sổ (ví dụ vừa đặt PT ở trang khác): tải lại lặng lẽ để lịch mới tự hiện.
+  // Quay lại tab/cửa sổ (ví dụ vừa đặt PT hoặc đăng ký lớp ở trang khác): tải lại lặng lẽ để lịch mới tự hiện.
   const quietRef = useRef(false);
   useEffect(() => {
     // Làm mới ngầm khi tab đang hiển thị.
@@ -192,26 +246,37 @@ export function MemberCalendar() {
     };
   }, []);
 
-  // Tải lại lịch PT khi quay lại cửa sổ; bỏ request lớp nhóm và sân.
+  // Tải song song lịch PT 1:1 và lịch lớp học nhóm đã đăng ký.
   useEffect(() => {
     let active = true;
     const quiet = quietRef.current;
     quietRef.current = false;
     if (!quiet) setLoading(true);
     setError('');
-    loadPtBookings()
-      .then(items => { if (active) setPts(items); })
-      .catch(cause => { if (active) { setPts([]); setError(memberError(cause, 'Không thể tải lịch của bạn.')); } })
+    Promise.allSettled([loadPtBookings(), loadEnrolledClassEvents(from, to)])
+      .then(([ptResult, classResult]) => {
+        if (!active) return;
+        const ptFailed = ptResult.status === 'rejected';
+        const classFailed = classResult.status === 'rejected';
+        setPts(ptResult.status === 'fulfilled' ? ptResult.value : []);
+        setClassEvents(classResult.status === 'fulfilled' ? classResult.value : []);
+        if (ptFailed && classFailed) {
+          setError(memberError(ptResult.reason, 'Không thể tải lịch của bạn.'));
+        } else if (ptFailed) {
+          setError(memberError(ptResult.reason, 'Không thể tải lịch PT 1:1 của bạn.'));
+        }
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [retry, today]);
+  }, [retry, today, from, to]);
 
-  // Các sự kiện PT dựng từ danh sách đặt lịch.
+  // Gộp sự kiện PT và lớp học nhóm.
   const ptEvents = useMemo(() => pts.map(ptEvent), [pts]);
+  const allEvents = useMemo(() => sortEvents([...ptEvents, ...classEvents]), [ptEvents, classEvents]);
   // Sự kiện nằm trong khoảng đang xem.
-  const events = useMemo(() => sortEvents(ptEvents.filter(item => item.date >= from && item.date <= to)), [ptEvents, from, to]);
+  const events = useMemo(() => allEvents.filter(item => item.date >= from && item.date <= to), [allEvents, from, to]);
   // Sự kiện sắp tới gần nhất chưa kết thúc.
-  const nextUp = useMemo(() => sortEvents(ptEvents).find(item => !isEnded(item, now)) ?? null, [ptEvents, now]);
+  const nextUp = useMemo(() => allEvents.find(item => !item.cancelled && !isEnded(item, now)) ?? null, [allEvents, now]);
 
   // Bảy ngày của tuần đang xem.
   const days = useMemo(() => weekDays(mondayOf(anchor)), [anchor]);
@@ -220,26 +285,6 @@ export function MemberCalendar() {
   const [focusDay, setFocusDay] = useState<string | null>(null);
   const activeDay = focusDay && days.includes(focusDay) ? focusDay : days.includes(today) ? today : days[0];
   const visibleDays = narrow ? [activeDay] : days;
-  // Sự kiện trong tuần (chỉ khi đang xem theo tuần).
-  const weekEvents = useMemo(() => (view === 'week' ? events : []), [view, events]);
-  // Khung giờ hiển thị: ít nhất 14 giờ để thấy vạch "bây giờ".
-  const hours = useMemo(() => {
-    // Ít nhất 14 giờ (ví dụ 07:00–21:00) để thấy vạch "bây giờ"; tuần trống: 07:00–21:00.
-    const fitted = fitHourRange(weekEvents, 14);
-    return fitted.length >= 16 ? fitted.slice(1, 15) : fitted;
-  }, [weekEvents]);
-  const firstHour = hours[0];
-  const endHour = hours[hours.length - 1] + 1;
-
-  // Đổi tuần: cuộn tới một giờ trước buổi sớm nhất.
-  useEffect(() => {
-    const box = scrollRef.current;
-    if (!box || loading || view !== 'week') return;
-    const starts = weekEvents.filter((item) => visibleDays.includes(item.date)).map((item) => toMinutes(item.startTime));
-    const target = starts.length > 0 ? Math.min(...starts) - 60 : firstHour * 60;
-    box.scrollTop = Math.max(0, ((target - firstHour * 60) / 60) * HOUR_PX);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [from, loading, view, activeDay, narrow]);
 
   // Chuyển tuần/tháng tiến hoặc lùi.
   function shift(step: number) {
@@ -281,9 +326,10 @@ export function MemberCalendar() {
   };
 
   const isEmpty = !loading && !error && events.length === 0;
+  const rowsPx = SCHEDULE_SLOTS.length * SLOT_ROW_PX;
 
   return (
-    <section data-i18n-managed className="mcal mcal--member"  aria-label={text("Lịch của tôi", "My schedule")}>
+    <section data-i18n-managed className="mcal mcal--member" aria-label={text("Lịch của tôi", "My schedule")}>
       <header className="mcal__toolbar">
         <div className="mcal__nav">
           <button type="button" className="mcal__icon-btn" aria-label={view === 'week' ? text("Tuần trước", 'Previous week') : text("Tháng trước", 'Previous month')} onClick={() => shift(-1)}>
@@ -297,6 +343,7 @@ export function MemberCalendar() {
         </div>
         <div className="mcal__side">
           <ul className="mcal__legend" aria-label={text("Chú thích", "Legend")}>
+            <li><i className="mcal__dot mcal__dot--class" aria-hidden="true" />{labels.class}</li>
             <li><i className="mcal__dot mcal__dot--pt" aria-hidden="true" />{labels.pt}</li>
           </ul>
           <div className="mcal__switch" role="group" aria-label={text("Chế độ xem", "View")}>
@@ -313,7 +360,7 @@ export function MemberCalendar() {
           <strong className="mcal__next-title">{title(nextUp)}</strong>
           <span className="mcal__next-meta">
             <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-            {english ? dayLabel(nextUp.date).slice(0, 3) : weekdayShort(nextUp.date)} {shortDate(nextUp.date)} · {hhmm(nextUp.startTime)}–{hhmm(nextUp.endTime)}
+            {english ? dayLabel(nextUp.date).slice(0, 3) : weekdayShort(nextUp.date)} {shortDate(nextUp.date)} · {formatSlotLabel(nextUp.startTime, nextUp.endTime)}
           </span>
           {nextUp.place && (
             <span className="mcal__next-meta">
@@ -357,8 +404,11 @@ export function MemberCalendar() {
       )}
 
       {!error && view === 'week' && (
-        <div className={`mcal__scroll${loading ? ' is-loading' : ''}`} ref={scrollRef} aria-busy={loading}>
-          <div className={`mcal__week${narrow ? ' is-single' : ''}`} style={{ '--mcal-hour': `${HOUR_PX}px`, '--mcal-rows': hours.length, '--mcal-days': visibleDays.length } as CSSProperties}>
+        <div className={`mcal__scroll${loading ? ' is-loading' : ''}`} aria-busy={loading}>
+          <div
+            className={`mcal__week${narrow ? ' is-single' : ''}`}
+            style={{ '--mcal-hour': `${SLOT_ROW_PX}px`, '--mcal-rows': SCHEDULE_SLOTS.length, '--mcal-days': visibleDays.length } as CSSProperties}
+          >
             <div className="mcal__corner" aria-hidden="true" />
             {visibleDays.map((day) => (
               <div key={day} className={`mcal__dayhead${day === today ? ' is-today' : ''}`} aria-current={day === today ? 'date' : undefined}>
@@ -369,11 +419,16 @@ export function MemberCalendar() {
             ))}
 
             <div className="mcal__gutter" aria-hidden="true">
-              {hours.map((hour) => <span key={hour}>{hourLabel(hour)}</span>)}
+              {SCHEDULE_SLOTS.map((slot) => (
+                <div key={slot.code} className="mcal__slot-head" data-testid={`timetable-slot-head-${slot.number}`}>
+                  <strong className="mcal__slot-name">{slot.label}</strong>
+                  <span className="mcal__slot-time">{slot.rangeLabel}</span>
+                </div>
+              ))}
             </div>
             {visibleDays.map((day) => {
-              const positioned = layoutDayEvents(eventsByDay.get(day) ?? [], firstHour, endHour);
-              const showNow = day === today && now.minutes >= firstHour * 60 && now.minutes < endHour * 60;
+              const positioned = layoutDaySlotEvents(eventsByDay.get(day) ?? []);
+              const nowPct = day === today ? nowSlotPercent(now.minutes) : null;
               return (
                 <div
                   key={day}
@@ -381,14 +436,14 @@ export function MemberCalendar() {
                   role="group"
                   aria-label={`${dayLabel(day)} ${shortDate(day)}`}
                 >
-                  {showNow && (
-                    <span className="mcal__now" aria-hidden="true" style={{ top: `${((now.minutes - firstHour * 60) / ((endHour - firstHour) * 60)) * 100}%` }} />
+                  {nowPct !== null && (
+                    <span className="mcal__now" aria-hidden="true" style={{ top: `${nowPct}%` }} />
                   )}
                   {positioned.map(({ event, lane, lanes, topPct, heightPct }) => (
                     <button
                       key={event.id}
                       type="button"
-                      className={`mcal__event mcal__event--${event.kind}${isEnded(event, now) ? ' is-past' : ''}${event.cancelled ? ' is-cancelled' : ''}${blockClass((heightPct / 100) * hours.length * HOUR_PX)}`}
+                      className={`mcal__event mcal__event--${event.kind}${isEnded(event, now) ? ' is-past' : ''}${event.cancelled ? ' is-cancelled' : ''}${blockClass((heightPct / 100) * rowsPx)}`}
                       style={{
                         top: `calc(${topPct}% + 3px)`,
                         height: `calc(${heightPct}% - 6px)`,
@@ -396,12 +451,14 @@ export function MemberCalendar() {
                         width: `calc(${100 / lanes}% - 12px)`,
                       }}
                       aria-label={eventLabel(event)}
-                      title={[labels[event.kind], `${hhmm(event.startTime)} - ${hhmm(event.endTime)}`, title(event), event.place].filter(Boolean).join(' · ')}
+                      title={[labels[event.kind], formatSlotLabel(event.startTime, event.endTime), title(event), event.place, event.coach].filter(Boolean).join(' · ')}
                       onClick={() => openEvent(event)}
                     >
-                      {/* Khối chỉ hiện tên và phòng; loại lịch (màu + chú thích), giờ… xem ở tooltip và chi tiết khi bấm. */}
                       <strong className="mcal__event-title">{title(event)}</strong>
                       {event.place && <span className="mcal__event-place">{event.place}</span>}
+                      {event.coach && !title(event).includes(event.coach) && (
+                        <span className="mcal__event-coach">{event.coach}</span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -429,18 +486,22 @@ export function MemberCalendar() {
                   {Number(day.slice(8))}
                 </button>
                 <div className="mcal__chips">
-                  {list.slice(0, 3).map((event) => (
-                    <button
-                      key={event.id}
-                      type="button"
-                      className={`mcal__chip mcal__chip--${event.kind}${isEnded(event, now) ? ' is-past' : ''}${event.cancelled ? ' is-cancelled' : ''}`}
-                      aria-label={eventLabel(event)}
-                      title={[labels[event.kind], hhmm(event.startTime), title(event), event.place].filter(Boolean).join(' · ')}
-                      onClick={() => openEvent(event)}
-                    >
-                      {title(event)}
-                    </button>
-                  ))}
+                  {list.slice(0, 3).map((event) => {
+                    const matchedSlot = findScheduleSlot(event.startTime, event.endTime);
+                    return (
+                      <button
+                        key={event.id}
+                        type="button"
+                        className={`mcal__chip mcal__chip--${event.kind}${isEnded(event, now) ? ' is-past' : ''}${event.cancelled ? ' is-cancelled' : ''}`}
+                        aria-label={eventLabel(event)}
+                        title={[labels[event.kind], formatSlotLabel(event.startTime, event.endTime), title(event), event.place, event.coach].filter(Boolean).join(' · ')}
+                        onClick={() => openEvent(event)}
+                      >
+                        {matchedSlot ? <span>{matchedSlot.label} · </span> : null}
+                        {title(event)}
+                      </button>
+                    );
+                  })}
                   {list.length > 3 && (
                     <button type="button" className="mcal__more" onClick={() => { setAnchor(day); setView('week'); }}>
                       +{list.length - 3} {text("lịch khác", 'more bookings')}
@@ -457,13 +518,17 @@ export function MemberCalendar() {
         <Modal title={title(selected)} onClose={closeDialog} returnFocusRef={returnFocusRef}>
           <div className="kv-list">
             <div className="kv-row"><span>{text("Loại", "Type")}</span><strong>{labels[selected.kind]}</strong></div>
-            <div className="kv-row"><span>{text("Thời gian", "Time")}</span><strong>{dayLabel(selected.date)} {shortDate(selected.date)} · {hhmm(selected.startTime)}–{hhmm(selected.endTime)}</strong></div>
+            <div className="kv-row"><span>{text("Thời gian", "Time")}</span><strong>{dayLabel(selected.date)} {shortDate(selected.date)} · {formatSlotLabel(selected.startTime, selected.endTime)}</strong></div>
             {selected.place && <div className="kv-row"><span>{text("Địa điểm", "Location")}</span><strong>{selected.place}</strong></div>}
             {selected.coach && <div className="kv-row"><span>{text("Huấn luyện viên", "Coach")}</span><strong>{selected.coach}</strong></div>}
             {selected.cancelled && <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{text("Buổi học đã bị hủy", "Class session cancelled")}</strong></div>}
           </div>
           <div className="mcal__dialog-actions">
-            <Link to="/member/classes?tab=pt" className="btn-primary">{text("Quản lý lịch PT", "Manage 1:1 sessions")}</Link>
+            {selected.kind === 'class' ? (
+              <Link to="/member/classes?tab=classes" className="btn-primary">{text("Quản lý lớp học", "Manage group classes")}</Link>
+            ) : (
+              <Link to="/member/classes?tab=pt" className="btn-primary">{text("Quản lý lịch PT", "Manage 1:1 sessions")}</Link>
+            )}
           </div>
         </Modal>
       )}

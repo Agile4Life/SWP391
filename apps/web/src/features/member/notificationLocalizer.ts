@@ -7,6 +7,8 @@ export function localizeTitle(title?: string | null): string {
     'Membership package expiring soon': 'Gói tập sắp hết hạn',
     'Class Session Cancelled': 'Thông báo hủy buổi học',
     'Class session cancelled': 'Thông báo hủy buổi học',
+    'Class session rescheduled': 'Thông báo đổi lịch buổi học',
+    'Course registration successful': 'Đăng ký khóa học thành công',
     'Support request updated': 'Cập nhật yêu cầu hỗ trợ',
     'New message in support request': 'Tin nhắn mới trong yêu cầu hỗ trợ',
     'New member complaint': 'Khiếu nại mới từ hội viên',
@@ -44,6 +46,21 @@ export function localizeMessage(message?: string | null): string {
   const classReminderMatch = message.match(/^Your class "([^"]+)" is starting at ([0-9:]+) on ([0-9/-]+)\. Get ready!$/i);
   if (classReminderMatch) {
     return `Lớp học "${classReminderMatch[1]}" của bạn sẽ bắt đầu lúc ${classReminderMatch[2]} ngày ${classReminderMatch[3]}. Hãy chuẩn bị sẵn sàng!`;
+  }
+
+  const sessionRescheduledMember = message.match(/^The session of class (.+?) \(previously ([^,]+), ([^)]+)\) has been moved to ([^ ]+) \(([^)]+)\)\.$/i);
+  if (sessionRescheduledMember) {
+    return `Buổi học của lớp ${sessionRescheduledMember[1]} (lịch cũ ${sessionRescheduledMember[2]}, ${sessionRescheduledMember[3]}) đã được dời sang ngày ${sessionRescheduledMember[4]} (${sessionRescheduledMember[5]}).`;
+  }
+
+  const sessionRescheduledCoach = message.match(/^Your teaching session for class (.+?) \(previously ([^,]+), ([^)]+)\) has been moved to ([^ ]+) \(([^)]+)\)\.$/i);
+  if (sessionRescheduledCoach) {
+    return `Lịch dạy lớp ${sessionRescheduledCoach[1]} (lịch cũ ${sessionRescheduledCoach[2]}, ${sessionRescheduledCoach[3]}) đã được dời sang ngày ${sessionRescheduledCoach[4]} (${sessionRescheduledCoach[5]}).`;
+  }
+
+  const courseCheckoutMatch = message.match(/^Your spot in course (.+?) has been reserved\. Please complete payment to confirm your enrollment\.$/i);
+  if (courseCheckoutMatch) {
+    return `Bạn đã giữ chỗ thành công cho khóa học ${courseCheckoutMatch[1]}. Vui lòng hoàn tất thanh toán để xác nhận suất học.`;
   }
 
   const pkgExpiryMatch1 = message.match(/^Your membership package "([^"]+)" will expire on ([0-9/-]+)(?: \(in (\d+) days\))?\. Please renew to continue using our services\.$/i);

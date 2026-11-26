@@ -916,7 +916,7 @@ public class EnrollmentService {
                     }
                     var checkout = vnpayPaymentService.checkout(
                             principal,
-                            new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, null, savedPayment.getId()),
+                            new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, savedPayment.getId()),
                             ip,
                             origin
                     );
@@ -928,6 +928,17 @@ public class EnrollmentService {
                             .warn("VNPay checkout could not be created for course payment {}", savedPayment.getId(), ex);
                 }
             }
+        }
+
+        if (notifications != null) {
+            notifications.send(
+                    member.getUserId(),
+                    msg("notifications.booking.class_enrolled.title"),
+                    msg("notifications.booking.course_checkout.body", gymClass.getName()),
+                    "system",
+                    "class_enrollment",
+                    savedEnrollment.getId()
+            );
         }
 
         return new CourseCheckoutDto(
@@ -989,6 +1000,16 @@ public class EnrollmentService {
         }
 
         ClassEnrollment saved = enrollments.save(enrollment);
+        if (notifications != null) {
+            notifications.send(
+                    member.getUserId(),
+                    msg("notifications.booking.cancelled.title"),
+                    msg("notifications.booking.cancelled.body"),
+                    "system",
+                    "class_enrollment",
+                    saved.getId()
+            );
+        }
         return toDto(saved, resolveSessionForClass(gymClass));
     }
 

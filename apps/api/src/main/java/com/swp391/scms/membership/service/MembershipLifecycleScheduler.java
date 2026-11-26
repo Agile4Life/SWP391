@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  *   <li>Các đợt bảo lưu đã duyệt sẽ chuyển sang trạng thái frozen vào ngày đầu tiên và tự động tiếp tục lại vào
  *   ngày ngay sau ngày cuối cùng (hoặc khi đạt {@link MembershipSubscriptionService#MAX_HOLD_DAYS} với các bảo lưu
  *   không có ngày cụ thể).</li>
- *   <li>Các lớp học, buổi tập 1:1 và lượt đặt sân đã đặt cho những ngày không còn gói hội viên active nào bao phủ
+ *   <li>Các lớp học và buổi tập 1:1 đã đặt cho những ngày không còn gói hội viên active nào bao phủ
  *   (đã hết hạn hoặc không gia hạn) sẽ được giải phóng để nhường chỗ hoặc khung giờ cho người khác.</li>
  * </ul>
  */

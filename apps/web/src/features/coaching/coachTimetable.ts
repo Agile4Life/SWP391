@@ -1,10 +1,12 @@
 import { staffText } from '../operations/staffI18n';
-import { hhmm, shortDate, toMinutes, todayISO, type TimetableEvent } from '../schedule/timetable';
+import { formatSlotLabel } from '../schedule/slots';
+import { shortDate, toMinutes, todayISO, type TimetableEvent } from '../schedule/timetable';
 
 /** Dạng dữ liệu buổi học mà bảng lịch của HLV cần. */
 interface SessionLike {
   id: number;
   className: string;
+  coachName?: string;
   roomName?: string;
   sessionDate: string;
   startTime: string;
@@ -18,6 +20,7 @@ interface SessionLike {
 interface PtBookingLike {
   id: number;
   memberName: string;
+  disciplineName?: string | null;
   bookingDate: string;
   startTime: string;
   endTime: string;
@@ -67,9 +70,10 @@ export function coachSessionEvents(
       endTime: session.endTime,
       title: session.className,
       meta: session.roomName || undefined,
+      detail: session.coachName || `${seats} ${staffText('học viên', 'members')}`,
       badge,
       tone,
-      ariaLabel: `${session.className}, ${shortDate(session.sessionDate)} ${hhmm(session.startTime)}–${hhmm(session.endTime)}${session.roomName ? `, ${session.roomName}` : ''}, ${seats} ${staffText('học viên', 'members')}, ${statusText}`,
+      ariaLabel: `${session.className}, ${shortDate(session.sessionDate)} ${formatSlotLabel(session.startTime, session.endTime)}${session.roomName ? `, ${session.roomName}` : ''}, ${seats} ${staffText('học viên', 'members')}, ${statusText}`,
     };
   });
 }
@@ -80,15 +84,18 @@ export function ptBookingEvents(bookings: PtBookingLike[]): TimetableEvent[] {
     .filter((booking) => booking.status && booking.status.toLowerCase() !== 'cancelled')
     .map((booking) => {
       const isCompleted = booking.status.toLowerCase() === 'completed';
+      const slotText = formatSlotLabel(booking.startTime, booking.endTime);
       return {
         id: `pt-${booking.id}`,
         date: booking.bookingDate,
         startTime: booking.startTime,
         endTime: booking.endTime,
         title: `PT 1:1 · ${booking.memberName}`,
+        meta: booking.disciplineName || staffText('Huấn luyện cá nhân', 'Personal training'),
+        detail: isCompleted ? staffText('Hoàn thành', 'Completed') : staffText('Đã xác nhận', 'Confirmed'),
         badge: isCompleted ? staffText('Hoàn thành', 'Completed') : '1:1',
         tone: 'mine' as const,
-        ariaLabel: staffText(`Kèm riêng 1:1 với ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`, `One-to-one coaching with ${booking.memberName}, ${shortDate(booking.bookingDate)} ${hhmm(booking.startTime)}–${hhmm(booking.endTime)}`),
+        ariaLabel: staffText(`Kèm riêng 1:1 với ${booking.memberName}, ${shortDate(booking.bookingDate)} ${slotText}`, `One-to-one coaching with ${booking.memberName}, ${shortDate(booking.bookingDate)} ${slotText}`),
       };
     });
 }

@@ -64,6 +64,22 @@ CREATE TRIGGER trg_enrollments_check_capacity
 AFTER INSERT OR UPDATE OF class_id, status ON class_enrollments
 FOR EACH ROW EXECUTE FUNCTION scms_check_enrollment_capacity();
 
+-- 5 khung giờ cố định (07:00 – 19:30) dùng chung cho lớp học nhóm và buổi PT 1:1.
+CREATE OR REPLACE FUNCTION scms_is_valid_schedule_slot(p_start TIME, p_end TIME)
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+AS $$
+    SELECT COALESCE(
+        (p_start = TIME '07:00:00' AND p_end = TIME '09:30:00')
+        OR (p_start = TIME '09:45:00' AND p_end = TIME '11:15:00')
+        OR (p_start = TIME '11:30:00' AND p_end = TIME '14:00:00')
+        OR (p_start = TIME '14:15:00' AND p_end = TIME '16:45:00')
+        OR (p_start = TIME '17:00:00' AND p_end = TIME '19:30:00'),
+        FALSE
+    );
+$$;
+
 CREATE OR REPLACE FUNCTION scms_check_session_conflict()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -71,19 +87,27 @@ AS $$
 DECLARE
     session_coach_id BIGINT;
     session_room_id BIGINT;
+    session_discipline_id BIGINT;
+    session_class_status VARCHAR(20);
     lock_key BIGINT;
 BEGIN
     IF NEW.status <> 'scheduled' THEN
         RETURN NEW;
     END IF;
-    SELECT coach_id, room_id INTO session_coach_id, session_room_id
+    IF NOT scms_is_valid_schedule_slot(NEW.start_time, NEW.end_time) THEN
+        RAISE EXCEPTION 'trg_schedule_invalid_slot'
+            USING ERRCODE = '23514', CONSTRAINT = 'trg_schedule_invalid_slot';
+    END IF;
+    SELECT coach_id, room_id, discipline_id, status
+    INTO session_coach_id, session_room_id, session_discipline_id, session_class_status
     FROM classes WHERE id = NEW.class_id FOR SHARE;
 
     FOR lock_key IN
         SELECT DISTINCT hashtextextended(resource_key, 0)
         FROM unnest(ARRAY[
             'coach:' || session_coach_id::TEXT,
-            'room:' || session_room_id::TEXT
+            'room:' || session_room_id::TEXT,
+            'discipline:' || session_discipline_id::TEXT
         ]) AS resources(resource_key)
         ORDER BY 1
     LOOP
@@ -105,14 +129,20 @@ BEGIN
             USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_conflict';
     END IF;
 
-    IF NEW.status <> 'cancelled' AND EXISTS (
-        SELECT 1 FROM court_bookings b
-        WHERE b.room_id = session_room_id AND b.booking_date = NEW.session_date
-          AND b.status = 'booked'
-          AND NEW.start_time < b.end_time AND NEW.end_time > b.start_time
+    IF NEW.status <> 'cancelled' AND COALESCE(session_class_status, 'active') = 'active' AND EXISTS (
+        SELECT 1
+        FROM class_sessions existing_session
+        JOIN classes existing_class ON existing_class.id = existing_session.class_id
+        WHERE existing_session.id <> NEW.id
+          AND existing_session.session_date = NEW.session_date
+          AND existing_session.status <> 'cancelled'
+          AND existing_class.status = 'active'
+          AND NEW.start_time < existing_session.end_time
+          AND NEW.end_time > existing_session.start_time
+          AND existing_class.discipline_id = session_discipline_id
     ) THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_conflict'
-            USING ERRCODE = '23P01', CONSTRAINT = 'trg_court_bookings_check_conflict';
+        RAISE EXCEPTION 'Bộ môn này đã có lớp học khác trùng khung giờ.'
+            USING ERRCODE = '23P01', CONSTRAINT = 'trg_sessions_check_discipline_conflict';
     END IF;
 
     RETURN NEW;
@@ -124,104 +154,20 @@ CREATE TRIGGER trg_sessions_check_conflict
 AFTER INSERT OR UPDATE OF class_id, session_date, start_time, end_time, status ON class_sessions
 FOR EACH ROW EXECUTE FUNCTION scms_check_session_conflict();
 
--- Khóa phòng và hội viên giúp tuần tự hóa cả các instance ứng dụng độc lập lẫn truy vấn SQL trực tiếp.
--- Khóa phòng dùng chung với thao tác tạo/dời buổi lớp học ở trên.
-CREATE OR REPLACE FUNCTION scms_guard_court_booking()
-RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE
-    lock_key BIGINT;
-    court rooms%ROWTYPE;
-    discipline_name TEXT;
-    business_now TIMESTAMP := statement_timestamp() AT TIME ZONE 'Asia/Ho_Chi_Minh';
-BEGIN
-    IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
-
-    FOR lock_key IN
-        SELECT DISTINCT hashtextextended(resource_key, 0)
-        FROM unnest(ARRAY['room:' || NEW.room_id::TEXT,
-                          'court-member:' || NEW.member_id::TEXT]) AS resources(resource_key)
-        ORDER BY 1
-    LOOP
-        PERFORM pg_advisory_xact_lock(lock_key);
-    END LOOP;
-
-    SELECT * INTO court FROM rooms WHERE id = NEW.room_id FOR SHARE;
-    SELECT name INTO discipline_name FROM disciplines WHERE id = court.discipline_id;
-    IF court.id IS NULL OR court.status <> 'available' OR court.open_time IS NULL
-       OR court.close_time IS NULL OR court.discipline_id IS NULL
-       OR discipline_name NOT IN ('Tennis', 'Cầu lông', 'Bơi lội') THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_court'
-            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_court';
-    END IF;
-
-    IF NEW.booking_date + NEW.start_time <= business_now THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_past'
-            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_past';
-    END IF;
-    IF EXTRACT(MINUTE FROM NEW.start_time) <> 0 OR EXTRACT(SECOND FROM NEW.start_time) <> 0
-       OR NEW.end_time - NEW.start_time <> INTERVAL '1 hour'
-       OR NEW.start_time < court.open_time OR NEW.end_time > court.close_time
-       OR court.open_time >= court.close_time THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_slot'
-            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_slot';
-    END IF;
-
-    IF NOT EXISTS (
-        SELECT 1 FROM membership_subscriptions s JOIN users u ON u.id = s.member_id
-        WHERE s.member_id = NEW.member_id AND s.status = 'active'
-          AND s.start_date <= business_now::date AND s.end_date >= business_now::date
-          AND s.start_date <= NEW.booking_date AND s.end_date >= NEW.booking_date
-          AND u.deleted_at IS NULL AND u.status = 'active'
-        FOR SHARE OF s, u
-    ) THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_membership'
-            USING ERRCODE = '23514', CONSTRAINT = 'trg_court_bookings_check_membership';
-    END IF;
-
-    IF EXISTS (
-        SELECT 1 FROM court_bookings b WHERE b.id IS DISTINCT FROM NEW.id
-          AND b.booking_date = NEW.booking_date AND b.status = 'booked'
-          AND (b.room_id = NEW.room_id OR b.member_id = NEW.member_id)
-          AND NEW.start_time < b.end_time AND NEW.end_time > b.start_time
-    ) OR EXISTS (
-        SELECT 1 FROM class_sessions s JOIN classes c ON c.id = s.class_id
-        WHERE c.room_id = NEW.room_id AND s.session_date = NEW.booking_date
-          AND s.status <> 'cancelled'
-          AND NEW.start_time < s.end_time AND NEW.end_time > s.start_time
-    ) THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_conflict'
-            USING ERRCODE = '23P01', CONSTRAINT = 'trg_court_bookings_check_conflict';
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-DROP TRIGGER IF EXISTS trg_court_bookings_check_conflict ON court_bookings;
-CREATE TRIGGER trg_court_bookings_check_conflict
-BEFORE INSERT OR UPDATE OF room_id, member_id, booking_date, start_time, end_time, status ON court_bookings
-FOR EACH ROW EXECUTE FUNCTION scms_guard_court_booking();
-
--- Đổi phòng của một lớp hiện có sẽ chuyển phòng cho các buổi của lớp mà không cập nhật từng dòng buổi học.
-CREATE OR REPLACE FUNCTION scms_guard_class_court_room()
-RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-    IF NEW.room_id IS NOT DISTINCT FROM OLD.room_id THEN RETURN NEW; END IF;
-    PERFORM pg_advisory_xact_lock(hashtextextended('room:' || NEW.room_id::TEXT, 0));
-    IF EXISTS (
-        SELECT 1 FROM class_sessions s JOIN court_bookings b
-          ON b.room_id = NEW.room_id AND b.booking_date = s.session_date
-         AND b.status = 'booked' AND s.start_time < b.end_time AND s.end_time > b.start_time
-        WHERE s.class_id = NEW.id AND s.status <> 'cancelled'
-    ) THEN
-        RAISE EXCEPTION 'trg_court_bookings_check_conflict'
-            USING ERRCODE = '23P01', CONSTRAINT = 'trg_court_bookings_check_conflict';
-    END IF;
-    RETURN NEW;
-END;
-$$;
+-- Gỡ bỏ các trigger và hàm đặt sân cũ trên CSDL đã tồn tại (tính năng đặt sân đã ngừng).
 DROP TRIGGER IF EXISTS trg_classes_check_court_room ON classes;
-CREATE TRIGGER trg_classes_check_court_room AFTER UPDATE OF room_id ON classes
-FOR EACH ROW EXECUTE FUNCTION scms_guard_class_court_room();
+DROP FUNCTION IF EXISTS scms_guard_class_court_room();
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = current_schema() AND table_name = 'court_bookings'
+    ) THEN
+        EXECUTE format('DROP TRIGGER IF EXISTS trg_court_bookings_check_conflict ON %I.court_bookings', current_schema());
+    END IF;
+END;
+$$;
+DROP FUNCTION IF EXISTS scms_guard_court_booking();
 
 CREATE OR REPLACE FUNCTION scms_require_active_membership_for_enrollment()
 RETURNS trigger
@@ -702,6 +648,10 @@ BEGIN
     END IF;
     IF TG_TABLE_NAME = 'coach_bookings' THEN
         IF NEW.status <> 'confirmed' THEN RETURN NEW; END IF;
+        IF NOT scms_is_valid_schedule_slot(NEW.start_time, NEW.end_time) THEN
+            RAISE EXCEPTION 'trg_schedule_invalid_slot'
+                USING ERRCODE = '23514', CONSTRAINT = 'trg_schedule_invalid_slot';
+        END IF;
         IF NOT EXISTS (
             SELECT 1 FROM membership_subscriptions m
             WHERE m.member_id = NEW.member_id AND m.status = 'active'
@@ -729,21 +679,6 @@ BEGIN
                   SELECT 1 FROM session_bookings sb WHERE sb.session_id = s.id
                     AND sb.member_id = NEW.member_id AND sb.status = 'booked'))
         ) INTO schedule_conflict;
-        -- Từ chối mọi chuỗi 4 giờ PT liên tiếp chứa buổi đang xét, kể cả khi chèn không theo thứ tự thời gian.
-        -- Advisory lock lịch ở trên cũng tuần tự hóa các lượt đặt đồng thời và việc đổi HLV.
-        IF EXISTS (
-            SELECT 1 FROM generate_series(0, 3) AS offsets(hours_before)
-            WHERE (SELECT count(DISTINCT b.start_time) FROM coach_bookings b
-                WHERE b.coach_id = NEW.coach_id AND b.booking_date = NEW.booking_date
-                  AND b.status IN ('confirmed', 'completed') AND b.id <> COALESCE(NEW.id, -1)
-                  AND b.end_time = b.start_time + interval '1 hour'
-                  AND b.booking_date + b.start_time >= NEW.booking_date + NEW.start_time - offsets.hours_before * interval '1 hour'
-                  AND b.booking_date + b.end_time <= NEW.booking_date + NEW.start_time + (4 - offsets.hours_before) * interval '1 hour'
-            ) >= 3
-        ) THEN
-            RAISE EXCEPTION 'trg_coach_bookings_rest_required'
-                USING ERRCODE = '23514', CONSTRAINT = 'trg_coach_bookings_rest_required';
-        END IF;
     ELSIF TG_TABLE_NAME = 'class_enrollments' THEN
         IF NEW.status <> 'booked' THEN RETURN NEW; END IF;
         SELECT EXISTS (

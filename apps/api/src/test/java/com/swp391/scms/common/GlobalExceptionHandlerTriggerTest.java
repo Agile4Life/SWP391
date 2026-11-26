@@ -39,16 +39,20 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String CAPACITY_EN = "Class is full";
     private static final String SCHEDULE_VI = "Trùng lịch: Huấn luyện viên hoặc phòng học đã có lịch trong khung giờ này";
     private static final String SCHEDULE_EN = "Schedule conflict: Coach or room is already booked during this time slot";
+    private static final String DISCIPLINE_CONFLICT_VI = "Trùng lịch bộ môn: Bộ môn này đã có lớp học khác hoạt động trong cùng khung giờ.";
+    private static final String DISCIPLINE_CONFLICT_EN = "Discipline schedule conflict: This discipline already has another active class during this time slot.";
     private static final String MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch";
     private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
+    private static final String INVALID_SLOT_VI = "Khung giờ không hợp lệ. Vui lòng chọn một trong 5 slot cố định (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
+    private static final String INVALID_SLOT_EN = "Invalid time slot. Please choose one of the 5 fixed slots (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
 
-    /** Kiểm thử: trigger nghỉ của HLV trả 409 Conflict. */
+    /** Kiểm thử: trigger sai 5 slot cố định trả 400 Bad Request với mã SCHEDULING_INVALID_SLOT. */
     @Test
-    void coachRestTriggerReturnsConflict() {
+    void invalidScheduleSlotTriggerReturnsBadRequest() {
         var response = new GlobalExceptionHandler().handleDataIntegrity(
-                new DataIntegrityViolationException("ERROR: trg_coach_bookings_rest_required"));
-        org.junit.jupiter.api.Assertions.assertEquals(409, response.getStatusCode().value());
-        org.junit.jupiter.api.Assertions.assertEquals("COACH_REST_REQUIRED", response.getBody().getCode());
+                new DataIntegrityViolationException("ERROR: trg_schedule_invalid_slot"));
+        org.junit.jupiter.api.Assertions.assertEquals(400, response.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("SCHEDULING_INVALID_SLOT", response.getBody().getCode());
     }
 
     /** Kiểm thử: tranh chấp lịch trả 409 Conflict có thể thử lại. */
@@ -160,42 +164,20 @@ class GlobalExceptionHandlerTriggerTest {
                 new TriggerFailure("Huấn luyện viên hoặc phòng tập đã có lịch trùng khung giờ này.",
                         "trg_sessions_check_conflict", "23P01", 409,
                         "SCHEDULE_CONFLICT", SCHEDULE_VI, SCHEDULE_EN),
+                new TriggerFailure("Bộ môn này đã có lớp học khác trùng khung giờ.",
+                        "trg_sessions_check_discipline_conflict", "23P01", 409,
+                        "SCHEDULING_DISCIPLINE_CONFLICT", DISCIPLINE_CONFLICT_VI, DISCIPLINE_CONFLICT_EN),
                 new TriggerFailure("Học viên không có gói thành viên còn hiệu lực để đăng ký lớp.",
                         "trg_enrollments_check_membership", "23514", 403,
                         "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),
                 new TriggerFailure("Học viên không có gói thành viên còn hiệu lực để check-in.",
                         "trg_checkins_check_membership", "23514", 403,
-                        "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN))
+                        "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),
+                new TriggerFailure("trg_schedule_invalid_slot",
+                        "trg_schedule_invalid_slot", "23514", 400,
+                        "SCHEDULING_INVALID_SLOT", INVALID_SLOT_VI, INVALID_SLOT_EN))
                 .flatMap(trigger -> Stream.of(trigger.message(), trigger.constraint())
                         .flatMap(message -> Stream.of("vi", "en").map(language -> Arguments.of(trigger, message, language))));
-    }
-
-    /** Kiểm thử: ràng buộc của sân có phản hồi công khai đã được dịch. */
-    @ParameterizedTest
-    @MethodSource("courtFailures")
-    void courtConstraintsHaveLocalizedPublicResponses(String constraint, int httpStatus, String code,
-                                                     String language, String message) throws Exception {
-        mockMvcFor(translate(new SQLException(constraint, "23514")))
-                .perform(get("/trigger-test").header("Accept-Language", language))
-                .andExpect(status().is(httpStatus))
-                .andExpect(jsonPath("$.code").value(code))
-                .andExpect(jsonPath("$.message").value(message))
-                .andExpect(jsonPath("$.details").doesNotExist());
-    }
-
-    /** Hàm trợ giúp của test: cung cấp các lỗi của sân. */
-    private static Stream<Arguments> courtFailures() {
-        return Stream.of(
-                Arguments.of("trg_court_bookings_check_conflict", 409, "COURT_BOOKING_SLOT_TAKEN", "vi",
-                        "Khung giờ đã có lượt đặt sân hoặc lớp học trùng lịch"),
-                Arguments.of("trg_court_bookings_check_conflict", 409, "COURT_BOOKING_SLOT_TAKEN", "en",
-                        "This time overlaps an existing court booking or class"),
-                Arguments.of("trg_court_bookings_check_membership", 403, "COURT_BOOKING_MEMBERSHIP_INVALID", "vi",
-                        "Bạn chưa đăng ký gói tập hoặc gói tập không còn hiệu lực đến ngày đặt sân. Vui lòng đăng ký gói tập đang hoạt động để đặt sân"),
-                Arguments.of("trg_court_bookings_check_limit", 409, "COURT_BOOKING_LIMIT_REACHED", "en",
-                        "You can have at most four court bookings per day"),
-                Arguments.of("trg_court_bookings_check_slot", 400, "COURT_BOOKING_INVALID_SLOT", "en",
-                        "Choose a whole-hour 60-minute slot within the court opening hours"));
     }
 
     /** Hàm trợ giúp của test: cung cấp các lỗi database không liên quan. */

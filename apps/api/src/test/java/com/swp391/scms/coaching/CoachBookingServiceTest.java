@@ -6,6 +6,7 @@ import com.swp391.scms.coaching.dto.CoachBookingDto;
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
 import com.swp391.scms.coaching.service.CoachBookingService;
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.facilities.entity.MembershipPackage;
@@ -121,13 +122,13 @@ class CoachBookingServiceTest {
             return b;
         });
 
-        // Đặt lịch lúc 14:00 (cách 08:00 hơn 2 tiếng)
+        // Đặt lịch Slot 4 (14:15–16:45, cách 08:00 hơn 2 tiếng)
         CoachBookingCreateDto request = new CoachBookingCreateDto(
                 20L,
                 null,
                 LocalDate.of(2026, 10, 31),
-                LocalTime.of(14, 0),
-                LocalTime.of(15, 0),
+                ScheduleSlot.SLOT_4.startTime(),
+                ScheduleSlot.SLOT_4.endTime(),
                 "cash",
                 "Mục tiêu tăng cơ giảm mỡ"
         );
@@ -139,6 +140,7 @@ class CoachBookingServiceTest {
         assertThat(result.paymentMethod()).isEqualTo("cash");
         assertThat(result.paymentStatus()).isEqualTo("pending");
         assertThat(result.status()).isEqualTo("confirmed");
+        assertThat(result.hourlyRate()).isEqualByComparingTo("200000.00");
     }
 
     /** Kiểm thử: Chặn đặt lịch nếu thời gian bắt đầu cách dưới 2 tiếng */
@@ -148,13 +150,13 @@ class CoachBookingServiceTest {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
 
-        // Thử đặt lịch lúc 09:00 (chỉ cách 08:00 đúng 1 tiếng, ít hơn 2 tiếng!)
+        // Thử đặt lịch Slot 2 lúc 09:45 (chỉ cách 08:00 đúng 1 giờ 45 phút, ít hơn 2 tiếng!)
         CoachBookingCreateDto request = new CoachBookingCreateDto(
                 20L,
                 null,
                 LocalDate.of(2026, 10, 31),
-                LocalTime.of(9, 0),
-                LocalTime.of(10, 0),
+                ScheduleSlot.SLOT_2.startTime(),
+                ScheduleSlot.SLOT_2.endTime(),
                 "cash",
                 "Đặt gấp"
         );
@@ -176,8 +178,8 @@ class CoachBookingServiceTest {
 
         ClassSession busySession = new ClassSession();
         busySession.setGymClass(gymClass);
-        busySession.setStartTime(LocalTime.of(14, 0));
-        busySession.setEndTime(LocalTime.of(15, 0));
+        busySession.setStartTime(ScheduleSlot.SLOT_4.startTime());
+        busySession.setEndTime(ScheduleSlot.SLOT_4.endTime());
 
         when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of(busySession));
 
@@ -185,8 +187,8 @@ class CoachBookingServiceTest {
                 20L,
                 null,
                 LocalDate.of(2026, 10, 31),
-                LocalTime.of(14, 0),
-                LocalTime.of(15, 0),
+                ScheduleSlot.SLOT_4.startTime(),
+                ScheduleSlot.SLOT_4.endTime(),
                 "cash",
                 "Tập riêng"
         );
@@ -229,8 +231,8 @@ class CoachBookingServiceTest {
                 20L,
                 null,
                 LocalDate.of(2026, 10, 31),
-                LocalTime.of(16, 0),
-                LocalTime.of(17, 0),
+                ScheduleSlot.SLOT_5.startTime(),
+                ScheduleSlot.SLOT_5.endTime(),
                 "package_quota",
                 "Tập kèm 1:1"
         );
@@ -274,8 +276,8 @@ class CoachBookingServiceTest {
                 20L,
                 null,
                 LocalDate.of(2026, 10, 31),
-                LocalTime.of(16, 0),
-                LocalTime.of(17, 0),
+                ScheduleSlot.SLOT_5.startTime(),
+                ScheduleSlot.SLOT_5.endTime(),
                 "package_quota",
                 "Tập thử HLV 1:1"
         );
@@ -313,8 +315,8 @@ class CoachBookingServiceTest {
                 20L,
                 null,
                 LocalDate.of(2026, 10, 31),
-                LocalTime.of(16, 0),
-                LocalTime.of(17, 0),
+                ScheduleSlot.SLOT_5.startTime(),
+                ScheduleSlot.SLOT_5.endTime(),
                 "package_quota",
                 "Đặt buổi thứ hai"
         );
@@ -349,8 +351,8 @@ class CoachBookingServiceTest {
                 20L,
                 null,
                 LocalDate.of(2026, 10, 31),
-                LocalTime.of(16, 0),
-                LocalTime.of(17, 0),
+                ScheduleSlot.SLOT_5.startTime(),
+                ScheduleSlot.SLOT_5.endTime(),
                 "package_quota",
                 "Tập riêng"
         );
@@ -360,9 +362,9 @@ class CoachBookingServiceTest {
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("COACH_BOOKING_PACKAGE_NO_QUOTA"));
     }
 
-    /** Kiểm thử: Kiểm tra khung giờ khả dụng: đánh dấu slot dưới 2 tiếng là too_soon */
+    /** Kiểm thử: Kiểm tra 5 slot cố định và đánh dấu slot dưới 2 tiếng là too_soon */
     @Test
-    @DisplayName("Kiểm tra khung giờ khả dụng: đánh dấu slot dưới 2 tiếng là too_soon")
+    @DisplayName("Kiểm tra 5 slot cố định và đánh dấu slot dưới 2 tiếng là too_soon")
     void getAvailableSlots_marks_tooSoon() {
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         when(classSessionRepository.findActiveByCoachAndDate(eq(20L), any())).thenReturn(List.of());
@@ -370,14 +372,26 @@ class CoachBookingServiceTest {
 
         List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, LocalDate.of(2026, 10, 31), 10L);
 
-        // Tại 08:00, các khung 06:00, 07:00, 08:00, 09:00 đã qua hoặc quá sát giờ
-        CoachAvailableSlotDto slot9 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(9, 0))).findFirst().orElseThrow();
-        assertThat(slot9.available()).isFalse();
-        assertThat(slot9.reason()).isEqualTo("too_soon");
+        assertThat(slots).hasSize(5);
+        assertThat(slots).extracting(CoachAvailableSlotDto::slotNumber).containsExactly(1, 2, 3, 4, 5);
 
-        // Khung 11:00 (cách hơn 2 tiếng) phải còn trống
-        CoachAvailableSlotDto slot11 = slots.stream().filter(s -> s.startTime().equals(LocalTime.of(11, 0))).findFirst().orElseThrow();
-        assertThat(slot11.available()).isTrue();
+        // Tại 08:00, Slot 1 (07:00) và Slot 2 (09:45, cách 1h45m < 2h) đều bị đánh dấu too_soon
+        CoachAvailableSlotDto slot1 = slots.get(0);
+        assertThat(slot1.available()).isFalse();
+        assertThat(slot1.reason()).isEqualTo("too_soon");
+
+        CoachAvailableSlotDto slot2 = slots.get(1);
+        assertThat(slot2.startTime()).isEqualTo(ScheduleSlot.SLOT_2.startTime());
+        assertThat(slot2.endTime()).isEqualTo(ScheduleSlot.SLOT_2.endTime());
+        assertThat(slot2.available()).isFalse();
+        assertThat(slot2.reason()).isEqualTo("too_soon");
+
+        // Slot 3 (11:30–14:00, cách hơn 2 tiếng) phải còn trống
+        CoachAvailableSlotDto slot3 = slots.get(2);
+        assertThat(slot3.startTime()).isEqualTo(ScheduleSlot.SLOT_3.startTime());
+        assertThat(slot3.endTime()).isEqualTo(ScheduleSlot.SLOT_3.endTime());
+        assertThat(slot3.available()).isTrue();
+        assertThat(slot3.reason()).isNull();
     }
     /** Kiểm thử: HLV không liên quan không hủy được buổi của HLV khác. */
     @Test
@@ -422,22 +436,34 @@ class CoachBookingServiceTest {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
-                LocalTime.of(14, 0), LocalTime.of(15, 0), "cash", null);
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "cash", null);
         assertThatThrownBy(() -> service.createBooking(principal, request))
                 .isInstanceOf(BadRequestException.class)
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("MEMBERSHIP_INACTIVE_OR_EXPIRED"));
         verify(coachBookingRepository, never()).save(any());
     }
-    /** Kiểm thử: từ chối đặt nhiều giờ nhưng tính một buổi. */
+
+    /** Kiểm thử: từ chối khung giờ ngoài 5 slot cố định (bao gồm đặt kéo dài nhiều giờ hoặc giờ lẻ). */
     @Test
     void rejectsMultiHourBookingChargedAsOneSession() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
-        var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
-                LocalTime.of(14, 0), LocalTime.of(18, 0), "package_quota", null);
-        assertThatThrownBy(() -> service.createBooking(principal, request))
-                .isInstanceOf(BadRequestException.class)
-                .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("INVALID_COACH_BOOKING_SLOT"));
+        for (LocalTime[] invalid : new LocalTime[][]{
+                {LocalTime.of(14, 0), LocalTime.of(18, 0)},
+                {LocalTime.of(8, 0), LocalTime.of(9, 0)},
+                {LocalTime.of(7, 0), LocalTime.of(9, 0)},
+                {LocalTime.of(19, 30), LocalTime.of(20, 30)}
+        }) {
+            var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 11, 1),
+                    invalid[0], invalid[1], "package_quota", null);
+            assertThatThrownBy(() -> service.createBooking(principal, request))
+                    .isInstanceOf(BadRequestException.class)
+                    .satisfies(e -> {
+                        BadRequestException bre = (BadRequestException) e;
+                        assertThat(bre.getErrorCode()).isEqualTo("INVALID_COACH_BOOKING_SLOT");
+                        assertThat(bre.getMessageKey()).isEqualTo("error.coach_booking.invalid_slot");
+                    });
+        }
         verify(coachBookingRepository, never()).save(any());
     }
 
@@ -446,27 +472,30 @@ class CoachBookingServiceTest {
     void availabilityIncludesMembersGroupClass() {
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         ClassSession session = new ClassSession();
-        session.setStartTime(LocalTime.of(11, 0)); session.setEndTime(LocalTime.NOON);
+        session.setStartTime(ScheduleSlot.SLOT_3.startTime());
+        session.setEndTime(ScheduleSlot.SLOT_3.endTime());
         when(classSessionRepository.findActiveByMemberAndDate(10L, LocalDate.of(2026, 10, 31))).thenReturn(List.of(session));
         var slot = service.getAvailableSlots(20L, LocalDate.of(2026, 10, 31), 10L).stream()
-                .filter(item -> item.startTime().equals(LocalTime.of(11, 0))).findFirst().orElseThrow();
+                .filter(item -> item.startTime().equals(ScheduleSlot.SLOT_3.startTime())).findFirst().orElseThrow();
+        assertThat(slot.slotNumber()).isEqualTo(3);
         assertThat(slot.available()).isFalse();
         assertThat(slot.reason()).isEqualTo("member_busy");
     }
+
     /** Kiểm thử: từ chối phương thức thanh toán không biết. */
     @Test
     void rejectsUnknownPaymentMethod() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
-                LocalTime.of(14, 0), LocalTime.of(15, 0), "free_lunch", null);
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "free_lunch", null);
         assertThatThrownBy(() -> service.createBooking(principal, request))
                 .isInstanceOf(BadRequestException.class)
                 .satisfies(e -> assertThat(((BadRequestException) e).getErrorCode()).isEqualTo("INVALID_PAYMENT_METHOD"));
         verify(coachBookingRepository, never()).save(any());
     }
 
-    /** Kiểm thử: từ chối đặt theo giờ khi đã chạm giới hạn chưa thanh toán. */
+    /** Kiểm thử: từ chối đặt theo slot khi đã chạm giới hạn chưa thanh toán. */
     @Test
     void rejectsHourlyBookingWhenUnpaidLimitReached() {
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
@@ -478,7 +507,7 @@ class CoachBookingServiceTest {
         when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(sub));
         when(coachBookingRepository.countUnpaid(10L)).thenReturn(2L);
         var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 10, 31),
-                LocalTime.of(14, 0), LocalTime.of(15, 0), "cash", null);
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "cash", null);
         assertThatThrownBy(() -> service.createBooking(principal, request))
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class);
         verify(coachBookingRepository, never()).save(any());
@@ -559,7 +588,8 @@ class CoachBookingServiceTest {
         });
 
         CoachBookingDto result = service.createBooking(principal, new CoachBookingCreateDto(
-                20L, null, LocalDate.of(2026, 10, 31), LocalTime.of(14, 0), LocalTime.of(15, 0), "cash", "Tập 1:1"
+                20L, null, LocalDate.of(2026, 10, 31),
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "cash", "Tập 1:1"
         ));
 
         assertThat(result.paymentStatus()).isEqualTo("pending");
@@ -847,13 +877,15 @@ class CoachBookingServiceTest {
         when(leaves.existsApprovedLeaveOn(20L, day)).thenReturn(true);
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
-        var request = new CoachBookingCreateDto(20L, null, day, LocalTime.of(14, 0), LocalTime.of(15, 0), "package_quota", null);
+        var request = new CoachBookingCreateDto(20L, null, day,
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "package_quota", null);
 
         assertThatThrownBy(() -> service.createBooking(principal, request))
                 .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class)
                 .satisfies(e -> assertThat(((com.swp391.scms.common.exception.ConflictException) e).getErrorCode())
                         .isEqualTo("COACH_ON_LEAVE"));
         assertThat(service.getAvailableSlots(20L, day, 10L))
+                .hasSize(5)
                 .allSatisfy(slot -> {
                     assertThat(slot.available()).isFalse();
                     assertThat(slot.reason()).isEqualTo("coach_on_leave");
@@ -907,42 +939,58 @@ class CoachBookingServiceTest {
         assertThat(quota.usedThisMonth()).isEqualTo(1);
         assertThat(quota.remainingQuota()).isEqualTo(2);
     }
-    /** Kiểm thử: HLV nghỉ sau ba khung PT liên tiếp và làm lại sau một giờ. */
+    /** Kiểm thử: HLV có thể nhận liên tiếp Slot 4 và Slot 5 sau 3 slot đầu mà không bị chặn nghỉ. */
     @Test
-    void coachRestsAfterThreeConsecutivePtSlotsAndResumesAfterAnHour() {
-        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
-        when(coachBookingRepository.findActiveByCoachAndDate(20L, LocalDate.of(2026, 11, 2)))
-                .thenReturn(ptSlots(10, 11, 12));
-        var slots = service.getAvailableSlots(20L, LocalDate.of(2026, 11, 2), 10L);
-        var rest = slots.stream().filter(s -> s.startTime().getHour() == 13).findFirst().orElseThrow();
-        assertThat(rest.available()).isFalse();
-        assertThat(rest.reason()).isEqualTo("coach_rest");
-        assertThat(slots.stream().filter(s -> s.startTime().getHour() == 14).findFirst().orElseThrow().available()).isTrue();
-    }
+    void coachCanAcceptFourAndFiveConsecutivePtSlotsWithoutRestRestriction() {
+        LocalDate day = LocalDate.of(2026, 11, 2);
+        MembershipSubscription active = new MembershipSubscription();
+        active.setStartDate(LocalDate.of(2026, 10, 1));
+        active.setEndDate(LocalDate.of(2026, 11, 30));
 
-    /** Kiểm thử: từ chối khung PT liên tiếp thứ tư kể cả khi chèn vào giữa. */
-    @Test
-    void rejectsFourthConsecutivePtSlotIncludingInsertionInTheMiddle() {
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
-        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
-        for (int requested : List.of(10, 11, 12, 13)) {
-            when(coachBookingRepository.findActiveByCoachAndDate(20L, LocalDate.of(2026, 11, 2)))
-                    .thenReturn(ptSlots(java.util.stream.IntStream.rangeClosed(10, 13).filter(h -> h != requested).toArray()));
-            var request = new CoachBookingCreateDto(20L, null, LocalDate.of(2026, 11, 2),
-                    LocalTime.of(requested, 0), LocalTime.of(requested + 1, 0), "cash", null);
-            assertThatThrownBy(() -> service.createBooking(principal, request))
-                    .isInstanceOf(ConflictException.class)
-                    .satisfies(e -> assertThat(((ConflictException) e).getErrorCode()).isEqualTo("COACH_REST_REQUIRED"));
-        }
-        verify(coachBookingRepository, never()).save(any());
+        when(subscriptionRepository.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(active));
+        when(classSessionRepository.findActiveByCoachAndDate(20L, day)).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(10L, day)).thenReturn(List.of());
+        when(classSessionRepository.findActiveByMemberAndDate(10L, day)).thenReturn(List.of());
+        when(coachBookingRepository.save(any(CoachBooking.class))).thenAnswer(inv -> {
+            CoachBooking saved = inv.getArgument(0);
+            saved.setId(900L);
+            return saved;
+        });
+
+        // Khi HLV đã có Slot 1, 2, 3 -> Slot 4 và Slot 5 vẫn còn trống (không có lý do "coach_rest")
+        when(coachBookingRepository.findActiveByCoachAndDate(20L, day))
+                .thenReturn(ptSlots(ScheduleSlot.SLOT_1, ScheduleSlot.SLOT_2, ScheduleSlot.SLOT_3));
+        var slots = service.getAvailableSlots(20L, day, 10L);
+        assertThat(slots).hasSize(5);
+        assertThat(slots.get(0).reason()).isEqualTo("coach_busy");
+        assertThat(slots.get(1).reason()).isEqualTo("coach_busy");
+        assertThat(slots.get(2).reason()).isEqualTo("coach_busy");
+        assertThat(slots.get(3).available()).isTrue();
+        assertThat(slots.get(3).reason()).isNull();
+        assertThat(slots.get(4).available()).isTrue();
+        assertThat(slots.get(4).reason()).isNull();
+
+        // Đặt Slot 4 liên tiếp thứ 4 thành công
+        var slot4Req = new CoachBookingCreateDto(20L, null, day,
+                ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "cash", null);
+        assertThat(service.createBooking(principal, slot4Req).status()).isEqualTo("confirmed");
+
+        // Đặt Slot 5 liên tiếp thứ 5 cũng thành công
+        when(coachBookingRepository.findActiveByCoachAndDate(20L, day))
+                .thenReturn(ptSlots(ScheduleSlot.SLOT_1, ScheduleSlot.SLOT_2, ScheduleSlot.SLOT_3, ScheduleSlot.SLOT_4));
+        var slot5Req = new CoachBookingCreateDto(20L, null, day,
+                ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime(), "cash", null);
+        assertThat(service.createBooking(principal, slot5Req).status()).isEqualTo("confirmed");
     }
 
-    /** Hàm trợ giúp của test: tạo danh sách khung PT. */
-    private List<CoachBooking> ptSlots(int... hours) {
-        return java.util.Arrays.stream(hours).mapToObj(hour -> {
+    /** Hàm trợ giúp của test: tạo danh sách khung PT theo {@link ScheduleSlot}. */
+    private List<CoachBooking> ptSlots(ScheduleSlot... slots) {
+        return java.util.Arrays.stream(slots).map(slot -> {
             CoachBooking booking = new CoachBooking();
-            booking.setStartTime(LocalTime.of(hour, 0));
-            booking.setEndTime(LocalTime.of(hour + 1, 0));
+            booking.setStartTime(slot.startTime());
+            booking.setEndTime(slot.endTime());
             return booking;
         }).toList();
     }
@@ -1132,5 +1180,78 @@ class CoachBookingServiceTest {
         when(coachBookingRepository.findForAttendance(any(), any())).thenReturn(List.of());
         service.getAttendance(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), null, null, "ALL");
         verify(coachBookingRepository).findForAttendance(LocalDate.of(2026, 10, 19), LocalDate.of(2026, 11, 1));
+    }
+
+    /** Kiểm thử: khi lớp nhóm bật và HLV đang có lịch dạy lớp thì khóa slot PT 1:1 và chặn đặt trùng giờ. */
+    @Test
+    void groupClassBlocksCoachPtSlotAndRejectsOverlappingBooking() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "legacyClassesEnabled", true);
+        LocalDate date = LocalDate.of(2026, 11, 1);
+
+        com.swp391.scms.scheduling.entity.GymClass yoga = new com.swp391.scms.scheduling.entity.GymClass();
+        yoga.setName("Yoga Sáng");
+        com.swp391.scms.scheduling.entity.ClassSession teaching = new com.swp391.scms.scheduling.entity.ClassSession();
+        teaching.setGymClass(yoga);
+        teaching.setSessionDate(date);
+        teaching.setStartTime(ScheduleSlot.SLOT_4.startTime());
+        teaching.setEndTime(ScheduleSlot.SLOT_4.endTime());
+        teaching.setStatus("scheduled");
+
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(classSessionRepository.findActiveByCoachAndDate(20L, date)).thenReturn(List.of(teaching));
+        when(coachBookingRepository.findActiveByCoachAndDate(20L, date)).thenReturn(List.of());
+        when(classSessionRepository.findActiveByMemberAndDate(10L, date)).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByMemberAndDate(10L, date)).thenReturn(List.of());
+
+        List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, date, 10L);
+        CoachAvailableSlotDto slot4 = slots.stream().filter(s -> s.startTime().equals(ScheduleSlot.SLOT_4.startTime())).findFirst().orElseThrow();
+        CoachAvailableSlotDto slot5 = slots.stream().filter(s -> s.startTime().equals(ScheduleSlot.SLOT_5.startTime())).findFirst().orElseThrow();
+        assertThat(slot4.slotNumber()).isEqualTo(4);
+        assertThat(slot4.available()).isFalse();
+        assertThat(slot4.reason()).isEqualTo("coach_busy");
+        assertThat(slot5.slotNumber()).isEqualTo(5);
+        assertThat(slot5.available()).isTrue();
+
+        CoachBookingCreateDto overlappingRequest = new CoachBookingCreateDto(
+                20L, null, date, ScheduleSlot.SLOT_4.startTime(), ScheduleSlot.SLOT_4.endTime(), "package_quota", "Tập riêng");
+        assertThatThrownBy(() -> service.createBooking(principal, overlappingRequest))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "COACH_SCHEDULE_CONFLICT");
+    }
+
+    /** Kiểm thử: khi hội viên đang có lớp nhóm trùng giờ thì slot PT báo member_busy và chặn đặt. */
+    @Test
+    void groupClassBlocksMemberPtSlotWhenMemberHasOverlappingClass() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "legacyClassesEnabled", true);
+        LocalDate date = LocalDate.of(2026, 11, 1);
+
+        com.swp391.scms.scheduling.entity.GymClass boxing = new com.swp391.scms.scheduling.entity.GymClass();
+        boxing.setName("Boxing");
+        com.swp391.scms.scheduling.entity.ClassSession attending = new com.swp391.scms.scheduling.entity.ClassSession();
+        attending.setGymClass(boxing);
+        attending.setSessionDate(date);
+        attending.setStartTime(ScheduleSlot.SLOT_5.startTime());
+        attending.setEndTime(ScheduleSlot.SLOT_5.endTime());
+        attending.setStatus("scheduled");
+
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(memberRepository.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
+        when(classSessionRepository.findActiveByCoachAndDate(20L, date)).thenReturn(List.of());
+        when(coachBookingRepository.findActiveByCoachAndDate(20L, date)).thenReturn(List.of());
+        when(classSessionRepository.findActiveByMemberAndDate(10L, date)).thenReturn(List.of(attending));
+        when(coachBookingRepository.findActiveByMemberAndDate(10L, date)).thenReturn(List.of());
+
+        List<CoachAvailableSlotDto> slots = service.getAvailableSlots(20L, date, 10L);
+        CoachAvailableSlotDto slot5 = slots.stream().filter(s -> s.startTime().equals(ScheduleSlot.SLOT_5.startTime())).findFirst().orElseThrow();
+        assertThat(slot5.slotNumber()).isEqualTo(5);
+        assertThat(slot5.available()).isFalse();
+        assertThat(slot5.reason()).isEqualTo("member_busy");
+
+        CoachBookingCreateDto overlappingRequest = new CoachBookingCreateDto(
+                20L, null, date, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime(), "package_quota", "Tập riêng");
+        assertThatThrownBy(() -> service.createBooking(principal, overlappingRequest))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBER_SCHEDULE_CONFLICT");
     }
 }

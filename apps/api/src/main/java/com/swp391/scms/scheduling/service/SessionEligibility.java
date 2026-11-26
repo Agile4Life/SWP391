@@ -45,9 +45,14 @@ final class SessionEligibility {
         ensureFuture(session.getSessionDate(), session.getStartTime(), clock);
     }
 
+    /** Kiểm tra thời điểm bắt đầu (ngày + giờ theo giờ Việt Nam) có nằm sau thời điểm hiện tại hay không. */
+    static boolean isFuture(LocalDate date, LocalTime start, Clock clock) {
+        return LocalDateTime.of(date, start).atZone(CENTER_ZONE).toInstant().isAfter(clock.instant());
+    }
+
     /** Ném lỗi nếu thời điểm bắt đầu (ngày + giờ) không nằm trong tương lai. */
     static void ensureFuture(LocalDate date, LocalTime start, Clock clock) {
-        if (!LocalDateTime.of(date, start).atZone(CENTER_ZONE).toInstant().isAfter(clock.instant())) {
+        if (!isFuture(date, start, clock)) {
             throw new BadRequestException("SCHEDULING_PAST_SESSION", "error.scheduling.past_session",
                     null, "Session must start in the future");
         }

@@ -60,7 +60,9 @@ class CatalogSeederTest {
         when(equipmentRepository.count()).thenReturn(0L);
         when(rooms.list()).thenReturn(List.of(
                 new RoomDto(1L, "Phòng Gym Tiêu chuẩn", "Tầng 1", 50, "available", null, null, null, null, "STANDARD"),
-                new RoomDto(2L, "Phòng Gym VIP", "Tầng 2", 25, "available", null, null, null, null, "PLATINUM")));
+                new RoomDto(2L, "Phòng Gym VIP", "Tầng 2", 25, "available", null, null, null, null, "PLATINUM"),
+                new RoomDto(3L, "Zen Garden Studio", "Penthouse", 18, "available", null, null, null, null, "STANDARD"),
+                new RoomDto(4L, "Ring Arena 01", "Level 1 - East Wing", 14, "available", null, null, null, null, "STANDARD")));
         when(roomRepository.findAll()).thenReturn(List.of(
                 namedRoom("Phòng Gym Tiêu chuẩn"), namedRoom("Phòng Gym VIP")));
 
@@ -81,7 +83,7 @@ class CatalogSeederTest {
         return room;
     }
 
-    /** Kiểm thử: seed các danh mục trống. */
+    /** Kiểm thử: seed các danh mục trống đủ 3 bộ môn và 4 phòng tập chuẩn. */
     @Test
     void seedsEmptyCatalogs() {
         when(disciplines.list()).thenReturn(List.of());
@@ -90,8 +92,8 @@ class CatalogSeederTest {
 
         seeder.run(null);
 
-        verify(disciplines, times(1)).create(any());
-        verify(rooms, times(1)).create(any());
+        verify(disciplines, times(3)).create(any());
+        verify(rooms, times(4)).create(any());
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
         verify(packages, times(7)).create(requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.price().intValue()).toList())
@@ -139,16 +141,23 @@ class CatalogSeederTest {
                         org.assertj.core.groups.Tuple.tuple(CatalogSeeder.PLATINUM_6M_NAME, 180));
     }
 
-    /** Kiểm thử: không seed lại danh mục đã có. */
+    /** Kiểm thử: không seed lại danh mục bộ môn và phòng chuẩn đã có đủ. */
     @Test
     void doesNotSeedExistingCatalogs() {
-        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Yoga", null)));
-        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
+        when(disciplines.list()).thenReturn(List.of(
+                new DisciplineDto(1L, "Gym", null),
+                new DisciplineDto(2L, "Boxing", null),
+                new DisciplineDto(3L, "Yoga", null)));
+        when(rooms.list()).thenReturn(List.of(
+                new RoomDto(1L, "Phòng Gym Tiêu chuẩn", "Tầng 1", 50, "available", null, null, null, null, "STANDARD"),
+                new RoomDto(2L, "Phòng Gym VIP", "Tầng 2", 25, "available", null, null, null, null, "PLATINUM"),
+                new RoomDto(3L, "Zen Garden Studio", "Penthouse", 18, "available", null, null, null, null, "STANDARD"),
+                new RoomDto(4L, "Ring Arena 01", "Level 1 - East Wing", 14, "available", null, null, null, null, "STANDARD")));
         when(packages.list()).thenReturn(List.of(new PackageDto(1L, "P", null, BigDecimal.ONE, 1, null, "active")));
 
         seeder.run(null);
 
-        verify(disciplines, times(1)).create(any());
+        verify(disciplines, never()).create(any());
         verify(disciplines, never()).update(any(), any());
         verify(rooms, never()).create(any());
         verify(packages, times(7)).create(any());
@@ -206,33 +215,31 @@ class CatalogSeederTest {
     void renamesLegacyDisciplinesToTheCanonicalListWithoutDuplicatingThem() {
         when(disciplines.list()).thenReturn(List.of(
                 new DisciplineDto(1L, "Olympic Strength", "Tạ"),
-                new DisciplineDto(2L, "Thermal Aquatics", null),
-                new DisciplineDto(3L, "Boxing & Kickfit", "Đấm"),
-                new DisciplineDto(4L, "Tennis", null)));
+                new DisciplineDto(2L, "Boxing & Kickfit", "Đấm")));
         when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
         when(packages.list()).thenReturn(List.of());
 
         seeder.run(null);
 
         var requests = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.DisciplineRequest.class);
-        verify(disciplines, times(1)).update(any(), requests.capture());
+        verify(disciplines, times(2)).update(any(), requests.capture());
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().stream().map(r -> r.name()).toList())
-                .containsExactly("Gym");
+                .containsExactly("Gym", "Boxing");
         org.assertj.core.api.Assertions.assertThat(requests.getAllValues().getFirst().description()).isEqualTo("Tạ");
-        verify(disciplines, never()).create(any());
+        var created = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.DisciplineRequest.class);
+        verify(disciplines, times(1)).create(created.capture());
+        org.assertj.core.api.Assertions.assertThat(created.getAllValues().stream().map(r -> r.name()).toList())
+                .containsExactly("Yoga");
     }
 
     /** Kiểm thử: không đổi tên bí danh cũ khi bộ môn hoặc gói chuẩn đã tồn tại. */
     @Test
     void doesNotRenameLegacyAliasWhenCanonicalDisciplineOrPackageAlreadyExistsLaterInSortedList() {
         when(disciplines.list()).thenReturn(List.of(
-                new DisciplineDto(1L, "Bơi lội", null),
-                new DisciplineDto(2L, "Boxing", null),
-                new DisciplineDto(3L, "Cầu lông", null),
-                new DisciplineDto(4L, "Gym", null),
-                new DisciplineDto(5L, "Mindful Yoga", "Legacy"),
-                new DisciplineDto(6L, "Tennis", null),
-                new DisciplineDto(7L, "Yoga", "Canonical")));
+                new DisciplineDto(1L, "Boxing", null),
+                new DisciplineDto(2L, "Gym", null),
+                new DisciplineDto(3L, "Mindful Yoga", "Legacy"),
+                new DisciplineDto(4L, "Yoga", "Canonical")));
         when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "S", null, 1, "available")));
         when(packages.list()).thenReturn(List.of(
                 new PackageDto(10L, "The Essential", "Old alias", new BigDecimal("150000"), 30, 2, "inactive"),
@@ -293,5 +300,33 @@ class CatalogSeederTest {
         seeder.run(null);
 
         verify(packages, never()).update(any(), any());
+    }
+
+    /** Kiểm thử: gỡ cụm mô tả không gian 3D cũ khỏi gói Silver 3/6 tháng mà vẫn giữ nguyên giá và trạng thái quản lý đặt. */
+    @Test
+    void stripsLegacy3dTextFromSeededSilverPackagesWhilePreservingPriceAndStatus() {
+        String old3mDesc = CatalogSeeder.SILVER_3M_DESC.replace(
+                "- Check-in ra/vào bằng thẻ QR động.",
+                "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.");
+        String old6mDesc = CatalogSeeder.SILVER_6M_DESC.replace(
+                "- Check-in ra/vào bằng thẻ QR động.",
+                "- Check-in ra/vào bằng thẻ QR động và trải nghiệm không gian 3D.");
+        when(disciplines.list()).thenReturn(List.of(new DisciplineDto(1L, "Gym", null)));
+        when(rooms.list()).thenReturn(List.of(new RoomDto(1L, "Phòng Gym Tiêu chuẩn", null, 50, "available")));
+        when(packages.list()).thenReturn(List.of(
+                new PackageDto(1L, CatalogSeeder.SILVER_3M_NAME, old3mDesc, new BigDecimal("499000"), 90, 3, "active", "SILVER"),
+                new PackageDto(2L, CatalogSeeder.SILVER_6M_NAME, old6mDesc, CatalogSeeder.SILVER_6M_PRICE, 180, 6, "inactive", "SILVER")
+        ));
+
+        seeder.run(null);
+
+        var updated = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.facilities.dto.CatalogRequests.PackageRequest.class);
+        verify(packages, times(2)).update(any(), updated.capture());
+        org.assertj.core.api.Assertions.assertThat(updated.getAllValues())
+                .allSatisfy(req -> org.assertj.core.api.Assertions.assertThat(req.description()).doesNotContain("không gian 3D"));
+        org.assertj.core.api.Assertions.assertThat(updated.getAllValues().get(0).price()).isEqualByComparingTo("499000");
+        org.assertj.core.api.Assertions.assertThat(updated.getAllValues().get(1).status()).isEqualTo("inactive");
+        org.assertj.core.api.Assertions.assertThat(CatalogSeeder.SILVER_3M_DESC).doesNotContain("3D");
+        org.assertj.core.api.Assertions.assertThat(CatalogSeeder.SILVER_6M_DESC).doesNotContain("3D");
     }
 }

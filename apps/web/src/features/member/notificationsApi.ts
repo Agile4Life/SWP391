@@ -56,21 +56,26 @@ export function safeNotificationPath(path: string | null | undefined, role = 'ME
     if (path === '/messages' || path === '/messages?tab=support') return path;
     const pathname = path.split(/[?#]/)[0];
     if (pathname === '/staff/support') return '/messages?tab=support';
-    if (/^\/staff\/(?:orders|classes|courts|pt-attendance|attendance)(?:\/|$)/.test(pathname)) return '/staff/reception';
+    if (/^\/staff\/(?:orders|classes|pt-attendance|attendance)(?:\/|$)/.test(pathname)) return '/staff/reception';
     return ['/staff/reception', '/staff/check-in', '/staff/check-out', '/staff/reception-history',
       '/staff/kyc', '/staff/holds', '/staff/requests'].includes(pathname) ? pathname : null;
   }
-  // Thông báo sân cũ không mở route đã bỏ; lịch sử thanh toán vẫn ở hóa đơn.
-  if (role === 'MEMBER' && /^\/member\/courts(?:[?/#]|$)/.test(path)) return '/member/invoices';
   // Thông báo đơn hàng cũ dẫn về lịch sử giao dịch, không mở màn Shop đã bỏ.
   if (role === 'MEMBER' && /^\/member\/(?:orders|products|checkout)(?:[?/#]|$)/.test(path)) return '/member/invoices';
   // Thông báo Streak cũ về Dashboard; bỏ anchor cũ để mở trang Giáo án hiện tại.
   if (role === 'MEMBER' && /^\/member\/streak(?:[?/#]|$)/.test(path)) return '/member/dashboard';
   if (role === 'MEMBER' && /^\/member\/progress(?:[?/#]|$)/.test(path)) return '/member/progress';
-  // Thông báo chỉ số cơ thể / điểm danh cũ của HLV trỏ về màn còn giữ theo phạm vi Gym.
+  // Chuẩn hóa param cũ ?tab=coach_booking của thông báo chuyển HLV PT sang ?tab=pt.
+  if (role === 'MEMBER' && path === '/member/classes?tab=coach_booking') return '/member/classes?tab=pt';
+  // Thông báo chỉ số cơ thể cũ của HLV về Soạn giáo án; liên kết điểm danh lớp nhóm giữ nguyên sessionId.
   if (role === 'COACH' && /^\/coach\/health-metrics(?:[?/#]|$)/.test(path)) return '/coach/training-plans';
-  if (role === 'COACH' && /^\/staff\/attendance(?:[?/#]|$)/.test(path)) return '/coach/pt-attendance';
+  if (role === 'COACH' && /^\/staff\/attendance(?:\/(\d+))?(?:[?#].*)?$/.test(path)) {
+    const match = path.match(/^\/staff\/attendance(?:\/(\d+))?/);
+    return match?.[1] ? `/coach/attendance/${match[1]}` : '/coach/attendance';
+  }
   if (role === 'COACH' && path === '/staff/coach-classes') return '/coach/classes';
+  // Liên kết cũ /staff/classes của Quản lý dẫn thẳng sang màn Quản lý lớp học mới.
+  if (['MANAGER', 'CENTER_MANAGER'].includes(role) && /^\/staff\/classes(?:[?/#]|$)/.test(path)) return '/manager/classes';
   const prefix = role === 'COACH' ? '/coach/' : ['STAFF', 'RECEPTIONIST'].includes(role) ? '/staff/' : ['MANAGER', 'CENTER_MANAGER'].includes(role) ? '/manager/' : role === 'ADMIN' ? '/admin/' : '/member/';
   return path.startsWith(prefix) ||
     path.startsWith('/member/profile') ||
@@ -133,9 +138,15 @@ export function notificationDestination(notification: NotificationTarget, role =
       return '/staff/requests';
     }
 
-    // 3. Điểm danh PT 1-1 & Đánh giá buổi tập cũ
+    // 3. Điểm danh lớp nhóm vs Điểm danh PT 1:1
     if (
-      ['session_attendance', 'session_evaluation', 'pt_attendance', 'attendance', 'evaluation'].includes(rawEntity) ||
+      rawEntity === 'session_attendance' ||
+      (rawEntity === 'attendance' && /lớp|class/.test(text))
+    ) {
+      return '/coach/attendance';
+    }
+    if (
+      ['session_evaluation', 'pt_attendance', 'attendance', 'evaluation'].includes(rawEntity) ||
       rawType === 'evaluation' ||
       /điểm danh|attendance|buổi tập pt|đánh giá buổi tập|đánh giá tiến độ|nhận xét buổi tập|progress evaluation/.test(text)
     ) {
@@ -199,6 +210,15 @@ export function notificationDestination(notification: NotificationTarget, role =
     ) {
       return '/manager/requests';
     }
+    if (
+      ['class_session', 'class_enrollment'].includes(rawEntity) ||
+      ['schedule_change', 'class_reminder'].includes(rawType)
+    ) {
+      return '/manager/classes';
+    }
+    if (['coach_booking', 'pt_booking', 'coach_assignment'].includes(rawEntity)) {
+      return '/manager/coach-assignments';
+    }
     return '/manager/reports';
   }
 
@@ -206,14 +226,19 @@ export function notificationDestination(notification: NotificationTarget, role =
 
   switch (rawEntity) {
     case 'class_session':
-    case 'class_enrollment': return '/member/dashboard';
+    case 'class_enrollment': return '/member/classes';
+    case 'coach_booking':
+    case 'pt_booking': return '/member/classes?tab=pt';
     case 'membership_subscription': return '/member/packages';
     case 'payment': return '/member/invoices';
     case 'product_order': return '/member/invoices';
     case 'support_request': return '/messages?tab=support';
     case 'training_plan': return '/member/progress';
     default:
-      if (rawType === 'class_reminder' || rawType === 'schedule_change') return '/member/dashboard';
+      if (rawType === 'class_reminder' || rawType === 'schedule_change') return '/member/classes';
+      if (rawType === 'booking') {
+        return /pt|1:1|1-1|huấn luyện viên|coach/.test(text) ? '/member/classes?tab=pt' : '/member/classes';
+      }
       if (rawType === 'package_expiry') return '/member/packages';
       if (rawType === 'payment') return '/member/invoices';
       if (rawType === 'order') return '/member/invoices';

@@ -1,9 +1,8 @@
 /* Mục đích: Kiểu cho lịch tuần/tháng dùng chung cho mọi vai trò. */
 /* Lịch tuần/tháng dùng chung cho mọi role: một thẻ, điều hướng tròn, cột giờ bên trái, ngày hôm nay là vòng salmon. */
 .mcal {
-  --mcal-hour: 64px;
-  --mcal-gutter: 64px;
-  --mcal-court: var(--portal-warning);
+  --mcal-hour: 104px;
+  --mcal-gutter: 112px;
   --mcal-class: var(--portal-salmon);
   display: grid; gap: 10px; min-width: 0; padding: 14px;
   border: 1px solid var(--portal-border); border-radius: 18px; background: var(--portal-surface);
@@ -25,7 +24,6 @@
 .mcal__legend { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; padding: 0; list-style: none; font-size: 12px; color: var(--portal-muted); }
 .mcal__legend li { display: inline-flex; align-items: center; gap: 7px; }
 .mcal__dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--portal-muted); }
-.mcal__dot--court { background: var(--mcal-court); }
 .mcal__dot--class, .mcal__dot--mine { background: var(--mcal-class); }
 .mcal__dot--pt { background: var(--mcal-pt, #b7e3c8); }
 .mcal__dot--open { background: var(--portal-info); }
@@ -91,7 +89,19 @@
 .mcal__dots .mcal__dot { width: 7px; height: 7px; }
 
 .mcal__gutter { position: sticky; left: 0; z-index: 5; display: grid; grid-template-rows: repeat(var(--mcal-rows), var(--mcal-hour)); background: var(--portal-surface); }
-.mcal__gutter span { padding: 8px 10px 0 0; text-align: right; font-size: 12px; font-weight: 700; color: var(--portal-muted); }
+.mcal__gutter > span { padding: 8px 10px 0 0; text-align: right; font-size: 12px; font-weight: 700; color: var(--portal-muted); }
+.mcal__slot-head {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-end;
+  padding-right: 10px;
+  gap: 2px;
+  border-bottom: 1px solid var(--portal-border);
+}
+.mcal__slot-head:last-child { border-bottom: 0; }
+.mcal__slot-name { font-size: 13px; font-weight: 750; line-height: 1.25; color: var(--portal-paper); white-space: nowrap; }
+.mcal__slot-time { font-size: 12px; font-weight: 600; line-height: 1.25; color: var(--portal-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
 .mcal__col {
   position: relative; border-left: 1px solid var(--portal-border);
@@ -116,10 +126,10 @@
 /* Khối lịch */
 .mcal__event {
   position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow: hidden;
-  padding: 9px 11px; border: 0; border-radius: 12px; text-align: left; font: inherit; cursor: pointer;
+  padding: 9px 11px; border: 1px solid transparent; border-radius: 12px; text-align: left; font: inherit; cursor: pointer;
   background: var(--mcal-class); color: var(--portal-on-accent);
   box-shadow: 0 10px 22px -12px color-mix(in srgb, var(--portal-ink) 85%, transparent);
-  transition: transform 120ms ease, filter 120ms ease;
+  transition: transform 120ms ease, filter 120ms ease, border-color 140ms ease, background-color 140ms ease;
 }
 .mcal__event:hover { filter: brightness(1.06); transform: translateY(-1px); }
 .mcal__event:focus-visible { outline: 2px solid var(--portal-paper); outline-offset: 2px; z-index: 5; }
@@ -128,11 +138,12 @@
 .mcal__event-time { font-size: 12px; font-weight: 800; letter-spacing: .01em; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mcal__event-title { font-size: 14px; font-weight: 800; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .mcal__event-place { font-size: 12.5px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event-coach { font-size: 12px; color: var(--portal-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event--mine .mcal__event-coach, .mcal__event--class .mcal__event-coach { color: color-mix(in srgb, currentColor 82%, transparent); }
 .mcal__event-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
 .mcal__event-top .mcal__event-time { flex: 1 1 auto; min-width: 0; }
 .mcal__event-badge { flex: none; max-width: 100%; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.mcal__event--court { background: var(--mcal-court); color: var(--portal-on-accent); }
 .mcal__event--mine, .mcal__event--class { background: var(--mcal-class); color: var(--portal-on-accent); }
 .mcal__event--open { background: color-mix(in srgb, var(--portal-info) 24%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--portal-info) 55%, transparent); }
 .mcal__event--full { background: color-mix(in srgb, var(--portal-warning) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--portal-warning) 55%, transparent); }
@@ -147,7 +158,7 @@
 
 /* Khối thấp (buổi ngắn hoặc nhiều làn): gọn lại */
 .mcal__event.is-short { padding: 4px 9px; gap: 1px; }
-.mcal__event.is-short .mcal__event-place, .mcal__event.is-short .mcal__event-badge { display: none; }
+.mcal__event.is-short .mcal__event-place, .mcal__event.is-short .mcal__event-coach, .mcal__event.is-short .mcal__event-badge { display: none; }
 .mcal__event.is-short .mcal__event-title { -webkit-line-clamp: 1; line-clamp: 1; font-size: 13px; }
 
 /* Lưới tháng */
@@ -163,7 +174,6 @@
 .mcal__chips { display: grid; gap: 3px; min-width: 0; }
 .mcal__chip { display: block; min-width: 0; overflow: hidden; padding: 3px 7px; border: 0; border-radius: 7px; text-align: left; white-space: nowrap; text-overflow: ellipsis; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; background: var(--mcal-class); color: var(--portal-on-accent); }
 .mcal__chip span { font-weight: 800; opacity: .8; }
-.mcal__chip--court { background: var(--mcal-court); }
 .mcal__chip.is-past { background: color-mix(in srgb, var(--portal-paper) 16%, var(--portal-raised)); color: var(--portal-muted); }
 .mcal__chip.is-cancelled { text-decoration: line-through; background: color-mix(in srgb, var(--portal-danger) 14%, var(--portal-raised)); color: var(--portal-muted); }
 .mcal__more { justify-self: start; padding: 0 4px; border: 0; background: none; color: var(--portal-salmon); font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
@@ -189,7 +199,8 @@
 .mcal :is(button, a):focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
 
 @media (max-width: 767px) {
-  .mcal { padding: 14px; border-radius: 18px; --mcal-gutter: 52px; }
+  .mcal { padding: 14px; border-radius: 18px; --mcal-gutter: 96px; }
+  .mcal__slot-head { padding-right: 6px; }
   .mcal__range { margin-left: 0; width: 100%; order: 5; }
   .mcal__next-count { margin-left: 0; }
   .mcal__scroll { max-height: 70vh; }
@@ -205,4 +216,561 @@
 @media (prefers-reduced-motion: reduce) {
   .mcal__event, .mcal__slot-plus { transition: none; }
   .mcal__event:hover { transform: none; }
+}
+
+/* Viền mảnh đều 4 cạnh phân biệt bộ môn trên khối sự kiện (không viền trái dày, giữ góc bo mượt) */
+.mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past) {
+  border-color: color-mix(in srgb, var(--event-accent) 48%, var(--portal-border));
+  background: color-mix(in srgb, var(--event-accent) 16%, var(--portal-surface));
+  box-shadow: none;
+}
+.mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past):hover {
+  border-color: color-mix(in srgb, var(--event-accent) 68%, var(--portal-border));
+  background: color-mix(in srgb, var(--event-accent) 24%, var(--portal-surface));
+}
+
+/* Nút gom cụm "+N lớp" khi khung giờ có >= 3 lớp song song trên Lịch tổng cả tuần */
+.mcal__overflow-btn {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px;
+  border: 1.5px dashed var(--sol-accent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--sol-accent) 14%, var(--portal-surface));
+  color: var(--portal-paper);
+  font: inherit;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.mcal__overflow-btn strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--sol-accent-text);
+  white-space: nowrap;
+}
+.mcal__overflow-btn span {
+  font-size: 12px;
+  color: var(--portal-muted);
+  white-space: nowrap;
+}
+.mcal__overflow-btn:hover {
+  background: color-mix(in srgb, var(--sol-accent) 24%, var(--portal-surface));
+}
+
+/* Danh sách buổi trong hộp thoại "+N lớp" */
+.mcal__overflow-list {
+  display: grid;
+  gap: 8px;
+}
+.mcal__overflow-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.mcal__overflow-row:hover {
+  border-color: var(--sol-accent);
+  background: color-mix(in srgb, var(--sol-accent) 10%, var(--portal-raised));
+}
+.mcal__overflow-swatch {
+  flex: 0 0 10px;
+  width: 10px;
+  height: 36px;
+  border-radius: 999px;
+  background: var(--sol-accent);
+}
+.mcal__overflow-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.mcal__overflow-main strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--portal-paper);
+}
+.mcal__overflow-main small {
+  font-size: 12px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+.mcal__overflow-badge {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--portal-surface);
+  border: 1px solid var(--portal-border-strong);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--portal-paper);
+}
+
+/* Lịch ngày theo Phòng (Tổng quan theo phòng — Phòng × Giờ) */
+.rcal__daystrip {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.rcal__grid {
+  display: grid;
+  grid-template-columns: var(--mcal-gutter, 62px) repeat(var(--rcal-rooms, 3), minmax(190px, 1fr));
+  grid-template-rows: auto calc(var(--mcal-rows, 16) * var(--mcal-hour, 64px));
+  min-width: calc(var(--mcal-gutter, 62px) + var(--rcal-rooms, 3) * 190px);
+}
+.rcal__roomhead {
+  gap: 3px;
+  padding: 10px 10px;
+}
+.rcal__roomname {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--portal-paper);
+  text-align: center;
+}
+.rcal__roommeta {
+  font-size: 12px;
+  color: var(--portal-muted);
+}
+.rcal__event {
+  align-items: flex-start;
+  gap: 2px;
+}
+.rcal__event-sub {
+  font-size: 12px;
+  color: var(--portal-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.mcal__event.is-short .rcal__event-sub {
+  display: none;
+}
+
+/* Bộ lọc bộ môn dạng chip có chấm màu */
+.class-discipline-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.class-discipline-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.class-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.class-filter-bar > .class-filter-field {
+  min-width: 180px;
+  flex: 0 1 220px;
+}
+
+/* Bộ chọn 5 Slot cố định trong form Quản lý (tạo khóa học / dời lịch buổi) */
+.slot-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 8px;
+}
+.slot-picker-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 54px;
+  padding: 8px 10px;
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+.slot-picker-btn:hover {
+  border-color: var(--sol-accent);
+  background: color-mix(in srgb, var(--sol-accent) 10%, var(--portal-raised));
+}
+.slot-picker-btn.is-active {
+  border-color: var(--sol-accent);
+  background: var(--sol-accent);
+  color: var(--sol-on-accent);
+}
+.slot-picker-btn:focus-visible {
+  outline: 2px solid var(--sol-accent);
+  outline-offset: 2px;
+}
+.slot-picker-btn__name {
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.slot-picker-btn__time {
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  white-space: nowrap;
+}
+.slot-picker-btn__status {
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  opacity: 0.9;
+}
+.slot-picker-btn.is-unavailable {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--portal-danger) 50%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-danger) 7%, var(--portal-raised));
+  color: var(--portal-muted);
+}
+.slot-picker-btn.is-unavailable:hover {
+  border-color: var(--portal-danger);
+  background: color-mix(in srgb, var(--portal-danger) 12%, var(--portal-raised));
+}
+.slot-picker-btn.is-unavailable.is-active {
+  border-style: solid;
+  border-color: var(--portal-danger);
+  background: color-mix(in srgb, var(--portal-danger) 16%, var(--portal-raised));
+  color: var(--portal-paper);
+}
+.slot-picker-btn.is-unavailable .slot-picker-btn__status {
+  color: var(--portal-danger);
+}
+
+/* Hộp thoại form & trình tạo khóa học 4 bước */
+.portal-dialog.class-wizard-modal {
+  width: min(680px, calc(100vw - 32px));
+  max-width: min(680px, calc(100vw - 32px));
+}
+.portal-form-stack {
+  display: grid;
+  gap: 14px;
+}
+.portal-form-stack .portal-form-group {
+  margin-bottom: 0;
+}
+.portal-form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 14px;
+  align-items: start;
+}
+
+.class-wizard__stepper {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.class-wizard__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  cursor: not-allowed;
+  opacity: 0.7;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, opacity 140ms ease;
+}
+.class-wizard__step-num {
+  flex: 0 0 24px;
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--portal-border-strong);
+  background: var(--portal-surface);
+  color: var(--portal-muted);
+  font-size: 12px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.class-wizard__step-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.class-wizard__step.is-active {
+  border-color: var(--sol-accent);
+  background: var(--portal-tint);
+  color: var(--portal-paper);
+  opacity: 1;
+  cursor: default;
+}
+.class-wizard__step.is-active .class-wizard__step-num {
+  border-color: var(--sol-accent);
+  background: var(--sol-accent);
+  color: var(--sol-on-accent);
+}
+.class-wizard__step.is-done {
+  border-color: color-mix(in srgb, var(--portal-success) 45%, var(--portal-border));
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  opacity: 1;
+  cursor: pointer;
+}
+.class-wizard__step.is-done:hover:not(:disabled) {
+  border-color: var(--sol-accent);
+  background: var(--portal-tint);
+}
+.class-wizard__step.is-done .class-wizard__step-num {
+  border-color: color-mix(in srgb, var(--portal-success) 55%, transparent);
+  background: color-mix(in srgb, var(--portal-success) 18%, var(--portal-surface));
+  color: var(--portal-success);
+}
+.class-wizard__step:focus-visible {
+  outline: 2px solid var(--sol-accent);
+  outline-offset: 2px;
+}
+
+.class-wizard__summary {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font-size: 13px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+.class-wizard__summary.is-ok {
+  border-color: color-mix(in srgb, var(--portal-success) 50%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-success) 10%, var(--portal-raised));
+}
+.class-wizard__summary.is-error {
+  border-color: color-mix(in srgb, var(--portal-danger) 55%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-danger) 10%, var(--portal-raised));
+  color: var(--portal-danger);
+}
+.class-wizard__summary-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.class-wizard__summary-sub {
+  font-size: 12px;
+  color: var(--portal-muted);
+}
+
+.class-wizard__banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  padding: 10px 14px;
+  border: 1px solid rgb(var(--sol-accent-rgb) / 0.35);
+  border-radius: 12px;
+  background: var(--portal-tint);
+  color: var(--portal-paper);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.class-wizard__options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+.class-wizard__option {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--portal-border-strong);
+  border-radius: 12px;
+  background: var(--portal-raised);
+  color: var(--portal-paper);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.class-wizard__option:hover:not(:disabled) {
+  border-color: var(--sol-accent);
+  background: color-mix(in srgb, var(--sol-accent) 10%, var(--portal-raised));
+}
+.class-wizard__option:focus-visible {
+  outline: 2px solid var(--sol-accent);
+  outline-offset: 2px;
+}
+.class-wizard__option.is-selected {
+  border-color: var(--sol-accent);
+  background: var(--portal-tint);
+  box-shadow: inset 0 0 0 1px var(--sol-accent);
+}
+.class-wizard__option.is-unavailable {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--portal-danger) 42%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-danger) 5%, var(--portal-surface));
+  color: var(--portal-muted);
+  opacity: 0.78;
+  cursor: not-allowed;
+}
+.class-wizard__option-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 8px;
+}
+.class-wizard__option-title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--portal-paper);
+}
+.class-wizard__option-meta {
+  font-size: 12px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+.class-wizard__option-reason {
+  font-size: 12px;
+  color: var(--portal-danger);
+  line-height: 1.35;
+}
+
+.class-wizard__hint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.class-wizard__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+  padding-top: 14px;
+  border-top: 1px solid var(--portal-border);
+}
+
+/* Thanh tóm tắt nhiều khóa học đang hoạt động của một bộ môn (Tab 1 Quản lý) */
+.discipline-active-bar {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--portal-border);
+}
+.discipline-active-bar__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+.discipline-active-bar__title {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.discipline-active-bar__count {
+  font-size: 13px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+.discipline-class-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.discipline-class-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex: 1 1 280px;
+  padding: 9px 12px;
+  border: 1px solid var(--portal-border);
+  border-radius: 12px;
+  background: var(--portal-raised);
+}
+.discipline-class-item__info {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.discipline-class-item__info strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--portal-paper);
+}
+.discipline-class-item__meta {
+  font-size: 12px;
+  color: var(--portal-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 600px) {
+  .portal-form-grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .class-wizard__stepper {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slot-picker-btn,
+  .class-wizard__step,
+  .class-wizard__option {
+    transition: none;
+  }
 }

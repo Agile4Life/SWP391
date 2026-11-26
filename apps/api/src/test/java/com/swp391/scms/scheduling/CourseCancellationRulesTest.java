@@ -103,4 +103,19 @@ class CourseCancellationRulesTest {
         assertEquals("failed", pending.getStatus());
         verify(payments).save(pending);
     }
+
+    /** Kiểm thử: hủy ghi danh theo mã khóa gửi thông báo class_enrollment cho hội viên. */
+    @Test
+    void cancelCourseEnrollmentNotifiesMember() {
+        courseStarting(LocalDate.of(2026, 11, 20));
+        when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(enrollment.getMember()));
+        when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(Optional.of(enrollment));
+        when(enrollments.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(payments.findByClassEnrollmentId(9L)).thenReturn(Optional.empty());
+
+        service.cancelCourseEnrollment(member, 50L);
+
+        assertEquals("cancelled", enrollment.getStatus());
+        verify(notifications).send(eq(100L), any(), any(), eq("system"), eq("class_enrollment"), eq(9L));
+    }
 }

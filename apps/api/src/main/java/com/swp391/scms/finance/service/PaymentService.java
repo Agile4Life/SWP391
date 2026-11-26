@@ -332,7 +332,7 @@ public class PaymentService {
 
     /**
      * Mô tả mục đích của khoản thu để hội viên phân biệt được các khoản chờ và khoản đã thanh toán:
-     * loại dịch vụ (gói, khóa học, PT, sân, đơn hàng, nạp ví, khác) và tên (gói, lớp, HLV/sân kèm ngày giờ, mã đơn).
+     * loại dịch vụ (gói, khóa học, PT, đơn hàng, nạp ví, khác) và tên (gói, lớp, HLV kèm ngày giờ, mã đơn).
      * Đọc trong transaction vì các bản ghi liên kết được tải lười (lazy).
      */
     static PaymentDto describe(Payment payment, PaymentDto dto) {
@@ -355,14 +355,6 @@ public class PaymentService {
                 dto.setServiceName(join(coach, booking.getBookingDate() == null ? null : booking.getBookingDate().format(day),
                         booking.getStartTime() == null ? null : booking.getStartTime().format(hour)));
             }
-        } else if (payment.getCourtBookingId() != null) {
-            dto.setServiceType("COURT");
-            var booking = payment.getCourtBooking();
-            if (booking != null) {
-                dto.setServiceName(join(booking.getRoom() == null ? null : booking.getRoom().getName(),
-                        booking.getBookingDate() == null ? null : booking.getBookingDate().format(day),
-                        booking.getStartTime() == null ? null : booking.getStartTime().format(hour)));
-            }
         } else if (payment.getProductOrderId() != null) {
             dto.setServiceType("SHOP");
             dto.setServiceName(payment.getProductOrder() != null ? payment.getProductOrder().getCode() : null);
@@ -382,7 +374,7 @@ public class PaymentService {
     }
 
     /**
-     * Đổi trạng thái do quầy/quản lý thực hiện. Các khoản thanh toán đặt sân, PT 1:1, cửa hàng và nạp ví có luồng
+     * Đổi trạng thái do quầy/quản lý thực hiện. Các khoản thanh toán PT 1:1, cửa hàng và nạp ví có luồng
      * xác nhận riêng để đồng thời đánh dấu lịch đặt/đơn hàng đã thanh toán hoặc cộng ví; quyết toán tại đây sẽ ghi nhận
      * tiền nhưng bỏ sót trạng thái đối tượng. (Luồng quyết toán VNPay gọi trực tiếp {@link #updatePaymentStatus} và tự
      * xử lý các đối tượng đó.)
@@ -390,11 +382,11 @@ public class PaymentService {
     public PaymentDto updatePaymentStatusByStaff(Long id, String status) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.payment", id));
-        if (payment.getCourtBookingId() != null || payment.getCoachBookingId() != null
+        if (payment.getCoachBookingId() != null
                 || payment.getProductOrderId() != null
                 || (payment.getNote() != null && payment.getNote().startsWith("WALLET_TOPUP"))) {
             throw new BadRequestException("PAYMENT_STATUS_USE_TARGET_FLOW", "finance.payment.use_target_flow", null,
-                    "Confirm this payment from its court booking, 1:1 session, order or wallet screen");
+                    "Confirm this payment from its 1:1 session, order or wallet screen");
         }
         return updatePaymentStatus(id, status);
     }
@@ -652,7 +644,7 @@ public class PaymentService {
     /**
      * Hoàn tiền (quản lý): khóa dòng khoản thu, chỉ khoản thành công, số tiền trong phần còn lại. Hoàn toàn bộ
      * thì hủy kỳ gói/khóa học liên quan, khôi phục kỳ cũ bị thay khi nâng cấp và hủy lịch không còn quyền lợi;
-     * khoản sân/PT/đơn hàng phải hoàn bằng cách hủy lịch/đơn. Hoàn một phần thì gói vẫn tiếp tục.
+     * khoản PT/đơn hàng phải hoàn bằng cách hủy lịch/đơn. Hoàn một phần thì gói vẫn tiếp tục.
      */
     @Audited(action = "PAYMENT_REFUND", entity = "payments")
     public PaymentDto refundPayment(Long paymentId, PaymentRefundRequest request) {
@@ -678,9 +670,9 @@ public class PaymentService {
 
         BigDecimal totalRefunded = alreadyRefunded.add(refundAmount);
         boolean fullRefund = totalRefunded.compareTo(payment.getAmount()) == 0;
-        // Các khoản thanh toán đặt sân, PT 1:1 và cửa hàng được hoàn toàn bộ bằng cách hủy lịch đặt/đơn hàng để
+        // Các khoản thanh toán PT 1:1 và cửa hàng được hoàn toàn bộ bằng cách hủy lịch đặt/đơn hàng để
         // đồng thời giải phóng khung giờ hoặc tồn kho; hoàn tại đây sẽ để lịch đặt còn sống và cho phép hủy sau đó hoàn tiền lần nữa.
-        if (fullRefund && (payment.getCourtBookingId() != null || payment.getCoachBookingId() != null
+        if (fullRefund && (payment.getCoachBookingId() != null
                 || payment.getProductOrderId() != null)) {
             throw new BadRequestException("REFUND_VIA_CANCELLATION", "finance.payment.refund_via_cancellation", null,
                     "Cancel the booking or order to refund it in full");

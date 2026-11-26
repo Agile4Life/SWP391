@@ -14,14 +14,14 @@ export interface CoachPublicDto {
 }
 
 /**
- * Một khung giờ PT: giờ bắt đầu/kết thúc, còn trống không và lý do nếu không (quá sát giờ, HLV bận/nghỉ/nghỉ
- * phép, hội viên bận).
+ * Một khung giờ PT trong 5 Slot cố định (07:00 – 19:30): số Slot, giờ bắt đầu/kết thúc, còn trống không và lý do nếu bận.
  */
 export interface CoachAvailableSlotDto {
-  startTime: string; // "08:00"
-  endTime: string;   // "09:00"
+  slotNumber?: number; // 1..5
+  startTime: string;   // "07:00"
+  endTime: string;     // "09:30"
   available: boolean;
-  reason: 'too_soon' | 'coach_busy' | 'coach_rest' | 'member_busy' | 'coach_on_leave' | null;
+  reason: 'too_soon' | 'coach_busy' | 'member_busy' | 'coach_on_leave' | null;
 }
 
 /** Một buổi PT 1:1: hội viên, HLV, bộ môn, ngày giờ, giá, thanh toán, trạng thái, thông tin hủy và điểm danh. */

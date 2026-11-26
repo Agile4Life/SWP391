@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Khoản thanh toán trả cho client: hội viên, đối tượng thanh toán (gói, khóa học, PT, sân, đơn hàng), số tiền,
+ * Khoản thanh toán trả cho client: hội viên, đối tượng thanh toán (gói, khóa học, PT, đơn hàng), số tiền,
  * đã hoàn, phương thức, trạng thái, người nhận, ghi chú, số hóa đơn, biên lai, loại và tên dịch vụ, và cờ đang
  * chờ VNPay.
  *
@@ -206,14 +206,13 @@ public class PaymentDto {
         this.refundedAmount = refundedAmount;
     }
 
-    /** Thanh toán dành cho việc gì: MEMBERSHIP, CLASS, PT, COURT, SHOP hoặc OTHER. */
-    @Schema(description = "Loại dịch vụ: MEMBERSHIP, CLASS, PT, COURT, SHOP, OTHER")
+    /** Thanh toán dành cho việc gì: MEMBERSHIP, CLASS, PT, SHOP hoặc OTHER. */
+    @Schema(description = "Loại dịch vụ: MEMBERSHIP, CLASS, PT, SHOP, OTHER")
     private String serviceType;
-    /** Mục đã trả dưới dạng dữ liệu lưu (gói, lớp, HLV và khung, sân và khung, mã đơn); không dịch. */
-    @Schema(description = "Tên dịch vụ cụ thể (gói tập, khóa học, HLV + giờ, sân + giờ, mã đơn)")
+    /** Mục đã trả dưới dạng dữ liệu lưu (gói, lớp, HLV và khung giờ, mã đơn); không dịch. */
+    @Schema(description = "Tên dịch vụ cụ thể (gói tập, khóa học, HLV + giờ, mã đơn)")
     private String serviceName;
     private Long coachBookingId;
-    private Long courtBookingId;
     private Long productOrderId;
     private boolean vnpayPending;
 
@@ -229,10 +228,6 @@ public class PaymentDto {
     public Long getCoachBookingId() { return coachBookingId; }
     /** Gán giá trị mới cho trường coachBookingId. */
     public void setCoachBookingId(Long coachBookingId) { this.coachBookingId = coachBookingId; }
-    /** Lấy giá trị trường courtBookingId. */
-    public Long getCourtBookingId() { return courtBookingId; }
-    /** Gán giá trị mới cho trường courtBookingId. */
-    public void setCourtBookingId(Long courtBookingId) { this.courtBookingId = courtBookingId; }
     /** Lấy giá trị trường productOrderId. */
     public Long getProductOrderId() { return productOrderId; }
     /** Gán giá trị mới cho trường productOrderId. */

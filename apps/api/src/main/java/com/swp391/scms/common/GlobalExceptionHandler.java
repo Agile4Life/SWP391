@@ -226,46 +226,11 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation from {}", ex.getMostSpecificCause().getClass().getSimpleName());
 
         if (rootMsg != null) {
-            // Nhóm trigger đặt sân (tính năng cũ): mỗi trigger ứng với một mã lỗi và mã HTTP riêng.
-            String courtCode = null;
-            String courtKey = null;
-            HttpStatus courtStatus = HttpStatus.CONFLICT;
-            if (normalizedRootMsg.contains("trg_court_bookings_check_conflict") || normalizedRootMsg.contains("court_booking_slot_taken")) {
-                courtCode = "COURT_BOOKING_SLOT_TAKEN";
-                courtKey = "slot_taken";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_membership") || normalizedRootMsg.contains("court_booking_membership_invalid")) {
-                courtCode = "COURT_BOOKING_MEMBERSHIP_INVALID";
-                courtKey = "membership_invalid";
-                courtStatus = HttpStatus.FORBIDDEN;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_limit") || normalizedRootMsg.contains("court_booking_limit_reached")) {
-                courtCode = "COURT_BOOKING_LIMIT_REACHED";
-                courtKey = "limit_reached";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_court") || normalizedRootMsg.contains("court_booking_court_unavailable")) {
-                courtCode = "COURT_BOOKING_COURT_UNAVAILABLE";
-                courtKey = "court_unavailable";
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_past") || normalizedRootMsg.contains("court_booking_past_slot")) {
-                courtCode = "COURT_BOOKING_PAST_SLOT";
-                courtKey = "past_slot";
-                courtStatus = HttpStatus.BAD_REQUEST;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_horizon") || normalizedRootMsg.contains("court_booking_too_far")) {
-                courtCode = "COURT_BOOKING_TOO_FAR";
-                courtKey = "too_far";
-                courtStatus = HttpStatus.BAD_REQUEST;
-            } else if (normalizedRootMsg.contains("trg_court_bookings_check_slot") || normalizedRootMsg.contains("court_booking_invalid_slot")) {
-                courtCode = "COURT_BOOKING_INVALID_SLOT";
-                courtKey = "invalid_slot";
-                courtStatus = HttpStatus.BAD_REQUEST;
-            }
-            if (courtCode != null) {
-                String key = "error.courts." + courtKey;
-                return ResponseEntity.status(courtStatus).body(
-                        ApiResponse.error(courtStatus.value(), courtCode, resolveMessage(key, key)));
-            }
-            // Trigger của buổi PT 1:1: HLV cần nghỉ giữa hai buổi, hoặc lịch đang được cập nhật đồng thời.
-            if (normalizedRootMsg.contains("trg_coach_bookings_rest_required")) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).body(
-                        ApiResponse.error(HttpStatus.CONFLICT.value(), "COACH_REST_REQUIRED",
-                                resolveMessage("error.coach_booking.rest_required", "error.coach_booking.rest_required")));
+            // Trigger kiểm tra 5 slot cố định (07:00–19:30) cho cả lớp học nhóm và PT 1:1.
+            if (normalizedRootMsg.contains("trg_schedule_invalid_slot")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                        ApiResponse.error(HttpStatus.BAD_REQUEST.value(), "SCHEDULING_INVALID_SLOT",
+                                resolveMessage("error.scheduling.invalid_slot", "error.scheduling.invalid_slot")));
             }
             if (normalizedRootMsg.contains("trg_pt_schedule_busy")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
@@ -286,6 +251,13 @@ public class GlobalExceptionHandler {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULING_MEMBER_TIME_OVERLAP",
                                 resolveMessage("error.scheduling.member_class_overlap", "error.scheduling.member_class_overlap"))
+                );
+            }
+            if (normalizedRootMsg.contains("trg_sessions_check_discipline_conflict")
+                    || normalizedRootMsg.contains("bộ môn này đã có lớp học khác trùng khung giờ.")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "SCHEDULING_DISCIPLINE_CONFLICT",
+                                resolveMessage("error.scheduling.discipline_conflict_trigger", "error.scheduling.discipline_conflict_trigger"))
                 );
             }
             if (normalizedRootMsg.contains("trg_sessions_check_conflict")

@@ -289,7 +289,7 @@ public class CoachAssignmentService {
         notificationService.send(from.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.from", member.getUser().getFullName(), to.getUser().getFullName(), dto.referenceId()),
                 "system", entityType, dto.referenceId(), coachPath);
         notificationService.send(member.getUserId(), msg("notice.transferred.title"), msg("notice.transferred.member", to.getUser().getFullName(), dto.referenceId(), reason),
-                "system", entityType, dto.referenceId(), "TRAINING_PLAN".equals(dto.assignmentType()) ? "/member/progress" : "/member/classes?tab=coach_booking");
+                "system", entityType, dto.referenceId(), "TRAINING_PLAN".equals(dto.assignmentType()) ? "/member/progress" : "/member/classes?tab=pt");
     }
 
     /**
@@ -324,9 +324,6 @@ public class CoachAssignmentService {
         boolean ptConflict = coachBookings.stream()
                 .anyMatch(b -> overlaps(booking, b.getStartTime(), b.getEndTime()));
         if (classConflict || ptConflict) throw invalid("COACH_SCHEDULE_CONFLICT", "coach_unavailable");
-        if (CoachBookingService.requiresCoachRest(coachBookings, booking.getStartTime())) {
-            throw new ConflictException("COACH_REST_REQUIRED", "error.coach_booking.rest_required", null, null);
-        }
     }
 
     /** Buổi PT có giao với khung giờ cho trước không. */

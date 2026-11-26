@@ -125,7 +125,7 @@ export function ManagerCoachAssignmentsPage() {
       });
       if (generation === loadGeneration.current) {
         const coaches = res.coaches.map((coach) => {
-          const students = coach.students.filter((student) => student.assignmentType !== 'CLASS');
+          const students = coach.students;
           const count = (type?: CoachAssignmentStudent['assignmentType']) => new Set(students.filter((student) => !type || student.assignmentType === type).map((student) => student.memberId)).size;
           return { ...coach, students, totalStudentsCount: count(), ptStudentsCount: count('PT_1_1'), planStudentsCount: count('TRAINING_PLAN') };
         });
@@ -289,6 +289,7 @@ export function ManagerCoachAssignmentsPage() {
             <option value="ALL">{t("Tất cả hình thức")}</option>
             <option value="TRAINING_PLAN">{t("Theo giáo án riêng")}</option>
             <option value="PT_1_1">{t("Tập 1:1 với HLV (PT)")}</option>
+            <option value="CLASS">{t("Lớp học nhóm")}</option>
           </Select>
 
           <Select

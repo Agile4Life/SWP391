@@ -5,12 +5,14 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.RescheduleSessionRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.UpdateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.CoachOptionDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.EnrolledStudentDto;
 import com.swp391.scms.scheduling.dto.SchedulingResponses.GymClassDto;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.RecurringAvailabilityDto;
 import com.swp391.scms.scheduling.service.ClassService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import io.swagger.v3.oas.annotations.Operation;
@@ -75,6 +77,15 @@ public class ClassController {
                 .body(ApiResponse.created(msg("scheduling.class.created"), service.createRecurringClass(request)));
     }
 
+    /** POST /recurring/availability: kiểm tra trước lịch trống trên 5 slot cố định, phòng tập và HLV. */
+    @Operation(summary = "Preview schedule availability & conflicts across 5 fixed slots, rooms, and coaches (CENTER_MANAGER only)")
+    @PostMapping("/recurring/availability")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
+    public ApiResponse<RecurringAvailabilityDto> checkRecurringAvailability(
+            @Valid @RequestBody RecurringAvailabilityRequest request) {
+        return ApiResponse.ok(msg("scheduling.availability.checked"), service.checkRecurringAvailability(request));
+    }
+
     /** PUT /{id}: quản lý cập nhật thông tin lớp/khóa học. */
     @Operation(summary = "Update a class (CENTER_MANAGER only)")
     @PutMapping("/{id}")
@@ -110,7 +121,7 @@ public class ClassController {
     /** POST /{id}/sessions: quản lý xếp thêm một buổi cho lớp. */
     @Operation(summary = "Schedule a session for a class (CENTER_MANAGER only)")
     @PostMapping("/{id}/sessions")
-    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ResponseEntity<ApiResponse<ClassSessionDto>> createSession(@PathVariable Long id,
                                                                      @Valid @RequestBody CreateSessionRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -120,7 +131,7 @@ public class ClassController {
     /** PUT /{id}/sessions/{sessionId}: quản lý dời lịch một buổi học. */
     @Operation(summary = "Reschedule an existing class session (CENTER_MANAGER only)")
     @PutMapping("/{id}/sessions/{sessionId}")
-    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'MANAGER')")
     public ApiResponse<ClassSessionDto> rescheduleSession(@PathVariable Long id,
                                                           @PathVariable Long sessionId,
                                                           @Valid @RequestBody RescheduleSessionRequest request) {

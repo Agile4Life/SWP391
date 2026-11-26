@@ -118,9 +118,6 @@ public class UserService {
     com.swp391.scms.coaching.repository.CoachBookingRepository coachBookingRepository;
 
     @Autowired(required = false)
-    com.swp391.scms.courts.repository.CourtBookingRepository courtBookingRepository;
-
-    @Autowired(required = false)
     com.swp391.scms.membership.repository.MembershipCancellationRequestRepository cancellationRequestRepository;
 
     /** Constructor cho test, không có repository gói tập. */
@@ -438,8 +435,7 @@ public class UserService {
             }
             if ((classEnrollmentRepository != null && classEnrollmentRepository.existsUpcomingBookedForMember(id, today))
                     || (sessionBookingRepository != null && sessionBookingRepository.existsUpcomingBookedForMember(id, today))
-                    || (coachBookingRepository != null && coachBookingRepository.existsUpcomingForMember(id, today))
-                    || (courtBookingRepository != null && courtBookingRepository.existsUpcomingForMember(id, today))) {
+                    || (coachBookingRepository != null && coachBookingRepository.existsUpcomingForMember(id, today))) {
                 throw new ConflictException("USER_HAS_OPEN_COMMITMENTS", "users.blocked.bookings", null, null);
             }
         } else if ("COACH".equals(role)) {
@@ -457,7 +453,7 @@ public class UserService {
      * đặt theo buổi sắp tới để người khác đặt. Các mục đã trả tiền để quầy hủy và hoàn tiền.
      *
      * Việc khóa không được để lại lịch: HLV trước hết bàn giao các lớp và buổi 1:1 sắp tới; chỗ theo buổi sắp
-     * tới của hội viên được nhả để người khác đặt. Các mục đã trả tiền (khóa học, sân, 1:1) để quầy hủy và
+     * tới của hội viên được nhả để người khác đặt. Các mục đã trả tiền (khóa học, 1:1) để quầy hủy và
      * hoàn tiền.
      */
     private void releaseCommitmentsOnLock(User user) {

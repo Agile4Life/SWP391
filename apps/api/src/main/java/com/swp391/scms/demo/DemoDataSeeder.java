@@ -4,6 +4,7 @@ import com.swp391.scms.attendance.entity.CenterCheckin;
 import com.swp391.scms.attendance.repository.CenterCheckinRepository;
 import com.swp391.scms.coaching.entity.CoachBooking;
 import com.swp391.scms.coaching.repository.CoachBookingRepository;
+import com.swp391.scms.common.ScheduleSlot;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -100,12 +101,12 @@ public class DemoDataSeeder implements ApplicationRunner {
     private static final List<CoachSpec> COACHES = List.of(
             new CoachSpec("hung", "Trịnh Quang Hùng", "male", "Gym - Sức mạnh", "NSCA-CPT",
                     "8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.", "Gym"),
-            new CoachSpec("mai", "Lý Thanh Mai", "female", "Gym - Phục hồi", "CPT",
-                    "Huấn luyện viên Gym tập trung sức khỏe và phục hồi.", "Gym"),
-            new CoachSpec("long", "Phan Thành Long", "male", "Gym - Thể lực", "CPT",
-                    "Huấn luyện viên Gym tập trung sức mạnh và thể lực.", "Gym"),
-            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Gym - Sức bền", "CPT",
-                    "Huấn luyện viên Gym tập trung kỹ thuật và sức bền.", "Gym"));
+            new CoachSpec("mai", "Lý Thanh Mai", "female", "Yoga", "RYT-500",
+                    "Giáo viên Yoga 6 năm kinh nghiệm, tập trung hơi thở, thăng bằng và phục hồi.", "Yoga"),
+            new CoachSpec("long", "Phan Thành Long", "male", "Boxing", "AIBA Level 2",
+                    "Cựu vận động viên Boxing, chuyên kỹ thuật đấm, di chuyển chân và thể lực.", "Boxing"),
+            new CoachSpec("thao", "Vũ Phương Thảo", "female", "Yoga & Phục hồi", "RYT-200",
+                    "Huấn luyện viên Yoga & Phục hồi 7 năm kinh nghiệm: hơi thở, giãn cơ và phục hồi thể lực.", "Yoga"));
 
     private final UserRepository users;
     private final RoleRepository roles;
@@ -154,6 +155,10 @@ public class DemoDataSeeder implements ApplicationRunner {
     @Transactional
     public void run(ApplicationArguments args) {
         if (users.findByEmailIgnoreCase(MANAGER_EMAIL).isPresent()) {
+            syncRetiredDemoCoaches();
+            if (coachBookings.count() == 0) {
+                reseedDemoPtBookings(LocalDate.now(ZONE));
+            }
             log.info("Demo data already present; skipping seed.");
             return;
         }
@@ -180,6 +185,32 @@ public class DemoDataSeeder implements ApplicationRunner {
         createProgress(memberByKey, coachByKey, today);
         log.info("Demo data seeded: 1 manager, 1 receptionist, {} coaches, {} members. Password from app.demo.password.",
                 COACHES.size(), MEMBERS.size());
+    }
+
+    /** Đồng bộ chuyên môn các HLV demo cũ nếu CSDL còn chứa bộ môn đã ngừng (Tennis, Bơi lội, Cầu lông). */
+    private void syncRetiredDemoCoaches() {
+        for (CoachSpec spec : COACHES) {
+            if (!"long".equals(spec.key()) && !"thao".equals(spec.key())) {
+                continue;
+            }
+            users.findByEmailIgnoreCase(spec.key() + DOMAIN)
+                    .flatMap(u -> coaches.findById(u.getId()))
+                    .ifPresent(coach -> {
+                        String currentSpec = coach.getSpecialization();
+                        String currentBio = coach.getBio();
+                        if (com.swp391.scms.facilities.RetiredCatalogCleanupRunner.containsRetiredSport(currentSpec)
+                                || com.swp391.scms.facilities.RetiredCatalogCleanupRunner.containsRetiredSport(currentBio)) {
+                            coach.setSpecialization(spec.specialization());
+                            if ("ASCA Level 2".equalsIgnoreCase(coach.getCertification())) {
+                                coach.setCertification(spec.certification());
+                            }
+                            if (com.swp391.scms.facilities.RetiredCatalogCleanupRunner.containsRetiredSport(currentBio)) {
+                                coach.setBio(spec.bio());
+                            }
+                            coaches.save(coach);
+                        }
+                    });
+        }
     }
 
     // ---- tài khoản ------------------------------------------------------------------------------------------
@@ -431,24 +462,52 @@ public class DemoDataSeeder implements ApplicationRunner {
 
     // ---- buổi đặt PT -----------------------------------------------------------------------------------------
 
-    /** Tạo buổi PT 1:1 quá khứ (đã hoàn thành) và sắp tới (đã xác nhận), dùng lượt PT của gói. */
+    /** Tải lại HLV/hội viên demo hiện có để seed lại các buổi PT 1:1 theo 5 slot cố định sau khi dọn lịch cũ. */
+    private void reseedDemoPtBookings(LocalDate today) {
+        Map<String, Coach> coachByKey = new HashMap<>();
+        for (CoachSpec spec : COACHES) {
+            users.findByEmailIgnoreCase(spec.key() + DOMAIN)
+                    .flatMap(u -> coaches.findById(u.getId()))
+                    .ifPresent(c -> coachByKey.put(spec.key(), c));
+        }
+        Map<String, Member> memberByKey = new HashMap<>();
+        for (MemberSpec spec : MEMBERS) {
+            users.findByEmailIgnoreCase(spec.key() + DOMAIN)
+                    .flatMap(u -> members.findById(u.getId()))
+                    .ifPresent(m -> memberByKey.put(spec.key(), m));
+        }
+        createPtBookings(memberByKey, coachByKey, today);
+        log.info("Demo PT bookings reseeded with canonical 5-slot schedule.");
+    }
+
+    /** Tạo buổi PT 1:1 quá khứ (đã hoàn thành) và sắp tới (đã xác nhận) dùng đúng 5 slot cố định, không trùng lớp nhóm. */
     private void createPtBookings(Map<String, Member> memberByKey, Map<String, Coach> coachByKey, LocalDate today) {
         Map<String, Discipline> disciplineByName = new HashMap<>();
         disciplines.findAll().forEach(d -> disciplineByName.put(d.getName(), d));
-        // hội viên, HLV, độ lệch ngày (âm = quá khứ), giờ.
+        // hội viên, HLV, độ lệch ngày (âm = quá khứ), slot cố định (tránh trùng Slot 1 Gym / Slot 2 Yoga / Slot 5 Boxing của HLV).
         Object[][] rows = {
-                {"an", "hung", -30, 7}, {"an", "hung", -23, 7}, {"an", "hung", -16, 7}, {"an", "hung", -9, 7},
-                {"an", "hung", -2, 7}, {"an", "hung", 3, 7}, {"an", "hung", 10, 7},
-                {"binh", "mai", -6, 10}, {"binh", "mai", 4, 10},
-                {"giang", "long", -14, 11}, {"giang", "long", -7, 11}, {"giang", "long", 5, 11},
-                {"hieu", "hung", -10, 9}, {"hieu", "hung", 2, 9},
-                {"chi", "mai", 6, 10}};
+                {"an", "hung", -30, ScheduleSlot.SLOT_3}, {"an", "hung", -23, ScheduleSlot.SLOT_3},
+                {"an", "hung", -16, ScheduleSlot.SLOT_3}, {"an", "hung", -9, ScheduleSlot.SLOT_3},
+                {"an", "hung", -2, ScheduleSlot.SLOT_3}, {"an", "hung", 3, ScheduleSlot.SLOT_3},
+                {"an", "hung", 10, ScheduleSlot.SLOT_3},
+                {"binh", "mai", -6, ScheduleSlot.SLOT_3}, {"binh", "mai", 4, ScheduleSlot.SLOT_3},
+                {"giang", "long", -14, ScheduleSlot.SLOT_2}, {"giang", "long", -7, ScheduleSlot.SLOT_2},
+                {"giang", "long", 5, ScheduleSlot.SLOT_2},
+                {"hieu", "hung", -10, ScheduleSlot.SLOT_4}, {"hieu", "hung", 2, ScheduleSlot.SLOT_4},
+                {"chi", "mai", 6, ScheduleSlot.SLOT_4}};
         for (Object[] row : rows) {
             Member member = memberByKey.get((String) row[0]);
             Coach coach = coachByKey.get((String) row[1]);
+            if (member == null || coach == null) {
+                continue;
+            }
             int offset = (Integer) row[2];
+            ScheduleSlot slot = (ScheduleSlot) row[3];
             LocalDate date = today.plusDays(offset);
-            if (date.isBefore(member.getJoinDate())) {
+            if (member.getJoinDate() != null && date.isBefore(member.getJoinDate())) {
+                continue;
+            }
+            if (offset >= 0 && !subscriptions.hasActiveMembershipCoveringSession(member.getUserId(), today, date)) {
                 continue;
             }
             CoachBooking booking = new CoachBooking();
@@ -456,15 +515,15 @@ public class DemoDataSeeder implements ApplicationRunner {
             booking.setCoach(coach);
             booking.setDiscipline(disciplineByName.get(coachDiscipline((String) row[1])));
             booking.setBookingDate(date);
-            booking.setStartTime(LocalTime.of((Integer) row[3], 0));
-            booking.setEndTime(LocalTime.of((Integer) row[3] + 1, 0));
+            booking.setStartTime(slot.startTime());
+            booking.setEndTime(slot.endTime());
             booking.setHourlyRate(new BigDecimal("200000.00"));
             booking.setPaymentMethod("package_quota");
             booking.setPaymentStatus("used_quota");
             booking.setCreatedAt(date.minusDays(4).atTime(20, 0));
             if (offset < 0) {
                 booking.setStatus("completed");
-                booking.setAttendedAt(date.atTime((Integer) row[3], 2));
+                booking.setAttendedAt(date.atTime(slot.startTime().plusMinutes(2)));
                 booking.setNotes("Buổi PT 1:1 đã hoàn thành");
             } else {
                 booking.setStatus("confirmed");

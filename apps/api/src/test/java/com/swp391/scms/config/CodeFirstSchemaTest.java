@@ -251,34 +251,15 @@ class CodeFirstSchemaTest {
         assertTrue(ddl.contains("foreign key (class_enrollment_id) references class_enrollments"));
     }
 
-    /** Kiểm thử: các bảng sân là code-first và cấu hình phòng mới giữ nguyên tính nullable cũ. */
+    /** Kiểm thử: các cột cấu hình phòng cũ vẫn nullable và không sinh bảng đặt sân đã loại bỏ. */
     @Test
-    void courtsAreCodeFirstAndNewRoomConfigurationPreservesLegacyNullability() throws Exception {
+    void roomLegacyColumnsPreserveNullabilityAndRemovedCourtTableIsNotGenerated() throws Exception {
         String ddl = generateDdl();
-        assertTrue(ddl.contains("create table court_bookings"), ddl);
-        assertTrue(ddl.contains("foreign key (room_id) references rooms"), ddl);
-        assertTrue(ddl.contains("booking_date"), ddl);
+        org.junit.jupiter.api.Assertions.assertFalse(ddl.contains("create table court_bookings"), ddl);
         var room = com.swp391.scms.facilities.entity.Room.class;
         assertTrue(room.getDeclaredField("discipline").getAnnotation(jakarta.persistence.JoinColumn.class).nullable());
         assertTrue(room.getDeclaredField("openTime").getAnnotation(jakarta.persistence.Column.class).nullable());
         assertTrue(room.getDeclaredField("closeTime").getAnnotation(jakarta.persistence.Column.class).nullable());
-    }
-
-    /** Kiểm thử: JPQL của đặt sân biên dịch được với mapping entity mà không cần kết nối database. */
-    @Test
-    void courtJpqlCompilesAgainstEntityMappingsWithoutConnectingToDatabase() throws Exception {
-        Class<?> repository = Class.forName("com.swp391.scms.courts.repository.CourtBookingRepository");
-        generateDdl(factory -> {
-            try (var session = factory.openSession()) {
-                for (var method : repository.getMethods()) {
-                    var query = method.getAnnotation(org.springframework.data.jpa.repository.Query.class);
-                    if (query != null && !query.nativeQuery()) {
-                        session.createQuery(query.value());
-                        if (!query.countQuery().isBlank()) session.createQuery(query.countQuery());
-                    }
-                }
-            }
-        });
     }
 
     /** Kiểm thử: PostgreSQL sinh cột tính toán dạng stored và JSON gốc. */

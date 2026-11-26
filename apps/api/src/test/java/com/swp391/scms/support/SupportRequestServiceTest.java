@@ -111,7 +111,7 @@ class SupportRequestServiceTest {
     @Test
     @DisplayName("Tạo yêu cầu hỗ trợ chỉ thông báo Lễ tân, Quản lý chỉ nhận khi đã escalate")
     void createRequest_notifiesReceptionistOnly() {
-        CreateSupportRequestDto dto = new CreateSupportRequestDto("Khiếu nại dịch vụ", "Nước hồ bơi quá lạnh");
+        CreateSupportRequestDto dto = new CreateSupportRequestDto("Khiếu nại dịch vụ", "Máy lạnh khu Gym không mát");
         User manager = new User();
         manager.setId(50L);
         Role managerRole = new Role();
@@ -128,7 +128,7 @@ class SupportRequestServiceTest {
         when(supportRequestRepository.save(any(SupportRequest.class))).thenReturn(sampleRequest);
         when(userRepository.findActiveStaffUsers()).thenReturn(List.of(manager, receptionist));
         when(supportRequestMapper.toDto(any(SupportRequest.class))).thenReturn(new SupportRequestDto(
-                1L, 10L, "Nguyễn Văn A", null, null, "Khiếu nại dịch vụ", "Nước hồ bơi quá lạnh", "open", LocalDateTime.now(), null
+                1L, 10L, "Nguyễn Văn A", null, null, "Khiếu nại dịch vụ", "Máy lạnh khu Gym không mát", "open", LocalDateTime.now(), null
         ));
 
         supportRequestService.createRequest(10L, dto);

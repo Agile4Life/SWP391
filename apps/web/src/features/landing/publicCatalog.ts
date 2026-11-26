@@ -49,7 +49,6 @@ export function usePublicCatalog() {
         if (active && request === sequence) {
           setCatalog({
             packages: Array.isArray(data?.packages) ? data.packages : [],
-            // Trung tâm chỉ còn Gym nên mọi HLV công khai đều là HLV Gym (kể cả HLV chưa ghi chuyên môn).
             coaches: Array.isArray(data?.coaches) ? data.coaches : [],
             sessions: Array.isArray(data?.sessions) ? data.sessions : [],
           });
@@ -86,19 +85,25 @@ export function sessionDate(value: string) {
 
 const SEEDED_CATALOG_TEXT_EN: Readonly<Record<string, string>> = {
   'Gym - Sức mạnh': 'Gym - Strength',
-  'Bơi lội': 'Swimming',
-  'Cầu lông': 'Badminton',
+  'Yoga & Phục hồi': 'Yoga & Recovery',
   'Phòng Gym Tiêu chuẩn': 'Standard Gym Floor',
   'Phòng Gym VIP': 'VIP Platinum Gym',
+  'Ring Arena 01': 'Ring Arena 01',
+  'Zen Garden Studio': 'Zen Garden Studio',
+  'Full Body Strength 101': 'Full Body Strength 101',
   'Yoga Cơ Bản (khóa mới)': 'Beginner Yoga (New Course)',
+  'Hatha Yoga Nền Tảng': 'Foundational Hatha Yoga',
+  'Boxing Cơ Bản': 'Foundational Boxing',
   '8 năm huấn luyện sức mạnh, tăng cơ và giảm mỡ cho hội viên mọi trình độ.':
     '8 years of strength coaching, muscle building, and fat loss for members of all levels.',
   'Giáo viên Yoga 6 năm kinh nghiệm, tập trung hơi thở, thăng bằng và phục hồi.':
     'Yoga instructor with 6 years of experience focusing on breathwork, balance, and recovery.',
+  'Huấn luyện viên Yoga & Phục hồi 7 năm kinh nghiệm: hơi thở, giãn cơ và phục hồi thể lực.':
+    'Yoga & Recovery coach with 7 years of experience in breathwork, stretching, and physical recovery.',
   'Cựu vận động viên Boxing, chuyên kỹ thuật đấm và thể lực theo hiệp.':
     'Former competitive boxer specializing in striking technique and round-based conditioning.',
-  'Huấn luyện viên bơi 7 năm kinh nghiệm: kỹ thuật bơi và sức bền dưới nước.':
-    'Swimming coach with 7 years of experience in stroke technique and aquatic endurance.',
+  'Cựu vận động viên Boxing, chuyên kỹ thuật đấm, di chuyển chân và thể lực.':
+    'Former competitive boxer specializing in striking technique, footwork, and conditioning.',
 };
 
 /**

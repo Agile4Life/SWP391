@@ -7,11 +7,11 @@ import java.time.LocalDateTime;
 public final class VnpayDtos {
     /** Lớp chỉ chứa các record, không cho tạo đối tượng. */
     private VnpayDtos() {}
-    /** Yêu cầu thanh toán: đúng một đối tượng (kỳ gói, buổi PT, sân, khoản thu hoặc đơn hàng). */
-    public record CheckoutRequest(Long subscriptionId, Long coachBookingId, Long courtBookingId, Long paymentId, Long productOrderId) {
+    /** Yêu cầu thanh toán: đúng một đối tượng (kỳ gói, buổi PT, khoản thu hoặc đơn hàng). */
+    public record CheckoutRequest(Long subscriptionId, Long coachBookingId, Long paymentId, Long productOrderId) {
         /** Constructor không có đơn hàng. */
-        public CheckoutRequest(Long subscriptionId, Long coachBookingId, Long courtBookingId, Long paymentId) {
-            this(subscriptionId, coachBookingId, courtBookingId, paymentId, null);
+        public CheckoutRequest(Long subscriptionId, Long coachBookingId, Long paymentId) {
+            this(subscriptionId, coachBookingId, paymentId, null);
         }
     }
     /** Cấu hình VNPay cho frontend: có bật không. */

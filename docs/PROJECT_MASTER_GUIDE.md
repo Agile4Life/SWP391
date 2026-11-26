@@ -2,7 +2,7 @@
 
 > **Nghiệp vụ đang triển khai thực tế** (màn hình, API, quy tắc, state machine, khác biệt so với thiết kế dưới đây): xem [`BUSINESS_FLOWS.md`](BUSINESS_FLOWS.md).
 
-> **Thu gọn phạm vi (22–23/11/2026, PR #144–#156):** hệ thống đang chạy **chỉ còn Gym** — gói tập, PT 1:1, giáo án, check-in QR, ví/hóa đơn, chat và hỗ trợ. Các phần của thiết kế dưới đây về lớp học nhóm và thời khóa biểu lớp, đặt chỗ/điểm danh lớp, các bộ môn khác (Yoga, Pilates, Bơi lội, Võ thuật…), đặt sân, cửa hàng, quản lý thiết bị, đánh giá HLV, theo dõi chỉ số cơ thể/tiến độ và streak **không còn được triển khai**; chỉ giữ lại để tham khảo lịch sử. Khi khác nhau, `BUSINESS_FLOWS.md` và code là chuẩn.
+> **Phạm vi đang hoạt động (cập nhật 25/11/2026):** hệ thống vận hành **3 bộ môn** (`Gym` chính, `Boxing`, `Yoga`) với **4 phòng** (`Phòng Gym Tiêu chuẩn`, `Phòng Gym VIP`, `Zen Garden Studio`, `Ring Arena 01`), **lớp học nhóm dạng khóa định kỳ** (`app.legacy.classes-enabled=true`, cho phép nhiều lớp `active`/bộ môn miễn không trùng ngày & slot cùng bộ môn — `409 SCHEDULING_DISCIPLINE_CONFLICT`, sức chứa lớp `<=` sức chứa phòng, wizard tạo khóa học 4 bước kèm API tiền kiểm tra `POST /api/v1/classes/recurring/availability`) và điểm danh lớp nhóm, PT 1:1 (có chống trùng lịch hai chiều với lớp nhóm, đồng nhất theo **5 Slot cố định `07:00 – 19:30`**), gói tập/bảo lưu, giáo án, check-in QR, VNPay, ví/hóa đơn, chat, SÖL AI và vận hành (`SingleSessionPolicy` vẫn chặn đặt buổi lẻ). Tính năng đặt sân và các bộ môn ngoài 3 bộ môn trên đã **gỡ bỏ hoàn toàn**; trải nghiệm 3D đã **ẩn khỏi sidebar hội viên** (`/member/explore` → `/member/dashboard`); cửa hàng (`app.shop.enabled`), quản lý thiết bị, đánh giá/xếp hạng HLV/buổi tập (`app.coaching.*`), chỉ số cơ thể/tiến độ và streak (`app.health.metrics.enabled`) vẫn tắt qua cờ legacy. Các phần khác trong tài liệu thiết kế gốc bên dưới chỉ giữ để tham khảo lịch sử; khi khác nhau, [`BUSINESS_FLOWS.md`](BUSINESS_FLOWS.md) và mã nguồn là chuẩn.
 
 > **Tài liệu hướng dẫn kỹ thuật toàn diện (Comprehensive Master Guide) dành cho AI Agent, Kỹ sư phần mềm & Nhóm phát triển.**  
 > **Môn học:** SWP391 - Đồ án Phát triển Phần mềm (Software Development Project) — FPT University  
@@ -34,7 +34,7 @@
 ## 1. TỔNG QUAN ĐỀ TÀI & BỐI CẢNH NGHIỆP VỤ
 
 ### 1.1. Mục tiêu hệ thống
-Dự án **Sports Center Management System** xây dựng một nền tảng số hóa đồng bộ và toàn diện phục vụ công tác vận hành, kinh doanh, đào tạo và chăm sóc khách hàng cho các trung tâm thể thao đa năng phức hợp (Gym, Yoga, Pilates, Bơi lội, Võ thuật, v.v.).
+Dự án **Sports Center Management System** xây dựng một nền tảng số hóa đồng bộ và toàn diện phục vụ công tác vận hành, kinh doanh, đào tạo và chăm sóc khách hàng cho trung tâm thể thao (hiện vận hành 3 bộ môn `Gym`, `Boxing`, `Yoga`; thiết kế gốc đa bộ môn bên dưới mang tính tham khảo lịch sử).
 
 Hệ thống giải quyết các bài toán lớn:
 - **Tự động hóa thẻ thành viên & Check-in:** Xóa bỏ thẻ nhựa vật lý, sử dụng mã QR Code động trên ứng dụng di động để quét qua cổng và đối soát thời hạn gói tập tức thì.

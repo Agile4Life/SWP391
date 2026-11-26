@@ -37,9 +37,13 @@ class TriggerPolymorphismIntegrationTest {
         assertTrue(sql.contains("scms_check_enrollment_capacity"), "Must contain P2 capacity check function");
         assertTrue(sql.contains("trg_enrollments_check_capacity"), "Must contain P2 capacity trigger");
 
-        // P3: Trùng lịch (Huấn luyện viên & Phòng tập)
+        // P3: Trùng lịch (Huấn luyện viên & Phòng tập) và chuẩn 5 slot cố định (07:00–19:30)
+        assertTrue(sql.contains("scms_is_valid_schedule_slot"), "Must contain 5-slot validation helper function");
+        assertTrue(sql.contains("trg_schedule_invalid_slot"), "Must enforce 5-slot constraint in triggers");
+        assertFalse(sql.contains("trg_coach_bookings_rest_required"), "Coach 3-consecutive-slot rest trigger must be removed");
         assertTrue(sql.contains("scms_check_session_conflict"), "Must contain P3 conflict check function");
         assertTrue(sql.contains("trg_sessions_check_conflict"), "Must contain P3 conflict trigger");
+        assertTrue(sql.contains("trg_sessions_check_discipline_conflict"), "Must contain same-discipline no-overlap constraint");
         assertTrue(sql.contains("scms_guard_member_class_overlap"), "Must forbid one member in two overlapping classes");
         assertTrue(sql.contains("trg_member_overlap_session_booking"), "Must guard per-session bookings against member overlap");
         assertTrue(sql.contains("coach_id"), "Must check coach time overlap");

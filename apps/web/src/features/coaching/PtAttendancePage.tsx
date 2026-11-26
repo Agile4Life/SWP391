@@ -11,6 +11,7 @@ import type { CoachBookingDto } from '../member/coachBookingApi';
 import { notify } from '../../shared/lib/portalNotices';
 import { getPtAttendance, markPtAttended, unmarkPtAttended, type PtOutcome } from './ptAttendanceApi';
 import { matchPtSearch } from './ptSearch';
+import { formatSlotLabel } from '../schedule/slots';
 
 const FILTERS: PtOutcome[] = ['ALL', 'ATTENDED', 'MISSED', 'UPCOMING'];
 
@@ -208,7 +209,7 @@ export function PtAttendancePage() {
               <li key={row.id} className="portal-card" data-testid={`pt-row-${row.id}`}
                 style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
                 <div>
-                  <strong>{formatCenterDate(row.bookingDate)} · {row.startTime.slice(0, 5)}–{row.endTime.slice(0, 5)}</strong>
+                  <strong>{formatCenterDate(row.bookingDate)} · {formatSlotLabel(row.startTime, row.endTime)}</strong>
                   <div>
                     {t('Hội viên', 'Member')}: <strong>{row.memberName}</strong>
                     {row.membershipCode ? <span className="muted" style={{ marginLeft: 6 }}>({row.membershipCode})</span> : row.memberId ? <span className="muted" style={{ marginLeft: 6 }}>(#{row.memberId})</span> : null}

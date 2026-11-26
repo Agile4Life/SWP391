@@ -85,34 +85,40 @@ describe('PtAttendancePage', () => {
   });
 
   it('restricts coach to mark and edit attendance only on the same day', async () => {
-    vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({ id: '20', name: 'HLV Hùng', identifier: 'hung', role: 'COACH' });
-    const todayIso = centerNowParts().date;
-    const pastAttended = { ...attended, id: 21, bookingDate: '2020-01-02' };
-    const pastMissed = { ...missed, id: 22, bookingDate: '2020-01-02' };
-    const todayStarted = { ...base, id: 23, bookingDate: todayIso, startTime: '06:00:00', endTime: '07:00:00', attendedAt: null };
-    const todayAttended = { ...base, id: 24, bookingDate: todayIso, startTime: '06:00:00', endTime: '07:00:00', attendedAt: `${todayIso}T06:10:00` };
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-11-13T05:00:00Z')); // 12:00 giờ Việt Nam để buổi 06:00 hôm nay luôn đã bắt đầu
+    try {
+      vi.spyOn(clientModule, 'getCurrentUser').mockReturnValue({ id: '20', name: 'HLV Hùng', identifier: 'hung', role: 'COACH' });
+      const todayIso = centerNowParts().date;
+      const pastAttended = { ...attended, id: 21, bookingDate: '2020-01-02' };
+      const pastMissed = { ...missed, id: 22, bookingDate: '2020-01-02' };
+      const todayStarted = { ...base, id: 23, bookingDate: todayIso, startTime: '06:00:00', endTime: '07:00:00', attendedAt: null };
+      const todayAttended = { ...base, id: 24, bookingDate: todayIso, startTime: '06:00:00', endTime: '07:00:00', attendedAt: `${todayIso}T06:10:00` };
 
-    mocks.load.mockResolvedValue([pastAttended, pastMissed, todayStarted, todayAttended]);
-    mocks.mark.mockResolvedValue({});
-    mocks.unmark.mockResolvedValue({});
-    await render();
+      mocks.load.mockResolvedValue([pastAttended, pastMissed, todayStarted, todayAttended]);
+      mocks.mark.mockResolvedValue({});
+      mocks.unmark.mockResolvedValue({});
+      await render();
 
-    // Buổi quá khứ của HLV không có nút thao tác và hiển thị nhãn Đã khóa
-    expect(host.querySelector('[data-testid="pt-row-21"] button')).toBeNull();
-    expect(host.querySelector('[data-testid="pt-row-21"]')?.textContent).toContain('Đã khóa (chỉ sửa trong ngày)');
-    expect(host.querySelector('[data-testid="pt-row-22"] button')).toBeNull();
-    expect(host.querySelector('[data-testid="pt-row-22"]')?.textContent).toContain('Đã khóa (chỉ sửa trong ngày)');
+      // Buổi quá khứ của HLV không có nút thao tác và hiển thị nhãn Đã khóa
+      expect(host.querySelector('[data-testid="pt-row-21"] button')).toBeNull();
+      expect(host.querySelector('[data-testid="pt-row-21"]')?.textContent).toContain('Đã khóa (chỉ sửa trong ngày)');
+      expect(host.querySelector('[data-testid="pt-row-22"] button')).toBeNull();
+      expect(host.querySelector('[data-testid="pt-row-22"]')?.textContent).toContain('Đã khóa (chỉ sửa trong ngày)');
 
-    // Buổi hôm nay có nút thao tác bình thường
-    const markTodayBtn = host.querySelector<HTMLButtonElement>('[data-testid="pt-row-23"] button');
-    expect(markTodayBtn?.textContent).toBe('Đánh dấu có mặt');
-    await act(async () => markTodayBtn?.click());
-    expect(mocks.mark).toHaveBeenCalledWith(23);
+      // Buổi hôm nay có nút thao tác bình thường
+      const markTodayBtn = host.querySelector<HTMLButtonElement>('[data-testid="pt-row-23"] button');
+      expect(markTodayBtn?.textContent).toBe('Đánh dấu có mặt');
+      await act(async () => markTodayBtn?.click());
+      expect(mocks.mark).toHaveBeenCalledWith(23);
 
-    const unmarkTodayBtn = host.querySelector<HTMLButtonElement>('[data-testid="pt-row-24"] button');
-    expect(unmarkTodayBtn?.textContent).toBe('Bỏ đánh dấu có mặt');
-    await act(async () => unmarkTodayBtn?.click());
-    expect(mocks.unmark).toHaveBeenCalledWith(24);
+      const unmarkTodayBtn = host.querySelector<HTMLButtonElement>('[data-testid="pt-row-24"] button');
+      expect(unmarkTodayBtn?.textContent).toBe('Bỏ đánh dấu có mặt');
+      await act(async () => unmarkTodayBtn?.click());
+      expect(mocks.unmark).toHaveBeenCalledWith(24);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('lets staff mark a started, unrecorded session as attended and reloads the list', async () => {

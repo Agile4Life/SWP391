@@ -11,9 +11,22 @@ Nội dung Sol AI dùng để trả lời khách. Sửa file này không cần �
 
 ## Giới thiệu
 Từ khóa: *
-- SÖL Fitness là trung tâm Gym: khu Gym tiêu chuẩn, PT 1:1 cùng huấn luyện viên và giáo án tập luyện cá nhân. Trung tâm không có lớp học nhóm, đặt sân theo giờ hay cửa hàng sản phẩm.
-- Các mục trên Portal hội viên: 'Gói tập & Bảo lưu', 'Thẻ & Check-in', 'Giao dịch & Hóa đơn', 'Giáo án', 'Hồ sơ', 'Thông báo'.
-- Chỉ hội viên có gói tập đang hoạt động và chưa hết hạn mới đặt PT 1:1, dùng quyền lợi gói và check-in được.
+- SÖL Fitness là trung tâm thể thao gồm 3 bộ môn: Gym (bộ môn chính), Boxing và Yoga; cung cấp lớp học nhóm dạng khóa định kỳ (mỗi bộ môn mở một lớp đang hoạt động), PT 1:1 cùng huấn luyện viên và giáo án tập luyện cá nhân. Trung tâm không có cửa hàng sản phẩm, bảng xếp hạng hay đánh giá HLV.
+- Các mục trên Portal hội viên: 'Gói tập & Bảo lưu', 'Lịch học & đặt PT', 'Thẻ & Check-in', 'Giao dịch & Hóa đơn', 'Giáo án', 'Hồ sơ', 'Thông báo'.
+- Chỉ hội viên có gói tập đang hoạt động và chưa hết hạn mới đăng ký lớp học nhóm, đặt PT 1:1, dùng quyền lợi gói và check-in được.
+
+## Lớp học nhóm đa bộ môn
+Từ khóa: lop hoc, lop nhom, khoa hoc, bo mon, gym, boxing, yoga, lich hoc, dang ky lop
+- Trung tâm có 3 bộ môn: Gym, Boxing và Yoga; mỗi bộ môn chỉ mở một lớp định kỳ đang hoạt động tại một thời điểm.
+- Toàn bộ lịch lớp học nhóm và PT 1:1 sử dụng chung 5 slot cố định mỗi ngày trong khung 07:00–19:30 (nghỉ 15 phút giữa hai slot kế tiếp): Slot 1 (07:00–09:30), Slot 2 (09:45–11:15), Slot 3 (11:30–14:00), Slot 4 (14:15–16:45) và Slot 5 (17:00–19:30).
+- Hội viên đăng ký cả khóa học tại mục 'Lịch học & đặt PT' > 'Đăng ký lớp học' bằng lượt miễn phí của gói tập hoặc thanh toán học phí khóa học (Ví SÖL, VNPay hoặc tiền mặt tại quầy lễ tân trước ngày khai giảng); không đặt lẻ từng buổi.
+- Hủy đăng ký khóa học chỉ thực hiện trước ngày khai giảng; hủy sau khi đã thanh toán được hoàn tiền về Ví SÖL hoặc trả lại suất gói.
+
+## Lịch 5 slot cố định và PT 1:1
+Từ khóa: slot, khung gio, gio tap, pt, hlv, dat lich, lich tap, coach, booking
+- Toàn bộ lịch tập lớp nhóm và buổi PT 1:1 hoạt động từ 07:00 đến 19:30 theo đúng 5 slot cố định, mỗi hai slot kế tiếp cách nhau 15 phút nghỉ: Slot 1 (07:00–09:30), Slot 2 (09:45–11:15), Slot 3 (11:30–14:00), Slot 4 (14:15–16:45), Slot 5 (17:00–19:30).
+- Đặt lịch PT 1:1 tại mục 'Lịch học & đặt PT' > 'Đặt lịch PT 1:1': phải đặt trước giờ bắt đầu slot ít nhất 2 tiếng, không trùng lịch dạy lớp hoặc lịch PT khác của HLV và hội viên.
+- Buổi PT 1:1 ngoài lượt miễn phí theo hạng gói được tính 200.000đ/slot (áp dụng ưu đãi giảm giá theo hạng gói Gold và Platinum).
 
 ## Mua, gia hạn và nâng cấp gói
 Từ khóa: mua goi, gia han, nang cap, goi tap, het han, dang ky goi, bang gia

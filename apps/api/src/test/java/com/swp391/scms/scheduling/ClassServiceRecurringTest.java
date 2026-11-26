@@ -1,5 +1,7 @@
 package com.swp391.scms.scheduling;
 
+import com.swp391.scms.common.ScheduleSlot;
+import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.facilities.entity.Discipline;
 import com.swp391.scms.facilities.entity.Room;
 import com.swp391.scms.facilities.repository.DisciplineRepository;
@@ -81,7 +83,7 @@ class ClassServiceRecurringTest {
                 new BigDecimal("500000"),
                 LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 11),
                 List.of("MONDAY", "WEDNESDAY"),
-                LocalTime.of(7, 0), LocalTime.of(8, 30)
+                ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime()
         );
 
         GymClassDto result = classService.createRecurringClass(req);
@@ -126,7 +128,7 @@ class ClassServiceRecurringTest {
 
         GymClassDto result = classService.createRecurringClass(new CreateRecurringClassRequest("Yoga", 1L, 2L, 3L, 20, "all", null,
                 BigDecimal.ZERO, LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 13), List.of("MONDAY", "WEDNESDAY"),
-                LocalTime.of(7, 0), LocalTime.of(8, 30)));
+                ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime()));
 
         assertEquals("MONDAY,WEDNESDAY", result.recurringDays());
         assertEquals(List.of(LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 2), LocalDate.of(2026, 12, 7),
@@ -139,8 +141,30 @@ class ClassServiceRecurringTest {
         stubCatalog();
         CreateRecurringClassRequest weeklyWithoutDays = new CreateRecurringClassRequest("Yoga", 1L, 2L, 3L, 20, "all", null,
                 BigDecimal.ZERO, LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 11), List.of(),
-                LocalTime.of(7, 0), LocalTime.of(8, 30));
-        assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
+        BadRequestException ex = assertThrows(BadRequestException.class,
                 () -> classService.createRecurringClass(weeklyWithoutDays));
+        assertEquals("SCHEDULING_NO_RECURRING_DAYS", ex.getErrorCode());
+    }
+
+    /** Kiểm thử: từ chối khóa học định kỳ có khung giờ ngoài 5 slot cố định. */
+    @Test
+    void rejectsRecurringClassOutsideFiveCanonicalSlots() {
+        stubCatalog();
+        for (LocalTime[] invalid : new LocalTime[][]{
+                {LocalTime.of(8, 0), LocalTime.of(9, 0)},
+                {LocalTime.of(7, 0), LocalTime.of(9, 0)},
+                {LocalTime.of(19, 30), LocalTime.of(20, 30)}
+        }) {
+            CreateRecurringClassRequest req = new CreateRecurringClassRequest("Yoga", 1L, 2L, 3L, 20, "all", null,
+                    BigDecimal.ZERO, LocalDate.of(2026, 11, 30), LocalDate.of(2026, 12, 11), List.of("MONDAY"),
+                    invalid[0], invalid[1]);
+            BadRequestException ex = assertThrows(BadRequestException.class,
+                    () -> classService.createRecurringClass(req));
+            assertEquals("SCHEDULING_INVALID_SLOT", ex.getErrorCode());
+            assertEquals("error.scheduling.invalid_slot", ex.getMessageKey());
+        }
+        verify(gymClasses, never()).save(any());
+        verify(sessions, never()).saveAndFlush(any());
     }
 }

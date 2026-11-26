@@ -35,6 +35,7 @@ const SEEDED_PACKAGE_LINE_EN: Readonly<Record<string, string>> = {
   'Toàn quyền sử dụng khu vực gym tiêu chuẩn và trang thiết bị hiện đại.': 'Full access to the standard gym floor and modern training equipment.',
   '01 buổi tập Personal Trainer 1:1 cùng Huấn luyện viên chuyên nghiệp.': '1 Personal Trainer 1:1 session with a certified coach.',
   'Sử dụng tủ khóa và tiện ích phòng thay đồ.': 'Locker room and changing amenities included.',
+  'Check-in ra/vào bằng thẻ QR động.': 'Check in and out with your dynamic QR card.',
   'Không đăng ký lớp Group Fitness và không áp dụng chính sách bảo lưu.': 'Group Fitness enrollment and membership hold policies do not apply.',
   'Tập luyện không giới hạn trong giờ hoạt động.': 'Unlimited gym access during operating hours.',
   'Sử dụng khu vực tập luyện tiêu chuẩn.': 'Access to the standard training floor.',

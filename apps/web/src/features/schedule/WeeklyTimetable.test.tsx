@@ -3,10 +3,11 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { WeeklyTimetable } from './WeeklyTimetable';
 import type { TimetableEvent } from './timetable';
+import calendarCss from './calendar.css?raw';
 
 const event: TimetableEvent = {
-  id: '7', date: '2099-01-05', startTime: '08:00:00', endTime: '09:30:00',
-  title: 'Yoga Flow', meta: 'Studio', detail: 'HLV An', badge: '3/12 chỗ', tone: 'open', ariaLabel: 'Yoga Flow 08:00',
+  id: '7', date: '2099-01-05', startTime: '07:00:00', endTime: '09:30:00',
+  title: 'Yoga Flow', meta: 'Zen Garden Studio', detail: 'HLV An', badge: '3/12 chỗ', tone: 'open', ariaLabel: 'Yoga Flow Slot 1',
 };
 const legend = [{ tone: 'open' as const, label: 'Còn chỗ' }];
 
@@ -23,46 +24,48 @@ describe('WeeklyTimetable', () => {
     <WeeklyTimetable label="Tuần" weekStart="2099-01-05" events={[event]} legend={legend}
       onWeekChange={() => {}} onEventClick={() => {}} {...props} />,
   ));
-  // Nhãn các giờ ở cột bên trái của lịch.
-  const gutterHours = () => [...host.querySelectorAll('.mcal__gutter span')].map((node) => node.textContent);
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const button = (text: string) => [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === text)!;
 
-  it('shows a time column fitted to the week and can switch to the whole day', async () => {
+  it('always renders 5 fixed slots (07:00 – 19:30) on the left axis without a day-range switch', async () => {
     await render();
     expect(host.querySelectorAll('.mcal__col')).toHaveLength(7);
-    // Buổi 08:00–09:30 -> khung tối thiểu 8 giờ, kẹp trong 06:00–22:00: 06:00–14:00.
-    expect(gutterHours()).toHaveLength(8);
-    expect(gutterHours()[0]).toBe('06:00');
-    await act(async () => button('Cả ngày').click());
-    expect(button('Cả ngày').getAttribute('aria-pressed')).toBe('true');
-    expect(gutterHours()).toHaveLength(16);
+    const slotHeads = [...host.querySelectorAll('.mcal__slot-head')];
+    expect(slotHeads).toHaveLength(5);
+    expect(slotHeads.map((node) => [
+      node.querySelector('.mcal__slot-name')?.textContent,
+      node.querySelector('.mcal__slot-time')?.textContent,
+    ])).toEqual([
+      ['Slot 1', '07:00 – 09:30'],
+      ['Slot 2', '09:45 – 11:15'],
+      ['Slot 3', '11:30 – 14:00'],
+      ['Slot 4', '14:15 – 16:45'],
+      ['Slot 5', '17:00 – 19:30'],
+    ]);
+    expect(host.querySelector('[aria-label="Khung giờ"]')).toBeNull();
     expect(host.textContent).toContain('05/01 – 11/01/2099');
   });
 
-  it('shows the full 06:00–22:00 range for an empty week without a range switch', async () => {
-    await render({ events: [] });
-    expect(gutterHours()).toHaveLength(16);
-    expect(host.querySelector('[aria-label="Khung giờ"]')).toBeNull();
+  it('positions events into their exact slot row (0%, 20%, 40%, 60%, 80%)', async () => {
+    await render({ events: [{ ...event, startTime: '17:00:00', endTime: '19:30:00' }] });
+    // Slot 5 là hàng thứ 5 (index 4 / 5 = 80%).
+    expect(host.querySelector<HTMLElement>('.mcal__event')!.style.top).toBe('calc(80% + 3px)');
+    expect(host.querySelector<HTMLElement>('.mcal__event')!.style.height).toBe('calc(20% - 6px)');
   });
 
-  it('positions events against the fitted range', async () => {
-    await render({ events: [{ ...event, startTime: '18:00', endTime: '19:00' }] });
-    // 18:00–19:00 -> 14:00–22:00 (8 giờ); buổi bắt đầu ở 4/8 chiều cao.
-    expect(host.querySelector<HTMLElement>('.mcal__event')!.style.top).toBe('calc(50% + 3px)');
-  });
-
-  it('draws one block per session with only title and place; time, status and coach live in the tooltip and detail', async () => {
+  it('draws one block per session with title, room, and coach name underneath without a thick left border stripe', async () => {
     const onEventClick = vi.fn();
     await render({ onEventClick });
     const blocks = host.querySelectorAll<HTMLButtonElement>('.mcal__event');
     expect(blocks).toHaveLength(1);
-    expect([...blocks[0].children].map((node) => node.textContent)).toEqual(['Yoga Flow', 'Studio']);
+    expect([...blocks[0].children].map((node) => node.textContent)).toEqual(['Yoga Flow', 'Zen Garden Studio', 'HLV An']);
+    expect(blocks[0].querySelector('.mcal__event-coach')?.textContent).toBe('HLV An');
     const tooltip = blocks[0].getAttribute('title')!;
-    expect(tooltip).toContain('08:00 - 09:30');
+    expect(tooltip).toContain('Slot 1 · 07:00 – 09:30');
     expect(tooltip).toContain('HLV An');
     expect(tooltip).toContain('3/12 chỗ');
     expect(blocks[0].classList).toContain('mcal__event--open');
+    expect(calendarCss).not.toContain('border-left: 4px');
     await act(async () => blocks[0].click());
     expect(onEventClick).toHaveBeenCalledWith('7');
   });
@@ -72,20 +75,20 @@ describe('WeeklyTimetable', () => {
     expect(host.querySelectorAll('.mcal__slot')).toHaveLength(0);
   });
 
-  it('lets a manager click an empty future slot and marks occupied slots', async () => {
+  it('lets a manager click an empty future slot (7 days × 5 slots) and marks occupied slots', async () => {
     const onSlotClick = vi.fn();
     await render({ onSlotClick });
-    expect(host.querySelectorAll('button.mcal__slot')).toHaveLength(7 * 16);
-    expect(host.querySelectorAll('.mcal__slot.is-busy')).toHaveLength(2);
-    const free = host.querySelector<HTMLButtonElement>('[data-slot="2099-01-06|10"]')!;
+    expect(host.querySelectorAll('button.mcal__slot')).toHaveLength(7 * 5);
+    expect(host.querySelectorAll('.mcal__slot.is-busy')).toHaveLength(1);
+    const free = host.querySelector<HTMLButtonElement>('[data-slot="2099-01-06|2"]')!;
     await act(async () => free.click());
-    expect(onSlotClick).toHaveBeenCalledWith({ date: '2099-01-06', startTime: '10:00', endTime: '11:00' });
+    expect(onSlotClick).toHaveBeenCalledWith({ date: '2099-01-06', startTime: '09:45', endTime: '11:15' });
   });
 
   it('ignores clicks on past slots', async () => {
     const onSlotClick = vi.fn();
     await render({ onSlotClick, weekStart: '2020-01-06', events: [] });
-    const past = host.querySelector<HTMLButtonElement>('[data-slot="2020-01-06|10"]')!;
+    const past = host.querySelector<HTMLButtonElement>('[data-slot="2020-01-06|2"]')!;
     expect(past.getAttribute('aria-disabled')).toBe('true');
     await act(async () => past.click());
     expect(onSlotClick).not.toHaveBeenCalled();
@@ -93,11 +96,11 @@ describe('WeeklyTimetable', () => {
 
   it('moves between slots with arrow keys (roving tabindex)', async () => {
     await render({ onSlotClick: () => {} });
-    const first = host.querySelector<HTMLButtonElement>('[data-slot="2099-01-05|6"]')!;
+    const first = host.querySelector<HTMLButtonElement>('[data-slot="2099-01-05|1"]')!;
     expect(first.tabIndex).toBe(0);
     first.focus();
     await act(async () => { first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); });
-    expect(document.activeElement).toBe(host.querySelector('[data-slot="2099-01-05|7"]'));
+    expect(document.activeElement).toBe(host.querySelector('[data-slot="2099-01-05|2"]'));
     expect(host.querySelectorAll('button.mcal__slot[tabindex="0"]')).toHaveLength(1);
   });
 
@@ -120,7 +123,7 @@ describe('WeeklyTimetable', () => {
     expect(host.querySelector('[aria-busy="true"]')).not.toBeNull();
   });
 
-  it('shows one day at a time with a day picker on narrow screens', async () => {
+  it('shows one day at a time with 5 slots and a day picker on narrow screens', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: query.includes('max-width'), media: query, addEventListener: () => {}, removeEventListener: () => {},
     }));
@@ -136,7 +139,7 @@ describe('WeeklyTimetable', () => {
     await act(async () => chips[2].click());
     expect(host.querySelector('.mcal__col')!.getAttribute('aria-label')).toContain('07/01');
     expect(host.querySelector('.mcal__event')!.textContent).toContain('Boxing');
-    expect(host.querySelectorAll('button.mcal__slot')).toHaveLength(16);
+    expect(host.querySelectorAll('button.mcal__slot')).toHaveLength(5);
   });
 
   it('opens on the day of the selected block on narrow screens', async () => {
@@ -145,11 +148,11 @@ describe('WeeklyTimetable', () => {
     expect(host.querySelector('.mcal__col')!.getAttribute('aria-label')).toContain('09/01');
   });
 
-  it('shows a bottom scroll cue while later hours remain below the fold and hides it at the bottom', async () => {
-    await render({ events: [event, { ...event, id: '9', startTime: '19:00:00', endTime: '20:00:00' }] });
+  it('shows a bottom scroll cue while later slots remain below the fold and hides it at the bottom', async () => {
+    await render({ events: [event, { ...event, id: '9', startTime: '17:00:00', endTime: '19:30:00' }] });
     const scrollBox = host.querySelector<HTMLDivElement>('.mcal__scroll')!;
-    Object.defineProperty(scrollBox, 'clientHeight', { value: 520, configurable: true });
-    Object.defineProperty(scrollBox, 'scrollHeight', { value: 960, configurable: true });
+    Object.defineProperty(scrollBox, 'clientHeight', { value: 400, configurable: true });
+    Object.defineProperty(scrollBox, 'scrollHeight', { value: 600, configurable: true });
     scrollBox.scrollTop = 0;
 
     await act(async () => {
@@ -157,10 +160,37 @@ describe('WeeklyTimetable', () => {
     });
     expect(host.querySelector('[data-testid="timetable-scroll-cue"]')).not.toBeNull();
 
-    scrollBox.scrollTop = 440;
+    scrollBox.scrollTop = 200;
     await act(async () => {
       scrollBox.dispatchEvent(new Event('scroll'));
     });
     expect(host.querySelector('[data-testid="timetable-scroll-cue"]')).toBeNull();
+  });
+
+  it('groups >= 3 concurrent classes in the same slot into "+N lớp" with Slot label and opens full clickable list', async () => {
+    const onEventClick = vi.fn();
+    const concurrent: TimetableEvent[] = [
+      { ...event, id: '1', title: 'Yoga', disciplineName: 'Yoga', meta: 'Zen Garden Studio', startTime: '17:00:00', endTime: '19:30:00' },
+      { ...event, id: '2', title: 'Boxing', disciplineName: 'Boxing', meta: 'Ring Arena 01', startTime: '17:00:00', endTime: '19:30:00' },
+      { ...event, id: '3', title: 'Gym Strength', disciplineName: 'Gym', meta: 'Phòng Gym Tiêu chuẩn', startTime: '17:00:00', endTime: '19:30:00' },
+    ];
+    await render({ events: concurrent, maxVisibleLanes: 2, onEventClick });
+
+    expect(host.querySelectorAll('.mcal__event')).toHaveLength(1);
+    const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]')!;
+    expect(overflowBtn).not.toBeNull();
+    expect(overflowBtn.textContent).toContain('+2 lớp');
+    expect(overflowBtn.textContent).toContain('Slot 5 · 17:00 – 19:30');
+
+    await act(async () => overflowBtn.click());
+    const rows = document.querySelectorAll<HTMLButtonElement>('[data-testid="timetable-overflow-list"] button');
+    expect(rows).toHaveLength(3);
+    expect(document.body.textContent).toContain('Boxing');
+    expect(document.body.textContent).toContain('Gym Strength');
+
+    const gymRow = [...rows].find((r) => r.textContent?.includes('Gym Strength'))!;
+    await act(async () => gymRow.click());
+    expect(onEventClick).toHaveBeenCalledWith('3');
+    expect(document.querySelector('[data-testid="timetable-overflow-list"]')).toBeNull();
   });
 });
