@@ -669,11 +669,6 @@ export function MemberCalendar() {
               : selected.statusLabel && <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{selected.statusLabel}</strong></div>}
             {selected.notes && <div className="kv-row"><span>{text("Ghi chú", "Notes")}</span><strong>{selected.notes}</strong></div>}
           </div>
-          <div className="mcal__dialog-actions">
-            <button type="button" className="btn-primary" onClick={closeDialog}>
-              {text("Đóng", "Close")}
-            </button>
-          </div>
         </Modal>
       )}
     </section>

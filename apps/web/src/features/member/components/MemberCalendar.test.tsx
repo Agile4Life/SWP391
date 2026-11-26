@@ -95,14 +95,14 @@ it('displays 5 fixed slot rows, enrolled group classes with coach name underneat
 
   await act(async () => classCard.click());
   expect(host.querySelector('dialog')?.textContent).toContain('Slot 5 · 18:00 – 20:30');
-  expect(host.querySelector('.mcal__dialog-actions button')?.textContent).toBe('Đóng');
+  expect(host.querySelector('.mcal__dialog-actions')).toBeNull();
   const closeBtn = host.querySelector<HTMLButtonElement>('dialog button[aria-label]')!;
   await act(async () => closeBtn.click());
 
   await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--pt')!.click());
   expect(host.querySelector('dialog')?.textContent).toContain('Slot 1 · 07:00 – 09:30');
   expect(host.querySelector('dialog')?.textContent).toContain('Chưa điểm danh');
-  expect(host.querySelector('.mcal__dialog-actions button')?.textContent).toBe('Đóng');
+  expect(host.querySelector('.mcal__dialog-actions')).toBeNull();
 });
 
 it('reports PT request failure and retries cleanly', async () => {
