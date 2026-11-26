@@ -255,7 +255,7 @@ export function MemberInvoicesPage() {
         >
           <div className="member-invoices__pdf-wrap">
             <iframe
-              src={previewUrl}
+              src={previewUrl.startsWith('blob:') ? `${previewUrl}#toolbar=0&navpanes=0&view=FitH` : previewUrl}
               title={invoice ? `${memberText("Hóa đơn điện tử")} ${invoice.invoiceNumber}` : memberText("Xem hóa đơn PDF")}
               className="member-invoices__pdf-frame"
             />
