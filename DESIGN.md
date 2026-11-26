@@ -1,6 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
+Các nút thao tác trong Danh mục vận hành nằm cùng một hàng; bảng cuộn ngang khi cần.
 
 Thu gọn phạm vi chỉ còn Gym (22–23/11/2026, PR #144–#156 — **ghi đè** mọi mục cũ bên dưới nói về lớp nhóm, đặt sân, Shop, thiết bị, streak, số đo, tiến độ hay đánh giá HLV):
 - **Còn giữ**: Gym tiêu chuẩn, gói tập (mua/gia hạn/nâng cấp/bảo lưu), PT 1:1 (đặt/hủy/thanh toán/điểm danh), giáo án, check-in/checkout và QR, ví và hóa đơn, tin nhắn/hỗ trợ. Giữ Dashboard bốn cột, bố cục, theme và cuộn native hiện hành.
