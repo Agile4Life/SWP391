@@ -12,19 +12,19 @@ export function SupportIcon({ size = 26 }: { size?: number }) {
 }
 
 /** Tiêu đề hội thoại giống ChatThread: nút quay lại, avatar, tên + dòng phụ, hành động bên phải. */
-export function SupportHeader({ onBack, title, subtitle, active, children }: {
+export function SupportHeader({ onBack, title, subtitle, active, children, inboxBackLabel }: {
   // Props: nút quay lại, tiêu đề, phụ đề, trạng thái đang xem và nội dung con.
-  onBack: () => void; title: string; subtitle: ReactNode; active: boolean; children?: ReactNode;
+  onBack: () => void; title: string; subtitle: ReactNode; active: boolean; children?: ReactNode; inboxBackLabel?: string;
 }) {
   const { t } = useI18n();
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (active) heading.current?.focus({ preventScroll: true }); }, [active]);
   return <header className="direct-chat__thread-header">
-    <button type="button" data-i18n-managed className="direct-chat__back direct-chat__link" onClick={onBack} aria-label={t('Quay lại danh sách', 'Back to conversations')} title={t('Quay lại danh sách', 'Back to conversations')}>
+    <button type="button" data-i18n-managed className={`direct-chat__back direct-chat__link${inboxBackLabel ? ' support-chat__back-to-inbox' : ''}`} onClick={onBack} aria-label={inboxBackLabel ?? t('Quay lại danh sách', 'Back to conversations')} title={inboxBackLabel ?? t('Quay lại danh sách', 'Back to conversations')}>
       <svg className="direct-chat__back-chevron" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-        <polyline points="15 18 9 12 15 6" />
+        {inboxBackLabel ? <><path d="M19 12H5" /><path d="m12 19-7-7 7-7" /></> : <polyline points="15 18 9 12 15 6" />}
       </svg>
-      <span className="direct-chat__back-label">{t('Danh sách', 'Conversations')}</span>
+      <span className="direct-chat__back-label">{inboxBackLabel ?? t('Danh sách', 'Conversations')}</span>
     </button>
     <div className="direct-chat__thread-peer">
       <span className="direct-chat__avatar direct-chat__avatar--support direct-chat__thread-avatar" aria-hidden="true"><SupportIcon size={18} /></span>

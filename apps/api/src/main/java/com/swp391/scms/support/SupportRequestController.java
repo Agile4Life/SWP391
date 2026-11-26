@@ -6,6 +6,8 @@ import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.support.dto.CreateSupportMessageDto;
 import com.swp391.scms.support.dto.CreateSupportRequestDto;
 import com.swp391.scms.support.dto.EscalateSupportRequestDto;
+import com.swp391.scms.support.dto.MarkSupportReadDto;
+import com.swp391.scms.support.dto.SupportReadResultDto;
 import com.swp391.scms.support.dto.SupportRequestDto;
 import com.swp391.scms.support.dto.SupportRequestMessageDto;
 import com.swp391.scms.support.dto.UpdateSupportRequestStatusDto;
@@ -32,6 +34,7 @@ public class SupportRequestController {
 
     private final SupportRequestService supportRequestService;
     private final MessageService messageService;
+    private final SupportInboxService inboxService;
 
     /** Constructor cho test, không có MessageService. */
     public SupportRequestController(SupportRequestService supportRequestService) {
@@ -39,10 +42,25 @@ public class SupportRequestController {
     }
 
     /** Constructor Spring dùng. */
-    @org.springframework.beans.factory.annotation.Autowired
     public SupportRequestController(SupportRequestService supportRequestService, MessageService messageService) {
+        this(supportRequestService, messageService, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public SupportRequestController(SupportRequestService supportRequestService, MessageService messageService,
+                                    SupportInboxService inboxService) {
+        this.inboxService = inboxService;
         this.supportRequestService = supportRequestService;
         this.messageService = messageService;
+    }
+
+    @PostMapping("/{id}/read")
+    @PreAuthorize("hasRole('RECEPTIONIST')")
+    public ApiResponse<SupportReadResultDto> markRead(@PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @Valid @RequestBody MarkSupportReadDto request) {
+        return ApiResponse.ok(msg("support.read.success"),
+                inboxService.markRead(id, principal.id(), principal.role(), request.lastMessageId()));
     }
 
     /** GET /{id}: chi tiết phiếu (hội viên chủ phiếu hoặc nhân viên được xem). */
@@ -86,9 +104,19 @@ public class SupportRequestController {
     public ApiResponse<Page<SupportRequestDto>> getAllRequests(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "false") boolean unreadOnly,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<SupportRequestDto> requests = supportRequestService.getAllRequests(status, pageable, principal.role());
+        Page<SupportRequestDto> requests = "RECEPTIONIST".equals(principal.role()) && inboxService != null
+                ? inboxService.inbox(principal.id(), principal.role(), status, unreadOnly, pageable)
+                : supportRequestService.getAllRequests(status, pageable, principal.role());
         return ApiResponse.ok(msg("support.list.success"), requests);
+    }
+
+    /** Tương thích các caller Java cũ; HTTP dùng bản có unreadOnly. */
+    @PreAuthorize("hasAnyRole('CENTER_MANAGER', 'RECEPTIONIST')")
+    public ApiResponse<Page<SupportRequestDto>> getAllRequests(AuthenticatedPrincipal principal,
+                                                              String status, Pageable pageable) {
+        return getAllRequests(principal, status, false, pageable);
     }
 
     /** PATCH /{id}/status: đổi trạng thái hoặc người phụ trách phiếu. */

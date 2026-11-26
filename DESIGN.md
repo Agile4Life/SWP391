@@ -414,3 +414,5 @@ Quyết định Receptionist (25/11/2026): Nạp Ví SÖL tại quầy chỉ nh�
 Quyết định Receptionist (25/11/2026): Hai bảng lịch sử tại quầy có tìm kiếm độc lập, Hôm nay/7/30/90 ngày/Tất cả thời gian, sắp xếp hai chiều; giữ bộ lọc loại và phương thức lịch sử.
 
 Quyết định Receptionist (25/11/2026): Receptionist nhận toast cho yêu cầu mới sau mốc đăng nhập; chuông dùng notification server và trạng thái đọc riêng việc xử lý. Giữ route nghiệp vụ hiện có.
+
+Quyết định Receptionist — Task 3 (25/11/2026): `/messages?tab=support` giữ cột hội thoại bên trái và hộp thư/chi tiết phiếu bên phải. Phiếu chưa đọc có tên hội viên và tin cuối in đậm, badge số tin đến chưa đọc, thời gian tin cuối; sắp theo tin cuối trên server trước phân trang. Bộ lọc Tất cả/Chưa đọc kết hợp độc lập với trạng thái xử lý. Header chi tiết có nút mũi tên trái “Quay lại hộp thư” hiện trên desktop/mobile, chỉ đóng chi tiết, giữ bộ lọc, nháp và vị trí cuộn danh sách. Trạng thái đọc lưu theo từng lễ tân, tách khỏi trạng thái xử lý phiếu; chỉ xác nhận đến tin đã tải thành công. Dùng token Light salmon/Dark bạc, không thay luồng gửi/trả lời/chuyển Manager hoặc giao diện AI.
