@@ -53,6 +53,12 @@ export function MemberCheckoutPage() {
   const subscriptionIdParam = searchParams.get('subscriptionId');
   const parsedSubscriptionIdRaw = parsePositiveIntParam(subscriptionIdParam);
   const existingSubscriptionId = typeof parsedSubscriptionIdRaw === 'number' ? parsedSubscriptionIdRaw : null;
+  const isKycOnlyMode =
+    searchParams.get('mode') === 'kyc' &&
+    !packageIdParam &&
+    !subscriptionIdParam;
+  const fromParam = searchParams.get('from');
+  const backTarget = fromParam === 'profile' ? '/member/profile' : '/member/packages';
 
   const preparedSubscriptionId = useRef<number | null>(existingSubscriptionId);
   const kycSubmittingRef = useRef(false);
@@ -114,6 +120,22 @@ export function MemberCheckoutPage() {
       }
 
       try {
+        if (isKycOnlyMode) {
+          const [userProfile, trialStatus] = await Promise.all([
+            getProfile().catch(() => null),
+            trialApi.getStatus().catch(() => null),
+          ]);
+          if (!active || version !== request) return;
+
+          setProfile(userProfile);
+          setApprovedTrial(trialStatus?.status === 'APPROVED');
+
+          if (userProfile?.fullName) {
+            setKycFullName(userProfile.fullName);
+          }
+          return;
+        }
+
         const [packages, history, userProfile, trialStatus] = await Promise.all([
           getMembershipPackages(),
           getMembershipHistory(),
@@ -198,7 +220,7 @@ export function MemberCheckoutPage() {
       active = false;
       window.removeEventListener('pageshow', restore);
     };
-  }, [parsedPackageId, parsedPackageIdRaw, existingSubscriptionId, parsedSubscriptionIdRaw, reload]);
+  }, [parsedPackageId, parsedPackageIdRaw, existingSubscriptionId, parsedSubscriptionIdRaw, isKycOnlyMode, reload]);
 
   const amount = selectedPackage ? quotedAmount ?? selectedPackage.price : 0;
   const isKycVerified = profile?.kycStatus === 'APPROVED'
@@ -310,15 +332,15 @@ export function MemberCheckoutPage() {
   if (loading) {
     return (
       <div data-i18n-managed className="portal-container checkout-container">
-        <PageHeader title={t("Thanh toán gói tập", "Membership payment")} />
+        <PageHeader title={isKycOnlyMode ? t("Xác minh danh tính", "Identity verification") : t("Thanh toán gói tập", "Membership payment")} />
         <div className="portal-card">
-          <LoadingSkeleton label={t("Đang tải thông tin thanh toán gói tập...", "Loading membership payment details…")} count={3} />
+          <LoadingSkeleton label={isKycOnlyMode ? t("Đang tải trạng thái xác minh...", "Loading verification status…") : t("Đang tải thông tin thanh toán gói tập...", "Loading membership payment details…")} count={3} />
         </div>
       </div>
     );
   }
 
-  if (error || !selectedPackage) {
+  if (error || (!isKycOnlyMode && !selectedPackage)) {
     return (
       <div data-i18n-managed className="portal-container checkout-container">
         <div className="portal-card" style={{ textAlign: 'center', padding: '40px 20px' }}>
@@ -329,8 +351,8 @@ export function MemberCheckoutPage() {
             <button type="button" className="btn-secondary" onClick={() => setReload((n) => n + 1)}>
               {t("Thử lại", "Try again")}
             </button>
-            <Link to="/member/packages" className="btn-primary">
-              {t("Quay lại danh mục gói tập", "Back to membership catalog")}
+            <Link to={backTarget} className="btn-primary">
+              {backTarget === '/member/profile' ? t("Quay lại hồ sơ cá nhân", "Back to profile") : t("Quay lại danh mục gói tập", "Back to membership catalog")}
             </Link>
           </div>
         </div>
@@ -341,14 +363,18 @@ export function MemberCheckoutPage() {
   return (
     <div data-i18n-managed className="portal-container checkout-container" >
       <div className="checkout-breadcrumb">
-        <Link to="/member/packages">{t("Gói tập hội viên", "Membership plan")}</Link>
+        <Link to={backTarget}>
+          {backTarget === '/member/profile' ? t("Hồ sơ cá nhân", "Profile") : t("Gói tập hội viên", "Membership plan")}
+        </Link>
         <span>/</span>
-        <span style={{ color: 'var(--portal-paper, var(--color-text-main, #202020))', fontWeight: 600 }}>{t("Thanh toán", "Payment")}</span>
+        <span style={{ color: 'var(--portal-paper, var(--color-text-main, #202020))', fontWeight: 600 }}>
+          {isKycOnlyMode ? t("Xác minh danh tính", "Identity verification") : t("Thanh toán", "Payment")}
+        </span>
       </div>
 
-      <PageHeader title={t("Thanh toán gói tập", "Membership payment")} />
+      <PageHeader title={isKycOnlyMode ? t("Xác minh danh tính", "Identity verification") : t("Thanh toán gói tập", "Membership payment")} />
 
-      <div className="checkout-layout">
+      <div className={isKycOnlyMode ? 'stack' : 'checkout-layout'}>
         <div className="stack" data-i18n-managed>
           {!isKycVerified && profile?.kycStatus === 'PENDING' ? (
             <section data-i18n-managed className="portal-card stack" role="status" data-testid="kyc-pending" aria-label={t("Hồ sơ định danh đang chờ duyệt", "Identity document awaiting review")}>
@@ -526,63 +552,80 @@ export function MemberCheckoutPage() {
             </div>
           )}
 
-          <section data-i18n-managed className="portal-card stack" aria-label={t("Phương thức thanh toán trực tuyến", "Online payment methods")} style={{ opacity: !canPurchase ? 0.6 : 1, pointerEvents: !canPurchase ? 'none' : 'auto' }}>
-            <h2 className="portal-card-title">{t("Thanh toán qua VNPay hoặc Ví điện tử SÖL", "Pay via VNPay or SÖL Wallet")}</h2>
-            {!canPurchase && (
-              <p className="hold-notice hold-notice--warn">
-                {t("Hoàn tất xác minh danh tính ở trên để thanh toán.", "Complete identity verification above to pay.")}</p>
-            )}
-            <VnpayPayButton
-              amount={amount}
-              disabled={!canPurchase}
-              prepare={preparePaymentTarget}
-              onPaid={() => navigate('/member/packages', { replace: true })}
-            />
-          </section>
+          {!isKycOnlyMode && selectedPackage && (
+            <>
+              <section data-i18n-managed className="portal-card stack" aria-label={t("Phương thức thanh toán trực tuyến", "Online payment methods")} style={{ opacity: !canPurchase ? 0.6 : 1, pointerEvents: !canPurchase ? 'none' : 'auto' }}>
+                <h2 className="portal-card-title">{t("Thanh toán qua VNPay hoặc Ví điện tử SÖL", "Pay via VNPay or SÖL Wallet")}</h2>
+                {!canPurchase && (
+                  <p className="hold-notice hold-notice--warn">
+                    {t("Hoàn tất xác minh danh tính ở trên để thanh toán.", "Complete identity verification above to pay.")}</p>
+                )}
+                <VnpayPayButton
+                  amount={amount}
+                  disabled={!canPurchase}
+                  prepare={preparePaymentTarget}
+                  onPaid={() => navigate('/member/packages', { replace: true })}
+                />
+              </section>
 
-          <section data-i18n-managed className="portal-card stack" aria-label={t("Lưu ý thanh toán tiền mặt", "Cash payment information")}>
-            <h3 className="portal-card-title">{t("Thanh toán tiền mặt", "Cash payment")}</h3>
-            <p className="row-card__meta" style={{ margin: 0 }}>
-              {t("Thanh toán tiền mặt tại quầy Lễ tân.", "Pay in cash at the front desk.")}</p>
-          </section>
+              <section data-i18n-managed className="portal-card stack" aria-label={t("Lưu ý thanh toán tiền mặt", "Cash payment information")}>
+                <h3 className="portal-card-title">{t("Thanh toán tiền mặt", "Cash payment")}</h3>
+                <p className="row-card__meta" style={{ margin: 0 }}>
+                  {t("Thanh toán tiền mặt tại quầy Lễ tân.", "Pay in cash at the front desk.")}</p>
+              </section>
+            </>
+          )}
+          {isKycOnlyMode && (
+            <div>
+              <Link to={backTarget} className="btn-secondary">
+                {backTarget === '/member/profile'
+                  ? t("Quay lại hồ sơ cá nhân", "Back to profile")
+                  : fromParam === 'trial' && isKycVerified
+                  ? t("Quay lại đăng ký gói trải nghiệm", "Back to claim 3-day trial")
+                  : t("Quay lại danh mục gói tập", "Back to membership catalog")}
+              </Link>
+            </div>
+          )}
         </div>
 
-        <div>
-          <div className="order-summary-card">
-            <h3 className="order-summary-title">{t("Tóm tắt đơn hàng", "Order summary")}</h3>
+        {!isKycOnlyMode && selectedPackage && (
+          <div>
+            <div className="order-summary-card">
+              <h3 className="order-summary-title">{t("Tóm tắt đơn hàng", "Order summary")}</h3>
 
-            <div className="order-package-info">
-              <div className="order-package-name">{selectedPackage.name}</div>
-              <div className="order-package-term">
-                <span>{t("Thời hạn: ", "Duration: ")}{selectedPackage.durationDays} {t("ngày tập", "training days")}</span>
+              <div className="order-package-info">
+                <div className="order-package-name">{selectedPackage.name}</div>
+                <div className="order-package-term">
+                  <span>{t("Thời hạn: ", "Duration: ")}{selectedPackage.durationDays} {t("ngày tập", "training days")}</span>
+                </div>
               </div>
-            </div>
 
-            <div className="order-breakdown">
-              <div className="order-breakdown-row">
-                <span>{t("Giá niêm yết", "List price")}</span>
-                <span>{formatPrice(selectedPackage.price)}</span>
-              </div>
-              {amount !== selectedPackage.price && (
+              <div className="order-breakdown">
                 <div className="order-breakdown-row">
-                  <span>{t("Số tiền theo yêu cầu hiện tại", "Amount on current request")}</span>
+                  <span>{t("Giá niêm yết", "List price")}</span>
+                  <span>{formatPrice(selectedPackage.price)}</span>
+                </div>
+                {amount !== selectedPackage.price && (
+                  <div className="order-breakdown-row">
+                    <span>{t("Số tiền theo yêu cầu hiện tại", "Amount on current request")}</span>
+                    <span>{formatPrice(amount)}</span>
+                  </div>
+                )}
+                <div className="order-breakdown-row total">
+                  <span>{t("Số tiền cần thanh toán", "Amount due")}</span>
                   <span>{formatPrice(amount)}</span>
                 </div>
-              )}
-              <div className="order-breakdown-row total">
-                <span>{t("Số tiền cần thanh toán", "Amount due")}</span>
-                <span>{formatPrice(amount)}</span>
               </div>
-            </div>
 
-            <Link
-              to="/member/packages"
-              className="btn-secondary"
-              style={{ width: '100%', justifyContent: 'center', display: 'inline-flex' }}
-            >
-              {t("Chọn gói tập khác", "Choose another membership")}</Link>
+              <Link
+                to="/member/packages"
+                className="btn-secondary"
+                style={{ width: '100%', justifyContent: 'center', display: 'inline-flex' }}
+              >
+                {t("Chọn gói tập khác", "Choose another membership")}</Link>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

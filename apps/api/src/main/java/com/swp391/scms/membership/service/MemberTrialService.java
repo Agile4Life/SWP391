@@ -317,6 +317,13 @@ public class MemberTrialService {
             throw e;
         }
 
+        // Nếu hội viên đã được Lễ tân phê duyệt KYC trước đó thì kích hoạt ngay gói trải nghiệm 3 ngày,
+        // không bắt chờ Lễ tân duyệt lại tại quầy.
+        if (isKycAlreadyApproved(member)) {
+            activateTrialRedemption(null, member, saved);
+            return toStatusDto(saved);
+        }
+
         if (notifications != null) {
             notifications.send(
                     memberId,
@@ -330,6 +337,14 @@ public class MemberTrialService {
 
         if (notifications != null) notifications.notifyReceptionists("trial", saved.getId());
         return toStatusDto(saved);
+    }
+
+    private static boolean isKycAlreadyApproved(Member member) {
+        if (member == null) return false;
+        if ("APPROVED".equalsIgnoreCase(member.getKycStatus())) return true;
+        return Boolean.TRUE.equals(member.getIdentityVerified())
+                && !"PENDING".equalsIgnoreCase(member.getKycStatus())
+                && !"REJECTED".equalsIgnoreCase(member.getKycStatus());
     }
 
     /** Lễ tân duyệt yêu cầu gói trải nghiệm và trả thông tin yêu cầu sau khi duyệt. */
@@ -377,6 +392,13 @@ public class MemberTrialService {
                     msg("trial.not_new_member"));
         }
 
+        return activateTrialRedemption(reviewer, member, redemption);
+    }
+
+    private MembershipSubscription activateTrialRedemption(
+            AuthenticatedPrincipal reviewer,
+            Member member,
+            MemberTrialRedemption redemption) {
         // Đồng bộ họ tên User theo họ tên trên giấy tờ đã xác minh
         if (member.getUser() != null) {
             member.getUser().setFullName(redemption.getFullName());
@@ -399,7 +421,9 @@ public class MemberTrialService {
         member.setKycStatus("APPROVED");
         member.setKycRejectReason(null);
         member.setIdentityVerified(true);
-        member.setIdentityVerifiedAt(LocalDateTime.now(clock));
+        if (member.getIdentityVerifiedAt() == null) {
+            member.setIdentityVerifiedAt(LocalDateTime.now(clock));
+        }
 
         // Tìm gói tập trải nghiệm 3 ngày (fallback gói Gold nếu chưa seed)
         MembershipPackage trialPkg = packages.findByStatusOrderByPriceAsc("active").stream()

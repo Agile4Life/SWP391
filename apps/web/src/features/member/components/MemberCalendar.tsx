@@ -2,7 +2,6 @@ import { memberError, memberRenderMessage } from '../memberI18n';
 import type { SourceMessage } from '../../../shared/i18n/language';
 import { useLanguage } from '../../../shared/i18n/language';
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { Link } from 'react-router-dom';
 import { Modal } from '../../../shared/ui/Modal';
 import { centerNowParts } from '../../../shared/lib/centerTime';
 import { getMyCoachBookings, type CoachBookingDto } from '../coachBookingApi';
@@ -31,8 +30,12 @@ export interface CalendarEvent extends TimetableEvent {
   kind: Kind;
   place: string;
   coach?: string;
+  specialization?: string;
+  paymentLabel?: string;
+  statusLabel?: string;
+  notes?: string;
   cancelled: boolean;
-  /** Mã bản ghi để điều hướng tới màn quản lý tương ứng. */
+  /** Mã bản ghi để đối chiếu sự kiện trên lịch. */
   seat: { type: 'enrollment' | 'pt'; id: number };
 }
 
@@ -139,9 +142,25 @@ function sortEvents(events: CalendarEvent[]) {
 function ptEvent(booking: CoachBookingDto, lang: 'vi' | 'en'): CalendarEvent {
   const coachName = formatCoachName(booking.coachName);
   const title = lang === 'en' ? `1:1 session with ${coachName}` : `Tập 1:1 cùng HLV ${coachName}`;
+  const isQuota = booking.paymentMethod === 'package_quota';
+  const paymentLabel = isQuota
+    ? (lang === 'en' ? 'Included in membership' : 'Miễn phí theo gói')
+    : booking.paymentStatus === 'paid'
+    ? (lang === 'en' ? 'Paid' : 'Đã thanh toán')
+    : booking.paymentStatus === 'pending'
+    ? (lang === 'en' ? 'Payment pending' : 'Chờ thanh toán')
+    : undefined;
+  const statusLabel = booking.attendedAt
+    ? (lang === 'en' ? 'Attended' : 'Đã điểm danh')
+    : (lang === 'en' ? 'Not attended yet' : 'Chưa điểm danh');
   return {
     id: `pt-${booking.id}`, kind: 'pt', date: booking.bookingDate, startTime: booking.startTime, endTime: booking.endTime,
-    title, place: '', coach: coachName, cancelled: false, seat: { type: 'pt', id: booking.id }, tone: 'neutral',
+    title, place: '', coach: coachName,
+    specialization: booking.coachSpecialization || undefined,
+    paymentLabel,
+    statusLabel,
+    notes: booking.notes?.trim() || undefined,
+    cancelled: false, seat: { type: 'pt', id: booking.id }, tone: 'neutral',
     ariaLabel: `${title}, ${weekdayLabel(booking.bookingDate)} ${shortDate(booking.bookingDate)}, ${formatSlotShort(booking.startTime, booking.endTime)}`,
   };
 }
@@ -594,14 +613,17 @@ export function MemberCalendar() {
             <div className="kv-row"><span>{text("Thời gian", "Time")}</span><strong>{dayLabel(selected.date)} {shortDate(selected.date)} · {formatSlotLabel(selected.startTime, selected.endTime)}</strong></div>
             {selected.place && <div className="kv-row"><span>{text("Địa điểm", "Location")}</span><strong>{selected.place}</strong></div>}
             {selected.coach && <div className="kv-row"><span>{text("Huấn luyện viên", "Coach")}</span><strong>{selected.coach}</strong></div>}
-            {selected.cancelled && <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{text("Buổi học đã bị hủy", "Class session cancelled")}</strong></div>}
+            {selected.specialization && <div className="kv-row"><span>{text("Chuyên môn", "Specialty")}</span><strong>{selected.specialization}</strong></div>}
+            {selected.paymentLabel && <div className="kv-row"><span>{text("Thanh toán", "Payment")}</span><strong>{selected.paymentLabel}</strong></div>}
+            {selected.cancelled
+              ? <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{text("Buổi học đã bị hủy", "Class session cancelled")}</strong></div>
+              : selected.statusLabel && <div className="kv-row"><span>{text("Trạng thái", "Status")}</span><strong>{selected.statusLabel}</strong></div>}
+            {selected.notes && <div className="kv-row"><span>{text("Ghi chú", "Notes")}</span><strong>{selected.notes}</strong></div>}
           </div>
           <div className="mcal__dialog-actions">
-            {selected.kind === 'class' ? (
-              <Link to="/member/classes?tab=classes" className="btn-primary">{text("Quản lý lớp học", "Manage group classes")}</Link>
-            ) : (
-              <Link to="/member/classes?tab=pt" className="btn-primary">{text("Quản lý lịch PT", "Manage 1:1 sessions")}</Link>
-            )}
+            <button type="button" className="btn-primary" onClick={closeDialog}>
+              {text("Đóng", "Close")}
+            </button>
           </div>
         </Modal>
       )}
