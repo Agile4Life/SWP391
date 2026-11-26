@@ -117,6 +117,7 @@ export function KycReviewPage() {
     <div data-i18n-managed className="portal-container kyc-review">
       <PageHeader title={t('Duyệt hồ sơ định danh', 'Identity review')}
         actions={<RefreshButton label={t('Làm mới danh sách hồ sơ', 'Refresh submissions')} disabled={loading} onClick={() => void load()} />} />
+      <p className="kyc-review__intro">{t('Đối chiếu thông tin hội viên với ảnh giấy tờ trước khi duyệt hồ sơ.', 'Check member details against the document photos before approving a submission.')}</p>
       {error && (
         <div className="portal-alert" role="alert">
           <span>{t(error)}</span>
@@ -124,49 +125,54 @@ export function KycReviewPage() {
         </div>
       )}
       {loading ? <LoadingSkeleton label={t('Đang tải hồ sơ chờ duyệt', 'Loading submissions')} /> : error && items.length === 0 ? null : items.length === 0 ? (
-        <div className="portal-card" role="status">{t('Không có hồ sơ nào chờ duyệt.', 'No submissions are waiting for review.')}</div>
+        <div className="portal-card kyc-review__empty" role="status">{t('Không có hồ sơ nào chờ duyệt.', 'No submissions are waiting for review.')}</div>
       ) : (
-        <ul className="stack" style={{ listStyle: 'none', padding: 0 }} aria-label={t('Hồ sơ chờ duyệt', 'Submissions awaiting review')}>
+        <ul className="kyc-review__list" aria-label={t('Hồ sơ chờ duyệt', 'Submissions awaiting review')}>
           {items.map((item) => {
             const docLabel = item.documentType === 'PASSPORT' ? t('Hộ chiếu', 'Passport') : t('CCCD', 'Identity card');
             return (
-              <li key={item.memberId} className="portal-card stack" data-testid={`kyc-${item.memberId}`}>
+              <li key={item.memberId} className="portal-card kyc-card" data-testid={`kyc-${item.memberId}`}>
                 <div className="kyc-card__head">
                   <div>
                     <h2 className="kyc-card__name">{item.fullName ?? '—'}</h2>
-                    {item.membershipCode && <span className="badge badge-neutral" style={{ fontVariantNumeric: 'tabular-nums' }}>{item.membershipCode}</span>}
+                    {item.membershipCode && <p className="kyc-card__code">{t('Mã hội viên', 'Member code')}: <strong>{item.membershipCode}</strong></p>}
                   </div>
-                  {item.submittedAt && <span className="kyc-card__time" style={{ fontVariantNumeric: 'tabular-nums' }}>{t('Gửi lúc', 'Submitted')} {formatCenterDateTime(item.submittedAt)}</span>}
+                  <div className="kyc-card__status">
+                    <span className="badge kyc-card__pending">{t('Chờ duyệt', 'Pending review')}</span>
+                    {item.submittedAt && <span className="kyc-card__time" style={{ fontVariantNumeric: 'tabular-nums' }}>{t('Gửi lúc', 'Submitted')} {formatCenterDateTime(item.submittedAt)}</span>}
+                  </div>
                 </div>
-                <dl className="kyc-card__doc">
-                  <div>
-                    <dt>{docLabel}</dt>
-                    <dd>{item.citizenId ? <strong className="kyc-card__number">{item.citizenId}</strong> : <span className="kyc-card__missing">{t('Chưa có số giấy tờ', 'No document number')}</span>}</dd>
+                <div className="kyc-card__body">
+                  <dl className="kyc-card__doc">
+                    <div>
+                      <dt>{docLabel}</dt>
+                      <dd>{item.citizenId ? <strong className="kyc-card__number">{item.citizenId}</strong> : <span className="kyc-card__missing">{t('Chưa có số giấy tờ', 'No document number')}</span>}</dd>
+                    </div>
+                    {item.nationality && <div><dt>{t('Quốc tịch', 'Nationality')}</dt><dd>{item.nationality}</dd></div>}
+                  </dl>
+                  <div className="kyc-card__images document-photo-grid">
+                    {([['front', item.frontImageUrl, t('Mặt trước', 'Front')], ['back', item.backImageUrl, t('Mặt sau', 'Back')]] as const).map(([side, url, label]) => url ? (
+                      <button
+                        key={side}
+                        type="button"
+                        className="kyc-card__image document-photo-trigger"
+                        aria-label={t(`Phóng to ảnh ${label}`, `Zoom ${label.toLowerCase()} image`)}
+                        onClick={() => setZoomImage({
+                          url,
+                          title: `${item.fullName ?? '—'} · ${docLabel} (${label})`,
+                          alt: t(`${label} giấy tờ`, `Document ${label.toLowerCase()}`),
+                        })}
+                      >
+                        <img src={url} alt={t(`${label} giấy tờ`, `Document ${label.toLowerCase()}`)} />
+                        <span className="document-photo-trigger__caption">{label} · {t('Bấm để phóng to', 'Click to zoom')}</span>
+                      </button>
+                    ) : (
+                      <div key={side} className="kyc-card__image kyc-card__image--empty"><span>{label}: {t('chưa có ảnh', 'no photo')}</span></div>
+                    ))}
                   </div>
-                  {item.nationality && <div><dt>{t('Quốc tịch', 'Nationality')}</dt><dd>{item.nationality}</dd></div>}
-                </dl>
-                <div className="kyc-card__images document-photo-grid">
-                  {([['front', item.frontImageUrl, t('Mặt trước', 'Front')], ['back', item.backImageUrl, t('Mặt sau', 'Back')]] as const).map(([side, url, label]) => url ? (
-                    <button
-                      key={side}
-                      type="button"
-                      className="kyc-card__image document-photo-trigger"
-                      aria-label={t(`Phóng to ảnh ${label}`, `Zoom ${label.toLowerCase()} image`)}
-                      onClick={() => setZoomImage({
-                        url,
-                        title: `${item.fullName ?? '—'} · ${docLabel} (${label})`,
-                        alt: t(`${label} giấy tờ`, `Document ${label.toLowerCase()}`),
-                      })}
-                    >
-                      <img src={url} alt={t(`${label} giấy tờ`, `Document ${label.toLowerCase()}`)} />
-                      <span className="document-photo-trigger__caption">{label} · {t('Bấm để phóng to', 'Click to zoom')}</span>
-                    </button>
-                  ) : (
-                    <div key={side} className="kyc-card__image kyc-card__image--empty"><span>{label}: {t('chưa có ảnh', 'no photo')}</span></div>
-                  ))}
                 </div>
                 {rejecting === item.memberId ? (
-                  <div className="portal-form-group">
+                  <div className="portal-form-group kyc-card__rejection">
                     <label className="portal-label" htmlFor={`kyc-reason-${item.memberId}`}>{t('Lý do từ chối *', 'Reason for rejection *')}</label>
                     <textarea
                       id={`kyc-reason-${item.memberId}`}
@@ -181,14 +187,13 @@ export function KycReviewPage() {
                         setReason(event.target.value);
                         if (rejectError) setRejectError(null);
                       }}
-                      style={{ width: '100%' }}
                     />
                     {rejectError && (
                       <p id={`kyc-reason-error-${item.memberId}`} className="form-error" role="alert" style={{ marginTop: 6 }}>
                         {rejectError}
                       </p>
                     )}
-                    <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+                    <div className="kyc-card__actions">
                       <button
                         type="button"
                         className="btn-secondary"
@@ -201,7 +206,7 @@ export function KycReviewPage() {
                     </div>
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <div className="kyc-card__actions">
                     <button type="button" className="btn-secondary" disabled={busyId !== null} onClick={() => { setRejecting(item.memberId); setReason(''); setRejectError(null); }}>{t('Từ chối', 'Reject')}</button>
                     <button type="button" className="btn-primary" disabled={busyId !== null} onClick={() => void confirmApprove(item)}>{t('Duyệt', 'Approve')}</button>
                   </div>

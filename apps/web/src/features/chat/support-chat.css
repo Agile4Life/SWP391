@@ -34,5 +34,20 @@
 .support-chat__tickets { height: auto; flex: 1; min-height: 0; padding: 8px 0; }
 .support-chat__ticket-list { list-style: none; margin: 0; padding: 0; }
 .support-chat__ticket-list .direct-chat__person { width: calc(100% - 16px); }
+.support-chat__ticket-list .support-chat__member { font-weight: 500; }
+.support-chat__ticket-list .has-unread .support-chat__member,
+.support-chat__ticket-list .is-unread { font-weight: 700; color: var(--support-ink); }
+.support-chat__subject { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--support-muted); }
+.support-chat__ticket-list time { font-size: 12px; color: var(--support-muted); }
+/* Nút quay lại hộp thư luôn hiện ở desktop và mobile, không dùng lịch sử trình duyệt. */
+.support-chat .support-chat__back-to-inbox { display: inline-flex; align-items: center; gap: 6px; padding: 8px; border-radius: 10px; font-size: 13px; color: var(--support-ink); }
+.support-chat .support-chat__back-to-inbox svg { flex-shrink: 0; }
+.support-chat .support-chat__back-to-inbox .direct-chat__back-label { position: static; width: auto; height: auto; margin: 0; overflow: visible; clip-path: none; white-space: normal; }
+@media (max-width: 540px) {
+  .support-chat:has(.support-chat__back-to-inbox) > .direct-chat__thread-header { flex-wrap: wrap; gap: 6px; padding: 10px 12px; }
+  .support-chat .support-chat__back-to-inbox { flex-basis: 100%; justify-content: flex-start; }
+  /* Chừa thêm một hàng cho nút quay lại, giữ ô soạn tin trong khung mobile hiện có. */
+  .support-chat:has(.support-chat__back-to-inbox) > .direct-chat__transcript { height: calc(48dvh - 44px); }
+}
 .support-chat__closed { display: grid; gap: 4px; padding: 10px 16px; border-top: 1px solid var(--support-line); }
 .support-chat__closed .direct-chat__link { justify-self: start; }

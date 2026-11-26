@@ -26,6 +26,68 @@ let root: Root;
 let host: HTMLDivElement;
 const member = { userId: 10, membershipCode: 'MB-10', fullName: 'An', email: 'an@example.test', phone: '1234', status: 'ACTIVE', identityVerified: true, kycStatus: 'APPROVED' };
 const pkg = { id: 2, name: 'Gold', price: 200, durationDays: 30, status: 'active' };
+const pendingSelection = { id: 50, memberId: 10, membershipCode: 'MB-10', memberName: 'An', memberEmail: 'an@example.test', memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30, packagePrice: 200, startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01' };
+async function clickPending(id = 50) {
+  const row = Array.from(host.querySelectorAll<HTMLElement>('[role="button"]')).find(node => node.textContent?.includes(`Yêu cầu #${id}`))!;
+  expect(row).toBeTruthy();
+  await act(async () => row.click());
+}
+it('loads the same masked identity when selecting a payment request and preserves its payment', async () => {
+  api.getPendingSubscriptions.mockResolvedValue([pendingSelection]);
+  api.lookupMembers.mockResolvedValue([{ ...member, citizenId: '********4753' }]);
+  await selectMember();
+  const identity = host.querySelector('[data-testid="pos-kyc-status"]')!.textContent;
+  await clickPending();
+  expect(api.lookupMembers).toHaveBeenCalledWith('MB-10');
+  expect(host.querySelector('[data-testid="pos-kyc-status"]')?.textContent).toBe(identity);
+  expect(host.textContent).toContain('********4753');
+  const form = host.querySelector('#pos-package')!.closest('form')!;
+  await act(async () => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận đã thu');
+  if (confirmBtn) await act(async () => confirmBtn.click());
+  expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ memberId: 10, subscriptionId: 50, packageId: 2, amount: 200 }));
+});
+it('does not fabricate identity after request profile loading fails', async () => {
+  api.getPendingSubscriptions.mockResolvedValue([pendingSelection]);
+  api.lookupMembers.mockRejectedValue(new Error('Profile unavailable'));
+  await act(async () => root.render(<StaffReceptionPage />));
+  await clickPending();
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Profile unavailable');
+  expect(host.querySelector('[data-testid="pos-kyc-status"]')).toBeNull();
+  expect(api.processPayment).not.toHaveBeenCalled();
+});
+it('rejects a lookup result belonging to another member', async () => {
+  api.getPendingSubscriptions.mockResolvedValue([pendingSelection]);
+  api.lookupMembers.mockResolvedValue([{ ...member, userId: 20 }]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  await clickPending();
+  expect(host.querySelector('[role="alert"]')).not.toBeNull();
+  expect(host.querySelector('[data-testid="pos-kyc-status"]')).toBeNull();
+});
+it('ignores an older request profile after selecting another request', async () => {
+  api.getPendingSubscriptions.mockResolvedValue([pendingSelection, { ...pendingSelection, id: 51, memberId: 20, membershipCode: 'MB-20' }]);
+  let finish!: (value: typeof member[]) => void;
+  api.lookupMembers.mockReturnValueOnce(new Promise(resolve => { finish = resolve; })).mockResolvedValueOnce([{ ...member, userId: 20, membershipCode: 'MB-20', fullName: 'Bình' }]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  await clickPending();
+  expect(host.querySelector('[data-testid="pos-kyc-status"]')).toBeNull();
+  await clickPending(51);
+  await act(async () => finish([member]));
+  expect(host.querySelector('.kv-list')?.textContent).toContain('Bình');
+  expect(host.querySelector('.kv-list')?.textContent).not.toContain('MB-10');
+});
+it('ignores a late request error after a successful member search', async () => {
+  api.getPendingSubscriptions.mockResolvedValue([pendingSelection]);
+  let fail!: (error: Error) => void;
+  api.lookupMembers.mockReturnValueOnce(new Promise((_, reject) => { fail = reject; }))
+    .mockResolvedValue([{ ...member, userId: 20, membershipCode: 'MB-20', fullName: 'Bình' }]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  await clickPending();
+  await selectMember();
+  await act(async () => fail(new Error('Old request failed')));
+  expect(host.querySelector('.kv-list')?.textContent).toContain('Bình');
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+});
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.resetAllMocks(); clearNotices();

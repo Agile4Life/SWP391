@@ -52,6 +52,7 @@ export function StaffReceptionPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchResults, setSearchResults] = useState<MemberLookupResult[]>([]);
+  const selectionVersion = useRef(0);
   const [selectedMember, setSelectedMember] = useState<MemberLookupResult | null>(null);
 
   // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký / gia hạn / nâng cấp)
@@ -90,19 +91,18 @@ export function StaffReceptionPage() {
   const [customPaymentNotes, setCustomPaymentNotes] = useState<string | null>(null);
   const paymentNotes = customPaymentNotes ?? defaultPaymentNote;
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
-  const [loadingSelectedMemberProfile, setLoadingSelectedMemberProfile] = useState(false);
   const [zoomImage, setZoomImage] = useState<LightboxImage | null>(null);
   const paymentInFlight = useRef(false);
-  const pendingSelectSeqRef = useRef(0);
   const selectedMemberRef = useRef<number | null>(null);
   useEffect(() => { selectedMemberRef.current = selectedMember?.userId ?? null; }, [selectedMember?.userId]);
   // Đọc lại API trước khi thu tiền; không áp dữ liệu cho hội viên đã đổi.
   const refreshSelectedMember = useCallback(async () => {
     const member = selectedMember;
     if (!member) return null;
+    const version = selectionVersion.current;
     const results = await receptionApi.lookupMembers(member.membershipCode || member.email);
     const fresh = results.find((item) => item.userId === member.userId);
-    if (selectedMemberRef.current !== member.userId) return null;
+    if (version !== selectionVersion.current || selectedMemberRef.current !== member.userId) return null;
     if (!fresh) throw new Error('Không tải được thông tin hội viên. Vui lòng tra cứu lại.');
     setSelectedMember(fresh);
     return fresh;
@@ -110,7 +110,10 @@ export function StaffReceptionPage() {
   useEffect(() => {
     const refresh = () => {
       if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
-      void refreshSelectedMember().catch((err: unknown) => setPaymentError(errorMessage(err, 'Không tải được thông tin hội viên.')));
+      const version = selectionVersion.current;
+      void refreshSelectedMember().catch((err: unknown) => {
+        if (version === selectionVersion.current) setPaymentError(errorMessage(err, 'Không tải được thông tin hội viên.'));
+      });
     };
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
@@ -446,49 +449,32 @@ export function StaffReceptionPage() {
     }
   };
 
-  // Chọn một yêu cầu chờ thanh toán để thu tiền, đồng thời tải lại hồ sơ đầy đủ (KYC/CCCD) của hội viên với khóa chống stale.
-  const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
-    const selectSeq = ++pendingSelectSeqRef.current;
-    selectedMemberRef.current = item.memberId;
+  // Chọn một yêu cầu chờ thanh toán để thu tiền, đồng thời chọn hội viên tương ứng.
+  const handleSelectPendingItem = async (item: PendingSubscriptionItem) => {
     setSelectedPending(item);
-    setSelectedMember({
-      userId: item.memberId,
-      membershipCode: item.membershipCode || '',
-      fullName: item.memberName,
-      email: item.memberEmail,
-      phone: item.memberPhone,
-      citizenId: null,
-      identityVerified: undefined,
-      kycStatus: undefined,
-      status: 'PENDING_PAYMENT',
-      currentPackage: item.packageName,
-      endDate: `${formatCenterDate(item.startDate)} → ${formatCenterDate(item.endDate)}`,
-    });
-    // Form thanh toán nằm phía trên danh sách chờ: đưa lễ tân tới bước xác nhận
-    checkoutRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-
-    const lookupQuery = item.membershipCode || item.memberEmail || item.memberPhone || '';
-    if (lookupQuery.trim().length >= 2) {
-      setLoadingSelectedMemberProfile(true);
-      void receptionApi.lookupMembers(lookupQuery)
-        .then((results) => {
-          if (pendingSelectSeqRef.current !== selectSeq || selectedMemberRef.current !== item.memberId) return;
-          const fresh = results.find((candidate) => candidate.userId === item.memberId);
-          if (fresh) {
-            setSelectedMember(fresh);
-          }
-        })
-        .catch(() => {
-          // Giữ lại thông tin cơ bản từ hàng đợi; trước khi thu tiền hệ thống vẫn refreshSelectedMember() bắt buộc.
-        })
-        .finally(() => {
-          if (pendingSelectSeqRef.current === selectSeq) {
-            setLoadingSelectedMemberProfile(false);
-          }
-        });
-    } else {
-      setLoadingSelectedMemberProfile(false);
+    const version = ++selectionVersion.current;
+    setSelectedMember(null);
+    selectedMemberRef.current = null;
+    setSearchError(null);
+    setIsSearching(true);
+    // DTO hàng đợi thiếu KYC/CCCD: lấy hồ sơ backend và đối chiếu đúng memberId.
+    try {
+      const results = await receptionApi.lookupMembers(item.membershipCode || item.memberEmail);
+      if (version !== selectionVersion.current) return;
+      const member = results.find((result) => result.userId === item.memberId);
+      if (!member) {
+        setSearchError(staffMessage('Không tải được thông tin hội viên. Vui lòng tra cứu lại.', 'Unable to load member profile. Please search again.'));
+        return;
+      }
+      setSelectedMember(member);
+      selectedMemberRef.current = member.userId;
+    } catch (err: unknown) {
+      if (version !== selectionVersion.current) return;
+      setSearchError(errorMessage(err, 'Không tải được thông tin hội viên.'));
+    } finally {
+      if (version === selectionVersion.current) setIsSearching(false);
     }
+    checkoutRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   };
 
   // Hủy một yêu cầu gói tập chờ thanh toán sau khi xác nhận.
@@ -706,11 +692,13 @@ export function StaffReceptionPage() {
     setSearchError(invalid);
     if (invalid) return;
 
+    const version = ++selectionVersion.current;
     setIsSearching(true);
     // Chỉ đánh dấu đã tìm khi API thành công, tránh hiển thị "không tìm thấy" trong lúc lỗi hoặc đang tải.
     setHasSearched(false);
     try {
       const results = await receptionApi.lookupMembers(q);
+      if (version !== selectionVersion.current) return;
       setHasSearched(true);
       setSearchResults(results);
       if (results.length > 0) {
@@ -723,12 +711,13 @@ export function StaffReceptionPage() {
         setSelectedPending(null);
       }
     } catch (err: unknown) {
+      if (version !== selectionVersion.current) return;
       setSearchError(errorMessage(err, 'Tra cứu thất bại.'));
       setSearchResults([]);
       setSelectedMember(null);
       setSelectedPending(null);
     } finally {
-      setIsSearching(false);
+      if (version === selectionVersion.current) setIsSearching(false);
     }
   };
 
@@ -914,6 +903,10 @@ export function StaffReceptionPage() {
                       type="button"
                       className={selectedMember?.userId === m.userId ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
                       onClick={() => {
+                        ++selectionVersion.current;
+                        setIsSearching(false);
+                        setSearchError(null);
+                        selectedMemberRef.current = m.userId;
                         setSelectedMember(m);
                         setSelectedPending(pendingList.find((p) => p.memberId === m.userId) ?? null);
                       }}
@@ -1488,9 +1481,7 @@ export function StaffReceptionPage() {
                 </div>
 
                 <div className="kv-row" data-testid="pos-kyc-status"><span>{t('Trạng thái KYC', 'Identity verification')}</span><span>
-                  {loadingSelectedMemberProfile && selectedMember.identityVerified === undefined && selectedMember.kycStatus === undefined
-                    ? t('Đang kiểm tra…', 'Checking…')
-                    : selectedMember.kycStatus === 'PENDING'
+                  {selectedMember.kycStatus === 'PENDING'
                       ? t('Chờ duyệt', 'Pending review')
                       : selectedMember.kycStatus === 'REJECTED'
                         ? t('Bị từ chối', 'Rejected')
@@ -1502,9 +1493,7 @@ export function StaffReceptionPage() {
                 <div className="kv-row">
                   <span>{selectedMember.documentType === 'PASSPORT' ? t('Số hộ chiếu', 'Passport number') : t('Số CCCD', 'Identity card number')}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)' }}>
-                    {loadingSelectedMemberProfile && selectedMember.citizenId == null && selectedMember.identityVerified === undefined
-                      ? t('Đang tải…', 'Loading…')
-                      : selectedMember.citizenId || (selectedMember.identityVerified ? t('Đã xác thực, không có số hiển thị', 'Verified; number unavailable') : t('Chưa cập nhật'))}
+                    {selectedMember.citizenId || (selectedMember.identityVerified ? t('Đã xác thực, không có số hiển thị', 'Verified; number unavailable') : t('Chưa cập nhật'))}
                   </span>
                 </div>
 

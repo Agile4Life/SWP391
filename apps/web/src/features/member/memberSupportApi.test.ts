@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
-import { createSupportTicket, getMySupportTickets, getSupportMessages, sendSupportMessage } from './memberSupportApi';
+import { createSupportTicket, getMySupportTickets, getSupportMessages, sendSupportMessage, getSupportInbox, markSupportRead } from './memberSupportApi';
 
 afterEach(() => { vi.unstubAllGlobals(); localStorage.clear(); });
 
@@ -15,4 +15,15 @@ it('uses authenticated member-scoped list and actual support payloads', async ()
   expect(fetchMock).toHaveBeenCalledWith('/api/v1/support/requests/12/messages', expect.anything());
   await sendSupportMessage(12, 'Xin chào');
   expect(fetchMock).toHaveBeenCalledWith('/api/v1/support/requests/12/messages', expect.objectContaining({ method: 'POST', body: '{"message":"Xin chào"}' }));
+});
+
+it('sends combined inbox filters and acknowledges only the loaded message id', async () => {
+  const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ data: { unreadCount: 1 } }) });
+  vi.stubGlobal('fetch', fetchMock);
+  await getSupportInbox(1, 'in_progress', true);
+  expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/support/requests?page=1&size=20&status=in_progress&unreadOnly=true', expect.anything());
+  await markSupportRead(12, 25);
+  expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/support/requests/12/read', expect.objectContaining({ method: 'POST', body: '{"lastMessageId":25}' }));
+  await getSupportInbox();
+  expect(fetchMock).toHaveBeenLastCalledWith('/api/v1/support/requests?page=0&size=20', expect.anything());
 });

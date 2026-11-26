@@ -11,6 +11,14 @@ import java.util.List;
 @Repository
 public interface SupportRequestMessageRepository extends JpaRepository<SupportRequestMessage, Long> {
 
+    boolean existsByIdAndSupportRequestId(Long id, Long requestId);
+    java.util.Optional<SupportRequestMessage> findFirstBySupportRequestIdOrderByCreatedAtDescIdDesc(Long requestId);
+    @org.springframework.data.jpa.repository.Query("""
+        select count(m) from SupportRequestMessage m where m.supportRequest.id = :requestId
+        and m.sender.id = m.supportRequest.member.userId and m.id > :cursor
+        """)
+    long countIncomingAfter(@org.springframework.data.repository.query.Param("requestId") Long requestId,
+            @org.springframework.data.repository.query.Param("cursor") long cursor);
     /**
      * Tìm các bản ghi có supportRequestId = tham số và senderId = tham số và clientMessageId = tham số (Spring
      * Data tự sinh truy vấn từ tên hàm).

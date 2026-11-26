@@ -689,7 +689,7 @@ export function ManagerCatalogsPage() {
                       <tr data-i18n-managed key={d.id}>
                         <td><strong>{d.name}</strong></td>
                         <td style={{ color: 'var(--portal-muted)' }}>{d.description || <span className="muted">{t("Không có mô tả")}</span>}</td>
-                        <td className="actions">
+                        <td className="actions" style={{ whiteSpace: 'nowrap' }}>
                           <button
                             type="button"
                             className="btn-secondary btn-sm"
@@ -742,7 +742,7 @@ export function ManagerCatalogsPage() {
                             {t(ROOM_STATUS_LABEL[r.status]) || r.status}
                           </span>
                         </td>
-                        <td className="actions">
+                        <td className="actions" style={{ whiteSpace: 'nowrap' }}>
                           <button
                             type="button"
                             className="btn-secondary btn-sm"
@@ -810,7 +810,7 @@ export function ManagerCatalogsPage() {
                               {p.status === 'active' ? t('Đang bán') : t('Ngừng bán')}
                             </span>
                           </td>
-                          <td className="actions">
+                          <td className="actions" style={{ whiteSpace: 'nowrap' }}>
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
