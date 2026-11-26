@@ -342,7 +342,7 @@ public class StaffInternalRequestService {
                 impact = computeLeaveImpact(req);
                 if (Boolean.FALSE.equals(reviewDto.confirmConflicts()) && impact.hasConflicts()) {
                     throw new ConflictException("COACH_LEAVE_HAS_CONFLICTS",
-                            "notifications.operations.leave_impact.body",
+                            leaveImpactBodyKey(impact),
                             new Object[]{req.getUser().getFullName(), req.getStartDate().format(DMY), leaveEnd.format(DMY),
                                     impact.classSessions(), impact.ptSessions()},
                             "Coach has scheduled class or PT sessions during this leave period.");
@@ -482,6 +482,17 @@ public class StaffInternalRequestService {
     }
 
     /** Đếm số buổi lớp và buổi PT 1:1 bị ảnh hưởng trong thời gian nghỉ phép của nhân sự. */
+    /** Chọn câu thông báo theo loại buổi bị ảnh hưởng; loại nào bằng 0 thì không nhắc tới. */
+    static String leaveImpactBodyKey(LeaveImpact impact) {
+        if (impact.ptSessions() <= 0) {
+            return "notifications.operations.leave_impact.body_classes";
+        }
+        if (impact.classSessions() <= 0) {
+            return "notifications.operations.leave_impact.body_pt";
+        }
+        return "notifications.operations.leave_impact.body";
+    }
+
     private LeaveImpact computeLeaveImpact(StaffInternalRequest leave) {
         if (!"LEAVE".equals(leave.getRequestType()) || leave.getStartDate() == null || leave.getUser() == null) {
             return LeaveImpact.NONE;
@@ -508,7 +519,7 @@ public class StaffInternalRequestService {
             notificationService.send(
                     manager.getId(),
                     msg("notifications.operations.leave_impact.title"),
-                    msg("notifications.operations.leave_impact.body", leave.getUser().getFullName(),
+                    msg(leaveImpactBodyKey(impact), leave.getUser().getFullName(),
                             leave.getStartDate().format(DMY), end.format(DMY), impact.classSessions(), impact.ptSessions()),
                     "system",
                     null,
