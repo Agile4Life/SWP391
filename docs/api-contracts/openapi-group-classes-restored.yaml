@@ -109,7 +109,7 @@ components:
         endTime:
           type: string
           enum: ['09:30:00', '12:15:00', '15:00:00', '17:45:00', '20:30:00']
-          example: '14:00:00'
+          example: '15:00:00'
         paymentMethod:
           type: string
           nullable: true
