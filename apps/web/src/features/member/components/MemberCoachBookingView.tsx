@@ -875,7 +875,10 @@ export function MemberCoachBookingView({
           if (slot.reason === 'coach_on_leave') {
             badgeText = memberText("HLV nghỉ phép");
           } else if (slot.reason === 'too_soon') {
-            badgeText = memberText("Cần đặt trước 2 tiếng");
+            // Backend gộp "đã qua" và "trong 2 tiếng tới" vào too_soon; tách theo giờ bắt đầu slot.
+            const now = centerNowParts();
+            const started = `${selectedDate}T${startFmt}` <= `${now.date}T${now.time}`;
+            badgeText = started ? memberText("Đã qua thời gian") : memberText("Cần đặt trước 2 tiếng");
           } else if (slot.reason === 'coach_busy') {
             badgeText = memberText("HLV đã có lịch");
           } else if (slot.reason === 'member_busy') {
