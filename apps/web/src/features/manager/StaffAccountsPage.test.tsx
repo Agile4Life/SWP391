@@ -31,6 +31,8 @@ it('offers only Coach and Receptionist and creates an account using the provisio
   vi.mocked(createStaffAccount).mockResolvedValue({ id: 4, fullName: 'New Coach', email: 'coach@gmail.com', roleCode: 'COACH', status: 'active' });
   await act(async () => root.render(<StaffAccountsPage />));
   expect(host.textContent).toContain('Chưa có tài khoản nhân sự');
+  const genderSelect = host.querySelector('#staff-gender')!.parentElement!.querySelector('select')!;
+  expect([...genderSelect.options].map(option => option.textContent)).toEqual(['Nam', 'Nữ']);
   await act(async () => host.querySelector<HTMLButtonElement>('#staff-role')!.click());
   expect([...host.querySelectorAll('[role="option"]')].map(option => option.textContent?.trim())).toEqual(['Huấn luyện viên', 'Lễ tân']);
   await act(async () => host.querySelector<HTMLButtonElement>('#staff-role')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
@@ -46,7 +48,7 @@ it('offers only Coach and Receptionist and creates an account using the provisio
   await setInput('staff-email', 'coach@gmail.com');
   await setInput('staff-password', 'Secret123!');
   await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  expect(createStaffAccount).toHaveBeenCalledWith({ fullName: 'New Coach', email: 'coach@gmail.com', phone: undefined, password: 'Secret123!', gender: 'other', roleCode: 'COACH' });
+  expect(createStaffAccount).toHaveBeenCalledWith({ fullName: 'New Coach', email: 'coach@gmail.com', phone: undefined, password: 'Secret123!', gender: 'male', roleCode: 'COACH' });
   expect(host.querySelector('tbody')?.textContent).toContain('coach@gmail.com');
   expect(host.querySelector<HTMLInputElement>('#staff-password')?.value).toBe('');
   expect(host.textContent).not.toContain('Phân quyền');

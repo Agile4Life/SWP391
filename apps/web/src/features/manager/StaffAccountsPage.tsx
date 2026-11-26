@@ -8,7 +8,7 @@ import { createStaffAccount, listStaffAccounts, setStaffAccountLocked, type Staf
 import { isValidEmailAddress, isValidPhoneNumber, normalizePhoneNumber } from '../auth/authValidation';
 
 const initialForm: StaffAccountInput = {
-  fullName: '', email: '', phone: '', password: '', gender: 'other', roleCode: 'COACH',
+  fullName: '', email: '', phone: '', password: '', gender: 'male', roleCode: 'COACH',
 };
 
 /** Kiểm tra email nhân sự: bắt buộc, đúng định dạng (cảnh báo gõ nhầm @gmail.co) và không trùng tài khoản khác. */
@@ -200,7 +200,7 @@ export function StaffAccountsPage() {
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="staff-gender">{t("Giới tính *")}</label>
               <Select id="staff-gender" className="portal-select" value={form.gender} onChange={e => setForm({ ...form, gender: e.target.value as StaffAccountInput['gender'] })}>
-                <option value="male">{t("Nam")}</option><option value="female">{t("Nữ")}</option><option value="other">{t("Khác")}</option>
+                <option value="male">{t("Nam")}</option><option value="female">{t("Nữ")}</option>
               </Select>
             </div>
             <div className="portal-form-group">
