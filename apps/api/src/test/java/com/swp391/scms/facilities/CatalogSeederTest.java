@@ -33,6 +33,7 @@ class CatalogSeederTest {
     @Mock PackageService packages;
     @Mock EquipmentRepository equipmentRepository;
     @Mock RoomRepository roomRepository;
+    @Mock com.swp391.scms.facilities.repository.CatalogInitializationRepository initialization;
     @InjectMocks CatalogSeeder seeder;
 
     /** Kiểm thử: thiết bị đã có không phải là đích seed. */
@@ -40,6 +41,7 @@ class CatalogSeederTest {
     void existingEquipmentIsNotASeedTarget() {
         org.springframework.test.util.ReflectionTestUtils.setField(seeder, "equipmentRepository", equipmentRepository);
         org.springframework.test.util.ReflectionTestUtils.setField(seeder, "roomRepository", roomRepository);
+        org.springframework.test.util.ReflectionTestUtils.setField(seeder, "initialization", initialization);
         org.mockito.Mockito.lenient().when(equipmentRepository.count()).thenReturn(1L);
     }
 
@@ -102,6 +104,15 @@ class CatalogSeederTest {
         verify(packages, times(3)).seedLegacyPackage(legacy.capture());
         org.assertj.core.api.Assertions.assertThat(legacy.getAllValues().stream().map(r -> r.price().intValue()).toList())
                 .containsExactly(199000, 299000, 599000);
+    }
+
+    @Test
+    void doesNotRecreateRoomsAfterInitializationEvenWhenAllWereDeleted() {
+        when(initialization.existsById("initial-rooms")).thenReturn(true);
+        when(disciplines.list()).thenReturn(List.of());
+        when(rooms.list()).thenReturn(List.of());
+        seeder.run(null);
+        verify(rooms, never()).create(any());
     }
 
     /**

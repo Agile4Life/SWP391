@@ -4,6 +4,7 @@ import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AUTH_STORAGE_KEY, TOKEN_STORAGE_KEY } from '../../shared/api/client';
 import { PortalShell } from './PortalShell';
+import { toast } from '../../shared/ui/toast';
 
 afterEach(() => {
   localStorage.clear();
@@ -32,6 +33,8 @@ it('keeps portal navigation and shows a skeleton until a pending route resolves'
   const root = createRoot(host);
   try {
     await act(async () => root.render(<RouterProvider router={router} />));
+    toast('Không thể xóa: gói này đã được bán cho hội viên.', 'error');
+    expect(host.querySelector('.sol-toast--error')).not.toBeNull();
     let navigating!: Promise<void>;
     await act(async () => { navigating = router.navigate('/coach/training-plans'); });
     expect(host.querySelector('nav[aria-label="Điều hướng portal"]')).not.toBeNull();
@@ -42,6 +45,7 @@ it('keeps portal navigation and shows a skeleton until a pending route resolves'
       await navigating;
     });
     expect(host.querySelector('#portal-main')?.textContent).toContain('Giáo án đã tải');
+    expect(host.querySelector('.sol-toast')).toBeNull();
     expect(host.querySelector('#portal-main .loading-skeleton')).toBeNull();
   } finally {
     await act(async () => root.unmount());

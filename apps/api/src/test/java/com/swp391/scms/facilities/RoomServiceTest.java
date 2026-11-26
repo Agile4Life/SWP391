@@ -98,4 +98,42 @@ class RoomServiceTest {
         var updated = service.update(1L, new RoomRequest("Zen Garden Studio", "L2", 16, "available"));
         assertEquals(16, updated.capacity());
     }
+
+    @Test
+    void refusesToDeleteRoomReferencedByClass() {
+        Room room = new Room();
+        var classes = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.GymClassRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "classes", classes);
+        when(rooms.findById(1L)).thenReturn(Optional.of(room));
+        when(classes.existsByRoomId(1L)).thenReturn(true);
+        var error = assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
+        assertEquals("ROOM_IN_USE", error.getErrorCode());
+        org.mockito.Mockito.verify(rooms, org.mockito.Mockito.never()).delete(any());
+    }
+
+    @Test
+    void deletesUnusedRoom() {
+        Room room = new Room();
+        when(rooms.findById(1L)).thenReturn(Optional.of(room));
+        service.delete(1L);
+        org.mockito.Mockito.verify(rooms).delete(room);
+    }
+
+    @Test
+    void refusesToDeleteRoomReferencedByEquipment() {
+        var equipment = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.EquipmentRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "equipment", equipment);
+        when(rooms.findById(1L)).thenReturn(Optional.of(new Room()));
+        when(equipment.existsByRoomId(1L)).thenReturn(true);
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
+        org.mockito.Mockito.verify(rooms, org.mockito.Mockito.never()).delete(any());
+    }
+
+    @Test
+    void rejectsDuplicateRoomNames() {
+        when(rooms.existsByNameIgnoreCase("Studio")).thenReturn(true);
+        var error = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.create(new RoomRequest(" Studio ", "L1", 10, "available")));
+        assertEquals("ROOM_NAME_EXISTS", error.getErrorCode());
+    }
 }

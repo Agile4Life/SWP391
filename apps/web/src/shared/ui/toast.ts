@@ -1,5 +1,5 @@
 import { getLanguage, subscribeLanguage, type SourceMessage } from '../i18n/language';
-// Thông báo nổi góc trên phải (.sol-toast): không chặn tương tác trang và không cướp focus khỏi ô nhập hiện tại.
+// Hiển thị phản hồi trong nội dung hiện tại, không dùng popup nổi.
 let activeToastTimer: number | null = null;
 let unsubscribeLanguage: (() => void) | null = null;
 let unsubscribeKeydown: (() => void) | null = null;
@@ -14,25 +14,16 @@ function clearActive() {
   unsubscribeLanguage = null;
   unsubscribeKeydown?.();
   unsubscribeKeydown = null;
-  document.querySelectorAll<HTMLDialogElement>('dialog.sol-toast').forEach((dialog) => {
-    if (typeof dialog.hidePopover === 'function' && dialog.hasAttribute('popover')) {
-      try {
-        dialog.hidePopover();
-      } catch {
-        // Bỏ qua nếu popover đã đóng từ trước hoặc không mở ở chế độ popover.
-      }
-    }
-    if (dialog.open && typeof dialog.close === 'function') dialog.close();
-    else dialog.removeAttribute('open');
-    dialog.remove();
-  });
+  document.querySelectorAll('.sol-toast').forEach((notice) => notice.remove());
 }
+
+export const dismissToast = clearActive;
 
 /** Hiện thông báo nổi (một lúc chỉ một thông báo), tự đổi ngôn ngữ nếu có bản dịch, đóng bằng nút × hoặc Esc. */
 export function toast(message: string, type: 'success' | 'error' = 'success', translation?: SourceMessage) {
   clearActive();
 
-  const el = document.createElement('dialog');
+  const el = document.createElement('div');
   if (translation) el.setAttribute('data-i18n-managed', '');
   el.className = `sol-toast sol-toast--${type}`;
   el.setAttribute('role', type === 'error' ? 'alert' : 'status');
@@ -73,8 +64,6 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
   card.append(icon, body, closeBtn);
   el.append(card);
 
-  // Esc hoặc nút đóng đều tắt thông báo mà không chiếm focus khi mới hiện.
-  el.addEventListener('cancel', (event) => { event.preventDefault(); clearActive(); });
   // Esc thì tắt thông báo.
   const handleEscape = (event: KeyboardEvent) => {
     if (event.key === 'Escape') clearActive();
@@ -82,22 +71,11 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
   document.addEventListener('keydown', handleEscape);
   unsubscribeKeydown = () => document.removeEventListener('keydown', handleEscape);
 
-  // Đưa thông báo lên Top Layer (nổi trên ::backdrop của <dialog> Modal) bằng Popover API; fallback về show() khi chưa hỗ trợ.
-  el.setAttribute('popover', 'manual');
-  document.body.append(el);
-  let openedAsPopover = false;
-  if (typeof el.showPopover === 'function') {
-    try {
-      el.showPopover();
-      openedAsPopover = true;
-    } catch {
-      el.removeAttribute('popover');
-    }
-  }
-  if (!openedAsPopover) {
-    if (typeof el.show === 'function') el.show();
-    else el.setAttribute('open', '');
-  }
+  const container = document.querySelector<HTMLElement>('dialog[open]')
+    ?? document.getElementById('portal-main')
+    ?? document.querySelector<HTMLElement>('main')
+    ?? document.body;
+  container.prepend(el);
 
   // DESIGN.md: thông báo lỗi (alert) giữ nguyên cho tới khi người dùng tự đóng; thông báo thường tự đóng sau 3,2s và tạm dừng khi hover hoặc focus.
   if (type !== 'error') {

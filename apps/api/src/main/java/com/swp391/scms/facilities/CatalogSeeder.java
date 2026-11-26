@@ -170,6 +170,9 @@ public class CatalogSeeder implements ApplicationRunner {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.facilities.repository.RoomRepository roomRepository;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.facilities.repository.CatalogInitializationRepository initialization;
+
     /** Nhận dịch vụ bộ môn, phòng và gói tập. */
     public CatalogSeeder(DisciplineService disciplines, RoomService rooms, PackageService packages) {
         this.disciplines = disciplines;
@@ -185,16 +188,23 @@ public class CatalogSeeder implements ApplicationRunner {
     @Override
     @org.springframework.transaction.annotation.Transactional
     public void run(ApplicationArguments args) {
+        boolean roomSeeded = initialization != null && initialization.existsById("initial-rooms");
+        boolean noRooms = rooms.list().isEmpty();
+        boolean emptyCatalog = disciplines.list().isEmpty() && noRooms;
         // Bộ môn chuẩn của trung tâm: Gym là bộ môn chính; Boxing và Yoga là hai bộ môn nhóm song song.
         upsertDiscipline("Gym", "Sức mạnh, thể lực và kỹ thuật tập tạ", "Olympic Strength");
         upsertDiscipline("Boxing", "Kỹ thuật đấm, phản xạ và thể lực theo hiệp", "Boxing & Kickfit");
         upsertDiscipline("Yoga", "Hơi thở, thăng bằng và giãn cơ", "Mindful Yoga");
 
-        // Upsert idempotent 4 phòng/khu tập của 3 bộ môn để cả DB mới lẫn DB đang chạy đều có đủ phòng xếp lớp.
-        upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
-        upsertRoom("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", "PLATINUM");
-        upsertRoom("Zen Garden Studio", "Penthouse", 18, "available", "STANDARD");
-        upsertRoom("Ring Arena 01", "Level 1 - East Wing", 14, "available", "STANDARD");
+        if (!roomSeeded && emptyCatalog) {
+            upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
+            upsertRoom("Phòng Gym VIP", "Tầng 2 - Khu VIP Platinum", 25, "available", "PLATINUM");
+            upsertRoom("Zen Garden Studio", "Penthouse", 18, "available", "STANDARD");
+            upsertRoom("Ring Arena 01", "Level 1 - East Wing", 14, "available", "STANDARD");
+        }
+        if (!roomSeeded && initialization != null) {
+            initialization.save(new com.swp391.scms.facilities.entity.CatalogInitialization("initial-rooms"));
+        }
 
         // Tạo hoặc cập nhật gói trải nghiệm 3 ngày
         upsertPackageWithTier(TRIAL_PACKAGE_NAME, TRIAL_PACKAGE_DESC, TRIAL_PACKAGE_PRICE, TRIAL_PACKAGE_DURATION, TRIAL_PACKAGE_CREDIT_LIMIT, TRIAL_PACKAGE_TIER, "GOLD TRIAL", "Gói Tập Thử 3 Ngày", "Gói Thử Gold");
@@ -236,7 +246,6 @@ public class CatalogSeeder implements ApplicationRunner {
 
     /** Tạo bộ thiết bị ban đầu cho phòng Gym tiêu chuẩn. */
     private void seedInitialEquipment() {
-        upsertRoom("Phòng Gym Tiêu chuẩn", "Tầng 1 - Khu Gym Chính", 50, "available", "STANDARD");
         var allRooms = roomRepository.findAll();
         com.swp391.scms.facilities.entity.Room standard = allRooms.stream()
                 .filter(r -> "Phòng Gym Tiêu chuẩn".equalsIgnoreCase(r.getName()))

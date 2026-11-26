@@ -1543,7 +1543,7 @@ export function StaffReceptionPage() {
                       className="btn-primary btn-sm"
                       onClick={handleOpenTopupModal}
                     >
-                      {t('+ Nạp tiền vào Ví', '+ Top up Wallet')}
+                      {t('Nạp tiền vào Ví', 'Top up Wallet')}
                     </button>
                   </div>
                 </div>

@@ -6,6 +6,7 @@ import { catalogApi, type Discipline, type MembershipPackage, type Room } from '
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PageHeader } from '../../shared/ui/PageHeader';
+import './manager-catalog.css';
 
 /** Ba tab danh mục: bộ môn, phòng tập và gói tập. */
 type Tab = 'disciplines' | 'rooms' | 'packages';
@@ -28,15 +29,6 @@ const QUICK_DURATION_PRESETS = [
 const ROOM_LOCATION_MAX_LENGTH = 150;
 
 const vnd = formatPrice;
-
-/** Xác định phân hạng phòng: luôn ưu tiên `tier` tường minh từ server, chỉ suy luận theo tên khi `tier` vắng. */
-function resolveRoomTier(room: { name?: string; tier?: string | null }): 'STANDARD' | 'PLATINUM' {
-  const explicit = room.tier?.trim().toUpperCase();
-  if (explicit === 'STANDARD' || explicit === 'PLATINUM') {
-    return explicit;
-  }
-  return (room.name ?? '').toLowerCase().includes('vip') ? 'PLATINUM' : 'STANDARD';
-}
 
 /** Xác định hạng gói: dùng tier khai báo nếu hợp lệ, không thì suy ra từ tên gói. */
 function resolvePackageTier(pkg: { name?: string; tier?: string | null }): 'SILVER' | 'GOLD' | 'PLATINUM' {
@@ -105,7 +97,7 @@ export function ManagerCatalogsPage() {
       const msg = errorMessage(err, 'Thao tác thất bại.');
       if (errorTarget === 'form') setFormError(msg);
       else if (errorTarget === 'quickPrice') setQuickPriceError(msg);
-      notify(msg, 'error');
+      else notify(msg, 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -193,15 +185,14 @@ export function ManagerCatalogsPage() {
           return catalogApi.saveDiscipline(id, { name: trimmedName, description: (f.description ?? '').trim() });
         }
         if (tab === 'rooms') {
-          // Danh mục phòng cố định: chỉ sửa phòng có sẵn, không tạo mới.
-          if (id == null) throw new Error(t('Không thể thêm phòng mới.', 'New rooms cannot be added.'));
-          return catalogApi.updateRoom(id, {
+          const room = {
             name: trimmedName,
             location: (f.location ?? '').trim(),
             capacity: Number(f.capacity),
             status: f.status as Room['status'],
-            tier: (f.tier as Room['tier']) || 'STANDARD',
-          });
+            tier: (f.tier as Room['tier']) || undefined,
+          };
+          return id == null ? catalogApi.createRoom(room) : catalogApi.updateRoom(id, room);
         }
         return catalogApi.savePackage(id, {
           name: trimmedName,
@@ -227,7 +218,6 @@ export function ManagerCatalogsPage() {
     if (!Number.isFinite(nextPrice) || nextPrice < 0) {
       const msg = staffMessage('Giá bán không hợp lệ.', 'Invalid price.');
       setQuickPriceError(msg);
-      notify(msg, 'error');
       return;
     }
     const p = quickPricePkg.pkg;
@@ -293,14 +283,14 @@ export function ManagerCatalogsPage() {
     <div data-i18n-managed className="portal-container">
       <PageHeader
         title={t("Danh mục vận hành")}
-        actions={tab === 'rooms' ? undefined : (
+        actions={(
           <div style={{ display: 'flex', gap: 10 }}>
             <button data-i18n-managed
               type="button"
               className="btn-primary"
               onClick={() => openEditor({ id: null, form: emptyForm() })}
             >
-              {tab === 'packages' ? t('+ Tạo gói tập mới', '+ Create membership plan') : t('Thêm mới', 'Add new')}
+              {tab === 'packages' ? t('Tạo gói tập mới', 'Create membership plan') : t('Thêm mới', 'Add new')}
             </button>
           </div>
         )}
@@ -443,13 +433,6 @@ export function ManagerCatalogsPage() {
             {tab === 'rooms' && (
               <>
                 <div data-i18n-managed className="portal-form-group">
-                  <label className="portal-label" htmlFor="cat-tier">{t("Phân hạng phòng")}</label>
-                  <Select id="cat-tier" className="portal-select" value={editing.form.tier || 'STANDARD'} onChange={(e) => set('tier', e.target.value)}>
-                    <option value="STANDARD">{t("Tiêu chuẩn (Mọi hội viên)")}</option>
-                    <option value="PLATINUM">{t("VIP (Chỉ dành cho Platinum)")}</option>
-                  </Select>
-                </div>
-                <div data-i18n-managed className="portal-form-group">
                   <label className="portal-label" htmlFor="cat-location">{t("Vị trí / tầng")}</label>
                   <input data-i18n-managed
                     id="cat-location"
@@ -578,7 +561,7 @@ export function ManagerCatalogsPage() {
               </div>
             )}
 
-            {tab !== 'rooms' && (
+            {(
               <div data-i18n-managed className="portal-form-group">
                 <label className="portal-label" htmlFor="cat-desc">
                   {tab === 'packages' ? t('Mô tả & Quyền lợi chi tiết trong gói') : t('Mô tả chi tiết')}
@@ -671,7 +654,7 @@ export function ManagerCatalogsPage() {
                   className="btn-primary"
                   onClick={() => openEditor({ id: null, form: emptyForm() })}
                 >
-                  {tab === 'packages' ? t('+ Tạo gói tập mới', '+ Create membership plan') : t('Thêm mới', 'Add new')}
+                  {tab === 'packages' ? t('Tạo gói tập mới', 'Create membership plan') : t('Thêm mới', 'Add new')}
                 </button>
               </>
             )}
@@ -680,7 +663,8 @@ export function ManagerCatalogsPage() {
       ) : (
         <div data-i18n-managed className="portal-card portal-card--flush">
           <div className="portal-table-wrapper">
-            <table className="portal-table">
+            <table className="portal-table manager-catalog-table" style={tab === 'packages' ? { tableLayout: 'fixed', minWidth: 1400 } : undefined}>
+              {tab === 'packages' && <colgroup><col style={{ width: '25%' }} /><col style={{ width: '10%' }} /><col style={{ width: '10%' }} /><col style={{ width: '9%' }} /><col style={{ width: '9%' }} /><col style={{ width: '10%' }} /><col style={{ width: '27%' }} /></colgroup>}
               {tab === 'disciplines' && (
                 <>
                   <thead data-i18n-managed>
@@ -722,7 +706,6 @@ export function ManagerCatalogsPage() {
                   <thead data-i18n-managed>
                     <tr>
                       <th>{t("Phòng tập")}</th>
-                      <th>{t("Phân hạng")}</th>
                       <th>{t("Vị trí")}</th>
                       <th>{t("Sức chứa")}</th>
                       <th>{t("Trạng thái")}</th>
@@ -731,17 +714,9 @@ export function ManagerCatalogsPage() {
                   </thead>
                   <tbody data-i18n-managed>
                     {rooms.map((r) => {
-                      const roomTier = resolveRoomTier(r);
                       return (
                       <tr data-i18n-managed key={r.id}>
                         <td><strong>{r.name}</strong></td>
-                        <td>
-                          {roomTier === 'PLATINUM' ? (
-                            <span data-i18n-managed className="badge badge-info">{t("Cao cấp (Platinum)", "Platinum · VIP")}</span>
-                          ) : (
-                            <span data-i18n-managed className="badge badge-neutral">{t("Tiêu chuẩn", "Standard")}</span>
-                          )}
-                        </td>
                         <td>{r.location || <span className="muted">—</span>}</td>
                         <td style={{ fontVariantNumeric: 'tabular-nums' }}><strong>{r.capacity} {t("người", "people")}</strong></td>
                         <td>
@@ -756,11 +731,15 @@ export function ManagerCatalogsPage() {
                             onClick={() =>
                               openEditor({
                                 id: r.id,
-                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, tier: roomTier },
+                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, tier: r.tier ?? '' },
                               })
                             }
                           >
                             {t("Chỉnh sửa")}</button>
+                          <button type="button" className="btn-danger btn-sm" style={{ marginLeft: 8 }}
+                            disabled={isSubmitting} onClick={() => void remove('phòng tập', r.name, () => catalogApi.deleteRoom(r.id))}>
+                            {t('Xóa', 'Delete')}
+                          </button>
                         </td>
                       </tr>
                       );

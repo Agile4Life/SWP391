@@ -12,8 +12,26 @@ info:
 servers:
   - url: /api/v1
 paths:
-  # /rooms POST và /rooms/{id} DELETE đã gỡ (26/11/2026): danh mục phòng cố định, chỉ sửa; gọi vào trả 405.
+  /rooms:
+    post:
+      summary: Create a room (CENTER_MANAGER)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoomRequest' }
+      responses:
+        '201': { description: 'ApiResponse.data = Room' }
+        '400': { description: Validation error }
   /rooms/{id}:
+    delete:
+      summary: Delete an unused room (CENTER_MANAGER)
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer, format: int64 } }
+      responses:
+        '200': { description: Room deleted }
+        '404': { description: Room not found }
+        '409': { description: Room referenced by classes or equipment }
     put:
       summary: Update room including tier (CENTER_MANAGER, MANAGER)
       parameters:

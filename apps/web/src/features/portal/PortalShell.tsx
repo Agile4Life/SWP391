@@ -9,6 +9,7 @@ import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { dismissToast } from '../../shared/ui/toast';
 import { PortalIcon } from './PortalIcon';
 import { usePortalMotion } from './usePortalMotion';
 import './portal-motion.css';
@@ -82,6 +83,7 @@ export function PortalShell() {
 function PortalShellContent({ user }: { user: UserSession }) {
   const { lang, t } = useI18n();
   const location = useLocation();
+  useEffect(() => () => dismissToast(), [location.pathname]);
   const navigate = useNavigate();
   const navigation = useNavigation();
   const navigating = navigation.state !== 'idle';

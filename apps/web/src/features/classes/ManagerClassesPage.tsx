@@ -296,7 +296,7 @@ export function ManagerClassesPage() {
                 })
               }
             >
-              {t('+ Tạo lớp học', '+ Create class')}
+              {t('Tạo lớp học', 'Create class')}
             </button>
           </div>
         }
@@ -403,7 +403,7 @@ export function ManagerClassesPage() {
                         data-testid="discipline-create-class-btn"
                         onClick={() => setCreateModal({ disciplineId: activeDiscipline.id })}
                       >
-                        {t('+ Tạo khóa mới', '+ New course')}
+                        {t('Tạo khóa mới', 'New course')}
                       </button>
                     </div>
                   </>
@@ -421,7 +421,7 @@ export function ManagerClassesPage() {
                       data-testid="discipline-create-class-btn"
                       onClick={() => setCreateModal({ disciplineId: activeDiscipline.id })}
                     >
-                      {t(`+ Tạo lớp ${activeDiscipline.name}`, `+ Create ${activeDiscipline.name} class`)}
+                      {t(`Tạo lớp ${activeDiscipline.name}`, `Create ${activeDiscipline.name} class`)}
                     </button>
                   </div>
                 )}

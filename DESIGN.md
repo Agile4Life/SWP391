@@ -1,5 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định Manager: phản hồi thao tác hiển thị trong nội dung, không dùng popup góc phải; nhãn nút tạo/thêm không có dấu cộng. Bảng danh mục căn trái cột đầu, căn giữa các cột dữ liệu còn lại và giữ nguyên cột thao tác.
+
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
 Quyết định Member (26/11/2026): Đặt PT 1:1 chọn ngày bằng dải 7 ngày có nút ‹ › lùi/tiến theo tuần (không lùi trước hôm nay) và `DatePicker` nhảy tới ngày bất kỳ từ hôm nay; không còn giới hạn 10 ngày cố định.
 Các nút thao tác trong Danh mục vận hành nằm cùng một hàng và có khoảng cách; bảng cuộn ngang khi cần.
@@ -7,7 +9,7 @@ Quyết định Manager (26/11/2026): Tab `Lịch theo bộ môn` chỉ hiện t
 Quyết định Manager (26/11/2026): Timetable Quản lý (`Lịch theo bộ môn`, `Lịch tổng cả tuần`) bỏ thao tác bấm ô trống để tạo lịch học và chú thích “Ô trống: bấm để tạo lớp”; tạo khóa học chỉ qua nút ở đầu trang/thanh bộ môn. Nút thao tác của tiêu đề trang bám mép trên để thẳng hàng cụm nút nổi topbar.
 Quyết định Manager (26/11/2026, ghi đè cơ chế `+N lớp` của tab tổng bên dưới): `Lịch tổng cả tuần` dùng `WeeklyTimetable summary` — mỗi ô Slot chỉ là một ô tóm tắt đếm số lớp theo bộ môn (chấm màu bộ môn + tên + số, dòng phụ `N đầy · N hủy`), bấm ô mở danh sách buổi rồi mở chi tiết; không vẽ từng khối buổi học và không dùng nút `+N lớp` ở tab này. Chú thích bộ môn phía trên là chip bật/tắt nhiều lựa chọn (`filter-chip`, mặc định bật hết) để ẩn/hiện từng bộ môn trên lịch tổng. Tab `Lịch theo bộ môn` giữ khối buổi học như cũ.
 Quyết định Manager (26/11/2026): Trang Lớp học của Quản lý xếp tab `Lịch tổng cả tuần` đứng đầu và mở mặc định, sau đó `Lịch theo bộ môn`, `Danh sách lớp`.
-Quyết định Manager (26/11/2026): Phòng là danh mục cố định (4 phòng chuẩn): tab `Phòng tập` không có nút `Thêm mới` hay `Xóa`, chỉ `Chỉnh sửa`; backend không có `POST /rooms` và `DELETE /rooms/{id}` (trả 405).
+Quyết định Manager: tab `Phòng tập` cho phép thêm, sửa và xóa phòng chưa được sử dụng; không hiển thị hoặc chỉnh hạng phòng tại đây. Bảng gói tập căn cột ổn định và cuộn ngang khi cần.
 
 Phạm vi 3 bộ môn (`Gym`, `Boxing`, `Yoga`), **đa lớp `active`/bộ môn không trùng ngày & slot**, **wizard tạo khóa học 4 bước kèm tiền kiểm tra khả dụng**, **hệ thống lịch 5 Slot cố định (`07:00 – 20:30`)**, thẻ sự kiện viền mảnh có tên HLV, gỡ hoàn toàn đặt sân, ẩn 3D, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò (25/11/2026 — **ghi đè** mục Gym-only 22–23/11/2026 và các mục cũ bên dưới về đặt sân, bộ môn ngoài phạm vi, 3D, quy tắc 1 lớp duy nhất/môn cũ, lưới giờ liên tục cũ, công tắc `08:00–20:00 / Cả ngày`, viền dày trái `border-left: 4px`, `TimePicker` tự do trong xếp lịch, 15 nút giờ PT Sáng/Chiều/Tối và giới hạn bắt buộc HLV nghỉ giữa các slot liền kề; các tính năng tắt qua cờ legacy vẫn giữ nguyên trạng thái tắt):
 - **Hệ thống lịch tuần 5 Slot cố định (`07:00 – 20:30`), thẻ sự kiện & bộ chọn Slot**:
