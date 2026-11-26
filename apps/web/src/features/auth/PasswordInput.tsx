@@ -30,6 +30,7 @@ export function PasswordInput({
         aria-label={label}
         aria-pressed={visible}
         title={label}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={onToggle}
       >
         {visible ? (
