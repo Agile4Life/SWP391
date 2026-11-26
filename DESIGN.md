@@ -407,6 +407,8 @@ VNPay Back/Forward (06/11/2026): khôi phục từ bfcache phải đồng bộ t
 Quyết định Receptionist (25/11/2026): Dropdown gia hạn tại quầy: lựa chọn không hợp lệ vẫn disabled; giải thích dùng màu chữ phụ rõ, opacity 1 và xuống dòng trong menu, không đổi rule gia hạn.
 Quyết định Receptionist (25/11/2026): KYC tại POS: hiện trạng thái từ API, chỉ hiện số giấy tờ đã che; mua mới dùng cùng điều kiện KYC với Member. Không thêm quyền sửa giấy tờ.
 
+KYC lễ tân (25/11/2026, Task 2 — chỉ UI tại `/staff/kyc`): card có tên/mã hội viên, badge Chờ duyệt và thời gian gửi; thông tin giấy tờ dạng label–value bên trái, hai ảnh bên phải trên desktop và xếp dọc trên mobile. Ảnh dùng khung đồng đều, `object-fit: contain`, nhãn nằm ngoài ảnh; giữ liên kết xem ảnh hiện có. Nút Từ chối outline, Duyệt primary; dùng token Light salmon/Dark bạc hiện hành. Giữ nguyên API, số giấy tờ, xác nhận duyệt, form lý do từ chối, disabled và refresh/polling.
+
 Quyết định Receptionist (25/11/2026): Nạp Ví SÖL tại quầy chỉ nhận tiền mặt; hiển thị phương thức cố định, giữ giao dịch lịch sử khác phương thức.
 
 Quyết định Receptionist (25/11/2026): Hai bảng lịch sử tại quầy có tìm kiếm độc lập, Hôm nay/7/30/90 ngày/Tất cả thời gian, sắp xếp hai chiều; giữ bộ lọc loại và phương thức lịch sử.
