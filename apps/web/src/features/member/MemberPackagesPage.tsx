@@ -931,7 +931,7 @@ export function MemberPackagesPage() {
                   : t('Khi bấm đăng ký gói lần đầu, hệ thống sẽ chuyển sang bước xác minh CCCD / Hộ chiếu trước khi thanh toán.', 'When registering your first plan, you will verify your identity card / passport first before payment.')}
               </p>
             </div>
-            <Link to="/member/packages/checkout" className="btn-secondary btn-sm">
+            <Link to="/member/packages/checkout?mode=kyc" className="btn-secondary btn-sm">
               {kycProfile?.kycStatus === 'PENDING'
                 ? t('Xem trạng thái duyệt', 'Check review status')
                 : kycProfile?.kycStatus === 'REJECTED'

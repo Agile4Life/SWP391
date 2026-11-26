@@ -447,4 +447,37 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.textContent).toContain('Duration: 90 training days');
   });
 
+  it('shows only identity verification without package order summary or payment options when opened in mode=kyc', async () => {
+    vi.mocked(profileApi.getProfile).mockResolvedValueOnce({
+      userId: 10,
+      fullName: 'Nguyen Van A',
+      email: 'member@test.local',
+      phone: null,
+      dob: null,
+      gender: null,
+      avatarUrl: null,
+      address: null,
+      membershipCode: 'MEM-0010',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: false,
+      kycStatus: 'UNVERIFIED',
+      kycRejectReason: null,
+      citizenId: null,
+      documentType: null,
+      nationality: null,
+    });
+
+    await renderCheckout('/member/packages/checkout?mode=kyc');
+
+    expect(host.textContent).toContain('Xác minh danh tính');
+    expect(host.textContent).not.toContain('Tóm tắt đơn hàng');
+    expect(host.textContent).not.toContain('Gói Tiêu Chuẩn 1 Tháng');
+    expect(host.textContent).not.toContain('Thanh toán qua VNPay');
+    expect(host.textContent).not.toContain('Thanh toán tiền mặt');
+  });
+
 });

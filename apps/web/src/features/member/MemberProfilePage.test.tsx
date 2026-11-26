@@ -383,7 +383,7 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     const kycBox = host.querySelector('[data-testid="member-kyc-status"]');
     expect(kycBox).not.toBeNull();
     expect(kycBox?.textContent).toContain('Chưa xác minh');
-    expect(kycBox?.querySelector('a')?.getAttribute('href')).toBe('/member/packages/checkout');
+    expect(kycBox?.querySelector('a')?.getAttribute('href')).toBe('/member/packages/checkout?mode=kyc&from=profile');
 
     await act(async () => setLanguage('en'));
     expect(kycBox?.textContent).toContain('Identity verification');
