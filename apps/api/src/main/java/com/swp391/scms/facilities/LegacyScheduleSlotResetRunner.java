@@ -77,6 +77,7 @@ public class LegacyScheduleSlotResetRunner implements ApplicationRunner {
             "coach_reviews",
             "session_bookings",
             "class_enrollments",
+            "class_waitlists",
             "class_sessions",
             "classes",
             "coach_bookings"

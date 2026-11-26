@@ -813,7 +813,12 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             </div>
           ) : history.length === 0 ? (
             <div data-i18n-managed className="attendance-empty-state">
-              <p>{t("Chưa có buổi nào được điểm danh trong 31 ngày qua.", "No sessions recorded in the last 31 days.")}</p>
+              <p>
+                {t(
+                  `Chưa có buổi nào được điểm danh trong tháng ${Number(centerNowParts().date.slice(5, 7))}.`,
+                  `No sessions recorded in month ${Number(centerNowParts().date.slice(5, 7))}.`,
+                )}
+              </p>
             </div>
           ) : (
             <div data-i18n-managed className="history-cards-grid">
