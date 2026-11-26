@@ -158,7 +158,7 @@ export function MemberInvoicesPage() {
               <thead><tr><th scope="col">{memberText("Mã giao dịch")}</th><th scope="col">{memberText("Dịch vụ")}</th><th scope="col">{memberText("Ngày giờ thanh toán")}</th><th scope="col">{memberText("Số tiền")}</th><th scope="col">{memberText("Trạng thái")}</th><th scope="col"><span className="sr-only">{memberText("Chi tiết")}</span></th></tr></thead>
               <tbody>{payments.map((payment) => <tr key={payment.id}>
                 <td>#{payment.id}</td><td><ServiceCell payment={payment} /></td><td>{formatCenterDateTime(payment.paidAt)}</td><td>{formatPrice(payment.amount)}</td><td><span className={`badge ${paymentStatusBadgeClass(payment.status)}`}>{memberRenderMessage(STATUS_LABELS[payment.status.toLowerCase()] ?? memberMessage(payment.status, payment.status))}</span></td>
-                <td><button type="button" className="btn-secondary btn-sm member-invoices__detail" onClick={() => setSelected(payment)} aria-label={memberText(`Xem hóa đơn giao dịch #${payment.id}`, `View invoice for transaction #${payment.id}`)}>{memberText("Xem hóa đơn ")}<span aria-hidden="true">↗</span></button></td>
+                <td className="member-invoices__actions-col"><button type="button" className="btn-secondary btn-sm member-invoices__detail" onClick={() => setSelected(payment)} aria-label={memberText(`Xem hóa đơn giao dịch #${payment.id}`, `View invoice for transaction #${payment.id}`)}>{memberText("Xem hóa đơn ")}<span aria-hidden="true">↗</span></button></td>
               </tr>)}</tbody>
             </table>
           </div>
@@ -167,21 +167,57 @@ export function MemberInvoicesPage() {
       {selected && <Modal title={memberText("Hóa đơn điện tử")} busy={downloading} onClose={() => setSelected(null)}>
         <div className="member-invoices__invoice">
           {invoiceLoading ? <LoadingSkeleton label={memberText("Đang tải hóa đơn…")} variant="profile" /> : invoiceError ? <p role="alert">{memberRenderMessage(invoiceError)}</p> : invoice && <>
-            <p className="member-invoices__number">{invoice.invoiceNumber}</p>
-            <p className="member-invoices__issued">{memberText("Phát hành lúc ")}{formatCenterDateTime(invoice.issuedAt)}</p>
-            <dl>
-              <div><dt>{memberText("Giao dịch")}</dt><dd>#{invoice.paymentId}</dd></div>
-              <div><dt>{memberText("Thanh toán lúc")}</dt><dd>{formatCenterDateTime(selected.paidAt)}</dd></div>
-              <div><dt>{memberText("Trước thuế")}</dt><dd>{formatPrice(invoice.subtotalAmount)}</dd></div>
-              <div><dt>VAT</dt><dd>{formatPrice(invoice.taxAmount)}</dd></div>
-              <div className="member-invoices__total"><dt>{memberText("Tổng tiền")}</dt><dd>{invoice.totalAmount == null ? memberText("Chưa có dữ liệu") : formatPrice(invoice.totalAmount)}</dd></div>
-            </dl>
-            <button type="button" className="btn-primary member-invoices__download" disabled={downloading || invoice.totalAmount == null}
-              onClick={() => void downloadInvoice(invoice.paymentId)}>
-              {downloading ? memberText("Đang tải file…") : memberText("Tải hóa đơn PDF")}
-            </button>
-            <p className="member-invoices__note">{memberText("Bản PDF thông tin từ hệ thống, không thay thế hóa đơn thuế ký số.")}</p>
+            <div className="member-invoices__receipt">
+              <header className="member-invoices__receipt-head">
+                <div>
+                  <strong className="member-invoices__brand">SÖL FITNESS</strong>
+                  <p className="member-invoices__subtitle">{memberText("Hóa đơn điện tử")}</p>
+                </div>
+                <div className="member-invoices__receipt-id">
+                  <p className="member-invoices__number">{invoice.invoiceNumber}</p>
+                  <p className="member-invoices__issued">{memberText("Phát hành lúc ")}{formatCenterDateTime(invoice.issuedAt)}</p>
+                </div>
+              </header>
+
+              <dl className="member-invoices__meta">
+                <div><dt>{memberText("Giao dịch")}</dt><dd>#{invoice.paymentId}</dd></div>
+                <div><dt>{memberText("Thanh toán lúc")}</dt><dd>{formatCenterDateTime(selected.paidAt)}</dd></div>
+                <div><dt>{memberText("Trạng thái")}</dt><dd><span className={`badge ${paymentStatusBadgeClass(selected.status)}`}>{memberRenderMessage(STATUS_LABELS[selected.status.toLowerCase()] ?? memberMessage(selected.status, selected.status))}</span></dd></div>
+              </dl>
+
+              <table className="member-invoices__items">
+                <thead>
+                  <tr>
+                    <th scope="col">{memberText("Dịch vụ")}</th>
+                    <th scope="col">{memberText("SL")}</th>
+                    <th scope="col">{memberText("Thành tiền")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><ServiceCell payment={selected} /></td>
+                    <td>1</td>
+                    <td>{formatPrice(invoice.subtotalAmount)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <dl className="member-invoices__summary">
+                <div><dt>{memberText("Trước thuế")}</dt><dd>{formatPrice(invoice.subtotalAmount)}</dd></div>
+                <div><dt>VAT</dt><dd>{formatPrice(invoice.taxAmount)}</dd></div>
+                <div className="member-invoices__total"><dt>{memberText("Tổng tiền")}</dt><dd>{invoice.totalAmount == null ? memberText("Chưa có dữ liệu") : formatPrice(invoice.totalAmount)}</dd></div>
+              </dl>
+
+              <p className="member-invoices__note">{memberText("Bản PDF thông tin từ hệ thống, không thay thế hóa đơn thuế ký số.")}</p>
+            </div>
+
             {downloadError && <p role="alert">{memberText("Không tải được file hóa đơn. Vui lòng thử lại.")}</p>}
+            <div className="member-invoices__modal-actions">
+              <button type="button" className="btn-primary member-invoices__download" disabled={downloading || invoice.totalAmount == null}
+                onClick={() => void downloadInvoice(invoice.paymentId)}>
+                {downloading ? memberText("Đang tải file…") : memberText("Tải hóa đơn PDF")}
+              </button>
+            </div>
           </>}
         </div>
       </Modal>}
