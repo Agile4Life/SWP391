@@ -1,7 +1,7 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, MemoryRouter, RouterProvider } from 'react-router-dom';
 import { StaffRequestHistoryPage } from './StaffRequestHistoryPage';
 import { getCurrentUser } from '../../shared/api/client';
 import { setLanguage } from '../../shared/i18n/language';
@@ -40,6 +40,38 @@ describe('StaffRequestHistoryPage (P2-E2E-02)', () => {
     setLanguage('vi');
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+  });
+
+  it.each(['', '?tab=membership', '?tab=wallet', '?tab=invalid'])('opens the correct history panel for %s', async search => {
+    vi.mocked(getCurrentUser).mockReturnValue({ id: 's1', name: 'Staff', identifier: 's1', role: 'STAFF' });
+    await act(async () => root.render(<MemoryRouter initialEntries={['/staff/reception-history' + search]}><StaffRequestHistoryPage /></MemoryRouter>));
+    const walletActive = search === '?tab=wallet';
+    expect(host.querySelector('[data-history-panel="membership"]')?.hasAttribute('hidden')).toBe(walletActive);
+    expect(host.querySelector('[data-history-panel="wallet"]')?.hasAttribute('hidden')).toBe(!walletActive);
+    expect(host.querySelectorAll('.portal-section-tab.active')).toHaveLength(1);
+  });
+
+  it('preserves filters and data across tabs, browser Back/Forward, and unrelated query parameters', async () => {
+    vi.mocked(getCurrentUser).mockReturnValue({ id: 's1', name: 'Staff', identifier: 's1', role: 'STAFF' });
+    const router = createMemoryRouter([{ path: '/staff/reception-history', element: <StaffRequestHistoryPage /> }], { initialEntries: ['/staff/reception-history?source=notice'] });
+    await act(async () => root.render(<RouterProvider router={router} />));
+    const search = host.querySelector<HTMLInputElement>('input[aria-label="Tìm lịch sử gói tập"]')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(search, 'MEM-164');
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const wallet = host.querySelector<HTMLAnchorElement>('a[href*="tab=wallet"]')!;
+    expect(wallet).not.toBeNull();
+    await act(async () => wallet.click());
+    expect(router.state.location.search).toContain('source=notice');
+    expect(router.state.location.search).toContain('tab=wallet');
+    await act(async () => router.navigate(-1));
+    expect(search.value).toBe('MEM-164');
+    expect(host.querySelector('[data-history-panel="membership"]')?.hasAttribute('hidden')).toBe(false);
+    await act(async () => router.navigate(1));
+    expect(host.querySelector('[data-history-panel="wallet"]')?.hasAttribute('hidden')).toBe(false);
+    expect(mocks.requestHistory).toHaveBeenCalledTimes(1);
+    expect(mocks.topupHistory).toHaveBeenCalledTimes(1);
   });
 
   it.each(['MEMBER', 'COACH', 'ADMIN'] as const)('blocks unauthorized role %s with forbidden guard', async (role) => {

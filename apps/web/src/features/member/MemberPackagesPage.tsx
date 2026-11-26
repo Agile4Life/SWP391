@@ -191,6 +191,12 @@ export function MemberPackagesPage() {
     });
   };
 
+  const isKycVerified = Boolean(
+    kycProfile &&
+    (kycProfile.kycStatus === 'APPROVED' ||
+      (kycProfile.identityVerified && kycProfile.kycStatus !== 'PENDING' && kycProfile.kycStatus !== 'REJECTED'))
+  );
+
   const hasReusableKyc = Boolean(
     kycProfile &&
     (kycProfile.identityVerified || kycProfile.kycStatus === 'APPROVED' || kycProfile.kycStatus === 'PENDING') &&
@@ -206,10 +212,14 @@ export function MemberPackagesPage() {
       setIsClaimingTrial(true);
       setTrialError('');
       try {
-        await trialApi.claim({
+        const claimed = await trialApi.claim({
           fullName: (kycProfile?.fullName || '').trim(),
         });
-        notify(t("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), record: true });
+        if (claimed?.status === 'APPROVED') {
+          notify(t("Đã kích hoạt Gói Trải Nghiệm 3 Ngày thành công!", "Your 3-day trial has been activated!"), 'success', { translation: sourceMessage("Đã kích hoạt Gói Trải Nghiệm 3 Ngày thành công!", "Your 3-day trial has been activated!"), record: true });
+        } else {
+          notify(t("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), record: true });
+        }
         setIsTrialModalOpen(false);
         await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
       } catch (err) {
@@ -891,6 +901,10 @@ export function MemberPackagesPage() {
               type="button"
               className="btn-primary btn-sm"
               onClick={() => {
+                if (!isKycVerified) {
+                  navigate('/member/packages/checkout?mode=kyc&from=trial');
+                  return;
+                }
                 setTrialError('');
                 setIsTrialModalOpen(true);
               }}
@@ -931,7 +945,7 @@ export function MemberPackagesPage() {
                   : t('Khi bấm đăng ký gói lần đầu, hệ thống sẽ chuyển sang bước xác minh CCCD / Hộ chiếu trước khi thanh toán.', 'When registering your first plan, you will verify your identity card / passport first before payment.')}
               </p>
             </div>
-            <Link to="/member/packages/checkout" className="btn-secondary btn-sm">
+            <Link to="/member/packages/checkout?mode=kyc" className="btn-secondary btn-sm">
               {kycProfile?.kycStatus === 'PENDING'
                 ? t('Xem trạng thái duyệt', 'Check review status')
                 : kycProfile?.kycStatus === 'REJECTED'
@@ -965,6 +979,10 @@ export function MemberPackagesPage() {
               type="button"
               className="btn-primary"
               onClick={() => {
+                if (!isKycVerified) {
+                  navigate('/member/packages/checkout?mode=kyc&from=trial');
+                  return;
+                }
                 setTrialError('');
                 setIsTrialModalOpen(true);
               }}
@@ -1505,7 +1523,11 @@ export function MemberPackagesPage() {
           onClose={() => setIsTrialModalOpen(false)}
           busy={isClaimingTrial}
         >
-          <div className="meta-label">{t("Xác minh Căn cước công dân (CCCD) / Hộ chiếu", "Verify identity card / passport")}</div>
+          <div className="meta-label">
+            {hasReusableKyc
+              ? t("Xác nhận nhận Gói Trải Nghiệm 3 Ngày", "Confirm 3-day trial")
+              : t("Xác minh Căn cước công dân (CCCD) / Hộ chiếu", "Verify identity card / passport")}
+          </div>
           <p className="row-card__meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
             {t("Mỗi hội viên nhận Gói Trải Nghiệm 1 lần. Gồm 1 buổi PT 1:1, không bảo lưu.", "One trial per member. Includes one 1:1 PT session; cannot be paused.")}</p>
 
@@ -1709,7 +1731,9 @@ export function MemberPackagesPage() {
                 className="btn-primary"
                 disabled={isClaimingTrial || (!hasReusableKyc && (!trialDocumentNumber.trim() || !trialFullName.trim()))}
               >
-                {isClaimingTrial ? t("Đang gửi đơn…", "Submitting application…") : t("Xác minh & Kích hoạt", "Verify & Activate")}
+                {isClaimingTrial
+                  ? (hasReusableKyc ? t("Đang kích hoạt…", "Activating…") : t("Đang gửi đơn…", "Submitting application…"))
+                  : (hasReusableKyc ? t("Nhận gói", "Claim trial") : t("Xác minh & Kích hoạt", "Verify & Activate"))}
               </button>
             </div>
           </form>

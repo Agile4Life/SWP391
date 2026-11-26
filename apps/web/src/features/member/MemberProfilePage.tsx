@@ -470,7 +470,7 @@ export function MemberProfilePage() {
                   </p>
                 </div>
                 {(kycStatusKey === 'UNVERIFIED' || kycStatusKey === 'REJECTED') && (
-                  <Link to="/member/packages/checkout" className="btn-secondary btn-sm" style={{ flexShrink: 0 }}>
+                  <Link to="/member/packages/checkout?mode=kyc&from=profile" className="btn-secondary btn-sm" style={{ flexShrink: 0 }}>
                     {kycStatusKey === 'REJECTED'
                       ? memberText('Gửi lại hồ sơ', 'Resubmit documents')
                       : memberText('Xác minh ngay', 'Verify now')}

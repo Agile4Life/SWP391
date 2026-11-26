@@ -29,9 +29,12 @@ public class RoomService {
         return rooms.findAllByOrderByNameAsc().stream().map(RoomDto::of).toList();
     }
 
-    /** Tạo phòng; chỉ dùng nội bộ cho CatalogSeeder, không mở qua API (danh mục phòng cố định). */
+    /** Tạo phòng. */
     @Transactional
     public RoomDto create(RoomRequest request) {
+        if (rooms.existsByNameIgnoreCase(request.name().trim())) {
+            throw new com.swp391.scms.common.exception.ConflictException("ROOM_NAME_EXISTS", "catalog.room.name_exists", null, null);
+        }
         Room room = new Room();
         apply(room, request);
         return RoomDto.of(rooms.save(room));
@@ -41,6 +44,9 @@ public class RoomService {
     @Transactional
     public RoomDto update(Long id, RoomRequest request) {
         Room room = rooms.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.room", id));
+        if (rooms.existsByNameIgnoreCaseAndIdNot(request.name().trim(), id)) {
+            throw new com.swp391.scms.common.exception.ConflictException("ROOM_NAME_EXISTS", "catalog.room.name_exists", null, null);
+        }
         if (classes != null) {
             Integer maxActiveClassCapacity = classes.findMaxCapacityByRoomIdAndStatus(id, "active");
             if (maxActiveClassCapacity != null && request.capacity() < maxActiveClassCapacity) {
@@ -57,6 +63,15 @@ public class RoomService {
         }
         apply(room, request);
         return RoomDto.of(room);
+    }
+
+    @Transactional
+    public void delete(Long id) {
+        Room room = rooms.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.room", id));
+        if ((classes != null && classes.existsByRoomId(id)) || (equipment != null && equipment.existsByRoomId(id))) {
+            throw new com.swp391.scms.common.exception.ConflictException("ROOM_IN_USE", "catalog.room.in_use", null, null);
+        }
+        rooms.delete(room);
     }
 
     /** Gán dữ liệu phòng: tên, vị trí, sức chứa, trạng thái và hạng phòng (mặc định STANDARD). */
@@ -79,4 +94,7 @@ public class RoomService {
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.scheduling.repository.GymClassRepository classes;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.facilities.repository.EquipmentRepository equipment;
 }

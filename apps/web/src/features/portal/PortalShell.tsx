@@ -9,6 +9,7 @@ import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { Modal } from '../../shared/ui/Modal';
 import { ThemeToggle } from '../../shared/ui/ThemeToggle';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
+import { dismissToast } from '../../shared/ui/toast';
 import { PortalIcon } from './PortalIcon';
 import { usePortalMotion } from './usePortalMotion';
 import './portal-motion.css';
@@ -82,6 +83,7 @@ export function PortalShell() {
 function PortalShellContent({ user }: { user: UserSession }) {
   const { lang, t } = useI18n();
   const location = useLocation();
+  useEffect(() => () => dismissToast(), [location.pathname]);
   const navigate = useNavigate();
   const navigation = useNavigation();
   const navigating = navigation.state !== 'idle';
@@ -450,7 +452,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           {navItems.filter((item) => item.to !== '/member/profile' && item.to !== '/member/notifications').map((item) => {
             // Mục gộp sáng khi đang ở bất kỳ tab con nào, không chỉ tab đầu.
             const active = isPortalNavActive(item, location.pathname);
-            return <Link key={item.to} to={item.to} className={`portal-rail-link${active ? ' active' : ''}`} aria-label={item.label} aria-current={active ? 'page' : undefined}>
+            return <Link key={item.to} to={item.to} className={`portal-rail-link${active ? ' active' : ''}`} aria-label={item.label} title={item.to === '/staff/reception-history' ? item.label : undefined} aria-current={active ? 'page' : undefined}>
               <PortalIcon name={item.icon} /><span className="portal-rail-label" aria-hidden="true">{item.label}</span>
             </Link>;
           })}

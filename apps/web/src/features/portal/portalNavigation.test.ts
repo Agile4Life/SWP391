@@ -96,14 +96,19 @@ it('keeps group-class navigation for Member, Coach and Manager while keeping Sta
   expect(manager.flatMap(portalNavRoutes)).not.toContain('/manager/products');
 
   const staff = forRole('STAFF').filter(item => item.to !== '/member/profile' && item.to !== '/member/notifications');
-  expect(staff).toHaveLength(3);
+  expect(staff).toHaveLength(4);
   expect(staff.flatMap(portalNavRoutes)).toEqual([
     '/staff/reception',
     '/staff/check-in',
     '/staff/check-out',
-    '/staff/reception-history',
     '/staff/kyc',
     '/staff/holds',
+    '/staff/reception-history',
     '/staff/requests',
   ]);
+  const history = staff.find(item => item.to === '/staff/reception-history')!;
+  expect(history.icon).toBe('history');
+  expect(isPortalNavActive(history, '/staff/reception-history')).toBe(true);
+  expect(isPortalNavActive(staff[0], '/staff/reception-history')).toBe(false);
+  expect(getNavLabel(history.to, history.label, 'en')).toBe('History');
 });

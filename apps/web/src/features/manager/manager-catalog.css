@@ -1,0 +1,13 @@
+.manager-catalog-table th:not(:first-child):not(.actions),
+.manager-catalog-table td:not(:first-child):not(.actions) {
+  text-align: center;
+}
+
+.portal-table.manager-catalog-table th.actions,
+.portal-table.manager-catalog-table td.actions {
+  text-align: center;
+}
+
+.portal-table.manager-catalog-table td.actions {
+  vertical-align: middle;
+}

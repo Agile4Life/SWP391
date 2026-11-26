@@ -526,9 +526,10 @@ paths:
     delete: { summary: "Delete a discipline no class/room/1:1 booking uses; member favourites are cleared (CENTER_MANAGER)", parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: Deleted }, '404': { description: Not found }, '409': { description: DISCIPLINE_IN_USE } } }
   /rooms:
     get: { summary: List rooms, responses: { '200': { description: "data = Room[]" } } }
-    # Danh mục phòng cố định (4 phòng do seeder tạo): không có POST/DELETE, gọi vào trả 405.
+    post: { summary: Create room (CENTER_MANAGER), responses: { '201': { description: Created }, '400': { description: Invalid room } } }
   /rooms/{id}:
     put: { summary: Update room incl. status (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: OK } } }
+    delete: { summary: Delete unused room (CENTER_MANAGER), parameters: [ { name: id, in: path, required: true, schema: { type: integer } } ], responses: { '200': { description: Deleted }, '404': { description: Not found }, '409': { description: ROOM_IN_USE } } }
   /packages:
     get: { summary: List membership packages, responses: { '200': { description: "data = MembershipPackage[]" } } }
     post: { summary: Create package (audited; CENTER_MANAGER), responses: { '201': { description: Created } } }

@@ -1,8 +1,24 @@
-/* Mục đích: Kiểu cho bộ lọc của lịch sử xử lý yêu cầu ở quầy lễ tân. */
-/* Bộ lọc của lịch sử xử lý: các ô chọn rộng cố định, nằm cùng một hàng với nút làm mới */
-.request-history__filters { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.request-history__filters .ui-select { width: 168px; }
-
-/* Bộ lọc xuống hàng trên màn nhỏ, không đẩy bảng ra ngoài viewport. */
-.request-history__filters .portal-input { width: min(100%, 260px); min-width: 0; }
-@media (max-width: 640px) { .request-history__filters { width: 100%; } .request-history__filters .portal-input { width: 100%; } .request-history__filters .ui-select { flex: 1 1 140px; min-width: 0; } }
+/* Dùng chiều rộng thực của card, không phụ thuộc sidebar đang mở hay thu gọn. */
+.request-history { container: reception-history / inline-size; min-width: 0; }
+.request-history .request-history__header { display: flex; flex-direction: column; align-items: stretch; gap: 16px; }
+.request-history__filters { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: center; width: 100%; }
+.request-history__filters > * { min-width: 0; max-width: 100%; }
+.request-history__filters .portal-input { grid-column: 1 / -1; width: 100%; }
+.request-history__filters .ui-select { width: 100%; }
+.request-history__filters .refresh-button { width: 40px; grid-column: -2 / -1; justify-self: end; }
+.reception-history-page .request-history .portal-table-wrapper { max-width: 100%; }
+/* Bảng cuộn trong card trên màn nhỏ; không ép cột giao dịch thành các mảnh chữ. */
+.request-history .portal-table { min-width: 960px; }
+.request-history--wallet .portal-table { min-width: 760px; }
+@container reception-history (min-width: 400px) {
+  .request-history__filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container reception-history (min-width: 560px) {
+  .request-history__filters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* Desktop đủ rộng: search, sort, trạng thái, loại, thời gian và refresh trên một hàng. */
+@container reception-history (min-width: 950px) {
+  .request-history__filters { grid-template-columns: minmax(240px, 1fr) minmax(150px, .55fr) minmax(120px, .45fr) minmax(140px, .5fr) minmax(140px, .5fr) 40px; }
+  .request-history__filters .portal-input { grid-column: auto; }
+  .request-history--wallet .request-history__filters { grid-template-columns: minmax(240px, 1fr) repeat(3, minmax(150px, .55fr)) 40px; }
+}
