@@ -450,7 +450,7 @@ function PortalShellContent({ user }: { user: UserSession }) {
           {navItems.filter((item) => item.to !== '/member/profile' && item.to !== '/member/notifications').map((item) => {
             // Mục gộp sáng khi đang ở bất kỳ tab con nào, không chỉ tab đầu.
             const active = isPortalNavActive(item, location.pathname);
-            return <Link key={item.to} to={item.to} className={`portal-rail-link${active ? ' active' : ''}`} aria-label={item.label} aria-current={active ? 'page' : undefined}>
+            return <Link key={item.to} to={item.to} className={`portal-rail-link${active ? ' active' : ''}`} aria-label={item.label} title={item.to === '/staff/reception-history' ? item.label : undefined} aria-current={active ? 'page' : undefined}>
               <PortalIcon name={item.icon} /><span className="portal-rail-label" aria-hidden="true">{item.label}</span>
             </Link>;
           })}
