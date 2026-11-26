@@ -83,6 +83,20 @@ export function ManagerReportsPage() {
   const [hoveredBar, setHoveredBar] = useState<{ date: string; revenue: number; count: number } | null>(null);
   const [txSearchTerm, setTxSearchTerm] = useState('');
 
+  const chartRef = useCallback((chart: HTMLDivElement | null) => {
+    if (!chart) return;
+    const onWheel = (event: WheelEvent) => {
+      if (event.ctrlKey || event.deltaY === 0 || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+      const maxScroll = chart.scrollWidth - chart.clientWidth;
+      const delta = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? chart.clientWidth : 1);
+      if (maxScroll <= 0 || (delta < 0 && chart.scrollLeft <= 0) || (delta > 0 && chart.scrollLeft >= maxScroll)) return;
+      event.preventDefault();
+      chart.scrollLeft += delta;
+    };
+    chart.addEventListener('wheel', onWheel, { passive: false });
+    return () => chart.removeEventListener('wheel', onWheel);
+  }, []);
+
   const recentTransactions = summary?.recentTransactions;
   // Giao dịch sau khi lọc theo từ khóa.
   const filteredTransactions = useMemo(() => {
@@ -349,18 +363,6 @@ export function ManagerReportsPage() {
   // Tìm giá trị max doanh thu trong chart để chuẩn hóa tỷ lệ cột
   const dailyData = summary?.dailyRevenue || [];
   const maxDailyRevenue = Math.max(...dailyData.map((d) => d.revenue), 1);
-  // Mũi tên chỉ nhảy giữa các ngày có doanh thu để không phải bấm qua hàng loạt ngày trống.
-  const revenueDays = dailyData.filter((d) => d.revenue > 0);
-  // Di chuyển chọn ngày trên biểu đồ sang ngày trước/sau bằng phím.
-  const stepDay = (dir: -1 | 1) => {
-    if (revenueDays.length === 0) return;
-    const idx = revenueDays.findIndex((d) => d.date === hoveredBar?.date);
-    const next = idx === -1
-      ? revenueDays[dir === 1 ? 0 : revenueDays.length - 1]
-      : revenueDays[Math.min(Math.max(idx + dir, 0), revenueDays.length - 1)];
-    setHoveredBar({ date: next.date, revenue: next.revenue, count: next.transactionCount });
-  };
-  const hoveredIdx = revenueDays.findIndex((d) => d.date === hoveredBar?.date);
 
   return (
     <div data-i18n-managed className="portal-container">
@@ -531,10 +533,6 @@ export function ManagerReportsPage() {
               <div data-i18n-managed>
                 {/* Khu vực tooltip hiển thị khi hover */}
                 <div style={{ minHeight: '28px', marginBottom: '8px', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <button type="button" className="btn-secondary btn-sm" aria-label={t("Ngày trước")} title={t("Ngày trước")}
-                    onClick={() => stepDay(-1)} disabled={hoveredIdx === 0}>‹</button>
-                  <button type="button" className="btn-secondary btn-sm" aria-label={t("Ngày sau")} title={t("Ngày sau")}
-                    onClick={() => stepDay(1)} disabled={hoveredIdx !== -1 && hoveredIdx === revenueDays.length - 1}>›</button>
                   {hoveredBar && (
                     <span data-i18n-managed style={{ color: 'var(--portal-salmon)' }}>
                       {t("Ngày ")}{formatCenterDate(hoveredBar.date)}: <strong>{vnd(hoveredBar.revenue)}</strong> ({hoveredBar.count} {t(" giao dịch)")}</span>
@@ -543,6 +541,8 @@ export function ManagerReportsPage() {
 
                 {/* Khung vẽ cột */}
                 <div
+                  ref={chartRef}
+                  data-testid="daily-revenue-chart"
                   style={{
                     display: 'flex',
                     alignItems: 'flex-end',

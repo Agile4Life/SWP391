@@ -41,6 +41,26 @@ it('shows cancellation requests below daily revenue and before recent transactio
   expect(text.indexOf('Doanh thu theo ngày')).toBeLessThan(text.indexOf('Duyệt yêu cầu hủy'));
   expect(text.indexOf('Duyệt yêu cầu hủy')).toBeLessThan(text.indexOf('Giao dịch gần đây'));
 });
+it('scrolls a long daily chart with the mouse wheel and lets the page scroll at the ends', async () => {
+  api.getSummary.mockResolvedValueOnce({ periodRevenue: 100, todayRevenue: 0, packagesSoldCount: 0, renewalRate: null,
+    dailyRevenue: Array.from({ length: 40 }, (_, i) => ({ date: new Date(Date.UTC(2026, 9, i + 1)).toISOString().slice(0, 10), revenue: i + 1, transactionCount: 1 })),
+    packageRevenue: [], recentTransactions: [] });
+  await act(async () => root.render(<ManagerReportsPage />));
+  const chart = host.querySelector<HTMLElement>('[data-testid="daily-revenue-chart"]')!;
+  Object.defineProperties(chart, { clientWidth: { value: 200 }, scrollWidth: { value: 800 } });
+  const wheel = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true });
+  chart.dispatchEvent(wheel);
+  expect(chart.scrollLeft).toBe(100);
+  expect(wheel.defaultPrevented).toBe(true);
+  chart.scrollLeft = 600;
+  const atEnd = new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true });
+  chart.dispatchEvent(atEnd);
+  expect(atEnd.defaultPrevented).toBe(false);
+  chart.scrollLeft = 0;
+  const atStart = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true });
+  chart.dispatchEvent(atStart);
+  expect(atStart.defaultPrevented).toBe(false);
+});
 it('shows a load error instead of an empty count and allows retry', async () => {
   api.getCancellationRequests.mockRejectedValueOnce(new Error('network')).mockResolvedValueOnce([]);
   await act(async () => root.render(<ManagerReportsPage />));
