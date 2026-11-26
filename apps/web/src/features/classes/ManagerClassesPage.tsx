@@ -53,7 +53,7 @@ export function ManagerClassesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [view, setView] = useState<ViewTab>('by_discipline');
+  const [view, setView] = useState<ViewTab>('week_all');
   const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<number | null>(null);
 
@@ -298,20 +298,20 @@ export function ManagerClassesPage() {
         <button
           type="button"
           role="tab"
-          aria-selected={view === 'by_discipline'}
-          className={`portal-tab${view === 'by_discipline' ? ' active' : ''}`}
-          onClick={() => setView('by_discipline')}
-        >
-          {t('Lịch theo bộ môn', 'By discipline')}
-        </button>
-        <button
-          type="button"
-          role="tab"
           aria-selected={view === 'week_all'}
           className={`portal-tab${view === 'week_all' ? ' active' : ''}`}
           onClick={() => setView('week_all')}
         >
           {t('Lịch tổng cả tuần', 'Full week overview')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'by_discipline'}
+          className={`portal-tab${view === 'by_discipline' ? ' active' : ''}`}
+          onClick={() => setView('by_discipline')}
+        >
+          {t('Lịch theo bộ môn', 'By discipline')}
         </button>
         <button
           type="button"
