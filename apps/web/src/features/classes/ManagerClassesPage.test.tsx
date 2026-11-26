@@ -305,6 +305,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
   afterEach(async () => {
     await act(async () => root.unmount());
     host.remove();
+    localStorage.clear();
     vi.clearAllMocks();
     vi.unstubAllGlobals();
   });
@@ -627,6 +628,22 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     );
     expect(document.querySelectorAll('[data-testid^="slot-option-"]')).toHaveLength(5);
 
+    // Thứ của ngày khai giảng bị khóa (không bỏ chọn được); ngày kết thúc tự tính theo số buổi.
+    const lockedChip = document.querySelector<HTMLButtonElement>('[data-testid^="weekday-chip-"].is-locked')!;
+    expect(lockedChip).not.toBeNull();
+    await act(async () => lockedChip.click());
+    expect(lockedChip.getAttribute('aria-pressed')).toBe('true');
+    const endInput = document.querySelector<HTMLInputElement>('#cls-end-date')!;
+    expect(endInput.disabled).toBe(true);
+    expect(document.querySelector('[data-testid="wizard-end-date"]')?.textContent).toContain('12 buổi, 1 buổi/tuần ≈ 12 tuần');
+    const firstEnd = vi.mocked(classesApi.checkRecurringAvailability).mock.calls.at(-1)![0].endDate;
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('[data-testid="wizard-session-count"]')!, '4'));
+    await act(async () => { await Promise.resolve(); });
+    const shortEnd = vi.mocked(classesApi.checkRecurringAvailability).mock.calls.at(-1)![0].endDate;
+    expect(shortEnd < firstEnd).toBe(true);
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('[data-testid="wizard-session-count"]')!, '12'));
+    await act(async () => { await Promise.resolve(); });
+
     // Slot 1 shows discipline conflict and blocks advancing; Slot 4 shows "Hết HLV"
     const slot1Btn = document.querySelector<HTMLButtonElement>('[data-testid="slot-option-1"]')!;
     expect(slot1Btn.classList.contains('is-unavailable')).toBe(true);
@@ -659,16 +676,26 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(document.querySelector('[data-testid="wizard-step3-banner"]')?.textContent).toContain('Slot 2 (09:45 – 12:15)');
 
     const busyRoomBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-room-10"]')!;
-    expect(busyRoomBtn.disabled).toBe(true);
+    // Thẻ bận chỉ hiện nhãn; bấm vào mới hiện lý do chi tiết, bấm lại thì ẩn, và không bị chọn.
+    expect(busyRoomBtn.getAttribute('aria-disabled')).toBe('true');
+    expect(busyRoomBtn.textContent).toContain('Đã bận');
+    expect(busyRoomBtn.textContent).not.toContain('Trùng lịch phòng tập');
+    await act(async () => busyRoomBtn.click());
     expect(busyRoomBtn.textContent).toContain('Trùng lịch phòng tập');
+    expect(busyRoomBtn.getAttribute('aria-checked')).toBe('false');
+    await act(async () => busyRoomBtn.click());
+    expect(busyRoomBtn.textContent).not.toContain('Trùng lịch phòng tập');
 
     const vipRoomBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-room-30"]')!;
     expect(vipRoomBtn.disabled).toBe(false);
     expect(vipRoomBtn.textContent).toContain('VIP Platinum');
 
     const busyCoachBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-coach-100"]')!;
-    expect(busyCoachBtn.disabled).toBe(true);
+    expect(busyCoachBtn.getAttribute('aria-disabled')).toBe('true');
+    expect(busyCoachBtn.textContent).not.toContain('Trùng lịch PT 1:1');
+    await act(async () => busyCoachBtn.click());
     expect(busyCoachBtn.textContent).toContain('Trùng lịch PT 1:1');
+    expect(busyCoachBtn.getAttribute('aria-checked')).toBe('false');
 
     const freeCoachBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-coach-101"]')!;
     expect(freeCoachBtn.disabled).toBe(false);
@@ -1159,10 +1186,69 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await act(async () => { await Promise.resolve(); });
     expect(classesApi.checkRecurringAvailability).toHaveBeenCalledTimes(4);
     const hungBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-coach-101"]')!;
-    expect(hungBtn.disabled).toBe(true);
+    expect(hungBtn.getAttribute('aria-disabled')).toBe('true');
+    await act(async () => hungBtn.click());
     expect(hungBtn.textContent).toContain('HLV Hùng vừa nhận lịch PT 1:1.');
     const lanBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-coach-100"]')!;
     expect(lanBtn.disabled).toBe(false);
+  });
+
+  it('lets the stepper jump between reached steps and shows no duplicate Cancel button', async () => {
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+    const footerTexts = () => [...document.querySelectorAll<HTMLButtonElement>('.class-wizard__footer button')].map((b) => b.textContent);
+    expect(footerTexts()).not.toContain('Hủy');
+    expect(document.querySelector<HTMLButtonElement>('[data-testid="wizard-step-tab-3"]')!.disabled).toBe(true);
+
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, 'Stepper Course'));
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-2"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-3"]')).not.toBeNull();
+
+    // Lùi thẳng về Bước 1 rồi nhảy thẳng tới Bước 3 bằng tab, không cần bấm Tiếp tục/Quay lại.
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-step-tab-1"]')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-1"]')).not.toBeNull();
+    expect(document.querySelector<HTMLButtonElement>('[data-testid="wizard-step-tab-3"]')!.disabled).toBe(false);
+    expect(document.querySelector<HTMLButtonElement>('[data-testid="wizard-step-tab-4"]')!.disabled).toBe(true);
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-step-tab-3"]')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-3"]')).not.toBeNull();
+
+    // Nhảy tới vẫn kiểm tra hợp lệ: xóa tên ở Bước 1 thì tab Bước 3 dừng lại ở Bước 1 kèm lỗi.
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-step-tab-1"]')!.click());
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, ''));
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-step-tab-3"]')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-1"]')).not.toBeNull();
+    expect(document.querySelector('dialog [role="alert"]')?.textContent).toContain('Vui lòng nhập tên khóa học');
+  });
+
+  it('keeps a wizard draft after closing, restores it on reopen and clears it on "Start over"', async () => {
+    await renderPage();
+    const openWizard = async () => {
+      await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+      await act(async () => { await Promise.resolve(); });
+    };
+    await openWizard();
+    expect(document.querySelector('[data-testid="wizard-draft-banner"]')).toBeNull();
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, 'Draft Course'));
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('[data-testid="wizard-session-count"]')!, '8'));
+
+    // Đóng wizard bằng nút X rồi mở lại -> quay về Bước 2 với dữ liệu cũ.
+    await act(async () => document.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-2"]')).toBeNull();
+    await openWizard();
+    expect(document.querySelector('[data-testid="wizard-draft-banner"]')?.textContent).toContain('Đã khôi phục bản nháp');
+    expect(document.querySelector('[data-testid="wizard-step-2"]')).not.toBeNull();
+    expect(document.querySelector<HTMLInputElement>('[data-testid="wizard-session-count"]')!.value).toBe('8');
+
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-draft-reset"]')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-1"]')).not.toBeNull();
+    expect(document.querySelector<HTMLInputElement>('#cls-name')!.value).toBe('');
+    expect(localStorage.getItem('scms_class_wizard_draft')).toBeNull();
   });
 
   it('P1-FE-16: resolveWizardRooms/Coaches never fall back to fake-available items when validSchedule returns empty arrays', async () => {

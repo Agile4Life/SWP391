@@ -255,7 +255,9 @@ components:
       description: >
         Trạng thái khả dụng của một HLV cho tập ngày định kỳ và slot đang chọn, kiểm tra đồng thời
         lớp nhóm khác (`SCHEDULING_COACH_CONFLICT`), buổi PT 1:1 `confirmed` (`SCHEDULING_COACH_PT_CONFLICT`)
-        và kỳ nghỉ phép đã duyệt (`COACH_ON_LEAVE`).
+        kỳ nghỉ phép đã duyệt (`COACH_ON_LEAVE`) và giới hạn tối đa 3 khóa dạy đồng thời
+        (`SCHEDULING_COACH_MAX_COURSES`: tại một ngày nào đó trong khoảng ngày của khóa mới, HLV đã có 3 khóa
+        đang hoạt động còn lịch; HLV chỉ nhận lại được khi khóa mới bắt đầu sau ngày kết thúc của một khóa).
       required: [id, fullName, available]
       properties:
         id: { type: integer, format: int64, example: 5 }
@@ -270,7 +272,7 @@ components:
           example: SCHEDULING_COACH_PT_CONFLICT
           description: >
             Mã xung đột (`SCHEDULING_COACH_CONFLICT`, `SCHEDULING_COACH_PT_CONFLICT`,
-            `COACH_ON_LEAVE`, `SCHEDULING_COACH_INACTIVE`, ...) khi `available=false`.
+            `COACH_ON_LEAVE`, `SCHEDULING_COACH_MAX_COURSES`, `SCHEDULING_COACH_INACTIVE`, ...) khi `available=false`.
         conflictReason:
           type: string
           nullable: true
@@ -525,7 +527,8 @@ paths:
             qua `ClassService` và trigger `trg_sessions_check_discipline_conflict`),
             trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lịch lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
             HLV đã có buổi PT 1:1 `confirmed` trùng slot (`SCHEDULING_COACH_PT_CONFLICT`),
-            hoặc HLV đang trong kỳ nghỉ phép đã duyệt (`COACH_ON_LEAVE`).
+            HLV đang trong kỳ nghỉ phép đã duyệt (`COACH_ON_LEAVE`),
+            hoặc HLV đã dạy đủ 3 khóa đồng thời trong khoảng ngày của khóa (`SCHEDULING_COACH_MAX_COURSES`).
 
   /classes/{id}:
     put:
@@ -564,7 +567,8 @@ paths:
             Trùng ngày & slot với lớp nhóm `active` khác cùng bộ môn (`SCHEDULING_DISCIPLINE_CONFLICT`),
             trùng phòng (`SCHEDULING_ROOM_CONFLICT`), trùng lớp nhóm khác của HLV (`SCHEDULING_COACH_CONFLICT`),
             trùng buổi PT 1:1 `confirmed` của HLV (`SCHEDULING_COACH_PT_CONFLICT`),
-            hoặc HLV nghỉ phép đã duyệt (`COACH_ON_LEAVE`).
+            HLV nghỉ phép đã duyệt (`COACH_ON_LEAVE`), hoặc khi đổi HLV/kích hoạt lại lớp mà HLV mới đã dạy đủ
+            3 khóa đồng thời trong khoảng ngày còn lịch của lớp (`SCHEDULING_COACH_MAX_COURSES`).
     delete:
       summary: Xóa/ngừng hoạt động lớp học không còn ghi danh hoạt động (CENTER_MANAGER, MANAGER)
       tags: [Lớp học nhóm]

@@ -27,6 +27,66 @@ export const WIZARD_WEEKDAYS: readonly {
   { code: 'SUNDAY', vi: 'Chủ nhật', en: 'Sun', shortVi: 'CN', shortEn: 'Sun' },
 ] as const;
 
+/** Số buổi tối đa của một khóa: giữ khoảng ngày trong giới hạn 365 ngày của backend kể cả khi học 1 buổi/tuần. */
+export const COURSE_SESSION_COUNT_MAX = 52;
+
+const JS_DAY_CODES = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+
+/** Mã thứ (MONDAY…SUNDAY) của một ngày YYYY-MM-DD. */
+export function weekdayCodeOf(isoDate: string): string {
+  const [y, m, d] = isoDate.split('-').map(Number);
+  return JS_DAY_CODES[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] ?? 'MONDAY';
+}
+
+/**
+ * Ngày kết thúc khóa = ngày học thứ N tính từ ngày khai giảng theo các thứ đã chọn
+ * (ví dụ 12 buổi, 3 buổi/tuần → buổi thứ 12 rơi vào tuần thứ 4). Trả '' nếu đầu vào không hợp lệ.
+ */
+export function computeCourseEndDate(startDate: string, days: readonly string[], sessionCount: number): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || days.length === 0
+    || !Number.isInteger(sessionCount) || sessionCount < 1) return '';
+  const picked = new Set(days);
+  const [y, m, d] = startDate.split('-').map(Number);
+  const cursor = new Date(Date.UTC(y, m - 1, d));
+  let remaining = sessionCount;
+  // Mỗi tuần có ít nhất 1 ngày học nên vòng lặp kết thúc sau tối đa 7 * sessionCount ngày.
+  for (let guard = 0; guard < 7 * sessionCount + 7; guard += 1) {
+    if (picked.has(JS_DAY_CODES[cursor.getUTCDay()]) && --remaining === 0) {
+      return cursor.toISOString().slice(0, 10);
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return '';
+}
+
+/**
+ * Cập nhật các thứ học khi đổi ngày khai giảng: thứ mới luôn được chọn; thứ khai giảng cũ chỉ bị gỡ nếu trước đó
+ * được thêm tự động (người dùng chưa tự chọn). Trả về các thứ mới và thứ đang được thêm tự động.
+ */
+export function daysForStartDate(
+  days: readonly string[],
+  autoAddedDay: string | null,
+  startDayCode: string,
+): { days: string[]; autoAddedDay: string | null } {
+  const kept = days.filter((day) => day !== autoAddedDay || day === startDayCode);
+  if (startDayCode && !kept.includes(startDayCode)) {
+    return { days: [...kept, startDayCode], autoAddedDay: startDayCode };
+  }
+  return { days: kept, autoAddedDay: startDayCode && startDayCode === autoAddedDay ? autoAddedDay : null };
+}
+
+/** Kiểm tra số buổi của khóa: số nguyên từ 1 đến COURSE_SESSION_COUNT_MAX. */
+export function validateCourseSessionCount(raw: string, t: WizardTranslator): string | null {
+  const value = Number(raw);
+  if (!raw.trim() || !Number.isInteger(value) || value < 1 || value > COURSE_SESSION_COUNT_MAX) {
+    return t(
+      `Số buổi của khóa phải là số nguyên từ 1 đến ${COURSE_SESSION_COUNT_MAX}.`,
+      `Course sessions must be a whole number from 1 to ${COURSE_SESSION_COUNT_MAX}.`,
+    );
+  }
+  return null;
+}
+
 /** Sắp xếp các thứ đã chọn theo chuẩn Thứ 2 → Chủ nhật. */
 export function sortRecurringDays(days: readonly string[]): string[] {
   const picked = new Set(days);

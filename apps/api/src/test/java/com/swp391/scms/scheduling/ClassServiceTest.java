@@ -1076,6 +1076,145 @@ class ClassServiceTest {
                 .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.invalid_price");
     }
 
+    private static com.swp391.scms.scheduling.dto.CoachCourseRange range(long classId, String from, String to) {
+        return new com.swp391.scms.scheduling.dto.CoachCourseRange(
+                2L, classId, "Khóa " + classId, LocalDate.parse(from), LocalDate.parse(to));
+    }
+
+    /** Kiểm thử: giới hạn 3 khóa đồng thời tính theo số khóa chạy cùng một ngày, không theo số khóa chồng khoảng. */
+    @Test
+    @DisplayName("coachCourseLimitArgs blocks a 4th concurrent course and frees the coach once a course ends")
+    void coachCourseLimitArgs_countsConcurrentCoursesOnly() {
+        Coach coach = activeCoach(2L);
+        var three = java.util.List.of(
+                range(1, "2026-11-01", "2026-12-20"),
+                range(2, "2026-11-10", "2027-01-15"),
+                range(3, "2026-12-01", "2027-02-01"));
+        LocalDate from = LocalDate.parse("2026-12-10");
+        LocalDate to = LocalDate.parse("2027-01-10");
+
+        Object[] blocked = ClassService.coachCourseLimitArgs(coach, three, from, to, null);
+        assertThat(blocked).isNotNull();
+        assertThat(blocked[0]).isEqualTo("Coach 2");
+        assertThat((String) blocked[1]).contains("\"Khóa 1\"", "\"Khóa 2\"", "\"Khóa 3\"");
+        assertThat(blocked[2]).isEqualTo("20/12/2026");
+        assertThat(blocked[3]).isEqualTo("10/12/2026");
+
+        // Khai giảng sau ngày kết thúc của khóa 1 -> chỉ còn 2 khóa chạy cùng lúc.
+        assertThat(ClassService.coachCourseLimitArgs(coach, three, LocalDate.parse("2026-12-21"), to, null)).isNull();
+        // Sửa chính khóa 3 (loại khỏi danh sách) -> không tự chặn mình.
+        assertThat(ClassService.coachCourseLimitArgs(coach, three, from, to, 3L)).isNull();
+        // 3 khóa cùng chồng khoảng ngày nhưng không bao giờ chạy cùng lúc -> hợp lệ.
+        var staggered = java.util.List.of(
+                range(4, "2026-12-01", "2026-12-12"),
+                range(5, "2026-12-01", "2027-01-31"),
+                range(6, "2026-12-15", "2027-01-31"));
+        assertThat(ClassService.coachCourseLimitArgs(coach, staggered, from, to, null)).isNull();
+        // Khóa thứ 3 bắt đầu giữa chừng khóa mới -> vẫn bị chặn tại ngày đó.
+        var midway = java.util.List.of(
+                range(7, "2026-12-01", "2027-01-31"),
+                range(8, "2026-12-01", "2027-01-31"),
+                range(9, "2026-12-28", "2027-03-01"));
+        assertThat(ClassService.coachCourseLimitArgs(coach, midway, from, to, null)[3]).isEqualTo("28/12/2026");
+    }
+
+    /** Kiểm thử: tạo khóa định kỳ cho HLV đang dạy đủ 3 khóa đồng thời bị chặn 409 trước khi lưu. */
+    @Test
+    @DisplayName("createRecurringClass rejects a coach already teaching 3 concurrent courses")
+    void createRecurringClass_rejectsCoachOverConcurrentCourseLimit() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Room studio = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(studio, "id", 3L);
+        studio.setStatus("available");
+        studio.setCapacity(20);
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(2L)).thenReturn(Optional.of(activeCoach(2L)));
+        when(rooms.findById(3L)).thenReturn(Optional.of(studio));
+        when(sessions.findActiveCourseRanges()).thenReturn(java.util.List.of(
+                range(1, "2026-10-01", "2026-12-31"),
+                range(2, "2026-10-01", "2026-12-31"),
+                range(3, "2026-10-01", "2026-12-31")));
+
+        var req = new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                "Yoga Thứ 4", 1L, 2L, 3L, 15, "all", "desc", java.math.BigDecimal.ZERO,
+                LocalDate.of(2026, 10, 19), LocalDate.of(2026, 11, 9),
+                java.util.List.of("MONDAY"), ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
+
+        assertThatThrownBy(() -> service.createRecurringClass(req))
+                .isInstanceOf(com.swp391.scms.common.exception.ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_COACH_MAX_COURSES")
+                .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.coach_max_courses");
+        org.mockito.Mockito.verify(gymClasses, org.mockito.Mockito.never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    /** Kiểm thử: thông báo trùng lịch cùng bộ môn liệt kê đủ mọi thứ bị trùng (VI và EN). */
+    @Test
+    @DisplayName("checkRecurringAvailability lists every conflicting weekday, not only the first date")
+    void checkRecurringAvailability_disciplineConflictListsAllWeekdays() {
+        var messageSource = new org.springframework.context.support.ResourceBundleMessageSource();
+        messageSource.setBasename("i18n/messages");
+        messageSource.setDefaultEncoding("UTF-8");
+        messageSource.setFallbackToSystemLocale(false);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "messageService",
+                new com.swp391.scms.common.i18n.MessageService(messageSource));
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "staffInternalRequestRepository",
+                org.mockito.Mockito.mock(com.swp391.scms.operations.repository.StaffInternalRequestRepository.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "coachBookingRepository",
+                org.mockito.Mockito.mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class));
+
+        Discipline gym = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(gym, "id", 1L);
+        gym.setName("Gym");
+        GymClass existing = new GymClass();
+        existing.setId(600L);
+        existing.setName("Hypertrophy");
+        existing.setDiscipline(gym);
+        existing.setStatus("active");
+
+        LocalDate mon = LocalDate.of(2026, 12, 14);
+        java.util.List<ClassSession> busy = new java.util.ArrayList<>();
+        // Lớp cũ học Slot 1 vào Thứ 2 (2 tuần) và Thứ 4 (1 tuần) -> 3 buổi trùng trên 2 thứ.
+        for (LocalDate d : java.util.List.of(mon, mon.plusDays(2), mon.plusDays(7))) {
+            ClassSession cs = new ClassSession();
+            cs.setGymClass(existing);
+            cs.setSessionDate(d);
+            cs.setStartTime(ScheduleSlot.SLOT_1.startTime());
+            cs.setEndTime(ScheduleSlot.SLOT_1.endTime());
+            cs.setStatus("scheduled");
+            busy.add(cs);
+        }
+        LocalDate last = mon.plusDays(11);
+        when(disciplines.findById(1L)).thenReturn(Optional.of(gym));
+        when(rooms.findAll()).thenReturn(java.util.List.of());
+        when(coaches.findActiveWithUser()).thenReturn(java.util.List.of());
+        when(sessions.findScheduledSessionsBetweenDates(mon, last)).thenReturn(busy);
+
+        var req = new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                1L, mon, last, java.util.List.of("MONDAY", "WEDNESDAY", "FRIDAY"),
+                ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime());
+
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.forLanguageTag("vi"));
+        var result = service.checkRecurringAvailability(req);
+
+        assertThat(result.selectedSlotConflictCode()).isEqualTo("SCHEDULING_DISCIPLINE_CONFLICT");
+        assertThat(result.selectedSlotConflictReason())
+                .contains("3 buổi")
+                .contains("Thứ 2 (2 buổi, lớp \"Hypertrophy\", từ 14/12/2026)")
+                .contains("Thứ 4 (1 buổi, lớp \"Hypertrophy\", từ 16/12/2026)")
+                .doesNotContain("Thứ 6");
+        org.springframework.context.i18n.LocaleContextHolder.setLocale(java.util.Locale.ENGLISH);
+        try {
+            assertThat(service.checkRecurringAvailability(req).selectedSlotConflictReason())
+                    .contains("in 3 sessions")
+                    .contains("Monday (2 sessions, class \"Hypertrophy\", from 14/12/2026)")
+                    .contains("Wednesday (1 session, class \"Hypertrophy\", from 16/12/2026)");
+        } finally {
+            org.springframework.context.i18n.LocaleContextHolder.resetLocaleContext();
+        }
+    }
+
     /** Kiểm thử: kiểm tra trước lịch trống trên 5 slot, phát hiện xung đột bộ môn, phòng, lớp HLV, PT 1:1 và nghỉ phép HLV. */
     @Test
     @DisplayName("checkRecurringAvailability previews 5 slots, discipline conflict, room conflicts, coach class/PT/leave conflicts")

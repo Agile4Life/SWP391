@@ -128,6 +128,16 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
             @Param("endDate") LocalDate endDate);
 
     @Query("""
+            select new com.swp391.scms.scheduling.dto.CoachCourseRange(
+                co.userId, c.id, c.name, min(s.sessionDate), max(s.sessionDate))
+            from ClassSession s join s.gymClass c join c.coach co
+            where c.status = 'active' and s.status = 'scheduled'
+            group by co.userId, c.id, c.name
+            """)
+    /** Khoảng ngày còn lịch của mọi khóa đang hoạt động theo HLV, dùng cho giới hạn số khóa dạy đồng thời. */
+    List<com.swp391.scms.scheduling.dto.CoachCourseRange> findActiveCourseRanges();
+
+    @Query("""
             select s from ClassSession s
             where s.gymClass.coach.userId = :coachId
               and s.sessionDate = :date

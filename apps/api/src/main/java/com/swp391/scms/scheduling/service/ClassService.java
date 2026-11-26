@@ -20,6 +20,7 @@ import com.swp391.scms.notifications.NotificationService;
 import com.swp391.scms.notifications.event.SessionCancelledEvent;
 import com.swp391.scms.operations.entity.StaffInternalRequest;
 import com.swp391.scms.operations.repository.StaffInternalRequestRepository;
+import com.swp391.scms.scheduling.dto.CoachCourseRange;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CreateSessionRequest;
@@ -80,6 +81,8 @@ public class ClassService {
     private static final String ENROLLMENT_BOOKED = "booked";
     private static final String CLASS_DEACTIVATED_REASON = "Lớp học ngừng hoạt động";
     private static final long MAX_RECURRING_SPAN_DAYS = 365L;
+    /** Một HLV dạy tối đa 3 khóa chạy đồng thời; khóa thứ 4 chỉ nhận được sau ngày kết thúc của một khóa. */
+    static final int MAX_CONCURRENT_COURSES_PER_COACH = 3;
 
     private final GymClassRepository gymClasses;
     private final ClassSessionRepository sessions;
@@ -288,6 +291,7 @@ public class ClassService {
         LocalDate lastDate = sessionDates.get(sessionDates.size() - 1);
         SessionEligibility.ensureFuture(firstDate, request.startTime(), clock);
 
+        ensureCoachCourseLimit(coach, firstDate, lastDate, null);
         ensureNoRecurringSessionConflicts(
                 discipline.getId(),
                 coach.getUserId(),
@@ -394,6 +398,19 @@ public class ClassService {
         if (!closingOrInactive && (scheduleResourceChanged || activating)) {
             Long effectiveDisciplineId = CLASS_ACTIVE.equalsIgnoreCase(targetStatus) ? discipline.getId() : null;
             List<ClassSession> classSessions = sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId);
+            boolean coachTakesCourse = CLASS_ACTIVE.equals(targetStatus)
+                    && (activating || !Objects.equals(oldCoachId, coach.getUserId()));
+            if (coachTakesCourse && classSessions != null) {
+                List<LocalDate> scheduledDates = classSessions.stream()
+                        .filter(s -> SESSION_SCHEDULED.equalsIgnoreCase(s.getStatus()) && s.getSessionDate() != null)
+                        .map(ClassSession::getSessionDate)
+                        .sorted()
+                        .toList();
+                if (!scheduledDates.isEmpty()) {
+                    ensureCoachCourseLimit(coach, scheduledDates.get(0),
+                            scheduledDates.get(scheduledDates.size() - 1), classId);
+                }
+            }
             if (classSessions != null) {
                 for (ClassSession s : classSessions) {
                     if (SESSION_SCHEDULED.equalsIgnoreCase(s.getStatus())) {
@@ -917,6 +934,15 @@ public class ClassService {
                 loadApprovedLeaveDatesByCoach(activeCoaches, sessionDates, firstDate, lastDate);
         java.util.Map<Long, java.util.Map<LocalDate, List<CoachBooking>>> ptBookingsByCoachAndDate =
                 loadConfirmedPtBookingsByCoachAndDate(firstDate, lastDate);
+        java.util.Map<Long, String> courseLimitReasonByCoach = new java.util.HashMap<>();
+        java.util.Map<Long, List<CoachCourseRange>> rangesByCoach = loadCourseRangesByCoach();
+        for (Coach coach : activeCoaches) {
+            String reason = coachCourseLimitReason(coach, rangesByCoach.getOrDefault(coach.getUserId(), List.of()),
+                    firstDate, lastDate, null);
+            if (reason != null) {
+                courseLimitReasonByCoach.put(coach.getUserId(), reason);
+            }
+        }
 
         List<SlotAvailabilityDto> slotDtos = new ArrayList<>(ScheduleSlot.values().length);
         List<RoomAvailabilityDto> selectedRooms = List.of();
@@ -940,7 +966,7 @@ public class ClassService {
 
             List<CoachAvailabilityDto> slotCoaches = evaluateCoachesForSlot(
                     activeCoaches, sessionDates, sessionsByDate, approvedLeaveDatesByCoach,
-                    ptBookingsByCoachAndDate, slot);
+                    ptBookingsByCoachAndDate, courseLimitReasonByCoach, slot);
             int availableCoachCount = (int) slotCoaches.stream().filter(CoachAvailabilityDto::available).count();
 
             boolean slotAvailable;
@@ -1119,6 +1145,11 @@ public class ClassService {
         if (disciplineId == null) {
             return null;
         }
+        // Gom mọi buổi trùng theo thứ trong tuần để báo đủ các thứ bị trùng, không chỉ ngày đầu tiên.
+        java.util.Map<java.time.DayOfWeek, DisciplineConflictGroup> byWeekday = new java.util.TreeMap<>();
+        ClassSession firstExisting = null;
+        LocalDate firstDate = null;
+        int total = 0;
         for (LocalDate sessionDate : sessionDates) {
             for (ClassSession existing : sessionsByDate.getOrDefault(sessionDate, List.of())) {
                 if (existing.getStartTime() == null || existing.getEndTime() == null) {
@@ -1135,21 +1166,63 @@ public class ClassService {
                         || !Objects.equals(disciplineId, existingClass.getDiscipline().getId())) {
                     continue;
                 }
-                String disciplineName = existingClass.getDiscipline().getName() != null
-                        ? existingClass.getDiscipline().getName()
-                        : (discipline.getName() != null ? discipline.getName() : ("#" + disciplineId));
-                String className = existingClass.getName() != null ? existingClass.getName() : "";
-                return msg(
-                        "error.scheduling.discipline_conflict",
-                        disciplineName,
-                        className,
-                        formatTime(existing.getStartTime()),
-                        formatTime(existing.getEndTime()),
-                        sessionDate.getDayOfWeek().getValue(),
-                        sessionDate.format(CONFLICT_DATE_FORMAT));
+                if (firstExisting == null) {
+                    firstExisting = existing;
+                    firstDate = sessionDate;
+                }
+                total++;
+                DisciplineConflictGroup group = byWeekday.computeIfAbsent(
+                        sessionDate.getDayOfWeek(), k -> new DisciplineConflictGroup(sessionDate));
+                group.count++;
+                group.classNames.add(existingClass.getName() != null ? existingClass.getName() : "");
+                break;
             }
         }
-        return null;
+        if (firstExisting == null) {
+            return null;
+        }
+        GymClass firstClass = firstExisting.getGymClass();
+        String disciplineName = firstClass.getDiscipline().getName() != null
+                ? firstClass.getDiscipline().getName()
+                : (discipline.getName() != null ? discipline.getName() : ("#" + disciplineId));
+        if (total == 1) {
+            return msg(
+                    "error.scheduling.discipline_conflict",
+                    disciplineName,
+                    firstClass.getName() != null ? firstClass.getName() : "",
+                    formatTime(firstExisting.getStartTime()),
+                    formatTime(firstExisting.getEndTime()),
+                    firstDate.getDayOfWeek().getValue(),
+                    firstDate.format(CONFLICT_DATE_FORMAT));
+        }
+        List<String> items = new ArrayList<>(byWeekday.size());
+        byWeekday.forEach((day, group) -> items.add(msg(
+                "error.scheduling.discipline_conflict_item",
+                // {2},{3} bỏ trống: tham số choice (thứ, số buổi) phải ở chỉ số >= 4 theo MessageBundlesConsistencyTest.
+                String.join(", ", group.classNames),
+                group.firstDate.format(CONFLICT_DATE_FORMAT),
+                null,
+                null,
+                day.getValue(),
+                group.count)));
+        return msg(
+                "error.scheduling.discipline_conflict_summary",
+                disciplineName,
+                formatTime(slot.startTime()),
+                formatTime(slot.endTime()),
+                String.join("; ", items),
+                total);
+    }
+
+    /** Các buổi trùng lịch cùng bộ môn rơi vào một thứ trong tuần. */
+    private static final class DisciplineConflictGroup {
+        private final LocalDate firstDate;
+        private final java.util.Set<String> classNames = new java.util.LinkedHashSet<>();
+        private int count;
+
+        private DisciplineConflictGroup(LocalDate firstDate) {
+            this.firstDate = firstDate;
+        }
     }
 
     /** Đánh giá tình trạng trống/trùng lịch của từng phòng khả dụng trong một slot trên toàn bộ các ngày học. */
@@ -1209,6 +1282,7 @@ public class ClassService {
             java.util.Map<LocalDate, List<ClassSession>> sessionsByDate,
             java.util.Map<Long, java.util.Set<LocalDate>> approvedLeaveDatesByCoach,
             java.util.Map<Long, java.util.Map<LocalDate, List<CoachBooking>>> ptBookingsByCoachAndDate,
+            java.util.Map<Long, String> courseLimitReasonByCoach,
             ScheduleSlot slot) {
         List<CoachAvailabilityDto> result = new ArrayList<>(activeCoaches.size());
         for (Coach coach : activeCoaches) {
@@ -1223,10 +1297,10 @@ public class ClassService {
             java.util.Map<LocalDate, List<CoachBooking>> ptByDate =
                     ptBookingsByCoachAndDate.getOrDefault(coachId, java.util.Map.of());
 
-            String conflictCode = null;
-            String conflictReason = null;
+            String conflictReason = courseLimitReasonByCoach.get(coachId);
+            String conflictCode = conflictReason != null ? "SCHEDULING_COACH_MAX_COURSES" : null;
             outer:
-            for (LocalDate sessionDate : sessionDates) {
+            for (LocalDate sessionDate : conflictReason != null ? List.<LocalDate>of() : sessionDates) {
                 if (leaveDates.contains(sessionDate)) {
                     conflictCode = "COACH_ON_LEAVE";
                     conflictReason = msg(
@@ -1328,6 +1402,87 @@ public class ClassService {
         if (gymClass.getCoach() != null && gymClass.getCoach().getUserId() != null) {
             String coachBody = msg("notifications.session.rescheduled.coach_body", className, oldDateStr, oldRange, newDateStr, newRange);
             notificationService.send(gymClass.getCoach().getUserId(), title, coachBody, "schedule_change", "class_session", session.getId());
+        }
+    }
+
+    /** Khoảng ngày còn lịch của mọi khóa đang hoạt động, gom theo HLV. */
+    private java.util.Map<Long, List<CoachCourseRange>> loadCourseRangesByCoach() {
+        List<CoachCourseRange> ranges = sessions.findActiveCourseRanges();
+        java.util.Map<Long, List<CoachCourseRange>> byCoach = new java.util.HashMap<>();
+        if (ranges != null) {
+            for (CoachCourseRange r : ranges) {
+                if (r != null && r.coachId() != null && r.firstDate() != null && r.lastDate() != null) {
+                    byCoach.computeIfAbsent(r.coachId(), k -> new ArrayList<>()).add(r);
+                }
+            }
+        }
+        return byCoach;
+    }
+
+    /**
+     * Tham số thông báo nếu giao thêm khóa [firstDate, lastDate] khiến HLV dạy quá MAX_CONCURRENT_COURSES_PER_COACH
+     * khóa cùng lúc tại một ngày nào đó; null nếu hợp lệ. Số khóa chồng nhau lớn nhất luôn đạt tại ngày bắt đầu
+     * của khóa mới hoặc ngày bắt đầu của một khóa hiện có nằm trong khoảng đó.
+     * Thứ tự: {0} tên HLV, {1} danh sách khóa đang chạy, {2} ngày kết thúc sớm nhất, {3} ngày bị vượt giới hạn.
+     */
+    public static Object[] coachCourseLimitArgs(Coach coach, List<CoachCourseRange> ranges, LocalDate firstDate,
+                                         LocalDate lastDate, Long excludeClassId) {
+        List<CoachCourseRange> overlapping = ranges.stream()
+                .filter(r -> !Objects.equals(r.classId(), excludeClassId))
+                .filter(r -> !r.lastDate().isBefore(firstDate) && !r.firstDate().isAfter(lastDate))
+                .toList();
+        if (overlapping.size() < MAX_CONCURRENT_COURSES_PER_COACH) {
+            return null;
+        }
+        List<LocalDate> candidates = new ArrayList<>();
+        candidates.add(firstDate);
+        for (CoachCourseRange r : overlapping) {
+            if (r.firstDate().isAfter(firstDate)) {
+                candidates.add(r.firstDate());
+            }
+        }
+        candidates.sort(null);
+        for (LocalDate day : candidates) {
+            List<CoachCourseRange> running = overlapping.stream()
+                    .filter(r -> !r.firstDate().isAfter(day) && !r.lastDate().isBefore(day))
+                    .sorted(java.util.Comparator.comparing(CoachCourseRange::lastDate))
+                    .toList();
+            if (running.size() >= MAX_CONCURRENT_COURSES_PER_COACH) {
+                User user = coach.getUser();
+                String coachName = user != null && user.getFullName() != null
+                        ? user.getFullName() : ("#" + coach.getUserId());
+                String names = running.stream()
+                        .map(r -> "\"" + (r.className() != null ? r.className() : "#" + r.classId()) + "\" ("
+                                + r.firstDate().format(CONFLICT_DATE_FORMAT) + " – "
+                                + r.lastDate().format(CONFLICT_DATE_FORMAT) + ")")
+                        .collect(java.util.stream.Collectors.joining(", "));
+                return new Object[]{
+                        coachName,
+                        names,
+                        running.get(0).lastDate().format(CONFLICT_DATE_FORMAT),
+                        day.format(CONFLICT_DATE_FORMAT)};
+            }
+        }
+        return null;
+    }
+
+    private String coachCourseLimitReason(Coach coach, List<CoachCourseRange> ranges, LocalDate firstDate,
+                                          LocalDate lastDate, Long excludeClassId) {
+        Object[] args = coachCourseLimitArgs(coach, ranges, firstDate, lastDate, excludeClassId);
+        return args == null ? null : msg("error.scheduling.coach_max_courses", args);
+    }
+
+    /** Chặn (409 SCHEDULING_COACH_MAX_COURSES) khi giao khóa [firstDate, lastDate] khiến HLV dạy quá 3 khóa cùng lúc. */
+    private void ensureCoachCourseLimit(Coach coach, LocalDate firstDate, LocalDate lastDate, Long excludeClassId) {
+        Object[] args = coachCourseLimitArgs(coach,
+                loadCourseRangesByCoach().getOrDefault(coach.getUserId(), List.of()),
+                firstDate, lastDate, excludeClassId);
+        if (args != null) {
+            throw new ConflictException(
+                    "SCHEDULING_COACH_MAX_COURSES",
+                    "error.scheduling.coach_max_courses",
+                    args,
+                    "Coach already teaches " + MAX_CONCURRENT_COURSES_PER_COACH + " concurrent courses");
         }
     }
 
