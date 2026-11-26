@@ -39,6 +39,14 @@ async function check(browser, theme, width, language = 'vi') {
     await page.locator('.reception-request').nth(5).waitFor();
     assert.equal(await page.locator('.reception-request').count(), 6);
     assert.equal(await page.locator('html').getAttribute('data-theme'), theme);
+    const sections = await page.locator('.reception-top__main').evaluate(node => [...node.children].map(child => child.className));
+    assert(sections[0].includes('reception-top__queue') && sections[1].includes('reception-top__search'));
+    const trialCard = page.locator('.reception-request').filter({ has: page.locator('.reception-todo__tag--trial') }).first();
+    const view = trialCard.locator('.reception-request__document button');
+    assert.equal((await view.textContent()).trim(), language === 'vi' ? 'Xem' : 'View');
+    const decisionButtons = trialCard.locator('.reception-request__actions button');
+    assert((await decisionButtons.nth(0).textContent()).includes(language === 'vi' ? 'Từ chối' : 'Reject'));
+    assert((await decisionButtons.nth(1).textContent()).includes(language === 'vi' ? 'Duyệt' : 'Approve'));
     const layout = await page.locator('.reception-request').evaluateAll(cards => cards.map(card => {
       const box = node => node.getBoundingClientRect();
       const details = card.querySelector('dl'), actions = card.querySelector('.reception-request__actions');
@@ -60,7 +68,13 @@ async function check(browser, theme, width, language = 'vi') {
     }
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({ path: path.join(output, `${language}-${theme}-${width}-queue.png`), fullPage: true });
-    await page.locator('.reception-todo__tag--trial').first().locator('..').locator('..').locator('..').getByRole('button').first().click();
+    await view.focus();
+    await page.keyboard.press('Tab');
+    assert(await decisionButtons.nth(0).evaluate(node => node === document.activeElement));
+    await page.keyboard.press('Tab');
+    assert(await decisionButtons.nth(1).evaluate(node => node === document.activeElement));
+    await view.focus();
+    await page.keyboard.press('Enter');
     const dialog = page.locator('.reception-trial-detail');
     await dialog.waitFor();
     assert(!(await dialog.textContent()).includes('Lưu ý nghiệp vụ'));
