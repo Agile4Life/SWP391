@@ -1182,7 +1182,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Sẽ tạo 5 buổi học');
 
     // Toggle another weekday -> stale availability cleared immediately while pending
-    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="weekday-chip-FRIDAY"]')!.click());
+    // Chọn một thứ chưa chọn và không phải thứ khai giảng (thứ khai giảng bị khóa; ngày mặc định = hôm nay + 14).
+    const freeChip = document.querySelector<HTMLButtonElement>('[data-testid^="weekday-chip-"]:not(.is-locked)[aria-pressed="false"]')!;
+    await act(async () => freeChip.click());
     const nextBtnPending = document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!;
     expect(nextBtnPending.disabled).toBe(true);
     expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Đang kiểm tra');
