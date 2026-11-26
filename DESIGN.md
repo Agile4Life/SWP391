@@ -1,5 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định Receptionist (26/11/2026): Thẻ `Cần xử lý` tại `/staff/reception` dùng header loại/mã yêu cầu và hội viên, thông tin label–value hai cột, Email/SĐT ở hàng riêng và hàng nút cuối thẻ căn phải; mobile xếp một cột. Áp dụng cho năm loại thẻ hiện có, không mở rộng nghiệp vụ. Popup trải nghiệm đặt tên/mã hội viên dưới tiêu đề, giữ ảnh `contain` và phóng to, bỏ khung “Lưu ý nghiệp vụ”; giữ nguyên các bước xác nhận và lý do từ chối.
+
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
 Quyết định Member (26/11/2026): Đặt PT 1:1 chọn ngày bằng dải 7 ngày có nút ‹ › lùi/tiến theo tuần (không lùi trước hôm nay) và `DatePicker` nhảy tới ngày bất kỳ từ hôm nay; không còn giới hạn 10 ngày cố định.
 Các nút thao tác trong Danh mục vận hành nằm cùng một hàng và có khoảng cách; bảng cuộn ngang khi cần.

@@ -27,6 +27,69 @@ let host: HTMLDivElement;
 const member = { userId: 10, membershipCode: 'MB-10', fullName: 'An', email: 'an@example.test', phone: '1234', status: 'ACTIVE', identityVerified: true, kycStatus: 'APPROVED' };
 const pkg = { id: 2, name: 'Gold', price: 200, durationDays: 30, status: 'active' };
 const pendingSelection = { id: 50, memberId: 10, membershipCode: 'MB-10', memberName: 'An', memberEmail: 'an@example.test', memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30, packagePrice: 200, startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01' };
+const pendingTrialUi = {
+  id: 155, memberId: 10, membershipCode: 'MB-10', memberName: 'An',
+  memberEmail: 'an@example.test', memberPhone: '0901234567', documentType: 'PASSPORT',
+  documentNumberMasked: '********4753', documentFullName: 'AN LE', nationality: 'Canada',
+  frontImageUrl: '/front.png', backImageUrl: '/back.png', status: 'PENDING_APPROVAL', requestedAt: '2026-11-05T10:00:00',
+};
+
+it('keeps all five queue types and their existing details in separate information and action sections', async () => {
+  api.getPendingSubscriptions.mockResolvedValue([pendingSelection]);
+  api.getUnpaidCourseEnrollments.mockResolvedValue([{ enrollmentId: 601, memberId: 10, memberName: 'An', membershipCode: 'MB-10', memberPhone: '1234', className: 'Yoga Foundation', disciplineName: 'Yoga', startDate: '2026-11-01', endDate: '2026-11-30', amount: 300000 }]);
+  api.getUnpaidCoachBookings.mockResolvedValue([{ id: 90, memberName: 'An', coachName: 'Hùng', bookingDate: '2026-11-02', startTime: '15:15:00', endTime: '17:45:00', hourlyRate: 200000, status: 'completed' }]);
+  api.getPendingTrials.mockResolvedValue([pendingTrialUi]);
+  api.getPendingHoldRequests.mockResolvedValue([{ id: 72, memberId: 10, memberName: 'An', membershipCode: 'MB-10', memberPhone: '1234', memberEmail: 'an@example.test', packageName: 'Gold', startDate: '2026-11-01', endDate: '2026-11-30', holdReason: 'Đi công tác dài ngày' }]);
+  await act(async () => root.render(<MemoryRouter><StaffReceptionPage /></MemoryRouter>));
+  const cards = [...host.querySelectorAll('.reception-request')];
+  expect(cards).toHaveLength(5);
+  for (const card of cards) {
+    expect(card.querySelector('.reception-request__header')?.textContent).toContain('An');
+    expect(card.querySelector('dl')?.textContent).toBeTruthy();
+    expect(card.lastElementChild?.classList.contains('reception-request__actions')).toBe(true);
+    expect(card.lastElementChild?.querySelector('button, a')).not.toBeNull();
+  }
+  const trial = host.querySelector('.reception-todo__tag--trial')!.closest('.reception-request')!;
+  for (const value of ['********4753', 'Canada', 'AN LE', 'an@example.test', '0901234567', '05/11/2026']) expect(trial.textContent).toContain(value);
+  expect(trial.querySelector('.reception-request__contact')?.textContent).toContain('an@example.test');
+  expect(trial.querySelector('.reception-request__contact')?.textContent).toContain('0901234567');
+  expect(cards[0].textContent).toContain('Gold');
+  expect(cards[1].textContent).toContain('Yoga Foundation');
+  expect(cards[2].textContent).toContain('ĐÃ TẬP');
+  expect(cards[4].textContent).toContain('Đi công tác dài ngày');
+  expect(cards[4].querySelector('a')?.getAttribute('href')).toBe('/staff/holds');
+});
+
+it('shows a compact trial dialog without the business note and preserves image zoom and rejection reason validation', async () => {
+  api.getPendingTrials.mockResolvedValue([pendingTrialUi]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Xem giấy tờ & ảnh')!.click());
+  const dialog = host.querySelector('dialog')!;
+  expect(dialog.querySelector('h2')?.textContent).toBe('Chi tiết đơn trải nghiệm #155');
+  expect(dialog.querySelector('.reception-trial-detail__member')?.textContent).toContain('An');
+  expect(dialog.querySelector('.reception-trial-detail__member')?.textContent).toContain('MB-10');
+  expect(dialog.textContent).not.toContain('Lưu ý nghiệp vụ');
+  expect(dialog.textContent).not.toContain('Khi Lễ tân bấm');
+  expect(dialog.textContent).toContain('********4753');
+  expect(dialog.querySelectorAll('.document-photo-trigger img')).toHaveLength(2);
+  for (const side of ['trước', 'sau']) {
+    await act(async () => dialog.querySelector<HTMLButtonElement>(`button[aria-label="Phóng to ảnh mặt ${side} giấy tờ"]`)!.click());
+    expect(host.querySelector('.document-lightbox')).not.toBeNull();
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('.portal-dialog__close')].at(-1)!.click());
+  }
+  await act(async () => [...dialog.querySelectorAll('button')].find(b => b.textContent?.includes('Từ chối đơn'))!.click());
+  const rejectForm = host.querySelector('textarea')!.closest('form')!;
+  await act(async () => rejectForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.rejectTrial).not.toHaveBeenCalled();
+  expect(host.textContent).toContain('Vui lòng nhập lý do từ chối');
+  const reason = host.querySelector('textarea')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(reason, 'Ảnh giấy tờ bị mờ');
+    reason.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => rejectForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.rejectTrial).toHaveBeenCalledWith(155, 'Ảnh giấy tờ bị mờ');
+});
 async function clickPending(id = 50) {
   const row = Array.from(host.querySelectorAll<HTMLElement>('[role="button"]')).find(node => node.textContent?.includes(`Yêu cầu #${id}`))!;
   expect(row).toBeTruthy();
@@ -477,7 +540,7 @@ it('asks confirmation before cancelling a pending membership request at the desk
 
   await act(async () => root.render(<StaffReceptionPage />));
   const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Hủy yêu cầu')!;
-  expect(cancelBtn.style.whiteSpace).toBe('nowrap');
+  expect(cancelBtn.disabled).toBe(false);
 
   await act(async () => cancelBtn.click());
   expect(api.cancelPendingSubscription).not.toHaveBeenCalled();
