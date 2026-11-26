@@ -38,6 +38,9 @@ interface SelectProps {
   'data-field'?: string;
   'aria-label'?: string;
   'aria-invalid'?: boolean | 'true' | 'false';
+  /** Thêm ô tìm kiếm trong menu để lọc các lựa chọn theo nhãn (không phân biệt hoa thường, dấu). */
+  searchable?: boolean;
+  searchPlaceholder?: string;
   /** Dùng các thẻ <option> như <select> gốc (hỗ trợ cả Fragment/map). */
   children: ReactNode;
 }
@@ -52,6 +55,11 @@ function toText(node: ReactNode): string {
   if (Array.isArray(node)) return node.map(toText).join('');
   if (isValidElement(node)) return toText((node.props as { children?: ReactNode }).children);
   return '';
+}
+
+/** Chuẩn hóa để tìm kiếm: chữ thường, bỏ dấu tiếng Việt. */
+function fold(text: string): string {
+  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd');
 }
 
 /** Đọc các thẻ <option> (kể cả trong Fragment) từ children thành danh sách lựa chọn. */
@@ -81,6 +89,8 @@ export function Select({
   disabled,
   required,
   name,
+  searchable = false,
+  searchPlaceholder,
   children,
   ...aria
 }: SelectProps) {
@@ -90,10 +100,14 @@ export function Select({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const typeRef = useRef({ buf: '', t: 0 });
+  const searchRef = useRef<HTMLInputElement>(null);
+  const [query, setQuery] = useState('');
 
-  const options = collect(children);
+  const allOptions = collect(children);
+  const selected = allOptions.find((o) => o.value === value);
+  // Khi tìm kiếm, mọi chỉ số (active, id option) đều tính trên danh sách đã lọc.
+  const options = searchable && query.trim() ? allOptions.filter((o) => fold(o.label).includes(fold(query.trim()))) : allOptions;
   const selectedIndex = options.findIndex((o) => o.value === value);
-  const selected = selectedIndex >= 0 ? options[selectedIndex] : undefined;
   const firstEnabledIndex = options.findIndex((o) => !o.disabled);
 
   const [open, setOpen] = useState(false);
@@ -127,8 +141,14 @@ export function Select({
   // Đóng menu, tùy chọn trả focus về nút kích hoạt.
   const closeMenu = useCallback((refocus = true) => {
     setOpen(false);
+    setQuery('');
     if (refocus) triggerRef.current?.focus();
   }, []);
+
+  // Mở menu có tìm kiếm thì đưa focus vào ô tìm kiếm.
+  useEffect(() => {
+    if (open && searchable) searchRef.current?.focus();
+  }, [open, searchable]);
 
   // Giữ DOM thêm một nhịp để chạy animation đóng
   useEffect(() => {
@@ -158,11 +178,11 @@ export function Select({
     if (!open) return;
     // Bấm ra ngoài thì đóng menu.
     const onDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!wrapRef.current?.contains(e.target as Node)) closeMenu(false);
     };
     document.addEventListener('pointerdown', onDown);
     return () => document.removeEventListener('pointerdown', onDown);
-  }, [open]);
+  }, [open, closeMenu]);
 
   // Cuộn mục đang active trong riêng menu, không kéo vùng cuộn cha (bảng, hộp thoại, trang)
   useEffect(() => {
@@ -196,7 +216,10 @@ export function Select({
   };
 
   // Điều khiển bằng bàn phím: mũi tên, Home/End, Enter/Space, Esc và Tab.
-  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    const fromSearch = e.currentTarget === searchRef.current;
+    // Trong ô tìm kiếm, ký tự (kể cả phím cách) và Home/End là thao tác gõ, không phải lệnh chọn.
+    if (fromSearch && (e.key.length === 1 || e.key === 'Home' || e.key === 'End')) return;
     switch (e.key) {
       case 'ArrowDown':
       case 'ArrowUp':
@@ -224,7 +247,7 @@ export function Select({
         }
         return;
       case 'Tab':
-        if (open) setOpen(false);
+        if (open) closeMenu(false);
         return;
     }
     // Gõ ký tự để nhảy tới mục tương ứng
@@ -240,6 +263,61 @@ export function Select({
       }
     }
   };
+
+  const menuClass = `ui-select__menu ui-select__menu--${placement.v} ui-select__menu--${placement.h} ${open ? 'is-open' : 'is-closing'}`;
+  const list = (
+    <ul
+      ref={listRef}
+      id={listId}
+      role="listbox"
+      className={searchable ? 'ui-select__list' : menuClass}
+      style={searchable ? undefined : { maxHeight: maxH }}
+    >
+      {options.map((o, i) => (
+        <li
+          key={`${o.value}-${i}`}
+          id={`${uid}-opt-${i}`}
+          role="option"
+          aria-selected={o.value === value}
+          aria-disabled={o.disabled || undefined}
+          className={`ui-select__option${o.value === value ? ' is-selected' : ''}${i === active ? ' is-active' : ''}${o.disabled ? ' is-disabled' : ''}`}
+          style={{ '--i': i } as CSSProperties}
+          onMouseDown={(e) => e.preventDefault()}
+          onPointerEnter={() => !o.disabled && setActive(i)}
+          onClick={() => pick(o)}
+        >
+          <span className="ui-select__label">{o.label}</span>
+          <svg className="ui-select__check" viewBox="0 0 12 12" aria-hidden="true">
+            <path d="m2.5 6.4 2.4 2.4 4.6-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </li>
+      ))}
+      {searchable && options.length === 0 && <li className="ui-select__empty" role="presentation">—</li>}
+    </ul>
+  );
+  const menu = !mounted ? null : !searchable ? list : (
+      <div className={`${menuClass} ui-select__menu--search`} style={{ maxHeight: maxH }}>
+        <input
+          ref={searchRef}
+          type="search"
+          className="portal-input ui-select__search"
+          value={query}
+          placeholder={searchPlaceholder}
+          aria-label={searchPlaceholder ?? aria['aria-label']}
+          role="combobox"
+          aria-expanded={open}
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={open && active >= 0 && active < options.length ? `${uid}-opt-${active}` : undefined}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setActive(0);
+          }}
+          onKeyDown={onKeyDown}
+        />
+        {list}
+      </div>
+  );
 
   return (
     <div
@@ -287,43 +365,15 @@ export function Select({
             if (!disabled) triggerRef.current?.focus();
           }}
         >
-          {!options.some((o) => o.value === value) && <option value={value} />}
-          {options.map((o, i) => (
+          {!allOptions.some((o) => o.value === value) && <option value={value} />}
+          {allOptions.map((o, i) => (
             <option key={`${o.value}-${i}`} value={o.value} disabled={o.disabled}>
               {o.label}
             </option>
           ))}
         </select>
 
-      {mounted && (
-        <ul
-          ref={listRef}
-          id={listId}
-          role="listbox"
-          className={`ui-select__menu ui-select__menu--${placement.v} ui-select__menu--${placement.h} ${open ? 'is-open' : 'is-closing'}`}
-          style={{ maxHeight: maxH }}
-        >
-          {options.map((o, i) => (
-            <li
-              key={`${o.value}-${i}`}
-              id={`${uid}-opt-${i}`}
-              role="option"
-              aria-selected={o.value === value}
-              aria-disabled={o.disabled || undefined}
-              className={`ui-select__option${o.value === value ? ' is-selected' : ''}${i === active ? ' is-active' : ''}${o.disabled ? ' is-disabled' : ''}`}
-              style={{ '--i': i } as CSSProperties}
-              onMouseDown={(e) => e.preventDefault()}
-              onPointerEnter={() => !o.disabled && setActive(i)}
-              onClick={() => pick(o)}
-            >
-              <span className="ui-select__label">{o.label}</span>
-              <svg className="ui-select__check" viewBox="0 0 12 12" aria-hidden="true">
-                <path d="m2.5 6.4 2.4 2.4 4.6-5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </li>
-          ))}
-        </ul>
-      )}
+      {menu}
     </div>
   );
 }

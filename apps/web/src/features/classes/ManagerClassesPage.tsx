@@ -33,14 +33,15 @@ import {
 } from './components/ClassFormModals';
 import { ClassListTable } from './components/ClassListTable';
 
-type ViewTab = 'by_discipline' | 'week_all' | 'list';
+type ViewTab = 'by_discipline' | 'by_coach' | 'week_all' | 'list';
 
 /**
  * Trang Quản lý lớp học & xếp lịch cho Quản lý (`/manager/classes`).
- * Gồm đúng 3 tab độc lập, không lặp điều khiển, không lọc chéo nhau:
+ * Gồm 4 tab độc lập, không lặp điều khiển, không lọc chéo nhau:
  * 1. `Lịch theo bộ môn`: chọn 1 trong 3 bộ môn để xem trọn lịch tuần và toàn bộ các khóa đang hoạt động của môn đó.
  * 2. `Lịch tổng cả tuần`: xem gộp cả 3 bộ môn trong tuần, gom nhóm "+N lớp" khi trùng giờ để không đè chữ.
- * 3. `Danh sách lớp`: quản lý đầy đủ các khóa học toàn trung tâm (hỗ trợ nhiều khóa học trên cùng một bộ môn khi khác lịch).
+ * 3. `Lịch theo HLV`: chọn 1 HLV (dropdown có tìm kiếm) để xem lịch tuần hoặc tháng của HLV đó.
+ * 4. `Danh sách lớp`: quản lý đầy đủ các khóa học toàn trung tâm (hỗ trợ nhiều khóa học trên cùng một bộ môn khi khác lịch).
  */
 export function ManagerClassesPage() {
   useLanguage();
@@ -61,6 +62,8 @@ export function ManagerClassesPage() {
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<number | null>(null);
   // Lọc lịch Tab 1 theo một khóa của bộ môn đang chọn; '' = tất cả khóa.
   const [selectedClassId, setSelectedClassId] = useState('');
+  // HLV đang xem ở tab Lịch theo HLV; '' = mặc định HLV đầu danh sách.
+  const [selectedCoachId, setSelectedCoachId] = useState('');
   /** Bộ môn đang bị tắt trên Lịch tổng (rỗng = hiện tất cả). */
   const [hiddenDisciplineIds, setHiddenDisciplineIds] = useState<number[]>([]);
   /** Lịch tổng xem theo tuần hoặc theo tháng. */
@@ -235,6 +238,15 @@ export function ManagerClassesPage() {
     [activeScheduleSessions, hiddenDisciplineIds, toTimetableEvents],
   );
 
+  const sortedCoaches = useMemo(() => [...coaches].sort((a, b) => a.fullName.localeCompare(b.fullName, 'vi')), [coaches]);
+  const activeCoach = sortedCoaches.find((c) => String(c.id) === selectedCoachId) ?? sortedCoaches[0] ?? null;
+
+  /** Sự kiện cho tab Lịch theo HLV: mọi buổi của lớp đang hoạt động do HLV đang chọn dạy. */
+  const coachEvents = useMemo(
+    () => (activeCoach ? toTimetableEvents(activeScheduleSessions.filter((s) => s.coachId === activeCoach.id)) : []),
+    [activeScheduleSessions, activeCoach, toTimetableEvents],
+  );
+
   const baseLegend = useMemo<TimetableLegendItem[]>(
     () => [
       { tone: 'open', label: t('Còn chỗ', 'Open') },
@@ -342,6 +354,15 @@ export function ManagerClassesPage() {
           onClick={() => setView('by_discipline')}
         >
           {t('Lịch theo bộ môn', 'By discipline')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'by_coach'}
+          className={`portal-tab${view === 'by_coach' ? ' active' : ''}`}
+          onClick={() => setView('by_coach')}
+        >
+          {t('Lịch theo HLV', 'By coach')}
         </button>
         <button
           type="button"
@@ -472,6 +493,70 @@ export function ManagerClassesPage() {
                 : t('Tuần này chưa có buổi học nào', 'No sessions scheduled this week')
             }
           />
+        </>
+      ) : view === 'by_coach' ? (
+        <>
+          <div className="portal-card" style={{ marginBottom: 16 }} data-testid="coach-filter-bar">
+            {sortedCoaches.length > 0 ? (
+              <Select
+                searchable
+                searchPlaceholder={t('Tìm huấn luyện viên...', 'Search coaches...')}
+                value={activeCoach ? String(activeCoach.id) : ''}
+                onChange={(e) => setSelectedCoachId(e.target.value)}
+                aria-label={t('Chọn huấn luyện viên để xem lịch', 'Select a coach to view schedule')}
+                style={{ maxWidth: 320 }}
+              >
+                {sortedCoaches.map((coach) => (
+                  <option key={coach.id} value={String(coach.id)}>{coach.fullName}</option>
+                ))}
+              </Select>
+            ) : (
+              <span>{t('Chưa có huấn luyện viên đang hoạt động.', 'No active coaches yet.')}</span>
+            )}
+          </div>
+
+          {overviewMode === 'week' ? (
+            <WeeklyTimetable
+              label={activeCoach
+                ? t(`Lịch tuần của HLV ${activeCoach.fullName}`, `${activeCoach.fullName} weekly schedule`)
+                : t('Lịch tuần theo HLV', 'Coach weekly schedule')}
+              weekStart={weekStart}
+              events={coachEvents}
+              loading={loading}
+              error={error}
+              onRetry={() => void loadAll()}
+              onWeekChange={setWeekStart}
+              onEventClick={handleOpenEventDetail}
+              selectedId={detailSession ? String(detailSession.id) : undefined}
+              maxVisibleLanes={2}
+              toolbar={overviewSwitch}
+              legend={baseLegend}
+              legendNote={t('Bấm vào từng buổi học để xem chi tiết lớp, phòng, HLV và danh sách học viên.', 'Click any session to inspect class, room, coach, and enrolled members.')}
+              emptyLabel={t('Tuần này HLV chưa có buổi dạy nào', 'This coach has no sessions this week')}
+            />
+          ) : (
+            <MonthOverview
+              label={activeCoach
+                ? t(`Lịch tháng của HLV ${activeCoach.fullName}`, `${activeCoach.fullName} month schedule`)
+                : t('Lịch tháng theo HLV', 'Coach month schedule')}
+              monthStart={monthStart}
+              events={coachEvents}
+              loading={loading}
+              error={error}
+              onRetry={() => void loadAll()}
+              onMonthChange={setMonthStart}
+              onEventClick={handleOpenEventDetail}
+              onOpenWeek={(day) => {
+                setWeekStart(mondayOf(day));
+                setOverviewMode('week');
+              }}
+              toolbar={overviewSwitch}
+              legendNote={t(
+                'Mỗi ô đếm số buổi theo bộ môn trong ngày — bấm vào ô để xem danh sách buổi.',
+                'Each cell counts sessions per discipline that day — click a cell to list them.',
+              )}
+            />
+          )}
         </>
       ) : view === 'week_all' ? (
         <>
