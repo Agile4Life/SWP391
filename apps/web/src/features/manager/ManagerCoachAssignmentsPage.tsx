@@ -36,7 +36,9 @@ function assignmentSchedule(student: CoachAssignmentStudent, compact = false): s
     const date = formatCenterDate(student.endDate, '');
     return date ? (compact ? date : staffText(`Ngày kết thúc giáo án: ${date}`, `Training plan end date: ${date}`)) : null;
   }
-  return student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), '') || null : null;
+  const next = student.nextSession ? formatCenterDateTime(student.nextSession.replace(' ', 'T'), '') || null : null;
+  const count = student.sessionCount ?? 0;
+  return next && !compact && count > 1 ? staffText(`${next} · ${count} buổi sắp tới`, `${next} · ${count} upcoming sessions`) : next;
 }
 
 /** Phân công của một hội viên (gom mọi phân công của hội viên đó). */
@@ -104,7 +106,8 @@ export function ManagerCoachAssignmentsPage() {
     currentCoachId: number;
     currentCoachName: string;
   } | null>(null);
-  const [selectedStudentDetail, setSelectedStudentDetail] = useState<CoachAssignmentStudent | null>(null);
+  const [detail, setDetail] = useState<{ student: CoachAssignmentStudent; assignments: CoachAssignmentStudent[] } | null>(null);
+  const selectedStudentDetail = detail?.student ?? null;
 
   // Trạng thái biểu mẫu điều chuyển HLV
   const [targetCoachId, setTargetCoachId] = useState<number | ''>('');
@@ -417,6 +420,12 @@ export function ManagerCoachAssignmentsPage() {
                         <div className="student-name-block">
                           <strong>{group.fullName}</strong>
                           <small>{group.membershipCode} {group.phone ? `• ${group.phone}` : ''}</small>
+                          <button
+                            type="button"
+                            className="coach-profile-link"
+                            onClick={() => setDetail({ student: group.assignments[0], assignments: group.assignments })}
+                          >
+                            {t("Chi tiết")}</button>
                         </div>
                       </div>
 
@@ -445,12 +454,6 @@ export function ManagerCoachAssignmentsPage() {
                             </div>
 
                             <div className="coach-student-actions">
-                              <button
-                                type="button"
-                                className="btn-secondary btn-sm coach-action-btn"
-                                onClick={() => setSelectedStudentDetail(student)}
-                              >
-                                {t("Chi tiết")}</button>
                               {student.assignmentType !== 'CLASS' && <button
                                 type="button"
                                 className="btn-secondary btn-sm coach-action-btn"
@@ -529,7 +532,7 @@ export function ManagerCoachAssignmentsPage() {
                       <button
                         type="button"
                         className="btn-secondary btn-sm coach-action-btn"
-                        onClick={() => setSelectedStudentDetail(item)}
+                        onClick={() => setDetail({ student: item, assignments: [item] })}
                       >
                         {t("Chi tiết")}</button>
                       {item.assignmentType !== 'CLASS' && <button
@@ -565,8 +568,8 @@ export function ManagerCoachAssignmentsPage() {
             <fieldset disabled={busy}>
             {formError && <p className="portal-alert portal-alert--error" role="alert">{t(formError)}</p>}
             <p>{reassignStudent.student.assignmentType === 'PT_1_1'
-              ? t('Buổi PT được chọn và các giáo án đang áp dụng, bản nháp hoặc thay thế của học viên với HLV hiện tại sẽ được chuyển sang HLV mới. Các buổi PT khác được giữ nguyên.', 'The selected PT session and the member’s active, draft and superseded training plans with the current coach transfer to the new coach. Other PT sessions stay unchanged.')
-              : t('Chỉ chuyển giáo án được chọn. Các phân công khác được giữ nguyên.', 'Only the selected training plan will transfer. Other assignments stay unchanged.')}</p>
+              ? t('Mọi buổi PT sắp tới cùng các giáo án đang áp dụng, bản nháp hoặc thay thế của học viên với HLV hiện tại sẽ được chuyển sang HLV mới. Nếu HLV mới không nhận được bất kỳ buổi nào thì không buổi nào bị chuyển.', 'All upcoming PT sessions and the member’s active, draft and superseded training plans with the current coach transfer to the new coach. If the new coach cannot take any one session, nothing transfers.')
+              : t('Chỉ chuyển giáo án được chọn. Các buổi PT và phân công khác được giữ nguyên.', 'Only the selected training plan will transfer. PT sessions and other assignments stay unchanged.')}</p>
             <div className="coach-form-group">
               <label>{t("Học viên")}</label>
               <input
@@ -647,7 +650,7 @@ export function ManagerCoachAssignmentsPage() {
       {selectedStudentDetail && (
         <Modal
           title={t(`Hồ sơ học viên: ${selectedStudentDetail.fullName}`, `Member profile: ${selectedStudentDetail.fullName}`)}
-          onClose={() => setSelectedStudentDetail(null)}
+          onClose={() => setDetail(null)}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.9rem', fontSize: '0.9rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -685,29 +688,31 @@ export function ManagerCoachAssignmentsPage() {
 
             <div>
               <small style={{ color: 'var(--portal-muted)', display: 'block' }}>{t("Hình thức & Lịch tập")}</small>
-              <div style={{ marginTop: '0.25rem' }}>
-                <span
-                  className={`coach-student-type-pill coach-student-type-pill--${
-                    selectedStudentDetail.assignmentType === 'PT_1_1'
-                      ? 'pt'
-                      : selectedStudentDetail.assignmentType === 'TRAINING_PLAN'
-                      ? 'plan'
-                      : 'class'
-                  }`}
-                >
-                  {assignmentTypeLabel(selectedStudentDetail.assignmentType, selectedStudentDetail.assignmentTypeLabel)}
-                </span>{' '}
-                <span style={{ marginLeft: '0.5rem' }}>
-                  {[selectedStudentDetail.detail, assignmentSchedule(selectedStudentDetail)].filter(Boolean).join(' · ') || '—'}
-                </span>
-              </div>
+              {(detail?.assignments ?? []).map((assignment) => (
+                <div data-i18n-managed key={`${assignment.assignmentType}-${assignment.referenceId}`} style={{ marginTop: '0.25rem' }}>
+                  <span
+                    className={`coach-student-type-pill coach-student-type-pill--${
+                      assignment.assignmentType === 'PT_1_1'
+                        ? 'pt'
+                        : assignment.assignmentType === 'TRAINING_PLAN'
+                        ? 'plan'
+                        : 'class'
+                    }`}
+                  >
+                    {assignmentTypeLabel(assignment.assignmentType, assignment.assignmentTypeLabel)}
+                  </span>{' '}
+                  <span style={{ marginLeft: '0.5rem' }}>
+                    {[assignment.detail, assignmentSchedule(assignment)].filter(Boolean).join(' · ') || '—'}
+                  </span>
+                </div>
+              ))}
             </div>
 
             <div className="coach-modal-actions" style={{ marginTop: '0.5rem' }}>
               <button
                 type="button"
                 className="btn-secondary coach-action-btn"
-                onClick={() => setSelectedStudentDetail(null)}
+                onClick={() => setDetail(null)}
               >
                 {t("Đóng")}</button>
             </div>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
+import { Select } from '../../shared/ui/Select';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { useI18n } from '../../shared/i18n';
 import { useLanguage } from '../../shared/i18n/language';
@@ -56,6 +57,8 @@ export function ManagerClassesPage() {
   const [view, setView] = useState<ViewTab>('week_all');
   const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<number | null>(null);
+  // Lọc lịch Tab 1 theo một khóa của bộ môn đang chọn; '' = tất cả khóa.
+  const [selectedClassId, setSelectedClassId] = useState('');
 
   const [detailSession, setDetailSession] = useState<ClassSessionDto | null>(null);
   const [createModal, setCreateModal] = useState<CreateSlotPrefill | null>(null);
@@ -209,11 +212,15 @@ export function ManagerClassesPage() {
     [t],
   );
 
-  /** Sự kiện riêng cho Tab 1 (chỉ 1 bộ môn đang chọn, chỉ tính lớp đang hoạt động). */
+  // Khóa đang lọc chỉ hợp lệ khi còn thuộc bộ môn đang chọn (đổi môn hoặc khóa ngừng hoạt động thì về "Tất cả").
+  const activeClassFilter = activeDisciplineClasses.some((c) => String(c.id) === selectedClassId) ? selectedClassId : '';
+
+  /** Sự kiện riêng cho Tab 1 (chỉ 1 bộ môn đang chọn, chỉ tính lớp đang hoạt động, lọc thêm theo khóa nếu có). */
   const disciplineEvents = useMemo(() => {
     if (activeDisciplineId === null) return [];
-    return toTimetableEvents(activeScheduleSessions.filter((s) => s.disciplineId === activeDisciplineId));
-  }, [activeScheduleSessions, activeDisciplineId, toTimetableEvents]);
+    return toTimetableEvents(activeScheduleSessions.filter((s) =>
+      s.disciplineId === activeDisciplineId && (activeClassFilter === '' || String(s.classId) === activeClassFilter)));
+  }, [activeScheduleSessions, activeDisciplineId, activeClassFilter, toTimetableEvents]);
 
   /** Sự kiện độc lập cho Tab 2 (luôn hiển thị toàn bộ 3 bộ môn đang hoạt động, không bị Tab 1 lọc ảnh hưởng). */
   const allWeekEvents = useMemo(
@@ -371,12 +378,19 @@ export function ManagerClassesPage() {
                     <div className="discipline-active-bar__head">
                       <div className="discipline-active-bar__title">
                         <strong>{activeDiscipline.name}</strong>
-                        <span className="discipline-active-bar__count">
-                          {t(
-                            `${activeDisciplineClasses.length} khóa đang hoạt động`,
-                            `${activeDisciplineClasses.length} ${activeDisciplineClasses.length === 1 ? 'active course' : 'active courses'}`,
-                          )}
-                        </span>
+                        <Select
+                          className="discipline-class-filter"
+                          value={activeClassFilter}
+                          onChange={(e) => setSelectedClassId(e.target.value)}
+                          aria-label={t('Lọc lịch theo khóa học', 'Filter schedule by course')}
+                        >
+                          <option value="">
+                            {t(`Tất cả khóa (${activeDisciplineClasses.length})`, `All courses (${activeDisciplineClasses.length})`)}
+                          </option>
+                          {activeDisciplineClasses.map((cls) => (
+                            <option key={cls.id} value={String(cls.id)}>{cls.name}</option>
+                          ))}
+                        </Select>
                       </div>
                       <button
                         type="button"

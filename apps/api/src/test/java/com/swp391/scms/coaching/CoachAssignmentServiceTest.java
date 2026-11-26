@@ -190,13 +190,18 @@ class CoachAssignmentServiceTest {
         verifyNoInteractions(audit, notifications);
     }
 
-    @Test void transfersOnlySelectedFuturePt() {
-        validAccounts(); CoachBooking selected = booking(601L), untouched = booking(602L);
+    @Test void transfersEveryUpcomingPtOfTheMemberTogether() {
+        validAccounts(); CoachBooking selected = booking(601L), later = booking(602L);
+        later.setBookingDate(today.plusDays(8));
+        Member otherMember = new Member(); otherMember.setUserId(200L);
+        CoachBooking otherMembers = booking(603L); otherMembers.setMember(otherMember);
         when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(1))).thenReturn(true);
+        when(bookings.findByIdForUpdate(602L)).thenReturn(Optional.of(later));
+        when(bookings.findCurrentAssignments(10L, today, LocalTime.of(15, 0))).thenReturn(List.of(selected, later, otherMembers));
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), eq(today), any())).thenReturn(true);
         service.reassignStudent(transfer("PT_1_1", 601L));
-        assertThat(selected.getCoach()).isSameAs(to); assertThat(untouched.getCoach()).isSameAs(from);
-        verify(bookings).save(selected); verify(bookings, never()).findByMemberId(anyLong());
+        assertThat(selected.getCoach()).isSameAs(to); assertThat(later.getCoach()).isSameAs(to); assertThat(otherMembers.getCoach()).isSameAs(from);
+        verify(bookings).save(selected); verify(bookings).save(later); verify(bookings, never()).findByMemberId(anyLong());
         verify(audit).save(any());
         verify(notifications).send(eq(100L), any(), any(), eq("system"), isNull(), eq(601L), eq("/member/classes?tab=pt"));
     }
@@ -211,6 +216,37 @@ class CoachAssignmentServiceTest {
         service.reassignStudent(transfer("PT_1_1", 601L));
         assertThat(java.util.List.of(active, draft, history)).allSatisfy(p -> assertThat(p.getCoach()).isSameAs(to));
         assertThat(active.getStatus()).isEqualTo("superseded"); assertThat(draft.getStatus()).isEqualTo("draft");
+    }
+
+    @Test void ptTransferIsAllOrNothingWhenALaterSessionConflicts() {
+        validAccounts(); CoachBooking selected = booking(601L), later = booking(602L);
+        later.setBookingDate(today.plusDays(8));
+        when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
+        when(bookings.findByIdForUpdate(602L)).thenReturn(Optional.of(later));
+        when(bookings.findCurrentAssignments(10L, today, LocalTime.of(15, 0))).thenReturn(List.of(selected, later));
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), eq(today), any())).thenReturn(true);
+        lenient().when(staffRequests.existsApprovedLeaveOn(20L, today.plusDays(8))).thenReturn(true);
+        assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "COACH_ON_LEAVE");
+        assertThat(selected.getCoach()).isSameAs(from); assertThat(later.getCoach()).isSameAs(from);
+        verify(bookings, never()).save(any()); verifyNoInteractions(notifications, audit);
+    }
+
+    @Test void overviewShowsOneRowPerMemberForUpcomingPtSessions() {
+        when(coaches.findActiveWithUser()).thenReturn(List.of(from));
+        when(subscriptions.hasActiveMembership(100L, today)).thenReturn(true);
+        when(subscriptions.hasActiveMembershipCoveringSession(100L, today, today.plusDays(8))).thenReturn(true);
+        CoachBooking first = booking(601L), second = booking(602L);
+        second.setBookingDate(today.plusDays(8));
+        when(bookings.findCurrentAssignments(eq(10L), eq(today), any())).thenReturn(List.of(first, second));
+        @SuppressWarnings("unchecked") List<CoachAssignmentOverviewDto> rows =
+                (List<CoachAssignmentOverviewDto>) service.getOverview(10L, null, null).get("coaches");
+        var students = rows.getFirst().students();
+        assertThat(students).hasSize(1);
+        assertThat(students.getFirst().referenceId()).isEqualTo(601L);
+        assertThat(students.getFirst().sessionCount()).isEqualTo(2);
+        assertThat(students.getFirst().endDate()).isEqualTo(today.plusDays(8));
+        assertThat(students.getFirst().membershipIssue()).isNull();
+        assertThat(rows.getFirst().ptStudentsCount()).isEqualTo(1);
     }
 
     @Test void doesNotTransferEarlierTodayPt() {

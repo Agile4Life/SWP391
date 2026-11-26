@@ -23,7 +23,10 @@ export interface CoachAssignmentStudent {
   membershipIssue?: 'FROZEN' | 'NO_ACTIVE' | 'NOT_COVERED' | null;
   nextSession: string | null;
   status: string;
+  /** Id giáo án, id buổi PT kế tiếp (PT_1_1) hoặc id lớp. */
   referenceId: number;
+  /** Số buổi PT sắp tới được gộp vào dòng PT_1_1. */
+  sessionCount?: number | null;
 }
 
 /** Tổng quan một HLV: liên hệ, chuyên môn, trạng thái và số học viên theo loại. */

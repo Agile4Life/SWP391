@@ -233,6 +233,28 @@
   margin-left: auto;
 }
 
+/* Nhãn hình thức rộng cố định để chi tiết các dòng thẳng hàng. */
+.coach-assignment-line .coach-student-type-pill {
+  flex: 0 0 9rem;
+  text-align: center;
+}
+
+.coach-profile-link {
+  display: block;
+  margin-top: 0.2rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--portal-salmon);
+  cursor: pointer;
+}
+
+.coach-profile-link:hover { text-decoration: underline; }
+.coach-profile-link:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
+
 /* Modal form fields */
 .coach-modal-form {
   display: flex;

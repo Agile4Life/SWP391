@@ -693,6 +693,9 @@
   align-items: center;
   gap: 8px;
 }
+.discipline-active-bar__title .discipline-class-filter {
+  width: min(280px, 100%);
+}
 .discipline-active-bar__count {
   font-size: 13px;
   color: var(--portal-muted);
