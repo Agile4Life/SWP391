@@ -25,6 +25,11 @@ import {
 } from '../classesApi';
 import {
   CLASS_NAME_MAX_LENGTH,
+  COURSE_SESSION_COUNT_MAX,
+  computeCourseEndDate,
+  daysForStartDate,
+  validateCourseSessionCount,
+  weekdayCodeOf,
   WIZARD_WEEKDAYS,
   formatRecurringDaysFull,
   formatRecurringDaysShort,
@@ -39,14 +44,16 @@ import {
   validateWizardStep2Local,
   validateWizardStep3,
 } from './classWizardValidation';
-
-const JS_DAY_TO_CODE = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+import { clearClassWizardDraft, readClassWizardDraft, writeClassWizardDraft } from './classWizardDraft';
 
 type WizardStep = 1 | 2 | 3 | 4;
 
-function weekdayCodeForIso(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  return JS_DAY_TO_CODE[new Date(Date.UTC(y, m - 1, d)).getUTCDay()] ?? 'MONDAY';
+/** Giờ lưu bản nháp dạng HH:mm dd/MM theo giờ máy người dùng. */
+function formatDraftTime(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())} ${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
 }
 
 function ScheduleSlotPicker({
@@ -116,7 +123,19 @@ export function CreateClassOrSessionModal({
   onSuccess,
 }: CreateClassOrSessionModalProps) {
   const { t } = useI18n();
-  const [step, setStep] = useState<WizardStep>(1);
+  // Bản nháp còn lưu từ lần mở trước (đóng wizard giữa chừng không mất dữ liệu đã nhập).
+  const [draft] = useState(() => readClassWizardDraft());
+  // Bước 3–4 cần kiểm tra lại lịch trống nên bản nháp luôn mở lại tối đa ở Bước 2.
+  const [step, setStep] = useState<WizardStep>(() => (draft ? (Math.min(draft.step, 2) as WizardStep) : 1));
+  const [restoredAt, setRestoredAt] = useState<string | null>(draft?.savedAt ?? null);
+  // Bước xa nhất đã tới: các tab bước đến mốc này bấm qua lại được tự do (đi tới vẫn kiểm tra hợp lệ từng bước).
+  const [maxStep, setMaxStep] = useState<WizardStep>(step);
+  useEffect(() => {
+    setMaxStep((prev) => (step > prev ? step : prev));
+  }, [step]);
+  // Thẻ phòng/HLV không khả dụng đang mở lý do chi tiết (chỉ hiện khi bấm vào thẻ).
+  const [openReason, setOpenReason] = useState<string | null>(null);
+  const toggleReason = (key: string) => setOpenReason((prev) => (prev === key ? null : key));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -131,26 +150,32 @@ export function CreateClassOrSessionModal({
   }, [classes]);
 
   const defaultStart = prefill?.date ?? addDays(todayISO(), 14);
-  const defaultEnd = addDays(defaultStart, 28);
-  const defaultDay = weekdayCodeForIso(defaultStart);
+  const defaultDay = weekdayCodeOf(defaultStart);
 
   // Bước 1: Thông tin khóa học
   const [disciplineId, setDisciplineId] = useState(() => {
+    if (draft && disciplines.some((d) => String(d.id) === draft.disciplineId)) return draft.disciplineId;
     if (prefill?.disciplineId && disciplines.some((d) => d.id === prefill.disciplineId)) {
       return String(prefill.disciplineId);
     }
     return disciplines[0]?.id ? String(disciplines[0].id) : '';
   });
-  const [name, setName] = useState('');
-  const [level, setLevel] = useState('all');
-  const [price, setPrice] = useState('150000');
-  const [description, setDescription] = useState('');
+  const [name, setName] = useState(draft?.name ?? '');
+  const [level, setLevel] = useState(draft?.level ?? 'all');
+  const [price, setPrice] = useState(draft?.price ?? '150000');
+  const [description, setDescription] = useState(draft?.description ?? '');
 
   // Bước 2: Lịch học & 5 Slot cố định
-  const [startDate, setStartDate] = useState(defaultStart);
-  const [endDate, setEndDate] = useState(defaultEnd);
-  const [recurringDays, setRecurringDays] = useState<string[]>([defaultDay]);
+  const [startDate, setStartDate] = useState(draft?.startDate ?? defaultStart);
+  const [sessionCountInput, setSessionCountInput] = useState(draft?.sessionCount ?? '12');
+  const [recurringDays, setRecurringDays] = useState<string[]>(draft?.recurringDays ?? [defaultDay]);
+  // Thứ được thêm tự động vì là thứ khai giảng (người dùng chưa tự chọn); đổi ngày khai giảng thì gỡ lại thứ này.
+  const [autoAddedDay, setAutoAddedDay] = useState<string | null>(draft ? draft.autoAddedDay : defaultDay);
+  // Thứ của ngày khai giảng luôn là một ngày học (buổi đầu tiên), không được bỏ chọn.
+  const startDayCode = startDate ? weekdayCodeOf(startDate) : '';
   const [selectedSlotCode, setSelectedSlotCode] = useState<ScheduleSlotCode>(() => {
+    const fromDraft = SCHEDULE_SLOTS.find((slot) => slot.code === draft?.slotCode);
+    if (fromDraft) return fromDraft.code;
     const matched = findScheduleSlot(prefill?.startTime, prefill?.endTime)
       ?? findScheduleSlot(prefill?.startTime);
     return matched?.code ?? SCHEDULE_SLOTS[0].code;
@@ -169,16 +194,34 @@ export function CreateClassOrSessionModal({
 
   // Bước 3: Phòng tập, sĩ số & HLV
   const [roomId, setRoomId] = useState(
-    prefill?.roomId ? String(prefill.roomId) : (rooms[0]?.id ? String(rooms[0].id) : ''),
+    draft?.roomId ?? (prefill?.roomId ? String(prefill.roomId) : (rooms[0]?.id ? String(rooms[0].id) : '')),
   );
-  const [coachId, setCoachId] = useState(coaches[0]?.id ? String(coaches[0].id) : '');
+  const [coachId, setCoachId] = useState(draft?.coachId ?? (coaches[0]?.id ? String(coaches[0].id) : ''));
   const [capacity, setCapacity] = useState(() => {
+    if (draft?.capacity) return draft.capacity;
     const initialRoom = rooms.find((r) => String(r.id) === String(prefill?.roomId ?? rooms[0]?.id));
     return String(initialRoom?.capacity ?? 15);
   });
 
+  // Tự lưu bản nháp sau mỗi thay đổi; chỉ xóa khi tạo khóa thành công hoặc bấm "Bắt đầu lại".
+  useEffect(() => {
+    if (step === 1 && !name.trim() && !description.trim()) return;
+    writeClassWizardDraft({
+      step, disciplineId, name, level, price, description, startDate,
+      sessionCount: sessionCountInput, recurringDays, autoAddedDay, slotCode: selectedSlotCode,
+      roomId, coachId, capacity,
+    });
+  }, [step, disciplineId, name, level, price, description, startDate, sessionCountInput, recurringDays,
+    autoAddedDay, selectedSlotCode, roomId, coachId, capacity]);
+
   const sortedDays = useMemo(() => sortRecurringDays(recurringDays), [recurringDays]);
   const sortedDaysKey = sortedDays.join(',');
+  const sessionCountError = useMemo(() => validateCourseSessionCount(sessionCountInput, t), [sessionCountInput, t]);
+  // Ngày kết thúc tự tính = ngày học thứ N theo số buổi và các thứ đã chọn.
+  const endDate = useMemo(
+    () => (sessionCountError ? '' : computeCourseEndDate(startDate, sortedDays, Number(sessionCountInput))),
+    [sessionCountError, startDate, sortedDays, sessionCountInput],
+  );
 
   const selectedSlot: ScheduleSlot = useMemo(
     () => SCHEDULE_SLOTS.find((slot) => slot.code === selectedSlotCode) ?? SCHEDULE_SLOTS[0],
@@ -220,8 +263,8 @@ export function CreateClassOrSessionModal({
   );
 
   const step2LocalError = useMemo(
-    () => validateWizardStep2Local({ startDate, endDate, recurringDays: sortedDays }, t),
-    [startDate, endDate, sortedDays, t],
+    () => sessionCountError ?? validateWizardStep2Local({ startDate, endDate, recurringDays: sortedDays }, t),
+    [sessionCountError, startDate, endDate, sortedDays, t],
   );
 
   const capacityInlineError = useMemo(
@@ -309,12 +352,40 @@ export function CreateClassOrSessionModal({
   ]);
 
   const toggleDay = (code: string) => {
+    if (code === startDayCode) return;
     setError(null);
     setAvailabilityState(null);
     setAvailabilityError(null);
     setRecurringDays((prev) =>
       prev.includes(code) ? prev.filter((item) => item !== code) : [...prev, code],
     );
+  };
+
+  /** Xóa bản nháp và đưa wizard về trạng thái ban đầu. */
+  const resetWizard = () => {
+    clearClassWizardDraft();
+    setRestoredAt(null);
+    setStep(1);
+    setMaxStep(1);
+    setError(null);
+    setDisciplineId(
+      prefill?.disciplineId && disciplines.some((d) => d.id === prefill.disciplineId)
+        ? String(prefill.disciplineId)
+        : (disciplines[0]?.id ? String(disciplines[0].id) : ''),
+    );
+    setName('');
+    setLevel('all');
+    setPrice('150000');
+    setDescription('');
+    setStartDate(defaultStart);
+    setSessionCountInput('12');
+    setRecurringDays([defaultDay]);
+    setAutoAddedDay(defaultDay);
+    setSelectedSlotCode(SCHEDULE_SLOTS[0].code);
+    setRoomId(rooms[0]?.id ? String(rooms[0].id) : '');
+    setCoachId(coaches[0]?.id ? String(coaches[0].id) : '');
+    setCapacity(String(rooms[0]?.capacity ?? 15));
+    setOpenReason(null);
   };
 
   const wizardSteps: { id: WizardStep; label: string }[] = [
@@ -324,33 +395,20 @@ export function CreateClassOrSessionModal({
     { id: 4, label: t('Xác nhận', 'Review') },
   ];
 
-  const handleStepTabClick = (targetStep: WizardStep) => {
-    if (busy || targetStep >= step) return;
-    setError(null);
-    setStep(targetStep);
-  };
-
-  const handleBack = () => {
-    if (busy || step === 1) return;
-    setError(null);
-    setStep((prev) => (prev > 1 ? ((prev - 1) as WizardStep) : 1));
-  };
-
-  const handleNext = () => {
-    if (busy) return;
-    setError(null);
-
-    if (step === 1) {
+  /**
+   * Kiểm tra bước `from` để đi tiếp; trả false (kèm lỗi) nếu chưa hợp lệ. Rời Bước 2 sẽ chọn sẵn phòng/HLV
+   * còn trống như khi bấm Tiếp tục.
+   */
+  const canLeaveStep = (from: WizardStep): boolean => {
+    if (from === 1) {
       const step1Error = validateWizardStep1({ name, disciplineId, price }, t);
       if (step1Error) {
         setError(step1Error);
-        return;
+        return false;
       }
-      setStep(2);
-      return;
+      return true;
     }
-
-    if (step === 2) {
+    if (from === 2) {
       const step2Error = validateWizardStep2Advance(
         {
           startDate,
@@ -365,7 +423,7 @@ export function CreateClassOrSessionModal({
       );
       if (step2Error) {
         setError(step2Error);
-        return;
+        return false;
       }
       const nextRoomSelection = pickDefaultRoomAndCapacity({
         rooms: resolvedRooms,
@@ -381,20 +439,48 @@ export function CreateClassOrSessionModal({
           currentCoachId: coachId,
         }),
       );
-      setStep(3);
-      return;
+      return true;
     }
-
-    if (step === 3) {
+    if (from === 3) {
       const step3Error = validateWizardStep3(
         { selectedRoom, selectedCoach, capacity },
         t,
       );
       if (step3Error) {
         setError(step3Error);
+        return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
+  /** Chuyển tới một bước bất kỳ đã từng tới: lùi thì đi thẳng, tiến thì kiểm tra lần lượt các bước ở giữa. */
+  const goToStep = (target: WizardStep) => {
+    if (busy || target === step || target > maxStep) return;
+    setError(null);
+    let current = step;
+    while (current < target) {
+      if (!canLeaveStep(current)) {
+        setStep(current);
         return;
       }
-      setStep(4);
+      current = (current + 1) as WizardStep;
+    }
+    setStep(target);
+  };
+
+  const handleBack = () => {
+    if (busy || step === 1) return;
+    setError(null);
+    setStep((prev) => (prev > 1 ? ((prev - 1) as WizardStep) : 1));
+  };
+
+  const handleNext = () => {
+    if (busy || step === 4) return;
+    setError(null);
+    if (canLeaveStep(step)) {
+      setStep((step + 1) as WizardStep);
     }
   };
 
@@ -431,6 +517,7 @@ export function CreateClassOrSessionModal({
         startTime: selectedSlot.startApi,
         endTime: selectedSlot.endApi,
       });
+      clearClassWizardDraft();
       onSuccess(t('Đã tạo khóa học định kỳ thành công.', 'Recurring course created successfully.'));
     } catch (err) {
       const isConflict =
@@ -555,8 +642,8 @@ export function CreateClassOrSessionModal({
               data-testid={`wizard-step-tab-${item.id}`}
               className={`class-wizard__step${isActive ? ' is-active' : ''}${isDone ? ' is-done' : ''}`}
               aria-current={isActive ? 'step' : undefined}
-              disabled={busy || item.id > step}
-              onClick={() => handleStepTabClick(item.id)}
+              disabled={busy || item.id > maxStep}
+              onClick={() => goToStep(item.id)}
             >
               <span className="class-wizard__step-num" aria-hidden="true">
                 {item.id}
@@ -566,6 +653,20 @@ export function CreateClassOrSessionModal({
           );
         })}
       </nav>
+
+      {restoredAt && (
+        <div className="class-wizard__draft" role="status" data-testid="wizard-draft-banner">
+          <span>
+            {t(
+              `Đã khôi phục bản nháp lưu lúc ${formatDraftTime(restoredAt)}.`,
+              `Restored the draft saved at ${formatDraftTime(restoredAt)}.`,
+            )}
+          </span>
+          <button type="button" className="btn-secondary btn-sm" data-testid="wizard-draft-reset" disabled={busy} onClick={resetWizard}>
+            {t('Bắt đầu lại', 'Start over')}
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="portal-alert portal-alert--error" role="alert" style={{ marginBottom: 12 }}>
@@ -686,6 +787,28 @@ export function CreateClassOrSessionModal({
 
         {step === 2 && (
           <div className="portal-form-stack" data-testid="wizard-step-2">
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="cls-session-count">
+                {t('Số buổi của khóa', 'Sessions in course')}
+              </label>
+              <input
+                id="cls-session-count"
+                data-testid="wizard-session-count"
+                className="portal-input"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={COURSE_SESSION_COUNT_MAX}
+                step={1}
+                value={sessionCountInput}
+                onChange={(e) => {
+                  setSessionCountInput(e.target.value);
+                  setAvailabilityState(null);
+                  setAvailabilityError(null);
+                  setError(null);
+                }}
+              />
+            </div>
             <div className="portal-form-grid-2">
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="cls-start-date">
@@ -695,7 +818,11 @@ export function CreateClassOrSessionModal({
                   id="cls-start-date"
                   value={startDate}
                   onChange={(e) => {
-                    setStartDate(e.target.value);
+                    const next = e.target.value;
+                    const nextDays = daysForStartDate(recurringDays, autoAddedDay, next ? weekdayCodeOf(next) : '');
+                    setStartDate(next);
+                    setRecurringDays(nextDays.days);
+                    setAutoAddedDay(nextDays.autoAddedDay);
                     setAvailabilityState(null);
                     setAvailabilityError(null);
                     setError(null);
@@ -706,18 +833,18 @@ export function CreateClassOrSessionModal({
                 <label className="portal-label" htmlFor="cls-end-date">
                   {t('Ngày kết thúc', 'End date')}
                 </label>
-                <DatePicker
-                  id="cls-end-date"
-                  value={endDate}
-                  onChange={(e) => {
-                    setEndDate(e.target.value);
-                    setAvailabilityState(null);
-                    setAvailabilityError(null);
-                    setError(null);
-                  }}
-                />
+                {/* Khóa: ngày kết thúc luôn bằng ngày học thứ N theo số buổi và các thứ đã chọn. */}
+                <DatePicker id="cls-end-date" value={endDate} onChange={() => undefined} disabled />
               </div>
             </div>
+            <p className="class-wizard__hint" data-testid="wizard-end-date">
+              {endDate
+                ? t(
+                  `${sessionCountInput} buổi, ${sortedDays.length} buổi/tuần ≈ ${Math.ceil(Number(sessionCountInput) / Math.max(1, sortedDays.length))} tuần · ngày kết thúc tự đổi theo số buổi và thứ học`,
+                  `${sessionCountInput} sessions, ${sortedDays.length}/week ≈ ${Math.ceil(Number(sessionCountInput) / Math.max(1, sortedDays.length))} weeks · end date follows the session count and weekdays`,
+                )
+                : t('Ngày kết thúc sẽ tự tính theo số buổi và các thứ học.', 'End date is calculated from the session count and weekdays.')}
+            </p>
 
             <div className="portal-form-group">
               <span className="portal-label">
@@ -729,17 +856,21 @@ export function CreateClassOrSessionModal({
                 aria-label={t('Chọn các thứ trong tuần', 'Select weekdays')}
               >
                 {WIZARD_WEEKDAYS.map((day) => {
-                  const selected = recurringDays.includes(day.code);
+                  const locked = day.code === startDayCode;
+                  const selected = locked || recurringDays.includes(day.code);
                   return (
                     <button
                       key={day.code}
                       type="button"
                       data-testid={`weekday-chip-${day.code}`}
-                      className={`filter-chip${selected ? ' is-active' : ''}`}
+                      className={`filter-chip${selected ? ' is-active' : ''}${locked ? ' is-locked' : ''}`}
                       aria-pressed={selected}
+                      aria-disabled={locked || undefined}
+                      title={locked ? t('Thứ của ngày khai giảng, luôn được chọn', 'Start date weekday, always included') : undefined}
                       onClick={() => toggleDay(day.code)}
                     >
                       {t(day.vi, day.en)}
+                      {locked && <span aria-hidden="true"> · {t('khai giảng', 'start')}</span>}
                     </button>
                   );
                 })}
@@ -969,9 +1100,15 @@ export function CreateClassOrSessionModal({
                       role="radio"
                       aria-checked={selected}
                       data-testid={`wizard-room-${room.id}`}
-                      disabled={!room.available || busy}
+                      disabled={busy}
+                      aria-disabled={!room.available || undefined}
+                      title={!room.available ? t('Bấm để xem lý do', 'Click to see why') : undefined}
                       className={`class-wizard__option${selected ? ' is-selected' : ''}${!room.available ? ' is-unavailable' : ''}`}
                       onClick={() => {
+                        if (!room.available) {
+                          toggleReason(`room-${room.id}`);
+                          return;
+                        }
                         setRoomId(String(room.id));
                         const capNum = Number(capacity.trim());
                         if (!capacity.trim() || !Number.isInteger(capNum) || capNum < 1 || capNum > room.capacity) {
@@ -1001,7 +1138,7 @@ export function CreateClassOrSessionModal({
                           .filter(Boolean)
                           .join(' · ')}
                       </span>
-                      {!room.available && room.conflictReason && (
+                      {!room.available && room.conflictReason && openReason === `room-${room.id}` && (
                         <span className="class-wizard__option-reason">{room.conflictReason}</span>
                       )}
                     </button>
@@ -1072,9 +1209,15 @@ export function CreateClassOrSessionModal({
                       role="radio"
                       aria-checked={selected}
                       data-testid={`wizard-coach-${coach.id}`}
-                      disabled={!coach.available || busy}
+                      disabled={busy}
+                      aria-disabled={!coach.available || undefined}
+                      title={!coach.available ? t('Bấm để xem lý do', 'Click to see why') : undefined}
                       className={`class-wizard__option${selected ? ' is-selected' : ''}${!coach.available ? ' is-unavailable' : ''}`}
                       onClick={() => {
+                        if (!coach.available) {
+                          toggleReason(`coach-${coach.id}`);
+                          return;
+                        }
                         setCoachId(String(coach.id));
                         setError(null);
                       }}
@@ -1090,7 +1233,7 @@ export function CreateClassOrSessionModal({
                       {coach.email && (
                         <span className="class-wizard__option-meta">{coach.email}</span>
                       )}
-                      {!coach.available && coach.conflictReason && (
+                      {!coach.available && coach.conflictReason && openReason === `coach-${coach.id}` && (
                         <span className="class-wizard__option-reason">{coach.conflictReason}</span>
                       )}
                     </button>
@@ -1186,10 +1329,9 @@ export function CreateClassOrSessionModal({
         )}
 
         <div className="class-wizard__footer">
+          {/* Bước 1 chỉ có nút X ở góc để đóng; không lặp thêm nút Hủy. */}
           {step === 1 ? (
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>
-              {t('Hủy', 'Cancel')}
-            </button>
+            <span aria-hidden="true" />
           ) : (
             <button
               type="button"
