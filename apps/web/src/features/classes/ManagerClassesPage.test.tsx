@@ -669,6 +669,12 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     );
     expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Sẽ tạo 5 buổi học');
 
+    // Re-clicking the active slot keeps the availability results instead of wiping them
+    await act(async () => slot2Btn.click());
+    await act(async () => { await Promise.resolve(); });
+    expect(slot2Btn.textContent).toContain('2 phòng · 1 HLV trống');
+    expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Sẽ tạo 5 buổi học');
+
     await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
 
     // Step 3: unavailable room & coach are disabled with exact conflict reasons
