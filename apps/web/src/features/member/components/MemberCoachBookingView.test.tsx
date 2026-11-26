@@ -406,6 +406,48 @@ describe('weekly PT booking after Monday has passed', () => {
     }
   });
 
+  it('lets the member page through dates beyond the first week but never before today', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-26T01:00:00Z')); // 2026-11-26 08:00 UTC+7
+    const host = document.createElement('div');
+    document.body.append(host);
+    const root = createRoot(host);
+    mocks.getCoaches.mockResolvedValue([{ id: 1, fullName: 'HLV A', specialization: 'Gym' }]);
+    mocks.getMyCoachBookings.mockResolvedValue([]);
+    mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: 'GOLD', remainingQuota: 3 });
+    mocks.getAvailableSlots.mockResolvedValue([]);
+    try {
+      await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+      const prev = host.querySelector<HTMLButtonElement>('[aria-label="7 ngày trước"]')!;
+      const next = host.querySelector<HTMLButtonElement>('[aria-label="7 ngày sau"]')!;
+      expect(prev.disabled).toBe(true);
+      const dayNumbers = () => [...host.querySelectorAll<HTMLButtonElement>('button')]
+        .filter((b) => /Tháng \d+/.test(b.textContent ?? ''))
+        .map((b) => b.textContent);
+      expect(dayNumbers()).toHaveLength(7);
+      expect(dayNumbers()[0]).toContain('26');
+      // Tiến 2 tuần: tới 10/12, vượt quá 10 ngày cũ
+      await act(async () => next.click());
+      await act(async () => next.click());
+      expect(dayNumbers()[0]).toContain('10');
+      expect(prev.disabled).toBe(false);
+      const dec10 = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => /10\s*Tháng 12/.test(b.textContent ?? ''))!;
+      await act(async () => dec10.click());
+      expect(mocks.getAvailableSlots).toHaveBeenLastCalledWith(1, '2026-12-10');
+      // Lùi không quá hôm nay
+      await act(async () => prev.click());
+      await act(async () => prev.click());
+      await act(async () => prev.click());
+      expect(dayNumbers()[0]).toContain('26');
+      expect(prev.disabled).toBe(true);
+    } finally {
+      await act(async () => root.unmount());
+      host.remove();
+      vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks();
+    }
+  });
+
   it('uses Asia/Ho_Chi_Minh date for startDate even when UTC is still on the previous calendar day', async () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     vi.useFakeTimers({ toFake: ['Date'] });

@@ -1,6 +1,7 @@
 # Quy chuẩn thiết kế chính — SÖL
 
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
+Quyết định Member (26/11/2026): Đặt PT 1:1 chọn ngày bằng dải 7 ngày có nút ‹ › lùi/tiến theo tuần (không lùi trước hôm nay) và `DatePicker` nhảy tới ngày bất kỳ từ hôm nay; không còn giới hạn 10 ngày cố định.
 Các nút thao tác trong Danh mục vận hành nằm cùng một hàng; bảng cuộn ngang khi cần.
 Quyết định Manager (26/11/2026): Tab `Lịch theo bộ môn` chỉ hiện tên bộ môn, dropdown lọc lịch theo khóa (`Tất cả khóa (N)` hoặc từng khóa đang hoạt động; đổi bộ môn thì về Tất cả) và nút `+ Tạo khóa mới`; không liệt kê thẻ lớp kèm nút `Sửa lớp` ở đây. Sửa lớp qua tab `Danh sách lớp` (nút `Sửa`) hoặc chi tiết buổi học trên lịch.
 Quyết định Manager (26/11/2026): Timetable Quản lý (`Lịch theo bộ môn`, `Lịch tổng cả tuần`) bỏ thao tác bấm ô trống để tạo lịch học và chú thích “Ô trống: bấm để tạo lớp”; tạo khóa học chỉ qua nút ở đầu trang/thanh bộ môn. Nút thao tác của tiêu đề trang bám mép trên để thẳng hàng cụm nút nổi topbar.
