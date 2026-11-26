@@ -8,15 +8,17 @@ spring:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
       minimum-idle: ${DB_POOL_MIN_IDLE:1}
       connection-timeout: 30000
-      idle-timeout: 120000
-      max-lifetime: 300000
-      keepalive-time: 30000
+      validation-timeout: 3000
+      idle-timeout: 45000
+      max-lifetime: 180000
+      keepalive-time: 20000
       data-source-properties:
         sslmode: ${DB_SSL_MODE:require}
         sslrootcert: ${DB_SSL_ROOT_CERT:}
         # An toàn khi dùng transaction pooler; ưu tiên session pooler.
         prepareThreshold: 0
         tcpKeepAlive: true
+        socketTimeout: 60
   jpa:
     properties:
       hibernate:
