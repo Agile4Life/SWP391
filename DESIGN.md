@@ -2,6 +2,7 @@
 
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
 Các nút thao tác trong Danh mục vận hành nằm cùng một hàng; bảng cuộn ngang khi cần.
+Quyết định Manager (26/11/2026): Tab `Lịch theo bộ môn` chỉ hiện tên bộ môn, số khóa đang hoạt động và nút `+ Tạo khóa mới`; không liệt kê thẻ lớp kèm nút `Sửa lớp` ở đây. Sửa lớp qua tab `Danh sách lớp` (nút `Sửa`) hoặc chi tiết buổi học trên lịch.
 
 Phạm vi 3 bộ môn (`Gym`, `Boxing`, `Yoga`), **đa lớp `active`/bộ môn không trùng ngày & slot**, **wizard tạo khóa học 4 bước kèm tiền kiểm tra khả dụng**, **hệ thống lịch 5 Slot cố định (`07:00 – 19:30`)**, thẻ sự kiện viền mảnh có tên HLV, gỡ hoàn toàn đặt sân, ẩn 3D, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò (25/11/2026 — **ghi đè** mục Gym-only 22–23/11/2026 và các mục cũ bên dưới về đặt sân, bộ môn ngoài phạm vi, 3D, quy tắc 1 lớp duy nhất/môn cũ, lưới giờ liên tục cũ, công tắc `08:00–20:00 / Cả ngày`, viền dày trái `border-left: 4px`, `TimePicker` tự do trong xếp lịch, 15 nút giờ PT Sáng/Chiều/Tối và giới hạn bắt buộc HLV nghỉ giữa các slot liền kề; các tính năng tắt qua cờ legacy vẫn giữ nguyên trạng thái tắt):
 - **Hệ thống lịch tuần 5 Slot cố định (`07:00 – 19:30`), thẻ sự kiện & bộ chọn Slot**:

@@ -335,7 +335,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
 
     const yogaChip = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!;
     await act(async () => yogaChip.click());
-    expect(host.querySelector('[data-testid="discipline-active-class-bar"]')?.textContent).toContain('Hatha Yoga Nền Tảng');
+    expect(host.querySelector('[data-testid="discipline-active-class-bar"]')?.textContent).toContain('1 khóa đang hoạt động');
     const yogaEvents = host.querySelectorAll<HTMLButtonElement>('.mcal__event');
     expect(yogaEvents).toHaveLength(1);
     expect(yogaEvents[0].textContent).toContain('Hatha Yoga Nền Tảng');
@@ -481,13 +481,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
 
     const activeBar = host.querySelector('[data-testid="discipline-active-class-bar"]')!;
     expect(activeBar.textContent).toContain('2 khóa đang hoạt động');
-    expect(activeBar.textContent).toContain('Full Body Strength 101');
-    expect(activeBar.textContent).toContain('Hypertrophy Evening');
-    expect(activeBar.textContent).toContain('Slot 1 · 07:00 – 09:30');
-    expect(activeBar.textContent).toContain('Slot 5 · 17:00 – 19:30');
     expect(activeBar.textContent).not.toContain('Thêm buổi');
-    expect(activeBar.querySelector('[data-testid="edit-discipline-class-1"]')?.textContent).toBe('Sửa lớp');
-    expect(activeBar.querySelector('[data-testid="edit-discipline-class-11"]')?.textContent).toBe('Sửa lớp');
+    // Sửa lớp nằm ở tab Danh sách lớp và chi tiết buổi học, không lặp ở thanh bộ môn.
+    expect(activeBar.textContent).not.toContain('Sửa lớp');
     expect(activeBar.querySelector('[data-testid="discipline-create-class-btn"]')?.textContent).toBe('+ Tạo khóa mới');
 
     // Buổi của lớp inactive (classId 99) không bị cộng vào chip Gym (chỉ đếm 2 buổi của 2 lớp active)
@@ -745,7 +741,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
 
     await renderPage();
 
-    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="edit-discipline-class-1"]')!.click());
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((tab) => tab.textContent?.includes('Danh sách lớp'))!.click());
+    const row = [...host.querySelectorAll('tr')].find((tr) => tr.textContent?.includes('Full Body Strength 101'))!;
+    await act(async () => [...row.querySelectorAll<HTMLButtonElement>('button')].find((btn) => btn.textContent === 'Sửa')!.click());
     const capInput = document.querySelector<HTMLInputElement>('#edit-cls-cap')!;
     const nameInput = document.querySelector<HTMLInputElement>('#edit-cls-name')!;
     const form = document.querySelector<HTMLFormElement>('dialog form')!;
