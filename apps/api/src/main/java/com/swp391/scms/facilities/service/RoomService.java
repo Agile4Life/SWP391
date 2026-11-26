@@ -29,7 +29,7 @@ public class RoomService {
         return rooms.findAllByOrderByNameAsc().stream().map(RoomDto::of).toList();
     }
 
-    /** Tạo phòng. */
+    /** Tạo phòng; chỉ dùng nội bộ cho CatalogSeeder, không mở qua API (danh mục phòng cố định). */
     @Transactional
     public RoomDto create(RoomRequest request) {
         Room room = new Room();
@@ -79,21 +79,4 @@ public class RoomService {
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.scheduling.repository.GymClassRepository classes;
-
-    @org.springframework.beans.factory.annotation.Autowired(required = false)
-    private com.swp391.scms.facilities.repository.EquipmentRepository equipment;
-
-    /**
-     * Xóa phòng chưa từng được dùng cho lớp học hay thiết bị; phòng đã từng sử dụng được giữ lại (chuyển trạng
-     * thái sang closed thay vì xóa).
-     */
-    @Transactional
-    public void delete(Long id) {
-        Room room = rooms.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.room", id));
-        if ((classes != null && classes.existsByRoomId(id))
-                || (equipment != null && equipment.existsByRoomId(id))) {
-            throw new com.swp391.scms.common.exception.ConflictException("ROOM_IN_USE", "catalog.room.in_use", null, null);
-        }
-        rooms.delete(room);
-    }
 }

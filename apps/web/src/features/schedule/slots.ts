@@ -210,26 +210,3 @@ export function isSlotPast(
 ): boolean {
   return date < today || (date === today && slot.endMinutes <= nowMinutes);
 }
-
-/**
- * Vị trí phần trăm (`0..100`) của vạch thời gian hiện tại trên lưới 5 hàng Slot.
- * Trả về `null` khi ngoài khung `07:00 – 19:30`.
- */
-export function nowSlotPercent(nowMinutes: number): number | null {
-  if (nowMinutes < SCHEDULE_DAY_START_MINUTES || nowMinutes >= SCHEDULE_DAY_END_MINUTES) {
-    return null;
-  }
-  const rowStep = 100 / SCHEDULE_SLOT_COUNT;
-  for (let index = 0; index < SCHEDULE_SLOTS.length; index += 1) {
-    const slot = SCHEDULE_SLOTS[index];
-    if (nowMinutes >= slot.startMinutes && nowMinutes < slot.endMinutes) {
-      const progress = (nowMinutes - slot.startMinutes) / (slot.endMinutes - slot.startMinutes);
-      return (index + progress) * rowStep;
-    }
-    const nextSlot = SCHEDULE_SLOTS[index + 1];
-    if (nextSlot && nowMinutes >= slot.endMinutes && nowMinutes < nextSlot.startMinutes) {
-      return (index + 1) * rowStep;
-    }
-  }
-  return null;
-}

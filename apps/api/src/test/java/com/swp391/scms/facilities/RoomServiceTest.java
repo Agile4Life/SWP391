@@ -78,36 +78,6 @@ class RoomServiceTest {
         assertEquals("STANDARD", dto.tier());
     }
 
-    @Test void deleteRemovesRoomNobodyUses() {
-        Room room = new Room();
-        var classes = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.GymClassRepository.class);
-        var equipment = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.EquipmentRepository.class);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "classes", classes);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "equipment", equipment);
-        when(rooms.findById(1L)).thenReturn(Optional.of(room));
-        service.delete(1L);
-        org.mockito.Mockito.verify(rooms).delete(room);
-    }
-
-    @Test void deleteBlockedWhenClassOrEquipmentUsesRoom() {
-        var classes = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.GymClassRepository.class);
-        var equipment = org.mockito.Mockito.mock(com.swp391.scms.facilities.repository.EquipmentRepository.class);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "classes", classes);
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "equipment", equipment);
-        when(rooms.findById(1L)).thenReturn(Optional.of(new Room()));
-        when(classes.existsByRoomId(1L)).thenReturn(true);
-        assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
-        when(classes.existsByRoomId(1L)).thenReturn(false);
-        when(equipment.existsByRoomId(1L)).thenReturn(true);
-        assertThrows(com.swp391.scms.common.exception.ConflictException.class, () -> service.delete(1L));
-        org.mockito.Mockito.verify(rooms, org.mockito.Mockito.never()).delete(any(Room.class));
-    }
-
-    @Test void deleteMissingRoomThrowsNotFound() {
-        when(rooms.findById(9L)).thenReturn(Optional.empty());
-        assertThrows(ResourceNotFoundException.class, () -> service.delete(9L));
-    }
-
     /** Kiểm thử P2-BE-23: từ chối giảm sức chứa phòng thấp hơn sức chứa của lớp đang active trong phòng. */
     @Test
     void updateRejectsCapacityBelowMaxActiveClassCapacity() {

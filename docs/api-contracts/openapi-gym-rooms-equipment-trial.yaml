@@ -12,17 +12,7 @@ info:
 servers:
   - url: /api/v1
 paths:
-  /rooms:
-    post:
-      summary: Create room with tier (CENTER_MANAGER, MANAGER)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/RoomRequest' }
-      responses:
-        '201': { description: 'ApiResponse.data = Room (includes tier)' }
-        '400': { description: Validation error, e.g. tier not STANDARD|PLATINUM }
+  # /rooms POST và /rooms/{id} DELETE đã gỡ (26/11/2026): danh mục phòng cố định, chỉ sửa; gọi vào trả 405.
   /rooms/{id}:
     put:
       summary: Update room including tier (CENTER_MANAGER, MANAGER)

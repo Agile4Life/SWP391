@@ -8,7 +8,6 @@ import {
   formatSlotShort,
   isSlotPast,
   isWithinScheduleSlots,
-  nowSlotPercent,
   resolveSlotIndex,
 } from './slots';
 
@@ -77,13 +76,4 @@ describe('canonical 5-slot schedule helpers', () => {
     expect(isSlotPast('2026-11-25', slot1, '2026-11-25', 570)).toBe(true);
   });
 
-  it('maps current time into 0..100 percent of the 5-slot grid and hides outside 07:00–19:30', () => {
-    expect(nowSlotPercent(6 * 60 + 59)).toBeNull();
-    expect(nowSlotPercent(7 * 60)).toBe(0);
-    expect(nowSlotPercent(8 * 60 + 15)).toBeCloseTo(10); // midpoint of Slot 1 (0..20%)
-    expect(nowSlotPercent(9 * 60 + 35)).toBeCloseTo(20); // 15-min break between Slot 1 & 2
-    expect(nowSlotPercent(10 * 60 + 30)).toBeCloseTo(30); // midpoint of Slot 2 (20..40%)
-    expect(nowSlotPercent(19 * 60 + 30)).toBeNull();
-    expect(nowSlotPercent(20 * 60)).toBeNull();
-  });
 });

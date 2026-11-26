@@ -8,7 +8,6 @@ import {
   formatSlotLabel,
   isSlotPast,
   isWithinScheduleSlots,
-  nowSlotPercent,
   resolveSlotIndex,
 } from './slots';
 import {
@@ -351,7 +350,6 @@ export function WeeklyTimetable({
               const busyEvents = dayEvents.filter((event) => event.tone !== 'cancelled');
               const positioned = layoutDaySlotEvents(dayEvents);
               const grouped = maxVisibleLanes ? groupVisibleLanes(positioned, maxVisibleLanes) : { visible: positioned, overflows: [] };
-              const nowPct = day === today ? nowSlotPercent(nowMinutes) : null;
               const weekend = days.indexOf(day) >= 5;
               return (
                 <div
@@ -390,14 +388,6 @@ export function WeeklyTimetable({
                       </button>
                     );
                   })}
-
-                  {nowPct !== null && (
-                    <span
-                      className="mcal__now"
-                      aria-hidden="true"
-                      style={{ top: `${nowPct}%` }}
-                    />
-                  )}
 
                   {grouped.visible.map(({ event, lane, lanes, topPct, heightPct }) => {
                     const slotText = formatSlotLabel(event.startTime, event.endTime);

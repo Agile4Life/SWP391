@@ -309,22 +309,27 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     vi.unstubAllGlobals();
   });
 
-  const renderPage = async () => {
+  const renderPage = async (tab?: string) => {
     await act(async () => {
       root.render(<ManagerClassesPage />);
     });
     await act(async () => {
       await Promise.resolve();
     });
+    // Tab mặc định là Lịch tổng cả tuần; test cần tab khác thì bấm chuyển.
+    if (tab) {
+      const target = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].find((b) => b.textContent?.includes(tab))!;
+      await act(async () => target.click());
+    }
   };
 
   it('renders 3 independent tabs without duplicate "All disciplines" chip or redundant filter dropdowns', async () => {
-    await renderPage();
+    await renderPage('Lịch theo bộ môn');
 
     const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].map((b) => b.textContent?.trim());
     expect(tabs).toHaveLength(3);
-    expect(tabs[0]).toBe('Lịch theo bộ môn');
-    expect(tabs[1]).toBe('Lịch tổng cả tuần');
+    expect(tabs[0]).toBe('Lịch tổng cả tuần');
+    expect(tabs[1]).toBe('Lịch theo bộ môn');
     expect(tabs[2]).toContain('Danh sách lớp');
 
     const chips = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="discipline-filter-chips"] button')];
@@ -341,7 +346,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(yogaEvents[0].textContent).toContain('Hatha Yoga Nền Tảng');
     expect(yogaEvents[0].querySelector('.mcal__event-coach')?.textContent).toBe('HLV Lan');
 
-    const allWeekTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][1];
+    const allWeekTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][0];
     await act(async () => allWeekTab.click());
     const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]');
     expect(overflowBtn).not.toBeNull();
@@ -473,7 +478,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
       },
     ]);
 
-    await renderPage();
+    await renderPage('Lịch theo bộ môn');
 
     const headerBtn = host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!;
     expect(headerBtn.textContent?.trim()).toBe('+ Tạo lớp học');
@@ -489,12 +494,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     // Buổi của lớp inactive (classId 99) không bị cộng vào chip Gym (chỉ đếm 2 buổi của 2 lớp active)
     expect(host.querySelector('[data-testid="discipline-chip-1"]')?.textContent).toContain('Gym (2)');
 
-    // Ô trống trên Tab 1 vẫn bấm được để mở trình tạo khóa học dù bộ môn đã có 2 lớp active
-    const freeSlotBtn = host.querySelector<HTMLButtonElement>('.mcal__slot:not(.is-past)');
-    expect(freeSlotBtn).not.toBeNull();
-    await act(async () => freeSlotBtn!.click());
-    expect(document.querySelector('[data-testid="class-wizard-stepper"]')).not.toBeNull();
-    await act(async () => document.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
+    // Timetable của Manager chỉ để xem: ô trống không còn mở trình tạo khóa học.
+    expect(host.querySelector('.mcal__slot:not(.is-past)')).toBeNull();
+    expect(host.textContent).not.toContain('bấm để tạo lớp');
 
     // Tab 3 Danh sách lớp cũng không còn nút "+ Thêm buổi"
     const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
@@ -779,7 +781,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
   });
 
   it('opens full session detail modal with room, coach, capacity, enrolled students and action buttons when clicking a block', async () => {
-    await renderPage();
+    await renderPage('Lịch theo bộ môn');
 
     const yogaChip = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!;
     await act(async () => yogaChip.click());
@@ -805,7 +807,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
   it('opens detail modal directly when selecting a hidden class from "+N lớp" overflow list on Full Week tab', async () => {
     await renderPage();
 
-    const allWeekTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][1];
+    const allWeekTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][0];
     await act(async () => allWeekTab.click());
 
     const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]')!;
@@ -833,7 +835,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
       endTime: '16:45:00',
       status: 'scheduled',
     });
-    await renderPage();
+    await renderPage('Lịch theo bộ môn');
 
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!.click());
     await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event')!.click());

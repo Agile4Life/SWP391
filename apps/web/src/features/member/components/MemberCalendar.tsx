@@ -13,7 +13,6 @@ import {
   findScheduleSlot,
   formatSlotLabel,
   formatSlotShort,
-  nowSlotPercent,
 } from '../../schedule/slots';
 import {
   addDays, blockClass, layoutDaySlotEvents, mondayOf, parseISODate, shortDate, toMinutes,
@@ -506,7 +505,6 @@ export function MemberCalendar() {
             </div>
             {visibleDays.map((day) => {
               const positioned = layoutDaySlotEvents(eventsByDay.get(day) ?? []);
-              const nowPct = day === today ? nowSlotPercent(now.minutes) : null;
               return (
                 <div
                   key={day}
@@ -514,9 +512,6 @@ export function MemberCalendar() {
                   role="group"
                   aria-label={`${dayLabel(day)} ${shortDate(day)}`}
                 >
-                  {nowPct !== null && (
-                    <span className="mcal__now" aria-hidden="true" style={{ top: `${nowPct}%` }} />
-                  )}
                   {positioned.map(({ event, lane, lanes, topPct, heightPct }) => (
                     <button
                       key={event.id}

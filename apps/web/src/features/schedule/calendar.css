@@ -121,8 +121,6 @@
 .mcal__slot:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: -2px; z-index: 1; }
 
 /* Vạch giờ hiện tại: chấm tròn rỗng + đường kẻ */
-.mcal__now { position: absolute; left: 0; right: 0; z-index: 1; height: 2px; margin-top: -1px; background: var(--portal-paper); pointer-events: none; }
-.mcal__now::before { content: ''; position: absolute; left: -6px; top: -5px; width: 8px; height: 8px; border: 2px solid var(--portal-paper); border-radius: 50%; background: var(--portal-salmon); }
 
 /* Khối lịch */
 .mcal__event {

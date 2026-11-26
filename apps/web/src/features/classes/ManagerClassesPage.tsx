@@ -53,7 +53,7 @@ export function ManagerClassesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [view, setView] = useState<ViewTab>('by_discipline');
+  const [view, setView] = useState<ViewTab>('week_all');
   const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<number | null>(null);
 
@@ -231,10 +231,6 @@ export function ManagerClassesPage() {
     [t],
   );
 
-  const schedulableLegend = useMemo<TimetableLegendItem[]>(
-    () => [...baseLegend, { tone: 'free', label: t('Ô trống: bấm để tạo lớp', 'Free slot: click to create class') }],
-    [baseLegend, t],
-  );
 
   const canCreateClass = disciplines.length > 0;
 
@@ -302,20 +298,20 @@ export function ManagerClassesPage() {
         <button
           type="button"
           role="tab"
-          aria-selected={view === 'by_discipline'}
-          className={`portal-tab${view === 'by_discipline' ? ' active' : ''}`}
-          onClick={() => setView('by_discipline')}
-        >
-          {t('Lịch theo bộ môn', 'By discipline')}
-        </button>
-        <button
-          type="button"
-          role="tab"
           aria-selected={view === 'week_all'}
           className={`portal-tab${view === 'week_all' ? ' active' : ''}`}
           onClick={() => setView('week_all')}
         >
           {t('Lịch tổng cả tuần', 'Full week overview')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={view === 'by_discipline'}
+          className={`portal-tab${view === 'by_discipline' ? ' active' : ''}`}
+          onClick={() => setView('by_discipline')}
+        >
+          {t('Lịch theo bộ môn', 'By discipline')}
         </button>
         <button
           type="button"
@@ -428,13 +424,8 @@ export function ManagerClassesPage() {
             onWeekChange={setWeekStart}
             onEventClick={handleOpenEventDetail}
             selectedId={detailSession ? String(detailSession.id) : undefined}
-            onSlotClick={
-              activeDisciplineId !== null
-                ? (slot) => setCreateModal({ ...slot, disciplineId: activeDisciplineId })
-                : undefined
-            }
             maxVisibleLanes={2}
-            legend={canCreateClass ? schedulableLegend : baseLegend}
+            legend={baseLegend}
             legendNote={t('Bấm vào từng buổi học để xem chi tiết lớp, phòng, HLV và danh sách học viên.', 'Click any session to inspect class, room, coach, and enrolled members.')}
             emptyLabel={
               activeDiscipline
@@ -469,9 +460,8 @@ export function ManagerClassesPage() {
             onWeekChange={setWeekStart}
             onEventClick={handleOpenEventDetail}
             selectedId={detailSession ? String(detailSession.id) : undefined}
-            onSlotClick={canCreateClass ? (slot) => setCreateModal({ ...slot }) : undefined}
             maxVisibleLanes={2}
-            legend={canCreateClass ? schedulableLegend : baseLegend}
+            legend={baseLegend}
             legendNote={t(
               'Khi khung giờ có từ 3 bộ môn học cùng lúc, lịch tự gom thành nút "+N lớp" để không đè nhau — bấm vào để xem đủ và chọn buổi.',
               'Slots with 3+ concurrent disciplines group into "+N classes" to prevent overlap — click to inspect every session.',
