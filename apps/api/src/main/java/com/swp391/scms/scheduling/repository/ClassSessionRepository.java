@@ -37,13 +37,25 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findByGymClassIdOrderBySessionDateAscStartTimeAsc(Long classId);
 
     /**
-     * Lấy mọi buổi kèm thông tin lớp, bộ môn, HLV và phòng, sắp theo ngày và giờ.
+     * Tải danh sách buổi học của nhiều lớp trong một truy vấn, sắp theo ngày và giờ bắt đầu.
+     */
+    @Query("""
+            select s from ClassSession s
+            join fetch s.gymClass c
+            where c.id in :classIds
+            order by s.sessionDate asc, s.startTime asc
+            """)
+    List<ClassSession> findByGymClassIdInOrderBySessionDateAscStartTimeAsc(@Param("classIds") java.util.Collection<Long> classIds);
+
+    /**
+     * Lấy mọi buổi kèm thông tin lớp, bộ môn, HLV (và tài khoản HLV) và phòng, sắp theo ngày và giờ.
      */
     @Query("""
             select s from ClassSession s
             join fetch s.gymClass c
             join fetch c.discipline d
             join fetch c.coach co
+            join fetch co.user u
             join fetch c.room r
             order by s.sessionDate asc, s.startTime asc
             """)
@@ -51,25 +63,39 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
     List<ClassSession> findAllWithDetails();
 
     /**
-     * Lọc buổi học trong bộ nhớ theo khoảng ngày, bộ môn và HLV (tham số null thì bỏ qua điều kiện đó).
-     *
-     * SCRUM-72 BR-06: tra cứu lịch với bộ lọc tùy chọn theo khoảng ngày, bộ môn và HLV. Tránh PSQLException
-     * của PostgreSQL ("could not determine data type of parameter $1") với (? is null).
+     * Truy vấn buổi học có lọc trực tiếp tại database theo khoảng ngày, bộ môn và HLV. Dùng ngày mốc xa và giá
+     * trị âm (-1L) làm sentinel thay cho tham số null để tránh lỗi PostgreSQL "could not determine data type".
+     */
+    @Query("""
+            select s from ClassSession s
+            join fetch s.gymClass c
+            join fetch c.discipline d
+            join fetch c.coach co
+            join fetch co.user u
+            join fetch c.room r
+            where s.sessionDate >= :fromDate
+              and s.sessionDate <= :toDate
+              and (:disciplineId < 0 or d.id = :disciplineId)
+              and (:coachId < 0 or co.userId = :coachId)
+            order by s.sessionDate asc, s.startTime asc
+            """)
+    List<ClassSession> findFilteredWithDetails(@Param("fromDate") LocalDate fromDate,
+                                               @Param("toDate") LocalDate toDate,
+                                               @Param("disciplineId") long disciplineId,
+                                               @Param("coachId") long coachId);
+
+    /**
+     * Tra cứu lịch với bộ lọc tùy chọn theo khoảng ngày, bộ môn và HLV, đẩy toàn bộ điều kiện xuống JPQL.
      */
     default List<ClassSession> searchSessions(LocalDate fromDate,
                                               LocalDate toDate,
                                               Long disciplineId,
                                               Long coachId) {
-        return findAllWithDetails().stream()
-                .filter(s -> fromDate == null || (s.getSessionDate() != null && !s.getSessionDate().isBefore(fromDate)))
-                .filter(s -> toDate == null || (s.getSessionDate() != null && !s.getSessionDate().isAfter(toDate)))
-                .filter(s -> disciplineId == null || (s.getGymClass() != null
-                        && s.getGymClass().getDiscipline() != null
-                        && disciplineId.equals(s.getGymClass().getDiscipline().getId())))
-                .filter(s -> coachId == null || (s.getGymClass() != null
-                        && s.getGymClass().getCoach() != null
-                        && coachId.equals(s.getGymClass().getCoach().getUserId())))
-                .toList();
+        return findFilteredWithDetails(
+                fromDate != null ? fromDate : LocalDate.of(1900, 1, 1),
+                toDate != null ? toDate : LocalDate.of(9999, 12, 31),
+                disciplineId != null ? disciplineId : -1L,
+                coachId != null ? coachId : -1L);
     }
 
     /** Đếm số bản ghi có gymClassId = tham số và status = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
@@ -119,13 +145,28 @@ public interface ClassSessionRepository extends JpaRepository<ClassSession, Long
 
     /** Xóa các bản ghi có gymClassId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     void deleteByGymClassId(Long classId);
-    @Query("select s from ClassSession s where s.status = 'scheduled' and s.sessionDate = :date " +
+    @Query("select s from ClassSession s join fetch s.gymClass c where s.status = 'scheduled' and s.sessionDate = :date " +
             "and (exists (select e.id from ClassEnrollment e where e.gymClass = s.gymClass " +
             "and e.member.userId = :memberId and e.status = 'booked') " +
             "or exists (select b.id from SessionBooking b where b.session = s " +
             "and b.member.userId = :memberId and b.status = 'booked'))")
     /** Buổi đã xếp trong ngày mà hội viên đã ghi danh lớp hoặc đặt chỗ, dùng để chặn trùng lịch. */
     List<ClassSession> findActiveByMemberAndDate(@Param("memberId") Long memberId, @Param("date") LocalDate date);
+
+    @Query("""
+            select s from ClassSession s
+            join fetch s.gymClass c
+            where s.status = 'scheduled'
+              and s.sessionDate between :fromDate and :toDate
+              and (exists (select e.id from ClassEnrollment e where e.gymClass = s.gymClass
+                           and e.member.userId = :memberId and e.status = 'booked')
+                   or exists (select b.id from SessionBooking b where b.session = s
+                           and b.member.userId = :memberId and b.status = 'booked'))
+            """)
+    /** Buổi đã xếp trong khoảng ngày mà hội viên đã ghi danh lớp hoặc đặt chỗ, dùng để chặn trùng lịch theo khóa. */
+    List<ClassSession> findActiveByMemberBetween(@Param("memberId") Long memberId,
+                                                 @Param("fromDate") LocalDate fromDate,
+                                                 @Param("toDate") LocalDate toDate);
 
     /**
      * Các buổi đã xếp của lớp khác vào {@code date} chồng lên {@code [start, end)} mà một thành viên của buổi

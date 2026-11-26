@@ -7,6 +7,9 @@ export type Language = 'vi' | 'en';
 export const LANGUAGE_STORAGE_KEY = 'scms_lang';
 
 const listeners = new Set<() => void>();
+let fallbackLanguage: Language = 'vi';
+let storageWriteFailed = false;
+let storageListenerAttached = false;
 
 /** Chuẩn hóa mã ngôn ngữ: bắt đầu bằng "en" thì là tiếng Anh, còn lại mặc định tiếng Việt. */
 function normalizeLanguage(value: string | null | undefined): Language {
@@ -16,15 +19,19 @@ function normalizeLanguage(value: string | null | undefined): Language {
   return 'vi';
 }
 
-/** Đọc ngôn ngữ đã lưu trong localStorage (mặc định tiếng Việt, kể cả khi không có window hoặc storage lỗi). */
+/** Đọc ngôn ngữ đã lưu trong localStorage; khi storage bị chặn/lỗi thì rơi về fallbackLanguage trong bộ nhớ. */
 export function getLanguage(): Language {
   if (typeof window === 'undefined') {
-    return 'vi';
+    return fallbackLanguage;
   }
   try {
-    return normalizeLanguage(window.localStorage.getItem(LANGUAGE_STORAGE_KEY));
+    const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    if (storageWriteFailed) {
+      return fallbackLanguage;
+    }
+    return normalizeLanguage(stored);
   } catch {
-    return 'vi';
+    return fallbackLanguage;
   }
 }
 
@@ -36,14 +43,16 @@ function applyDocumentLanguage(lang: Language): void {
   }
 }
 
-/** Đổi ngôn ngữ: lưu vào localStorage (bỏ qua lỗi storage), áp lên tài liệu và báo cho các listener. */
+/** Đổi ngôn ngữ: lưu vào localStorage (rơi về fallbackLanguage khi storage lỗi), áp lên tài liệu và báo cho các listener. */
 export function setLanguage(next: Language): void {
   const normalized = normalizeLanguage(next);
+  fallbackLanguage = normalized;
   if (typeof window !== 'undefined') {
     try {
       window.localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
+      storageWriteFailed = false;
     } catch {
-      // Bỏ qua lỗi lưu trữ trong các môi trường bị hạn chế
+      storageWriteFailed = true;
     }
   }
   applyDocumentLanguage(normalized);
@@ -53,25 +62,29 @@ export function setLanguage(next: Language): void {
   }
 }
 
-/** Đăng ký listener nhận thay đổi ngôn ngữ (cả từ tab khác qua sự kiện storage); trả về hàm hủy đăng ký. */
+function onLanguageStorage(event: StorageEvent): void {
+  if (event.key === null || event.key === LANGUAGE_STORAGE_KEY) {
+    storageWriteFailed = false;
+    const next = getLanguage();
+    fallbackLanguage = next;
+    applyDocumentLanguage(next);
+    listeners.forEach((listener) => listener());
+  }
+}
+
+/** Đăng ký listener nhận thay đổi ngôn ngữ (cả từ tab khác qua một listener storage dùng chung); trả về hàm hủy đăng ký. */
 export function subscribeLanguage(listener: () => void): () => void {
   listeners.add(listener);
-  if (typeof window !== 'undefined') {
-    // Tab khác đổi ngôn ngữ thì áp lại lên tài liệu và báo listener.
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === null || event.key === LANGUAGE_STORAGE_KEY) {
-        applyDocumentLanguage(getLanguage());
-        listener();
-      }
-    };
-    window.addEventListener('storage', onStorage);
-    return () => {
-      listeners.delete(listener);
-      window.removeEventListener('storage', onStorage);
-    };
+  if (!storageListenerAttached && typeof window !== 'undefined') {
+    window.addEventListener('storage', onLanguageStorage);
+    storageListenerAttached = true;
   }
   return () => {
     listeners.delete(listener);
+    if (listeners.size === 0 && storageListenerAttached && typeof window !== 'undefined') {
+      window.removeEventListener('storage', onLanguageStorage);
+      storageListenerAttached = false;
+    }
   };
 }
 
@@ -83,10 +96,10 @@ export function useLanguage() {
     applyDocumentLanguage(lang);
   }, [lang]);
 
-  // Đảo giữa tiếng Việt và tiếng Anh.
-  const toggleLanguage = () => {
-    setLanguage(lang === 'vi' ? 'en' : 'vi');
-  };
+  // Đảo giữa tiếng Việt và tiếng Anh (giữ ổn định tham chiếu giữa các lần render).
+  const toggleLanguage = useCallback(() => {
+    setLanguage(getLanguage() === 'vi' ? 'en' : 'vi');
+  }, []);
 
   return {
     lang,
@@ -208,7 +221,7 @@ function translateDomSubtree(root: ParentNode, lang: Language): void {
             if (!originalTextMap.has(current)) {
               originalTextMap.set(current, raw);
             }
-            current.nodeValue = raw.replace(trimmed, mappedEn);
+            current.nodeValue = raw.replace(trimmed, () => mappedEn);
           }
         } else {
           const original = originalTextMap.get(current);
@@ -278,6 +291,9 @@ export const getMissingTranslations = (): readonly string[] => [...missingTransl
 /** Xóa danh sách chuỗi thiếu bản dịch. */
 export const clearMissingTranslations = () => missingTranslations.clear();
 
+/** Chỉ khớp ký tự có dấu tiếng Việt và chữ Đ/đ (không khớp nhầm Ö trong tên thương hiệu SÖL). */
+const VIETNAMESE_CHAR_RE = /[ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚÝàáâãèéêìíòóôõùúýĂăĐđĨĩŨũƠơƯư\u1EA0-\u1EF9]/u;
+
 /**
  * Dịch chuỗi thuộc mã nguồn sang tiếng Anh; chuỗi thiếu bản dịch được ghi nhận (và cảnh báo khi chạy dev).
  * Chỉ gọi cho văn bản thuộc mã nguồn; nội dung từ API và dữ liệu người dùng nhập phải giữ nguyên văn.
@@ -285,12 +301,12 @@ export const clearMissingTranslations = () => missingTranslations.clear();
 export function translateSource(vi: string, en?: string, lang: Language = getLanguage()): string {
   const key = vi.trim();
   const translated = en ?? (Object.hasOwn(englishLabels, key) ? englishLabels[key] : undefined);
-  if (lang === 'en' && translated === undefined && /[\u00c0-\u1ef9\u0110\u0111]/u.test(key)) {
+  if (lang === 'en' && translated === undefined && VIETNAMESE_CHAR_RE.test(key)) {
     if (!missingTranslations.has(key)) {
       missingTranslations.add(key);
       if (import.meta.env.DEV) console.warn('[i18n] Missing English UI translation:', key);
     }
   }
-  return lang === 'en' && translated !== undefined ? vi.replace(key, translated) : vi;
+  return lang === 'en' && translated !== undefined ? vi.replace(key, () => translated) : vi;
 }
 export const getIntlLocale = (lang: Language = getLanguage()) => lang === 'en' ? 'en-GB' : 'vi-VN';

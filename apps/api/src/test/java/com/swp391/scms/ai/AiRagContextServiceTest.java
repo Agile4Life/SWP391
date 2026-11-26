@@ -12,6 +12,7 @@ import com.swp391.scms.facilities.dto.CatalogResponses.PackageDto;
 import com.swp391.scms.facilities.entity.MembershipPackage;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
 import com.swp391.scms.users.entity.Member;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -21,12 +22,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 /** Bộ kiểm thử cho service AiRagContextService (ai rag context service). */
@@ -61,6 +68,10 @@ class AiRagContextServiceTest {
     /** Kiểm thử: ngữ cảnh RAG gồm danh mục và dữ liệu hội viên đã xác thực. */
     @Test
     void buildRagContext_IncludesCatalogAndAuthenticatedMemberData() {
+        ReflectionTestUtils.setField(ragContextService, "clock", Clock.fixed(
+                Instant.parse("2026-11-13T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh")));
+        LocalDate today = LocalDate.of(2026, 11, 13);
+
         PackageDto pkg = new PackageDto(1L, "SÖL Signature", "Full gym & yoga", BigDecimal.valueOf(499000), 30, 12, "active");
         CoachDto coach = new CoachDto(10L, "Trần Minh", "Strength & Conditioning", "10 năm kinh nghiệm", "NASM-CPT", null);
         when(catalogService.getCatalog()).thenReturn(new CatalogDto(List.of(pkg), List.of(coach), List.of()));
@@ -79,7 +90,8 @@ class AiRagContextServiceTest {
         sub.setStatus("active");
         sub.setStartDate(LocalDate.of(2026, 10, 15));
         sub.setEndDate(LocalDate.of(2026, 11, 14));
-        when(subscriptionRepository.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(100L, "active"))
+        when(subscriptionRepository.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                100L, "active", today, today))
                 .thenReturn(Optional.of(sub));
 
         TrainingPlan plan = new TrainingPlan();
@@ -113,6 +125,81 @@ class AiRagContextServiceTest {
         org.mockito.Mockito.verify(catalogService, org.mockito.Mockito.times(1)).getCatalog();
     }
 
+    /** Kiểm thử: ngữ cảnh RAG bao gồm lịch lớp học nhóm 7 ngày tới kèm phòng, HLV và số chỗ trống. */
+    @Test
+    void buildRagContext_IncludesUpcomingGroupSessions() {
+        ClassSessionDto session = new ClassSessionDto(
+                501L, 11L, "Yoga Flow Sáng", 3L, "Yoga", 10L, "Nguyễn Lan",
+                4L, "Zen Garden Studio", LocalDate.of(2026, 11, 14),
+                LocalTime.of(7, 0), LocalTime.of(9, 30), "scheduled", null, 20, 14L);
+        when(catalogService.getCatalog()).thenReturn(new CatalogDto(List.of(), List.of(), List.of(session)));
+
+        String context = ragContextService.buildRagContext(null, "Ngày mai có lớp Yoga nào còn chỗ không?");
+
+        assertTrue(context.contains("LỊCH LỚP HỌC NHÓM SẮP TỚI"));
+        assertTrue(context.contains("Yoga Flow Sáng"));
+        assertTrue(context.contains("Yoga"));
+        assertTrue(context.contains("2026-11-14"));
+        assertTrue(context.contains("07:00–09:30"));
+        assertTrue(context.contains("Zen Garden Studio"));
+        assertTrue(context.contains("Nguyễn Lan"));
+        assertTrue(context.contains("14/20"));
+        assertTrue(context.contains("còn 6 chỗ trống"));
+    }
+
+    /** Kiểm thử: nhận diện gói đang bảo lưu (frozen) và không coi gói active đã quá hạn là đang hoạt động. */
+    @Test
+    void buildRagContext_ReportsFrozenSubscriptionAndIgnoresExpiredActive() {
+        ReflectionTestUtils.setField(ragContextService, "clock", Clock.fixed(
+                Instant.parse("2026-11-20T03:00:00Z"), ZoneId.of("Asia/Ho_Chi_Minh")));
+        LocalDate today = LocalDate.of(2026, 11, 20);
+        when(catalogService.getCatalog()).thenReturn(new CatalogDto(List.of(), List.of(), List.of()));
+
+        Member frozenMember = new Member();
+        frozenMember.setUserId(200L);
+        frozenMember.setMembershipCode("MEM-200");
+
+        MembershipPackage goldPkg = new MembershipPackage();
+        goldPkg.setName("SÖL Gold 3 tháng");
+        MembershipSubscription frozen = new MembershipSubscription();
+        frozen.setMembershipPackage(goldPkg);
+        frozen.setStatus("frozen");
+        frozen.setHoldStartDate(LocalDate.of(2026, 11, 18));
+        frozen.setHoldEndDate(LocalDate.of(2026, 11, 25));
+
+        when(subscriptionRepository.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                200L, "active", today, today)).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(200L, "frozen"))
+                .thenReturn(Optional.of(frozen));
+        when(trainingPlanRepository.findByMemberUserIdAndStatusOrderByCreatedAtDesc(200L, "active"))
+                .thenReturn(List.of());
+
+        String frozenContext = ragContextService.buildRagContext(frozenMember, "Gói tập của mình đang thế nào?");
+        assertTrue(frozenContext.contains("Đang bảo lưu (frozen)"));
+        assertTrue(frozenContext.contains("SÖL Gold 3 tháng"));
+        assertTrue(frozenContext.contains("2026-11-18"));
+        assertTrue(frozenContext.contains("2026-11-25"));
+        assertFalse(frozenContext.contains("Chưa có gói active"));
+
+        Member expiredMember = new Member();
+        expiredMember.setUserId(201L);
+        expiredMember.setMembershipCode("MEM-201");
+        MembershipSubscription staleActive = new MembershipSubscription();
+        staleActive.setMembershipPackage(goldPkg);
+        staleActive.setStatus("active");
+        staleActive.setStartDate(LocalDate.of(2026, 10, 1));
+        staleActive.setEndDate(LocalDate.of(2026, 11, 1)); // đã hết hạn trước today
+        when(subscriptionRepository.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                201L, "active", today, today)).thenReturn(Optional.of(staleActive));
+        when(subscriptionRepository.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(201L, "frozen"))
+                .thenReturn(Optional.empty());
+        when(trainingPlanRepository.findByMemberUserIdAndStatusOrderByCreatedAtDesc(201L, "active"))
+                .thenReturn(List.of());
+
+        String expiredContext = ragContextService.buildRagContext(expiredMember, "Gói tập của mình?");
+        assertTrue(expiredContext.contains("Chưa có gói active"));
+    }
+
     /** Kiểm thử: ngữ cảnh RAG nêu rõ ngày hôm nay. */
     @Test
     void buildRagContext_StatesToday() {
@@ -139,7 +226,9 @@ class AiRagContextServiceTest {
         item.setDayOfWeek(7);
         item.setExerciseName("Đi bộ phục hồi");
         when(trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(77L)).thenReturn(List.of(item));
-        when(subscriptionRepository.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(100L, "active")).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                eq(100L), eq("active"), any(LocalDate.class), any(LocalDate.class))).thenReturn(Optional.empty());
+        when(subscriptionRepository.findFirstByMemberUserIdAndStatusOrderByEndDateDesc(100L, "frozen")).thenReturn(Optional.empty());
 
         String context = ragContextService.buildRagContext(member, "giáo án của mình");
 

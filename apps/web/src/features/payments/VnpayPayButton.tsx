@@ -2,8 +2,9 @@
 import { useLanguage } from '../../shared/i18n/language';
 import { sourceMessage, useI18n } from '../../shared/i18n';
 import { useEffect, useRef, useState } from 'react';
-import { localizableError } from '../../shared/lib/errorMessage';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { notify } from '../../shared/lib/portalNotices';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { payWithWallet } from '../wallet/walletApi';
 import { createVnpayCheckout, navigateToVnpay, type VnpayTarget } from './vnpayApi';
 import { cancelVnpayTarget, releaseAbandonedVnpay, rememberActiveVnpay } from './vnpaySession';
@@ -15,6 +16,10 @@ function isAwaitingVnpayError(cause: unknown): boolean {
   return code === 'VNPAY_AWAITING_CONFIRMATION' || code === 'ORDER_AWAITING_PAYMENT';
 }
 
+function toLocalizableError(reason: unknown, vi: string, en: string): Error | SourceMessage {
+  return reason instanceof Error && reason.name === 'Error' && reason.message ? reason : sourceMessage(vi, en);
+}
+
 /**
  * Nút thanh toán một khoản bằng VNPay hoặc Ví SÖL: lấy đối tượng thanh toán (target hoặc prepare), mở cổng
  * VNPay hay trừ ví, và cho phép mở khóa giao dịch đang chờ xác nhận.
@@ -22,22 +27,28 @@ function isAwaitingVnpayError(cause: unknown): boolean {
 export function VnpayPayButton({
   target,
   prepare,
+  amount,
   disabled = false,
+  allowWallet = true,
   onPaid,
 }: {
   target?: VnpayTarget;
   prepare?: () => Promise<VnpayTarget>;
+  amount?: number;
   disabled?: boolean;
+  allowWallet?: boolean;
   onPaid?: () => void;
 }) {
   useLanguage();
   const { t } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [busy, setBusy] = useState(false);
   const [walletBusy, setWalletBusy] = useState(false);
   const [unlockBusy, setUnlockBusy] = useState(false);
   const [awaitingLockTarget, setAwaitingLockTarget] = useState<VnpayTarget | null>(null);
   const [error, setError] = useState<string | Error | SourceMessage>('');
   const sending = useRef(false);
+  const unlocking = useRef(false);
 
   useEffect(() => {
     if (typeof releaseAbandonedVnpay === 'function') {
@@ -78,15 +89,31 @@ export function VnpayPayButton({
       if (isAwaitingVnpayError(reason) && resolvedOrder) {
         setAwaitingLockTarget(resolvedOrder);
       }
-      setError(localizableError(reason, 'Không thể mở thanh toán VNPay. Vui lòng thử lại.'));
+      setError(toLocalizableError(reason, 'Không thể mở thanh toán VNPay. Vui lòng thử lại.', 'Unable to open VNPay payment. Please try again.'));
       setBusy(false);
       sending.current = false;
     }
   }
 
-  // Thanh toán bằng số dư Ví SÖL, thành công thì cập nhật ví/thông báo và gọi onPaid.
+  // Thanh toán bằng số dư Ví SÖL sau khi xác nhận, thành công thì cập nhật ví/thông báo và gọi onPaid.
   async function handlePayWithWallet() {
-    if (sending.current || disabled) return;
+    if (!allowWallet || sending.current || disabled) return;
+    const formattedAmount = typeof amount === 'number' && Number.isFinite(amount) && amount > 0 ? formatPrice(amount) : null;
+    const confirmed = await confirm({
+      title: sourceMessage('Xác nhận thanh toán bằng Ví SÖL?', 'Confirm SÖL Wallet payment?'),
+      message: formattedAmount
+        ? sourceMessage(
+          `Số tiền ${formattedAmount} sẽ được trừ trực tiếp từ số dư Ví SÖL của bạn.`,
+          `${formattedAmount} will be deducted directly from your SÖL Wallet balance.`,
+        )
+        : sourceMessage(
+          'Số tiền thanh toán sẽ được trừ trực tiếp từ số dư Ví SÖL của bạn.',
+          'The payment amount will be deducted directly from your SÖL Wallet balance.',
+        ),
+      confirmLabel: sourceMessage('Xác nhận thanh toán', 'Confirm payment'),
+      cancelLabel: sourceMessage('Hủy', 'Cancel'),
+    });
+    if (!confirmed || sending.current || disabled) return;
     sending.current = true;
     setWalletBusy(true);
     setError('');
@@ -95,7 +122,7 @@ export function VnpayPayButton({
     try {
       const order = prepare ? await prepare() : target;
       resolvedOrder = order;
-      if (!order) throw Object.assign(new Error('Không tìm thấy khoản cần thanh toán.'), { translation: sourceMessage('Không tìm thấy khoản cần thanh toán.', "Payment item not found.") });
+      if (!order) throw Object.assign(new Error('Không tìm thấy khoản cần thanh toán.'), { translation: sourceMessage('Không tìm thấy khoản cần thanh toán.', 'Payment item not found.') });
       await payWithWallet(order);
       window.dispatchEvent(new CustomEvent('wallet-updated'));
       window.dispatchEvent(new CustomEvent('member-notifications-changed'));
@@ -105,7 +132,11 @@ export function VnpayPayButton({
       if (isAwaitingVnpayError(reason) && resolvedOrder) {
         setAwaitingLockTarget(resolvedOrder);
       }
-      setError(localizableError(reason, 'Không thể thanh toán bằng Ví SÖL. Vui lòng kiểm tra số dư hoặc nạp thêm tiền vào Ví.'));
+      setError(toLocalizableError(
+        reason,
+        'Không thể thanh toán bằng Ví SÖL. Vui lòng kiểm tra số dư hoặc nạp thêm tiền vào Ví.',
+        'Unable to pay with SÖL Wallet. Please check your balance or top up your wallet.',
+      ));
     } finally {
       setWalletBusy(false);
       sending.current = false;
@@ -115,7 +146,8 @@ export function VnpayPayButton({
   // Mở khóa giao dịch VNPay đang chờ xác nhận bằng cách hủy nó.
   async function handleUnlock() {
     const lockTarget = awaitingLockTarget ?? target;
-    if (!lockTarget || unlockBusy || typeof cancelVnpayTarget !== 'function') return;
+    if (!lockTarget || unlocking.current || typeof cancelVnpayTarget !== 'function') return;
+    unlocking.current = true;
     setUnlockBusy(true);
     try {
       await cancelVnpayTarget(lockTarget);
@@ -123,8 +155,9 @@ export function VnpayPayButton({
       setAwaitingLockTarget(null);
       window.dispatchEvent(new CustomEvent('vnpay-attempt-released'));
     } catch (reason) {
-      setError(localizableError(reason, 'Không thể mở khóa giao dịch VNPay. Vui lòng thử lại.'));
+      setError(toLocalizableError(reason, 'Không thể mở khóa giao dịch VNPay. Vui lòng thử lại.', 'Unable to unlock VNPay transaction. Please try again.'));
     } finally {
+      unlocking.current = false;
       setUnlockBusy(false);
     }
   }
@@ -135,15 +168,17 @@ export function VnpayPayButton({
         <button type="button" className="btn-primary" disabled={busy || walletBusy || unlockBusy || disabled} onClick={() => void pay()}>
           {busy ? t("Đang chuyển tới VNPay…", "Redirecting to VNPay…") : t("Thanh toán VNPay", "Pay with VNPay")}
         </button>
-        <button
-          type="button"
-          className="btn-secondary"
-          data-testid="pay-with-wallet-btn"
-          disabled={busy || walletBusy || unlockBusy || disabled}
-          onClick={() => void handlePayWithWallet()}
-        >
-          {walletBusy ? t("Đang trừ Ví…", "Charging wallet…") : t("Thanh toán bằng Ví SÖL", "Pay with SÖL Wallet")}
-        </button>
+        {allowWallet && (
+          <button
+            type="button"
+            className="btn-secondary"
+            data-testid="pay-with-wallet-btn"
+            disabled={busy || walletBusy || unlockBusy || disabled}
+            onClick={() => void handlePayWithWallet()}
+          >
+            {walletBusy ? t("Đang trừ Ví…", "Charging wallet…") : t("Thanh toán bằng Ví SÖL", "Pay with SÖL Wallet")}
+          </button>
+        )}
       </div>
       {error && (
         <p className="form-error" role="alert">
@@ -162,6 +197,7 @@ export function VnpayPayButton({
           </button>
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }

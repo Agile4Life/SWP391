@@ -8,7 +8,7 @@
 .direct-chat__inbox { position: relative; min-width: 0; border-right: 1px solid rgba(255, 255, 255, 0.08); display: flex; flex-direction: column; }
 .direct-chat__inbox-heading { padding: 18px 20px; border-bottom: 1px solid rgba(255, 255, 255, 0.08); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .direct-chat h2 { font-family: inherit; font-size: 1rem; font-weight: 700; margin: 0; line-height: 1.4; color: #f5f5f5; }
-.direct-chat__link { border: 0; background: transparent; color: var(--chat-accent, var(--sol-accent)); font: inherit; font-size: .82rem; font-weight: 600; padding: 6px 0; cursor: pointer; text-align: left; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
+.direct-chat__link { border: 0; background: transparent; color: var(--chat-accent, var(--sol-accent-text)); font: inherit; font-size: .82rem; font-weight: 600; padding: 6px 0; cursor: pointer; text-align: left; min-height: 44px; display: inline-flex; align-items: center; gap: 6px; }
 .direct-chat__link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .direct-chat button:disabled { cursor: default; opacity: .5; }
 .direct-chat :is(button, input, textarea, [tabindex]):focus-visible { outline: 2px solid var(--chat-accent, var(--sol-accent)); outline-offset: -2px; }
@@ -36,7 +36,7 @@
 .direct-chat__person time { color: #a8a8a8; font-size: 13px; flex-shrink: 0; white-space: nowrap; }
 
 .direct-chat__meta { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.direct-chat__unread { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--sol-accent); color: #ffffff; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
+.direct-chat__unread { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: var(--sol-accent); color: #202020; font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums; }
 .direct-chat__more { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; color: #f5f5f5; opacity: 0; transition: opacity 140ms ease; }
 .direct-chat__person:hover .direct-chat__more, .direct-chat__person:focus-visible .direct-chat__more { opacity: .88; }
 .direct-chat__person-arrow { color: #a8a8a8; }
@@ -57,8 +57,10 @@
 .direct-chat__thread-header h2 { font-size: 15px; font-weight: 700; color: #f5f5f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .direct-chat__thread-header p { margin: 2px 0 0; font-size: 12px; color: #a8a8a8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.direct-chat__transcript { height: min(58dvh, 620px); min-height: 260px; overflow-y: auto; padding: 18px 16px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.22) transparent; }
-.direct-chat__list { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.22) transparent; }
+.direct-chat__transcript { height: min(58dvh, 620px); min-height: 260px; overflow-y: auto; padding: 18px 16px; overscroll-behavior: contain; scrollbar-width: none; -ms-overflow-style: none; }
+.direct-chat__list { scrollbar-width: none; -ms-overflow-style: none; }
+.direct-chat__transcript::-webkit-scrollbar,
+.direct-chat__list::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 .direct-chat__messages { list-style: none; display: grid; gap: 12px; padding: 0; margin: 0; }
 .direct-chat__messages li { display: flex; align-items: center; gap: 8px; min-width: 0; justify-content: flex-start; }
@@ -70,8 +72,8 @@
 .direct-chat__bubble p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; line-height: 1.48; }
 .direct-chat__bubble time { display: block; text-align: right; font-size: 12px; color: rgba(255, 255, 255, 0.55); margin-top: 4px; }
 .direct-chat__sender { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
-.direct-chat__messages .is-mine .direct-chat__bubble { border-radius: 18px 18px 4px 18px; background: var(--sol-accent); color: #212328; border-color: transparent; }
-.direct-chat__messages .is-mine .direct-chat__bubble time { color: rgba(33, 35, 40, .8); }
+.direct-chat__messages .is-mine .direct-chat__bubble { border-radius: 18px 18px 4px 18px; background: var(--sol-accent); color: #202020; border-color: transparent; }
+.direct-chat__messages .is-mine .direct-chat__bubble time { color: rgba(32, 32, 32, 0.85); }
 
 .direct-chat__reaction-pill { position: absolute; right: 8px; bottom: -11px; display: inline-flex; align-items: center; justify-content: center; min-width: 26px; height: 20px; padding: 0 6px; border-radius: 999px; background: #2b2e36; border: 2px solid #212328; font-size: 12px; line-height: 1; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45); pointer-events: none; }
 .direct-chat__react-trigger { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; padding: 0; border: 0; background: transparent; border-radius: 50%; color: #a8a8a8; opacity: 0; cursor: pointer; transition: opacity 140ms ease, transform 140ms ease; flex-shrink: 0; }
@@ -101,8 +103,8 @@
 .direct-chat__composer-icon:hover:not(:disabled) { background: rgba(255, 255, 255, 0.08); }
 
 /* Nút Gửi luôn ở chỗ và có bề rộng cố định (kể cả “Đang gửi…”), chỉ mờ đi khi chưa có nội dung */
-.direct-chat .direct-chat__send-btn { display: inline-grid; place-items: center; position: relative; flex: 0 0 72px; width: 72px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 22px; background: var(--sol-accent); color: #212328; font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: color 120ms ease, background-color 120ms ease, opacity 120ms ease; }
-.direct-chat .direct-chat__send-btn:hover:not(:disabled) { color: #212328; background: #e0aa9b; }
+.direct-chat .direct-chat__send-btn { display: inline-grid; place-items: center; position: relative; flex: 0 0 72px; width: 72px; height: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 22px; background: var(--sol-accent); color: #202020; font: inherit; font-size: 14px; font-weight: 700; white-space: nowrap; cursor: pointer; transition: color 120ms ease, background-color 120ms ease, opacity 120ms ease; }
+.direct-chat .direct-chat__send-btn:hover:not(:disabled) { color: #202020; background: var(--sol-accent-hover); }
 .direct-chat .direct-chat__send-btn:disabled { opacity: .42; cursor: not-allowed; }
 .direct-chat .direct-chat__send-btn[aria-busy="true"] { opacity: .72; }
 .direct-chat__sending-dot { position: absolute; left: 9px; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
@@ -150,18 +152,21 @@
   .direct-chat__back-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
   .direct-chat__transcript { padding: 16px 12px; height: 48dvh; }
   .direct-chat__bubble { max-width: 86%; }
-  /* iOS phóng to trang khi chạm ô nhập có chữ nhỏ hơn 16px */
-  .direct-chat .direct-chat__input { font-size: 16px; line-height: 24px; height: 24px; min-height: 24px; }
   .direct-chat__connection { width: 100%; }
   .direct-chat__connection-label { flex-basis: 100%; }
 }
 
+/* iOS phóng to trang khi chạm ô nhập có chữ nhỏ hơn 16px trên di động & máy tính bảng (DESIGN.md) */
+@media (max-width: 1024px), (pointer: coarse) {
+  .direct-chat .direct-chat__input { font-size: 16px; line-height: 24px; height: 24px; min-height: 24px; }
+}
+
 /* Các nút điều khiển chat dùng chung: vùng bấm ổn định và phản hồi thị giác nhất quán. */
-.direct-chat :is(.direct-chat__back, .direct-chat__thread-action, .direct-chat__composer-icon) svg { width: 20px; height: 20px; }
+.direct-chat :is(.direct-chat__back, .direct-chat__thread-action, .direct-chat__composer-icon, .direct-chat__compose-fab) svg { width: 20px; height: 20px; }
 .direct-chat button:disabled:hover { text-decoration: none; }
 .direct-chat :is(.direct-chat__back, .direct-chat__thread-action, .direct-chat__composer-icon):active:not(:disabled) { background: rgb(var(--sol-accent-rgb) / .2); }
-.direct-chat .direct-chat__send-btn:active:not(:disabled) { background: #bb7f6f; }
-.direct-chat__compose-fab { min-height: 44px; padding: 8px 12px; border: 1px solid rgb(var(--sol-accent-rgb) / .45); border-radius: 999px; color: var(--sol-accent); }
+.direct-chat .direct-chat__send-btn:active:not(:disabled) { background: var(--sol-accent-deep); }
+.direct-chat__compose-fab { min-height: 44px; padding: 8px 12px; border: 1px solid rgb(var(--sol-accent-rgb) / .45); border-radius: 999px; color: var(--sol-accent-text); }
 @media (hover: none) { .direct-chat__react-trigger { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .direct-chat *, .direct-chat *::before, .direct-chat *::after { transition: none !important; } }
 
@@ -171,9 +176,9 @@
 .direct-chat__notice span, .direct-chat__notice strong { color: inherit; }
 .direct-chat__notice .direct-chat__link { color: inherit; font-weight: 700; text-decoration: underline; }
 .direct-chat__list--pinned { flex: 0 0 auto; overflow: visible; padding: 6px 0 2px; }
-:root[data-theme='light'] .chat-widget .direct-chat__notice { color: var(--chat-glass-ink, #1c1917); }
+:root[data-theme='light'] .direct-chat__notice { color: var(--chat-glass-ink, var(--portal-paper, #202020)); }
 
-.direct-chat__avatar--support { background: var(--sol-accent); color: #212328; }
+.direct-chat__avatar--support { background: var(--sol-accent); color: #202020; }
 .direct-chat__contacts .direct-chat__avatar--support { width: 42px; height: 42px; flex-basis: 42px; }
 
 /* Hỗ trợ chế độ sáng cho không gian làm việc /messages độc lập */
@@ -194,6 +199,7 @@
 :root[data-theme='light'] .direct-chat h2,
 :root[data-theme='light'] .direct-chat__person,
 :root[data-theme='light'] .direct-chat__person strong,
+:root[data-theme='light'] .direct-chat__more,
 :root[data-theme='light'] .direct-chat__thread-header h2,
 :root[data-theme='light'] .direct-chat__placeholder h2,
 :root[data-theme='light'] .direct-chat__composer-icon,
@@ -203,24 +209,39 @@
 :root[data-theme='light'] .direct-chat__role,
 :root[data-theme='light'] .direct-chat__person-sub,
 :root[data-theme='light'] .direct-chat__preview,
+:root[data-theme='light'] .direct-chat__dot,
 :root[data-theme='light'] .direct-chat__person time,
+:root[data-theme='light'] .direct-chat__person-arrow,
 :root[data-theme='light'] .direct-chat__thread-header p,
 :root[data-theme='light'] .direct-chat__placeholder p,
+:root[data-theme='light'] .direct-chat__older,
 :root[data-theme='light'] .direct-chat__empty,
 :root[data-theme='light'] .direct-chat__muted,
 :root[data-theme='light'] .direct-chat__pagination,
-:root[data-theme='light'] .direct-chat__connection-label { color: var(--portal-muted, #68645f); }
+:root[data-theme='light'] .direct-chat__connection-label,
+:root[data-theme='light'] .direct-chat__search .portal-label,
+:root[data-theme='light'] .direct-chat__react-trigger,
+:root[data-theme='light'] .direct-chat .direct-chat__input:disabled { color: var(--portal-muted, #68645f); }
+:root[data-theme='light'] .direct-chat__link { color: var(--sol-accent-text); }
+:root[data-theme='light'] .direct-chat__error { color: var(--portal-danger, #a33030); }
 :root[data-theme='light'] .direct-chat__preview.is-unread { color: var(--portal-paper, #202020); }
 :root[data-theme='light'] .direct-chat__person:hover,
 :root[data-theme='light'] .direct-chat__person.is-selected { background: var(--portal-raised, #f5f5f3); }
+:root[data-theme='light'] .direct-chat :is(.direct-chat__composer-icon, .direct-chat__thread-action):hover:not(:disabled),
+:root[data-theme='light'] .direct-chat__back:hover { background: rgba(32, 32, 32, 0.06); }
+:root[data-theme='light'] .direct-chat__react-trigger:hover { color: var(--portal-paper, #202020); background: rgb(var(--sol-accent-rgb) / .16); }
 :root[data-theme='light'] .direct-chat__bubble { background: var(--portal-raised, #f5f5f3); border-color: var(--portal-border, #e4e2de); color: var(--portal-paper, #202020); }
 :root[data-theme='light'] .direct-chat__bubble time { color: var(--portal-muted, #68645f); }
 :root[data-theme='light'] .direct-chat__messages .is-mine .direct-chat__bubble { background: var(--sol-accent); color: #202020; }
-:root[data-theme='light'] .direct-chat__messages .is-mine .direct-chat__bubble time { color: rgba(32, 32, 32, 0.78); }
+:root[data-theme='light'] .direct-chat__messages .is-mine .direct-chat__bubble time { color: rgba(32, 32, 32, 0.85); }
+:root[data-theme='light'] .direct-chat__reaction-pill { background: var(--portal-surface, #ffffff); border-color: var(--portal-border, #e4e2de); box-shadow: 0 2px 6px rgba(32, 32, 32, 0.14); }
+:root[data-theme='light'] .direct-chat__new { background: var(--portal-surface, #ffffff); color: var(--portal-paper, #202020); border-color: var(--portal-border-strong, #ccc8c2); box-shadow: 0 4px 12px rgba(32, 32, 32, 0.1); }
+:root[data-theme='light'] .direct-chat__emoji-bar { background: var(--portal-surface, #ffffff); border-color: var(--portal-border-strong, #ccc8c2); box-shadow: 0 8px 24px rgba(32, 32, 32, 0.14); }
+:root[data-theme='light'] .direct-chat__emoji-item:hover { background: var(--portal-raised, #eeefec); }
+:root[data-theme='light'] .direct-chat__typing span { background: var(--portal-muted, #68645f); }
 :root[data-theme='light'] .direct-chat__compose-pill { border-color: var(--portal-border-strong, #ccc8c2); background: var(--portal-surface, #ffffff); }
+:root[data-theme='light'] .direct-chat__compose-pill:focus-within { border-color: var(--sol-accent-text); }
 :root[data-theme='light'] .direct-chat .direct-chat__input { color: var(--portal-paper, #202020); }
 :root[data-theme='light'] .direct-chat .direct-chat__input::placeholder { color: var(--portal-muted, #68645f); }
 :root[data-theme='light'] .direct-chat__search input,
 :root[data-theme='light'] .direct-chat__search .btn-secondary { background: var(--portal-surface, #ffffff); border-color: var(--portal-border-strong, #ccc8c2); color: var(--portal-paper, #202020); }
-:root[data-theme='light'] .direct-chat__transcript,
-:root[data-theme='light'] .direct-chat__list { scrollbar-color: rgba(32, 32, 32, 0.2) transparent; }

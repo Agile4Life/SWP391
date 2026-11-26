@@ -57,7 +57,7 @@ export const auditApi = {
    */
   getAuditLogs: async (filter?: AuditLogFilter): Promise<PageResult<AuditLogItem>> => {
     const params = new URLSearchParams();
-    if (filter?.userId) params.set('user_id', String(filter.userId));
+    if (filter?.userId != null && filter.userId > 0) params.set('user_id', String(filter.userId));
     if (filter?.entityType && filter.entityType !== 'ALL') params.set('entity_type', filter.entityType);
     if (filter?.action && filter.action !== 'ALL') params.set('action', filter.action);
     if (filter?.from) params.set('from', filter.from);

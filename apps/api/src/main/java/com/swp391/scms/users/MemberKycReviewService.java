@@ -2,6 +2,7 @@ package com.swp391.scms.users;
 
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
+import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.notifications.NotificationService;
@@ -67,51 +68,82 @@ public class MemberKycReviewService {
     }
 
     /**
-     * Duyệt: đánh dấu đã xác minh danh tính, lưu thời điểm và người duyệt, xóa lý do từ chối cũ, gửi thông báo
-     * cho hội viên.
+     * Duyệt: chặn tự duyệt chính mình, khóa dòng hội viên, kiểm tra trùng mã băm giấy tờ với tài khoản khác,
+     * đánh dấu đã xác minh danh tính, lưu thời điểm và người duyệt, xóa lý do từ chối cũ, gửi thông báo cho hội viên.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "MEMBER_KYC_APPROVE", entity = "members")
     public void approve(AuthenticatedPrincipal reviewer, Long memberId) {
+        rejectSelfReview(reviewer, memberId);
         Member member = pending(memberId);
+        String docHash = member.getCitizenIdHash();
+        if (docHash == null || docHash.isBlank()) {
+            String plain = readableNumber(member);
+            if (plain != null && !plain.isBlank() && !KycCrypto.isMasked(plain)) {
+                docHash = crypto.hash(plain);
+                member.setCitizenIdHash(docHash);
+            }
+        }
+        if (docHash != null && members.existsByCitizenIdHashAndUserIdNotAndUserDeletedAtIsNull(docHash, memberId)) {
+            throw new ConflictException("KYC_DOCUMENT_ALREADY_USED", "invariant.duplicate_resource", null,
+                    "This identity document is already registered to another member");
+        }
         LocalDateTime now = LocalDateTime.now(clock);
         member.setIdentityVerified(true);
         member.setIdentityVerifiedAt(now);
         member.setKycStatus(APPROVED);
         member.setKycReviewedAt(now);
         member.setKycRejectReason(null);
-        users.findById(reviewer.id()).ifPresent(member::setKycReviewedBy);
+        if (reviewer != null && reviewer.id() != null) {
+            users.findById(reviewer.id()).ifPresent(member::setKycReviewedBy);
+        }
         members.save(member);
         notify(memberId, "notifications.kyc.approved.title", "notifications.kyc.approved.body", null);
     }
 
     /**
-     * Từ chối: lý do bắt buộc (cắt còn 255 ký tự), đánh dấu chưa xác minh, lưu người duyệt và gửi thông báo kèm
-     * lý do.
+     * Từ chối: chặn tự xử lý chính mình, lý do bắt buộc (cắt còn 255 ký tự), khóa dòng hội viên, đánh dấu chưa
+     * xác minh, xóa mã băm giấy tờ bị từ chối, lưu người duyệt và gửi thông báo kèm lý do.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "MEMBER_KYC_REJECT", entity = "members")
     public void reject(AuthenticatedPrincipal reviewer, Long memberId, String reason) {
+        rejectSelfReview(reviewer, memberId);
         String trimmed = reason == null ? "" : reason.trim();
         if (trimmed.isEmpty()) {
             throw new BadRequestException("KYC_REJECT_REASON_REQUIRED", "error.kyc.reject_reason_required", null,
                     "A reason is required to reject an identity document");
         }
+        String truncated = trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed;
         Member member = pending(memberId);
         LocalDateTime now = LocalDateTime.now(clock);
         member.setIdentityVerified(false);
         member.setKycStatus(REJECTED);
         member.setKycReviewedAt(now);
-        member.setKycRejectReason(trimmed.length() > 255 ? trimmed.substring(0, 255) : trimmed);
-        users.findById(reviewer.id()).ifPresent(member::setKycReviewedBy);
+        member.setKycRejectReason(truncated);
+        member.setCitizenIdHash(null);
+        if (reviewer != null && reviewer.id() != null) {
+            users.findById(reviewer.id()).ifPresent(member::setKycReviewedBy);
+        }
         members.save(member);
-        notify(memberId, "notifications.kyc.rejected.title", "notifications.kyc.rejected.body", trimmed);
+        notify(memberId, "notifications.kyc.rejected.title", "notifications.kyc.rejected.body", truncated);
     }
 
-    /** Lấy hội viên và bắt buộc hồ sơ đang ở trạng thái PENDING; không thì báo 409. */
+    /** Chặn nhân viên tự duyệt hoặc tự từ chối hồ sơ KYC của chính mình. */
+    private void rejectSelfReview(AuthenticatedPrincipal reviewer, Long memberId) {
+        if (reviewer != null && reviewer.id() != null && reviewer.id().equals(memberId)) {
+            throw new ForbiddenException("KYC_SELF_REVIEW_FORBIDDEN", "error.forbidden", null,
+                    "Reviewers cannot approve or reject their own KYC submission");
+        }
+    }
+
+    /** Khóa dòng hội viên chưa bị xóa và bắt buộc hồ sơ đang ở trạng thái PENDING; không thì báo 404/409. */
     private Member pending(Long memberId) {
-        Member member = members.findById(memberId)
+        Member member = members.findByUserIdForUpdate(memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+        if (member.getUser() == null || member.getUser().getDeletedAt() != null) {
+            throw new ResourceNotFoundException("resource.member", memberId);
+        }
         if (!PENDING.equals(member.getKycStatus())) {
             throw new ConflictException("KYC_NOT_PENDING", "error.kyc.not_pending", null,
                     "This identity document is not waiting for review");

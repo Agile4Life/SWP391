@@ -102,6 +102,9 @@ public class MembershipCancellationService {
         if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
             throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
         }
+        if ("APPROVED".equalsIgnoreCase(subscription.getHoldStatus())) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_APPROVED", "error.membership.hold_already_requested", null, null);
+        }
         String reason = body == null || body.reason() == null ? "" : body.reason().trim();
         if (reason.isEmpty()) {
             throw new BadRequestException("CANCELLATION_REASON_REQUIRED", "validation.membership.cancellation_reason.not_blank", null, null);
@@ -141,8 +144,15 @@ public class MembershipCancellationService {
         if (body.subscriptionId() != null) {
             MembershipSubscription found = subscriptions.findById(body.subscriptionId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", body.subscriptionId()));
-            member = lockMember(found.getMember().getUserId());
+            Long ownerId = found.getMember() != null ? found.getMember().getUserId() : null;
+            if (ownerId == null || (body.memberId() != null && !ownerId.equals(body.memberId()))) {
+                throw new BadRequestException("MEMBERSHIP_NOT_OWNER", "error.membership.not_owner", null, null);
+            }
+            member = lockMember(ownerId);
             subscription = lockSubscription(body.subscriptionId());
+            if (subscription.getMember() == null || !ownerId.equals(subscription.getMember().getUserId())) {
+                throw new BadRequestException("MEMBERSHIP_NOT_OWNER", "error.membership.not_owner", null, null);
+            }
         } else if (body.memberId() != null) {
             member = lockMember(body.memberId());
             MembershipSubscription activeSub = subscriptions.findByMemberUserIdOrderByCreatedAtDesc(body.memberId())
@@ -160,6 +170,9 @@ public class MembershipCancellationService {
         }
         if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
             throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
+        }
+        if ("APPROVED".equalsIgnoreCase(subscription.getHoldStatus())) {
+            throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_APPROVED", "error.membership.hold_already_requested", null, null);
         }
         if (requests.existsBySubscriptionIdAndStatus(subscription.getId(), "PENDING")) {
             throw new ConflictException("CANCELLATION_PENDING_EXISTS", "error.membership.cancellation_pending_exists", null, null);
@@ -254,10 +267,26 @@ public class MembershipCancellationService {
             if ("PENDING".equalsIgnoreCase(subscription.getHoldStatus())) {
                 throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_PENDING", "error.membership.hold_already_pending", null, null);
             }
+            if ("APPROVED".equalsIgnoreCase(subscription.getHoldStatus())) {
+                throw new ConflictException("MEMBERSHIP_HOLD_ALREADY_APPROVED", "error.membership.hold_already_requested", null, null);
+            }
             // Đăng ký lớp tham chiếu tới hội viên và lớp học chứ không tham chiếu kỳ gói. Việc hủy trên toàn hội viên
             // bên dưới chỉ an toàn khi đây là quyền lợi duy nhất còn lại.
             ensureSoleEntitlement(memberId, subscription);
+
+            BigDecimal refundAmount = (body != null && body.refundAmount() != null)
+                    ? body.refundAmount()
+                    : request.getRefundAmount();
+            if (refundAmount == null) {
+                refundAmount = defaultRefund(subscription);
+            }
+            ensureRefundWithinPaid(subscription, refundAmount);
+
             subscription.setStatus("cancelled");
+            subscription.setHoldStatus(null);
+            subscription.setHoldStartDate(null);
+            subscription.setHoldEndDate(null);
+            subscription.setHoldDaysCredited(false);
             subscription.setUpdatedAt(LocalDateTime.now(clock));
             subscriptions.saveAndFlush(subscription);
             String cancelReason = messages != null
@@ -269,13 +298,6 @@ public class MembershipCancellationService {
                 enrollments.cancelFutureEnrollmentsForMember(memberId, cancelReason);
             }
 
-            BigDecimal refundAmount = (body != null && body.refundAmount() != null)
-                    ? body.refundAmount()
-                    : request.getRefundAmount();
-            if (refundAmount == null) {
-                refundAmount = defaultRefund(subscription);
-            }
-            ensureRefundWithinPaid(subscription, refundAmount);
             request.setRefundAmount(refundAmount);
             if (walletService != null && refundAmount != null && refundAmount.compareTo(BigDecimal.ZERO) > 0) {
                 // Khoản thanh toán cũng phải thể hiện phần hoàn tiền, nếu không doanh thu sẽ bị tính thừa và /payments/{id}/refund có thể hoàn tiền lần nữa.
@@ -444,33 +466,59 @@ public class MembershipCancellationService {
         }
     }
 
+    private static final int MAX_CHAIN_DEPTH = 20;
+
     /**
      * Phân bổ số tiền hoàn lên các khoản thanh toán thành công của kỳ (khoản cũ trước), cập nhật số đã hoàn và ghi
-     * chú; khoản thanh toán được hoàn đủ sẽ chuyển sang trạng thái {@code refunded}. Nhờ vậy báo cáo doanh thu chính
-     * xác và tránh hoàn trùng hai lần.
+     * chú; khoản thanh toán được hoàn đủ sẽ chuyển sang trạng thái {@code refunded}. Khi kỳ bị hủy là gói nâng cấp
+     * (mang theo phần quy đổi {@code creditApplied} từ kỳ trước), nếu số tiền hoàn vượt phần đã thu của kỳ hiện tại
+     * thì tiếp tục đi ngược chuỗi {@code previousSubscription} (giới hạn {@value #MAX_CHAIN_DEPTH}) để ghi nhận đủ
+     * phần hoàn lên các giao dịch gốc. Nhờ vậy báo cáo doanh thu chính xác và tránh hoàn trùng hai lần.
      */
     private void recordRefundOnPayments(MembershipSubscription subscription, BigDecimal refundAmount, String reason) {
-        if (payments == null || subscription.getId() == null) return;
+        if (payments == null || subscription == null || subscription.getId() == null
+                || refundAmount == null || refundAmount.signum() <= 0) return;
         BigDecimal remaining = refundAmount;
-        for (var payment : payments.findAllBySubscriptionId(subscription.getId()).stream()
-                .filter(p -> "success".equalsIgnoreCase(p.getStatus()))
-                .sorted(java.util.Comparator.comparing(com.swp391.scms.finance.entity.Payment::getId))
-                .toList()) {
-            if (remaining.signum() <= 0) break;
-            BigDecimal already = payment.getRefundedAmount() != null ? payment.getRefundedAmount() : BigDecimal.ZERO;
-            BigDecimal net = payment.getAmount().subtract(already);
-            if (net.signum() <= 0) continue;
-            BigDecimal portion = net.min(remaining);
-            payment.setRefundedAmount(already.add(portion));
-            if (payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0) {
-                payment.setStatus("refunded");
+        MembershipSubscription current = subscription;
+        java.util.Set<Long> visited = new java.util.HashSet<>();
+        int depth = 0;
+        while (current != null && current.getId() != null && remaining.signum() > 0
+                && depth <= MAX_CHAIN_DEPTH && visited.add(current.getId())) {
+            for (var payment : payments.findAllBySubscriptionId(current.getId()).stream()
+                    .filter(p -> "success".equalsIgnoreCase(p.getStatus()))
+                    .sorted(java.util.Comparator.comparing(com.swp391.scms.finance.entity.Payment::getId,
+                            java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder())))
+                    .toList()) {
+                if (remaining.signum() <= 0) break;
+                BigDecimal already = payment.getRefundedAmount() != null ? payment.getRefundedAmount() : BigDecimal.ZERO;
+                BigDecimal net = payment.getAmount().subtract(already);
+                if (net.signum() <= 0) continue;
+                BigDecimal portion = net.min(remaining);
+                payment.setRefundedAmount(already.add(portion));
+                if (payment.getRefundedAmount().compareTo(payment.getAmount()) >= 0) {
+                    payment.setStatus("refunded");
+                }
+                String note = "CANCEL_REQ refund " + portion.toPlainString() + (reason == null || reason.isBlank() ? "" : " - " + reason);
+                String combined = payment.getNote() == null || payment.getNote().isBlank() ? note : payment.getNote() + " | " + note;
+                payment.setNote(combined.length() > 255 ? combined.substring(0, 255) : combined);
+                payments.save(payment);
+                remaining = remaining.subtract(portion);
             }
-            String note = "CANCEL_REQ refund " + portion.toPlainString() + (reason == null || reason.isBlank() ? "" : " - " + reason);
-            String combined = payment.getNote() == null || payment.getNote().isBlank() ? note : payment.getNote() + " | " + note;
-            payment.setNote(combined.length() > 255 ? combined.substring(0, 255) : combined);
-            payments.save(payment);
-            remaining = remaining.subtract(portion);
+            if (remaining.signum() <= 0) break;
+            MembershipSubscription previous = current.getPreviousSubscription();
+            if (previous == null || !isUpgradeLink(current, previous)) break;
+            current = previous;
+            depth++;
         }
+    }
+
+    /** Kỳ hiện tại có phải là kỳ nâng cấp từ kỳ trước không (có tín dụng chuyển tiếp, phí nâng cấp hoặc khác gói). */
+    private static boolean isUpgradeLink(MembershipSubscription current, MembershipSubscription previous) {
+        if (current.getCreditApplied() != null && current.getCreditApplied().signum() > 0) return true;
+        if (current.getUpgradeCharge() != null) return true;
+        return current.getMembershipPackage() != null && previous.getMembershipPackage() != null
+                && current.getMembershipPackage().getId() != null
+                && !current.getMembershipPackage().getId().equals(previous.getMembershipPackage().getId());
     }
 
     /** Kỳ gói đang active và chưa hết hạn tính tới hôm nay. */

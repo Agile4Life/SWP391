@@ -1,6 +1,6 @@
 /**
  * Danh mục bộ môn chuẩn của SÖL, dùng chung cho landing, lịch lớp và bộ lọc portal.
- * Gym là bộ môn chính; Boxing và Yoga là bộ môn phụ.
+ * Gym là bộ môn chính; Boxing và Yoga là hai bộ môn nhóm song song.
  */
 export const DISCIPLINES = [
   { id: 'gym', name: 'Gym', tier: 'main' },
@@ -17,7 +17,7 @@ export const SECONDARY_DISCIPLINES = DISCIPLINES.filter((discipline) => discipli
 /** Tên bộ môn trong catalog có thể khác tên chuẩn (ví dụ "Olympic Strength" thuộc Gym). */
 const ALIASES: Record<DisciplineId, RegExp> = {
   gym: /\bgym\b|\bstrength\b|olympic|thể hình|tập tạ/i,
-  boxing: /boxing|kickfit|đấm bốc/i,
+  boxing: /boxing|đấm bốc/i,
   yoga: /yoga|mindful/i,
 };
 
@@ -36,8 +36,11 @@ export function matchesDiscipline(name: string | null | undefined, selected: str
   return value.includes(filter);
 }
 
-/** Bộ môn thuộc danh mục chuẩn của SÖL; bộ môn cũ còn sót trong CSDL (ví dụ Pilates) bị loại khỏi giao diện. */
-export function isStandardDiscipline(name: string | null | undefined): boolean {
-  const value = (name ?? '').trim().toLocaleLowerCase('vi');
-  return DISCIPLINES.some((discipline) => ALIASES[discipline.id].test(value));
+/**
+ * Chấp nhận mọi bộ môn đang hoạt động có tên hợp lệ (không lọc cứng theo danh sách tên ở frontend để bộ môn mới
+ * do Quản lý tạo luôn hiển thị đúng theo dữ liệu backend).
+ */
+export function isStandardDiscipline(value: string | { name?: string | null } | null | undefined): boolean {
+  const raw = typeof value === 'string' ? value : value?.name;
+  return Boolean(raw && raw.trim().length > 0);
 }

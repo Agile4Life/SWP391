@@ -21,12 +21,16 @@ it('renders 3 tabs (My schedule, Group classes, 1:1 PT) and switches cleanly', a
     expect(host.textContent).toContain('Merged calendar');
     const tabs = host.querySelectorAll<HTMLButtonElement>('[role="tab"]');
     expect(tabs).toHaveLength(3);
+    expect(tabs[0].getAttribute('aria-controls')).toBe('member-classes-panel-timetable');
+    expect(host.querySelector('#member-classes-panel-timetable[role="tabpanel"]')?.getAttribute('aria-labelledby')).toBe(tabs[0].id);
 
     await act(async () => tabs[1].click());
     expect(host.textContent).toContain('Group classes view');
+    expect(host.querySelector('#member-classes-panel-classes[role="tabpanel"]')?.getAttribute('aria-labelledby')).toBe(tabs[1].id);
 
     await act(async () => tabs[2].click());
     expect(host.textContent).toContain('PT booking and payment');
+    expect(host.querySelector('#member-classes-panel-pt[role="tabpanel"]')?.getAttribute('aria-labelledby')).toBe(tabs[2].id);
 
     await act(async () => tabs[0].click());
     expect(host.textContent).toContain('Merged calendar');

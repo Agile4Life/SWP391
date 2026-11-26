@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,31 +18,37 @@ public class LoginAttemptService {
 
     public static final int MAX_FAILED_ATTEMPTS = 5;
     public static final long LOCKOUT_DURATION_SECONDS = 60L; // 1 phút
+    public static final int MAX_TRACKED_IDENTIFIERS = 10_000;
+    private static final long STALE_WINDOW_SECONDS = LOCKOUT_DURATION_SECONDS * 10;
 
-    /** Bản ghi số lần sai của một định danh: số lần sai, khóa đến lúc nào và lần thử gần nhất. */
-    private static class AttemptRecord {
-        int failedAttempts;
-        Instant lockedUntil;
-        Instant lastAttempt;
-
-        AttemptRecord(Instant now) {
-            this.failedAttempts = 1;
-            this.lastAttempt = now;
-            this.lockedUntil = null;
+    /** Bản ghi bất biến số lần sai của một định danh: số lần sai, khóa đến lúc nào và lần thử gần nhất. */
+    private record AttemptRecord(int failedAttempts, Instant lockedUntil, Instant lastAttempt) {
+        boolean isExpired(Instant now) {
+            if (lockedUntil != null) {
+                return !now.isBefore(lockedUntil);
+            }
+            return lastAttempt != null && now.isAfter(lastAttempt.plusSeconds(STALE_WINDOW_SECONDS));
         }
     }
 
     private final Map<String, AttemptRecord> attempts = new ConcurrentHashMap<>();
     private final Clock clock;
+    private final int maxEntries;
 
     /** Constructor mặc định dùng đồng hồ UTC. */
     public LoginAttemptService() {
-        this(Clock.systemUTC());
+        this(Clock.systemUTC(), MAX_TRACKED_IDENTIFIERS);
     }
 
     /** Constructor nhận Clock để test điều khiển thời gian. */
     public LoginAttemptService(Clock clock) {
+        this(clock, MAX_TRACKED_IDENTIFIERS);
+    }
+
+    /** Constructor cho test kiểm soát giới hạn kích thước bộ nhớ đệm. */
+    LoginAttemptService(Clock clock, int maxEntries) {
         this.clock = clock;
+        this.maxEntries = Math.max(1, maxEntries);
     }
 
     /**
@@ -58,13 +65,16 @@ public class LoginAttemptService {
         }
 
         Instant now = clock.instant();
-        if (record.lockedUntil != null) {
-            if (now.isBefore(record.lockedUntil)) {
+        if (record.lockedUntil() != null) {
+            if (now.isBefore(record.lockedUntil())) {
                 return true;
             }
-            // Hết thời gian khóa -> mở khóa và reset
-            attempts.remove(key);
+            // Hết thời gian khóa -> chỉ xóa nếu đúng bản ghi đã đọc (tránh xóa nhầm bản ghi mới ghi đồng thời)
+            attempts.remove(key, record);
             return false;
+        }
+        if (record.isExpired(now)) {
+            attempts.remove(key, record);
         }
         return false;
     }
@@ -78,12 +88,12 @@ public class LoginAttemptService {
         }
         String key = normalize(identifier);
         AttemptRecord record = attempts.get(key);
-        if (record == null || record.lockedUntil == null) {
+        if (record == null || record.lockedUntil() == null) {
             return 0;
         }
 
         Instant now = clock.instant();
-        long diff = record.lockedUntil.getEpochSecond() - now.getEpochSecond();
+        long diff = record.lockedUntil().getEpochSecond() - now.getEpochSecond();
         return Math.max(0, diff);
     }
 
@@ -99,7 +109,12 @@ public class LoginAttemptService {
         if (record == null) {
             return MAX_FAILED_ATTEMPTS;
         }
-        return Math.max(0, MAX_FAILED_ATTEMPTS - record.failedAttempts);
+        Instant now = clock.instant();
+        if (record.isExpired(now)) {
+            attempts.remove(key, record);
+            return MAX_FAILED_ATTEMPTS;
+        }
+        return Math.max(0, MAX_FAILED_ATTEMPTS - record.failedAttempts());
     }
 
     /**
@@ -112,33 +127,48 @@ public class LoginAttemptService {
         }
         String key = normalize(identifier);
         Instant now = clock.instant();
+        evictIfNeeded(key, now);
 
         AttemptRecord record = attempts.compute(key, (k, existing) -> {
-            if (existing == null) {
-                return new AttemptRecord(now);
+            if (existing == null || existing.isExpired(now)) {
+                return new AttemptRecord(1, null, now);
             }
-            // Nếu lần thử trước đã quá 10 phút trước và chưa bị khóa, reset fresh
-            if (existing.lockedUntil == null && existing.lastAttempt != null
-                    && now.isAfter(existing.lastAttempt.plusSeconds(LOCKOUT_DURATION_SECONDS * 10))) {
-                return new AttemptRecord(now);
-            }
-            // Nếu khóa cũ đã hết hạn, bắt đầu chu kỳ mới với 1 lần sai
-            if (existing.lockedUntil != null && now.isAfter(existing.lockedUntil)) {
-                return new AttemptRecord(now);
-            }
-
-            existing.failedAttempts++;
-            existing.lastAttempt = now;
-            if (existing.failedAttempts >= MAX_FAILED_ATTEMPTS) {
-                existing.lockedUntil = now.plusSeconds(LOCKOUT_DURATION_SECONDS);
-            }
-            return existing;
+            int nextAttempts = existing.failedAttempts() + 1;
+            Instant nextLockedUntil = nextAttempts >= MAX_FAILED_ATTEMPTS
+                    ? now.plusSeconds(LOCKOUT_DURATION_SECONDS)
+                    : existing.lockedUntil();
+            return new AttemptRecord(nextAttempts, nextLockedUntil, now);
         });
 
-        if (record.lockedUntil != null && now.isBefore(record.lockedUntil)) {
+        if (record.lockedUntil() != null && now.isBefore(record.lockedUntil())) {
             return 0; // Đã bị khóa
         }
-        return Math.max(0, MAX_FAILED_ATTEMPTS - record.failedAttempts);
+        return Math.max(0, MAX_FAILED_ATTEMPTS - record.failedAttempts());
+    }
+
+    /** Dọn các bản ghi hết hạn và kẹp kích thước map khi gần ngưỡng để chống phình RAM khi nhận username ngẫu nhiên. */
+    private void evictIfNeeded(String incomingKey, Instant now) {
+        if (attempts.size() < maxEntries || attempts.containsKey(incomingKey)) {
+            return;
+        }
+        for (Map.Entry<String, AttemptRecord> entry : attempts.entrySet()) {
+            AttemptRecord rec = entry.getValue();
+            if (rec != null && rec.isExpired(now)) {
+                attempts.remove(entry.getKey(), rec);
+            }
+        }
+        int excess = attempts.size() - maxEntries + 1;
+        if (excess > 0) {
+            attempts.entrySet().stream()
+                    .sorted(Comparator.comparing(e -> e.getValue().lastAttempt() != null ? e.getValue().lastAttempt() : Instant.EPOCH))
+                    .limit(excess)
+                    .forEach(e -> attempts.remove(e.getKey(), e.getValue()));
+        }
+    }
+
+    /** Số định danh hiện đang được theo dõi (dùng cho test kiểm tra giới hạn bộ nhớ). */
+    int trackedCount() {
+        return attempts.size();
     }
 
     /**

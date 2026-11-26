@@ -10,7 +10,9 @@ import jakarta.validation.constraints.Size;
  * buộc), vai trò (bị bỏ qua, luôn là MEMBER) và họ tên. Thông báo lỗi validate là mã i18n.
  */
 public record RegisterRequest(
-    @NotBlank(message = "{validation.auth.username.not_blank}") @Size(min = 3, message = "{validation.auth.username.size}") String username,
+    @NotBlank(message = "{validation.auth.username.not_blank}")
+    @Size(min = 3, max = 50, message = "{validation.auth.username.size}")
+    @Pattern(regexp = "^[a-zA-Z0-9._-]{3,50}$", message = "{validation.auth.username.size}") String username,
     @NotBlank(message = "{validation.auth.password.not_blank}") @jakarta.validation.constraints.Pattern(regexp = com.swp391.scms.auth.PasswordPolicy.REGEX, message = "{validation.auth.password.policy}") String password,
     @NotBlank(message = "{validation.auth.email.not_blank}") @Email(message = "{validation.auth.email.invalid}")
     @Pattern(regexp = "^\\s*[a-zA-Z0-9]+([._%+-][a-zA-Z0-9]+)*@([a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,}\\s*$", message = "{validation.auth.email.invalid}") String email,

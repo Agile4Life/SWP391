@@ -2,9 +2,12 @@ package com.swp391.scms.ai.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,6 +16,7 @@ import java.util.Map;
 /** Client gọi Google Gemini để soạn giáo án. */
 public class GeminiRestClient implements AiClient {
 
+    private static final Logger log = LoggerFactory.getLogger(GeminiRestClient.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     static final int MAX_JSON_OUTPUT_TOKENS = 2500;
 
@@ -112,8 +116,11 @@ public class GeminiRestClient implements AiClient {
             if (!cleaned.isBlank()) {
                 return cleaned;
             }
-        } catch (Exception ignored) {
-            // Rơi về payload dự phòng có tính xác định khi upstream không truy cập được.
+        } catch (RestClientResponseException ex) {
+            log.warn("AI provider 'gemini' (model '{}') returned HTTP {}", model, ex.getStatusCode().value());
+        } catch (Exception ex) {
+            // Không ghi API key, body hay prompt/PII vào log.
+            log.warn("AI provider 'gemini' (model '{}') call failed: {}", model, ex.getClass().getSimpleName());
         }
         return fallbackPayload(userMessage);
     }

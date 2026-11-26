@@ -21,7 +21,7 @@ import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -48,18 +48,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /** Bộ kiểm thử cho PaymentMemberAccess (payment member access). */
 class PaymentMemberAccessTest {
     @Autowired MockMvc mvc;
-    @MockBean com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
-    @MockBean PaymentRepository payments;
-    @MockBean MemberRepository members;
-    @MockBean UserRepository users;
-    @MockBean MembershipSubscriptionRepository subscriptions;
-    @MockBean ClassEnrollmentRepository enrollments;
+    @MockitoBean com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
+    @MockitoBean PaymentRepository payments;
+    @MockitoBean MemberRepository members;
+    @MockitoBean UserRepository users;
+    @MockitoBean MembershipSubscriptionRepository subscriptions;
+    @MockitoBean ClassEnrollmentRepository enrollments;
     // PaymentService dùng repository trial thật trong context; slice test phải khai báo mock tương ứng.
-    @MockBean com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trials;
-    @MockBean PaymentMapper mapper;
-    @MockBean JwtService jwt;
-    @MockBean MessageService messages;
-    @MockBean Clock clock;
+    @MockitoBean com.swp391.scms.membership.repository.MemberTrialRedemptionRepository trials;
+    @MockitoBean PaymentMapper mapper;
+    @MockitoBean JwtService jwt;
+    @MockitoBean MessageService messages;
+    @MockitoBean Clock clock;
 
     /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (actor). */
     private static UsernamePasswordAuthenticationToken actor(String role) {
@@ -292,5 +292,47 @@ class PaymentMemberAccessTest {
                         .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"test\",\"amount\":500000}"))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(payments);
+    }
+
+    @Test
+    void memberCannotSubmitDualTargetOrArbitraryAmountClassEnrollmentPayment() throws Exception {
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"subscriptionId":10,"classEnrollmentId":20,"amount":500000,"method":"online_wallet"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PAYMENT_MULTIPLE_TARGETS"));
+
+        Member member = new Member(); member.setUserId(2L);
+        var gymClass = new com.swp391.scms.scheduling.entity.GymClass();
+        gymClass.setId(50L); gymClass.setPrice(new BigDecimal("600000"));
+        var enrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        enrollment.setId(20L); enrollment.setMember(member); enrollment.setGymClass(gymClass); enrollment.setStatus("booked");
+        when(enrollments.findById(20L)).thenReturn(Optional.of(enrollment));
+
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"classEnrollmentId":20,"amount":1,"method":"online_wallet"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("PAYMENT_AMOUNT_MISMATCH"));
+
+        Payment existing = new Payment();
+        existing.setId(55L); existing.setMember(member); existing.setClassEnrollmentId(20L);
+        existing.setStatus("pending"); existing.setAmount(new BigDecimal("600000"));
+        when(members.findById(2L)).thenReturn(Optional.of(member));
+        when(members.findByUserIdForUpdate(2L)).thenReturn(Optional.of(member));
+        when(payments.findAllByClassEnrollmentId(20L)).thenReturn(List.of(existing));
+
+        mvc.perform(post("/api/v1/payments").with(authentication(actor("MEMBER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"memberId":2,"classEnrollmentId":20,"amount":600000,"method":"online_wallet"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("PAYMENT_ALREADY_EXISTS"));
+        verify(payments, never()).save(any());
     }
 }

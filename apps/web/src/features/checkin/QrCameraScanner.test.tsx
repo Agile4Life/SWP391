@@ -101,3 +101,30 @@ it('isolates rapid retry from delayed cleanup belonging to the previous scanner'
   await act(async () => camera.decode!({ data: 'second' }));
   expect(codes).toEqual(['first', 'second']);
 });
+it('invokes the latest onScan callback when prop changes while camera is active (P1-FE-32)', async () => {
+  const firstHandler = vi.fn();
+  const secondHandler = vi.fn();
+  await act(async () => root.render(<QrCameraScanner onScan={firstHandler} />));
+  await act(async () => host.querySelector('button')!.click());
+  await act(async () => root.render(<QrCameraScanner onScan={secondHandler} />));
+  await act(async () => camera.decode!({ data: 'SOL:GATE:checkout-code' }));
+  expect(firstHandler).not.toHaveBeenCalled();
+  expect(secondHandler).toHaveBeenCalledWith('SOL:GATE:checkout-code');
+});
+it('distinguishes permission denied, missing camera, and stream startup errors (P3-FE-24)', async () => {
+  const notAllowed = Object.assign(new Error('Permission denied'), { name: 'NotAllowedError' });
+  camera.start.mockRejectedValueOnce(notAllowed);
+  await act(async () => root.render(<QrCameraScanner onScan={vi.fn()} />));
+  await act(async () => host.querySelector('button')!.click());
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('chưa cấp quyền truy cập camera');
+
+  const notFound = Object.assign(new Error('Camera not found'), { name: 'NotFoundError' });
+  camera.start.mockRejectedValueOnce(notFound);
+  await act(async () => host.querySelector('button')!.click());
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không tìm thấy camera');
+
+  const streamFailed = Object.assign(new Error('Device in use'), { name: 'NotReadableError' });
+  camera.start.mockRejectedValueOnce(streamFailed);
+  await act(async () => host.querySelector('button')!.click());
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('luồng camera');
+});

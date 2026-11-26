@@ -146,6 +146,23 @@ public class NotificationControllerTest {
                 .andExpect(jsonPath("$.data.content[0].title").value("Test title"));
     }
 
+    /** Kiểm thử P2-BE-49: loại bỏ sort tùy ý từ client và giới hạn size <= 50. */
+    @Test
+    @DisplayName("GET /api/v1/notifications sanitizes client sort and caps page size to 50")
+    void getNotifications_SanitizesPageable() throws Exception {
+        var pageableCaptor = org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        when(notificationService.getUserNotifications(eq(101L), pageableCaptor.capture()))
+                .thenReturn(new PageImpl<>(Collections.emptyList(), PageRequest.of(0, 50), 0));
+
+        mockMvc.perform(get("/api/v1/notifications?page=2&size=500&sort=nonExistentField,asc"))
+                .andExpect(status().isOk());
+
+        org.assertj.core.api.Assertions.assertThat(pageableCaptor.getValue().getPageNumber()).isEqualTo(2);
+        org.assertj.core.api.Assertions.assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(50);
+        org.assertj.core.api.Assertions.assertThat(pageableCaptor.getValue().getSort())
+                .isEqualTo(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+    }
+
     /** Kiểm thử: lấy số thông báo chưa đọc thành công. */
     @Test
     @DisplayName("GET /api/v1/notifications/unread-count returns unread count")

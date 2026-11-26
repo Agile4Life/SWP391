@@ -169,4 +169,84 @@ class AuditServiceTest {
         assertThat(spec.toPredicate(root, query, cb)).isSameAs(conjunction);
         org.mockito.Mockito.verifyNoInteractions(root);
     }
+
+    /** Kiểm thử P1-BE-43: chuỗi có offset UTC được quy đổi đúng sang CenterTime.ZONE (+07:00). */
+    @Test
+    @DisplayName("parseDateTimeBound converts offset timestamps to CenterTime.ZONE instead of dropping offset")
+    void parseDateTimeBound_ConvertsOffsetToCenterZone() {
+        AuditService.ParsedBound parsed = auditService.parseDateTimeBound("2026-10-31T23:59:59Z", true);
+        assertThat(parsed.value()).isEqualTo(LocalDateTime.of(2026, 11, 1, 6, 59, 59));
+        assertThat(parsed.exclusive()).isFalse();
+    }
+
+    /** Kiểm thử P1-BE-43: chuỗi chỉ có ngày cho to dùng đầu ngày kế tiếp với cận trên mở (<) thay vì LocalTime.MAX. */
+    @Test
+    @DisplayName("parseDateTimeBound uses exclusive next-day start for date-only upper bound")
+    void parseDateTimeBound_DateOnlyToUsesExclusiveNextDayStart() {
+        AuditService.ParsedBound parsed = auditService.parseDateTimeBound("2026-10-31", true);
+        assertThat(parsed.value()).isEqualTo(LocalDateTime.of(2026, 11, 1, 0, 0, 0));
+        assertThat(parsed.exclusive()).isTrue();
+
+        var root = org.mockito.Mockito.mock(jakarta.persistence.criteria.Root.class);
+        var query = org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaQuery.class);
+        var cb = org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaBuilder.class);
+        var createdAtPath = org.mockito.Mockito.mock(jakarta.persistence.criteria.Path.class);
+        var ltPred = org.mockito.Mockito.mock(jakarta.persistence.criteria.Predicate.class);
+        when(root.get("createdAt")).thenReturn(createdAtPath);
+        when(cb.lessThan(createdAtPath, parsed.value())).thenReturn(ltPred);
+        when(cb.and(any(jakarta.persistence.criteria.Predicate[].class))).thenReturn(ltPred);
+
+        AuditSpecifications.filter(null, null, null, null, parsed.value(), true).toPredicate(root, query, cb);
+
+        verify(cb).lessThan(createdAtPath, LocalDateTime.of(2026, 11, 1, 0, 0, 0));
+        org.mockito.Mockito.verify(cb, org.mockito.Mockito.never()).lessThanOrEqualTo(any(), any(LocalDateTime.class));
+    }
+
+    /** Kiểm thử P3-BE-17: từ chối khoảng thời gian from > to, nhưng cho phép cùng ngày. */
+    @Test
+    @DisplayName("getAuditLogs rejects from > to with 400 BadRequestException and allows same-day range")
+    void getAuditLogs_RejectsInvertedDateRange() {
+        PageRequest pageable = PageRequest.of(0, 20);
+        assertThatThrownBy(() -> auditService.getAuditLogs(null, null, null, "2026-10-10", "2026-10-09", pageable))
+                .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> auditService.getAuditLogs(
+                null, null, null, "2026-10-10T15:00:00", "2026-10-10T14:59:59", pageable))
+                .isInstanceOf(BadRequestException.class);
+
+        when(auditLogRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(), pageable, 0));
+        assertThat(auditService.getAuditLogs(null, null, null, "2026-10-10", "2026-10-10", pageable).getContent())
+                .isEmpty();
+    }
+
+    /** Kiểm thử P2-BE-47: escape ký tự wildcard LIKE (\\, %, _) với ESCAPE '\\', index trên AuditLog và @EntityGraph. */
+    @Test
+    @SuppressWarnings("unchecked")
+    @DisplayName("AuditSpecifications escapes LIKE wildcards and AuditLog defines created_at/user_id indexes and EntityGraph")
+    void specifications_EscapeLikeWildcardsAndMetadataIndexesExist() throws Exception {
+        assertThat(AuditSpecifications.escapeLike("USER_100%\\TEST")).isEqualTo("USER\\_100\\%\\\\TEST");
+
+        var root = org.mockito.Mockito.mock(jakarta.persistence.criteria.Root.class);
+        var query = org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaQuery.class);
+        var cb = org.mockito.Mockito.mock(jakarta.persistence.criteria.CriteriaBuilder.class);
+        var actionPath = org.mockito.Mockito.mock(jakarta.persistence.criteria.Path.class);
+        var lowered = org.mockito.Mockito.mock(jakarta.persistence.criteria.Expression.class);
+        var pred = org.mockito.Mockito.mock(jakarta.persistence.criteria.Predicate.class);
+        when(root.get("action")).thenReturn(actionPath);
+        when(cb.lower(actionPath)).thenReturn(lowered);
+        when(cb.like(lowered, "%user\\_100\\%\\\\%", '\\')).thenReturn(pred);
+        when(cb.and(any(jakarta.persistence.criteria.Predicate[].class))).thenReturn(pred);
+
+        AuditSpecifications.filter(null, null, "USER_100%\\", null, null, false).toPredicate(root, query, cb);
+        verify(cb).like(lowered, "%user\\_100\\%\\\\%", '\\');
+
+        var table = AuditLog.class.getAnnotation(jakarta.persistence.Table.class);
+        var indexNames = java.util.Arrays.stream(table.indexes()).map(jakarta.persistence.Index::name).toList();
+        assertThat(indexNames).contains("ix_audit_entity", "ix_audit_created_at", "ix_audit_user_id");
+
+        var findAllMethod = AuditLogRepository.class.getMethod("findAll", Specification.class, Pageable.class);
+        var entityGraph = findAllMethod.getAnnotation(org.springframework.data.jpa.repository.EntityGraph.class);
+        assertThat(entityGraph).isNotNull();
+        assertThat(entityGraph.attributePaths()).containsExactly("user");
+    }
 }

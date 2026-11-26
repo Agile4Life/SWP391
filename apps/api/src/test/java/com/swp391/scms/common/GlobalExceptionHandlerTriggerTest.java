@@ -43,6 +43,8 @@ class GlobalExceptionHandlerTriggerTest {
     private static final String DISCIPLINE_CONFLICT_EN = "Discipline schedule conflict: This discipline already has another active class during this time slot.";
     private static final String MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký gói tập trước khi đặt lịch";
     private static final String MEMBERSHIP_EN = "You do not have an active membership package or your subscription has expired. Please register or activate a package before booking";
+    private static final String CHECKIN_MEMBERSHIP_VI = "Bạn chưa đăng ký gói tập, gói tập chưa được kích hoạt hoặc đã hết hạn. Vui lòng đăng ký hoặc gia hạn gói tập để tiếp tục.";
+    private static final String CHECKIN_MEMBERSHIP_EN = "You do not have an active membership subscription or your subscription has expired. Please register or renew a membership package to continue.";
     private static final String INVALID_SLOT_VI = "Khung giờ không hợp lệ. Vui lòng chọn một trong 5 slot cố định (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
     private static final String INVALID_SLOT_EN = "Invalid time slot. Please choose one of the 5 fixed slots (Slot 1: 07:00–09:30, Slot 2: 09:45–11:15, Slot 3: 11:30–14:00, Slot 4: 14:15–16:45, Slot 5: 17:00–19:30).";
 
@@ -71,6 +73,76 @@ class GlobalExceptionHandlerTriggerTest {
                 new DataIntegrityViolationException("ERROR: trg_member_schedule_conflict"));
         org.junit.jupiter.api.Assertions.assertEquals(409, response.getStatusCode().value());
         org.junit.jupiter.api.Assertions.assertEquals("SCHEDULING_MEMBER_TIME_OVERLAP", response.getBody().getCode());
+    }
+
+    /** Kiểm thử P1-BE-12: IllegalStateException rơi về HTTP 500 không lộ nội dung nội bộ; IllegalArgumentException trả 400 thông báo chung đã dịch. */
+    @Test
+    void illegalStateFallsTo500AndIllegalArgumentDoesNotLeakRawMessage() throws Exception {
+        mockMvcFor(new IllegalStateException("internal-vnpay-key-secret")).perform(get("/trigger-test").header("Accept-Language", "en"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_SERVER_ERROR"))
+                .andExpect(jsonPath("$.message").value("An internal system error occurred. Please contact administrator."));
+
+        mockMvcFor(new IllegalArgumentException("raw internal stack hint")).perform(get("/trigger-test").header("Accept-Language", "en"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("BAD_REQUEST"))
+                .andExpect(jsonPath("$.message").value("Bad request"));
+    }
+
+    /** Kiểm thử P1-BE-12: ánh xạ uq_users_email / key (email)= sang EMAIL_EXISTS và uq_users_username / key (username)= sang USERNAME_EXISTS. */
+    @Test
+    void mapsNamedAndKeyFallbackUniqueConstraintsForEmailAndUsername() {
+        var handler = new GlobalExceptionHandler();
+        var emailByKey = handler.handleDataIntegrity(
+                new DataIntegrityViolationException("ERROR: duplicate key value violates unique constraint \"uk6dotkott2kjsp8vw4d0m25fb7\" Detail: Key (email)=(a@b.com) already exists."));
+        org.junit.jupiter.api.Assertions.assertEquals(409, emailByKey.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("EMAIL_EXISTS", emailByKey.getBody().getCode());
+
+        var usernameByConstraint = handler.handleDataIntegrity(
+                new DataIntegrityViolationException("ERROR: duplicate key value violates unique constraint \"uq_users_username\""));
+        org.junit.jupiter.api.Assertions.assertEquals(409, usernameByConstraint.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("USERNAME_EXISTS", usernameByConstraint.getBody().getCode());
+
+        var usernameByKey = handler.handleDataIntegrity(
+                new DataIntegrityViolationException("Detail: Key (username)=(alice) already exists."));
+        org.junit.jupiter.api.Assertions.assertEquals(409, usernameByKey.getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals("USERNAME_EXISTS", usernameByKey.getBody().getCode());
+    }
+
+    /** Kiểm thử P1-BE-12 & P2-BE-15: các handler 4xx mới (413, 400 multipart/sort, 415, 406, ResponseStatusException) và lọc tên method ở ConstraintViolation. */
+    @Test
+    void standard4xxHandlersAndConstraintViolationLeafPathWork() {
+        ResourceBundleMessageSource source = new ResourceBundleMessageSource();
+        source.setBasename("i18n/messages");
+        source.setDefaultEncoding("UTF-8");
+        source.setFallbackToSystemLocale(false);
+        var handler = new GlobalExceptionHandler(new MessageService(source));
+
+        org.junit.jupiter.api.Assertions.assertEquals(413,
+                handler.handleMaxUploadSize(new org.springframework.web.multipart.MaxUploadSizeExceededException(1024)).getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals(400,
+                handler.handleMultipart(new org.springframework.web.multipart.MultipartException("bad multipart")).getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals(415,
+                handler.handleMediaTypeNotSupported(new org.springframework.web.HttpMediaTypeNotSupportedException("text/plain")).getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals(406,
+                handler.handleMediaTypeNotAcceptable(new org.springframework.web.HttpMediaTypeNotAcceptableException("not acceptable")).getStatusCode().value());
+        org.junit.jupiter.api.Assertions.assertEquals(404,
+                handler.handleResponseStatus(new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "secret internal reason")).getStatusCode().value());
+
+        @SuppressWarnings("unchecked")
+        jakarta.validation.ConstraintViolation<Object> violation = org.mockito.Mockito.mock(jakarta.validation.ConstraintViolation.class);
+        jakarta.validation.Path path = org.mockito.Mockito.mock(jakarta.validation.Path.class);
+        org.mockito.Mockito.when(path.toString()).thenReturn("getAll.memberId");
+        org.mockito.Mockito.when(violation.getPropertyPath()).thenReturn(path);
+        org.mockito.Mockito.when(violation.getMessage()).thenReturn("{error.bad_request}");
+        var cvRes = handler.handleConstraintViolation(new jakarta.validation.ConstraintViolationException(java.util.Set.of(violation)));
+        org.junit.jupiter.api.Assertions.assertEquals(400, cvRes.getStatusCode().value());
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, String> details = (java.util.Map<String, String>) cvRes.getBody().getDetails();
+        org.junit.jupiter.api.Assertions.assertTrue(details.containsKey("memberId"));
+        org.junit.jupiter.api.Assertions.assertFalse(details.containsKey("getAll.memberId"));
+        org.junit.jupiter.api.Assertions.assertEquals("Yêu cầu không hợp lệ", details.get("memberId"));
     }
 
     /** Kiểm thử: giữ nguyên phản hồi của trigger PostgreSQL. */
@@ -172,7 +244,7 @@ class GlobalExceptionHandlerTriggerTest {
                         "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),
                 new TriggerFailure("Học viên không có gói thành viên còn hiệu lực để check-in.",
                         "trg_checkins_check_membership", "23514", 403,
-                        "MEMBERSHIP_INACTIVE_OR_EXPIRED", MEMBERSHIP_VI, MEMBERSHIP_EN),
+                        "MEMBERSHIP_INACTIVE_OR_EXPIRED", CHECKIN_MEMBERSHIP_VI, CHECKIN_MEMBERSHIP_EN),
                 new TriggerFailure("trg_schedule_invalid_slot",
                         "trg_schedule_invalid_slot", "23514", 400,
                         "SCHEDULING_INVALID_SLOT", INVALID_SLOT_VI, INVALID_SLOT_EN))

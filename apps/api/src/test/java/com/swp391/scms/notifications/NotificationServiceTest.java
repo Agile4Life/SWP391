@@ -29,7 +29,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class NotificationServiceTest {
 
-    /** Kiểm thử: gửi thông báo giữ nguyên nội dung gốc cho lưu trữ và gửi ra ngoài. */
+    /** Kiểm thử: gửi thông báo giữ nguyên nội dung gốc cho lưu trữ và gửi payload đã chuẩn hóa ra kênh ngoài. */
     @Test
     void sendPreservesOriginalContentForPersistenceAndExternalDelivery() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
@@ -43,12 +43,18 @@ class NotificationServiceTest {
         verify(notificationRepository).save(saved.capture());
         assertThat(saved.getValue().getTitle()).isEqualTo("Class session booked");
         assertThat(saved.getValue().getMessage()).isEqualTo("You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).");
-        verify(dispatcher).dispatch(101L, "Class session booked",
-                "You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).", "booking", null, null,
-                java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.PUSH));
+
+        var dispatched = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.notifications.port.NotificationPayload.class);
+        verify(dispatcher).dispatch(dispatched.capture());
+        assertThat(dispatched.getValue().userId()).isEqualTo(101L);
+        assertThat(dispatched.getValue().title()).isEqualTo("Class session booked");
+        assertThat(dispatched.getValue().message()).isEqualTo("You booked class Sunrise Yoga on 2026-11-14 (07:00-08:30).");
+        assertThat(dispatched.getValue().type()).isEqualTo("class_reminder");
+        assertThat(dispatched.getValue().channels())
+                .containsExactlyInAnyOrder(com.swp391.scms.notifications.port.NotificationChannel.PUSH);
     }
 
-    /** Kiểm thử: các loại quan trọng còn được gửi qua email. */
+    /** Kiểm thử: các loại quan trọng còn được gửi qua email (gồm order/wallet đã chuẩn hóa về payment). */
     @Test
     void importantTypesAlsoGoByEmail() {
         var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
@@ -61,11 +67,31 @@ class NotificationServiceTest {
         service.send(101L, "T", "M", "password_changed", "user", 1L);
         service.send(101L, "T", "M", "schedule_change", "class_session", 1L);
         service.send(101L, "T", "M", "package_expiry", "membership_subscription", 1L);
+        service.send(101L, "T", "M", "order", "product_order", 2L, "/member/invoices");
 
-        verify(dispatcher).dispatch(101L, "T", "M", "payment", "wallet", 1L, emailAndPush);
-        verify(dispatcher).dispatch(101L, "T", "M", "password_changed", "user", 1L, emailAndPush);
-        verify(dispatcher).dispatch(101L, "T", "M", "schedule_change", "class_session", 1L, emailAndPush);
-        verify(dispatcher).dispatch(101L, "T", "M", "package_expiry", "membership_subscription", 1L, emailAndPush);
+        var captor = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.notifications.port.NotificationPayload.class);
+        verify(dispatcher, times(5)).dispatch(captor.capture());
+        var payloads = captor.getAllValues();
+
+        assertThat(payloads.get(0).type()).isEqualTo("payment");
+        assertThat(payloads.get(0).relatedEntityType()).isEqualTo("payment");
+        assertThat(payloads.get(0).channels()).isEqualTo(emailAndPush);
+
+        assertThat(payloads.get(1).type()).isEqualTo("password_changed");
+        assertThat(payloads.get(1).relatedEntityType()).isNull();
+        assertThat(payloads.get(1).channels()).isEqualTo(emailAndPush);
+
+        assertThat(payloads.get(2).type()).isEqualTo("schedule_change");
+        assertThat(payloads.get(2).relatedEntityType()).isEqualTo("class_session");
+        assertThat(payloads.get(2).channels()).isEqualTo(emailAndPush);
+
+        assertThat(payloads.get(3).type()).isEqualTo("package_expiry");
+        assertThat(payloads.get(3).relatedEntityType()).isEqualTo("membership_subscription");
+        assertThat(payloads.get(3).channels()).isEqualTo(emailAndPush);
+
+        assertThat(payloads.get(4).type()).isEqualTo("payment");
+        assertThat(payloads.get(4).actionPath()).isEqualTo("/member/invoices");
+        assertThat(payloads.get(4).channels()).isEqualTo(emailAndPush);
     }
 
     /** Kiểm thử: gửi đa kênh giữ nguyên nội dung gốc. */
@@ -81,7 +107,7 @@ class NotificationServiceTest {
                 "Your class \"Sunrise Yoga\" is starting at 07:00 on 2026-11-14. Get ready!", "class_reminder", null, null);
     }
 
-    /** Kiểm thử: thông báo đánh giá có liên kết tiến độ an toàn và nội dung đã bản địa hóa. */
+    /** Kiểm thử: thông báo đánh giá dùng liên kết tiến độ hợp lệ (đã gỡ #coach-evaluations) và nội dung đã bản địa hóa. */
     @Test
     void evaluationNotificationHasSafeProgressLinkAndLocalizedCopy() {
         var messages = org.mockito.Mockito.mock(com.swp391.scms.common.i18n.MessageService.class);
@@ -93,8 +119,37 @@ class NotificationServiceTest {
         service.notifyEvaluation(101L);
         var captured = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.notifications.entity.Notification.class);
         verify(notificationRepository).save(captured.capture());
-        org.junit.jupiter.api.Assertions.assertEquals("/member/progress#coach-evaluations", captured.getValue().getActionPath());
+        org.junit.jupiter.api.Assertions.assertEquals("/member/progress", captured.getValue().getActionPath());
         org.junit.jupiter.api.Assertions.assertEquals("View feedback", captured.getValue().getMessage());
+    }
+
+    /** Kiểm thử P1-BE-51, P2-BE-48, P3-BE-20: chuẩn hóa không phân biệt hoa thường, cắt title 150 ký tự và gắn /coach/classes cho HLV. */
+    @Test
+    void sendNormalizesCaseInsensitiveTypesClampsTitleAndSetsCoachScheduleActionPath() {
+        var dispatcher = mock(com.swp391.scms.notifications.port.NotificationDispatcher.class);
+        var service = new NotificationService(notificationRepository, userRepository, notificationMapper, dispatcher);
+        var coachRole = new com.swp391.scms.users.entity.Role();
+        coachRole.setCode("COACH");
+        var coach = new User();
+        coach.setId(202L);
+        coach.setRole(coachRole);
+        when(userRepository.findByIdAndDeletedAtIsNull(202L)).thenReturn(Optional.of(coach));
+
+        String longTitle = "A".repeat(200);
+        service.send(202L, longTitle, "Buổi học đã đổi giờ", "SCHEDULE_CHANGE", "CLASS_SESSION", 55L);
+
+        var saved = org.mockito.ArgumentCaptor.forClass(Notification.class);
+        verify(notificationRepository).save(saved.capture());
+        assertThat(saved.getValue().getTitle()).hasSize(150);
+        assertThat(saved.getValue().getType()).isEqualTo("schedule_change");
+        assertThat(saved.getValue().getRelatedEntityType()).isEqualTo("class_session");
+        assertThat(saved.getValue().getActionPath()).isEqualTo("/coach/classes");
+
+        var payloadCaptor = org.mockito.ArgumentCaptor.forClass(com.swp391.scms.notifications.port.NotificationPayload.class);
+        verify(dispatcher).dispatch(payloadCaptor.capture());
+        assertThat(payloadCaptor.getValue().title()).hasSize(150);
+        assertThat(payloadCaptor.getValue().type()).isEqualTo("schedule_change");
+        assertThat(payloadCaptor.getValue().actionPath()).isEqualTo("/coach/classes");
     }
 
     /** Kiểm thử: gửi qua kênh ngoài chỉ sau khi commit. */
@@ -112,8 +167,12 @@ class NotificationServiceTest {
             verifyNoInteractions(dispatcher);
             org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
                     .forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit);
-            verify(dispatcher).dispatch(101L, "Title", "Message", "system", null, null,
-                    java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.PUSH));
+            verify(dispatcher).dispatch(argThat((com.swp391.scms.notifications.port.NotificationPayload p) ->
+                    p.userId().equals(101L)
+                            && "Title".equals(p.title())
+                            && "Message".equals(p.message())
+                            && "system".equals(p.type())
+                            && p.channels().equals(java.util.Set.of(com.swp391.scms.notifications.port.NotificationChannel.PUSH))));
         } finally {
             org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
         }
@@ -128,13 +187,13 @@ class NotificationServiceTest {
         user.setId(101L);
         when(userRepository.findByIdAndDeletedAtIsNull(101L)).thenReturn(Optional.of(user));
         doThrow(new org.springframework.core.task.TaskRejectedException("executor full"))
-                .when(dispatcher).dispatch(eq(101L), eq("Title"), eq("Message"), eq("system"), isNull(), isNull(), any());
+                .when(dispatcher).dispatch(any(com.swp391.scms.notifications.port.NotificationPayload.class));
         org.springframework.transaction.support.TransactionSynchronizationManager.initSynchronization();
         try {
             service.send(101L, "Title", "Message", "system", null, null);
             assertThatCode(() -> org.springframework.transaction.support.TransactionSynchronizationManager.getSynchronizations()
                     .forEach(org.springframework.transaction.support.TransactionSynchronization::afterCommit)).doesNotThrowAnyException();
-            verify(dispatcher).dispatch(eq(101L), eq("Title"), eq("Message"), eq("system"), isNull(), isNull(), any());
+            verify(dispatcher).dispatch(any(com.swp391.scms.notifications.port.NotificationPayload.class));
         } finally {
             org.springframework.transaction.support.TransactionSynchronizationManager.clearSynchronization();
         }

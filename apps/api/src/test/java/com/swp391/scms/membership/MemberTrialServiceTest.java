@@ -171,7 +171,7 @@ class MemberTrialServiceTest {
         assertEquals("active", result.status());
         assertEquals("GOLD", result.packageName());
         assertEquals(LocalDate.now(clock), result.startDate());
-        assertEquals(LocalDate.now(clock).plusDays(3), result.endDate());
+        assertEquals(LocalDate.now(clock).plusDays(2), result.endDate());
 
         verify(trialRedemptions).saveAndFlush(any(MemberTrialRedemption.class));
         verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("membership_subscription"), eq(200L));
@@ -347,10 +347,13 @@ class MemberTrialServiceTest {
         pending.setId(55L);
         pending.setMember(testMember);
         pending.setFullName("Nguyen Van Verified");
-        pending.setDocumentNumberEnc("enc");
+        pending.setDocumentNumberEnc(hasher.encrypt("001200001234"));
         pending.setStatus(MemberTrialRedemption.STATUS_PENDING);
 
         when(trialRedemptions.findById(55L)).thenReturn(Optional.of(pending));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(testMember));
+        when(trialRedemptions.findByIdForUpdate(55L)).thenReturn(Optional.of(pending));
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
         when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
         when(subscriptions.saveAndFlush(any(MembershipSubscription.class))).thenAnswer(inv -> {
             MembershipSubscription s = inv.getArgument(0);
@@ -365,6 +368,8 @@ class MemberTrialServiceTest {
         assertEquals(300L, result.subscriptionId());
         assertEquals("APPROVED", result.status());
         assertEquals("Nguyen Van Verified", testMember.getUser().getFullName());
+        assertEquals("********1234", testMember.getCitizenId());
+        assertEquals("001200001234", kycCrypto.decrypt(testMember.getCitizenIdEncrypted()));
         assertNull(pending.getDocumentNumberEnc());
         assertNull(result.documentNumber());
         verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("membership_subscription"), eq(300L));
@@ -381,6 +386,8 @@ class MemberTrialServiceTest {
         pending.setStatus(MemberTrialRedemption.STATUS_PENDING);
 
         when(trialRedemptions.findById(56L)).thenReturn(Optional.of(pending));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(testMember));
+        when(trialRedemptions.findByIdForUpdate(56L)).thenReturn(Optional.of(pending));
         when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> inv.getArgument(0));
 
         ReceptionTrialDto result = service.rejectTrial(receptionist, 56L, "CCCD mờ không đọc được thông tin");
@@ -420,9 +427,12 @@ class MemberTrialServiceTest {
     void rejectingFreesTheDocumentAndARejectedRequestCannotBeApproved() {
         MemberTrialRedemption rejected = new MemberTrialRedemption();
         rejected.setId(70L);
+        rejected.setMember(testMember);
         rejected.setCccdHash("real-hash");
         rejected.setStatus(MemberTrialRedemption.STATUS_PENDING);
         when(trialRedemptions.findById(70L)).thenReturn(java.util.Optional.of(rejected));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(testMember));
+        when(trialRedemptions.findByIdForUpdate(70L)).thenReturn(Optional.of(rejected));
         when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> inv.getArgument(0));
         AuthenticatedPrincipal desk = new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST");
 
@@ -498,5 +508,82 @@ class MemberTrialServiceTest {
         org.mockito.ArgumentCaptor<MemberTrialRedemption> captor = org.mockito.ArgumentCaptor.forClass(MemberTrialRedemption.class);
         verify(trialRedemptions).saveAndFlush(captor.capture());
         assertEquals(hasher.hash("001200008888"), captor.getValue().getCccdHash());
+    }
+
+    /** Kiểm thử P1-BE-34: chuẩn hóa chữ hoa số hộ chiếu trước khi băm để không vượt qua kiểm tra trùng bằng khác hoa/thường. */
+    @Test
+    @DisplayName("requestTrial: Normalizes passport case to uppercase before hashing and duplicate checks")
+    void requestTrial_normalizesPassportCaseBeforeHashing() {
+        AuthenticatedPrincipal principal = new AuthenticatedPrincipal(10L, "member1", "MEMBER");
+        String img = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        TrialClaimRequest lowerCase = new TrialClaimRequest("PASSPORT", "p12345678", null, "John Doe", "United States", img, null);
+
+        when(members.findById(10L)).thenReturn(Optional.of(testMember));
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(trialRedemptions.existsByCccdHashAndMemberUserIdNot(hasher.hash("P12345678"), 10L)).thenReturn(true);
+
+        ConflictException ex = assertThrows(ConflictException.class, () -> service.requestTrial(principal, lowerCase));
+        assertEquals("TRIAL_DOCUMENT_ALREADY_USED", ex.getErrorCode());
+        verify(trialRedemptions, never()).saveAndFlush(any());
+    }
+
+    /** Kiểm thử P1-BE-34 & P2-BE-40: duyệt trial khóa hội viên trước rồi khóa yêu cầu, kiểm tra lại chưa có gói trả phí, lưu KYC che và đặt hạn đúng 3 ngày tính cả hôm nay. */
+    @Test
+    @DisplayName("approveTrial: Locks Member then Redemption, re-checks subscriptions, masks citizenId, and sets 3 inclusive days")
+    void approveTrial_locksMemberThenRedemptionRechecksSubAndSetsInclusiveThreeDayWindow() {
+        AuthenticatedPrincipal receptionist = new AuthenticatedPrincipal(99L, "receptionist1", "RECEPTIONIST");
+        MemberTrialRedemption pending = new MemberTrialRedemption();
+        pending.setId(58L);
+        pending.setMember(testMember);
+        pending.setDocumentType("PASSPORT");
+        pending.setFullName("Jane Roe");
+        pending.setCccdLast4("5678");
+        pending.setDocumentNumberEnc(hasher.encrypt("p12345678"));
+        pending.setStatus(MemberTrialRedemption.STATUS_PENDING);
+
+        when(trialRedemptions.findById(58L)).thenReturn(Optional.of(pending));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(testMember));
+        when(trialRedemptions.findByIdForUpdate(58L)).thenReturn(Optional.of(pending));
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
+        org.mockito.ArgumentCaptor<MembershipSubscription> subCaptor = org.mockito.ArgumentCaptor.forClass(MembershipSubscription.class);
+        when(subscriptions.saveAndFlush(subCaptor.capture())).thenAnswer(inv -> {
+            MembershipSubscription s = inv.getArgument(0);
+            s.setId(301L);
+            return s;
+        });
+        when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        service.approveTrial(receptionist, 58L);
+
+        org.mockito.InOrder order = inOrder(members, trialRedemptions, subscriptions);
+        order.verify(members).findByUserIdForUpdate(10L);
+        order.verify(trialRedemptions).findByIdForUpdate(58L);
+        order.verify(subscriptions).existsByMemberUserId(10L);
+
+        assertEquals(com.swp391.scms.users.KycCrypto.mask("P12345678"), testMember.getCitizenId());
+        assertEquals("P12345678", kycCrypto.decrypt(testMember.getCitizenIdEncrypted()));
+        assertEquals(LocalDate.now(clock), subCaptor.getValue().getStartDate());
+        assertEquals(LocalDate.now(clock).plusDays(2), subCaptor.getValue().getEndDate());
+    }
+
+    /** Kiểm thử P1-BE-34: nếu hội viên đã mua gói trả phí trong lúc chờ duyệt thì từ chối duyệt dùng thử. */
+    @Test
+    @DisplayName("approveTrial: Rejects approval if member already acquired a subscription while waiting")
+    void approveTrial_rejectsIfMemberBoughtSubscriptionWhileWaiting() {
+        AuthenticatedPrincipal receptionist = new AuthenticatedPrincipal(99L, "receptionist1", "RECEPTIONIST");
+        MemberTrialRedemption pending = new MemberTrialRedemption();
+        pending.setId(59L);
+        pending.setMember(testMember);
+        pending.setStatus(MemberTrialRedemption.STATUS_PENDING);
+
+        when(trialRedemptions.findById(59L)).thenReturn(Optional.of(pending));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(testMember));
+        when(trialRedemptions.findByIdForUpdate(59L)).thenReturn(Optional.of(pending));
+        when(subscriptions.existsByMemberUserId(10L)).thenReturn(true);
+
+        ConflictException ex = assertThrows(ConflictException.class, () -> service.approveTrial(receptionist, 59L));
+        assertEquals("TRIAL_NOT_NEW_MEMBER", ex.getErrorCode());
+        verify(subscriptions, never()).saveAndFlush(any());
     }
 }

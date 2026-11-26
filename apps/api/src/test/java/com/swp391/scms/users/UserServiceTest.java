@@ -439,4 +439,129 @@ class UserServiceTest {
         service.setStaffStatus(7L, "active");
         assertEquals("active", target.getStatus());
     }
+
+    /** Kiểm thử P1-BE-07: không hủy gói trả phí đang hoạt động mới của hội viên từng có đơn hủy gói cũ được duyệt. */
+    @Test
+    void returningMemberActiveSubscriptionIsNotCancelledByPriorApprovedCancellation() {
+        var memberRole = new com.swp391.scms.users.entity.Role();
+        memberRole.setCode("MEMBER");
+        User member = new User();
+        member.setId(88L);
+        member.setRole(memberRole);
+
+        var oldCancelledSub = new com.swp391.scms.membership.entity.MembershipSubscription();
+        oldCancelledSub.setId(100L);
+        oldCancelledSub.setStatus("cancelled");
+        var activeNewSub = new com.swp391.scms.membership.entity.MembershipSubscription();
+        activeNewSub.setId(200L);
+        activeNewSub.setStatus("active");
+
+        var cancellations = org.mockito.Mockito.mock(
+                com.swp391.scms.membership.repository.MembershipCancellationRequestRepository.class);
+        service.cancellationRequestRepository = cancellations;
+
+        when(userRepository.findByIdAndDeletedAtIsNull(88L)).thenReturn(Optional.of(member));
+        when(subscriptionRepository.findByMemberUserId(88L)).thenReturn(java.util.List.of(oldCancelledSub, activeNewSub));
+        when(cancellations.existsBySubscriptionIdAndStatus(200L, "APPROVED")).thenReturn(false);
+        when(subscriptionRepository.existsByMemberUserIdAndStatusInAndEndDateGreaterThanEqual(
+                eq(88L), any(), any())).thenReturn(true);
+
+        ConflictException ex = assertThrows(ConflictException.class, () -> service.deleteUser(88L));
+        assertEquals("users.blocked.membership", ex.getMessageKey());
+        assertEquals("active", activeNewSub.getStatus());
+        verify(subscriptionRepository, never()).save(activeNewSub);
+        verify(cancellations, never()).existsByMemberUserIdAndStatus(any(), any());
+    }
+
+    /** Kiểm thử P1-BE-11: đổi vai trò khỏi COACH/RECEPTIONIST phải hạ employmentStatus sang terminated và kích hoạt lại khi đổi về. */
+    @Test
+    void changingRoleDeactivatesAndReactivatesCoachAndReceptionistProfiles() {
+        var coachRole = new com.swp391.scms.users.entity.Role();
+        coachRole.setId(2L);
+        coachRole.setCode("COACH");
+        var recRole = new com.swp391.scms.users.entity.Role();
+        recRole.setId(3L);
+        recRole.setCode("RECEPTIONIST");
+        var memberRole = new com.swp391.scms.users.entity.Role();
+        memberRole.setId(4L);
+        memberRole.setCode("MEMBER");
+
+        User user = new User();
+        user.setId(55L);
+        user.setRole(coachRole);
+        user.setStatus("active");
+        var coachProfile = new com.swp391.scms.users.entity.Coach();
+        coachProfile.setUser(user);
+        coachProfile.setEmploymentStatus("active");
+        user.setCoach(coachProfile);
+
+        when(userRepository.findByIdAndDeletedAtIsNull(55L)).thenReturn(Optional.of(user));
+        when(roleRepository.findById(3L)).thenReturn(Optional.of(recRole));
+        when(roleRepository.findById(4L)).thenReturn(Optional.of(memberRole));
+        when(roleRepository.findById(2L)).thenReturn(Optional.of(coachRole));
+        when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        var toRec = new com.swp391.scms.users.dto.UserUpdateDto();
+        toRec.setRoleId(3L);
+        service.updateUser(55L, toRec);
+        assertEquals("terminated", user.getCoach().getEmploymentStatus());
+        assertNotNull(user.getReceptionist());
+        assertEquals("active", user.getReceptionist().getEmploymentStatus());
+
+        var toMember = new com.swp391.scms.users.dto.UserUpdateDto();
+        toMember.setRoleId(4L);
+        service.updateUser(55L, toMember);
+        assertEquals("terminated", user.getReceptionist().getEmploymentStatus());
+
+        var backToCoach = new com.swp391.scms.users.dto.UserUpdateDto();
+        backToCoach.setRoleId(2L);
+        service.updateUser(55L, backToCoach);
+        assertEquals("active", user.getCoach().getEmploymentStatus());
+    }
+
+    /** Kiểm thử P2-BE-11: updateUser từ chối fullName chỉ gồm khoảng trắng. */
+    @Test
+    void updateUserRejectsBlankFullName() {
+        User user = new User();
+        user.setId(15L);
+        user.setFullName("Valid Name");
+        when(userRepository.findByIdAndDeletedAtIsNull(15L)).thenReturn(Optional.of(user));
+
+        var dto = new com.swp391.scms.users.dto.UserUpdateDto();
+        dto.setFullName("   ");
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> service.updateUser(15L, dto));
+        assertEquals("INVALID_FULL_NAME", ex.getErrorCode());
+        assertEquals("Valid Name", user.getFullName());
+        verify(userRepository, never()).save(any());
+    }
+
+    /** Kiểm thử P2-BE-12: getAllUsers dùng 1 truy vấn batch lấy tập hội viên đang bảo lưu thay cho N+1. */
+    @Test
+    void getAllUsersBatchesFrozenSubscriptionLookup() {
+        var memberRole = new com.swp391.scms.users.entity.Role();
+        memberRole.setCode("MEMBER");
+        User m1 = new User();
+        m1.setId(1L);
+        m1.setRole(memberRole);
+        User m2 = new User();
+        m2.setId(2L);
+        m2.setRole(memberRole);
+
+        var dto1 = new com.swp391.scms.users.dto.UserDto();
+        dto1.setId(1L);
+        var dto2 = new com.swp391.scms.users.dto.UserDto();
+        dto2.setId(2L);
+
+        when(userRepository.findAllByDeletedAtIsNullOrderByIdAsc()).thenReturn(java.util.List.of(m1, m2));
+        when(userRepository.findMemberUserIdsWithFrozenSubscription()).thenReturn(java.util.List.of(2L));
+        when(userMapper.toDto(m1)).thenReturn(dto1);
+        when(userMapper.toDto(m2)).thenReturn(dto2);
+
+        var result = service.getAllUsers();
+        assertEquals(2, result.size());
+        assertEquals(Boolean.FALSE, result.get(0).getSubscriptionFrozen());
+        assertEquals(Boolean.TRUE, result.get(1).getSubscriptionFrozen());
+        verify(userRepository).findMemberUserIdsWithFrozenSubscription();
+        verify(subscriptionRepository, never()).existsByMemberUserIdAndStatus(any(), any());
+    }
 }

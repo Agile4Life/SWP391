@@ -1,12 +1,16 @@
+import { useEffect, useState } from 'react';
 import type { ChatContact } from './chatApi';
 
 /**
  * Ảnh đại diện trong khung chat: ảnh người dùng nếu có, SÖL AI dùng biểu tượng riêng, còn lại dùng chữ cái và
- * màu theo id.
+ * màu theo id. Tự động rơi về hình bóng mặc định khi ảnh tải lỗi.
  */
 export function ChatAvatar({ contact, className }: { contact: Pick<ChatContact, 'id' | 'name' | 'avatarUrl'> & { role?: string }; className?: string }) {
   const ai = contact.role === 'AI';
   const seed = Math.abs(contact.id || 0) % 4;
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  useEffect(() => { setFailedUrl(null); }, [contact.avatarUrl]);
+  const showImage = Boolean(contact.avatarUrl && failedUrl !== contact.avatarUrl);
   return (
     <span className={`direct-chat__avatar ${ai ? 'is-ai' : `is-seed-${seed}`}${className ? ` ${className}` : ''}`} aria-hidden="true">
       {ai ? (
@@ -14,8 +18,8 @@ export function ChatAvatar({ contact, className }: { contact: Pick<ChatContact, 
           <path d="M12 2.5l1.9 5.6 5.6 1.9-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.9z" />
           <path d="M18.5 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z" opacity=".75" />
         </svg>
-      ) : contact.avatarUrl ? (
-        <img src={contact.avatarUrl} alt="" className="direct-chat__avatar-img" loading="lazy" decoding="async" />
+      ) : showImage ? (
+        <img src={contact.avatarUrl!} alt="" className="direct-chat__avatar-img" loading="lazy" decoding="async" onError={() => setFailedUrl(contact.avatarUrl ?? null)} />
       ) : (
         <svg className="direct-chat__avatar-placeholder" viewBox="0 0 36 36" fill="none">
           <circle cx="18" cy="13.5" r="6" fill="currentColor" />

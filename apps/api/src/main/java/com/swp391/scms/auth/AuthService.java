@@ -21,14 +21,19 @@ import com.swp391.scms.users.entity.User;
 import com.swp391.scms.common.i18n.MessageService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 /**
  * Nghiệp vụ xác thực: đăng nhập (có khóa tạm khi sai nhiều lần), đăng ký hội viên, OTP kích hoạt/quên mật khẩu,
@@ -36,6 +41,12 @@ import java.util.UUID;
  */
 @Service
 public class AuthService {
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final Pattern USERNAME_PATTERN = Pattern.compile("^[a-zA-Z0-9._-]{3,50}$");
+    // Chuỗi băm BCrypt hợp lệ cố định dùng khi không tìm thấy tài khoản để cân bằng thời gian phản hồi (chống dò tài khoản qua timing).
+    static final String DUMMY_BCRYPT_HASH =
+            "$2a$10$7EqJtq98hPqEX7fNZaFWoOHi6Z0o.N6r7J9Y1aZ0k8W6tM3W5Z5yG";
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -49,13 +60,14 @@ public class AuthService {
     private final GoogleTokenVerifierPort googleTokenVerifierPort;
     private final com.swp391.scms.notifications.NotificationService notificationService;
     private final LoginAttemptService loginAttemptService;
+    private final TransactionTemplate writeTx;
 
     /** Constructor cho test với tập phụ thuộc tối thiểu. */
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
                        PasswordEncoder passwordEncoder, JwtService jwtService,
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null, null, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, null, null, null, null, null);
     }
 
     /** Constructor cho test có MessageService. */
@@ -64,7 +76,7 @@ public class AuthService {
                        OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
                        MessageService messageService) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, null, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, null, null, null, null);
     }
 
     /** Constructor cho test có thêm bộ xác minh Google. */
@@ -74,7 +86,7 @@ public class AuthService {
                        @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
                        MessageService messageService,
                        GoogleTokenVerifierPort googleTokenVerifierPort) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, null, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, null, null, null);
     }
 
     /** Constructor cho test có thêm NotificationService. */
@@ -85,12 +97,24 @@ public class AuthService {
                        MessageService messageService,
                        GoogleTokenVerifierPort googleTokenVerifierPort,
                        com.swp391.scms.notifications.NotificationService notificationService) {
-        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, notificationService, null);
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, notificationService, null, null);
+    }
+
+    /** Constructor cho test có đầy đủ phụ thuộc trừ PlatformTransactionManager. */
+    public AuthService(UserRepository userRepository, RoleRepository roleRepository,
+                       PasswordEncoder passwordEncoder, JwtService jwtService,
+                       OtpService otpService, OtpDeliveryPort otpDeliveryPort, Clock clock,
+                       @org.springframework.beans.factory.annotation.Value("${app.auth.debug-otp-enabled:false}") boolean debugOtpEnabled,
+                       MessageService messageService,
+                       GoogleTokenVerifierPort googleTokenVerifierPort,
+                       com.swp391.scms.notifications.NotificationService notificationService,
+                       LoginAttemptService loginAttemptService) {
+        this(userRepository, roleRepository, passwordEncoder, jwtService, otpService, otpDeliveryPort, clock, debugOtpEnabled, messageService, googleTokenVerifierPort, notificationService, loginAttemptService, null);
     }
 
     /**
-     * Constructor Spring dùng: các phụ thuộc tùy chọn (Google, thông báo, chống dò mật khẩu) có thể vắng mặt;
-     * thiếu LoginAttemptService thì tự tạo bản mặc định.
+     * Constructor Spring dùng: các phụ thuộc tùy chọn (Google, thông báo, chống dò mật khẩu, transaction manager)
+     * có thể vắng mặt; thiếu LoginAttemptService thì tự tạo bản mặc định.
      */
     @org.springframework.beans.factory.annotation.Autowired
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
@@ -100,7 +124,8 @@ public class AuthService {
                        MessageService messageService,
                        @org.springframework.beans.factory.annotation.Autowired(required = false) GoogleTokenVerifierPort googleTokenVerifierPort,
                        @org.springframework.beans.factory.annotation.Autowired(required = false) com.swp391.scms.notifications.NotificationService notificationService,
-                       @org.springframework.beans.factory.annotation.Autowired(required = false) LoginAttemptService loginAttemptService) {
+                       @org.springframework.beans.factory.annotation.Autowired(required = false) LoginAttemptService loginAttemptService,
+                       @org.springframework.beans.factory.annotation.Autowired(required = false) PlatformTransactionManager transactionManager) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.passwordEncoder = passwordEncoder;
@@ -113,6 +138,12 @@ public class AuthService {
         this.googleTokenVerifierPort = googleTokenVerifierPort;
         this.notificationService = notificationService;
         this.loginAttemptService = loginAttemptService != null ? loginAttemptService : new LoginAttemptService(clock);
+        this.writeTx = transactionManager != null ? new TransactionTemplate(transactionManager) : null;
+    }
+
+    /** Chạy hành động ghi trong một transaction độc lập (không có PlatformTransactionManager trong unit test thì chạy trực tiếp). */
+    private <T> T inWriteTx(Supplier<T> action) {
+        return writeTx != null ? writeTx.execute(status -> action.get()) : action.get();
     }
 
     /** Dịch mã thông báo; không có MessageService thì trả lại chính mã. */
@@ -142,8 +173,17 @@ public class AuthService {
                     "Tài khoản tạm thời bị khóa do nhập sai quá 5 lần. Vui lòng thử lại sau " + remainingSeconds + " giây.");
         }
 
-        User user = userRepository.findActiveByIdentifier(identifier).orElse(null);
-        boolean passwordMatches = user != null && passwordEncoder.matches(request.password(), user.getPasswordHash());
+        User user = (identifier.contains("@")
+                ? userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(identifier)
+                : userRepository.findByUsernameIgnoreCaseAndDeletedAtIsNull(identifier))
+                .orElse(null);
+        boolean passwordMatches;
+        if (user != null) {
+            passwordMatches = passwordEncoder.matches(request.password(), user.getPasswordHash());
+        } else {
+            passwordEncoder.matches(request.password(), DUMMY_BCRYPT_HASH);
+            passwordMatches = false;
+        }
 
         if (!passwordMatches) {
             int remaining = loginAttemptService.recordFailure(identifier);
@@ -173,6 +213,9 @@ public class AuthService {
      */
     @Transactional
     public RegistrationResponse register(RegisterRequest request) {
+        if (request.username() == null || !isValidUsername(request.username())) {
+            throw new BadRequestException("INVALID_USERNAME", "validation.auth.username.size", null, null);
+        }
         if (!isValidEmail(request.email())) {
             throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
         }
@@ -202,11 +245,16 @@ public class AuthService {
                 user.getId(), username);
     }
 
-    /** Kiểm tra OTP rồi kích hoạt tài khoản đang chờ. */
-    @Transactional
+    /**
+     * Kiểm tra OTP (mục đích kích hoạt tài khoản) rồi kích hoạt tài khoản đang chờ trong một transaction độc lập
+     * để không giữ kết nối ngoài khi gọi {@code otpService.verifyOtp} ({@code REQUIRES_NEW}).
+     */
     public OtpService.Status verifyOtp(VerifyOtpRequest request) {
-        OtpService.Status status = verifyOtpChallenge(request.target(), request.otpCode());
-        activateAccount(request.target());
+        OtpService.Status status = verifyOtpChallenge(request.target(), request.otpCode(), OtpPurpose.ACCOUNT_ACTIVATION);
+        inWriteTx(() -> {
+            activateAccount(request.target());
+            return null;
+        });
         return status;
     }
 
@@ -223,7 +271,7 @@ public class AuthService {
     /** Gửi OTP kích hoạt: chỉ cho tài khoản đang chờ kích hoạt. */
     public String generateOtp(String target) {
         findPendingUser(target);
-        return issueAndSendOtp(normalize(target));
+        return issueAndSendOtp(normalize(target), OtpPurpose.ACCOUNT_ACTIVATION);
     }
 
     /** Gửi OTP đặt lại mật khẩu: email phải hợp lệ, tài khoản phải tồn tại và không bị khóa. */
@@ -237,14 +285,14 @@ public class AuthService {
         if ("locked".equalsIgnoreCase(user.getStatus())) {
             throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
         }
-        return issueAndSendOtp(email);
+        return issueAndSendOtp(email, OtpPurpose.PASSWORD_RESET);
     }
 
     /**
-     * Đặt lại mật khẩu bằng OTP: kiểm tra OTP, mã hóa mật khẩu mới bằng BCrypt, tài khoản đang chờ kích hoạt
-     * được kích hoạt luôn (vì đã chứng minh sở hữu email), rồi gửi thông báo "mật khẩu đã đổi".
+     * Đặt lại mật khẩu bằng OTP: kiểm tra OTP (đúng mục đích PASSWORD_RESET, ngoài transaction ghi để tránh giữ
+     * hai kết nối pool cùng lúc), mã hóa mật khẩu mới bằng BCrypt, tài khoản đang chờ kích hoạt được kích hoạt
+     * luôn (vì đã chứng minh sở hữu email), rồi gửi thông báo "mật khẩu đã đổi".
      */
-    @Transactional
     public void resetPasswordWithOtp(ResetPasswordRequest request) {
         if (request == null || !isValidEmail(request.email())) {
             throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
@@ -253,31 +301,34 @@ public class AuthService {
             throw new BadRequestException("INVALID_OTP", "validation.auth.otp.not_blank", null, null);
         }
         String email = normalize(request.email());
-        verifyOtpChallenge(email, request.otpCode().trim());
+        verifyOtpChallenge(email, request.otpCode().trim(), OtpPurpose.PASSWORD_RESET);
 
-        User user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new ResourceNotFoundException("resource.account", email));
-        if ("locked".equalsIgnoreCase(user.getStatus())) {
-            throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
-        }
+        inWriteTx(() -> {
+            User user = userRepository.findByEmailIgnoreCaseAndDeletedAtIsNull(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.account", email));
+            if ("locked".equalsIgnoreCase(user.getStatus())) {
+                throw new ForbiddenException("ACCOUNT_INACTIVE", "auth.account.inactive", null, null);
+            }
 
-        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
-        if ("inactive".equalsIgnoreCase(user.getStatus())) {
-            user.setStatus("active");
-        }
-        user.setUpdatedAt(LocalDateTime.now(clock));
-        userRepository.save(user);
+            user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+            if ("inactive".equalsIgnoreCase(user.getStatus())) {
+                user.setStatus("active");
+            }
+            user.setUpdatedAt(LocalDateTime.now(clock));
+            userRepository.save(user);
 
-        if (notificationService != null && user.getId() != null) {
-            notificationService.send(
-                    user.getId(),
-                    msg("notifications.auth.password_changed.title"),
-                    msg("notifications.auth.password_changed.body"),
-                    "password_changed",
-                    "user",
-                    user.getId()
-            );
-        }
+            if (notificationService != null && user.getId() != null) {
+                notificationService.send(
+                        user.getId(),
+                        msg("notifications.auth.password_changed.title"),
+                        msg("notifications.auth.password_changed.body"),
+                        "password_changed",
+                        "user",
+                        user.getId()
+                );
+            }
+            return null;
+        });
     }
 
     /** Chuyển tài khoản đang chờ sang active. */
@@ -298,8 +349,9 @@ public class AuthService {
     }
 
     /**
-     * Gửi OTP đăng nhập Google: chưa có tài khoản thì tạo tài khoản chờ kích hoạt với mật khẩu ngẫu nhiên; có
-     * rồi thì kiểm tra vai trò/trạng thái được phép.
+     * Gửi lại OTP kích hoạt đăng nhập Google: KHÔNG BAO GIỜ tạo mới tài khoản. Chỉ cho phép gửi lại OTP mục đích
+     * GOOGLE_ACTIVATION cho tài khoản đã hoàn tất xác minh Google OAuth (đã gắn google_sub) và đang ở trạng thái
+     * chờ kích hoạt.
      */
     @Transactional
     public String requestGoogleOtp(String rawEmail) {
@@ -308,16 +360,16 @@ public class AuthService {
         }
         String email = normalize(rawEmail);
 
-        Optional<User> userOpt = userRepository.findByEmailIgnoreCase(email);
-        if (userOpt.isEmpty()) {
-            String username = generateUniqueUsernameFromEmail(email);
-            createPendingMemberUser(username, email, null, UUID.randomUUID().toString());
-        } else {
-            User user = userOpt.get();
-            ensureGoogleOtpAccountAllowed(user);
+        User user = userRepository.findByEmailIgnoreCase(email)
+                .orElseThrow(() -> new UnauthorizedException("GOOGLE_AUTH_REQUIRED", "auth.google.state_invalid", null,
+                        "Google OAuth verification is required before requesting OTP"));
+        ensureGoogleOtpAccountAllowed(user);
+        requireGoogleLinkedAccount(user);
+        if (!"inactive".equalsIgnoreCase(user.getStatus())) {
+            throw new BadRequestException("ACCOUNT_NOT_PENDING", "auth.account.not_pending", null, null);
         }
 
-        return issueAndSendOtp(email);
+        return issueAndSendOtp(email, OtpPurpose.GOOGLE_ACTIVATION);
     }
 
     /**
@@ -365,12 +417,15 @@ public class AuthService {
         }
 
         String accountEmail = normalize(user.getEmail());
-        String otpCode = issueAndSendOtp(accountEmail);
+        String otpCode = issueAndSendOtp(accountEmail, OtpPurpose.GOOGLE_ACTIVATION);
         return new GoogleOAuthResult(accountEmail, otpCode);
     }
 
-    /** Kiểm tra OTP đăng nhập Google, kích hoạt tài khoản nếu đang chờ, cập nhật lần đăng nhập cuối và cấp JWT. */
-    @Transactional
+    /**
+     * Kiểm tra OTP đăng nhập Google (mục đích GOOGLE_ACTIVATION, ngoài transaction ghi để tránh lồng kết nối
+     * pool), yêu cầu tài khoản đã liên kết Google và đang chờ kích hoạt, kích hoạt tài khoản, cập nhật lần đăng
+     * nhập cuối và cấp JWT.
+     */
     public AuthTokenResponse verifyGoogleOtp(String rawEmail, String otpCode) {
         if (!isValidEmail(rawEmail)) {
             throw new BadRequestException("INVALID_EMAIL", "auth.register.invalid_email", null, null);
@@ -379,21 +434,25 @@ public class AuthService {
             throw new BadRequestException("INVALID_OTP", "validation.auth.otp.not_blank", null, null);
         }
         String email = normalize(rawEmail);
-        verifyOtpChallenge(email, otpCode.trim());
+        verifyOtpChallenge(email, otpCode.trim(), OtpPurpose.GOOGLE_ACTIVATION);
 
-        User user = userRepository.findByEmailIgnoreCase(email)
-                .orElseThrow(() -> new ResourceNotFoundException("resource.account", email));
-        ensureGoogleOtpAccountAllowed(user);
+        return inWriteTx(() -> {
+            User user = userRepository.findByEmailIgnoreCase(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.account", email));
+            ensureGoogleOtpAccountAllowed(user);
+            requireGoogleLinkedAccount(user);
+            if (!"inactive".equalsIgnoreCase(user.getStatus())) {
+                throw new BadRequestException("ACCOUNT_NOT_PENDING", "auth.account.not_pending", null, null);
+            }
 
-        LocalDateTime now = LocalDateTime.now(clock);
-        if (!"active".equalsIgnoreCase(user.getStatus())) {
+            LocalDateTime now = LocalDateTime.now(clock);
             user.setStatus("active");
-        }
-        user.setLastLoginAt(now);
-        user.setUpdatedAt(now);
-        userRepository.save(user);
+            user.setLastLoginAt(now);
+            user.setUpdatedAt(now);
+            userRepository.save(user);
 
-        return issueTokenForUser(user);
+            return issueTokenForUser(user);
+        });
     }
 
     /**
@@ -401,6 +460,14 @@ public class AuthService {
      * trùng thì thêm số 1, 2, 3...
      */
     private String generateUniqueUsernameFromEmail(String email) {
+        return generateUniqueUsernameFromEmail(email, null);
+    }
+
+    /**
+     * Tạo tên đăng nhập duy nhất từ phần trước @ của email, tránh trùng cả DB lẫn tên đăng nhập cũ cần thay thế
+     * (khi thu hồi tài khoản đăng ký chưa xác thực).
+     */
+    private String generateUniqueUsernameFromEmail(String email, String excludedUsername) {
         String baseUsername = email.substring(0, email.indexOf('@')).replaceAll("[^a-zA-Z0-9_]", "");
         if (baseUsername.length() < 3) {
             baseUsername = "user_" + baseUsername;
@@ -410,7 +477,8 @@ public class AuthService {
         }
         String username = baseUsername;
         int suffix = 1;
-        while (userRepository.findByUsernameIgnoreCase(username).isPresent()) {
+        while ((excludedUsername != null && username.equalsIgnoreCase(excludedUsername))
+                || userRepository.findByUsernameIgnoreCase(username).isPresent()) {
             username = baseUsername + suffix++;
         }
         return username;
@@ -518,14 +586,38 @@ public class AuthService {
                 throw new UnauthorizedException("GOOGLE_ACCOUNT_LINK_REQUIRED", "auth.google.link_required", null, null);
             }
             ensureGoogleOtpAccountAllowed(user);
+            boolean unverifiedStub = (linkedSub == null || linkedSub.isBlank())
+                    && "inactive".equalsIgnoreCase(user.getStatus());
+            if (unverifiedStub) {
+                // Chống Pre-Account Hijacking: vô hiệu hóa hoàn toàn mật khẩu, username, SĐT và họ tên do kẻ tấn công đăng ký trước.
+                String previousUsername = user.getUsername();
+                String previousPhone = user.getPhone();
+                user.setPasswordHash(passwordEncoder.encode(generateRandomPassword()));
+                user.setUsername(generateUniqueUsernameFromEmail(email, previousUsername));
+                user.setPhone(null);
+                user.setFullName(googleUser.name() != null && !googleUser.name().isBlank()
+                        ? googleUser.name()
+                        : user.getUsername());
+                if (googleUser.picture() != null && !googleUser.picture().isBlank()) {
+                    user.setAvatarUrl(googleUser.picture());
+                }
+                if ("active".equalsIgnoreCase(initialStatusForNewUser)) {
+                    user.setStatus("active");
+                }
+                if (previousPhone != null && !previousPhone.isBlank()) {
+                    String normalizedOldPhone = normalize(previousPhone);
+                    runAfterCommit(() -> otpService.invalidate(normalizedOldPhone));
+                }
+            } else {
+                if (googleUser.picture() != null && (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank())) {
+                    user.setAvatarUrl(googleUser.picture());
+                }
+                if (googleUser.name() != null && !googleUser.name().isBlank()
+                        && (user.getFullName() == null || user.getFullName().equals(user.getUsername()))) {
+                    user.setFullName(googleUser.name());
+                }
+            }
             user.setGoogleSub(googleSub);
-            if (googleUser.picture() != null && (user.getAvatarUrl() == null || user.getAvatarUrl().isBlank())) {
-                user.setAvatarUrl(googleUser.picture());
-            }
-            if (googleUser.name() != null && !googleUser.name().isBlank()
-                    && (user.getFullName() == null || user.getFullName().equals(user.getUsername()))) {
-                user.setFullName(googleUser.name());
-            }
             user.setUpdatedAt(LocalDateTime.now(clock));
             if (saveImmediatelyOnEmailLink) {
                 userRepository.save(user);
@@ -539,7 +631,7 @@ public class AuthService {
                 googleUser.name(),
                 email,
                 null,
-                UUID.randomUUID().toString(),
+                generateRandomPassword(),
                 googleSub,
                 googleUser.picture(),
                 initialStatusForNewUser);
@@ -548,11 +640,12 @@ public class AuthService {
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthService.class);
 
     /**
-     * Sinh OTP và gửi email sau khi transaction commit (để không gửi mã cho dữ liệu bị rollback). Gửi lỗi thì
-     * hủy mã đã sinh và báo lỗi 503 cho người dùng. Ở chế độ debug OTP thì không gửi email.
+     * Sinh OTP gắn mục đích cụ thể và gửi email sau khi transaction commit (để không gửi mã cho dữ liệu bị
+     * rollback). Gửi lỗi thì hủy mã đã sinh và báo lỗi 503 cho người dùng. Ở chế độ debug OTP thì không gửi
+     * email.
      */
-    private String issueAndSendOtp(String normalizedTarget) {
-        String code = otpService.generateOtp(normalizedTarget);
+    private String issueAndSendOtp(String normalizedTarget, OtpPurpose purpose) {
+        String code = otpService.generateOtp(normalizedTarget, purpose);
         if (!debugOtpEnabled) {
             runAfterCommit(() -> {
                 try {
@@ -642,11 +735,11 @@ public class AuthService {
     }
 
     /**
-     * Kiểm tra OTP và đổi kết quả thành lỗi tương ứng: hết hạn/không có (400), sai quá số lần (429), sai mã
-     * (400 kèm số lần còn lại).
+     * Kiểm tra OTP theo đúng mục đích và đổi kết quả thành lỗi tương ứng: hết hạn/không có/sai mục đích (400),
+     * sai quá số lần (429), sai mã (400 kèm số lần còn lại).
      */
-    private OtpService.Status verifyOtpChallenge(String target, String otpCode) {
-        OtpService.Status status = otpService.verifyOtp(target, otpCode);
+    private OtpService.Status verifyOtpChallenge(String target, String otpCode, OtpPurpose purpose) {
+        OtpService.Status status = otpService.verifyOtp(target, otpCode, purpose);
         return switch (status.result()) {
             case EXPIRED_OR_NOT_FOUND -> throw new BadRequestException("OTP_EXPIRED", "auth.otp.expired", null, null);
             case MAX_ATTEMPTS_EXCEEDED -> throw new TooManyRequestsException("MAX_ATTEMPTS", "auth.otp.max_attempts", null, null);
@@ -654,6 +747,26 @@ public class AuthService {
                     new Object[]{status.remainingAttempts()}, null);
             case SUCCESS -> status;
         };
+    }
+
+    /** Yêu cầu tài khoản đã hoàn tất xác minh Google OAuth (có google_sub) trước khi dùng luồng Google OTP. */
+    private void requireGoogleLinkedAccount(User user) {
+        if (user.getGoogleSub() == null || user.getGoogleSub().isBlank()) {
+            throw new UnauthorizedException("GOOGLE_AUTH_REQUIRED", "auth.google.state_invalid", null,
+                    "Google OAuth verification is required");
+        }
+    }
+
+    /** Sinh mật khẩu ngẫu nhiên an toàn bằng SecureRandom (32 byte -> 43 ký tự Base64URL, dưới giới hạn 72 byte của BCrypt). */
+    private static String generateRandomPassword() {
+        byte[] bytes = new byte[32];
+        SECURE_RANDOM.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /** Tên đăng nhập hợp lệ: 3–50 ký tự gồm chữ cái, chữ số, dấu chấm, gạch dưới, gạch nối (không chứa @ hoặc khoảng trắng). */
+    private boolean isValidUsername(String rawUsername) {
+        return rawUsername != null && USERNAME_PATTERN.matcher(rawUsername).matches();
     }
 
     /**

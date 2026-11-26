@@ -29,7 +29,7 @@ describe('HoldManagementPage', () => {
   // Dựng component vào DOM giả để kiểm thử.
   async function render() { await act(async () => root.render(<HoldManagementPage />)); }
 
-  it('lists pending requests with dates, reason and documents and approves one', async () => {
+  it('lists pending requests with dates, reason and documents and requires confirmation before approving', async () => {
     mocks.list.mockResolvedValue([pending]);
     mocks.approve.mockResolvedValue({});
     await render();
@@ -38,8 +38,41 @@ describe('HoldManagementPage', () => {
     expect(card.textContent).toContain('Nguyen Van A');
     expect(card.textContent).toContain('Phẫu thuật');
     expect(card.textContent).toContain('giay-ra-vien.pdf');
+    expect(card.textContent).toContain('khóa học nhóm');
+    expect(card.textContent).toContain('PT 1:1');
     await act(async () => [...card.querySelectorAll('button')].find((button) => button.textContent === 'Duyệt bảo lưu')!.click());
+    expect(mocks.approve).not.toHaveBeenCalled();
+    expect(host.querySelector('dialog')?.textContent).toContain('Nguyen Van A');
+    expect(host.querySelector('dialog')?.textContent).toContain('khóa học nhóm');
+    const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận duyệt bảo lưu')!;
+    await act(async () => confirmBtn.click());
     expect(mocks.approve).toHaveBeenCalledWith(7);
+  });
+
+  it('preserves action errors across background reload when approve fails (P1-FE-55)', async () => {
+    mocks.list.mockResolvedValue([pending]);
+    mocks.approve.mockRejectedValueOnce(new Error('Gói đã hết hiệu lực'));
+    await render();
+    const card = host.querySelector('[data-testid="hold-7"]')!;
+    await act(async () => [...card.querySelectorAll('button')].find((button) => button.textContent === 'Duyệt bảo lưu')!.click());
+    const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận duyệt bảo lưu')!;
+    await act(async () => confirmBtn.click());
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Gói đã hết hiệu lực');
+  });
+
+  it('ignores stale responses when rapidly switching tabs (P1-FE-61)', async () => {
+    let resolvePending!: (rows: typeof pending[]) => void;
+    let resolveApproved!: (rows: typeof pending[]) => void;
+    mocks.list
+      .mockReturnValueOnce(new Promise((r) => { resolvePending = r; }))
+      .mockReturnValueOnce(new Promise((r) => { resolveApproved = r; }));
+    await render();
+    const approvedTab = [...host.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].find((b) => b.textContent === 'Đã duyệt')!;
+    await act(async () => approvedTab.click());
+    await act(async () => { resolveApproved([{ ...pending, id: 88, memberName: 'Approved Member', holdStatus: 'APPROVED' }]); });
+    await act(async () => { resolvePending([{ ...pending, id: 77, memberName: 'Stale Pending' }]); });
+    expect(host.textContent).toContain('Approved Member');
+    expect(host.textContent).not.toContain('Stale Pending');
   });
 
   it('requires a reason before rejecting and sends it', async () => {
@@ -74,9 +107,10 @@ describe('HoldManagementPage', () => {
     mocks.list.mockRejectedValueOnce(new Error('Không có quyền'));
     await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].find((button) => button.textContent === 'Tất cả')!.click());
     expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không có quyền');
+    expect(host.textContent).not.toContain('Không có yêu cầu bảo lưu nào');
   });
 
-  it('lets the desk cancel an approved hold that has not started, but not one that is running', async () => {
+  it('lets the desk cancel an approved hold that has not started after confirmation, but not one that is running', async () => {
     const future = { ...pending, id: 8, holdStatus: 'APPROVED', status: 'active', holdStartDate: '2099-01-10', holdEndDate: '2099-01-20' };
     const running = { ...pending, id: 9, holdStatus: 'APPROVED', status: 'frozen', holdStartDate: '2020-01-10', holdEndDate: '2099-01-20' };
     mocks.list.mockResolvedValue([future, running]);
@@ -87,6 +121,9 @@ describe('HoldManagementPage', () => {
     expect(cancelFor(9)).toHaveLength(0);
     expect(cancelFor(8)).toHaveLength(1);
     await act(async () => cancelFor(8)[0].click());
+    expect(mocks.withdraw).not.toHaveBeenCalled();
+    const confirmCancel = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận hủy bảo lưu')!;
+    await act(async () => confirmCancel.click());
     expect(mocks.withdraw).toHaveBeenCalledWith(8);
   });
 });

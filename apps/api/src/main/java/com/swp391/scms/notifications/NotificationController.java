@@ -9,7 +9,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -42,13 +44,24 @@ public class NotificationController {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 50;
+
+    /** Cố định sắp xếp mới nhất trước và giới hạn kích thước trang (1..50), bỏ sort tùy ý từ client. */
+    private static Pageable sanitizePageable(Pageable pageable) {
+        int page = pageable != null && pageable.isPaged() ? Math.max(0, pageable.getPageNumber()) : 0;
+        int size = pageable != null && pageable.isPaged() ? pageable.getPageSize() : DEFAULT_PAGE_SIZE;
+        size = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    }
+
     /** GET: danh sách thông báo của người dùng, mới nhất trước, có phân trang. */
     @Operation(summary = "Lấy danh sách thông báo", description = "Lấy danh sách thông báo của người dùng đang đăng nhập, có phân trang")
     @GetMapping
     public ApiResponse<Page<NotificationDto>> getNotifications(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<NotificationDto> notifications = notificationService.getUserNotifications(principal.id(), pageable);
+        Page<NotificationDto> notifications = notificationService.getUserNotifications(principal.id(), sanitizePageable(pageable));
         return ApiResponse.ok(msg("notifications.list.success"), notifications);
     }
 

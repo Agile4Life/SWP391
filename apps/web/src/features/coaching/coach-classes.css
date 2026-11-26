@@ -262,9 +262,7 @@
 }
 
 .coach-session-card:hover {
-  transform: translateY(-2px);
   border-color: var(--portal-salmon);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
 
 .coach-session-top,
@@ -279,8 +277,9 @@
 .coach-session-time {
   font-size: 1.15rem;
   font-weight: 800;
-  color: var(--portal-salmon);
+  color: var(--sol-accent-text);
   letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -305,7 +304,7 @@
 .status-pill.status-scheduled,
 .coach-session-badge.status-scheduled {
   background: rgba(34, 197, 94, 0.15);
-  color: light-dark(#226442, #4ade80);
+  color: var(--portal-success);
   border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
@@ -319,7 +318,7 @@
 .status-pill.status-cancelled,
 .coach-session-badge.status-cancelled {
   background: rgba(239, 68, 68, 0.15);
-  color: light-dark(#a33030, #fca5a5);
+  color: var(--portal-danger);
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
@@ -558,20 +557,26 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 
 .fitness-level-pill.level-beginner {
   background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
+  color: var(--portal-success);
   border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
 .fitness-level-pill.level-intermediate {
   background: rgba(56, 189, 248, 0.15);
-  color: #0284c7;
+  color: var(--portal-info);
   border: 1px solid rgba(56, 189, 248, 0.3);
 }
 
 .fitness-level-pill.level-advanced {
   background: rgba(168, 85, 247, 0.15);
-  color: #9333ea;
+  color: var(--portal-violet);
   border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.fitness-level-pill.level-unknown {
+  background: var(--portal-surface);
+  color: var(--portal-muted);
+  border: 1px solid var(--portal-border);
 }
 
 .students-cards-list,
@@ -665,21 +670,21 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 .fitness-level-badge.level-beginner,
 .roster-level-beginner {
   background: rgba(34, 197, 94, 0.12);
-  color: #16a34a;
+  color: var(--portal-success);
   border: 1px solid rgba(34, 197, 94, 0.25);
 }
 
 .fitness-level-badge.level-intermediate,
 .roster-level-intermediate {
   background: rgba(56, 189, 248, 0.12);
-  color: #0284c7;
+  color: var(--portal-info);
   border: 1px solid rgba(56, 189, 248, 0.25);
 }
 
 .fitness-level-badge.level-advanced,
 .roster-level-advanced {
   background: rgba(168, 85, 247, 0.12);
-  color: #9333ea;
+  color: var(--portal-violet);
   border: 1px solid rgba(168, 85, 247, 0.25);
 }
 
@@ -689,12 +694,13 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   align-items: center;
   gap: 14px;
   font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
   color: var(--portal-muted);
   flex-wrap: wrap;
 }
 
 .emergency-tag {
-  color: #ef4444;
+  color: var(--portal-danger);
   font-weight: 600;
 }
 
@@ -720,7 +726,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   font-size: 0.76rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: var(--portal-salmon);
+  color: var(--sol-accent-text);
   margin-bottom: 6px;
   letter-spacing: 0.03em;
 }
@@ -732,15 +738,15 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
   line-height: 1.5;
 }
 
-.student-detail-box.health-box,
+.student-detail-box.health-box--alert,
 .roster-health-box {
   background: rgba(239, 68, 68, 0.08);
   border: 1px solid rgba(239, 68, 68, 0.34);
 }
 
-.health-box .box-title,
-.health-box .warning-text {
-  color: #ef4444;
+.health-box--alert .box-title,
+.health-box--alert .warning-text {
+  color: var(--portal-danger);
 }
 
 .students-modal-footer {
@@ -755,152 +761,6 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 .footer-count {
   font-size: 0.85rem;
   color: var(--portal-muted);
-}
-
-/* ==========================================================================
-   LỊCH SỬ ĐIỂM DANH & ĐÁNH GIÁ (Trong Modal Lịch sử)
-   ========================================================================== */
-.history-summary-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 10px;
-  padding: 12px 18px;
-  flex-wrap: wrap;
-  font-size: 0.85rem;
-  margin-bottom: 2px;
-}
-
-.history-stat-badge {
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 0.82rem;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.history-stat-badge.is-present {
-  background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
-  border: 1px solid rgba(34, 197, 94, 0.3);
-}
-
-.history-stat-badge.is-absent {
-  background: rgba(239, 68, 68, 0.15);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.history-stat-badge.is-rate,
-.history-stat-badge.is-score {
-  background: var(--portal-tint);
-  color: var(--portal-salmon);
-  border: 1px solid var(--portal-border);
-}
-
-.history-timestamp {
-  margin-left: auto;
-  font-size: 0.8rem;
-  color: var(--portal-muted);
-}
-
-.history-record-card {
-  background: var(--portal-raised);
-  border: 1px solid var(--portal-border);
-  border-radius: 12px;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
-}
-
-.history-record-card:hover {
-  border-color: var(--portal-salmon);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
-}
-
-.history-record-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.status-pill {
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.status-pill.is-present {
-  background: rgba(34, 197, 94, 0.14);
-  color: light-dark(#226442, #4ade80);
-  border: 1px solid rgba(34, 197, 94, 0.35);
-}
-
-.status-pill.is-absent {
-  background: rgba(220, 38, 38, 0.14);
-  color: light-dark(#b91c1c, #fca5a5);
-  border: 1px solid rgba(220, 38, 38, 0.35);
-}
-
-.roster-health-box .roster-detail-label {
-  color: #ef4444;
-}
-
-.score-badge {
-  background: var(--portal-tint);
-  color: var(--portal-salmon);
-  border: 1px solid var(--portal-border);
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 0.84rem;
-  font-weight: 700;
-}
-
-.history-score-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.history-score-bar-track {
-  flex: 1;
-  height: 8px;
-  background: var(--portal-surface);
-  border-radius: 999px;
-  overflow: hidden;
-  border: 1px solid var(--portal-border);
-}
-
-.history-score-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, var(--portal-salmon));
-  border-radius: 999px;
-  transition: width 0.3s ease;
-}
-
-.history-notes-box {
-  background: var(--portal-surface);
-  border: 1px solid var(--portal-border);
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 0.88rem;
-  color: var(--portal-paper);
-  line-height: 1.45;
-}
-
-.history-notes-label {
-  font-weight: 700;
-  color: var(--portal-salmon);
-  margin-right: 6px;
 }
 
 /* ==========================================================================
@@ -998,7 +858,8 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 
 .coach-students-count {
   font-size: 0.85rem;
-  color: var(--portal-salmon);
+  font-variant-numeric: tabular-nums;
+  color: var(--sol-accent-text);
   background: var(--portal-tint);
   border: 1px solid var(--portal-border);
   border-radius: 999px;
@@ -1037,22 +898,7 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
 }
 
 .btn-plan-for-student {
-  background: var(--portal-raised);
-  border: 1px solid var(--portal-border);
-  color: var(--portal-salmon);
-  font-weight: 600;
-  padding: 6px 14px;
-  border-radius: 6px;
   text-decoration: none;
-  font-size: 0.84rem;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
-  cursor: pointer;
   display: inline-flex;
   align-items: center;
-}
-
-.btn-plan-for-student:hover {
-  background: var(--portal-salmon);
-  color: #1e293b;
-  border-color: var(--portal-salmon);
 }

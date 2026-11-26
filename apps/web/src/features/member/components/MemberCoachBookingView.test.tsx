@@ -2,12 +2,14 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setLanguage } from '../../../shared/i18n/language';
 import {
   MemberCoachBookingView,
 } from './MemberCoachBookingView';
 import {
   formatCoachName,
   isSessionCompleted,
+  isSessionStarted,
 } from '../coachBookingUtils';
 
 const mocks = vi.hoisted(() => ({
@@ -28,15 +30,25 @@ vi.mock('../coachBookingApi', () => ({
   getMemberQuotaStatus: mocks.getMemberQuotaStatus,
 }));
 
-describe('formatCoachName & isSessionCompleted helpers', () => {
-  it('formats coach names correctly without duplicate HLV prefixes', () => {
+describe('formatCoachName, isSessionStarted & isSessionCompleted helpers', () => {
+  afterEach(() => {
+    setLanguage('vi');
+  });
+
+  it('formats coach names correctly without duplicate HLV prefixes and localizes fallback in EN (P2-FE-50)', () => {
     expect(formatCoachName('HLV Huỳnh Đắc Tài')).toBe('Huỳnh Đắc Tài');
     expect(formatCoachName('hlv Nguyễn Văn A')).toBe('Nguyễn Văn A');
     expect(formatCoachName('Trần Thị B')).toBe('Trần Thị B');
     expect(formatCoachName(null)).toBe('Huấn luyện viên');
+    setLanguage('en');
+    expect(formatCoachName(null)).toBe('Coach');
   });
 
-  it('determines whether a session has completed based on status and time', () => {
+  it('determines whether a session has started or completed based on status and UTC+7 time (P1-FE-40)', () => {
+    const now = { date: '2026-11-26', time: '08:00' };
+    expect(isSessionStarted({ bookingDate: '2026-11-26', startTime: '07:00:00', status: 'confirmed' }, now)).toBe(true);
+    expect(isSessionStarted({ bookingDate: '2026-11-26', startTime: '09:45:00', status: 'confirmed' }, now)).toBe(false);
+    expect(isSessionStarted({ bookingDate: '2026-11-26', startTime: '07:00:00', status: 'cancelled' }, now)).toBe(false);
     // Trạng thái đã hoàn thành
     expect(isSessionCompleted({ bookingDate: '2099-01-01', endTime: '20:00', status: 'completed' })).toBe(true);
     // Trạng thái đã hủy
@@ -250,6 +262,8 @@ describe('MemberCoachBookingView coach list & booking order', () => {
     });
 
     it('sorts member PT bookings chronologically and filters by selected day', async () => {
+      vi.useFakeTimers({ toFake: ['Date'] });
+      vi.setSystemTime(new Date('2026-11-25T02:00:00Z'));
       mocks.getMyCoachBookings.mockResolvedValue([
         {
           id: 201,
@@ -287,43 +301,48 @@ describe('MemberCoachBookingView coach list & booking order', () => {
         },
       ]);
 
-      await act(async () => {
-        root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>);
-      });
-      await act(async () => {
-        await new Promise((r) => setTimeout(r, 60));
-      });
+      try {
+        await act(async () => {
+          root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>);
+        });
+        await act(async () => {
+          await new Promise((r) => setTimeout(r, 60));
+        });
 
-      const dateInput = host.querySelector<HTMLInputElement>('input[aria-label="Tìm lịch theo ngày"]');
-      expect(dateInput).not.toBeNull();
-      const historySection = dateInput?.closest('section');
-      expect(historySection).not.toBeNull();
-      // Chỉ kiểm tra ngày trong lịch sử; vùng chọn lịch mới cũng có thể hiển thị cùng ngày.
-      const historyDates = () => Array.from(
-        historySection?.querySelectorAll('.row-card__meta > strong:first-child') ?? [],
-        date => date.textContent,
-      );
-      expect(historyDates()).toEqual(['25/11/2026', '26/11/2026']);
+        // P1-FE-39: uses shared DatePicker instead of native <input type="date">
+        expect(host.querySelector('input[type="date"]')).toBeNull();
+        const dateTrigger = host.querySelector<HTMLButtonElement>('button[aria-label="Tìm lịch theo ngày"]');
+        expect(dateTrigger).not.toBeNull();
+        const historySection = dateTrigger?.closest('section');
+        expect(historySection).not.toBeNull();
+        // Chỉ kiểm tra ngày trong lịch sử; vùng chọn lịch mới cũng có thể hiển thị cùng ngày.
+        const historyDates = () => Array.from(
+          historySection?.querySelectorAll('.row-card__meta > strong:first-child') ?? [],
+          date => date.textContent,
+        );
+        expect(historyDates()).toEqual(['25/11/2026', '26/11/2026']);
 
-      await act(async () => {
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-        setter?.call(dateInput, '2026-11-26');
-        dateInput?.dispatchEvent(new Event('input', { bubbles: true }));
-        dateInput?.dispatchEvent(new Event('change', { bubbles: true }));
-      });
+        // Mở DatePicker và chọn ngày 26/11/2026
+        await act(async () => { dateTrigger?.click(); });
+        const day26Btn = host.querySelector<HTMLButtonElement>('button[data-date="2026-11-26"]');
+        expect(day26Btn).not.toBeNull();
+        await act(async () => { day26Btn?.click(); });
 
-      expect(historyDates()).toEqual(['26/11/2026']);
+        expect(historyDates()).toEqual(['26/11/2026']);
 
-      const allDaysBtn = [...(historySection?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) =>
-        b.textContent?.includes('Tất cả ngày')
-      );
-      expect(allDaysBtn).toBeDefined();
+        const allDaysBtn = [...(historySection?.querySelectorAll<HTMLButtonElement>('button') ?? [])].find((b) =>
+          b.textContent?.includes('Tất cả ngày')
+        );
+        expect(allDaysBtn).toBeDefined();
 
-      await act(async () => {
-        allDaysBtn?.click();
-      });
+        await act(async () => {
+          allDaysBtn?.click();
+        });
 
-      expect(historyDates()).toEqual(['25/11/2026', '26/11/2026']);
+        expect(historyDates()).toEqual(['25/11/2026', '26/11/2026']);
+      } finally {
+        vi.useRealTimers();
+      }
     });
   });
 });
@@ -463,5 +482,181 @@ describe('weekly PT booking after Monday has passed', () => {
       vi.unstubAllGlobals();
       vi.clearAllMocks();
     }
+  });
+});
+
+describe('MemberCoachBookingView audit remediation (P1-FE-40, P1-FE-41, P2-FE-55/56/59)', () => {
+  let host: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    setLanguage('vi');
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { configurable: true, value(this: HTMLDialogElement) { this.setAttribute('open', ''); } });
+    Object.defineProperty(HTMLDialogElement.prototype, 'close', { configurable: true, value(this: HTMLDialogElement) { this.removeAttribute('open'); } });
+    host = document.createElement('div');
+    document.body.append(host);
+    root = createRoot(host);
+    mocks.getCoaches.mockResolvedValue([
+      { id: 1, fullName: 'HLV Huỳnh Đắc Tài', specialization: '', defaultHourlyRate: 200000 },
+    ]);
+    mocks.getAvailableSlots.mockResolvedValue([
+      { slotNumber: 4, startTime: '14:15:00', endTime: '16:45:00', available: true, reason: null },
+    ]);
+    mocks.getMyCoachBookings.mockResolvedValue([]);
+    mocks.getMemberQuotaStatus.mockResolvedValue({
+      packageName: 'GOLD 3 THÁNG',
+      monthlyQuota: 3,
+      usedThisMonth: 1,
+      remainingQuota: 2,
+    });
+  });
+
+  afterEach(async () => {
+    await act(async () => root.unmount());
+    host.remove();
+    setLanguage('vi');
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.clearAllMocks();
+  });
+
+  it('P1-FE-40: shows "Đang diễn ra" and hides Cancel for an in-progress session, and refreshes + invokes onBookingSuccess when selectedCoachId is null', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-26T01:00:00Z')); // 2026-11-26 08:00 UTC+7
+    mocks.getCoaches.mockResolvedValue([]); // selectedCoachId === null
+    mocks.getMyCoachBookings.mockResolvedValue([
+      {
+        id: 301,
+        coachId: 1,
+        coachName: 'HLV An',
+        bookingDate: '2026-11-26',
+        startTime: '07:00:00',
+        endTime: '09:30:00',
+        status: 'confirmed',
+        paymentMethod: 'package_quota',
+        paymentStatus: 'used_quota',
+        hourlyRate: 200000,
+      },
+      {
+        id: 302,
+        coachId: 1,
+        coachName: 'HLV An',
+        bookingDate: '2026-11-26',
+        startTime: '17:00:00',
+        endTime: '19:30:00',
+        status: 'confirmed',
+        paymentMethod: 'package_quota',
+        paymentStatus: 'used_quota',
+        hourlyRate: 200000,
+      },
+    ]);
+    mocks.cancelCoachBooking.mockResolvedValue({ id: 302, status: 'cancelled' });
+    const onBookingSuccess = vi.fn();
+
+    await act(async () => root.render(<MemoryRouter><MemberCoachBookingView onBookingSuccess={onBookingSuccess} /></MemoryRouter>));
+
+    expect(host.textContent).toContain('Đang diễn ra');
+    // Only the future 17:00 session has a Cancel button (using btn-danger btn-sm)
+    const cancelBtns = [...host.querySelectorAll<HTMLButtonElement>('button')].filter((b) => b.textContent === 'Hủy lịch hẹn');
+    expect(cancelBtns).toHaveLength(1);
+    expect(cancelBtns[0].className).toContain('btn-danger');
+
+    await act(async () => cancelBtns[0].click());
+    const confirmCancel = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận Hủy')!;
+    await act(async () => confirmCancel.click());
+
+    expect(mocks.cancelCoachBooking).toHaveBeenCalledWith(302, 'Hội viên chủ động hủy');
+    expect(mocks.getMyCoachBookings).toHaveBeenCalledTimes(2);
+    expect(mocks.getMemberQuotaStatus).toHaveBeenCalledTimes(2);
+    expect(onBookingSuccess).toHaveBeenCalledTimes(1);
+  });
+
+  it('P1-FE-41 & P2-FE-59: renders / slot units, accurate Gold 10% tier discount in modal, and ArrowDown radio keyboard navigation', async () => {
+    await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+    expect(host.textContent).toContain('/ slot');
+    expect(host.textContent).not.toContain('/ giờ');
+
+    const slot4 = host.querySelector<HTMLButtonElement>('[data-testid="pt-slot-4"]')!;
+    await act(async () => slot4.click());
+
+    const modalPrice = host.querySelector('[data-testid="pt-modal-slot-price"]')?.textContent ?? '';
+    expect(modalPrice).toContain('180');
+    expect(modalPrice).toContain('200');
+    expect(modalPrice).toContain('Giảm 10%');
+    expect(modalPrice).toContain('/ slot');
+    expect(host.textContent).not.toContain('/ buổi');
+    expect(host.textContent).not.toContain('Fitness & Cardio');
+
+    const radios = [...host.querySelectorAll<HTMLDivElement>('dialog [role="radio"]')];
+    expect(radios).toHaveLength(2);
+    expect(radios[0].getAttribute('aria-checked')).toBe('true');
+    await act(async () => {
+      radios[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    });
+    expect(radios[1].getAttribute('aria-checked')).toBe('true');
+    await act(async () => {
+      radios[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    });
+    expect(radios[0].getAttribute('aria-checked')).toBe('true');
+  });
+
+  it('P2-FE-55 & P2-FE-56: does not misclassify monthlyQuota=1 as Trial, localizes EN cancel modal cleanly, and hides empty state on error', async () => {
+    mocks.getMemberQuotaStatus.mockResolvedValue({
+      packageName: 'CUSTOM PRO',
+      monthlyQuota: 1,
+      usedThisMonth: 0,
+      remainingQuota: 1,
+    });
+    mocks.getMyCoachBookings.mockResolvedValue([
+      {
+        id: 401,
+        coachId: 1,
+        coachName: 'HLV Huỳnh Đắc Tài',
+        bookingDate: '2099-11-26',
+        startTime: '07:00:00',
+        endTime: '09:30:00',
+        status: 'confirmed',
+        paymentMethod: 'cash',
+        paymentStatus: 'pending',
+        hourlyRate: 200000,
+        memberName: 'An',
+      },
+    ]);
+    setLanguage('en');
+    await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+
+    expect(host.textContent).toContain('CUSTOM PRO');
+    expect(host.textContent).not.toContain('3-Day Trial Pass');
+    expect(host.textContent).toContain('1:1 session with coach Huỳnh Đắc Tài');
+
+    // Payment modal no longer includes obsolete VietQR transfer memo
+    const payDetailsBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'View payment details')!;
+    await act(async () => payDetailsBtn.click());
+    expect(host.querySelector('dialog')?.textContent).not.toContain('PT401');
+    const closePay = host.querySelector<HTMLButtonElement>('dialog button[aria-label]')!;
+    await act(async () => closePay.click());
+
+    // Cancel modal EN copy has clean grammar without "days"
+    const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Cancel appointment')!;
+    await act(async () => cancelBtn.click());
+    const cancelModalText = host.querySelector('dialog')?.textContent ?? '';
+    expect(cancelModalText).toContain('26/11/2099');
+    expect(cancelModalText).not.toContain('days 26/11/2099');
+  });
+
+  it('P2-FE-56: error banner shows Retry button & dismiss aria-label and suppresses coach empty state', async () => {
+    mocks.getCoaches.mockRejectedValueOnce(new Error('offline'));
+    await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+
+    const alert = host.querySelector('[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert?.querySelector('button[aria-label="Đóng thông báo lỗi"]')).not.toBeNull();
+    expect(host.textContent).not.toContain('Chưa có huấn luyện viên nào.');
+
+    const retryBtn = [...alert!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Thử lại')!;
+    await act(async () => retryBtn.click());
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+    expect(host.textContent).toContain('Huỳnh Đắc Tài');
   });
 });

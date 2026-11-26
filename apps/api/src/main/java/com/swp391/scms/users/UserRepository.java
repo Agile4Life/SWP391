@@ -78,18 +78,21 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByPhoneAndDeletedAtIsNull(String phone);
     /**
-     * Tìm tài khoản có SĐT (sau khi bỏ khoảng trắng, dấu gạch, dấu chấm) nằm trong danh sách cho trước; dùng để
-     * phát hiện SĐT trùng dù lưu khác định dạng.
+     * Tìm tài khoản có SĐT (sau khi bỏ khoảng trắng, dấu gạch, dấu chấm, dấu ngoặc) nằm trong danh sách cho trước;
+     * dùng để phát hiện SĐT trùng dù lưu khác định dạng.
      */
-    @Query("select u from User u where u.phone is not null and replace(replace(replace(u.phone, ' ', ''), '-', ''), '.', '') in :phones")
+    @Query("select u from User u where u.phone is not null and replace(replace(replace(replace(replace(u.phone, ' ', ''), '-', ''), '.', ''), '(', ''), ')', '') in :phones")
     List<User> findAllByCompactPhoneIn(@Param("phones") java.util.Collection<String> phones);
     /** Tìm các bản ghi có googleSub = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     Optional<User> findByGoogleSub(String googleSub);
 
-    /** Tài khoản nhân viên vận hành chưa xóa (quản lý, lễ tân...) kèm vai trò; dùng để gửi thông báo nội bộ. */
-    @Query("select u from User u join fetch u.role r where u.deletedAt is null and upper(r.code) in ('CENTER_MANAGER', 'MANAGER', 'RECEPTIONIST', 'STAFF', 'ROLE_CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_RECEPTIONIST', 'ROLE_STAFF') order by u.id asc")
+    /** Tài khoản nhân viên vận hành đang active và chưa xóa (quản lý, lễ tân...) kèm vai trò; dùng để gửi thông báo nội bộ. */
+    @Query("select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' and upper(r.code) in ('CENTER_MANAGER', 'MANAGER', 'RECEPTIONIST', 'STAFF', 'ROLE_CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_RECEPTIONIST', 'ROLE_STAFF') order by u.id asc")
     List<User> findActiveStaffUsers();
     /** Tài khoản quản lý đang active và chưa xóa; dùng để gửi thông báo cần quản lý xử lý. */
     @Query("select u from User u join fetch u.role r where u.deletedAt is null and u.status = 'active' and upper(r.code) in ('MANAGER', 'CENTER_MANAGER', 'ROLE_MANAGER', 'ROLE_CENTER_MANAGER') order by u.id asc")
     List<User> findActiveManagers();
+    /** Tập userId các hội viên hiện có gói tập đang bảo lưu (frozen); dùng nạp hàng loạt thay cho N+1 trong getAllUsers. */
+    @Query("select distinct s.member.userId from MembershipSubscription s where s.status = 'frozen'")
+    List<Long> findMemberUserIdsWithFrozenSubscription();
 }

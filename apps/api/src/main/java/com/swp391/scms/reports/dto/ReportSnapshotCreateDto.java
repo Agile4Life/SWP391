@@ -3,6 +3,7 @@ package com.swp391.scms.reports.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 
 /** Dữ liệu lưu ảnh chụp báo cáo: loại báo cáo, khoảng ngày, dữ liệu JSON và người tạo (tùy chọn). */
@@ -23,7 +24,8 @@ public class ReportSnapshotCreateDto {
     private LocalDate periodEnd;
 
     @NotBlank(message = "{validation.reports.data.not_blank}")
-    @Schema(description = "Dữ liệu báo cáo dạng JSON", example = "{\"totalRevenue\": 150000000, \"totalOrders\": 120}")
+    @Size(max = 262144, message = "{reports.snapshot.invalid_json}")
+    @Schema(description = "Dữ liệu báo cáo dạng JSON (tối đa 256 KB)", example = "{\"totalRevenue\": 150000000, \"totalOrders\": 120}")
     private String data;
 
     @Schema(description = "ID người thực hiện tạo báo cáo (tùy chọn)", example = "1")

@@ -50,7 +50,7 @@ export function ChatContacts({ onChoose, pending, forMember = true }: { onChoose
       <span>{t("Danh bạ hiển thị người bạn được phép nhắn tin. Hãy chọn lễ tân nếu cần hỗ trợ.", "The directory lists people you can message. Choose a receptionist if you need support.")}</span>
       {inRouter ? <Link className="direct-chat__link" to="/member/classes?tab=pt">{t("Đặt lịch HLV 1:1", "Book a 1:1 coach")}</Link> : <a className="direct-chat__link" href="/member/classes?tab=pt">{t("Đặt lịch HLV 1:1", "Book a 1:1 coach")}</a>}
     </div>}
-    {loading ? <LoadingSkeleton label={t("Đang tải danh bạ…", "Loading contacts…")} count={3} /> : error ? <div role="alert"><p>{t(error)}</p><button className="direct-chat__link" type="button" onClick={() => void search(submitted, page)}>{t("Thử lại", "Retry")}</button></div>
+    {loading ? <LoadingSkeleton label={t("Đang tải danh bạ…", "Loading contacts…")} count={3} /> : error ? <div role="alert" className="direct-chat__error"><p>{t(error)}</p><button className="direct-chat__link" type="button" onClick={() => void search(submitted, page)}>{t("Thử lại", "Retry")}</button></div>
       : contacts.length === 0 ? <p className="direct-chat__muted">{forMember ? t("Không tìm thấy lễ tân hoặc huấn luyện viên phù hợp.", "No matching receptionist or coach found.") : t("Không tìm thấy hội viên phù hợp.", "No matching members found.")}</p>
         : <ul className="direct-chat__list">{contacts.map(contact => <li key={contact.id}><button type="button" data-contact-id={contact.id} className="direct-chat__person" disabled={pending !== null} onClick={() => onChoose(contact)}>
           <ChatAvatar contact={contact} />

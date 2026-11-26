@@ -67,6 +67,7 @@ class OperationsConcurrencyPostgreSqlTest {
     @Autowired Clock clock;
     @Autowired EnrollmentService bookingService;
     @Autowired com.swp391.scms.membership.service.MembershipSubscriptionService membershipService;
+    @Autowired com.swp391.scms.membership.service.DynamicQrService dynamicQrService;
     private static final AtomicInteger BOOKING_DAY = new AtomicInteger(60);
 
     private ExecutorService workers;
@@ -183,7 +184,7 @@ class OperationsConcurrencyPostgreSqlTest {
     @Test
     void scanWaitsForCancellationAndRejectsThatQrEvenWithAnotherActiveSubscription() throws Exception {
         long member = member();
-        String cancelledQr = subscription(member, "active", -1, 30);
+        SubscriptionFixture cancelled = createSubscription(member, "active", -1, 30);
         subscription(member, "active", -1, 30); // Đảm bảo trigger kiểm tra gói thành viên chung vẫn được thỏa mãn.
         var ready = new CountDownLatch(1);
         var scannerPid = new AtomicInteger();
@@ -191,11 +192,11 @@ class OperationsConcurrencyPostgreSqlTest {
         try (var cancellation = dataSource.getConnection()) {
             cancellation.setAutoCommit(false);
             try {
-                try (var update = cancellation.prepareStatement("update membership_subscriptions set status = 'cancelled' where qr_code = ?")) {
-                    update.setString(1, cancelledQr);
+                try (var update = cancellation.prepareStatement("update membership_subscriptions set status = 'cancelled' where id = ?")) {
+                    update.setLong(1, cancelled.id());
                     assertEquals(1, update.executeUpdate());
                 }
-                scan = submit(ready, scannerPid, () -> scan(cancelledQr));
+                scan = submit(ready, scannerPid, () -> scan(cancelled.dynamicQr()));
                 awaitBlocked(ready, scannerPid);
                 cancellation.commit();
             } finally {
@@ -347,11 +348,11 @@ class OperationsConcurrencyPostgreSqlTest {
                 """, Long.class, "Concurrency-" + UUID.randomUUID(), coach, capacity);
     }
 
-    /** Hàm trợ giúp của test: tạo buổi học dùng cho đặt chỗ. */
+    /** Hàm trợ giúp của test: tạo buổi học dùng cho đặt chỗ theo đúng 5 slot chuẩn (Slot 2: 09:45–11:15). */
     private long bookingSession(long gymClass) {
         return jdbc.queryForObject("""
                 insert into class_sessions (class_id, session_date, start_time, end_time, status, created_at, updated_at)
-                values (?, ?, '10:00', '11:00', 'scheduled', now(), now()) returning id
+                values (?, ?, '09:45', '11:15', 'scheduled', now(), now()) returning id
                 """, Long.class, gymClass, LocalDate.now(clock).plusDays(BOOKING_DAY.getAndIncrement()));
     }
 
@@ -454,16 +455,23 @@ class OperationsConcurrencyPostgreSqlTest {
         return member;
     }
 
-    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (subscription). */
-    private String subscription(long member, String status, int startOffset, int endOffset) {
+    private record SubscriptionFixture(long id, String dynamicQr) {}
+
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (subscription kèm Dynamic QR ký 60 giây). */
+    private SubscriptionFixture createSubscription(long member, String status, int startOffset, int endOffset) {
         String qr = UUID.randomUUID().toString();
         LocalDate today = LocalDate.now(clock);
-        jdbc.update("""
+        long subId = jdbc.queryForObject("""
                 insert into membership_subscriptions
                     (member_id, package_id, start_date, end_date, status, qr_code, created_at, updated_at)
-                values (?, (select min(id) from membership_packages), ?, ?, ?, ?, now(), now())
-                """, member, today.plusDays(startOffset), today.plusDays(endOffset), status, qr);
-        return qr;
+                values (?, (select min(id) from membership_packages), ?, ?, ?, ?, now(), now()) returning id
+                """, Long.class, member, today.plusDays(startOffset), today.plusDays(endOffset), status, qr);
+        return new SubscriptionFixture(subId, dynamicQrService.generate(member, subId, clock.millis()));
+    }
+
+    /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (trả về Dynamic QR động hợp lệ). */
+    private String subscription(long member, String status, int startOffset, int endOffset) {
+        return createSubscription(member, status, startOffset, endOffset).dynamicQr();
     }
 
     /** Hàm trợ giúp của test: tạo thông tin đăng nhập kết nối test. */

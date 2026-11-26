@@ -98,14 +98,6 @@ export const getGoogleOAuthAuthorizeUrl = async () => {
   return `${baseUrl}/auth/google/authorize?code_challenge=${encodeURIComponent(challenge)}`;
 };
 
-/** Đăng nhập Google bằng idToken. */
-export const googleLoginWithIdToken = (idToken: string) =>
-  apiFetch<GoogleVerifyResponse>('/auth/google', {
-    method: 'POST',
-    body: JSON.stringify({ idToken }),
-  });
-
-
 /** Đổi mã handoff cùng verifier PKCE đã lưu lấy phiên đăng nhập; thiếu verifier thì báo phiên không hợp lệ. */
 export const googleRedeemHandoff = (code: string) => {
   const verifier = sessionStorage.getItem(GOOGLE_VERIFIER_KEY);

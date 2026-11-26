@@ -15,44 +15,80 @@ type ChatState = ReturnType<typeof useChatConversation>;
  * Khung một hội thoại trực tiếp: danh sách tin nhắn, tải tin cũ hơn, tự đánh dấu đã đọc, thích tin nhắn và ô
  * soạn tin.
  */
-export function ChatThread({ conversation, chat, onBack, active = true, canMarkRead = active, onRead }: {
+export function ChatThread({ conversation, chat, onBack, active = true, canMarkRead = active, onRead, likedIds: externalLikedIds, onToggleLike }: {
   conversation: ChatConversation; chat: ChatState; onBack: () => void; active?: boolean; canMarkRead?: boolean; onRead?: (conversationId: number) => void;
+  likedIds?: ReadonlySet<number>; onToggleLike?: (id: number) => void;
 }) {
   const { t } = useI18n();
-  const [likedIds, setLikedIds] = useState<Set<number>>(() => new Set());
+  const [localLikedIds, setLocalLikedIds] = useState<Set<number>>(() => new Set());
+  const likedIds = externalLikedIds ?? localLikedIds;
   const reported = useRef(0);
+  const pendingRead = useRef(false);
   const scroll = useRef<HTMLDivElement>(null);
   const title = useRef<HTMLHeadingElement>(null);
   const atBottom = useRef(true);
   const previous = useRef<{ first?: number; last?: number; height: number }>({ height: 0 });
   const [newBelow, setNewBelow] = useState(false);
+  const [visibilityTick, setVisibilityTick] = useState(0);
+  useEffect(() => { setLocalLikedIds(new Set()); }, [conversation.id]);
   useEffect(() => { if (active) title.current?.focus({ preventScroll: true }); }, [active]);
+  useEffect(() => {
+    const onVisible = () => {
+      if (pendingRead.current && document.visibilityState !== 'hidden') setVisibilityTick(n => n + 1);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, []);
   useLayoutEffect(() => {
     const node = scroll.current;
     if (!node) return;
-    const first = chat.messages[0]?.id, last = chat.messages.at(-1)?.id;
+    const first = chat.messages[0]?.id;
+    const lastMessage = chat.messages.at(-1);
+    const last = lastMessage?.id;
     const old = previous.current;
+    const appended = last !== undefined && old.last !== undefined && last > old.last;
     if (old.first !== undefined && first !== undefined && first < old.first) {
       node.scrollTop += node.scrollHeight - old.height;
-    } else if (atBottom.current) node.scrollTop = node.scrollHeight;
-    else if (last !== undefined && old.last !== undefined && last > old.last) setNewBelow(true);
+    } else if (atBottom.current || (appended && lastMessage?.mine)) {
+      node.scrollTop = node.scrollHeight;
+      atBottom.current = true;
+      setNewBelow(false);
+    } else if (appended) {
+      setNewBelow(true);
+    }
     previous.current = { first, last, height: node.scrollHeight };
   }, [chat.messages]);
 
-  // Chỉ đánh dấu đã đọc khi người dùng đang thật sự nhìn thấy hội thoại.
+  // Chỉ đánh dấu đã đọc khi người dùng đang thật sự nhìn thấy hội thoại; quay lại tab sẽ tự đánh dấu ngay.
   const lastPeerId = chat.messages.reduce((latest, message) => message.mine ? latest : Math.max(latest, message.id), 0);
   useEffect(() => {
-    if (!canMarkRead || chat.loading || lastPeerId <= reported.current || document.visibilityState === 'hidden') return;
+    if (!canMarkRead || chat.loading || lastPeerId <= reported.current) {
+      pendingRead.current = false;
+      return;
+    }
+    if (document.visibilityState === 'hidden') {
+      pendingRead.current = true;
+      return;
+    }
+    pendingRead.current = false;
     reported.current = lastPeerId;
     onRead?.(conversation.id);
-    void markConversationRead(conversation.id, lastPeerId).then(result => announceChatUnread(result.count)).catch(() => { reported.current = 0; });
-  }, [canMarkRead, chat.loading, lastPeerId, conversation.id, onRead]);
+    void markConversationRead(conversation.id, lastPeerId).then(result => announceChatUnread(result.count)).catch(() => {
+      reported.current = 0;
+      pendingRead.current = true;
+    });
+  }, [canMarkRead, chat.loading, lastPeerId, conversation.id, onRead, visibilityTick]);
 
   const unavailable = !conversation.peer.available;
 
   // Bật/tắt dấu thích của một tin nhắn (chỉ lưu trên giao diện).
   function toggleLike(id: number) {
-    setLikedIds(prev => {
+    if (onToggleLike) { onToggleLike(id); return; }
+    setLocalLikedIds(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
@@ -86,14 +122,14 @@ export function ChatThread({ conversation, chat, onBack, active = true, canMarkR
       <ol className="direct-chat__messages">{chat.messages.map(message => {
         const liked = likedIds.has(message.id);
         return <li key={message.id} className={message.mine ? 'is-mine' : undefined}>
-          <div className={`direct-chat__bubble${liked ? ' has-reaction' : ''}`} onDoubleClick={() => toggleLike(message.id)}>
+          <div className={`direct-chat__bubble${liked ? ' has-reaction' : ''}`} onDoubleClick={() => { if (window.getSelection()?.toString().trim()) return; toggleLike(message.id); }}>
             <span data-i18n-managed className="direct-chat__sender">{message.mine ? t('Bạn', 'You') : conversation.peer.name}</span>
             <p data-i18n-managed>{message.message}</p>
             <time dateTime={message.createdAt}>{formatCenterDateTime(message.createdAt)}</time>
             {liked && <span className="direct-chat__reaction-pill" aria-hidden="true">❤️</span>}
           </div>
           <button type="button" className={`direct-chat__react-trigger${liked ? ' is-liked' : ''}`} aria-pressed={liked} aria-label={t('Thả tim tin nhắn', 'Like message')} title={t('Thả tim tin nhắn', 'Like message')} onClick={() => toggleLike(message.id)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill={liked ? '#ff3040' : 'none'} stroke={liked ? '#ff3040' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill={liked ? '#ff3040' : 'none'} stroke={liked ? '#ff3040' : 'currentColor'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
             </svg>
           </button>
@@ -101,7 +137,7 @@ export function ChatThread({ conversation, chat, onBack, active = true, canMarkR
       })}</ol>
     </div>
     {newBelow && <button className="direct-chat__new direct-chat__link" type="button" onClick={() => { if (scroll.current) scroll.current.scrollTop = scroll.current.scrollHeight; atBottom.current = true; setNewBelow(false); }}>{t("Có tin nhắn mới · Xem ↓", "New messages · View ↓")}</button>}
-    <p className="direct-chat__sr" role="status">{!chat.loading && chat.messages.length > 0 ? t(`Đang hiển thị ${chat.messages.length} tin nhắn.`, `Showing ${chat.messages.length} messages.`) : ''}</p>
+    <p className="direct-chat__sr" role="status">{!chat.loading && chat.messages.length > 0 ? t(`Đang hiển thị ${chat.messages.length} tin nhắn.`, chat.messages.length === 1 ? 'Showing 1 message.' : `Showing ${chat.messages.length} messages.`) : ''}</p>
     <ChatComposer id="chat-message" label={t('Tin nhắn cho', 'Message to') + ' ' + conversation.peer.name}
       value={chat.draft} onChange={chat.setDraft} onSubmit={() => void chat.send()}
       disabled={unavailable || chat.loading} sending={chat.sending} failed={!!chat.sendError}

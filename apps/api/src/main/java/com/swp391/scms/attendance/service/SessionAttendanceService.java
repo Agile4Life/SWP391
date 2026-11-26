@@ -64,6 +64,9 @@ public class SessionAttendanceService {
     @Autowired(required = false)
     private SessionEvaluationRepository evaluationRepository;
 
+    @org.springframework.beans.factory.annotation.Value("${app.coaching.evaluations.enabled:false}")
+    private boolean evaluationsEnabled = false;
+
     @Autowired(required = false)
     private CourseAttendanceService courseAttendance;
 
@@ -95,13 +98,14 @@ public class SessionAttendanceService {
         this.clock = clock;
     }
 
-    /** Constructor Spring dùng. */
+    /** Constructor dự phòng cho test không truyền Clock/MessageService. */
     public SessionAttendanceService(SessionAttendanceRepository attendanceRepository,
                                   ClassSessionRepository sessionRepository,
                                   ClassEnrollmentRepository enrollmentRepository,
                                   CoachRepository coachRepository,
                                   MemberRepository memberRepository) {
-        this(attendanceRepository, sessionRepository, enrollmentRepository, coachRepository, memberRepository, null, Clock.systemUTC());
+        this(attendanceRepository, sessionRepository, enrollmentRepository, coachRepository, memberRepository, null,
+                Clock.system(com.swp391.scms.common.CenterTime.ZONE));
     }
 
     /** Dịch mã thông báo kèm tham số; không có MessageService thì trả lại chính mã. */
@@ -113,21 +117,40 @@ public class SessionAttendanceService {
     private record RosterEntry(Member member, String status) {}
 
     /**
-     * Danh sách học viên có chỗ trong buổi: đăng ký cả khóa cộng với người đặt riêng buổi đó (không trùng).
-     *
-     * Mọi người có chỗ trong buổi này: ghi danh toàn lớp cộng các hội viên đã đặt riêng buổi này.
+     * Danh sách học viên có chỗ trong buổi: đăng ký cả khóa (booked/completed) cộng với người đặt riêng buổi đó
+     * (booked/completed) và hợp nhất mọi học viên đã có bản ghi điểm danh trong buổi để lịch sử (>7 ngày) không
+     * bị xóa trắng.
      */
-    private List<RosterEntry> rosterFor(ClassSession session) {
+    private List<RosterEntry> rosterFor(ClassSession session, List<SessionAttendance> attendances) {
         Map<Long, RosterEntry> roster = new java.util.LinkedHashMap<>();
+        Map<Long, String> fallbackStatus = new HashMap<>();
         for (ClassEnrollment e : enrollmentRepository.findByGymClassId(session.getGymClass().getId())) {
-            if ("booked".equalsIgnoreCase(e.getStatus()) && e.getMember() != null) {
+            if (e.getMember() == null || e.getMember().getUserId() == null) continue;
+            if (e.getStatus() != null) {
+                fallbackStatus.putIfAbsent(e.getMember().getUserId(), e.getStatus());
+            }
+            if ("booked".equalsIgnoreCase(e.getStatus()) || "completed".equalsIgnoreCase(e.getStatus())) {
                 roster.putIfAbsent(e.getMember().getUserId(), new RosterEntry(e.getMember(), e.getStatus()));
             }
         }
         if (sessionBookings != null) {
-            for (com.swp391.scms.scheduling.entity.SessionBooking b : sessionBookings.findBySessionIdAndStatus(session.getId(), "booked")) {
-                if (b.getMember() != null) {
-                    roster.putIfAbsent(b.getMember().getUserId(), new RosterEntry(b.getMember(), b.getStatus()));
+            for (String bookingStatus : List.of("booked", "completed")) {
+                List<com.swp391.scms.scheduling.entity.SessionBooking> bookings =
+                        sessionBookings.findBySessionIdAndStatus(session.getId(), bookingStatus);
+                if (bookings == null) continue;
+                for (com.swp391.scms.scheduling.entity.SessionBooking b : bookings) {
+                    if (b.getMember() != null) {
+                        roster.putIfAbsent(b.getMember().getUserId(), new RosterEntry(b.getMember(), b.getStatus()));
+                    }
+                }
+            }
+        }
+        if (attendances != null) {
+            for (SessionAttendance att : attendances) {
+                if (att.getMember() != null && att.getMember().getUserId() != null) {
+                    Long memberId = att.getMember().getUserId();
+                    roster.putIfAbsent(memberId,
+                            new RosterEntry(att.getMember(), fallbackStatus.getOrDefault(memberId, "completed")));
                 }
             }
         }
@@ -148,15 +171,15 @@ public class SessionAttendanceService {
         requireAssignedCoach(principal, session.getGymClass() != null ? session.getGymClass().getCoach() : null);
 
         Long classId = session.getGymClass().getId();
-        List<RosterEntry> enrollments = rosterFor(session);
-
         List<SessionAttendance> attendances = attendanceRepository.findBySessionIdWithDetails(sessionId);
+        List<RosterEntry> enrollments = rosterFor(session, attendances);
+
         Map<Long, SessionAttendance> attendanceMap = attendances.stream()
                 .filter(a -> a.getMember() != null)
                 .collect(Collectors.toMap(a -> a.getMember().getUserId(), a -> a, (first, second) -> first));
 
         Map<Long, Integer> scoreMap = new HashMap<>();
-        if (evaluationRepository != null) {
+        if (evaluationsEnabled && evaluationRepository != null) {
             List<SessionEvaluation> evaluations = evaluationRepository.findBySessionIdOrderByEvaluatedAtDesc(sessionId);
             if (evaluations != null) {
                 for (SessionEvaluation eval : evaluations) {
@@ -274,7 +297,7 @@ public class SessionAttendanceService {
                     .merge(String.valueOf(row[1]).toLowerCase(), ((Number) row[2]).longValue(), Long::sum);
         }
         Map<Long, Object[]> evaluations = new HashMap<>();
-        if (evaluationRepository != null) {
+        if (evaluationsEnabled && evaluationRepository != null) {
             for (Object[] row : evaluationRepository.summarizeForSessions(ids)) evaluations.put((Long) row[0], row);
         }
         LocalDate editableFrom = today.minusDays(com.swp391.scms.scheduling.service.SessionCompletionScheduler.GRACE_DAYS);
@@ -333,6 +356,18 @@ public class SessionAttendanceService {
                     "attendance.error.session_not_started", new Object[]{sessionId},
                     "Attendance can be recorded once the session has started");
         }
+        // Chặn trùng lặp memberId trong cùng yêu cầu điểm danh hàng loạt.
+        java.util.Set<Long> seenMemberIds = new java.util.HashSet<>();
+        for (BatchAttendanceRequest.AttendanceItem item : request.records()) {
+            if (item.memberId() == null || !seenMemberIds.add(item.memberId())) {
+                throw new com.swp391.scms.common.exception.BadRequestException(
+                        "ATTENDANCE_DUPLICATE_MEMBER",
+                        "attendance.error.duplicate_key",
+                        null,
+                        "Duplicate member entry in batch attendance request"
+                );
+            }
+        }
         // Chỉ hội viên có đặt chỗ cho lớp này (hoặc đã hoàn thành) nằm trong danh sách.
         Map<Long, String> enrollmentStatus = new HashMap<>();
         for (ClassEnrollment enrollment : enrollmentRepository.findByGymClassId(session.getGymClass().getId())) {
@@ -343,7 +378,10 @@ public class SessionAttendanceService {
         }
         if (sessionBookings != null) {
             for (String bookingStatus : List.of("booked", "completed")) {
-                for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(sessionId, bookingStatus)) {
+                List<com.swp391.scms.scheduling.entity.SessionBooking> bookings =
+                        sessionBookings.findBySessionIdAndStatus(sessionId, bookingStatus);
+                if (bookings == null) continue;
+                for (com.swp391.scms.scheduling.entity.SessionBooking booking : bookings) {
                     if (booking.getMember() != null) {
                         enrollmentStatus.putIfAbsent(booking.getMember().getUserId(), bookingStatus);
                     }
@@ -352,7 +390,7 @@ public class SessionAttendanceService {
         }
 
         Map<Long, SessionEvaluation> existingEvalMap = new HashMap<>();
-        if (evaluationRepository != null) {
+        if (evaluationsEnabled && evaluationRepository != null) {
             List<SessionEvaluation> existingEvals = evaluationRepository.findBySessionIdOrderByEvaluatedAtDesc(sessionId);
             if (existingEvals != null) {
                 for (SessionEvaluation eval : existingEvals) {
@@ -387,55 +425,70 @@ public class SessionAttendanceService {
                             "Attendance can no longer be changed for this session");
                 }
 
-                SessionAttendance attendance;
-                if (existingOpt.isPresent()) {
-                    attendance = existingOpt.get();
-                    attendance.setStatus(normalizedStatus);
-                    if ("present".equals(normalizedStatus) || "late".equals(normalizedStatus)) {
-                        if (attendance.getCheckedInAt() == null) {
+                SessionAttendance saved;
+                if (statusLocked) {
+                    // Đã khóa sổ điểm danh (>7 ngày): giữ nguyên bản ghi gốc (không ghi đè status/notes/recordedBy).
+                    saved = existingOpt.orElseThrow();
+                } else {
+                    SessionAttendance attendance;
+                    if (existingOpt.isPresent()) {
+                        attendance = existingOpt.get();
+                        attendance.setStatus(normalizedStatus);
+                        if ("present".equals(normalizedStatus) || "late".equals(normalizedStatus)) {
+                            if (attendance.getCheckedInAt() == null) {
+                                attendance.setCheckedInAt(now);
+                            }
+                        } else {
+                            attendance.setCheckedInAt(null);
+                        }
+                        attendance.setRecordedBy(recordingCoach);
+                        attendance.setNotes(item.notes());
+                    } else {
+                        attendance = new SessionAttendance();
+                        attendance.setSession(session);
+                        attendance.setMember(member);
+                        attendance.setStatus(normalizedStatus);
+                        if ("present".equals(normalizedStatus) || "late".equals(normalizedStatus)) {
                             attendance.setCheckedInAt(now);
                         }
-                    } else {
-                        attendance.setCheckedInAt(null);
+                        attendance.setRecordedBy(recordingCoach);
+                        attendance.setNotes(item.notes());
                     }
-                    attendance.setRecordedBy(recordingCoach);
-                    attendance.setNotes(item.notes());
-                } else {
-                    attendance = new SessionAttendance();
-                    attendance.setSession(session);
-                    attendance.setMember(member);
-                    attendance.setStatus(normalizedStatus);
-                    if ("present".equals(normalizedStatus) || "late".equals(normalizedStatus)) {
-                        attendance.setCheckedInAt(now);
-                    }
-                    attendance.setRecordedBy(recordingCoach);
-                    attendance.setNotes(item.notes());
+                    saved = attendanceRepository.saveAndFlush(attendance);
                 }
 
-                SessionAttendance saved = attendanceRepository.saveAndFlush(attendance);
-
-                if (Boolean.TRUE.equals(request.publishEvaluations()) && item.progressScore() != null && evaluationRepository != null) {
-                    SessionEvaluation eval = existingEvalMap.getOrDefault(member.getUserId(), new SessionEvaluation());
-                    eval.setSession(session);
-                    eval.setMember(member);
-                    eval.setCoach(recordingCoach);
-                    eval.setProgressScore(BigDecimal.valueOf(item.progressScore()));
-                    eval.setPerformanceNotes(item.notes());
-                    eval.setEvaluatedAt(now);
-                    if (eval.getCreatedAt() == null) {
-                        eval.setCreatedAt(now);
-                    }
-                    evaluationRepository.save(eval);
-                    if (notificationService != null) {
-                        try {
-                            notificationService.notifyEvaluation(member.getUserId());
-                        } catch (ResourceNotFoundException ex) {
-                            log.debug("Skipping evaluation notification for inactive user {}", member.getUserId());
+                Integer persistedScore = null;
+                if (evaluationsEnabled && evaluationRepository != null) {
+                    if (Boolean.TRUE.equals(request.publishEvaluations()) && item.progressScore() != null) {
+                        SessionEvaluation eval = existingEvalMap.getOrDefault(member.getUserId(), new SessionEvaluation());
+                        eval.setSession(session);
+                        eval.setMember(member);
+                        eval.setCoach(recordingCoach);
+                        eval.setProgressScore(BigDecimal.valueOf(item.progressScore()));
+                        eval.setPerformanceNotes(item.notes());
+                        eval.setEvaluatedAt(now);
+                        if (eval.getCreatedAt() == null) {
+                            eval.setCreatedAt(now);
+                        }
+                        evaluationRepository.save(eval);
+                        persistedScore = item.progressScore();
+                        if (notificationService != null) {
+                            try {
+                                notificationService.notifyEvaluation(member.getUserId());
+                            } catch (ResourceNotFoundException ex) {
+                                log.debug("Skipping evaluation notification for inactive user {}", member.getUserId());
+                            }
+                        }
+                    } else {
+                        SessionEvaluation existingEval = existingEvalMap.get(member.getUserId());
+                        if (existingEval != null && existingEval.getProgressScore() != null) {
+                            persistedScore = existingEval.getProgressScore().intValue();
                         }
                     }
                 }
 
                 User user = member.getUser();
+                Coach effectiveRecorder = saved.getRecordedBy() != null ? saved.getRecordedBy() : recordingCoach;
                 result.add(new MemberAttendanceItem(
                         member.getUserId(),
                         member.getMembershipCode(),
@@ -446,10 +499,10 @@ public class SessionAttendanceService {
                         enrollmentStatus.get(member.getUserId()),
                         saved.getStatus(),
                         saved.getCheckedInAt(),
-                        recordingCoach.getUserId(),
-                        recordingCoach.getUser() != null ? recordingCoach.getUser().getFullName() : null,
+                        effectiveRecorder.getUserId(),
+                        effectiveRecorder.getUser() != null ? effectiveRecorder.getUser().getFullName() : null,
                         saved.getNotes(),
-                        item.progressScore()
+                        persistedScore
                 ));
             }
         } catch (DataIntegrityViolationException ex) {
@@ -483,9 +536,9 @@ public class SessionAttendanceService {
      */
     private static void requireAssignedCoach(AuthenticatedPrincipal principal, Coach sessionCoach) {
         if (principal != null && "COACH".equalsIgnoreCase(principal.role())
-                && sessionCoach != null
-                && sessionCoach.getUserId() != null
-                && !sessionCoach.getUserId().equals(principal.id())) {
+                && (sessionCoach == null
+                        || sessionCoach.getUserId() == null
+                        || !sessionCoach.getUserId().equals(principal.id()))) {
             throw new ForbiddenException(
                     "ATTENDANCE_NOT_COACH",
                     "attendance.forbidden.not_coach",

@@ -19,12 +19,29 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByMembershipCode(String membershipCode);
 
     /**
-     * Hội viên theo trạng thái KYC (kèm User), hồ sơ nộp sớm nhất đứng trước; dùng cho hàng chờ duyệt giấy tờ.
-     *
-     * Hội viên đã đăng ký, đang hoạt động mà chưa ai đo: những người mà HLV có thể đánh giá lần đầu.
+     * Hội viên chưa bị xóa theo trạng thái KYC (kèm User), hồ sơ nộp sớm nhất đứng trước; dùng cho hàng chờ duyệt giấy tờ.
      */
-    @Query("select m from Member m join fetch m.user where m.kycStatus = :status order by m.kycSubmittedAt asc")
+    @Query("select m from Member m join fetch m.user where m.kycStatus = :status and m.user.deletedAt is null order by m.kycSubmittedAt asc")
     List<Member> findByKycStatusOrderByKycSubmittedAtAsc(@Param("status") String status);
+
+    /** Kiểm tra mã băm CCCD/Hộ chiếu đã thuộc một hội viên khác chưa bị xóa (và không bị từ chối KYC) chưa. */
+    @Query("""
+            select (count(m) > 0) from Member m
+            where m.citizenIdHash = :hash
+              and m.userId <> :userId
+              and m.user.deletedAt is null
+              and (m.kycStatus is null or upper(m.kycStatus) <> 'REJECTED')
+            """)
+    boolean existsByCitizenIdHashAndUserIdNotAndUserDeletedAtIsNull(@Param("hash") String hash, @Param("userId") Long userId);
+
+    /** Chỉ nạp các hội viên còn lưu số giấy tờ dạng chữ rõ chưa che (phục vụ KycBackfill mà không nạp toàn bảng). */
+    @Query("""
+            select m from Member m
+            where m.citizenId is not null
+              and trim(m.citizenId) <> ''
+              and m.citizenId not like '********%'
+            """)
+    List<Member> findUnmaskedCitizenIds();
 
     /**
      * Lấy hội viên và khóa dòng để ghi (FOR UPDATE), tránh hai thao tác song song trên cùng hội viên (ví dụ hai

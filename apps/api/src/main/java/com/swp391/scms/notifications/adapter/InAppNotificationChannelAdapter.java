@@ -62,6 +62,7 @@ public class InAppNotificationChannelAdapter implements NotificationChannelAdapt
                 payload.relatedEntityType(),
                 payload.relatedEntityId()
         );
+        notification.setActionPath(payload.actionPath());
 
         notificationRepository.save(notification);
         log.info("[IN-APP] Persisted notification #{} for User #{} (type={}, entity={})",

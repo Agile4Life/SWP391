@@ -53,6 +53,9 @@ public class MemberTrialService {
     private final CccdHasher cccdHasher;
     private final com.swp391.scms.users.KycCrypto kycCrypto;
 
+    @Autowired(required = false)
+    private jakarta.persistence.EntityManager entityManager;
+
     /** Constructor Spring dùng; thông báo, dịch, Clock và bộ mã hóa KYC là tùy chọn. */
     @Autowired
     public MemberTrialService(
@@ -232,6 +235,8 @@ public class MemberTrialService {
         validateDocument(docType, docNumber, nationality);
         validateDocumentImage(frontImageUrl);
         validateDocumentImage(backImageUrl);
+        // Chuẩn hóa in hoa trước khi băm/mã hóa để hộ chiếu khác chữ hoa/thường không lách ràng buộc trùng lặp.
+        docNumber = docNumber.trim().toUpperCase(Locale.ROOT);
 
         if (member == null) {
             member = members.findById(memberId)
@@ -342,8 +347,20 @@ public class MemberTrialService {
      * nay với mã QR mới, xóa bản mã hóa số giấy tờ, lưu người duyệt và gửi thông báo.
      */
     private MembershipSubscription approveTrialInternal(AuthenticatedPrincipal reviewer, Long trialId) {
-        MemberTrialRedemption redemption = trialRedemptions.findById(trialId)
+        MemberTrialRedemption lookup = trialRedemptions.findById(trialId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.trial", trialId));
+        if (lookup.getMember() == null || lookup.getMember().getUserId() == null) {
+            throw new ResourceNotFoundException("resource.member", trialId);
+        }
+        Long memberId = lookup.getMember().getUserId();
+        Member member = members.findByUserIdForUpdate(memberId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", memberId));
+        MemberTrialRedemption redemption = trialRedemptions.findByIdForUpdate(trialId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.trial", trialId));
+        if (entityManager != null) {
+            entityManager.refresh(member);
+            entityManager.refresh(redemption);
+        }
 
         if (MemberTrialRedemption.STATUS_APPROVED.equalsIgnoreCase(redemption.getStatus())) {
             throw new ConflictException("TRIAL_ALREADY_APPROVED", "trial.already_approved", null,
@@ -354,10 +371,10 @@ public class MemberTrialService {
             throw new ConflictException("TRIAL_REJECTED_RESUBMIT", "trial.rejected.resubmit_required", null,
                     "Rejected request: the member must resubmit it first.");
         }
-
-        Member member = redemption.getMember();
-        if (member == null) {
-            throw new ResourceNotFoundException("resource.member", trialId);
+        // Kiểm tra lại dưới khóa hội viên phòng trường hợp hội viên đã mua gói trả phí trong lúc chờ duyệt.
+        if (subscriptions.existsByMemberUserId(member.getUserId())) {
+            throw new ConflictException("TRIAL_NOT_NEW_MEMBER", "trial.not_new_member", null,
+                    msg("trial.not_new_member"));
         }
 
         // Đồng bộ họ tên User theo họ tên trên giấy tờ đã xác minh
@@ -365,7 +382,16 @@ public class MemberTrialService {
             member.getUser().setFullName(redemption.getFullName());
         }
         member.setDocumentType(redemption.getDocumentType());
-        member.setCitizenId(redemption.getCccdLast4());
+        String plainDoc = cccdHasher.decrypt(redemption.getDocumentNumberEnc());
+        if (plainDoc != null && !plainDoc.isBlank()) {
+            String normalizedDoc = plainDoc.trim().toUpperCase(Locale.ROOT);
+            member.setCitizenId(com.swp391.scms.users.KycCrypto.mask(normalizedDoc));
+            if (kycCrypto != null) {
+                member.setCitizenIdEncrypted(kycCrypto.encrypt(normalizedDoc));
+            }
+        } else if (redemption.getCccdLast4() != null && !redemption.getCccdLast4().isBlank()) {
+            member.setCitizenId(com.swp391.scms.users.KycCrypto.mask(redemption.getCccdLast4()));
+        }
         member.setNationality(redemption.getNationality());
         member.setFrontImageUrl(redemption.getFrontImageUrl());
         member.setBackImageUrl(redemption.getBackImageUrl());
@@ -390,7 +416,7 @@ public class MemberTrialService {
         subscription.setMember(member);
         subscription.setMembershipPackage(trialPkg);
         subscription.setStartDate(today);
-        subscription.setEndDate(today.plusDays(TRIAL_DAYS));
+        subscription.setEndDate(today.plusDays(TRIAL_DAYS - 1L));
         subscription.setStatus("active");
         subscription.setUpgradeCharge(BigDecimal.ZERO);
         subscription.setQrCode(UUID.randomUUID().toString());
@@ -425,8 +451,17 @@ public class MemberTrialService {
      */
     @Transactional
     public ReceptionTrialDto rejectTrial(AuthenticatedPrincipal reviewer, Long trialId, String reason) {
-        MemberTrialRedemption redemption = trialRedemptions.findById(trialId)
+        MemberTrialRedemption lookup = trialRedemptions.findById(trialId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.trial", trialId));
+        if (lookup.getMember() != null && lookup.getMember().getUserId() != null) {
+            members.findByUserIdForUpdate(lookup.getMember().getUserId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.member", lookup.getMember().getUserId()));
+        }
+        MemberTrialRedemption redemption = trialRedemptions.findByIdForUpdate(trialId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.trial", trialId));
+        if (entityManager != null) {
+            entityManager.refresh(redemption);
+        }
 
         if (MemberTrialRedemption.STATUS_APPROVED.equalsIgnoreCase(redemption.getStatus())) {
             throw new ConflictException("TRIAL_ALREADY_APPROVED", "trial.already_approved", null,
@@ -499,7 +534,7 @@ public class MemberTrialService {
             throw new BadRequestException("AUTH_REQUIRED", "error.unauthorized", null, "Authentication required");
         }
         Long memberId = principal.id();
-        String cccd = request.resolvedDocumentNumber();
+        String cccd = request.resolvedDocumentNumber().trim().toUpperCase(Locale.ROOT);
         String cccdHash = cccdHasher.hash(cccd);
         String fullName = request.fullName().trim();
 
@@ -535,7 +570,7 @@ public class MemberTrialService {
         subscription.setMember(member);
         subscription.setMembershipPackage(trialPkg);
         subscription.setStartDate(today);
-        subscription.setEndDate(today.plusDays(TRIAL_DAYS));
+        subscription.setEndDate(today.plusDays(TRIAL_DAYS - 1L));
         subscription.setStatus("active");
         subscription.setUpgradeCharge(BigDecimal.ZERO);
         subscription.setQrCode(UUID.randomUUID().toString());

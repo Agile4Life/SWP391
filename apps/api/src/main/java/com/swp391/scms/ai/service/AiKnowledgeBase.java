@@ -7,6 +7,7 @@ import com.swp391.scms.membership.service.DynamicQrService;
 import com.swp391.scms.membership.service.EntitlementRevocationService;
 import com.swp391.scms.membership.service.MemberTrialService;
 import com.swp391.scms.membership.service.MembershipSubscriptionService;
+import com.swp391.scms.scheduling.service.EnrollmentService;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
@@ -87,6 +88,7 @@ public class AiKnowledgeBase {
         v.put("hold.noticeHours", String.valueOf(MembershipSubscriptionService.HOLD_NOTICE_HOURS));
         v.put("hold.minDays", String.valueOf(MembershipSubscriptionService.MIN_HOLD_DAYS));
         v.put("hold.ptRefundDays", String.valueOf(EntitlementRevocationService.PT_HOLD_REFUND_DAYS));
+        v.put("hold.courseRefundDays", String.valueOf(EnrollmentService.HOLD_REFUND_NOTICE_DAYS));
         v.put("hold.maxDocuments", String.valueOf(MembershipSubscriptionService.MAX_HOLD_DOCUMENTS));
         v.put("hold.maxDocumentMb", String.valueOf(MembershipSubscriptionService.MAX_HOLD_DOCUMENT_BYTES / (1024 * 1024)));
         return v;
@@ -164,20 +166,33 @@ public class AiKnowledgeBase {
         for (String tier : List.of("SILVER", "GOLD", "PLATINUM")) {
             MembershipPackage month = pkg(tier, 30);
             MembershipPackage longTerm = pkg(tier, 90);
+            int courseCredits = PackageBenefits.courseCredits(tier, PackageBenefits.CYCLE_DAYS);
+            int discount = PackageBenefits.discountPercent(month);
             sb.append("- ").append(tier.charAt(0)).append(tier.substring(1).toLowerCase(java.util.Locale.ROOT)).append(": ")
                     .append("PT 1:1 miễn phí ").append(PackageBenefits.ptSessionsPerCycle(month)).append(" buổi mỗi 30 ngày; ")
+                    .append("lượt khóa học nhóm miễn phí ").append(courseCredits).append(" khóa mỗi 30 ngày; ")
                     .append("bảo lưu: ").append(holdText(PackageBenefits.holdMaxDays(longTerm)))
                     .append(" (gói 1 tháng cũ: ").append(holdText(PackageBenefits.holdMaxDays(month))).append("); ")
-                    .append("giảm ").append(PackageBenefits.discountPercent(month)).append("% cho buổi PT thêm");
+                    .append("giảm ").append(discount).append("% cho buổi PT thêm và khóa học có phí; ");
+            if (PackageBenefits.hasVipRoomAccess(month)) {
+                sb.append("được sử dụng Phòng Gym VIP; ");
+            }
+            sb.append(PackageBenefits.canViewWorkoutPlan(month)
+                    ? "được xem giáo án HLV soạn"
+                    : "không bao gồm quyền xem giáo án HLV soạn");
             sb.append(".\n");
         }
         MembershipPackage trial = pkg(null, PackageBenefits.TRIAL_MAX_DAYS);
         trial.setName("Trải nghiệm");
-        sb.append("- Gói trải nghiệm: dịch vụ như hạng Gold, PT 1:1 miễn phí ").append(PackageBenefits.ptSessionsPerCycle(trial))
+        sb.append("- Gói trải nghiệm: dịch vụ như hạng Gold (")
+                .append(PackageBenefits.canViewWorkoutPlan(trial) ? "được xem giáo án HLV soạn" : "không xem giáo án")
+                .append(", không gồm Phòng Gym VIP), PT 1:1 miễn phí ")
+                .append(PackageBenefits.ptSessionsPerCycle(trial))
                 .append(" buổi, không bảo lưu được.");
         return new Section("Quyền lợi theo hạng gói",
-                List.of("quyen loi", "hang", "silver", "gold", "platinum", "vip", "giam gia", "uu dai", "pt", "khac nhau",
-                        "so sanh", "nen chon", "goi nao", "bao luu"),
+                List.of("quyen loi", "hang", "silver", "gold", "platinum", "vip", "giam gia", "uu dai", "pt",
+                        "khoa hoc", "lop hoc", "phong vip", "giao an", "khac nhau", "so sanh", "nen chon", "goi nao",
+                        "bao luu"),
                 false, sb.toString());
     }
 

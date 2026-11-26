@@ -3,6 +3,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
+import { ApiError } from '../../shared/api/client';
 import {
   getAllStaffRequests,
   reviewStaffRequest,
@@ -37,6 +40,7 @@ const ROLE_DISPLAY: Record<string, { label: string; bg: string; color: string }>
  */
 export function ManagerInternalRequestsPage() {
   const { t } = useStaffI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [requests, setRequests] = useState<StaffInternalRequestDto[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<StaffMessage>('');
@@ -84,11 +88,11 @@ export function ManagerInternalRequestsPage() {
     });
   }, [requests, statusFilter, typeFilter]);
 
-  // Mở hộp duyệt đơn với ghi chú mặc định.
+  // Mở hộp duyệt đơn với ghi chú mặc định theo ngôn ngữ hiện tại.
   function handleOpenApprove(r: StaffInternalRequestDto) {
     setReviewTarget(r);
     setReviewAction('APPROVED');
-    setManagerNotes('Đã xem xét và chấp thuận.');
+    setManagerNotes(t('Đã xem xét và chấp thuận.', 'Reviewed and approved.'));
     setModalError('');
   }
 
@@ -100,33 +104,73 @@ export function ManagerInternalRequestsPage() {
     setModalError('');
   }
 
-  // Gửi kết quả duyệt/từ chối: từ chối cần lý do, thành công thì báo và tải lại danh sách.
+  // Gửi kết quả duyệt/từ chối: từ chối cần lý do; duyệt đơn nghỉ HLV kiểm tra xung đột lịch dạy/PT trước khi chốt.
   async function handleReviewSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!reviewTarget) return;
 
     if (reviewAction === 'REJECTED' && !managerNotes.trim()) {
-      setModalError('Vui lòng nhập lý do từ chối đơn để nhân viên nắm rõ.');
+      setModalError(staffMessage(
+        'Vui lòng nhập lý do từ chối đơn để nhân viên nắm rõ.',
+        'Please enter a rejection reason so the staff member understands.',
+      ));
       return;
     }
+
+    const isCoachLeaveApproval = reviewAction === 'APPROVED'
+      && reviewTarget.requestType === 'LEAVE'
+      && reviewTarget.userRole === 'COACH';
+    const notes = managerNotes.trim() || undefined;
+    const staffDisplayName = reviewTarget.userFullName || t('nhân sự', 'staff member');
 
     setSubmitting(true);
     setModalError('');
     try {
-      await reviewStaffRequest(reviewTarget.id, {
-        status: reviewAction,
-        managerNotes: managerNotes.trim() || undefined,
-      });
+      let reviewed: StaffInternalRequestDto;
+      try {
+        reviewed = await reviewStaffRequest(reviewTarget.id, {
+          status: reviewAction,
+          managerNotes: notes,
+          ...(isCoachLeaveApproval ? { confirmConflicts: false } : {}),
+        });
+      } catch (err: unknown) {
+        if (!(isCoachLeaveApproval && err instanceof ApiError && err.code === 'COACH_LEAVE_HAS_CONFLICTS')) {
+          throw err;
+        }
+        const proceed = await confirm({
+          title: staffMessage('HLV có lịch dạy trùng thời gian nghỉ', 'Coach has scheduled sessions during leave'),
+          message: err.message,
+          confirmLabel: staffMessage('Vẫn phê duyệt', 'Approve anyway'),
+          cancelLabel: staffMessage('Kiểm tra lại', 'Review again'),
+          danger: true,
+        });
+        if (!proceed) return;
+        reviewed = await reviewStaffRequest(reviewTarget.id, {
+          status: 'APPROVED',
+          managerNotes: notes,
+          confirmConflicts: true,
+        });
+      }
 
+      const affectedClasses = reviewed?.affectedClassSessionCount ?? 0;
+      const affectedPt = reviewed?.affectedPtSessionCount ?? 0;
+      const hasImpact = affectedClasses > 0 || affectedPt > 0;
       notify(
         reviewAction === 'APPROVED'
-          ? staffMessage(`Đã phê duyệt đơn của ${reviewTarget.userFullName} thành công!`, `Approved request from ${reviewTarget.userFullName} successfully!`)
-          : staffMessage(`Đã từ chối đơn của ${reviewTarget.userFullName}.`, `Rejected request from ${reviewTarget.userFullName}.`)
-      , 'success');
+          ? hasImpact
+            ? staffMessage(
+                `Đã phê duyệt đơn của ${staffDisplayName}. Lưu ý: cần sắp xếp người dạy thay cho ${affectedClasses} buổi lớp và ${affectedPt} buổi PT 1:1.`,
+                `Approved request from ${staffDisplayName}. Note: reassign ${affectedClasses} class session(s) and ${affectedPt} 1:1 PT session(s).`,
+              )
+            : staffMessage(`Đã phê duyệt đơn của ${staffDisplayName} thành công!`, `Approved request from ${staffDisplayName} successfully!`)
+          : staffMessage(`Đã từ chối đơn của ${staffDisplayName}.`, `Rejected request from ${staffDisplayName}.`),
+        'success',
+      );
+      window.dispatchEvent(new Event('member-notifications-changed'));
       setReviewTarget(null);
       await loadData();
     } catch (err: unknown) {
-      setModalError((errorMessage(err, 'Không thể xử lý đơn từ. Vui lòng thử lại.')));
+      setModalError(errorMessage(err, 'Không thể xử lý đơn từ. Vui lòng thử lại.'));
     } finally {
       setSubmitting(false);
     }
@@ -136,6 +180,9 @@ export function ManagerInternalRequestsPage() {
     <div data-i18n-managed className="portal-container">
       <PageHeader
         title={t("Duyệt đơn từ nội bộ")}
+        actions={
+          <RefreshButton label={t('Làm mới danh sách đơn từ', 'Refresh requests')} disabled={loading} onClick={() => void loadData()} />
+        }
       />
 
       {/* Thanh bộ lọc và điều khiển */}
@@ -184,8 +231,10 @@ export function ManagerInternalRequestsPage() {
 
         {/* Bộ lọc loại đơn */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>{t("Loại đơn:")}</span>
+          <label htmlFor="manager-request-type-filter" style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)' }}>{t("Loại đơn:")}</label>
           <Select
+            id="manager-request-type-filter"
+            aria-label={t('Lọc theo loại đơn', 'Filter by request type')}
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
             style={{ width: 180 }}
@@ -202,14 +251,19 @@ export function ManagerInternalRequestsPage() {
       {error && (
         <div data-i18n-managed className="portal-alert" role="alert" style={{ marginBottom: 20 }}>
           <span>{t(error)}</span>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => setError('')}
-            aria-label={t('Đóng thông báo lỗi', 'Dismiss error')}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => void loadData()}>
+              {t('Thử lại', 'Retry')}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => setError('')}
+              aria-label={t('Đóng thông báo lỗi', 'Dismiss error')}
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -221,7 +275,7 @@ export function ManagerInternalRequestsPage() {
           </div>
           <p style={{ margin: 0, color: 'var(--portal-muted)' }}>{t("Đang tải danh sách đơn từ...")}</p>
         </div>
-      ) : filteredRequests.length === 0 ? (
+      ) : error ? null : filteredRequests.length === 0 ? (
         <div data-i18n-managed
           className="portal-card"
           style={{
@@ -233,9 +287,13 @@ export function ManagerInternalRequestsPage() {
           }}
         >
           <p style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px 0', color: 'var(--portal-paper)' }}>
-            {t("Không có đơn từ nào cần xử lý")}</p>
+            {requests.length > 0
+              ? t('Không có đơn từ nào khớp bộ lọc hiện tại', 'No requests match the current filter')
+              : t("Không có đơn từ nào cần xử lý")}</p>
           <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-            {t("Không có đơn từ cần duyệt.")}</span>
+            {requests.length > 0
+              ? t('Hãy thử chọn trạng thái hoặc loại đơn khác.', 'Try choosing a different status or request type.')
+              : t("Không có đơn từ cần duyệt.")}</span>
         </div>
       ) : (
         <div data-i18n-managed style={{ display: 'grid', gap: 16 }}>
@@ -277,12 +335,13 @@ export function ManagerInternalRequestsPage() {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                     <div
+                      aria-hidden="true"
                       style={{
                         width: 38,
                         height: 38,
                         borderRadius: 99,
-                        background: 'var(--portal-salmon, var(--sol-accent))',
-                        color: 'var(--portal-ink, #202020)',
+                        background: 'var(--sol-accent)',
+                        color: 'var(--sol-on-accent)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -290,12 +349,12 @@ export function ManagerInternalRequestsPage() {
                         fontSize: 15,
                       }}
                     >
-                      {req.userFullName.charAt(0).toUpperCase()}
+                      {((req.userFullName ?? '').trim().charAt(0) || '?').toUpperCase()}
                     </div>
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <span style={{ fontWeight: 800, fontSize: 15, color: 'var(--portal-paper)' }}>
-                          {req.userFullName}
+                          {req.userFullName || t('Nhân sự', 'Staff')}
                         </span>
                         <span
                           style={{
@@ -355,36 +414,38 @@ export function ManagerInternalRequestsPage() {
                   </p>
                 </div>
 
-                {/* Chi tiết phạm vi (ngày, ca mong muốn) */}
-                <div
-                  style={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    gap: 18,
-                    background: 'var(--portal-raised)',
-                    padding: '10px 16px',
-                    borderRadius: 10,
-                    fontSize: 13,
-                    color: 'var(--portal-paper)',
-                  }}
-                >
-                  {req.startDate && (
-                    <div data-i18n-managed>
-                      <strong style={{ color: 'var(--portal-muted)' }}>{t("Thời gian:")}</strong>{' '}
-                      {formatCenterDate(req.startDate)}
-                      {req.endDate && req.endDate !== req.startDate ? t(` đến ${formatCenterDate(req.endDate)}`, ` to ${formatCenterDate(req.endDate)}`) : ''}
-                      {req.replacementUserFullName ? t(` · Thay thế: ${req.replacementUserFullName}`, ` · Substitute: ${req.replacementUserFullName}`) : ''}
+                {/* Chi tiết phạm vi (ngày, ca mong muốn): chỉ hiển thị khi có thông tin, tránh hộp rỗng với đơn OTHER */}
+                {(req.startDate || req.targetShift || req.replacementUserFullName) && (
+                  <div
+                    style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: 18,
+                      background: 'var(--portal-raised)',
+                      padding: '10px 16px',
+                      borderRadius: 10,
+                      fontSize: 13,
+                      fontVariantNumeric: 'tabular-nums',
+                      color: 'var(--portal-paper)',
+                    }}
+                  >
+                    {req.startDate && (
+                      <div data-i18n-managed>
+                        <strong style={{ color: 'var(--portal-muted)' }}>{t("Thời gian:")}</strong>{' '}
+                        {formatCenterDate(req.startDate)}
+                        {req.endDate && req.endDate !== req.startDate ? t(` đến ${formatCenterDate(req.endDate)}`, ` to ${formatCenterDate(req.endDate)}`) : ''}
+                        {req.replacementUserFullName ? t(` · Thay thế: ${req.replacementUserFullName}`, ` · Substitute: ${req.replacementUserFullName}`) : ''}
+                      </div>
+                    )}
 
-                    </div>
-                  )}
-
-                  {req.targetShift && (
-                    <div data-i18n-managed>
-                      <strong style={{ color: 'var(--portal-muted)' }}>{t("Ca / Buổi liên quan:")}</strong>{' '}
-                      {req.targetShift}
-                    </div>
-                  )}
-                </div>
+                    {req.targetShift && (
+                      <div data-i18n-managed>
+                        <strong style={{ color: 'var(--portal-muted)' }}>{t("Ca / Buổi liên quan:")}</strong>{' '}
+                        {req.targetShift}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Kết quả duyệt nếu đã được xử lý */}
                 {req.reviewedAt && (
@@ -398,9 +459,10 @@ export function ManagerInternalRequestsPage() {
                           : 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
                       border: `1px solid ${req.status === 'APPROVED' ? 'color-mix(in srgb, var(--portal-success) 34%, transparent)' : 'color-mix(in srgb, var(--portal-danger) 34%, transparent)'}`,
                       fontSize: 13,
+                      fontVariantNumeric: 'tabular-nums',
                     }}
                   >
-                    <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
+                    <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success)' : 'var(--portal-danger)' }}>
                       {req.status === 'APPROVED' ? t('Đã phê duyệt') : t('Đã từ chối')} {t(" bởi")}{' '}
                       {req.reviewedByName || t('Ban Quản Lý')} (
                       {formatCenterDate(req.reviewedAt)})
@@ -468,10 +530,11 @@ export function ManagerInternalRequestsPage() {
                 padding: '12px 16px',
                 borderRadius: 10,
                 fontSize: 13,
+                fontVariantNumeric: 'tabular-nums',
               }}
             >
               <div>
-                <strong>{t("Người làm đơn:")}</strong> {reviewTarget.userFullName} ({reviewTarget.userEmail})
+                <strong>{t("Người làm đơn:")}</strong> {reviewTarget.userFullName || t('Nhân sự', 'Staff')} ({reviewTarget.userEmail})
               </div>
               <div>
                 <strong>{t("Loại đơn:")}</strong> {t(TYPE_LABELS[reviewTarget.requestType]?.label)}
@@ -479,20 +542,33 @@ export function ManagerInternalRequestsPage() {
               {reviewTarget.startDate && (
                 <div data-i18n-managed>
                   <strong>{t("Thời gian đề xuất:")}</strong> {formatCenterDate(reviewTarget.startDate)}
-                  {reviewTarget.endDate && t(` đến ${formatCenterDate(reviewTarget.endDate)}`, ` to ${formatCenterDate(reviewTarget.endDate)}`)}
+                  {reviewTarget.endDate && reviewTarget.endDate !== reviewTarget.startDate
+                    ? t(` đến ${formatCenterDate(reviewTarget.endDate)}`, ` to ${formatCenterDate(reviewTarget.endDate)}`)
+                    : ''}
                   {reviewTarget.replacementUserFullName ? t(` · Thay thế: ${reviewTarget.replacementUserFullName}`, ` · Substitute: ${reviewTarget.replacementUserFullName}`) : ''}
-
                 </div>
               )}
             </div>
 
+            {reviewAction === 'APPROVED' && reviewTarget.requestType === 'LEAVE' && reviewTarget.userRole === 'COACH' && (
+              <div data-i18n-managed className="portal-alert portal-alert--info" role="status">
+                <span>
+                  {t(
+                    'Lưu ý: duyệt đơn nghỉ phép của HLV có thể ảnh hưởng đến các buổi lớp nhóm hoặc PT 1:1 đã xếp trong thời gian này. Hệ thống sẽ cảnh báo nếu phát hiện trùng lịch để bạn sắp xếp người dạy thay tại Phân công HLV.',
+                    'Note: approving coach leave may impact scheduled group classes or 1:1 PT sessions during these dates. The system will warn you if conflicts exist so you can reassign them in Coach Assignments.',
+                  )}
+                </span>
+              </div>
+            )}
+
             <div>
-              <label style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
+              <label htmlFor="manager-review-notes" style={{ display: 'block', fontWeight: 700, fontSize: 13, marginBottom: 6 }}>
                 {reviewAction === 'APPROVED'
                   ? t('Ghi chú / Lời nhắn của Quản lý gửi nhân viên (tùy chọn):')
                   : t('Lý do từ chối đơn (bắt buộc):')}
               </label>
               <textarea
+                id="manager-review-notes"
                 className="portal-textarea"
                 rows={4}
                 placeholder={
@@ -529,6 +605,7 @@ export function ManagerInternalRequestsPage() {
           </form>
         </Modal>
       )}
+      {confirmDialog}
     </div>
   );
 }

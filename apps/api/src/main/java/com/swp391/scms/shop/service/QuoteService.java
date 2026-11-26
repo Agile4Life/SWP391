@@ -6,6 +6,7 @@ import com.swp391.scms.shop.entity.Product;
 import com.swp391.scms.shop.entity.ProductVariant;
 import com.swp391.scms.shop.mapper.ProductMapper;
 import com.swp391.scms.shop.repository.ProductVariantRepository;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.Map;
  * Báo giá giỏ hàng: gộp dòng trùng, kiểm tra giới hạn, tính tiền từng dòng theo tồn kho, giảm giá thành viên và
  * phí giao hàng.
  */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 @Transactional(readOnly = true)
 public class QuoteService {

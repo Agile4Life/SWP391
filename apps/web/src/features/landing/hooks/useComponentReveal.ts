@@ -115,11 +115,39 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       if (node.matches(selector)) callback(node);
       node.querySelectorAll<HTMLElement>(selector).forEach(callback);
     };
-    // Cấu hình lại các bộ quan sát; giảm chuyển động thì tắt hiệu ứng và đưa các giá trị về trạng thái tĩnh.
+    // Theo dõi section đang nằm giữa màn hình để tô sáng mục điều hướng tương ứng (luôn hoạt động kể cả khi giảm chuyển động).
+    const setupSectionObserver = () => {
+      if (route !== '/') return;
+      const trackedSections = root.querySelectorAll<HTMLElement>('section[id]');
+      if (trackedSections.length === 0) return;
+      // Quy đổi #id của section sang mục điều hướng tương ứng.
+      const mapSectionToNav = (id: string): string => {
+        if (id === 'about' || id === 'disciplines') return 'about';
+        if (id === 'multisport') return 'multisport';
+        if (id === 'trainers' || id === 'journey') return 'trainers';
+        if (id === 'packages' || id === 'benefits' || id === 'faq') return 'packages';
+        return '';
+      };
+      sectionObserver = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const id = entry.target.getAttribute('id');
+          if (!id) return;
+          const activeTarget = mapSectionToNav(id);
+          root.querySelectorAll<HTMLElement>('.fit-nav a[data-nav-target]').forEach((link) => {
+            link.classList.toggle('is-active', Boolean(activeTarget) && link.dataset.navTarget === activeTarget);
+          });
+        });
+      }, { rootMargin: '-35% 0px -50% 0px' });
+      trackedSections.forEach((section) => sectionObserver?.observe(section));
+    };
+
+    // Cấu hình lại các bộ quan sát; giảm chuyển động thì tắt hiệu ứng reveal nhưng vẫn giữ sectionObserver.
     const configure = () => {
       observer?.disconnect();
       sectionObserver?.disconnect();
       [...targets].forEach(unregister);
+      setupSectionObserver();
       if (preference.matches) {
         setProperty(progressBar, 'transform', 'scaleX(0)');
         root.querySelector<HTMLElement>('.fit-hero')?.style.removeProperty('--fit-hero-scroll');
@@ -133,9 +161,13 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
       observer = new IntersectionObserver((entries) => {
         if (preference.matches) return;
         onScroll();
+        const minVisiblePx = Math.min((window.innerHeight || 0) * 0.12, 80);
         entries.forEach((entry) => {
           const element = entry.target as HTMLElement;
-          if (entry.isIntersecting && entry.intersectionRatio >= .12) {
+          const visibleHeight = entry.intersectionRect?.height ?? 0;
+          const visibleEnough = entry.intersectionRatio >= 0.12
+            || (minVisiblePx > 0 && visibleHeight >= minVisiblePx);
+          if (entry.isIntersecting && visibleEnough) {
             if (!element.classList.contains('is-visible')) element.dataset.revealDirection = direction;
             reveal(element);
           } else if (!entry.isIntersecting) {
@@ -143,35 +175,8 @@ export function useComponentReveal(container: RefObject<HTMLDivElement | null>, 
             element.classList.remove('is-visible');
           }
         });
-      }, { threshold: [0, .12] });
+      }, { threshold: [0, 0.02, 0.05, 0.12] });
       root.querySelectorAll<HTMLElement>(selector).forEach(register);
-
-      if (route === '/') {
-        const trackedSections = root.querySelectorAll<HTMLElement>('section[id]');
-        if (trackedSections.length > 0) {
-          // Quy đổi #id của section sang mục điều hướng tương ứng.
-          const mapSectionToNav = (id: string): string => {
-            if (id === 'about' || id === 'disciplines') return 'about';
-            if (id === 'multisport') return 'multisport';
-            if (id === 'trainers' || id === 'journey') return 'trainers';
-            if (id === 'packages' || id === 'benefits' || id === 'faq') return 'packages';
-
-            return '';
-          };
-          sectionObserver = new IntersectionObserver((entries) => {
-            entries.forEach((entry) => {
-              if (!entry.isIntersecting) return;
-              const id = entry.target.getAttribute('id');
-              if (!id) return;
-              const activeTarget = mapSectionToNav(id);
-              root.querySelectorAll<HTMLElement>('.fit-nav a[data-nav-target]').forEach((link) => {
-                link.classList.toggle('is-active', Boolean(activeTarget) && link.dataset.navTarget === activeTarget);
-              });
-            });
-          }, { rootMargin: '-35% 0px -50% 0px' });
-          trackedSections.forEach((section) => sectionObserver?.observe(section));
-        }
-      }
 
       syncScrollEffects();
     };

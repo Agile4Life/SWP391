@@ -3,7 +3,7 @@ import { EmptyState } from '../../shared/ui/EmptyState';
 import { memberText, memberMessage, memberRenderMessage } from './memberI18n';
 import type { SourceMessage } from '../../shared/i18n/language';
 import { useLanguage } from '../../shared/i18n/language';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 
 import { Link } from 'react-router-dom';
@@ -11,14 +11,12 @@ import { getProfile, type Profile } from './profileApi';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { notify } from '../../shared/lib/portalNotices';
 import { cardStatus } from './cardStatus';
-import { centerNowParts } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
 import { getMembershipHistory, getMySubscription, getDynamicQr, type CardSubscription } from './memberCardApi';
 
-/** Định dạng ngày YYYY-MM-DD thành dd/MM/yyyy (không hợp lệ thì "—"). */
+/** Định dạng ngày YYYY-MM-DD theo múi giờ trung tâm (không hợp lệ thì "—"). */
 function displayDate(value: string) {
-  if (!validDate(value)) return '—';
-  const [year, month, day] = value.split('-');
-  return `${day}/${month}/${year}`;
+  return validDate(value) ? formatCenterDate(value) : '—';
 }
 
 /** Kiểm tra chuỗi ngày YYYY-MM-DD hợp lệ. */
@@ -38,6 +36,10 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
   const [qrError, setQrError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [dynamicQr, setDynamicQr] = useState<string | null>(null);
+  const [dynamicExpired, setDynamicExpired] = useState(false);
+  const [dynamicError, setDynamicError] = useState(false);
+  const [dynamicRetry, setDynamicRetry] = useState(0);
+  const expiresAtRef = useRef<number | null>(null);
   const paidThroughDate = subscription.paidThroughDate ?? subscription.endDate;
   const status = cardStatus(subscription.status, paidThroughDate);
   const periodStatus = cardStatus(subscription.status, subscription.endDate);
@@ -51,37 +53,124 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
     Boolean(subscription.qrCode?.trim());
   const border = status === 'warning' ? '#D6A638' : status === 'active' ? '#ce9180' : '#A45A53';
 
-  // Lấy mã QR động theo chu kỳ
+  // Lấy mã QR động theo chu kỳ, ẩn ngay khi quá hạn 60 giây, tạm dừng khi tab ẩn và làm mới ngay khi quay lại tab.
   useEffect(() => {
-    if (!canShowQr || typeof getDynamicQr !== 'function') return;
+    if (!canShowQr || typeof getDynamicQr !== 'function') {
+      setDynamicQr(null);
+      setDynamicExpired(false);
+      setDynamicError(false);
+      expiresAtRef.current = null;
+      return;
+    }
 
     let mounted = true;
+    let pollId: ReturnType<typeof setInterval> | null = null;
+    let expiryId: ReturnType<typeof setTimeout> | null = null;
+    let requestSeq = 0;
+
+    const clearExpiryTimer = () => {
+      if (expiryId !== null) {
+        clearTimeout(expiryId);
+        expiryId = null;
+      }
+    };
+
+    const markExpired = () => {
+      if (!mounted) return;
+      setDynamicExpired(true);
+      setDynamicQr(null);
+      setQrImage('');
+      setQrLoaded(false);
+    };
+
+    const scheduleExpiry = (ttlMs: number) => {
+      clearExpiryTimer();
+      expiryId = setTimeout(markExpired, ttlMs);
+    };
 
     // Lấy mã QR động mới.
     async function fetchDynamic() {
+      if (!mounted || document.visibilityState === 'hidden') return;
+      const seq = ++requestSeq;
       try {
         const res = await getDynamicQr();
-        if (mounted && res?.qrCode) {
+        if (!mounted || seq !== requestSeq) return;
+        if (res?.qrCode) {
+          const ttlSeconds = Number.isFinite(res.expiresInSeconds) && res.expiresInSeconds > 0 ? res.expiresInSeconds : 60;
+          const ttlMs = Math.max(1000, ttlSeconds * 1000);
+          expiresAtRef.current = Date.now() + ttlMs;
           setDynamicQr(res.qrCode);
+          setDynamicExpired(false);
+          setDynamicError(false);
+          scheduleExpiry(ttlMs);
+        } else {
+          setDynamicError(true);
+          if (!expiresAtRef.current || Date.now() >= expiresAtRef.current) {
+            setDynamicQr(null);
+            setQrImage('');
+            setQrLoaded(false);
+          }
         }
       } catch {
-        // Giữ lại mã luân phiên gần nhất; mã tĩnh không còn được chấp nhận tại cổng.
+        if (!mounted || seq !== requestSeq) return;
+        setDynamicError(true);
+        if (!expiresAtRef.current || Date.now() >= expiresAtRef.current) {
+          setDynamicQr(null);
+          setQrImage('');
+          setQrLoaded(false);
+        }
       }
     }
 
-    void fetchDynamic();
-    const intervalId = setInterval(() => {
+    const stopPolling = () => {
+      if (pollId !== null) {
+        clearInterval(pollId);
+        pollId = null;
+      }
+    };
+
+    const startPolling = () => {
+      if (pollId === null && document.visibilityState !== 'hidden') {
+        pollId = setInterval(() => {
+          void fetchDynamic();
+        }, 30000);
+      }
+    };
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'hidden') {
+        stopPolling();
+        return;
+      }
+      if (expiresAtRef.current !== null && Date.now() >= expiresAtRef.current) {
+        markExpired();
+      }
+      startPolling();
       void fetchDynamic();
-    }, 30000);
+    };
+
+    setDynamicError(false);
+    if (document.visibilityState !== 'hidden') {
+      void fetchDynamic();
+      startPolling();
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    window.addEventListener('online', handleVisibilityOrFocus);
 
     return () => {
       mounted = false;
-      clearInterval(intervalId);
+      stopPolling();
+      clearExpiryTimer();
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+      window.removeEventListener('online', handleVisibilityOrFocus);
     };
-  }, [canShowQr]);
+  }, [canShowQr, dynamicRetry]);
 
-  // Chỉ mã ký số luân phiên mới hợp lệ tại cổng; mã định danh tĩnh không bao giờ hiển thị dạng QR để quét.
-  const activeQrCode = dynamicQr;
+  // Chỉ mã ký số luân phiên chưa hết hạn mới hợp lệ tại cổng; mã định danh tĩnh không bao giờ hiển thị dạng QR để quét.
+  const activeQrCode = !dynamicExpired ? dynamicQr : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -136,7 +225,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
             <div><dt>{memberText("Bắt đầu")}</dt><dd>{displayDate(subscription.startDate)}</dd></div>
             <div><dt>{memberText("Hết hạn")}</dt><dd className="pass-card__expiry">{displayDate(paidThroughDate)} <DaysLeft endDate={paidThroughDate} /></dd></div>
           </dl>
-          {canShowQr && qrImage && !qrError && (
+          {canShowQr && qrImage && !qrError && !dynamicExpired && (
             <div className="pass-card__qr">
               <img
                 src={qrImage}
@@ -150,19 +239,30 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
                   setQrError(true);
                 }}
               />
-              {dynamicQr ? (
-                <>
-                  <span className="pass-card__qr-live"><i />{memberText("Mã QR bảo mật", "Secure QR code")}</span>
-                  <span className="pass-card__qr-note">{memberText("Mã tự đổi mỗi 60 giây. Mở thẻ này khi đến quầy.", "The code refreshes every 60 seconds. Open this card at the desk.")}</span>
-                </>
-              ) : (
-                <span className="pass-card__qr-note">{memberText("Mã QR định danh: ")}<strong>{subscription.qrCode}</strong></span>
-              )}
+              <span className="pass-card__qr-live"><i />{memberText("Mã QR bảo mật", "Secure QR code")}</span>
+              <span className="pass-card__qr-note">{memberText("Mã tự đổi mỗi 60 giây. Mở thẻ này khi đến quầy.", "The code refreshes every 60 seconds. Open this card at the desk.")}</span>
             </div>
           )}
-          {canShowQr && !qrImage && !qrError && (
+          {canShowQr && !qrImage && !qrError && !dynamicError && !dynamicExpired && (
             <div className="portal-skeleton" style={{ width: 180, height: 180 }}>
               <span className="sr-only">{memberText("Đang tạo ảnh QR…")}</span>
+            </div>
+          )}
+          {canShowQr && !qrImage && (dynamicError || dynamicExpired) && !qrError && (
+            <div className="pass-card__qr" role="alert" data-testid="dynamic-qr-error">
+              <p style={{ margin: '0 0 10px', fontSize: '0.88rem', color: '#fca5a5' }}>
+                {dynamicExpired
+                  ? memberText("Mã QR động đã hết hạn. Bấm thử lại để tạo mã mới.", "Dynamic QR code expired. Tap retry to generate a new code.")
+                  : memberText("Không thể tải mã QR động. Vui lòng thử lại.", "Unable to load dynamic QR code. Please try again.")}
+              </p>
+              <button
+                type="button"
+                className="btn-secondary btn-sm"
+                data-testid="qr-retry-btn"
+                onClick={() => setDynamicRetry((n) => n + 1)}
+              >
+                {memberText("Thử lại", "Retry")}
+              </button>
             </div>
           )}
         </div>
@@ -174,7 +274,7 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
           type="button"
           className="btn-primary"
           onClick={downloadCard}
-          disabled={!canShowQr || !qrImage || !qrLoaded || qrError || downloading}
+          disabled={!canShowQr || !qrImage || !qrLoaded || qrError || dynamicExpired || downloading}
         >
           {downloading ? memberText("Đang tải…") : memberText("Tải thẻ về máy")}
         </button>
@@ -185,14 +285,14 @@ export function MemberCard({ profile, subscription }: { profile: Profile; subscr
             onClick={async () => {
               try {
                 if (!navigator.clipboard?.writeText) throw new Error('Clipboard unavailable');
-                await navigator.clipboard.writeText(activeQrCode!);
+                await navigator.clipboard.writeText(activeQrCode);
                 notify(memberText("Đã sao chép mã QR check-in vào bộ nhớ tạm!"), 'success', { translation: memberMessage("Đã sao chép mã QR check-in vào bộ nhớ tạm!") });
               } catch {
                 notify(memberText("Không thể sao chép mã QR. Vui lòng thử lại."), 'error', { translation: memberMessage("Không thể sao chép mã QR. Vui lòng thử lại.") });
               }
             }}
           >
-            {dynamicQr ? memberText("Sao chép mã QR động", "Copy dynamic QR") : memberText("Sao chép mã QR Check-in")}
+            {memberText("Sao chép mã QR động", "Copy dynamic QR")}
           </button>
         )}
       </div>
@@ -208,9 +308,19 @@ export function MemberCardPage() {
   const [history, setHistory] = useState<CardSubscription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | SourceMessage>('');
+  const requestSeqRef = useRef(0);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Tải hồ sơ, gói hiện tại và lịch sử (silent thì không hiện trạng thái tải).
-  async function loadCard(silent = false) {
+  const loadCard = useCallback(async (silent = false) => {
+    const seq = ++requestSeqRef.current;
     if (!silent) {
       setLoading(true);
       setError('');
@@ -218,19 +328,24 @@ export function MemberCardPage() {
     }
     try {
       const [memberProfile, memberSubscription] = await Promise.all([getProfile(), getMySubscription()]);
+      if (!mountedRef.current || seq !== requestSeqRef.current) return;
       const memberHistory = memberSubscription ? [] : await getMembershipHistory();
+      if (!mountedRef.current || seq !== requestSeqRef.current) return;
       setProfile(memberProfile);
       setSubscription(memberSubscription);
       setHistory(memberHistory);
       if (silent) setError('');
     } catch {
+      if (!mountedRef.current || seq !== requestSeqRef.current) return;
       if (!silent) {
         setError(memberMessage("Không thể tải thông tin thẻ hội viên. Vui lòng thử lại."));
       }
     } finally {
-      if (!silent) setLoading(false);
+      if (mountedRef.current && seq === requestSeqRef.current && !silent) {
+        setLoading(false);
+      }
     }
-  }
+  }, []);
 
   useEffect(() => {
     void loadCard();
@@ -247,7 +362,7 @@ export function MemberCardPage() {
       window.removeEventListener('online', syncCard);
       document.removeEventListener('visibilitychange', syncCard);
     };
-  }, []);
+  }, [loadCard]);
 
   const frozen = history.find((item) => item.status === 'frozen');
   const expired = history

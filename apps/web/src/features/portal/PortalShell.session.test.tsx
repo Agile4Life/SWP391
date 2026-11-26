@@ -125,3 +125,29 @@ it('adopts the role reported by the server when it differs from the stored one',
     router.dispose();
   }
 });
+
+it('normalizes legacy role aliases RECEPTIONIST and CENTER_MANAGER inside RoleGuard', async () => {
+  localStorage.setItem(AUTH_STORAGE_KEY, session('staff01', 'STAFF'));
+  const staffRouter = createMemoryRouter([
+    { element: <RoleGuard allowedRoles={['RECEPTIONIST']} />, children: [{ path: '/staff/reception', element: <h1>Quầy lễ tân</h1> }] },
+    { path: '/login', element: <h1>Đăng nhập</h1> },
+  ], { initialEntries: ['/staff/reception'] });
+  try {
+    await act(async () => root.render(<RouterProvider router={staffRouter} />));
+    expect(host.textContent).toContain('Quầy lễ tân');
+  } finally {
+    staffRouter.dispose();
+  }
+
+  localStorage.setItem(AUTH_STORAGE_KEY, session('mgr01', 'MANAGER'));
+  const mgrRouter = createMemoryRouter([
+    { element: <RoleGuard allowedRoles={['CENTER_MANAGER']} />, children: [{ path: '/manager/reports', element: <h1>Báo cáo quản lý</h1> }] },
+    { path: '/login', element: <h1>Đăng nhập</h1> },
+  ], { initialEntries: ['/manager/reports'] });
+  try {
+    await act(async () => root.render(<RouterProvider router={mgrRouter} />));
+    expect(host.textContent).toContain('Báo cáo quản lý');
+  } finally {
+    mgrRouter.dispose();
+  }
+});

@@ -340,4 +340,135 @@ class MembershipCancellationServiceTest {
                 .isInstanceOf(BadRequestException.class);
         verifyNoInteractions(walletService);
     }
+
+    /** Kiểm thử P0-10: chặn yêu cầu/duyệt hủy khi gói đang có đợt bảo lưu đã duyệt (chưa bắt đầu). */
+    @Test
+    void requestStaffRequestAndApproveRejectWhenHoldIsApproved() {
+        active.setHoldStatus("APPROVED");
+        active.setHoldDaysCredited(true);
+        active.setHoldStartDate(LocalDate.of(2026, 10, 25));
+        active.setHoldEndDate(LocalDate.of(2026, 11, 5));
+        active.setEndDate(LocalDate.of(2026, 11, 13));
+
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
+        assertThatThrownBy(() -> service.request(owner, 100L, new CancellationDtos.Request("Moving")))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+
+        var receptionist = new AuthenticatedPrincipal(30L, "desk", "RECEPTIONIST");
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(active));
+        assertThatThrownBy(() -> service.staffRequest(receptionist, new CancellationDtos.StaffRequest(10L, 100L, "Moving", null)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+
+        stubDecision();
+        assertThatThrownBy(() -> service.decide(manager, 7L, true, new CancellationDtos.Decision(null)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+        assertThat(active.getStatus()).isEqualTo("active");
+        verifyNoInteractions(enrollments);
+    }
+
+    /** Kiểm thử P0-10: hủy gói sau khi bảo lưu đã kết thúc tính tiền hoàn chính xác theo 60 ngày thực tế. */
+    @Test
+    void requestAfterCompletedHoldComputesExactPostHoldRefund() {
+        // Clock cố định ở 2026-10-22 (Day 32 tính từ 2026-09-21).
+        LocalDate start = LocalDate.of(2026, 9, 21); // Day 1
+        active.setStartDate(start);
+        active.setEndDate(start.plusDays(89));       // Day 90 (60 gốc + 30 ngày bảo lưu)
+        active.setHoldStartDate(start.plusDays(1));  // Day 2
+        active.setHoldEndDate(start.plusDays(30));   // Day 31 (2026-10-21)
+        active.setHoldStatus(null);
+        active.setHoldUsed(true);
+        active.setHoldDaysCredited(true);
+
+        com.swp391.scms.finance.entity.Payment paid = new com.swp391.scms.finance.entity.Payment();
+        paid.setSubscriptionId(100L);
+        paid.setAmount(new java.math.BigDecimal("6000000"));
+        paid.setStatus("success");
+        when(payments.findAllBySubscriptionId(100L)).thenReturn(List.of(paid));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(active));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CancellationDtos.Response result = service.request(owner, 100L, new CancellationDtos.Request("Moving"));
+        assertThat(result.refundAmount()).isEqualByComparingTo("5900000");
+    }
+
+    /** Kiểm thử P1-BE-29: hủy gói đã nâng cấp ghi nhận đủ tiền hoàn tràn ngược sang giao dịch kỳ trước. */
+    @Test
+    void decide_walksUpgradePredecessorChainToRecordCarryOverRefundOnOldPayments() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+
+        MembershipPackage silver = new MembershipPackage();
+        silver.setId(1L); silver.setName("SILVER");
+        MembershipPackage platinum = new MembershipPackage();
+        platinum.setId(2L); platinum.setName("PLATINUM");
+
+        MembershipSubscription oldSub = new MembershipSubscription();
+        oldSub.setId(90L); oldSub.setMember(member); oldSub.setMembershipPackage(silver);
+        oldSub.setStatus("expired");
+        oldSub.setStartDate(LocalDate.of(2026, 9, 1));
+        oldSub.setEndDate(LocalDate.of(2026, 10, 1));
+
+        active.setMembershipPackage(platinum);
+        active.setPreviousSubscription(oldSub);
+        active.setUpgradeCharge(new java.math.BigDecimal("2000000"));
+        active.setCreditApplied(new java.math.BigDecimal("900000"));
+
+        com.swp391.scms.finance.entity.Payment p2 = new com.swp391.scms.finance.entity.Payment();
+        p2.setId(2L); p2.setSubscriptionId(100L); p2.setAmount(new java.math.BigDecimal("2000000")); p2.setStatus("success");
+        com.swp391.scms.finance.entity.Payment p1 = new com.swp391.scms.finance.entity.Payment();
+        p1.setId(1L); p1.setSubscriptionId(90L); p1.setAmount(new java.math.BigDecimal("1500000")); p1.setStatus("success");
+
+        stubDecision();
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(oldSub, active));
+        when(payments.findAllBySubscriptionId(100L)).thenReturn(List.of(p2));
+        when(payments.findAllBySubscriptionId(90L)).thenReturn(List.of(p1));
+        User managerUser = new User(); managerUser.setId(20L);
+        when(users.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(managerUser));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.decide(manager, 7L, true, new CancellationDtos.Decision("Full upgrade cancel", new java.math.BigDecimal("2900000")));
+
+        assertThat(p2.getRefundedAmount()).isEqualByComparingTo("2000000");
+        assertThat(p2.getStatus()).isEqualTo("refunded");
+        assertThat(p1.getRefundedAmount()).isEqualByComparingTo("900000");
+        assertThat(p1.getStatus()).isEqualTo("success");
+        verify(walletService).creditRefund(10L, new java.math.BigDecimal("2900000"), "CANCEL_REQ_7", "Moving");
+    }
+
+    /** Kiểm thử P3-BE-13: duyệt hủy gói xóa sạch trạng thái/ngày bảo lưu và staffRequest chặn lệch memberId. */
+    @Test
+    void approvalClearsHoldFieldsAndStaffRequestRejectsMismatchedMemberId() {
+        active.setHoldStatus("REJECTED");
+        active.setHoldStartDate(LocalDate.of(2026, 10, 5));
+        active.setHoldEndDate(LocalDate.of(2026, 10, 10));
+        active.setHoldDaysCredited(true);
+
+        stubDecision();
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(active));
+        when(messages.getMessage("scheduling.enrollment.cancelled_by_membership")).thenReturn("Membership cancelled");
+        User managerUser = new User(); managerUser.setId(20L);
+        when(users.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(managerUser));
+        when(requests.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.decide(manager, 7L, true, new CancellationDtos.Decision("Cleared"));
+
+        assertThat(active.getStatus()).isEqualTo("cancelled");
+        assertThat(active.getHoldStatus()).isNull();
+        assertThat(active.getHoldStartDate()).isNull();
+        assertThat(active.getHoldEndDate()).isNull();
+        assertThat(active.getHoldDaysCredited()).isFalse();
+
+        // staffRequest từ chối khi subscriptionId không thuộc memberId được truyền lên
+        var receptionist = new AuthenticatedPrincipal(30L, "desk", "RECEPTIONIST");
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(active));
+        assertThatThrownBy(() -> service.staffRequest(receptionist,
+                new CancellationDtos.StaffRequest(99L, 100L, "Mismatch", null)))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_NOT_OWNER");
+    }
 }

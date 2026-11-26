@@ -226,6 +226,43 @@ class RetiredCatalogCleanupRunnerTest {
         verify(sessions, never()).deleteByGymClassId(any());
     }
 
+    /** Kiểm thử P2-BE-24: khi chuyển lớp đã ngừng có dữ liệu liên kết sang inactive, hủy toàn bộ buổi scheduled tương lai để tránh buổi ma. */
+    @Test
+    void cancelsFutureScheduledSessionsOfDeactivatedRetiredClass() {
+        Discipline swimming = discipline(2L, "Bơi lội");
+        GymClass usedSwim = gymClass(11L, "Bơi Cơ Bản Người Lớn", swimming, "active");
+
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        var pastCompleted = new com.swp391.scms.scheduling.entity.ClassSession();
+        pastCompleted.setId(101L);
+        pastCompleted.setGymClass(usedSwim);
+        pastCompleted.setSessionDate(today.minusDays(5));
+        pastCompleted.setStatus("completed");
+
+        var futureScheduled = new com.swp391.scms.scheduling.entity.ClassSession();
+        futureScheduled.setId(102L);
+        futureScheduled.setGymClass(usedSwim);
+        futureScheduled.setSessionDate(today.plusDays(3));
+        futureScheduled.setStatus("scheduled");
+
+        when(classes.findAll()).thenReturn(List.of(usedSwim));
+        when(enrollments.findByGymClassId(11L)).thenReturn(List.of(new ClassEnrollment()));
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(11L))
+                .thenReturn(List.of(pastCompleted, futureScheduled));
+        when(rooms.findAll()).thenReturn(List.of());
+        when(disciplines.findAll()).thenReturn(List.of());
+        when(coaches.findAll()).thenReturn(List.of());
+
+        runner().run(null);
+
+        assertThat(usedSwim.getStatus()).isEqualTo("inactive");
+        assertThat(pastCompleted.getStatus()).isEqualTo("completed");
+        assertThat(futureScheduled.getStatus()).isEqualTo("cancelled");
+        assertThat(futureScheduled.getCancelReason()).isEqualTo("Lớp học ngừng hoạt động");
+        verify(sessions).save(futureScheduled);
+        verify(sessions, never()).save(pastCompleted);
+    }
+
     /** Kiểm thử: an toàn khi mọi repository tùy chọn đều null (môi trường unit test tối giản). */
     @Test
     void safeWhenOptionalRepositoriesAreNull() {

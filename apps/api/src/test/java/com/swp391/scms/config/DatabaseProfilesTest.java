@@ -80,6 +80,8 @@ class DatabaseProfilesTest {
                 .run(context -> assertThat(context).hasFailed());
         supabase().withPropertyValues("DB_SSL_MODE=disable")
                 .run(context -> assertThat(context).hasFailed());
+        supabase().withPropertyValues("spring.datasource.hikari.data-source-properties.sslmode=disable")
+                .run(context -> assertThat(context).hasFailed());
         supabase().withPropertyValues("SPRING_DATASOURCE_URL=jdbc:postgresql://example.invalid/postgres?sslmode=disable")
                 .run(context -> assertThat(context).hasFailed());
         supabase().withPropertyValues("SPRING_DATASOURCE_URL=jdbc:mysql://example.invalid/scms")

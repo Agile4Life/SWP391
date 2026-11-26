@@ -36,15 +36,34 @@ public class MembershipLifecycleScheduler {
     }
 
     /**
-     * Chạy lúc 00:15 hằng ngày (cấu hình app.membership.lifecycle.cron): bắt đầu bảo lưu, kết thúc bảo lưu,
-     * giải phóng lịch, rồi ghi log số lượng.
+     * Chạy lúc 00:15 hằng ngày theo giờ Việt Nam (cấu hình app.membership.lifecycle.cron): chuyển gói quá hạn
+     * sang expired (kèm đóng yêu cầu bảo lưu PENDING quá hạn), bắt đầu bảo lưu, kết thúc bảo lưu, giải phóng
+     * lịch, rồi ghi log số lượng.
      */
-    @Scheduled(cron = "${app.membership.lifecycle.cron:0 15 0 * * ?}")
+    @Scheduled(cron = "${app.membership.lifecycle.cron:0 15 0 * * ?}", zone = "Asia/Ho_Chi_Minh")
     public void runDaily() {
+        int expired = expirePastDueSubscriptions();
         int started = startDueHolds();
         int resumed = resumeExpiredHolds();
         int released = releaseUncoveredBookings();
-        log.info("[MembershipLifecycle] started {} hold(s), resumed {} hold(s), released {} booking(s)", started, resumed, released);
+        log.info("[MembershipLifecycle] expired {} subscription(s), started {} hold(s), resumed {} hold(s), released {} booking(s)",
+                expired, started, resumed, released);
+    }
+
+    /**
+     * Chuyển sang trạng thái expired các kỳ gói active đã qua endDate (đồng thời đóng các yêu cầu bảo lưu
+     * PENDING của kỳ đã hết hạn để không chặn gia hạn về sau); trả về số kỳ đã chuyển.
+     */
+    public int expirePastDueSubscriptions() {
+        int expired = 0;
+        for (Long id : subscriptions.findActiveSubscriptionsPastDue()) {
+            try {
+                if (subscriptions.expireSubscription(id)) expired++;
+            } catch (RuntimeException ex) {
+                log.warn("[MembershipLifecycle] could not expire subscription {}", id, ex);
+            }
+        }
+        return expired;
     }
 
     /**

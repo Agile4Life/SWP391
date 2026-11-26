@@ -140,4 +140,46 @@ class ProductOrderPaymentsTest {
         verify(notifications, never()).send(any(), any(), any(), any(), any(), any(), eq("/staff/orders"));
         verify(users, never()).findActiveStaffUsers();
     }
+
+    /** Kiểm thử P1-BE-56: thông báo đơn mới cho nhân viên truyền đủ 4 tham số và không để sót placeholder {2}/{3}. */
+    @Test
+    void markPaidFormatsAllFourStaffNotificationArgumentsWithoutRawPlaceholders() {
+        var source = new org.springframework.context.support.ResourceBundleMessageSource();
+        source.setBasename("i18n/messages");
+        source.setDefaultEncoding("UTF-8");
+        MessageService realMessages = new MessageService(source);
+        ProductOrderPayments realService = new ProductOrderPayments(orders, refunds, notifications, users, realMessages, clock);
+
+        User memberUser = new User();
+        memberUser.setId(1L);
+        memberUser.setFullName("Nguyễn Minh Quân");
+        member.setUser(memberUser);
+
+        ProductOrder order = new ProductOrder();
+        order.setId(9L);
+        order.setCode("SOL-261105-ABCD");
+        order.setMember(member);
+        order.setStatus(OrderStatus.pending_payment.name());
+        order.setPaymentMethod("online");
+        order.setFulfillment("delivery");
+        order.setTotal(new BigDecimal("1290000"));
+        when(orders.findByIdForUpdate(9L)).thenReturn(Optional.of(order));
+
+        User staff = new User();
+        staff.setId(20L);
+        staff.setStatus("active");
+        when(users.findActiveStaffUsers()).thenReturn(List.of(staff));
+
+        realService.markPaid(9L, "online_wallet");
+
+        var bodyCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(notifications).send(eq(20L), any(), bodyCaptor.capture(), eq("order"), eq("product_order"), eq(9L), eq("/staff/orders"));
+        String body = bodyCaptor.getValue();
+        assertThat(body)
+                .contains("Nguyễn Minh Quân")
+                .contains("SOL-261105-ABCD")
+                .contains("1290000")
+                .contains("delivery")
+                .doesNotContain("{0}", "{1}", "{2}", "{3}");
+    }
 }

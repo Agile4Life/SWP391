@@ -11,7 +11,7 @@ export function CoachSavedPlansPage() {
   return (
     <div data-i18n-managed className="portal-container plan-editor-page">
       <PageHeader title={t("Giáo án đã lưu")} />
-      <SavedTrainingPlans />
+      <SavedTrainingPlans hideHeading />
     </div>
   );
 }

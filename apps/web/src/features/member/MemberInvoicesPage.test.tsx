@@ -48,6 +48,22 @@ describe('MemberInvoicesPage', () => {
     expect(host.textContent).toContain('Thanh toán VNPay');
   });
 
+  it('P0-04: hides SÖL Wallet pay button for pending WALLET_TOPUP payments while keeping it for other services', async () => {
+    mocks.payments.mockResolvedValue([
+      { ...paid, id: 21, status: 'pending', serviceType: 'WALLET_TOPUP', amount: 500000 },
+      { ...paid, id: 22, status: 'pending', serviceType: 'CLASS', serviceName: 'Yoga Sáng', amount: 200000 },
+    ]);
+    await render();
+
+    const topupRow = host.querySelector('[data-testid="pending-payment-21"]')!;
+    expect(topupRow.textContent).toContain('Thanh toán VNPay');
+    expect(topupRow.querySelector('[data-testid="pay-with-wallet-btn"]')).toBeNull();
+
+    const classRow = host.querySelector('[data-testid="pending-payment-22"]')!;
+    expect(classRow.textContent).toContain('Thanh toán VNPay');
+    expect(classRow.querySelector('[data-testid="pay-with-wallet-btn"]')).not.toBeNull();
+  });
+
   it('shows an invoice skeleton until the detail request settles without a display delay', async () => {
     mocks.payments.mockResolvedValue([paid]);
     let finish!: (value: unknown) => void;
@@ -135,5 +151,29 @@ describe('MemberInvoicesPage', () => {
     expect(icons[0].getAttribute('viewBox')).toBe('0 0 24 24');
     expect(icons[0].getAttribute('stroke-width')).toBe(icons[1].getAttribute('stroke-width'));
     expect(icons[0].querySelector('path')?.getAttribute('d')).not.toBe(icons[1].querySelector('path')?.getAttribute('d'));
+  });
+
+  it('P2-FE-48: displays refunded transactions, matches pending case-insensitively, and resets downloadError on invoice change', async () => {
+    const refunded = { ...paid, id: 14, amount: 300000, status: 'REFUNDED' };
+    const upperPending = { ...paid, id: 15, amount: 400000, status: 'PENDING', serviceType: 'MEMBERSHIP' as const };
+    mocks.payments.mockResolvedValue([paid, refunded, upperPending]);
+    mocks.invoice
+      .mockResolvedValueOnce({ paymentId: 12, invoiceNumber: 'INV-12', issuedAt: '2026-10-25T10:00:00', subtotalAmount: 200000, taxAmount: 20000, totalAmount: 220000 })
+      .mockResolvedValueOnce({ paymentId: 14, invoiceNumber: 'INV-14', issuedAt: '2026-10-25T10:00:00', subtotalAmount: 270000, taxAmount: 30000, totalAmount: 300000 });
+    mocks.pdf.mockRejectedValueOnce(new Error('offline'));
+
+    await render();
+    expect(host.querySelector('[aria-label="Khoản chờ thanh toán"]')?.textContent).toContain('#15');
+    const tableText = host.querySelector('.member-invoices__table')?.textContent ?? '';
+    expect(tableText).toContain('#14');
+    expect(tableText).toContain('Đã hoàn tiền');
+
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Xem hóa đơn giao dịch #12"]')?.click());
+    await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Tải hóa đơn'))?.click());
+    expect(host.textContent).toContain('Không tải được file hóa đơn');
+
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Đóng"]')?.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Xem hóa đơn giao dịch #14"]')?.click());
+    expect(host.textContent).not.toContain('Không tải được file hóa đơn');
   });
 });

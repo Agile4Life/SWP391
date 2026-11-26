@@ -6,12 +6,16 @@ import static org.mockito.Mockito.*;
 
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
+import com.swp391.scms.common.exception.ForbiddenException;
+import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.dto.MemberKycRequest;
 import com.swp391.scms.users.entity.Member;
+import com.swp391.scms.users.entity.Role;
 import com.swp391.scms.users.entity.User;
 import java.time.Clock;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
@@ -44,12 +48,15 @@ class KycFlowTest {
         user = new User();
         user.setId(10L);
         user.setFullName("Nguyen Van A");
+        Role memberRole = new Role();
+        memberRole.setCode("MEMBER");
+        user.setRole(memberRole);
         member = new Member();
         member.setUserId(10L);
         member.setUser(user);
         member.setMembershipCode("MB-010");
         when(users.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(user));
-        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(members.findByUserIdForUpdate(10L)).thenReturn(Optional.of(member));
         when(users.findById(2L)).thenReturn(Optional.of(new User()));
     }
 
@@ -131,20 +138,93 @@ class KycFlowTest {
         assertEquals("MB-010", pending.get(0).membershipCode());
     }
 
-    /** Kiểm thử: số giấy tờ cũ lưu plaintext được mã hóa một lần bằng backfill. */
+    /** Kiểm thử P2-BE-12: số giấy tờ cũ lưu plaintext được mã hóa + băm một lần qua findUnmaskedCitizenIds (không findAll). */
     @Test
     void legacyPlaintextNumbersAreEncryptedOnceByTheBackfill() throws Exception {
         member.setCitizenId("012345678901");
-        when(members.findAll()).thenReturn(List.of(member));
+        when(members.findUnmaskedCitizenIds()).thenReturn(List.of(member));
 
         new KycBackfill(members, crypto).run(null);
 
         assertEquals("********8901", member.getCitizenId());
         assertEquals("012345678901", crypto.decrypt(member.getCitizenIdEncrypted()));
+        assertEquals(crypto.hash("012345678901"), member.getCitizenIdHash());
         verify(members).save(member);
+        verify(members, never()).findAll();
         // Chạy lại một lần nữa không thay đổi gì: cột đã được che bớt rồi.
         clearInvocations(members);
+        when(members.findUnmaskedCitizenIds()).thenReturn(List.of());
         new KycBackfill(members, crypto).run(null);
         verify(members, never()).save(any());
+    }
+
+    /** Kiểm thử P1-BE-08: nhân sự không phải MEMBER bị chặn nộp KYC, và người duyệt không thể tự duyệt/từ chối chính mình. */
+    @Test
+    void nonMemberCannotSubmitKycAndReviewerCannotSelfApproveOrReject() {
+        Role recRole = new Role();
+        recRole.setCode("RECEPTIONIST");
+        user.setRole(recRole);
+        assertThrows(ForbiddenException.class, this::submit);
+
+        Role memberRole = new Role();
+        memberRole.setCode("MEMBER");
+        user.setRole(memberRole);
+        submit();
+
+        AuthenticatedPrincipal selfReviewer = new AuthenticatedPrincipal(10L, "self", "RECEPTIONIST");
+        assertThrows(ForbiddenException.class, () -> review.approve(selfReviewer, 10L));
+        assertThrows(ForbiddenException.class, () -> review.reject(selfReviewer, 10L, "Self reject"));
+    }
+
+    /** Kiểm thử P1-BE-09: chặn nộp đè khi đang PENDING hoặc đã APPROVED/verified, và xóa backImageUrl cũ khi chuyển sang PASSPORT. */
+    @Test
+    void kycStateMachineBlocksPendingOrApprovedResubmissionAndClearsPassportBackImage() {
+        submit();
+        assertThrows(ConflictException.class, this::submit);
+
+        review.reject(desk, 10L, "Ảnh mờ");
+        String png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        profiles.submitMemberKyc(10L, new MemberKycRequest("PASSPORT", "p98765432", "JOHN DOE", "United States", png, null));
+        assertEquals("PASSPORT", member.getDocumentType());
+        assertNull(member.getBackImageUrl());
+        assertEquals(crypto.hash("P98765432"), member.getCitizenIdHash());
+
+        review.approve(desk, 10L);
+        assertThrows(ConflictException.class, this::submit);
+    }
+
+    /** Kiểm thử P1-BE-09: chặn trùng số CCCD/Hộ chiếu giữa hai hội viên khác nhau ở cả bước nộp và bước duyệt. */
+    @Test
+    void duplicateDocumentHashIsRejectedAtSubmitAndApprove() {
+        String expectedHash = crypto.hash("012345678901");
+        when(members.existsByCitizenIdHashAndUserIdNotAndUserDeletedAtIsNull(expectedHash, 10L)).thenReturn(true);
+        ConflictException submitEx = assertThrows(ConflictException.class, this::submit);
+        assertEquals("KYC_DOCUMENT_ALREADY_USED", submitEx.getErrorCode());
+
+        // Trường hợp race: nộp lọt qua trước, nhưng tài khoản khác đã có cùng mã băm khi duyệt.
+        when(members.existsByCitizenIdHashAndUserIdNotAndUserDeletedAtIsNull(expectedHash, 10L)).thenReturn(false);
+        submit();
+        when(members.existsByCitizenIdHashAndUserIdNotAndUserDeletedAtIsNull(expectedHash, 10L)).thenReturn(true);
+        ConflictException approveEx = assertThrows(ConflictException.class, () -> review.approve(desk, 10L));
+        assertEquals("KYC_DOCUMENT_ALREADY_USED", approveEx.getErrorCode());
+    }
+
+    /** Kiểm thử P1-BE-11, P2-BE-10, P2-BE-13: tài khoản xóa mềm bị từ chối duyệt, loại giấy tờ lạ trả 400, và fail-closed khi thiếu KycCrypto/PasswordEncoder. */
+    @Test
+    void deletedUserUnknownDocTypeAndMissingCryptoFailClosed() {
+        String png = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+        BadRequestException badType = assertThrows(BadRequestException.class, () ->
+                profiles.submitMemberKyc(10L, new MemberKycRequest("DRIVER_LICENSE", "012345678901", "NGUYEN VAN A", "Việt Nam", png, png)));
+        assertEquals("INVALID_DOCUMENT_TYPE", badType.getErrorCode());
+
+        submit();
+        user.setDeletedAt(LocalDateTime.now());
+        assertThrows(ResourceNotFoundException.class, () -> review.approve(desk, 10L));
+        assertThrows(ResourceNotFoundException.class, () -> review.reject(desk, 10L, "Deleted"));
+
+        ProfileService unconfigured = new ProfileService(users, members, mock(CoachRepository.class), mock(ReceptionistRepository.class));
+        assertThrows(IllegalStateException.class, () -> unconfigured.changePassword(10L, "OldPass123", "NewPass456"));
+        assertThrows(IllegalStateException.class, () ->
+                unconfigured.submitMemberKyc(10L, new MemberKycRequest("CCCD", "012345678901", "NGUYEN VAN A", "Việt Nam", png, png)));
     }
 }

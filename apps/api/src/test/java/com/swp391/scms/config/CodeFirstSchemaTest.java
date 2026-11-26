@@ -43,7 +43,8 @@ class CodeFirstSchemaTest {
     static void initSharedHibernateMetadata() throws Exception {
         Path out = Files.createTempFile("ddl", ".sql");
         sharedRegistry = new StandardServiceRegistryBuilder()
-                .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
+                .applySetting("jakarta.persistence.database-product-name", "PostgreSQL")
+                .applySetting("jakarta.persistence.database-major-version", "16")
                 .applySetting("hibernate.boot.allow_jdbc_metadata_access", "false")
                 .applySetting("jakarta.persistence.schema-generation.database.action", "none")
                 .applySetting("jakarta.persistence.schema-generation.scripts.action", "create")
@@ -285,5 +286,6 @@ class CodeFirstSchemaTest {
                 assertTrue(ddl.contains("constraint " + name + " check"), "Missing PostgreSQL CHECK: " + name);
             }
         }
+        assertTrue(ddl.contains("constraint ck_wallets_balance_nonneg check"), "Missing PostgreSQL CHECK: ck_wallets_balance_nonneg");
     }
 }

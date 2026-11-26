@@ -10,7 +10,7 @@ import { ChatComposer } from './ChatComposer';
 import { SupportHeader, SupportIcon, SupportTranscript } from './SupportChatParts';
 import {
   SUPPORT_CATEGORIES, SUPPORT_MESSAGE_MAX, SUPPORT_STATUS_LABEL, buildSubject, categoryOf, displaySubject, isAccessDenied,
-  supportBubbles, supportError, uniqueMessages, type SupportCategory,
+  localizedSubject, supportBubbles, supportError, uniqueMessages, type SupportCategory,
 } from './supportChat';
 import './support-chat.css';
 
@@ -26,6 +26,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [ticketsLoading, setTicketsLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [ticketsError, setTicketsError] = useState<ChatError | null>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [detail, setDetail] = useState<SupportTicket | null>(null);
@@ -41,13 +42,15 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   const [showTickets, setShowTickets] = useState(false);
   const [connection, setConnection] = useState<ChatConnection>('connecting');
   const [closing, setClosing] = useState(false);
-  const [closeError, setCloseError] = useState<string | null>(null);
+  const [closeError, setCloseError] = useState<ChatError | null>(null);
   const alive = useRef(false);
   const selection = useRef<number | null>(null);
   const listRequest = useRef(0);
   const messagesRequest = useRef(0);
   const firstLoad = useRef(true);
-  const sendingRef = useRef(false);
+  const loadingMoreRef = useRef(false);
+  const sendingIds = useRef(new Set<string>());
+  const closingIds = useRef(new Set<number>());
   const messageKeys = useRef(new Map<number, { text: string; key: string }>());
 
   const draftKey = selectedId == null ? NEW_DRAFT : String(selectedId);
@@ -64,17 +67,24 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   // Chọn một phiếu (hoặc null để tạo mới): hủy các lần tải cũ và đặt lại trạng thái.
   const selectTicket = useCallback((next: SupportTicket | null) => {
     messagesRequest.current++;
-    selection.current = next?.id ?? null;
-    setMessages([]); setMessagesError(null); setAccessDenied(false); setSendError(null); setPending(null); setMessagesLoading(next != null);
-    setDetail(next); setSelectedId(next?.id ?? null); setShowTickets(false);
+    const nextId = next?.id ?? null;
+    const nextKey = nextId == null ? NEW_DRAFT : String(nextId);
+    selection.current = nextId;
+    setMessages([]); setMessagesError(null); setAccessDenied(false); setSendError(null); setCloseError(null); setPending(null);
+    setSending(sendingIds.current.has(nextKey));
+    setClosing(nextId != null && closingIds.current.has(nextId));
+    setMessagesLoading(next != null);
+    setDetail(next); setSelectedId(nextId); setShowTickets(false);
   }, []);
 
   // Tải một trang phiếu của hội viên (nối thêm hoặc thay danh sách), chỉ kết quả của lần gọi mới nhất được dùng.
   const loadTickets = useCallback(async (targetPage: number, append = false) => {
+    if (append && loadingMoreRef.current) return;
     const request = ++listRequest.current;
     // Lần gọi này còn hiệu lực không (component còn sống và chưa có lần gọi mới hơn).
     const current = () => alive.current && request === listRequest.current;
-    if (!append && firstLoad.current) setTicketsLoading(true);
+    if (append) { loadingMoreRef.current = true; setLoadingMore(true); }
+    else { loadingMoreRef.current = false; setLoadingMore(false); if (firstLoad.current) setTicketsLoading(true); }
     try {
       const result = await getMySupportTickets(targetPage);
       if (!current()) return;
@@ -86,7 +96,13 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
         if (result.content[0] && selection.current == null) selectTicket(result.content[0]);
       }
     } catch (cause) { if (current()) setTicketsError(supportError(cause)); }
-    finally { if (current()) setTicketsLoading(false); }
+    finally {
+      if (append) {
+        loadingMoreRef.current = false;
+        if (alive.current) setLoadingMore(false);
+      }
+      if (current()) setTicketsLoading(false);
+    }
   }, [selectTicket]);
   useEffect(() => { void loadTickets(0); }, [loadTickets]);
 
@@ -140,49 +156,53 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   // Gửi tin nhắn (tạo phiếu mới khi chưa chọn phiếu, tối đa SUPPORT_MESSAGE_MAX ký tự), không gửi khi phiếu đã đóng hoặc bị từ chối truy cập.
   async function send() {
     const text = draft.trim();
-    if (!text || text.length > SUPPORT_MESSAGE_MAX || sendingRef.current) return;
-    if (selectedId != null && (!ticket || ticket.status === 'closed' || accessDenied)) return;
+    const targetId = selectedId;
     const key = draftKey;
-    sendingRef.current = true; setSending(true); setSendError(null);
+    if (!text || text.length > SUPPORT_MESSAGE_MAX || sendingIds.current.has(key)) return;
+    if (targetId != null && (!ticket || ticket.status === 'closed' || accessDenied)) return;
+    sendingIds.current.add(key); setSending(true); setSendError(null);
     try {
-      if (selectedId == null) {
+      if (targetId == null) {
         const created = await createSupportTicket(buildSubject(category, text), text);
         if (!alive.current) return;
         setDrafts(previous => ({ ...previous, [key]: '' }));
         setTickets(previous => [created, ...previous.filter(item => item.id !== created.id)]);
-        selectTicket(created);
+        if (selection.current === null) selectTicket(created);
         return;
       }
-      const id = selectedId;
-      let attempt = messageKeys.current.get(id);
-      if (!attempt || attempt.text !== text) { attempt = { text, key: crypto.randomUUID() }; messageKeys.current.set(id, attempt); }
+      let attempt = messageKeys.current.get(targetId);
+      if (!attempt || attempt.text !== text) { attempt = { text, key: crypto.randomUUID() }; messageKeys.current.set(targetId, attempt); }
       setPending(text);
-      await sendSupportMessage(id, text, attempt.key);
+      await sendSupportMessage(targetId, text, attempt.key);
       if (!alive.current) return;
-      messageKeys.current.delete(id);
+      messageKeys.current.delete(targetId);
       setDrafts(previous => previous[key] === draft ? { ...previous, [key]: '' } : previous);
-      if (selection.current === id) await loadMessages(id, true);
-    } catch (cause) { if (alive.current) setSendError(supportError(cause)); }
-    finally {
-      sendingRef.current = false;
-      if (alive.current) { setSending(false); setPending(null); }
+      if (selection.current === targetId) await loadMessages(targetId, true);
+    } catch (cause) {
+      if (alive.current && selection.current === targetId) setSendError(supportError(cause));
+    } finally {
+      sendingIds.current.delete(key);
+      if (alive.current && selection.current === targetId) { setSending(false); setPending(null); }
     }
   }
 
   // Hội viên đóng phiếu hỗ trợ của mình.
   async function closeTicket() {
-    if (!ticket || closing) return;
+    if (!ticket || closingIds.current.has(ticket.id)) return;
+    const targetId = ticket.id;
+    closingIds.current.add(targetId);
     setClosing(true);
     setCloseError(null);
     try {
-      const updated = await closeSupportTicket(ticket.id);
+      const updated = await closeSupportTicket(targetId);
       if (!alive.current) return;
-      setDetail(updated);
       setTickets(list => list.map(item => item.id === updated.id ? { ...item, status: updated.status } : item));
+      if (selection.current === targetId) setDetail(updated);
     } catch (error) {
-      if (alive.current) setCloseError(error instanceof Error ? error.message : t('Không thể đóng phiếu. Vui lòng thử lại.', 'Could not close the ticket. Please try again.'));
+      if (alive.current && selection.current === targetId) setCloseError(supportError(error));
     } finally {
-      if (alive.current) setClosing(false);
+      closingIds.current.delete(targetId);
+      if (alive.current && selection.current === targetId) setClosing(false);
     }
   }
 
@@ -202,7 +222,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     {label && <p role="status" className="support-chat__connection">{label}</p>}
     {ticketsError && <div role="alert" className="direct-chat__error"><p>{t(ticketsError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadTickets(0)}>{t('Thử lại', 'Retry')}</button></div>}
     <div className="support-chat__toolbar">
-      <p className="support-chat__ticketbar" title={ticket && !showTickets ? ticket.subject : undefined}>
+      <p className="support-chat__ticketbar" title={ticket && !showTickets ? localizedSubject(ticket.subject, t) : undefined}>
         {showTickets ? <span className="support-chat__ticketbar-subject">{t('Phiếu của tôi', 'My tickets')}</span>
           : ticket ? <><span className="support-chat__ticketbar-subject">{displaySubject(ticket.subject)}</span>
             <span className={`support-chat__pill support-chat__pill--${ticket.status}`}>{statusPair ? t(...statusPair) : ticket.status}</span></>
@@ -210,10 +230,10 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
       </p>
       <div className="support-chat__tools">
         <button type="button" data-i18n-managed className="support-chat__tool" aria-pressed={showTickets} aria-label={t('Phiếu của tôi', 'My tickets')} title={t('Phiếu của tôi', 'My tickets')} disabled={ticketsLoading && tickets.length === 0} onClick={() => setShowTickets(value => !value)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
         </button>
         <button type="button" data-i18n-managed className="support-chat__tool" aria-label={t('Yêu cầu mới', 'New request')} title={t('Yêu cầu mới', 'New request')} disabled={newMode && !showTickets} onClick={() => selectTicket(null)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
         </button>
       </div>
     </div>
@@ -232,7 +252,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
               <span className={`support-chat__pill support-chat__pill--${item.status}`}>{itemStatus ? t(...itemStatus) : item.status}</span>
             </button></li>;
           })}</ul>}
-        {page + 1 < totalPages && <button type="button" className="direct-chat__older direct-chat__link" disabled={ticketsLoading} onClick={() => void loadTickets(page + 1, true)}>{t('Tải thêm phiếu', 'Load more tickets')}</button>}
+        {page + 1 < totalPages && <button type="button" className="direct-chat__older direct-chat__link" disabled={ticketsLoading || loadingMore} aria-busy={loadingMore || undefined} onClick={() => void loadTickets(page + 1, true)}>{loadingMore ? t('Đang tải…', 'Loading…') : t('Tải thêm phiếu', 'Load more tickets')}</button>}
       </div>
       : <>
         {messagesError && !newMode && <div role="alert" className="direct-chat__error"><p>{t(messagesError)}</p>{!accessDenied && <button type="button" className="direct-chat__link" onClick={() => void loadMessages(selectedId!)}>{t('Thử lại', 'Retry')}</button>}</div>}
@@ -249,7 +269,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
       : <>
         {ticket && (ticket.status === 'open' || ticket.status === 'resolved') && <div className="support-chat__closed">
           {ticket.status === 'resolved' && <p className="direct-chat__muted">{t('Lễ tân đã giải quyết yêu cầu. Phiếu tự đóng sau 72 giờ nếu bạn không phản hồi.', 'The front desk resolved this request. It closes automatically after 72 hours without a reply.')}</p>}
-          {closeError && <p role="alert" className="direct-chat__error">{closeError}</p>}
+          {closeError && <p role="alert" className="direct-chat__error">{t(closeError)}</p>}
           <button type="button" className="direct-chat__link" disabled={closing} onClick={() => void closeTicket()}>
             {closing ? t('Đang đóng…', 'Closing…') : ticket.status === 'resolved' ? t('Xác nhận đã giải quyết', 'Confirm resolved') : t('Rút yêu cầu', 'Withdraw request')}
           </button>

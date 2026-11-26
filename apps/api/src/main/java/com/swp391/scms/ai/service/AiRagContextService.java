@@ -11,6 +11,7 @@ import com.swp391.scms.coaching.repository.TrainingPlanRepository;
 import com.swp391.scms.facilities.dto.CatalogResponses.PackageDto;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
+import com.swp391.scms.scheduling.dto.SchedulingResponses.ClassSessionDto;
 import com.swp391.scms.users.entity.Member;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.text.Normalizer;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -99,7 +101,7 @@ public class AiRagContextService {
                 sb.append(cached.memberSection());
             } else {
                 StringBuilder memberSb = new StringBuilder();
-                appendMemberContext(memberSb, member);
+                appendMemberContext(memberSb, member, today);
                 String memberSection = memberSb.toString();
                 sb.append(memberSection);
                 if (memberId != null) {
@@ -121,7 +123,7 @@ public class AiRagContextService {
      * Phần hồ sơ hội viên: mã, mục tiêu, trình độ, lưu ý sức khỏe, gói đang hoạt động và giáo án hiện tại (tối
      * đa 10 bài).
      */
-    private void appendMemberContext(StringBuilder sb, Member member) {
+    private void appendMemberContext(StringBuilder sb, Member member, LocalDate today) {
         sb.append("\n1. HỒ SƠ HỘI VIÊN ĐANG TRÒ CHUYỆN:\n");
         sb.append("- Mã hội viên: ").append(member.getMembershipCode() != null ? member.getMembershipCode() : "#" + member.getUserId()).append("\n");
         if (member.getFitnessGoal() != null && !member.getFitnessGoal().isBlank()) {
@@ -141,14 +143,31 @@ public class AiRagContextService {
 
         if (subscriptionRepository != null) {
             Optional<MembershipSubscription> activeSub = subscriptionRepository
-                    .findFirstByMemberUserIdAndStatusOrderByEndDateDesc(memberId, "active");
+                    .findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                            memberId, "active", today, today)
+                    .filter(sub -> sub.getStartDate() != null && sub.getEndDate() != null
+                            && !sub.getStartDate().isAfter(today) && !sub.getEndDate().isBefore(today));
             if (activeSub.isPresent()) {
                 MembershipSubscription sub = activeSub.get();
                 String pkgName = sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : "Gói hội viên";
                 sb.append("- Gói tập đang hoạt động: ").append(pkgName)
                         .append(" (Hiệu lực: ").append(sub.getStartDate()).append(" đến ").append(sub.getEndDate()).append(")\n");
             } else {
-                sb.append("- Gói tập đang hoạt động: Chưa có gói active\n");
+                Optional<MembershipSubscription> frozenSub = subscriptionRepository
+                        .findFirstByMemberUserIdAndStatusOrderByEndDateDesc(memberId, "frozen");
+                if (frozenSub.isPresent()) {
+                    MembershipSubscription sub = frozenSub.get();
+                    String pkgName = sub.getMembershipPackage() != null ? sub.getMembershipPackage().getName() : "Gói hội viên";
+                    sb.append("- Trạng thái gói tập: Đang bảo lưu (frozen) — ").append(pkgName);
+                    if (sub.getHoldStartDate() != null && sub.getHoldEndDate() != null) {
+                        sb.append(" (Bảo lưu từ ").append(sub.getHoldStartDate()).append(" đến ").append(sub.getHoldEndDate()).append(")");
+                    } else if (sub.getHoldStartDate() != null) {
+                        sb.append(" (Bảo lưu từ ").append(sub.getHoldStartDate()).append(")");
+                    }
+                    sb.append("\n");
+                } else {
+                    sb.append("- Gói tập đang hoạt động: Chưa có gói active\n");
+                }
             }
         }
 
@@ -216,6 +235,44 @@ public class AiRagContextService {
                 sb.append(")\n");
             }
         }
+
+        List<ClassSessionDto> sessions = catalog.sessions();
+        if (sessions != null && !sessions.isEmpty()) {
+            sb.append("\n4. LỊCH LỚP HỌC NHÓM SẮP TỚI (7 NGÀY TỚI):\n");
+            for (ClassSessionDto s : sessions) {
+                String className = s.className() != null && !s.className().isBlank() ? s.className() : "Lớp học nhóm";
+                String discipline = s.disciplineName() != null && !s.disciplineName().isBlank() ? s.disciplineName() : "Đa môn";
+                String dateText = s.sessionDate() != null
+                        ? weekdayLabel(s.sessionDate()) + " " + s.sessionDate()
+                        : "Chưa rõ ngày";
+                String timeText = formatTimeRange(s.startTime(), s.endTime());
+                String room = s.roomName() != null && !s.roomName().isBlank() ? s.roomName() : "Đang cập nhật";
+                String coachName = s.coachName() != null && !s.coachName().isBlank() ? s.coachName() : "Đang cập nhật";
+                long remaining = Math.max(0L, s.capacity() - s.bookedCount());
+                sb.append("- ").append(className).append(" (").append(discipline).append(")")
+                        .append(" | ").append(dateText);
+                if (!timeText.isEmpty()) {
+                    sb.append(" ").append(timeText);
+                }
+                sb.append(" | Phòng: ").append(room)
+                        .append(" | HLV: ").append(coachName)
+                        .append(" | Đã đặt: ").append(s.bookedCount()).append("/").append(s.capacity())
+                        .append(" (còn ").append(remaining).append(" chỗ trống)\n");
+            }
+        }
+    }
+
+    /** Định dạng khoảng giờ HH:mm–HH:mm. */
+    private static String formatTimeRange(LocalTime start, LocalTime end) {
+        if (start == null && end == null) return "";
+        if (start != null && end != null) return hhmm(start) + "–" + hhmm(end);
+        return start != null ? hhmm(start) : hhmm(end);
+    }
+
+    /** Định dạng giờ HH:mm. */
+    private static String hhmm(LocalTime time) {
+        String raw = time.toString();
+        return raw.length() >= 5 ? raw.substring(0, 5) : raw;
     }
 
     /** Lower-case, accent-free, single-spaced, so "Lịch Yoga ngày mai?" and "lich yoga ngay mai" match alike. */
@@ -251,7 +308,7 @@ public class AiRagContextService {
     /** Phần quy định và tiện ích của trung tâm, chỉ gồm các mục liên quan tới câu hỏi. */
     private void appendPolicyContext(StringBuilder sb, String userQuery) {
         AiKnowledgeBase base = knowledgeBase != null ? knowledgeBase : defaultKnowledgeBase();
-        sb.append("\n4. QUY ĐỊNH & TIỆN ÍCH TRUNG TÂM SÖL:");
+        sb.append("\n5. QUY ĐỊNH & TIỆN ÍCH TRUNG TÂM SÖL:");
         sb.append(base.sectionsFor(userQuery));
     }
 

@@ -160,3 +160,46 @@ it('shows visit times in the center timezone', async () => {
   await renderPage();
   expect(host.textContent).toContain('Vào: 10:30:00');
 });
+
+it('renders natural English remaining days & member ID, uses tablist semantics, and blocks duplicate concurrent QR scans (P2-FE-66, P3-FE-27, P3-FE-29)', async () => {
+  const { setLanguage } = await import('../../shared/i18n/language');
+  let resolveScan!: (res: Response) => void;
+  const fetchMock = vi.fn<(url: string) => Promise<Response>>((url) => {
+    if (url.endsWith('/scan')) return new Promise((resolve) => { resolveScan = resolve; });
+    return Promise.resolve(new Response(JSON.stringify({ success: true, data: [{ ...visit, checkOutTime: '2026-10-21T07:05:00Z' }] })));
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  setLanguage('en');
+  try {
+    await renderPage();
+    expect(host.textContent).toContain('Member #100');
+    expect(host.textContent).not.toContain('HV #100');
+    expect(host.textContent).toContain('Exit: 14:05:00');
+
+    const input = host.querySelector('#checkin-qr-input') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, 'CARD-QR-1');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const form = input.closest('form')!;
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/scan'))).toHaveLength(1);
+
+    await act(async () => {
+      resolveScan(new Response(JSON.stringify({ success: true, data: { ...visit, packageName: 'GOLD', remainingDays: 15 } })));
+    });
+    const banner = host.querySelector('[data-testid="checkin-result-banner"]')!;
+    expect(banner.textContent).toContain('15 days left');
+    expect(banner.textContent).not.toContain('Remaining 15 on');
+    expect(banner.textContent).toContain('Member #100');
+  } finally {
+    await act(async () => { setLanguage('vi'); });
+  }
+
+  await renderPage('out');
+  expect(host.querySelector('[role="tablist"]')).not.toBeNull();
+  expect(host.querySelectorAll('[role="tab"]')).toHaveLength(2);
+});

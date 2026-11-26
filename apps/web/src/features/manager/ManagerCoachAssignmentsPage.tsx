@@ -24,7 +24,7 @@ function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['members
   // Bảng ánh xạ vấn đề sang class màu, nhãn và gợi ý.
   const tag = {
     FROZEN: { cls: 'badge-warning', label: staffText('Đang bảo lưu', 'On hold'), hint: staffText('Gói đang bảo lưu: chưa thể đặt hoặc điều chuyển buổi tập.', 'Plan on hold: sessions cannot be booked or transferred.') },
-    NO_ACTIVE: { cls: 'badge-danger', label: staffText('Hết hiệu lực gói', 'No valid plan'), hint: staffText('Hội viên không còn gói active còn hạn hôm nay.', 'The member has no active plan valid today.') },
+    NO_ACTIVE: { cls: 'badge-danger', label: staffText('Hết hiệu lực gói', 'No valid plan'), hint: staffText('Hội viên không còn gói tập đang hoạt động còn hạn hôm nay.', 'The member has no active plan valid today.') },
     NOT_COVERED: { cls: 'badge-warning', label: staffText('Gói hết trước buổi PT', 'Plan ends before PT'), hint: staffText('Gói hết hạn trước ngày của buổi PT này.', 'The plan expires before this PT session date.') },
   }[issue];
   return <span className={`badge ${tag.cls} coach-membership-issue`} title={tag.hint}>{tag.label}</span>;
@@ -127,7 +127,14 @@ export function ManagerCoachAssignmentsPage() {
         const coaches = res.coaches.map((coach) => {
           const students = coach.students;
           const count = (type?: CoachAssignmentStudent['assignmentType']) => new Set(students.filter((student) => !type || student.assignmentType === type).map((student) => student.memberId)).size;
-          return { ...coach, students, totalStudentsCount: count(), ptStudentsCount: count('PT_1_1'), planStudentsCount: count('TRAINING_PLAN') };
+          return {
+            ...coach,
+            students,
+            totalStudentsCount: count(),
+            ptStudentsCount: count('PT_1_1'),
+            planStudentsCount: count('TRAINING_PLAN'),
+            classStudentsCount: count('CLASS'),
+          };
         });
         coaches.sort((a, b) => {
           const nameOrder = a.coachName.localeCompare(b.coachName, 'vi');
@@ -138,7 +145,16 @@ export function ManagerCoachAssignmentsPage() {
         });
         const students = coaches.flatMap((coach) => coach.students);
         const count = (type: CoachAssignmentStudent['assignmentType']) => new Set(students.filter((student) => student.assignmentType === type).map((student) => student.memberId)).size;
-        setData({ ...res, coaches, stats: { ...res.stats, totalPtStudents: count('PT_1_1'), totalPlanStudents: count('TRAINING_PLAN') } });
+        setData({
+          ...res,
+          coaches,
+          stats: {
+            ...res.stats,
+            totalPtStudents: count('PT_1_1'),
+            totalPlanStudents: count('TRAINING_PLAN'),
+            totalClassStudents: count('CLASS'),
+          },
+        });
       }
     } catch (err) {
       if (generation === loadGeneration.current) setError(safeMessage(err, 'Không thể tải danh sách HLV & học viên phụ trách'));
@@ -212,6 +228,22 @@ export function ManagerCoachAssignmentsPage() {
     }
   };
 
+  const assignmentTypeLabel = useCallback(
+    (type: CoachAssignmentStudent['assignmentType'], fallback?: string): string => {
+      switch (type) {
+        case 'PT_1_1':
+          return t('Kèm riêng 1:1', '1:1 PT');
+        case 'TRAINING_PLAN':
+          return t('Giáo án riêng', 'Training plan');
+        case 'CLASS':
+          return t('Lớp học nhóm', 'Group class');
+        default:
+          return fallback || type;
+      }
+    },
+    [t],
+  );
+
   // Danh sách phẳng cho chế độ xem bảng: làm phẳng học viên của mọi HLV thành một danh sách kèm thông tin HLV.
   const flattenedStudents = useMemo(() => {
     if (!data?.coaches) return [];
@@ -233,8 +265,9 @@ export function ManagerCoachAssignmentsPage() {
       {confirmDialog}
 
       {error && (
-        <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
-          {t(error)} <button type="button" onClick={() => void load()}>{t("Thử lại")}</button>
+        <div data-i18n-managed className="portal-alert portal-alert--error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+          <span>{t(error)}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>{t("Thử lại", "Retry")}</button>
         </div>
       )}
 
@@ -251,6 +284,10 @@ export function ManagerCoachAssignmentsPage() {
         <div className="metric-card coach-stat-card">
           <span className="metric-label">{t("Theo giáo án riêng")}</span>
           <span className="metric-value">{data?.stats.totalPlanStudents ?? 0}</span>
+        </div>
+        <div className="metric-card coach-stat-card">
+          <span className="metric-label">{t('Học viên lớp nhóm', 'Group class members')}</span>
+          <span className="metric-value">{data?.stats.totalClassStudents ?? 0}</span>
         </div>
       </section>}
 
@@ -352,12 +389,17 @@ export function ManagerCoachAssignmentsPage() {
 
                 <div className="coach-student-pills">
                   <span className="student-count-pill">
-                    <strong>{coach.totalStudentsCount}</strong> {t(" tổng học viên")}</span>
+                    <strong>{coach.totalStudentsCount}</strong> {t('tổng học viên', 'total members')}
+                  </span>
                   <span className="student-count-pill">
                     <strong>{coach.ptStudentsCount}</strong> PT 1:1
                   </span>
                   <span className="student-count-pill">
-                    <strong>{coach.planStudentsCount}</strong> {t(" Giáo án")}</span>
+                    <strong>{coach.planStudentsCount}</strong> {t('Giáo án', 'Training plans')}
+                  </span>
+                  <span className="student-count-pill">
+                    <strong>{coach.classStudentsCount}</strong> {t('Lớp nhóm', 'Group classes')}
+                  </span>
                 </div>
               </header>
 
@@ -390,11 +432,11 @@ export function ManagerCoachAssignmentsPage() {
                                   : 'class'
                               }`}
                             >
-                              {student.assignmentTypeLabel}
+                              {assignmentTypeLabel(student.assignmentType, student.assignmentTypeLabel)}
                             </span>
 
                             <div className="coach-student-detail">
-                              <div>{student.assignmentType === 'TRAINING_PLAN' ? student.detail : null} <MembershipIssueTag issue={student.membershipIssue} /></div>
+                              <div>{student.detail || null} <MembershipIssueTag issue={student.membershipIssue} /></div>
                               {assignmentSchedule(student) && (
                                 <small data-i18n-managed style={{ color: 'var(--portal-salmon)', display: 'block', marginTop: '0.2rem' }}>
                                   {assignmentSchedule(student)}
@@ -457,7 +499,7 @@ export function ManagerCoachAssignmentsPage() {
             </thead>
             <tbody>
               {flattenedStudents.map((item) => (
-                <tr data-i18n-managed key={`table-${item.assignmentType}-${item.referenceId}-${item.memberId}`}>
+                <tr data-i18n-managed key={`table-${item.assignmentType}-${item.referenceId}-${item.memberId}-${item.coachId}`}>
                   <td>
                     <strong>{item.fullName}</strong>
                     <div style={{ fontSize: '0.8rem', color: 'var(--portal-muted)' }}>
@@ -477,10 +519,10 @@ export function ManagerCoachAssignmentsPage() {
                           : 'class'
                       }`}
                     >
-                      {item.assignmentTypeLabel}
+                      {assignmentTypeLabel(item.assignmentType, item.assignmentTypeLabel)}
                     </span>
                   </td>
-                  <td>{item.assignmentType === 'TRAINING_PLAN' ? item.detail : '—'} <MembershipIssueTag issue={item.membershipIssue} /></td>
+                  <td>{item.detail || '—'} <MembershipIssueTag issue={item.membershipIssue} /></td>
                   <td>{assignmentSchedule(item, true) || t('Chưa có thông tin', 'Not available')}</td>
                   <td>
                     <div className="coach-student-actions">
@@ -551,7 +593,7 @@ export function ManagerCoachAssignmentsPage() {
                 id="reassign-target-coach"
                 className="coach-form-control"
                 value={String(targetCoachId)}
-                onChange={(e) => setTargetCoachId(Number(e.target.value))}
+                onChange={(e) => setTargetCoachId(e.target.value ? Number(e.target.value) : '')}
                 required
               >
                 <option value="">{t("-- Chọn HLV mới --")}</option>
@@ -653,9 +695,11 @@ export function ManagerCoachAssignmentsPage() {
                       : 'class'
                   }`}
                 >
-                  {selectedStudentDetail.assignmentTypeLabel}
+                  {assignmentTypeLabel(selectedStudentDetail.assignmentType, selectedStudentDetail.assignmentTypeLabel)}
                 </span>{' '}
-                <span style={{ marginLeft: '0.5rem' }}>{assignmentSchedule(selectedStudentDetail) || (selectedStudentDetail.assignmentType === 'TRAINING_PLAN' ? selectedStudentDetail.detail : null)}</span>
+                <span style={{ marginLeft: '0.5rem' }}>
+                  {[selectedStudentDetail.detail, assignmentSchedule(selectedStudentDetail)].filter(Boolean).join(' · ') || '—'}
+                </span>
               </div>
             </div>
 

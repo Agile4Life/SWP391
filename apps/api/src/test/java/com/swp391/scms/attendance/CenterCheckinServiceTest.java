@@ -101,7 +101,7 @@ class CenterCheckinServiceTest {
     private void registerQr(String label, MembershipSubscription sub) {
         long id = nextSubscriptionId++;
         sub.setId(id);
-        when(subscriptions.findById(id)).thenReturn(Optional.of(sub));
+        when(subscriptions.findByIdForUpdate(id)).thenReturn(Optional.of(sub));
         codes.put(label, qrService.generate(sub.getMember().getUserId(), id, clock.millis()));
     }
 
@@ -406,9 +406,9 @@ class CenterCheckinServiceTest {
         verify(checkins).saveAndFlush(captor.capture());
         assertEquals("GRANTED", captor.getValue().getStatus());
         assertNull(captor.getValue().getDenialReason());
-        InOrder locksBeforeInsert = inOrder(subscriptions, members, checkins);
-        locksBeforeInsert.verify(subscriptions).findById(org.mockito.ArgumentMatchers.anyLong());
+        InOrder locksBeforeInsert = inOrder(members, subscriptions, checkins);
         locksBeforeInsert.verify(members).findByUserIdForUpdate(10L);
+        locksBeforeInsert.verify(subscriptions).findByIdForUpdate(org.mockito.ArgumentMatchers.anyLong());
         locksBeforeInsert.verify(checkins).existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED");
         locksBeforeInsert.verify(checkins).saveAndFlush(any());
     }
@@ -640,7 +640,7 @@ class CenterCheckinServiceTest {
         long currentMillis = now.atZone(clock.getZone()).toInstant().toEpochMilli();
         String dynamicQr = qrService.generate(10L, 5L, currentMillis);
 
-        when(subscriptions.findById(5L)).thenReturn(Optional.of(sub));
+        when(subscriptions.findByIdForUpdate(5L)).thenReturn(Optional.of(sub));
         when(checkins.existsByMemberUserIdAndStatusAndCheckOutTimeIsNull(10L, "GRANTED")).thenReturn(false);
         when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -664,5 +664,38 @@ class CenterCheckinServiceTest {
 
         assertEquals("DENIED", result.status());
         assertEquals(messageService.getMessage("error.attendance.qr_expired"), result.denialReason());
+    }
+
+    /** Kiểm thử P1-BE-25: gói còn status=active nhưng đang nằm trong khoảng bảo lưu đã duyệt hôm nay bị từ chối cả scan lẫn selfScan. */
+    @Test
+    @DisplayName("P1-BE-25: Chặn check-in và tự quét khi gói có bảo lưu đã duyệt bao phủ ngày hôm nay")
+    void scanAndSelfScanDenySubscriptionWithApprovedDatedHoldOnHoldStartDate() {
+        var gateQr = new com.swp391.scms.attendance.service.GateQrService("test-gate-secret");
+        var selfService = new CenterCheckinService(checkins, subscriptions, users, members, clock, messageService, qrService, gateQr);
+        Member member = mockMember(10L, "Hội viên bảo lưu");
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription heldSub = mockSubscription(member, "active", today.minusDays(5), today.plusDays(30));
+        heldSub.setHoldStatus("APPROVED");
+        heldSub.setHoldStartDate(today);
+        heldSub.setHoldEndDate(today.plusDays(7));
+        registerQr("QR-HELD-TODAY", heldSub);
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", today, today)).thenReturn(Optional.of(heldSub));
+        when(checkins.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckinDto deskScan = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-HELD-TODAY"), "Gate A"));
+        assertEquals("DENIED", deskScan.status());
+        assertEquals(messageService.getMessage("error.attendance.subscription_not_active"), deskScan.denialReason());
+
+        String gateCode = gateQr.generate("A1", clock.millis()).qrCode();
+        CheckinDto selfScan = selfService.selfScan(memberPrincipal, new CheckinRequests.SelfScan(gateCode));
+        assertEquals("DENIED", selfScan.status());
+        assertEquals(messageService.getMessage("error.attendance.subscription_not_active"), selfScan.denialReason());
+
+        // Ngày trước holdStartDate vẫn được phép check-in bình thường.
+        heldSub.setHoldStartDate(today.plusDays(1));
+        heldSub.setHoldEndDate(today.plusDays(8));
+        CheckinDto beforeHold = service.scan(receptionist, new CheckinRequests.Scan(qrFor("QR-HELD-TODAY"), "Gate A"));
+        assertEquals("GRANTED", beforeHold.status());
     }
 }

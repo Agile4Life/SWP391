@@ -23,6 +23,7 @@ export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all
   const [installError, setInstallError] = useState(false);
   const waiting = useSyncExternalStore(subscribePwaUpdate, getWaitingRegistration, () => null);
   const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = !ios && /Android/i.test(navigator.userAgent);
 
   useEffect(() => {
     capturePwaInstall();
@@ -65,10 +66,11 @@ export function PwaStatus({ mode = 'all' }: { mode?: 'status' | 'install' | 'all
     {mode !== 'install' && waiting && <div className="pwa-status__notice" role="status"><span>{sourceText("Đã có phiên bản mới. Hoàn tất thao tác đang làm trước khi cập nhật.")}</span><button className="btn-secondary" type="button" disabled={offline || busy} onClick={() => { if (applyPwaUpdate()) setBusy(true); }}>{sourceText("Cập nhật")}</button></div>}
     {mode !== 'status' && !installed && <button type="button" className="pwa-install-button" disabled={busy} onClick={() => void install()}>{busy ? sourceText('Đang mở cài đặt…') : installPrompt ? sourceText('Cài SÖL trên điện thoại') : sourceText('Thêm SÖL vào màn hình chính')}</button>}
     {installError && <p className="pwa-status__notice" role="alert">{sourceText("Chưa thể mở cài đặt. Hãy thử thêm ứng dụng từ menu trình duyệt.")}</p>}
-    {help && <Modal title={sourceText("SÖL trên điện thoại")} onClose={() => setHelp(false)}>
-      <p className="portal-subtitle">{sourceText("Mở nhanh portal từ màn hình chính và dùng camera để check-in.")}</p>
+    {help && <Modal title={ios || android ? sourceText("SÖL trên điện thoại") : sourceText({ vi: 'Cài đặt ứng dụng SÖL', en: 'Install SÖL app' })} onClose={() => setHelp(false)}>
+      <p className="portal-subtitle">{ios || android ? sourceText("Mở nhanh portal từ màn hình chính và dùng camera để check-in.") : sourceText({ vi: 'Mở nhanh portal trong cửa sổ riêng từ thanh tác vụ hoặc màn hình máy tính.', en: 'Launch the portal in its own window from your desktop or taskbar.' })}</p>
       {ios ? <ol className="pwa-install-steps"><li>{sourceText("Mở website này bằng Safari.")}</li><li>{sourceText("Chọn Chia sẻ, rồi Thêm vào MH chính.")}</li><li>{sourceText("Nếu có tùy chọn Mở dưới dạng ứng dụng web, hãy bật và chọn Thêm.")}</li></ol>
-        : <ol className="pwa-install-steps"><li>{sourceText("Mở website này bằng Chrome trên Android.")}</li><li>{sourceText("Mở menu ⋮, chọn Cài đặt ứng dụng hoặc Thêm vào màn hình chính.")}</li><li>{sourceText("Xác nhận cài đặt, rồi mở biểu tượng SÖL.")}</li></ol>}
+        : android ? <ol className="pwa-install-steps"><li>{sourceText("Mở website này bằng Chrome trên Android.")}</li><li>{sourceText("Mở menu ⋮, chọn Cài đặt ứng dụng hoặc Thêm vào màn hình chính.")}</li><li>{sourceText("Xác nhận cài đặt, rồi mở biểu tượng SÖL.")}</li></ol>
+          : <ol className="pwa-install-steps"><li>{sourceText({ vi: 'Mở website này bằng Chrome hoặc Edge trên máy tính.', en: 'Open this website in Chrome or Edge on your computer.' })}</li><li>{sourceText({ vi: 'Chọn biểu tượng cài đặt trên thanh địa chỉ hoặc mở menu trình duyệt, rồi chọn Cài đặt ứng dụng.', en: 'Click the install icon in the address bar or open the browser menu and select Install app.' })}</li><li>{sourceText({ vi: 'Xác nhận cài đặt để mở nhanh SÖL từ màn hình chính hoặc thanh tác vụ.', en: 'Confirm the installation to launch SÖL directly from your desktop or taskbar.' })}</li></ol>}
       <p className="portal-subtitle">{sourceText("Check-in cần kết nối mạng.")}</p>
     </Modal>}
   </div>;

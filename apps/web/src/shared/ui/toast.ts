@@ -15,6 +15,13 @@ function clearActive() {
   unsubscribeKeydown?.();
   unsubscribeKeydown = null;
   document.querySelectorAll<HTMLDialogElement>('dialog.sol-toast').forEach((dialog) => {
+    if (typeof dialog.hidePopover === 'function' && dialog.hasAttribute('popover')) {
+      try {
+        dialog.hidePopover();
+      } catch {
+        // Bỏ qua nếu popover đã đóng từ trước hoặc không mở ở chế độ popover.
+      }
+    }
     if (dialog.open && typeof dialog.close === 'function') dialog.close();
     else dialog.removeAttribute('open');
     dialog.remove();
@@ -75,18 +82,58 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
   document.addEventListener('keydown', handleEscape);
   unsubscribeKeydown = () => document.removeEventListener('keydown', handleEscape);
 
+  // Đưa thông báo lên Top Layer (nổi trên ::backdrop của <dialog> Modal) bằng Popover API; fallback về show() khi chưa hỗ trợ.
+  el.setAttribute('popover', 'manual');
   document.body.append(el);
-  if (typeof el.show === 'function') el.show();
-  else el.setAttribute('open', '');
+  let openedAsPopover = false;
+  if (typeof el.showPopover === 'function') {
+    try {
+      el.showPopover();
+      openedAsPopover = true;
+    } catch {
+      el.removeAttribute('popover');
+    }
+  }
+  if (!openedAsPopover) {
+    if (typeof el.show === 'function') el.show();
+    else el.setAttribute('open', '');
+  }
 
-  // Tự đóng; giữ lại khi người dùng đang rê chuột hoặc trỏ vào thông báo.
-  const schedule = () => {
-    if (activeToastTimer !== null) window.clearTimeout(activeToastTimer);
-    activeToastTimer = window.setTimeout(clearActive, type === 'error' ? 5500 : 3200);
-  };
-  card.addEventListener('pointerenter', () => { if (activeToastTimer !== null) window.clearTimeout(activeToastTimer); activeToastTimer = null; });
-  card.addEventListener('pointerleave', schedule);
-  schedule();
+  // DESIGN.md: thông báo lỗi (alert) giữ nguyên cho tới khi người dùng tự đóng; thông báo thường tự đóng sau 3,2s và tạm dừng khi hover hoặc focus.
+  if (type !== 'error') {
+    let hovered = false;
+    let focused = false;
+    const pause = () => {
+      if (activeToastTimer !== null) {
+        window.clearTimeout(activeToastTimer);
+        activeToastTimer = null;
+      }
+    };
+    const schedule = () => {
+      pause();
+      if (!hovered && !focused) {
+        activeToastTimer = window.setTimeout(clearActive, 3200);
+      }
+    };
+    card.addEventListener('pointerenter', () => {
+      hovered = true;
+      pause();
+    });
+    card.addEventListener('pointerleave', () => {
+      hovered = false;
+      schedule();
+    });
+    card.addEventListener('focusin', () => {
+      focused = true;
+      pause();
+    });
+    card.addEventListener('focusout', (event) => {
+      if (event.relatedTarget instanceof Node && card.contains(event.relatedTarget)) return;
+      focused = false;
+      schedule();
+    });
+    schedule();
+  }
 }
 
 toast.success = (message: string, translation?: SourceMessage) => toast(message, 'success', translation);

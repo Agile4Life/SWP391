@@ -5,28 +5,29 @@ import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Table;
 import jakarta.persistence.JoinTable;
 import org.springframework.boot.ApplicationArguments;
-import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Bật Row Level Security (RLS) cho mọi bảng của ứng dụng khi chạy trên Supabase, để Supabase Data API (REST
- * công khai) không đọc/ghi được dữ liệu; chỉ backend (đã kiểm tra JWT riêng) truy cập database.
+ * Bật Row Level Security (RLS) cho mọi bảng của ứng dụng khi chạy trên Supabase (trong pha SmartLifecycle
+ * ngay sau cài trigger và trước khi web server mở cổng), để Supabase Data API (REST công khai) không
+ * đọc/ghi được dữ liệu; chỉ backend (đã kiểm tra JWT riêng) truy cập database.
  *
  * Supabase Data API không được lộ các bảng do backend bảo vệ bằng JWT quản lý.
  */
 @Component
 @Profile("supabase")
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
-public class PostgreSqlDataSecurityInitializer implements ApplicationRunner {
+public class PostgreSqlDataSecurityInitializer implements SmartLifecycle {
     private final EntityManagerFactory entityManagerFactory;
     private final JdbcTemplate jdbc;
+    private final AtomicBoolean running = new AtomicBoolean(false);
 
     /** Nhận EntityManagerFactory để liệt kê các bảng do Entity định nghĩa và JdbcTemplate để chạy SQL. */
     public PostgreSqlDataSecurityInitializer(EntityManagerFactory entityManagerFactory, JdbcTemplate jdbc) {
@@ -34,13 +35,44 @@ public class PostgreSqlDataSecurityInitializer implements ApplicationRunner {
         this.jdbc = jdbc;
     }
 
+    /** Bật RLS sau DatabaseTriggerInitializer và trước khi Tomcat mở cổng HTTP. */
+    @Override
+    public void start() {
+        if (running.compareAndSet(false, true)) {
+            try {
+                enableRowLevelSecurity();
+            } catch (RuntimeException ex) {
+                running.set(false);
+                throw ex;
+            }
+        }
+    }
+
+    @Override
+    public void stop() {
+        running.set(false);
+    }
+
+    @Override
+    public boolean isRunning() {
+        return running.get();
+    }
+
+    @Override
+    public int getPhase() {
+        return Ordered.HIGHEST_PRECEDENCE + 1;
+    }
+
     /**
      * Gom tên mọi bảng (bảng của Entity, bảng nối @JoinTable, bảng @CollectionTable), kiểm tra tài khoản
      * database có quyền sở hữu hoặc bỏ qua RLS trên tất cả các bảng, rồi mới bật RLS cho từng bảng. Kiểm tra
      * trước để không bật RLS dở dang làm chính backend mất quyền truy cập.
      */
-    @Override
     public void run(ApplicationArguments args) {
+        enableRowLevelSecurity();
+    }
+
+    private void enableRowLevelSecurity() {
         String currentSchema = jdbc.queryForObject("select current_schema()", String.class);
         if (currentSchema == null || currentSchema.isBlank()) {
             throw new IllegalStateException("Cannot determine application database schema");

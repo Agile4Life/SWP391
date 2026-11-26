@@ -9,6 +9,7 @@ public record CreateSupportRequestDto(
     @Size(max = 150, message = "{validation.support.subject.size}")
     String subject,
 
+    @Size(max = 5000, message = "{error.validation}")
     String description
 ) {}
 

@@ -1,9 +1,14 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setLanguage } from '../../shared/i18n/language';
 import { ManagerCoachAssignmentsPage } from './ManagerCoachAssignmentsPage';
 import { coachAssignmentsApi, type CoachAssignmentData } from './coachAssignmentsApi';
 import { notify } from '../../shared/lib/portalNotices';
+
+const assignmentsCss = readFileSync(resolve(__dirname, 'manager-coach-assignments.css'), 'utf8');
 
 vi.mock('../../shared/lib/portalNotices', () => ({ notify: vi.fn() }));
 
@@ -154,6 +159,7 @@ describe('ManagerCoachAssignmentsPage', () => {
   afterEach(async () => {
     await act(async () => root.unmount());
     host.remove();
+    setLanguage('vi');
     vi.unstubAllGlobals();
     vi.clearAllMocks();
     vi.useRealTimers();
@@ -356,7 +362,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     const names = () => [...host.querySelectorAll('.coach-card-header h3')].map(el => el.textContent);
     const counts = () => [...host.querySelectorAll('.coach-card-header')].map(el => [...el.querySelectorAll('.student-count-pill strong')].map(x => x.textContent));
     expect(names()).toEqual(['HLV An', 'HLV Ánh', 'HLV Bình']);
-    expect(counts()).toEqual([['1', '0', '0'], ['1', '1', '1'], ['2', '1', '1']]);
+    expect(counts()).toEqual([['1', '0', '0', '1'], ['1', '1', '1', '0'], ['2', '1', '1', '0']]);
     const select = host.querySelector('select[aria-label="Sắp xếp danh sách HLV"]') as HTMLSelectElement;
     const choose = async (value: string) => {
       await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); });
@@ -379,7 +385,70 @@ describe('ManagerCoachAssignmentsPage', () => {
     await act(async () => { typeFilter.value = 'PT_1_1'; typeFilter.dispatchEvent(new Event('change', { bubbles: true })); });
     await act(async () => { await new Promise(r => setTimeout(r, 260)); });
     expect(names()).toEqual(['HLV Ánh', 'HLV Bình', 'HLV An']);
-    expect(counts()).toEqual([['1', '1', '0'], ['1', '1', '0'], ['0', '0', '0']]);
+    expect(counts()).toEqual([['1', '1', '0', '0'], ['1', '1', '0', '0'], ['0', '0', '0', '0']]);
+  });
+
+  it('P1-FE-20, P2-FE-41, P2-FE-42 & P2-FE-76: displays detail on CLASS & PT rows, renders Group classes KPI/pill, handles blank target coach, localizes type pills, and uses theme CSS tokens', async () => {
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      await renderComponent();
+
+      // KPI & pill include Group class members
+      expect(host.textContent).toContain('Học viên lớp nhóm');
+      expect(host.textContent).toContain('Lớp nhóm');
+      // Card view renders detail for CLASS and PT_1_1 (not only TRAINING_PLAN)
+      expect(host.textContent).toContain('Lớp Pilates Sáng Thứ 7');
+      expect(host.textContent).toContain('Buổi PT Fitness cá nhân');
+
+      // Table view also renders detail for CLASS and PT_1_1
+      await act(async () => {
+        [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Bảng danh sách'))?.click();
+      });
+      const tableText = host.querySelector('.coach-table')?.textContent ?? '';
+      expect(tableText).toContain('Lớp Pilates Sáng Thứ 7');
+      expect(tableText).toContain('Buổi PT Fitness cá nhân');
+
+      // Switching language to EN translates assignmentType pills dynamically
+      await act(async () => {
+        setLanguage('en');
+      });
+      const enTableText = host.querySelector('.coach-table')?.textContent ?? '';
+      expect(enTableText).toContain('1:1 PT');
+      expect(enTableText).toContain('Training plan');
+      expect(enTableText).toContain('Group class');
+      await act(async () => {
+        setLanguage('vi');
+      });
+
+      // Clearing target coach select resets to empty string (not 0) and disables submit
+      await act(async () => {
+        [...host.querySelectorAll('button')].find((b) => b.textContent === 'Điều chuyển')?.click();
+      });
+      const target = host.querySelector('#reassign-target-coach')!.closest('.ui-select')!.querySelector('select.ui-select__native') as HTMLSelectElement;
+      await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
+      await act(async () => { target.value = ''; target.dispatchEvent(new Event('change', { bubbles: true })); });
+      expect(target.value).toBe('');
+      expect((host.querySelector('dialog button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
+
+      // CSS tokens check (no hardcoded coral rgba(255, 122, 89, ...))
+      expect(assignmentsCss).not.toContain('rgba(255, 122, 89');
+      expect(assignmentsCss).toContain('rgb(var(--sol-accent-rgb)');
+      expect(assignmentsCss).toContain('var(--portal-raised)');
+
+      // Retry button styling on load error
+      vi.mocked(coachAssignmentsApi.getOverview).mockRejectedValueOnce(new Error('Mất kết nối'));
+      await act(async () => root.unmount());
+      root = createRoot(host);
+      await renderComponent();
+      const retryBtn = host.querySelector<HTMLButtonElement>('[role="alert"] button')!;
+      expect(retryBtn.className).toContain('btn-secondary');
+      expect(retryBtn.className).toContain('btn-sm');
+
+      // No React duplicate-key warning
+      expect(consoleErrorSpy).not.toHaveBeenCalledWith(expect.stringContaining('same key'), expect.anything(), expect.anything());
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
   });
 });
 

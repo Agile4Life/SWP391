@@ -2,10 +2,12 @@ import { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { apiFetch, AUTH_STORAGE_KEY } from '../api/client';
+import { apiFetch, AUTH_STORAGE_KEY, TOKEN_STORAGE_KEY } from '../api/client';
 import { AppLayout } from '../ui/AppLayout';
 import { PublicLayout } from '../../features/landing/components/PublicLayout';
 import { getLanguage, LANGUAGE_STORAGE_KEY, setLanguage } from './index';
+import { sourceText } from './sourceText';
+import { englishLabels } from './translations';
 
 describe('Multi-language settings (Avatar dropdown & Footer)', () => {
   beforeEach(() => {
@@ -48,6 +50,15 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
   });
 
   it('switches language from the user avatar dropdown, with no switch in the portal workspace footer', async () => {
+    vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes('/auth/me')) {
+        return new Response(JSON.stringify({ success: true, data: { username: 'member1', role: 'MEMBER', fullName: 'Nguyen Van A' } }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ success: true, data: { balance: 0, transactions: [], content: [], number: 0, totalPages: 0 } }), { status: 200 });
+    });
+    localStorage.setItem(TOKEN_STORAGE_KEY, 'member-token');
     localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({ id: '1', name: 'Nguyen Van A', identifier: 'member1', role: 'MEMBER' })
@@ -158,5 +169,38 @@ describe('Multi-language settings (Avatar dropdown & Footer)', () => {
     await act(async () => {
       root.unmount();
     });
+  });
+
+  // P2-FE-17: In-memory fallbackLanguage when localStorage throws SecurityError
+  it('falls back to in-memory language state when localStorage throws SecurityError', () => {
+    const secErr = new DOMException('Blocked', 'SecurityError');
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw secErr; });
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw secErr; });
+
+    setLanguage('en');
+    expect(getLanguage()).toBe('en');
+    expect(document.documentElement.lang).toBe('en');
+
+    setLanguage('vi');
+    expect(getLanguage()).toBe('vi');
+  });
+
+  // P2-FE-19: Natural English labels without grammar errors or Vietnamese weekday leaks
+  it('renders corrected English labels for landing headings, services, schedule tags, and KYC copy', () => {
+    setLanguage('en');
+    expect(`${sourceText('Bạn nhận được')} ${sourceText('gì ')}${sourceText('khi có gói.')}`).toBe('Membership benefits included.');
+    expect(sourceText('WeightLifting')).toBe('Weightlifting');
+    expect(sourceText('Tập tạ')).toBe('Weightlifting');
+    expect(`${sourceText('BUILD YOUR')} ${sourceText('BODY SHAPES')}`).toBe('BUILD YOUR STRENGTH & PHYSIQUE');
+    expect(sourceText('T2 · Sức mạnh')).toBe('Mon · Strength');
+    expect(sourceText('CN · Linh hoạt')).toBe('Sun · Mobility');
+    expect(
+      englishLabels['Hội viên mới cần cập nhật CCCD (hoặc Hộ chiếu cho người nước ngoài) để xác thực hợp đồng hội viên. Họ tên tài khoản sẽ được đồng bộ chính xác theo họ tên trên giấy tờ này.'],
+    ).toContain('an identity card');
+    expect(englishLabels['Quốc tịch']).toBe('Nationality');
+
+    setLanguage('vi');
+    expect(sourceText('WeightLifting')).toBe('Tập tạ');
+    expect(sourceText('BODY SHAPES')).toBe('VÓC DÁNG CỦA BẠN');
   });
 });

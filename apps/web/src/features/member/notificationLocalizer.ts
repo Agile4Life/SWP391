@@ -39,9 +39,43 @@ export function localizeTitle(title?: string | null): string {
   return map[trimmed] ?? title;
 }
 
-/** Dịch nội dung thông báo sang tiếng Việt theo mẫu đã biết (không khớp thì giữ nguyên). */
-export function localizeMessage(message?: string | null): string {
+const SUPPORT_STATUS_VI: Record<string, string> = {
+  OPEN: 'Mở',
+  PENDING: 'Chờ xử lý',
+  IN_PROGRESS: 'Đang xử lý',
+  ESCALATED: 'Đã chuyển Quản lý',
+  RESOLVED: 'Đã giải quyết',
+  CLOSED: 'Đã đóng',
+};
+
+const SUPPORT_STATUS_EN: Record<string, string> = {
+  OPEN: 'Open',
+  PENDING: 'Pending',
+  IN_PROGRESS: 'In progress',
+  ESCALATED: 'Escalated to manager',
+  RESOLVED: 'Resolved',
+  CLOSED: 'Closed',
+};
+
+/** Chuyển mã trạng thái phiếu hỗ trợ thô (IN_PROGRESS/RESOLVED...) sang nhãn đọc được theo ngôn ngữ. */
+export function localizeSupportTicketStatus(rawStatus: string, lang: 'vi' | 'en' = 'vi'): string {
+  const key = rawStatus.trim().toUpperCase().replace(/\s+/g, '_');
+  return (lang === 'en' ? SUPPORT_STATUS_EN[key] : SUPPORT_STATUS_VI[key]) ?? rawStatus.trim();
+}
+
+/** Dịch nội dung thông báo sang tiếng Việt (hoặc chuẩn hóa mã trạng thái thô khi hiển thị tiếng Anh). */
+export function localizeMessage(message?: string | null, lang: 'vi' | 'en' = 'vi'): string {
   if (!message) return '';
+
+  const supportStatusMatch = message.match(/^Your support request "([^"]+)" has been updated to status ([^.]+)\.$/i);
+  if (supportStatusMatch) {
+    const label = localizeSupportTicketStatus(supportStatusMatch[2], lang);
+    return lang === 'en'
+      ? `Your support request "${supportStatusMatch[1]}" has been updated to status ${label}.`
+      : `Yêu cầu hỗ trợ "${supportStatusMatch[1]}" của bạn đã chuyển sang trạng thái ${label}.`;
+  }
+
+  if (lang === 'en') return message;
 
   const classReminderMatch = message.match(/^Your class "([^"]+)" is starting at ([0-9:]+) on ([0-9/-]+)\. Get ready!$/i);
   if (classReminderMatch) {
@@ -71,11 +105,6 @@ export function localizeMessage(message?: string | null): string {
   const pkgExpiryMatch2 = message.match(/^Your membership package (.+?) will expire in (\d+) day\(s\) \(([^)]+)\)\. Please renew to avoid workout interruption\.$/i);
   if (pkgExpiryMatch2) {
     return `Gói tập ${pkgExpiryMatch2[1]} của bạn sẽ hết hạn sau ${pkgExpiryMatch2[2]} ngày (${pkgExpiryMatch2[3]}). Vui lòng gia hạn để không gián đoạn tập luyện.`;
-  }
-
-  const supportStatusMatch = message.match(/^Your support request "([^"]+)" has been updated to status ([^.]+)\.$/i);
-  if (supportStatusMatch) {
-    return `Yêu cầu hỗ trợ "${supportStatusMatch[1]}" của bạn đã chuyển sang trạng thái ${supportStatusMatch[2]}.`;
   }
 
   const supportMsgMatch = message.match(/^You have a new message from (.+?) in support request "([^"]+)"\.$/i);

@@ -37,10 +37,24 @@ public class RoomService {
         return RoomDto.of(rooms.save(room));
     }
 
-    /** Sửa phòng. */
+    /** Sửa phòng; từ chối giảm sức chứa phòng thấp hơn sức chứa lớn nhất của các lớp đang active trong phòng. */
     @Transactional
     public RoomDto update(Long id, RoomRequest request) {
         Room room = rooms.findById(id).orElseThrow(() -> new ResourceNotFoundException("resource.room", id));
+        if (classes != null) {
+            Integer maxActiveClassCapacity = classes.findMaxCapacityByRoomIdAndStatus(id, "active");
+            if (maxActiveClassCapacity != null && request.capacity() < maxActiveClassCapacity) {
+                String roomName = request.name() != null && !request.name().isBlank()
+                        ? request.name().trim()
+                        : (room.getName() != null ? room.getName() : ("#" + id));
+                throw new com.swp391.scms.common.exception.BadRequestException(
+                        "SCHEDULING_CAPACITY_EXCEEDS_ROOM",
+                        "error.scheduling.capacity_exceeds_room",
+                        new Object[]{maxActiveClassCapacity, roomName, request.capacity()},
+                        "Room capacity (" + request.capacity() + ") cannot be less than active class capacity ("
+                                + maxActiveClassCapacity + ")");
+            }
+        }
         apply(room, request);
         return RoomDto.of(room);
     }

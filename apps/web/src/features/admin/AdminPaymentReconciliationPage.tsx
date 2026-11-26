@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactElement } from 'react';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
-import { useStaffI18n, type StaffMessage, staffError as errorMessage } from '../operations/staffI18n';
+import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage } from '../operations/staffI18n';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
@@ -27,12 +27,22 @@ type Translate = ReturnType<typeof useStaffI18n>['t'];
 
 const PAGE_SIZE = 20;
 const DEFAULT_DAYS = 7;
+const MAX_RANGE_DAYS = 92;
 
 /** Cộng/trừ số ngày vào ngày YYYY-MM-DD (tính theo UTC). */
 function shiftIsoDate(iso: string, days: number): string {
   const [y, m, d] = iso.split('-').map(Number);
   const date = new Date(Date.UTC(y, m - 1, d + days));
   return date.toISOString().slice(0, 10);
+}
+
+/** Số ngày tính cả hai đầu từ `fromIso` đến `toIso` (UTC thuần, tránh lệch DST). */
+function inclusiveRangeDays(fromIso: string, toIso: string): number {
+  const [fy, fm, fd] = fromIso.split('-').map(Number);
+  const [ty, tm, td] = toIso.split('-').map(Number);
+  const start = Date.UTC(fy, fm - 1, fd);
+  const end = Date.UTC(ty, tm - 1, td);
+  return Math.floor((end - start) / 86_400_000) + 1;
 }
 
 /**
@@ -44,6 +54,7 @@ function usePaged<T>(load: () => Promise<PageResult<T>>, key: string, enabled: b
   // Khai báo trước effect tải dữ liệu để yêu cầu bên dưới luôn dùng bộ lọc mới nhất.
   useEffect(() => { loader.current = load; });
   const [data, setData] = useState<PageResult<T> | null>(null);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<StaffMessage>('');
   const [reload, setReload] = useState(0);
@@ -54,10 +65,11 @@ function usePaged<T>(load: () => Promise<PageResult<T>>, key: string, enabled: b
     setLoading(true);
     setError('');
     loader.current()
-      .then((res) => { if (mounted) setData(res); })
+      .then((res) => { if (mounted) { setData(res); setLoadedKey(key); } })
       .catch((err) => {
         if (mounted) {
           setData(null);
+          setLoadedKey(null);
           setError(errorMessage(err, fallback));
         }
       })
@@ -65,7 +77,8 @@ function usePaged<T>(load: () => Promise<PageResult<T>>, key: string, enabled: b
     return () => { mounted = false; };
   }, [key, enabled, reload, fallback]);
 
-  return { data, loading, error, retry: () => setReload((n) => n + 1) };
+  // Coi `!data && !error` (hoặc key đổi) khi tab vừa bật là đang tải để không chớp empty state 1 frame trước khi effect chạy.
+  return { data, loading: loading || (enabled && (!data || loadedKey !== key) && !error), error, retry: () => setReload((n) => n + 1) };
 }
 
 /**
@@ -82,6 +95,18 @@ export function AdminPaymentReconciliationPage() {
   // Định dạng số tiền (rỗng là "—").
   const formatOptionalPrice = (n: number | null | undefined) => (n == null ? '—' : formatPrice(Math.round(Number(n))));
 
+  // Kiểm tra khoảng ngày trên client (tối đa 92 ngày) trước khi gọi API.
+  const rangeDays = inclusiveRangeDays(from, to);
+  const rangeError: StaffMessage = from > to
+    ? staffMessage('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.', 'Start date must be on or before end date.')
+    : rangeDays > MAX_RANGE_DAYS
+      ? staffMessage(
+          `Khoảng thời gian tra cứu tối đa ${MAX_RANGE_DAYS} ngày (hiện chọn ${rangeDays} ngày).`,
+          `Date range cannot exceed ${MAX_RANGE_DAYS} days (currently ${rangeDays} days).`,
+        )
+      : '';
+  const rangeValid = !rangeError;
+
   // Tóm tắt đối soát
   const [summary, setSummary] = useState<ReconciliationSummary | null>(null);
   const [summaryLoading, setSummaryLoading] = useState(true);
@@ -89,6 +114,12 @@ export function AdminPaymentReconciliationPage() {
   const [summaryReload, setSummaryReload] = useState(0);
 
   useEffect(() => {
+    if (!rangeValid) {
+      setSummary(null);
+      setSummaryLoading(false);
+      setSummaryError('');
+      return undefined;
+    }
     let mounted = true;
     setSummaryLoading(true);
     setSummaryError('');
@@ -102,7 +133,7 @@ export function AdminPaymentReconciliationPage() {
       })
       .finally(() => { if (mounted) setSummaryLoading(false); });
     return () => { mounted = false; };
-  }, [from, to, summaryReload]);
+  }, [from, to, rangeValid, summaryReload]);
 
   // Tab lượt thanh toán
   const [attemptStatus, setAttemptStatus] = useState('ALL');
@@ -113,7 +144,7 @@ export function AdminPaymentReconciliationPage() {
   const attempts = usePaged<VnpayAttemptRow>(
     () => reconciliationApi.getAttempts({ status: attemptStatus, stale: staleOnly, q: search, from, to, page: attemptPage, size: PAGE_SIZE }),
     JSON.stringify([attemptStatus, staleOnly, search, from, to, attemptPage]),
-    tab === 'attempts',
+    tab === 'attempts' && rangeValid,
     'Không thể tải danh sách lượt VNPay.',
   );
 
@@ -122,7 +153,7 @@ export function AdminPaymentReconciliationPage() {
   const refunds = usePaged<LateRefundRow>(
     () => reconciliationApi.getLateRefunds({ from, to, page: refundPage, size: PAGE_SIZE }),
     JSON.stringify([from, to, refundPage]),
-    tab === 'refunds',
+    tab === 'refunds' && rangeValid,
     'Không thể tải danh sách hoàn tiền tự động.',
   );
 
@@ -135,7 +166,7 @@ export function AdminPaymentReconciliationPage() {
   const ipn = usePaged<IpnEventRow>(
     () => reconciliationApi.getIpnEvents({ rspCode, source, reference, from, to, page: ipnPage, size: PAGE_SIZE }),
     JSON.stringify([rspCode, source, reference, from, to, ipnPage]),
-    tab === 'ipn',
+    tab === 'ipn' && rangeValid,
     'Không thể tải sự kiện IPN.',
   );
 
@@ -190,16 +221,23 @@ export function AdminPaymentReconciliationPage() {
 
       <div className="portal-card audit-filter-bar">
         <div className="audit-filter-group recon-date">
-          <span className="portal-label filter-label">{t('Từ ngày', 'From')}</span>
-          <DatePicker value={from} max={to} onChange={(e) => { if (e.target.value) { setFrom(e.target.value); resetPages(); } }} />
+          <label htmlFor="recon-from" className="portal-label filter-label">{t('Từ ngày', 'From')}</label>
+          <DatePicker id="recon-from" value={from} max={to} aria-label={t('Từ ngày', 'From date')} onChange={(e) => { if (e.target.value) { setFrom(e.target.value); resetPages(); } }} />
         </div>
         <div className="audit-filter-group recon-date">
-          <span className="portal-label filter-label">{t('Đến ngày', 'To')}</span>
-          <DatePicker value={to} min={from} onChange={(e) => { if (e.target.value) { setTo(e.target.value); resetPages(); } }} />
+          <label htmlFor="recon-to" className="portal-label filter-label">{t('Đến ngày', 'To')}</label>
+          <DatePicker id="recon-to" value={to} min={from} aria-label={t('Đến ngày', 'To date')} onChange={(e) => { if (e.target.value) { setTo(e.target.value); resetPages(); } }} />
         </div>
         <span className="recon-muted recon-range-hint">{t('Tối đa 92 ngày mỗi lần tra cứu.', 'Up to 92 days per search.')}</span>
       </div>
 
+      {rangeError && (
+        <div className="portal-alert" role="alert" style={{ marginBottom: 16 }}>
+          <span>{t(rangeError)}</span>
+        </div>
+      )}
+
+      {rangeValid && (
       <section aria-label={t('Tổng quan đối soát', 'Reconciliation overview')}>
         {summaryLoading ? (
           <LoadingSkeleton label={t('Đang tải tổng quan…', 'Loading overview…')} variant="cards" count={6} />
@@ -216,7 +254,18 @@ export function AdminPaymentReconciliationPage() {
                   {t(`Có ${summary.staleAttempts} lượt VNPay treo quá hạn: job đóng giao dịch treo có thể không chạy.`,
                     `${summary.staleAttempts} VNPay attempt(s) stuck past expiry: the stale-attempt job may not be running.`)}
                 </span>
-                <button type="button" className="btn-secondary btn-sm" onClick={() => { setTab('attempts'); setStaleOnly(true); setAttemptStatus('ALL'); setAttemptPage(0); }}>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => {
+                    setTab('attempts');
+                    setStaleOnly(true);
+                    setAttemptStatus('ALL');
+                    setSearch('');
+                    setSearchDraft('');
+                    setAttemptPage(0);
+                  }}
+                >
                   {t('Xem lượt treo', 'Show stuck attempts')}
                 </button>
               </div>
@@ -261,7 +310,9 @@ export function AdminPaymentReconciliationPage() {
           </>
         ) : null}
       </section>
+      )}
 
+      {rangeValid && (
       <div className="portal-tabs audit-view-tabs" role="tablist">
         {([
           ['attempts', t('Lượt VNPay', 'VNPay attempts')],
@@ -280,8 +331,9 @@ export function AdminPaymentReconciliationPage() {
           </button>
         ))}
       </div>
+      )}
 
-      {tab === 'attempts' && (
+      {rangeValid && tab === 'attempts' && (
         <section aria-label={t('Lượt VNPay', 'VNPay attempts')}>
           <form
             className="portal-card audit-filter-bar"
@@ -351,7 +403,7 @@ export function AdminPaymentReconciliationPage() {
         </section>
       )}
 
-      {tab === 'refunds' && (
+      {rangeValid && tab === 'refunds' && (
         <section aria-label={t('Hoàn tiền tự động', 'Automatic refunds')}>
           <ListCard
             t={t}
@@ -384,7 +436,7 @@ export function AdminPaymentReconciliationPage() {
         </section>
       )}
 
-      {tab === 'ipn' && (
+      {rangeValid && tab === 'ipn' && (
         <section aria-label={t('Sự kiện IPN', 'IPN events')}>
           <form
             className="portal-card audit-filter-bar"
@@ -534,7 +586,7 @@ function ListCard<T>({ t, state, loadingLabel, emptyLabel, page, setPage, tableL
       ) : rows.length === 0 ? (
         <div className="portal-empty recon-empty"><p>{emptyLabel}</p></div>
       ) : (
-        <div className="recon-table-scroll">
+        <div className="portal-table-wrapper">
           <table className="portal-table audit-table" aria-label={tableLabel}>
             <thead><tr>{head.map((h) => <th key={h}>{h}</th>)}</tr></thead>
             <tbody>{rows}</tbody>

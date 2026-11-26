@@ -22,7 +22,7 @@ export function PortalSectionTabs({ label, tabs, pathname, lang }: PortalSection
   );
   if (!activeInGroup) return null;
   return (
-    <nav className="portal-section-tabs" aria-label={label}>
+    <nav className="portal-section-tabs" data-tab-count={tabs.length} aria-label={label}>
       {tabs.map(tab => (
         <NavLink key={tab.to} to={tab.to} className="portal-section-tab">
           {getTabLabel(tab, lang)}

@@ -25,26 +25,27 @@ export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [otp, setOtp] = useState('');
   const [debugOtp, setDebugOtp] = useState('');
-  const [error, setError] = useState<string | Error>('');
+  const [error, setError] = useState<string | Error | import('../../shared/i18n').SourceMessage>('');
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof RegistrationFields, string>>>({});
   const [busy, setBusy] = useState(false);
   const requestBusy = useRef(false);
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(() => Math.max(0, Math.ceil(((pendingAccount?.resendAt ?? 0) - Date.now()) / 1000)));
+  const countdownActive = countdown > 0;
 
-  // Bộ đếm ngược thời gian gửi lại mã OTP
+  // Bộ đếm ngược thời gian gửi lại mã OTP (chỉ khởi tạo interval một lần khi đếm ngược đang chạy).
   useEffect(() => {
-    if (countdown <= 0) return;
+    if (!countdownActive) return;
     const timer = window.setInterval(() => {
-      setCountdown((prev) => Math.max(0, prev - 1));
+      setCountdown((prev) => (prev <= 1 ? 0 : prev - 1));
     }, 1000);
     return () => clearInterval(timer);
-  }, [countdown]);
+  }, [countdownActive]);
 
   // Gửi mã OTP tới email của tài khoản đang chờ xác thực và đặt đếm ngược gửi lại.
   const sendOtp = async (account: PendingRegistration = pendingAccount!) => {
     const res = await requestOtp(account.email);
-    setDebugOtp(res.debugOtp || '');
+    setDebugOtp(import.meta.env.DEV && res.debugOtp ? res.debugOtp : '');
     const next = { ...account, resendAt: Date.now() + RESEND_COOLDOWN * 1000 };
     savePendingRegistration(next);
     setPendingAccount(next);
@@ -96,15 +97,31 @@ export function RegisterPage() {
     setBusy(true);
     setError('');
 
+    let account: PendingRegistration;
     try {
       await register(parsed.data);
-      const account = { username: parsed.data.username, email: parsed.data.email, createdAt: Date.now(), resendAt: 0 };
+      account = { username: parsed.data.username, email: parsed.data.email, createdAt: Date.now(), resendAt: 0 };
       savePendingRegistration(account);
       setPendingAccount(account);
       setForm(previous => ({ ...previous, password: '' }));
-      await sendOtp(account);
     } catch (err) {
       setError(sourceError(err, 'Đăng ký không thành công.'));
+      requestBusy.current = false;
+      setBusy(false);
+      return;
+    }
+
+    try {
+      await sendOtp(account);
+    } catch (err) {
+      if (err instanceof Error && err.name === 'Error' && err.message) {
+        setError(err);
+      } else {
+        setError({
+          vi: 'Tài khoản đã được tạo nhưng chưa gửi được mã OTP. Vui lòng bấm gửi lại mã.',
+          en: 'Your account was created, but we could not send the OTP code. Please try resending it.',
+        });
+      }
     } finally {
       requestBusy.current = false;
       setBusy(false);
@@ -176,7 +193,7 @@ export function RegisterPage() {
         </div>
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="reg-email">{sourceText("Địa chỉ email")}</label>
-          <input id="reg-email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'reg-email-error' : undefined} className="portal-input" type="email" autoComplete="email" placeholder="ban@example.com" required value={form.email} onChange={(e) => updateField('email', e.target.value)} onBlur={() => handleFieldBlur('email')} />
+          <input id="reg-email" aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'reg-email-error' : undefined} className="portal-input" type="email" autoComplete="email" placeholder={sourceText({ vi: 'ban@example.com', en: 'you@example.com' })} required value={form.email} onChange={(e) => updateField('email', e.target.value)} onBlur={() => handleFieldBlur('email')} />
           {fieldErrors.email && <p id="reg-email-error" className="portal-field-error">{sourceText(fieldErrors.email)}</p>}
         </div>
         <div className="portal-form-group">
@@ -193,8 +210,8 @@ export function RegisterPage() {
           {fieldErrors.password && <p id="reg-password-error" className="portal-field-error">{sourceText(fieldErrors.password)}</p>}
         </div>
         <button className="luxury-login-submit-btn" type="submit" disabled={busy}><span>{busy ? sourceText('ĐANG TẠO TÀI KHOẢN...') : sourceText('TIẾP TỤC XÁC THỰC')}</span><span className="submit-arrow" aria-hidden="true">→</span></button>
-      </form> : <form onSubmit={handleVerify} aria-busy={busy}>
-        {debugOtp && <div className="fit-debug-otp">{sourceText("Mã OTP thử nghiệm (debug): ")}<strong>{debugOtp}</strong></div>}
+      </form> : <form onSubmit={handleVerify} aria-busy={busy} noValidate>
+        {import.meta.env.DEV && debugOtp && <div className="fit-debug-otp">{sourceText({ vi: 'Mã OTP thử nghiệm: ', en: 'Test OTP code: ' })}<strong>{debugOtp}</strong></div>}
         <div className="portal-form-group">
           <label className="portal-label" htmlFor="otp-code">{sourceText("Nhập mã 6 chữ số")}</label>
           <input id="otp-code" className="portal-input fit-otp-input" type="text" inputMode="numeric" autoComplete="one-time-code" placeholder="000000" autoFocus required value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} />

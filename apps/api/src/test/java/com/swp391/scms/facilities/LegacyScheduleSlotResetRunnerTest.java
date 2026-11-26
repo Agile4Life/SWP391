@@ -3,11 +3,13 @@ package com.swp391.scms.facilities;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.contains;
@@ -15,6 +17,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /** Bộ kiểm thử đơn vị cho {@link LegacyScheduleSlotResetRunner}. */
@@ -100,5 +103,47 @@ class LegacyScheduleSlotResetRunnerTest {
         verify(jdbcTemplate, never()).update(contains("UPDATE payments"));
         verify(jdbcTemplate, never()).update(contains("UPDATE training_plans"));
         verify(jdbcTemplate).update("DELETE FROM coach_bookings");
+    }
+
+    @Test
+    void doesNothingWhenDisabledByConfiguration() {
+        new LegacyScheduleSlotResetRunner(jdbcTemplate, false).run(null);
+        verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
+    void checksOnlyActiveNonNullClassesAndUpcomingScheduledOrConfirmedRows() {
+        when(jdbcTemplate.queryForObject(contains("information_schema.tables"), eq(Boolean.class), anyString()))
+                .thenReturn(Boolean.TRUE);
+        ArgumentCaptor<String> sqlCaptor = ArgumentCaptor.forClass(String.class);
+        when(jdbcTemplate.queryForObject(sqlCaptor.capture(), eq(Boolean.class)))
+                .thenReturn(Boolean.FALSE);
+
+        new LegacyScheduleSlotResetRunner(jdbcTemplate, true).run(null);
+
+        List<String> queries = sqlCaptor.getAllValues();
+        assertThat(queries).hasSize(3);
+
+        String classesSql = queries.get(0);
+        assertThat(classesSql)
+                .contains("FROM classes WHERE")
+                .contains("status = 'active'")
+                .contains("start_time IS NOT NULL AND end_time IS NOT NULL")
+                .doesNotContain("start_time IS NULL")
+                .doesNotContain("end_time IS NULL");
+
+        String sessionsSql = queries.get(1);
+        assertThat(sessionsSql)
+                .contains("FROM class_sessions WHERE")
+                .contains("status = 'scheduled'")
+                .contains("session_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date");
+
+        String bookingsSql = queries.get(2);
+        assertThat(bookingsSql)
+                .contains("FROM coach_bookings WHERE")
+                .contains("status = 'confirmed'")
+                .contains("booking_date >= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Ho_Chi_Minh')::date");
+
+        verify(jdbcTemplate, never()).update(anyString());
     }
 }

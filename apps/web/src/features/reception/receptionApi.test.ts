@@ -128,4 +128,64 @@ describe('receptionApi.ts (Receptionist Member Lookup & POS Billing)', () => {
     expect(res.invoiceNumber).toBe('INV-20261007-0101');
     expect(res.status).toBe('success');
   });
+
+  it('P0-03: getUnpaidCourseEnrollments fetches /api/v1/classes/enrollments/unpaid', async () => {
+    const mockItems = [
+      {
+        enrollmentId: 55,
+        paymentId: 801,
+        classId: 10,
+        className: 'Yoga Flow Sáng',
+        disciplineName: 'Yoga',
+        startDate: '2026-12-01',
+        endDate: '2026-12-29',
+        memberId: 10,
+        memberName: 'Nguyễn Văn An',
+        memberPhone: '0901234567',
+        membershipCode: 'MB-010',
+        amount: 200000,
+        method: 'cash',
+        createdAt: '2026-11-25T10:00:00',
+      },
+    ];
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: mockItems }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const res = await receptionApi.getUnpaidCourseEnrollments();
+    expect(res).toEqual(mockItems);
+    expect(mockFetch).toHaveBeenCalledWith('/api/v1/classes/enrollments/unpaid', expect.anything());
+  });
+
+  it('P0-03: confirmCourseEnrollmentPayment posts payment method to /api/v1/classes/enrollments/:id/confirm-payment', async () => {
+    const settled = {
+      id: 801,
+      memberId: 10,
+      memberName: 'Nguyễn Văn An',
+      amount: 200000,
+      method: 'bank_transfer',
+      status: 'success',
+      paidAt: '2026-11-25T12:00:00',
+      invoiceNumber: 'INV-20261125-0801',
+    };
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ success: true, data: settled }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    const res = await receptionApi.confirmCourseEnrollmentPayment(55, 'bank_transfer');
+    expect(res).toEqual(settled);
+    expect(mockFetch).toHaveBeenCalledWith(
+      '/api/v1/classes/enrollments/55/confirm-payment',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ method: 'bank_transfer' }),
+      }),
+    );
+  });
 });

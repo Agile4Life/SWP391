@@ -16,10 +16,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Quản lý tồn kho biến thể: giữ hàng khi đặt đơn, trả hàng khi hủy và ghi lịch sử biến động. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 @Transactional
 public class StockService {

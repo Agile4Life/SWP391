@@ -1,5 +1,6 @@
 package com.swp391.scms.security;
 
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.http.HttpMethod;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -68,15 +69,34 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/catalog").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/vnpay/ipn").permitAll()
                     .requestMatchers("/api/v1/payments/vnpay/**").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
-                    .requestMatchers("/api/v1/auth/**", "/api/v1/health", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                    .requestMatchers("/api/v1/auth/me").authenticated()
+                    .requestMatchers(
+                            "/api/v1/auth/login",
+                            "/api/v1/auth/register",
+                            "/api/v1/auth/send-otp",
+                            "/api/v1/auth/verify-otp",
+                            "/api/v1/auth/password/send-otp",
+                            "/api/v1/auth/password/reset",
+                            "/api/v1/auth/google",
+                            "/api/v1/auth/google/authorize",
+                            "/api/v1/auth/google/authorize/start",
+                            "/api/v1/auth/google/callback",
+                            "/api/v1/auth/google/handoff",
+                            "/api/v1/auth/google/oauth-callback",
+                            "/api/v1/auth/google/send-otp",
+                            "/api/v1/auth/google/verify-otp",
+                            "/api/v1/health",
+                            "/swagger-ui/**",
+                            "/swagger-ui.html",
+                            "/v3/api-docs/**"
+                    ).permitAll()
                     // Mở rộng hồ sơ (SCRUM-66)
                     .requestMatchers(HttpMethod.POST, "/api/v1/profile/avatar").authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/profile/kyc").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/coach").hasRole("COACH")
                     .requestMatchers("/api/v1/wallet/members/**", "/api/v1/wallet/counter-topups").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
                     .requestMatchers("/api/v1/wallet/**").authenticated()
                     .requestMatchers(HttpMethod.PUT, "/api/v1/profile/receptionist").hasRole("RECEPTIONIST")
-                    .requestMatchers(HttpMethod.PUT, "/api/v1/users/*/receptionist").hasRole("ADMIN")
 
                     // Thông báo & Yêu cầu hỗ trợ (SCRUM-67, SCRUM-68)
                     .requestMatchers("/api/v1/notifications/**").authenticated()
@@ -89,9 +109,9 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.GET, "/api/v1/support/requests/*/messages").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
 
                     // Điểm danh & Check-in (SCRUM-75)
-                    .requestMatchers(HttpMethod.POST, "/api/v1/check-in/scan").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.POST, "/api/v1/check-in/*/checkout", "/api/v1/check-in/checkout").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/check-in/history").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "MEMBER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/check-in/scan").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/check-in/*/checkout", "/api/v1/check-in/checkout").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "ADMIN")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/check-in/history").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER", "MEMBER", "ADMIN")
                     .requestMatchers("/api/v1/attendance/sessions/**").hasAnyRole("COACH", "CENTER_MANAGER", "RECEPTIONIST", "STAFF")
 
                     // Thanh toán & Hóa đơn (SCRUM-76, 77, 78)
@@ -104,7 +124,6 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/payments/process").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers(HttpMethod.GET, "/api/v1/payments/*", "/api/v1/payments/member/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
                     .requestMatchers("/api/v1/payments/**", "/api/v1/invoices/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST")
-                    .requestMatchers("/api/v1/wallet/members/**", "/api/v1/wallet/counter-topups").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER")
 
                     // Báo cáo (SCRUM-79)
                     .requestMatchers(HttpMethod.GET, "/api/v1/reports/class-utilization").hasAnyRole("ADMIN", "CENTER_MANAGER", "MANAGER")
@@ -116,7 +135,7 @@ public class SecurityConfig {
                             "/api/v1/training-plans/**", "/api/v1/training-plans").hasAnyRole("COACH", "CENTER_MANAGER")
                     .requestMatchers("/api/v1/ai/generate-workout-plan", "/api/v1/ai/recommend",
                             "/api/v1/ai/recommendations/**").hasAnyRole("COACH", "CENTER_MANAGER")
-                    .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "COACH", "CENTER_MANAGER", "RECEPTIONIST")
+                    .requestMatchers("/api/v1/ai/chat/**").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
 
                     // Quầy lễ tân duyệt giấy tờ định danh: quầy sở hữu việc này, cổng quản lý không còn làm.
                     .requestMatchers("/api/v1/members/kyc/**").hasRole("RECEPTIONIST")
@@ -164,19 +183,25 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/v1/memberships/cancellations/staff-request").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.GET, "/api/v1/memberships/cancellations").hasAnyRole("RECEPTIONIST", "STAFF", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/memberships/cancellations/*/approve", "/api/v1/memberships/cancellations/*/reject").hasRole("CENTER_MANAGER")
+                    .requestMatchers("/api/v1/memberships/trial/requests", "/api/v1/memberships/trial/requests/**").hasAnyRole("CENTER_MANAGER", "RECEPTIONIST", "ADMIN")
                     .requestMatchers("/api/v1/memberships/trial/**").hasRole("MEMBER")
                     .requestMatchers("/api/v1/memberships/subscriptions/**", "/api/v1/memberships/subscriptions",
                             "/api/v1/subscriptions/**", "/api/v1/subscriptions").hasRole("MEMBER")
 
                     // Xếp lịch & Ghi danh (SCRUM-72, 73, 131)
                     .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/my").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.GET, "/api/v1/classes/enrollments/unpaid").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
+                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/enrollments/*/confirm-payment").hasAnyRole("RECEPTIONIST", "CENTER_MANAGER")
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/enroll").hasRole("MEMBER")
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/enrollments/*").hasAnyRole("MEMBER", "CENTER_MANAGER", "RECEPTIONIST")
                     // Ghi danh / thanh toán / hủy khóa học định kỳ là thao tác của hội viên; chúng phải đứng
                     // trước các matcher ghi "/api/v1/classes/**" của CENTER_MANAGER bên dưới (khớp đầu tiên
                     // thắng).
-                    .requestMatchers(HttpMethod.POST, "/api/v1/classes/*/enroll", "/api/v1/classes/*/checkout").hasRole("MEMBER")
-                    .requestMatchers(HttpMethod.DELETE, "/api/v1/classes/*/enroll").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.POST,
+                            "/api/v1/classes/*/enroll", "/api/v1/classes/*/checkout",
+                            "/api/v1/classes/classes/*/enroll", "/api/v1/classes/classes/*/checkout").hasRole("MEMBER")
+                    .requestMatchers(HttpMethod.DELETE,
+                            "/api/v1/classes/*/enroll", "/api/v1/classes/classes/*/enroll").hasRole("MEMBER")
                     // Đặt chỗ theo buổi phải đứng trước các matcher ghi "/api/v1/classes/**" của CENTER_MANAGER
                     // bên dưới.
                     .requestMatchers(HttpMethod.POST, "/api/v1/classes/sessions/*/bookings", "/api/v1/classes/session-bookings/bulk").hasRole("MEMBER")
@@ -217,6 +242,22 @@ public class SecurityConfig {
             .addFilterBefore(rateLimitingFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    /** Tắt tự đăng ký JwtAuthenticationFilter ở tầng servlet Tomcat để bộ lọc chỉ chạy một lần trong chuỗi Spring Security. */
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtAuthenticationFilterRegistration() {
+        FilterRegistrationBean<JwtAuthenticationFilter> registration = new FilterRegistrationBean<>(jwtAuthenticationFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    /** Tắt tự đăng ký RateLimitingFilter ở tầng servlet Tomcat để bộ lọc chỉ chạy một lần trong chuỗi Spring Security. */
+    @Bean
+    public FilterRegistrationBean<RateLimitingFilter> rateLimitingFilterRegistration() {
+        FilterRegistrationBean<RateLimitingFilter> registration = new FilterRegistrationBean<>(rateLimitingFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     /** Mã hóa mật khẩu bằng BCrypt (có salt ngẫu nhiên, không giải ngược được). */

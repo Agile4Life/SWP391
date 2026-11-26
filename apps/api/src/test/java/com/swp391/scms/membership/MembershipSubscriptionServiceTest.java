@@ -1790,4 +1790,280 @@ class MembershipSubscriptionServiceTest {
         assertThat(upgraded.creditApplied()).isEqualByComparingTo("0");
         assertThat(upgraded.upgradeCharge()).isEqualByComparingTo("199000");
     }
+
+    /** Kiểm thử P0-10: nâng cấp bị từ chối khi gói đang có đợt bảo lưu đã duyệt (chưa bắt đầu). */
+    @Test
+    void upgrade_rejectsWhenHoldIsApproved() {
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage basic = new MembershipPackage();
+        basic.setId(1L); basic.setStatus("active"); basic.setDurationDays(60); basic.setPrice(new BigDecimal("6000000"));
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription current = period(100L, member, basic, null, today.minusDays(28), today.plusDays(61));
+        current.setHoldStatus("APPROVED");
+        current.setHoldUsed(true);
+        current.setHoldDaysCredited(true);
+        current.setHoldStartDate(today.plusDays(1));
+        current.setHoldEndDate(today.plusDays(30));
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(current));
+
+        assertThatThrownBy(() -> service.upgrade(principal, 100L, new SubscriptionRequests.Upgrade(2L)))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+        verify(subscriptions, never()).saveAndFlush(any());
+    }
+
+    /** Kiểm thử P0-10 & P2-BE-34: mở lại sớm gói bảo lưu đã cộng bù trừ đúng số ngày chưa dùng (inclusive) và bảo toàn proration. */
+    @Test
+    void resume_creditedHoldSubtractsInclusiveUnusedDaysAndKeepsExactProration() {
+        LocalDate today = LocalDate.now(clock); // 2026-10-11
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = holdablePackage("PLATINUM", 60);
+        pack.setPrice(new BigDecimal("6000000"));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        // 1. Mở lại giữa đợt bảo lưu 10 ngày (today-4 .. today+5 -> đã bảo lưu 4 ngày, chưa dùng 6 ngày inclusive).
+        MembershipSubscription mid = period(71L, member, pack, null, today.minusDays(14), today.plusDays(55)); // 60 + 10 = 70 ngày
+        mid.setStatus("frozen");
+        mid.setHoldStatus("APPROVED");
+        mid.setHoldUsed(true);
+        mid.setHoldDaysCredited(true);
+        mid.setHoldStartDate(today.minusDays(4));
+        mid.setHoldEndDate(today.plusDays(5));
+        when(subscriptions.findByIdForUpdate(71L)).thenReturn(Optional.of(mid));
+
+        SubscriptionDto midResumed = service.resume(principal, 71L);
+        assertThat(midResumed.endDate()).isEqualTo(today.plusDays(49)); // trừ 6 ngày chưa dùng -> gốc + 4 ngày đã bảo lưu
+        assertThat(mid.getHoldEndDate()).isEqualTo(today.minusDays(1));
+        assertThat(mid.isHoldDaysCredited()).isTrue();
+        assertThat(com.swp391.scms.membership.service.SubscriptionValueCalculator.totalDays(mid)).isEqualTo(60);
+        assertThat(com.swp391.scms.membership.service.SubscriptionValueCalculator.remainingDays(mid, today)).isEqualTo(50);
+
+        // 2. Mở lại đúng ngày cuối của bảo lưu (today == holdEndDate): trừ đúng 1 ngày hôm nay.
+        MembershipSubscription lastDay = period(72L, member, pack, null, today.minusDays(19), today.plusDays(50));
+        lastDay.setStatus("frozen");
+        lastDay.setHoldStatus("APPROVED");
+        lastDay.setHoldUsed(true);
+        lastDay.setHoldDaysCredited(true);
+        lastDay.setHoldStartDate(today.minusDays(9));
+        lastDay.setHoldEndDate(today);
+        when(subscriptions.findByIdForUpdate(72L)).thenReturn(Optional.of(lastDay));
+
+        SubscriptionDto lastResumed = service.resume(principal, 72L);
+        assertThat(lastResumed.endDate()).isEqualTo(today.plusDays(49)); // trừ 1 ngày -> gốc + 9 ngày thực nghỉ
+        assertThat(lastDay.getHoldEndDate()).isEqualTo(today.minusDays(1));
+        assertThat(lastDay.isHoldDaysCredited()).isTrue();
+        assertThat(com.swp391.scms.membership.service.SubscriptionValueCalculator.totalDays(lastDay)).isEqualTo(60);
+
+        // 3. Mở lại ngay ngày đầu của bảo lưu (today == holdStartDate): trừ đủ 10 ngày về hạn gốc, holdDaysCredited = false.
+        MembershipSubscription firstDay = period(73L, member, pack, null, today.minusDays(10), today.plusDays(59));
+        firstDay.setStatus("frozen");
+        firstDay.setHoldStatus("APPROVED");
+        firstDay.setHoldUsed(true);
+        firstDay.setHoldDaysCredited(true);
+        firstDay.setHoldStartDate(today);
+        firstDay.setHoldEndDate(today.plusDays(9));
+        when(subscriptions.findByIdForUpdate(73L)).thenReturn(Optional.of(firstDay));
+
+        SubscriptionDto firstResumed = service.resume(principal, 73L);
+        assertThat(firstResumed.endDate()).isEqualTo(today.plusDays(49)); // hạn gốc 60 ngày
+        assertThat(firstDay.isHoldDaysCredited()).isFalse();
+        assertThat(com.swp391.scms.membership.service.SubscriptionValueCalculator.totalDays(firstDay)).isEqualTo(60);
+    }
+
+    /** Kiểm thử P0-10: autoResumeHold giữ cờ holdDaysCredited=true để proration sau bảo lưu chính xác tuyệt đối. */
+    @Test
+    void autoResumeHold_preservesHoldDaysCreditedForPostHoldProration() {
+        LocalDate today = LocalDate.now(clock); // Day 32
+        Member member = new Member(); member.setUserId(10L);
+        MembershipPackage pack = holdablePackage("PLATINUM", 60);
+        pack.setPrice(new BigDecimal("6000000"));
+        MembershipSubscription sub = period(100L, member, pack, null, today.minusDays(31), today.plusDays(58)); // 90 ngày (60 + 30)
+        sub.setStatus("frozen");
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.minusDays(30)); // Day 2
+        sub.setHoldEndDate(today.minusDays(1));    // Day 31
+        sub.setHoldDaysCredited(true);
+        when(subscriptions.findById(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.autoResumeHold(100L)).isTrue();
+        assertThat(sub.getStatus()).isEqualTo("active");
+        assertThat(sub.getHoldStatus()).isNull();
+        assertThat(sub.isHoldDaysCredited()).isTrue();
+        var calc = new com.swp391.scms.membership.service.SubscriptionValueCalculator(null);
+        assertThat(calc.remainingValue(sub, today)).isEqualByComparingTo("5900000");
+    }
+
+    /** Kiểm thử P1-BE-25: gói đang trong ngày bảo lưu APPROVED bị loại khỏi current() và generateDynamicQr(). */
+    @Test
+    void currentAndDynamicQrExcludeSubscriptionHeldOnToday() {
+        Member member = new Member(); member.setUserId(10L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription heldToday = period(120L, member, holdablePackage("GOLD", 90), null,
+                today.minusDays(5), today.plusDays(90));
+        heldToday.setStatus("active");
+        heldToday.setHoldStatus("APPROVED");
+        heldToday.setHoldStartDate(today);
+        heldToday.setHoldEndDate(today.plusDays(5));
+        heldToday.setQrCode("valid-qr");
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(subscriptions.findFirstByMemberUserIdAndStatusAndStartDateLessThanEqualAndEndDateGreaterThanEqualOrderByEndDateDesc(
+                10L, "active", today, today)).thenReturn(Optional.of(heldToday));
+
+        assertThat(service.current(principal)).isNull();
+        assertThatThrownBy(() -> service.generateDynamicQr(principal))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_NOT_ACTIVE");
+
+        // Trước ngày bắt đầu bảo lưu (holdStartDate = tomorrow) thì hội viên vẫn hoạt động và sinh được QR
+        heldToday.setHoldStartDate(today.plusDays(1));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(heldToday));
+        assertThat(service.current(principal)).isNotNull();
+        assertThat(service.generateDynamicQr(principal).qrCode()).isNotBlank();
+    }
+
+    /** Kiểm thử P2-BE-37: expireSubscription chuyển gói active quá hạn sang expired và dọn HOLD_PENDING để không khóa gia hạn. */
+    @Test
+    void expireSubscriptionMarksPastDueActiveExpiredAndClearsPendingHold() {
+        Member member = new Member(); member.setUserId(10L);
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription pastDue = period(121L, member, holdablePackage("GOLD", 90), null,
+                today.minusDays(95), today.minusDays(1));
+        pastDue.setStatus("active");
+        pastDue.setHoldStatus("PENDING");
+        pastDue.setHoldStartDate(today.minusDays(5));
+        pastDue.setHoldEndDate(today.minusDays(2));
+        pastDue.setHoldReason("Đi công tác");
+        var holdDocs = org.mockito.Mockito.mock(com.swp391.scms.membership.repository.MembershipHoldDocumentRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "holdDocuments", holdDocs);
+
+        when(subscriptions.findById(121L)).thenReturn(Optional.of(pastDue));
+        when(subscriptions.findByIdForUpdate(121L)).thenReturn(Optional.of(pastDue));
+        when(subscriptions.saveAndFlush(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        assertThat(service.expireSubscription(121L)).isTrue();
+        assertThat(pastDue.getStatus()).isEqualTo("expired");
+        assertThat(pastDue.getHoldStatus()).isEqualTo("REJECTED");
+        verify(holdDocs).deleteBySubscriptionId(121L);
+    }
+
+    /** Kiểm thử P2-BE-36 & P2-BE-38: cancelHoldRequest và withdrawHoldForMember khóa Member trước Subscription và chặn rút bảo lưu khi đã có kỳ gia hạn tương lai đã trả. */
+    @Test
+    void holdCancellationLocksMemberBeforeSubscriptionAndWithdrawBlocksPaidFutureRenewal() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        LocalDate originalEnd = sub.getEndDate();
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.plusDays(3));
+        sub.setHoldEndDate(today.plusDays(9));
+        sub.setEndDate(originalEnd.plusDays(7));
+        sub.setHoldDaysCredited(true);
+
+        when(subscriptions.findByIdForUpdate(100L)).thenReturn(Optional.of(sub));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(sub));
+
+        service.cancelHoldRequest(principal, 100L);
+        org.mockito.InOrder order = org.mockito.Mockito.inOrder(members, subscriptions);
+        order.verify(members).findByUserIdForUpdate(10L);
+        order.verify(subscriptions).findByIdForUpdate(100L);
+
+        // Thiết lập lại bảo lưu đã duyệt và thêm kỳ gia hạn tương lai đã thanh toán -> withdraw bị chặn
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldUsed(true);
+        sub.setHoldStartDate(today.plusDays(3));
+        sub.setHoldEndDate(today.plusDays(9));
+        sub.setEndDate(originalEnd.plusDays(7));
+        sub.setHoldDaysCredited(true);
+        MembershipSubscription futureRenewal = period(101L, sub.getMember(), sub.getMembershipPackage(), sub,
+                sub.getEndDate().plusDays(1), sub.getEndDate().plusDays(90));
+        when(subscriptions.findByMemberUserId(10L)).thenReturn(List.of(sub, futureRenewal));
+
+        assertThatThrownBy(() -> service.withdrawHoldForMember(staffPrincipal, 100L))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_FUTURE_PAID_RENEWAL");
+    }
+
+    /** Kiểm thử P2-BE-38: không cho gia hạn khi gói đang hoạt động đã có bảo lưu APPROVED. */
+    @Test
+    void renewBlocksActiveSubscriptionWithApprovedHold() {
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        LocalDate today = LocalDate.now(clock);
+        sub.setHoldStatus("APPROVED");
+        sub.setHoldStartDate(today.plusDays(3));
+        sub.setHoldEndDate(today.plusDays(10));
+
+        assertThatThrownBy(() -> service.renew(principal, 100L))
+                .isInstanceOf(ConflictException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "MEMBERSHIP_HOLD_ALREADY_APPROVED");
+        verify(subscriptions, never()).saveAndFlush(any());
+    }
+
+    /** Kiểm thử P2-BE-40: chặn mua/gia hạn gói dùng thử hoặc gói 0đ và lọc khỏi danh sách ứng viên gia hạn của quầy. */
+    @Test
+    void createRenewAndRenewalCandidatesBlockTrialAndZeroPricePackages() {
+        com.swp391.scms.users.entity.User memberUser = new com.swp391.scms.users.entity.User();
+        memberUser.setId(10L);
+        Member member = new Member(); member.setUserId(10L); member.setUser(memberUser);
+        MembershipPackage trialPkg = new MembershipPackage();
+        trialPkg.setId(99L); trialPkg.setName("Gói Trải Nghiệm 3 Ngày");
+        trialPkg.setStatus("active"); trialPkg.setDurationDays(3); trialPkg.setPrice(BigDecimal.ZERO);
+
+        MembershipPackage freePkg = new MembershipPackage();
+        freePkg.setId(98L); freePkg.setName("Promo Free");
+        freePkg.setStatus("active"); freePkg.setDurationDays(30); freePkg.setPrice(BigDecimal.ZERO);
+
+        MembershipPackage paidPkg = new MembershipPackage();
+        paidPkg.setId(1L); paidPkg.setName("GOLD 1 THÁNG");
+        paidPkg.setStatus("active"); paidPkg.setDurationDays(30); paidPkg.setPrice(new BigDecimal("500000"));
+
+        when(members.findById(10L)).thenReturn(Optional.of(member));
+        when(packages.findById(99L)).thenReturn(Optional.of(trialPkg));
+        when(packages.findById(98L)).thenReturn(Optional.of(freePkg));
+
+        assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(99L)))
+                .isInstanceOf(BadRequestException.class);
+        assertThatThrownBy(() -> service.create(principal, new SubscriptionRequests.Create(98L)))
+                .isInstanceOf(BadRequestException.class);
+
+        LocalDate today = LocalDate.now(clock);
+        MembershipSubscription freeSub = period(200L, member, freePkg, null, today.minusDays(5), today.plusDays(24));
+        MembershipSubscription paidSub = period(201L, member, paidPkg, null, today.minusDays(5), today.plusDays(24));
+        when(subscriptions.findById(200L)).thenReturn(Optional.of(freeSub));
+        assertThatThrownBy(() -> service.renew(principal, 200L))
+                .isInstanceOf(BadRequestException.class);
+
+        when(subscriptions.findByMemberUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of(freeSub, paidSub));
+        List<SubscriptionDto> candidates = service.renewalCandidatesForStaff(staffPrincipal, 10L);
+        assertThat(candidates).extracting(SubscriptionDto::id).containsExactly(201L);
+    }
+
+    /** Kiểm thử P1-BE-56: duyệt bảo lưu truyền lý do bảo lưu vào thông báo hủy lớp (không để sót placeholder {0}). */
+    @Test
+    void approveHoldPassesHoldReasonToCancelledEnrollmentMessageWithoutRawPlaceholder() {
+        var source = new org.springframework.context.support.ResourceBundleMessageSource();
+        source.setBasename("i18n/messages");
+        source.setDefaultEncoding("UTF-8");
+        var realMessages = new com.swp391.scms.common.i18n.MessageService(source);
+        var svcWithMessages = new MembershipSubscriptionService(
+                subscriptions, packages, members, clock, new DynamicQrService(), enrollmentService, null, null, realMessages);
+
+        MembershipSubscription sub = holdableSubscription("PLATINUM", 90);
+        sub.setHoldStatus("PENDING");
+        sub.setHoldReason("Đi công tác nước ngoài");
+        // Không có ngày cụ thể -> kích hoạt nhánh đóng băng ngay và gọi cancelFutureEnrollmentsForMember
+        sub.setHoldStartDate(null);
+        sub.setHoldEndDate(null);
+
+        svcWithMessages.approveHold(staffPrincipal, 100L);
+
+        var reasonCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(enrollmentService).cancelFutureEnrollmentsForMember(eq(10L), reasonCaptor.capture());
+        assertThat(reasonCaptor.getValue())
+                .contains("Đi công tác nước ngoài")
+                .doesNotContain("{0}");
+    }
 }

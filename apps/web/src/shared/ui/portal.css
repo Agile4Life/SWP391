@@ -362,8 +362,8 @@
 }
 
 .portal-input:focus, .portal-select:focus, .portal-textarea:focus {
-  border-color: var(--color-accent-gold);
-  box-shadow: 0 0 0 3px rgba(194, 166, 132, 0.18);
+  border-color: var(--sol-accent);
+  box-shadow: 0 0 0 3px rgb(var(--sol-accent-rgb) / .18);
 }
 
 .portal-input:disabled, .portal-select:disabled, .portal-textarea:disabled {
@@ -379,7 +379,7 @@
 input[type="date"],
 input[type="time"],
 input[type="datetime-local"] {
-  accent-color: #8C6D46;
+  accent-color: var(--sol-accent);
   color-scheme: light;
 }
 
@@ -1443,8 +1443,8 @@ input[type="time"]::-webkit-calendar-picker-indicator:hover {
 
 .nav-indicator {
   width: 3px;
-  background: linear-gradient(180deg, #E3CFB0, #C2A684);
-  box-shadow: 0 0 12px rgba(194, 166, 132, 0.8);
+  background: linear-gradient(180deg, var(--sol-accent-hover), var(--sol-accent));
+  box-shadow: 0 0 12px rgb(var(--sol-accent-rgb) / .6);
 }
 
 /* Topbar: viền vàng mảnh phía dưới */
@@ -1904,9 +1904,9 @@ textarea.portal-textarea:focus-visible,
 
 /* Chip thời hạn gói tập */
 .days-left { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; white-space: nowrap; }
-.days-left--ok { background: color-mix(in srgb, #2f8f5b 16%, transparent); color: #2f8f5b; }
-.days-left--warn { background: color-mix(in srgb, #d6a638 22%, transparent); color: #9a6f00; }
-.days-left--danger { background: color-mix(in srgb, #c0392b 18%, transparent); color: #c0392b; }
+.days-left--ok { background: color-mix(in srgb, var(--portal-success, #226442) 16%, transparent); color: var(--portal-success, #226442); }
+.days-left--warn { background: color-mix(in srgb, var(--portal-warning, #805400) 20%, transparent); color: var(--portal-warning, #805400); }
+.days-left--danger { background: color-mix(in srgb, var(--portal-danger, #a33030) 16%, transparent); color: var(--portal-danger, #a33030); }
 .pass-card .days-left--ok { color: #7ddba5; }
 .pass-card .days-left--warn { color: #f0c860; }
 .pass-card .days-left--danger { color: #ff8f84; }
@@ -1936,17 +1936,17 @@ textarea.portal-textarea:focus-visible,
 
 /* Kết quả thanh toán VNPay */
 .payment-result__title { margin: 0; font-size: 22px; font-weight: 800; }
-.payment-result__title--success { color: var(--color-success, #2f855a); }
-.payment-result__title--failed { color: var(--color-danger, #c53030); }
+.payment-result__title--success { color: var(--portal-success, #226442); }
+.payment-result__title--failed { color: var(--portal-danger, #a33030); }
 .payment-result__amount { margin: 0; font-size: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }
 .payment-result__ref { margin: 0; display: grid; gap: 2px; }
 .payment-result__ref dt { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; opacity: .65; }
 .payment-result__ref dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; word-break: break-all; }
 
-.hold-notice--danger { background: color-mix(in srgb, #c53030 10%, transparent); border-color: color-mix(in srgb, #c53030 32%, transparent); }
-.hold-notice--success { background: color-mix(in srgb, #2f855a 12%, transparent); border-color: color-mix(in srgb, #2f855a 34%, transparent); }
+.hold-notice--danger { background: color-mix(in srgb, var(--portal-danger, #a33030) 12%, transparent); border-color: color-mix(in srgb, var(--portal-danger, #a33030) 34%, transparent); }
+.hold-notice--success { background: color-mix(in srgb, var(--portal-success, #226442) 12%, transparent); border-color: color-mix(in srgb, var(--portal-success, #226442) 34%, transparent); }
 .kyc-verified { display: flex; align-items: center; gap: 8px; }
-.required-mark { color: var(--color-danger, #c53030); margin-left: 2px; }
+.required-mark { color: var(--portal-danger, #a33030); margin-left: 2px; }
 .form-hint { display: block; margin-top: 4px; font-size: 13px; color: var(--portal-muted); }
 
 /* Bộ lọc khoảng ngày: hai ô ngày một hàng, ghi chú nằm dưới thay vì lơ lửng bên cạnh. */

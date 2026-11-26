@@ -64,6 +64,10 @@ class ClassServiceRecurringTest {
         Coach coach = new Coach();
         coach.setUserId(2L);
         coach.setEmploymentStatus("active");
+        com.swp391.scms.users.entity.User coachUser = new com.swp391.scms.users.entity.User();
+        coachUser.setId(2L);
+        coachUser.setStatus("active");
+        coach.setUser(coachUser);
         when(coaches.findById(2L)).thenReturn(Optional.of(coach));
 
         Room room = new Room();
@@ -102,6 +106,10 @@ class ClassServiceRecurringTest {
         Coach coach = new Coach();
         coach.setUserId(2L);
         coach.setEmploymentStatus("active");
+        com.swp391.scms.users.entity.User coachUser = new com.swp391.scms.users.entity.User();
+        coachUser.setId(2L);
+        coachUser.setStatus("active");
+        coach.setUser(coachUser);
         when(coaches.findById(2L)).thenReturn(Optional.of(coach));
         Room room = new Room();
         room.setId(3L);

@@ -5,6 +5,7 @@ import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { Modal } from '../../shared/ui/Modal';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { Select } from '../../shared/ui/Select';
 import {
   getMyStaffRequests,
@@ -59,12 +60,14 @@ export function StaffInternalRequestsPage() {
   // Đơn đang thao tác hủy
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
+  const todayDate = useMemo(() => centerNowParts().date, []);
   const tomorrowDate = useMemo(() => {
-    const today = centerNowParts().date;
-    const [y, m, d] = today.split('-').map(Number);
+    const [y, m, d] = todayDate.split('-').map(Number);
     const tomorrow = new Date(Date.UTC(y, m - 1, d + 1));
     return tomorrow.toISOString().slice(0, 10);
-  }, []);
+  }, [todayDate]);
+  // Nghỉ phép cần báo trước tối thiểu từ ngày mai; đổi ca / đổi lịch / đề xuất khác cho phép chọn ngay hôm nay.
+  const minStartDate = createType === 'LEAVE' ? tomorrowDate : todayDate;
 
   // Tải đơn từ của chính người dùng.
   const loadData = useCallback(async () => {
@@ -102,16 +105,30 @@ export function StaffInternalRequestsPage() {
       return;
     }
     if (createType === 'LEAVE' && (!createStartDate || !createEndDate)) {
-      setFormError('Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu và Ngày kết thúc.');
+      setFormError(staffMessage(
+        'Đơn xin nghỉ phép bắt buộc phải chọn Ngày bắt đầu và Ngày kết thúc.',
+        'A leave request requires both start date and end date.',
+      ));
+      return;
+    }
+    if (!createStartDate && createEndDate) {
+      setFormError(staffMessage(
+        'Vui lòng chọn Ngày bắt đầu khi đã nhập Ngày kết thúc.',
+        'Please select a start date when an end date is provided.',
+      ));
       return;
     }
     if (createStartDate && createEndDate && createEndDate < createStartDate) {
-      setFormError('Ngày kết thúc không được nhỏ hơn ngày bắt đầu.');
+      setFormError(staffMessage(
+        'Ngày kết thúc không được nhỏ hơn ngày bắt đầu.',
+        'End date cannot be earlier than start date.',
+      ));
       return;
     }
 
     setSubmitting(true);
     setFormError('');
+    const supportsShift = createType === 'SHIFT_EXCHANGE' || createType === 'SCHEDULE_CHANGE';
     // Dữ liệu đơn gửi lên backend.
     const payload = {
       requestType: createType,
@@ -119,7 +136,7 @@ export function StaffInternalRequestsPage() {
       reason: createReason.trim(),
       startDate: createStartDate || null,
       endDate: createEndDate || null,
-      targetShift: createTargetShift.trim() || null,
+      targetShift: supportsShift ? (createTargetShift.trim() || null) : null,
     };
     try {
       try {
@@ -137,7 +154,7 @@ export function StaffInternalRequestsPage() {
         await createStaffRequest({ ...payload, confirmOverlap: true });
       }
 
-      notify('Đã gửi đơn từ.', 'success');
+      notify(staffMessage('Đã gửi đơn từ.', 'Request submitted.'), 'success');
       setShowCreateModal(false);
       resetForm();
       await loadData();
@@ -165,7 +182,7 @@ export function StaffInternalRequestsPage() {
     setCancellingId(id);
     try {
       await cancelStaffRequest(id);
-      notify('Đã hủy đơn thành công.', 'success');
+      notify(staffMessage('Đã hủy đơn thành công.', 'Request cancelled successfully.'), 'success');
       await loadData();
     } catch (err: unknown) {
       setError((errorMessage(err, 'Không thể hủy đơn từ.')));
@@ -179,27 +196,30 @@ export function StaffInternalRequestsPage() {
       <PageHeader
         title={t("Đơn từ nội bộ")}
         actions={
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => {
-              resetForm();
-              setShowCreateModal(true);
-            }}
-          >
-            {t("Tạo đơn từ mới")}
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <RefreshButton label={t('Làm mới danh sách đơn từ', 'Refresh requests')} disabled={loading} onClick={() => void loadData()} />
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={() => {
+                resetForm();
+                setShowCreateModal(true);
+              }}
+            >
+              {t("Tạo đơn từ mới")}
+            </button>
+          </div>
         }
       />
 
       {/* Lọc theo trạng thái */}
       <div className="filter-chips" role="group" aria-label={t("Lọc theo trạng thái")} style={{ marginBottom: 20 }}>
         {[
-          { key: 'ALL', label: t('Tất cả') },
-          { key: 'PENDING', label: t('Chờ duyệt') },
-          { key: 'APPROVED', label: t('Đã duyệt') },
-          { key: 'REJECTED', label: t('Từ chối') },
-          { key: 'CANCELLED', label: t('Đã hủy') },
+          { key: 'ALL', label: t('Tất cả', 'All') },
+          { key: 'PENDING', label: t('Chờ duyệt', 'Pending') },
+          { key: 'APPROVED', label: t('Đã duyệt', 'Approved') },
+          { key: 'REJECTED', label: t('Từ chối', 'Rejected') },
+          { key: 'CANCELLED', label: t('Đã hủy', 'Cancelled') },
         ].map((tab) => (
           <button data-i18n-managed
             key={tab.key}
@@ -208,7 +228,7 @@ export function StaffInternalRequestsPage() {
             aria-pressed={statusFilter === tab.key}
             onClick={() => setStatusFilter(tab.key)}
           >
-            {t(tab.label)}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -216,16 +236,21 @@ export function StaffInternalRequestsPage() {
       {error && (
         <div data-i18n-managed className="portal-alert" role="alert">
           <span>{t(error)}</span>
-          <button type="button" className="portal-icon-button" aria-label={t("Đóng")} onClick={() => setError('')}>✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => void loadData()}>{t('Thử lại', 'Retry')}</button>
+            <button type="button" className="portal-icon-button" aria-label={t("Đóng")} onClick={() => setError('')}>✕</button>
+          </div>
         </div>
       )}
 
       {loading ? (
         <LoadingSkeleton label={t("Đang tải danh sách đơn từ...", "Loading requests...")} count={3} />
-      ) : filteredRequests.length === 0 ? (
+      ) : error ? null : filteredRequests.length === 0 ? (
         <EmptyState
           icon="file"
-          title={t("Không có đơn từ nào trong danh sách", "No requests in this list")}
+          title={requests.length > 0
+            ? t('Không có đơn từ nào khớp bộ lọc hiện tại', 'No requests match the current filter')
+            : t("Không có đơn từ nào trong danh sách", "No requests in this list")}
         />
       ) : (
         <div data-i18n-managed style={{ display: 'grid', gap: 16 }}>
@@ -299,7 +324,7 @@ export function StaffInternalRequestsPage() {
                 </div>
 
                 {/* Chi tiết phạm vi (ngày, ca mong muốn) */}
-                {(req.startDate || req.targetShift) && (
+                {(req.startDate || req.targetShift || req.replacementUserFullName) && (
                   <div
                     style={{
                       display: 'flex',
@@ -309,6 +334,7 @@ export function StaffInternalRequestsPage() {
                       padding: '10px 16px',
                       borderRadius: 10,
                       fontSize: 13,
+                      fontVariantNumeric: 'tabular-nums',
                       color: 'var(--portal-paper)',
                     }}
                   >
@@ -343,9 +369,10 @@ export function StaffInternalRequestsPage() {
                           : 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
                       border: `1px solid ${req.status === 'APPROVED' ? 'color-mix(in srgb, var(--portal-success) 34%, transparent)' : 'color-mix(in srgb, var(--portal-danger) 34%, transparent)'}`,
                       fontSize: 13,
+                      fontVariantNumeric: 'tabular-nums',
                     }}
                   >
-                    <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success, #22c55e)' : 'var(--portal-danger)' }}>
+                    <div style={{ fontWeight: 700, color: req.status === 'APPROVED' ? 'var(--portal-success)' : 'var(--portal-danger)' }}>
                       {req.status === 'APPROVED' ? t('Quản lý chấp thuận') : t('Quản lý từ chối')} •{' '}
                       {t("Người duyệt: ")}{req.reviewedByName || t('Ban Quản Lý')} (
                       {formatCenterDate(req.reviewedAt)})
@@ -363,8 +390,7 @@ export function StaffInternalRequestsPage() {
                   <div data-i18n-managed style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>
                     <button
                       type="button"
-                      className="btn-secondary btn-sm"
-                      style={{ color: 'var(--portal-danger)' }}
+                      className="btn-danger btn-sm"
                       disabled={cancellingId === req.id}
                       onClick={() => handleCancelRequest(req.id)}
                     >
@@ -394,7 +420,13 @@ export function StaffInternalRequestsPage() {
               <Select
                 id="internal-request-type"
                 value={createType}
-                onChange={(e) => setCreateType(e.target.value as RequestType)}
+                onChange={(e) => {
+                  const nextType = e.target.value as RequestType;
+                  setCreateType(nextType);
+                  if (nextType !== 'SHIFT_EXCHANGE' && nextType !== 'SCHEDULE_CHANGE') {
+                    setCreateTargetShift('');
+                  }
+                }}
                 style={{ width: '100%' }}
               >
                 <option value="LEAVE">{t("Xin nghỉ phép", "Leave request")}</option>
@@ -426,7 +458,7 @@ export function StaffInternalRequestsPage() {
                 <DatePicker
                   id="internal-request-start"
                   value={createStartDate}
-                  min={tomorrowDate}
+                  min={minStartDate}
                   onChange={(e) => setCreateStartDate(e.target.value)}
                 />
               </div>
@@ -438,7 +470,7 @@ export function StaffInternalRequestsPage() {
                 <DatePicker
                   id="internal-request-end"
                   value={createEndDate}
-                  min={createStartDate && createStartDate >= tomorrowDate ? createStartDate : tomorrowDate}
+                  min={createStartDate && createStartDate >= minStartDate ? createStartDate : minStartDate}
                   onChange={(e) => setCreateEndDate(e.target.value)}
                 />
               </div>
@@ -477,6 +509,7 @@ export function StaffInternalRequestsPage() {
               <button
                 type="button"
                 className="btn-secondary"
+                disabled={submitting}
                 onClick={() => setShowCreateModal(false)}
               >
                 {t("Hủy")}</button>

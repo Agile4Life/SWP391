@@ -48,7 +48,7 @@ public class AiRecommendationController {
     }
 
     /** POST /generate-workout-plan: AI đề xuất giáo án cho hội viên dựa trên hồ sơ và yêu cầu thêm. */
-    @Operation(summary = "AI gợi ý giáo án bài tập cá nhân hóa", description = "Phân tích chiều cao, cân nặng, BMI, mục tiêu và tiền sử chấn thương của hội viên để sinh giáo án JSON và lưu vết ai_recommendation_logs")
+    @Operation(summary = "AI gợi ý giáo án bài tập cá nhân hóa", description = "Phân tích mục tiêu, trình độ, lưu ý sức khỏe và giáo án hiện tại của hội viên để sinh giáo án JSON và lưu vết ai_recommendation_logs")
     @PostMapping({"/generate-workout-plan", "/recommend", "/recommendations"})
     public ResponseEntity<ApiResponse<AiWorkoutPlanResponse>> generateWorkoutPlan(
             @Valid @RequestBody AiWorkoutPlanRequest request,

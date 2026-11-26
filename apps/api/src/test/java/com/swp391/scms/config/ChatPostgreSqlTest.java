@@ -47,6 +47,7 @@ class ChatPostgreSqlTest {
 
     @Test void concurrentOpenAndRetryProduceOneConversationAndOneMessage() throws Exception {
         long member = user("MEMBER"), coach = user("COACH");
+        linkCoachAndMember(member, coach);
         var p = new AuthenticatedPrincipal(member, "fixture", "MEMBER");
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var ready = new CountDownLatch(2); var start = new CountDownLatch(1);
@@ -67,6 +68,7 @@ class ChatPostgreSqlTest {
 
     @Test void unreadCountsFollowEachSidesReadMarker() {
         long member = user("MEMBER"), coach = user("COACH");
+        linkCoachAndMember(member, coach);
         var m = new AuthenticatedPrincipal(member, "fixture", "MEMBER");
         var c = new AuthenticatedPrincipal(coach, "fixture", "COACH");
         long id = service.open(m, coach).id();
@@ -90,6 +92,15 @@ class ChatPostgreSqlTest {
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update("insert into chat_conversations(member_user_id,staff_user_id,created_at,last_activity_at) values (?,?,now(),now())", member, -999L))
                 .isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
+    }
+
+    /** Hàm trợ giúp của test: gắn quan hệ HLV - hội viên hiện tại qua giáo án active để đáp ứng phân quyền chat. */
+    private void linkCoachAndMember(long member, long coach) {
+        jdbc.update("insert into members(user_id,membership_code,join_date,fitness_level) values (?,?,current_date,'beginner')",
+                member, "CHAT-" + member);
+        jdbc.update("insert into coaches(user_id,employment_status) values (?,'active')", coach);
+        jdbc.update("insert into training_plans(member_id,coach_id,goal,start_date,end_date,status,is_ai_generated,created_at,updated_at) "
+                + "values (?,?,'Chat fixture plan',current_date,current_date + 30,'active',false,now(),now())", member, coach);
     }
 
     /** Hàm trợ giúp của test: tạo dữ liệu mẫu/giả lập (user). */

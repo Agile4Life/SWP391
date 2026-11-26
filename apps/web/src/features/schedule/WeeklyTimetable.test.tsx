@@ -1,9 +1,13 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { setLanguage } from '../../shared/i18n/language';
 import { WeeklyTimetable } from './WeeklyTimetable';
 import type { TimetableEvent } from './timetable';
-import calendarCss from './calendar.css?raw';
+
+const calendarCss = readFileSync(resolve(__dirname, 'calendar.css'), 'utf8');
 
 const event: TimetableEvent = {
   id: '7', date: '2099-01-05', startTime: '07:00:00', endTime: '09:30:00',
@@ -18,7 +22,7 @@ describe('WeeklyTimetable', () => {
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div'); document.body.append(host); root = createRoot(host);
   });
-  afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+  afterEach(async () => { await act(async () => root.unmount()); host.remove(); setLanguage('vi'); vi.useRealTimers(); vi.unstubAllGlobals(); });
   // Dựng component vào DOM giả để kiểm thử.
   const render = (props: Partial<React.ComponentProps<typeof WeeklyTimetable>> = {}) => act(async () => root.render(
     <WeeklyTimetable label="Tuần" weekStart="2099-01-05" events={[event]} legend={legend}
@@ -98,7 +102,7 @@ describe('WeeklyTimetable', () => {
     await render({ onSlotClick: () => {} });
     const first = host.querySelector<HTMLButtonElement>('[data-slot="2099-01-05|1"]')!;
     expect(first.tabIndex).toBe(0);
-    first.focus();
+    await act(async () => { first.focus(); });
     await act(async () => { first.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true })); });
     expect(document.activeElement).toBe(host.querySelector('[data-slot="2099-01-05|2"]'));
     expect(host.querySelectorAll('button.mcal__slot[tabindex="0"]')).toHaveLength(1);
@@ -192,5 +196,56 @@ describe('WeeklyTimetable', () => {
     await act(async () => gymRow.click());
     expect(onEventClick).toHaveBeenCalledWith('3');
     expect(document.querySelector('[data-testid="timetable-overflow-list"]')).toBeNull();
+  });
+
+  it('renders a distinct full-capacity seat badge on full events and guards accent override in CSS', async () => {
+    const fullEvent: TimetableEvent = {
+      ...event,
+      id: '11',
+      tone: 'full',
+      accentColor: '#60a5fa',
+      badge: '12/12 · Đã đầy',
+    };
+    await render({ events: [fullEvent] });
+    const block = host.querySelector<HTMLButtonElement>('.mcal__event')!;
+    expect(block.classList).toContain('mcal__event--full');
+    expect(block.getAttribute('data-accent')).toBe('true');
+    expect(block.querySelector('.mcal__event-badge--full')?.textContent).toBe('12/12 · Đã đầy');
+    expect(calendarCss).toContain(":not(.mcal__event--full)");
+    expect(calendarCss).not.toContain('.rcal__');
+    expect(calendarCss).not.toContain('12.5px');
+  });
+
+  it('uses singular English grammar for 1 outside-range session and role-neutral overflow subtitle', async () => {
+    setLanguage('en');
+    const events: TimetableEvent[] = [
+      { ...event, id: '1', title: 'Yoga', startTime: '17:00:00', endTime: '19:30:00' },
+      { ...event, id: '2', title: 'Boxing', startTime: '17:00:00', endTime: '19:30:00' },
+      { ...event, id: '3', title: 'Gym', startTime: '17:00:00', endTime: '19:30:00' },
+      { ...event, id: '4', title: 'Late Session', startTime: '20:30:00', endTime: '21:30:00' },
+    ];
+    await render({ events, maxVisibleLanes: 2 });
+    expect(host.textContent).toContain('1 session outside the 5-slot schedule (07:00–19:30) is not shown.');
+    expect(host.textContent).not.toContain('1 sessions');
+
+    const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]')!;
+    await act(async () => overflowBtn.click());
+    expect(document.body.textContent).toContain('Select a session below to view full details.');
+    expect(document.body.textContent).not.toContain('reschedule, or cancel');
+  });
+
+  it('evaluates today and past slots in Asia/Ho_Chi_Minh (UTC+7)', async () => {
+    vi.useFakeTimers();
+    // 2026-11-25T18:30:00Z = 2026-11-26 01:30+07:00 (Thursday in VN)
+    vi.setSystemTime(new Date('2026-11-25T18:30:00Z'));
+    await render({ weekStart: '2026-11-23', events: [], onSlotClick: () => {} });
+    const todayHead = host.querySelector('.mcal__dayhead.is-today');
+    expect(todayHead?.textContent).toContain('26');
+    // 2026-11-25 is yesterday in VN, so Slot 5 on 2026-11-25 is past.
+    const yesterdaySlot5 = host.querySelector<HTMLButtonElement>('[data-slot="2026-11-25|5"]')!;
+    expect(yesterdaySlot5.getAttribute('aria-disabled')).toBe('true');
+    // 2026-11-26 Slot 1 (07:00-09:30) is still upcoming at 01:30 VN.
+    const todaySlot1 = host.querySelector<HTMLButtonElement>('[data-slot="2026-11-26|1"]')!;
+    expect(todaySlot1.getAttribute('aria-disabled')).toBeNull();
   });
 });

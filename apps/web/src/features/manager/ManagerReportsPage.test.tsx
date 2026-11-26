@@ -88,3 +88,27 @@ it('does not report snapshot success or download a report when persistence fails
   expect(api.toast).toHaveBeenCalledWith('snapshot unavailable', 'error');
   expect(api.toast).not.toHaveBeenCalledWith(expect.any(String), 'success');
 });
+
+it('P2-FE-44 & P3-FE-21: renders unknown payment method fallback instead of blank badge, formats CSV export timestamp in center time, and styles quick range buttons with btn-secondary btn-sm', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-24T01:05:00Z')); // 08:05 24/11/2026 UTC+7
+  try {
+    await exportReport();
+    // Unknown payment method '=method' must render '=method' inside the badge, not empty string
+    const methodBadge = host.querySelector('tbody tr td:nth-child(5) .badge');
+    expect(methodBadge?.textContent).toBe('=method');
+
+    // Quick range buttons use btn-secondary btn-sm without inline style overrides
+    const sevenDaysBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('7 ngày qua'))!;
+    expect(sevenDaysBtn.className).toContain('btn-secondary');
+    expect(sevenDaysBtn.className).toContain('btn-sm');
+    expect(sevenDaysBtn.getAttribute('style')).toBeNull();
+
+    // CSV export timestamp uses Asia/Ho_Chi_Minh (08:05 24/11/2026)
+    const blob = vi.mocked(URL.createObjectURL).mock.calls[0][0] as Blob;
+    const csv = await blob.text();
+    expect(csv).toContain('08:05 24/11/2026');
+  } finally {
+    vi.useRealTimers();
+  }
+});

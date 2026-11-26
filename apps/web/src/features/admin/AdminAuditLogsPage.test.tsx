@@ -167,8 +167,79 @@ describe('AdminAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấp 
     expect(host.textContent).toContain('Chi tiết thay đổi bản ghi #101');
     expect(host.textContent).toContain('Giá trị cũ');
     expect(host.textContent).toContain('Giá trị mới');
-    expect(host.textContent).toContain('pending_payment');
-    expect(host.textContent).toContain('active');
+    expect(host.textContent).toContain('Chờ thanh toán');
+    expect(host.textContent).toContain('Đang hoạt động');
+  });
+
+  it('wraps table in portal-table-wrapper, hides retired shop filter options, hides pagination on error/empty, and supports #ID & date filters (P1-FE-57, P1-FE-58, P2-FE-74)', async () => {
+    await act(async () => { root.render(<AdminAuditLogsPage />); });
+
+    // P1-FE-57: table wrapped in portal-table-wrapper for horizontal scroll
+    expect(host.querySelector('.portal-table-wrapper table.audit-table')).not.toBeNull();
+
+    // P2-FE-74: retired shop filter options removed from dropdowns
+    const actionOptions = Array.from(host.querySelectorAll('select[aria-label="Lọc theo hành động"] option')).map((o) => (o as HTMLOptionElement).value);
+    const entityOptions = Array.from(host.querySelectorAll('select[aria-label="Lọc theo đối tượng"] option')).map((o) => (o as HTMLOptionElement).value);
+    expect(actionOptions).not.toContain('COMPLETE_ORDER');
+    expect(actionOptions).not.toContain('CANCEL_ORDER');
+    expect(entityOptions).not.toContain('products');
+    expect(entityOptions).not.toContain('product_orders');
+
+    // P1-FE-58: numeric #ID sends userId to server API
+    const actorInput = host.querySelector('input[aria-label="Tìm kiếm người thực hiện"]') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(actorInput, '#5');
+      actorInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(auditApi.getAuditLogs).toHaveBeenLastCalledWith(expect.objectContaining({ userId: 5, page: 0 }));
+
+    // P2-FE-74: pagination bar hidden when 0 results
+    vi.mocked(auditApi.getAuditLogs).mockResolvedValueOnce({ content: [], totalElements: 0, totalPages: 0, number: 0, size: 8 });
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(actorInput, '#999');
+      actorInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    expect(host.querySelector('.audit-pagination-bar')).toBeNull();
+  });
+
+  it('never leaks raw CCCD enum into English Diff modal (P2-FE-74)', async () => {
+    vi.mocked(auditApi.getAuditLogs).mockResolvedValue({
+      content: [{
+        id: 305,
+        userId: 3,
+        userFullName: 'Admin',
+        userEmail: 'admin@sol.vn',
+        action: 'MEMBER_KYC_APPROVE',
+        entityType: 'members',
+        entityId: 12,
+        oldValue: { idCardType: 'CCCD', kycStatus: 'pending' },
+        newValue: { idCardType: 'PASSPORT', kycStatus: 'approved' },
+        ipAddress: '::1',
+        createdAt: '2026-11-25T10:00:00',
+      }],
+      totalElements: 1,
+      totalPages: 1,
+      number: 0,
+      size: 8,
+    });
+    await act(async () => { setLanguage('en'); });
+    await act(async () => { root.render(<AdminAuditLogsPage />); });
+    await act(async () => { (host.querySelector('button[aria-label="View record diff #305"]') as HTMLButtonElement).click(); });
+    const modalText = host.querySelector('.diff-modal-container')?.textContent ?? '';
+    expect(modalText).toContain('Identity card');
+    expect(modalText).toContain('Passport');
+    expect(modalText).not.toContain('CCCD');
+  });
+
+  it('computes unclamped totalEnrolled and hides highestClass when all classes are 0% (P3-FE-28)', async () => {
+    vi.mocked(auditApi.getClassOccupancy).mockResolvedValueOnce([
+      { classId: 1, className: 'Empty Yoga', disciplineId: 1, disciplineName: 'Yoga', capacity: 10, enrolledCount: 0, presentCount: 0, utilizationRate: 0, attendanceRate: 0 },
+      { classId: 2, className: 'Empty Boxing', disciplineId: 2, disciplineName: 'Boxing', capacity: 10, enrolledCount: 0, presentCount: 0, utilizationRate: 0, attendanceRate: 0 },
+    ]);
+    await act(async () => { root.render(<AdminAuditLogsPage />); });
+    await act(async () => { (host.querySelectorAll('button[role="tab"]')[1] as HTMLButtonElement).click(); });
+    expect(host.querySelector('.occupancy-summary-cards')?.textContent).not.toContain('Empty Yoga');
+    expect(host.querySelector('.occupancy-summary-cards')?.textContent).toContain('—');
   });
 
   it('filters the current page by actor name or email', async () => {
@@ -201,7 +272,8 @@ describe('AdminAuditLogsPage (SCRUM-124: Giám sát Audit Log & Báo cáo Lấp 
     expect(host.textContent).toContain('Audit log & class fill');
     expect(host.querySelector('input[aria-label="Search actor"]')).not.toBeNull();
     await act(async () => { (host.querySelector('button[aria-label="View record diff #101"]') as HTMLButtonElement).click(); });
-    expect(host.textContent).toContain('pending_payment');
+    expect(host.textContent).toContain('Pending payment');
+    expect(host.textContent).toContain('Active');
     expect(host.textContent).toContain('View changes');
     expect(auditApi.getAuditLogs).toHaveBeenCalledTimes(1);
     await act(async () => { (host.querySelectorAll('button[role="tab"]')[1] as HTMLButtonElement).click(); });

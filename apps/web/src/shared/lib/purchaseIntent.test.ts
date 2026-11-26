@@ -11,17 +11,29 @@ it('keeps the selected package through register and login for members only', () 
   expect(selectedPackageId('?packageId=2')).toBe(2);
 });
 
-it.each(['https://evil.test', '//evil.test', '/manager/users', '/member/packages?packageId=-1', '/member/packages?packageId=1.5'])('rejects untrusted purchase return paths: %s', returnTo => {
+it.each(['https://evil.test', '//evil.test', '/manager/users', '/member/packages?packageId=-1', '/member/packages?packageId=1.5', '/member/packages?packageId=1e2'])('rejects untrusted purchase return paths: %s', returnTo => {
   const search = '?returnTo=' + encodeURIComponent(returnTo);
   expect(authDestination('MEMBER', search)).toBe('/member/dashboard');
   expect(purchaseAuthPath('/login', search)).toBe('/login');
 });
 
-it('recovers the purchase intent after an OAuth redirect and clears it on arrival', () => {
+// P3-FE-12: strict integer regex for selectedPackageId
+it.each(['?packageId=1e2', '?packageId=%2B5', '?packageId=0x10', '?packageId=0', '?packageId=-3', '?packageId=1.5'])('rejects non-strict integer packageId: %s', search => {
+  expect(selectedPackageId(search)).toBeNull();
+});
+
+it('recovers the purchase intent after an OAuth redirect and consumes it on arrival', () => {
   rememberPurchaseIntent('?returnTo=' + encodeURIComponent('/member/packages?packageId=2'));
   expect(authDestination('MEMBER', '?google_oauth=authenticated')).toBe('/member/packages?packageId=2');
-  clearPurchaseIntent();
   expect(authDestination('MEMBER', '')).toBe('/member/dashboard');
+});
+
+// P2-FE-23: Non-member login clears stale purchase intent so subsequent member logins are not misrouted
+it('clears stale purchase intent when a non-member signs in', () => {
+  rememberPurchaseIntent('?returnTo=' + encodeURIComponent('/member/packages?packageId=9'));
+  expect(authDestination('STAFF', '')).toBe('/staff/reception');
+  expect(authDestination('MEMBER', '')).toBe('/member/dashboard');
+  clearPurchaseIntent();
 });
 
 it.each(['/checkout', '/products', '/products/sol-whey-isolate'])('rejects retired shop return path %s', path => {

@@ -80,6 +80,7 @@ public class EntitlementRevocationService {
             booking.setStatus("cancelled");
             booking.setCancelledAt(now);
             booking.setCancelReason(cancelReason);
+            settleCoachPayments(booking, memberId, true, cancelReason);
             cancelled++;
             notifyReleased(memberId, "notifications.membership.pt_released.body", booking.getId(),
                     booking.getBookingDate(), booking.getStartTime());
@@ -96,9 +97,9 @@ public class EntitlementRevocationService {
     }
 
     /**
-     * Gói đang bảo lưu (frozen) có đợt bảo lưu theo ngày đã duyệt vẫn bao phủ thời hạn của chính nó: gồm các ngày
-     * bảo lưu và các ngày sau đó cho đến ngày hết hạn đã được lùi thêm số ngày bảo lưu.
-     * Nếu không có kiểm tra này, job quét hằng đêm sẽ hủy toàn bộ lịch đặt sau đợt bảo lưu vì hội viên chưa ở trạng thái "active".
+     * Gói đang bảo lưu (frozen) có đợt bảo lưu theo ngày đã duyệt vẫn bao phủ các ngày ngoài khoảng bảo lưu của
+     * chính nó (tới ngày hết hạn đã cộng bù ngày bảo lưu — không cộng lặp nếu {@code holdDaysCredited} đã là true).
+     * Các ngày nằm ngay trong {@code [holdStartDate, holdEndDate]} bị loại trừ vì hội viên đang bảo lưu.
      */
     private boolean coveredByDatedHold(Long memberId, LocalDate date) {
         return subscriptions.findByMemberUserIdAndStatus(memberId, "frozen").stream()
@@ -106,8 +107,12 @@ public class EntitlementRevocationService {
                         && sub.getHoldStartDate() != null && sub.getHoldEndDate() != null
                         && sub.getStartDate() != null && sub.getEndDate() != null)
                 .anyMatch(sub -> {
-                    long heldDays = java.time.temporal.ChronoUnit.DAYS.between(sub.getHoldStartDate(), sub.getHoldEndDate()) + 1;
-                    return !date.isBefore(sub.getStartDate()) && !date.isAfter(sub.getEndDate().plusDays(heldDays));
+                    if (sub.isHeldOn(date)) return false;
+                    LocalDate effectiveEnd = sub.isHoldDaysCredited()
+                            ? sub.getEndDate()
+                            : sub.getEndDate().plusDays(
+                                    java.time.temporal.ChronoUnit.DAYS.between(sub.getHoldStartDate(), sub.getHoldEndDate()) + 1);
+                    return !date.isBefore(sub.getStartDate()) && !date.isAfter(effectiveEnd);
                 });
     }
 
@@ -138,7 +143,7 @@ public class EntitlementRevocationService {
             // sau mốc đó lượt gói (hoặc số tiền đã trả) được tính là đã sử dụng.
             boolean inTime = !booking.getBookingDate().isBefore(today.plusDays(PT_HOLD_REFUND_DAYS));
             boolean quota = "package_quota".equalsIgnoreCase(booking.getPaymentMethod());
-            java.math.BigDecimal[] money = settleCoachPayments(booking, inTime, cancelReason);
+            java.math.BigDecimal[] money = settleCoachPayments(booking, memberId, inTime, cancelReason);
             if (quota && !inTime) booking.setQuotaForfeited(true);
             String ptKey = money[0].signum() == 0 && !quota ? "notifications.membership.pt_hold_released.unpaid"
                     : inTime ? (quota ? "notifications.membership.pt_hold_released.quota"
@@ -164,10 +169,11 @@ public class EntitlementRevocationService {
      * được hoàn vào ví nếu kịp hạn. Trả về {đã trả, đã hoàn}: số tiền hội viên đã trả và số tiền hoàn về ví
      * (bằng 0 khi {@code inTime} là false).
      */
-    private java.math.BigDecimal[] settleCoachPayments(CoachBooking booking, boolean inTime, String reason) {
+    private java.math.BigDecimal[] settleCoachPayments(CoachBooking booking, Long fallbackMemberId,
+                                                       boolean inTime, String reason) {
         java.math.BigDecimal paid = java.math.BigDecimal.ZERO;
         java.math.BigDecimal refunded = java.math.BigDecimal.ZERO;
-        if (payments != null) {
+        if (payments != null && booking.getId() != null) {
             for (var payment : payments.findAllByCoachBookingId(booking.getId())) {
                 if ("pending".equals(payment.getStatus())) {
                     payment.setStatus("failed");
@@ -183,8 +189,10 @@ public class EntitlementRevocationService {
                 }
             }
         }
-        if (refunded.signum() > 0 && walletService != null && booking.getMember() != null) {
-            walletService.creditCoachBookingRefund(booking.getMember().getUserId(), refunded,
+        Long targetMemberId = booking.getMember() != null && booking.getMember().getUserId() != null
+                ? booking.getMember().getUserId() : fallbackMemberId;
+        if (refunded.signum() > 0 && walletService != null && targetMemberId != null) {
+            walletService.creditCoachBookingRefund(targetMemberId, refunded,
                     "COACH_REFUND_" + booking.getId(), reason);
         }
         return new java.math.BigDecimal[]{paid, refunded};

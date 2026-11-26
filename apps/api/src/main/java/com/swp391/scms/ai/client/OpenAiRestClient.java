@@ -2,9 +2,12 @@ package com.swp391.scms.ai.client;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -13,6 +16,7 @@ import java.util.Map;
 /** Client gọi API kiểu OpenAI (OpenAI hoặc Groq) để soạn giáo án. */
 public class OpenAiRestClient implements AiClient {
 
+    private static final Logger log = LoggerFactory.getLogger(OpenAiRestClient.class);
     private static final ObjectMapper MAPPER = new ObjectMapper();
     static final int MAX_JSON_OUTPUT_TOKENS = 2500;
 
@@ -115,8 +119,11 @@ public class OpenAiRestClient implements AiClient {
             if (!cleaned.isBlank()) {
                 return cleaned;
             }
-        } catch (Exception ignored) {
-            // Rơi về payload dự phòng có tính xác định khi upstream không truy cập được.
+        } catch (RestClientResponseException ex) {
+            log.warn("AI provider '{}' (model '{}') returned HTTP {}", providerName, model, ex.getStatusCode().value());
+        } catch (Exception ex) {
+            // Không ghi API key, body hay prompt/PII vào log.
+            log.warn("AI provider '{}' (model '{}') call failed: {}", providerName, model, ex.getClass().getSimpleName());
         }
         return fallbackPayload(userMessage);
     }

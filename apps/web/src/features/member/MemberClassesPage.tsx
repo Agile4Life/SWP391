@@ -42,27 +42,33 @@ export function MemberClassesPage() {
       <PageHeader title={text('Lịch học & đặt PT', 'Classes & 1:1 PT')} />
       <div className="portal-tabs" role="tablist" aria-label={text('Lịch học và đặt lịch', 'Schedule and booking')}>
         <button
+          id="member-classes-tab-timetable"
           type="button"
           role="tab"
           aria-selected={activeTab === 'timetable'}
+          aria-controls="member-classes-panel-timetable"
           className={activeTab === 'timetable' ? 'portal-tab active' : 'portal-tab'}
           onClick={() => selectTab('timetable')}
         >
           {text('Lịch của tôi', 'My schedule')}
         </button>
         <button
+          id="member-classes-tab-classes"
           type="button"
           role="tab"
           aria-selected={activeTab === 'classes'}
+          aria-controls="member-classes-panel-classes"
           className={activeTab === 'classes' ? 'portal-tab active' : 'portal-tab'}
           onClick={() => selectTab('classes')}
         >
           {text('Đăng ký lớp học', 'Group classes')}
         </button>
         <button
+          id="member-classes-tab-pt"
           type="button"
           role="tab"
           aria-selected={activeTab === 'pt'}
+          aria-controls="member-classes-panel-pt"
           className={activeTab === 'pt' ? 'portal-tab active' : 'portal-tab'}
           onClick={() => selectTab('pt')}
         >
@@ -70,13 +76,19 @@ export function MemberClassesPage() {
         </button>
       </div>
 
-      {activeTab === 'timetable' ? (
-        <MemberCalendar key={refreshTick} />
-      ) : activeTab === 'classes' ? (
-        <MemberGroupClassesView initialDiscipline={disciplineParam} onBookingChange={handleBookingChange} />
-      ) : (
-        <MemberCoachBookingView onBookingSuccess={handleBookingChange} />
-      )}
+      <div
+        role="tabpanel"
+        id={`member-classes-panel-${activeTab}`}
+        aria-labelledby={`member-classes-tab-${activeTab}`}
+      >
+        {activeTab === 'timetable' ? (
+          <MemberCalendar key={refreshTick} />
+        ) : activeTab === 'classes' ? (
+          <MemberGroupClassesView initialDiscipline={disciplineParam} onBookingChange={handleBookingChange} />
+        ) : (
+          <MemberCoachBookingView onBookingSuccess={handleBookingChange} />
+        )}
+      </div>
     </div>
   );
 }

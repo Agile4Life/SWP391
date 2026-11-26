@@ -67,16 +67,20 @@ public class CourseAttendanceService {
     }
 
     /**
-     * Job mỗi 30 phút đánh vắng các buổi đã qua; chỉ chạy khi bật lớp nhóm (app.legacy.classes-enabled). Lỗi
-     * chỉ ghi log.
+     * Job mỗi 30 phút đánh vắng các buổi đã qua; chỉ chạy khi bật lớp nhóm (app.legacy.classes-enabled). Chạy
+     * trong transaction Spring để đảm bảo phiên Hibernate mở (tránh LazyInitializationException) và ghi nguyên tử.
      */
-    @Scheduled(cron = "${app.attendance.auto-absent.cron:0 */30 * * * ?}")
+    @Scheduled(cron = "${app.attendance.auto-absent.cron:0 */30 * * * ?}", zone = "Asia/Ho_Chi_Minh")
+    @Transactional
     public void sweep() {
         if (!classesEnabled) return;
         try {
             int marked = markMissedSessions();
             if (marked > 0) log.info("[CourseAttendance] marked {} missed session(s) as absent", marked);
         } catch (RuntimeException ex) {
+            if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+                org.springframework.transaction.interceptor.TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            }
             log.warn("[CourseAttendance] sweep failed", ex);
         }
     }

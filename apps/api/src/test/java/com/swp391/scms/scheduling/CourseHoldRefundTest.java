@@ -196,4 +196,26 @@ class CourseHoldRefundTest {
         assertEquals(1, overlapping.creditsRestored());
         assertEquals("cancelled", enrollment.getStatus());
     }
+
+    /** Kiểm thử P1-BE-56: releaseCoursesForHold khi cancelReason rỗng hoặc chứa {0} vẫn resolve đủ đối số i18n. */
+    @Test
+    void releaseCoursesForHoldNeverStoresLiteralPlaceholderInCancelReason() {
+        var messageSource = new org.springframework.context.support.ResourceBundleMessageSource();
+        messageSource.setBasenames("i18n/messages");
+        messageSource.setDefaultEncoding("UTF-8");
+        var realMessages = new com.swp391.scms.common.i18n.MessageService(messageSource);
+
+        EnrollmentService localized = new EnrollmentService(enrollments, null, gymClasses,
+                mock(MembershipSubscriptionRepository.class), members, null, realMessages, clock);
+        localized.setPaymentRepository(payments);
+        ReflectionTestUtils.setField(localized, "wallets", wallets);
+
+        ClassEnrollment enrollment = enroll(1L, today.plusDays(10));
+        CourseHoldOutcome outcome = localized.releaseCoursesForHold(100L, null, null, null);
+
+        assertEquals(1, outcome.cancelled());
+        assertNotNull(enrollment.getCancelReason());
+        assertFalse(enrollment.getCancelReason().contains("{0}"),
+                "Hold cancel reason must not contain literal {0}: " + enrollment.getCancelReason());
+    }
 }

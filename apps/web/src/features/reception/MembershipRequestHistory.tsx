@@ -90,9 +90,16 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
       {loading ? (
         <LoadingSkeleton label={t('Đang tải lịch sử…')} variant="table" count={3} />
       ) : error ? (
-        <div role="alert"><p>{t(error)}</p><button type="button" className="btn-secondary btn-sm" onClick={() => setReload((n) => n + 1)}>{t('Thử lại')}</button></div>
+        <div className="portal-alert" role="alert">
+          <span>{t(error)}</span>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setReload((n) => n + 1)}>{t('Thử lại', 'Retry')}</button>
+        </div>
       ) : visible.length === 0 ? (
-        <p className="muted" style={{ padding: '16px 0' }}>{t('Chưa có yêu cầu nào được xử lý trong khoảng thời gian này.')}</p>
+        <p className="muted" style={{ padding: '16px 0' }}>
+          {items.length > 0
+            ? t('Không có yêu cầu nào khớp từ khóa hoặc bộ lọc hiện tại.', 'No requests match your search or current filters.')
+            : t('Chưa có yêu cầu nào được xử lý trong khoảng thời gian này.', 'No requests have been processed in this period.')}
+        </p>
       ) : (
         <div className="portal-table-wrapper">
           <table className="portal-table">
@@ -110,11 +117,11 @@ export function MembershipRequestHistory({ refreshKey = 0 }: { refreshKey?: numb
             <tbody>
               {visible.map((item) => (
                 <tr key={`${item.subscriptionId}-${item.outcome}`}>
-                  <td>{item.processedAt ? formatCenterDateTime(item.processedAt) : '—'}</td>
-                  <td>#{item.subscriptionId} · {item.memberName}{item.membershipCode ? <span className="muted"> · {item.membershipCode}</span> : null}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{item.processedAt ? formatCenterDateTime(item.processedAt) : '—'}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>#{item.subscriptionId} · {item.memberName}{item.membershipCode ? <span className="muted"> · {item.membershipCode}</span> : null}</td>
                   <td>{t(TYPE_LABELS[item.type])}</td>
                   <td>{item.previousPackageName && item.type === 'UPGRADE' ? `${item.previousPackageName} → ${item.packageName ?? ''}` : item.packageName ?? '—'}</td>
-                  <td>{vnd(item.amount)}{item.paymentMethod ? <span className="muted"> · {t(METHOD_LABELS[item.paymentMethod] ?? item.paymentMethod)}</span> : null}</td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>{vnd(item.amount)}{item.paymentMethod ? <span className="muted"> · {t(METHOD_LABELS[item.paymentMethod] ?? item.paymentMethod)}</span> : null}</td>
                   <td>{t(OUTCOME_LABELS[item.outcome])}</td>
                   <td>{item.processedByName ?? (item.outcome === 'APPROVED' ? t('Hội viên tự thanh toán') : '—')}</td>
                 </tr>

@@ -72,4 +72,22 @@ class MemberDiscountServiceTest {
         assertThat(MemberDiscountService.apply(new BigDecimal("500000"), 0)).isEqualByComparingTo("500000");
         assertThat(MemberDiscountService.apply(BigDecimal.ZERO, 20)).isEqualByComparingTo("0");
     }
+
+    /** Kiểm thử P1-BE-25: không áp dụng giảm giá hạng khi gói active đang nằm trong ngày bảo lưu đã duyệt. */
+    @Test
+    void heldSubscriptionDoesNotGrantTierDiscountOnHoldDay() {
+        LocalDate today = LocalDate.of(2026, 11, 9);
+        MembershipSubscription heldToday = sub("PLATINUM 3 THÁNG", "PLATINUM", 90, today.minusDays(10), today.plusDays(85));
+        heldToday.setHoldStatus("APPROVED");
+        heldToday.setHoldStartDate(today);
+        heldToday.setHoldEndDate(today.plusDays(5));
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "active")).thenReturn(List.of(heldToday));
+
+        assertThat(service.percentFor(10L)).isZero();
+
+        // Trước ngày bắt đầu bảo lưu: vẫn được hưởng chiết khấu bình thường.
+        heldToday.setHoldStartDate(today.plusDays(1));
+        heldToday.setHoldEndDate(today.plusDays(6));
+        assertThat(service.percentFor(10L)).isEqualTo(20);
+    }
 }

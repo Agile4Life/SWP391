@@ -70,15 +70,25 @@ class DemoClassSeederTest {
         });
     }
 
-    /** Kiểm thử: tạo đúng 1 lớp active cho mỗi bộ môn trong 3 bộ môn mà không trùng lịch HLV hay phòng. */
+    /** Kiểm thử P2-BE-25: tạo đủ khóa đang diễn ra và khóa sắp khai giảng (fromDay > 0) cho cả 3 bộ môn mà không trùng HLV, phòng hay cùng bộ môn. */
     @Test
-    void createsOneActiveClassPerDisciplineWithoutDoubleBookingACoachOrRoom() {
+    void createsOngoingAndUpcomingActiveClassesPerDisciplineWithoutConflicts() {
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+
         seeder.run(null);
 
-        assertThat(savedClasses).hasSize(3);
+        assertThat(savedClasses).hasSize(6);
         assertThat(savedClasses)
                 .extracting(c -> c.getDiscipline().getName())
-                .containsExactlyInAnyOrder("Gym", "Boxing", "Yoga");
+                .containsExactlyInAnyOrder("Gym", "Gym", "Boxing", "Boxing", "Yoga", "Yoga");
+        // Mỗi bộ môn đều có ít nhất 1 khóa sắp khai giảng (startDate > today) để hội viên đăng ký được ngay
+        for (String disciplineName : List.of("Gym", "Boxing", "Yoga")) {
+            assertThat(savedClasses.stream()
+                    .filter(c -> disciplineName.equals(c.getDiscipline().getName()))
+                    .anyMatch(c -> c.getStartDate().isAfter(today)))
+                    .as("discipline %s should have an upcoming enrollable course", disciplineName)
+                    .isTrue();
+        }
         assertThat(savedClasses).allSatisfy(c -> {
             assertThat(c.getStatus()).isEqualTo("active");
             assertThat(c.getStartDate()).isNotNull();
@@ -101,6 +111,9 @@ class DemoClassSeederTest {
                     assertThat(a.getGymClass().getRoom().getId())
                             .as("room double-booked on %s", a.getSessionDate())
                             .isNotEqualTo(b.getGymClass().getRoom().getId());
+                    assertThat(a.getGymClass().getDiscipline().getId())
+                            .as("same discipline overlapped on %s", a.getSessionDate())
+                            .isNotEqualTo(b.getGymClass().getDiscipline().getId());
                 }
             }
         }
@@ -136,19 +149,38 @@ class DemoClassSeederTest {
         });
     }
 
-    /** Kiểm thử: bỏ qua bộ môn đã có sẵn lớp active khác (tôn trọng quy tắc 1 lớp duy nhất mỗi bộ môn). */
+    /** Kiểm thử P2-BE-25: tuân thủ quy tắc đa lớp/bộ môn và né slot đã bị lớp cùng bộ môn chiếm. */
     @Test
-    void skipsDisciplinesThatAlreadyHaveAnActiveClass() {
+    void allowsAdditionalClassesInSameDisciplineWhileAvoidingSameDisciplineSlotOverlap() {
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
+        Discipline gym = discipline(1L, "Gym");
         GymClass existingGym = new GymClass();
         existingGym.setName("Existing Gym Course");
         existingGym.setStatus("active");
-        existingGym.setDiscipline(discipline(1L, "Gym"));
+        existingGym.setDiscipline(gym);
         lenient().when(classes.findAll()).thenReturn(List.of(existingGym));
+
+        // Lớp Gym có sẵn chiếm trọn Slot 1 mọi ngày -> seeder vẫn tạo các lớp Gym ở slot khác không trùng bộ môn
+        List<ClassSession> occupiedGymSlot1 = new ArrayList<>();
+        for (int d = -20; d <= 60; d++) {
+            ClassSession s = new ClassSession();
+            s.setGymClass(existingGym);
+            s.setSessionDate(today.plusDays(d));
+            s.setStartTime(ScheduleSlot.SLOT_1.startTime());
+            s.setEndTime(ScheduleSlot.SLOT_1.endTime());
+            s.setStatus("scheduled");
+            occupiedGymSlot1.add(s);
+        }
+        lenient().when(sessions.findNotCancelledBetween(any(), any())).thenReturn(occupiedGymSlot1);
 
         seeder.run(null);
 
-        assertThat(savedClasses).hasSize(2);
-        assertThat(savedClasses).extracting(c -> c.getDiscipline().getName()).containsExactlyInAnyOrder("Boxing", "Yoga");
+        List<GymClass> seededGym = savedClasses.stream()
+                .filter(c -> "Gym".equals(c.getDiscipline().getName()))
+                .toList();
+        assertThat(seededGym).hasSize(2);
+        assertThat(seededGym).allSatisfy(c ->
+                assertThat(c.getStartTime()).isNotEqualTo(ScheduleSlot.SLOT_1.startTime()));
         assertThat(savedSessions).extracting(ClassSession::getStatus).contains("completed", "scheduled");
     }
 

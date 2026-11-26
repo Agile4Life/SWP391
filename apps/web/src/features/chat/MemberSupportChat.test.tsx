@@ -8,7 +8,7 @@ import { subscribeSupport } from '../member/supportRealtime';
 import { MemberSupportChat } from './MemberSupportChat';
 
 vi.mock('../member/supportRealtime', () => ({ subscribeSupport: vi.fn(() => () => {}) }));
-vi.mock('../member/memberSupportApi', () => ({ getMySupportTickets: vi.fn(), getSupportTicket: vi.fn(), createSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn() }));
+vi.mock('../member/memberSupportApi', () => ({ getMySupportTickets: vi.fn(), getSupportTicket: vi.fn(), createSupportTicket: vi.fn(), getSupportMessages: vi.fn(), sendSupportMessage: vi.fn(), closeSupportTicket: vi.fn() }));
 
 const ticket = { id: 7, memberId: 10, subject: '[Thiết bị] Máy chạy', description: 'Máy chạy không bật\nĐã thử cắm lại', status: 'open', createdAt: '2026-10-25T08:00:00', assignedToName: null } as supportApi.SupportTicket;
 // Tạo tin nhắn giả của nhân viên.
@@ -167,4 +167,81 @@ it('switches labels with the language', async () => {
   expect(host.querySelector('#chat-support-title')?.textContent).toBe('Support & Tickets');
   expect([...host.querySelectorAll('[role="radio"]')].map(chip => chip.textContent)).toEqual(['Membership', 'Equipment', 'Class schedule', 'Other']);
   expect(input().placeholder).toContain('Describe your issue');
+});
+
+it('P1-FE-65: guards closeTicket and send against mid-flight ticket switching, clears closeError, and uses supportError()', async () => {
+  const ticketB = { ...ticket, id: 8, subject: '[Khác] Phiếu B', description: 'Nội dung B', status: 'open' } as supportApi.SupportTicket;
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket, ticketB], totalPages: 1 });
+  let rejectCloseA!: (err: unknown) => void;
+  let rejectSendA!: (err: unknown) => void;
+  vi.mocked(supportApi.closeSupportTicket).mockReturnValueOnce(new Promise((_, fail) => { rejectCloseA = fail; }));
+  vi.mocked(supportApi.sendSupportMessage).mockReturnValueOnce(new Promise((_, fail) => { rejectSendA = fail; }));
+
+  await render();
+  await vi.waitFor(() => expect(input().disabled).toBe(false));
+
+  // Start closeTicket and send on Ticket A (#7), then immediately switch to Ticket B (#8)
+  await type('Tin gửi phiếu A');
+  const withdrawBtn = [...host.querySelectorAll('button')].find(b => b.textContent === 'Rút yêu cầu') as HTMLButtonElement;
+  await act(async () => {
+    withdrawBtn.click();
+    sendButton().click();
+  });
+  await act(async () => button('Phiếu của tôi').click());
+  await act(async () => (host.querySelector('[data-support-ticket="8"]') as HTMLButtonElement).click());
+  await vi.waitFor(() => expect(host.querySelector('.support-chat__ticketbar')?.textContent).toContain('Phiếu B'));
+
+  // Ticket A's in-flight failures settle after switch -> must NOT leak onto Ticket B
+  await act(async () => {
+    rejectCloseA(new ApiError('Lỗi đóng phiếu A', 500));
+    rejectSendA(new ApiError('Lỗi gửi phiếu A', 500));
+  });
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+  expect(host.querySelector('.support-chat__ticketbar')?.textContent).toContain('Phiếu B');
+
+  // Non-ApiError close error on Ticket B formats cleanly through supportError() and clears on switch
+  vi.mocked(supportApi.closeSupportTicket).mockRejectedValueOnce(new TypeError('network down'));
+  const withdrawB = [...host.querySelectorAll('button')].find(b => b.textContent === 'Rút yêu cầu') as HTMLButtonElement;
+  await act(async () => { withdrawB.click(); });
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe('Không thể hoàn tất yêu cầu. Vui lòng thử lại.');
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('[role="alert"]')?.textContent).toBe('Unable to complete the request. Please try again.');
+  await act(async () => button('New request').click());
+  expect(host.querySelector('[role="alert"]')).toBeNull();
+});
+
+it('P2-FE-80: disables "Tải thêm phiếu" while appending and guards SupportTranscript scroll when reading older messages', async () => {
+  const page2Ticket = { ...ticket, id: 8, subject: '[Khác] Phiếu trang 2', description: 'Trang 2', status: 'open' } as supportApi.SupportTicket;
+  let resolvePage2!: (v: { content: supportApi.SupportTicket[]; totalPages: number }) => void;
+  vi.mocked(supportApi.getMySupportTickets)
+    .mockResolvedValueOnce({ content: [ticket], totalPages: 2 })
+    .mockReturnValueOnce(new Promise(resolve => { resolvePage2 = resolve; }));
+
+  await render();
+  await vi.waitFor(() => expect(bubbles()).toHaveLength(1));
+
+  // Test SupportTranscript atBottom guard: scroll up, then receive a staff reply -> scrollTop must stay untouched
+  const transcript = host.querySelector<HTMLDivElement>('.direct-chat__transcript')!;
+  Object.defineProperty(transcript, 'scrollHeight', { value: 900, configurable: true });
+  Object.defineProperty(transcript, 'clientHeight', { value: 300, configurable: true });
+  transcript.scrollTop = 120;
+  await act(async () => { transcript.dispatchEvent(new Event('scroll')); });
+
+  const changed = vi.mocked(subscribeSupport).mock.calls.at(-1)![0];
+  vi.mocked(supportApi.getSupportMessages).mockResolvedValue([staffMessage(22, 'Phản hồi mới từ lễ tân')]);
+  await act(async () => { changed(); await new Promise(resolve => setTimeout(resolve, 120)); });
+  expect(bubbles()).toHaveLength(2);
+  expect(transcript.scrollTop).toBe(120);
+
+  // Test loadingMore state on "Tải thêm phiếu"
+  await act(async () => button('Phiếu của tôi').click());
+  const loadMoreBtn = [...host.querySelectorAll('button')].find(b => b.textContent === 'Tải thêm phiếu') as HTMLButtonElement;
+  expect(loadMoreBtn.disabled).toBe(false);
+  await act(async () => { loadMoreBtn.click(); loadMoreBtn.click(); });
+  expect(supportApi.getMySupportTickets).toHaveBeenCalledTimes(2);
+  expect(loadMoreBtn.disabled).toBe(true);
+  expect(loadMoreBtn.textContent).toBe('Đang tải…');
+
+  await act(async () => { resolvePage2({ content: [page2Ticket], totalPages: 2 }); });
+  expect(host.querySelectorAll('[data-support-ticket]')).toHaveLength(2);
 });

@@ -43,10 +43,11 @@ import java.util.List;
  */
 @Service
 public class CoachBookingService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CoachBookingService.class);
     private final com.swp391.scms.finance.service.VnpayPaymentGuard vnpayGuard;
 
     private static final int ADVANCE_MINUTES_REQUIRED = 120; // 2 giờ
-    private static final int UNPAID_HOLD_MINUTES = 5;
+    private static final int UNPAID_HOLD_MINUTES = 15;
     private static final int UNPAID_RELEASE_LEAD_MINUTES = 60;
     private static final int UNPAID_MIN_HOLD_MINUTES = 5;
     private static final java.util.Set<String> ALLOWED_PAYMENT_METHODS =
@@ -74,6 +75,17 @@ public class CoachBookingService {
 
     @Autowired(required = false)
     private com.swp391.scms.operations.repository.StaffInternalRequestRepository staffRequestRepository;
+
+    @Autowired(required = false)
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
+    @Autowired(required = false)
+    private jakarta.persistence.EntityManager entityManager;
+
+    /** Gán TransactionManager (dùng cho test cô lập transaction theo từng lịch đặt). */
+    public void setTransactionManager(org.springframework.transaction.PlatformTransactionManager transactionManager) {
+        this.transactionManager = transactionManager;
+    }
 
     @org.springframework.beans.factory.annotation.Value("${app.legacy.classes-enabled:false}")
     private boolean legacyClassesEnabled = true;
@@ -177,7 +189,8 @@ public class CoachBookingService {
     @Transactional(readOnly = true)
     public List<CoachAvailableSlotDto> getAvailableSlots(Long coachId, LocalDate date, Long currentMemberId) {
         Coach coach = coachRepository.findById(coachId)
-                .orElseThrow(() -> new ResourceNotFoundException("Coach", coachId));
+                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", coachId));
+        requireActiveCoach(coach);
 
         List<ClassSession> coachClasses = legacyClassesEnabled ? classSessionRepository.findActiveByCoachAndDate(coachId, date) : List.of();
         List<CoachBooking> coachBookings = coachBookingRepository.findActiveByCoachAndDate(coachId, date);
@@ -241,25 +254,74 @@ public class CoachBookingService {
 
     /** Kỳ gói có phải gói trải nghiệm không (theo gói hoặc kỳ dài tối đa 3 ngày). */
     private boolean isTrialSubscription(MembershipSubscription sub) {
-        if (sub == null) return false;
-        if (PackageBenefits.isTrial(sub.getMembershipPackage())) {
-            return true;
+        return PackageBenefits.isTrialSubscription(sub);
+    }
+
+    /** HLV phải đang làm việc và có tài khoản active chưa bị xóa mềm. */
+    private void requireActiveCoach(Coach coach) {
+        if (coach == null
+                || !"active".equalsIgnoreCase(coach.getEmploymentStatus())
+                || coach.getUser() == null
+                || coach.getUser().getDeletedAt() != null
+                || !"active".equalsIgnoreCase(coach.getUser().getStatus())) {
+            throw new BadRequestException("COACH_INACTIVE", "error.coach.inactive", null,
+                    "Huấn luyện viên hiện không nhận học viên.");
         }
-        if (sub.getUpgradeCharge() == null && !"expired".equalsIgnoreCase(sub.getStatus())
-                && sub.getStartDate() != null && sub.getEndDate() != null) {
-            long days = java.time.temporal.ChronoUnit.DAYS.between(sub.getStartDate(), sub.getEndDate());
-            return days >= 0 && days <= 3;
+    }
+
+    /** Thứ tự ưu tiên xác định cho các gói active: hạn mức PT cao nhất, hết hạn muộn nhất, id lớn nhất. */
+    private java.util.Comparator<MembershipSubscription> subscriptionPriority() {
+        return java.util.Comparator
+                .comparingInt((MembershipSubscription s) -> ptQuotaOf(s, isTrialSubscription(s)))
+                .thenComparing(MembershipSubscription::getEndDate, java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder()))
+                .thenComparing(MembershipSubscription::getId, java.util.Comparator.nullsFirst(java.util.Comparator.naturalOrder()))
+                .reversed();
+    }
+
+    /**
+     * Số lượt PT miễn phí còn lại ở chu kỳ chứa ngày đặt lịch, đồng thời không vượt quá tổng hạn mức PT trong toàn
+     * bộ thời hạn đã mua của kỳ gói (ngăn lỗ hổng nâng cấp giữa chu kỳ nhận gấp đôi lượt).
+     */
+    private int remainingQuota(Long memberUserId, MembershipSubscription sub, int monthlyQuota,
+                               LocalDate cycleStart, LocalDate cycleEnd, long usedInCycle) {
+        int cycleRemaining = Math.max(0, monthlyQuota - (int) usedInCycle);
+        if (cycleRemaining == 0) {
+            return 0;
         }
-        return false;
+        if (sub.getStartDate() != null && sub.getEndDate() != null
+                && (cycleStart.isAfter(sub.getStartDate()) || cycleEnd.isBefore(sub.getEndDate()))) {
+            int lifetimeQuota = PackageBenefits.totalPtSessions(sub);
+            long usedLifetime = countSubscriptionLifetimeUsage(memberUserId, sub);
+            int lifetimeRemaining = Math.max(0, lifetimeQuota - (int) usedLifetime);
+            return Math.min(cycleRemaining, lifetimeRemaining);
+        }
+        return cycleRemaining;
+    }
+
+    /** Đếm tổng số lượt PT miễn phí đã dùng trên chính kỳ gói {@code sub} trong toàn bộ thời hạn của nó. */
+    private long countSubscriptionLifetimeUsage(Long memberUserId, MembershipSubscription sub) {
+        if (sub.getId() != null) {
+            LocalDateTime subCreatedAt = sub.getCreatedAt() != null
+                    ? sub.getCreatedAt()
+                    : sub.getStartDate().atStartOfDay();
+            return coachBookingRepository.countSubscriptionQuotaUsage(
+                    memberUserId, sub.getStartDate(), sub.getEndDate(), "package_quota",
+                    List.of(sub.getId()), subCreatedAt);
+        }
+        return coachBookingRepository.countMonthlyQuotaUsage(
+                memberUserId, sub.getStartDate(), sub.getEndDate(), "package_quota");
     }
 
     /** Tình trạng lượt PT miễn phí của hội viên trong chu kỳ hiện tại: tên gói, số lượt, đã dùng và còn lại. */
     @Transactional(readOnly = true)
     public CoachQuotaStatusDto getMemberQuotaStatus(Long memberUserId) {
+        LocalDate now = LocalDate.now(clock);
         List<MembershipSubscription> activeSubs = subscriptionRepository.findByMemberUserIdAndStatus(memberUserId, "active").stream()
                 .filter(sub -> sub.getStartDate() != null && sub.getEndDate() != null
-                        && !sub.getStartDate().isAfter(LocalDate.now(clock))
-                        && !sub.getEndDate().isBefore(LocalDate.now(clock)))
+                        && !sub.getStartDate().isAfter(now)
+                        && !sub.getEndDate().isBefore(now)
+                        && !sub.isHeldOn(now))
+                .sorted(subscriptionPriority())
                 .toList();
         if (activeSubs.isEmpty()) {
             return new CoachQuotaStatusDto(null, 0, 0, 0);
@@ -271,13 +333,13 @@ public class CoachBookingService {
                         ? sub.getMembershipPackage().getName() : "";
         int monthlyQuota = ptQuotaOf(sub, isTrial);
 
-        LocalDate now = LocalDate.now(clock);
         LocalDate startMonth = PackageBenefits.cycleStart(sub, now);
         LocalDate endMonth = PackageBenefits.cycleEnd(sub, now);
         long usedQuota = countQuotaUsageForSubscription(memberUserId, sub, startMonth, endMonth);
 
-        int remaining = Math.max(0, monthlyQuota - (int) usedQuota);
-        return new CoachQuotaStatusDto(pkgName, monthlyQuota, (int) usedQuota, remaining);
+        int remaining = remainingQuota(memberUserId, sub, monthlyQuota, startMonth, endMonth, usedQuota);
+        int usedDisplay = Math.max((int) usedQuota, monthlyQuota - remaining);
+        return new CoachQuotaStatusDto(pkgName, monthlyQuota, usedDisplay, remaining);
     }
 
     /**
@@ -326,14 +388,12 @@ public class CoachBookingService {
     public CoachBookingDto createBooking(AuthenticatedPrincipal principal, CoachBookingCreateDto request) {
         // Khóa dòng tuần tự hóa các yêu cầu đặt lịch đồng thời của một hội viên để phép đếm hạn mức bên dưới luôn chính xác.
         Member member = memberRepository.findByUserIdForUpdate(principal.id())
-                .orElseThrow(() -> new ResourceNotFoundException("Member", principal.id()));
+                .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
 
         Coach coach = coachRepository.findById(request.coachId())
-                .orElseThrow(() -> new ResourceNotFoundException("Coach", request.coachId()));
+                .orElseThrow(() -> new ResourceNotFoundException("resource.coach", request.coachId()));
 
-        if (!"active".equalsIgnoreCase(coach.getEmploymentStatus())) {
-            throw new BadRequestException("COACH_INACTIVE", "error.coach.inactive", null, "Huấn luyện viên hiện không nhận học viên.");
-        }
+        requireActiveCoach(coach);
         if (request.bookingDate() != null && onLeave(coach.getUserId(), request.bookingDate())) {
             throw new ConflictException("COACH_ON_LEAVE", "error.coach_booking.coach_on_leave",
                     new Object[]{request.bookingDate()}, "The coach is on approved leave that day.");
@@ -408,28 +468,47 @@ public class CoachBookingService {
             }
         }
 
-        if (legacyClassesEnabled && classSessionRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate()).stream()
-                .anyMatch(cs -> request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime()))) {
-            throw new ConflictException("MEMBER_SCHEDULE_CONFLICT", "error.coach_booking.member_busy", null,
-                    "Bạn đã có lịch học lớp trong khung giờ này.");
+        if (legacyClassesEnabled) {
+            List<ClassSession> memberClasses = classSessionRepository.findActiveByMemberAndDate(member.getUserId(), request.bookingDate());
+            for (ClassSession cs : memberClasses) {
+                if (request.startTime().isBefore(cs.getEndTime()) && request.endTime().isAfter(cs.getStartTime())) {
+                    String className = cs.getGymClass() != null && cs.getGymClass().getName() != null
+                            ? cs.getGymClass().getName() : "";
+                    throw new ConflictException(
+                            "MEMBER_SCHEDULE_CONFLICT",
+                            "error.coach_booking.member_class_conflict",
+                            new Object[]{className, cs.getStartTime().toString(), cs.getEndTime().toString()},
+                            "Bạn đã có lịch học lớp " + className + " (" + cs.getStartTime() + " - " + cs.getEndTime() + ") trong khung giờ này."
+                    );
+                }
+            }
         }
         if (scheduleGuard != null) {
             scheduleGuard.ensureFree(member.getUserId(), request.bookingDate(), request.startTime(), request.endTime(), null);
         }
 
-        List<MembershipSubscription> validSubscriptions = subscriptionRepository
-                .findByMemberUserIdAndStatus(member.getUserId(), "active").stream()
-                .filter(sub -> sub.getStartDate() != null && sub.getEndDate() != null
-                        && !sub.getStartDate().isAfter(LocalDate.now(clock))
-                        && !sub.getEndDate().isBefore(LocalDate.now(clock))
-                        && !sub.getStartDate().isAfter(request.bookingDate())
-                        && !sub.getEndDate().isBefore(request.bookingDate())
-                        && !sub.isHeldOn(request.bookingDate()))
-                .toList();
-        if (subscriptionRepository.existsApprovedHoldCovering(member.getUserId(), request.bookingDate())) {
+        LocalDate today = LocalDate.now(clock);
+        List<MembershipSubscription> activeSubscriptions = subscriptionRepository
+                .findByMemberUserIdAndStatus(member.getUserId(), "active");
+        if (subscriptionRepository.existsApprovedHoldCovering(member.getUserId(), request.bookingDate())
+                || activeSubscriptions.stream().anyMatch(sub -> sub.isHeldOn(request.bookingDate()))) {
             throw new BadRequestException("MEMBERSHIP_ON_HOLD", "error.coach_booking.membership_on_hold",
                     new Object[]{request.bookingDate()}, "Gói tập đang bảo lưu vào ngày đặt lịch.");
         }
+        boolean hasActiveToday = activeSubscriptions.stream()
+                .anyMatch(sub -> sub.getStartDate() != null && sub.getEndDate() != null
+                        && !sub.getStartDate().isAfter(today)
+                        && !sub.getEndDate().isBefore(today)
+                        && !sub.isHeldOn(today));
+        List<MembershipSubscription> validSubscriptions = hasActiveToday
+                ? activeSubscriptions.stream()
+                        .filter(sub -> sub.getStartDate() != null && sub.getEndDate() != null
+                                && !sub.getStartDate().isAfter(request.bookingDate())
+                                && !sub.getEndDate().isBefore(request.bookingDate())
+                                && !sub.isHeldOn(request.bookingDate()))
+                        .sorted(subscriptionPriority())
+                        .toList()
+                : List.of();
         if (validSubscriptions.isEmpty()) {
             throw new BadRequestException("MEMBERSHIP_INACTIVE_OR_EXPIRED", "error.coach_booking.no_active_subscription", null,
                     "Bạn chưa có gói tập đang hoạt động (hoặc gói tập không còn hiệu lực vào ngày đặt lịch). Vui lòng đăng ký hoặc kích hoạt gói tập trước khi đặt lịch HLV 1:1.");
@@ -462,8 +541,9 @@ public class CoachBookingService {
             LocalDate startMonth = PackageBenefits.cycleStart(sub, request.bookingDate());
             LocalDate endMonth = PackageBenefits.cycleEnd(sub, request.bookingDate());
             long usedQuota = countQuotaUsageForSubscription(member.getUserId(), sub, startMonth, endMonth);
+            int remaining = remainingQuota(member.getUserId(), sub, monthlyQuota, startMonth, endMonth, usedQuota);
 
-            if (usedQuota >= monthlyQuota) {
+            if (remaining <= 0) {
                 if (isTrial) {
                     throw new BadRequestException(
                             "COACH_BOOKING_TRIAL_QUOTA_EXCEEDED",
@@ -490,7 +570,8 @@ public class CoachBookingService {
 
         Discipline discipline = null;
         if (request.disciplineId() != null) {
-            discipline = disciplineRepository.findById(request.disciplineId()).orElse(null);
+            discipline = disciplineRepository.findById(request.disciplineId())
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.discipline", request.disciplineId()));
         }
 
         CoachBooking booking = new CoachBooking();
@@ -607,6 +688,13 @@ public class CoachBookingService {
                 .toList();
     }
 
+    /** Nạp buổi PT có khóa dòng (dự phòng findById cho mock đơn vị chỉ stub findById). */
+    private CoachBooking loadBookingForUpdate(Long bookingId) {
+        return coachBookingRepository.findByIdForUpdate(bookingId)
+                .or(() -> coachBookingRepository.findById(bookingId))
+                .orElseThrow(() -> new ResourceNotFoundException("resource.coach_booking", bookingId));
+    }
+
     /**
      * HLV (đối với buổi của mình), lễ tân hoặc quản lý ghi nhận hội viên đã đến buổi PT; quét cổng chỉ hiển thị như
      * gợi ý và không bao giờ tự ghi nhận. Buổi phải đã bắt đầu và chưa hủy; đánh dấu lại buổi đã ghi nhận không làm
@@ -620,8 +708,7 @@ public class CoachBookingService {
         if (!coach && !DESK_ROLES.contains(role) && !"MANAGER".equals(role)) {
             throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "Only coaches, the front desk and managers can mark attendance.");
         }
-        CoachBooking booking = coachBookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("CoachBooking", bookingId));
+        CoachBooking booking = loadBookingForUpdate(bookingId);
         if (coach && (booking.getCoach() == null || !principal.id().equals(booking.getCoach().getUserId()))) {
             throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "A coach can mark only their own sessions.");
         }
@@ -644,13 +731,13 @@ public class CoachBookingService {
             booking.setAttendanceLocked(false);
             coachBookingRepository.save(booking);
         }
-        return mapToDto(booking);
+        return mapToDto(booking, ptAttendance != null ? ptAttendance.gateCheckinFor(booking) : null);
     }
 
     /**
      * Nhân viên gỡ bỏ ghi nhận đến buổi đã đánh dấu nhầm. Buổi được gắn cờ (attendanceLocked) để danh sách thể hiện
-     * rõ việc gỡ dấu là chủ đích; đánh dấu lại thủ công sẽ xóa cờ này. HLV chỉ thao tác trong ngày diễn ra buổi tập;
-     * lễ tân và quản lý vẫn chỉnh được các ngày trước.
+     * rõ việc gỡ dấu là chủ đích; đánh dấu lại thủ công sẽ xóa cờ này. Buổi phải đã bắt đầu; HLV chỉ thao tác trong
+     * ngày diễn ra buổi tập; lễ tân và quản lý vẫn chỉnh được các ngày trước.
      */
     @Transactional
     @com.swp391.scms.audit.Audited(action = "PT_ATTENDANCE_UNMARK", entity = "coach_bookings")
@@ -660,8 +747,7 @@ public class CoachBookingService {
         if (!coach && !DESK_ROLES.contains(role) && !"MANAGER".equals(role)) {
             throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "Only coaches, the front desk and managers can change attendance.");
         }
-        CoachBooking booking = coachBookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("CoachBooking", bookingId));
+        CoachBooking booking = loadBookingForUpdate(bookingId);
         if (coach && (booking.getCoach() == null || !principal.id().equals(booking.getCoach().getUserId()))) {
             throw new ForbiddenException("FORBIDDEN", "error.forbidden", null, "A coach can change only their own sessions.");
         }
@@ -670,6 +756,10 @@ public class CoachBookingService {
                     "A cancelled session has no attendance.");
         }
         LocalDateTime now = LocalDateTime.now(clock.withZone(com.swp391.scms.common.CenterTime.ZONE));
+        if (LocalDateTime.of(booking.getBookingDate(), booking.getStartTime()).isAfter(now)) {
+            throw new BadRequestException("COACH_BOOKING_NOT_STARTED", "error.coach_booking.attendance_not_started", null,
+                    "Attendance can be changed once the session has started.");
+        }
         LocalDate today = now.toLocalDate();
         if (coach && !booking.getBookingDate().isEqual(today)) {
             throw new BadRequestException("COACH_BOOKING_ATTENDANCE_EXPIRED", "error.coach_booking.attendance_same_day_only", null,
@@ -680,7 +770,7 @@ public class CoachBookingService {
             booking.setAttendanceLocked(true);
             coachBookingRepository.save(booking);
         }
-        return mapToDto(booking);
+        return mapToDto(booking, ptAttendance != null ? ptAttendance.gateCheckinFor(booking) : null);
     }
 
     /**
@@ -711,7 +801,7 @@ public class CoachBookingService {
     @Transactional
     public CoachBookingDto cancelBooking(AuthenticatedPrincipal principal, Long bookingId, String reason) {
         CoachBooking booking = coachBookingRepository.findByIdForUpdate(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("CoachBooking", bookingId));
+                .orElseThrow(() -> new ResourceNotFoundException("resource.coach_booking", bookingId));
         if (!booking.getMember().getUserId().equals(principal.id()) && !"CENTER_MANAGER".equalsIgnoreCase(principal.role()) && !("COACH".equalsIgnoreCase(principal.role()) && booking.getCoach().getUserId().equals(principal.id()))) {
             throw new ForbiddenException("FORBIDDEN", "error.coach_booking.forbidden_cancel", null, "You cannot cancel this booking.");
         }
@@ -731,14 +821,17 @@ public class CoachBookingService {
         }
 
         LocalDateTime sessionStart = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
-        boolean cancelledByStaff = "CENTER_MANAGER".equalsIgnoreCase(principal.role())
-                || ("COACH".equalsIgnoreCase(principal.role()) && booking.getCoach().getUserId().equals(principal.id()));
+        boolean cancelledByCoach = "COACH".equalsIgnoreCase(principal.role())
+                && booking.getCoach() != null && booking.getCoach().getUserId().equals(principal.id());
+        boolean cancelledByStaff = "CENTER_MANAGER".equalsIgnoreCase(principal.role()) || cancelledByCoach;
         boolean inTimeForQuotaRefund = !sessionStart.isBefore(now.plusMinutes(ADVANCE_MINUTES_REQUIRED));
         if (!cancelledByStaff
                 && "package_quota".equalsIgnoreCase(booking.getPaymentMethod())
                 && !inTimeForQuotaRefund) {
             booking.setQuotaForfeited(true);
         }
+
+        String resolvedReason = (reason != null && !reason.isBlank()) ? reason.trim() : defaultCancelReason(principal);
 
         BigDecimal refundedTotal = BigDecimal.ZERO;
         if (paymentRepository != null) {
@@ -761,33 +854,64 @@ public class CoachBookingService {
                     booking.getMember().getUserId(),
                     refundedTotal,
                     "COACH_REFUND_" + booking.getId(),
-                    reason
+                    resolvedReason
             );
         }
         booking.setStatus("cancelled");
         booking.setCancelledAt(LocalDateTime.now(clock));
-        booking.setCancelReason(reason != null ? reason : "Hội viên yêu cầu hủy");
+        booking.setCancelReason(resolvedReason);
 
-        // Thông báo cho HLV về việc hủy lịch
-        if (booking.getCoach() != null && booking.getCoach().getUser() != null && notificationService != null) {
-            String memberName = booking.getMember().getUser() != null ? booking.getMember().getUser().getFullName() : "Hội viên";
+        if (notificationService != null && booking.getStartTime() != null && booking.getEndTime() != null) {
+            String startStr = booking.getStartTime().toString().substring(0, 5);
+            String endStr = booking.getEndTime().toString().substring(0, 5);
             String title = msg("notifications.coaching.booking.cancelled.title");
-            String message = msg("notifications.coaching.booking.cancelled.body",
-                    memberName, booking.getBookingDate(), booking.getStartTime().toString().substring(0, 5), booking.getEndTime().toString().substring(0, 5));
-            notificationService.send(booking.getCoach().getUserId(), title, message, "system", null, booking.getId(), "/coach/classes");
+            if (cancelledByStaff) {
+                // Thông báo cho hội viên khi HLV hoặc Quản lý hủy buổi tập.
+                if (booking.getMember() != null && booking.getMember().getUserId() != null) {
+                    String memberBody = msg("notifications.session.cancelled.coach_body",
+                            msg("resource.coach_booking"),
+                            booking.getBookingDate() + " (" + startStr + " - " + endStr + ")",
+                            resolvedReason);
+                    notificationService.send(booking.getMember().getUserId(), title, memberBody,
+                            "system", null, booking.getId(), "/member/classes?tab=pt");
+                }
+                // Thông báo cho HLV khi Quản lý hủy (không gửi thông báo tự hủy cho chính HLV).
+                if (!cancelledByCoach && booking.getCoach() != null && booking.getCoach().getUser() != null) {
+                    String coachBody = msg("notifications.session.cancelled.coach_body",
+                            msg("resource.coach_booking"),
+                            booking.getBookingDate() + " (" + startStr + " - " + endStr + ")",
+                            resolvedReason);
+                    notificationService.send(booking.getCoach().getUserId(), title, coachBody,
+                            "system", null, booking.getId(), "/coach/classes");
+                }
+            } else if (booking.getCoach() != null && booking.getCoach().getUser() != null) {
+                // Thông báo cho HLV khi hội viên hủy lịch.
+                String memberName = booking.getMember() != null && booking.getMember().getUser() != null
+                        ? booking.getMember().getUser().getFullName() : msg("resource.member");
+                String message = msg("notifications.coaching.booking.cancelled.body",
+                        memberName, booking.getBookingDate(), startStr, endStr);
+                notificationService.send(booking.getCoach().getUserId(), title, message, "system", null, booking.getId(), "/coach/classes");
+            }
         }
 
         return mapToDto(booking);
     }
 
+    /** Lý do hủy mặc định đã bản địa hóa theo vai trò người thao tác (không đổ lỗi cho hội viên khi nhân viên hủy). */
+    private String defaultCancelReason(AuthenticatedPrincipal principal) {
+        String roleKey = "CENTER_MANAGER".equalsIgnoreCase(principal.role())
+                ? "resource.manager"
+                : ("COACH".equalsIgnoreCase(principal.role()) ? "resource.coach" : "resource.member");
+        return msg("scheduling.enrollment.cancelled_by_role", msg(roleKey));
+    }
+
     /**
      * Giải phóng các khung giờ PT 1:1 bị giữ bởi booking chưa thanh toán quá {@link #UNPAID_HOLD_MINUTES} phút, hoặc
      * vẫn chưa thanh toán trong vòng {@link #UNPAID_RELEASE_LEAD_MINUTES} phút trước giờ bắt đầu (sau khi đã giữ ít
-     * nhất {@link #UNPAID_MIN_HOLD_MINUTES} phút). Các booking đang có giao dịch VNPay hoạt động sẽ được bỏ qua cho
-     * tới khi cổng thanh toán hoàn tất hoặc hết hạn. Khoản thu chờ chuyển failed, báo cho hội viên và trả số buổi đã
-     * giải phóng.
+     * nhất {@link #UNPAID_MIN_HOLD_MINUTES} phút). Mỗi booking được xử lý trong một transaction độc lập có khóa dòng
+     * {@code FOR UPDATE} để đọc lại trạng thái thanh toán mới nhất và không bao giờ ghi đè buổi vừa được thanh toán
+     * hoặc kéo rollback các booking khác khi xảy ra lỗi.
      */
-    @Transactional
     public int expireUnpaidBookings() {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime createdCutoff = now.minusMinutes(UNPAID_HOLD_MINUTES);
@@ -796,35 +920,77 @@ public class CoachBookingService {
         List<CoachBooking> stale = coachBookingRepository.findUnpaidStale(
                 createdCutoff, minHoldCutoff, releaseDueAt.toLocalDate(), releaseDueAt.toLocalTime());
         int cancelled = 0;
-        for (CoachBooking booking : stale) {
-            try {
-                if (vnpayGuard != null) vnpayGuard.coach(booking.getId());
-            } catch (RuntimeException awaitingGateway) {
+        for (CoachBooking candidate : stale) {
+            if (candidate == null || candidate.getId() == null) {
                 continue;
             }
-            if (paymentRepository != null) {
-                for (var payment : paymentRepository.findAllByCoachBookingId(booking.getId())) {
-                    if ("pending".equalsIgnoreCase(payment.getStatus())) {
-                        payment.setStatus("failed");
-                    }
+            try {
+                Boolean expired;
+                if (transactionManager != null) {
+                    var template = new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+                    template.setPropagationBehavior(org.springframework.transaction.TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                    expired = template.execute(status -> expireSingleUnpaidBooking(candidate.getId(), now));
+                } else {
+                    expired = expireSingleUnpaidBooking(candidate.getId(), now);
                 }
-            }
-            booking.setStatus("cancelled");
-            booking.setCancelledAt(now);
-            booking.setCancelReason(msg("coaching.auto_cancel.unpaid"));
-            coachBookingRepository.save(booking);
-            cancelled++;
-            if (notificationService != null && booking.getMember() != null && booking.getMember().getUserId() != null
-                    && booking.getStartTime() != null && booking.getEndTime() != null) {
-                String title = msg("notifications.coaching.booking.auto_cancelled.title");
-                String body = msg("notifications.coaching.booking.auto_cancelled.body",
-                        booking.getBookingDate(),
-                        booking.getStartTime().toString().substring(0, 5),
-                        booking.getEndTime().toString().substring(0, 5));
-                notificationService.send(booking.getMember().getUserId(), title, body, "system", null, booking.getId(), "/member/classes?tab=pt");
+                if (Boolean.TRUE.equals(expired)) {
+                    cancelled++;
+                }
+            } catch (RuntimeException ex) {
+                log.warn("Could not expire unpaid 1:1 PT booking {}: {}", candidate.getId(), ex.getMessage());
             }
         }
         return cancelled;
+    }
+
+    /** Khóa một booking PT 1:1 cụ thể, kiểm tra lại trạng thái thanh toán và cổng VNPay dưới khóa rồi hủy nếu vẫn quá hạn. */
+    private boolean expireSingleUnpaidBooking(Long bookingId, LocalDateTime now) {
+        CoachBooking locked = coachBookingRepository.findByIdForUpdate(bookingId).orElse(null);
+        if (locked == null) {
+            return false;
+        }
+        if (entityManager != null) {
+            entityManager.refresh(locked);
+        }
+        if (!"confirmed".equalsIgnoreCase(locked.getStatus())
+                || !"pending".equalsIgnoreCase(locked.getPaymentStatus())
+                || "package_quota".equalsIgnoreCase(locked.getPaymentMethod())) {
+            return false;
+        }
+        try {
+            if (vnpayGuard != null) vnpayGuard.coach(locked.getId());
+        } catch (ConflictException awaitingGateway) {
+            return false;
+        }
+        if (paymentRepository != null) {
+            List<com.swp391.scms.finance.entity.Payment> bookingPayments =
+                    paymentRepository.findAllByCoachBookingId(locked.getId());
+            if (bookingPayments != null) {
+                if (bookingPayments.stream().anyMatch(p -> "success".equalsIgnoreCase(p.getStatus()))) {
+                    return false;
+                }
+                for (var payment : bookingPayments) {
+                    if ("pending".equalsIgnoreCase(payment.getStatus())) {
+                        payment.setStatus("failed");
+                        paymentRepository.save(payment);
+                    }
+                }
+            }
+        }
+        locked.setStatus("cancelled");
+        locked.setCancelledAt(now);
+        locked.setCancelReason(msg("coaching.auto_cancel.unpaid"));
+        coachBookingRepository.save(locked);
+        if (notificationService != null && locked.getMember() != null && locked.getMember().getUserId() != null
+                && locked.getStartTime() != null && locked.getEndTime() != null) {
+            String title = msg("notifications.coaching.booking.auto_cancelled.title");
+            String body = msg("notifications.coaching.booking.auto_cancelled.body",
+                    locked.getBookingDate(),
+                    locked.getStartTime().toString().substring(0, 5),
+                    locked.getEndTime().toString().substring(0, 5));
+            notificationService.send(locked.getMember().getUserId(), title, body, "system", null, locked.getId(), "/member/classes?tab=pt");
+        }
+        return true;
     }
 
     /**

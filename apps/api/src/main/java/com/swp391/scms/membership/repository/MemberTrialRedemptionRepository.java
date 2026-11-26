@@ -1,7 +1,11 @@
 package com.swp391.scms.membership.repository;
 
 import com.swp391.scms.membership.entity.MemberTrialRedemption;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -10,6 +14,10 @@ import java.util.Optional;
 /** Truy cập bảng member_trial_redemptions (yêu cầu/lượt nhận gói trải nghiệm). */
 @Repository
 public interface MemberTrialRedemptionRepository extends JpaRepository<MemberTrialRedemption, Long> {
+    /** Lấy yêu cầu gói trải nghiệm và khóa dòng để ghi (FOR UPDATE). */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from MemberTrialRedemption r where r.id = :id")
+    Optional<MemberTrialRedemption> findByIdForUpdate(@Param("id") Long id);
     /** Kiểm tra có tồn tại bản ghi có cccdHash = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByCccdHash(String cccdHash);
     /**

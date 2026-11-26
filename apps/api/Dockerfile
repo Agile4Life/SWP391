@@ -21,6 +21,8 @@ COPY --from=build /build/target/*.jar /app/app.jar
 
 # Bật profile Supabase mặc định; có thể ghi đè bằng biến môi trường khi chạy.
 ENV SPRING_PROFILES_ACTIVE=supabase
+# Đồng bộ múi giờ container khớp với CenterTime.ZONE (Asia/Ho_Chi_Minh).
+ENV TZ=Asia/Ho_Chi_Minh
 # Tùy chọn JVM cho máy ít tài nguyên (Render free: 0,1 CPU, 512 MB RAM); ghi đè được bằng biến môi trường JAVA_OPTS.
 # SerialGC: ít luồng và ít RAM hơn G1; TieredStopAtLevel=1: chỉ dùng trình biên dịch C1, giảm CPU và RAM khi khởi động.
 # MaxRAMPercentage=65: chừa RAM cho metaspace và bộ nhớ ngoài heap; Xss512k: giảm RAM mỗi luồng.

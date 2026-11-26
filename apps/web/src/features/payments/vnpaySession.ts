@@ -54,7 +54,6 @@ export function releaseAbandonedVnpay(): Promise<boolean> {
   try {
     stored = window.localStorage.getItem(ACTIVE_VNPAY_KEY)?.trim() || null;
     hasToken = Boolean(window.localStorage.getItem(TOKEN_STORAGE_KEY));
-    if (stored) window.localStorage.removeItem(ACTIVE_VNPAY_KEY);
   } catch {
     // Bộ nhớ trình duyệt không khả dụng: khi không có mã tham chiếu hoặc token đã lưu, điều kiện bên dưới sẽ trả về false.
   }
@@ -62,10 +61,19 @@ export function releaseAbandonedVnpay(): Promise<boolean> {
   const reference = stored;
   const task = cancelVnpayTransaction(reference)
     .then(() => {
+      clearActiveVnpay(reference);
       window.dispatchEvent(new CustomEvent('vnpay-attempt-released', { detail: { reference } }));
       return true;
     })
-    .catch(() => false)
+    .catch((reason: unknown) => {
+      const status = typeof reason === 'object' && reason !== null && 'status' in reason
+        ? (reason as { status?: unknown }).status
+        : undefined;
+      if (status === 400 || status === 404 || status === 409) {
+        clearActiveVnpay(reference);
+      }
+      return false;
+    })
     .finally(() => {
       if (inFlightRelease === task) inFlightRelease = null;
     });

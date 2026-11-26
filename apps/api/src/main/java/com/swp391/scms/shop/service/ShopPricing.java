@@ -2,12 +2,14 @@ package com.swp391.scms.shop.service;
 
 import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.shop.ShopProperties;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 
 /** Tính phí giao hàng của đơn shop theo cấu hình. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 public class ShopPricing {
     private final ShopProperties props;

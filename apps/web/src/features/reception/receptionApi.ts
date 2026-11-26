@@ -1,9 +1,28 @@
 import { apiFetch } from '../../shared/api/client';
 import { catalogApi, type MembershipPackage } from '../manager/catalogApi';
 import type { CoachBookingDto } from '../member/coachBookingApi';
+import { staffText } from '../operations/staffI18n';
 export type { MembershipPackage };
 /** Buổi PT 1:1 chưa thu tiền (dùng chung kiểu booking). */
 export type UnpaidCoachBooking = CoachBookingDto;
+
+/** Ghi danh khóa học nhóm chờ thu học phí tại quầy lễ tân (tiền mặt hoặc chuyển khoản). */
+export interface UnpaidCourseEnrollmentItem {
+  enrollmentId: number;
+  paymentId: number;
+  classId: number;
+  className: string;
+  disciplineName: string;
+  startDate: string | null;
+  endDate: string | null;
+  memberId: number;
+  memberName: string;
+  memberPhone?: string | null;
+  membershipCode?: string | null;
+  amount: number;
+  method: string;
+  createdAt: string;
+}
 
 /** Kết quả tra cứu hội viên: mã thẻ, họ tên, liên hệ, trạng thái và gói hiện tại. */
 export interface MemberLookupResult {
@@ -212,7 +231,7 @@ export interface InvoiceDto {
  * BR-05: Che một phần (masked) dữ liệu nhạy cảm CCCD (ví dụ: 079******123)
  */
 export function maskCitizenId(id?: string | null): string {
-  if (!id) return 'Chưa cập nhật';
+  if (!id) return staffText('Chưa cập nhật', 'Not updated');
   const clean = id.trim();
   if (clean.length < 6) return '******';
   const start = clean.slice(0, 3);
@@ -316,6 +335,20 @@ export const receptionApi = {
   confirmCoachBookingPayment: (bookingId: number, method: string): Promise<UnpaidCoachBooking> =>
     apiFetch(`/coach-bookings/${bookingId}/confirm-payment?method=${encodeURIComponent(method)}`, { method: 'POST' }),
 
+  /** Danh sách ghi danh khóa học nhóm chờ thu học phí tại quầy lễ tân. */
+  getUnpaidCourseEnrollments: (): Promise<UnpaidCourseEnrollmentItem[]> =>
+    apiFetch<UnpaidCourseEnrollmentItem[]>('/classes/enrollments/unpaid'),
+
+  /** Ghi nhận đã thu học phí khóa học nhóm (tiền mặt hoặc chuyển khoản) và trả về hóa đơn đã thanh toán. */
+  confirmCourseEnrollmentPayment: (
+    enrollmentId: number,
+    method: 'cash' | 'bank_transfer',
+  ): Promise<PaymentResponseDto> =>
+    apiFetch<PaymentResponseDto>(`/classes/enrollments/${enrollmentId}/confirm-payment`, {
+      method: 'POST',
+      body: JSON.stringify({ method }),
+    }),
+
   /** Ảnh hóa đơn tiền mặt hội viên đã gửi cho yêu cầu gói tập đang chờ (null nếu chưa có). */
   getPendingReceipt: async (memberId: number, subscriptionId: number): Promise<string | null> => {
     const payments = await apiFetch<PaymentReceiptSummary[]>(`/payments/member/${memberId}`);
@@ -337,7 +370,7 @@ export const receptionApi = {
         packageId: payload.packageId,
         amount: payload.amount,
         method: payload.method,
-        note: payload.notes || 'Thu tiền tại quầy Lễ tân POS',
+        note: payload.notes || staffText('Thu tiền tại quầy Lễ tân POS', 'Front desk POS payment'),
       }),
     });
 

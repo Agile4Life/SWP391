@@ -25,7 +25,7 @@ public final class ImageDataUrlValidator {
      * về loại ảnh và dữ liệu byte.
      */
     public static ValidatedImage validate(String dataUrl, long maxBytes, String errorCode, String messageKey) {
-        if (dataUrl == null || !dataUrl.startsWith("data:")) {
+        if (maxBytes <= 0 || dataUrl == null || !dataUrl.startsWith("data:")) {
             throw invalid(errorCode, messageKey);
         }
         int semi = dataUrl.indexOf(";base64,");
@@ -35,6 +35,10 @@ public final class ImageDataUrlValidator {
         String declaredType = dataUrl.substring(5, semi).trim().toLowerCase(java.util.Locale.ROOT);
         String base64Part = dataUrl.substring(semi + 8).trim();
         if (base64Part.isEmpty()) {
+            throw invalid(errorCode, messageKey);
+        }
+        long maxEncodedLength = ((maxBytes + 2) / 3) * 4;
+        if (base64Part.length() > maxEncodedLength) {
             throw invalid(errorCode, messageKey);
         }
         byte[] bytes;

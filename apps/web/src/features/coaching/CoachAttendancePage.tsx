@@ -1,11 +1,11 @@
-import { staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { staffMessage, useStaffI18n, type StaffMessage, staffNotify as notify } from '../operations/staffI18n';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
-import { formatCenterDate, formatCenterTime } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, formatCenterTime, parseCenterTime } from '../../shared/lib/centerTime';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import {
   attendanceApi,
@@ -15,16 +15,19 @@ import {
 } from './attendanceApi';
 import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
 import { formatSlotLabel } from '../schedule/slots';
-import { mondayOf, parseISODate, todayISO } from '../schedule/timetable';
-import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
+import { addIsoDays, coachSessionEvents, isoDayToUtcMs, mondayOfIso, ptBookingEvents } from './coachTimetable';
+import { coachingError } from './coachingApi';
 import { getCoachSchedule, type CoachBookingDto } from '../member/coachBookingApi';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import './coach-attendance.css';
 
-/** Roster as the page edits it: only Có mặt / Vắng mặt, default score 80. */
+/** Số ngày ân hạn sửa điểm danh sau buổi học (khớp `SessionCompletionScheduler.GRACE_DAYS`). */
+const ATTENDANCE_EDIT_GRACE_DAYS = 7;
+
+/** Roster as the page edits it: only Có mặt / Vắng mặt (late counts as present), default score 80. */
 const normalizeRoster = (list: AttendanceStudent[]): AttendanceStudent[] => list.map((item) => ({
   ...item,
-  status: (item.status === 'present' ? 'present' : 'absent') as 'present' | 'absent',
+  status: (item.status === 'present' || item.status === 'late' ? 'present' : 'absent') as 'present' | 'absent',
   progressScore: item.progressScore || 80,
   notes: item.notes || '',
 }));
@@ -96,9 +99,12 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const selectedSessionId: number | null = sessionMode && Number.isInteger(Number(routeSessionId)) ? Number(routeSessionId) : null;
   const [loadedSessionId, setLoadedSessionId] = useState<number | null>(null);
   const [rosterError, setRosterError] = useState<StaffMessage | null>(null);
+  const [rosterAttempt, setRosterAttempt] = useState(0);
   const [students, setStudents] = useState<AttendanceStudent[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [sessionsLoading, setSessionsLoading] = useState<boolean>(true);
+  const [rosterLoading, setRosterLoading] = useState<boolean>(sessionMode);
   const [saving, setSaving] = useState<boolean>(false);
+  const [now, setNow] = useState<Date>(() => new Date());
 
   // Modal sửa điểm danh giữa màn hình (ở lại tab Lịch sử)
   const [editingAttendanceRecord, setEditingAttendanceRecord] = useState<AttendanceHistoryRecord | null>(null);
@@ -106,21 +112,53 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const [sessionsError, setSessionsError] = useState<StaffMessage | null>(null);
   const [sessionsAttempt, setSessionsAttempt] = useState(0);
   const [sessionsLoaded, setSessionsLoaded] = useState(false);
-  const [weekStart, setWeekStart] = useState(() => mondayOf(todayISO()));
+  const [weekStart, setWeekStart] = useState(() => mondayOfIso(centerNowParts().date));
   const [classFilter, setClassFilter] = useState('ALL');
   const [confirm, confirmDialog] = useConfirm();
-  const showCenterNotification = useCallback((msg: string = 'Cập nhật thành công') => notify(msg, 'success'), []);
+  const showCenterNotification = useCallback(
+    (msg: StaffMessage = staffMessage('Cập nhật thành công', 'Updated successfully')) => notify(msg, 'success'),
+    [],
+  );
+
+  const mountedRef = useRef(true);
+  const weekStartInitializedRef = useRef(false);
+  const savingRef = useRef(false);
+  const openingEditRef = useRef(false);
+  const historyReqIdRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   // Lịch sử điểm danh: đọc từ server, không lưu trên trình duyệt.
   const [history, setHistory] = useState<AttendanceHistoryRecord[]>([]);
+  const [historyLoading, setHistoryLoading] = useState<boolean>(true);
   const [historyError, setHistoryError] = useState(false);
   const loadHistory = useCallback(async () => {
+    const reqId = ++historyReqIdRef.current;
+    setHistoryLoading(true);
+    setHistoryError(false);
     try {
       const items = await attendanceApi.getHistory();
+      if (!mountedRef.current || reqId !== historyReqIdRef.current) return;
       setHistory(items.filter((i) => i.presentCount + i.lateCount + i.absentCount + i.excusedCount > 0).map(toAttendanceHistory));
       setHistoryError(false);
     } catch {
-      setHistoryError(true);
+      if (mountedRef.current && reqId === historyReqIdRef.current) {
+        setHistoryError(true);
+      }
+    } finally {
+      if (mountedRef.current && reqId === historyReqIdRef.current) {
+        setHistoryLoading(false);
+      }
     }
   }, []);
   useEffect(() => { void loadHistory(); }, [loadHistory]);
@@ -129,7 +167,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   useEffect(() => {
     let mounted = true;
     const fetchSessions = async () => {
-      setLoading(true);
+      setSessionsLoading(true);
       setSessionsError(null);
       try {
         const [data, ptData] = await Promise.all([
@@ -139,36 +177,46 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         if (mounted) {
           setSessions(data);
           setPtBookings(ptData);
-          const allActiveDates: string[] = [
-            ...data.map((s) => s.sessionDate),
-            ...ptData.filter((b) => b.status?.toLowerCase() !== 'cancelled').map((b) => b.bookingDate),
-          ];
-          if (allActiveDates.length > 0) {
-            // Mở sẵn buổi gần hôm nay nhất (ưu tiên buổi đã có học viên hoặc buổi PT 1:1) và tuần chứa buổi đó.
-            const withStudents = data.filter((s) => (s.bookedCount ?? 0) > 0);
-            const poolDates = withStudents.length > 0
-              ? [...withStudents.map((s) => s.sessionDate), ...ptData.filter((b) => b.status?.toLowerCase() !== 'cancelled').map((b) => b.bookingDate)]
-              : allActiveDates;
-            const today = parseISODate(todayISO()).getTime();
-            const distance = (d: string) => Math.abs(parseISODate(d).getTime() - today);
-            const preferred = poolDates.reduce((best, d) => (distance(d) < distance(best) ? d : best), poolDates[0]);
-            setWeekStart(mondayOf(preferred));
+          if (!weekStartInitializedRef.current) {
+            weekStartInitializedRef.current = true;
+            const allActiveDates: string[] = [
+              ...data.map((s) => s.sessionDate),
+              ...ptData.filter((b) => b.status?.toLowerCase() !== 'cancelled').map((b) => b.bookingDate),
+            ];
+            if (allActiveDates.length > 0) {
+              // Chỉ tự căn tuần gần hôm nay nhất 1 lần lúc khởi tạo để focus/visibility refresh không giật tuần đang xem.
+              const withStudents = data.filter((s) => (s.bookedCount ?? 0) > 0);
+              const poolDates = withStudents.length > 0
+                ? [...withStudents.map((s) => s.sessionDate), ...ptData.filter((b) => b.status?.toLowerCase() !== 'cancelled').map((b) => b.bookingDate)]
+                : allActiveDates;
+              const todayMs = isoDayToUtcMs(centerNowParts().date);
+              const distance = (d: string) => Math.abs(isoDayToUtcMs(d) - todayMs);
+              const preferred = poolDates.reduce((best, d) => (distance(d) < distance(best) ? d : best), poolDates[0]);
+              setWeekStart(mondayOfIso(preferred));
+            }
           }
         }
-      } catch {
-        if (mounted) setSessionsError('Không thể tải danh sách buổi học của bạn.');
+      } catch (err) {
+        if (mounted) {
+          setSessionsError(
+            coachingError(err, 'Không thể tải danh sách buổi học của bạn.', 'Unable to load your teaching sessions.'),
+          );
+        }
       } finally {
-        if (mounted) { setLoading(false); setSessionsLoaded(true); }
+        if (mounted) {
+          setSessionsLoading(false);
+          setSessionsLoaded(true);
+        }
       }
     };
 
-    fetchSessions();
+    void fetchSessions();
     return () => {
       mounted = false;
     };
   }, [sessionsAttempt]);
 
-  // Tự động làm mới lịch khi quay lại tab trình duyệt
+  // Tự động làm mới danh sách buổi trên nền khi quay lại tab trình duyệt (không đụng rosterLoading hay weekStart).
   useEffect(() => {
     const handleRefresh = () => {
       if (document.visibilityState === 'visible') {
@@ -183,13 +231,16 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     };
   }, []);
 
-  // Load danh sách học viên khi chọn buổi học khác
+  // Load danh sách học viên khi chọn buổi học khác hoặc bấm Thử lại.
   useEffect(() => {
-    if (!selectedSessionId) return;
+    if (!selectedSessionId) {
+      setRosterLoading(false);
+      return;
+    }
 
     let mounted = true;
     const fetchStudents = async () => {
-      setLoading(true);
+      setRosterLoading(true);
       setStudents([]);
       setLoadedSessionId(null);
       setRosterError(null);
@@ -199,24 +250,29 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
           setStudents(normalizeRoster(list));
           setLoadedSessionId(selectedSessionId);
         }
-      } catch {if (mounted) {
-          setRosterError('Không thể tải danh sách học viên. Hãy chọn lại buổi học.');
+      } catch (err) {
+        if (mounted) {
+          setRosterError(
+            coachingError(
+              err,
+              'Không thể tải danh sách học viên. Hãy thử lại.',
+              'Unable to load the student list. Please try again.',
+            ),
+          );
         }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) setRosterLoading(false);
       }
     };
 
-    fetchStudents();
+    void fetchStudents();
     return () => {
       mounted = false;
     };
-  }, [selectedSessionId]);
-
-  const rosterReady = selectedSessionId !== null && loadedSessionId === selectedSessionId && !loading && !rosterError;
+  }, [selectedSessionId, rosterAttempt]);
 
   const activeSession = useMemo(() => {
-    return sessions.find((s) => s.id === selectedSessionId) ;
+    return sessions.find((s) => s.id === selectedSessionId);
   }, [sessions, selectedSessionId]);
 
   // Kiểm tra buổi hiện tại đã được lưu hay chưa
@@ -224,8 +280,34 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     return history.find((h) => h.sessionId === selectedSessionId);
   }, [history, selectedSessionId]);
 
+  // Kiểm tra trạng thái khóa điểm danh của buổi (hủy, chưa bắt đầu, quá 7 ngày sau buổi học) theo giờ trung tâm.
+  const { isCancelled, notStarted, isExpired, isAttendanceLocked } = useMemo(() => {
+    if (!activeSession) {
+      return { isCancelled: false, notStarted: false, isExpired: false, isAttendanceLocked: false };
+    }
+    const cancelled = activeSession.status?.toLowerCase() === 'cancelled';
+    const startDt = parseCenterTime(`${activeSession.sessionDate}T${activeSession.startTime}`);
+    const upcoming = Boolean(!cancelled && startDt && startDt.getTime() > now.getTime());
+    const cutoffDate = addIsoDays(centerNowParts(now).date, -ATTENDANCE_EDIT_GRACE_DAYS);
+    const expired = Boolean(
+      !cancelled && (
+        activeSession.sessionDate < cutoffDate
+        || currentSavedRecord?.attendanceEditable === false
+      ),
+    );
+    return {
+      isCancelled: cancelled,
+      notStarted: upcoming,
+      isExpired: expired,
+      isAttendanceLocked: cancelled || upcoming || expired,
+    };
+  }, [activeSession, currentSavedRecord, now]);
+
+  const rosterReady = selectedSessionId !== null && loadedSessionId === selectedSessionId && !rosterLoading && !rosterError;
+
   // Cập nhật trạng thái điểm danh cho 1 học viên (chỉ có Có mặt hoặc Vắng mặt)
   const handleUpdateStatus = (studentId: number, status: 'present' | 'absent') => {
+    if (saving || isAttendanceLocked) return;
     setStudents((prev) =>
       prev.map((s) => (s.id === studentId ? { ...s, status } : s))
     );
@@ -233,19 +315,25 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
   // Điểm danh nhanh: Đặt tất cả thành Có mặt
   const handleMarkAllPresent = () => {
+    if (saving || isAttendanceLocked) return;
     setStudents((prev) => prev.map((s) => ({ ...s, status: 'present' })));
   };
 
   // Lưu hoặc Cập nhật điểm danh (Tab Điểm danh)
   const handleSaveAttendance = async () => {
-    if (!selectedSessionId || !activeSession || !rosterReady || saving) {
-      notify('Vui lòng chọn buổi học cần lưu điểm danh.', 'error');
+    if (savingRef.current) return;
+    if (!selectedSessionId || !activeSession || !rosterReady) {
+      notify(staffMessage('Vui lòng chọn buổi học cần lưu điểm danh.', 'Please select a session to save attendance.'), 'error');
       return;
     }
-    if (!(await confirmAbsentDespiteCheckin(checkedInButAbsent(students)))) return;
+    if (isAttendanceLocked) return;
 
-    setSaving(true);
+    savingRef.current = true;
     try {
+      if (!(await confirmAbsentDespiteCheckin(checkedInButAbsent(students)))) return;
+      if (!mountedRef.current) return;
+
+      setSaving(true);
       const payload = students.map((s) => ({
         memberId: s.memberId,
         status: s.status,
@@ -254,17 +342,25 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       }));
 
       await attendanceApi.saveBatchAttendance(selectedSessionId, payload);
+      if (!mountedRef.current) return;
 
       void loadHistory();
 
       showCenterNotification(
         currentSavedRecord
-          ? 'Đã cập nhật lại điểm danh thành công!'
-          : 'Lưu điểm danh thành công!'
+          ? staffMessage('Đã cập nhật lại điểm danh thành công!', 'Attendance updated successfully!')
+          : staffMessage('Lưu điểm danh thành công!', 'Attendance saved successfully!')
       );
-    } catch (err) { notify(errorMessage(err, 'Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.'), 'error');
+    } catch (err) {
+      if (mountedRef.current) {
+        notify(
+          coachingError(err, 'Có lỗi xảy ra khi lưu điểm danh. Vui lòng thử lại.', 'An error occurred while saving attendance. Please try again.'),
+          'error',
+        );
+      }
     } finally {
-      setSaving(false);
+      savingRef.current = false;
+      if (mountedRef.current) setSaving(false);
     }
   };
 
@@ -281,17 +377,28 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
   // Mở modal sửa điểm danh trực tiếp giữa màn hình (Không chuyển tab)
   const handleOpenEditAttendanceModal = async (record: AttendanceHistoryRecord) => {
+    if (openingEditRef.current) return;
+    openingEditRef.current = true;
     try {
       const list = await attendanceApi.getSessionStudents(record.sessionId);
-      setEditingAttendanceRecord({ ...record, students: normalizeRoster(list) });
+      if (mountedRef.current) {
+        setEditingAttendanceRecord({ ...record, students: normalizeRoster(list) });
+      }
     } catch (err) {
-      notify(errorMessage(err, 'Không thể tải danh sách học viên. Hãy thử lại.'), 'error');
+      if (mountedRef.current) {
+        notify(
+          coachingError(err, 'Không thể tải danh sách học viên. Hãy thử lại.', 'Unable to load the student list. Please try again.'),
+          'error',
+        );
+      }
+    } finally {
+      openingEditRef.current = false;
     }
   };
 
   // Thay đổi trạng thái học viên trong Modal sửa điểm danh
   const handleUpdateModalAttendanceStatus = (studentId: number, status: 'present' | 'absent') => {
-    if (!editingAttendanceRecord) return;
+    if (!editingAttendanceRecord || saving) return;
     setEditingAttendanceRecord({
       ...editingAttendanceRecord,
       students: editingAttendanceRecord.students.map((s) =>
@@ -302,10 +409,12 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
   // Lưu cập nhật từ Modal sửa điểm danh
   const handleSaveModalAttendance = async () => {
-    if (!editingAttendanceRecord) return;
+    if (!editingAttendanceRecord || savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const latest = await attendanceApi.getSessionStudents(editingAttendanceRecord.sessionId);
+      if (!mountedRef.current) return;
       const latestByMember = new Map(latest.map(student => [student.memberId, student]));
       const updatedStudents = editingAttendanceRecord.students.map(student => {
         const current = latestByMember.get(student.memberId);
@@ -317,12 +426,14 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         };
       });
       if (!(await confirmAbsentDespiteCheckin(checkedInButAbsent(updatedStudents)))) return;
+      if (!mountedRef.current) return;
       await attendanceApi.saveBatchAttendance(editingAttendanceRecord.sessionId, updatedStudents.map(student => ({
         memberId: student.memberId,
         status: student.status,
         progressScore: student.progressScore,
         notes: student.notes.trim(),
       })));
+      if (!mountedRef.current) return;
 
       void loadHistory();
       if (selectedSessionId === editingAttendanceRecord.sessionId) {
@@ -330,10 +441,17 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       }
 
       setEditingAttendanceRecord(null);
-      showCenterNotification('Cập nhật thành công');
-    } catch (err) { notify(errorMessage(err, 'Không thể lưu cập nhật. Vui lòng thử lại.'), 'error');
+      showCenterNotification(staffMessage('Cập nhật thành công', 'Updated successfully'));
+    } catch (err) {
+      if (mountedRef.current) {
+        notify(
+          coachingError(err, 'Không thể lưu cập nhật. Vui lòng thử lại.', 'Unable to save updates. Please try again.'),
+          'error',
+        );
+      }
     } finally {
-      setSaving(false);
+      savingRef.current = false;
+      if (mountedRef.current) setSaving(false);
     }
   };
 
@@ -358,13 +476,13 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     );
   }
 
-  const tabs: { id: AttendanceTab; label: string }[] = sessionMode
+  const tabs: { id: AttendanceTab; label: string; count?: number }[] = sessionMode
     ? [
         { id: 'attendance', label: t("Điểm danh buổi học") },
       ]
     : [
         { id: 'timetable', label: t("Thời khóa biểu") },
-        { id: 'attendance-history', label: `${t("Lịch sử điểm danh (")}${history.length})` },
+        { id: 'attendance-history', label: t("Lịch sử điểm danh", "Attendance history"), count: history.length },
       ];
 
   return (
@@ -378,7 +496,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         actions={sessionMode ? <Link to="/coach/attendance" className="btn-secondary">{t("Quay lại thời khóa biểu")}</Link> : undefined}
       />
 
-      {/* Quản lý buổi học: thời khóa biểu + 2 lịch sử. Trang một buổi: điểm danh + đánh giá. */}
+      {/* Quản lý buổi học: thời khóa biểu + lịch sử điểm danh. Trang một buổi: điểm danh. */}
       <div className="portal-tabs attendance-nav-tabs" role="tablist">
         {tabs.map((tab) => (
           <button
@@ -387,7 +505,10 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             role="tab" aria-selected={activeTab === tab.id} className={`portal-tab attendance-tab-btn ${activeTab === tab.id ? 'active is-active' : ''}`}
             onClick={() => setActiveTab(tab.id)}
           >
-            {tab.label}
+            <span>{tab.label}</span>
+            {tab.count !== undefined && (
+              <span className="portal-tab-count" style={{ fontVariantNumeric: 'tabular-nums' }}>{tab.count}</span>
+            )}
           </button>
         ))}
       </div>
@@ -399,7 +520,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         </div>
       )}
 
-      {/* Chọn buổi học trên thời khóa biểu tuần (Dùng cho tab Điểm danh & Đánh giá) */}
+      {/* Chọn buổi học trên thời khóa biểu tuần */}
       {!sessionsError && !sessionMode && activeTab === 'timetable' && (
         <WeeklyTimetable
           label={t("Thời khóa biểu buổi dạy cần điểm danh")}
@@ -411,13 +532,17 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                   sessions.filter((s) => classFilter === 'ALL' || s.className === classFilter),
                   'attendance',
                   new Set(history.map((h) => Number(h.sessionId))),
+                  now,
                 )),
             ...(classFilter === 'ALL' || classFilter === 'PT_1ON1'
-              ? ptBookingEvents(ptBookings)
+              ? ptBookingEvents(ptBookings, now)
               : []),
           ]}
           loading={!sessionsLoaded}
-          onWeekChange={setWeekStart}
+          onWeekChange={(iso) => {
+            weekStartInitializedRef.current = true;
+            setWeekStart(mondayOfIso(iso));
+          }}
           onEventClick={(id) => {
             if (id.startsWith('pt-')) {
               navigate('/coach/pt-attendance');
@@ -445,7 +570,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
               <RefreshButton
                 label={t("Làm mới thời khóa biểu", "Refresh timetable") as string}
                 onClick={() => setSessionsAttempt((n) => n + 1)}
-                disabled={loading}
+                disabled={sessionsLoading}
               />
             </div>
           }
@@ -466,7 +591,11 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
               <h3 className="session-name-title">
                 {activeSession?.className || t('Buổi tập Huấn luyện viên')}
               </h3>
-              {currentSavedRecord ? (
+              {isCancelled ? (
+                <span data-i18n-managed className="session-status-badge is-cancelled">
+                  {t("Đã hủy", "Cancelled")}
+                </span>
+              ) : currentSavedRecord ? (
                 <span data-i18n-managed className="session-status-badge is-saved">
                   {t("Đã có điểm danh", "Attendance recorded")}
                 </span>
@@ -498,8 +627,40 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         </div>
       )}
 
+      {sessionMode && isAttendanceLocked && (
+        <div
+          data-i18n-managed
+          className={`portal-alert${isCancelled ? '' : ' portal-alert--info'}`}
+          role={isCancelled ? 'alert' : 'status'}
+          data-testid="attendance-lock-banner"
+          style={{ marginBottom: 16 }}
+        >
+          {isCancelled
+            ? t(
+                'Buổi học này đã bị hủy. Không thể điểm danh hoặc chỉnh sửa điểm danh.',
+                'This session has been cancelled. Attendance cannot be recorded or edited.',
+              )
+            : notStarted
+            ? t(
+                'Buổi học chưa đến giờ bắt đầu. Chỉ có thể điểm danh sau khi buổi học bắt đầu.',
+                'This session has not started yet. Attendance can only be recorded once the session begins.',
+              )
+            : isExpired
+            ? t(
+                'Buổi học đã quá thời hạn 7 ngày chỉnh sửa điểm danh. Danh sách hiện chỉ ở chế độ xem.',
+                'This session is past the 7-day attendance edit window. The roster is now read-only.',
+              )
+            : ''}
+        </div>
+      )}
+
       {rosterError && sessionMode && (
-        <div data-i18n-managed className="coach-error-box" role="alert">{t(rosterError)}</div>
+        <div data-i18n-managed className="coach-error-box" role="alert">
+          <p>{t(rosterError)}</p>
+          <button type="button" className="btn-secondary btn-sm" onClick={() => setRosterAttempt((n) => n + 1)}>
+            {t("Thử lại", "Retry")}
+          </button>
+        </div>
       )}
 
       {/* =========================================================================
@@ -523,7 +684,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             </div>
             <div className="summary-pill-card">
               <span className="pill-label">{t("Tỷ lệ chuyên cần")}</span>
-              <span className="pill-value" style={{ color: 'var(--portal-salmon)' }}>
+              <span className="pill-value" style={{ color: 'var(--sol-accent-text)' }}>
                 {summaryCounts.rate}%
               </span>
             </div>
@@ -531,25 +692,25 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
           {/* Toolbar */}
           <div data-i18n-managed className="attendance-toolbar">
-            <span style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
+            <span style={{ fontSize: '0.9rem', color: 'var(--portal-muted)', fontVariantNumeric: 'tabular-nums' }}>
               {t("Danh sách ")}<strong>{students.length}</strong> {t(" học viên đã ghi danh:")}</span>
             <div className="toolbar-btn-group">
               <button
                 type="button"
                 className="btn-secondary btn-sm btn-quick-present"
                 onClick={handleMarkAllPresent}
-                disabled={!rosterReady || saving || students.length === 0}
+                disabled={!rosterReady || saving || students.length === 0 || isAttendanceLocked}
               >
                 {t("Điểm danh nhanh tất cả Có mặt")}</button>
             </div>
           </div>
 
           {/* Danh sách học viên ĐIỂM DANH */}
-          {loading ? (
+          {rosterLoading ? (
             <LoadingSkeleton label={t("Đang tải danh sách học viên buổi học…")} count={5} />
-          ) : students.length === 0 ? (
-            <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--color-text-muted)' }}>
-              <p>{t("Chưa có học viên nào book buổi học này.")}</p>
+          ) : rosterError ? null : students.length === 0 ? (
+            <div data-i18n-managed className="attendance-empty-state">
+              <p>{t("Chưa có học viên nào đăng ký buổi học này.", "No members have enrolled in this session.")}</p>
             </div>
           ) : (
             <div data-i18n-managed className="attendance-students-list">
@@ -559,7 +720,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                     <div className="student-card-top-row">
                       <div className="student-identity-group">
                         <div className="student-avatar-circle">
-                          {student.fullName.charAt(0).toUpperCase()}
+                          {(student.fullName?.trim().charAt(0) || '?').toUpperCase()}
                         </div>
                         <div className="student-meta-text">
                           <h4 className="student-full-name">{student.fullName}</h4>
@@ -588,6 +749,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                                 name={`attendance-status-${student.id}`}
                                 value={cfg.value}
                                 checked={isSelected}
+                                disabled={saving || isAttendanceLocked}
                                 onChange={() => handleUpdateStatus(student.id, cfg.value)}
                               />
                               <span data-i18n-managed
@@ -617,7 +779,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
               type="button"
               className="btn-primary btn-batch-save"
               onClick={handleSaveAttendance}
-              disabled={saving || !rosterReady || students.length === 0}
+              disabled={saving || !rosterReady || students.length === 0 || isAttendanceLocked}
             >
               {saving
                 ? t('Đang lưu...')
@@ -640,9 +802,18 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
             </div>
           </div>
 
-          {history.length === 0 ? (
+          {historyLoading && history.length === 0 ? (
+            <LoadingSkeleton label={t("Đang tải lịch sử điểm danh…", "Loading attendance history…")} count={4} />
+          ) : historyError ? (
+            <div data-i18n-managed className="coach-error-box" role="alert">
+              <p>{t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.")}</p>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => void loadHistory()}>
+                {t("Thử lại", "Retry")}
+              </button>
+            </div>
+          ) : history.length === 0 ? (
             <div data-i18n-managed className="attendance-empty-state">
-              <p>{historyError ? t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.") : t("Chưa có buổi nào được điểm danh trong 31 ngày qua.", "No sessions recorded in the last 31 days.")}</p>
+              <p>{t("Chưa có buổi nào được điểm danh trong 31 ngày qua.", "No sessions recorded in the last 31 days.")}</p>
             </div>
           ) : (
             <div data-i18n-managed className="history-cards-grid">
@@ -695,7 +866,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                       {record.attendanceEditable && (
                         <button
                           type="button"
-                          className="btn-history-edit"
+                          className="btn-secondary btn-sm btn-history-edit"
                           onClick={() => void handleOpenEditAttendanceModal(record)}
                         >
                           {t("Sửa điểm danh")}</button>
@@ -716,7 +887,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         <Modal
           title={t(`Sửa điểm danh: ${editingAttendanceRecord.className}`, `Edit attendance: ${editingAttendanceRecord.className}`)}
           busy={saving}
-          onClose={() => setEditingAttendanceRecord(null)}
+          onClose={() => { if (!saving) setEditingAttendanceRecord(null); }}
         >
           <div className="modal-edit-container">
             <div className="modal-record-meta-bar">
@@ -731,16 +902,25 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                   <div data-i18n-managed key={student.id} className="modal-student-edit-item">
                     <div className="student-identity-group">
                       <div className="student-avatar-circle">
-                        {student.fullName.charAt(0).toUpperCase()}
+                        {(student.fullName?.trim().charAt(0) || '?').toUpperCase()}
                       </div>
                       <div className="student-meta-text">
                         <h4 className="student-full-name">{student.fullName}</h4>
                         <span className="student-code-badge">{student.membershipCode}</span>
+                        {student.gateCheckinAt && (
+                          <span className="badge badge-info student-gate-tag">
+                            {t(`Đã check-in ${formatCenterTime(student.gateCheckinAt)}`, `Checked in ${formatCenterTime(student.gateCheckinAt)}`)}
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Radio 2 trạng thái: Có mặt / Vắng mặt */}
-                    <div className="attendance-radio-group">
+                    <div
+                      className="attendance-radio-group"
+                      role="radiogroup"
+                      aria-label={t(`Trạng thái điểm danh của ${student.fullName}`, `Attendance status for ${student.fullName}`)}
+                    >
                       {STATUS_CONFIG.map((cfg) => {
                         const isSelected = student.status === cfg.value;
                         return (
@@ -753,6 +933,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                               name={`modal-status-${student.id}`}
                               value={cfg.value}
                               checked={isSelected}
+                              disabled={saving}
                               onChange={() => handleUpdateModalAttendanceStatus(student.id, cfg.value)}
                             />
                             <span data-i18n-managed

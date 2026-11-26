@@ -244,6 +244,9 @@ class CoachAssignmentServiceTest {
         service.removeAssignment(501L);
         assertThat(selected.getStatus()).isEqualTo("cancelled"); assertThat(selected.getEndDate()).isEqualTo(today.plusDays(30));
         assertThat(selected.getCoach()).isSameAs(from); assertThat(selected.getMember()).isSameAs(member);
+        verify(audit).save(any(AuditLog.class));
+        verify(notifications).send(eq(10L), anyString(), anyString(), eq("system"), eq("training_plan"), eq(501L), eq("/coach/training-plans"));
+        verify(notifications).send(eq(100L), anyString(), anyString(), eq("system"), eq("training_plan"), eq(501L), eq("/member/progress"));
     }
 
     /** Kiểm thử: kết thúc phân công đã hoàn thành giữ nguyên trạng thái lịch sử. */
@@ -262,6 +265,7 @@ class CoachAssignmentServiceTest {
 
     @Test void overviewUsesCurrentQueriesIncludesSessionMembersAndCountsDistinctStudents() {
         when(coaches.findActiveWithUser()).thenReturn(List.of(from, to));
+        when(coaches.count()).thenReturn(5L);
         when(plans.findCurrentAssignments(10L, today)).thenReturn(List.of(plan(501L, "active"), plan(502L, "active")));
         GymClass group = new GymClass(); group.setId(701L); group.setName("Yoga");
         ClassSession session = new ClassSession(); session.setGymClass(group); session.setSessionDate(today.plusDays(1)); session.setStartTime(LocalTime.of(10, 0));
@@ -271,7 +275,10 @@ class CoachAssignmentServiceTest {
         @SuppressWarnings("unchecked") List<CoachAssignmentOverviewDto> rows = (List<CoachAssignmentOverviewDto>) overview.get("coaches");
         assertThat(rows).hasSize(1); assertThat(rows.getFirst().students()).hasSize(3); assertThat(rows.getFirst().totalStudentsCount()).isEqualTo(1);
         assertThat(rows.getFirst().planStudentsCount()).isEqualTo(1); assertThat(rows.getFirst().classStudentsCount()).isEqualTo(1);
-        var stats = (CoachAssignmentSummaryStatsDto) overview.get("stats"); assertThat(stats.totalAssignedStudents()).isEqualTo(1); assertThat(stats.totalPlanStudents()).isEqualTo(1);
+        var stats = (CoachAssignmentSummaryStatsDto) overview.get("stats");
+        assertThat(stats.totalCoaches()).isEqualTo(5);
+        assertThat(stats.activeCoaches()).isEqualTo(2);
+        assertThat(stats.totalAssignedStudents()).isEqualTo(1); assertThat(stats.totalPlanStudents()).isEqualTo(1);
         assertThat((List<?>) overview.get("availableCoaches")).hasSize(2);
         verify(plans, never()).findByCoachUserIdOrderByCreatedAtDesc(anyLong()); verify(bookings, never()).findByCoachId(anyLong());
         verify(bookings).findCurrentAssignments(10L, today, LocalTime.of(15, 0));

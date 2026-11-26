@@ -1,12 +1,11 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getCurrentUser } from '../../shared/api/client';
+import { sessionIdentityKey, useCurrentUser } from '../../shared/api/useCurrentUser';
 import { announceFloatingPanel, useCloseWhenOtherPanelOpens } from '../../shared/lib/floatingPanels';
 import type { ChatRealtimeFeed } from './ChatPage';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { CHAT_UNREAD_EVENT, getChatUnreadCount, type ChatContact } from './chatApi';
 import { subscribeChat, type ChatConnection } from './chatRealtime';
-import { LiquidGlassContainer } from '../../shared/liquid-glass/LiquidGlassContainer';
 import { useDraggableWidget } from './useDraggableWidget';
 import { useI18n } from '../../shared/i18n';
 import './chat-widget.css';
@@ -16,19 +15,40 @@ const ChatPage = lazy(() => import('./ChatPage').then(module => ({ default: modu
 
 const connectionLabel: Record<ChatConnection, [string, string]> = {
   connecting: ['Đang kết nối…', 'Connecting…'], connected: ['Cập nhật trực tiếp', 'Live updates'],
-  reconnecting: ['Mất kết nối · đang thử lại', 'Connection lost · reconnecting'], disabled: ['Bấm làm mới để xem tin mới', 'Refresh to see new messages'],
+  reconnecting: ['Mất kết nối · đang thử lại', 'Connection lost · reconnecting'], disabled: ['Tự động đồng bộ tin nhắn', 'Auto-syncing messages'],
 };
+
+/** Ảnh đại diện nhỏ trên nút chat nổi; tự rơi về hình bóng mặc định khi ảnh lỗi. */
+function MiniAvatar({ peer, index }: { peer?: ChatContact; index: number }) {
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const showImage = Boolean(peer?.avatarUrl && failedUrl !== peer.avatarUrl);
+  return (
+    <span className={`chat-widget__mini-avatar is-slot-${index}`}>
+      {showImage ? (
+        <img src={peer!.avatarUrl!} alt="" onError={() => setFailedUrl(peer!.avatarUrl ?? null)} />
+      ) : (
+        <svg viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="13.5" r="6" fill="currentColor" />
+          <path d="M7 31.5c1.8-5.5 5.8-8.2 11-8.2s9.2 2.7 11 8.2" fill="currentColor" />
+        </svg>
+      )}
+    </span>
+  );
+}
 
 /**
  * Nút chat nổi: khách xem được khung rỗng, quản lý dùng bản riêng, các vai trò khác dùng bản có kết nối
  * realtime; vai trò không hợp lệ thì không hiển thị.
  */
 export function ChatWidget() {
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const allowed = !user || ['MEMBER', 'STAFF', 'COACH', 'MANAGER'].includes(user.role);
   if (!allowed) return null;
-  if (user?.role === 'MANAGER') return <ManagerChatWidget />;
-  return user ? <SignedInChatWidget /> : <ChatShell unread={0} feed={null} onOpen={() => {}} />;
+  const identity = sessionIdentityKey(user);
+  if (user?.role === 'MANAGER') return <ManagerChatWidget key={identity} />;
+  return user
+    ? <SignedInChatWidget key={identity} />
+    : <ChatShell key={identity} unread={0} feed={null} onOpen={() => {}} />;
 }
 
 /** Quản lý không có chat riêng: không mở kết nối/badge chat, hộp thư khiếu nại tự giữ realtime của nó. */
@@ -92,10 +112,14 @@ function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unr
     closeButton.current?.focus();
     // Đóng panel và trả focus về nút mở.
     const close = () => { setOpen(false); trigger.current?.focus(); };
-    // Nhấn Esc thì đóng panel.
+    // Nhấn Esc thì đóng panel; bỏ qua nếu đang mở hộp thoại <dialog open> bên trên.
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented) return;
-      if (event.key === 'Escape') { event.preventDefault(); close(); }
+      if (event.key === 'Escape') {
+        if (document.querySelector('dialog[open]')) return;
+        event.preventDefault();
+        close();
+      }
     };
     // Bấm ra ngoài panel và nút mở thì đóng panel.
     const onPointer = (event: PointerEvent) => {
@@ -129,7 +153,6 @@ function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unr
         setOpen(value => !value);
       }}
     >
-      <LiquidGlassContainer shape="pill" tintOpacity={0.04} blurRadius={4} active={!open} className="chat-widget__trigger-glass" />
       <span className="chat-widget__trigger-main" aria-hidden="true">
         <span className="chat-widget__trigger-icon">
           <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -141,30 +164,15 @@ function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unr
         <span className="chat-widget__trigger-label">{t('Tin nhắn', 'Messages')}</span>
       </span>
       <span className="chat-widget__trigger-avatars" aria-hidden="true">
-        {[0, 1, 2].map(index => {
-          const peer = peers[index];
-          return (
-            <span key={peer?.id ?? `slot-${index}`} className={`chat-widget__mini-avatar is-slot-${index}`}>
-              {peer?.avatarUrl ? (
-                <img src={peer.avatarUrl} alt="" />
-              ) : (
-                <svg viewBox="0 0 36 36" fill="none">
-                  <circle cx="18" cy="13.5" r="6" fill="currentColor" />
-                  <path d="M7 31.5c1.8-5.5 5.8-8.2 11-8.2s9.2 2.7 11 8.2" fill="currentColor" />
-                </svg>
-              )}
-            </span>
-          );
-        })}
+        {[0, 1, 2].map(index => (
+          <MiniAvatar key={peers[index]?.id ?? `slot-${index}`} peer={peers[index]} index={index} />
+        ))}
       </span>
     </button>
     {visited && <section ref={panel} id="sol-direct-chat" className={`chat-widget__panel${expanded ? ' is-expanded' : ''}`} role="dialog" aria-label={t("Tin nhắn SÖL", "SÖL messages")} hidden={!open} style={panelStyle} onPointerDown={onPanelPointerDown}>
-      <LiquidGlassContainer shape="rounded" borderRadius={16} tintOpacity={0.04} blurRadius={8} active={open} className="chat-widget__glass" />
       <header className="chat-widget__header">
         <div className="chat-widget__header-title">
           <strong>{t("Tin nhắn", "Messages")}</strong>
-          {feed && showStatus && <p className={`chat-widget__status is-${feed.connection}`} role="status">{t(...connectionLabel[feed.connection])}
-            {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>{t("Thử lại", "Retry")}</button>}</p>}
         </div>
         <div className="chat-widget__header-actions">
           <button
@@ -190,6 +198,8 @@ function ChatShell({ unread, feed, onOpen, onRefresh, showStatus = true }: { unr
           </button>
         </div>
       </header>
+      {feed && showStatus && <p className={`chat-widget__status is-${feed.connection}`} role="status">{t(...connectionLabel[feed.connection])}
+        {feed.connection === 'reconnecting' && <button type="button" className="direct-chat__link" onClick={feed.reconnect}>{t("Thử lại", "Retry")}</button>}</p>}
       {feed ? <Suspense fallback={<div className="chat-widget__loading"><LoadingSkeleton label={t("Đang mở tin nhắn…", "Opening messages…")} count={4} /></div>}>
         <ChatPage embedded visible={open} realtime={feed} onPeersChange={setPeers} />
       </Suspense> : <div className="chat-widget__login"><p>{t("Đăng nhập để trao đổi với lễ tân, huấn luyện viên và trợ lý SÖL AI.", "Sign in to chat with receptionists, coaches and SÖL AI.")}</p><Link to="/login" className="btn-primary">{t("Đăng nhập để nhắn tin", "Sign in to send messages")}</Link></div>}

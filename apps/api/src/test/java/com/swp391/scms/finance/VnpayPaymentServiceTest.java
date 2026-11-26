@@ -26,7 +26,8 @@ class VnpayPaymentServiceTest {
     final PaymentService settlement = mock(PaymentService.class);
     final InvoiceService invoices = mock(InvoiceService.class);
     final VnpayGateway gateway = new VnpayGateway(new VnpayProperties(true, "TEST1234", "test-secret",
-            "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", "https://example.test/member/payments/vnpay/return", 15));
+            "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html", "https://example.test/member/payments/vnpay/return", 15),
+            "https://scms.bluesymphony.site");
     final com.swp391.scms.notifications.NotificationService notifications = mock(com.swp391.scms.notifications.NotificationService.class);
     final Clock clock = Clock.fixed(Instant.parse("2026-11-03T05:00:00Z"), ZoneOffset.UTC);
     final VnpayPaymentService service = new VnpayPaymentService(transactions, payments, members, subscriptions, settlement, invoices, gateway, clock, mock(jakarta.persistence.EntityManager.class), mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class), notifications, mock(com.swp391.scms.common.i18n.MessageService.class));
@@ -545,5 +546,138 @@ class VnpayPaymentServiceTest {
         assertEquals("00", service.ipn(lateSuccess));
         assertEquals("success", topupTx.getStatus());
         verify(walletService, times(1)).creditLateGatewayPayment(7L, new BigDecimal("200000"), "TOPUP1");
+    }
+
+    @Test void payWithWalletRejectsWalletTopupPaymentWithoutDebitingWallet() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+
+        Payment topupPayment = new Payment();
+        topupPayment.setId(88L);
+        topupPayment.setMember(payment.getMember());
+        topupPayment.setAmount(new BigDecimal("200000"));
+        topupPayment.setMethod("online_wallet");
+        topupPayment.setNote("WALLET_TOPUP");
+        topupPayment.setStatus("pending");
+        when(payments.findById(88L)).thenReturn(Optional.of(topupPayment));
+
+        var ex = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, 88L)));
+        assertEquals("VNPAY_WALLET_TOPUP_NOT_PAYABLE_BY_WALLET", ex.getErrorCode());
+
+        // Khoản thu không gắn đối tượng nào (kể cả không có note WALLET_TOPUP) cũng không được trừ ví.
+        Payment untargeted = new Payment();
+        untargeted.setId(89L);
+        untargeted.setMember(payment.getMember());
+        untargeted.setAmount(new BigDecimal("100000"));
+        untargeted.setMethod("online_wallet");
+        untargeted.setStatus("pending");
+        when(payments.findById(89L)).thenReturn(Optional.of(untargeted));
+
+        var ex2 = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.payWithWallet(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, 89L)));
+        assertEquals("VNPAY_WALLET_TOPUP_NOT_PAYABLE_BY_WALLET", ex2.getErrorCode());
+
+        verifyNoInteractions(walletService, settlement, invoices);
+        verify(payments, never()).saveAndFlush(any());
+        assertEquals("pending", topupPayment.getStatus());
+        assertEquals("pending", untargeted.getStatus());
+    }
+
+    /** Kiểm thử P1-BE-31: không tạo khoản pending VNPay thứ hai khi gói tập đã có khoản chờ (kể cả biên lai tiền mặt). */
+    @Test void checkoutDoesNotCreateSecondPendingPaymentWhenPendingCashReceiptExists() {
+        Payment cashReceiptPending = new Payment();
+        cashReceiptPending.setId(77L);
+        cashReceiptPending.setMember(payment.getMember());
+        cashReceiptPending.setSubscriptionId(11L);
+        cashReceiptPending.setAmount(new BigDecimal("650000"));
+        cashReceiptPending.setMethod("cash");
+        cashReceiptPending.setStatus("pending");
+        cashReceiptPending.setReceiptImage("data:image/png;base64,abc");
+        when(payments.findAllBySubscriptionId(11L)).thenReturn(List.of(cashReceiptPending));
+
+        var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.checkout(owner, 11L, "127.0.0.1"));
+        assertEquals("VNPAY_TARGET_UNAVAILABLE", ex.getErrorCode());
+        verify(payments, never()).save(any());
+        verify(transactions, never()).save(any());
+    }
+
+    /** Kiểm thử P1-BE-31: từ chối tạo phiên VNPay cho ghi danh lớp học đã hủy. */
+    @Test void checkoutRejectsCancelledClassEnrollment() {
+        var enrollmentRepo = mock(com.swp391.scms.scheduling.repository.ClassEnrollmentRepository.class);
+        service.setClassEnrollments(enrollmentRepo);
+
+        Payment coursePayment = new Payment();
+        coursePayment.setId(55L);
+        coursePayment.setMember(payment.getMember());
+        coursePayment.setClassEnrollmentId(33L);
+        coursePayment.setAmount(new BigDecimal("500000"));
+        coursePayment.setMethod("online_wallet");
+        coursePayment.setStatus("pending");
+        when(payments.findById(55L)).thenReturn(Optional.of(coursePayment));
+
+        var cancelled = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        cancelled.setId(33L);
+        cancelled.setStatus("cancelled");
+        when(enrollmentRepo.findById(33L)).thenReturn(Optional.of(cancelled));
+
+        var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> service.checkout(owner, new com.swp391.scms.finance.dto.VnpayDtos.CheckoutRequest(null, null, 55L), "127.0.0.1"));
+        assertEquals("VNPAY_TARGET_UNAVAILABLE", ex.getErrorCode());
+        verify(transactions, never()).save(any());
+    }
+
+    /** Kiểm thử P1-BE-31: IPN gặp ConflictException đầu cuối (ghi danh đã hủy / lịch đã hủy) hoàn tiền về ví và trả 00 thay vì kẹt 99. */
+    @Test void ipnCatchesTerminalConflictFromSettlementOrBookingValidationRefundsWalletAndReturns00() {
+        var walletService = mock(com.swp391.scms.wallet.WalletService.class);
+        service.setWalletService(walletService);
+        when(settlement.updatePaymentStatus(9L, "success"))
+                .thenThrow(new com.swp391.scms.common.exception.ConflictException("ENROLLMENT_CANCELLED", "Cancelled enrollment"));
+
+        assertEquals("00", service.ipn(callback("00", "00", "65000000")));
+        assertEquals("success", transaction.getStatus());
+        assertEquals("12345", transaction.getGatewayTransactionNo());
+        assertEquals("failed", payment.getStatus());
+        verify(walletService, times(1)).creditLateGatewayPayment(7L, new BigDecimal("650000"), "ABC123");
+        verifyNoInteractions(invoices);
+
+        // Callback lặp lại trả 02 và không cộng tiền thêm
+        assertEquals("02", service.ipn(callback("00", "00", "65000000")));
+        verify(walletService, times(1)).creditLateGatewayPayment(any(), any(), any());
+
+        // Kiểm tra thêm trường hợp ConflictException từ validateBooking (PT đã bị hủy trước khi IPN về)
+        var bookingRepo = mock(com.swp391.scms.coaching.repository.CoachBookingRepository.class);
+        var cancelledBooking = new com.swp391.scms.coaching.entity.CoachBooking();
+        cancelledBooking.setId(82L);
+        cancelledBooking.setMember(payment.getMember());
+        cancelledBooking.setStatus("cancelled");
+        when(bookingRepo.findByIdForUpdate(82L)).thenReturn(Optional.of(cancelledBooking));
+
+        Payment ptPayment = new Payment();
+        ptPayment.setId(19L);
+        ptPayment.setMember(payment.getMember());
+        ptPayment.setCoachBookingId(82L);
+        ptPayment.setAmount(new BigDecimal("200000"));
+        ptPayment.setStatus("pending");
+        ptPayment.setMethod("online_wallet");
+        var ptTx = new VnpayTransaction("PTREF1", ptPayment, ptPayment.getAmount(),
+                LocalDateTime.of(2026, 11, 3, 12, 0), LocalDateTime.of(2026, 11, 3, 12, 15), "127.0.0.1");
+        when(transactions.findById("PTREF1")).thenReturn(Optional.of(ptTx));
+
+        var ptSvc = new VnpayPaymentService(transactions, payments, members, subscriptions, settlement, invoices, gateway,
+                clock, mock(jakarta.persistence.EntityManager.class), bookingRepo, notifications,
+                mock(com.swp391.scms.common.i18n.MessageService.class));
+        ptSvc.setWalletService(walletService);
+
+        var ptData = new HashMap<>(Map.of("vnp_TmnCode", "TEST1234", "vnp_TxnRef", "PTREF1", "vnp_Amount", "20000000",
+                "vnp_ResponseCode", "00", "vnp_TransactionStatus", "00", "vnp_TransactionNo", "54321", "vnp_PayDate", "20261103120100"));
+        ptData.put("vnp_SecureHash", gateway.sign(ptData));
+
+        assertEquals("00", ptSvc.ipn(ptData));
+        assertEquals("success", ptTx.getStatus());
+        assertEquals("54321", ptTx.getGatewayTransactionNo());
+        assertEquals("failed", ptPayment.getStatus());
+        verify(walletService, times(1)).creditLateGatewayPayment(7L, new BigDecimal("200000"), "PTREF1");
     }
 }

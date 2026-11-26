@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { subscribeMembershipChanges } from '../membershipRealtime';
 import { Modal } from '../../../shared/ui/Modal';
+import { DatePicker } from '../../../shared/ui/DatePicker';
 import { centerNowParts, formatCenterDate, parseCenterTime } from '../../../shared/lib/centerTime';
 import { addDays, parseISODate } from '../../schedule/timetable';
 import { findScheduleSlot, findSlotByNumber, formatSlotLabel } from '../../schedule/slots';
@@ -22,11 +23,12 @@ import {
   type CoachQuotaStatusDto,
 } from '../coachBookingApi';
 import { coachIllustration } from '../../../shared/lib/coachIllustration';
-import { formatPrice } from '../../../shared/lib/membershipPresentation';
+import { formatPrice, localizeSeededPackageName } from '../../../shared/lib/membershipPresentation';
 import { ApiError } from '../../../shared/api/client';
 import {
   formatCoachName,
   isSessionCompleted,
+  isSessionStarted,
 } from '../coachBookingUtils';
 
 /** Chuyển lỗi đặt lịch PT thành thông báo dễ hiểu (gói hết hạn, hết hạn mức...). */
@@ -36,10 +38,16 @@ function coachBookingErrorMessage(err: unknown): string | SourceMessage {
       return memberMessage('Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.');
     }
     if (err.code === 'COACH_BOOKING_PACKAGE_NO_QUOTA') {
-      return memberMessage('Gói hiện tại không có lượt PT 1:1 miễn phí. Chọn thanh toán theo giờ.');
+      return memberMessage(
+        'Gói hiện tại không có lượt PT 1:1 miễn phí. Chọn thanh toán theo slot.',
+        'Your plan has no free 1:1 sessions. Choose pay per slot.',
+      );
     }
     if (err.code === 'COACH_BOOKING_QUOTA_EXCEEDED') {
-      return memberMessage('Đã hết lượt PT 1:1 miễn phí của tháng. Chọn thanh toán theo giờ.');
+      return memberMessage(
+        'Đã hết lượt PT 1:1 miễn phí của tháng. Chọn thanh toán theo slot.',
+        'Your free 1:1 sessions for this month are used up. Choose pay per slot.',
+      );
     }
     return err.message;
   }
@@ -97,7 +105,7 @@ export function MemberCoachBookingView({
 }: {
   onBookingSuccess?: () => void;
 }) {
-  useLanguage();
+  const { lang } = useLanguage();
   const navigate = useNavigate();
   const [coaches, setCoaches] = useState<CoachPublicDto[]>([]);
   const [selectedCoachId, setSelectedCoachId] = useState<number | null>(null);
@@ -107,6 +115,9 @@ export function MemberCoachBookingView({
   const [myBookings, setMyBookings] = useState<CoachBookingDto[]>([]);
   const [bookingDateFilter, setBookingDateFilter] = useState<string>('');
   const [quotaStatus, setQuotaStatus] = useState<CoachQuotaStatusDto | null>(null);
+  const [quotaError, setQuotaError] = useState(false);
+  const [initRetryTick, setInitRetryTick] = useState(0);
+  const [slotRetryTick, setSlotRetryTick] = useState(0);
   const [errorCode, setErrorCode] = useState<string | undefined | SourceMessage>();
   // Lỗi gửi của hộp thoại hiện ngay trong hộp thoại (không dùng banner đầu trang nằm sau lớp nền mờ).
   const [bookingError, setBookingError] = useState<string | SourceMessage>('');
@@ -114,16 +125,24 @@ export function MemberCoachBookingView({
   // quotaStatus giữ null khi đang tải hoặc khi yêu cầu lỗi; chỉ kết quả đã tải xong mà không có gói mới nghĩa là chưa có gói.
   const hasNoPackage = quotaStatus !== null && !quotaStatus.packageName;
   const isTrial = Boolean(
-    quotaStatus &&
-    (quotaStatus.monthlyQuota === 1 ||
-     (quotaStatus.packageName && (
-       quotaStatus.packageName.includes('Trải Nghiệm') ||
-       quotaStatus.packageName.toUpperCase().includes('TRIAL')
-     )))
+    quotaStatus?.packageName && (
+      quotaStatus.packageName.toLowerCase().includes('trải nghiệm') ||
+      quotaStatus.packageName.toLowerCase().includes('trai nghiem') ||
+      quotaStatus.packageName.toUpperCase().includes('TRIAL')
+    ),
   );
   const displayedPackageName = isTrial
-    ? 'Gói Trải Nghiệm 3 Ngày'
-    : (quotaStatus?.packageName || 'Gold / Platinum');
+    ? localizeSeededPackageName('Gói Trải Nghiệm 3 Ngày', lang)
+    : quotaStatus?.packageName
+      ? localizeSeededPackageName(quotaStatus.packageName, lang)
+      : 'Gold / Platinum';
+  const ptDiscountPercent = (() => {
+    if (!quotaStatus || !quotaStatus.packageName || isTrial) return 0;
+    const upper = quotaStatus.packageName.toUpperCase();
+    if (upper.includes('PLATINUM')) return 20;
+    if (upper.includes('GOLD')) return 10;
+    return 0;
+  })();
 
   const [loadingCoaches, setLoadingCoaches] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -136,6 +155,8 @@ export function MemberCoachBookingView({
   const [paymentMethod, setPaymentMethod] = useState<'package_quota' | 'hourly_pay'>('package_quota');
   const [notes, setNotes] = useState('');
   const slotDate = selectedDate;
+  const quotaRadioRef = useRef<HTMLDivElement | null>(null);
+  const hourlyRadioRef = useRef<HTMLDivElement | null>(null);
 
   // Trạng thái hộp thoại thanh toán
   const [paymentModalBooking, setPaymentModalBooking] = useState<CoachBookingDto | null>(null);
@@ -145,12 +166,20 @@ export function MemberCoachBookingView({
   // Tải lại các buổi đã đặt và hạn mức PT.
   const refreshBookingsAndQuota = useCallback(async () => {
     try {
-      const [bookingsList, quota] = await Promise.all([
+      const [bookingsList, quotaResult] = await Promise.all([
         getMyCoachBookings(),
-        getMemberQuotaStatus().catch(() => null),
+        getMemberQuotaStatus().then(
+          (value) => ({ ok: true as const, value }),
+          () => ({ ok: false as const }),
+        ),
       ]);
       setMyBookings(bookingsList);
-      if (quota) setQuotaStatus(quota);
+      if (quotaResult.ok) {
+        setQuotaStatus(quotaResult.value);
+        setQuotaError(false);
+      } else {
+        setQuotaError(true);
+      }
     } catch {
       // Làm mới ngầm khi có lỗi
     }
@@ -171,16 +200,26 @@ export function MemberCoachBookingView({
     async function init() {
       setLoadingCoaches(true);
       setError('');
+      setQuotaError(false);
       try {
-        const [coachList, bookingsList, quota] = await Promise.all([
+        const [coachList, bookingsList, quotaResult] = await Promise.all([
           getCoaches(),
           getMyCoachBookings(),
-          getMemberQuotaStatus().catch(() => null),
+          getMemberQuotaStatus().then(
+            (value) => ({ ok: true as const, value }),
+            () => ({ ok: false as const }),
+          ),
         ]);
         if (!active) return;
         setCoaches(coachList);
         setMyBookings(bookingsList);
-        if (quota) setQuotaStatus(quota);
+        if (quotaResult.ok) {
+          setQuotaStatus(quotaResult.value);
+          setQuotaError(false);
+        } else {
+          setQuotaStatus(null);
+          setQuotaError(true);
+        }
         setSelectedCoachId((current) => current ?? coachList[0]?.id ?? null);
       } catch (err: unknown) {
         if (active) setError((memberError(err, 'Không thể tải danh sách huấn luyện viên.')));
@@ -190,7 +229,7 @@ export function MemberCoachBookingView({
     }
     void init();
     return () => { active = false; };
-  }, []);
+  }, [initRetryTick]);
 
   // Theo dõi các buổi 1:1 trả phí đang chờ thanh toán và thông báo theo thời gian thực khi thanh toán được xác nhận
   useEffect(() => {
@@ -285,6 +324,7 @@ export function MemberCoachBookingView({
     // Tải các khung giờ của HLV trong ngày đang chọn.
     async function loadSlots() {
       setLoadingSlots(true);
+      setError('');
       setSlots([]);
       setSelectedSlot(null);
       try {
@@ -298,10 +338,13 @@ export function MemberCoachBookingView({
     }
     void loadSlots();
     return () => { active = false; };
-  }, [selectedCoachId, slotDate]);
+  }, [selectedCoachId, slotDate, slotRetryTick]);
 
   const selectedCoach = coaches.find((c) => c.id === selectedCoachId);
-
+  const baseSlotPrice = selectedCoach?.defaultHourlyRate || 200000;
+  const finalSlotPrice = ptDiscountPercent > 0
+    ? Math.round((baseSlotPrice * (100 - ptDiscountPercent)) / 100)
+    : baseSlotPrice;
 
   const hasRemainingQuota = (quotaStatus?.remainingQuota ?? 0) > 0;
 
@@ -342,14 +385,22 @@ export function MemberCoachBookingView({
       setSelectedSlot(null);
       setNotes('');
 
-      const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
+      const [updatedSlots, updatedBookings, updatedQuotaResult] = await Promise.all([
         getAvailableSlots(selectedCoach.id, slotDate),
         getMyCoachBookings(),
-        getMemberQuotaStatus().catch(() => null),
+        getMemberQuotaStatus().then(
+          (value) => ({ ok: true as const, value }),
+          () => ({ ok: false as const }),
+        ),
       ]);
       setSlots(updatedSlots);
       setMyBookings(updatedBookings);
-      if (updatedQuota) setQuotaStatus(updatedQuota);
+      if (updatedQuotaResult.ok) {
+        setQuotaStatus(updatedQuotaResult.value);
+        setQuotaError(false);
+      } else {
+        setQuotaError(true);
+      }
       window.dispatchEvent(new Event('member-notifications-changed'));
       onBookingSuccess?.();
 
@@ -409,16 +460,27 @@ export function MemberCoachBookingView({
       }
       setCancelTarget(null);
 
-      if (selectedCoachId) {
-        const [updatedSlots, updatedBookings, updatedQuota] = await Promise.all([
-          getAvailableSlots(selectedCoachId, slotDate),
+      try {
+        const [updatedSlots, updatedBookings, updatedQuotaResult] = await Promise.all([
+          selectedCoachId ? getAvailableSlots(selectedCoachId, slotDate) : Promise.resolve(null),
           getMyCoachBookings(),
-          getMemberQuotaStatus().catch(() => null),
+          getMemberQuotaStatus().then(
+            (value) => ({ ok: true as const, value }),
+            () => ({ ok: false as const }),
+          ),
         ]);
-        setSlots(updatedSlots);
+        if (updatedSlots !== null) setSlots(updatedSlots);
         setMyBookings(updatedBookings);
-        if (updatedQuota) setQuotaStatus(updatedQuota);
+        if (updatedQuotaResult.ok) {
+          setQuotaStatus(updatedQuotaResult.value);
+          setQuotaError(false);
+        } else {
+          setQuotaError(true);
+        }
+      } catch {
+        // Đã hủy lịch thành công ở backend; bỏ qua lỗi làm mới tạm thời.
       }
+      onBookingSuccess?.();
     } catch (err: unknown) {
       setCancelError(memberError(err, 'Không thể hủy lịch.'));
     } finally {
@@ -446,19 +508,46 @@ export function MemberCoachBookingView({
             background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
             padding: 14,
             display: 'flex',
+            flexWrap: 'wrap',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: 10,
           }}
         >
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}><strong style={{ color: 'var(--portal-danger)' }}>{memberRenderMessage(error)}</strong>{errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED' && <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')} style={{ padding: '4px 10px', fontSize: 12 }}>{memberText("Đăng ký / Kích hoạt gói tập")}</button>}</div>
-          <button
-            type="button"
-            className="btn-secondary btn-sm"
-            onClick={() => setError('')}
-            style={{ padding: '2px 8px', fontSize: 12 }}
-          >
-            ✕
-          </button>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+            <strong style={{ color: 'var(--portal-danger)' }}>{memberRenderMessage(error)}</strong>
+            {errorCode === 'MEMBERSHIP_INACTIVE_OR_EXPIRED' && (
+              <button type="button" className="btn-primary btn-sm" onClick={() => navigate('/member/packages')} style={{ padding: '4px 10px', fontSize: 12 }}>
+                {memberText("Đăng ký / Kích hoạt gói tập")}
+              </button>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              onClick={() => {
+                setError('');
+                if (coaches.length === 0) {
+                  setInitRetryTick((v) => v + 1);
+                } else {
+                  setSlotRetryTick((v) => v + 1);
+                  if (quotaError) void refreshBookingsAndQuota();
+                }
+              }}
+            >
+              {memberText("Thử lại", "Retry")}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary btn-sm"
+              aria-label={memberText("Đóng thông báo lỗi", "Dismiss error")}
+              onClick={() => setError('')}
+              style={{ padding: '2px 8px', fontSize: 12 }}
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
 
@@ -489,36 +578,106 @@ export function MemberCoachBookingView({
                 color: 'var(--portal-on-accent)',
               }}
             >
-              {memberText("Gói: ")}{quotaStatus?.packageName || memberText("Chưa có gói")}
+              {quotaError
+                ? memberText("Không thể tải thông tin gói", "Unable to load membership")
+                : quotaStatus?.packageName
+                  ? `${memberText("Gói: ", "Membership: ")}${localizeSeededPackageName(quotaStatus.packageName, lang)}`
+                  : hasNoPackage
+                    ? `${memberText("Gói: ", "Membership: ")}${memberText("Chưa có gói", "No membership")}`
+                    : `${memberText("Gói: ", "Membership: ")}…`}
             </span>
             <span style={{ fontSize: 14, fontWeight: 700 }}>
               {memberText("Chính sách Huấn luyện viên cá nhân (PT 1:1)")}</span>
           </div>
 
           <p style={{ margin: '8px 0 0', fontSize: 13, color: 'var(--portal-muted)' }}>
-            {isTrial ? (
-              <>
-                <strong>{displayedPackageName}</strong>{memberText(" bao gồm đặc quyền ")}<strong>{memberText("01 buổi tập HLV 1:1 miễn phí")}</strong> {memberText(" duy nhất trong suốt thời gian trải nghiệm.")}{quotaStatus && (
-                  <>
-                    {' '}{memberText("Bạn đã dùng ")}<strong>{quotaStatus.usedThisMonth}{memberText(" lượt")}</strong>{memberText(" (còn lại:")}{' '}
-                    <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
-                      {quotaStatus.remainingQuota}{memberText(" lượt")}</strong>).
-                  </>
-                )}
-                {quotaStatus && quotaStatus.remainingQuota <= 0 && memberText(" Hết buổi trải nghiệm 1:1? Đặt thêm HLV theo giờ (200.000 đ / giờ).")}
-              </>
+            {quotaError ? (
+              <span style={{ display: 'inline-flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                <span>{memberText("Không thể tải thông tin hạn mức gói tập.", "Unable to load membership PT quota.")}</span>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  onClick={() => void refreshBookingsAndQuota()}
+                >
+                  {memberText("Thử lại", "Retry")}
+                </button>
+              </span>
+            ) : isTrial ? (
+              lang === 'en' ? (
+                <>
+                  <strong>{displayedPackageName}</strong> includes <strong>01 free 1:1 coaching session</strong> for the entire trial period.
+                  {quotaStatus && (
+                    <>
+                      {' '}You have used <strong>{quotaStatus.usedThisMonth}</strong> (remaining:{' '}
+                      <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
+                        {quotaStatus.remainingQuota}
+                      </strong>
+                      ).
+                    </>
+                  )}
+                  {quotaStatus && quotaStatus.remainingQuota <= 0 && (
+                    <> Trial session used? Book extra 1:1 coaching per slot ({formatPrice(200000)} / slot).</>
+                  )}
+                </>
+              ) : (
+                <>
+                  <strong>{displayedPackageName}</strong> bao gồm đặc quyền <strong>01 buổi tập HLV 1:1 miễn phí</strong> duy nhất trong suốt thời gian trải nghiệm.
+                  {quotaStatus && (
+                    <>
+                      {' '}Bạn đã dùng <strong>{quotaStatus.usedThisMonth} lượt</strong> (còn lại:{' '}
+                      <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
+                        {quotaStatus.remainingQuota} lượt
+                      </strong>
+                      ).
+                    </>
+                  )}
+                  {quotaStatus && quotaStatus.remainingQuota <= 0 && (
+                    <> Hết buổi trải nghiệm 1:1? Đặt thêm HLV theo slot ({formatPrice(200000)} / slot).</>
+                  )}
+                </>
+              )
             ) : quotaStatus?.monthlyQuota && quotaStatus.monthlyQuota > 0 ? (
+              lang === 'en' ? (
+                <>
+                  <strong>{displayedPackageName}</strong> includes <strong>{quotaStatus.monthlyQuota} free PT sessions/month</strong>. This month you have used{' '}
+                  <strong>{quotaStatus.usedThisMonth}</strong> (remaining:{' '}
+                  <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
+                    {quotaStatus.remainingQuota}
+                  </strong>
+                  ).
+                  {quotaStatus.remainingQuota <= 0 && (
+                    <> Once free sessions are used up, additional slots cost {formatPrice(200000)} / slot.</>
+                  )}
+                </>
+              ) : (
+                <>
+                  Gói <strong>{displayedPackageName}</strong> được tặng <strong>{quotaStatus.monthlyQuota} lượt PT miễn phí/tháng</strong>. Tháng này bạn đã dùng{' '}
+                  <strong>{quotaStatus.usedThisMonth} lượt</strong> (còn lại:{' '}
+                  <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
+                    {quotaStatus.remainingQuota} lượt
+                  </strong>
+                  ).
+                  {quotaStatus.remainingQuota <= 0 && (
+                    <> Khi hết lượt miễn phí, phí đăng ký thêm là {formatPrice(200000)} / slot.</>
+                  )}
+                </>
+              )
+            ) : lang === 'en' ? (
               <>
-                {memberText("Gói ")}{displayedPackageName}{memberText(" được tặng ")}<strong>{quotaStatus.monthlyQuota}{memberText(" lượt PT miễn phí/tháng")}</strong>{memberText(". Tháng này bạn đã dùng ")}<strong>{quotaStatus.usedThisMonth}{memberText(" lượt")}</strong>{memberText(" (còn lại:")}{' '}
-                <strong style={{ color: quotaStatus.remainingQuota > 0 ? 'var(--portal-salmon)' : 'var(--portal-danger)' }}>
-                  {quotaStatus.remainingQuota}{memberText(" lượt")}</strong>
-                ).
-                {quotaStatus.remainingQuota <= 0 && memberText(" Khi hết lượt miễn phí, phí đăng ký thêm là 200.000 đ / giờ.")}
+                {hasNoPackage
+                  ? 'An active membership is required to book 1:1 coaching.'
+                  : `Membership ${displayedPackageName} does not include free 1:1 PT sessions.`}{' '}
+                Private 1:1 coaching costs{' '}
+                <strong style={{ color: 'var(--portal-salmon)', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong>. (Gold includes 3 sessions/month, Platinum 6 sessions/month).
               </>
             ) : (
               <>
-                {hasNoPackage ? memberText("Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.") : memberText(`Gói ${displayedPackageName} không bao gồm lượt tập PT 1:1 miễn phí.`, `Membership ${displayedPackageName} does not include free 1:1 PT sessions.`)}{memberText(" Phí đặt lịch HLV kèm riêng là")}{' '}
-                <strong style={{ color: 'var(--portal-salmon)' }}>{memberText("200.000 đ / giờ")}</strong>{memberText(". (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).")}</>
+                {hasNoPackage
+                  ? 'Cần có gói tập đang hoạt động để đặt lịch HLV 1:1.'
+                  : `Gói ${displayedPackageName} không bao gồm lượt tập PT 1:1 miễn phí.`}{' '}
+                Phí đặt lịch HLV kèm riêng là{' '}
+                <strong style={{ color: 'var(--portal-salmon)', fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong>. (Gói Gold được tặng 3 lượt/tháng, Platinum 6 lượt/tháng).
+              </>
             )}
           </p>
         </div>
@@ -548,26 +707,28 @@ export function MemberCoachBookingView({
           <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>
             {memberText("Chọn Huấn luyện viên cá nhân (PT 1:1)")}</h3>
           <span className="row-card__meta" style={{ fontSize: 13 }}>
-            {memberText("Phí tập tiêu chuẩn: ")}<strong>{formatPrice(200000)}{memberText(" / giờ")}</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Gold giảm 10% / Platinum giảm 20%", "Gold 10% off / Platinum 20% off")})
+            {memberText("Phí tập tiêu chuẩn: ")}<strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(200000)} / slot</strong> ({isTrial ? memberText("Miễn phí 01 buổi với Gói Trải Nghiệm") : memberText("Gold giảm 10% / Platinum giảm 20%", "Gold 10% off / Platinum 20% off")})
           </span>
         </div>
 
         {coaches.length === 0 ? (
-          <div
-            className="portal-card"
-            style={{
-              padding: '28px 20px',
-              textAlign: 'center',
-              borderRadius: 14,
-              background: 'var(--portal-surface)',
-              border: '1px dashed var(--portal-border)',
-              color: 'var(--portal-muted)',
-            }}
-          >
-            <p style={{ margin: '0 0 10px', fontSize: 14 }}>
-              {memberText("Chưa có huấn luyện viên nào.")}
-            </p>
-          </div>
+          !error ? (
+            <div
+              className="portal-card"
+              style={{
+                padding: '28px 20px',
+                textAlign: 'center',
+                borderRadius: 14,
+                background: 'var(--portal-surface)',
+                border: '1px dashed var(--portal-border)',
+                color: 'var(--portal-muted)',
+              }}
+            >
+              <p style={{ margin: '0 0 10px', fontSize: 14 }}>
+                {memberText("Chưa có huấn luyện viên nào.")}
+              </p>
+            </div>
+          ) : null
         ) : (
           <div
             style={{
@@ -874,8 +1035,8 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            <p className="row-card__meta" style={{ margin: 0 }}>
-              {memberText("Khung giờ cho ngày ")}{slotDate.split('-').reverse().join('/')}
+            <p className="row-card__meta" style={{ margin: 0, fontVariantNumeric: 'tabular-nums' }}>
+              {memberText(`Khung giờ cho ngày ${formatCenterDate(slotDate)}`, `Slots for ${formatCenterDate(slotDate)}`)}
             </p>
 
             {/* Lưới 5 Slot cố định trong ngày */}
@@ -885,10 +1046,12 @@ export function MemberCoachBookingView({
                   {memberText("Đang kiểm tra lịch trống của huấn luyện viên...")}</p>
               </div>
             ) : slots.length === 0 ? (
-              <div style={{ padding: '24px 0', textAlign: 'center' }}>
-                <p className="row-card__meta" style={{ margin: 0 }}>
-                  {memberText("HLV không có khung giờ trong ngày này.")}</p>
-              </div>
+              !error ? (
+                <div style={{ padding: '24px 0', textAlign: 'center' }}>
+                  <p className="row-card__meta" style={{ margin: 0 }}>
+                    {memberText("HLV không có khung giờ trong ngày này.")}</p>
+                </div>
+              ) : null
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div
@@ -935,13 +1098,13 @@ export function MemberCoachBookingView({
                           {formatSlotLabel(selectedSlot.startTime, selectedSlot.endTime, selectedSlot.slotNumber)}
                         </strong>
                         <span style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                          {` (${formatCenterDate(slotDate)} • ${memberText("HLV", "Coach")} ${selectedCoach?.fullName})`}
+                          {` (${formatCenterDate(slotDate)} • ${memberText("HLV", "Coach")} ${formatCoachName(selectedCoach?.fullName)})`}
                         </span>
                       </div>
                     </div>
                     <button
                       type="button"
-                      className="btn btn-primary"
+                      className="btn-primary"
                       style={{
                         padding: '8px 22px',
                         borderRadius: 99,
@@ -967,25 +1130,17 @@ export function MemberCoachBookingView({
           </h3>
           {myBookings.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              <input
-                type="date"
+              <DatePicker
                 aria-label={memberText('Tìm lịch theo ngày', 'Filter bookings by date')}
                 value={bookingDateFilter}
                 onChange={(e) => setBookingDateFilter(e.target.value)}
-                style={{
-                  fontSize: 13,
-                  padding: '6px 10px',
-                  borderRadius: 8,
-                  border: '1px solid var(--portal-border)',
-                  background: 'var(--portal-surface)',
-                  color: 'var(--portal-paper)',
-                }}
+                placeholder={memberText('Lọc theo ngày...', 'Filter by date...')}
+                style={{ minWidth: 180 }}
               />
               {bookingDateFilter && (
                 <button
                   type="button"
-                  className="btn-secondary"
-                  style={{ fontSize: 13, padding: '6px 12px' }}
+                  className="btn-secondary btn-sm"
                   onClick={() => setBookingDateFilter('')}
                 >
                   {memberText('Tất cả ngày', 'All days')}
@@ -996,6 +1151,7 @@ export function MemberCoachBookingView({
         </div>
 
         {(() => {
+          const nowParts = centerNowParts();
           const visibleBookings = [...myBookings]
             .filter((b) => !bookingDateFilter || b.bookingDate === bookingDateFilter)
             .sort((a, b) => `${a.bookingDate}T${a.startTime}`.localeCompare(`${b.bookingDate}T${b.startTime}`));
@@ -1017,8 +1173,7 @@ export function MemberCoachBookingView({
                 </p>
                 <button
                   type="button"
-                  className="btn-secondary"
-                  style={{ fontSize: 13, padding: '6px 12px' }}
+                  className="btn-secondary btn-sm"
                   onClick={() => setBookingDateFilter('')}
                 >
                   {memberText('Xem tất cả ngày', 'Show all days')}
@@ -1031,7 +1186,9 @@ export function MemberCoachBookingView({
             <div style={{ display: 'grid', gap: 10 }}>
               {visibleBookings.map((b) => {
               const isCancelled = b.status === 'cancelled';
-              const hasEnded = isSessionCompleted(b);
+              const hasStarted = isSessionStarted(b, nowParts);
+              const hasEnded = isSessionCompleted(b, nowParts);
+              const isInProgress = !isCancelled && hasStarted && !hasEnded;
               const isConfirmed = !isCancelled;
               const coachDisplayName = formatCoachName(b.coachName);
 
@@ -1074,7 +1231,7 @@ export function MemberCoachBookingView({
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                         <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: 'var(--portal-paper)' }}>
-                          {memberText("Tập 1:1 cùng HLV ")}{coachDisplayName}
+                          {memberText(`Tập 1:1 cùng HLV ${coachDisplayName}`, `1:1 session with coach ${coachDisplayName}`)}
                         </h4>
                         {isCancelled ? (
                           <span className="badge badge-danger" style={{ fontSize: 12 }}>
@@ -1090,6 +1247,9 @@ export function MemberCoachBookingView({
                             }}
                           >
                             {memberText("Đã kết thúc buổi")}</span>
+                        ) : isInProgress ? (
+                          <span className="badge badge-warning" style={{ fontSize: 12 }}>
+                            {memberText("Đang diễn ra", "In progress")}</span>
                         ) : (
                           <span className="badge badge-success" style={{ fontSize: 12 }}>
                             {memberText("Sắp diễn ra")}</span>
@@ -1145,11 +1305,10 @@ export function MemberCoachBookingView({
                           {memberText("Xem thông tin thanh toán")}</button>
                       )}
 
-                      {!hasEnded && (
+                      {!hasStarted && !hasEnded && (
                         <button
                           type="button"
-                          className="btn-secondary btn-sm"
-                          style={{ color: 'var(--portal-danger)', borderColor: 'var(--portal-danger)' }}
+                          className="btn-danger btn-sm"
                           onClick={() => { setCancelTarget(b); setCancelOpenedAt(Date.now()); }}
                         >
                           {memberText("Hủy lịch hẹn")}</button>
@@ -1259,7 +1418,7 @@ export function MemberCoachBookingView({
                     {selectedCoach.fullName}
                   </div>
                   <div style={{ fontSize: 13, color: 'var(--portal-muted)' }}>
-                    {selectedCoach.specialization || 'Fitness & Cardio'}
+                    {selectedCoach.specialization || memberText('Huấn luyện cá nhân', 'Personal training')}
                   </div>
                 </div>
               </div>
@@ -1277,7 +1436,7 @@ export function MemberCoachBookingView({
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 2 }}>
                     {memberText("Thời gian")}</div>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)' }}>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--portal-paper)', fontVariantNumeric: 'tabular-nums' }}>
                     {formatCenterDate(slotDate)}
                   </div>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--portal-paper)', fontVariantNumeric: 'tabular-nums' }}>
@@ -1299,8 +1458,20 @@ export function MemberCoachBookingView({
                 <div>
                   <div style={{ fontSize: 12, color: 'var(--portal-muted)', marginBottom: 2 }}>
                     {memberText("Chi phí buổi tập")}</div>
-                  <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--portal-paper)' }}>
-                    {formatPrice(selectedCoach.defaultHourlyRate || 200000)} {memberText(" / buổi")}</div>
+                  <div style={{ fontSize: 14, fontWeight: 750, color: 'var(--portal-paper)', fontVariantNumeric: 'tabular-nums' }} data-testid="pt-modal-slot-price">
+                    {ptDiscountPercent > 0 ? (
+                      <>
+                        <span>{formatPrice(finalSlotPrice)} / slot</span>
+                        <span style={{ display: 'block', fontSize: 12, fontWeight: 500, color: 'var(--portal-muted)' }}>
+                          <span style={{ textDecoration: 'line-through' }}>{formatPrice(baseSlotPrice)}</span>
+                          {' '}
+                          ({memberText(`Giảm ${ptDiscountPercent}%`, `${ptDiscountPercent}% off`)})
+                        </span>
+                      </>
+                    ) : (
+                      <>{formatPrice(baseSlotPrice)} / slot</>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -1319,12 +1490,19 @@ export function MemberCoachBookingView({
               <div role="radiogroup" aria-label={memberText("Phương thức thanh toán", "Payment method")} style={{ display: 'grid', gap: 10 }}>
                 {/* Lựa chọn 1: Gói tập */}
                 <div
+                  ref={quotaRadioRef}
                   role="radio"
                   aria-checked={paymentMethod === 'package_quota'}
                   aria-disabled={!hasRemainingQuota}
-                  tabIndex={hasRemainingQuota ? 0 : -1}
+                  tabIndex={hasRemainingQuota && paymentMethod === 'package_quota' ? 0 : -1}
                   onClick={() => hasRemainingQuota && setPaymentMethod('package_quota')}
                   onKeyDown={(e) => {
+                    if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+                      e.preventDefault();
+                      setPaymentMethod('hourly_pay');
+                      hourlyRadioRef.current?.focus();
+                      return;
+                    }
                     if (hasRemainingQuota && (e.key === 'Enter' || e.key === ' ')) {
                       e.preventDefault();
                       setPaymentMethod('package_quota');
@@ -1390,7 +1568,8 @@ export function MemberCoachBookingView({
                             borderRadius: 99,
                           }}
                         >
-                          {memberText("(Còn ")}{quotaStatus?.remainingQuota} {memberText(" lượt miễn phí)")}</span>
+                          {memberText(`(Còn ${quotaStatus?.remainingQuota ?? 0} lượt miễn phí)`, `(${quotaStatus?.remainingQuota ?? 0} free left)`)}
+                        </span>
                       ) : (
                         <span
                           style={{
@@ -1410,20 +1589,38 @@ export function MemberCoachBookingView({
                         ? (isTrial
                             ? memberText("Áp dụng buổi PT 1:1 miễn phí của gói trải nghiệm (0 đ).")
                             : memberText("Tự động trừ 1 buổi tập PT trong hạn mức tháng của bạn (0 đ)."))
-                        : (isTrial
-                            ? memberText("Đã dùng buổi PT 1:1 miễn phí. Tập thêm: ") + formatPrice(selectedCoach.defaultHourlyRate || 200000) + memberText(" / giờ.")
-                            : memberText("Không còn lượt PT miễn phí. Giá theo giờ: ") + formatPrice(selectedCoach.defaultHourlyRate || 200000) + '.')}
+                        : isTrial
+                          ? memberText(
+                              `Đã dùng buổi PT 1:1 miễn phí. Tập thêm: ${formatPrice(finalSlotPrice)} / slot.`,
+                              `Free 1:1 session used. Extra sessions: ${formatPrice(finalSlotPrice)} / slot.`,
+                            )
+                          : ptDiscountPercent > 0
+                            ? memberText(
+                                `Không còn lượt PT miễn phí. Giá ưu đãi hạng thành viên: ${formatPrice(finalSlotPrice)} / slot (giá gốc ${formatPrice(baseSlotPrice)}, giảm ${ptDiscountPercent}%).`,
+                                `No free PT sessions left. Member rate: ${formatPrice(finalSlotPrice)} / slot (regular ${formatPrice(baseSlotPrice)}, ${ptDiscountPercent}% off).`,
+                              )
+                            : memberText(
+                                `Không còn lượt PT miễn phí. Giá theo slot: ${formatPrice(finalSlotPrice)} / slot.`,
+                                `No free PT sessions left. Slot rate: ${formatPrice(finalSlotPrice)} / slot.`,
+                              )}
                     </div>
                   </div>
                 </div>
 
-                {/* Lựa chọn 2: Trả phí theo giờ */}
+                {/* Lựa chọn 2: Trả phí theo slot */}
                 <div
+                  ref={hourlyRadioRef}
                   role="radio"
                   aria-checked={paymentMethod === 'hourly_pay'}
-                  tabIndex={0}
+                  tabIndex={paymentMethod === 'hourly_pay' || !hasRemainingQuota ? 0 : -1}
                   onClick={() => setPaymentMethod('hourly_pay')}
                   onKeyDown={(e) => {
+                    if (hasRemainingQuota && (e.key === 'ArrowUp' || e.key === 'ArrowLeft' || e.key === 'ArrowDown' || e.key === 'ArrowRight')) {
+                      e.preventDefault();
+                      setPaymentMethod('package_quota');
+                      quotaRadioRef.current?.focus();
+                      return;
+                    }
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       setPaymentMethod('hourly_pay');
@@ -1475,8 +1672,17 @@ export function MemberCoachBookingView({
 
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: 14, color: 'var(--portal-paper)' }}>
-                        {memberText("Đăng ký trả phí theo giờ qua VNPay / Ví SÖL (")}{formatPrice(selectedCoach.defaultHourlyRate || 200000)} {memberText(" / giờ)")}</strong>
+                      <strong style={{ fontSize: 14, color: 'var(--portal-paper)', fontVariantNumeric: 'tabular-nums' }}>
+                        {ptDiscountPercent > 0
+                          ? memberText(
+                              `Đăng ký trả phí theo slot qua VNPay / Ví SÖL (${formatPrice(finalSlotPrice)} / slot, giảm ${ptDiscountPercent}%)`,
+                              `Book paid slot via VNPay / SÖL Wallet (${formatPrice(finalSlotPrice)} / slot, ${ptDiscountPercent}% off)`,
+                            )
+                          : memberText(
+                              `Đăng ký trả phí theo slot qua VNPay / Ví SÖL (${formatPrice(finalSlotPrice)} / slot)`,
+                              `Book paid slot via VNPay / SÖL Wallet (${formatPrice(finalSlotPrice)} / slot)`,
+                            )}
+                      </strong>
                       {!hasRemainingQuota && !hasNoPackage && (
                         <span
                           style={{
@@ -1592,7 +1798,7 @@ export function MemberCoachBookingView({
         </Modal>
       )}
 
-      {/* Modal Hướng dẫn Thanh toán / VietQR */}
+      {/* Modal Hướng dẫn Thanh toán */}
       {paymentModalBooking && (
         <Modal
           title={memberText("Thanh toán Buổi tập PT 1:1")}
@@ -1644,13 +1850,19 @@ export function MemberCoachBookingView({
                 {paymentModalBooking.paymentStatus === 'paid' ? (
                   <>
                     <div>{memberText("Trạng thái thanh toán: ", "Payment status: ")}<strong style={{ color: 'var(--portal-success)' }}>{memberText("Đã thanh toán", "Paid")}</strong></div>
-                    <div>{memberText("Số tiền đã thanh toán: ", "Amount paid: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
+                    <div>{memberText("Số tiền đã thanh toán: ", "Amount paid: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                   </>
                 ) : (
                   <>
-                    <div>{memberText("Chọn ")}<strong>{memberText("Thanh toán VNPay")}</strong>{memberText(" hoặc ")}<strong>{memberText("Thanh toán bằng Ví SÖL")}</strong>{memberText(" ở trên để hoàn tất thanh toán trực tuyến.")}</div>
-                    <div>{memberText("Số tiền cần thanh toán: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16 }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
-                    <div>{memberText("Nội dung chuyển khoản: ")}<strong style={{ color: 'var(--portal-salmon)' }}>PT{paymentModalBooking.id} {paymentModalBooking.memberName}</strong></div>
+                    <div>
+                      {lang === 'en' ? (
+                        <>Choose <strong>Pay with VNPay</strong> or <strong>Pay with SÖL Wallet</strong> above to complete online payment.</>
+                      ) : (
+                        <>Chọn <strong>Thanh toán VNPay</strong> hoặc <strong>Thanh toán bằng Ví SÖL</strong> ở trên để hoàn tất thanh toán trực tuyến.</>
+                      )}
+                    </div>
+                    <div>{memberText("Số tiền cần thanh toán: ", "Amount due: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
+                    <div style={{ color: 'var(--portal-muted)' }}>{memberText("Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy trước giờ tập để được hỗ trợ thu tiền.")}</div>
                   </>
                 )}
               </div>
@@ -1680,14 +1892,31 @@ export function MemberCoachBookingView({
         >
           <div style={{ display: 'grid', gap: 14 }}>
             <p>
-              {memberText("Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV ")}<strong>{formatCoachName(cancelTarget.coachName)}</strong>{memberText(" vào")}{' '}
-              <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatSlotLabel(cancelTarget.startTime, cancelTarget.endTime)}{memberText(" ngày ")}{formatCenterDate(cancelTarget.bookingDate)}</strong>?
+              {lang === 'en' ? (
+                <>
+                  Are you sure you want to cancel your 1:1 session with coach{' '}
+                  <strong>{formatCoachName(cancelTarget.coachName)}</strong> on{' '}
+                  <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {formatCenterDate(cancelTarget.bookingDate)} ({formatSlotLabel(cancelTarget.startTime, cancelTarget.endTime)})
+                  </strong>
+                  ?
+                </>
+              ) : (
+                <>
+                  Bạn có chắc chắn muốn hủy lịch tập 1:1 với HLV{' '}
+                  <strong>{formatCoachName(cancelTarget.coachName)}</strong> vào{' '}
+                  <strong style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {formatSlotLabel(cancelTarget.startTime, cancelTarget.endTime)} ngày {formatCenterDate(cancelTarget.bookingDate)}
+                  </strong>
+                  ?
+                </>
+              )}
             </p>
             {cancelTarget.paymentMethod === 'package_quota' && (() => {
               const sessionStart = parseCenterTime(`${cancelTarget.bookingDate}T${cancelTarget.startTime.slice(0, 5)}:00`);
               const isWithinTwoHours = sessionStart !== null && sessionStart.getTime() - cancelOpenedAt < 2 * 60 * 60 * 1000;
               return (
-                <p style={{ margin: 0, fontSize: '0.88rem', color: isWithinTwoHours ? 'var(--portal-danger)' : 'var(--portal-text-muted)' }}>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: isWithinTwoHours ? 'var(--portal-danger)' : 'var(--portal-muted)' }}>
                   {isWithinTwoHours
                     ? memberText(
                         "Lưu ý: Hủy trong vòng 2 giờ trước khi buổi tập bắt đầu sẽ không được hoàn lại lượt đăng ký HLV 1:1.",

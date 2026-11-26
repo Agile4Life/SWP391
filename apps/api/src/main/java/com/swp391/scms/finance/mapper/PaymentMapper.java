@@ -39,6 +39,9 @@ public interface PaymentMapper {
     @Mapping(target = "invoice", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "refundedAmount", ignore = true)
+    @Mapping(target = "coachBookingId", ignore = true)
+    @Mapping(target = "productOrderId", ignore = true)
+    @Mapping(target = "productOrder", ignore = true)
     Payment toEntity(PaymentCreateDto dto);
 
     /** Cập nhật entity từ DTO (chỉ các trường cho phép). */
@@ -51,5 +54,6 @@ public interface PaymentMapper {
     @Mapping(target = "receiptImage", ignore = true)
     @Mapping(target = "coachBookingId", ignore = true)
     @Mapping(target = "productOrderId", ignore = true)
+    @Mapping(target = "productOrder", ignore = true)
     void updateEntityFromDto(PaymentDto dto, @MappingTarget Payment entity);
 }

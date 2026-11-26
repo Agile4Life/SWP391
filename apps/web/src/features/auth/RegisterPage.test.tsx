@@ -140,3 +140,19 @@ it('asks for the real full name and refuses to register without it', async () =>
   expect(host.querySelector('#reg-fullName-error')?.textContent).toContain('họ và tên');
   expect(document.activeElement?.id).toBe('reg-fullName');
 });
+
+it('localizes email placeholder, normalizes +84 phone formats, separates OTP error fallback, and adds noValidate on step 2 (P2-FE-05, P2-FE-06, P3-FE-02, P3-FE-07)', async () => {
+  api.sendOtp.mockRejectedValueOnce({});
+  await render();
+  expect(host.querySelector<HTMLInputElement>('#reg-email')?.placeholder).toBe('ban@example.com');
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector<HTMLInputElement>('#reg-email')?.placeholder).toBe('you@example.com');
+  await act(async () => setLanguage('vi'));
+
+  await validForm('+84 912-345-678');
+  await submit();
+  expect(api.register).toHaveBeenCalledWith(expect.objectContaining({ phone: '0912345678' }));
+  expect(host.querySelector('form')?.hasAttribute('novalidate')).toBe(true);
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('chưa gửi được mã OTP');
+  expect(host.querySelector('[role="alert"]')?.textContent).not.toContain('Đăng ký không thành công');
+});

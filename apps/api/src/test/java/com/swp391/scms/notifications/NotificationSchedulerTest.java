@@ -361,6 +361,118 @@ class NotificationSchedulerTest {
         verify(sessionRepository, never()).findScheduledSessionsBetweenDates(any(LocalDate.class), any(LocalDate.class));
     }
 
+    /** Kiểm thử P1-BE-49: bỏ qua user đã xóa mềm và không dừng cả batch khi một người nhận ném ResourceNotFoundException. */
+    @Test
+    @DisplayName("P1-BE-49: Expiring subscription batch skips soft-deleted users and continues on ResourceNotFoundException")
+    void scanAndNotifyExpiringSubscriptions_SkipsSoftDeletedAndContinuesBatch() {
+        LocalDate targetDate = LocalDate.of(2026, 10, 29);
+
+        user1.setDeletedAt(LocalDateTime.now().minusDays(1)); // soft-deleted
+        User user3 = new User();
+        user3.setId(103L);
+        Member member3 = new Member();
+        member3.setUserId(103L);
+        member3.setUser(user3);
+
+        MembershipSubscription subDeleted = new MembershipSubscription();
+        subDeleted.setId(201L);
+        subDeleted.setMember(member1);
+        subDeleted.setMembershipPackage(membershipPackage);
+        subDeleted.setEndDate(targetDate);
+
+        MembershipSubscription subRaceDeleted = new MembershipSubscription();
+        subRaceDeleted.setId(202L);
+        subRaceDeleted.setMember(member2);
+        subRaceDeleted.setMembershipPackage(membershipPackage);
+        subRaceDeleted.setEndDate(targetDate);
+
+        MembershipSubscription subValid = new MembershipSubscription();
+        subValid.setId(203L);
+        subValid.setMember(member3);
+        subValid.setMembershipPackage(membershipPackage);
+        subValid.setEndDate(targetDate);
+
+        when(subscriptionRepository.findActiveSubscriptionsExpiringOn(targetDate))
+                .thenReturn(List.of(subDeleted, subRaceDeleted, subValid));
+        when(notificationRepository.existsNotification(anyLong(), eq("package_expiry"), eq("membership_subscription"), anyLong()))
+                .thenReturn(false);
+        doThrow(new com.swp391.scms.common.exception.ResourceNotFoundException("resource.user", 102L))
+                .when(notificationService).send(eq(102L), anyString(), anyString(), eq("package_expiry"), eq("membership_subscription"), eq(202L));
+
+        int sentCount = notificationScheduler.scanAndNotifyExpiringSubscriptions(targetDate);
+
+        assertThat(sentCount).isEqualTo(1);
+        verify(notificationService, never()).send(eq(101L), any(), any(), any(), any(), any());
+        verify(notificationService).send(eq(103L), anyString(), anyString(), eq("package_expiry"), eq("membership_subscription"), eq(203L));
+    }
+
+    /** Kiểm thử P1-BE-49 & P2-BE-55: bỏ qua lớp inactive, user xóa mềm và không dừng batch khi một học viên ném ResourceNotFoundException. */
+    @Test
+    @DisplayName("P1-BE-49 & P2-BE-55: Class reminder skips inactive classes, soft-deleted users, and continues batch on 404")
+    void scanAndNotifyUpcomingClasses_SkipsInactiveClassAndSoftDeletedUsers() {
+        LocalDateTime referenceTime = LocalDateTime.of(2026, 10, 22, 10, 0);
+        LocalDate sessionDate = LocalDate.of(2026, 10, 22);
+
+        GymClass inactiveClass = new GymClass();
+        inactiveClass.setId(9L);
+        inactiveClass.setName("Lớp đã ngưng");
+        inactiveClass.setStatus("inactive");
+        ClassSession inactiveSession = new ClassSession();
+        inactiveSession.setId(300L);
+        inactiveSession.setGymClass(inactiveClass);
+        inactiveSession.setSessionDate(sessionDate);
+        inactiveSession.setStartTime(LocalTime.of(11, 0));
+        inactiveSession.setStatus("scheduled");
+
+        GymClass activeClass = new GymClass();
+        activeClass.setId(10L);
+        activeClass.setName("Yoga Flow");
+        activeClass.setStatus("active");
+        ClassSession activeSession = new ClassSession();
+        activeSession.setId(301L);
+        activeSession.setGymClass(activeClass);
+        activeSession.setSessionDate(sessionDate);
+        activeSession.setStartTime(LocalTime.of(11, 0));
+        activeSession.setStatus("scheduled");
+
+        user1.setDeletedAt(LocalDateTime.now().minusDays(2));
+        User user3 = new User();
+        user3.setId(103L);
+        Member member3 = new Member();
+        member3.setUserId(103L);
+        member3.setUser(user3);
+
+        ClassEnrollment e1 = new ClassEnrollment(); e1.setMember(member1); e1.setStatus("booked");
+        ClassEnrollment e2 = new ClassEnrollment(); e2.setMember(member2); e2.setStatus("booked");
+        ClassEnrollment e3 = new ClassEnrollment(); e3.setMember(member3); e3.setStatus("booked");
+
+        when(sessionRepository.findScheduledSessionsBetweenDates(sessionDate, sessionDate))
+                .thenReturn(List.of(inactiveSession, activeSession));
+        when(enrollmentRepository.findByGymClassIdAndStatus(10L, "booked"))
+                .thenReturn(List.of(e1, e2, e3));
+        when(notificationRepository.existsNotification(anyLong(), eq("class_reminder"), eq("class_session"), eq(301L)))
+                .thenReturn(false);
+        doThrow(new com.swp391.scms.common.exception.ResourceNotFoundException("resource.user", 102L))
+                .when(notificationService).send(eq(102L), anyString(), anyString(), eq("class_reminder"), eq("class_session"), eq(301L));
+
+        int sentCount = notificationScheduler.scanAndNotifyUpcomingClasses(referenceTime);
+
+        assertThat(sentCount).isEqualTo(1);
+        verify(enrollmentRepository, never()).findByGymClassIdAndStatus(eq(9L), anyString());
+        verify(notificationService, never()).send(eq(101L), any(), any(), any(), any(), any());
+        verify(notificationService).send(eq(103L), anyString(), anyString(), eq("class_reminder"), eq("class_session"), eq(301L));
+    }
+
+    /** Kiểm thử P2-BE-50: job hết hạn gói chạy theo múi giờ Asia/Ho_Chi_Minh. */
+    @Test
+    @DisplayName("P2-BE-50: schedulePackageExpiryJob uses Asia/Ho_Chi_Minh timezone")
+    void schedulePackageExpiryJob_UsesVietnamTimezone() throws NoSuchMethodException {
+        var scheduled = NotificationScheduler.class.getMethod("schedulePackageExpiryJob")
+                .getAnnotation(org.springframework.scheduling.annotation.Scheduled.class);
+        assertThat(scheduled).isNotNull();
+        assertThat(scheduled.zone()).isEqualTo("Asia/Ho_Chi_Minh");
+    }
+
     /** Kiểm thử: Spring context phân giải được constructor autowired. */
     @Test
     @DisplayName("Spring context verifies Autowired constructor exists and bean instantiates without NoSuchMethodException")

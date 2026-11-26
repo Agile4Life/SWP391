@@ -101,4 +101,22 @@ class RateLimitingFilterTest {
         assertEquals(429, blockedRes.getStatus());
         assertEquals("60", blockedRes.getHeader("Retry-After"));
     }
+
+    /** Kiểm thử P2-BE-05: khớp chính xác đường dẫn (equals), không khớp tiền tố lạ với endsWith để tránh rác bộ nhớ. */
+    @Test
+    void prefixedPathsDoNotMatchExactRateLimitedEndpoints() throws Exception {
+        for (int i = 0; i < 80; i++) {
+            MockHttpServletRequest req = new MockHttpServletRequest("POST", "/evil-prefix-" + i + "/api/v1/check-in/scan");
+            req.setRemoteAddr("10.0.0.77");
+            MockHttpServletResponse res = new MockHttpServletResponse();
+            filter.doFilterInternal(req, res, filterChain);
+            assertEquals(200, res.getStatus());
+        }
+        // Ngân sách của đường dẫn /api/v1/check-in/scan thật vẫn nguyên vẹn.
+        MockHttpServletRequest realReq = new MockHttpServletRequest("POST", "/api/v1/check-in/scan");
+        realReq.setRemoteAddr("10.0.0.77");
+        MockHttpServletResponse realRes = new MockHttpServletResponse();
+        filter.doFilterInternal(realReq, realRes, filterChain);
+        assertEquals(200, realRes.getStatus());
+    }
 }

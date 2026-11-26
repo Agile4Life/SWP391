@@ -5,9 +5,11 @@ import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /** Sinh mã đơn hàng dạng SOL-yyMMdd-XXXX (bảng chữ bỏ ký tự dễ nhầm) và kiểm tra không trùng. */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Component
 public class OrderCodeGenerator {
     private static final String ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";

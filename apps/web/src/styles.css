@@ -12,7 +12,7 @@
   --color-text-muted: #7E7771;
   --color-text-light: #ABA49D;
   --color-accent-sand: #D6C7B8;
-  --color-accent-gold: #C2A684;
+  --color-accent-gold: var(--sol-accent);
   --color-border-subtle: rgba(33, 28, 24, 0.08);
   --color-border-medium: rgba(33, 28, 24, 0.16);
   --color-border-dark: rgba(33, 28, 24, 0.4);
@@ -27,7 +27,7 @@
   font-family: var(--font-sans);
   color: var(--color-text-main);
   background-color: var(--color-bg-base);
-  accent-color: #8C6D46;
+  accent-color: var(--sol-accent);
   color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -116,7 +116,7 @@ body::-webkit-scrollbar,
 
 /* Vòng focus rõ ràng cho người dùng bàn phím */
 :focus-visible {
-  outline: 2px solid var(--color-accent-gold);
+  outline: 2px solid var(--sol-accent);
   outline-offset: 2px;
 }
 
@@ -217,7 +217,7 @@ body::-webkit-scrollbar,
 }
 
 .anim-shimmer {
-  background: linear-gradient(90deg, transparent, rgb(194 166 132 / .25), transparent);
+  background: linear-gradient(90deg, transparent, rgb(var(--sol-accent-rgb) / .22), transparent);
   background-size: 200% 100%;
   animation: shimmer 1.6s linear infinite;
 }
@@ -257,7 +257,7 @@ body::-webkit-scrollbar,
   position: absolute;
   left: 0;
   width: 3px;
-  background: var(--color-accent-gold, #C2A684);
+  background: var(--sol-accent);
   border-radius: 2px;
   transform: translateY(var(--y, 0));
   height: var(--h, 0);
@@ -322,14 +322,14 @@ body::-webkit-scrollbar,
   to { stroke-dashoffset: 0; }
 }
 
-/* --- Phản hồi nhấp chuột: vòng sóng vàng cát tại điểm nhấp + nhấn nút --- */
+/* --- Phản hồi nhấp chuột: vòng sóng màu nhấn tại điểm nhấp + nhấn nút --- */
 .click-ripple {
   position: fixed;
   z-index: 99998;
   width: 14px;
   height: 14px;
   margin: -7px 0 0 -7px;
-  border: 1px solid var(--color-accent-gold);
+  border: 1px solid var(--sol-accent);
   border-radius: 50%;
   pointer-events: none;
   animation: click-ripple 620ms var(--ease-luxury) forwards;
@@ -450,6 +450,10 @@ dialog.sol-toast {
   pointer-events: auto;
 }
 
+dialog.sol-toast::backdrop {
+  display: none;
+}
+
 .sol-toast__card {
   display: flex;
   flex-direction: row;
@@ -535,6 +539,15 @@ dialog.sol-toast {
   color: #202020;
 }
 .sol-toast__close:focus-visible { outline: 2px solid var(--sol-accent); outline-offset: 2px; }
+
+@media (max-width: 767px), (pointer: coarse) {
+  .sol-toast__close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
 
 .portal-dialog::backdrop,
 .portal-v2 .portal-dialog::backdrop {
@@ -636,7 +649,7 @@ small { font-size: max(12px, 0.875em); }
 
 /* Tránh iOS / iPadOS Safari tự phóng to màn hình khi chạm ô nhập < 16px */
 @media (max-width: 1024px), (pointer: coarse) {
-  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):not([aria-hidden='true']),
   select,
   textarea,
   .portal-input,

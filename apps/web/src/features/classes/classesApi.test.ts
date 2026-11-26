@@ -145,6 +145,20 @@ describe('classesApi.ts (Classes & Scheduling API Client)', () => {
     expect(coaches[0].status).toBe('active');
   });
 
+  it('P2-FE-40: getActiveCoaches surfaces /classes/coaches failure without falling back to admin-only /users', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 503,
+      json: async () => ({ success: false, status: 503, message: 'Dịch vụ tạm gián đoạn' }),
+    });
+    vi.stubGlobal('fetch', mockFetch);
+
+    await expect(classesApi.getActiveCoaches()).rejects.toThrow(ApiError);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledWith('/api/v1/classes/coaches', expect.anything());
+    expect('createSession' in classesApi).toBe(false);
+  });
+
   it('checkRecurringAvailability posts schedule probe to /api/v1/classes/recurring/availability', async () => {
     const payload = {
       disciplineId: 1,

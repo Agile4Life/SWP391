@@ -47,6 +47,9 @@ public class VnpayPaymentService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.swp391.scms.shop.repository.ProductOrderRepository orders;
 
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollments;
+
     /** Constructor Spring dùng. */
     public VnpayPaymentService(VnpayTransactionRepository transactions, PaymentRepository payments, MemberRepository members,
             MembershipSubscriptionRepository subscriptions, PaymentService settlement, InvoiceService invoices,
@@ -78,6 +81,11 @@ public class VnpayPaymentService {
     /** Gán giá trị mới cho trường walletService. */
     public void setWalletService(com.swp391.scms.wallet.WalletService walletService) {
         this.walletService = walletService;
+    }
+
+    /** Gán giá trị mới cho trường classEnrollments (dùng cho test). */
+    public void setClassEnrollments(com.swp391.scms.scheduling.repository.ClassEnrollmentRepository classEnrollments) {
+        this.classEnrollments = classEnrollments;
     }
     /** VNPay có đang bật không. */
     public boolean enabled() { return gateway.enabled(); }
@@ -152,6 +160,10 @@ public class VnpayPaymentService {
             throw new ConflictException("WALLET_UNAVAILABLE", "error.wallet.unavailable", null, "Tính năng Ví điện tử hiện không khả dụng.");
         }
         Payment payment = resolveTargetPayment(principal, request, true);
+        if (isWalletTopup(payment)) {
+            throw new BadRequestException("VNPAY_WALLET_TOPUP_NOT_PAYABLE_BY_WALLET",
+                    "error.coach_booking.invalid_payment_method", null, null);
+        }
         if (!"pending".equals(payment.getStatus())) throw unavailable();
         if (payment.getId() != null) {
             var existing = transactions.findFirstByPaymentIdAndStatusOrderByCreatedAtDesc(payment.getId(), "pending");
@@ -237,6 +249,11 @@ public class VnpayPaymentService {
                     settlement.requireSubscriptionPaymentKyc(sub);
                 }
             }
+            if (payment.getClassEnrollmentId() != null && classEnrollments != null) {
+                var enrollment = classEnrollments.findById(payment.getClassEnrollmentId()).orElseThrow(this::unavailable);
+                entities.refresh(enrollment);
+                if (!"booked".equalsIgnoreCase(enrollment.getStatus())) throw unavailable();
+            }
             validateBooking(payment);
         } else if(request.subscriptionId()!=null) {
             var sub=subscriptions.findById(request.subscriptionId()).orElseThrow(()->new ResourceNotFoundException("resource.subscription",request.subscriptionId()));
@@ -271,21 +288,26 @@ public class VnpayPaymentService {
         return payment;
     }
 
-    /** Dùng lại khoản thu đang chờ đúng số tiền hoặc tạo khoản mới. */
-    private Payment findOrCreate(List<Payment> existing,Long memberId,BigDecimal amount) {
-        if(existing!=null && !existing.isEmpty()) {
-            if(existing.stream().anyMatch(p -> !"pending".equals(p.getStatus()))) throw unavailable();
-            List<Payment> reusable = existing.stream()
-                    .filter(p -> p.getReceiptImage() == null || p.getReceiptImage().isBlank())
-                    .toList();
-            if(reusable.size() > 1) throw unavailable();
-            if(reusable.size() == 1) {
-                Payment p=reusable.getFirst(); entities.refresh(p); if(!"pending".equals(p.getStatus())) throw unavailable();
-                if(p.getReceiptImage() == null || p.getReceiptImage().isBlank()) return p;
-            }
+    /**
+     * Dùng lại khoản thu đang chờ duy nhất (không có biên lai tiền mặt đang chờ quầy duyệt) hoặc tạo khoản mới.
+     * Chặn tuyệt đối việc tạo khoản thu pending thứ hai khi đã tồn tại khoản chờ (kể cả biên lai tiền mặt).
+     */
+    private Payment findOrCreate(List<Payment> existing, Long memberId, BigDecimal amount) {
+        if (existing != null && !existing.isEmpty()) {
+            if (existing.stream().anyMatch(p -> !"pending".equals(p.getStatus()))) throw unavailable();
+            if (existing.size() > 1) throw unavailable();
+            Payment p = existing.getFirst();
+            entities.refresh(p);
+            if (!"pending".equals(p.getStatus())) throw unavailable();
+            if (p.getReceiptImage() != null && !p.getReceiptImage().isBlank()) throw unavailable();
+            return p;
         }
-        Payment p=new Payment();p.setMember(members.findById(memberId).orElseThrow(this::unavailable));
-        p.setAmount(amount);p.setMethod("online_wallet");p.setStatus("pending");return p;
+        Payment p = new Payment();
+        p.setMember(members.findById(memberId).orElseThrow(this::unavailable));
+        p.setAmount(amount);
+        p.setMethod("online_wallet");
+        p.setStatus("pending");
+        return p;
     }
     /** Tạo kết quả trả về kèm link cổng. */
     private Checkout checkoutDto(VnpayTransaction t, String origin) {
@@ -397,25 +419,50 @@ public class VnpayPaymentService {
         if("00".equals(response) && "00".equals(status)) {
             String gatewayId=fields.get("vnp_TransactionNo");
             if(gatewayId==null || !gatewayId.matches("[0-9]{1,15}") || gatewayId.matches("0+")) return "97";
-            if (p.getSubscriptionId() != null) {
-                var sub = subscriptions.findById(p.getSubscriptionId()).orElseThrow(this::unavailable);
-                entities.refresh(sub);
-                try {
-                    settlement.requireSubscriptionPaymentKyc(sub);
-                } catch (BadRequestException ex) {
-                    if (!Set.of("MEMBERSHIP_KYC_REQUIRED", "MEMBERSHIP_KYC_PENDING").contains(ex.getErrorCode())) throw ex;
-                    // KYC thay đổi sau checkout: giữ khoản thu chờ, hoàn số tiền cổng đã trừ vào ví đúng một lần.
-                    if (walletService == null) return "99";
-                    t.setGatewayTransactionNo(gatewayId); t.setStatus("success");
-                    transactions.saveAndFlush(t);
-                    walletService.creditLateGatewayPayment(p.getMember().getUserId(), t.getAmount(), reference);
-                    return "00";
+            try {
+                if (p.getSubscriptionId() != null) {
+                    var sub = subscriptions.findById(p.getSubscriptionId()).orElseThrow(this::unavailable);
+                    entities.refresh(sub);
+                    try {
+                        settlement.requireSubscriptionPaymentKyc(sub);
+                    } catch (BadRequestException ex) {
+                        if (!Set.of("MEMBERSHIP_KYC_REQUIRED", "MEMBERSHIP_KYC_PENDING").contains(ex.getErrorCode())) throw ex;
+                        // KYC thay đổi sau checkout: giữ khoản thu chờ, hoàn số tiền cổng đã trừ vào ví đúng một lần.
+                        if (walletService == null) return "99";
+                        t.setGatewayTransactionNo(gatewayId); t.setStatus("success");
+                        transactions.saveAndFlush(t);
+                        walletService.creditLateGatewayPayment(p.getMember().getUserId(), t.getAmount(), reference);
+                        return "00";
+                    }
                 }
+                validateBooking(p);
+                t.setGatewayTransactionNo(gatewayId);t.setStatus("success");
+                transactions.saveAndFlush(t); // bộ chặn nhìn thấy giao dịch đã kết thúc trong cùng phép quyết toán nguyên tử
+                settlement.updatePaymentStatus(p.getId(),"success");
+            } catch (ConflictException ex) {
+                if ("VNPAY_AWAITING_CONFIRMATION".equals(ex.getErrorCode())) {
+                    throw ex;
+                }
+                // Xung đột trạng thái kết thúc (gói/lớp/lịch PT đã hủy hoặc đã kích hoạt theo cách khác) sau khi
+                // ngân hàng đã trừ tiền: đóng khoản thu, hoàn tiền vào ví hội viên một lần và trả "00" để tiền
+                // không bao giờ bị kẹt trong vòng lặp RspCode=99.
+                if (walletService == null) {
+                    LATE_LOG.error("VNPay charged attempt {} for payment {} but target conflicted ({}) and no wallet is available",
+                            reference, p.getId(), ex.getErrorCode());
+                    return "99";
+                }
+                t.setGatewayTransactionNo(gatewayId);
+                t.setStatus("success");
+                transactions.saveAndFlush(t);
+                if ("pending".equals(p.getStatus())) {
+                    p.setStatus("failed");
+                    payments.saveAndFlush(p);
+                }
+                walletService.creditLateGatewayPayment(p.getMember().getUserId(), t.getAmount(), reference);
+                LATE_LOG.warn("VNPay confirmed attempt {} for payment {} but target conflicted ({}); refunded {} to member wallet",
+                        reference, p.getId(), ex.getErrorCode(), t.getAmount().toPlainString());
+                return "00";
             }
-            validateBooking(p);
-            t.setGatewayTransactionNo(gatewayId);t.setStatus("success");
-            transactions.saveAndFlush(t); // bộ chặn nhìn thấy giao dịch đã kết thúc trong cùng phép quyết toán nguyên tử
-            settlement.updatePaymentStatus(p.getId(),"success");
             markBookingPaid(p);
             try {
                 invoices.autoIssueInvoiceForPayment(p.getId());
@@ -541,11 +588,18 @@ public class VnpayPaymentService {
         if(p.getCoachBookingId()!=null) coaches.findByIdForUpdate(p.getCoachBookingId()).orElseThrow(this::unavailable);
         if(p.getProductOrderId()!=null && orders!=null) orders.findByIdForUpdate(p.getProductOrderId()).orElseThrow(this::unavailable);
     }
-    /** Kiểm tra buổi PT/đơn hàng vẫn còn hợp lệ để ghi nhận thanh toán. */
+    /** Kiểm tra buổi PT/khóa học/đơn hàng vẫn còn hợp lệ để ghi nhận thanh toán. */
     private void validateBooking(Payment p) {
         if(p.getCoachBookingId()!=null) {
             var b=coaches.findById(p.getCoachBookingId()).orElseThrow(this::unavailable);entities.refresh(b);
             if(!Set.of("confirmed","completed").contains(b.getStatus()) || !"pending".equals(b.getPaymentStatus())) throw unavailable();
+        }
+        if(p.getClassEnrollmentId()!=null && classEnrollments!=null) {
+            var e=classEnrollments.findById(p.getClassEnrollmentId()).orElseThrow(this::unavailable);entities.refresh(e);
+            if("cancelled".equalsIgnoreCase(e.getStatus())
+                    || (!"booked".equalsIgnoreCase(e.getStatus()) && !"completed".equalsIgnoreCase(e.getStatus()))) {
+                throw unavailable();
+            }
         }
         if(p.getProductOrderId()!=null && orderPayments!=null) {
             orderPayments.requirePayable(p.getProductOrderId());

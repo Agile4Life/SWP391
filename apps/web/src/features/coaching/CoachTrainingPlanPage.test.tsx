@@ -6,6 +6,7 @@ import { CoachTrainingPlanPage } from './CoachTrainingPlanPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { setLanguage } from '../../shared/i18n/language';
 import { aiApi, type MemberOption } from './aiApi';
+import * as profileApi from '../member/profileApi';
 
 
 const MEMBERS: MemberOption[] = [
@@ -92,6 +93,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
       })
     );
 
+    vi.spyOn(profileApi, 'getProfile').mockResolvedValue({ userId: 3, fullName: 'HLV Marcus Vance' } as never);
     vi.spyOn(aiApi, 'generateWorkoutPlan').mockResolvedValue(mockAiResponse);
     vi.spyOn(aiApi, 'saveTrainingPlan').mockResolvedValue({ id: 101, status: 'active' });
     vi.spyOn(aiApi, 'listTrainingPlans').mockResolvedValue([]);
@@ -123,6 +125,18 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   async function openStep(step: 1 | 2 | 3) {
     await act(async () => { host.querySelectorAll<HTMLButtonElement>('.plan-step__button')[step - 1].click(); });
   }
+  // Thêm 1 bài tập hợp lệ ở bước 2 để kiểm thử luồng lưu/sửa.
+  async function addManualExercise(name = 'Dumbbell Row') {
+    await openStep(2);
+    const nameInput = host.querySelector('#exercise-name-input') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')?.set?.call(nameInput, name);
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    const submitBtn = host.querySelector('form.exercise-form-card button[type="submit"]') as HTMLButtonElement;
+    await act(async () => { submitBtn.click(); });
+  }
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const saveButton = () => Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Lưu & Kích hoạt giáo án')) as HTMLButtonElement | undefined;
 
@@ -138,7 +152,9 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     );
 
     await renderComponent();
-    expect(host.textContent).toContain('Truy cập bị từ chối (403 Forbidden)');
+    expect(host.textContent).toContain('Truy cập bị từ chối');
+    expect(host.textContent).not.toContain('403 Forbidden');
+    expect(host.textContent).not.toContain('(COACH)');
   });
 
   it('waits for member data before showing the editor and renders immediately when it arrives', async () => {
@@ -182,7 +198,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(saveButton()).toBeDefined();
   });
 
-  it('moves through the three steps with Tiếp tục and Quay lại', async () => {
+  it('moves through the three steps with Tiếp tục and Quay lại and starts with empty exercises (no hardcoded samples)', async () => {
     await renderComponent();
     // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
     const click = async (label: string) => act(async () => {
@@ -194,9 +210,12 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.textContent).not.toContain('Chỉ số sức khỏe ·');
     await click('Tiếp tục');
     expect(active()).toContain('Bài tập theo ngày');
+    // P1-FE-52: Khởi tạo danh sách bài tập rỗng, không tự điền bài tập mẫu cứng.
+    expect(host.textContent).not.toContain('Kéo xà trợ lực');
+    expect(host.textContent).toContain('Chưa có bài tập nào cho ngày này');
     await click('Tiếp tục');
     expect(active()).toContain('Xem lại & kích hoạt');
-    expect(host.textContent).toContain('Kéo xà trợ lực');
+    expect(host.textContent).toContain('Giáo án chưa có bài tập nào');
     expect(Array.from(host.querySelectorAll('button')).some((b) => b.textContent === 'Tiếp tục')).toBe(false);
     await click('Quay lại');
     expect(active()).toContain('Bài tập theo ngày');
@@ -331,6 +350,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
   it('saves and activates plan when clicking "Lưu & Kích hoạt giáo án" and re-enables save after edits', async () => {
     await renderComponent();
+    await addManualExercise('Barbell Squat');
     await openStep(3);
 
     const saveBtn = saveButton();
@@ -400,6 +420,7 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     await act(async () => { (host.querySelector('#plan-coach-select') as HTMLElement).click(); });
     const option = Array.from(host.querySelectorAll('[role="option"]')).find((o) => o.textContent?.includes('HLV Elena Cruz')) as HTMLElement;
     await act(async () => { option.click(); });
+    await addManualExercise('Goblet Squat');
     await openStep(3);
     expect(saveBtn().disabled).toBe(false);
 
@@ -410,13 +431,14 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
   it('does not ask a coach to choose a coach and never sends coach id for them', async () => {
     await renderComponent();
     expect(host.querySelector('#plan-coach-select')).toBeNull();
+    await addManualExercise('Bench Press');
     await openStep(3);
     const saveBtn = saveButton() as HTMLButtonElement;
     await act(async () => { saveBtn.click(); });
     expect(vi.mocked(aiApi.saveTrainingPlan).mock.calls[0][0].coachId).toBeUndefined();
   });
 
-  it('enforces that endDate min constraint is set to startDate', async () => {
+  it('enforces that endDate min constraint is set to startDate and startDate has no max constraint', async () => {
     await renderComponent();
 
     const startInput = host.querySelector('input[name="plan-start-date"]') as HTMLInputElement;
@@ -424,20 +446,25 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
 
     expect(startInput).not.toBeNull();
     expect(endInput).not.toBeNull();
+    expect(startInput.getAttribute('max')).toBeNull();
     expect(endInput.getAttribute('min')).toBe(startInput.value);
   });
+
   it('edits draft exercise reps and sets before saving the plan', async () => {
     await renderComponent();
-    await openStep(2);
-    await act(async()=>host.querySelector<HTMLButtonElement>('button[aria-label="Sửa bài tập Kéo xà trợ lực (Assisted Pull-up)"]')!.click());
+    await addManualExercise('Kéo xà trợ lực');
+    await act(async()=>host.querySelector<HTMLButtonElement>('button[aria-label="Sửa bài tập Kéo xà trợ lực"]')!.click());
     for (const [id,value] of [['draft-exercise-sets','5'],['draft-exercise-reps','8'],['draft-exercise-rest','90']]) {
       const input=document.getElementById(id) as HTMLInputElement;
       await act(async()=>{Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value')!.set!.call(input,value);input.dispatchEvent(new Event('input',{bubbles:true}));});
     }
     const form=document.querySelector('#draft-exercise-sets')!.closest('form')!;
     await act(async()=>form.dispatchEvent(new Event('submit',{bubbles:true,cancelable:true})));
-    const card=[...host.querySelectorAll('.exercise-item-card')].find(item=>item.textContent?.includes('Assisted Pull-up'))!;
-    expect(card.textContent).toContain('Hiệp: 5');expect(card.textContent).toContain('8 reps');expect(card.textContent).toContain('90s');
+    const card=[...host.querySelectorAll('.exercise-item-card')].find(item=>item.textContent?.includes('Kéo xà trợ lực'))!;
+    expect(card.textContent).toContain('Hiệp: 5');
+    expect(card.textContent).toContain('Lần: 8');
+    expect(card.textContent).not.toContain('reps');
+    expect(card.textContent).toContain('90s');
   });
 
 
@@ -633,11 +660,101 @@ describe('CoachTrainingPlanPage (SCRUM-122: UI Coach Soạn Giáo án Bài tập
     expect(host.querySelector('#plan-member-select')?.textContent).toContain('Không tìm thấy học viên phù hợp');
     expect(host.textContent).toContain('0 học viên');
 
-    // Tìm lại "014" và lưu giáo án -> gửi đúng memberId = 2.
+    // Tìm lại "014", thêm bài tập và lưu giáo án -> gửi đúng memberId = 2.
     await setSearch('014');
+    await addManualExercise('Hip Thrust');
     await openStep(3);
     await act(async () => { saveButton()?.click(); });
     expect(aiApi.saveTrainingPlan).toHaveBeenCalledWith(expect.objectContaining({ memberId: 2 }), true);
+  });
+
+  it('P1-FE-48 & P2-FE-62: hides retired body metrics in AI modal, translates fitnessLevel, and omits ellipsis on short goals', async () => {
+    await renderComponent();
+    const aiBtn = Array.from(host.querySelectorAll('button')).find((b) => b.textContent?.includes('Gợi ý giáo án bằng AI'))!;
+    await act(async () => { aiBtn.click(); });
+
+    const preview = host.ownerDocument.querySelector('.ai-member-preview')!;
+    expect(preview).not.toBeNull();
+    expect(preview.textContent).toContain('Tăng cơ nạc');
+    expect(preview.textContent).toContain('Trung cấp');
+    expect(preview.textContent).not.toContain('intermediate');
+    expect(preview.textContent).not.toContain('Chiều cao');
+    expect(preview.textContent).not.toContain('Cân nặng');
+    expect(preview.textContent).not.toContain('BMI');
+    // Mục tiêu ngắn <= 40 ký tự không bị nối dấu "..."
+    expect(host.ownerDocument.querySelector('#ai-member-select')?.textContent).not.toContain('...');
+  });
+
+  it('P1-FE-49: surfaces server error details on save failure and distinguishes Coach block vs Manager override for Silver tier', async () => {
+    vi.mocked(aiApi.saveTrainingPlan).mockRejectedValueOnce(new Error('Hội viên cần có buổi PT 1:1 trước khi tạo giáo án'));
+    await renderComponent();
+    await addManualExercise('Lat Pulldown');
+    await openStep(3);
+    await act(async () => { saveButton()?.click(); });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Hội viên cần có buổi PT 1:1 trước khi tạo giáo án');
+
+    // Gói Silver với vai trò COACH -> chặn nút Lưu và báo rõ không đủ điều kiện
+    await act(async () => root.unmount());
+    root = createRoot(host);
+    vi.mocked(aiApi.getCoachMembers).mockResolvedValue([{ ...MEMBERS[0], canViewWorkoutPlan: false }]);
+    await renderComponent();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('không thể lưu giáo án');
+    await addManualExercise('Lat Pulldown');
+    await openStep(3);
+    expect(saveButton()?.disabled).toBe(true);
+  });
+
+  it('P1-FE-50: resolves numeric coach userId from getProfile for username session and confirms before manual active plan overwrite', async () => {
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({ id: 'coach_marcus', name: 'HLV Marcus Vance', identifier: 'coach_marcus', role: 'COACH' }),
+    );
+    vi.spyOn(profileApi, 'getProfile').mockResolvedValue({ userId: 77, fullName: 'HLV Marcus Vance' } as never);
+    vi.mocked(aiApi.listTrainingPlans).mockResolvedValue([
+      { id: 10, memberId: 1, coachId: 99, goal: 'Giáo án HLV khác', startDate: '2026-11-10', endDate: '2026-12-10', status: 'active' },
+      { id: 11, memberId: 1, coachId: 77, goal: 'Giáo án cũ của tôi', startDate: '2026-11-12', endDate: '2026-12-12', status: 'active' },
+    ]);
+
+    await renderComponent();
+    await addManualExercise('Seated Row');
+    await openStep(3);
+    await act(async () => { saveButton()?.click(); });
+
+    // Phải mở hộp xác nhận nêu đúng giáo án của chính HLV (coachId=77), không phải của coachId=99
+    expect(host.ownerDocument.body.textContent).toContain('Thay thế giáo án đang áp dụng?');
+    expect(host.ownerDocument.body.textContent).toContain('Giáo án cũ của tôi');
+    expect(host.ownerDocument.body.textContent).not.toContain('Giáo án HLV khác');
+    expect(aiApi.saveTrainingPlan).not.toHaveBeenCalled();
+
+    const confirmBtn = Array.from(host.ownerDocument.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Kích hoạt giáo án mới'),
+    )!;
+    await act(async () => { confirmBtn.click(); });
+    expect(aiApi.saveTrainingPlan).toHaveBeenCalledTimes(1);
+  });
+
+  it('P1-FE-51: validates manual exercise inputs via validateExercise and uses step=1 on rest seconds with maxLength=150', async () => {
+    await renderComponent();
+    await openStep(2);
+
+    const nameInput = host.querySelector('#exercise-name-input') as HTMLInputElement;
+    const restInput = host.querySelector('#exercise-rest-input') as HTMLInputElement;
+    expect(nameInput.maxLength).toBe(150);
+    expect(restInput.step).toBe('1');
+
+    // Nhập số hiệp âm -> validateExercise chặn không cho thêm
+    const setsInput = host.querySelector('#exercise-sets-input') as HTMLInputElement;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(nameInput, 'Pull-up');
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(setsInput, '-2');
+      setsInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    const submitBtn = host.querySelector('form.exercise-form-card button[type="submit"]') as HTMLButtonElement;
+    await act(async () => { submitBtn.click(); });
+
+    expect(host.querySelector('#exercise-name-error')?.textContent).toContain('Số hiệp phải là số nguyên từ 1 trở lên');
+    expect(host.querySelectorAll('.exercise-item-card')).toHaveLength(0);
   });
 
 });

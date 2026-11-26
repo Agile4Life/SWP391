@@ -76,6 +76,19 @@ class ClassServiceTest {
         gymClass.setStatus("active");
     }
 
+    /** Tạo HLV đang làm việc gắn tài khoản User active chưa bị xóa mềm. */
+    private static Coach activeCoach(Long userId) {
+        var user = new com.swp391.scms.users.entity.User();
+        user.setId(userId);
+        user.setStatus("active");
+        user.setFullName("Coach " + userId);
+        Coach coach = new Coach();
+        coach.setUserId(userId);
+        coach.setEmploymentStatus("active");
+        coach.setUser(user);
+        return coach;
+    }
+
     /** Kiểm thử: từ chối tạo buổi có ngày trong quá khứ. */
     @Test
     @DisplayName("createSession rejects when sessionDate is in the past")
@@ -211,9 +224,7 @@ class ClassServiceTest {
         Discipline d = new Discipline();
         d.setName("Pilates");
 
-        Coach coach = new Coach();
-        coach.setUserId(10L);
-        coach.setEmploymentStatus("active");
+        Coach coach = activeCoach(10L);
 
         Room room = new Room();
         room.setName("Studio B");
@@ -240,9 +251,7 @@ class ClassServiceTest {
     @DisplayName("SCRUM-131: updateClass rejects when new capacity is below booked student count")
     void updateClass_rejectsCapacityBelowBooked() {
         Discipline d = new Discipline();
-        Coach coach = new Coach();
-        coach.setUserId(10L);
-        coach.setEmploymentStatus("active");
+        Coach coach = activeCoach(10L);
         Room room = new Room();
         room.setStatus("available");
 
@@ -768,12 +777,8 @@ class ClassServiceTest {
         Discipline yoga = new Discipline();
         org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
         yoga.setName("Yoga");
-        Coach coach1 = new Coach();
-        coach1.setUserId(2L);
-        coach1.setEmploymentStatus("active");
-        Coach coach2 = new Coach();
-        coach2.setUserId(20L);
-        coach2.setEmploymentStatus("active");
+        Coach coach1 = activeCoach(2L);
+        Coach coach2 = activeCoach(20L);
         Room studio1 = new Room();
         org.springframework.test.util.ReflectionTestUtils.setField(studio1, "id", 3L);
         studio1.setStatus("available");
@@ -867,12 +872,8 @@ class ClassServiceTest {
         org.springframework.test.util.ReflectionTestUtils.setField(boxing, "id", 2L);
         boxing.setName("Boxing");
 
-        Coach coach1 = new Coach();
-        coach1.setUserId(10L);
-        coach1.setEmploymentStatus("active");
-        Coach coach2 = new Coach();
-        coach2.setUserId(20L);
-        coach2.setEmploymentStatus("active");
+        Coach coach1 = activeCoach(10L);
+        Coach coach2 = activeCoach(20L);
 
         Room room1 = new Room();
         org.springframework.test.util.ReflectionTestUtils.setField(room1, "id", 30L);
@@ -1012,9 +1013,7 @@ class ClassServiceTest {
         Discipline yoga = new Discipline();
         org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
         yoga.setName("Yoga");
-        Coach activeCoach = new Coach();
-        activeCoach.setUserId(2L);
-        activeCoach.setEmploymentStatus("active");
+        Coach activeCoach = activeCoach(2L);
         Room smallRoom = new Room();
         org.springframework.test.util.ReflectionTestUtils.setField(smallRoom, "id", 3L);
         smallRoom.setName("Zen Garden Studio");
@@ -1055,9 +1054,7 @@ class ClassServiceTest {
         Discipline yoga = new Discipline();
         org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
         yoga.setName("Yoga");
-        Coach activeCoach = new Coach();
-        activeCoach.setUserId(2L);
-        activeCoach.setEmploymentStatus("active");
+        Coach activeCoach = activeCoach(2L);
         Room studio = new Room();
         org.springframework.test.util.ReflectionTestUtils.setField(studio, "id", 3L);
         studio.setStatus("available");
@@ -1347,9 +1344,7 @@ class ClassServiceTest {
         Discipline yoga = new Discipline();
         org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
         yoga.setName("Yoga");
-        Coach activeCoach = new Coach();
-        activeCoach.setUserId(2L);
-        activeCoach.setEmploymentStatus("active");
+        Coach activeCoach = activeCoach(2L);
         Room studio = new Room();
         org.springframework.test.util.ReflectionTestUtils.setField(studio, "id", 3L);
         studio.setStatus("available");
@@ -1366,5 +1361,304 @@ class ClassServiceTest {
                 .isInstanceOf(BadRequestException.class)
                 .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_INVALID_SLOT")
                 .hasFieldOrPropertyWithValue("messageKey", "error.scheduling.invalid_slot");
+    }
+
+    /** Kiểm thử P0-05: chuyển lớp active sang inactive hoặc archived sẽ chạy closeClass và lưu đúng trạng thái hợp lệ. */
+    @Test
+    @DisplayName("P0-05: updateClass closes class when transitioning active to inactive or archived")
+    void updateClass_closesClassWhenTransitioningToInactiveOrArchived() {
+        var enrollmentService = org.mockito.Mockito.mock(com.swp391.scms.scheduling.service.EnrollmentService.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "enrollmentService", enrollmentService);
+
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        Coach coach = activeCoach(10L);
+        Room room = new Room();
+        org.springframework.test.util.ReflectionTestUtils.setField(room, "id", 3L);
+        room.setStatus("available");
+        room.setCapacity(20);
+
+        gymClass.setId(1L);
+        gymClass.setDiscipline(yoga);
+        gymClass.setCoach(coach);
+        gymClass.setRoom(room);
+        gymClass.setStatus("active");
+
+        ClassSession futureSession = new ClassSession();
+        futureSession.setId(201L);
+        futureSession.setGymClass(gymClass);
+        futureSession.setSessionDate(LocalDate.of(2026, 10, 20));
+        futureSession.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        futureSession.setEndTime(ScheduleSlot.SLOT_1.endTime());
+        futureSession.setStatus("scheduled");
+
+        var member = new com.swp391.scms.users.entity.Member();
+        member.setUserId(42L);
+        var enrollment = new com.swp391.scms.scheduling.entity.ClassEnrollment();
+        enrollment.setId(301L);
+        enrollment.setGymClass(gymClass);
+        enrollment.setMember(member);
+        enrollment.setStatus("booked");
+
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(10L)).thenReturn(Optional.of(coach));
+        when(rooms.findById(3L)).thenReturn(Optional.of(room));
+        when(enrollments.countByGymClassIdAndStatus(1L, "booked")).thenReturn(1L);
+        when(enrollments.findByGymClassId(1L)).thenReturn(java.util.List.of(enrollment));
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(1L))
+                .thenReturn(java.util.List.of(futureSession));
+        when(gymClasses.saveAndFlush(any(GymClass.class))).thenAnswer(i -> i.getArgument(0));
+
+        GymClassDto updated = service.updateClass(1L,
+                new UpdateClassRequest("Yoga Flow", 1L, 10L, 3L, 20, "all", null, "inactive"));
+
+        assertThat(updated.status()).isEqualTo("inactive");
+        assertThat(futureSession.getStatus()).isEqualTo("cancelled");
+        assertThat(enrollment.getStatus()).isEqualTo("cancelled");
+        verify(enrollmentService).settleFeeOnClassClosure(enrollment, "Lớp học ngừng hoạt động");
+    }
+
+    /** Kiểm thử P1-BE-16: kiểm tra tương lai trên ngày buổi đầu tiên (firstDate) thay vì request.startDate(). */
+    @Test
+    @DisplayName("P1-BE-16: createRecurringClass and checkRecurringAvailability evaluate future slot against firstDate")
+    void recurringScheduleEvaluatesFutureAgainstFirstSessionDate() {
+        // Đồng hồ: 2026-10-16 (Thứ 6) 10:00 giờ VN. Slot 1 (07:00) hôm nay đã qua, nhưng thứ 7 (17/10) 07:00 ở tương lai.
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Coach coach = activeCoach(10L);
+        Room room = new Room();
+        room.setId(3L);
+        room.setName("Zen Garden Studio");
+        room.setCapacity(20);
+        room.setStatus("available");
+
+        LocalDate todayFriday = LocalDate.of(2026, 10, 16);
+        LocalDate saturday = LocalDate.of(2026, 10, 17);
+        LocalDate nextTuesday = LocalDate.of(2026, 10, 20);
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(rooms.findAll()).thenReturn(java.util.List.of(room));
+        when(coaches.findActiveWithUser()).thenReturn(java.util.List.of(coach));
+        when(sessions.findScheduledSessionsBetweenDates(saturday, nextTuesday)).thenReturn(java.util.List.of());
+
+        var avail = service.checkRecurringAvailability(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                        1L, todayFriday, nextTuesday, java.util.List.of("SATURDAY", "TUESDAY"),
+                        ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime()));
+        assertThat(avail.validSchedule()).isTrue();
+        assertThat(avail.firstSessionDate()).isEqualTo(saturday);
+        assertThat(avail.selectedSlotAvailable()).isTrue();
+        assertThat(avail.slots().get(0).available()).isTrue();
+
+        when(coaches.findById(10L)).thenReturn(Optional.of(coach));
+        when(rooms.findById(3L)).thenReturn(Optional.of(room));
+        when(sessions.searchSessions(saturday, nextTuesday, null, null)).thenReturn(java.util.List.of());
+        when(gymClasses.save(any(GymClass.class))).thenAnswer(i -> {
+            GymClass c = i.getArgument(0);
+            c.setId(88L);
+            return c;
+        });
+        when(sessions.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
+
+        GymClassDto created = service.createRecurringClass(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                        "Yoga Sáng Cuối Tuần", 1L, 10L, 3L, 15, "all", null, java.math.BigDecimal.ZERO,
+                        todayFriday, nextTuesday, java.util.List.of("SATURDAY", "TUESDAY"),
+                        ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime()));
+        assertThat(created.id()).isEqualTo(88L);
+        verify(sessions, org.mockito.Mockito.times(1)).searchSessions(saturday, nextTuesday, null, null);
+
+        // Nếu startDate < today (hôm qua) vẫn bị từ chối SCHEDULING_PAST_SESSION
+        assertThatThrownBy(() -> service.createRecurringClass(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                        "Yoga Quá Khứ", 1L, 10L, 3L, 15, "all", null, java.math.BigDecimal.ZERO,
+                        todayFriday.minusDays(1), nextTuesday, java.util.List.of("SATURDAY"),
+                        ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime())))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_PAST_SESSION");
+    }
+
+    /** Kiểm thử P1-BE-18: rescheduleSession chặn buổi học đã hoàn tất (completed). */
+    @Test
+    @DisplayName("P1-BE-18: rescheduleSession rejects completed sessions")
+    void rescheduleSession_rejectsCompletedSession() {
+        gymClass.setId(1L);
+        ClassSession completed = new ClassSession();
+        completed.setId(100L);
+        completed.setGymClass(gymClass);
+        completed.setSessionDate(LocalDate.of(2026, 10, 15));
+        completed.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        completed.setEndTime(ScheduleSlot.SLOT_1.endTime());
+        completed.setStatus("completed");
+
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(sessions.findById(100L)).thenReturn(Optional.of(completed));
+
+        assertThatThrownBy(() -> service.rescheduleSession(1L, 100L,
+                new RescheduleSessionRequest(LocalDate.of(2026, 10, 20),
+                        ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime())))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_SESSION_NOT_SCHEDULED");
+        verify(sessions, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
+    /** Kiểm thử P1-BE-19: chặn HLV có User bị xóa mềm/khóa khi tạo hoặc kích hoạt lớp, nhưng vẫn cho đóng lớp sang inactive/archived. */
+    @Test
+    @DisplayName("P1-BE-19: rejects soft-deleted or inactive coach user except when closing class to inactive/archived")
+    void rejectsSoftDeletedCoachUserExceptWhenClosingClass() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+
+        var deletedUser = new com.swp391.scms.users.entity.User();
+        deletedUser.setId(10L);
+        deletedUser.setStatus("active");
+        deletedUser.setDeletedAt(java.time.LocalDateTime.of(2026, 10, 1, 9, 0));
+        Coach deletedCoach = new Coach();
+        deletedCoach.setUserId(10L);
+        deletedCoach.setEmploymentStatus("active");
+        deletedCoach.setUser(deletedUser);
+
+        Room maintenanceRoom = new Room();
+        maintenanceRoom.setId(3L);
+        maintenanceRoom.setStatus("maintenance");
+        maintenanceRoom.setCapacity(20);
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(10L)).thenReturn(Optional.of(deletedCoach));
+
+        assertThatThrownBy(() -> service.createClass(new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateClassRequest(
+                "Yoga", 1L, 10L, 3L, 15, "all", null)))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_COACH_INACTIVE");
+
+        assertThatThrownBy(() -> service.createRecurringClass(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                        "Yoga", 1L, 10L, 3L, 15, "all", null, java.math.BigDecimal.ZERO,
+                        LocalDate.of(2026, 10, 20), LocalDate.of(2026, 10, 27),
+                        java.util.List.of("TUESDAY"), ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime())))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_COACH_INACTIVE");
+
+        gymClass.setId(1L);
+        gymClass.setDiscipline(yoga);
+        gymClass.setCoach(deletedCoach);
+        gymClass.setRoom(maintenanceRoom);
+        gymClass.setStatus("active");
+        when(gymClasses.findById(1L)).thenReturn(Optional.of(gymClass));
+        when(rooms.findById(3L)).thenReturn(Optional.of(maintenanceRoom));
+        when(enrollments.countByGymClassIdAndStatus(1L, "booked")).thenReturn(0L);
+        when(enrollments.findByGymClassId(1L)).thenReturn(java.util.List.of());
+        when(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(1L)).thenReturn(java.util.List.of());
+        when(gymClasses.saveAndFlush(any(GymClass.class))).thenAnswer(i -> i.getArgument(0));
+
+        // Giữ active với HLV bị xóa mềm -> bị chặn
+        assertThatThrownBy(() -> service.updateClass(1L,
+                new UpdateClassRequest("Yoga", 1L, 10L, 3L, 15, "all", null, "active")))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_COACH_INACTIVE");
+
+        // Đóng lớp sang archived với HLV bị xóa mềm & phòng bảo trì -> cho phép
+        GymClassDto archived = service.updateClass(1L,
+                new UpdateClassRequest("Yoga", 1L, 10L, 3L, 15, "all", null, "archived"));
+        assertThat(archived.status()).isEqualTo("archived");
+    }
+
+    /** Kiểm thử P2-BE-16 & P2-BE-17: giới hạn khoảng khóa <= 365 ngày, chuẩn hóa recurringDays khử trùng và batch searchSessions. */
+    @Test
+    @DisplayName("P2-BE-16 & P2-BE-17: caps course span at 365 days, normalizes recurringDays and batches searchSessions counts")
+    void enforcesMaxSpanNormalizesDaysAndBatchesSearchSessionCounts() {
+        Discipline yoga = new Discipline();
+        org.springframework.test.util.ReflectionTestUtils.setField(yoga, "id", 1L);
+        yoga.setName("Yoga");
+        Coach coach = activeCoach(10L);
+        Room room = new Room();
+        room.setId(3L);
+        room.setStatus("available");
+        room.setCapacity(20);
+
+        when(disciplines.findById(1L)).thenReturn(Optional.of(yoga));
+        when(coaches.findById(10L)).thenReturn(Optional.of(coach));
+        when(rooms.findById(3L)).thenReturn(Optional.of(room));
+
+        // 1. Khoảng > 365 ngày bị từ chối ở cả createRecurringClass lẫn checkRecurringAvailability
+        LocalDate start = LocalDate.of(2026, 10, 20);
+        LocalDate tooLongEnd = start.plusDays(366);
+        assertThatThrownBy(() -> service.createRecurringClass(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                        "Yoga 2 Năm", 1L, 10L, 3L, 15, "all", null, java.math.BigDecimal.ZERO,
+                        start, tooLongEnd, java.util.List.of("TUESDAY"),
+                        ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime())))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_INVALID_DATE_RANGE");
+        var tooLongAvail = service.checkRecurringAvailability(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.RecurringAvailabilityRequest(
+                        1L, start, tooLongEnd, java.util.List.of("TUESDAY"), null, null));
+        assertThat(tooLongAvail.validSchedule()).isFalse();
+        assertThat(tooLongAvail.scheduleErrorCode()).isEqualTo("SCHEDULING_INVALID_DATE_RANGE");
+
+        // 2. Tên thứ sai hoặc phần tử null -> BadRequestException SCHEDULING_NO_RECURRING_DAYS (không NPE/500)
+        assertThatThrownBy(() -> service.createRecurringClass(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                        "Yoga", 1L, 10L, 3L, 15, "all", null, java.math.BigDecimal.ZERO,
+                        start, start.plusDays(7), java.util.Arrays.asList("MONDAY", null),
+                        ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime())))
+                .isInstanceOf(BadRequestException.class)
+                .hasFieldOrPropertyWithValue("errorCode", "SCHEDULING_NO_RECURRING_DAYS");
+
+        // 3. Khử trùng & chuẩn hóa recurringDays
+        when(sessions.searchSessions(LocalDate.of(2026, 10, 21), LocalDate.of(2026, 10, 26), null, null))
+                .thenReturn(java.util.List.of());
+        when(gymClasses.save(any(GymClass.class))).thenAnswer(i -> {
+            GymClass c = i.getArgument(0);
+            c.setId(99L);
+            return c;
+        });
+        when(sessions.saveAndFlush(any(ClassSession.class))).thenAnswer(i -> i.getArgument(0));
+        GymClassDto created = service.createRecurringClass(
+                new com.swp391.scms.scheduling.dto.SchedulingRequests.CreateRecurringClassRequest(
+                        "Yoga Chuẩn Hóa", 1L, 10L, 3L, 15, "all", null, java.math.BigDecimal.ZERO,
+                        start, start.plusDays(6), java.util.List.of("wednesday", "MONDAY", "monday", "WEDNESDAY"),
+                        ScheduleSlot.SLOT_1.startTime(), ScheduleSlot.SLOT_1.endTime()));
+        assertThat(created.recurringDays()).isEqualTo("MONDAY,WEDNESDAY");
+
+        // 4. searchSessions đếm booked theo lô thay vì 2N+1
+        var sbRepo = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "sessionBookings", sbRepo);
+        gymClass.setId(1L);
+        gymClass.setDiscipline(yoga);
+        gymClass.setCoach(coach);
+        gymClass.setRoom(room);
+        ClassSession s1 = new ClassSession();
+        s1.setId(101L);
+        s1.setGymClass(gymClass);
+        s1.setSessionDate(start);
+        s1.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        s1.setEndTime(ScheduleSlot.SLOT_1.endTime());
+        s1.setStatus("scheduled");
+        ClassSession s2 = new ClassSession();
+        s2.setId(102L);
+        s2.setGymClass(gymClass);
+        s2.setSessionDate(start.plusDays(2));
+        s2.setStartTime(ScheduleSlot.SLOT_1.startTime());
+        s2.setEndTime(ScheduleSlot.SLOT_1.endTime());
+        s2.setStatus("scheduled");
+
+        when(sessions.searchSessions(start, start.plusDays(7), 1L, 10L)).thenReturn(java.util.List.of(s1, s2));
+        when(enrollments.countByClassIdsAndStatus(java.util.List.of(1L), "booked"))
+                .thenReturn(java.util.List.of(new com.swp391.scms.scheduling.dto.ClassBookingCount(1L, 4L)));
+        when(sbRepo.countBookedBySessionIds(java.util.List.of(101L, 102L)))
+                .thenReturn(java.util.List.of(new com.swp391.scms.scheduling.dto.SessionBookingCount(101L, 2L)));
+
+        var dtos = service.searchSessions(start, start.plusDays(7), 1L, 10L);
+        assertThat(dtos).hasSize(2);
+        assertThat(dtos.get(0).bookedCount()).isEqualTo(6L);
+        assertThat(dtos.get(1).bookedCount()).isEqualTo(4L);
+        verify(enrollments, org.mockito.Mockito.times(1)).countByClassIdsAndStatus(java.util.List.of(1L), "booked");
+        verify(enrollments, org.mockito.Mockito.never()).countByGymClassIdAndStatus(any(), any());
+        verify(sbRepo, org.mockito.Mockito.times(1)).countBookedBySessionIds(java.util.List.of(101L, 102L));
+        verify(sbRepo, org.mockito.Mockito.never()).countBySessionIdAndStatus(any(), any());
     }
 }

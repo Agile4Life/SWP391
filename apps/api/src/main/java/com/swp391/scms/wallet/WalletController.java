@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,7 @@ public class WalletController {
             @NotNull(message = "{validation.wallet.amount.not_null}")
             @DecimalMin(value = "10000", message = "{validation.wallet.amount.min}")
             @DecimalMax(value = "100000000", message = "{validation.wallet.amount.max}")
+            @Digits(integer = 10, fraction = 0, message = "{error.wallet.topup_range}")
             BigDecimal amount
     ) {}
 
@@ -49,6 +51,7 @@ public class WalletController {
             @NotNull(message = "{validation.wallet.amount.not_null}")
             @DecimalMin(value = "10000", message = "{validation.wallet.amount.min}")
             @DecimalMax(value = "100000000", message = "{validation.wallet.amount.max}")
+            @Digits(integer = 10, fraction = 0, message = "{error.wallet.topup_range}")
             BigDecimal amount,
             @Size(max = 30)
             String paymentMethod,
@@ -144,7 +147,7 @@ public class WalletController {
         String msg = messageService != null
                 ? messageService.getMessage("wallet.get.success")
                 : "Lấy thông tin Ví thành công";
-        return ApiResponse.ok(msg, walletService.getMyWallet(memberId));
+        return ApiResponse.ok(msg, walletService.getMemberWallet(memberId));
     }
 
     /** POST /members/{memberId}/topup: quầy nạp tiền vào ví hội viên. */

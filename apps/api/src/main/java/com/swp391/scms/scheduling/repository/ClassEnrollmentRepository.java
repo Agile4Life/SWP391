@@ -136,6 +136,27 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
             @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
             @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
 
+    /**
+     * Đếm tổng số credit miễn phí đã dùng trong khoảng hạn mức: gồm các lượt đang {@code booked}, đã hoàn thành
+     * {@code completed}, và các lượt {@code cancelled} bị mất lượt ({@code creditForfeited = true}); loại trừ
+     * các lượt đã trả học phí hoặc đang chờ thanh toán.
+     */
+    @org.springframework.data.jpa.repository.Query("""
+            select count(e) from ClassEnrollment e
+            where e.member.userId = :memberId
+              and (e.status in ('booked', 'completed')
+                   or (e.status = 'cancelled' and e.creditForfeited = true))
+              and coalesce(e.gymClass.startDate, cast(e.enrolledAt as date)) between :startDate and :endDate
+              and not exists (
+                select 1 from Payment p
+                where p.classEnrollmentId = e.id and p.status in ('pending', 'success')
+              )
+            """)
+    long countUsedFreeCreditsBetween(
+            @org.springframework.data.repository.query.Param("memberId") Long memberId,
+            @org.springframework.data.repository.query.Param("startDate") java.time.LocalDate startDate,
+            @org.springframework.data.repository.query.Param("endDate") java.time.LocalDate endDate);
+
     /** Ghi danh khóa học hoàn thành khi mọi buổi chưa hủy của lớp đã diễn ra trước {@code cutoff}. */
     @org.springframework.data.jpa.repository.Modifying
     @Query("""
@@ -150,4 +171,55 @@ public interface ClassEnrollmentRepository extends JpaRepository<ClassEnrollment
      * về số dòng cập nhật.
      */
     int completeFinishedBefore(@Param("cutoff") java.time.LocalDate cutoff);
+
+    /** Bản ghi phẳng cho hàng đợi thu học phí khóa học tại quầy lễ tân (tiền mặt / chuyển khoản). */
+    interface UnpaidCourseEnrollmentRow {
+        Long getEnrollmentId();
+        Long getPaymentId();
+        Long getClassId();
+        String getClassName();
+        String getDisciplineName();
+        java.time.LocalDate getStartDate();
+        java.time.LocalDate getEndDate();
+        Long getMemberId();
+        String getMemberName();
+        String getMemberPhone();
+        String getMembershipCode();
+        java.math.BigDecimal getAmount();
+        String getMethod();
+        java.time.LocalDateTime getCreatedAt();
+    }
+
+    /**
+     * Các lượt ghi danh khóa học đang giữ chỗ ({@code booked}) có khoản học phí đang chờ thanh toán tại quầy
+     * ({@code cash} hoặc {@code bank_transfer}) của hội viên chưa bị xóa mềm, mới nhất trước.
+     */
+    @Query("""
+            select e.id as enrollmentId,
+                   p.id as paymentId,
+                   c.id as classId,
+                   c.name as className,
+                   d.name as disciplineName,
+                   c.startDate as startDate,
+                   c.endDate as endDate,
+                   m.userId as memberId,
+                   u.fullName as memberName,
+                   u.phone as memberPhone,
+                   m.membershipCode as membershipCode,
+                   p.amount as amount,
+                   p.method as method,
+                   p.createdAt as createdAt
+            from Payment p
+            join p.classEnrollment e
+            join e.gymClass c
+            left join c.discipline d
+            join e.member m
+            join m.user u
+            where e.status = 'booked'
+              and p.status = 'pending'
+              and p.method in ('cash', 'bank_transfer')
+              and u.deletedAt is null
+            order by p.createdAt desc, e.id desc
+            """)
+    List<UnpaidCourseEnrollmentRow> findUnpaidCourseEnrollments();
 }

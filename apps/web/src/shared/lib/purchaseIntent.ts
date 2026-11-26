@@ -1,10 +1,11 @@
 import { homePath, type UserSession } from '../api/client';
 
 const KEY = 'scms_purchase_return';
-/** Đọc packageId hợp lệ (số nguyên dương) từ query string; không có thì null. */
+
+/** Đọc packageId hợp lệ (chuỗi chữ số nguyên dương, chặn '1e2'/'1.5'/'-1') từ query string; không có thì null. */
 export function selectedPackageId(search: string): number | null {
   const raw = new URLSearchParams(search).get('packageId')?.trim();
-  if (!raw) return null;
+  if (!raw || !/^\d+$/.test(raw)) return null;
   const num = Number(raw);
   return Number.isSafeInteger(num) && num > 0 ? num : null;
 }
@@ -34,14 +35,23 @@ export function purchaseAuthPath(path: '/login' | '/register', search: string): 
 }
 
 /**
- * Trang đích sau đăng nhập: role khác MEMBER về trang chủ của role; hội viên ưu tiên quay lại trang chọn gói đã
- * lưu.
+ * Trang đích sau đăng nhập: role khác MEMBER về trang chủ của role (và xóa ý định mua cũ);
+ * hội viên ưu tiên quay lại trang chọn gói từ query hoặc sessionStorage rồi tiêu thụ ý định đã lưu.
  */
 export function authDestination(role: UserSession['role'], search: string): string {
-  if (role !== 'MEMBER') return homePath(role);
+  if (role !== 'MEMBER') {
+    clearPurchaseIntent();
+    return homePath(role);
+  }
   let saved: string | null = null;
   try { saved = sessionStorage.getItem(KEY); } catch { /* Điều hướng bằng URL vẫn hoạt động khi không có storage. */ }
-  return purchaseReturnPath(search) ?? purchaseReturnPath(`?returnTo=${encodeURIComponent(saved ?? '')}`) ?? homePath(role);
+  const destination = purchaseReturnPath(search)
+    ?? purchaseReturnPath(`?returnTo=${encodeURIComponent(saved ?? '')}`)
+    ?? homePath(role);
+  if (saved !== null) {
+    clearPurchaseIntent();
+  }
+  return destination;
 }
 
 /** Lưu ý định mua gói vào sessionStorage để giữ qua các bước chuyển hướng đăng nhập. */

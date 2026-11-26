@@ -6,28 +6,14 @@ import { CoachClassesPage } from './CoachClassesPage';
 import { AUTH_STORAGE_KEY } from '../../shared/api/client';
 import { coachingApi } from './coachingApi';
 import { getCoachSchedule } from '../member/coachBookingApi';
+import { addIsoDays, mondayOfIso } from './coachTimetable';
+import { centerNowParts } from '../../shared/lib/centerTime';
 
 vi.mock('../member/coachBookingApi', () => ({ getCoachSchedule: vi.fn().mockResolvedValue([]) }));
 
-// Thứ Hai của tuần chứa ngày d.
-function getWeekMonday(d: Date): Date {
-  const date = new Date(d);
-  const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-  date.setDate(diff);
-  date.setHours(0, 0, 0, 0);
-  return date;
-}
-
-// Định dạng Date thành YYYY-MM-DD.
-function formatYmd(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-const currentMondayStr = formatYmd(getWeekMonday(new Date()));
+// Giả lập Thứ Hai 06:00 giờ Việt Nam để các buổi trong tuần hiện tại luôn ở tương lai (trừ buổi cố tình đặt ở quá khứ).
+const FIXED_MONDAY_MORNING = new Date('2026-11-22T23:00:00Z'); // 2026-11-23 06:00 +07:00
+const currentMondayStr = mondayOfIso(centerNowParts(FIXED_MONDAY_MORNING).date);
 
 describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Phụ trách)', () => {
   let host: HTMLDivElement;
@@ -67,6 +53,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
   ];
 
   beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(FIXED_MONDAY_MORNING);
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.append(host);
@@ -106,6 +94,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
       })
     );
 
+    vi.mocked(getCoachSchedule).mockReset().mockResolvedValue([]);
     vi.spyOn(coachingApi, 'getAllAssignedStudents').mockResolvedValue(mockStudents);
     vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValue([]);
   });
@@ -117,6 +106,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     host.remove();
     localStorage.clear();
     vi.restoreAllMocks();
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -276,9 +266,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
   });
 
   it('shows group class sessions alongside PT bookings and links to group class attendance', async () => {
-    const sunday = new Date(getWeekMonday(new Date()));
-    sunday.setDate(sunday.getDate() + 6);
-    const futureSessionDate = formatYmd(sunday);
+    const futureSessionDate = addIsoDays(currentMondayStr, 6);
     vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([
       {
         id: 77,
@@ -286,6 +274,7 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
         className: 'Yoga Sáng',
         disciplineName: 'Yoga',
         coachId: 1,
+        coachName: 'Marcus Vance',
         roomName: 'Studio A',
         sessionDate: futureSessionDate,
         startTime: '17:00:00',
@@ -307,6 +296,9 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     const classBlock = host.querySelector<HTMLButtonElement>('.mcal__event--open')!;
     expect(classBlock).not.toBeNull();
     expect(classBlock.textContent).toContain('Yoga Sáng');
+    // P2-FE-64: Thẻ lớp nhóm của HLV hiện số học viên thay vì lặp tên HLV.
+    expect(classBlock.textContent).toContain('11/20 học viên');
+    expect(classBlock.textContent).not.toContain('Marcus Vance');
     await act(async () => classBlock.click());
 
     const dialog = host.querySelector('dialog')!;
@@ -314,5 +306,218 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     expect(dialog.textContent).toContain('Studio A');
     expect(dialog.textContent).toContain('11/20');
     expect(dialog.querySelector('a[href="/coach/attendance/77"]')).not.toBeNull();
+  });
+
+  it('P1-FE-45 & P2-FE-64: hides attendance link for cancelled class sessions and marks ended PT sessions as past', async () => {
+    // 10:00 giờ Việt Nam Thứ Ba (2026-11-24): buổi PT Thứ Hai (2026-11-23) đã kết thúc -> tone past.
+    vi.setSystemTime(new Date('2026-11-24T03:00:00Z'));
+    vi.mocked(getCoachSchedule).mockResolvedValueOnce([
+      {
+        id: 31,
+        memberName: 'Nguyễn Minh Anh',
+        bookingDate: currentMondayStr,
+        startTime: '07:00:00',
+        endTime: '09:30:00',
+        status: 'confirmed',
+        paymentMethod: 'package_quota',
+      },
+    ] as never);
+    vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([
+      {
+        id: 79,
+        classId: 5,
+        className: 'Boxing Đã Hủy',
+        disciplineName: 'Boxing',
+        coachId: 1,
+        roomName: 'Ring Arena 01',
+        sessionDate: addIsoDays(currentMondayStr, 2),
+        startTime: '17:00:00',
+        endTime: '19:30:00',
+        status: 'cancelled',
+        cancelReason: 'Bảo trì sàn đấu',
+        capacity: 14,
+        bookedCount: 5,
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>
+      );
+    });
+
+    // Buổi PT đã qua được đánh dấu .mcal__event--past thay vì .mcal__event--mine
+    expect(host.querySelectorAll('.mcal__event--past')).toHaveLength(1);
+    expect(host.querySelectorAll('.mcal__event--mine')).toHaveLength(0);
+
+    // Buổi lớp nhóm đã hủy không hiện link Điểm danh buổi này trong modal chi tiết
+    const cancelledBlock = host.querySelector<HTMLButtonElement>('.mcal__event--cancelled')!;
+    expect(cancelledBlock).not.toBeNull();
+    await act(async () => cancelledBlock.click());
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.textContent).toContain('Bảo trì sàn đấu');
+    expect(dialog.querySelector('a[href="/coach/attendance/79"]')).toBeNull();
+  });
+
+  it('P1-FE-53: handles null student fields safely, renders dash for blank fitnessLevel, and provides Retry on error', async () => {
+    vi.spyOn(coachingApi, 'getAllAssignedStudents')
+      .mockRejectedValueOnce(new Error('Roster down'))
+      .mockResolvedValueOnce([
+        {
+          id: 501,
+          memberId: 501,
+          membershipCode: '',
+          fullName: 'Học viên PT thuần',
+          email: '',
+          phone: null,
+          fitnessGoal: '',
+          healthNotes: '',
+          fitnessLevel: '',
+          enrolledAt: '',
+          status: 'active',
+        },
+      ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>,
+      );
+    });
+
+    const studentsTabBtn = [...host.querySelectorAll<HTMLButtonElement>('.coach-tab-btn')].find((btn) =>
+      btn.textContent?.includes('Học viên phụ trách'),
+    )!;
+    await act(async () => studentsTabBtn.click());
+
+    const alert = host.querySelector('[role="alert"]');
+    expect(alert?.textContent).toContain('Roster down');
+    const retryBtn = [...alert!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Thử lại')!;
+    await act(async () => retryBtn.click());
+
+    expect(host.textContent).toContain('Học viên PT thuần');
+    const pill = host.querySelector('.fitness-level-pill');
+    expect(pill?.textContent).toBe('—');
+    expect(pill?.textContent).not.toContain('Nâng cao');
+    expect(host.querySelector('.health-box--alert')).toBeNull();
+  });
+
+  it('P0-06: calls coachingApi.getCoachSchedule without passing username string id and surfaces partial group class failures with retry', async () => {
+    localStorage.setItem(
+      AUTH_STORAGE_KEY,
+      JSON.stringify({
+        id: 'coach_marcus',
+        identifier: 'coach_marcus',
+        name: 'Marcus Vance',
+        role: 'COACH',
+      }),
+    );
+    vi.mocked(getCoachSchedule).mockResolvedValue([
+      {
+        id: 19,
+        memberName: 'Nguyễn Minh Anh',
+        bookingDate: currentMondayStr,
+        startTime: '07:00:00',
+        endTime: '09:30:00',
+        status: 'confirmed',
+        paymentMethod: 'package_quota',
+        disciplineName: 'Gym',
+      },
+    ] as never);
+    const scheduleSpy = vi.spyOn(coachingApi, 'getCoachSchedule')
+      .mockRejectedValueOnce(new Error('Group classes down'))
+      .mockResolvedValueOnce([]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>,
+      );
+    });
+
+    // Must not pass currentUser.id ("coach_marcus") to backend Long coachId param
+    expect(scheduleSpy).toHaveBeenCalledWith();
+    // Surfaces alert with Retry button while still showing PT bookings that loaded
+    const alert = host.querySelector('[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert?.textContent).toContain('lớp nhóm');
+    expect(host.querySelectorAll('.mcal__event--mine')).toHaveLength(1);
+
+    // Retry reloads and clears alert
+    const retryBtn = [...alert!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Thử lại')!;
+    await act(async () => retryBtn.click());
+    expect(host.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('P0-06: surfaces partial PT 1:1 failure with retry while still rendering loaded group class sessions', async () => {
+    vi.mocked(getCoachSchedule).mockRejectedValueOnce(new Error('PT schedule down'));
+    vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([
+      {
+        id: 88,
+        classId: 5,
+        className: 'Boxing Nâng Cao',
+        disciplineName: 'Boxing',
+        coachId: 1,
+        roomName: 'Ring Arena 01',
+        sessionDate: currentMondayStr,
+        startTime: '17:00:00',
+        endTime: '19:30:00',
+        status: 'scheduled',
+        capacity: 14,
+        bookedCount: 6,
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>,
+      );
+    });
+
+    const alert = host.querySelector('[role="alert"]');
+    expect(alert).not.toBeNull();
+    expect(alert?.textContent).toContain('PT 1:1');
+    expect(host.textContent).toContain('Boxing Nâng Cao');
+  });
+
+  it('P2-E2E-03: marks Sunday 17:00–19:30 session as past deterministically after Sunday 19:30 UTC+7', async () => {
+    // 20:00 giờ Việt Nam Chủ Nhật (2026-11-29): buổi Slot 5 (17:00–19:30) cùng ngày đã qua -> .mcal__event--past
+    vi.setSystemTime(new Date('2026-11-29T13:00:00Z'));
+    const sundayDate = addIsoDays(currentMondayStr, 6);
+    vi.spyOn(coachingApi, 'getCoachSchedule').mockResolvedValueOnce([
+      {
+        id: 91,
+        classId: 5,
+        className: 'Yoga Chủ Nhật',
+        disciplineName: 'Yoga',
+        coachId: 1,
+        coachName: 'Marcus Vance',
+        roomName: 'Zen Garden Studio',
+        sessionDate: sundayDate,
+        startTime: '17:00:00',
+        endTime: '19:30:00',
+        status: 'scheduled',
+        capacity: 16,
+        bookedCount: 8,
+      },
+    ]);
+
+    await act(async () => {
+      root.render(
+        <MemoryRouter>
+          <CoachClassesPage />
+        </MemoryRouter>,
+      );
+    });
+
+    expect(host.querySelectorAll('.mcal__event--past')).toHaveLength(1);
+    expect(host.querySelectorAll('.mcal__event--open')).toHaveLength(0);
+    expect(host.querySelector('.mcal__event--past')?.textContent).toContain('Yoga Chủ Nhật');
   });
 });

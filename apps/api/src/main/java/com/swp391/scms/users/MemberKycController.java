@@ -6,23 +6,30 @@ import com.swp391.scms.security.AuthenticatedPrincipal;
 import com.swp391.scms.users.MemberKycReviewService.KycReviewDto;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.List;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * API duyệt giấy tờ tùy thân của hội viên (/api/v1/members/kyc) cho lễ tân và quản lý.
+ * API duyệt giấy tờ tùy thân của hội viên (/api/v1/members/kyc) dành riêng cho lễ tân.
  *
- * Quầy duyệt giấy tờ định danh của hội viên (lễ tân và quản lý).
+ * Quầy duyệt giấy tờ định danh của hội viên (lễ tân).
  */
 @Tag(name = "Member KYC review", description = "Approve or reject identity documents before a first package")
 @RestController
 @RequestMapping("/api/v1/members/kyc")
 @PreAuthorize("hasRole('RECEPTIONIST')")
 public class MemberKycController {
-    /** Body khi từ chối: lý do từ chối. */
-    public record RejectRequest(String reason) {}
+    /** Body khi từ chối: lý do từ chối bắt buộc, tối đa 255 ký tự. */
+    public record RejectRequest(
+            @NotBlank(message = "{error.kyc.reject_reason_required}")
+            @Size(max = 255)
+            String reason
+    ) {}
 
     private final MemberKycReviewService service;
     private final MessageService messages;
@@ -52,8 +59,8 @@ public class MemberKycController {
     @Operation(summary = "Reject a submission with a reason: the member submits again")
     @PostMapping("/{memberId}/reject")
     public ApiResponse<Void> reject(@AuthenticationPrincipal AuthenticatedPrincipal principal, @PathVariable Long memberId,
-                                    @RequestBody RejectRequest request) {
-        service.reject(principal, memberId, request == null ? null : request.reason());
+                                    @Valid @RequestBody RejectRequest request) {
+        service.reject(principal, memberId, request.reason());
         return ApiResponse.ok(messages.getMessage("users.kyc.rejected"), null);
     }
 }

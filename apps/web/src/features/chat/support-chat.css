@@ -1,34 +1,35 @@
 /* Mục đích: Kiểu bổ sung cho hỗ trợ và khiếu nại, dùng lại khung hội thoại của tin nhắn. */
 /* Hỗ trợ & Khiếu nại dùng khung hội thoại của Tin nhắn; chỉ bổ sung phần riêng của phiếu (loại yêu cầu, trạng thái, danh sách phiếu).
    Màu đi theo biến kính của widget (sáng/tối) và rơi về bảng màu portal của trang /messages. */
-.support-chat { --support-ink: var(--chat-glass-ink, #f5f5f5); --support-muted: var(--chat-glass-muted, #a8a8a8); --support-line: var(--chat-glass-line, rgba(255, 255, 255, 0.14)); min-height: 0; }
-:root[data-theme='light'] .support-chat { --support-ink: var(--chat-glass-ink, var(--portal-paper, #202020)); --support-muted: var(--chat-glass-muted, var(--portal-muted, #68645f)); --support-line: var(--chat-glass-line, var(--portal-border-strong, #ccc8c2)); }
+.support-chat { --support-ink: var(--chat-glass-ink, #f5f5f5); --support-muted: var(--chat-glass-muted, #a8a8a8); --support-line: var(--chat-glass-line, rgba(255, 255, 255, 0.14)); --support-success: var(--portal-success, #86efac); min-height: 0; }
+:root[data-theme='light'] .support-chat { --support-ink: var(--chat-glass-ink, var(--portal-paper, #202020)); --support-muted: var(--chat-glass-muted, var(--portal-muted, #68645f)); --support-line: var(--chat-glass-line, var(--portal-border-strong, #ccc8c2)); --support-success: var(--portal-success, #226442); }
 .support-chat__name { display: block; margin-bottom: 2px; font-size: 12px; font-weight: 700; color: var(--support-muted); }
 .support-chat__connection { margin: 0; padding: 6px 20px; font-size: 12px; color: var(--support-muted); border-bottom: 1px solid var(--support-line); }
 
 .support-chat__toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 4px 10px 4px 20px; border-bottom: 1px solid var(--support-line); }
 .support-chat__ticketbar { display: flex; align-items: center; flex: 1; gap: 10px; min-width: 0; margin: 0; font-size: 13px; color: var(--support-ink); }
 .support-chat__tools { display: flex; flex-shrink: 0; gap: 4px; }
-.support-chat__tool { display: inline-grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--support-ink); cursor: pointer; transition: background-color 120ms ease; }
+.support-chat__tool { display: inline-grid; place-items: center; width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--support-ink); cursor: pointer; transition: background-color 120ms ease; }
+.support-chat__tool svg { width: 20px; height: 20px; }
 .support-chat__tool:hover:not(:disabled), .support-chat__tool[aria-pressed='true'] { background: rgb(var(--sol-accent-rgb) / .18); }
-@media (pointer: coarse) { .support-chat__tool { width: 44px; height: 44px; } }
 .support-chat__ticketbar-subject { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .support-chat__note { margin: 0; padding: 8px 20px; border-bottom: 1px solid var(--support-line); overflow-wrap: anywhere; }
 
 .support-chat__pill { flex-shrink: 0; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--support-line); font-size: 12px; font-weight: 600; line-height: 1.4; white-space: nowrap; color: var(--support-ink); }
 .support-chat__pill--open { border-color: var(--sol-accent); color: var(--sol-accent-text, var(--support-ink)); background: rgb(var(--sol-accent-rgb) / .1); }
 .support-chat__pill--in_progress { background: rgb(var(--sol-accent-rgb) / .24); border-color: rgb(var(--sol-accent-rgb) / .5); color: var(--support-ink); }
-.support-chat__pill--resolved { color: var(--portal-success, #86efac); border-color: color-mix(in srgb, currentColor 45%, transparent); background: color-mix(in srgb, currentColor 10%, transparent); }
+.support-chat__pill--resolved { color: var(--support-success); border-color: color-mix(in srgb, currentColor 45%, transparent); background: color-mix(in srgb, currentColor 10%, transparent); }
 .support-chat__pill--closed { color: var(--support-muted); border-color: var(--support-line); }
 .support-chat__pill--escalated { background: rgb(var(--sol-accent-rgb) / .3); border-color: var(--sol-accent); color: var(--support-ink); }
 .support-chat__badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
 
 /* Chip chọn loại yêu cầu / trạng thái, nằm ngay trên ô soạn tin */
-.support-chat__categories { display: flex; gap: 8px; padding: 10px 16px 4px; overflow-x: auto; overscroll-behavior-x: contain; }
-.support-chat__chip { flex: 0 0 auto; white-space: nowrap; min-height: 34px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--support-line); background: transparent; color: var(--support-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
+.support-chat__categories { display: flex; gap: 8px; padding: 10px 16px 4px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -ms-overflow-style: none; }
+.support-chat__categories::-webkit-scrollbar { display: none; width: 0; height: 0; }
+.support-chat__chip { flex: 0 0 auto; white-space: nowrap; min-height: 36px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--support-line); background: transparent; color: var(--support-ink); font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
 .support-chat__chip:hover:not(:disabled) { background: rgb(var(--sol-accent-rgb) / .14); border-color: var(--sol-accent); }
 .support-chat__chip.is-selected, .support-chat__chip[aria-checked='true'] { background: var(--sol-accent); border-color: var(--sol-accent); color: #202020; }
-@media (pointer: coarse) { .support-chat__chip { min-height: 44px; } }
+@media (max-width: 1024px), (pointer: coarse) { .support-chat__chip { min-height: 44px; } }
 
 .support-chat__tickets { height: auto; flex: 1; min-height: 0; padding: 8px 0; }
 .support-chat__ticket-list { list-style: none; margin: 0; padding: 0; }
@@ -48,5 +49,5 @@
   /* Chừa thêm một hàng cho nút quay lại, giữ ô soạn tin trong khung mobile hiện có. */
   .support-chat:has(.support-chat__back-to-inbox) > .direct-chat__transcript { height: calc(48dvh - 44px); }
 }
-.support-chat__closed { display: grid; gap: 4px; border-top: 1px solid var(--support-line); }
+.support-chat__closed { display: grid; gap: 4px; padding: 10px 16px; border-top: 1px solid var(--support-line); }
 .support-chat__closed .direct-chat__link { justify-self: start; }

@@ -1,9 +1,16 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { apiFetch } from '../../shared/api/client';
+import { ApiError, apiFetch } from '../../shared/api/client';
 import type { ChatRealtimeSession } from './chatApi';
 
 /** Trạng thái kết nối realtime: đang kết nối, đã kết nối, đang kết nối lại hoặc tắt. */
 export type ChatConnection = 'connecting' | 'connected' | 'reconnecting' | 'disabled';
+
+const PERMANENT_ERROR_STATUSES = new Set([401, 403, 404]);
+
+/** Lỗi xác thực / không có quyền / không tìm thấy tài nguyên là vĩnh viễn: dừng vòng lặp thử kết nối lại. */
+function isPermanentError(cause: unknown): boolean {
+  return typeof ApiError === 'function' && cause instanceof ApiError && PERMANENT_ERROR_STATUSES.has(cause.status);
+}
 
 /**
  * Đăng ký nhận thông báo realtime qua Supabase: tự gia hạn token trước khi hết hạn, kết nối lại theo cấp số nhân,
@@ -12,7 +19,7 @@ export type ChatConnection = 'connecting' | 'connected' | 'reconnecting' | 'disa
  */
 export function subscribeChat(changed: () => void, status: (state: ChatConnection) => void,
   sessionPath = '/chat/realtime-session'): () => void {
-  let disposed = false, disabled = false, connecting = false, failures = 0;
+  let disposed = false, disabled = false, permanentStop = false, connecting = false, failures = 0;
   let client: SupabaseClient | null = null;
   let chatToken: string | null = null;
   let hasChannel = false;
@@ -88,12 +95,27 @@ export function subscribeChat(changed: () => void, status: (state: ChatConnectio
       }
       clearTimeout(renewTimer);
       renewTimer = setTimeout(() => { void connect(); }, Math.max(1000, expires - Date.now() - 60_000));
-    } catch { if (!disposed) retry(); }
+    } catch (cause) {
+      if (disposed) return;
+      if (isPermanentError(cause)) {
+        disabled = true;
+        permanentStop = true;
+        clearTimeout(renewTimer);
+        clearTimeout(retryTimer);
+        retryTimer = undefined;
+        clearInterval(pollTimer);
+        pollTimer = undefined;
+        closeClient();
+        status('disabled');
+        return;
+      }
+      retry();
+    }
     finally { connecting = false; }
   }
   // Quay lại tab/mạng/focus thì làm mới dữ liệu và kết nối lại nếu cần.
   function resume() {
-    if (disposed || document.visibilityState === 'hidden') return;
+    if (disposed || permanentStop || document.visibilityState === 'hidden') return;
     changed();
     if (!disabled && (!client || retryTimer)) {
       clearTimeout(retryTimer); retryTimer = undefined; closeClient(); void connect();

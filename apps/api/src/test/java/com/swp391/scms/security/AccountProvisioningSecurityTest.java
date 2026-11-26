@@ -93,6 +93,11 @@ class AccountProvisioningSecurityTest {
                             .contentType(MediaType.APPLICATION_JSON).content(staffBody(role)))
                     .andExpect(status().isBadRequest());
         }
+        // P2-BE-11: kiểm tra định dạng SĐT trên StaffAccountCreateDto.
+        mvc.perform(post("/api/v1/staff-accounts").with(authentication(actor("CENTER_MANAGER")))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"fullName\":\"Staff\",\"email\":\"staff@gmail.com\",\"phone\":\"12345\",\"password\":\"Secret123\",\"gender\":\"other\",\"roleCode\":\"COACH\"}"))
+                .andExpect(status().isBadRequest());
         verifyNoInteractions(service);
     }
 

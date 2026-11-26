@@ -1,5 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fitWithin, fileToUploadDataUrl, KEEP_AS_IS_BYTES, MAX_UPLOAD_SIDE } from './imageUpload';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 describe('fitWithin', () => {
   it('scales the longer side down to the limit and keeps the aspect ratio', () => {
@@ -22,5 +27,43 @@ describe('fileToUploadDataUrl', () => {
     expect(file.size).toBeLessThanOrEqual(KEEP_AS_IS_BYTES);
     const url = await fileToUploadDataUrl(file);
     expect(url.startsWith('data:image/png;base64,')).toBe(true);
+  });
+
+  // P2-FE-24: Reject empty 0-byte files, zero-dimension decoded images, and empty "data:," data URLs
+  it('rejects 0-byte files', async () => {
+    const empty = new File([], 'empty.png', { type: 'image/png' });
+    await expect(fileToUploadDataUrl(empty)).rejects.toThrow('Image file is empty');
+  });
+
+  it('rejects zero-dimension decoded images', async () => {
+    const largeBytes = new Uint8Array(KEEP_AS_IS_BYTES + 16);
+    const file = new File([largeBytes], 'corrupt.jpg', { type: 'image/jpeg' });
+    const close = vi.fn();
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 0, height: 0, close }));
+
+    await expect(fileToUploadDataUrl(file)).rejects.toThrow('Invalid image dimensions');
+    expect(close).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects invalid or empty canvas data URLs such as "data:,"', async () => {
+    const largeBytes = new Uint8Array(KEEP_AS_IS_BYTES + 16);
+    const file = new File([largeBytes], 'photo.jpg', { type: 'image/jpeg' });
+    const close = vi.fn();
+    vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({ width: 800, height: 600, close }));
+    const origCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tagName: string) => {
+      if (tagName === 'canvas') {
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => ({ fillStyle: '', fillRect: vi.fn(), drawImage: vi.fn() }),
+          toDataURL: () => 'data:,',
+        } as unknown as HTMLCanvasElement;
+      }
+      return origCreate(tagName);
+    });
+
+    await expect(fileToUploadDataUrl(file)).rejects.toThrow('Invalid image data');
+    expect(close).toHaveBeenCalledTimes(1);
   });
 });

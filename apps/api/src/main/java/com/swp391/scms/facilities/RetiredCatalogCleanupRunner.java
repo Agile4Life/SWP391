@@ -43,6 +43,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class RetiredCatalogCleanupRunner implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(RetiredCatalogCleanupRunner.class);
+    private static final java.time.ZoneId CENTER_ZONE = java.time.ZoneId.of("Asia/Ho_Chi_Minh");
+    private static final String CLASS_DEACTIVATED_REASON = "Lớp học ngừng hoạt động";
 
     static final Set<String> RETIRED_DISCIPLINES = Set.of(
             "bơi lội",
@@ -167,14 +169,20 @@ public class RetiredCatalogCleanupRunner implements ApplicationRunner {
         syncDemoCoachSpecializations();
     }
 
-    /** Xóa lớp cũ nếu chưa có dữ liệu liên kết; nếu đã có dữ liệu lịch sử thì chuyển trạng thái sang inactive. */
+    /**
+     * Xóa lớp cũ nếu chưa có dữ liệu liên kết; nếu đã có dữ liệu lịch sử thì chuyển trạng thái sang inactive
+     * và hủy toàn bộ buổi học {@code scheduled} tương lai để không gây buổi ma chặn phòng/HLV.
+     */
     private void cleanupRetiredClasses() {
         if (classes == null) {
             return;
         }
         List<GymClass> allClasses = safeList(classes.findAll());
+        java.time.LocalDate today = java.time.LocalDate.now(CENTER_ZONE);
+        java.time.LocalDateTime now = java.time.LocalDateTime.now(CENTER_ZONE);
         int deleted = 0;
         int deactivated = 0;
+        int cancelledSessions = 0;
         for (GymClass gymClass : allClasses) {
             if (!isRetiredClass(gymClass)) {
                 continue;
@@ -186,6 +194,19 @@ public class RetiredCatalogCleanupRunner implements ApplicationRunner {
                     classes.save(gymClass);
                     deactivated++;
                 }
+                if (sessions != null && classId != null) {
+                    for (ClassSession session : safeList(sessions.findByGymClassIdOrderBySessionDateAscStartTimeAsc(classId))) {
+                        if (session != null && "scheduled".equalsIgnoreCase(session.getStatus())
+                                && session.getSessionDate() != null
+                                && !session.getSessionDate().isBefore(today)) {
+                            session.setStatus("cancelled");
+                            session.setCancelReason(CLASS_DEACTIVATED_REASON);
+                            session.setUpdatedAt(now);
+                            sessions.save(session);
+                            cancelledSessions++;
+                        }
+                    }
+                }
             } else {
                 if (sessions != null && classId != null) {
                     sessions.deleteByGymClassId(classId);
@@ -195,8 +216,9 @@ public class RetiredCatalogCleanupRunner implements ApplicationRunner {
                 deleted++;
             }
         }
-        if (deleted > 0 || deactivated > 0) {
-            log.info("Retired catalog cleanup: {} retired classes deleted, {} set inactive.", deleted, deactivated);
+        if (deleted > 0 || deactivated > 0 || cancelledSessions > 0) {
+            log.info("Retired catalog cleanup: {} retired classes deleted, {} set inactive, {} future sessions cancelled.",
+                    deleted, deactivated, cancelledSessions);
         }
     }
 

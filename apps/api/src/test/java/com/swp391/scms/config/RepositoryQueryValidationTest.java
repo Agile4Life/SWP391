@@ -40,7 +40,8 @@ class RepositoryQueryValidationTest {
         factoryBean.setPackagesToScan("com.swp391.scms");
         factoryBean.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
         factoryBean.setJpaPropertyMap(Map.of(
-                "hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect",
+                "jakarta.persistence.database-product-name", "PostgreSQL",
+                "jakarta.persistence.database-major-version", "16",
                 "hibernate.boot.allow_jdbc_metadata_access", "false",
                 "hibernate.hbm2ddl.auto", "none"));
         factoryBean.afterPropertiesSet();

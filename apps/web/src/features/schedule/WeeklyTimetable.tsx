@@ -1,6 +1,6 @@
-import { memberText } from '../member/memberI18n';
 import { useI18n } from '../../shared/i18n';
 import { useLanguage } from '../../shared/i18n/language';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { Modal } from '../../shared/ui/Modal';
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from 'react';
 import {
@@ -18,7 +18,7 @@ import {
   layoutDaySlotEvents,
   mondayOf,
   shortDate,
-  todayISO,
+  toMinutes,
   weekRangeLabel,
   weekdayLabel,
   weekDays,
@@ -79,10 +79,33 @@ const MINUTE_MS = 60_000;
 /** Dưới mốc này bảng chuyển sang xem từng ngày thay vì 7 cột hẹp cuộn ngang. */
 const NARROW_QUERY = '(max-width: 767px)';
 const SLOT_ROW_PX = 104;
-const WEEKDAY_HEAD = ['Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7', 'Chủ nhật'];
-const WEEKDAY_CHIP: [string, string][] = [['T2', 'Mon'], ['T3', 'Tue'], ['T4', 'Wed'], ['T5', 'Thu'], ['T6', 'Fri'], ['T7', 'Sat'], ['CN', 'Sun']];
-/** Nhãn số buổi học theo ngôn ngữ ("3 buổi học" / "3 sessions"). */
-const sessionCount = (count: number) => memberText(`${count} buổi học`, `${count} ${count === 1 ? 'session' : 'sessions'}`);
+const WEEKDAY_HEAD: [string, string][] = [
+  ['Thứ 2', 'Mon'],
+  ['Thứ 3', 'Tue'],
+  ['Thứ 4', 'Wed'],
+  ['Thứ 5', 'Thu'],
+  ['Thứ 6', 'Fri'],
+  ['Thứ 7', 'Sat'],
+  ['Chủ nhật', 'Sun'],
+];
+const WEEKDAY_CHIP: [string, string][] = [
+  ['T2', 'Mon'],
+  ['T3', 'Tue'],
+  ['T4', 'Wed'],
+  ['T5', 'Thu'],
+  ['T6', 'Fri'],
+  ['T7', 'Sat'],
+  ['CN', 'Sun'],
+];
+const WEEKDAY_EN_BY_VI: Record<string, string> = {
+  'Thứ 2': 'Mon',
+  'Thứ 3': 'Tue',
+  'Thứ 4': 'Wed',
+  'Thứ 5': 'Thu',
+  'Thứ 6': 'Fri',
+  'Thứ 7': 'Sat',
+  'Chủ nhật': 'Sun',
+};
 
 /** Hook trả về thời điểm hiện tại, cập nhật mỗi phút. */
 function useNow(): Date {
@@ -123,15 +146,23 @@ function slotKey(date: string, slotNumber: number) {
  */
 export function WeeklyTimetable({
   weekStart, events, loading = false, error = null, onRetry, onWeekChange, onEventClick, selectedId, disabled = false,
-  emptyLabel = 'Tuần này chưa có buổi học nào', onSlotClick, slotActionLabel = 'tạo lịch', legend, legendNote, toolbar,
+  emptyLabel, onSlotClick, slotActionLabel, legend, legendNote, toolbar,
   maxVisibleLanes, label,
 }: WeeklyTimetableProps) {
   useLanguage();
   const { t } = useI18n();
   const [overflowCluster, setOverflowCluster] = useState<OverflowCluster | null>(null);
   const now = useNow();
-  const today = todayISO(now);
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const { date: today, time: nowTime } = centerNowParts(now);
+  const nowMinutes = toMinutes(nowTime);
+
+  const dayName = (iso: string) => {
+    const vi = weekdayLabel(iso);
+    return t(vi, WEEKDAY_EN_BY_VI[vi] ?? vi);
+  };
+  const sessionCount = (count: number) =>
+    t(`${count} buổi học`, `${count} ${count === 1 ? 'session' : 'sessions'}`);
+
   // Danh sách 7 ngày của tuần đang xem.
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const narrow = useMediaQuery(NARROW_QUERY);
@@ -159,7 +190,11 @@ export function WeeklyTimetable({
     (event) => days.includes(event.date) && isWithinScheduleSlots(event.startTime, event.endTime),
   ).length;
   const thisWeek = mondayOf(today);
-  const emptyText = emptyLabel.replace(/\.$/, '');
+  const resolvedEmptyLabel = emptyLabel ?? t('Tuần này chưa có buổi học nào', 'No sessions scheduled this week');
+  const emptyText = resolvedEmptyLabel.replace(/\.$/, '');
+  const resolvedSlotAction = slotActionLabel
+    ? (slotActionLabel === 'tạo lịch' ? t('tạo lịch', 'create a schedule') : slotActionLabel)
+    : t('tạo lịch', 'create a schedule');
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [hasMoreBelow, setHasMoreBelow] = useState(false);
@@ -214,11 +249,11 @@ export function WeeklyTimetable({
   return (
     <section data-i18n-managed className="mcal" aria-label={label}>
       <header className="mcal__toolbar">
-        <div className="mcal__nav" role="group" aria-label={memberText("Điều hướng tuần")}>
-          <button type="button" className="mcal__icon-btn" aria-label={memberText("Tuần trước")} onClick={() => onWeekChange(addDays(weekStart, -7))}>
+        <div className="mcal__nav" role="group" aria-label={t('Điều hướng tuần', 'Week navigation')}>
+          <button type="button" className="mcal__icon-btn" aria-label={t('Tuần trước', 'Previous week')} onClick={() => onWeekChange(addDays(weekStart, -7))}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
           </button>
-          <button type="button" className="mcal__icon-btn" aria-label={memberText("Tuần sau")} onClick={() => onWeekChange(addDays(weekStart, 7))}>
+          <button type="button" className="mcal__icon-btn" aria-label={t('Tuần sau', 'Next week')} onClick={() => onWeekChange(addDays(weekStart, 7))}>
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
           </button>
           <button
@@ -227,11 +262,12 @@ export function WeeklyTimetable({
             disabled={weekStart === thisWeek}
             onClick={() => { setFocusDay(null); onWeekChange(thisWeek); }}
           >
-            {memberText("Hôm nay")}</button>
+            {t('Hôm nay', 'Today')}
+          </button>
           <h2 className="mcal__range" aria-live="polite">{weekRangeLabel(weekStart)}</h2>
         </div>
         <div className="mcal__side">
-          <ul className="mcal__legend" aria-label={memberText("Chú thích")}>
+          <ul className="mcal__legend" aria-label={t('Chú thích', 'Legend')}>
             {legend.map((item) => (
               <li key={item.tone}>
                 <i className={`mcal__dot mcal__dot--${item.tone}`} aria-hidden="true" />
@@ -246,28 +282,29 @@ export function WeeklyTimetable({
 
       {error && (
         <div className="mcal__state" role="alert">
-          <strong>{memberText("Không tải được thời khóa biểu")}</strong>
+          <strong>{t('Không tải được thời khóa biểu', 'Unable to load timetable')}</strong>
           <p>{error}</p>
-          {onRetry && <button type="button" className="btn-secondary btn-sm" onClick={onRetry}>{memberText("Thử lại")}</button>}
+          {onRetry && <button type="button" className="btn-secondary btn-sm" onClick={onRetry}>{t('Thử lại', 'Retry')}</button>}
         </div>
       )}
 
       {narrow && (
-        <div className="mcal__daystrip" role="group" aria-label={memberText("Chọn ngày")}>
+        <div className="mcal__daystrip" role="group" aria-label={t('Chọn ngày', 'Select day')}>
           {days.map((day) => {
             const count = (eventsByDay.get(day) ?? []).filter(
               (event) => event.tone !== 'cancelled' && isWithinScheduleSlots(event.startTime, event.endTime),
             ).length;
+            const [chipVi, chipEn] = WEEKDAY_CHIP[days.indexOf(day)];
             return (
               <button
                 key={day}
                 type="button"
                 className={`mcal__daychip${day === activeDay ? ' is-active' : ''}${day === today ? ' is-today' : ''}`}
                 aria-pressed={day === activeDay}
-                aria-label={`${memberText(weekdayLabel(day))} ${shortDate(day)}, ${sessionCount(count)}`}
+                aria-label={`${dayName(day)} ${shortDate(day)}, ${sessionCount(count)}`}
                 onClick={() => setFocusDay(day)}
               >
-                <span>{memberText(...WEEKDAY_CHIP[days.indexOf(day)])}</span>
+                <span>{t(chipVi, chipEn)}</span>
                 <strong>{shortDate(day).slice(0, 2)}</strong>
                 <small aria-hidden="true">{count > 0 ? count : '–'}</small>
               </button>
@@ -276,154 +313,158 @@ export function WeeklyTimetable({
         </div>
       )}
 
-      {loading && <span className="sr-only" role="status">{memberText("Đang tải thời khóa biểu...")}</span>}
+      {loading && <span className="sr-only" role="status">{t('Đang tải thời khóa biểu...', 'Loading timetable...')}</span>}
 
       <div className={`mcal__frame${hasMoreBelow ? ' has-more-below' : ''}`}>
         <div className={`mcal__scroll${loading ? ' is-loading' : ''}`} aria-busy={loading} ref={scrollRef} onScroll={syncScrollCue}>
-        <div
-          className={`mcal__week${narrow ? ' is-single' : ''}`}
-          style={{ '--mcal-hour': `${SLOT_ROW_PX}px`, '--mcal-rows': SCHEDULE_SLOTS.length, '--mcal-days': visibleDays.length } as CSSProperties}
-          ref={gridRef}
-        >
-          <div className="mcal__corner" aria-hidden="true" />
-          {visibleDays.map((day) => {
-            const dayEvents = (eventsByDay.get(day) ?? []).filter((event) => isWithinScheduleSlots(event.startTime, event.endTime));
-            return (
-              <div key={day} className={`mcal__dayhead${day === today ? ' is-today' : ''}`} aria-current={day === today ? 'date' : undefined}>
-                <span className="mcal__dayname">{memberText(WEEKDAY_HEAD[days.indexOf(day)])}</span>
-                <strong className="mcal__daynum">{day.slice(8)}</strong>
-                <span className="mcal__dots" aria-hidden="true">
-                  {dayEvents.slice(0, 3).map((event) => <i key={event.id} className={`mcal__dot mcal__dot--${event.tone}`} />)}
-                </span>
-              </div>
-            );
-          })}
+          <div
+            className={`mcal__week${narrow ? ' is-single' : ''}`}
+            style={{ '--mcal-hour': `${SLOT_ROW_PX}px`, '--mcal-rows': SCHEDULE_SLOTS.length, '--mcal-days': visibleDays.length } as CSSProperties}
+            ref={gridRef}
+          >
+            <div className="mcal__corner" aria-hidden="true" />
+            {visibleDays.map((day) => {
+              const dayEvents = (eventsByDay.get(day) ?? []).filter((event) => isWithinScheduleSlots(event.startTime, event.endTime));
+              const [headVi, headEn] = WEEKDAY_HEAD[days.indexOf(day)];
+              return (
+                <div key={day} className={`mcal__dayhead${day === today ? ' is-today' : ''}`} aria-current={day === today ? 'date' : undefined}>
+                  <span className="mcal__dayname">{t(headVi, headEn)}</span>
+                  <strong className="mcal__daynum">{day.slice(8)}</strong>
+                  <span className="mcal__dots" aria-hidden="true">
+                    {dayEvents.slice(0, 3).map((event) => <i key={event.id} className={`mcal__dot mcal__dot--${event.tone}`} />)}
+                  </span>
+                </div>
+              );
+            })}
 
-          <div className="mcal__gutter" aria-hidden="true">
-            {SCHEDULE_SLOTS.map((slot) => (
-              <div key={slot.code} className="mcal__slot-head" data-testid={`timetable-slot-head-${slot.number}`}>
-                <strong className="mcal__slot-name">{slot.label}</strong>
-                <span className="mcal__slot-time">{slot.rangeLabel}</span>
-              </div>
-            ))}
-          </div>
+            <div className="mcal__gutter" aria-hidden="true">
+              {SCHEDULE_SLOTS.map((slot) => (
+                <div key={slot.code} className="mcal__slot-head" data-testid={`timetable-slot-head-${slot.number}`}>
+                  <strong className="mcal__slot-name">{slot.label}</strong>
+                  <span className="mcal__slot-time">{slot.rangeLabel}</span>
+                </div>
+              ))}
+            </div>
 
-          {visibleDays.map((day, dayIndex) => {
-            const dayEvents = eventsByDay.get(day) ?? [];
-            const busyEvents = dayEvents.filter((event) => event.tone !== 'cancelled');
-            const positioned = layoutDaySlotEvents(dayEvents);
-            const grouped = maxVisibleLanes ? groupVisibleLanes(positioned, maxVisibleLanes) : { visible: positioned, overflows: [] };
-            const nowPct = day === today ? nowSlotPercent(nowMinutes) : null;
-            const weekend = days.indexOf(day) >= 5;
-            return (
-              <div
-                key={day}
-                className={`mcal__col${day === today ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}`}
-                role="group"
-                aria-label={`${memberText(weekdayLabel(day))} ${shortDate(day)}`}
-              >
-                {onSlotClick && SCHEDULE_SLOTS.map((slot, slotIndex) => {
-                  const busy = busyEvents.some((event) => resolveSlotIndex(event.startTime, event.endTime) === slotIndex);
-                  const past = isSlotPast(day, slot, today, nowMinutes);
-                  const key = slotKey(day, slot.number);
-                  const slotDisplay = `${slot.label} (${slot.rangeLabel})`;
-                  return (
+            {visibleDays.map((day, dayIndex) => {
+              const dayEvents = eventsByDay.get(day) ?? [];
+              const busyEvents = dayEvents.filter((event) => event.tone !== 'cancelled');
+              const positioned = layoutDaySlotEvents(dayEvents);
+              const grouped = maxVisibleLanes ? groupVisibleLanes(positioned, maxVisibleLanes) : { visible: positioned, overflows: [] };
+              const nowPct = day === today ? nowSlotPercent(nowMinutes) : null;
+              const weekend = days.indexOf(day) >= 5;
+              return (
+                <div
+                  key={day}
+                  className={`mcal__col${day === today ? ' is-today' : ''}${weekend ? ' is-weekend' : ''}`}
+                  role="group"
+                  aria-label={`${dayName(day)} ${shortDate(day)}`}
+                >
+                  {onSlotClick && SCHEDULE_SLOTS.map((slot, slotIndex) => {
+                    const busy = busyEvents.some((event) => resolveSlotIndex(event.startTime, event.endTime) === slotIndex);
+                    const past = isSlotPast(day, slot, today, nowMinutes);
+                    const key = slotKey(day, slot.number);
+                    const slotDisplay = `${slot.label} (${slot.rangeLabel})`;
+                    return (
+                      <button
+                        key={slot.code}
+                        type="button"
+                        className={`mcal__slot${busy ? ' is-busy' : ' is-free'}${past ? ' is-past' : ''}`}
+                        style={{ top: slotIndex * SLOT_ROW_PX }}
+                        data-slot={key}
+                        tabIndex={key === activeKey ? 0 : -1}
+                        aria-disabled={past || undefined}
+                        aria-label={
+                          past
+                            ? `${dayName(day)} ${shortDate(day)}, ${slotDisplay}: ${t('Đã qua', 'Past')}`
+                            : `${dayName(day)} ${shortDate(day)}, ${slotDisplay}: ${busy ? t('đã có lịch, ', 'scheduled, ') : t('trống, ', 'available, ')}${resolvedSlotAction}`
+                        }
+                        onFocus={() => setRovingKey(key)}
+                        onKeyDown={(event) => moveFocus(event, dayIndex, slotIndex)}
+                        onClick={() => {
+                          if (past) return;
+                          onSlotClick({ date: day, startTime: slot.startTime, endTime: slot.endTime });
+                        }}
+                      >
+                        <span className="mcal__slot-plus" aria-hidden="true">+ {slot.label}</span>
+                      </button>
+                    );
+                  })}
+
+                  {nowPct !== null && (
+                    <span
+                      className="mcal__now"
+                      aria-hidden="true"
+                      style={{ top: `${nowPct}%` }}
+                    />
+                  )}
+
+                  {grouped.visible.map(({ event, lane, lanes, topPct, heightPct }) => {
+                    const slotText = formatSlotLabel(event.startTime, event.endTime);
+                    const eventStyle: CSSProperties & { '--event-accent'?: string } = {
+                      top: `calc(${topPct}% + 3px)`,
+                      height: `calc(${heightPct}% - 6px)`,
+                      left: `calc(${(lane / lanes) * 100}% + 5px)`,
+                      width: `calc(${100 / lanes}% - 10px)`,
+                    };
+                    if (event.accentColor) {
+                      eventStyle['--event-accent'] = event.accentColor;
+                    }
+                    return (
+                      <button
+                        key={event.id}
+                        type="button"
+                        data-accent={event.accentColor ? 'true' : undefined}
+                        className={`mcal__event mcal__event--${event.tone}${event.id === selectedId ? ' is-selected' : ''}${blockClass((heightPct / 100) * rowsPx)}`}
+                        style={eventStyle}
+                        aria-label={event.ariaLabel}
+                        disabled={disabled}
+                        aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
+                        title={[event.title, slotText, event.meta, event.detail, event.badge].filter(Boolean).join(' · ')}
+                        onClick={() => onEventClick(event.id)}
+                      >
+                        <strong className="mcal__event-title">{event.title}</strong>
+                        {event.meta && <span className="mcal__event-place">{event.meta}</span>}
+                        {event.detail && <span className="mcal__event-coach">{event.detail}</span>}
+                        {event.tone === 'full' && event.badge && (
+                          <span className="mcal__event-badge mcal__event-badge--full">{event.badge}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+
+                  {grouped.overflows.map((cluster) => (
                     <button
-                      key={slot.code}
+                      key={cluster.id}
                       type="button"
-                      className={`mcal__slot${busy ? ' is-busy' : ' is-free'}${past ? ' is-past' : ''}`}
-                      style={{ top: slotIndex * SLOT_ROW_PX }}
-                      data-slot={key}
-                      tabIndex={key === activeKey ? 0 : -1}
-                      aria-disabled={past || undefined}
-                      aria-label={
-                        past
-                          ? `${memberText(weekdayLabel(day))} ${shortDate(day)}, ${slotDisplay}: ${memberText('Đã qua')}`
-                          : `${memberText(weekdayLabel(day))} ${shortDate(day)}, ${slotDisplay}: ${busy ? memberText("đã có lịch, ") : memberText("trống, ")}${slotActionLabel === 'tạo lịch' ? memberText(slotActionLabel) : slotActionLabel}`
-                      }
-                      onFocus={() => setRovingKey(key)}
-                      onKeyDown={(event) => moveFocus(event, dayIndex, slotIndex)}
-                      onClick={() => {
-                        if (past) return;
-                        onSlotClick({ date: day, startTime: slot.startTime, endTime: slot.endTime });
+                      className="mcal__overflow-btn"
+                      data-testid="timetable-overflow-btn"
+                      style={{
+                        top: `calc(${cluster.topPct}% + 3px)`,
+                        height: `calc(${cluster.heightPct}% - 6px)`,
+                        left: `calc(${(cluster.lane / cluster.lanes) * 100}% + 5px)`,
+                        width: `calc(${100 / cluster.lanes}% - 10px)`,
                       }}
-                    >
-                      <span className="mcal__slot-plus" aria-hidden="true">+ {slot.label}</span>
-                    </button>
-                  );
-                })}
-
-                {nowPct !== null && (
-                  <span
-                    className="mcal__now"
-                    aria-hidden="true"
-                    style={{ top: `${nowPct}%` }}
-                  />
-                )}
-
-                {grouped.visible.map(({ event, lane, lanes, topPct, heightPct }) => {
-                  const slotText = formatSlotLabel(event.startTime, event.endTime);
-                  const eventStyle: CSSProperties & { '--event-accent'?: string } = {
-                    top: `calc(${topPct}% + 3px)`,
-                    height: `calc(${heightPct}% - 6px)`,
-                    left: `calc(${(lane / lanes) * 100}% + 5px)`,
-                    width: `calc(${100 / lanes}% - 10px)`,
-                  };
-                  if (event.accentColor) {
-                    eventStyle['--event-accent'] = event.accentColor;
-                  }
-                  return (
-                    <button
-                      key={event.id}
-                      type="button"
-                      data-accent={event.accentColor ? 'true' : undefined}
-                      className={`mcal__event mcal__event--${event.tone}${event.id === selectedId ? ' is-selected' : ''}${blockClass((heightPct / 100) * rowsPx)}`}
-                      style={eventStyle}
-                      aria-label={event.ariaLabel}
                       disabled={disabled}
-                      aria-pressed={selectedId === undefined ? undefined : event.id === selectedId}
-                      title={[event.title, slotText, event.meta, event.detail, event.badge].filter(Boolean).join(' · ')}
-                      onClick={() => onEventClick(event.id)}
+                      aria-label={t(
+                        `Xem thêm ${cluster.hiddenEvents.length} lớp (${cluster.allEvents.length} lớp trong khung ${cluster.rangeLabel})`,
+                        `View ${cluster.hiddenEvents.length} more ${cluster.hiddenEvents.length === 1 ? 'class' : 'classes'} (${cluster.allEvents.length} ${cluster.allEvents.length === 1 ? 'class' : 'classes'} in ${cluster.rangeLabel})`,
+                      )}
+                      onClick={() => setOverflowCluster(cluster)}
                     >
-                      <strong className="mcal__event-title">{event.title}</strong>
-                      {event.meta && <span className="mcal__event-place">{event.meta}</span>}
-                      {event.detail && <span className="mcal__event-coach">{event.detail}</span>}
+                      <strong>{cluster.hiddenEvents.length === 1 ? t('+1 lớp', '+1 class') : `+${cluster.hiddenEvents.length} ${t('lớp', 'classes')}`}</strong>
+                      <span>{cluster.rangeLabel}</span>
                     </button>
-                  );
-                })}
-
-                {grouped.overflows.map((cluster) => (
-                  <button
-                    key={cluster.id}
-                    type="button"
-                    className="mcal__overflow-btn"
-                    data-testid="timetable-overflow-btn"
-                    style={{
-                      top: `calc(${cluster.topPct}% + 3px)`,
-                      height: `calc(${cluster.heightPct}% - 6px)`,
-                      left: `calc(${(cluster.lane / cluster.lanes) * 100}% + 5px)`,
-                      width: `calc(${100 / cluster.lanes}% - 10px)`,
-                    }}
-                    disabled={disabled}
-                    aria-label={t(
-                      `Xem thêm ${cluster.hiddenEvents.length} lớp (${cluster.allEvents.length} lớp trong khung ${cluster.rangeLabel})`,
-                      `View ${cluster.hiddenEvents.length} more classes (${cluster.allEvents.length} classes in ${cluster.rangeLabel})`,
-                    )}
-                    onClick={() => setOverflowCluster(cluster)}
-                  >
-                    <strong>{cluster.hiddenEvents.length === 1 ? t('+1 lớp', '+1 class') : `+${cluster.hiddenEvents.length} ${t('lớp', 'classes')}`}</strong>
-                    <span>{cluster.rangeLabel}</span>
-                  </button>
-                ))}
-              </div>
-            );
-          })}
-        </div>
-        {!loading && !error && visibleCount === 0 && (
-          <p className="mcal__empty" role="status">
-            {emptyText}.{onSlotClick ? memberText(" Bấm vào một ô giờ để tạo lịch.") : ''}
-          </p>
-        )}
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+          {!loading && !error && visibleCount === 0 && (
+            <p className="mcal__empty" role="status">
+              {emptyText}.{onSlotClick ? ` ${t('Bấm vào một ô slot để tạo lịch.', 'Click an empty slot to create a schedule.')}` : ''}
+            </p>
+          )}
         </div>
         {hasMoreBelow && !loading && (
           <div className="mcal__scroll-cue" data-testid="timetable-scroll-cue" aria-hidden="true">
@@ -434,10 +475,11 @@ export function WeeklyTimetable({
 
       {outsideRange > 0 && (
         <p className="mcal__note" role="status">
-          {outsideRange}{' '}
           {t(
-            'buổi học nằm ngoài khung 5 slot (07:00–19:30) nên không hiện trên bảng.',
-            'sessions outside the 5-slot schedule (07:00–19:30) are not shown.',
+            `${outsideRange} buổi học nằm ngoài khung 5 slot (07:00–19:30) nên không hiện trên bảng.`,
+            outsideRange === 1
+              ? '1 session outside the 5-slot schedule (07:00–19:30) is not shown.'
+              : `${outsideRange} sessions outside the 5-slot schedule (07:00–19:30) are not shown.`,
           )}
         </p>
       )}
@@ -445,13 +487,13 @@ export function WeeklyTimetable({
       {overflowCluster && (
         <Modal
           title={t(
-            `${memberText(weekdayLabel(overflowCluster.date))} ${shortDate(overflowCluster.date)} · ${overflowCluster.rangeLabel} (${overflowCluster.allEvents.length} lớp)`,
-            `${memberText(weekdayLabel(overflowCluster.date))} ${shortDate(overflowCluster.date)} · ${overflowCluster.rangeLabel} (${overflowCluster.allEvents.length} classes)`,
+            `${dayName(overflowCluster.date)} ${shortDate(overflowCluster.date)} · ${overflowCluster.rangeLabel} (${overflowCluster.allEvents.length} lớp)`,
+            `${dayName(overflowCluster.date)} ${shortDate(overflowCluster.date)} · ${overflowCluster.rangeLabel} (${overflowCluster.allEvents.length} ${overflowCluster.allEvents.length === 1 ? 'class' : 'classes'})`,
           )}
           onClose={() => setOverflowCluster(null)}
         >
           <p className="mcal__note" style={{ marginBottom: 12 }}>
-            {t('Chọn một buổi học bên dưới để xem chi tiết đầy đủ, dời lịch hoặc hủy buổi.', 'Select a session below to view full details, reschedule, or cancel.')}
+            {t('Chọn một buổi học bên dưới để xem thông tin chi tiết.', 'Select a session below to view full details.')}
           </p>
           <div className="mcal__overflow-list" data-testid="timetable-overflow-list">
             {overflowCluster.allEvents.map((ev) => (

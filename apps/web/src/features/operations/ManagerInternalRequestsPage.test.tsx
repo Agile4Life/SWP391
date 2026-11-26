@@ -157,5 +157,59 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
 
     expect(host.textContent).toContain('Vui lòng nhập lý do từ chối đơn');
   });
+
+  it('warns on coach leave conflicts, confirms before forcing approval, dispatches notification refresh, and guards empty OTHER metadata (P2-FE-70, P2-FE-71)', async () => {
+    const { ApiError } = await import('../../shared/api/client');
+    const otherReq: staffRequestApi.StaffInternalRequestDto = {
+      ...mockRequests[0],
+      id: 99,
+      userFullName: '',
+      requestType: 'OTHER',
+      title: 'Đề xuất bổ sung dụng cụ',
+      startDate: null,
+      endDate: null,
+      targetShift: null,
+      status: 'PENDING',
+    };
+    vi.mocked(staffRequestApi.getAllStaffRequests).mockResolvedValue([mockRequests[0], otherReq]);
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent');
+    await render();
+
+    // Null-safe userFullName renders '?' avatar without crashing
+    expect(host.textContent).toContain('Đề xuất bổ sung dụng cụ');
+
+    // Open coach LEAVE approval modal -> shows coach schedule conflict warning
+    const approveBtns = [...host.querySelectorAll('button')].filter((b) => b.textContent?.includes('Phê duyệt đơn'));
+    await act(async () => approveBtns[0].click());
+    expect(host.textContent).toContain('có thể ảnh hưởng đến các buổi lớp nhóm hoặc PT 1:1');
+
+    // Backend returns 409 COACH_LEAVE_HAS_CONFLICTS -> asks confirmation before sending confirmConflicts: true
+    vi.mocked(staffRequestApi.reviewStaffRequest)
+      .mockRejectedValueOnce(new ApiError('HLV có 2 buổi lớp và 1 buổi PT bị ảnh hưởng.', 409, 'COACH_LEAVE_HAS_CONFLICTS'))
+      .mockResolvedValueOnce({ ...mockRequests[0], status: 'APPROVED', affectedClassSessionCount: 2, affectedPtSessionCount: 1 });
+
+    const confirmApprove = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Xác nhận Phê duyệt'))!;
+    await act(async () => confirmApprove.click());
+    expect(staffRequestApi.reviewStaffRequest).toHaveBeenCalledWith(1, expect.objectContaining({ status: 'APPROVED', confirmConflicts: false }));
+    expect(document.body.textContent).toContain('HLV có 2 buổi lớp và 1 buổi PT bị ảnh hưởng.');
+
+    const forceBtn = [...document.body.querySelectorAll('button')].find((b) => b.textContent === 'Vẫn phê duyệt')!;
+    await act(async () => forceBtn.click());
+    expect(staffRequestApi.reviewStaffRequest).toHaveBeenLastCalledWith(1, expect.objectContaining({ status: 'APPROVED', confirmConflicts: true }));
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'member-notifications-changed' }));
+    dispatchSpy.mockRestore();
+  });
+
+  it('hides empty state when loading fails and provides a Retry button (P2-FE-71)', async () => {
+    vi.mocked(staffRequestApi.getAllStaffRequests).mockRejectedValueOnce(new Error('API error'));
+    await render();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('API error');
+    expect(host.textContent).not.toContain('Không có đơn từ nào cần xử lý');
+
+    vi.mocked(staffRequestApi.getAllStaffRequests).mockResolvedValueOnce(mockRequests);
+    const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Thử lại')!;
+    await act(async () => retry.click());
+    expect(host.textContent).toContain('Xin nghỉ phép cá nhân');
+  });
 });
 

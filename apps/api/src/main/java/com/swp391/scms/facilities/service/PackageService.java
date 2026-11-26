@@ -54,8 +54,8 @@ public class PackageService {
     }
 
     /**
-     * Sửa gói: thời hạn mới phải hợp lệ; gói đã bán không được đổi tên/thời hạn (sẽ làm sai lịch sử mua) mà
-     * phải tạo gói mới.
+     * Sửa gói: thời hạn mới phải hợp lệ; gói đã bán không được đổi tên, thời hạn, hạng hoặc hạn mức lượt học
+     * (sẽ làm sai lịch sử mua và tước quyền lợi hội viên hiện hữu) mà phải tạo gói mới.
      */
     @Transactional
     @Audited(action = "PACKAGE_UPDATE", entity = "membership_packages")
@@ -63,12 +63,17 @@ public class PackageService {
         MembershipPackage pkg = find(id);
         boolean durationChanged = request.durationDays() != pkg.getDurationDays();
         boolean nameChanged = !request.name().trim().equals(pkg.getName());
+        String currentTier = PackageDto.inferTier(pkg.getName(), pkg.getTier());
+        String requestedTier = PackageDto.inferTier(request.name(), request.tier());
+        boolean tierChanged = !java.util.Objects.equals(currentTier, requestedTier);
+        boolean creditLimitChanged = !java.util.Objects.equals(pkg.getClassCreditLimit(), request.classCreditLimit());
         if (durationChanged) {
             requireValidDuration(request.durationDays());
         }
-        // Các kỳ gói trỏ tới dòng gói tập này, nên đổi tên hoặc thời hạn của gói đã bán sẽ làm sai lệch lịch sử
-        // (ví dụ giao dịch mua "GOLD 6 THÁNG" bỗng hiển thị thành "GOLD 12 THÁNG"). Hãy tạo gói mới thay thế.
-        if ((durationChanged || nameChanged) && subscriptions != null && subscriptions.existsByMembershipPackageId(id)) {
+        // Các kỳ gói trỏ tới dòng gói tập này, nên đổi tên, thời hạn, hạng hoặc hạn mức lượt học của gói đã bán
+        // sẽ làm sai lệch lịch sử và thay đổi quyền lợi hội viên đang giữ gói. Hãy tạo gói mới thay thế.
+        if ((durationChanged || nameChanged || tierChanged || creditLimitChanged)
+                && subscriptions != null && subscriptions.existsByMembershipPackageId(id)) {
             throw new com.swp391.scms.common.exception.ConflictException(
                     "PACKAGE_IDENTITY_LOCKED", "catalog.package.identity_locked", null, null);
         }

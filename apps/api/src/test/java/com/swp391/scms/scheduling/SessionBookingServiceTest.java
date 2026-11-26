@@ -257,6 +257,58 @@ class SessionBookingServiceTest {
         verify(notifications).send(eq(5L), any(), any(), eq("system"), eq("class_session"), eq(45L));
     }
 
+    /** Kiểm thử P2-BE-22: cancelMany sắp xếp (classId, bookingId) trước khi khóa và gửi thông báo riêng từng hội viên. */
+    @Test
+    void bulkCancelSortsLocksByClassAndBookingIdAndNotifiesEachMemberSeparately() {
+        GymClass class2 = new GymClass();
+        class2.setId(2L);
+        class2.setName("Boxing");
+        class2.setCapacity(10);
+        class2.setStatus("active");
+        when(gymClasses.findByIdForUpdate(2L)).thenReturn(Optional.of(class2));
+
+        ClassSession sClass2 = new ClassSession();
+        sClass2.setId(51L);
+        sClass2.setGymClass(class2);
+        sClass2.setSessionDate(today.plusDays(2));
+        sClass2.setStartTime(LocalTime.of(9, 0));
+        sClass2.setEndTime(LocalTime.of(10, 0));
+        sClass2.setStatus("scheduled");
+
+        ClassSession sClass1a = session(52, today.plusDays(2), 7);
+        ClassSession sClass1b = session(53, today.plusDays(3), 7);
+
+        SessionBooking m5Booking1 = booked(70, sClass2, 5L);
+        SessionBooking m6Booking1 = booked(65, sClass1a, 6L);
+        SessionBooking m6Booking2 = booked(66, sClass1b, 6L);
+
+        when(bookings.findClassIdById(70L)).thenReturn(Optional.of(2L));
+        when(bookings.findByIdForUpdate(70L)).thenReturn(Optional.of(m5Booking1));
+        when(bookings.findClassIdById(65L)).thenReturn(Optional.of(1L));
+        when(bookings.findByIdForUpdate(65L)).thenReturn(Optional.of(m6Booking1));
+        when(bookings.findClassIdById(66L)).thenReturn(Optional.of(1L));
+        when(bookings.findByIdForUpdate(66L)).thenReturn(Optional.of(m6Booking2));
+
+        AuthenticatedPrincipal staff = new AuthenticatedPrincipal(1L, "manager", "CENTER_MANAGER");
+        // Truyền đảo thứ tự (class 2 trước class 1, id 66 trước 65)
+        var result = service.cancelMany(staff, List.of(70L, 66L, 65L));
+
+        assertEquals(3, result.cancelled().size());
+        assertTrue(result.skipped().isEmpty());
+
+        var lockOrder = inOrder(gymClasses, bookings);
+        lockOrder.verify(gymClasses).findByIdForUpdate(1L);
+        lockOrder.verify(bookings).findByIdForUpdate(65L);
+        lockOrder.verify(gymClasses).findByIdForUpdate(1L);
+        lockOrder.verify(bookings).findByIdForUpdate(66L);
+        lockOrder.verify(gymClasses).findByIdForUpdate(2L);
+        lockOrder.verify(bookings).findByIdForUpdate(70L);
+
+        // Mỗi hội viên nhận đúng 1 thông báo riêng của mình (hội viên 6: bulk 2 buổi; hội viên 5: 1 buổi).
+        verify(notifications, times(1)).send(eq(6L), any(), any(), eq("system"), eq("class_session"), eq(52L));
+        verify(notifications, times(1)).send(eq(5L), any(), any(), eq("system"), eq("class_session"), eq(51L));
+    }
+
     @Test void holdOrExpiryCancelsOnlyUncoveredUpcomingBookings() {
         SessionBooking covered = booked(70, session(47, today.plusDays(2), 7), 5L);
         SessionBooking uncovered = booked(71, session(48, today.plusDays(20), 7), 5L);

@@ -71,24 +71,43 @@ public final class SolEmailTemplateRenderer {
                 <p style="margin: 0;">%s</p>
                 """.formatted(greeting, escapeHtml(message).replace("\n", "<br/>"));
 
-        String[] cta = resolveCta(type);
+        String actionPath = payload != null ? payload.actionPath() : null;
+        String[] cta = resolveCta(type, actionPath);
         return wrap(title, message, body, cta[0], baseUrl + cta[1], baseUrl);
     }
 
     /**
-     * Chọn nhãn và đường dẫn nút hành động theo loại thông báo (đổi mật khẩu, thanh toán, đổi lịch, gói sắp hết
-     * hạn, mặc định).
+     * Chọn nhãn và đường dẫn nút hành động theo loại thông báo (chuẩn hóa order/wallet về payment; ưu tiên
+     * actionPath hợp lệ bắt đầu bằng '/' nếu được cung cấp; mặc định trỏ '/portal').
      *
-     * @return mảng {label, path} của nút hành động duy nhất, được chọn theo loại thông báo.
+     * @return mảng {label, path} của nút hành động duy nhất.
      */
-    private static String[] resolveCta(String type) {
-        return switch (type) {
+    private static String[] resolveCta(String type, String actionPath) {
+        String normalizedType = switch (type == null ? "" : type.trim().toLowerCase(Locale.ROOT)) {
+            case "order", "wallet" -> "payment";
+            default -> type == null ? "" : type.trim().toLowerCase(Locale.ROOT);
+        };
+        String[] base = switch (normalizedType) {
             case "password_changed" -> new String[]{"Kiểm tra tài khoản", "/member/profile"};
             case "payment" -> new String[]{"Xem giao dịch", "/member/invoices"};
             case "schedule_change" -> new String[]{"Xem lịch tập", "/member/classes"};
             case "package_expiry" -> new String[]{"Gia hạn gói tập", "/member/packages"};
-            default -> new String[]{"Mở SÖL Fitness", "/member"};
+            default -> new String[]{"Mở SÖL Fitness", "/portal"};
         };
+        String safePath = sanitizeActionPath(actionPath);
+        return safePath != null ? new String[]{base[0], safePath} : base;
+    }
+
+    /** Chỉ chấp nhận đường dẫn tương đối nội bộ bắt đầu bằng '/' (từ chối '//' hoặc URL ngoài). */
+    private static String sanitizeActionPath(String actionPath) {
+        if (actionPath == null) {
+            return null;
+        }
+        String trimmed = actionPath.trim();
+        if (trimmed.startsWith("/") && !trimmed.startsWith("//") && !trimmed.contains("://")) {
+            return trimmed;
+        }
+        return null;
     }
 
     /**

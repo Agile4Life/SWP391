@@ -128,13 +128,46 @@ public final class PackageBenefits {
     }
 
     /**
+     * Kỳ gói có phải gói trải nghiệm không (theo gói hoặc kỳ không nâng cấp, chưa hết hạn dài tối đa 3 ngày).
+     */
+    public static boolean isTrialSubscription(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return false;
+        if (isTrial(sub.getMembershipPackage())) return true;
+        if (sub.getUpgradeCharge() == null && !"expired".equalsIgnoreCase(sub.getStatus())
+                && sub.getStartDate() != null && sub.getEndDate() != null) {
+            long days = ChronoUnit.DAYS.between(sub.getStartDate(), sub.getEndDate());
+            return days >= 0 && days <= TRIAL_MAX_DAYS;
+        }
+        return false;
+    }
+
+    /**
+     * Tổng số buổi PT 1:1 miễn phí tối đa trong toàn bộ thời hạn đã mua của một kỳ gói, nhằm ngăn trường hợp nâng cấp
+     * giữa chu kỳ tạo thêm chu kỳ lẻ và nhân đôi hạn mức (ví dụ gói Platinum 30 ngày tối đa 6 buổi).
+     */
+    public static int totalPtSessions(com.swp391.scms.membership.entity.MembershipSubscription sub) {
+        if (sub == null) return 0;
+        if (isTrialSubscription(sub)) return 1;
+        int perCycle = ptSessionsPerCycle(sub.getMembershipPackage());
+        if (perCycle <= 0) return 0;
+        int durationDays = sub.getMembershipPackage() != null ? sub.getMembershipPackage().getDurationDays() : 0;
+        if (durationDays <= 0 && sub.getStartDate() != null && sub.getEndDate() != null) {
+            durationDays = (int) Math.max(1, ChronoUnit.DAYS.between(sub.getStartDate(), sub.getEndDate()) + 1);
+        }
+        int expectedCycles = Math.max(1, (int) Math.ceil(durationDays / (double) CYCLE_DAYS));
+        return perCycle * expectedCycles;
+    }
+
+    /**
      * Ngày gốc dùng để đếm các chu kỳ quyền lợi: ngày bắt đầu của kỳ gói, hoặc với gói nâng cấp thì là ngày bắt đầu
-     * của gói bị thay thế — để việc nâng cấp giữa chu kỳ không bao giờ cấp thêm hạn mức PT hay khóa học mới.
+     * của gói trả phí bị thay thế (dừng trước gói trải nghiệm) — để việc nâng cấp giữa chu kỳ không bao giờ cấp thêm
+     * hạn mức PT hay khóa học mới.
      */
     public static LocalDate cycleAnchor(com.swp391.scms.membership.entity.MembershipSubscription subscription) {
         var current = subscription;
         java.util.Set<Long> seen = new java.util.HashSet<>();
         while (current.getUpgradeCharge() != null && current.getPreviousSubscription() != null
+                && !isTrialSubscription(current.getPreviousSubscription())
                 && current.getId() != null && seen.add(current.getId())) {
             current = current.getPreviousSubscription();
         }

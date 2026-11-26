@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 /** Bảng wallets: Ví SÖL của một người dùng (mỗi người một ví), gồm số dư và thời điểm cập nhật. */
 @Entity
+@org.hibernate.annotations.Check(name = "ck_wallets_balance_nonneg", constraints = "balance >= 0")
 @Table(name = "wallets")
 public class Wallet {
 

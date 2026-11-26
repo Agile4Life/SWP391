@@ -4,7 +4,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { VnpayPayButton } from './VnpayPayButton';
 import * as api from './vnpayApi';
 import * as session from './vnpaySession';
+import * as walletApi from '../wallet/walletApi';
 vi.mock('./vnpayApi',()=>({createVnpayCheckout:vi.fn(),navigateToVnpay:vi.fn()}));
+vi.mock('../wallet/walletApi',()=>({payWithWallet:vi.fn()}));
 vi.mock('./vnpaySession',()=>({
   rememberActiveVnpay:vi.fn(),
   releaseAbandonedVnpay:vi.fn(()=>Promise.resolve(false)),
@@ -60,4 +62,58 @@ it('lets member manually unlock a stuck VNPay attempt when VNPAY_AWAITING_CONFIR
  await act(async()=>unlockBtn!.click());
  expect(session.cancelVnpayTarget).toHaveBeenCalledWith({subscriptionId:11});
  expect(host.querySelector('[role="alert"]')).toBeNull();
+});
+it('P0-04: hides wallet payment button when allowWallet is false',async()=>{
+ await act(async()=>root.render(<VnpayPayButton target={{paymentId:99}} allowWallet={false} />));
+ expect(host.textContent).toContain('Thanh toán VNPay');
+ expect(host.querySelector('[data-testid="pay-with-wallet-btn"]')).toBeNull();
+});
+it('P0-04: asks confirmation before charging SÖL Wallet and only calls payWithWallet after confirmation',async()=>{
+ vi.mocked(walletApi.payWithWallet).mockResolvedValue({balance:300000,updatedAt:'2026-11-25T10:00:00',transactions:[]});
+ const onPaid = vi.fn();
+ const walletUpdated = vi.fn();
+ const notifChanged = vi.fn();
+ window.addEventListener('wallet-updated', walletUpdated);
+ window.addEventListener('member-notifications-changed', notifChanged);
+ try {
+  await act(async()=>root.render(<VnpayPayButton target={{paymentId:55}} onPaid={onPaid} />));
+  const walletBtn = host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')!;
+  await act(async()=>walletBtn.click());
+  expect(walletApi.payWithWallet).not.toHaveBeenCalled();
+
+  // Cancel confirmation does not charge wallet
+  const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Hủy')!;
+  await act(async()=>cancelBtn.click());
+  expect(walletApi.payWithWallet).not.toHaveBeenCalled();
+
+  // Confirming charges wallet and dispatches events
+  await act(async()=>walletBtn.click());
+  const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Xác nhận thanh toán')!;
+  await act(async()=>confirmBtn.click());
+  expect(walletApi.payWithWallet).toHaveBeenCalledWith({paymentId:55});
+  expect(onPaid).toHaveBeenCalledTimes(1);
+  expect(walletUpdated).toHaveBeenCalledTimes(1);
+  expect(notifChanged).toHaveBeenCalledTimes(1);
+ } finally {
+  window.removeEventListener('wallet-updated', walletUpdated);
+  window.removeEventListener('member-notifications-changed', notifChanged);
+ }
+});
+it('P1-FE-26 & P3-FE-23: shows formatted amount in wallet confirmation and guards handleUnlock with a ref against double click',async()=>{
+ await act(async()=>root.render(<VnpayPayButton target={{paymentId:55}} amount={450000} />));
+ const walletBtn = host.querySelector<HTMLButtonElement>('[data-testid="pay-with-wallet-btn"]')!;
+ await act(async()=>walletBtn.click());
+ expect(host.querySelector('dialog')?.textContent).toContain('450.000');
+ const cancelBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Hủy')!;
+ await act(async()=>cancelBtn.click());
+
+ let finishUnlock!: () => void;
+ vi.mocked(session.cancelVnpayTarget).mockReturnValueOnce(new Promise<void>((res) => { finishUnlock = res; }));
+ const conflict = Object.assign(new Error('Giao dịch VNPay đang chờ xác nhận.'), { code: 'VNPAY_AWAITING_CONFIRMATION' });
+ vi.mocked(api.createVnpayCheckout).mockRejectedValueOnce(conflict);
+ await act(async()=>host.querySelector('button')!.click());
+ const unlockBtn = [...host.querySelectorAll('button')].find(b => b.textContent?.includes('Mở khóa'))!;
+ await act(async()=>{ unlockBtn.click(); unlockBtn.click(); });
+ expect(session.cancelVnpayTarget).toHaveBeenCalledTimes(1);
+ await act(async()=>{ finishUnlock(); });
 });

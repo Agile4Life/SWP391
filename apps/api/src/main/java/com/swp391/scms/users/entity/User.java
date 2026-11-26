@@ -12,7 +12,9 @@ import java.time.LocalDateTime;
 @org.hibernate.annotations.DynamicUpdate
 @org.hibernate.annotations.Check(name = "ck_users_gender", constraints = "gender IN ('male','female','other')")
 @org.hibernate.annotations.Check(name = "ck_users_status", constraints = "status IN ('active','inactive','locked')")
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(name = "uq_users_email", columnNames = "email")
+})
 public class User {
 
     public static final String DEFAULT_AVATAR_URL = "/images/default-avatar.png";
@@ -28,7 +30,7 @@ public class User {
     @Column(name = "full_name", nullable = false, length = 150)
     private String fullName;
 
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(nullable = false, length = 150)
     private String email;
 
     @Column(length = 50)

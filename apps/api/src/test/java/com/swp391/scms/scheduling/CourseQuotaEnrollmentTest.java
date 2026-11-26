@@ -65,7 +65,7 @@ class CourseQuotaEnrollmentTest {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(sub));
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
-        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(100L, "booked", sub.getStartDate(), sub.getEndDate())).thenReturn(1L);
+        when(enrollments.countUsedFreeCreditsBetween(100L, sub.getStartDate(), sub.getEndDate())).thenReturn(1L);
 
         QuotaDto quota = enrollmentService.getMemberCourseQuota(principal);
         assertEquals("SILVER", quota.tier());
@@ -75,7 +75,7 @@ class CourseQuotaEnrollmentTest {
         assertFalse(quota.unlimited());
     }
 
-    /** Kiểm thử: đăng ký thất bại khi vượt hạn mức. */
+    /** Kiểm thử: đăng ký thất bại khi vượt hạn mức (bao gồm cả lượt completed và forfeited). */
     @Test
     void testEnrollFailsWhenQuotaExceeded() {
         AuthenticatedPrincipal principal = new AuthenticatedPrincipal(100L, "member@test.com", "MEMBER");
@@ -96,8 +96,8 @@ class CourseQuotaEnrollmentTest {
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(sub));
         when(subscriptions.hasActiveMembership(eq(100L), any(LocalDate.class))).thenReturn(true);
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(LocalDate.class), any(LocalDate.class))).thenReturn(true);
-        // Đã sử dụng 2 lượt
-        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(100L, "booked", sub.getStartDate(), sub.getEndDate())).thenReturn(2L);
+        // Đã sử dụng 2 lượt (booked + completed + forfeited)
+        when(enrollments.countUsedFreeCreditsBetween(100L, sub.getStartDate(), sub.getEndDate())).thenReturn(2L);
 
         GymClass gymClass = new GymClass();
         gymClass.setId(50L);

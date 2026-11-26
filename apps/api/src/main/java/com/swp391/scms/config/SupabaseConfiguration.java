@@ -36,8 +36,12 @@ public class SupabaseConfiguration {
                     throw new IllegalStateException("Missing required Supabase configuration: " + property);
                 }
             }
-            validateConnection(environment.getRequiredProperty("spring.datasource.url"),
-                    environment.getProperty("DB_SSL_MODE", "require"));
+            String url = environment.getRequiredProperty("spring.datasource.url");
+            String dbSslMode = environment.getProperty("DB_SSL_MODE", "require");
+            String hikariSslMode = environment.getProperty(
+                    "spring.datasource.hikari.data-source-properties.sslmode", dbSslMode);
+            validateConnection(url, dbSslMode);
+            validateConnection(url, hikariSslMode);
         };
     }
 
@@ -46,10 +50,11 @@ public class SupabaseConfiguration {
      * require, verify-ca hoặc verify-full.
      */
     static void validateConnection(String url, String sslMode) {
-        if (!url.startsWith("jdbc:postgresql:") || url.matches("(?is).*[?&](?:user|password|ssl|sslmode|sslfactory)=.*")) {
+        if (url == null || !url.startsWith("jdbc:postgresql:")
+                || url.matches("(?is).*[?&](?:user|password|ssl|sslmode|sslfactory)=.*")) {
             throw new IllegalStateException("Use a PostgreSQL JDBC URL; configure credentials and TLS separately");
         }
-        if (!Set.of("require", "verify-ca", "verify-full").contains(sslMode.toLowerCase(Locale.ROOT))) {
+        if (sslMode == null || !Set.of("require", "verify-ca", "verify-full").contains(sslMode.trim().toLowerCase(Locale.ROOT))) {
             throw new IllegalStateException("Supabase requires encrypted SSL connections");
         }
     }

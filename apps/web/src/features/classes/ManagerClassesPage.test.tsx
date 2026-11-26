@@ -1,12 +1,14 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '../../shared/api/client';
 import { ManagerClassesPage } from './ManagerClassesPage';
 import {
   classesApi,
   type RecurringAvailabilityDto,
   type RecurringAvailabilityPayload,
 } from './classesApi';
+import { resolveWizardCoaches, resolveWizardRooms } from './components/classWizardValidation';
 import { todayISO } from '../schedule/timetable';
 
 vi.mock('./classesApi', () => ({
@@ -19,7 +21,6 @@ vi.mock('./classesApi', () => ({
     getSessionStudents: vi.fn(),
     checkRecurringAvailability: vi.fn(),
     createRecurringClass: vi.fn(),
-    createSession: vi.fn(),
     updateClass: vi.fn(),
     deleteClass: vi.fn(),
     rescheduleSession: vi.fn(),
@@ -856,5 +857,441 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(classesApi.rescheduleSession).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: 503, startTime: '14:15:00', endTime: '16:45:00' }),
     );
+  });
+
+  it('P0-01: keeps Step 4 review open after clicking Step 3 Next with distinct non-submit button nodes until explicit Step 4 click', async () => {
+    vi.mocked(classesApi.createRecurringClass).mockResolvedValue({
+      id: 301,
+      name: 'Boxing Afternoon',
+      disciplineId: 1,
+      coachId: 101,
+      roomId: 20,
+      capacity: 12,
+      status: 'active',
+    });
+
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+
+    // Step 1 -> Step 2
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, 'Boxing Afternoon'));
+    // Submitting the form on Step 1 must not create the course
+    await act(async () => {
+      document.querySelector<HTMLFormElement>('dialog form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(classesApi.createRecurringClass).not.toHaveBeenCalled();
+
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+
+    // Step 2: choose available Slot 2 -> Step 3
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-2"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+
+    // Step 3 -> Step 4: capture Step 3 Next DOM element before click
+    const step3NextBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!;
+    expect(step3NextBtn).not.toBeNull();
+    await act(async () => step3NextBtn.click());
+    await act(async () => { await Promise.resolve(); });
+
+    // Must remain on Step 4 Review without auto-submitting
+    expect(document.querySelector('[data-testid="wizard-step-4"]')).not.toBeNull();
+    expect(classesApi.createRecurringClass).not.toHaveBeenCalled();
+
+    // Step 4 confirm button must be a freshly mounted distinct DOM node with type="button"
+    const step4SubmitBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-submit-btn"]')!;
+    expect(step4SubmitBtn).not.toBeNull();
+    expect(step4SubmitBtn).not.toBe(step3NextBtn);
+    expect(step4SubmitBtn.type).toBe('button');
+
+    // Explicit click on Step 4 submits the course
+    await act(async () => step4SubmitBtn.click());
+    await act(async () => { await Promise.resolve(); });
+    expect(classesApi.createRecurringClass).toHaveBeenCalledTimes(1);
+  });
+
+  it('P0-05: aligns EditClassModal and ClassListTable statuses to active, inactive, and archived without cancelled', async () => {
+    vi.mocked(classesApi.getClasses).mockResolvedValue([
+      {
+        id: 1,
+        name: 'Full Body Strength 101',
+        disciplineId: 1,
+        disciplineName: 'Gym',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 10,
+        roomName: 'Phòng Gym Tiêu chuẩn',
+        capacity: 20,
+        status: 'active',
+      },
+      {
+        id: 2,
+        name: 'Boxing Ngừng Mở',
+        disciplineId: 2,
+        disciplineName: 'Boxing',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 20,
+        roomName: 'Ring Arena 01',
+        capacity: 14,
+        status: 'inactive',
+      },
+      {
+        id: 3,
+        name: 'Yoga Lưu Trữ',
+        disciplineId: 3,
+        disciplineName: 'Yoga',
+        coachId: 100,
+        coachName: 'HLV Lan',
+        roomId: 30,
+        roomName: 'Phòng Gym VIP',
+        capacity: 16,
+        status: 'archived',
+      },
+    ]);
+    vi.mocked(classesApi.updateClass).mockResolvedValue({
+      id: 1,
+      name: 'Full Body Strength 101',
+      disciplineId: 1,
+      coachId: 101,
+      roomId: 10,
+      capacity: 20,
+      status: 'inactive',
+    });
+
+    await renderPage();
+
+    // Tab 3 ClassListTable distinguishes active, inactive, archived cleanly
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    await act(async () => listTab.click());
+    const allChip = [...host.querySelectorAll<HTMLButtonElement>('.filter-chip')].find((b) =>
+      b.textContent?.includes('ngừng mở/lưu trữ'),
+    )!;
+    expect(allChip).toBeDefined();
+    await act(async () => allChip.click());
+
+    const rows = [...host.querySelectorAll('tbody tr')];
+    expect(rows).toHaveLength(3);
+    expect(rows[0].textContent).toContain('Đang mở');
+    expect(rows[1].textContent).toContain('Ngừng mở');
+    expect(rows[2].textContent).toContain('Lưu trữ');
+
+    // Open EditClassModal and verify status select options are active | inactive | archived
+    const editBtn = [...rows[0].querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Sửa')!;
+    await act(async () => editBtn.click());
+    const statusSelect = document.querySelector('#edit-cls-status')!.parentElement!.querySelector('select') as HTMLSelectElement;
+    const optionValues = [...statusSelect.options].map((opt) => opt.value);
+    expect(optionValues).toEqual(['active', 'inactive', 'archived']);
+    expect(optionValues).not.toContain('cancelled');
+
+    await act(async () => {
+      statusSelect.value = 'inactive';
+      statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      document.querySelector<HTMLFormElement>('dialog form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await act(async () => { await Promise.resolve(); });
+    expect(classesApi.updateClass).toHaveBeenCalledWith(1, expect.objectContaining({ status: 'inactive' }));
+  });
+
+  it('P1-FE-15 & P3-FE-19: invalidates stale availability on Step 2 edits, re-checks Step 3 after 409 conflict on Step 4, and prioritizes SCHEDULING_PAST_SESSION', async () => {
+    let resolveDeferred: ((v: RecurringAvailabilityDto) => void) | null = null;
+    vi.mocked(classesApi.checkRecurringAvailability)
+      // Initial Step 2 check (Slot 1 has both past + disciplineConflict -> must prioritize Past slot)
+      .mockImplementationOnce(async (payload) =>
+        buildAvailabilityResponse(payload, {
+          slots: buildAvailabilityResponse(payload).slots.map((s) =>
+            s.slotNumber === 1
+              ? { ...s, disciplineConflict: true, conflictCode: 'SCHEDULING_PAST_SESSION' }
+              : s,
+          ),
+        }),
+      )
+      // Slot 2 check -> available
+      .mockImplementationOnce(async (payload) => buildAvailabilityResponse(payload))
+      // Toggling a weekday -> stays pending to test stale-key invalidation
+      .mockImplementationOnce(
+        () =>
+          new Promise<RecurringAvailabilityDto>((resolve) => {
+            resolveDeferred = resolve;
+          }),
+      )
+      // Step 3 automatic re-check after 409 Conflict -> HLV Hùng is now busy!
+      .mockImplementationOnce(async (payload) =>
+        buildAvailabilityResponse(payload, {
+          coaches: [
+            {
+              id: 100,
+              fullName: 'HLV Lan',
+              email: 'lan@sol.vn',
+              available: true,
+              conflictCode: null,
+              conflictReason: null,
+            },
+            {
+              id: 101,
+              fullName: 'HLV Hùng',
+              email: 'hung@sol.vn',
+              available: false,
+              conflictCode: 'SCHEDULING_COACH_PT_CONFLICT',
+              conflictReason: 'HLV Hùng vừa nhận lịch PT 1:1.',
+            },
+          ],
+        }),
+      );
+
+    vi.mocked(classesApi.createRecurringClass).mockRejectedValueOnce(
+      new ApiError('Trùng lịch HLV Hùng', 409, 'SCHEDULING_COACH_PT_CONFLICT'),
+    );
+
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, 'Race Safe Class'));
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+
+    // P3-FE-19: SCHEDULING_PAST_SESSION prioritized over disciplineConflict
+    expect(document.querySelector('[data-testid="slot-option-1"]')?.textContent).toContain('Đã qua giờ');
+
+    // Pick Slot 2 -> valid availability
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-2"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Sẽ tạo 5 buổi học');
+
+    // Toggle another weekday -> stale availability cleared immediately while pending
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="weekday-chip-FRIDAY"]')!.click());
+    const nextBtnPending = document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!;
+    expect(nextBtnPending.disabled).toBe(true);
+    expect(document.querySelector('[data-testid="wizard-schedule-summary"]')?.textContent).toContain('Đang kiểm tra');
+
+    // Resolve pending availability check -> advance to Step 3 -> Step 4
+    await act(async () => {
+      resolveDeferred!(
+        buildAvailabilityResponse({
+          disciplineId: 1,
+          startDate: '2026-12-01',
+          endDate: '2026-12-29',
+          recurringDays: ['MONDAY', 'FRIDAY'],
+          startTime: '09:45:00',
+          endTime: '11:15:00',
+        }),
+      );
+      await Promise.resolve();
+    });
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    expect(document.querySelector('[data-testid="wizard-step-4"]')).not.toBeNull();
+
+    // Submit on Step 4 -> fails with 409 Conflict
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-submit-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    expect(document.querySelector('dialog [role="alert"]')?.textContent).toContain('Trùng lịch HLV Hùng');
+
+    // Click Back to Step 3 -> triggers automatic re-check, HLV Hùng turns unavailable!
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-back-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    expect(classesApi.checkRecurringAvailability).toHaveBeenCalledTimes(4);
+    const hungBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-coach-101"]')!;
+    expect(hungBtn.disabled).toBe(true);
+    expect(hungBtn.textContent).toContain('HLV Hùng vừa nhận lịch PT 1:1.');
+    const lanBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-coach-100"]')!;
+    expect(lanBtn.disabled).toBe(false);
+  });
+
+  it('P1-FE-16: resolveWizardRooms/Coaches never fall back to fake-available items when validSchedule returns empty arrays', async () => {
+    const emptyAvailability = buildAvailabilityResponse(
+      {
+        disciplineId: 1,
+        startDate: '2026-12-01',
+        endDate: '2026-12-29',
+        recurringDays: ['MONDAY'],
+        startTime: '09:45:00',
+        endTime: '11:15:00',
+      },
+      { validSchedule: true, selectedSlotAvailable: true, rooms: [], coaches: [] },
+    );
+
+    expect(
+      resolveWizardRooms(emptyAvailability, [
+        { id: 10, name: 'Phòng Gym Tiêu chuẩn', location: 'L1', capacity: 50, status: 'available' },
+      ]),
+    ).toEqual([]);
+    expect(
+      resolveWizardCoaches(emptyAvailability, [
+        { id: 100, fullName: 'HLV Lan', email: 'lan@sol.vn', status: 'active' },
+      ]),
+    ).toEqual([]);
+
+    vi.mocked(classesApi.checkRecurringAvailability).mockResolvedValue(emptyAvailability);
+    await renderPage();
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="create-class-btn"]')!.click());
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#cls-name')!, 'No Resource Course'));
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+    await act(async () => { await Promise.resolve(); });
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="wizard-next-btn"]')!.click());
+
+    expect(document.querySelector('[data-testid="wizard-no-rooms-alert"]')).not.toBeNull();
+    expect(document.querySelector('[data-testid="wizard-no-coaches-alert"]')).not.toBeNull();
+    expect(document.querySelectorAll('button[data-testid^="wizard-room-"]')).toHaveLength(0);
+    expect(document.querySelectorAll('button[data-testid^="wizard-coach-"]')).toHaveLength(0);
+  });
+
+  it('P1-FE-17: EditClassModal injects maintenance/inactive fallback room & coach, blocks saving Active until replaced, and permits switching to Inactive', async () => {
+    vi.mocked(classesApi.getClasses).mockResolvedValue([
+      {
+        id: 77,
+        name: 'Legacy Yoga Maintenance',
+        disciplineId: 3,
+        disciplineName: 'Yoga',
+        coachId: 999,
+        coachName: 'HLV Cũ',
+        roomId: 888,
+        roomName: 'Zen Studio (Đóng)',
+        capacity: 12,
+        status: 'active',
+      },
+    ]);
+    vi.mocked(classesApi.updateClass).mockResolvedValue({
+      id: 77,
+      name: 'Legacy Yoga Maintenance',
+      disciplineId: 3,
+      coachId: 999,
+      roomId: 888,
+      capacity: 12,
+      status: 'inactive',
+    });
+
+    await renderPage();
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    await act(async () => listTab.click());
+    const editBtn = [...host.querySelectorAll<HTMLButtonElement>('tbody button')].find((b) => b.textContent === 'Sửa')!;
+    await act(async () => editBtn.click());
+
+    // Fallback options appear with clear status labels
+    const roomSelect = document.querySelector('#edit-cls-room')!.parentElement!.querySelector('select') as HTMLSelectElement;
+    const coachSelect = document.querySelector('#edit-cls-coach')!.parentElement!.querySelector('select') as HTMLSelectElement;
+    expect(roomSelect.options[0].textContent).toContain('Zen Studio (Đóng)');
+    expect(roomSelect.options[0].textContent).toContain('Đang bảo trì');
+    expect(coachSelect.options[0].textContent).toContain('HLV Cũ');
+    expect(coachSelect.options[0].textContent).toContain('Ngừng hoạt động');
+    expect(document.querySelector('[data-testid="edit-unavailable-resource-warning"]')).not.toBeNull();
+
+    // Preserves room capacity validation against fallback room capacity (12)
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#edit-cls-cap')!, '20'));
+    expect(document.querySelector('[data-testid="edit-capacity-error"]')?.textContent).toContain('vượt quá sức chứa');
+    await act(async () => setInputValue(document.querySelector<HTMLInputElement>('#edit-cls-cap')!, '12'));
+
+    // Keeping status === 'active' with maintenance room is blocked
+    const form = document.querySelector<HTMLFormElement>('dialog form')!;
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    expect(classesApi.updateClass).not.toHaveBeenCalled();
+    expect(document.querySelector('dialog [role="alert"]')?.textContent).toContain('bảo trì');
+
+    // Switching status to 'inactive' allows saving cleanly
+    const statusSelect = document.querySelector('#edit-cls-status')!.parentElement!.querySelector('select') as HTMLSelectElement;
+    await act(async () => {
+      statusSelect.value = 'inactive';
+      statusSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await act(async () => { await Promise.resolve(); });
+    expect(classesApi.updateClass).toHaveBeenCalledWith(
+      77,
+      expect.objectContaining({ roomId: 888, coachId: 999, status: 'inactive' }),
+    );
+  });
+
+  it('P2-FE-38, P2-FE-39 & P3-FE-19: Tab 3 shows refresh error, hides Xem lịch on inactive classes, jumps to startDate week, and localizes fitnessLevel without flashing (0)', async () => {
+    vi.mocked(classesApi.getClasses).mockResolvedValue([
+      {
+        id: 1,
+        name: 'Future Gym Course',
+        disciplineId: 1,
+        disciplineName: 'Gym',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 10,
+        roomName: 'Phòng Gym Tiêu chuẩn',
+        capacity: 20,
+        status: 'active',
+        startDate: '2099-03-11',
+        endDate: '2099-04-11',
+      },
+      {
+        id: 2,
+        name: 'Archived Boxing',
+        disciplineId: 2,
+        disciplineName: 'Boxing',
+        coachId: 101,
+        coachName: 'HLV Hùng',
+        roomId: 20,
+        roomName: 'Ring Arena 01',
+        capacity: 14,
+        status: 'archived',
+      },
+    ]);
+
+    let resolveStudents: ((list: Awaited<ReturnType<typeof classesApi.getSessionStudents>>) => void) | null = null;
+    vi.mocked(classesApi.getSessionStudents).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveStudents = resolve;
+        }),
+    );
+
+    await renderPage();
+
+    // Open session detail modal while students are loading -> should NOT flash "(0)"
+    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event')!.click());
+    expect(document.querySelector('dialog h3')?.textContent?.trim()).toBe('Học viên đã ghi danh');
+    expect(document.querySelector('dialog h3')?.textContent).not.toContain('(0)');
+
+    // Resolve students with raw fitnessLevel enum -> must map to localized label, not raw enum
+    await act(async () => {
+      resolveStudents!([
+        {
+          id: 1,
+          memberId: 50,
+          fullName: 'Nguyễn Minh Anh',
+          email: 'anh@sol.vn',
+          fitnessLevel: 'intermediate',
+          status: 'booked',
+        },
+      ]);
+      await Promise.resolve();
+    });
+    expect(document.querySelector('dialog h3')?.textContent).toContain('(1)');
+    expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).toContain('Trung cấp');
+    expect(document.querySelector('[data-testid="session-detail-students"]')?.textContent).not.toContain('intermediate');
+    await act(async () => document.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
+
+    // Switch to Tab 3, show All -> archived row must not have "Xem lịch", active row jumps weekStart to Monday of 2099-03-11 (2099-03-09)
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    await act(async () => listTab.click());
+    const allChip = [...host.querySelectorAll<HTMLButtonElement>('.filter-chip')].find((b) =>
+      b.textContent?.includes('Tất cả'),
+    )!;
+    await act(async () => allChip.click());
+
+    const rows = [...host.querySelectorAll('tbody tr')];
+    expect(rows).toHaveLength(2);
+    expect(rows[1].textContent).not.toContain('Xem lịch');
+
+    // Trigger refresh failure while on Tab 3 -> must display error alert + Retry button
+    vi.mocked(classesApi.getClasses).mockRejectedValueOnce(new Error('Lỗi làm mới danh sách'));
+    await act(async () => host.querySelector<HTMLButtonElement>('.portal-header button[aria-label]')?.click());
+    await act(async () => { await Promise.resolve(); });
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Lỗi làm mới danh sách');
+
+    // Click "Xem lịch" on Future Gym Course -> switches to Tab 1 and jumps to week 09/03 – 15/03/2099
+    const viewScheduleBtn = [...rows[0].querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Xem lịch')!;
+    await act(async () => viewScheduleBtn.click());
+    expect(host.textContent).toContain('09/03 – 15/03/2099');
   });
 });

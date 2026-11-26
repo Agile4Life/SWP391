@@ -4,7 +4,7 @@ import { createMemoryRouter } from 'react-router-dom';
 import { afterEach, expect, it, vi } from 'vitest';
 import { AppRouter } from './AppRouter';
 import { PortalShell } from '../features/portal/PortalShell';
-import { AUTH_STORAGE_KEY } from '../shared/api/client';
+import { AUTH_STORAGE_KEY, TOKEN_STORAGE_KEY } from '../shared/api/client';
 
 const fixture = vi.hoisted(() => ({ router: undefined as unknown as ReturnType<typeof createMemoryRouter> }));
 vi.mock('./router', () => ({ get router() { return fixture.router; } }));
@@ -51,6 +51,11 @@ it('shows a skeleton after logout while the login route module is pending', asyn
   vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) {
     this.setAttribute('open', '');
   });
+  vi.stubGlobal('fetch', vi.fn(() => Promise.resolve(new Response(JSON.stringify({
+    success: true,
+    data: { username: 'coach', role: 'COACH', fullName: 'Coach', unreadCount: 0, count: 0 },
+  }), { status: 200, headers: { 'Content-Type': 'application/json' } }))));
+  localStorage.setItem(TOKEN_STORAGE_KEY, 'test-coach-token');
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'coach', name: 'Coach', identifier: 'coach', role: 'COACH' }));
   let finishRoute!: (value: { Component: () => React.ReactNode }) => void;
   const pendingRoute = new Promise<{ Component: () => React.ReactNode }>(resolve => { finishRoute = resolve; });

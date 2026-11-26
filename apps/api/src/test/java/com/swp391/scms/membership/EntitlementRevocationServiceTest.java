@@ -76,8 +76,8 @@ class EntitlementRevocationServiceTest {
         CoachBooking pastTheEnd = pt(LocalDate.of(2026, 12, 8));
         when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any(), any())).thenAnswer(inv -> {
             java.util.function.Predicate<LocalDate> covered = inv.getArgument(2);
-            // Chỗ học khóa có buổi tiếp theo rơi vào khoảng tạm hoãn hoặc ngay sau đó vẫn được giữ.
-            assertTrue(covered.test(LocalDate.of(2026, 10, 14)));
+            // Ngày nằm ngay trong khoảng bảo lưu [12..18] KHÔNG được bao phủ; ngày sau bảo lưu tới hạn mở rộng được giữ.
+            assertFalse(covered.test(LocalDate.of(2026, 10, 14)));
             assertTrue(covered.test(LocalDate.of(2026, 10, 25)));
             assertFalse(covered.test(LocalDate.of(2026, 12, 8)));
             return 0;
@@ -156,6 +156,75 @@ class EntitlementRevocationServiceTest {
         assertEquals("refunded", paidInTime.getStatus());
         assertEquals("success", paidLate.getStatus());
         org.mockito.Mockito.verify(wallets).creditCoachBookingRefund(eq(10L), eq(new java.math.BigDecimal("200000")), eq("COACH_REFUND_1"), any());
+        org.mockito.Mockito.verifyNoMoreInteractions(wallets);
+    }
+
+    /** Kiểm thử P2-BE-35: gói frozen đã cộng bù ngày bảo lưu (holdDaysCredited=true) không bị cộng thêm lần 2. */
+    @Test
+    void creditedFrozenHoldDoesNotDoubleAddHeldDaysAndExcludesHoldDates() {
+        Clock clock = Clock.fixed(Instant.parse("2026-10-11T10:00:00Z"), ZoneOffset.UTC);
+        var service = new EntitlementRevocationService(subscriptions, enrollmentService, coachBookings, clock);
+        LocalDate today = LocalDate.of(2026, 10, 11);
+        var frozen = new com.swp391.scms.membership.entity.MembershipSubscription();
+        frozen.setStatus("frozen");
+        frozen.setHoldStatus("APPROVED");
+        frozen.setHoldDaysCredited(true);
+        frozen.setStartDate(LocalDate.of(2026, 10, 1));
+        frozen.setEndDate(LocalDate.of(2026, 12, 7)); // Đã cộng sẵn 7 ngày (30/11 + 7 = 07/12)
+        frozen.setHoldStartDate(LocalDate.of(2026, 10, 12));
+        frozen.setHoldEndDate(LocalDate.of(2026, 10, 18));
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "frozen")).thenReturn(List.of(frozen));
+        when(subscriptions.hasActiveMembership(eq(10L), any())).thenReturn(false);
+
+        CoachBooking duringHold = pt(LocalDate.of(2026, 10, 15));
+        CoachBooking lastDay = pt(LocalDate.of(2026, 12, 7));
+        CoachBooking doubleAddedDay = pt(LocalDate.of(2026, 12, 10)); // Nếu cộng lặp 7 ngày sẽ bị giữ nhầm!
+        when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any(), any())).thenReturn(0);
+        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(duringHold, lastDay, doubleAddedDay));
+
+        assertEquals(2, service.revokeUncoveredBookings(10L, "Sweep"));
+        assertEquals("cancelled", duringHold.getStatus());
+        assertEquals("confirmed", lastDay.getStatus());
+        assertEquals("cancelled", doubleAddedDay.getStatus());
+    }
+
+    /** Kiểm thử P1-BE-30: revokeUncoveredBookings hoàn tiền buổi PT đã trả về ví và đóng khoản thu pending. */
+    @Test
+    void revokeUncoveredBookingsRefundsPaidPtToWalletAndFailsPendingPtPayment() {
+        var payments = org.mockito.Mockito.mock(com.swp391.scms.finance.repository.PaymentRepository.class);
+        var wallets = org.mockito.Mockito.mock(com.swp391.scms.wallet.WalletService.class);
+        var service = holdService(payments, wallets);
+        LocalDate today = LocalDate.of(2026, 10, 11);
+        var member = new com.swp391.scms.users.entity.Member();
+        member.setUserId(10L);
+
+        CoachBooking paidPt = pt(today.plusDays(5));
+        paidPt.setId(501L);
+        paidPt.setMember(member);
+        var successPay = successPayment("200000");
+
+        CoachBooking pendingPt = pt(today.plusDays(6));
+        pendingPt.setId(502L);
+        pendingPt.setMember(member);
+        var pendingPay = new com.swp391.scms.finance.entity.Payment();
+        pendingPay.setAmount(new java.math.BigDecimal("200000"));
+        pendingPay.setStatus("pending");
+
+        when(subscriptions.hasActiveMembership(eq(10L), any())).thenReturn(false);
+        when(subscriptions.findByMemberUserIdAndStatus(10L, "frozen")).thenReturn(List.of());
+        when(enrollmentService.cancelFutureEnrollmentsForMember(eq(10L), any(), any())).thenReturn(0);
+        when(coachBookings.findFutureConfirmedByMember(10L, today)).thenReturn(List.of(paidPt, pendingPt));
+        when(payments.findAllByCoachBookingId(501L)).thenReturn(List.of(successPay));
+        when(payments.findAllByCoachBookingId(502L)).thenReturn(List.of(pendingPay));
+
+        assertEquals(2, service.revokeUncoveredBookings(10L, "Hủy gói"));
+        assertEquals("cancelled", paidPt.getStatus());
+        assertEquals("refunded", successPay.getStatus());
+        assertEquals(0, new java.math.BigDecimal("200000").compareTo(successPay.getRefundedAmount()));
+        assertEquals("cancelled", pendingPt.getStatus());
+        assertEquals("failed", pendingPay.getStatus());
+        org.mockito.Mockito.verify(wallets).creditCoachBookingRefund(
+                eq(10L), eq(new java.math.BigDecimal("200000")), eq("COACH_REFUND_501"), eq("Hủy gói"));
         org.mockito.Mockito.verifyNoMoreInteractions(wallets);
     }
 

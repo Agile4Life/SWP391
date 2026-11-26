@@ -3,7 +3,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
+import { DatePicker } from '../../shared/ui/DatePicker';
+import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { Modal } from '../../shared/ui/Modal';
+import { formatPrice } from '../../shared/lib/membershipPresentation';
 import {
   auditApi,
   type AuditLogItem,
@@ -36,9 +39,22 @@ export function AdminAuditLogsPage() {
   const [selectedAction, setSelectedAction] = useState<string>('ALL');
   const [selectedEntityType, setSelectedEntityType] = useState<string>('ALL');
   const [actorSearch, setActorSearch] = useState<string>('');
+  const [fromDate, setFromDate] = useState<string>('');
+  const [toDate, setToDate] = useState<string>('');
+
+  // Nếu người dùng nhập số nguyên hoặc #ID (ví dụ: 5 hoặc #5), gửi thẳng user_id lên server để lọc toàn hệ thống.
+  const parsedActorUserId = useMemo(() => {
+    const match = /^#?(\d+)$/.exec(actorSearch.trim());
+    if (!match) return undefined;
+    const id = Number(match[1]);
+    return Number.isSafeInteger(id) && id > 0 ? id : undefined;
+  }, [actorSearch]);
+
+  const dateRangeInvalid = Boolean(fromDate && toDate && fromDate > toDate);
 
   // Trạng thái hộp thoại xem khác biệt (diff)
   const [diffLog, setDiffLog] = useState<AuditLogItem | null>(null);
+  const [showRawDiffJson, setShowRawDiffJson] = useState<boolean>(false);
 
   // Trạng thái báo cáo mức lấp đầy lớp học
   const [occupancyList, setOccupancyList] = useState<ClassOccupancyItem[]>([]);
@@ -48,6 +64,14 @@ export function AdminAuditLogsPage() {
 
   // Tải danh sách nhật ký thao tác
   useEffect(() => {
+    if (dateRangeInvalid) {
+      setLoadingLogs(false);
+      setLogs([]);
+      setTotalElements(0);
+      setTotalPages(1);
+      setLogsError('Ngày bắt đầu phải trước hoặc bằng ngày kết thúc.');
+      return undefined;
+    }
     let mounted = true;
     // Tải nhật ký thao tác theo bộ lọc và trang hiện tại.
     const fetchAudit = async () => {
@@ -55,8 +79,11 @@ export function AdminAuditLogsPage() {
       setLogsError('');
       try {
         const res = await auditApi.getAuditLogs({
+          userId: parsedActorUserId,
           action: selectedAction,
           entityType: selectedEntityType,
+          from: fromDate || undefined,
+          to: toDate || undefined,
           page: currentPage,
           size: 8,
         });
@@ -80,7 +107,7 @@ export function AdminAuditLogsPage() {
     return () => {
       mounted = false;
     };
-  }, [selectedAction, selectedEntityType, currentPage, logsReload]);
+  }, [parsedActorUserId, selectedAction, selectedEntityType, fromDate, toDate, dateRangeInvalid, currentPage, logsReload]);
 
   // Tải báo cáo mức lấp đầy lớp học
   useEffect(() => {
@@ -112,30 +139,32 @@ export function AdminAuditLogsPage() {
     };
   }, [activeTab, occupancyReload]);
 
-  // Lọc nhật ký tại client theo tên/email người thực hiện.
+  // Lọc nhật ký tại client theo tên/email người thực hiện trên trang hiện tại (nếu nhập #ID thì đã lọc trên server).
+  const isClientActorFilter = Boolean(actorSearch.trim()) && parsedActorUserId === undefined;
   const filteredLogs = useMemo(() => {
-    if (!actorSearch.trim()) return logs;
+    if (!isClientActorFilter) return logs;
     const q = actorSearch.toLowerCase().trim();
     return logs.filter(
       (l) =>
         (l.userFullName ?? '').toLowerCase().includes(q) ||
         (l.userEmail ?? '').toLowerCase().includes(q)
     );
-  }, [logs, actorSearch]);
+  }, [logs, actorSearch, isClientActorFilter]);
 
-  // Chỉ số tổng hợp mức lấp đầy: tỷ lệ lấp đầy trung bình, lớp cao nhất, tổng sức chứa và tổng ghi danh.
+  // Chỉ số tổng hợp mức lấp đầy: tỷ lệ lấp đầy trung bình, lớp cao nhất (ẩn khi mọi lớp đều 0%), tổng sức chứa và tổng ghi danh.
   const occupancyMetrics = useMemo(() => {
     if (occupancyList.length === 0) {
       return { avgUtilization: 0, highestClass: '—', totalCapacity: 0, totalEnrolled: 0 };
     }
     const totalCap = occupancyList.reduce((acc, c) => acc + c.capacity, 0);
-    const totalEnr = occupancyList.reduce((acc, c) => acc + Math.min(c.enrolledCount, c.capacity), 0);
+    const totalEnr = occupancyList.reduce((acc, c) => acc + c.enrolledCount, 0);
     const avg = totalCap > 0 ? (totalEnr / totalCap) * 100 : 0;
     const sorted = [...occupancyList].sort((a, b) => b.utilizationRate - a.utilizationRate);
+    const topClass = sorted[0];
 
     return {
       avgUtilization: Math.round(avg * 10) / 10,
-      highestClass: sorted[0]?.className || '—',
+      highestClass: topClass && topClass.utilizationRate > 0 ? topClass.className : '—',
       totalCapacity: totalCap,
       totalEnrolled: totalEnr,
     };
@@ -386,7 +415,31 @@ export function AdminAuditLogsPage() {
   const getDiffFieldLabel = (key: string) => {
     switch (key) {
       case 'id': return 'ID';
+      case 'userId':
+      case 'user_id': return t('Mã tài khoản', 'User ID');
+      case 'memberId':
+      case 'member_id': return t('Mã hội viên', 'Member ID');
+      case 'membershipCode':
+      case 'membership_code': return t('Mã thẻ hội viên', 'Membership code');
+      case 'packageId':
+      case 'package_id': return t('Mã gói tập', 'Package ID');
+      case 'packageName':
+      case 'package_name': return t('Tên gói tập', 'Package name');
+      case 'classId':
+      case 'class_id': return t('Mã lớp học', 'Class ID');
+      case 'className':
+      case 'class_name': return t('Tên lớp học', 'Class name');
+      case 'sessionId':
+      case 'session_id': return t('Mã buổi học', 'Session ID');
+      case 'roomId':
+      case 'room_id': return t('Mã phòng tập', 'Room ID');
+      case 'coachId':
+      case 'coach_id': return t('Mã HLV', 'Coach ID');
       case 'status': return t('Trạng thái', 'Status');
+      case 'paymentStatus':
+      case 'payment_status': return t('Trạng thái thanh toán', 'Payment status');
+      case 'holdStatus':
+      case 'hold_status': return t('Trạng thái bảo lưu', 'Hold status');
       case 'invoiceNumber':
       case 'invoice_number': return t('Số hóa đơn', 'Invoice number');
       case 'orderNumber':
@@ -394,48 +447,156 @@ export function AdminAuditLogsPage() {
       case 'amount':
       case 'totalAmount':
       case 'total_amount': return t('Số tiền', 'Amount');
+      case 'refundAmount':
+      case 'refund_amount': return t('Số tiền hoàn', 'Refund amount');
+      case 'balance': return t('Số dư', 'Balance');
       case 'price': return t('Đơn giá', 'Price');
+      case 'method':
+      case 'paymentMethod':
+      case 'payment_method': return t('Phương thức thanh toán', 'Payment method');
       case 'name': return t('Tên', 'Name');
+      case 'title': return t('Tiêu đề', 'Title');
+      case 'description': return t('Mô tả', 'Description');
       case 'fullName':
       case 'full_name': return t('Họ và tên', 'Full name');
       case 'email': return 'Email';
       case 'phone': return t('Số điện thoại', 'Phone');
       case 'role':
+      case 'roleCode':
+      case 'role_code':
       case 'roleName': return t('Vai trò', 'Role');
+      case 'permission':
+      case 'permissionCode':
+      case 'permission_code': return t('Quyền hạn', 'Permission');
       case 'kycStatus':
       case 'kyc_status': return t('Trạng thái định danh', 'Verification status');
       case 'idCardType':
-      case 'id_card_type': return t('Loại giấy tờ', 'Document type');
+      case 'id_card_type':
+      case 'documentType':
+      case 'document_type': return t('Loại giấy tờ', 'Document type');
+      case 'citizenId':
+      case 'citizen_id':
+      case 'documentNumber':
+      case 'document_number': return t('Số giấy tờ', 'Document number');
+      case 'nationality': return t('Quốc tịch', 'Nationality');
       case 'startDate':
       case 'start_date': return t('Ngày bắt đầu', 'Start date');
       case 'endDate':
       case 'end_date': return t('Ngày kết thúc', 'End date');
+      case 'holdStartDate':
+      case 'hold_start_date': return t('Ngày bắt đầu bảo lưu', 'Hold start date');
+      case 'holdEndDate':
+      case 'hold_end_date': return t('Ngày kết thúc bảo lưu', 'Hold end date');
+      case 'durationDays':
+      case 'duration_days': return t('Thời hạn (ngày)', 'Duration (days)');
+      case 'capacity': return t('Sức chứa', 'Capacity');
+      case 'tier': return t('Hạng gói', 'Tier');
       case 'stock':
       case 'stockQuantity':
       case 'stock_quantity': return t('Tồn kho', 'Stock');
-      case 'shift': return t('Ca trực', 'Shift');
+      case 'shift':
+      case 'targetShift':
+      case 'target_shift': return t('Ca trực', 'Shift');
+      case 'requestType':
+      case 'request_type': return t('Loại yêu cầu', 'Request type');
       case 'reason':
-      case 'rejectionReason': return t('Lý do', 'Reason');
+      case 'holdReason':
+      case 'hold_reason':
+      case 'rejectionReason':
+      case 'rejection_reason':
+      case 'denialReason':
+      case 'denial_reason': return t('Lý do', 'Reason');
+      case 'note':
+      case 'notes':
+      case 'managerNotes':
+      case 'manager_notes': return t('Ghi chú', 'Notes');
       case 'isActive':
       case 'active': return t('Kích hoạt', 'Active');
       case 'fitnessGoal':
       case 'fitness_goal': return t('Mục tiêu tập luyện', 'Fitness goal');
+      case 'gate': return t('Cổng kiểm soát', 'Gate');
+      case 'createdAt':
+      case 'created_at': return t('Thời điểm tạo', 'Created at');
+      case 'updatedAt':
+      case 'updated_at': return t('Thời điểm cập nhật', 'Updated at');
+      case 'deletedAt':
+      case 'deleted_at': return t('Thời điểm xóa', 'Deleted at');
       default: return humanizeCode(key) || key;
     }
   };
 
-  // Định dạng giá trị của một trường khác biệt (rỗng là "—", boolean là Có/Không, object là JSON).
-  const formatDiffFieldValue = (val: unknown) => {
+  // Định dạng giá trị của một trường khác biệt: dịch các mã enum/trạng thái quen thuộc (không rò rỉ CCCD hay snake_case sang EN).
+  const formatDiffFieldValue = (val: unknown, key?: string) => {
     if (val === null || val === undefined || val === '') return '—';
     if (typeof val === 'boolean') return val ? t('Có', 'Yes') : t('Không', 'No');
+    if (typeof val === 'number') {
+      if (key && /^(amount|totalAmount|total_amount|price|refundAmount|refund_amount|balance)$/.test(key)) {
+        return formatPrice(val);
+      }
+      return String(val);
+    }
     if (typeof val === 'object') return JSON.stringify(val);
-    return String(val);
+    const raw = String(val).trim();
+    const normalized = raw.toLowerCase();
+    switch (normalized) {
+      case 'cccd': return t('CCCD', 'Identity card');
+      case 'passport': return t('Hộ chiếu', 'Passport');
+      case 'pending_payment': return t('Chờ thanh toán', 'Pending payment');
+      case 'pending_approval': return t('Chờ duyệt', 'Pending approval');
+      case 'pending': return t('Chờ duyệt', 'Pending');
+      case 'active': return t('Đang hoạt động', 'Active');
+      case 'inactive': return t('Ngưng hoạt động', 'Inactive');
+      case 'suspended': return t('Tạm khóa', 'Suspended');
+      case 'approved': return t('Đã duyệt', 'Approved');
+      case 'rejected': return t('Đã từ chối', 'Rejected');
+      case 'cancelled':
+      case 'canceled': return t('Đã hủy', 'Cancelled');
+      case 'completed': return t('Hoàn tất', 'Completed');
+      case 'expired': return t('Hết hạn', 'Expired');
+      case 'frozen':
+      case 'on_hold':
+      case 'hold': return t('Đang bảo lưu', 'On hold');
+      case 'paid': return t('Đã thanh toán', 'Paid');
+      case 'unpaid': return t('Chưa thanh toán', 'Unpaid');
+      case 'failed': return t('Thất bại', 'Failed');
+      case 'refunded': return t('Đã hoàn tiền', 'Refunded');
+      case 'granted': return t('Cho phép', 'Granted');
+      case 'denied': return t('Từ chối', 'Denied');
+      case 'cash': return t('Tiền mặt', 'Cash');
+      case 'bank_transfer': return t('Chuyển khoản', 'Bank transfer');
+      case 'online_wallet': return t('Ví / Trực tuyến', 'Wallet / Online');
+      case 'pos': return t('Thẻ / POS', 'Card / POS');
+      case 'ready_for_pickup': return t('Sẵn sàng nhận tại quầy', 'Ready for pickup');
+      case 'lose_weight': return t('Giảm cân', 'Weight loss');
+      case 'gain_muscle': return t('Tăng cơ', 'Muscle gain');
+      case 'maintain': return t('Duy trì vóc dáng', 'Maintenance');
+      case 'general_fitness': return t('Thể lực tổng quát', 'General fitness');
+      case 'member': return t('Hội viên', 'Member');
+      case 'staff': return t('Lễ tân', 'Staff');
+      case 'receptionist': return t('Lễ tân', 'Receptionist');
+      case 'coach': return t('Huấn luyện viên', 'Coach');
+      case 'manager':
+      case 'center_manager': return t('Quản lý', 'Manager');
+      case 'admin': return t('Quản trị viên', 'Administrator');
+      case 'leave': return t('Xin nghỉ phép', 'Leave');
+      case 'shift_exchange': return t('Đổi ca trực', 'Shift exchange');
+      case 'schedule_change': return t('Đổi lịch dạy', 'Schedule change');
+      case 'other': return t('Khác', 'Other');
+      default: return raw;
+    }
   };
 
   return (
     <div data-i18n-managed className="audit-page portal-container">
       <PageHeader
         title={t("Nhật ký & lấp đầy lớp")}
+        actions={
+          <RefreshButton
+            label={activeTab === 'audit' ? t('Làm mới nhật ký', 'Refresh audit log') : t('Làm mới thống kê lấp đầy', 'Refresh occupancy')}
+            disabled={activeTab === 'audit' ? loadingLogs : loadingOccupancy}
+            onClick={() => activeTab === 'audit' ? setLogsReload((n) => n + 1) : setOccupancyReload((n) => n + 1)}
+          />
+        }
       />
 
       {/* Các tab điều hướng */}
@@ -463,20 +624,56 @@ export function AdminAuditLogsPage() {
           {/* Thanh bộ lọc */}
           <div className="portal-card audit-filter-bar">
             <div className="audit-filter-group" style={{ flex: 1.2, minWidth: '220px' }}>
-              <span className="portal-label filter-label">{t("Tìm kiếm Người thực hiện")}</span>
+              <label htmlFor="audit-actor-search" className="portal-label filter-label">{t("Tìm kiếm Người thực hiện", "Search actor")}</label>
               <input
+                id="audit-actor-search"
                 type="text"
                 className="portal-input"
-                placeholder={t("Nhập tên hoặc email...")}
+                placeholder={t("Tên, email (trang này) hoặc #ID...", "Name, email (this page) or #ID...")}
                 value={actorSearch}
-                onChange={(e) => setActorSearch(e.target.value)}
-                aria-label={t("Tìm kiếm người thực hiện")}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  const prevId = /^#?(\d+)$/.exec(actorSearch.trim())?.[1];
+                  const nextId = /^#?(\d+)$/.exec(next.trim())?.[1];
+                  setActorSearch(next);
+                  if (prevId !== nextId) setCurrentPage(0);
+                }}
+                aria-label={t("Tìm kiếm người thực hiện", "Search actor")}
+              />
+            </div>
+
+            <div className="audit-filter-group" style={{ minWidth: '165px' }}>
+              <label htmlFor="audit-from-date" className="portal-label filter-label">{t("Từ ngày", "From")}</label>
+              <DatePicker
+                id="audit-from-date"
+                value={fromDate}
+                max={toDate || undefined}
+                aria-label={t("Từ ngày", "From date")}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setCurrentPage(0);
+                }}
+              />
+            </div>
+
+            <div className="audit-filter-group" style={{ minWidth: '165px' }}>
+              <label htmlFor="audit-to-date" className="portal-label filter-label">{t("Đến ngày", "To")}</label>
+              <DatePicker
+                id="audit-to-date"
+                value={toDate}
+                min={fromDate || undefined}
+                aria-label={t("Đến ngày", "To date")}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setCurrentPage(0);
+                }}
               />
             </div>
 
             <div className="audit-filter-group" style={{ minWidth: '160px' }}>
-              <span className="portal-label filter-label">{t("Hành động", "Action")}</span>
+              <label htmlFor="audit-action-filter" className="portal-label filter-label">{t("Hành động", "Action")}</label>
               <Select
+                id="audit-action-filter"
                 className="portal-select"
                 value={selectedAction}
                 onChange={(e) => {
@@ -503,15 +700,14 @@ export function AdminAuditLogsPage() {
                 <option value="PACKAGE_CREATE">{t("Tạo gói tập", "Create package")}</option>
                 <option value="PAYMENT_REFUND">{t("Hoàn tiền", "Refund payment")}</option>
                 <option value="COUNTER_PAYMENT">{t("Thu tiền tại quầy", "Counter payment")}</option>
-                <option value="COMPLETE_ORDER">{t("Hoàn tất đơn hàng", "Complete order")}</option>
-                <option value="CANCEL_ORDER">{t("Hủy đơn hàng", "Cancel order")}</option>
                 <option value="USER_CLEANUP_INACTIVE">{t("Dọn dẹp tự động", "Auto cleanup")}</option>
               </Select>
             </div>
 
             <div className="audit-filter-group" style={{ minWidth: '180px' }}>
-              <span className="portal-label filter-label">{t("Đối tượng", "Entity")}</span>
+              <label htmlFor="audit-entity-filter" className="portal-label filter-label">{t("Đối tượng", "Entity")}</label>
               <Select
+                id="audit-entity-filter"
                 className="portal-select"
                 value={selectedEntityType}
                 onChange={(e) => {
@@ -531,8 +727,6 @@ export function AdminAuditLogsPage() {
                 <option value="classes">{t("Lớp học", "Classes")}</option>
                 <option value="class_sessions">{t("Buổi học", "Class sessions")}</option>
                 <option value="coach_bookings">{t("Lịch hẹn HLV 1:1", "PT bookings")}</option>
-                <option value="products">{t("Sản phẩm", "Products")}</option>
-                <option value="product_orders">{t("Đơn hàng sản phẩm", "Product orders")}</option>
                 <option value="cancellation_requests">{t("Yêu cầu hủy", "Cancellations")}</option>
                 <option value="support_requests">{t("Phiếu hỗ trợ", "Support tickets")}</option>
                 <option value="users">{t("Tài khoản", "Accounts")}</option>
@@ -549,92 +743,110 @@ export function AdminAuditLogsPage() {
             ) : logsError ? (
               <div data-i18n-managed className="portal-alert" role="alert">
                 <span>{t(logsError)}</span>
-                <button type="button" className="btn-secondary btn-sm" onClick={() => setLogsReload((n) => n + 1)}>{t("Thử lại")}</button>
+                {!dateRangeInvalid && (
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => setLogsReload((n) => n + 1)}>{t("Thử lại")}</button>
+                )}
               </div>
             ) : filteredLogs.length === 0 ? (
-              <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 0', color: 'var(--portal-muted)' }}>
-                <p>{t("Không tìm thấy bản ghi nhật ký kiểm toán nào phù hợp.")}</p>
+              <div data-i18n-managed style={{ textAlign: 'center', padding: '40px 16px', color: 'var(--portal-muted)' }}>
+                <p>
+                  {isClientActorFilter && logs.length > 0
+                    ? t('Không có bản ghi nào trên trang hiện tại khớp tên/email này. Nhập #ID để lọc toàn hệ thống.', 'No rows on this page match that name or email. Enter #ID to filter server-wide.')
+                    : t("Không tìm thấy bản ghi nhật ký kiểm toán nào phù hợp.")}
+                </p>
               </div>
             ) : (
-              <table data-i18n-managed className="portal-table audit-table" aria-label={t("Bảng nhật ký kiểm toán")}>
-                <thead>
-                  <tr>
-                    <th>{t("Thời gian")}</th>
-                    <th>{t("Người thực hiện")}</th>
-                    <th>{t("Hành động")}</th>
-                    <th>{t("Đối tượng")}</th>
-                    <th>{t("Bản ghi ID")}</th>
-                    <th style={{ textAlign: 'right' }}>{t("Chi tiết thay đổi")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.map((log) => (
-                    <tr data-i18n-managed key={log.id}>
-                      <td style={{ fontSize: '0.82rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-muted)' }}>
-                        {log.createdAt ? formatCenterDateTime(log.createdAt) : '—'}
-                      </td>
-                      <td>
-                        <div className="actor-meta">
-                          <span className="actor-name">{log.userFullName || t('Hệ thống', 'System')}</span>
-                          <span className="actor-email">
-                            {log.userEmail ||
-                              (log.userId != null
-                                ? `${t('Mã người dùng', 'User')} #${log.userId}`
-                                : t('Tác vụ tự động', 'Automated task'))}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={`action-badge ${getActionBadgeClass(log.action)}`}>
-                          {getActionLabel(log.action)}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--portal-paper)' }}>
-                          {getEntityLabel(log.entityType)}
-                        </span>
-                      </td>
-                      <td>
-                        <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>#{log.entityId}</span>
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <button
-                          type="button"
-                          className="btn-secondary btn-sm btn-view-diff"
-                          onClick={() => setDiffLog(log)}
-                          aria-label={t(`Xem diff bản ghi #${log.id}`, `View record diff #${log.id}`)}
-                        >
-                          {t("Xem thay đổi", "View changes")}</button>
-                      </td>
+              <div className="portal-table-wrapper">
+                <table data-i18n-managed className="portal-table audit-table" aria-label={t("Bảng nhật ký kiểm toán")}>
+                  <thead>
+                    <tr>
+                      <th>{t("Thời gian")}</th>
+                      <th>{t("Người thực hiện")}</th>
+                      <th>{t("Hành động")}</th>
+                      <th>{t("Đối tượng")}</th>
+                      <th>{t("Bản ghi ID")}</th>
+                      <th style={{ textAlign: 'right' }}>{t("Chi tiết thay đổi")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredLogs.map((log) => (
+                      <tr data-i18n-managed key={log.id}>
+                        <td style={{ fontSize: '0.82rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-muted)' }}>
+                          {log.createdAt ? formatCenterDateTime(log.createdAt) : '—'}
+                        </td>
+                        <td>
+                          <div className="actor-meta">
+                            <span className="actor-name">{log.userFullName || t('Hệ thống', 'System')}</span>
+                            <span className="actor-email">
+                              {log.userEmail ||
+                                (log.userId != null
+                                  ? `${t('Mã người dùng', 'User')} #${log.userId}`
+                                  : t('Tác vụ tự động', 'Automated task'))}
+                            </span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`action-badge ${getActionBadgeClass(log.action)}`}>
+                            {getActionLabel(log.action)}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontWeight: 600, fontSize: '0.86rem', color: 'var(--portal-paper)' }}>
+                            {getEntityLabel(log.entityType)}
+                          </span>
+                        </td>
+                        <td>
+                          <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>#{log.entityId}</span>
+                        </td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm btn-view-diff"
+                            onClick={() => { setShowRawDiffJson(false); setDiffLog(log); }}
+                            aria-label={t(`Xem diff bản ghi #${log.id}`, `View record diff #${log.id}`)}
+                          >
+                            {t("Xem thay đổi", "View changes")}</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
 
-            {/* Điều khiển phân trang */}
-            <div className="audit-pagination-bar">
-              <span>
-                {t("Hiển thị trang ")}<strong>{currentPage + 1}</strong> / <strong>{totalPages}</strong> ({totalElements}{t(" bản ghi)")}</span>
-              <div className="pagination-controls">
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm btn-page-nav"
-                  disabled={currentPage <= 0}
-                  onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
-                  aria-label={t("Trang trước")}
-                >
-                  {t("Trang trước")}</button>
-                <button
-                  type="button"
-                  className="btn-secondary btn-sm btn-page-nav"
-                  disabled={currentPage >= totalPages - 1}
-                  onClick={() => setCurrentPage((p) => p + 1)}
-                  aria-label={t("Trang sau →")}
-                >
-                  {t("Trang sau →")}</button>
+            {/* Điều khiển phân trang: ẩn khi đang tải, lỗi hoặc không có kết quả */}
+            {!loadingLogs && !logsError && totalElements > 0 && (
+              <div className="audit-pagination-bar">
+                <span>
+                  {isClientActorFilter ? (
+                    t(
+                      `Khớp ${filteredLogs.length}/${logs.length} dòng trên trang ${currentPage + 1}/${totalPages} (tổng ${totalElements} bản ghi · nhập #ID để lọc toàn hệ thống)`,
+                      `Matched ${filteredLogs.length}/${logs.length} rows on page ${currentPage + 1}/${totalPages} (${totalElements} total · enter #ID to filter server-wide)`,
+                    )
+                  ) : (
+                    <>{t("Hiển thị trang ")}<strong>{currentPage + 1}</strong> / <strong>{totalPages}</strong> ({totalElements}{t(" bản ghi)")}</>
+                  )}
+                </span>
+                <div className="pagination-controls">
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm btn-page-nav"
+                    disabled={currentPage <= 0}
+                    onClick={() => setCurrentPage((p) => Math.max(0, p - 1))}
+                    aria-label={t("Trang trước")}
+                  >
+                    {t("Trang trước")}</button>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm btn-page-nav"
+                    disabled={currentPage >= totalPages - 1}
+                    onClick={() => setCurrentPage((p) => p + 1)}
+                    aria-label={t("Trang sau →")}
+                  >
+                    {t("Trang sau →")}</button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </section>
       ) : (
@@ -772,7 +984,7 @@ export function AdminAuditLogsPage() {
                         return (
                           <div key={key} className={`diff-kv-row${changed ? ' is-changed' : ''}`}>
                             <dt>{getDiffFieldLabel(key)}</dt>
-                            <dd>{formatDiffFieldValue(oldObj[key])}</dd>
+                            <dd>{formatDiffFieldValue(oldObj[key], key)}</dd>
                           </div>
                         );
                       })}
@@ -797,7 +1009,7 @@ export function AdminAuditLogsPage() {
                         return (
                           <div key={key} className={`diff-kv-row${changed ? ' is-changed' : ''}`}>
                             <dt>{getDiffFieldLabel(key)}</dt>
-                            <dd>{formatDiffFieldValue(newObj[key])}</dd>
+                            <dd>{formatDiffFieldValue(newObj[key], key)}</dd>
                           </div>
                         );
                       })}
@@ -809,16 +1021,22 @@ export function AdminAuditLogsPage() {
               </div>
 
               {(oldObj || newObj) && (diffLog.oldValue != null || diffLog.newValue != null) && (
-                <details className="diff-raw-details">
+                <details
+                  className="diff-raw-details"
+                  open={showRawDiffJson}
+                  onToggle={(e) => setShowRawDiffJson(e.currentTarget.open)}
+                >
                   <summary>{t('Xem dữ liệu JSON gốc', 'View raw JSON payload')}</summary>
-                  <div className="diff-grid-comparison diff-raw-grid">
-                    <pre className="diff-code-content">
-                      {diffLog.oldValue ? formatJsonPretty(diffLog.oldValue) : 'null'}
-                    </pre>
-                    <pre className="diff-code-content">
-                      {diffLog.newValue ? formatJsonPretty(diffLog.newValue) : 'null'}
-                    </pre>
-                  </div>
+                  {showRawDiffJson && (
+                    <div className="diff-grid-comparison diff-raw-grid">
+                      <pre className="diff-code-content">
+                        {diffLog.oldValue ? formatJsonPretty(diffLog.oldValue) : 'null'}
+                      </pre>
+                      <pre className="diff-code-content">
+                        {diffLog.newValue ? formatJsonPretty(diffLog.newValue) : 'null'}
+                      </pre>
+                    </div>
+                  )}
                 </details>
               )}
             </div>

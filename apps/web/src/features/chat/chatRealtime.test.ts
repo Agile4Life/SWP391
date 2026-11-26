@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { subscribeChat } from './chatRealtime';
-import { apiFetch } from '../../shared/api/client';
+import { ApiError, apiFetch } from '../../shared/api/client';
 
 const fake = vi.hoisted(() => {
   const on = vi.fn(); const subscribe = vi.fn();
   return { on, subscribe, setAuth: vi.fn(), removeAllChannels: vi.fn(), disconnect: vi.fn(), channel: vi.fn(), createClient: vi.fn() };
 });
-vi.mock('../../shared/api/client', () => ({ apiFetch: vi.fn() }));
+vi.mock('../../shared/api/client', async importOriginal => ({
+  ...(await importOriginal<typeof import('../../shared/api/client')>()),
+  apiFetch: vi.fn(),
+}));
 vi.mock('@supabase/supabase-js', () => ({ createClient: fake.createClient }));
 const session = { enabled: true, userId: 42, url: 'https://test.supabase.co', publishableKey: 'sb_publishable_test', topic: 'scms:chat:42', token: 'signed-token', expiresAt: '2026-10-29T01:05:00Z' };
 // Biến/hàm phụ để ghi lại kết quả trong kiểm thử.
@@ -100,4 +103,37 @@ it('keeps the scoped token when the installed SDK refreshes auth on connect or h
   await vi.advanceTimersByTimeAsync(240_000);
   await realClient!.realtime.setAuth();
   expect(realClient!.realtime.accessTokenValue).toBe('renewed-scoped-token');
+});
+
+it('P2-FE-80: stops reconnecting and polling on permanent 401/403/404 ApiError responses', async () => {
+  for (const statusCode of [401, 403, 404] as const) {
+    vi.clearAllMocks();
+    vi.mocked(apiFetch).mockRejectedValue(new ApiError('Denied', statusCode));
+    const changed = vi.fn(), status = vi.fn();
+    dispose = subscribeChat(changed, status);
+    await settle();
+    expect(status).toHaveBeenLastCalledWith('disabled');
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+
+    await vi.advanceTimersByTimeAsync(120_000);
+    window.dispatchEvent(new Event('online'));
+    window.dispatchEvent(new Event('focus'));
+    await settle();
+
+    expect(apiFetch).toHaveBeenCalledTimes(1);
+    expect(changed).not.toHaveBeenCalled();
+    expect(fake.createClient).not.toHaveBeenCalled();
+    dispose();
+  }
+});
+
+it('P2-FE-80: continues exponential backoff retry on transient 500 ApiError', async () => {
+  vi.mocked(apiFetch).mockRejectedValueOnce(new ApiError('Server error', 500)).mockResolvedValueOnce(session);
+  const status = vi.fn();
+  dispose = subscribeChat(vi.fn(), status);
+  await settle();
+  expect(status).toHaveBeenLastCalledWith('reconnecting');
+  await vi.advanceTimersByTimeAsync(3000);
+  expect(apiFetch).toHaveBeenCalledTimes(2);
+  expect(fake.channel).toHaveBeenCalledTimes(1);
 });

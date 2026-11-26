@@ -12,3 +12,9 @@ export function LegacyClassesRedirect() {
   const role = getCurrentUser()?.role;
   return <Navigate to={role === 'MANAGER' ? '/manager/classes' : '/staff/reception'} replace />;
 }
+
+/** Chuyển hướng liên kết lễ tân đã ngừng (`/staff/orders`, `/staff/pt-attendance`) thẳng về trang đích theo vai trò. */
+export function LegacyStaffRouteRedirect() {
+  const role = getCurrentUser()?.role;
+  return <Navigate to={role === 'MANAGER' ? '/manager/reports' : '/staff/reception'} replace />;
+}

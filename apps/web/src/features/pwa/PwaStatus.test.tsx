@@ -64,3 +64,21 @@ it('retains an install event received on the public page before the portal mount
   await act(async () => (host.querySelector('button') as HTMLButtonElement).click());
   expect(prompt).toHaveBeenCalledOnce();
 });
+
+it('shows desktop install instructions on desktop browsers and Android instructions on Android (P3-FE-05)', async () => {
+  vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) {
+    this.setAttribute('open', '');
+  });
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0.0.0');
+  await act(async () => root.render(<PwaStatus mode="install" />));
+  await act(async () => host.querySelector<HTMLButtonElement>('.pwa-install-button')!.click());
+  expect(host.textContent).toContain('Chrome hoặc Edge trên máy tính');
+  expect(host.textContent).not.toContain('Chrome trên Android');
+
+  await act(async () => root.unmount());
+  root = createRoot(host);
+  vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Mozilla/5.0 (Linux; Android 14; Pixel 8) Chrome/131.0.0.0 Mobile');
+  await act(async () => root.render(<PwaStatus mode="install" />));
+  await act(async () => host.querySelector<HTMLButtonElement>('.pwa-install-button')!.click());
+  expect(host.textContent).toContain('Chrome trên Android');
+});

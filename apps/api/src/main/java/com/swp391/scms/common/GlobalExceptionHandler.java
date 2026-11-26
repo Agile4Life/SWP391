@@ -6,19 +6,28 @@ import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.mapping.PropertyReferenceException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.swp391.scms.common.i18n.MessageService;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -110,22 +119,31 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
+    /** Giải mã chuỗi thông báo validation có dạng "{message.key}". */
+    private String resolveValidationMessage(String rawMessage) {
+        if (rawMessage != null && rawMessage.startsWith("{") && rawMessage.endsWith("}")) {
+            String key = rawMessage.substring(1, rawMessage.length() - 1);
+            return resolveMessage(key, rawMessage);
+        }
+        return rawMessage;
+    }
+
     /**
-     * Lỗi validate @Valid ở request body (HTTP 400): gom lỗi từng trường thành details để form hiển thị ngay
-     * dưới ô nhập.
-     *
-     * Xử lý lỗi bean validation (@Valid trên request body).
+     * Lỗi validate @Valid ở request body (HTTP 400): gom cả lỗi từng trường lẫn lỗi cấp đối tượng (global errors)
+     * theo thứ tự xuất hiện thành details để form hiển thị ngay dưới ô nhập.
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Object>> handleValidation(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
+        Map<String, String> errors = new LinkedHashMap<>();
         ex.getBindingResult().getFieldErrors().forEach(err -> {
-            String defaultMsg = err.getDefaultMessage();
-            if (defaultMsg != null && defaultMsg.startsWith("{") && defaultMsg.endsWith("}")) {
-                String key = defaultMsg.substring(1, defaultMsg.length() - 1);
-                defaultMsg = resolveMessage(key, defaultMsg);
-            }
-            errors.put(err.getField(), defaultMsg);
+            String msg = resolveValidationMessage(err.getDefaultMessage());
+            errors.merge(err.getField(), msg != null ? msg : "",
+                    (existing, next) -> existing.equals(next) ? existing : existing + "; " + next);
+        });
+        ex.getBindingResult().getGlobalErrors().forEach(err -> {
+            String msg = resolveValidationMessage(err.getDefaultMessage());
+            errors.merge(err.getObjectName(), msg != null ? msg : "",
+                    (existing, next) -> existing.equals(next) ? existing : existing + "; " + next);
         });
 
         ApiResponse<Object> response = ApiResponse.error(
@@ -138,16 +156,20 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Lỗi validate tham số đường dẫn/query (@Validated, HTTP 400): gom theo tên tham số.
-     *
-     * Xử lý lỗi vi phạm ràng buộc trên tham số truy vấn hoặc entity.
+     * Lỗi validate tham số đường dẫn/query (@Validated, HTTP 400): lược bỏ tiền tố tên method/arg Java và dịch
+     * thông báo {key} nếu có.
      */
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Object>> handleConstraintViolation(ConstraintViolationException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getConstraintViolations().forEach(cv ->
-                errors.put(cv.getPropertyPath().toString(), cv.getMessage())
-        );
+        Map<String, String> errors = new LinkedHashMap<>();
+        ex.getConstraintViolations().forEach(cv -> {
+            String rawPath = cv.getPropertyPath() != null ? cv.getPropertyPath().toString() : "parameter";
+            int lastDot = rawPath.lastIndexOf('.');
+            String field = lastDot >= 0 && lastDot + 1 < rawPath.length() ? rawPath.substring(lastDot + 1) : rawPath;
+            String msg = resolveValidationMessage(cv.getMessage());
+            errors.merge(field, msg != null ? msg : "",
+                    (existing, next) -> existing.equals(next) ? existing : existing + "; " + next);
+        });
 
         ApiResponse<Object> response = ApiResponse.error(
                 HttpStatus.BAD_REQUEST.value(),
@@ -191,18 +213,16 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * IllegalArgumentException/IllegalStateException lọt ra từ code: trả HTTP 400 và dùng nguyên nội dung
-     * exception làm thông báo (nội dung này không được dịch, nên code nghiệp vụ nên ném AppException thay thế).
-     *
-     * Xử lý đối số không hợp lệ và trạng thái không hợp lệ.
+     * IllegalArgumentException lọt ra từ code: ghi log chi tiết ở server và chỉ trả thông báo lỗi đã dịch chung
+     * cho client (IllegalStateException rơi về lưới HTTP 500 để không lộ trạng thái nội bộ).
      */
-    @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})
-    public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(RuntimeException ex) {
-        log.warn("Illegal argument / state: {}", ex.getMessage());
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
+        log.warn("Illegal argument: {}", ex.getMessage());
         ApiResponse<Object> response = ApiResponse.error(
                 HttpStatus.BAD_REQUEST.value(),
                 "BAD_REQUEST",
-                ex.getMessage()
+                resolveMessage("error.bad_request", "error.bad_request")
         );
         return ResponseEntity.badRequest().body(response);
     }
@@ -269,9 +289,15 @@ public class GlobalExceptionHandler {
                                 resolveMessage("error.scheduling.session_conflict", "invariant.schedule_conflict"))
                 );
             }
-            if (normalizedRootMsg.contains("trg_enrollments_check_membership") || normalizedRootMsg.contains("trg_checkins_check_membership")
-                    || normalizedRootMsg.contains("học viên không có gói thành viên còn hiệu lực để đăng ký lớp.")
+            if (normalizedRootMsg.contains("trg_checkins_check_membership")
                     || normalizedRootMsg.contains("học viên không có gói thành viên còn hiệu lực để check-in.")) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                        ApiResponse.error(HttpStatus.FORBIDDEN.value(), "MEMBERSHIP_INACTIVE_OR_EXPIRED",
+                                resolveMessage("invariant.membership_inactive_or_expired", "invariant.membership_inactive_or_expired"))
+                );
+            }
+            if (normalizedRootMsg.contains("trg_enrollments_check_membership")
+                    || normalizedRootMsg.contains("học viên không có gói thành viên còn hiệu lực để đăng ký lớp.")) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
                         ApiResponse.error(HttpStatus.FORBIDDEN.value(), "MEMBERSHIP_INACTIVE_OR_EXPIRED",
                                 resolveMessage("error.scheduling.membership_expired_or_inactive", "invariant.membership_inactive_or_expired"))
@@ -284,13 +310,23 @@ public class GlobalExceptionHandler {
                                 resolveMessage("error.shop.product_out_of_stock", "error.shop.product_out_of_stock"))
                 );
             }
-            if (normalizedRootMsg.contains("uq_users_phone")) {
+            if (normalizedRootMsg.contains("uq_users_phone") || normalizedRootMsg.contains("key (phone)=")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "PHONE_EXISTS",
                                 resolveMessage("users.phone_exists", "users.phone_exists"))
                 );
             }
-            if (normalizedRootMsg.contains("users_email_key") || normalizedRootMsg.contains("uq_users_email")) {
+            if (normalizedRootMsg.contains("uq_users_username")
+                    || normalizedRootMsg.contains("users_username_key")
+                    || normalizedRootMsg.contains("key (username)=")) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                        ApiResponse.error(HttpStatus.CONFLICT.value(), "USERNAME_EXISTS",
+                                resolveMessage("auth.register.username_exists", "auth.register.username_exists"))
+                );
+            }
+            if (normalizedRootMsg.contains("users_email_key")
+                    || normalizedRootMsg.contains("uq_users_email")
+                    || normalizedRootMsg.contains("key (email)=")) {
                 return ResponseEntity.status(HttpStatus.CONFLICT).body(
                         ApiResponse.error(HttpStatus.CONFLICT.value(), "EMAIL_EXISTS",
                                 resolveMessage("users.email_exists", "users.email_exists"))
@@ -336,18 +372,110 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Xử lý tham số request thiếu hoặc sai kiểu.
+     * Xử lý tham số request thiếu, sai kiểu hoặc tên thuộc tính sắp xếp không hợp lệ (HTTP 400).
      */
-    @ExceptionHandler({org.springframework.web.bind.MissingServletRequestParameterException.class,
-            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class})
-    /** Tham số đường dẫn/query sai kiểu hoặc thiếu (HTTP 400). */
+    @ExceptionHandler({ServletRequestBindingException.class,
+            MethodArgumentTypeMismatchException.class,
+            PropertyReferenceException.class})
     public ResponseEntity<ApiResponse<Object>> handleBadParameter(Exception ex) {
+        log.warn("Invalid request parameter ({}): {}", ex.getClass().getSimpleName(), ex.getMessage());
         ApiResponse<Object> response = ApiResponse.error(
                 HttpStatus.BAD_REQUEST.value(),
                 "INVALID_REQUEST_PARAMETER",
                 resolveMessage("error.invalid_parameter", "error.invalid_parameter")
         );
         return ResponseEntity.badRequest().body(response);
+    }
+
+    /** Lỗi validation tham số controller theo chuẩn Spring Framework 6 (HTTP 400). */
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleMethodValidation(HandlerMethodValidationException ex) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        ex.getParameterValidationResults().forEach(result -> {
+            String paramName = result.getMethodParameter().getParameterName();
+            String key = paramName != null ? paramName : "parameter";
+            result.getResolvableErrors().forEach(err -> {
+                String msg = resolveValidationMessage(err.getDefaultMessage());
+                errors.merge(key, msg != null ? msg : "",
+                        (existing, next) -> existing.equals(next) ? existing : existing + "; " + next);
+            });
+        });
+        ApiResponse<Object> response = ApiResponse.error(
+                HttpStatus.BAD_REQUEST.value(),
+                "VALIDATION_ERROR",
+                resolveMessage("error.validation", "error.validation"),
+                errors.isEmpty() ? null : errors
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /** Tệp tải lên vượt quá giới hạn dung lượng cấu hình (HTTP 413). */
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    public ResponseEntity<ApiResponse<Object>> handleMaxUploadSize(MaxUploadSizeExceededException ex) {
+        log.warn("Upload payload too large: {}", ex.getMessage());
+        ApiResponse<Object> response = ApiResponse.error(
+                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                "PAYLOAD_TOO_LARGE",
+                resolveMessage("error.bad_request", "error.bad_request")
+        );
+        return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body(response);
+    }
+
+    /** Request multipart sai định dạng hoặc hỏng (HTTP 400). */
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ApiResponse<Object>> handleMultipart(MultipartException ex) {
+        log.warn("Invalid multipart request: {}", ex.getMessage());
+        ApiResponse<Object> response = ApiResponse.error(
+                HttpStatus.BAD_REQUEST.value(),
+                "BAD_REQUEST",
+                resolveMessage("error.bad_request", "error.bad_request")
+        );
+        return ResponseEntity.badRequest().body(response);
+    }
+
+    /** Content-Type không được hỗ trợ (HTTP 415). */
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ApiResponse<Object>> handleMediaTypeNotSupported(HttpMediaTypeNotSupportedException ex) {
+        ApiResponse<Object> response = ApiResponse.error(
+                HttpStatus.UNSUPPORTED_MEDIA_TYPE.value(),
+                "UNSUPPORTED_MEDIA_TYPE",
+                resolveMessage("error.bad_request", "error.bad_request")
+        );
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body(response);
+    }
+
+    /** Header Accept không phù hợp với định dạng phản hồi (HTTP 406). */
+    @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
+    public ResponseEntity<ApiResponse<Object>> handleMediaTypeNotAcceptable(HttpMediaTypeNotAcceptableException ex) {
+        ApiResponse<Object> response = ApiResponse.error(
+                HttpStatus.NOT_ACCEPTABLE.value(),
+                "NOT_ACCEPTABLE",
+                resolveMessage("error.bad_request", "error.bad_request")
+        );
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(response);
+    }
+
+    /** Giữ nguyên mã HTTP của ResponseStatusException thay vì rơi về 500. */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiResponse<Object>> handleResponseStatus(ResponseStatusException ex) {
+        int codeValue = ex.getStatusCode().value();
+        HttpStatus resolved = HttpStatus.resolve(codeValue);
+        String errorCode = resolved != null ? resolved.name() : "HTTP_" + codeValue;
+        String messageKey = switch (codeValue) {
+            case 401 -> "error.unauthorized";
+            case 403 -> "error.forbidden";
+            case 404 -> "error.resource_not_found";
+            case 409 -> "error.conflict";
+            case 429 -> "error.too_many_requests";
+            case 503 -> "error.service_unavailable";
+            default -> codeValue >= 500 ? "error.internal" : "error.bad_request";
+        };
+        ApiResponse<Object> response = ApiResponse.error(
+                codeValue,
+                errorCode,
+                resolveMessage(messageKey, messageKey)
+        );
+        return ResponseEntity.status(ex.getStatusCode()).body(response);
     }
 
     /**

@@ -11,6 +11,7 @@ export interface PopoverPlacement {
 export function popoverPlacement(trigger: HTMLElement, width: number, height: number): PopoverPlacement {
   const rect = trigger.getBoundingClientRect();
   const dialog = trigger.closest('dialog')?.getBoundingClientRect();
+  const left = dialog ? Math.max(dialog.left, 0) : 0;
   const top = dialog ? Math.max(dialog.top, 0) : 0;
   const bottom = dialog ? Math.min(dialog.bottom, window.innerHeight) : window.innerHeight;
   const right = dialog ? Math.min(dialog.right, window.innerWidth) : window.innerWidth;
@@ -18,6 +19,6 @@ export function popoverPlacement(trigger: HTMLElement, width: number, height: nu
   const above = rect.top - top - 12;
   return {
     v: below < height && above > below ? 'up' : 'down',
-    h: rect.left + width > right - 8 && rect.right - width >= 8 ? 'right' : 'left',
+    h: rect.left + width > right - 8 && rect.right - width >= left + 8 ? 'right' : 'left',
   };
 }

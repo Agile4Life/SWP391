@@ -2,9 +2,12 @@ package com.swp391.scms.scheduling;
 
 import com.swp391.scms.common.ApiResponse;
 import com.swp391.scms.common.i18n.MessageService;
+import com.swp391.scms.finance.dto.PaymentDto;
 import com.swp391.scms.scheduling.dto.EnrollmentResponses.EnrollmentDto;
 import com.swp391.scms.scheduling.dto.EnrollmentResponses.QuotaDto;
 import com.swp391.scms.scheduling.dto.EnrollmentResponses.CourseCheckoutDto;
+import com.swp391.scms.scheduling.dto.EnrollmentResponses.UnpaidCourseEnrollmentDto;
+import com.swp391.scms.scheduling.dto.SchedulingRequests.ConfirmCoursePaymentRequest;
 import com.swp391.scms.scheduling.dto.SchedulingRequests.CourseCheckoutRequest;
 import com.swp391.scms.scheduling.service.EnrollmentService;
 import com.swp391.scms.security.AuthenticatedPrincipal;
@@ -132,5 +135,31 @@ public class EnrollmentController {
     @PreAuthorize("hasRole('MEMBER')")
     public ApiResponse<List<EnrollmentDto>> myCourseEnrollments(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("scheduling.enrollment.list"), service.getMyCourseEnrollments(principal));
+    }
+
+    /** GET /enrollments/unpaid: danh sách khoản học phí khóa học chờ thanh toán tại quầy. */
+    @Operation(summary = "List course enrollments with pending counter tuition payments (front desk)")
+    @GetMapping("/enrollments/unpaid")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER')")
+    public ApiResponse<List<UnpaidCourseEnrollmentDto>> unpaidCourseEnrollments() {
+        return ApiResponse.ok(msg("scheduling.enrollment.unpaid_list"), service.listUnpaidCourseEnrollments());
+    }
+
+    /** POST /enrollments/{id}/confirm-payment: quầy lễ tân xác nhận đã thu học phí khóa học. */
+    @Operation(summary = "Confirm cash or bank transfer tuition payment for a course enrollment (front desk)")
+    @PostMapping("/enrollments/{id}/confirm-payment")
+    @PreAuthorize("hasAnyRole('RECEPTIONIST', 'CENTER_MANAGER')")
+    public ApiResponse<PaymentDto> confirmCoursePayment(
+            @AuthenticationPrincipal AuthenticatedPrincipal principal,
+            @PathVariable Long id,
+            @RequestParam(value = "method", required = false) String methodParam,
+            @RequestBody(required = false) ConfirmCoursePaymentRequest request) {
+        String method = request != null && request.method() != null && !request.method().isBlank()
+                ? request.method()
+                : methodParam;
+        return ApiResponse.ok(
+                msg("scheduling.enrollment.payment_confirmed"),
+                service.confirmCourseEnrollmentPayment(principal, id, method)
+        );
     }
 }

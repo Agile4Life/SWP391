@@ -68,6 +68,10 @@ public class Member {
     @Column(name = "citizen_id_encrypted", columnDefinition = "TEXT")
     private String citizenIdEncrypted;
 
+    /** Mã băm HMAC-SHA256 của số giấy tờ đã chuẩn hóa để chống trùng CCCD/Hộ chiếu giữa các tài khoản. */
+    @Column(name = "citizen_id_hash", length = 64)
+    private String citizenIdHash;
+
     /** PENDING (chờ quầy), APPROVED hoặc REJECTED; null với hội viên được xác minh trước khi có bước duyệt. */
     @Column(name = "kyc_status", length = 20)
     private String kycStatus;
@@ -89,6 +93,10 @@ public class Member {
     public String getCitizenIdEncrypted() { return citizenIdEncrypted; }
     /** Gán giá trị mới cho trường citizenIdEncrypted. */
     public void setCitizenIdEncrypted(String value) { this.citizenIdEncrypted = value; }
+    /** Lấy giá trị trường citizenIdHash. */
+    public String getCitizenIdHash() { return citizenIdHash; }
+    /** Gán giá trị mới cho trường citizenIdHash. */
+    public void setCitizenIdHash(String value) { this.citizenIdHash = value; }
     /** Lấy giá trị trường kycStatus. */
     public String getKycStatus() { return kycStatus; }
     /** Gán giá trị mới cho trường kycStatus. */

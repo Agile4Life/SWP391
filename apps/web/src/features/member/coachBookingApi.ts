@@ -1,6 +1,6 @@
 import { apiFetch } from '../../shared/api/client';
 
-/** Thông tin công khai của HLV: liên hệ, chuyên môn, giới thiệu, chứng chỉ, ảnh và giá mỗi giờ. */
+/** Thông tin công khai của HLV: liên hệ, chuyên môn, giới thiệu, chứng chỉ, ảnh và giá mỗi slot. */
 export interface CoachPublicDto {
   id: number;
   fullName: string;

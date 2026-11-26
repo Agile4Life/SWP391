@@ -1,9 +1,11 @@
 import { DaysLeft } from './DaysLeft';
 import { memberText } from './memberI18n';
 import { getMyCoachBookings, type CoachBookingDto } from './coachBookingApi';
+import { getMyEnrollments, getSessionsBetween, type ClassSessionDto } from './memberClassesApi';
+import { formatSlotShort } from '../schedule/slots';
 import { useLanguage } from '../../shared/i18n/language';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCurrentUser } from '../../shared/api/useCurrentUser';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -14,47 +16,47 @@ import {
   getCurrentMembership,
   type MemberSubscription,
 } from './memberDashboardApi';
-import { formatCenterDate } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate, parseCenterTime } from '../../shared/lib/centerTime';
 
 const DAY_MS = 86_400_000;
+const CLASS_LOOKAHEAD_DAYS = 30;
 
 /** Kiểm tra chuỗi ngày YYYY-MM-DD hợp lệ (ngày có thật trên lịch). */
 function validDate(value: string | null | undefined): boolean {
   if (!value || !/^\d{4}-\d{2}-\d{2}/.test(value)) return false;
   const [year, month, day] = value.slice(0, 10).split('-').map(Number);
-  const date = new Date(year, month - 1, day);
+  const date = new Date(Date.UTC(year, month - 1, day));
   return (
-    date.getFullYear() === year &&
-    date.getMonth() === month - 1 &&
-    date.getDate() === day
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
   );
 }
 
-/** Đổi chuỗi ngày thành Date theo giờ địa phương. */
-function localDate(value: string): Date {
-  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
-  return new Date(year, month - 1, day);
+/** Số thứ tự ngày của chuỗi YYYY-MM-DD theo lịch UTC (tránh lệch múi giờ trình duyệt). */
+function dayNumberFromIso(iso: string): number {
+  const [year, month, day] = iso.slice(0, 10).split('-').map(Number);
+  return Math.floor(Date.UTC(year, month - 1, day) / DAY_MS);
 }
 
-/** Số thứ tự ngày của một Date (bỏ phần giờ). */
-function dayNumber(date: Date): number {
-  return Math.floor(
-    Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()) / DAY_MS,
-  );
+/** Cộng số ngày vào chuỗi YYYY-MM-DD. */
+function addIsoDays(iso: string, days: number): string {
+  const [year, month, day] = iso.slice(0, 10).split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
 /** Tiến độ gói đã trôi qua (phần trăm) từ ngày bắt đầu đến ngày kết thúc/đã trả tiền tới. */
 function membershipProgress(
   subscription: MemberSubscription,
-  today: Date,
+  todayIso: string,
 ): number {
-  const start = dayNumber(localDate(subscription.startDate));
-  const end = dayNumber(localDate(subscription.paidThroughDate ?? subscription.endDate));
+  const start = dayNumberFromIso(subscription.startDate);
+  const end = dayNumberFromIso(subscription.paidThroughDate ?? subscription.endDate);
   const duration = end - start + 1;
 
   if (duration <= 0) return 0;
 
-  const used = dayNumber(today) - start;
+  const used = dayNumberFromIso(todayIso) - start;
   return Math.min(100, Math.max(0, (used / duration) * 100));
 }
 
@@ -69,15 +71,25 @@ type MembershipState =
   | { status: 'error' }
   | { status: 'success'; membership: MemberSubscription | null };
 
-/** Trạng thái tải lịch PT: đang tải, lỗi hoặc thành công kèm danh sách buổi. */
-type PtState =
+interface UpcomingScheduleItem {
+  key: string;
+  kind: 'pt' | 'class';
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  roomName?: string;
+}
+
+/** Trạng thái tải lịch tập (gộp PT 1:1 và lớp nhóm): đang tải, lỗi hoặc thành công. */
+type ScheduleState =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'success'; bookings: CoachBookingDto[] };
+  | { status: 'success'; bookings: CoachBookingDto[]; classSessions: ClassSessionDto[]; partialError?: boolean };
 
 /**
- * Bảng điều khiển của hội viên: gói tập hiện tại và tiến độ, các buổi PT sắp tới; tự làm mới khi quay lại tab
- * hoặc có mạng.
+ * Bảng điều khiển của hội viên: gói tập hiện tại và tiến độ, các buổi tập sắp tới (lớp nhóm + PT 1:1);
+ * tự làm mới khi quay lại tab hoặc có mạng.
  */
 export function MemberDashboardPage() {
   useLanguage();
@@ -86,42 +98,91 @@ export function MemberDashboardPage() {
   const [membershipState, setMembershipState] =
     useState<MembershipState>({ status: 'loading' });
 
-  const [ptState, setPtState] =
-    useState<PtState>({ status: 'loading' });
+  const [scheduleState, setScheduleState] =
+    useState<ScheduleState>({ status: 'loading' });
 
-  // Tải gói hiện tại (silent thì không hiện trạng thái đang tải).
+  const mountedRef = useRef(true);
+  const membershipSeqRef = useRef(0);
+  const scheduleSeqRef = useRef(0);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Tải gói hiện tại (silent thì không hiện trạng thái đang tải); có khóa chống race & unmount.
   const loadMembership = useCallback(async (silent = false) => {
+    const seq = ++membershipSeqRef.current;
     if (!silent) setMembershipState({ status: 'loading' });
 
     try {
       const membership = await getCurrentMembership();
+      if (!mountedRef.current || seq !== membershipSeqRef.current) return;
       setMembershipState({ status: 'success', membership });
     } catch {
+      if (!mountedRef.current || seq !== membershipSeqRef.current) return;
       if (!silent) setMembershipState({ status: 'error' });
     }
   }, []);
 
-  // Tải lịch PT 1:1 của hội viên.
-  const loadPtBookings = useCallback(async (silent = false) => {
-    if (!silent) setPtState({ status: 'loading' });
+  // Tải lịch PT 1:1 và các buổi lớp học nhóm đang ghi danh của hội viên.
+  const loadSchedule = useCallback(async (silent = false) => {
+    const seq = ++scheduleSeqRef.current;
+    if (!silent) setScheduleState({ status: 'loading' });
 
-    try {
-      // Dashboard chỉ lấy lịch PT thật, không gọi quota hay ghi danh lớp nhóm.
-      const bookings = await getMyCoachBookings();
-      setPtState({ status: 'success', bookings });
-    } catch {
-      if (!silent) setPtState({ status: 'error' });
+    const todayIso = centerNowParts().date;
+    const lookaheadEnd = addIsoDays(todayIso, CLASS_LOOKAHEAD_DAYS);
+
+    const loadClassSessions = async (): Promise<ClassSessionDto[]> => {
+      if (typeof getMyEnrollments !== 'function') return [];
+      const enrollments = await getMyEnrollments();
+      const activeList = Array.isArray(enrollments)
+        ? enrollments.filter((item) => item.status?.toLowerCase() === 'enrolled')
+        : [];
+      if (activeList.length === 0) return [];
+      const enrolledClassIds = new Set(activeList.map((item) => item.classId));
+      if (typeof getSessionsBetween !== 'function') return [];
+      const sessions = await getSessionsBetween(todayIso, lookaheadEnd);
+      return Array.isArray(sessions)
+        ? sessions.filter((session) => enrolledClassIds.has(session.classId))
+        : [];
+    };
+
+    const [ptResult, classResult] = await Promise.allSettled([
+      getMyCoachBookings(),
+      loadClassSessions(),
+    ]);
+
+    if (!mountedRef.current || seq !== scheduleSeqRef.current) return;
+
+    const ptFailed = ptResult.status === 'rejected';
+    const classFailed = classResult.status === 'rejected';
+    const bookings = ptResult.status === 'fulfilled' && Array.isArray(ptResult.value) ? ptResult.value : [];
+    const classSessions = classResult.status === 'fulfilled' && Array.isArray(classResult.value) ? classResult.value : [];
+
+    if (ptFailed && (classFailed || classSessions.length === 0)) {
+      if (!silent) setScheduleState({ status: 'error' });
+      return;
     }
+
+    setScheduleState({
+      status: 'success',
+      bookings,
+      classSessions,
+      partialError: ptFailed || classFailed,
+    });
   }, []);
 
   useEffect(() => {
     void loadMembership();
-    void loadPtBookings();
+    void loadSchedule();
     // Làm mới ngầm khi tab đang hiển thị.
     const syncDashboard = () => {
       if (document.visibilityState === 'hidden') return;
       void loadMembership(true);
-      void loadPtBookings(true);
+      void loadSchedule(true);
     };
     window.addEventListener('focus', syncDashboard);
     window.addEventListener('online', syncDashboard);
@@ -131,24 +192,54 @@ export function MemberDashboardPage() {
       window.removeEventListener('online', syncDashboard);
       document.removeEventListener('visibilitychange', syncDashboard);
     };
-  }, [loadMembership, loadPtBookings]);
+  }, [loadMembership, loadSchedule]);
 
-  const today = new Date();
+  const now = new Date();
+  const todayIso = centerNowParts(now).date;
 
   const membership =
     membershipState.status === 'success' &&
     membershipState.membership?.status?.toLowerCase() === 'active' &&
     validDate(membershipState.membership.startDate) &&
     validDate(membershipState.membership.endDate) &&
-    dayNumber(localDate(membershipState.membership.startDate)) <= dayNumber(today) &&
-    dayNumber(localDate(membershipState.membership.endDate)) >= dayNumber(today)
+    membershipState.membership.startDate.slice(0, 10) <= todayIso &&
+    membershipState.membership.endDate.slice(0, 10) >= todayIso
       ? membershipState.membership
       : null;
 
-  // Chỉ hiện buổi PT đã xác nhận và chưa kết thúc; lịch sử vẫn ở màn quản lý PT.
-  const bookings = ptState.status === 'success'
-    ? ptState.bookings.filter(item => item.status === 'confirmed' && new Date(item.bookingDate + 'T' + item.endTime + '+07:00').getTime() > today.getTime())
-        .sort((a, b) => a.bookingDate.localeCompare(b.bookingDate) || a.startTime.localeCompare(b.startTime))
+  // Gộp buổi PT 1:1 đã xác nhận và buổi lớp học nhóm chưa kết thúc, sắp theo ngày & giờ tăng dần.
+  const upcomingItems: UpcomingScheduleItem[] = scheduleState.status === 'success'
+    ? [
+        ...scheduleState.bookings
+          .filter((item) => {
+            if (item.status !== 'confirmed' || !item.bookingDate || !item.endTime) return false;
+            const endAt = parseCenterTime(`${item.bookingDate}T${item.endTime}`);
+            return endAt !== null && endAt.getTime() > now.getTime();
+          })
+          .map((item): UpcomingScheduleItem => ({
+            key: `pt-${item.id}`,
+            kind: 'pt',
+            title: item.coachName,
+            date: item.bookingDate!,
+            startTime: item.startTime ?? '',
+            endTime: item.endTime ?? '',
+          })),
+        ...scheduleState.classSessions
+          .filter((session) => {
+            if (session.status?.toLowerCase() === 'cancelled' || !session.sessionDate || !session.endTime) return false;
+            const endAt = parseCenterTime(`${session.sessionDate}T${session.endTime}`);
+            return endAt !== null && endAt.getTime() > now.getTime();
+          })
+          .map((session): UpcomingScheduleItem => ({
+            key: `class-${session.id}`,
+            kind: 'class',
+            title: session.className,
+            date: session.sessionDate,
+            startTime: session.startTime,
+            endTime: session.endTime,
+            roomName: session.roomName || undefined,
+          })),
+      ].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime))
     : [];
 
   return (
@@ -214,7 +305,7 @@ export function MemberDashboardPage() {
                       aria-valuemin={0}
                       aria-valuemax={100}
                       aria-valuenow={Math.round(
-                        membershipProgress(membership, today),
+                        membershipProgress(membership, todayIso),
                       )}
                       style={{
                         height: 6,
@@ -226,7 +317,7 @@ export function MemberDashboardPage() {
                     >
                       <div
                         style={{
-                          width: `${membershipProgress(membership, today)}%`,
+                          width: `${membershipProgress(membership, todayIso)}%`,
                           height: '100%',
                           background: 'var(--portal-salmon)',
                         }}
@@ -264,7 +355,7 @@ export function MemberDashboardPage() {
         </section>
 
         <section data-i18n-managed className="member-board-column member-board-column--orange" aria-labelledby="board-classes">
-          <div className="member-column-heading"><h2 id="board-classes">{memberText("Lịch tập của tôi")}</h2><Link to="/member/classes" aria-label={memberText("Xem lịch PT", "View PT schedule")}><PortalIcon name="arrow" size={16} /></Link></div>
+          <div className="member-column-heading"><h2 id="board-classes">{memberText("Lịch tập của tôi")}</h2><Link to="/member/classes" aria-label={memberText("Xem lịch tập của tôi", "View my training schedule")}><PortalIcon name="arrow" size={16} /></Link></div>
 
           <section
             className="portal-card member-classes-card"
@@ -275,47 +366,51 @@ export function MemberDashboardPage() {
                 id="upcoming-title"
                 className="portal-card-title"
               >
-                {memberText("Lịch PT đã đặt", "Booked PT sessions")}</h2>
+                {memberText("Lịch tập sắp tới", "Upcoming sessions")}</h2>
             </div>
 
-            {ptState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label={memberText("Xem lịch PT của tôi", "View my PT schedule")} />}
-            {ptState.status === 'loading' && (
-              <LoadingSkeleton label={memberText("Đang tải lịch PT…", "Loading PT schedule…")} count={3} />
+            {scheduleState.status === 'success' && <Link className="member-card-overlay-link" to="/member/classes" aria-label={memberText("Xem lịch tập của tôi", "View my training schedule")} />}
+            {scheduleState.status === 'loading' && (
+              <LoadingSkeleton label={memberText("Đang tải lịch tập…", "Loading schedule…")} count={3} />
             )}
 
-            {ptState.status === 'error' && (
+            {scheduleState.status === 'error' && (
               <div role="alert">
                 <p className="row-card__meta">
-                  {memberText("Chưa thể tải lịch PT lúc này.", "Unable to load PT sessions right now.")}</p>
+                  {memberText("Chưa thể tải lịch tập lúc này.", "Unable to load your schedule right now.")}</p>
 
                 <button
                   type="button"
                   className="btn-secondary"
                   style={{ marginTop: 16 }}
-                  onClick={() => void loadPtBookings()}
+                  onClick={() => void loadSchedule()}
                 >
                   {memberText("Thử lại")}</button>
               </div>
             )}
 
-            {ptState.status === 'success' &&
-              bookings.length === 0 && (
-                <div className="member-board-empty"><p className="row-card__meta">{memberText("Bạn chưa có lịch PT sắp tới.", "You have no upcoming PT sessions.")}</p><Link className="member-text-link" to="/member/classes?tab=pt">{memberText("Đặt lịch HLV 1:1")}<PortalIcon name="arrow" size={14} /></Link></div>
+            {scheduleState.status === 'success' &&
+              upcomingItems.length === 0 && (
+                <div className="member-board-empty"><p className="row-card__meta">{memberText("Bạn chưa có lịch tập sắp tới.", "You have no upcoming sessions.")}</p><Link className="member-text-link" to="/member/classes?tab=pt">{memberText("Đặt lịch HLV 1:1")}<PortalIcon name="arrow" size={14} /></Link></div>
               )}
 
-            {ptState.status === 'success' &&
-              bookings.length > 0 && (
+            {scheduleState.status === 'success' &&
+              upcomingItems.length > 0 && (
                 <div className="stack">
-                  {bookings.map((item) => (
-                    <div key={item.id} className="row-card member-booking-row">
+                  {upcomingItems.slice(0, 5).map((item) => (
+                    <div key={item.key} className="row-card member-booking-row">
                       <div>
+                        <span className={`badge ${item.kind === 'pt' ? 'badge-info' : 'badge-neutral'}`} style={{ marginBottom: 4 }}>
+                          {item.kind === 'pt' ? memberText("PT 1:1", "1:1 PT") : memberText("Lớp nhóm", "Group class")}
+                        </span>
                         <h3 className="row-card__title">
-                          {item.coachName}
+                          {item.title}
                         </h3>
                         <div className="row-card__meta">
                           {[
-                            validDate(item.bookingDate) ? formatDate(item.bookingDate!) : '',
-                            item.startTime && item.endTime ? `${item.startTime.slice(0, 5)}–${item.endTime.slice(0, 5)}` : '',
+                            validDate(item.date) ? formatDate(item.date) : '',
+                            formatSlotShort(item.startTime, item.endTime),
+                            item.roomName ?? '',
                           ].filter(Boolean).join(' · ')}
                         </div>
                       </div>
@@ -324,7 +419,7 @@ export function MemberDashboardPage() {
                 </div>
               )}
           </section>
-          <Link className="member-board-note" to="/member/classes?tab=pt"><span>{memberText("Đặt lịch HLV 1:1")}<small>{memberText("PT kèm riêng theo giờ · Đặt trước 2 tiếng")}</small></span><PortalIcon name="arrow" size={14} /></Link>
+          <Link className="member-board-note" to="/member/classes?tab=pt"><span>{memberText("Đặt lịch HLV 1:1")}<small>{memberText("5 Slot cố định (07:00 – 19:30) · Đặt trước 2 tiếng", "5 fixed slots (07:00 – 19:30) · Book 2 hours ahead")}</small></span><PortalIcon name="arrow" size={14} /></Link>
         </section>
 
         <section data-i18n-managed className="member-board-column member-board-column--blue" aria-labelledby="board-card">

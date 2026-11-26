@@ -14,13 +14,13 @@ export const PORTAL_REVEAL_SELECTOR = [
 ].join(', ');
 
 /** Vùng tự quản lý chuyển động (3D, hộp thoại, skeleton tĩnh) hoặc đã tắt bằng `data-motion="off"`. */
-const EXCLUDED = '[data-motion="off"], dialog, .explore3d-page, .portal-route-loading, .portal-skeleton';
+const EXCLUDED = '[data-motion="off"], dialog, [role="dialog"], .explore3d-page, .portal-route-loading, .portal-skeleton, .loading-skeleton';
 /** Thẻ bố cục có thể chứa nhiều phần nhỏ; hook đi vào trong thay vì coi cả khối là một phần. */
 const PART_GROUP_TAGS = 'div, section, article, header, footer, nav, form, ul, ol, dl';
 /** Đơn vị nội dung trọn vẹn: luôn là một phần nhỏ, không tách tiếp (nhãn + ô nhập, dòng thông tin, hàng danh sách…). */
-const PART_ATOMIC = '.portal-form-group, .kv-row, .row-card, .stat-pill, .badge, .ui-select, .action-menu, .portal-alert, .portal-state, .portal-empty, .portal-tabs';
+const PART_ATOMIC = '.portal-form-group, .kv-row, .row-card, .stat-pill, .badge, .ui-select, .luxury-datepicker-wrap, .luxury-timepicker-wrap, .file-picker, .action-menu, .portal-alert, .portal-state, .portal-empty, .portal-tabs';
 /** Không tách thành phần nhỏ: lớp nổi, nội dung ẩn, bảng (hàng đã có hiệu ứng riêng), chỉ báo đang tải. */
-const PART_SKIP = 'dialog, script, style, template, [hidden], .sr-only, table, .portal-table-wrapper, .spinner, [data-motion="off"]';
+const PART_SKIP = 'dialog, [role="dialog"], script, style, template, [hidden], .sr-only, table, .portal-table-wrapper, .spinner, .loading-skeleton, [data-motion="off"]';
 const MAX_PARTS = 12;
 const STAGGER_MS = 55;
 const MAX_STAGGER_STEPS = 6;
@@ -36,7 +36,17 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
     if (!root || typeof IntersectionObserver === 'undefined' || typeof window.matchMedia !== 'function') return;
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
     const targets = new Set<HTMLElement>();
+    const pendingParts = new Set<HTMLElement>();
+    let partsRafId: number | null = null;
     let observer: IntersectionObserver | undefined;
+
+    const cancelScheduledParts = () => {
+      if (partsRafId !== null && typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(partsRafId);
+      }
+      partsRafId = null;
+      pendingParts.clear();
+    };
 
     /** Phần nhỏ bên trong một khối: con trực tiếp, đi sâu thêm tối đa hai cấp qua thẻ bố cục. */
     const collectParts = (element: HTMLElement, depth: number, parts: HTMLElement[]) => {
@@ -67,19 +77,38 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
         part.style.removeProperty('--portal-part');
       });
     };
+    /** Gom các đợt markParts từ MutationObserver vào một khung hình rAF để tránh forced reflow đồng bộ. */
+    const flushPendingParts = () => {
+      partsRafId = null;
+      pendingParts.forEach((element) => {
+        if (targets.has(element) && element.isConnected) markParts(element);
+      });
+      pendingParts.clear();
+    };
+    const scheduleMarkParts = (element: HTMLElement) => {
+      pendingParts.add(element);
+      if (partsRafId !== null) return;
+      if (typeof window.requestAnimationFrame === 'function') {
+        partsRafId = window.requestAnimationFrame(flushPendingParts);
+      } else {
+        flushPendingParts();
+      }
+    };
     // Khối đủ điều kiện reveal: không thuộc vùng loại trừ và không nằm trong một khối reveal khác.
     const eligible = (element: HTMLElement) =>
       !element.closest(EXCLUDED) && !element.parentElement?.closest(PORTAL_REVEAL_SELECTOR);
     // Đăng ký khối vào bộ quan sát và gán chỉ số cho các phần con.
-    const register = (element: HTMLElement) => {
+    const register = (element: HTMLElement, deferParts = false) => {
       if (!observer || targets.has(element) || !eligible(element)) return;
       targets.add(element);
       element.classList.add('portal-reveal-ready');
-      markParts(element);
+      if (deferParts) scheduleMarkParts(element);
+      else markParts(element);
       observer.observe(element);
     };
     // Hủy đăng ký khối và trả lại trạng thái ban đầu.
     const unregister = (element: HTMLElement) => {
+      pendingParts.delete(element);
       if (!targets.delete(element)) return;
       observer?.unobserve(element);
       element.classList.remove('portal-reveal-ready', 'is-visible');
@@ -116,12 +145,13 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
     };
     // Cấu hình lại bộ quan sát; người dùng bật giảm chuyển động thì không đăng ký khối nào.
     const configure = () => {
+      cancelScheduledParts();
       observer?.disconnect();
       observer = undefined;
       [...targets].forEach(unregister);
       if (preference.matches) return;
       observer = new IntersectionObserver(onIntersect, { threshold: 0 });
-      root.querySelectorAll<HTMLElement>(PORTAL_REVEAL_SELECTOR).forEach(register);
+      root.querySelectorAll<HTMLElement>(PORTAL_REVEAL_SELECTOR).forEach((element) => register(element, false));
     };
     // Khối nhận focus bàn phím mà chưa hiện thì hiện ngay không trễ.
     const onFocus = (event: FocusEvent) => {
@@ -134,21 +164,20 @@ export function usePortalMotion(container: RefObject<HTMLElement | null>) {
 
     configure();
     const mutations = new MutationObserver((changes) => {
-      const grown = new Set<HTMLElement>();
       changes.forEach((change) => {
         change.removedNodes.forEach((node) => visit(node, unregister));
-        change.addedNodes.forEach((node) => visit(node, register));
+        change.addedNodes.forEach((node) => visit(node, (element) => register(element, true)));
         // Nội dung mới bên trong khối đã đăng ký (dữ liệu vừa tải, kết quả lọc) cũng hiện lệch nhịp.
         const owner = change.addedNodes.length > 0 && change.target instanceof HTMLElement
           ? change.target.closest<HTMLElement>('.portal-reveal-ready') : null;
-        if (owner && targets.has(owner)) grown.add(owner);
+        if (owner && targets.has(owner)) scheduleMarkParts(owner);
       });
-      grown.forEach(markParts);
     });
     mutations.observe(root, { childList: true, subtree: true });
     preference.addEventListener('change', configure);
     root.addEventListener('focusin', onFocus);
     return () => {
+      cancelScheduledParts();
       mutations.disconnect();
       preference.removeEventListener('change', configure);
       root.removeEventListener('focusin', onFocus);

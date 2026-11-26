@@ -15,12 +15,51 @@ function stopStream(element: HTMLVideoElement | null) {
   element.srcObject = null;
 }
 
+/** Phân loại lỗi khởi động camera: từ chối quyền, thiếu thiết bị hoặc lỗi luồng phát. */
+function classifyCameraError(err: unknown): SourceMessage {
+  const name = err instanceof Error ? err.name : '';
+  const message = typeof err === 'string' ? err : err instanceof Error ? err.message : '';
+  const lower = `${name} ${message}`.toLowerCase();
+  if (
+    name === 'NotAllowedError'
+    || name === 'PermissionDeniedError'
+    || lower.includes('permission')
+    || lower.includes('denied')
+    || lower.includes('notallowederror')
+  ) {
+    return memberMessage(
+      'Bạn chưa cấp quyền truy cập camera. Hãy cho phép quyền camera trong trình duyệt và thử lại.',
+      'Camera access was denied. Please allow camera permission in your browser and try again.',
+    );
+  }
+  if (
+    name === 'NotFoundError'
+    || name === 'DevicesNotFoundError'
+    || lower.includes('notfounderror')
+    || lower.includes('camera not found')
+    || lower.includes('no camera')
+    || lower.includes('requested device not found')
+  ) {
+    return memberMessage(
+      'Không tìm thấy camera trên thiết bị này.',
+      'No camera was found on this device.',
+    );
+  }
+  return memberMessage(
+    'Không thể khởi động luồng camera. Hãy kiểm tra camera có đang được ứng dụng khác sử dụng không rồi thử lại.',
+    'Unable to start the camera stream. Make sure no other app is using the camera and try again.',
+  );
+}
+
 /**
  * Ô quét mã QR bằng camera: xin quyền camera, quét liên tục và gọi onScan khi đọc được mã; tự tắt camera khi bị
  * vô hiệu, ẩn tab hoặc rời trang.
  */
 export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT }: { onScan: (code: string) => void; disabled?: boolean; hint?: string }) {
   const { lang } = useLanguage();
+
+  const onScanRef = useRef(onScan);
+  useEffect(() => { onScanRef.current = onScan; }, [onScan]);
 
   const video = useRef<HTMLVideoElement>(null);
   const videoHost = useRef<HTMLDivElement>(null);
@@ -79,16 +118,16 @@ export function QrCameraScanner({ onScan, disabled = false, hint = DEFAULT_HINT 
         if (run.current !== current || !data.trim()) return;
         release();
         setPhase('done');
-        onScan(data.trim());
+        onScanRef.current(data.trim());
       }, { preferredCamera: 'environment', returnDetailedScanResult: true, maxScansPerSecond: 8 });
       scanner.current = instance;
       await instance.start();
       if (run.current !== current) { instance.destroy(); stopStream(element); return; }
       setPhase('scanning');
-    } catch {
+    } catch (err) {
       if (run.current !== current) return;
       release(); setPhase('ready');
-      setError(memberMessage("Không thể mở camera. Hãy cấp quyền camera và thử lại."));
+      setError(classifyCameraError(err));
     }
   }
 

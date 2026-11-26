@@ -232,9 +232,9 @@ class InvoiceServiceTest {
         verify(invoiceRepository, never()).save(any());
     }
 
-    /** Kiểm thử: ném lỗi khi tạo hóa đơn cho thanh toán thất bại hoặc đã hoàn. */
+    /** Kiểm thử: ném lỗi khi tạo hóa đơn cho thanh toán thất bại, đã hoàn hoặc đang chờ xử lý. */
     @Test
-    @DisplayName("Should throw BadRequestException when trying to issue invoice for failed or refunded payment")
+    @DisplayName("Should throw BadRequestException when trying to issue invoice for non-success payment")
     void shouldThrowWhenCreatingInvoiceForFailedOrRefundedPayment() {
         InvoiceCreateDto dto = new InvoiceCreateDto();
         dto.setPaymentId(10L);
@@ -249,6 +249,40 @@ class InvoiceServiceTest {
 
         payment.setStatus("refunded");
         assertThrows(BadRequestException.class, () -> invoiceService.createInvoice(dto));
+
+        payment.setStatus("pending");
+        BadRequestException pendingEx = assertThrows(BadRequestException.class, () -> invoiceService.createInvoice(dto));
+        assertEquals("INVALID_PAYMENT_STATE", pendingEx.getErrorCode());
+    }
+
+    /** Kiểm thử P3-BE-12: từ chối xuất hóa đơn thủ công khi subtotal + tax không khớp số tiền thanh toán. */
+    @Test
+    @DisplayName("Should reject manual invoice when subtotal plus tax does not match payment amount")
+    void shouldRejectManualInvoiceWhenSubtotalPlusTaxMismatchesPaymentAmount() {
+        InvoiceCreateDto dto = new InvoiceCreateDto();
+        dto.setPaymentId(10L);
+        dto.setSubtotalAmount(new BigDecimal("1000000.00"));
+        dto.setTaxAmount(new BigDecimal("100000.00"));
+
+        Payment payment = new Payment();
+        payment.setId(10L);
+        payment.setStatus("success");
+        payment.setAmount(new BigDecimal("1000000.00"));
+
+        when(paymentRepository.findById(10L)).thenReturn(Optional.of(payment));
+        when(invoiceRepository.findByPaymentId(10L)).thenReturn(Optional.empty());
+
+        BadRequestException ex = assertThrows(BadRequestException.class, () -> invoiceService.createInvoice(dto));
+        assertEquals("INVOICE_AMOUNT_MISMATCH", ex.getErrorCode());
+        verify(invoiceRepository, never()).save(any());
+
+        // Khớp đúng tổng payment.amount -> cho phép lưu
+        payment.setAmount(new BigDecimal("1100000"));
+        Invoice invoice = new Invoice();
+        when(invoiceMapper.toEntity(dto)).thenReturn(invoice);
+        when(invoiceRepository.save(invoice)).thenReturn(invoice);
+        when(invoiceMapper.toDto(invoice)).thenReturn(new InvoiceDto());
+        assertNotNull(invoiceService.createInvoice(dto));
     }
 
     /** Kiểm thử: lấy hóa đơn theo id. */

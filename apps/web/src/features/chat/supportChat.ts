@@ -39,6 +39,15 @@ export function displaySubject(subject: string): string {
   return subject.replace(PREFIX, '');
 }
 
+/** Dịch tiền tố phân loại [Gói tập]/[Thiết bị]/[Lịch học]/[Khác] theo ngôn ngữ hiện tại, giữ nguyên nội dung tiêu đề. */
+export function localizedSubject(subject: string, t: (vi: string, en: string) => string): string {
+  const match = PREFIX.exec(subject);
+  if (!match) return subject;
+  const entry = SUPPORT_CATEGORIES.find(item => item.value === match[1]);
+  if (!entry) return subject;
+  return `[${t(entry.vi, entry.en)}] ${subject.slice(match[0].length)}`;
+}
+
 /** Dòng đầu của tin nhắn đầu tiên làm tiêu đề phiếu; nội dung đầy đủ nằm ở phần mô tả (bong bóng đầu tiên). */
 export function buildSubject(category: SupportCategory, text: string): string {
   const firstLine = text.trim().split(/\r?\n/)[0].replace(/\s+/g, ' ');

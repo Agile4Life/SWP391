@@ -50,13 +50,14 @@
 .mcal__frame { position: relative; min-width: 0; }
 .mcal__scroll {
   position: relative; isolation: isolate; overflow: auto; max-height: max(520px, calc(100vh - 320px));
-  scrollbar-width: thin; scrollbar-color: var(--portal-salmon) transparent;
+  scrollbar-width: none; -ms-overflow-style: none;
   background:
     linear-gradient(to bottom, var(--portal-surface) 30%, transparent) top / 100% 28px no-repeat local,
     linear-gradient(to top, var(--portal-surface) 30%, transparent) bottom / 100% 28px no-repeat local,
     radial-gradient(farthest-side at 50% 0, color-mix(in srgb, var(--portal-ink) 50%, transparent), transparent) top / 100% 12px no-repeat scroll,
     radial-gradient(farthest-side at 50% 100%, color-mix(in srgb, var(--portal-ink) 60%, transparent), transparent) bottom / 100% 14px no-repeat scroll;
 }
+.mcal__scroll::-webkit-scrollbar { display: none; width: 0; height: 0; }
 .mcal__scroll-cue {
   position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
   display: flex; justify-content: center; align-items: flex-end;
@@ -137,16 +138,22 @@
 .mcal__event.is-selected { outline: 2px solid var(--portal-paper); outline-offset: 2px; z-index: 4; }
 .mcal__event-time { font-size: 12px; font-weight: 800; letter-spacing: .01em; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mcal__event-title { font-size: 14px; font-weight: 800; line-height: 1.2; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
-.mcal__event-place { font-size: 12.5px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event-place { font-size: 13px; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mcal__event-coach { font-size: 12px; color: var(--portal-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mcal__event--mine .mcal__event-coach, .mcal__event--class .mcal__event-coach { color: color-mix(in srgb, currentColor 82%, transparent); }
 .mcal__event-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
 .mcal__event-top .mcal__event-time { flex: 1 1 auto; min-width: 0; }
-.mcal__event-badge { flex: none; max-width: 100%; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); font-size: 12px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event-badge { flex: none; align-self: flex-start; max-width: 100%; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); font-size: 12px; font-weight: 800; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mcal__event-badge--full {
+  margin-top: auto;
+  border: 1px solid color-mix(in srgb, var(--portal-warning) 65%, transparent);
+  background: color-mix(in srgb, var(--portal-warning) 22%, var(--portal-surface));
+  color: var(--portal-warning);
+}
 
 .mcal__event--mine, .mcal__event--class { background: var(--mcal-class); color: var(--portal-on-accent); }
 .mcal__event--open { background: color-mix(in srgb, var(--portal-info) 24%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--portal-info) 55%, transparent); }
-.mcal__event--full { background: color-mix(in srgb, var(--portal-warning) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--portal-warning) 55%, transparent); }
+.mcal__event--full { border-color: color-mix(in srgb, var(--portal-warning) 62%, var(--portal-border)); background: color-mix(in srgb, var(--portal-warning) 20%, var(--portal-raised)); color: var(--portal-paper); box-shadow: none; }
 .mcal__event--neutral { background: var(--portal-raised); color: var(--portal-paper); box-shadow: inset 0 0 0 1px var(--portal-border-strong); }
 .mcal__event--past, .mcal__event.is-past { background: color-mix(in srgb, var(--portal-paper) 16%, var(--portal-raised)); color: var(--portal-muted); box-shadow: none; }
 .mcal__event--cancelled, .mcal__event.is-cancelled { background: color-mix(in srgb, var(--portal-danger) 14%, var(--portal-raised)); color: var(--portal-muted); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--portal-danger) 55%, transparent); }
@@ -219,14 +226,24 @@
 }
 
 /* Viền mảnh đều 4 cạnh phân biệt bộ môn trên khối sự kiện (không viền trái dày, giữ góc bo mượt) */
-.mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past) {
+.mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past):not(.mcal__event--full) {
   border-color: color-mix(in srgb, var(--event-accent) 48%, var(--portal-border));
   background: color-mix(in srgb, var(--event-accent) 16%, var(--portal-surface));
   box-shadow: none;
 }
-.mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past):hover {
+.mcal__event[data-accent='true']:not(.mcal__event--cancelled):not(.mcal__event--past):not(.mcal__event--full):hover {
   border-color: color-mix(in srgb, var(--event-accent) 68%, var(--portal-border));
   background: color-mix(in srgb, var(--event-accent) 24%, var(--portal-surface));
+}
+.mcal__event[data-accent='true'].mcal__event--full {
+  border-color: color-mix(in srgb, var(--portal-warning) 68%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-warning) 20%, var(--portal-surface));
+  color: var(--portal-paper);
+  box-shadow: none;
+}
+.mcal__event[data-accent='true'].mcal__event--full:hover {
+  border-color: color-mix(in srgb, var(--portal-warning) 85%, var(--portal-border));
+  background: color-mix(in srgb, var(--portal-warning) 28%, var(--portal-surface));
 }
 
 /* Nút gom cụm "+N lớp" khi khung giờ có >= 3 lớp song song trên Lịch tổng cả tuần */
@@ -321,48 +338,6 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: var(--portal-paper);
-}
-
-/* Lịch ngày theo Phòng (Tổng quan theo phòng — Phòng × Giờ) */
-.rcal__daystrip {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
-}
-.rcal__grid {
-  display: grid;
-  grid-template-columns: var(--mcal-gutter, 62px) repeat(var(--rcal-rooms, 3), minmax(190px, 1fr));
-  grid-template-rows: auto calc(var(--mcal-rows, 16) * var(--mcal-hour, 64px));
-  min-width: calc(var(--mcal-gutter, 62px) + var(--rcal-rooms, 3) * 190px);
-}
-.rcal__roomhead {
-  gap: 3px;
-  padding: 10px 10px;
-}
-.rcal__roomname {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--portal-paper);
-  text-align: center;
-}
-.rcal__roommeta {
-  font-size: 12px;
-  color: var(--portal-muted);
-}
-.rcal__event {
-  align-items: flex-start;
-  gap: 2px;
-}
-.rcal__event-sub {
-  font-size: 12px;
-  color: var(--portal-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-.mcal__event.is-short .rcal__event-sub {
-  display: none;
 }
 
 /* Bộ lọc bộ môn dạng chip có chấm màu */

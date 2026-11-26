@@ -30,6 +30,8 @@ export interface StaffInternalRequestDto {
   reviewedAt: string | null;
   createdAt: string;
   updatedAt: string | null;
+  affectedClassSessionCount?: number;
+  affectedPtSessionCount?: number;
 }
 
 /** Dữ liệu tạo đơn: loại, tiêu đề, lý do, ngày, ca mong muốn, người thay thế và cờ xác nhận khi nghỉ phép trùng. */
@@ -45,10 +47,11 @@ export interface StaffInternalRequestCreatePayload {
   confirmOverlap?: boolean;
 }
 
-/** Dữ liệu duyệt đơn: kết quả (duyệt/từ chối) và ghi chú của quản lý. */
+/** Dữ liệu duyệt đơn: kết quả (duyệt/từ chối), ghi chú của quản lý và cờ xác nhận xung đột lịch nghỉ phép HLV. */
 export interface StaffInternalRequestReviewPayload {
   status: 'APPROVED' | 'REJECTED';
   managerNotes?: string;
+  confirmConflicts?: boolean;
 }
 
 /** Gửi một đơn từ mới. */

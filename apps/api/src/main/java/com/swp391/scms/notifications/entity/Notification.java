@@ -1,8 +1,10 @@
 package com.swp391.scms.notifications.entity;
 
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.Locale;
 
 /**
  * Bảng notifications: thông báo trong ứng dụng của một người dùng (tiêu đề, nội dung, loại, bản ghi liên quan,
@@ -41,7 +43,7 @@ public class Notification {
     private boolean isRead = false;
 
     @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(CenterTime.ZONE);
 
     @Column(name = "action_path", length = 500)
     private String actionPath;
@@ -51,6 +53,8 @@ public class Notification {
     /** Gán giá trị mới cho trường actionPath. */
     public void setActionPath(String actionPath) { this.actionPath = actionPath; }
 
+    public static final int MAX_TITLE_LENGTH = 150;
+
     public static final java.util.Set<String> ALLOWED_TYPES = java.util.Set.of(
             "schedule_change", "package_expiry", "class_reminder", "system", "support_reply", "payment"
     );
@@ -59,43 +63,51 @@ public class Notification {
             "class_session", "membership_subscription", "payment", "support_request", "class_enrollment", "training_plan"
     );
 
+    /** Giới hạn tiêu đề tối đa 150 ký tự khớp độ dài cột DB (P3-BE-20). */
+    public static String clampTitle(String rawTitle) {
+        if (rawTitle == null || rawTitle.length() <= MAX_TITLE_LENGTH) {
+            return rawTitle;
+        }
+        return rawTitle.substring(0, MAX_TITLE_LENGTH);
+    }
+
     /**
-     * Chuẩn hóa loại thông báo về danh sách cho phép: order/wallet thành payment, booking thành class_reminder,
-     * còn lại không hợp lệ thành system.
+     * Chuẩn hóa loại thông báo về danh sách cho phép (không phân biệt hoa thường): order/wallet thành payment,
+     * booking thành class_reminder, còn lại không hợp lệ thành system.
      */
     public static String normalizeType(String rawType) {
         if (rawType == null || rawType.isBlank()) {
             return "system";
         }
-        String trimmed = rawType.trim();
-        if (ALLOWED_TYPES.contains(trimmed)) {
-            return trimmed;
+        String normalized = rawType.trim().toLowerCase(Locale.ROOT);
+        if (ALLOWED_TYPES.contains(normalized)) {
+            return normalized;
         }
-        if ("order".equalsIgnoreCase(trimmed) || "wallet".equalsIgnoreCase(trimmed)) {
+        if ("order".equals(normalized) || "wallet".equals(normalized)) {
             return "payment";
         }
-        if ("booking".equalsIgnoreCase(trimmed)) {
+        if ("booking".equals(normalized)) {
             return "class_reminder";
         }
         return "system";
     }
 
     /**
-     * Chuẩn hóa loại bản ghi liên quan: wallet/product_order thành payment, booking/session_booking thành
-     * class_session, không hợp lệ thành null.
+     * Chuẩn hóa loại bản ghi liên quan (không phân biệt hoa thường): wallet/product_order thành payment,
+     * booking/session_booking thành class_session, không hợp lệ thành null.
      */
     public static String normalizeEntityType(String rawEntityType) {
         if (rawEntityType == null || rawEntityType.isBlank()) {
             return null;
         }
-        String trimmed = rawEntityType.trim();
-        if (ALLOWED_ENTITY_TYPES.contains(trimmed)) {
-            return trimmed;
+        String normalized = rawEntityType.trim().toLowerCase(Locale.ROOT);
+        if (ALLOWED_ENTITY_TYPES.contains(normalized)) {
+            return normalized;
         }
-        if ("wallet".equalsIgnoreCase(trimmed) || "product_order".equalsIgnoreCase(trimmed)) {
+        if ("wallet".equals(normalized) || "product_order".equals(normalized)) {
             return "payment";
         }
-        if ("booking".equalsIgnoreCase(trimmed) || "session_booking".equalsIgnoreCase(trimmed)) {
+        if ("booking".equals(normalized) || "session_booking".equals(normalized)) {
             return "class_session";
         }
         return null;
@@ -104,16 +116,16 @@ public class Notification {
     /** Constructor rỗng cho JPA. */
     public Notification() {}
 
-    /** Tạo thông báo chưa đọc với loại và loại bản ghi đã chuẩn hóa. */
+    /** Tạo thông báo chưa đọc với tiêu đề đã giới hạn 150 ký tự, loại và loại bản ghi đã chuẩn hóa. */
     public Notification(User user, String title, String message, String type, String relatedEntityType, Long relatedEntityId) {
         this.user = user;
-        this.title = title;
+        this.title = clampTitle(title);
         this.message = message;
         this.type = normalizeType(type);
         this.relatedEntityType = normalizeEntityType(relatedEntityType);
         this.relatedEntityId = relatedEntityId;
         this.isRead = false;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(CenterTime.ZONE);
     }
 
     /** Lấy giá trị trường id. */
@@ -128,8 +140,8 @@ public class Notification {
     
     /** Lấy giá trị trường title. */
     public String getTitle() { return title; }
-    /** Gán giá trị mới cho trường title. */
-    public void setTitle(String title) { this.title = title; }
+    /** Gán giá trị mới cho trường title (giới hạn 150 ký tự). */
+    public void setTitle(String title) { this.title = clampTitle(title); }
     
     /** Lấy giá trị trường message. */
     public String getMessage() { return message; }

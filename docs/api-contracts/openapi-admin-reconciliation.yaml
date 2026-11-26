@@ -207,7 +207,7 @@ components:
         status: {type: string, enum: [pending, success, failed]}
         stale: {type: boolean}
         paymentStatus: {type: string, enum: [pending, success, failed, refunded]}
-        targetType: {type: string, enum: [MEMBERSHIP, COACH_BOOKING, COURT_BOOKING, PRODUCT_ORDER, COURSE, WALLET_TOPUP]}
+        targetType: {type: string, enum: [MEMBERSHIP, COACH_BOOKING, PRODUCT_ORDER, COURSE, WALLET_TOPUP]}
         targetId: {type: integer, format: int64, nullable: true}
         createdAt: {type: string, format: date-time}
         expiresAt: {type: string, format: date-time}

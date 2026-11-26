@@ -1,13 +1,13 @@
 import { EmptyState } from '../../shared/ui/EmptyState';
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { useI18n } from '../../shared/i18n';
+import { sourceMessage, useI18n, type SourceMessage } from '../../shared/i18n';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { FilePicker } from '../../shared/ui/FilePicker';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { DatePicker } from '../../shared/ui/DatePicker';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
-import { localizableError } from '../../shared/lib/errorMessage';
-import { formatCenterDate } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
 import { notify } from '../../shared/lib/portalNotices';
 import { getMembershipHistory, type MemberSubscription } from './membershipApi';
 import {
@@ -22,29 +22,38 @@ import {
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
 
-/** Định dạng Date thành chuỗi YYYY-MM-DD. */
-function isoDate(date: Date): string {
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+function toLocalizableError(error: unknown, vi: string, en: string): Error | SourceMessage {
+  return error instanceof Error && error.name === 'Error' && error.message ? error : sourceMessage(vi, en);
 }
 
-/** Cộng/trừ số ngày vào ngày YYYY-MM-DD. */
+/** Cộng/trừ số ngày vào ngày YYYY-MM-DD (không phụ thuộc múi giờ trình duyệt). */
 function addDays(iso: string, days: number): string {
-  const date = new Date(`${iso}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return isoDate(date);
+  const [year, month, day] = iso.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
-/** Số ngày tính cả hai đầu của khoảng [start, end]. */
+/** Số ngày tính cả hai đầu của khoảng [start, end] theo lịch UTC. */
 function inclusiveDays(start: string, end: string): number {
-  return Math.round((new Date(`${end}T00:00:00`).getTime() - new Date(`${start}T00:00:00`).getTime()) / 86400000) + 1;
+  const [sy, sm, sd] = start.split('-').map(Number);
+  const [ey, em, ed] = end.split('-').map(Number);
+  return Math.round((Date.UTC(ey, em - 1, ed) - Date.UTC(sy, sm - 1, sd)) / 86400000) + 1;
 }
 
 /**
- * Chọn gói áp dụng bảo lưu: gói đang hoạt động hôm nay, nếu không thì gói đang bảo lưu.
+ * Tính ngày bắt đầu sớm nhất theo múi giờ trung tâm + `noticeHours` (khớp backend:
+ * `start.atStartOfDay() >= now.plusHours(noticeHours)`).
+ */
+function earliestStartFromNotice(noticeHours: number, now = new Date()): string {
+  const threshold = new Date(now.getTime() + Math.max(0, noticeHours) * 3_600_000);
+  const parts = centerNowParts(threshold);
+  return parts.time === '00:00' ? parts.date : addDays(parts.date, 1);
+}
+
+/**
+ * Chọn gói áp dụng bảo lưu: gói đang hoạt động hôm nay (giờ trung tâm), nếu không thì gói đang bảo lưu.
  */
 function pickSubscription(history: MemberSubscription[]): MemberSubscription | null {
-  const today = isoDate(new Date());
+  const today = centerNowParts().date;
   return history.find((item) => item.status === 'active' && item.startDate <= today && item.endDate >= today)
     ?? history.find((item) => item.status === 'frozen')
     ?? null;
@@ -56,8 +65,9 @@ function pickSubscription(history: MemberSubscription[]): MemberSubscription | n
  */
 export function MemberHoldPage() {
   const { t } = useI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | Error | null>(null);
+  const [loadError, setLoadError] = useState<string | Error | SourceMessage | null>(null);
   const [subscription, setSubscription] = useState<MemberSubscription | null>(null);
   const [policy, setPolicy] = useState<HoldPolicy | null>(null);
   const [detail, setDetail] = useState<HoldDetail | null>(null);
@@ -65,7 +75,8 @@ export function MemberHoldPage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [files, setFiles] = useState<File[]>([]);
-  const [formError, setFormError] = useState<string | Error | null>(null);
+  const [formError, setFormError] = useState<string | Error | SourceMessage | null>(null);
+  const [invalidFields, setInvalidFields] = useState<{ startDate?: boolean; endDate?: boolean; reason?: boolean }>({});
   const [busy, setBusy] = useState(false);
 
   // Tải gói hiện tại, chính sách và yêu cầu bảo lưu hiện có.
@@ -88,7 +99,7 @@ export function MemberHoldPage() {
         setDetail(null);
       }
     } catch (error) {
-      setLoadError(localizableError(error, 'Không tải được thông tin bảo lưu. Vui lòng thử lại.'));
+      setLoadError(toLocalizableError(error, 'Không tải được thông tin bảo lưu. Vui lòng thử lại.', 'Unable to load hold information. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -96,12 +107,13 @@ export function MemberHoldPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  // Ngày bắt đầu sớm nhất được chọn (hôm nay + 2 ngày).
-  const earliestStart = useMemo(() => addDays(isoDate(new Date()), 2), []);
+  const today = centerNowParts().date;
+  // Ngày bắt đầu sớm nhất theo giờ trung tâm + policy.noticeHours.
+  const earliestStart = useMemo(() => earliestStartFromNotice(policy?.noticeHours ?? 24), [policy?.noticeHours]);
   const status = detail?.holdStatus ?? null;
   // Yêu cầu đang chờ duyệt, hoặc bảo lưu đã duyệt nhưng chưa bắt đầu, vẫn có thể rút lại.
   const canWithdraw = status === 'PENDING'
-    || (status === 'APPROVED' && subscription?.status === 'active' && !!detail?.holdStartDate && detail.holdStartDate > isoDate(new Date()));
+    || (status === 'APPROVED' && subscription?.status === 'active' && !!detail?.holdStartDate && detail.holdStartDate > today);
   const canRequest = !!subscription && !!policy?.allowed && !policy.alreadyUsed
     && subscription.status === 'active' && status !== 'PENDING' && status !== 'APPROVED';
 
@@ -111,14 +123,18 @@ export function MemberHoldPage() {
     if (!list) return;
     const picked = Array.from(list);
     if (policy && picked.length > policy.maxDocuments) {
-      setFormError(t(`Chỉ được đính kèm tối đa ${policy.maxDocuments} tệp.`, `You can attach at most ${policy.maxDocuments} files.`));
+      setFormError(sourceMessage(
+        `Chỉ được đính kèm tối đa ${policy.maxDocuments} tệp.`,
+        `You can attach at most ${policy.maxDocuments} files.`,
+      ));
       return;
     }
     const bad = picked.find((file) => !ACCEPTED_TYPES.includes(file.type) || file.size > (policy?.maxDocumentBytes ?? 0));
     if (bad) {
-      setFormError(t(
-        `Tệp "${bad.name}" không hợp lệ. Chỉ nhận ảnh JPG, PNG hoặc PDF, mỗi tệp tối đa ${Math.round((policy?.maxDocumentBytes ?? 0) / 1048576)} MB.`,
-        `"${bad.name}" is not valid. Use JPG, PNG or PDF files of at most ${Math.round((policy?.maxDocumentBytes ?? 0) / 1048576)} MB each.`,
+      const maxMb = Math.round((policy?.maxDocumentBytes ?? 0) / 1048576);
+      setFormError(sourceMessage(
+        `Tệp "${bad.name}" không hợp lệ. Chỉ nhận ảnh JPG, PNG hoặc PDF, mỗi tệp tối đa ${maxMb} MB.`,
+        `"${bad.name}" is not valid. Use JPG, PNG or PDF files of at most ${maxMb} MB each.`,
       ));
       return;
     }
@@ -129,27 +145,49 @@ export function MemberHoldPage() {
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!subscription || !policy || busy) return;
-    if (!reason.trim()) { setFormError(t('Vui lòng nhập lý do bảo lưu.', 'Please enter the reason for the hold.')); return; }
-    if (!startDate || !endDate || endDate < startDate) { setFormError(t('Vui lòng chọn ngày bắt đầu và kết thúc hợp lệ.', 'Please choose valid start and end dates.')); return; }
-    if (startDate < earliestStart) { setFormError(t(`Đơn phải nộp trước ngày bắt đầu ít nhất ${policy.noticeHours} giờ.`, `The request must be filed at least ${policy.noticeHours} hours before the start.`)); return; }
+    setInvalidFields({});
+    if (!reason.trim()) {
+      setInvalidFields({ reason: true });
+      setFormError(sourceMessage('Vui lòng nhập lý do bảo lưu.', 'Please enter the reason for the hold.'));
+      return;
+    }
+    if (!startDate || !endDate || endDate < startDate) {
+      setInvalidFields({ startDate: !startDate || endDate < startDate, endDate: !endDate || endDate < startDate });
+      setFormError(sourceMessage('Vui lòng chọn ngày bắt đầu và kết thúc hợp lệ.', 'Please choose valid start and end dates.'));
+      return;
+    }
+    if (startDate < earliestStart) {
+      setInvalidFields({ startDate: true });
+      setFormError(sourceMessage(
+        `Đơn phải nộp trước ngày bắt đầu ít nhất ${policy.noticeHours} giờ.`,
+        `The request must be filed at least ${policy.noticeHours} hours before the start.`,
+      ));
+      return;
+    }
     const days = inclusiveDays(startDate, endDate);
     if (days < policy.minDays || days > policy.maxDays) {
-      setFormError(t(`Thời gian bảo lưu phải từ ${policy.minDays} đến ${policy.maxDays} ngày.`, `The hold must last between ${policy.minDays} and ${policy.maxDays} days.`));
+      setInvalidFields({ startDate: true, endDate: true });
+      setFormError(sourceMessage(
+        `Thời gian bảo lưu phải từ ${policy.minDays} đến ${policy.maxDays} ngày.`,
+        `The hold must last between ${policy.minDays} and ${policy.maxDays} days.`,
+      ));
       return;
     }
     if (startDate < subscription.startDate || endDate > subscription.endDate) {
-      setFormError(t('Thời gian bảo lưu phải nằm trong thời hạn gói tập.', 'The hold must fall inside your membership period.'));
+      setInvalidFields({ startDate: startDate < subscription.startDate, endDate: endDate > subscription.endDate });
+      setFormError(sourceMessage('Thời gian bảo lưu phải nằm trong thời hạn gói tập.', 'The hold must fall inside your membership period.'));
       return;
     }
     setBusy(true);
     setFormError(null);
     try {
       await submitHoldRequest(subscription.id, { reason: reason.trim(), startDate, endDate, files });
-      notify(t('Đã gửi đơn bảo lưu. Lễ tân sẽ xem xét giấy tờ của bạn.', 'Hold request sent. Reception will review your paperwork.'), 'success');
-      setReason(''); setStartDate(''); setEndDate(''); setFiles([]);
+      const msg = sourceMessage('Đã gửi đơn bảo lưu. Lễ tân sẽ xem xét giấy tờ của bạn.', 'Hold request sent. Reception will review your paperwork.');
+      notify(t(msg), 'success', { translation: msg });
+      setReason(''); setStartDate(''); setEndDate(''); setFiles([]); setInvalidFields({});
       await load();
     } catch (error) {
-      setFormError(localizableError(error, 'Không thể gửi đơn bảo lưu. Vui lòng thử lại.'));
+      setFormError(toLocalizableError(error, 'Không thể gửi đơn bảo lưu. Vui lòng thử lại.', 'Unable to submit hold request. Please try again.'));
     } finally {
       setBusy(false);
     }
@@ -158,28 +196,59 @@ export function MemberHoldPage() {
   // Rút yêu cầu bảo lưu đang chờ hoặc đã duyệt nhưng chưa bắt đầu.
   async function onWithdraw() {
     if (!subscription || busy) return;
+    const isApproved = status === 'APPROVED';
+    const confirmed = await confirm({
+      title: isApproved
+        ? sourceMessage('Hủy bảo lưu chưa bắt đầu?', 'Cancel upcoming hold?')
+        : sourceMessage('Rút đơn bảo lưu?', 'Withdraw hold request?'),
+      message: isApproved
+        ? sourceMessage(
+          'Bạn có chắc muốn hủy bảo lưu đã duyệt? Các khóa học nhóm và buổi PT 1:1 đã bị hủy khi duyệt sẽ không tự khôi phục; gói tập sẽ được trả lại lượt bảo lưu.',
+          'Are you sure you want to cancel this approved hold? Group courses and 1:1 PT sessions cancelled at approval will not be restored; your package hold allowance will be returned.',
+        )
+        : sourceMessage(
+          'Bạn có chắc muốn rút đơn bảo lưu đang chờ duyệt này không?',
+          'Are you sure you want to withdraw this pending hold request?',
+        ),
+      confirmLabel: isApproved
+        ? sourceMessage('Hủy bảo lưu', 'Cancel hold')
+        : sourceMessage('Rút đơn', 'Withdraw request'),
+      cancelLabel: sourceMessage('Để sau', 'Keep'),
+      danger: isApproved,
+    });
+    if (!confirmed) return;
     setBusy(true);
+    setFormError(null);
     try {
       await withdrawHoldRequest(subscription.id);
-      notify(t('Đã rút đơn bảo lưu.', 'Hold request withdrawn.'), 'success');
+      const msg = sourceMessage('Đã rút đơn bảo lưu.', 'Hold request withdrawn.');
+      notify(t(msg), 'success', { translation: msg });
       await load();
     } catch (error) {
-      setFormError(localizableError(error, 'Không thể rút đơn bảo lưu. Vui lòng thử lại.'));
+      setFormError(toLocalizableError(error, 'Không thể rút đơn bảo lưu. Vui lòng thử lại.', 'Unable to withdraw hold request. Please try again.'));
     } finally {
       setBusy(false);
     }
   }
 
-  // Mở tài liệu đã nộp trong tab mới qua object URL (thu hồi sau 60 giây).
-  async function openDocument(documentId: number) {
+  // Mở tài liệu đã nộp trong tab mới qua object URL (fallback tải trực tiếp nếu bị chặn popup, thu hồi sau 60 giây).
+  async function openDocument(documentId: number, fileName?: string) {
     if (!subscription) return;
     try {
       const blob = await fetchHoldDocument(subscription.id, documentId);
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener');
+      const popup = window.open(url, '_blank', 'noopener');
+      if (!popup) {
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = fileName || `hold-document-${documentId}`;
+        document.body.append(anchor);
+        anchor.click();
+        anchor.remove();
+      }
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error) {
-      setFormError(localizableError(error, 'Không mở được giấy tờ. Vui lòng thử lại.'));
+      setFormError(toLocalizableError(error, 'Không mở được giấy tờ. Vui lòng thử lại.', 'Unable to open document. Please try again.'));
     }
   }
 
@@ -212,7 +281,10 @@ export function MemberHoldPage() {
                 <li>{t(`Tối đa ${policy.maxDays} ngày, tối thiểu ${policy.minDays} ngày.`, `Between ${policy.minDays} and ${policy.maxDays} days.`)}</li>
                 <li>{t('Mỗi gói chỉ được bảo lưu một lần.', 'Each package can be put on hold only once.')}</li>
                 <li>{t(`Nộp đơn trước ngày bắt đầu ít nhất ${policy.noticeHours} giờ (có thể đính kèm giấy tờ nếu có).`, `File at least ${policy.noticeHours} hours before it starts (supporting documents optional).`)}</li>
-                <li>{t('Khi được duyệt, các buổi PT trong giai đoạn bảo lưu sẽ tự hủy (buổi PT dùng lượt của gói được trả lại lượt); ngày bảo lưu được cộng vào hạn gói.', 'When approved, PT sessions booked during the hold are cancelled (PT sessions booked with package sessions get them back); the held days are added to your expiry.')}</li>
+                <li>{t(
+                  'Khi được duyệt, cả các khóa học nhóm (hoàn lượt/học phí nếu hủy trước ngày khai giảng ít nhất 3 ngày; muộn hơn sẽ mất lượt/không hoàn) lẫn các buổi PT 1:1 trong giai đoạn bảo lưu sẽ tự hủy (buổi PT dùng lượt của gói được trả lại lượt); ngày bảo lưu được cộng vào hạn gói.',
+                  'When approved, both group courses (credit/fee refunded if cancelled at least 3 days before the course start date; forfeited afterward) and 1:1 PT sessions during the hold are cancelled (package PT sessions are returned); held days are added to your expiry.',
+                )}</li>
               </ul>
             ) : (
               <p className="hold-notice hold-notice--info" role="status">{t('Gói này không được bảo lưu. Gói trải nghiệm và gói 1 tháng cũ hạng Silver/Gold không có quyền bảo lưu.', 'This package cannot be put on hold. The trial and the old 1-month Silver/Gold packages have no hold allowance.')}</p>
@@ -230,7 +302,7 @@ export function MemberHoldPage() {
                 <ul aria-label={t('Giấy tờ đã nộp', 'Submitted documents')}>
                   {detail.documents.map((document) => (
                     <li key={document.id}>
-                      <button type="button" className="btn-secondary btn-sm" onClick={() => void openDocument(document.id)}>{document.fileName}</button>
+                      <button type="button" className="btn-secondary btn-sm" onClick={() => void openDocument(document.id, document.fileName)}>{document.fileName}</button>
                     </li>
                   ))}
                 </ul>
@@ -240,7 +312,7 @@ export function MemberHoldPage() {
                   <button type="button" className="btn-secondary" disabled={busy} onClick={() => void onWithdraw()}>
                     {status === 'PENDING' ? t('Rút đơn', 'Withdraw request') : t('Hủy bảo lưu chưa bắt đầu', 'Cancel the hold before it starts')}
                   </button>
-                  {status === 'APPROVED' && <small className="meta-label" style={{ display: 'block' }}>{t('Các buổi PT đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'PT sessions cancelled at approval are not restored; the package gets its hold back.')}</small>}
+                  {status === 'APPROVED' && <small className="meta-label" style={{ display: 'block' }}>{t('Các khóa học nhóm và buổi PT 1:1 đã hủy khi duyệt sẽ không tự khôi phục; gói được trả lại lượt bảo lưu.', 'Group courses and 1:1 PT sessions cancelled at approval are not restored; the package gets its hold back.')}</small>}
                 </div>
               )}
               {status === 'REJECTED' && <p className="hold-notice hold-notice--warn" role="status">{t('Đơn bị từ chối. Bạn có thể nộp đơn mới.', 'The request was rejected. You can file a new one.')}{detail.holdRejectionReason ? <> {t('Lý do từ Lễ tân', 'Reception\'s reason')}: <strong>{detail.holdRejectionReason}</strong></> : null}</p>}
@@ -257,30 +329,34 @@ export function MemberHoldPage() {
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="hold-start">{t('Ngày bắt đầu', 'Start date')}</label>
                 <DatePicker id="hold-start" min={earliestStart} max={subscription.endDate}
-                  value={startDate} onChange={(event) => setStartDate(event.target.value)} disabled={busy} />
+                  aria-invalid={invalidFields.startDate ? 'true' : undefined}
+                  value={startDate} onChange={(event) => { setStartDate(event.target.value); setInvalidFields((prev) => ({ ...prev, startDate: false })); }} disabled={busy} />
               </div>
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="hold-end">{t('Ngày kết thúc', 'End date')}</label>
                 <DatePicker id="hold-end" min={startDate || earliestStart} max={subscription.endDate}
-                  value={endDate} onChange={(event) => setEndDate(event.target.value)} disabled={busy} />
+                  aria-invalid={invalidFields.endDate ? 'true' : undefined}
+                  value={endDate} onChange={(event) => { setEndDate(event.target.value); setInvalidFields((prev) => ({ ...prev, endDate: false })); }} disabled={busy} />
               </div>
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="hold-reason">{t('Lý do bảo lưu *', 'Reason *')}</label>
-                <textarea id="hold-reason" className="portal-input" rows={3} maxLength={500} value={reason}
-                  onChange={(event) => setReason(event.target.value)} disabled={busy} style={{ width: '100%', resize: 'vertical' }} />
+                <textarea id="hold-reason" className="portal-textarea" rows={3} maxLength={500} value={reason}
+                  aria-invalid={invalidFields.reason ? 'true' : undefined}
+                  onChange={(event) => { setReason(event.target.value); setInvalidFields((prev) => ({ ...prev, reason: false })); }} disabled={busy} style={{ width: '100%', resize: 'vertical' }} />
               </div>
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="hold-files">{t('Giấy tờ đính kèm nếu có (JPG, PNG, PDF)', 'Supporting documents if any (JPG, PNG, PDF)')}</label>
                 <FilePicker id="hold-files" multiple accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
                   fileNames={files.map((file) => file.name)} onChange={(event) => onPickFiles(event.target.files)} disabled={busy} />
               </div>
-              {formError && <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)' }}>{t(formError)}</p>}
+              {formError && <p className="form-error" role="alert">{t(formError)}</p>}
               <div><button type="submit" className="btn-primary" disabled={busy}>{busy ? t('Đang gửi…', 'Sending…') : t('Gửi đơn bảo lưu', 'Send hold request')}</button></div>
             </form>
           )}
-          {!canRequest && formError && <p role="alert" style={{ color: 'var(--portal-danger, #fca5a5)' }}>{t(formError)}</p>}
+          {!canRequest && formError && <p className="form-error" role="alert">{t(formError)}</p>}
         </>
       )}
+      {confirmDialog}
     </div>
   );
 }

@@ -292,6 +292,7 @@ class TrainingPlanServiceTest {
         coach.setUserId(20L);
         AiRecommendationLog recoLog = new AiRecommendationLog();
         ReflectionTestUtils.setField(recoLog, "id", 55L);
+        recoLog.setMember(member);
         recoLog.setApplied(false);
 
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
@@ -463,6 +464,7 @@ class TrainingPlanServiceTest {
     @DisplayName("Activating a plan moves the same coach's other active plan for the member into history")
     void activatingAPlanSupersedesTheMembersOtherActivePlan() {
         var draft = ownedPlan("draft");
+        draft.setEndDate(LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(30));
         var previous = ownedPlan("active");
         ReflectionTestUtils.setField(previous, "id", 99L);
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(draft));
@@ -482,8 +484,10 @@ class TrainingPlanServiceTest {
         var history = ownedPlan("superseded");
         var current = ownedPlan("active");
         ReflectionTestUtils.setField(current, "id", 101L);
-        history.setStartDate(LocalDate.now().minusDays(10));
-        history.setEndDate(LocalDate.now().plusDays(18));
+        LocalDate baseDate = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
+        LocalDate expectedEnd = baseDate.plusDays(18);
+        history.setStartDate(baseDate.minusDays(10));
+        history.setEndDate(expectedEnd);
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(history));
         when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
         when(trainingPlanRepository.findOtherActiveForMemberAndCoach(10L, 20L, 100L)).thenReturn(List.of(current));
@@ -492,7 +496,7 @@ class TrainingPlanServiceTest {
 
         assertEquals("active", result.getStatus());
         assertEquals("superseded", current.getStatus());
-        assertEquals(LocalDate.now().plusDays(18), result.getEndDate(), "A plan still in its period keeps its dates");
+        assertEquals(expectedEnd, result.getEndDate(), "A plan still in its period keeps its dates");
     }
 
     /** Kiểm thử: áp dụng lại kế hoạch đã hết hạn dời ngày về hôm nay. */
@@ -505,11 +509,13 @@ class TrainingPlanServiceTest {
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(history));
         when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
 
+        LocalDate before = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
         var result = service.reapplyPlan(100L, 20L, "COACH");
+        LocalDate after = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
 
-        var today = LocalDate.now(com.swp391.scms.common.CenterTime.ZONE);
-        assertEquals(today, result.getStartDate());
-        assertEquals(today.plusDays(28), result.getEndDate());
+        assertFalse(result.getStartDate().isBefore(before));
+        assertFalse(result.getStartDate().isAfter(after));
+        assertEquals(result.getStartDate().plusDays(28), result.getEndDate());
     }
 
     /** Kiểm thử: từ chối áp dụng lại kế hoạch ngoài lịch sử. */
@@ -527,6 +533,7 @@ class TrainingPlanServiceTest {
     @DisplayName("Activating a plan leaves the active plans of the member's other coaches alone")
     void activatingAPlanOnlyLooksAtTheSameCoachsPlans() {
         var draft = ownedPlan("draft");
+        draft.setEndDate(LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(30));
         when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(draft));
         when(trainingPlanRepository.save(any(TrainingPlan.class))).thenAnswer(inv -> inv.getArgument(0));
         when(trainingPlanRepository.findOtherActiveForMemberAndCoach(10L, 20L, 100L)).thenReturn(List.of());
@@ -535,5 +542,97 @@ class TrainingPlanServiceTest {
 
         verify(trainingPlanRepository).findOtherActiveForMemberAndCoach(10L, 20L, 100L);
         verify(trainingPlanRepository, times(1)).save(any(TrainingPlan.class));
+    }
+
+    /** Kiểm thử P1-BE-26: hội viên không đọc được giáo án draft/cancelled/superseded theo ID, nhưng đọc được completed. */
+    @Test
+    @DisplayName("P1-BE-26: Member cannot view draft, cancelled, or superseded plans via getPlanById")
+    void memberCannotViewDraftCancelledOrSupersededPlanById() {
+        for (String blockedStatus : List.of("draft", "cancelled", "superseded")) {
+            var plan = ownedPlan(blockedStatus);
+            when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(plan));
+            assertThrows(ForbiddenException.class, () -> service.getPlanById(100L, 10L, "MEMBER"));
+        }
+        var completed = ownedPlan("completed");
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(completed));
+        when(trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(100L)).thenReturn(List.of());
+        assertEquals("completed", service.getPlanById(100L, 10L, "MEMBER").getStatus());
+    }
+
+    /** Kiểm thử P1-BE-26: HLV khác phải có phân công hiện tại qua CurrentCoachMembers và không bao giờ xem được bản nháp của HLV khác. */
+    @Test
+    @DisplayName("P1-BE-26: Cross-coach read requires active CurrentCoachMembers assignment and hides private drafts")
+    void otherCoachRequiresCurrentAssignmentAndCannotReadOtherCoachDraft() {
+        var activePlan = ownedPlan("active");
+        var draftPlan = ownedPlan("draft");
+        ReflectionTestUtils.setField(draftPlan, "id", 101L);
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(activePlan));
+        when(trainingPlanRepository.findById(101L)).thenReturn(Optional.of(draftPlan));
+
+        // Cựu HLV (không có phân công hiện tại) bị từ chối cả getPlanById lẫn getPlans(memberId).
+        doThrow(new ForbiddenException("COACH_MEMBER_NOT_ASSIGNED", "coaching.member.not_assigned", null, "Denied"))
+                .when(currentCoachMembers).requireCoachOf(99L, 10L);
+        assertThrows(ForbiddenException.class, () -> service.getPlanById(100L, 99L, "COACH"));
+        assertThrows(ForbiddenException.class, () -> service.getPlans(10L, 99L, "COACH"));
+
+        // HLV đang phụ trách hiện tại (id=30L) đọc được giáo án active nhưng bị chặn xem draft riêng của HLV 20L.
+        doNothing().when(currentCoachMembers).requireCoachOf(30L, 10L);
+        when(trainingPlanItemRepository.findByTrainingPlanIdOrderByOrderIndexAscIdAsc(100L)).thenReturn(List.of());
+        assertEquals(100L, service.getPlanById(100L, 30L, "COACH").getId());
+        assertThrows(ForbiddenException.class, () -> service.getPlanById(101L, 30L, "COACH"));
+
+        when(trainingPlanRepository.findByMemberUserIdOrderByCreatedAtDesc(10L)).thenReturn(List.of(activePlan, draftPlan));
+        var visibleToCoCoach = service.getPlans(10L, 30L, "COACH");
+        assertEquals(1, visibleToCoCoach.size());
+        assertEquals(100L, visibleToCoCoach.get(0).getId());
+    }
+
+    /** Kiểm thử P2-BE-30: chặn addItem trên giáo án superseded, chặn kích hoạt nháp hết hạn (kèm khóa Member), và chặn IDOR aiRecommendationId. */
+    @Test
+    @DisplayName("P2-BE-30: Blocks addItem on superseded, expired activatePlan, member lock, and cross-member AI reco IDOR")
+    void enforcesLifecycleAndOwnershipGuardsOnTrainingPlans() {
+        // 1. addItem bị chặn trên giáo án superseded
+        var superseded = ownedPlan("superseded");
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(superseded));
+        var itemDto = new TrainingPlanItemCreateDto(1, "Push Up", null, 3, 12, null, 1);
+        assertThrows(ConflictException.class, () -> service.addItem(100L, itemDto, 20L, "COACH"));
+
+        // 2. activatePlan từ chối giáo án nháp đã quá hạn
+        var expiredDraft = ownedPlan("draft");
+        expiredDraft.setStartDate(LocalDate.of(2025, 1, 1));
+        expiredDraft.setEndDate(LocalDate.of(2025, 1, 31));
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(expiredDraft));
+        assertThrows(BadRequestException.class, () -> service.activatePlan(100L, 20L, "COACH"));
+
+        // 3. activatePlan hợp lệ khóa Member bằng findByUserIdForUpdate
+        var validDraft = ownedPlan("draft");
+        validDraft.setEndDate(LocalDate.now(com.swp391.scms.common.CenterTime.ZONE).plusDays(14));
+        when(trainingPlanRepository.findById(100L)).thenReturn(Optional.of(validDraft));
+        when(trainingPlanRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        service.activatePlan(100L, 20L, "COACH");
+        verify(memberRepository).findByUserIdForUpdate(10L);
+
+        // 4. createPlan chặn gắn aiRecommendationId của hội viên khác
+        Member member10 = new Member();
+        member10.setUserId(10L);
+        Member member99 = new Member();
+        member99.setUserId(99L);
+        Coach coach20 = new Coach();
+        coach20.setUserId(20L);
+        AiRecommendationLog foreignReco = new AiRecommendationLog();
+        ReflectionTestUtils.setField(foreignReco, "id", 88L);
+        foreignReco.setMember(member99);
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member10));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach20));
+        when(aiRecommendationLogRepository.findById(88L)).thenReturn(Optional.of(foreignReco));
+
+        TrainingPlanCreateDto dto = new TrainingPlanCreateDto();
+        dto.setMemberId(10L);
+        dto.setStartDate(LocalDate.of(2026, 11, 1));
+        dto.setEndDate(LocalDate.of(2026, 12, 1));
+        dto.setAiRecommendationId(88L);
+        assertThrows(ForbiddenException.class, () -> service.createPlan(dto, 20L, "COACH"));
+        assertFalse(foreignReco.isApplied());
+        verify(aiRecommendationLogRepository, never()).save(foreignReco);
     }
 }

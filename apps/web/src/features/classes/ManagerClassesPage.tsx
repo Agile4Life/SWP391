@@ -5,6 +5,7 @@ import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { useI18n } from '../../shared/i18n';
 import { useLanguage } from '../../shared/i18n/language';
+import { centerNowParts } from '../../shared/lib/centerTime';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { notify } from '../../shared/lib/portalNotices';
 import type { Discipline, Room } from '../manager/catalogApi';
@@ -168,14 +169,14 @@ export function ManagerClassesPage() {
     [activeDisciplineId, activeClassesByDiscipline],
   );
 
-  const today = todayISO();
-
   const toTimetableEvents = useCallback(
-    (list: typeof enrichedSessions): TimetableEvent[] =>
-      list.map((s) => {
+    (list: typeof enrichedSessions): TimetableEvent[] => {
+      const { date: today, time: nowTime } = centerNowParts();
+      return list.map((s) => {
         const capacity = s.capacity ?? 0;
         const booked = s.bookedCount ?? 0;
-        const isPast = s.sessionDate < today;
+        const endClock = (s.endTime ?? '').slice(0, 5);
+        const isPast = s.sessionDate < today || (s.sessionDate === today && endClock !== '' && endClock <= nowTime);
         const tone: TimetableTone =
           s.status === 'cancelled'
             ? 'cancelled'
@@ -185,7 +186,8 @@ export function ManagerClassesPage() {
                 ? 'full'
                 : 'open';
         const title = s.className || t(`Lớp #${s.classId}`, `Class #${s.classId}`);
-        const badge = capacity > 0 ? `${booked}/${capacity}` : `${booked}`;
+        const seats = capacity > 0 ? `${booked}/${capacity}` : `${booked}`;
+        const badge = tone === 'full' ? `${seats} · ${t('Đã đầy', 'Full')}` : seats;
         const range = formatSlotLabel(s.startTime, s.endTime);
         return {
           id: String(s.id),
@@ -202,8 +204,9 @@ export function ManagerClassesPage() {
           tone,
           ariaLabel: `${title} (${s.disciplineName ?? ''}) · ${range} · ${s.roomName ?? ''} · ${badge}`,
         };
-      }),
-    [today, t],
+      });
+    },
+    [t],
   );
 
   /** Sự kiện riêng cho Tab 1 (chỉ 1 bộ môn đang chọn, chỉ tính lớp đang hoạt động). */
@@ -509,16 +512,41 @@ export function ManagerClassesPage() {
           />
         </>
       ) : (
-        <ClassListTable
-          classes={classes}
-          sessions={enrichedSessions}
-          onViewClassSchedule={(cls) => {
-            setSelectedDisciplineId(cls.disciplineId);
-            setView('by_discipline');
-          }}
-          onEditClass={(cls) => setEditingClass(cls)}
-          onDeleteClass={(cls) => void handleDeleteClass(cls)}
-        />
+        <>
+          {error && (
+            <div
+              className="portal-alert portal-alert--error"
+              role="alert"
+              style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12 }}
+            >
+              <span>{error}</span>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => void loadAll()}>
+                {t('Thử lại', 'Retry')}
+              </button>
+            </div>
+          )}
+          <ClassListTable
+            classes={classes}
+            sessions={enrichedSessions}
+            onViewClassSchedule={(cls) => {
+              setSelectedDisciplineId(cls.disciplineId);
+              if (cls.startDate) {
+                setWeekStart(mondayOf(cls.startDate));
+              } else {
+                const firstSessionDate = activeScheduleSessions
+                  .filter((s) => s.classId === cls.id && s.status !== 'cancelled')
+                  .map((s) => s.sessionDate)
+                  .sort()[0];
+                if (firstSessionDate) {
+                  setWeekStart(mondayOf(firstSessionDate));
+                }
+              }
+              setView('by_discipline');
+            }}
+            onEditClass={(cls) => setEditingClass(cls)}
+            onDeleteClass={(cls) => void handleDeleteClass(cls)}
+          />
+        </>
       )}
 
       {/* Modal chi tiết buổi học khi bấm vào ô lịch nhỏ */}
@@ -557,7 +585,6 @@ export function ManagerClassesPage() {
       {editingClass && (
         <EditClassModal
           gymClass={editingClass}
-          classes={classes}
           disciplines={disciplines}
           rooms={rooms}
           coaches={coaches}

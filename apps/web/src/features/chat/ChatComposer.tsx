@@ -18,7 +18,11 @@ export function ChatComposer({ id, label, value, onChange, onSubmit, disabled = 
   const [quickSend] = useState(enterSends);
   const [emojiOpen, setEmojiOpen] = useState(false);
   const input = useRef<HTMLTextAreaElement>(null);
-  const canSend = !disabled && !sending && value.trim().length > 0;
+  const canSend = !disabled && !sending && value.trim().length > 0 && value.length <= maxLength;
+
+  useEffect(() => {
+    if (disabled) setEmojiOpen(false);
+  }, [disabled]);
 
   useEffect(() => {
     if (!emojiOpen || disabled) return;
@@ -48,8 +52,13 @@ export function ChatComposer({ id, label, value, onChange, onSubmit, disabled = 
     setEmojiOpen(false);
     if (canSend) onSubmit();
   }
-  // Chèn emoji vào cuối nội dung rồi đóng bảng emoji.
+  // Chèn emoji vào cuối nội dung (giữ đúng giới hạn maxLength) rồi đóng bảng emoji.
   function insert(emoji: string) {
+    if (disabled || value.length + emoji.length > maxLength) {
+      setEmojiOpen(false);
+      input.current?.focus();
+      return;
+    }
     onChange(`${value}${emoji}`);
     setEmojiOpen(false);
     input.current?.focus();
@@ -60,10 +69,10 @@ export function ChatComposer({ id, label, value, onChange, onSubmit, disabled = 
     <label htmlFor={id} className="direct-chat__sr">{label}</label>
     {notice && <p className="direct-chat__muted">{notice}</p>}
     {emojiOpen && !disabled && <div className="direct-chat__emoji-bar" role="group" id={`${id}-emojis`} aria-label={t('Biểu tượng cảm xúc', 'Emoji')}>
-      {QUICK_EMOJIS.map(emoji => <button key={emoji} type="button" className="direct-chat__emoji-item" aria-label={`${t('Chèn', 'Insert')} ${emoji}`} title={`${t('Chèn', 'Insert')} ${emoji}`} onClick={() => insert(emoji)}>{emoji}</button>)}
+      {QUICK_EMOJIS.map(emoji => <button key={emoji} type="button" className="direct-chat__emoji-item" disabled={disabled || value.length + emoji.length > maxLength} aria-label={`${t('Chèn', 'Insert')} ${emoji}`} title={`${t('Chèn', 'Insert')} ${emoji}`} onClick={() => insert(emoji)}>{emoji}</button>)}
     </div>}
     <div className="direct-chat__compose-pill">
-      <button type="button" className="direct-chat__composer-icon" aria-label={t('Chọn biểu tượng cảm xúc', 'Choose emoji')} title={t('Chọn biểu tượng cảm xúc', 'Choose emoji')} aria-expanded={emojiOpen} aria-controls={`${id}-emojis`} disabled={disabled} onClick={() => setEmojiOpen(open => !open)}>
+      <button type="button" className="direct-chat__composer-icon" aria-label={t('Chọn biểu tượng cảm xúc', 'Choose emoji')} title={t('Chọn biểu tượng cảm xúc', 'Choose emoji')} aria-expanded={emojiOpen && !disabled} aria-controls={`${id}-emojis`} disabled={disabled} onClick={() => setEmojiOpen(open => !open)}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
           <circle cx="12" cy="12" r="10" />
           <path d="M8 14s1.5 2 4 2 4-2 4-2" />

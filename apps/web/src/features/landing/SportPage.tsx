@@ -2,8 +2,9 @@ import { useSourceLanguage, sourceText } from '../../shared/i18n/sourceText';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import { usePublicCatalog, localizeSeededCatalogText } from './publicCatalog';
 import { CatalogSchedule, CatalogStatus } from './components/CatalogSections';
-import { Link, useLocation, useParams } from 'react-router-dom';
-import { getCurrentUser, homePath } from '../../shared/api/client';
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom';
+import { homePath } from '../../shared/api/client';
+import { useCurrentUser } from '../../shared/api/useCurrentUser';
 import { PublicLayout, RoundArrow } from './components/PublicLayout';
 import { DISCIPLINES } from '../../shared/lib/disciplines';
 import { SPORT_PAGES, SPORT_PAGE_LIST, sportIdFromPath, type SportPageId } from './sportPages';
@@ -13,10 +14,17 @@ export function SportPage({ forcedSport }: { forcedSport?: SportPageId }) {
   useSourceLanguage();
   const { sportId } = useParams<{ sportId?: string }>();
   const { pathname } = useLocation();
-  const key: SportPageId = forcedSport ?? sportIdFromPath(sportId ? `/sports/${sportId}` : pathname) ?? 'boxing';
-  const sport = SPORT_PAGES[key];
+  const resolved = forcedSport ?? sportIdFromPath(sportId ? `/sports/${sportId}` : pathname);
+  if (!resolved) {
+    return <Navigate to="/" replace />;
+  }
+  return <SportPageContent sportKey={resolved} />;
+}
+
+function SportPageContent({ sportKey }: { sportKey: SportPageId }) {
+  const sport = SPORT_PAGES[sportKey];
   const { catalog, error, retry } = usePublicCatalog();
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const joinPath = user ? (user.role === 'MEMBER' ? '/member/packages' : homePath(user.role)) : '/register';
   const sportName = DISCIPLINES.find((item) => item.id === sport.id)!.name;
   const classesPath = user

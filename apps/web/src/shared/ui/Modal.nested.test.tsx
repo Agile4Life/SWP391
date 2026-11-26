@@ -78,3 +78,53 @@ it('stays open when a file picker inside it is dismissed', async () => {
   await act(async () => host.querySelector('dialog')!.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true })));
   expect(onClose).toHaveBeenCalledTimes(1);
 });
+
+it('includes summary and contenteditable in focus trap, handles Shift+Tab from dialog, ignores returnFocusRef identity changes, and restores activeElement', async () => {
+  const opener = document.createElement('button');
+  opener.type = 'button';
+  opener.textContent = 'Mở';
+  document.body.append(opener);
+  opener.focus();
+
+  const showModalSpy = vi.spyOn(HTMLDialogElement.prototype, 'showModal');
+  const refA = { current: opener };
+  const refB = { current: opener };
+
+  function Wrapper({ useRefB }: { useRefB: boolean }) {
+    return (
+      <Modal title="Chi tiết" onClose={() => {}} returnFocusRef={useRefB ? refB : refA}>
+        <details><summary>Xem thêm</summary><button type="button">Ẩn</button></details>
+        <div contentEditable suppressContentEditableWarning tabIndex={0} id="editable-box">Ghi chú</div>
+      </Modal>
+    );
+  }
+
+  await act(async () => root.render(<Wrapper useRefB={false} />));
+  const initialCalls = showModalSpy.mock.calls.length;
+
+  // Đổi tham chiếu prop returnFocusRef không được đóng/mở lại dialog
+  await act(async () => root.render(<Wrapper useRefB={true} />));
+  expect(showModalSpy.mock.calls.length).toBe(initialCalls);
+
+  // Shift+Tab khi activeElement là chính <dialog> phải vòng về phần tử cuối (contenteditable)
+  const dialog = host.querySelector<HTMLDialogElement>('dialog')!;
+  const editable = host.querySelector<HTMLElement>('#editable-box')!;
+  dialog.focus();
+  await act(async () => {
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true, cancelable: true }));
+  });
+  expect(document.activeElement).toBe(editable);
+
+  // Khi unmount vẫn trả focus về returnFocusRef / activeElement trước khi mở
+  await act(async () => root.unmount());
+  expect(document.activeElement).toBe(opener);
+
+  opener.focus();
+  root = createRoot(host);
+  await act(async () => root.render(<Modal title="Tự trả focus" onClose={() => {}}><button type="button">OK</button></Modal>));
+  await act(async () => root.unmount());
+  expect(document.activeElement).toBe(opener);
+
+  opener.remove();
+  root = createRoot(host);
+});

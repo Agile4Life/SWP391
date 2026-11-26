@@ -15,7 +15,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -86,6 +88,17 @@ public class SupportRequestController {
         return ApiResponse.ok(msg("support.create.success"), result);
     }
 
+    private static final int DEFAULT_PAGE_SIZE = 20;
+    private static final int MAX_PAGE_SIZE = 50;
+
+    /** Cố định sắp xếp mới nhất trước và giới hạn kích thước trang (1..50), bỏ sort tùy ý từ client. */
+    private static Pageable sanitizePageable(Pageable pageable) {
+        int page = pageable != null && pageable.isPaged() ? Math.max(0, pageable.getPageNumber()) : 0;
+        int size = pageable != null && pageable.isPaged() ? pageable.getPageSize() : DEFAULT_PAGE_SIZE;
+        size = Math.min(Math.max(size, 1), MAX_PAGE_SIZE);
+        return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    }
+
     /** GET /my: các phiếu của hội viên, có phân trang. */
     @Operation(summary = "Xem lịch sử yêu cầu của bản thân (Member)")
     @GetMapping("/my")
@@ -93,7 +106,7 @@ public class SupportRequestController {
     public ApiResponse<Page<SupportRequestDto>> getMyRequests(
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PageableDefault(size = 20) Pageable pageable) {
-        Page<SupportRequestDto> requests = supportRequestService.getMyRequests(principal.id(), pageable);
+        Page<SupportRequestDto> requests = supportRequestService.getMyRequests(principal.id(), sanitizePageable(pageable));
         return ApiResponse.ok(msg("support.list.success"), requests);
     }
 
@@ -107,8 +120,8 @@ public class SupportRequestController {
             @RequestParam(defaultValue = "false") boolean unreadOnly,
             @PageableDefault(size = 20) Pageable pageable) {
         Page<SupportRequestDto> requests = "RECEPTIONIST".equals(principal.role()) && inboxService != null
-                ? inboxService.inbox(principal.id(), principal.role(), status, unreadOnly, pageable)
-                : supportRequestService.getAllRequests(status, pageable, principal.role());
+                ? inboxService.inbox(principal.id(), principal.role(), status, unreadOnly, sanitizePageable(pageable))
+                : supportRequestService.getAllRequests(status, sanitizePageable(pageable), principal.role());
         return ApiResponse.ok(msg("support.list.success"), requests);
     }
 
@@ -127,7 +140,7 @@ public class SupportRequestController {
             @AuthenticationPrincipal AuthenticatedPrincipal principal,
             @PathVariable Long id,
             @Valid @RequestBody UpdateSupportRequestStatusDto request) {
-        SupportRequestDto result = supportRequestService.updateStatus(id, request, principal.role());
+        SupportRequestDto result = supportRequestService.updateStatus(id, request, principal.id(), principal.role());
         return ApiResponse.ok(msg("support.update_status.success"), result);
     }
 

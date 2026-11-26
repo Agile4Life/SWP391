@@ -4,12 +4,13 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { VnpayReturnPage } from './VnpayReturnPage';
 import * as api from './vnpayApi';
+import { setLanguage } from '../../shared/i18n';
 import { toast } from '../../shared/ui/toast';
 vi.mock('../../shared/ui/toast', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('./vnpayApi', () => ({ getVnpayStatus: vi.fn(), verifyVnpayReturn: vi.fn() }));
 let host: HTMLDivElement; let root: Root;
 beforeEach(() => { vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); host=document.createElement('div');document.body.append(host);root=createRoot(host); });
-afterEach(async()=>{await act(async()=>root.unmount());host.remove();vi.clearAllMocks();vi.unstubAllGlobals();});
+afterEach(async()=>{vi.useRealTimers();await act(async()=>root.unmount());setLanguage('vi');host.remove();vi.clearAllMocks();vi.unstubAllGlobals();});
 // Dựng component vào DOM giả để kiểm thử.
 async function render(query: string) { await act(async()=>root.render(<MemoryRouter key={query} initialEntries={['/member/payments/vnpay/return'+query]}><VnpayReturnPage /></MemoryRouter>)); }
 it('never trusts a successful browser return code over server status',async()=>{
@@ -60,4 +61,39 @@ it.each(['/member/packages', '/member/classes?tab=pt', '/member/orders/42'])('ke
   vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({ reference: 'ABC123', paymentId: 1, subscriptionId: null, amount: 500000, status: 'success', expiresAt: '2026-11-03T12:15:00', destination });
   await render('?vnp_TxnRef=ABC123');
   expect(host.querySelector('a.btn-primary')?.getAttribute('href')).toBe(destination.startsWith('/member/orders/') ? '/member/invoices' : destination);
+});
+
+it('P1-FE-25: does not re-verify or duplicate toast when toggling language VI <-> EN', async () => {
+  vi.mocked(api.verifyVnpayReturn).mockResolvedValue({
+    reference: 'LANG01', paymentId: 1, subscriptionId: 2, amount: 500000, status: 'success',
+    expiresAt: '2026-11-03T12:15:00', destination: '/member/packages',
+  });
+  await render('?vnp_TxnRef=LANG01&vnp_ResponseCode=00&vnp_SecureHash=sig123');
+  expect(api.verifyVnpayReturn).toHaveBeenCalledTimes(1);
+  expect(toast.success).toHaveBeenCalledTimes(1);
+
+  await act(async () => { setLanguage('en'); });
+  expect(host.textContent).toContain('Payment successful');
+  expect(api.verifyVnpayReturn).toHaveBeenCalledTimes(1);
+  expect(toast.success).toHaveBeenCalledTimes(1);
+});
+
+it('P1-FE-25: verifies signed callback once and polls subsequent pending updates with GET getVnpayStatus', async () => {
+  vi.useFakeTimers();
+  const pending: api.VnpayStatus = {
+    reference: 'POLL01', paymentId: 1, subscriptionId: 2, amount: 500000, status: 'pending',
+    expiresAt: '2026-11-03T12:15:00', destination: '/member/packages',
+  };
+  vi.mocked(api.verifyVnpayReturn).mockResolvedValueOnce(pending);
+  vi.mocked(api.getVnpayStatus).mockResolvedValueOnce({ ...pending, status: 'success' });
+
+  await render('?vnp_TxnRef=POLL01&vnp_ResponseCode=00&vnp_SecureHash=sig123');
+  expect(api.verifyVnpayReturn).toHaveBeenCalledTimes(1);
+  expect(api.getVnpayStatus).not.toHaveBeenCalled();
+
+  await act(async () => { await vi.advanceTimersByTimeAsync(2500); });
+  expect(api.verifyVnpayReturn).toHaveBeenCalledTimes(1);
+  expect(api.getVnpayStatus).toHaveBeenCalledTimes(1);
+  expect(api.getVnpayStatus).toHaveBeenCalledWith('POLL01');
+  expect(host.textContent).toContain('Thanh toán thành công');
 });

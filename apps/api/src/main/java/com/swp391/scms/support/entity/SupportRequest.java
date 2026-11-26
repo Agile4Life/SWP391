@@ -1,5 +1,6 @@
 package com.swp391.scms.support.entity;
 
+import com.swp391.scms.common.CenterTime;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.User;
 import jakarta.persistence.*;
@@ -39,7 +40,7 @@ public class SupportRequest {
     private String status = "open";
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(CenterTime.ZONE);
 
     @Column(name = "resolved_at")
     private LocalDateTime resolvedAt;
@@ -64,7 +65,7 @@ public class SupportRequest {
         this.subject = subject;
         this.description = description;
         this.status = "open";
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = LocalDateTime.now(CenterTime.ZONE);
     }
 
     /** Lấy giá trị trường id. */

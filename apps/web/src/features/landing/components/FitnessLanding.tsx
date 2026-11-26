@@ -1,28 +1,30 @@
 import { sourceText, useSourceLanguage, sourceFormat } from "../../../shared/i18n/sourceText";
 import { LoadingImage } from '../../../shared/ui/LoadingImage';
 import { DISCIPLINES } from '../../../shared/lib/disciplines';
-import { useEffect, useRef, useState, type CSSProperties, type PointerEvent } from 'react';
+import { SCHEDULE_SLOTS } from '../../schedule/slots';
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { getCurrentUser, homePath } from '../../../shared/api/client';
+import { homePath } from '../../../shared/api/client';
+import { useCurrentUser } from '../../../shared/api/useCurrentUser';
 import { usePublicCatalog } from '../publicCatalog';
 import { CatalogPackages, CatalogStatus, CatalogTrainers } from './CatalogSections';
 import { RoundArrow } from './PublicLayout';
 import { SplitHeading } from './SplitHeading';
 import { SportStack } from './SportStack';
 
-const tickerItems = [
+const tickerItems: (string | { vi: string; en: string })[] = [
   ...DISCIPLINES.map((discipline) => discipline.name.toUpperCase()),
   'STRENGTH FLOOR',
   'MOVEMENT STUDIO',
   'GROUP TRAINING',
-  'PERSONAL TRAINING',
+  { vi: 'HUẤN LUYỆN CÁ NHÂN 1:1', en: 'PERSONAL TRAINING' },
 ];
 
 
 const services = [
-  { get title() { return sourceText('WeightLifting'); }, get description() { return sourceText('Tập tạ đúng kỹ thuật, tăng sức mạnh nền tảng.'); }, icon: 'weights' },
-  { get title() { return sourceText('Private Training'); }, get description() { return sourceText('Huấn luyện 1:1 theo nhịp độ riêng.'); }, icon: 'training' },
-  { get title() { return sourceText('Build Muscle'); }, get description() { return sourceText('Phát triển cơ bắp săn chắc, cân đối.'); }, icon: 'muscle' },
+  { id: 'weights', get title() { return sourceText({ vi: 'Tập Tạ', en: 'Weightlifting' }); }, get description() { return sourceText('Tập tạ đúng kỹ thuật, tăng sức mạnh nền tảng.'); }, icon: 'weights' },
+  { id: 'training', get title() { return sourceText('Private Training'); }, get description() { return sourceText('Huấn luyện 1:1 theo nhịp độ riêng.'); }, icon: 'training' },
+  { id: 'muscle', get title() { return sourceText('Build Muscle'); }, get description() { return sourceText('Phát triển cơ bắp săn chắc, cân đối.'); }, icon: 'muscle' },
 ];
 const serviceShapes = [
   'M37 30L259 0Q290-2 295 32L319 231Q323 280 279 280H72Q33 280 27 241L1 80Q-5 40 37 30Z',
@@ -208,10 +210,10 @@ const dailyRhythmItems = [
 ] as const;
 
 const spaces = [
-  { get title() { return sourceText('Không gian cho những mục tiêu lớn.'); }, image: '/images/fitness/gym-floor.jpg', label: 'Strength floor', get meta() { return sourceText({ vi: 'Khu máy tập Gym', en: 'Gym equipment floor' }); } },
-  { get title() { return sourceText('Tập trung vào từng chuyển động.'); }, image: '/images/fitness/strength-session.jpg', label: 'Free weights', get meta() { return sourceText('Khu tạ rời & Power Rack'); } },
-  { get title() { return sourceText('Tìm lại nhịp điệu của chính mình.'); }, image: '/images/yoga-aerial-silk-studio.jpg', label: 'Zen Garden Studio', get meta() { return sourceText({ vi: 'Yoga & Giãn cơ', en: 'Yoga & Mobility' }); } },
-  { get title() { return sourceText({ vi: 'Nhịp tập bùng nổ trên võ đài.', en: 'High-energy boxing & conditioning.' }); }, image: '/images/hero-options/opt5-boxing.jpg', label: 'Ring Arena', get meta() { return sourceText({ vi: 'Boxing & Thể lực', en: 'Boxing & Conditioning' }); } },
+  { id: 'strength', get title() { return sourceText('Không gian cho những mục tiêu lớn.'); }, image: '/images/fitness/gym-floor.jpg', get label() { return sourceText({ vi: 'Khu tập sức mạnh', en: 'Strength floor' }); }, get meta() { return sourceText({ vi: 'Khu máy tập Gym', en: 'Gym equipment floor' }); } },
+  { id: 'weights', get title() { return sourceText('Tập trung vào từng chuyển động.'); }, image: '/images/fitness/strength-session.jpg', get label() { return sourceText({ vi: 'Khu tạ rời', en: 'Free weights' }); }, get meta() { return sourceText('Khu tạ rời & Power Rack'); } },
+  { id: 'yoga', get title() { return sourceText('Tìm lại nhịp điệu của chính mình.'); }, image: '/images/yoga-aerial-silk-studio.jpg', label: 'Zen Garden Studio', get meta() { return sourceText({ vi: 'Yoga & Giãn cơ', en: 'Yoga & Mobility' }); } },
+  { id: 'boxing', get title() { return sourceText({ vi: 'Nhịp tập bùng nổ trên võ đài.', en: 'High-energy boxing & conditioning.' }); }, image: '/images/hero-options/opt5-boxing.jpg', label: 'Ring Arena', get meta() { return sourceText({ vi: 'Boxing & Thể lực', en: 'Boxing & Conditioning' }); } },
 ];
 
 const journeySteps = [
@@ -272,7 +274,7 @@ const faqs = [
   },
   {
     get question() { return sourceText('Tôi có thể tạm dừng (bảo lưu) gói tập khi bận công tác không?'); },
-    get answer() { return sourceText('Có. Bạn gửi yêu cầu bảo lưu (Freeze) trực tiếp trên Portal hội viên.'); },
+    get answer() { return sourceText({ vi: 'Có. Bạn có thể gửi yêu cầu bảo lưu gói tập trực tiếp trên Portal hội viên.', en: 'Yes. You can submit a membership freeze request directly from the member portal.' }); },
   },
   {
     get question() { return sourceText({ vi: 'Làm sao để đăng ký lớp nhóm hoặc đặt lịch PT 1:1?', en: 'How do I join a group class or book 1:1 PT?' }); },
@@ -396,6 +398,69 @@ export function calculateBmi(
   return Number(rawBmi.toFixed(1));
 }
 
+type BmiGoalType = 'lean' | 'muscle' | 'balance';
+
+function getBmiRecommendation(bmiValue: number | null, goalType: BmiGoalType): { vi: string; en: string } {
+  if (bmiValue === null) {
+    return {
+      vi: 'Nhập chiều cao (100–240 cm) và cân nặng (30–250 kg) để nhận gợi ý lộ trình theo mục tiêu.',
+      en: 'Enter your height (100–240 cm) and weight (30–250 kg) to get goal-based training guidance.',
+    };
+  }
+  if (goalType === 'lean') {
+    if (bmiValue < 18.5) {
+      return {
+        vi: 'Chỉ số BMI đang thấp — ưu tiên tập Gym tăng sức mạnh nền tảng và dinh dưỡng đầy đủ trước khi tập siết mỡ.',
+        en: 'Your BMI is low — prioritize foundational Gym strength and proper nutrition before cutting fat.',
+      };
+    }
+    if (bmiValue < 23) {
+      return {
+        vi: 'Kết hợp 2–3 buổi Gym săn chắc và 1–2 buổi Boxing cường độ cao mỗi tuần để giữ vóc dáng sắc nét.',
+        en: 'Pair 2–3 toning Gym sessions with 1–2 high-energy Boxing classes per week to stay lean and defined.',
+      };
+    }
+    return {
+      vi: 'Ưu tiên 3 buổi Boxing hoặc Gym cường độ kiểm soát kết hợp HLV 1:1 để tối ưu đốt mỡ và bảo vệ khớp.',
+      en: 'Focus on 3 Boxing or controlled-intensity Gym sessions with 1:1 coaching for joint-safe fat loss.',
+    };
+  }
+  if (goalType === 'muscle') {
+    if (bmiValue < 18.5) {
+      return {
+        vi: 'Ưu tiên 3–4 buổi tập tạ Gym nền tảng kèm HLV 1:1 để tăng khối cơ nạc và cải thiện sức mạnh ổn định.',
+        en: 'Prioritize 3–4 foundational Gym lifting sessions with 1:1 coaching to build lean muscle steadily.',
+      };
+    }
+    if (bmiValue < 25) {
+      return {
+        vi: 'Duy trì 3–4 buổi Gym theo giáo án tăng sức mạnh và 1 buổi Yoga phục hồi giúp cơ phát triển tối ưu.',
+        en: 'Train 3–4 structured Gym strength sessions plus 1 recovery Yoga class weekly for optimal hypertrophy.',
+      };
+    }
+    return {
+      vi: 'Kết hợp 3 buổi Gym toàn thân cùng 1–2 buổi Boxing để tăng cơ nạc song song cải thiện tỷ lệ mỡ.',
+      en: 'Combine 3 full-body Gym sessions with 1–2 Boxing classes to build lean muscle while reducing body fat.',
+    };
+  }
+  if (bmiValue < 18.5) {
+    return {
+      vi: 'Kết hợp 2 buổi Yoga hơi thở & thăng bằng với 2 buổi Gym nền tảng để nâng cao sức bền và độ ổn định khớp.',
+      en: 'Pair 2 breath-and-balance Yoga classes with 2 foundational Gym sessions to build stamina and stability.',
+    };
+  }
+  if (bmiValue < 25) {
+    return {
+      vi: 'Lịch mẫu 2–3 buổi Yoga xen kẽ 1–2 buổi Gym linh hoạt giúp cơ thể dẻo dai, cân bằng và giảm căng thẳng.',
+      en: 'Alternate 2–3 Yoga sessions with 1–2 mobility-focused Gym workouts for flexibility and stress relief.',
+    };
+  }
+  return {
+    vi: 'Ưu tiên 3 buổi Yoga giãn cơ & ổn định khớp kết hợp Gym nhẹ cùng HLV để cải thiện biên độ vận động an toàn.',
+    en: 'Prioritize 3 joint-friendly Yoga sessions plus coached light Gym work to safely improve mobility.',
+  };
+}
+
 /**
  * Trang giới thiệu chính của SÖL Fitness: hero, manifesto, dịch vụ, mô hình cơ thể, gói tập, HLV, lợi ích và
  * câu hỏi thường gặp.
@@ -403,7 +468,7 @@ export function calculateBmi(
 export function FitnessLanding() {
   const manifestoWords = sourceText('Mạnh mẽ trong phòng tạ. Linh hoạt qua từng chuyển động. Bền bỉ sau mỗi hiệp tập.').split(' ');
   useSourceLanguage();
-  const user = getCurrentUser();
+  const user = useCurrentUser();
   const { catalog, error: catalogError, retry: retryCatalog } = usePublicCatalog();
   const classPath = user ? user.role === 'MEMBER' ? '/member/classes' : homePath(user.role) : '/login';
   const joinPath = user ? user.role === 'MEMBER' ? '/member/packages' : homePath(user.role) : '/register';
@@ -415,11 +480,23 @@ export function FitnessLanding() {
   const [space, setSpace] = useState(0);
   const [heightCm, setHeightCm] = useState('170');
   const [weightKg, setWeightKg] = useState('65');
-  const [goalType, setGoalType] = useState<'lean' | 'muscle' | 'balance'>('muscle');
+  const [goalType, setGoalType] = useState<BmiGoalType>('muscle');
   const [openFaq, setOpenFaq] = useState<number>(0);
   const [activeStep, setActiveStep] = useState<number>(0);
   const [activeRhythmIdx, setActiveRhythmIdx] = useState<number>(0);
   const activeRhythm = dailyRhythmItems[activeRhythmIdx];
+
+  const handleRhythmKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>, idx: number) => {
+    let nextIdx: number;
+    if (event.key === 'ArrowRight') nextIdx = (idx + 1) % dailyRhythmItems.length;
+    else if (event.key === 'ArrowLeft') nextIdx = (idx - 1 + dailyRhythmItems.length) % dailyRhythmItems.length;
+    else if (event.key === 'Home') nextIdx = 0;
+    else if (event.key === 'End') nextIdx = dailyRhythmItems.length - 1;
+    else return;
+    event.preventDefault();
+    setActiveRhythmIdx(nextIdx);
+    document.getElementById(`rhythm-tab-${dailyRhythmItems[nextIdx].id}`)?.focus();
+  };
 
   const activateMuscle = (id: (typeof muscleGroups)[number]['id']) => {
     if (closeTimerRef.current !== null) {
@@ -462,14 +539,15 @@ export function FitnessLanding() {
   const validWeight = Number.isFinite(parsedWeight) && parsedWeight >= 30 && parsedWeight <= 250;
   const bmiValue = calculateBmi(heightCm, weightKg);
   const bmiStatus = bmiValue === null
-    ? 'Nhập chiều cao & cân nặng hợp lệ'
+    ? { vi: 'Nhập chiều cao & cân nặng hợp lệ', en: 'Enter valid height & weight' }
     : bmiValue < 18.5
-      ? 'Cần bổ sung khối cơ & dinh dưỡng'
+      ? { vi: 'Cần bổ sung khối cơ & dinh dưỡng', en: 'Focus on lean mass & nutrition' }
       : bmiValue < 23
-        ? 'Thể trạng cân đối chuẩn châu Á'
+        ? { vi: 'Thể trạng cân đối chuẩn châu Á', en: 'Balanced Asian-standard physique' }
         : bmiValue < 25
-          ? 'Thừa cân nhẹ — tối ưu đốt mỡ'
-          : 'Ưu tiên giảm mỡ & bảo vệ khớp';
+          ? { vi: 'Thừa cân nhẹ — tối ưu đốt mỡ', en: 'Slightly overweight — prioritize fat loss' }
+          : { vi: 'Ưu tiên giảm mỡ & bảo vệ khớp', en: 'Prioritize fat loss & joint protection' };
+  const bmiRecommendation = getBmiRecommendation(bmiValue, goalType);
 
 
   return <main id="public-main">
@@ -591,12 +669,12 @@ export function FitnessLanding() {
     </section>
     <section className="fit-services" id="disciplines" aria-label={sourceText("Các hình thức tập luyện")}>
       <div className="fit-services-glow" aria-hidden="true" />
-      {services.map((service, index) => <a key={service.title} className={`fit-service fit-service-${index}`} data-reveal="lift" href="#packages"><svg className="fit-service-surface" viewBox="0 0 320 280" preserveAspectRatio="none" aria-hidden="true"><path d={serviceShapes[index]} /></svg><ServiceIcon type={service.icon} /><h2>{service.title}</h2><span className="fit-service-rule" /><p>{service.description}</p></a>)}
+      {services.map((service, index) => <a key={service.id} className={`fit-service fit-service-${index}`} data-reveal="lift" href="#packages"><svg className="fit-service-surface" viewBox="0 0 320 280" preserveAspectRatio="none" aria-hidden="true"><path d={serviceShapes[index]} /></svg><ServiceIcon type={service.icon} /><h2>{service.title}</h2><span className="fit-service-rule" /><p>{service.description}</p></a>)}
     </section>
     <div className="fit-ticker" aria-hidden="true">
       <div className="fit-marquee-track">
         {[0, 1].map((groupIndex) => <div key={groupIndex} className="fit-marquee-group">
-          {tickerItems.map((item) => <span key={`${groupIndex}-${item}`} className="fit-marquee-item">{sourceText(item)}<i /></span>)}
+          {tickerItems.map((item, idx) => <span key={`${groupIndex}-${idx}`} className="fit-marquee-item">{sourceText(item)}<i /></span>)}
         </div>)}
       </div>
     </div>
@@ -621,7 +699,7 @@ export function FitnessLanding() {
           <p className="fit-space-meta">{spaces[space].meta}</p>
           <a className="fit-pill" href="#contact">{sourceText("Ghé thăm SÖL")}<RoundArrow diagonal /></a>
         </div>
-        <div className="fit-space-tabs" aria-label={sourceText("Khám phá không gian")}>{spaces.map((item, index) => <button type="button" key={item.label} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><LoadingImage src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span className="fit-space-tab-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></button>)}</div>
+        <div className="fit-space-tabs" aria-label={sourceText("Khám phá không gian")}>{spaces.map((item, index) => <button type="button" key={item.id} onClick={() => setSpace(index)} className={space === index ? 'is-active' : ''} aria-pressed={space === index}><LoadingImage src={item.image} alt="" loading="lazy" /><span>{item.label}</span><span className="fit-space-tab-arrow" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4.5 11.5L11.5 4.5M6 4.5h5.5V10" /></svg></span></button>)}</div>
         <span className="fit-space-number">0{space + 1} / 0{spaces.length}</span>
       </div>
       <div className="fit-rhythm-explorer" data-reveal="lift" aria-label={sourceText("Nhịp sinh hoạt trong ngày tại câu lạc bộ")}>
@@ -632,17 +710,28 @@ export function FitnessLanding() {
           <div className="fit-rhythm-tabs" role="tablist" aria-label={sourceText("Chọn khung giờ trong ngày")}>
             {dailyRhythmItems.map((item, idx) => <button
               key={item.id}
+              id={`rhythm-tab-${item.id}`}
               type="button"
               role="tab"
               aria-selected={activeRhythmIdx === idx}
+              aria-controls={`rhythm-panel-${item.id}`}
+              tabIndex={activeRhythmIdx === idx ? 0 : -1}
               className={activeRhythmIdx === idx ? 'is-active' : ''}
               onClick={() => setActiveRhythmIdx(idx)}
+              onKeyDown={(event) => handleRhythmKeyDown(event, idx)}
             >
               {item.label}
             </button>)}
           </div>
         </div>
-        <div key={activeRhythm.id} className="fit-rhythm-body fit-blur-morph">
+        <div
+          key={activeRhythm.id}
+          id={`rhythm-panel-${activeRhythm.id}`}
+          role="tabpanel"
+          aria-labelledby={`rhythm-tab-${activeRhythm.id}`}
+          tabIndex={0}
+          className="fit-rhythm-body fit-blur-morph"
+        >
           <div className="fit-rhythm-copy">
             <h4>{activeRhythm.title}</h4>
             <ul>
@@ -673,14 +762,21 @@ export function FitnessLanding() {
             key={item.step}
             className={`fit-step-item ${activeStep === index ? 'is-active' : ''}`}
             data-reveal="lift"
-            onPointerEnter={() => setActiveStep(index)}
-            onClick={() => setActiveStep(index)}
           >
-            <span className="fit-step-badge">{item.step}</span>
-            <div>
-              <h3>{item.title}</h3>
-              <p>{item.description}</p>
-            </div>
+            <button
+              type="button"
+              className="fit-step-trigger"
+              aria-pressed={activeStep === index}
+              onPointerEnter={() => setActiveStep(index)}
+              onFocus={() => setActiveStep(index)}
+              onClick={() => setActiveStep(index)}
+            >
+              <span className="fit-step-badge">{item.step}</span>
+              <span>
+                <span className="fit-step-title">{item.title}</span>
+                <span className="fit-step-desc">{item.description}</span>
+              </span>
+            </button>
           </li>)}
         </ol>
         <div key={activeStep} className="fit-journey-preview fit-blur-morph" aria-label={sourceText("Minh họa trực quan theo từng bước")}>
@@ -689,12 +785,13 @@ export function FitnessLanding() {
               <span className="fit-preview-live"><i />{sourceText("Minh họa")}</span>
             </div>
             <div className="fit-preview-slots" aria-hidden="true">
-              {['06:30', '08:00', '09:30', '12:00', '16:00', '17:30', '18:30', '19:30'].map((slot, idx) => <span
-                key={slot}
-                className={`fit-slot-pill ${idx === 5 ? 'is-selected' : idx === 1 || idx === 6 ? 'is-busy' : ''}`}
+              {SCHEDULE_SLOTS.map((slot, idx) => <span
+                key={slot.code}
+                className={`fit-slot-pill ${idx === 4 ? 'is-selected' : idx === 1 ? 'is-busy' : ''}`}
                 style={{ '--slot-idx': idx } as CSSProperties}
               >
-                {slot}
+                <small>{slot.label}</small>
+                <span>{slot.startTime}–{slot.endTime}</span>
               </span>)}
             </div>
           </div> : activeStep === 1 ? <div className="fit-preview-widget fit-preview-ai">
@@ -702,7 +799,7 @@ export function FitnessLanding() {
               <span className="fit-preview-live"><i />{sourceText("Minh họa")}</span>
             </div>
             <div className="fit-preview-chat" aria-hidden="true">
-              <div className="fit-chat-user">{sourceText("Mục tiêu săn chắc · 4 buổi/tuần sau 17:30")}</div>
+              <div className="fit-chat-user">{sourceText({ vi: 'Mục tiêu săn chắc · 4 buổi/tuần khung 17:00–19:30 (Slot 5)', en: 'Toning goal · 4 sessions/week at 17:00–19:30 (Slot 5)' })}</div>
               <div className="fit-chat-bot">
                 <div className="fit-chat-tags">
                   <span>{sourceText({ vi: 'T2 · Gym Strength', en: 'Mon · Gym Strength' })}</span>
@@ -742,11 +839,21 @@ export function FitnessLanding() {
         <div className="fit-bmi-inputs">
           <label htmlFor="fit-bmi-height">
             <span>{sourceText("Chiều cao (cm)")}</span>
-            <input id="fit-bmi-height" type="text" inputMode="decimal" min={100} max={240} aria-invalid={!validHeight} value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
+            <input id="fit-bmi-height" type="text" inputMode="decimal" aria-invalid={!validHeight} aria-describedby="fit-bmi-height-hint" value={heightCm} onChange={(e) => setHeightCm(e.target.value)} />
+            <span id="fit-bmi-height-hint" className={`fit-bmi-hint${validHeight ? '' : ' is-invalid'}`}>
+              {validHeight
+                ? '100–240 cm'
+                : sourceText({ vi: 'Nhập chiều cao từ 100–240 cm', en: 'Enter height between 100–240 cm' })}
+            </span>
           </label>
           <label htmlFor="fit-bmi-weight">
             <span>{sourceText("Cân nặng (kg)")}</span>
-            <input id="fit-bmi-weight" type="text" inputMode="decimal" min={30} max={250} aria-invalid={!validWeight} value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
+            <input id="fit-bmi-weight" type="text" inputMode="decimal" aria-invalid={!validWeight} aria-describedby="fit-bmi-weight-hint" value={weightKg} onChange={(e) => setWeightKg(e.target.value)} />
+            <span id="fit-bmi-weight-hint" className={`fit-bmi-hint${validWeight ? '' : ' is-invalid'}`}>
+              {validWeight
+                ? '30–250 kg'
+                : sourceText({ vi: 'Nhập cân nặng từ 30–250 kg', en: 'Enter weight between 30–250 kg' })}
+            </span>
           </label>
         </div>
         <div className="fit-bmi-goals" role="group" aria-label={sourceText("Chọn mục tiêu tập luyện")}>
@@ -760,7 +867,7 @@ export function FitnessLanding() {
             <strong>{bmiValue !== null ? bmiValue : '—'}</strong>
             <span>{sourceText(bmiStatus)}</span>
           </div>
-          <p><strong>{sourceText("Gợi ý:")}</strong> {sourceText(" Xem các gói đang mở tại bảng giá và trao đổi mục tiêu với huấn luyện viên.")}</p>
+          <p><strong>{sourceText("Gợi ý:")}</strong> {sourceText(bmiRecommendation)}</p>
         </div>
         <Link to={planPath} className="fit-pill">{sourceText("Nhận lộ trình")}<RoundArrow diagonal /></Link>
       </div>
@@ -771,7 +878,7 @@ export function FitnessLanding() {
     </section>
     <section className="fit-section fit-faq" id="faq" aria-labelledby="faq-title">
       <div className="fit-section-heading fit-centered" data-reveal="soft">
-        <SplitHeading id="faq-title" lines={['Frequently Asked', 'Questions']} />
+        <SplitHeading id="faq-title" lines={[{ vi: 'Câu Hỏi', en: 'Frequently Asked' }, { vi: 'Thường Gặp', en: 'Questions' }]} />
       </div>
       <div className="fit-faq-list">
         {faqs.map((item, index) => {
@@ -828,7 +935,7 @@ export function FitnessLanding() {
           </article>)}
           <article className="fit-benefit-card fit-benefit-end" data-reveal="lift">
             <h3>{sourceText("Chưa có gói vẫn trải nghiệm được")}</h3>
-            <p>{sourceText({ vi: 'Tạo tài khoản miễn phí để đặt PT và chọn gói. Gói được kích hoạt tại quầy lễ tân.', en: 'Create a free account to book PT and choose a membership. Memberships are activated at reception.' })}</p>
+            <p>{sourceText({ vi: 'Tạo tài khoản miễn phí để khám phá portal, xem lịch lớp, huấn luyện viên và chọn gói tập phù hợp. Đặt lịch lớp nhóm và PT 1:1 áp dụng khi gói hội viên đang hoạt động.', en: 'Create a free account to explore the portal, browse class schedules and coaches, and choose a membership package. Group class and 1:1 PT bookings require an active membership.' })}</p>
             <Link to={joinPath} className="fit-benefit-end-btn">
               {sourceText(accountLabel)}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">

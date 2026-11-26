@@ -222,4 +222,18 @@ class ClassSessionServiceTest {
         verify(notificationService, times(1)).send(
                 eq(10L), any(), any(), eq("schedule_change"), eq("class_session"), eq(100L));
     }
+
+    /** Kiểm thử P1-BE-18: không cho hủy buổi học đã hoàn tất (completed). */
+    @Test
+    void cancelSession_completedSession_throwsConflictException() {
+        session.setStatus("completed");
+        when(sessionRepository.findById(100L)).thenReturn(Optional.of(session));
+
+        ConflictException ex = assertThrows(ConflictException.class,
+                () -> sessionService.cancelSession(100L, new CancelSessionRequest("Late cancel"), managerPrincipal));
+
+        assertEquals("SCHEDULING_SESSION_NOT_SCHEDULED", ex.getErrorCode());
+        verify(sessionRepository, never()).saveAndFlush(any());
+        verifyNoInteractions(notificationService, eventPublisher);
+    }
 }

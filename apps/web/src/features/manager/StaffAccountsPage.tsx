@@ -5,11 +5,32 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { Select } from '../../shared/ui/Select';
 import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { createStaffAccount, listStaffAccounts, setStaffAccountLocked, type StaffAccount, type StaffAccountInput } from './staffAccountsApi';
-import { isValidEmailAddress, isValidPhoneNumber, normalizePhoneNumber } from '../auth/authValidation';
+import {
+  PASSWORD_RULE_ERROR,
+  PASSWORD_RULE_HINT,
+  isValidEmailAddress,
+  isValidPassword,
+  isValidPhoneNumber,
+  normalizePhoneNumber,
+} from '../auth/authValidation';
 
 const initialForm: StaffAccountInput = {
   fullName: '', email: '', phone: '', password: '', gender: 'male', roleCode: 'COACH',
 };
+
+/** Kiểm tra họ và tên nhân sự: sau khi bỏ khoảng trắng phải có tối thiểu 2 ký tự. */
+function validateStaffName(raw: string): string | undefined {
+  const clean = raw.trim();
+  if (clean.length < 2) return 'Vui lòng nhập họ và tên (tối thiểu 2 ký tự).';
+  if (clean.length > 150) return 'Họ và tên tối đa 150 ký tự.';
+  return undefined;
+}
+
+/** Kiểm tra mật khẩu nhân sự khớp với PasswordPolicy của backend (8–50 ký tự, có chữ và số, không khoảng trắng). */
+function validateStaffPassword(raw: string): string | undefined {
+  if (!raw || !isValidPassword(raw)) return PASSWORD_RULE_ERROR;
+  return undefined;
+}
 
 /** Kiểm tra email nhân sự: bắt buộc, đúng định dạng (cảnh báo gõ nhầm @gmail.co) và không trùng tài khoản khác. */
 function validateStaffEmail(raw: string, accounts: StaffAccount[] = []): string | undefined {
@@ -41,7 +62,7 @@ export function StaffAccountsPage() {
   const [accounts, setAccounts] = useState<StaffAccount[]>([]);
   const [sortOption, setSortOption] = useState<'name_asc' | 'name_desc'>('name_asc');
   const [form, setForm] = useState(initialForm);
-  const [fieldErrors, setFieldErrors] = useState<{ email?: string; phone?: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ fullName?: string; email?: string; phone?: string; password?: string }>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<StaffMessage>('');
   const [saving, setSaving] = useState(false);
@@ -99,14 +120,16 @@ export function StaffAccountsPage() {
     }
   }
 
-  // Tạo tài khoản nhân sự sau khi kiểm tra email và số điện thoại.
+  // Tạo tài khoản nhân sự sau khi kiểm tra họ tên, email, số điện thoại và mật khẩu.
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (saving) return;
+    const fullNameError = validateStaffName(form.fullName);
     const emailError = validateStaffEmail(form.email, accounts);
     const phoneError = validateStaffPhone(form.phone, accounts);
-    if (emailError || phoneError) {
-      setFieldErrors({ email: emailError, phone: phoneError });
+    const passwordError = validateStaffPassword(form.password);
+    if (fullNameError || emailError || phoneError || passwordError) {
+      setFieldErrors({ fullName: fullNameError, email: emailError, phone: phoneError, password: passwordError });
       return;
     }
     setFieldErrors({});
@@ -138,12 +161,39 @@ export function StaffAccountsPage() {
     <PageHeader title={t("Tài khoản nhân sự")} />
     <section className="portal-card" aria-labelledby="staff-create-heading">
       <h2 id="staff-create-heading" className="portal-card-title">{t("Thêm nhân sự")}</h2>
-      <form onSubmit={event => void submit(event)}>
+      <form onSubmit={event => void submit(event)} noValidate>
         <fieldset disabled={saving} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
           <div className="portal-form-grid">
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="staff-name">{t("Họ và tên *")}</label>
-              <input id="staff-name" className="portal-input" required maxLength={150} autoComplete="name" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} />
+              <input
+                id="staff-name"
+                className="portal-input"
+                required
+                minLength={2}
+                maxLength={150}
+                autoComplete="name"
+                aria-invalid={!!fieldErrors.fullName}
+                aria-describedby={fieldErrors.fullName ? 'staff-name-error' : undefined}
+                value={form.fullName}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({ ...form, fullName: value });
+                  if (fieldErrors.fullName) {
+                    setFieldErrors(prev => ({ ...prev, fullName: validateStaffName(value) }));
+                  }
+                }}
+                onBlur={() => {
+                  if (form.fullName.length > 0 || fieldErrors.fullName) {
+                    setFieldErrors(prev => ({ ...prev, fullName: validateStaffName(form.fullName) }));
+                  }
+                }}
+              />
+              {fieldErrors.fullName && (
+                <p id="staff-name-error" role="alert" className="form-error">
+                  {t(fieldErrors.fullName, 'Please enter full name (at least 2 characters).')}
+                </p>
+              )}
             </div>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="staff-email">Email *</label>
@@ -195,7 +245,38 @@ export function StaffAccountsPage() {
             </div>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="staff-password">{t("Mật khẩu *")}</label>
-              <input id="staff-password" className="portal-input" type="password" required minLength={6} maxLength={50} autoComplete="new-password" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+              <input
+                id="staff-password"
+                className="portal-input"
+                type="password"
+                required
+                minLength={8}
+                maxLength={50}
+                autoComplete="new-password"
+                aria-invalid={!!fieldErrors.password}
+                aria-describedby={fieldErrors.password ? 'staff-password-error' : 'staff-password-hint'}
+                value={form.password}
+                onChange={e => {
+                  const value = e.target.value;
+                  setForm({ ...form, password: value });
+                  if (fieldErrors.password) {
+                    setFieldErrors(prev => ({ ...prev, password: validateStaffPassword(value) }));
+                  }
+                }}
+                onBlur={() => {
+                  if (form.password.length > 0 || fieldErrors.password) {
+                    setFieldErrors(prev => ({ ...prev, password: validateStaffPassword(form.password) }));
+                  }
+                }}
+              />
+              <small id="staff-password-hint" className="meta-label" style={{ display: 'block', marginTop: 4, color: 'var(--portal-muted)' }}>
+                {t(PASSWORD_RULE_HINT, '8–50 characters, with letters and numbers, no spaces')}
+              </small>
+              {fieldErrors.password && (
+                <p id="staff-password-error" role="alert" className="form-error">
+                  {t(fieldErrors.password, 'Password must be 8–50 characters with at least 1 letter and 1 number, and no spaces.')}
+                </p>
+              )}
             </div>
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="staff-gender">{t("Giới tính *")}</label>
@@ -219,7 +300,7 @@ export function StaffAccountsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
         <h2 id="staff-list-heading" className="portal-card-title" style={{ margin: 0 }}>{t("Huấn luyện viên & Lễ tân", "Coaches & Receptionists")}</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <label htmlFor="staff-sort-select" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--sol-text-muted)' }}>
+          <label htmlFor="staff-sort-select" style={{ fontSize: '0.875rem', fontWeight: 500, color: 'var(--portal-muted)' }}>
             {t("Sắp xếp:", "Sort:")}
           </label>
           <Select

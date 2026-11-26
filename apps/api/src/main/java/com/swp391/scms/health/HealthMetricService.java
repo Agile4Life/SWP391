@@ -199,7 +199,7 @@ public class HealthMetricService {
         }
     }
 
-    /** Sửa một số đo của hội viên (tên, giá trị, đơn vị) sau khi kiểm tra quyền và đơn vị. */
+    /** Sửa một số đo của hội viên (tên, giá trị, đơn vị) sau khi kiểm tra quyền, hạng gói và đơn vị. */
     @Transactional
     public HealthMetricDto updateMetric(Long memberId, Long metricId, HealthMetricDto request, Long currentUserId, String currentUserRole) {
         ensureCanModify(memberId, currentUserId, currentUserRole, false);
@@ -208,6 +208,7 @@ public class HealthMetricService {
         if (request.metricName() != null && !request.metricName().isBlank()) {
             log.setMetricName(validateAndNormalizeMetricName(request.metricName()));
         }
+        enforceDeepAssessmentTier(memberId, log.getMetricName());
         if (request.metricValue() != null) {
             log.setMetricValue(request.metricValue());
         }
@@ -216,6 +217,18 @@ public class HealthMetricService {
         }
         log.setUnit(validatedUnit(log.getMetricName(), log.getMetricValue(), log.getUnit()));
         return toDto(progressLogRepository.save(log));
+    }
+
+    /** Kiểm tra quyền đo chỉ số chuyên sâu (body_fat / muscle_mass chỉ dành cho hạng Platinum). */
+    private void enforceDeepAssessmentTier(Long memberId, String metricName) {
+        if (!"body_fat".equals(metricName) && !"muscle_mass".equals(metricName)) return;
+        List<com.swp391.scms.facilities.entity.MembershipPackage> packages = currentSubscriptions(memberId).stream()
+                .map(com.swp391.scms.membership.entity.MembershipSubscription::getMembershipPackage)
+                .toList();
+        if (!packages.isEmpty() && packages.stream().noneMatch(com.swp391.scms.facilities.PackageBenefits::allowsDeepAssessment)) {
+            throw new ForbiddenException("HEALTH_DEEP_ASSESSMENT_PLATINUM", "health.metrics.platinum_required", null,
+                    "Body Fat and Muscle Mass assessments are part of the Platinum package");
+        }
     }
 
     /** Xóa một số đo của hội viên sau khi kiểm tra quyền. */

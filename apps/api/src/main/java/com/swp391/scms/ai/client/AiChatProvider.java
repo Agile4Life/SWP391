@@ -51,7 +51,7 @@ public class AiChatProvider {
                         String line = raw.trim();
                         int sep = line.indexOf('=');
                         if (!line.isEmpty() && !line.startsWith("#") && sep > 0) {
-                            result.putIfAbsent(line.substring(0, sep).trim(), line.substring(sep + 1).trim());
+                            result.putIfAbsent(line.substring(0, sep).trim(), stripQuotes(line.substring(sep + 1).trim()));
                         }
                     }
                 } catch (java.io.IOException ignored) {
@@ -59,6 +59,16 @@ public class AiChatProvider {
             }
         }
         return result;
+    }
+
+    /** Bỏ cặp dấu nháy đơn hoặc nháy kép bao ngoài giá trị trong file .env (nếu có). */
+    private static String stripQuotes(String value) {
+        if (value.length() >= 2
+                && ((value.startsWith("\"") && value.endsWith("\""))
+                    || (value.startsWith("'") && value.endsWith("'")))) {
+            return value.substring(1, value.length() - 1);
+        }
+        return value;
     }
 
     /** Tên nhà cung cấp: cấu hình hợp lệ thì dùng, không thì đọc từ .env. */

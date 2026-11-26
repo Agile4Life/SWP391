@@ -2,17 +2,39 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AUTH_STORAGE_KEY, type UserSession } from '../../shared/api/client';
+import { AUTH_STORAGE_KEY, TOKEN_STORAGE_KEY, type UserSession } from '../../shared/api/client';
 import { PortalShell } from './PortalShell';
 import { MemberNotificationsPage } from '../member/MemberNotificationsPage';
 
 vi.mock('../member/notificationsApi', () => ({ getUnreadCount: vi.fn().mockResolvedValue(0), getNotifications: vi.fn().mockResolvedValue({ content: [], number: 0, totalPages: 1 }) }));
+
+const BACKEND_ROLE: Record<UserSession['role'], string> = {
+  MEMBER: 'MEMBER',
+  STAFF: 'RECEPTIONIST',
+  COACH: 'COACH',
+  MANAGER: 'CENTER_MANAGER',
+  ADMIN: 'ADMIN',
+};
 
 let host: HTMLDivElement;
 let root: Root;
 
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    const stored = JSON.parse(localStorage.getItem(AUTH_STORAGE_KEY) ?? '{}');
+    if (url.includes('/auth/me')) {
+      return new Response(JSON.stringify({
+        success: true,
+        data: { username: stored.identifier ?? 'an', role: BACKEND_ROLE[stored.role as UserSession['role']] ?? 'MEMBER', fullName: stored.name ?? 'Nguyễn An' },
+      }));
+    }
+    if (url.includes('/wallet/my')) {
+      return new Response(JSON.stringify({ success: true, data: { balance: 0, transactions: [] } }));
+    }
+    return new Response(JSON.stringify({ success: true, data: {} }));
+  }));
   vi.spyOn(HTMLDialogElement.prototype, 'showModal').mockImplementation(function (this: HTMLDialogElement) {
     this.setAttribute('open', '');
   });
@@ -31,6 +53,7 @@ afterEach(async () => {
 
 // Dựng component vào DOM giả để kiểm thử.
 async function renderPortal(role: UserSession['role'], path: string) {
+  localStorage.setItem(TOKEN_STORAGE_KEY, 'test-token');
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '1', name: 'Nguyễn An', identifier: 'an', role }));
   const router = createMemoryRouter([
     { element: <PortalShell />, children: [{ path: '/member/notifications', element: <MemberNotificationsPage /> }, { path: '*', element: <h1>Nội dung portal</h1> }] },
@@ -71,7 +94,7 @@ describe('mobile portal navigation', () => {
     expect(document.activeElement).toBe(bell);
   });
 
-  it('keeps notifications out of the rail and closes the topbar panel on outside pointerdown', async () => {
+  it('keeps notifications out of the rail and closes the topbar panel on outside pointerdown without pulling focus back to the bell', async () => {
     const router = await renderPortal('MEMBER', '/member/dashboard');
     expect(host.querySelector('.portal-rail-nav [aria-label="Thông báo"]')).toBeNull();
     const trigger = host.querySelector<HTMLButtonElement>('button.member-notification-bell');
@@ -81,6 +104,7 @@ describe('mobile portal navigation', () => {
     expect(router.state.location.pathname).toBe('/member/dashboard');
     await act(async () => document.body.dispatchEvent(new Event('pointerdown', { bubbles: true })));
     expect(host.querySelector('.notification-popover')).toBeNull();
+    expect(document.activeElement).not.toBe(trigger);
   });
 
   it.each([
@@ -176,5 +200,104 @@ describe('mobile portal navigation', () => {
     await act(async () => dialogs[1].dispatchEvent(new Event('cancel', { cancelable: true })));
     expect(host.querySelectorAll('dialog')).toHaveLength(1);
     expect(host.querySelector('dialog .portal-screen-results')).not.toBeNull();
+  });
+
+  it('closes search, menu, and wallet shell dialogs when location.pathname changes', async () => {
+    const router = await renderPortal('MEMBER', '/member/dashboard');
+    await act(async () => host.querySelector<HTMLButtonElement>('button.portal-search-trigger')!.click());
+    expect(host.querySelector('dialog')).not.toBeNull();
+    await act(async () => router.navigate('/member/classes'));
+    expect(host.querySelector('dialog')).toBeNull();
+
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-wallet"]')!.click());
+    expect(host.querySelector('dialog')?.textContent).toContain('Ví điện tử SÖL');
+    await act(async () => router.navigate('/member/invoices'));
+    expect(host.querySelector('dialog')).toBeNull();
+  });
+
+  it('returns focus to the topbar menu button rather than bottom nav More when opened from topbar', async () => {
+    await renderPortal('MEMBER', '/member/dashboard');
+    const topbarMenu = host.querySelector<HTMLButtonElement>('button.portal-mobile-menu')!;
+    await act(async () => topbarMenu.click());
+    const dialog = host.querySelector<HTMLDialogElement>('dialog')!;
+    expect(dialog).not.toBeNull();
+    await act(async () => dialog.dispatchEvent(new Event('cancel', { cancelable: true })));
+    expect(host.querySelector('dialog')).toBeNull();
+    expect(document.activeElement).toBe(topbarMenu);
+  });
+
+  it('marks 4-tab staff section tabs with data-tab-count="4" for 2-column mobile layout', async () => {
+    await renderPortal('STAFF', '/staff/reception');
+    const tabs = host.querySelector<HTMLElement>('.portal-section-tabs');
+    expect(tabs?.getAttribute('data-tab-count')).toBe('4');
+    expect(tabs?.querySelectorAll('.portal-section-tab')).toHaveLength(4);
+  });
+
+  it('sets busy on wallet modal during topup, shows error if paymentUrl is missing, and shows walletError + Retry on /wallet/my failure', async () => {
+    let walletFails = true;
+    let resolveTopup!: (res: Response) => void;
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/auth/me')) {
+        return Promise.resolve(new Response(JSON.stringify({ success: true, data: { username: 'an', role: 'MEMBER', fullName: 'Nguyễn An' } })));
+      }
+      if (url.includes('/wallet/my')) {
+        if (walletFails) {
+          return Promise.resolve(new Response(JSON.stringify({ success: false, message: 'Lỗi kết nối ví' }), { status: 500 }));
+        }
+        return Promise.resolve(new Response(JSON.stringify({ success: true, data: { balance: 350000, transactions: [] } })));
+      }
+      if (url.includes('/wallet/topup/vnpay')) {
+        return new Promise<Response>((resolve) => { resolveTopup = resolve; });
+      }
+      return Promise.resolve(new Response(JSON.stringify({ success: true, data: {} })));
+    }));
+
+    await renderPortal('MEMBER', '/member/dashboard');
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!.click());
+    // Không hiện giả 0 đ khi /wallet/my lỗi
+    expect(host.querySelector('[data-testid="avatar-menu-wallet"]')?.textContent).toContain('Lỗi tải số dư');
+
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="avatar-menu-wallet"]')!.click());
+    const dialog = host.querySelector<HTMLDialogElement>('dialog')!;
+    expect(dialog.querySelector('[role="alert"]')?.textContent).toContain('Lỗi kết nối ví');
+    expect(dialog.textContent).not.toContain('Chưa có biến động số dư nào trong ví.');
+
+    // Bấm Thử lại để tải lại ví thành công
+    walletFails = false;
+    const retryBtn = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Thử lại')!;
+    expect(retryBtn).toBeDefined();
+    await act(async () => retryBtn.click());
+    expect(dialog.textContent).toContain('350.000');
+
+    // Gọi nạp ví: Modal phải có aria-busy="true" và không đóng khi đang bận; nếu paymentUrl rỗng thì báo lỗi rõ ràng
+    const topupBtn = dialog.querySelector<HTMLButtonElement>('[data-testid="wallet-topup-btn"]')!;
+    await act(async () => { topupBtn.click(); });
+    expect(dialog.getAttribute('aria-busy')).toBe('true');
+    await act(async () => dialog.dispatchEvent(new Event('cancel', { cancelable: true })));
+    expect(host.querySelector('dialog')).not.toBeNull();
+
+    await act(async () => {
+      resolveTopup(new Response(JSON.stringify({ success: true, data: { reference: 'REF1', paymentUrl: '' } })));
+    });
+    expect(dialog.getAttribute('aria-busy')).toBe('false');
+    expect(dialog.querySelector('.form-error')?.textContent).toContain('Không nhận được đường dẫn thanh toán VNPay');
+  });
+
+  it.each(['STAFF', 'COACH', 'MANAGER', 'ADMIN'] as const)('does not call GET /wallet/my for non-member role %s', async (role) => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/auth/me')) {
+        return new Response(JSON.stringify({ success: true, data: { username: 'an', role: BACKEND_ROLE[role], fullName: 'Nguyễn An' } }));
+      }
+      return new Response(JSON.stringify({ success: true, data: {} }));
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+
+    await renderPortal(role, '/member/dashboard');
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="portal-avatar-trigger"]')!.click());
+    const walletCalls = fetchSpy.mock.calls.filter(([input]) => String(input).includes('/wallet/my'));
+    expect(walletCalls).toHaveLength(0);
   });
 });

@@ -46,6 +46,9 @@ export default defineConfig({
           if (normalized.includes('node_modules/react-router')) {
             return 'router-vendor';
           }
+          if (normalized.includes('node_modules/@supabase/')) {
+            return 'supabase-vendor';
+          }
           if (
             normalized.includes('node_modules/three') ||
             normalized.includes('node_modules/@react-three/') ||

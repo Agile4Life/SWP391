@@ -2,13 +2,14 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { getCurrentUser } from '../../shared/api/client';
+import { clearAuthSession, getCurrentUser, setCurrentUser } from '../../shared/api/client';
 import { clearMissingTranslations, getMissingTranslations, setLanguage } from '../../shared/i18n';
 import { LuxuryLoginForm } from './LuxuryLoginForm';
 
 let host: HTMLDivElement;
 let root: Root;
-let oauthCallback: ((response: { access_token?: string }) => void) | undefined;
+let oauthCallback: ((response: { access_token?: string; error?: string; error_description?: string }) => void) | undefined;
+let oauthErrorCallback: ((error: { type: string; message?: string }) => void) | undefined;
 const requestAccessToken = vi.fn();
 
 beforeEach(() => {
@@ -16,6 +17,7 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   oauthCallback = undefined;
+  oauthErrorCallback = undefined;
   requestAccessToken.mockReset();
   window.history.replaceState({}, '', '/login');
   vi.stubEnv('VITE_GOOGLE_CLIENT_ID', 'test-client.apps.googleusercontent.com');
@@ -24,6 +26,7 @@ beforeEach(() => {
       oauth2: {
         initTokenClient: vi.fn((config) => {
           oauthCallback = config.callback;
+          oauthErrorCallback = config.error_callback;
           return { requestAccessToken };
         }),
       },
@@ -37,6 +40,7 @@ beforeEach(() => {
 afterEach(async () => {
   await act(async () => root.unmount());
   host.remove();
+  setLanguage('vi');
   delete window.google;
   window.history.replaceState({}, '', '/');
   vi.unstubAllEnvs();
@@ -127,29 +131,74 @@ it('transitions to email OTP verification screen when the single Google button r
   expect(host.textContent).toContain('oauthuser@gmail.com');
 });
 
-it('opens email OTP verification screen automatically when redirected back from Google OAuth 2.0 callback URL', async () => {
+it('opens email OTP verification screen on Google OAuth callback without reflecting URL message or auto-filling debug_otp (P1-FE-03)', async () => {
   window.history.replaceState(
     {},
     '',
-    '/login?google_oauth=callback&email=redirected%40gmail.com&message=Da+gui+OTP&debug_otp=998877',
+    '/login?google_oauth=callback&email=redirected%40gmail.com&message=Phishing+Injected+Banner&debug_otp=998877',
   );
 
   await renderForm();
 
   const otpInput = host.querySelector<HTMLInputElement>('#google-otp-code');
   expect(otpInput).not.toBeNull();
-  expect(otpInput?.value).toBe('998877');
+  expect(otpInput?.value).toBe('');
   expect(host.textContent).toContain('Xác thực tài khoản');
   expect(host.textContent).toContain('redirected@gmail.com');
+  expect(host.textContent).not.toContain('Phishing Injected Banner');
+  expect(host.textContent).not.toContain('998877');
+  expect(host.querySelector('.fit-otp-notice')).not.toBeNull();
   expect(window.location.search).toBe('');
 });
 
-
-it('accepts legacy debugOtp and removes sensitive callback parameters from history', async () => {
+it('ignores legacy debugOtp query param and strips sensitive callback parameters from history (P1-FE-03)', async () => {
   window.history.replaceState({}, '', '/login?google_oauth=callback&email=user%40gmail.com&debugOtp=123456&state=old-state&error=old-error');
   await renderForm();
-  expect(host.querySelector<HTMLInputElement>('#google-otp-code')?.value).toBe('123456');
+  expect(host.querySelector<HTMLInputElement>('#google-otp-code')?.value).toBe('');
+  expect(host.textContent).not.toContain('123456');
   expect(window.location.search).toBe('');
+});
+
+it('rejects arbitrary ?google_oauth=error free text and only maps allowlisted error codes (P1-FE-03)', async () => {
+  window.history.replaceState({}, '', '/login?google_oauth=error&error=Call+555-SCAM+immediately');
+  await renderForm();
+  const alert = host.querySelector('[role="alert"]');
+  expect(alert?.textContent).not.toContain('555-SCAM');
+  expect(alert?.textContent).toContain('Xác thực Google OAuth thất bại');
+  expect(window.location.search).toBe('');
+
+  await act(async () => root.unmount());
+  root = createRoot(host);
+  window.history.replaceState({}, '', '/login?google_oauth=error&error_code=access_denied');
+  await renderForm();
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Bạn đã hủy đăng nhập Google');
+});
+
+it('gates API debugOtp display and auto-fill behind import.meta.env.DEV (P1-FE-03)', async () => {
+  vi.stubEnv('DEV', false);
+  const mockFetch = vi.fn().mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      success: true,
+      data: {
+        requiresOtp: true,
+        email: 'produser@gmail.com',
+        message: 'Đã gửi mã xác nhận',
+        expiresInMinutes: 5,
+        debugOtp: '654321',
+      },
+    }),
+  });
+  vi.stubGlobal('fetch', mockFetch);
+
+  await renderForm();
+  await act(async () => host.querySelector<HTMLButtonElement>('#google-oauth-btn')!.click());
+  await act(async () => oauthCallback!({ access_token: 'tok' }));
+
+  expect(host.querySelector<HTMLInputElement>('#google-otp-code')?.value).toBe('');
+  expect(host.querySelector('.fit-debug-otp')).toBeNull();
+  expect(host.textContent).not.toContain('654321');
 });
 
 
@@ -238,7 +287,7 @@ it('renders active session role label in English without recording missing trans
   expect(host.textContent).toContain('You are signed in');
   expect(host.textContent).toContain('System administrator');
   expect(getMissingTranslations()).toEqual([]);
-  setLanguage('vi');
+  await act(async () => setLanguage('vi'));
 });
 
 it('sends password reset OTP via email and resets password with 6-digit OTP', async () => {
@@ -360,4 +409,86 @@ it('locks login submission and shows countdown when receiving 429 lockout respon
   expect(submitBtn.textContent).toContain('ĐĂNG NHẬP');
 
   vi.useRealTimers();
+});
+
+it('reacts to external session changes and keeps login form visible when typing after ?expired=1 (P1-FE-02)', async () => {
+  localStorage.setItem('fitcenter_auth_session', JSON.stringify({
+    id: 'member-1', name: 'Old Member', identifier: 'member1', role: 'MEMBER',
+  }));
+  await act(async () => root.render(
+    <MemoryRouter initialEntries={['/login?expired=1']}>
+      <LuxuryLoginForm />
+      <CurrentLocation />
+    </MemoryRouter>,
+  ));
+  expect(getCurrentUser()).toBeNull();
+  const idInput = host.querySelector<HTMLInputElement>('#login-identifier')!;
+  expect(idInput).not.toBeNull();
+
+  // First keystroke dismisses expired notice without switching to "Already signed in"
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(idInput, 'newuser');
+    idInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  expect(host.querySelector<HTMLInputElement>('#login-identifier')).not.toBeNull();
+  expect(host.textContent).not.toContain('Bạn đã đăng nhập');
+
+  // Reactive useCurrentUser: signing in/out from another tab or component updates cleanly even without remount
+  await act(async () => {
+    setCurrentUser({ id: '2', name: 'Live User', identifier: 'live', role: 'COACH' });
+  });
+  expect(host.textContent).toContain('Bạn đã đăng nhập');
+  await act(async () => {
+    clearAuthSession();
+  });
+  expect(host.querySelector('#login-identifier')).not.toBeNull();
+});
+
+it('resets sensitive fields and showPassword on mode switch, toggles forgot_reset password, and handles popup_closed (P2-FE-03, P3-FE-01)', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce({
+    ok: true,
+    status: 200,
+    json: async () => ({ success: true, data: { email: 'user@example.com', expiresInMinutes: 5 } }),
+  }));
+  await renderForm();
+
+  // Toggle show password on standard login, then navigate to forgot_email -> showPassword resets
+  const showBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Hiện mật khẩu')!;
+  await act(async () => showBtn.click());
+  expect(host.querySelector<HTMLInputElement>('#login-password')?.type).toBe('text');
+
+  // popup_closed reports cancelled instead of unable-to-open
+  await act(async () => host.querySelector<HTMLButtonElement>('#google-oauth-btn')!.click());
+  await act(async () => oauthErrorCallback?.({ type: 'popup_closed' }));
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('Bạn đã đóng cửa sổ đăng nhập Google');
+
+  await act(async () => host.querySelector<HTMLButtonElement>('#forgot-password-btn')!.click());
+  expect(host.querySelector('form')?.hasAttribute('novalidate')).toBe(true);
+
+  // Invalid gmail typo rejected via isValidEmailAddress
+  const resetEmailInput = host.querySelector<HTMLInputElement>('#reset-email-input')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(resetEmailInput, 'member@gmail.co');
+    resetEmailInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(host.querySelector('[role="alert"]')?.textContent).toContain('email');
+
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(resetEmailInput, 'user@example.com');
+    resetEmailInput.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+
+  const newPassInput = host.querySelector<HTMLInputElement>('#reset-new-password-input')!;
+  expect(newPassInput.type).toBe('password');
+  expect(newPassInput.getAttribute('autocomplete')).toBe('new-password');
+  const toggleResetPass = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Hiện mật khẩu')!;
+  await act(async () => toggleResetPass.click());
+  expect(newPassInput.type).toBe('text');
+
+  // Clicking Back clears showPassword & sensitive fields
+  const backBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Quay lại đăng nhập')!;
+  await act(async () => backBtn.click());
+  expect(host.querySelector<HTMLInputElement>('#login-password')?.type).toBe('password');
 });

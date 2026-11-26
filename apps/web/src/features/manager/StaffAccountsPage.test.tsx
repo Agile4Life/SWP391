@@ -143,3 +143,39 @@ it('sorts staff accounts by name only', async () => {
   expect(getRenderedNames()).toEqual(['Cù Trọng C', 'Bùi Văn B', 'An Thị A']);
 
 });
+
+it('P1-FE-21 & P2-FE-41: enforces PasswordPolicy (min 8 chars with letter+number, no spaces), requires trimmed fullName >= 2, and avoids undefined CSS token', async () => {
+  await act(async () => root.render(<StaffAccountsPage />));
+  const setInput = async (id: string, value: string) => {
+    const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
+
+  const passwordInput = host.querySelector<HTMLInputElement>('#staff-password')!;
+  expect(passwordInput.minLength).toBe(8);
+  expect(host.textContent).toContain('8–50 ký tự');
+
+  // Whitespace-only name & weak 6-char password rejected before API call
+  await setInput('staff-name', '   ');
+  await setInput('staff-email', 'valid.staff@sol.vn');
+  await setInput('staff-password', '123456');
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(createStaffAccount).not.toHaveBeenCalled();
+  expect(host.querySelector('#staff-name-error')?.textContent).toContain('tối thiểu 2 ký tự');
+  expect(host.querySelector('#staff-password-error')?.textContent).toContain('8–50 ký tự');
+
+  // Password with spaces is also rejected
+  await setInput('staff-name', 'Nguyễn Văn A');
+  await setInput('staff-password', 'Secret 123');
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(createStaffAccount).not.toHaveBeenCalled();
+  expect(host.querySelector('#staff-password-error')?.textContent).toContain('không chứa khoảng trắng');
+
+  // Sort label uses valid --portal-muted token, not nonexistent --sol-text-muted
+  const sortLabel = host.querySelector<HTMLLabelElement>('label[for="staff-sort-select"]')!;
+  expect(sortLabel.getAttribute('style')).toContain('--portal-muted');
+  expect(sortLabel.getAttribute('style')).not.toContain('--sol-text-muted');
+});

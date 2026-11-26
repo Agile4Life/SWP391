@@ -27,4 +27,16 @@ public interface CurrentCoachMemberRepository extends Repository<Member,Long> {
  order by u.fullName, m.userId
  """)
  List<Member> findCurrent(@Param("coachId") Long coachId,@Param("memberId") Long memberId,@Param("today") LocalDate today);
+
+ /**
+  * Nạp hàng loạt các kỳ gói active đang hiệu lực hôm nay (kèm hội viên và gói) cho danh sách hội viên để
+  * tránh truy vấn N+1 khi dựng danh bạ học viên.
+  */
+ @Query("""
+ select s from MembershipSubscription s join fetch s.member m join fetch s.membershipPackage
+ where m.userId in :memberIds and s.status = 'active'
+   and s.startDate <= :today and s.endDate >= :today
+ """)
+ List<com.swp391.scms.membership.entity.MembershipSubscription> findActiveSubscriptionsForMembers(
+         @Param("memberIds") java.util.Collection<Long> memberIds, @Param("today") LocalDate today);
 }

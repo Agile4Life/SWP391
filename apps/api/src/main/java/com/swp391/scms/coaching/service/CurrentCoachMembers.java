@@ -19,6 +19,8 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class CurrentCoachMembers {
  private final CurrentCoachMemberRepository members; private final Clock clock; private final MemberProgressLogRepository progressLogs;
+ @org.springframework.beans.factory.annotation.Value("${app.health.metrics.enabled:false}")
+ private boolean healthMetricsEnabled = false;
  @Autowired(required=false) private com.swp391.scms.membership.repository.MembershipSubscriptionRepository subscriptionRepository;
  /** Constructor cho test, không có repository số đo. */
  public CurrentCoachMembers(CurrentCoachMemberRepository members,Clock clock){this(members,clock,null);}
@@ -47,13 +49,29 @@ public class CurrentCoachMembers {
  @Transactional(readOnly=true)
  public List<MemberOption> list(Long userId,String role){
   if(userId==null||!("COACH".equals(role)||"CENTER_MANAGER".equals(role))) throw denied();
-  return members.findCurrent("COACH".equals(role)?userId:null,null,today()).stream()
-   .map(this::toMemberOption).toList();
+  LocalDate currentDay=today();
+  List<Member> currentMembers=members.findCurrent("COACH".equals(role)?userId:null,null,currentDay);
+  if(currentMembers.isEmpty()) return List.of();
+  List<Long> memberIds=currentMembers.stream().map(Member::getUserId).filter(java.util.Objects::nonNull).toList();
+  java.util.Map<Long,List<com.swp391.scms.membership.entity.MembershipSubscription>> subsByMember=new java.util.HashMap<>();
+  if(!memberIds.isEmpty()){
+   List<com.swp391.scms.membership.entity.MembershipSubscription> batch=members.findActiveSubscriptionsForMembers(memberIds,currentDay);
+   if(batch!=null){
+    for(var sub:batch){
+     if(sub.getMember()!=null&&sub.getMember().getUserId()!=null){
+      subsByMember.computeIfAbsent(sub.getMember().getUserId(),k->new java.util.ArrayList<>()).add(sub);
+     }
+    }
+   }
+  }
+  return currentMembers.stream()
+   .map(m->toMemberOption(m,subsByMember.getOrDefault(m.getUserId(),List.of())))
+   .toList();
  }
- /** Dựng thông tin học viên kèm chiều cao/cân nặng/BMI mới nhất (BMI tính lại từ chiều cao, cân nặng nếu có). */
- private MemberOption toMemberOption(Member m){
+ /** Dựng thông tin học viên kèm chiều cao/cân nặng/BMI mới nhất khi bật cờ chỉ số sức khỏe. */
+ private MemberOption toMemberOption(Member m,List<com.swp391.scms.membership.entity.MembershipSubscription> activeSubs){
   BigDecimal heightCm=null,weightKg=null,recordedBmi=null;
-  if(progressLogs!=null&&m.getUserId()!=null){
+  if(healthMetricsEnabled&&progressLogs!=null&&m.getUserId()!=null){
    List<MemberProgressLog> logs=progressLogs.findByMemberUserIdOrderByRecordedAtDesc(m.getUserId());
    if(logs!=null){
     for(MemberProgressLog log:logs){
@@ -67,16 +85,9 @@ public class CurrentCoachMembers {
   }
   BigDecimal bmi=calculateBmi(heightCm,weightKg);
   if(bmi==null) bmi=recordedBmi;
-  return new MemberOption(m.getUserId(),m.getMembershipCode(),m.getUser().getFullName(),m.getFitnessGoal(),m.getHealthNotes(),m.getFitnessLevel(),heightCm,weightKg,bmi,canMemberViewWorkoutPlan(m.getUserId()));
- }
- /** Hội viên có được xem giáo án theo hạng gói không (không có gói hiệu lực thì được). */
- private boolean canMemberViewWorkoutPlan(Long memberId){
-  if(subscriptionRepository==null||memberId==null) return true;
-  LocalDate currentDay=today();
-  var current=subscriptionRepository.findByMemberUserIdAndStatus(memberId,"active").stream()
-   .filter(s->s.getStartDate()!=null&&s.getEndDate()!=null&&!s.getStartDate().isAfter(currentDay)&&!s.getEndDate().isBefore(currentDay))
-   .toList();
-  return current.isEmpty()||current.stream().anyMatch(s->com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(s.getMembershipPackage()));
+  boolean canView=activeSubs.isEmpty()||activeSubs.stream()
+   .anyMatch(s->com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(s.getMembershipPackage()));
+  return new MemberOption(m.getUserId(),m.getMembershipCode(),m.getUser().getFullName(),m.getFitnessGoal(),m.getHealthNotes(),m.getFitnessLevel(),heightCm,weightKg,bmi,canView);
  }
  /** Tính BMI = cân nặng (kg) / chiều cao (m)², làm tròn 1 chữ số; thiếu hoặc không hợp lệ thì null. */
  public static BigDecimal calculateBmi(BigDecimal heightCm,BigDecimal weightKg){

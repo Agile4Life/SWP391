@@ -20,13 +20,23 @@ const PACKAGE_TIER_LABEL: Record<string, StaffMessage> = {
 };
 const QUICK_PRICE_PRESETS = [199000, 299000, 549000, 599000, 799000, 1599000, 1990000, 2990000, 5990000];
 const QUICK_DURATION_PRESETS = [
-  { days: 90, label: '3 tháng (90 ngày)' },
-  { days: 180, label: '6 tháng (180 ngày)' },
-  { days: 270, label: '9 tháng (270 ngày)' },
-  { days: 365, label: '12 tháng (365 ngày)' },
+  { days: 90, vi: '3 tháng (90 ngày)', en: '3 months (90 days)' },
+  { days: 180, vi: '6 tháng (180 ngày)', en: '6 months (180 days)' },
+  { days: 270, vi: '9 tháng (270 ngày)', en: '9 months (270 days)' },
+  { days: 365, vi: '12 tháng (365 ngày)', en: '12 months (365 days)' },
 ];
+const ROOM_LOCATION_MAX_LENGTH = 150;
 
 const vnd = formatPrice;
+
+/** Xác định phân hạng phòng: luôn ưu tiên `tier` tường minh từ server, chỉ suy luận theo tên khi `tier` vắng. */
+function resolveRoomTier(room: { name?: string; tier?: string | null }): 'STANDARD' | 'PLATINUM' {
+  const explicit = room.tier?.trim().toUpperCase();
+  if (explicit === 'STANDARD' || explicit === 'PLATINUM') {
+    return explicit;
+  }
+  return (room.name ?? '').toLowerCase().includes('vip') ? 'PLATINUM' : 'STANDARD';
+}
 
 /** Xác định hạng gói: dùng tier khai báo nếu hợp lệ, không thì suy ra từ tên gói. */
 function resolvePackageTier(pkg: { name?: string; tier?: string | null }): 'SILVER' | 'GOLD' | 'PLATINUM' {
@@ -50,22 +60,23 @@ export function ManagerCatalogsPage() {
   const [packages, setPackages] = useState<MembershipPackage[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<StaffMessage>('');
+  const [loadError, setLoadError] = useState<StaffMessage>('');
   const [formError, setFormError] = useState<StaffMessage>('');
+  const [quickPriceError, setQuickPriceError] = useState<StaffMessage>('');
   const [editing, setEditing] = useState<{ id: number | null; form: Form } | null>(null);
   const [quickPricePkg, setQuickPricePkg] = useState<{ pkg: MembershipPackage; price: string } | null>(null);
 
   // Tải bộ môn, phòng và gói cùng lúc.
   const load = useCallback(async () => {
     setLoading(true);
-    setError('');
+    setLoadError('');
     try {
       const [d, r, p] = await Promise.all([catalogApi.disciplines(), catalogApi.rooms(), catalogApi.packages()]);
       setDisciplines(d);
       setRooms(r);
       setPackages(p);
     } catch (err) {
-      setError(errorMessage(err, 'Không thể tải danh mục.'));
+      setLoadError(errorMessage(err, 'Không thể tải danh mục.'));
     } finally {
       setLoading(false);
     }
@@ -75,9 +86,14 @@ export function ManagerCatalogsPage() {
     void load();
   }, [load]);
 
-  // Chạy một thao tác ghi: bật trạng thái đang gửi, báo thành công rồi tải lại; lỗi thì hiện thông báo.
-  const run = async (action: () => Promise<unknown>, successMsg: StaffMessage = 'Thao tác thành công!') => {
-    setError('');
+  // Chạy một thao tác ghi: tách lỗi modal khỏi lỗi tải trang để không hiện trùng 2 nơi và không ẩn bảng dữ liệu.
+  const run = async (
+    action: () => Promise<unknown>,
+    successMsg: StaffMessage = 'Thao tác thành công!',
+    errorTarget: 'form' | 'quickPrice' | 'toast' = 'toast',
+  ) => {
+    if (errorTarget === 'form') setFormError('');
+    if (errorTarget === 'quickPrice') setQuickPriceError('');
     setIsSubmitting(true);
     try {
       await action();
@@ -87,7 +103,8 @@ export function ManagerCatalogsPage() {
       notify(successMsg, 'success');
     } catch (err) {
       const msg = errorMessage(err, 'Thao tác thất bại.');
-      setError(msg);
+      if (errorTarget === 'form') setFormError(msg);
+      else if (errorTarget === 'quickPrice') setQuickPriceError(msg);
       notify(msg, 'error');
     } finally {
       setIsSubmitting(false);
@@ -102,60 +119,113 @@ export function ManagerCatalogsPage() {
         ? { name: '', location: '', capacity: '10', status: 'available', tier: 'STANDARD' }
         : { name: '', description: '', price: '199000', durationDays: '90', classCreditLimit: '', status: 'active', tier: 'SILVER' };
 
-  // Gửi biểu mẫu thêm/sửa theo tab hiện tại sau khi kiểm tra dữ liệu.
+  const nameMaxLength = tab === 'packages' ? 150 : 100;
+
+  // Gửi biểu mẫu thêm/sửa theo tab hiện tại sau khi kiểm tra dữ liệu (trim & maxLength khớp backend).
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editing || isSubmitting) return;
     const { id, form: f } = editing;
     const isNew = id == null;
     setFormError('');
+
+    const trimmedName = (f.name ?? '').trim();
+    if (!trimmedName) {
+      setFormError(staffMessage('Vui lòng nhập tên hiển thị.', 'Please enter a display name.'));
+      return;
+    }
+    if (trimmedName.length > nameMaxLength) {
+      setFormError(
+        staffMessage(
+          `Tên hiển thị tối đa ${nameMaxLength} ký tự.`,
+          `Display name must be at most ${nameMaxLength} characters.`,
+        ),
+      );
+      return;
+    }
+
+    if (tab === 'rooms') {
+      const trimmedLocation = (f.location ?? '').trim();
+      if (trimmedLocation.length > ROOM_LOCATION_MAX_LENGTH) {
+        setFormError(
+          staffMessage(
+            `Vị trí / tầng tối đa ${ROOM_LOCATION_MAX_LENGTH} ký tự.`,
+            `Location must be at most ${ROOM_LOCATION_MAX_LENGTH} characters.`,
+          ),
+        );
+        return;
+      }
+      const parsedCap = Number(f.capacity);
+      if (!Number.isInteger(parsedCap) || parsedCap < 1 || parsedCap > 200) {
+        setFormError(
+          staffMessage(
+            'Sức chứa phòng phải là số nguyên từ 1 đến 200 người.',
+            'Room capacity must be a whole number between 1 and 200.',
+          ),
+        );
+        return;
+      }
+    }
+
     if (tab === 'packages') {
       const parsedPrice = Number(f.price);
       const parsedDuration = Number(f.durationDays);
       if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
-        setFormError('Giá bán gói tập phải từ 0 đ trở lên.');
+        setFormError(staffMessage('Giá bán gói tập phải từ 0 đ trở lên.', 'Membership price must be 0 VND or higher.'));
         return;
       }
       const outOfRange = parsedDuration !== 3 && (parsedDuration < 90 || parsedDuration > 365);
       // Các gói hiện có giữ nguyên thời hạn đã lưu trừ khi được thay đổi; máy chủ sẽ kiểm tra quy tắc khi chỉnh sửa.
       if (!Number.isFinite(parsedDuration) || (isNew && outOfRange)) {
-        setFormError('Thời hạn gói tập phải từ 3 đến 12 tháng (90–365 ngày); chỉ gói trải nghiệm 3 ngày được ngắn hơn.');
+        setFormError(
+          staffMessage(
+            'Thời hạn gói tập phải từ 3 đến 12 tháng (90–365 ngày); chỉ gói trải nghiệm 3 ngày được ngắn hơn.',
+            'Membership duration must be 3 to 12 months (90–365 days); only the 3-day trial can be shorter.',
+          ),
+        );
         return;
       }
     }
 
-    void run(async () => {
-      if (tab === 'disciplines') {
-        return catalogApi.saveDiscipline(id, { name: f.name.trim(), description: f.description.trim() });
-      }
-      if (tab === 'rooms') {
-        return catalogApi.saveRoom(id, {
-          name: f.name.trim(),
-          location: f.location.trim(),
-          capacity: Number(f.capacity),
-          status: f.status as Room['status'],
-          tier: (f.tier as Room['tier']) || 'STANDARD',
+    void run(
+      async () => {
+        if (tab === 'disciplines') {
+          return catalogApi.saveDiscipline(id, { name: trimmedName, description: (f.description ?? '').trim() });
+        }
+        if (tab === 'rooms') {
+          return catalogApi.saveRoom(id, {
+            name: trimmedName,
+            location: (f.location ?? '').trim(),
+            capacity: Number(f.capacity),
+            status: f.status as Room['status'],
+            tier: (f.tier as Room['tier']) || 'STANDARD',
+          });
+        }
+        return catalogApi.savePackage(id, {
+          name: trimmedName,
+          description: (f.description ?? '').trim(),
+          price: Number(f.price),
+          durationDays: Number(f.durationDays),
+          classCreditLimit: f.classCreditLimit === '' ? null : Number(f.classCreditLimit),
+          status: (f.status as MembershipPackage['status']) || 'active',
+          tier: (f.tier as MembershipPackage['tier']) || resolvePackageTier({ name: trimmedName }),
         });
-      }
-      return catalogApi.savePackage(id, {
-        name: f.name.trim(),
-        description: f.description.trim(),
-        price: Number(f.price),
-        durationDays: Number(f.durationDays),
-        classCreditLimit: f.classCreditLimit === '' ? null : Number(f.classCreditLimit),
-        status: (f.status as MembershipPackage['status']) || 'active',
-        tier: (f.tier as MembershipPackage['tier']) || resolvePackageTier({ name: f.name }),
-      });
-    }, isNew ? 'Đã thêm mới danh mục thành công!' : 'Đã cập nhật danh mục thành công!');
+      },
+      isNew ? 'Đã thêm mới danh mục thành công!' : 'Đã cập nhật danh mục thành công!',
+      'form',
+    );
   };
 
   // Gửi giá mới của gói trong hộp đổi nhanh giá.
   const submitQuickPrice = (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickPricePkg || isSubmitting) return;
+    setQuickPriceError('');
     const nextPrice = Number(quickPricePkg.price);
     if (!Number.isFinite(nextPrice) || nextPrice < 0) {
-      notify('Giá bán không hợp lệ.', 'error');
+      const msg = staffMessage('Giá bán không hợp lệ.', 'Invalid price.');
+      setQuickPriceError(msg);
+      notify(msg, 'error');
       return;
     }
     const p = quickPricePkg.pkg;
@@ -170,14 +240,14 @@ export function ManagerCatalogsPage() {
           status: p.status,
           tier: resolvePackageTier(p),
         }),
-      staffMessage(`Đã cập nhật giá gói "${p.name}" thành ${vnd(nextPrice)}!`, `Updated membership "${p.name}" price to ${vnd(nextPrice)}!`)
+      staffMessage(`Đã cập nhật giá gói "${p.name}" thành ${vnd(nextPrice)}!`, `Updated membership "${p.name}" price to ${vnd(nextPrice)}!`),
+      'quickPrice',
     );
   };
 
   // Mở hộp thêm/sửa với dữ liệu cho trước.
   const openEditor = (value: { id: number | null; form: Form }) => {
     setFormError('');
-    setError('');
     setEditing(value);
   };
 
@@ -234,17 +304,19 @@ export function ManagerCatalogsPage() {
         }
       />
 
-      <div className="portal-tabs">
+      <div className="portal-tabs" role="tablist" aria-label={t('Danh mục vận hành', 'Operational catalogs')}>
         {(
           [
-            ['disciplines', t(`Bộ môn (${disciplines.length})`, `Disciplines (${disciplines.length})`)],
-            ['rooms', t(`Phòng tập (${rooms.length})`, `Rooms (${rooms.length})`)],
-            ['packages', t(`Gói tập (${packages.length})`, `Memberships (${packages.length})`)],
+            ['disciplines', t('Bộ môn', 'Disciplines'), disciplines.length],
+            ['rooms', t('Phòng tập', 'Rooms'), rooms.length],
+            ['packages', t('Gói tập', 'Memberships'), packages.length],
           ] as const
-        ).map(([key, label]) => (
+        ).map(([key, label, count]) => (
           <button data-i18n-managed
             key={key}
             type="button"
+            role="tab"
+            aria-selected={tab === key}
             className={`portal-tab ${tab === key ? 'active' : ''}`}
             onClick={() => {
               setTab(key);
@@ -252,15 +324,22 @@ export function ManagerCatalogsPage() {
             }}
           >
             {label}
+            <span className="portal-tab-count">{count}</span>
           </button>
         ))}
       </div>
 
-      {error && (
-        <div data-i18n-managed className="portal-alert" role="alert">
-          <span>{t(error)}</span>
+      {loadError && (
+        <div
+          data-i18n-managed
+          className="portal-alert portal-alert--error"
+          role="alert"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}
+        >
+          <span>{t(loadError)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>
-            {t("Thử lại")}</button>
+            {t("Thử lại", "Retry")}
+          </button>
         </div>
       )}
 
@@ -269,9 +348,15 @@ export function ManagerCatalogsPage() {
         <Modal
           title={t(`Sửa giá nhanh: ${quickPricePkg.pkg.name}`, `Quick price edit: ${quickPricePkg.pkg.name}`)}
           busy={isSubmitting}
-          onClose={() => !isSubmitting && setQuickPricePkg(null)}
+          onClose={() => {
+            if (!isSubmitting) {
+              setQuickPricePkg(null);
+              setQuickPriceError('');
+            }
+          }}
         >
-          <form onSubmit={submitQuickPrice} style={{ display: 'grid', gap: 14 }}>
+          <form onSubmit={submitQuickPrice} style={{ display: 'grid', gap: 14 }} noValidate>
+            {quickPriceError && <p role="alert" className="portal-alert portal-alert--error">{t(quickPriceError)}</p>}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="quick-pkg-price">
                 {t("Giá bán mới (VNĐ) *")}</label>
@@ -336,18 +421,18 @@ export function ManagerCatalogsPage() {
       {/* Hộp thoại thêm/chỉnh sửa hỗ trợ truy cập */}
       {editing && (
         <Modal title={t(modalTitle())} busy={isSubmitting} onClose={() => !isSubmitting && setEditing(null)}>
-          <form onSubmit={submit} style={{ display: 'grid', gap: 14 }}>
-            {formError && <p role="alert" className="portal-alert">{t(formError)}</p>}
-            {error && <p role="alert" className="portal-alert">{t(error)}</p>}
+          <form onSubmit={submit} style={{ display: 'grid', gap: 14 }} noValidate>
+            {formError && <p role="alert" className="portal-alert portal-alert--error">{t(formError)}</p>}
             <div className="portal-form-group">
               <label className="portal-label" htmlFor="cat-name">{t("Tên hiển thị *")}</label>
               <input
                 id="cat-name"
                 className="portal-input"
                 type="text"
+                maxLength={nameMaxLength}
                 required
                 autoFocus
-                placeholder={tab === 'packages' ? t('Vd: SILVER, GOLD 3 THÁNG, PLATINUM VIP...') : t('Vd: Gym, Boxing, Yoga...', 'Example: Gym, Boxing, Yoga...')}
+                placeholder={tab === 'packages' ? t('Vd: SILVER, GOLD 3 THÁNG, PLATINUM VIP...', 'e.g. SILVER, GOLD 3 MONTHS, PLATINUM VIP...') : t('Vd: Gym, Boxing, Yoga...', 'e.g. Gym, Boxing, Yoga...')}
                 value={editing.form.name ?? ''}
                 onChange={(e) => set('name', e.target.value)}
               />
@@ -368,7 +453,8 @@ export function ManagerCatalogsPage() {
                     id="cat-location"
                     className="portal-input"
                     type="text"
-                    placeholder={t("Vd: Tầng 2, Khu Đông")}
+                    maxLength={ROOM_LOCATION_MAX_LENGTH}
+                    placeholder={t("Vd: Tầng 2, Khu Đông", "e.g. Floor 2, East Wing")}
                     value={editing.form.location ?? ''}
                     onChange={(e) => set('location', e.target.value)}
                   />
@@ -417,7 +503,7 @@ export function ManagerCatalogsPage() {
                       min="0"
                       step="1000"
                       required
-                      placeholder="Vd: 199000"
+                      placeholder={t("Vd: 199000", "e.g. 199000")}
                       value={editing.form.price ?? ''}
                       onChange={(e) => set('price', e.target.value)}
                     />
@@ -431,7 +517,7 @@ export function ManagerCatalogsPage() {
                       min="3"
                       max="365"
                       required
-                      placeholder="Vd: 90"
+                      placeholder={t("Vd: 90", "e.g. 90")}
                       value={editing.form.durationDays ?? ''}
                       onChange={(e) => set('durationDays', e.target.value)}
                     />
@@ -467,7 +553,7 @@ export function ManagerCatalogsPage() {
                       className="btn-secondary btn-sm"
                       onClick={() => set('durationDays', String(preset.days))}
                     >
-                      {t(preset.label)}
+                      {t(preset.vi, preset.en)}
                     </button>
                   ))}
                 </div>
@@ -566,7 +652,7 @@ export function ManagerCatalogsPage() {
             ))}
           </div>
         </div>
-      ) : rowCount === 0 && !error ? (
+      ) : loadError ? null : rowCount === 0 ? (
         <div data-i18n-managed className="portal-card">
           <div className="portal-state">
             <h3 className="portal-state__title">
@@ -581,7 +667,7 @@ export function ManagerCatalogsPage() {
               className="btn-primary"
               onClick={() => openEditor({ id: null, form: emptyForm() })}
             >
-              {tab === 'packages' ? t('+ Tạo gói tập mới') : t('Thêm mới')}
+              {tab === 'packages' ? t('+ Tạo gói tập mới', '+ Create membership plan') : t('Thêm mới', 'Add new')}
             </button>
           </div>
         </div>
@@ -612,7 +698,7 @@ export function ManagerCatalogsPage() {
                             {t("Chỉnh sửa")}</button>
                           <button
                             type="button"
-                            className="btn-secondary btn-sm"
+                            className="btn-danger btn-sm"
                             disabled={isSubmitting}
                             onClick={() => void remove('bộ môn', d.name, () => catalogApi.deleteDiscipline(d.id))}
                           >
@@ -637,18 +723,20 @@ export function ManagerCatalogsPage() {
                     </tr>
                   </thead>
                   <tbody data-i18n-managed>
-                    {rooms.map((r) => (
+                    {rooms.map((r) => {
+                      const roomTier = resolveRoomTier(r);
+                      return (
                       <tr data-i18n-managed key={r.id}>
                         <td><strong>{r.name}</strong></td>
                         <td>
-                          {r.tier === 'PLATINUM' || r.name.toLowerCase().includes('vip') ? (
+                          {roomTier === 'PLATINUM' ? (
                             <span data-i18n-managed className="badge badge-info">{t("Cao cấp (Platinum)", "Platinum · VIP")}</span>
                           ) : (
-                            <span data-i18n-managed className="badge badge-neutral">{t("Tiêu chuẩn")}</span>
+                            <span data-i18n-managed className="badge badge-neutral">{t("Tiêu chuẩn", "Standard")}</span>
                           )}
                         </td>
                         <td>{r.location || <span className="muted">—</span>}</td>
-                        <td><strong>{r.capacity} {t(" người")}</strong></td>
+                        <td style={{ fontVariantNumeric: 'tabular-nums' }}><strong>{r.capacity} {t("người", "people")}</strong></td>
                         <td>
                           <span className={`badge ${r.status === 'available' ? 'badge-success' : 'badge-warning'}`}>
                             {t(ROOM_STATUS_LABEL[r.status]) || r.status}
@@ -661,21 +749,22 @@ export function ManagerCatalogsPage() {
                             onClick={() =>
                               openEditor({
                                 id: r.id,
-                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, tier: r.tier || (r.name.toLowerCase().includes('vip') ? 'PLATINUM' : 'STANDARD') },
+                                form: { name: r.name, location: r.location ?? '', capacity: String(r.capacity), status: r.status, tier: roomTier },
                               })
                             }
                           >
                             {t("Chỉnh sửa")}</button>
                           <button
                             type="button"
-                            className="btn-secondary btn-sm"
+                            className="btn-danger btn-sm"
                             disabled={isSubmitting}
                             onClick={() => void remove('phòng tập', r.name, () => catalogApi.deleteRoom(r.id))}
                           >
                             {t("Xóa")}</button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </>
               )}
@@ -711,11 +800,11 @@ export function ManagerCatalogsPage() {
                               {t(PACKAGE_TIER_LABEL[tier]) || tier}
                             </span>
                           </td>
-                          <td style={{ fontWeight: 700, color: 'var(--portal-salmon)', whiteSpace: 'nowrap' }}>
+                          <td style={{ fontWeight: 700, color: 'var(--portal-salmon)', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                             {vnd(p.price)}
                           </td>
-                          <td>{p.durationDays} {t(" ngày")}</td>
-                          <td>{p.classCreditLimit ?? t('Không giới hạn')}</td>
+                          <td style={{ fontVariantNumeric: 'tabular-nums' }}>{p.durationDays} {t("ngày", "days")}</td>
+                          <td style={{ fontVariantNumeric: 'tabular-nums' }}>{p.classCreditLimit ?? t('Không giới hạn')}</td>
                           <td>
                             <span className={`badge ${p.status === 'active' ? 'badge-success' : 'badge-warning'}`}>
                               {p.status === 'active' ? t('Đang bán') : t('Ngừng bán')}
@@ -725,7 +814,10 @@ export function ManagerCatalogsPage() {
                             <button
                               type="button"
                               className="btn-secondary btn-sm"
-                              onClick={() => setQuickPricePkg({ pkg: p, price: String(p.price) })}
+                              onClick={() => {
+                                setQuickPriceError('');
+                                setQuickPricePkg({ pkg: p, price: String(p.price) });
+                              }}
                             >
                               {t("Sửa giá nhanh")}</button>
                             <button
@@ -773,7 +865,7 @@ export function ManagerCatalogsPage() {
                             </button>
                             <button
                               type="button"
-                              className="btn-secondary btn-sm"
+                              className="btn-danger btn-sm"
                               disabled={isSubmitting}
                               onClick={() => void remove('gói tập', p.name, () => catalogApi.deletePackage(p.id))}
                             >

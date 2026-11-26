@@ -28,3 +28,9 @@ it('replaces programming errors and empty errors with bilingual safe source copy
     setLanguage('vi');
   }
 });
+it('supports explicit english fallback in memberError', () => {
+  const err = memberError(new TypeError('boom'), 'Lỗi tạm thời.', 'Temporary failure.');
+  expect(memberRenderMessage(err)).toBe('Lỗi tạm thời.');
+  setLanguage('en');
+  expect(memberRenderMessage(err)).toBe('Temporary failure.');
+});

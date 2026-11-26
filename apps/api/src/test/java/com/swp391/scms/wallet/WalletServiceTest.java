@@ -215,4 +215,61 @@ class WalletServiceTest {
         verify(walletTransactionRepository, times(1)).save(argThat(tx ->
                 "REFUND_CREDIT".equals(tx.getType()) && "VNPAY_LATE_REFUND".equals(tx.getReferenceType())));
     }
+
+    /** Kiểm thử P1-BE-33: chỉ tài khoản Hội viên đang hoạt động mới được nạp/xem ví hội viên tại quầy. */
+    @Test
+    void memberOnlyGuardRejectsStaffOrDeletedAccountsOnCounterTopupAndLookup() {
+        var memberRepo = mock(com.swp391.scms.users.MemberRepository.class);
+        walletService.setMemberRepository(memberRepo);
+
+        when(memberRepo.existsById(99L)).thenReturn(false);
+        assertThatThrownBy(() -> walletService.creditByReceptionist(99L, new BigDecimal("100000"), "cash", null, 2L))
+                .isInstanceOf(com.swp391.scms.common.exception.ResourceNotFoundException.class);
+        assertThatThrownBy(() -> walletService.getMemberWallet(99L))
+                .isInstanceOf(com.swp391.scms.common.exception.ResourceNotFoundException.class);
+
+        when(memberRepo.existsById(7L)).thenReturn(true);
+        when(userRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> walletService.creditByReceptionist(7L, new BigDecimal("100000"), "cash", null, 2L))
+                .isInstanceOf(com.swp391.scms.common.exception.ResourceNotFoundException.class);
+        assertThatThrownBy(() -> walletService.getMemberWallet(7L))
+                .isInstanceOf(com.swp391.scms.common.exception.ResourceNotFoundException.class);
+
+        User activeUser = new User();
+        activeUser.setId(7L);
+        when(userRepository.findByIdAndDeletedAtIsNull(7L)).thenReturn(Optional.of(activeUser));
+        when(walletRepository.findByUser_Id(7L)).thenReturn(Optional.of(wallet));
+        assertThat(walletService.getMemberWallet(7L).balance()).isEqualByComparingTo("500000");
+    }
+
+    /** Kiểm thử P2-BE-42: dùng Clock múi giờ Asia/Ho_Chi_Minh và xử lý tạo ví lần đầu đồng thời an toàn. */
+    @Test
+    void usesCenterTimeClockAndHandlesConcurrentFirstWalletCreation() {
+        java.time.Clock fixedUtcClock = java.time.Clock.fixed(
+                java.time.Instant.parse("2026-11-26T00:15:00Z"), java.time.ZoneOffset.UTC);
+        walletService.setClock(fixedUtcClock);
+        java.time.LocalDateTime expectedVnTime = java.time.LocalDateTime.of(2026, 11, 26, 7, 15, 0);
+
+        User newUser = new User();
+        newUser.setId(42L);
+        Wallet createdByPeer = new Wallet();
+        createdByPeer.setId(200L);
+        createdByPeer.setUser(newUser);
+        createdByPeer.setBalance(BigDecimal.ZERO);
+
+        when(userRepository.findByIdAndDeletedAtIsNull(42L)).thenReturn(Optional.of(newUser));
+        when(walletRepository.findByUserIdForUpdate(42L))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(createdByPeer));
+
+        walletService.creditPaymentRefund(42L, new BigDecimal("250000"), "PAYMENT_REFUND_55_250000", "Hoàn tiền");
+
+        verify(walletRepository).insertIfAbsent(42L, expectedVnTime);
+        assertThat(createdByPeer.getBalance()).isEqualByComparingTo("250000");
+        assertThat(createdByPeer.getUpdatedAt()).isEqualTo(expectedVnTime);
+        ArgumentCaptor<WalletTransaction> txCaptor = ArgumentCaptor.forClass(WalletTransaction.class);
+        verify(walletTransactionRepository).save(txCaptor.capture());
+        assertThat(txCaptor.getValue().getCreatedAt()).isEqualTo(expectedVnTime);
+        assertThat(txCaptor.getValue().getReferenceId()).isEqualTo("PAYMENT_REFUND_55_250000");
+    }
 }

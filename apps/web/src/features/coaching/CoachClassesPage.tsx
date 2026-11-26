@@ -1,5 +1,5 @@
-import { useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useStaffI18n, type StaffMessage, staffMessage, staffNotify as notify } from '../operations/staffI18n';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiFetch, getCurrentUser } from '../../shared/api/client';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -8,6 +8,7 @@ import { Modal } from '../../shared/ui/Modal';
 import { Select } from '../../shared/ui/Select';
 import {
   coachingApi,
+  coachingError,
   type CoachSession,
   type EnrolledStudent,
 } from './coachingApi';
@@ -17,44 +18,24 @@ import {
 } from '../member/coachBookingApi';
 import { WeeklyTimetable } from '../schedule/WeeklyTimetable';
 import { formatSlotLabel } from '../schedule/slots';
-import { parseISODate } from '../schedule/timetable';
-import { coachSessionEvents, ptBookingEvents } from './coachTimetable';
+import { coachSessionEvents, mondayOfIso, ptBookingEvents } from './coachTimetable';
 import './coach-classes.css';
-import { formatCenterDate } from '../../shared/lib/centerTime';
+import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
 import { matchPtSearch } from './ptSearch';
 
-/** Thứ Hai (00:00) của tuần chứa ngày cho trước; Chủ nhật được tính vào tuần trước. */
-function getWeekMonday(date: Date): Date {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  d.setDate(diff);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-/** Định dạng Date thành chuỗi YYYY-MM-DD theo giờ địa phương. */
-function formatYmd(d: Date): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
-}
-
-
 /**
- * Trang lịch dạy của HLV: thời khóa biểu tuần các buổi kèm 1:1 (có tìm kiếm, xem chi tiết, hủy buổi kèm lý do)
- * và danh sách học viên mình phụ trách.
+ * Trang lịch dạy của HLV: thời khóa biểu tuần các buổi kèm 1:1 và lớp nhóm (có tìm kiếm, xem chi tiết, hủy buổi
+ * kèm lý do) và danh sách học viên mình phụ trách.
  */
 export function CoachClassesPage() {
   const { t } = useStaffI18n();
   const currentUser = getCurrentUser();
 
-  // Tab chuyển đổi: 'schedule' (Thời khóa biểu PT 1-1) hoặc 'students' (Học viên phụ trách)
+  // Tab chuyển đổi: 'schedule' (Thời khóa biểu) hoặc 'students' (Học viên phụ trách)
   const [activeTab, setActiveTab] = useState<'schedule' | 'students'>('schedule');
   const [scheduleSearch, setScheduleSearch] = useState('');
 
-  const [currentMonday, setCurrentMonday] = useState<Date>(() => getWeekMonday(new Date()));
+  const [weekStart, setWeekStart] = useState<string>(() => mondayOfIso(centerNowParts().date));
   const [selectedPt, setSelectedPt] = useState<CoachBookingDto | null>(null);
   const [selectedClassSession, setSelectedClassSession] = useState<CoachSession | null>(null);
   const [coach1on1Bookings, setCoach1on1Bookings] = useState<CoachBookingDto[]>([]);
@@ -76,43 +57,92 @@ export function CoachClassesPage() {
   const [cancelPtError, setCancelPtError] = useState<StaffMessage | null>(null);
   const [cancelBusy, setCancelBusy] = useState<boolean>(false);
 
-  // Tải danh sách toàn bộ học viên phụ trách
-  useEffect(() => {
-    let mounted = true;
-    // Tải toàn bộ học viên HLV đang phụ trách (bỏ qua kết quả nếu component đã bị gỡ).
-    const fetchAllStudents = async () => {
-      setAllStudentsLoading(true);
-      setAllStudentsError(null);
-      try {
-        const res = await coachingApi.getAllAssignedStudents();
-        if (mounted) setAllStudents(res);
-      } catch {
-        if (mounted) setAllStudentsError('Không thể tải danh sách học viên phụ trách.');
-      } finally {
-        if (mounted) setAllStudentsLoading(false);
-      }
-    };
-    void fetchAllStudents();
-    return () => {
-      mounted = false;
-    };
-  }, [currentUser?.id]);
+  const mountedRef = useRef(true);
+  const scheduleReqIdRef = useRef(0);
+  const studentsReqIdRef = useRef(0);
+  const cancelBusyRef = useRef(false);
 
-  // Học viên sau khi lọc theo từ khóa tìm kiếm.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Tải danh sách toàn bộ học viên phụ trách (gồm cả PT 1:1 và lớp nhóm).
+  const loadAssignedStudents = useCallback(async () => {
+    const reqId = ++studentsReqIdRef.current;
+    setAllStudentsLoading(true);
+    setAllStudentsError(null);
+    try {
+      const res = await coachingApi.getAllAssignedStudents();
+      if (mountedRef.current && reqId === studentsReqIdRef.current) {
+        setAllStudents(Array.isArray(res) ? res : []);
+      }
+    } catch (err: unknown) {
+      if (mountedRef.current && reqId === studentsReqIdRef.current) {
+        setAllStudentsError(
+          coachingError(
+            err,
+            'Không thể tải danh sách học viên phụ trách.',
+            'Unable to load assigned trainees.',
+          ),
+        );
+      }
+    } finally {
+      if (mountedRef.current && reqId === studentsReqIdRef.current) {
+        setAllStudentsLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadAssignedStudents();
+  }, [loadAssignedStudents, currentUser?.id]);
+
+  // Bổ sung thông tin liên hệ (email/SĐT) từ lịch PT 1:1 đã tải nếu danh bạ `/coaching/members` chưa kèm.
+  const enrichedStudents = useMemo(() => {
+    if (coach1on1Bookings.length === 0) return allStudents;
+    const ptContactByMember = new Map<number, { email?: string | null; phone?: string | null }>();
+    for (const booking of coach1on1Bookings) {
+      if (booking.memberId == null) continue;
+      const existing = ptContactByMember.get(booking.memberId);
+      ptContactByMember.set(booking.memberId, {
+        email: existing?.email || booking.memberEmail,
+        phone: existing?.phone || booking.memberPhone,
+      });
+    }
+    return allStudents.map((st) => {
+      const contact = ptContactByMember.get(st.memberId);
+      if (!contact) return st;
+      return {
+        ...st,
+        email: st.email || contact.email || '',
+        phone: st.phone || contact.phone || null,
+      };
+    });
+  }, [allStudents, coach1on1Bookings]);
+
+  // Học viên sau khi lọc theo từ khóa tìm kiếm và trình độ (kiểm tra null an toàn).
   const filteredAllStudents = useMemo(() => {
-    return allStudents.filter((st) => {
-      const q = allStudentsSearch.trim().toLowerCase();
+    const q = allStudentsSearch.trim().toLowerCase();
+    return enrichedStudents.filter((st) => {
+      const name = (st.fullName ?? '').toLowerCase();
+      const code = (st.membershipCode ?? '').toLowerCase();
+      const phone = (st.phone ?? '').toLowerCase();
+      const email = (st.email ?? '').toLowerCase();
+      const level = (st.fitnessLevel ?? '').trim().toLowerCase();
       const matchSearch =
         !q ||
-        st.fullName.toLowerCase().includes(q) ||
-        st.membershipCode.toLowerCase().includes(q) ||
-        (st.phone && st.phone.includes(q)) ||
-        st.email.toLowerCase().includes(q);
+        name.includes(q) ||
+        code.includes(q) ||
+        phone.includes(q) ||
+        email.includes(q);
       const matchLevel =
-        allStudentsLevelFilter === 'all' || st.fitnessLevel === allStudentsLevelFilter;
+        allStudentsLevelFilter === 'all' || level === allStudentsLevelFilter;
       return matchSearch && matchLevel;
     });
-  }, [allStudents, allStudentsSearch, allStudentsLevelFilter]);
+  }, [enrichedStudents, allStudentsSearch, allStudentsLevelFilter]);
 
   // Các buổi kèm 1:1 khớp từ khóa tìm kiếm.
   const filteredPtBookings = useMemo(() => {
@@ -128,30 +158,51 @@ export function CoachClassesPage() {
     );
   }, [classSessions, scheduleSearch]);
 
-  // Tải song song lịch PT 1:1 và lịch dạy lớp nhóm của HLV.
+  // Tải song song lịch PT 1:1 và lịch dạy lớp nhóm của HLV (backend tự lọc theo JWT principal của COACH).
   const loadWeeklySessions = useCallback(async () => {
+    const reqId = ++scheduleReqIdRef.current;
     setLoading(true);
     setError(null);
     try {
       const [ptResult, classResult] = await Promise.allSettled([
         getCoachSchedule(),
         typeof coachingApi.getCoachSchedule === 'function'
-          ? coachingApi.getCoachSchedule(currentUser?.id)
+          ? coachingApi.getCoachSchedule()
           : Promise.resolve([] as CoachSession[]),
       ]);
-      const ptList = ptResult.status === 'fulfilled' ? ptResult.value : [];
+      if (!mountedRef.current || reqId !== scheduleReqIdRef.current) return;
+      const ptList = ptResult.status === 'fulfilled' && Array.isArray(ptResult.value) ? ptResult.value : [];
       const classList = classResult.status === 'fulfilled' && Array.isArray(classResult.value) ? classResult.value : [];
       setCoach1on1Bookings(ptList);
       setClassSessions(classList);
       if (ptResult.status === 'rejected' && classResult.status === 'rejected') {
-        setError('Không thể tải lịch dạy của tuần này. Vui lòng thử lại.');
-      } else if (ptResult.status === 'rejected' && classList.length === 0) {
-        setError('Không thể tải lịch dạy của tuần này. Vui lòng thử lại.');
+        setError(
+          staffMessage(
+            'Không thể tải lịch dạy của tuần này. Vui lòng thử lại.',
+            'Unable to load this week’s teaching schedule. Please try again.',
+          ),
+        );
+      } else if (ptResult.status === 'rejected') {
+        setError(
+          staffMessage(
+            'Không thể tải lịch kèm PT 1:1. Các buổi lớp nhóm đã tải vẫn hiển thị bên dưới.',
+            'Unable to load 1:1 PT sessions. Loaded group class sessions are still shown below.',
+          ),
+        );
+      } else if (classResult.status === 'rejected') {
+        setError(
+          staffMessage(
+            'Không thể tải lịch dạy lớp nhóm. Các buổi PT 1:1 đã tải vẫn hiển thị bên dưới.',
+            'Unable to load group class sessions. Loaded 1:1 PT sessions are still shown below.',
+          ),
+        );
       }
     } finally {
-      setLoading(false);
+      if (mountedRef.current && reqId === scheduleReqIdRef.current) {
+        setLoading(false);
+      }
     }
-  }, [currentUser?.id]);
+  }, []);
 
   useEffect(() => {
     void loadWeeklySessions();
@@ -169,12 +220,13 @@ export function CoachClassesPage() {
   // Xác nhận hủy buổi lớp nhóm do HLV phụ trách.
   const handleConfirmCancelSession = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cancellingSession || cancelBusy) return;
+    if (!cancellingSession || cancelBusyRef.current) return;
     const reason = cancelPtReason.trim();
     if (!reason) {
-      setCancelPtError('Vui lòng nhập lý do hủy buổi học.');
+      setCancelPtError(staffMessage('Vui lòng nhập lý do hủy buổi học.', 'Please enter a session cancellation reason.'));
       return;
     }
+    cancelBusyRef.current = true;
     setCancelPtError(null);
     setCancelBusy(true);
     try {
@@ -182,42 +234,57 @@ export function CoachClassesPage() {
         method: 'POST',
         body: JSON.stringify({ reason }),
       });
-      notify('Đã hủy buổi học và gửi thông báo tới học viên.', 'success');
+      if (!mountedRef.current) return;
+      notify(
+        staffMessage(
+          'Đã hủy buổi học và gửi thông báo tới học viên.',
+          'Session cancelled and enrolled members have been notified.',
+        ),
+        'success',
+      );
       setCancellingSession(null);
       setCancelPtReason('');
       setSelectedClassSession(null);
       await loadWeeklySessions();
     } catch (err: unknown) {
-      setCancelPtError(errorMessage(err, 'Không thể hủy buổi học này.'));
+      if (mountedRef.current) {
+        setCancelPtError(coachingError(err, 'Không thể hủy buổi học này.', 'Unable to cancel this session.'));
+      }
     } finally {
-      setCancelBusy(false);
+      cancelBusyRef.current = false;
+      if (mountedRef.current) setCancelBusy(false);
     }
   };
 
   // Xác nhận hủy buổi kèm 1:1: bắt buộc nhập lý do, gửi yêu cầu xóa rồi tải lại lịch.
   const handleConfirmCancelPt = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!cancellingPt || cancelBusy) return;
+    if (!cancellingPt || cancelBusyRef.current) return;
     const reason = cancelPtReason.trim();
     if (!reason) {
-      setCancelPtError('Vui lòng nhập lý do hủy buổi kèm 1:1.');
+      setCancelPtError(staffMessage('Vui lòng nhập lý do hủy buổi kèm 1:1.', 'Please enter a cancellation reason for this 1:1 session.'));
       return;
     }
+    cancelBusyRef.current = true;
     setCancelPtError(null);
     setCancelBusy(true);
     try {
       await apiFetch(`/coach-bookings/${cancellingPt.id}?reason=${encodeURIComponent(reason)}`, {
         method: 'DELETE',
       });
-      notify('Đã hủy buổi kèm 1:1 thành công!', 'success');
+      if (!mountedRef.current) return;
+      notify(staffMessage('Đã hủy buổi kèm 1:1 thành công!', '1:1 session cancelled successfully!'), 'success');
       setCancellingPt(null);
       setCancelPtReason('');
       setSelectedPt(null);
       await loadWeeklySessions();
     } catch (err: unknown) {
-      setCancelPtError(errorMessage(err, 'Không thể hủy buổi kèm 1:1 này.'));
+      if (mountedRef.current) {
+        setCancelPtError(coachingError(err, 'Không thể hủy buổi kèm 1:1 này.', 'Unable to cancel this 1:1 session.'));
+      }
     } finally {
-      setCancelBusy(false);
+      cancelBusyRef.current = false;
+      if (mountedRef.current) setCancelBusy(false);
     }
   };
 
@@ -265,19 +332,19 @@ export function CoachClassesPage() {
               />
             </div>
             {scheduleSearch.trim() && (
-              <span className="coach-students-count" style={{ fontSize: '0.88rem', color: 'var(--sol-text-muted)' }}>
+              <span className="coach-students-count" style={{ fontSize: '0.88rem', color: 'var(--portal-muted)' }}>
                 {t("Kết quả tìm kiếm: ", "Search results: ")}<strong>{filteredPtBookings.length + filteredClassSessions.length} {t("buổi tập", "sessions")}</strong>
               </span>
             )}
           </div>
           <WeeklyTimetable
             label={t("Thời khóa biểu giảng dạy của tôi", "My teaching timetable")}
-            weekStart={formatYmd(currentMonday)}
+            weekStart={weekStart}
             events={[...coachSessionEvents(filteredClassSessions, 'schedule'), ...ptBookingEvents(filteredPtBookings)]}
             loading={loading}
             error={t(error)}
             onRetry={() => void loadWeeklySessions()}
-            onWeekChange={(iso) => setCurrentMonday(getWeekMonday(parseISODate(iso)))}
+            onWeekChange={(iso) => setWeekStart(mondayOfIso(iso))}
             onEventClick={handleEventClick}
             emptyLabel={
               scheduleSearch.trim()
@@ -302,11 +369,11 @@ export function CoachClassesPage() {
             {selectedClassSession.disciplineName && (
               <div className="kv-row"><span>{t("Bộ môn", "Discipline")}</span><strong>{selectedClassSession.disciplineName}</strong></div>
             )}
-            <div className="kv-row"><span>{t("Thời gian", "Time")}</span><strong>{formatCenterDate(selectedClassSession.sessionDate)} · {formatSlotLabel(selectedClassSession.startTime, selectedClassSession.endTime)}</strong></div>
+            <div className="kv-row"><span>{t("Thời gian", "Time")}</span><strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCenterDate(selectedClassSession.sessionDate)} · {formatSlotLabel(selectedClassSession.startTime, selectedClassSession.endTime)}</strong></div>
             {selectedClassSession.roomName && (
               <div className="kv-row"><span>{t("Phòng tập", "Room")}</span><strong>{selectedClassSession.roomName}</strong></div>
             )}
-            <div className="kv-row"><span>{t("Sĩ số", "Attendance")}</span><strong>{`${selectedClassSession.bookedCount}/${selectedClassSession.capacity}`}</strong></div>
+            <div className="kv-row"><span>{t("Sĩ số", "Attendance")}</span><strong style={{ fontVariantNumeric: 'tabular-nums' }}>{`${selectedClassSession.bookedCount}/${selectedClassSession.capacity}`}</strong></div>
             {selectedClassSession.cancelReason && (
               <div className="kv-row"><span>{t("Lý do hủy", "Cancellation reason")}</span><strong>{selectedClassSession.cancelReason}</strong></div>
             )}
@@ -325,9 +392,11 @@ export function CoachClassesPage() {
                 {t("Hủy buổi học", "Cancel session")}
               </button>
             )}
-            <Link to={`/coach/attendance/${selectedClassSession.id}`} className="btn-primary">
-              {t("Điểm danh buổi này", "Take attendance")}
-            </Link>
+            {selectedClassSession.status?.toLowerCase() !== 'cancelled' && (
+              <Link to={`/coach/attendance/${selectedClassSession.id}`} className="btn-primary">
+                {t("Điểm danh buổi này", "Take attendance")}
+              </Link>
+            )}
           </div>
         </Modal>
       )}
@@ -373,7 +442,7 @@ export function CoachClassesPage() {
         <Modal title={t("Buổi kèm riêng 1:1")} onClose={() => setSelectedPt(null)}>
           <div className="kv-list">
             <div className="kv-row"><span>{t("Học viên")}</span><strong>{selectedPt.memberName}</strong></div>
-            <div className="kv-row"><span>{t("Thời gian")}</span><strong>{formatCenterDate(selectedPt.bookingDate)} · {formatSlotLabel(selectedPt.startTime, selectedPt.endTime)}</strong></div>
+            <div className="kv-row"><span>{t("Thời gian")}</span><strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatCenterDate(selectedPt.bookingDate)} · {formatSlotLabel(selectedPt.startTime, selectedPt.endTime)}</strong></div>
             <div className="kv-row"><span>{t("Bộ môn")}</span><strong>{selectedPt.disciplineName || t('Huấn luyện cá nhân')}</strong></div>
             <div className="kv-row"><span>{t("Hình thức")}</span><strong>{selectedPt.paymentMethod === 'package_quota' ? t('Quyền lợi gói tập') : t('Hội viên trả phí')}</strong></div>
             {selectedPt.notes && <div className="kv-row"><span>{t("Ghi chú của học viên")}</span><strong>{selectedPt.notes}</strong></div>}
@@ -383,8 +452,7 @@ export function CoachClassesPage() {
               {(selectedPt.status === 'confirmed' || (selectedPt.status as string) === 'pending') && (
                 <button data-i18n-managed
                   type="button"
-                  className="btn-secondary"
-                  style={{ color: 'var(--portal-danger, #fca5a5)' }}
+                  className="btn-danger"
                   onClick={() => {
                     setCancelPtError(null);
                     setCancelPtReason('');
@@ -403,6 +471,7 @@ export function CoachClassesPage() {
         <Modal
           title={t(`Hủy buổi kèm 1:1: ${cancellingPt.memberName}`, `Cancel one-to-one session: ${cancellingPt.memberName}`)}
           onClose={() => { if (!cancelBusy) setCancellingPt(null); }}
+          busy={cancelBusy}
         >
           <form onSubmit={handleConfirmCancelPt} style={{ display: 'grid', gap: 12 }}>
             <div className="portal-form-group">
@@ -420,7 +489,7 @@ export function CoachClassesPage() {
               />
             </div>
             {cancelPtError && (
-              <div data-i18n-managed role="alert" style={{ color: 'var(--portal-danger, #fca5a5)', fontSize: '0.88rem' }}>
+              <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
                 {t(cancelPtError)}
               </div>
             )}
@@ -445,7 +514,7 @@ export function CoachClassesPage() {
               <h3 className="coach-students-title">{t("Danh sách học viên phụ trách")}</h3>
             </div>
             <span className="coach-students-count">
-              {t("Tổng số: ")}<strong>{allStudents.length} {t(" học viên")}</strong>
+              {t("Tổng số: ")}<strong>{enrichedStudents.length} {t(" học viên")}</strong>
             </span>
           </div>
 
@@ -474,7 +543,12 @@ export function CoachClassesPage() {
           {allStudentsLoading ? (
             <LoadingSkeleton label={t("Đang tải danh sách học viên phụ trách…")} variant="cards" count={4} />
           ) : allStudentsError ? (
-            <div data-i18n-managed className="coach-error-box" role="alert"><p>{t(allStudentsError)}</p></div>
+            <div data-i18n-managed className="coach-error-box" role="alert">
+              <p>{t(allStudentsError)}</p>
+              <button type="button" className="btn-secondary btn-sm" onClick={() => void loadAssignedStudents()}>
+                {t("Thử lại", "Retry")}
+              </button>
+            </div>
           ) : filteredAllStudents.length === 0 ? (
             <div data-i18n-managed className="coach-empty-box">
               <p>{t("Không tìm thấy học viên nào phù hợp.")}</p>
@@ -482,59 +556,73 @@ export function CoachClassesPage() {
             </div>
           ) : (
             <div data-i18n-managed className="coach-students-grid">
-              {filteredAllStudents.map((st, index) => (
-                <div data-i18n-managed key={`${st.id}-${index}`} className="student-card-item">
-                  <div className="student-card-header">
-                    <div className="student-avatar-col">
-                      <div className="student-avatar-fallback">
-                        {st.fullName.charAt(0).toUpperCase()}
+              {filteredAllStudents.map((st, index) => {
+                const displayName = st.fullName?.trim() || '—';
+                const avatarInitial = (st.fullName?.trim().charAt(0) || '?').toUpperCase();
+                const normalizedLevel = (st.fitnessLevel ?? '').trim().toLowerCase();
+                const levelLabel =
+                  normalizedLevel === 'beginner'
+                    ? t('Cơ bản', 'Beginner')
+                    : normalizedLevel === 'intermediate'
+                    ? t('Trung cấp', 'Intermediate')
+                    : normalizedLevel === 'advanced'
+                    ? t('Nâng cao', 'Advanced')
+                    : '—';
+                const levelClass =
+                  normalizedLevel === 'beginner' || normalizedLevel === 'intermediate' || normalizedLevel === 'advanced'
+                    ? `level-${normalizedLevel}`
+                    : 'level-unknown';
+                const hasHealthNotes = Boolean(st.healthNotes?.trim());
+                return (
+                  <div data-i18n-managed key={`${st.id}-${index}`} className="student-card-item">
+                    <div className="student-card-header">
+                      <div className="student-avatar-col">
+                        <div className="student-avatar-fallback">
+                          {avatarInitial}
+                        </div>
                       </div>
-                    </div>
-                    <div className="student-main-col">
-                      <div className="student-name-row">
-                        <h4 className="student-name">{st.fullName}</h4>
-                        <span className="student-code-tag">{st.membershipCode}</span>
-                        <span className={`fitness-level-pill level-${st.fitnessLevel}`}>
-                          {st.fitnessLevel === 'beginner'
-                            ? t('Cơ bản')
-                            : st.fitnessLevel === 'intermediate'
-                            ? t('Trung cấp')
-                            : t('Nâng cao')}
-                        </span>
-                      </div>
-                      <div className="student-contact-row">
-                        <span>Email: {st.email}</span>
-                        {st.phone && <span>{t("SĐT: ")}{st.phone}</span>}
-                        {st.emergencyContactName && (
-                          <span data-i18n-managed className="emergency-tag">
-                            {t("Khẩn cấp: ")}{st.emergencyContactName} ({st.emergencyContactPhone || '—'})
+                      <div className="student-main-col">
+                        <div className="student-name-row">
+                          <h4 className="student-name">{displayName}</h4>
+                          {st.membershipCode && <span className="student-code-tag">{st.membershipCode}</span>}
+                          <span className={`fitness-level-pill ${levelClass}`}>
+                            {levelLabel}
                           </span>
-                        )}
+                        </div>
+                        <div className="student-contact-row">
+                          {st.email && <span>Email: {st.email}</span>}
+                          {st.phone && <span>{t("SĐT: ")}{st.phone}</span>}
+                          {st.emergencyContactName && (
+                            <span data-i18n-managed className="emergency-tag">
+                              {t("Khẩn cấp: ")}{st.emergencyContactName} ({st.emergencyContactPhone || '—'})
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <div className="student-details-grid">
-                    <div className="student-detail-box goal-box">
-                      <span className="box-title">{t("Mục tiêu thể lực:", "Fitness goal:")}</span>
-                      <p className="box-content">{st.fitnessGoal || t('Chưa cập nhật')}</p>
+                    <div className="student-details-grid">
+                      <div className="student-detail-box goal-box">
+                        <span className="box-title">{t("Mục tiêu thể lực:", "Fitness goal:")}</span>
+                        <p className="box-content">{st.fitnessGoal?.trim() || t('Chưa cập nhật')}</p>
+                      </div>
+
+                      <div className={`student-detail-box health-box${hasHealthNotes ? ' health-box--alert' : ''}`}>
+                        <span className="box-title">{t("Lưu ý sức khỏe & chấn thương:", "Health & injury notes:")}</span>
+                        <p className={`box-content${hasHealthNotes ? ' warning-text' : ''}`}>
+                          {st.healthNotes?.trim() || t('Sức khỏe bình thường, không có ghi chú chấn thương.')}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="student-detail-box health-box">
-                      <span className="box-title">{t("Lưu ý sức khỏe & chấn thương:", "Health & injury notes:")}</span>
-                      <p className="box-content warning-text">
-                        {st.healthNotes || t('Sức khỏe bình thường, không có ghi chú chấn thương.')}
-                      </p>
+                    <div className="student-card-item-footer">
+                      <span>{t("Học viên chính thức của trung tâm")}</span>
+                      <Link to="/coach/training-plans" className="btn-secondary btn-sm btn-plan-for-student">
+                        {t("Soạn giáo án bài tập →")}</Link>
                     </div>
                   </div>
-
-                  <div className="student-card-item-footer">
-                    <span>{t("Học viên chính thức của trung tâm")}</span>
-                    <Link to="/coach/training-plans" className="btn-plan-for-student">
-                      {t("Soạn giáo án bài tập →")}</Link>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

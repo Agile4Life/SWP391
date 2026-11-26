@@ -156,12 +156,53 @@ class SupportRequestControllerTest {
                 .andExpect(jsonPath("$.data.content.length()").value(2));
     }
 
+    /** Kiểm thử: POST /api/v1/support/requests lỗi 400 khi description vượt quá 5000 ký tự (P2-BE-54). */
+    @Test
+    @DisplayName("POST /api/v1/support/requests lỗi 400 khi description vượt quá 5000 ký tự")
+    void createRequest_DescriptionTooLong_Returns400() throws Exception {
+        CreateSupportRequestDto dto = new CreateSupportRequestDto("Lỗi phòng tập", "x".repeat(5001));
+
+        mockMvc.perform(post("/api/v1/support/requests")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    /** Kiểm thử: GET /my và GET / cố định sort createdAt DESC và giới hạn size <= 50 (P2-BE-49). */
+    @Test
+    @DisplayName("GET /my và GET / loại bỏ sort tùy ý từ client và giới hạn size tối đa 50")
+    void listEndpoints_SanitizePageableSortAndCapSize() throws Exception {
+        var myCaptor = org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        when(supportRequestService.getMyRequests(eq(10L), myCaptor.capture()))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
+
+        mockMvc.perform(get("/api/v1/support/requests/my?page=1&size=500&sort=escalationReason,asc"))
+                .andExpect(status().isOk());
+
+        org.assertj.core.api.Assertions.assertThat(myCaptor.getValue().getPageNumber()).isEqualTo(1);
+        org.assertj.core.api.Assertions.assertThat(myCaptor.getValue().getPageSize()).isEqualTo(50);
+        org.assertj.core.api.Assertions.assertThat(myCaptor.getValue().getSort())
+                .isEqualTo(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+
+        var allCaptor = org.mockito.ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        when(supportRequestService.getAllRequests(any(), allCaptor.capture(), any()))
+                .thenReturn(new PageImpl<>(List.of(), PageRequest.of(0, 50), 0));
+
+        mockMvc.perform(get("/api/v1/support/requests?page=0&size=200&sort=assignedTo.passwordHash,desc"))
+                .andExpect(status().isOk());
+
+        org.assertj.core.api.Assertions.assertThat(allCaptor.getValue().getPageSize()).isEqualTo(50);
+        org.assertj.core.api.Assertions.assertThat(allCaptor.getValue().getSort())
+                .isEqualTo(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"));
+    }
+
     /** Kiểm thử: PATCH /api/v1/support/requests/{id}/status cập nhật trạng thái ticket */
     @Test
     @DisplayName("PATCH /api/v1/support/requests/{id}/status cập nhật trạng thái ticket")
     void updateStatus_Success() throws Exception {
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
-        when(supportRequestService.updateStatus(eq(1L), any(UpdateSupportRequestStatusDto.class), any()))
+        when(supportRequestService.updateStatus(eq(1L), any(UpdateSupportRequestStatusDto.class), eq(10L), eq("MEMBER")))
                 .thenReturn(sampleDto(1L, "in_progress"));
 
         mockMvc.perform(patch("/api/v1/support/requests/1/status")
@@ -190,7 +231,7 @@ class SupportRequestControllerTest {
     @DisplayName("PATCH /api/v1/support/requests/{id}/status trả về 403 FORBIDDEN khi phân quyền bị chặn")
     void updateStatus_AccessDeniedReturns403() throws Exception {
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
-        when(supportRequestService.updateStatus(eq(1L), any(UpdateSupportRequestStatusDto.class), any()))
+        when(supportRequestService.updateStatus(eq(1L), any(UpdateSupportRequestStatusDto.class), eq(10L), eq("MEMBER")))
                 .thenThrow(new AccessDeniedException("Access is denied"));
 
         mockMvc.perform(patch("/api/v1/support/requests/1/status")

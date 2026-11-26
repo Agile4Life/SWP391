@@ -2,6 +2,7 @@ import { notify } from '../lib/portalNotices';
 import { toast } from '../ui/toast';
 import { getLanguage, translateSource, useI18n, type SourceMessage } from './language';
 import { englishPublicLabels, vietnamesePublicLabels } from './publicLabels';
+import { englishLabels } from './translations';
 
 
 /** Dịch một chuỗi nguồn theo ngôn ngữ cho trước bằng bảng nhãn công khai (chuỗi gom khoảng trắng). */
@@ -9,9 +10,19 @@ function translatedSource(value: string, lang: 'vi' | 'en'): string {
   const trimmed = value.trim();
   if (!trimmed) return value;
   const key = trimmed.replace(/\s+/g, ' ');
-  const translated = Object.hasOwn(vietnamesePublicLabels, key)
-    ? translateSource(vietnamesePublicLabels[key], key, lang)
-    : translateSource(key, englishPublicLabels[key] ?? englishPublicLabels[value], lang);
+  let translated: string;
+  if (Object.hasOwn(vietnamesePublicLabels, key)) {
+    const vi = vietnamesePublicLabels[key];
+    const en = Object.hasOwn(englishPublicLabels, vi) ? englishPublicLabels[vi] : key;
+    translated = translateSource(vi, en, lang);
+  } else {
+    const en = Object.hasOwn(englishPublicLabels, key)
+      ? englishPublicLabels[key]
+      : Object.hasOwn(englishPublicLabels, value)
+        ? englishPublicLabels[value]
+        : undefined;
+    translated = translateSource(key, en, lang);
+  }
   // Giữ nguyên khoảng trắng phân cách có chủ đích trong các đoạn ghép như " and {0} other items".
   return value.slice(0, value.indexOf(trimmed)) + translated.trim() + value.slice(value.indexOf(trimmed) + trimmed.length);
 }
@@ -70,7 +81,17 @@ export function sourceFormatPair(source: string, ...values: unknown[]): SourceMe
 function noticePair(value: string | Error | SourceMessage): SourceMessage | undefined {
   if (value instanceof Error) return (value as Error & { translation?: SourceMessage }).translation;
   if (typeof value !== 'string') return value;
-  return Object.hasOwn(englishPublicLabels, value) ? sourcePair(value) : undefined;
+  const key = value.trim().replace(/\s+/g, ' ');
+  if (!key) return undefined;
+  if (
+    Object.hasOwn(englishPublicLabels, key) ||
+    Object.hasOwn(englishPublicLabels, value) ||
+    Object.hasOwn(englishLabels, key) ||
+    Object.hasOwn(vietnamesePublicLabels, key)
+  ) {
+    return sourcePair(value);
+  }
+  return undefined;
 }
 
 /** Hiện thông báo trong portal, kèm bản dịch nếu có. */

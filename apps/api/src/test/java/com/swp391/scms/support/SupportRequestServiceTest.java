@@ -87,11 +87,11 @@ class SupportRequestServiceTest {
         sampleRequest.setStatus("open");
     }
 
-    /** Kiểm thử: Tạo yêu cầu hỗ trợ thành công khi member tồn tại */
+    /** Kiểm thử: Tạo yêu cầu hỗ trợ thành công khi member tồn tại (tự cắt khoảng trắng thừa của subject) */
     @Test
     @DisplayName("Tạo yêu cầu hỗ trợ thành công khi member tồn tại")
     void createRequest_Success() {
-        CreateSupportRequestDto dto = new CreateSupportRequestDto("Lỗi tủ đồ", "Tủ số 12 bị kẹt");
+        CreateSupportRequestDto dto = new CreateSupportRequestDto("  Lỗi tủ đồ  ", "Tủ số 12 bị kẹt");
         SupportRequestDto expectedDto = new SupportRequestDto(
                 1L, 10L, "Nguyễn Văn A", null, null, "Lỗi tủ đồ", "Tủ số 12 bị kẹt", "open", LocalDateTime.now(), null
         );
@@ -104,7 +104,9 @@ class SupportRequestServiceTest {
 
         assertThat(result).isNotNull();
         assertThat(result.subject()).isEqualTo("Lỗi tủ đồ");
-        verify(supportRequestRepository).save(any(SupportRequest.class));
+        var savedCaptor = org.mockito.ArgumentCaptor.forClass(SupportRequest.class);
+        verify(supportRequestRepository).save(savedCaptor.capture());
+        assertThat(savedCaptor.getValue().getSubject()).isEqualTo("Lỗi tủ đồ");
     }
 
     /** Kiểm thử: Tạo yêu cầu hỗ trợ chỉ thông báo Lễ tân, Quản lý chỉ nhận khi đã escalate */
@@ -202,6 +204,7 @@ class SupportRequestServiceTest {
     @DisplayName("Chuyển trạng thái hợp lệ: open -> in_progress và gửi thông báo cho member")
     void updateStatus_OpenToInProgress_Success() {
         sampleRequest.setStatus("open");
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staffUser(20L, "RECEPTIONIST")));
         when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
@@ -209,7 +212,7 @@ class SupportRequestServiceTest {
         );
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
-        SupportRequestDto result = supportRequestService.updateStatus(1L, updateDto, "RECEPTIONIST");
+        SupportRequestDto result = supportRequestService.updateStatus(1L, updateDto, 20L, "RECEPTIONIST");
 
         assertThat(sampleRequest.getStatus()).isEqualTo("in_progress");
         assertThat(result.status()).isEqualTo("in_progress");
@@ -221,6 +224,7 @@ class SupportRequestServiceTest {
     @DisplayName("Chuyển trạng thái hợp lệ: in_progress -> resolved và ghi nhận resolvedAt")
     void updateStatus_InProgressToResolved_Success() {
         sampleRequest.setStatus("in_progress");
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staffUser(20L, "RECEPTIONIST")));
         when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
@@ -228,7 +232,7 @@ class SupportRequestServiceTest {
         );
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("resolved", null);
-        supportRequestService.updateStatus(1L, updateDto, "RECEPTIONIST");
+        supportRequestService.updateStatus(1L, updateDto, 20L, "RECEPTIONIST");
 
         assertThat(sampleRequest.getStatus()).isEqualTo("resolved");
         assertThat(sampleRequest.getResolvedAt()).isNotNull();
@@ -240,6 +244,7 @@ class SupportRequestServiceTest {
     void updateStatus_ResolvedToClosed_Success() {
         sampleRequest.setStatus("resolved");
         sampleRequest.setResolvedAt(LocalDateTime.now().minusHours(24));
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staffUser(20L, "RECEPTIONIST")));
         when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
@@ -247,7 +252,7 @@ class SupportRequestServiceTest {
         );
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("closed", null);
-        supportRequestService.updateStatus(1L, updateDto, "RECEPTIONIST");
+        supportRequestService.updateStatus(1L, updateDto, 20L, "RECEPTIONIST");
 
         assertThat(sampleRequest.getStatus()).isEqualTo("closed");
     }
@@ -257,6 +262,7 @@ class SupportRequestServiceTest {
     @DisplayName("Chuyển trạng thái hợp lệ: in_progress -> open (yêu cầu thêm thông tin)")
     void updateStatus_InProgressToOpen_Success() {
         sampleRequest.setStatus("in_progress");
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staffUser(20L, "RECEPTIONIST")));
         when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         when(supportRequestRepository.save(sampleRequest)).thenReturn(sampleRequest);
         when(supportRequestMapper.toDto(sampleRequest)).thenReturn(
@@ -264,7 +270,7 @@ class SupportRequestServiceTest {
         );
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("open", null);
-        supportRequestService.updateStatus(1L, updateDto, "RECEPTIONIST");
+        supportRequestService.updateStatus(1L, updateDto, 20L, "RECEPTIONIST");
 
         assertThat(sampleRequest.getStatus()).isEqualTo("open");
         assertThat(sampleRequest.getResolvedAt()).isNull();
@@ -275,11 +281,12 @@ class SupportRequestServiceTest {
     @DisplayName("Không được phép mở lại hoặc thay đổi ticket đã đóng (closed)")
     void updateStatus_ClosedTicketCannotBeChanged() {
         sampleRequest.setStatus("closed");
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staffUser(20L, "RECEPTIONIST")));
         when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("in_progress", null);
 
-        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, updateDto, "RECEPTIONIST"))
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, updateDto, 20L, "RECEPTIONIST"))
                 .isInstanceOf(AppException.class)
                 .hasMessageContaining("Closed support request cannot be modified");
     }
@@ -289,11 +296,12 @@ class SupportRequestServiceTest {
     @DisplayName("Ném AppException khi chuyển trạng thái sai state machine: open -> closed")
     void updateStatus_InvalidTransition_OpenToClosed() {
         sampleRequest.setStatus("open");
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staffUser(20L, "RECEPTIONIST")));
         when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto("closed", null);
 
-        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, updateDto, "RECEPTIONIST"))
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, updateDto, 20L, "RECEPTIONIST"))
                 .isInstanceOf(AppException.class)
                 .hasMessageContaining("Invalid state transition from open to closed");
     }
@@ -307,7 +315,6 @@ class SupportRequestServiceTest {
         staff.setId(20L);
         staff.setStatus("active");
         staff.setFullName("Lễ tân Lan");
-        staff.setStatus("active");
         com.swp391.scms.users.entity.Role role = new com.swp391.scms.users.entity.Role();
         role.setCode("RECEPTIONIST");
         staff.setRole(role);
@@ -320,7 +327,7 @@ class SupportRequestServiceTest {
         );
 
         UpdateSupportRequestStatusDto updateDto = new UpdateSupportRequestStatusDto(null, 20L);
-        SupportRequestDto result = supportRequestService.updateStatus(1L, updateDto, "RECEPTIONIST");
+        SupportRequestDto result = supportRequestService.updateStatus(1L, updateDto, 20L, "RECEPTIONIST");
 
         assertThat(sampleRequest.getAssignedTo()).isEqualTo(staff);
         assertThat(result.assignedToName()).isEqualTo("Lễ tân Lan");
@@ -670,16 +677,19 @@ class SupportRequestServiceTest {
     @Test
     @DisplayName("Sau khi chuyển cấp lễ tân bị khóa, trước khi chuyển cấp quản lý bị khóa")
     void updateStatus_followsTheEscalationHandoff() {
+        when(userRepository.findByIdAndDeletedAtIsNull(30L)).thenReturn(Optional.of(staffUser(30L, "CENTER_MANAGER")));
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staffUser(20L, "RECEPTIONIST")));
+        when(userRepository.findByIdAndDeletedAtIsNull(40L)).thenReturn(Optional.of(staffUser(40L, "COACH")));
         when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
         var dto = new UpdateSupportRequestStatusDto("in_progress", null);
 
-        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, dto, "CENTER_MANAGER"))
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, dto, 30L, "CENTER_MANAGER"))
                 .isInstanceOf(ForbiddenException.class).extracting("errorCode").isEqualTo("SUPPORT_NOT_ESCALATED");
 
         sampleRequest.setEscalatedAt(LocalDateTime.now());
-        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, dto, "RECEPTIONIST"))
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, dto, 20L, "RECEPTIONIST"))
                 .isInstanceOf(ForbiddenException.class).extracting("errorCode").isEqualTo("SUPPORT_ESCALATED_LOCKED");
-        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, dto, "COACH"))
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, dto, 40L, "COACH"))
                 .isInstanceOf(ForbiddenException.class);
     }
 
@@ -743,11 +753,12 @@ class SupportRequestServiceTest {
     @Test
     @DisplayName("Nhân viên không được nhảy open -> resolved hoặc in_progress -> closed")
     void updateStatus_rejectsSkippingSteps() {
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(staffUser(20L, "RECEPTIONIST")));
         when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
-        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto("resolved", null), "RECEPTIONIST"))
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto("resolved", null), 20L, "RECEPTIONIST"))
                 .isInstanceOf(com.swp391.scms.common.exception.AppException.class);
         sampleRequest.setStatus("in_progress");
-        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto("closed", null), "RECEPTIONIST"))
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto("closed", null), 20L, "RECEPTIONIST"))
                 .isInstanceOf(com.swp391.scms.common.exception.AppException.class);
     }
 
@@ -760,5 +771,89 @@ class SupportRequestServiceTest {
                 .thenReturn(java.util.List.of(sampleRequest));
         assertThat(supportRequestService.closeStaleResolved()).isEqualTo(1);
         assertThat(sampleRequest.getStatus()).isEqualTo("closed");
+    }
+
+    /** Kiểm thử P1-BE-48: hội viên vẫn gửi tin được khi người phụ trách đã xóa mềm/khóa, fallback về nhóm nhân viên và không rollback. */
+    @Test
+    @DisplayName("P1-BE-48: Member reply falls back to active staff when assignee is soft-deleted or notification fails")
+    void sendMessage_asMember_fallsBackWhenAssigneeDeletedOrNotificationFails() {
+        User deletedAssignee = staffUser(20L, "RECEPTIONIST");
+        deletedAssignee.setDeletedAt(LocalDateTime.now().minusDays(1));
+        sampleRequest.setAssignedTo(deletedAssignee);
+
+        User activeReceptionist = staffUser(51L, "RECEPTIONIST");
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
+        when(userRepository.findActiveStaffUsers()).thenReturn(List.of(activeReceptionist));
+        when(supportRequestMessageRepository.save(any(SupportRequestMessage.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(supportRequestMapper.toMessageDto(any(SupportRequestMessage.class))).thenReturn(
+                new SupportRequestMessageDto(201L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Vẫn bị kẹt", LocalDateTime.now()));
+
+        SupportRequestMessageDto result = supportRequestService.sendMessage(1L, 10L, "MEMBER", new CreateSupportMessageDto("Vẫn bị kẹt"));
+
+        assertThat(result).isNotNull();
+        verify(supportRequestMessageRepository).save(any(SupportRequestMessage.class));
+        verify(notificationService, never()).send(eq(20L), any(), any(), any(), any(), any());
+        verify(notificationService).send(eq(51L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+
+        // Khi assignee có vẻ active nhưng notificationService ném ResourceNotFoundException vẫn không rollback và fallback sang staff
+        User raceAssignee = staffUser(21L, "RECEPTIONIST");
+        sampleRequest.setAssignedTo(raceAssignee);
+        doThrow(new ResourceNotFoundException("resource.user", 21L))
+                .when(notificationService).send(eq(21L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+
+        SupportRequestMessageDto result2 = supportRequestService.sendMessage(1L, 10L, "MEMBER", new CreateSupportMessageDto("Kiểm tra lại giúp"));
+        assertThat(result2).isNotNull();
+        verify(notificationService, times(2)).send(eq(51L), any(), any(), eq("support_reply"), eq("support_request"), eq(1L));
+    }
+
+    /** Kiểm thử P1-BE-50: hội viên trả lời vào phiếu resolved tự mở lại in_progress và xóa resolvedAt. */
+    @Test
+    @DisplayName("P1-BE-50: Member reply on resolved ticket reopens to in_progress and clears resolvedAt")
+    void sendMessage_asMember_onResolvedTicketReopensToInProgress() {
+        sampleRequest.setStatus("resolved");
+        sampleRequest.setResolvedAt(LocalDateTime.now().minusHours(50));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(sampleUser));
+        when(supportRequestMessageRepository.save(any(SupportRequestMessage.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(supportRequestMapper.toMessageDto(any(SupportRequestMessage.class))).thenReturn(
+                new SupportRequestMessageDto(202L, 1L, 10L, "Nguyễn Văn A", "MEMBER", "Vẫn chưa xong", LocalDateTime.now()));
+
+        supportRequestService.sendMessage(1L, 10L, "MEMBER", new CreateSupportMessageDto("Vẫn chưa xong"));
+
+        assertThat(sampleRequest.getStatus()).isEqualTo("in_progress");
+        assertThat(sampleRequest.getResolvedAt()).isNull();
+        verify(supportRequestRepository).save(sampleRequest);
+    }
+
+    /** Kiểm thử P2-BE-55: updateStatus kiểm tra requireActor và fail-closed khi assignee thiếu status/role. */
+    @Test
+    @DisplayName("P2-BE-55: updateStatus enforces requireActor and rejects null-status or null-role assignees")
+    void updateStatus_enforcesRequireActorAndFailClosedAssigneeChecks() {
+        // Actor bị xóa mềm hoặc không tồn tại -> 403
+        when(userRepository.findByIdAndDeletedAtIsNull(99L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto("in_progress", null), 99L, "RECEPTIONIST"))
+                .isInstanceOf(ForbiddenException.class);
+
+        // Assignee thiếu status (null) -> 400 INVALID_ASSIGNEE
+        User actor = staffUser(20L, "RECEPTIONIST");
+        User nullStatusAssignee = staffUser(21L, "RECEPTIONIST");
+        nullStatusAssignee.setStatus(null);
+        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(actor));
+        when(userRepository.findByIdAndDeletedAtIsNull(21L)).thenReturn(Optional.of(nullStatusAssignee));
+        when(supportRequestRepository.findByIdForUpdate(1L)).thenReturn(Optional.of(sampleRequest));
+
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto(null, 21L), 20L, "RECEPTIONIST"))
+                .isInstanceOf(BadRequestException.class);
+
+        // Assignee thiếu role (null) -> 400 INVALID_ASSIGNEE
+        User nullRoleAssignee = new User();
+        nullRoleAssignee.setId(22L);
+        nullRoleAssignee.setStatus("active");
+        nullRoleAssignee.setRole(null);
+        when(userRepository.findByIdAndDeletedAtIsNull(22L)).thenReturn(Optional.of(nullRoleAssignee));
+
+        assertThatThrownBy(() -> supportRequestService.updateStatus(1L, new UpdateSupportRequestStatusDto(null, 22L), 20L, "RECEPTIONIST"))
+                .isInstanceOf(BadRequestException.class);
     }
 }

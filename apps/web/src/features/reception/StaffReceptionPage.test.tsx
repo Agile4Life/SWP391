@@ -11,6 +11,7 @@ const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), cancelPendingSubscription: vi.fn(), getPendingHoldRequests: vi.fn(),
   getActivePackages: vi.fn(), getRenewalCandidates: vi.fn(), createRenewal: vi.fn(), processPayment: vi.fn(), getPendingReceipt: vi.fn(),
   getUnpaidCoachBookings: vi.fn(), confirmCoachBookingPayment: vi.fn(),
+  getUnpaidCourseEnrollments: vi.fn(), confirmCourseEnrollmentPayment: vi.fn(),
   getPendingTrials: vi.fn(), approveTrial: vi.fn(), rejectTrial: vi.fn(),
   getMemberWallet: vi.fn(), topupMemberWallet: vi.fn(), getRequestHistory: vi.fn(),
 }));
@@ -42,6 +43,8 @@ it('loads the same masked identity when selecting a payment request and preserve
   expect(host.textContent).toContain('********4753');
   const form = host.querySelector('#pos-package')!.closest('form')!;
   await act(async () => form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận đã thu');
+  if (confirmBtn) await act(async () => confirmBtn.click());
   expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ memberId: 10, subscriptionId: 50, packageId: 2, amount: 200 }));
 });
 it('does not fabricate identity after request profile loading fails', async () => {
@@ -94,6 +97,7 @@ beforeEach(() => {
     generatedAt: '2026-10-29T00:00:00Z', expiresAt: '2026-10-29T00:01:00Z', expiresInSeconds: 60 });
   api.lookupMembers.mockResolvedValue([member]);
   api.getPendingSubscriptions.mockResolvedValue([]);
+  api.getUnpaidCourseEnrollments.mockResolvedValue([]);
   api.getPendingHoldRequests.mockResolvedValue([]);
   api.getUnpaidCoachBookings.mockResolvedValue([]);
   api.getActivePackages.mockResolvedValue([pkg]);
@@ -145,12 +149,16 @@ async function selectMember() {
   expect(api.lookupMembers).toHaveBeenCalledWith('1234');
 }
 
-// Chọn phương thức rồi thu tiền.
-async function chooseAndPay(value: string) {
+// Chọn phương thức rồi thu tiền (tự xác nhận hộp thoại khi mở, trừ khi test muốn kiểm tra bước hủy xác nhận).
+async function chooseAndPay(value: string, confirmPayment = true) {
   const select = host.querySelector('#pos-package')!.parentElement!.querySelector('select') as HTMLSelectElement;
   expect(Array.from(select.options).map((option) => option.value)).toContain(value);
   await act(async () => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); });
   await act(async () => select.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  if (confirmPayment) {
+    const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận đã thu');
+    if (confirmBtn) await act(async () => confirmBtn.click());
+  }
 }
 
 it('shows a lookup failure separately from a successful empty search', async () => {
@@ -190,6 +198,7 @@ it('displays a genuine zero balance returned by the wallet API', async () => {
 
 it.each([
   ['getPendingSubscriptions', 'gói tập chờ thanh toán', 'Tải lại gói tập chờ thanh toán', 'plan'],
+  ['getUnpaidCourseEnrollments', 'khóa học chờ thu học phí', 'Tải lại khóa học chờ thu học phí', 'course'],
   ['getPendingHoldRequests', 'yêu cầu bảo lưu', 'Tải lại yêu cầu bảo lưu', 'hold'],
   ['getPendingTrials', 'yêu cầu dùng thử', 'Tải lại yêu cầu dùng thử', 'trial'],
 ] as const)('shows %s errors instead of empty queues and clears the error after retry', async (method, label, retryLabel, filter) => {
@@ -198,7 +207,7 @@ it.each([
   const card = host.querySelector('.reception-top__queue')!;
   expect(card.textContent).toContain(`Không thể tải ${label}. Vui lòng thử lại.`);
   expect(card.textContent).not.toContain('Không có việc nào cần xử lý');
-  const tabs = { plan: 'Gói tập', hold: 'Bảo lưu', trial: 'Trải nghiệm' };
+  const tabs = { plan: 'Gói tập', course: 'Khóa học', hold: 'Bảo lưu', trial: 'Trải nghiệm' };
   const tab = [...card.querySelectorAll<HTMLButtonElement>('.filter-chip')].find(b => b.textContent?.startsWith(tabs[filter]))!;
   await act(async () => tab.click());
   expect(card.textContent).not.toContain('Không có mục nào trong nhóm đã chọn');
@@ -280,6 +289,9 @@ it('keeps an existing pending order fixed to its selected package', async () => 
   expect(field.disabled).toBe(true);
   expect(field.value).toContain('Gold');
   await act(async () => field.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(api.processPayment).not.toHaveBeenCalled();
+  const confirmPayBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận đã thu')!;
+  await act(async () => confirmPayBtn.click());
   expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ subscriptionId: 9, packageId: 2, amount: 200 }));
 });
 
@@ -297,23 +309,30 @@ it('keeps the created renewal pending when payment fails', async () => {
   expect(host.textContent).not.toContain('Hóa đơn thực');
 });
 
-it('lets the desk record payment for an unpaid hourly 1:1 session', async () => {
+it('lets the desk record payment for an unpaid hourly 1:1 session after confirmation', async () => {
   const booking = { id: 90, memberId: 10, memberName: 'An', coachId: 20, coachName: 'Hùng', coachSpecialization: 'Gym',
-    coachAvatarUrl: null, disciplineId: null, disciplineName: null, bookingDate: '2026-11-02', startTime: '14:00:00',
-    endTime: '15:00:00', hourlyRate: 200000, paymentMethod: 'cash', paymentStatus: 'pending', status: 'confirmed',
+    coachAvatarUrl: null, disciplineId: null, disciplineName: null, bookingDate: '2026-11-02', startTime: '14:15:00',
+    endTime: '16:45:00', hourlyRate: 200000, paymentMethod: 'cash', paymentStatus: 'pending', status: 'confirmed',
     notes: null, createdAt: '2026-10-30T10:00:00', cancelledAt: null, cancelReason: null };
   api.getUnpaidCoachBookings.mockResolvedValueOnce([booking]).mockResolvedValue([]);
   api.confirmCoachBookingPayment.mockResolvedValue({ ...booking, paymentStatus: 'paid' });
   await act(async () => root.render(<StaffReceptionPage />));
   expect(host.querySelector('.reception-todo__tag--pt')!.textContent).toBe('Buổi PT');
   expect(host.querySelector('.reception-top__queue h2')!.textContent).toBe('Cần xử lý (1)');
-  const confirm = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Đã thu tiền mặt')!;
-  await act(async () => confirm.click());
+  expect(host.textContent).toContain('HLV Hùng');
+  expect(host.textContent).toContain('02/11/2026');
+  expect(host.textContent).toContain('Slot 4 · 14:15 – 16:45');
+  const payBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Đã thu tiền mặt')!;
+  await act(async () => payBtn.click());
+  expect(api.confirmCoachBookingPayment).not.toHaveBeenCalled();
+  expect(host.querySelector('dialog')?.textContent).toContain('200.000');
+  const dialogConfirm = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận đã thu')!;
+  await act(async () => dialogConfirm.click());
   expect(api.confirmCoachBookingPayment).toHaveBeenCalledWith(90, 'cash');
   expect(host.querySelector('.reception-todo__tag--pt')).toBeNull();
 });
 
-it('renders pending trial applications and lets the desk approve a trial with name sync', async () => {
+it('renders pending trial applications and lets the desk approve a trial with name sync after confirmation', async () => {
   // Dữ liệu mẫu dùng trong các ca kiểm thử.
   const trialItem = {
     id: 55,
@@ -343,6 +362,10 @@ it('renders pending trial applications and lets the desk approve a trial with na
   const approveBtn = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Duyệt & Kích hoạt'))!;
   expect(approveBtn).toBeDefined();
   await act(async () => approveBtn.click());
+  expect(api.approveTrial).not.toHaveBeenCalled();
+  expect(host.querySelector('dialog')?.textContent).toContain('NGUYỄN VĂN AN');
+  const confirmApprove = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận duyệt & kích hoạt')!;
+  await act(async () => confirmApprove.click());
   expect(api.approveTrial).toHaveBeenCalledWith(55);
 });
 
@@ -596,6 +619,8 @@ it.each([null, 5])('validates KYC only for new pending requests, previous=%s', a
   api.getPendingSubscriptions.mockResolvedValue([{ id: 9, memberId: 10, membershipCode: 'MB-10', memberName: 'An', memberEmail: 'an@example.test', memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30, packagePrice: 200, startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01', previousSubscriptionId }]);
   await selectMember();
   await act(async () => host.querySelector('#pos-package')!.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Xác nhận đã thu');
+  if (confirmBtn) await act(async () => confirmBtn.click());
   expect(api.processPayment).toHaveBeenCalledTimes(previousSubscriptionId ? 1 : 0);
 });
 
@@ -611,4 +636,139 @@ it('offers only cash for counter wallet topup', async () => {
   await act(async () => open.click());
   expect(host.querySelector('#counter-topup-method')).toBeNull();
   expect(host.querySelector('[data-testid="counter-topup-cash"]')?.textContent).toContain('Tiền mặt tại quầy');
+});
+
+it('P0-03: renders unpaid course enrollments, requires confirmation, settles tuition payment, and opens invoice', async () => {
+  const courseItem = {
+    enrollmentId: 601,
+    paymentId: 901,
+    classId: 12,
+    className: 'Yoga Phục Hồi Sáng',
+    disciplineName: 'Yoga',
+    startDate: '2026-12-01',
+    endDate: '2026-12-29',
+    memberId: 10,
+    memberName: 'An',
+    memberPhone: '0901234567',
+    membershipCode: 'MB-10',
+    amount: 200000,
+    method: 'cash',
+    createdAt: '2026-11-25T10:00:00',
+  };
+  api.getUnpaidCourseEnrollments.mockResolvedValueOnce([courseItem]).mockResolvedValue([]);
+  api.confirmCourseEnrollmentPayment.mockResolvedValue({
+    id: 901,
+    memberId: 10,
+    memberName: 'An',
+    amount: 200000,
+    method: 'bank_transfer',
+    status: 'success',
+    paidAt: '2026-11-25T11:00:00',
+    invoiceNumber: 'INV-20261125-0901',
+  });
+
+  await act(async () => root.render(<StaffReceptionPage />));
+  expect(host.querySelector('.reception-top__queue h2')!.textContent).toBe('Cần xử lý (1)');
+  expect(host.querySelector('.reception-todo__tag--course')!.textContent).toBe('Khóa học');
+  const row = host.querySelector('[data-testid="unpaid-course-601"]')!;
+  expect(row.textContent).toContain('Yoga Phục Hồi Sáng');
+  expect(row.textContent).toContain('Yoga');
+  expect(row.textContent).toContain('01/12/2026');
+  expect(row.textContent).toContain('29/12/2026');
+  expect(row.textContent).toContain('200.000');
+
+  // Clicking payment button opens confirmation dialog without settling immediately
+  const transferBtn = host.querySelector<HTMLButtonElement>('[data-testid="confirm-course-transfer-601"]')!;
+  await act(async () => transferBtn.click());
+  expect(api.confirmCourseEnrollmentPayment).not.toHaveBeenCalled();
+
+  const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+    (b) => b.textContent === 'Xác nhận đã thu',
+  )!;
+  expect(confirmBtn).toBeDefined();
+  await act(async () => confirmBtn.click());
+
+  expect(api.confirmCourseEnrollmentPayment).toHaveBeenCalledWith(601, 'bank_transfer');
+  expect(host.querySelector('[data-testid="unpaid-course-601"]')).toBeNull();
+  expect(host.textContent).toContain('Hóa đơn thực');
+  expect(getNotices()[0]?.message).toContain('INV-20261125-0901');
+});
+
+it('P0-03: clears course queue error automatically when silent background sync succeeds', async () => {
+  api.getUnpaidCourseEnrollments.mockRejectedValueOnce(new Error('Offline')).mockResolvedValue([]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  const card = host.querySelector('.reception-top__queue')!;
+  expect(card.textContent).toContain('Không thể tải khóa học chờ thu học phí. Vui lòng thử lại.');
+
+  await act(async () => window.dispatchEvent(new Event('online')));
+  expect(card.textContent).not.toContain('Không thể tải khóa học chờ thu học phí');
+});
+
+it('P1-FE-59: fetches full KYC profile when selecting a pending subscription item from the queue', async () => {
+  const pendingItem = {
+    id: 88, memberId: 10, membershipCode: 'MB-10', memberName: 'An', memberEmail: 'an@example.test',
+    memberPhone: '1234', packageId: 2, packageName: 'Gold', durationDays: 30, packagePrice: 200000,
+    startDate: '2026-10-01', endDate: '2026-10-30', status: 'pending_payment', createdAt: '2026-10-01',
+  };
+  api.getPendingSubscriptions.mockResolvedValue([pendingItem]);
+  api.lookupMembers.mockResolvedValue([{ ...member, citizenId: '079******234', identityVerified: true, kycStatus: 'APPROVED' }]);
+  await act(async () => root.render(<StaffReceptionPage />));
+
+  const selectBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Chọn xác nhận')!;
+  await act(async () => selectBtn.click());
+
+  expect(api.lookupMembers).toHaveBeenCalledWith('MB-10');
+  expect(host.querySelector('[data-testid="pos-kyc-status"]')?.textContent).toContain('Đã xác thực');
+  expect(host.textContent).toContain('079******234');
+});
+
+it('P1-FE-60: clears stale ptError when silent background poll of unpaid PT bookings succeeds', async () => {
+  api.getUnpaidCoachBookings.mockRejectedValueOnce(new Error('PT offline')).mockResolvedValue([]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  const card = host.querySelector('.reception-top__queue')!;
+  expect(card.textContent).toContain('PT offline');
+
+  await act(async () => window.dispatchEvent(new Event('online')));
+  expect(card.textContent).not.toContain('PT offline');
+});
+
+it('P2-FE-67 & P2-FE-68: shows "Chưa cấp thẻ" instead of fabricated code, opens trial photo lightbox, and avoids raw CCCD in EN toast', async () => {
+  const { setLanguage } = await import('../../shared/i18n/language');
+  const trialItem = {
+    id: 58, memberId: 10, membershipCode: null, memberName: 'an_user', memberEmail: 'an@example.test',
+    memberPhone: '0901234567', documentType: 'CCCD' as const, documentNumberMasked: '••••••••1234',
+    documentFullName: 'NGUYEN VAN AN', nationality: null, frontImageUrl: 'data:image/png;base64,front',
+    backImageUrl: 'data:image/png;base64,back', status: 'PENDING_APPROVAL' as const, requestedAt: '2026-11-05T10:00:00',
+  };
+  api.lookupMembers.mockResolvedValue([{ ...member, membershipCode: '' }]);
+  api.getPendingTrials.mockResolvedValueOnce([trialItem]).mockResolvedValue([]);
+  api.approveTrial.mockResolvedValue({ ...trialItem, status: 'APPROVED' });
+
+  await selectMember();
+  expect(host.textContent).toContain('Chưa cấp thẻ');
+  expect(host.textContent).not.toContain('MB-2026-010');
+
+  // Open trial inspection modal and open in-app lightbox
+  const inspectBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Xem giấy tờ & ảnh')!;
+  await act(async () => inspectBtn.click());
+  const zoomBtn = host.querySelector<HTMLButtonElement>('button[aria-label="Phóng to ảnh mặt trước giấy tờ"]')!;
+  expect(zoomBtn).not.toBeNull();
+  await act(async () => zoomBtn.click());
+  expect(host.querySelector('.document-lightbox')).not.toBeNull();
+
+  // Switch to EN and approve trial -> EN toast must not contain raw "CCCD"
+  await act(async () => { setLanguage('en'); });
+  try {
+    const closeButtons = [...host.querySelectorAll<HTMLButtonElement>('.portal-dialog__close')];
+    for (const btn of closeButtons.reverse()) await act(async () => btn.click());
+    const approveBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent?.includes('Approve & Activate'))!;
+    await act(async () => approveBtn.click());
+    const confirmBtn = [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find((b) => b.textContent === 'Confirm approve & activate')!;
+    await act(async () => confirmBtn.click());
+    const notice = getNotices()[0];
+    expect(notice?.translation?.en).toContain('identity card');
+    expect(notice?.translation?.en).not.toContain('CCCD');
+  } finally {
+    await act(async () => { setLanguage('vi'); });
+  }
 });

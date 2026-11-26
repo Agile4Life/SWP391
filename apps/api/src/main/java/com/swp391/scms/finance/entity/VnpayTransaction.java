@@ -28,6 +28,10 @@ public class VnpayTransaction {
     private String status;
     @Column(name = "gateway_transaction_no", unique = true, length = 20)
     private String gatewayTransactionNo;
+    @Version
+    @Column(name = "version")
+    @org.hibernate.annotations.ColumnDefault("0")
+    private Long version;
     /** Constructor rỗng cho JPA. */
     protected VnpayTransaction() {}
     /** Tạo lượt thanh toán mới ở trạng thái pending. */
@@ -55,4 +59,6 @@ public class VnpayTransaction {
     public String getGatewayTransactionNo() { return gatewayTransactionNo; }
     /** Gán giá trị mới cho trường gatewayTransactionNo. */
     public void setGatewayTransactionNo(String value) { this.gatewayTransactionNo = value; }
+    /** Lấy phiên bản khóa lạc quan (optimistic locking). */
+    public Long getVersion() { return version; }
 }

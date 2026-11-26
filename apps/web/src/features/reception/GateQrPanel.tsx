@@ -60,7 +60,7 @@ export function GateQrPanel({ gateId, purpose = 'in' }: { gateId: string; purpos
     <p className="qr-checkin-hint">{purpose === 'out'
       ? t("Mở mục Quét QR trên điện thoại, chọn Check-out rồi hướng camera vào mã bên dưới.")
       : t("Mở mục Quét QR trên điện thoại và hướng camera vào mã bên dưới.")}</p>
-    {qr && remaining > 0 ? <><LoadingImage className="gate-qr-panel__image" src={qr.image} alt={t("Mã QR cổng check-in")} onError={() => { setQr(null); setError('Không thể hiển thị mã QR. Vui lòng thử lại.'); }} /><p data-i18n-managed className="gate-qr-panel__status">{t("Mã còn hiệu lực ")}{remaining}{t("s · Tự làm mới")}</p></>
+    {qr && remaining > 0 ? <><LoadingImage className="gate-qr-panel__image" src={qr.image} alt={purpose === 'out' ? t('Mã QR cổng check-out', 'Gate check-out QR code') : t('Mã QR cổng check-in', 'Gate check-in QR code')} onError={() => { setQr(null); setError('Không thể hiển thị mã QR. Vui lòng thử lại.'); }} /><p data-i18n-managed className="gate-qr-panel__status" style={{ fontVariantNumeric: 'tabular-nums' }}>{t("Mã còn hiệu lực ")}{remaining}{t("s · Tự làm mới")}</p></>
       : loading ? <div role="status" aria-busy="true" style={{ display: 'grid' }}><span className="sr-only">{t("Đang tạo mã QR cổng…")}</span><div className="gate-qr-panel__image portal-skeleton" aria-hidden="true" style={{ background: 'var(--portal-raised, #eeefec)' }} /></div> : !error && <p role="status">{t("Mã đã hết hạn. Vui lòng tạo mã mới.")}</p>}
     {error && <p className="qr-checkin-error" role="alert">{t(error)}</p>}
     {(!qr || remaining === 0) && <button type="button" className="btn-secondary" disabled={loading} onClick={() => setRetry((value) => value + 1)}>{t("Tạo lại mã QR cổng")}</button>}

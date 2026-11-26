@@ -1,6 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useI18n } from '../i18n/language';
-import { popoverPlacement, type PopoverPlacement } from './popoverPlacement';
 import './timepicker.css';
 
 export interface TimePickerProps {
@@ -22,6 +21,8 @@ export interface TimePickerProps {
 
 const HOURS = Array.from({ length: 24 }, (_, i) => (i < 10 ? `0${i}` : `${i}`));
 const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
+const POPOVER_WIDTH = 252;
+const POPOVER_HEIGHT = 330;
 
 export function TimePicker({
   id,
@@ -40,22 +41,31 @@ export function TimePicker({
 }: TimePickerProps) {
   const { t } = useI18n();
   const [isOpen, setIsOpen] = useState(false);
-  const [placement, setPlacement] = useState<PopoverPlacement>({ v: 'down', h: 'left' });
+  const [position, setPosition] = useState<{ top: number; left: number; v: 'up' | 'down' } | null>(null);
   const triggerPlaceholder = placeholder ?? t('Chọn giờ...', 'Select time...');
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const hourScrollRef = useRef<HTMLDivElement>(null);
   const minuteScrollRef = useRef<HTMLDivElement>(null);
 
-  // Parse current hour and minute
-  const { hour, minute } = useMemo(() => {
+  const focusTrigger = () => {
+    containerRef.current?.querySelector<HTMLButtonElement>('.luxury-timepicker-trigger')?.focus();
+  };
+
+  // Phân tích giờ và phút; khi giá trị rỗng thì không tô sáng giả 08:00.
+  const { hasValue, hour, minute } = useMemo(() => {
     if (value && /^\d{1,2}:\d{2}$/.test(value)) {
       const parts = value.split(':');
       const h = parts[0].padStart(2, '0');
       const m = parts[1];
-      return { hour: h, minute: m };
+      return { hasValue: true, hour: h, minute: m };
     }
-    return { hour: '08', minute: '00' };
+    return { hasValue: false, hour: null as string | null, minute: null as string | null };
   }, [value]);
+
+  useEffect(() => {
+    if (disabled && isOpen) setIsOpen(false);
+  }, [disabled, isOpen]);
 
   // Click outside to close
   useEffect(() => {
@@ -70,7 +80,7 @@ export function TimePicker({
         e.preventDefault();
         e.stopPropagation();
         setIsOpen(false);
-        containerRef.current?.querySelector<HTMLButtonElement>('.luxury-timepicker-trigger')?.focus();
+        focusTrigger();
       }
     };
     document.addEventListener('pointerdown', handleClickOutside);
@@ -83,31 +93,73 @@ export function TimePicker({
 
   // Auto scroll active item into view when popover opens (without scrolling ancestor containers)
   useEffect(() => {
-    if (isOpen) {
-      setTimeout(() => {
-        for (const col of [hourScrollRef.current, minuteScrollRef.current]) {
-          const item = col?.querySelector<HTMLElement>('.is-active');
-          if (col && item) col.scrollTop = Math.max(0, item.offsetTop - (col.clientHeight - item.offsetHeight) / 2);
-        }
-      }, 50);
-    }
+    if (!isOpen) return;
+    const timer = window.setTimeout(() => {
+      for (const col of [hourScrollRef.current, minuteScrollRef.current]) {
+        const item = col?.querySelector<HTMLElement>('.is-active');
+        if (col && item) col.scrollTop = Math.max(0, item.offsetTop - (col.clientHeight - item.offsetHeight) / 2);
+      }
+    }, 50);
+    return () => window.clearTimeout(timer);
   }, [isOpen]);
 
-  // Lật lên / căn phải khi thiếu chỗ
+  // Dùng position: fixed theo viewport (tương tự DatePicker) để popover không bị cắt trong <dialog>.
   useLayoutEffect(() => {
-    if (!isOpen) return;
-    const trigger = containerRef.current?.querySelector<HTMLElement>('.luxury-timepicker-trigger');
-    if (trigger) setPlacement(popoverPlacement(trigger, 252, 330));
-  }, [isOpen]);
+    if (!isOpen) {
+      setPosition(null);
+      return;
+    }
+    const reposition = () => {
+      const trigger = containerRef.current?.querySelector<HTMLElement>('.luxury-timepicker-trigger');
+      if (!trigger) return;
+      const rect = trigger.getBoundingClientRect();
+      const width = Math.min(POPOVER_WIDTH, window.innerWidth - 32);
+      const height = popoverRef.current?.offsetHeight || POPOVER_HEIGHT;
+      const gap = 6;
+      const margin = 8;
+      const below = window.innerHeight - rect.bottom - gap - margin;
+      const above = rect.top - gap - margin;
+      const openUp = below < height && above > below;
+      const rawTop = openUp ? rect.top - gap - height : rect.bottom + gap;
+      const top = Math.max(margin, Math.min(rawTop, window.innerHeight - height - margin));
+      const alignRight = rect.left + width > window.innerWidth - margin && rect.right - width >= margin;
+      const rawLeft = alignRight ? rect.right - width : rect.left;
+      const left = Math.max(margin, Math.min(rawLeft, window.innerWidth - width - margin));
+      setPosition({ top, left, v: openUp ? 'up' : 'down' });
+    };
+    reposition();
+    window.addEventListener('resize', reposition);
+    window.addEventListener('scroll', reposition, true);
+    return () => {
+      window.removeEventListener('resize', reposition);
+      window.removeEventListener('scroll', reposition, true);
+    };
+  }, [isOpen, wholeHour]);
 
   const handleSelectHour = (h: string) => {
-    const newVal = `${h}:${wholeHour ? '00' : minute}`;
+    const newVal = `${h}:${wholeHour ? '00' : (minute ?? '00')}`;
     onChange({ target: { value: newVal } });
+    if (wholeHour) {
+      setIsOpen(false);
+      focusTrigger();
+    }
   };
 
   const handleSelectMinute = (m: string) => {
-    const newVal = `${hour}:${m}`;
+    const newVal = `${hour ?? '08'}:${m}`;
     onChange({ target: { value: newVal } });
+  };
+
+  const handleClear = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChange({ target: { value: '' } });
+    setIsOpen(false);
+    focusTrigger();
+  };
+
+  const handleDone = () => {
+    setIsOpen(false);
+    focusTrigger();
   };
 
   return (
@@ -145,13 +197,17 @@ export function TimePicker({
       {required && (
         <input
           tabIndex={-1}
+          aria-hidden="true"
+          disabled={disabled}
           required={required}
           value={value}
           onChange={() => {}}
           onInvalid={(event) => {
             event.preventDefault();
-            setIsOpen(true);
-            containerRef.current?.querySelector<HTMLButtonElement>('.luxury-timepicker-trigger')?.focus();
+            if (!disabled) {
+              setIsOpen(true);
+              focusTrigger();
+            }
           }}
           style={{ position: 'absolute', opacity: 0, pointerEvents: 'none', width: 0, height: 0 }}
         />
@@ -159,14 +215,23 @@ export function TimePicker({
 
       {isOpen && (
         <div
-          className={`luxury-timepicker-popover luxury-timepicker-popover--${placement.v} luxury-timepicker-popover--${placement.h}`}
+          ref={popoverRef}
+          className={`luxury-timepicker-popover luxury-timepicker-popover--${position?.v ?? 'down'}`}
+          style={{
+            position: 'fixed',
+            top: position?.top ?? 0,
+            left: position?.left ?? 0,
+            bottom: 'auto',
+            right: 'auto',
+            visibility: position ? 'visible' : 'hidden',
+          }}
           role="dialog"
           aria-label={t('Chọn giờ', 'Select time')}
         >
           <div className="ltp-header">
             <span className="ltp-title">{t('Khung giờ', 'Time')}</span>
             <span className="ltp-preview-badge">
-              {hour}:{wholeHour ? '00' : minute}
+              {hasValue ? `${hour}:${wholeHour ? '00' : minute}` : '--:--'}
             </span>
           </div>
 
@@ -174,32 +239,40 @@ export function TimePicker({
             <div className="ltp-col">
               <span className="ltp-col-label">{t('Giờ', 'Hour')}</span>
               <div className="ltp-col-scroll" ref={hourScrollRef}>
-                {HOURS.map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    className={`ltp-item-btn ${h === hour ? 'is-active' : ''}`}
-                    onClick={() => handleSelectHour(h)}
-                  >
-                    {h}
-                  </button>
-                ))}
+                {HOURS.map((h) => {
+                  const active = hasValue && h === hour;
+                  return (
+                    <button
+                      key={h}
+                      type="button"
+                      className={`ltp-item-btn ${active ? 'is-active' : ''}`}
+                      aria-pressed={active}
+                      onClick={() => handleSelectHour(h)}
+                    >
+                      {h}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
             {!wholeHour && <div className="ltp-col">
               <span className="ltp-col-label">{t('Phút', 'Min')}</span>
               <div className="ltp-col-scroll" ref={minuteScrollRef}>
-                {MINUTES.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    className={`ltp-item-btn ${m === minute ? 'is-active' : ''}`}
-                    onClick={() => handleSelectMinute(m)}
-                  >
-                    {m}
-                  </button>
-                ))}
+                {MINUTES.map((m) => {
+                  const active = hasValue && m === minute;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      className={`ltp-item-btn ${active ? 'is-active' : ''}`}
+                      aria-pressed={active}
+                      onClick={() => handleSelectMinute(m)}
+                    >
+                      {m}
+                    </button>
+                  );
+                })}
               </div>
             </div>}
           </div>
@@ -207,8 +280,15 @@ export function TimePicker({
           <div className="ltp-footer">
             <button
               type="button"
+              className="ltp-clear-btn"
+              onClick={handleClear}
+            >
+              {t('Xóa giờ', 'Clear')}
+            </button>
+            <button
+              type="button"
               className="ltp-done-btn"
-              onClick={() => setIsOpen(false)}
+              onClick={handleDone}
             >
               {t('Xong', 'Done')}
             </button>

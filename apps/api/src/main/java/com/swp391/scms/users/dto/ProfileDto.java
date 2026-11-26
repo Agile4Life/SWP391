@@ -12,7 +12,7 @@ import java.time.LocalDate;
 public record ProfileDto(
     Long userId,
     @NotBlank(message = "{validation.users.full_name.not_blank}")
-    @Size(max = 100, message = "{validation.users.full_name.size}")
+    @Size(max = 150, message = "{validation.users.full_name.size}")
     String fullName,
     @Email(message = "{validation.users.email.invalid}")
     String email,
@@ -26,6 +26,7 @@ public record ProfileDto(
     @Size(max = 255)
     String address,
     String membershipCode,
+    @Size(max = 255)
     String healthNotes,
     @Size(max = 255)
     String fitnessGoal,

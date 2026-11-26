@@ -54,13 +54,20 @@ paths:
         '200': { description: List of HoldRequestDto }
   /subscriptions/{id}/hold/approve:
     post:
-      summary: Approve a hold
+      summary: Approve a hold (including late approval rules)
       description: |
-        Marks the package as held once. 1:1 sessions and courts inside the window are cancelled; course seats are
-        kept and their sessions in the window become `excused`. The membership freezes on the first day (at once
-        when it is today) and resumes the day after the last day with the held days added to its end date.
+        Marks the package as held once. 1:1 sessions inside the window are cancelled; course enrollments/sessions
+        in the window are handled according to hold policy (excused or cancelled/refunded per current rules).
+        The membership freezes on the first day (at once when it is today) and resumes the day after the last day
+        with the held days added to its end date.
+        Approving after the requested first day starts the hold today: days already lived are not held and not added
+        back. A hold whose whole period has passed answers 400 MEMBERSHIP_HOLD_WINDOW_PASSED (reject it instead).
+        `DELETE /subscriptions/{id}/hold` also withdraws an approved hold that has not started: the package gets its one
+        hold back, bookings released at approval are not restored. Benefit cycles (PT and course quotas) do not
+        count held days: a cycle that contains the hold is stretched by its length.
       responses:
         '200': { description: Approved }
+        '400': { description: MEMBERSHIP_HOLD_WINDOW_PASSED when the requested hold period has already ended }
   /subscriptions/{id}/hold/policy:
     get:
       summary: Hold allowance of the member's subscription (drives the request form)
@@ -73,14 +80,13 @@ paths:
       description: Empty for members whose active package is Silver; GET /coaching/training-plans/{id} answers 403 COACHING_PLAN_TIER_REQUIRED for them. Coaches and managers still see and write plans, which appear after an upgrade.
       responses:
         '200': { description: Plans (empty for Silver) }
-  /coaching/bookings:
+  /coach-bookings/my:
     get:
-      summary: 1:1 sessions (CoachBookingDto)
+      summary: Authenticated member's 1:1 PT sessions (CoachBookingDto)
       description: |
-        Adds `attendedAt` (date-time, nullable). A gate scan from 30 minutes before a session until its end sets it. A
-        sweep every 30 minutes also sets it for finished sessions that a granted visit covered, as long as the visit began
-        at most 3 hours before the start (a member who came in early and stayed). A finished session with a null
-        `attendedAt` is a no-show; its quota stays used.
+        Returns the member's 1:1 bookings including `attendedAt` (date-time, nullable) and `attendanceLocked`.
+        Staff/coach attendance roster and arrival views are exposed via `GET /coach-bookings/attendance`.
+        A finished session with a null `attendedAt` is derived as MISSED; its quota stays used.
       responses:
         '200': { description: Bookings with attendedAt }
   /coach-bookings/attendance:
@@ -163,17 +169,6 @@ paths:
       responses:
         '200': { description: The booking without attendedAt }
         '400': { description: COACH_BOOKING_ATTENDANCE_EXPIRED (coach outside session date) }
-  /subscriptions/{id}/hold#approval:
-    post:
-      summary: Hold approval, late approval and withdrawal
-      description: |
-        Approving after the requested first day starts the hold today: days already lived are not held and not added
-        back. A hold whose whole period has passed answers 400 MEMBERSHIP_HOLD_WINDOW_PASSED (reject it instead).
-        `DELETE /subscriptions/{id}/hold` also withdraws an approved hold that has not started: the package gets its one
-        hold back, bookings released at approval are not restored. Benefit cycles (PT, courts, the assessment) do not
-        count held days: a cycle that contains the hold is stretched by its length.
-      responses:
-        '200': { description: ok }
   /subscriptions/{id}/hold/withdraw:
     post:
       summary: Desk withdraws a hold on behalf of the member (receptionist only)

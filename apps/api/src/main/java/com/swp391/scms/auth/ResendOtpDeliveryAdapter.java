@@ -5,6 +5,7 @@ import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.notifications.adapter.SolEmailTemplateRenderer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,6 +35,7 @@ import java.util.Map;
  */
 @Component
 @Primary
+@ConditionalOnExpression("!'disabled'.equalsIgnoreCase('${app.auth.otp.delivery:disabled}')")
 public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
 
     private final String apiKey;
@@ -70,12 +72,13 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
             @Value("${app.resend.from-address:${app.auth.otp.from-address:SÖL Fitness <no-reply@scms.bluesymphony.site>}}") String fromAddress,
             @Value("${app.resend.base-url:https://api.resend.com}") String baseUrl,
             @Autowired(required = false) MessageService messageService,
+            @Value("${app.cors.web-origin:https://scms.bluesymphony.site}") String webOrigin,
             @Value("${SMTP_HOST:}") String smtpHost,
             @Value("${SMTP_PORT:587}") int smtpPort,
             @Value("${SMTP_USERNAME:}") String smtpUsername,
             @Value("${SMTP_PASSWORD:}") String smtpPassword,
             @Value("${SMTP_FROM:}") String smtpFrom) {
-        this(apiKey, fromAddress, messageService, defaultRestClient(baseUrl), "https://scms.bluesymphony.site",
+        this(apiKey, fromAddress, messageService, defaultRestClient(baseUrl), webOrigin,
                 smtpHost, smtpPort, smtpUsername, smtpPassword, smtpFrom);
     }
 
@@ -199,11 +202,26 @@ public class ResendOtpDeliveryAdapter implements OtpDeliveryPort {
         sendViaStartTlsSmtp(destination.trim(), subject, htmlBody);
     }
 
+    /** Kiểm tra địa chỉ SMTP không chứa ký tự điều khiển hoặc ngoặc nhọn (chống SMTP command/header injection). */
+    static void requireSafeSmtpAddress(String address) {
+        if (address == null || address.isBlank()) {
+            throw new ServiceUnavailableException("OTP_DELIVERY_FAILED", "auth.otp.delivery_failed", null, null);
+        }
+        for (int i = 0; i < address.length(); i++) {
+            char c = address.charAt(i);
+            if (c < 0x20 || c == 0x7F || c == '\r' || c == '\n' || c == '<' || c == '>') {
+                throw new ServiceUnavailableException("OTP_DELIVERY_FAILED", "auth.otp.delivery_failed", null, null);
+            }
+        }
+    }
+
     /**
      * Gửi email qua SMTP thủ công: kết nối, EHLO, nâng cấp TLS (STARTTLS, có kiểm tra tên máy chủ), đăng nhập
      * AUTH LOGIN, rồi gửi thư HTML với tiêu đề và nội dung mã hóa UTF-8 base64.
      */
     private void sendViaStartTlsSmtp(String recipient, String subject, String htmlBody) {
+        requireSafeSmtpAddress(smtpFrom);
+        requireSafeSmtpAddress(recipient);
         try (Socket plainSocket = new Socket()) {
             plainSocket.connect(new InetSocketAddress(smtpHost, smtpPort), 5_000);
             plainSocket.setSoTimeout(10_000);

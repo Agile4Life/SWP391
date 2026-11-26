@@ -36,7 +36,8 @@ public class MemberDiscountService {
         LocalDate today = LocalDate.now(clock.withZone(CenterTime.ZONE));
         return subscriptions.findByMemberUserIdAndStatus(memberId, "active").stream()
                 .filter(s -> s.getStartDate() != null && s.getEndDate() != null
-                        && !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today))
+                        && !s.getStartDate().isAfter(today) && !s.getEndDate().isBefore(today)
+                        && !s.isHeldOn(today))
                 .mapToInt(s -> PackageBenefits.discountPercent(s.getMembershipPackage()))
                 .max().orElse(0);
     }

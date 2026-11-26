@@ -154,10 +154,14 @@ export const userApi = {
     return toAccount(updated);
   },
 
-  // Khóa / mở khóa tài khoản theo trạng thái hiện tại trên server
-  async toggleLockUser(userId: string): Promise<UserAccount> {
-    const current = await apiFetch<UserDto>(`/users/${userId}`);
-    const action = current.status === 'active' ? 'lock' : 'unlock';
+  // Khóa / mở khóa tài khoản: ưu tiên trạng thái đích tường minh để tránh race condition khi click đúp.
+  async toggleLockUser(userId: string, shouldLock?: boolean): Promise<UserAccount> {
+    let lock = shouldLock;
+    if (lock === undefined) {
+      const current = await apiFetch<UserDto>(`/users/${userId}`);
+      lock = current.status === 'active';
+    }
+    const action = lock ? 'lock' : 'unlock';
     return toAccount(await apiFetch<UserDto>(`/users/${userId}/${action}`, { method: 'PATCH' }));
   },
 
@@ -176,11 +180,15 @@ export const userApi = {
     return Object.fromEntries(entries) as Record<SystemRole, string[]>;
   },
 
-  // Bật/tắt một quyền của role: PUT nếu chưa có, DELETE nếu đã có
-  async toggleRolePermission(role: SystemRole, permId: string): Promise<void> {
+  // Bật/tắt một quyền của role: ưu tiên trạng thái đích (grant) để tránh race condition khi click đúp.
+  async toggleRolePermission(role: SystemRole, permId: string, grant?: boolean): Promise<void> {
     const roleId = (await roleIds())[role];
-    const granted = (await apiFetch<PermissionDto[]>(`/roles/${roleId}/permissions`)).some((p) => String(p.id) === permId);
-    await apiFetch(`/roles/${roleId}/permissions/${permId}`, { method: granted ? 'DELETE' : 'PUT' });
+    let shouldGrant = grant;
+    if (shouldGrant === undefined) {
+      const granted = (await apiFetch<PermissionDto[]>(`/roles/${roleId}/permissions`)).some((p) => String(p.id) === permId);
+      shouldGrant = !granted;
+    }
+    await apiFetch(`/roles/${roleId}/permissions/${permId}`, { method: shouldGrant ? 'PUT' : 'DELETE' });
   },
 
   // Xóa mềm tài khoản người dùng

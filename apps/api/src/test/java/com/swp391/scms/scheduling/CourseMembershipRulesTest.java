@@ -111,9 +111,8 @@ class CourseMembershipRulesTest {
         course(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 20));
         when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(Optional.empty());
         when(enrollments.countByGymClassIdAndStatus(50L, "booked")).thenReturn(0L);
-        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(eq(100L), eq("booked"), any(), any()))
-                .thenReturn(0L);
-        when(enrollments.save(any())).thenAnswer(i -> i.getArgument(0));
+        when(enrollments.countUsedFreeCreditsBetween(eq(100L), any(), any())).thenReturn(0L);
+        when(enrollments.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
 
         assertDoesNotThrow(() -> service.enrollCourse(principal, 50L));
     }
@@ -138,8 +137,8 @@ class CourseMembershipRulesTest {
         gold.setPreviousSubscription(silver);
         gold.setUpgradeCharge(new BigDecimal("100000"));
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(gold));
-        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(
-                eq(100L), eq("booked"), eq(LocalDate.of(2026, 11, 1)), eq(LocalDate.of(2026, 12, 8)))).thenReturn(1L);
+        when(enrollments.countUsedFreeCreditsBetween(
+                eq(100L), eq(LocalDate.of(2026, 11, 1)), eq(LocalDate.of(2026, 12, 8)))).thenReturn(1L);
 
         QuotaDto quota = service.getMemberCourseQuota(principal);
 
@@ -184,8 +183,8 @@ class CourseMembershipRulesTest {
         MembershipSubscription renewal = sub(2, "GOLD", 2, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30));
         renewal.setPreviousSubscription(first);
         when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(renewal));
-        when(enrollments.countByMemberUserIdAndStatusAndGymClassStartDateBetween(
-                eq(100L), eq("booked"), eq(LocalDate.of(2026, 11, 1)), eq(LocalDate.of(2026, 11, 30)))).thenReturn(0L);
+        when(enrollments.countUsedFreeCreditsBetween(
+                eq(100L), eq(LocalDate.of(2026, 11, 1)), eq(LocalDate.of(2026, 11, 30)))).thenReturn(0L);
 
         assertEquals(2, service.getMemberCourseQuota(principal).remainingCredits());
     }
@@ -203,15 +202,140 @@ class CourseMembershipRulesTest {
         assertThrows(ForbiddenException.class, () -> service.checkoutCourse(principal, 50L, "cash"));
     }
 
-    /** Kiểm thử: hạn mức báo lệnh chặn để hội viên biết vì sao không đăng ký được. */
+    /** Kiểm thử P2-BE-19: hạn mức đọc không lấy khóa ghi và báo đúng lệnh chặn mà không fallback sang gói ngoài hạn. */
     @Test
     void theQuotaReportsTheBlockSoTheMemberSeesWhyEnrollingIsOff() {
         Member blocked = new Member();
         blocked.setUserId(100L);
         blocked.setCourseEnrollBlockedUntil(java.time.LocalDateTime.of(2026, 12, 1, 8, 0));
-        when(members.findByUserIdForUpdate(100L)).thenReturn(Optional.of(blocked));
-        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of());
+        when(members.findById(100L)).thenReturn(Optional.of(blocked));
+        MembershipSubscription futureSub = sub(3, "GOLD", 2, LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31));
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(futureSub));
 
-        assertEquals(java.time.LocalDateTime.of(2026, 12, 1, 8, 0), service.getMemberCourseQuota(principal).enrollBlockedUntil());
+        QuotaDto quota = service.getMemberCourseQuota(principal);
+
+        assertEquals(java.time.LocalDateTime.of(2026, 12, 1, 8, 0), quota.enrollBlockedUntil());
+        assertNull(quota.tier());
+        assertEquals(0, quota.remainingCredits());
+        org.mockito.Mockito.verify(members, org.mockito.Mockito.never()).findByUserIdForUpdate(100L);
+    }
+
+    /** Kiểm thử P1-BE-17: gia hạn nối tiếp cho phép đăng ký khóa bắt đầu sau kỳ hiện tại (dù 1 dòng gói không phủ cả 2 ngày). */
+    @Test
+    void contiguousRenewalAllowsEnrollingInCourseStartingInNextPeriod() {
+        when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), any(), any())).thenReturn(false);
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
+                sub(1, "GOLD", 2, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30)),
+                sub(2, "GOLD", 2, LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31))));
+        course(LocalDate.of(2026, 12, 5), LocalDate.of(2026, 12, 20));
+        when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(Optional.empty());
+        when(enrollments.countByGymClassIdAndStatus(50L, "booked")).thenReturn(0L);
+        when(enrollments.countUsedFreeCreditsBetween(eq(100L), any(), any())).thenReturn(0L);
+        when(enrollments.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
+
+        assertDoesNotThrow(() -> service.enrollCourse(principal, 50L));
+    }
+
+    /** Kiểm thử P1-BE-17: bảo lưu đã duyệt chồng lên buổi giữa khóa sẽ chặn đăng ký khóa học. */
+    @Test
+    void approvedHoldOverlappingMidCourseSessionIsRejected() {
+        var sessionRepo = mock(com.swp391.scms.scheduling.repository.ClassSessionRepository.class);
+        EnrollmentService withSessions = new EnrollmentService(
+                enrollments, sessionRepo, gymClasses, subscriptions, members, null, null, clock);
+
+        MembershipSubscription active = sub(1, "GOLD", 2, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 31));
+        active.setHoldStatus("APPROVED");
+        active.setHoldStartDate(LocalDate.of(2026, 11, 25));
+        active.setHoldEndDate(LocalDate.of(2026, 11, 30));
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(active));
+
+        GymClass c = course(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 10));
+        var s1 = new com.swp391.scms.scheduling.entity.ClassSession();
+        s1.setGymClass(c);
+        s1.setSessionDate(LocalDate.of(2026, 11, 20));
+        s1.setStatus("scheduled");
+        var s2 = new com.swp391.scms.scheduling.entity.ClassSession();
+        s2.setGymClass(c);
+        s2.setSessionDate(LocalDate.of(2026, 11, 27));
+        s2.setStatus("scheduled");
+        when(sessionRepo.findByGymClassIdOrderBySessionDateAscStartTimeAsc(50L)).thenReturn(List.of(s1, s2));
+
+        ForbiddenException ex = assertThrows(ForbiddenException.class, () -> withSessions.enrollCourse(principal, 50L));
+        assertEquals("SCHEDULING_MEMBERSHIP_ON_HOLD", ex.getErrorCode());
+
+        ForbiddenException checkoutEx = assertThrows(ForbiddenException.class,
+                () -> withSessions.checkoutCourse(principal, 50L, "cash"));
+        assertEquals("SCHEDULING_MEMBERSHIP_ON_HOLD", checkoutEx.getErrorCode());
+    }
+
+    /** Kiểm thử P1-BE-13 & P1-BE-17: phòng VIP Platinum chặn non-Platinum trong checkoutCourse và chặn gói Platinum hết hạn giữa khóa. */
+    @Test
+    void platinumVipRoomRequiresPlatinumAcrossEntireCourseInEnrollAndCheckout() {
+        com.swp391.scms.facilities.entity.Room vipRoom = new com.swp391.scms.facilities.entity.Room();
+        vipRoom.setId(9L);
+        vipRoom.setName("Phòng Gym VIP");
+        vipRoom.setTier("PLATINUM");
+        GymClass c = course(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 15));
+        c.setRoom(vipRoom);
+
+        // 1. Hội viên Gold (không phải Platinum) bị chặn ở checkoutCourse
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
+                sub(1, "GOLD", 2, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 31))));
+        ForbiddenException goldCheckout = assertThrows(ForbiddenException.class,
+                () -> service.checkoutCourse(principal, 50L, "cash"));
+        assertEquals("SCHEDULING_ROOM_PLATINUM_REQUIRED", goldCheckout.getErrorCode());
+
+        // 2. Platinum hết hạn 30/11 rồi gia hạn bằng Gold 01/12..31/12 -> không đủ Platinum suốt khóa -> chặn cả enroll lẫn checkout
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
+                sub(1, "PLATINUM", 4, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30)),
+                sub(2, "GOLD", 2, LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31))));
+        assertEquals("SCHEDULING_ROOM_PLATINUM_REQUIRED",
+                assertThrows(ForbiddenException.class, () -> service.enrollCourse(principal, 50L)).getErrorCode());
+        assertEquals("SCHEDULING_ROOM_PLATINUM_REQUIRED",
+                assertThrows(ForbiddenException.class, () -> service.checkoutCourse(principal, 50L, "cash")).getErrorCode());
+
+        // 3. Platinum nối tiếp Platinum phủ trọn khóa -> cho phép
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
+                sub(1, "PLATINUM", 4, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30)),
+                sub(2, "PLATINUM", 4, LocalDate.of(2026, 12, 1), LocalDate.of(2026, 12, 31))));
+        when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(Optional.empty());
+        when(enrollments.countByGymClassIdAndStatus(50L, "booked")).thenReturn(0L);
+        when(enrollments.countUsedFreeCreditsBetween(eq(100L), any(), any())).thenReturn(0L);
+        when(enrollments.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
+        assertDoesNotThrow(() -> service.enrollCourse(principal, 50L));
+    }
+
+    /** Kiểm thử P1-BE-20: enrollCourse và checkoutCourse tính thêm busiestSession và chặn trùng SessionBooking. */
+    @Test
+    void courseEnrollmentChecksBusiestSessionCapacityAndDuplicateSessionBooking() {
+        var sbRepo = mock(com.swp391.scms.scheduling.repository.SessionBookingRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "sessionBookings", sbRepo);
+        when(subscriptions.findByMemberUserIdAndStatus(100L, "active")).thenReturn(List.of(
+                sub(1, "GOLD", 2, LocalDate.of(2026, 11, 1), LocalDate.of(2026, 12, 31))));
+        GymClass c = course(LocalDate.of(2026, 11, 20), LocalDate.of(2026, 12, 10));
+        c.setCapacity(5);
+        when(enrollments.findByGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(Optional.empty());
+
+        // 1. Đã có SessionBooking lẻ trong lớp -> 409 SCHEDULING_ALREADY_ENROLLED
+        when(sbRepo.existsBySessionGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(true);
+        assertEquals("SCHEDULING_ALREADY_ENROLLED",
+                assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                        () -> service.enrollCourse(principal, 50L)).getErrorCode());
+        assertEquals("SCHEDULING_ALREADY_ENROLLED",
+                assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                        () -> service.checkoutCourse(principal, 50L, "cash")).getErrorCode());
+
+        // 2. 3 ghi danh toàn lớp + 2 đặt lẻ ở buổi đông nhất = 5 == capacity -> 409 SCHEDULING_CLASS_FULL
+        when(sbRepo.existsBySessionGymClassIdAndMemberUserIdAndStatus(50L, 100L, "booked")).thenReturn(false);
+        when(enrollments.countByGymClassIdAndStatus(50L, "booked")).thenReturn(3L);
+        when(sbRepo.countBookedGroupedBySession(50L))
+                .thenReturn(List.of(new com.swp391.scms.scheduling.dto.SessionBookingCount(101L, 2L)));
+        when(enrollments.countUsedFreeCreditsBetween(eq(100L), any(), any())).thenReturn(0L);
+        assertEquals("SCHEDULING_CLASS_FULL",
+                assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                        () -> service.enrollCourse(principal, 50L)).getErrorCode());
+        assertEquals("SCHEDULING_CLASS_FULL",
+                assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                        () -> service.checkoutCourse(principal, 50L, "cash")).getErrorCode());
     }
 }

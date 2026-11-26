@@ -117,3 +117,31 @@ it('localizes restored class reschedule, checkout and cancellation notifications
     localizeMessage('Your spot in course Yoga Flow has been reserved. Please complete payment to confirm your enrollment.'),
   ).toBe('Bạn đã giữ chỗ thành công cho khóa học Yoga Flow. Vui lòng hoàn tất thanh toán để xác nhận suất học.');
 });
+
+it('P2-FE-51: disallows ADMIN on /messages* and enforces per-role active route allowlist with retired path mapping', () => {
+  expect(safeNotificationPath('/messages', 'ADMIN')).toBeNull();
+  expect(safeNotificationPath('/messages?tab=support', 'ADMIN')).toBeNull();
+  expect(notificationDestination({ actionPath: '/messages?tab=support', type: 'support_reply' }, 'ADMIN')).toBe('/admin/users');
+
+  expect(safeNotificationPath('/member/courts', 'MEMBER')).toBe('/member/dashboard');
+  expect(safeNotificationPath('/member/explore', 'MEMBER')).toBe('/member/dashboard');
+  expect(safeNotificationPath('/member/nonexistent', 'MEMBER')).toBeNull();
+  expect(safeNotificationPath('/manager/audit-logs', 'MANAGER')).toBe('/manager/reports');
+  expect(safeNotificationPath('/manager/equipment', 'MANAGER')).toBe('/manager/catalogs');
+  expect(safeNotificationPath('/manager/coach-reviews', 'MANAGER')).toBe('/manager/coach-assignments');
+  expect(safeNotificationPath('/manager/nonexistent', 'MANAGER')).toBeNull();
+  expect(safeNotificationPath('/admin/audit-logs', 'ADMIN')).toBe('/admin/audit-logs');
+  expect(safeNotificationPath('/admin/unknown', 'ADMIN')).toBeNull();
+});
+
+it('P2-FE-50: localizes raw support ticket statuses IN_PROGRESS and RESOLVED cleanly in VI and EN', () => {
+  expect(
+    localizeMessage('Your support request "Hỗ trợ thẻ" has been updated to status IN_PROGRESS.', 'vi'),
+  ).toBe('Yêu cầu hỗ trợ "Hỗ trợ thẻ" của bạn đã chuyển sang trạng thái Đang xử lý.');
+  expect(
+    localizeMessage('Your support request "Hỗ trợ thẻ" has been updated to status RESOLVED.', 'vi'),
+  ).toBe('Yêu cầu hỗ trợ "Hỗ trợ thẻ" của bạn đã chuyển sang trạng thái Đã giải quyết.');
+  expect(
+    localizeMessage('Your support request "Card help" has been updated to status IN_PROGRESS.', 'en'),
+  ).toBe('Your support request "Card help" has been updated to status In progress.');
+});

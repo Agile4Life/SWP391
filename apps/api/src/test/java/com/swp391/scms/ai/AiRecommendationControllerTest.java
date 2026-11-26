@@ -112,10 +112,55 @@ class AiRecommendationControllerTest {
                 .build();
     }
 
-    /** Kiểm thử: sinh kế hoạch tập có cấu trúc và ghi log. */
+    /** Kiểm thử: sinh kế hoạch tập có cấu trúc và ghi log (mặc định không truy vấn chỉ số sức khỏe đã tắt). */
     @Test
-    @DisplayName("POST /api/v1/ai/generate-workout-plan should read height, weight, BMI, fitness_goal, health_notes and save log")
+    @DisplayName("POST /api/v1/ai/generate-workout-plan skips retired progress logs by default and logs workout plan")
     void shouldGenerateStructuredWorkoutPlanAndLog() throws Exception {
+        Member member = new Member();
+        member.setUserId(10L);
+        member.setMembershipCode("MB-2026-089");
+        member.setFitnessGoal("Tăng cơ giảm mỡ");
+        member.setFitnessLevel("intermediate");
+        member.setHealthNotes("Đau nhẹ khớp gối trái");
+
+        Coach coach = new Coach();
+        coach.setUserId(20L);
+
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
+        when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> {
+            AiRecommendationLog log = inv.getArgument(0);
+            ReflectionTestUtils.setField(log, "id", 77L);
+            return log;
+        });
+
+        AiWorkoutPlanRequest req = new AiWorkoutPlanRequest(10L, "Ưu tiên bài tập ít áp lực khớp gối", 4);
+
+        mockMvc.perform(post("/api/v1/ai/generate-workout-plan")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.id").value(77))
+                .andExpect(jsonPath("$.data.memberId").value(10))
+                .andExpect(jsonPath("$.data.modelName").value("gpt-4o"))
+                .andExpect(jsonPath("$.data.inputContext.heightCm").doesNotExist())
+                .andExpect(jsonPath("$.data.inputContext.weightKg").doesNotExist())
+                .andExpect(jsonPath("$.data.inputContext.bmi").doesNotExist())
+                .andExpect(jsonPath("$.data.inputContext.healthNotes").value("Đau nhẹ khớp gối trái"))
+                .andExpect(jsonPath("$.data.items").isArray())
+                .andExpect(jsonPath("$.data.items[0].exerciseName").isNotEmpty());
+
+        verify(progressLogRepository, never()).findByMemberUserIdOrderByRecordedAtDesc(any());
+        verify(recommendationLogRepository).save(any(AiRecommendationLog.class));
+    }
+
+    /** Kiểm thử: khi app.health.metrics.enabled=true, chỉ truy vấn member_progress_logs 1 lần duy nhất (P1-BE-46). */
+    @Test
+    @DisplayName("Reads health metrics once when app.health.metrics.enabled is true")
+    void shouldReadHealthMetricsOnceWhenEnabled() throws Exception {
+        ReflectionTestUtils.setField(recommendationService, "healthMetricsEnabled", true);
+
         Member member = new Member();
         member.setUserId(10L);
         member.setMembershipCode("MB-2026-089");
@@ -140,7 +185,7 @@ class AiRecommendationControllerTest {
                 .thenReturn(List.of(heightLog, weightLog));
         when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> {
             AiRecommendationLog log = inv.getArgument(0);
-            ReflectionTestUtils.setField(log, "id", 77L);
+            ReflectionTestUtils.setField(log, "id", 78L);
             return log;
         });
 
@@ -150,18 +195,11 @@ class AiRecommendationControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(req)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.success").value(true))
-                .andExpect(jsonPath("$.data.id").value(77))
-                .andExpect(jsonPath("$.data.memberId").value(10))
-                .andExpect(jsonPath("$.data.modelName").value("gpt-4o"))
                 .andExpect(jsonPath("$.data.inputContext.heightCm").value(175.0))
                 .andExpect(jsonPath("$.data.inputContext.weightKg").value(73.5))
-                .andExpect(jsonPath("$.data.inputContext.bmi").value(24.0))
-                .andExpect(jsonPath("$.data.inputContext.healthNotes").value("Đau nhẹ khớp gối trái"))
-                .andExpect(jsonPath("$.data.items").isArray())
-                .andExpect(jsonPath("$.data.items[0].exerciseName").isNotEmpty());
+                .andExpect(jsonPath("$.data.inputContext.bmi").value(24.0));
 
-        verify(recommendationLogRepository).save(any(AiRecommendationLog.class));
+        verify(progressLogRepository, times(1)).findByMemberUserIdOrderByRecordedAtDesc(10L);
     }
 
     /** Kiểm thử: áp dụng gợi ý AI vào kế hoạch tập. */
@@ -172,9 +210,13 @@ class AiRecommendationControllerTest {
         member.setUserId(10L);
         member.setFitnessGoal("Tăng sức bền");
 
+        Coach coach = new Coach();
+        coach.setUserId(20L);
+
         AiRecommendationLog log = new AiRecommendationLog();
         ReflectionTestUtils.setField(log, "id", 77L);
         log.setMember(member);
+        log.setCoach(coach);
         log.setRecommendedContent("{\"goal\":\"Tăng sức bền 4 tuần\",\"items\":[{\"dayOfWeek\":1,\"exerciseName\":\"Kettlebell Swing\",\"sets\":4,\"reps\":15,\"durationMinutes\":15,\"orderIndex\":1}]}");
         log.setApplied(false);
 
@@ -281,7 +323,7 @@ class AiRecommendationControllerTest {
         assertFalse(txActiveDuringAi.get(), "Transaction must NOT be active while calling AiClient.generate");
 
         txActiveDuringAi.set(true);
-        txService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, "extra", 4), null);
+        txService.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, "extra", 4), 1L, "CENTER_MANAGER");
         assertFalse(txActiveDuringAi.get(), "Transaction must NOT be active while calling AiClient.generate in generateWorkoutPlan");
     }
 
@@ -333,9 +375,11 @@ class AiRecommendationControllerTest {
         ReflectionTestUtils.setField(service, "trainingPlanRepository", plans);
         ReflectionTestUtils.setField(service, "trainingPlanItemRepository", planItems);
 
-        var response = service.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 6), null);
+        var response = service.generateWorkoutPlan(new AiWorkoutPlanRequest(10L, null, 6), 1L, "CENTER_MANAGER");
 
         assertTrue(prompts.get(0).contains("7 = Chủ nhật"));
+        assertFalse(prompts.get(0).contains("THIẾT BỊ SẴN CÓ"));
+        assertFalse(prompts.get(0).contains("chỉ số hình thể"));
         String userPrompt = prompts.get(1);
         assertTrue(userPrompt.contains("Thời lượng giáo án: 6 tuần"));
         assertTrue(userPrompt.contains("Giáo án đang áp dụng: Giảm mỡ 4 tuần"));
@@ -368,6 +412,9 @@ class AiRecommendationControllerTest {
         member.setUser(activeUser);
         member.setMembershipCode("MB-2026-089");
 
+        Coach coach = new Coach();
+        coach.setUserId(20L);
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
         when(memberRepository.existsById(10L)).thenReturn(true);
         when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> {
@@ -488,12 +535,19 @@ class AiRecommendationControllerTest {
         Coach logCoach = new Coach();
         logCoach.setUserId(20L);
 
-        AiRecommendationLog log = new AiRecommendationLog();
-        ReflectionTestUtils.setField(log, "id", 77L);
-        log.setMember(member);
-        log.setCoach(logCoach);
-        log.setRecommendedContent("{\"goal\":\"Sức mạnh\",\"items\":[]}");
-        when(recommendationLogRepository.findById(77L)).thenReturn(Optional.of(log));
+        AiRecommendationLog log1 = new AiRecommendationLog();
+        ReflectionTestUtils.setField(log1, "id", 77L);
+        log1.setMember(member);
+        log1.setCoach(logCoach);
+        log1.setRecommendedContent("{\"goal\":\"Sức mạnh\",\"items\":[]}");
+        when(recommendationLogRepository.findById(77L)).thenReturn(Optional.of(log1));
+
+        AiRecommendationLog log2 = new AiRecommendationLog();
+        ReflectionTestUtils.setField(log2, "id", 78L);
+        log2.setMember(member);
+        log2.setCoach(logCoach);
+        log2.setRecommendedContent("{\"goal\":\"Sức mạnh\",\"items\":[]}");
+        when(recommendationLogRepository.findById(78L)).thenReturn(Optional.of(log2));
 
         var capturedCoachIds = new java.util.ArrayList<Long>();
         when(trainingPlanService.createPlan(any(TrainingPlanCreateDto.class), eq(1L), eq("CENTER_MANAGER")))
@@ -508,12 +562,89 @@ class AiRecommendationControllerTest {
         recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 1L, "CENTER_MANAGER");
         AiApplyRecommendationRequest explicitCoachReq = objectMapper.readValue(
                 "{\"coach_id\":25}", AiApplyRecommendationRequest.class);
-        recommendationService.applyRecommendation(77L, explicitCoachReq, 1L, "CENTER_MANAGER");
+        recommendationService.applyRecommendation(78L, explicitCoachReq, 1L, "CENTER_MANAGER");
 
         assertEquals(List.of(20L, 25L), capturedCoachIds);
 
         assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
                 () -> recommendationService.applyRecommendation(77L, new AiApplyRecommendationRequest(), 21L, "COACH"));
+    }
+
+    /** Kiểm thử P1-BE-47: fail-closed khi thiếu hồ sơ HLV (không cho giả mạo coachId), chặn HLV chiếm log của manager và chặn áp dụng trùng 409. */
+    @Test
+    @DisplayName("Fail-closed when coach profile missing, blocks coach from hijacking manager log, and rejects duplicate apply with 409")
+    void shouldEnforceFailClosedCoachAuthAndRejectDuplicateApply() throws Exception {
+        Member member = new Member();
+        member.setUserId(10L);
+        when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.empty());
+
+        AiWorkoutPlanRequest spoofedCoachReq = objectMapper.readValue(
+                "{\"member_id\":10,\"coach_id\":99,\"duration_weeks\":4}", AiWorkoutPlanRequest.class);
+        assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
+                () -> recommendationService.generateWorkoutPlan(spoofedCoachReq, 20L, "COACH"));
+
+        // Manager-created recommendation without coach (logCoachId == null): coach must be forbidden
+        AiRecommendationLog managerLog = new AiRecommendationLog();
+        ReflectionTestUtils.setField(managerLog, "id", 90L);
+        managerLog.setMember(member);
+        managerLog.setCoach(null);
+        managerLog.setRecommendedContent("{\"goal\":\"Sức bền\",\"items\":[]}");
+        managerLog.setApplied(false);
+        when(recommendationLogRepository.findById(90L)).thenReturn(Optional.of(managerLog));
+
+        assertThrows(com.swp391.scms.common.exception.ForbiddenException.class,
+                () -> recommendationService.applyRecommendation(90L, new AiApplyRecommendationRequest(), 20L, "COACH"));
+
+        // Already applied recommendation must throw 409 ConflictException
+        Coach ownerCoach = new Coach();
+        ownerCoach.setUserId(20L);
+        AiRecommendationLog appliedLog = new AiRecommendationLog();
+        ReflectionTestUtils.setField(appliedLog, "id", 91L);
+        appliedLog.setMember(member);
+        appliedLog.setCoach(ownerCoach);
+        appliedLog.setRecommendedContent("{\"goal\":\"Sức bền\",\"items\":[]}");
+        appliedLog.setApplied(true);
+        when(recommendationLogRepository.findById(91L)).thenReturn(Optional.of(appliedLog));
+
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> recommendationService.applyRecommendation(91L, new AiApplyRecommendationRequest(), 20L, "COACH"));
+        assertThrows(com.swp391.scms.common.exception.ConflictException.class,
+                () -> recommendationService.applyRecommendation(91L, new AiApplyRecommendationRequest(), 1L, "CENTER_MANAGER"));
+    }
+
+    /** Kiểm thử P2-BE-50: applyRecommendation dùng múi giờ Asia/Ho_Chi_Minh thay vì UTC mặc định. */
+    @Test
+    @DisplayName("applyRecommendation defaults startDate using CenterTime.ZONE clock")
+    void shouldDefaultApplyStartDateInCenterTimezone() {
+        // 2026-11-25T18:00:00Z = 2026-11-26 01:00 Asia/Ho_Chi_Minh
+        ReflectionTestUtils.setField(recommendationService, "clock",
+                java.time.Clock.fixed(java.time.Instant.parse("2026-11-25T18:00:00Z"), java.time.ZoneOffset.UTC));
+
+        Member member = new Member();
+        member.setUserId(10L);
+        Coach coach = new Coach();
+        coach.setUserId(20L);
+        AiRecommendationLog log = new AiRecommendationLog();
+        ReflectionTestUtils.setField(log, "id", 92L);
+        log.setMember(member);
+        log.setCoach(coach);
+        log.setRecommendedContent("{\"goal\":\"Sức mạnh\",\"items\":[]}");
+        log.setApplied(false);
+        when(recommendationLogRepository.findById(92L)).thenReturn(Optional.of(log));
+
+        var capturedStarts = new java.util.ArrayList<java.time.LocalDate>();
+        when(trainingPlanService.createPlan(any(TrainingPlanCreateDto.class), eq(20L), eq("COACH")))
+                .thenAnswer(inv -> {
+                    TrainingPlanCreateDto dto = inv.getArgument(0);
+                    capturedStarts.add(dto.getStartDate());
+                    TrainingPlanDto created = new TrainingPlanDto();
+                    created.setId(401L);
+                    return created;
+                });
+
+        recommendationService.applyRecommendation(92L, new AiApplyRecommendationRequest(), 20L, "COACH");
+        assertEquals(List.of(java.time.LocalDate.of(2026, 11, 26)), capturedStarts);
     }
 
     /** Kiểm thử: validate số tuần của kế hoạch và giới hạn tần suất sinh gợi ý. */
@@ -532,7 +663,10 @@ class AiRecommendationControllerTest {
 
         Member member = new Member();
         member.setUserId(10L);
+        Coach coach = new Coach();
+        coach.setUserId(20L);
         when(memberRepository.findById(10L)).thenReturn(Optional.of(member));
+        when(coachRepository.findById(20L)).thenReturn(Optional.of(coach));
         when(recommendationLogRepository.save(any(AiRecommendationLog.class))).thenAnswer(inv -> inv.getArgument(0));
 
         assertThrows(com.swp391.scms.common.exception.TooManyRequestsException.class, () -> {

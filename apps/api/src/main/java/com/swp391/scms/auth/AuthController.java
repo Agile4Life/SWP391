@@ -19,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
@@ -84,6 +85,7 @@ public class AuthController {
      * sau khi Admin đổi vai trò).
      */
     @GetMapping("/me")
+    @PreAuthorize("isAuthenticated()")
     public ApiResponse<AuthSessionResponse> me(@AuthenticationPrincipal AuthenticatedPrincipal principal) {
         return ApiResponse.ok(msg("auth.me.success"), new AuthSessionResponse(principal.username(), principal.role(), authService.fullNameOf(principal.id())));
     }
@@ -148,8 +150,8 @@ public class AuthController {
         return ApiResponse.ok(msg("auth.password.reset_success"), Map.of("email", request.email().trim()));
     }
 
-    /** POST /google/send-otp: tạo tài khoản theo Gmail nếu chưa có và gửi mã OTP xác nhận về Gmail đó. */
-    @Operation(summary = "Gửi mã OTP đăng nhập Google", description = "Tạo tài khoản nếu chưa có và gửi mã OTP xác nhận về Gmail")
+    /** POST /google/send-otp: gửi lại mã OTP xác nhận cho tài khoản đang chờ kích hoạt đã xác minh Google OAuth. */
+    @Operation(summary = "Gửi lại mã OTP đăng nhập Google", description = "Gửi lại mã OTP kích hoạt cho tài khoản đã xác minh Google OAuth và đang chờ kích hoạt")
     @PostMapping("/google/send-otp")
     public ApiResponse<Map<String, Object>> sendGoogleOtp(@Valid @RequestBody GoogleOtpRequest request) {
         String email = request.email() == null ? "" : request.email().trim();

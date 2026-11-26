@@ -1,6 +1,28 @@
-import { staffSourceError } from '../operations/staffI18n';
+import { staffMessage, staffSourceError, type StaffMessage } from '../operations/staffI18n';
 import { apiFetch } from '../../shared/api/client';
 import { getProfile } from '../member/profileApi';
+
+/** Giữ nguyên nội dung Error từ backend; chỉ dùng fallback song ngữ khi lỗi không phải lỗi nghiệp vụ. */
+export function coachingError(error: unknown, vi: string, en: string): StaffMessage {
+  return error instanceof Error && error.name === 'Error' && error.message
+    ? error
+    : staffMessage(vi, en);
+}
+
+/** Bản ghi hội viên từ danh bạ `/coaching/members` (gồm cả học viên PT 1:1 lẫn lớp nhóm). */
+interface CoachDirectoryMember {
+  id: number;
+  memberCode?: string | null;
+  fullName?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  fitnessGoal?: string | null;
+  healthNotes?: string | null;
+  fitnessLevel?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+}
 
 /** Buổi dạy của HLV: lớp, bộ môn, phòng, ngày giờ, trạng thái, sức chứa và số chỗ đã đặt. */
 export interface CoachSession {
@@ -50,7 +72,12 @@ export const coachingApi = {
     toDate?: string
   ): Promise<CoachSession[]> => {
     const params = new URLSearchParams();
-    if (coachId) params.set('coachId', String(coachId));
+    if (coachId !== undefined && coachId !== null && coachId !== '') {
+      const numericCoachId = typeof coachId === 'number' ? coachId : Number(String(coachId).trim());
+      if (Number.isInteger(numericCoachId) && numericCoachId > 0) {
+        params.set('coachId', String(numericCoachId));
+      }
+    }
     if (fromDate) params.set('fromDate', fromDate);
     if (toDate) params.set('toDate', toDate);
 
@@ -83,12 +110,32 @@ export const coachingApi = {
     throw staffSourceError('Dữ liệu học viên không hợp lệ', 'Invalid member data.');
   },
 
-  // Lấy toàn bộ học viên mà HLV đang phụ trách (gộp theo hội viên qua các lớp).
-  getAllAssignedStudents: async (coachId?: string | number): Promise<EnrolledStudent[]> => {
-    const id = coachId ?? (await getProfile()).userId;
-    const sessions = await coachingApi.getCoachSchedule(id);
-    const classSessions = [...new Map(sessions.map(session => [session.classId, session])).values()];
-    const rosters = await Promise.all(classSessions.map(session => coachingApi.getSessionStudents(session.id)));
-    return [...new Map(rosters.flat().map(student => [student.memberId, student])).values()];
+  // Lấy toàn bộ học viên mà HLV đang phụ trách qua danh bạ chuẩn `/coaching/members` (bao gồm cả PT 1:1 và lớp nhóm).
+  getAllAssignedStudents: async (): Promise<EnrolledStudent[]> => {
+    const members = await apiFetch<CoachDirectoryMember[]>('/coaching/members');
+    if (!Array.isArray(members)) {
+      throw staffSourceError('Dữ liệu học viên không hợp lệ', 'Invalid member data.');
+    }
+    const deduped = new Map<number, EnrolledStudent>();
+    for (const m of members) {
+      if (m == null || m.id == null) continue;
+      deduped.set(m.id, {
+        id: m.id,
+        memberId: m.id,
+        membershipCode: m.memberCode ?? '',
+        fullName: m.fullName ?? '',
+        email: m.email ?? '',
+        phone: m.phone ?? null,
+        avatarUrl: m.avatarUrl ?? null,
+        fitnessGoal: m.fitnessGoal ?? '',
+        healthNotes: m.healthNotes ?? '',
+        fitnessLevel: m.fitnessLevel ?? '',
+        emergencyContactName: m.emergencyContactName ?? null,
+        emergencyContactPhone: m.emergencyContactPhone ?? null,
+        enrolledAt: '',
+        status: 'active',
+      });
+    }
+    return [...deduped.values()];
   },
 };

@@ -29,6 +29,7 @@ import java.time.ZoneId;
 import java.util.Locale;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,6 +41,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Nghiệp vụ xử lý đơn shop của nhân viên: tìm/đếm đơn, chuyển trạng thái xử lý–giao–nhận–hoàn tất, thu tiền tại
  * quầy và hủy đơn.
  */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 @Transactional
 public class ProductOrderStaffService {

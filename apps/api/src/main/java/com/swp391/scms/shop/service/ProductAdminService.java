@@ -14,6 +14,7 @@ import com.swp391.scms.shop.mapper.ProductMapper;
 import com.swp391.scms.shop.repository.*;
 import jakarta.persistence.EntityManager;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -32,6 +33,7 @@ import java.util.regex.Pattern;
  * Nghiệp vụ quản lý sản phẩm cho quản lý: tìm, tạo/sửa/xóa sản phẩm và biến thể, ảnh, điều chỉnh tồn kho và
  * thống kê đơn hàng.
  */
+@ConditionalOnProperty(name = "app.shop.enabled", havingValue = "true")
 @Service
 @Transactional(readOnly = true)
 public class ProductAdminService {

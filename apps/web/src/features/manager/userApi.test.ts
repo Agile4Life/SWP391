@@ -245,6 +245,32 @@ describe('userApi.ts (User Management & RBAC)', () => {
     );
   });
 
+  it('P1-FE-22: toggleLockUser and toggleRolePermission use explicit target state directly without racy GET', async () => {
+    const lockFetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: { id: 5, roleCode: 'MEMBER', fullName: 'John', email: 'j@t.com', phone: null, status: 'locked', createdAt: '2026-09-20' },
+      }),
+    });
+    vi.stubGlobal('fetch', lockFetch);
+
+    const locked = await userApi.toggleLockUser('5', true);
+    expect(lockFetch).toHaveBeenCalledTimes(1);
+    expect(lockFetch).toHaveBeenCalledWith('/api/v1/users/5/lock', expect.objectContaining({ method: 'PATCH' }));
+    expect(locked.status).toBe('LOCKED');
+
+    const permFetch = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, data: [{ id: 2, code: 'COACH' }] }) })
+      .mockResolvedValueOnce({ ok: true, status: 200, json: async () => ({ success: true, data: null }) });
+    vi.stubGlobal('fetch', permFetch);
+
+    await userApi.toggleRolePermission('COACH', '101', true);
+    expect(permFetch).toHaveBeenCalledTimes(2);
+    expect(permFetch).toHaveBeenNthCalledWith(2, '/api/v1/roles/2/permissions/101', expect.objectContaining({ method: 'PUT' }));
+  });
+
   it('deleteUser calls DELETE /api/v1/users/{id}', async () => {
     const mockFetch = vi.fn().mockResolvedValue({
       ok: true,

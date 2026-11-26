@@ -5,6 +5,7 @@ import com.swp391.scms.common.exception.BadRequestException;
 import com.swp391.scms.common.exception.ConflictException;
 import com.swp391.scms.common.exception.ForbiddenException;
 import com.swp391.scms.common.exception.ResourceNotFoundException;
+import com.swp391.scms.common.image.ImageDataUrlValidator;
 import com.swp391.scms.users.dto.CoachProfileUpdateDto;
 import com.swp391.scms.users.dto.ProfileDto;
 import com.swp391.scms.users.dto.ReceptionistProfileUpdateDto;
@@ -12,11 +13,14 @@ import com.swp391.scms.users.entity.Coach;
 import com.swp391.scms.users.entity.Member;
 import com.swp391.scms.users.entity.Receptionist;
 import com.swp391.scms.users.entity.User;
-import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
-import java.util.Base64;
+import java.io.IOException;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -82,14 +86,17 @@ public class ProfileService {
     @Transactional
     @Audited(action = "PASSWORD_CHANGE", entity = "users")
     public com.swp391.scms.auth.dto.AuthTokenResponse changePassword(Long userId, String currentPassword, String newPassword) {
+        if (passwordEncoder == null) {
+            throw new IllegalStateException("PasswordEncoder is required to change password");
+        }
         User user = findActiveUser(userId);
-        if (passwordEncoder != null && !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new BadRequestException("INVALID_CURRENT_PASSWORD", "users.profile.password.invalid_current", null, null);
         }
         if (currentPassword != null && currentPassword.equals(newPassword)) {
             throw new BadRequestException("PASSWORD_UNCHANGED", "users.profile.password.unchanged", null, null);
         }
-        user.setPasswordHash(passwordEncoder != null ? passwordEncoder.encode(newPassword) : newPassword);
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setUpdatedAt(java.time.LocalDateTime.now());
         userRepository.save(user);
 
@@ -131,7 +138,9 @@ public class ProfileService {
     @Audited(action = "PROFILE_UPDATE", entity = "users")
     public ProfileDto updateProfile(Long userId, ProfileDto request) {
         User user = findActiveUser(userId);
-        validateAvatarUrl(request.avatarUrl());
+        if (request.avatarUrl() != null && !request.avatarUrl().trim().equals(user.getAvatarUrl())) {
+            validateAvatarUrl(request.avatarUrl());
+        }
 
         user.setFullName(request.fullName());
         if (request.phone() != null) {
@@ -211,17 +220,19 @@ public class ProfileService {
     }
 
     /**
-     * Kiểm tra ảnh đại diện: data URL chỉ chấp nhận JPEG/PNG/WEBP, base64 hợp lệ, tối đa 2MB, kích thước từ
-     * 100x100 đến 4096x4096 px; hoặc là đường dẫn http(s)/tương đối.
+     * Kiểm tra ảnh đại diện: data URL chỉ chấp nhận JPEG/PNG/WEBP (xác minh magic bytes thật, tối đa 2MB, đọc
+     * kích thước chỉ từ header từ 100x100 đến 4096x4096 px không giải nén toàn bộ pixel); hoặc đường dẫn nội bộ
+     * dạng /images/... (từ chối mọi URL ngoài http(s):// hoặc protocol-relative //).
      */
     public void validateAvatarUrl(String avatarUrl) {
         if (avatarUrl == null || avatarUrl.isBlank()) {
             return;
         }
         String trimmed = avatarUrl.trim();
-        if (trimmed.startsWith("data:")) {
+        if (trimmed.regionMatches(true, 0, "data:", 0, 5)) {
+            String lower = trimmed.toLowerCase(Locale.ROOT);
             String matchedPrefix = ALLOWED_DATA_URL_PREFIXES.stream()
-                    .filter(trimmed::startsWith)
+                    .filter(lower::startsWith)
                     .findFirst()
                     .orElseThrow(() -> new BadRequestException(
                             "INVALID_AVATAR_FORMAT",
@@ -229,17 +240,13 @@ public class ProfileService {
                             null,
                             "Ảnh đại diện chỉ hỗ trợ định dạng image/jpeg, image/png hoặc image/webp."
                     ));
-            String base64Payload = trimmed.substring(matchedPrefix.length()).replaceAll("\\s+", "");
+            String base64Payload = trimmed.substring(matchedPrefix.length()).trim();
             if (base64Payload.isEmpty()) {
                 throw new BadRequestException("INVALID_AVATAR_DATA", "error.profile.avatar.invalid_data", null, "Dữ liệu ảnh đại diện không hợp lệ.");
             }
-            byte[] decoded;
-            try {
-                decoded = Base64.getDecoder().decode(base64Payload);
-            } catch (IllegalArgumentException ex) {
-                throw new BadRequestException("INVALID_AVATAR_DATA", "error.profile.avatar.invalid_base64", null, "Dữ liệu base64 của ảnh đại diện không hợp lệ.");
-            }
-            if (decoded.length == 0 || decoded.length > MAX_AVATAR_BYTES) {
+            long maxEncodedChars = (((long) MAX_AVATAR_BYTES + 2L) / 3L) * 4L;
+            if (base64Payload.length() > maxEncodedChars
+                    || (base64Payload.length() == maxEncodedChars && !base64Payload.endsWith("="))) {
                 throw new BadRequestException(
                         "AVATAR_TOO_LARGE",
                         "error.profile.avatar.too_large",
@@ -247,26 +254,10 @@ public class ProfileService {
                         "Dung lượng ảnh đại diện không được vượt quá 2MB."
                 );
             }
-            try {
-                BufferedImage image = ImageIO.read(new ByteArrayInputStream(decoded));
-                if (image != null) {
-                    int width = image.getWidth();
-                    int height = image.getHeight();
-                    if (width < 100 || height < 100 || width > 4096 || height > 4096) {
-                        throw new BadRequestException(
-                                "INVALID_AVATAR_DIMENSIONS",
-                                "error.profile.avatar.invalid_dimensions",
-                                null,
-                                "Ảnh đại diện phải có kích thước tối thiểu 100x100 px và tối đa 4096x4096 px."
-                        );
-                    }
-                }
-            } catch (BadRequestException ex) {
-                throw ex;
-            } catch (Exception ignored) {
-                // Các payload test giả lập không phải ảnh raster đầy đủ vẫn được phép.
-            }
-        } else if (!trimmed.startsWith("http://") && !trimmed.startsWith("https://") && !trimmed.startsWith("/")) {
+            ImageDataUrlValidator.ValidatedImage validated = ImageDataUrlValidator.validate(
+                    trimmed, MAX_AVATAR_BYTES, "INVALID_AVATAR_DATA", "error.profile.avatar.invalid_data");
+            validateAvatarDimensions(validated.bytes(), validated.contentType());
+        } else if (!isAllowedInternalAvatarPath(trimmed)) {
             throw new BadRequestException(
                     "INVALID_AVATAR_URL",
                     "error.profile.avatar.invalid_url",
@@ -274,6 +265,92 @@ public class ProfileService {
                     "Đường dẫn ảnh đại diện không hợp lệ."
             );
         }
+    }
+
+    /** Chỉ cho phép đường dẫn ảnh nội bộ đơn gạch chéo dưới /images/... (chặn http(s), //, .. và khoảng trắng). */
+    private static boolean isAllowedInternalAvatarPath(String path) {
+        return path.startsWith("/images/")
+                && !path.startsWith("//")
+                && !path.contains("..")
+                && !path.contains("\\")
+                && path.chars().noneMatch(Character::isWhitespace);
+    }
+
+    /** Đọc chiều rộng/cao ảnh chỉ từ header (không giải nén pixel ra heap để tránh bom giải nén OOM). */
+    private static void validateAvatarDimensions(byte[] bytes, String contentType) {
+        int[] dims = "image/webp".equals(contentType)
+                ? readWebpHeaderDimensions(bytes)
+                : readImageIoHeaderDimensions(bytes);
+        if (dims == null) {
+            throw new BadRequestException("INVALID_AVATAR_DATA", "error.profile.avatar.invalid_data", null,
+                    "Dữ liệu ảnh đại diện không hợp lệ.");
+        }
+        int width = dims[0];
+        int height = dims[1];
+        if (width < 100 || height < 100 || width > 4096 || height > 4096) {
+            throw new BadRequestException(
+                    "INVALID_AVATAR_DIMENSIONS",
+                    "error.profile.avatar.invalid_dimensions",
+                    null,
+                    "Ảnh đại diện phải có kích thước tối thiểu 100x100 px và tối đa 4096x4096 px."
+            );
+        }
+    }
+
+    /** Đọc kích thước JPEG/PNG qua ImageReader.getWidth(0)/getHeight(0) (chỉ đọc header, không decode pixel). */
+    private static int[] readImageIoHeaderDimensions(byte[] bytes) {
+        try (ImageInputStream iis = ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))) {
+            if (iis == null) {
+                return null;
+            }
+            Iterator<ImageReader> readers = ImageIO.getImageReaders(iis);
+            if (!readers.hasNext()) {
+                return null;
+            }
+            ImageReader reader = readers.next();
+            try {
+                reader.setInput(iis, true, true);
+                return new int[]{reader.getWidth(0), reader.getHeight(0)};
+            } finally {
+                reader.dispose();
+            }
+        } catch (IOException | RuntimeException ex) {
+            return null;
+        }
+    }
+
+    /** Đọc kích thước WebP (VP8 / VP8L / VP8X) trực tiếp từ header RIFF không cần giải nén pixel. */
+    private static int[] readWebpHeaderDimensions(byte[] b) {
+        if (b.length < 25) {
+            return null;
+        }
+        String chunk = new String(b, 12, 4, java.nio.charset.StandardCharsets.US_ASCII);
+        if ("VP8 ".equals(chunk)) {
+            if (b.length < 30 || (b[23] & 0xFF) != 0x9D || (b[24] & 0xFF) != 0x01 || (b[25] & 0xFF) != 0x2A) {
+                return null;
+            }
+            int width = ((b[26] & 0xFF) | ((b[27] & 0xFF) << 8)) & 0x3FFF;
+            int height = ((b[28] & 0xFF) | ((b[29] & 0xFF) << 8)) & 0x3FFF;
+            return new int[]{width, height};
+        }
+        if ("VP8L".equals(chunk)) {
+            if ((b[20] & 0xFF) != 0x2F) {
+                return null;
+            }
+            int bits = (b[21] & 0xFF) | ((b[22] & 0xFF) << 8) | ((b[23] & 0xFF) << 16) | ((b[24] & 0xFF) << 24);
+            int width = (bits & 0x3FFF) + 1;
+            int height = ((bits >>> 14) & 0x3FFF) + 1;
+            return new int[]{width, height};
+        }
+        if ("VP8X".equals(chunk)) {
+            if (b.length < 30) {
+                return null;
+            }
+            int width = ((b[24] & 0xFF) | ((b[25] & 0xFF) << 8) | ((b[26] & 0xFF) << 16)) + 1;
+            int height = ((b[27] & 0xFF) | ((b[28] & 0xFF) << 8) | ((b[29] & 0xFF) << 16)) + 1;
+            return new int[]{width, height};
+        }
+        return null;
     }
 
     /** HLV cập nhật hồ sơ chuyên môn; người gọi phải có vai trò COACH. Chưa có hồ sơ HLV thì tạo mới. */
@@ -340,8 +417,14 @@ public class ProfileService {
     @Transactional
     @Audited(action = "MEMBER_KYC_SUBMIT", entity = "members")
     public ProfileDto submitMemberKyc(Long userId, com.swp391.scms.users.dto.MemberKycRequest request) {
+        if (kycCrypto == null) {
+            throw new IllegalStateException("KycCrypto is required to submit KYC");
+        }
         User user = findActiveUser(userId);
-        Member member = memberRepository.findById(userId).orElseGet(() -> {
+        if (user.getRole() == null || !"MEMBER".equalsIgnoreCase(user.getRole().getCode())) {
+            throw new ForbiddenException("FORBIDDEN", "users.forbidden.invalid_role", null, null);
+        }
+        Member member = memberRepository.findByUserIdForUpdate(userId).orElseGet(() -> {
             Member m = new Member();
             m.setUser(user);
             m.setMembershipCode("MEM-" + userId);
@@ -349,7 +432,20 @@ public class ProfileService {
             return m;
         });
 
+        if ("PENDING".equalsIgnoreCase(member.getKycStatus())) {
+            throw new ConflictException("KYC_ALREADY_PENDING", "error.membership.kyc_pending", null,
+                    "Your KYC submission is already pending review");
+        }
+        if (Boolean.TRUE.equals(member.getIdentityVerified()) || "APPROVED".equalsIgnoreCase(member.getKycStatus())) {
+            throw new ConflictException("KYC_ALREADY_VERIFIED", "error.conflict", null,
+                    "Your identity has already been verified");
+        }
+
         String docType = request.resolvedDocumentType();
+        if (!"CCCD".equals(docType) && !"PASSPORT".equals(docType)) {
+            throw new BadRequestException("INVALID_DOCUMENT_TYPE", "error.bad_request", null,
+                    "Document type must be CCCD or PASSPORT");
+        }
         String citizenId = request.citizenId() != null ? request.citizenId().trim() : "";
         String fullName = request.fullName() != null ? request.fullName().trim() : "";
 
@@ -357,7 +453,7 @@ public class ProfileService {
             throw new BadRequestException("INVALID_FULL_NAME", "validation.users.full_name.not_blank", null, "Họ và tên không được để trống.");
         }
 
-        if ("PASSPORT".equalsIgnoreCase(docType)) {
+        if ("PASSPORT".equals(docType)) {
             String nationality = request.nationality() != null ? request.nationality().trim() : "";
             if (nationality.isBlank() || isVietnamese(nationality)) {
                 throw new BadRequestException("TRIAL_PASSPORT_FOREIGN_ONLY", "trial.passport.foreign_only", null,
@@ -369,7 +465,6 @@ public class ProfileService {
             }
             member.setNationality(nationality);
         } else {
-            docType = "CCCD";
             if (!CCCD_PATTERN.matcher(citizenId).matches()) {
                 throw new BadRequestException("TRIAL_CCCD_INVALID", "validation.trial.cccd.format", null,
                         "Số Căn cước công dân (CCCD) phải bao gồm 9 hoặc 12 chữ số.");
@@ -393,17 +488,23 @@ public class ProfileService {
             validateDocumentImage(request.backImageUrl());
         }
 
-        member.setDocumentType(docType);
-        // Số được lưu mã hóa; cột đọc được chỉ giữ dạng che.
-        if (kycCrypto != null) {
-            member.setCitizenIdEncrypted(kycCrypto.encrypt(citizenId));
-            member.setCitizenId(KycCrypto.mask(citizenId));
-        } else {
-            member.setCitizenId(citizenId);
+        String normalizedDoc = citizenId.trim().toUpperCase(Locale.ROOT);
+        String docHash = kycCrypto.hash(normalizedDoc);
+        if (memberRepository.existsByCitizenIdHashAndUserIdNotAndUserDeletedAtIsNull(docHash, userId)) {
+            throw new ConflictException("KYC_DOCUMENT_ALREADY_USED", "invariant.duplicate_resource", null,
+                    "This identity document is already registered to another member");
         }
+
+        member.setDocumentType(docType);
+        // Số được lưu mã hóa + băm HMAC chống trùng; cột đọc được chỉ giữ dạng che.
+        member.setCitizenIdEncrypted(kycCrypto.encrypt(normalizedDoc));
+        member.setCitizenIdHash(docHash);
+        member.setCitizenId(KycCrypto.mask(normalizedDoc));
         member.setFrontImageUrl(request.frontImageUrl().trim());
         if (request.backImageUrl() != null && !request.backImageUrl().isBlank()) {
             member.setBackImageUrl(request.backImageUrl().trim());
+        } else {
+            member.setBackImageUrl(null);
         }
         // Giấy tờ tự khai không được tin: quầy duyệt ảnh trước khi hội viên mua gói.
         member.setIdentityVerified(false);

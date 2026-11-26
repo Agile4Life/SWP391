@@ -278,34 +278,56 @@ public class SessionBookingService {
     }
 
     /**
-     * Hủy nhiều lượt đặt chỗ; lượt lỗi được bỏ qua kèm lý do; gửi một thông báo gộp (hoặc thông báo đơn nếu chỉ
-     * hủy một lượt).
+     * Hủy nhiều lượt đặt chỗ: sắp xếp mục tiêu theo {@code (classId, bookingId)} trước khi khóa để tránh deadlock;
+     * lượt lỗi được bỏ qua kèm lý do; gửi thông báo riêng cho từng hội viên bị ảnh hưởng (gộp nếu > 1 lượt).
      */
     @Transactional
     public BulkCancelResult cancelMany(AuthenticatedPrincipal principal, List<Long> bookingIds) {
         List<Long> ids = distinctIds(bookingIds);
         List<SessionBookingDto> cancelled = new ArrayList<>();
         List<Skipped> skipped = new ArrayList<>();
-        Long notifyUser = null;
+        record Target(Long classId, Long bookingId) {}
+        List<Target> targets = new ArrayList<>();
         for (Long id : ids) {
-            try {
-                SessionBooking booking = lockBooking(id);
-                cancelled.add(cancelLocked(principal, booking));
-                notifyUser = booking.getMember().getUserId();
-            } catch (AppException e) {
-                skipped.add(new Skipped(id, null, e.getErrorCode(), reason(e)));
+            Optional<Long> classId = bookings.findClassIdById(id);
+            if (classId.isEmpty()) {
+                skipped.add(new Skipped(id, null, "NOT_FOUND", msg("resource.session_booking")));
+            } else {
+                targets.add(new Target(classId.get(), id));
             }
         }
-        if (!cancelled.isEmpty() && notifyUser != null && cancelled.size() > 1) {
-            notifications.send(notifyUser, msg("notifications.booking.bulk_cancelled.title"),
-                    msg("notifications.booking.bulk_cancelled.body", cancelled.size()), "system", "class_session",
-                    cancelled.get(0).sessionId());
-        } else if (cancelled.size() == 1 && notifyUser != null) {
-            notifications.send(notifyUser, msg("notifications.booking.session_cancelled.title"),
-                    msg("notifications.booking.session_cancelled.body", cancelled.get(0).className(),
-                            cancelled.get(0).sessionDate().toString()),
-                    "system", "class_session", cancelled.get(0).sessionId());
+        targets.sort(Comparator.comparing(Target::classId).thenComparing(Target::bookingId));
+
+        java.util.Map<Long, List<SessionBookingDto>> cancelledByMember = new java.util.LinkedHashMap<>();
+        for (Target target : targets) {
+            try {
+                gymClasses.findByIdForUpdate(target.classId())
+                        .orElseThrow(() -> new ResourceNotFoundException("resource.gym_class", target.classId()));
+                SessionBooking booking = bookings.findByIdForUpdate(target.bookingId())
+                        .orElseThrow(() -> new ResourceNotFoundException("resource.session_booking", target.bookingId()));
+                SessionBookingDto dto = cancelLocked(principal, booking);
+                cancelled.add(dto);
+                Long memberId = booking.getMember() != null ? booking.getMember().getUserId() : null;
+                if (memberId != null) {
+                    cancelledByMember.computeIfAbsent(memberId, k -> new ArrayList<>()).add(dto);
+                }
+            } catch (AppException e) {
+                skipped.add(new Skipped(target.bookingId(), null, e.getErrorCode(), reason(e)));
+            }
         }
+        cancelledByMember.forEach((memberId, items) -> {
+            if (items.size() > 1) {
+                notifications.send(memberId, msg("notifications.booking.bulk_cancelled.title"),
+                        msg("notifications.booking.bulk_cancelled.body", items.size()), "system", "class_session",
+                        items.get(0).sessionId());
+            } else if (items.size() == 1) {
+                SessionBookingDto one = items.get(0);
+                notifications.send(memberId, msg("notifications.booking.session_cancelled.title"),
+                        msg("notifications.booking.session_cancelled.body", one.className(),
+                                one.sessionDate().toString()),
+                        "system", "class_session", one.sessionId());
+            }
+        });
         return new BulkCancelResult(cancelled, skipped);
     }
 

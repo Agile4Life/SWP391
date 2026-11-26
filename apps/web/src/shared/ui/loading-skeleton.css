@@ -7,7 +7,7 @@
   min-width: 0;
 }
 
-:root[data-theme='dark'] .loading-skeleton {
+:root:not([data-theme='light']) .loading-skeleton {
   --loading-fill: var(--portal-raised, #303030);
   --loading-surface: var(--portal-surface, #292929);
   --loading-border: var(--portal-border, #ffffff14);

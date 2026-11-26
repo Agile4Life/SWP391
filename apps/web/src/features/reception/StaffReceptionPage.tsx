@@ -1,4 +1,5 @@
 import { useStaffI18n, type StaffMessage, staffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { sourceMessage } from '../../shared/i18n';
 import { renewalOptionError } from './renewalOptions';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -8,14 +9,18 @@ import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Select } from '../../shared/ui/Select';
 import { Modal } from '../../shared/ui/Modal';
+import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { PaymentInvoice } from './PaymentInvoice';
+import { DocumentImageLightbox, type LightboxImage } from './DocumentImageLightbox';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
+import { formatSlotLabel } from '../schedule/slots';
 import './staff-reception.css';
 import { centerNowParts, formatCenterDate } from '../../shared/lib/centerTime';
 import {
   receptionApi,
   type HoldRequestItem,
   type UnpaidCoachBooking,
+  type UnpaidCourseEnrollmentItem,
   type MemberLookupResult,
   type MembershipPackage,
   type PaymentMethod,
@@ -32,6 +37,7 @@ import { Link } from 'react-router-dom';
  */
 export function StaffReceptionPage() {
   const { t } = useStaffI18n();
+  const [confirm, confirmDialog] = useConfirm();
   const currentUser = getCurrentUser();
 
   // BR-01: Chỉ RECEPTIONIST / STAFF và CENTER_MANAGER / MANAGER được truy cập
@@ -77,10 +83,19 @@ export function StaffReceptionPage() {
   const [ptError, setPtError] = useState<StaffMessage>('');
   const [processingPtId, setProcessingPtId] = useState<number | null>(null);
 
+  // Khóa học nhóm trả phí chờ thu học phí tại quầy
+  const [unpaidCourses, setUnpaidCourses] = useState<UnpaidCourseEnrollmentItem[]>([]);
+  const [loadingCourses, setLoadingCourses] = useState(true);
+  const [courseError, setCourseError] = useState<StaffMessage>('');
+  const [processingCourseId, setProcessingCourseId] = useState<number | null>(null);
+
   // Form thanh toán
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | ''>('cash');
-  const [paymentNotes, setPaymentNotes] = useState('Thanh toán gói tập tại quầy Lễ tân');
+  const defaultPaymentNote = t('Thanh toán gói tập tại quầy Lễ tân', 'Membership payment at the front desk');
+  const [customPaymentNotes, setCustomPaymentNotes] = useState<string | null>(null);
+  const paymentNotes = customPaymentNotes ?? defaultPaymentNote;
   const [isSubmittingPayment, setIsSubmittingPayment] = useState(false);
+  const [zoomImage, setZoomImage] = useState<LightboxImage | null>(null);
   const paymentInFlight = useRef(false);
   const selectedMemberRef = useRef<number | null>(null);
   useEffect(() => { selectedMemberRef.current = selectedMember?.userId ?? null; }, [selectedMember?.userId]);
@@ -149,7 +164,7 @@ export function StaffReceptionPage() {
   const [trialRejectReason, setTrialRejectReason] = useState('');
   const [isSubmittingTrialReject, setIsSubmittingTrialReject] = useState(false);
   const [trialRejectError, setTrialRejectError] = useState<StaffMessage | null>(null);
-  const [todoFilter, setTodoFilter] = useState<'all' | 'plan' | 'pt' | 'trial' | 'hold'>('all');
+  const [todoFilter, setTodoFilter] = useState<'all' | 'plan' | 'course' | 'pt' | 'trial' | 'hold'>('all');
 
   useEffect(() => {
     setReceiptImage(null);
@@ -262,7 +277,7 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
-  // Tải các buổi PT 1:1 chưa thu tiền.
+  // Tải các buổi PT 1:1 chưa thu tiền (luôn xóa ptError khi fetch thành công, kể cả khi poll nền silent).
   const loadUnpaidPt = useCallback(async (silent = false) => {
     if (!hasAccess) return;
     if (!silent) {
@@ -271,6 +286,7 @@ export function StaffReceptionPage() {
     }
     try {
       setUnpaidPt(await receptionApi.getUnpaidCoachBookings());
+      setPtError('');
     } catch (err: unknown) {
       if (!silent) {
         setUnpaidPt([]);
@@ -278,6 +294,26 @@ export function StaffReceptionPage() {
       }
     } finally {
       if (!silent) setLoadingPt(false);
+    }
+  }, [hasAccess]);
+
+  // Tải các ghi danh khóa học nhóm chờ thu học phí tại quầy.
+  const loadUnpaidCourses = useCallback(async (silent = false) => {
+    if (!hasAccess) return;
+    if (!silent) setLoadingCourses(true);
+    try {
+      const items = await receptionApi.getUnpaidCourseEnrollments();
+      setUnpaidCourses(Array.isArray(items) ? items : []);
+      setCourseError('');
+    } catch {
+      setCourseError(
+        staffMessage(
+          'Không thể tải khóa học chờ thu học phí. Vui lòng thử lại.',
+          'Unable to load unpaid course enrollments. Please try again.',
+        ),
+      );
+    } finally {
+      if (!silent) setLoadingCourses(false);
     }
   }, [hasAccess]);
 
@@ -296,25 +332,27 @@ export function StaffReceptionPage() {
     }
   }, [hasAccess]);
 
-  const todoCount = pendingList.length + unpaidPt.length + trialList.length + holdList.length;
-  const loadingTodo = loadingPending || loadingHolds || loadingPt || loadingTrials;
-  const todoErrors = { plan: pendingError, pt: ptError, trial: trialsError, hold: holdsError };
+  const todoCount = pendingList.length + unpaidCourses.length + unpaidPt.length + trialList.length + holdList.length;
+  const loadingTodo = loadingPending || loadingCourses || loadingHolds || loadingPt || loadingTrials;
+  const todoErrors = { plan: pendingError, course: courseError, pt: ptError, trial: trialsError, hold: holdsError };
   const hasTodoError = Object.values(todoErrors).some(Boolean);
-  // Tải lại cả bốn hàng đợi.
+  // Tải lại cả năm hàng đợi.
   const reloadTodo = useCallback(() => Promise.all([
-    loadPendingSubscriptions(), loadPendingHolds(), loadUnpaidPt(), loadPendingTrials(),
-  ]), [loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
+    loadPendingSubscriptions(), loadUnpaidCourses(), loadPendingHolds(), loadUnpaidPt(), loadPendingTrials(),
+  ]), [loadPendingSubscriptions, loadUnpaidCourses, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
 
   useEffect(() => {
     void loadPendingSubscriptions();
+    void loadUnpaidCourses();
     void loadPendingHolds();
     void loadUnpaidPt();
     void loadPendingTrials();
     if (!hasAccess) return;
-    // Đồng bộ ngầm bốn hàng đợi khi tab hiện, trừ lúc đang xử lý thanh toán.
+    // Đồng bộ ngầm năm hàng đợi khi tab hiện, trừ lúc đang xử lý thanh toán.
     const syncQueues = () => {
       if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
       void loadPendingSubscriptions(true);
+      void loadUnpaidCourses(true);
       void loadPendingHolds(true);
       void loadUnpaidPt(true);
       void loadPendingTrials(true);
@@ -329,7 +367,7 @@ export function StaffReceptionPage() {
       window.removeEventListener('online', syncQueues);
       document.removeEventListener('visibilitychange', syncQueues);
     };
-  }, [hasAccess, loadPendingSubscriptions, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
+  }, [hasAccess, loadPendingSubscriptions, loadUnpaidCourses, loadPendingHolds, loadUnpaidPt, loadPendingTrials]);
 
   useEffect(() => {
     let active = true;
@@ -479,13 +517,77 @@ export function StaffReceptionPage() {
   };
 
 
-  // Xác nhận đã thu tiền buổi PT 1:1 theo phương thức đã chọn.
+  // Xác nhận đã thu học phí khóa học nhóm sau khi lễ tân xác nhận hộp thoại.
+  const handleConfirmCoursePayment = async (
+    item: UnpaidCourseEnrollmentItem,
+    method: 'cash' | 'bank_transfer',
+  ) => {
+    if (processingCourseId !== null) return;
+    const methodVi = method === 'cash' ? 'tiền mặt' : 'chuyển khoản';
+    const methodEn = method === 'cash' ? 'cash' : 'bank transfer';
+    const ok = await confirm({
+      title: sourceMessage('Xác nhận thu học phí khóa học?', 'Confirm course tuition payment?'),
+      message: sourceMessage(
+        `Xác nhận đã thu ${formatPrice(item.amount)} (${methodVi}) cho khóa "${item.className}" của hội viên ${item.memberName}?`,
+        `Confirm collecting ${formatPrice(item.amount)} (${methodEn}) for course "${item.className}" from ${item.memberName}?`,
+      ),
+      confirmLabel: sourceMessage('Xác nhận đã thu', 'Confirm payment'),
+      cancelLabel: sourceMessage('Để sau', 'Later'),
+    });
+    if (!ok) return;
+    setProcessingCourseId(item.enrollmentId);
+    try {
+      const settled = await receptionApi.confirmCourseEnrollmentPayment(item.enrollmentId, method);
+      setCompletedPackageName(
+        item.disciplineName ? `${item.className} (${item.disciplineName})` : item.className,
+      );
+      setCompletedMemberName(item.memberName);
+      setCompletedMembershipCode(item.membershipCode ?? null);
+      setCompletedPayment(settled);
+      notify(
+        settled.invoiceNumber
+          ? staffMessage(
+              `Đã thu ${formatPrice(item.amount)} học phí khóa "${item.className}" của ${item.memberName}. Hóa đơn: ${settled.invoiceNumber}`,
+              `Collected ${formatPrice(item.amount)} tuition for "${item.className}" from ${item.memberName}. Invoice: ${settled.invoiceNumber}`,
+            )
+          : staffMessage(
+              `Đã thu ${formatPrice(item.amount)} học phí khóa "${item.className}" của ${item.memberName}.`,
+              `Collected ${formatPrice(item.amount)} tuition for "${item.className}" from ${item.memberName}.`,
+            ),
+        'success',
+        { record: true, destination: '/staff/reception-history' },
+      );
+      await loadUnpaidCourses();
+    } catch (err: unknown) {
+      const msg = errorMessage(err, 'Xác nhận thu học phí khóa học thất bại.');
+      await loadUnpaidCourses();
+      notify(msg, 'error');
+    } finally {
+      setProcessingCourseId(null);
+    }
+  };
+
+  // Xác nhận đã thu tiền buổi PT 1:1 sau khi xác nhận hộp thoại rõ tên hội viên, khung giờ và số tiền.
   const handleConfirmPt = async (item: UnpaidCoachBooking, method: string) => {
     if (processingPtId !== null) return;
+    const methodVi = method === 'cash' ? 'tiền mặt' : 'chuyển khoản';
+    const methodEn = method === 'cash' ? 'cash' : 'bank transfer';
+    const dateText = formatCenterDate(item.bookingDate);
+    const slotText = formatSlotLabel(item.startTime, item.endTime);
+    const ok = await confirm({
+      title: sourceMessage('Xác nhận thu tiền buổi PT 1:1?', 'Confirm 1:1 PT session payment?'),
+      message: sourceMessage(
+        `Xác nhận đã thu ${formatPrice(item.hourlyRate)} (${methodVi}) cho buổi PT 1:1 của hội viên ${item.memberName} với HLV ${item.coachName} (${dateText} · ${slotText})?`,
+        `Confirm collecting ${formatPrice(item.hourlyRate)} (${methodEn}) for ${item.memberName}'s 1:1 PT session with Coach ${item.coachName} (${dateText} · ${slotText})?`,
+      ),
+      confirmLabel: sourceMessage('Xác nhận đã thu', 'Confirm payment'),
+      cancelLabel: sourceMessage('Để sau', 'Later'),
+    });
+    if (!ok) return;
     setProcessingPtId(item.id);
     try {
       await receptionApi.confirmCoachBookingPayment(item.id, method);
-      notify(staffMessage(`Đã thu ${formatPrice(item.hourlyRate)} buổi PT của ${item.memberName} (${formatCenterDate(item.bookingDate)}).`, `Collected ${formatPrice(item.hourlyRate)} PT sessions for ${item.memberName} (${formatCenterDate(item.bookingDate)}).`), 'success', { record: true });
+      notify(staffMessage(`Đã thu ${formatPrice(item.hourlyRate)} buổi PT của ${item.memberName} (${dateText}).`, `Collected ${formatPrice(item.hourlyRate)} for ${item.memberName}'s PT session (${dateText}).`), 'success', { record: true });
       await loadUnpaidPt();
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Xác nhận thu tiền buổi PT thất bại.');
@@ -497,14 +599,30 @@ export function StaffReceptionPage() {
   };
 
 
-  // Duyệt đơn dùng thử.
+  // Duyệt đơn dùng thử 3 ngày sau khi xác nhận rõ việc đồng bộ họ tên tài khoản theo giấy tờ.
   const handleApproveTrial = async (item: ReceptionTrialItem) => {
     if (processingTrialId !== null) return;
+    const docLabelVi = item.documentType === 'PASSPORT' ? 'Hộ chiếu' : 'CCCD';
+    const docLabelEn = item.documentType === 'PASSPORT' ? 'Passport' : 'identity card';
+    const docNumber = item.documentNumber ?? item.documentNumberMasked;
+    const ok = await confirm({
+      title: sourceMessage('Xác nhận duyệt gói trải nghiệm 3 ngày?', 'Confirm 3-day trial approval?'),
+      message: sourceMessage(
+        `Phê duyệt đơn trải nghiệm #${item.id} cho ${item.memberName} (${docLabelVi}: ${docNumber})? Hệ thống sẽ cập nhật họ tên tài khoản thành "${item.documentFullName}" và kích hoạt gói trải nghiệm 3 ngày miễn phí cùng 01 buổi HLV 1:1.`,
+        `Approve trial application #${item.id} for ${item.memberName} (${docLabelEn}: ${docNumber})? This will update the account full name to "${item.documentFullName}" and activate the 3-day trial pass with 1 complimentary 1:1 PT session.`,
+      ),
+      confirmLabel: sourceMessage('Xác nhận duyệt & kích hoạt', 'Confirm approve & activate'),
+      cancelLabel: sourceMessage('Hủy', 'Cancel'),
+    });
+    if (!ok) return;
     setProcessingTrialId(item.id);
     try {
       await receptionApi.approveTrial(item.id);
       notify(
-        staffMessage(`Đã kích hoạt Gói Trải Nghiệm 3 Ngày cho ${item.memberName}. Họ tên đã đồng bộ theo ${item.documentType}: "${item.documentFullName}".`, `Activated the 3-Day Trial for ${item.memberName}. Account name synchronized with ${item.documentType}: "${item.documentFullName}".`),
+        staffMessage(
+          `Đã kích hoạt Gói Trải Nghiệm 3 Ngày cho ${item.memberName}. Họ tên đã đồng bộ theo ${docLabelVi}: "${item.documentFullName}".`,
+          `Activated the 3-Day Trial for ${item.memberName}. Account name synchronized with ${docLabelEn}: "${item.documentFullName}".`,
+        ),
         'success',
         { record: true }
       );
@@ -649,6 +767,38 @@ export function StaffReceptionPage() {
           'The member has not completed identity verification. Ask them to complete verification before registering a membership.'));
         return;
       }
+
+      const targetPackage = selectedPackage;
+      const confirmPkgName = selectedPending?.packageName ?? targetPackage!.name;
+      const confirmAmount = selectedPending?.packagePrice ?? targetPackage!.price;
+      const methodLabelVi = paymentMethod === 'bank_transfer' ? 'chuyển khoản'
+        : paymentMethod === 'pos' ? 'thẻ (POS)'
+          : paymentMethod === 'online_wallet' ? 'ví điện tử' : 'tiền mặt';
+      const methodLabelEn = paymentMethod === 'bank_transfer' ? 'bank transfer'
+        : paymentMethod === 'pos' ? 'card (POS)'
+          : paymentMethod === 'online_wallet' ? 'e-wallet' : 'cash';
+      const actionDescVi = selectedPending
+        ? `yêu cầu #${selectedPending.id} (${confirmPkgName})`
+        : selectedCandidate
+          ? `gia hạn gói "${confirmPkgName}"`
+          : `đăng ký mới gói "${confirmPkgName}"`;
+      const actionDescEn = selectedPending
+        ? `request #${selectedPending.id} (${confirmPkgName})`
+        : selectedCandidate
+          ? `renewal of "${confirmPkgName}"`
+          : `new membership "${confirmPkgName}"`;
+
+      const confirmed = await confirm({
+        title: sourceMessage('Xác nhận thu tiền gói tập?', 'Confirm membership payment?'),
+        message: sourceMessage(
+          `Xác nhận đã thu ${formatPrice(confirmAmount)} (${methodLabelVi}) cho ${actionDescVi} của hội viên ${fresh.fullName}? Hệ thống sẽ kích hoạt gói và xuất hóa đơn ngay lập tức.`,
+          `Confirm collecting ${formatPrice(confirmAmount)} (${methodLabelEn}) for ${actionDescEn} of ${fresh.fullName}? The membership will be activated and an invoice issued immediately.`,
+        ),
+        confirmLabel: sourceMessage('Xác nhận đã thu', 'Confirm payment'),
+        cancelLabel: sourceMessage('Hủy', 'Cancel'),
+      });
+      if (!confirmed) return;
+
       let pending = selectedPending;
       if (!pending && selectedCandidate && selectedPackage) {
         creatingRenewal = true;
@@ -664,7 +814,6 @@ export function StaffReceptionPage() {
         };
         setSelectedPending(pending);
       }
-      const targetPackage = selectedPackage;
       const result = await receptionApi.processPayment({
         memberId: selectedMember.userId,
         subscriptionId: pending?.id,
@@ -694,6 +843,17 @@ export function StaffReceptionPage() {
     } finally {
       paymentInFlight.current = false;
       setIsSubmittingPayment(false);
+    }
+  };
+
+  // Chuyển mã trạng thái tài khoản hội viên sang nhãn VI/EN, không lộ ACTIVE/INACTIVE thô.
+  const formatMemberStatus = (status?: string | null) => {
+    switch ((status ?? '').trim().toUpperCase()) {
+      case 'ACTIVE': return t('Đang hoạt động', 'Active');
+      case 'INACTIVE': return t('Ngưng hoạt động', 'Inactive');
+      case 'SUSPENDED': return t('Tạm khóa', 'Suspended');
+      case 'PENDING_PAYMENT': return t('Chờ thanh toán', 'Awaiting payment');
+      default: return status || '—';
     }
   };
 
@@ -753,7 +913,7 @@ export function StaffReceptionPage() {
                     <button data-i18n-managed
                       key={m.userId}
                       type="button"
-                      className={`btn-secondary btn-sm ${selectedMember?.userId === m.userId ? 'btn-primary' : ''}`}
+                      className={selectedMember?.userId === m.userId ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
                       onClick={() => {
                         ++selectionVersion.current;
                         setIsSearching(false);
@@ -763,7 +923,7 @@ export function StaffReceptionPage() {
                         setSelectedPending(pendingList.find((p) => p.memberId === m.userId) ?? null);
                       }}
                     >
-                      {m.fullName} ({m.membershipCode || m.phone})
+                      {m.fullName} ({m.membershipCode || m.phone || t('Chưa cấp thẻ', 'No card issued')})
                     </button>
                   ))}
                 </div>
@@ -785,6 +945,7 @@ export function StaffReceptionPage() {
                 {[
                   { key: 'all' as const, label: t('Tất cả', 'All'), count: todoCount },
                   { key: 'plan' as const, label: t('Gói tập', 'Packages'), count: pendingList.length },
+                  { key: 'course' as const, label: t('Khóa học', 'Courses'), count: unpaidCourses.length },
                   { key: 'pt' as const, label: t('Buổi PT', 'PT sessions'), count: unpaidPt.length },
                   { key: 'trial' as const, label: t('Trải nghiệm', 'Trials'), count: trialList.length },
                   { key: 'hold' as const, label: t('Bảo lưu', 'Holds'), count: holdList.length },
@@ -808,6 +969,7 @@ export function StaffReceptionPage() {
               {/* Mỗi hàng chờ có lỗi và nút thử lại riêng; không che dữ liệu của các nhóm đã tải thành công. */}
               {[
                 { key: 'plan', error: pendingError, loading: loadingPending, retry: loadPendingSubscriptions, label: t('Tải lại gói tập chờ thanh toán', 'Reload pending memberships') },
+                { key: 'course', error: courseError, loading: loadingCourses, retry: loadUnpaidCourses, label: t('Tải lại khóa học chờ thu học phí', 'Reload unpaid course enrollments') },
                 { key: 'trial', error: trialsError, loading: loadingTrials, retry: loadPendingTrials, label: t('Tải lại yêu cầu dùng thử', 'Reload trial requests') },
                 { key: 'hold', error: holdsError, loading: loadingHolds, retry: loadPendingHolds, label: t('Tải lại yêu cầu bảo lưu', 'Reload hold requests') },
               ].map((queue) => queue.error && (todoFilter === 'all' || todoFilter === queue.key) && (
@@ -899,7 +1061,7 @@ export function StaffReceptionPage() {
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', minWidth: 0 }}>
                             <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                              <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--portal-paper)', whiteSpace: 'nowrap' }}>
+                              <div style={{ fontWeight: 700, fontSize: '1.05rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)', whiteSpace: 'nowrap' }}>
                                 {formatPrice(item.packagePrice)}
                               </div>
                               <span className="badge badge-neutral" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
@@ -918,8 +1080,8 @@ export function StaffReceptionPage() {
                             </button>
                             <button
                               type="button"
-                              className="btn-secondary btn-sm"
-                              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)', whiteSpace: 'nowrap', flexShrink: 0 }}
+                              className="btn-danger btn-sm"
+                              style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
                               disabled={cancellingPendingId !== null || isSubmittingPayment}
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -927,6 +1089,76 @@ export function StaffReceptionPage() {
                               }}
                             >
                               {cancellingPendingId === item.id ? t('Đang hủy...') : t('Hủy yêu cầu')}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                ))}
+
+              {(todoFilter === 'all' || todoFilter === 'course') && (loadingCourses ? (
+                  <LoadingSkeleton label={t('Đang tải khóa học chờ thu học phí…', 'Loading unpaid course enrollments…')} count={2} />
+                ) : (
+                  <>
+                    {unpaidCourses.map((item) => {
+                      const isBusy = processingCourseId === item.enrollmentId;
+                      return (
+                        <div
+                          data-i18n-managed
+                          key={item.enrollmentId}
+                          data-testid={`unpaid-course-${item.enrollmentId}`}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '14px',
+                            padding: '16px 18px',
+                            borderRadius: '10px',
+                            border: '1px solid var(--portal-border-strong)',
+                            backgroundColor: 'var(--portal-raised)',
+                          }}
+                        >
+                          <div style={{ flex: 1, minWidth: 240 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="reception-todo__tag reception-todo__tag--course">{t('Khóa học', 'Courses')}</span>
+                              <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700, color: 'var(--portal-salmon)', fontSize: '0.92rem' }}>
+                                {t('Khóa học #', 'Course #')}{item.enrollmentId}
+                              </span>
+                              <strong>{item.memberName}</strong>
+                              <span style={{ color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
+                                ({item.membershipCode || `MB-${item.memberId}`}{item.memberPhone ? ` • ${item.memberPhone}` : ''})
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
+                              <strong>{item.className}</strong>
+                              {item.disciplineName ? ` • ${item.disciplineName}` : ''}
+                              {item.startDate && item.endDate
+                                ? ` • ${formatCenterDate(item.startDate)} → ${formatCenterDate(item.endDate)}`
+                                : ''}
+                              {' • '}
+                              <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(item.amount)}</strong>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="btn-primary btn-sm"
+                              data-testid={`confirm-course-cash-${item.enrollmentId}`}
+                              disabled={processingCourseId !== null}
+                              onClick={() => void handleConfirmCoursePayment(item, 'cash')}
+                            >
+                              {isBusy ? t('Đang xử lý...') : t('Đã thu tiền mặt')}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-secondary btn-sm"
+                              data-testid={`confirm-course-transfer-${item.enrollmentId}`}
+                              disabled={processingCourseId !== null}
+                              onClick={() => void handleConfirmCoursePayment(item, 'bank_transfer')}
+                            >
+                              {isBusy ? t('Đang xử lý...') : t('Đã nhận chuyển khoản')}
                             </button>
                           </div>
                         </div>
@@ -970,9 +1202,9 @@ export function StaffReceptionPage() {
                               <strong>{item.memberName}</strong>
                               {item.status === 'completed' && <span className="badge badge-warning">{t("ĐÃ TẬP")}</span>}
                             </div>
-                            <div style={{ fontSize: '0.88rem', color: 'var(--portal-paper)', marginTop: '6px' }}>
-                              {t("HLV")}{item.coachName} • {item.bookingDate} {item.startTime.slice(0, 5)}–{item.endTime.slice(0, 5)} •{' '}
-                              <strong>{formatPrice(item.hourlyRate)}</strong>
+                            <div style={{ fontSize: '0.88rem', fontVariantNumeric: 'tabular-nums', color: 'var(--portal-paper)', marginTop: '6px' }}>
+                              {t('HLV', 'Coach')} {item.coachName} • {formatCenterDate(item.bookingDate)} · {formatSlotLabel(item.startTime, item.endTime)} •{' '}
+                              <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(item.hourlyRate)}</strong>
                             </div>
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
@@ -1057,8 +1289,10 @@ export function StaffReceptionPage() {
                                   fontWeight: 700,
                                   padding: '2px 8px',
                                   borderRadius: '99px',
-                                  background: item.documentType === 'PASSPORT' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(234, 88, 12, 0.15)',
-                                  color: item.documentType === 'PASSPORT' ? '#2563eb' : 'var(--portal-salmon)',
+                                  background: item.documentType === 'PASSPORT'
+                                    ? 'color-mix(in srgb, var(--portal-info) 15%, transparent)'
+                                    : 'var(--portal-tint)',
+                                  color: item.documentType === 'PASSPORT' ? 'var(--portal-info)' : 'var(--sol-accent-text)',
                                 }}
                               >
                                 {item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Foreign'})`) : t('CCCD', 'Identity card')}
@@ -1075,14 +1309,14 @@ export function StaffReceptionPage() {
                                   </span>
                                 )}
                               </div>
-                              <div>
+                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 <strong>{t("Số giấy tờ:")}</strong> {item.documentNumber ?? item.documentNumberMasked}
                                 {item.nationality && t(` • Quốc tịch: ${item.nationality}`, ` • Nationality: ${item.nationality}`)}
                               </div>
-                              <div>
+                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 <strong>{t("Email/SĐT:")}</strong> {item.memberEmail} {item.memberPhone ? `• ${item.memberPhone}` : ''}
                               </div>
-                              <div>
+                              <div style={{ fontVariantNumeric: 'tabular-nums' }}>
                                 <strong>{t("Thời gian nộp:")}</strong> {formatCenterDate(item.requestedAt)}
                               </div>
                             </div>
@@ -1105,8 +1339,7 @@ export function StaffReceptionPage() {
                             </button>
                             <button
                               type="button"
-                              className="btn-secondary btn-sm"
-                              style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                              className="btn-danger btn-sm"
                               disabled={isBusy}
                               onClick={() => handleOpenRejectTrial(item)}
                             >
@@ -1205,6 +1438,7 @@ export function StaffReceptionPage() {
               )}
               {!loadingTodo && todoCount > 0 && todoFilter !== 'all' && (
                 (todoFilter === 'plan' && pendingList.length === 0 && !pendingError)
+                || (todoFilter === 'course' && unpaidCourses.length === 0 && !courseError)
                 || (todoFilter === 'pt' && unpaidPt.length === 0 && !ptError)
                 || (todoFilter === 'trial' && trialList.length === 0 && !trialsError)
                 || (todoFilter === 'hold' && holdList.length === 0 && !holdsError)
@@ -1228,7 +1462,7 @@ export function StaffReceptionPage() {
             <h2 className="portal-card-title">{t("Thông tin hội viên")}</h2>
             {selectedMember && (
               <span data-i18n-managed className={`badge ${selectedMember.status?.toUpperCase() === 'ACTIVE' ? 'badge-success' : 'badge-neutral'}`}>
-                {selectedPending ? t('CHỜ THANH TOÁN') : selectedMember.status?.toUpperCase()}
+                {selectedPending ? t('CHỜ THANH TOÁN', 'AWAITING PAYMENT') : formatMemberStatus(selectedMember.status)}
               </span>
             )}
           </div>
@@ -1244,13 +1478,13 @@ export function StaffReceptionPage() {
                 <div className="kv-row">
                   <span>{t("Mã hội viên")}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-                    {selectedMember.membershipCode || `MB-2026-${String(selectedMember.userId).padStart(3, '0')}`}
+                    {selectedMember.membershipCode || t('Chưa cấp thẻ', 'No card issued')}
                   </span>
                 </div>
 
                 <div className="kv-row">
                   <span>{t("Số điện thoại")}</span>
-                  <strong>{selectedMember.phone || t('Chưa cập nhật')}</strong>
+                  <strong style={{ fontVariantNumeric: 'tabular-nums' }}>{selectedMember.phone || t('Chưa cập nhật')}</strong>
                 </div>
 
                 <div className="kv-row">
@@ -1259,7 +1493,13 @@ export function StaffReceptionPage() {
                 </div>
 
                 <div className="kv-row" data-testid="pos-kyc-status"><span>{t('Trạng thái KYC', 'Identity verification')}</span><span>
-                  {selectedMember.kycStatus === 'PENDING' ? t('Chờ duyệt', 'Pending review') : selectedMember.kycStatus === 'REJECTED' ? t('Bị từ chối', 'Rejected') : selectedMember.identityVerified ? t('Đã xác thực', 'Verified') : t('Chưa xác thực', 'Not verified')}
+                  {selectedMember.kycStatus === 'PENDING'
+                      ? t('Chờ duyệt', 'Pending review')
+                      : selectedMember.kycStatus === 'REJECTED'
+                        ? t('Bị từ chối', 'Rejected')
+                        : selectedMember.identityVerified
+                          ? t('Đã xác thực', 'Verified')
+                          : t('Chưa xác thực', 'Not verified')}
                 </span></div>
                 {/* BR-05: CCCD được che một phần (masked) */}
                 <div className="kv-row">
@@ -1282,7 +1522,7 @@ export function StaffReceptionPage() {
 
                 <div className="kv-row">
                   <span>{t("Thời hạn gói")}</span>
-                  <span style={{ color: 'var(--portal-salmon)', fontWeight: 600 }}>
+                  <span style={{ color: 'var(--portal-salmon)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
                     {selectedPending
                       ? t(`${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} ngày)`, `${formatCenterDate(selectedPending.startDate)} → ${formatCenterDate(selectedPending.endDate)} (${selectedPending.durationDays} days)`)
                       : activeCandidate
@@ -1294,7 +1534,7 @@ export function StaffReceptionPage() {
                 <div className="kv-row" style={{ alignItems: 'center' }}>
                   <span>{t('Số dư Ví SÖL', 'SÖL Wallet balance')}</span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                    <strong data-testid="member-wallet-balance" style={{ color: 'var(--portal-salmon, #fb923c)', fontSize: '0.96rem' }}>
+                    <strong data-testid="member-wallet-balance" style={{ color: 'var(--sol-accent-text)', fontSize: '0.96rem', fontVariantNumeric: 'tabular-nums' }}>
                       {walletBalanceContent}
                     </strong>
                     <button
@@ -1311,13 +1551,23 @@ export function StaffReceptionPage() {
                 {selectedPending && receiptImage && (
                   <div data-i18n-managed className="kv-row" style={{ display: 'block' }}>
                     <span>{t("Ảnh hóa đơn hội viên đã gửi")}</span>
-                    <a href={receiptImage} target="_blank" rel="noreferrer">
+                    <button
+                      type="button"
+                      className="document-photo-trigger"
+                      style={{ marginTop: 8 }}
+                      aria-label={t('Phóng to ảnh hóa đơn thanh toán tiền mặt', 'Zoom cash payment receipt image')}
+                      onClick={() => setZoomImage({
+                        url: receiptImage,
+                        title: t('Ảnh hóa đơn hội viên đã gửi', "Member's submitted receipt image"),
+                        alt: t('Ảnh hóa đơn thanh toán tiền mặt', 'Cash payment receipt image'),
+                      })}
+                    >
                       <img
                         src={receiptImage}
                         alt={t("Ảnh hóa đơn thanh toán tiền mặt")}
-                        style={{ display: 'block', marginTop: 8, maxWidth: '100%', maxHeight: 280, borderRadius: 8 }}
                       />
-                    </a>
+                      <span className="document-photo-trigger__caption">{t('Bấm để phóng to', 'Click to zoom')}</span>
+                    </button>
                   </div>
                 )}
               </div>
@@ -1328,8 +1578,7 @@ export function StaffReceptionPage() {
                     {t("Hủy gói & hoàn tiền về Ví (Quản lý duyệt):")}</span>
                   <button
                     type="button"
-                    className="btn-secondary btn-sm"
-                    style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                    className="btn-danger btn-sm"
                     onClick={handleOpenCancelModal}
                   >
                     {t("Yêu cầu hủy gói & hoàn tiền")}</button>
@@ -1365,7 +1614,10 @@ export function StaffReceptionPage() {
               </label>
               {selectedPending ? (
                 <input data-i18n-managed id="pos-package" type="text" className="portal-input"
-                  value={`${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`}
+                  value={t(
+                    `${selectedPending.packageName} (${selectedPending.durationDays} ngày — Yêu cầu #${selectedPending.id})`,
+                    `${selectedPending.packageName} (${selectedPending.durationDays} days — Request #${selectedPending.id})`,
+                  )}
                   disabled readOnly />
               ) : loadingOffers ? <LoadingSkeleton label={t("Đang tải gói tập và lựa chọn gia hạn…")} count={1} /> : (
                 <Select id="pos-package" className="portal-select" value={selectedOffer}
@@ -1413,6 +1665,7 @@ export function StaffReceptionPage() {
                   style={{
                     fontWeight: 700,
                     fontSize: '1rem',
+                    fontVariantNumeric: 'tabular-nums',
                     color: 'var(--portal-salmon)',
                     backgroundColor: 'var(--portal-raised)',
                     cursor: 'not-allowed',
@@ -1445,7 +1698,7 @@ export function StaffReceptionPage() {
                 className="portal-input"
                 placeholder={t("Ghi chú thêm về giao dịch...")}
                 value={paymentNotes}
-                onChange={(e) => setPaymentNotes(e.target.value)}
+                onChange={(e) => setCustomPaymentNotes(e.target.value)}
                 disabled={isSubmittingPayment}
               />
             </div>
@@ -1479,10 +1732,10 @@ export function StaffReceptionPage() {
           <form onSubmit={(e) => void handleSubmitCounterTopup(e)} style={{ display: 'grid', gap: '14px' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
               {t('Hội viên: ', 'Member: ')}
-              <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
+              <strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || t('Chưa cấp thẻ', 'No card issued')})
               <br />
               {t('Số dư hiện tại: ', 'Current balance: ')}
-              <strong style={{ color: 'var(--portal-salmon, #fb923c)' }}>
+              <strong style={{ color: 'var(--sol-accent-text)', fontVariantNumeric: 'tabular-nums' }}>
                 {walletBalanceContent}
               </strong>
             </div>
@@ -1551,7 +1804,7 @@ export function StaffReceptionPage() {
                 disabled={isSubmittingTopup}
                 onClick={() => setIsTopupModalOpen(false)}
               >
-                {t('Đóng', 'Close')}
+                {t('Hủy', 'Cancel')}
               </button>
               <button
                 type="submit"
@@ -1574,7 +1827,7 @@ export function StaffReceptionPage() {
         >
           <form onSubmit={(e) => void handleSubmitCancellationRequest(e)} style={{ display: 'grid', gap: '14px' }}>
             <div style={{ fontSize: '0.9rem', color: 'var(--portal-muted)' }}>
-              {t("Hội viên: ")}<strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || `MB-${selectedMember.userId}`})
+              {t("Hội viên: ")}<strong>{selectedMember.fullName}</strong> ({selectedMember.membershipCode || t('Chưa cấp thẻ', 'No card issued')})
               {activeCandidate && (
                 <>
                   <br data-i18n-managed />
@@ -1588,7 +1841,7 @@ export function StaffReceptionPage() {
                 {t("Lý do hủy gói tập (bắt buộc trình Quản lý) *")}</label>
               <textarea
                 id="reception-cancel-reason"
-                className="portal-input"
+                className="portal-textarea"
                 rows={4}
                 maxLength={500}
                 required
@@ -1629,7 +1882,7 @@ export function StaffReceptionPage() {
                 disabled={isSubmittingCancel}
                 onClick={() => setIsCancelModalOpen(false)}
               >
-                {t("Đóng")}</button>
+                {t('Hủy', 'Cancel')}</button>
               <button
                 type="submit"
                 className="btn-primary"
@@ -1653,11 +1906,11 @@ export function StaffReceptionPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', fontSize: '0.9rem' }}>
               <div>
                 <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Hội viên")}</span>
-                <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || t('Chưa cấp thẻ')})
+                <strong>{inspectingTrial.memberName}</strong> ({inspectingTrial.membershipCode || t('Chưa cấp thẻ', 'No card issued')})
               </div>
               <div>
                 <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Loại giấy tờ")}</span>
-                <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Foreign'})`) : t('Căn cước công dân (CCCD)')}</strong>
+                <strong>{inspectingTrial.documentType === 'PASSPORT' ? t(`Hộ chiếu (${inspectingTrial.nationality || 'Nước ngoài'})`, `Passport (${inspectingTrial.nationality || 'Foreign'})`) : t('Căn cước công dân (CCCD)', 'Identity card')}</strong>
               </div>
               <div>
                 <span style={{ color: 'var(--portal-muted)', display: 'block', fontSize: '0.8rem' }}>{t("Số giấy tờ")}</span>
@@ -1681,8 +1934,8 @@ export function StaffReceptionPage() {
             >
               <strong>{t("Lưu ý nghiệp vụ:")}</strong> {t(" Khi Lễ tân bấm ")}<strong>{t("Duyệt & Kích hoạt")}</strong>{t(", hệ thống sẽ tự động đồng bộ họ tên tài khoản thành ")}<strong>&quot;{inspectingTrial.documentFullName}&quot;</strong> {t(" và kích hoạt gói 3 ngày tập cùng 01 buổi tập HLV 1:1 miễn phí.")}</div>
 
-            {/* Ảnh mặt trước & mặt sau */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginTop: '4px' }}>
+            {/* Ảnh mặt trước & mặt sau: lưới responsive & phóng to bằng Lightbox */}
+            <div className="document-photo-grid" style={{ marginTop: '4px' }}>
               <div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--portal-muted)' }}>
                   {t('Ảnh mặt trước (', 'Front photo (')}
@@ -1690,13 +1943,22 @@ export function StaffReceptionPage() {
                   {')'}
                 </div>
                 {inspectingTrial.frontImageUrl ? (
-                  <div data-i18n-managed style={{ border: '1px solid var(--portal-border-strong)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img data-i18n-managed
+                  <button
+                    type="button"
+                    className="document-photo-trigger"
+                    aria-label={t('Phóng to ảnh mặt trước giấy tờ', 'Zoom front document image')}
+                    onClick={() => setZoomImage({
+                      url: inspectingTrial.frontImageUrl!,
+                      title: `${inspectingTrial.memberName} · ${t('Mặt trước', 'Front')}`,
+                      alt: t('Mặt trước giấy tờ', 'Front of document'),
+                    })}
+                  >
+                    <img
                       src={inspectingTrial.frontImageUrl}
-                      alt={t("Mặt trước giấy tờ")}
-                      style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }}
+                      alt={t("Mặt trước giấy tờ", "Front of document")}
                     />
-                  </div>
+                    <span className="document-photo-trigger__caption">{t('Bấm để phóng to', 'Click to zoom')}</span>
+                  </button>
                 ) : (
                   <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--portal-surface)', borderRadius: '8px', border: '1px dashed var(--portal-border-strong)', color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                     {t("Chưa có ảnh mặt trước")}</div>
@@ -1705,16 +1967,27 @@ export function StaffReceptionPage() {
 
               <div>
                 <div style={{ fontSize: '0.82rem', fontWeight: 600, marginBottom: '6px', color: 'var(--portal-muted)' }}>
-                  {t("Ảnh mặt sau (")}{inspectingTrial.documentType === 'PASSPORT' ? t('Trang thị thực (tùy chọn)') : t('Mặt sau CCCD')})
+                  {t('Ảnh mặt sau (', 'Back photo (')}
+                  {inspectingTrial.documentType === 'PASSPORT' ? t('Trang thị thực (tùy chọn)', 'Visa page (optional)') : t('Mặt sau CCCD', 'Back of identity card')}
+                  {')'}
                 </div>
                 {inspectingTrial.backImageUrl ? (
-                  <div data-i18n-managed style={{ border: '1px solid var(--portal-border-strong)', borderRadius: '8px', overflow: 'hidden', maxHeight: 220, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#000' }}>
-                    <img data-i18n-managed
+                  <button
+                    type="button"
+                    className="document-photo-trigger"
+                    aria-label={t('Phóng to ảnh mặt sau giấy tờ', 'Zoom back document image')}
+                    onClick={() => setZoomImage({
+                      url: inspectingTrial.backImageUrl!,
+                      title: `${inspectingTrial.memberName} · ${t('Mặt sau', 'Back')}`,
+                      alt: t('Mặt sau giấy tờ', 'Back of document'),
+                    })}
+                  >
+                    <img
                       src={inspectingTrial.backImageUrl}
-                      alt={t("Mặt sau giấy tờ")}
-                      style={{ maxWidth: '100%', maxHeight: 220, objectFit: 'contain' }}
+                      alt={t("Mặt sau giấy tờ", "Back of document")}
                     />
-                  </div>
+                    <span className="document-photo-trigger__caption">{t('Bấm để phóng to', 'Click to zoom')}</span>
+                  </button>
                 ) : (
                   <div data-i18n-managed style={{ padding: '30px 10px', textAlign: 'center', background: 'var(--portal-surface)', borderRadius: '8px', border: '1px dashed var(--portal-border-strong)', color: 'var(--portal-muted)', fontSize: '0.85rem' }}>
                     {t("Chưa có ảnh mặt sau")}</div>
@@ -1725,8 +1998,7 @@ export function StaffReceptionPage() {
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', borderTop: '1px solid var(--portal-border-strong)', paddingTop: '14px' }}>
               <button
                 type="button"
-                className="btn-secondary"
-                style={{ color: 'var(--portal-danger, #fca5a5)', borderColor: 'var(--portal-danger, #fca5a5)' }}
+                className="btn-danger"
                 disabled={processingTrialId === inspectingTrial.id}
                 onClick={() => handleOpenRejectTrial(inspectingTrial)}
               >
@@ -1760,11 +2032,11 @@ export function StaffReceptionPage() {
                 {t("Lý do từ chối *")}</label>
               <textarea
                 id="trial-reject-reason"
-                className="portal-input"
+                className="portal-textarea"
                 rows={3}
                 maxLength={500}
                 required
-                placeholder={t("Vd: ảnh mờ, số CCCD không khớp bản gốc")}
+                placeholder={t("Vd: ảnh mờ, số giấy tờ không khớp bản gốc", "e.g. blurry photo, document number does not match")}
                 value={trialRejectReason}
                 onChange={(e) => setTrialRejectReason(e.target.value)}
                 disabled={isSubmittingTrialReject}
@@ -1788,8 +2060,7 @@ export function StaffReceptionPage() {
                 {t("Hủy")}</button>
               <button
                 type="submit"
-                className="btn-primary"
-                style={{ background: 'var(--portal-danger, #ef4444)' }}
+                className="btn-danger"
                 disabled={isSubmittingTrialReject}
               >
                 {isSubmittingTrialReject ? t('Đang từ chối…') : t('Xác nhận từ chối')}
@@ -1810,6 +2081,8 @@ export function StaffReceptionPage() {
           onClose={() => setCompletedPayment(null)}
         />
       )}
+      <DocumentImageLightbox image={zoomImage} onClose={() => setZoomImage(null)} />
+      {confirmDialog}
       {cancelPendingItem && (
         <Modal title={t('Hủy yêu cầu gói tập?', 'Cancel this membership request?')}
           onClose={() => { if (!cancelPendingInFlight.current) setCancelPendingItem(null); }} busy={cancellingPendingId !== null}>

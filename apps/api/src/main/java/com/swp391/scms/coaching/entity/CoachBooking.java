@@ -70,7 +70,7 @@ public class CoachBooking {
     private String notes;
 
     @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now(com.swp391.scms.common.CenterTime.ZONE);
 
     /** Thời điểm hội viên được ghi nhận đến buổi tập (quét cổng hoặc lượt vào cổng bao phủ buổi tập); null nếu chưa có. */
     @Column(name = "attended_at")

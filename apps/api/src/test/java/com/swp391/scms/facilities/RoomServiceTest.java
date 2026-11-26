@@ -107,4 +107,25 @@ class RoomServiceTest {
         when(rooms.findById(9L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class, () -> service.delete(9L));
     }
+
+    /** Kiểm thử P2-BE-23: từ chối giảm sức chứa phòng thấp hơn sức chứa của lớp đang active trong phòng. */
+    @Test
+    void updateRejectsCapacityBelowMaxActiveClassCapacity() {
+        Room room = new Room();
+        room.setName("Zen Garden Studio");
+        room.setCapacity(20);
+        var classes = org.mockito.Mockito.mock(com.swp391.scms.scheduling.repository.GymClassRepository.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "classes", classes);
+        when(rooms.findById(1L)).thenReturn(Optional.of(room));
+        when(classes.findMaxCapacityByRoomIdAndStatus(1L, "active")).thenReturn(16);
+
+        var ex = assertThrows(com.swp391.scms.common.exception.BadRequestException.class,
+                () -> service.update(1L, new RoomRequest("Zen Garden Studio", "L2", 12, "available")));
+        assertEquals("SCHEDULING_CAPACITY_EXCEEDS_ROOM", ex.getErrorCode());
+        assertEquals(20, room.getCapacity());
+
+        // Đặt sức chứa >= max lớp active thì cho phép
+        var updated = service.update(1L, new RoomRequest("Zen Garden Studio", "L2", 16, "available"));
+        assertEquals(16, updated.capacity());
+    }
 }

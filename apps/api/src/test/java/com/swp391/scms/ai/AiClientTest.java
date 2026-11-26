@@ -63,10 +63,30 @@ class AiClientTest {
         ReflectionTestUtils.setField(config, "provider", "openai");
         ReflectionTestUtils.setField(config, "apiKey", "");
         ReflectionTestUtils.setField(config, "model", "gpt-4o-mini");
+        ReflectionTestUtils.setField(config, "dotEnvSupplier", (java.util.function.Supplier<java.util.Map<String, String>>) java.util.Map::of);
 
         AiClient client = config.aiClient();
         assertNotNull(client);
         assertEquals("mock", client.getProviderName());
+    }
+
+    /** Kiểm thử: AiClientConfig đọc API key từ .env độc lập với provider đã cấu hình (P2-BE-54). */
+    @Test
+    @DisplayName("AiClientConfig should resolve .env API key even when provider is explicitly configured")
+    void testAiClientConfigResolvesDotEnvApiKeyWhenProviderIsExplicit() {
+        AiClientConfig config = new AiClientConfig();
+        ReflectionTestUtils.setField(config, "provider", "gemini");
+        ReflectionTestUtils.setField(config, "apiKey", "");
+        ReflectionTestUtils.setField(config, "model", "");
+        ReflectionTestUtils.setField(config, "dotEnvSupplier",
+                (java.util.function.Supplier<java.util.Map<String, String>>) () -> java.util.Map.of(
+                        "SCMS_AI_API_KEY", "dotenv-gemini-key",
+                        "SCMS_AI_MODEL", "gemini-3-flash-preview"));
+
+        AiClient client = config.aiClient();
+        assertInstanceOf(GeminiRestClient.class, client);
+        assertEquals("gemini", client.getProviderName());
+        assertEquals("gemini-3-flash-preview", client.getModelName());
     }
 
     /** Kiểm thử: OpenAiRestClient gọi HTTP đúng. */

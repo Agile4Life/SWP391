@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,6 +62,11 @@ class AiChatServiceTest {
     @Mock
     private AiChatProvider chatProvider;
 
+    private static final java.time.Clock FIXED_CLOCK = java.time.Clock.fixed(
+            java.time.Instant.parse("2026-11-26T03:00:00Z"),
+            com.swp391.scms.common.CenterTime.ZONE);
+    private static final LocalDateTime FIXED_NOW = LocalDateTime.now(FIXED_CLOCK);
+
     private AiChatService aiChatService;
     private Member member;
     private AiChatSession session;
@@ -80,7 +86,7 @@ class AiChatServiceTest {
         ReflectionTestUtils.setField(session, "id", 500L);
         session.setMember(member);
         session.setTopic("Giảm mỡ & Dinh dưỡng");
-        session.setStartedAt(LocalDateTime.now().minusMinutes(5));
+        session.setStartedAt(FIXED_NOW.minusMinutes(5));
     }
 
     /** Kiểm thử: tạo phiên lưu và trả DTO phiên. */
@@ -111,11 +117,11 @@ class AiChatServiceTest {
     @Test
     void sendMessage_RejectsTheSixteenthMessageInTenMinutesBeforeCallingTheProviderOrSavingAnything() {
         var limiter = new com.swp391.scms.ai.service.AiChatRateLimiter(messageRepository, 15, java.time.Duration.ofMinutes(10),
-                java.time.Clock.systemDefaultZone());
+                FIXED_CLOCK);
         ReflectionTestUtils.setField(aiChatService, "rateLimiter", limiter);
         // Đã có 15 tin nhắn của hội viên được gửi trong 10 phút gần nhất.
         List<LocalDateTime> recent = new java.util.ArrayList<>();
-        for (int i = 0; i < 15; i++) recent.add(LocalDateTime.now().minusMinutes(9).plusSeconds(i));
+        for (int i = 0; i < 15; i++) recent.add(FIXED_NOW.minusMinutes(9).plusSeconds(i));
         when(messageRepository.memberMessageTimesSince(eq(100L), any())).thenReturn(recent);
 
         var thrown = assertThrows(com.swp391.scms.common.exception.TooManyRequestsException.class,
@@ -130,10 +136,10 @@ class AiChatServiceTest {
     @Test
     void sendMessage_AllowsTheFifteenthMessageAndFreesItsSlotWhenTheProviderFails() {
         var limiter = new com.swp391.scms.ai.service.AiChatRateLimiter(messageRepository, 15, java.time.Duration.ofMinutes(10),
-                java.time.Clock.systemDefaultZone());
+                FIXED_CLOCK);
         ReflectionTestUtils.setField(aiChatService, "rateLimiter", limiter);
         List<LocalDateTime> recent = new java.util.ArrayList<>();
-        for (int i = 0; i < 14; i++) recent.add(LocalDateTime.now().minusMinutes(5).plusSeconds(i));
+        for (int i = 0; i < 14; i++) recent.add(FIXED_NOW.minusMinutes(5).plusSeconds(i));
         when(messageRepository.memberMessageTimesSince(eq(100L), any())).thenReturn(recent);
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
         when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of());
@@ -240,14 +246,14 @@ class AiChatServiceTest {
         m1.setSession(session);
         m1.setSender("member");
         m1.setMessage("Xin chào");
-        m1.setCreatedAt(LocalDateTime.now().minusMinutes(2));
+        m1.setCreatedAt(FIXED_NOW.minusMinutes(2));
 
         AiChatMessage m2 = new AiChatMessage();
         ReflectionTestUtils.setField(m2, "id", 2L);
         m2.setSession(session);
         m2.setSender("ai");
         m2.setMessage("Chào bạn!");
-        m2.setCreatedAt(LocalDateTime.now().minusMinutes(1));
+        m2.setCreatedAt(FIXED_NOW.minusMinutes(1));
 
         when(sessionRepository.findById(500L)).thenReturn(Optional.of(session));
         when(messageRepository.findBySessionIdOrderByCreatedAtAscIdAsc(500L)).thenReturn(List.of(m1, m2));
@@ -352,7 +358,7 @@ class AiChatServiceTest {
         AiChatSession desk = new AiChatSession();
         ReflectionTestUtils.setField(desk, "id", 600L);
         desk.setStaffUser(staff);
-        desk.setStartedAt(LocalDateTime.now());
+        desk.setStartedAt(FIXED_NOW);
         return desk;
     }
 
@@ -426,5 +432,11 @@ class AiChatServiceTest {
             assertTrue(prompt.contains("Khi từ chối"));
         }
         assertTrue(AiChatService.SYSTEM_PROMPT.contains("thông tin của hội viên khác"));
+        assertFalse(AiChatService.SYSTEM_PROMPT.contains("mỗi bộ môn một lớp đang hoạt động"));
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("Phòng Gym Tiêu chuẩn"));
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("Phòng Gym VIP"));
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("Zen Garden Studio"));
+        assertTrue(AiChatService.SYSTEM_PROMPT.contains("Ring Arena 01"));
+        assertTrue(AiChatService.STAFF_SYSTEM_PROMPT.contains("Phòng Gym VIP"));
     }
 }

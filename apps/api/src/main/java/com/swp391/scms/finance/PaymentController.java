@@ -49,11 +49,18 @@ public class PaymentController {
         return messageService != null ? messageService.getMessage(key) : key;
     }
 
+    /** Overload tương thích cho test bảo mật gọi trực tiếp không qua MVC. */
+    public ResponseEntity<ApiResponse<PaymentDto>> processPayment(PaymentProcessDto dto) {
+        return processPayment(dto, null);
+    }
+
     /** POST /process: quầy thu tiền một bước cho gói tập/khóa học (tạo khoản thu, kích hoạt gói, xuất hóa đơn). */
     @Operation(summary = "Xử lý thanh toán mua gói hoặc ghi danh", description = "Tiếp nhận thanh toán và tự động kích hoạt gói tập / ghi danh lớp học kèm sinh mã QR")
     @PostMapping("/process")
-    public ResponseEntity<ApiResponse<PaymentDto>> processPayment(@Valid @RequestBody PaymentProcessDto dto) {
-        PaymentDto processed = paymentService.processPayment(dto);
+    public ResponseEntity<ApiResponse<PaymentDto>> processPayment(
+            @Valid @RequestBody PaymentProcessDto dto,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        PaymentDto processed = paymentService.processPayment(principal, dto);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(msg("finance.payment.processed"), processed));
     }
@@ -100,8 +107,9 @@ public class PaymentController {
     @PatchMapping("/{id}/status")
     public ResponseEntity<ApiResponse<PaymentDto>> updatePaymentStatus(
             @PathVariable Long id,
-            @Valid @RequestBody PaymentStatusUpdateRequest request) {
-        PaymentDto updated = paymentService.updatePaymentStatusByStaff(id, request.status());
+            @Valid @RequestBody PaymentStatusUpdateRequest request,
+            @AuthenticationPrincipal AuthenticatedPrincipal principal) {
+        PaymentDto updated = paymentService.updatePaymentStatusByStaff(principal, id, request.status());
         return ResponseEntity.ok(ApiResponse.ok(msg("finance.payment.status_updated"), updated));
     }
 

@@ -389,4 +389,37 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     expect(kycBox?.textContent).toContain('Identity verification');
     expect(kycBox?.textContent).toContain('Not verified');
   });
+
+  it('P1-FE-27: does not mark KYC verified when identityVerified is true but kycStatus is REJECTED or PENDING', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '10', name: 'Member', identifier: 'member1', role: 'MEMBER' }));
+    mockApi.getProfile.mockResolvedValue({ ...sampleProfile, identityVerified: true, kycStatus: 'REJECTED', kycRejectReason: 'Ảnh mờ' });
+    await renderPage();
+
+    const kycBox = host.querySelector('[data-testid="member-kyc-status"]');
+    expect(kycBox?.textContent).toContain('Cần bổ sung lại');
+    expect(kycBox?.textContent).not.toContain('Đã xác minh');
+    expect(kycBox?.querySelector('a')?.textContent).toContain('Gửi lại hồ sơ');
+
+    const avatarInput = host.querySelector<HTMLInputElement>('#avatar-file-input')!;
+    expect(avatarInput.style.display).not.toBe('none');
+    expect(avatarInput.classList.contains('file-picker__input')).toBe(true);
+  });
+
+  it('P3-FE-23 & P2-FE-50: handles 2-step save partial failure and re-translates password errors on language switch', async () => {
+    localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: '20', name: 'Coach', identifier: 'coach1', role: 'COACH' }));
+    mockApi.getProfile.mockResolvedValue({ ...sampleProfile, fullName: 'Coach Old', specialization: 'Gym' });
+    mockApi.updateProfile.mockResolvedValue({ ...sampleProfile, fullName: 'Coach New', specialization: 'Gym' });
+    mockApi.updateCoachProfile.mockRejectedValueOnce(new Error('Coach service unavailable'));
+    await renderPage();
+
+    await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Đã lưu thông tin cơ bản');
+    expect((host.querySelector('#fullName') as HTMLInputElement).value).toBe('Coach New');
+
+    await act(async () => host.querySelector<HTMLButtonElement>('#toggle-password-change-btn')!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('#submit-password-change-btn')!.click());
+    expect(host.querySelector('#currentPassword-error')?.textContent).toContain('Vui lòng nhập mật khẩu hiện tại');
+    await act(async () => setLanguage('en'));
+    expect(host.querySelector('#currentPassword-error')?.textContent).toContain('Enter your current password');
+  });
 });

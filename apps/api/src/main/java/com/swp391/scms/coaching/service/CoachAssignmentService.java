@@ -146,9 +146,10 @@ public class CoachAssignmentService {
                     distinct.size(), pt.size(), plans.size(), classes.size(), filtered));
         }
         sortCoaches(coaches, sortBy, sortDir);
+        int totalCoaches = (int) Math.max(coachRepository.count(), availableCoaches.size());
         return Map.of("coaches", coaches, "availableCoaches", availableCoaches.stream()
                         .map(c -> new CoachAssignmentCoachOptionDto(c.getUserId(), c.getUser().getFullName(), c.getSpecialization())).toList(),
-                "stats", new CoachAssignmentSummaryStatsDto(availableCoaches.size(), availableCoaches.size(), allStudents.size(), allPt.size(), allPlans.size(), allClasses.size()));
+                "stats", new CoachAssignmentSummaryStatsDto(totalCoaches, availableCoaches.size(), allStudents.size(), allPt.size(), allPlans.size(), allClasses.size()));
     }
 
     /** Sắp xếp danh sách HLV theo trường và chiều (asc/desc) được chọn; không chọn thì giữ nguyên. */
@@ -345,15 +346,43 @@ public class CoachAssignmentService {
         auditRepository.save(entry);
     }
 
-    /** Kết thúc phân công giáo án: giáo án phải đang áp dụng và còn hạn, chuyển sang cancelled và báo cho HLV. */
+    /** Kết thúc phân công giáo án: giáo án phải đang áp dụng và còn hạn, chuyển sang cancelled, ghi audit và báo cho HLV/hội viên. */
     public void removeAssignment(Long planId) {
         TrainingPlan plan = trainingPlanRepository.findByIdForUpdate(planId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.training_plan", planId));
         requireActivePlan(plan);
         plan.setStatus("cancelled");
         trainingPlanRepository.save(plan);
-        notificationService.send(plan.getCoach().getUserId(), msg("notice.ended.title"), msg("notice.ended.body", plan.getMember().getUser().getFullName()),
+        recordRemoval(plan);
+        String memberName = plan.getMember() != null && plan.getMember().getUser() != null
+                ? plan.getMember().getUser().getFullName() : "";
+        notificationService.send(plan.getCoach().getUserId(), msg("notice.ended.title"), msg("notice.ended.body", memberName),
                 "system", "training_plan", plan.getId(), "/coach/training-plans");
+        if (plan.getMember() != null && plan.getMember().getUserId() != null) {
+            notificationService.send(plan.getMember().getUserId(), msg("notice.ended.title"), msg("notice.ended.body", memberName),
+                    "system", "training_plan", plan.getId(), "/member/progress");
+        }
+    }
+
+    /** Ghi audit khi quản lý kết thúc phân công giáo án. */
+    private void recordRemoval(TrainingPlan plan) {
+        if (auditRepository == null || objectMapper == null) return;
+        var oldValue = objectMapper.createObjectNode()
+                .put("assignmentType", "TRAINING_PLAN")
+                .put("referenceId", plan.getId())
+                .put("memberId", plan.getMember() != null ? plan.getMember().getUserId() : null)
+                .put("coachId", plan.getCoach() != null ? plan.getCoach().getUserId() : null)
+                .put("status", "active");
+        var newValue = oldValue.deepCopy().put("status", "cancelled");
+        AuditLog entry = new AuditLog();
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof AuthenticatedPrincipal principal) entry.setUserId(principal.id());
+        entry.setAction("COACH_ASSIGNMENT_REMOVE");
+        entry.setEntityType("training_plans");
+        entry.setEntityId(plan.getId());
+        entry.setOldValue(oldValue.toString());
+        entry.setNewValue(newValue.toString());
+        auditRepository.save(entry);
     }
 
     /** Giáo án phải đang active và chưa hết hạn. */

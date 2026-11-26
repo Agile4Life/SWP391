@@ -1,5 +1,7 @@
 package com.swp391.scms.notifications;
 
+import com.swp391.scms.common.CenterTime;
+import com.swp391.scms.common.exception.ResourceNotFoundException;
 import com.swp391.scms.common.i18n.MessageService;
 import com.swp391.scms.membership.entity.MembershipSubscription;
 import com.swp391.scms.membership.repository.MembershipSubscriptionRepository;
@@ -64,7 +66,7 @@ public class NotificationScheduler {
         this.notificationRepository = notificationRepository;
         this.notificationService = notificationService;
         this.messageService = messageService;
-        this.clock = clock != null ? clock : Clock.systemDefaultZone();
+        this.clock = (clock != null ? clock : Clock.system(CenterTime.ZONE)).withZone(CenterTime.ZONE);
     }
 
     /** Constructor cho test không có MessageService. */
@@ -95,7 +97,7 @@ public class NotificationScheduler {
      * Quét các membership_subscriptions có end_date còn đúng 7 ngày; tạo notification package_expiry.
      */
     // Hàm quét bên dưới được gọi trực tiếp trên this (bỏ qua proxy), nên hàm job giữ transaction.
-    @Scheduled(cron = "${app.scheduler.package-expiry.cron:0 0 8 * * ?}")
+    @Scheduled(cron = "${app.scheduler.package-expiry.cron:0 0 8 * * ?}", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public void schedulePackageExpiryJob() {
         log.info("[NotificationScheduler] Running daily package expiry reminder job...");
@@ -106,7 +108,7 @@ public class NotificationScheduler {
 
     /**
      * Nghiệp vụ quét các kỳ gói active hết hạn đúng ngày đích và gửi nhắc gia hạn; bỏ qua hội viên đã trả tiền
-     * kỳ tiếp theo và kỳ đã được nhắc rồi.
+     * kỳ tiếp theo, tài khoản đã xóa mềm và kỳ đã được nhắc rồi.
      *
      * @param targetDate ngày hết hạn cần quét (thường là LocalDate.now().plusDays(7))
      * @return số thông báo đã gửi
@@ -123,6 +125,10 @@ public class NotificationScheduler {
         int sentCount = 0;
         for (MembershipSubscription sub : expiringSubscriptions) {
             if (sub.getMember() == null || sub.getMember().getUserId() == null) {
+                continue;
+            }
+            var user = sub.getMember().getUser();
+            if (user == null || user.getDeletedAt() != null) {
                 continue;
             }
             Long userId = sub.getMember().getUserId();
@@ -155,15 +161,19 @@ public class NotificationScheduler {
                     expiryDateStr
             );
 
-            notificationService.send(
-                    userId,
-                    title,
-                    message,
-                    "package_expiry",
-                    "membership_subscription",
-                    sub.getId()
-            );
-            sentCount++;
+            try {
+                notificationService.send(
+                        userId,
+                        title,
+                        message,
+                        "package_expiry",
+                        "membership_subscription",
+                        sub.getId()
+                );
+                sentCount++;
+            } catch (ResourceNotFoundException ex) {
+                log.warn("[NotificationScheduler] Skipping package expiry reminder for unavailable user {}", userId);
+            }
         }
         return sentCount;
     }
@@ -172,7 +182,7 @@ public class NotificationScheduler {
      * Job 2 (Nhắc lịch học): Chạy mỗi 30 phút.
      * Quét các class_sessions diễn ra trong vòng 2 giờ tới; gửi notification class_reminder cho toàn bộ hội viên có enrollment booked.
      */
-    @Scheduled(cron = "${app.scheduler.class-reminder.cron:0 */30 * * * ?}")
+    @Scheduled(cron = "${app.scheduler.class-reminder.cron:0 */30 * * * ?}", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public void scheduleClassReminderJob() {
         if (!classesEnabled) return;
@@ -184,7 +194,7 @@ public class NotificationScheduler {
 
     /**
      * Nghiệp vụ quét các buổi lớp sắp diễn ra trong 2 giờ tới và gửi nhắc cho hội viên đã đăng ký (mỗi buổi
-     * chỉ nhắc một lần).
+     * chỉ nhắc một lần); bỏ qua lớp không còn active và tài khoản đã xóa mềm.
      *
      * @param referenceTime mốc thời gian tham chiếu hiện tại
      * @return số thông báo nhắc lịch đã gửi
@@ -212,7 +222,8 @@ public class NotificationScheduler {
                 continue;
             }
 
-            if (session.getGymClass() == null || session.getGymClass().getId() == null) {
+            if (session.getGymClass() == null || session.getGymClass().getId() == null
+                    || !"active".equalsIgnoreCase(session.getGymClass().getStatus())) {
                 continue;
             }
 
@@ -236,13 +247,19 @@ public class NotificationScheduler {
             java.util.Set<Long> recipients = new java.util.LinkedHashSet<>();
             for (ClassEnrollment enrollment : enrollments) {
                 if (enrollment.getMember() != null && enrollment.getMember().getUserId() != null) {
-                    recipients.add(enrollment.getMember().getUserId());
+                    var user = enrollment.getMember().getUser();
+                    if (user != null && user.getDeletedAt() == null) {
+                        recipients.add(enrollment.getMember().getUserId());
+                    }
                 }
             }
             if (sessionBookings != null) {
                 for (com.swp391.scms.scheduling.entity.SessionBooking booking : sessionBookings.findBySessionIdAndStatus(session.getId(), "booked")) {
                     if (booking.getMember() != null && booking.getMember().getUserId() != null) {
-                        recipients.add(booking.getMember().getUserId());
+                        var user = booking.getMember().getUser();
+                        if (user != null && user.getDeletedAt() == null) {
+                            recipients.add(booking.getMember().getUserId());
+                        }
                     }
                 }
             }
@@ -261,15 +278,20 @@ public class NotificationScheduler {
                     continue;
                 }
 
-                notificationService.send(
-                        userId,
-                        title,
-                        message,
-                        "class_reminder",
-                        "class_session",
-                        session.getId()
-                );
-                sentCount++;
+                try {
+                    notificationService.send(
+                            userId,
+                            title,
+                            message,
+                            "class_reminder",
+                            "class_session",
+                            session.getId()
+                    );
+                    sentCount++;
+                } catch (ResourceNotFoundException ex) {
+                    log.warn("[NotificationScheduler] Skipping class reminder for unavailable user {} (session {})",
+                            userId, session.getId());
+                }
             }
         }
         return sentCount;

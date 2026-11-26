@@ -55,32 +55,13 @@ public class ChatService {
         return switch (role(actor)) {
             case "MEMBER" -> contacts.searchForMember(actor.getId(), today(), term, page(page)).map(u -> contact(u, true));
             case "RECEPTIONIST" -> contacts.searchMembers(term, page(page)).map(u -> contact(u, true));
-            default -> coachContacts(actor.getId(), term, page(page));
+            default -> contacts.searchForCoach(actor.getId(), today(), term, page(page)).map(u -> contact(u, true));
         };
     }
 
     /** Ngày hôm nay theo giờ trung tâm. */
     private java.time.LocalDate today() {
         return coachMembers != null ? coachMembers.centerToday() : java.time.LocalDate.now(java.time.ZoneId.of("Asia/Ho_Chi_Minh"));
-    }
-
-    /** Danh bạ của HLV: học viên đang phụ trách, lọc theo tên/mã, sắp theo tên, tự phân trang. */
-    private Page<ChatContactDto> coachContacts(Long coachId, String term, Pageable pageable) {
-        if (coachMembers == null) return Page.empty(pageable);
-        String needle = term.toLowerCase(java.util.Locale.ROOT);
-        List<com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption> mine = coachMembers.list(coachId, "COACH").stream()
-                .filter(m -> needle.isEmpty() || (m.fullName() != null && m.fullName().toLowerCase(java.util.Locale.ROOT).contains(needle))
-                        || (m.memberCode() != null && m.memberCode().toLowerCase(java.util.Locale.ROOT).contains(needle)))
-                .sorted(Comparator.comparing((com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption m) -> m.fullName() == null ? "" : m.fullName())
-                        .thenComparing(com.swp391.scms.coaching.service.CurrentCoachMembers.MemberOption::id))
-                .toList();
-        int from = (int) Math.min(pageable.getOffset(), mine.size());
-        int to = Math.min(from + pageable.getPageSize(), mine.size());
-        List<ChatContactDto> rows = new ArrayList<>();
-        for (var m : mine.subList(from, to)) {
-            contacts.findUser(m.id()).filter(u -> active(u) && "MEMBER".equals(role(u))).ifPresent(u -> rows.add(contact(u, true)));
-        }
-        return new PageImpl<>(rows, pageable, mine.size());
     }
 
     /**
@@ -154,9 +135,26 @@ public class ChatService {
             if ("COACH".equals(role(actor))) coachMembers.requireCoachOf(actor.getId(), contactId);
             member = other; staff = actor;
         }
-        ChatConversation c = conversations.findByMemberIdAndStaffId(member.getId(), staff.getId())
-                .orElseGet(() -> conversations.save(new ChatConversation(member, staff, Instant.now())));
-        return conversation(c, principal.id());
+        Optional<ChatConversation> existing = conversations.findByMemberIdAndStaffId(member.getId(), staff.getId());
+        if (existing.isPresent()) {
+            ChatConversation c = existing.get();
+            ChatMessage latest = null;
+            long unread = 0L;
+            if (c.getId() != null) {
+                List<Long> ids = List.of(c.getId());
+                List<ChatMessage> latestRows = messages.latestIn(ids);
+                if (latestRows != null && !latestRows.isEmpty()) {
+                    latest = latestRows.get(0);
+                }
+                List<Object[]> unreadRows = messages.unreadIn(principal.id(), ids);
+                if (unreadRows != null && !unreadRows.isEmpty() && unreadRows.get(0)[1] instanceof Number n) {
+                    unread = n.longValue();
+                }
+            }
+            return conversation(c, principal.id(), latest, unread);
+        }
+        ChatConversation created = conversations.save(new ChatConversation(member, staff, Instant.now()));
+        return conversation(created, principal.id());
     }
 
     /** HLV phải đang dạy hội viên; không thì báo lỗi riêng "chỉ chat được với HLV đang dạy bạn". */
@@ -208,6 +206,15 @@ public class ChatService {
         }
         User peer = peer(c, actor.getId());
         if (!availablePeer(c, peer)) throw new ConflictException("CHAT_PEER_UNAVAILABLE", "chat.peer.unavailable", null, null);
+        // Kiểm tra lại phân công hiện tại khi hội thoại có HLV (lịch sử cũ vẫn chỉ đọc ở history()).
+        if ("COACH".equals(role(c.getStaff()))) {
+            if ("MEMBER".equals(role(actor))) {
+                requireCoachOfMember(c.getStaff().getId(), c.getMember().getId());
+            } else {
+                if (coachMembers == null) throw forbidden();
+                coachMembers.requireCoachOf(c.getStaff().getId(), c.getMember().getId());
+            }
+        }
         Instant now = Instant.now();
         var saved = messages.save(new ChatMessage(c, actor, input.clientMessageId(), text, now));
         c.touch(now);
