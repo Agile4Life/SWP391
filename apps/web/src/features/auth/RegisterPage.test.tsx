@@ -156,3 +156,20 @@ it('localizes email placeholder, normalizes +84 phone formats, separates OTP err
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('chưa gửi được mã OTP');
   expect(host.querySelector('[role="alert"]')?.textContent).not.toContain('Đăng ký không thành công');
 });
+
+it('toggles password visibility via eye icon button instead of text label', async () => {
+  await render();
+  const input = host.querySelector<HTMLInputElement>('#reg-password')!;
+  expect(input.type).toBe('password');
+  const toggleBtn = host.querySelector<HTMLButtonElement>('button[aria-label="Hiện mật khẩu"]')!;
+  expect(toggleBtn.querySelector('svg')).not.toBeNull();
+  expect(toggleBtn.textContent).toBe('');
+
+  await act(async () => toggleBtn.click());
+  expect(input.type).toBe('text');
+  expect(toggleBtn.getAttribute('aria-label')).toBe('Ẩn mật khẩu');
+
+  await act(async () => toggleBtn.click());
+  expect(input.type).toBe('password');
+  expect(toggleBtn.getAttribute('aria-label')).toBe('Hiện mật khẩu');
+});
