@@ -458,7 +458,8 @@ it('resets sensitive fields and showPassword on mode switch, toggles forgot_rese
   await renderForm();
 
   // Toggle show password on standard login, then navigate to forgot_email -> showPassword resets
-  const showBtn = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Hiện mật khẩu')!;
+  const showBtn = host.querySelector<HTMLButtonElement>('button[aria-label="Hiện mật khẩu"]')!;
+  expect(showBtn.querySelector('svg')).not.toBeNull();
   await act(async () => showBtn.click());
   expect(host.querySelector<HTMLInputElement>('#login-password')?.type).toBe('text');
 
@@ -488,7 +489,8 @@ it('resets sensitive fields and showPassword on mode switch, toggles forgot_rese
   const newPassInput = host.querySelector<HTMLInputElement>('#reset-new-password-input')!;
   expect(newPassInput.type).toBe('password');
   expect(newPassInput.getAttribute('autocomplete')).toBe('new-password');
-  const toggleResetPass = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Hiện mật khẩu')!;
+  const toggleResetPass = host.querySelector<HTMLButtonElement>('button[aria-label="Hiện mật khẩu"]')!;
+  expect(toggleResetPass.querySelector('svg')).not.toBeNull();
   await act(async () => toggleResetPass.click());
   expect(newPassInput.type).toBe('text');
 
