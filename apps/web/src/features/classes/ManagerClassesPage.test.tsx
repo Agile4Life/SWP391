@@ -340,7 +340,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
 
     const yogaChip = host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-3"]')!;
     await act(async () => yogaChip.click());
-    expect(host.querySelector('[data-testid="discipline-active-class-bar"]')?.textContent).toContain('1 khóa đang hoạt động');
+    expect(host.querySelector('[data-testid="discipline-active-class-bar"]')?.textContent).toContain('Tất cả khóa (1)');
     const yogaEvents = host.querySelectorAll<HTMLButtonElement>('.mcal__event');
     expect(yogaEvents).toHaveLength(1);
     expect(yogaEvents[0].textContent).toContain('Hatha Yoga Nền Tảng');
@@ -485,7 +485,22 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(headerBtn.disabled).toBe(false);
 
     const activeBar = host.querySelector('[data-testid="discipline-active-class-bar"]')!;
-    expect(activeBar.textContent).toContain('2 khóa đang hoạt động');
+    expect(activeBar.textContent).toContain('Tất cả khóa (2)');
+
+    // Dropdown lọc lịch theo từng khóa của bộ môn đang chọn
+    const eventsBefore = host.querySelectorAll('.mcal__event').length;
+    expect(eventsBefore).toBe(2);
+    const classFilter = activeBar.querySelector<HTMLButtonElement>('[aria-label="Lọc lịch theo khóa học"]')!;
+    await act(async () => classFilter.click());
+    const options = [...document.querySelectorAll<HTMLElement>('[role="option"]')];
+    expect(options.map((o) => o.textContent?.trim())).toEqual(['Tất cả khóa (2)', 'Full Body Strength 101', 'Hypertrophy Evening']);
+    await act(async () => options[2].click());
+    const filtered = [...host.querySelectorAll('.mcal__event')];
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0].textContent).toContain('Hypertrophy Evening');
+    await act(async () => classFilter.click());
+    await act(async () => [...document.querySelectorAll<HTMLElement>('[role="option"]')][0].click());
+    expect(host.querySelectorAll('.mcal__event')).toHaveLength(2);
     expect(activeBar.textContent).not.toContain('Thêm buổi');
     // Sửa lớp nằm ở tab Danh sách lớp và chi tiết buổi học, không lặp ở thanh bộ môn.
     expect(activeBar.textContent).not.toContain('Sửa lớp');

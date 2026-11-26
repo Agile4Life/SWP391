@@ -6,7 +6,7 @@ info:
     Center manager screen, UI owner Khoa; related backlog SCRUM-121 and SCRUM-124.
     All operations require CENTER_MANAGER (legacy MANAGER alias accepted).
     Accept-Language selects vi (default) or en for messages and assignment labels.
-    Only the explicitly selected training-plan or future PT relationship can be transferred.
+    A transfer moves the selected training plan, or all upcoming PT sessions of the member with that coach.
     CLASS relationships are read-only. No request changes unrelated assignments.
 servers:
   - url: /api/v1
@@ -21,7 +21,9 @@ paths:
         and start strictly after the current center time. Classes are active and have a future
         scheduled session; both booked ClassEnrollment and booked SessionBooking members count.
         Accounts must be active and non-deleted; coaches must also be employed as active.
-        A class/member pair appears once even with both enrollment sources. Student counters
+        A class/member pair appears once even with both enrollment sources. All upcoming PT sessions
+        of one member with one coach collapse into a single PT_1_1 row (next session, last date and
+        sessionCount). Student counters
         count distinct member IDs, including per-type counters. Filters apply to displayed
         relationships and student counters. availableCoaches is always the full independent
         active coach list; coach counters describe that list and remain unaffected by filters.
@@ -61,10 +63,12 @@ paths:
         '403': { description: Manager role required }
   /manager/coach-assignments/reassign:
     post:
-      summary: Transfer exactly one training plan or future PT session
+      summary: Transfer one training plan, or all upcoming PT sessions of the member
       description: |
         assignmentType and referenceId are mandatory. referenceId identifies the TrainingPlan
-        for TRAINING_PLAN, or CoachBooking for PT_1_1. Its actual member and coach must match
+        for TRAINING_PLAN, or any upcoming CoachBooking for PT_1_1 (the overview sends the next one);
+        a PT_1_1 transfer moves every upcoming confirmed PT session of that member with fromCoachId,
+        all or nothing: each session is validated below before any is changed. Its actual member and coach must match
         memberId and fromCoachId. The destination must differ, be actively employed and have
         an active non-deleted account. The member must have an active non-deleted account and
         a currently active membership. Plans must be active and unexpired. PT must be confirmed
@@ -158,7 +162,9 @@ components:
         endDate: { type: string, format: date, nullable: true }
         nextSession: { type: string, nullable: true }
         status: { type: string }
-        referenceId: { type: integer, format: int64, description: Plan ID, PT booking ID or read-only class ID, according to assignmentType }
+        referenceId: { type: integer, format: int64, description: Plan ID, next upcoming PT booking ID or read-only class ID, according to assignmentType }
+        membershipIssue: { type: string, nullable: true, enum: [FROZEN, NO_ACTIVE, NOT_COVERED] }
+        sessionCount: { type: integer, nullable: true, description: Number of upcoming PT sessions grouped into a PT_1_1 row; null for other types }
     Overview:
       type: object
       properties:

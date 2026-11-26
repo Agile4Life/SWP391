@@ -271,6 +271,23 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(rows[0].querySelectorAll('.coach-assignment-line')).toHaveLength(2);
   });
 
+  it('shows one Chi tiết per member, the grouped PT session count and every assignment in the profile', async () => {
+    const [coachA] = mockData.coaches;
+    const [pt, plan] = coachA.students;
+    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({
+      ...mockData,
+      coaches: [{ ...coachA, students: [{ ...plan, memberId: pt.memberId, membershipIssue: null }, { ...pt, sessionCount: 2 }] }],
+    });
+    await renderComponent();
+    const row = host.querySelector('.coach-student-row')!;
+    const buttons = [...row.querySelectorAll('button')].map(b => b.textContent);
+    expect(buttons.filter(text => text === 'Chi tiết')).toHaveLength(1);
+    expect(buttons.filter(text => text === 'Điều chuyển HLV')).toHaveLength(2);
+    expect(row.textContent).toContain('09:00 10/11/2026 · 2 buổi sắp tới');
+    await act(async () => { [...row.querySelectorAll('button')].find(b => b.textContent === 'Chi tiết')!.click(); });
+    expect(host.querySelectorAll('dialog .coach-student-type-pill')).toHaveLength(2);
+  });
+
   it('displays group class assignments as view-only without coach reassignment button', async () => {
     await renderComponent();
     const row = [...host.querySelectorAll('.coach-student-row')].find(r => r.textContent?.includes('Phạm Minh Tuấn'));

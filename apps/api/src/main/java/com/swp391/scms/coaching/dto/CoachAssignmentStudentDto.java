@@ -25,15 +25,7 @@ public record CoachAssignmentStudentDto(
         String status,
         Long referenceId,
         /** Null khi gói tập bình thường; FROZEN (đang bảo lưu), NO_ACTIVE (hôm nay không có gói hợp lệ) hoặc NOT_COVERED (gói kết thúc trước ngày PT). */
-        String membershipIssue
-) {
-    /** Constructor rút gọn không có membershipIssue (mặc định null). */
-    public CoachAssignmentStudentDto(Long memberId, String membershipCode, String fullName, String phone, String email,
-                                     String avatarUrl, String fitnessGoal, String fitnessLevel, String healthNotes,
-                                     String assignmentType, String assignmentTypeLabel, String detail, LocalDate startDate,
-                                     LocalDate endDate, String nextSession, String status, Long referenceId) {
-        this(memberId, membershipCode, fullName, phone, email, avatarUrl, fitnessGoal, fitnessLevel, healthNotes,
-                assignmentType, assignmentTypeLabel, detail, startDate, endDate, nextSession, status, referenceId, null);
-    }
-}
-
+        String membershipIssue,
+        /** Số buổi PT sắp tới được gộp vào dòng PT_1_1 (mỗi hội viên một dòng); null với giáo án và lớp. */
+        Integer sessionCount
+) {}

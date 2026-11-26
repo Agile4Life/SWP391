@@ -114,24 +114,32 @@ public class CoachAssignmentService {
             List<CoachAssignmentStudentDto> rows = new ArrayList<>();
             for (TrainingPlan plan : trainingPlanRepository.findCurrentAssignments(coachId, date)) {
                 rows.add(student(plan.getMember(), "TRAINING_PLAN", plan.getGoal(), plan.getStartDate(),
-                        plan.getEndDate(), plan.getEndDate().toString(), plan.getStatus(), plan.getId()));
+                        plan.getEndDate(), plan.getEndDate().toString(), plan.getStatus(), plan.getId(), null));
             }
+            // Gộp mọi buổi PT sắp tới của một hội viên thành một dòng: buổi kế tiếp, buổi cuối và số buổi.
+            Map<Long, List<CoachBooking>> ptByMember = new LinkedHashMap<>();
             for (CoachBooking booking : coachBookingRepository.findCurrentAssignments(coachId, date, time)) {
-                rows.add(student(booking.getMember(), "PT_1_1", booking.getDiscipline() == null ? null : booking.getDiscipline().getName(),
-                        booking.getBookingDate(), booking.getBookingDate(), booking.getBookingDate() + " " + booking.getStartTime(),
-                        booking.getStatus(), booking.getId()));
+                ptByMember.computeIfAbsent(booking.getMember().getUserId(), id -> new ArrayList<>()).add(booking);
+            }
+            for (List<CoachBooking> sessions : ptByMember.values()) {
+                CoachBooking next = sessions.getFirst();
+                String disciplines = String.join(", ", sessions.stream().map(CoachBooking::getDiscipline)
+                        .filter(Objects::nonNull).map(d -> d.getName()).distinct().toList());
+                rows.add(student(next.getMember(), "PT_1_1", disciplines.isEmpty() ? null : disciplines,
+                        next.getBookingDate(), sessions.getLast().getBookingDate(), next.getBookingDate() + " " + next.getStartTime(),
+                        next.getStatus(), next.getId(), sessions.size()));
             }
             // Gộp đăng ký cả khóa và đặt từng buổi thành một quan hệ lớp/hội viên duy nhất.
             Set<String> classMembers = new HashSet<>();
             for (var enrollment : classEnrollmentRepository.findCurrentCoachAssignments(coachId, date, time)) {
                 if (classMembers.add(enrollment.getGymClass().getId() + ":" + enrollment.getMember().getUserId())) rows.add(student(enrollment.getMember(), "CLASS", enrollment.getGymClass().getName(), null, null, null,
-                        enrollment.getStatus(), enrollment.getGymClass().getId()));
+                        enrollment.getStatus(), enrollment.getGymClass().getId(), null));
             }
             for (var booking : sessionBookingRepository.findCurrentCoachAssignments(coachId, date, time)) {
                 var session = booking.getSession();
                 if (classMembers.add(session.getGymClass().getId() + ":" + booking.getMember().getUserId())) {
                     rows.add(student(booking.getMember(), "CLASS", session.getGymClass().getName(), session.getSessionDate(),
-                            session.getSessionDate(), session.getSessionDate() + " " + session.getStartTime(), booking.getStatus(), session.getGymClass().getId()));
+                            session.getSessionDate(), session.getSessionDate() + " " + session.getStartTime(), booking.getStatus(), session.getGymClass().getId(), null));
                 }
             }
             List<CoachAssignmentStudentDto> filtered = rows.stream()
@@ -214,15 +222,16 @@ public class CoachAssignmentService {
 
     /**
      * Tạo dòng học viên trong tổng quan: thông tin liên hệ, mục tiêu, loại phân công, chi tiết, thời gian, buổi
-     * tới, trạng thái, id tham chiếu và vấn đề về gói.
+     * tới, trạng thái, id tham chiếu (buổi PT kế tiếp với PT_1_1), vấn đề về gói và số buổi PT sắp tới.
      */
     private CoachAssignmentStudentDto student(Member member, String type, String detail, LocalDate start, LocalDate end,
-            String nextSession, String status, Long referenceId) {
+            String nextSession, String status, Long referenceId, Integer sessionCount) {
         var user = member.getUser();
         return new CoachAssignmentStudentDto(member.getUserId(), member.getMembershipCode(), user.getFullName(), user.getPhone(),
                 user.getEmail(), user.getAvatarUrl(), member.getFitnessGoal(), member.getFitnessLevel(), member.getHealthNotes(),
                 type, msg("type." + type), detail, start, end, nextSession, status, referenceId,
-                membershipIssue(member.getUserId(), type, start));
+                // Với PT, gói phải bao phủ tới buổi cuối cùng.
+                membershipIssue(member.getUserId(), type, end), sessionCount);
     }
 
     /**
@@ -239,9 +248,9 @@ public class CoachAssignmentService {
     }
 
     /**
-     * Chuyển học viên sang HLV khác (chỉ giáo án hoặc buổi PT 1:1): bắt buộc lý do, hai HLV phải khác nhau và
-     * đều đang làm; với buổi PT thì buổi phải sắp tới, gói còn bao phủ, HLV mới rảnh và không nghỉ phép; giáo
-     * án đi theo HLV mới; gửi thông báo và ghi audit.
+     * Chuyển học viên sang HLV khác (giáo án hoặc PT 1:1): bắt buộc lý do, hai HLV phải khác nhau và đều đang
+     * làm; với PT thì mọi buổi PT sắp tới của hội viên với HLV cũ cùng chuyển (tất cả hoặc không): từng buổi phải
+     * sắp tới, gói còn bao phủ, HLV mới rảnh và không nghỉ phép; giáo án đi theo HLV mới; gửi thông báo và ghi audit.
      */
     public void reassignStudent(CoachAssignmentReassignDto dto) {
         if (dto.referenceId() == null || dto.assignmentType() == null || !Set.of("TRAINING_PLAN", "PT_1_1").contains(dto.assignmentType())) {
@@ -271,16 +280,27 @@ public class CoachAssignmentService {
             CoachBooking booking = coachBookingRepository.findByIdForUpdate(dto.referenceId())
                     .orElseThrow(() -> new ResourceNotFoundException("resource.coach_booking", dto.referenceId()));
             requireRelationship(booking.getMember(), booking.getCoach(), dto);
-            if (!"confirmed".equals(booking.getStatus()) || booking.getBookingDate() == null || booking.getStartTime() == null
-                    || !booking.getBookingDate().atTime(booking.getStartTime()).isAfter(LocalDateTime.now(clock))) {
-                throw invalid("ASSIGNMENT_NOT_CURRENT", "not_current");
+            List<CoachBooking> sessions = new ArrayList<>(List.of(booking));
+            for (CoachBooking other : coachBookingRepository.findCurrentAssignments(from.getUserId(), today(), LocalTime.now(clock))) {
+                if (Objects.equals(other.getMember().getUserId(), member.getUserId()) && !Objects.equals(other.getId(), booking.getId())) {
+                    sessions.add(coachBookingRepository.findByIdForUpdate(other.getId()).orElse(other));
+                }
             }
-            if (!subscriptionRepository.hasActiveMembershipCoveringSession(member.getUserId(), today(), booking.getBookingDate())) {
-                throw membershipMissing(member.getUserId());
+            // Kiểm tra hết mọi buổi trước khi đổi để không chuyển dở dang.
+            for (CoachBooking session : sessions) {
+                if (!"confirmed".equals(session.getStatus()) || session.getBookingDate() == null || session.getStartTime() == null
+                        || !session.getBookingDate().atTime(session.getStartTime()).isAfter(LocalDateTime.now(clock))) {
+                    throw invalid("ASSIGNMENT_NOT_CURRENT", "not_current");
+                }
+                if (!subscriptionRepository.hasActiveMembershipCoveringSession(member.getUserId(), today(), session.getBookingDate())) {
+                    throw membershipMissing(member.getUserId());
+                }
+                requireCoachAvailable(to.getUserId(), session);
             }
-            requireCoachAvailable(to.getUserId(), booking);
-            booking.setCoach(to);
-            coachBookingRepository.save(booking);
+            for (CoachBooking session : sessions) {
+                session.setCoach(to);
+                coachBookingRepository.save(session);
+            }
             inheritPlans(member.getUserId(), from, to);
             entityType = null; coachPath = "/coach/classes";
         }
