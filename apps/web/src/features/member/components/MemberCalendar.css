@@ -9,3 +9,11 @@
 .mcal--member .mcal__next .mcal__type { align-self: center; display: inline-flex; align-items: center; }
 .mcal--member .mcal__type--class { background: var(--mcal-class); }
 .mcal--member .mcal__type--pt { background: var(--mcal-pt); }
+.mcal--member .mcal__day-list { display: grid; gap: 8px; }
+.mcal--member .mcal__day-item { display: grid; gap: 3px; width: 100%; padding: 10px 12px; border-radius: 10px; text-align: left; font: inherit; cursor: pointer; background: var(--mcal-class); color: #202020; border: 1px solid #a83e2d; }
+.mcal--member .mcal__day-item--pt { background: var(--mcal-pt); border-color: #2f7d5b; }
+.mcal--member .mcal__day-item.is-past { background: color-mix(in srgb, var(--portal-paper) 16%, var(--portal-raised)); border-color: var(--portal-line); color: var(--portal-muted); }
+.mcal--member .mcal__day-item.is-cancelled { text-decoration: line-through; background: color-mix(in srgb, var(--portal-danger) 14%, var(--portal-raised)); border-color: var(--portal-danger); color: var(--portal-muted); }
+.mcal--member .mcal__day-item-time { font-size: 12px; font-weight: 800; opacity: 0.85; }
+.mcal--member .mcal__day-item-title { font-size: 14px; font-weight: 700; }
+.mcal--member .mcal__day-item-meta { font-size: 12px; opacity: 0.85; }

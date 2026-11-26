@@ -212,7 +212,14 @@ export function MemberDashboardPage() {
     ? [
         ...scheduleState.bookings
           .filter((item) => {
-            if (item.status !== 'confirmed' || !item.bookingDate || !item.endTime) return false;
+            if (
+              item.status !== 'confirmed' ||
+              String(item.paymentStatus ?? '').toLowerCase() === 'pending' ||
+              !item.bookingDate ||
+              !item.endTime
+            ) {
+              return false;
+            }
             const endAt = parseCenterTime(`${item.bookingDate}T${item.endTime}`);
             return endAt !== null && endAt.getTime() > now.getTime();
           })

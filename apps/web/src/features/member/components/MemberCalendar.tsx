@@ -187,9 +187,11 @@ function classEvent(session: ClassSessionDto, enrollmentId: number, lang: 'vi' |
   };
 }
 
-/** Lấy lịch PT thật; lỗi được báo trên lịch để hội viên có thể thử lại. */
+/** Lấy lịch PT thật đã thanh toán/đã dùng lượt; lỗi được báo trên lịch để hội viên có thể thử lại. */
 async function loadPtBookings(): Promise<CoachBookingDto[]> {
-  return (await getMyCoachBookings()).filter(item => item.status !== 'cancelled');
+  return (await getMyCoachBookings()).filter(
+    (item) => item.status !== 'cancelled' && String(item.paymentStatus ?? '').toLowerCase() !== 'pending',
+  );
 }
 
 const NEXT_UP_LOOKAHEAD_DAYS = 30;
@@ -236,6 +238,7 @@ export function MemberCalendar() {
   const [rangeClassError, setRangeClassError] = useState<unknown>(null);
   const [retry, setRetry] = useState(0);
   const [selected, setSelected] = useState<CalendarEvent | null>(null);
+  const [dayModalDate, setDayModalDate] = useState<string | null>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
 
   const { from, to } = rangeOf(view, anchor);
@@ -397,6 +400,16 @@ export function MemberCalendar() {
   // Đóng hộp thoại chi tiết.
   function closeDialog() {
     setSelected(null);
+  }
+
+  // Mở danh sách toàn bộ lịch trong ngày (từ nút "+N lịch khác" ở chế độ tháng).
+  function openDayModal(day: string) {
+    returnFocusRef.current = document.activeElement as HTMLElement | null;
+    setDayModalDate(day);
+  }
+
+  function closeDayModal() {
+    setDayModalDate(null);
   }
 
   // Gom sự kiện theo ngày.
@@ -599,7 +612,7 @@ export function MemberCalendar() {
                     );
                   })}
                   {list.length > 3 && (
-                    <button type="button" className="mcal__more" onClick={() => { setAnchor(day); setView('week'); }}>
+                    <button type="button" className="mcal__more" onClick={() => openDayModal(day)}>
                       +{list.length - 3} {text("lịch khác", 'more bookings')}
                     </button>
                   )}
@@ -608,6 +621,43 @@ export function MemberCalendar() {
             );
           })}
         </div>
+      )}
+
+      {dayModalDate && (
+        <Modal
+          title={`${text("Lịch ngày", "Schedule for")} ${dayLabel(dayModalDate)} ${shortDate(dayModalDate)}`}
+          onClose={closeDayModal}
+          returnFocusRef={returnFocusRef}
+        >
+          <div className="mcal__day-list">
+            {[...(eventsByDay.get(dayModalDate) ?? [])]
+              .sort((a, b) => a.startTime.localeCompare(b.startTime))
+              .map((event) => (
+                <button
+                  key={event.id}
+                  type="button"
+                  className={`mcal__day-item mcal__day-item--${event.kind}${isEnded(event, now) ? ' is-past' : ''}${event.cancelled ? ' is-cancelled' : ''}`}
+                  onClick={() => {
+                    setDayModalDate(null);
+                    setSelected(event);
+                  }}
+                >
+                  <span className="mcal__day-item-time">{formatSlotLabel(event.startTime, event.endTime)}</span>
+                  <span className="mcal__day-item-title">{title(event)}</span>
+                  {(event.coach || event.place) && (
+                    <span className="mcal__day-item-meta">
+                      {[event.coach, event.place].filter(Boolean).join(' · ')}
+                    </span>
+                  )}
+                </button>
+              ))}
+          </div>
+          <div className="mcal__dialog-actions">
+            <button type="button" className="btn-primary" onClick={closeDayModal}>
+              {text("Đóng", "Close")}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {selected && (

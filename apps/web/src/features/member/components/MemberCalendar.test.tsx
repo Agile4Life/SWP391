@@ -179,3 +179,38 @@ it('keeps Next Up banner stable across week navigation and includes next-week gr
   await act(async () => host.querySelector<HTMLButtonElement>('[aria-label="Tuần trước"]')!.click());
   expect(host.querySelector('.mcal__next')?.textContent).toContain('Boxing Thứ Hai');
 });
+
+it('excludes unpaid pending PT 1:1 bookings from the personal calendar', async () => {
+  mocks.pt.mockResolvedValue([
+    { ...booking, id: 41, paymentStatus: 'pending' },
+    { ...booking, id: 42, paymentStatus: 'paid', startTime: '09:45:00', endTime: '12:15:00' },
+  ]);
+  await render();
+  const ptEvents = host.querySelectorAll('.mcal__event--pt');
+  expect(ptEvents).toHaveLength(1);
+  expect(host.querySelector('.mcal__next')?.textContent).toContain('Slot 2 · 09:45 – 12:15');
+});
+
+it('opens a day modal with all bookings when clicking +N more in month view', async () => {
+  mocks.pt.mockResolvedValue([
+    { ...booking, id: 51, startTime: '07:00:00', endTime: '09:30:00' },
+    { ...booking, id: 52, startTime: '09:45:00', endTime: '12:15:00' },
+    { ...booking, id: 53, startTime: '12:30:00', endTime: '15:00:00' },
+    { ...booking, id: 54, startTime: '15:15:00', endTime: '17:45:00' },
+  ]);
+  await render();
+  await act(async () => button('Tháng').click());
+
+  const moreBtn = host.querySelector<HTMLButtonElement>('.mcal__more')!;
+  expect(moreBtn).not.toBeNull();
+  expect(moreBtn.textContent).toContain('+2 lịch khác');
+
+  await act(async () => moreBtn.click());
+  const dialog = host.querySelector('dialog');
+  expect(dialog).not.toBeNull();
+  expect(dialog?.textContent).toContain('Lịch ngày');
+  expect(dialog?.querySelectorAll('.mcal__day-item')).toHaveLength(5);
+
+  await act(async () => dialog!.querySelector<HTMLButtonElement>('.mcal__day-item')!.click());
+  expect(host.querySelector('dialog')?.textContent).toContain('Chưa điểm danh');
+});
