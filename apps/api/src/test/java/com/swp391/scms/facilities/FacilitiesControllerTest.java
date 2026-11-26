@@ -66,23 +66,15 @@ class FacilitiesControllerTest {
         verify(disciplines, never()).create(any());
     }
 
-    /** Kiểm thử: tạo phòng trả 201. */
+    /** Kiểm thử: danh mục phòng cố định, không có API thêm hay xóa phòng (405). */
     @Test
-    void createRoomReturns201() throws Exception {
-        when(rooms.create(any())).thenReturn(new RoomDto(1L, "Studio", "L1", 10, "available"));
-
+    void roomsCannotBeCreatedOrDeleted() throws Exception {
         mockMvc.perform(post("/api/v1/rooms").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Studio\",\"location\":\"L1\",\"capacity\":10}"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.data.capacity").value(10));
-    }
-
-    /** Kiểm thử: tạo phòng sức chứa 0 trả 400. */
-    @Test
-    void createRoomWithZeroCapacityReturns400() throws Exception {
-        mockMvc.perform(post("/api/v1/rooms").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Studio\",\"capacity\":0}"))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isMethodNotAllowed());
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/rooms/1"))
+                .andExpect(status().isMethodNotAllowed());
+        verify(rooms, never()).create(any());
     }
 
     /** Kiểm thử: đổi trạng thái gói với giá trị lạ bị từ chối. */

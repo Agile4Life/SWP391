@@ -112,7 +112,7 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
     );
   });
 
-  it('deletes disciplines, rooms and packages with DELETE and surfaces an in-use conflict', async () => {
+  it('deletes disciplines and packages with DELETE and surfaces an in-use conflict', async () => {
     const ok = { ok: true, status: 200, json: async () => ({ success: true, data: null }) };
     // Dữ liệu mẫu dùng trong các ca kiểm thử.
     const conflict = {
@@ -124,17 +124,16 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
     const mockFetch = vi.fn()
       .mockResolvedValueOnce(ok)
       .mockResolvedValueOnce(ok)
-      .mockResolvedValueOnce(ok)
       .mockResolvedValueOnce(conflict);
     vi.stubGlobal('fetch', mockFetch);
 
     await catalogApi.deleteDiscipline(3);
-    await catalogApi.deleteRoom(4);
     await catalogApi.deletePackage(5);
-    await expect(catalogApi.deleteRoom(6)).rejects.toThrow();
+    await expect(catalogApi.deleteDiscipline(6)).rejects.toThrow();
 
     expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/v1/disciplines/3', expect.objectContaining({ method: 'DELETE' }));
-    expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/v1/rooms/4', expect.objectContaining({ method: 'DELETE' }));
-    expect(mockFetch).toHaveBeenNthCalledWith(3, '/api/v1/packages/5', expect.objectContaining({ method: 'DELETE' }));
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/v1/packages/5', expect.objectContaining({ method: 'DELETE' }));
+    // Danh mục phòng cố định: không có API thêm hay xóa phòng.
+    expect('deleteRoom' in catalogApi).toBe(false);
   });
 });

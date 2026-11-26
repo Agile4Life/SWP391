@@ -193,7 +193,9 @@ export function ManagerCatalogsPage() {
           return catalogApi.saveDiscipline(id, { name: trimmedName, description: (f.description ?? '').trim() });
         }
         if (tab === 'rooms') {
-          return catalogApi.saveRoom(id, {
+          // Danh mục phòng cố định: chỉ sửa phòng có sẵn, không tạo mới.
+          if (id == null) throw new Error(t('Không thể thêm phòng mới.', 'New rooms cannot be added.'));
+          return catalogApi.updateRoom(id, {
             name: trimmedName,
             location: (f.location ?? '').trim(),
             capacity: Number(f.capacity),
@@ -291,7 +293,7 @@ export function ManagerCatalogsPage() {
     <div data-i18n-managed className="portal-container">
       <PageHeader
         title={t("Danh mục vận hành")}
-        actions={
+        actions={tab === 'rooms' ? undefined : (
           <div style={{ display: 'flex', gap: 10 }}>
             <button data-i18n-managed
               type="button"
@@ -301,7 +303,7 @@ export function ManagerCatalogsPage() {
               {tab === 'packages' ? t('+ Tạo gói tập mới', '+ Create membership plan') : t('Thêm mới', 'Add new')}
             </button>
           </div>
-        }
+        )}
       />
 
       <div className="portal-tabs" role="tablist" aria-label={t('Danh mục vận hành', 'Operational catalogs')}>
@@ -660,15 +662,19 @@ export function ManagerCatalogsPage() {
               {tab === 'rooms' && t('Chưa có cơ sở phòng tập nào')}
               {tab === 'packages' && t('Chưa có gói hội viên nào')}
             </h3>
-            <p style={{ color: 'var(--portal-muted)' }}>
-              {t("Hãy nhấn nút thêm để cấu hình danh mục phục vụ vận hành.")}</p>
-            <button
-              type="button"
-              className="btn-primary"
-              onClick={() => openEditor({ id: null, form: emptyForm() })}
-            >
-              {tab === 'packages' ? t('+ Tạo gói tập mới', '+ Create membership plan') : t('Thêm mới', 'Add new')}
-            </button>
+            {tab !== 'rooms' && (
+              <>
+                <p style={{ color: 'var(--portal-muted)' }}>
+                  {t("Hãy nhấn nút thêm để cấu hình danh mục phục vụ vận hành.")}</p>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => openEditor({ id: null, form: emptyForm() })}
+                >
+                  {tab === 'packages' ? t('+ Tạo gói tập mới', '+ Create membership plan') : t('Thêm mới', 'Add new')}
+                </button>
+              </>
+            )}
           </div>
         </div>
       ) : (
@@ -754,13 +760,6 @@ export function ManagerCatalogsPage() {
                             }
                           >
                             {t("Chỉnh sửa")}</button>
-                          <button
-                            type="button"
-                            className="btn-danger btn-sm"
-                            disabled={isSubmitting}
-                            onClick={() => void remove('phòng tập', r.name, () => catalogApi.deleteRoom(r.id))}
-                          >
-                            {t("Xóa")}</button>
                         </td>
                       </tr>
                       );

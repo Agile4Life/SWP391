@@ -47,11 +47,8 @@ export const catalogApi = {
 
   // Danh sách phòng.
   rooms: () => apiFetch<Room[]>('/rooms'),
-  // Tạo hoặc cập nhật phòng.
-  saveRoom: (id: number | null, b: Body<Room>) =>
-    apiFetch<Room>(id ? `/rooms/${id}` : '/rooms', json(id ? 'PUT' : 'POST', b)),
-  // Xóa phòng.
-  deleteRoom: (id: number) => apiFetch<void>(`/rooms/${id}`, { method: 'DELETE' }),
+  // Cập nhật phòng; danh mục phòng cố định nên không có API thêm hay xóa.
+  updateRoom: (id: number, b: Body<Room>) => apiFetch<Room>(`/rooms/${id}`, json('PUT', b)),
 
   // Danh sách gói tập.
   packages: () => apiFetch<MembershipPackage[]>('/packages'),
