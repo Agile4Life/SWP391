@@ -769,9 +769,9 @@ describe('SCRUM-86 packages', () => {
     });
     await render();
     await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
-    expect(host.textContent).toContain('Xác minh Căn cước công dân (CCCD)');
+    expect(host.textContent).toContain('Xác nhận nhận Gói Trải Nghiệm 3 Ngày');
     expect(host.textContent).toContain('********1234');
-    const submitBtn = button('Xác minh & Kích hoạt');
+    const submitBtn = button('Nhận gói');
     expect(submitBtn).toBeDefined();
   });
 

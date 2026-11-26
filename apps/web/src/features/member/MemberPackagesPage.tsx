@@ -1523,7 +1523,11 @@ export function MemberPackagesPage() {
           onClose={() => setIsTrialModalOpen(false)}
           busy={isClaimingTrial}
         >
-          <div className="meta-label">{t("Xác minh Căn cước công dân (CCCD) / Hộ chiếu", "Verify identity card / passport")}</div>
+          <div className="meta-label">
+            {hasReusableKyc
+              ? t("Xác nhận nhận Gói Trải Nghiệm 3 Ngày", "Confirm 3-day trial")
+              : t("Xác minh Căn cước công dân (CCCD) / Hộ chiếu", "Verify identity card / passport")}
+          </div>
           <p className="row-card__meta" style={{ marginTop: 8, lineHeight: 1.5 }}>
             {t("Mỗi hội viên nhận Gói Trải Nghiệm 1 lần. Gồm 1 buổi PT 1:1, không bảo lưu.", "One trial per member. Includes one 1:1 PT session; cannot be paused.")}</p>
 
@@ -1727,7 +1731,9 @@ export function MemberPackagesPage() {
                 className="btn-primary"
                 disabled={isClaimingTrial || (!hasReusableKyc && (!trialDocumentNumber.trim() || !trialFullName.trim()))}
               >
-                {isClaimingTrial ? t("Đang gửi đơn…", "Submitting application…") : t("Xác minh & Kích hoạt", "Verify & Activate")}
+                {isClaimingTrial
+                  ? (hasReusableKyc ? t("Đang kích hoạt…", "Activating…") : t("Đang gửi đơn…", "Submitting application…"))
+                  : (hasReusableKyc ? t("Nhận gói", "Claim trial") : t("Xác minh & Kích hoạt", "Verify & Activate"))}
               </button>
             </div>
           </form>
