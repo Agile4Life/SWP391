@@ -829,7 +829,7 @@ class MembershipSubscriptionServiceTest {
         when(subscriptions.findByIdForUpdate(150L)).thenReturn(Optional.of(sub));
         when(paymentRepository.findAllBySubscriptionId(150L)).thenReturn(List.of(payment));
 
-        assertThatThrownBy(() -> service.cancelPending(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 150L))
+        assertThatThrownBy(() -> service.cancelPending(new AuthenticatedPrincipal(2L, "desk", "RECEPTIONIST"), 150L, "Wrong package"))
                 .isInstanceOf(ConflictException.class);
         assertThat(sub.getStatus()).isEqualTo("pending_payment");
         assertThat(payment.getStatus()).isEqualTo("pending");

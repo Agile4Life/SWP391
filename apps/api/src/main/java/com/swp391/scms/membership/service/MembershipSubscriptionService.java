@@ -547,6 +547,11 @@ public class MembershipSubscriptionService {
      */
     @Transactional
     public SubscriptionDto cancelPending(AuthenticatedPrincipal principal, Long subscriptionId) {
+        return cancelPending(principal, subscriptionId, null);
+    }
+
+    @Transactional
+    public SubscriptionDto cancelPending(AuthenticatedPrincipal principal, Long subscriptionId, String rawReason) {
         MembershipSubscription lookup = subscriptions.findById(subscriptionId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.subscription", subscriptionId));
 
@@ -585,6 +590,16 @@ public class MembershipSubscriptionService {
                     "Only a pending payment subscription can be cancelled");
         }
 
+        // Lý do của lễ tân chỉ áp dụng cho yêu cầu chưa thanh toán, không dùng cho hủy gói/hoàn tiền.
+        boolean isReceptionist = "RECEPTIONIST".equalsIgnoreCase(principal.role()) || "STAFF".equalsIgnoreCase(principal.role());
+        String reason = rawReason == null ? null : rawReason.replaceAll("(?U)^\\s+|\\s+$", "");
+        if (isReceptionist && (reason == null || reason.isBlank())) {
+            throw new BadRequestException("PENDING_CANCEL_REASON_REQUIRED", "validation.membership.pending_cancel_reason.required", null, null);
+        }
+        if (reason != null && reason.length() > 500) {
+            throw new BadRequestException("PENDING_CANCEL_REASON_TOO_LONG", "validation.membership.pending_cancel_reason.size", null, null);
+        }
+
         if (paymentRepository != null) {
             List<com.swp391.scms.finance.entity.Payment> subPayments = paymentRepository.findAllBySubscriptionId(subscriptionId);
             if (subPayments.stream().anyMatch(payment -> "success".equalsIgnoreCase(payment.getStatus()))) {
@@ -608,9 +623,18 @@ public class MembershipSubscriptionService {
         }
 
         subscription.setStatus("cancelled");
+        subscription.setPendingCancellationReason(reason);
         subscription.setUpdatedAt(LocalDateTime.now(clock));
 
-        return toDto(subscriptions.saveAndFlush(subscription));
+        MembershipSubscription saved = subscriptions.saveAndFlush(subscription);
+        // Lưu trạng thái, lý do và thông báo cùng transaction; thử lại yêu cầu đã hủy không gửi lặp.
+        if (isReceptionist && notificationService != null) {
+            notificationService.send(memberId, msg("notifications.membership.pending_cancelled.title"),
+                    msg("notifications.membership.pending_cancelled.body", saved.getId(),
+                            saved.getMembershipPackage() == null ? "" : saved.getMembershipPackage().getName(), reason),
+                    "system", "membership_subscription", saved.getId(), "/member/packages");
+        }
+        return toDto(saved);
     }
 
     /** Bộ tính giá trị còn lại của gói (dùng bản Spring tiêm vào, không có thì tự tạo). */

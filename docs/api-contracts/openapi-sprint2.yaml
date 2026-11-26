@@ -1161,6 +1161,7 @@ paths:
   /memberships/subscriptions/{id}/cancel:
     post:
       summary: Hủy yêu cầu gói tập đang chờ Lễ tân xác nhận thanh toán (MEMBER, RECEPTIONIST, CENTER_MANAGER)
+      description: Lễ tân bắt buộc gửi reason không rỗng sau trim, tối đa 500 ký tự. Lưu lý do hủy yêu cầu chưa thanh toán và thông báo chủ yêu cầu trong cùng transaction; không hoàn tiền. MEMBER/CENTER_MANAGER vẫn được gọi không có body như trước. Yêu cầu đã hủy trả kết quả cũ, không sửa lý do hoặc thông báo lặp.
       tags: [Memberships]
       parameters:
         - name: id
@@ -1169,9 +1170,19 @@ paths:
           schema:
             type: integer
             format: int64
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason: {type: string, maxLength: 500}
       responses:
         '200':
           description: Hủy yêu cầu gói tập thành công
+        '400':
+          description: Lễ tân thiếu lý do, chỉ nhập khoảng trắng hoặc lý do dài quá 500 ký tự
         '403':
           description: Không có quyền hủy yêu cầu này
         '404':

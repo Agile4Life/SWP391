@@ -10,6 +10,11 @@ public final class SubscriptionRequests {
     /** Lớp chỉ chứa các record, không cho tạo đối tượng. */
     private SubscriptionRequests() {}
 
+    /** Lý do hủy yêu cầu chưa thanh toán; bắt buộc riêng cho thao tác tại quầy lễ tân. */
+    public record CancelPendingRequest(
+            @Size(max = 500, message = "{validation.membership.pending_cancel_reason.size}") String reason
+    ) {}
+
     /** Đăng ký gói mới: id gói bắt buộc. */
     public record Create(
             @NotNull(message = "{validation.membership.package_id.not_null}")

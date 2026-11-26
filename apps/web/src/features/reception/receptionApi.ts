@@ -285,9 +285,10 @@ export const receptionApi = {
   /**
    * Hủy yêu cầu đăng ký/gia hạn/nâng cấp gói tập đang chờ thanh toán (pending_payment)
    */
-  cancelPendingSubscription: async (subscriptionId: number): Promise<void> => {
+  cancelPendingSubscription: async (subscriptionId: number, reason: string): Promise<void> => {
     await apiFetch(`/memberships/subscriptions/${subscriptionId}/cancel`, {
       method: 'POST',
+      body: JSON.stringify({ reason: reason.trim() }),
     });
   },
 

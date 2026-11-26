@@ -220,12 +220,28 @@ class MembershipSubscriptionControllerTest {
                 100L, 10L, 1L, "Gói 1 tháng", null,
                 LocalDate.now(), LocalDate.now().plusDays(30), "cancelled", null, LocalDateTime.now()
         );
-        when(service.cancelPending(any(), eq(100L))).thenReturn(dto);
+        when(service.cancelPending(any(), eq(100L), org.mockito.ArgumentMatchers.isNull())).thenReturn(dto);
 
         mockMvc.perform(post("/api/v1/memberships/subscriptions/100/cancel"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.id").value(100L))
                 .andExpect(jsonPath("$.data.status").value("cancelled"));
+    }
+
+    @Test
+    void cancelPending_passesReasonToService() throws Exception {
+        mockMvc.perform(post("/api/v1/memberships/subscriptions/50/cancel")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Wrong package\"}"))
+                .andExpect(status().isOk());
+        org.mockito.Mockito.verify(service).cancelPending(any(), eq(50L), eq("Wrong package"));
+    }
+
+    @Test
+    void cancelPending_rejectsTooLongBody() throws Exception {
+        mockMvc.perform(post("/api/v1/memberships/subscriptions/50/cancel")
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"" + "x".repeat(501) + "\"}"))
+                .andExpect(status().isBadRequest());
+        org.mockito.Mockito.verifyNoInteractions(service);
     }
 
     /** Kiểm thử: lấy subscription của tôi trả 200 kèm đối tượng. */

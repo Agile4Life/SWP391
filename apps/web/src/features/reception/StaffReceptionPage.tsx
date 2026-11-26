@@ -61,6 +61,10 @@ export function StaffReceptionPage() {
   const [pendingError, setPendingError] = useState<StaffMessage>('');
   const [selectedPending, setSelectedPending] = useState<PendingSubscriptionItem | null>(null);
   const [cancellingPendingId, setCancellingPendingId] = useState<number | null>(null);
+  const [cancelPendingItem, setCancelPendingItem] = useState<PendingSubscriptionItem | null>(null);
+  const [cancelPendingReason, setCancelPendingReason] = useState('');
+  const [cancelPendingError, setCancelPendingError] = useState<StaffMessage | null>(null);
+  const cancelPendingInFlight = useRef(false);
   const [packages, setPackages] = useState<MembershipPackage[]>([]);
   const [renewalCandidates, setRenewalCandidates] = useState<RenewalCandidate[]>([]);
   const [selectedOffer, setSelectedOffer] = useState('');
@@ -480,26 +484,34 @@ export function StaffReceptionPage() {
   // Hủy một yêu cầu gói tập chờ thanh toán sau khi xác nhận.
   const handleCancelPendingItem = async (item: PendingSubscriptionItem) => {
     if (cancellingPendingId !== null || isSubmittingPayment) return;
-    const ok = await confirm({
-      title: sourceMessage('Hủy yêu cầu gói tập?', 'Cancel this membership request?'),
-      message: sourceMessage(
-        `Yêu cầu #${item.id} (${item.packageName}) của ${item.memberName} sẽ bị hủy, hội viên cần đăng ký lại.`,
-        `Request #${item.id} (${item.packageName}) from ${item.memberName} will be cancelled and the member has to apply again.`,
-      ),
-      confirmLabel: sourceMessage('Hủy yêu cầu', 'Cancel request'),
-      cancelLabel: sourceMessage('Giữ yêu cầu', 'Keep request'),
-      danger: true,
-    });
-    if (!ok) return;
+    setCancelPendingItem(item);
+    setCancelPendingReason('');
+    setCancelPendingError(null);
+  };
+
+  const handleSubmitCancelPending = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const item = cancelPendingItem;
+    if (!item || cancelPendingInFlight.current || isSubmittingPayment) return;
+    const reason = cancelPendingReason.trim();
+    if (!reason || reason.length > 500) {
+      setCancelPendingError(staffMessage('Vui lòng nhập lý do hủy từ 1 đến 500 ký tự.', 'Enter a cancellation reason between 1 and 500 characters.'));
+      return;
+    }
+    // Khóa đúng yêu cầu trong popup; không dùng hội viên hoặc yêu cầu đang chọn ở form thu tiền.
+    cancelPendingInFlight.current = true;
     setCancellingPendingId(item.id);
+    setCancelPendingError(null);
     try {
-      await receptionApi.cancelPendingSubscription(item.id);
+      await receptionApi.cancelPendingSubscription(item.id, reason);
+      setCancelPendingItem(null);
       notify(staffMessage(`Đã hủy yêu cầu gói tập #${item.id} (${item.packageName}) của hội viên ${item.memberName}.`, `Cancelled membership request #${item.id} (${item.packageName}) for member ${item.memberName}.`), 'success', { record: true });
       await loadPendingSubscriptions();
     } catch (err: unknown) {
-      const msg = errorMessage(err, 'Hủy yêu cầu gói tập thất bại.'); await loadPendingSubscriptions();
-      notify(msg, 'error');
+      // Giữ yêu cầu và lý do để thử lại, không báo thành công khi backend từ chối.
+      setCancelPendingError(errorMessage(err, 'Hủy yêu cầu gói tập thất bại.'));
     } finally {
+      cancelPendingInFlight.current = false;
       setCancellingPendingId(null);
     }
   };
@@ -2071,6 +2083,27 @@ export function StaffReceptionPage() {
       )}
       <DocumentImageLightbox image={zoomImage} onClose={() => setZoomImage(null)} />
       {confirmDialog}
+      {cancelPendingItem && (
+        <Modal title={t('Hủy yêu cầu gói tập?', 'Cancel this membership request?')}
+          onClose={() => { if (!cancelPendingInFlight.current) setCancelPendingItem(null); }} busy={cancellingPendingId !== null}>
+          <form onSubmit={event => void handleSubmitCancelPending(event)}>
+            <p className="portal-subtitle confirm-dialog__message">{t(
+              `Yêu cầu #${cancelPendingItem.id} (${cancelPendingItem.packageName}) của ${cancelPendingItem.memberName} sẽ bị hủy, hội viên cần đăng ký lại.`,
+              `Request #${cancelPendingItem.id} (${cancelPendingItem.packageName}) from ${cancelPendingItem.memberName} will be cancelled and the member has to apply again.`,
+            )}</p>
+            <div className="portal-form-group">
+              <label className="portal-label" htmlFor="cancel-pending-reason">{t('Lý do hủy *', 'Cancellation reason *')}</label>
+              <textarea id="cancel-pending-reason" className="portal-textarea" rows={3} required maxLength={500}
+                value={cancelPendingReason} onChange={event => setCancelPendingReason(event.target.value)} disabled={cancellingPendingId !== null} />
+            </div>
+            {cancelPendingError && <p className="form-error" role="alert">{t(cancelPendingError)}</p>}
+            <div className="form-actions confirm-dialog__actions">
+              <button type="button" className="btn-secondary" disabled={cancellingPendingId !== null} onClick={() => setCancelPendingItem(null)}>{t('Giữ yêu cầu', 'Keep request')}</button>
+              <button type="submit" className="btn-danger" disabled={cancellingPendingId !== null || isSubmittingPayment}>{t('Xác nhận hủy', 'Confirm cancellation')}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
