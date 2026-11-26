@@ -30,6 +30,9 @@
 .member-invoices__total dt { color: inherit; font-weight: 700; }
 .member-invoices__note { text-align: center; padding-top: 10px; border-top: 1px dashed var(--portal-border); }
 .member-invoices__modal-actions { display: flex; justify-content: flex-end; }
+.member-invoices__pdf-modal { width: min(760px, 94vw); }
+.member-invoices__pdf-wrap { border: 1px solid var(--portal-border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; background: var(--portal-raised, var(--portal-surface)); }
+.member-invoices__pdf-frame { display: block; width: 100%; height: min(68vh, 560px); border: 0; }
 .member-invoices [role='alert'] { color: var(--portal-danger); padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--portal-danger) 10%, transparent); border: 1px solid color-mix(in srgb, var(--portal-danger) 30%, transparent); }
 @media (max-width: 640px) {
   .portal-v2 .member-invoices__table :is(th, td) { padding: 14px 10px; }

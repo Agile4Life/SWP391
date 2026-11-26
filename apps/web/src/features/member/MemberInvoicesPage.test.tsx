@@ -89,21 +89,27 @@ describe('MemberInvoicesPage', () => {
     expect(host.textContent).toContain('10:00 25/10/2026');
     expect(host.textContent).toContain('Phát hành lúc 10:00 25/10/2026');
     expect(host.textContent).toContain('Thanh toán lúc10:00 25/10/2026');
-    expect(host.querySelector('.member-invoices__download')?.classList.contains('btn-primary')).toBe(true);
+    expect(host.querySelector('.member-invoices__download')).toBeNull();
+    expect(host.querySelector('.member-invoices__preview-btn')?.classList.contains('btn-primary')).toBe(true);
     const blob = new Blob(['%PDF'], { type: 'application/pdf' });
     mocks.pdf.mockResolvedValue(blob);
-    const createUrl = vi.fn().mockReturnValue('blob:test');
-    const revokeUrl = vi.fn();
-    vi.stubGlobal('URL', { createObjectURL: createUrl, revokeObjectURL: revokeUrl });
+    const createUrl = vi.spyOn(URL, 'createObjectURL').mockReturnValue('about:blank');
+    const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
     vi.useFakeTimers();
-    await act(async () => [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Tải hóa đơn'))?.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('.member-invoices__preview-btn')?.click());
     expect(mocks.pdf).toHaveBeenCalledWith(12);
     expect(createUrl).toHaveBeenCalledWith(blob);
+    expect(host.querySelector<HTMLIFrameElement>('.member-invoices__pdf-frame')?.getAttribute('src')).toBe('about:blank');
+    expect(host.querySelector('.member-invoices__download')?.classList.contains('btn-primary')).toBe(true);
+    await act(async () => host.querySelector<HTMLButtonElement>('.member-invoices__download')?.click());
     expect(click).toHaveBeenCalled();
     expect(revokeUrl).not.toHaveBeenCalled();
+    await act(async () => host.querySelector<HTMLButtonElement>('.member-invoices__pdf-modal button[aria-label^="Đóng"]')?.click());
     vi.advanceTimersByTime(1000);
-    expect(revokeUrl).toHaveBeenCalledWith('blob:test');
+    expect(revokeUrl).toHaveBeenCalledWith('about:blank');
+    createUrl.mockRestore();
+    revokeUrl.mockRestore();
     click.mockRestore();
   });
 
@@ -113,7 +119,7 @@ describe('MemberInvoicesPage', () => {
     mocks.pdf.mockRejectedValueOnce(new Error('offline'));
     await render();
     await act(async () => host.querySelector('button[aria-label="Xem hóa đơn giao dịch #12"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
-    await act(async () => [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Tải hóa đơn'))?.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('.member-invoices__preview-btn')?.click());
     expect(host.textContent).toContain('Không tải được file hóa đơn');
   });
 
@@ -123,7 +129,7 @@ describe('MemberInvoicesPage', () => {
     mocks.pdf.mockReturnValue(new Promise(() => {}));
     await render();
     await act(async () => host.querySelector('button[aria-label="Xem hóa đơn giao dịch #12"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
-    await act(async () => [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('Tải hóa đơn'))?.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('.member-invoices__preview-btn')?.click());
     const button = [...host.querySelectorAll('button')].find((item) => item.textContent?.includes('Đang tải file'));
     expect(button?.disabled).toBe(true);
   });
@@ -169,7 +175,7 @@ describe('MemberInvoicesPage', () => {
     expect(tableText).toContain('Đã hoàn tiền');
 
     await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Xem hóa đơn giao dịch #12"]')?.click());
-    await act(async () => [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Tải hóa đơn'))?.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('.member-invoices__preview-btn')?.click());
     expect(host.textContent).toContain('Không tải được file hóa đơn');
 
     await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Đóng"]')?.click());

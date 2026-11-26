@@ -66,6 +66,8 @@ export function MemberInvoicesPage() {
   const [invoiceError, setInvoiceError] = useState<string | null | SourceMessage>(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewPaymentId, setPreviewPaymentId] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -92,6 +94,11 @@ export function MemberInvoicesPage() {
 
   useEffect(() => {
     setDownloadError(false);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setPreviewPaymentId(null);
     if (!selected) return;
     let active = true;
     setInvoice(null);
@@ -106,24 +113,43 @@ export function MemberInvoicesPage() {
     return () => { active = false; };
   }, [selected]);
 
-  // Tải hóa đơn PDF của một khoản thanh toán.
-  async function downloadInvoice(paymentId: number) {
+  // Mở cửa sổ xem trước PDF hóa đơn, sau đó cho phép tải về từ trong cửa sổ xem trước.
+  async function openInvoicePreview(paymentId: number) {
     setDownloading(true);
     setDownloadError(false);
     try {
       const pdf = await getMyInvoicePdf(paymentId);
       const url = URL.createObjectURL(pdf);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `invoice-${paymentId}.pdf`;
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+      setPreviewPaymentId(paymentId);
     } catch {
       setDownloadError(true);
     } finally {
       setDownloading(false);
+    }
+  }
+
+  // Tải xuống file PDF đang xem trước.
+  function triggerPdfDownload() {
+    if (!previewUrl || previewPaymentId == null) return;
+    const anchor = document.createElement('a');
+    anchor.href = previewUrl;
+    anchor.download = `invoice-${previewPaymentId}.pdf`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  // Đóng cửa sổ xem trước PDF và giải phóng object URL.
+  function closeInvoicePreview() {
+    const currentUrl = previewUrl;
+    setPreviewUrl(null);
+    setPreviewPaymentId(null);
+    if (currentUrl) {
+      window.setTimeout(() => URL.revokeObjectURL(currentUrl), 1000);
     }
   }
 
@@ -213,14 +239,34 @@ export function MemberInvoicesPage() {
 
             {downloadError && <p role="alert">{memberText("Không tải được file hóa đơn. Vui lòng thử lại.")}</p>}
             <div className="member-invoices__modal-actions">
-              <button type="button" className="btn-primary member-invoices__download" disabled={downloading || invoice.totalAmount == null}
-                onClick={() => void downloadInvoice(invoice.paymentId)}>
-                {downloading ? memberText("Đang tải file…") : memberText("Tải hóa đơn PDF")}
+              <button type="button" className="btn-primary member-invoices__preview-btn" disabled={downloading || invoice.totalAmount == null}
+                onClick={() => void openInvoicePreview(invoice.paymentId)}>
+                {downloading ? memberText("Đang tải file…") : memberText("Xem hóa đơn")}
               </button>
             </div>
           </>}
         </div>
       </Modal>}
+      {previewUrl && (
+        <Modal
+          title={memberText("Xem hóa đơn PDF")}
+          onClose={closeInvoicePreview}
+          className="member-invoices__pdf-modal"
+        >
+          <div className="member-invoices__pdf-wrap">
+            <iframe
+              src={previewUrl}
+              title={invoice ? `${memberText("Hóa đơn điện tử")} ${invoice.invoiceNumber}` : memberText("Xem hóa đơn PDF")}
+              className="member-invoices__pdf-frame"
+            />
+          </div>
+          <div className="member-invoices__modal-actions">
+            <button type="button" className="btn-primary member-invoices__download" onClick={triggerPdfDownload}>
+              {memberText("Tải hóa đơn PDF")}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
