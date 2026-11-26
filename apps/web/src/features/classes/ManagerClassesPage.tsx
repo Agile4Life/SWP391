@@ -59,6 +59,8 @@ export function ManagerClassesPage() {
   const [selectedDisciplineId, setSelectedDisciplineId] = useState<number | null>(null);
   // Lọc lịch Tab 1 theo một khóa của bộ môn đang chọn; '' = tất cả khóa.
   const [selectedClassId, setSelectedClassId] = useState('');
+  /** Bộ môn đang bị tắt trên Lịch tổng (rỗng = hiện tất cả). */
+  const [hiddenDisciplineIds, setHiddenDisciplineIds] = useState<number[]>([]);
 
   const [detailSession, setDetailSession] = useState<ClassSessionDto | null>(null);
   const [createModal, setCreateModal] = useState<CreateSlotPrefill | null>(null);
@@ -224,8 +226,8 @@ export function ManagerClassesPage() {
 
   /** Sự kiện độc lập cho Tab 2 (luôn hiển thị toàn bộ 3 bộ môn đang hoạt động, không bị Tab 1 lọc ảnh hưởng). */
   const allWeekEvents = useMemo(
-    () => toTimetableEvents(activeScheduleSessions),
-    [activeScheduleSessions, toTimetableEvents],
+    () => toTimetableEvents(activeScheduleSessions.filter((s) => s.disciplineId == null || !hiddenDisciplineIds.includes(s.disciplineId))),
+    [activeScheduleSessions, hiddenDisciplineIds, toTimetableEvents],
   );
 
   const baseLegend = useMemo<TimetableLegendItem[]>(
@@ -455,15 +457,28 @@ export function ManagerClassesPage() {
         <>
           {disciplines.length > 0 && (
             <div
-              style={{ display: 'flex', flexWrap: 'wrap', gap: 12, marginBottom: 12, fontSize: 13, color: 'var(--portal-muted)' }}
-              aria-label={t('Chú thích màu theo bộ môn', 'Discipline color legend')}
+              className="class-discipline-chips"
+              role="group"
+              style={{ marginBottom: 12 }}
+              aria-label={t('Bật/tắt bộ môn trên lịch tổng', 'Toggle disciplines on the overview')}
+              data-testid="overview-discipline-toggles"
             >
-              {disciplines.map((disc) => (
-                <span key={disc.id} style={{ display: 'inline-flex', alignItems: 'center' }}>
-                  <span className="class-discipline-dot" style={{ background: disciplineAccentColor(disc.id) }} aria-hidden="true" />
-                  {disc.name}
-                </span>
-              ))}
+              {disciplines.map((disc) => {
+                const shown = !hiddenDisciplineIds.includes(disc.id);
+                return (
+                  <button
+                    key={disc.id}
+                    type="button"
+                    data-testid={`overview-discipline-${disc.id}`}
+                    className={`filter-chip${shown ? ' is-active' : ''}`}
+                    aria-pressed={shown}
+                    onClick={() => setHiddenDisciplineIds((ids) => (shown ? [...ids, disc.id] : ids.filter((id) => id !== disc.id)))}
+                  >
+                    <span className="class-discipline-dot" style={{ background: disciplineAccentColor(disc.id) }} aria-hidden="true" />
+                    {`${disc.name} (${weeklyCountsByDiscipline.get(disc.id) ?? 0})`}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -477,11 +492,11 @@ export function ManagerClassesPage() {
             onWeekChange={setWeekStart}
             onEventClick={handleOpenEventDetail}
             selectedId={detailSession ? String(detailSession.id) : undefined}
-            maxVisibleLanes={2}
-            legend={baseLegend}
+            summary
+            legend={[]}
             legendNote={t(
-              'Khi khung giờ có từ 3 bộ môn học cùng lúc, lịch tự gom thành nút "+N lớp" để không đè nhau — bấm vào để xem đủ và chọn buổi.',
-              'Slots with 3+ concurrent disciplines group into "+N classes" to prevent overlap — click to inspect every session.',
+              'Mỗi ô đếm số lớp theo bộ môn trong slot đó — bấm vào ô để xem danh sách buổi và mở chi tiết.',
+              'Each cell counts classes per discipline in that slot — click a cell to list its sessions and open details.',
             )}
             emptyLabel={t('Tuần này chưa có buổi học nào', 'No sessions scheduled this week')}
           />

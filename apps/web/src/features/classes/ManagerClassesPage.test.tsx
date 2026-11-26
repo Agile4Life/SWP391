@@ -386,9 +386,20 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
 
     const allWeekTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][0];
     await act(async () => allWeekTab.click());
-    const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]');
-    expect(overflowBtn).not.toBeNull();
-    expect(overflowBtn!.textContent).toContain('+2 lớp');
+    expect(host.querySelector('[data-testid="timetable-overflow-btn"]')).toBeNull();
+    expect(host.querySelectorAll('.mcal__event')).toHaveLength(0);
+    const busiest = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="timetable-summary-cell"]')]
+      .find((cell) => cell.querySelectorAll('.mcal__summary-row').length === 3);
+    expect(busiest).toBeDefined();
+    expect(busiest!.textContent).toContain('Yoga');
+
+    // Tắt chip Yoga thì ô tóm tắt không còn đếm Yoga.
+    const yogaToggle = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="overview-discipline-toggles"] button')]
+      .find((b) => b.textContent?.includes('Yoga'))!;
+    await act(async () => yogaToggle.click());
+    expect(yogaToggle.getAttribute('aria-pressed')).toBe('false');
+    const cellsText = [...host.querySelectorAll('[data-testid="timetable-summary-cell"]')].map((c) => c.textContent).join(' ');
+    expect(cellsText).not.toContain('Yoga');
   });
 
   it('keeps "+ Tạo lớp học" enabled when all 3 disciplines have active classes, shows multiple active courses in Tab 1, and never renders "+ Thêm buổi"', async () => {
@@ -857,14 +868,15 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(dialogButtons).toContain('Hủy buổi');
   });
 
-  it('opens detail modal directly when selecting a hidden class from "+N lớp" overflow list on Full Week tab', async () => {
+  it('opens detail modal from the slot summary cell list on Full Week tab', async () => {
     await renderPage();
 
     const allWeekTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][0];
     await act(async () => allWeekTab.click());
 
-    const overflowBtn = host.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-btn"]')!;
-    await act(async () => overflowBtn.click());
+    const summaryCell = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="timetable-summary-cell"]')]
+      .find((cell) => cell.querySelectorAll('.mcal__summary-row').length === 3)!;
+    await act(async () => summaryCell.click());
 
     const rows = [...document.querySelectorAll<HTMLButtonElement>('[data-testid="timetable-overflow-list"] button')];
     expect(rows).toHaveLength(3);
@@ -1301,7 +1313,8 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await renderPage();
 
     // Open session detail modal while students are loading -> should NOT flash "(0)"
-    await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event')!.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="timetable-summary-cell"]')!.click());
+    await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="timetable-overflow-list"] button')!.click());
     expect(document.querySelector('dialog h3')?.textContent?.trim()).toBe('Học viên đã ghi danh');
     expect(document.querySelector('dialog h3')?.textContent).not.toContain('(0)');
 
