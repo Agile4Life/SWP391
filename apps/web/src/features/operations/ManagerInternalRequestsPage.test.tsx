@@ -1,9 +1,11 @@
 import { act } from 'react';
+import { toast } from '../../shared/ui/toast';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ManagerInternalRequestsPage } from './ManagerInternalRequestsPage';
 import * as staffRequestApi from './staffRequestApi';
 
+vi.mock('../../shared/ui/toast', () => ({ toast: vi.fn() }));
 vi.mock('./staffRequestApi', () => ({
   getAllStaffRequests: vi.fn(),
   reviewStaffRequest: vi.fn(),
@@ -186,7 +188,7 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
     // Backend returns 409 COACH_LEAVE_HAS_CONFLICTS -> asks confirmation before sending confirmConflicts: true
     vi.mocked(staffRequestApi.reviewStaffRequest)
       .mockRejectedValueOnce(new ApiError('HLV có 2 buổi lớp và 1 buổi PT bị ảnh hưởng.', 409, 'COACH_LEAVE_HAS_CONFLICTS'))
-      .mockResolvedValueOnce({ ...mockRequests[0], status: 'APPROVED', affectedClassSessionCount: 2, affectedPtSessionCount: 1 });
+      .mockResolvedValueOnce({ ...mockRequests[0], status: 'APPROVED', affectedClassSessionCount: 2, affectedPtSessionCount: 0 });
 
     const confirmApprove = [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Xác nhận Phê duyệt'))!;
     await act(async () => confirmApprove.click());
@@ -196,6 +198,10 @@ describe('ManagerInternalRequestsPage (Duyệt đơn từ nội bộ)', () => {
     const forceBtn = [...document.body.querySelectorAll('button')].find((b) => b.textContent === 'Vẫn phê duyệt')!;
     await act(async () => forceBtn.click());
     expect(staffRequestApi.reviewStaffRequest).toHaveBeenLastCalledWith(1, expect.objectContaining({ status: 'APPROVED', confirmConflicts: true }));
+    // Không có buổi PT 1:1 thì câu báo chỉ nhắc buổi lớp nhóm.
+    const lastNotice = String(vi.mocked(toast).mock.calls.at(-1)?.[0] ?? '');
+    expect(lastNotice).toContain('cần sắp xếp người dạy thay cho 2 buổi lớp nhóm.');
+    expect(lastNotice).not.toContain('PT');
     expect(dispatchSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'member-notifications-changed' }));
     dispatchSpy.mockRestore();
   });

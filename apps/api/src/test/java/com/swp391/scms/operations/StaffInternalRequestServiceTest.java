@@ -353,7 +353,7 @@ class StaffInternalRequestServiceTest {
         assertEquals(2L, dto.affectedClassSessionCount());
         assertEquals(1L, dto.affectedPtSessionCount());
         verify(notificationService).send(eq(1L), any(),
-                argThat(body -> body.contains("2 buổi lớp và 1 buổi PT")
+                argThat(body -> body.contains("2 buổi lớp nhóm và 1 buổi PT 1:1")
                         && body.contains("01/12/2026") && body.contains("06/12/2026")
                         && !body.contains("2026-12-01")),
                 eq("system"), isNull(), eq(100L),
@@ -384,6 +384,8 @@ class StaffInternalRequestServiceTest {
         var ex = assertThrows(com.swp391.scms.common.exception.ConflictException.class,
                 () -> service.reviewRequest(1L, 101L, new StaffInternalRequestReviewDto("APPROVED", null, false)));
         assertEquals("COACH_LEAVE_HAS_CONFLICTS", ex.getErrorCode());
+        // Không có buổi PT 1:1 -> câu chỉ nhắc buổi lớp nhóm.
+        assertEquals("notifications.operations.leave_impact.body_classes", ex.getMessageKey());
         assertEquals("01/12/2026", ex.getMessageArgs()[1]);
         assertEquals("03/12/2026", ex.getMessageArgs()[2]);
         verify(requestRepository, never()).save(any());

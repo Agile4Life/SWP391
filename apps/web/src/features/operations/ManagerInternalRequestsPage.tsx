@@ -159,8 +159,14 @@ export function ManagerInternalRequestsPage() {
         reviewAction === 'APPROVED'
           ? hasImpact
             ? staffMessage(
-                `Đã phê duyệt đơn của ${staffDisplayName}. Lưu ý: cần sắp xếp người dạy thay cho ${affectedClasses} buổi lớp và ${affectedPt} buổi PT 1:1.`,
-                `Approved request from ${staffDisplayName}. Note: reassign ${affectedClasses} class session(s) and ${affectedPt} 1:1 PT session(s).`,
+                `Đã phê duyệt đơn của ${staffDisplayName}. Lưu ý: cần sắp xếp người dạy thay cho ${[
+                  affectedClasses > 0 ? `${affectedClasses} buổi lớp nhóm` : '',
+                  affectedPt > 0 ? `${affectedPt} buổi PT 1:1` : '',
+                ].filter(Boolean).join(' và ')}.`,
+                `Approved request from ${staffDisplayName}. Note: find a substitute coach for ${[
+                  affectedClasses > 0 ? `${affectedClasses} group class session(s)` : '',
+                  affectedPt > 0 ? `${affectedPt} 1:1 PT session(s)` : '',
+                ].filter(Boolean).join(' and ')}.`,
               )
             : staffMessage(`Đã phê duyệt đơn của ${staffDisplayName} thành công!`, `Approved request from ${staffDisplayName} successfully!`)
           : staffMessage(`Đã từ chối đơn của ${staffDisplayName}.`, `Rejected request from ${staffDisplayName}.`),
