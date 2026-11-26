@@ -101,7 +101,7 @@ it('displays 5 fixed slot rows, enrolled group classes with coach name underneat
 
   await act(async () => host.querySelector<HTMLButtonElement>('.mcal__event--pt')!.click());
   expect(host.querySelector('dialog')?.textContent).toContain('Slot 1 · 07:00 – 09:30');
-  expect(host.querySelector('dialog')?.textContent).toContain('Đã xác nhận');
+  expect(host.querySelector('dialog')?.textContent).toContain('Chưa điểm danh');
   expect(host.querySelector('.mcal__dialog-actions button')?.textContent).toBe('Đóng');
 });
 

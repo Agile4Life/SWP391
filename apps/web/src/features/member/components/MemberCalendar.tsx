@@ -152,9 +152,7 @@ function ptEvent(booking: CoachBookingDto, lang: 'vi' | 'en'): CalendarEvent {
     : undefined;
   const statusLabel = booking.attendedAt
     ? (lang === 'en' ? 'Attended' : 'Đã điểm danh')
-    : booking.status === 'completed'
-    ? (lang === 'en' ? 'Completed' : 'Đã hoàn thành')
-    : (lang === 'en' ? 'Confirmed' : 'Đã xác nhận');
+    : (lang === 'en' ? 'Not attended yet' : 'Chưa điểm danh');
   return {
     id: `pt-${booking.id}`, kind: 'pt', date: booking.bookingDate, startTime: booking.startTime, endTime: booking.endTime,
     title, place: '', coach: coachName,
