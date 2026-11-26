@@ -338,7 +338,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="discipline-chip-2"]')!.click());
     const filter = host.querySelector<HTMLSelectElement>('select[aria-label="Lọc lịch theo khóa học"]')!;
     await act(async () => { filter.value = '4'; filter.dispatchEvent(new Event('change', { bubbles: true })); });
-    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][3];
     await act(async () => listTab.click());
     const row = [...host.querySelectorAll('tbody tr')].find((item) => item.textContent?.includes('Boxing Cơ Bản'))!;
     const viewButton = [...row.querySelectorAll('button')].find((button) => button.textContent === 'Xem lịch')!;
@@ -362,14 +362,15 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(host.querySelector<HTMLSelectElement>('select[aria-label="Lọc lịch theo khóa học"]')?.value).toBe('');
   });
 
-  it('renders 3 independent tabs without duplicate "All disciplines" chip or redundant filter dropdowns', async () => {
+  it('renders 4 independent tabs without duplicate "All disciplines" chip or redundant filter dropdowns', async () => {
     await renderPage('Lịch theo bộ môn');
 
     const tabs = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')].map((b) => b.textContent?.trim());
-    expect(tabs).toHaveLength(3);
+    expect(tabs).toHaveLength(4);
     expect(tabs[0]).toBe('Lịch tổng cả tuần');
     expect(tabs[1]).toBe('Lịch theo bộ môn');
-    expect(tabs[2]).toContain('Danh sách lớp');
+    expect(tabs[2]).toBe('Lịch theo HLV');
+    expect(tabs[3]).toContain('Danh sách lớp');
 
     const chips = [...host.querySelectorAll<HTMLButtonElement>('[data-testid="discipline-filter-chips"] button')];
     expect(chips).toHaveLength(3);
@@ -564,7 +565,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(host.textContent).not.toContain('bấm để tạo lớp');
 
     // Tab 3 Danh sách lớp cũng không còn nút "+ Thêm buổi"
-    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][3];
     await act(async () => listTab.click());
     const tableButtons = [...host.querySelectorAll<HTMLButtonElement>('table button')].map((b) => b.textContent?.trim());
     expect(tableButtons.some((label) => label?.includes('Thêm buổi'))).toBe(false);
@@ -895,6 +896,33 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(dialogButtons).toContain('Hủy buổi');
   });
 
+  it('filters the schedule by a coach picked from a searchable dropdown, in week and month views', async () => {
+    await renderPage('Lịch theo HLV');
+    const titles = () => [...host.querySelectorAll('.mcal__event')].map((e) => e.textContent ?? '');
+    // Mặc định HLV đầu danh sách theo tên (HLV Hùng) — chỉ thấy buổi của HLV đó.
+    expect(titles()).toHaveLength(2);
+    expect(titles().some((x) => x.includes('Hatha Yoga'))).toBe(false);
+
+    const trigger = host.querySelector<HTMLButtonElement>('[data-testid="coach-filter-bar"] .ui-select__trigger')!;
+    await act(async () => trigger.click());
+    const search = host.querySelector<HTMLInputElement>('.ui-select__search')!;
+    expect(document.activeElement).toBe(search);
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => { setter.call(search, 'lan'); search.dispatchEvent(new Event('input', { bubbles: true })); });
+    const options = [...host.querySelectorAll('[role="option"]')].map((o) => o.textContent);
+    expect(options).toEqual(['HLV Lan']);
+    await act(async () => search.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })));
+
+    expect(titles()).toHaveLength(1);
+    expect(titles()[0]).toContain('Hatha Yoga Nền Tảng');
+
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('[data-testid="overview-mode-switch"] button')]
+      .find((b) => b.textContent === 'Tháng')!.click());
+    const cell = host.querySelector(`[data-testid="month-day-${today}"]`)!;
+    expect(cell.textContent).toContain('Yoga');
+    expect(cell.textContent).not.toContain('Gym');
+  });
+
   it('switches the overview to a month calendar, lists a day and jumps back to its week', async () => {
     await renderPage();
     const switchBtns = () => [...document.querySelectorAll<HTMLButtonElement>('[data-testid="overview-mode-switch"] button')];
@@ -1084,7 +1112,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await renderPage();
 
     // Tab 3 ClassListTable distinguishes active, inactive, archived cleanly
-    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][3];
     await act(async () => listTab.click());
     const allChip = [...host.querySelectorAll<HTMLButtonElement>('.filter-chip')].find((b) =>
       b.textContent?.includes('ngừng mở/lưu trữ'),
@@ -1346,7 +1374,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     });
 
     await renderPage();
-    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][3];
     await act(async () => listTab.click());
     const editBtn = [...host.querySelectorAll<HTMLButtonElement>('tbody button')].find((b) => b.textContent === 'Sửa')!;
     await act(async () => editBtn.click());
@@ -1455,7 +1483,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await act(async () => document.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
 
     // Switch to Tab 3, show All -> archived row must not have "Xem lịch", active row jumps weekStart to Monday of 2099-03-11 (2099-03-09)
-    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];
+    const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][3];
     await act(async () => listTab.click());
     const allChip = [...host.querySelectorAll<HTMLButtonElement>('.filter-chip')].find((b) =>
       b.textContent?.includes('Tất cả'),

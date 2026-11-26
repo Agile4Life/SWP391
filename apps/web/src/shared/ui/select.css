@@ -249,3 +249,33 @@
     transition: none !important;
   }
 }
+
+/* Menu có ô tìm kiếm: khung ngoài giữ nền/viền/animation, danh sách bên trong tự cuộn. */
+.ui-select__menu--search {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  min-width: max(100%, 240px);
+}
+
+.ui-select__search {
+  flex: none;
+  height: 36px;
+  font-size: 13px;
+}
+
+.ui-select__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.ui-select__empty {
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--color-text-muted);
+}
