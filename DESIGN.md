@@ -1,5 +1,8 @@
 # Quy chuẩn thiết kế chính — SÖL
 
+Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
+Các nút thao tác trong Danh mục vận hành nằm cùng một hàng; bảng cuộn ngang khi cần.
+
 Phạm vi 3 bộ môn (`Gym`, `Boxing`, `Yoga`), **đa lớp `active`/bộ môn không trùng ngày & slot**, **wizard tạo khóa học 4 bước kèm tiền kiểm tra khả dụng**, **hệ thống lịch 5 Slot cố định (`07:00 – 19:30`)**, thẻ sự kiện viền mảnh có tên HLV, gỡ hoàn toàn đặt sân, ẩn 3D, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò (25/11/2026 — **ghi đè** mục Gym-only 22–23/11/2026 và các mục cũ bên dưới về đặt sân, bộ môn ngoài phạm vi, 3D, quy tắc 1 lớp duy nhất/môn cũ, lưới giờ liên tục cũ, công tắc `08:00–20:00 / Cả ngày`, viền dày trái `border-left: 4px`, `TimePicker` tự do trong xếp lịch, 15 nút giờ PT Sáng/Chiều/Tối và giới hạn bắt buộc HLV nghỉ giữa các slot liền kề; các tính năng tắt qua cờ legacy vẫn giữ nguyên trạng thái tắt):
 - **Hệ thống lịch tuần 5 Slot cố định (`07:00 – 19:30`), thẻ sự kiện & bộ chọn Slot**:
   - Áp dụng đồng nhất cho cả **Lớp học nhóm định kỳ** (3 bộ môn `Gym`, `Boxing`, `Yoga` — cho phép **nhiều lớp `active`/bộ môn** miễn không trùng ngày & slot cùng bộ môn, `409 SCHEDULING_DISCIPLINE_CONFLICT`) lẫn **PT 1:1** trên toàn bộ portal (nguồn chuẩn duy nhất: enum `ScheduleSlot` ở backend và `apps/web/src/features/schedule/slots.ts` ở frontend; nghỉ 15 phút giữa hai slot kế tiếp):
@@ -407,8 +410,12 @@ VNPay Back/Forward (06/11/2026): khôi phục từ bfcache phải đồng bộ t
 Quyết định Receptionist (25/11/2026): Dropdown gia hạn tại quầy: lựa chọn không hợp lệ vẫn disabled; giải thích dùng màu chữ phụ rõ, opacity 1 và xuống dòng trong menu, không đổi rule gia hạn.
 Quyết định Receptionist (25/11/2026): KYC tại POS: hiện trạng thái từ API, chỉ hiện số giấy tờ đã che; mua mới dùng cùng điều kiện KYC với Member. Không thêm quyền sửa giấy tờ.
 
+KYC lễ tân (25/11/2026, Task 2 — chỉ UI tại `/staff/kyc`): card có tên/mã hội viên, badge Chờ duyệt và thời gian gửi; thông tin giấy tờ dạng label–value bên trái, hai ảnh bên phải trên desktop và xếp dọc trên mobile. Ảnh dùng khung đồng đều, `object-fit: contain`, nhãn nằm ngoài ảnh; giữ liên kết xem ảnh hiện có. Nút Từ chối outline, Duyệt primary; dùng token Light salmon/Dark bạc hiện hành. Giữ nguyên API, số giấy tờ, xác nhận duyệt, form lý do từ chối, disabled và refresh/polling.
+
 Quyết định Receptionist (25/11/2026): Nạp Ví SÖL tại quầy chỉ nhận tiền mặt; hiển thị phương thức cố định, giữ giao dịch lịch sử khác phương thức.
 
 Quyết định Receptionist (25/11/2026): Hai bảng lịch sử tại quầy có tìm kiếm độc lập, Hôm nay/7/30/90 ngày/Tất cả thời gian, sắp xếp hai chiều; giữ bộ lọc loại và phương thức lịch sử.
 
 Quyết định Receptionist (25/11/2026): Receptionist nhận toast cho yêu cầu mới sau mốc đăng nhập; chuông dùng notification server và trạng thái đọc riêng việc xử lý. Giữ route nghiệp vụ hiện có.
+
+Quyết định Receptionist — Task 3 (25/11/2026): `/messages?tab=support` giữ cột hội thoại bên trái và hộp thư/chi tiết phiếu bên phải. Phiếu chưa đọc có tên hội viên và tin cuối in đậm, badge số tin đến chưa đọc, thời gian tin cuối; sắp theo tin cuối trên server trước phân trang. Bộ lọc Tất cả/Chưa đọc kết hợp độc lập với trạng thái xử lý. Header chi tiết có nút mũi tên trái “Quay lại hộp thư” hiện trên desktop/mobile, chỉ đóng chi tiết, giữ bộ lọc, nháp và vị trí cuộn danh sách. Trạng thái đọc lưu theo từng lễ tân, tách khỏi trạng thái xử lý phiếu; chỉ xác nhận đến tin đã tải thành công. Dùng token Light salmon/Dark bạc, không thay luồng gửi/trả lời/chuyển Manager hoặc giao diện AI.

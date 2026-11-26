@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
 import { useI18n } from '../../shared/i18n';
-import { escalateSupportTicket, getSupportInbox, getSupportMessages, getSupportTicket, sendSupportMessage, updateSupportStatus, type SupportMessage, type SupportTicket } from '../member/memberSupportApi';
+import { escalateSupportTicket, getSupportInbox, getSupportMessages, getSupportTicket, markSupportRead, sendSupportMessage, updateSupportStatus, type SupportMessage, type SupportTicket } from '../member/memberSupportApi';
 import { subscribeSupport } from '../member/supportRealtime';
 import type { ChatConnection } from './chatRealtime';
 import type { ChatError } from './chatMessages';
@@ -29,6 +29,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const [page, setPage] = useState(0);
   const [pages, setPages] = useState(0);
   const [filter, setFilter] = useState<'' | Status>('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState<ChatError | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
@@ -36,6 +37,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<ChatError | null>(null);
+  const [readError, setReadError] = useState<ChatError | null>(null);
   const [accessDenied, setAccessDenied] = useState(false);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
   const [busy, setBusy] = useState(false);
@@ -45,51 +47,81 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const [reason, setReason] = useState('');
   const [connection, setConnection] = useState<ChatConnection>('connecting');
   const alive = useRef(false);
+  const activeRef = useRef(active);
   const selection = useRef<number | null>(null);
   const listGeneration = useRef(0);
   const detailGeneration = useRef(0);
-  const listQuery = useRef<{ page: number; filter: '' | Status }>({ page: 0, filter: '' });
+  const listQuery = useRef<{ page: number; filter: '' | Status; unreadOnly: boolean }>({ page: 0, filter: '', unreadOnly: false });
+  const readCursors = useRef(new Map<number, number>());
+  const detailInFlight = useRef(new Map<number, Promise<void>>());
+  const detailDirty = useRef(new Set<number>());
+  const listElement = useRef<HTMLDivElement>(null);
+  const listScroll = useRef(0);
   const busyRef = useRef(false);
   const sendKeys = useRef(new Map<number, { text: string; key: string }>());
 
   useEffect(() => { alive.current = true; return () => { alive.current = false; selection.current = null; }; }, []);
+  useEffect(() => { activeRef.current = active; }, [active]);
 
   // Tải danh sách phiếu theo trang và trạng thái hiện tại; trang vượt quá thì lùi về trang cuối, chỉ lần gọi mới nhất được dùng.
   const loadList = useCallback(async (background = false) => {
-    const { page: target, filter: status } = listQuery.current;
+    const { page: target, filter: status, unreadOnly: unread } = listQuery.current;
     const generation = ++listGeneration.current;
     // Lần gọi này còn hiệu lực không (component còn sống và chưa có lần gọi mới hơn).
     const current = () => alive.current && generation === listGeneration.current;
     if (!background) setLoading(true);
     try {
-      let result = await getSupportInbox(target, status);
+      const fetchPage = (value: number) => manager ? getSupportInbox(value, status) : getSupportInbox(value, status, unread);
+      let result = await fetchPage(target);
       if (!current()) return;
       const last = Math.max(0, result.totalPages - 1);
       if (target > last) {
         // Trang hiện tại không còn (phiếu vừa được xử lý xong): lùi về trang cuối rồi đọc lại.
-        listQuery.current = { page: last, filter: status }; setPage(last);
-        result = await getSupportInbox(last, status);
+        listQuery.current = { page: last, filter: status, unreadOnly: unread }; setPage(last);
+        result = await fetchPage(last);
         if (!current()) return;
       }
       setTickets(result.content); setPages(result.totalPages); setListError(null);
     } catch (cause) { if (current()) setListError(supportError(cause)); }
     finally { if (current()) setLoading(false); }
-  }, []);
+  }, [manager]);
   useEffect(() => { void loadList(); }, [loadList]);
 
   // Tải chi tiết phiếu và các tin nhắn (silent thì không hiện trạng thái tải).
   const loadDetail = useCallback(async (id: number, silent = false) => {
-    const generation = ++detailGeneration.current;
-    // Lần gọi này còn hiệu lực không (đúng phiếu đang chọn và chưa có lần gọi mới hơn).
-    const current = () => alive.current && selection.current === id && generation === detailGeneration.current;
-    if (!silent) { setDetailLoading(true); setDetailError(null); setAccessDenied(false); }
-    try {
-      const [result, history] = await Promise.all([getSupportTicket(id), getSupportMessages(id)]);
-      if (current()) { setTicket(result); setMessages(uniqueMessages(history)); setDetailError(null); setAccessDenied(false); }
-    } catch (cause) {
-      if (current()) { setDetailError(supportError(cause)); setAccessDenied(isAccessDenied(cause)); if (!silent) { setTicket(null); setMessages([]); } }
-    } finally { if (current()) setDetailLoading(false); }
-  }, []);
+    // Gộp realtime/focus liên tiếp: mỗi phiếu chỉ có một lượt tải và xác nhận đọc đang chạy.
+    const existing = detailInFlight.current.get(id);
+    if (existing) { detailDirty.current.add(id); return existing; }
+    const request = (async () => {
+      do {
+        detailDirty.current.delete(id);
+        const generation = ++detailGeneration.current;
+        const current = () => alive.current && selection.current === id && generation === detailGeneration.current;
+        if (!silent) { setDetailLoading(true); setDetailError(null); setAccessDenied(false); }
+        try {
+          const [result, history] = await Promise.all([getSupportTicket(id), getSupportMessages(id)]);
+          // Có thể vừa quay lại và mở lại cùng phiếu: bỏ kết quả cũ, vẫn chạy lượt tải đang chờ.
+          if (!current()) continue;
+          setTicket(result); setMessages(uniqueMessages(history)); setDetailLoading(false); setDetailError(null); setAccessDenied(false);
+          // Chỉ đọc đến ảnh chụp dữ liệu vừa tải thành công; tin đến sau vẫn còn chưa đọc trên server.
+          const cursor = history.reduce((last, message) => Math.max(last, message.id), 0);
+          if (!manager && activeRef.current && document.visibilityState !== 'hidden' && (readCursors.current.get(id) ?? -1) < cursor) {
+            try {
+              await markSupportRead(id, cursor);
+              readCursors.current.set(id, cursor);
+              if (current()) setReadError(null);
+              // Tải lại số chưa đọc thật; generation của danh sách loại kết quả cũ trước lúc xác nhận đọc.
+              if (alive.current) void loadList(true);
+            } catch (cause) { if (current()) setReadError(supportError(cause)); }
+          }
+        } catch (cause) {
+          if (current()) { setDetailError(supportError(cause)); setAccessDenied(isAccessDenied(cause)); if (!silent || isAccessDenied(cause)) { setTicket(null); setMessages([]); } }
+        } finally { if (current()) setDetailLoading(false); }
+      } while (detailDirty.current.has(id) && alive.current && selection.current === id && (manager || activeRef.current));
+    })();
+    detailInFlight.current.set(id, request);
+    try { await request; } finally { detailInFlight.current.delete(id); }
+  }, [manager, loadList]);
 
   // Realtime: danh sách phiếu (phiếu mới, đổi trạng thái) và phiếu đang mở (tin nhắn mới của hội viên).
   useEffect(() => {
@@ -105,7 +137,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     return () => { disposed = true; stop(); clearTimeout(timer); };
   }, [loadList]);
   useEffect(() => {
-    if (selected === null) return;
+    if (selected === null || (!manager && !active)) return;
     const id = selected;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let disposed = false, running = false, dirty = false;
@@ -118,25 +150,28 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     void loadDetail(id);
     const stop = subscribeSupport(invalidate, state => { if (state === 'connected') invalidate(); }, id);
     return () => { disposed = true; stop(); clearTimeout(timer); };
-  }, [selected, loadDetail]);
+  }, [selected, active, manager, loadDetail]);
+
+  useLayoutEffect(() => { if (selected === null && listElement.current) listElement.current.scrollTop = listScroll.current; }, [selected]);
 
   // Mở một phiếu để xem chi tiết.
   function open(item: SupportTicket) {
+    listScroll.current = listElement.current?.scrollTop ?? 0;
     detailGeneration.current++;
     selection.current = item.id;
-    setTicket(item); setMessages([]); setDetailError(null); setAccessDenied(false); setActionError(null); setPending(null);
+    setTicket(item); setMessages([]); setDetailError(null); setReadError(null); setAccessDenied(false); setActionError(null); setPending(null);
     setDetailLoading(true); setEscalating(false); setReason(''); setSelected(item.id);
   }
   // Đóng phiếu đang xem, quay về danh sách và tải lại.
   function close() {
     selection.current = null; detailGeneration.current++;
-    setSelected(null); setTicket(null); setMessages([]); setActionError(null); setPending(null); setEscalating(false); setReason('');
+    setSelected(null); setTicket(null); setMessages([]); setActionError(null); setReadError(null); setPending(null); setEscalating(false); setReason('');
     void loadList(true);
   }
   // Đổi trang hoặc bộ lọc trạng thái rồi tải lại danh sách.
-  function changeQuery(nextPage: number, nextFilter: '' | Status) {
-    listQuery.current = { page: nextPage, filter: nextFilter };
-    setPage(nextPage); setFilter(nextFilter);
+  function changeQuery(nextPage: number, nextFilter: '' | Status, unread = unreadOnly) {
+    listQuery.current = { page: nextPage, filter: nextFilter, unreadOnly: unread };
+    setPage(nextPage); setFilter(nextFilter); setUnreadOnly(unread); listScroll.current = 0;
     void loadList();
   }
 
@@ -199,22 +234,34 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
           <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
         </HeaderAction>
       </SupportHeader>
+      {!manager && <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc tin chưa đọc', 'Filter unread messages')}>
+        {[false, true].map(value => <button key={String(value)} type="button" role="radio" aria-checked={unreadOnly === value} className={`support-chat__chip${unreadOnly === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, filter, value)}>{value ? t('Chưa đọc', 'Unread') : t('Tất cả', 'All')}</button>)}
+      </div>}
       <div className="support-chat__categories" role="radiogroup" aria-label={t('Lọc theo trạng thái', 'Filter by status')}>
         {(['', ...STATUSES] as const).map(value => <button key={value || 'all'} type="button" role="radio" aria-checked={filter === value} className={`support-chat__chip${filter === value ? ' is-selected' : ''}`} onClick={() => changeQuery(0, value)}>
-          {value ? t(...SUPPORT_STATUS_LABEL[value]) : t('Tất cả', 'All')}</button>)}
+          {value ? t(...SUPPORT_STATUS_LABEL[value]) : manager ? t('Tất cả', 'All') : t('Mọi trạng thái', 'Any status')}</button>)}
       </div>
-      <div className="direct-chat__transcript support-chat__tickets" role="region" aria-label={t('Phiếu hỗ trợ', 'Support tickets')} aria-busy={loading}>
+      <div ref={listElement} className="direct-chat__transcript support-chat__tickets" role="region" aria-label={t('Phiếu hỗ trợ', 'Support tickets')} aria-busy={loading}>
         {loading ? <LoadingSkeleton label={t('Đang tải phiếu hỗ trợ…', 'Loading support tickets…')} count={4} />
           : listError ? <div role="alert" className="direct-chat__error"><p>{t(listError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadList()}>{t('Thử lại', 'Retry')}</button></div>
             : tickets.length === 0 ? <p className="direct-chat__empty">{manager ? t('Chưa có phiếu nào được chuyển lên.', 'No escalated tickets.') : t('Không có phiếu hỗ trợ phù hợp.', 'No matching support tickets.')}</p>
               : <ul className="support-chat__ticket-list">{tickets.map(item => {
                 const pair = SUPPORT_STATUS_LABEL[item.status];
-                return <li key={item.id}><button type="button" data-support-ticket={item.id} className="direct-chat__person" onClick={() => open(item)}>
+                const unread = !manager && !!item.unreadCount;
+                return <li key={item.id}><button type="button" data-support-ticket={item.id} className={`direct-chat__person${unread ? ' has-unread' : ''}`} onClick={() => open(item)}>
                   <span className="direct-chat__person-info">
-                    <strong data-i18n-managed>#{item.id} · {item.subject}</strong>
-                    <span className="direct-chat__person-sub"><small data-i18n-managed className="direct-chat__preview">{memberName(item)} · {formatCenterDate(item.createdAt)}{item.assignedToName ? ` · ${item.assignedToName}` : ''}</small></span>
+                    {manager ? <>
+                      <strong data-i18n-managed>#{item.id} · {item.subject}</strong>
+                      <span className="direct-chat__person-sub"><small data-i18n-managed className="direct-chat__preview">{memberName(item)} · {formatCenterDate(item.createdAt)}{item.assignedToName ? ` · ${item.assignedToName}` : ''}</small></span>
+                    </> : <>
+                      <strong data-i18n-managed className="support-chat__member">{memberName(item)}</strong>
+                      <span data-i18n-managed className="support-chat__subject">#{item.id} · {item.subject}</span>
+                      <span data-i18n-managed className={`direct-chat__preview${unread ? ' is-unread' : ''}`}>{item.lastMessage ?? item.description ?? item.subject}</span>
+                      <time dateTime={item.lastMessageAt ?? item.createdAt}>{formatCenterDateTime(item.lastMessageAt ?? item.createdAt)}</time>
+                    </>}
                   </span>
                   <span className="support-chat__badges">
+                    {unread && <span className="direct-chat__unread" aria-label={t(`${item.unreadCount} tin chưa đọc`, `${item.unreadCount} unread messages`)}>{item.unreadCount! > 99 ? '99+' : item.unreadCount}</span>}
                     <span className={`support-chat__pill support-chat__pill--${item.status}`}>{pair ? t(...pair) : item.status}</span>
                     {item.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}
                   </span>
@@ -231,12 +278,13 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
   const pair = ticket ? SUPPORT_STATUS_LABEL[ticket.status] : null;
   const closed = ticket?.status === 'closed';
   return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
-    <SupportHeader onBack={close} active={active} title={ticket ? memberName(ticket) : `#${selected}`} subtitle={ticket ? `#${ticket.id} · ${pair ? t(...pair) : ticket.status}${ticket.assignedToName ? ` · ${ticket.assignedToName}` : ''}` : t('Đang tải phiếu…', 'Loading ticket…')}>
+    <SupportHeader onBack={close} active={active} inboxBackLabel={!manager ? t('Quay lại hộp thư', 'Back to inbox') : undefined} title={ticket ? memberName(ticket) : `#${selected}`} subtitle={ticket ? `#${ticket.id} · ${pair ? t(...pair) : ticket.status}${ticket.assignedToName ? ` · ${ticket.assignedToName}` : ''}` : t('Đang tải phiếu…', 'Loading ticket…')}>
       {canEscalate && <HeaderAction label={t('Chuyển lên quản lý', 'Escalate to management')} disabled={busy || detailLoading} onClick={() => { setReason(''); setActionError(null); setEscalating(true); }}>
         <line x1="7" y1="17" x2="17" y2="7" /><polyline points="7 7 17 7 17 17" />
       </HeaderAction>}
     </SupportHeader>
     {detailError && <div role="alert" className="direct-chat__error"><p>{t(detailError)}</p>{!accessDenied && <button type="button" className="direct-chat__link" onClick={() => void loadDetail(selected)}>{t('Thử lại', 'Retry')}</button>}</div>}
+    {readError && !detailError && <div role="alert" className="direct-chat__error"><p>{t(readError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadDetail(selected, true)}>{t('Thử lại', 'Retry')}</button></div>}
     {ticket && <div className="support-chat__toolbar"><p className="support-chat__ticketbar" title={ticket.subject}><span className="support-chat__ticketbar-subject">{ticket.subject}</span>
       {ticket.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}</p></div>}
     {ticket?.escalatedAt && <p role="status" data-testid="escalation-info" className="direct-chat__muted support-chat__note">

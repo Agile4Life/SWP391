@@ -34,6 +34,11 @@ describe('KycReviewPage', () => {
     const card = host.querySelector('[data-testid="kyc-10"]')!;
     expect(card.textContent).toContain('012345678901');
     expect(card.querySelectorAll('img')).toHaveLength(2);
+    expect(card.querySelector('.kyc-card__pending')?.textContent).toBe('Chờ duyệt');
+    expect(card.querySelector('.kyc-card__code')?.textContent).toContain('MB-010');
+    const photos = [...card.querySelectorAll<HTMLAnchorElement>('a.kyc-card__image')];
+    expect(photos.map(photo => photo.getAttribute('href'))).toEqual([submission.frontImageUrl, submission.backImageUrl]);
+    expect(photos.every(photo => photo.target === '_blank' && photo.rel === 'noreferrer')).toBe(true);
     await act(async () => button('Duyệt').click());
     expect(mocks.approve).not.toHaveBeenCalled();
     expect(host.querySelector('dialog')?.textContent).toContain('012345678901');
@@ -63,6 +68,42 @@ describe('KycReviewPage', () => {
     mocks.list.mockResolvedValueOnce([]);
     await render();
     expect(host.textContent).toContain('Không có hồ sơ nào chờ duyệt');
+  });
+
+  it('shows loading while preserving the disabled refresh button', async () => {
+    mocks.list.mockReturnValue(new Promise(() => {}));
+    await render();
+    expect(host.textContent).toContain('Đang tải hồ sơ chờ duyệt');
+    expect(host.querySelector<HTMLButtonElement>('button[aria-label="Làm mới danh sách hồ sơ"]')?.disabled).toBe(true);
+    expect(host.querySelector('.kyc-card')).toBeNull();
+  });
+
+  it('shows a readable load error without review actions', async () => {
+    mocks.list.mockRejectedValue(new Error('Không tải được hồ sơ'));
+    await render();
+    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Không tải được hồ sơ');
+    expect(host.querySelector('.kyc-card__actions')).toBeNull();
+  });
+
+  it('keeps passport details and missing-photo placeholders', async () => {
+    mocks.list.mockResolvedValue([{ ...submission, documentType: 'PASSPORT', citizenId: 'P1234567', backImageUrl: null }]);
+    await render();
+    expect(host.querySelector('dt')?.textContent).toBe('Hộ chiếu');
+    expect(host.querySelector('dd')?.textContent).toBe('P1234567');
+    expect(host.querySelector('.kyc-card__image--empty')?.textContent).toContain('Mặt sau: chưa có ảnh');
+  });
+
+  it('keeps both review actions disabled while approval is pending', async () => {
+    let finish!: () => void;
+    mocks.list.mockResolvedValue([submission]);
+    mocks.approve.mockReturnValue(new Promise<void>(resolve => { finish = resolve; }));
+    await render();
+    await act(async () => button('Duyệt').click());
+    await act(async () => button('Xác nhận duyệt').click());
+    expect(button('Duyệt').disabled).toBe(true);
+    expect(button('Từ chối').disabled).toBe(true);
+    await act(async () => finish());
+    expect(mocks.approve).toHaveBeenCalledTimes(1);
   });
 
   it('picks up a submission sent after the page was opened: refresh button, timer and window focus', async () => {

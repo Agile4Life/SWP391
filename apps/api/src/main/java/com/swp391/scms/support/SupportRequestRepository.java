@@ -10,6 +10,19 @@ import org.springframework.data.repository.query.Param;
 /** Truy cập bảng support_requests (phiếu khiếu nại/hỗ trợ). */
 public interface SupportRequestRepository extends JpaRepository<SupportRequest, Long> {
     
+    String INBOX_FILTER = """
+        from SupportRequest r where (:status is null or r.status = :status)
+        and (:unreadOnly = false or not exists
+          (select receipt.id from SupportRequestRead receipt where receipt.supportRequest = r and receipt.user.id = :userId)
+          or exists (select m.id from SupportRequestMessage m where m.supportRequest = r
+            and m.sender.id = r.member.userId and m.id > coalesce(
+              (select receipt.lastMessageId from SupportRequestRead receipt where receipt.supportRequest = r and receipt.user.id = :userId), 0)))
+        """;
+    @Query(value = "select r " + INBOX_FILTER + """
+        order by coalesce((select max(m.createdAt) from SupportRequestMessage m where m.supportRequest = r), r.createdAt) desc, r.id desc
+        """, countQuery = "select count(r) " + INBOX_FILTER)
+    Page<SupportRequest> findReceptionistInbox(@Param("status") String status, @Param("unreadOnly") boolean unreadOnly,
+            @Param("userId") Long userId, Pageable pageable);
     /** Lấy phiếu và khóa dòng để ghi, tránh hai người cập nhật cùng lúc. */
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("select r from SupportRequest r where r.id = :id")

@@ -46,6 +46,7 @@ export function StaffReceptionPage() {
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchResults, setSearchResults] = useState<MemberLookupResult[]>([]);
+  const selectionVersion = useRef(0);
   const [selectedMember, setSelectedMember] = useState<MemberLookupResult | null>(null);
 
   // Danh sách yêu cầu gói tập đang chờ thanh toán (do Hội viên đăng ký / gia hạn / nâng cấp)
@@ -87,9 +88,10 @@ export function StaffReceptionPage() {
   const refreshSelectedMember = useCallback(async () => {
     const member = selectedMember;
     if (!member) return null;
+    const version = selectionVersion.current;
     const results = await receptionApi.lookupMembers(member.membershipCode || member.email);
     const fresh = results.find((item) => item.userId === member.userId);
-    if (selectedMemberRef.current !== member.userId) return null;
+    if (version !== selectionVersion.current || selectedMemberRef.current !== member.userId) return null;
     if (!fresh) throw new Error('Không tải được thông tin hội viên. Vui lòng tra cứu lại.');
     setSelectedMember(fresh);
     return fresh;
@@ -97,7 +99,10 @@ export function StaffReceptionPage() {
   useEffect(() => {
     const refresh = () => {
       if (document.visibilityState === 'hidden' || paymentInFlight.current) return;
-      void refreshSelectedMember().catch((err: unknown) => setPaymentError(errorMessage(err, 'Không tải được thông tin hội viên.')));
+      const version = selectionVersion.current;
+      void refreshSelectedMember().catch((err: unknown) => {
+        if (version === selectionVersion.current) setPaymentError(errorMessage(err, 'Không tải được thông tin hội viên.'));
+      });
     };
     window.addEventListener('focus', refresh);
     document.addEventListener('visibilitychange', refresh);
@@ -411,20 +416,30 @@ export function StaffReceptionPage() {
   };
 
   // Chọn một yêu cầu chờ thanh toán để thu tiền, đồng thời chọn hội viên tương ứng.
-  const handleSelectPendingItem = (item: PendingSubscriptionItem) => {
+  const handleSelectPendingItem = async (item: PendingSubscriptionItem) => {
     setSelectedPending(item);
-    setSelectedMember({
-      userId: item.memberId,
-      membershipCode: item.membershipCode || '',
-      fullName: item.memberName,
-      email: item.memberEmail,
-      phone: item.memberPhone,
-      citizenId: null,
-      status: 'PENDING_PAYMENT',
-      currentPackage: item.packageName,
-      endDate: `${formatCenterDate(item.startDate)} → ${formatCenterDate(item.endDate)}`,
-    });
-    // Form thanh toán nằm phía trên danh sách chờ: đưa lễ tân tới bước xác nhận
+    const version = ++selectionVersion.current;
+    setSelectedMember(null);
+    selectedMemberRef.current = null;
+    setSearchError(null);
+    setIsSearching(true);
+    // DTO hàng đợi thiếu KYC/CCCD: lấy hồ sơ backend và đối chiếu đúng memberId.
+    try {
+      const results = await receptionApi.lookupMembers(item.membershipCode || item.memberEmail);
+      if (version !== selectionVersion.current) return;
+      const member = results.find((result) => result.userId === item.memberId);
+      if (!member) {
+        setSearchError(staffMessage('Không tải được thông tin hội viên. Vui lòng tra cứu lại.', 'Unable to load member profile. Please search again.'));
+        return;
+      }
+      setSelectedMember(member);
+      selectedMemberRef.current = member.userId;
+    } catch (err: unknown) {
+      if (version !== selectionVersion.current) return;
+      setSearchError(errorMessage(err, 'Không tải được thông tin hội viên.'));
+    } finally {
+      if (version === selectionVersion.current) setIsSearching(false);
+    }
     checkoutRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
   };
 
@@ -571,11 +586,13 @@ export function StaffReceptionPage() {
     setSearchError(invalid);
     if (invalid) return;
 
+    const version = ++selectionVersion.current;
     setIsSearching(true);
     // Chỉ đánh dấu đã tìm khi API thành công, tránh hiển thị "không tìm thấy" trong lúc lỗi hoặc đang tải.
     setHasSearched(false);
     try {
       const results = await receptionApi.lookupMembers(q);
+      if (version !== selectionVersion.current) return;
       setHasSearched(true);
       setSearchResults(results);
       if (results.length > 0) {
@@ -588,12 +605,13 @@ export function StaffReceptionPage() {
         setSelectedPending(null);
       }
     } catch (err: unknown) {
+      if (version !== selectionVersion.current) return;
       setSearchError(errorMessage(err, 'Tra cứu thất bại.'));
       setSearchResults([]);
       setSelectedMember(null);
       setSelectedPending(null);
     } finally {
-      setIsSearching(false);
+      if (version === selectionVersion.current) setIsSearching(false);
     }
   };
 
@@ -737,6 +755,10 @@ export function StaffReceptionPage() {
                       type="button"
                       className={`btn-secondary btn-sm ${selectedMember?.userId === m.userId ? 'btn-primary' : ''}`}
                       onClick={() => {
+                        ++selectionVersion.current;
+                        setIsSearching(false);
+                        setSearchError(null);
+                        selectedMemberRef.current = m.userId;
                         setSelectedMember(m);
                         setSelectedPending(pendingList.find((p) => p.memberId === m.userId) ?? null);
                       }}

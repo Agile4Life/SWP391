@@ -92,6 +92,12 @@ export type NotificationTarget = Partial<Pick<MemberNotification, 'relatedEntity
  */
 export function notificationDestination(notification: NotificationTarget, role = 'MEMBER'): string {
   const explicit = safeNotificationPath(notification.actionPath, role);
+  // Chỉ sửa liên kết quầy cũ của giao dịch đã hoàn tất cho lễ tân.
+  // Yêu cầu mới từ PR #172 có type system, nên vẫn mở quầy để xử lý.
+  if ((role === 'STAFF' || role === 'RECEPTIONIST') && explicit === '/staff/reception' &&
+      (notification.type === 'payment' || notification.relatedEntityType === 'payment')) {
+    return '/staff/reception-history';
+  }
   if (explicit) return explicit;
   if (role === 'COACH' && notification.actionPath === '/staff/classes') {
     return '/coach/classes';

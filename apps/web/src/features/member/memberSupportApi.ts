@@ -17,6 +17,10 @@ export interface SupportTicket {
   /** Chỉ dành cho nhân sự: ai đã chuyển cấp và lý do (API ẩn khỏi hội viên). */
   escalatedByName?: string | null;
   escalationReason?: string | null;
+  /** Dữ liệu hộp thư lễ tân, tính từ server theo người đang đăng nhập. */
+  lastMessage?: string | null;
+  lastMessageAt?: string | null;
+  unreadCount?: number;
 }
 
 /** Một tin nhắn trong phiếu hỗ trợ: người gửi, vai trò, nội dung và thời điểm. */
@@ -56,8 +60,12 @@ export const sendSupportMessage = (id: number, message: string, clientMessageId?
 export const getSupportTicket = (id: number) => apiFetch<SupportTicket>(`/support/requests/${id}`);
 
 /** Lấy hộp thư phiếu của nhân sự, lọc theo trạng thái. */
-export const getSupportInbox = (page = 0, status = '') =>
-  apiFetch<TicketPage>(`/support/requests?page=${page}&size=20${status ? `&status=${encodeURIComponent(status)}` : ''}`);
+export const getSupportInbox = (page = 0, status = '', unreadOnly?: boolean) =>
+  apiFetch<TicketPage>(`/support/requests?page=${page}&size=20${status ? `&status=${encodeURIComponent(status)}` : ''}${unreadOnly === undefined ? '' : `&unreadOnly=${unreadOnly}`}`);
+
+/** Chỉ xác nhận đến tin đã tải thành công; server giữ con trỏ riêng cho từng lễ tân. */
+export const markSupportRead = (id: number, lastMessageId: number) =>
+  apiFetch<{ unreadCount: number }>(`/support/requests/${id}/read`, { method: 'POST', body: JSON.stringify({ lastMessageId }) });
 
 /** Đổi trạng thái phiếu và người được giao. */
 export const updateSupportStatus = (id: number, status: SupportTicket['status'], assignedTo?: number) =>

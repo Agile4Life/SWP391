@@ -31,6 +31,8 @@ it('offers only Coach and Receptionist and creates an account using the provisio
   vi.mocked(createStaffAccount).mockResolvedValue({ id: 4, fullName: 'New Coach', email: 'coach@gmail.com', roleCode: 'COACH', status: 'active' });
   await act(async () => root.render(<StaffAccountsPage />));
   expect(host.textContent).toContain('Chưa có tài khoản nhân sự');
+  const genderSelect = host.querySelector('#staff-gender')!.parentElement!.querySelector('select')!;
+  expect([...genderSelect.options].map(option => option.textContent)).toEqual(['Nam', 'Nữ']);
   await act(async () => host.querySelector<HTMLButtonElement>('#staff-role')!.click());
   expect([...host.querySelectorAll('[role="option"]')].map(option => option.textContent?.trim())).toEqual(['Huấn luyện viên', 'Lễ tân']);
   await act(async () => host.querySelector<HTMLButtonElement>('#staff-role')!.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })));
@@ -46,7 +48,7 @@ it('offers only Coach and Receptionist and creates an account using the provisio
   await setInput('staff-email', 'coach@gmail.com');
   await setInput('staff-password', 'Secret123!');
   await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
-  expect(createStaffAccount).toHaveBeenCalledWith({ fullName: 'New Coach', email: 'coach@gmail.com', phone: undefined, password: 'Secret123!', gender: 'other', roleCode: 'COACH' });
+  expect(createStaffAccount).toHaveBeenCalledWith({ fullName: 'New Coach', email: 'coach@gmail.com', phone: undefined, password: 'Secret123!', gender: 'male', roleCode: 'COACH' });
   expect(host.querySelector('tbody')?.textContent).toContain('coach@gmail.com');
   expect(host.querySelector<HTMLInputElement>('#staff-password')?.value).toBe('');
   expect(host.textContent).not.toContain('Phân quyền');
@@ -113,7 +115,7 @@ it('rejects duplicate email and phone number before calling createStaffAccount',
   expect(host.querySelector('[role="alert"]')?.textContent).toContain('Số điện thoại đã tồn tại');
 });
 
-it('sorts staff accounts by name and status without a coach-first option', async () => {
+it('sorts staff accounts by name only', async () => {
   const staffList = [
     { id: 1, fullName: 'Bùi Văn B', email: 'b@sol.vn', roleCode: 'RECEPTIONIST' as const, status: 'locked' as const },
     { id: 2, fullName: 'An Thị A', email: 'a@sol.vn', roleCode: 'COACH' as const, status: 'active' as const },
@@ -131,7 +133,7 @@ it('sorts staff accounts by name and status without a coach-first option', async
 
   const sortSelect = host.querySelector('select[aria-label="Sắp xếp danh sách nhân sự"]') as HTMLSelectElement;
   expect(sortSelect).toBeTruthy();
-  expect([...sortSelect.options].map(option => option.value)).not.toContain('role');
+  expect([...sortSelect.options].map(option => option.value)).toEqual(['name_asc', 'name_desc']);
 
   // Sort name_desc -> Cù Trọng C, Bùi Văn B, An Thị A
   await act(async () => {
@@ -140,10 +142,4 @@ it('sorts staff accounts by name and status without a coach-first option', async
   });
   expect(getRenderedNames()).toEqual(['Cù Trọng C', 'Bùi Văn B', 'An Thị A']);
 
-  // Sort status (Active first, then Locked) -> An Thị A (Active), Cù Trọng C (Active), Bùi Văn B (Locked)
-  await act(async () => {
-    sortSelect.value = 'status';
-    sortSelect.dispatchEvent(new Event('change', { bubbles: true }));
-  });
-  expect(getRenderedNames()).toEqual(['An Thị A', 'Cù Trọng C', 'Bùi Văn B']);
 });
