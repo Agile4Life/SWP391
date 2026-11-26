@@ -151,11 +151,13 @@ it('surfaces group class load failure with Retry and translates alerts in EN mod
 it('updates PT event titles when toggling VI/EN and strips duplicate HLV prefix in EN (P2-FE-54)', async () => {
   mocks.pt.mockResolvedValue([{ ...booking, coachName: 'HLV Hùng' }]);
   await render();
-  expect(host.querySelector('.mcal__event--pt')?.textContent).toContain('Tập 1:1 cùng HLV Hùng');
+  expect(host.querySelector('.mcal__event--pt .mcal__event-title')?.textContent).toBe('Tập PT 1:1');
+  expect(host.querySelector('.mcal__event--pt .mcal__event-coach')?.textContent).toBe('HLV Hùng');
   expect(host.querySelector('.mcal__event--pt')?.textContent).not.toContain('HLV HLV');
 
   await act(async () => { setLanguage('en'); });
-  expect(host.querySelector('.mcal__event--pt')?.textContent).toContain('1:1 session with Hùng');
+  expect(host.querySelector('.mcal__event--pt .mcal__event-title')?.textContent).toBe('1:1 PT Session');
+  expect(host.querySelector('.mcal__event--pt .mcal__event-coach')?.textContent).toBe('Coach Hùng');
   expect(host.querySelector('.mcal__event--pt')?.textContent).not.toContain('HLV');
 });
 

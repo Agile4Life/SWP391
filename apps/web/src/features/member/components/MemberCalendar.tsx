@@ -141,7 +141,7 @@ function sortEvents(events: CalendarEvent[]) {
 /** Chuyển một buổi PT thành sự kiện lịch (chuẩn hóa tên HLV không lặp "HLV " ở chế độ EN). */
 function ptEvent(booking: CoachBookingDto, lang: 'vi' | 'en'): CalendarEvent {
   const coachName = formatCoachName(booking.coachName);
-  const title = lang === 'en' ? `1:1 session with ${coachName}` : `Tập 1:1 cùng HLV ${coachName}`;
+  const title = lang === 'en' ? '1:1 PT Session' : 'Tập PT 1:1';
   const isQuota = booking.paymentMethod === 'package_quota';
   const paymentLabel = isQuota
     ? (lang === 'en' ? 'Included in membership' : 'Miễn phí theo gói')
@@ -549,7 +549,11 @@ export function MemberCalendar() {
                       <strong className="mcal__event-title">{title(event)}</strong>
                       {event.place && <span className="mcal__event-place">{event.place}</span>}
                       {event.coach && !title(event).includes(event.coach) && (
-                        <span className="mcal__event-coach">{event.coach}</span>
+                        <span className="mcal__event-coach">
+                          {event.kind === 'pt'
+                            ? (english ? `Coach ${event.coach}` : `HLV ${event.coach}`)
+                            : event.coach}
+                        </span>
                       )}
                     </button>
                   ))}
