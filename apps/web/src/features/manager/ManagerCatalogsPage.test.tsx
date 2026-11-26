@@ -56,6 +56,8 @@ vi.mock('./catalogApi', () => ({
     saveDiscipline: vi.fn().mockResolvedValue({}),
     deleteDiscipline: vi.fn().mockResolvedValue(undefined),
     updateRoom: vi.fn().mockResolvedValue({}),
+    createRoom: vi.fn().mockResolvedValue({}),
+    deleteRoom: vi.fn().mockResolvedValue(undefined),
     savePackage: vi.fn().mockResolvedValue({}),
     deletePackage: vi.fn().mockResolvedValue(undefined),
     setPackageStatus: vi.fn().mockResolvedValue({}),
@@ -138,7 +140,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     expect(host.textContent).toContain('199.000\u00a0₫');
     expect(host.textContent).toContain('299.000\u00a0₫');
     expect(host.textContent).toContain('599.000\u00a0₫');
-    expect(host.textContent).toContain('+ Tạo gói tập mới');
+    expect(host.textContent).toContain('Tạo gói tập mới');
 
     // Cập nhật giá nhanh cho gói SILVER
     const quickPriceBtn = [...host.querySelectorAll('button')].find((b) =>
@@ -181,7 +183,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     await act(async () => pkgTabBtn.click());
 
     const createBtn = [...host.querySelectorAll('button')].find((b) =>
-      b.textContent === '+ Tạo gói tập mới'
+      b.textContent === 'Tạo gói tập mới'
     )!;
     await act(async () => createBtn.click());
 
@@ -248,9 +250,8 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
 
     // Modal form error does not duplicate on page level & trims blank name
     vi.mocked(catalogApi.updateRoom).mockRejectedValueOnce(new Error('Trùng tên phòng'));
-    // Danh mục phòng cố định: không có nút Thêm mới hay Xóa, chỉ Chỉnh sửa.
-    expect(host.querySelector('.portal-header .btn-primary')).toBeNull();
-    expect([...host.querySelectorAll('tbody button')].some((b) => b.textContent?.trim() === 'Xóa')).toBe(false);
+    expect(host.querySelector('.portal-header .btn-primary')).not.toBeNull();
+    expect([...host.querySelectorAll('tbody button')].some((b) => b.textContent?.trim() === 'Xóa')).toBe(true);
     const roomEditBtn = [...host.querySelectorAll<HTMLButtonElement>('tbody tr:first-child button')].find((b) => b.textContent?.trim() === 'Chỉnh sửa')!;
     await act(async () => roomEditBtn.click());
     const nameInput = host.querySelector<HTMLInputElement>('#cat-name')!;
@@ -457,7 +458,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
 
   // ── Rooms (Phòng tập) tab coverage (P2-E2E-02) ────────────────────────────────────────
 
-  it('Rooms tab: respects explicit r.tier over name heuristics, displays all statuses/fallbacks, and renders empty state', async () => {
+  it('Rooms tab: hides room tiers, displays statuses and empty state', async () => {
     vi.mocked(catalogApi.rooms).mockResolvedValueOnce([
       {
         id: 1,
@@ -493,22 +494,21 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     const rows = [...host.querySelectorAll('tbody tr')];
     expect(rows).toHaveLength(3);
 
-    // Explicit tier STANDARD stays Standard even though name contains "VIP"
+    // Existing names and room status remain visible without a tier column.
     expect(rows[0].textContent).toContain('Phòng VIP Tiêu chuẩn');
-    expect(rows[0].textContent).toContain('Tiêu chuẩn');
-    expect(rows[0].textContent).not.toContain('Cao cấp (Platinum)');
+    expect(host.textContent).not.toContain('Phân hạng');
     expect(rows[0].textContent).toContain('50 người');
     expect(rows[0].querySelector('.badge-success')?.textContent).toContain('Đang hoạt động');
 
-    // Explicit tier PLATINUM renders Platinum badge even without "VIP" in name, plus null location fallback & maintenance status
+    // Null location and maintenance status remain visible.
     expect(rows[1].textContent).toContain('Studio Riêng');
-    expect(rows[1].querySelector('.badge-info')?.textContent).toContain('Cao cấp (Platinum)');
+    expect(rows[1].textContent).not.toContain('Cao cấp (Platinum)');
     expect(rows[1].textContent).toContain('—');
     expect(rows[1].textContent).toContain('12 người');
     expect(rows[1].querySelector('.badge-warning')?.textContent).toContain('Bảo trì');
 
-    // Missing tier falls back to VIP heuristic and renders closed status
-    expect(rows[2].querySelector('.badge-info')?.textContent).toContain('Cao cấp (Platinum)');
+    // Closed status remains visible.
+    expect(rows[2].textContent).not.toContain('Cao cấp (Platinum)');
     expect(rows[2].querySelector('.badge-warning')?.textContent).toContain('Đã đóng');
 
     // Empty rooms list renders empty state
@@ -523,18 +523,32 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     expect(host.textContent).toContain('Chưa có cơ sở phòng tập nào');
   });
 
-  it('Rooms tab: rooms are a fixed catalog with no add or delete actions', async () => {
+  it('Rooms tab: offers add and delete actions', async () => {
     await act(async () => {
       root.render(<ManagerCatalogsPage />);
     });
     await switchTab('Phòng tập');
-    expect(host.querySelector('.portal-header .btn-primary')).toBeNull();
+    expect(host.querySelector('.portal-header .btn-primary')).not.toBeNull();
     const rowButtons = [...host.querySelectorAll<HTMLButtonElement>('tbody button')].map((b) => b.textContent?.trim());
     expect(rowButtons).toContain('Chỉnh sửa');
-    expect(rowButtons).not.toContain('Xóa');
+    expect(rowButtons).toContain('Xóa');
   });
 
-  it('Rooms tab: edits a room, respects initial r.tier, and updates status to maintenance', async () => {
+  it('creates a room and deletes an unused room after confirmation', async () => {
+    await act(async () => root.render(<ManagerCatalogsPage />));
+    await switchTab('Phòng tập');
+    await act(async () => host.querySelector<HTMLButtonElement>('.portal-header .btn-primary')!.click());
+    expect(host.querySelector('#cat-tier')).toBeNull();
+    await setFieldValue(host.querySelector<HTMLInputElement>('#cat-name')!, 'Studio Mới');
+    await submitDialogForm();
+    expect(catalogApi.createRoom).toHaveBeenCalledWith(expect.objectContaining({ name: 'Studio Mới', capacity: 10 }));
+    const deleteButton = [...host.querySelectorAll<HTMLButtonElement>('tbody button')].find((b) => b.textContent?.trim() === 'Xóa')!;
+    await act(async () => deleteButton.click());
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .btn-danger')!.click());
+    expect(catalogApi.deleteRoom).toHaveBeenCalledWith(1);
+  });
+
+  it('Rooms tab: preserves the room tier when editing its status', async () => {
     vi.mocked(catalogApi.rooms).mockResolvedValueOnce([
       {
         id: 5,
@@ -542,7 +556,7 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
         location: 'Tầng 1',
         capacity: 50,
         status: 'available',
-        tier: 'STANDARD',
+        tier: 'PLATINUM',
       },
     ]);
 
@@ -558,12 +572,11 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
 
     const dialog = host.querySelector('dialog')!;
     expect(dialog.textContent).toContain('Chỉnh sửa phòng tập');
-    // Respects explicit r.tier = STANDARD instead of inferring VIP from room name
-    expect(dialog.querySelector('#cat-tier')?.textContent).toContain('Tiêu chuẩn (Mọi hội viên)');
+    // The tier is not editable here.
+    expect(dialog.querySelector('#cat-tier')).toBeNull();
 
     await setFieldValue(dialog.querySelector<HTMLInputElement>('#cat-capacity')!, '35');
     await selectOption('cat-status', 'Bảo trì');
-    await selectOption('cat-tier', 'VIP (Chỉ dành cho Platinum)');
     await submitDialogForm();
 
     expect(catalogApi.updateRoom).toHaveBeenCalledWith(5, {

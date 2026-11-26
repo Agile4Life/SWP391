@@ -55,42 +55,23 @@ it('resolves pending confirm promise with false when the host unmounts', async (
   root = createRoot(host);
 });
 
-it('uses Popover API to render toast on top layer above modals with show() fallback', () => {
-  const showPopover = vi.fn();
-  const hidePopover = vi.fn();
-  const proto = HTMLDialogElement.prototype as unknown as {
-    showPopover?: () => void;
-    hidePopover?: () => void;
-  };
-  const origShow = proto.showPopover;
-  const origHide = proto.hidePopover;
-  proto.showPopover = showPopover;
-  proto.hidePopover = hidePopover;
-  try {
-    toast('Trên top layer', 'success');
-    const el = document.querySelector<HTMLDialogElement>('dialog.sol-toast')!;
-    expect(el.getAttribute('popover')).toBe('manual');
-    expect(showPopover).toHaveBeenCalledTimes(1);
-    el.querySelector<HTMLButtonElement>('.sol-toast__close')!.click();
-    expect(hidePopover).toHaveBeenCalledTimes(1);
-  } finally {
-    if (origShow) proto.showPopover = origShow;
-    else delete proto.showPopover;
-    if (origHide) proto.hidePopover = origHide;
-    else delete proto.hidePopover;
-  }
+it('renders feedback inline without opening a popup', () => {
+  const main = document.createElement('main');
+  main.id = 'portal-main';
+  document.body.append(main);
+  toast('Yêu cầu thất bại (HTTP 502)', 'error');
+  expect(main.querySelector('[role="alert"]')?.textContent).toContain('Yêu cầu thất bại (HTTP 502)');
+  expect(document.querySelector('dialog.sol-toast')).toBeNull();
+  main.remove();
+});
 
-  // Fallback sang show() khi Popover API không khả dụng
-  const showSpy = vi.spyOn(HTMLDialogElement.prototype, 'show').mockImplementation(function (this: HTMLDialogElement) {
-    this.setAttribute('open', '');
-  });
-  try {
-    toast('Fallback show', 'success');
-    expect(showSpy).toHaveBeenCalledTimes(1);
-    expect(document.querySelector('dialog.sol-toast')).not.toBeNull();
-  } finally {
-    showSpy.mockRestore();
-  }
+it('shows feedback inside an open dialog', () => {
+  const dialog = document.createElement('dialog');
+  dialog.setAttribute('open', '');
+  document.body.append(dialog);
+  toast('Không thể lưu', 'error');
+  expect(dialog.querySelector('[role="alert"]')?.textContent).toContain('Không thể lưu');
+  dialog.remove();
 });
 
 it('never auto-dismisses error toasts and pauses/resumes success toast timer on focusin/focusout', () => {
@@ -98,7 +79,7 @@ it('never auto-dismisses error toasts and pauses/resumes success toast timer on 
   try {
     toast('Lỗi nghiêm trọng', 'error');
     vi.advanceTimersByTime(60_000);
-    expect(document.querySelector('dialog.sol-toast--error')).not.toBeNull();
+    expect(document.querySelector('.sol-toast--error')).not.toBeNull();
 
     toast('Đã lưu thành công', 'success');
     const card = document.querySelector<HTMLElement>('.sol-toast__card')!;
@@ -106,14 +87,14 @@ it('never auto-dismisses error toasts and pauses/resumes success toast timer on 
     // Focus vào card phải tạm dừng đếm ngược tự đóng
     card.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
     vi.advanceTimersByTime(10_000);
-    expect(document.querySelector('dialog.sol-toast--success')).not.toBeNull();
+    expect(document.querySelector('.sol-toast--success')).not.toBeNull();
 
     // Rời focus ra ngoài thì tiếp tục đếm ngược và tự đóng sau 3.2s
     card.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: document.body }));
     vi.advanceTimersByTime(3100);
-    expect(document.querySelector('dialog.sol-toast--success')).not.toBeNull();
+    expect(document.querySelector('.sol-toast--success')).not.toBeNull();
     vi.advanceTimersByTime(200);
-    expect(document.querySelector('dialog.sol-toast--success')).toBeNull();
+    expect(document.querySelector('.sol-toast--success')).toBeNull();
     expect(closeBtn).toBeDefined();
   } finally {
     vi.useRealTimers();
@@ -126,7 +107,7 @@ it('shows a non-blocking live notice described by its message without stealing f
   input.focus();
 
   toast('Đã lưu.', 'success');
-  const el = document.querySelector('dialog.sol-toast')!;
+  const el = document.querySelector('.sol-toast')!;
   expect(el.getAttribute('role')).toBe('status');
   expect(el.getAttribute('aria-live')).toBe('polite');
   expect(el.hasAttribute('aria-modal')).toBe(false);
@@ -136,7 +117,7 @@ it('shows a non-blocking live notice described by its message without stealing f
   expect(document.querySelector('.sol-toast')).toBeNull();
 
   toast('Không lưu được.', 'error');
-  const error = document.querySelector('dialog.sol-toast')!;
+  const error = document.querySelector('.sol-toast')!;
   expect(error.getAttribute('role')).toBe('alert');
   expect(error.getAttribute('aria-live')).toBe('assertive');
   error.querySelector<HTMLButtonElement>('.sol-toast__close')!.click();

@@ -66,15 +66,15 @@ class FacilitiesControllerTest {
         verify(disciplines, never()).create(any());
     }
 
-    /** Kiểm thử: danh mục phòng cố định, không có API thêm hay xóa phòng (405). */
+    /** Manager can create and delete rooms. */
     @Test
-    void roomsCannotBeCreatedOrDeleted() throws Exception {
+    void roomsCanBeCreatedAndDeleted() throws Exception {
         mockMvc.perform(post("/api/v1/rooms").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Studio\",\"location\":\"L1\",\"capacity\":10}"))
-                .andExpect(status().isMethodNotAllowed());
+                .andExpect(status().isCreated());
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete("/api/v1/rooms/1"))
-                .andExpect(status().isMethodNotAllowed());
-        verify(rooms, never()).create(any());
+                .andExpect(status().isOk());
+        verify(rooms).create(any());
     }
 
     /** Kiểm thử: đổi trạng thái gói với giá trị lạ bị từ chối. */

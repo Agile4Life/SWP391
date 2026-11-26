@@ -9,6 +9,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;
 
@@ -16,7 +18,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 @Tag(name = "Rooms", description = "Room catalog. Read: any authenticated user; write: CENTER_MANAGER")
 @RestController
 @RequestMapping("/api/v1/rooms")
-/** Danh mục phòng cố định (4 phòng do seeder tạo): chỉ xem và sửa, không có API thêm hay xóa phòng. */
 public class RoomController {
 
     private final RoomService service;
@@ -44,6 +45,19 @@ public class RoomController {
     @GetMapping
     public ApiResponse<List<RoomDto>> list() {
         return ApiResponse.ok(msg("catalog.list"), service.list());
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    public ResponseEntity<ApiResponse<RoomDto>> create(@Valid @RequestBody RoomRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(msg("catalog.created"), service.create(request)));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('CENTER_MANAGER')")
+    public ApiResponse<Void> delete(@PathVariable Long id) {
+        service.delete(id);
+        return ApiResponse.ok(msg("catalog.deleted"), null);
     }
 
     /** PUT /{id}: sửa phòng. */

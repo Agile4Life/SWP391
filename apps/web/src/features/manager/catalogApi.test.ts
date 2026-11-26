@@ -133,7 +133,14 @@ describe('catalogApi.ts (Disciplines, Rooms, Packages CRUD)', () => {
 
     expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/v1/disciplines/3', expect.objectContaining({ method: 'DELETE' }));
     expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/v1/packages/5', expect.objectContaining({ method: 'DELETE' }));
-    // Danh mục phòng cố định: không có API thêm hay xóa phòng.
-    expect('deleteRoom' in catalogApi).toBe(false);
+  });
+
+  it('creates and deletes rooms through the rooms API', async () => {
+    const mockFetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true, data: null }) });
+    vi.stubGlobal('fetch', mockFetch);
+    await catalogApi.createRoom({ name: 'Studio', location: null, capacity: 10, status: 'available' });
+    await catalogApi.deleteRoom(3);
+    expect(mockFetch).toHaveBeenNthCalledWith(1, '/api/v1/rooms', expect.objectContaining({ method: 'POST' }));
+    expect(mockFetch).toHaveBeenNthCalledWith(2, '/api/v1/rooms/3', expect.objectContaining({ method: 'DELETE' }));
   });
 });
