@@ -193,6 +193,7 @@ jobs:
           SCMS_POSTGRES_TEST_URL: jdbc:postgresql://127.0.0.1:55431/postgres
           SCMS_POSTGRES_TEST_USERNAME: postgres
           SCMS_POSTGRES_TEST_PASSWORD: scms_ci_test_password
+          APP_JWT_SECRET: ci-postgres-integration-test-jwt-secret-key-2026-32bytes
           DB_SSL_MODE: require
           TZ: Asia/Ho_Chi_Minh
         run: >-

@@ -256,17 +256,21 @@ class PtAttendanceIsolatedPostgreSqlTest {
     @Test void historicalConfirmedBookingStillChecksMembershipAndCompletedHistoryCanBeCorrected() {
         migrate();
         jdbc.update("update membership_subscriptions set status='expired', end_date=current_date-1");
-        var before = booking();
+        // Đổi cột lịch hẹn (booking_date) trên buổi confirmed khi gói đã hết hạn vẫn bắt buộc bị trigger chặn (23514).
         var guard = assertThrows(org.springframework.dao.DataIntegrityViolationException.class,
-                () -> jdbc.update("update coach_bookings set attended_at=null, attendance_locked=true where id=?", bookingId));
+                () -> jdbc.update("update coach_bookings set booking_date = booking_date + 1 where id=?", bookingId));
         var sqlError = assertInstanceOf(java.sql.SQLException.class, guard.getMostSpecificCause());
         assertEquals("23514", sqlError.getSQLState());
         assertTrue(sqlError.getMessage().contains("trg_enrollments_check_membership"));
-        assertThrows(RuntimeException.class, () -> service.unmarkAttended(receptionist, bookingId));
-        assertEquals(before, booking());
-        // Ràng buộc hiện tại loại trừ rõ ràng các buổi đã hoàn thành; không làm yếu phần kiểm tra cho buổi đang xác nhận ở đây.
-        jdbc.update("update coach_bookings set status='completed' where id=?", bookingId);
+        // P1-BE-52: sửa điểm danh (attended_at, attendance_locked) không đổi lịch hẹn phải thành công kể cả khi gói đã hết hạn.
+        var unmarkedConfirmed = service.unmarkAttended(receptionist, bookingId);
+        assertNull(unmarkedConfirmed.attendedAt());
+        assertTrue(unmarkedConfirmed.attendanceLocked());
+        assertEquals("confirmed", unmarkedConfirmed.status());
+        // Ràng buộc cũng cho phép chỉnh sửa điểm danh trên buổi đã hoàn thành (completed).
+        jdbc.update("update coach_bookings set status='completed', attended_at=now(), attendance_locked=false where id=?", bookingId);
         var removed = service.unmarkAttended(receptionist, bookingId);
-        assertNull(removed.attendedAt()); assertEquals("completed", removed.status());
+        assertNull(removed.attendedAt());
+        assertEquals("completed", removed.status());
     }
 }
