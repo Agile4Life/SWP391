@@ -489,12 +489,9 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     // Buổi của lớp inactive (classId 99) không bị cộng vào chip Gym (chỉ đếm 2 buổi của 2 lớp active)
     expect(host.querySelector('[data-testid="discipline-chip-1"]')?.textContent).toContain('Gym (2)');
 
-    // Ô trống trên Tab 1 vẫn bấm được để mở trình tạo khóa học dù bộ môn đã có 2 lớp active
-    const freeSlotBtn = host.querySelector<HTMLButtonElement>('.mcal__slot:not(.is-past)');
-    expect(freeSlotBtn).not.toBeNull();
-    await act(async () => freeSlotBtn!.click());
-    expect(document.querySelector('[data-testid="class-wizard-stepper"]')).not.toBeNull();
-    await act(async () => document.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
+    // Timetable của Manager chỉ để xem: ô trống không còn mở trình tạo khóa học.
+    expect(host.querySelector('.mcal__slot:not(.is-past)')).toBeNull();
+    expect(host.textContent).not.toContain('bấm để tạo lớp');
 
     // Tab 3 Danh sách lớp cũng không còn nút "+ Thêm buổi"
     const listTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][2];

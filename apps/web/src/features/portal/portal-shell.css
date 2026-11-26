@@ -611,6 +611,12 @@ html:root .portal-logo.portal-logo--mark {
   padding-right: max(0px, calc(var(--portal-topbar-width, 0px) - 8px));
 }
 
+/* Nút thao tác đứng cùng hàng với cụm nút nổi (cao 44px, cách mép 10px như nội dung):
+   bám mép trên thay vì canh giữa theo tiêu đề cao hơn, để không lệch xuống so với topbar. */
+.portal-v2 #portal-main .portal-header:first-child .portal-header__actions {
+  align-self: flex-start;
+}
+
 .portal-avatar-menu {
   position: relative;
 }
@@ -1295,6 +1301,10 @@ html:root .portal-logo.portal-logo--mark {
 .portal-v2 #portal-main:has(> .portal-section-tabs) .portal-header:first-child {
   min-height: 0;
   padding-right: 0;
+}
+
+.portal-v2 #portal-main:has(> .portal-section-tabs) .portal-header:first-child .portal-header__actions {
+  align-self: center;
 }
 
 /* Số đếm trong tab cấp 2 (vd. "Lịch sử điểm danh 3"). */
@@ -1987,6 +1997,10 @@ html:root .portal-logo.portal-logo--mark {
   .portal-v2 #portal-main .portal-header:first-child {
     min-height: 0;
     padding-right: 0;
+  }
+
+  .portal-v2 #portal-main .portal-header:first-child .portal-header__actions {
+    align-self: center;
   }
 
   .portal-v2 #portal-main {
