@@ -557,7 +557,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(activeBar.querySelector('[data-testid="discipline-create-class-btn"]')?.textContent).toBe('Tạo khóa mới');
 
     // Buổi của lớp inactive (classId 99) không bị cộng vào chip Gym (chỉ đếm 2 buổi của 2 lớp active)
-    expect(host.querySelector('[data-testid="discipline-chip-1"]')?.textContent).toContain('Gym (2)');
+    expect(host.querySelector('[data-testid="discipline-chip-1"]')?.textContent).toBe('Gym');
 
     // Timetable của Manager chỉ để xem: ô trống không còn mở trình tạo khóa học.
     expect(host.querySelector('.mcal__slot:not(.is-past)')).toBeNull();

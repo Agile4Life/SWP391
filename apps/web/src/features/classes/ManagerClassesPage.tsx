@@ -142,7 +142,7 @@ export function ManagerClassesPage() {
 
   const activeWeekDays = useMemo(() => new Set(weekDays(weekStart)), [weekStart]);
 
-  /** Số buổi không bị hủy trong tuần hiện tại của lớp đang hoạt động theo từng bộ môn (hiển thị trên chip Tab 1). */
+  /** Số buổi không bị hủy trong tuần hiện tại theo bộ môn; dùng để chọn sẵn bộ môn có lịch ở Tab theo bộ môn. */
   const weeklyCountsByDiscipline = useMemo(() => {
     const map = new Map<number, number>();
     for (const s of activeScheduleSessions) {
@@ -355,7 +355,6 @@ export function ManagerClassesPage() {
             >
               {disciplines.map((disc) => {
                 const selected = activeDisciplineId === disc.id;
-                const count = weeklyCountsByDiscipline.get(disc.id) ?? 0;
                 const color = disciplineAccentColor(disc.id);
                 return (
                   <button
@@ -370,7 +369,7 @@ export function ManagerClassesPage() {
                     }}
                   >
                     <span className="class-discipline-dot" style={{ background: color }} aria-hidden="true" />
-                    {`${disc.name} (${count})`}
+                    {disc.name}
                   </button>
                 );
               })}
@@ -475,7 +474,7 @@ export function ManagerClassesPage() {
                     onClick={() => setHiddenDisciplineIds((ids) => (shown ? [...ids, disc.id] : ids.filter((id) => id !== disc.id)))}
                   >
                     <span className="class-discipline-dot" style={{ background: disciplineAccentColor(disc.id) }} aria-hidden="true" />
-                    {`${disc.name} (${weeklyCountsByDiscipline.get(disc.id) ?? 0})`}
+                    {disc.name}
                   </button>
                 );
               })}
