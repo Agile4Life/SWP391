@@ -59,8 +59,8 @@ function localToday(): string {
   return centerNowParts().date;
 }
 
-/** Danh sách các ngày sắp tới (mặc định 14 ngày) kèm tên thứ, ngày, tháng và nhãn. */
-function nextDays(count = 14): Array<{
+/** Danh sách `count` ngày liên tiếp từ `start` (mặc định hôm nay) kèm tên thứ, ngày, tháng và nhãn. */
+function nextDays(count = 14, start = localToday()): Array<{
   iso: string;
   dayName: string;
   dayNumber: string;
@@ -79,7 +79,7 @@ function nextDays(count = 14): Array<{
   const dayNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
   const todayIso = localToday();
   for (let i = 0; i < count; i++) {
-    const iso = addDays(todayIso, i);
+    const iso = addDays(start, i);
     const d = parseISODate(iso);
     const dayName = memberText(dayNames[d.getDay()], ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d.getDay()]);
     const dayNumber = String(d.getDate()).padStart(2, '0');
@@ -89,8 +89,8 @@ function nextDays(count = 14): Array<{
       dayName,
       dayNumber,
       monthText,
-      label: `${i === 0 ? memberText('Hôm nay') : dayName} (${dayNumber}/${String(d.getMonth() + 1).padStart(2, '0')})`,
-      isToday: i === 0,
+      label: `${iso === todayIso ? memberText('Hôm nay') : dayName} (${dayNumber}/${String(d.getMonth() + 1).padStart(2, '0')})`,
+      isToday: iso === todayIso,
     });
   }
   return days;
@@ -191,7 +191,19 @@ export function MemberCoachBookingView({
   const [cancelOpenedAt, setCancelOpenedAt] = useState(0);
   const [cancelling, setCancelling] = useState(false);
 
-  const daysList = nextDays(10);
+  // Dải 7 ngày có thể lùi/tiến theo tuần hoặc nhảy tới ngày bất kỳ; không cho xem ngày đã qua.
+  const [stripStart, setStripStart] = useState<string>(localToday());
+  const daysList = nextDays(7, stripStart);
+  const todayIso = localToday();
+  const pickDate = (iso: string) => {
+    setSelectedDate(iso);
+    setSelectedSlot(null);
+    setError('');
+  };
+  const shiftStrip = (days: number) => {
+    const next = addDays(stripStart, days);
+    setStripStart(next < todayIso ? todayIso : next);
+  };
 
   // Tải HLV, lịch PT và quota thật; không gọi API đánh giá đã bỏ khỏi Member.
   useEffect(() => {
@@ -938,6 +950,38 @@ export function MemberCoachBookingView({
 
             {/* Hàng thẻ chọn ngày trên lịch */}
             <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  aria-label={memberText('7 ngày trước', 'Previous 7 days')}
+                  disabled={stripStart <= todayIso}
+                  onClick={() => shiftStrip(-7)}
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary btn-sm"
+                  aria-label={memberText('7 ngày sau', 'Next 7 days')}
+                  onClick={() => shiftStrip(7)}
+                >
+                  ›
+                </button>
+                <div style={{ width: 180 }}>
+                  <DatePicker
+                    id="pt-booking-date"
+                    value={selectedDate}
+                    min={todayIso}
+                    aria-label={memberText('Chọn ngày khác', 'Pick another date')}
+                    onChange={(e) => {
+                      if (!e.target.value) return;
+                      pickDate(e.target.value);
+                      setStripStart(e.target.value);
+                    }}
+                  />
+                </div>
+              </div>
               <div
                 style={{
                   display: 'flex',
@@ -954,11 +998,7 @@ export function MemberCoachBookingView({
                     <button
                       key={d.iso}
                       type="button"
-                      onClick={() => {
-                        setSelectedDate(d.iso);
-                        setSelectedSlot(null);
-                        setError('');
-                      }}
+                      onClick={() => pickDate(d.iso)}
                       style={{
                         minWidth: 70,
                         width: 72,
