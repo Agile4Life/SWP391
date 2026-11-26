@@ -6,5 +6,6 @@
 .mcal--member :is(.mcal__event, .mcal__chip):not(.is-past):not(.is-cancelled) { color: #202020; }
 .mcal--member .mcal__event:not(.is-past):not(.is-cancelled) .mcal__event-coach { color: color-mix(in srgb, currentColor 78%, transparent); }
 .mcal--member .mcal__type { display: block; flex: none; align-self: flex-start; max-width: 100%; padding: 2px 5px; border-radius: 4px; color: #202020; font-size: 12px; font-weight: 800; line-height: 1.3; white-space: normal; overflow-wrap: anywhere; }
+.mcal--member .mcal__next .mcal__type { align-self: center; display: inline-flex; align-items: center; }
 .mcal--member .mcal__type--class { background: var(--mcal-class); }
 .mcal--member .mcal__type--pt { background: var(--mcal-pt); }
