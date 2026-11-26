@@ -227,11 +227,24 @@ describe('mobile portal navigation', () => {
     expect(document.activeElement).toBe(topbarMenu);
   });
 
-  it('marks 4-tab staff section tabs with data-tab-count="4" for 2-column mobile layout', async () => {
+  it('keeps three front-desk tabs after moving history into its own sidebar entry', async () => {
     await renderPortal('STAFF', '/staff/reception');
     const tabs = host.querySelector<HTMLElement>('.portal-section-tabs');
-    expect(tabs?.getAttribute('data-tab-count')).toBe('4');
-    expect(tabs?.querySelectorAll('.portal-section-tab')).toHaveLength(4);
+    expect(tabs?.getAttribute('data-tab-count')).toBe('3');
+    expect(tabs?.querySelectorAll('.portal-section-tab')).toHaveLength(3);
+    expect(tabs?.querySelector('a[href="/staff/reception-history"]')).toBeNull();
+  });
+
+  it('opens the dedicated history screen from the mobile menu and marks only its sidebar item active', async () => {
+    const router = await renderPortal('STAFF', '/staff/reception');
+    await act(async () => host.querySelector<HTMLButtonElement>('button[aria-label="Thêm màn hình"]')!.click());
+    const history = host.querySelector<HTMLAnchorElement>('dialog a[href="/staff/reception-history"]')!;
+    expect(history).not.toBeNull();
+    await act(async () => history.click());
+    expect(router.state.location.pathname).toBe('/staff/reception-history');
+    expect(host.querySelector('.portal-rail-link[href="/staff/reception-history"]')?.getAttribute('aria-current')).toBe('page');
+    expect(host.querySelector('.portal-rail-link[href="/staff/reception"]')?.getAttribute('aria-current')).toBeNull();
+    expect(host.querySelector('.portal-rail-link[href="/staff/reception-history"]')?.getAttribute('title')).toBe('Lịch sử');
   });
 
   it('sets busy on wallet modal during topup, shows error if paymentUrl is missing, and shows walletError + Retry on /wallet/my failure', async () => {
