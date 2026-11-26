@@ -468,9 +468,15 @@ class MemberTrialServiceTest {
         when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
         when(trialRedemptions.existsByCccdHashAndMemberUserIdNot(hasher.hash("001200009999"), 10L)).thenReturn(false);
         when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
+        when(subscriptions.saveAndFlush(any(MembershipSubscription.class))).thenAnswer(inv -> {
+            MembershipSubscription s = inv.getArgument(0);
+            s.setId(301L);
+            return s;
+        });
         when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> {
             MemberTrialRedemption r = inv.getArgument(0);
-            r.setId(99L);
+            if (r.getId() == null) r.setId(99L);
             return r;
         });
 
@@ -479,16 +485,18 @@ class MemberTrialServiceTest {
 
         var result = service.requestTrial(principal, request);
 
-        assertEquals(MemberTrialRedemption.STATUS_PENDING, result.status());
+        assertEquals(MemberTrialRedemption.STATUS_APPROVED, result.status());
+        assertTrue(result.alreadyClaimed());
         org.mockito.ArgumentCaptor<MemberTrialRedemption> captor = org.mockito.ArgumentCaptor.forClass(MemberTrialRedemption.class);
-        verify(trialRedemptions).saveAndFlush(captor.capture());
+        verify(trialRedemptions, times(2)).saveAndFlush(captor.capture());
         assertEquals(hasher.hash("001200009999"), captor.getValue().getCccdHash());
         assertEquals("Nguyen Van Test", captor.getValue().getFullName());
         assertEquals(validPngDataUrl, captor.getValue().getFrontImageUrl());
         assertEquals(validPngDataUrl, captor.getValue().getBackImageUrl());
+        verify(notifications, never()).notifyReceptionists(anyString(), anyLong());
     }
 
-    /** Kiểm thử: yêu cầu dùng thử tái dùng KYC cũ dạng plaintext khi chưa có bản mã hóa. */
+    /** Kiểm thử: yêu cầu dùng thử tái dùng KYC cũ dạng plaintext khi chưa có bản mã hóa và kích hoạt ngay. */
     @Test
     void requestTrialReusesLegacyPlainKycWhenNoEncryptedCopyExists() {
         testMember.setKycStatus("APPROVED");
@@ -500,13 +508,20 @@ class MemberTrialServiceTest {
         when(members.findById(10L)).thenReturn(java.util.Optional.of(testMember));
         when(trialRedemptions.findByMemberUserId(10L)).thenReturn(Optional.empty());
         when(subscriptions.existsByMemberUserId(10L)).thenReturn(false);
+        when(packages.findByStatusOrderByPriceAsc("active")).thenReturn(List.of(goldPackage));
+        when(subscriptions.saveAndFlush(any(MembershipSubscription.class))).thenAnswer(inv -> {
+            MembershipSubscription s = inv.getArgument(0);
+            s.setId(302L);
+            return s;
+        });
         when(trialRedemptions.saveAndFlush(any(MemberTrialRedemption.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        service.requestTrial(new AuthenticatedPrincipal(10L, "member1", "MEMBER"),
+        var result = service.requestTrial(new AuthenticatedPrincipal(10L, "member1", "MEMBER"),
                 new TrialClaimRequest(null, null, null, null, null, null, null));
 
+        assertEquals(MemberTrialRedemption.STATUS_APPROVED, result.status());
         org.mockito.ArgumentCaptor<MemberTrialRedemption> captor = org.mockito.ArgumentCaptor.forClass(MemberTrialRedemption.class);
-        verify(trialRedemptions).saveAndFlush(captor.capture());
+        verify(trialRedemptions, times(2)).saveAndFlush(captor.capture());
         assertEquals(hasher.hash("001200008888"), captor.getValue().getCccdHash());
     }
 

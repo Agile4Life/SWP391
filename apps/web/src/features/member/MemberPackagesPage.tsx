@@ -212,10 +212,14 @@ export function MemberPackagesPage() {
       setIsClaimingTrial(true);
       setTrialError('');
       try {
-        await trialApi.claim({
+        const claimed = await trialApi.claim({
           fullName: (kycProfile?.fullName || '').trim(),
         });
-        notify(t("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), record: true });
+        if (claimed?.status === 'APPROVED') {
+          notify(t("Đã kích hoạt Gói Trải Nghiệm 3 Ngày thành công!", "Your 3-day trial has been activated!"), 'success', { translation: sourceMessage("Đã kích hoạt Gói Trải Nghiệm 3 Ngày thành công!", "Your 3-day trial has been activated!"), record: true });
+        } else {
+          notify(t("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), 'success', { translation: sourceMessage("Đã gửi đơn đăng ký. Mang giấy tờ gốc đến quầy Lễ tân để kích hoạt.", "Application sent. Bring your original ID to the front desk to activate."), record: true });
+        }
         setIsTrialModalOpen(false);
         await Promise.all([loadCurrent(), loadHistory(), loadTrialStatus()]);
       } catch (err) {
