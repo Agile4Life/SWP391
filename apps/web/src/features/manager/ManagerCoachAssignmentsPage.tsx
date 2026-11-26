@@ -25,7 +25,7 @@ function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['members
   const tag = {
     FROZEN: { cls: 'badge-warning', label: staffText('Đang bảo lưu', 'On hold'), hint: staffText('Gói đang bảo lưu: chưa thể đặt hoặc điều chuyển buổi tập.', 'Plan on hold: sessions cannot be booked or transferred.') },
     NO_ACTIVE: { cls: 'badge-danger', label: staffText('Hết hiệu lực gói', 'No valid plan'), hint: staffText('Hội viên không còn gói tập đang hoạt động còn hạn hôm nay.', 'The member has no active plan valid today.') },
-    NOT_COVERED: { cls: 'badge-warning', label: staffText('Gói hết trước buổi PT', 'Plan ends before PT'), hint: staffText('Gói hết hạn trước ngày của buổi PT này.', 'The plan expires before this PT session date.') },
+    NOT_COVERED: { cls: 'badge-warning', label: staffText('Gói hết trước buổi PT', 'Plan ends before PT'), hint: staffText('Gói hết hạn trước buổi PT sắp tới cuối cùng.', 'The plan expires before the last upcoming PT session.') },
   }[issue];
   return <span className={`badge ${tag.cls} coach-membership-issue`} title={tag.hint}>{tag.label}</span>;
 }
@@ -247,6 +247,11 @@ export function ManagerCoachAssignmentsPage() {
     [t],
   );
 
+  // Nhãn nút điều chuyển nói rõ phạm vi: giáo án đã chọn, hoặc mọi buổi PT sắp tới kèm giáo án.
+  const transferLabel = (student: CoachAssignmentStudent) => student.assignmentType === 'PT_1_1'
+    ? t('Chuyển toàn bộ PT', 'Transfer all PT')
+    : t('Chuyển giáo án', 'Transfer plan');
+
   // Danh sách phẳng cho chế độ xem bảng: làm phẳng học viên của mọi HLV thành một danh sách kèm thông tin HLV.
   const flattenedStudents = useMemo(() => {
     if (!data?.coaches) return [];
@@ -422,7 +427,7 @@ export function ManagerCoachAssignmentsPage() {
                           <small>{group.membershipCode} {group.phone ? `• ${group.phone}` : ''}</small>
                           <button
                             type="button"
-                            className="coach-profile-link"
+                            className="btn-secondary btn-sm coach-action-btn coach-profile-detail"
                             onClick={() => setDetail({ student: group.assignments[0], assignments: group.assignments })}
                           >
                             {t("Chi tiết")}</button>
@@ -465,7 +470,7 @@ export function ManagerCoachAssignmentsPage() {
                                     currentCoachName: coach.coachName,
                                   }); }}
                               >
-                                {t("Điều chuyển HLV")}</button>}
+                                {transferLabel(student)}</button>}
                               {student.assignmentType === 'TRAINING_PLAN' && (
                                 <button data-i18n-managed
                                   type="button"
@@ -546,7 +551,7 @@ export function ManagerCoachAssignmentsPage() {
                             currentCoachName: item.coachName,
                           }); }}
                       >
-                        {t("Điều chuyển")}</button>}
+                        {transferLabel(item)}</button>}
                       {item.assignmentType === 'TRAINING_PLAN' && <button type="button" className="btn-danger btn-sm coach-action-btn" disabled={busy} onClick={() => void handleRemoveAssignment(item)}>{t("Kết thúc")}</button>}
                     </div>
                   </td>

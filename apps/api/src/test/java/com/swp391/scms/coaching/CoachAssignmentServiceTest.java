@@ -193,15 +193,15 @@ class CoachAssignmentServiceTest {
     @Test void transfersEveryUpcomingPtOfTheMemberTogether() {
         validAccounts(); CoachBooking selected = booking(601L), later = booking(602L);
         later.setBookingDate(today.plusDays(8));
-        Member otherMember = new Member(); otherMember.setUserId(200L);
-        CoachBooking otherMembers = booking(603L); otherMembers.setMember(otherMember);
         when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(bookings.findByIdForUpdate(602L)).thenReturn(Optional.of(later));
-        when(bookings.findCurrentAssignments(10L, today, LocalTime.of(15, 0))).thenReturn(List.of(selected, later, otherMembers));
+        when(bookings.findUpcomingForMemberAndCoachForUpdate(10L, 100L, today, LocalTime.of(15, 0))).thenReturn(List.of(selected, later));
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), eq(today), any())).thenReturn(true);
         service.reassignStudent(transfer("PT_1_1", 601L));
-        assertThat(selected.getCoach()).isSameAs(to); assertThat(later.getCoach()).isSameAs(to); assertThat(otherMembers.getCoach()).isSameAs(from);
+        assertThat(selected.getCoach()).isSameAs(to); assertThat(later.getCoach()).isSameAs(to);
         verify(bookings).save(selected); verify(bookings).save(later); verify(bookings, never()).findByMemberId(anyLong());
+        ArgumentCaptor<AuditLog> entry = ArgumentCaptor.forClass(AuditLog.class);
+        verify(audit).save(entry.capture());
+        assertThat(entry.getValue().getNewValue()).contains("\"sessionIds\":[601,602]");
         verify(audit).save(any());
         verify(notifications).send(eq(100L), any(), any(), eq("system"), isNull(), eq(601L), eq("/member/classes?tab=pt"));
     }
@@ -222,8 +222,7 @@ class CoachAssignmentServiceTest {
         validAccounts(); CoachBooking selected = booking(601L), later = booking(602L);
         later.setBookingDate(today.plusDays(8));
         when(bookings.findByIdForUpdate(601L)).thenReturn(Optional.of(selected));
-        when(bookings.findByIdForUpdate(602L)).thenReturn(Optional.of(later));
-        when(bookings.findCurrentAssignments(10L, today, LocalTime.of(15, 0))).thenReturn(List.of(selected, later));
+        when(bookings.findUpcomingForMemberAndCoachForUpdate(10L, 100L, today, LocalTime.of(15, 0))).thenReturn(List.of(selected, later));
         when(subscriptions.hasActiveMembershipCoveringSession(eq(100L), eq(today), any())).thenReturn(true);
         lenient().when(staffRequests.existsApprovedLeaveOn(20L, today.plusDays(8))).thenReturn(true);
         assertThatThrownBy(() -> service.reassignStudent(transfer("PT_1_1", 601L))).isInstanceOf(BadRequestException.class).hasFieldOrPropertyWithValue("errorCode", "COACH_ON_LEAVE");
