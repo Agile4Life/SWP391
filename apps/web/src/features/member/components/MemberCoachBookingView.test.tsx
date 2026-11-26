@@ -383,7 +383,7 @@ describe('weekly PT booking after Monday has passed', () => {
         expect(host.textContent).toContain('07:00 – 09:30');
         expect(host.textContent).toContain('Slot 4');
         expect(host.textContent).toContain('15:15 – 17:45');
-        expect(host.textContent).toContain('Cần đặt trước 2 tiếng');
+        expect(host.textContent).toContain('Đã qua thời gian'); // 07:00 slot already started at 08:00
         expect(host.textContent).toContain('HLV đã có lịch');
         expect(host.textContent).toContain('Bạn đã có lịch trùng');
         expect(host.textContent).toContain('HLV nghỉ phép');
