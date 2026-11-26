@@ -35,14 +35,17 @@ public class CurrentCoachMembers {
   * Một học viên trong danh sách: mã, họ tên, mục tiêu, sức khỏe, trình độ, chiều cao, cân nặng, BMI và có xem
   * được giáo án không.
   */
- public record MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel,BigDecimal heightCm,BigDecimal weightKg,BigDecimal bmi,Boolean canViewWorkoutPlan) {
+ public record MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel,BigDecimal heightCm,BigDecimal weightKg,BigDecimal bmi,Boolean canViewWorkoutPlan,String phone) {
   /** Constructor không có số đo. */
   public MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel){
-   this(id,memberCode,fullName,fitnessGoal,healthNotes,fitnessLevel,null,null,null,true);
+   this(id,memberCode,fullName,fitnessGoal,healthNotes,fitnessLevel,null,null,null,true,null);
   }
   /** Constructor có số đo nhưng mặc định xem được giáo án. */
   public MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel,BigDecimal heightCm,BigDecimal weightKg,BigDecimal bmi){
-   this(id,memberCode,fullName,fitnessGoal,healthNotes,fitnessLevel,heightCm,weightKg,bmi,true);
+   this(id,memberCode,fullName,fitnessGoal,healthNotes,fitnessLevel,heightCm,weightKg,bmi,true,null);
+  }
+  public MemberOption(Long id,String memberCode,String fullName,String fitnessGoal,String healthNotes,String fitnessLevel,BigDecimal heightCm,BigDecimal weightKg,BigDecimal bmi,Boolean canViewWorkoutPlan){
+   this(id,memberCode,fullName,fitnessGoal,healthNotes,fitnessLevel,heightCm,weightKg,bmi,canViewWorkoutPlan,null);
   }
  }
  /** Học viên hiện tại: HLV xem của mình, quản lý xem tất cả; vai trò khác bị từ chối. */
@@ -87,7 +90,9 @@ public class CurrentCoachMembers {
   if(bmi==null) bmi=recordedBmi;
   boolean canView=activeSubs.isEmpty()||activeSubs.stream()
    .anyMatch(s->com.swp391.scms.facilities.PackageBenefits.canViewWorkoutPlan(s.getMembershipPackage()));
-  return new MemberOption(m.getUserId(),m.getMembershipCode(),m.getUser().getFullName(),m.getFitnessGoal(),m.getHealthNotes(),m.getFitnessLevel(),heightCm,weightKg,bmi,canView);
+  String phone=m.getUser()!=null?m.getUser().getPhone():null;
+  String fullName=m.getUser()!=null?m.getUser().getFullName():null;
+  return new MemberOption(m.getUserId(),m.getMembershipCode(),fullName,m.getFitnessGoal(),m.getHealthNotes(),m.getFitnessLevel(),heightCm,weightKg,bmi,canView,phone);
  }
  /** Tính BMI = cân nặng (kg) / chiều cao (m)², làm tròn 1 chữ số; thiếu hoặc không hợp lệ thì null. */
  public static BigDecimal calculateBmi(BigDecimal heightCm,BigDecimal weightKg){

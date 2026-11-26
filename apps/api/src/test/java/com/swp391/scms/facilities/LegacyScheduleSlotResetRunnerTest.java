@@ -67,6 +67,7 @@ class LegacyScheduleSlotResetRunnerTest {
                 "coach_reviews",
                 "session_bookings",
                 "class_enrollments",
+                "class_waitlists",
                 "class_sessions",
                 "classes",
                 "coach_bookings")) {
@@ -93,7 +94,8 @@ class LegacyScheduleSlotResetRunnerTest {
                 "session_evaluations",
                 "coach_reviews",
                 "session_bookings",
-                "class_enrollments")) {
+                "class_enrollments",
+                "class_waitlists")) {
             when(jdbcTemplate.queryForObject(contains("information_schema.tables"), eq(Boolean.class), eq(absent)))
                     .thenReturn(Boolean.FALSE);
         }
