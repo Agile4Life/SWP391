@@ -652,11 +652,6 @@ export function MemberCalendar() {
                 </button>
               ))}
           </div>
-          <div className="mcal__dialog-actions">
-            <button type="button" className="btn-primary" onClick={closeDayModal}>
-              {text("Đóng", "Close")}
-            </button>
-          </div>
         </Modal>
       )}
 
