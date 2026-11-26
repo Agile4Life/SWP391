@@ -405,7 +405,6 @@ export function WeeklyTimetable({
                       groups.set(name, group);
                     }
                     const fullCount = active.filter((event) => event.tone === 'full').length;
-                    const cancelledCount = slotEvents.length - active.length;
                     const allPast = slotEvents.every((event) => event.tone === 'past' || event.tone === 'cancelled');
                     const rangeLabel = `${slot.label} · ${slot.rangeLabel}`;
                     const summaryText = [...groups.values()].map((g) => `${g.name} ${g.count}`).join(', ');
@@ -434,13 +433,11 @@ export function WeeklyTimetable({
                             {group.count > 1 && <strong>{group.count}</strong>}
                           </span>
                         ))}
-                        {(fullCount > 0 || cancelledCount > 0) && (
-                          <span className="mcal__summary-note">
-                            {[
-                              fullCount > 0 ? t(`${fullCount} đầy`, `${fullCount} full`) : '',
-                              cancelledCount > 0 ? t(`${cancelledCount} hủy`, `${cancelledCount} cancelled`) : '',
-                            ].filter(Boolean).join(' · ')}
-                          </span>
+                        {groups.size === 0 && (
+                          <span className="mcal__summary-note">{t('Đã hủy', 'Cancelled')}</span>
+                        )}
+                        {fullCount > 0 && (
+                          <span className="mcal__summary-note">{t(`${fullCount} đầy`, `${fullCount} full`)}</span>
                         )}
                       </button>
                     );
@@ -569,7 +566,9 @@ export function WeeklyTimetable({
                     ].filter(Boolean).join(' · ')}
                   </small>
                 </span>
-                {ev.badge && <span className="mcal__overflow-badge">{ev.badge}</span>}
+                {ev.tone === 'cancelled'
+                  ? <span className="mcal__overflow-badge">{t('Đã hủy', 'Cancelled')}</span>
+                  : ev.badge && <span className="mcal__overflow-badge">{ev.badge}</span>}
               </button>
             ))}
           </div>

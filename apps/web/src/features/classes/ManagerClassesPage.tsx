@@ -10,11 +10,13 @@ import { centerNowParts } from '../../shared/lib/centerTime';
 import { errorMessage } from '../../shared/lib/errorMessage';
 import { notify } from '../../shared/lib/portalNotices';
 import type { Discipline, Room } from '../manager/catalogApi';
+import { MonthOverview } from '../schedule/MonthOverview';
 import { WeeklyTimetable, type TimetableLegendItem } from '../schedule/WeeklyTimetable';
 import { formatSlotLabel } from '../schedule/slots';
 import {
   disciplineAccentColor,
   mondayOf,
+  monthStartOf,
   todayISO,
   weekDays,
   type TimetableEvent,
@@ -61,6 +63,9 @@ export function ManagerClassesPage() {
   const [selectedClassId, setSelectedClassId] = useState('');
   /** Bộ môn đang bị tắt trên Lịch tổng (rỗng = hiện tất cả). */
   const [hiddenDisciplineIds, setHiddenDisciplineIds] = useState<number[]>([]);
+  /** Lịch tổng xem theo tuần hoặc theo tháng. */
+  const [overviewMode, setOverviewMode] = useState<'week' | 'month'>('week');
+  const [monthStart, setMonthStart] = useState(() => monthStartOf(todayISO()));
 
   const [detailSession, setDetailSession] = useState<ClassSessionDto | null>(null);
   const [createModal, setCreateModal] = useState<CreateSlotPrefill | null>(null);
@@ -242,6 +247,22 @@ export function ManagerClassesPage() {
 
 
   const canCreateClass = disciplines.length > 0;
+
+  const overviewSwitch = (
+    <div className="mcal__switch" role="group" aria-label={t('Chế độ xem', 'View')} data-testid="overview-mode-switch">
+      <button type="button" aria-pressed={overviewMode === 'week'} onClick={() => setOverviewMode('week')}>{t('Tuần', 'Week')}</button>
+      <button
+        type="button"
+        aria-pressed={overviewMode === 'month'}
+        onClick={() => {
+          setMonthStart(monthStartOf(weekStart));
+          setOverviewMode('month');
+        }}
+      >
+        {t('Tháng', 'Month')}
+      </button>
+    </div>
+  );
 
   const handleOpenEventDetail = (eventId: string) => {
     const found = enrichedSessions.find((s) => String(s.id) === eventId);
@@ -481,6 +502,7 @@ export function ManagerClassesPage() {
             </div>
           )}
 
+{overviewMode === 'week' ? (
           <WeeklyTimetable
             label={t('Lịch tổng cả tuần toàn trung tâm', 'Full center weekly overview')}
             weekStart={weekStart}
@@ -492,6 +514,7 @@ export function ManagerClassesPage() {
             onEventClick={handleOpenEventDetail}
             selectedId={detailSession ? String(detailSession.id) : undefined}
             summary
+            toolbar={overviewSwitch}
             legend={[]}
             legendNote={t(
               'Mỗi ô đếm số lớp theo bộ môn trong slot đó — bấm vào ô để xem danh sách buổi và mở chi tiết.',
@@ -499,6 +522,27 @@ export function ManagerClassesPage() {
             )}
             emptyLabel={t('Tuần này chưa có buổi học nào', 'No sessions scheduled this week')}
           />
+          ) : (
+          <MonthOverview
+            label={t('Lịch tháng toàn trung tâm', 'Full center month overview')}
+            monthStart={monthStart}
+            events={allWeekEvents}
+            loading={loading}
+            error={error}
+            onRetry={() => void loadAll()}
+            onMonthChange={setMonthStart}
+            onEventClick={handleOpenEventDetail}
+            onOpenWeek={(day) => {
+              setWeekStart(mondayOf(day));
+              setOverviewMode('week');
+            }}
+            toolbar={overviewSwitch}
+            legendNote={t(
+              'Mỗi ô đếm số buổi theo bộ môn trong ngày — bấm vào ô để xem danh sách buổi.',
+              'Each cell counts sessions per discipline that day — click a cell to list them.',
+            )}
+          />
+          )}
         </>
       ) : (
         <>

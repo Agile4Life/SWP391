@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, disciplineAccentColor, groupVisibleLanes, layoutDaySlotEvents, mondayOf, toISODate, todayISO, weekDays, weekdayLabel, type TimetableEvent } from './timetable';
+import { addDays, addMonths, disciplineAccentColor, monthStartOf, groupVisibleLanes, layoutDaySlotEvents, mondayOf, toISODate, todayISO, weekDays, weekdayLabel, type TimetableEvent } from './timetable';
 
 // Tạo một sự kiện lịch mẫu từ id và giờ bắt đầu/kết thúc.
 const ev = (id: string, startTime: string, endTime: string): TimetableEvent => ({
@@ -103,5 +103,15 @@ describe('timetable helpers', () => {
     expect(grouped.overflows).toHaveLength(1);
     expect(grouped.overflows[0].hiddenEvents).toHaveLength(2);
     expect(grouped.overflows[0].rangeLabel).toBe('Slot 1 · 07:00 – 09:30');
+  });
+});
+
+describe('month helpers', () => {
+  it('monthStartOf / addMonths cross year boundaries', () => {
+    expect(monthStartOf('2026-11-26')).toBe('2026-11-01');
+    expect(addMonths('2026-11-01', 1)).toBe('2026-12-01');
+    expect(addMonths('2026-12-01', 1)).toBe('2027-01-01');
+    expect(addMonths('2027-01-01', -1)).toBe('2026-12-01');
+    expect(addMonths('2026-01-01', -13)).toBe('2024-12-01');
   });
 });

@@ -271,3 +271,15 @@ export function layoutDaySlotEvents<T extends TimetableEvent>(events: T[]): Posi
 export function blockClass(heightPx: number): string {
   return heightPx < 64 ? ' is-short' : heightPx < 100 ? ' is-compact' : '';
 }
+
+/** Ngày 1 của tháng chứa ngày cho trước (YYYY-MM-01). */
+export function monthStartOf(iso: string): string {
+  return `${iso.slice(0, 7)}-01`;
+}
+
+/** Cộng/trừ số tháng, trả về ngày 1 của tháng kết quả. */
+export function addMonths(monthStart: string, months: number): string {
+  const [y, m] = monthStart.split('-').map(Number);
+  const total = y * 12 + (m - 1) + months;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}-01`;
+}
