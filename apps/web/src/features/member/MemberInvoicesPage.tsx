@@ -215,8 +215,8 @@ export function MemberInvoicesPage() {
                 <thead>
                   <tr>
                     <th scope="col">{memberText("Dịch vụ")}</th>
-                    <th scope="col">{memberText("SL")}</th>
-                    <th scope="col">{memberText("Thành tiền")}</th>
+                    <th scope="col">{memberText("SL", "Qty")}</th>
+                    <th scope="col">{memberText("Thành tiền", "Amount")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -249,14 +249,14 @@ export function MemberInvoicesPage() {
       </Modal>}
       {previewUrl && (
         <Modal
-          title={memberText("Xem hóa đơn PDF")}
+          title={memberText("Xem hóa đơn PDF", "View invoice PDF")}
           onClose={closeInvoicePreview}
           className="member-invoices__pdf-modal"
         >
           <div className="member-invoices__pdf-wrap">
             <iframe
               src={previewUrl.startsWith('blob:') ? `${previewUrl}#toolbar=0&navpanes=0&view=FitH` : previewUrl}
-              title={invoice ? `${memberText("Hóa đơn điện tử")} ${invoice.invoiceNumber}` : memberText("Xem hóa đơn PDF")}
+              title={invoice ? `${memberText("Hóa đơn điện tử")} ${invoice.invoiceNumber}` : memberText("Xem hóa đơn PDF", "View invoice PDF")}
               className="member-invoices__pdf-frame"
             />
           </div>
