@@ -734,17 +734,43 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).not.toHaveBeenCalled();
   });
 
-  it('renders and claims the 3-day trial with cccd', async () => {
+  it('redirects unverified members to identity verification before claiming the 3-day trial', async () => {
     trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
     await render();
     expect(host.textContent).toContain('Gói Trải Nghiệm 3 Ngày miễn phí');
     expect(button('Nhận 3 ngày tập miễn phí')).toBeDefined();
     await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
+    expect(host.querySelector('dialog')).toBeNull();
+  });
+
+  it('opens trial modal with reusable KYC once identity verification is approved', async () => {
+    trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
+    profileApiMock.getProfile.mockResolvedValue({
+      userId: 1,
+      fullName: 'Nguyen Van A',
+      email: 'member@test.local',
+      phone: null,
+      dob: null,
+      gender: null,
+      avatarUrl: null,
+      address: null,
+      membershipCode: 'MEM-001',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: true,
+      kycStatus: 'APPROVED',
+      kycRejectReason: null,
+      citizenId: '********1234',
+      documentType: 'CCCD',
+      nationality: null,
+    });
+    await render();
+    await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
     expect(host.textContent).toContain('Xác minh Căn cước công dân (CCCD)');
-    const nameInput = host.querySelector('#trial-full-name');
-    const cccdInput = host.querySelector('#trial-cccd');
-    expect(nameInput).not.toBeNull();
-    expect(cccdInput).not.toBeNull();
+    expect(host.textContent).toContain('********1234');
     const submitBtn = button('Xác minh & Kích hoạt');
     expect(submitBtn).toBeDefined();
   });
@@ -787,6 +813,28 @@ describe('SCRUM-86 packages', () => {
   });
 
   it('switches an open trial modal and existing validation error VI → EN → VI without rewriting catalog content', async () => {
+    profileApiMock.getProfile.mockResolvedValue({
+      userId: 1,
+      fullName: 'Nguyen Van A',
+      email: 'member@test.local',
+      phone: null,
+      dob: null,
+      gender: null,
+      avatarUrl: null,
+      address: null,
+      membershipCode: 'MEM-001',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: true,
+      kycStatus: 'APPROVED',
+      kycRejectReason: null,
+      citizenId: null,
+      documentType: null,
+      nationality: null,
+    });
     await render();
     await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
     await act(async () => host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
@@ -1060,6 +1108,28 @@ describe('SCRUM-86 packages', () => {
 
   it('P2-FE-46 & P2-FE-49: trial modal uses FilePicker, semantic radio, no nested portal-card, and aligns passport 6-15 rules', async () => {
     trialApiMock.getStatus.mockResolvedValue({ eligible: true, alreadyClaimed: false, days: 3, tier: 'GOLD' });
+    profileApiMock.getProfile.mockResolvedValue({
+      userId: 1,
+      fullName: 'Nguyen Van A',
+      email: 'member@test.local',
+      phone: null,
+      dob: null,
+      gender: null,
+      avatarUrl: null,
+      address: null,
+      membershipCode: 'MEM-001',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: true,
+      kycStatus: 'APPROVED',
+      kycRejectReason: null,
+      citizenId: null,
+      documentType: null,
+      nationality: null,
+    });
     await render();
     await act(async () => button('Nhận 3 ngày tập miễn phí')?.click());
     const dialog = host.querySelector('dialog')!;

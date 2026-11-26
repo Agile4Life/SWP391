@@ -191,6 +191,12 @@ export function MemberPackagesPage() {
     });
   };
 
+  const isKycVerified = Boolean(
+    kycProfile &&
+    (kycProfile.kycStatus === 'APPROVED' ||
+      (kycProfile.identityVerified && kycProfile.kycStatus !== 'PENDING' && kycProfile.kycStatus !== 'REJECTED'))
+  );
+
   const hasReusableKyc = Boolean(
     kycProfile &&
     (kycProfile.identityVerified || kycProfile.kycStatus === 'APPROVED' || kycProfile.kycStatus === 'PENDING') &&
@@ -891,6 +897,10 @@ export function MemberPackagesPage() {
               type="button"
               className="btn-primary btn-sm"
               onClick={() => {
+                if (!isKycVerified) {
+                  navigate('/member/packages/checkout?mode=kyc&from=trial');
+                  return;
+                }
                 setTrialError('');
                 setIsTrialModalOpen(true);
               }}
@@ -965,6 +975,10 @@ export function MemberPackagesPage() {
               type="button"
               className="btn-primary"
               onClick={() => {
+                if (!isKycVerified) {
+                  navigate('/member/packages/checkout?mode=kyc&from=trial');
+                  return;
+                }
                 setTrialError('');
                 setIsTrialModalOpen(true);
               }}

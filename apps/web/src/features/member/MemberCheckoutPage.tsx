@@ -57,7 +57,8 @@ export function MemberCheckoutPage() {
     searchParams.get('mode') === 'kyc' &&
     !packageIdParam &&
     !subscriptionIdParam;
-  const backTarget = searchParams.get('from') === 'profile' ? '/member/profile' : '/member/packages';
+  const fromParam = searchParams.get('from');
+  const backTarget = fromParam === 'profile' ? '/member/profile' : '/member/packages';
 
   const preparedSubscriptionId = useRef<number | null>(existingSubscriptionId);
   const kycSubmittingRef = useRef(false);
@@ -577,7 +578,11 @@ export function MemberCheckoutPage() {
           {isKycOnlyMode && (
             <div>
               <Link to={backTarget} className="btn-secondary">
-                {backTarget === '/member/profile' ? t("Quay lại hồ sơ cá nhân", "Back to profile") : t("Quay lại danh mục gói tập", "Back to membership catalog")}
+                {backTarget === '/member/profile'
+                  ? t("Quay lại hồ sơ cá nhân", "Back to profile")
+                  : fromParam === 'trial' && isKycVerified
+                  ? t("Quay lại đăng ký gói trải nghiệm", "Back to claim 3-day trial")
+                  : t("Quay lại danh mục gói tập", "Back to membership catalog")}
               </Link>
             </div>
           )}
