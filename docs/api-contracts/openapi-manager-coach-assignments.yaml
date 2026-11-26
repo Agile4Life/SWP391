@@ -33,7 +33,10 @@ paths:
           schema: { type: integer, format: int64 }
         - name: search
           in: query
-          description: Case-insensitive member name/code/phone/email, coach name or relationship detail
+          description: |
+            Case-insensitive member name/code/phone/email, coach name or relationship detail.
+            Matching coach names take priority and show only those coaches, even without assignments.
+            Otherwise only coaches with matching member relationships are returned.
           schema: { type: string }
         - name: type
           in: query

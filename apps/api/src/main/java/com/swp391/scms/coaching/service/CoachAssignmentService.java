@@ -104,12 +104,17 @@ public class CoachAssignmentService {
         LocalDate date = today();
         LocalTime time = LocalTime.now(clock);
         String query = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        boolean matchesCoachName = !query.isEmpty() && availableCoaches.stream()
+                .filter(c -> filterCoachId == null || filterCoachId.equals(c.getUserId()))
+                .anyMatch(c -> safeText(c.getUser().getFullName()).toLowerCase(Locale.ROOT).contains(query));
         String type = assignmentType == null ? "ALL" : assignmentType.trim().toUpperCase(Locale.ROOT);
         if (!Set.of("ALL", "TRAINING_PLAN", "PT_1_1", "CLASS").contains(type)) throw invalid("INVALID_ASSIGNMENT_TYPE", "invalid_type");
         List<CoachAssignmentOverviewDto> coaches = new ArrayList<>();
         Set<Long> allStudents = new HashSet<>(), allPt = new HashSet<>(), allPlans = new HashSet<>(), allClasses = new HashSet<>();
         for (Coach coach : availableCoaches) {
             if (filterCoachId != null && !filterCoachId.equals(coach.getUserId())) continue;
+            boolean coachMatches = !query.isEmpty() && safeText(coach.getUser().getFullName()).toLowerCase(Locale.ROOT).contains(query);
+            if (matchesCoachName && !coachMatches) continue;
             Long coachId = coach.getUserId();
             List<CoachAssignmentStudentDto> rows = new ArrayList<>();
             for (TrainingPlan plan : trainingPlanRepository.findCurrentAssignments(coachId, date)) {
@@ -145,6 +150,7 @@ public class CoachAssignmentService {
             List<CoachAssignmentStudentDto> filtered = rows.stream()
                     .filter(s -> "ALL".equals(type) || type.equals(s.assignmentType()))
                     .filter(s -> query.isEmpty() || searchable(s, coach).contains(query)).toList();
+            if (!query.isEmpty() && !coachMatches && filtered.isEmpty()) continue;
             Set<Long> pt = studentsOfType(filtered, "PT_1_1"), plans = studentsOfType(filtered, "TRAINING_PLAN"), classes = studentsOfType(filtered, "CLASS");
             Set<Long> distinct = new HashSet<>();
             filtered.forEach(s -> distinct.add(s.memberId()));
