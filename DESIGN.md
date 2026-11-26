@@ -1,7 +1,5 @@
 # Quy chuẩn thiết kế chính — SÖL
 
-Quyết định Receptionist (26/11/2026): Thẻ `Cần xử lý` tại `/staff/reception` dùng header loại/mã yêu cầu và hội viên, thông tin label–value hai cột, Email/SĐT ở hàng riêng và hàng nút cuối thẻ căn phải; mobile xếp một cột. Áp dụng cho năm loại thẻ hiện có, không mở rộng nghiệp vụ. Popup trải nghiệm đặt tên/mã hội viên dưới tiêu đề, giữ ảnh `contain` và phóng to, bỏ khung “Lưu ý nghiệp vụ”; giữ nguyên các bước xác nhận và lý do từ chối.
-
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
 Quyết định Member (26/11/2026): Đặt PT 1:1 chọn ngày bằng dải 7 ngày có nút ‹ › lùi/tiến theo tuần (không lùi trước hôm nay) và `DatePicker` nhảy tới ngày bất kỳ từ hôm nay; không còn giới hạn 10 ngày cố định.
 Các nút thao tác trong Danh mục vận hành nằm cùng một hàng và có khoảng cách; bảng cuộn ngang khi cần.
@@ -414,6 +412,8 @@ VNPay Back/Forward (06/11/2026): khôi phục từ bfcache phải đồng bộ t
 
 Đặt lịch HLV 1:1 (06/11/2026, cập nhật 25/11/2026): chọn tần suất “Một buổi / Hàng tuần” và thứ trong tuần ngay trong khối chọn ngày, trước khi chọn slot. Lịch tuần xét 7 ngày kể từ ngày bắt đầu; thứ đã qua chuyển sang tuần sau trong khoảng này. Danh sách slot lấy từ `GET /api/v1/coach-bookings/available-slots` gồm **đúng 5 thẻ Slot cố định (`Slot 1` → `Slot 5`, kèm `slotNumber: 1..5`)** trong khung `07:00 – 20:30` (`Slot 1` `07:00 – 09:30`, `Slot 2` `09:45 – 12:15`, `Slot 3` `12:30 – 15:00`, `Slot 4` `15:15 – 17:45`, `Slot 5` `18:00 – 20:30`), thay hoàn toàn 3 nhóm Sáng/Chiều/Tối (15 nút giờ). Hiển thị ngày đang tra slot, `Slot N` in đậm ở trên, khung giờ phía dưới và trạng thái trống hoặc lý do bận (`HLV nghỉ phép`, `Cần đặt trước 2 tiếng`, `HLV đã có lịch`, `Bạn đã có lịch trùng`). **Đã gỡ bỏ hoàn toàn quy tắc nghỉ liên tiếp của HLV** (`coach_rest`); giữ nguyên đơn giá `200.000đ / slot` (hoặc 1 lượt gói PT) và yêu cầu đặt trước giờ bắt đầu slot tối thiểu 2 giờ. Giữ màu charcoal–salmon (Dark: bạc), bố cục và khoảng cách hiện hành.
 
+
+Quyết định Receptionist (26/11/2026): Thẻ `Cần xử lý` tại `/staff/reception` dùng header loại/mã yêu cầu và hội viên, thông tin label–value hai cột, Email/SĐT ở hàng riêng và hàng nút cuối thẻ căn phải; mobile xếp một cột. Áp dụng cho năm loại thẻ hiện có, không mở rộng nghiệp vụ. Popup trải nghiệm đặt tên/mã hội viên dưới tiêu đề, giữ ảnh `contain` và phóng to, bỏ khung “Lưu ý nghiệp vụ”; giữ nguyên các bước xác nhận và lý do từ chối.
 
 Quyết định Receptionist (25/11/2026): Dropdown gia hạn tại quầy: lựa chọn không hợp lệ vẫn disabled; giải thích dùng màu chữ phụ rõ, opacity 1 và xuống dòng trong menu, không đổi rule gia hạn.
 Quyết định Receptionist (25/11/2026): KYC tại POS: hiện trạng thái từ API, chỉ hiện số giấy tờ đã che; mua mới dùng cùng điều kiện KYC với Member. Không thêm quyền sửa giấy tờ.
