@@ -469,10 +469,40 @@ export function CoachTrainingPlanPage() {
     try {
       const recs = await aiApi.getMemberRecommendations(targetMemberId);
       if (!mountedRef.current || reqId !== aiReqIdRef.current) return;
-      const latest = Array.isArray(recs)
-        ? recs.find((r) => !r.applied && Array.isArray(r.items) && r.items.length > 0)
-        ?? recs.find((r) => Array.isArray(r.items) && r.items.length > 0)
-        : undefined;
+      let latest: AiWorkoutPlanResult | undefined;
+
+      // Ưu tiên 1: Nếu trong trình soạn của học viên này đang có giáo án bài tập đã áp dụng trước đó
+      if (selectedMemberId === targetMemberId && exercises.length > 0) {
+        const targetMember = members.find((m) => m.id === targetMemberId);
+        latest = {
+          id: appliedRecommendationId ?? 0,
+          memberId: targetMemberId,
+          memberName: targetMember?.fullName,
+          goal: planGoal || targetMember?.fitnessGoal || '',
+          analysis: t(
+            'Giáo án AI đã áp dụng trước đó trong trình soạn của học viên này.',
+            'Previously applied AI plan from the draft editor for this member.'
+          ) as string,
+          items: exercises.map((ex) => ({
+            dayOfWeek: ex.dayOfWeek,
+            exerciseName: ex.exerciseName,
+            sets: ex.sets,
+            reps: ex.reps,
+            restSeconds: ex.restSeconds,
+            durationMinutes: ex.durationMinutes,
+            description: ex.description,
+          })),
+        };
+      }
+
+      // Ưu tiên 2: Nếu chưa có trong trình soạn, lấy từ lịch sử server
+      if (!latest) {
+        latest = Array.isArray(recs)
+          ? recs.find((r) => !r.applied && Array.isArray(r.items) && r.items.length > 0)
+          ?? recs.find((r) => Array.isArray(r.items) && r.items.length > 0)
+          : undefined;
+      }
+
       if (!latest) {
         setAiError(
           staffMessage(
@@ -488,7 +518,35 @@ export function CoachTrainingPlanPage() {
         [targetMemberId]: { result: latest, durationWeeks: weeks },
       }));
     } catch (err) {
-      if (mountedRef.current && reqId === aiReqIdRef.current) {
+      // Nếu gọi server lỗi nhưng trong trình soạn đã có giáo án đang áp dụng cho học viên này:
+      if (selectedMemberId === targetMemberId && exercises.length > 0) {
+        const targetMember = members.find((m) => m.id === targetMemberId);
+        const fallbackPlan: AiWorkoutPlanResult = {
+          id: appliedRecommendationId ?? 0,
+          memberId: targetMemberId,
+          memberName: targetMember?.fullName,
+          goal: planGoal || targetMember?.fitnessGoal || '',
+          analysis: t(
+            'Giáo án AI đang được áp dụng trong trình soạn cho học viên này.',
+            'Current AI plan applied in the draft editor for this member.'
+          ) as string,
+          items: exercises.map((ex) => ({
+            dayOfWeek: ex.dayOfWeek,
+            exerciseName: ex.exerciseName,
+            sets: ex.sets,
+            reps: ex.reps,
+            restSeconds: ex.restSeconds,
+            durationMinutes: ex.durationMinutes,
+            description: ex.description,
+          })),
+        };
+        const weeks = Math.min(52, Math.max(1, Math.trunc(Number(durationWeeks) || 4)));
+        setAiResultsByMember((prev) => ({
+          ...prev,
+          [targetMemberId]: { result: fallbackPlan, durationWeeks: weeks },
+        }));
+        setAiError(null);
+      } else if (mountedRef.current && reqId === aiReqIdRef.current) {
         setAiError(
           coachingError(
             err,
@@ -1086,7 +1144,7 @@ export function CoachTrainingPlanPage() {
             <div role="presentation" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', paddingBottom: '6px', flexShrink: 0 }}>
               <button
                 type="button"
-                className="btn-secondary btn-ai-sparkle"
+                className="plan-ai-trigger-btn btn-ai-sparkle"
                 onClick={handleOpenAiModal}
               >
                 <span>{t("Gợi ý giáo án bằng AI")}</span>
