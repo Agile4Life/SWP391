@@ -15,9 +15,10 @@ import {
 } from './language';
 import { sourceToast } from './sourceText';
 import { localizableError } from '../lib/errorMessage';
+import { dismissToast } from '../ui/toast';
 // Component phụ chỉ phục vụ kiểm thử.
 function Notices() { const notices = usePortalNotices(); const { t } = useI18n(); return <>{notices.map(n => <p key={n.id}>{n.translation ? t(n.translation) : n.message}</p>)}</>; }
-afterEach(() => { clearNotices(); setLanguage('vi'); vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { dismissToast(); clearNotices(); setLanguage('vi'); vi.useRealTimers(); vi.unstubAllGlobals(); });
 it('updates already-visible source notices/toasts, preserving untagged API content and stored message strings', async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true); vi.useFakeTimers(); setLanguage('vi');
   const host = document.createElement('div'); document.body.append(host); const root = createRoot(host);

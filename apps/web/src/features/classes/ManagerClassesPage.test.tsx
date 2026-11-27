@@ -2,6 +2,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../shared/api/client';
+import { dismissToast } from '../../shared/ui/toast';
 import { ManagerClassesPage } from './ManagerClassesPage';
 import {
   classesApi,
@@ -303,6 +304,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
   });
 
   afterEach(async () => {
+    dismissToast();
     await act(async () => root.unmount());
     host.remove();
     localStorage.clear();

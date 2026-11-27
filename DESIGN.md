@@ -2,6 +2,8 @@
 
 Quyết định Manager: khi tạo hoặc sửa khóa học, tên trùng được báo ngay dưới ô Tên khóa học; wizard không cho qua bước tiếp theo và biểu mẫu sửa không cho lưu. Khi API phát hiện trùng lúc lưu, wizard trở về bước thông tin. Thông báo biến mất khi sửa thành tên không trùng.
 
+Quyết định Thông báo phản hồi & trạng thái ứng dụng toàn web (27/11/2026 — **mở rộng** quyết định hộp thoại giữa màn hình của Manager ra toàn ứng dụng và **ghi đè** các mô tả trước đây về thông báo inline đầu trang hoặc toast góc trên bên phải): mọi phản hồi thao tác (`toast` / `notify`) và thông báo trạng thái ứng dụng (`PwaStatus`: mất kết nối mạng, có phiên bản mới, lỗi mở cài đặt) trên cả 5 vai trò portal lẫn các trang công khai/xác thực (`/`, `/login`, `/register`) đều hiển thị thống nhất dưới dạng **một hộp thoại `<dialog role="alertdialog">` căn giữa màn hình** (tối đa 1 popup mở tại một thời điểm). Hộp thoại gồm tiêu đề ở phần đầu và khung ngữ nghĩa `.portal-alert` (không dùng biểu tượng tròn/elip), **không đặt nút “Đóng” ở chân** — chỉ đóng bằng nút `×` góc trên phải, phím `Esc` hoặc bấm nền mờ. Riêng lỗi kiểm tra nhập liệu tại biểu mẫu và lỗi tải bảng/thẻ có nút thử lại vẫn giữ hiển thị inline ngay tại chỗ.
+
 Quyết định Manager: ô trả lời khiếu nại trải rộng trong khung bo viền, giữ nút emoji và nút chữ Gửi bo tròn ở phía phải.
 
 Quyết định Manager: mỗi ngày và slot chỉ được có tối đa hai bộ môn lớp nhóm; wizard báo rõ khi đã đủ hai bộ môn.

@@ -603,16 +603,6 @@ html:root .portal-logo.portal-logo--mark {
   min-height: 0;
 }
 
-.portal-v2 .app-main > .pwa-status:not(:empty) {
-  margin: 8px var(--portal-gutter, 8px) 12px;
-}
-
-@media (min-width: 768px) {
-  .portal-v2 .app-main > .pwa-status:not(:empty) {
-    margin: 64px var(--portal-gutter, 24px) 12px;
-  }
-}
-
 /* Desktop: không còn hàng tiêu đề riêng; cụm thao tác nổi ở góc phải, nội dung trang bắt đầu ngay từ đầu. */
 .portal-v2 .app-topbar {
   position: absolute;
@@ -1340,25 +1330,6 @@ html:root .portal-logo.portal-logo--mark {
 
 .portal-v2 #portal-main:has(> .portal-section-tabs) .portal-header:first-child .portal-header__actions {
   align-self: center;
-}
-
-/* Khi thanh PWA hoặc toast fallback đẩy nội dung xuống dưới topbar nổi, tiêu đề và thanh tab không cần chừa chỗ cho topbar nữa. */
-@media (min-width: 768px) {
-  .portal-v2 .app-main:has(> .pwa-status:not(:empty)) #portal-main .portal-header:first-child,
-  .portal-v2 #portal-main:has(> .sol-toast) .portal-header:first-child {
-    min-height: 0;
-    padding-right: 0;
-  }
-
-  .portal-v2 .app-main:has(> .pwa-status:not(:empty)) #portal-main .portal-header:first-child .portal-header__actions,
-  .portal-v2 #portal-main:has(> .sol-toast) .portal-header:first-child .portal-header__actions {
-    align-self: center;
-  }
-
-  .portal-v2 .app-main:has(> .pwa-status:not(:empty)) .portal-section-tabs,
-  .portal-v2 #portal-main:has(> .sol-toast) > .portal-section-tabs {
-    max-width: calc(100% - 2 * var(--portal-gutter));
-  }
 }
 
 /* Số đếm trong tab cấp 2 (vd. "Lịch sử điểm danh 3"). */

@@ -2,181 +2,229 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { dismissToast, toast } from './toast';
 import { setLanguage } from '../i18n/language';
 
-describe('toast lifecycle', () => {
+describe('toast unified centered dialog', () => {
+  const originalPath = window.location.pathname;
+
   beforeEach(() => {
-    vi.useFakeTimers(); dismissToast(); setLanguage('vi');
-    document.body.innerHTML = '<main id="portal-main"><button id="return">Return</button></main>';
+    vi.useFakeTimers();
+    dismissToast();
+    setLanguage('vi');
+    window.history.replaceState(null, '', '/member/dashboard');
+    document.body.innerHTML = '<div class="portal-v2"><main id="portal-main"><button id="return">Return</button></main></div>';
   });
-  afterEach(() => { dismissToast(); document.body.innerHTML = ''; setLanguage('vi'); vi.useRealTimers(); vi.restoreAllMocks(); });
-  function dialog() {
-    const el = document.createElement('dialog'); el.setAttribute('open', '');
-    el.innerHTML = '<input aria-label="Form field">'; document.body.append(el); return el;
+
+  afterEach(() => {
+    dismissToast();
+    document.body.innerHTML = '';
+    setLanguage('vi');
+    window.history.replaceState(null, '', originalPath);
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  function openUnderlyingDialog() {
+    const el = document.createElement('dialog');
+    el.setAttribute('open', '');
+    el.innerHTML = '<div class="portal-dialog__body"><input id="underlying-input" aria-label="Form field"></div>';
+    document.body.append(el);
+    return el;
   }
-  const flush = () => vi.advanceTimersByTimeAsync(0);
 
-  it('shows manager operation results in a centered dialog without an icon', () => {
-    const originalPath = window.location.pathname;
-    window.history.replaceState(null, '', '/manager/internal-requests');
+  it.each([
+    '/member/dashboard',
+    '/staff/reception',
+    '/coach/classes',
+    '/manager/internal-requests',
+    '/admin/users',
+    '/login',
+    '/',
+  ])('renders a centered alertdialog popup without icon or bottom close button on %s', (route) => {
+    window.history.replaceState(null, '', route);
+
+    toast.success('Đã lưu thay đổi');
+    const dialog = document.querySelector<HTMLDialogElement>('dialog.portal-dialog.sol-toast.sol-toast--success[open]')!;
+    expect(dialog).not.toBeNull();
+    expect(dialog.getAttribute('role')).toBe('alertdialog');
+    expect(dialog.getAttribute('aria-modal')).toBe('true');
+    expect(dialog.getAttribute('aria-labelledby')).toBe('sol-toast-title');
+    expect(dialog.getAttribute('aria-describedby')).toBe('sol-toast-message');
+    expect(dialog.hasAttribute('data-i18n-managed')).toBe(false);
+    expect(dialog.style.margin).toBe('auto');
+
+    expect(dialog.querySelector('#sol-toast-title')?.textContent).toBe('Thành công');
+    expect(dialog.querySelector('.portal-alert.portal-alert--success.sol-toast__alert .sol-toast__message')?.textContent).toBe('Đã lưu thay đổi');
+    expect(dialog.querySelector('.portal-alert svg')).toBeNull();
+    expect(dialog.querySelector('.sol-toast__icon')).toBeNull();
+
+    const buttons = [...dialog.querySelectorAll<HTMLButtonElement>('button')];
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0].className).toBe('portal-dialog__close sol-toast__close');
+    expect(buttons[0].getAttribute('aria-label')).toBe('Đóng thông báo');
+    expect(buttons[0].querySelector('svg')).not.toBeNull();
+    expect(buttons.some((b) => b.textContent?.trim() === 'Đóng' || b.textContent?.trim() === 'Close')).toBe(false);
+
+    toast.error('Không thể xử lý');
+    const errorDialog = document.querySelector<HTMLDialogElement>('dialog.portal-dialog.sol-toast.sol-toast--error[open]')!;
+    expect(errorDialog).not.toBeNull();
+    expect(errorDialog.querySelector('#sol-toast-title')?.textContent).toBe('Không thể thực hiện');
+    expect(errorDialog.querySelector('.portal-alert.portal-alert--error.sol-toast__alert .sol-toast__message')?.textContent).toBe('Không thể xử lý');
+    expect(errorDialog.querySelector('.sol-toast__icon')).toBeNull();
+  });
+
+  it('mounts inside .portal-v2, falls back to .fit-site, and finally document.body', () => {
+    toast.success('Trong portal');
+    expect(document.querySelector('.portal-v2 > dialog.sol-toast')).not.toBeNull();
+
+    document.body.innerHTML = '<div class="fit-site"><main>Landing</main></div>';
+    toast.success('Trên landing');
+    expect(document.querySelector('.fit-site > dialog.sol-toast')).not.toBeNull();
+
+    document.body.innerHTML = '<main>Plain</main>';
+    toast.error('Trên body');
+    expect(document.body.querySelector(':scope > dialog.sol-toast--error')).not.toBeNull();
+  });
+
+  it('replaces any previous toast so only 1 centered popup exists at a time and preserves focus restoration', () => {
+    const returnBtn = document.getElementById('return') as HTMLButtonElement;
+    returnBtn.focus();
+
+    toast.success('Thông báo đầu tiên');
+    expect(document.querySelectorAll('.sol-toast')).toHaveLength(1);
+    expect(document.activeElement).toBe(document.querySelector('.sol-toast__close'));
+
+    toast.error('Thông báo thứ hai');
+    expect(document.querySelectorAll('.sol-toast')).toHaveLength(1);
+    expect(document.querySelector('.sol-toast--success')).toBeNull();
+    expect(document.querySelector('.sol-toast--error .sol-toast__message')?.textContent).toBe('Thông báo thứ hai');
+    expect(document.activeElement).toBe(document.querySelector('.sol-toast__close'));
+
+    dismissToast();
+    expect(document.querySelector('.sol-toast')).toBeNull();
+    expect(document.activeElement).toBe(returnBtn);
+  });
+
+  it('stacks cleanly above an open dialog without closing it and restores focus back to the underlying dialog', () => {
+    const underlying = openUnderlyingDialog();
+    const underlyingCancel = vi.fn();
+    underlying.addEventListener('cancel', underlyingCancel);
+    const input = underlying.querySelector<HTMLInputElement>('#underlying-input')!;
+    input.focus();
+
+    toast.error('Lỗi thao tác');
+    const notice = document.querySelector<HTMLDialogElement>('dialog.sol-toast--error[open]')!;
+    expect(notice).not.toBeNull();
+    expect(underlying.contains(notice)).toBe(false);
+    expect(underlying.hasAttribute('open')).toBe(true);
+    expect(document.activeElement).toBe(notice.querySelector('.sol-toast__close'));
+
+    notice.dispatchEvent(new Event('cancel', { cancelable: true }));
+    expect(document.querySelector('dialog.sol-toast')).toBeNull();
+    expect(underlying.hasAttribute('open')).toBe(true);
+    expect(underlyingCancel).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('closes on close button click, cancel event, Escape keydown, and valid backdrop click only', () => {
+    const returnBtn = document.getElementById('return') as HTMLButtonElement;
+    returnBtn.focus();
+
+    // Close via × button
+    toast.success('Bấm nút X');
+    document.querySelector<HTMLButtonElement>('.sol-toast__close')!.click();
+    expect(document.querySelector('dialog.sol-toast')).toBeNull();
+    expect(document.activeElement).toBe(returnBtn);
+
+    // Close via native cancel event; ignore cancel events from descendants
+    toast.error('Bấm Esc native');
+    const cancelDialog = document.querySelector<HTMLDialogElement>('dialog.sol-toast')!;
+    cancelDialog.querySelector('.sol-toast__message')!.dispatchEvent(new Event('cancel', { bubbles: true, cancelable: true }));
+    expect(document.querySelector('dialog.sol-toast')).toBe(cancelDialog);
+    cancelDialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+    expect(document.querySelector('dialog.sol-toast')).toBeNull();
+    expect(document.activeElement).toBe(returnBtn);
+
+    // Close via synthetic Escape keydown on document
+    toast.success('Bấm phím Escape');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(document.querySelector('dialog.sol-toast')).toBeNull();
+    expect(document.activeElement).toBe(returnBtn);
+
+    // Dragging selection from inside dialog onto backdrop must NOT close
+    toast.success('Không đóng khi kéo chọn chữ');
+    const backdropDialog = document.querySelector<HTMLDialogElement>('dialog.sol-toast')!;
+    const messageEl = backdropDialog.querySelector<HTMLElement>('.sol-toast__message')!;
+    messageEl.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    backdropDialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.querySelector('dialog.sol-toast')).toBe(backdropDialog);
+
+    // Pressing on backdrop then releasing inside body must NOT close
+    backdropDialog.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    messageEl.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.querySelector('dialog.sol-toast')).toBe(backdropDialog);
+
+    // Both pointerdown and click directly on dialog backdrop closes and restores focus
+    backdropDialog.dispatchEvent(new Event('pointerdown', { bubbles: true }));
+    backdropDialog.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    expect(document.querySelector('dialog.sol-toast')).toBeNull();
+    expect(document.activeElement).toBe(returnBtn);
+  });
+
+  it('updates title, message, and close aria-label dynamically when language toggles VI <-> EN', () => {
+    toast.success('Đã từ chối đơn', { vi: 'Đã từ chối đơn', en: 'Request rejected' });
+    const successDialog = document.querySelector<HTMLDialogElement>('dialog.sol-toast--success')!;
+    expect(successDialog.hasAttribute('data-i18n-managed')).toBe(true);
+    expect(successDialog.querySelector('#sol-toast-title')?.textContent).toBe('Thành công');
+    expect(successDialog.querySelector('.sol-toast__message')?.textContent).toBe('Đã từ chối đơn');
+    expect(successDialog.querySelector('.sol-toast__close')?.getAttribute('aria-label')).toBe('Đóng thông báo');
+
+    setLanguage('en');
+    expect(successDialog.querySelector('#sol-toast-title')?.textContent).toBe('Success');
+    expect(successDialog.querySelector('.sol-toast__message')?.textContent).toBe('Request rejected');
+    expect(successDialog.querySelector('.sol-toast__close')?.getAttribute('aria-label')).toBe('Close notification');
+
+    setLanguage('vi');
+    expect(successDialog.querySelector('#sol-toast-title')?.textContent).toBe('Thành công');
+    expect(successDialog.querySelector('.sol-toast__message')?.textContent).toBe('Đã từ chối đơn');
+    expect(successDialog.querySelector('.sol-toast__close')?.getAttribute('aria-label')).toBe('Đóng thông báo');
+
+    // Error toast without translation updates chrome (title & aria-label) while preserving API message text
+    toast.error('Backend message 502');
+    const errorDialog = document.querySelector<HTMLDialogElement>('dialog.sol-toast--error')!;
+    expect(errorDialog.hasAttribute('data-i18n-managed')).toBe(false);
+    expect(errorDialog.querySelector('#sol-toast-title')?.textContent).toBe('Không thể thực hiện');
+    setLanguage('en');
+    expect(errorDialog.querySelector('#sol-toast-title')?.textContent).toBe('Unable to complete');
+    expect(errorDialog.querySelector('.sol-toast__close')?.getAttribute('aria-label')).toBe('Close notification');
+    expect(errorDialog.querySelector('.sol-toast__message')?.textContent).toBe('Backend message 502');
+  });
+
+  it('never auto-dismisses success or error toasts and cleans up cleanly on dismissToast()', async () => {
+    toast.success('Giữ nguyên cho đến khi đóng');
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(document.querySelector('dialog.sol-toast--success[open]')).not.toBeNull();
+
+    toast.error('Lỗi giữ nguyên');
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(document.querySelector('dialog.sol-toast--error[open]')).not.toBeNull();
+
+    const removeListenerSpy = vi.spyOn(document, 'removeEventListener');
+    dismissToast();
+    expect(document.querySelector('dialog.sol-toast')).toBeNull();
+    expect(removeListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function), true);
+  });
+
+  it('falls back to setting the open attribute when showModal is unavailable', () => {
+    const originalShowModal = HTMLDialogElement.prototype.showModal;
+    Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { value: undefined, configurable: true });
     try {
-      toast.success('Đã từ chối đơn', { vi: 'Đã từ chối đơn', en: 'Request rejected' });
-      const notice = document.querySelector<HTMLDialogElement>('dialog.sol-toast[open]')!;
-      expect(notice.getAttribute('role')).toBe('alertdialog');
-      expect(notice.style.margin).toBe('auto');
-      expect(notice.querySelector('.portal-alert--success')?.textContent).toContain('Đã từ chối đơn');
-      expect(notice.querySelector('.sol-toast__icon')).toBeNull();
-      setLanguage('en');
-      expect(notice.textContent).toContain('Request rejected');
-      notice.querySelector<HTMLButtonElement>('button')!.click();
+      toast.success('Fallback open');
+      const dialog = document.querySelector<HTMLDialogElement>('dialog.sol-toast[open]');
+      expect(dialog).not.toBeNull();
+      expect(dialog?.querySelector('.sol-toast__message')?.textContent).toBe('Fallback open');
+      dismissToast();
       expect(document.querySelector('dialog.sol-toast')).toBeNull();
     } finally {
-      window.history.replaceState(null, '', originalPath);
+      Object.defineProperty(HTMLDialogElement.prototype, 'showModal', { value: originalShowModal, configurable: true });
     }
-  });
-
-  it('keeps manager errors open until dismissed with Escape', async () => {
-    const originalPath = window.location.pathname;
-    window.history.replaceState(null, '', '/manager/internal-requests');
-    try {
-      toast.error('Không thể xử lý');
-      const notice = document.querySelector<HTMLDialogElement>('dialog.sol-toast[open]')!;
-      expect(notice.querySelector('.portal-alert--error')?.textContent).toContain('Không thể xử lý');
-      await vi.advanceTimersByTimeAsync(10000);
-      expect(notice.open).toBe(true);
-      notice.dispatchEvent(new Event('cancel', { cancelable: true }));
-      expect(document.querySelector('dialog.sol-toast')).toBeNull();
-    } finally {
-      window.history.replaceState(null, '', originalPath);
-    }
-  });
-
-  it('keeps manager form errors inside the open form', () => {
-    const originalPath = window.location.pathname;
-    window.history.replaceState(null, '', '/manager/classes');
-    try {
-      const form = dialog();
-      toast.error('Lỗi nhập liệu');
-      expect(form.querySelector('.sol-toast')?.textContent).toContain('Lỗi nhập liệu');
-    } finally {
-      window.history.replaceState(null, '', originalPath);
-    }
-  });
-
-  it.each(['close', 'unmount'] as const)('keeps the same single toast after dialog %s without stealing restored focus', async action => {
-    const modal = dialog(); modal.querySelector('input')!.focus();
-    toast.success('Đã lưu', { vi: 'Đã lưu', en: 'Saved' });
-    const notice = modal.querySelector('.sol-toast');
-    expect(document.activeElement).toBe(modal.querySelector('input'));
-    if (action === 'close') modal.removeAttribute('open'); else modal.remove();
-    document.getElementById('return')!.focus();
-    await flush();
-    expect(document.querySelector('#portal-main .sol-toast')).toBe(notice);
-    expect(document.querySelectorAll('.sol-toast')).toHaveLength(1);
-    expect(document.activeElement?.id).toBe('return');
-    setLanguage('en'); expect(notice?.textContent).toContain('Saved');
-    expect(notice?.getAttribute('role')).toBe('status');
-  });
-
-  it('keeps the original 3200ms success deadline when the modal closes', async () => {
-    const modal = dialog(); toast.success('Saved');
-    await vi.advanceTimersByTimeAsync(2000); modal.remove(); await flush();
-    await vi.advanceTimersByTimeAsync(1199); expect(document.querySelector('.sol-toast')).not.toBeNull();
-    await vi.advanceTimersByTimeAsync(1); expect(document.querySelector('.sol-toast')).toBeNull();
-  });
-
-  it('cleans the observer on dismiss and never resurrects a removed modal toast', async () => {
-    const disconnect = vi.spyOn(MutationObserver.prototype, 'disconnect');
-    const modal = dialog(); toast.error('Failed'); const notice = modal.querySelector<HTMLElement>('.sol-toast')!;
-    modal.remove(); dismissToast(); await flush();
-    document.body.append(document.createElement('div')); await flush();
-    expect(disconnect).toHaveBeenCalled(); expect(notice.isConnected).toBe(false);
-    expect(document.querySelector('.sol-toast')).toBeNull();
-  });
-
-  it('does not restore an older toast when a newer one replaces it', async () => {
-    const modal = dialog(); toast.success('Old'); modal.remove(); toast.error('New'); await flush();
-    expect(document.querySelectorAll('.sol-toast')).toHaveLength(1);
-    expect(document.querySelector('.sol-toast')?.textContent).toContain('New');
-    expect(document.querySelector('.sol-toast')?.textContent).not.toContain('Old');
-    await vi.advanceTimersByTimeAsync(10000); expect(document.querySelector('.sol-toast')).not.toBeNull();
-  });
-
-  it('keeps the toast accessible in a remaining open dialog before moving to main', async () => {
-    const first = dialog(); toast.success('Saved'); const notice = first.querySelector('.sol-toast');
-    const remaining = dialog(); first.remove(); await flush();
-    expect(remaining.querySelector('.sol-toast')).toBe(notice);
-    remaining.remove(); await flush();
-    expect(document.querySelector('#portal-main .sol-toast')).toBe(notice);
-    expect(document.querySelectorAll('.sol-toast')).toHaveLength(1);
-  });
-
-  it.each(['main', 'body'] as const)('uses the existing %s fallback when there is no portal host', async target => {
-    document.body.innerHTML = target === 'main' ? '<main></main>' : '';
-    const modal = dialog(); toast.error('Failed'); const notice = modal.querySelector('.sol-toast');
-    modal.remove(); await flush();
-    expect(document.querySelector(target)?.firstElementChild).toBe(notice);
-    expect(notice?.getAttribute('role')).toBe('alert');
-  });
-
-  it.each(['pointer', 'focus'] as const)('resumes a paused success timer after modal unmount (%s)', async mode => {
-    const modal = dialog(); toast.success('Saved'); const card = modal.querySelector<HTMLElement>('.sol-toast__card')!;
-    if (mode === 'pointer') card.dispatchEvent(new Event('pointerenter')); else card.querySelector<HTMLButtonElement>('button')!.focus();
-    await vi.advanceTimersByTimeAsync(4000); expect(modal.querySelector('.sol-toast')).not.toBeNull();
-    modal.remove(); document.getElementById('return')!.focus(); await flush();
-    expect(document.querySelector('#portal-main .sol-toast')).not.toBeNull();
-    await vi.advanceTimersByTimeAsync(3200); expect(document.querySelector('.sol-toast')).toBeNull();
-  });
-
-  it('preserves hover/focus pause, dismiss button and Escape behavior', async () => {
-    toast.success('Saved'); const card = document.querySelector<HTMLElement>('.sol-toast__card')!;
-    card.dispatchEvent(new Event('pointerenter')); await vi.advanceTimersByTimeAsync(4000);
-    expect(document.querySelector('.sol-toast')).not.toBeNull();
-    card.dispatchEvent(new Event('pointerleave')); card.querySelector<HTMLButtonElement>('button')!.focus();
-    await vi.advanceTimersByTimeAsync(4000); expect(document.querySelector('.sol-toast')).not.toBeNull();
-    card.querySelector<HTMLButtonElement>('button')!.click(); expect(document.querySelector('.sol-toast')).toBeNull();
-    toast.error('Failed'); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-    expect(document.querySelector('.sol-toast')).toBeNull();
-  });
-
-  it('mounts inside .portal-dialog__body right after .portal-dialog__header and relocates after .portal-header in #portal-main', async () => {
-    document.body.innerHTML = '<main id="portal-main"><div class="portal-container"><header class="portal-header"><h1>Title</h1></header><section class="portal-card">Body</section></div></main>';
-    const modal = document.createElement('dialog');
-    modal.setAttribute('open', '');
-    modal.innerHTML = '<div class="portal-dialog__body"><div class="portal-dialog__header"><h2>Modal</h2><button type="button">×</button></div><form><input aria-label="Field"></form></div>';
-    document.body.append(modal);
-
-    toast.error('Lỗi biểu mẫu');
-    const notice = modal.querySelector('.sol-toast');
-    const dialogBody = modal.querySelector('.portal-dialog__body')!;
-    const dialogHeader = modal.querySelector('.portal-dialog__header')!;
-    expect(notice?.parentElement).toBe(dialogBody);
-    expect(dialogHeader.nextElementSibling).toBe(notice);
-
-    modal.remove();
-    await flush();
-    const container = document.querySelector('#portal-main .portal-container')!;
-    const pageHeader = container.querySelector('.portal-header')!;
-    expect(notice?.parentElement).toBe(container);
-    expect(pageHeader.nextElementSibling).toBe(notice);
-    expect(container.firstElementChild).toBe(pageHeader);
-  });
-
-  it('mounts right after .portal-header inside #portal-main and scrolls into view when above the viewport without stealing focus', () => {
-    document.body.innerHTML = '<main id="portal-main"><div class="portal-container"><header class="portal-header"><h1>Title</h1></header><button id="action">Save</button></div></main>';
-    const actionBtn = document.getElementById('action') as HTMLButtonElement;
-    actionBtn.focus();
-    const scrollIntoView = vi.fn();
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
-      top: -120, bottom: -60, left: 0, right: 320, width: 320, height: 60, x: 0, y: -120, toJSON: () => ({}),
-    });
-    HTMLElement.prototype.scrollIntoView = scrollIntoView;
-
-    toast.success('Đã cập nhật');
-    const container = document.querySelector('#portal-main .portal-container')!;
-    const pageHeader = container.querySelector('.portal-header')!;
-    const notice = container.querySelector('.sol-toast');
-    expect(notice?.parentElement).toBe(container);
-    expect(pageHeader.nextElementSibling).toBe(notice);
-    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
-    expect(document.activeElement).toBe(actionBtn);
   });
 });
