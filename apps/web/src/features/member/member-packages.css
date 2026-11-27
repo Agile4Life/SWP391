@@ -28,7 +28,7 @@
 }
 .member-packages .portal-dialog:has(.package-result) .portal-dialog__body {
   position: relative;
-  padding: 24px 28px 26px;
+  padding: 24px 28px 28px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -42,6 +42,7 @@
   justify-content: center;
   text-align: center;
   width: 100%;
+  padding-inline: 24px;
   gap: 6px;
   margin-bottom: 0;
 }
@@ -64,7 +65,7 @@
   flex: 0 0 34px;
   border-radius: 50%;
 }
-.package-result { display: grid; justify-items: center; gap: 12px; text-align: center; padding-top: 4px; width: 100%; }
+.package-result { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 4px 0; width: 100%; }
 .package-result h3, .package-result p { margin: 0; overflow-wrap: anywhere; }
 .package-result__actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; margin-top: 6px; }
 .member-packages .metric-value { font-variant-numeric: tabular-nums; }

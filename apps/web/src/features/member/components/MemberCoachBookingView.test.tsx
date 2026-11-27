@@ -701,4 +701,41 @@ describe('MemberCoachBookingView audit remediation (P1-FE-40, P1-FE-41, P2-FE-55
     expect(host.querySelector('[role="alert"]')).toBeNull();
     expect(host.textContent).toContain('Huỳnh Đắc Tài');
   });
+
+  it('renders paid hourly_pay PT payment details modal without a duplicate bottom Close button and closes via top-right X', async () => {
+    mocks.getMyCoachBookings.mockResolvedValue([
+      {
+        id: 402,
+        coachId: 1,
+        coachName: 'HLV Huỳnh Đắc Tài',
+        bookingDate: '2099-11-26',
+        startTime: '09:45:00',
+        endTime: '12:15:00',
+        status: 'confirmed',
+        paymentMethod: 'hourly_pay',
+        paymentStatus: 'paid',
+        hourlyRate: 200000,
+        memberName: 'An',
+      },
+    ]);
+
+    await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+
+    const payDetailsBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === 'Xem thông tin thanh toán',
+    );
+    expect(payDetailsBtn).toBeDefined();
+    await act(async () => payDetailsBtn!.click());
+
+    const dialog = host.querySelector('dialog');
+    expect(dialog).not.toBeNull();
+    expect(dialog?.textContent).toContain('Đã thanh toán');
+    const closeX = dialog?.querySelector<HTMLButtonElement>('.portal-dialog__close');
+    expect(closeX).not.toBeNull();
+    const dialogButtons = [...dialog!.querySelectorAll<HTMLButtonElement>('button')];
+    expect(dialogButtons.some((b) => /^(Đóng|Close)$/i.test(b.textContent?.trim() ?? ''))).toBe(false);
+
+    await act(async () => closeX!.click());
+    expect(host.querySelector('dialog')).toBeNull();
+  });
 });

@@ -181,7 +181,9 @@ describe('UserManagerPage', () => {
     expect(host.textContent).toContain('Chỉ áp dụng cho tài khoản Hội viên');
     expect(host.textContent).not.toContain('(frozen)');
 
-    const startBtn = button(host, 'Bắt đầu quét & dọn dẹp');
+    const dialogBeforeCleanup = host.querySelector<HTMLDialogElement>('dialog[open]')!;
+    expect(button(dialogBeforeCleanup, 'Hủy')).toBeTruthy();
+    const startBtn = button(dialogBeforeCleanup, 'Bắt đầu quét & dọn dẹp');
     expect(startBtn).toBeTruthy();
 
     await act(async () => {
@@ -190,6 +192,21 @@ describe('UserManagerPage', () => {
 
     expect(userApi.cleanupInactiveUsers).toHaveBeenCalledTimes(1);
     expect(userApi.getDeletedUsers).toHaveBeenCalledTimes(2);
+
+    const dialogAfterCleanup = host.querySelector<HTMLDialogElement>('dialog[open]')!;
+    expect(dialogAfterCleanup).not.toBeNull();
+    expect(dialogAfterCleanup.textContent).toContain('Đã dọn dẹp 1 tài khoản không hoạt động.');
+    expect(button(dialogAfterCleanup, 'Đóng')).toBeUndefined();
+    expect(button(dialogAfterCleanup, 'Close')).toBeUndefined();
+    expect(button(dialogAfterCleanup, 'Hủy')).toBeUndefined();
+    expect(button(dialogAfterCleanup, 'Bắt đầu quét & dọn dẹp')).toBeUndefined();
+
+    const closeIconBtn = dialogAfterCleanup.querySelector<HTMLButtonElement>('.portal-dialog__close');
+    expect(closeIconBtn).not.toBeNull();
+    await act(async () => {
+      closeIconBtn!.click();
+    });
+    expect(host.querySelector('dialog')).toBeNull();
   });
 
   it('blocks creating a user when email or phone number already exists in the user list', async () => {

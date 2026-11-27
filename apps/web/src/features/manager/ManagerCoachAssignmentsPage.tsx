@@ -504,15 +504,6 @@ export function ManagerCoachAssignmentsPage() {
                 </div>
               ))}
             </div>
-
-            <div className="coach-modal-actions" style={{ marginTop: '0.5rem' }}>
-              <button
-                type="button"
-                className="btn-secondary coach-action-btn"
-                onClick={() => setDetail(null)}
-              >
-                {t("Đóng")}</button>
-            </div>
           </div>
         </Modal>
       )}

@@ -1424,19 +1424,19 @@ export function UserManagerPage() {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={isCleaning}
-                onClick={() => {
-                  setShowCleanupModal(false);
-                  setCleanupResult(null);
-                }}
-              >
-                {cleanupResult ? t('Đóng') : t('Hủy')}
-              </button>
-              {!cleanupResult && (
+            {!cleanupResult && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={isCleaning}
+                  onClick={() => {
+                    setShowCleanupModal(false);
+                    setCleanupResult(null);
+                  }}
+                >
+                  {t('Hủy')}
+                </button>
                 <button data-i18n-managed
                   type="button"
                   className="btn-primary"
@@ -1452,8 +1452,8 @@ export function UserManagerPage() {
                     t('Bắt đầu quét & dọn dẹp')
                   )}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

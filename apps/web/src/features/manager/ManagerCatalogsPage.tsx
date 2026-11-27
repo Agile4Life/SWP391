@@ -871,7 +871,6 @@ export function ManagerCatalogsPage() {
         onClose={() => setResult(null)}
       >
         <p id="catalog-result-message" className="portal-subtitle">{t(result.message)}</p>
-        <div className="form-actions"><button type="button" className="btn-primary" onClick={() => setResult(null)}>{t('Đóng', 'Close')}</button></div>
       </Modal>}
     </div>
   );

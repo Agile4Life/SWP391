@@ -241,13 +241,6 @@
   flex-shrink: 0;
 }
 
-.coach-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1rem;
-}
-
 .coach-member-result { width: 100%; border: 0; background: transparent; text-align: left; }
 .coach-member-result:focus-visible { outline: 2px solid var(--portal-salmon); outline-offset: 2px; }
 

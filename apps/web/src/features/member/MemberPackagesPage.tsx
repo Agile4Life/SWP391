@@ -781,8 +781,8 @@ export function MemberPackagesPage() {
       {blockedMessage && <Modal returnFocusRef={membershipFocus} title={t("Chưa thể thực hiện", "Action unavailable")} onClose={() => { setBlockedMessage(null); setBlockedKycPackageId(null); }}>
         <div className="package-result package-result--error">
           <p role="alert">{t(blockedMessage)}</p>
-          <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-            {blockedKycPackageId != null && (
+          {blockedKycPackageId != null && (
+            <div className="package-result__actions">
               <Link
                 to={`/member/packages/checkout?packageId=${blockedKycPackageId}`}
                 className="btn-primary"
@@ -790,9 +790,8 @@ export function MemberPackagesPage() {
               >
                 {t("Xác thực định danh & Thanh toán", "Verify identity & Checkout")}
               </Link>
-            )}
-            {blockedKycPackageId == null && <button type="button" className="btn-primary" onClick={() => setBlockedMessage(null)}>{t("Đóng", "Close")}</button>}
-          </div>
+            </div>
+          )}
         </div>
       </Modal>}
       <PageHeader
@@ -1465,7 +1464,6 @@ export function MemberPackagesPage() {
             <p className="row-card__meta">{paymentResult.status === 'active'
               ? paymentResult.startDate > todayKey() ? t("Kỳ tiếp theo đã thanh toán, chờ ngày bắt đầu.", "Your next period is paid and awaiting its start date.") : t("Gói tập đã được kích hoạt.", "Your membership has been activated.")
               : t("Đã thanh toán, đang chờ kích hoạt.", "Paid, awaiting activation.")}</p>
-            <button type="button" className="btn-primary" onClick={() => setPaymentResult(null)}>{t("Đóng", "Close")}</button>
           </div>
         </Modal>
       )}

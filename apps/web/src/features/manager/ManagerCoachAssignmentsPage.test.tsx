@@ -316,6 +316,31 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(host.querySelectorAll('dialog .coach-student-type-pill')).toHaveLength(2);
   });
 
+  it('closes the student detail modal via the top-right close button without a duplicate Đóng button', async () => {
+    await renderComponent();
+    const detailBtn = [...host.querySelectorAll<HTMLButtonElement>('.coach-student-row button')].find(
+      (b) => b.textContent?.trim() === 'Chi tiết',
+    )!;
+    await act(async () => {
+      detailBtn.click();
+    });
+
+    const dialog = host.querySelector('dialog[open]');
+    expect(dialog).not.toBeNull();
+    const closeIconBtn = dialog!.querySelector<HTMLButtonElement>('.portal-dialog__close');
+    expect(closeIconBtn).not.toBeNull();
+    expect(
+      [...dialog!.querySelectorAll<HTMLButtonElement>('button')].find(
+        (b) => b.textContent?.trim() === 'Đóng' || b.textContent?.trim() === 'Close',
+      ),
+    ).toBeUndefined();
+
+    await act(async () => {
+      closeIconBtn!.click();
+    });
+    expect(host.querySelector('dialog')).toBeNull();
+  });
+
   it('displays group class assignments as view-only without coach reassignment button', async () => {
     await renderComponent();
     const row = [...host.querySelectorAll('.coach-student-row')].find(r => r.textContent?.includes('Phạm Minh Tuấn'));

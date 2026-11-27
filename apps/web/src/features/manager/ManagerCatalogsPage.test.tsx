@@ -356,7 +356,12 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     });
     expect(host.querySelector('dialog[open]')?.textContent).toContain('Thành công');
     expect(document.querySelector('.sol-toast')).toBeNull();
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Đóng')!.click());
+    expect(
+      [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+        (b) => b.textContent?.trim() === 'Đóng' || b.textContent?.trim() === 'Close',
+      ),
+    ).toBeUndefined();
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
     expect(host.querySelector('dialog')).toBeNull();
     expect(catalogApi.disciplines).toHaveBeenCalledTimes(2);
   });
@@ -415,7 +420,12 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     expect(catalogApi.deleteDiscipline).toHaveBeenCalledWith(1);
     expect(catalogApi.disciplines).toHaveBeenCalledTimes(2);
     expect(host.querySelector('dialog[open]')?.textContent).toContain('Đã xóa bộ môn');
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Đóng')!.click());
+    expect(
+      [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+        (b) => b.textContent?.trim() === 'Đóng' || b.textContent?.trim() === 'Close',
+      ),
+    ).toBeUndefined();
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
 
     // Backend rejects deletion when discipline is already in use -> table remains visible & usable
     vi.mocked(catalogApi.deleteDiscipline).mockRejectedValueOnce(
@@ -548,7 +558,12 @@ describe('ManagerCatalogsPage (A6: Package & Price CRUD)', () => {
     await setFieldValue(host.querySelector<HTMLInputElement>('#cat-name')!, 'Studio Mới');
     await submitDialogForm();
     expect(catalogApi.createRoom).toHaveBeenCalledWith(expect.objectContaining({ name: 'Studio Mới', capacity: 10 }));
-    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(b => b.textContent === 'Đóng')!.click());
+    expect(
+      [...host.querySelectorAll<HTMLButtonElement>('dialog button')].find(
+        (b) => b.textContent?.trim() === 'Đóng' || b.textContent?.trim() === 'Close',
+      ),
+    ).toBeUndefined();
+    await act(async () => host.querySelector<HTMLButtonElement>('dialog .portal-dialog__close')!.click());
     const deleteButton = [...host.querySelectorAll<HTMLButtonElement>('tbody button')].find((b) => b.textContent?.trim() === 'Xóa')!;
     await act(async () => deleteButton.click());
     await act(async () => host.querySelector<HTMLButtonElement>('dialog .btn-danger')!.click());

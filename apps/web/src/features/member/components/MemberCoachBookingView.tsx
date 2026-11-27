@@ -1891,8 +1891,8 @@ export function MemberCoachBookingView({
               </div>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 }}>
-              {paymentModalBooking.paymentStatus === 'pending' ? (
+            {paymentModalBooking.paymentStatus === 'pending' && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 }}>
                 <VnpayPayButton
                   target={{ coachBookingId: paymentModalBooking.id }}
                   onPaid={() => {
@@ -1903,16 +1903,8 @@ export function MemberCoachBookingView({
                     window.dispatchEvent(new CustomEvent('wallet-updated'));
                   }}
                 />
-              ) : (
-                <button
-                  type="button"
-                  className="btn-primary"
-                  onClick={() => setPaymentModalBooking(null)}
-                >
-                  {memberText("Đóng", "Close")}
-                </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}
