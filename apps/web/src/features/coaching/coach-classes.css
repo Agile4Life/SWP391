@@ -767,7 +767,6 @@ dialog.portal-dialog.coach-students-modal-dialog .portal-dialog__body {
    TRẠNG THÁI RỖNG / ĐANG TẢI
    ========================================================================== */
 .coach-loading-box,
-.coach-error-box,
 .coach-empty-box,
 .coach-empty-state {
   text-align: center;

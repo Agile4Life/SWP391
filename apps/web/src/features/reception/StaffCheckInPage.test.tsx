@@ -203,3 +203,40 @@ it('renders natural English remaining days & member ID, uses tablist semantics, 
   expect(host.querySelector('[role="tablist"]')).not.toBeNull();
   expect(host.querySelectorAll('[role="tab"]')).toHaveLength(2);
 });
+
+it('shows server check-in denial only inside .gate-result--denied without duplicating into #checkin-qr-error and keeps network errors in #checkin-qr-error', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/scan')) {
+      return new Response(JSON.stringify({ message: 'Gói tập của hội viên đã hết hạn.' }), { status: 400 });
+    }
+    return new Response(JSON.stringify({ success: true, data: history }));
+  }));
+  await renderPage();
+  const input = host.querySelector('#checkin-qr-input') as HTMLInputElement;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, 'EXPIRED-QR');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => (host.querySelector('[data-testid="scan-submit-button"]') as HTMLButtonElement).click());
+
+  const banner = host.querySelector<HTMLElement>('[data-testid="checkin-result-banner"]')!;
+  expect(banner).not.toBeNull();
+  expect(banner.classList.contains('gate-result--denied')).toBe(true);
+  expect(banner.textContent).toContain('Gói tập của hội viên đã hết hạn.');
+  expect(banner.style.borderRadius).toBe('');
+  expect(host.querySelector('#checkin-qr-error')).toBeNull();
+
+  // Network error should show in #checkin-qr-error without fabricating a denied gate card
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+    if (url.endsWith('/scan')) throw new TypeError('Failed to fetch');
+    return new Response(JSON.stringify({ success: true, data: history }));
+  }));
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, 'NETWORK-QR');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => (host.querySelector('[data-testid="scan-submit-button"]') as HTMLButtonElement).click());
+
+  expect(host.querySelector('#checkin-qr-error')?.textContent).toBeTruthy();
+  expect(host.querySelector('[data-testid="checkin-result-banner"]')).toBeNull();
+});

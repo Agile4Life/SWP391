@@ -1095,6 +1095,8 @@ export function CreateClassOrSessionModal({
                 {resolvedRooms.map((room) => {
                   const selected = String(room.id) === roomId;
                   const isVip = String(room.tier ?? '').toUpperCase() === 'PLATINUM';
+                  const hasReason = !room.available && Boolean(room.conflictReason);
+                  const showReason = hasReason && openReason === `room-${room.id}`;
                   return (
                     <button
                       key={room.id}
@@ -1104,6 +1106,7 @@ export function CreateClassOrSessionModal({
                       data-testid={`wizard-room-${room.id}`}
                       disabled={busy}
                       aria-disabled={!room.available || undefined}
+                      aria-expanded={hasReason ? showReason : undefined}
                       title={!room.available ? t('Bấm để xem lý do', 'Click to see why') : undefined}
                       className={`class-wizard__option${selected ? ' is-selected' : ''}${!room.available ? ' is-unavailable' : ''}`}
                       onClick={() => {
@@ -1140,7 +1143,7 @@ export function CreateClassOrSessionModal({
                           .filter(Boolean)
                           .join(' · ')}
                       </span>
-                      {!room.available && room.conflictReason && openReason === `room-${room.id}` && (
+                      {showReason && (
                         <span className="class-wizard__option-reason">{room.conflictReason}</span>
                       )}
                     </button>
@@ -1204,6 +1207,8 @@ export function CreateClassOrSessionModal({
               >
                 {resolvedCoaches.map((coach) => {
                   const selected = String(coach.id) === coachId;
+                  const hasReason = !coach.available && Boolean(coach.conflictReason);
+                  const showReason = hasReason && openReason === `coach-${coach.id}`;
                   return (
                     <button
                       key={coach.id}
@@ -1213,6 +1218,7 @@ export function CreateClassOrSessionModal({
                       data-testid={`wizard-coach-${coach.id}`}
                       disabled={busy}
                       aria-disabled={!coach.available || undefined}
+                      aria-expanded={hasReason ? showReason : undefined}
                       title={!coach.available ? t('Bấm để xem lý do', 'Click to see why') : undefined}
                       className={`class-wizard__option${selected ? ' is-selected' : ''}${!coach.available ? ' is-unavailable' : ''}`}
                       onClick={() => {
@@ -1235,7 +1241,7 @@ export function CreateClassOrSessionModal({
                       {coach.email && (
                         <span className="class-wizard__option-meta">{coach.email}</span>
                       )}
-                      {!coach.available && coach.conflictReason && openReason === `coach-${coach.id}` && (
+                      {showReason && (
                         <span className="class-wizard__option-reason">{coach.conflictReason}</span>
                       )}
                     </button>

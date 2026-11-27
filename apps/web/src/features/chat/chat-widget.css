@@ -220,15 +220,18 @@
   flex-wrap: wrap;
   gap: 0 8px;
   flex-shrink: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgb(var(--sol-accent-rgb) / .1);
+  border-bottom: 1px solid rgba(252, 211, 77, 0.32);
+  background: rgba(33, 35, 40, 0.92);
   font-size: 12px;
-  color: rgba(245, 245, 245, 0.9);
+  font-weight: 600;
+  color: var(--portal-warning, #fcd89a);
 }
 
 .chat-widget__status .direct-chat__link {
   min-height: 44px;
-  padding: 0;
+  min-width: 44px;
+  justify-content: flex-end;
+  padding: 0 6px;
   font-size: 12px;
 }
 
@@ -681,8 +684,14 @@
 
 .chat-widget__trigger > * { position: relative; z-index: 1; }
 
+.chat-widget .direct-chat div.direct-chat__error {
+  background: rgba(42, 22, 24, 0.94);
+  border-bottom: 1px solid rgba(252, 165, 165, 0.3);
+  color: #fca5a5;
+}
+
 /* Chữ phụ xám #a8a8a8 chìm khi nền khúc xạ sáng: nâng lên trắng bán trong suốt trên kính. */
-.chat-widget__panel :is(.chat-widget__login p, .chat-widget__status.is-reconnecting, .direct-chat__role,
+.chat-widget__panel :is(.chat-widget__login p, .direct-chat__role,
   .direct-chat__person-sub, .direct-chat__preview, .direct-chat__dot, .direct-chat__person time,
   .direct-chat__person-arrow, .direct-chat__thread-header p, .direct-chat__older, .direct-chat__empty,
   .direct-chat__muted, .direct-chat__search .portal-label, .direct-chat__intro) {
@@ -746,9 +755,9 @@
   box-shadow: 0 24px 56px rgba(32, 24, 20, 0.18), 0 0 0 1px rgb(var(--sol-accent-rgb) / .16), inset 0 1.5px 1px rgba(255, 255, 255, 0.95), inset 0 -1px 1px rgba(255, 255, 255, 0.5);
 }
 :root[data-theme='light'] .chat-widget__status.is-reconnecting {
-  border-bottom-color: var(--chat-glass-line);
-  background: rgb(var(--sol-accent-rgb) / .12);
-  color: var(--chat-glass-ink);
+  border-bottom-color: #f5deb0;
+  background: rgba(255, 250, 240, 0.94);
+  color: var(--chat-glass-ink, #1c1917);
 }
 :root[data-theme='light'] .chat-widget__header,
 :root[data-theme='light'] .chat-widget .direct-chat__thread-header {
@@ -760,7 +769,7 @@
   color: var(--chat-glass-ink);
 }
 :root[data-theme='light'] .chat-widget .direct-chat { color: var(--chat-glass-ink); }
-:root[data-theme='light'] .chat-widget__panel :is(.chat-widget__login p, .chat-widget__status.is-reconnecting, .direct-chat__role,
+:root[data-theme='light'] .chat-widget__panel :is(.chat-widget__login p, .direct-chat__role,
   .direct-chat__person-sub, .direct-chat__preview:not(.is-unread), .direct-chat__dot, .direct-chat__person time,
   .direct-chat__person-arrow, .direct-chat__thread-header p, .direct-chat__older, .direct-chat__empty,
   .direct-chat__muted, .direct-chat__search .portal-label, .direct-chat__intro, .direct-chat__placeholder p, .direct-chat__react-trigger) {
@@ -792,6 +801,22 @@
   box-shadow: inset 0 1px 2px rgba(32, 24, 20, 0.05), 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 :root[data-theme='light'] .chat-widget .direct-chat__link { color: var(--sol-accent-text); }
+:root[data-theme='light'] .chat-widget .chat-widget__status.is-reconnecting .direct-chat__link {
+  color: var(--chat-glass-ink, #202020);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+:root[data-theme='light'] .chat-widget .direct-chat__notice .direct-chat__link {
+  color: var(--chat-glass-ink, var(--portal-paper, #202020));
+}
+:root[data-theme='light'] .chat-widget .direct-chat div.direct-chat__error {
+  background: rgba(253, 240, 239, 0.96);
+  border-bottom-color: #f3c4bf;
+  color: var(--portal-danger, #a33030);
+}
+:root[data-theme='light'] .chat-widget .direct-chat div.direct-chat__error .direct-chat__link {
+  color: var(--portal-danger, #a33030);
+}
 
 /* Bong bóng tin nhắn: của người khác là kính sáng, của mình dùng salmon kèm chữ than #202020 (DESIGN.md) */
 :root[data-theme='light'] .chat-widget .direct-chat__bubble {

@@ -1,12 +1,32 @@
 /* Mục đích: Kiểu cho thanh trạng thái PWA (cài đặt, ngoại tuyến, cập nhật). */
 .pwa-status { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
 .pwa-status:empty { display: none; }
-.pwa-status__notice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; width: 100%; margin: 0; padding: 12px 16px; border: 1px solid var(--color-border, #57504c); border-radius: 12px; background: var(--color-bg-card, #292929); color: var(--color-text-main, #faf9f6); font-size: 13px; line-height: 1.6; }
-.pwa-status__notice .btn-secondary { min-height: 44px; }
-.pwa-install-button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--color-border, #57504c); border-radius: 100px; background: transparent; color: var(--color-text-main, #faf9f6); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
+.pwa-status__notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  width: 100%;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--sol-accent) 32%, var(--portal-border-strong, rgba(255, 255, 255, 0.19)));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--sol-accent) 8%, var(--portal-surface, #292929));
+  color: var(--portal-paper, #faf9f6);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.pwa-status__notice[role='alert'] {
+  border-color: color-mix(in srgb, var(--portal-danger, #fca5a5) 45%, transparent);
+  background: color-mix(in srgb, var(--portal-danger, #fca5a5) 10%, var(--portal-surface, #292929));
+  color: var(--portal-danger, #fca5a5);
+}
+.pwa-status__notice > span { flex: 1 1 200px; min-width: 0; }
+.pwa-status__notice .btn-secondary { min-height: 44px; flex-shrink: 0; margin-left: auto; white-space: nowrap; }
+.pwa-install-button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--portal-border-strong, rgba(255, 255, 255, 0.19)); border-radius: 100px; background: transparent; color: var(--portal-paper, #faf9f6); font: inherit; font-size: 13px; cursor: pointer; text-align: left; }
 .pwa-install-button:hover { border-color: var(--sol-accent); }
 .pwa-install-button:focus-visible { outline: 2px solid var(--sol-accent); outline-offset: 3px; }
 .pwa-install-button:disabled { opacity: .65; cursor: wait; }
-.pwa-install-steps { padding-left: 24px; line-height: 1.7; color: var(--color-text-main, #faf9f6); }
+.pwa-install-steps { padding-left: 24px; line-height: 1.7; color: var(--portal-paper, #faf9f6); }
 .pwa-install-steps li + li { margin-top: 12px; }
 @media (max-width: 767px) { .pwa-status__notice { font-size: 13px; padding: 10px 12px; } }

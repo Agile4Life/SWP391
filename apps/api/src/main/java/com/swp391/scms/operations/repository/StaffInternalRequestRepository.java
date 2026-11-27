@@ -17,6 +17,10 @@ import java.util.Optional;
 /** Truy cập bảng staff_internal_requests (đơn từ nội bộ của nhân viên). */
 @Repository
 public interface StaffInternalRequestRepository extends JpaRepository<StaffInternalRequest, Long> {
+    /** Chỉ đọc mã chủ đơn để lấy khóa nhân viên trước khóa đơn; không nạp trạng thái cũ vào persistence context. */
+    @Query("select r.user.id from StaffInternalRequest r where r.id = :id")
+    Optional<Long> findOwnerId(@Param("id") Long id);
+
 
     /** Lấy đơn và khóa dòng để ghi, tránh hai người thao tác cùng lúc. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)

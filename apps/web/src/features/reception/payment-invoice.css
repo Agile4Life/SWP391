@@ -54,7 +54,7 @@
 .invoice-document__footer { padding-top: 12px; border-top: 1px dashed #000; text-align: center; font-size: 12px; }
 .invoice-document__footer p { margin: 6px 0 0; }
 .payment-invoice__hint { margin: 12px 0; color: var(--portal-muted); font-size: 12px; line-height: 1.5; }
-.payment-invoice__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; }
+.payment-invoice__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-top: 16px; }
 .invoice-print-root { display: none; }
 
 @page sol-receipt {

@@ -59,7 +59,14 @@ components:
         memberName: { type: string }
         packageName: { type: string, nullable: true }
         previousPackageName: { type: string, nullable: true }
-        amount: { type: number, nullable: true }
-        paymentMethod: { type: string, nullable: true }
+        amount: { type: number, nullable: true, deprecated: true, description: 'Alias of paidAmount. Unpaid cancellations return zero, never the request quote.' }
+        paymentMethod: { type: string, nullable: true, description: 'Raw legacy method; online_wallet is not proof of VNPay or wallet funding. Use actualPaymentMethod.' }
+        paymentId: { type: integer, format: int64, nullable: true, description: 'Selected settled payment; null for never-paid cancellation. Amounts refer to this payment, not aggregated payments for the subscription.' }
+        paymentStatus: { type: string, nullable: true, enum: [success, refunded], description: 'Recorded payment state; APPROVED history outcome does not prove the subscription is currently activated.' }
+        actualPaymentMethod: { type: string, enum: [VNPAY, WALLET, CASH, POS, BANK_TRANSFER, UNKNOWN, UNPAID], description: 'Settled cash/POS/bank transfer use the explicit recorded method. Wallet requires exact WALLET_PAY_{paymentId} debit for the same member and amount. VNPay requires a successful matching attempt, gateway transaction number and matching VNPAY TOPUP/DEBIT ledger without a late-refund marker. Missing/conflicting evidence returns UNKNOWN. Synthetic VNPay wallet transit is not split tender.' }
+        paidAmount: { type: number, nullable: true, description: 'Gross amount recorded on the selected settled payment, not reduced by refunds. Zero for unpaid cancellation.' }
+        quotedAmount: { type: number, nullable: true, description: 'Persisted upgradeCharge or quotedPrice only; never a fallback to current package price and never evidence of collection.' }
+        refundedAmount: { type: number, nullable: true, description: 'Recorded refund of the selected payment. Null means unknown/missing or inconsistent evidence. Does not include a returned duplicate late gateway charge.' }
+        lateGatewayRefundedAmount: { type: number, nullable: true, description: 'Sum of verified recorded late gateway returns for attempts of this payment and the same member; for unpaid cancellations, reads returns of linked failed/pending payments. Separate from paidAmount/refundedAmount; zero means no matching recorded late return, null means inconsistent records. This is not a net amount or evidence that the request was paid.' }
         processedAt: { type: string, format: date-time, nullable: true }
         processedByName: { type: string, nullable: true, description: 'Null when the member paid online' }

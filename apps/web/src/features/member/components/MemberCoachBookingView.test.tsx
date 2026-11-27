@@ -693,12 +693,71 @@ describe('MemberCoachBookingView audit remediation (P1-FE-40, P1-FE-41, P2-FE-55
 
     const alert = host.querySelector('[role="alert"]');
     expect(alert).not.toBeNull();
-    expect(alert?.querySelector('button[aria-label="Đóng thông báo lỗi"]')).not.toBeNull();
+    expect(alert?.className).toContain('portal-alert--error');
+    const dismissBtn = alert?.querySelector<HTMLButtonElement>('button[aria-label="Đóng thông báo lỗi"]');
+    expect(dismissBtn).not.toBeNull();
+    expect(dismissBtn?.style.minWidth).toBe('44px');
+    expect(dismissBtn?.style.minHeight).toBe('44px');
     expect(host.textContent).not.toContain('Chưa có huấn luyện viên nào.');
 
     const retryBtn = [...alert!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Thử lại')!;
     await act(async () => retryBtn.click());
     expect(host.querySelector('[role="alert"]')).toBeNull();
     expect(host.textContent).toContain('Huỳnh Đắc Tài');
+  });
+
+  it('renders paid hourly_pay PT payment details modal without a duplicate bottom Close button and closes via top-right X', async () => {
+    mocks.getMyCoachBookings.mockResolvedValue([
+      {
+        id: 402,
+        coachId: 1,
+        coachName: 'HLV Huỳnh Đắc Tài',
+        bookingDate: '2099-11-26',
+        startTime: '09:45:00',
+        endTime: '12:15:00',
+        status: 'confirmed',
+        paymentMethod: 'hourly_pay',
+        paymentStatus: 'paid',
+        hourlyRate: 200000,
+        memberName: 'An',
+      },
+    ]);
+
+    await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+
+    const payDetailsBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find(
+      (b) => b.textContent?.trim() === 'Xem thông tin thanh toán',
+    );
+    expect(payDetailsBtn).toBeDefined();
+    await act(async () => payDetailsBtn!.click());
+
+    const dialog = host.querySelector('dialog');
+    expect(dialog).not.toBeNull();
+    expect(dialog?.textContent).toContain('Đã thanh toán');
+    const closeX = dialog?.querySelector<HTMLButtonElement>('.portal-dialog__close');
+    expect(closeX).not.toBeNull();
+    const dialogButtons = [...dialog!.querySelectorAll<HTMLButtonElement>('button')];
+    expect(dialogButtons.some((b) => /^(Đóng|Close)$/i.test(b.textContent?.trim() ?? ''))).toBe(false);
+
+    await act(async () => closeX!.click());
+    expect(host.querySelector('dialog')).toBeNull();
+  });
+
+  it('disables confirm button and keeps a single primary CTA in booking modal when member has no active package', async () => {
+    mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: null, monthlyQuota: 0, usedThisMonth: 0, remainingQuota: 0 });
+    await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+
+    const slot4 = host.querySelector<HTMLButtonElement>('[data-testid="pt-slot-4"]')!;
+    await act(async () => slot4.click());
+
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.querySelector('.hold-notice.hold-notice--warn[role="alert"]')).not.toBeNull();
+    expect(dialog.querySelectorAll('button.btn-primary')).toHaveLength(1);
+    const confirmBtn = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('Xác nhận & Đặt lịch'),
+    )!;
+    expect(confirmBtn.disabled).toBe(true);
+    await act(async () => confirmBtn.click());
+    expect(mocks.createCoachBooking).not.toHaveBeenCalled();
   });
 });

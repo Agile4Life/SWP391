@@ -430,6 +430,8 @@ describe('CoachClassesPage (SCRUM-121: UI Coach Lịch PT 1-1 & Học viên Ph�
     await act(async () => studentsTabBtn.click());
 
     const alert = host.querySelector('[role="alert"]');
+    expect(alert?.classList.contains('portal-alert')).toBe(true);
+    expect(alert?.classList.contains('portal-alert--error')).toBe(true);
     expect(alert?.textContent).toContain('Roster down');
     const retryBtn = [...alert!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Thử lại')!;
     await act(async () => retryBtn.click());

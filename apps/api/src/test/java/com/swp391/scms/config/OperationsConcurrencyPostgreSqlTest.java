@@ -66,12 +66,96 @@ class OperationsConcurrencyPostgreSqlTest {
     @Autowired PlatformTransactionManager transactionManager;
     @Autowired Clock clock;
     @Autowired EnrollmentService bookingService;
+    @Autowired com.swp391.scms.operations.service.StaffInternalRequestService internalRequests;
+    @Autowired com.swp391.scms.operations.repository.StaffInternalRequestRepository internalRequestRepository;
     @Autowired com.swp391.scms.membership.service.MembershipSubscriptionService membershipService;
     @Autowired com.swp391.scms.membership.service.DynamicQrService dynamicQrService;
     private static final AtomicInteger BOOKING_DAY = new AtomicInteger(60);
 
     private ExecutorService workers;
     private AuthenticatedPrincipal staff;
+
+    /** Hai đơn khác nhau cùng nhân viên: khóa nhân viên bảo vệ cả khi tập APPROVED ban đầu rỗng. */
+    @Test
+    void concurrentLeaveApprovalsCannotApproveOverlappingRequests() throws Exception {
+        long owner = user("RECEPTIONIST"), manager = user("CENTER_MANAGER");
+        LocalDate start = LocalDate.now(clock.withZone(com.swp391.scms.common.CenterTime.ZONE)).plusDays(10);
+        var firstRequest = internalRequests.createRequest(owner, new com.swp391.scms.operations.dto.StaffInternalRequestCreateDto(
+                "LEAVE", "Leave one", "Fixture", start, start.plusDays(1), null, null, false));
+        var secondRequest = internalRequests.createRequest(owner, new com.swp391.scms.operations.dto.StaffInternalRequestCreateDto(
+                "LEAVE", "Leave two", "Fixture", start, start.plusDays(1), null, null, true));
+        var review = new com.swp391.scms.operations.dto.StaffInternalRequestReviewDto("APPROVED", "OK");
+        assertFalse(internalRequestRepository.existsApprovedLeaveOn(owner, start), "Pending leave must not grant time off");
+        var ready = new CountDownLatch(2);
+        var firstPid = new AtomicInteger();
+        var secondPid = new AtomicInteger();
+        Future<?> first;
+        Future<?> second;
+        try (var blocker = dataSource.getConnection()) {
+            blocker.setAutoCommit(false);
+            try {
+                lockRow(blocker, "select id from users where id = ? for update", owner);
+                first = submit(ready, firstPid, () -> internalRequests.reviewRequest(manager, firstRequest.id(), review));
+                second = submit(ready, secondPid, () -> internalRequests.reviewRequest(manager, secondRequest.id(), review));
+                awaitBlocked(ready, firstPid, secondPid);
+            } finally {
+                blocker.rollback();
+            }
+        }
+        int success = 0;
+        for (Future<?> result : List.of(first, second)) {
+            try {
+                result.get(20, TimeUnit.SECONDS);
+                success++;
+            } catch (ExecutionException ex) {
+                assertInstanceOf(com.swp391.scms.common.exception.ConflictException.class, ex.getCause());
+            }
+        }
+        assertEquals(1, success);
+        assertEquals(1, internalRequests.getMyRequests(owner, "APPROVED").size());
+        assertEquals(1, internalRequests.getMyRequests(owner, "PENDING").size());
+        assertTrue(internalRequestRepository.existsApprovedLeaveOn(owner, start));
+        var another = internalRequests.createRequest(owner, new com.swp391.scms.operations.dto.StaffInternalRequestCreateDto(
+                "LEAVE", "Another date", "Fixture", start.plusDays(10), start.plusDays(10), null, null));
+        assertEquals("PENDING", another.status());
+    }
+
+    /** Hủy và duyệt cùng một đơn: chỉ một chuyển trạng thái được commit, không ghi đè kết quả. */
+    @Test
+    void concurrentLeaveReviewAndCancellationHaveOneWinner() throws Exception {
+        long owner = user("RECEPTIONIST"), manager = user("CENTER_MANAGER");
+        LocalDate start = LocalDate.now(clock.withZone(com.swp391.scms.common.CenterTime.ZONE)).plusDays(10);
+        var request = internalRequests.createRequest(owner, new com.swp391.scms.operations.dto.StaffInternalRequestCreateDto(
+                "LEAVE", "Leave", "Fixture", start, start, null, null));
+        var ready = new CountDownLatch(2);
+        var reviewPid = new AtomicInteger();
+        var cancelPid = new AtomicInteger();
+        Future<?> review;
+        Future<?> cancel;
+        try (var blocker = dataSource.getConnection()) {
+            blocker.setAutoCommit(false);
+            try {
+                lockRow(blocker, "select id from staff_internal_requests where id = ? for update", request.id());
+                review = submit(ready, reviewPid, () -> internalRequests.reviewRequest(manager, request.id(),
+                        new com.swp391.scms.operations.dto.StaffInternalRequestReviewDto("APPROVED", "OK")));
+                cancel = submit(ready, cancelPid, () -> internalRequests.cancelRequest(owner, request.id()));
+                awaitBlocked(ready, reviewPid, cancelPid);
+            } finally {
+                blocker.rollback();
+            }
+        }
+        int success = 0;
+        for (Future<?> result : List.of(review, cancel)) {
+            try {
+                result.get(20, TimeUnit.SECONDS);
+                success++;
+            } catch (ExecutionException ex) {
+                assertInstanceOf(BadRequestException.class, ex.getCause());
+            }
+        }
+        assertEquals(1, success);
+        assertEquals(0, internalRequests.getMyRequests(owner, "PENDING").size());
+    }
 
     /** Hàm trợ giúp của test: lấy kết nối database test dùng chung. */
     @DynamicPropertySource

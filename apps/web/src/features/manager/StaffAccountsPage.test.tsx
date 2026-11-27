@@ -179,3 +179,30 @@ it('P1-FE-21 & P2-FE-41: enforces PasswordPolicy (min 8 chars with letter+number
   expect(sortLabel.getAttribute('style')).toContain('--portal-muted');
   expect(sortLabel.getAttribute('style')).not.toContain('--sol-text-muted');
 });
+
+it('does not falsely mark both email and phone invalid on ambiguous combined duplicate backend errors', async () => {
+  vi.mocked(createStaffAccount).mockRejectedValueOnce(new Error('Email hoặc số điện thoại nhân sự đã tồn tại'));
+  await act(async () => root.render(<StaffAccountsPage />));
+  const setInput = async (id: string, value: string) => {
+    const input = host.querySelector<HTMLInputElement>(`#${id}`)!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, value);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+  };
+  await setInput('staff-name', 'Nguyễn Văn B');
+  await setInput('staff-email', 'new.staff@sol.vn');
+  await setInput('staff-phone', '0912345678');
+  await setInput('staff-password', 'Secret123!');
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+
+  expect(host.querySelector('#staff-email')?.getAttribute('aria-invalid')).toBe('false');
+  expect(host.querySelector('#staff-phone')?.getAttribute('aria-invalid')).toBe('false');
+  expect(host.querySelector('.portal-alert[role="alert"]')?.textContent).toContain('Email hoặc số điện thoại nhân sự đã tồn tại');
+
+  // Unambiguous single-field backend error still marks only that field
+  vi.mocked(createStaffAccount).mockRejectedValueOnce(new Error('Email already exists'));
+  await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+  expect(host.querySelector('#staff-email')?.getAttribute('aria-invalid')).toBe('true');
+  expect(host.querySelector('#staff-phone')?.getAttribute('aria-invalid')).toBe('false');
+});

@@ -2,8 +2,10 @@ package com.swp391.scms.users;
 
 import com.swp391.scms.users.entity.User;
 import com.swp391.scms.users.dto.AuthenticationUser;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -13,6 +15,11 @@ import java.util.Optional;
 /** Truy cập bảng users (tài khoản đăng nhập của mọi vai trò). */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
+    /** Khóa nhân viên trước khi kiểm tra đơn nghỉ, kể cả khi chưa có đơn đã duyệt để khóa. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from User u where u.id = :id")
+    Optional<User> findByIdForUpdate(@Param("id") Long id);
+
     /**
      * Đếm số bản ghi có role_Code = tham số và deletedAt đang trống (null) và status = tham số (Spring Data tự
      * sinh truy vấn từ tên hàm).

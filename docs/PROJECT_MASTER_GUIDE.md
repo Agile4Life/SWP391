@@ -593,6 +593,8 @@ MODULE                      METHOD   ENDPOINT                                  M
 
 ## 8. KẾT LUẬN & TRẠNG THÁI DỰ ÁN
 
+Quy tắc đơn nghỉ phép nội bộ: đơn LEAVE cần ngày bắt đầu và kết thúc; ngày bắt đầu phải từ ngày mai theo `Asia/Ho_Chi_Minh`. Manager phải duyệt trước ngày bắt đầu; khi `startDate <= ngày hiện tại` thì không được APPROVE, kể cả khi chờ khóa qua nửa đêm. Đơn vẫn PENDING và nhân viên tiếp tục đi làm theo lịch bình thường; chủ đơn vẫn được hủy, Manager vẫn được từ chối với lý do. Đơn quá hạn không chặn việc tạo đơn mới cho ngày hợp lệ khác. Giữ cảnh báo trùng ngày và `confirmOverlap` khi gửi, nhưng không duyệt hai đơn nghỉ trùng nhau. Không thêm trạng thái database hoặc scheduler cho quy tắc này; các loại đơn khác giữ nguyên.
+
 Dự án **Sports Center Management System (SWP391)** hiện tại đã hoàn thiện toàn bộ giai đoạn khảo sát, mô hình hóa dữ liệu và thiết kế kiến trúc quy trình:
 - **33/33 bảng CSDL** đã được kiểm chứng chuẩn hóa 3NF và được định nghĩa bằng Entity để Hibernate đồng bộ trên PostgreSQL.
 - **6/6 luồng nghiệp vụ Swimlane** đã được phân ranh giới phân vai rõ ràng, zero overlap và có sẵn file vẽ Draw.io phục vụ thuyết minh đồ án.

@@ -122,6 +122,11 @@ public class StaffInternalRequestService {
             throw new BadRequestException("INVALID_REQUEST_TYPE", "error.operations.request.invalid_type", null, "Loại đơn từ không hợp lệ.");
         }
 
+        if ("LEAVE".equals(type)) {
+            userRepository.findByIdForUpdate(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("resource.user", userId));
+        }
+
         String title = requestDto.title().trim();
         String reason = requestDto.reason().trim();
         String targetShift = requestDto.targetShift() != null && !requestDto.targetShift().isBlank()
@@ -158,6 +163,12 @@ public class StaffInternalRequestService {
 
         if ("LEAVE".equals(type) && (requestDto.startDate() == null || requestDto.endDate() == null)) {
             throw new BadRequestException("LEAVE_DATES_REQUIRED", "error.operations.request.leave_dates_required", null, "A leave request needs its start and end dates.");
+        }
+
+        // Nghỉ phép phải báo trước: ngày bắt đầu sớm nhất là ngày mai tại trung tâm.
+        if ("LEAVE".equals(type) && !requestDto.startDate().isAfter(today)) {
+            throw new BadRequestException("LEAVE_START_MUST_BE_FUTURE", "error.operations.request.leave_start_future", null,
+                    "Leave must start tomorrow or later.");
         }
 
         if (requestDto.startDate() != null && requestDto.endDate() != null
@@ -259,6 +270,7 @@ public class StaffInternalRequestService {
     /** Nhân viên hủy đơn của chính mình; chỉ hủy được khi đơn đang chờ duyệt. */
     @Transactional
     public StaffInternalRequestDto cancelRequest(Long userId, Long requestId) {
+        lockRequestOwner(requestId);
         StaffInternalRequest req = requestRepository.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.staff_internal_request", requestId));
 
@@ -274,6 +286,14 @@ public class StaffInternalRequestService {
         req.setUpdatedAt(LocalDateTime.now(clock.withZone(CenterTime.ZONE)));
         StaffInternalRequest updated = requestRepository.save(req);
         return mapToDto(updated);
+    }
+
+    /** Mọi luồng đổi trạng thái cùng lấy khóa nhân viên trước khóa đơn để tránh đảo thứ tự khóa. */
+    private void lockRequestOwner(Long requestId) {
+        Long ownerId = requestRepository.findOwnerId(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.staff_internal_request", requestId));
+        userRepository.findByIdForUpdate(ownerId)
+                .orElseThrow(() -> new ResourceNotFoundException("resource.user", ownerId));
     }
 
     /** Mọi đơn cho quản lý, lọc theo trạng thái và loại (ALL hoặc trống là bỏ qua), tối đa 200 đơn mới nhất. */
@@ -295,6 +315,8 @@ public class StaffInternalRequestService {
      */
     @Transactional
     public StaffInternalRequestDto reviewRequest(Long managerUserId, Long requestId, StaffInternalRequestReviewDto reviewDto) {
+        // Cùng thứ tự nhân viên → đơn: hai đơn khác nhau cũng không thể cùng vượt kiểm tra trùng.
+        lockRequestOwner(requestId);
         StaffInternalRequest req = requestRepository.findByIdForUpdate(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("resource.staff_internal_request", requestId));
 
@@ -350,10 +372,16 @@ public class StaffInternalRequestService {
             }
         }
 
+        // Đọc đồng hồ sau khi lấy khóa và kiểm tra tác động, ngay trước khi đổi trạng thái.
+        LocalDateTime reviewedNow = LocalDateTime.now(clock.withZone(CenterTime.ZONE));
+        if ("APPROVED".equals(newStatus) && "LEAVE".equals(req.getRequestType())
+                && req.getStartDate() != null && !req.getStartDate().isAfter(reviewedNow.toLocalDate())) {
+            throw new BadRequestException("LEAVE_APPROVAL_DEADLINE_PASSED", "error.operations.request.leave_approval_deadline", null,
+                    "Leave approval deadline passed. The staff member must follow their normal work schedule.");
+        }
         req.setStatus(newStatus);
         req.setManagerNotes(trimmedNotes);
         req.setReviewedBy(manager);
-        LocalDateTime reviewedNow = LocalDateTime.now(clock.withZone(CenterTime.ZONE));
         req.setReviewedAt(reviewedNow);
         req.setUpdatedAt(reviewedNow);
 

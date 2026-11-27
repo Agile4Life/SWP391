@@ -6,6 +6,7 @@ import { StaffReceptionPage } from './StaffReceptionPage';
 import { getCurrentUser } from '../../shared/api/client';
 import { checkinApi } from './checkinApi';
 import { clearNotices, getNotices } from '../../shared/lib/portalNotices';
+import { dismissToast } from '../../shared/ui/toast';
 
 const api = vi.hoisted(() => ({
   lookupMembers: vi.fn(), getPendingSubscriptions: vi.fn(), cancelPendingSubscription: vi.fn(), getPendingHoldRequests: vi.fn(),
@@ -19,7 +20,6 @@ vi.mock('./receptionApi', () => ({ receptionApi: api, maskCitizenId: () => '—'
 vi.mock('../../shared/api/client', () => ({ getCurrentUser: vi.fn() }));
 vi.mock('./checkinApi', () => ({ checkinApi: { gateQr: vi.fn() } }));
 vi.mock('qrcode', () => ({ default: { toDataURL: vi.fn(async () => 'data:image/png;base64,gate-qr') } }));
-vi.mock('../../shared/ui/toast', () => ({ toast: vi.fn() }));
 vi.mock('./PaymentInvoice', () => ({ PaymentInvoice: () => <div>Hóa đơn thực</div> }));
 
 let root: Root;
@@ -60,10 +60,29 @@ it('keeps all five queue types and their existing details in separate informatio
   expect(cards[4].querySelector('a')?.getAttribute('href')).toBe('/staff/holds');
 });
 
+it('places lookup after the queue and keeps trial inspection beside document type with reject first', async () => {
+  api.getPendingTrials.mockResolvedValue([pendingTrialUi]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  const sections = [...host.querySelector('.reception-top__main')!.children];
+  expect(sections[0].classList.contains('reception-top__queue')).toBe(true);
+  expect(sections[1].classList.contains('reception-top__search')).toBe(true);
+  const trial = host.querySelector('.reception-todo__tag--trial')!.closest('.reception-request')!;
+  const type = [...trial.querySelectorAll('dl > div')].find(row => row.querySelector('dt')?.textContent === 'Loại giấy tờ')!;
+  expect(type.querySelector('dd')?.textContent).toContain('Hộ chiếu');
+  const view = type.querySelector<HTMLButtonElement>('button')!;
+  expect(view?.textContent?.trim()).toBe('Xem');
+  expect(view?.type).toBe('button');
+  const actions = [...trial.querySelectorAll<HTMLButtonElement>('.reception-request__actions button')];
+  expect(actions.map(button => button.textContent)).toEqual(['✕ Từ chối', '✓ Duyệt & Kích hoạt']);
+  expect(actions.every(button => !button.disabled)).toBe(true);
+  await act(async () => view.click());
+  expect(host.querySelector('dialog h2')?.textContent).toBe('Chi tiết đơn trải nghiệm #155');
+});
+
 it('shows a compact trial dialog without the business note and preserves image zoom and rejection reason validation', async () => {
   api.getPendingTrials.mockResolvedValue([pendingTrialUi]);
   await act(async () => root.render(<StaffReceptionPage />));
-  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Xem giấy tờ & ảnh')!.click());
+  await act(async () => [...host.querySelectorAll('button')].find(b => b.textContent === 'Xem')!.click());
   const dialog = host.querySelector('dialog')!;
   expect(dialog.querySelector('h2')?.textContent).toBe('Chi tiết đơn trải nghiệm #155');
   expect(dialog.querySelector('.reception-trial-detail__member')?.textContent).toContain('An');
@@ -89,12 +108,49 @@ it('shows a compact trial dialog without the business note and preserves image z
   });
   await act(async () => rejectForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
   expect(api.rejectTrial).toHaveBeenCalledWith(155, 'Ảnh giấy tờ bị mờ');
+  await vi.waitFor(() => expect(document.querySelectorAll('.sol-toast--success')).toHaveLength(1));
+  expect(document.querySelector('.sol-toast--success')?.textContent).toContain('Đã từ chối đơn đăng ký gói trải nghiệm');
+  expect(getNotices()).toHaveLength(1);
+  expect(getNotices()[0].type).toBe('success');
 });
 async function clickPending(id = 50) {
   const row = Array.from(host.querySelectorAll<HTMLElement>('[role="button"]')).find(node => node.textContent?.includes(`Yêu cầu #${id}`))!;
   expect(row).toBeTruthy();
   await act(async () => row.click());
 }
+
+async function submitTrialRejection() {
+  api.getPendingTrials.mockResolvedValue([pendingTrialUi]);
+  await act(async () => root.render(<StaffReceptionPage />));
+  const trial = host.querySelector('.reception-todo__tag--trial')!.closest('.reception-request')!;
+  await act(async () => trial.querySelector<HTMLButtonElement>('.reception-request__actions button')!.click());
+  const reason = host.querySelector<HTMLTextAreaElement>('#trial-reject-reason')!;
+  await act(async () => {
+    Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(reason, 'Ảnh bị mờ');
+    reason.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await act(async () => reason.closest('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+}
+
+it('waits for trial rejection API success and emits exactly one toast and one bell record', async () => {
+  let finish!: () => void;
+  api.rejectTrial.mockReturnValue(new Promise<void>(resolve => { finish = resolve; }));
+  await submitTrialRejection();
+  expect(document.querySelector('.sol-toast')).toBeNull(); expect(getNotices()).toHaveLength(0);
+  await act(async () => finish());
+  await vi.waitFor(() => expect(document.querySelectorAll('.sol-toast--success')).toHaveLength(1));
+  expect(api.rejectTrial).toHaveBeenCalledTimes(1); expect(getNotices()).toHaveLength(1);
+  expect(getNotices()[0].message).toContain('Đã từ chối');
+  expect(host.querySelector('#trial-reject-reason')).toBeNull();
+});
+
+it('keeps trial rejection API errors in the form with no success toast or bell record', async () => {
+  api.rejectTrial.mockRejectedValue(new Error('Backend refused trial rejection'));
+  await submitTrialRejection();
+  expect(host.querySelector('#trial-reject-reason')).not.toBeNull();
+  expect(host.textContent).toContain('Backend refused trial rejection');
+  expect(document.querySelector('.sol-toast')).toBeNull(); expect(getNotices()).toHaveLength(0);
+});
 it('loads the same masked identity when selecting a payment request and preserves its payment', async () => {
   api.getPendingSubscriptions.mockResolvedValue([pendingSelection]);
   api.lookupMembers.mockResolvedValue([{ ...member, citizenId: '********4753' }]);
@@ -153,7 +209,7 @@ it('ignores a late request error after a successful member search', async () => 
 });
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
-  vi.resetAllMocks(); clearNotices();
+  vi.resetAllMocks(); clearNotices(); dismissToast();
   api.getRequestHistory.mockResolvedValue([]);
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role: 'STAFF' });
   vi.mocked(checkinApi.gateQr).mockResolvedValue({ qrCode: 'SOL:GATE:1:A1:signed', gateId: 'A1', gate: 'Turnstile A1 - Sảnh Chính',
@@ -172,7 +228,7 @@ beforeEach(() => {
   api.processPayment.mockResolvedValue({ id: 42, memberId: 10, amount: 200, method: 'pos', status: 'success', paidAt: '2026-10-01T10:00:00', invoiceNumber: 'INV-42' });
   host = document.createElement('div'); document.body.append(host); root = createRoot(host);
 });
-afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.unstubAllGlobals(); });
+afterEach(async () => { await act(async () => root.unmount()); dismissToast(); host.remove(); vi.unstubAllGlobals(); });
 
 it.each(['STAFF', 'MANAGER'] as const)('leaves the gate QR to the check-in and check-out tabs for %s', async (role) => {
   vi.mocked(getCurrentUser).mockReturnValue({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role });
@@ -268,6 +324,9 @@ it.each([
   api[method].mockRejectedValue(new Error('Offline'));
   await act(async () => root.render(<StaffReceptionPage />));
   const card = host.querySelector('.reception-top__queue')!;
+  const alert = card.querySelector('[role="alert"]');
+  expect(alert?.classList.contains('portal-alert')).toBe(true);
+  expect(alert?.classList.contains('portal-alert--error')).toBe(true);
   expect(card.textContent).toContain(`Không thể tải ${label}. Vui lòng thử lại.`);
   expect(card.textContent).not.toContain('Không có việc nào cần xử lý');
   const tabs = { plan: 'Gói tập', course: 'Khóa học', hold: 'Bảo lưu', trial: 'Trải nghiệm' };
@@ -303,6 +362,7 @@ it('sells an active package at the counter for a member without a pending order'
   expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ memberId: 10, packageId: 2, amount: 200 }));
   expect(api.createRenewal).not.toHaveBeenCalled();
   expect(getNotices()[0].destination).toBe('/staff/reception-history');
+  expect(document.querySelector('.sol-toast')).toBeNull();
   expect(host.textContent).toContain('Hóa đơn thực');
 });
 
@@ -460,7 +520,13 @@ it('renders passport document type and nationality for foreign trial applicants'
 it('shows a retry when unpaid 1:1 sessions fail to load', async () => {
   api.getUnpaidCoachBookings.mockRejectedValueOnce(new Error('Mất kết nối')).mockResolvedValue([]);
   await act(async () => root.render(<StaffReceptionPage />));
+  const ptAlert = host.querySelector('.reception-top__queue [role="alert"]');
+  expect(ptAlert?.classList.contains('portal-alert')).toBe(true);
+  expect(ptAlert?.classList.contains('portal-alert--error')).toBe(true);
   expect(host.textContent).toContain('Mất kết nối');
+  const searchInput = host.querySelector<HTMLInputElement>('input[placeholder^="Nhập Số điện thoại"]')!;
+  expect(document.activeElement).not.toBe(searchInput);
+  expect(searchInput.hasAttribute('autofocus')).toBe(false);
   const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Thử lại')!;
   await act(async () => retry.click());
   expect(host.querySelector('.reception-todo__tag--pt')).toBeNull();
@@ -754,6 +820,7 @@ it('P0-03: renders unpaid course enrollments, requires confirmation, settles tui
   expect(api.confirmCourseEnrollmentPayment).toHaveBeenCalledWith(601, 'bank_transfer');
   expect(host.querySelector('[data-testid="unpaid-course-601"]')).toBeNull();
   expect(host.textContent).toContain('Hóa đơn thực');
+  expect(document.querySelector('.sol-toast')).toBeNull();
   expect(getNotices()[0]?.message).toContain('INV-20261125-0901');
 });
 
@@ -812,7 +879,7 @@ it('P2-FE-67 & P2-FE-68: shows "Chưa cấp thẻ" instead of fabricated code, o
   expect(host.textContent).not.toContain('MB-2026-010');
 
   // Open trial inspection modal and open in-app lightbox
-  const inspectBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Xem giấy tờ & ảnh')!;
+  const inspectBtn = [...host.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Xem')!;
   await act(async () => inspectBtn.click());
   const zoomBtn = host.querySelector<HTMLButtonElement>('button[aria-label="Phóng to ảnh mặt trước giấy tờ"]')!;
   expect(zoomBtn).not.toBeNull();

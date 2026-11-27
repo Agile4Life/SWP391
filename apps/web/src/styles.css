@@ -137,6 +137,10 @@ body::-webkit-scrollbar,
   color: var(--portal-danger, #ef4444);
 }
 
+.fit-auth .portal-field-error {
+  color: #fca5a5;
+}
+
 .page {
   margin: 34px;
   padding: 32px;
@@ -438,6 +442,31 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   margin: 0 0 16px;
 }
 
+.portal-v2 .portal-container > .sol-toast {
+  margin: 0 0 18px;
+}
+
+.portal-v2 #portal-main > .sol-toast {
+  margin-inline: var(--portal-gutter, 24px);
+}
+
+.fit-site main > .sol-toast {
+  margin-inline: 5.4%;
+}
+
+.fit-site .fit-auth > .sol-toast,
+.fit-auth > .sol-toast {
+  grid-column: 1 / -1;
+  margin-inline: 0;
+  margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  /* Topbar nổi chiếm hàng 54px; toast fallback gắn trực tiếp vào #portal-main phải nằm dưới hàng nút. */
+  .portal-v2 #portal-main > .sol-toast { margin-top: 64px; }
+  .portal-v2 .app-main:has(> .pwa-status:not(:empty)) #portal-main > .sol-toast { margin-top: 0; }
+}
+
 .sol-toast__card {
   display: flex;
   flex-direction: row;
@@ -452,11 +481,31 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   box-shadow: none;
 }
 
+.sol-toast--success .sol-toast__card {
+  background: color-mix(in srgb, var(--portal-success, #86efac) 8%, var(--portal-surface, #262524));
+  border-color: color-mix(in srgb, var(--portal-success, #86efac) 42%, var(--portal-border-strong, rgba(255, 255, 255, 0.16)));
+}
+
+.sol-toast--error .sol-toast__card {
+  background: color-mix(in srgb, var(--portal-danger, #F87171) 10%, var(--portal-surface, #262524));
+  border-color: color-mix(in srgb, var(--portal-danger, #F87171) 48%, var(--portal-border-strong, rgba(255, 255, 255, 0.16)));
+}
+
 :root[data-theme='light'] .sol-toast__card {
   background: #FFFFFF;
   color: #202020;
   border-color: #E4E2DE;
   box-shadow: none;
+}
+
+:root[data-theme='light'] .sol-toast--success .sol-toast__card {
+  background: color-mix(in srgb, var(--portal-success, #226442) 5%, #FFFFFF);
+  border-color: color-mix(in srgb, var(--portal-success, #226442) 38%, #E4E2DE);
+}
+
+:root[data-theme='light'] .sol-toast--error .sol-toast__card {
+  background: color-mix(in srgb, var(--portal-danger, #a33030) 6%, #FFFFFF);
+  border-color: color-mix(in srgb, var(--portal-danger, #a33030) 42%, #E4E2DE);
 }
 
 .sol-toast__icon {
@@ -473,13 +522,21 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
 }
 
 .sol-toast--error .sol-toast__icon {
-  color: var(--portal-danger, #EF4444);
-  background: color-mix(in srgb, var(--portal-danger, #EF4444) 16%, transparent);
-  border-color: color-mix(in srgb, var(--portal-danger, #EF4444) 36%, transparent);
+  color: var(--portal-danger, #F87171);
+  background: color-mix(in srgb, var(--portal-danger, #F87171) 16%, transparent);
+  border-color: color-mix(in srgb, var(--portal-danger, #F87171) 36%, transparent);
 }
 
-:root[data-theme='light'] .sol-toast__icon { color: #15803D; }
-:root[data-theme='light'] .sol-toast--error .sol-toast__icon { color: #B91C1C; }
+:root[data-theme='light'] .sol-toast__icon {
+  color: var(--portal-success, #15803D);
+  background: color-mix(in srgb, var(--portal-success, #15803D) 12%, transparent);
+  border-color: color-mix(in srgb, var(--portal-success, #15803D) 30%, transparent);
+}
+:root[data-theme='light'] .sol-toast--error .sol-toast__icon {
+  color: var(--portal-danger, #B91C1C);
+  background: color-mix(in srgb, var(--portal-danger, #B91C1C) 12%, transparent);
+  border-color: color-mix(in srgb, var(--portal-danger, #B91C1C) 30%, transparent);
+}
 
 .sol-toast__message {
   flex: 1 1 auto;
@@ -504,7 +561,7 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   border: 1px solid transparent;
   border-radius: 50%;
   background: transparent;
-  color: var(--portal-muted, #9a948e);
+  color: var(--portal-muted, #cbc7c3);
   font-family: var(--font-sans, 'Plus Jakarta Sans', sans-serif);
   font-size: 18px;
   font-weight: 600;
@@ -517,11 +574,20 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   background: var(--portal-raised, rgba(255, 255, 255, 0.08));
   color: var(--portal-paper, #FAF9F6);
 }
+:root[data-theme='light'] .sol-toast__close {
+  color: var(--portal-muted, #68645f);
+}
 :root[data-theme='light'] .sol-toast__close:hover {
   background: #eeefec;
   color: #202020;
 }
 .sol-toast__close:focus-visible { outline: 2px solid var(--sol-accent); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .sol-toast__card {
+    animation: toast-in 200ms var(--ease-luxury) both;
+  }
+}
 
 @media (max-width: 767px), (pointer: coarse) {
   .sol-toast__close {
@@ -551,6 +617,10 @@ button:not(:disabled):not(.ui-select__trigger):not(.luxury-datepicker-trigger):n
   box-shadow:
     0 24px 64px rgba(28, 25, 23, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.92);
+}
+
+:root[data-theme='light'] .portal-dialog:has(.package-result--error) {
+  border-color: color-mix(in srgb, var(--portal-danger, #a33030) 38%, transparent);
 }
 
 .package-result__icon {

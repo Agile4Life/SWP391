@@ -66,6 +66,8 @@ export function MemberInvoicesPage() {
   const [invoiceError, setInvoiceError] = useState<string | null | SourceMessage>(null);
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewPaymentId, setPreviewPaymentId] = useState<number | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -92,6 +94,11 @@ export function MemberInvoicesPage() {
 
   useEffect(() => {
     setDownloadError(false);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return null;
+    });
+    setPreviewPaymentId(null);
     if (!selected) return;
     let active = true;
     setInvoice(null);
@@ -106,24 +113,43 @@ export function MemberInvoicesPage() {
     return () => { active = false; };
   }, [selected]);
 
-  // Tải hóa đơn PDF của một khoản thanh toán.
-  async function downloadInvoice(paymentId: number) {
+  // Mở cửa sổ xem trước PDF hóa đơn, sau đó cho phép tải về từ trong cửa sổ xem trước.
+  async function openInvoicePreview(paymentId: number) {
     setDownloading(true);
     setDownloadError(false);
     try {
       const pdf = await getMyInvoicePdf(paymentId);
       const url = URL.createObjectURL(pdf);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `invoice-${paymentId}.pdf`;
-      document.body.append(anchor);
-      anchor.click();
-      anchor.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setPreviewUrl((prev) => {
+        if (prev) URL.revokeObjectURL(prev);
+        return url;
+      });
+      setPreviewPaymentId(paymentId);
     } catch {
       setDownloadError(true);
     } finally {
       setDownloading(false);
+    }
+  }
+
+  // Tải xuống file PDF đang xem trước.
+  function triggerPdfDownload() {
+    if (!previewUrl || previewPaymentId == null) return;
+    const anchor = document.createElement('a');
+    anchor.href = previewUrl;
+    anchor.download = `invoice-${previewPaymentId}.pdf`;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  // Đóng cửa sổ xem trước PDF và giải phóng object URL.
+  function closeInvoicePreview() {
+    const currentUrl = previewUrl;
+    setPreviewUrl(null);
+    setPreviewPaymentId(null);
+    if (currentUrl) {
+      window.setTimeout(() => URL.revokeObjectURL(currentUrl), 1000);
     }
   }
 
@@ -147,7 +173,10 @@ export function MemberInvoicesPage() {
       </section>}
       <section data-i18n-managed className="portal-card portal-card--flush member-invoices__card" aria-label={memberText("Lịch sử giao dịch")}>
         {loading ? <LoadingSkeleton label={memberText("Đang tải giao dịch…")} variant="table" count={4} /> : error ? (
-          <div role="alert"><p>{memberText("Không tải được giao dịch. Vui lòng thử lại.")}</p><button type="button" className="btn-secondary btn-sm" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>{memberText("Thử lại")}</button></div>
+          <div role="alert" className="member-invoices__error">
+            <p>{memberText("Không tải được giao dịch. Vui lòng thử lại.")}</p>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>{memberText("Thử lại")}</button>
+          </div>
         ) : payments.length === 0 ? (
           <EmptyState variant="plain" icon="receipt" title={memberText("Chưa có giao dịch")}
             description={memberText("Hóa đơn sẽ hiện ở đây sau khi bạn thanh toán gói tập hoặc dịch vụ.")}
@@ -158,7 +187,7 @@ export function MemberInvoicesPage() {
               <thead><tr><th scope="col">{memberText("Mã giao dịch")}</th><th scope="col">{memberText("Dịch vụ")}</th><th scope="col">{memberText("Ngày giờ thanh toán")}</th><th scope="col">{memberText("Số tiền")}</th><th scope="col">{memberText("Trạng thái")}</th><th scope="col"><span className="sr-only">{memberText("Chi tiết")}</span></th></tr></thead>
               <tbody>{payments.map((payment) => <tr key={payment.id}>
                 <td>#{payment.id}</td><td><ServiceCell payment={payment} /></td><td>{formatCenterDateTime(payment.paidAt)}</td><td>{formatPrice(payment.amount)}</td><td><span className={`badge ${paymentStatusBadgeClass(payment.status)}`}>{memberRenderMessage(STATUS_LABELS[payment.status.toLowerCase()] ?? memberMessage(payment.status, payment.status))}</span></td>
-                <td><button type="button" className="btn-secondary btn-sm member-invoices__detail" onClick={() => setSelected(payment)} aria-label={memberText(`Xem hóa đơn giao dịch #${payment.id}`, `View invoice for transaction #${payment.id}`)}>{memberText("Xem hóa đơn ")}<span aria-hidden="true">↗</span></button></td>
+                <td className="member-invoices__actions-col"><button type="button" className="btn-secondary btn-sm member-invoices__detail" onClick={() => setSelected(payment)} aria-label={memberText(`Xem hóa đơn giao dịch #${payment.id}`, `View invoice for transaction #${payment.id}`)}>{memberText("Xem hóa đơn ")}<span aria-hidden="true">↗</span></button></td>
               </tr>)}</tbody>
             </table>
           </div>
@@ -167,24 +196,80 @@ export function MemberInvoicesPage() {
       {selected && <Modal title={memberText("Hóa đơn điện tử")} busy={downloading} onClose={() => setSelected(null)}>
         <div className="member-invoices__invoice">
           {invoiceLoading ? <LoadingSkeleton label={memberText("Đang tải hóa đơn…")} variant="profile" /> : invoiceError ? <p role="alert">{memberRenderMessage(invoiceError)}</p> : invoice && <>
-            <p className="member-invoices__number">{invoice.invoiceNumber}</p>
-            <p className="member-invoices__issued">{memberText("Phát hành lúc ")}{formatCenterDateTime(invoice.issuedAt)}</p>
-            <dl>
-              <div><dt>{memberText("Giao dịch")}</dt><dd>#{invoice.paymentId}</dd></div>
-              <div><dt>{memberText("Thanh toán lúc")}</dt><dd>{formatCenterDateTime(selected.paidAt)}</dd></div>
-              <div><dt>{memberText("Trước thuế")}</dt><dd>{formatPrice(invoice.subtotalAmount)}</dd></div>
-              <div><dt>VAT</dt><dd>{formatPrice(invoice.taxAmount)}</dd></div>
-              <div className="member-invoices__total"><dt>{memberText("Tổng tiền")}</dt><dd>{invoice.totalAmount == null ? memberText("Chưa có dữ liệu") : formatPrice(invoice.totalAmount)}</dd></div>
-            </dl>
-            <button type="button" className="btn-primary member-invoices__download" disabled={downloading || invoice.totalAmount == null}
-              onClick={() => void downloadInvoice(invoice.paymentId)}>
-              {downloading ? memberText("Đang tải file…") : memberText("Tải hóa đơn PDF")}
-            </button>
-            <p className="member-invoices__note">{memberText("Bản PDF thông tin từ hệ thống, không thay thế hóa đơn thuế ký số.")}</p>
+            <div className="member-invoices__receipt">
+              <header className="member-invoices__receipt-head">
+                <div>
+                  <strong className="member-invoices__brand">SÖL FITNESS</strong>
+                  <p className="member-invoices__subtitle">{memberText("Hóa đơn điện tử")}</p>
+                </div>
+                <div className="member-invoices__receipt-id">
+                  <p className="member-invoices__number">{invoice.invoiceNumber}</p>
+                  <p className="member-invoices__issued">{memberText("Phát hành lúc ")}{formatCenterDateTime(invoice.issuedAt)}</p>
+                </div>
+              </header>
+
+              <dl className="member-invoices__meta">
+                <div><dt>{memberText("Giao dịch")}</dt><dd>#{invoice.paymentId}</dd></div>
+                <div><dt>{memberText("Thanh toán lúc")}</dt><dd>{formatCenterDateTime(selected.paidAt)}</dd></div>
+                <div><dt>{memberText("Trạng thái")}</dt><dd><span className={`badge ${paymentStatusBadgeClass(selected.status)}`}>{memberRenderMessage(STATUS_LABELS[selected.status.toLowerCase()] ?? memberMessage(selected.status, selected.status))}</span></dd></div>
+              </dl>
+
+              <table className="member-invoices__items">
+                <thead>
+                  <tr>
+                    <th scope="col">{memberText("Dịch vụ")}</th>
+                    <th scope="col">{memberText("SL", "Qty")}</th>
+                    <th scope="col">{memberText("Thành tiền", "Amount")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><ServiceCell payment={selected} /></td>
+                    <td>1</td>
+                    <td>{formatPrice(invoice.subtotalAmount)}</td>
+                  </tr>
+                </tbody>
+              </table>
+
+              <dl className="member-invoices__summary">
+                <div><dt>{memberText("Trước thuế")}</dt><dd>{formatPrice(invoice.subtotalAmount)}</dd></div>
+                <div><dt>VAT</dt><dd>{formatPrice(invoice.taxAmount)}</dd></div>
+                <div className="member-invoices__total"><dt>{memberText("Tổng tiền")}</dt><dd>{invoice.totalAmount == null ? memberText("Chưa có dữ liệu") : formatPrice(invoice.totalAmount)}</dd></div>
+              </dl>
+
+              <p className="member-invoices__note">{memberText("Bản PDF thông tin từ hệ thống, không thay thế hóa đơn thuế ký số.")}</p>
+            </div>
+
             {downloadError && <p role="alert">{memberText("Không tải được file hóa đơn. Vui lòng thử lại.")}</p>}
+            <div className="member-invoices__modal-actions">
+              <button type="button" className="btn-primary member-invoices__preview-btn" disabled={downloading || invoice.totalAmount == null}
+                onClick={() => void openInvoicePreview(invoice.paymentId)}>
+                {downloading ? memberText("Đang tải file…") : memberText("Xem hóa đơn")}
+              </button>
+            </div>
           </>}
         </div>
       </Modal>}
+      {previewUrl && (
+        <Modal
+          title={memberText("Xem hóa đơn PDF", "View invoice PDF")}
+          onClose={closeInvoicePreview}
+          className="member-invoices__pdf-modal"
+        >
+          <div className="member-invoices__pdf-wrap">
+            <iframe
+              src={previewUrl.startsWith('blob:') ? `${previewUrl}#toolbar=0&navpanes=0&view=FitH` : previewUrl}
+              title={invoice ? `${memberText("Hóa đơn điện tử")} ${invoice.invoiceNumber}` : memberText("Xem hóa đơn PDF", "View invoice PDF")}
+              className="member-invoices__pdf-frame"
+            />
+          </div>
+          <div className="member-invoices__modal-actions">
+            <button type="button" className="btn-primary member-invoices__download" onClick={triggerPdfDownload}>
+              {memberText("Tải hóa đơn PDF")}
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

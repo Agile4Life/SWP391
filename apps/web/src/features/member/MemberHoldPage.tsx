@@ -26,6 +26,14 @@ function toLocalizableError(error: unknown, vi: string, en: string): Error | Sou
   return error instanceof Error && error.name === 'Error' && error.message ? error : sourceMessage(vi, en);
 }
 
+/** Rút gọn tên file đính kèm quá dài nhưng vẫn giữ phần mở rộng (.jpg, .pdf). */
+function formatAttachmentName(fileName: string): string {
+  if (fileName.length <= 32) return fileName;
+  const dot = fileName.lastIndexOf('.');
+  const ext = dot > 0 && fileName.length - dot <= 6 ? fileName.slice(dot) : '';
+  return `${fileName.slice(0, 16)}…${fileName.slice(fileName.length - ext.length - 8)}`;
+}
+
 /** Cộng/trừ số ngày vào ngày YYYY-MM-DD (không phụ thuộc múi giờ trình duyệt). */
 function addDays(iso: string, days: number): string {
   const [year, month, day] = iso.split('-').map(Number);
@@ -263,9 +271,9 @@ export function MemberHoldPage() {
     <div data-i18n-managed className="portal-container member-hold">
       <PageHeader title={t('Bảo lưu gói tập', 'Membership hold')} />
       {loading ? <LoadingSkeleton label={t('Đang tải thông tin bảo lưu', 'Loading hold information')} /> : loadError ? (
-        <div className="portal-card" role="alert">
-          <p>{t(loadError)}</p>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>{t('Thử lại', 'Retry')}</button>
+        <div className="portal-alert portal-alert--error" role="alert">
+          <span>{t(loadError)}</span>
+          <button type="button" className="btn-secondary btn-sm" style={{ flexShrink: 0 }} onClick={() => void load()}>{t('Thử lại', 'Retry')}</button>
         </div>
       ) : !subscription || !policy ? (
         <EmptyState icon="clock" title={t('Chưa có gói để bảo lưu', 'No membership to put on hold')}
@@ -293,16 +301,29 @@ export function MemberHoldPage() {
 
           {detail && status && (
             <section className="portal-card stack" aria-label={t('Đơn bảo lưu hiện tại', 'Current hold request')} data-testid="hold-current">
-              <h2 className="portal-card-title">{t('Đơn bảo lưu', 'Hold request')}: <span className={`badge ${status === 'APPROVED' ? 'badge-success' : status === 'REJECTED' ? 'badge-danger' : status === 'PENDING' ? 'badge-warning' : 'badge-neutral'}`}>{statusLabel[status] ?? status}</span></h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <h2 className="portal-card-title" style={{ margin: 0 }}>{t('Đơn bảo lưu', 'Hold request')}</h2>
+                <span className={`badge ${status === 'APPROVED' ? 'badge-success' : status === 'REJECTED' ? 'badge-danger' : status === 'PENDING' ? 'badge-warning' : 'badge-neutral'}`}>{statusLabel[status] ?? status}</span>
+              </div>
               {detail.holdStartDate && detail.holdEndDate && (
                 <p className="hold-period"><strong>{formatCenterDate(detail.holdStartDate)} – {formatCenterDate(detail.holdEndDate)}</strong></p>
               )}
-              {detail.holdReason && <p className="hold-reason">{t('Lý do', 'Reason')}: {detail.holdReason}</p>}
+              {detail.holdReason && <p className="hold-reason"><strong>{t('Lý do', 'Reason')}:</strong> {detail.holdReason}</p>}
               {detail.documents.length > 0 && (
-                <ul aria-label={t('Giấy tờ đã nộp', 'Submitted documents')}>
+                <ul
+                  aria-label={t('Giấy tờ đã nộp', 'Submitted documents')}
+                  style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexWrap: 'wrap', gap: 8 }}
+                >
                   {detail.documents.map((document) => (
                     <li key={document.id}>
-                      <button type="button" className="btn-secondary btn-sm" onClick={() => void openDocument(document.id, document.fileName)}>{document.fileName}</button>
+                      <button
+                        type="button"
+                        className="btn-secondary btn-sm"
+                        title={document.fileName}
+                        onClick={() => void openDocument(document.id, document.fileName)}
+                      >
+                        {formatAttachmentName(document.fileName)}
+                      </button>
                     </li>
                   ))}
                 </ul>
@@ -320,7 +341,7 @@ export function MemberHoldPage() {
           )}
 
           {policy.alreadyUsed && status !== 'PENDING' && status !== 'APPROVED' && (
-            <div className="portal-card hold-notice hold-notice--info" role="status">{t('Gói này đã dùng lượt bảo lưu duy nhất.', 'This package has already used its only hold.')}</div>
+            <p className="hold-notice hold-notice--info" role="status" style={{ marginBottom: 20 }}>{t('Gói này đã dùng lượt bảo lưu duy nhất.', 'This package has already used its only hold.')}</p>
           )}
 
           {canRequest && (
