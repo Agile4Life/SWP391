@@ -1,5 +1,7 @@
 # Nghiệp vụ SÖL Fitness — các luồng chính đang chạy trên web
 
+> Phương thức Thẻ (POS) đã ngừng cho giao dịch mới. Backend từ chối trước khi ghi khoản thu hoặc giao dịch ví, không chuyển POS thành tiền mặt. Giữ nguyên giao dịch POS cũ, nhãn lịch sử/hóa đơn và schema để đối soát. Bộ lọc nạp ví không còn lựa chọn POS; giao dịch POS cũ vẫn hiện khi chọn Tất cả. Tiền mặt, chuyển khoản, VNPay và Ví SÖL chỉ được dùng tại các luồng vốn đã hỗ trợ; quy tắc nạp ví tại quầy chỉ nhận tiền mặt giữ nguyên.
+
 > Quản lý có thể thêm, sửa và xóa phòng chưa được sử dụng. Hạng phòng không hiển thị trong danh mục quản lý; quyền truy cập VIP hiện có vẫn giữ. Phòng mẫu không tự tạo lại sau khi xóa.
 
 > Cập nhật: 25/11/2026 (phạm vi 3 bộ môn `Gym`/`Boxing`/`Yoga` với các phòng mẫu ban đầu, cho phép **nhiều lớp `active` mỗi bộ môn không trùng ngày & slot** (`409 SCHEDULING_DISCIPLINE_CONFLICT`), **wizard tạo khóa học 4 bước** kèm API tiền kiểm tra chỉ đọc `POST /api/v1/classes/recurring/availability`, **hệ thống lịch 5 Slot cố định `07:00 – 20:30`** cho cả lớp nhóm và PT 1:1, gỡ bỏ giới hạn bắt buộc nghỉ liên tiếp của HLV, dọn dữ liệu lệch slot qua `LegacyScheduleSlotResetRunner`, gỡ bỏ hoàn toàn tính năng đặt sân & các bộ môn ngoài phạm vi, ẩn 3D khỏi sidebar hội viên, lịch Quản lý 3 tab độc lập & chuẩn hóa sidebar 5 vai trò).

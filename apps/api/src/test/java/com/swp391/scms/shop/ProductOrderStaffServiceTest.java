@@ -71,6 +71,13 @@ class ProductOrderStaffServiceTest {
     final ShopProperties props = new ShopProperties();
     final AuthenticatedPrincipal staff = new AuthenticatedPrincipal(3L, "receptionist", "RECEPTIONIST");
 
+    @Test
+    void rejectsPosWithoutCreatingAPaymentOrChangingTheOrder() {
+        assertThatThrownBy(() -> service.counterPayment(staff, 9L, new CounterPaymentRequest(" POS ")))
+                .hasFieldOrPropertyWithValue("errorCode", "PAYMENT_METHOD_NOT_ALLOWED");
+        org.mockito.Mockito.verifyNoInteractions(orders, payments, orderPayments, invoices);
+    }
+
     StockService stock;
     ProductOrderService orderService;
     ProductOrderStaffService service;

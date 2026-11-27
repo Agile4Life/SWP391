@@ -47,7 +47,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductOrderStaffService {
     private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
     private static final Set<String> STAFF_ROLES = Set.of("RECEPTIONIST", "STAFF", "CENTER_MANAGER", "MANAGER");
-    private static final Set<String> COUNTER_METHODS = Set.of("cash", "pos", "bank_transfer");
+    private static final Set<String> COUNTER_METHODS = Set.of("cash", "bank_transfer");
 
     private final ProductOrderRepository orders;
     private final ProductOrderService orderService;
