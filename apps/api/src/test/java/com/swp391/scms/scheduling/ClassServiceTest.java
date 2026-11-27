@@ -756,16 +756,20 @@ class ClassServiceTest {
         when(sessionBookings.findBySessionIdAndStatus(55L, "booked")).thenReturn(java.util.List.of(duplicateBooking20));
 
         service.rescheduleSession(1L, 55L,
-                new RescheduleSessionRequest(newDate, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime()));
+                new RescheduleSessionRequest(newDate, ScheduleSlot.SLOT_5.startTime(), ScheduleSlot.SLOT_5.endTime(), "Bảo trì phòng tập"));
 
         verify(notificationService, org.mockito.Mockito.times(1)).send(
                 org.mockito.ArgumentMatchers.eq(20L),
-                any(), any(), org.mockito.ArgumentMatchers.eq("schedule_change"),
+                any(),
+                org.mockito.ArgumentMatchers.argThat(body -> body != null && (body.contains("Bảo trì phòng tập") || body.contains("body_with_reason"))),
+                org.mockito.ArgumentMatchers.eq("schedule_change"),
                 org.mockito.ArgumentMatchers.eq("class_session"),
                 org.mockito.ArgumentMatchers.eq(55L));
         verify(notificationService, org.mockito.Mockito.times(1)).send(
                 org.mockito.ArgumentMatchers.eq(coach.getUserId()),
-                any(), any(), org.mockito.ArgumentMatchers.eq("schedule_change"),
+                any(),
+                org.mockito.ArgumentMatchers.argThat(body -> body != null && (body.contains("Bảo trì phòng tập") || body.contains("coach_body_with_reason"))),
+                org.mockito.ArgumentMatchers.eq("schedule_change"),
                 org.mockito.ArgumentMatchers.eq("class_session"),
                 org.mockito.ArgumentMatchers.eq(55L));
     }

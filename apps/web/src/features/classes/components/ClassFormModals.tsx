@@ -1684,6 +1684,7 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
       ?? findScheduleSlot(session.startTime);
     return matched?.code ?? SCHEDULE_SLOTS[0].code;
   });
+  const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -1703,6 +1704,7 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
         sessionDate: date,
         startTime: selectedSlot.startApi,
         endTime: selectedSlot.endApi,
+        reason: reason.trim() || undefined,
       });
       onSuccess(t('Đã dời lịch buổi học và gửi thông báo tới học viên, HLV.', 'Session rescheduled and notifications sent.'));
     } catch (err) {
@@ -1735,6 +1737,19 @@ export function RescheduleSessionModal({ session, onClose, onSuccess }: Reschedu
             onChange={setSelectedSlotCode}
             disabled={busy}
             ariaLabel={t('Chọn khung giờ mới trong 5 Slot cố định', 'Select a new fixed time slot')}
+          />
+        </div>
+        <div className="portal-form-group">
+          <label className="portal-label" htmlFor="resch-reason">{t('Lý do dời lịch', 'Reschedule reason')}</label>
+          <textarea
+            id="resch-reason"
+            className="portal-textarea"
+            rows={3}
+            maxLength={500}
+            disabled={busy}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder={t('Nhập lý do dời lịch để gửi thông báo tới học viên và HLV (tùy chọn)…', 'Enter a reason to notify members and coach (optional)…')}
           />
         </div>
         <div className="mcal__dialog-actions">

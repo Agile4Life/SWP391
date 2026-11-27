@@ -1010,6 +1010,13 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(document.querySelector<HTMLButtonElement>('[data-testid="slot-option-5"]')?.getAttribute('aria-pressed')).toBe('true');
 
     await act(async () => document.querySelector<HTMLButtonElement>('[data-testid="slot-option-4"]')!.click());
+    const reasonInput = document.querySelector<HTMLTextAreaElement>('#resch-reason')!;
+    expect(reasonInput).not.toBeNull();
+    await act(async () => {
+      const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!;
+      setter.call(reasonInput, 'Bảo trì phòng tập');
+      reasonInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
     const form = document.querySelector<HTMLFormElement>('dialog form')!;
     await act(async () => {
       form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -1017,7 +1024,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     await act(async () => { await Promise.resolve(); });
 
     expect(classesApi.rescheduleSession).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionId: 503, startTime: '15:15:00', endTime: '17:45:00' }),
+      expect.objectContaining({ sessionId: 503, startTime: '15:15:00', endTime: '17:45:00', reason: 'Bảo trì phòng tập' }),
     );
   });
 
