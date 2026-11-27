@@ -32,7 +32,7 @@ import java.util.Set;
 
 /**
  * Nghiệp vụ ra vào cổng: chỉ cho vào khi gói đang hiệu lực; ghi lại mọi lượt quét (được vào hay bị từ chối) với
- * giờ server; chống quẹt hộ (anti-passback) khi hội viên đã ở trong mà chưa ra; tự đóng lượt bị treo quá 8 giờ.
+ * giờ server; chống quẹt hộ (anti-passback) khi hội viên đã ở trong mà chưa ra; tự đóng phiên đủ 8 giờ.
  *
  * Service quản lý check-in QR vào trung tâm, check-out, nhật ký audit và lịch sử theo ngày (SCRUM-75).
  */
@@ -165,8 +165,10 @@ public class CenterCheckinService {
         gateQrService.verify(request.gateQr(), clock.millis());
         members.findByUserIdForUpdate(principal.id())
                 .orElseThrow(() -> new ResourceNotFoundException("resource.member", principal.id()));
-        CenterCheckin open = checkins
-                .findFirstByMemberUserIdAndCheckOutTimeIsNullOrderByCheckInTimeDesc(principal.id())
+        // Dùng cùng khóa phiên với scheduler và quầy, không ghi đè giờ ra đã được luồng khác lưu.
+        CenterCheckin open = checkins.findOpenVisitIdsForMember(principal.id()).stream().findFirst()
+                .flatMap(checkins::findByIdForUpdate)
+                .filter(visit -> RESULT_GRANTED.equals(visit.getStatus()) && visit.getCheckOutTime() == null)
                 .orElseThrow(() -> new BadRequestException("CHECKIN_NO_OPEN_VISIT",
                         "error.attendance.no_open_visit", null, "No open check-in to check out"));
         open.setCheckOutTime(LocalDateTime.now(clock));
@@ -186,7 +188,7 @@ public class CenterCheckinService {
      *   Nếu không thỏa: result = 'DENIED' kèm denial_reason.
      * - BR-03: MỌI lượt quét (GRANTED hay DENIED) bắt buộc lưu 1 bản ghi vào center_checkins với server time.
      * - BR-04: Anti-passback: Nếu hội viên đã GRANTED mà chưa checkout, chặn GRANTED thứ hai và log DENIED.
-     *   Tự động đóng phiên treo quá 8 tiếng để tránh kẹt quyền vào cửa ngày hôm sau.
+     *   Tự động đóng phiên đủ 8 tiếng để không giữ anti-passback của phiên đã hết thời gian.
      */
     @Transactional
     public CheckinDto scan(AuthenticatedPrincipal principal, CheckinRequests.Scan request) {
@@ -264,7 +266,7 @@ public class CenterCheckinService {
             return saveDeniedRecord(member, now, gate, recorder, "error.attendance.subscription_expired");
         }
 
-        // Tự động đóng các lượt check-in GRANTED bị treo quá 8 tiếng của hội viên (giải phóng bẫy anti-passback)
+        // Tự động đóng phiên GRANTED đã đủ 8 tiếng trước khi kiểm tra anti-passback.
         autoCheckoutStaleVisitsForMember(member.getUserId(), now);
 
         // Trường hợp 5 (BR-04 Anti-passback): Hội viên đang ở trong phòng tập chưa checkout
@@ -290,41 +292,41 @@ public class CenterCheckinService {
     }
 
     /**
-     * Tự động checkout các lượt check-in GRANTED của member bị treo quá 8 tiếng.
+     * Đóng phiên đã đủ 8 giờ trước khi kiểm tra anti-passback, dùng cùng quy tắc với scheduler.
      */
     @Transactional
     public void autoCheckoutStaleVisitsForMember(Long memberUserId, LocalDateTime now) {
         if (memberUserId == null) return;
         LocalDateTime cutoff = now.minusHours(ANTI_PASSBACK_TIMEOUT_HOURS);
-        List<CenterCheckin> staleVisits = checkins
-                .findByMemberUserIdAndStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(
-                        memberUserId, RESULT_GRANTED, cutoff);
-        closeStaleVisits(staleVisits, now);
+        closeStaleVisits(checkins.findStaleVisitIdsForMember(memberUserId, cutoff), cutoff);
     }
 
     /**
-     * Cron Job chạy lúc 03:00 AM hàng ngày: Tự động đóng các lượt check-in GRANTED chưa checkout của ngày hôm trước
-     * với trạng thái ghi chú SYSTEM_AUTO_CHECKOUT, giải phóng hội viên khỏi bẫy anti-passback ngày hôm sau.
+     * Kiểm tra mỗi phút theo giờ trung tâm. Quét cả phiên tồn đọng, không phụ thuộc thời điểm server khởi động.
      */
-    @Scheduled(cron = "${app.attendance.auto-checkout.cron:0 0 3 * * ?}", zone = "Asia/Ho_Chi_Minh")
+    @Scheduled(cron = "${app.attendance.auto-checkout.cron:0 * * * * ?}", zone = "Asia/Ho_Chi_Minh")
     @Transactional
     public int autoCheckoutStaleVisits() {
         LocalDateTime now = LocalDateTime.now(clock);
         LocalDateTime cutoff = now.minusHours(ANTI_PASSBACK_TIMEOUT_HOURS);
-        List<CenterCheckin> staleVisits = checkins
-                .findByStatusAndCheckOutTimeIsNullAndCheckInTimeLessThan(RESULT_GRANTED, cutoff);
-        return closeStaleVisits(staleVisits, now);
+        return closeStaleVisits(checkins.findStaleVisitIds(cutoff), cutoff);
     }
 
-    /** Đóng các lượt bị treo: giờ ra mặc định là 4 giờ sau giờ vào (không quá hiện tại), ghi chú tự động. */
-    private int closeStaleVisits(List<CenterCheckin> staleVisits, LocalDateTime now) {
-        for (CenterCheckin stale : staleVisits) {
-            LocalDateTime defaultEnd = stale.getCheckInTime().plusHours(4);
-            stale.setCheckOutTime(defaultEnd.isBefore(now) ? defaultEnd : now);
-            stale.setNotes(AUTO_CHECKOUT_NOTE);
-            checkins.save(stale);
+    /** Khóa cùng thứ tự ID và kiểm tra lại sau khi chờ khóa, không ghi đè kết quả của luồng/instance khác. */
+    private int closeStaleVisits(List<Long> visitIds, LocalDateTime cutoff) {
+        int closed = 0;
+        for (Long id : visitIds) {
+            CenterCheckin visit = checkins.findByIdForUpdate(id).orElse(null);
+            if (visit == null || !RESULT_GRANTED.equals(visit.getStatus()) || visit.getCheckOutTime() != null
+                    || visit.getCheckInTime().isAfter(cutoff)) continue;
+
+            // Mốc kết thúc phiên theo quy tắc, không phải bằng chứng giờ rời trung tâm thực tế.
+            visit.setCheckOutTime(visit.getCheckInTime().plusHours(ANTI_PASSBACK_TIMEOUT_HOURS));
+            visit.setNotes(AUTO_CHECKOUT_NOTE);
+            checkins.save(visit);
+            closed++;
         }
-        return staleVisits.size();
+        return closed;
     }
 
     /** Ghi một lượt bị từ chối (DENIED) kèm mã lý do, dùng để kiểm tra sau này. */

@@ -265,8 +265,8 @@ Từ 25/11/2026 trung tâm vận hành **3 bộ môn đang hoạt động** (`Gy
 
 1. Hội viên mở thẻ, ứng dụng sinh **QR động có chữ ký, đổi mỗi 60 giây**. QR tĩnh bị từ chối.
 2. Cổng/lễ tân quét. Được vào (`GRANTED`) khi tài khoản `active`, gói `active` và đang trong thời hạn. Mọi lượt quét, kể cả bị từ chối (`DENIED` kèm lý do), đều được lưu.
-3. **Chống quay vòng:** đang ở trong chưa check-out thì lượt vào thứ hai bị từ chối. Lượt quá 8 giờ tự đóng; 3:00 sáng hằng ngày đóng các lượt chưa check-out.
-4. Check-out bằng quét cổng hoặc lễ tân.
+3. **Chống quay vòng:** lượt `GRANTED` chưa có giờ ra chặn lượt vào thứ hai. Khi đủ 8 giờ (`checkInTime <= now - 8 giờ`), scheduler kiểm tra mỗi phút theo giờ Việt Nam và lần check-in tiếp theo tự đóng phiên: `checkOutTime = checkInTime + 8 giờ`, ghi chú `SYSTEM_AUTO_CHECKOUT`. Khóa và kiểm tra lại trước khi ghi, không ghi đè phiên đã đóng; lần chạy sau xử lý cả phiên tồn đọng sau restart/gián đoạn.
+4. Hội viên chỉ cần check-in, không bắt buộc check-out thủ công. UI/endpoint quét cổng hoặc lễ tân được giữ trong giai đoạn Backend này. Giờ kết thúc tự động là mốc theo quy tắc, không chứng minh giờ rời thực tế; không sửa lịch sử đã lưu.
 5. Chuỗi ngày tập (streak) đã gỡ: không còn `GET /check-in/streak` hay trang `/member/streak`.
 
 ---
@@ -292,7 +292,7 @@ Từ 22/11/2026 (PR #146, #155) không còn cửa hàng. Mọi controller của 
 | `SessionCompletionScheduler` | 00:30 hằng ngày | Đóng các buổi lớp nhóm đã kết thúc (đang bật cùng `app.legacy.classes-enabled=true`) |
 | `CoachingCompletionScheduler` | 00:35 hằng ngày | PT 1:1 đã qua 3 ngày, giáo án hết hạn → `completed` |
 | `CourseAttendanceService` | 30 phút | Tự đánh vắng buổi lớp nhóm đã kết thúc nếu chưa điểm danh |
-| `CenterCheckinService` | 03:00 hằng ngày | Đóng lượt check-in treo |
+| `CenterCheckinService` | Mỗi phút, Asia/Ho_Chi_Minh | Đóng phiên GRANTED còn mở đã đủ 8 giờ, lưu giờ vào +8 giờ |
 | `SupportRequestService` | Hằng giờ | Đóng phiếu `resolved` quá 72 giờ |
 | `NotificationScheduler` | 8:00 và 30 phút | Nhắc gia hạn gói và nhắc buổi lớp sắp bắt đầu |
 | `VnpayExpiryScheduler` | 1–5 phút | Đóng giao dịch VNPay quá hạn |

@@ -41,7 +41,7 @@ Từ khóa: trai nghiem, dung thu, trial, mien phi, tap thu
 ## Check-in và check-out
 Từ khóa: check in, checkin, check out, checkout, qr, cong, the hoi vien, quet ma, vao cong
 - Mở 'Thẻ & Check-in' > 'Quét QR cổng' và quét mã tại cổng sảnh lễ tân. Mã QR tự đổi sau mỗi {{checkin.qrTtlSeconds}} giây nên ảnh chụp màn hình không dùng được.
-- Lượt vào chưa check-out sau {{checkin.autoCheckoutHours}} giờ được hệ thống tự check-out.
+- Hội viên chỉ cần check-in. Lượt vào hợp lệ còn mở đủ {{checkin.autoCheckoutHours}} giờ được hệ thống tự check-out; scheduler kiểm tra mỗi phút. Giờ kết thúc bằng giờ vào cộng {{checkin.autoCheckoutHours}} giờ, không phải bằng chứng giờ rời trung tâm thực tế.
 
 ## Bảo lưu gói tập
 Từ khóa: bao luu, tam dung, dong bang, hold, nghi tap, tam ngung

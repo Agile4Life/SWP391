@@ -74,6 +74,7 @@ class OperationsConcurrencyPostgreSqlTest {
 
     private ExecutorService workers;
     private AuthenticatedPrincipal staff;
+    private final List<Long> autoVisitIds = new java.util.ArrayList<>();
 
     /** Hai đơn khác nhau cùng nhân viên: khóa nhân viên bảo vệ cả khi tập APPROVED ban đầu rỗng. */
     @Test
@@ -174,6 +175,8 @@ class OperationsConcurrencyPostgreSqlTest {
         properties.add("app.bootstrap.manager.email", () -> "operations-test@example.invalid");
         properties.add("app.bootstrap.manager.password", () -> "OperationsTest_75!");
         properties.add("app.auth.otp.delivery", () -> "disabled");
+        // Test tự gọi job để kiểm soát thứ tự khóa, không để cron nền chen vào dữ liệu fixture.
+        properties.add("app.attendance.auto-checkout.cron", () -> "-");
     }
 
     /** Dọn dẹp sau test: xóa schema của test đồng thời. */
@@ -197,6 +200,7 @@ class OperationsConcurrencyPostgreSqlTest {
     void stopWorkers() throws InterruptedException {
         workers.shutdownNow();
         assertTrue(workers.awaitTermination(20, TimeUnit.SECONDS), "Database workers must finish before schema cleanup");
+        for (Long id : autoVisitIds) jdbc.update("delete from center_checkins where id = ?", id);
     }
 
     /** Kiểm thử: nhiều QR khác nhau cùng lúc của một hội viên chỉ lưu một lượt cho vào và một lượt từ chối. */
@@ -262,6 +266,142 @@ class OperationsConcurrencyPostgreSqlTest {
         assertEquals(originalCheckin, timestamp(visit.id(), "check_in_time"));
         assertEquals(1, countVisits(member, "status = 'GRANTED' and check_out_time is not null"));
         assertEquals(1, countVisits(member, "true"));
+    }
+
+    @Test
+    void autoCheckoutIncludesExactBoundaryAndPreservesOtherHistory() {
+        long member = member();
+        LocalDateTime now = LocalDateTime.now(clock).withNano(0);
+        long young = visit(member, now.minusHours(7).minusMinutes(59), "GRANTED", null);
+        long exact = visit(member, now.minusHours(8), "GRANTED", null);
+        long overdue = visit(member, now.minusDays(3), "GRANTED", null);
+        long denied = visit(member, now.minusHours(9), "DENIED", null);
+        LocalDateTime manualEnd = now.minusHours(2);
+        long manual = visit(member, now.minusHours(9), "GRANTED", manualEnd);
+        List<Long> candidates = visits.findStaleVisitIds(now.minusHours(8));
+        assertTrue(candidates.containsAll(List.of(exact, overdue)));
+        assertFalse(candidates.contains(young) || candidates.contains(denied) || candidates.contains(manual));
+        assertTrue(checkins.autoCheckoutStaleVisits() >= 2);
+        assertNull(timestamp(young, "check_out_time"));
+        assertNull(timestamp(denied, "check_out_time"));
+        assertEquals(manualEnd, timestamp(manual, "check_out_time"));
+        for (long id : List.of(exact, overdue)) {
+            assertEquals(timestamp(id, "check_in_time").plusHours(8), timestamp(id, "check_out_time"));
+            assertEquals("SYSTEM_AUTO_CHECKOUT", jdbc.queryForObject("select notes from center_checkins where id = ?", String.class, id));
+        }
+    }
+
+    @Test
+    void simultaneousAutoCheckoutsCloseOnceAndReleasePresenceForNextScan() throws Exception {
+        long member = member();
+        long id = visit(member, LocalDateTime.now(clock).minusHours(9).withNano(0), "GRANTED", null);
+        var ready = new CountDownLatch(2);
+        var firstPid = new AtomicInteger();
+        var secondPid = new AtomicInteger();
+        Future<Integer> first;
+        Future<Integer> second;
+        try (var blocker = dataSource.getConnection()) {
+            blocker.setAutoCommit(false);
+            try {
+                lockRow(blocker, "select id from center_checkins where id = ? for update", id);
+                first = submit(ready, firstPid, checkins::autoCheckoutStaleVisits);
+                second = submit(ready, secondPid, checkins::autoCheckoutStaleVisits);
+                awaitBlocked(ready, firstPid, secondPid);
+            } finally { blocker.rollback(); }
+        }
+        assertEquals(List.of(0, 1), List.of(first.get(20, TimeUnit.SECONDS), second.get(20, TimeUnit.SECONDS)).stream().sorted().toList());
+        assertEquals(timestamp(id, "check_in_time").plusHours(8), timestamp(id, "check_out_time"));
+        assertFalse(visits.existsByMemberUserIdAndCheckOutTimeIsNull(member));
+        assertEquals(0, checkins.autoCheckoutStaleVisits());
+        assertTrue(checkins.history(staff, LocalDate.now(clock).minusDays(1), LocalDate.now(clock)).stream()
+                .anyMatch(row -> row.id().equals(id) && row.checkOutTime() != null));
+        assertEquals("GRANTED", scan(subscription(member, "active", -1, 30)).status());
+    }
+
+    @Test
+    void autoAndManualCheckoutRespectTheSameRowLock() throws Exception {
+        long member = member();
+        long id = visit(member, LocalDateTime.now(clock).minusHours(9).withNano(0), "GRANTED", null);
+        var ready = new CountDownLatch(2);
+        var firstPid = new AtomicInteger();
+        var secondPid = new AtomicInteger();
+        Future<Integer> automatic;
+        Future<CheckinDto> manual;
+        try (var blocker = dataSource.getConnection()) {
+            blocker.setAutoCommit(false);
+            try {
+                lockRow(blocker, "select id from center_checkins where id = ? for update", id);
+                automatic = submit(ready, firstPid, checkins::autoCheckoutStaleVisits);
+                manual = submit(ready, secondPid, () -> checkins.checkout(staff, id));
+                awaitBlocked(ready, firstPid, secondPid);
+            } finally { blocker.rollback(); }
+        }
+        int closed = automatic.get(20, TimeUnit.SECONDS);
+        CheckinDto manualResult = checkoutResult(manual);
+        assertEquals(manualResult == null ? 1 : 0, closed);
+        LocalDateTime stored = timestamp(id, "check_out_time");
+        if (manualResult == null) assertEquals(timestamp(id, "check_in_time").plusHours(8), stored);
+        else assertTrue(Duration.between(manualResult.checkOutTime(), stored).abs().toNanos() <= 1_000);
+        assertEquals(closed == 1 ? "SYSTEM_AUTO_CHECKOUT" : null,
+                jdbc.queryForObject("select notes from center_checkins where id = ?", String.class, id));
+    }
+
+    @Test
+    void autoAndSelfCheckoutRespectTheSameRowLock() throws Exception {
+        long member = member();
+        long id = visit(member, LocalDateTime.now(clock).minusHours(9).withNano(0), "GRANTED", null);
+        var principal = new AuthenticatedPrincipal(member, "member-test", "MEMBER");
+        var request = new CheckinRequests.SelfScan(checkins.gateQr(staff, "Test gate").qrCode());
+        var ready = new CountDownLatch(2);
+        var firstPid = new AtomicInteger();
+        var secondPid = new AtomicInteger();
+        Future<Integer> automatic;
+        Future<CheckinDto> manual;
+        try (var blocker = dataSource.getConnection()) {
+            blocker.setAutoCommit(false);
+            try {
+                lockRow(blocker, "select id from center_checkins where id = ? for update", id);
+                automatic = submit(ready, firstPid, checkins::autoCheckoutStaleVisits);
+                manual = submit(ready, secondPid, () -> checkins.selfCheckout(principal, request));
+                awaitBlocked(ready, firstPid, secondPid);
+            } finally { blocker.rollback(); }
+        }
+        int closed = automatic.get(20, TimeUnit.SECONDS);
+        CheckinDto result = null;
+        try { result = manual.get(20, TimeUnit.SECONDS); }
+        catch (ExecutionException error) {
+            assertEquals("CHECKIN_NO_OPEN_VISIT", assertInstanceOf(BadRequestException.class, error.getCause()).getErrorCode());
+        }
+        assertEquals(result == null ? 1 : 0, closed);
+        LocalDateTime stored = timestamp(id, "check_out_time");
+        if (result == null) assertEquals(timestamp(id, "check_in_time").plusHours(8), stored);
+        else assertTrue(Duration.between(result.checkOutTime(), stored).abs().toNanos() <= 1_000);
+        assertEquals(closed == 1 ? "SYSTEM_AUTO_CHECKOUT" : null,
+                jdbc.queryForObject("select notes from center_checkins where id = ?", String.class, id));
+    }
+
+    @Test
+    void rolledBackAutoCheckoutRemainsEligibleForNextRun() {
+        long member = member();
+        long id = visit(member, LocalDateTime.now(clock).minusDays(3).withNano(0), "GRANTED", null);
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+            assertTrue(checkins.autoCheckoutStaleVisits() >= 1);
+            status.setRollbackOnly();
+        });
+        assertNull(timestamp(id, "check_out_time"));
+        assertTrue(checkins.autoCheckoutStaleVisits() >= 1);
+        assertEquals(timestamp(id, "check_in_time").plusHours(8), timestamp(id, "check_out_time"));
+        assertFalse(visits.existsByMemberUserIdAndCheckOutTimeIsNull(member));
+    }
+
+    /** Fixture chỉ được tạo trong schema PostgreSQL test biệt lập của lớp này. */
+    private long visit(long member, LocalDateTime entered, String status, LocalDateTime ended) {
+        Long id = jdbc.queryForObject("""
+                insert into center_checkins (member_id, check_in_time, check_out_time, method, status, gate)
+                values (?, ?, ?, 'qr', ?, 'Auto-checkout test') returning id
+                """, Long.class, member, entered, ended, status);
+        autoVisitIds.add(id);
+        return id;
     }
 
     /** Kiểm thử: quét chờ việc hủy hoàn tất rồi từ chối QR đó dù hội viên có subscription khác. */
