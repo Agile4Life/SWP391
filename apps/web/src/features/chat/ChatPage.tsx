@@ -206,7 +206,7 @@ function ChatWorkspace({ member, direct, support, ai, embedded, visible, realtim
     <div className="direct-chat__workspace">
       <aside className="direct-chat__inbox" aria-labelledby="chat-inbox-title">
         <div className="direct-chat__inbox-heading">
-          <h2 id="chat-inbox-title" tabIndex={-1} ref={listTitle}>{t("Hội thoại của bạn", "Your conversations")}</h2>
+          <h2 id="chat-inbox-title" tabIndex={-1} ref={listTitle}>{t("Hội thoại", "Conversations")}</h2>
           {direct && <button
             type="button"
             data-i18n-managed

@@ -167,7 +167,7 @@ it('owns inbox, unread, role, contact and empty labels in both languages without
   vi.mocked(api.getConversations).mockResolvedValue({ content: [{ ...conversation, peer: { ...conversation.peer, name: 'Tin nhắn' }, unreadCount: 2, lastMessage: 'Tìm', lastMessageMine: true }], totalPages: 2, number: 0 });
   await render();
   await act(async () => setLanguage('en'));
-  expect(host.querySelector('#chat-inbox-title')!.textContent).toBe('Your conversations');
+  expect(host.querySelector('#chat-inbox-title')!.textContent).toBe('Conversations');
   expect(host.querySelector('[aria-label="2 unread messages"]')).not.toBeNull();
   expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai):not(.direct-chat__person--support) strong')!.textContent).toBe('Tin nhắn');
   expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai):not(.direct-chat__person--support) .direct-chat__preview')!.textContent).toBe('You: Tìm');
@@ -178,7 +178,7 @@ it('owns inbox, unread, role, contact and empty labels in both languages without
   expect(host.querySelector('input[type="search"]')!.getAttribute('placeholder')).toBe('Search recipients...');
   expect(host.querySelector('[data-contact-id="20"]')!.textContent).toContain('Coach');
   await act(async () => setLanguage('vi'));
-  expect(host.querySelector('#chat-inbox-title')!.textContent).toBe('Hội thoại của bạn');
+  expect(host.querySelector('#chat-inbox-title')!.textContent).toBe('Hội thoại');
   expect(host.querySelector('[aria-label="2 tin chưa đọc"]')).not.toBeNull();
   expect(host.querySelector('input[type="search"]')!.getAttribute('placeholder')).toBe('Tìm kiếm người nhận...');
   expect(host.querySelector('.direct-chat__person:not(.direct-chat__person--ai):not(.direct-chat__person--support) .direct-chat__preview')!.textContent).toBe('Bạn: Tìm');
