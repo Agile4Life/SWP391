@@ -242,7 +242,7 @@ public class MembershipSubscriptionService {
         }
         return subscriptions.findByMemberUserIdOrderByCreatedAtDesc(memberId).stream()
                 .filter(this::isPaidPeriod)
-                .filter(sub -> !isTrialSubscription(sub) && !isNonPurchasableTrialOrFree(sub.getMembershipPackage()))
+                .filter(sub -> !isRenewalTrial(sub) && !isNonPurchasableTrialOrFree(sub.getMembershipPackage()))
                 .map(this::toDto).toList();
     }
 
@@ -280,7 +280,7 @@ public class MembershipSubscriptionService {
      * trùng kỳ đã trả tiền nào.
      */
     private SubscriptionDto renewForOwner(MembershipSubscription requested, Long memberId, Long previousId) {
-        if (!isPaidPeriod(requested) || isTrialSubscription(requested)
+        if (!isPaidPeriod(requested) || isRenewalTrial(requested)
                 || isNonPurchasableTrialOrFree(requested.getMembershipPackage())) {
             throw new BadRequestException("MEMBERSHIP_INVALID_RENEWAL_STATUS",
                     "membership.subscription.invalid_renewal_status", new Object[]{requested.getStatus()},
@@ -410,6 +410,13 @@ public class MembershipSubscriptionService {
     private boolean isPaidPeriod(MembershipSubscription subscription) {
         return subscription != null && (STATUS_ACTIVE.equalsIgnoreCase(subscription.getStatus())
                 || "expired".equalsIgnoreCase(subscription.getStatus()));
+    }
+
+    /** Kỳ ngắn vẫn là kỳ trả phí nếu có giao dịch thanh toán thành công lớn hơn 0. */
+    private boolean isRenewalTrial(MembershipSubscription subscription) {
+        return isTrialSubscription(subscription) && (paymentRepository == null || subscription.getId() == null
+                || !paymentRepository.existsBySubscriptionIdAndStatusAndAmountGreaterThan(
+                        subscription.getId(), "success", java.math.BigDecimal.ZERO));
     }
 
     /** Kỳ gói có ngày bắt đầu, ngày kết thúc và kết thúc không trước bắt đầu. */

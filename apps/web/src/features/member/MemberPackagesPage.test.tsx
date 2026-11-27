@@ -737,6 +737,45 @@ describe('SCRUM-86 packages', () => {
     expect(api.renew).not.toHaveBeenCalled();
   });
 
+  it('offers a new registration after an approved cancellation instead of renewing an older period', async () => {
+    const older = { ...pending, id: 20, status: 'expired', createdAt: '2026-09-01T10:00:00', startDate: '2026-09-01', endDate: '2026-09-02' };
+    const cancelled = { ...pending, id: 21, status: 'cancelled', createdAt: '2026-10-16T10:00:00' };
+    api.history.mockResolvedValue([cancelled, older]);
+    api.cancellations.mockResolvedValue([{ id: 1, subscriptionId: 21, status: 'APPROVED', resolvedAt: '2026-11-24T10:00:00' }]);
+    await render();
+    expect(button('Gia hạn')).toBeUndefined();
+    expect(button('Đăng ký gói mới')?.disabled).toBe(false);
+    await act(async () => button('Đăng ký gói mới')?.click());
+    await act(async () => confirmRequest());
+    expect(api.create).toHaveBeenCalledWith(5);
+    expect(api.renew).not.toHaveBeenCalled();
+  });
+
+  it('still permits renewal of a paid period created after a cancellation', async () => {
+    const newer = { ...pending, id: 22, status: 'expired', createdAt: '2026-11-25T08:00:00', startDate: '2026-10-01', endDate: '2026-11-01' };
+    api.history.mockResolvedValue([newer, { ...pending, id: 21, status: 'cancelled' }]);
+    api.cancellations.mockResolvedValue([{ id: 1, subscriptionId: 21, status: 'APPROVED', resolvedAt: '2026-11-24T10:00:00' }]);
+    await render();
+    expect(button('Gia hạn')?.disabled).toBe(false);
+  });
+
+  it('does not treat a rejected cancellation as a completed cancellation', async () => {
+    const older = { ...pending, id: 20, status: 'expired', createdAt: '2026-09-01T10:00:00', startDate: '2026-09-01', endDate: '2026-09-02' };
+    api.history.mockResolvedValue([older]);
+    api.cancellations.mockResolvedValue([{ id: 1, subscriptionId: 20, status: 'REJECTED', resolvedAt: '2026-11-24T10:00:00' }]);
+    await render();
+    expect(button('Gia hạn')?.disabled).toBe(false);
+  });
+
+  it('blocks membership actions when cancellation history cannot be verified', async () => {
+    api.history.mockResolvedValue([{ ...pending, id: 20, status: 'expired', startDate: '2020-01-01', endDate: '2020-02-01' }]);
+    api.cancellations.mockRejectedValue(new Error('Không tải được'));
+    await render();
+    expect(button('Gia hạn')?.getAttribute('aria-disabled')).toBe('true');
+    await act(async () => button('Gia hạn')?.click());
+    expect(api.renew).not.toHaveBeenCalled();
+  });
+
   it('blocks an ambiguous expired renewal source', async () => {
     api.history.mockResolvedValue([
       { ...pending, id: 20, status: 'expired', endDate: '2020-01-01' },

@@ -1105,6 +1105,7 @@ paths:
   /memberships/subscriptions/{id}/renew:
     post:
       summary: Gia hạn gói tập chờ thanh toán (SCRUM-71)
+      description: Kỳ gói trả phí bị rút ngắn vẫn có thể gia hạn khi có giao dịch thành công với số tiền lớn hơn 0; gói trải nghiệm và kỳ đã hủy không được gia hạn.
       tags: [Memberships]
       parameters:
         - name: id
