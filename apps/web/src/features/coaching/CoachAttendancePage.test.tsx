@@ -92,14 +92,18 @@ describe('CoachAttendancePage (group class attendance)', () => {
     vi.unstubAllGlobals();
   });
 
-  it('renders timetable & attendance history tabs with .portal-tab-count and without retired evaluation tabs', async () => {
+  it('renders attendance sessions list & attendance history tabs with .portal-tab-count and without retired evaluation tabs', async () => {
     await renderAt('/coach/attendance');
 
-    const tabs = [...host.querySelectorAll('[role="tab"]')];
+    const tabs = [...host.querySelectorAll('.attendance-nav-tabs [role="tab"]')];
     expect(tabs).toHaveLength(2);
-    expect(tabs.map((el) => el.textContent).join(' ')).not.toContain('đánh giá');
+    expect(tabs[0].textContent).toContain('Điểm danh');
+    expect(tabs[0].querySelector('.portal-tab-count')?.textContent).toBe('1');
+    expect(tabs[1].textContent).toContain('Lịch sử điểm danh');
     expect(tabs[1].querySelector('.portal-tab-count')?.textContent).toBe('0');
+    expect(tabs.map((el) => el.textContent).join(' ')).not.toContain('đánh giá');
     expect(host.textContent).toContain('Yoga Sáng');
+    expect(host.querySelector('a[href="/coach/attendance/88"]')).not.toBeNull();
   });
 
   it('loads session roster at /coach/attendance/:sessionId and links back to /coach/attendance', async () => {
@@ -133,24 +137,7 @@ describe('CoachAttendancePage (group class attendance)', () => {
     ]);
   });
 
-  it('P1-FE-44: keeps manual week selection and in-progress roster edits intact across focus/visibility background refreshes', async () => {
-    // 1. Trên thời khóa biểu: đổi sang tuần sau, bắn focus -> tuần đang xem KHÔNG bị kéo về tuần ban đầu.
-    await renderAt('/coach/attendance');
-    const initialRange = host.querySelector('.mcal__range')?.textContent;
-    const nextWeekBtn = host.querySelector<HTMLButtonElement>('[aria-label="Tuần sau"]')!;
-    await act(async () => { nextWeekBtn.click(); });
-    const nextRange = host.querySelector('.mcal__range')?.textContent;
-    expect(nextRange).not.toBe(initialRange);
-
-    await act(async () => {
-      window.dispatchEvent(new Event('focus'));
-      await Promise.resolve();
-    });
-    expect(host.querySelector('.mcal__range')?.textContent).toBe(nextRange);
-
-    // 2. Trên trang điểm danh 1 buổi: chỉnh trạng thái rồi bắn focus khi getCoachSessions đang chờ -> không hiện skeleton, không mất thay đổi.
-    await act(async () => root.unmount());
-    root = createRoot(host);
+  it('P1-FE-44: keeps in-progress roster edits intact across focus/visibility background refreshes', async () => {
     await renderAt('/coach/attendance/88');
 
     const absentRadio = host.querySelector<HTMLInputElement>('input[name="attendance-status-1"][value="absent"]')!;
@@ -279,7 +266,7 @@ describe('CoachAttendancePage (group class attendance)', () => {
     ]);
 
     await renderAt('/coach/attendance');
-    const historyTab = [...host.querySelectorAll<HTMLButtonElement>('[role="tab"]')][1];
+    const historyTab = [...host.querySelectorAll<HTMLButtonElement>('.attendance-nav-tabs [role="tab"]')].find((t) => t.textContent?.includes('Lịch sử'))!;
     await act(async () => { historyTab.click(); });
 
     const errorBox = host.querySelector('[role="alert"]');
@@ -297,5 +284,43 @@ describe('CoachAttendancePage (group class attendance)', () => {
     expect(dialog).not.toBeNull();
     expect(dialog.querySelector('.student-gate-tag')?.textContent).toContain('Đã check-in');
     expect(dialog.querySelector('[role="radiogroup"]')).not.toBeNull();
+  });
+
+  it('renders quick date presets, datepickers and search input in history tab', async () => {
+    const today = centerNowParts().date;
+    vi.mocked(attendanceApi.getHistory).mockResolvedValue([
+      {
+        sessionId: 88,
+        className: 'Boxing Pro',
+        roomName: 'Ring 1',
+        sessionDate: today,
+        startTime: '07:00:00',
+        endTime: '09:30:00',
+        presentCount: 2,
+        lateCount: 0,
+        absentCount: 0,
+        excusedCount: 0,
+        evaluatedCount: 0,
+        averageScore: null,
+        lastEvaluatedAt: null,
+        attendanceEditable: true,
+      },
+    ]);
+
+    await renderAt('/coach/attendance');
+    const historyTab = [...host.querySelectorAll<HTMLButtonElement>('.attendance-nav-tabs [role="tab"]')].find((t) => t.textContent?.includes('Lịch sử'))!;
+    await act(async () => { historyTab.click(); });
+
+    const presets = [...host.querySelectorAll<HTMLButtonElement>('.history-presets-bar button')];
+    expect(presets.map((b) => b.textContent?.trim())).toEqual(['Hôm nay', '7 ngày qua', '14 ngày qua', '30 ngày qua']);
+
+    expect(host.querySelector('#history-from')).not.toBeNull();
+    expect(host.querySelector('#history-to')).not.toBeNull();
+    expect(host.textContent).toContain('Boxing Pro');
+
+    // Bấm preset Hôm nay
+    const todayBtn = presets.find((b) => b.textContent?.includes('Hôm nay'))!;
+    await act(async () => { todayBtn.click(); });
+    expect(host.textContent).toContain('Boxing Pro');
   });
 });

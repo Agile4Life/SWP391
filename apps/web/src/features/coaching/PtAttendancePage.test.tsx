@@ -1,5 +1,6 @@
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as clientModule from '../../shared/api/client';
 import { PtAttendancePage } from './PtAttendancePage';
@@ -53,22 +54,27 @@ describe('PtAttendancePage', () => {
   });
   afterEach(async () => { await act(async () => root.unmount()); host.remove(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
   // Dựng component vào DOM giả để kiểm thử.
-  async function render() { await act(async () => root.render(<PtAttendancePage />)); }
+  async function render(initialEntries?: string[]) {
+    await act(async () => root.render(
+      <MemoryRouter initialEntries={initialEntries}>
+        <PtAttendancePage />
+      </MemoryRouter>
+    ));
+  }
   // Hàm trợ giúp tìm phần tử (nút/tab) trong DOM giả hoặc bấm vào nó.
   const tab = (label: string) => [...host.querySelectorAll<HTMLButtonElement>('button[role="tab"]')].find((button) => button.textContent?.startsWith(label))!;
   const tabCount = (label: string) => tab(label)?.querySelector('.portal-tab-count')?.textContent;
 
-  it('splits sessions into in-progress, attended, missed and upcoming with counts summing to ALL, and shows the coach to the desk', async () => {
+  it('splits sessions into today, pending and upcoming with counts summing to ALL, and shows the coach to the desk', async () => {
     mocks.load.mockResolvedValue([upcoming, missed, attended]);
     await render();
     expect(mocks.load).toHaveBeenCalledWith(expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/), 'ALL');
     expect(tabCount('Tất cả')).toBe('3');
-    expect(tabCount('Đang diễn ra')).toBe('0');
-    expect(tabCount('Đã có mặt')).toBe('1');
-    expect(tabCount('Không có mặt')).toBe('1');
+    expect(tabCount('Hôm nay')).toBe('0');
+    expect(tabCount('Chưa điểm danh')).toBe('1');
     expect(tabCount('Sắp diễn ra')).toBe('1');
     expect(host.querySelector('[data-testid="pt-row-1"]')?.textContent).toContain('HLV Hùng');
-    await act(async () => tab('Không có mặt').click());
+    await act(async () => tab('Chưa điểm danh').click());
     expect(host.querySelector('[data-testid="pt-row-2"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="pt-row-1"]')).toBeNull();
     expect(host.querySelector('[data-testid="pt-row-3"]')).toBeNull();
@@ -172,18 +178,19 @@ describe('PtAttendancePage', () => {
     mocks.load.mockResolvedValueOnce([attended]).mockResolvedValue([{ ...attended, attendedAt: null, attendanceLocked: true }]);
     mocks.unmark.mockResolvedValue({ ...attended, attendedAt: null });
     await render();
-    await act(async () => tab('Đã có mặt').click());
-    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
-    expect(tabCount('Đã có mặt')).toBe('0');
-    expect(tabCount('Không có mặt')).toBe('1');
+    expect(tabCount('Chưa điểm danh')).toBe('0');
+    await act(async () => tab('Chưa điểm danh').click());
     expect(host.querySelector('[data-testid="pt-row-1"]')).toBeNull();
-    await act(async () => tab('Không có mặt').click());
+    await act(async () => tab('Tất cả').click());
+    await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
+    expect(tabCount('Chưa điểm danh')).toBe('1');
+    await act(async () => tab('Chưa điểm danh').click());
     expect(host.querySelector('[data-testid="pt-row-1"]')).not.toBeNull();
     expect(host.querySelector('[data-testid="pt-row-1"]')?.textContent).toContain('Đã bỏ ghi nhận có mặt');
     await act(async () => root.unmount());
     root = createRoot(host);
     await render();
-    expect(tabCount('Đã có mặt')).toBe('0');
+    expect(tabCount('Chưa điểm danh')).toBe('1');
   });
 
   it.each(['Không có quyền', 'API unavailable'])('retains attendance on unmark failure: %s', async (message) => {
@@ -192,7 +199,7 @@ describe('PtAttendancePage', () => {
     await render();
     await act(async () => host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.click());
     expect(host.querySelector('[role="alert"]')?.textContent).toContain(message);
-    expect(tabCount('Đã có mặt')).toBe('1');
+    expect(tabCount('Chưa điểm danh')).toBe('0');
     expect(host.querySelector<HTMLButtonElement>('[data-testid="pt-row-1"] button')!.disabled).toBe(false);
   });
 
@@ -212,8 +219,7 @@ describe('PtAttendancePage', () => {
     mocks.load.mockResolvedValueOnce([attended]).mockResolvedValue([{ ...attended, attendedAt: null }]);
     await render();
     await act(async () => window.dispatchEvent(new Event('focus')));
-    expect(tabCount('Đã có mặt')).toBe('0');
-    expect(tabCount('Không có mặt')).toBe('1');
+    expect(tabCount('Chưa điểm danh')).toBe('1');
   });
 
   it('ignores a slow response for the previous date range', async () => {
@@ -226,7 +232,7 @@ describe('PtAttendancePage', () => {
     await act(async () => finishOld([attended]));
     expect(host.querySelector('[data-testid="pt-row-1"]')).toBeNull();
     expect(host.querySelector('[data-testid="pt-row-2"]')).not.toBeNull();
-    expect(tabCount('Đã có mặt')).toBe('0');
+    expect(tabCount('Chưa điểm danh')).toBe('1');
   });
 
   it('excludes cancelled sessions and keeps attendance unchanged until the backend reload completes', async () => {
@@ -241,7 +247,7 @@ describe('PtAttendancePage', () => {
     expect(host.textContent).toContain('Đang cập nhật điểm danh');
     expect(host.querySelector<HTMLButtonElement>('#pt-from')!.disabled).toBe(true);
     await act(async () => finishReload([{ ...attended, attendedAt: null }]));
-    expect(tabCount('Không có mặt')).toBe('1');
+    expect(tabCount('Chưa điểm danh')).toBe('1');
     expect(host.querySelector<HTMLButtonElement>('#pt-from')!.disabled).toBe(false);
   });
 
@@ -255,18 +261,16 @@ describe('PtAttendancePage', () => {
     try {
       await render();
       expect(tabCount('Tất cả')).toBe('2');
-      expect(tabCount('Đang diễn ra')).toBe('1');
+      expect(tabCount('Hôm nay')).toBe('2');
+      expect(tabCount('Chưa điểm danh')).toBe('1');
       expect(tabCount('Sắp diễn ra')).toBe('1');
       expect(host.querySelector('[data-testid="pt-row-4"]')?.textContent).toContain('Đang diễn ra');
-      await act(async () => tab('Đang diễn ra').click());
+      await act(async () => tab('Chưa điểm danh').click());
       expect(host.querySelector('[data-testid="pt-row-4"]')).not.toBeNull();
       expect(host.querySelector('[data-testid="pt-row-3"]')).toBeNull();
       await act(async () => tab('Sắp diễn ra').click());
       expect(host.querySelector('[data-testid="pt-row-4"]')).toBeNull();
       expect(host.querySelector('[data-testid="pt-row-3"] button')).toBeNull();
-      await act(async () => vi.advanceTimersByTime(60000));
-      expect(tabCount('Đang diễn ra')).toBe('0');
-      expect(tabCount('Không có mặt')).toBe('1');
     } finally { vi.useRealTimers(); }
   });
 
@@ -330,5 +334,77 @@ describe('PtAttendancePage', () => {
 
     await doSearch('Không tồn tại');
     expect(host.textContent).toContain('Không tìm thấy học viên phù hợp');
+  });
+
+  it('initializes from search query parameters date and search', async () => {
+    mocks.load.mockResolvedValue([
+      { ...base, id: 10, memberName: 'Nguyễn Văn A', bookingDate: '2026-12-01', startTime: '07:00:00', endTime: '09:30:00' },
+      { ...base, id: 11, memberName: 'Trần Thị B', bookingDate: '2026-12-01', startTime: '09:45:00', endTime: '12:15:00' },
+    ]);
+
+    await render(['/coach/pt-attendance?date=2026-12-01&search=Nguy%E1%BB%85n%20V%C4%83n%20A']);
+
+    expect(mocks.load).toHaveBeenCalledWith(expect.any(String), '2026-12-01', 'ALL');
+    const input = host.querySelector<HTMLInputElement>('.pt-search-box input')!;
+    expect(input.value).toBe('Nguyễn Văn A');
+    expect(host.querySelector('[data-testid="pt-row-10"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-11"]')).toBeNull();
+  });
+
+  it('switches between attendance tab and attendance history tab', async () => {
+    mocks.load.mockResolvedValue([attended, upcoming]);
+    await render();
+
+    const historyTab = [...host.querySelectorAll<HTMLButtonElement>('.attendance-nav-tabs [role="tab"]')].find((b) => b.textContent?.includes('Lịch sử'))!;
+    const attendanceTab = [...host.querySelectorAll<HTMLButtonElement>('.attendance-nav-tabs [role="tab"]')].find((b) => b.textContent?.startsWith('Điểm danh'))!;
+
+    expect(historyTab).toBeDefined();
+    expect(attendanceTab).toBeDefined();
+
+    // Ban đầu ở tab Điểm danh: hiển thị cả row 1 và 3
+    expect(host.querySelector('[data-testid="pt-row-1"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-3"]')).not.toBeNull();
+
+    // Chuyển sang tab Lịch sử điểm danh: chỉ hiển thị attended (row 1)
+    await act(async () => historyTab.click());
+    expect(host.querySelector('.history-header-bar')).not.toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-1"]')).not.toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-3"]')).toBeNull();
+
+    // Quay lại tab Điểm danh
+    await act(async () => attendanceTab.click());
+    expect(host.querySelector('.history-header-bar')).toBeNull();
+    expect(host.querySelector('[data-testid="pt-row-3"]')).not.toBeNull();
+  });
+
+  it('filters history with quick date range presets', async () => {
+    mocks.load.mockResolvedValue([attended]);
+    await render();
+
+    const historyTab = [...host.querySelectorAll<HTMLButtonElement>('.attendance-nav-tabs [role="tab"]')].find((b) => b.textContent?.includes('Lịch sử'))!;
+    await act(async () => historyTab.click());
+
+    const findPresetBtn = (label: string) =>
+      [...host.querySelectorAll<HTMLButtonElement>('.pt-presets-bar button')].find((b) => b.textContent?.includes(label))!;
+
+    const todayBtn = findPresetBtn('Hôm nay');
+    const d7Btn = findPresetBtn('7 ngày qua');
+    const d14Btn = findPresetBtn('14 ngày qua');
+    const d30Btn = findPresetBtn('30 ngày qua');
+
+    expect(todayBtn).toBeDefined();
+    expect(d7Btn).toBeDefined();
+    expect(d14Btn).toBeDefined();
+    expect(d30Btn).toBeDefined();
+
+    // Bấm preset 7 ngày qua
+    await act(async () => d7Btn.click());
+    const todayStr = centerNowParts().date;
+    const from7d = isoOffset(-7);
+    expect(mocks.load).toHaveBeenCalledWith(from7d, todayStr, 'ALL');
+
+    // Bấm preset Hôm nay
+    await act(async () => todayBtn.click());
+    expect(mocks.load).toHaveBeenCalledWith(todayStr, todayStr, 'ALL');
   });
 });

@@ -9,7 +9,7 @@ export interface DatePickerProps {
   name?: string;
   value: string; // YYYY-MM-DD
   // Gọi lại theo dạng sự kiện giả { target: { value } } để dùng thay thẻ input gốc.
-  onChange: (e: { target: { value: string } }) => void;
+  onChange?: (e: { target: { value: string } }) => void;
   min?: string; // YYYY-MM-DD
   max?: string; // YYYY-MM-DD
   disabled?: boolean;
@@ -64,7 +64,7 @@ export function DatePicker({
   id,
   name,
   value,
-  onChange,
+  onChange = () => {},
   min,
   max,
   disabled = false,
