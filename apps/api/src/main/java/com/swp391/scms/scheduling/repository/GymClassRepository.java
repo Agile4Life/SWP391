@@ -14,11 +14,11 @@ import java.util.Optional;
 /** Truy cập dữ liệu lớp/khóa học (bảng classes). */
 @Repository
 public interface GymClassRepository extends JpaRepository<GymClass, Long> {
-    @Query("select case when count(c) > 0 then true else false end from GymClass c where lower(trim(c.name)) = lower(:name)")
-    boolean existsByNormalizedName(@Param("name") String name);
+    @Query("select case when count(c) > 0 then true else false end from GymClass c where lower(trim(c.name)) = lower(:name) and c.discipline.id = :disciplineId")
+    boolean existsByNormalizedNameAndDiscipline(@Param("name") String name, @Param("disciplineId") Long disciplineId);
 
-    @Query("select case when count(c) > 0 then true else false end from GymClass c where lower(trim(c.name)) = lower(:name) and c.id <> :id")
-    boolean existsByNormalizedNameAndIdNot(@Param("name") String name, @Param("id") Long id);
+    @Query("select case when count(c) > 0 then true else false end from GymClass c where lower(trim(c.name)) = lower(:name) and c.discipline.id = :disciplineId and c.id <> :id")
+    boolean existsByNormalizedNameAndDisciplineAndIdNot(@Param("name") String name, @Param("disciplineId") Long disciplineId, @Param("id") Long id);
 
     /** Kiểm tra có tồn tại bản ghi có roomId = tham số (Spring Data tự sinh truy vấn từ tên hàm). */
     boolean existsByRoomId(Long roomId);

@@ -1,6 +1,6 @@
 # Quy chuẩn thiết kế chính — SÖL
 
-Quyết định Manager: khi tạo hoặc sửa khóa học, tên trùng được báo ngay dưới ô Tên khóa học; wizard không cho qua bước tiếp theo và biểu mẫu sửa không cho lưu. Khi API phát hiện trùng lúc lưu, wizard trở về bước thông tin. Thông báo biến mất khi sửa thành tên không trùng.
+Quyết định Manager: khi tạo hoặc sửa khóa học, tên trùng trong cùng bộ môn được báo ngay dưới ô Tên khóa học; các bộ môn khác nhau có thể dùng cùng tên. Wizard không cho qua bước tiếp theo và biểu mẫu sửa không cho lưu khi trùng. Khi API phát hiện trùng lúc lưu, wizard trở về bước thông tin. Thông báo biến mất khi sửa thành tên hoặc bộ môn không trùng.
 
 Quyết định Manager: ô trả lời khiếu nại trải rộng trong khung bo viền, giữ nút emoji và nút chữ Gửi bo tròn ở phía phải.
 
