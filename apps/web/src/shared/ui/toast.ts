@@ -62,9 +62,74 @@ function revealIfAboveViewport(el: HTMLElement) {
   }
 }
 
+/** Kết quả thao tác Manager dùng hộp thoại giống các màn hình danh mục và lớp học. */
+function managerResultDialog(message: string, type: 'success' | 'error', translation?: SourceMessage) {
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const dialog = document.createElement('dialog');
+  dialog.className = 'portal-dialog sol-toast';
+  dialog.style.margin = 'auto';
+  dialog.setAttribute('role', 'alertdialog');
+  dialog.setAttribute('aria-modal', 'true');
+  dialog.setAttribute('aria-labelledby', 'manager-result-title');
+  dialog.setAttribute('aria-describedby', 'manager-result-message');
+  if (translation) dialog.setAttribute('data-i18n-managed', '');
+
+  const content = document.createElement('div');
+  content.className = 'portal-dialog__body';
+  const header = document.createElement('div');
+  header.className = 'portal-dialog__header';
+  const title = document.createElement('h2');
+  title.id = 'manager-result-title';
+  title.className = 'portal-card-title';
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'portal-dialog__close';
+  close.textContent = '×';
+  const alert = document.createElement('div');
+  alert.className = `portal-alert portal-alert--${type}`;
+  alert.style.marginBottom = '0';
+  const body = document.createElement('p');
+  body.id = 'manager-result-message';
+  body.style.margin = '0';
+  const renderLanguage = () => {
+    const english = getLanguage() === 'en';
+    title.textContent = type === 'success' ? (english ? 'Success' : 'Thành công') : (english ? 'Unable to complete' : 'Không thể thực hiện');
+    close.setAttribute('aria-label', english ? 'Close dialog' : 'Đóng hộp thoại');
+    body.textContent = translation ? (english ? translation.en : translation.vi) : message;
+  };
+  renderLanguage();
+  unsubscribeLanguage = subscribeLanguage(renderLanguage);
+  close.addEventListener('click', clearActive);
+  dialog.addEventListener('cancel', (event) => { event.preventDefault(); clearActive(); });
+  let pressedBackdrop = false;
+  dialog.addEventListener('pointerdown', (event) => { pressedBackdrop = event.target === dialog; });
+  dialog.addEventListener('click', (event) => {
+    if (pressedBackdrop && event.target === dialog) clearActive();
+    pressedBackdrop = false;
+  });
+  header.append(title, close);
+  alert.append(body);
+  content.append(header, alert);
+  dialog.append(content);
+  (document.querySelector('.portal-v2') ?? document.body).append(dialog);
+  dialog.showModal();
+  close.focus();
+  unsubscribeContainer = () => {
+    const restoreFocus = dialog.contains(document.activeElement);
+    if (dialog.open) dialog.close();
+    dialog.remove();
+    if (restoreFocus && previousFocus?.isConnected) previousFocus.focus({ preventScroll: true });
+  };
+}
+
 /** Hiện thông báo nổi (một lúc chỉ một thông báo), tự đổi ngôn ngữ nếu có bản dịch, đóng bằng nút × hoặc Esc. */
 export function toast(message: string, type: 'success' | 'error' = 'success', translation?: SourceMessage) {
   clearActive();
+
+  if (/^\/manager(?:\/|$)/.test(window.location.pathname) && (type === 'success' || !document.querySelector('dialog[open]'))) {
+    managerResultDialog(message, type, translation);
+    return;
+  }
 
   const el = document.createElement('div');
   if (translation) el.setAttribute('data-i18n-managed', '');

@@ -14,6 +14,53 @@ describe('toast lifecycle', () => {
   }
   const flush = () => vi.advanceTimersByTimeAsync(0);
 
+  it('shows manager operation results in a centered dialog without an icon', () => {
+    const originalPath = window.location.pathname;
+    window.history.replaceState(null, '', '/manager/internal-requests');
+    try {
+      toast.success('Đã từ chối đơn', { vi: 'Đã từ chối đơn', en: 'Request rejected' });
+      const notice = document.querySelector<HTMLDialogElement>('dialog.sol-toast[open]')!;
+      expect(notice.getAttribute('role')).toBe('alertdialog');
+      expect(notice.style.margin).toBe('auto');
+      expect(notice.querySelector('.portal-alert--success')?.textContent).toContain('Đã từ chối đơn');
+      expect(notice.querySelector('.sol-toast__icon')).toBeNull();
+      setLanguage('en');
+      expect(notice.textContent).toContain('Request rejected');
+      notice.querySelector<HTMLButtonElement>('button')!.click();
+      expect(document.querySelector('dialog.sol-toast')).toBeNull();
+    } finally {
+      window.history.replaceState(null, '', originalPath);
+    }
+  });
+
+  it('keeps manager errors open until dismissed with Escape', async () => {
+    const originalPath = window.location.pathname;
+    window.history.replaceState(null, '', '/manager/internal-requests');
+    try {
+      toast.error('Không thể xử lý');
+      const notice = document.querySelector<HTMLDialogElement>('dialog.sol-toast[open]')!;
+      expect(notice.querySelector('.portal-alert--error')?.textContent).toContain('Không thể xử lý');
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(notice.open).toBe(true);
+      notice.dispatchEvent(new Event('cancel', { cancelable: true }));
+      expect(document.querySelector('dialog.sol-toast')).toBeNull();
+    } finally {
+      window.history.replaceState(null, '', originalPath);
+    }
+  });
+
+  it('keeps manager form errors inside the open form', () => {
+    const originalPath = window.location.pathname;
+    window.history.replaceState(null, '', '/manager/classes');
+    try {
+      const form = dialog();
+      toast.error('Lỗi nhập liệu');
+      expect(form.querySelector('.sol-toast')?.textContent).toContain('Lỗi nhập liệu');
+    } finally {
+      window.history.replaceState(null, '', originalPath);
+    }
+  });
+
   it.each(['close', 'unmount'] as const)('keeps the same single toast after dialog %s without stealing restored focus', async action => {
     const modal = dialog(); modal.querySelector('input')!.focus();
     toast.success('Đã lưu', { vi: 'Đã lưu', en: 'Saved' });

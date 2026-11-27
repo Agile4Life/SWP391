@@ -7,7 +7,7 @@ Quyết định Hộp thoại / Popup toàn portal (27/11/2026 — **ghi đè** 
 
 Quyết định Receptionist — lịch sử bảo lưu (27/11/2026): `/staff/reception-history` có ba tab `membership`, `wallet`, `holds`; tab bảo lưu chỉ dành cho Receptionist theo quyền API hiện có. Thanh tab là tiêu đề chính, bỏ heading trang và heading lặp trong từng panel; giữ nhãn accessibility, bộ lọc và trạng thái tải/lỗi. Giữ các panel mounted để bảo toàn bộ lọc và Back/Forward. Tab bảo lưu chỉ đọc APPROVED/REJECTED/COMPLETED, loại PENDING; dùng thông tin gần nhất Backend trả về, không dựng reviewer/completedAt hay audit log. Không thay đổi logic giao dịch của các panel khác. Quyết định này thay mô tả hai tab lịch sử ở phần điều hướng bên dưới.
 
-Quyết định Manager: phản hồi thao tác hiển thị trong nội dung, không dùng popup góc phải; nhãn nút tạo/thêm không có dấu cộng. Bảng danh mục căn trái cột đầu, căn giữa các cột còn lại và cụm nút thao tác.
+Quyết định Manager: kết quả thao tác thành công hoặc lỗi ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình, không có biểu tượng hình elip; lỗi trong biểu mẫu giữ tại biểu mẫu. Nhãn nút tạo/thêm không có dấu cộng. Bảng danh mục căn trái cột đầu, căn giữa các cột còn lại và cụm nút thao tác.
 
 Quyết định Manager: tại Danh mục vận hành, kết quả thành công hoặc lỗi thao tác ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình, không có biểu tượng hình elip; lỗi nhập liệu vẫn hiển thị tại biểu mẫu.
 
