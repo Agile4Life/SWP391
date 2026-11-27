@@ -253,7 +253,6 @@ export function MemberDashboardPage() {
     <div data-i18n-managed className="portal-container member-overview">
       <PageHeader
         title={memberText(`Xin chào, ${userName}`, `Hello, ${userName}`)}
-        actions={<Link className="btn-primary" to="/member/classes?tab=pt">{memberText("Đặt lịch HLV 1:1")}</Link>}
       />
 
       <div className="member-board" aria-label={memberText("Tổng quan hội viên")}>
