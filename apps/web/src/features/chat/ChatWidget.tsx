@@ -35,12 +35,12 @@ function MiniAvatar({ peer, index }: { peer?: ChatContact; index: number }) {
 }
 
 /**
- * Nút chat nổi: khách xem được khung rỗng, quản lý dùng bản riêng, các vai trò khác dùng bản có kết nối
- * realtime; vai trò không hợp lệ thì không hiển thị.
+ * Nút chat nổi: khách xem được khung rỗng, hội viên và HLV dùng bản có kết nối realtime;
+ * lễ tân vào thẳng trang Tin nhắn từ sidebar, quản lý xử lý khiếu nại trong Đơn từ & Khiếu nại.
  */
 export function ChatWidget() {
   const user = useCurrentUser();
-  const allowed = !user || ['MEMBER', 'STAFF', 'COACH'].includes(user.role);
+  const allowed = !user || ['MEMBER', 'COACH'].includes(user.role);
   if (!allowed) return null;
   const identity = sessionIdentityKey(user);
   return user
