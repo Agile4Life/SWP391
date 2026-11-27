@@ -46,7 +46,6 @@ export function WalletTopupHistory({ refreshKey = 0 }: { refreshKey?: number }) 
   return (
     <section className="portal-card request-history request-history--wallet" aria-label={t('Lịch sử nạp tiền vào Ví SÖL')} data-testid="wallet-topup-history">
       <div className="portal-card-header request-history__header">
-        <h2 className="portal-card-title">{t('Lịch sử nạp tiền vào Ví SÖL')}</h2>
         <div className="request-history__filters">
           <input type="search" className="portal-input" aria-label={t('Tìm lịch sử nạp ví', 'Search wallet history')} placeholder={t('Tên, mã hội viên, mã giao dịch', 'Name, member code, transaction ID')} value={query} onChange={e => setQuery(e.target.value)} />
           <Select aria-label={t('Sắp xếp', 'Sort order')} value={order} onChange={e => setOrder(e.target.value)}>
