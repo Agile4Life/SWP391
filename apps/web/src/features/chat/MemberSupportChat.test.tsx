@@ -245,3 +245,27 @@ it('P2-FE-80: disables "Tải thêm phiếu" while appending and guards SupportT
   await act(async () => { resolvePage2({ content: [page2Ticket], totalPages: 2 }); });
   expect(host.querySelectorAll('[data-support-ticket]')).toHaveLength(2);
 });
+
+it('shows a retry button in the reconnecting banner and resubscribes on click', async () => {
+  vi.mocked(supportApi.getMySupportTickets).mockResolvedValue({ content: [ticket], totalPages: 1 });
+  let onState!: (state: 'connecting' | 'connected' | 'reconnecting' | 'disabled') => void;
+  vi.mocked(subscribeSupport).mockImplementation((_onChange, status) => {
+    onState = status;
+    return () => {};
+  });
+  await render();
+  await vi.waitFor(() => expect(vi.mocked(subscribeSupport)).toHaveBeenCalledTimes(1));
+
+  await act(async () => { onState('reconnecting'); });
+  const banner = host.querySelector('.support-chat__connection')!;
+  expect(banner).not.toBeNull();
+  const retryBtn = banner.querySelector<HTMLButtonElement>('button')!;
+  expect(retryBtn.textContent).toBe('Thử lại');
+
+  await act(async () => setLanguage('en'));
+  expect(retryBtn.textContent).toBe('Retry');
+
+  await act(async () => { retryBtn.click(); });
+  expect(vi.mocked(subscribeSupport)).toHaveBeenCalledTimes(2);
+  expect(host.querySelector('.support-chat__connection')).toBeNull();
+});

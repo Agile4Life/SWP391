@@ -412,10 +412,13 @@ export function UserManagerPage() {
     } catch (err) {
       const code = (err as { code?: string })?.code;
       const msg = err instanceof Error ? err.message : '';
-      if (code === 'EMAIL_EXISTS' || /email.*tồn tại|email already exists/i.test(msg)) {
+      const isAmbiguousDuplicate = /(?:^|[\s,.;:(])(?:hoặc|or)(?:$|[\s,.;:)])/i.test(msg);
+      const matchesEmail = /email.*tồn tại|email\s+(?:address\s+)?already exists/i.test(msg);
+      const matchesPhone = /(?:số\s+)?điện thoại.*tồn tại|phone(?:\s+number)?\s+already exists/i.test(msg);
+      if (code === 'EMAIL_EXISTS' || (!isAmbiguousDuplicate && matchesEmail && !matchesPhone)) {
         setFieldErrors((prev) => ({ ...prev, email: 'Email đã tồn tại.' }));
       }
-      if (code === 'PHONE_EXISTS' || /điện thoại.*tồn tại|phone.*already exists/i.test(msg)) {
+      if (code === 'PHONE_EXISTS' || (!isAmbiguousDuplicate && matchesPhone && !matchesEmail)) {
         setFieldErrors((prev) => ({ ...prev, phone: 'Số điện thoại đã tồn tại.' }));
       }
       setCreateError(errorMessage(err, 'Không thể tạo người dùng.'));
@@ -1014,7 +1017,7 @@ export function UserManagerPage() {
           }}
         >
           <form onSubmit={handleCreateUser} style={{ display: 'grid', gap: 14 }} noValidate>
-            <div className="portal-form-group">
+            <div className="portal-form-group" style={{ marginBottom: 0 }}>
               <label className="portal-label" htmlFor="user-name">{t("Họ và tên *")}</label>
               <input
                 id="user-name"
@@ -1022,6 +1025,8 @@ export function UserManagerPage() {
                 className="portal-input"
                 autoFocus
                 placeholder={t("Vd: Nguyễn Thị Mai")}
+                aria-invalid={Boolean(fieldErrors.name)}
+                aria-describedby={fieldErrors.name ? 'user-name-error' : undefined}
                 value={formData.name}
                 onChange={(e) => {
                   setFormData({ ...formData, name: e.target.value });
@@ -1029,72 +1034,76 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.name && (
-                <div data-i18n-managed className="form-error">
+                <div id="user-name-error" data-i18n-managed className="form-error" role="alert">
                   {t(fieldErrors.name)}
                 </div>
               )}
             </div>
 
-            <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-email">Email *</label>
-              <input
-                id="user-email"
-                type="email"
-                className="portal-input"
-                placeholder="mai.nguyen@sol.vn"
-                aria-invalid={!!fieldErrors.email}
-                value={formData.email}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setFormData({ ...formData, email: val });
-                  if (val.trim() || fieldErrors.email) {
-                    setFieldErrors((prev) => ({ ...prev, email: validateUserEmail(val, users) }));
-                  }
-                }}
-                onBlur={() => {
-                  if (formData.email.trim() || fieldErrors.email) {
-                    setFieldErrors((prev) => ({ ...prev, email: validateUserEmail(formData.email, users) }));
-                  }
-                }}
-              />
-              {fieldErrors.email && (
-                <div data-i18n-managed className="form-error">
-                  {t(fieldErrors.email)}
-                </div>
-              )}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+              <div className="portal-form-group" style={{ marginBottom: 0 }}>
+                <label className="portal-label" htmlFor="user-email">Email *</label>
+                <input
+                  id="user-email"
+                  type="email"
+                  className="portal-input"
+                  placeholder="mai.nguyen@sol.vn"
+                  aria-invalid={Boolean(fieldErrors.email)}
+                  aria-describedby={fieldErrors.email ? 'user-email-error' : undefined}
+                  value={formData.email}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, email: val });
+                    if (val.trim() || fieldErrors.email) {
+                      setFieldErrors((prev) => ({ ...prev, email: validateUserEmail(val, users) }));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (formData.email.trim() || fieldErrors.email) {
+                      setFieldErrors((prev) => ({ ...prev, email: validateUserEmail(formData.email, users) }));
+                    }
+                  }}
+                />
+                {fieldErrors.email && (
+                  <div id="user-email-error" data-i18n-managed className="form-error" role="alert">
+                    {t(fieldErrors.email)}
+                  </div>
+                )}
+              </div>
+
+              <div className="portal-form-group" style={{ marginBottom: 0 }}>
+                <label className="portal-label" htmlFor="user-phone">{t("Số điện thoại *")}</label>
+                <input
+                  id="user-phone"
+                  type="tel"
+                  className="portal-input"
+                  placeholder="0912345678"
+                  maxLength={11}
+                  aria-invalid={Boolean(fieldErrors.phone)}
+                  aria-describedby={fieldErrors.phone ? 'user-phone-error' : undefined}
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const onlyNums = e.target.value.replace(/[^0-9]/g, '');
+                    setFormData({ ...formData, phone: onlyNums });
+                    if (onlyNums || fieldErrors.phone) {
+                      setFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(onlyNums, true, users) }));
+                    }
+                  }}
+                  onBlur={() => {
+                    if (formData.phone.trim() || fieldErrors.phone) {
+                      setFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(formData.phone, true, users) }));
+                    }
+                  }}
+                />
+                {fieldErrors.phone && (
+                  <div id="user-phone-error" data-i18n-managed className="form-error" role="alert">
+                    {t(fieldErrors.phone)}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-phone">{t("Số điện thoại *")}</label>
-              <input
-                id="user-phone"
-                type="tel"
-                className="portal-input"
-                placeholder="0912345678"
-                maxLength={11}
-                aria-invalid={!!fieldErrors.phone}
-                value={formData.phone}
-                onChange={(e) => {
-                  const onlyNums = e.target.value.replace(/[^0-9]/g, '');
-                  setFormData({ ...formData, phone: onlyNums });
-                  if (onlyNums || fieldErrors.phone) {
-                    setFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(onlyNums, true, users) }));
-                  }
-                }}
-                onBlur={() => {
-                  if (formData.phone.trim() || fieldErrors.phone) {
-                    setFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(formData.phone, true, users) }));
-                  }
-                }}
-              />
-              {fieldErrors.phone && (
-                <div data-i18n-managed className="form-error">
-                  {t(fieldErrors.phone)}
-                </div>
-              )}
-            </div>
-
-            <div className="portal-form-group">
+            <div className="portal-form-group" style={{ marginBottom: 0 }}>
               <label className="portal-label" htmlFor="user-pass">{t("Mật khẩu khởi tạo *")}</label>
               <input
                 id="user-pass"
@@ -1102,6 +1111,8 @@ export function UserManagerPage() {
                 className="portal-input"
                 autoComplete="new-password"
                 placeholder={t(PASSWORD_RULE_HINT, '8–50 characters, with letters and numbers, no spaces')}
+                aria-invalid={Boolean(fieldErrors.password)}
+                aria-describedby={fieldErrors.password ? 'user-pass-error' : undefined}
                 value={formData.password}
                 onChange={(e) => {
                   setFormData({ ...formData, password: e.target.value });
@@ -1109,50 +1120,52 @@ export function UserManagerPage() {
                 }}
               />
               {fieldErrors.password && (
-                <div data-i18n-managed className="form-error">
+                <div id="user-pass-error" data-i18n-managed className="form-error" role="alert">
                   {t(fieldErrors.password, 'Password must be 8–50 characters with at least 1 letter and 1 number, and no spaces.')}
                 </div>
               )}
             </div>
 
-            <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-gender">{t("Giới tính *")}</label>
-              <Select
-                id="user-gender"
-                className="portal-select"
-                value={formData.gender}
-                onChange={(e) => {
-                  setFormData({ ...formData, gender: e.target.value as UserGender });
-                  if (fieldErrors.gender) setFieldErrors((prev) => ({ ...prev, gender: undefined }));
-                }}
-              >
-                <option value="male">{t("Nam", "Male")}</option>
-                <option value="female">{t("Nữ", "Female")}</option>
-                <option value="other">{t("Khác", "Other")}</option>
-              </Select>
-              {fieldErrors.gender && (
-                <div data-i18n-managed className="form-error">
-                  {t(fieldErrors.gender)}
-                </div>
-              )}
-            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
+              <div className="portal-form-group" style={{ marginBottom: 0 }}>
+                <label className="portal-label" htmlFor="user-gender">{t("Giới tính *")}</label>
+                <Select
+                  id="user-gender"
+                  className="portal-select"
+                  value={formData.gender}
+                  onChange={(e) => {
+                    setFormData({ ...formData, gender: e.target.value as UserGender });
+                    if (fieldErrors.gender) setFieldErrors((prev) => ({ ...prev, gender: undefined }));
+                  }}
+                >
+                  <option value="male">{t("Nam", "Male")}</option>
+                  <option value="female">{t("Nữ", "Female")}</option>
+                  <option value="other">{t("Khác", "Other")}</option>
+                </Select>
+                {fieldErrors.gender && (
+                  <div id="user-gender-error" data-i18n-managed className="form-error" role="alert">
+                    {t(fieldErrors.gender)}
+                  </div>
+                )}
+              </div>
 
-            <div className="portal-form-group">
-              <label className="portal-label" htmlFor="user-role">{t("Vai trò *")}</label>
-              <Select
-                id="user-role"
-                className="portal-select"
-                value={formData.role}
-                onChange={(e) =>
-                  setFormData({ ...formData, role: e.target.value as SystemRole })
-                }
-              >
-                <option value="COACH">{t("Huấn luyện viên")}</option>
-                <option value="RECEPTIONIST">{t("Lễ tân")}</option>
-                <option value="MEMBER">{t("Hội viên")}</option>
-                <option value="CENTER_MANAGER">{t("Quản lý trung tâm")}</option>
-                <option value="ADMIN">{t("Quản trị hệ thống")}</option>
-              </Select>
+              <div className="portal-form-group" style={{ marginBottom: 0 }}>
+                <label className="portal-label" htmlFor="user-role">{t("Vai trò *")}</label>
+                <Select
+                  id="user-role"
+                  className="portal-select"
+                  value={formData.role}
+                  onChange={(e) =>
+                    setFormData({ ...formData, role: e.target.value as SystemRole })
+                  }
+                >
+                  <option value="COACH">{t("Huấn luyện viên")}</option>
+                  <option value="RECEPTIONIST">{t("Lễ tân")}</option>
+                  <option value="MEMBER">{t("Hội viên")}</option>
+                  <option value="CENTER_MANAGER">{t("Quản lý trung tâm")}</option>
+                  <option value="ADMIN">{t("Quản trị hệ thống")}</option>
+                </Select>
+              </div>
             </div>
 
             {createError && <p className="form-error" role="alert">{t(createError)}</p>}
@@ -1214,6 +1227,8 @@ export function UserManagerPage() {
                 className="portal-input"
                 autoFocus
                 placeholder={t("Vd: Nguyễn Thị Mai")}
+                aria-invalid={Boolean(editFieldErrors.name)}
+                aria-describedby={editFieldErrors.name ? 'edit-user-name-error' : undefined}
                 value={editFormData.name}
                 onChange={(e) => {
                   setEditFormData({ ...editFormData, name: e.target.value });
@@ -1221,7 +1236,7 @@ export function UserManagerPage() {
                 }}
               />
               {editFieldErrors.name && (
-                <div data-i18n-managed className="form-error">
+                <div id="edit-user-name-error" data-i18n-managed className="form-error" role="alert">
                   {t(editFieldErrors.name)}
                 </div>
               )}
@@ -1235,7 +1250,8 @@ export function UserManagerPage() {
                 className="portal-input"
                 placeholder="0912345678"
                 maxLength={11}
-                aria-invalid={!!editFieldErrors.phone}
+                aria-invalid={Boolean(editFieldErrors.phone)}
+                aria-describedby={editFieldErrors.phone ? 'edit-user-phone-error' : undefined}
                 value={editFormData.phone}
                 onChange={(e) => {
                   const onlyNums = e.target.value.replace(/[^0-9]/g, '');
@@ -1245,7 +1261,7 @@ export function UserManagerPage() {
                 onBlur={() => setEditFieldErrors((prev) => ({ ...prev, phone: validateUserPhone(editFormData.phone, false, users, editingUser.id) }))}
               />
               {editFieldErrors.phone && (
-                <div data-i18n-managed className="form-error">
+                <div id="edit-user-phone-error" data-i18n-managed className="form-error" role="alert">
                   {t(editFieldErrors.phone)}
                 </div>
               )}
@@ -1329,29 +1345,13 @@ export function UserManagerPage() {
               {t("Tài khoản này sẽ được xóa mềm và chuyển vào tab \"Tài khoản đã xóa\". Bạn có thể khôi phục lại bất kỳ lúc nào.")}
             </p>
             {deletingUser.is_frozen && (
-              <div data-i18n-managed
-                style={{
-                  padding: '10px 12px',
-                  borderRadius: 6,
-                  background: 'color-mix(in srgb, var(--portal-info) 10%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--portal-info) 25%, transparent)',
-                  fontSize: '0.85rem',
-                  color: 'var(--portal-info)',
-                }}
-              >
-                {t("Tài khoản này đang bảo lưu gói tập.")}</div>
+              <div data-i18n-managed className="portal-alert portal-alert--info" role="status" style={{ marginBottom: 0 }}>
+                {t("Tài khoản này đang bảo lưu gói tập.")}
+              </div>
             )}
-            <div
-              style={{
-                padding: '10px 12px',
-                borderRadius: 6,
-                background: 'color-mix(in srgb, var(--portal-danger) 8%, transparent)',
-                border: '1px solid color-mix(in srgb, var(--portal-danger) 20%, transparent)',
-                fontSize: '0.85rem',
-                color: 'var(--portal-danger)',
-              }}
-            >
-              {t("Tài khoản sẽ bị xóa khỏi danh sách và mất quyền truy cập.")}</div>
+            <div data-i18n-managed className="portal-alert portal-alert--warning" role="alert" style={{ marginBottom: 0 }}>
+              {t("Tài khoản sẽ bị xóa khỏi danh sách và mất quyền truy cập.")}
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
               <button
@@ -1407,16 +1407,7 @@ export function UserManagerPage() {
             </ul>
 
             {cleanupResult && (
-              <div data-i18n-managed
-                style={{
-                  padding: '12px 14px',
-                  borderRadius: 6,
-                  background: 'color-mix(in srgb, var(--portal-success) 10%, transparent)',
-                  border: '1px solid color-mix(in srgb, var(--portal-success) 30%, transparent)',
-                  fontSize: '0.88rem',
-                  color: 'var(--portal-success)',
-                }}
-              >
+              <div data-i18n-managed className="portal-alert portal-alert--success" role="status" style={{ marginBottom: 0 }}>
                 {cleanupResult.message || t(
                   `Đã dọn dẹp thành công ${cleanupResult.deletedCount} tài khoản không hoạt động.`,
                   `Successfully cleaned up ${cleanupResult.deletedCount} inactive ${cleanupResult.deletedCount === 1 ? 'account' : 'accounts'}.`,
@@ -1424,19 +1415,19 @@ export function UserManagerPage() {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={isCleaning}
-                onClick={() => {
-                  setShowCleanupModal(false);
-                  setCleanupResult(null);
-                }}
-              >
-                {cleanupResult ? t('Đóng') : t('Hủy')}
-              </button>
-              {!cleanupResult && (
+            {!cleanupResult && (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={isCleaning}
+                  onClick={() => {
+                    setShowCleanupModal(false);
+                    setCleanupResult(null);
+                  }}
+                >
+                  {t('Hủy')}
+                </button>
                 <button data-i18n-managed
                   type="button"
                   className="btn-primary"
@@ -1452,8 +1443,8 @@ export function UserManagerPage() {
                     t('Bắt đầu quét & dọn dẹp')
                   )}
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         </Modal>
       )}

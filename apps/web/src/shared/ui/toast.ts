@@ -3,6 +3,7 @@ import { getLanguage, subscribeLanguage, type SourceMessage } from '../i18n/lang
 let activeToastTimer: number | null = null;
 let unsubscribeLanguage: (() => void) | null = null;
 let unsubscribeKeydown: (() => void) | null = null;
+let unsubscribeContainer: (() => void) | null = null;
 
 /** Đóng thông báo đang hiện: hủy hẹn giờ, gỡ các listener ngôn ngữ/phím và xóa phần tử khỏi DOM. */
 function clearActive() {
@@ -14,10 +15,52 @@ function clearActive() {
   unsubscribeLanguage = null;
   unsubscribeKeydown?.();
   unsubscribeKeydown = null;
+  unsubscribeContainer?.();
+  unsubscribeContainer = null;
   document.querySelectorAll('.sol-toast').forEach((notice) => notice.remove());
 }
 
 export const dismissToast = clearActive;
+
+function toastContainer(): HTMLElement {
+  return document.querySelector<HTMLElement>('dialog[open]')
+    ?? document.getElementById('portal-main')
+    ?? document.querySelector<HTMLElement>('main')
+    ?? document.body;
+}
+
+/** Gắn toast vào vị trí phù hợp trong dialog (sau tiêu đề hộp thoại) hoặc trang portal (sau .portal-header). */
+function mountToast(container: HTMLElement, el: HTMLElement) {
+  if (container.matches('dialog[open]')) {
+    const body = container.querySelector<HTMLElement>('.portal-dialog__body') ?? container;
+    const header = body.querySelector<HTMLElement>(':scope > .portal-dialog__header')
+      ?? body.querySelector<HTMLElement>('.portal-dialog__header');
+    if (header && body.contains(header)) {
+      header.after(el);
+    } else {
+      body.prepend(el);
+    }
+    return;
+  }
+  if (container.id === 'portal-main') {
+    const header = [...container.querySelectorAll<HTMLElement>('.portal-container > .portal-header')]
+      .find((candidate) => !candidate.closest('[hidden]'));
+    if (header) {
+      header.after(el);
+      return;
+    }
+  }
+  container.prepend(el);
+}
+
+/** Nếu toast mới gắn nằm phía trên vùng nhìn thấy thì cuộn mượt tới nó mà không cướp focus bàn phím. */
+function revealIfAboveViewport(el: HTMLElement) {
+  const rect = el.getBoundingClientRect?.();
+  if (rect && rect.height > 0 && rect.top < 0) {
+    const behavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    el.scrollIntoView?.({ behavior, block: 'nearest' });
+  }
+}
 
 /** Hiện thông báo nổi (một lúc chỉ một thông báo), tự đổi ngôn ngữ nếu có bản dịch, đóng bằng nút × hoặc Esc. */
 export function toast(message: string, type: 'success' | 'error' = 'success', translation?: SourceMessage) {
@@ -71,11 +114,10 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
   document.addEventListener('keydown', handleEscape);
   unsubscribeKeydown = () => document.removeEventListener('keydown', handleEscape);
 
-  const container = document.querySelector<HTMLElement>('dialog[open]')
-    ?? document.getElementById('portal-main')
-    ?? document.querySelector<HTMLElement>('main')
-    ?? document.body;
-  container.prepend(el);
+  let container = toastContainer();
+  mountToast(container, el);
+  revealIfAboveViewport(el);
+  let resumeAfterMove = () => {};
 
   // DESIGN.md: thông báo lỗi (alert) giữ nguyên cho tới khi người dùng tự đóng; thông báo thường tự đóng sau 3,2s và tạm dừng khi hover hoặc focus.
   if (type !== 'error') {
@@ -110,7 +152,31 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
       focused = false;
       schedule();
     });
+    resumeAfterMove = () => {
+      const wasPaused = hovered || focused;
+      hovered = false;
+      focused = card.contains(document.activeElement);
+      // Gỡ modal có thể không phát pointerleave/focusout; chỉ khởi động lại timer đang tạm dừng.
+      if (wasPaused) schedule();
+    };
     schedule();
+  }
+
+  if (container.matches('dialog[open]')) {
+    // Chuyển chính toast hiện có khi modal đóng/unmount; không tạo bản sao hoặc lấy focus.
+    const observer = new MutationObserver(() => {
+      if (container.isConnected && container.matches('dialog[open]') && el.isConnected) return;
+      container = toastContainer();
+      mountToast(container, el);
+      revealIfAboveViewport(el);
+      resumeAfterMove();
+      if (!container.matches('dialog[open]')) observer.disconnect();
+    });
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['open'] });
+    unsubscribeContainer = () => {
+      observer.disconnect();
+      el.remove(); // Toast có thể vẫn nằm trong cây modal đã bị gỡ khỏi document.
+    };
   }
 }
 

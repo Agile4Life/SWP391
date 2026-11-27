@@ -76,20 +76,40 @@ export function VnpayReturnPage() {
     return () => { active = false; if (timer) clearTimeout(timer); };
   }, [searchKey, reference, valid, retry]);
   const title = data?.status === 'success' ? t("Thanh toán thành công", "Payment successful") : data?.status === 'failed' ? t("Thanh toán chưa thành công", "Payment unsuccessful") : data?.status === 'refunded' ? t("Giao dịch đã hoàn tiền", "Transaction refunded") : t("Đang xác nhận thanh toán", "Confirming payment");
-  return <div data-i18n-managed className="portal-container" >
+  const showPrimary = Boolean(valid && !loading && !error && data);
+  const showRetry = valid && Boolean(error || data?.status === 'pending');
+  const showInvoicesLink = !valid || Boolean(error) || data?.status === 'pending'
+    || Boolean(data && isAllowedDestination(data.destination) && data.destination !== '/member/invoices');
+  const showActions = showPrimary || showRetry || showInvoicesLink;
+
+  return <div data-i18n-managed className="portal-container">
     <PageHeader title={t("Kết quả thanh toán", "Payment result")} />
-    <section data-i18n-managed className="portal-card stack">
+    <section data-i18n-managed className="portal-card stack" style={{ maxWidth: 640 }}>
       {!valid ? <p className="form-error" role="alert">{t("Không tìm thấy mã giao dịch. Vui lòng mở từ giao dịch của bạn.", "Transaction reference missing. Open this page from your transaction.")}</p> : loading ? <LoadingSkeleton label={t("Đang kiểm tra với hệ thống…", "Checking with the system…")} count={2} /> : error ? <p className="form-error" role="alert">{t(error)}</p> : data && <>
         <h2 className={`payment-result__title payment-result__title--${data.status}`} aria-live="polite">{title}</h2>
         <p className="payment-result__amount" style={{ fontVariantNumeric: 'tabular-nums' }}>{formatPrice(data.amount)}</p>
         <dl className="payment-result__ref"><dt>{t("Mã giao dịch", "Transaction reference")}</dt><dd style={{ fontVariantNumeric: 'tabular-nums' }}>{data.reference}</dd></dl>
-        {data.status === 'pending' && <p className="hold-notice hold-notice--info">{t("Chưa nhận được xác nhận từ VNPay. Vui lòng chờ, đừng thanh toán lại. Nếu quá lâu, liên hệ lễ tân.", "No confirmation from VNPay yet. Please wait and do not pay again. If it takes too long, contact the front desk.")}</p>}
-        {data.status === 'failed' && <p className="hold-notice hold-notice--warn">{t("Giao dịch không thành công. Bạn có thể thử lại.", "The transaction failed. You can try again.")}</p>}
-        <Link className="btn-primary" to={isAllowedDestination(data.destination) ? data.destination : '/member/invoices'}>{t("Về khoản thanh toán", "Back to payment")}</Link>
+        {data.status === 'pending' && <p className="hold-notice hold-notice--info" role="status">{t("Chưa nhận được xác nhận từ VNPay. Vui lòng chờ, đừng thanh toán lại. Nếu quá lâu, liên hệ lễ tân.", "No confirmation from VNPay yet. Please wait and do not pay again. If it takes too long, contact the front desk.")}</p>}
+        {data.status === 'failed' && <p className="hold-notice hold-notice--warn" role="alert">{t("Giao dịch không thành công. Bạn có thể thử lại.", "The transaction failed. You can try again.")}</p>}
       </>}
-      {valid && (error || data?.status === 'pending') && <button type="button" className="btn-secondary" onClick={() => setRetry(value => value + 1)}>{t("Kiểm tra lại", "Check again")}</button>}
-      {(!valid || error || data?.status === 'pending' || (data && isAllowedDestination(data.destination) && data.destination !== '/member/invoices')) && (
-        <Link className="btn-secondary" to="/member/invoices">{t("Giao dịch & hóa đơn", "Transactions & invoices")}</Link>
+      {showActions && (
+        <div className="form-actions" style={{ justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+          {showPrimary && data && (
+            <Link className="btn-primary" to={isAllowedDestination(data.destination) ? data.destination : '/member/invoices'}>
+              {t("Về khoản thanh toán", "Back to payment")}
+            </Link>
+          )}
+          {showRetry && (
+            <button type="button" className="btn-secondary" onClick={() => setRetry(value => value + 1)}>
+              {t("Kiểm tra lại", "Check again")}
+            </button>
+          )}
+          {showInvoicesLink && (
+            <Link className="btn-secondary" to="/member/invoices">
+              {t("Giao dịch & hóa đơn", "Transactions & invoices")}
+            </Link>
+          )}
+        </div>
       )}
     </section>
   </div>;

@@ -138,4 +138,19 @@ describe('MemberHoldPage', () => {
     await act(async () => setLanguage('en'));
     expect(host.querySelector('.form-error')?.textContent).toContain('Please enter the reason for the hold.');
   });
+
+  it('styles load error with portal-alert--error and alreadyUsed notice without portal-card override', async () => {
+    mocks.history.mockRejectedValueOnce(new Error('offline'));
+    await render();
+    const alert = host.querySelector('.portal-alert.portal-alert--error[role="alert"]');
+    expect(alert).not.toBeNull();
+
+    mocks.history.mockResolvedValueOnce([subscription]);
+    mocks.policy.mockResolvedValueOnce({ ...policy, alreadyUsed: true });
+    await act(async () => alert?.querySelector<HTMLButtonElement>('button')?.click());
+    const infoNotice = host.querySelector('.hold-notice.hold-notice--info[role="status"]');
+    expect(infoNotice).not.toBeNull();
+    expect(infoNotice?.classList.contains('portal-card')).toBe(false);
+    expect(infoNotice?.textContent).toContain('Gói này đã dùng lượt bảo lưu duy nhất.');
+  });
 });

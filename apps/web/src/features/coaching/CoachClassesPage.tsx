@@ -550,8 +550,8 @@ export function CoachClassesPage() {
           {allStudentsLoading ? (
             <LoadingSkeleton label={t("Đang tải danh sách học viên phụ trách…")} variant="cards" count={4} />
           ) : allStudentsError ? (
-            <div data-i18n-managed className="coach-error-box" role="alert">
-              <p>{t(allStudentsError)}</p>
+            <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
+              <span>{t(allStudentsError)}</span>
               <button type="button" className="btn-secondary btn-sm" onClick={() => void loadAssignedStudents()}>
                 {t("Thử lại", "Retry")}
               </button>

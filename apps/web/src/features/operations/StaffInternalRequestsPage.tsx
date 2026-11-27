@@ -16,6 +16,7 @@ import {
 } from './staffRequestApi';
 import { centerNowParts, formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import { ApiError } from '../../shared/api/client';
+import { isOverdueLeave } from './staffRequestDates';
 
 import { DatePicker } from '../../shared/ui/DatePicker';
 const TYPE_LABELS: Record<RequestType, { label: string; bg: string; color: string }> = {
@@ -60,7 +61,7 @@ export function StaffInternalRequestsPage() {
   // Đơn đang thao tác hủy
   const [cancellingId, setCancellingId] = useState<number | null>(null);
 
-  const todayDate = useMemo(() => centerNowParts().date, []);
+  const todayDate = centerNowParts().date;
   const tomorrowDate = useMemo(() => {
     const [y, m, d] = todayDate.split('-').map(Number);
     const tomorrow = new Date(Date.UTC(y, m - 1, d + 1));
@@ -126,6 +127,12 @@ export function StaffInternalRequestsPage() {
       return;
     }
 
+    // Đọc lại ngày Việt Nam lúc gửi, không dùng ngày cũ khi mở trang qua nửa đêm.
+    if (createType === 'LEAVE' && createStartDate <= centerNowParts().date) {
+      setFormError(staffMessage('Ngày bắt đầu nghỉ phải từ ngày mai.', 'Leave must start tomorrow or later.'));
+      return;
+    }
+
     setSubmitting(true);
     setFormError('');
     const supportsShift = createType === 'SHIFT_EXCHANGE' || createType === 'SCHEDULE_CHANGE';
@@ -151,6 +158,10 @@ export function StaffInternalRequestsPage() {
           cancelLabel: staffMessage('Không gửi', 'Do not send'),
         });
         if (!resend) return;
+        if (createType === 'LEAVE' && createStartDate <= centerNowParts().date) {
+          setFormError(staffMessage('Ngày bắt đầu nghỉ phải từ ngày mai.', 'Leave must start tomorrow or later.'));
+          return;
+        }
         await createStaffRequest({ ...payload, confirmOverlap: true });
       }
 
@@ -314,6 +325,7 @@ export function StaffInternalRequestsPage() {
                 </div>
 
                 {/* Tiêu đề & lý do */}
+                {isOverdueLeave(req) && <p role="note" className="portal-alert portal-alert--info">{t('Quá hạn duyệt — tiếp tục đi làm theo lịch bình thường. Bạn vẫn có thể hủy đơn hoặc gửi đơn mới cho ngày hợp lệ khác.', 'Approval deadline passed — continue working your normal schedule. You can still cancel or submit a new request for another valid date.')}</p>}
                 <div>
                   <h3 style={{ margin: '0 0 6px 0', fontSize: 17, fontWeight: 800, color: 'var(--portal-paper)' }}>
                     {req.title}

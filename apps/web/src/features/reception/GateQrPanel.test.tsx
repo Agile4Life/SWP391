@@ -19,7 +19,10 @@ it('uses server lifetime despite local clock skew and removes a code when refres
   vi.mocked(checkinApi.gateQr).mockRejectedValue(new Error('offline'));
   await act(async () => vi.advanceTimersByTime(46000));
   expect(host.querySelector('img')).toBeNull();
-  expect(host.querySelector('[role="alert"]')).not.toBeNull();
+  const box = host.querySelector('.portal-alert.portal-alert--error');
+  expect(box).not.toBeNull();
+  expect(box?.querySelector('[role="alert"]')?.textContent).toContain('Không thể tạo mã QR cổng');
+  expect(box?.querySelector('button')?.textContent).toContain('Tạo lại mã QR cổng');
 });
 it('hides a previous gate immediately while the next gate is loading', async () => {
   await act(async () => root.render(<GateQrPanel gateId="A1" />));

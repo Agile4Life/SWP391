@@ -305,6 +305,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
 
   const pair = ticket ? SUPPORT_STATUS_LABEL[ticket.status] : null;
   const closed = ticket?.status === 'closed';
+  const escalationReason = ticket?.escalationReason?.trim().replace(/\.+$/, '') || '';
   return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
     <SupportHeader onBack={close} active={active} inboxBackLabel={!manager ? t('Quay lại hộp thư', 'Back to inbox') : undefined} title={ticket ? memberName(ticket) : `#${selected}`} subtitle={ticket ? `#${ticket.id} · ${pair ? t(...pair) : ticket.status}${ticket.assignedToName ? ` · ${ticket.assignedToName}` : ''}` : t('Đang tải phiếu…', 'Loading ticket…')}>
       {canEscalate && <HeaderAction label={t('Chuyển lên quản lý', 'Escalate to management')} disabled={busy || detailLoading} onClick={() => { setReason(''); setEscalationError(null); setEscalating(true); }}>
@@ -316,7 +317,7 @@ export function StaffSupportChat({ onBack, active = true, manager = false }: { o
     {ticket && <div className="support-chat__toolbar"><p className="support-chat__ticketbar" title={localizedSubject(ticket.subject, t)}><span className="support-chat__ticketbar-subject">{localizedSubject(ticket.subject, t)}</span>
       {ticket.escalatedAt && !manager && <span className="support-chat__pill support-chat__pill--escalated">{t('Đã chuyển quản lý', 'Escalated')}</span>}</p></div>}
     {ticket?.escalatedAt && <p role="status" data-testid="escalation-info" className="direct-chat__muted support-chat__note">
-      {t('Đã chuyển lên quản lý', 'Escalated to management')}{ticket.escalatedByName ? ` · ${ticket.escalatedByName}` : ''} · {formatCenterDateTime(ticket.escalatedAt)}{ticket.escalationReason ? ` — ${ticket.escalationReason}` : ''}. {manager ? t('Trả lời hội viên và cập nhật trạng thái tại đây.', 'Reply to the member and update the status here.') : t('Quản lý đang xử lý, lễ tân chỉ xem.', 'A manager is handling it; the front desk can only view.')}</p>}
+      {t('Đã chuyển lên quản lý', 'Escalated to management')}{ticket.escalatedByName ? ` · ${ticket.escalatedByName}` : ''} · {formatCenterDateTime(ticket.escalatedAt)}{escalationReason ? ` — ${escalationReason}` : ''}. {manager ? t('Trả lời hội viên và cập nhật trạng thái tại đây.', 'Reply to the member and update the status here.') : t('Quản lý đang xử lý, lễ tân chỉ xem.', 'A manager is handling it; the front desk can only view.')}</p>}
     {canAct && ticket && !closed && <div className="support-chat__categories" role="radiogroup" aria-label={t('Trạng thái phiếu', 'Ticket status')}>
       {STATUSES.filter(value => TRANSITIONS[ticket.status].includes(value)).map(value => <button key={value} type="button" role="radio" aria-checked={ticket.status === value} className={`support-chat__chip${ticket.status === value ? ' is-selected' : ''}`} disabled={busy || detailLoading} onClick={() => changeStatus(value)}>{t(...SUPPORT_STATUS_LABEL[value])}</button>)}
     </div>}

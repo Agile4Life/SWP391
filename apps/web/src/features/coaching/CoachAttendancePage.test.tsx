@@ -218,6 +218,8 @@ describe('CoachAttendancePage (group class attendance)', () => {
     await renderAt('/coach/attendance/88');
 
     const alert = host.querySelector('[role="alert"]');
+    expect(alert?.classList.contains('portal-alert')).toBe(true);
+    expect(alert?.classList.contains('portal-alert--error')).toBe(true);
     expect(alert?.textContent).toContain('Lỗi tải danh sách');
     expect(host.textContent).not.toContain('Chưa có học viên nào đăng ký');
 
@@ -270,6 +272,8 @@ describe('CoachAttendancePage (group class attendance)', () => {
     await act(async () => { historyTab.click(); });
 
     const errorBox = host.querySelector('[role="alert"]');
+    expect(errorBox?.classList.contains('portal-alert')).toBe(true);
+    expect(errorBox?.classList.contains('portal-alert--error')).toBe(true);
     expect(errorBox?.textContent).toContain('Không tải được lịch sử điểm danh.');
     expect(host.textContent).not.toContain('Chưa có buổi nào được điểm danh');
 

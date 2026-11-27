@@ -1,4 +1,4 @@
-import { staffLocale, staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
+import { staffLocale, staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffError as errorMessage } from '../operations/staffI18n';
 import { formatPrice } from '../../shared/lib/membershipPresentation';
 import { Select } from '../../shared/ui/Select';
 import { useCallback, useEffect, useState } from 'react';
@@ -55,6 +55,7 @@ export function ManagerCatalogsPage() {
   const [loadError, setLoadError] = useState<StaffMessage>('');
   const [formError, setFormError] = useState<StaffMessage>('');
   const [quickPriceError, setQuickPriceError] = useState<StaffMessage>('');
+  const [result, setResult] = useState<{ type: 'success' | 'error'; message: StaffMessage } | null>(null);
   const [editing, setEditing] = useState<{ id: number | null; form: Form } | null>(null);
   const [quickPricePkg, setQuickPricePkg] = useState<{ pkg: MembershipPackage; price: string } | null>(null);
 
@@ -92,12 +93,12 @@ export function ManagerCatalogsPage() {
       setEditing(null);
       setQuickPricePkg(null);
       await load();
-      notify(successMsg, 'success');
+      setResult({ type: 'success', message: successMsg });
     } catch (err) {
       const msg = errorMessage(err, 'Thao tác thất bại.');
       if (errorTarget === 'form') setFormError(msg);
       else if (errorTarget === 'quickPrice') setQuickPriceError(msg);
-      else notify(msg, 'error');
+      else setResult({ type: 'error', message: msg });
     } finally {
       setIsSubmitting(false);
     }
@@ -863,6 +864,50 @@ export function ManagerCatalogsPage() {
         </div>
       )}
       {confirmDialog}
+      {result && <Modal
+        title={result.type === 'success' ? t('Thành công', 'Success') : t('Không thể thực hiện', 'Unable to complete')}
+        role="alertdialog"
+        ariaDescribedBy="catalog-result-message"
+        onClose={() => setResult(null)}
+      >
+        <div
+          className={`portal-alert ${result.type === 'success' ? 'portal-alert--success' : 'portal-alert--error'}`}
+          style={{ justifyContent: 'flex-start', alignItems: 'flex-start', marginBottom: 0 }}
+        >
+          <span
+            aria-hidden="true"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+              width: 32,
+              height: 32,
+              borderRadius: '50%',
+              background: result.type === 'success'
+                ? 'color-mix(in srgb, var(--portal-success) 16%, transparent)'
+                : 'color-mix(in srgb, var(--portal-danger) 16%, transparent)',
+              border: result.type === 'success'
+                ? '1px solid color-mix(in srgb, var(--portal-success) 36%, transparent)'
+                : '1px solid color-mix(in srgb, var(--portal-danger) 36%, transparent)',
+            }}
+          >
+            {result.type === 'success' ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="7" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            )}
+          </span>
+          <p id="catalog-result-message" style={{ margin: '4px 0 0', fontWeight: 500, lineHeight: 1.5, color: 'inherit' }}>
+            {t(result.message)}
+          </p>
+        </div>
+      </Modal>}
     </div>
   );
 }

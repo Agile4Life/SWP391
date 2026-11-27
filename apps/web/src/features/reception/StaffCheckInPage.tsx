@@ -1,7 +1,7 @@
 import { useStaffI18n, staffMessage, type StaffMessage, staffError as errorMessage, staffNotify as notify } from '../operations/staffI18n';
 import { LoadingImage } from '../../shared/ui/LoadingImage';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getCurrentUser } from '../../shared/api/client';
+import { ApiError, getCurrentUser } from '../../shared/api/client';
 import { RefreshButton } from '../../shared/ui/RefreshButton';
 import { StatusMark } from '../../shared/ui/StatusMark';
 import { PageHeader } from '../../shared/ui/PageHeader';
@@ -51,6 +51,7 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
   const [historyView, setHistoryView] = useState<'inside' | 'recent'>('inside');
 
   const [currentResult, setCurrentResult] = useState<CheckinDto | null>(null);
+  const [denialMessage, setDenialMessage] = useState<StaffMessage | null>(null);
   const [recentCheckins, setRecentCheckins] = useState<CheckinDto[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(true);
   const [historyError, setHistoryError] = useState<StaffMessage | null>(null);
@@ -118,24 +119,33 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
         qrCode: trimmed,
         gate: GATE,
       });
+      setDenialMessage(null);
       setCurrentResult(res);
       setRecentCheckins((prev) => [res, ...prev.filter((item) => item.id !== res.id)]);
       setScanCode('');
     } catch (err: unknown) {
       const msg = errorMessage(err, 'Không thể xác thực mã QR lúc này.');
-      const deniedRecord: CheckinDto = {
-        id: Date.now(),
-        memberId: null,
-        memberName: null,
-        checkInTime: new Date().toISOString(),
-        checkOutTime: null,
-        method: 'qr_code',
-        gate: GATE,
-        status: 'DENIED',
-        denialReason: msg instanceof Error ? msg.message : typeof msg === 'string' ? msg : msg.vi,
-      };
-      setScanError(msg);
-      setCurrentResult(deniedRecord);
+      const isNetworkError = (err instanceof ApiError && err.status === 0) || err instanceof TypeError;
+      if (isNetworkError) {
+        setCurrentResult(null);
+        setDenialMessage(null);
+        setScanError(msg);
+      } else {
+        const deniedRecord: CheckinDto = {
+          id: Date.now(),
+          memberId: null,
+          memberName: null,
+          checkInTime: new Date().toISOString(),
+          checkOutTime: null,
+          method: 'qr_code',
+          gate: GATE,
+          status: 'DENIED',
+          denialReason: msg instanceof Error ? msg.message : typeof msg === 'string' ? msg : msg.vi,
+        };
+        setScanError(null);
+        setDenialMessage(msg);
+        setCurrentResult(deniedRecord);
+      }
     } finally {
       scanInFlight.current = false;
       setIsScanning(false);
@@ -240,16 +250,9 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
           {currentResult && (
             <div data-i18n-managed
               key={currentResult.id}
-              role="status"
+              role={isGranted ? 'status' : 'alert'}
               data-testid="checkin-result-banner"
               className={`gate-result gate-result--${isGranted ? 'granted' : 'denied'}`}
-              style={{
-                borderRadius: '6px',
-                padding: '24px',
-                textAlign: 'center',
-                backgroundColor: isGranted ? undefined : undefined,
-                border: undefined,
-              }}
             >
               <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '12px' }}>
                 <StatusMark type={isGranted ? 'success' : 'error'} size={64} />
@@ -285,9 +288,9 @@ export function StaffCheckInPage({ mode = 'in' }: { mode?: 'in' | 'out' } = {}) 
                 {currentResult.gate || GATE} — {formatTime(currentResult.checkInTime)}
               </div>
 
-              {currentResult.denialReason && (
+              {(denialMessage || currentResult.denialReason) && (
                 <div data-i18n-managed style={{ marginTop: '10px', color: 'var(--portal-danger)', fontWeight: 600, fontSize: '0.85rem' }}>
-                  {scanError ? t(scanError) : currentResult.denialReason}
+                  {denialMessage ? t(denialMessage) : currentResult.denialReason}
                 </div>
               )}
             </div>

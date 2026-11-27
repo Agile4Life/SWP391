@@ -828,8 +828,8 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       )}
 
       {rosterError && sessionMode && (
-        <div data-i18n-managed className="coach-error-box" role="alert">
-          <p>{t(rosterError)}</p>
+        <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
+          <span>{t(rosterError)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => setRosterAttempt((n) => n + 1)}>
             {t("Thử lại", "Retry")}
           </button>
@@ -1018,8 +1018,8 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
           {historyLoading && history.length === 0 ? (
             <LoadingSkeleton label={t("Đang tải lịch sử điểm danh…", "Loading attendance history…")} count={4} />
           ) : historyError ? (
-            <div data-i18n-managed className="coach-error-box" role="alert">
-              <p>{t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.")}</p>
+            <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
+              <span>{t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.")}</span>
               <button type="button" className="btn-secondary btn-sm" onClick={() => void loadHistory()}>
                 {t("Thử lại", "Retry")}
               </button>

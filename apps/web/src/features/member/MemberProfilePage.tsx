@@ -103,6 +103,7 @@ export function MemberProfilePage() {
   const [saving, setSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [error, setError] = useState<string | SourceMessage>('');
+  const [phoneError, setPhoneError] = useState<string | SourceMessage>('');
   const [showPasswordChange, setShowPasswordChange] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -116,6 +117,14 @@ export function MemberProfilePage() {
     form?: string | SourceMessage;
   }>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  const alertRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (error) {
+      alertRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [error]);
 
   // Tải hồ sơ của người dùng đang đăng nhập.
   const load = useCallback(async () => {
@@ -191,8 +200,11 @@ export function MemberProfilePage() {
     e.preventDefault();
     if (!profile || saving) return;
     setError('');
+    setPhoneError('');
     if ((profile.phone ?? '').trim() && !isValidPhoneNumber(profile.phone ?? '')) {
-      setError(memberMessage('Số điện thoại không hợp lệ (vd: 0912345678).'));
+      setPhoneError(memberMessage('Số điện thoại không hợp lệ (vd: 0912345678).'));
+      phoneInputRef.current?.focus?.();
+      phoneInputRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
       return;
     }
     setSaving(true);
@@ -302,6 +314,7 @@ export function MemberProfilePage() {
   if (!profile) {
     return (
       <div data-i18n-managed className="portal-container">
+        <PageHeader title={memberText("Hồ sơ cá nhân")} />
         <div className="portal-state" role="alert">
           <h2 className="portal-state__title">{memberText("Không tìm thấy thông tin hồ sơ")}</h2>
           <p>{memberRenderMessage(error) || memberText("Hệ thống chưa tìm thấy dữ liệu hồ sơ của bạn.")}</p>
@@ -320,9 +333,9 @@ export function MemberProfilePage() {
       />
 
       {error && (
-        <div role="alert" className="portal-alert">
+        <div ref={alertRef} role="alert" className="portal-alert" style={{ maxWidth: 860 }}>
           <span>{memberRenderMessage(error)}</span>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => setError('')}>
+          <button type="button" className="btn-secondary btn-sm" style={{ flexShrink: 0 }} onClick={() => setError('')}>
             {memberText("Đóng")}</button>
         </div>
       )}
@@ -537,14 +550,25 @@ export function MemberProfilePage() {
               <div className="portal-form-group">
                 <label className="portal-label" htmlFor="phone">{memberText("Số điện thoại")}</label>
                 <input
+                  ref={phoneInputRef}
                   id="phone"
                   type="tel"
                   className="portal-input"
                   maxLength={20}
+                  aria-invalid={Boolean(phoneError)}
+                  aria-describedby={phoneError ? 'phone-error' : undefined}
                   placeholder={memberText("Vd: 0912345678", "E.g. 0912345678")}
                   value={profile.phone ?? ''}
-                  onChange={(e) => patch({ phone: e.target.value })}
+                  onChange={(e) => {
+                    patch({ phone: e.target.value });
+                    if (phoneError) setPhoneError('');
+                  }}
                 />
+                {phoneError && (
+                  <p id="phone-error" className="portal-field-error" role="alert">
+                    {memberRenderMessage(phoneError)}
+                  </p>
+                )}
               </div>
             </div>
 

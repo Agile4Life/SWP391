@@ -137,10 +137,10 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
           if (mutationBusy.current) return;
           openDestination(safeNotificationPath(notice.destination, role) ?? notificationDestination({ relatedEntityType: null, type: 'system' }, role));
         }}><span>{notice.translation ? t(notice.translation) : notice.message}</span><small>{formatCenterDateTime(new Date(notice.createdAt).toISOString())}</small></button>
-        {notice.action && <button type="button" className="notification-action" onClick={notice.action.run}>{notice.action.translation ? t(notice.action.translation) : notice.action.label}</button>}
+        {notice.action && <button type="button" className="notification-action btn-secondary btn-sm" onClick={notice.action.run}>{notice.action.translation ? t(notice.action.translation) : notice.action.label}</button>}
       </li>)}
     </ul>}
-    {error && <div className="portal-alert notification-error" role="alert">{t(error)} <button type="button" onClick={() => void load()}>{t("Thử lại", "Retry")}</button></div>}
+    {error && <div className="portal-alert notification-error" role="alert"><span>{t(error)}</span> <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>{t("Thử lại", "Retry")}</button></div>}
     {loading ? <LoadingSkeleton label={t("Đang tải thông báo…", "Loading notifications…")} count={5} /> : !notificationItems.length && !error && notices.length === 0 ?
       <div className="portal-empty"><h3>{t("Chưa có thông báo", "No notifications yet")}</h3><p>{t("Thông báo mới sẽ xuất hiện tại đây.", "New notifications will appear here.")}</p></div> :
       <div className="notification-list" aria-label={t("Danh sách thông báo", "Notifications list")}>
@@ -154,9 +154,9 @@ export function MemberNotificationsPanel({ onNavigate }: { onNavigate?: () => vo
       </div>}
     </div>
     {!loading && data && data.totalPages > 1 && <nav className="notification-pages" aria-label={t("Phân trang thông báo", "Notification pagination")}>
-      <button type="button" disabled={page === 0 || busy} onClick={() => setPage(page - 1)}>{t("Trước", "Previous")}</button>
+      <button type="button" className="btn-secondary btn-sm" disabled={page === 0 || busy} onClick={() => setPage(page - 1)}>{t("Trước", "Previous")}</button>
       <span>{t('Trang', "Page")} {page + 1} / {data.totalPages}</span>
-      <button type="button" disabled={page + 1 >= data.totalPages || busy} onClick={() => setPage(page + 1)}>{t("Sau", "Next")}</button>
+      <button type="button" className="btn-secondary btn-sm" disabled={page + 1 >= data.totalPages || busy} onClick={() => setPage(page + 1)}>{t("Sau", "Next")}</button>
     </nav>}
   </div>;
 }

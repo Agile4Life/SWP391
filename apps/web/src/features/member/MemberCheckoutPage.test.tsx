@@ -480,4 +480,37 @@ describe('MemberCheckoutPage Component', () => {
     expect(host.textContent).not.toContain('Thanh toán tiền mặt');
   });
 
+  it('strips trailing period from kycRejectReason and uses responsive checkout-kyc-uploads grid', async () => {
+    vi.mocked(membershipApi.getMembershipHistory).mockResolvedValue([]);
+    vi.mocked(profileApi.getProfile).mockResolvedValueOnce({
+      userId: 10,
+      fullName: 'Nguyen Van A',
+      email: 'member@test.local',
+      phone: null,
+      dob: null,
+      gender: null,
+      avatarUrl: null,
+      address: null,
+      membershipCode: 'MEM-0010',
+      healthNotes: null,
+      fitnessGoal: null,
+      fitnessLevel: 'beginner',
+      emergencyContactName: null,
+      emergencyContactPhone: null,
+      identityVerified: false,
+      kycStatus: 'REJECTED',
+      kycRejectReason: 'Ảnh bị mờ.',
+      citizenId: null,
+      documentType: null,
+      nationality: null,
+    });
+
+    await renderCheckout('/member/packages/checkout?packageId=1');
+
+    const rejected = host.querySelector('[data-testid="kyc-rejected"]');
+    expect(rejected?.textContent).toContain('Ảnh bị mờ. Vui lòng gửi lại.');
+    expect(rejected?.textContent).not.toContain('..');
+    expect(host.querySelector('.checkout-kyc-uploads.checkout-kyc-uploads--two')).not.toBeNull();
+  });
+
 });

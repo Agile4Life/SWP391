@@ -555,7 +555,7 @@ export function StaffReceptionPage() {
               `Collected ${formatPrice(item.amount)} tuition for "${item.className}" from ${item.memberName}.`,
             ),
         'success',
-        { record: true, destination: '/staff/reception-history' },
+        { silent: true, record: true, destination: '/staff/reception-history' },
       );
       await loadUnpaidCourses();
     } catch (err: unknown) {
@@ -656,7 +656,7 @@ export function StaffReceptionPage() {
     setTrialRejectError(null);
     try {
       await receptionApi.rejectTrial(rejectingTrial.id, reason);
-      notify(staffMessage(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, `Rejected trial application for ${rejectingTrial.memberName}.`), 'info', { record: true });
+      notify(staffMessage(`Đã từ chối đơn đăng ký gói trải nghiệm của ${rejectingTrial.memberName}.`, `Rejected trial application for ${rejectingTrial.memberName}.`), 'success', { record: true });
       setRejectingTrial(null);
       if (inspectingTrial?.id === rejectingTrial.id) setInspectingTrial(null);
       await loadPendingTrials();
@@ -828,7 +828,7 @@ export function StaffReceptionPage() {
       setCompletedMemberName(selectedMember.fullName);
       setCompletedMembershipCode(selectedMember.membershipCode);
       setCompletedPayment(result);
-      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { record: true, destination: '/staff/reception-history' });
+      notify(result.invoiceNumber ? staffMessage(`Đã xác nhận thu tiền. Hóa đơn: ${result.invoiceNumber}`, `Payment collected. Invoice: ${result.invoiceNumber}`) : 'Đã ghi nhận thanh toán; chưa có số hóa đơn.', 'success', { silent: true, record: true, destination: '/staff/reception-history' });
       setSelectedMember(null);
       setSelectedPending(null);
       await loadPendingSubscriptions();
@@ -873,64 +873,6 @@ export function StaffReceptionPage() {
 
       <div className="reception-top">
         <div className="reception-top__main">
-          {/* Thanh tra cứu hội viên (BR-01, BR-05) */}
-          <div className="portal-card reception-top__search">
-            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-              <div style={{ flex: 1 }}>
-                <input
-                  type="text"
-                  placeholder={t("Nhập Số điện thoại, Mã hội viên (MB-...) hoặc CCCD để tra cứu...")}
-                  className="portal-input"
-                  aria-label={t("Tra cứu hội viên theo số điện thoại, mã hội viên hoặc CCCD")}
-                  value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); if (searchError) setSearchError(null); }}
-                  disabled={isSearching}
-                  aria-invalid={searchError ? true : undefined}
-                  aria-describedby={searchError ? 'reception-search-error' : undefined}
-                  autoFocus
-                />
-              </div>
-              <button type="submit" className="btn-primary" disabled={isSearching}>
-                {isSearching ? (
-                  <>
-                    <span data-i18n-managed className="spinner" />
-                    <span data-i18n-managed>{t("Đang tìm...")}</span>
-                  </>
-                ) : (
-                  t('Tra cứu hội viên')
-                )}
-              </button>
-            </form>
-            {searchError && <p id="reception-search-error" className="form-error" role="alert">{t(searchError)}</p>}
-
-            {/* Danh sách kết quả nếu có nhiều hơn 1 người */}
-            {searchResults.length > 1 && (
-              <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--portal-border)' }}>
-                <div style={{ fontSize: '0.86rem', color: 'var(--portal-muted)', marginBottom: '8px' }}>
-                  {t("Tìm thấy ")}{searchResults.length} {t(" hội viên. Chọn hội viên để kiểm tra yêu cầu:")}</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {searchResults.map((m) => (
-                    <button data-i18n-managed
-                      key={m.userId}
-                      type="button"
-                      className={selectedMember?.userId === m.userId ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
-                      onClick={() => {
-                        ++selectionVersion.current;
-                        setIsSearching(false);
-                        setSearchError(null);
-                        selectedMemberRef.current = m.userId;
-                        setSelectedMember(m);
-                        setSelectedPending(pendingList.find((p) => p.memberId === m.userId) ?? null);
-                      }}
-                    >
-                      {m.fullName} ({m.membershipCode || m.phone || t('Chưa cấp thẻ', 'No card issued')})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
           {/* Mục Yêu Cầu Đăng Ký / Gia Hạn / Nâng Cấp Gói Tập Đang Chờ Thanh Toán (pending_payment) */}
           <div className="portal-card reception-top__queue">
             <div className="portal-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -973,8 +915,8 @@ export function StaffReceptionPage() {
                 { key: 'trial', error: trialsError, loading: loadingTrials, retry: loadPendingTrials, label: t('Tải lại yêu cầu dùng thử', 'Reload trial requests') },
                 { key: 'hold', error: holdsError, loading: loadingHolds, retry: loadPendingHolds, label: t('Tải lại yêu cầu bảo lưu', 'Reload hold requests') },
               ].map((queue) => queue.error && (todoFilter === 'all' || todoFilter === queue.key) && (
-                <div key={queue.key} role="alert" className="form-error">
-                  {t(queue.error)}{' '}
+                <div key={queue.key} role="alert" className="portal-alert portal-alert--error" style={{ marginBottom: 0 }}>
+                  <span>{t(queue.error)}</span>
                   <button type="button" className="btn-secondary btn-sm" aria-label={queue.label}
                     disabled={queue.loading} onClick={() => void queue.retry()}>{t('Thử lại', 'Retry')}</button>
                 </div>
@@ -1166,8 +1108,8 @@ export function StaffReceptionPage() {
               {(todoFilter === 'all' || todoFilter === 'pt') && (loadingPt ? (
                   <LoadingSkeleton label={t("Đang tải buổi PT chưa thanh toán…")} count={2} />
                 ) : ptError ? (
-                  <div data-i18n-managed role="alert" style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap', marginTop: '8px' }}>
-                    <span style={{ color: 'var(--portal-danger)', fontSize: '0.9rem' }}>{t(ptError)}</span>
+                  <div data-i18n-managed role="alert" className="portal-alert portal-alert--error" style={{ marginBottom: 0 }}>
+                    <span>{t(ptError)}</span>
                     <button type="button" className="btn-secondary btn-sm" onClick={() => void loadUnpaidPt()}>{t("Thử lại")}</button>
                   </div>
                 ) : (
@@ -1267,7 +1209,15 @@ export function StaffReceptionPage() {
                           <dl className="reception-request__details">
                             <div>
                               <dt>{t('Loại giấy tờ', 'Document type')}</dt>
-                              <dd>{item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Foreign'})`) : t('CCCD', 'Identity card')}</dd>
+                              <dd className="reception-request__document"><strong>{item.documentType === 'PASSPORT' ? t(`Hộ chiếu (${item.nationality || 'Nước ngoài'})`, `Passport (${item.nationality || 'Foreign'})`) : t('CCCD', 'Identity card')}</strong>
+                                <button
+                                  type="button"
+                                  className="btn-secondary btn-sm"
+                                  onClick={() => setInspectingTrial(item)}
+                                >
+                                  {t("Xem", "View")}
+                                </button>
+                              </dd>
                             </div>
                             <div>
                               <dt>{t('Tên trên giấy tờ', 'Name on document')}</dt>
@@ -1275,7 +1225,7 @@ export function StaffReceptionPage() {
                             </div>
                             <div>
                               <dt>{t('Số giấy tờ', 'Document number')}</dt>
-                              <dd>{item.documentNumber ?? item.documentNumberMasked}</dd>
+                              <dd><strong>{item.documentNumber ?? item.documentNumberMasked}</strong></dd>
                             </div>
                             {item.nationality && (<div>
                               <dt>{t('Quốc tịch', 'Nationality')}</dt>
@@ -1299,10 +1249,11 @@ export function StaffReceptionPage() {
                           <div className="reception-request__actions">
                             <button
                               type="button"
-                              className="btn-secondary btn-sm"
-                              onClick={() => setInspectingTrial(item)}
+                              className="btn-danger btn-sm"
+                              disabled={isBusy}
+                              onClick={() => handleOpenRejectTrial(item)}
                             >
-                              {t("Xem giấy tờ & ảnh")}</button>
+                              {t("✕ Từ chối")}</button>
                             <button
                               type="button"
                               className="btn-primary btn-sm"
@@ -1311,13 +1262,6 @@ export function StaffReceptionPage() {
                             >
                               {isBusy ? t('Đang duyệt…') : t('✓ Duyệt & Kích hoạt')}
                             </button>
-                            <button
-                              type="button"
-                              className="btn-danger btn-sm"
-                              disabled={isBusy}
-                              onClick={() => handleOpenRejectTrial(item)}
-                            >
-                              {t("✕ Từ chối")}</button>
                           </div>
                         </div>
                       );
@@ -1412,6 +1356,63 @@ export function StaffReceptionPage() {
               )}
             </div>
           </div>
+          {/* Thanh tra cứu hội viên (BR-01, BR-05) */}
+          <div className="portal-card reception-top__search">
+            <form onSubmit={handleSearch} style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <input
+                  type="text"
+                  placeholder={t("Nhập Số điện thoại, Mã hội viên (MB-...) hoặc CCCD để tra cứu...")}
+                  className="portal-input"
+                  aria-label={t("Tra cứu hội viên theo số điện thoại, mã hội viên hoặc CCCD")}
+                  value={searchQuery}
+                  onChange={(e) => { setSearchQuery(e.target.value); if (searchError) setSearchError(null); }}
+                  disabled={isSearching}
+                  aria-invalid={searchError ? true : undefined}
+                  aria-describedby={searchError ? 'reception-search-error' : undefined}
+                />
+              </div>
+              <button type="submit" className="btn-primary" disabled={isSearching}>
+                {isSearching ? (
+                  <>
+                    <span data-i18n-managed className="spinner" />
+                    <span data-i18n-managed>{t("Đang tìm...")}</span>
+                  </>
+                ) : (
+                  t('Tra cứu hội viên')
+                )}
+              </button>
+            </form>
+            {searchError && <p id="reception-search-error" className="form-error" role="alert">{t(searchError)}</p>}
+
+            {/* Danh sách kết quả nếu có nhiều hơn 1 người */}
+            {searchResults.length > 1 && (
+              <div data-i18n-managed style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--portal-border)' }}>
+                <div style={{ fontSize: '0.86rem', color: 'var(--portal-muted)', marginBottom: '8px' }}>
+                  {t("Tìm thấy ")}{searchResults.length} {t(" hội viên. Chọn hội viên để kiểm tra yêu cầu:")}</div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  {searchResults.map((m) => (
+                    <button data-i18n-managed
+                      key={m.userId}
+                      type="button"
+                      className={selectedMember?.userId === m.userId ? 'btn-primary btn-sm' : 'btn-secondary btn-sm'}
+                      onClick={() => {
+                        ++selectionVersion.current;
+                        setIsSearching(false);
+                        setSearchError(null);
+                        selectedMemberRef.current = m.userId;
+                        setSelectedMember(m);
+                        setSelectedPending(pendingList.find((p) => p.memberId === m.userId) ?? null);
+                      }}
+                    >
+                      {m.fullName} ({m.membershipCode || m.phone || t('Chưa cấp thẻ', 'No card issued')})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
@@ -1604,7 +1605,12 @@ export function StaffReceptionPage() {
                   {t('Gói hiện tại còn hạn. Vui lòng chọn kỳ gia hạn hợp lệ.', 'The current membership is still valid. Please choose an eligible renewal period.')}
                 </p>
               )}
-              {offersError && <p role="alert">{t(offersError)} <button type="button" className="btn-secondary" onClick={() => setOffersRetry((n) => n + 1)}>{t("Thử lại")}</button></p>}
+              {offersError && (
+                <div role="alert" className="portal-alert portal-alert--error" style={{ marginTop: 8, marginBottom: 0 }}>
+                  <span>{t(offersError)}</span>
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => setOffersRetry((n) => n + 1)}>{t("Thử lại")}</button>
+                </div>
+              )}
               {!selectedPending && !loadingOffers && selectedMember && !offersError && packages.length === 0 && (
                 <p data-i18n-managed>{t("Hiện không có gói tập đang hoạt động.")}</p>
               )}

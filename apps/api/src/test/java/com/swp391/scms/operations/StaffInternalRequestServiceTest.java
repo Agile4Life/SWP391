@@ -34,6 +34,104 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class StaffInternalRequestServiceTest {
 
+    @Test
+    void leaveCreationRechecksVietnamDateAfterWaitingForOwnerLock() {
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
+        when(userRepository.findByIdForUpdate(10L)).thenAnswer(i -> {
+            service.setClock(Clock.fixed(Instant.parse("2026-11-26T17:00:00Z"), java.time.ZoneOffset.UTC));
+            return Optional.of(staffUser);
+        });
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L,
+                new StaffInternalRequestCreateDto("LEAVE", "Leave", "Reason", FIXED_TODAY.plusDays(1), FIXED_TODAY.plusDays(1), null, null)));
+        verify(requestRepository, never()).save(any());
+    }
+
+    @Test
+    void nonLeaveRequestsCanStillStartToday() {
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
+        when(requestRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        assertEquals("PENDING", service.createRequest(10L,
+                new StaffInternalRequestCreateDto("OTHER", "Request", "Reason", FIXED_TODAY, FIXED_TODAY, null, null)).status());
+        verify(userRepository, never()).findByIdForUpdate(anyLong());
+    }
+
+    @Test
+    void beforeDeadlineApprovalAndOverdueRejectionOrCancellationRemainAvailable() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(901L);
+        req.setUser(staffUser);
+        req.setTitle("Leave");
+        req.setRequestType("LEAVE");
+        req.setStatus("PENDING");
+        req.setStartDate(FIXED_TODAY.plusDays(1));
+        when(requestRepository.findByIdForUpdate(901L)).thenReturn(Optional.of(req));
+        when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
+        when(requestRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        assertEquals("APPROVED", service.reviewRequest(1L, 901L, new StaffInternalRequestReviewDto("APPROVED", "OK")).status());
+        var order = inOrder(userRepository, requestRepository);
+        order.verify(requestRepository).findOwnerId(901L);
+        order.verify(userRepository).findByIdForUpdate(10L);
+        order.verify(requestRepository).findByIdForUpdate(901L);
+        req.setStatus("PENDING");
+        req.setStartDate(FIXED_TODAY.minusDays(1));
+        assertEquals("REJECTED", service.reviewRequest(1L, 901L, new StaffInternalRequestReviewDto("REJECTED", "Too late")).status());
+        req.setStatus("PENDING");
+        assertEquals("CANCELLED", service.cancelRequest(10L, 901L).status());
+    }
+
+    @Test
+    void leaveCannotStartTodayButCanStartTomorrow() {
+        when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));
+        lenient().when(requestRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        assertThrows(BadRequestException.class, () -> service.createRequest(10L,
+                new StaffInternalRequestCreateDto("LEAVE", "Leave", "Reason", FIXED_TODAY, FIXED_TODAY, null, null)));
+        verify(requestRepository, never()).save(any());
+        when(requestRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        assertEquals("PENDING", service.createRequest(10L,
+                new StaffInternalRequestCreateDto("LEAVE", "Leave", "Reason", FIXED_TODAY.plusDays(1), FIXED_TODAY.plusDays(1), null, null)).status());
+    }
+
+    @Test
+    void leaveReviewDeadlineUsesVietnamDateAfterAcquiringRequestLock() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(900L);
+        req.setUser(staffUser);
+        req.setRequestType("LEAVE");
+        req.setStatus("PENDING");
+        req.setStartDate(FIXED_TODAY);
+        when(requestRepository.findByIdForUpdate(900L)).thenReturn(Optional.of(req));
+        lenient().when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
+        lenient().when(requestRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        for (LocalDate start : List.of(FIXED_TODAY, FIXED_TODAY.minusDays(1))) {
+            req.setStartDate(start);
+            assertThrows(BadRequestException.class, () -> service.reviewRequest(1L, 900L,
+                    new StaffInternalRequestReviewDto("APPROVED", "OK")));
+            assertEquals("PENDING", req.getStatus());
+        }
+        verify(requestRepository, never()).save(any());
+        verifyNoInteractions(notificationService);
+    }
+
+    @Test
+    void waitingForLockAcrossMidnightCannotApproveStaleLeave() {
+        StaffInternalRequest req = new StaffInternalRequest();
+        req.setId(900L);
+        req.setUser(staffUser);
+        req.setRequestType("LEAVE");
+        req.setStatus("PENDING");
+        req.setStartDate(FIXED_TODAY.plusDays(1));
+        when(requestRepository.findByIdForUpdate(900L)).thenAnswer(i -> {
+            service.setClock(Clock.fixed(Instant.parse("2026-11-26T17:00:00Z"), java.time.ZoneOffset.UTC));
+            return Optional.of(req);
+        });
+        lenient().when(userRepository.findByIdAndDeletedAtIsNull(1L)).thenReturn(Optional.of(managerUser));
+        lenient().when(requestRepository.save(any())).thenAnswer(i -> i.getArgument(0));
+        assertThrows(BadRequestException.class, () -> service.reviewRequest(1L, 900L,
+                new StaffInternalRequestReviewDto("APPROVED", "OK")));
+        assertEquals("PENDING", req.getStatus());
+        verify(requestRepository, never()).save(any());
+    }
+
     @Mock
     private StaffInternalRequestRepository requestRepository;
 
@@ -84,6 +182,8 @@ class StaffInternalRequestServiceTest {
         managerUser.setFullName("Trần Quản Lý");
         managerUser.setEmail("manager@solfitness.vn");
         managerUser.setRole(managerRole);
+        lenient().when(requestRepository.findOwnerId(anyLong())).thenReturn(Optional.of(10L));
+        lenient().when(userRepository.findByIdForUpdate(10L)).thenReturn(Optional.of(staffUser));
     }
 
     /** Dọn dẹp sau mỗi test: đặt lại locale mặc định. */
@@ -506,6 +606,7 @@ class StaffInternalRequestServiceTest {
         User receptionist = new User(); receptionist.setId(30L); receptionist.setStatus("active"); receptionist.setRole(receptionRole);
 
         when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(coachA));
+        when(userRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(coachA));
         when(userRepository.findByIdAndDeletedAtIsNull(30L)).thenReturn(Optional.of(receptionist));
         when(userRepository.findByIdAndDeletedAtIsNull(21L)).thenReturn(Optional.of(coachB));
         when(userRepository.findByIdAndDeletedAtIsNull(10L)).thenReturn(Optional.of(staffUser));

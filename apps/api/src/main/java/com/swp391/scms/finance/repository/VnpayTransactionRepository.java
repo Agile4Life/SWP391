@@ -18,6 +18,7 @@ import java.util.Optional;
 
 /** Truy cập bảng vnpay_transactions (các lượt thanh toán VNPay), hỗ trợ truy vấn động. */
 public interface VnpayTransactionRepository extends JpaRepository<VnpayTransaction, String>, JpaSpecificationExecutor<VnpayTransaction> {
+    List<VnpayTransaction> findAllByPaymentIdIn(Collection<Long> paymentIds);
     /**
      * Tìm các bản ghi có paymentId = tham số và status = tham số, sắp xếp theo createdAt giảm dần (chỉ lấy bản
      * ghi đầu tiên) (Spring Data tự sinh truy vấn từ tên hàm).
