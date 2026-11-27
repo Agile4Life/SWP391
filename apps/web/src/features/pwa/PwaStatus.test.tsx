@@ -139,33 +139,14 @@ it('shows the offline notice in a centered alertdialog that closes via × and re
   expect(host.querySelector('dialog.portal-dialog[role="alertdialog"][open]')).not.toBeNull();
 });
 
-it('shows the update-available notice in a centered alertdialog with an Update button, no bottom Close button, and closes via ×', async () => {
+it('does not show any new-version update popup on the web when a waiting worker exists', async () => {
   await act(async () => root.render(<PwaStatus mode="status" />));
   const reg1 = { waiting: { state: 'installed' } as ServiceWorker } as ServiceWorkerRegistration;
   await act(async () => pwaUpdateMock.setWaiting(reg1));
 
-  const dialog = host.querySelector<HTMLDialogElement>('dialog.portal-dialog[role="alertdialog"][open]');
-  expect(dialog).not.toBeNull();
-  expect(dialog?.classList.contains('pwa-status__dialog')).toBe(true);
-  expect(dialog?.getAttribute('aria-describedby')).toBe('pwa-status-message');
-  expect(dialog?.querySelector('.portal-card-title')?.textContent).toBe('Đã có phiên bản mới');
-  expect(dialog?.querySelector('.portal-alert.portal-alert--info.pwa-status__alert[role="status"]')).not.toBeNull();
-
-  const buttons = [...dialog!.querySelectorAll('button')];
-  const updateButton = buttons.find(b => b.textContent?.trim() === 'Cập nhật');
-  expect(updateButton).toBeDefined();
-  expect(updateButton?.classList.contains('btn-primary')).toBe(true);
-  expect(buttons.filter(b => /^(Đóng|Close)$/i.test(b.textContent?.trim() ?? ''))).toHaveLength(0);
-
-  await act(async () => dialog?.querySelector<HTMLButtonElement>('.portal-dialog__close')!.click());
   expect(host.querySelector('dialog')).toBeNull();
-
-  const reg2 = { waiting: { state: 'installed' } as ServiceWorker } as ServiceWorkerRegistration;
-  await act(async () => pwaUpdateMock.setWaiting(reg2));
-  const reopened = host.querySelector<HTMLDialogElement>('dialog.portal-dialog[role="alertdialog"][open]');
-  expect(reopened).not.toBeNull();
-  await act(async () => reopened?.querySelector<HTMLButtonElement>('.pwa-status__actions .btn-primary')!.click());
-  expect(pwaUpdateMock.applyPwaUpdate).toHaveBeenCalledOnce();
+  expect(host.textContent).not.toContain('Đã có phiên bản mới');
+  expect(pwaUpdateMock.applyPwaUpdate).not.toHaveBeenCalled();
 });
 
 it('shows install error in a centered alertdialog with priority and closes via ×', async () => {
