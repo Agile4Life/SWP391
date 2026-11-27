@@ -2,6 +2,8 @@
 
 Quyết định Manager: phản hồi thao tác hiển thị trong nội dung, không dùng popup góc phải; nhãn nút tạo/thêm không có dấu cộng. Bảng danh mục căn trái cột đầu, căn giữa các cột còn lại và cụm nút thao tác.
 
+Quyết định Manager: tại Danh mục vận hành, kết quả thành công hoặc lỗi thao tác ngoài biểu mẫu hiển thị trong hộp thoại giữa màn hình; lỗi nhập liệu vẫn hiển thị tại biểu mẫu.
+
 Quyết định Manager (25/11/2026): Biểu mẫu thêm nhân sự chỉ chọn Nam hoặc Nữ, mặc định Nam.
 Quyết định Member (26/11/2026): Đặt PT 1:1 chọn ngày bằng dải 7 ngày có nút ‹ › lùi/tiến theo tuần (không lùi trước hôm nay) và `DatePicker` nhảy tới ngày bất kỳ từ hôm nay; không còn giới hạn 10 ngày cố định.
 Các nút thao tác trong Danh mục vận hành nằm cùng một hàng và có khoảng cách; bảng cuộn ngang khi cần.

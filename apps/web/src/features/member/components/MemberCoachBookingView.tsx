@@ -1849,18 +1849,6 @@ export function MemberCoachBookingView({
           title={memberText("Thanh toán Buổi tập PT 1:1")}
           onClose={() => setPaymentModalBooking(null)}
         >
-          {paymentModalBooking.paymentStatus === 'pending' && (
-            <VnpayPayButton
-              target={{ coachBookingId: paymentModalBooking.id }}
-              onPaid={() => {
-                watchedPendingBookingsRef.current.add(paymentModalBooking.id);
-                setPaymentModalBooking(null);
-                void refreshBookingsAndQuota();
-                window.dispatchEvent(new Event('member-notifications-changed'));
-                window.dispatchEvent(new CustomEvent('wallet-updated'));
-              }}
-            />
-          )}
           <div style={{ display: 'grid', gap: 16 }}>
             <div
               style={{
@@ -1898,31 +1886,32 @@ export function MemberCoachBookingView({
                     <div>{memberText("Số tiền đã thanh toán: ", "Amount paid: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                   </>
                 ) : (
-                  <>
-                    <div>
-                      {lang === 'en' ? (
-                        <>Choose <strong>Pay with VNPay</strong> or <strong>Pay with SÖL Wallet</strong> above to complete online payment.</>
-                      ) : (
-                        <>Chọn <strong>Thanh toán VNPay</strong> hoặc <strong>Thanh toán bằng Ví SÖL</strong> ở trên để hoàn tất thanh toán trực tuyến.</>
-                      )}
-                    </div>
-                    <div>{memberText("Số tiền cần thanh toán: ", "Amount due: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
-                    <div style={{ color: 'var(--portal-muted)' }}>{memberText("Lưu ý: Nếu thanh toán bằng tiền mặt, vui lòng gặp trực tiếp Lễ tân tại quầy trước giờ tập để được hỗ trợ thu tiền.")}</div>
-                  </>
+                  <div>{memberText("Số tiền cần thanh toán: ", "Amount due: ")}<strong style={{ color: 'var(--portal-salmon)', fontSize: 16, fontVariantNumeric: 'tabular-nums' }}>{formatPrice(paymentModalBooking.hourlyRate)}</strong></div>
                 )}
               </div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginTop: 8 }}>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={() => {
-                  setPaymentModalBooking(null);
-                  navigate('/member/invoices');
-                }}
-              >
-                {memberText("Xem Hóa đơn & Lịch sử thanh toán →")}</button>
+              {paymentModalBooking.paymentStatus === 'pending' ? (
+                <VnpayPayButton
+                  target={{ coachBookingId: paymentModalBooking.id }}
+                  onPaid={() => {
+                    watchedPendingBookingsRef.current.add(paymentModalBooking.id);
+                    setPaymentModalBooking(null);
+                    void refreshBookingsAndQuota();
+                    window.dispatchEvent(new Event('member-notifications-changed'));
+                    window.dispatchEvent(new CustomEvent('wallet-updated'));
+                  }}
+                />
+              ) : (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => setPaymentModalBooking(null)}
+                >
+                  {memberText("Đóng", "Close")}
+                </button>
+              )}
             </div>
           </div>
         </Modal>
