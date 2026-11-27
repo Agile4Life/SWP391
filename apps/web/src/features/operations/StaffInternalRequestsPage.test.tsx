@@ -69,6 +69,8 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
   ];
 
   beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-31T03:00:00Z'));
     vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
     host = document.createElement('div');
     document.body.append(host);
@@ -78,6 +80,7 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
   });
 
   afterEach(async () => {
+    vi.useRealTimers();
     await act(async () => root.unmount());
     host.remove();
     vi.unstubAllGlobals();
@@ -103,6 +106,39 @@ describe('StaffInternalRequestsPage (Hệ thống Đơn từ nội bộ)', () =>
     expect(host.textContent).toContain('Chờ duyệt');
     expect(host.textContent).toContain('Đã duyệt');
     expect(host.textContent).toContain('Đã duyệt và sắp xếp người trực thay.');
+  });
+
+  it('shows overdue pending leave without blocking creation or owner cancellation', async () => {
+    vi.setSystemTime(new Date('2026-11-05T00:00:00Z'));
+    await render();
+    expect(host.textContent).toContain('Quá hạn duyệt');
+    expect(host.textContent).toContain('tiếp tục đi làm');
+    expect([...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.includes('Tạo đơn từ mới'))?.disabled).toBe(false);
+    expect([...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.includes('Hủy đơn'))?.disabled).toBe(false);
+  });
+
+  it.each([false, true])('validates a new non-overlapping leave at submit, crossing midnight: %s', async crossesMidnight => {
+    vi.setSystemTime(new Date('2026-10-31T16:59:00Z'));
+    vi.mocked(staffRequestApi.createStaffRequest).mockReset().mockResolvedValue(mockRequests[0]);
+    await render();
+    await act(async () => [...host.querySelectorAll<HTMLButtonElement>('button')].find(b => b.textContent?.includes('Tạo đơn từ mới'))!.click());
+    expect((host.querySelector('#internal-request-start') as HTMLInputElement).value).toBe('');
+    await act(async () => {
+      for (const [selector, value] of [['#internal-request-title', 'New leave'], ['#internal-request-reason', 'Reason'], ['#internal-request-start', '2026-11-01'], ['#internal-request-end', '2026-11-01']]) {
+        const input = host.querySelector(selector)!;
+        const proto = input.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+        Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    });
+    if (crossesMidnight) vi.setSystemTime(new Date('2026-10-31T17:00:00Z'));
+    await act(async () => host.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    if (crossesMidnight) {
+      expect(staffRequestApi.createStaffRequest).not.toHaveBeenCalled();
+      expect(host.textContent).toContain('Ngày bắt đầu nghỉ phải từ ngày mai.');
+    } else {
+      expect(staffRequestApi.createStaffRequest).toHaveBeenCalledWith(expect.objectContaining({ startDate: '2026-11-01' }));
+    }
   });
 
   it('opens create modal, validates required fields, and submits new request', async () => {
