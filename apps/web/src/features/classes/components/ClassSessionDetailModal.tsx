@@ -55,7 +55,9 @@ export function ClassSessionDetailModal({
   const roomName = session.roomName || parentClass?.roomName || '—';
   const coachName = session.coachName || parentClass?.coachName || '—';
   const capacity = session.capacity ?? parentClass?.capacity ?? 0;
-  const bookedCount = session.bookedCount ?? students.length;
+  const bookedCount = !loadingStudents && !studentsError
+    ? Math.max(session.bookedCount ?? 0, students.length)
+    : (session.bookedCount ?? students.length);
   const accent = disciplineAccentColor(session.disciplineId ?? parentClass?.disciplineId ?? disciplineName);
   const isScheduled = session.status === 'scheduled';
 
@@ -154,11 +156,11 @@ export function ClassSessionDetailModal({
         ) : students.length === 0 ? (
           <p className="mcal__note">{t('Chưa có học viên nào đăng ký buổi học này.', 'No members enrolled in this session yet.')}</p>
         ) : (
-          <div className="mcal__overflow-list" data-testid="session-detail-students">
+          <div className="mcal__overflow-list mcal__students-scroll" data-testid="session-detail-students">
             {students.map((st) => {
               const levelText = fitnessLevelLabel(st.fitnessLevel);
               return (
-                <div key={st.id} className="mcal__overflow-row" style={{ cursor: 'default' }}>
+                <div key={st.id} className="mcal__overflow-row mcal__student-row" style={{ cursor: 'default' }}>
                   <span className="mcal__overflow-main">
                     <strong>{st.fullName}</strong>
                     <small>{[st.membershipCode, st.phone, st.email].filter(Boolean).join(' · ')}</small>
