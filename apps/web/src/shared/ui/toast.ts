@@ -29,6 +29,39 @@ function toastContainer(): HTMLElement {
     ?? document.body;
 }
 
+/** Gắn toast vào vị trí phù hợp trong dialog (sau tiêu đề hộp thoại) hoặc trang portal (sau .portal-header). */
+function mountToast(container: HTMLElement, el: HTMLElement) {
+  if (container.matches('dialog[open]')) {
+    const body = container.querySelector<HTMLElement>('.portal-dialog__body') ?? container;
+    const header = body.querySelector<HTMLElement>(':scope > .portal-dialog__header')
+      ?? body.querySelector<HTMLElement>('.portal-dialog__header');
+    if (header && body.contains(header)) {
+      header.after(el);
+    } else {
+      body.prepend(el);
+    }
+    return;
+  }
+  if (container.id === 'portal-main') {
+    const header = [...container.querySelectorAll<HTMLElement>('.portal-container > .portal-header')]
+      .find((candidate) => !candidate.closest('[hidden]'));
+    if (header) {
+      header.after(el);
+      return;
+    }
+  }
+  container.prepend(el);
+}
+
+/** Nếu toast mới gắn nằm phía trên vùng nhìn thấy thì cuộn mượt tới nó mà không cướp focus bàn phím. */
+function revealIfAboveViewport(el: HTMLElement) {
+  const rect = el.getBoundingClientRect?.();
+  if (rect && rect.height > 0 && rect.top < 0) {
+    const behavior = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+    el.scrollIntoView?.({ behavior, block: 'nearest' });
+  }
+}
+
 /** Hiện thông báo nổi (một lúc chỉ một thông báo), tự đổi ngôn ngữ nếu có bản dịch, đóng bằng nút × hoặc Esc. */
 export function toast(message: string, type: 'success' | 'error' = 'success', translation?: SourceMessage) {
   clearActive();
@@ -82,7 +115,8 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
   unsubscribeKeydown = () => document.removeEventListener('keydown', handleEscape);
 
   let container = toastContainer();
-  container.prepend(el);
+  mountToast(container, el);
+  revealIfAboveViewport(el);
   let resumeAfterMove = () => {};
 
   // DESIGN.md: thông báo lỗi (alert) giữ nguyên cho tới khi người dùng tự đóng; thông báo thường tự đóng sau 3,2s và tạm dừng khi hover hoặc focus.
@@ -133,7 +167,8 @@ export function toast(message: string, type: 'success' | 'error' = 'success', tr
     const observer = new MutationObserver(() => {
       if (container.isConnected && container.matches('dialog[open]') && el.isConnected) return;
       container = toastContainer();
-      container.prepend(el);
+      mountToast(container, el);
+      revealIfAboveViewport(el);
       resumeAfterMove();
       if (!container.matches('dialog[open]')) observer.disconnect();
     });

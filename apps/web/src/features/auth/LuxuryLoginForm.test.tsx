@@ -147,8 +147,13 @@ it('opens email OTP verification screen on Google OAuth callback without reflect
   expect(host.textContent).toContain('redirected@gmail.com');
   expect(host.textContent).not.toContain('Phishing Injected Banner');
   expect(host.textContent).not.toContain('998877');
-  expect(host.querySelector('.fit-otp-notice')).not.toBeNull();
+  expect(host.querySelector('.fit-otp-notice')?.textContent).toContain('Đã gửi mã xác nhận đến Gmail redirected@gmail.com.');
   expect(window.location.search).toBe('');
+
+  clearMissingTranslations();
+  await act(async () => setLanguage('en'));
+  expect(host.querySelector('.fit-otp-notice')?.textContent).toContain('A verification code was sent to redirected@gmail.com.');
+  expect(getMissingTranslations()).toEqual([]);
 });
 
 it('ignores legacy debugOtp query param and strips sensitive callback parameters from history (P1-FE-03)', async () => {

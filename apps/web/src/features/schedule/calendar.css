@@ -629,10 +629,9 @@
 }
 .class-wizard__option.is-unavailable {
   border-style: dashed;
-  border-color: color-mix(in srgb, var(--portal-danger) 42%, var(--portal-border));
+  border-color: color-mix(in srgb, var(--portal-danger) 42%, transparent);
   background: color-mix(in srgb, var(--portal-danger) 5%, var(--portal-surface));
   color: var(--portal-muted);
-  opacity: 0.78;
   /* Bấm thẻ không khả dụng để xem lý do chi tiết, không chọn được. */
   cursor: help;
 }

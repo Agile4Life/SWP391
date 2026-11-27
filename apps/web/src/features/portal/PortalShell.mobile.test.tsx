@@ -67,7 +67,11 @@ describe('mobile portal navigation', () => {
   it('opens legacy notification URLs as a panel over the dashboard', async () => {
     const router = await renderPortal('MEMBER', '/member/notifications');
     expect(router.state.location.pathname).toBe('/member/dashboard');
-    expect(host.querySelector('.notification-popover')).not.toBeNull();
+    const popover = host.querySelector<HTMLElement>('.notification-popover');
+    expect(popover).not.toBeNull();
+    // Neo theo nút chuông ngay cả khi mở từ URL chuyển hướng (không có click triggerRef trước đó).
+    expect(popover?.style.right).toBe('auto');
+    expect(popover?.style.top).not.toBe('');
   });
 
   it('opens notifications from More without navigating and closes its navigation modal', async () => {

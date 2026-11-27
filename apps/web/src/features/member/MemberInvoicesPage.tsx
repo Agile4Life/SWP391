@@ -173,7 +173,10 @@ export function MemberInvoicesPage() {
       </section>}
       <section data-i18n-managed className="portal-card portal-card--flush member-invoices__card" aria-label={memberText("Lịch sử giao dịch")}>
         {loading ? <LoadingSkeleton label={memberText("Đang tải giao dịch…")} variant="table" count={4} /> : error ? (
-          <div role="alert"><p>{memberText("Không tải được giao dịch. Vui lòng thử lại.")}</p><button type="button" className="btn-secondary btn-sm" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>{memberText("Thử lại")}</button></div>
+          <div role="alert" className="member-invoices__error">
+            <p>{memberText("Không tải được giao dịch. Vui lòng thử lại.")}</p>
+            <button type="button" className="btn-secondary btn-sm" onClick={() => { setLoading(true); setReload((n) => n + 1); }}>{memberText("Thử lại")}</button>
+          </div>
         ) : payments.length === 0 ? (
           <EmptyState variant="plain" icon="receipt" title={memberText("Chưa có giao dịch")}
             description={memberText("Hóa đơn sẽ hiện ở đây sau khi bạn thanh toán gói tập hoặc dịch vụ.")}

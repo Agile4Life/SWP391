@@ -693,7 +693,11 @@ describe('MemberCoachBookingView audit remediation (P1-FE-40, P1-FE-41, P2-FE-55
 
     const alert = host.querySelector('[role="alert"]');
     expect(alert).not.toBeNull();
-    expect(alert?.querySelector('button[aria-label="Đóng thông báo lỗi"]')).not.toBeNull();
+    expect(alert?.className).toContain('portal-alert--error');
+    const dismissBtn = alert?.querySelector<HTMLButtonElement>('button[aria-label="Đóng thông báo lỗi"]');
+    expect(dismissBtn).not.toBeNull();
+    expect(dismissBtn?.style.minWidth).toBe('44px');
+    expect(dismissBtn?.style.minHeight).toBe('44px');
     expect(host.textContent).not.toContain('Chưa có huấn luyện viên nào.');
 
     const retryBtn = [...alert!.querySelectorAll<HTMLButtonElement>('button')].find((b) => b.textContent === 'Thử lại')!;
@@ -737,5 +741,23 @@ describe('MemberCoachBookingView audit remediation (P1-FE-40, P1-FE-41, P2-FE-55
 
     await act(async () => closeX!.click());
     expect(host.querySelector('dialog')).toBeNull();
+  });
+
+  it('disables confirm button and keeps a single primary CTA in booking modal when member has no active package', async () => {
+    mocks.getMemberQuotaStatus.mockResolvedValue({ packageName: null, monthlyQuota: 0, usedThisMonth: 0, remainingQuota: 0 });
+    await act(async () => root.render(<MemoryRouter><MemberCoachBookingView /></MemoryRouter>));
+
+    const slot4 = host.querySelector<HTMLButtonElement>('[data-testid="pt-slot-4"]')!;
+    await act(async () => slot4.click());
+
+    const dialog = host.querySelector('dialog')!;
+    expect(dialog.querySelector('.hold-notice.hold-notice--warn[role="alert"]')).not.toBeNull();
+    expect(dialog.querySelectorAll('button.btn-primary')).toHaveLength(1);
+    const confirmBtn = [...dialog.querySelectorAll<HTMLButtonElement>('button')].find((b) =>
+      b.textContent?.includes('Xác nhận & Đặt lịch'),
+    )!;
+    expect(confirmBtn.disabled).toBe(true);
+    await act(async () => confirmBtn.click());
+    expect(mocks.createCoachBooking).not.toHaveBeenCalled();
   });
 });

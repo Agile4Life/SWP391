@@ -422,4 +422,24 @@ describe('MemberProfilePage role-based profile & avatar upload', () => {
     await act(async () => setLanguage('en'));
     expect(host.querySelector('#currentPassword-error')?.textContent).toContain('Enter your current password');
   });
+
+  it('renders PageHeader above load-error state and shows inline phone validation error under #phone', async () => {
+    mockApi.getProfile.mockRejectedValueOnce(new Error('Network down'));
+    await renderPage();
+    expect(host.querySelector('h1')?.textContent).toBe('Hồ sơ cá nhân');
+    expect(host.querySelector('.portal-state[role="alert"]')).not.toBeNull();
+
+    mockApi.getProfile.mockResolvedValueOnce(sampleProfile);
+    await act(async () => host.querySelector<HTMLButtonElement>('.portal-state button')?.click());
+
+    const phoneInput = host.querySelector<HTMLInputElement>('#phone')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(phoneInput, '123');
+      phoneInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => host.querySelector('form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })));
+    expect(phoneInput.getAttribute('aria-invalid')).toBe('true');
+    expect(host.querySelector('#phone-error.portal-field-error')?.textContent).toContain('Số điện thoại không hợp lệ');
+    expect(mockApi.updateProfile).not.toHaveBeenCalled();
+  });
 });

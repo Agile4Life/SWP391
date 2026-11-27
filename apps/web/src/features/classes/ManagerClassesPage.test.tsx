@@ -685,27 +685,34 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     const busyRoomBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-room-10"]')!;
     // Thẻ bận chỉ hiện nhãn; bấm vào mới hiện lý do chi tiết, bấm lại thì ẩn, và không bị chọn.
     expect(busyRoomBtn.getAttribute('aria-disabled')).toBe('true');
+    expect(busyRoomBtn.getAttribute('aria-expanded')).toBe('false');
     expect(busyRoomBtn.textContent).toContain('Đã bận');
     expect(busyRoomBtn.textContent).not.toContain('Trùng lịch phòng tập');
     await act(async () => busyRoomBtn.click());
+    expect(busyRoomBtn.getAttribute('aria-expanded')).toBe('true');
     expect(busyRoomBtn.textContent).toContain('Trùng lịch phòng tập');
     expect(busyRoomBtn.getAttribute('aria-checked')).toBe('false');
     await act(async () => busyRoomBtn.click());
+    expect(busyRoomBtn.getAttribute('aria-expanded')).toBe('false');
     expect(busyRoomBtn.textContent).not.toContain('Trùng lịch phòng tập');
 
     const vipRoomBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-room-30"]')!;
     expect(vipRoomBtn.disabled).toBe(false);
+    expect(vipRoomBtn.getAttribute('aria-expanded')).toBeNull();
     expect(vipRoomBtn.textContent).toContain('VIP Platinum');
 
     const busyCoachBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-coach-100"]')!;
     expect(busyCoachBtn.getAttribute('aria-disabled')).toBe('true');
+    expect(busyCoachBtn.getAttribute('aria-expanded')).toBe('false');
     expect(busyCoachBtn.textContent).not.toContain('Trùng lịch PT 1:1');
     await act(async () => busyCoachBtn.click());
+    expect(busyCoachBtn.getAttribute('aria-expanded')).toBe('true');
     expect(busyCoachBtn.textContent).toContain('Trùng lịch PT 1:1');
     expect(busyCoachBtn.getAttribute('aria-checked')).toBe('false');
 
     const freeCoachBtn = document.querySelector<HTMLButtonElement>('[data-testid="wizard-coach-101"]')!;
     expect(freeCoachBtn.disabled).toBe(false);
+    expect(freeCoachBtn.getAttribute('aria-expanded')).toBeNull();
     expect(freeCoachBtn.getAttribute('aria-checked')).toBe('true');
 
     // Select VIP room (capacity 20) and test capacity > room.capacity inline error

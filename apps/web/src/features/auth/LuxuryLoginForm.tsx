@@ -114,6 +114,14 @@ function resolveGoogleOAuthError(params: URLSearchParams): SourceMessage {
   return GOOGLE_OAUTH_ERROR_FALLBACK;
 }
 
+/** Thông báo đã gửi mã OTP kích hoạt tới địa chỉ Gmail (song ngữ VI/EN). */
+function googleOtpSentMessage(email: string): SourceMessage {
+  return {
+    vi: `Đã gửi mã xác nhận đến Gmail ${email}. Hãy nhập mã xác nhận để kích hoạt tài khoản.`,
+    en: `A verification code was sent to ${email}. Enter it to activate your account.`,
+  };
+}
+
 /**
  * Các bước của biểu mẫu: đăng nhập thường, nhập OTP khi vào bằng Google, nhập email quên mật khẩu, đặt lại mật
  * khẩu.
@@ -249,7 +257,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       const verifiedEmail = (res.email || '').trim();
       setGoogleEmail(verifiedEmail);
       setOtpMessage(
-        (res.message ? new Error(res.message) : null) || sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", verifiedEmail)
+        (res.message ? new Error(res.message) : null) || googleOtpSentMessage(verifiedEmail)
       );
       if (import.meta.env.DEV && res.debugOtp) {
         setDebugOtpCode(res.debugOtp);
@@ -343,7 +351,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
       cleanSearchParams();
       if (isValidEmailAddress(email)) {
         setGoogleEmail(email);
-        setOtpMessage(sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", email));
+        setOtpMessage(googleOtpSentMessage(email));
         setDebugOtpCode('');
         setOtpCode('');
         setShowPassword(false);
@@ -483,7 +491,7 @@ export function LuxuryLoginForm({ onSuccess }: LuxuryLoginFormProps) {
 
     try {
       const res = await googleSendOtp(cleanEmail);
-      setOtpMessage((res.message ? new Error(res.message) : null) || sourceFormatPair("Đã gửi mã xác nhận đến gmail {0}. Hãy nhập mã xác nhận để kích hoạt tài khoản.", cleanEmail));
+      setOtpMessage((res.message ? new Error(res.message) : null) || googleOtpSentMessage(cleanEmail));
       if (import.meta.env.DEV && res.debugOtp) {
         setDebugOtpCode(res.debugOtp);
         setOtpCode(res.debugOtp);

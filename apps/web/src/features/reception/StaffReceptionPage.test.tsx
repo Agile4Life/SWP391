@@ -324,6 +324,9 @@ it.each([
   api[method].mockRejectedValue(new Error('Offline'));
   await act(async () => root.render(<StaffReceptionPage />));
   const card = host.querySelector('.reception-top__queue')!;
+  const alert = card.querySelector('[role="alert"]');
+  expect(alert?.classList.contains('portal-alert')).toBe(true);
+  expect(alert?.classList.contains('portal-alert--error')).toBe(true);
   expect(card.textContent).toContain(`Không thể tải ${label}. Vui lòng thử lại.`);
   expect(card.textContent).not.toContain('Không có việc nào cần xử lý');
   const tabs = { plan: 'Gói tập', course: 'Khóa học', hold: 'Bảo lưu', trial: 'Trải nghiệm' };
@@ -359,6 +362,7 @@ it('sells an active package at the counter for a member without a pending order'
   expect(api.processPayment).toHaveBeenCalledWith(expect.objectContaining({ memberId: 10, packageId: 2, amount: 200 }));
   expect(api.createRenewal).not.toHaveBeenCalled();
   expect(getNotices()[0].destination).toBe('/staff/reception-history');
+  expect(document.querySelector('.sol-toast')).toBeNull();
   expect(host.textContent).toContain('Hóa đơn thực');
 });
 
@@ -516,7 +520,13 @@ it('renders passport document type and nationality for foreign trial applicants'
 it('shows a retry when unpaid 1:1 sessions fail to load', async () => {
   api.getUnpaidCoachBookings.mockRejectedValueOnce(new Error('Mất kết nối')).mockResolvedValue([]);
   await act(async () => root.render(<StaffReceptionPage />));
+  const ptAlert = host.querySelector('.reception-top__queue [role="alert"]');
+  expect(ptAlert?.classList.contains('portal-alert')).toBe(true);
+  expect(ptAlert?.classList.contains('portal-alert--error')).toBe(true);
   expect(host.textContent).toContain('Mất kết nối');
+  const searchInput = host.querySelector<HTMLInputElement>('input[placeholder^="Nhập Số điện thoại"]')!;
+  expect(document.activeElement).not.toBe(searchInput);
+  expect(searchInput.hasAttribute('autofocus')).toBe(false);
   const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Thử lại')!;
   await act(async () => retry.click());
   expect(host.querySelector('.reception-todo__tag--pt')).toBeNull();
@@ -810,6 +820,7 @@ it('P0-03: renders unpaid course enrollments, requires confirmation, settles tui
   expect(api.confirmCourseEnrollmentPayment).toHaveBeenCalledWith(601, 'bank_transfer');
   expect(host.querySelector('[data-testid="unpaid-course-601"]')).toBeNull();
   expect(host.textContent).toContain('Hóa đơn thực');
+  expect(document.querySelector('.sol-toast')).toBeNull();
   expect(getNotices()[0]?.message).toContain('INV-20261125-0901');
 });
 

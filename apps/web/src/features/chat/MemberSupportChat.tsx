@@ -41,6 +41,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
   const [pending, setPending] = useState<string | null>(null);
   const [showTickets, setShowTickets] = useState(false);
   const [connection, setConnection] = useState<ChatConnection>('connecting');
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
   const [closing, setClosing] = useState(false);
   const [closeError, setCloseError] = useState<ChatError | null>(null);
   const alive = useRef(false);
@@ -151,7 +152,7 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     }
     const unsubscribe = subscribeSupport(schedule, state => { if (live()) setConnection(state); }, id);
     return () => { disposed = true; clearTimeout(timer); unsubscribe(); };
-  }, [selectedId, loadMessages]);
+  }, [selectedId, loadMessages, connectionAttempt]);
 
   // Gửi tin nhắn (tạo phiếu mới khi chưa chọn phiếu, tối đa SUPPORT_MESSAGE_MAX ký tự), không gửi khi phiếu đã đóng hoặc bị từ chối truy cập.
   async function send() {
@@ -216,10 +217,17 @@ export function MemberSupportChat({ onBack, active = true }: { onBack: () => voi
     : t('Gửi yêu cầu tới lễ tân và theo dõi phản hồi', 'Send requests to the front desk and follow replies');
   const composerBlocked = ticketsLoading || (!newMode && (messagesLoading || accessDenied || (!!ticketsError && !ticket)));
   const label = connection === 'reconnecting' ? t('Mất kết nối trực tiếp · đang thử lại', 'Live connection lost · reconnecting') : null;
+  // Thử kết nối lại realtime và đồng bộ lại tin nhắn của phiếu đang xem.
+  const retryConnection = () => {
+    setConnection('connecting');
+    setConnectionAttempt(n => n + 1);
+    if (selectedId != null) void loadMessages(selectedId, true);
+    else void loadTickets(0);
+  };
 
   return <section data-i18n-managed className="direct-chat__thread direct-chat__support support-chat" aria-labelledby="chat-support-title">
     <SupportHeader onBack={onBack} active={active} title={t('Hỗ trợ & Khiếu nại', 'Support & Tickets')} subtitle={subtitle} />
-    {label && <p role="status" className="support-chat__connection">{label}</p>}
+    {label && <p role="status" className="support-chat__connection"><span>{label}</span><button type="button" className="direct-chat__link" onClick={retryConnection}>{t('Thử lại', 'Retry')}</button></p>}
     {ticketsError && <div role="alert" className="direct-chat__error"><p>{t(ticketsError)}</p><button type="button" className="direct-chat__link" onClick={() => void loadTickets(0)}>{t('Thử lại', 'Retry')}</button></div>}
     <div className="support-chat__toolbar">
       <p className="support-chat__ticketbar" title={ticket && !showTickets ? localizedSubject(ticket.subject, t) : undefined}>

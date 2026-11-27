@@ -42,7 +42,7 @@
   justify-content: center;
   text-align: center;
   width: 100%;
-  padding-inline: 24px;
+  padding-inline: 44px;
   gap: 6px;
   margin-bottom: 0;
 }
@@ -60,9 +60,6 @@
   position: absolute;
   top: 16px;
   right: 16px;
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
   border-radius: 50%;
 }
 .package-result { display: grid; justify-items: center; gap: 12px; text-align: center; padding: 4px 0; width: 100%; }
@@ -140,7 +137,7 @@
   .member-packages .grid-3 .portal-card-title,
   .member-packages .grid-3 article > div:first-child > p,
   .member-packages .package-benefit-list { min-height: 0; }
-  .package-result__actions > button { width: 100%; }
+  .package-result__actions > :is(button, a) { width: 100%; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) {
   .member-packages .portal-dialog { animation: none; }

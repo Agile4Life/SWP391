@@ -145,10 +145,13 @@ export function StaffAccountsPage() {
     } catch (err) {
       const code = (err as { code?: string })?.code;
       const msg = err instanceof Error ? err.message : '';
-      if (code === 'EMAIL_EXISTS' || /email.*tồn tại|email already exists/i.test(msg)) {
+      const isAmbiguousDuplicate = /(?:^|[\s,.;:(])(?:hoặc|or)(?:$|[\s,.;:)])/i.test(msg);
+      const matchesEmail = /email.*tồn tại|email\s+(?:address\s+)?already exists/i.test(msg);
+      const matchesPhone = /(?:số\s+)?điện thoại.*tồn tại|phone(?:\s+number)?\s+already exists/i.test(msg);
+      if (code === 'EMAIL_EXISTS' || (!isAmbiguousDuplicate && matchesEmail && !matchesPhone)) {
         setFieldErrors(prev => ({ ...prev, email: 'Email đã tồn tại.' }));
       }
-      if (code === 'PHONE_EXISTS' || /điện thoại.*tồn tại|phone.*already exists/i.test(msg)) {
+      if (code === 'PHONE_EXISTS' || (!isAmbiguousDuplicate && matchesPhone && !matchesEmail)) {
         setFieldErrors(prev => ({ ...prev, phone: 'Số điện thoại đã tồn tại.' }));
       }
       setError(errorMessage(err, 'Không thể tạo tài khoản. Vui lòng thử lại.'));

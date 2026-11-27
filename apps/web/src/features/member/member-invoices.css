@@ -34,6 +34,9 @@
 .member-invoices__pdf-wrap { border: 1px solid var(--portal-border); border-radius: 12px; overflow: hidden; margin-bottom: 16px; background: var(--portal-raised, var(--portal-surface)); }
 .member-invoices__pdf-frame { display: block; width: 100%; height: min(68vh, 560px); border: 0; }
 .member-invoices [role='alert'] { color: var(--portal-danger); padding: 12px 14px; border-radius: 10px; background: color-mix(in srgb, var(--portal-danger) 10%, transparent); border: 1px solid color-mix(in srgb, var(--portal-danger) 30%, transparent); }
+.member-invoices__error { margin: 20px; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.member-invoices__error > p { margin: 0; }
+.member-invoices__error > button { flex-shrink: 0; }
 @media (max-width: 640px) {
   .portal-v2 .member-invoices__table :is(th, td) { padding: 14px 10px; }
   .member-invoices__receipt-head { flex-direction: column; }

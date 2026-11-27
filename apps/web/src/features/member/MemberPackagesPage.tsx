@@ -57,7 +57,10 @@ interface RequestResult {
 
 // Gói "đồng hành" dài hạn (từ 2 tháng trở lên, hiện là gói 3 tháng) tách khỏi gói 1 tháng bằng tab
 /** Các gói mở bán có kỳ hạn 3–12 tháng: 3 tháng thuộc nhóm "short", từ 6 tháng trở lên thuộc nhóm "long". */
-const paymentInstructionsNotice = 'Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.';
+const paymentInstructionsNotice = sourceMessage(
+  'Bạn có thể thanh toán bằng VNPay, Ví SÖL hoặc tại quầy lễ tân.',
+  'You can pay via VNPay, SÖL Wallet, or at the front desk.',
+);
 
 // Bộ kiểm tra VNPay phía backend quyết định liệu một lượt thanh toán trực tuyến đang chờ còn có thể hoàn tất hay không.
 // Biên lai tiền mặt đang chờ duyệt, thanh toán đã hoàn tất và các trạng thái không xác định phải tiếp tục bị chặn ở đây.
@@ -1499,14 +1502,14 @@ export function MemberPackagesPage() {
       )}
 
       {pendingToCancel && (
-        <Modal returnFocusRef={membershipFocus} title={t("Hủy yêu cầu đăng ký?", "Cancel registration request?")} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
+        <Modal role="alertdialog" returnFocusRef={membershipFocus} title={t("Hủy yêu cầu đăng ký?", "Cancel registration request?")} onClose={() => setPendingToCancel(null)} busy={isCancellingPending}>
 <p className="row-card__meta" style={{ marginTop: 12 }}>
               {t("Yêu cầu ", "Request ")}{pendingToCancel.packageName} {t("sẽ bị hủy. Bạn có thể đăng ký gói khác sau khi hệ thống xác nhận.", "will be cancelled. You can register for another plan after confirmation.")}</p>
             {actionError && <p role="alert" className="portal-alert">{t(actionError)}</p>}
             <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, marginTop: 24 }}>
               <button type="button" className="btn-secondary" autoFocus disabled={isCancellingPending}
                 onClick={() => { setActionError(null); setPendingToCancel(null); }}>{t("Giữ yêu cầu", "Keep request")}</button>
-              <button type="button" className="btn-primary" disabled={returnSyncing || syncError || isStatusSyncing || isCancellingPending}
+              <button type="button" className="btn-danger" disabled={returnSyncing || syncError || isStatusSyncing || isCancellingPending}
                 onClick={() => void handleCancelPending(pendingToCancel.id)}>
                 {isCancellingPending ? t("Đang hủy…", "Cancelling…") : t("Xác nhận hủy", "Confirm cancellation")}
               </button>

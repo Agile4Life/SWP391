@@ -144,6 +144,7 @@ describe('MemberInvoicesPage', () => {
     root = createRoot(host);
     await render();
     expect(host.textContent).toContain('Không tải được giao dịch');
+    expect(host.querySelector('.member-invoices__error[role="alert"]')).not.toBeNull();
     await act(async () => [...host.querySelectorAll('button')].find((button) => button.textContent === 'Thử lại')?.click());
     await act(async () => host.querySelector('button[aria-label="Xem hóa đơn giao dịch #12"]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     expect(host.textContent).toContain('chưa có hóa đơn điện tử');

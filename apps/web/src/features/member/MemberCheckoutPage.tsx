@@ -401,11 +401,14 @@ export function MemberCheckoutPage() {
               <p className="hold-notice hold-notice--warn">
                 {t("Hội viên mới cần xác minh CCCD (hoặc Hộ chiếu cho người nước ngoài). Họ tên tài khoản sẽ khớp với giấy tờ.", "New members must verify an identity card (or passport for foreign nationals). Your account name will match the document.")}</p>
 
-              {profile?.kycStatus === 'REJECTED' && (
-                <div role="alert" data-testid="kyc-rejected" className="hold-notice hold-notice--danger">
-                  {t("Hồ sơ trước bị từ chối", "Your previous submission was rejected")}{profile.kycRejectReason ? `: ${profile.kycRejectReason}` : ''}. {t("Vui lòng gửi lại.", "Please submit it again.")}
-                </div>
-              )}
+              {profile?.kycStatus === 'REJECTED' && (() => {
+                const cleanReason = profile.kycRejectReason?.trim().replace(/\.+$/, '');
+                return (
+                  <div role="alert" data-testid="kyc-rejected" className="hold-notice hold-notice--danger">
+                    {t("Hồ sơ trước bị từ chối", "Your previous submission was rejected")}{cleanReason ? `: ${cleanReason}` : ''}. {t("Vui lòng gửi lại.", "Please submit it again.")}
+                  </div>
+                );
+              })()}
               {kycError && (
                 <div role="alert" className="hold-notice hold-notice--danger">
                   {t(kycError)}
@@ -503,7 +506,7 @@ export function MemberCheckoutPage() {
                     {t("Họ tên tài khoản sẽ được đồng bộ theo tên này.", "Your account name will match this name.")}</span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: kycDocType === 'CCCD' ? '1fr 1fr' : '1fr', gap: 12 }}>
+                <div className={kycDocType === 'CCCD' ? 'checkout-kyc-uploads checkout-kyc-uploads--two' : 'checkout-kyc-uploads'}>
                   <div>
                     <label className="portal-label" style={{ display: 'block', marginBottom: 6 }}>
                       {kycDocType === 'PASSPORT' ? t("Ảnh mặt trước Hộ chiếu", "Front of passport") : t("Ảnh mặt trước CCCD", "Front of identity card")} <span className="required-mark" aria-hidden="true">*</span>

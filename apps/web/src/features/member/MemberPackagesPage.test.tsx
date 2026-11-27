@@ -573,7 +573,7 @@ describe('SCRUM-86 packages', () => {
     api.history.mockResolvedValue([pending]);
     await render();
     expect(host.textContent).toContain('Yêu cầu #12');
-    expect(host.textContent).toContain('Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.');
+    expect(host.textContent).toContain('Bạn có thể thanh toán bằng VNPay, Ví SÖL hoặc tại quầy lễ tân.');
     expect(button('Tôi đã chuyển khoản')).toBeUndefined();
     expect(button('Hủy yêu cầu đăng ký')).toBeDefined();
     expect(host.querySelector('img')).toBeNull();
@@ -594,7 +594,8 @@ describe('SCRUM-86 packages', () => {
     });
 
     expect(api.cancelPending).not.toHaveBeenCalled();
-    expect(host.querySelector('[role="dialog"]')?.textContent).toContain('Essential');
+    expect(host.querySelector('[role="alertdialog"]')?.textContent).toContain('Essential');
+    expect(button('Xác nhận hủy')?.className).toContain('btn-danger');
     api.history.mockResolvedValue([cancelledSub]);
     await act(async () => { button('Xác nhận hủy')?.click(); });
 
@@ -631,7 +632,7 @@ describe('SCRUM-86 packages', () => {
     expect(dialog?.textContent).toContain('Essential');
     expect(dialog?.textContent).toContain('500.000');
     expect(dialog?.textContent).toContain('#12');
-    expect(dialog?.textContent).toContain('Bạn có thể thanh toán bằng VNPay hoặc tới quầy lễ tân.');
+    expect(dialog?.textContent).toContain('Bạn có thể thanh toán bằng VNPay, Ví SÖL hoặc tại quầy lễ tân.');
     expect(dialog?.textContent).not.toContain('Số tài khoản');
     expect(dialog?.textContent).not.toContain('Tên người nhận');
     expect(dialog?.querySelector('img, canvas')).toBeNull();
@@ -895,7 +896,7 @@ describe('SCRUM-86 packages', () => {
     await render();
     await act(async () => button('Hủy yêu cầu đăng ký')?.click());
     await act(async () => button('Xác nhận hủy')?.click());
-    expect(host.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('VNPay đang chờ xác nhận');
+    expect(host.querySelector('[role="alertdialog"] [role="alert"]')?.textContent).toContain('VNPay đang chờ xác nhận');
     expect(api.cancelPending).toHaveBeenCalledTimes(1);
     expect(host.textContent).toContain('Đang chờ thanh toán');
     api.cancelPending.mockResolvedValueOnce({ ...pending, status: 'cancelled' });

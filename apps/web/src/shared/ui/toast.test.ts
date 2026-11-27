@@ -89,4 +89,47 @@ describe('toast lifecycle', () => {
     toast.error('Failed'); document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     expect(document.querySelector('.sol-toast')).toBeNull();
   });
+
+  it('mounts inside .portal-dialog__body right after .portal-dialog__header and relocates after .portal-header in #portal-main', async () => {
+    document.body.innerHTML = '<main id="portal-main"><div class="portal-container"><header class="portal-header"><h1>Title</h1></header><section class="portal-card">Body</section></div></main>';
+    const modal = document.createElement('dialog');
+    modal.setAttribute('open', '');
+    modal.innerHTML = '<div class="portal-dialog__body"><div class="portal-dialog__header"><h2>Modal</h2><button type="button">×</button></div><form><input aria-label="Field"></form></div>';
+    document.body.append(modal);
+
+    toast.error('Lỗi biểu mẫu');
+    const notice = modal.querySelector('.sol-toast');
+    const dialogBody = modal.querySelector('.portal-dialog__body')!;
+    const dialogHeader = modal.querySelector('.portal-dialog__header')!;
+    expect(notice?.parentElement).toBe(dialogBody);
+    expect(dialogHeader.nextElementSibling).toBe(notice);
+
+    modal.remove();
+    await flush();
+    const container = document.querySelector('#portal-main .portal-container')!;
+    const pageHeader = container.querySelector('.portal-header')!;
+    expect(notice?.parentElement).toBe(container);
+    expect(pageHeader.nextElementSibling).toBe(notice);
+    expect(container.firstElementChild).toBe(pageHeader);
+  });
+
+  it('mounts right after .portal-header inside #portal-main and scrolls into view when above the viewport without stealing focus', () => {
+    document.body.innerHTML = '<main id="portal-main"><div class="portal-container"><header class="portal-header"><h1>Title</h1></header><button id="action">Save</button></div></main>';
+    const actionBtn = document.getElementById('action') as HTMLButtonElement;
+    actionBtn.focus();
+    const scrollIntoView = vi.fn();
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      top: -120, bottom: -60, left: 0, right: 320, width: 320, height: 60, x: 0, y: -120, toJSON: () => ({}),
+    });
+    HTMLElement.prototype.scrollIntoView = scrollIntoView;
+
+    toast.success('Đã cập nhật');
+    const container = document.querySelector('#portal-main .portal-container')!;
+    const pageHeader = container.querySelector('.portal-header')!;
+    const notice = container.querySelector('.sol-toast');
+    expect(notice?.parentElement).toBe(container);
+    expect(pageHeader.nextElementSibling).toBe(notice);
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: 'smooth', block: 'nearest' });
+    expect(document.activeElement).toBe(actionBtn);
+  });
 });

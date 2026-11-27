@@ -150,9 +150,10 @@ describe('UserManagerPage', () => {
       deleteButtons[3].click();
     });
 
-    // Hộp thoại xác nhận phải được mở
+    // Hộp thoại xác nhận phải được mở và dùng .portal-alert--warning
     expect(host.textContent).toContain('Xác nhận xóa tài khoản');
     expect(host.textContent).toContain('Inactive Coach');
+    expect(host.querySelector('dialog .portal-alert.portal-alert--warning')).not.toBeNull();
 
     // Nhấn xác nhận xóa
     const confirmBtn = button(host, 'Xác nhận xóa');
@@ -195,6 +196,7 @@ describe('UserManagerPage', () => {
 
     const dialogAfterCleanup = host.querySelector<HTMLDialogElement>('dialog[open]')!;
     expect(dialogAfterCleanup).not.toBeNull();
+    expect(dialogAfterCleanup.querySelector('.portal-alert.portal-alert--success')).not.toBeNull();
     expect(dialogAfterCleanup.textContent).toContain('Đã dọn dẹp 1 tài khoản không hoạt động.');
     expect(button(dialogAfterCleanup, 'Đóng')).toBeUndefined();
     expect(button(dialogAfterCleanup, 'Close')).toBeUndefined();
@@ -229,10 +231,10 @@ describe('UserManagerPage', () => {
       });
     };
 
-    await setInput('user-name', 'New Staff');
+    await setInput('user-name', '');
     await setInput('user-email', 'COACH@scms.local');
     await setInput('user-phone', '0901000003');
-    await setInput('user-pass', 'Secret123!');
+    await setInput('user-pass', 'weak');
 
     const form = document.querySelector('form')!;
     await act(async () => {
@@ -240,6 +242,10 @@ describe('UserManagerPage', () => {
     });
 
     expect(userApi.createUser).not.toHaveBeenCalled();
+    expect(document.querySelector('#user-name')?.getAttribute('aria-invalid')).toBe('true');
+    expect(document.querySelector('#user-pass')?.getAttribute('aria-invalid')).toBe('true');
+    expect(document.querySelector('#user-name-error')?.getAttribute('role')).toBe('alert');
+    expect(document.querySelector('#user-pass-error')?.getAttribute('role')).toBe('alert');
     expect(document.body.textContent).toContain('Email đã tồn tại');
     expect(document.body.textContent).toContain('Số điện thoại đã tồn tại');
   });
