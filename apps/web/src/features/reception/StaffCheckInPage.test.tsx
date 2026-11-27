@@ -16,15 +16,12 @@ const visit = { id: 1, memberId: 100, memberName: 'Hội viên đang tập', che
 let host: HTMLDivElement;
 let root: Root;
 let history: typeof visit[];
-let checkoutResponse: Promise<Response>;
 
 beforeEach(() => {
   (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ id: 'staff', name: 'Lễ tân', identifier: 'staff', role: 'STAFF' }));
   history = [visit];
-  checkoutResponse = Promise.resolve(new Response(JSON.stringify({ success: true, data: { ...visit, checkOutTime: '2026-10-21T13:00:00' } })));
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => url.endsWith('/checkout') ? checkoutResponse
-    : new Response(JSON.stringify({ success: true, data: history }))));
+  vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ success: true, data: history }))));
   host = document.createElement('div');
   document.body.append(host);
   root = createRoot(host);
@@ -39,8 +36,8 @@ afterEach(async () => {
 });
 
 // Dựng component vào DOM giả để kiểm thử.
-async function renderPage(mode: 'in' | 'out' = 'in') {
-  await act(async () => root.render(<StaffCheckInPage mode={mode} />));
+async function renderPage() {
+  await act(async () => root.render(<StaffCheckInPage />));
 }
 
 // Các nút check-out đang hiển thị.
@@ -48,34 +45,12 @@ function checkoutButtons() {
   return [...host.querySelectorAll('button')].filter((button) => button.textContent?.includes('Ra về'));
 }
 
-it('keeps every open visit available for checkout, including visits older than the newest ten scans', async () => {
-  history = Array.from({ length: 11 }, (_, index) => ({ ...visit, id: index + 1, memberName: `Member ${index + 1}` }));
-  await renderPage('out');
-  expect(checkoutButtons()).toHaveLength(11);
-  expect(host.textContent).toContain('Member 11');
-  const recent = [...host.querySelectorAll('button')].find((button) => button.textContent?.includes('10 lượt gần nhất'))!;
-  await act(async () => recent.click());
-  expect(host.querySelectorAll('tbody tr')).toHaveLength(10);
-});
-
-it('places the checkout action before horizontally scrollable history details', async () => {
-  await renderPage('out');
-  expect(host.querySelector('tbody tr td:first-child button')?.textContent).toContain('Ra về');
-});
-
 it('check-in tab scans member cards and lists recent entries without checkout actions', async () => {
   await renderPage();
   expect(host.querySelector('#checkin-qr-input')).not.toBeNull();
   expect(host.textContent).toContain('Hội viên quét QR cổng');
   expect(host.textContent).toContain('Hội viên đang tập');
   expect(checkoutButtons()).toHaveLength(0);
-});
-
-it('check-out tab shows the gate QR for leaving instead of the member-card scanner', async () => {
-  await renderPage('out');
-  expect(host.querySelector('#checkin-qr-input')).toBeNull();
-  expect(host.textContent).toContain('Hội viên quét QR để check-out');
-  expect(host.textContent).not.toContain('Quét QR thẻ hội viên bằng camera');
 });
 
 it('shows the granted member photo, package and days remaining from the scan', async () => {
@@ -92,35 +67,6 @@ it('shows the granted member photo, package and days remaining from the scan', a
   expect(banner.textContent).toContain('Gói tập 30 ngày');
   expect(banner.textContent).toContain('7 ngày');
   expect(banner.querySelector('img')?.getAttribute('src')).toBe('https://example.test/photo.jpg');
-});
-
-it('checks out through the real API client and removes the visit from the open list', async () => {
-  await renderPage('out');
-  await act(async () => checkoutButtons()[0].click());
-  expect(fetch).toHaveBeenCalledWith('/api/v1/check-in/1/checkout', expect.objectContaining({ method: 'POST' }));
-  expect(checkoutButtons()).toHaveLength(0);
-  expect(host.textContent).toContain('Hiện không có hội viên trong trung tâm');
-  expect(document.querySelector('.sol-toast--success')?.textContent).toContain('thành công');
-});
-
-it('keeps checkout available after a server failure and explains the error', async () => {
-  checkoutResponse = Promise.resolve(new Response(JSON.stringify({ message: 'Không thể ghi nhận ra về' }), { status: 500 }));
-  await renderPage('out');
-  await act(async () => checkoutButtons()[0].click());
-  expect(checkoutButtons()).toHaveLength(1);
-  expect(checkoutButtons()[0].disabled).toBe(false);
-  expect(document.querySelector('.sol-toast--error')?.textContent).toContain('Không thể ghi nhận ra về');
-});
-
-it('submits one checkout request when the same action is clicked repeatedly', async () => {
-  let finish!: (response: Response) => void;
-  checkoutResponse = new Promise((resolve) => { finish = resolve; });
-  await renderPage('out');
-  const button = checkoutButtons()[0];
-  await act(async () => { button.click(); button.click(); });
-  expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith('/checkout'))).toHaveLength(1);
-  expect(button.disabled).toBe(true);
-  await act(async () => finish(new Response(JSON.stringify({ success: true, data: { ...visit, checkOutTime: '2026-10-21T13:00:00' } }))));
 });
 
 it('scans a member card with the camera and sends the code to the staff scan endpoint', async () => {
@@ -199,9 +145,9 @@ it('renders natural English remaining days & member ID, uses tablist semantics, 
     await act(async () => { setLanguage('vi'); });
   }
 
-  await renderPage('out');
-  expect(host.querySelector('[role="tablist"]')).not.toBeNull();
-  expect(host.querySelectorAll('[role="tab"]')).toHaveLength(2);
+  await renderPage();
+  expect(host.querySelector('[role="tablist"]')).toBeNull();
+  expect(checkoutButtons()).toHaveLength(0);
 });
 
 it('shows server check-in denial only inside .gate-result--denied without duplicating into #checkin-qr-error and keeps network errors in #checkin-qr-error', async () => {

@@ -216,7 +216,7 @@ export function KycReviewPage() {
           })}
         </ul>
       )}
-      <DocumentImageLightbox image={zoomImage} onClose={() => setZoomImage(null)} />
+      <DocumentImageLightbox image={zoomImage} onClose={() => setZoomImage(null)} showOriginalAction={false} />
       {confirmDialog}
     </div>
   );

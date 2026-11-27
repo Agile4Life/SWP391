@@ -55,9 +55,9 @@ const STATUS_CONFIG: {
   className: string;
   indicatorColor: string;
 }[] = [
-  { value: 'present', label: 'Có mặt', className: 'is-present', indicatorColor: 'var(--portal-success)' },
-  { value: 'absent', label: 'Vắng mặt', className: 'is-absent', indicatorColor: 'var(--portal-danger)' },
-];
+    { value: 'present', label: 'Có mặt', className: 'is-present', indicatorColor: 'var(--portal-success)' },
+    { value: 'absent', label: 'Vắng mặt', className: 'is-absent', indicatorColor: 'var(--portal-danger)' },
+  ];
 
 export interface AttendanceHistoryRecord {
   id: string;
@@ -101,6 +101,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
   const [rosterLoading, setRosterLoading] = useState<boolean>(sessionMode);
   const [saving, setSaving] = useState<boolean>(false);
   const [now, setNow] = useState<Date>(() => new Date());
+  const todayIso = centerNowParts(now).date;
 
   // Modal sửa điểm danh giữa màn hình (ở lại tab Lịch sử)
   const [editingAttendanceRecord, setEditingAttendanceRecord] = useState<AttendanceHistoryRecord | null>(null);
@@ -285,7 +286,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     return history.find((h) => h.sessionId === selectedSessionId);
   }, [history, selectedSessionId]);
 
-  // Kiểm tra trạng thái khóa điểm danh của buổi (hủy, chưa bắt đầu, quá 7 ngày sau buổi học) theo giờ trung tâm.
+  // Kiểm tra trạng thái khóa điểm danh của buổi (hủy, chưa bắt đầu, đã qua ngày) theo giờ trung tâm.
   const { isCancelled, notStarted, isExpired, isAttendanceLocked } = useMemo(() => {
     if (!activeSession) {
       return { isCancelled: false, notStarted: false, isExpired: false, isAttendanceLocked: false };
@@ -293,10 +294,9 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
     const cancelled = activeSession.status?.toLowerCase() === 'cancelled';
     const startDt = parseCenterTime(`${activeSession.sessionDate}T${activeSession.startTime}`);
     const upcoming = Boolean(!cancelled && startDt && startDt.getTime() > now.getTime());
-    const cutoffDate = addIsoDays(centerNowParts(now).date, -ATTENDANCE_EDIT_GRACE_DAYS);
     const expired = Boolean(
       !cancelled && (
-        activeSession.sessionDate < cutoffDate
+        activeSession.sessionDate < todayIso
         || currentSavedRecord?.attendanceEditable === false
       ),
     );
@@ -306,7 +306,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
       isExpired: expired,
       isAttendanceLocked: cancelled || upcoming || expired,
     };
-  }, [activeSession, currentSavedRecord, now]);
+  }, [activeSession, currentSavedRecord, now, todayIso]);
 
   const rosterReady = selectedSessionId !== null && loadedSessionId === selectedSessionId && !rosterLoading && !rosterError;
 
@@ -540,13 +540,13 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
 
   const tabs: { id: AttendanceTab; label: string; count?: number }[] = sessionMode
     ? [
-        { id: 'attendance', label: t("Điểm danh buổi học", "Session attendance") },
-        { id: 'attendance-history', label: t("Lịch sử điểm danh", "Attendance history"), count: history.length },
-      ]
+      { id: 'attendance', label: t("Điểm danh buổi học", "Session attendance") },
+      { id: 'attendance-history', label: t("Lịch sử điểm danh", "Attendance history"), count: history.length },
+    ]
     : [
-        { id: 'sessions-list', label: t("Điểm danh", "Attendance"), count: sessionCounts.all },
-        { id: 'attendance-history', label: t("Lịch sử điểm danh", "Attendance history"), count: history.length },
-      ];
+      { id: 'sessions-list', label: t("Điểm danh", "Attendance"), count: sessionCounts.all },
+      { id: 'attendance-history', label: t("Lịch sử điểm danh", "Attendance history"), count: history.length },
+    ];
 
   return (
     <div data-i18n-managed className="coach-attendance-page portal-container">
@@ -671,6 +671,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
               {filteredSessions.map((session) => {
                 const isCancelled = session.status?.toLowerCase() === 'cancelled';
                 const hasRecorded = recordedSessionIds.has(session.id);
+                const isPast = session.sessionDate < todayIso;
                 const startDt = parseCenterTime(`${session.sessionDate}T${session.startTime}`);
                 const notStarted = Boolean(startDt && startDt.getTime() > now.getTime());
 
@@ -700,6 +701,17 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                           <span className="session-status-badge is-cancelled">{t("Đã hủy", "Cancelled")}</span>
                         ) : hasRecorded ? (
                           <span className="session-status-badge is-saved">{t("Đã điểm danh", "Attendance recorded")}</span>
+                        ) : isPast ? (
+                          <span
+                            className="session-status-badge"
+                            style={{
+                              background: 'rgba(148, 163, 184, 0.15)',
+                              color: 'var(--portal-muted)',
+                              border: '1px solid rgba(148, 163, 184, 0.3)',
+                            }}
+                          >
+                            {t("Buổi học đã kết thúc", "Session ended")}
+                          </span>
                         ) : notStarted ? (
                           <span
                             className="session-status-badge"
@@ -728,8 +740,12 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                       {!isCancelled && (
                         hasRecorded ? (
                           <Link to={`/coach/attendance/${session.id}`} className="btn-secondary btn-sm">
-                            {t("Xem / Sửa điểm danh", "View / edit attendance")}
+                            {isPast ? t("Xem điểm danh", "View attendance") : t("Xem / Sửa điểm danh", "View / edit attendance")}
                           </Link>
+                        ) : isPast ? (
+                          <span className="muted" style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>
+                            {t("Buổi học đã kết thúc", "Session ended")}
+                          </span>
                         ) : notStarted ? (
                           <span className="muted" style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>
                             {t('Điểm danh khi bắt đầu', 'Take attendance once started')}
@@ -810,26 +826,33 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
         >
           {isCancelled
             ? t(
-                'Buổi học này đã bị hủy. Không thể điểm danh hoặc chỉnh sửa điểm danh.',
-                'This session has been cancelled. Attendance cannot be recorded or edited.',
-              )
+              'Buổi học này đã bị hủy. Không thể điểm danh hoặc chỉnh sửa điểm danh.',
+              'This session has been cancelled. Attendance cannot be recorded or edited.',
+            )
             : notStarted
-            ? t(
+              ? t(
                 'Buổi học chưa đến giờ bắt đầu. Chỉ có thể điểm danh sau khi buổi học bắt đầu.',
                 'This session has not started yet. Attendance can only be recorded once the session begins.',
               )
-            : isExpired
-            ? t(
-                'Buổi học đã quá thời hạn 7 ngày chỉnh sửa điểm danh. Danh sách hiện chỉ ở chế độ xem.',
-                'This session is past the 7-day attendance edit window. The roster is now read-only.',
-              )
-            : ''}
+              : isExpired
+                ? (
+                  activeSession?.sessionDate && activeSession.sessionDate < addIsoDays(centerNowParts(now).date, -ATTENDANCE_EDIT_GRACE_DAYS)
+                    ? t(
+                      'Buổi học đã quá thời hạn 7 ngày chỉnh sửa điểm danh. Danh sách hiện chỉ ở chế độ xem.',
+                      'This session is past the 7-day attendance edit window. The roster is now read-only.',
+                    )
+                    : t(
+                      'Buổi học đã kết thúc. Chỉ có thể điểm danh trong ngày diễn ra buổi học.',
+                      'This session has ended. Attendance can only be recorded on the day of the session.',
+                    )
+                )
+                : ''}
         </div>
       )}
 
       {rosterError && sessionMode && (
-        <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
-          <span>{t(rosterError)}</span>
+        <div data-i18n-managed className="portal-alert portal-alert--error coach-error-box" role="alert">
+          <p>{t(rosterError)}</p>
           <button type="button" className="btn-secondary btn-sm" onClick={() => setRosterAttempt((n) => n + 1)}>
             {t("Thử lại", "Retry")}
           </button>
@@ -957,8 +980,8 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
               {saving
                 ? t('Đang lưu...')
                 : currentSavedRecord
-                ? t('Cập nhật điểm danh')
-                : t('Lưu điểm danh')}
+                  ? t('Cập nhật điểm danh')
+                  : t('Lưu điểm danh')}
             </button>
           </div>
         </>
@@ -1018,8 +1041,8 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
           {historyLoading && history.length === 0 ? (
             <LoadingSkeleton label={t("Đang tải lịch sử điểm danh…", "Loading attendance history…")} count={4} />
           ) : historyError ? (
-            <div data-i18n-managed className="portal-alert portal-alert--error" role="alert">
-              <span>{t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.")}</span>
+            <div data-i18n-managed className="portal-alert portal-alert--error coach-error-box" role="alert">
+              <p>{t("Không tải được lịch sử điểm danh.", "Could not load the attendance history.")}</p>
               <button type="button" className="btn-secondary btn-sm" onClick={() => void loadHistory()}>
                 {t("Thử lại", "Retry")}
               </button>
@@ -1055,8 +1078,8 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                           <span>{t("Ngày: ")}{formatCenterDate(record.sessionDate)}</span>
                         </div>
                       </div>
-                      {!record.attendanceEditable && (
-                        <span className="history-saved-badge">{t("Đã khóa sửa (quá 7 ngày)", "Locked (over 7 days)")}</span>
+                      {(!record.attendanceEditable || record.sessionDate < todayIso) && (
+                        <span className="history-saved-badge">{t("Đã khóa sửa", "Editing locked")}</span>
                       )}
                     </div>
 
@@ -1080,7 +1103,7 @@ function SessionManagement({ routeSessionId }: { routeSessionId?: string }) {
                     </div>
 
                     <div className="history-actions-row">
-                      {record.attendanceEditable && (
+                      {record.attendanceEditable && record.sessionDate >= todayIso && (
                         <button
                           type="button"
                           className="btn-secondary btn-sm btn-history-edit"

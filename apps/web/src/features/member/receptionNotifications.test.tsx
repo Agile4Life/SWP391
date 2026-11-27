@@ -31,7 +31,7 @@ it.each(routes)('opens only the existing Receptionist destination: %s', async ac
   api.list.mockResolvedValue({ content: [{ ...item, actionPath }], number: 0, totalPages: 1 });
   await render(); await act(async () => host.querySelector<HTMLButtonElement>('.notification-item')!.click());
   expect(api.read).toHaveBeenCalledWith(7); expect(closed).toHaveBeenCalledTimes(1);
-  expect(host.querySelector('output')?.textContent).toBe(actionPath);
+  expect(host.querySelector('output')?.textContent).toBe(actionPath === '/staff/check-out' ? '/staff/check-in' : actionPath);
 });
 
 it.each(['STAFF', 'RECEPTIONIST'])('maps real payment metadata to transaction history for %s', role => {

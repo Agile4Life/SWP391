@@ -161,7 +161,7 @@ public final class SchedulingRequests {
     }
 
     /**
-     * Yêu cầu dời lịch buổi học: ngày, giờ bắt đầu và kết thúc mới.
+     * Yêu cầu dời lịch buổi học: ngày, giờ bắt đầu, kết thúc mới và lý do (tùy chọn).
      *
      * SCRUM-131 AC: dời lịch một buổi học hiện có.
      */
@@ -173,8 +173,17 @@ public final class SchedulingRequests {
             java.time.LocalTime startTime,
 
             @NotNull(message = "{validation.scheduling.end_time.not_null}")
-            java.time.LocalTime endTime
+            java.time.LocalTime endTime,
+
+            @jakarta.validation.constraints.Size(max = 500, message = "{validation.scheduling.reason.max}")
+            String reason
     ) {
+        public RescheduleSessionRequest(
+                java.time.LocalDate sessionDate,
+                java.time.LocalTime startTime,
+                java.time.LocalTime endTime) {
+            this(sessionDate, startTime, endTime, null);
+        }
     }
 
     /** Yêu cầu thanh toán khóa học: phương thức thanh toán. */

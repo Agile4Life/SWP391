@@ -183,6 +183,7 @@ export interface RescheduleSessionPayload {
   sessionDate: string;
   startTime: string;
   endTime: string;
+  reason?: string;
 }
 
 interface UserDto {
@@ -252,6 +253,7 @@ export const classesApi = {
         sessionDate: payload.sessionDate,
         startTime: payload.startTime,
         endTime: payload.endTime,
+        ...(payload.reason?.trim() ? { reason: payload.reason.trim() } : {}),
       }),
     }),
 

@@ -248,14 +248,6 @@ body:has(.portal-backdrop) .click-ripple {
   background-size: 200% 100%;
 }
 
-.portal-v2 .checkin-page .portal-table .checkin-actions {
-  background: var(--portal-surface);
-}
-
-.portal-v2 .checkin-page .portal-table th.checkin-actions {
-  background: var(--portal-raised);
-}
-
 .portal-v2 .payment-invoice__preview {
   background: var(--portal-raised);
   border-color: var(--portal-border);
