@@ -438,14 +438,6 @@ export function ManagerClassesPage() {
                           ))}
                         </Select>
                       </div>
-                      <button
-                        type="button"
-                        className="btn-primary btn-sm"
-                        data-testid="discipline-create-class-btn"
-                        onClick={() => setCreateModal({ disciplineId: activeDiscipline.id })}
-                      >
-                        {t('Tạo khóa mới', 'New course')}
-                      </button>
                     </div>
                   </>
                 ) : (

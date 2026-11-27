@@ -555,7 +555,7 @@ describe('ManagerClassesPage (multi-class per discipline, 4-step wizard, 3 indep
     expect(activeBar.textContent).not.toContain('Thêm buổi');
     // Sửa lớp nằm ở tab Danh sách lớp và chi tiết buổi học, không lặp ở thanh bộ môn.
     expect(activeBar.textContent).not.toContain('Sửa lớp');
-    expect(activeBar.querySelector('[data-testid="discipline-create-class-btn"]')?.textContent).toBe('Tạo khóa mới');
+    expect(activeBar.querySelector('[data-testid="discipline-create-class-btn"]')).toBeNull();
 
     // Buổi của lớp inactive (classId 99) không bị cộng vào chip Gym (chỉ đếm 2 buổi của 2 lớp active)
     expect(host.querySelector('[data-testid="discipline-chip-1"]')?.textContent).toBe('Gym');
