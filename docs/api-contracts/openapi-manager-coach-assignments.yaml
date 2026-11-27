@@ -6,8 +6,8 @@ info:
     Center manager screen, UI owner Khoa; related backlog SCRUM-121 and SCRUM-124.
     All operations require CENTER_MANAGER (legacy MANAGER alias accepted).
     Accept-Language selects vi (default) or en for messages and assignment labels.
-    A transfer moves only the selected training plan. PT_1_1 relationships are read-only: a member
-    trains 1:1 only with the coach they booked. CLASS relationships are read-only. No request changes unrelated assignments.
+    The screen is read-only: there is no transfer or end-assignment API. Whoever takes on a member
+    (training plan, 1:1 PT or class coach) keeps that member until the relationship ends naturally. No request changes unrelated assignments.
 servers:
   - url: /api/v1
 security:
@@ -22,7 +22,7 @@ paths:
         scheduled session; both booked ClassEnrollment and booked SessionBooking members count.
         Member accounts must be active and non-deleted. Active coaches are always listed; coaches on
         leave, terminated or with an inactive account are listed (employmentStatus shows why) only while
-        they still hold current relationships, so they can be transferred away. With a type filter and no
+        they still hold current relationships, so the manager can see who they still hold. With a type filter and no
         coachId, coaches without matching rows are omitted.
         A class/member pair appears once even with both enrollment sources. All upcoming PT sessions
         of one member with one coach collapse into a single PT_1_1 row (next session, last date and
@@ -68,53 +68,6 @@ paths:
         '400': { description: Invalid assignment type, sort field (INVALID_SORT_FIELD) or sort direction (INVALID_SORT_DIRECTION), content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } } }
         '401': { description: Authentication required }
         '403': { description: Manager role required }
-  /manager/coach-assignments/reassign:
-    post:
-      summary: Transfer one training plan to another coach
-      description: |
-        assignmentType must be TRAINING_PLAN and referenceId is the TrainingPlan ID; any other type
-        (PT_1_1, CLASS) fails with 400 ONLY_TRAINING_PLAN_TRANSFER, because 1:1 PT always stays with
-        the coach the member booked. The plan's actual member and coach must match memberId and
-        fromCoachId (the source coach may be on leave or no longer employed). The destination must
-        differ, be actively employed and have an active non-deleted account. The member must have an
-        active non-deleted account and a currently active membership. The plan must be active and
-        unexpired, and the receiving coach must not already have another active plan for the member
-        (409 COACH_ALREADY_HAS_ACTIVE_PLAN). A missing or stale relationship fails without success
-        notifications. Audit logs preserve actor, assignment type, reference ID, member ID, old/new
-        coach IDs and the required reason. No plan items, lifecycle dates, PT sessions or other
-        relationships change. Only after a valid transfer are the member and both coaches notified;
-        the member's in-app notification includes the manager's reason.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ReassignRequest' }
-      responses:
-        '200': { description: Selected relationship transferred; envelope data is omitted }
-        '400': { description: Validation failure, CLASS type, mismatched relationship, historical relationship, invalid membership or unavailable destination coach }
-        '401': { description: Authentication required }
-        '403': { description: Manager role required }
-        '404': { description: Referenced assignment, member or coach not found }
-        '409': { description: 'COACH_ALREADY_HAS_ACTIVE_PLAN or a database schedule conflict' }
-  /manager/coach-assignments/{planId}:
-    delete:
-      summary: End an active unexpired training-plan assignment by cancelling it
-      description: |
-        The plan remains stored with status cancelled. Coach/member attribution, dates,
-        goal and plan items remain intact. Completed, cancelled, draft and expired plans
-        are rejected without changing their historical lifecycle. This operation never
-        marks a plan completed and does not cancel PT sessions or class relationships.
-      parameters:
-        - name: planId
-          in: path
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        '200': { description: Assignment cancelled; envelope data is omitted }
-        '400': { description: Plan is not active or has expired }
-        '401': { description: Authentication required }
-        '403': { description: Manager role required }
-        '404': { description: Training plan not found }
 components:
   securitySchemes:
     bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
@@ -131,16 +84,6 @@ components:
       properties:
         code: { type: string }
         message: { type: string }
-    ReassignRequest:
-      type: object
-      required: [memberId, fromCoachId, toCoachId, referenceId, assignmentType, reason]
-      properties:
-        memberId: { type: integer, format: int64 }
-        fromCoachId: { type: integer, format: int64 }
-        toCoachId: { type: integer, format: int64 }
-        referenceId: { type: integer, format: int64 }
-        assignmentType: { type: string, enum: [TRAINING_PLAN] }
-        reason: { type: string, minLength: 1, maxLength: 500 }
     Student:
       type: object
       properties:

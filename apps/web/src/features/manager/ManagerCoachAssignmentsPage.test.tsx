@@ -6,17 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setLanguage } from '../../shared/i18n/language';
 import { ManagerCoachAssignmentsPage } from './ManagerCoachAssignmentsPage';
 import { coachAssignmentsApi, type CoachAssignmentData } from './coachAssignmentsApi';
-import { notify } from '../../shared/lib/portalNotices';
 
 const assignmentsCss = readFileSync(resolve(__dirname, 'manager-coach-assignments.css'), 'utf8');
 
-vi.mock('../../shared/lib/portalNotices', () => ({ notify: vi.fn() }));
 
 vi.mock('./coachAssignmentsApi', () => ({
   coachAssignmentsApi: {
     getOverview: vi.fn(),
-    reassignStudent: vi.fn(),
-    removeAssignment: vi.fn(),
   },
 }));
 
@@ -238,41 +234,13 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(coachAssignmentsApi.getOverview).toHaveBeenLastCalledWith(expect.objectContaining({ coachId: 11, search: 'Trần Văn A' }));
   });
 
-  it('keeps the list visible and shows the error when ending an assignment fails', async () => {
-    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({
-      ...mockData,
-      coaches: [{ ...mockData.coaches[0], students: [{ ...mockData.coaches[0].students[1], membershipIssue: null }] }],
-    });
-    vi.mocked(coachAssignmentsApi.removeAssignment).mockRejectedValueOnce(new Error('Giáo án đã hết hạn'));
+  it('is view-only: no transfer or end-assignment actions on any row', async () => {
     await renderComponent();
-    await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent === 'Kết thúc')!.click(); });
-    await act(async () => { [...document.querySelectorAll('dialog button')].find((b) => b.textContent === 'Kết thúc phân công')!.dispatchEvent(new MouseEvent('click', { bubbles: true })); });
-    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
-    expect(host.querySelector('[role="alert"]')?.textContent).toContain('Giáo án đã hết hạn');
-    expect(host.textContent).toContain('Lê Thị Hoa');
-    expect(host.querySelector('.coach-assignments-stats')).not.toBeNull();
-  });
-
-  it('disables the transfer button with a reason when the member plan blocks coaching', async () => {
-    await renderComponent();
-    const row = [...host.querySelectorAll('.coach-student-row')].find((r) => r.textContent?.includes('Lê Thị Hoa'))!;
-    const transfer = [...row.querySelectorAll('button')].find((b) => b.textContent === 'Chuyển giáo án') as HTMLButtonElement;
-    expect(transfer.disabled).toBe(true);
-    expect(transfer.title).toContain('bảo lưu');
-  });
-
-  it('never offers a PT transfer and shows coach specializations when transferring a plan', async () => {
-    const coach = mockData.coaches[0];
-    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({
-      ...mockData,
-      coaches: [{ ...coach, students: [coach.students[0], { ...coach.students[1], membershipIssue: null }] }],
-    });
-    await renderComponent();
-    const ptRow = [...host.querySelectorAll('.coach-assignment-line')].find((line) => line.textContent?.includes('Buổi PT Fitness cá nhân'))!;
-    expect(ptRow.querySelector('button')).toBeNull();
-    await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent === 'Chuyển giáo án')!.click(); });
-    const target = host.querySelector('#reassign-target-coach')!.closest('.ui-select')!.querySelector('select.ui-select__native') as HTMLSelectElement;
-    expect([...target.options].map((o) => o.textContent)).toContain('HLV Nguyễn Thị B — Pilates & Yoga');
+    const labels = [...host.querySelectorAll('button')].map((b) => b.textContent ?? '');
+    expect(labels.some((text) => text.includes('Chuyển') || text.includes('Kết thúc'))).toBe(false);
+    await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent?.includes('Bảng danh sách'))!.click(); });
+    const rowButtons = [...host.querySelectorAll('.coach-table tbody button')].map((b) => b.textContent);
+    expect(rowButtons.every((text) => text === 'Chi tiết')).toBe(true);
   });
 
   it('labels coaches who are no longer employed', async () => {
@@ -342,8 +310,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     const row = host.querySelector('.coach-student-row')!;
     const buttons = [...row.querySelectorAll('button')].map(b => b.textContent);
     expect(buttons.filter(text => text === 'Chi tiết')).toHaveLength(1);
-    expect(buttons.filter(text => text === 'Chuyển giáo án')).toHaveLength(1);
-    expect(buttons.filter(text => text?.includes('PT'))).toHaveLength(0);
+    expect(buttons.filter(text => text?.includes('Chuyển') || text?.includes('Kết thúc'))).toHaveLength(0);
     expect(row.textContent).toContain('09:00 10/11/2026 · 2 buổi sắp tới');
     await act(async () => { [...row.querySelectorAll('button')].find(b => b.textContent === 'Chi tiết')!.click(); });
     expect(host.querySelectorAll('dialog .coach-student-type-pill')).toHaveLength(2);
@@ -363,30 +330,6 @@ describe('ManagerCoachAssignmentsPage', () => {
     await renderComponent();
     expect(host.textContent).toContain('09:00 10/11/2026');
     expect(host.textContent).toContain('Ngày kết thúc giáo án: 05/12/2026');
-  });
-
-  it('keeps target coach options after filtering and sends the selected training plan only', async () => {
-    await renderComponent();
-    const filter = host.querySelector('select[aria-label="Lọc theo Huấn luyện viên"]') as HTMLSelectElement;
-    const coachA = mockData.coaches[0];
-    vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({ ...mockData, coaches: [{ ...coachA, students: [coachA.students[0], { ...coachA.students[1], membershipIssue: null }] }] });
-    await act(async () => { filter.value = '10'; filter.dispatchEvent(new Event('change', { bubbles: true })); });
-    await act(async () => { await new Promise(r => setTimeout(r, 260)); });
-    await act(async () => { [...host.querySelectorAll('button')].find(b => b.textContent === 'Chuyển giáo án')?.click(); });
-    const target = host.querySelector('#reassign-target-coach')!.closest('.ui-select')!.querySelector('select.ui-select__native') as HTMLSelectElement;
-    expect([...target.options].map(o => o.value)).toContain('11');
-    await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
-    const reason = host.querySelector('#reassign-reason') as HTMLTextAreaElement;
-    expect(reason.required).toBe(true);
-    expect((host.querySelector('dialog button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
-    await act(async () => {
-      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set?.call(reason, '  HLV cũ nghỉ phép  ');
-      reason.dispatchEvent(new Event('input', { bubbles: true }));
-    });
-    expect((host.querySelector('dialog button[type="submit"]') as HTMLButtonElement).disabled).toBe(false);
-    await act(async () => { host.querySelector('dialog form')?.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); });
-    expect(coachAssignmentsApi.reassignStudent).toHaveBeenCalledWith(expect.objectContaining({ assignmentType: 'TRAINING_PLAN', referenceId: 601, memberId: 102, fromCoachId: 10, toCoachId: 11, reason: 'HLV cũ nghỉ phép' }));
-    expect(notify).toHaveBeenCalledWith('Điều chuyển phân công đã chọn sang HLV mới thành công!', 'success', { translation: { vi: 'Điều chuyển phân công đã chọn sang HLV mới thành công!', en: 'Selected assignment transferred to the new coach successfully!' } });
   });
 
   it('requests sorted coaches list when sort dropdown value changes', async () => {
@@ -456,7 +399,7 @@ describe('ManagerCoachAssignmentsPage', () => {
     expect(counts()).toEqual([['0', '0', '0', '0'], ['1', '1', '0', '0'], ['1', '1', '0', '0']]);
   });
 
-  it('P1-FE-20, P2-FE-41, P2-FE-42 & P2-FE-76: displays detail on CLASS & PT rows, renders Group classes KPI/pill, handles blank target coach, localizes type pills, and uses theme CSS tokens', async () => {
+  it('P1-FE-20, P2-FE-41 & P2-FE-76: displays detail on CLASS & PT rows, renders Group classes KPI/pill, localizes type pills, and uses theme CSS tokens', async () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
       await renderComponent();
@@ -489,23 +432,6 @@ describe('ManagerCoachAssignmentsPage', () => {
       });
 
       // Clearing target coach select resets to empty string (not 0) and disables submit
-      vi.mocked(coachAssignmentsApi.getOverview).mockResolvedValue({
-        ...mockData,
-        coaches: mockData.coaches.map((coach) => ({ ...coach, students: coach.students.map((student) => ({ ...student, membershipIssue: null })) })),
-      });
-      await act(async () => { [...host.querySelectorAll('button')].find((b) => b.textContent === 'Theo HLV')!.click(); });
-      const sort = host.querySelector('select[aria-label="Sắp xếp danh sách HLV"]') as HTMLSelectElement;
-      await act(async () => { sort.value = 'name_desc'; sort.dispatchEvent(new Event('change', { bubbles: true })); });
-      await act(async () => { await new Promise((r) => setTimeout(r, 260)); });
-      await act(async () => {
-        [...host.querySelectorAll('button')].find((b) => b.textContent === 'Chuyển giáo án')?.click();
-      });
-      const target = host.querySelector('#reassign-target-coach')!.closest('.ui-select')!.querySelector('select.ui-select__native') as HTMLSelectElement;
-      await act(async () => { target.value = '11'; target.dispatchEvent(new Event('change', { bubbles: true })); });
-      await act(async () => { target.value = ''; target.dispatchEvent(new Event('change', { bubbles: true })); });
-      expect(target.value).toBe('');
-      expect((host.querySelector('dialog button[type="submit"]') as HTMLButtonElement).disabled).toBe(true);
-
       // CSS tokens check (no hardcoded coral rgba(255, 122, 89, ...))
       expect(assignmentsCss).not.toContain('rgba(255, 122, 89');
       expect(assignmentsCss).toContain('rgb(var(--sol-accent-rgb)');

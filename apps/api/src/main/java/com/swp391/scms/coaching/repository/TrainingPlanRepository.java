@@ -21,11 +21,6 @@ public interface TrainingPlanRepository extends JpaRepository<TrainingPlan, Long
     List<TrainingPlan> findCurrentAssignments(@org.springframework.data.repository.query.Param("coachId") Long coachId,
             @org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
 
-    /** Lấy giáo án theo id và khóa dòng (PESSIMISTIC_WRITE) để cập nhật an toàn khi nhiều request cùng sửa. */
-    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
-    @org.springframework.data.jpa.repository.Query("select p from TrainingPlan p where p.id = :id")
-    java.util.Optional<TrainingPlan> findByIdForUpdate(@org.springframework.data.repository.query.Param("id") Long id);
-
     /**
      * Tìm các bản ghi có memberUserId = tham số và status = tham số, sắp xếp theo createdAt giảm dần (Spring
      * Data tự sinh truy vấn từ tên hàm).

@@ -1,9 +1,8 @@
-import { staffTranslation, staffMessage, useStaffI18n, type StaffMessage, staffNotify as notify } from '../operations/staffI18n';
+import { useStaffI18n, type StaffMessage } from '../operations/staffI18n';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../../shared/ui/PageHeader';
 import { LoadingSkeleton } from '../../shared/ui/LoadingSkeleton';
 import { Modal } from '../../shared/ui/Modal';
-import { useConfirm } from '../../shared/ui/ConfirmDialog';
 import { formatCenterDate, formatCenterDateTime } from '../../shared/lib/centerTime';
 import {
   coachAssignmentsApi,
@@ -23,7 +22,7 @@ function MembershipIssueTag({ issue }: { issue?: CoachAssignmentStudent['members
   if (!issue) return null;
   // Bảng ánh xạ vấn đề sang class màu, nhãn và gợi ý.
   const tag = {
-    FROZEN: { cls: 'badge-warning', label: staffText('Đang bảo lưu', 'On hold'), hint: staffText('Gói đang bảo lưu: chưa thể đặt hoặc điều chuyển buổi tập.', 'Plan on hold: sessions cannot be booked or transferred.') },
+    FROZEN: { cls: 'badge-warning', label: staffText('Đang bảo lưu', 'On hold'), hint: staffText('Gói đang bảo lưu: chưa thể đặt buổi tập.', 'Plan on hold: sessions cannot be booked.') },
     NO_ACTIVE: { cls: 'badge-danger', label: staffText('Hết hiệu lực gói', 'No valid plan'), hint: staffText('Hội viên không còn gói tập đang hoạt động còn hạn hôm nay.', 'The member has no active plan valid today.') },
     NOT_COVERED: { cls: 'badge-warning', label: staffText('Gói hết trước buổi PT', 'Plan ends before PT'), hint: staffText('Gói hết hạn trước buổi PT sắp tới cuối cùng.', 'The plan expires before the last upcoming PT session.') },
   }[issue];
@@ -40,13 +39,6 @@ function assignmentSchedule(student: CoachAssignmentStudent, compact = false): s
   const count = student.sessionCount ?? 0;
   if (!next || count <= 1) return next;
   return compact ? staffText(`${next} (+${count - 1})`, `${next} (+${count - 1})`) : staffText(`${next} · ${count} buổi sắp tới`, `${next} · ${count} upcoming sessions`);
-}
-
-/** Lý do không thể điều chuyển do gói tập (backend cũng chặn); null nếu được chuyển. */
-function transferBlockedHint(student: CoachAssignmentStudent): string | null {
-  if (student.membershipIssue === 'FROZEN') return staffText('Gói đang bảo lưu nên chưa thể điều chuyển.', 'The plan is on hold, so it cannot be transferred yet.');
-  if (student.membershipIssue === 'NO_ACTIVE') return staffText('Hội viên không còn gói tập hiệu lực nên chưa thể điều chuyển.', 'The member has no valid plan, so it cannot be transferred.');
-  return null;
 }
 
 /** Nhãn trạng thái làm việc của HLV không còn hoạt động; null khi đang làm. */
@@ -88,25 +80,20 @@ function groupStudentsByMember(students: CoachAssignmentStudent[]): MemberAssign
 }
 
 /**
- * Màn quản lý phân công HLV: xem học viên của từng HLV, lọc/sắp xếp, điều chuyển giáo án hoặc buổi PT sang HLV
- * khác (kèm lý do) và kết thúc phân công.
+ * Màn phân công HLV (chỉ xem): học viên của từng HLV theo giáo án, PT 1:1, lớp nhóm; lọc/sắp xếp và xem hồ sơ.
+ * Không có điều chuyển hay kết thúc: hội viên do HLV nào đảm nhận thì đi theo HLV đó đến hết.
  */
 export function ManagerCoachAssignmentsPage() {
   const { t } = useStaffI18n();
-  const [confirm, confirmDialog] = useConfirm();
   const loadGeneration = useRef(0);
   const [data, setData] = useState<CoachAssignmentData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<StaffMessage | null>(null);
-  // Lỗi của thao tác (kết thúc phân công) hiện riêng, không ẩn danh sách như lỗi tải trang.
-  const [actionError, setActionError] = useState<StaffMessage | null>(null);
   const [search, setSearch] = useState('');
   const [coachFilter, setCoachFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [sortOption, setSortOption] = useState<string>('name_asc');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
-  const [busy, setBusy] = useState(false);
-  const [formError, setFormError] = useState<StaffMessage | null>(null);
 
   const [sortBy, sortDir] = useMemo(() => {
     switch (sortOption) {
@@ -119,18 +106,9 @@ export function ManagerCoachAssignmentsPage() {
     }
   }, [sortOption]);
 
-  // Trạng thái các hộp thoại
-  const [reassignStudent, setReassignStudent] = useState<{
-    student: CoachAssignmentStudent;
-    currentCoachId: number;
-    currentCoachName: string;
-  } | null>(null);
+  // Hộp thoại hồ sơ học viên
   const [detail, setDetail] = useState<{ student: CoachAssignmentStudent; assignments: CoachAssignmentStudent[] } | null>(null);
   const selectedStudentDetail = detail?.student ?? null;
-
-  // Trạng thái biểu mẫu điều chuyển HLV
-  const [targetCoachId, setTargetCoachId] = useState<number | ''>('');
-  const [reassignReason, setReassignReason] = useState('');
 
   // Tải tổng quan phân công; chỉ kết quả của lần gọi mới nhất được dùng.
   const load = useCallback(async () => {
@@ -172,61 +150,10 @@ export function ManagerCoachAssignmentsPage() {
     return () => { clearTimeout(timer); generation.current += 1; };
   }, [load]);
 
-  // Danh sách HLV có thể chọn khi điều chuyển.
+  // Danh sách HLV đang hoạt động cho ô lọc.
   const allCoachesList = useMemo(() => {
     return data?.availableCoaches || [];
   }, [data]);
-
-  // Điều chuyển: bắt buộc chọn HLV mới và nhập lý do, lớp học chỉ xem, không điều chuyển.
-  const handleReassignSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (busy || !reassignStudent || !targetCoachId || reassignStudent.student.assignmentType !== 'TRAINING_PLAN') return;
-    const reason = reassignReason.trim();
-    if (!reason) {
-      setFormError(staffMessage('Vui lòng nhập lý do điều chuyển để thông báo cho học viên.', staffTranslation('Vui lòng nhập lý do điều chuyển để thông báo cho học viên.')));
-      return;
-    }
-
-    setBusy(true);
-    setFormError(null);
-    try {
-      await coachAssignmentsApi.reassignStudent({
-        memberId: reassignStudent.student.memberId,
-        fromCoachId: reassignStudent.currentCoachId,
-        toCoachId: Number(targetCoachId),
-        referenceId: reassignStudent.student.referenceId,
-        assignmentType: 'TRAINING_PLAN',
-        reason,
-      });
-      setReassignStudent(null);
-      setTargetCoachId('');
-      setReassignReason('');
-      notify('Điều chuyển phân công đã chọn sang HLV mới thành công!', 'success');
-      await load();
-    } catch (err) {
-      setFormError(safeMessage(err, 'Lỗi khi điều chuyển học viên'));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // Kết thúc phân công giáo án (theo id tham chiếu) sau khi xác nhận.
-  const handleRemoveAssignment = async (student: CoachAssignmentStudent) => {
-    if (busy || !(await confirm({ title: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), message: staffMessage(`Kết thúc phân công giáo án của ${student.fullName}? Lịch sử giáo án được giữ lại.`, `End the training plan assignment for ${student.fullName}? Training plan history will be retained.`), confirmLabel: staffMessage('Kết thúc phân công', staffTranslation('Kết thúc phân công')), danger: true }))) {
-      return;
-    }
-    setBusy(true);
-    setActionError(null);
-    try {
-      await coachAssignmentsApi.removeAssignment(student.referenceId);
-      notify('Đã kết thúc phân công học viên!', 'success');
-      await load();
-    } catch (err) {
-      setActionError(safeMessage(err, 'Lỗi khi kết thúc phân công'));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const assignmentTypeLabel = useCallback(
     (type: CoachAssignmentStudent['assignmentType'], fallback?: string): string => {
@@ -243,27 +170,6 @@ export function ManagerCoachAssignmentsPage() {
     },
     [t],
   );
-
-  const openTransfer = (student: CoachAssignmentStudent, coachId: number, coachName: string) => {
-    setFormError(null); setTargetCoachId(''); setReassignReason('');
-    setReassignStudent({ student, currentCoachId: coachId, currentCoachName: coachName });
-  };
-
-  // Chỉ giáo án được điều chuyển: PT 1:1 luôn ở với HLV hội viên đã đặt, lớp nhóm chỉ xem. Gói chặn thì khóa nút kèm lý do.
-  const transferButton = (student: CoachAssignmentStudent, coachId: number, coachName: string) => {
-    if (student.assignmentType !== 'TRAINING_PLAN') return null;
-    const blocked = transferBlockedHint(student);
-    return (
-      <button
-        type="button"
-        className="btn-secondary btn-sm coach-action-btn"
-        disabled={busy || Boolean(blocked)}
-        title={blocked ?? undefined}
-        onClick={() => openTransfer(student, coachId, coachName)}
-      >
-        {t('Chuyển giáo án', 'Transfer plan')}</button>
-    );
-  };
 
   // Danh sách phẳng cho chế độ xem bảng: làm phẳng học viên của mọi HLV thành một danh sách kèm thông tin HLV.
   const flattenedStudents = useMemo(() => {
@@ -283,19 +189,10 @@ export function ManagerCoachAssignmentsPage() {
         title={t("HLV & học viên phụ trách")}
       />
 
-      {confirmDialog}
-
       {error && (
         <div data-i18n-managed className="portal-alert portal-alert--error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
           <span>{t(error)}</span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => void load()}>{t("Thử lại", "Retry")}</button>
-        </div>
-      )}
-
-      {actionError && (
-        <div data-i18n-managed className="portal-alert portal-alert--error" role="alert" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-          <span>{t(actionError)}</span>
-          <button type="button" className="btn-secondary btn-sm" onClick={() => setActionError(null)}>{t('Đóng', 'Dismiss')}</button>
         </div>
       )}
 
@@ -477,19 +374,6 @@ export function ManagerCoachAssignmentsPage() {
                                 </small>
                               )}
                             </div>
-
-                            <div className="coach-student-actions">
-                              {transferButton(student, coach.coachId, coach.coachName)}
-                              {student.assignmentType === 'TRAINING_PLAN' && (
-                                <button data-i18n-managed
-                                  type="button"
-                                  className="btn-danger btn-sm coach-action-btn"
-                                  disabled={busy}
-                                  onClick={() => void handleRemoveAssignment(student)}
-                                >
-                                  {t("Kết thúc")}</button>
-                              )}
-                            </div>
                           </div>
                         ))}
                       </div>
@@ -511,7 +395,7 @@ export function ManagerCoachAssignmentsPage() {
                 <th>{t("Hình thức")}</th>
                 <th>{t("Chi tiết & Mục tiêu")}</th>
                 <th>{t('Hết hạn giáo án / Buổi kế tiếp', 'Plan end / Next session')}</th>
-                <th>{t("Thao tác")}</th>
+                <th>{t("Hồ sơ", "Profile")}</th>
               </tr>
             </thead>
             <tbody>
@@ -549,8 +433,6 @@ export function ManagerCoachAssignmentsPage() {
                         onClick={() => setDetail({ student: item, assignments: flattenedStudents.filter((s) => s.memberId === item.memberId && s.coachId === item.coachId) })}
                       >
                         {t("Chi tiết")}</button>
-                      {transferButton(item, item.coachId, item.coachName)}
-                      {item.assignmentType === 'TRAINING_PLAN' && <button type="button" className="btn-danger btn-sm coach-action-btn" disabled={busy} onClick={() => void handleRemoveAssignment(item)}>{t("Kết thúc")}</button>}
                     </div>
                   </td>
                 </tr>
@@ -560,94 +442,7 @@ export function ManagerCoachAssignmentsPage() {
         </div>
       )}
 
-      {/* Hộp thoại 2: Điều chuyển HLV cho học viên */}
-      {reassignStudent && (
-        <Modal
-          title={t(`Chuyển giáo án của học viên: ${reassignStudent.student.fullName}`, `Transfer training plan for member: ${reassignStudent.student.fullName}`)}
-          busy={busy}
-          onClose={() => setReassignStudent(null)}
-        >
-          <form className="coach-modal-form" onSubmit={(e) => void handleReassignSubmit(e)}>
-            <fieldset disabled={busy}>
-            {formError && <p className="portal-alert portal-alert--error" role="alert">{t(formError)}</p>}
-            <p>{t('Chỉ chuyển giáo án được chọn. Buổi PT 1:1 luôn do HLV hội viên đã đặt phụ trách và không thay đổi.', 'Only the selected training plan transfers. 1:1 PT sessions always stay with the coach the member booked.')}</p>
-            <div className="coach-form-group">
-              <label>{t("Học viên")}</label>
-              <input
-                type="text"
-                className="coach-form-control"
-                value={`${reassignStudent.student.fullName} (${reassignStudent.student.membershipCode})`}
-                disabled
-              />
-            </div>
-
-            <div className="coach-form-group">
-              <label>{t("HLV hiện tại")}</label>
-              <input
-                type="text"
-                className="coach-form-control"
-                value={reassignStudent.currentCoachName}
-                disabled
-              />
-            </div>
-
-            <div className="coach-form-group">
-              <label htmlFor="reassign-target-coach">{t("Chọn Huấn luyện viên tiếp nhận mới *")}</label>
-              <Select
-                id="reassign-target-coach"
-                className="coach-form-control"
-                value={String(targetCoachId)}
-                onChange={(e) => setTargetCoachId(e.target.value ? Number(e.target.value) : '')}
-                required
-              >
-                <option value="">{t("-- Chọn HLV mới --")}</option>
-                {allCoachesList
-                  .filter((c) => c.coachId !== reassignStudent.currentCoachId)
-                  .map((c) => (
-                    <option data-i18n-managed key={c.coachId} value={c.coachId}>
-                      {c.specialization ? `${c.coachName} — ${c.specialization}` : c.coachName}
-                    </option>
-                  ))}
-              </Select>
-            </div>
-
-            <div className="coach-form-group">
-              <label htmlFor="reassign-reason">{t("Lý do điều chuyển *")}</label>
-              <textarea
-                id="reassign-reason"
-                className="coach-form-control"
-                rows={3}
-                required
-                maxLength={500}
-                placeholder={t("Nhập lý do điều chuyển (vd: HLV cũ nghỉ phép, điều chỉnh lịch tập...)")}
-                value={reassignReason}
-                onChange={(e) => setReassignReason(e.target.value)}
-              />
-              <small className="coach-form-hint">{t('Lý do này sẽ được gửi tới học viên qua thông báo trong ứng dụng.', 'The reason will be sent to the member in an in-app notification.')}</small>
-            </div>
-
-            <div className="coach-modal-actions">
-              <button
-                type="button"
-                className="btn-secondary coach-action-btn"
-                onClick={() => setReassignStudent(null)}
-                disabled={busy}
-              >
-                {t("Hủy")}</button>
-              <button
-                type="submit"
-                className="btn-primary coach-action-btn"
-                disabled={busy || !targetCoachId || !reassignReason.trim()}
-              >
-                {busy ? t('Đang điều chuyển…') : t('Xác nhận điều chuyển')}
-              </button>
-            </div>
-            </fieldset>
-          </form>
-        </Modal>
-      )}
-
-      {/* Hộp thoại 3: Chi tiết học viên */}
+      {/* Hộp thoại: Chi tiết học viên */}
       {selectedStudentDetail && (
         <Modal
           title={t(`Hồ sơ học viên: ${selectedStudentDetail.fullName}`, `Member profile: ${selectedStudentDetail.fullName}`)}
