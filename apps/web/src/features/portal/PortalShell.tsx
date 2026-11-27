@@ -206,8 +206,12 @@ function PortalShellContent({ user }: { user: UserSession }) {
   const profileLabel = isMember
     ? t('Hồ sơ hội viên', 'Member profile')
     : t('Hồ sơ cá nhân', 'My profile');
+  const isCoach = user.role === 'COACH';
   const navItems = PORTAL_NAV.filter((item) => item.roles.includes(user.role)).map((item) => {
     if (item.to === '/member/profile') return { ...item, label: profileLabel };
+    if (item.to === '/staff/requests' && isCoach) {
+      return { ...item, label: t('Đơn xin nghỉ phép', 'Leave requests') };
+    }
     return { ...item, label: getNavLabel(item.to, item.label, lang) };
   });
   const normalizedPathname = location.pathname === '/profile' ? '/member/profile' : location.pathname;
